@@ -1,21 +1,10 @@
 import {AbortSignal} from "@chainsafe/abort-controller";
 import {IExecutionEngine} from "./interface";
 import {ExecutionEngineDisabled} from "./disabled";
-import {
-  ExecutionEngineHttp,
-  ExecutionEngineHttpOpts,
-  defaultExecutionEngineHttpOpts,
-  defaultDefaultSuggestedFeeRecipient,
-} from "./http";
+import {ExecutionEngineHttp, ExecutionEngineHttpOpts, defaultExecutionEngineHttpOpts} from "./http";
 import {ExecutionEngineMock, ExecutionEngineMockOpts} from "./mock";
 
-export {
-  IExecutionEngine,
-  ExecutionEngineHttp,
-  ExecutionEngineDisabled,
-  ExecutionEngineMock,
-  defaultDefaultSuggestedFeeRecipient,
-};
+export {IExecutionEngine, ExecutionEngineHttp, ExecutionEngineDisabled, ExecutionEngineMock};
 
 export type ExecutionEngineOpts =
   | ({mode?: "http"} & ExecutionEngineHttpOpts)

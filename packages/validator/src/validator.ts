@@ -31,7 +31,7 @@ export type ValidatorOptions = {
   logger: ILogger;
   afterBlockDelaySlotFraction?: number;
   graffiti?: string;
-  defaultSuggestedFeeRecipient?: ExecutionAddress;
+  defaultFeeRecipient?: ExecutionAddress;
 };
 
 // TODO: Extend the timeout, and let it be customizable
@@ -64,7 +64,7 @@ export class Validator {
   private state: State = {status: Status.stopped};
 
   constructor(opts: ValidatorOptions, readonly genesis: Genesis, metrics: Metrics | null = null) {
-    const {dbOps, logger, slashingProtection, signers, graffiti, defaultSuggestedFeeRecipient} = opts;
+    const {dbOps, logger, slashingProtection, signers, graffiti, defaultFeeRecipient} = opts;
     const config = createIBeaconConfig(dbOps.config, genesis.genesisValidatorsRoot);
 
     const api =
@@ -114,13 +114,13 @@ export class Validator {
       metrics
     );
 
-    this.prepareBeaconProposerService = defaultSuggestedFeeRecipient
+    this.prepareBeaconProposerService = defaultFeeRecipient
       ? new PrepareBeaconProposerService(
           loggerVc,
           api,
           clock,
           validatorStore,
-          defaultSuggestedFeeRecipient,
+          defaultFeeRecipient,
           indicesService,
           metrics
         )

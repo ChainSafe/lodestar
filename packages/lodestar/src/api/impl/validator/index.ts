@@ -584,7 +584,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
     },
 
     async prepareBeaconProposer(proposers) {
-      await chain.executionEngine.updateProposerPreparation(chain.clock.currentEpoch, proposers);
+      await chain.updateBeaconProposerData(chain.clock.currentEpoch, proposers);
     },
   };
 }

@@ -13,8 +13,18 @@ import {
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
-import {allForks, UintNum64, Root, phase0, Slot, RootHex} from "@chainsafe/lodestar-types";
-import {ILogger} from "@chainsafe/lodestar-utils";
+import {
+  allForks,
+  UintNum64,
+  Root,
+  phase0,
+  Slot,
+  RootHex,
+  ValidatorIndex,
+  ExecutionAddress,
+  Epoch,
+} from "@chainsafe/lodestar-types";
+import {ILogger, fromHex} from "@chainsafe/lodestar-utils";
 import {fromHexString} from "@chainsafe/ssz";
 import {AbortController} from "@chainsafe/abort-controller";
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants";
@@ -25,7 +35,7 @@ import {BlockProcessor, PartiallyVerifiedBlockFlags} from "./blocks";
 import {IBeaconClock, LocalClock} from "./clock";
 import {ChainEventEmitter} from "./emitter";
 import {handleChainEvents} from "./eventHandlers";
-import {IBeaconChain, SSZObjectType} from "./interface";
+import {IBeaconChain, SSZObjectType, ProposerPreparationData} from "./interface";
 import {IChainOptions} from "./options";
 import {IStateRegenerator, QueuedStateRegenerator, RegenCaller} from "./regen";
 import {initializeForkChoice} from "./forkChoice";
@@ -52,6 +62,7 @@ import {IExecutionEngine} from "../executionEngine";
 import {PrecomputeNextEpochTransitionScheduler} from "./precomputeNextEpochTransition";
 import {ReprocessController} from "./reprocess";
 import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof";
+import {MapDef} from "../util/map";
 
 export class BeaconChain implements IBeaconChain {
   readonly genesisTime: UintNum64;
@@ -90,6 +101,8 @@ export class BeaconChain implements IBeaconChain {
   // Global state caches
   readonly pubkey2index: PubkeyIndexMap;
   readonly index2pubkey: Index2PubkeyCache;
+
+  readonly beaconProposerCache: MapDef<ValidatorIndex, {epoch: Epoch; feeRecipient: ExecutionAddress}>;
 
   protected readonly blockProcessor: BlockProcessor;
   protected readonly db: IBeaconDb;
@@ -147,6 +160,11 @@ export class BeaconChain implements IBeaconChain {
     // Initialize single global instance of state caches
     this.pubkey2index = new PubkeyIndexMap();
     this.index2pubkey = [];
+
+    this.beaconProposerCache = new MapDef<ValidatorIndex, {epoch: Epoch; feeRecipient: ExecutionAddress}>(() => ({
+      epoch: 0,
+      feeRecipient: fromHex(opts.defaultFeeRecipient),
+    }));
 
     // Restore state caches
     const cachedState = createCachedBeaconState(anchorState, {
@@ -315,5 +333,11 @@ export class BeaconChain implements IBeaconChain {
       fs.writeFileSync(fileName, bytes);
     }
     return fileName;
+  }
+
+  async updateBeaconProposerData(epoch: Epoch, proposers: ProposerPreparationData[]): Promise<void> {
+    proposers.forEach(({validatorIndex, feeRecipient}) => {
+      this.beaconProposerCache.set(validatorIndex, {epoch, feeRecipient});
+    });
   }
 }

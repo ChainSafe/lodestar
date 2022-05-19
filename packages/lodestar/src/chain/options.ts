@@ -10,6 +10,7 @@ export type IChainOptions = BlockProcessOpts &
     blsVerifyAllMultiThread?: boolean;
     persistInvalidSszObjects?: boolean;
     persistInvalidSszObjectsDir?: string;
+    defaultFeeRecipient: string;
   };
 
 export type BlockProcessOpts = {
@@ -24,6 +25,8 @@ export type BlockProcessOpts = {
   safeSlotsToImportOptimistically: number;
 };
 
+export const defaultDefaultFeeRecipient = "0x0000000000000000000000000000000000000000";
+
 export const defaultChainOptions: IChainOptions = {
   blsVerifyAllMainThread: false,
   blsVerifyAllMultiThread: false,
@@ -32,4 +35,5 @@ export const defaultChainOptions: IChainOptions = {
   persistInvalidSszObjectsDir: "",
   proposerBoostEnabled: true,
   safeSlotsToImportOptimistically: SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY,
+  defaultFeeRecipient: defaultDefaultFeeRecipient,
 };

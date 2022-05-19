@@ -22,11 +22,11 @@ export class PrepareBeaconProposerService {
     private readonly api: Api,
     private clock: IClock,
     private readonly validatorStore: ValidatorStore,
-    private readonly defaultSuggestedFeeRecipient: ExecutionAddress,
+    private readonly defaultFeeRecipient: ExecutionAddress,
     private readonly indicesService: IndicesService,
     private readonly metrics: Metrics | null
   ) {
-    clock.runEverySlot(this.prepareBeaconProposer);
+    clock.runEveryEpoch(this.prepareBeaconProposer);
   }
 
   private prepareBeaconProposer = async (epoch: Epoch): Promise<void> => {
@@ -49,6 +49,6 @@ export class PrepareBeaconProposerService {
   };
 
   private getProposerData(indices: number[]): ProposerPreparationData[] {
-    return indices.map((validatorIndex) => ({validatorIndex, feeRecipient: this.defaultSuggestedFeeRecipient}));
+    return indices.map((validatorIndex) => ({validatorIndex, feeRecipient: this.defaultFeeRecipient}));
   }
 }

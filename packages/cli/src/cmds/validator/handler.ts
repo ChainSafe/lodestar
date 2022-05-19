@@ -11,7 +11,7 @@ import {onGracefulShutdown, parseFeeRecipient} from "../../util";
 import {getVersionData} from "../../util/version";
 import {getBeaconPaths} from "../beacon/paths";
 import {getValidatorPaths} from "./paths";
-import {IValidatorCliArgs, validatorMetricsDefaultOptions, defaultDefaultSuggestedFeeRecipient} from "./options";
+import {IValidatorCliArgs, validatorMetricsDefaultOptions, defaultDefaultFeeRecipient} from "./options";
 import {getLocalSecretKeys, getExternalSigners, groupExternalSignersByUrl} from "./keys";
 
 /**
@@ -21,9 +21,7 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
   await initBLS();
 
   const graffiti = args.graffiti || getDefaultGraffiti();
-  const defaultSuggestedFeeRecipient = parseFeeRecipient(
-    args.defaultSuggestedFeeRecipient ?? defaultDefaultSuggestedFeeRecipient
-  );
+  const defaultFeeRecipient = parseFeeRecipient(args.defaultFeeRecipient ?? defaultDefaultFeeRecipient);
 
   const validatorPaths = getValidatorPaths(args);
   const beaconPaths = getBeaconPaths(args);
@@ -132,7 +130,7 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
       signers,
       graffiti,
       afterBlockDelaySlotFraction: args.afterBlockDelaySlotFraction,
-      defaultSuggestedFeeRecipient,
+      defaultFeeRecipient,
     },
     controller.signal,
     metrics

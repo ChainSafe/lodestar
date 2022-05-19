@@ -1,5 +1,5 @@
 import {AbortSignal} from "@chainsafe/abort-controller";
-import {bellatrix, RootHex, Root, Epoch, ExecutionAddress, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {bellatrix, RootHex, Root} from "@chainsafe/lodestar-types";
 import {BYTES_PER_LOGS_BLOOM} from "@chainsafe/lodestar-params";
 import {fromHex} from "@chainsafe/lodestar-utils";
 
@@ -22,9 +22,7 @@ import {
   PayloadId,
   PayloadAttributes,
   ApiPayloadAttributes,
-  ProposerPreparationData,
 } from "./interface";
-import {MapDef} from "../util/map";
 
 export type ExecutionEngineHttpOpts = {
   urls: string[];
@@ -36,10 +34,8 @@ export type ExecutionEngineHttpOpts = {
    * +-5 seconds interval.
    */
   jwtSecretHex?: string;
-  defaultSuggestedFeeRecipientHex?: string;
 };
 
-export const defaultDefaultSuggestedFeeRecipient = "0x0000000000000000000000000000000000000000";
 export const defaultExecutionEngineHttpOpts: ExecutionEngineHttpOpts = {
   /**
    * By default ELs host engine api on an auth protected 8551 port, would need a jwt secret to be
@@ -48,7 +44,6 @@ export const defaultExecutionEngineHttpOpts: ExecutionEngineHttpOpts = {
    */
   urls: ["http://localhost:8551"],
   timeout: 12000,
-  defaultSuggestedFeeRecipientHex: defaultDefaultSuggestedFeeRecipient,
 };
 
 /**
@@ -61,15 +56,9 @@ export const defaultExecutionEngineHttpOpts: ExecutionEngineHttpOpts = {
  * https://github.com/ethereum/execution-apis/blob/v1.0.0-alpha.1/src/engine/interop/specification.md
  */
 export class ExecutionEngineHttp implements IExecutionEngine {
-  readonly proposers: MapDef<ValidatorIndex, {epoch: Epoch; feeRecipient: ExecutionAddress}>;
   private readonly rpc: IJsonRpcHttpClient;
 
   constructor(opts: ExecutionEngineHttpOpts, signal: AbortSignal, rpc?: IJsonRpcHttpClient) {
-    const feeRecipient = fromHex(opts.defaultSuggestedFeeRecipientHex ?? defaultDefaultSuggestedFeeRecipient);
-    this.proposers = new MapDef<ValidatorIndex, {epoch: Epoch; feeRecipient: ExecutionAddress}>(() => ({
-      epoch: 0,
-      feeRecipient,
-    }));
     this.rpc =
       rpc ??
       new JsonRpcHttpClient(opts.urls, {
@@ -281,12 +270,6 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     });
 
     return parseExecutionPayload(executionPayloadRpc);
-  }
-
-  async updateProposerPreparation(epoch: Epoch, proposers: ProposerPreparationData[]): Promise<void> {
-    proposers.forEach(({validatorIndex, feeRecipient}) => {
-      this.proposers.set(validatorIndex, {epoch, feeRecipient});
-    });
   }
 }
 

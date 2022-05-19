@@ -1,17 +1,18 @@
+import {defaultOptions} from "@chainsafe/lodestar";
 import {ICliCommandOptions, ILogArgs} from "../../util";
 import {defaultValidatorPaths} from "./paths";
 import {accountValidatorOptions, IAccountValidatorArgs} from "../account/cmds/validator/options";
 import {logOptions, beaconPathsOptions} from "../beacon/options";
 import {IBeaconPaths} from "../beacon/paths";
 import {KeymanagerArgs, keymanagerOptions} from "../../options/keymanagerOptions";
-import {defaultDefaultSuggestedFeeRecipient} from "@chainsafe/lodestar";
 
-export {defaultDefaultSuggestedFeeRecipient};
 export const validatorMetricsDefaultOptions = {
   enabled: false,
   port: 5064,
   address: "127.0.0.1",
 };
+
+export const defaultDefaultFeeRecipient = defaultOptions.chain.defaultFeeRecipient;
 
 export type IValidatorCliArgs = IAccountValidatorArgs &
   ILogArgs & {
@@ -21,7 +22,7 @@ export type IValidatorCliArgs = IAccountValidatorArgs &
     force: boolean;
     graffiti: string;
     afterBlockDelaySlotFraction?: number;
-    defaultSuggestedFeeRecipient?: string;
+    defaultFeeRecipient?: string;
 
     importKeystoresPath?: string[];
     importKeystoresPassword?: string;
@@ -72,10 +73,10 @@ export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
     type: "number",
   },
 
-  defaultSuggestedFeeRecipient: {
+  defaultFeeRecipient: {
     description:
       "Specify fee recipient default for collecting the EL block fees and rewards (a hex string representing 20 bytes address: ^0x[a-fA-F0-9]{40}$). It would be possible (WIP) to override this per validator key using config or keymanager API.",
-    default: defaultDefaultSuggestedFeeRecipient,
+    defaultDescription: defaultDefaultFeeRecipient,
     type: "string",
   },
 

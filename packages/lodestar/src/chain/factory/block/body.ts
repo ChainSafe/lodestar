@@ -90,7 +90,7 @@ export async function assembleBody(
     // - Call prepareExecutionPayload again if parameters change
 
     const finalizedBlockHash = chain.forkChoice.getFinalizedBlock().executionPayloadBlockHash;
-    const feeRecipient = chain.executionEngine.proposers.getOrDefault(proposerIndex).feeRecipient;
+    const feeRecipient = chain.beaconProposerCache.getOrDefault(proposerIndex).feeRecipient;
 
     // prepareExecutionPayload will throw error via notifyForkchoiceUpdate if
     // the EL returns Syncing on this request to prepare a payload
