@@ -11,7 +11,7 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "0.36.0",
+  "version": "0.36.1-beta.0",
   "main": "lib/index.js",
   "files": [
     "lib/**/*.d.ts",
@@ -74,7 +74,7 @@
     "@chainsafe/lodestar-params": "^0.36.0",
     "@chainsafe/lodestar-types": "^0.36.0",
     "@chainsafe/lodestar-utils": "^0.36.0",
-    "@chainsafe/lodestar-validator": "^0.36.0",
+    "@chainsafe/lodestar-validator": "^0.36.1-beta.0",
     "@chainsafe/persistent-merkle-tree": "^0.4.1",
     "@chainsafe/snappy-stream": "5.1.1",
     "@chainsafe/ssz": "^0.9.1",
