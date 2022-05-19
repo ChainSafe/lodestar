@@ -25,6 +25,7 @@ export async function validateGossipAggregateAndProof(
 
   const aggregateAndProof = signedAggregateAndProof.message;
   const aggregate = aggregateAndProof.aggregate;
+  const {aggregationBits} = aggregate;
   const attData = aggregate.data;
   const attDataRoot = toHexString(ssz.phase0.AttestationData.hashTreeRoot(attData));
   const attSlot = attData.slot;
@@ -53,6 +54,16 @@ export async function validateGossipAggregateAndProof(
     });
   }
 
+  // _[IGNORE]_ A valid aggregate attestation defined by `hash_tree_root(aggregate.data)` whose `aggregation_bits`
+  // is a non-strict superset has _not_ already been seen.
+  if (chain.seenAggregatedAttestations.isKnown(targetEpoch, attDataRoot, aggregationBits)) {
+    throw new AttestationError(GossipAction.IGNORE, {
+      code: AttestationErrorCode.ATTESTING_INDICES_ALREADY_KNOWN,
+      targetEpoch,
+      aggregateRoot: attDataRoot,
+    });
+  }
+
   // [IGNORE] The block being voted for (attestation.data.beacon_block_root) has been seen (via both gossip
   // and non-gossip sources) (a client MAY queue attestations for processing once block is retrieved).
   const attHeadBlock = verifyHeadBlockAndTargetRoot(chain, attData.beaconBlockRoot, attTarget.root, attEpoch);
@@ -77,16 +88,6 @@ export async function validateGossipAggregateAndProof(
     data: attData,
     signature: aggregate.signature,
   };
-
-  // _[IGNORE]_ A valid aggregate attestation defined by `hash_tree_root(aggregate.data)` whose `aggregation_bits`
-  // is a non-strict superset has _not_ already been seen.
-  if (chain.seenAggregatedAttestations.isKnown(targetEpoch, attDataRoot, attestingIndices)) {
-    throw new AttestationError(GossipAction.IGNORE, {
-      code: AttestationErrorCode.ATTESTING_INDICES_ALREADY_KNOWN,
-      targetEpoch,
-      aggregateRoot: attDataRoot,
-    });
-  }
 
   // TODO: Check this before regen
   // [REJECT] The attestation has participants -- that is,
@@ -134,7 +135,12 @@ export async function validateGossipAggregateAndProof(
   }
 
   chain.seenAggregators.add(targetEpoch, aggregatorIndex);
-  chain.seenAggregatedAttestations.add(targetEpoch, attDataRoot, attestingIndices, false);
+  chain.seenAggregatedAttestations.add(
+    targetEpoch,
+    attDataRoot,
+    {aggregationBits, trueBitCount: attestingIndices.length},
+    false
+  );
 
   return {indexedAttestation, committeeIndices};
 }

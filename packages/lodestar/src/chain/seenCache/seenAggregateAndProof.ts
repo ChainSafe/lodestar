@@ -1,5 +1,6 @@
 import {Epoch, RootHex} from "@chainsafe/lodestar-types";
-import {isNonStrictSuperSet} from "../../util/array";
+import {BitArray} from "@chainsafe/ssz";
+import {IntersectResult, intersectUint8Arrays} from "../../util/bitArray";
 import {MapDef} from "../../util/map";
 
 /**
@@ -8,7 +9,10 @@ import {MapDef} from "../../util/map";
  */
 const MAX_EPOCHS_IN_CACHE = 2;
 
-type AttestingIndices = number[];
+type AggregationInfo = {
+  aggregationBits: BitArray;
+  trueBitCount: number;
+};
 
 /**
  * Although there are up to TARGET_AGGREGATORS_PER_COMMITTEE (16 for mainnet) AggregateAndProof messages per slot,
@@ -17,31 +21,45 @@ type AttestingIndices = number[];
  * This is used to address the following spec in p2p-interface gossipsub:
  * _[IGNORE]_ A valid aggregate attestation defined by `hash_tree_root(aggregate.data)` whose `aggregation_bits` is a
  * non-strict superset has _not_ already been seen.
+ *
+ * We have AggregatedAttestationPool op pool, however aggregated attestations are not added to that place while this does.
  */
 export class SeenAggregatedAttestations {
   /**
    * Array of AttestingIndices by same attestation data root by epoch.
    * Note that there are at most TARGET_AGGREGATORS_PER_COMMITTEE (16) per attestation data.
    * */
-  private readonly aggregateRootsByEpoch = new MapDef<Epoch, MapDef<RootHex, AttestingIndices[]>>(
-    () => new MapDef<RootHex, AttestingIndices[]>(() => [])
+  private readonly aggregateRootsByEpoch = new MapDef<Epoch, MapDef<RootHex, AggregationInfo[]>>(
+    () => new MapDef<RootHex, AggregationInfo[]>(() => [])
   );
   private lowestPermissibleEpoch: Epoch = 0;
 
-  isKnown(targetEpoch: Epoch, attDataRoot: RootHex, attestingIndices: AttestingIndices): boolean {
+  isKnown(targetEpoch: Epoch, attDataRoot: RootHex, aggregationBits: BitArray): boolean {
     const seenAttestingIndicesArr = this.aggregateRootsByEpoch.getOrDefault(targetEpoch).getOrDefault(attDataRoot);
-    return seenAttestingIndicesArr.some((seenAttestingIndices) =>
-      isNonStrictSuperSet(seenAttestingIndices, attestingIndices)
+    // seenAttestingIndicesArr is sorted by trueBitCount desc
+    return seenAttestingIndicesArr.some((seenAggregationInfo) =>
+      isNonStrictSuperSet(seenAggregationInfo.aggregationBits, aggregationBits)
     );
   }
 
-  add(targetEpoch: Epoch, attDataRoot: RootHex, attestingIndices: AttestingIndices, checkIsKnown: boolean): void {
-    if (checkIsKnown && this.isKnown(targetEpoch, attDataRoot, attestingIndices)) {
+  add(targetEpoch: Epoch, attDataRoot: RootHex, newItem: AggregationInfo, checkIsKnown: boolean): void {
+    const {aggregationBits, trueBitCount} = newItem;
+    if (checkIsKnown && this.isKnown(targetEpoch, attDataRoot, aggregationBits)) {
       return;
     }
 
-    const seenAttestingIndicesArr = this.aggregateRootsByEpoch.getOrDefault(targetEpoch).getOrDefault(attDataRoot);
-    seenAttestingIndicesArr.push(attestingIndices);
+    const seenAggregationInfoArr = this.aggregateRootsByEpoch.getOrDefault(targetEpoch).getOrDefault(attDataRoot);
+    // make sure seenAggregationInfoArr is always in desc order based on trueBitCount so that isKnown can be faster
+    let found = false;
+    for (let i = 0; i < seenAggregationInfoArr.length; i++) {
+      if (trueBitCount >= seenAggregationInfoArr[i].trueBitCount) {
+        seenAggregationInfoArr.splice(i, 0, newItem);
+        found = true;
+        break;
+      }
+    }
+
+    if (!found) seenAggregationInfoArr.push(newItem);
   }
 
   prune(currentEpoch: Epoch): void {
@@ -52,4 +70,9 @@ export class SeenAggregatedAttestations {
       }
     }
   }
+}
+
+function isNonStrictSuperSet(superSet: BitArray, toCheck: BitArray): boolean {
+  const intersectionResult = intersectUint8Arrays(superSet.uint8Array, toCheck.uint8Array);
+  return intersectionResult === IntersectResult.Superset || intersectionResult === IntersectResult.Equal;
 }

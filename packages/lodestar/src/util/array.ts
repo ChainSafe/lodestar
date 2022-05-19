@@ -126,25 +126,3 @@ export class LinkedList<T> {
     return arr;
   }
 }
-
-/**
- * Check if an array is super set of another, both array should be in a consistent order,
- * for example order of CommitteeIndices.
- * This loops exactly 1 time through the `superSet` and at most all item in `arr`.
- */
-export function isNonStrictSuperSet<T>(superSet: T[], arr: T[]): boolean {
-  if (superSet.length < arr.length) return false;
-
-  let arrIndex = 0;
-  for (const superSetItem of superSet) {
-    if (arrIndex >= arr.length) {
-      break;
-    }
-
-    if (superSetItem === arr[arrIndex]) {
-      arrIndex++;
-    }
-  }
-
-  return arrIndex >= arr.length;
-}

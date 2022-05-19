@@ -123,7 +123,12 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
         const targetEpoch = attestation.data.target.epoch;
 
         const attDataRoot = toHexString(ssz.phase0.AttestationData.hashTreeRoot(indexedAttestation.data));
-        chain.seenAggregatedAttestations.add(targetEpoch, attDataRoot, indexedAttestation.attestingIndices, true);
+        chain.seenAggregatedAttestations.add(
+          targetEpoch,
+          attDataRoot,
+          {aggregationBits: attestation.aggregationBits, trueBitCount: indexedAttestation.attestingIndices.length},
+          true
+        );
         // Duplicated logic from fork-choice onAttestation validation logic.
         // Attestations outside of this range will be dropped as Errors, so no need to import
         if (targetEpoch <= currentEpoch && targetEpoch >= currentEpoch - FORK_CHOICE_ATT_EPOCH_LIMIT) {

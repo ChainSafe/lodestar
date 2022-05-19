@@ -1,6 +1,6 @@
 import {expect} from "chai";
 
-import {findLastIndex, isNonStrictSuperSet, LinkedList} from "../../../src/util/array";
+import {findLastIndex, LinkedList} from "../../../src/util/array";
 
 describe("findLastIndex", () => {
   it("should return the last index that matches a predicate", () => {
@@ -72,31 +72,4 @@ describe("LinkedList", () => {
     expect(list.toArray()).to.be.deep.equal([]);
     expect(list.length).to.be.equal(0);
   });
-});
-
-describe("isNonStrictSuperSet", () => {
-  const superSet = [1, 3, 5];
-  const toName = (arr: number[]): string => {
-    return "[" + arr.join(",") + "]";
-  };
-  const testCases: {arr: number[]; expected: boolean}[] = [
-    {arr: [1, 2, 3, 4], expected: false},
-    {arr: [1, 2, 3], expected: false},
-    {arr: [1, 6], expected: false},
-    {arr: [4], expected: false},
-    {arr: [], expected: true},
-    {arr: [1], expected: true},
-    {arr: [1, 3], expected: true},
-    {arr: [1, 5], expected: true},
-    {arr: [3, 5], expected: true},
-    {arr: [1, 3, 5], expected: true},
-  ];
-
-  for (const {arr, expected} of testCases) {
-    it(`${toName(superSet)} ${expected ? "should be super set of" : "should NOT be superset of"} ${toName(
-      arr
-    )}`, () => {
-      expect(isNonStrictSuperSet(superSet, arr)).to.be.equal(expected);
-    });
-  }
 });

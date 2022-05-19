@@ -3,7 +3,7 @@ import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {IBeaconChain} from "../../../../src/chain";
 import {AttestationErrorCode} from "../../../../src/chain/errors";
-import {getCommitteeIndices, validateGossipAggregateAndProof} from "../../../../src/chain/validation";
+import {validateGossipAggregateAndProof} from "../../../../src/chain/validation";
 import {expectRejectedWithLodestarError} from "../../../utils/errors";
 import {generateTestCachedBeaconStateOnlyValidators} from "@chainsafe/lodestar-beacon-state-transition/test/perf/util";
 import {memoOnce} from "../../../utils/cache";
@@ -67,13 +67,13 @@ describe("chain / validation / aggregateAndProof", () => {
 
   it("ATTESTING_INDICES_ALREADY_KNOWN", async () => {
     const {chain, signedAggregateAndProof} = getValidData();
+    const {aggregationBits} = signedAggregateAndProof.message.aggregate;
     const attData = signedAggregateAndProof.message.aggregate.data;
-    const committeeIndices = getCommitteeIndices(getState(), attData.slot, attData.index);
     // Register attester as already seen
     chain.seenAggregatedAttestations.add(
       attData.target.epoch,
       toHexString(ssz.phase0.AttestationData.hashTreeRoot(attData)),
-      committeeIndices,
+      {aggregationBits, trueBitCount: aggregationBits.getTrueBitIndexes().length},
       false
     );
 
