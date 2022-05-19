@@ -77,7 +77,7 @@ describe("chain / validation / aggregateAndProof", () => {
       false
     );
 
-    await expectError(chain, signedAggregateAndProof, AttestationErrorCode.ATTESTING_INDICES_ALREADY_KNOWN);
+    await expectError(chain, signedAggregateAndProof, AttestationErrorCode.ATTESTERS_ALREADY_KNOWN);
   });
 
   it("AGGREGATOR_ALREADY_KNOWN", async () => {

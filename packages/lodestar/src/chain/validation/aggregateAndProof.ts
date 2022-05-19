@@ -58,7 +58,7 @@ export async function validateGossipAggregateAndProof(
   // is a non-strict superset has _not_ already been seen.
   if (chain.seenAggregatedAttestations.isKnown(targetEpoch, attDataRoot, aggregationBits)) {
     throw new AttestationError(GossipAction.IGNORE, {
-      code: AttestationErrorCode.ATTESTING_INDICES_ALREADY_KNOWN,
+      code: AttestationErrorCode.ATTESTERS_ALREADY_KNOWN,
       targetEpoch,
       aggregateRoot: attDataRoot,
     });

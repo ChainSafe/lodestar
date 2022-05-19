@@ -1,6 +1,6 @@
 import {Epoch, RootHex} from "@chainsafe/lodestar-types";
 import {BitArray} from "@chainsafe/ssz";
-import {IntersectResult, intersectUint8Arrays} from "../../util/bitArray";
+import {isNonStrictSuperSet} from "../../util/bitArray";
 import {MapDef} from "../../util/map";
 
 /**
@@ -9,7 +9,7 @@ import {MapDef} from "../../util/map";
  */
 const MAX_EPOCHS_IN_CACHE = 2;
 
-type AggregationInfo = {
+export type AggregationInfo = {
   aggregationBits: BitArray;
   trueBitCount: number;
 };
@@ -35,31 +35,21 @@ export class SeenAggregatedAttestations {
   private lowestPermissibleEpoch: Epoch = 0;
 
   isKnown(targetEpoch: Epoch, attDataRoot: RootHex, aggregationBits: BitArray): boolean {
-    const seenAttestingIndicesArr = this.aggregateRootsByEpoch.getOrDefault(targetEpoch).getOrDefault(attDataRoot);
+    const seenAggregationInfoArr = this.aggregateRootsByEpoch.getOrDefault(targetEpoch).getOrDefault(attDataRoot);
     // seenAttestingIndicesArr is sorted by trueBitCount desc
-    return seenAttestingIndicesArr.some((seenAggregationInfo) =>
+    return seenAggregationInfoArr.some((seenAggregationInfo) =>
       isNonStrictSuperSet(seenAggregationInfo.aggregationBits, aggregationBits)
     );
   }
 
   add(targetEpoch: Epoch, attDataRoot: RootHex, newItem: AggregationInfo, checkIsKnown: boolean): void {
-    const {aggregationBits, trueBitCount} = newItem;
+    const {aggregationBits} = newItem;
     if (checkIsKnown && this.isKnown(targetEpoch, attDataRoot, aggregationBits)) {
       return;
     }
 
     const seenAggregationInfoArr = this.aggregateRootsByEpoch.getOrDefault(targetEpoch).getOrDefault(attDataRoot);
-    // make sure seenAggregationInfoArr is always in desc order based on trueBitCount so that isKnown can be faster
-    let found = false;
-    for (let i = 0; i < seenAggregationInfoArr.length; i++) {
-      if (trueBitCount >= seenAggregationInfoArr[i].trueBitCount) {
-        seenAggregationInfoArr.splice(i, 0, newItem);
-        found = true;
-        break;
-      }
-    }
-
-    if (!found) seenAggregationInfoArr.push(newItem);
+    insertDesc(seenAggregationInfoArr, newItem);
   }
 
   prune(currentEpoch: Epoch): void {
@@ -72,7 +62,19 @@ export class SeenAggregatedAttestations {
   }
 }
 
-function isNonStrictSuperSet(superSet: BitArray, toCheck: BitArray): boolean {
-  const intersectionResult = intersectUint8Arrays(superSet.uint8Array, toCheck.uint8Array);
-  return intersectionResult === IntersectResult.Superset || intersectionResult === IntersectResult.Equal;
+/**
+ * Make sure seenAggregationInfoArr is always in desc order based on trueBitCount so that isKnown can be faster
+ */
+export function insertDesc(seenAggregationInfoArr: AggregationInfo[], newItem: AggregationInfo): void {
+  const {trueBitCount} = newItem;
+  let found = false;
+  for (let i = 0; i < seenAggregationInfoArr.length; i++) {
+    if (trueBitCount >= seenAggregationInfoArr[i].trueBitCount) {
+      seenAggregationInfoArr.splice(i, 0, newItem);
+      found = true;
+      break;
+    }
+  }
+
+  if (!found) seenAggregationInfoArr.push(newItem);
 }

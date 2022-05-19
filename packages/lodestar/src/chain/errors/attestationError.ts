@@ -38,9 +38,9 @@ export enum AttestationErrorCode {
    */
   AGGREGATOR_ALREADY_KNOWN = "ATTESTATION_ERROR_AGGREGATOR_ALREADY_KNOWN",
   /**
-   * All of the attesting indices are known, we refuse to process subset of attesting indices since it brings no value.
+   * All of the attesters are known, we refuse to process subset of attesting indices since it brings no value.
    */
-  ATTESTING_INDICES_ALREADY_KNOWN = "ATTESTATION_ERROR_ATTESTING_INDICES_ALREADY_KNOWN",
+  ATTESTERS_ALREADY_KNOWN = "ATTESTATION_ERROR_ATTESTERS_ALREADY_KNOWN",
   /**
    * The aggregator index is higher than the maximum possible validator count.
    */
@@ -137,7 +137,7 @@ export type AttestationErrorType =
   | {code: AttestationErrorCode.AGGREGATOR_PUBKEY_UNKNOWN; aggregatorIndex: ValidatorIndex}
   | {code: AttestationErrorCode.ATTESTATION_ALREADY_KNOWN; targetEpoch: Epoch; validatorIndex: number}
   | {code: AttestationErrorCode.AGGREGATOR_ALREADY_KNOWN; targetEpoch: Epoch; aggregatorIndex: number}
-  | {code: AttestationErrorCode.ATTESTING_INDICES_ALREADY_KNOWN; targetEpoch: Epoch; aggregateRoot: RootHex}
+  | {code: AttestationErrorCode.ATTESTERS_ALREADY_KNOWN; targetEpoch: Epoch; aggregateRoot: RootHex}
   | {code: AttestationErrorCode.AGGREGATOR_INDEX_TOO_HIGH; aggregatorIndex: ValidatorIndex}
   | {code: AttestationErrorCode.UNKNOWN_OR_PREFINALIZED_BEACON_BLOCK_ROOT; root: RootHex}
   | {code: AttestationErrorCode.BAD_TARGET_EPOCH}
