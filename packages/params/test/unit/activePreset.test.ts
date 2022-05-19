@@ -6,7 +6,6 @@ import {setActivePreset as setActivePresetLib} from "../../src/setPreset.js";
 import {expect} from "chai";
 
 describe("active preset", async () => {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-var-requires
   const exports = (await import("../../src/index.js")) as Record<string, unknown>;
   const params = {
     [PresetName.mainnet]: mainnetParams,
