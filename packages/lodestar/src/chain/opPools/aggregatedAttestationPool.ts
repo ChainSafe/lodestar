@@ -185,59 +185,6 @@ export class AggregatedAttestationPool {
     }
     return attestations;
   }
-
-  /**
-   * Get attestations to be included in a phase0 block.
-   * As we are close to altair, this is not really important, it's mainly for e2e.
-   * The performance is not great due to the different BeaconState data structure to altair.
-   */
-  private getParticipationPhase0(state: CachedBeaconStateAllForks): GetParticipationFn {
-    // check for phase0 block already
-    const phase0State = state as CachedBeaconStatePhase0;
-    const stateEpoch = computeEpochAtSlot(state.slot);
-
-    const previousEpochParticipants = extractParticipation(
-      phase0State.previousEpochAttestations.getAllReadonly(),
-      state
-    );
-    const currentEpochParticipants = extractParticipation(phase0State.currentEpochAttestations.getAllReadonly(), state);
-
-    return (epoch: Epoch) => {
-      return epoch === stateEpoch
-        ? currentEpochParticipants
-        : epoch === stateEpoch - 1
-        ? previousEpochParticipants
-        : null;
-    };
-  }
-
-  /**
-   * Get attestations to be included in an altair block.
-   * Attestations are sorted by inclusion distance then number of attesters.
-   * Attestations should pass the validation when processing attestations in beacon-state-transition.
-   */
-  private getParticipationAltair(state: CachedBeaconStateAllForks): GetParticipationFn {
-    // check for altair block already
-    const altairState = state as CachedBeaconStateAltair;
-    const stateEpoch = computeEpochAtSlot(state.slot);
-    const previousParticipation = altairState.previousEpochParticipation.getAll();
-    const currentParticipation = altairState.currentEpochParticipation.getAll();
-
-    return (epoch: Epoch, committee: number[]) => {
-      const participationStatus =
-        epoch === stateEpoch ? currentParticipation : epoch === stateEpoch - 1 ? previousParticipation : null;
-
-      if (participationStatus === null) return null;
-
-      const seenValidatorIndices = new Set<ValidatorIndex>();
-      for (const validatorIndex of committee) {
-        if (flagIsTimelySource(participationStatus[validatorIndex])) {
-          seenValidatorIndices.add(validatorIndex);
-        }
-      }
-      return seenValidatorIndices;
-    };
-  }
 }
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -437,14 +384,6 @@ export function extractParticipation(
     }
   }
   return allParticipants;
-}
-
-export function intersection(bigSet: Set<ValidatorIndex>, smallSet: Set<ValidatorIndex>): number {
-  let numIntersection = 0;
-  for (const validatorIndex of smallSet) {
-    if (bigSet.has(validatorIndex)) numIntersection++;
-  }
-  return numIntersection;
 }
 
 /**
