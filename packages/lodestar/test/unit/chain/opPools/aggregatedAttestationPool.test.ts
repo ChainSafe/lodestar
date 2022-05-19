@@ -9,6 +9,7 @@ import {ssz, phase0} from "@chainsafe/lodestar-types";
 import {
   AggregatedAttestationPool,
   aggregateInto,
+  countNotSeenAttester,
   getParticipationFn,
   MatchingDataAttestationGroup,
 } from "../../../../src/chain/opPools/aggregatedAttestationPool";
@@ -33,7 +34,7 @@ describe("AggregatedAttestationPool", function () {
   const originalState = generateCachedState({slot: currentSlot + 1}, config, true);
   let altairState: CachedBeaconStateAllForks;
   const attestation = generateAttestation({data: {slot: currentSlot, target: {epoch: currentEpoch}}});
-  const committee = [0, 1, 2, 3];
+  const committee = [0, 1, 2, 3, 4, 5, 6, 7];
 
   before(async function () {
     await initBLS();
@@ -49,7 +50,7 @@ describe("AggregatedAttestationPool", function () {
     // 0 and 1 are fully participated
     const participationFn = getParticipationFn(altairState);
     const participation = participationFn(currentEpoch, committee);
-    expect(participation).to.deep.equal(new Set([0, 1]), "Wrong participation set");
+    expect(participation).to.deep.equal([0, 1], "Wrong participation set");
   });
 
   // previousEpochParticipation and currentEpochParticipation is created inside generateCachedState
@@ -63,7 +64,7 @@ describe("AggregatedAttestationPool", function () {
   for (const {name, attestingBits, isReturned} of testCases) {
     it(name, function () {
       const aggregationBits = new BitArray(new Uint8Array(attestingBits), 8);
-      pool.add({...attestation, aggregationBits}, aggregationBits.getTrueBitIndexes().length, committee);
+      pool.add({...attestation, aggregationBits}, aggregationBits.intersectValues(committee), committee);
       expect(pool.getAttestationsForBlock(altairState).length > 0).to.equal(isReturned, "Wrong attestation isReturned");
     });
   }
@@ -72,7 +73,7 @@ describe("AggregatedAttestationPool", function () {
     altairState.currentJustifiedCheckpoint.epoch = 1000;
     // all attesters are not seen
     const attestingIndices = [2, 3];
-    pool.add(attestation, attestingIndices.length, committee);
+    pool.add(attestation, attestingIndices, committee);
     expect(pool.getAttestationsForBlock(altairState)).to.be.deep.equal([], "no attestation since incorrect source");
   });
 });
@@ -126,9 +127,10 @@ describe("MatchingDataAttestationGroup.add()", () => {
         })
       );
 
-      const results = attestations.map((attestation) =>
-        attestationGroup.add({attestation, trueBitsCount: attestation.aggregationBits.getTrueBitIndexes().length})
-      );
+      const results = attestations.map((attestation) => {
+        const attestingIndices = attestation.aggregationBits.intersectValues(committee);
+        return attestationGroup.add({attestation, attestingIndices, trueBitsCount: attestingIndices.length});
+      });
 
       expect(results).to.deep.equal(
         attestationsToAdd.map((e) => e.res),
@@ -193,11 +195,12 @@ describe("MatchingDataAttestationGroup.getAttestationsForBlock", () => {
       );
 
       for (const attestation of attestations) {
-        attestationGroup.add({attestation, trueBitsCount: attestation.aggregationBits.getTrueBitIndexes().length});
+        const attestingIndices = attestation.aggregationBits.intersectValues(committee);
+        attestationGroup.add({attestation, attestingIndices, trueBitsCount: attestingIndices.length});
       }
 
       const indices = new BitArray(new Uint8Array(seenAttestingBits), 8).intersectValues(committee);
-      const attestationsForBlock = attestationGroup.getAttestationsForBlock(new Set(indices));
+      const attestationsForBlock = attestationGroup.getAttestationsForBlock(indices);
 
       for (const [i, {notSeenAttesterCount}] of attestationsToAdd.entries()) {
         const attestation = attestationsForBlock.find((a) => a.attestation === attestations[i]);
@@ -229,8 +232,8 @@ describe("MatchingDataAttestationGroup aggregateInto", function () {
   });
 
   it("should aggregate 2 attestations", () => {
-    const attWithIndex1 = {attestation: attestation1, trueBitsCount: 1};
-    const attWithIndex2 = {attestation: attestation2, trueBitsCount: 1};
+    const attWithIndex1 = {attestation: attestation1, attestingIndices: [1], trueBitsCount: 1};
+    const attWithIndex2 = {attestation: attestation2, attestingIndices: [0], trueBitsCount: 1};
     aggregateInto(attWithIndex1, attWithIndex2);
 
     expect(renderBitArray(attWithIndex1.attestation.aggregationBits)).to.be.deep.equal(
@@ -242,4 +245,33 @@ describe("MatchingDataAttestationGroup aggregateInto", function () {
       aggregatedSignature.verifyAggregate([sk1.toPublicKey(), sk2.toPublicKey()], attestationDataRoot)
     ).to.be.equal(true, "invalid aggregated signature");
   });
+});
+
+describe("countNotSeenAttester", function () {
+  const committee = [10, 11, 12, 13, 14, 15, 16, 17];
+  const testCases: {
+    committee: number[];
+    attestingIndices: number[];
+    seenAttestingIndices: number[];
+    notSeenCount: number;
+  }[] = [
+    {
+      committee,
+      attestingIndices: [11, 12, 13, 14, 15, 16, 17],
+      seenAttestingIndices: [10, 14, 15, 16, 17],
+      notSeenCount: 3,
+    },
+    {committee, attestingIndices: [12, 14, 16], seenAttestingIndices: [10, 14, 15, 16, 17], notSeenCount: 1},
+    {committee, attestingIndices: [10, 17], seenAttestingIndices: [14, 16], notSeenCount: 2},
+    {committee, attestingIndices: [14, 16], seenAttestingIndices: [10, 17], notSeenCount: 2},
+  ];
+
+  for (const {committee, attestingIndices, seenAttestingIndices, notSeenCount} of testCases) {
+    it(`attestingIndices ${attestingIndices.join(",")}, seenAttestingIndices ${seenAttestingIndices.join(",")}`, () => {
+      expect(countNotSeenAttester(committee, attestingIndices, seenAttestingIndices)).to.be.equal(
+        notSeenCount,
+        `Not Seen Count should be ${notSeenCount}`
+      );
+    });
+  }
 });

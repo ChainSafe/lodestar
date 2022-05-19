@@ -24,7 +24,7 @@ type DataRootHex = string;
 
 type AttestationWithScore = {attestation: phase0.Attestation; score: number};
 
-type GetParticipationFn = (epoch: Epoch, committee: number[]) => Set<number> | null;
+type GetParticipationFn = (epoch: Epoch, committee: number[]) => ValidatorIndex[] | null;
 
 /**
  * Limit the max attestations with the same AttestationData.
@@ -55,7 +55,8 @@ export class AggregatedAttestationPool {
   );
   private lowestPermissibleSlot = 0;
 
-  add(attestation: phase0.Attestation, attestingIndicesCount: number, committee: ValidatorIndex[]): InsertOutcome {
+  /** attestingIndices should be in the committee order */
+  add(attestation: phase0.Attestation, attestingIndices: ValidatorIndex[], committee: ValidatorIndex[]): InsertOutcome {
     const slot = attestation.data.slot;
     const lowestPermissibleSlot = this.lowestPermissibleSlot;
 
@@ -76,7 +77,8 @@ export class AggregatedAttestationPool {
 
     return attestationGroup.add({
       attestation,
-      trueBitsCount: attestingIndicesCount,
+      attestingIndices,
+      trueBitsCount: attestingIndices.length,
     });
   }
 
@@ -185,64 +187,13 @@ export class AggregatedAttestationPool {
     }
     return attestations;
   }
-
-  /**
-   * Get attestations to be included in a phase0 block.
-   * As we are close to altair, this is not really important, it's mainly for e2e.
-   * The performance is not great due to the different BeaconState data structure to altair.
-   */
-  private getParticipationPhase0(state: CachedBeaconStateAllForks): GetParticipationFn {
-    // check for phase0 block already
-    const phase0State = state as CachedBeaconStatePhase0;
-    const stateEpoch = computeEpochAtSlot(state.slot);
-
-    const previousEpochParticipants = extractParticipation(
-      phase0State.previousEpochAttestations.getAllReadonly(),
-      state
-    );
-    const currentEpochParticipants = extractParticipation(phase0State.currentEpochAttestations.getAllReadonly(), state);
-
-    return (epoch: Epoch) => {
-      return epoch === stateEpoch
-        ? currentEpochParticipants
-        : epoch === stateEpoch - 1
-        ? previousEpochParticipants
-        : null;
-    };
-  }
-
-  /**
-   * Get attestations to be included in an altair block.
-   * Attestations are sorted by inclusion distance then number of attesters.
-   * Attestations should pass the validation when processing attestations in beacon-state-transition.
-   */
-  private getParticipationAltair(state: CachedBeaconStateAllForks): GetParticipationFn {
-    // check for altair block already
-    const altairState = state as CachedBeaconStateAltair;
-    const stateEpoch = computeEpochAtSlot(state.slot);
-    const previousParticipation = altairState.previousEpochParticipation.getAll();
-    const currentParticipation = altairState.currentEpochParticipation.getAll();
-
-    return (epoch: Epoch, committee: number[]) => {
-      const participationStatus =
-        epoch === stateEpoch ? currentParticipation : epoch === stateEpoch - 1 ? previousParticipation : null;
-
-      if (participationStatus === null) return null;
-
-      const seenValidatorIndices = new Set<ValidatorIndex>();
-      for (const validatorIndex of committee) {
-        if (flagIsTimelySource(participationStatus[validatorIndex])) {
-          seenValidatorIndices.add(validatorIndex);
-        }
-      }
-      return seenValidatorIndices;
-    };
-  }
 }
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
 interface AttestationWithIndex {
   attestation: phase0.Attestation;
+  /** attestingIndices should be in committee order */
+  attestingIndices: ValidatorIndex[];
   trueBitsCount: number;
 }
 
@@ -316,27 +267,12 @@ export class MatchingDataAttestationGroup {
     return InsertOutcome.NewData;
   }
 
-  getAttestationsForBlock(seenAttestingIndices: Set<ValidatorIndex>): AttestationNonParticipant[] {
+  /** seenAttestingIndices should be in committee order */
+  getAttestationsForBlock(seenAttestingIndices: ValidatorIndex[]): AttestationNonParticipant[] {
     const attestations: AttestationNonParticipant[] = [];
 
-    const committeeLen = this.committee.length;
-    const committeeSeenAttesting = new Array<boolean>(committeeLen);
-
-    // Intersect committee with participation only once for all attestations
-    for (let i = 0; i < committeeLen; i++) {
-      committeeSeenAttesting[i] = seenAttestingIndices.has(this.committee[i]);
-    }
-
-    for (const {attestation} of this.attestations) {
-      const {aggregationBits} = attestation;
-      let notSeenAttesterCount = 0;
-
-      for (let i = 0; i < committeeLen; i++) {
-        // TODO: Optimize aggregationBits.get() in bulk for the entire BitArray
-        if (!committeeSeenAttesting[i] && aggregationBits.get(i)) {
-          notSeenAttesterCount++;
-        }
-      }
+    for (const {attestation, attestingIndices} of this.attestations) {
+      const notSeenAttesterCount = countNotSeenAttester(this.committee, attestingIndices, seenAttestingIndices);
 
       if (notSeenAttesterCount > 0) {
         attestations.push({attestation, notSeenAttesterCount});
@@ -382,12 +318,20 @@ export function getParticipationFn(state: CachedBeaconStateAllForks): GetPartici
     );
     const currentEpochParticipants = extractParticipation(phase0State.currentEpochAttestations.getAllReadonly(), state);
 
-    return (epoch: Epoch) => {
-      return epoch === stateEpoch
-        ? currentEpochParticipants
-        : epoch === stateEpoch - 1
-        ? previousEpochParticipants
-        : null;
+    return (epoch: Epoch, committee: number[]) => {
+      const epochParticipants =
+        epoch === stateEpoch ? currentEpochParticipants : epoch === stateEpoch - 1 ? previousEpochParticipants : null;
+      if (epochParticipants) {
+        const attestingIndices: ValidatorIndex[] = [];
+        for (const index of committee) {
+          if (epochParticipants.has(index)) {
+            attestingIndices.push(index);
+          }
+        }
+        return attestingIndices;
+      } else {
+        return null;
+      }
     };
   }
 
@@ -408,10 +352,10 @@ export function getParticipationFn(state: CachedBeaconStateAllForks): GetPartici
 
       if (participationStatus === null) return null;
 
-      const seenValidatorIndices = new Set<ValidatorIndex>();
+      const seenValidatorIndices: ValidatorIndex[] = [];
       for (const validatorIndex of committee) {
         if (flagIsTimelySource(participationStatus[validatorIndex])) {
-          seenValidatorIndices.add(validatorIndex);
+          seenValidatorIndices.push(validatorIndex);
         }
       }
       return seenValidatorIndices;
@@ -439,12 +383,31 @@ export function extractParticipation(
   return allParticipants;
 }
 
-export function intersection(bigSet: Set<ValidatorIndex>, smallSet: Set<ValidatorIndex>): number {
-  let numIntersection = 0;
-  for (const validatorIndex of smallSet) {
-    if (bigSet.has(validatorIndex)) numIntersection++;
+/**
+ * Make sure all arrays are in the same committee order when calling this.
+ */
+export function countNotSeenAttester(
+  committee: ValidatorIndex[],
+  attestingIndices: ValidatorIndex[],
+  seenAttestingIndices: ValidatorIndex[]
+): number {
+  let seenIndex = 0;
+  let attIndex = 0;
+  let seenCount = 0;
+  for (let i = 0; i < committee.length; i++) {
+    if (attIndex >= attestingIndices.length || seenIndex >= seenAttestingIndices.length) break;
+    const committeeItem = committee[i];
+    const seenItem = seenAttestingIndices[seenIndex];
+    const attItem = attestingIndices[attIndex];
+
+    if (committeeItem === seenItem && committeeItem === attItem) {
+      seenCount++;
+    }
+    if (committeeItem === seenItem) seenIndex++;
+    if (committeeItem === attItem) attIndex++;
   }
-  return numIntersection;
+
+  return attestingIndices.length - seenCount;
 }
 
 /**

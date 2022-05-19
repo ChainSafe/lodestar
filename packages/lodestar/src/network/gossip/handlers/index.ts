@@ -166,11 +166,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       metrics?.registerGossipAggregatedAttestation(seenTimestampSec, signedAggregateAndProof, indexedAttestation);
       const aggregatedAttestation = signedAggregateAndProof.message.aggregate;
 
-      chain.aggregatedAttestationPool.add(
-        aggregatedAttestation,
-        indexedAttestation.attestingIndices.length,
-        committeeIndices
-      );
+      chain.aggregatedAttestationPool.add(aggregatedAttestation, indexedAttestation.attestingIndices, committeeIndices);
 
       if (!options.dontSendGossipAttestationsToForkchoice) {
         try {
