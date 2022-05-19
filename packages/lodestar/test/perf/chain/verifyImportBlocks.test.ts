@@ -14,6 +14,7 @@ import {testLogger} from "../../utils/logger";
 import {linspace} from "../../../src/util/numpy";
 import {BeaconDb} from "../../../src";
 import {LevelDbController} from "@chainsafe/lodestar-db";
+import {defaultDefaultFeeRecipient} from "../../../src/chain/options";
 
 // Define this params in `packages/beacon-state-transition/test/perf/params.ts`
 // to trigger Github actions CI cache
@@ -80,6 +81,7 @@ describe("verify+import blocks - range sync perf test", () => {
           proposerBoostEnabled: true,
           safeSlotsToImportOptimistically: SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY,
           disableArchiveOnCheckpoint: true,
+          defaultFeeRecipient: defaultDefaultFeeRecipient,
         },
         {
           config: state.config,

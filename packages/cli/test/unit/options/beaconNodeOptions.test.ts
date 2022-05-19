@@ -21,6 +21,7 @@ describe("options / beaconNodeOptions", () => {
       "chain.disableBlsBatchVerify": true,
       "chain.persistInvalidSszObjects": true,
       "chain.proposerBoostEnabled": false,
+      "chain.defaultFeeRecipient": "0xafa3f8684e54059998bc3a7b0d2b0da075154d66",
       "safe-slots-to-import-optimistically": 256,
 
       "eth1.enabled": true,
@@ -79,6 +80,7 @@ describe("options / beaconNodeOptions", () => {
         persistInvalidSszObjects: true,
         proposerBoostEnabled: false,
         safeSlotsToImportOptimistically: 256,
+        defaultFeeRecipient: "0xafa3f8684e54059998bc3a7b0d2b0da075154d66",
       },
       eth1: {
         enabled: true,
