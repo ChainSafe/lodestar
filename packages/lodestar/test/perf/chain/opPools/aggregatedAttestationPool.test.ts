@@ -77,7 +77,7 @@ function getAggregatedAttestationPool(state: CachedBeaconStateAltair): Aggregate
       const committee = state.epochCtx.getBeaconCommittee(slot, committeeIndex);
       // all attestation has full participation so getAttestationsForBlock() has to do a lot of filter
       // aggregate_and_proof messages
-      pool.add(attestation, committee, committee);
+      pool.add(attestation, committee.length, committee);
     }
   }
   return pool;
