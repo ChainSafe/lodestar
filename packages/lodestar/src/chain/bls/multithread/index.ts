@@ -14,7 +14,8 @@ import {QueueError, QueueErrorCode} from "../../../util/queue/index.js";
 import {IMetrics} from "../../../metrics/index.js";
 import {IBlsVerifier, VerifySignatureOpts} from "../interface.js";
 import {BlsWorkReq, BlsWorkResult, WorkerData, WorkResultCode} from "./types.js";
-import {chunkifyMaximizeChunkSize, getDefaultPoolSize} from "./utils.js";
+import {chunkifyMaximizeChunkSize} from "./utils.js";
+import {defaultPoolSize} from "./poolSize.js";
 import {ISignatureSet} from "@chainsafe/lodestar-beacon-state-transition";
 import {getAggregatedPubkey} from "../utils.js";
 import {verifySignatureSetsMaybeBatch} from "../maybeBatch.js";
@@ -126,7 +127,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     // THe worker is not able to deserialize from uncompressed
     // `Error: err _wrapDeserialize`
     this.format = implementation === "blst-native" ? PointFormat.uncompressed : PointFormat.compressed;
-    this.workers = this.createWorkers(implementation, getDefaultPoolSize());
+    this.workers = this.createWorkers(implementation, defaultPoolSize);
 
     this.signal.addEventListener(
       "abort",
