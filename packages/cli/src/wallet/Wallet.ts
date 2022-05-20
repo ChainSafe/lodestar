@@ -1,4 +1,4 @@
-import _ from "lodash";
+import mapValues from "lodash/mapValues";
 import bls from "@chainsafe/bls";
 import {Keystore, IKeystore} from "@chainsafe/bls-keystore";
 import {
@@ -95,7 +95,7 @@ export class Wallet extends Keystore {
     const privKeys = deriveEth2ValidatorKeys(masterKey, validatorIndex);
     const paths = eth2ValidatorPaths(validatorIndex);
 
-    const keystores = _.mapValues(privKeys, async (privKey, key) => {
+    const keystores = mapValues(privKeys, async (privKey, key) => {
       const type = key as keyof typeof privKeys;
       const publicKey = bls.SecretKey.fromBytes(privKey).toPublicKey().toBytes();
       const keystore = await Keystore.create(passwords[type], privKey, publicKey, paths[type]);
@@ -105,7 +105,7 @@ export class Wallet extends Keystore {
     // Update nextaccount last in case Keystore generation throws
     this.nextaccount += 1;
 
-    const resolved = await Promise.all(_.values(keystores));
+    const resolved = await Promise.all(Object.values(keystores));
     return {
       withdrawal: resolved[0],
       signing: resolved[1],

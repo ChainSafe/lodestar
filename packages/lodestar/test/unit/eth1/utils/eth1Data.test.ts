@@ -1,6 +1,6 @@
 import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
-import _ from "lodash";
+import pick from "lodash/pick";
 import {Root, phase0, ssz} from "@chainsafe/lodestar-types";
 import {toHex} from "@chainsafe/lodestar-utils";
 import {iteratorFromArray} from "../../../utils/interator.js";
@@ -117,7 +117,7 @@ describe("eth1 / util / getEth1DataForBlocks", function () {
 
       if (expectedEth1Data) {
         const eth1Datas = await eth1DatasPromise;
-        const eth1DatasPartial = eth1Datas.map((eth1Data) => _.pick(eth1Data, Object.keys(expectedEth1Data[0])));
+        const eth1DatasPartial = eth1Datas.map((eth1Data) => pick(eth1Data, Object.keys(expectedEth1Data[0])));
         expect(eth1DatasPartial).to.deep.equal(expectedEth1Data);
       } else if (error) {
         await expectRejectedWithLodestarError(eth1DatasPromise, error);

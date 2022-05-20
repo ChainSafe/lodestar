@@ -12,7 +12,7 @@ import {
   IEth2ValidatorKeys,
 } from "@chainsafe/bls-keygen";
 import {IValidatorCreateArgs, validatorCreateOptions} from "./create.js";
-import _ from "lodash";
+import mapValues from "lodash/mapValues";
 import bls from "@chainsafe/bls";
 import {Keystore} from "@chainsafe/bls-keystore";
 import {getBeaconConfigFromArgs} from "../../../../config/index.js";
@@ -100,14 +100,14 @@ export const recover: ICliCommand<IValidatorRecoverArgs, IGlobalArgs, ReturnType
       const privKeys = deriveEth2ValidatorKeys(masterSK, i);
       const paths = eth2ValidatorPaths(i);
 
-      const keystoreRequests = _.mapValues(privKeys, async (privKey, key) => {
+      const keystoreRequests = mapValues(privKeys, async (privKey, key) => {
         const type = key as keyof typeof privKeys;
         const publicKey = bls.SecretKey.fromBytes(privKey).toPublicKey().toBytes();
         const keystore = await Keystore.create(passwords[type], privKey, publicKey, paths[type]);
         return keystore;
       });
 
-      const keystores = await Promise.all(_.values(keystoreRequests));
+      const keystores = await Promise.all(Object.values(keystoreRequests));
 
       await validatorDirBuilder.build({
         keystores: {
