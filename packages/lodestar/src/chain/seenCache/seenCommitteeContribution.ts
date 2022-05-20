@@ -1,6 +1,7 @@
 import {Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {ContributionAndProof, SyncCommitteeContribution} from "@chainsafe/lodestar-types/altair";
 import {toHexString} from "@chainsafe/ssz";
+import {IMetrics} from "../../metrics";
 import {isNonStrictSuperSet} from "../../util/bitArray";
 import {MapDef} from "../../util/map";
 import {AggregationInfo, insertDesc} from "./seenAggregateAndProof";
@@ -30,6 +31,8 @@ export class SeenContributionAndProof {
     () => new MapDef(() => [])
   );
 
+  constructor(private readonly metrics: IMetrics | null) {}
+
   /**
    * _[IGNORE]_ A valid sync committee contribution with equal `slot`, `beacon_block_root` and `subcommittee_index` whose
    * `aggregation_bits` is non-strict superset has _not_ already been seen.
@@ -38,10 +41,19 @@ export class SeenContributionAndProof {
     const {aggregationBits, slot} = contribution;
     const contributionMap = this.seenContributionBySlot.getOrDefault(slot);
     const seenAggregationInfoArr = contributionMap.getOrDefault(toContributionDataKey(contribution));
+    this.metrics?.seenCache.committeeContributions.isKnownTotal.inc();
     // seenAttestingIndicesArr is sorted by trueBitCount desc
-    return seenAggregationInfoArr.some((seenAggregationInfo) =>
-      isNonStrictSuperSet(seenAggregationInfo.aggregationBits, aggregationBits)
-    );
+
+    for (let i = 0; i < seenAggregationInfoArr.length; i++) {
+      if (isNonStrictSuperSet(seenAggregationInfoArr[i].aggregationBits, aggregationBits)) {
+        this.metrics?.seenCache.committeeContributions.isKnownSuccess.inc();
+        this.metrics?.seenCache.committeeContributions.superSetCheckTotal.observe(i + 1);
+        return true;
+      }
+    }
+
+    this.metrics?.seenCache.committeeContributions.superSetCheckTotal.observe(seenAggregationInfoArr.length);
+    return false;
   }
 
   /**

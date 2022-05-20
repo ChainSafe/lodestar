@@ -42,7 +42,7 @@ describe("chain / seenCache / SeenSyncCommittee caches", function () {
     const aggregatorIndex = 100;
 
     it("should find a sync committee based on same slot and validator index", () => {
-      const cache = new SeenContributionAndProof();
+      const cache = new SeenContributionAndProof(null);
 
       expect(cache.isAggregatorKnown(slot, subcommitteeIndex, aggregatorIndex)).to.equal(
         false,
@@ -69,7 +69,7 @@ describe("chain / seenCache / SeenSyncCommittee caches", function () {
     });
 
     it("should prune", () => {
-      const cache = new SeenContributionAndProof();
+      const cache = new SeenContributionAndProof(null);
       const contributionAndProof = generateContributionAndProof({
         aggregatorIndex,
         contribution: {slot, subcommitteeIndex},
@@ -132,7 +132,7 @@ describe("chain / seenCache / SeenSyncCommittee caches", function () {
 
     for (const {id, seenAttestingBits, checkAttestingBits} of testCases) {
       it(id, () => {
-        const cache = new SeenContributionAndProof();
+        const cache = new SeenContributionAndProof(null);
         const aggregationBits = new BitArray(new Uint8Array(seenAttestingBits), 8);
         const contributionAndProof = generateContributionAndProof({
           aggregatorIndex,

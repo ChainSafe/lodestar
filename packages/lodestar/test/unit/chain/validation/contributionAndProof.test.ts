@@ -39,7 +39,7 @@ describe("Sync Committee Contribution And Proof validation", function () {
     chain = sandbox.createStubInstance(BeaconChain);
     (chain as {
       seenContributionAndProof: SeenContributionAndProof;
-    }).seenContributionAndProof = new SeenContributionAndProof();
+    }).seenContributionAndProof = new SeenContributionAndProof(null);
     clockStub = sandbox.createStubInstance(LocalClock);
     chain.clock = clockStub;
     clockStub.isCurrentSlotGivenGossipDisparity.returns(true);

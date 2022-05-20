@@ -45,7 +45,7 @@ describe("SeenAggregatedAttestations.isKnown", function () {
 
   for (const {id, seenAttestingBits, checkAttestingBits} of testCases) {
     it(id, () => {
-      const cache = new SeenAggregatedAttestations();
+      const cache = new SeenAggregatedAttestations(null);
       const aggregationBits = new BitArray(new Uint8Array(seenAttestingBits), 8);
       cache.add(
         targetEpoch,

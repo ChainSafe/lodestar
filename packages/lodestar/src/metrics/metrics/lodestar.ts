@@ -809,6 +809,39 @@ export function createLodestarMetrics(
       }),
     },
 
+    seenCache: {
+      aggregatedAttestations: {
+        superSetCheckTotal: register.histogram({
+          name: "lodestar_seen_cache_aggregated_attestations_super_set_check_total",
+          help: "Number of times to call isNonStrictSuperSet in SeenAggregatedAttestations",
+          buckets: [1, 4, 10],
+        }),
+        isKnownTotal: register.gauge({
+          name: "lodestar_seen_cache_aggregated_attestations_is_known_total",
+          help: "Total times calling SeenAggregatedAttestations.isKnown",
+        }),
+        isKnownSuccess: register.gauge({
+          name: "lodestar_seen_cache_aggregated_attestations_is_known_success_total",
+          help: "Total times SeenAggregatedAttestations.isKnown returning true",
+        }),
+      },
+      committeeContributions: {
+        superSetCheckTotal: register.histogram({
+          name: "lodestar_seen_cache_committee_contributions_super_set_check_total",
+          help: "Number of times to call isNonStrictSuperSet in SeenContributionAndProof",
+          buckets: [1, 4, 10],
+        }),
+        isKnownTotal: register.gauge({
+          name: "lodestar_seen_cache_committee_contributions_is_known_total",
+          help: "Total times calling SeenContributionAndProof.isKnown",
+        }),
+        isKnownSuccess: register.gauge({
+          name: "lodestar_seen_cache_committee_contributions_is_known_success_total",
+          help: "Total times SeenContributionAndProof.isKnown returning true",
+        }),
+      },
+    },
+
     regenFnCallTotal: register.gauge<"entrypoint" | "caller">({
       name: "lodestar_regen_fn_call_total",
       help: "Total number of calls for regen functions",

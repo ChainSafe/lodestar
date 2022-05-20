@@ -82,10 +82,10 @@ export class BeaconChain implements IBeaconChain {
   // Gossip seen cache
   readonly seenAttesters = new SeenAttesters();
   readonly seenAggregators = new SeenAggregators();
-  readonly seenAggregatedAttestations = new SeenAggregatedAttestations();
+  readonly seenAggregatedAttestations: SeenAggregatedAttestations;
   readonly seenBlockProposers = new SeenBlockProposers();
   readonly seenSyncCommitteeMessages = new SeenSyncCommitteeMessages();
-  readonly seenContributionAndProof = new SeenContributionAndProof();
+  readonly seenContributionAndProof: SeenContributionAndProof;
 
   // Global state caches
   readonly pubkey2index: PubkeyIndexMap;
@@ -140,6 +140,9 @@ export class BeaconChain implements IBeaconChain {
     const clock = new LocalClock({config, emitter, genesisTime: this.genesisTime, signal});
     const stateCache = new StateContextCache({metrics});
     const checkpointStateCache = new CheckpointStateCache({metrics});
+
+    this.seenAggregatedAttestations = new SeenAggregatedAttestations(metrics);
+    this.seenContributionAndProof = new SeenContributionAndProof(metrics);
 
     // Initialize single global instance of state caches
     this.pubkey2index = new PubkeyIndexMap();

@@ -1,5 +1,6 @@
 import {Epoch, RootHex} from "@chainsafe/lodestar-types";
 import {BitArray} from "@chainsafe/ssz";
+import {IMetrics} from "../../metrics";
 import {isNonStrictSuperSet} from "../../util/bitArray";
 import {MapDef} from "../../util/map";
 
@@ -34,12 +35,22 @@ export class SeenAggregatedAttestations {
   );
   private lowestPermissibleEpoch: Epoch = 0;
 
+  constructor(private readonly metrics: IMetrics | null) {}
+
   isKnown(targetEpoch: Epoch, attDataRoot: RootHex, aggregationBits: BitArray): boolean {
     const seenAggregationInfoArr = this.aggregateRootsByEpoch.getOrDefault(targetEpoch).getOrDefault(attDataRoot);
-    // seenAttestingIndicesArr is sorted by trueBitCount desc
-    return seenAggregationInfoArr.some((seenAggregationInfo) =>
-      isNonStrictSuperSet(seenAggregationInfo.aggregationBits, aggregationBits)
-    );
+    this.metrics?.seenCache.aggregatedAttestations.isKnownTotal.inc();
+
+    for (let i = 0; i < seenAggregationInfoArr.length; i++) {
+      if (isNonStrictSuperSet(seenAggregationInfoArr[i].aggregationBits, aggregationBits)) {
+        this.metrics?.seenCache.aggregatedAttestations.superSetCheckTotal.observe(i + 1);
+        this.metrics?.seenCache.aggregatedAttestations.isKnownSuccess.inc();
+        return true;
+      }
+    }
+
+    this.metrics?.seenCache.aggregatedAttestations.superSetCheckTotal.observe(seenAggregationInfoArr.length);
+    return false;
   }
 
   add(targetEpoch: Epoch, attDataRoot: RootHex, newItem: AggregationInfo, checkIsKnown: boolean): void {

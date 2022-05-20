@@ -116,7 +116,7 @@ export function getAttestationValidData(
     forkChoice,
     regen,
     seenAttesters: new SeenAttesters(),
-    seenAggregatedAttestations: new SeenAggregatedAttestations(),
+    seenAggregatedAttestations: new SeenAggregatedAttestations(null),
     bls: new BlsSingleThreadVerifier({metrics: null}),
     waitForBlockOfAttestation: () => Promise.resolve(false),
   } as Partial<IBeaconChain>) as IBeaconChain;
