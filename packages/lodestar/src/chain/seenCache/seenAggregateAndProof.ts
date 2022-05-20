@@ -1,7 +1,7 @@
 import {Epoch, RootHex} from "@chainsafe/lodestar-types";
 import {BitArray} from "@chainsafe/ssz";
 import {IMetrics} from "../../metrics";
-import {isNonStrictSuperSet} from "../../util/bitArray";
+import {isSuperSetOrEqual} from "../../util/bitArray";
 import {MapDef} from "../../util/map";
 
 /**
@@ -42,7 +42,7 @@ export class SeenAggregatedAttestations {
     this.metrics?.seenCache.aggregatedAttestations.isKnownTotal.inc();
 
     for (let i = 0; i < seenAggregationInfoArr.length; i++) {
-      if (isNonStrictSuperSet(seenAggregationInfoArr[i].aggregationBits, aggregationBits)) {
+      if (isSuperSetOrEqual(seenAggregationInfoArr[i].aggregationBits, aggregationBits)) {
         this.metrics?.seenCache.aggregatedAttestations.superSetCheckTotal.observe(i + 1);
         this.metrics?.seenCache.aggregatedAttestations.isKnownSuccess.inc();
         return true;

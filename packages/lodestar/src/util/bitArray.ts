@@ -78,7 +78,7 @@ export function intersectUint8Arrays(aUA: Uint8Array, bUA: Uint8Array): Intersec
 /**
  * Check if first BitArray is equal to or superset of the second
  */
-export function isNonStrictSuperSet(superSet: BitArray, toCheck: BitArray): boolean {
+export function isSuperSetOrEqual(superSet: BitArray, toCheck: BitArray): boolean {
   const intersectionResult = intersectUint8Arrays(superSet.uint8Array, toCheck.uint8Array);
   return intersectionResult === IntersectResult.Superset || intersectionResult === IntersectResult.Equal;
 }

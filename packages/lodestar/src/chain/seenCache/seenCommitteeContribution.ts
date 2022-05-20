@@ -2,7 +2,7 @@ import {Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {ContributionAndProof, SyncCommitteeContribution} from "@chainsafe/lodestar-types/altair";
 import {toHexString} from "@chainsafe/ssz";
 import {IMetrics} from "../../metrics";
-import {isNonStrictSuperSet} from "../../util/bitArray";
+import {isSuperSetOrEqual} from "../../util/bitArray";
 import {MapDef} from "../../util/map";
 import {AggregationInfo, insertDesc} from "./seenAggregateAndProof";
 
@@ -45,7 +45,7 @@ export class SeenContributionAndProof {
     // seenAttestingIndicesArr is sorted by trueBitCount desc
 
     for (let i = 0; i < seenAggregationInfoArr.length; i++) {
-      if (isNonStrictSuperSet(seenAggregationInfoArr[i].aggregationBits, aggregationBits)) {
+      if (isSuperSetOrEqual(seenAggregationInfoArr[i].aggregationBits, aggregationBits)) {
         this.metrics?.seenCache.committeeContributions.isKnownSuccess.inc();
         this.metrics?.seenCache.committeeContributions.superSetCheckTotal.observe(i + 1);
         return true;
