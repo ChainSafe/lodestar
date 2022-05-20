@@ -1,4 +1,4 @@
-import mapValues from "lodash/mapValues";
+import mapValues from "lodash/mapValues.js";
 import bls from "@chainsafe/bls";
 import {Keystore, IKeystore} from "@chainsafe/bls-keystore";
 import {

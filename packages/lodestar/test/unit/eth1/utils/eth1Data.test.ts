@@ -1,6 +1,6 @@
 import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
-import pick from "lodash/pick";
+import pick from "lodash/pick.js";
 import {Root, phase0, ssz} from "@chainsafe/lodestar-types";
 import {toHex} from "@chainsafe/lodestar-utils";
 import {iteratorFromArray} from "../../../utils/interator.js";

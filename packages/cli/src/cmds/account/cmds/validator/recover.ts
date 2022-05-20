@@ -12,7 +12,7 @@ import {
   IEth2ValidatorKeys,
 } from "@chainsafe/bls-keygen";
 import {IValidatorCreateArgs, validatorCreateOptions} from "./create.js";
-import mapValues from "lodash/mapValues";
+import mapValues from "lodash/mapValues.js";
 import bls from "@chainsafe/bls";
 import {Keystore} from "@chainsafe/bls-keystore";
 import {getBeaconConfigFromArgs} from "../../../../config/index.js";
