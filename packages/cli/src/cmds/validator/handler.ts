@@ -8,11 +8,11 @@ import {getBeaconConfigFromArgs} from "../../config/index.js";
 import {IGlobalArgs} from "../../options/index.js";
 import {YargsError, getDefaultGraffiti, mkdir, getCliLogger} from "../../util/index.js";
 import {onGracefulShutdown} from "../../util/index.js";
+import {getVersionData} from "../../util/version.js";
 import {getBeaconPaths} from "../beacon/paths.js";
 import {getValidatorPaths} from "./paths.js";
 import {IValidatorCliArgs, validatorMetricsDefaultOptions} from "./options.js";
 import {getLocalSecretKeys, getExternalSigners, groupExternalSignersByUrl} from "./keys.js";
-import {getVersionData} from "../../util/version.js";
 
 /**
  * Runs a validator client.

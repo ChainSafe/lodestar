@@ -2,7 +2,6 @@ import fs from "node:fs";
 import path from "node:path";
 import {fileURLToPath} from "node:url";
 import findUp from "find-up";
-
 import {readAndGetGitData} from "./gitData/index.js";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention

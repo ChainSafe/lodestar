@@ -2,7 +2,6 @@ import PeerId from "peer-id";
 import {altair, phase0} from "@chainsafe/lodestar-types";
 import {BitArray} from "@chainsafe/ssz";
 import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
-
 import {shuffle} from "../../../util/shuffle.js";
 import {sortBy} from "../../../util/sortBy.js";
 import {RequestedSubnet} from "./subnetMap.js";

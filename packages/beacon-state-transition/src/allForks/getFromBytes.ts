@@ -1,7 +1,6 @@
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import {bytesToInt} from "@chainsafe/lodestar-utils";
-
 import {allForks, Slot} from "@chainsafe/lodestar-types";
+import {bytesToInt} from "@chainsafe/lodestar-utils";
 
 /**
  * Slot	uint64
