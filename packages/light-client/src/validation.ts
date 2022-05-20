@@ -1,6 +1,6 @@
 import {altair, phase0, Root, Slot, ssz} from "@chainsafe/lodestar-types";
 import bls from "@chainsafe/bls";
-import {PublicKey, Signature} from "@chainsafe/bls/types";
+import type {PublicKey, Signature} from "@chainsafe/bls/types";
 import {
   FINALIZED_ROOT_INDEX,
   FINALIZED_ROOT_DEPTH,
