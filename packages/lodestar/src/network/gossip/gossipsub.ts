@@ -41,6 +41,8 @@ import {PeersData} from "../peers/peersData.js";
 import {ClientKind} from "../peers/client.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
+/** As specified in https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md */
+const GOSSIPSUB_HEARTBEAT_INTERVAL = 0.7 * 1000;
 
 // TODO: Export this type
 type GossipsubEvents = {
@@ -106,6 +108,11 @@ export class Eth2Gossipsub extends Gossipsub {
       Dlo: GOSSIP_D_LOW,
       Dhi: GOSSIP_D_HIGH,
       Dlazy: 6,
+      heartbeatInterval: GOSSIPSUB_HEARTBEAT_INTERVAL,
+      fanoutTTL: 60 * 1000,
+      mcacheLength: 6,
+      mcacheGossip: 3,
+      seenTTL: 550 * GOSSIPSUB_HEARTBEAT_INTERVAL,
       scoreParams,
       scoreThresholds: gossipScoreThresholds,
       // the default in gossipsub is 3s is not enough since lodestar suffers from I/O lag
