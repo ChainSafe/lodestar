@@ -62,7 +62,7 @@
   },
   "types": "lib/index.d.ts",
   "dependencies": {
-    "@chainsafe/as-sha256": "^0.3.0",
+    "@chainsafe/as-sha256": "^0.3.1",
     "@chainsafe/bls": "7.1.0",
     "@chainsafe/lodestar-config": "^0.37.0",
     "@chainsafe/lodestar-params": "^0.37.0",

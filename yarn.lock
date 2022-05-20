@@ -380,7 +380,7 @@
   dependencies:
     event-target-shim "^5.0.0"
 
-"@chainsafe/as-sha256@^0.3.0", "@chainsafe/as-sha256@^0.3.1":
+"@chainsafe/as-sha256@^0.3.1":
   version "0.3.1"
   resolved "https://registry.yarnpkg.com/@chainsafe/as-sha256/-/as-sha256-0.3.1.tgz#3639df0e1435cab03f4d9870cc3ac079e57a6fc9"
   integrity sha512-hldFFYuf49ed7DAakWVXSJODuq3pzJEguD8tQ7h+sGkM18vja+OFoJI9krnGmgzyuZC2ETX0NOIcCTy31v2Mtg==
