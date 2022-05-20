@@ -12,7 +12,6 @@ import {
   RootHex,
   Slot,
   ssz,
-  ExecutionAddress,
   ValidatorIndex,
 } from "@chainsafe/lodestar-types";
 import {
@@ -90,7 +89,7 @@ export async function assembleBody(
     // - Call prepareExecutionPayload again if parameters change
 
     const finalizedBlockHash = chain.forkChoice.getFinalizedBlock().executionPayloadBlockHash;
-    const feeRecipient = chain.beaconProposerCache.getOrDefault(proposerIndex).feeRecipient;
+    const feeRecipient = chain.beaconProposerCache.getOrDefault(`${proposerIndex}`).feeRecipient;
 
     // prepareExecutionPayload will throw error via notifyForkchoiceUpdate if
     // the EL returns Syncing on this request to prepare a payload
@@ -134,7 +133,7 @@ async function prepareExecutionPayload(
   chain: IBeaconChain,
   finalizedBlockHash: RootHex,
   state: CachedBeaconStateBellatrix,
-  suggestedFeeRecipient: ExecutionAddress
+  suggestedFeeRecipient: string
 ): Promise<PayloadId | null> {
   // Use different POW block hash parent for block production based on merge status.
   // Returned value of null == using an empty ExecutionPayload value

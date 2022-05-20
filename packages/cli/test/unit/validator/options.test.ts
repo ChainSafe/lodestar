@@ -8,7 +8,7 @@ describe("validator / parseFeeRecipient", () => {
   const testCases: string[] = [`0x${feeRecipientString}`, `0X${feeRecipientString}`];
   for (const testCase of testCases) {
     it(`parse ${testCase}`, () => {
-      expect(feeRecipient).to.be.deep.equal(parseFeeRecipient(testCase));
+      expect(`0x${feeRecipientString}`).to.be.deep.equal(parseFeeRecipient(testCase));
     });
   }
 });

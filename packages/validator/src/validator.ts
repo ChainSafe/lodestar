@@ -1,6 +1,6 @@
 import {AbortController, AbortSignal} from "@chainsafe/abort-controller";
 import {IDatabaseApiOptions} from "@chainsafe/lodestar-db";
-import {ssz, ExecutionAddress} from "@chainsafe/lodestar-types";
+import {ssz} from "@chainsafe/lodestar-types";
 import {createIBeaconConfig, IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Genesis} from "@chainsafe/lodestar-types/phase0";
 import {ILogger} from "@chainsafe/lodestar-utils";
@@ -31,7 +31,7 @@ export type ValidatorOptions = {
   logger: ILogger;
   afterBlockDelaySlotFraction?: number;
   graffiti?: string;
-  defaultFeeRecipient?: ExecutionAddress;
+  defaultFeeRecipient?: string;
 };
 
 // TODO: Extend the timeout, and let it be customizable

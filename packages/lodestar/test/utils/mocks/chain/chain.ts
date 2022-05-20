@@ -2,23 +2,11 @@ import {AbortController} from "@chainsafe/abort-controller";
 import sinon from "sinon";
 
 import {toHexString} from "@chainsafe/ssz";
-import {
-  allForks,
-  UintNum64,
-  Root,
-  Slot,
-  ssz,
-  Uint16,
-  UintBn64,
-  ValidatorIndex,
-  Epoch,
-  ExecutionAddress,
-} from "@chainsafe/lodestar-types";
+import {allForks, UintNum64, Root, Slot, ssz, Uint16, UintBn64, Epoch} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {BeaconStateAllForks, CachedBeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {CheckpointWithHex, IForkChoice, IProtoBlock, ExecutionStatus} from "@chainsafe/lodestar-fork-choice";
-import {fromHex} from "@chainsafe/lodestar-utils";
 
 import {ChainEventEmitter, IBeaconChain} from "../../../../src/chain";
 import {IBeaconClock} from "../../../../src/chain/clock/interface";
@@ -98,9 +86,9 @@ export class MockBeaconChain implements IBeaconChain {
   readonly seenSyncCommitteeMessages = new SeenSyncCommitteeMessages();
   readonly seenContributionAndProof = new SeenContributionAndProof(null);
 
-  readonly beaconProposerCache = new MapDef<ValidatorIndex, {epoch: Epoch; feeRecipient: ExecutionAddress}>(() => ({
+  readonly beaconProposerCache = new MapDef<string, {epoch: Epoch; feeRecipient: string}>(() => ({
     epoch: 0,
-    feeRecipient: fromHex(defaultDefaultFeeRecipient),
+    feeRecipient: defaultDefaultFeeRecipient,
   }));
 
   private state: BeaconStateAllForks;

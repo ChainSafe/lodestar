@@ -13,18 +13,8 @@ import {
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
-import {
-  allForks,
-  UintNum64,
-  Root,
-  phase0,
-  Slot,
-  RootHex,
-  ValidatorIndex,
-  ExecutionAddress,
-  Epoch,
-} from "@chainsafe/lodestar-types";
-import {ILogger, fromHex} from "@chainsafe/lodestar-utils";
+import {allForks, UintNum64, Root, phase0, Slot, RootHex, Epoch} from "@chainsafe/lodestar-types";
+import {ILogger} from "@chainsafe/lodestar-utils";
 import {fromHexString} from "@chainsafe/ssz";
 import {AbortController} from "@chainsafe/abort-controller";
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants";
@@ -102,7 +92,7 @@ export class BeaconChain implements IBeaconChain {
   readonly pubkey2index: PubkeyIndexMap;
   readonly index2pubkey: Index2PubkeyCache;
 
-  readonly beaconProposerCache: MapDef<ValidatorIndex, {epoch: Epoch; feeRecipient: ExecutionAddress}>;
+  readonly beaconProposerCache: MapDef<string, {epoch: Epoch; feeRecipient: string}>;
 
   protected readonly blockProcessor: BlockProcessor;
   protected readonly db: IBeaconDb;
@@ -161,9 +151,9 @@ export class BeaconChain implements IBeaconChain {
     this.pubkey2index = new PubkeyIndexMap();
     this.index2pubkey = [];
 
-    this.beaconProposerCache = new MapDef<ValidatorIndex, {epoch: Epoch; feeRecipient: ExecutionAddress}>(() => ({
+    this.beaconProposerCache = new MapDef<string, {epoch: Epoch; feeRecipient: string}>(() => ({
       epoch: 0,
-      feeRecipient: fromHex(opts.defaultFeeRecipient),
+      feeRecipient: opts.defaultFeeRecipient,
     }));
 
     // Restore state caches

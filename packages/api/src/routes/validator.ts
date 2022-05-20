@@ -13,7 +13,6 @@ import {
   ssz,
   UintNum64,
   ValidatorIndex,
-  ExecutionAddress,
 } from "@chainsafe/lodestar-types";
 import {
   RoutesData,
@@ -24,6 +23,7 @@ import {
   WithVersion,
   reqOnlyBody,
   ReqSerializers,
+  jsonType,
 } from "../utils";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
@@ -46,8 +46,8 @@ export type SyncCommitteeSubscription = {
 };
 
 export type ProposerPreparationData = {
-  validatorIndex: ValidatorIndex;
-  feeRecipient: ExecutionAddress;
+  validatorIndex: string;
+  feeRecipient: string;
 };
 
 export type ProposerDuty = {
@@ -264,14 +264,6 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
     {jsonCase: "eth2"}
   );
 
-  const ProposerPreparationData = new ContainerType(
-    {
-      validatorIndex: ssz.ValidatorIndex,
-      feeRecipient: ssz.ExecutionAddress,
-    },
-    {jsonCase: "eth2"}
-  );
-
   const produceBlock: ReqSerializers<Api, ReqTypes>["produceBlock"] = {
     writeReq: (slot, randaoReveal, grafitti) => ({
       params: {slot},
@@ -348,7 +340,13 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
     publishContributionAndProofs: reqOnlyBody(ArrayOf(ssz.altair.SignedContributionAndProof), Schema.ObjectArray),
     prepareBeaconCommitteeSubnet: reqOnlyBody(ArrayOf(BeaconCommitteeSubscription), Schema.ObjectArray),
     prepareSyncCommitteeSubnets: reqOnlyBody(ArrayOf(SyncCommitteeSubscription), Schema.ObjectArray),
-    prepareBeaconProposer: reqOnlyBody(ArrayOf(ProposerPreparationData), Schema.ObjectArray),
+    prepareBeaconProposer: {
+      writeReq: (items: ProposerPreparationData[]) => ({body: items.map((item) => jsonType("snake").toJson(item))}),
+      parseReq: ({body}) => [
+        (body as Record<string, unknown>[]).map((item) => jsonType("snake").fromJson(item) as ProposerPreparationData),
+      ],
+      schema: {body: Schema.ObjectArray},
+    },
   };
 }
 

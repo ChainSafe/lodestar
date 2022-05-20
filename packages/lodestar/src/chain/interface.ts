@@ -1,14 +1,4 @@
-import {
-  allForks,
-  UintNum64,
-  Root,
-  phase0,
-  Slot,
-  RootHex,
-  ValidatorIndex,
-  ExecutionAddress,
-  Epoch,
-} from "@chainsafe/lodestar-types";
+import {allForks, UintNum64, Root, phase0, Slot, RootHex, Epoch} from "@chainsafe/lodestar-types";
 import {CachedBeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
@@ -42,8 +32,8 @@ export type Eth2Context = {
 };
 
 export type ProposerPreparationData = {
-  validatorIndex: ValidatorIndex;
-  feeRecipient: ExecutionAddress;
+  validatorIndex: string;
+  feeRecipient: string;
 };
 
 /**
@@ -86,7 +76,7 @@ export interface IBeaconChain {
   readonly seenSyncCommitteeMessages: SeenSyncCommitteeMessages;
   readonly seenContributionAndProof: SeenContributionAndProof;
 
-  readonly beaconProposerCache: MapDef<ValidatorIndex, {epoch: Epoch; feeRecipient: ExecutionAddress}>;
+  readonly beaconProposerCache: MapDef<string, {epoch: Epoch; feeRecipient: string}>;
 
   /** Stop beacon chain processing */
   close(): void;

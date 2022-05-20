@@ -1,4 +1,4 @@
-import {ValidatorIndex, ExecutionAddress, Epoch} from "@chainsafe/lodestar-types";
+import {Epoch} from "@chainsafe/lodestar-types";
 import {Api} from "@chainsafe/lodestar-api";
 
 import {ValidatorStore} from "./validatorStore";
@@ -7,8 +7,8 @@ import {IClock, ILoggerVc} from "../util";
 import {Metrics} from "../metrics";
 
 type ProposerPreparationData = {
-  validatorIndex: ValidatorIndex;
-  feeRecipient: ExecutionAddress;
+  validatorIndex: string;
+  feeRecipient: string;
 };
 
 /**
@@ -22,7 +22,7 @@ export class PrepareBeaconProposerService {
     private readonly api: Api,
     private clock: IClock,
     private readonly validatorStore: ValidatorStore,
-    private readonly defaultFeeRecipient: ExecutionAddress,
+    private readonly defaultFeeRecipient: string,
     private readonly indicesService: IndicesService,
     private readonly metrics: Metrics | null
   ) {
@@ -49,6 +49,9 @@ export class PrepareBeaconProposerService {
   };
 
   private getProposerData(indices: number[]): ProposerPreparationData[] {
-    return indices.map((validatorIndex) => ({validatorIndex, feeRecipient: this.defaultFeeRecipient}));
+    return indices.map((validatorIndex) => ({
+      validatorIndex: validatorIndex.toString(),
+      feeRecipient: this.defaultFeeRecipient,
+    }));
   }
 }

@@ -52,7 +52,9 @@ export type ForkChoiceUpdateStatus =
 export type PayloadAttributes = {
   timestamp: number;
   prevRandao: Uint8Array;
-  suggestedFeeRecipient: Uint8Array;
+  // DATA is anyway a hex string, so we can just track it as a hex string to
+  // avoid any conversions
+  suggestedFeeRecipient: string;
 };
 
 export type ApiPayloadAttributes = {

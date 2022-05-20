@@ -200,7 +200,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       ? {
           timestamp: numToQuantity(payloadAttributes.timestamp),
           prevRandao: bytesToData(payloadAttributes.prevRandao),
-          suggestedFeeRecipient: bytesToData(payloadAttributes.suggestedFeeRecipient),
+          suggestedFeeRecipient: payloadAttributes.suggestedFeeRecipient,
         }
       : undefined;
 

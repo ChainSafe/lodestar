@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import {bellatrix, RootHex, Root} from "@chainsafe/lodestar-types";
-import {toHexString} from "@chainsafe/ssz";
+import {toHexString, fromHexString} from "@chainsafe/ssz";
 import {BYTES_PER_LOGS_BLOOM} from "@chainsafe/lodestar-params";
 
 import {ZERO_HASH, ZERO_HASH_HEX} from "../constants";
@@ -107,7 +107,7 @@ export class ExecutionEngineMock implements IExecutionEngine {
     const payloadId = this.payloadId++;
     const payload: bellatrix.ExecutionPayload = {
       parentHash: headBlockHash,
-      feeRecipient: payloadAttributes.suggestedFeeRecipient,
+      feeRecipient: fromHexString(payloadAttributes.suggestedFeeRecipient),
       stateRoot: crypto.randomBytes(32),
       receiptsRoot: crypto.randomBytes(32),
       logsBloom: crypto.randomBytes(BYTES_PER_LOGS_BLOOM),
