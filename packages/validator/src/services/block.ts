@@ -80,7 +80,7 @@ export class BlockProposingService {
         this.metrics?.blockProposingErrors.inc({error: "produce"});
         throw extendError(e, "Failed to produce block");
       });
-      const blockFeeRecipient = (block.data as bellatrix.BeaconBlock).body?.executionPayload.feeRecipient;
+      const blockFeeRecipient = (block.data as bellatrix.BeaconBlock).body.executionPayload?.feeRecipient;
       const feeRecipient = blockFeeRecipient !== undefined ? toHexString(blockFeeRecipient) : undefined;
       this.logger.debug("Produced block", {...debugLogCtx, feeRecipient});
       this.metrics?.blocksProduced.inc();
