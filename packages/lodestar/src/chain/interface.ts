@@ -23,7 +23,7 @@ import {AggregatedAttestationPool} from "./opPools/aggregatedAttestationPool";
 import {PartiallyVerifiedBlockFlags} from "./blocks/types";
 import {ReprocessController} from "./reprocess";
 import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof";
-import {MapDef} from "../util/map";
+import {BeaconProposerCache, ProposerPreparationData} from "./beaconProposerCache";
 
 export type Eth2Context = {
   activeValidatorCount: number;
@@ -31,10 +31,7 @@ export type Eth2Context = {
   currentEpoch: number;
 };
 
-export type ProposerPreparationData = {
-  validatorIndex: string;
-  feeRecipient: string;
-};
+export {ProposerPreparationData};
 
 /**
  * The IBeaconChain service deals with processing incoming blocks, advancing a state transition
@@ -76,7 +73,7 @@ export interface IBeaconChain {
   readonly seenSyncCommitteeMessages: SeenSyncCommitteeMessages;
   readonly seenContributionAndProof: SeenContributionAndProof;
 
-  readonly beaconProposerCache: MapDef<string, {epoch: Epoch; feeRecipient: string}>;
+  readonly beaconProposerCache: BeaconProposerCache;
 
   /** Stop beacon chain processing */
   close(): void;

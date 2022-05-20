@@ -2,7 +2,7 @@ import {AbortController} from "@chainsafe/abort-controller";
 import sinon from "sinon";
 
 import {toHexString} from "@chainsafe/ssz";
-import {allForks, UintNum64, Root, Slot, ssz, Uint16, UintBn64, Epoch} from "@chainsafe/lodestar-types";
+import {allForks, UintNum64, Root, Slot, ssz, Uint16, UintBn64} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {BeaconStateAllForks, CachedBeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
@@ -39,7 +39,7 @@ import {ReprocessController} from "../../../../src/chain/reprocess";
 import {createCachedBeaconStateTest} from "@chainsafe/lodestar-beacon-state-transition/test/utils/state";
 import {SeenAggregatedAttestations} from "../../../../src/chain/seenCache/seenAggregateAndProof";
 import {defaultDefaultFeeRecipient} from "../../../../src/chain/options";
-import {MapDef} from "../../../../src/util/map";
+import {BeaconProposerCache} from "../../../../src/chain/beaconProposerCache";
 
 /* eslint-disable @typescript-eslint/no-empty-function */
 
@@ -86,10 +86,7 @@ export class MockBeaconChain implements IBeaconChain {
   readonly seenSyncCommitteeMessages = new SeenSyncCommitteeMessages();
   readonly seenContributionAndProof = new SeenContributionAndProof(null);
 
-  readonly beaconProposerCache = new MapDef<string, {epoch: Epoch; feeRecipient: string}>(() => ({
-    epoch: 0,
-    feeRecipient: defaultDefaultFeeRecipient,
-  }));
+  readonly beaconProposerCache = new BeaconProposerCache({defaultFeeRecipient: defaultDefaultFeeRecipient});
 
   private state: BeaconStateAllForks;
   private abortController: AbortController;

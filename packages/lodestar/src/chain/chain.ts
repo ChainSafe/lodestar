@@ -52,7 +52,7 @@ import {IExecutionEngine} from "../executionEngine";
 import {PrecomputeNextEpochTransitionScheduler} from "./precomputeNextEpochTransition";
 import {ReprocessController} from "./reprocess";
 import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof";
-import {MapDef} from "../util/map";
+import {BeaconProposerCache} from "./beaconProposerCache";
 
 export class BeaconChain implements IBeaconChain {
   readonly genesisTime: UintNum64;
@@ -92,7 +92,7 @@ export class BeaconChain implements IBeaconChain {
   readonly pubkey2index: PubkeyIndexMap;
   readonly index2pubkey: Index2PubkeyCache;
 
-  readonly beaconProposerCache: MapDef<string, {epoch: Epoch; feeRecipient: string}>;
+  readonly beaconProposerCache: BeaconProposerCache;
 
   protected readonly blockProcessor: BlockProcessor;
   protected readonly db: IBeaconDb;
@@ -151,10 +151,7 @@ export class BeaconChain implements IBeaconChain {
     this.pubkey2index = new PubkeyIndexMap();
     this.index2pubkey = [];
 
-    this.beaconProposerCache = new MapDef<string, {epoch: Epoch; feeRecipient: string}>(() => ({
-      epoch: 0,
-      feeRecipient: opts.defaultFeeRecipient,
-    }));
+    this.beaconProposerCache = new BeaconProposerCache(opts);
 
     // Restore state caches
     const cachedState = createCachedBeaconState(anchorState, {
@@ -326,8 +323,8 @@ export class BeaconChain implements IBeaconChain {
   }
 
   async updateBeaconProposerData(epoch: Epoch, proposers: ProposerPreparationData[]): Promise<void> {
-    proposers.forEach(({validatorIndex, feeRecipient}) => {
-      this.beaconProposerCache.set(validatorIndex, {epoch, feeRecipient});
+    proposers.forEach((proposer) => {
+      this.beaconProposerCache.add(epoch, proposer);
     });
   }
 }
