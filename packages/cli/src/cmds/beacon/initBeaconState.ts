@@ -8,8 +8,13 @@ import {
   isWithinWeakSubjectivityPeriod,
   BeaconStateAllForks,
 } from "@chainsafe/lodestar-beacon-state-transition";
-import {IBeaconDb, IBeaconNodeOptions, initStateFromAnchorState, initStateFromEth1} from "@chainsafe/lodestar";
-import {getStateTypeFromBytes} from "@chainsafe/lodestar-beacon-state-transition/allForks";
+import {
+  IBeaconDb,
+  IBeaconNodeOptions,
+  initStateFromAnchorState,
+  initStateFromEth1,
+  getStateTypeFromBytes,
+} from "@chainsafe/lodestar";
 import {Checkpoint} from "@chainsafe/lodestar-types/phase0";
 
 import {downloadOrLoadFile} from "../../util/index.js";

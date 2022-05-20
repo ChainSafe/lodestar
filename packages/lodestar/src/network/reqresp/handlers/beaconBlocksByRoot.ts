@@ -1,7 +1,7 @@
 import {phase0, Slot} from "@chainsafe/lodestar-types";
-import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
+import {getSlotFromBytes} from "../../../util/multifork.js";
 import {ReqRespBlockResponse} from "../types.js";
 
 export async function* onBeaconBlocksByRoot(
@@ -30,7 +30,7 @@ export async function* onBeaconBlocksByRoot(
     if (blockBytes) {
       yield {
         bytes: blockBytes,
-        slot: slot ?? allForks.getSlotFromBytes(blockBytes),
+        slot: slot ?? getSlotFromBytes(blockBytes),
       };
     }
   }

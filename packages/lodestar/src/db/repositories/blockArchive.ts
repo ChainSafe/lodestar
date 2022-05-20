@@ -1,9 +1,9 @@
 import all from "it-all";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {Db, Repository, IKeyValue, IFilterOptions, Bucket, IDbMetrics} from "@chainsafe/lodestar-db";
-import {Slot, Root, ssz} from "@chainsafe/lodestar-types";
+import {Slot, Root, allForks, ssz} from "@chainsafe/lodestar-types";
 import {bytesToInt} from "@chainsafe/lodestar-utils";
-import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
+import {getSignedBlockTypeFromBytes} from "../../util/multifork.js";
 import {getRootIndexKey, getParentRootIndexKey} from "./blockArchiveIndex.js";
 import {deleteParentRootIndex, deleteRootIndex, storeParentRootIndex, storeRootIndex} from "./blockArchiveIndex.js";
 
@@ -33,7 +33,7 @@ export class BlockArchiveRepository extends Repository<Slot, allForks.SignedBeac
   }
 
   decodeValue(data: Uint8Array): allForks.SignedBeaconBlock {
-    return allForks.getSignedBlockTypeFromBytes(this.config, data).deserialize(data);
+    return getSignedBlockTypeFromBytes(this.config, data).deserialize(data);
   }
 
   // Handle key as slot

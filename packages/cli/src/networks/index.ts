@@ -1,11 +1,10 @@
 import {SLOTS_PER_EPOCH, ForkName} from "@chainsafe/lodestar-params";
 import {getClient} from "@chainsafe/lodestar-api";
-import {IBeaconNodeOptions} from "@chainsafe/lodestar";
+import {IBeaconNodeOptions, getStateTypeFromBytes} from "@chainsafe/lodestar";
 import {IChainConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
 import {Checkpoint} from "@chainsafe/lodestar-types/phase0";
 import {RecursivePartial, fromHex} from "@chainsafe/lodestar-utils";
 import {BeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
-import {getStateTypeFromBytes} from "@chainsafe/lodestar-beacon-state-transition/allForks";
 import fs from "node:fs";
 import got from "got";
 import * as mainnet from "./mainnet.js";
