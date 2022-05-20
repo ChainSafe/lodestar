@@ -72,7 +72,7 @@ describe("Sync Committee Signature validation", function () {
     chain.seenSyncCommitteeMessages.isKnown = () => true;
     await expectRejectedWithLodestarError(
       validateGossipSyncCommittee(chain, syncCommittee, 0),
-      SyncCommitteeErrorCode.SYNC_COMMITTEE_ALREADY_KNOWN
+      SyncCommitteeErrorCode.SYNC_COMMITTEE_AGGREGATOR_ALREADY_KNOWN
     );
   });
 
