@@ -1,6 +1,6 @@
 import {AbortSignal} from "@chainsafe/abort-controller";
 import {toHexString} from "@chainsafe/ssz";
-import {allForks, Epoch, phase0, Slot, ssz, Version} from "@chainsafe/lodestar-types";
+import {allForks, Epoch, phase0, Slot, Version} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {CheckpointWithHex, IProtoBlock} from "@chainsafe/lodestar-fork-choice";
 import {CachedBeaconStateAllForks, computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
@@ -176,7 +176,7 @@ export function onForkChoiceReorg(this: BeaconChain, head: IProtoBlock, oldHead:
   this.logger.verbose("Chain reorg", {depth});
 }
 
-export function onAttestation(this: BeaconChain, attestation: phase0.Attestation): void {
+export function onAttestation(this: BeaconChain, _: phase0.Attestation): void {
   // do nothing for now
 }
 
