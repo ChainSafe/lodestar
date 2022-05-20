@@ -446,7 +446,7 @@ export class ForkChoice implements IForkChoice {
    * The supplied `attestation` **must** pass the `in_valid_indexed_attestation` function as it
    * will not be run here.
    */
-  onAttestation(attestation: phase0.IndexedAttestation): void {
+  onAttestation(attestation: phase0.IndexedAttestation, attDataRoot?: string): void {
     // Ignore any attestations to the zero hash.
     //
     // This is an edge case that results from the spec aliasing the zero hash to the genesis
@@ -468,7 +468,7 @@ export class ForkChoice implements IForkChoice {
       return;
     }
 
-    this.validateOnAttestation(attestation, slot, blockRootHex, targetEpoch);
+    this.validateOnAttestation(attestation, slot, blockRootHex, targetEpoch, attDataRoot);
 
     if (slot < this.fcStore.currentSlot) {
       for (const validatorIndex of attestation.attestingIndices) {
@@ -791,7 +791,8 @@ export class ForkChoice implements IForkChoice {
     indexedAttestation: phase0.IndexedAttestation,
     slot: Slot,
     blockRootHex: string,
-    targetEpoch: Epoch
+    targetEpoch: Epoch,
+    attDataRoot?: string
   ): void {
     // There is no point in processing an attestation with an empty bitfield. Reject
     // it immediately.
@@ -809,7 +810,7 @@ export class ForkChoice implements IForkChoice {
 
     const attestationData = indexedAttestation.data;
     // AttestationData is expected to internally cache its root to make this hashTreeRoot() call free
-    const attestationCacheKey = toHexString(ssz.phase0.AttestationData.hashTreeRoot(attestationData));
+    const attestationCacheKey = attDataRoot ?? toHexString(ssz.phase0.AttestationData.hashTreeRoot(attestationData));
 
     if (!this.validatedAttestationDatas.has(attestationCacheKey)) {
       this.validateAttestationData(indexedAttestation.data, slot, blockRootHex, targetEpoch, attestationCacheKey);

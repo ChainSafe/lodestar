@@ -22,6 +22,7 @@ import {LightClientServer} from "./lightClient/index.js";
 import {AggregatedAttestationPool} from "./opPools/aggregatedAttestationPool.js";
 import {PartiallyVerifiedBlockFlags} from "./blocks/types.js";
 import {ReprocessController} from "./reprocess.js";
+import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
 
 export type Eth2Context = {
   activeValidatorCount: number;
@@ -64,6 +65,7 @@ export interface IBeaconChain {
   // Gossip seen cache
   readonly seenAttesters: SeenAttesters;
   readonly seenAggregators: SeenAggregators;
+  readonly seenAggregatedAttestations: SeenAggregatedAttestations;
   readonly seenBlockProposers: SeenBlockProposers;
   readonly seenSyncCommitteeMessages: SeenSyncCommitteeMessages;
   readonly seenContributionAndProof: SeenContributionAndProof;

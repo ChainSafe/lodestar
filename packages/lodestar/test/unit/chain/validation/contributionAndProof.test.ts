@@ -35,7 +35,7 @@ describe.skip("Sync Committee Contribution And Proof validation", function () {
     chain = sandbox.createStubInstance(BeaconChain);
     (chain as {
       seenContributionAndProof: SeenContributionAndProof;
-    }).seenContributionAndProof = new SeenContributionAndProof();
+    }).seenContributionAndProof = new SeenContributionAndProof(null);
     clockStub = sandbox.createStubInstance(LocalClock);
     chain.clock = clockStub;
     clockStub.isCurrentSlotGivenGossipDisparity.returns(true);
@@ -69,6 +69,20 @@ describe.skip("Sync Committee Contribution And Proof validation", function () {
     );
   });
 
+  it("should throw error - same contribution data with superset of aggregationBits already known", async function () {
+    const signedContributionAndProof = generateSignedContributionAndProof({
+      contribution: {slot: currentSlot},
+      aggregatorIndex,
+    });
+    const headState = await generateCachedStateWithPubkeys({slot: currentSlot}, config, true);
+    chain.getHeadState.returns(headState);
+    chain.seenContributionAndProof.participantsKnown = () => true;
+    await expectRejectedWithLodestarError(
+      validateSyncCommitteeGossipContributionAndProof(chain, signedContributionAndProof),
+      SyncCommitteeErrorCode.SYNC_COMMITTEE_PARTICIPANTS_ALREADY_KNOWN
+    );
+  });
+
   it("should throw error - there is same contribution with same aggregator and index and slot", async function () {
     const signedContributionAndProof = generateSignedContributionAndProof({
       contribution: {slot: currentSlot},
@@ -76,10 +90,10 @@ describe.skip("Sync Committee Contribution And Proof validation", function () {
     });
     const headState = await generateCachedStateWithPubkeys({slot: currentSlot}, config, true);
     chain.getHeadState.returns(headState);
-    chain.seenContributionAndProof.isKnown = () => true;
+    chain.seenContributionAndProof.isAggregatorKnown = () => true;
     await expectRejectedWithLodestarError(
       validateSyncCommitteeGossipContributionAndProof(chain, signedContributionAndProof),
-      SyncCommitteeErrorCode.SYNC_COMMITTEE_ALREADY_KNOWN
+      SyncCommitteeErrorCode.SYNC_COMMITTEE_AGGREGATOR_ALREADY_KNOWN
     );
   });
 

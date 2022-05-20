@@ -32,7 +32,7 @@ export async function validateGossipSyncCommittee(
   // by sync_committee_signature.validator_index.
   if (chain.seenSyncCommitteeMessages.isKnown(slot, subnet, validatorIndex)) {
     throw new SyncCommitteeError(GossipAction.IGNORE, {
-      code: SyncCommitteeErrorCode.SYNC_COMMITTEE_ALREADY_KNOWN,
+      code: SyncCommitteeErrorCode.SYNC_COMMITTEE_AGGREGATOR_ALREADY_KNOWN,
     });
   }
 

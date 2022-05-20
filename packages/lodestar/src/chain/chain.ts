@@ -51,6 +51,7 @@ import {IEth1ForBlockProduction} from "../eth1/index.js";
 import {IExecutionEngine} from "../executionEngine/index.js";
 import {PrecomputeNextEpochTransitionScheduler} from "./precomputeNextEpochTransition.js";
 import {ReprocessController} from "./reprocess.js";
+import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
 
 export class BeaconChain implements IBeaconChain {
   readonly genesisTime: UintNum64;
@@ -81,9 +82,10 @@ export class BeaconChain implements IBeaconChain {
   // Gossip seen cache
   readonly seenAttesters = new SeenAttesters();
   readonly seenAggregators = new SeenAggregators();
+  readonly seenAggregatedAttestations: SeenAggregatedAttestations;
   readonly seenBlockProposers = new SeenBlockProposers();
   readonly seenSyncCommitteeMessages = new SeenSyncCommitteeMessages();
-  readonly seenContributionAndProof = new SeenContributionAndProof();
+  readonly seenContributionAndProof: SeenContributionAndProof;
 
   // Global state caches
   readonly pubkey2index: PubkeyIndexMap;
@@ -139,6 +141,9 @@ export class BeaconChain implements IBeaconChain {
     const stateCache = new StateContextCache({metrics});
     const checkpointStateCache = new CheckpointStateCache({metrics});
 
+    this.seenAggregatedAttestations = new SeenAggregatedAttestations(metrics);
+    this.seenContributionAndProof = new SeenContributionAndProof(metrics);
+
     // Initialize single global instance of state caches
     this.pubkey2index = new PubkeyIndexMap();
     this.index2pubkey = [];
@@ -188,6 +193,7 @@ export class BeaconChain implements IBeaconChain {
         lightClientServer,
         stateCache,
         checkpointStateCache,
+        seenAggregatedAttestations: this.seenAggregatedAttestations,
         emitter,
         config,
         logger,

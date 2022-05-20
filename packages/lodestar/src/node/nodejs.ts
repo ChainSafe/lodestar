@@ -132,7 +132,7 @@ export class BeaconNode {
     if (opts.metrics.enabled) {
       // Since the db is managed separately, db metrics must be manually added to the registry
       db.metricsRegistry && metricsRegistries.push(db.metricsRegistry);
-      metrics = createMetrics(opts.metrics, config, anchorState, logger.child({module: "VMON"}), metricsRegistries)
+      metrics = createMetrics(opts.metrics, config, anchorState, logger.child({module: "VMON"}), metricsRegistries);
       initBeaconMetrics(metrics, anchorState);
     }
 

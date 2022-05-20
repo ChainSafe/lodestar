@@ -1,3 +1,4 @@
+import {ssz} from "@chainsafe/lodestar-types";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {toHexString} from "@chainsafe/ssz";
 import {allForks} from "@chainsafe/lodestar-types";
@@ -23,6 +24,7 @@ import {LightClientServer} from "../lightClient/index.js";
 import {getCheckpointFromState} from "./utils/checkpoint.js";
 import {PendingEvents} from "./utils/pendingEvents.js";
 import {FullyVerifiedBlock} from "./types.js";
+import {SeenAggregatedAttestations} from "../seenCache/seenAggregateAndProof.js";
 
 /**
  * Fork-choice allows to import attestations from current (0) or past (1) epoch.
@@ -34,6 +36,7 @@ export type ImportBlockModules = {
   forkChoice: IForkChoice;
   stateCache: StateContextCache;
   checkpointStateCache: CheckpointStateCache;
+  seenAggregatedAttestations: SeenAggregatedAttestations;
   lightClientServer: LightClientServer;
   executionEngine: IExecutionEngine;
   emitter: ChainEventEmitter;
@@ -119,10 +122,17 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
         const indexedAttestation = postState.epochCtx.getIndexedAttestation(attestation);
         const targetEpoch = attestation.data.target.epoch;
 
+        const attDataRoot = toHexString(ssz.phase0.AttestationData.hashTreeRoot(indexedAttestation.data));
+        chain.seenAggregatedAttestations.add(
+          targetEpoch,
+          attDataRoot,
+          {aggregationBits: attestation.aggregationBits, trueBitCount: indexedAttestation.attestingIndices.length},
+          true
+        );
         // Duplicated logic from fork-choice onAttestation validation logic.
         // Attestations outside of this range will be dropped as Errors, so no need to import
         if (targetEpoch <= currentEpoch && targetEpoch >= currentEpoch - FORK_CHOICE_ATT_EPOCH_LIMIT) {
-          chain.forkChoice.onAttestation(indexedAttestation);
+          chain.forkChoice.onAttestation(indexedAttestation, attDataRoot);
         }
 
         if (parentSlot !== undefined) {

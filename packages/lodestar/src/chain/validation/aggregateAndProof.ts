@@ -1,4 +1,5 @@
-import {ValidatorIndex} from "@chainsafe/lodestar-types";
+import {toHexString} from "@chainsafe/ssz";
+import {ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {
   phase0,
   allForks,
@@ -24,7 +25,9 @@ export async function validateGossipAggregateAndProof(
 
   const aggregateAndProof = signedAggregateAndProof.message;
   const aggregate = aggregateAndProof.aggregate;
+  const {aggregationBits} = aggregate;
   const attData = aggregate.data;
+  const attDataRoot = toHexString(ssz.phase0.AttestationData.hashTreeRoot(attData));
   const attSlot = attData.slot;
   const attEpoch = computeEpochAtSlot(attSlot);
   const attTarget = attData.target;
@@ -48,6 +51,16 @@ export async function validateGossipAggregateAndProof(
       code: AttestationErrorCode.AGGREGATOR_ALREADY_KNOWN,
       targetEpoch,
       aggregatorIndex,
+    });
+  }
+
+  // _[IGNORE]_ A valid aggregate attestation defined by `hash_tree_root(aggregate.data)` whose `aggregation_bits`
+  // is a non-strict superset has _not_ already been seen.
+  if (chain.seenAggregatedAttestations.isKnown(targetEpoch, attDataRoot, aggregationBits)) {
+    throw new AttestationError(GossipAction.IGNORE, {
+      code: AttestationErrorCode.ATTESTERS_ALREADY_KNOWN,
+      targetEpoch,
+      aggregateRoot: attDataRoot,
     });
   }
 
@@ -122,6 +135,12 @@ export async function validateGossipAggregateAndProof(
   }
 
   chain.seenAggregators.add(targetEpoch, aggregatorIndex);
+  chain.seenAggregatedAttestations.add(
+    targetEpoch,
+    attDataRoot,
+    {aggregationBits, trueBitCount: attestingIndices.length},
+    false
+  );
 
   return {indexedAttestation, committeeIndices};
 }
