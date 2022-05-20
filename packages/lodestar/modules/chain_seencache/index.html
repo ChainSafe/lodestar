@@ -601,8 +601,35 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#aggregationinfo" class="md-nav__link">
+    AggregationInfo
+  </a>
+  
+    <nav class="md-nav" aria-label="AggregationInfo">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#type-declaration" class="md-nav__link">
+    Type declaration:
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#aggregatorsubnetkey" class="md-nav__link">
     AggregatorSubnetKey
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#contributiondatakey" class="md-nav__link">
+    ContributionDataKey
   </a>
   
 </li>
@@ -635,6 +662,13 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#const-max_epochs_in_cache" class="md-nav__link">
+    Const MAX_EPOCHS_IN_CACHE
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#const-max_slots_in_cache" class="md-nav__link">
     Const MAX_SLOTS_IN_CACHE
   </a>
@@ -662,6 +696,20 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#insertdesc" class="md-nav__link">
+    insertDesc
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#seenaggregatorkey" class="md-nav__link">
+    seenAggregatorKey
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#seencachekey" class="md-nav__link">
     seenCacheKey
   </a>
@@ -669,8 +717,8 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#seencachekey_1" class="md-nav__link">
-    seenCacheKey
+  <a href="#tocontributiondatakey" class="md-nav__link">
+    toContributionDataKey
   </a>
   
 </li>
@@ -711,6 +759,7 @@
 </ul>
 <h3 id="classes">Classes<a class="headerlink" href="#classes" title="Permanent link">&para;</a></h3>
 <ul>
+<li><a href="../../classes/chain_seencache.seenaggregatedattestations/">SeenAggregatedAttestations</a></li>
 <li><a href="../../classes/chain_seencache.seenaggregators/">SeenAggregators</a></li>
 <li><a href="../../classes/chain_seencache.seenattesters/">SeenAttesters</a></li>
 <li><a href="../../classes/chain_seencache.seenblockproposers/">SeenBlockProposers</a></li>
@@ -719,19 +768,24 @@
 </ul>
 <h3 id="type-aliases">Type aliases<a class="headerlink" href="#type-aliases" title="Permanent link">&para;</a></h3>
 <ul>
+<li><a href="./#aggregationinfo">AggregationInfo</a></li>
 <li><a href="./#aggregatorsubnetkey">AggregatorSubnetKey</a></li>
+<li><a href="./#contributiondatakey">ContributionDataKey</a></li>
 <li><a href="./#validataorsubnetkey">ValidataorSubnetKey</a></li>
 </ul>
 <h3 id="variables">Variables<a class="headerlink" href="#variables" title="Permanent link">&para;</a></h3>
 <ul>
 <li><a href="./#const-max_epochs">MAX_EPOCHS</a></li>
+<li><a href="./#const-max_epochs_in_cache">MAX_EPOCHS_IN_CACHE</a></li>
 <li><a href="./#const-max_slots_in_cache">MAX_SLOTS_IN_CACHE</a></li>
 <li><a href="./#const-max_slots_in_cache">MAX_SLOTS_IN_CACHE</a></li>
 </ul>
 <h3 id="functions">Functions<a class="headerlink" href="#functions" title="Permanent link">&para;</a></h3>
 <ul>
+<li><a href="./#insertdesc">insertDesc</a></li>
+<li><a href="./#seenaggregatorkey">seenAggregatorKey</a></li>
 <li><a href="./#seencachekey">seenCacheKey</a></li>
-<li><a href="./#seencachekey">seenCacheKey</a></li>
+<li><a href="./#tocontributiondatakey">toContributionDataKey</a></li>
 </ul>
 <h2 id="references_1">References<a class="headerlink" href="#references_1" title="Permanent link">&para;</a></h2>
 <h3 id="seenaggregators">SeenAggregators<a class="headerlink" href="#seenaggregators" title="Permanent link">&para;</a></h3>
@@ -749,33 +803,106 @@
 <h3 id="seensynccommitteemessages">SeenSyncCommitteeMessages<a class="headerlink" href="#seensynccommitteemessages" title="Permanent link">&para;</a></h3>
 <p>• <strong>SeenSyncCommitteeMessages</strong>:</p>
 <h2 id="type-aliases_1">Type aliases<a class="headerlink" href="#type-aliases_1" title="Permanent link">&para;</a></h2>
+<h3 id="aggregationinfo">AggregationInfo<a class="headerlink" href="#aggregationinfo" title="Permanent link">&para;</a></h3>
+<p>Ƭ <strong>AggregationInfo</strong>: <em>object</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/ef9528a/packages/lodestar/src/chain/seenCache/seenAggregateAndProof.ts#L13">packages/lodestar/src/chain/seenCache/seenAggregateAndProof.ts:13</a></em></p>
+<h4 id="type-declaration">Type declaration:<a class="headerlink" href="#type-declaration" title="Permanent link">&para;</a></h4>
+<ul>
+<li>
+<p><strong>aggregationBits</strong>: <em>BitArray</em></p>
+</li>
+<li>
+<p><strong>trueBitCount</strong>: <em>number</em></p>
+</li>
+</ul>
+<hr />
 <h3 id="aggregatorsubnetkey">AggregatorSubnetKey<a class="headerlink" href="#aggregatorsubnetkey" title="Permanent link">&para;</a></h3>
 <p>Ƭ <strong>AggregatorSubnetKey</strong>: <em>string</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/fbfae0c/packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts#L10">packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts:10</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/ef9528a/packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts#L15">packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts:15</a></em></p>
 <p>AggregatorSubnetKey = <code>aggregatorIndex + subcommitteeIndex</code></p>
+<hr />
+<h3 id="contributiondatakey">ContributionDataKey<a class="headerlink" href="#contributiondatakey" title="Permanent link">&para;</a></h3>
+<p>Ƭ <strong>ContributionDataKey</strong>: <em>string</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/ef9528a/packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts#L18">packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts:18</a></em></p>
+<p>ContributionDataKey = `slot + beacon_block_root + subcommittee_index</p>
 <hr />
 <h3 id="validataorsubnetkey">ValidataorSubnetKey<a class="headerlink" href="#validataorsubnetkey" title="Permanent link">&para;</a></h3>
 <p>Ƭ <strong>ValidataorSubnetKey</strong>: <em>string</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/fbfae0c/packages/lodestar/src/chain/seenCache/seenCommittee.ts#L10">packages/lodestar/src/chain/seenCache/seenCommittee.ts:10</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/ef9528a/packages/lodestar/src/chain/seenCache/seenCommittee.ts#L10">packages/lodestar/src/chain/seenCache/seenCommittee.ts:10</a></em></p>
 <p>ValidataorSubnetKey = <code>validatorIndex + subcommitteeIndex</code></p>
 <h2 id="variables_1">Variables<a class="headerlink" href="#variables_1" title="Permanent link">&para;</a></h2>
 <h3 id="const-max_epochs"><code>Const</code> MAX_EPOCHS<a class="headerlink" href="#const-max_epochs" title="Permanent link">&para;</a></h3>
 <p>• <strong>MAX_EPOCHS</strong>: <em>3</em> = 3</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/fbfae0c/packages/lodestar/src/chain/seenCache/seenAttesters.ts#L15">packages/lodestar/src/chain/seenCache/seenAttesters.ts:15</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/ef9528a/packages/lodestar/src/chain/seenCache/seenAttesters.ts#L15">packages/lodestar/src/chain/seenCache/seenAttesters.ts:15</a></em></p>
+<hr />
+<h3 id="const-max_epochs_in_cache"><code>Const</code> MAX_EPOCHS_IN_CACHE<a class="headerlink" href="#const-max_epochs_in_cache" title="Permanent link">&para;</a></h3>
+<p>• <strong>MAX_EPOCHS_IN_CACHE</strong>: <em>2</em> = 2</p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/ef9528a/packages/lodestar/src/chain/seenCache/seenAggregateAndProof.ts#L11">packages/lodestar/src/chain/seenCache/seenAggregateAndProof.ts:11</a></em></p>
+<p>With this gossip validation condition: [IGNORE] aggregate.data.slot is within the last ATTESTATION_PROPAGATION_SLOT_RANGE slots (with a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance)
+Since ATTESTATION_PROPAGATION_SLOT_RANGE is 32, we keep seen AggregateAndProof in the last 2 epochs.</p>
 <hr />
 <h3 id="const-max_slots_in_cache"><code>Const</code> MAX_SLOTS_IN_CACHE<a class="headerlink" href="#const-max_slots_in_cache" title="Permanent link">&para;</a></h3>
 <p>• <strong>MAX_SLOTS_IN_CACHE</strong>: <em>3</em> = 3</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/fbfae0c/packages/lodestar/src/chain/seenCache/seenCommittee.ts#L7">packages/lodestar/src/chain/seenCache/seenCommittee.ts:7</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/ef9528a/packages/lodestar/src/chain/seenCache/seenCommittee.ts#L7">packages/lodestar/src/chain/seenCache/seenCommittee.ts:7</a></em></p>
 <p>SyncCommittee signatures are only useful during a single slot according to our peer's clocks</p>
 <hr />
 <h3 id="const-max_slots_in_cache_1"><code>Const</code> MAX_SLOTS_IN_CACHE<a class="headerlink" href="#const-max_slots_in_cache_1" title="Permanent link">&para;</a></h3>
 <p>• <strong>MAX_SLOTS_IN_CACHE</strong>: <em>8</em> = 8</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/fbfae0c/packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts#L7">packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts:7</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/ef9528a/packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts#L12">packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts:12</a></em></p>
 <p>SyncCommittee aggregates are only useful for the next block they have signed.</p>
 <h2 id="functions_1">Functions<a class="headerlink" href="#functions_1" title="Permanent link">&para;</a></h2>
+<h3 id="insertdesc">insertDesc<a class="headerlink" href="#insertdesc" title="Permanent link">&para;</a></h3>
+<p>▸ <strong>insertDesc</strong>(<code>seenAggregationInfoArr</code>: <a href="./#aggregationinfo">AggregationInfo</a>[], <code>newItem</code>: <a href="./#aggregationinfo">AggregationInfo</a>): <em>void</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/ef9528a/packages/lodestar/src/chain/seenCache/seenAggregateAndProof.ts#L79">packages/lodestar/src/chain/seenCache/seenAggregateAndProof.ts:79</a></em></p>
+<p>Make sure seenAggregationInfoArr is always in desc order based on trueBitCount so that isKnown can be faster</p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>seenAggregationInfoArr</code></td>
+<td><a href="./#aggregationinfo">AggregationInfo</a>[]</td>
+</tr>
+<tr>
+<td><code>newItem</code></td>
+<td><a href="./#aggregationinfo">AggregationInfo</a></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong> <em>void</em></p>
+<hr />
+<h3 id="seenaggregatorkey">seenAggregatorKey<a class="headerlink" href="#seenaggregatorkey" title="Permanent link">&para;</a></h3>
+<p>▸ <strong>seenAggregatorKey</strong>(<code>subcommitteeIndex</code>: number, <code>aggregatorIndex</code>: ValidatorIndex): <em><a href="./#aggregatorsubnetkey">AggregatorSubnetKey</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/ef9528a/packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts#L98">packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts:98</a></em></p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>subcommitteeIndex</code></td>
+<td>number</td>
+</tr>
+<tr>
+<td><code>aggregatorIndex</code></td>
+<td>ValidatorIndex</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong> <em><a href="./#aggregatorsubnetkey">AggregatorSubnetKey</a></em></p>
+<hr />
 <h3 id="seencachekey">seenCacheKey<a class="headerlink" href="#seencachekey" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>seenCacheKey</strong>(<code>subnet</code>: number, <code>validatorIndex</code>: ValidatorIndex): <em><a href="./#validataorsubnetkey">ValidataorSubnetKey</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/fbfae0c/packages/lodestar/src/chain/seenCache/seenCommittee.ts#L40">packages/lodestar/src/chain/seenCache/seenCommittee.ts:40</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/ef9528a/packages/lodestar/src/chain/seenCache/seenCommittee.ts#L40">packages/lodestar/src/chain/seenCache/seenCommittee.ts:40</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -797,9 +924,9 @@
 </table>
 <p><strong>Returns:</strong> <em><a href="./#validataorsubnetkey">ValidataorSubnetKey</a></em></p>
 <hr />
-<h3 id="seencachekey_1">seenCacheKey<a class="headerlink" href="#seencachekey_1" title="Permanent link">&para;</a></h3>
-<p>▸ <strong>seenCacheKey</strong>(<code>subcommitteeIndex</code>: number, <code>aggregatorIndex</code>: ValidatorIndex): <em><a href="./#aggregatorsubnetkey">AggregatorSubnetKey</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/fbfae0c/packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts#L44">packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts:44</a></em></p>
+<h3 id="tocontributiondatakey">toContributionDataKey<a class="headerlink" href="#tocontributiondatakey" title="Permanent link">&para;</a></h3>
+<p>▸ <strong>toContributionDataKey</strong>(<code>contribution</code>: SyncCommitteeContribution): <em><a href="./#contributiondatakey">ContributionDataKey</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/ef9528a/packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts#L102">packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts:102</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -810,16 +937,12 @@
 </thead>
 <tbody>
 <tr>
-<td><code>subcommitteeIndex</code></td>
-<td>number</td>
-</tr>
-<tr>
-<td><code>aggregatorIndex</code></td>
-<td>ValidatorIndex</td>
+<td><code>contribution</code></td>
+<td>SyncCommitteeContribution</td>
 </tr>
 </tbody>
 </table>
-<p><strong>Returns:</strong> <em><a href="./#aggregatorsubnetkey">AggregatorSubnetKey</a></em></p>
+<p><strong>Returns:</strong> <em><a href="./#contributiondatakey">ContributionDataKey</a></em></p>
 
               
             </article>

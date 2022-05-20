@@ -512,6 +512,13 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#constructors" class="md-nav__link">
+    Constructors
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#properties" class="md-nav__link">
     Properties
   </a>
@@ -531,6 +538,26 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#constructors_1" class="md-nav__link">
+    Constructors
+  </a>
+  
+    <nav class="md-nav" aria-label="Constructors">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#constructor" class="md-nav__link">
+    constructor
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#properties_1" class="md-nav__link">
     Properties
   </a>
@@ -539,8 +566,22 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#private-readonly-seencachebyslot" class="md-nav__link">
-    Private Readonly seenCacheBySlot
+  <a href="#private-readonly-metrics" class="md-nav__link">
+    Private Readonly metrics
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#private-readonly-seenaggregatorbyslot" class="md-nav__link">
+    Private Readonly seenAggregatorBySlot
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#private-readonly-seencontributionbyslot" class="md-nav__link">
+    Private Readonly seenContributionBySlot
   </a>
   
 </li>
@@ -566,8 +607,15 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#isknown" class="md-nav__link">
-    isKnown
+  <a href="#isaggregatorknown" class="md-nav__link">
+    isAggregatorKnown
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#participantsknown" class="md-nav__link">
+    participantsKnown
   </a>
   
 </li>
@@ -612,24 +660,63 @@ This stays in-memory and should be pruned per slot.</p>
 <li><strong>SeenContributionAndProof</strong></li>
 </ul>
 <h2 id="index">Index<a class="headerlink" href="#index" title="Permanent link">&para;</a></h2>
+<h3 id="constructors">Constructors<a class="headerlink" href="#constructors" title="Permanent link">&para;</a></h3>
+<ul>
+<li><a href="./#constructor">constructor</a></li>
+</ul>
 <h3 id="properties">Properties<a class="headerlink" href="#properties" title="Permanent link">&para;</a></h3>
 <ul>
-<li><a href="./#private-readonly-seencachebyslot">seenCacheBySlot</a></li>
+<li><a href="./#private-readonly-metrics">metrics</a></li>
+<li><a href="./#private-readonly-seenaggregatorbyslot">seenAggregatorBySlot</a></li>
+<li><a href="./#private-readonly-seencontributionbyslot">seenContributionBySlot</a></li>
 </ul>
 <h3 id="methods">Methods<a class="headerlink" href="#methods" title="Permanent link">&para;</a></h3>
 <ul>
 <li><a href="./#add">add</a></li>
-<li><a href="./#isknown">isKnown</a></li>
+<li><a href="./#isaggregatorknown">isAggregatorKnown</a></li>
+<li><a href="./#participantsknown">participantsKnown</a></li>
 <li><a href="./#prune">prune</a></li>
 </ul>
+<h2 id="constructors_1">Constructors<a class="headerlink" href="#constructors_1" title="Permanent link">&para;</a></h2>
+<h3 id="constructor">constructor<a class="headerlink" href="#constructor" title="Permanent link">&para;</a></h3>
+<p>+ <strong>new SeenContributionAndProof</strong>(<code>metrics</code>: <a href="../../modules/metrics/#imetrics">IMetrics</a> | null): <em><a href="./">SeenContributionAndProof</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/ef9528a/packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts#L32">packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts:32</a></em></p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>metrics</code></td>
+<td><a href="../../modules/metrics/#imetrics">IMetrics</a> &#124; null</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong> <em><a href="./">SeenContributionAndProof</a></em></p>
 <h2 id="properties_1">Properties<a class="headerlink" href="#properties_1" title="Permanent link">&para;</a></h2>
-<h3 id="private-readonly-seencachebyslot"><code>Private</code> <code>Readonly</code> seenCacheBySlot<a class="headerlink" href="#private-readonly-seencachebyslot" title="Permanent link">&para;</a></h3>
-<p>• <strong>seenCacheBySlot</strong>: <em><a href="../util.mapdef/">MapDef</a>‹number, Set‹string››</em> = new MapDef<Slot, Set\<AggregatorSubnetKey>>(() =&gt; new Set<AggregatorSubnetKey>())</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/fbfae0c/packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts#L18">packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts:18</a></em></p>
+<h3 id="private-readonly-metrics"><code>Private</code> <code>Readonly</code> metrics<a class="headerlink" href="#private-readonly-metrics" title="Permanent link">&para;</a></h3>
+<p>• <strong>metrics</strong>: <em><a href="../../modules/metrics/#imetrics">IMetrics</a> | null</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/ef9528a/packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts#L34">packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts:34</a></em></p>
+<hr />
+<h3 id="private-readonly-seenaggregatorbyslot"><code>Private</code> <code>Readonly</code> seenAggregatorBySlot<a class="headerlink" href="#private-readonly-seenaggregatorbyslot" title="Permanent link">&para;</a></h3>
+<p>• <strong>seenAggregatorBySlot</strong>: <em><a href="../util.mapdef/">MapDef</a>‹number, Set‹string››</em> = new MapDef<Slot, Set\<AggregatorSubnetKey>>(
+    () =&gt; new Set<AggregatorSubnetKey>()
+  )</p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/ef9528a/packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts#L26">packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts:26</a></em></p>
+<hr />
+<h3 id="private-readonly-seencontributionbyslot"><code>Private</code> <code>Readonly</code> seenContributionBySlot<a class="headerlink" href="#private-readonly-seencontributionbyslot" title="Permanent link">&para;</a></h3>
+<p>• <strong>seenContributionBySlot</strong>: <em><a href="../util.mapdef/">MapDef</a>‹number, <a href="../util.mapdef/">MapDef</a>‹string, <a href="../../modules/chain_seencache/#aggregationinfo">AggregationInfo</a>[]››</em> = new MapDef<Slot, MapDef\<ContributionDataKey, AggregationInfo[]>>(
+    () =&gt; new MapDef(() =&gt; [])
+  )</p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/ef9528a/packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts#L30">packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts:30</a></em></p>
 <h2 id="methods_1">Methods<a class="headerlink" href="#methods_1" title="Permanent link">&para;</a></h2>
 <h3 id="add">add<a class="headerlink" href="#add" title="Permanent link">&para;</a></h3>
-<p>▸ <strong>add</strong>(<code>slot</code>: Slot, <code>subcommitteeIndex</code>: number, <code>aggregatorIndex</code>: ValidatorIndex): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/fbfae0c/packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts#L30">packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts:30</a></em></p>
+<p>▸ <strong>add</strong>(<code>contributionAndProof</code>: ContributionAndProof, <code>trueBitCount</code>: number): <em>void</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/ef9528a/packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts#L69">packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts:69</a></em></p>
 <p>Register item as seen in the cache</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -641,24 +728,20 @@ This stays in-memory and should be pruned per slot.</p>
 </thead>
 <tbody>
 <tr>
-<td><code>slot</code></td>
-<td>Slot</td>
+<td><code>contributionAndProof</code></td>
+<td>ContributionAndProof</td>
 </tr>
 <tr>
-<td><code>subcommitteeIndex</code></td>
+<td><code>trueBitCount</code></td>
 <td>number</td>
-</tr>
-<tr>
-<td><code>aggregatorIndex</code></td>
-<td>ValidatorIndex</td>
 </tr>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>void</em></p>
 <hr />
-<h3 id="isknown">isKnown<a class="headerlink" href="#isknown" title="Permanent link">&para;</a></h3>
-<p>▸ <strong>isKnown</strong>(<code>slot</code>: Slot, <code>subcommitteeIndex</code>: number, <code>aggregatorIndex</code>: ValidatorIndex): <em>boolean</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/fbfae0c/packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts#L25">packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts:25</a></em></p>
+<h3 id="isaggregatorknown">isAggregatorKnown<a class="headerlink" href="#isaggregatorknown" title="Permanent link">&para;</a></h3>
+<p>▸ <strong>isAggregatorKnown</strong>(<code>slot</code>: Slot, <code>subcommitteeIndex</code>: number, <code>aggregatorIndex</code>: ValidatorIndex): <em>boolean</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/ef9528a/packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts#L64">packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts:64</a></em></p>
 <p>Gossip validation requires to check:
 The sync committee contribution is the first valid contribution received for the aggregator with index
 contribution_and_proof.aggregator_index for the slot contribution.slot and subcommittee index contribution.subcommittee_index.</p>
@@ -687,9 +770,31 @@ contribution_and_proof.aggregator_index for the slot contribution.slot and subco
 </table>
 <p><strong>Returns:</strong> <em>boolean</em></p>
 <hr />
+<h3 id="participantsknown">participantsKnown<a class="headerlink" href="#participantsknown" title="Permanent link">&para;</a></h3>
+<p>▸ <strong>participantsKnown</strong>(<code>contribution</code>: SyncCommitteeContribution): <em>boolean</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/ef9528a/packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts#L40">packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts:40</a></em></p>
+<p><em>[IGNORE]</em> A valid sync committee contribution with equal <code>slot</code>, <code>beacon_block_root</code> and <code>subcommittee_index</code> whose
+<code>aggregation_bits</code> is non-strict superset has <em>not</em> already been seen.</p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>contribution</code></td>
+<td>SyncCommitteeContribution</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong> <em>boolean</em></p>
+<hr />
 <h3 id="prune">prune<a class="headerlink" href="#prune" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>prune</strong>(<code>headSlot</code>: Slot): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/fbfae0c/packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts#L35">packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts:35</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/ef9528a/packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts#L83">packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts:83</a></em></p>
 <p>Prune per head slot</p>
 <p><strong>Parameters:</strong></p>
 <table>
