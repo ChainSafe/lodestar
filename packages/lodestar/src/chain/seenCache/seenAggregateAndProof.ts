@@ -39,12 +39,12 @@ export class SeenAggregatedAttestations {
 
   isKnown(targetEpoch: Epoch, attDataRoot: RootHex, aggregationBits: BitArray): boolean {
     const seenAggregationInfoArr = this.aggregateRootsByEpoch.getOrDefault(targetEpoch).getOrDefault(attDataRoot);
-    this.metrics?.seenCache.aggregatedAttestations.isKnownTotal.inc();
+    this.metrics?.seenCache.aggregatedAttestations.isKnownCalls.inc();
 
     for (let i = 0; i < seenAggregationInfoArr.length; i++) {
       if (isSuperSetOrEqual(seenAggregationInfoArr[i].aggregationBits, aggregationBits)) {
         this.metrics?.seenCache.aggregatedAttestations.superSetCheckTotal.observe(i + 1);
-        this.metrics?.seenCache.aggregatedAttestations.isKnownSuccess.inc();
+        this.metrics?.seenCache.aggregatedAttestations.isKnownHits.inc();
         return true;
       }
     }

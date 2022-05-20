@@ -41,12 +41,12 @@ export class SeenContributionAndProof {
     const {aggregationBits, slot} = contribution;
     const contributionMap = this.seenContributionBySlot.getOrDefault(slot);
     const seenAggregationInfoArr = contributionMap.getOrDefault(toContributionDataKey(contribution));
-    this.metrics?.seenCache.committeeContributions.isKnownTotal.inc();
+    this.metrics?.seenCache.committeeContributions.isKnownCalls.inc();
     // seenAttestingIndicesArr is sorted by trueBitCount desc
 
     for (let i = 0; i < seenAggregationInfoArr.length; i++) {
       if (isSuperSetOrEqual(seenAggregationInfoArr[i].aggregationBits, aggregationBits)) {
-        this.metrics?.seenCache.committeeContributions.isKnownSuccess.inc();
+        this.metrics?.seenCache.committeeContributions.isKnownHits.inc();
         this.metrics?.seenCache.committeeContributions.superSetCheckTotal.observe(i + 1);
         return true;
       }
