@@ -25,7 +25,7 @@ export class BeaconProposerCache {
     // This is not so optimized function, but could maintain a 2d array may be?
     for (const [validatorIndex, feeRecipientEntry] of this.feeRecipientByValidatorIndex.entries()) {
       // We only retain an entry for PROPOSER_PRESERVE_EPOCHS epochs
-      if (feeRecipientEntry.epoch + PROPOSER_PRESERVE_EPOCHS > epoch) {
+      if (feeRecipientEntry.epoch + PROPOSER_PRESERVE_EPOCHS < epoch) {
         this.feeRecipientByValidatorIndex.delete(validatorIndex);
       }
     }
