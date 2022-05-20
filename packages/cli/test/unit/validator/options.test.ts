@@ -4,7 +4,7 @@ import {parseFeeRecipient} from "../../../src/util";
 const feeRecipient = Buffer.from(Array.from({length: 20}, () => Math.round(Math.random() * 255)));
 const feeRecipientString = feeRecipient.toString("hex");
 
-describe("parseFeeRecipient", () => {
+describe("validator / parseFeeRecipient", () => {
   const testCases: string[] = [`0x${feeRecipientString}`, `0X${feeRecipientString}`];
   for (const testCase of testCases) {
     it(`parse ${testCase}`, () => {
@@ -13,7 +13,7 @@ describe("parseFeeRecipient", () => {
   }
 });
 
-describe("invalid feeRecipient", () => {
+describe("validator / invalid feeRecipient", () => {
   const testCases: string[] = [
     feeRecipientString,
     `X0${feeRecipientString}`,
