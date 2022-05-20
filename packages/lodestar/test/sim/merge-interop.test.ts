@@ -147,13 +147,13 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     if (TX_SCENARIOS.includes("simple")) {
       await sendTransaction(jsonRpcUrl, {
         from: "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b",
-        to: "0xafa3f8684e54059998bc3a7b0d2b0da075154d66",
+        to: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         gas: "0x76c0",
         gasPrice: "0x9184e72a000",
         value: "0x9184e72a",
       });
 
-      const balance = await getBalance(jsonRpcUrl, "0xafa3f8684e54059998bc3a7b0d2b0da075154d66");
+      const balance = await getBalance(jsonRpcUrl, "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
       if (balance != "0x0") throw new Error("Invalid Balance: " + balance);
     }
 
@@ -192,7 +192,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     if (TX_SCENARIOS.includes("simple")) {
       if (payload.transactions.length !== 1)
         throw new Error("Expected a simple transaction to be in the fetched payload");
-      const balance = await getBalance(jsonRpcUrl, "0xafa3f8684e54059998bc3a7b0d2b0da075154d66");
+      const balance = await getBalance(jsonRpcUrl, "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
       if (balance != "0x0") throw new Error("Invalid Balance: " + balance);
     }
 
@@ -215,7 +215,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     await executionEngine.notifyForkchoiceUpdate(bytesToData(payload.blockHash), genesisBlockHash);
 
     if (TX_SCENARIOS.includes("simple")) {
-      const balance = await getBalance(jsonRpcUrl, "0xafa3f8684e54059998bc3a7b0d2b0da075154d66");
+      const balance = await getBalance(jsonRpcUrl, "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
       if (balance !== "0x9184e72a") throw new Error("Invalid Balance");
     }
 
@@ -359,7 +359,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       // If bellatrixEpoch > 0, this is the case of pre-merge transaction submission on EL pow
       await sendTransaction(jsonRpcUrl, {
         from: "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b",
-        to: "0xafa3f8684e54059998bc3a7b0d2b0da075154d66",
+        to: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         gas: "0x76c0",
         gasPrice: "0x9184e72a000",
         value: "0x9184e72a",
@@ -374,7 +374,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
           // If bellatrixEpoch > 0, this is the case of pre-merge transaction confirmation on EL pow
           case 2:
             if (TX_SCENARIOS.includes("simple")) {
-              const balance = await getBalance(jsonRpcUrl, "0xafa3f8684e54059998bc3a7b0d2b0da075154d66");
+              const balance = await getBalance(jsonRpcUrl, "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
               if (balance !== "0x9184e72a") reject("Invalid Balance");
             }
             break;
@@ -390,7 +390,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
             if (TX_SCENARIOS.includes("simple")) {
               await sendTransaction(jsonRpcUrl, {
                 from: "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b",
-                to: "0xafa3f8684e54059998bc3a7b0d2b0da075154d66",
+                to: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
                 gas: "0x76c0",
                 gasPrice: "0x9184e72a000",
                 value: "0x9184e72a",
@@ -439,7 +439,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     }
 
     if (TX_SCENARIOS.includes("simple")) {
-      const balance = await getBalance(jsonRpcUrl, "0xafa3f8684e54059998bc3a7b0d2b0da075154d66");
+      const balance = await getBalance(jsonRpcUrl, "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
       // 0x12309ce54 = 2 * 0x9184e72a
       if (balance !== "0x12309ce54") throw Error("Invalid Balance");
     }
