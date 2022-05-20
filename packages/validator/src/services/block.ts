@@ -1,4 +1,4 @@
-import {BLSPubkey, Slot} from "@chainsafe/lodestar-types";
+import {BLSPubkey, Slot, bellatrix} from "@chainsafe/lodestar-types";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {ForkName} from "@chainsafe/lodestar-params";
 import {extendError, prettyBytes} from "@chainsafe/lodestar-utils";
@@ -80,7 +80,9 @@ export class BlockProposingService {
         this.metrics?.blockProposingErrors.inc({error: "produce"});
         throw extendError(e, "Failed to produce block");
       });
-      this.logger.debug("Produced block", debugLogCtx);
+      const blockFeeRecipient = (block.data as bellatrix.BeaconBlock).body?.executionPayload.feeRecipient;
+      const feeRecipient = blockFeeRecipient !== undefined ? toHexString(blockFeeRecipient) : undefined;
+      this.logger.debug("Produced block", {...debugLogCtx, feeRecipient});
       this.metrics?.blocksProduced.inc();
 
       const signedBlock = await this.validatorStore.signBlock(pubkey, block.data, slot);
@@ -91,7 +93,7 @@ export class BlockProposingService {
         this.metrics?.blockProposingErrors.inc({error: "publish"});
         throw extendError(e, "Failed to publish block");
       });
-      this.logger.info("Published block", {...logCtx, graffiti});
+      this.logger.info("Published block", {...logCtx, graffiti, feeRecipient});
       this.metrics?.blocksPublished.inc();
     } catch (e) {
       this.logger.error("Error proposing block", logCtx, e as Error);

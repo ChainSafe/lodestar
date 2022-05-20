@@ -324,6 +324,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
         // Now eth deposit/merge tracker methods directly available on engine endpoints
         eth1: {enabled: true, providerUrls: [engineApiUrl], jwtSecretHex},
         executionEngine: {urls: [engineApiUrl], jwtSecretHex},
+        chain: {defaultFeeRecipient: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"},
       },
       validatorCount: validatorClientCount * validatorsPerClient,
       logger: loggerNodeA,
@@ -346,6 +347,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       // At least one sim test must use the REST API for beacon <-> validator comms
       useRestApi: true,
       testLoggerOpts,
+      defaultFeeRecipient: "0xcccccccccccccccccccccccccccccccccccccccc",
       // TODO test merge-interop with remote;
     });
 
@@ -418,6 +420,10 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     await Promise.all(validators.map((v) => v.stop()));
     await bn.close();
     await sleep(500);
+
+    if (bn.chain.beaconProposerCache.get(1) !== "0xcccccccccccccccccccccccccccccccccccccccc") {
+      throw Error("Invalid feeRecipient set at BN");
+    }
 
     // Assertions to make sure the end state is good
     // 1. The proper head is set
