@@ -128,10 +128,11 @@ export class BeaconNode {
     // start db if not already started
     await db.start();
 
-    const metrics = opts.metrics.enabled
-      ? createMetrics(opts.metrics, config, anchorState, logger.child({module: "VMON"}), metricsRegistries)
-      : null;
-    if (metrics) {
+    let metrics = null;
+    if (opts.metrics.enabled) {
+      // Since the db is managed separately, db metrics must be manually added to the registry
+      db.metricsRegistry && metricsRegistries.push(db.metricsRegistry);
+      metrics = createMetrics(opts.metrics, config, anchorState, logger.child({module: "VMON"}), metricsRegistries)
       initBeaconMetrics(metrics, anchorState);
     }
 
