@@ -177,12 +177,7 @@ export function onForkChoiceReorg(this: BeaconChain, head: IProtoBlock, oldHead:
 }
 
 export function onAttestation(this: BeaconChain, attestation: phase0.Attestation): void {
-  this.logger.debug("Attestation processed", {
-    slot: attestation.data.slot,
-    index: attestation.data.index,
-    targetRoot: toHexString(attestation.data.target.root),
-    aggregationBits: ssz.phase0.CommitteeBits.toJson(attestation.aggregationBits) as string,
-  });
+  // do nothing for now
 }
 
 export async function onBlock(
