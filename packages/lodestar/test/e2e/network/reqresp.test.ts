@@ -18,7 +18,7 @@ import {testLogger} from "../../utils/logger.js";
 import {MockBeaconChain} from "../../utils/mocks/chain/chain.js";
 import {createNode} from "../../utils/network.js";
 import {generateState} from "../../utils/state.js";
-import {arrToSource, generateEmptySignedBlocks} from "../../unit/network/reqresp/utils";
+import {arrToSource, generateEmptySignedBlocks} from "../../unit/network/reqresp/utils.js";
 import {
   blocksToReqRespBlockResponses,
   generateEmptyReqRespBlockResponse,
