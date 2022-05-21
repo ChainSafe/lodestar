@@ -1,5 +1,5 @@
 import {itBench} from "@dapplion/benchmark";
-import {generatePerfTestCachedStatePhase0} from "../../util";
+import {generatePerfTestCachedStatePhase0} from "../../util.js";
 import {processSlot} from "../../../../src/allForks/slot/index.js";
 import {State} from "../../types.js";
 

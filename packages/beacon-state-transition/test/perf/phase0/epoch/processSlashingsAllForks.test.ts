@@ -6,7 +6,7 @@ import {
   CachedBeaconStateAllForks,
   EpochProcess,
 } from "../../../../src/index.js";
-import {generatePerfTestCachedStatePhase0, numValidators} from "../../util";
+import {generatePerfTestCachedStatePhase0, numValidators} from "../../util.js";
 import {StateEpoch} from "../../types.js";
 
 // PERF: Cost 'proportional' to only validators that are slashed. For mainnet conditions:

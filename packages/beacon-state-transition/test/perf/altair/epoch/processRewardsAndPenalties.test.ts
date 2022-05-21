@@ -1,6 +1,6 @@
 import {itBench} from "@dapplion/benchmark";
 import {altair} from "../../../../src/index.js";
-import {generatePerfTestCachedStateAltair, numValidators} from "../../util";
+import {generatePerfTestCachedStateAltair, numValidators} from "../../util.js";
 import {FlagFactors, generateBalanceDeltasEpochProcess} from "../../phase0/epoch/util.js";
 import {StateAltairEpoch} from "../../types.js";
 import {mutateInactivityScores} from "./util.js";

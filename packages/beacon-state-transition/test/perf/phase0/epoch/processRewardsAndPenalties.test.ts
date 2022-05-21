@@ -1,6 +1,6 @@
 import {itBench} from "@dapplion/benchmark";
 import {phase0} from "../../../../src/index.js";
-import {generatePerfTestCachedStatePhase0, numValidators} from "../../util";
+import {generatePerfTestCachedStatePhase0, numValidators} from "../../util.js";
 import {StatePhase0Epoch} from "../../types.js";
 import {FlagFactors, generateBalanceDeltasEpochProcess} from "./util.js";
 

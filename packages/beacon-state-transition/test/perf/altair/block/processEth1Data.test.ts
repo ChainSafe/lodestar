@@ -1,7 +1,7 @@
 import {itBench} from "@dapplion/benchmark";
 import {ACTIVE_PRESET, PresetName, SYNC_COMMITTEE_SIZE} from "@chainsafe/lodestar-params";
 import {allForks, CachedBeaconStateAllForks, CachedBeaconStateAltair} from "../../../../src/index.js";
-import {generatePerfTestCachedStateAltair, perfStateId} from "../../util";
+import {generatePerfTestCachedStateAltair, perfStateId} from "../../util.js";
 import {getBlockAltair} from "../../phase0/block/util.js";
 import {phase0} from "@chainsafe/lodestar-types";
 

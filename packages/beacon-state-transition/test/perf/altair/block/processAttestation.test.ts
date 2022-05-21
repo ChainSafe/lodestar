@@ -12,7 +12,7 @@ import {
 } from "@chainsafe/lodestar-params";
 import {phase0} from "@chainsafe/lodestar-types";
 import {altair, CachedBeaconStateAllForks, CachedBeaconStateAltair} from "../../../../src/index.js";
-import {generatePerfTestCachedStateAltair, perfStateId} from "../../util";
+import {generatePerfTestCachedStateAltair, perfStateId} from "../../util.js";
 import {BlockAltairOpts, getBlockAltair} from "../../phase0/block/util.js";
 import {StateAltair} from "../../types.js";
 

@@ -11,7 +11,7 @@ import {
   SYNC_COMMITTEE_SIZE,
 } from "@chainsafe/lodestar-params";
 import {allForks, CachedBeaconStateAltair} from "../../../../src/index.js";
-import {cachedStateAltairPopulateCaches, generatePerfTestCachedStateAltair, perfStateId} from "../../util";
+import {cachedStateAltairPopulateCaches, generatePerfTestCachedStateAltair, perfStateId} from "../../util.js";
 import {BlockAltairOpts, getBlockAltair} from "../../phase0/block/util.js";
 import {StateBlock} from "../../types.js";
 
