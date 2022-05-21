@@ -16,9 +16,6 @@
   "exports": {
     ".": {
       "import": "./lib/index.js"
-    },
-    "./chain": {
-      "import": "./lib/chain/index.js"
     }
   },
   "typesVersions": {

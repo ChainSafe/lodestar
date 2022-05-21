@@ -18,7 +18,7 @@ import {
   CheckpointStateCache,
   toCheckpointHex,
   toCheckpointKey,
-} from "@chainsafe/lodestar/chain";
+} from "../../../src/chain/index.js";
 import {toHexString} from "@chainsafe/ssz";
 import {
   CheckpointWithHex,
