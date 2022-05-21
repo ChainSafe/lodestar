@@ -33,7 +33,7 @@
     "test:unit": "nyc --cache-dir .nyc_output/.cache -e .ts mocha 'test/unit/**/*.test.ts'",
     "test": "yarn test:unit",
     "test:e2e": "yarn run download-spec-tests && mocha 'test/spec/**/*.test.ts'",
-    "download-spec-tests": "node --experimental-specifier-resolution=node --loader=ts-node/esm test/spec/downloadTests.ts",
+    "download-spec-tests": "node --loader=ts-node/esm test/spec/downloadTests.ts",
     "coverage": "codecov -F lodestar-validator",
     "check-readme": "typescript-docs-verifier"
   },

@@ -29,7 +29,7 @@ import {ResponseError} from "../../../../../src/network/reqresp/response/index.j
 import {RespStatus, ZERO_HASH} from "../../../../../src/constants/index.js";
 import {expectIsEqualSszTypeArr} from "../../../../utils/ssz.js";
 import {expectRejectedWithLodestarError} from "../../../../utils/errors.js";
-import {arrToSource, expectEqualByteChunks} from "../utils";
+import {arrToSource, expectEqualByteChunks} from "../utils.js";
 import {
   sszSnappyPing,
   sszSnappySignedBeaconBlockPhase0,

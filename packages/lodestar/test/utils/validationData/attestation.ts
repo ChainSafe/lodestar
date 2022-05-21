@@ -12,8 +12,7 @@ import {ZERO_HASH, ZERO_HASH_HEX} from "../../../src/constants/index.js";
 import {
   generateTestCachedBeaconStateOnlyValidators,
   getSecretKeyFromIndexCached,
-  // eslint-disable-next-line import/no-relative-packages
-} from "../../../../beacon-state-transition/test/perf/util";
+} from "../../../../beacon-state-transition/test/perf/util.js";
 import {SeenAttesters} from "../../../src/chain/seenCache/index.js";
 import {BlsSingleThreadVerifier} from "../../../src/chain/bls/index.js";
 import {signCached} from "../cache.js";

@@ -6,7 +6,7 @@ import {Method, Encoding, getRequestSzzTypeByMethod, RequestBody} from "../../..
 import {requestEncode} from "../../../../../src/network/reqresp/encoders/requestEncode.js";
 import {requestDecode} from "../../../../../src/network/reqresp/encoders/requestDecode.js";
 import {isEqualSszType} from "../../../../utils/ssz.js";
-import {createStatus, generateRoots} from "../utils";
+import {createStatus, generateRoots} from "../utils.js";
 
 chai.use(chaiAsPromised);
 

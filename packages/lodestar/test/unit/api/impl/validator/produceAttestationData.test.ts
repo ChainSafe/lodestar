@@ -8,7 +8,7 @@ import {LocalClock} from "../../../../../src/chain/clock/index.js";
 import {testLogger} from "../../../../utils/logger.js";
 import chaiAsPromised from "chai-as-promised";
 import {use, expect} from "chai";
-import {ApiImplTestModules, setupApiImplTestServer} from "../index.test";
+import {ApiImplTestModules, setupApiImplTestServer} from "../index.test.js";
 
 use(chaiAsPromised);
 

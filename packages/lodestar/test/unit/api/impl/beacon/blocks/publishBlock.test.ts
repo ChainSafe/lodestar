@@ -7,7 +7,7 @@ import {Eth2Gossipsub} from "../../../../../../src/network/gossip/index.js";
 import {generateEmptySignedBlock} from "../../../../../utils/block.js";
 import {allForks} from "@chainsafe/lodestar-types";
 import {BeaconSync} from "../../../../../../src/sync/index.js";
-import {setupApiImplTestServer, ApiImplTestModules} from "../../index.test";
+import {setupApiImplTestServer, ApiImplTestModules} from "../../index.test.js";
 
 use(chaiAsPromised);
 

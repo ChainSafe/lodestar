@@ -3,7 +3,7 @@ import * as blockUtils from "../../../../../../src/api/impl/beacon/blocks/utils.
 import {expect, use} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import {generateEmptySignedBlock} from "../../../../../utils/block.js";
-import {setupApiImplTestServer, ApiImplTestModules} from "../../index.test";
+import {setupApiImplTestServer, ApiImplTestModules} from "../../index.test.js";
 import {SinonStubFn} from "../../../../../utils/types.js";
 
 use(chaiAsPromised);

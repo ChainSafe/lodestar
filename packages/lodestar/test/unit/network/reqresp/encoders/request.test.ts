@@ -7,7 +7,7 @@ import {SszSnappyErrorCode} from "../../../../../src/network/reqresp/encodingStr
 import {requestEncode} from "../../../../../src/network/reqresp/encoders/requestEncode.js";
 import {requestDecode} from "../../../../../src/network/reqresp/encoders/requestDecode.js";
 import {sszSnappyPing} from "../encodingStrategies/sszSnappy/testData.js";
-import {arrToSource, expectEqualByteChunks} from "../utils";
+import {arrToSource, expectEqualByteChunks} from "../utils.js";
 
 chai.use(chaiAsPromised);
 

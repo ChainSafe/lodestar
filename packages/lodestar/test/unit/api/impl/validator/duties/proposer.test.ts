@@ -13,7 +13,7 @@ import {generateState} from "../../../../../utils/state.js";
 import {IBeaconSync} from "../../../../../../src/sync/index.js";
 import {generateValidators} from "../../../../../utils/validator.js";
 import {StubbedBeaconDb} from "../../../../../utils/stub/index.js";
-import {setupApiImplTestServer, ApiImplTestModules} from "../../index.test";
+import {setupApiImplTestServer, ApiImplTestModules} from "../../index.test.js";
 import {testLogger} from "../../../../../utils/logger.js";
 import {createCachedBeaconStateTest} from "../../../../../utils/cachedBeaconState.js";
 import {ssz} from "@chainsafe/lodestar-types";

@@ -3,5 +3,4 @@ timeout: 2000
 exit: true
 extension: ["ts"]
 node-option:
-  - "experimental-specifier-resolution=node"
   - "loader=ts-node/esm"

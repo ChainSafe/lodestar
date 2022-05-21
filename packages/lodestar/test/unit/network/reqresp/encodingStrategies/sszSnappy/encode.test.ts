@@ -13,7 +13,7 @@ import {
   writeSszSnappyPayload,
 } from "../../../../../../src/network/reqresp/encodingStrategies/sszSnappy/index.js";
 import {expectRejectedWithLodestarError} from "../../../../../utils/errors.js";
-import {expectEqualByteChunks} from "../../utils";
+import {expectEqualByteChunks} from "../../utils.js";
 import {sszSnappyPing, sszSnappyStatus, sszSnappySignedBeaconBlockPhase0} from "./testData.js";
 import {blocksToReqRespBlockResponses} from "../../../../../utils/block.js";
 import {RequestOrOutgoingResponseBody} from "../../../../../../src/network/reqresp/types.js";

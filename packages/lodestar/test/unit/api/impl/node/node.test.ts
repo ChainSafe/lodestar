@@ -6,7 +6,7 @@ import sinon, {SinonStubbedInstance} from "sinon";
 import {BitArray} from "@chainsafe/ssz";
 import {createPeerId, INetwork, Network} from "../../../../../src/network/index.js";
 import {BeaconSync, IBeaconSync} from "../../../../../src/sync/index.js";
-import {createKeypairFromPeerId, ENR} from "@chainsafe/discv5/lib";
+import {createKeypairFromPeerId, ENR} from "@chainsafe/discv5";
 import PeerId from "peer-id";
 import {expect, use} from "chai";
 import chaiAsPromised from "chai-as-promised";

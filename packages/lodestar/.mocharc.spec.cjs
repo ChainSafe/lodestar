@@ -3,7 +3,6 @@ module.exports = {
   colors: true,
   require: ["./test/setupPreset.ts"],
   "node-option": [
-    "experimental-specifier-resolution=node",
     "loader=ts-node/esm"
   ],
   timeout: 60_000,

@@ -61,7 +61,7 @@
     "test:sim:singleThreadMultiNode": "mocha 'test/sim/multiNodeSingleThread.test.ts'",
     "test:sim:multiThread": "mocha 'test/sim/multiNodeMultiThread.test.ts'",
     "test:sim:merge-interop": "mocha 'test/sim/merge-interop.test.ts'",
-    "download-spec-tests": "node --experimental-specifier-resolution=node --loader=ts-node/esm test/spec/downloadTests.ts",
+    "download-spec-tests": "node --loader=ts-node/esm test/spec/downloadTests.ts",
     "check-spec-tests": "mocha test/spec/checkCoverage.ts",
     "test:spec-general": "mocha --config .mocharc.spec.cjs 'test/spec/general/**/*.test.ts'",
     "test:spec-minimal": "LODESTAR_PRESET=minimal mocha --config .mocharc.spec.cjs 'test/spec/presets/**/*.test.ts'",

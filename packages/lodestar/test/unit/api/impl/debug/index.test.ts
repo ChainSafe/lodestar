@@ -14,7 +14,7 @@ import {IBeaconChain} from "../../../../../src/chain/index.js";
 import {generateProtoBlock} from "../../../../utils/block.js";
 import {StubbedBeaconDb} from "../../../../utils/stub/index.js";
 import {generateState} from "../../../../utils/state.js";
-import {setupApiImplTestServer} from "../index.test";
+import {setupApiImplTestServer} from "../index.test.js";
 import {SinonStubFn} from "../../../../utils/types.js";
 
 // TODO remove stub

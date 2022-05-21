@@ -6,7 +6,7 @@ import {AttestationErrorCode} from "../../../../src/chain/errors/index.js";
 import {validateGossipAttestation} from "../../../../src/chain/validation/index.js";
 import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
 // eslint-disable-next-line import/no-relative-packages
-import {generateTestCachedBeaconStateOnlyValidators} from "../../../../../beacon-state-transition/test/perf/util";
+import {generateTestCachedBeaconStateOnlyValidators} from "../../../../../beacon-state-transition/test/perf/util.js";
 import {memoOnce} from "../../../utils/cache.js";
 import {getAttestationValidData, AttestationValidDataOpts} from "../../../utils/validationData/attestation.js";
 

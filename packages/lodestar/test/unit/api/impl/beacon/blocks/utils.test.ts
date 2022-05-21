@@ -8,7 +8,7 @@ import chaiAsPromised from "chai-as-promised";
 import {StubbedBeaconDb} from "../../../../../utils/stub/index.js";
 import {GENESIS_SLOT} from "../../../../../../src/constants/index.js";
 import {bufferEqualsMatcher} from "../../../../../utils/sinon/matcher.js";
-import {setupApiImplTestServer, ApiImplTestModules} from "../../index.test";
+import {setupApiImplTestServer, ApiImplTestModules} from "../../index.test.js";
 
 /* eslint-disable @typescript-eslint/no-empty-function */
 

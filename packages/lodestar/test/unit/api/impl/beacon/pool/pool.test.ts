@@ -17,7 +17,7 @@ import * as voluntaryExitValidation from "../../../../../../src/chain/validation
 import {phase0} from "@chainsafe/lodestar-types";
 import {Eth2Gossipsub} from "../../../../../../src/network/gossip/index.js";
 import {generateSignedBlockHeaderBn} from "../../../../../utils/block.js";
-import {setupApiImplTestServer} from "../../index.test";
+import {setupApiImplTestServer} from "../../index.test.js";
 import {SinonStubFn} from "../../../../../utils/types.js";
 import {testLogger} from "../../../../../utils/logger.js";
 import {AggregatedAttestationPool, OpPool} from "../../../../../../src/chain/opPools/index.js";

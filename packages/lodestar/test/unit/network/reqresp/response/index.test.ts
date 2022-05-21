@@ -7,7 +7,7 @@ import {Method, Encoding, Version} from "../../../../../src/network/reqresp/type
 import {handleRequest, PerformRequestHandler} from "../../../../../src/network/reqresp/response/index.js";
 import {PeersData} from "../../../../../src/network/peers/peersData.js";
 import {expectRejectedWithLodestarError} from "../../../../utils/errors.js";
-import {expectEqualByteChunks, MockLibP2pStream} from "../utils";
+import {expectEqualByteChunks, MockLibP2pStream} from "../utils.js";
 import {sszSnappyPing} from "../encodingStrategies/sszSnappy/testData.js";
 import {testLogger} from "../../../../utils/logger.js";
 import {getValidPeerId} from "../../../../utils/peer.js";

@@ -4,7 +4,7 @@ import varint from "varint";
 import {BufferedSource} from "../../../../../../src/network/reqresp/utils/index.js";
 import {readSszSnappyPayload} from "../../../../../../src/network/reqresp/encodingStrategies/sszSnappy/index.js";
 import {isEqualSszType} from "../../../../../utils/ssz.js";
-import {arrToSource} from "../../../../../../test/unit/network/reqresp/utils";
+import {arrToSource} from "../../../../../../test/unit/network/reqresp/utils.js";
 import {goerliShadowForkBlock13249} from "./testData.js";
 
 chai.use(chaiAsPromised);

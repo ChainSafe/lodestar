@@ -4,7 +4,7 @@ import sinon, {SinonStubbedMember} from "sinon";
 import * as stateApiUtils from "../../../../../../src/api/impl/beacon/state/utils.js";
 import {generateCachedState} from "../../../../../utils/state.js";
 import {expect} from "chai";
-import {setupApiImplTestServer, ApiImplTestModules} from "../../index.test";
+import {setupApiImplTestServer, ApiImplTestModules} from "../../index.test.js";
 
 // TODO remove stub
 describe.skip("beacon api impl - state - get fork", function () {

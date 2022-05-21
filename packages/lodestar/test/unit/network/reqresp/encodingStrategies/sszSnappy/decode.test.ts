@@ -9,7 +9,7 @@ import {
   readSszSnappyPayload,
 } from "../../../../../../src/network/reqresp/encodingStrategies/sszSnappy/index.js";
 import {isEqualSszType} from "../../../../../utils/ssz.js";
-import {arrToSource} from "../../utils";
+import {arrToSource} from "../../utils.js";
 import {sszSnappyPing, sszSnappyStatus, sszSnappySignedBeaconBlockPhase0} from "./testData.js";
 
 chai.use(chaiAsPromised);
