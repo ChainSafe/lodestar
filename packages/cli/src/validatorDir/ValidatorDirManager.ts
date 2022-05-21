@@ -47,23 +47,23 @@ export class ValidatorDirManager {
    * Open a `ValidatorDir` at the given `path`.
    * *Note*: It is not enforced that `path` is contained in `this.dir`.
    */
-  async openValidator(pubkey: string, options?: IValidatorDirOptions): Promise<ValidatorDir> {
-    return await ValidatorDir.create(this.keystoresDir, pubkey, options);
+  openValidator(pubkey: string, options?: IValidatorDirOptions): ValidatorDir {
+    return new ValidatorDir(this.keystoresDir, pubkey, options);
   }
 
   /**
    * Opens all the validator directories in `this`.
    * *Note*: Returns an error if any of the directories is unable to be opened
    */
-  async openAllValidators(options?: IValidatorDirOptions): Promise<ValidatorDir[]> {
-    return await Promise.all(this.iterDir().map((pubkey) => this.openValidator(pubkey, options)));
+  openAllValidators(options?: IValidatorDirOptions): ValidatorDir[] {
+    return this.iterDir().map((pubkey) => this.openValidator(pubkey, options));
   }
 
   /**
    * Opens the given validator and decrypts its secretKeys.
    */
   async decryptValidator(pubkey: string, options?: IValidatorDirOptions): Promise<SecretKey> {
-    const validator = await this.openValidator(pubkey, options);
+    const validator = this.openValidator(pubkey, options);
     return await validator.votingKeypair(this.secretsDir);
   }
 
@@ -71,7 +71,7 @@ export class ValidatorDirManager {
    * Opens all the validator directories in `this` and decrypts the validator secretKeys.
    */
   async decryptAllValidators(options?: IValidatorDirOptions): Promise<SecretKey[]> {
-    const validators = await this.openAllValidators(options);
+    const validators = this.openAllValidators(options);
     return await Promise.all(validators.map(async (validator) => validator.votingKeypair(this.secretsDir)));
   }
 }

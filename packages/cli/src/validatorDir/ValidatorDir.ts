@@ -72,10 +72,6 @@ export class ValidatorDir {
     }
   }
 
-  static async create(baseDir: string, pubkey: string, options?: IValidatorDirOptions): Promise<ValidatorDir> {
-    return new ValidatorDir(baseDir, pubkey, options);
-  }
-
   /**
    * Removes the lockfile associated with this validator dir
    */

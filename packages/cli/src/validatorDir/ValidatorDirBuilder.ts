@@ -96,6 +96,6 @@ export class ValidatorDirBuilder {
     fs.writeFileSync(path.join(dir, VOTING_KEYSTORE_FILE), keystores.signing.stringify());
     writeValidatorPassphrase({secretsDir, pubkey, passphrase: passwords.signing});
 
-    return await ValidatorDir.create(this.keystoresDir, pubkey);
+    return new ValidatorDir(this.keystoresDir, pubkey);
   }
 }
