@@ -4,10 +4,11 @@ import {ILogger, sleep} from "@chainsafe/lodestar-utils";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {computeEndSlotForEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {AbortController} from "@chainsafe/abort-controller";
+import {LivenessResponseData} from "@chainsafe/lodestar-api/src/routes/validator";
 import {PubkeyHex} from "../types";
 import {IClock} from "../util";
+import {Metrics} from "../metrics";
 import {IndicesService} from "./indices";
-import {LivenessResponseData} from "@chainsafe/lodestar-api/src/routes/validator";
 
 // The number of epochs that must be checked before we assume that there are
 // no other duplicate validators on the network
@@ -27,6 +28,7 @@ export enum DoppelgangerStatus {
 
 export class DoppelgangerService {
   private readonly doppelgangerStateByIndex = new Map<ValidatorIndex, DoppelgangerState>();
+
   constructor(
     private readonly config: IChainForkConfig,
     private readonly logger: ILogger,
@@ -34,8 +36,10 @@ export class DoppelgangerService {
     private readonly api: Api,
     private readonly genesisTime: number,
     private readonly indicesService: IndicesService,
-    private readonly validatorController: AbortController
+    private readonly validatorController: AbortController,
+    private readonly metrics: Metrics | null
   ) {
+    this.metrics = metrics;
     this.clock.runEveryEpoch(this.pollLiveness);
   }
 
@@ -74,6 +78,7 @@ export class DoppelgangerService {
     // Run the doppelganger protection check 75% through the last slot of this epoch. This
     // *should* mean that the BN has seen the blocks and attestations for the epoch
     await sleep(this.clock.msToSlot(endSlotOfEpoch + 3 / 4));
+    const timer = this.metrics?.doppelganger.checkDuration.startTimer();
     const indices = await this.getIndicesToCheck(currentEpoch);
     if (indices.length !== 0) {
       const previousEpoch = currentEpoch - 1;
@@ -98,6 +103,7 @@ export class DoppelgangerService {
 
       this.detectDoppelganger([...previous, ...current], currentEpoch);
     }
+    timer?.();
   };
 
   private detectDoppelganger(livenessData: LivenessResponseData[], currentEpoch: Epoch): void {

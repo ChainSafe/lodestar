@@ -95,7 +95,8 @@ export class Validator {
         api,
         Number(genesis.genesisTime),
         indicesService,
-        this.controller
+        this.controller,
+        metrics
       );
       validatorStore.setDoppelganger(doppelgangerService);
     }
