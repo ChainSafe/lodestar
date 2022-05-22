@@ -35,11 +35,19 @@ export async function validateSyncCommitteeGossipContributionAndProof(
   // get_sync_subcommittee_pubkeys(state, contribution.subcommittee_index).
   // > Checked in validateGossipSyncCommitteeExceptSig()
 
+  // _[IGNORE]_ A valid sync committee contribution with equal `slot`, `beacon_block_root` and `subcommittee_index` whose
+  // `aggregation_bits` is non-strict superset has _not_ already been seen.
+  if (chain.seenContributionAndProof.participantsKnown(contribution)) {
+    throw new SyncCommitteeError(GossipAction.IGNORE, {
+      code: SyncCommitteeErrorCode.SYNC_COMMITTEE_PARTICIPANTS_ALREADY_KNOWN,
+    });
+  }
+
   // [IGNORE] The sync committee contribution is the first valid contribution received for the aggregator with index
   // contribution_and_proof.aggregator_index for the slot contribution.slot and subcommittee index contribution.subcommittee_index.
-  if (chain.seenContributionAndProof.isKnown(slot, subcommitteeIndex, aggregatorIndex)) {
+  if (chain.seenContributionAndProof.isAggregatorKnown(slot, subcommitteeIndex, aggregatorIndex)) {
     throw new SyncCommitteeError(GossipAction.IGNORE, {
-      code: SyncCommitteeErrorCode.SYNC_COMMITTEE_ALREADY_KNOWN,
+      code: SyncCommitteeErrorCode.SYNC_COMMITTEE_AGGREGATOR_ALREADY_KNOWN,
     });
   }
 
@@ -85,7 +93,7 @@ export async function validateSyncCommitteeGossipContributionAndProof(
   }
 
   // no need to add to seenSyncCommittteeContributionCache here, gossip handler will do that
-  chain.seenContributionAndProof.add(slot, subcommitteeIndex, aggregatorIndex);
+  chain.seenContributionAndProof.add(contributionAndProof, syncCommitteeIndices.length);
 
   return {syncCommitteeParticipants: syncCommitteeIndices.length};
 }

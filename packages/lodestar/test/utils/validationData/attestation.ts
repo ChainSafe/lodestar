@@ -20,6 +20,7 @@ import {ClockStatic} from "../clock";
 import {BitArray, toHexString} from "@chainsafe/ssz";
 import {config} from "@chainsafe/lodestar-config/default";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {SeenAggregatedAttestations} from "../../../src/chain/seenCache/seenAggregateAndProof";
 
 export type AttestationValidDataOpts = {
   currentSlot?: Slot;
@@ -115,6 +116,7 @@ export function getAttestationValidData(
     forkChoice,
     regen,
     seenAttesters: new SeenAttesters(),
+    seenAggregatedAttestations: new SeenAggregatedAttestations(null),
     bls: new BlsSingleThreadVerifier({metrics: null}),
     waitForBlockOfAttestation: () => Promise.resolve(false),
   } as Partial<IBeaconChain>) as IBeaconChain;

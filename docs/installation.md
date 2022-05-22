@@ -10,7 +10,7 @@ Make sure to have [Yarn installed](https://classic.yarnpkg.com/en/docs/install).
 
 <!-- prettier-ignore-start -->
 !!! info
-    NodeJS versions < 12 are not supported by Lodestar.
+    NodeJS versions < 16.x are not supported by Lodestar. We currently recommend running NodeJS 16.x.
 <!-- prettier-ignore-end -->
 
 Clone the repo locally.

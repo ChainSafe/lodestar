@@ -1,27 +1,16 @@
 import {expect} from "chai";
-import child_process from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import findUp from "find-up";
 import {gitDataPath, readGitDataFile} from "../../../src/util/gitData/gitDataPath";
 import {getGitData} from "../../../src/util";
 
-const WRITE_GIT_DATA_CMD = "npm run write-git-data";
-
 describe("util / gitData", function () {
-  // In CI, the below before() function takes time
-  this.timeout(3000);
-
-  before(() => {
-    const pkgJsonPath = findUp.sync("package.json", {cwd: __dirname});
-    if (!pkgJsonPath) {
-      throw Error("No package.json found");
-    }
-
-    const pkgJsonDir = path.resolve(path.dirname(pkgJsonPath));
-    child_process.execSync(WRITE_GIT_DATA_CMD, {cwd: pkgJsonDir});
-  });
-
+  // .gitData file is created at build time with the command
+  // ```
+  // npm run write-git-data
+  // ```
+  // If this step fails run that command. This could happen when running tests before building.
   it("gitData file must exist", () => {
     const gitData = readGitDataFile();
 

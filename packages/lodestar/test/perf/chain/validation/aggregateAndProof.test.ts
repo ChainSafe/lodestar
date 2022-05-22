@@ -17,7 +17,10 @@ describe("validate gossip signedAggregateAndProof", () => {
   for (const [id, agg] of Object.entries({struct: aggStruct})) {
     itBench({
       id: `validate gossip signedAggregateAndProof - ${id}`,
-      beforeEach: () => chain.seenAggregators["validatorIndexesByEpoch"].clear(),
+      beforeEach: () => {
+        chain.seenAggregators["validatorIndexesByEpoch"].clear();
+        chain.seenAggregatedAttestations["aggregateRootsByEpoch"].clear();
+      },
       fn: async () => {
         await validateGossipAggregateAndProof(chain, agg);
       },

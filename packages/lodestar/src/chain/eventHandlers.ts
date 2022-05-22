@@ -100,6 +100,7 @@ export async function onClockSlot(this: BeaconChain, slot: Slot): Promise<void> 
 export function onClockEpoch(this: BeaconChain, currentEpoch: Epoch): void {
   this.seenAttesters.prune(currentEpoch);
   this.seenAggregators.prune(currentEpoch);
+  this.seenAggregatedAttestations.prune(currentEpoch);
   this.observedBlockAttesters.prune(currentEpoch);
 }
 
