@@ -26,6 +26,13 @@ export enum DoppelgangerStatus {
   Unknown = "Unknown",
 }
 
+/** Map a DoppelgangerStatus to an integer for rendering in Grafana */
+export const doppelgangerStatusMetrics: {[K in DoppelgangerStatus]: number} = {
+  [DoppelgangerStatus.VerifiedSafe]: 0,
+  [DoppelgangerStatus.Unverified]: 1,
+  [DoppelgangerStatus.Unknown]: 2,
+};
+
 export class DoppelgangerService {
   private readonly doppelgangerStateByIndex = new Map<ValidatorIndex, DoppelgangerState>();
 
@@ -39,7 +46,6 @@ export class DoppelgangerService {
     private readonly validatorController: AbortController,
     private readonly metrics: Metrics | null
   ) {
-    this.metrics = metrics;
     this.clock.runEveryEpoch(this.pollLiveness);
   }
 
@@ -53,8 +59,9 @@ export class DoppelgangerService {
     }
   }
 
-  getStatus(pubkeyHex: PubkeyHex): DoppelgangerStatus {
-    const validatorIndex = this.indicesService.getValidatorIndex(pubkeyHex);
+  getStatus(pubkeyOrIndex: PubkeyHex | ValidatorIndex): DoppelgangerStatus {
+    const validatorIndex =
+      typeof pubkeyOrIndex === "string" ? this.indicesService.getValidatorIndex(pubkeyOrIndex) : pubkeyOrIndex;
 
     if (validatorIndex != null) {
       const doppelgangerState = this.doppelgangerStateByIndex.get(validatorIndex);
@@ -64,7 +71,7 @@ export class DoppelgangerService {
         return DoppelgangerStatus.Unverified;
       }
     } else {
-      this.logger.error(`Validator index not know for public key ${pubkeyHex}`);
+      this.logger.error(`Validator index not know for public key ${pubkeyOrIndex}`);
       return DoppelgangerStatus.Unknown;
     }
   }
@@ -133,6 +140,13 @@ export class DoppelgangerService {
             doppelgangerState.epochChecked.push(currentEpoch);
           }
         }
+
+        this.metrics?.doppelganger.status.set(
+          {
+            validatorIndex: String(validatorIndexToBeChecked.index),
+          },
+          doppelgangerStatusMetrics[this.getStatus(validatorIndexToBeChecked.index)]
+        );
       }
     }
 

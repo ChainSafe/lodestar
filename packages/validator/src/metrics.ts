@@ -325,6 +325,11 @@ export function getMetrics(register: MetricsRegister, gitData: LodestarGitData) 
         name: "lodestar_doppelganger_check_time_seconds",
         help: "Time to complete a doppelganger check in seconds",
       }),
+      status: register.gauge<{validatorIndex: string}>({
+        name: "lodestar_doppelganger_validator_status",
+        help: "Statuses of doppelganger check for each validator",
+        labelNames: ["validatorIndex"],
+      }),
     },
   };
 }
