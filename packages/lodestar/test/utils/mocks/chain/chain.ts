@@ -7,6 +7,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {BeaconStateAllForks, CachedBeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {CheckpointWithHex, IForkChoice, IProtoBlock, ExecutionStatus} from "@chainsafe/lodestar-fork-choice";
+import {defaultDefaultFeeRecipient} from "@chainsafe/lodestar-validator";
 
 import {ChainEventEmitter, IBeaconChain} from "../../../../src/chain";
 import {IBeaconClock} from "../../../../src/chain/clock/interface";
@@ -38,7 +39,6 @@ import {testLogger} from "../../logger";
 import {ReprocessController} from "../../../../src/chain/reprocess";
 import {createCachedBeaconStateTest} from "@chainsafe/lodestar-beacon-state-transition/test/utils/state";
 import {SeenAggregatedAttestations} from "../../../../src/chain/seenCache/seenAggregateAndProof";
-import {defaultDefaultFeeRecipient} from "../../../../src/chain/options";
 import {BeaconProposerCache} from "../../../../src/chain/beaconProposerCache";
 
 /* eslint-disable @typescript-eslint/no-empty-function */

@@ -45,6 +45,10 @@ export type SyncCommitteeSubscription = {
   untilEpoch: Epoch;
 };
 
+/**
+ * The types used here are string instead of ssz based because the use of proposer data
+ * is just validator --> beacon json api call for `beaconProposerCache` cache update.
+ */
 export type ProposerPreparationData = {
   validatorIndex: string;
   feeRecipient: string;

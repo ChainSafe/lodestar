@@ -34,6 +34,7 @@ import {Interchange, InterchangeFormatVersion, ISlashingProtection} from "../sla
 import {PubkeyHex} from "../types";
 import {externalSignerPostSignature} from "../util/externalSignerClient";
 import {Metrics} from "../metrics";
+import {MapDef} from "../util/map";
 
 export enum SignerType {
   Local,
@@ -62,6 +63,7 @@ export type Signer = SignerLocal | SignerRemote;
  * Service that sets up and handles validator attester duties.
  */
 export class ValidatorStore {
+  readonly feeRecipientByValidatorPubkey: MapDef<PubkeyHex, string>;
   private readonly validators = new Map<PubkeyHex, Signer>();
   private readonly genesisValidatorsRoot: Root;
 
@@ -70,8 +72,10 @@ export class ValidatorStore {
     private readonly slashingProtection: ISlashingProtection,
     private readonly metrics: Metrics | null,
     signers: Signer[],
-    genesis: phase0.Genesis
+    genesis: phase0.Genesis,
+    defaultFeeRecipient: string
   ) {
+    this.feeRecipientByValidatorPubkey = new MapDef<PubkeyHex, string>(() => defaultFeeRecipient);
     for (const signer of signers) {
       this.addSigner(signer);
     }

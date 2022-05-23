@@ -1,15 +1,10 @@
 import {Epoch} from "@chainsafe/lodestar-types";
-import {Api} from "@chainsafe/lodestar-api";
+import {Api, routes} from "@chainsafe/lodestar-api";
 
 import {ValidatorStore} from "./validatorStore";
 import {IndicesService} from "./indices";
 import {IClock, ILoggerVc} from "../util";
 import {Metrics} from "../metrics";
-
-type ProposerPreparationData = {
-  validatorIndex: string;
-  feeRecipient: string;
-};
 
 /**
  * This service is responsible for updating the BNs and/or Mev relays with
@@ -22,7 +17,6 @@ export class PrepareBeaconProposerService {
     private readonly api: Api,
     private clock: IClock,
     private readonly validatorStore: ValidatorStore,
-    private readonly defaultFeeRecipient: string,
     private readonly indicesService: IndicesService,
     private readonly metrics: Metrics | null
   ) {
@@ -48,10 +42,13 @@ export class PrepareBeaconProposerService {
     ]);
   };
 
-  private getProposerData(indices: number[]): ProposerPreparationData[] {
+  private getProposerData(indices: number[]): routes.validator.ProposerPreparationData[] {
     return indices.map((validatorIndex) => ({
       validatorIndex: validatorIndex.toString(),
-      feeRecipient: this.defaultFeeRecipient,
+      feeRecipient: this.validatorStore.feeRecipientByValidatorPubkey.getOrDefault(
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        this.indicesService.index2pubkey.get(validatorIndex)!
+      ),
     }));
   }
 }

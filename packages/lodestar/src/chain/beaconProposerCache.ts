@@ -1,12 +1,11 @@
 import {MapDef} from "../util/map";
 import {Epoch} from "@chainsafe/lodestar-types";
 import {IMetrics} from "../metrics";
+import {routes} from "@chainsafe/lodestar-api";
 
 const PROPOSER_PRESERVE_EPOCHS = 2;
-export type ProposerPreparationData = {
-  validatorIndex: string;
-  feeRecipient: string;
-};
+
+export type ProposerPreparationData = routes.validator.ProposerPreparationData;
 
 export class BeaconProposerCache {
   private readonly feeRecipientByValidatorIndex: MapDef<string, {epoch: Epoch; feeRecipient: string}>;

@@ -20,8 +20,11 @@ import {toHexString} from "@chainsafe/ssz";
 import {ValidatorEventEmitter} from "./services/emitter";
 import {ValidatorStore, Signer} from "./services/validatorStore";
 import {computeEpochAtSlot, getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
+
 import {PubkeyHex} from "./types";
 import {Metrics} from "./metrics";
+
+export const defaultDefaultFeeRecipient = "0x0000000000000000000000000000000000000000";
 
 export type ValidatorOptions = {
   slashingProtection: ISlashingProtection;
@@ -81,7 +84,14 @@ export class Validator {
         : opts.api;
 
     const clock = new Clock(config, logger, {genesisTime: Number(genesis.genesisTime)});
-    const validatorStore = new ValidatorStore(config, slashingProtection, metrics, signers, genesis);
+    const validatorStore = new ValidatorStore(
+      config,
+      slashingProtection,
+      metrics,
+      signers,
+      genesis,
+      defaultFeeRecipient ?? defaultDefaultFeeRecipient
+    );
     const indicesService = new IndicesService(logger, api, validatorStore, metrics);
     const emitter = new ValidatorEventEmitter();
     const chainHeaderTracker = new ChainHeaderTracker(logger, api, emitter);
@@ -115,15 +125,7 @@ export class Validator {
     );
 
     this.prepareBeaconProposerService = defaultFeeRecipient
-      ? new PrepareBeaconProposerService(
-          loggerVc,
-          api,
-          clock,
-          validatorStore,
-          defaultFeeRecipient,
-          indicesService,
-          metrics
-        )
+      ? new PrepareBeaconProposerService(loggerVc, api, clock, validatorStore, indicesService, metrics)
       : null;
 
     this.config = config;

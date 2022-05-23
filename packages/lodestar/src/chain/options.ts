@@ -1,4 +1,6 @@
 import {SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY} from "@chainsafe/lodestar-params";
+import {defaultDefaultFeeRecipient} from "@chainsafe/lodestar-validator";
+
 import {ArchiverOpts} from "./archiver";
 import {ForkChoiceOpts} from "./forkChoice";
 
@@ -24,8 +26,6 @@ export type BlockProcessOpts = {
    */
   safeSlotsToImportOptimistically: number;
 };
-
-export const defaultDefaultFeeRecipient = "0x0000000000000000000000000000000000000000";
 
 export const defaultChainOptions: IChainOptions = {
   blsVerifyAllMainThread: false,
