@@ -12,9 +12,10 @@ import got from "got";
 import * as mainnet from "./mainnet";
 import * as prater from "./prater";
 import * as kiln from "./kiln";
+import * as ropsten from "./ropsten";
 
-export type NetworkName = "mainnet" | "prater" | "kiln" | "dev";
-export const networkNames: NetworkName[] = ["mainnet", "prater", "kiln"];
+export type NetworkName = "mainnet" | "prater" | "kiln" | "ropsten" | "dev";
+export const networkNames: NetworkName[] = ["mainnet", "prater", "kiln", "ropsten"];
 
 export type WeakSubjectivityFetchOptions = {
   weakSubjectivityServerUrl: string;
@@ -37,6 +38,8 @@ function getNetworkData(
       return prater;
     case "kiln":
       return kiln;
+    case "ropsten":
+      return ropsten;
     default:
       throw Error(`Network not supported: ${network}`);
   }
