@@ -1,6 +1,4 @@
-import {ropstenChainConfig} from "@chainsafe/lodestar-config/networks";
-
-export const chainConfig = ropstenChainConfig;
+export {ropstenChainConfig as chainConfig} from "@chainsafe/lodestar-config/networks";
 
 /* eslint-disable max-len */
 
