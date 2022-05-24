@@ -31,11 +31,6 @@ export const ropstenChainConfig: IChainConfig = {
   SHARDING_FORK_VERSION: b("0x03001020"),
   SHARDING_FORK_EPOCH: Infinity,
 
-  // Fork choice
-  // ---------------------------------------------------------------
-  // 40%
-  PROPOSER_SCORE_BOOST: 40,
-
   // Deposit contract
   // ---------------------------------------------------------------
   DEPOSIT_CHAIN_ID: 3,
