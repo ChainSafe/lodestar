@@ -129,6 +129,7 @@ async function lernaVersion(tag, yes) {
     await _lernaVersion({
       cwd: process.cwd(),
       bump: tag,
+      "force-publish": true,
       yes: yes,
     })
   } catch (e) {
