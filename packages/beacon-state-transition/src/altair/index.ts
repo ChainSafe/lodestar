@@ -1,6 +1,6 @@
-export * from "./block";
-export * from "./epoch";
-export * from "./upgradeState";
+export * from "./block/index.js";
+export * from "./epoch/index.js";
+export * from "./upgradeState.js";
 
 // re-export altair lodestar types for ergonomic usage downstream
 // eg:

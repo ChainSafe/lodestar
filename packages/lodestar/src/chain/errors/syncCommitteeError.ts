@@ -1,5 +1,5 @@
 import {altair, ValidatorIndex, Slot} from "@chainsafe/lodestar-types";
-import {GossipActionError} from "./gossipValidation";
+import {GossipActionError} from "./gossipValidation.js";
 
 export enum SyncCommitteeErrorCode {
   NOT_CURRENT_SLOT = "SYNC_COMMITTEE_ERROR_NOT_CURRENT_SLOT",

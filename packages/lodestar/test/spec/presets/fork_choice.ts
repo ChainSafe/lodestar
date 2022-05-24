@@ -12,13 +12,13 @@ import {
   bellatrix,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {InputType} from "@chainsafe/lodestar-spec-test-util";
-import {initializeForkChoice} from "@chainsafe/lodestar/src/chain/forkChoice";
 import {
+  ChainEventEmitter,
+  initializeForkChoice,
   CheckpointStateCache,
   toCheckpointHex,
   toCheckpointKey,
-} from "@chainsafe/lodestar/src/chain/stateCache/stateContextCheckpointsCache";
-import {ChainEventEmitter} from "@chainsafe/lodestar/src/chain/emitter";
+} from "../../../src/chain/index.js";
 import {toHexString} from "@chainsafe/ssz";
 import {
   CheckpointWithHex,
@@ -32,10 +32,10 @@ import {
 import {ssz, RootHex} from "@chainsafe/lodestar-types";
 import {bnToNum} from "@chainsafe/lodestar-utils";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState";
-import {testLogger} from "../../utils/logger";
-import {getConfig} from "../utils/getConfig";
-import {TestRunnerFn} from "../utils/types";
+import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
+import {testLogger} from "../../utils/logger.js";
+import {getConfig} from "../utils/getConfig.js";
+import {TestRunnerFn} from "../utils/types.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 

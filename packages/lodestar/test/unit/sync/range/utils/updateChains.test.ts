@@ -1,7 +1,7 @@
 import {expect} from "chai";
-import {updateChains} from "../../../../../src/sync/range/utils/updateChains";
-import {SyncChain} from "../../../../../src/sync/range/chain";
-import {RangeSyncType} from "../../../../../src/sync/utils/remoteSyncType";
+import {updateChains} from "../../../../../src/sync/range/utils/updateChains.js";
+import {SyncChain} from "../../../../../src/sync/range/chain.js";
+import {RangeSyncType} from "../../../../../src/sync/utils/remoteSyncType.js";
 
 describe("sync / range / utils / updateChains", () => {
   const testCases: {

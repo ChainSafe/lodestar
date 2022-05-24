@@ -1,5 +1,5 @@
-import {ICliCommandOptions} from "../../../../../util";
-import {IValidatorCliArgs, validatorOptions} from "../../../../validator/options";
+import {ICliCommandOptions} from "../../../../../util/index.js";
+import {IValidatorCliArgs, validatorOptions} from "../../../../validator/options.js";
 
 export type ISlashingProtectionArgs = Pick<IValidatorCliArgs, "server"> & {
   force?: boolean;

@@ -3,7 +3,7 @@ import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {BeaconStateAllForks, initializeBeaconStateFromEth1} from "@chainsafe/lodestar-beacon-state-transition";
 import {createEmptyEpochContextImmutableData} from "@chainsafe/lodestar-beacon-state-transition";
 import {GENESIS_BASE_FEE_PER_GAS, GENESIS_GAS_LIMIT} from "@chainsafe/lodestar-params";
-import {DepositTree} from "../../../db/repositories/depositDataRoot";
+import {DepositTree} from "../../../db/repositories/depositDataRoot.js";
 
 export const INTEROP_BLOCK_HASH = Buffer.alloc(32, "B");
 export const INTEROP_TIMESTAMP = Math.pow(2, 40);

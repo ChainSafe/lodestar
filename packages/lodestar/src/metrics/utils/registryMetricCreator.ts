@@ -1,7 +1,7 @@
 import {Gauge, GaugeConfiguration, Registry, HistogramConfiguration, CounterConfiguration, Counter} from "prom-client";
-import {AvgMinMax} from "./avgMinMax";
-import {GaugeExtra} from "./gauge";
-import {HistogramExtra} from "./histogram";
+import {AvgMinMax} from "./avgMinMax.js";
+import {GaugeExtra} from "./gauge.js";
+import {HistogramExtra} from "./histogram.js";
 
 type StaticConfiguration<T extends string> = {
   name: GaugeConfiguration<string>["name"];

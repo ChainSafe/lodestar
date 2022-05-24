@@ -1,7 +1,7 @@
 import {expect} from "chai";
-import {collectResponses} from "../../../../../src/network/reqresp/request/collectResponses";
-import {Method, IncomingResponseBody} from "../../../../../src/network/reqresp/types";
-import {arrToSource} from "../utils";
+import {collectResponses} from "../../../../../src/network/reqresp/request/collectResponses.js";
+import {Method, IncomingResponseBody} from "../../../../../src/network/reqresp/types.js";
+import {arrToSource} from "../utils.js";
 
 describe("network / reqresp / request / collectResponses", () => {
   const chunk: IncomingResponseBody = BigInt(1);

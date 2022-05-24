@@ -1,8 +1,8 @@
 import {mapValues} from "@chainsafe/lodestar-utils";
 // eslint-disable-next-line import/no-extraneous-dependencies
 import * as fastify from "fastify";
-import {ReqGeneric, RouteGeneric, ReturnTypes, TypeJson, Resolves, RouteGroupDefinition} from "../../utils/types";
-import {getFastifySchema} from "../../utils/schema";
+import {ReqGeneric, RouteGeneric, ReturnTypes, TypeJson, Resolves, RouteGroupDefinition} from "../../utils/types.js";
+import {getFastifySchema} from "../../utils/schema.js";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 
 // See /packages/api/src/routes/index.ts for reasoning

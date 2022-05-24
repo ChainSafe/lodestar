@@ -1,10 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
 import {expect} from "chai";
-import {TestRunnerCustom} from "../utils/types";
-import {parseSszGenericInvalidTestcase, parseSszGenericValidTestcase} from "../utils/sszTestCaseParser";
-import {runValidSszTest} from "../utils/runValidSszTest";
-import {getTestType} from "./ssz_generic_types";
+import {TestRunnerCustom} from "../utils/types.js";
+import {parseSszGenericInvalidTestcase, parseSszGenericValidTestcase} from "../utils/sszTestCaseParser.js";
+import {runValidSszTest} from "../utils/runValidSszTest.js";
+import {getTestType} from "./ssz_generic_types.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 

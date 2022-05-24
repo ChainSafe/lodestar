@@ -2,8 +2,8 @@
  * @module logger
  */
 
-export * from "./interface";
-export * from "./format";
-export * from "./transport";
-export * from "./winston";
-export {LogData} from "./json";
+export * from "./interface.js";
+export * from "./format.js";
+export * from "./transport.js";
+export * from "./winston.js";
+export {LogData} from "./json.js";

@@ -1,21 +1,21 @@
 import {expect} from "chai";
-import {SecretKey} from "@chainsafe/bls";
+import bls from "@chainsafe/bls";
 import {altair, phase0, Root, ssz, SyncPeriod} from "@chainsafe/lodestar-types";
 import {BeaconStateAltair} from "@chainsafe/lodestar-beacon-state-transition";
 import {toHexString} from "@chainsafe/ssz";
 import {chainConfig} from "@chainsafe/lodestar-config/default";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
-import {processLightClientUpdate} from "../naive/update";
-import {prepareUpdateNaive, IBeaconChainLc} from "../prepareUpdateNaive";
-import {getInteropSyncCommittee, getSyncAggregateSigningRoot, SyncCommitteeKeys} from "../utils";
-import {LightClientStoreFast} from "../../src/types";
+import {processLightClientUpdate} from "../naive/update.js";
+import {prepareUpdateNaive, IBeaconChainLc} from "../prepareUpdateNaive.js";
+import {getInteropSyncCommittee, getSyncAggregateSigningRoot, SyncCommitteeKeys} from "../utils.js";
+import {LightClientStoreFast} from "../../src/types.js";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
 describe("Lightclient flow", () => {
   before("BLS sanity check", () => {
-    const sk = SecretKey.fromBytes(Buffer.alloc(32, 1));
+    const sk = bls.SecretKey.fromBytes(Buffer.alloc(32, 1));
     expect(sk.toPublicKey().toHex()).to.equal(
       "0xaa1a1c26055a329817a5759d877a2795f9499b97d6056edde0eea39512f24e8bc874b4471f0501127abb1ea0d9f68ac1"
     );

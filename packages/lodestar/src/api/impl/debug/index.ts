@@ -1,8 +1,8 @@
 import {routes} from "@chainsafe/lodestar-api";
 import {Multiaddr} from "multiaddr";
 import {createFromB58String} from "peer-id";
-import {resolveStateId} from "../beacon/state/utils";
-import {ApiModules} from "../types";
+import {resolveStateId} from "../beacon/state/utils.js";
+import {ApiModules} from "../types.js";
 
 export function getDebugApi({
   chain,

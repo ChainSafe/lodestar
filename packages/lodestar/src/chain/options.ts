@@ -1,8 +1,7 @@
 import {SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY} from "@chainsafe/lodestar-params";
 import {defaultDefaultFeeRecipient} from "@chainsafe/lodestar-validator";
-
-import {ArchiverOpts} from "./archiver";
-import {ForkChoiceOpts} from "./forkChoice";
+import {ArchiverOpts} from "./archiver/index.js";
+import {ForkChoiceOpts} from "./forkChoice/index.js";
 
 // eslint-disable-next-line @typescript-eslint/ban-types
 export type IChainOptions = BlockProcessOpts &

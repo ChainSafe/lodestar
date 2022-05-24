@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import {VOTING_KEYSTORE_FILE} from "../validatorDir/paths";
+import {VOTING_KEYSTORE_FILE} from "../validatorDir/paths.js";
 
 /**
  * Find files recursively in `dirPath` whose filename matches a custom function

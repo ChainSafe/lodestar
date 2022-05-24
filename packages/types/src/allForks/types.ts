@@ -1,10 +1,10 @@
 import {CompositeType, ContainerType, ValueOf, CompositeView, CompositeViewDU} from "@chainsafe/ssz";
-import {ts as phase0} from "../phase0";
-import {ts as altair} from "../altair";
-import {ts as bellatrix} from "../bellatrix";
-import {ssz as phase0Ssz} from "../phase0";
-import {ssz as altairSsz} from "../altair";
-import {ssz as bellatrixSsz} from "../bellatrix";
+import {ts as phase0} from "../phase0/index.js";
+import {ts as altair} from "../altair/index.js";
+import {ts as bellatrix} from "../bellatrix/index.js";
+import {ssz as phase0Ssz} from "../phase0/index.js";
+import {ssz as altairSsz} from "../altair/index.js";
+import {ssz as bellatrixSsz} from "../bellatrix/index.js";
 
 // Re-export union types for types that are _known_ to differ
 

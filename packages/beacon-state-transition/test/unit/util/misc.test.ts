@@ -2,8 +2,8 @@ import {assert} from "chai";
 
 import {GENESIS_SLOT, SLOTS_PER_HISTORICAL_ROOT} from "@chainsafe/lodestar-params";
 import {toBigIntLE} from "bigint-buffer";
-import {getBlockRoot} from "../../../src/util";
-import {generateState} from "../../utils/state";
+import {getBlockRoot} from "../../../src/util/index.js";
+import {generateState} from "../../utils/state.js";
 
 describe("getBlockRoot", () => {
   it("should return first block root for genesis slot", () => {

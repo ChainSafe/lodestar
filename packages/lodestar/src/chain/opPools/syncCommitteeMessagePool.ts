@@ -1,10 +1,11 @@
-import bls, {PointFormat, Signature} from "@chainsafe/bls";
+import {PointFormat, Signature} from "@chainsafe/bls/types";
+import bls from "@chainsafe/bls";
 import {SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 import {altair, Root, Slot, SubcommitteeIndex} from "@chainsafe/lodestar-types";
 import {BitArray, toHexString} from "@chainsafe/ssz";
-import {MapDef} from "../../util/map";
-import {InsertOutcome, OpPoolError, OpPoolErrorCode} from "./types";
-import {pruneBySlot} from "./utils";
+import {MapDef} from "../../util/map.js";
+import {InsertOutcome, OpPoolError, OpPoolErrorCode} from "./types.js";
+import {pruneBySlot} from "./utils.js";
 
 /**
  * SyncCommittee signatures are only useful during a single slot according to our peer's clocks
@@ -111,7 +112,7 @@ function aggregateSignatureInto(
   }
 
   contribution.aggregationBits.set(indexInSubcommittee, true);
-  contribution.signature = Signature.aggregate([
+  contribution.signature = bls.Signature.aggregate([
     contribution.signature,
     bls.Signature.fromBytes(signature.signature, undefined, true),
   ]);

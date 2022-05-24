@@ -2,8 +2,8 @@ import PeerId from "peer-id";
 import {Multiaddr} from "multiaddr";
 import {IBeaconNodeOptions} from "@chainsafe/lodestar";
 import {ENR, createKeypairFromPeerId} from "@chainsafe/discv5";
-import {writeFile, readFile} from "../util";
-import {FileENR} from "./fileEnr";
+import {writeFile, readFile} from "../util/index.js";
+import {FileENR} from "./fileEnr.js";
 
 export interface IENRJson {
   ip?: string;

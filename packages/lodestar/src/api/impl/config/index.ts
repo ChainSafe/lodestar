@@ -1,7 +1,7 @@
 import {routes} from "@chainsafe/lodestar-api";
 import {chainConfigToJson} from "@chainsafe/lodestar-config";
 import {activePreset, presetToJson} from "@chainsafe/lodestar-params";
-import {ApiModules} from "../types";
+import {ApiModules} from "../types.js";
 
 export function getConfigApi({config}: Pick<ApiModules, "config">): routes.config.Api {
   // Retrieve specification configuration used on this node.  The configuration should include:

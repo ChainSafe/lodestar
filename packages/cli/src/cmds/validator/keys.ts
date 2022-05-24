@@ -1,16 +1,17 @@
 import fs from "node:fs";
 import path from "node:path";
 import {Keystore} from "@chainsafe/bls-keystore";
-import {CoordType, PublicKey, SecretKey} from "@chainsafe/bls";
+import bls from "@chainsafe/bls";
+import {CoordType, SecretKey} from "@chainsafe/bls/types";
 import {deriveEth2ValidatorKeys, deriveKeyFromMnemonic} from "@chainsafe/bls-keygen";
 import {interopSecretKey} from "@chainsafe/lodestar-beacon-state-transition";
 import {externalSignerGetKeys} from "@chainsafe/lodestar-validator";
 import {lockFilepath, unlockFilepath} from "@chainsafe/lodestar-keymanager-server";
-import {defaultNetwork, IGlobalArgs} from "../../options";
-import {parseRange, stripOffNewlines, YargsError} from "../../util";
-import {ValidatorDirManager} from "../../validatorDir";
-import {getAccountPaths} from "../account/paths";
-import {IValidatorCliArgs} from "./options";
+import {defaultNetwork, IGlobalArgs} from "../../options/index.js";
+import {parseRange, stripOffNewlines, YargsError} from "../../util/index.js";
+import {ValidatorDirManager} from "../../validatorDir/index.js";
+import {getAccountPaths} from "../account/paths.js";
+import {IValidatorCliArgs} from "./options.js";
 import {fromHexString} from "@chainsafe/ssz";
 
 const depositDataPattern = new RegExp(/^deposit_data-\d+\.json$/gi);
@@ -32,7 +33,7 @@ export async function getLocalSecretKeys(
     return {
       secretKeys: indexes.map((index) => {
         const {signing} = deriveEth2ValidatorKeys(masterSK, index);
-        return SecretKey.fromBytes(signing);
+        return bls.SecretKey.fromBytes(signing);
       }),
     };
   }
@@ -70,7 +71,7 @@ export async function getLocalSecretKeys(
           throw e;
         }
 
-        return SecretKey.fromBytes(await keystore.decrypt(passphrase));
+        return bls.SecretKey.fromBytes(await keystore.decrypt(passphrase));
       })
     );
 
@@ -159,7 +160,7 @@ export function groupExternalSignersByUrl(
 function assertValidPubkeysHex(pubkeysHex: string[]): void {
   for (const pubkeyHex of pubkeysHex) {
     const pubkeyBytes = fromHexString(pubkeyHex);
-    PublicKey.fromBytes(pubkeyBytes, CoordType.jacobian, true);
+    bls.PublicKey.fromBytes(pubkeyBytes, CoordType.jacobian, true);
   }
 }
 

@@ -1,4 +1,5 @@
-import bls, {CoordType} from "@chainsafe/bls";
+import bls from "@chainsafe/bls";
+import {CoordType} from "@chainsafe/bls/types";
 import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {verifyMerkleBranch} from "@chainsafe/lodestar-utils";
 import {
@@ -10,9 +11,9 @@ import {
   MAX_EFFECTIVE_BALANCE,
 } from "@chainsafe/lodestar-params";
 
-import {ZERO_HASH} from "../../constants";
-import {computeDomain, computeSigningRoot, increaseBalance} from "../../util";
-import {CachedBeaconStateAllForks, CachedBeaconStateAltair} from "../../types";
+import {ZERO_HASH} from "../../constants/index.js";
+import {computeDomain, computeSigningRoot, increaseBalance} from "../../util/index.js";
+import {CachedBeaconStateAllForks, CachedBeaconStateAltair} from "../../types.js";
 
 /**
  * Process a Deposit operation. Potentially adds a new validator to the registry. Mutates the validators and balances

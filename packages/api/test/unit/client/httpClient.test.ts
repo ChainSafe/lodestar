@@ -4,7 +4,7 @@ import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import fastify, {RouteOptions} from "fastify";
 import {IncomingMessage} from "node:http";
-import {HttpClient, HttpError} from "../../../src/client/utils";
+import {HttpClient, HttpError} from "../../../src/client/utils/index.js";
 
 chai.use(chaiAsPromised);
 

@@ -1,6 +1,6 @@
 import {expect} from "chai";
 import {Gauge, Registry} from "prom-client";
-import {GaugeExtra} from "../../../src/metrics/utils/gauge";
+import {GaugeExtra} from "../../../src/metrics/utils/gauge.js";
 
 type MetricValue = {
   value: number;

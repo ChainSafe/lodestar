@@ -1,5 +1,5 @@
 import {itBench} from "@dapplion/benchmark";
-import {unshuffleList} from "../../../src";
+import {unshuffleList} from "../../../src/index.js";
 
 //          Lightouse  Lodestar
 // 512      254.04 us  1.6034 ms (x6)

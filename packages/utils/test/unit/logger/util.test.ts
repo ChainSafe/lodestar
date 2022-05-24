@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {formatEpochSlotTime} from "../../../src/logger/util";
+import {formatEpochSlotTime} from "../../../src/logger/util.js";
 
 describe("logger / util / formatEpochSlotTime", () => {
   const nowSec = 1619171569;

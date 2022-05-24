@@ -9,16 +9,16 @@ import {
 } from "@chainsafe/lodestar-params";
 import {Bytes32, phase0, Root, ssz, TimeSeconds} from "@chainsafe/lodestar-types";
 
-import {processDeposit} from "../allForks";
-import {CachedBeaconStateAllForks, BeaconStateAllForks} from "../types";
-import {computeEpochAtSlot} from "./epoch";
-import {getActiveValidatorIndices} from "./validator";
-import {getTemporaryBlockHeader} from "./blockRoot";
+import {processDeposit} from "../allForks/index.js";
+import {CachedBeaconStateAllForks, BeaconStateAllForks} from "../types.js";
+import {computeEpochAtSlot} from "./epoch.js";
+import {getActiveValidatorIndices} from "./validator.js";
+import {getTemporaryBlockHeader} from "./blockRoot.js";
 import {CompositeViewDU, ListCompositeType} from "@chainsafe/ssz";
-import {newFilledArray} from "./array";
-import {getNextSyncCommittee} from "./syncCommittee";
-import {createCachedBeaconState} from "../cache/stateCache";
-import {EpochContextImmutableData} from "../cache/epochContext";
+import {newFilledArray} from "./array.js";
+import {getNextSyncCommittee} from "./syncCommittee.js";
+import {createCachedBeaconState} from "../cache/stateCache.js";
+import {EpochContextImmutableData} from "../cache/epochContext.js";
 
 type DepositDataRootListType = ListCompositeType<typeof ssz.Root>;
 type DepositDataRootViewDU = CompositeViewDU<DepositDataRootListType>;

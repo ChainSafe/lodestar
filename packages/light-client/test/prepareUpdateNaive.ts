@@ -1,8 +1,8 @@
 import {altair, phase0, Root, ssz} from "@chainsafe/lodestar-types";
 import {CompositeViewDU} from "@chainsafe/ssz";
 import {FINALIZED_ROOT_GINDEX, NEXT_SYNC_COMMITTEE_GINDEX, SLOTS_PER_HISTORICAL_ROOT} from "@chainsafe/lodestar-params";
-import {computeEpochAtSlot} from "../src/utils/clock";
-import {getForkVersion} from "../src/utils/domain";
+import {computeEpochAtSlot} from "../src/utils/clock.js";
+import {getForkVersion} from "../src/utils/domain.js";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
 
 export interface IBeaconChainLc {

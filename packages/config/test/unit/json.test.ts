@@ -1,6 +1,6 @@
 import {expect} from "chai";
-import {chainConfigFromJson, chainConfigToJson} from "../../src";
-import {chainConfig} from "../../src/default";
+import {chainConfigFromJson, chainConfigToJson} from "../../src/index.js";
+import {chainConfig} from "../../src/default.js";
 
 describe("chainConfig JSON", () => {
   it("Convert to and from JSON", () => {

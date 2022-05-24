@@ -1,4 +1,6 @@
 colors: true
-require: ts-node/register
 timeout: 2000
 exit: true
+extension: ["ts"]
+node-option:
+  - "loader=ts-node/esm"

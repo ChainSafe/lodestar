@@ -1,10 +1,10 @@
 import {expect} from "chai";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import {RouteGeneric, ReqGeneric, Resolves} from "../../src/utils";
-import {FetchOpts, HttpClient, IHttpClient} from "../../src/client/utils";
-import {ServerRoutes} from "../../src/server/utils";
-import {getMockApi, getTestServer} from "./utils";
-import {registerRoutesGroup} from "../../src/server";
+import {RouteGeneric, ReqGeneric, Resolves} from "../../src/utils/index.js";
+import {FetchOpts, HttpClient, IHttpClient} from "../../src/client/utils/index.js";
+import {ServerRoutes} from "../../src/server/utils/index.js";
+import {getMockApi, getTestServer} from "./utils.js";
+import {registerRoutesGroup} from "../../src/server/index.js";
 
 type IgnoreVoid<T> = T extends void ? undefined : T;
 

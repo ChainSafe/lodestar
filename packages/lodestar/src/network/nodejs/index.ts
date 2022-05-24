@@ -1,5 +1,5 @@
 /**
  * @module network/nodejs
  */
-export * from "./bundle";
-export * from "./util";
+export * from "./bundle.js";
+export * from "./util.js";

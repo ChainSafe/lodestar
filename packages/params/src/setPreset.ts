@@ -1,5 +1,5 @@
-import {PresetName} from "./presetName";
-import {presetStatus} from "./presetStatus";
+import {PresetName} from "./presetName.js";
+import {presetStatus} from "./presetStatus.js";
 
 export {PresetName};
 

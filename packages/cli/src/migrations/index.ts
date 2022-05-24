@@ -1,1 +1,1 @@
-export * from "./deleteOldPeerstore";
+export * from "./deleteOldPeerstore.js";

@@ -4,7 +4,7 @@ import {
   BeaconStateAllForks,
   CachedBeaconStateBellatrix,
   CachedBeaconStateAllForks,
-} from "../types";
+} from "../types.js";
 
 /**
  * Execution enabled = merge is done.

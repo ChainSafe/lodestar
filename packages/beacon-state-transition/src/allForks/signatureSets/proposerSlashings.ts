@@ -1,7 +1,7 @@
 import {DOMAIN_BEACON_PROPOSER} from "@chainsafe/lodestar-params";
 import {allForks, phase0, ssz} from "@chainsafe/lodestar-types";
-import {computeSigningRoot, ISignatureSet, SignatureSetType} from "../../util";
-import {CachedBeaconStateAllForks} from "../../types";
+import {computeSigningRoot, ISignatureSet, SignatureSetType} from "../../util/index.js";
+import {CachedBeaconStateAllForks} from "../../types.js";
 
 /**
  * Extract signatures to allow validating all block signatures at once

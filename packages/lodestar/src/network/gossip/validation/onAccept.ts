@@ -1,5 +1,5 @@
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import {GossipType, GossipTypeMap, GossipTopicTypeMap} from "../interface";
+import {GossipType, GossipTypeMap, GossipTopicTypeMap} from "../interface.js";
 
 export type GetGossipAcceptMetadataFn = (
   config: IChainForkConfig,

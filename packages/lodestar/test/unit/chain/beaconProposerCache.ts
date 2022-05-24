@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {BeaconProposerCache} from "../../../src/chain/beaconProposerCache";
+import {BeaconProposerCache} from "../../../src/chain/beaconProposerCache.js";
 
 const defaultFeeRecipient = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 describe("BeaconProposerCache", function () {

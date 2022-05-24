@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {computeEpochsToDelete} from "../../../../src/chain/archiver/archiveStates";
+import {computeEpochsToDelete} from "../../../../src/chain/archiver/archiveStates.js";
 
 describe("state archiver task", () => {
   describe("computeEpochsToDelete", () => {

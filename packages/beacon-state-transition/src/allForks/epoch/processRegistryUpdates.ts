@@ -1,6 +1,6 @@
-import {computeActivationExitEpoch} from "../../util";
-import {initiateValidatorExit} from "../block";
-import {EpochProcess, CachedBeaconStateAllForks} from "../../types";
+import {computeActivationExitEpoch} from "../../util/index.js";
+import {initiateValidatorExit} from "../block/index.js";
+import {EpochProcess, CachedBeaconStateAllForks} from "../../types.js";
 
 /**
  * Update validator registry for validators that activate + exit

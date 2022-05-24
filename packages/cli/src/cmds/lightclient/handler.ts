@@ -1,15 +1,13 @@
 import {getClient} from "@chainsafe/lodestar-api";
 import {Lightclient} from "@chainsafe/lodestar-light-client";
 import {fromHexString} from "@chainsafe/ssz";
-import {getBeaconConfigFromArgs} from "../../config/beaconParams";
-import {IGlobalArgs} from "../../options";
-import {getCliLogger, initBLS} from "../../util";
-import {getBeaconPaths} from "../beacon/paths";
-import {ILightClientArgs} from "./options";
+import {getBeaconConfigFromArgs} from "../../config/beaconParams.js";
+import {IGlobalArgs} from "../../options/index.js";
+import {getCliLogger} from "../../util/index.js";
+import {getBeaconPaths} from "../beacon/paths.js";
+import {ILightClientArgs} from "./options.js";
 
 export async function lightclientHandler(args: ILightClientArgs & IGlobalArgs): Promise<void> {
-  await initBLS();
-
   const config = getBeaconConfigFromArgs(args);
   const beaconPaths = getBeaconPaths(args);
   const logger = getCliLogger(args, beaconPaths, config);

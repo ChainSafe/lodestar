@@ -1,6 +1,6 @@
 import {assert} from "chai";
 
-import {computeSlotsSinceEpochStart} from "../../../src/util";
+import {computeSlotsSinceEpochStart} from "../../../src/util/index.js";
 import {Slot} from "@chainsafe/lodestar-types";
 
 describe("computeSlotsSinceEpochStart", () => {

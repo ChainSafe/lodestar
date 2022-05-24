@@ -1,14 +1,14 @@
 import {SinonStubbedInstance} from "sinon";
 import {ForkChoice, IProtoBlock, ExecutionStatus} from "@chainsafe/lodestar-fork-choice";
-import {resolveBlockId} from "../../../../../../src/api/impl/beacon/blocks/utils";
+import {resolveBlockId} from "../../../../../../src/api/impl/beacon/blocks/utils.js";
 import {expect, use} from "chai";
 import {toHexString} from "@chainsafe/ssz";
-import {generateEmptySignedBlock, generateProtoBlock} from "../../../../../utils/block";
+import {generateEmptySignedBlock, generateProtoBlock} from "../../../../../utils/block.js";
 import chaiAsPromised from "chai-as-promised";
-import {StubbedBeaconDb} from "../../../../../utils/stub";
-import {GENESIS_SLOT} from "../../../../../../src/constants";
-import {bufferEqualsMatcher} from "../../../../../utils/sinon/matcher";
-import {setupApiImplTestServer, ApiImplTestModules} from "../../index.test";
+import {StubbedBeaconDb} from "../../../../../utils/stub/index.js";
+import {GENESIS_SLOT} from "../../../../../../src/constants/index.js";
+import {bufferEqualsMatcher} from "../../../../../utils/sinon/matcher.js";
+import {setupApiImplTestServer, ApiImplTestModules} from "../../index.test.js";
 
 /* eslint-disable @typescript-eslint/no-empty-function */
 

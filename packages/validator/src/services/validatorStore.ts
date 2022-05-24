@@ -15,7 +15,7 @@ import {
   DOMAIN_SYNC_COMMITTEE_SELECTION_PROOF,
   DOMAIN_VOLUNTARY_EXIT,
 } from "@chainsafe/lodestar-params";
-import {SecretKey} from "@chainsafe/bls";
+import type {SecretKey} from "@chainsafe/bls/types";
 import {
   allForks,
   altair,
@@ -30,11 +30,11 @@ import {
 } from "@chainsafe/lodestar-types";
 import {BitArray, fromHexString, toHexString} from "@chainsafe/ssz";
 import {routes} from "@chainsafe/lodestar-api";
-import {Interchange, InterchangeFormatVersion, ISlashingProtection} from "../slashingProtection";
-import {PubkeyHex} from "../types";
-import {externalSignerPostSignature} from "../util/externalSignerClient";
-import {Metrics} from "../metrics";
-import {MapDef} from "../util/map";
+import {Interchange, InterchangeFormatVersion, ISlashingProtection} from "../slashingProtection/index.js";
+import {PubkeyHex} from "../types.js";
+import {externalSignerPostSignature} from "../util/externalSignerClient.js";
+import {Metrics} from "../metrics.js";
+import {MapDef} from "../util/map.js";
 
 export enum SignerType {
   Local,

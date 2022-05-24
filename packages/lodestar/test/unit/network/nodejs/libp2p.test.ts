@@ -1,8 +1,8 @@
 import {assert} from "chai";
 import {sleep} from "@chainsafe/lodestar-utils";
-import {NodejsNode} from "../../../../src/network/nodejs";
-import {createNode} from "../../../utils/network";
-import {Libp2pEvent} from "../../../../src/constants";
+import {NodejsNode} from "../../../../src/network/nodejs/index.js";
+import {createNode} from "../../../utils/network.js";
+import {Libp2pEvent} from "../../../../src/constants/index.js";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 

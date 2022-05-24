@@ -1,8 +1,8 @@
 import {Root, phase0} from "@chainsafe/lodestar-types";
-import {binarySearchLte} from "../../util/binarySearch";
-import {Eth1Error, Eth1ErrorCode} from "../errors";
-import {DepositTree} from "../../db/repositories/depositDataRoot";
-import {Eth1Block} from "../interface";
+import {binarySearchLte} from "../../util/binarySearch.js";
+import {Eth1Error, Eth1ErrorCode} from "../errors.js";
+import {DepositTree} from "../../db/repositories/depositDataRoot.js";
+import {Eth1Block} from "../interface.js";
 
 type BlockNumber = number;
 

@@ -1,18 +1,17 @@
 import {GENESIS_SLOT, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {phase0, Slot} from "@chainsafe/lodestar-types";
-import {initBLS} from "@chainsafe/lodestar-cli/src/util";
 import {IChainConfig} from "@chainsafe/lodestar-config";
-import {fetchWeakSubjectivityState} from "@chainsafe/lodestar-cli/src/networks";
+import {fetchWeakSubjectivityState} from "../../../../cli/src/networks/index.js";
 import {config} from "@chainsafe/lodestar-config/default";
-import {getDevBeaconNode} from "../../utils/node/beacon";
-import {waitForEvent} from "../../utils/events/resolver";
-import {getAndInitDevValidators} from "../../utils/node/validator";
-import {ChainEvent} from "../../../src/chain";
-import {RestApiOptions} from "../../../src/api/rest";
-import {testLogger, TestLoggerOpts} from "../../utils/logger";
-import {connect} from "../../utils/network";
-import {Network} from "../../../src/network";
-import {BackfillSyncEvent} from "../../../src/sync/backfill";
+import {getDevBeaconNode} from "../../utils/node/beacon.js";
+import {waitForEvent} from "../../utils/events/resolver.js";
+import {getAndInitDevValidators} from "../../utils/node/validator.js";
+import {ChainEvent} from "../../../src/chain/index.js";
+import {RestApiOptions} from "../../../src/api/rest/index.js";
+import {testLogger, TestLoggerOpts} from "../../utils/logger.js";
+import {connect} from "../../utils/network.js";
+import {Network} from "../../../src/network/index.js";
+import {BackfillSyncEvent} from "../../../src/sync/backfill/index.js";
 import {TimestampFormatCode} from "@chainsafe/lodestar-utils";
 
 /* eslint-disable @typescript-eslint/naming-convention */
@@ -20,10 +19,6 @@ describe("Start from WSS", function () {
   const testParams: Pick<IChainConfig, "SECONDS_PER_SLOT"> = {
     SECONDS_PER_SLOT: 2,
   };
-
-  before(async function () {
-    await initBLS();
-  });
 
   const afterEachCallbacks: (() => Promise<unknown> | unknown)[] = [];
   afterEach(async () => Promise.all(afterEachCallbacks.splice(0, afterEachCallbacks.length)));
@@ -36,7 +31,7 @@ describe("Start from WSS", function () {
     const timeoutSetupMargin = 5 * 1000; // Give extra 5 seconds of margin
 
     // delay a bit so regular sync sees it's up to date and sync is completed from the beginning
-    const genesisSlotsDelay = 3;
+    const genesisSlotsDelay = 16;
 
     const timeout =
       ((epochsOfMargin + expectedEpochsToFinish) * SLOTS_PER_EPOCH + genesisSlotsDelay) *

@@ -1,5 +1,11 @@
-import {AttesterFlags, FLAG_ELIGIBLE_ATTESTER, hasMarkers, IAttesterStatus, toAttesterFlags} from "../../../../src";
-import {CachedBeaconStatePhase0, CachedBeaconStateAltair, EpochProcess} from "../../../../src/types";
+import {
+  AttesterFlags,
+  FLAG_ELIGIBLE_ATTESTER,
+  hasMarkers,
+  IAttesterStatus,
+  toAttesterFlags,
+} from "../../../../src/index.js";
+import {CachedBeaconStatePhase0, CachedBeaconStateAltair, EpochProcess} from "../../../../src/types.js";
 
 /**
  * Generate an incomplete EpochProcess to simulate any network condition relevant to getAttestationDeltas

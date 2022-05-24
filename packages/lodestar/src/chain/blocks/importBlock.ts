@@ -14,22 +14,22 @@ import {
 import {IForkChoice, OnBlockPrecachedData, ForkChoiceError, ForkChoiceErrorCode} from "@chainsafe/lodestar-fork-choice";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import {IMetrics} from "../../metrics";
-import {IExecutionEngine, PayloadId} from "../../executionEngine/interface";
-import {IBeaconDb} from "../../db";
-import {ZERO_HASH_HEX} from "../../constants";
-import {CheckpointStateCache, StateContextCache, toCheckpointHex} from "../stateCache";
-import {ChainEvent} from "../emitter";
-import {ChainEventEmitter} from "../emitter";
-import {LightClientServer} from "../lightClient";
-import {getCheckpointFromState} from "./utils/checkpoint";
-import {PendingEvents} from "./utils/pendingEvents";
-import {FullyVerifiedBlock} from "./types";
-import {SeenAggregatedAttestations} from "../seenCache/seenAggregateAndProof";
-import {prepareExecutionPayload} from "../factory/block/body";
-import {IEth1ForBlockProduction} from "../../eth1";
-import {BeaconProposerCache} from "../beaconProposerCache";
-import {IBeaconClock} from "../clock";
+import {IMetrics} from "../../metrics/index.js";
+import {IExecutionEngine, PayloadId} from "../../executionEngine/interface.js";
+import {IBeaconDb} from "../../db/index.js";
+import {ZERO_HASH_HEX} from "../../constants/index.js";
+import {CheckpointStateCache, StateContextCache, toCheckpointHex} from "../stateCache/index.js";
+import {ChainEvent} from "../emitter.js";
+import {ChainEventEmitter} from "../emitter.js";
+import {LightClientServer} from "../lightClient/index.js";
+import {getCheckpointFromState} from "./utils/checkpoint.js";
+import {PendingEvents} from "./utils/pendingEvents.js";
+import {FullyVerifiedBlock} from "./types.js";
+import {SeenAggregatedAttestations} from "../seenCache/seenAggregateAndProof.js";
+import {prepareExecutionPayload} from "../factory/block/body.js";
+import {IEth1ForBlockProduction} from "../../eth1/index.js";
+import {BeaconProposerCache} from "../beaconProposerCache.js";
+import {IBeaconClock} from "../clock/index.js";
 
 /**
  * Fork-choice allows to import attestations from current (0) or past (1) epoch.

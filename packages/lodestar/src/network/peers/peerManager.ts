@@ -6,26 +6,26 @@ import {SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {allForks, altair, phase0} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {IBeaconChain} from "../../chain";
-import {GoodByeReasonCode, GOODBYE_KNOWN_CODES, Libp2pEvent} from "../../constants";
-import {IMetrics} from "../../metrics";
-import {NetworkEvent, INetworkEventBus} from "../events";
-import {IReqResp, ReqRespMethod, RequestTypedContainer} from "../reqresp";
-import {prettyPrintPeerId} from "../util";
-import {PeersData, PeerData} from "./peersData";
-import {ISubnetsService} from "../subnets";
-import {PeerDiscovery, SubnetDiscvQueryMs} from "./discover";
-import {IPeerRpcScoreStore, ScoreState, updateGossipsubScores} from "./score";
-import {clientFromAgentVersion, ClientKind} from "./client";
+import {IBeaconChain} from "../../chain/index.js";
+import {GoodByeReasonCode, GOODBYE_KNOWN_CODES, Libp2pEvent} from "../../constants/index.js";
+import {IMetrics} from "../../metrics/index.js";
+import {NetworkEvent, INetworkEventBus} from "../events.js";
+import {IReqResp, ReqRespMethod, RequestTypedContainer} from "../reqresp/index.js";
+import {prettyPrintPeerId} from "../util.js";
+import {PeersData, PeerData} from "./peersData.js";
+import {ISubnetsService} from "../subnets/index.js";
+import {PeerDiscovery, SubnetDiscvQueryMs} from "./discover.js";
+import {IPeerRpcScoreStore, ScoreState, updateGossipsubScores} from "./score.js";
+import {clientFromAgentVersion, ClientKind} from "./client.js";
 import {
   getConnectedPeerIds,
   hasSomeConnectedPeer,
   assertPeerRelevance,
   prioritizePeers,
   renderIrrelevantPeerType,
-} from "./utils";
-import {SubnetType} from "../metadata";
-import {Eth2Gossipsub} from "../gossip/gossipsub";
+} from "./utils/index.js";
+import {SubnetType} from "../metadata.js";
+import {Eth2Gossipsub} from "../gossip/gossipsub.js";
 
 /** heartbeat performs regular updates such as updating reputations and performing discovery requests */
 const HEARTBEAT_INTERVAL_MS = 30 * 1000;

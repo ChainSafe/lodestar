@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {binarySearchLte, ErrorNoValues, ErrorNoValueMinValue} from "../../../src/util/binarySearch";
+import {binarySearchLte, ErrorNoValues, ErrorNoValueMinValue} from "../../../src/util/binarySearch.js";
 
 describe("util / binarySearch", () => {
   describe("binarySearchLte", () => {

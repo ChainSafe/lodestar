@@ -1,18 +1,16 @@
 import {SLOTS_PER_EPOCH, ForkName} from "@chainsafe/lodestar-params";
 import {getClient} from "@chainsafe/lodestar-api";
-import {IBeaconNodeOptions} from "@chainsafe/lodestar";
+import {IBeaconNodeOptions, getStateTypeFromBytes} from "@chainsafe/lodestar";
 import {IChainConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
 import {Checkpoint} from "@chainsafe/lodestar-types/phase0";
 import {RecursivePartial, fromHex} from "@chainsafe/lodestar-utils";
 import {BeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
-// eslint-disable-next-line no-restricted-imports
-import {getStateTypeFromBytes} from "@chainsafe/lodestar/lib/util/multifork";
 import fs from "node:fs";
 import got from "got";
-import * as mainnet from "./mainnet";
-import * as prater from "./prater";
-import * as kiln from "./kiln";
-import * as ropsten from "./ropsten";
+import * as mainnet from "./mainnet.js";
+import * as prater from "./prater.js";
+import * as kiln from "./kiln.js";
+import * as ropsten from "./ropsten.js";
 
 export type NetworkName = "mainnet" | "prater" | "kiln" | "ropsten" | "dev";
 export const networkNames: NetworkName[] = ["mainnet", "prater", "kiln", "ropsten"];

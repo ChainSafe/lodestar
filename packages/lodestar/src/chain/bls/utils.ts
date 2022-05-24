@@ -1,4 +1,5 @@
-import {bls, PublicKey} from "@chainsafe/bls";
+import type {PublicKey} from "@chainsafe/bls/types";
+import bls from "@chainsafe/bls";
 import {ISignatureSet, SignatureSetType} from "@chainsafe/lodestar-beacon-state-transition";
 
 export function getAggregatedPubkey(signatureSet: ISignatureSet): PublicKey {

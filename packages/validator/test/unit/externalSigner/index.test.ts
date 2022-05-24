@@ -2,13 +2,14 @@ import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import {interopSecretKeys} from "@chainsafe/lodestar-beacon-state-transition";
 import {toHexString} from "@chainsafe/ssz";
-import {PublicKey, Signature} from "@chainsafe/bls";
+import type {PublicKey} from "@chainsafe/bls/types";
+import bls from "@chainsafe/bls";
 import {
   externalSignerGetKeys,
   externalSignerPostSignature,
   externalSignerUpCheck,
-} from "../../../src/util/externalSignerClient";
-import {createExternalSignerServer} from "../../utils/createExternalSignerServer";
+} from "../../../src/util/externalSignerClient.js";
+import {createExternalSignerServer} from "../../utils/createExternalSignerServer.js";
 
 chai.use(chaiAsPromised);
 
@@ -46,7 +47,7 @@ describe("External signer server", () => {
     for (let i = 0; i < pubkeys.length; i++) {
       const pubkey = pubkeys[i];
       const sigHex = await externalSignerPostSignature(externalSignerUrl, pubkey.toHex(), signingRootHex);
-      const isValid = Signature.fromHex(sigHex).verify(pubkey, signingRoot);
+      const isValid = bls.Signature.fromHex(sigHex).verify(pubkey, signingRoot);
       expect(isValid).to.equal(true, `Invalid signature for pubkey[${i}]`);
     }
   });

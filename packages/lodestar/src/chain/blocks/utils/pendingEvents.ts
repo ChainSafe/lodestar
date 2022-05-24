@@ -1,4 +1,4 @@
-import {ChainEventEmitter} from "../../emitter";
+import {ChainEventEmitter} from "../../emitter.js";
 
 /**
  * Utility to buffer events and send them all at once afterwards

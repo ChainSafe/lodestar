@@ -1,7 +1,7 @@
-import {sortBy} from "../../../util/sortBy";
-import {MIN_FINALIZED_CHAIN_VALIDATED_EPOCHS, PARALLEL_HEAD_CHAINS} from "../../constants";
-import {RangeSyncType} from "../../utils/remoteSyncType";
-import {SyncChain} from "../chain";
+import {sortBy} from "../../../util/sortBy.js";
+import {MIN_FINALIZED_CHAIN_VALIDATED_EPOCHS, PARALLEL_HEAD_CHAINS} from "../../constants.js";
+import {RangeSyncType} from "../../utils/remoteSyncType.js";
+import {SyncChain} from "../chain.js";
 
 /**
  * Priotize existing chains based on their target and peer count

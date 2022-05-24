@@ -1,7 +1,7 @@
 import {BLSPubkey, Epoch, ssz} from "@chainsafe/lodestar-types";
 import {Bucket, encodeKey, IDatabaseApiOptions} from "@chainsafe/lodestar-db";
 import {ContainerType, Type} from "@chainsafe/ssz";
-import {LodestarValidatorDatabaseController} from "../../types";
+import {LodestarValidatorDatabaseController} from "../../types.js";
 
 // Only used locally here
 // eslint-disable-next-line @typescript-eslint/naming-convention

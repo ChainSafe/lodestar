@@ -1,8 +1,8 @@
 import {DOMAIN_BEACON_PROPOSER} from "@chainsafe/lodestar-params";
 import {allForks} from "@chainsafe/lodestar-types";
-import {computeSigningRoot} from "../../util";
-import {ISignatureSet, SignatureSetType, verifySignatureSet} from "../../util/signatureSets";
-import {CachedBeaconStateAllForks} from "../../types";
+import {computeSigningRoot} from "../../util/index.js";
+import {ISignatureSet, SignatureSetType, verifySignatureSet} from "../../util/signatureSets.js";
+import {CachedBeaconStateAllForks} from "../../types.js";
 
 export function verifyProposerSignature(
   state: CachedBeaconStateAllForks,

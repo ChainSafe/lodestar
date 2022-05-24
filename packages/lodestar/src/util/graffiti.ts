@@ -1,4 +1,4 @@
-import {GRAFFITI_SIZE} from "../constants";
+import {GRAFFITI_SIZE} from "../constants/index.js";
 
 /**
  * Parses a graffiti UTF8 string and returns a 32 bytes buffer right padded with zeros

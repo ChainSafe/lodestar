@@ -1,7 +1,7 @@
 import {itBench} from "@dapplion/benchmark";
-import {beforeProcessEpoch} from "../../../../src";
-import {StateEpoch} from "../../types";
-import {generatePerfTestCachedStatePhase0, perfStateId} from "../../util";
+import {beforeProcessEpoch} from "../../../../src/index.js";
+import {StateEpoch} from "../../types.js";
+import {generatePerfTestCachedStatePhase0, perfStateId} from "../../util.js";
 
 // PERF: Cost = compute attester and proposer shufflings ~ 'proportional' to $VALIDATOR_COUNT, but independent of
 // network conditions. See also individual benchmarks for shuffling computations.

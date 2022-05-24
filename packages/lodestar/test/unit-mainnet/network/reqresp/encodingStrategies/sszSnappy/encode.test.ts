@@ -5,10 +5,10 @@ import varint from "varint";
 
 import {allForks, ssz} from "@chainsafe/lodestar-types";
 
-import {reqRespBlockResponseSerializer} from "../../../../../../src/network/reqresp/types";
-import {writeSszSnappyPayload} from "../../../../../../src/network/reqresp/encodingStrategies/sszSnappy";
-import {goerliShadowForkBlock13249} from "./testData";
-import {RequestOrOutgoingResponseBody} from "../../../../../../src/network/reqresp/types";
+import {reqRespBlockResponseSerializer} from "../../../../../../src/network/reqresp/types.js";
+import {writeSszSnappyPayload} from "../../../../../../src/network/reqresp/encodingStrategies/sszSnappy/index.js";
+import {goerliShadowForkBlock13249} from "./testData.js";
+import {RequestOrOutgoingResponseBody} from "../../../../../../src/network/reqresp/types.js";
 
 describe("network / reqresp / sszSnappy / encode", () => {
   describe("Test data vectors (generated in a previous version)", () => {

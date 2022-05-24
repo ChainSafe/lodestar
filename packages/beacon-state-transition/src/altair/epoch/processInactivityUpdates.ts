@@ -1,7 +1,7 @@
 import {GENESIS_EPOCH} from "@chainsafe/lodestar-params";
-import {CachedBeaconStateAltair, EpochProcess} from "../../types";
-import * as attesterStatusUtil from "../../util/attesterStatus";
-import {isInInactivityLeak} from "../../util";
+import {CachedBeaconStateAltair, EpochProcess} from "../../types.js";
+import * as attesterStatusUtil from "../../util/attesterStatus.js";
+import {isInInactivityLeak} from "../../util/index.js";
 
 /**
  * Mutates `inactivityScores` from pre-calculated validator statuses.

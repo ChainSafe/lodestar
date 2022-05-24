@@ -1,13 +1,13 @@
 import {IChainConfig} from "@chainsafe/lodestar-config";
 import {assert} from "chai";
-import {getDevBeaconNode} from "../../utils/node/beacon";
-import {waitForEvent} from "../../utils/events/resolver";
+import {getDevBeaconNode} from "../../utils/node/beacon.js";
+import {waitForEvent} from "../../utils/events/resolver.js";
 import {phase0, ssz} from "@chainsafe/lodestar-types";
-import {getAndInitDevValidators} from "../../utils/node/validator";
-import {ChainEvent} from "../../../src/chain";
-import {Network} from "../../../src/network";
-import {connect} from "../../utils/network";
-import {testLogger, LogLevel, TestLoggerOpts} from "../../utils/logger";
+import {getAndInitDevValidators} from "../../utils/node/validator.js";
+import {ChainEvent} from "../../../src/chain/index.js";
+import {Network} from "../../../src/network/index.js";
+import {connect} from "../../utils/network.js";
+import {testLogger, LogLevel, TestLoggerOpts} from "../../utils/logger.js";
 import {fromHexString} from "@chainsafe/ssz";
 
 describe("sync / finalized sync", function () {
@@ -31,11 +31,17 @@ describe("sync / finalized sync", function () {
     const testLoggerOpts: TestLoggerOpts = {logLevel: LogLevel.info};
     const loggerNodeA = testLogger("Node-A", testLoggerOpts);
     const loggerNodeB = testLogger("Node-B", testLoggerOpts);
+    // delay a bit so regular sync sees it's up to date and sync is completed from the beginning
+    // the node needs time to transpile/initialize bls worker threads
+    const genesisSlotsDelay = 16;
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    const genesisTime = Math.floor(Date.now() / 1000) + genesisSlotsDelay * beaconParams.SECONDS_PER_SLOT!;
 
     const bn = await getDevBeaconNode({
       params: beaconParams,
       options: {sync: {isSingleNode: true}, network: {allowPublishToZeroPeers: true}},
       validatorCount,
+      genesisTime,
       logger: loggerNodeA,
     });
 

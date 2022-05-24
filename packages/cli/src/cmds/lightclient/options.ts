@@ -1,6 +1,6 @@
-import {ICliCommandOptions, ILogArgs} from "../../util";
-import {beaconPathsOptions, logOptions} from "../beacon/options";
-import {IBeaconPaths} from "../beacon/paths";
+import {ICliCommandOptions, ILogArgs} from "../../util/index.js";
+import {beaconPathsOptions, logOptions} from "../beacon/options.js";
+import {IBeaconPaths} from "../beacon/paths.js";
 
 export type ILightClientArgs = ILogArgs & {
   logFile: IBeaconPaths["logFile"];

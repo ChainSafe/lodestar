@@ -2,8 +2,8 @@ import {computeStartSlotAtEpoch, getBlockRootAtSlot} from "@chainsafe/lodestar-b
 import {SLOTS_PER_HISTORICAL_ROOT} from "@chainsafe/lodestar-params";
 import {Epoch, ForkDigest, Root, phase0, ssz} from "@chainsafe/lodestar-types";
 import {toHexString} from "@chainsafe/ssz";
-import {IBeaconChain} from "../../../chain";
-import {GENESIS_EPOCH} from "../../../constants";
+import {IBeaconChain} from "../../../chain/index.js";
+import {GENESIS_EPOCH} from "../../../constants/index.js";
 
 // TODO: Why this value? (From Lighthouse)
 const FUTURE_SLOT_TOLERANCE = 1;

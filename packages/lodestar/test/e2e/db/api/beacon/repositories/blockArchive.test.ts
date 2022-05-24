@@ -1,12 +1,12 @@
-import {BeaconDb} from "../../../../../../src/db";
+import {BeaconDb} from "../../../../../../src/db/index.js";
 import {config} from "@chainsafe/lodestar-config/default";
 import {LevelDbController} from "@chainsafe/lodestar-db";
-import {generateSignedBlock} from "../../../../../utils/block";
-import {testLogger} from "../../../../../utils/logger";
+import {generateSignedBlock} from "../../../../../utils/block.js";
+import {testLogger} from "../../../../../utils/logger.js";
 import {fromHexString} from "@chainsafe/ssz";
 import {allForks, phase0, ssz} from "@chainsafe/lodestar-types";
 import {expect} from "chai";
-import {BlockArchiveBatchPutBinaryItem} from "../../../../../../src/db/repositories";
+import {BlockArchiveBatchPutBinaryItem} from "../../../../../../src/db/repositories/index.js";
 
 describe("BlockArchiveRepository", function () {
   let db: BeaconDb;

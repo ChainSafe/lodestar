@@ -1,2 +1,2 @@
-export * from "./interface";
-export * from "./LocalClock";
+export * from "./interface.js";
+export * from "./LocalClock.js";

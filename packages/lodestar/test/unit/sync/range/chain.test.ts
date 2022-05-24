@@ -1,14 +1,14 @@
 import {config} from "@chainsafe/lodestar-config/default";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {Epoch, phase0, Slot} from "@chainsafe/lodestar-types";
-import {linspace} from "../../../../src/util/numpy";
-import {generateEmptyBlock, generateEmptySignedBlock} from "../../../utils/block";
-import {SyncChain, SyncChainFns, ChainTarget} from "../../../../src/sync/range/chain";
+import {linspace} from "../../../../src/util/numpy.js";
+import {generateEmptyBlock, generateEmptySignedBlock} from "../../../utils/block.js";
+import {SyncChain, SyncChainFns, ChainTarget} from "../../../../src/sync/range/chain.js";
 import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
-import {RangeSyncType} from "../../../../src/sync/utils/remoteSyncType";
-import {ZERO_HASH} from "../../../../src/constants";
-import {testLogger} from "../../../utils/logger";
-import {getValidPeerId} from "../../../utils/peer";
+import {RangeSyncType} from "../../../../src/sync/utils/remoteSyncType.js";
+import {ZERO_HASH} from "../../../../src/constants/index.js";
+import {testLogger} from "../../../utils/logger.js";
+import {getValidPeerId} from "../../../utils/peer.js";
 
 describe("sync / range / chain", () => {
   const testCases: {

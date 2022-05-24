@@ -1,10 +1,10 @@
 import {allForks, altair, BeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {bellatrix, ssz} from "@chainsafe/lodestar-types";
 import {ForkName} from "@chainsafe/lodestar-params";
-import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState";
-import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState";
-import {shouldVerify, TestRunnerFn} from "../utils/types";
-import {getConfig} from "../utils/getConfig";
+import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
+import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
+import {shouldVerify, TestRunnerFn} from "../utils/types.js";
+import {getConfig} from "../utils/getConfig.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 

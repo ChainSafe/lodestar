@@ -1,4 +1,4 @@
-import {Method, Version, Encoding, protocolPrefix, Protocol} from "../types";
+import {Method, Version, Encoding, protocolPrefix, Protocol} from "../types.js";
 
 const methods = new Set(Object.values(Method));
 const versions = new Set(Object.values(Version));

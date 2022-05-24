@@ -4,8 +4,8 @@ import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {routes, Api} from "@chainsafe/lodestar-api";
 import {chainConfig as chainConfigDef} from "@chainsafe/lodestar-config/default";
 import {createIBeaconConfig, IChainConfig} from "@chainsafe/lodestar-config";
-import {Lightclient, LightclientEvent} from "../../src";
-import {EventsServerApi, LightclientServerApi, ServerOpts, startServer} from "../lightclientApiServer";
+import {Lightclient, LightclientEvent} from "../../src/index.js";
+import {EventsServerApi, LightclientServerApi, ServerOpts, startServer} from "../lightclientApiServer.js";
 import {
   computeLightclientUpdate,
   computeLightClientSnapshot,
@@ -14,7 +14,7 @@ import {
   committeeUpdateToLatestHeadUpdate,
   committeeUpdateToLatestFinalizedHeadUpdate,
   lastInMap,
-} from "../utils";
+} from "../utils.js";
 import {toHexString} from "@chainsafe/ssz";
 import {expect} from "chai";
 

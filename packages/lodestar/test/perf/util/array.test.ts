@@ -1,5 +1,5 @@
 import {itBench, setBenchOpts} from "@dapplion/benchmark";
-import {LinkedList} from "../../../src/util/array";
+import {LinkedList} from "../../../src/util/array.js";
 
 /**
  * 16_000 items: push then shift  - LinkedList is >200x faster than regular array

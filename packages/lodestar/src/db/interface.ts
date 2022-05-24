@@ -3,6 +3,7 @@
  */
 
 import {IDbMetrics} from "@chainsafe/lodestar-db";
+import {Registry} from "prom-client";
 
 import {
   AttesterSlashingRepository,
@@ -19,8 +20,8 @@ import {
   SyncCommitteeRepository,
   SyncCommitteeWitnessRepository,
   BackfilledRanges,
-} from "./repositories";
-import {PreGenesisState, PreGenesisStateLastProcessedBlock} from "./single";
+} from "./repositories/index.js";
+import {PreGenesisState, PreGenesisStateLastProcessedBlock} from "./single/index.js";
 
 /**
  * The DB service manages the data layer of the beacon chain
@@ -29,6 +30,7 @@ import {PreGenesisState, PreGenesisStateLastProcessedBlock} from "./single";
  */
 export interface IBeaconDb {
   metrics?: IDbMetrics;
+  metricsRegistry?: Registry;
 
   // unfinalized blocks
   block: BlockRepository;

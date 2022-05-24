@@ -5,13 +5,13 @@ import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@chainsafe/lodestar-b
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Epoch, Slot, phase0} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {IBeaconChain} from "../../chain";
-import {INetwork} from "../../network";
-import {IMetrics} from "../../metrics";
-import {RangeSyncType, getRangeSyncType, rangeSyncTypes} from "../utils/remoteSyncType";
-import {updateChains} from "./utils";
-import {ChainTarget, SyncChainFns, SyncChain, SyncChainOpts, SyncChainDebugState} from "./chain";
-import {PartiallyVerifiedBlockFlags} from "../../chain/blocks";
+import {IBeaconChain} from "../../chain/index.js";
+import {INetwork} from "../../network/index.js";
+import {IMetrics} from "../../metrics/index.js";
+import {RangeSyncType, getRangeSyncType, rangeSyncTypes} from "../utils/remoteSyncType.js";
+import {updateChains} from "./utils/index.js";
+import {ChainTarget, SyncChainFns, SyncChain, SyncChainOpts, SyncChainDebugState} from "./chain.js";
+import {PartiallyVerifiedBlockFlags} from "../../chain/blocks/index.js";
 
 export enum RangeSyncEvent {
   completedChain = "RangeSync-completedChain",

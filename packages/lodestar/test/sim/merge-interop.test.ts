@@ -10,19 +10,19 @@ import {IChainConfig} from "@chainsafe/lodestar-config";
 import {Epoch} from "@chainsafe/lodestar-types";
 import {bellatrix} from "@chainsafe/lodestar-beacon-state-transition";
 
-import {ExecutePayloadStatus} from "../../src/executionEngine/interface";
-import {ExecutionEngineHttp} from "../../src/executionEngine/http";
-import {shell} from "./shell";
-import {ChainEvent} from "../../src/chain";
-import {testLogger, TestLoggerOpts} from "../utils/logger";
-import {logFilesDir} from "./params";
-import {getDevBeaconNode} from "../utils/node/beacon";
-import {RestApiOptions} from "../../src/api";
-import {simTestInfoTracker} from "../utils/node/simTest";
-import {getAndInitDevValidators} from "../utils/node/validator";
-import {Eth1Provider} from "../../src";
-import {ZERO_HASH} from "../../src/constants";
-import {bytesToData, dataToBytes, quantityToNum} from "../../src/eth1/provider/utils";
+import {ExecutePayloadStatus} from "../../src/executionEngine/interface.js";
+import {ExecutionEngineHttp} from "../../src/executionEngine/http.js";
+import {shell} from "./shell.js";
+import {ChainEvent} from "../../src/chain/index.js";
+import {testLogger, TestLoggerOpts} from "../utils/logger.js";
+import {logFilesDir} from "./params.js";
+import {getDevBeaconNode} from "../utils/node/beacon.js";
+import {RestApiOptions} from "../../src/api/index.js";
+import {simTestInfoTracker} from "../utils/node/simTest.js";
+import {getAndInitDevValidators} from "../utils/node/validator.js";
+import {Eth1Provider} from "../../src/index.js";
+import {ZERO_HASH} from "../../src/constants/index.js";
+import {bytesToData, dataToBytes, quantityToNum} from "../../src/eth1/provider/utils.js";
 
 // NOTE: Must specify
 // EL_BINARY_DIR: File path to locate the EL executable
@@ -284,10 +284,10 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     const expectedEpochsToFinish = 6;
     // 1 epoch of margin of error
     const epochsOfMargin = 1;
-    const timeoutSetupMargin = 5 * 1000; // Give extra 5 seconds of margin
+    const timeoutSetupMargin = 30 * 1000; // Give extra 30 seconds of margin
 
     // delay a bit so regular sync sees it's up to date and sync is completed from the beginning
-    const genesisSlotsDelay = 3;
+    const genesisSlotsDelay = 30;
 
     const timeout =
       ((epochsOfMargin + expectedEpochsToFinish) * SLOTS_PER_EPOCH + genesisSlotsDelay) *

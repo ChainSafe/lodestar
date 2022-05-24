@@ -2,9 +2,9 @@ import {BLSPubkey, Slot, ssz} from "@chainsafe/lodestar-types";
 import {intToBytes, bytesToInt} from "@chainsafe/lodestar-utils";
 import {Bucket, DB_PREFIX_LENGTH, encodeKey, IDatabaseApiOptions, uintLen} from "@chainsafe/lodestar-db";
 import {ContainerType, Type} from "@chainsafe/ssz";
-import {LodestarValidatorDatabaseController} from "../../types";
-import {SlashingProtectionBlock} from "../types";
-import {blsPubkeyLen, uniqueVectorArr} from "../utils";
+import {LodestarValidatorDatabaseController} from "../../types.js";
+import {SlashingProtectionBlock} from "../types.js";
+import {blsPubkeyLen, uniqueVectorArr} from "../utils.js";
 
 /**
  * Manages validator db storage of blocks.

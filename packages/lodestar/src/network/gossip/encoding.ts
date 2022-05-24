@@ -2,8 +2,8 @@ import {digest} from "@chainsafe/as-sha256";
 import {compress, uncompress} from "snappyjs";
 import {intToBytes} from "@chainsafe/lodestar-utils";
 import {ForkName} from "@chainsafe/lodestar-params";
-import {MESSAGE_DOMAIN_VALID_SNAPPY} from "./constants";
-import {GossipTopicCache} from "./topic";
+import {MESSAGE_DOMAIN_VALID_SNAPPY} from "./constants.js";
+import {GossipTopicCache} from "./topic.js";
 import {RPC} from "libp2p-gossipsub/src/message/rpc";
 import {GossipsubMessage} from "libp2p-gossipsub/src/types";
 

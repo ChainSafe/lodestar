@@ -1,6 +1,7 @@
 import {config} from "@chainsafe/lodestar-config/default";
 import {phase0, ssz, Slot, altair} from "@chainsafe/lodestar-types";
-import bls, {CoordType, PublicKey, SecretKey} from "@chainsafe/bls";
+import {CoordType, PublicKey, SecretKey} from "@chainsafe/bls/types";
+import bls from "@chainsafe/bls";
 import {BitArray, fromHexString} from "@chainsafe/ssz";
 import {
   allForks,
@@ -11,7 +12,7 @@ import {
   newFilledArray,
   createCachedBeaconState,
   computeCommitteeCount,
-} from "../../src";
+} from "../../src/index.js";
 import {createIBeaconConfig, createIChainForkConfig} from "@chainsafe/lodestar-config";
 import {
   CachedBeaconStateAllForks,
@@ -19,9 +20,9 @@ import {
   CachedBeaconStateAltair,
   BeaconStatePhase0,
   BeaconStateAltair,
-} from "../../src/types";
-import {profilerLogger} from "../utils/logger";
-import {interopPubkeysCached} from "../utils/interop";
+} from "../../src/types.js";
+import {profilerLogger} from "../utils/logger.js";
+import {interopPubkeysCached} from "../utils/interop.js";
 import {
   EPOCHS_PER_ETH1_VOTING_PERIOD,
   EPOCHS_PER_HISTORICAL_VECTOR,
@@ -30,8 +31,8 @@ import {
   SLOTS_PER_EPOCH,
   SLOTS_PER_HISTORICAL_ROOT,
 } from "@chainsafe/lodestar-params";
-import {getNextSyncCommittee} from "../../src/util/syncCommittee";
-import {getEffectiveBalanceIncrements} from "../../src/cache/effectiveBalanceIncrements";
+import {getNextSyncCommittee} from "../../src/util/syncCommittee.js";
+import {getEffectiveBalanceIncrements} from "../../src/cache/effectiveBalanceIncrements.js";
 
 let phase0State: BeaconStatePhase0 | null = null;
 let phase0CachedState23637: CachedBeaconStatePhase0 | null = null;

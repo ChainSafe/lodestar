@@ -1,10 +1,15 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import {unlinkSync, writeFileSync} from "node:fs";
-import {join} from "node:path";
-
+import path, {join} from "node:path";
+import {fileURLToPath} from "node:url";
 import {ContainerType, Type} from "@chainsafe/ssz";
 import {ssz} from "@chainsafe/lodestar-types";
-import {describeDirectorySpecTest, InputType, loadYamlFile} from "../../../src/single";
+import {describeDirectorySpecTest, InputType, loadYamlFile} from "../../../src/single.js";
+
+// Global variable __dirname no longer available in ES6 modules.
+// Solutions: https://stackoverflow.com/questions/46745014/alternative-for-dirname-in-node-js-when-using-es6-modules
+// eslint-disable-next-line @typescript-eslint/naming-convention
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /* eslint-disable @typescript-eslint/naming-convention */
 

@@ -1,5 +1,5 @@
 import {GaugeConfiguration} from "prom-client";
-import {GaugeExtra} from "./gauge";
+import {GaugeExtra} from "./gauge.js";
 
 type GetValuesFn = () => number[];
 type Labels<T extends string> = Partial<Record<T, string | number>>;

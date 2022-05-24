@@ -1,4 +1,4 @@
-import {EpochSlotOpts} from "./interface";
+import {EpochSlotOpts} from "./interface.js";
 
 /**
  * Formats time as: `EPOCH/SLOT_INDEX SECONDS.MILISECONDS

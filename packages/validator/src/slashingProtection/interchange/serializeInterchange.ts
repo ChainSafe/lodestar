@@ -1,7 +1,7 @@
-import {InterchangeError, InterchangeErrorErrorCode} from "./errors";
-import {Interchange, InterchangeFormatVersion, IInterchangeLodestar} from "./types";
-import {serializeInterchangeCompleteV4} from "./formats/completeV4";
-import {serializeInterchangeV5} from "./formats/v5";
+import {InterchangeError, InterchangeErrorErrorCode} from "./errors.js";
+import {Interchange, InterchangeFormatVersion, IInterchangeLodestar} from "./types.js";
+import {serializeInterchangeCompleteV4} from "./formats/completeV4.js";
+import {serializeInterchangeV5} from "./formats/v5.js";
 
 export function serializeInterchange(
   interchangeLodestar: IInterchangeLodestar,

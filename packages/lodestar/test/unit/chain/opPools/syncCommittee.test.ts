@@ -1,9 +1,9 @@
-import {bls} from "@chainsafe/bls";
+import bls from "@chainsafe/bls";
 import {altair} from "@chainsafe/lodestar-types";
 import {toHexString} from "@chainsafe/ssz";
 import {expect} from "chai";
-import {SyncCommitteeMessagePool} from "../../../../src/chain/opPools";
-import {generateSyncCommitteeSignature} from "../../../utils/syncCommittee";
+import {SyncCommitteeMessagePool} from "../../../../src/chain/opPools/index.js";
+import {generateSyncCommitteeSignature} from "../../../utils/syncCommittee.js";
 
 describe("chain / opPools / SyncCommitteeMessagePool", function () {
   let cache: SyncCommitteeMessagePool;

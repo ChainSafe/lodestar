@@ -1,7 +1,7 @@
-import {phase0} from "./phase0";
-import {altair} from "./altair";
-import {bellatrix} from "./bellatrix";
-import {BeaconPreset} from "../../interface";
+import {phase0} from "./phase0.js";
+import {altair} from "./altair.js";
+import {bellatrix} from "./bellatrix.js";
+import {BeaconPreset} from "../../interface/index.js";
 
 export const commit = "v1.1.9";
 

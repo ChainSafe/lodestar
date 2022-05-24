@@ -1,21 +1,21 @@
 import * as fs from "node:fs";
-import {add0xPrefix, ICliCommand, initBLS, randomPassword} from "../../../../util";
-import {IGlobalArgs} from "../../../../options";
+import {add0xPrefix, ICliCommand, randomPassword} from "../../../../util/index.js";
+import {IGlobalArgs} from "../../../../options/index.js";
 import inquirer from "inquirer";
 import {validateMnemonic} from "bip39";
-import {ValidatorDirBuilder} from "../../../../validatorDir";
-import {getAccountPaths} from "../../paths";
+import {ValidatorDirBuilder} from "../../../../validatorDir/index.js";
+import {getAccountPaths} from "../../paths.js";
 import {
   deriveEth2ValidatorKeys,
   deriveKeyFromMnemonic,
   eth2ValidatorPaths,
   IEth2ValidatorKeys,
 } from "@chainsafe/bls-keygen";
-import {IValidatorCreateArgs, validatorCreateOptions} from "./create";
-import {mapValues, values} from "lodash";
+import {IValidatorCreateArgs, validatorCreateOptions} from "./create.js";
+import mapValues from "lodash/mapValues.js";
 import bls from "@chainsafe/bls";
 import {Keystore} from "@chainsafe/bls-keystore";
-import {getBeaconConfigFromArgs} from "../../../../config";
+import {getBeaconConfigFromArgs} from "../../../../config/index.js";
 import {MAX_EFFECTIVE_BALANCE} from "@chainsafe/lodestar-params";
 
 /* eslint-disable no-console */
@@ -59,8 +59,6 @@ export const recover: ICliCommand<IValidatorRecoverArgs, IGlobalArgs, ReturnType
   },
 
   handler: async (args) => {
-    await initBLS();
-
     const config = getBeaconConfigFromArgs(args);
 
     const {mnemonicInputPath, count, storeWithdrawalKeystore, firstIndex} = args;
@@ -109,7 +107,7 @@ export const recover: ICliCommand<IValidatorRecoverArgs, IGlobalArgs, ReturnType
         return keystore;
       });
 
-      const keystores = await Promise.all(values(keystoreRequests));
+      const keystores = await Promise.all(Object.values(keystoreRequests));
 
       await validatorDirBuilder.build({
         keystores: {

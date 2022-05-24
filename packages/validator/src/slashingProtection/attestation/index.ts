@@ -1,10 +1,10 @@
 import {BLSPubkey} from "@chainsafe/lodestar-types";
-import {isEqualNonZeroRoot, minEpoch} from "../utils";
-import {MinMaxSurround, SurroundAttestationError, SurroundAttestationErrorCode} from "../minMaxSurround";
-import {SlashingProtectionAttestation} from "../types";
-import {InvalidAttestationError, InvalidAttestationErrorCode} from "./errors";
-import {AttestationByTargetRepository} from "./attestationByTargetRepository";
-import {AttestationLowerBoundRepository} from "./attestationLowerBoundRepository";
+import {isEqualNonZeroRoot, minEpoch} from "../utils.js";
+import {MinMaxSurround, SurroundAttestationError, SurroundAttestationErrorCode} from "../minMaxSurround/index.js";
+import {SlashingProtectionAttestation} from "../types.js";
+import {InvalidAttestationError, InvalidAttestationErrorCode} from "./errors.js";
+import {AttestationByTargetRepository} from "./attestationByTargetRepository.js";
+import {AttestationLowerBoundRepository} from "./attestationLowerBoundRepository.js";
 export {
   AttestationByTargetRepository,
   AttestationLowerBoundRepository,

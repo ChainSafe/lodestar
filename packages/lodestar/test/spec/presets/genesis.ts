@@ -8,9 +8,9 @@ import {
   isValidGenesisState,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {bnToNum} from "@chainsafe/lodestar-utils";
-import {expectEqualBeaconState} from "../utils/expectEqualBeaconState";
-import {TestRunnerFn} from "../utils/types";
-import {getConfig} from "../utils/getConfig";
+import {expectEqualBeaconState} from "../utils/expectEqualBeaconState.js";
+import {TestRunnerFn} from "../utils/types.js";
+import {getConfig} from "../utils/getConfig.js";
 
 // The aim of the genesis tests is to provide a baseline to test genesis-state initialization and test if the
 // proposed genesis-validity conditions are working.

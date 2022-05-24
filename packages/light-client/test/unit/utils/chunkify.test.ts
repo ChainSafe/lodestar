@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {chunkifyInclusiveRange} from "../../../src/utils/chunkify";
+import {chunkifyInclusiveRange} from "../../../src/utils/chunkify.js";
 
 describe("utils / chunkifyInclusiveRange", () => {
   const testCases: {id: string; from: number; to: number; max: number; result: [number, number][]}[] = [

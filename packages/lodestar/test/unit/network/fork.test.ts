@@ -1,7 +1,7 @@
 import {expect} from "chai";
 import {ForkName} from "@chainsafe/lodestar-params";
 import {IBeaconConfig, IForkInfo} from "@chainsafe/lodestar-config";
-import {getCurrentAndNextFork, getActiveForks} from "../../../src/network/forks";
+import {getCurrentAndNextFork, getActiveForks} from "../../../src/network/forks.js";
 
 function getForkConfig({
   phase0,

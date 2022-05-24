@@ -6,9 +6,9 @@ import {
   SLOTS_PER_EPOCH,
   TARGET_COMMITTEE_SIZE,
 } from "@chainsafe/lodestar-params";
-import {BeaconStateAllForks} from "../types";
-import {getSeed} from "./seed";
-import {unshuffleList} from "./shuffle";
+import {BeaconStateAllForks} from "../types.js";
+import {getSeed} from "./seed.js";
+import {unshuffleList} from "./shuffle.js";
 
 /**
  * Readonly interface for IEpochShuffling.

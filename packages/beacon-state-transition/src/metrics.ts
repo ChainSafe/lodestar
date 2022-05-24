@@ -1,5 +1,5 @@
 import {Epoch} from "@chainsafe/lodestar-types";
-import {IAttesterStatus} from "./util/attesterStatus";
+import {IAttesterStatus} from "./util/attesterStatus.js";
 
 export interface IBeaconStateTransitionMetrics {
   stfnEpochTransition: IHistogram;

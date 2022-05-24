@@ -1,5 +1,5 @@
-import {ICliCommandOptions} from "../../../../util";
-import {defaultAccountPaths} from "../../paths";
+import {ICliCommandOptions} from "../../../../util/index.js";
+import {defaultAccountPaths} from "../../paths.js";
 
 export interface IAccountValidatorArgs {
   keystoresDir?: string;

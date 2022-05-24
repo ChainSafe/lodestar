@@ -4,10 +4,10 @@
 import http from "node:http";
 import {Registry} from "prom-client";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {wrapError} from "../../util/wrapError";
-import {HistogramExtra} from "../utils/histogram";
-import {HttpActiveSocketsTracker} from "../../api/rest/activeSockets";
-import {RegistryMetricCreator} from "../utils/registryMetricCreator";
+import {wrapError} from "../../util/wrapError.js";
+import {HistogramExtra} from "../utils/histogram.js";
+import {HttpActiveSocketsTracker} from "../../api/rest/activeSockets.js";
+import {RegistryMetricCreator} from "../utils/registryMetricCreator.js";
 
 export type HttpMetricsServerOpts = {
   port: number;

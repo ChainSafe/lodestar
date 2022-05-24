@@ -3,7 +3,7 @@ import {ssz} from "@chainsafe/lodestar-types";
 import {toHex} from "@chainsafe/lodestar-utils";
 import {BitArray} from "@chainsafe/ssz";
 import {expect} from "chai";
-import {deserializeEnrSubnets} from "../../../../../src/network/peers/utils/enrSubnetsDeserialize";
+import {deserializeEnrSubnets} from "../../../../../src/network/peers/utils/enrSubnetsDeserialize.js";
 
 describe("ENR syncnets", () => {
   const syncnetTestCases: {bytes: string; bools: boolean[]}[] = [

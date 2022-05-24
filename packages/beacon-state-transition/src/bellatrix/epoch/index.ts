@@ -1,1 +1,1 @@
-export {processSlashings} from "./processSlashings";
+export {processSlashings} from "./processSlashings.js";

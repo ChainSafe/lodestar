@@ -2,12 +2,12 @@ import {defaultOptions} from "@chainsafe/lodestar";
 import {expect} from "chai";
 import fs from "node:fs";
 import path from "node:path";
-import {getBeaconPaths} from "../../../src/cmds/beacon/paths";
-import {BeaconNodeOptions, mergeBeaconNodeOptions} from "../../../src/config";
-import {enrsToNetworkConfig, parseBootnodesFile} from "../../../src/networks";
-import {bootEnrs as praterBootEnrs} from "../../../src/networks/prater";
-import {testFilesDir} from "../../utils";
-import {extractJwtHexSecret} from "../../../src/util";
+import {getBeaconPaths} from "../../../src/cmds/beacon/paths.js";
+import {BeaconNodeOptions, mergeBeaconNodeOptions} from "../../../src/config/index.js";
+import {enrsToNetworkConfig, parseBootnodesFile} from "../../../src/networks/index.js";
+import {bootEnrs as praterBootEnrs} from "../../../src/networks/prater.js";
+import {testFilesDir} from "../../utils.js";
+import {extractJwtHexSecret} from "../../../src/util/index.js";
 
 describe("config / beaconNodeOptions", () => {
   it("Should return prater options", () => {

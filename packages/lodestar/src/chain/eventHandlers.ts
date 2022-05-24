@@ -4,11 +4,11 @@ import {allForks, Epoch, phase0, Slot, ssz, Version} from "@chainsafe/lodestar-t
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {CheckpointWithHex, IProtoBlock} from "@chainsafe/lodestar-fork-choice";
 import {CachedBeaconStateAllForks, computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
-import {AttestationError, BlockError, BlockErrorCode} from "./errors";
-import {ChainEvent, IChainEvents} from "./emitter";
-import {BeaconChain} from "./chain";
-import {REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC} from "./reprocess";
-import {toCheckpointHex} from "./stateCache";
+import {AttestationError, BlockError, BlockErrorCode} from "./errors/index.js";
+import {ChainEvent, IChainEvents} from "./emitter.js";
+import {BeaconChain} from "./chain.js";
+import {REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC} from "./reprocess.js";
+import {toCheckpointHex} from "./stateCache/index.js";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyCallback = () => Promise<void>;

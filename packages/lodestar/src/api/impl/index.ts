@@ -2,9 +2,9 @@
  * @module rpc/api
  */
 
-export * from "./validator";
-export * from "./beacon";
-export * from "./node";
-export * from "./events";
-export * from "./types";
-export * from "./api";
+export * from "./validator/index.js";
+export * from "./beacon/index.js";
+export * from "./node/index.js";
+export * from "./events/index.js";
+export * from "./types.js";
+export * from "./api.js";

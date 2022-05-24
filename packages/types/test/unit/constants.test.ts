@@ -1,5 +1,5 @@
 import * as constants from "@chainsafe/lodestar-params";
-import {ssz} from "../../src";
+import {ssz} from "../../src/index.js";
 import {expect} from "chai";
 
 /* eslint-disable @typescript-eslint/naming-convention */

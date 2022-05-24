@@ -1,9 +1,8 @@
 import crypto from "node:crypto";
 import {bellatrix, RootHex, Root} from "@chainsafe/lodestar-types";
 import {toHexString, fromHexString} from "@chainsafe/ssz";
+import {ZERO_HASH, ZERO_HASH_HEX} from "../constants/index.js";
 import {BYTES_PER_LOGS_BLOOM} from "@chainsafe/lodestar-params";
-
-import {ZERO_HASH, ZERO_HASH_HEX} from "../constants";
 import {
   ExecutePayloadStatus,
   ExecutePayloadResponse,
@@ -11,8 +10,7 @@ import {
   PayloadId,
   PayloadAttributes,
   PayloadIdCache,
-} from "./interface";
-
+} from "./interface.js";
 const INTEROP_GAS_LIMIT = 30e6;
 
 export type ExecutionEngineMockOpts = {

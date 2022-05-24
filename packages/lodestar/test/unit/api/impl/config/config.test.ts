@@ -1,6 +1,6 @@
 import {config} from "@chainsafe/lodestar-config/default";
 import {expect} from "chai";
-import {getConfigApi} from "../../../../../src/api/impl/config";
+import {getConfigApi} from "../../../../../src/api/impl/config/index.js";
 
 describe("config api implementation", function () {
   let api: ReturnType<typeof getConfigApi>;

@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import {defaultOptions, IBeaconNodeOptions} from "@chainsafe/lodestar";
-import {ICliCommandOptions, extractJwtHexSecret} from "../../util";
+import {ICliCommandOptions, extractJwtHexSecret} from "../../util/index.js";
 
 export type ExecutionEngineArgs = {
   "execution.urls": string[];

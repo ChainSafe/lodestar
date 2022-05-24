@@ -1,19 +1,18 @@
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {phase0} from "@chainsafe/lodestar-types";
 import {toHexString} from "@chainsafe/ssz";
-import {getDevBeaconNode} from "../utils/node/beacon";
-import {waitForEvent} from "../utils/events/resolver";
-import {getAndInitDevValidators} from "../utils/node/validator";
-import {ChainEvent} from "../../src/chain";
-import {RestApiOptions} from "../../src/api/rest";
-import {testLogger, TestLoggerOpts, LogLevel} from "../utils/logger";
-import {logFilesDir} from "./params";
-import {simTestInfoTracker} from "../utils/node/simTest";
+import {getDevBeaconNode} from "../utils/node/beacon.js";
+import {waitForEvent} from "../utils/events/resolver.js";
+import {getAndInitDevValidators} from "../utils/node/validator.js";
+import {ChainEvent} from "../../src/chain/index.js";
+import {RestApiOptions} from "../../src/api/rest/index.js";
+import {testLogger, TestLoggerOpts, LogLevel} from "../utils/logger.js";
+import {logFilesDir} from "./params.js";
+import {simTestInfoTracker} from "../utils/node/simTest.js";
 import {sleep, TimestampFormatCode} from "@chainsafe/lodestar-utils";
-import {initBLS} from "@chainsafe/lodestar-cli/src/util";
 import {IChainConfig} from "@chainsafe/lodestar-config";
-import {INTEROP_BLOCK_HASH} from "../../src/node/utils/interop/state";
-import {createExternalSignerServer} from "@chainsafe/lodestar-validator/test/utils/createExternalSignerServer";
+import {INTEROP_BLOCK_HASH} from "../../src/node/utils/interop/state.js";
+import {createExternalSignerServer} from "../../../validator/test/utils/createExternalSignerServer.js";
 
 /* eslint-disable no-console, @typescript-eslint/naming-convention */
 
@@ -44,10 +43,6 @@ describe("Run single node single thread interop validators (no eth1) until check
     {event: ChainEvent.justified, altairEpoch: 0, bellatrixEpoch: Infinity, withExternalSigner: true},
   ];
 
-  before(async function () {
-    await initBLS();
-  });
-
   const afterEachCallbacks: (() => Promise<unknown> | unknown)[] = [];
   afterEach(async () => {
     // Run the afterEachCallbacks in a specific order decided latter in the test
@@ -75,7 +70,8 @@ describe("Run single node single thread interop validators (no eth1) until check
       const timeoutSetupMargin = 5 * 1000; // Give extra 5 seconds of margin
 
       // delay a bit so regular sync sees it's up to date and sync is completed from the beginning
-      const genesisSlotsDelay = 3;
+      // allow time for bls worker threads to warm up
+      const genesisSlotsDelay = 20;
 
       const timeout =
         ((epochsOfMargin + expectedEpochsToFinish) * SLOTS_PER_EPOCH + genesisSlotsDelay) *

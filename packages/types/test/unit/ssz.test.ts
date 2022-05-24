@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {ssz} from "../../src";
+import {ssz} from "../../src/index.js";
 
 describe("size", function () {
   it("should calculate correct minSize and maxSize", () => {

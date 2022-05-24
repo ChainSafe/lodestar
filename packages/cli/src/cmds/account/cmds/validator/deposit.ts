@@ -1,6 +1,6 @@
-import {YargsError, ICliCommand} from "../../../../util";
-import {IAccountValidatorArgs} from "./options";
-import {IGlobalArgs} from "../../../../options";
+import {YargsError, ICliCommand} from "../../../../util/index.js";
+import {IAccountValidatorArgs} from "./options.js";
+import {IGlobalArgs} from "../../../../options/index.js";
 
 const deprecatedDescription =
   "DEPRECATED. Please use the official tools to perform your deposits \

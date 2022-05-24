@@ -1,10 +1,10 @@
 import {ssz} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/default";
 import {ProofType} from "@chainsafe/persistent-merkle-tree";
-import {Api, ReqTypes} from "../../src/routes/lightclient";
-import {getClient} from "../../src/client/lightclient";
-import {getRoutes} from "../../src/server/lightclient";
-import {runGenericServerTest} from "../utils/genericServerTest";
+import {Api, ReqTypes} from "../../src/routes/lightclient.js";
+import {getClient} from "../../src/client/lightclient.js";
+import {getRoutes} from "../../src/server/lightclient.js";
+import {runGenericServerTest} from "../utils/genericServerTest.js";
 import {toHexString} from "@chainsafe/ssz";
 
 const root = Uint8Array.from(Buffer.alloc(32, 1));

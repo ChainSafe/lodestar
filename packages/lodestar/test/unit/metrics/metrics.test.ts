@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {createMetricsTest} from "./utils";
+import {createMetricsTest} from "./utils.js";
 
 describe("Metrics", () => {
   it("should get default metrics from register", async () => {

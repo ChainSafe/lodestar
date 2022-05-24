@@ -4,13 +4,13 @@ import {ForkName} from "@chainsafe/lodestar-params";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {allForks, phase0} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {IPeerRpcScoreStore} from "../peers";
-import {MetadataController} from "../metadata";
-import {INetworkEventBus} from "../events";
-import {PeersData} from "../peers/peersData";
-import {ReqRespHandlers} from "./handlers";
-import {IMetrics} from "../../metrics";
-import {RequestTypedContainer} from "./types";
+import {IPeerRpcScoreStore} from "../peers/index.js";
+import {MetadataController} from "../metadata.js";
+import {INetworkEventBus} from "../events.js";
+import {PeersData} from "../peers/peersData.js";
+import {ReqRespHandlers} from "./handlers/index.js";
+import {IMetrics} from "../../metrics/index.js";
+import {RequestTypedContainer} from "./types.js";
 
 export interface IReqResp {
   start(): void;

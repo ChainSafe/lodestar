@@ -1,9 +1,9 @@
 import {phase0} from "@chainsafe/lodestar-types";
-import {IBeaconChain} from "../../../chain";
-import {IBeaconDb} from "../../../db";
-import {ReqRespBlockResponse} from "../types";
-import {onBeaconBlocksByRange} from "./beaconBlocksByRange";
-import {onBeaconBlocksByRoot} from "./beaconBlocksByRoot";
+import {IBeaconChain} from "../../../chain/index.js";
+import {IBeaconDb} from "../../../db/index.js";
+import {ReqRespBlockResponse} from "../types.js";
+import {onBeaconBlocksByRange} from "./beaconBlocksByRange.js";
+import {onBeaconBlocksByRoot} from "./beaconBlocksByRoot.js";
 
 export type ReqRespHandlers = {
   onStatus(): AsyncIterable<phase0.Status>;

@@ -2,8 +2,8 @@ import {allForks, RootHex, Slot, ValidatorIndex} from "@chainsafe/lodestar-types
 import {LodestarError} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
 import {CachedBeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
-import {GossipActionError} from "./gossipValidation";
-import {ExecutePayloadStatus} from "../../executionEngine/interface";
+import {GossipActionError} from "./gossipValidation.js";
+import {ExecutePayloadStatus} from "../../executionEngine/interface.js";
 
 export enum BlockErrorCode {
   /** The prestate cannot be fetched */

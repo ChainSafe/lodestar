@@ -3,7 +3,7 @@ import {ILogger} from "@chainsafe/lodestar-utils";
 import {Slot, Root, RootHex} from "@chainsafe/lodestar-types";
 import {GENESIS_SLOT} from "@chainsafe/lodestar-params";
 import {fromHexString} from "@chainsafe/ssz";
-import {ValidatorEvent, ValidatorEventEmitter} from "./emitter";
+import {ValidatorEvent, ValidatorEventEmitter} from "./emitter.js";
 
 const {EventType} = routes.events;
 

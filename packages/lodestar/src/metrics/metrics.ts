@@ -7,11 +7,11 @@ import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {collectDefaultMetrics, Counter, Metric, Registry} from "prom-client";
 import gcStats from "prometheus-gc-stats";
 import {DbMetricLabels, IDbMetrics} from "@chainsafe/lodestar-db";
-import {createBeaconMetrics, IBeaconMetrics} from "./metrics/beacon";
-import {createLodestarMetrics, ILodestarMetrics} from "./metrics/lodestar";
-import {MetricsOptions} from "./options";
-import {RegistryMetricCreator} from "./utils/registryMetricCreator";
-import {createValidatorMonitor, IValidatorMonitor} from "./validatorMonitor";
+import {createBeaconMetrics, IBeaconMetrics} from "./metrics/beacon.js";
+import {createLodestarMetrics, ILodestarMetrics} from "./metrics/lodestar.js";
+import {MetricsOptions} from "./options.js";
+import {RegistryMetricCreator} from "./utils/registryMetricCreator.js";
+import {createValidatorMonitor, IValidatorMonitor} from "./validatorMonitor.js";
 
 export type IMetrics = IBeaconMetrics & ILodestarMetrics & IValidatorMonitor & {register: RegistryMetricCreator};
 

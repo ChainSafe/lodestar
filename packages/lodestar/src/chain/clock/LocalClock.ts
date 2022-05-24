@@ -4,10 +4,10 @@ import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {ErrorAborted} from "@chainsafe/lodestar-utils";
 import {computeEpochAtSlot, computeTimeAtSlot, getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
 
-import {ChainEvent, ChainEventEmitter} from "../emitter";
+import {ChainEvent, ChainEventEmitter} from "../emitter.js";
 
-import {IBeaconClock} from "./interface";
-import {MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../constants";
+import {IBeaconClock} from "./interface.js";
+import {MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../constants/index.js";
 
 /**
  * A local clock, the clock time is assumed to be trusted

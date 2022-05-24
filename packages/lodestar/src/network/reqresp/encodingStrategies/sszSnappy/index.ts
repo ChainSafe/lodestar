@@ -1,3 +1,3 @@
-export * from "./encode";
-export * from "./decode";
-export * from "./errors";
+export * from "./encode.js";
+export * from "./decode.js";
+export * from "./errors.js";

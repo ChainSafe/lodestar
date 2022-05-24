@@ -11,17 +11,18 @@ import {
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {ssz} from "@chainsafe/lodestar-types";
 
-import {BeaconChain} from "../../../../src/chain";
-import {StubbedChain} from "../../../utils/stub";
-import {generateState} from "../../../utils/state";
-import {validateGossipVoluntaryExit} from "../../../../src/chain/validation/voluntaryExit";
-import {VoluntaryExitErrorCode} from "../../../../src/chain/errors/voluntaryExitError";
-import {OpPool} from "../../../../src/chain/opPools";
-import {expectRejectedWithLodestarError} from "../../../utils/errors";
+import {BeaconChain} from "../../../../src/chain/index.js";
+import {StubbedChain} from "../../../utils/stub/index.js";
+import {generateState} from "../../../utils/state.js";
+import {validateGossipVoluntaryExit} from "../../../../src/chain/validation/voluntaryExit.js";
+import {VoluntaryExitErrorCode} from "../../../../src/chain/errors/voluntaryExitError.js";
+import {OpPool} from "../../../../src/chain/opPools/index.js";
+import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
 import {DOMAIN_VOLUNTARY_EXIT, FAR_FUTURE_EPOCH, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import {PointFormat, SecretKey} from "@chainsafe/bls";
+import bls from "@chainsafe/bls";
+import {PointFormat} from "@chainsafe/bls/types";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
-import {createCachedBeaconStateTest} from "../../../utils/cachedBeaconState";
+import {createCachedBeaconStateTest} from "../../../utils/cachedBeaconState.js";
 
 describe("validate voluntary exit", () => {
   const sandbox = sinon.createSandbox();
@@ -31,7 +32,7 @@ describe("validate voluntary exit", () => {
   let opPool: OpPool & SinonStubbedInstance<OpPool>;
 
   before(() => {
-    const sk = SecretKey.fromKeygen();
+    const sk = bls.SecretKey.fromKeygen();
 
     const stateEmpty = ssz.phase0.BeaconState.defaultValue();
 

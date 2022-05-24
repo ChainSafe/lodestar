@@ -1,7 +1,7 @@
 import {phase0} from "@chainsafe/lodestar-types";
 import {ForkName} from "@chainsafe/lodestar-params";
-import {CachedBeaconStatePhase0} from "../../types";
-import {processProposerSlashing as processProposerSlashingAllForks} from "../../allForks/block";
+import {CachedBeaconStatePhase0} from "../../types.js";
+import {processProposerSlashing as processProposerSlashingAllForks} from "../../allForks/block/index.js";
 
 export function processProposerSlashing(
   state: CachedBeaconStatePhase0,

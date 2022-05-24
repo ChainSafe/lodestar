@@ -1,6 +1,6 @@
 import {expect} from "chai";
 
-import {isValidAddress} from "../../../src/util/address";
+import {isValidAddress} from "../../../src/util/address.js";
 
 describe("Eth address helper", () => {
   it("should be valid address", () => {

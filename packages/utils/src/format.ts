@@ -1,4 +1,4 @@
-import {toHexString} from "./bytes";
+import {toHexString} from "./bytes.js";
 
 /**
  * Format bytes as `0x1234…1234`

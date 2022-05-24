@@ -1,4 +1,4 @@
-import {IExecutionEngine, PayloadIdCache} from "./interface";
+import {IExecutionEngine, PayloadIdCache} from "./interface.js";
 
 export class ExecutionEngineDisabled implements IExecutionEngine {
   readonly payloadIdCache = new PayloadIdCache();

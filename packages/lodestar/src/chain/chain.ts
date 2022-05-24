@@ -17,42 +17,42 @@ import {allForks, UintNum64, Root, phase0, Slot, RootHex, Epoch} from "@chainsaf
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {fromHexString} from "@chainsafe/ssz";
 import {AbortController} from "@chainsafe/abort-controller";
-import {GENESIS_EPOCH, ZERO_HASH} from "../constants";
-import {IBeaconDb} from "../db";
-import {CheckpointStateCache, StateContextCache} from "./stateCache";
-import {IMetrics} from "../metrics";
-import {BlockProcessor, PartiallyVerifiedBlockFlags} from "./blocks";
-import {IBeaconClock, LocalClock} from "./clock";
-import {ChainEventEmitter} from "./emitter";
-import {handleChainEvents} from "./eventHandlers";
-import {IBeaconChain, SSZObjectType, ProposerPreparationData} from "./interface";
-import {IChainOptions} from "./options";
-import {IStateRegenerator, QueuedStateRegenerator, RegenCaller} from "./regen";
-import {initializeForkChoice} from "./forkChoice";
-import {computeAnchorCheckpoint} from "./initState";
-import {IBlsVerifier, BlsSingleThreadVerifier, BlsMultiThreadWorkerPool} from "./bls";
+import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
+import {IBeaconDb} from "../db/index.js";
+import {CheckpointStateCache, StateContextCache} from "./stateCache/index.js";
+import {IMetrics} from "../metrics/index.js";
+import {BlockProcessor, PartiallyVerifiedBlockFlags} from "./blocks/index.js";
+import {IBeaconClock, LocalClock} from "./clock/index.js";
+import {ChainEventEmitter} from "./emitter.js";
+import {handleChainEvents} from "./eventHandlers.js";
+import {IBeaconChain, SSZObjectType, ProposerPreparationData} from "./interface.js";
+import {IChainOptions} from "./options.js";
+import {IStateRegenerator, QueuedStateRegenerator, RegenCaller} from "./regen/index.js";
+import {initializeForkChoice} from "./forkChoice/index.js";
+import {computeAnchorCheckpoint} from "./initState.js";
+import {IBlsVerifier, BlsSingleThreadVerifier, BlsMultiThreadWorkerPool} from "./bls/index.js";
 import {
   SeenAttesters,
   SeenAggregators,
   SeenBlockProposers,
   SeenSyncCommitteeMessages,
   SeenContributionAndProof,
-} from "./seenCache";
+} from "./seenCache/index.js";
 import {
   AggregatedAttestationPool,
   AttestationPool,
   SyncCommitteeMessagePool,
   SyncContributionAndProofPool,
   OpPool,
-} from "./opPools";
-import {LightClientServer} from "./lightClient";
-import {Archiver} from "./archiver";
-import {IEth1ForBlockProduction} from "../eth1";
-import {IExecutionEngine} from "../executionEngine";
-import {PrecomputeNextEpochTransitionScheduler} from "./precomputeNextEpochTransition";
-import {ReprocessController} from "./reprocess";
-import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof";
-import {BeaconProposerCache} from "./beaconProposerCache";
+} from "./opPools/index.js";
+import {LightClientServer} from "./lightClient/index.js";
+import {Archiver} from "./archiver/index.js";
+import {IEth1ForBlockProduction} from "../eth1/index.js";
+import {IExecutionEngine} from "../executionEngine/index.js";
+import {PrecomputeNextEpochTransitionScheduler} from "./precomputeNextEpochTransition.js";
+import {ReprocessController} from "./reprocess.js";
+import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
+import {BeaconProposerCache} from "./beaconProposerCache.js";
 
 export class BeaconChain implements IBeaconChain {
   readonly genesisTime: UintNum64;

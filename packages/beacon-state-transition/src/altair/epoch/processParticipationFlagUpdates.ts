@@ -1,6 +1,6 @@
 import {zeroNode} from "@chainsafe/persistent-merkle-tree";
 import {ssz} from "@chainsafe/lodestar-types";
-import {CachedBeaconStateAltair} from "../../types";
+import {CachedBeaconStateAltair} from "../../types.js";
 
 /**
  * Updates `state.previousEpochParticipation` with precalculated epoch participation. Creates a new empty tree for

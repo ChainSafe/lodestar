@@ -1,9 +1,9 @@
 import {ssz} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/default";
-import {Api, ReqTypes, NodePeer} from "../../src/routes/node";
-import {getClient} from "../../src/client/node";
-import {getRoutes} from "../../src/server/node";
-import {runGenericServerTest} from "../utils/genericServerTest";
+import {Api, ReqTypes, NodePeer} from "../../src/routes/node.js";
+import {getClient} from "../../src/client/node.js";
+import {getRoutes} from "../../src/server/node.js";
+import {runGenericServerTest} from "../utils/genericServerTest.js";
 
 describe("node", () => {
   const peerIdStr = "peerId";

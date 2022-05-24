@@ -5,12 +5,12 @@ import {Connection} from "libp2p";
 import {Discv5, ENR} from "@chainsafe/discv5";
 import {Multiaddr} from "multiaddr";
 import PeerId from "peer-id";
-import {INetworkEventBus} from "./events";
-import {Eth2Gossipsub} from "./gossip";
-import {MetadataController} from "./metadata";
-import {PeerAction} from "./peers";
-import {IReqResp} from "./reqresp";
-import {IAttnetsService, ISubnetsService, CommitteeSubscription} from "./subnets";
+import {INetworkEventBus} from "./events.js";
+import {Eth2Gossipsub} from "./gossip/index.js";
+import {MetadataController} from "./metadata.js";
+import {PeerAction} from "./peers/index.js";
+import {IReqResp} from "./reqresp/index.js";
+import {IAttnetsService, ISubnetsService, CommitteeSubscription} from "./subnets/index.js";
 
 export type PeerSearchOptions = {
   supportsProtocols?: string[];

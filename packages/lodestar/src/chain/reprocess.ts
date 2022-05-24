@@ -1,6 +1,6 @@
 import {Slot, RootHex} from "@chainsafe/lodestar-types";
-import {IMetrics} from "../metrics";
-import {MapDef} from "../util/map";
+import {IMetrics} from "../metrics/index.js";
+import {MapDef} from "../util/map.js";
 
 /**
  * To prevent our node from having to reprocess while struggling to sync,

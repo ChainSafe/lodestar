@@ -1,10 +1,10 @@
 import {ssz} from "@chainsafe/lodestar-types";
-import {CachedBeaconStatePhase0, CachedBeaconStateAltair} from "../types";
-import {newZeroedArray} from "../util";
-import {getAttestationParticipationStatus, RootCache} from "./block/processAttestation";
-import {getNextSyncCommittee} from "../util/syncCommittee";
+import {CachedBeaconStatePhase0, CachedBeaconStateAltair} from "../types.js";
+import {newZeroedArray} from "../util/index.js";
+import {getAttestationParticipationStatus, RootCache} from "./block/processAttestation.js";
+import {getNextSyncCommittee} from "../util/syncCommittee.js";
 import {CompositeViewDU} from "@chainsafe/ssz";
-import {getCachedBeaconState} from "../cache/stateCache";
+import {getCachedBeaconState} from "../cache/stateCache.js";
 
 /**
  * Upgrade a state from phase0 to altair.

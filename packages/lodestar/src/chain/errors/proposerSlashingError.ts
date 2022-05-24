@@ -1,4 +1,4 @@
-import {GossipActionError} from "./gossipValidation";
+import {GossipActionError} from "./gossipValidation.js";
 
 export enum ProposerSlashingErrorCode {
   ALREADY_EXISTS = "PROPOSER_SLASHING_ERROR_ALREADY_EXISTS",

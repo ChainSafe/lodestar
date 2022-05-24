@@ -4,10 +4,10 @@ import {
   RequestOrIncomingResponseBody,
   RequestOrOutgoingResponseBody,
   OutgoingSerializer,
-} from "../types";
-import {BufferedSource} from "../utils";
-import {readSszSnappyPayload} from "./sszSnappy/decode";
-import {writeSszSnappyPayload} from "./sszSnappy/encode";
+} from "../types.js";
+import {BufferedSource} from "../utils/index.js";
+import {readSszSnappyPayload} from "./sszSnappy/decode.js";
+import {writeSszSnappyPayload} from "./sszSnappy/encode.js";
 
 // For more info about Ethereum Consensus request/response encoding strategies, see:
 // https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#encoding-strategies

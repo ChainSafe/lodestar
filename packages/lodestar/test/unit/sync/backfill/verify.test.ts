@@ -1,11 +1,17 @@
-import {BackfillSyncErrorCode, BackfillSyncError} from "./../../../../src/sync/backfill/errors";
+import {BackfillSyncErrorCode, BackfillSyncError} from "./../../../../src/sync/backfill/errors.js";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {config} from "@chainsafe/lodestar-config/default";
 import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {expect} from "chai";
 import {readFileSync} from "node:fs";
-import {verifyBlockSequence} from "../../../../src/sync/backfill/verify";
+import {verifyBlockSequence} from "../../../../src/sync/backfill/verify.js";
 import path from "node:path";
+import {fileURLToPath} from "node:url";
+
+// Global variable __dirname no longer available in ES6 modules.
+// Solutions: https://stackoverflow.com/questions/46745014/alternative-for-dirname-in-node-js-when-using-es6-modules
+// eslint-disable-next-line @typescript-eslint/naming-convention
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 describe("backfill sync - verify block sequence", function () {
   //mainnet validators root

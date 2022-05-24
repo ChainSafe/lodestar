@@ -1,7 +1,7 @@
 import {altair, ssz} from "@chainsafe/lodestar-types";
-import {initBLS} from "@chainsafe/lodestar-cli/src/util";
 import {newFilledArray} from "@chainsafe/lodestar-beacon-state-transition";
-import bls, {SecretKey} from "@chainsafe/bls";
+import type {SecretKey} from "@chainsafe/bls/types";
+import bls from "@chainsafe/bls";
 import {BitArray} from "@chainsafe/ssz";
 import {SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 import {expect} from "chai";
@@ -10,11 +10,11 @@ import {
   replaceIfBetter,
   SyncContributionAndProofPool,
   SyncContributionFast,
-} from "../../../../src/chain/opPools/syncContributionAndProofPool";
-import {generateContributionAndProof, generateEmptyContribution} from "../../../utils/contributionAndProof";
-import {InsertOutcome} from "../../../../src/chain/opPools/types";
-import {EMPTY_SIGNATURE} from "../../../../src/constants";
-import {renderBitArray} from "../../../utils/render";
+} from "../../../../src/chain/opPools/syncContributionAndProofPool.js";
+import {generateContributionAndProof, generateEmptyContribution} from "../../../utils/contributionAndProof.js";
+import {InsertOutcome} from "../../../../src/chain/opPools/types.js";
+import {EMPTY_SIGNATURE} from "../../../../src/constants/index.js";
+import {renderBitArray} from "../../../utils/render.js";
 
 describe("chain / opPools / SyncContributionAndProofPool", function () {
   let cache: SyncContributionAndProofPool;
@@ -92,7 +92,6 @@ describe("aggregate", function () {
   const sks: SecretKey[] = [];
   let bestContributionBySubnet: Map<number, SyncContributionFast>;
   before(async () => {
-    await initBLS();
     for (let i = 0; i < SYNC_COMMITTEE_SUBNET_COUNT; i++) {
       sks.push(bls.SecretKey.fromBytes(Buffer.alloc(32, i + 1)));
     }

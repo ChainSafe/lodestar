@@ -4,11 +4,11 @@ import {ForkName} from "@chainsafe/lodestar-params";
 import {extendError, prettyBytes} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
 import {Api} from "@chainsafe/lodestar-api";
-import {IClock, ILoggerVc} from "../util";
-import {ValidatorStore} from "./validatorStore";
-import {BlockDutiesService, GENESIS_SLOT} from "./blockDuties";
-import {PubkeyHex} from "../types";
-import {Metrics} from "../metrics";
+import {IClock, ILoggerVc} from "../util/index.js";
+import {ValidatorStore} from "./validatorStore.js";
+import {BlockDutiesService, GENESIS_SLOT} from "./blockDuties.js";
+import {PubkeyHex} from "../types.js";
+import {Metrics} from "../metrics.js";
 
 type BlockProposingServiceOpts = {
   graffiti?: string;

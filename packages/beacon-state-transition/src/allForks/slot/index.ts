@@ -1,7 +1,7 @@
 import {SLOTS_PER_HISTORICAL_ROOT} from "@chainsafe/lodestar-params";
 import {byteArrayEquals} from "@chainsafe/ssz";
-import {CachedBeaconStateAllForks} from "../../types";
-import {ZERO_HASH} from "../../constants";
+import {CachedBeaconStateAllForks} from "../../types.js";
+import {ZERO_HASH} from "../../constants/index.js";
 
 /**
  * Dial state to next slot. Common for all forks

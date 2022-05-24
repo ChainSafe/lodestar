@@ -5,9 +5,9 @@ import {
   generateEmptyProtoBlock,
   generateEmptySignedBlock,
   generateSignedBlock,
-} from "../../../../../utils/block";
+} from "../../../../../utils/block.js";
 import {expect} from "chai";
-import {setupApiImplTestServer, ApiImplTestModules} from "../../index.test";
+import {setupApiImplTestServer, ApiImplTestModules} from "../../index.test.js";
 import {toHexString} from "@chainsafe/ssz";
 
 describe("api - beacon - getBlockHeaders", function () {

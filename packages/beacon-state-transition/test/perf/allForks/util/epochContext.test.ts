@@ -1,7 +1,7 @@
 import {Epoch} from "@chainsafe/lodestar-types";
 import {itBench} from "@dapplion/benchmark";
-import {computeEpochAtSlot, CachedBeaconStateAllForks} from "../../../../src";
-import {generatePerfTestCachedStatePhase0, numValidators} from "../../util";
+import {computeEpochAtSlot, CachedBeaconStateAllForks} from "../../../../src/index.js";
+import {generatePerfTestCachedStatePhase0, numValidators} from "../../util.js";
 
 // Current implementation scales very well with number of requested validators
 // Benchmark data from Wed Jun 30 2021 - Intel(R) Core(TM) i5-8250U CPU @ 1.60GHz

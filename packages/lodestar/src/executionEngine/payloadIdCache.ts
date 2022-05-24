@@ -1,7 +1,7 @@
-import {pruneSetToMax} from "../util/map";
-import {IMetrics} from "../metrics";
+import {pruneSetToMax} from "../util/map.js";
+import {IMetrics} from "../metrics/index.js";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import {DATA, QUANTITY} from "../eth1/provider/utils";
+import {DATA, QUANTITY} from "../eth1/provider/utils.js";
 
 // Idealy this only need to be set to the max head reorgs number
 const MAX_PAYLOAD_IDS = SLOTS_PER_EPOCH;

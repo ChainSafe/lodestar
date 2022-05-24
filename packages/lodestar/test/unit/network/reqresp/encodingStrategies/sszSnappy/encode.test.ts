@@ -6,17 +6,17 @@ import {
   reqRespBlockResponseSerializer,
   RequestOrIncomingResponseBody,
   RequestOrResponseType,
-} from "../../../../../../src/network/reqresp/types";
+} from "../../../../../../src/network/reqresp/types.js";
 import {
   SszSnappyError,
   SszSnappyErrorCode,
   writeSszSnappyPayload,
-} from "../../../../../../src/network/reqresp/encodingStrategies/sszSnappy";
-import {expectRejectedWithLodestarError} from "../../../../../utils/errors";
-import {expectEqualByteChunks} from "../../utils";
-import {sszSnappyPing, sszSnappyStatus, sszSnappySignedBeaconBlockPhase0} from "./testData";
-import {blocksToReqRespBlockResponses} from "../../../../../utils/block";
-import {RequestOrOutgoingResponseBody} from "../../../../../../src/network/reqresp/types";
+} from "../../../../../../src/network/reqresp/encodingStrategies/sszSnappy/index.js";
+import {expectRejectedWithLodestarError} from "../../../../../utils/errors.js";
+import {expectEqualByteChunks} from "../../utils.js";
+import {sszSnappyPing, sszSnappyStatus, sszSnappySignedBeaconBlockPhase0} from "./testData.js";
+import {blocksToReqRespBlockResponses} from "../../../../../utils/block.js";
+import {RequestOrOutgoingResponseBody} from "../../../../../../src/network/reqresp/types.js";
 
 describe("network / reqresp / sszSnappy / encode", () => {
   describe("Test data vectors (generated in a previous version)", () => {

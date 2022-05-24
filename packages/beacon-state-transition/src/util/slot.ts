@@ -1,7 +1,7 @@
 import {IChainConfig} from "@chainsafe/lodestar-config";
 import {GENESIS_SLOT, INTERVALS_PER_SLOT} from "@chainsafe/lodestar-params";
 import {Slot, Epoch, TimeSeconds} from "@chainsafe/lodestar-types";
-import {computeStartSlotAtEpoch, computeEpochAtSlot} from ".";
+import {computeStartSlotAtEpoch, computeEpochAtSlot} from "./epoch.js";
 
 export function getSlotsSinceGenesis(config: IChainConfig, genesisTime: TimeSeconds): Slot {
   const diffInSeconds = Date.now() / 1000 - genesisTime;

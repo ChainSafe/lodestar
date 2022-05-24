@@ -1,13 +1,13 @@
 import {expect, use} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import sinon, {SinonStubbedInstance} from "sinon";
-import {getBeaconBlockApi} from "../../../../../../src/api/impl/beacon/blocks";
-import {BeaconChain} from "../../../../../../src/chain";
-import {Eth2Gossipsub} from "../../../../../../src/network/gossip";
-import {generateEmptySignedBlock} from "../../../../../utils/block";
+import {getBeaconBlockApi} from "../../../../../../src/api/impl/beacon/blocks/index.js";
+import {BeaconChain} from "../../../../../../src/chain/index.js";
+import {Eth2Gossipsub} from "../../../../../../src/network/gossip/index.js";
+import {generateEmptySignedBlock} from "../../../../../utils/block.js";
 import {allForks} from "@chainsafe/lodestar-types";
-import {BeaconSync} from "../../../../../../src/sync";
-import {setupApiImplTestServer, ApiImplTestModules} from "../../index.test";
+import {BeaconSync} from "../../../../../../src/sync/index.js";
+import {setupApiImplTestServer, ApiImplTestModules} from "../../index.test.js";
 
 use(chaiAsPromised);
 

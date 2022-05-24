@@ -1,6 +1,6 @@
 import {getClient} from "@chainsafe/lodestar-api";
 import {config} from "@chainsafe/lodestar-config/default";
-import {getInfuraBeaconUrl} from "../utils/infura";
+import {getInfuraBeaconUrl} from "../utils/infura.js";
 
 // Analyze how Ethereum Consensus blocks are in a target network to prepare accurate performance states and blocks
 

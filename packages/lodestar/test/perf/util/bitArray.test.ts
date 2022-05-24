@@ -1,6 +1,6 @@
 import {BitArray} from "@chainsafe/ssz";
 import {itBench, setBenchOpts} from "@dapplion/benchmark";
-import {intersectUint8Arrays} from "../../../src/util/bitArray";
+import {intersectUint8Arrays} from "../../../src/util/bitArray.js";
 
 /**
  * 16_000 items: push then shift  - LinkedList is >200x faster than regular array

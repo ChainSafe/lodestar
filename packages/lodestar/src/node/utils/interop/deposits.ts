@@ -9,7 +9,7 @@ import {
   ZERO_HASH,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {BLS_WITHDRAWAL_PREFIX, DOMAIN_DEPOSIT, MAX_EFFECTIVE_BALANCE} from "@chainsafe/lodestar-params";
-import {DepositTree} from "../../../db/repositories/depositDataRoot";
+import {DepositTree} from "../../../db/repositories/depositDataRoot.js";
 
 /**
  * Compute and return deposit data from other validators.

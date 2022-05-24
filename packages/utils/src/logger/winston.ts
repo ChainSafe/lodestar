@@ -2,13 +2,16 @@
  * @module logger
  */
 
-import {createLogger, Logger} from "winston";
-import {defaultLogLevel, ILogger, ILoggerOptions, LogLevel, logLevelNum} from "./interface";
+import winston from "winston";
+import type {Logger} from "winston";
+import {defaultLogLevel, ILogger, ILoggerOptions, LogLevel, logLevelNum} from "./interface.js";
 import chalk from "chalk";
-import {getFormat} from "./format";
+import {getFormat} from "./format.js";
 import {Writable} from "node:stream";
-import {TransportOpts, TransportType, fromTransportOpts} from "./transport";
-import {LogData} from "./json";
+import {TransportOpts, TransportType, fromTransportOpts} from "./transport.js";
+import {LogData} from "./json.js";
+
+const {createLogger} = winston;
 
 const defaultTransportOpts: TransportOpts = {type: TransportType.console};
 

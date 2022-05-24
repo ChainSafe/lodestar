@@ -10,7 +10,7 @@ import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {Epoch, Slot, ValidatorIndex, ssz} from "@chainsafe/lodestar-types";
 import {IndexedAttestation, SignedAggregateAndProof} from "@chainsafe/lodestar-types/phase0";
-import {ILodestarMetrics} from "./metrics/lodestar";
+import {ILodestarMetrics} from "./metrics/lodestar.js";
 
 /** The validator monitor collects per-epoch data about each monitored validator.
  * Historical data will be kept around for `HISTORIC_EPOCHS` before it is pruned.

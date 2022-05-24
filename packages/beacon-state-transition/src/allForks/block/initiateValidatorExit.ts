@@ -1,6 +1,6 @@
 import {FAR_FUTURE_EPOCH} from "@chainsafe/lodestar-params";
 import {phase0} from "@chainsafe/lodestar-types";
-import {CachedBeaconStateAllForks} from "../../types";
+import {CachedBeaconStateAllForks} from "../../types.js";
 
 /**
  * Initiate the exit of the validator with index ``index``.

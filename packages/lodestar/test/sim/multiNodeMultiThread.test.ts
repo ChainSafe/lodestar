@@ -3,12 +3,18 @@ import os from "node:os";
 import {Worker} from "worker_threads";
 import {phase0} from "@chainsafe/lodestar-types";
 import {toHexString} from "@chainsafe/ssz";
-import {waitForEvent} from "../utils/events/resolver";
-import {ChainEvent} from "../../src/chain";
-import {createPeerId} from "../../src/network";
-import {logFilesDir} from "./params";
-import {NodeWorkerOptions} from "./threaded/types";
+import {waitForEvent} from "../utils/events/resolver.js";
+import {ChainEvent} from "../../src/chain/index.js";
+import {createPeerId} from "../../src/network/index.js";
+import {logFilesDir} from "./params.js";
+import {NodeWorkerOptions} from "./threaded/types.js";
 import {IChainConfig} from "@chainsafe/lodestar-config";
+import {fileURLToPath} from "node:url";
+
+// Global variable __dirname no longer available in ES6 modules.
+// Solutions: https://stackoverflow.com/questions/46745014/alternative-for-dirname-in-node-js-when-using-es6-modules
+// eslint-disable-next-line @typescript-eslint/naming-convention
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /* eslint-disable no-console, @typescript-eslint/naming-convention */
 
@@ -68,7 +74,7 @@ function runMultiNodeMultiThreadTest({nodeCount, validatorsPerNode, event, altai
     // delay a bit so regular sync sees it's up to date and sync is completed from the beginning
     // When running multi-thread each thread has to compile the entire codebase from Typescript
     // so it takes a long time before each node is started
-    const genesisSlotsDelay = 30;
+    const genesisSlotsDelay = 40;
     const genesisTime = Math.floor(Date.now() / 1000) + genesisSlotsDelay * testParams.SECONDS_PER_SLOT;
 
     for (let i = 0; i < nodeCount; i++) {

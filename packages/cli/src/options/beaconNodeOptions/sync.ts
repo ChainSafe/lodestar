@@ -1,5 +1,5 @@
 import {defaultOptions, IBeaconNodeOptions} from "@chainsafe/lodestar";
-import {ICliCommandOptions} from "../../util";
+import {ICliCommandOptions} from "../../util/index.js";
 
 export interface ISyncArgs {
   "sync.isSingleNode": boolean;

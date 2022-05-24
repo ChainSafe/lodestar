@@ -1,7 +1,7 @@
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {serializeProof} from "@chainsafe/persistent-merkle-tree";
-import {ServerRoutes, getGenericJsonServer} from "./utils";
-import {Api, ReqTypes, routesData, getReturnTypes, getReqSerializers} from "../routes/lightclient";
+import {ServerRoutes, getGenericJsonServer} from "./utils/index.js";
+import {Api, ReqTypes, routesData, getReturnTypes, getReqSerializers} from "../routes/lightclient.js";
 
 export function getRoutes(config: IChainForkConfig, api: Api): ServerRoutes<Api, ReqTypes> {
   const reqSerializers = getReqSerializers();

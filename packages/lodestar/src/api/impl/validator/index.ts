@@ -16,18 +16,18 @@ import {
 import {Root, Slot, ValidatorIndex, ssz} from "@chainsafe/lodestar-types";
 import {ExecutionStatus} from "@chainsafe/lodestar-fork-choice";
 
-import {assembleBlock} from "../../../chain/factory/block";
-import {AttestationError, AttestationErrorCode, GossipAction, SyncCommitteeError} from "../../../chain/errors";
-import {validateGossipAggregateAndProof} from "../../../chain/validation";
-import {ZERO_HASH} from "../../../constants";
-import {SyncState} from "../../../sync";
-import {toGraffitiBuffer} from "../../../util/graffiti";
-import {ApiError, NodeIsSyncing} from "../errors";
-import {validateSyncCommitteeGossipContributionAndProof} from "../../../chain/validation/syncCommitteeContributionAndProof";
-import {CommitteeSubscription} from "../../../network/subnets";
-import {computeSubnetForCommitteesAtSlot, getPubkeysForIndices} from "./utils";
-import {ApiModules} from "../types";
-import {RegenCaller} from "../../../chain/regen";
+import {assembleBlock} from "../../../chain/factory/block/index.js";
+import {AttestationError, AttestationErrorCode, GossipAction, SyncCommitteeError} from "../../../chain/errors/index.js";
+import {validateGossipAggregateAndProof} from "../../../chain/validation/index.js";
+import {ZERO_HASH} from "../../../constants/index.js";
+import {SyncState} from "../../../sync/index.js";
+import {toGraffitiBuffer} from "../../../util/graffiti.js";
+import {ApiError, NodeIsSyncing} from "../errors.js";
+import {validateSyncCommitteeGossipContributionAndProof} from "../../../chain/validation/syncCommitteeContributionAndProof.js";
+import {CommitteeSubscription} from "../../../network/subnets/index.js";
+import {computeSubnetForCommitteesAtSlot, getPubkeysForIndices} from "./utils.js";
+import {ApiModules} from "../types.js";
+import {RegenCaller} from "../../../chain/regen/index.js";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 
 /**

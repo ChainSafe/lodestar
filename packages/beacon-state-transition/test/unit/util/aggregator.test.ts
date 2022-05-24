@@ -6,7 +6,7 @@ import {
   TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE,
   TARGET_AGGREGATORS_PER_COMMITTEE,
 } from "@chainsafe/lodestar-params";
-import {isAggregatorFromCommitteeLength, isSyncCommitteeAggregator} from "../../../src/util/aggregator";
+import {isAggregatorFromCommitteeLength, isSyncCommitteeAggregator} from "../../../src/util/aggregator.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 

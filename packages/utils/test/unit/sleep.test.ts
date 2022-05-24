@@ -1,8 +1,8 @@
 import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import {AbortController} from "@chainsafe/abort-controller";
-import {sleep} from "../../src/sleep";
-import {ErrorAborted} from "../../src/errors";
+import {sleep} from "../../src/sleep.js";
+import {ErrorAborted} from "../../src/errors.js";
 
 chai.use(chaiAsPromised);
 

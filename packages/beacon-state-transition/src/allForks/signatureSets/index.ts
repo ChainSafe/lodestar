@@ -1,20 +1,20 @@
 import {allForks, altair} from "@chainsafe/lodestar-types";
-import {computeEpochAtSlot, ISignatureSet} from "../../util";
-import {CachedBeaconStateAllForks, CachedBeaconStateAltair} from "../../types";
-import {getProposerSlashingsSignatureSets} from "./proposerSlashings";
-import {getAttesterSlashingsSignatureSets} from "./attesterSlashings";
-import {getAttestationsSignatureSets} from "./indexedAttestation";
-import {getProposerSignatureSet} from "./proposer";
-import {getRandaoRevealSignatureSet} from "./randao";
-import {getVoluntaryExitsSignatureSets} from "./voluntaryExits";
-import {getSyncCommitteeSignatureSet} from "../../altair/block/processSyncCommittee";
+import {computeEpochAtSlot, ISignatureSet} from "../../util/index.js";
+import {CachedBeaconStateAllForks, CachedBeaconStateAltair} from "../../types.js";
+import {getProposerSlashingsSignatureSets} from "./proposerSlashings.js";
+import {getAttesterSlashingsSignatureSets} from "./attesterSlashings.js";
+import {getAttestationsSignatureSets} from "./indexedAttestation.js";
+import {getProposerSignatureSet} from "./proposer.js";
+import {getRandaoRevealSignatureSet} from "./randao.js";
+import {getVoluntaryExitsSignatureSets} from "./voluntaryExits.js";
+import {getSyncCommitteeSignatureSet} from "../../altair/block/processSyncCommittee.js";
 
-export * from "./attesterSlashings";
-export * from "./indexedAttestation";
-export * from "./proposer";
-export * from "./proposerSlashings";
-export * from "./randao";
-export * from "./voluntaryExits";
+export * from "./attesterSlashings.js";
+export * from "./indexedAttestation.js";
+export * from "./proposer.js";
+export * from "./proposerSlashings.js";
+export * from "./randao.js";
+export * from "./voluntaryExits.js";
 
 /**
  * Includes all signatures on the block (except the deposit signatures) for verification.

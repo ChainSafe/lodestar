@@ -6,9 +6,9 @@ import {
   computeStartSlotAtEpoch,
   getBlockRootAtSlot,
 } from "@chainsafe/lodestar-beacon-state-transition";
-import {AggregatedAttestationPool} from "../../../../src/chain/opPools/aggregatedAttestationPool";
+import {AggregatedAttestationPool} from "../../../../src/chain/opPools/aggregatedAttestationPool.js";
 import {SLOTS_PER_EPOCH, TIMELY_SOURCE_FLAG_INDEX} from "@chainsafe/lodestar-params";
-import {generatePerfTestCachedStateAltair} from "@chainsafe/lodestar-beacon-state-transition/test/perf/util";
+import {generatePerfTestCachedStateAltair} from "../../../../../beacon-state-transition/test/perf/util.js";
 import {BitArray} from "@chainsafe/ssz";
 
 /** Same to https://github.com/ethereum/eth2.0-specs/blob/v1.1.0-alpha.5/specs/altair/beacon-chain.md#has_flag */

@@ -1,4 +1,5 @@
-import bls, {CoordType} from "@chainsafe/bls";
+import {CoordType} from "@chainsafe/bls/types";
+import bls from "@chainsafe/bls";
 import {BLSSignature, CommitteeIndex, Epoch, Slot, ValidatorIndex, phase0, SyncPeriod} from "@chainsafe/lodestar-types";
 import {createIBeaconConfig, IBeaconConfig, IChainConfig} from "@chainsafe/lodestar-config";
 import {
@@ -22,18 +23,18 @@ import {
   computeSyncPeriodAtEpoch,
   getSeed,
   computeProposers,
-} from "../util";
-import {computeEpochShuffling, IEpochShuffling} from "../util/epochShuffling";
-import {EffectiveBalanceIncrements, getEffectiveBalanceIncrementsWithLen} from "./effectiveBalanceIncrements";
-import {Index2PubkeyCache, PubkeyIndexMap, syncPubkeys} from "./pubkeyCache";
-import {BeaconStateAllForks, BeaconStateAltair} from "./types";
+} from "../util/index.js";
+import {computeEpochShuffling, IEpochShuffling} from "../util/epochShuffling.js";
+import {EffectiveBalanceIncrements, getEffectiveBalanceIncrementsWithLen} from "./effectiveBalanceIncrements.js";
+import {Index2PubkeyCache, PubkeyIndexMap, syncPubkeys} from "./pubkeyCache.js";
+import {BeaconStateAllForks, BeaconStateAltair} from "./types.js";
 import {
   computeSyncCommitteeCache,
   getSyncCommitteeCache,
   SyncCommitteeCache,
   SyncCommitteeCacheEmpty,
-} from "./syncCommitteeCache";
-import {computeBaseRewardPerIncrement, computeSyncParticipantReward} from "../util/syncCommittee";
+} from "./syncCommitteeCache.js";
+import {computeBaseRewardPerIncrement, computeSyncParticipantReward} from "../util/syncCommittee.js";
 
 /** `= PROPOSER_WEIGHT / (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT)` */
 export const PROPOSER_WEIGHT_FACTOR = PROPOSER_WEIGHT / (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT);

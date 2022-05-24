@@ -2,18 +2,22 @@ import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {allForks, Root, RootHex} from "@chainsafe/lodestar-types";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {INetwork, NetworkEvent, PeerAction} from "../network";
-import {IBeaconChain} from "../chain";
-import {IMetrics} from "../metrics";
-import {shuffle} from "../util/shuffle";
-import {byteArrayEquals} from "../util/bytes";
+import {INetwork, NetworkEvent, PeerAction} from "../network/index.js";
+import {IBeaconChain} from "../chain/index.js";
+import {IMetrics} from "../metrics/index.js";
+import {shuffle} from "../util/shuffle.js";
+import {byteArrayEquals} from "../util/bytes.js";
 import PeerId from "peer-id";
-import {BlockError, BlockErrorCode} from "../chain/errors";
-import {wrapError} from "../util/wrapError";
-import {pruneSetToMax} from "../util/map";
-import {PendingBlock, PendingBlockStatus} from "./interface";
-import {getDescendantBlocks, getAllDescendantBlocks, getLowestPendingUnknownParents} from "./utils/pendingBlocksTree";
-import {SyncOptions} from "./options";
+import {BlockError, BlockErrorCode} from "../chain/errors/index.js";
+import {wrapError} from "../util/wrapError.js";
+import {pruneSetToMax} from "../util/map.js";
+import {PendingBlock, PendingBlockStatus} from "./interface.js";
+import {
+  getDescendantBlocks,
+  getAllDescendantBlocks,
+  getLowestPendingUnknownParents,
+} from "./utils/pendingBlocksTree.js";
+import {SyncOptions} from "./options.js";
 
 const MAX_ATTEMPTS_PER_BLOCK = 5;
 const MAX_KNOWN_BAD_BLOCKS = 500;

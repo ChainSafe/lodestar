@@ -3,9 +3,9 @@ import PeerId from "peer-id";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {ILogger, prettyBytes} from "@chainsafe/lodestar-utils";
-import {IMetrics} from "../../../metrics";
-import {OpSource} from "../../../metrics/validatorMonitor";
-import {IBeaconChain} from "../../../chain";
+import {IMetrics} from "../../../metrics/index.js";
+import {OpSource} from "../../../metrics/validatorMonitor.js";
+import {IBeaconChain} from "../../../chain/index.js";
 import {
   AttestationError,
   AttestationErrorCode,
@@ -14,8 +14,8 @@ import {
   BlockGossipError,
   GossipAction,
   SyncCommitteeError,
-} from "../../../chain/errors";
-import {GossipHandlers, GossipType} from "../interface";
+} from "../../../chain/errors/index.js";
+import {GossipHandlers, GossipType} from "../interface.js";
 import {
   validateGossipAggregateAndProof,
   validateGossipAttestation,
@@ -25,10 +25,10 @@ import {
   validateGossipSyncCommittee,
   validateSyncCommitteeGossipContributionAndProof,
   validateGossipVoluntaryExit,
-} from "../../../chain/validation";
-import {INetwork} from "../../interface";
-import {NetworkEvent} from "../../events";
-import {PeerAction} from "../../peers";
+} from "../../../chain/validation/index.js";
+import {INetwork} from "../../interface.js";
+import {NetworkEvent} from "../../events.js";
+import {PeerAction} from "../../peers/index.js";
 
 /**
  * Gossip handler options as part of network options

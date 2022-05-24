@@ -5,7 +5,7 @@ import {
   HYSTERESIS_UPWARD_MULTIPLIER,
   MAX_EFFECTIVE_BALANCE,
 } from "@chainsafe/lodestar-params";
-import {EpochProcess, CachedBeaconStateAllForks} from "../../types";
+import {EpochProcess, CachedBeaconStateAllForks} from "../../types.js";
 
 /**
  * Update effective balances if validator.balance has changed enough

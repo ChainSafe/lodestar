@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {parseFeeRecipient} from "../../../src/util";
+import {parseFeeRecipient} from "../../../src/util/index.js";
 
 const feeRecipient = Buffer.from(Array.from({length: 20}, () => Math.round(Math.random() * 255)));
 const feeRecipientString = feeRecipient.toString("hex");

@@ -6,11 +6,11 @@ import {CachedBeaconStateAllForks, allForks} from "@chainsafe/lodestar-beacon-st
 import {Bytes32, Bytes96, Root, Slot} from "@chainsafe/lodestar-types";
 import {fromHexString} from "@chainsafe/ssz";
 
-import {ZERO_HASH} from "../../../constants";
-import {IMetrics} from "../../../metrics";
-import {IBeaconChain} from "../../interface";
-import {assembleBody} from "./body";
-import {RegenCaller} from "../../regen";
+import {ZERO_HASH} from "../../../constants/index.js";
+import {IMetrics} from "../../../metrics/index.js";
+import {IBeaconChain} from "../../interface.js";
+import {assembleBody} from "./body.js";
+import {RegenCaller} from "../../regen/index.js";
 
 type AssembleBlockModules = {
   chain: IBeaconChain;

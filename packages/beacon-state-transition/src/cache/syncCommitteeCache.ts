@@ -1,6 +1,6 @@
 import {ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {CompositeViewDU, toHexString} from "@chainsafe/ssz";
-import {PubkeyIndexMap} from "./pubkeyCache";
+import {PubkeyIndexMap} from "./pubkeyCache.js";
 
 type SyncComitteeValidatorIndexMap = Map<ValidatorIndex, number[]>;
 

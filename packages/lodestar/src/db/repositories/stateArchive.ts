@@ -3,8 +3,8 @@ import {Epoch, Root, Slot, ssz} from "@chainsafe/lodestar-types";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {bytesToInt} from "@chainsafe/lodestar-utils";
 import {Db, Bucket, Repository, IDbMetrics} from "@chainsafe/lodestar-db";
-import {getStateTypeFromBytes} from "../../util/multifork";
-import {getRootIndexKey, storeRootIndex} from "./stateArchiveIndex";
+import {getStateTypeFromBytes} from "../../util/multifork.js";
+import {getRootIndexKey, storeRootIndex} from "./stateArchiveIndex.js";
 
 /* eslint-disable @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call */
 

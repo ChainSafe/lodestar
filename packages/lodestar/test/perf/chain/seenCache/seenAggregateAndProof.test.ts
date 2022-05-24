@@ -1,7 +1,7 @@
 import {TARGET_AGGREGATORS_PER_COMMITTEE} from "@chainsafe/lodestar-params";
 import {BitArray} from "@chainsafe/ssz";
 import {itBench} from "@dapplion/benchmark";
-import {SeenAggregatedAttestations} from "../../../../src/chain/seenCache/seenAggregateAndProof";
+import {SeenAggregatedAttestations} from "../../../../src/chain/seenCache/seenAggregateAndProof.js";
 
 describe("SeenAggregatedAttestations perf test", function () {
   const targetEpoch = 2022;

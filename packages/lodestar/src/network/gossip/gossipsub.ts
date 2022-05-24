@@ -1,8 +1,10 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import Libp2p from "libp2p";
-import Gossipsub from "libp2p-gossipsub";
-import {GossipsubMessage, SignaturePolicy, TopicStr} from "libp2p-gossipsub/src/types";
-import {PeerScore, PeerScoreParams} from "libp2p-gossipsub/src/score";
+import GossipsubDefault from "libp2p-gossipsub";
+// TODO remove once Gossipsub goes ESM
+const Gossipsub = ((GossipsubDefault as unknown) as {default: unknown}).default as typeof GossipsubDefault;
+import {GossipsubMessage, SignaturePolicy, TopicStr} from "libp2p-gossipsub/src/types.js";
+import {PeerScore, PeerScoreParams} from "libp2p-gossipsub/src/score/index.js";
 import PeerId from "peer-id";
 import {AbortSignal} from "@chainsafe/abort-controller";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
@@ -11,7 +13,7 @@ import {allForks, altair, phase0} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 
-import {IMetrics} from "../../metrics";
+import {IMetrics} from "../../metrics/index.js";
 import {
   GossipJobQueues,
   GossipTopic,
@@ -20,11 +22,11 @@ import {
   GossipTypeMap,
   ValidatorFnsByType,
   GossipHandlers,
-} from "./interface";
-import {getGossipSSZType, GossipTopicCache, stringifyGossipTopic} from "./topic";
-import {DataTransformSnappy, fastMsgIdFn, msgIdFn} from "./encoding";
-import {createValidatorFnsByType} from "./validation";
-import {Map2d, Map2dArr} from "../../util/map";
+} from "./interface.js";
+import {getGossipSSZType, GossipTopicCache, stringifyGossipTopic} from "./topic.js";
+import {DataTransformSnappy, fastMsgIdFn, msgIdFn} from "./encoding.js";
+import {createValidatorFnsByType} from "./validation/index.js";
+import {Map2d, Map2dArr} from "../../util/map.js";
 
 import {
   computeGossipPeerScoreParams,
@@ -32,11 +34,11 @@ import {
   GOSSIP_D,
   GOSSIP_D_HIGH,
   GOSSIP_D_LOW,
-} from "./scoringParameters";
-import {Eth2Context} from "../../chain";
+} from "./scoringParameters.js";
+import {Eth2Context} from "../../chain/index.js";
 import {MetricsRegister, TopicLabel, TopicStrToLabel} from "libp2p-gossipsub/src/metrics";
-import {PeersData} from "../peers/peersData";
-import {ClientKind} from "../peers/client";
+import {PeersData} from "../peers/peersData.js";
+import {ClientKind} from "../peers/client.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 /** As specified in https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md */

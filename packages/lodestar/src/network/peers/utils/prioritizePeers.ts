@@ -2,10 +2,10 @@ import PeerId from "peer-id";
 import {altair, phase0} from "@chainsafe/lodestar-types";
 import {BitArray} from "@chainsafe/ssz";
 import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
-import {shuffle} from "../../../util/shuffle";
-import {sortBy} from "../../../util/sortBy";
-import {RequestedSubnet} from "./subnetMap";
-import {MapDef} from "../../../util/map";
+import {shuffle} from "../../../util/shuffle.js";
+import {sortBy} from "../../../util/sortBy.js";
+import {RequestedSubnet} from "./subnetMap.js";
+import {MapDef} from "../../../util/map.js";
 
 /** Target number of peers we'd like to have connected to a given long-lived subnet */
 const TARGET_SUBNET_PEERS = 6;

@@ -1,5 +1,5 @@
 import {Epoch} from "@chainsafe/lodestar-types";
-import {Batch, BatchOpts, BatchStatus} from "../batch";
+import {Batch, BatchOpts, BatchStatus} from "../batch.js";
 
 /**
  * Validates that the status and ordering of batches is valid

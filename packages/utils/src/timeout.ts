@@ -1,7 +1,7 @@
 import {AbortSignal, AbortController} from "@chainsafe/abort-controller";
 import {anySignal} from "any-signal";
-import {TimeoutError} from "./errors";
-import {sleep} from "./sleep";
+import {TimeoutError} from "./errors.js";
+import {sleep} from "./sleep.js";
 
 export async function withTimeout<T>(
   asyncFn: (timeoutAndParentSignal?: AbortSignal) => Promise<T>,

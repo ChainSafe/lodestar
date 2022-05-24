@@ -1,4 +1,4 @@
-import {ICliCommandOptions} from "../util";
+import {ICliCommandOptions} from "../util/index.js";
 
 export type WSSOptions =
   | {

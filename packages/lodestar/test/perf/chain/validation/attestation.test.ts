@@ -1,7 +1,7 @@
 import {itBench} from "@dapplion/benchmark";
-import {validateGossipAttestation} from "../../../../src/chain/validation";
-import {generateTestCachedBeaconStateOnlyValidators} from "@chainsafe/lodestar-beacon-state-transition/test/perf/util";
-import {getAttestationValidData} from "../../../utils/validationData/attestation";
+import {validateGossipAttestation} from "../../../../src/chain/validation/index.js";
+import {generateTestCachedBeaconStateOnlyValidators} from "../../../../../beacon-state-transition/test/perf/util.js";
+import {getAttestationValidData} from "../../../utils/validationData/attestation.js";
 
 describe("validate gossip attestation", () => {
   const vc = 64;

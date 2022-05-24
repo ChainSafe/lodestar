@@ -11,13 +11,13 @@ import {
   OutgoingResponseBody,
   getResponseSzzTypeByMethod,
   IncomingResponseBodyByMethod,
-} from "../../../../../src/network/reqresp/types";
-import {responseDecode} from "../../../../../src/network/reqresp/encoders/responseDecode";
-import {responseEncodeSuccess} from "../../../../../src/network/reqresp/encoders/responseEncode";
-import {arrToSource, createStatus, generateEmptySignedBlocks} from "../utils";
-import {expectIsEqualSszTypeArr} from "../../../../utils/ssz";
-import {config} from "../../../../utils/config";
-import {blocksToReqRespBlockResponses} from "../../../../utils/block";
+} from "../../../../../src/network/reqresp/types.js";
+import {responseDecode} from "../../../../../src/network/reqresp/encoders/responseDecode.js";
+import {responseEncodeSuccess} from "../../../../../src/network/reqresp/encoders/responseEncode.js";
+import {arrToSource, createStatus, generateEmptySignedBlocks} from "../utils.js";
+import {expectIsEqualSszTypeArr} from "../../../../utils/ssz.js";
+import {config} from "../../../../utils/config.js";
+import {blocksToReqRespBlockResponses} from "../../../../utils/block.js";
 
 chai.use(chaiAsPromised);
 

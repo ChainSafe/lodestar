@@ -1,6 +1,6 @@
-import {bls, SecretKey} from "@chainsafe/bls";
+import type {SecretKey} from "@chainsafe/bls/types";
+import bls from "@chainsafe/bls";
 import {BitArray, fromHexString} from "@chainsafe/ssz";
-import {initBLS} from "@chainsafe/lodestar-cli/src/util";
 import {createIChainForkConfig, defaultChainConfig} from "@chainsafe/lodestar-config";
 import {CachedBeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
@@ -11,12 +11,12 @@ import {
   aggregateInto,
   getParticipationFn,
   MatchingDataAttestationGroup,
-} from "../../../../src/chain/opPools/aggregatedAttestationPool";
-import {InsertOutcome} from "../../../../src/chain/opPools/types";
-import {linspace} from "../../../../src/util/numpy";
-import {generateAttestation, generateEmptyAttestation} from "../../../utils/attestation";
-import {generateCachedState} from "../../../utils/state";
-import {renderBitArray} from "../../../utils/render";
+} from "../../../../src/chain/opPools/aggregatedAttestationPool.js";
+import {InsertOutcome} from "../../../../src/chain/opPools/types.js";
+import {linspace} from "../../../../src/util/numpy.js";
+import {generateAttestation, generateEmptyAttestation} from "../../../utils/attestation.js";
+import {generateCachedState} from "../../../utils/state.js";
+import {renderBitArray} from "../../../utils/render.js";
 
 /** Valid signature of random data to prevent BLS errors */
 const validSignature = fromHexString(
@@ -34,10 +34,6 @@ describe("AggregatedAttestationPool", function () {
   let altairState: CachedBeaconStateAllForks;
   const attestation = generateAttestation({data: {slot: currentSlot, target: {epoch: currentEpoch}}});
   const committee = [0, 1, 2, 3];
-
-  before(async function () {
-    await initBLS();
-  });
 
   beforeEach(() => {
     pool = new AggregatedAttestationPool();
@@ -221,7 +217,6 @@ describe("MatchingDataAttestationGroup aggregateInto", function () {
   let sk2: SecretKey;
 
   before("Init BLS", async () => {
-    await initBLS();
     sk1 = bls.SecretKey.fromBytes(Buffer.alloc(32, 1));
     sk2 = bls.SecretKey.fromBytes(Buffer.alloc(32, 2));
     attestation1.signature = sk1.sign(attestationDataRoot).toBytes();

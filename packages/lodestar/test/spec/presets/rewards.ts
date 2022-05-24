@@ -10,10 +10,10 @@ import {
 import {ForkName} from "@chainsafe/lodestar-params";
 import {VectorCompositeType} from "@chainsafe/ssz";
 import {ssz} from "@chainsafe/lodestar-types";
-import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState";
-import {inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState";
-import {getConfig} from "../utils/getConfig";
-import {TestRunnerFn} from "../utils/types";
+import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
+import {inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
+import {getConfig} from "../utils/getConfig.js";
+import {TestRunnerFn} from "../utils/types.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 

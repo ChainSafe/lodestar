@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import {defaultOptions, IBeaconNodeOptions} from "@chainsafe/lodestar";
-import {ICliCommandOptions, extractJwtHexSecret} from "../../util";
-import {ExecutionEngineArgs} from "./execution";
+import {ICliCommandOptions, extractJwtHexSecret} from "../../util/index.js";
+import {ExecutionEngineArgs} from "./execution.js";
 
 export interface IEth1Args {
   "eth1.enabled": boolean;

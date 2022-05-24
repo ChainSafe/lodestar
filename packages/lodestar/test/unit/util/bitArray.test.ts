@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {IntersectResult, intersectUint8Arrays} from "../../../src/util/bitArray";
+import {IntersectResult, intersectUint8Arrays} from "../../../src/util/bitArray.js";
 
 describe("util / bitArray / intersectUint8Arrays", () => {
   const testCases: {id?: string; a: number[]; b: number[]; res: IntersectResult}[] = [

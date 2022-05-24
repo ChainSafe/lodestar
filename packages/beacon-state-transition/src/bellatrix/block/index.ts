@@ -1,16 +1,16 @@
 import {bellatrix} from "@chainsafe/lodestar-types";
 
-import {CachedBeaconStateBellatrix} from "../../types";
-import {processBlockHeader, processEth1Data, processRandao} from "../../allForks/block";
-import {processOperations} from "./processOperations";
-import {processSyncAggregate} from "../../altair/block/processSyncCommittee";
-import {processExecutionPayload} from "./processExecutionPayload";
-import {ExecutionEngine} from "../executionEngine";
-import {isExecutionEnabled} from "../utils";
-import {processAttesterSlashing} from "./processAttesterSlashing";
-import {processProposerSlashing} from "./processProposerSlashing";
+import {CachedBeaconStateBellatrix} from "../../types.js";
+import {processBlockHeader, processEth1Data, processRandao} from "../../allForks/block/index.js";
+import {processOperations} from "./processOperations.js";
+import {processSyncAggregate} from "../../altair/block/processSyncCommittee.js";
+import {processExecutionPayload} from "./processExecutionPayload.js";
+import {ExecutionEngine} from "../executionEngine.js";
+import {isExecutionEnabled} from "../utils.js";
+import {processAttesterSlashing} from "./processAttesterSlashing.js";
+import {processProposerSlashing} from "./processProposerSlashing.js";
 
-export {processOperations, processAttesterSlashing, processProposerSlashing};
+export {processOperations, processAttesterSlashing, processProposerSlashing, processExecutionPayload};
 
 export function processBlock(
   state: CachedBeaconStateBellatrix,

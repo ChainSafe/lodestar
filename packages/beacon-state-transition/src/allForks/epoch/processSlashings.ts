@@ -7,8 +7,8 @@ import {
   PROPORTIONAL_SLASHING_MULTIPLIER_BELLATRIX,
 } from "@chainsafe/lodestar-params";
 
-import {decreaseBalance} from "../../util";
-import {CachedBeaconStateAllForks, EpochProcess} from "../../types";
+import {decreaseBalance} from "../../util/index.js";
+import {CachedBeaconStateAllForks, EpochProcess} from "../../types.js";
 
 /**
  * Update validator registry for validators that activate + exit

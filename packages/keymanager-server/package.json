@@ -8,7 +8,9 @@
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
   "homepage": "https://github.com/ChainSafe/lodestar#readme",
-  "main": "lib/index.js",
+  "type": "module",
+  "exports": "./lib/index.js",
+  "types": "./lib/index.d.ts",
   "files": [
     "lib/**/*.js",
     "lib/**/*.js.map",
@@ -23,8 +25,9 @@
     "build:lib:watch": "yarn run build:lib --watch",
     "build:typedocs": "typedoc --exclude src/index.ts --out typedocs src",
     "build:types:watch": "yarn run build:types --watch",
+    "check-build": "node -e \"(async function() { await import('./lib/index.js') })()\"",
     "check-types": "tsc",
-    "lint": "eslint --color --ext .ts src/ test/",
+    "lint": "eslint --color --ext .ts src/",
     "lint:fix": "yarn run lint --fix",
     "pretest": "yarn run check-types",
     "test": "yarn test:unit",
@@ -43,7 +46,7 @@
   ],
   "dependencies": {
     "@chainsafe/abort-controller": "^3.0.1",
-    "@chainsafe/bls": "6.0.3",
+    "@chainsafe/bls": "7.1.0",
     "@chainsafe/bls-keystore": "^2.0.0",
     "@chainsafe/lodestar-api": "^0.37.0",
     "@chainsafe/lodestar-config": "^0.37.0",

@@ -4,9 +4,9 @@ import {ForkName} from "@chainsafe/lodestar-params";
 import {altair, Epoch, phase0, ssz} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {IBeaconChain} from "../chain";
-import {FAR_FUTURE_EPOCH} from "../constants";
-import {getCurrentAndNextFork} from "./forks";
+import {IBeaconChain} from "../chain/index.js";
+import {FAR_FUTURE_EPOCH} from "../constants/index.js";
+import {getCurrentAndNextFork} from "./forks.js";
 
 export enum ENRKey {
   tcp = "tcp",

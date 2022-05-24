@@ -2,11 +2,11 @@ import {assert, expect} from "chai";
 
 import {phase0, ssz} from "@chainsafe/lodestar-types";
 
-import {getActiveValidatorIndices, isActiveValidator, isSlashableValidator} from "../../../src/util";
+import {getActiveValidatorIndices, isActiveValidator, isSlashableValidator} from "../../../src/util/index.js";
 
-import {randBetween} from "../../utils/misc";
-import {generateValidator} from "../../utils/validator";
-import {generateState} from "../../utils/state";
+import {randBetween} from "../../utils/misc.js";
+import {generateValidator} from "../../utils/validator.js";
+import {generateState} from "../../utils/state.js";
 
 describe("getActiveValidatorIndices", () => {
   it("empty list of validators should return no indices (empty list)", () => {

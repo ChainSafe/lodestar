@@ -9,7 +9,7 @@ import {Repository, Id} from "@chainsafe/lodestar-db";
 import {MAX_PROPOSER_SLASHINGS, MAX_VOLUNTARY_EXITS} from "@chainsafe/lodestar-params";
 import {Epoch, phase0, ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {IBeaconDb} from "../../db";
+import {IBeaconDb} from "../../db/index.js";
 
 type HexRoot = string;
 type AttesterSlashingCached = {
