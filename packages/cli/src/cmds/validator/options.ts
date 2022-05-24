@@ -23,6 +23,7 @@ export type IValidatorCliArgs = IAccountValidatorArgs &
     graffiti: string;
     afterBlockDelaySlotFraction?: number;
     defaultFeeRecipient?: string;
+    strictFeeRecipientCheck?: boolean;
 
     importKeystoresPath?: string[];
     importKeystoresPassword?: string;
@@ -78,6 +79,11 @@ export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
       "Specify fee recipient default for collecting the EL block fees and rewards (a hex string representing 20 bytes address: ^0x[a-fA-F0-9]{40}$). It would be possible (WIP) to override this per validator key using config or keymanager API.",
     defaultDescription: defaultDefaultFeeRecipient,
     type: "string",
+  },
+
+  strictFeeRecipientCheck: {
+    description: "Enable strict checking of the validator's feeRecipient with the one returned by engine",
+    type: "boolean",
   },
 
   importKeystoresPath: {

@@ -12,6 +12,7 @@ import {Metrics} from "../metrics";
 
 type BlockProposingServiceOpts = {
   graffiti?: string;
+  strictFeeRecipientCheck?: boolean;
 };
 
 /**
@@ -87,7 +88,16 @@ export class BlockProposingService {
         // In Mev Builder, the feeRecipeint could differ and rewards to the feeRecipeint
         // might be included in the block transactions as indicated by the BuilderBid
         // Address this appropriately in the Mev boost PR
-        if (feeRecipient !== expectedFeeRecipient) {
+        //
+        // Even for engine, there isn't any clarity as of now how to proceed with the
+        // the divergence of feeRecipient, the argument being that the bn <> engine setup
+        // has implied trust and are user-agents of the same entity.
+        // A better approach would be to have engine also provide something akin to BuilderBid
+        //
+        // The following conversation in the interop R&D channel can provide some context
+        // https://discord.com/channels/595666850260713488/892088344438255616/978374892678426695
+        // For now providing a strick check flag to enable disable this
+        if (feeRecipient !== expectedFeeRecipient && this.opts.strictFeeRecipientCheck) {
           throw Error(`Invalid feeRecipient=${feeRecipient}, expected=${expectedFeeRecipient}`);
         }
       }
