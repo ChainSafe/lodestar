@@ -704,7 +704,7 @@
 <h2 id="type-aliases_1">Type aliases<a class="headerlink" href="#type-aliases_1" title="Permanent link">&para;</a></h2>
 <h3 id="getgossipacceptmetadatafn">GetGossipAcceptMetadataFn<a class="headerlink" href="#getgossipacceptmetadatafn" title="Permanent link">&para;</a></h3>
 <p>Ƭ <strong>GetGossipAcceptMetadataFn</strong>: <em>function</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3b84bc3/packages/lodestar/src/network/gossip/validation/onAccept.ts#L4">packages/lodestar/src/network/gossip/validation/onAccept.ts:4</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/75e405c/packages/lodestar/src/network/gossip/validation/onAccept.ts#L4">packages/lodestar/src/network/gossip/validation/onAccept.ts:4</a></em></p>
 <h4 id="type-declaration">Type declaration:<a class="headerlink" href="#type-declaration" title="Permanent link">&para;</a></h4>
 <p>▸ (<code>config</code>: IChainForkConfig, <code>object</code>: GossipTypeMap[GossipType], <code>topic</code>: GossipTopicTypeMap[GossipType]): <em>Record‹string, string | number›</em></p>
 <p><strong>Parameters:</strong></p>
@@ -733,12 +733,12 @@
 <hr />
 <h3 id="getgossipacceptmetadatafns">GetGossipAcceptMetadataFns<a class="headerlink" href="#getgossipacceptmetadatafns" title="Permanent link">&para;</a></h3>
 <p>Ƭ <strong>GetGossipAcceptMetadataFns</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3b84bc3/packages/lodestar/src/network/gossip/validation/onAccept.ts#L9">packages/lodestar/src/network/gossip/validation/onAccept.ts:9</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/75e405c/packages/lodestar/src/network/gossip/validation/onAccept.ts#L9">packages/lodestar/src/network/gossip/validation/onAccept.ts:9</a></em></p>
 <h4 id="type-declaration_1">Type declaration:<a class="headerlink" href="#type-declaration_1" title="Permanent link">&para;</a></h4>
 <hr />
 <h3 id="validatorfnmodules">ValidatorFnModules<a class="headerlink" href="#validatorfnmodules" title="Permanent link">&para;</a></h3>
 <p>Ƭ <strong>ValidatorFnModules</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3b84bc3/packages/lodestar/src/network/gossip/validation/index.ts#L18">packages/lodestar/src/network/gossip/validation/index.ts:18</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/75e405c/packages/lodestar/src/network/gossip/validation/index.ts#L18">packages/lodestar/src/network/gossip/validation/index.ts:18</a></em></p>
 <h4 id="type-declaration_2">Type declaration:<a class="headerlink" href="#type-declaration_2" title="Permanent link">&para;</a></h4>
 <ul>
 <li>
@@ -754,7 +754,7 @@
 <h2 id="functions_1">Functions<a class="headerlink" href="#functions_1" title="Permanent link">&para;</a></h2>
 <h3 id="createvalidationqueues">createValidationQueues<a class="headerlink" href="#createvalidationqueues" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>createValidationQueues</strong>(<code>gossipValidatorFns</code>: <a href="../network_gossip/#validatorfnsbytype">ValidatorFnsByType</a>, <code>signal</code>: AbortSignal, <code>metrics</code>: <a href="../metrics/#imetrics">IMetrics</a> | null): <em><a href="../network_gossip/#gossipjobqueues">GossipJobQueues</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3b84bc3/packages/lodestar/src/network/gossip/validation/queue.ts#L39">packages/lodestar/src/network/gossip/validation/queue.ts:39</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/75e405c/packages/lodestar/src/network/gossip/validation/queue.ts#L39">packages/lodestar/src/network/gossip/validation/queue.ts:39</a></em></p>
 <p>Wraps a GossipValidatorFn with a queue, to limit the processing of gossip objects by type.</p>
 <p>A queue here is essential to protect against DOS attacks, where a peer may send many messages at once.
 Queues also protect the node against overloading. If the node gets bussy with an expensive epoch transition,
@@ -793,7 +793,7 @@ to customize different queue behaviours per object type (see <code>gossipQueueOp
 <hr />
 <h3 id="createvalidatorfnsbytype">createValidatorFnsByType<a class="headerlink" href="#createvalidatorfnsbytype" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>createValidatorFnsByType</strong>(<code>gossipHandlers</code>: <a href="../network_gossip/#gossiphandlers">GossipHandlers</a>, <code>modules</code>: <a href="./#validatorfnmodules">ValidatorFnModules</a> &amp; object): <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3b84bc3/packages/lodestar/src/network/gossip/validation/index.ts#L29">packages/lodestar/src/network/gossip/validation/index.ts:29</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/75e405c/packages/lodestar/src/network/gossip/validation/index.ts#L29">packages/lodestar/src/network/gossip/validation/index.ts:29</a></em></p>
 <p>Returns GossipValidatorFn for each GossipType, given GossipHandlerFn indexed by type.</p>
 <p><strong><code>see</code></strong> getGossipHandlers for reasoning on why GossipHandlerFn are used for gossip validation.</p>
 <p><strong>Parameters:</strong></p>
@@ -827,7 +827,7 @@ to customize different queue behaviours per object type (see <code>gossipQueueOp
 <hr />
 <h3 id="getgossipvalidatorfn">getGossipValidatorFn<a class="headerlink" href="#getgossipvalidatorfn" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>getGossipValidatorFn</strong>‹<strong>K</strong>›(<code>gossipHandler</code>: GossipHandlers[K], <code>type</code>: K, <code>modules</code>: <a href="./#validatorfnmodules">ValidatorFnModules</a>): <em><a href="../network_gossip/#gossipvalidatorfn">GossipValidatorFn</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3b84bc3/packages/lodestar/src/network/gossip/validation/index.ts#L65">packages/lodestar/src/network/gossip/validation/index.ts:65</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/75e405c/packages/lodestar/src/network/gossip/validation/index.ts#L65">packages/lodestar/src/network/gossip/validation/index.ts:65</a></em></p>
 <p>Returns a GossipSub validator function from a GossipHandlerFn. GossipHandlerFn may throw GossipActionError if one
 or more validation conditions from the consensus-specs#p2p-interface are not satisfied.</p>
 <p>This function receives a string topic and a binary message <code>InMessage</code> and deserializes both using caches.
@@ -866,10 +866,10 @@ or more validation conditions from the consensus-specs#p2p-interface are not sat
 <h2 id="object-literals_1">Object literals<a class="headerlink" href="#object-literals_1" title="Permanent link">&para;</a></h2>
 <h3 id="const-gossipqueueopts"><code>Const</code> gossipQueueOpts<a class="headerlink" href="#const-gossipqueueopts" title="Permanent link">&para;</a></h3>
 <h3 id="gossipqueueopts-object">▪ <strong>gossipQueueOpts</strong>: <em>object</em><a class="headerlink" href="#gossipqueueopts-object" title="Permanent link">&para;</a></h3>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3b84bc3/packages/lodestar/src/network/gossip/validation/queue.ts#L10">packages/lodestar/src/network/gossip/validation/queue.ts:10</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/75e405c/packages/lodestar/src/network/gossip/validation/queue.ts#L10">packages/lodestar/src/network/gossip/validation/queue.ts:10</a></em></p>
 <p>Numbers from https://github.com/sigp/lighthouse/blob/b34a79dc0b02e04441ba01fd0f304d1e203d877d/beacon_node/network/src/beacon_processor/mod.rs#L69</p>
 <p>▪ <strong>[GossipType.attester_slashing]</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3b84bc3/packages/lodestar/src/network/gossip/validation/queue.ts#L18">packages/lodestar/src/network/gossip/validation/queue.ts:18</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/75e405c/packages/lodestar/src/network/gossip/validation/queue.ts#L18">packages/lodestar/src/network/gossip/validation/queue.ts:18</a></em></p>
 <ul>
 <li>
 <p><strong>maxLength</strong>: <em>number</em> = 4096</p>
@@ -879,7 +879,7 @@ or more validation conditions from the consensus-specs#p2p-interface are not sat
 </li>
 </ul>
 <p>▪ <strong>[GossipType.beacon_aggregate_and_proof]</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3b84bc3/packages/lodestar/src/network/gossip/validation/queue.ts#L13">packages/lodestar/src/network/gossip/validation/queue.ts:13</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/75e405c/packages/lodestar/src/network/gossip/validation/queue.ts#L13">packages/lodestar/src/network/gossip/validation/queue.ts:13</a></em></p>
 <ul>
 <li>
 <p><strong>maxConcurrency</strong>: <em>number</em> = 16</p>
@@ -892,7 +892,7 @@ or more validation conditions from the consensus-specs#p2p-interface are not sat
 </li>
 </ul>
 <p>▪ <strong>[GossipType.beacon_attestation]</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3b84bc3/packages/lodestar/src/network/gossip/validation/queue.ts#L15">packages/lodestar/src/network/gossip/validation/queue.ts:15</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/75e405c/packages/lodestar/src/network/gossip/validation/queue.ts#L15">packages/lodestar/src/network/gossip/validation/queue.ts:15</a></em></p>
 <ul>
 <li>
 <p><strong>maxConcurrency</strong>: <em>number</em> = 64</p>
@@ -905,7 +905,7 @@ or more validation conditions from the consensus-specs#p2p-interface are not sat
 </li>
 </ul>
 <p>▪ <strong>[GossipType.beacon_block]</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3b84bc3/packages/lodestar/src/network/gossip/validation/queue.ts#L11">packages/lodestar/src/network/gossip/validation/queue.ts:11</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/75e405c/packages/lodestar/src/network/gossip/validation/queue.ts#L11">packages/lodestar/src/network/gossip/validation/queue.ts:11</a></em></p>
 <ul>
 <li>
 <p><strong>maxLength</strong>: <em>number</em> = 1024</p>
@@ -915,7 +915,7 @@ or more validation conditions from the consensus-specs#p2p-interface are not sat
 </li>
 </ul>
 <p>▪ <strong>[GossipType.proposer_slashing]</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3b84bc3/packages/lodestar/src/network/gossip/validation/queue.ts#L17">packages/lodestar/src/network/gossip/validation/queue.ts:17</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/75e405c/packages/lodestar/src/network/gossip/validation/queue.ts#L17">packages/lodestar/src/network/gossip/validation/queue.ts:17</a></em></p>
 <ul>
 <li>
 <p><strong>maxLength</strong>: <em>number</em> = 4096</p>
@@ -925,7 +925,7 @@ or more validation conditions from the consensus-specs#p2p-interface are not sat
 </li>
 </ul>
 <p>▪ <strong>[GossipType.sync_committee]</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3b84bc3/packages/lodestar/src/network/gossip/validation/queue.ts#L20">packages/lodestar/src/network/gossip/validation/queue.ts:20</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/75e405c/packages/lodestar/src/network/gossip/validation/queue.ts#L20">packages/lodestar/src/network/gossip/validation/queue.ts:20</a></em></p>
 <ul>
 <li>
 <p><strong>maxConcurrency</strong>: <em>number</em> = 64</p>
@@ -938,7 +938,7 @@ or more validation conditions from the consensus-specs#p2p-interface are not sat
 </li>
 </ul>
 <p>▪ <strong>[GossipType.sync_committee_contribution_and_proof]</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3b84bc3/packages/lodestar/src/network/gossip/validation/queue.ts#L19">packages/lodestar/src/network/gossip/validation/queue.ts:19</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/75e405c/packages/lodestar/src/network/gossip/validation/queue.ts#L19">packages/lodestar/src/network/gossip/validation/queue.ts:19</a></em></p>
 <ul>
 <li>
 <p><strong>maxConcurrency</strong>: <em>number</em> = 16</p>
@@ -951,7 +951,7 @@ or more validation conditions from the consensus-specs#p2p-interface are not sat
 </li>
 </ul>
 <p>▪ <strong>[GossipType.voluntary_exit]</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3b84bc3/packages/lodestar/src/network/gossip/validation/queue.ts#L16">packages/lodestar/src/network/gossip/validation/queue.ts:16</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/75e405c/packages/lodestar/src/network/gossip/validation/queue.ts#L16">packages/lodestar/src/network/gossip/validation/queue.ts:16</a></em></p>
 <ul>
 <li>
 <p><strong>maxLength</strong>: <em>number</em> = 4096</p>
