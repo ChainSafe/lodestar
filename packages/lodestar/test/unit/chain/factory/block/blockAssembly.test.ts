@@ -65,7 +65,6 @@ describe.skip("block assembly", function () {
         randaoReveal: Buffer.alloc(96, 0),
         graffiti: Buffer.alloc(32, 0),
         slot: 1,
-        feeRecipient: Buffer.alloc(20, 0),
       }
     );
     expect(result).to.not.be.null;

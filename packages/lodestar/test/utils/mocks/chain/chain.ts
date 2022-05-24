@@ -7,6 +7,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {BeaconStateAllForks, CachedBeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {CheckpointWithHex, IForkChoice, IProtoBlock, ExecutionStatus} from "@chainsafe/lodestar-fork-choice";
+import {defaultDefaultFeeRecipient} from "@chainsafe/lodestar-validator";
 
 import {ChainEventEmitter, IBeaconChain} from "../../../../src/chain/index.js";
 import {IBeaconClock} from "../../../../src/chain/clock/interface.js";
@@ -38,6 +39,7 @@ import {testLogger} from "../../logger.js";
 import {ReprocessController} from "../../../../src/chain/reprocess.js";
 import {createCachedBeaconStateTest} from "../../../../../beacon-state-transition/test/utils/state.js";
 import {SeenAggregatedAttestations} from "../../../../src/chain/seenCache/seenAggregateAndProof.js";
+import {BeaconProposerCache} from "../../../../src/chain/beaconProposerCache.js";
 
 /* eslint-disable @typescript-eslint/no-empty-function */
 
@@ -83,6 +85,8 @@ export class MockBeaconChain implements IBeaconChain {
   readonly seenBlockProposers = new SeenBlockProposers();
   readonly seenSyncCommitteeMessages = new SeenSyncCommitteeMessages();
   readonly seenContributionAndProof = new SeenContributionAndProof(null);
+
+  readonly beaconProposerCache = new BeaconProposerCache({defaultFeeRecipient: defaultDefaultFeeRecipient});
 
   private state: BeaconStateAllForks;
   private abortController: AbortController;
@@ -178,6 +182,8 @@ export class MockBeaconChain implements IBeaconChain {
   persistInvalidSszObject(): string | null {
     return null;
   }
+
+  async updateBeaconProposerData(): Promise<void> {}
 }
 
 function mockForkChoice(): IForkChoice {

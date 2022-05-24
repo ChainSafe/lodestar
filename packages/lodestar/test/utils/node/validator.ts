@@ -115,6 +115,7 @@ export async function getAndInitDevValidators({
   useRestApi,
   testLoggerOpts,
   externalSignerUrl,
+  defaultFeeRecipient,
 }: {
   node: BeaconNode;
   validatorsPerClient: number;
@@ -123,6 +124,7 @@ export async function getAndInitDevValidators({
   useRestApi?: boolean;
   testLoggerOpts?: TestLoggerOpts;
   externalSignerUrl?: string;
+  defaultFeeRecipient?: string;
 }): Promise<{validators: Validator[]; secretKeys: SecretKey[]}> {
   const validators: Promise<Validator>[] = [];
   const secretKeys: SecretKey[] = [];
@@ -163,6 +165,7 @@ export async function getAndInitDevValidators({
         slashingProtection,
         logger,
         signers,
+        defaultFeeRecipient,
       })
     );
   }

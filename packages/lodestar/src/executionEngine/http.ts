@@ -23,6 +23,7 @@ import {
   PayloadAttributes,
   ApiPayloadAttributes,
 } from "./interface.js";
+import {PayloadIdCache} from "./payloadIdCache.js";
 
 export type ExecutionEngineHttpOpts = {
   urls: string[];
@@ -56,6 +57,7 @@ export const defaultExecutionEngineHttpOpts: ExecutionEngineHttpOpts = {
  * https://github.com/ethereum/execution-apis/blob/v1.0.0-alpha.1/src/engine/interop/specification.md
  */
 export class ExecutionEngineHttp implements IExecutionEngine {
+  readonly payloadIdCache = new PayloadIdCache();
   private readonly rpc: IJsonRpcHttpClient;
 
   constructor(opts: ExecutionEngineHttpOpts, signal: AbortSignal, rpc?: IJsonRpcHttpClient) {
@@ -200,7 +202,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       ? {
           timestamp: numToQuantity(payloadAttributes.timestamp),
           prevRandao: bytesToData(payloadAttributes.prevRandao),
-          suggestedFeeRecipient: bytesToData(payloadAttributes.suggestedFeeRecipient),
+          suggestedFeeRecipient: payloadAttributes.suggestedFeeRecipient,
         }
       : undefined;
 
@@ -220,8 +222,16 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     switch (status) {
       case ExecutePayloadStatus.VALID:
         // if payloadAttributes are provided, a valid payloadId is expected
-        if (payloadAttributes && (!payloadId || payloadId === "0x")) {
-          throw Error(`Received invalid payloadId=${payloadId}`);
+        if (apiPayloadAttributes) {
+          if (!payloadId || payloadId === "0x") {
+            throw Error(`Received invalid payloadId=${payloadId}`);
+          }
+
+          this.payloadIdCache.add(
+            {headBlockHash: headBlockHashData, finalizedBlockHash, ...apiPayloadAttributes},
+            payloadId
+          );
+          void this.prunePayloadIdCache();
         }
         return payloadId !== "0x" ? payloadId : null;
 
@@ -270,6 +280,10 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     });
 
     return parseExecutionPayload(executionPayloadRpc);
+  }
+
+  async prunePayloadIdCache(): Promise<void> {
+    this.payloadIdCache.prune();
   }
 }
 

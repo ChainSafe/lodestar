@@ -59,7 +59,7 @@ describe("blockAssembly - body", function () {
       blockSlot: 1,
       parentSlot: 0,
       parentBlockRoot: Buffer.alloc(32, 0),
-      feeRecipient: Buffer.alloc(20, 0),
+      proposerIndex: 1000,
     });
     expect(result).to.not.be.null;
     expect(result.randaoReveal.length).to.be.equal(96);

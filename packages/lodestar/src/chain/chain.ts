@@ -13,7 +13,7 @@ import {
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
-import {allForks, UintNum64, Root, phase0, Slot, RootHex} from "@chainsafe/lodestar-types";
+import {allForks, UintNum64, Root, phase0, Slot, RootHex, Epoch} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {fromHexString} from "@chainsafe/ssz";
 import {AbortController} from "@chainsafe/abort-controller";
@@ -25,7 +25,7 @@ import {BlockProcessor, PartiallyVerifiedBlockFlags} from "./blocks/index.js";
 import {IBeaconClock, LocalClock} from "./clock/index.js";
 import {ChainEventEmitter} from "./emitter.js";
 import {handleChainEvents} from "./eventHandlers.js";
-import {IBeaconChain, SSZObjectType} from "./interface.js";
+import {IBeaconChain, SSZObjectType, ProposerPreparationData} from "./interface.js";
 import {IChainOptions} from "./options.js";
 import {IStateRegenerator, QueuedStateRegenerator, RegenCaller} from "./regen/index.js";
 import {initializeForkChoice} from "./forkChoice/index.js";
@@ -52,6 +52,7 @@ import {IExecutionEngine} from "../executionEngine/index.js";
 import {PrecomputeNextEpochTransitionScheduler} from "./precomputeNextEpochTransition.js";
 import {ReprocessController} from "./reprocess.js";
 import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
+import {BeaconProposerCache} from "./beaconProposerCache.js";
 
 export class BeaconChain implements IBeaconChain {
   readonly genesisTime: UintNum64;
@@ -90,6 +91,8 @@ export class BeaconChain implements IBeaconChain {
   // Global state caches
   readonly pubkey2index: PubkeyIndexMap;
   readonly index2pubkey: Index2PubkeyCache;
+
+  readonly beaconProposerCache: BeaconProposerCache;
 
   protected readonly blockProcessor: BlockProcessor;
   protected readonly db: IBeaconDb;
@@ -148,6 +151,8 @@ export class BeaconChain implements IBeaconChain {
     this.pubkey2index = new PubkeyIndexMap();
     this.index2pubkey = [];
 
+    this.beaconProposerCache = new BeaconProposerCache(opts);
+
     // Restore state caches
     const cachedState = createCachedBeaconState(anchorState, {
       config,
@@ -194,6 +199,7 @@ export class BeaconChain implements IBeaconChain {
         stateCache,
         checkpointStateCache,
         seenAggregatedAttestations: this.seenAggregatedAttestations,
+        beaconProposerCache: this.beaconProposerCache,
         emitter,
         config,
         logger,
@@ -315,5 +321,11 @@ export class BeaconChain implements IBeaconChain {
       fs.writeFileSync(fileName, bytes);
     }
     return fileName;
+  }
+
+  async updateBeaconProposerData(epoch: Epoch, proposers: ProposerPreparationData[]): Promise<void> {
+    proposers.forEach((proposer) => {
+      this.beaconProposerCache.add(epoch, proposer);
+    });
   }
 }

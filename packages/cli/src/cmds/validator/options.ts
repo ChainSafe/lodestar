@@ -1,3 +1,4 @@
+import {defaultOptions} from "@chainsafe/lodestar";
 import {ICliCommandOptions, ILogArgs} from "../../util/index.js";
 import {defaultValidatorPaths} from "./paths.js";
 import {accountValidatorOptions, IAccountValidatorArgs} from "../account/cmds/validator/options.js";
@@ -11,6 +12,8 @@ export const validatorMetricsDefaultOptions = {
   address: "127.0.0.1",
 };
 
+export const defaultDefaultFeeRecipient = defaultOptions.chain.defaultFeeRecipient;
+
 export type IValidatorCliArgs = IAccountValidatorArgs &
   ILogArgs & {
     logFile: IBeaconPaths["logFile"];
@@ -19,6 +22,9 @@ export type IValidatorCliArgs = IAccountValidatorArgs &
     force: boolean;
     graffiti: string;
     afterBlockDelaySlotFraction?: number;
+    defaultFeeRecipient?: string;
+    strictFeeRecipientCheck?: boolean;
+
     importKeystoresPath?: string[];
     importKeystoresPassword?: string;
     externalSignerUrl?: string;
@@ -66,6 +72,18 @@ export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
     hidden: true,
     description: "Delay before publishing attestations if block comes early, as a fraction of SECONDS_PER_SLOT",
     type: "number",
+  },
+
+  defaultFeeRecipient: {
+    description:
+      "Specify fee recipient default for collecting the EL block fees and rewards (a hex string representing 20 bytes address: ^0x[a-fA-F0-9]{40}$). It would be possible (WIP) to override this per validator key using config or keymanager API.",
+    defaultDescription: defaultDefaultFeeRecipient,
+    type: "string",
+  },
+
+  strictFeeRecipientCheck: {
+    description: "Enable strict checking of the validator's feeRecipient with the one returned by engine",
+    type: "boolean",
   },
 
   importKeystoresPath: {

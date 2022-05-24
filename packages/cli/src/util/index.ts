@@ -16,3 +16,4 @@ export * from "./sleep.js";
 export * from "./stripOffNewlines.js";
 export * from "./types.js";
 export * from "./jwt.js";
+export * from "./feeRecipient.js";

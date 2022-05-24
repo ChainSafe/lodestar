@@ -7,11 +7,11 @@ import {RegistryMetricCreator, collectNodeJSMetrics, HttpMetricsServer} from "@c
 import {getBeaconConfigFromArgs} from "../../config/index.js";
 import {IGlobalArgs} from "../../options/index.js";
 import {YargsError, getDefaultGraffiti, mkdir, getCliLogger} from "../../util/index.js";
-import {onGracefulShutdown} from "../../util/index.js";
+import {onGracefulShutdown, parseFeeRecipient} from "../../util/index.js";
 import {getVersionData} from "../../util/version.js";
 import {getBeaconPaths} from "../beacon/paths.js";
 import {getValidatorPaths} from "./paths.js";
-import {IValidatorCliArgs, validatorMetricsDefaultOptions} from "./options.js";
+import {IValidatorCliArgs, validatorMetricsDefaultOptions, defaultDefaultFeeRecipient} from "./options.js";
 import {getLocalSecretKeys, getExternalSigners, groupExternalSignersByUrl} from "./keys.js";
 
 /**
@@ -19,6 +19,7 @@ import {getLocalSecretKeys, getExternalSigners, groupExternalSignersByUrl} from 
  */
 export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): Promise<void> {
   const graffiti = args.graffiti || getDefaultGraffiti();
+  const defaultFeeRecipient = parseFeeRecipient(args.defaultFeeRecipient ?? defaultDefaultFeeRecipient);
 
   const validatorPaths = getValidatorPaths(args);
   const beaconPaths = getBeaconPaths(args);
@@ -127,6 +128,7 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
       signers,
       graffiti,
       afterBlockDelaySlotFraction: args.afterBlockDelaySlotFraction,
+      defaultFeeRecipient,
     },
     controller.signal,
     metrics
