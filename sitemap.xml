@@ -591,27 +591,27 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/cli/modules/reflection-2220/</loc>
+         <loc>https://chainsafe.github.io/lodestar/packages/cli/modules/reflection-2243/</loc>
          <lastmod>2022-05-24</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/cli/modules/reflection-2220.reflection-2221._/</loc>
+         <loc>https://chainsafe.github.io/lodestar/packages/cli/modules/reflection-2243.reflection-2244._/</loc>
          <lastmod>2022-05-24</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/cli/modules/reflection-2220.reflection-2221._.reflection-2223._validator_src/</loc>
+         <loc>https://chainsafe.github.io/lodestar/packages/cli/modules/reflection-2243.reflection-2244._.reflection-2246._validator_src/</loc>
          <lastmod>2022-05-24</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/cli/modules/reflection-2220.reflection-2221._.reflection-2223/</loc>
+         <loc>https://chainsafe.github.io/lodestar/packages/cli/modules/reflection-2243.reflection-2244._.reflection-2246/</loc>
          <lastmod>2022-05-24</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/cli/modules/reflection-2220.reflection-2221/</loc>
+         <loc>https://chainsafe.github.io/lodestar/packages/cli/modules/reflection-2243.reflection-2244/</loc>
          <lastmod>2022-05-24</lastmod>
          <changefreq>daily</changefreq>
     </url>
@@ -1047,6 +1047,11 @@
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/chain.beaconchain/</loc>
+         <lastmod>2022-05-24</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/chain.beaconproposercache/</loc>
          <lastmod>2022-05-24</lastmod>
          <changefreq>daily</changefreq>
     </url>
@@ -2946,6 +2951,11 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
+         <loc>https://chainsafe.github.io/lodestar/packages/validator/classes/services.preparebeaconproposerservice/</loc>
+         <lastmod>2022-05-24</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
          <loc>https://chainsafe.github.io/lodestar/packages/validator/classes/services.synccommitteedutiesservice/</loc>
          <lastmod>2022-05-24</lastmod>
          <changefreq>daily</changefreq>
@@ -3032,6 +3042,11 @@
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/validator/classes/util.clock/</loc>
+         <lastmod>2022-05-24</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://chainsafe.github.io/lodestar/packages/validator/classes/util.mapdef/</loc>
          <lastmod>2022-05-24</lastmod>
          <changefreq>daily</changefreq>
     </url>

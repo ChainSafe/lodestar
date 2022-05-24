@@ -1057,6 +1057,12 @@
 <td>true</td>
 </tr>
 <tr>
+<td><code>--chain.defaultFeeRecipient</code></td>
+<td>string</td>
+<td>Specify fee recipient default for collecting the EL block fees and rewards (a hex string representing 20 bytes address: ^0x[a-fA-F0-9]{40}$) in case validator fails to update for a validator index before calling produceBlock.</td>
+<td>0x0000000000000000000000000000000000000000</td>
+</tr>
+<tr>
 <td><code>--eth1.enabled</code></td>
 <td>boolean</td>
 <td>Whether to follow the eth1 chain</td>
@@ -1367,6 +1373,18 @@
 <td><code>--graffiti</code></td>
 <td>string</td>
 <td>Specify your custom graffiti to be included in blocks (plain UTF8 text, 32 characters max)</td>
+<td></td>
+</tr>
+<tr>
+<td><code>--defaultFeeRecipient</code></td>
+<td>string</td>
+<td>Specify fee recipient default for collecting the EL block fees and rewards (a hex string representing 20 bytes address: ^0x[a-fA-F0-9]{40}$). It would be possible (WIP) to override this per validator key using config or keymanager API.</td>
+<td>0x0000000000000000000000000000000000000000</td>
+</tr>
+<tr>
+<td><code>--strictFeeRecipientCheck</code></td>
+<td>boolean</td>
+<td>Enable strict checking of the validator's feeRecipient with the one returned by engine</td>
 <td></td>
 </tr>
 <tr>
@@ -1844,6 +1862,18 @@
 <td><code>--graffiti</code></td>
 <td>string</td>
 <td>Specify your custom graffiti to be included in blocks (plain UTF8 text, 32 characters max)</td>
+<td></td>
+</tr>
+<tr>
+<td><code>--defaultFeeRecipient</code></td>
+<td>string</td>
+<td>Specify fee recipient default for collecting the EL block fees and rewards (a hex string representing 20 bytes address: ^0x[a-fA-F0-9]{40}$). It would be possible (WIP) to override this per validator key using config or keymanager API.</td>
+<td>0x0000000000000000000000000000000000000000</td>
+</tr>
+<tr>
+<td><code>--strictFeeRecipientCheck</code></td>
+<td>boolean</td>
+<td>Enable strict checking of the validator's feeRecipient with the one returned by engine</td>
 <td></td>
 </tr>
 <tr>
