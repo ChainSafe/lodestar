@@ -676,7 +676,7 @@ non-strict superset has <em>not</em> already been seen.</p>
 <h2 id="constructors_1">Constructors<a class="headerlink" href="#constructors_1" title="Permanent link">&para;</a></h2>
 <h3 id="constructor">constructor<a class="headerlink" href="#constructor" title="Permanent link">&para;</a></h3>
 <p>+ <strong>new SeenAggregatedAttestations</strong>(<code>metrics</code>: <a href="../../modules/metrics/#imetrics">IMetrics</a> | null): <em><a href="./">SeenAggregatedAttestations</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/71024a2/packages/lodestar/src/chain/seenCache/seenAggregateAndProof.ts#L36">packages/lodestar/src/chain/seenCache/seenAggregateAndProof.ts:36</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/7b9cd7f/packages/lodestar/src/chain/seenCache/seenAggregateAndProof.ts#L36">packages/lodestar/src/chain/seenCache/seenAggregateAndProof.ts:36</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -698,21 +698,21 @@ non-strict superset has <em>not</em> already been seen.</p>
 <p>• <strong>aggregateRootsByEpoch</strong>: <em><a href="../util.mapdef/">MapDef</a>‹number, <a href="../util.mapdef/">MapDef</a>‹string, <a href="../../modules/chain_seencache/#aggregationinfo">AggregationInfo</a>[]››</em> = new MapDef<Epoch, MapDef\<RootHex, AggregationInfo[]>>(
     () =&gt; new MapDef<RootHex, AggregationInfo[]>(() =&gt; [])
   )</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/71024a2/packages/lodestar/src/chain/seenCache/seenAggregateAndProof.ts#L33">packages/lodestar/src/chain/seenCache/seenAggregateAndProof.ts:33</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/7b9cd7f/packages/lodestar/src/chain/seenCache/seenAggregateAndProof.ts#L33">packages/lodestar/src/chain/seenCache/seenAggregateAndProof.ts:33</a></em></p>
 <p>Array of AttestingIndices by same attestation data root by epoch.
 Note that there are at most TARGET_AGGREGATORS_PER_COMMITTEE (16) per attestation data.</p>
 <hr />
 <h3 id="private-lowestpermissibleepoch"><code>Private</code> lowestPermissibleEpoch<a class="headerlink" href="#private-lowestpermissibleepoch" title="Permanent link">&para;</a></h3>
 <p>• <strong>lowestPermissibleEpoch</strong>: <em>Epoch</em> = 0</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/71024a2/packages/lodestar/src/chain/seenCache/seenAggregateAndProof.ts#L36">packages/lodestar/src/chain/seenCache/seenAggregateAndProof.ts:36</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/7b9cd7f/packages/lodestar/src/chain/seenCache/seenAggregateAndProof.ts#L36">packages/lodestar/src/chain/seenCache/seenAggregateAndProof.ts:36</a></em></p>
 <hr />
 <h3 id="private-readonly-metrics"><code>Private</code> <code>Readonly</code> metrics<a class="headerlink" href="#private-readonly-metrics" title="Permanent link">&para;</a></h3>
 <p>• <strong>metrics</strong>: <em><a href="../../modules/metrics/#imetrics">IMetrics</a> | null</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/71024a2/packages/lodestar/src/chain/seenCache/seenAggregateAndProof.ts#L38">packages/lodestar/src/chain/seenCache/seenAggregateAndProof.ts:38</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/7b9cd7f/packages/lodestar/src/chain/seenCache/seenAggregateAndProof.ts#L38">packages/lodestar/src/chain/seenCache/seenAggregateAndProof.ts:38</a></em></p>
 <h2 id="methods_1">Methods<a class="headerlink" href="#methods_1" title="Permanent link">&para;</a></h2>
 <h3 id="add">add<a class="headerlink" href="#add" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>add</strong>(<code>targetEpoch</code>: Epoch, <code>attDataRoot</code>: RootHex, <code>newItem</code>: <a href="../../modules/chain_seencache/#aggregationinfo">AggregationInfo</a>, <code>checkIsKnown</code>: boolean): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/71024a2/packages/lodestar/src/chain/seenCache/seenAggregateAndProof.ts#L56">packages/lodestar/src/chain/seenCache/seenAggregateAndProof.ts:56</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/7b9cd7f/packages/lodestar/src/chain/seenCache/seenAggregateAndProof.ts#L56">packages/lodestar/src/chain/seenCache/seenAggregateAndProof.ts:56</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -744,7 +744,7 @@ Note that there are at most TARGET_AGGREGATORS_PER_COMMITTEE (16) per attestatio
 <hr />
 <h3 id="isknown">isKnown<a class="headerlink" href="#isknown" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>isKnown</strong>(<code>targetEpoch</code>: Epoch, <code>attDataRoot</code>: RootHex, <code>aggregationBits</code>: BitArray): <em>boolean</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/71024a2/packages/lodestar/src/chain/seenCache/seenAggregateAndProof.ts#L40">packages/lodestar/src/chain/seenCache/seenAggregateAndProof.ts:40</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/7b9cd7f/packages/lodestar/src/chain/seenCache/seenAggregateAndProof.ts#L40">packages/lodestar/src/chain/seenCache/seenAggregateAndProof.ts:40</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -772,7 +772,7 @@ Note that there are at most TARGET_AGGREGATORS_PER_COMMITTEE (16) per attestatio
 <hr />
 <h3 id="prune">prune<a class="headerlink" href="#prune" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>prune</strong>(<code>currentEpoch</code>: Epoch): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/71024a2/packages/lodestar/src/chain/seenCache/seenAggregateAndProof.ts#L66">packages/lodestar/src/chain/seenCache/seenAggregateAndProof.ts:66</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/7b9cd7f/packages/lodestar/src/chain/seenCache/seenAggregateAndProof.ts#L66">packages/lodestar/src/chain/seenCache/seenAggregateAndProof.ts:66</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
