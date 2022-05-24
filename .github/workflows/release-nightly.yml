@@ -55,6 +55,7 @@ jobs:
         # git-data is also correct, since it's generated at build time, before `lerna version` run.
         run: |
           node_modules/.bin/lerna version ${{ steps.version.outputs.version }} \
+          --exact \
           --yes \
           --no-git-tag-version
 
