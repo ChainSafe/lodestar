@@ -655,15 +655,15 @@
 <h2 id="variables_1">Variables<a class="headerlink" href="#variables_1" title="Permanent link">&para;</a></h2>
 <h3 id="const-peersynctypes"><code>Const</code> peerSyncTypes<a class="headerlink" href="#const-peersynctypes" title="Permanent link">&para;</a></h3>
 <p>• <strong>peerSyncTypes</strong>: <em><a href="../../enums/sync_utils.peersynctype/">PeerSyncType</a>[]</em> = Object.keys(PeerSyncType) as PeerSyncType[]</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/7b9cd7f/packages/lodestar/src/sync/utils/remoteSyncType.ts#L15">packages/lodestar/src/sync/utils/remoteSyncType.ts:15</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/2d7a978/packages/lodestar/src/sync/utils/remoteSyncType.ts#L15">packages/lodestar/src/sync/utils/remoteSyncType.ts:15</a></em></p>
 <hr />
 <h3 id="const-rangesynctypes"><code>Const</code> rangeSyncTypes<a class="headerlink" href="#const-rangesynctypes" title="Permanent link">&para;</a></h3>
 <p>• <strong>rangeSyncTypes</strong>: <em><a href="../../enums/sync_utils.rangesynctype/">RangeSyncType</a>[]</em> = Object.keys(RangeSyncType) as RangeSyncType[]</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/7b9cd7f/packages/lodestar/src/sync/utils/remoteSyncType.ts#L80">packages/lodestar/src/sync/utils/remoteSyncType.ts:80</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/2d7a978/packages/lodestar/src/sync/utils/remoteSyncType.ts#L80">packages/lodestar/src/sync/utils/remoteSyncType.ts:80</a></em></p>
 <h2 id="functions_1">Functions<a class="headerlink" href="#functions_1" title="Permanent link">&para;</a></h2>
 <h3 id="addtodescendantblocks">addToDescendantBlocks<a class="headerlink" href="#addtodescendantblocks" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>addToDescendantBlocks</strong>(<code>childBlockRootHex</code>: string, <code>byParent</code>: <a href="../../classes/chain_statecache.maptracker/#static-map">Map</a>‹RootHex, <a href="../sync/#pendingblock">PendingBlock</a>[]›, <code>descendantBlocks</code>: <a href="../sync/#pendingblock">PendingBlock</a>[]): <em><a href="../sync/#pendingblock">PendingBlock</a>[]</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/7b9cd7f/packages/lodestar/src/sync/utils/pendingBlocksTree.ts#L17">packages/lodestar/src/sync/utils/pendingBlocksTree.ts:17</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/2d7a978/packages/lodestar/src/sync/utils/pendingBlocksTree.ts#L17">packages/lodestar/src/sync/utils/pendingBlocksTree.ts:17</a></em></p>
 <p>Recursive function for <code>getAllDescendantBlocks()</code></p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -696,7 +696,7 @@
 <hr />
 <h3 id="getalldescendantblocks">getAllDescendantBlocks<a class="headerlink" href="#getalldescendantblocks" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>getAllDescendantBlocks</strong>(<code>blockRootHex</code>: RootHex, <code>blocks</code>: <a href="../../classes/chain_statecache.maptracker/#static-map">Map</a>‹RootHex, <a href="../sync/#pendingblock">PendingBlock</a>›): <em><a href="../sync/#pendingblock">PendingBlock</a>[]</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/7b9cd7f/packages/lodestar/src/sync/utils/pendingBlocksTree.ts#L5">packages/lodestar/src/sync/utils/pendingBlocksTree.ts:5</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/2d7a978/packages/lodestar/src/sync/utils/pendingBlocksTree.ts#L5">packages/lodestar/src/sync/utils/pendingBlocksTree.ts:5</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -720,7 +720,7 @@
 <hr />
 <h3 id="getdescendantblocks">getDescendantBlocks<a class="headerlink" href="#getdescendantblocks" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>getDescendantBlocks</strong>(<code>blockRootHex</code>: RootHex, <code>blocks</code>: <a href="../../classes/chain_statecache.maptracker/#static-map">Map</a>‹RootHex, <a href="../sync/#pendingblock">PendingBlock</a>›): <em><a href="../sync/#pendingblock">PendingBlock</a>[]</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/7b9cd7f/packages/lodestar/src/sync/utils/pendingBlocksTree.ts#L32">packages/lodestar/src/sync/utils/pendingBlocksTree.ts:32</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/2d7a978/packages/lodestar/src/sync/utils/pendingBlocksTree.ts#L32">packages/lodestar/src/sync/utils/pendingBlocksTree.ts:32</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -744,7 +744,7 @@
 <hr />
 <h3 id="getlowestpendingunknownparents">getLowestPendingUnknownParents<a class="headerlink" href="#getlowestpendingunknownparents" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>getLowestPendingUnknownParents</strong>(<code>blocks</code>: <a href="../../classes/chain_statecache.maptracker/#static-map">Map</a>‹RootHex, <a href="../sync/#pendingblock">PendingBlock</a>›): <em><a href="../sync/#pendingblock">PendingBlock</a>[]</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/7b9cd7f/packages/lodestar/src/sync/utils/pendingBlocksTree.ts#L44">packages/lodestar/src/sync/utils/pendingBlocksTree.ts:44</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/2d7a978/packages/lodestar/src/sync/utils/pendingBlocksTree.ts#L44">packages/lodestar/src/sync/utils/pendingBlocksTree.ts:44</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -764,7 +764,7 @@
 <hr />
 <h3 id="getpeersynctype">getPeerSyncType<a class="headerlink" href="#getpeersynctype" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>getPeerSyncType</strong>(<code>local</code>: phase0.Status, <code>remote</code>: phase0.Status, <code>forkChoice</code>: IForkChoice, <code>slotImportTolerance</code>: number): <em><a href="../../enums/sync_utils.peersynctype/">PeerSyncType</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/7b9cd7f/packages/lodestar/src/sync/utils/remoteSyncType.ts#L17">packages/lodestar/src/sync/utils/remoteSyncType.ts:17</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/2d7a978/packages/lodestar/src/sync/utils/remoteSyncType.ts#L17">packages/lodestar/src/sync/utils/remoteSyncType.ts:17</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -796,7 +796,7 @@
 <hr />
 <h3 id="getrangesynctype">getRangeSyncType<a class="headerlink" href="#getrangesynctype" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>getRangeSyncType</strong>(<code>local</code>: phase0.Status, <code>remote</code>: phase0.Status, <code>forkChoice</code>: IForkChoice): <em><a href="../../enums/sync_utils.rangesynctype/">RangeSyncType</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/7b9cd7f/packages/lodestar/src/sync/utils/remoteSyncType.ts#L87">packages/lodestar/src/sync/utils/remoteSyncType.ts:87</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/2d7a978/packages/lodestar/src/sync/utils/remoteSyncType.ts#L87">packages/lodestar/src/sync/utils/remoteSyncType.ts:87</a></em></p>
 <p>Check if a peer requires a finalized chain sync. Only if:
 - The remotes finalized epoch is greater than our current finalized epoch and we have
   not seen the finalized hash before</p>
