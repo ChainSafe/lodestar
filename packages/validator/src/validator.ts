@@ -11,6 +11,7 @@ import {BlockProposingService} from "./services/block";
 import {AttestationService} from "./services/attestation";
 import {IndicesService} from "./services/indices";
 import {SyncCommitteeService} from "./services/syncCommittee";
+import {PrepareBeaconProposerService} from "./services/prepareBeaconProposer";
 import {ISlashingProtection} from "./slashingProtection";
 import {assertEqualParams, getLoggerVc, NotEqualParamsError} from "./util";
 import {ChainHeaderTracker} from "./services/chainHeaderTracker";
@@ -19,8 +20,11 @@ import {toHexString} from "@chainsafe/ssz";
 import {ValidatorEventEmitter} from "./services/emitter";
 import {ValidatorStore, Signer} from "./services/validatorStore";
 import {computeEpochAtSlot, getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
+
 import {PubkeyHex} from "./types";
 import {Metrics} from "./metrics";
+
+export const defaultDefaultFeeRecipient = "0x0000000000000000000000000000000000000000";
 
 export type ValidatorOptions = {
   slashingProtection: ISlashingProtection;
@@ -30,6 +34,8 @@ export type ValidatorOptions = {
   logger: ILogger;
   afterBlockDelaySlotFraction?: number;
   graffiti?: string;
+  defaultFeeRecipient?: string;
+  strictFeeRecipientCheck?: boolean;
 };
 
 // TODO: Extend the timeout, and let it be customizable
@@ -52,6 +58,7 @@ export class Validator {
   private readonly attestationService: AttestationService;
   private readonly syncCommitteeService: SyncCommitteeService;
   private readonly indicesService: IndicesService;
+  private readonly prepareBeaconProposerService: PrepareBeaconProposerService | null;
   private readonly config: IBeaconConfig;
   private readonly api: Api;
   private readonly clock: IClock;
@@ -61,7 +68,7 @@ export class Validator {
   private state: State = {status: Status.stopped};
 
   constructor(opts: ValidatorOptions, readonly genesis: Genesis, metrics: Metrics | null = null) {
-    const {dbOps, logger, slashingProtection, signers, graffiti} = opts;
+    const {dbOps, logger, slashingProtection, signers, graffiti, defaultFeeRecipient, strictFeeRecipientCheck} = opts;
     const config = createIBeaconConfig(dbOps.config, genesis.genesisValidatorsRoot);
 
     const api =
@@ -78,7 +85,14 @@ export class Validator {
         : opts.api;
 
     const clock = new Clock(config, logger, {genesisTime: Number(genesis.genesisTime)});
-    const validatorStore = new ValidatorStore(config, slashingProtection, metrics, signers, genesis);
+    const validatorStore = new ValidatorStore(
+      config,
+      slashingProtection,
+      metrics,
+      signers,
+      genesis,
+      defaultFeeRecipient ?? defaultDefaultFeeRecipient
+    );
     const indicesService = new IndicesService(logger, api, validatorStore, metrics);
     const emitter = new ValidatorEventEmitter();
     const chainHeaderTracker = new ChainHeaderTracker(logger, api, emitter);
@@ -86,6 +100,7 @@ export class Validator {
 
     this.blockProposingService = new BlockProposingService(config, loggerVc, api, clock, validatorStore, metrics, {
       graffiti,
+      strictFeeRecipientCheck,
     });
 
     this.attestationService = new AttestationService(
@@ -110,6 +125,10 @@ export class Validator {
       indicesService,
       metrics
     );
+
+    this.prepareBeaconProposerService = defaultFeeRecipient
+      ? new PrepareBeaconProposerService(loggerVc, api, clock, validatorStore, indicesService, metrics)
+      : null;
 
     this.config = config;
     this.logger = logger;

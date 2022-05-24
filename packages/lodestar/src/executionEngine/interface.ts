@@ -52,7 +52,9 @@ export type ForkChoiceUpdateStatus =
 export type PayloadAttributes = {
   timestamp: number;
   prevRandao: Uint8Array;
-  suggestedFeeRecipient: Uint8Array;
+  // DATA is anyway a hex string, so we can just track it as a hex string to
+  // avoid any conversions
+  suggestedFeeRecipient: string;
 };
 
 export type ApiPayloadAttributes = {
@@ -63,6 +65,7 @@ export type ApiPayloadAttributes = {
   /** DATA, 20 Bytes - suggested value for the coinbase field of the new payload */
   suggestedFeeRecipient: DATA;
 };
+
 /**
  * Execution engine represents an abstract protocol to interact with execution clients. Potential transports include:
  * - JSON RPC over network

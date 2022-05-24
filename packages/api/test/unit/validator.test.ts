@@ -74,6 +74,10 @@ describe("validator", () => {
       args: [[{validatorIndex: 1, syncCommitteeIndices: [2], untilEpoch: 3}]],
       res: undefined,
     },
+    prepareBeaconProposer: {
+      args: [[{validatorIndex: "1", feeRecipient: "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b"}]],
+      res: undefined,
+    },
   });
 
   // TODO: Extra tests to implement maybe

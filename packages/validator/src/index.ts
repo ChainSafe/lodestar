@@ -2,7 +2,7 @@
  * @module validator
  */
 
-export {Validator, ValidatorOptions} from "./validator";
+export {Validator, ValidatorOptions, defaultDefaultFeeRecipient} from "./validator";
 export {ValidatorStore, SignerType, Signer, SignerLocal, SignerRemote} from "./services/validatorStore";
 export {waitForGenesis} from "./genesis";
 export {getMetrics, Metrics, MetricsRegister} from "./metrics";

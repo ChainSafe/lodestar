@@ -1,4 +1,6 @@
 import {SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY} from "@chainsafe/lodestar-params";
+import {defaultDefaultFeeRecipient} from "@chainsafe/lodestar-validator";
+
 import {ArchiverOpts} from "./archiver";
 import {ForkChoiceOpts} from "./forkChoice";
 
@@ -10,6 +12,7 @@ export type IChainOptions = BlockProcessOpts &
     blsVerifyAllMultiThread?: boolean;
     persistInvalidSszObjects?: boolean;
     persistInvalidSszObjectsDir?: string;
+    defaultFeeRecipient: string;
   };
 
 export type BlockProcessOpts = {
@@ -32,4 +35,5 @@ export const defaultChainOptions: IChainOptions = {
   persistInvalidSszObjectsDir: "",
   proposerBoostEnabled: true,
   safeSlotsToImportOptimistically: SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY,
+  defaultFeeRecipient: defaultDefaultFeeRecipient,
 };

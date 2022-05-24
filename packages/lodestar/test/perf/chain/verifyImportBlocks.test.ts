@@ -7,13 +7,15 @@ import {
 import {rangeSyncTest} from "@chainsafe/lodestar-beacon-state-transition/test/perf/params";
 import {config} from "@chainsafe/lodestar-config/default";
 import {SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
+import {LevelDbController} from "@chainsafe/lodestar-db";
+import {defaultDefaultFeeRecipient} from "@chainsafe/lodestar-validator";
+
 import {BeaconChain} from "../../../src/chain";
 import {ExecutionEngineDisabled} from "../../../src/executionEngine";
 import {Eth1ForBlockProductionDisabled} from "../../../src/eth1";
 import {testLogger} from "../../utils/logger";
 import {linspace} from "../../../src/util/numpy";
 import {BeaconDb} from "../../../src";
-import {LevelDbController} from "@chainsafe/lodestar-db";
 
 // Define this params in `packages/beacon-state-transition/test/perf/params.ts`
 // to trigger Github actions CI cache
@@ -80,6 +82,7 @@ describe("verify+import blocks - range sync perf test", () => {
           proposerBoostEnabled: true,
           safeSlotsToImportOptimistically: SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY,
           disableArchiveOnCheckpoint: true,
+          defaultFeeRecipient: defaultDefaultFeeRecipient,
         },
         {
           config: state.config,

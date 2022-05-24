@@ -1,4 +1,4 @@
-import {allForks, UintNum64, Root, phase0, Slot, RootHex} from "@chainsafe/lodestar-types";
+import {allForks, UintNum64, Root, phase0, Slot, RootHex, Epoch} from "@chainsafe/lodestar-types";
 import {CachedBeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
@@ -23,12 +23,15 @@ import {AggregatedAttestationPool} from "./opPools/aggregatedAttestationPool";
 import {PartiallyVerifiedBlockFlags} from "./blocks/types";
 import {ReprocessController} from "./reprocess";
 import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof";
+import {BeaconProposerCache, ProposerPreparationData} from "./beaconProposerCache";
 
 export type Eth2Context = {
   activeValidatorCount: number;
   currentSlot: number;
   currentEpoch: number;
 };
+
+export {ProposerPreparationData};
 
 /**
  * The IBeaconChain service deals with processing incoming blocks, advancing a state transition
@@ -70,6 +73,8 @@ export interface IBeaconChain {
   readonly seenSyncCommitteeMessages: SeenSyncCommitteeMessages;
   readonly seenContributionAndProof: SeenContributionAndProof;
 
+  readonly beaconProposerCache: BeaconProposerCache;
+
   /** Stop beacon chain processing */
   close(): void;
   /** Populate in-memory caches with persisted data. Call at least once on startup */
@@ -99,6 +104,8 @@ export interface IBeaconChain {
 
   /** Persist bad items to persistInvalidSszObjectsDir dir, for example invalid state, attestations etc. */
   persistInvalidSszObject(type: SSZObjectType, bytes: Uint8Array, suffix: string): string | null;
+
+  updateBeaconProposerData(epoch: Epoch, proposers: ProposerPreparationData[]): Promise<void>;
 }
 
 export type SSZObjectType =

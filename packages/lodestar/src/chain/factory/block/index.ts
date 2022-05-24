@@ -3,7 +3,7 @@
  */
 
 import {CachedBeaconStateAllForks, allForks} from "@chainsafe/lodestar-beacon-state-transition";
-import {Bytes32, Bytes96, ExecutionAddress, Root, Slot} from "@chainsafe/lodestar-types";
+import {Bytes32, Bytes96, Root, Slot} from "@chainsafe/lodestar-types";
 import {fromHexString} from "@chainsafe/ssz";
 
 import {ZERO_HASH} from "../../../constants";
@@ -23,21 +23,20 @@ export async function assembleBlock(
     randaoReveal,
     graffiti,
     slot,
-    feeRecipient,
   }: {
     randaoReveal: Bytes96;
     graffiti: Bytes32;
     slot: Slot;
-    feeRecipient: ExecutionAddress;
   }
 ): Promise<allForks.BeaconBlock> {
   const head = chain.forkChoice.getHead();
   const state = await chain.regen.getBlockSlotState(head.blockRoot, slot, RegenCaller.produceBlock);
   const parentBlockRoot = fromHexString(head.blockRoot);
+  const proposerIndex = state.epochCtx.getBeaconProposer(slot);
 
   const block: allForks.BeaconBlock = {
     slot,
-    proposerIndex: state.epochCtx.getBeaconProposer(slot),
+    proposerIndex,
     parentRoot: parentBlockRoot,
     stateRoot: ZERO_HASH,
     body: await assembleBody(chain, state, {
@@ -46,7 +45,7 @@ export async function assembleBlock(
       blockSlot: slot,
       parentSlot: slot - 1,
       parentBlockRoot,
-      feeRecipient,
+      proposerIndex,
     }),
   };
 
