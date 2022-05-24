@@ -725,7 +725,7 @@
 <h2 id="constructors_1">Constructors<a class="headerlink" href="#constructors_1" title="Permanent link">&para;</a></h2>
 <h3 id="constructor">constructor<a class="headerlink" href="#constructor" title="Permanent link">&para;</a></h3>
 <p>+ <strong>new IndicesService</strong>(<code>logger</code>: ILogger, <code>api</code>: Api, <code>validatorStore</code>: <a href="../services.validatorstore/">ValidatorStore</a>, <code>metrics</code>: <a href="../../modules/root/#metrics">Metrics</a> | null): <em><a href="./">IndicesService</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/75e405c/packages/validator/src/services/indices.ts#L23">packages/validator/src/services/indices.ts:23</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/531e2c2/packages/validator/src/services/indices.ts#L23">packages/validator/src/services/indices.ts:23</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -757,36 +757,36 @@
 <h2 id="properties_1">Properties<a class="headerlink" href="#properties_1" title="Permanent link">&para;</a></h2>
 <h3 id="private-readonly-api"><code>Private</code> <code>Readonly</code> api<a class="headerlink" href="#private-readonly-api" title="Permanent link">&para;</a></h3>
 <p>• <strong>api</strong>: <em>Api</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/75e405c/packages/validator/src/services/indices.ts#L27">packages/validator/src/services/indices.ts:27</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/531e2c2/packages/validator/src/services/indices.ts#L27">packages/validator/src/services/indices.ts:27</a></em></p>
 <hr />
 <h3 id="readonly-index2pubkey"><code>Readonly</code> index2pubkey<a class="headerlink" href="#readonly-index2pubkey" title="Permanent link">&para;</a></h3>
 <p>• <strong>index2pubkey</strong>: <em><a href="../util.mapdef/#static-map">Map</a>‹number, string›</em> = new Map<ValidatorIndex, PubkeyHex>()</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/75e405c/packages/validator/src/services/indices.ts#L19">packages/validator/src/services/indices.ts:19</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/531e2c2/packages/validator/src/services/indices.ts#L19">packages/validator/src/services/indices.ts:19</a></em></p>
 <hr />
 <h3 id="private-readonly-logger"><code>Private</code> <code>Readonly</code> logger<a class="headerlink" href="#private-readonly-logger" title="Permanent link">&para;</a></h3>
 <p>• <strong>logger</strong>: <em>ILogger</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/75e405c/packages/validator/src/services/indices.ts#L26">packages/validator/src/services/indices.ts:26</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/531e2c2/packages/validator/src/services/indices.ts#L26">packages/validator/src/services/indices.ts:26</a></em></p>
 <hr />
 <h3 id="private-readonly-metrics"><code>Private</code> <code>Readonly</code> metrics<a class="headerlink" href="#private-readonly-metrics" title="Permanent link">&para;</a></h3>
 <p>• <strong>metrics</strong>: <em><a href="../../modules/root/#metrics">Metrics</a> | null</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/75e405c/packages/validator/src/services/indices.ts#L29">packages/validator/src/services/indices.ts:29</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/531e2c2/packages/validator/src/services/indices.ts#L29">packages/validator/src/services/indices.ts:29</a></em></p>
 <hr />
 <h3 id="private-pollvalidatorindicespromise"><code>Private</code> pollValidatorIndicesPromise<a class="headerlink" href="#private-pollvalidatorindicespromise" title="Permanent link">&para;</a></h3>
 <p>• <strong>pollValidatorIndicesPromise</strong>: <em>Promise‹ValidatorIndex[]› | null</em> = null</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/75e405c/packages/validator/src/services/indices.ts#L23">packages/validator/src/services/indices.ts:23</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/531e2c2/packages/validator/src/services/indices.ts#L23">packages/validator/src/services/indices.ts:23</a></em></p>
 <hr />
 <h3 id="readonly-pubkey2index"><code>Readonly</code> pubkey2index<a class="headerlink" href="#readonly-pubkey2index" title="Permanent link">&para;</a></h3>
 <p>• <strong>pubkey2index</strong>: <em><a href="../util.mapdef/#static-map">Map</a>‹string, number›</em> = new Map<PubkeyHex, ValidatorIndex>()</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/75e405c/packages/validator/src/services/indices.ts#L21">packages/validator/src/services/indices.ts:21</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/531e2c2/packages/validator/src/services/indices.ts#L21">packages/validator/src/services/indices.ts:21</a></em></p>
 <p>Indexed by pubkey in hex 0x prefixed</p>
 <hr />
 <h3 id="private-readonly-validatorstore"><code>Private</code> <code>Readonly</code> validatorStore<a class="headerlink" href="#private-readonly-validatorstore" title="Permanent link">&para;</a></h3>
 <p>• <strong>validatorStore</strong>: <em><a href="../services.validatorstore/">ValidatorStore</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/75e405c/packages/validator/src/services/indices.ts#L28">packages/validator/src/services/indices.ts:28</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/531e2c2/packages/validator/src/services/indices.ts#L28">packages/validator/src/services/indices.ts:28</a></em></p>
 <h2 id="methods_1">Methods<a class="headerlink" href="#methods_1" title="Permanent link">&para;</a></h2>
 <h3 id="private-fetchvalidatorindices"><code>Private</code> fetchValidatorIndices<a class="headerlink" href="#private-fetchvalidatorindices" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>fetchValidatorIndices</strong>(<code>pubkeysHex</code>: string[]): <em>Promise‹ValidatorIndex[]›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/75e405c/packages/validator/src/services/indices.ts#L97">packages/validator/src/services/indices.ts:97</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/531e2c2/packages/validator/src/services/indices.ts#L97">packages/validator/src/services/indices.ts:97</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -806,13 +806,13 @@
 <hr />
 <h3 id="getalllocalindices">getAllLocalIndices<a class="headerlink" href="#getalllocalindices" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>getAllLocalIndices</strong>(): <em>ValidatorIndex[]</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/75e405c/packages/validator/src/services/indices.ts#L37">packages/validator/src/services/indices.ts:37</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/531e2c2/packages/validator/src/services/indices.ts#L37">packages/validator/src/services/indices.ts:37</a></em></p>
 <p>Return all known indices from the validatorStore pubkeys</p>
 <p><strong>Returns:</strong> <em>ValidatorIndex[]</em></p>
 <hr />
 <h3 id="hasvalidatorindex">hasValidatorIndex<a class="headerlink" href="#hasvalidatorindex" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>hasValidatorIndex</strong>(<code>index</code>: ValidatorIndex): <em>boolean</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/75e405c/packages/validator/src/services/indices.ts#L42">packages/validator/src/services/indices.ts:42</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/531e2c2/packages/validator/src/services/indices.ts#L42">packages/validator/src/services/indices.ts:42</a></em></p>
 <p>Return true if <code>index</code> is active part of this validator client</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -833,19 +833,19 @@
 <hr />
 <h3 id="pollvalidatorindices">pollValidatorIndices<a class="headerlink" href="#pollvalidatorindices" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>pollValidatorIndices</strong>(): <em>Promise‹ValidatorIndex[]›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/75e405c/packages/validator/src/services/indices.ts#L46">packages/validator/src/services/indices.ts:46</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/531e2c2/packages/validator/src/services/indices.ts#L46">packages/validator/src/services/indices.ts:46</a></em></p>
 <p><strong>Returns:</strong> <em>Promise‹ValidatorIndex[]›</em></p>
 <hr />
 <h3 id="private-pollvalidatorindicesinternal"><code>Private</code> pollValidatorIndicesInternal<a class="headerlink" href="#private-pollvalidatorindicesinternal" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>pollValidatorIndicesInternal</strong>(): <em>Promise‹ValidatorIndex[]›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/75e405c/packages/validator/src/services/indices.ts#L74">packages/validator/src/services/indices.ts:74</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/531e2c2/packages/validator/src/services/indices.ts#L74">packages/validator/src/services/indices.ts:74</a></em></p>
 <p>Iterate through all the voting pubkeys in the <code>ValidatorStore</code> and attempt to learn any unknown
 validator indices. Returns the new discovered indexes</p>
 <p><strong>Returns:</strong> <em>Promise‹ValidatorIndex[]›</em></p>
 <hr />
 <h3 id="removedutiesforkey">removeDutiesForKey<a class="headerlink" href="#removedutiesforkey" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>removeDutiesForKey</strong>(<code>pubkey</code>: <a href="../../modules/services/#pubkeyhex">PubkeyHex</a>): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/75e405c/packages/validator/src/services/indices.ts#L62">packages/validator/src/services/indices.ts:62</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/531e2c2/packages/validator/src/services/indices.ts#L62">packages/validator/src/services/indices.ts:62</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
