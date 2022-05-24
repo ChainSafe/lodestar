@@ -199,6 +199,7 @@ export class BeaconChain implements IBeaconChain {
         stateCache,
         checkpointStateCache,
         seenAggregatedAttestations: this.seenAggregatedAttestations,
+        beaconProposerCache: this.beaconProposerCache,
         emitter,
         config,
         logger,

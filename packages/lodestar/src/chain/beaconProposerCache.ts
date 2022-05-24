@@ -30,7 +30,11 @@ export class BeaconProposerCache {
     }
   }
 
-  get(proposerIndex: number | string): string {
+  getOrDefault(proposerIndex: number | string): string {
     return this.feeRecipientByValidatorIndex.getOrDefault(`${proposerIndex}`).feeRecipient;
+  }
+
+  get(proposerIndex: number | string): string | undefined {
+    return this.feeRecipientByValidatorIndex.get(`${proposerIndex}`)?.feeRecipient;
   }
 }
