@@ -805,7 +805,7 @@
 <h2 id="type-aliases_1">Type aliases<a class="headerlink" href="#type-aliases_1" title="Permanent link">&para;</a></h2>
 <h3 id="aggregationinfo">AggregationInfo<a class="headerlink" href="#aggregationinfo" title="Permanent link">&para;</a></h3>
 <p>Ƭ <strong>AggregationInfo</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/531e2c2/packages/lodestar/src/chain/seenCache/seenAggregateAndProof.ts#L13">packages/lodestar/src/chain/seenCache/seenAggregateAndProof.ts:13</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/11f6d0e/packages/lodestar/src/chain/seenCache/seenAggregateAndProof.ts#L13">packages/lodestar/src/chain/seenCache/seenAggregateAndProof.ts:13</a></em></p>
 <h4 id="type-declaration">Type declaration:<a class="headerlink" href="#type-declaration" title="Permanent link">&para;</a></h4>
 <ul>
 <li>
@@ -818,42 +818,42 @@
 <hr />
 <h3 id="aggregatorsubnetkey">AggregatorSubnetKey<a class="headerlink" href="#aggregatorsubnetkey" title="Permanent link">&para;</a></h3>
 <p>Ƭ <strong>AggregatorSubnetKey</strong>: <em>string</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/531e2c2/packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts#L15">packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts:15</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/11f6d0e/packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts#L15">packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts:15</a></em></p>
 <p>AggregatorSubnetKey = <code>aggregatorIndex + subcommitteeIndex</code></p>
 <hr />
 <h3 id="contributiondatakey">ContributionDataKey<a class="headerlink" href="#contributiondatakey" title="Permanent link">&para;</a></h3>
 <p>Ƭ <strong>ContributionDataKey</strong>: <em>string</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/531e2c2/packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts#L18">packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts:18</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/11f6d0e/packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts#L18">packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts:18</a></em></p>
 <p>ContributionDataKey = `slot + beacon_block_root + subcommittee_index</p>
 <hr />
 <h3 id="validataorsubnetkey">ValidataorSubnetKey<a class="headerlink" href="#validataorsubnetkey" title="Permanent link">&para;</a></h3>
 <p>Ƭ <strong>ValidataorSubnetKey</strong>: <em>string</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/531e2c2/packages/lodestar/src/chain/seenCache/seenCommittee.ts#L10">packages/lodestar/src/chain/seenCache/seenCommittee.ts:10</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/11f6d0e/packages/lodestar/src/chain/seenCache/seenCommittee.ts#L10">packages/lodestar/src/chain/seenCache/seenCommittee.ts:10</a></em></p>
 <p>ValidataorSubnetKey = <code>validatorIndex + subcommitteeIndex</code></p>
 <h2 id="variables_1">Variables<a class="headerlink" href="#variables_1" title="Permanent link">&para;</a></h2>
 <h3 id="const-max_epochs"><code>Const</code> MAX_EPOCHS<a class="headerlink" href="#const-max_epochs" title="Permanent link">&para;</a></h3>
 <p>• <strong>MAX_EPOCHS</strong>: <em>3</em> = 3</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/531e2c2/packages/lodestar/src/chain/seenCache/seenAttesters.ts#L15">packages/lodestar/src/chain/seenCache/seenAttesters.ts:15</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/11f6d0e/packages/lodestar/src/chain/seenCache/seenAttesters.ts#L15">packages/lodestar/src/chain/seenCache/seenAttesters.ts:15</a></em></p>
 <hr />
 <h3 id="const-max_epochs_in_cache"><code>Const</code> MAX_EPOCHS_IN_CACHE<a class="headerlink" href="#const-max_epochs_in_cache" title="Permanent link">&para;</a></h3>
 <p>• <strong>MAX_EPOCHS_IN_CACHE</strong>: <em>2</em> = 2</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/531e2c2/packages/lodestar/src/chain/seenCache/seenAggregateAndProof.ts#L11">packages/lodestar/src/chain/seenCache/seenAggregateAndProof.ts:11</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/11f6d0e/packages/lodestar/src/chain/seenCache/seenAggregateAndProof.ts#L11">packages/lodestar/src/chain/seenCache/seenAggregateAndProof.ts:11</a></em></p>
 <p>With this gossip validation condition: [IGNORE] aggregate.data.slot is within the last ATTESTATION_PROPAGATION_SLOT_RANGE slots (with a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance)
 Since ATTESTATION_PROPAGATION_SLOT_RANGE is 32, we keep seen AggregateAndProof in the last 2 epochs.</p>
 <hr />
 <h3 id="const-max_slots_in_cache"><code>Const</code> MAX_SLOTS_IN_CACHE<a class="headerlink" href="#const-max_slots_in_cache" title="Permanent link">&para;</a></h3>
 <p>• <strong>MAX_SLOTS_IN_CACHE</strong>: <em>3</em> = 3</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/531e2c2/packages/lodestar/src/chain/seenCache/seenCommittee.ts#L7">packages/lodestar/src/chain/seenCache/seenCommittee.ts:7</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/11f6d0e/packages/lodestar/src/chain/seenCache/seenCommittee.ts#L7">packages/lodestar/src/chain/seenCache/seenCommittee.ts:7</a></em></p>
 <p>SyncCommittee signatures are only useful during a single slot according to our peer's clocks</p>
 <hr />
 <h3 id="const-max_slots_in_cache_1"><code>Const</code> MAX_SLOTS_IN_CACHE<a class="headerlink" href="#const-max_slots_in_cache_1" title="Permanent link">&para;</a></h3>
 <p>• <strong>MAX_SLOTS_IN_CACHE</strong>: <em>8</em> = 8</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/531e2c2/packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts#L12">packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts:12</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/11f6d0e/packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts#L12">packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts:12</a></em></p>
 <p>SyncCommittee aggregates are only useful for the next block they have signed.</p>
 <h2 id="functions_1">Functions<a class="headerlink" href="#functions_1" title="Permanent link">&para;</a></h2>
 <h3 id="insertdesc">insertDesc<a class="headerlink" href="#insertdesc" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>insertDesc</strong>(<code>seenAggregationInfoArr</code>: <a href="./#aggregationinfo">AggregationInfo</a>[], <code>newItem</code>: <a href="./#aggregationinfo">AggregationInfo</a>): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/531e2c2/packages/lodestar/src/chain/seenCache/seenAggregateAndProof.ts#L79">packages/lodestar/src/chain/seenCache/seenAggregateAndProof.ts:79</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/11f6d0e/packages/lodestar/src/chain/seenCache/seenAggregateAndProof.ts#L79">packages/lodestar/src/chain/seenCache/seenAggregateAndProof.ts:79</a></em></p>
 <p>Make sure seenAggregationInfoArr is always in desc order based on trueBitCount so that isKnown can be faster</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -878,7 +878,7 @@ Since ATTESTATION_PROPAGATION_SLOT_RANGE is 32, we keep seen AggregateAndProof i
 <hr />
 <h3 id="seenaggregatorkey">seenAggregatorKey<a class="headerlink" href="#seenaggregatorkey" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>seenAggregatorKey</strong>(<code>subcommitteeIndex</code>: number, <code>aggregatorIndex</code>: ValidatorIndex): <em><a href="./#aggregatorsubnetkey">AggregatorSubnetKey</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/531e2c2/packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts#L98">packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts:98</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/11f6d0e/packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts#L98">packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts:98</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -902,7 +902,7 @@ Since ATTESTATION_PROPAGATION_SLOT_RANGE is 32, we keep seen AggregateAndProof i
 <hr />
 <h3 id="seencachekey">seenCacheKey<a class="headerlink" href="#seencachekey" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>seenCacheKey</strong>(<code>subnet</code>: number, <code>validatorIndex</code>: ValidatorIndex): <em><a href="./#validataorsubnetkey">ValidataorSubnetKey</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/531e2c2/packages/lodestar/src/chain/seenCache/seenCommittee.ts#L40">packages/lodestar/src/chain/seenCache/seenCommittee.ts:40</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/11f6d0e/packages/lodestar/src/chain/seenCache/seenCommittee.ts#L40">packages/lodestar/src/chain/seenCache/seenCommittee.ts:40</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -926,7 +926,7 @@ Since ATTESTATION_PROPAGATION_SLOT_RANGE is 32, we keep seen AggregateAndProof i
 <hr />
 <h3 id="tocontributiondatakey">toContributionDataKey<a class="headerlink" href="#tocontributiondatakey" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>toContributionDataKey</strong>(<code>contribution</code>: SyncCommitteeContribution): <em><a href="./#contributiondatakey">ContributionDataKey</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/531e2c2/packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts#L102">packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts:102</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/11f6d0e/packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts#L102">packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts:102</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
