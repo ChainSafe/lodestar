@@ -64,7 +64,7 @@ export const chainConfig: IChainConfig = {
   MIN_PER_EPOCH_CHURN_LIMIT: 4,
   // [customized] scale queue churn at much lower validator counts for testing
   CHURN_LIMIT_QUOTIENT: 32,
-  PROPOSER_SCORE_BOOST: 70,
+  PROPOSER_SCORE_BOOST: 40,
 
   // Deposit contract
   // ---------------------------------------------------------------

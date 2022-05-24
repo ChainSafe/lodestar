@@ -64,7 +64,7 @@ export const chainConfig: IChainConfig = {
   MIN_PER_EPOCH_CHURN_LIMIT: 4,
   // 2**16 (= 65,536)
   CHURN_LIMIT_QUOTIENT: 65536,
-  PROPOSER_SCORE_BOOST: 70,
+  PROPOSER_SCORE_BOOST: 40,
 
   // Deposit contract
   // ---------------------------------------------------------------
