@@ -176,6 +176,12 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
       notWhileSyncing();
       await waitForSlot(slot); // Must never request for a future slot > currentSlot
 
+      // Process the queued attestations in the forkchoice for correct head estimation
+      // forkChoice.updateTime() might have already been called by the onSlot clock
+      // handler, in which case this should just return.
+      chain.forkChoice.updateTime(slot);
+      chain.forkChoice.updateHead();
+
       timer = metrics?.blockProductionTime.startTimer();
       const block = await assembleBlock(
         {chain, metrics},
