@@ -1,4 +1,3 @@
-import {AbortController} from "@chainsafe/abort-controller";
 import {expect} from "chai";
 import sinon from "sinon";
 import bls from "@chainsafe/bls";

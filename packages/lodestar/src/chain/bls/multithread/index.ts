@@ -6,7 +6,6 @@ import {spawn, Worker} from "@chainsafe/threads";
 // @ts-ignore
 // eslint-disable-next-line
 self = undefined;
-import {AbortSignal} from "@chainsafe/abort-controller";
 import bls from "@chainsafe/bls";
 import {Implementation, PointFormat} from "@chainsafe/bls/types";
 import {ILogger} from "@chainsafe/lodestar-utils";

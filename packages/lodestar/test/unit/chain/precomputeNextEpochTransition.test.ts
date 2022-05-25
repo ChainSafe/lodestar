@@ -1,5 +1,4 @@
 import {config} from "@chainsafe/lodestar-config/default";
-import {AbortController} from "@chainsafe/abort-controller";
 import {ForkChoice, IProtoBlock} from "@chainsafe/lodestar-fork-choice";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {expect} from "chai";

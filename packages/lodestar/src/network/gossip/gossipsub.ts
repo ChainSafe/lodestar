@@ -6,7 +6,6 @@ const Gossipsub = ((GossipsubDefault as unknown) as {default: unknown}).default 
 import {GossipsubMessage, SignaturePolicy, TopicStr} from "libp2p-gossipsub/src/types.js";
 import {PeerScore, PeerScoreParams} from "libp2p-gossipsub/src/score/index.js";
 import PeerId from "peer-id";
-import {AbortSignal} from "@chainsafe/abort-controller";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ATTESTATION_SUBNET_COUNT, ForkName, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 import {allForks, altair, phase0} from "@chainsafe/lodestar-types";

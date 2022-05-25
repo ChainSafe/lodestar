@@ -1,4 +1,3 @@
-import {AbortController} from "@chainsafe/abort-controller";
 import {expect} from "chai";
 import sinon, {SinonStubbedInstance} from "sinon";
 import {routes} from "@chainsafe/lodestar-api";

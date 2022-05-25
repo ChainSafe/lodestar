@@ -1,4 +1,3 @@
-import {AbortSignal} from "@chainsafe/abort-controller";
 import {IExecutionEngine} from "./interface.js";
 import {ExecutionEngineDisabled} from "./disabled.js";
 import {ExecutionEngineHttp, ExecutionEngineHttpOpts, defaultExecutionEngineHttpOpts} from "./http.js";

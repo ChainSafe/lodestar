@@ -45,7 +45,6 @@
     "blockchain"
   ],
   "dependencies": {
-    "@chainsafe/abort-controller": "^3.0.1",
     "@chainsafe/bls": "7.1.0",
     "@chainsafe/bls-keystore": "^2.0.0",
     "@chainsafe/lodestar-api": "^0.37.0",

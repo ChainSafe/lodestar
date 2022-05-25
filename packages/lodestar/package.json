@@ -67,7 +67,6 @@
     "check-readme": "typescript-docs-verifier"
   },
   "dependencies": {
-    "@chainsafe/abort-controller": "^3.0.1",
     "@chainsafe/as-sha256": "^0.3.1",
     "@chainsafe/bls": "7.1.1",
     "@chainsafe/discv5": "^0.7.1",

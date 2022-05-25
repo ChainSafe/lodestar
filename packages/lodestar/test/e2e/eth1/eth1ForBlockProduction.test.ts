@@ -3,7 +3,6 @@ import "mocha";
 import {expect} from "chai";
 import {promisify} from "node:util";
 import leveldown from "leveldown";
-import {AbortController} from "@chainsafe/abort-controller";
 import {sleep} from "@chainsafe/lodestar-utils";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 

@@ -1,6 +1,5 @@
 import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
-import {AbortController} from "@chainsafe/abort-controller";
 import bls from "@chainsafe/bls";
 import {ISignatureSet, SignatureSetType} from "@chainsafe/lodestar-beacon-state-transition";
 import {BlsMultiThreadWorkerPool} from "../../../../src/chain/bls/multithread/index.js";

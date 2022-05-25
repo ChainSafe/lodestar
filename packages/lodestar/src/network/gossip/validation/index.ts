@@ -1,5 +1,4 @@
 import {MessageAcceptance} from "libp2p-gossipsub/src/types.js";
-import {AbortSignal} from "@chainsafe/abort-controller";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {ILogger, mapValues} from "@chainsafe/lodestar-utils";
 import {IMetrics} from "../../../metrics/index.js";

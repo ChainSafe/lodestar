@@ -1,4 +1,3 @@
-import {AbortController} from "@chainsafe/abort-controller";
 import sinon from "sinon";
 
 import {toHexString} from "@chainsafe/ssz";

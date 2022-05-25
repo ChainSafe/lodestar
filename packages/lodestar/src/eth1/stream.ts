@@ -2,7 +2,6 @@
  * @module eth1
  */
 
-import {AbortSignal} from "@chainsafe/abort-controller";
 import {Eth1Block, IBatchDepositEvents, IEth1Provider, IEth1StreamParams} from "./interface.js";
 import {groupDepositEventsByBlock} from "./utils/groupDepositEventsByBlock.js";
 import {optimizeNextBlockDiffForGenesis} from "./utils/optimizeNextBlockDiffForGenesis.js";
