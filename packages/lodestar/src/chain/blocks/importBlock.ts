@@ -268,8 +268,9 @@ async function maybeIssueNextProposerEngineFcU(
   state: CachedBeaconStateAllForks
 ): Promise<PayloadId | null> {
   const prepareSlot = state.slot + 1;
+  const prepareEpoch = computeEpochAtSlot(prepareSlot);
   // No need to try building block if we are not synced
-  if (prepareSlot > chain.clock.currentSlot + 1) {
+  if (prepareSlot !== chain.clock.currentSlot + 1 || prepareEpoch < chain.config.BELLATRIX_FORK_EPOCH) {
     return null;
   }
   const prepareState = allForks.processSlots(state, prepareSlot);
