@@ -1,6 +1,6 @@
 import {AbortSignal} from "@chainsafe/abort-controller";
 import {toHexString} from "@chainsafe/ssz";
-import {allForks, Epoch, phase0, Slot, ssz, Version} from "@chainsafe/lodestar-types";
+import {allForks, Epoch, phase0, Slot, Version} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {CheckpointWithHex, IProtoBlock} from "@chainsafe/lodestar-fork-choice";
 import {CachedBeaconStateAllForks, computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
@@ -176,13 +176,10 @@ export function onForkChoiceReorg(this: BeaconChain, head: IProtoBlock, oldHead:
   this.logger.verbose("Chain reorg", {depth});
 }
 
-export function onAttestation(this: BeaconChain, attestation: phase0.Attestation): void {
-  this.logger.debug("Attestation processed", {
-    slot: attestation.data.slot,
-    index: attestation.data.index,
-    targetRoot: toHexString(attestation.data.target.root),
-    aggregationBits: ssz.phase0.CommitteeBits.toJson(attestation.aggregationBits) as string,
-  });
+export function onAttestation(this: BeaconChain, _: phase0.Attestation): void {
+  // don't want to log the processed attestations here as there are so many attestations and it takes too much disc space,
+  // users may want to keep more log files instead of unnecessary processed attestations log
+  // see https://github.com/ChainSafe/lodestar/pull/4032
 }
 
 export async function onBlock(
