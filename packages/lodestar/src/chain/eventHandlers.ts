@@ -177,7 +177,9 @@ export function onForkChoiceReorg(this: BeaconChain, head: IProtoBlock, oldHead:
 }
 
 export function onAttestation(this: BeaconChain, _: phase0.Attestation): void {
-  // do nothing for now
+  // don't want to log the processed attestations here as there are so many attestations and it takes too much disc space,
+  // users may want to keep more log files instead of unnecessary processed attestations log
+  // see https://github.com/ChainSafe/lodestar/pull/4032
 }
 
 export async function onBlock(
