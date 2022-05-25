@@ -951,6 +951,7 @@ export class ForkChoice implements IForkChoice {
   private processAttestationQueue(): void {
     const currentSlot = this.fcStore.currentSlot;
     for (const attestation of this.queuedAttestations.values()) {
+      // Delay consideration in the fork choice until their slot is in the past.
       if (attestation.slot < currentSlot) {
         this.queuedAttestations.delete(attestation);
         const {blockRoot, targetEpoch} = attestation;
