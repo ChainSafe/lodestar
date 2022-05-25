@@ -173,7 +173,15 @@ export function onForkChoiceHead(this: BeaconChain, head: IProtoBlock): void {
 }
 
 export function onForkChoiceReorg(this: BeaconChain, head: IProtoBlock, oldHead: IProtoBlock, depth: number): void {
-  this.logger.verbose("Chain reorg", {depth});
+  this.logger.verbose("Chain reorg", {
+    depth,
+    previousHead: oldHead.blockRoot,
+    previousHeadParent: oldHead.parentRoot,
+    previousSlot: oldHead.slot,
+    newHead: head.blockRoot,
+    newHeadParent: head.parentRoot,
+    newSlot: head.slot,
+  });
 }
 
 export function onAttestation(this: BeaconChain, attestation: phase0.Attestation): void {
