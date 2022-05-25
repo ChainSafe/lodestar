@@ -24,6 +24,11 @@ jobs:
       - name: Get tag
         id: get_tag
         run: echo ::set-output name=tag::${GITHUB_REF/refs\/tags\//}
+      - name: Assert tag name is valid
+        id: assert_tag
+        run: node scripts/assert_tag.mjs
+        env:
+          TAG: ${{ steps.get_tag.outputs.tag }}
       - name: Get previous tag
         id: get_prev_tag
         run: node scripts/get_prev_tag.js

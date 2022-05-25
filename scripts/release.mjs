@@ -4,6 +4,7 @@ import yargs from "yargs";
 import {hideBin} from "yargs/helpers";
 import inquirer from "inquirer";
 import _lernaVersion from "@lerna/version";
+import {assertTag} from "./assert_tag.mjs";
 
 // Script to make releasing easier
 // Run with --help to see usage
@@ -74,12 +75,8 @@ console.log("Success!");
 /////////////////////////////
 
 function getInfo(argv) {
-  // Validate tag version (must be semver-ish)
-  const versionCaptureRegex=/^(v[0-9]+\.[0-9]+)\.[0-9]+(-beta\.[0-9]+)?$/
-  const versionMatch = versionCaptureRegex.exec(argv.tag);
-  if (versionMatch == null) {
-    exit(`Tag must match ${versionCaptureRegex}`);
-  }
+  const versionMatch = assertTag(argv.tag);
+  // versionMatch should be valid now
 
   const tag = argv.tag;
   const currentCommit = cmd("git rev-parse --short HEAD");
