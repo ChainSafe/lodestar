@@ -1,10 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
-import {IGlobalArgs} from "../../../../options";
-import {YargsError, writeFile600Perm, randomPassword, readPassphraseFile} from "../../../../util";
-import {WalletManager} from "../../../../wallet";
-import {getAccountPaths} from "../../paths";
-import {IWalletRecoverArgs} from "./recover";
+import {IGlobalArgs} from "../../../../options/index.js";
+import {YargsError, writeFile600Perm, randomPassword, readPassphraseFile} from "../../../../util/index.js";
+import {WalletManager} from "../../../../wallet/index.js";
+import {getAccountPaths} from "../../paths.js";
+import {IWalletRecoverArgs} from "./recover.js";
 
 export async function createWalletFromArgsAndMnemonic(
   args: Pick<IWalletRecoverArgs & IGlobalArgs, "name" | "type" | "passphraseFile" | "mnemonicOutputPath" | "rootDir">,

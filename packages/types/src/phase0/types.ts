@@ -1,9 +1,11 @@
 import {ValueOf} from "@chainsafe/ssz";
-import * as ssz from "./sszTypes";
+import * as ssz from "./sszTypes.js";
 
 export type AttestationSubnets = ValueOf<typeof ssz.AttestationSubnets>;
 export type BeaconBlockHeader = ValueOf<typeof ssz.BeaconBlockHeader>;
+export type BeaconBlockHeaderBigint = ValueOf<typeof ssz.BeaconBlockHeaderBigint>;
 export type SignedBeaconBlockHeader = ValueOf<typeof ssz.SignedBeaconBlockHeader>;
+export type SignedBeaconBlockHeaderBigint = ValueOf<typeof ssz.SignedBeaconBlockHeaderBigint>;
 export type Checkpoint = ValueOf<typeof ssz.Checkpoint>;
 export type DepositMessage = ValueOf<typeof ssz.DepositMessage>;
 export type DepositData = ValueOf<typeof ssz.DepositData>;
@@ -17,7 +19,9 @@ export type ENRForkID = ValueOf<typeof ssz.ENRForkID>;
 export type HistoricalBatch = ValueOf<typeof ssz.HistoricalBatch>;
 export type Validator = ValueOf<typeof ssz.Validator>;
 export type AttestationData = ValueOf<typeof ssz.AttestationData>;
+export type AttestationDataBigint = ValueOf<typeof ssz.AttestationDataBigint>;
 export type IndexedAttestation = ValueOf<typeof ssz.IndexedAttestation>;
+export type IndexedAttestationBigint = ValueOf<typeof ssz.IndexedAttestationBigint>;
 export type PendingAttestation = ValueOf<typeof ssz.PendingAttestation>;
 export type SigningData = ValueOf<typeof ssz.SigningData>;
 export type Attestation = ValueOf<typeof ssz.Attestation>;

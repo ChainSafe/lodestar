@@ -1,7 +1,7 @@
 import {DOMAIN_AGGREGATE_AND_PROOF} from "@chainsafe/lodestar-params";
 import {ssz} from "@chainsafe/lodestar-types";
 import {Epoch, phase0} from "@chainsafe/lodestar-types";
-import {PublicKey} from "@chainsafe/bls";
+import type {PublicKey} from "@chainsafe/bls/types";
 import {
   CachedBeaconStateAllForks,
   computeSigningRoot,

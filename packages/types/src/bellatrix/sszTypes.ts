@@ -1,4 +1,7 @@
 import {ByteListType, ByteVectorType, ContainerType, ListCompositeType, VectorCompositeType} from "@chainsafe/ssz";
+import {ssz as primitiveSsz} from "../primitive/index.js";
+import {ssz as phase0Ssz} from "../phase0/index.js";
+import {ssz as altairSsz} from "../altair/index.js";
 import {
   BYTES_PER_LOGS_BLOOM,
   HISTORICAL_ROOTS_LIMIT,
@@ -7,9 +10,6 @@ import {
   MAX_EXTRA_DATA_BYTES,
   SLOTS_PER_HISTORICAL_ROOT,
 } from "@chainsafe/lodestar-params";
-import {ssz as primitiveSsz} from "../primitive";
-import {ssz as phase0Ssz} from "../phase0";
-import {ssz as altairSsz} from "../altair";
 
 const {Bytes20, Bytes32, UintNum64, Slot, ValidatorIndex, Root, BLSSignature, UintBn256: Uint256} = primitiveSsz;
 

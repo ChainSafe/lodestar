@@ -1,8 +1,8 @@
 import * as bip39 from "bip39";
-import {ICliCommand, ICliCommandOptions, initBLS} from "../../../../util";
-import {IGlobalArgs} from "../../../../options";
-import {accountWalletsOptions, IAccountWalletArgs} from "./options";
-import {createWalletFromArgsAndMnemonic} from "./utils";
+import {ICliCommand, ICliCommandOptions} from "../../../../util/index.js";
+import {IGlobalArgs} from "../../../../options/index.js";
+import {accountWalletsOptions, IAccountWalletArgs} from "./options.js";
+import {createWalletFromArgsAndMnemonic} from "./utils.js";
 
 export const command = "create";
 
@@ -72,8 +72,6 @@ export const create: ICliCommand<IWalletCreateArgs, IAccountWalletArgs & IGlobal
   options: walletCreateOptions,
 
   handler: async (args) => {
-    await initBLS();
-
     // Create a new random mnemonic.
     const mnemonic = bip39.generateMnemonic();
 

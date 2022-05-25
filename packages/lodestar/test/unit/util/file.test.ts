@@ -1,5 +1,5 @@
 import {assert} from "chai";
-import {ensureDirectoryExistence} from "../../../src/util/file";
+import {ensureDirectoryExistence} from "../../../src/util/file.js";
 
 describe("util/file", function () {
   const testFilePath = "keys/toml/test_config.toml";

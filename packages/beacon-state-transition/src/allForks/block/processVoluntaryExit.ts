@@ -1,9 +1,9 @@
 import {FAR_FUTURE_EPOCH} from "@chainsafe/lodestar-params";
 import {phase0} from "@chainsafe/lodestar-types";
-import {isActiveValidator} from "../../util";
-import {CachedBeaconStateAllForks} from "../../types";
-import {initiateValidatorExit} from "../../allForks/block";
-import {verifyVoluntaryExitSignature} from "../../allForks/signatureSets";
+import {isActiveValidator} from "../../util/index.js";
+import {CachedBeaconStateAllForks} from "../../types.js";
+import {initiateValidatorExit} from "../../allForks/block/index.js";
+import {verifyVoluntaryExitSignature} from "../../allForks/signatureSets/index.js";
 
 /**
  * Process a VoluntaryExit operation. Initiates the exit of a validator.

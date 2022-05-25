@@ -1,10 +1,10 @@
 import {ForkName} from "@chainsafe/lodestar-params";
 import {ssz} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/default";
-import {Api, ReqTypes} from "../../src/routes/validator";
-import {getClient} from "../../src/client/validator";
-import {getRoutes} from "../../src/server/validator";
-import {runGenericServerTest} from "../utils/genericServerTest";
+import {Api, ReqTypes} from "../../src/routes/validator.js";
+import {getClient} from "../../src/client/validator.js";
+import {getRoutes} from "../../src/server/validator.js";
+import {runGenericServerTest} from "../utils/genericServerTest.js";
 
 const ZERO_HASH = Buffer.alloc(32, 0);
 
@@ -72,6 +72,10 @@ describe("validator", () => {
     },
     prepareSyncCommitteeSubnets: {
       args: [[{validatorIndex: 1, syncCommitteeIndices: [2], untilEpoch: 3}]],
+      res: undefined,
+    },
+    prepareBeaconProposer: {
+      args: [[{validatorIndex: "1", feeRecipient: "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b"}]],
       res: undefined,
     },
   });

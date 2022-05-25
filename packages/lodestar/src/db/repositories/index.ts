@@ -1,17 +1,17 @@
-export {BlockRepository} from "./block";
-export {BlockArchiveBatchPutBinaryItem, BlockArchiveRepository, IBlockFilterOptions} from "./blockArchive";
-export {StateArchiveRepository} from "./stateArchive";
+export {BlockRepository} from "./block.js";
+export {BlockArchiveBatchPutBinaryItem, BlockArchiveRepository, IBlockFilterOptions} from "./blockArchive.js";
+export {StateArchiveRepository} from "./stateArchive.js";
 
-export {AttesterSlashingRepository} from "./attesterSlashing";
-export {ProposerSlashingRepository} from "./proposerSlashing";
-export {VoluntaryExitRepository} from "./voluntaryExit";
-export {DepositEventRepository} from "./depositEvent";
+export {AttesterSlashingRepository} from "./attesterSlashing.js";
+export {ProposerSlashingRepository} from "./proposerSlashing.js";
+export {VoluntaryExitRepository} from "./voluntaryExit.js";
+export {DepositEventRepository} from "./depositEvent.js";
 
-export {DepositDataRootRepository} from "./depositDataRoot";
-export {Eth1DataRepository} from "./eth1Data";
+export {DepositDataRootRepository} from "./depositDataRoot.js";
+export {Eth1DataRepository} from "./eth1Data.js";
 
-export {BestPartialLightClientUpdateRepository} from "./lightclientBestPartialUpdate";
-export {CheckpointHeaderRepository} from "./lightclientCheckpointHeader";
-export {SyncCommitteeRepository} from "./lightclientSyncCommittee";
-export {SyncCommitteeWitnessRepository} from "./lightclientSyncCommitteeWitness";
-export {BackfilledRanges} from "./backfilledRanges";
+export {BestPartialLightClientUpdateRepository} from "./lightclientBestPartialUpdate.js";
+export {CheckpointHeaderRepository} from "./lightclientCheckpointHeader.js";
+export {SyncCommitteeRepository} from "./lightclientSyncCommittee.js";
+export {SyncCommitteeWitnessRepository} from "./lightclientSyncCommitteeWitness.js";
+export {BackfilledRanges} from "./backfilledRanges.js";

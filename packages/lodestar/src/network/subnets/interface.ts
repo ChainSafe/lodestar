@@ -1,6 +1,6 @@
 import {ForkName} from "@chainsafe/lodestar-params";
 import {Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
-import {RequestedSubnet} from "../peers/utils";
+import {RequestedSubnet} from "../peers/utils/index.js";
 
 /** Generic CommitteeSubscription for both beacon attnets subs and syncnets subs */
 export type CommitteeSubscription = {

@@ -5,7 +5,7 @@ import {ATTESTATION_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 import {getEffectiveBalanceIncrementsZeroed} from "@chainsafe/lodestar-beacon-state-transition";
 import {ssz} from "@chainsafe/lodestar-types";
 import {fromHexString} from "@chainsafe/ssz";
-import {ExecutionStatus, ForkChoice, IForkChoiceStore, IProtoBlock, ProtoArray} from "../../../src";
+import {ExecutionStatus, ForkChoice, IForkChoiceStore, IProtoBlock, ProtoArray} from "../../../src/index.js";
 
 describe("ForkChoice", () => {
   let forkchoice: ForkChoice;

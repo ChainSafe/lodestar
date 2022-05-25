@@ -10,7 +10,7 @@
 /**
  * The maximum number of slots during which an attestation can be propagated.
  */
-export const ATTESTATION_PROPAGATION_SLOT_RANGE = 23;
+export const ATTESTATION_PROPAGATION_SLOT_RANGE = 32;
 
 //  Request/Response constants
 

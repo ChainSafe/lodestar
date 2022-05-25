@@ -1,12 +1,20 @@
 import {Epoch, phase0, Slot, ssz, StringType, RootHex, altair, UintNum64} from "@chainsafe/lodestar-types";
-import {ContainerType, Type} from "@chainsafe/ssz";
-import {RouteDef, TypeJson} from "../utils";
+import {ContainerType, Type, VectorCompositeType} from "@chainsafe/ssz";
+import {FINALIZED_ROOT_DEPTH} from "@chainsafe/lodestar-params";
+import {RouteDef, TypeJson} from "../utils/index.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
 export type LightclientHeaderUpdate = {
   syncAggregate: altair.SyncAggregate;
   attestedHeader: phase0.BeaconBlockHeader;
+};
+
+export type LightclientFinalizedUpdate = {
+  attestedHeader: phase0.BeaconBlockHeader;
+  finalizedHeader: phase0.BeaconBlockHeader;
+  finalityBranch: Uint8Array[];
+  syncAggregate: altair.SyncAggregate;
 };
 
 export enum EventType {
@@ -29,6 +37,8 @@ export enum EventType {
   chainReorg = "chain_reorg",
   /** New or better header update available */
   lightclientHeaderUpdate = "lightclient_header_update",
+  /** New or better finalized update available */
+  lightclientFinalizedUpdate = "lightclient_finalized_update",
 }
 
 export type EventData = {
@@ -54,6 +64,7 @@ export type EventData = {
     epoch: Epoch;
   };
   [EventType.lightclientHeaderUpdate]: LightclientHeaderUpdate;
+  [EventType.lightclientFinalizedUpdate]: LightclientFinalizedUpdate;
 };
 
 export type BeaconEvent = {[K in EventType]: {type: K; message: EventData[K]}}[EventType];
@@ -136,6 +147,15 @@ export function getTypeByEvent(): {[K in EventType]: Type<EventData[K]>} {
       {
         syncAggregate: ssz.altair.SyncAggregate,
         attestedHeader: ssz.phase0.BeaconBlockHeader,
+      },
+      {jsonCase: "eth2"}
+    ),
+    [EventType.lightclientFinalizedUpdate]: new ContainerType(
+      {
+        attestedHeader: ssz.phase0.BeaconBlockHeader,
+        finalizedHeader: ssz.phase0.BeaconBlockHeader,
+        finalityBranch: new VectorCompositeType(ssz.Bytes32, FINALIZED_ROOT_DEPTH),
+        syncAggregate: ssz.altair.SyncAggregate,
       },
       {jsonCase: "eth2"}
     ),

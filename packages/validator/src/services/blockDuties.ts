@@ -2,9 +2,11 @@ import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {BLSPubkey, Epoch, Root, Slot, ssz} from "@chainsafe/lodestar-types";
 import {toHexString} from "@chainsafe/ssz";
 import {Api, routes} from "@chainsafe/lodestar-api";
-import {IClock, extendError, differenceHex, ILoggerVc} from "../util";
-import {PubkeyHex} from "../types";
-import {ValidatorStore} from "./validatorStore";
+import {extendError} from "@chainsafe/lodestar-utils";
+import {IClock, differenceHex, ILoggerVc} from "../util/index.js";
+import {ValidatorStore} from "./validatorStore.js";
+import {PubkeyHex} from "../types.js";
+import {Metrics} from "../metrics.js";
 
 /** Only retain `HISTORICAL_DUTIES_EPOCHS` duties prior to the current epoch */
 const HISTORICAL_DUTIES_EPOCHS = 2;
@@ -27,6 +29,7 @@ export class BlockDutiesService {
     private readonly api: Api,
     clock: IClock,
     private readonly validatorStore: ValidatorStore,
+    private readonly metrics: Metrics | null,
     notifyBlockProductionFn: NotifyBlockProductionFn
   ) {
     this.notifyBlockProductionFn = notifyBlockProductionFn;
@@ -35,6 +38,12 @@ export class BlockDutiesService {
     //       only then re-fetch the block duties. Make sure most clients (including Lodestar)
     //       properly emit the re-org event
     clock.runEverySlot(this.runBlockDutiesTask);
+
+    if (metrics) {
+      metrics.proposerDutiesEpochCount.addCollect(() => {
+        metrics.proposerDutiesEpochCount.set(this.proposers.size);
+      });
+    }
   }
 
   /**
@@ -133,8 +142,7 @@ export class BlockDutiesService {
     if (additionalBlockProducers.length > 0) {
       this.notifyBlockProductionFn(currentSlot, additionalBlockProducers);
       this.logger.debug("Detected new block proposer", {currentSlot});
-      // TODO: Add Metrics
-      // this.metrics.proposalChanged.inc();
+      this.metrics?.proposerDutiesReorg.inc();
     }
   }
 
@@ -162,6 +170,7 @@ export class BlockDutiesService {
     this.proposers.set(epoch, {dependentRoot, data: relevantDuties});
 
     if (prior && !ssz.Root.equals(prior.dependentRoot, dependentRoot)) {
+      this.metrics?.proposerDutiesReorg.inc();
       this.logger.warn("Proposer duties re-org. This may happen from time to time", {
         priorDependentRoot: toHexString(prior.dependentRoot),
         dependentRoot: toHexString(dependentRoot),

@@ -2,14 +2,14 @@ import fs from "node:fs";
 import path from "node:path";
 import rimraf from "rimraf";
 import {expect} from "chai";
-import {getAccountPaths} from "../../../src/cmds/account/paths";
-import {ReturnType as WalletCreateReturnType} from "../../../src/cmds/account/cmds/wallet/create";
-import {ReturnType as WalletListReturnType} from "../../../src/cmds/account/cmds/wallet/list";
-import {ReturnType as ValidatorCreateReturnType} from "../../../src/cmds/account/cmds/validator/create";
-import {ReturnType as ValidatorListReturnType} from "../../../src/cmds/account/cmds/validator/list";
-import {VOTING_KEYSTORE_FILE, getValidatorDirPath} from "../../../src/validatorDir/paths";
-import {testFilesDir} from "../../utils";
-import {getLodestarCliTestRunner} from "../commandRunner";
+import {getAccountPaths} from "../../../src/cmds/account/paths.js";
+import {ReturnType as WalletCreateReturnType} from "../../../src/cmds/account/cmds/wallet/create.js";
+import {ReturnType as WalletListReturnType} from "../../../src/cmds/account/cmds/wallet/list.js";
+import {ReturnType as ValidatorCreateReturnType} from "../../../src/cmds/account/cmds/validator/create.js";
+import {ReturnType as ValidatorListReturnType} from "../../../src/cmds/account/cmds/validator/list.js";
+import {VOTING_KEYSTORE_FILE, getValidatorDirPath} from "../../../src/validatorDir/paths.js";
+import {testFilesDir} from "../../utils.js";
+import {getLodestarCliTestRunner} from "../commandRunner.js";
 
 /* eslint-disable no-console */
 

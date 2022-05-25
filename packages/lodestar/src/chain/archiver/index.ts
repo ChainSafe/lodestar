@@ -1,14 +1,19 @@
 import {AbortSignal} from "@chainsafe/abort-controller";
 import {ILogger} from "@chainsafe/lodestar-utils";
 
+import {IBeaconDb} from "../../db/index.js";
+import {archiveBlocks} from "./archiveBlocks.js";
+import {StatesArchiver} from "./archiveStates.js";
+import {JobItemQueue} from "../../util/queue/index.js";
 import {CheckpointWithHex} from "@chainsafe/lodestar-fork-choice";
-import {IBeaconDb} from "../../db";
-import {ChainEvent, IBeaconChain} from "..";
-import {JobItemQueue} from "../../util/queue";
-import {StatesArchiver} from "./archiveStates";
-import {archiveBlocks} from "./archiveBlocks";
+import {IBeaconChain} from "../interface.js";
+import {ChainEvent} from "../emitter.js";
 
 const PROCESS_FINALIZED_CHECKPOINT_QUEUE_LEN = 256;
+
+export type ArchiverOpts = {
+  disableArchiveOnCheckpoint?: boolean;
+};
 
 /**
  * Used for running tasks that depends on some events or are executed
@@ -23,7 +28,8 @@ export class Archiver {
     private readonly db: IBeaconDb,
     private readonly chain: IBeaconChain,
     private readonly logger: ILogger,
-    signal: AbortSignal
+    signal: AbortSignal,
+    opts: ArchiverOpts
   ) {
     this.statesArchiver = new StatesArchiver(chain.checkpointStateCache, db, logger);
     this.jobQueue = new JobItemQueue<[CheckpointWithHex], void>(this.processFinalizedCheckpoint, {
@@ -31,17 +37,19 @@ export class Archiver {
       signal,
     });
 
-    this.chain.emitter.on(ChainEvent.forkChoiceFinalized, this.onFinalizedCheckpoint);
-    this.chain.emitter.on(ChainEvent.checkpoint, this.onCheckpoint);
+    if (!opts.disableArchiveOnCheckpoint) {
+      this.chain.emitter.on(ChainEvent.forkChoiceFinalized, this.onFinalizedCheckpoint);
+      this.chain.emitter.on(ChainEvent.checkpoint, this.onCheckpoint);
 
-    signal.addEventListener(
-      "abort",
-      () => {
-        this.chain.emitter.off(ChainEvent.forkChoiceFinalized, this.onFinalizedCheckpoint);
-        this.chain.emitter.off(ChainEvent.checkpoint, this.onCheckpoint);
-      },
-      {once: true}
-    );
+      signal.addEventListener(
+        "abort",
+        () => {
+          this.chain.emitter.off(ChainEvent.forkChoiceFinalized, this.onFinalizedCheckpoint);
+          this.chain.emitter.off(ChainEvent.checkpoint, this.onCheckpoint);
+        },
+        {once: true}
+      );
+    }
   }
 
   /** Archive latest finalized state */

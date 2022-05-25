@@ -9,7 +9,7 @@ import bearerAuthPlugin from "fastify-bearer-auth";
 import {toHexString} from "@chainsafe/ssz";
 export {allNamespaces} from "@chainsafe/lodestar-api";
 import {Api} from "@chainsafe/lodestar-api/keymanager";
-import {getRoutes} from "@chainsafe/lodestar-api/keymanager_server";
+import {getRoutes} from "@chainsafe/lodestar-api/keymanager/server";
 import {registerRoutesGroup, RouteConfig} from "@chainsafe/lodestar-api/server";
 import {ErrorAborted, ILogger} from "@chainsafe/lodestar-utils";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
@@ -47,9 +47,12 @@ export class KeymanagerServer {
 
   constructor(optsArg: Partial<RestApiOptions>, modules: IRestApiModules) {
     this.logger = modules.logger;
+
     // Apply opts defaults
     const opts = {
       ...restApiOptionsDefault,
+      // optsArg is a Partial type, any of its properties can be undefined. If port is set to undefined,
+      // it overrides the default port value in restApiOptionsDefault to be undefined.
       ...Object.fromEntries(Object.entries(optsArg).filter(([_, v]) => v != null)),
     };
 

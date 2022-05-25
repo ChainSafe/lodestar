@@ -1,10 +1,9 @@
-// eslint-disable-next-line import/no-extraneous-dependencies
-import * as fastify from "fastify";
 import {mapValues} from "@chainsafe/lodestar-utils";
 // eslint-disable-next-line import/no-extraneous-dependencies
+import * as fastify from "fastify";
+import {ReqGeneric, RouteGeneric, ReturnTypes, TypeJson, Resolves, RouteGroupDefinition} from "../../utils/types.js";
+import {getFastifySchema} from "../../utils/schema.js";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import {ReqGeneric, RouteGeneric, ReturnTypes, TypeJson, Resolves, RouteGroupDefinition} from "../../utils/types";
-import {getFastifySchema} from "../../utils/schema";
 
 // See /packages/api/src/routes/index.ts for reasoning
 
@@ -47,19 +46,19 @@ export function getGenericJsonServer<
   const reqSerializers = getReqSerializers(config);
   const returnTypes = getReturnTypes(config);
 
-  return mapValues(routesData, (routeDef, routeKey) => {
-    const routeSerdes = reqSerializers[routeKey];
-    const returnType = returnTypes[routeKey as keyof ReturnTypes<Api>] as TypeJson<any> | null;
+  return mapValues(routesData, (routeDef, routeId) => {
+    const routeSerdes = reqSerializers[routeId];
+    const returnType = returnTypes[routeId as keyof ReturnTypes<Api>] as TypeJson<any> | null;
 
     return {
       url: routeDef.url,
       method: routeDef.method,
-      id: routeKey as string,
+      id: routeId as string,
       schema: routeSerdes.schema && getFastifySchema(routeSerdes.schema),
 
       handler: async function handler(req: ReqGeneric): Promise<unknown | void> {
         const args: any[] = routeSerdes.parseReq(req as ReqTypes[keyof Api]);
-        const data = (await api[routeKey](...args)) as Resolves<Api[keyof Api]>;
+        const data = (await api[routeId](...args)) as Resolves<Api[keyof Api]>;
         if (returnType) {
           return returnType.toJson(data);
         } else {

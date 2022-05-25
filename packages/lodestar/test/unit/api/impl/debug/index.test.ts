@@ -1,21 +1,24 @@
-import {expect} from "chai";
-import sinon from "sinon";
-import {SinonStubbedInstance} from "sinon";
 import {config} from "@chainsafe/lodestar-config/default";
+import {config as minimalConfig} from "@chainsafe/lodestar-config/default";
+import {altair, phase0, ssz} from "@chainsafe/lodestar-types";
 import {ZERO_HASH} from "@chainsafe/lodestar-beacon-state-transition";
 import {ForkChoice, IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {toHexString} from "@chainsafe/ssz";
-import * as stateApiUtils from "../../../../../src/api/impl/beacon/state/utils";
-import {getDebugApi} from "../../../../../src/api/impl/debug";
-import {INetwork, Network} from "../../../../../src/network";
-import {IBeaconChain} from "../../../../../src/chain";
-import {generateProtoBlock} from "../../../../utils/block";
-import {StubbedBeaconDb} from "../../../../utils/stub";
-import {generateState} from "../../../../utils/state";
-import {setupApiImplTestServer} from "../index.test";
-import {SinonStubFn} from "../../../../utils/types";
+import {expect} from "chai";
+import sinon from "sinon";
+import {SinonStubbedInstance} from "sinon";
+import * as stateApiUtils from "../../../../../src/api/impl/beacon/state/utils.js";
+import {getDebugApi} from "../../../../../src/api/impl/debug/index.js";
+import {INetwork, Network} from "../../../../../src/network/index.js";
+import {IBeaconChain} from "../../../../../src/chain/index.js";
+import {generateProtoBlock} from "../../../../utils/block.js";
+import {StubbedBeaconDb} from "../../../../utils/stub/index.js";
+import {generateState} from "../../../../utils/state.js";
+import {setupApiImplTestServer} from "../index.test.js";
+import {SinonStubFn} from "../../../../utils/types.js";
 
-describe("api - debug - beacon", function () {
+// TODO remove stub
+describe.skip("api - debug - beacon", function () {
   let debugApi: ReturnType<typeof getDebugApi>;
   let chainStub: SinonStubbedInstance<IBeaconChain>;
   let forkchoiceStub: SinonStubbedInstance<IForkChoice>;
@@ -48,5 +51,17 @@ describe("api - debug - beacon", function () {
     resolveStateIdStub.resolves(generateState());
     const {data: state} = await debugApi.getState("something");
     expect(state).to.not.be.null;
+  });
+
+  it("getState - should be able to convert to json", async function () {
+    resolveStateIdStub.resolves(generateState());
+    const {data: state} = await debugApi.getState("something");
+    expect(() => ssz.phase0.BeaconState.toJson(state as phase0.BeaconState)).to.not.throw();
+  });
+
+  it("getStateV2 - should be able to convert to json", async function () {
+    resolveStateIdStub.resolves(generateState({}, minimalConfig, true));
+    const {data: state} = await debugApi.getStateV2("something");
+    expect(() => ssz.altair.BeaconState.toJson(state as altair.BeaconState)).to.not.throw();
   });
 });

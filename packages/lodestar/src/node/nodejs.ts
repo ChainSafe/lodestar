@@ -2,9 +2,9 @@
  * @module node
  */
 
+import {AbortController} from "@chainsafe/abort-controller";
 import LibP2p from "libp2p";
 import {Registry} from "prom-client";
-import {AbortController} from "@chainsafe/abort-controller";
 
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {phase0} from "@chainsafe/lodestar-types";
@@ -12,19 +12,19 @@ import {ILogger} from "@chainsafe/lodestar-utils";
 import {Api} from "@chainsafe/lodestar-api";
 import {BeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
 
-import {IBeaconDb} from "../db";
-import {INetwork, Network, getReqRespHandlers} from "../network";
-import {BeaconSync, IBeaconSync} from "../sync";
-import {BackfillSync} from "../sync/backfill";
-import {BeaconChain, IBeaconChain, initBeaconMetrics} from "../chain";
-import {createMetrics, IMetrics, HttpMetricsServer} from "../metrics";
-import {getApi, RestApi} from "../api";
-import {initializeExecutionEngine} from "../executionEngine";
-import {initializeEth1ForBlockProduction} from "../eth1";
-import {runNodeNotifier} from "./notifier";
-import {IBeaconNodeOptions} from "./options";
+import {IBeaconDb} from "../db/index.js";
+import {INetwork, Network, getReqRespHandlers} from "../network/index.js";
+import {BeaconSync, IBeaconSync} from "../sync/index.js";
+import {BackfillSync} from "../sync/backfill/index.js";
+import {BeaconChain, IBeaconChain, initBeaconMetrics} from "../chain/index.js";
+import {createMetrics, IMetrics, HttpMetricsServer} from "../metrics/index.js";
+import {getApi, RestApi} from "../api/index.js";
+import {initializeExecutionEngine} from "../executionEngine/index.js";
+import {initializeEth1ForBlockProduction} from "../eth1/index.js";
+import {IBeaconNodeOptions} from "./options.js";
+import {runNodeNotifier} from "./notifier.js";
 
-export * from "./options";
+export * from "./options.js";
 
 export interface IBeaconNodeModules {
   opts: IBeaconNodeOptions;
@@ -128,8 +128,11 @@ export class BeaconNode {
     // start db if not already started
     await db.start();
 
-    const metrics = opts.metrics.enabled ? createMetrics(opts.metrics, config, anchorState, metricsRegistries) : null;
-    if (metrics) {
+    let metrics = null;
+    if (opts.metrics.enabled) {
+      // Since the db is managed separately, db metrics must be manually added to the registry
+      db.metricsRegistry && metricsRegistries.push(db.metricsRegistry);
+      metrics = createMetrics(opts.metrics, config, anchorState, logger.child({module: "VMON"}), metricsRegistries);
       initBeaconMetrics(metrics, anchorState);
     }
 
@@ -195,7 +198,7 @@ export class BeaconNode {
     });
 
     const metricsServer = metrics
-      ? new HttpMetricsServer(opts.metrics, {metrics, logger: logger.child(opts.logger.metrics)})
+      ? new HttpMetricsServer(opts.metrics, {register: metrics.register, logger: logger.child(opts.logger.metrics)})
       : undefined;
     if (metricsServer) {
       await metricsServer.start();

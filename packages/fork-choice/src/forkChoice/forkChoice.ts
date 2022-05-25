@@ -13,14 +13,14 @@ import {
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IChainConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
 
-import {computeDeltas} from "../protoArray/computeDeltas";
-import {HEX_ZERO_HASH, IVoteTracker, IProtoBlock, ExecutionStatus} from "../protoArray/interface";
-import {ProtoArray} from "../protoArray/protoArray";
+import {computeDeltas} from "../protoArray/computeDeltas.js";
+import {HEX_ZERO_HASH, IVoteTracker, IProtoBlock, ExecutionStatus} from "../protoArray/interface.js";
+import {ProtoArray} from "../protoArray/protoArray.js";
 
-import {IForkChoiceMetrics} from "../metrics";
-import {IForkChoiceStore, CheckpointWithHex, toCheckpointWithHex} from "./store";
-import {IForkChoice, ILatestMessage, IQueuedAttestation, OnBlockPrecachedData} from "./interface";
-import {ForkChoiceError, ForkChoiceErrorCode, InvalidBlockCode, InvalidAttestationCode} from "./errors";
+import {IForkChoiceMetrics} from "../metrics.js";
+import {ForkChoiceError, ForkChoiceErrorCode, InvalidBlockCode, InvalidAttestationCode} from "./errors.js";
+import {IForkChoice, ILatestMessage, IQueuedAttestation, OnBlockPrecachedData, PowBlockHex} from "./interface.js";
+import {IForkChoiceStore, CheckpointWithHex, toCheckpointWithHex} from "./store.js";
 
 /* eslint-disable max-len */
 
@@ -182,7 +182,9 @@ export class ForkChoice implements IForkChoice {
 
       // Check if scores need to be calculated/updated
       if (!this.synced) {
+        // eslint-disable-next-line prefer-const
         timer = this.metrics?.forkChoiceFindHead.startTimer();
+        // eslint-disable-next-line prefer-const
         deltas = computeDeltas(this.protoArray.indices, this.votes, this.justifiedBalances, this.justifiedBalances);
         /**
          * The structure in line with deltas to propogate boost up the branch
@@ -328,13 +330,15 @@ export class ForkChoice implements IForkChoice {
       });
     }
 
-    if (
-      preCachedData?.isMergeTransitionBlock ||
-      (bellatrix.isBellatrixStateType(state) &&
-        bellatrix.isBellatrixBlockBodyType(block.body) &&
-        bellatrix.isMergeTransitionBlock(state, block.body))
-    )
-      assertValidTerminalPowBlock(this.config, (block as unknown) as bellatrix.BeaconBlock, preCachedData);
+    // As per specs, we should be validating here the terminal conditions of
+    // the PoW if this were a merge transition block.
+    // (https://github.com/ethereum/consensus-specs/blob/dev/specs/bellatrix/fork-choice.md#on_block)
+    //
+    // However this check has been moved to the `verifyBlockStateTransition` in
+    // `packages/lodestar/src/chain/blocks/verifyBlock.ts` as:
+    //
+    //  1. Its prudent to fail fast and not try importing a block in forkChoice.
+    //  2. Also the data to run such a validation is readily available there.
 
     let shouldUpdateJustified = false;
     const {finalizedCheckpoint} = state;
@@ -442,7 +446,7 @@ export class ForkChoice implements IForkChoice {
    * The supplied `attestation` **must** pass the `in_valid_indexed_attestation` function as it
    * will not be run here.
    */
-  onAttestation(attestation: phase0.IndexedAttestation): void {
+  onAttestation(attestation: phase0.IndexedAttestation, attDataRoot?: string): void {
     // Ignore any attestations to the zero hash.
     //
     // This is an edge case that results from the spec aliasing the zero hash to the genesis
@@ -464,7 +468,7 @@ export class ForkChoice implements IForkChoice {
       return;
     }
 
-    this.validateOnAttestation(attestation, slot, blockRootHex, targetEpoch);
+    this.validateOnAttestation(attestation, slot, blockRootHex, targetEpoch, attDataRoot);
 
     if (slot < this.fcStore.currentSlot) {
       for (const validatorIndex of attestation.attestingIndices) {
@@ -787,7 +791,8 @@ export class ForkChoice implements IForkChoice {
     indexedAttestation: phase0.IndexedAttestation,
     slot: Slot,
     blockRootHex: string,
-    targetEpoch: Epoch
+    targetEpoch: Epoch,
+    attDataRoot?: string
   ): void {
     // There is no point in processing an attestation with an empty bitfield. Reject
     // it immediately.
@@ -805,7 +810,7 @@ export class ForkChoice implements IForkChoice {
 
     const attestationData = indexedAttestation.data;
     // AttestationData is expected to internally cache its root to make this hashTreeRoot() call free
-    const attestationCacheKey = toHexString(ssz.phase0.AttestationData.hashTreeRoot(attestationData));
+    const attestationCacheKey = attDataRoot ?? toHexString(ssz.phase0.AttestationData.hashTreeRoot(attestationData));
 
     if (!this.validatedAttestationDatas.has(attestationCacheKey)) {
       this.validateAttestationData(indexedAttestation.data, slot, blockRootHex, targetEpoch, attestationCacheKey);
@@ -1003,16 +1008,28 @@ export class ForkChoice implements IForkChoice {
   }
 }
 
-function assertValidTerminalPowBlock(
+/**
+ * This function checks the terminal pow conditions on the merge block as
+ * specified in the config either via TTD or TBH. This function is part of
+ * forkChoice because if the merge block was previously imported as syncing
+ * and the EL eventually signals it catching up via validateLatestHash
+ * the specs mandates validating terminal conditions on the previously
+ * imported merge block.
+ */
+export function assertValidTerminalPowBlock(
   config: IChainConfig,
   block: bellatrix.BeaconBlock,
-  preCachedData?: OnBlockPrecachedData
+  preCachedData: {
+    executionStatus: ExecutionStatus.Syncing | ExecutionStatus.Valid;
+    powBlock?: PowBlockHex | null;
+    powBlockParent?: PowBlockHex | null;
+  }
 ): void {
   if (!ssz.Root.equals(config.TERMINAL_BLOCK_HASH, ZERO_HASH)) {
     if (computeEpochAtSlot(block.slot) < config.TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH)
       throw Error(`Terminal block activation epoch ${config.TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH} not reached`);
 
-    // powBock.blockhash is hex, so we just pick the corresponding root
+    // powBock.blockHash is hex, so we just pick the corresponding root
     if (!ssz.Root.equals(block.body.executionPayload.parentHash, config.TERMINAL_BLOCK_HASH))
       throw new Error(
         `Invalid terminal block hash, expected: ${toHexString(config.TERMINAL_BLOCK_HASH)}, actual: ${toHexString(
@@ -1026,9 +1043,9 @@ function assertValidTerminalPowBlock(
     // syncing response in notifyNewPayload call while verifying
     if (preCachedData?.executionStatus === ExecutionStatus.Syncing) return;
 
-    const {powBlock, powBlockParent} = preCachedData || {};
+    const {powBlock, powBlockParent} = preCachedData;
     if (!powBlock) throw Error("onBlock preCachedData must include powBlock");
-    if (!powBlockParent) throw Error("onBlock preCachedData must include powBlock");
+    if (!powBlockParent) throw Error("onBlock preCachedData must include powBlockParent");
 
     const isTotalDifficultyReached = powBlock.totalDifficulty >= config.TERMINAL_TOTAL_DIFFICULTY;
     const isParentTotalDifficultyValid = powBlockParent.totalDifficulty < config.TERMINAL_TOTAL_DIFFICULTY;

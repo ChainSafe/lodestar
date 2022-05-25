@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import {phase0} from "@chainsafe/lodestar-types";
-import {ZERO_HASH} from "../../src/constants";
+import {ZERO_HASH} from "../../src/constants/index.js";
 
 export function generateEmptyBlock(): phase0.BeaconBlock {
   return {

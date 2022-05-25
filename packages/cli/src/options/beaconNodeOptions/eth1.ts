@@ -1,5 +1,7 @@
+import fs from "node:fs";
 import {defaultOptions, IBeaconNodeOptions} from "@chainsafe/lodestar";
-import {ICliCommandOptions} from "../../util";
+import {ICliCommandOptions, extractJwtHexSecret} from "../../util/index.js";
+import {ExecutionEngineArgs} from "./execution.js";
 
 export interface IEth1Args {
   "eth1.enabled": boolean;
@@ -10,17 +12,30 @@ export interface IEth1Args {
   "eth1.unsafeAllowDepositDataOverwrite": boolean;
 }
 
-export function parseArgs(args: IEth1Args): IBeaconNodeOptions["eth1"] {
+export function parseArgs(args: IEth1Args & Partial<ExecutionEngineArgs>): IBeaconNodeOptions["eth1"] {
   // Support deprecated flag 'eth1.providerUrl' only if 'eth1.providerUrls' is not defined
   // Safe default to '--eth1.providerUrl' only if it's defined. Prevent returning providerUrls: [undefined]
+  let jwtSecretHex: string | undefined;
   let providerUrls = args["eth1.providerUrls"];
-  if (providerUrls !== undefined && args["eth1.providerUrl"]) {
+  if (providerUrls === undefined && args["eth1.providerUrl"]) {
     providerUrls = [args["eth1.providerUrl"]];
+  }
+
+  // If no providerUrls are explicitly provided, we should pick the execution endpoint
+  // because as per Kiln spec v2.1, execution *must* host the `eth_` methods necessary
+  // for deposit and merge trackers on engine endpoints as well protected by a
+  // jwt auth mechanism.
+  if (providerUrls === undefined && args["execution.urls"]) {
+    providerUrls = args["execution.urls"];
+    jwtSecretHex = args["jwt-secret"]
+      ? extractJwtHexSecret(fs.readFileSync(args["jwt-secret"], "utf-8").trim())
+      : undefined;
   }
 
   return {
     enabled: args["eth1.enabled"],
-    providerUrls: providerUrls,
+    providerUrls,
+    jwtSecretHex,
     depositContractDeployBlock: args["eth1.depositContractDeployBlock"],
     disableEth1DepositDataTracker: args["eth1.disableEth1DepositDataTracker"],
     unsafeAllowDepositDataOverwrite: args["eth1.unsafeAllowDepositDataOverwrite"],
@@ -43,7 +58,8 @@ export const options: ICliCommandOptions<IEth1Args> = {
   },
 
   "eth1.providerUrls": {
-    description: "Urls to Eth1 node with enabled rpc",
+    description:
+      "Urls to Eth1 node with enabled rpc. If not explicity provided and execution endpoint provided via execution.urls, it will use execution.urls. Otherwise will try connecting on the specified default(s)",
     type: "array",
     defaultDescription: defaultOptions.eth1.providerUrls.join(" "),
     group: "eth1",

@@ -1,10 +1,11 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import Libp2p from "libp2p";
-import Gossipsub from "libp2p-gossipsub";
-import {GossipsubMessage, SignaturePolicy, TopicStr} from "libp2p-gossipsub/src/types";
-import {PeerScore, PeerScoreParams} from "libp2p-gossipsub/src/score";
+import GossipsubDefault from "libp2p-gossipsub";
+// TODO remove once Gossipsub goes ESM
+const Gossipsub = ((GossipsubDefault as unknown) as {default: unknown}).default as typeof GossipsubDefault;
+import {GossipsubMessage, SignaturePolicy, TopicStr} from "libp2p-gossipsub/src/types.js";
+import {PeerScore, PeerScoreParams} from "libp2p-gossipsub/src/score/index.js";
 import PeerId from "peer-id";
-import {MetricsRegister, TopicLabel, TopicStrToLabel} from "libp2p-gossipsub/src/metrics";
 import {AbortSignal} from "@chainsafe/abort-controller";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ATTESTATION_SUBNET_COUNT, ForkName, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
@@ -12,11 +13,7 @@ import {allForks, altair, phase0} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 
-import {Map2d, Map2dArr} from "../../util/map";
-import {Eth2Context} from "../../chain";
-import {IMetrics} from "../../metrics";
-import {PeersData} from "../peers/peersData";
-import {ClientKind} from "../peers/client";
+import {IMetrics} from "../../metrics/index.js";
 import {
   GossipJobQueues,
   GossipTopic,
@@ -25,19 +22,27 @@ import {
   GossipTypeMap,
   ValidatorFnsByType,
   GossipHandlers,
-} from "./interface";
-import {getGossipSSZType, GossipTopicCache, stringifyGossipTopic} from "./topic";
-import {DataTransformSnappy, fastMsgIdFn, msgIdFn} from "./encoding";
-import {createValidatorFnsByType} from "./validation";
+} from "./interface.js";
+import {getGossipSSZType, GossipTopicCache, stringifyGossipTopic} from "./topic.js";
+import {DataTransformSnappy, fastMsgIdFn, msgIdFn} from "./encoding.js";
+import {createValidatorFnsByType} from "./validation/index.js";
+import {Map2d, Map2dArr} from "../../util/map.js";
+
 import {
   computeGossipPeerScoreParams,
   gossipScoreThresholds,
   GOSSIP_D,
   GOSSIP_D_HIGH,
   GOSSIP_D_LOW,
-} from "./scoringParameters";
+} from "./scoringParameters.js";
+import {Eth2Context} from "../../chain/index.js";
+import {MetricsRegister, TopicLabel, TopicStrToLabel} from "libp2p-gossipsub/src/metrics";
+import {PeersData} from "../peers/peersData.js";
+import {ClientKind} from "../peers/client.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
+/** As specified in https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md */
+const GOSSIPSUB_HEARTBEAT_INTERVAL = 0.7 * 1000;
 
 // TODO: Export this type
 type GossipsubEvents = {
@@ -103,6 +108,11 @@ export class Eth2Gossipsub extends Gossipsub {
       Dlo: GOSSIP_D_LOW,
       Dhi: GOSSIP_D_HIGH,
       Dlazy: 6,
+      heartbeatInterval: GOSSIPSUB_HEARTBEAT_INTERVAL,
+      fanoutTTL: 60 * 1000,
+      mcacheLength: 6,
+      mcacheGossip: 3,
+      seenTTL: 550 * GOSSIPSUB_HEARTBEAT_INTERVAL,
       scoreParams,
       scoreThresholds: gossipScoreThresholds,
       // the default in gossipsub is 3s is not enough since lodestar suffers from I/O lag
@@ -147,12 +157,13 @@ export class Eth2Gossipsub extends Gossipsub {
   /**
    * Publish a `GossipObject` on a `GossipTopic`
    */
-  async publishObject<K extends GossipType>(topic: GossipTopicMap[K], object: GossipTypeMap[K]): Promise<void> {
+  async publishObject<K extends GossipType>(topic: GossipTopicMap[K], object: GossipTypeMap[K]): Promise<number> {
     const topicStr = this.getGossipTopicString(topic);
     const sszType = getGossipSSZType(topic);
     const messageData = (sszType.serialize as (object: GossipTypeMap[GossipType]) => Uint8Array)(object);
     const sentPeers = await this.publish(topicStr, messageData);
     this.logger.verbose("Publish to topic", {topic: topicStr, sentPeers});
+    return sentPeers;
   }
 
   /**
@@ -181,17 +192,17 @@ export class Eth2Gossipsub extends Gossipsub {
     await this.publishObject<GossipType.beacon_block>({type: GossipType.beacon_block, fork}, signedBlock);
   }
 
-  async publishBeaconAggregateAndProof(aggregateAndProof: phase0.SignedAggregateAndProof): Promise<void> {
+  async publishBeaconAggregateAndProof(aggregateAndProof: phase0.SignedAggregateAndProof): Promise<number> {
     const fork = this.config.getForkName(aggregateAndProof.message.aggregate.data.slot);
-    await this.publishObject<GossipType.beacon_aggregate_and_proof>(
+    return await this.publishObject<GossipType.beacon_aggregate_and_proof>(
       {type: GossipType.beacon_aggregate_and_proof, fork},
       aggregateAndProof
     );
   }
 
-  async publishBeaconAttestation(attestation: phase0.Attestation, subnet: number): Promise<void> {
+  async publishBeaconAttestation(attestation: phase0.Attestation, subnet: number): Promise<number> {
     const fork = this.config.getForkName(attestation.data.slot);
-    await this.publishObject<GossipType.beacon_attestation>(
+    return await this.publishObject<GossipType.beacon_attestation>(
       {type: GossipType.beacon_attestation, fork, subnet},
       attestation
     );
@@ -203,7 +214,7 @@ export class Eth2Gossipsub extends Gossipsub {
   }
 
   async publishProposerSlashing(proposerSlashing: phase0.ProposerSlashing): Promise<void> {
-    const fork = this.config.getForkName(proposerSlashing.signedHeader1.message.slot);
+    const fork = this.config.getForkName(Number(proposerSlashing.signedHeader1.message.slot as bigint));
     await this.publishObject<GossipType.proposer_slashing>(
       {type: GossipType.proposer_slashing, fork},
       proposerSlashing
@@ -211,7 +222,7 @@ export class Eth2Gossipsub extends Gossipsub {
   }
 
   async publishAttesterSlashing(attesterSlashing: phase0.AttesterSlashing): Promise<void> {
-    const fork = this.config.getForkName(attesterSlashing.attestation1.data.slot);
+    const fork = this.config.getForkName(Number(attesterSlashing.attestation1.data.slot as bigint));
     await this.publishObject<GossipType.attester_slashing>(
       {type: GossipType.attester_slashing, fork},
       attesterSlashing

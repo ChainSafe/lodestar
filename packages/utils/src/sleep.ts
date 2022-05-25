@@ -1,11 +1,15 @@
 import {AbortSignal} from "@chainsafe/abort-controller";
-import {ErrorAborted} from "./errors";
+import {ErrorAborted} from "./errors.js";
 
 /**
  * Abortable sleep function. Cleans everything on all cases preventing leaks
  * On abort throws ErrorAborted
  */
 export async function sleep(ms: number, signal?: AbortSignal): Promise<void> {
+  if (ms < 0) {
+    return;
+  }
+
   return new Promise((resolve, reject) => {
     if (signal && signal.aborted) return reject(new ErrorAborted());
 

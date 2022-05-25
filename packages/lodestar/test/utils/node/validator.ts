@@ -1,6 +1,6 @@
+import tmp, {DirResult, FileResult} from "tmp";
 import fs from "node:fs";
 import path from "node:path";
-import tmp, {DirResult, FileResult} from "tmp";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import {interopSecretKey} from "@chainsafe/lodestar-beacon-state-transition";
 import {
@@ -11,13 +11,13 @@ import {
   ISlashingProtection,
   SignerLocal,
 } from "@chainsafe/lodestar-validator";
-import {SecretKey} from "@chainsafe/bls";
-import {getLocalSecretKeys} from "@chainsafe/lodestar-cli/src/cmds/validator/keys";
-import {IValidatorCliArgs} from "@chainsafe/lodestar-cli/src/cmds/validator/options";
-import {IGlobalArgs} from "@chainsafe/lodestar-cli/src/options";
+import {BeaconNode} from "../../../src/node/index.js";
+import {testLogger, TestLoggerOpts} from "../logger.js";
+import type {SecretKey} from "@chainsafe/bls/types";
+import {getLocalSecretKeys} from "../../../../cli/src/cmds/validator/keys.js";
+import {IValidatorCliArgs} from "../../../../cli/src/cmds/validator/options.js";
+import {IGlobalArgs} from "../../../../cli/src/options/index.js";
 import {KEY_IMPORTED_PREFIX} from "@chainsafe/lodestar-keymanager-server";
-import {testLogger, TestLoggerOpts} from "../logger";
-import {BeaconNode} from "../../../src/node";
 
 export async function getAndInitValidatorsWithKeystore({
   node,
@@ -115,6 +115,7 @@ export async function getAndInitDevValidators({
   useRestApi,
   testLoggerOpts,
   externalSignerUrl,
+  defaultFeeRecipient,
 }: {
   node: BeaconNode;
   validatorsPerClient: number;
@@ -123,12 +124,13 @@ export async function getAndInitDevValidators({
   useRestApi?: boolean;
   testLoggerOpts?: TestLoggerOpts;
   externalSignerUrl?: string;
+  defaultFeeRecipient?: string;
 }): Promise<{validators: Validator[]; secretKeys: SecretKey[]}> {
   const validators: Promise<Validator>[] = [];
   const secretKeys: SecretKey[] = [];
 
-  for (let i = 0; i < validatorClientCount; i++) {
-    const startIndexVc = startIndex + i * validatorClientCount;
+  for (let clientIndex = 0; clientIndex < validatorClientCount; clientIndex++) {
+    const startIndexVc = startIndex + clientIndex * validatorsPerClient;
     const endIndex = startIndexVc + validatorsPerClient - 1;
     const logger = testLogger(`Vali ${startIndexVc}-${endIndex}`, testLoggerOpts);
     const tmpDir = tmp.dirSync({unsafeCleanup: true});
@@ -163,6 +165,7 @@ export async function getAndInitDevValidators({
         slashingProtection,
         logger,
         signers,
+        defaultFeeRecipient,
       })
     );
   }

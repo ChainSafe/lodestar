@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {assert} from "../../src";
+import {assert} from "../../src/index.js";
 
 describe("assert", () => {
   describe("true", () => {

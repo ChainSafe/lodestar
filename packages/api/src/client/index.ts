@@ -1,20 +1,28 @@
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import {Api} from "../interface";
-import * as beacon from "./beacon";
-import * as configApi from "./config";
-import * as debug from "./debug";
-import * as events from "./events";
-import * as lightclient from "./lightclient";
-import * as lodestar from "./lodestar";
-import * as node from "./node";
-import * as validator from "./validator";
-import {IHttpClient, HttpClient, HttpClientOptions, HttpError} from "./utils";
+import {Api} from "../interface.js";
+import {IHttpClient, HttpClient, HttpClientOptions, HttpClientModules, HttpError} from "./utils/index.js";
 export {HttpClient, HttpClientOptions, HttpError};
+
+import * as beacon from "./beacon.js";
+import * as configApi from "./config.js";
+import * as debug from "./debug.js";
+import * as events from "./events.js";
+import * as lightclient from "./lightclient.js";
+import * as lodestar from "./lodestar.js";
+import * as node from "./node.js";
+import * as validator from "./validator.js";
+
+type ClientModules = HttpClientModules & {
+  config: IChainForkConfig;
+  httpClient?: IHttpClient;
+};
+
 /**
  * REST HTTP client for all routes
  */
-export function getClient(config: IChainForkConfig, opts: HttpClientOptions, httpClient?: IHttpClient): Api {
-  if (!httpClient) httpClient = new HttpClient(opts);
+export function getClient(opts: HttpClientOptions, modules: ClientModules): Api {
+  const {config} = modules;
+  const httpClient = modules.httpClient ?? new HttpClient(opts, modules);
 
   return {
     beacon: beacon.getClient(config, httpClient),

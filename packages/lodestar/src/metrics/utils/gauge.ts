@@ -1,5 +1,5 @@
 import {Gauge, GaugeConfiguration} from "prom-client";
-import {IGauge} from "../interface";
+import {IGauge} from "../interface.js";
 
 type CollectFn<T extends string> = (metric: IGauge<T>) => void;
 type Labels<T extends string> = Partial<Record<T, string | number>>;

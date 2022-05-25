@@ -3,9 +3,9 @@ import {
   assertSequentialBlocksInRange,
   BlocksByRangeError,
   BlocksByRangeErrorCode,
-} from "../../../../../src/network/reqresp/utils";
-import {generateEmptySignedBlock} from "../../../../utils/block";
-import {expectThrowsLodestarError} from "../../../../utils/errors";
+} from "../../../../../src/network/reqresp/utils/index.js";
+import {generateEmptySignedBlock} from "../../../../utils/block.js";
+import {expectThrowsLodestarError} from "../../../../utils/errors.js";
 
 describe("network / reqResp / utils / assertSequentialBlocksInRange", () => {
   const testCases: {

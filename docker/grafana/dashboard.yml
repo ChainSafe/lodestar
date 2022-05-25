@@ -1,0 +1,10 @@
+apiVersion: 1
+
+providers:
+  - name: lodestar_github
+    type: file
+    updateIntervalSeconds: 60
+    allowUiUpdates: true
+    options:
+      path: $DASHBOARDS_DIR
+      foldersFromFilesStructure: true

@@ -1,11 +1,11 @@
-export * as beacon from "./beacon";
-export * as config from "./config";
-export * as debug from "./debug";
-export * as events from "./events";
-export * as lightclient from "./lightclient";
-export * as lodestar from "./lodestar";
-export * as node from "./node";
-export * as validator from "./validator";
+export * as beacon from "./beacon/index.js";
+export * as config from "./config.js";
+export * as debug from "./debug.js";
+export * as events from "./events.js";
+export * as lightclient from "./lightclient.js";
+export * as lodestar from "./lodestar.js";
+export * as node from "./node.js";
+export * as validator from "./validator.js";
 
 // Reasoning of the API definitions
 // ================================

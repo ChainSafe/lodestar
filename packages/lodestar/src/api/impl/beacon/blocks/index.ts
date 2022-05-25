@@ -1,15 +1,13 @@
 import {routes} from "@chainsafe/lodestar-api";
-// eslint-disable-next-line no-restricted-imports
-import {Api as IBeaconBlocksApi} from "@chainsafe/lodestar-api/lib/routes/beacon/block";
 import {computeTimeAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {SLOTS_PER_HISTORICAL_ROOT} from "@chainsafe/lodestar-params";
 import {sleep} from "@chainsafe/lodestar-utils";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {BlockError, BlockErrorCode} from "../../../../chain/errors";
-import {OpSource} from "../../../../metrics/validatorMonitor";
-import {NetworkEvent} from "../../../../network";
-import {ApiModules} from "../../types";
-import {resolveBlockId, toBeaconHeaderResponse} from "./utils";
+import {BlockError, BlockErrorCode} from "../../../../chain/errors/index.js";
+import {OpSource} from "../../../../metrics/validatorMonitor.js";
+import {NetworkEvent} from "../../../../network/index.js";
+import {ApiModules} from "../../types.js";
+import {resolveBlockId, toBeaconHeaderResponse} from "./utils.js";
 
 /**
  * Validator clock may be advanced from beacon's clock. If the validator requests a resource in a
@@ -23,7 +21,7 @@ export function getBeaconBlockApi({
   metrics,
   network,
   db,
-}: Pick<ApiModules, "chain" | "config" | "metrics" | "network" | "db">): IBeaconBlocksApi {
+}: Pick<ApiModules, "chain" | "config" | "metrics" | "network" | "db">): routes.beacon.block.Api {
   return {
     async getBlockHeaders(filters) {
       // TODO - SLOW CODE: This code seems like it could be improved

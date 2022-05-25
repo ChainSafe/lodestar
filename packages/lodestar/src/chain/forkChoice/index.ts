@@ -12,11 +12,11 @@ import {
   bellatrix,
 } from "@chainsafe/lodestar-beacon-state-transition";
 
-import {computeAnchorCheckpoint} from "../initState";
-import {ChainEventEmitter} from "../emitter";
-import {IMetrics} from "../../metrics";
-import {ChainEvent} from "../emitter";
-import {GENESIS_SLOT} from "../../constants";
+import {computeAnchorCheckpoint} from "../initState.js";
+import {ChainEventEmitter} from "../emitter.js";
+import {IMetrics} from "../../metrics/index.js";
+import {ChainEvent} from "../emitter.js";
+import {GENESIS_SLOT} from "../../constants/index.js";
 
 export type ForkChoiceOpts = {
   terminalTotalDifficulty?: bigint;

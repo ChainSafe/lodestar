@@ -1,11 +1,12 @@
 import {AbortSignal} from "@chainsafe/abort-controller";
 import {Epoch, Slot} from "@chainsafe/lodestar-types";
-import {IClock} from "../../src/util";
+import {IClock} from "../../src/util/index.js";
 
 type RunEveryFn = (slot: Slot, signal: AbortSignal) => Promise<void>;
 
 export class ClockMock implements IClock {
   readonly genesisTime = 0;
+  readonly secondsPerSlot = 12;
 
   private readonly everySlot: RunEveryFn[] = [];
   private readonly everyEpoch: RunEveryFn[] = [];
@@ -14,7 +15,8 @@ export class ClockMock implements IClock {
   start = (): void => {};
   runEverySlot = (fn: RunEveryFn): number => this.everySlot.push(fn);
   runEveryEpoch = (fn: RunEveryFn): number => this.everyEpoch.push(fn);
-  msToSlotFraction = (): number => 0;
+  msToSlot = (): number => 0;
+  secFromSlot = (): number => 0;
 
   async tickSlotFns(slot: Slot, signal: AbortSignal): Promise<void> {
     for (const fn of this.everySlot) await fn(slot, signal);

@@ -1,9 +1,9 @@
 import {CachedBeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {SYNC_COMMITTEE_SUBNET_SIZE, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 import {altair} from "@chainsafe/lodestar-types";
-import {GossipAction, SyncCommitteeError, SyncCommitteeErrorCode} from "../errors";
-import {IBeaconChain} from "../interface";
-import {getSyncCommitteeSignatureSet} from "./signatureSets";
+import {GossipAction, SyncCommitteeError, SyncCommitteeErrorCode} from "../errors/index.js";
+import {IBeaconChain} from "../interface.js";
+import {getSyncCommitteeSignatureSet} from "./signatureSets/index.js";
 
 type IndexInSubcommittee = number;
 
@@ -32,7 +32,7 @@ export async function validateGossipSyncCommittee(
   // by sync_committee_signature.validator_index.
   if (chain.seenSyncCommitteeMessages.isKnown(slot, subnet, validatorIndex)) {
     throw new SyncCommitteeError(GossipAction.IGNORE, {
-      code: SyncCommitteeErrorCode.SYNC_COMMITTEE_ALREADY_KNOWN,
+      code: SyncCommitteeErrorCode.SYNC_COMMITTEE_AGGREGATOR_ALREADY_KNOWN,
     });
   }
 

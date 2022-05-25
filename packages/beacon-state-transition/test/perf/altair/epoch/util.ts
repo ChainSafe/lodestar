@@ -1,4 +1,4 @@
-import {CachedBeaconStateAltair} from "../../../../src";
+import {CachedBeaconStateAltair} from "../../../../src/index.js";
 
 export function mutateInactivityScores(state: CachedBeaconStateAltair, factorWithPositive: number): void {
   const vc = state.inactivityScores.length;

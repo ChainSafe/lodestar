@@ -8,10 +8,12 @@ import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {BLSSignature, Epoch, Root, Slot, SyncPeriod, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {toHexString} from "@chainsafe/ssz";
 import {Api, routes} from "@chainsafe/lodestar-api";
-import {IClock, extendError, ILoggerVc} from "../util";
-import {PubkeyHex} from "../types";
-import {IndicesService} from "./indices";
-import {ValidatorStore} from "./validatorStore";
+import {extendError} from "@chainsafe/lodestar-utils";
+import {IndicesService} from "./indices.js";
+import {IClock, ILoggerVc} from "../util/index.js";
+import {ValidatorStore} from "./validatorStore.js";
+import {PubkeyHex} from "../types.js";
+import {Metrics} from "../metrics.js";
 
 /** Only retain `HISTORICAL_DUTIES_PERIODS` duties prior to the current periods. */
 const HISTORICAL_DUTIES_PERIODS = 2;
@@ -59,11 +61,23 @@ export class SyncCommitteeDutiesService {
     private readonly api: Api,
     clock: IClock,
     private readonly validatorStore: ValidatorStore,
-    private readonly indicesService: IndicesService
+    private readonly indicesService: IndicesService,
+    private readonly metrics: Metrics | null
   ) {
     // Running this task every epoch is safe since a re-org of many epochs is very unlikely
     // TODO: If the re-org event is reliable consider re-running then
     clock.runEveryEpoch(this.runDutiesTasks);
+
+    if (metrics) {
+      metrics.syncCommitteeDutiesCount.addCollect(() => {
+        let duties = 0;
+        for (const dutiesByIndex of this.dutiesByIndexByPeriod.values()) {
+          duties += dutiesByIndex.size;
+        }
+        metrics.syncCommitteeDutiesCount.set(duties);
+        metrics.syncCommitteeDutiesEpochCount.set(this.dutiesByIndexByPeriod.size);
+      });
+    }
   }
 
   /**
@@ -224,6 +238,8 @@ export class SyncCommitteeDutiesService {
       //
       // - There were no known duties for this period.
       // - The dependent root has changed, signalling a re-org.
+      //
+      // if (reorg) this.metrics?.syncCommitteeDutiesReorg.inc()
 
       // Using `alreadyWarnedReorg` avoids excessive logs.
       dutiesByIndex.set(validatorIndex, {dependentRoot, duty});

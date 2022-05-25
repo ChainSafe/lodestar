@@ -1,2 +1,2 @@
-export * from "./nodejs";
-export * as nodeUtils from "./utils/state";
+export * from "./nodejs.js";
+export * as nodeUtils from "./utils/state.js";

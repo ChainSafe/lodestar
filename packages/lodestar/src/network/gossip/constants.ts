@@ -2,7 +2,7 @@
  * @module network/gossip
  */
 
-import {GossipEncoding} from "./interface";
+import {GossipEncoding} from "./interface.js";
 
 export const GOSSIP_MSGID_LENGTH = 20;
 

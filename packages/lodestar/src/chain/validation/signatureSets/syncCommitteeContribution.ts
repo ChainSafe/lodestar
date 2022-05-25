@@ -1,4 +1,4 @@
-import {PublicKey} from "@chainsafe/bls";
+import type {PublicKey} from "@chainsafe/bls/types";
 import {altair, ssz} from "@chainsafe/lodestar-types";
 import {DOMAIN_SYNC_COMMITTEE} from "@chainsafe/lodestar-params";
 import {

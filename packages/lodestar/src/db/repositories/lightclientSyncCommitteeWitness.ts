@@ -2,7 +2,7 @@ import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {Bucket, IDatabaseController, IDbMetrics, Repository} from "@chainsafe/lodestar-db";
 import {ssz} from "@chainsafe/lodestar-types";
 import {ContainerType, VectorCompositeType} from "@chainsafe/ssz";
-import {SyncCommitteeWitness} from "../../chain/lightClient/types";
+import {SyncCommitteeWitness} from "../../chain/lightClient/types.js";
 
 /**
  * Historical sync committees witness by block root

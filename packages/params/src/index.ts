@@ -1,12 +1,12 @@
-import {PresetName} from "./presetName";
-import {preset as mainnet} from "./presets/mainnet";
-import {preset as minimal} from "./presets/minimal";
-import {presetStatus} from "./presetStatus";
-import {userSelectedPreset} from "./setPreset";
+import {PresetName} from "./presetName.js";
+import {preset as mainnet} from "./presets/mainnet/index.js";
+import {preset as minimal} from "./presets/minimal/index.js";
+import {presetStatus} from "./presetStatus.js";
+import {userSelectedPreset} from "./setPreset.js";
 
-export * from "./interface";
-export {ForkName} from "./forkName";
-export {presetToJson} from "./json";
+export * from "./interface/index.js";
+export {ForkName} from "./forkName.js";
+export {presetToJson} from "./json.js";
 export {PresetName};
 
 const presets = {

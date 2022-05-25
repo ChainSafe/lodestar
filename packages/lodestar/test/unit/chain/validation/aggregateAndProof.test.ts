@@ -1,15 +1,17 @@
+import {toHexString} from "@chainsafe/ssz";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import {phase0} from "@chainsafe/lodestar-types";
-import {generateTestCachedBeaconStateOnlyValidators} from "@chainsafe/lodestar-beacon-state-transition/test/perf/util";
-import {IBeaconChain} from "../../../../src/chain";
-import {AttestationErrorCode} from "../../../../src/chain/errors";
-import {validateGossipAggregateAndProof} from "../../../../src/chain/validation";
-import {expectRejectedWithLodestarError} from "../../../utils/errors";
-import {memoOnce} from "../../../utils/cache";
+import {phase0, ssz} from "@chainsafe/lodestar-types";
+import {IBeaconChain} from "../../../../src/chain/index.js";
+import {AttestationErrorCode} from "../../../../src/chain/errors/index.js";
+import {validateGossipAggregateAndProof} from "../../../../src/chain/validation/index.js";
+import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
+// eslint-disable-next-line import/no-relative-packages
+import {generateTestCachedBeaconStateOnlyValidators} from "../../../../../beacon-state-transition/test/perf/util.js";
+import {memoOnce} from "../../../utils/cache.js";
 import {
   getAggregateAndProofValidData,
   AggregateAndProofValidDataOpts,
-} from "../../../utils/validationData/aggregateAndProof";
+} from "../../../utils/validationData/aggregateAndProof.js";
 
 describe("chain / validation / aggregateAndProof", () => {
   const vc = 64;
@@ -64,6 +66,21 @@ describe("chain / validation / aggregateAndProof", () => {
     await expectError(chain, signedAggregateAndProof, AttestationErrorCode.FUTURE_SLOT);
   });
 
+  it("ATTESTING_INDICES_ALREADY_KNOWN", async () => {
+    const {chain, signedAggregateAndProof} = getValidData();
+    const {aggregationBits} = signedAggregateAndProof.message.aggregate;
+    const attData = signedAggregateAndProof.message.aggregate.data;
+    // Register attester as already seen
+    chain.seenAggregatedAttestations.add(
+      attData.target.epoch,
+      toHexString(ssz.phase0.AttestationData.hashTreeRoot(attData)),
+      {aggregationBits, trueBitCount: aggregationBits.getTrueBitIndexes().length},
+      false
+    );
+
+    await expectError(chain, signedAggregateAndProof, AttestationErrorCode.ATTESTERS_ALREADY_KNOWN);
+  });
+
   it("AGGREGATOR_ALREADY_KNOWN", async () => {
     const {chain, signedAggregateAndProof} = getValidData();
     // Register attester as already seen
@@ -80,7 +97,7 @@ describe("chain / validation / aggregateAndProof", () => {
     // Set beaconBlockRoot to a root not known by the fork choice
     signedAggregateAndProof.message.aggregate.data.beaconBlockRoot = UNKNOWN_ROOT;
 
-    await expectError(chain, signedAggregateAndProof, AttestationErrorCode.UNKNOWN_BEACON_BLOCK_ROOT);
+    await expectError(chain, signedAggregateAndProof, AttestationErrorCode.UNKNOWN_OR_PREFINALIZED_BEACON_BLOCK_ROOT);
   });
 
   it("INVALID_TARGET_ROOT", async () => {

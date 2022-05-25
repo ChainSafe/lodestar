@@ -38,10 +38,6 @@ export function toExpandedInputType(inputType: InputType | ExpandedInputType): E
   };
 }
 
-function isDirectory(path: string): boolean {
-  return fs.lstatSync(path).isDirectory();
-}
-
 export interface ISpecTestOptions<TestCase extends {meta?: any}, Result> {
   /**
    * If directory contains both ssz or yaml file version,
@@ -83,10 +79,6 @@ export interface ISpecTestOptions<TestCase extends {meta?: any}, Result> {
   timeout?: number;
 }
 
-export interface ITestCaseMeta {
-  directoryName: string;
-}
-
 const defaultOptions: ISpecTestOptions<any, any> = {
   inputTypes: {},
   inputProcessing: {},
@@ -122,6 +114,10 @@ export function describeDirectorySpecTest<TestCase extends {meta?: any}, Result>
       generateTestCase(testCaseDirectory, index, testFunction, options);
     }
   });
+}
+
+export function loadYamlFile(path: string): Record<string, unknown> {
+  return loadYaml(fs.readFileSync(path, "utf8"));
 }
 
 function generateTestCase<TestCase extends {meta?: any}, Result>(
@@ -254,6 +250,6 @@ function deserializeInputFile<TestCase extends {meta?: any}, Result>(
   }
 }
 
-export function loadYamlFile(path: string): Record<string, unknown> {
-  return loadYaml(fs.readFileSync(path, "utf8"));
+function isDirectory(path: string): boolean {
+  return fs.lstatSync(path).isDirectory();
 }

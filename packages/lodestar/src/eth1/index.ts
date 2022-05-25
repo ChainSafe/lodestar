@@ -7,11 +7,11 @@ import {
 import {Root} from "@chainsafe/lodestar-types";
 import {bellatrix} from "@chainsafe/lodestar-beacon-state-transition";
 import {fromHexString} from "@chainsafe/ssz";
-import {IEth1ForBlockProduction, Eth1DataAndDeposits, IEth1Provider, PowMergeBlock} from "./interface";
-import {Eth1DepositDataTracker, Eth1DepositDataTrackerModules} from "./eth1DepositDataTracker";
-import {Eth1MergeBlockTracker, Eth1MergeBlockTrackerModules} from "./eth1MergeBlockTracker";
-import {Eth1Options} from "./options";
-import {Eth1Provider} from "./provider/eth1Provider";
+import {IEth1ForBlockProduction, Eth1DataAndDeposits, IEth1Provider, PowMergeBlock} from "./interface.js";
+import {Eth1DepositDataTracker, Eth1DepositDataTrackerModules} from "./eth1DepositDataTracker.js";
+import {Eth1MergeBlockTracker, Eth1MergeBlockTrackerModules} from "./eth1MergeBlockTracker.js";
+import {Eth1Options} from "./options.js";
+import {Eth1Provider} from "./provider/eth1Provider.js";
 export {IEth1ForBlockProduction, IEth1Provider, Eth1Provider};
 
 // This module encapsulates all consumer functionality to the execution node (formerly eth1). The execution client
@@ -92,7 +92,7 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
 
   getTerminalPowBlock(): Root | null {
     const block = this.eth1MergeBlockTracker.getTerminalPowBlock();
-    return block && fromHexString(block.blockhash);
+    return block && fromHexString(block.blockHash);
   }
 
   mergeCompleted(): void {

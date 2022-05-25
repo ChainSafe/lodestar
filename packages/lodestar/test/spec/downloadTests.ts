@@ -1,5 +1,5 @@
 import {downloadTests} from "@chainsafe/lodestar-spec-test-util";
-import {SPEC_TEST_LOCATION, SPEC_TEST_VERSION, SPEC_TEST_REPO_URL} from "./specTestVersioning";
+import {SPEC_TEST_LOCATION, SPEC_TEST_VERSION, SPEC_TEST_REPO_URL} from "./specTestVersioning.js";
 
 /* eslint-disable no-console */
 

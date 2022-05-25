@@ -1,12 +1,12 @@
 import {phase0} from "@chainsafe/lodestar-types";
 import {MAX_DEPOSITS} from "@chainsafe/lodestar-params";
 
-import {CachedBeaconStatePhase0} from "../../types";
-import {processProposerSlashing} from "./processProposerSlashing";
-import {processAttesterSlashing} from "./processAttesterSlashing";
-import {processAttestation} from "./processAttestation";
-import {processDeposit} from "./processDeposit";
-import {processVoluntaryExit} from "./processVoluntaryExit";
+import {CachedBeaconStatePhase0} from "../../types.js";
+import {processProposerSlashing} from "./processProposerSlashing.js";
+import {processAttesterSlashing} from "./processAttesterSlashing.js";
+import {processAttestation} from "./processAttestation.js";
+import {processDeposit} from "./processDeposit.js";
+import {processVoluntaryExit} from "./processVoluntaryExit.js";
 
 export function processOperations(
   state: CachedBeaconStatePhase0,

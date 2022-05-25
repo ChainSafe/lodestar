@@ -1,4 +1,5 @@
-import {ValidatorIndex} from "@chainsafe/lodestar-types";
+import {toHexString} from "@chainsafe/ssz";
+import {ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {
   phase0,
   allForks,
@@ -6,10 +7,10 @@ import {
   isAggregatorFromCommitteeLength,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconChain} from "..";
-import {AttestationError, AttestationErrorCode, GossipAction} from "../errors";
-import {RegenCaller} from "../regen";
-import {getCommitteeIndices, verifyHeadBlockAndTargetRoot, verifyPropagationSlotRange} from "./attestation";
-import {getSelectionProofSignatureSet, getAggregateAndProofSignatureSet} from "./signatureSets";
+import {getSelectionProofSignatureSet, getAggregateAndProofSignatureSet} from "./signatureSets/index.js";
+import {AttestationError, AttestationErrorCode, GossipAction} from "../errors/index.js";
+import {getCommitteeIndices, verifyHeadBlockAndTargetRoot, verifyPropagationSlotRange} from "./attestation.js";
+import {RegenCaller} from "../regen/index.js";
 
 export async function validateGossipAggregateAndProof(
   chain: IBeaconChain,
@@ -24,7 +25,9 @@ export async function validateGossipAggregateAndProof(
 
   const aggregateAndProof = signedAggregateAndProof.message;
   const aggregate = aggregateAndProof.aggregate;
+  const {aggregationBits} = aggregate;
   const attData = aggregate.data;
+  const attDataRoot = toHexString(ssz.phase0.AttestationData.hashTreeRoot(attData));
   const attSlot = attData.slot;
   const attEpoch = computeEpochAtSlot(attSlot);
   const attTarget = attData.target;
@@ -51,11 +54,21 @@ export async function validateGossipAggregateAndProof(
     });
   }
 
+  // _[IGNORE]_ A valid aggregate attestation defined by `hash_tree_root(aggregate.data)` whose `aggregation_bits`
+  // is a non-strict superset has _not_ already been seen.
+  if (chain.seenAggregatedAttestations.isKnown(targetEpoch, attDataRoot, aggregationBits)) {
+    throw new AttestationError(GossipAction.IGNORE, {
+      code: AttestationErrorCode.ATTESTERS_ALREADY_KNOWN,
+      targetEpoch,
+      aggregateRoot: attDataRoot,
+    });
+  }
+
   // [IGNORE] The block being voted for (attestation.data.beacon_block_root) has been seen (via both gossip
   // and non-gossip sources) (a client MAY queue attestations for processing once block is retrieved).
   const attHeadBlock = verifyHeadBlockAndTargetRoot(chain, attData.beaconBlockRoot, attTarget.root, attEpoch);
 
-  // [REJECT] The current finalized_checkpoint is an ancestor of the block defined by aggregate.data.beacon_block_root
+  // [IGNORE] The current finalized_checkpoint is an ancestor of the block defined by aggregate.data.beacon_block_root
   // -- i.e. get_ancestor(store, aggregate.data.beacon_block_root, compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)) == store.finalized_checkpoint.root
   // > Altready check in `chain.forkChoice.hasBlock(attestation.data.beaconBlockRoot)`
 
@@ -122,6 +135,12 @@ export async function validateGossipAggregateAndProof(
   }
 
   chain.seenAggregators.add(targetEpoch, aggregatorIndex);
+  chain.seenAggregatedAttestations.add(
+    targetEpoch,
+    attDataRoot,
+    {aggregationBits, trueBitCount: attestingIndices.length},
+    false
+  );
 
   return {indexedAttestation, committeeIndices};
 }

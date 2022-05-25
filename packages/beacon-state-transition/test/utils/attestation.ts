@@ -10,17 +10,21 @@ import {BitArray} from "@chainsafe/ssz";
 
 export function generateAttestationData(sourceEpoch: Epoch, targetEpoch: Epoch): phase0.AttestationData {
   return {
-    slot: 0,
+    slot: 1,
     index: 0,
     beaconBlockRoot: Buffer.alloc(32),
-    source: {
-      epoch: sourceEpoch,
-      root: Buffer.alloc(32),
-    },
-    target: {
-      epoch: targetEpoch,
-      root: Buffer.alloc(32),
-    },
+    source: {epoch: sourceEpoch, root: Buffer.alloc(32)},
+    target: {epoch: targetEpoch, root: Buffer.alloc(32)},
+  };
+}
+
+export function generateAttestationDataBigint(sourceEpoch: Epoch, targetEpoch: Epoch): phase0.AttestationDataBigint {
+  return {
+    slot: BigInt(0),
+    index: BigInt(0),
+    beaconBlockRoot: Buffer.alloc(32),
+    source: {epoch: BigInt(sourceEpoch), root: Buffer.alloc(32)},
+    target: {epoch: BigInt(targetEpoch), root: Buffer.alloc(32)},
   };
 }
 
@@ -31,14 +35,8 @@ export function generateEmptyAttestation(): phase0.Attestation {
       slot: 1,
       index: 0,
       beaconBlockRoot: Buffer.alloc(32),
-      source: {
-        epoch: 0,
-        root: Buffer.alloc(32),
-      },
-      target: {
-        epoch: 0,
-        root: Buffer.alloc(32),
-      },
+      source: {epoch: 0, root: Buffer.alloc(32)},
+      target: {epoch: 0, root: Buffer.alloc(32)},
     },
     signature: Buffer.alloc(96),
   };

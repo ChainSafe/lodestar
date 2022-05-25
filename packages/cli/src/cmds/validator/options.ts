@@ -1,9 +1,18 @@
-import {ICliCommandOptions, ILogArgs} from "../../util";
-import {accountValidatorOptions, IAccountValidatorArgs} from "../account/cmds/validator/options";
-import {logOptions, beaconPathsOptions} from "../beacon/options";
-import {IBeaconPaths} from "../beacon/paths";
-import {KeymanagerArgs, keymanagerOptions} from "../../options/keymanagerOptions";
-import {defaultValidatorPaths} from "./paths";
+import {defaultOptions} from "@chainsafe/lodestar";
+import {ICliCommandOptions, ILogArgs} from "../../util/index.js";
+import {defaultValidatorPaths} from "./paths.js";
+import {accountValidatorOptions, IAccountValidatorArgs} from "../account/cmds/validator/options.js";
+import {logOptions, beaconPathsOptions} from "../beacon/options.js";
+import {IBeaconPaths} from "../beacon/paths.js";
+import {KeymanagerArgs, keymanagerOptions} from "../../options/keymanagerOptions.js";
+
+export const validatorMetricsDefaultOptions = {
+  enabled: false,
+  port: 5064,
+  address: "127.0.0.1",
+};
+
+export const defaultDefaultFeeRecipient = defaultOptions.chain.defaultFeeRecipient;
 
 export type IValidatorCliArgs = IAccountValidatorArgs &
   ILogArgs & {
@@ -12,6 +21,10 @@ export type IValidatorCliArgs = IAccountValidatorArgs &
     server: string;
     force: boolean;
     graffiti: string;
+    afterBlockDelaySlotFraction?: number;
+    defaultFeeRecipient?: string;
+    strictFeeRecipientCheck?: boolean;
+
     importKeystoresPath?: string[];
     importKeystoresPassword?: string;
     externalSignerUrl?: string;
@@ -20,6 +33,10 @@ export type IValidatorCliArgs = IAccountValidatorArgs &
     interopIndexes?: string;
     fromMnemonic?: string;
     mnemonicIndexes?: string;
+
+    "metrics.enabled"?: boolean;
+    "metrics.port"?: number;
+    "metrics.address"?: string;
   } & KeymanagerArgs;
 
 export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
@@ -49,6 +66,24 @@ export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
     description: "Specify your custom graffiti to be included in blocks (plain UTF8 text, 32 characters max)",
     // Don't use a default here since it should be computed only if necessary by getDefaultGraffiti()
     type: "string",
+  },
+
+  afterBlockDelaySlotFraction: {
+    hidden: true,
+    description: "Delay before publishing attestations if block comes early, as a fraction of SECONDS_PER_SLOT",
+    type: "number",
+  },
+
+  defaultFeeRecipient: {
+    description:
+      "Specify fee recipient default for collecting the EL block fees and rewards (a hex string representing 20 bytes address: ^0x[a-fA-F0-9]{40}$). It would be possible (WIP) to override this per validator key using config or keymanager API.",
+    defaultDescription: defaultDefaultFeeRecipient,
+    type: "string",
+  },
+
+  strictFeeRecipientCheck: {
+    description: "Enable strict checking of the validator's feeRecipient with the one returned by engine",
+    type: "boolean",
   },
 
   importKeystoresPath: {
@@ -87,6 +122,29 @@ export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
     description: "Fetch then list of pubkeys to validate from an external signer",
     type: "boolean",
     group: "External signer",
+  },
+
+  // Metrics
+
+  "metrics.enabled": {
+    type: "boolean",
+    description: "Enable the Prometheus metrics HTTP server",
+    defaultDescription: String(validatorMetricsDefaultOptions.enabled),
+    group: "metrics",
+  },
+
+  "metrics.port": {
+    type: "number",
+    description: "Listen TCP port for the Prometheus metrics HTTP server",
+    defaultDescription: String(validatorMetricsDefaultOptions.port),
+    group: "metrics",
+  },
+
+  "metrics.address": {
+    type: "string",
+    description: "Listen address for the Prometheus metrics HTTP server",
+    defaultDescription: String(validatorMetricsDefaultOptions.address),
+    group: "metrics",
   },
 
   // For testing only

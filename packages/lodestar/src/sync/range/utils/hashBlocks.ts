@@ -1,6 +1,6 @@
 import {allForks} from "@chainsafe/lodestar-types";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import {byteArrayConcat} from "../../../util/bytes";
+import {byteArrayConcat} from "../../../util/bytes.js";
 
 /**
  * Hash SignedBeaconBlock in a byte form easy to compare only

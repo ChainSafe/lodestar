@@ -3,7 +3,7 @@
  */
 
 import {Writable} from "node:stream";
-import {LogData} from "./json";
+import {LogData} from "./json.js";
 
 export enum LogLevel {
   error = "error",

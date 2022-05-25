@@ -1,10 +1,10 @@
 import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {ForkName} from "@chainsafe/lodestar-params";
-import {isSlashableValidator} from "../../util";
-import {CachedBeaconStateAllForks} from "../../types";
-import {getProposerSlashingSignatureSets} from "../../allForks/signatureSets";
-import {slashValidatorAllForks} from "../../allForks/block/slashValidator";
-import {verifySignatureSet} from "../../util/signatureSets";
+import {isSlashableValidator} from "../../util/index.js";
+import {CachedBeaconStateAllForks} from "../../types.js";
+import {getProposerSlashingSignatureSets} from "../../allForks/signatureSets/index.js";
+import {slashValidatorAllForks} from "../../allForks/block/slashValidator.js";
+import {verifySignatureSet} from "../../util/signatureSets.js";
 
 /**
  * Process a ProposerSlashing operation. Initiates the exit of a validator, decreases the balance of the slashed
@@ -28,8 +28,6 @@ export function assertValidProposerSlashing(
   proposerSlashing: phase0.ProposerSlashing,
   verifySignatures = true
 ): void {
-  const {epochCtx} = state;
-  const {BeaconBlockHeader} = ssz.phase0;
   const header1 = proposerSlashing.signedHeader1.message;
   const header2 = proposerSlashing.signedHeader2.message;
 
@@ -46,13 +44,13 @@ export function assertValidProposerSlashing(
   }
 
   // verify headers are different
-  if (BeaconBlockHeader.equals(header1, header2)) {
+  if (ssz.phase0.BeaconBlockHeaderBigint.equals(header1, header2)) {
     throw new Error("ProposerSlashing headers are equal");
   }
 
   // verify the proposer is slashable
   const proposer = state.validators.get(header1.proposerIndex);
-  if (!isSlashableValidator(proposer, epochCtx.currentShuffling.epoch)) {
+  if (!isSlashableValidator(proposer, state.epochCtx.epoch)) {
     throw new Error("ProposerSlashing proposer is not slashable");
   }
 

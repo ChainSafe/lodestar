@@ -6,11 +6,11 @@ import {
   CachedBeaconStateAllForks,
   CachedBeaconStatePhase0,
   beforeProcessEpoch,
-} from "../../../../src";
-import {beforeValue, getNetworkCachedState, LazyValue} from "../../util";
-import {processParticipationRecordUpdates} from "../../../../src/phase0/epoch/processParticipationRecordUpdates";
-import {StateEpoch} from "../../types";
-import {phase0State} from "../../params";
+} from "../../../../src/index.js";
+import {getNetworkCachedState, beforeValue, LazyValue} from "../../../utils/index.js";
+import {processParticipationRecordUpdates} from "../../../../src/phase0/epoch/processParticipationRecordUpdates.js";
+import {StateEpoch} from "../../types.js";
+import {phase0State} from "../../params.js";
 
 const slot = computeStartSlotAtEpoch(phase0State.epoch) - 1;
 const stateId = `${phase0State.network}_e${phase0State.epoch}`;

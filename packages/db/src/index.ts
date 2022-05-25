@@ -2,9 +2,9 @@
  * @module db
  */
 
-export * from "./databaseService";
-export * from "./abstractRepository";
-export * from "./controller";
-export * from "./schema";
-export * from "./const";
-export * from "./metrics";
+export * from "./databaseService.js";
+export * from "./abstractRepository.js";
+export * from "./controller/index.js";
+export * from "./schema.js";
+export * from "./const.js";
+export * from "./metrics.js";

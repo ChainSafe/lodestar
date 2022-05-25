@@ -1,6 +1,6 @@
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {phase0} from "@chainsafe/lodestar-types";
-import {IBeaconDb} from "../db";
+import {IBeaconDb} from "../db/index.js";
 
 export class Eth1DataCache {
   db: IBeaconDb;

@@ -1,14 +1,14 @@
 import {expect} from "chai";
 import {config} from "@chainsafe/lodestar-config/default";
 import {Epoch} from "@chainsafe/lodestar-types";
-import {getValidPeerId} from "../../../../utils/peer";
-import {Batch, BatchOpts, BatchStatus} from "../../../../../src/sync/range/batch";
+import {getValidPeerId} from "../../../../utils/peer.js";
+import {Batch, BatchOpts, BatchStatus} from "../../../../../src/sync/range/batch.js";
 import {
   validateBatchesStatus,
   getNextBatchToProcess,
   toBeProcessedStartEpoch,
   toBeDownloadedStartEpoch,
-} from "../../../../../src/sync/range/utils/batches";
+} from "../../../../../src/sync/range/utils/batches.js";
 
 describe("sync / range / batches", () => {
   const opts: BatchOpts = {epochsPerBatch: 2};

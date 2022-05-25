@@ -7,10 +7,10 @@ import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@chainsafe/lode
 import {Lightclient} from "@chainsafe/lodestar-light-client";
 import {IProtoBlock} from "@chainsafe/lodestar-fork-choice";
 import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
-import {testLogger, LogLevel, TestLoggerOpts} from "../../utils/logger";
-import {getDevBeaconNode} from "../../utils/node/beacon";
-import {getAndInitDevValidators} from "../../utils/node/validator";
-import {ChainEvent} from "../../../src/chain";
+import {testLogger, LogLevel, TestLoggerOpts} from "../../utils/logger.js";
+import {getDevBeaconNode} from "../../utils/node/beacon.js";
+import {getAndInitDevValidators} from "../../utils/node/validator.js";
+import {ChainEvent} from "../../../src/chain/index.js";
 
 describe("chain / lightclient", function () {
   /**
@@ -20,6 +20,7 @@ describe("chain / lightclient", function () {
    */
   const maxLcHeadTrackingDiffSlots = 4;
   const validatorCount = 8;
+  const validatorClientCount = 4;
   const targetSyncCommittee = 3;
   /** N sync committee periods + 1 epoch of margin */
   const finalizedEpochToReach = targetSyncCommittee * EPOCHS_PER_SYNC_COMMITTEE_PERIOD + 1;
@@ -49,7 +50,8 @@ describe("chain / lightclient", function () {
     this.timeout("10 min");
 
     // delay a bit so regular sync sees it's up to date and sync is completed from the beginning
-    const genesisSlotsDelay = 2 / testParams.SECONDS_PER_SLOT;
+    // also delay to allow bls workers to be transpiled/initialized
+    const genesisSlotsDelay = 16;
     const genesisTime = Math.floor(Date.now() / 1000) + genesisSlotsDelay * testParams.SECONDS_PER_SLOT;
 
     const testLoggerOpts: TestLoggerOpts = {
@@ -72,7 +74,7 @@ describe("chain / lightclient", function () {
         network: {allowPublishToZeroPeers: true},
         api: {rest: {enabled: true, api: ["lightclient"], port: restPort}},
       },
-      validatorCount,
+      validatorCount: validatorCount * validatorClientCount,
       genesisTime,
       logger: loggerNodeA,
     });
@@ -84,7 +86,7 @@ describe("chain / lightclient", function () {
     const {validators} = await getAndInitDevValidators({
       node: bn,
       validatorsPerClient: validatorCount,
-      validatorClientCount: 1,
+      validatorClientCount,
       startIndex: 0,
       useRestApi: false,
       testLoggerOpts: {...testLoggerOpts, logLevel: LogLevel.error},

@@ -1,8 +1,8 @@
 import varint from "varint";
 import {source} from "stream-to-it";
-import {createCompressStream} from "@chainsafe/snappy-stream";
-import {RequestOrOutgoingResponseBody, OutgoingSerializer} from "../../types";
-import {SszSnappyError, SszSnappyErrorCode} from "./errors";
+import snappy from "@chainsafe/snappy-stream";
+import {RequestOrOutgoingResponseBody, OutgoingSerializer} from "../../types.js";
+import {SszSnappyError, SszSnappyErrorCode} from "./errors.js";
 
 /**
  * ssz_snappy encoding strategy writer.
@@ -29,7 +29,15 @@ export async function* writeSszSnappyPayload<T extends RequestOrOutgoingResponse
  * Buffered Snappy writer
  */
 function encodeSszSnappy(bytes: Buffer): AsyncGenerator<Buffer> {
-  const stream = createCompressStream();
+  /**
+   * Use sync version (default) for compress as it is almost 2x faster than async
+   * one and most payloads are "1 chunk" and 100kb payloads (which would mostly be
+   * big bellatrix blocks with transactions) are just 2 chunks
+   *
+   * To use async version (for e.g. on big payloads) instantiate the stream with
+   * `createCompressStream({asyncCompress: true})`
+   */
+  const stream = snappy.createCompressStream();
   stream.write(bytes);
   stream.end();
   return source<Buffer>(stream);

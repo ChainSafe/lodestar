@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {fromHexString as b} from "@chainsafe/ssz";
 import {PresetName} from "@chainsafe/lodestar-params";
-import {IChainConfig} from "../types";
+import {IChainConfig} from "../types.js";
 
 export const chainConfig: IChainConfig = {
   // Extends the minimal preset
@@ -64,7 +64,7 @@ export const chainConfig: IChainConfig = {
   MIN_PER_EPOCH_CHURN_LIMIT: 4,
   // [customized] scale queue churn at much lower validator counts for testing
   CHURN_LIMIT_QUOTIENT: 32,
-  PROPOSER_SCORE_BOOST: 70,
+  PROPOSER_SCORE_BOOST: 40,
 
   // Deposit contract
   // ---------------------------------------------------------------

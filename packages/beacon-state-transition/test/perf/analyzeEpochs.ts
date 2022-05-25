@@ -1,8 +1,7 @@
 import fs from "node:fs";
-import {init} from "@chainsafe/bls";
 import {getClient} from "@chainsafe/lodestar-api";
 import {config} from "@chainsafe/lodestar-config/default";
-import {NetworkName} from "@chainsafe/lodestar-config/networks";
+import {NetworkName} from "@chainsafe/lodestar-config/networks.js";
 import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {
   allForks,
@@ -11,11 +10,11 @@ import {
   AttesterFlags,
   beforeProcessEpoch,
   parseAttesterFlags,
-} from "../../src";
-import {Validator} from "../../lib/phase0";
-import {createCachedBeaconStateTest} from "../utils/state";
-import {getInfuraBeaconUrl} from "./infura";
-import {csvAppend, readCsv} from "./csv";
+} from "../../src/index.js";
+import {Validator} from "../../src/phase0/index.js";
+import {csvAppend, readCsv} from "./csv.js";
+import {getInfuraBeaconUrl} from "../utils/infura.js";
+import {createCachedBeaconStateTest} from "../utils/state.js";
 
 // Understand the real network characteristics regarding epoch transitions to accurately produce performance test data.
 //
@@ -72,8 +71,6 @@ const validatorChangesCountZero: ValidatorChangesCount = {
 };
 
 async function analyzeEpochs(network: NetworkName, fromEpoch?: number): Promise<void> {
-  await init("blst-native");
-
   // Persist summary of epoch data as CSV
   const csvPath = `epoch_data_${network}.csv`;
   const currCsv = fs.existsSync(csvPath) ? readCsv<EpochData>(csvPath) : [];
@@ -81,7 +78,7 @@ async function analyzeEpochs(network: NetworkName, fromEpoch?: number): Promise<
 
   const baseUrl = getInfuraBeaconUrl(network);
   // Long timeout to download states
-  const client = getClient(config, {baseUrl, timeoutMs: 5 * 60 * 1000});
+  const client = getClient({baseUrl, timeoutMs: 5 * 60 * 1000}, {config});
 
   // Start at epoch 1 since 0 will go and fetch state at slot -1
   const maxEpoch = fromEpoch ?? Math.max(1, ...currCsv.map((row) => row.epoch));

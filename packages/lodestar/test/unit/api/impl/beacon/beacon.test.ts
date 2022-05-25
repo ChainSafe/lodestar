@@ -1,10 +1,10 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
-import {expect} from "chai";
+import {getBeaconApi} from "../../../../../src/api/impl/beacon/index.js";
+import {StubbedBeaconDb} from "../../../../utils/stub/index.js";
 import {config} from "@chainsafe/lodestar-config/default";
-import {getBeaconApi} from "../../../../../src/api/impl/beacon";
-import {StubbedBeaconDb} from "../../../../utils/stub";
-import {setupApiImplTestServer, ApiImplTestModules} from "../index.test";
-import {testLogger} from "../../../../utils/logger";
+import {expect} from "chai";
+import {setupApiImplTestServer, ApiImplTestModules} from "../index.test.js";
+import {testLogger} from "../../../../utils/logger.js";
 
 describe("beacon api implementation", function () {
   const logger = testLogger();

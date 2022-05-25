@@ -1,8 +1,8 @@
-import {IAccountValidatorArgs} from "../options";
-import {ICliCommand} from "../../../../../util";
-import {ISlashingProtectionArgs, slashingProtectionOptions} from "./options";
-import {importCmd} from "./import";
-import {exportCmd} from "./export";
+import {ICliCommand} from "../../../../../util/index.js";
+import {IAccountValidatorArgs} from "../options.js";
+import {ISlashingProtectionArgs, slashingProtectionOptions} from "./options.js";
+import {importCmd} from "./import.js";
+import {exportCmd} from "./export.js";
 
 export const slashingProtection: ICliCommand<ISlashingProtectionArgs, IAccountValidatorArgs> = {
   command: "slashing-protection <command>",

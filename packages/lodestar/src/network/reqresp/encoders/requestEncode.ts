@@ -1,5 +1,5 @@
-import {Protocol, getRequestSzzTypeByMethod, RequestBody} from "../types";
-import {writeEncodedPayload} from "../encodingStrategies";
+import {Protocol, getRequestSzzTypeByMethod, RequestBody} from "../types.js";
+import {writeEncodedPayload} from "../encodingStrategies/index.js";
 
 /**
  * Yields byte chunks for a `<request>`

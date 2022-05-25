@@ -1,5 +1,5 @@
-import {Phase0Preset} from "./phase0";
-import {AltairPreset} from "./altair";
-import {BellatrixPreset} from "./bellatrix";
+import {Phase0Preset} from "./phase0.js";
+import {AltairPreset} from "./altair.js";
+import {BellatrixPreset} from "./bellatrix.js";
 
 export type BeaconPreset = Phase0Preset & AltairPreset & BellatrixPreset;

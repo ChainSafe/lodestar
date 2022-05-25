@@ -13,44 +13,46 @@ import {
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
-import {allForks, UintNum64, Root, phase0, Slot, RootHex} from "@chainsafe/lodestar-types";
+import {allForks, UintNum64, Root, phase0, Slot, RootHex, Epoch} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {fromHexString} from "@chainsafe/ssz";
 import {AbortController} from "@chainsafe/abort-controller";
-import {IEth1ForBlockProduction} from "../eth1";
-import {IExecutionEngine} from "../executionEngine";
-import {IMetrics} from "../metrics";
-import {IBeaconDb} from "../db";
-import {GENESIS_EPOCH, ZERO_HASH} from "../constants";
-import {CheckpointStateCache, StateContextCache} from "./stateCache";
-import {BlockProcessor, PartiallyVerifiedBlockFlags} from "./blocks";
-import {IBeaconClock, LocalClock} from "./clock";
-import {ChainEventEmitter} from "./emitter";
-import {handleChainEvents} from "./eventHandlers";
-import {IBeaconChain, SSZObjectType} from "./interface";
-import {IChainOptions} from "./options";
-import {IStateRegenerator, QueuedStateRegenerator, RegenCaller} from "./regen";
-import {initializeForkChoice} from "./forkChoice";
-import {computeAnchorCheckpoint} from "./initState";
-import {IBlsVerifier, BlsSingleThreadVerifier, BlsMultiThreadWorkerPool} from "./bls";
+import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
+import {IBeaconDb} from "../db/index.js";
+import {CheckpointStateCache, StateContextCache} from "./stateCache/index.js";
+import {IMetrics} from "../metrics/index.js";
+import {BlockProcessor, PartiallyVerifiedBlockFlags} from "./blocks/index.js";
+import {IBeaconClock, LocalClock} from "./clock/index.js";
+import {ChainEventEmitter} from "./emitter.js";
+import {handleChainEvents} from "./eventHandlers.js";
+import {IBeaconChain, SSZObjectType, ProposerPreparationData} from "./interface.js";
+import {IChainOptions} from "./options.js";
+import {IStateRegenerator, QueuedStateRegenerator, RegenCaller} from "./regen/index.js";
+import {initializeForkChoice} from "./forkChoice/index.js";
+import {computeAnchorCheckpoint} from "./initState.js";
+import {IBlsVerifier, BlsSingleThreadVerifier, BlsMultiThreadWorkerPool} from "./bls/index.js";
 import {
   SeenAttesters,
   SeenAggregators,
   SeenBlockProposers,
   SeenSyncCommitteeMessages,
   SeenContributionAndProof,
-} from "./seenCache";
+} from "./seenCache/index.js";
 import {
   AggregatedAttestationPool,
   AttestationPool,
   SyncCommitteeMessagePool,
   SyncContributionAndProofPool,
   OpPool,
-} from "./opPools";
-import {LightClientServer} from "./lightClient";
-import {Archiver} from "./archiver";
-import {PrecomputeNextEpochTransitionScheduler} from "./precomputeNextEpochTransition";
-import {ReprocessController} from "./reprocess";
+} from "./opPools/index.js";
+import {LightClientServer} from "./lightClient/index.js";
+import {Archiver} from "./archiver/index.js";
+import {IEth1ForBlockProduction} from "../eth1/index.js";
+import {IExecutionEngine} from "../executionEngine/index.js";
+import {PrecomputeNextEpochTransitionScheduler} from "./precomputeNextEpochTransition.js";
+import {ReprocessController} from "./reprocess.js";
+import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
+import {BeaconProposerCache} from "./beaconProposerCache.js";
 
 export class BeaconChain implements IBeaconChain {
   readonly genesisTime: UintNum64;
@@ -81,13 +83,16 @@ export class BeaconChain implements IBeaconChain {
   // Gossip seen cache
   readonly seenAttesters = new SeenAttesters();
   readonly seenAggregators = new SeenAggregators();
+  readonly seenAggregatedAttestations: SeenAggregatedAttestations;
   readonly seenBlockProposers = new SeenBlockProposers();
   readonly seenSyncCommitteeMessages = new SeenSyncCommitteeMessages();
-  readonly seenContributionAndProof = new SeenContributionAndProof();
+  readonly seenContributionAndProof: SeenContributionAndProof;
 
   // Global state caches
   readonly pubkey2index: PubkeyIndexMap;
   readonly index2pubkey: Index2PubkeyCache;
+
+  readonly beaconProposerCache: BeaconProposerCache;
 
   protected readonly blockProcessor: BlockProcessor;
   protected readonly db: IBeaconDb;
@@ -139,9 +144,14 @@ export class BeaconChain implements IBeaconChain {
     const stateCache = new StateContextCache({metrics});
     const checkpointStateCache = new CheckpointStateCache({metrics});
 
+    this.seenAggregatedAttestations = new SeenAggregatedAttestations(metrics);
+    this.seenContributionAndProof = new SeenContributionAndProof(metrics);
+
     // Initialize single global instance of state caches
     this.pubkey2index = new PubkeyIndexMap();
     this.index2pubkey = [];
+
+    this.beaconProposerCache = new BeaconProposerCache(opts);
 
     // Restore state caches
     const cachedState = createCachedBeaconState(anchorState, {
@@ -188,6 +198,8 @@ export class BeaconChain implements IBeaconChain {
         lightClientServer,
         stateCache,
         checkpointStateCache,
+        seenAggregatedAttestations: this.seenAggregatedAttestations,
+        beaconProposerCache: this.beaconProposerCache,
         emitter,
         config,
         logger,
@@ -206,7 +218,7 @@ export class BeaconChain implements IBeaconChain {
     this.emitter = emitter;
     this.lightClientServer = lightClientServer;
 
-    this.archiver = new Archiver(db, this, logger, signal);
+    this.archiver = new Archiver(db, this, logger, signal, opts);
     new PrecomputeNextEpochTransitionScheduler(this, this.config, metrics, this.logger, signal);
 
     handleChainEvents.bind(this)(this.abortController.signal);
@@ -309,5 +321,11 @@ export class BeaconChain implements IBeaconChain {
       fs.writeFileSync(fileName, bytes);
     }
     return fileName;
+  }
+
+  async updateBeaconProposerData(epoch: Epoch, proposers: ProposerPreparationData[]): Promise<void> {
+    proposers.forEach((proposer) => {
+      this.beaconProposerCache.add(epoch, proposer);
+    });
   }
 }

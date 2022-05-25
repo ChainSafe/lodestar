@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {maxEncodedLen} from "../../../../../../src/network/reqresp/encodingStrategies/sszSnappy/utils";
+import {maxEncodedLen} from "../../../../../../src/network/reqresp/encodingStrategies/sszSnappy/utils.js";
 
 describe("network / reqresp / sszSnappy / utils", () => {
   describe("maxEncodedLen", () => {

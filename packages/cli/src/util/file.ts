@@ -3,7 +3,8 @@ import path from "node:path";
 import stream from "node:stream";
 import {promisify} from "node:util";
 import got from "got";
-import {load, dump, FAILSAFE_SCHEMA, Schema, Type} from "js-yaml";
+import yaml from "js-yaml";
+const {load, dump, FAILSAFE_SCHEMA, Schema, Type} = yaml;
 
 export const yamlSchema = new Schema({
   include: [FAILSAFE_SCHEMA],

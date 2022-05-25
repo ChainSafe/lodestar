@@ -1,5 +1,5 @@
 import {LodestarError} from "@chainsafe/lodestar-utils";
-import {RespStatus, RpcResponseStatusError} from "../../../constants";
+import {RespStatus, RpcResponseStatusError} from "../../../constants/index.js";
 
 type RpcResponseStatusNotSuccess = Exclude<RespStatus, RespStatus.SUCCESS>;
 

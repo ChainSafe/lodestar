@@ -1,4 +1,4 @@
-import {Phase0Preset} from "../../interface/phase0";
+import {Phase0Preset} from "../../interface/phase0.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 export const phase0: Phase0Preset = {

@@ -8,9 +8,9 @@ import {
   enrOptions,
   IWSSArgs,
   wssOptions,
-} from "../../options";
-import {ICliCommandOptions, ILogArgs} from "../../util";
-import {defaultBeaconPaths, IBeaconPaths} from "./paths";
+} from "../../options/index.js";
+import {defaultBeaconPaths, IBeaconPaths} from "./paths.js";
+import {ICliCommandOptions, ILogArgs} from "../../util/index.js";
 
 interface IBeaconExtraArgs {
   port?: number;

@@ -16,20 +16,19 @@ import {
 import {Root, Slot, ValidatorIndex, ssz} from "@chainsafe/lodestar-types";
 import {ExecutionStatus} from "@chainsafe/lodestar-fork-choice";
 
+import {assembleBlock} from "../../../chain/factory/block/index.js";
+import {AttestationError, AttestationErrorCode, GossipAction, SyncCommitteeError} from "../../../chain/errors/index.js";
+import {validateGossipAggregateAndProof} from "../../../chain/validation/index.js";
+import {ZERO_HASH} from "../../../constants/index.js";
+import {SyncState} from "../../../sync/index.js";
+import {toGraffitiBuffer} from "../../../util/graffiti.js";
+import {ApiError, NodeIsSyncing} from "../errors.js";
+import {validateSyncCommitteeGossipContributionAndProof} from "../../../chain/validation/syncCommitteeContributionAndProof.js";
+import {CommitteeSubscription} from "../../../network/subnets/index.js";
+import {computeSubnetForCommitteesAtSlot, getPubkeysForIndices} from "./utils.js";
+import {ApiModules} from "../types.js";
+import {RegenCaller} from "../../../chain/regen/index.js";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {assembleBlock} from "../../../chain/factory/block";
-import {AttestationError, AttestationErrorCode, GossipAction, SyncCommitteeError} from "../../../chain/errors";
-import {validateGossipAggregateAndProof} from "../../../chain/validation";
-import {ZERO_HASH} from "../../../constants";
-import {SyncState} from "../../../sync";
-import {toGraffitiBuffer} from "../../../util/graffiti";
-import {ApiError, NodeIsSyncing} from "../errors";
-import {validateSyncCommitteeGossipContributionAndProof} from "../../../chain/validation/syncCommitteeContributionAndProof";
-import {CommitteeSubscription} from "../../../network/subnets";
-import {OpSource} from "../../../metrics/validatorMonitor";
-import {ApiModules} from "../types";
-import {RegenCaller} from "../../../chain/regen";
-import {computeSubnetForCommitteesAtSlot, getPubkeysForIndices} from "./utils";
 
 /**
  * Validator clock may be advanced from beacon's clock. If the validator requests a resource in a
@@ -184,8 +183,6 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
           slot,
           randaoReveal,
           graffiti: toGraffitiBuffer(graffiti || ""),
-          // TODO - TEMP
-          feeRecipient: Buffer.alloc(20, 0),
         }
       );
       metrics?.blockProductionSuccess.inc();
@@ -279,14 +276,17 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
 
       const state = await chain.getHeadStateAtCurrentEpoch();
 
-      const duties: routes.validator.ProposerDuty[] = [];
-      const indexes: ValidatorIndex[] = [];
+      const stateEpoch = state.epochCtx.epoch;
+      let indexes: ValidatorIndex[] = [];
 
-      // Gather indexes to get pubkeys in batch (performance optimization)
-      for (let i = 0; i < SLOTS_PER_EPOCH; i++) {
-        // getBeaconProposer ensures the requested epoch is correct
-        const validatorIndex = state.epochCtx.getBeaconProposer(startSlot + i);
-        indexes.push(validatorIndex);
+      if (epoch === stateEpoch) {
+        indexes = state.epochCtx.getBeaconProposers();
+      } else if (epoch === stateEpoch + 1) {
+        // Requesting duties for next epoch is allow since they can be predicted with high probabilities.
+        // @see `epochCtx.getBeaconProposersNextEpoch` JSDocs for rationale.
+        indexes = state.epochCtx.getBeaconProposersNextEpoch();
+      } else {
+        throw Error(`Proposer duties for epoch ${epoch} not supported, current epoch ${stateEpoch}`);
       }
 
       // NOTE: this is the fastest way of getting compressed pubkeys.
@@ -295,6 +295,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
       // TODO: Add a flag to just send 0x00 as pubkeys since the Lodestar validator does not need them.
       const pubkeys = getPubkeysForIndices(state.validators, indexes);
 
+      const duties: routes.validator.ProposerDuty[] = [];
       for (let i = 0; i < SLOTS_PER_EPOCH; i++) {
         duties.push({slot: startSlot + i, validatorIndex: indexes[i], pubkey: pubkeys[i]});
       }
@@ -436,21 +437,13 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
               signedAggregateAndProof
             );
 
-            metrics?.registerAggregatedAttestation(
-              OpSource.api,
-              seenTimestampSec,
-              signedAggregateAndProof,
-              indexedAttestation
+            chain.aggregatedAttestationPool.add(
+              signedAggregateAndProof.message.aggregate,
+              indexedAttestation.attestingIndices.length,
+              committeeIndices
             );
-
-            await Promise.all([
-              chain.aggregatedAttestationPool.add(
-                signedAggregateAndProof.message.aggregate,
-                indexedAttestation.attestingIndices,
-                committeeIndices
-              ),
-              network.gossip.publishBeaconAggregateAndProof(signedAggregateAndProof),
-            ]);
+            const sentPeers = await network.gossip.publishBeaconAggregateAndProof(signedAggregateAndProof);
+            metrics?.submitAggregatedAttestation(seenTimestampSec, indexedAttestation, sentPeers);
           } catch (e) {
             if (e instanceof AttestationError && e.type.code === AttestationErrorCode.AGGREGATOR_ALREADY_KNOWN) {
               logger.debug("Ignoring known signedAggregateAndProof");
@@ -588,6 +581,10 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
       }
 
       network.prepareSyncCommitteeSubnets(subs);
+    },
+
+    async prepareBeaconProposer(proposers) {
+      await chain.updateBeaconProposerData(chain.clock.currentEpoch, proposers);
     },
   };
 }

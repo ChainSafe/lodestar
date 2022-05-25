@@ -1,10 +1,10 @@
 import {itBench} from "@dapplion/benchmark";
 import {ssz} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/default";
-import {allForks, beforeProcessEpoch, CachedBeaconStateAllForks, EpochProcess} from "../../../../src";
-import {numValidators} from "../../util";
-import {StateEpoch} from "../../types";
-import {createCachedBeaconStateTest} from "../../../utils/state";
+import {allForks, beforeProcessEpoch, CachedBeaconStateAllForks, EpochProcess} from "../../../../src/index.js";
+import {numValidators} from "../../util.js";
+import {StateEpoch} from "../../types.js";
+import {createCachedBeaconStateTest} from "../../../utils/state.js";
 
 // PERF: Cost 'proportional' to $VALIDATOR_COUNT, to iterate over all balances. Then cost is proportional to the amount
 // of validators whose effectiveBalance changed. Worst case is a massive network leak or a big slashing event which

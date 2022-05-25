@@ -36,7 +36,7 @@ export function getTestServer(): {baseUrl: string; server: FastifyInstance} {
 
 /** Type helper to get a Sinon mock object type with Api */
 export function getMockApi<Api extends Record<string, any>>(
-  routeKeys: Record<string, any>
+  routeIds: Record<string, any>
 ): Sinon.SinonStubbedInstance<Api> & Api {
-  return mapValues(routeKeys, () => Sinon.stub()) as Sinon.SinonStubbedInstance<Api> & Api;
+  return mapValues(routeIds, () => Sinon.stub()) as Sinon.SinonStubbedInstance<Api> & Api;
 }

@@ -1,6 +1,6 @@
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import {Api, ReqTypes, routesData, getReqSerializers, getReturnTypes} from "../routes/validator";
-import {IHttpClient, generateGenericJsonClient} from "./utils";
+import {IHttpClient, generateGenericJsonClient} from "./utils/index.js";
+import {Api, ReqTypes, routesData, getReqSerializers, getReturnTypes} from "../routes/validator.js";
 
 /**
  * REST HTTP client for validator routes

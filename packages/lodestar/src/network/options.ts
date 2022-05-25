@@ -1,8 +1,8 @@
 import {ENR, IDiscv5DiscoveryInputOptions} from "@chainsafe/discv5";
-import {Eth2GossipsubOpts} from "./gossip/gossipsub";
-import {defaultGossipHandlerOpts, GossipHandlerOpts} from "./gossip/handlers";
-import {PeerManagerOpts} from "./peers";
-import {defaultRateLimiterOpts, RateLimiterOpts} from "./reqresp/response/rateLimiter";
+import {Eth2GossipsubOpts} from "./gossip/gossipsub.js";
+import {defaultGossipHandlerOpts, GossipHandlerOpts} from "./gossip/handlers/index.js";
+import {PeerManagerOpts} from "./peers/index.js";
+import {defaultRateLimiterOpts, RateLimiterOpts} from "./reqresp/response/rateLimiter.js";
 
 export interface INetworkOptions extends PeerManagerOpts, RateLimiterOpts, GossipHandlerOpts, Eth2GossipsubOpts {
   localMultiaddrs: string[];

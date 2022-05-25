@@ -1,7 +1,7 @@
 import {expect} from "chai";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {Slot} from "@chainsafe/lodestar-types";
-import {getNonCheckpointBlocks} from "../../../../src/chain/archiver/archiveBlocks";
+import {getNonCheckpointBlocks} from "../../../../src/chain/archiver/archiveBlocks.js";
 
 describe("chain / archive / getNonCheckpointBlocks", () => {
   before("Correct params", () => {

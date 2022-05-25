@@ -1,6 +1,6 @@
 import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
-import {retry, IRetryOptions} from "../../../src/util/retry";
+import {retry, IRetryOptions} from "../../../src/util/retry.js";
 
 chai.use(chaiAsPromised);
 

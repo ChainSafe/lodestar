@@ -1,6 +1,4 @@
-import {praterChainConfig} from "@chainsafe/lodestar-config/networks";
-
-export const chainConfig = praterChainConfig;
+export {praterChainConfig as chainConfig} from "@chainsafe/lodestar-config/networks";
 
 /* eslint-disable max-len */
 

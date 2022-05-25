@@ -1,5 +1,5 @@
 import {assert, expect} from "chai";
-import {intToBytes, bytesToInt} from "../../src";
+import {intToBytes, bytesToInt} from "../../src/index.js";
 
 describe("intToBytes", () => {
   const zeroedArray = (length: number): number[] => Array.from({length}, () => 0);

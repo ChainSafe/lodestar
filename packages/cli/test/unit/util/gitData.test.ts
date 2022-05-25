@@ -2,14 +2,25 @@ import fs from "node:fs";
 import path from "node:path";
 import {expect} from "chai";
 import findUp from "find-up";
-import {gitDataPath, readGitDataFile} from "../../../src/util/gitData/gitDataPath";
+import {fileURLToPath} from "node:url";
+import {gitDataPath, readGitDataFile} from "../../../src/util/gitData/gitDataPath.js";
+import {getGitData} from "../../../src/util/index.js";
 
-describe("util / gitData", () => {
+// Global variable __dirname no longer available in ES6 modules.
+// Solutions: https://stackoverflow.com/questions/46745014/alternative-for-dirname-in-node-js-when-using-es6-modules
+// eslint-disable-next-line @typescript-eslint/naming-convention
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+describe("util / gitData", function () {
+  // .gitData file is created at build time with the command
+  // ```
+  // npm run write-git-data
+  // ```
+  // If this step fails run that command. This could happen when running tests before building.
   it("gitData file must exist", () => {
     const gitData = readGitDataFile();
 
-    if (!gitData.branch) throw Error("No gitData.branch");
-    if (!gitData.commit) throw Error("No gitData.commit");
+    expect(gitData).to.deep.equal(getGitData(), "Wrong git-data.json contents");
   });
 
   it("gitData path must be included in the package.json", () => {

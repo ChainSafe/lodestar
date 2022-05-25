@@ -1,17 +1,17 @@
-import crypto from "node:crypto";
 import LibP2p from "libp2p";
 import PeerId from "peer-id";
 import {Multiaddr} from "multiaddr";
+import crypto from "node:crypto";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {Discv5, ENR, IDiscv5Metrics, IDiscv5DiscoveryInputOptions} from "@chainsafe/discv5";
 import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
-import {IMetrics} from "../../metrics";
-import {ENRKey, SubnetType} from "../metadata";
-import {prettyPrintPeerId} from "../util";
-import {pruneSetToMax} from "../../util/map";
-import {deserializeEnrSubnets, zeroAttnets, zeroSyncnets} from "./utils/enrSubnetsDeserialize";
-import {IPeerRpcScoreStore, ScoreState} from "./score";
+import {IMetrics} from "../../metrics/index.js";
+import {ENRKey, SubnetType} from "../metadata.js";
+import {prettyPrintPeerId} from "../util.js";
+import {IPeerRpcScoreStore, ScoreState} from "./score.js";
+import {pruneSetToMax} from "../../util/map.js";
+import {deserializeEnrSubnets, zeroAttnets, zeroSyncnets} from "./utils/enrSubnetsDeserialize.js";
 
 /** Max number of cached ENRs after discovering a good peer */
 const MAX_CACHED_ENRS = 100;
@@ -357,7 +357,13 @@ export class PeerDiscovery {
    * Peers that have been returned by discovery requests are dialed here if they are suitable.
    */
   private async dialPeer(cachedPeer: CachedENR): Promise<void> {
-    this.peersToConnect--;
+    // we dial a peer when:
+    // - this.peersToConnect > 0
+    // - or the peer subscribes to a subnet that we want
+    // If this.peersToConnect is 3 while we need to dial 5 subnet peers, in that case we want this.peersToConnect
+    // to be 0 instead of a negative value. The next heartbeat may increase this.peersToConnect again if some dials
+    // are not successful.
+    this.peersToConnect = Math.max(this.peersToConnect - 1, 0);
 
     const {peerId, multiaddrTCP} = cachedPeer;
 
@@ -376,7 +382,6 @@ export class PeerDiscovery {
     // Note: You must listen to the connected events to listen for a successful conn upgrade
     try {
       await this.libp2p.dial(peerId);
-
       timer?.({status: "success"});
       this.logger.debug("Dialed discovered peer", {peer: peerIdShort});
     } catch (e) {

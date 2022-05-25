@@ -11,11 +11,11 @@ import {
   isPassphraseFile,
   writeValidatorPassphrase,
   ICliCommand,
-} from "../../../../util";
-import {VOTING_KEYSTORE_FILE, getValidatorDirPath} from "../../../../validatorDir/paths";
-import {getAccountPaths} from "../../paths";
-import {IGlobalArgs} from "../../../../options";
-import {IAccountValidatorArgs} from "./options";
+} from "../../../../util/index.js";
+import {VOTING_KEYSTORE_FILE, getValidatorDirPath} from "../../../../validatorDir/paths.js";
+import {IAccountValidatorArgs} from "./options.js";
+import {getAccountPaths} from "../../paths.js";
+import {IGlobalArgs} from "../../../../options/index.js";
 
 /* eslint-disable no-console */
 
@@ -117,7 +117,7 @@ has the '.json' extension will be attempted to be imported.",
       }
       const dir = getValidatorDirPath({keystoresDir, pubkey, prefixed: true});
       if (fs.existsSync(dir) || fs.existsSync(getValidatorDirPath({keystoresDir, pubkey}))) {
-        console.log(`Skipping existing validator ${pubkey}`);
+        console.log(`Skipping existing validator ${pubkey}. Already exist in ${dir}`);
         continue;
       }
 
@@ -128,10 +128,11 @@ has the '.json' extension will be attempted to be imported.",
       const passphrase = await getKeystorePassphrase(keystore, passphrasePaths, passphraseFile);
       fs.mkdirSync(secretsDir, {recursive: true});
       fs.mkdirSync(dir, {recursive: true});
-      fs.writeFileSync(path.join(dir, VOTING_KEYSTORE_FILE), keystore.stringify());
+      const votingKeystoreFile = path.join(dir, VOTING_KEYSTORE_FILE);
+      fs.writeFileSync(votingKeystoreFile, keystore.stringify());
       writeValidatorPassphrase({secretsDir, pubkey, passphrase});
 
-      console.log(`Successfully imported validator ${pubkey}`);
+      console.log(`Successfully imported validator ${pubkey} to ${votingKeystoreFile}`);
       numOfImportedValidators++;
     }
 
@@ -168,10 +169,10 @@ async function getKeystorePassphrase(
     const passphrase = fs.readFileSync(passphraseFile, "utf8");
     try {
       await keystore.decrypt(stripOffNewlines(passphrase));
-      console.log(`Imported passphrase ${passphraseFile}`);
+      console.log("Imported passphrase successfully");
       return passphrase;
     } catch (e) {
-      console.log(`Imported passphrase ${passphraseFile}, but it's invalid: ${(e as Error).message}`);
+      console.log(`Imported passphrase, but it's invalid: ${(e as Error).message}`);
     }
   }
 
@@ -201,4 +202,12 @@ required each time the validator client starts
   await sleep(1000); // For UX
 
   return answers.password;
+}
+
+/**
+ * Extend an existing error by appending a string to its `e.message`
+ */
+export function extendError(e: Error, prependMessage: string): Error {
+  e.message = `${e.message} - ${prependMessage}`;
+  return e;
 }

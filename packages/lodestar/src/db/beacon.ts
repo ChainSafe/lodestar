@@ -2,8 +2,10 @@
  * @module db/api/beacon
  */
 
+import {Registry} from "prom-client";
 import {DatabaseService, IDatabaseApiOptions, IDbMetrics} from "@chainsafe/lodestar-db";
-import {IBeaconDb} from "./interface";
+import {createDbMetrics} from "../metrics/metrics.js";
+import {IBeaconDb} from "./interface.js";
 import {
   AttesterSlashingRepository,
   BlockArchiveRepository,
@@ -19,11 +21,12 @@ import {
   SyncCommitteeRepository,
   SyncCommitteeWitnessRepository,
   BackfilledRanges,
-} from "./repositories";
-import {PreGenesisState, PreGenesisStateLastProcessedBlock} from "./single";
+} from "./repositories/index.js";
+import {PreGenesisState, PreGenesisStateLastProcessedBlock} from "./single/index.js";
 
 export class BeaconDb extends DatabaseService implements IBeaconDb {
   metrics?: IDbMetrics;
+  metricsRegistry?: Registry;
 
   block: BlockRepository;
   blockArchive: BlockArchiveRepository;
@@ -47,9 +50,15 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
 
   backfilledRanges: BackfilledRanges;
 
-  constructor(opts: IDatabaseApiOptions) {
-    super(opts);
-    this.metrics = opts.metrics;
+  constructor(opts: Omit<IDatabaseApiOptions, "metrics"> & {metrics?: boolean}) {
+    if (opts.metrics) {
+      const {metrics, registry} = createDbMetrics();
+      super({...opts, metrics});
+      this.metrics = metrics;
+      this.metricsRegistry = registry;
+    } else {
+      super({...opts, metrics: undefined});
+    }
     // Warning: If code is ever run in the constructor, must change this stub to not extend 'packages/lodestar/test/utils/stub/beaconDb.ts' -
     this.block = new BlockRepository(this.config, this.db, this.metrics);
     this.blockArchive = new BlockArchiveRepository(this.config, this.db, this.metrics);

@@ -2,15 +2,15 @@ import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import varint from "varint";
 import {ssz} from "@chainsafe/lodestar-types";
-import {RequestOrResponseType} from "../../../../../../src/network/reqresp/types";
-import {BufferedSource} from "../../../../../../src/network/reqresp/utils";
+import {RequestOrResponseType} from "../../../../../../src/network/reqresp/types.js";
+import {BufferedSource} from "../../../../../../src/network/reqresp/utils/index.js";
 import {
   SszSnappyErrorCode,
   readSszSnappyPayload,
-} from "../../../../../../src/network/reqresp/encodingStrategies/sszSnappy";
-import {isEqualSszType} from "../../../../../utils/ssz";
-import {arrToSource} from "../../utils";
-import {sszSnappyPing, sszSnappyStatus, sszSnappySignedBeaconBlockPhase0} from "./testData";
+} from "../../../../../../src/network/reqresp/encodingStrategies/sszSnappy/index.js";
+import {isEqualSszType} from "../../../../../utils/ssz.js";
+import {arrToSource} from "../../utils.js";
+import {sszSnappyPing, sszSnappyStatus, sszSnappySignedBeaconBlockPhase0} from "./testData.js";
 
 chai.use(chaiAsPromised);
 

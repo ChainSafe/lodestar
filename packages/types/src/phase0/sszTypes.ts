@@ -27,7 +27,7 @@ import {
   SLOTS_PER_HISTORICAL_ROOT,
   VALIDATOR_REGISTRY_LIMIT,
 } from "@chainsafe/lodestar-params";
-import * as primitiveSsz from "../primitive/sszTypes";
+import * as primitiveSsz from "../primitive/sszTypes.js";
 
 const {
   Boolean,
@@ -36,6 +36,7 @@ const {
   UintBn64,
   Slot,
   Epoch,
+  EpochInf,
   CommitteeIndex,
   ValidatorIndex,
   Gwei,
@@ -52,9 +53,22 @@ const {
 
 export const AttestationSubnets = new BitVectorType(ATTESTATION_SUBNET_COUNT);
 
+/** BeaconBlockHeader where slot is bounded by the clock, and values above it are invalid */
 export const BeaconBlockHeader = new ContainerType(
   {
     slot: Slot,
+    proposerIndex: ValidatorIndex,
+    parentRoot: Root,
+    stateRoot: Root,
+    bodyRoot: Root,
+  },
+  {typeName: "BeaconBlockHeader", jsonCase: "eth2", cachePermanentRootStruct: true}
+);
+
+/** BeaconBlockHeader where slot is NOT bounded by the clock, i.e. slashings. So slot is a bigint. */
+export const BeaconBlockHeaderBigint = new ContainerType(
+  {
+    slot: UintBn64,
     proposerIndex: ValidatorIndex,
     parentRoot: Root,
     stateRoot: Root,
@@ -71,9 +85,28 @@ export const SignedBeaconBlockHeader = new ContainerType(
   {typeName: "SignedBeaconBlockHeader", jsonCase: "eth2"}
 );
 
+/** Same as `SignedBeaconBlockHeader` but slot is not bounded by the clock and must be a bigint */
+export const SignedBeaconBlockHeaderBigint = new ContainerType(
+  {
+    message: BeaconBlockHeaderBigint,
+    signature: BLSSignature,
+  },
+  {typeName: "SignedBeaconBlockHeader", jsonCase: "eth2"}
+);
+
+/** Checkpoint where epoch is bounded by the clock, and values above it are invalid */
 export const Checkpoint = new ContainerType(
   {
     epoch: Epoch,
+    root: Root,
+  },
+  {typeName: "Checkpoint", jsonCase: "eth2"}
+);
+
+/** Checkpoint where epoch is NOT bounded by the clock, so must be a bigint */
+export const CheckpointBigint = new ContainerType(
+  {
+    epoch: UintBn64,
     root: Root,
   },
   {typeName: "Checkpoint", jsonCase: "eth2"}
@@ -199,10 +232,10 @@ export const ValidatorContainer = new ContainerType(
     withdrawalCredentials: Bytes32,
     effectiveBalance: UintNum64,
     slashed: Boolean,
-    activationEligibilityEpoch: Epoch,
-    activationEpoch: Epoch,
-    exitEpoch: Epoch,
-    withdrawableEpoch: Epoch,
+    activationEligibilityEpoch: EpochInf,
+    activationEpoch: EpochInf,
+    exitEpoch: EpochInf,
+    withdrawableEpoch: EpochInf,
   },
   {typeName: "Validator", jsonCase: "eth2"}
 );
@@ -231,10 +264,32 @@ export const AttestationData = new ContainerType(
   {typeName: "AttestationData", jsonCase: "eth2", cachePermanentRootStruct: true}
 );
 
+/** Same as `AttestationData` but epoch, slot and index are not bounded and must be a bigint */
+export const AttestationDataBigint = new ContainerType(
+  {
+    slot: UintBn64,
+    index: UintBn64,
+    beaconBlockRoot: Root,
+    source: CheckpointBigint,
+    target: CheckpointBigint,
+  },
+  {typeName: "AttestationData", jsonCase: "eth2", cachePermanentRootStruct: true}
+);
+
 export const IndexedAttestation = new ContainerType(
   {
     attestingIndices: CommitteeIndices,
     data: AttestationData,
+    signature: BLSSignature,
+  },
+  {typeName: "IndexedAttestation", jsonCase: "eth2"}
+);
+
+/** Same as `IndexedAttestation` but epoch, slot and index are not bounded and must be a bigint */
+export const IndexedAttestationBigint = new ContainerType(
+  {
+    attestingIndices: CommitteeIndices,
+    data: AttestationDataBigint,
     signature: BLSSignature,
   },
   {typeName: "IndexedAttestation", jsonCase: "eth2"}
@@ -272,8 +327,11 @@ export const Attestation = new ContainerType(
 
 export const AttesterSlashing = new ContainerType(
   {
-    attestation1: IndexedAttestation,
-    attestation2: IndexedAttestation,
+    // In state transition, AttesterSlashing attestations are only partially validated. Their slot and epoch could
+    // be higher than the clock and the slashing would still be valid. Same applies to attestation data index, which
+    // can be any arbitrary value. Must use bigint variants to hash correctly to all possible values
+    attestation1: IndexedAttestationBigint,
+    attestation2: IndexedAttestationBigint,
   },
   {typeName: "AttesterSlashing", jsonCase: "eth2"}
 );
@@ -288,8 +346,10 @@ export const Deposit = new ContainerType(
 
 export const ProposerSlashing = new ContainerType(
   {
-    signedHeader1: SignedBeaconBlockHeader,
-    signedHeader2: SignedBeaconBlockHeader,
+    // In state transition, ProposerSlashing headers are only partially validated. Their slot could be higher than the
+    // clock and the slashing would still be valid. Must use bigint variants to hash correctly to all possible values
+    signedHeader1: SignedBeaconBlockHeaderBigint,
+    signedHeader2: SignedBeaconBlockHeaderBigint,
   },
   {typeName: "ProposerSlashing", jsonCase: "eth2"}
 );

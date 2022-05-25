@@ -1,6 +1,6 @@
 import {phase0, allForks, getAttesterSlashableIndices} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconChain} from "..";
-import {AttesterSlashingError, AttesterSlashingErrorCode, GossipAction} from "../errors";
+import {AttesterSlashingError, AttesterSlashingErrorCode, GossipAction} from "../errors/index.js";
 
 export async function validateGossipAttesterSlashing(
   chain: IBeaconChain,

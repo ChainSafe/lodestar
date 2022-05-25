@@ -2,6 +2,7 @@
 # set -e
 
 source parse-args.sh
+source "./fixed.vars"
 source $devnetVars
 
 currentDir=$(pwd)
@@ -12,9 +13,9 @@ configGitDir=$CONFIG_GIT_DIR
 gethImage=$GETH_IMAGE
 nethermindImage=$NETHERMIND_IMAGE
 
-if [ ! -n "$dataDir" ] || [ ! -n "$devnetVars" ] || ([ "$elClient" != "geth" ] && [ "$elClient" != "nethermind" ] && [ "$elClient" != "ethereumjs" ]) 
+if [ ! -n "$dataDir" ] || [ ! -n "$devnetVars" ] || ([ "$elClient" != "geth" ] && [ "$elClient" != "nethermind" ] && [ "$elClient" != "ethereumjs" ] && [ "$elClient" != "besu" ]) 
 then
-  echo "usage: ./setup.sh --dataDir <data dir> --elClient <geth | nethermind | ethereumjs> --devetVars <devnet vars file> [--dockerWithSudo --withTerminal \"gnome-terminal --disable-factory --\"]"
+  echo "usage: ./setup.sh --dataDir <data dir> --elClient <geth | nethermind | ethereumjs | besu> --devetVars <devnet vars file> [--dockerWithSudo --withTerminal \"gnome-terminal --disable-factory --\"]"
   echo "example: ./setup.sh --dataDir kiln-data --elClient nethermind --devnetVars ./kiln.vars --dockerWithSudo --withTerminal \"gnome-terminal --disable-factory --\""
   echo "Note: if running on macOS where gnome-terminal is not available, remove the gnome-terminal related flags."
   echo "example: ./setup.sh --dataDir kiln-data --elClient geth --devnetVars ./kiln.vars"
@@ -22,16 +23,40 @@ then
 fi
 
 
-mkdir $dataDir && mkdir $dataDir/lodestar && mkdir $dataDir/geth && mkdir $dataDir/nethermind && mkdir $dataDir/ethereumjs && cd $dataDir && git init && git remote add -f origin $setupConfigUrl && git config core.sparseCheckout true && echo "$configGitDir/*" >> .git/info/sparse-checkout && git pull --depth=1 origin main && cd $currentDir
+mkdir $dataDir && mkdir $dataDir/lodestar && mkdir $dataDir/geth && mkdir $dataDir/nethermind && mkdir $dataDir/ethereumjs && mkdir $dataDir/besu
 
-if [ ! -n "$(ls -A $dataDir/$configGitDir)" ] || [ ! -n "$(ls -A $dataDir/$configGitDir/genesis.json)" ] || [ ! -n "$(ls -A $dataDir/$configGitDir/genesis.ssz)" ] || [ ! -n "$(ls -A $dataDir/$configGitDir/nethermind_genesis.json)" ] || [ ! -n "$(ls -A $dataDir/$configGitDir/el_bootnode.txt)" ] || [ ! -n "$(ls -A $dataDir/$configGitDir/bootstrap_nodes.txt)" ]
+if [ -n "$configGitDir" ]
 then
-  echo "Configuration directory not setup properly, remove the data directory and run again."
-  echo "exiting ..."
-  exit;
-else 
-  echo "Configuration discovered!"
+  if [ ! -n "$(ls -A $dataDir/$configGitDir)" ]
+  then
+    cd $dataDir && git init && git remote add -f origin $setupConfigUrl && git config core.sparseCheckout true && echo "$configGitDir/*" >> .git/info/sparse-checkout && git pull --depth=1 origin main && cd $currentDir
+  fi;
+
+  if [ ! -n "$(ls -A $dataDir/$configGitDir)" ] || [ ! -n "$(ls -A $dataDir/$configGitDir/genesis.json)" ] || [ ! -n "$(ls -A $dataDir/$configGitDir/genesis.ssz)" ] || [ ! -n "$(ls -A $dataDir/$configGitDir/nethermind_genesis.json)" ] || [ ! -n "$(ls -A $dataDir/$configGitDir/el_bootnode.txt)" ] || [ ! -n "$(ls -A $dataDir/$configGitDir/bootstrap_nodes.txt)" ]
+  then
+    echo "Configuration directory not setup properly, remove the data directory and run again."
+    echo "exiting ..."
+    exit;
+  else 
+    echo "Configuration discovered!"
+  fi;
+
+  # Load the required variables from the config dir
+  bootNode=$(cat $dataDir/$configGitDir/el_bootnode.txt)
+  bootNode=($bootNode)
+  bootNodeWithSpace=$(IFS=" " ; echo "${bootNode[*]}")
+  bootNode=$(IFS=, ; echo "${bootNode[*]}")
+
+  bootEnr=$(cat $dataDir/$configGitDir/bootstrap_nodes.txt)
+  bootEnr=($bootEnr)
+  bootEnr=$(IFS=" " ; echo "${bootEnr[*]}")
+
+  depositContractDeployBlock=$(cat $dataDir/$configGitDir/deposit_contract_block.txt)
+
+else
+  echo "No configuration specified, assuming the configuration baked in the images and args appropriately set to use it!"
 fi;
+
 
 run_cmd(){
   execCmd=$1;
@@ -72,10 +97,13 @@ then
 fi;
 
 platform=$(uname)
-bootNode=$(cat $dataDir/$configGitDir/el_bootnode.txt)
-bootNode=($bootNode)
-bootNodeWithSpace=$(IFS=" " ; echo "${bootNode[*]}")
-bootNode=$(IFS=, ; echo "${bootNode[*]}")
+
+if [ $platform == 'Darwin' ]
+then
+  elDockerNetwork=""
+else
+  elDockerNetwork="--network host"
+fi;
 
 if [ "$elClient" == "geth" ]
 then
@@ -83,69 +111,95 @@ then
   $dockerExec pull $GETH_IMAGE
 
   elName="$DEVNET_NAME-geth"
-  if [ ! -n "$(ls -A $dataDir/geth)" ]
+  if [ ! -n "$(ls -A $dataDir/geth)" ] && [ -n "$configGitDir" ]
   then 
     echo "setting up geth directory"
     $dockerExec run --rm -v $currentDir/$dataDir/$configGitDir:/config -v $currentDir/$dataDir/geth:/data $GETH_IMAGE --datadir /data init /config/genesis.json
   fi;
-  if [ $platform == 'Darwin' ]
+
+  elCmd="$dockerCmd --name $elName $elDockerNetwork -v $currentDir/$dataDir:/data $GETH_IMAGE $GETH_EXTRA_ARGS"
+  if [ -n "$configGitDir" ]
   then
-    elCmd="$dockerCmd --name $elName -v $currentDir/$dataDir:/data $GETH_IMAGE --bootnodes $EXTRA_BOOTNODES$bootNode --datadir /data/geth --authrpc.jwtsecret /data/jwtsecret $GETH_EXTRA_ARGS"
-  else
-    elCmd="$dockerCmd --name $elName --network host -v $currentDir/$dataDir:/data $GETH_IMAGE --bootnodes $EXTRA_BOOTNODES$bootNode --datadir /data/geth --authrpc.jwtsecret /data/jwtsecret $GETH_EXTRA_ARGS"
-  fi
+    elCmd="$elCmd --bootnodes $EXTRA_BOOTNODES$bootNode"
+  fi;
+
 elif [ "$elClient" == "nethermind" ] 
 then
   echo "nethermindImage: $NETHERMIND_IMAGE"
   $dockerExec pull $NETHERMIND_IMAGE
 
   elName="$DEVNET_NAME-nethermind"
-
-  if [ $platform == 'Darwin' ]
+  elCmd="$dockerCmd --name $elName $elDockerNetwork -v $currentDir/$dataDir:/data"
+  if [ -n "$configGitDir" ]
   then
-    elCmd="$dockerCmd --name $elName -v $currentDir/$dataDir/$configGitDir:/config -v $currentDir/$dataDir:/data $NETHERMIND_IMAGE --datadir /data/nethermind  --Init.ChainSpecPath=/config/nethermind_genesis.json --JsonRpc.JwtSecretFile /data/jwtsecret $NETHERMIND_EXTRA_ARGS --Discovery.Bootnodes $EXTRA_BOOTNODES$bootNode"
+    elCmd="$elCmd -v $currentDir/$dataDir/$configGitDir:/config  $NETHERMIND_IMAGE --Init.ChainSpecPath=/config/nethermind_genesis.json --Discovery.Bootnodes $EXTRA_BOOTNODES$bootNode"
   else
-    elCmd="$dockerCmd --name $elName --network host -v $currentDir/$dataDir/$configGitDir:/config -v $currentDir/$dataDir:/data $NETHERMIND_IMAGE --datadir /data/nethermind  --Init.ChainSpecPath=/config/nethermind_genesis.json --JsonRpc.JwtSecretFile /data/jwtsecret $NETHERMIND_EXTRA_ARGS --Discovery.Bootnodes $EXTRA_BOOTNODES$bootNode"
-  fi
+    elCmd="$elCmd $NETHERMIND_IMAGE"
+  fi;
+  elCmd="$elCmd $NETHERMIND_EXTRA_ARGS"
+
 elif [ "$elClient" == "ethereumjs" ] 
 then
   echo "ethereumjsImage: $ETHEREUMJS_IMAGE"
   $dockerExec pull $ETHEREUMJS_IMAGE
 
   elName="$DEVNET_NAME-ethereumjs"
-
-  if [ $platform == 'Darwin' ]
+  elCmd="$dockerCmd --name $elName $elDockerNetwork -v $currentDir/$dataDir:/data"
+  if [ -n "$configGitDir" ]
   then
-    elCmd="$dockerCmd --name $elName -v $currentDir/$dataDir/$configGitDir:/config -v $currentDir/$dataDir:/data $ETHEREUMJS_IMAGE --datadir /data/ethereumjs --gethGenesis /config/genesis.json $ETHEREUMJS_EXTRA_ARGS --bootnodes=$bootNodeWithSpace --jwt-secret /data/jwtsecret"
+    elCmd="$elCmd -v $currentDir/$dataDir/$configGitDir:/config  $ETHEREUMJS_IMAGE --bootnodes=$EXTRA_BOOTNODES$bootNode"
   else
-    elCmd="$dockerCmd --name $elName --network host -v $currentDir/$dataDir/$configGitDir:/config -v $currentDir/$dataDir:/data $ETHEREUMJS_IMAGE --datadir /data/ethereumjs --gethGenesis /config/genesis.json $ETHEREUMJS_EXTRA_ARGS --bootnodes=$bootNodeWithSpace --jwt-secret /data/jwtsecret"
-  fi
+    elCmd="$elCmd $ETHEREUMJS_IMAGE"
+  fi;
+  elCmd="$elCmd --datadir /data/ethereumjs --gethGenesis /config/genesis.json --jwt-secret /data/jwtsecret $ETHEREUMJS_EXTRA_ARGS "
+
+elif [ "$elClient" == "besu" ] 
+then
+  echo "besuImage: $BESU_IMAGE"
+  $dockerExec pull $BESU_IMAGE
+
+  elName="$DEVNET_NAME-besu"
+  elCmd="$dockerCmd --name $elName $elDockerNetwork -v $currentDir/$dataDir:/data"
+  if [ -n "$configGitDir" ]
+  then
+    elCmd="$elCmd -v $currentDir/$dataDir/$configGitDir:/config  $BESU_IMAGE --genesis-file=/config/besu_genesis.json --bootnodes=$EXTRA_BOOTNODES$bootNode"
+  else
+    elCmd="$elCmd $BESU_IMAGE"
+  fi;
+  elCmd="$elCmd $BESU_IMAGE --data-path=/data --engine-jwt-secret=/data/jwtsecret $BESU_EXTRA_ARGS"
 fi
 
 echo "lodestarImage: $LODESTAR_IMAGE"
 $dockerExec pull $LODESTAR_IMAGE
 
-bootEnr=$(cat $dataDir/$configGitDir/bootstrap_nodes.txt)
-bootEnr=($bootEnr)
-bootEnr=$(IFS=" " ; echo "${bootEnr[*]}")
-
-depositContractDeployBlock=$(cat $dataDir/$configGitDir/deposit_contract_block.txt)
-clName="$DEVNET_NAME-lodestar"
-
 if [ $platform == 'Darwin' ]
 then
-  clCmd="$dockerCmd --name $clName --net=container:$elName -v $currentDir/$dataDir/$configGitDir:/config -v $currentDir/$dataDir:/data $LODESTAR_IMAGE beacon --rootDir /data/lodestar --paramsFile /config/config.yaml --genesisStateFile /config/genesis.ssz --network.connectToDiscv5Bootnodes --network.discv5.enabled true --eth1.enabled true --eth1.depositContractDeployBlock $depositContractDeployBlock  $LODESTAR_EXTRA_ARGS --bootnodesFile /config/boot_enr.yaml --jwt-secret /data/jwtsecret"
+  clDockerNetwork="--net=container:$elName"
 else
-  clCmd="$dockerCmd --name $clName --network host -v $currentDir/$dataDir/$configGitDir:/config -v $currentDir/$dataDir:/data $LODESTAR_IMAGE beacon --rootDir /data/lodestar --paramsFile /config/config.yaml --genesisStateFile /config/genesis.ssz --network.connectToDiscv5Bootnodes --network.discv5.enabled true --eth1.enabled true --eth1.depositContractDeployBlock $depositContractDeployBlock  $LODESTAR_EXTRA_ARGS --bootnodesFile /config/boot_enr.yaml --jwt-secret /data/jwtsecret"
+  clDockerNetwork="--network host"
 fi
 
-valName="$DEVNET_NAME-validator"
-if [ $platform == 'Darwin' ]
+clName="$DEVNET_NAME-lodestar"
+clCmd="$dockerCmd --name $clName $clDockerNetwork -v $currentDir/$dataDir:/data"
+# mount and use config
+if [ -n "$configGitDir" ]
 then
-  valCmd="$dockerCmd --name $valName --net=container:$elName -v $currentDir/$dataDir/$configGitDir:/config -v $currentDir/$dataDir:/data $LODESTAR_IMAGE validator --rootDir /data/lodestar --paramsFile /config/config.yaml $LODESTAR_VALIDATOR_ARGS"
+  clCmd="$clCmd -v $currentDir/$dataDir/$configGitDir:/config $LODESTAR_IMAGE beacon --paramsFile /config/config.yaml --genesisStateFile /config/genesis.ssz --eth1.depositContractDeployBlock $depositContractDeployBlock --bootnodesFile /config/boot_enr.yaml"
 else
-  valCmd="$dockerCmd --name $valName --network host -v $currentDir/$dataDir/$configGitDir:/config -v $currentDir/$dataDir:/data $LODESTAR_IMAGE validator --rootDir /data/lodestar --paramsFile /config/config.yaml $LODESTAR_VALIDATOR_ARGS"
+  clCmd="$clCmd $LODESTAR_IMAGE beacon"
 fi;
+clCmd="$clCmd $LODESTAR_EXTRA_ARGS"
+
+valName="$DEVNET_NAME-validator"
+valCmd="$dockerCmd --name $valName $clDockerNetwork -v $currentDir/$dataDir:/data"
+# mount and use config
+if [ -n "$configGitDir" ]
+then
+  valCmd="$valCmd -v $currentDir/$dataDir/$configGitDir:/config $LODESTAR_IMAGE validator --paramsFile /config/config.yaml"
+else
+  valCmd="$valCmd $LODESTAR_IMAGE validator"
+fi;
+valCmd="$valCmd $LODESTAR_VALIDATOR_ARGS"
 
 echo -n $JWT_SECRET > $dataDir/jwtsecret
 run_cmd "$elCmd"

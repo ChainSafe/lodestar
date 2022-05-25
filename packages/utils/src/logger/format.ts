@@ -1,9 +1,11 @@
-import {format} from "winston";
-import {logCtxToJson, logCtxToString, LogData} from "./json";
-import {ILoggerOptions, TimestampFormatCode} from "./interface";
-import {formatEpochSlotTime} from "./util";
+import winston from "winston";
+import {logCtxToJson, logCtxToString, LogData} from "./json.js";
+import {ILoggerOptions, TimestampFormatCode} from "./interface.js";
+import {formatEpochSlotTime} from "./util.js";
 
-type Format = ReturnType<typeof format.combine>;
+const {format} = winston;
+
+type Format = ReturnType<typeof winston.format.combine>;
 
 // TODO: Find a more typesafe way of enforce this properties
 interface IWinstonInfoArg {

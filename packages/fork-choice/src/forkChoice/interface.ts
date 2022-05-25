@@ -1,8 +1,8 @@
 import {EffectiveBalanceIncrements} from "@chainsafe/lodestar-beacon-state-transition";
 import {BeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {Epoch, Slot, ValidatorIndex, phase0, allForks, Root, RootHex} from "@chainsafe/lodestar-types";
-import {IProtoBlock, ExecutionStatus} from "../protoArray/interface";
-import {CheckpointWithHex} from "./store";
+import {IProtoBlock, ExecutionStatus} from "../protoArray/interface.js";
+import {CheckpointWithHex} from "./store.js";
 
 export type CheckpointHex = {
   epoch: Epoch;
@@ -77,7 +77,7 @@ export interface IForkChoice {
    * The supplied `attestation` **must** pass the `in_valid_indexed_attestation` function as it
    * will not be run here.
    */
-  onAttestation(attestation: phase0.IndexedAttestation): void;
+  onAttestation(attestation: phase0.IndexedAttestation, attDataRoot?: string): void;
   getLatestMessage(validatorIndex: ValidatorIndex): ILatestMessage | undefined;
   /**
    * Call `onTick` for all slots between `fcStore.getCurrentSlot()` and the provided `currentSlot`.
@@ -142,7 +142,7 @@ export interface IForkChoice {
 
 /** Same to the PowBlock but we want RootHex to work with forkchoice conveniently */
 export type PowBlockHex = {
-  blockhash: RootHex;
+  blockHash: RootHex;
   parentHash: RootHex;
   totalDifficulty: bigint;
 };
@@ -152,24 +152,6 @@ export type OnBlockPrecachedData = {
   justifiedBalances?: EffectiveBalanceIncrements;
   /** Time in seconds when the block was received */
   blockDelaySec: number;
-  /**
-   * POW chain block parent, from getPowBlock() `eth_getBlockByHash` JSON RPC endpoint
-   * ```ts
-   * powBlock = getPowBlock((block as bellatrix.BeaconBlock).body.executionPayload.parentHash)
-   * ```
-   */
-  powBlock?: PowBlockHex | null;
-  /**
-   * POW chain block's block parent, from getPowBlock() `eth_getBlockByHash` JSON RPC endpoint
-   * ```ts
-   * const powParent = getPowBlock(powBlock.parentHash);
-   * ```
-   */
-  powBlockParent?: PowBlockHex | null;
-  /**
-   * Optimistic sync fields
-   */
-  isMergeTransitionBlock?: boolean;
   executionStatus?: ExecutionStatus;
 };
 

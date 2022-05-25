@@ -1,11 +1,11 @@
 import {ssz} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/default";
 import {ProofType} from "@chainsafe/persistent-merkle-tree";
+import {Api, ReqTypes} from "../../src/routes/lightclient.js";
+import {getClient} from "../../src/client/lightclient.js";
+import {getRoutes} from "../../src/server/lightclient.js";
+import {runGenericServerTest} from "../utils/genericServerTest.js";
 import {toHexString} from "@chainsafe/ssz";
-import {Api, ReqTypes} from "../../src/routes/lightclient";
-import {getClient} from "../../src/client/lightclient";
-import {getRoutes} from "../../src/server/lightclient";
-import {runGenericServerTest} from "../utils/genericServerTest";
 
 const root = Uint8Array.from(Buffer.alloc(32, 1));
 
@@ -43,9 +43,20 @@ describe("lightclient", () => {
       args: [1, 2],
       res: {data: [lightClientUpdate]},
     },
-    getHeadUpdate: {
+    getLatestHeadUpdate: {
       args: [],
       res: {data: {syncAggregate, attestedHeader: header}},
+    },
+    getLatestFinalizedHeadUpdate: {
+      args: [],
+      res: {
+        data: {
+          syncAggregate,
+          attestedHeader: header,
+          finalizedHeader: lightClientUpdate.finalizedHeader,
+          finalityBranch: lightClientUpdate.finalityBranch,
+        },
+      },
     },
     getSnapshot: {
       args: [toHexString(root)],

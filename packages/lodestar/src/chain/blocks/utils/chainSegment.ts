@@ -1,6 +1,6 @@
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {allForks, ssz} from "@chainsafe/lodestar-types";
-import {BlockError, BlockErrorCode} from "../../errors";
+import {BlockError, BlockErrorCode} from "../../errors/index.js";
 
 /**
  * Assert this chain segment of blocks is linear with slot numbers and hashes

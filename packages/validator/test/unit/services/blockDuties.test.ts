@@ -5,11 +5,11 @@ import bls from "@chainsafe/bls";
 import {toHexString} from "@chainsafe/ssz";
 import {Root} from "@chainsafe/lodestar-types";
 import {routes} from "@chainsafe/lodestar-api";
-import {BlockDutiesService} from "../../../src/services/blockDuties";
-import {ValidatorStore} from "../../../src/services/validatorStore";
-import {getApiClientStub} from "../../utils/apiStub";
-import {loggerVc} from "../../utils/logger";
-import {ClockMock} from "../../utils/clock";
+import {BlockDutiesService} from "../../../src/services/blockDuties.js";
+import {ValidatorStore} from "../../../src/services/validatorStore.js";
+import {getApiClientStub} from "../../utils/apiStub.js";
+import {loggerVc} from "../../utils/logger.js";
+import {ClockMock} from "../../utils/clock.js";
 
 type ProposerDutiesRes = {dependentRoot: Root; data: routes.validator.ProposerDuty[]};
 
@@ -46,7 +46,7 @@ describe("BlockDutiesService", function () {
     const notifyBlockProductionFn = sinon.stub(); // Returns void
 
     const clock = new ClockMock();
-    const dutiesService = new BlockDutiesService(loggerVc, api, clock, validatorStore, notifyBlockProductionFn);
+    const dutiesService = new BlockDutiesService(loggerVc, api, clock, validatorStore, null, notifyBlockProductionFn);
 
     // Trigger clock onSlot for slot 0
     await clock.tickSlotFns(0, controller.signal);
@@ -81,7 +81,7 @@ describe("BlockDutiesService", function () {
 
     // Clock will call runAttesterDutiesTasks() immediatelly
     const clock = new ClockMock();
-    const dutiesService = new BlockDutiesService(loggerVc, api, clock, validatorStore, notifyBlockProductionFn);
+    const dutiesService = new BlockDutiesService(loggerVc, api, clock, validatorStore, null, notifyBlockProductionFn);
 
     // Trigger clock onSlot for slot 0
     api.validator.getProposerDuties.resolves(dutiesBeforeReorg);
@@ -136,7 +136,7 @@ describe("BlockDutiesService", function () {
     const notifyBlockProductionFn = sinon.stub(); // Returns void
 
     const clock = new ClockMock();
-    const dutiesService = new BlockDutiesService(loggerVc, api, clock, validatorStore, notifyBlockProductionFn);
+    const dutiesService = new BlockDutiesService(loggerVc, api, clock, validatorStore, null, notifyBlockProductionFn);
 
     // Trigger clock onSlot for slot 0
     await clock.tickSlotFns(0, controller.signal);

@@ -15,8 +15,8 @@ import {
   InvalidBlockError,
   SlashingProtectionBlock,
   SlashingProtectionAttestation,
-} from "../../src/slashingProtection";
-import {SPEC_TEST_LOCATION} from "./params";
+} from "../../src/slashingProtection/index.js";
+import {SPEC_TEST_LOCATION} from "./params.js";
 
 chai.use(chaiAsPromised);
 

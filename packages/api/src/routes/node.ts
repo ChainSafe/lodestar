@@ -11,7 +11,7 @@ import {
   ReqSerializers,
   ReqEmpty,
   sameType,
-} from "../utils";
+} from "../utils/index.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
@@ -180,11 +180,11 @@ export function getReturnTypes(): ReturnTypes<Api> {
     getNetworkIdentity: ContainerData(NetworkIdentity),
     // All these types don't contain any BigInt nor Buffer instances.
     // Use jsonType() to translate the casing in a generic way.
-    getPeers: jsonType("camel"),
-    getPeer: jsonType("camel"),
-    getPeerCount: jsonType("camel"),
-    getNodeVersion: jsonType("camel"),
-    getSyncingStatus: jsonType("camel"),
+    getPeers: jsonType("snake"),
+    getPeer: jsonType("snake"),
+    getPeerCount: jsonType("snake"),
+    getNodeVersion: jsonType("snake"),
+    getSyncingStatus: jsonType("snake"),
     getHealth: sameType(),
   };
 }

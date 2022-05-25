@@ -1,4 +1,4 @@
-import {ReqGeneric} from "./types";
+import {ReqGeneric} from "./types.js";
 
 // Reasoning: Allows to declare JSON schemas for server routes in a succinct typesafe way.
 // The enums exposed here are very feature incomplete but cover the minimum necessary for

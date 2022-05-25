@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {fromHexString as b} from "@chainsafe/ssz";
 import {PresetName} from "@chainsafe/lodestar-params";
-import {IChainConfig} from "../types";
+import {IChainConfig} from "../types.js";
 
 export const chainConfig: IChainConfig = {
   PRESET_BASE: PresetName.mainnet,
@@ -64,7 +64,7 @@ export const chainConfig: IChainConfig = {
   MIN_PER_EPOCH_CHURN_LIMIT: 4,
   // 2**16 (= 65,536)
   CHURN_LIMIT_QUOTIENT: 65536,
-  PROPOSER_SCORE_BOOST: 70,
+  PROPOSER_SCORE_BOOST: 40,
 
   // Deposit contract
   // ---------------------------------------------------------------

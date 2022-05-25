@@ -2,7 +2,11 @@
 import {expect} from "chai";
 import {Root, ssz} from "@chainsafe/lodestar-types";
 import {toHexString} from "@chainsafe/ssz";
-import {Interchange, parseInterchange, serializeInterchange} from "../../../../src/slashingProtection/interchange";
+import {
+  Interchange,
+  parseInterchange,
+  serializeInterchange,
+} from "../../../../src/slashingProtection/interchange/index.js";
 
 describe("interchange", () => {
   it("Should parseInterchange and serializeInterchange", () => {

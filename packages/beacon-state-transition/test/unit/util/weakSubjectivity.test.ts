@@ -1,7 +1,7 @@
-import {expect} from "chai";
 import {config} from "@chainsafe/lodestar-config/default";
-import {computeWeakSubjectivityPeriodFromConstituents} from "../../../src/util/weakSubjectivity";
-import {getChurnLimit} from "../../../src/util/validator";
+import {expect} from "chai";
+import {computeWeakSubjectivityPeriodFromConstituents} from "../../../src/util/weakSubjectivity.js";
+import {getChurnLimit} from "../../../src/util/validator.js";
 
 describe("weak subjectivity tests", () => {
   describe("computeWeakSubjectivityPeriodFromConstituents", function () {

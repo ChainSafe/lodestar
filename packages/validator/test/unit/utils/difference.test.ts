@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {differenceHex} from "../../../src/util/difference";
+import {differenceHex} from "../../../src/util/difference.js";
 
 describe("utils / differenceHex", () => {
   const root0 = Buffer.alloc(32, 0);

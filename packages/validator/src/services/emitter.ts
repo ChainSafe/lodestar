@@ -1,6 +1,6 @@
 import {EventEmitter} from "events";
 import StrictEventEmitter from "strict-event-emitter-types";
-import {HeadEventData} from "./chainHeaderTracker";
+import {HeadEventData} from "./chainHeaderTracker.js";
 
 export enum ValidatorEvent {
   /**

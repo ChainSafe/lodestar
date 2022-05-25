@@ -1,6 +1,6 @@
 import {HttpError} from "@chainsafe/lodestar-api";
 import {LogData, ILogger, isErrorAborted} from "@chainsafe/lodestar-utils";
-import {IClock} from "./clock";
+import {IClock} from "./clock.js";
 
 export type ILoggerVc = Pick<ILogger, "error" | "warn" | "info" | "verbose" | "debug"> & {
   isSyncing(e: Error): void;

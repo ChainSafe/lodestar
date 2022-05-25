@@ -1,4 +1,4 @@
-import {BellatrixPreset} from "../../interface/bellatrix";
+import {BellatrixPreset} from "../../interface/bellatrix.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 export const bellatrix: BellatrixPreset = {

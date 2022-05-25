@@ -1,6 +1,4 @@
-import {kilnChainConfig} from "@chainsafe/lodestar-config/networks";
-
-export const chainConfig = kilnChainConfig;
+export {kilnChainConfig as chainConfig} from "@chainsafe/lodestar-config/networks";
 
 /* eslint-disable max-len */
 

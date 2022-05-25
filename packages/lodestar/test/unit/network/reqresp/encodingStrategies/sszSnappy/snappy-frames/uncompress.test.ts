@@ -1,10 +1,10 @@
 import {expect} from "chai";
-import {createCompressStream} from "@chainsafe/snappy-stream";
-import {SnappyFramesUncompress} from "../../../../../../../src/network/reqresp/encodingStrategies/sszSnappy/snappyFrames/uncompress";
+import snappy from "@chainsafe/snappy-stream";
+import {SnappyFramesUncompress} from "../../../../../../../src/network/reqresp/encodingStrategies/sszSnappy/snappyFrames/uncompress.js";
 
 describe("snappy frames uncompress", function () {
   it("should work with short input", function (done) {
-    const compressStream = createCompressStream();
+    const compressStream = snappy.createCompressStream();
 
     const decompress = new SnappyFramesUncompress();
 
@@ -22,15 +22,17 @@ describe("snappy frames uncompress", function () {
   });
 
   it("should work with huge input", function (done) {
-    const compressStream = createCompressStream();
+    const compressStream = snappy.createCompressStream();
 
     const decompress = new SnappyFramesUncompress();
 
     const testData = Buffer.alloc(100000, 4).toString();
+    let result = Buffer.alloc(0);
 
     compressStream.on("data", function (data) {
-      const result = decompress.uncompress(data);
-      if (result) {
+      // testData will come compressed as two or more chunks
+      result = Buffer.concat([result, decompress.uncompress(data) ?? Buffer.alloc(0)]);
+      if (result.length === testData.length) {
         expect(result.toString()).to.be.equal(testData);
         done();
       }

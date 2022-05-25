@@ -1,19 +1,19 @@
+import {AbortController} from "@chainsafe/abort-controller";
 import {expect} from "chai";
 import sinon from "sinon";
-import {AbortController} from "@chainsafe/abort-controller";
 import bls from "@chainsafe/bls";
 import {toHexString} from "@chainsafe/ssz";
 import {createIChainForkConfig} from "@chainsafe/lodestar-config";
 import {config as mainnetConfig} from "@chainsafe/lodestar-config/default";
+import {SyncCommitteeService} from "../../../src/services/syncCommittee.js";
+import {SyncDutyAndProofs} from "../../../src/services/syncCommitteeDuties.js";
+import {ValidatorStore} from "../../../src/services/validatorStore.js";
+import {getApiClientStub} from "../../utils/apiStub.js";
+import {loggerVc, testLogger} from "../../utils/logger.js";
+import {ClockMock} from "../../utils/clock.js";
+import {IndicesService} from "../../../src/services/indices.js";
 import {ssz} from "@chainsafe/lodestar-types";
-import {SyncCommitteeService} from "../../../src/services/syncCommittee";
-import {SyncDutyAndProofs} from "../../../src/services/syncCommitteeDuties";
-import {ValidatorStore} from "../../../src/services/validatorStore";
-import {getApiClientStub} from "../../utils/apiStub";
-import {loggerVc, testLogger} from "../../utils/logger";
-import {ClockMock} from "../../utils/clock";
-import {IndicesService} from "../../../src/services/indices";
-import {ChainHeaderTracker} from "../../../src/services/chainHeaderTracker";
+import {ChainHeaderTracker} from "../../../src/services/chainHeaderTracker.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
@@ -50,7 +50,7 @@ describe("SyncCommitteeService", function () {
 
   it("Should produce, sign, and publish a sync committee + contribution", async () => {
     const clock = new ClockMock();
-    const indicesService = new IndicesService(logger, api, validatorStore);
+    const indicesService = new IndicesService(logger, api, validatorStore, null);
     const syncCommitteeService = new SyncCommitteeService(
       config,
       loggerVc,
@@ -58,7 +58,8 @@ describe("SyncCommitteeService", function () {
       clock,
       validatorStore,
       chainHeaderTracker,
-      indicesService
+      indicesService,
+      null
     );
 
     const beaconBlockRoot = Buffer.alloc(32, 0x4d);

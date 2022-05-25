@@ -1,21 +1,7 @@
 import {DOMAIN_BEACON_ATTESTER} from "@chainsafe/lodestar-params";
 import {allForks, phase0, ssz} from "@chainsafe/lodestar-types";
-import {
-  computeSigningRoot,
-  computeStartSlotAtEpoch,
-  ISignatureSet,
-  SignatureSetType,
-  verifySignatureSet,
-} from "../../util";
-import {CachedBeaconStateAllForks} from "../../types";
-
-export function verifyIndexedAttestationSignature(
-  state: CachedBeaconStateAllForks,
-  indexedAttestation: phase0.IndexedAttestation,
-  indices?: number[]
-): boolean {
-  return verifySignatureSet(getIndexedAttestationSignatureSet(state, indexedAttestation, indices));
-}
+import {computeSigningRoot, computeStartSlotAtEpoch, ISignatureSet, SignatureSetType} from "../../util/index.js";
+import {CachedBeaconStateAllForks} from "../../types.js";
 
 export function getAttestationWithIndicesSignatureSet(
   state: CachedBeaconStateAllForks,
@@ -36,14 +22,9 @@ export function getAttestationWithIndicesSignatureSet(
 
 export function getIndexedAttestationSignatureSet(
   state: CachedBeaconStateAllForks,
-  indexedAttestation: phase0.IndexedAttestation,
-  indices?: number[]
+  indexedAttestation: phase0.IndexedAttestation
 ): ISignatureSet {
-  return getAttestationWithIndicesSignatureSet(
-    state,
-    indexedAttestation,
-    indices ?? indexedAttestation.attestingIndices
-  );
+  return getAttestationWithIndicesSignatureSet(state, indexedAttestation, indexedAttestation.attestingIndices);
 }
 
 export function getAttestationsSignatureSets(

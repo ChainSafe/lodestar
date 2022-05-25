@@ -1,4 +1,4 @@
-import {getVersion} from "./version";
+import {getVersionData} from "./version.js";
 
 const lodestarPackageName = "Lodestar";
 
@@ -8,7 +8,7 @@ const lodestarPackageName = "Lodestar";
  */
 export function getDefaultGraffiti(): string {
   try {
-    const version = getVersion();
+    const {version} = getVersionData();
     return `${lodestarPackageName}-${version}`;
   } catch (e) {
     // eslint-disable-next-line no-console

@@ -6,10 +6,10 @@ import {
   CachedBeaconStateAllForks,
   CachedBeaconStateAltair,
   beforeProcessEpoch,
-} from "../../../../src";
-import {beforeValue, getNetworkCachedState, LazyValue} from "../../util";
-import {StateEpoch} from "../../types";
-import {altairState} from "../../params";
+} from "../../../../src/index.js";
+import {getNetworkCachedState, beforeValue, LazyValue} from "../../../utils/index.js";
+import {StateEpoch} from "../../types.js";
+import {altairState} from "../../params.js";
 
 const slot = computeStartSlotAtEpoch(altairState.epoch) - 1;
 const stateId = `${altairState.network}_e${altairState.epoch}`;

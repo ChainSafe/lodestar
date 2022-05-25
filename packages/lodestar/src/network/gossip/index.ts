@@ -1,3 +1,3 @@
-export {Eth2Gossipsub} from "./gossipsub";
-export {getGossipHandlers} from "./handlers";
-export * from "./interface";
+export {Eth2Gossipsub} from "./gossipsub.js";
+export {getGossipHandlers} from "./handlers/index.js";
+export * from "./interface.js";

@@ -1,4 +1,5 @@
-import {bls, CoordType, PublicKey} from "@chainsafe/bls";
+import {CoordType, PublicKey} from "@chainsafe/bls/types";
+import bls from "@chainsafe/bls";
 
 const MIN_SET_COUNT_TO_BATCH = 2;
 

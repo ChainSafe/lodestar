@@ -1,5 +1,5 @@
 import {assert} from "chai";
-import {bigIntMin, bigIntMax, intDiv, intSqrt, bigIntSqrt} from "../../src";
+import {bigIntMin, bigIntMax, intDiv, intSqrt, bigIntSqrt} from "../../src/index.js";
 
 describe("util/maths", function () {
   describe("bigIntMin", () => {

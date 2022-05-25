@@ -1,5 +1,5 @@
-import {Method, isSingleResponseChunkByMethod, IncomingResponseBody} from "../types";
-import {RequestErrorCode, RequestInternalError} from "./errors";
+import {Method, isSingleResponseChunkByMethod, IncomingResponseBody} from "../types.js";
+import {RequestErrorCode, RequestInternalError} from "./errors.js";
 
 /**
  * Sink for `<response_chunk>*`, from

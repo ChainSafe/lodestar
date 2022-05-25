@@ -1,6 +1,6 @@
 import {MutableVector} from "@chainsafe/persistent-ts";
 import {testRunnerMemory} from "@chainsafe/lodestar/test/memory/testRunnerMemory";
-import {newZeroedArray} from "../../src";
+import {newZeroedArray} from "../../src/index.js";
 
 // Results in Linux Feb 2022
 //

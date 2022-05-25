@@ -1,7 +1,7 @@
 import fastify from "fastify";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {SecretKey} from "@chainsafe/bls";
-import {PubkeyHex} from "../../src/types";
+import type {SecretKey} from "@chainsafe/bls/types";
+import {PubkeyHex} from "../../src/types.js";
 
 /**
  * Creates a fastify server with registered remote signer routes.

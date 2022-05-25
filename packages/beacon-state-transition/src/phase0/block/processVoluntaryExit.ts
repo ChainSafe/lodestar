@@ -1,6 +1,6 @@
 import {phase0} from "@chainsafe/lodestar-types";
-import {CachedBeaconStatePhase0} from "../../types";
-import {processVoluntaryExitAllForks} from "../../allForks/block";
+import {CachedBeaconStatePhase0} from "../../types.js";
+import {processVoluntaryExitAllForks} from "../../allForks/block/index.js";
 
 export function processVoluntaryExit(
   state: CachedBeaconStatePhase0,

@@ -1,14 +1,14 @@
-import {expect} from "chai";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {Root, phase0} from "@chainsafe/lodestar-types";
 import {toHexString} from "@chainsafe/ssz";
-import {ZERO_HASH} from "../../../../src/constants";
+import {expect} from "chai";
+import {ZERO_HASH} from "../../../../src/constants/index.js";
 import {
   getPeerSyncType,
   getRangeSyncType,
   PeerSyncType,
   RangeSyncType,
-} from "../../../../src/sync/utils/remoteSyncType";
+} from "../../../../src/sync/utils/remoteSyncType.js";
 
 describe("network / peers / remoteSyncType", () => {
   const slotImportTolerance = 32;

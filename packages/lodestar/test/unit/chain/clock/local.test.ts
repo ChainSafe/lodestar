@@ -1,12 +1,12 @@
 import sinon from "sinon";
-import {expect} from "chai";
 import {AbortController} from "@chainsafe/abort-controller";
+import {expect} from "chai";
 import {config} from "@chainsafe/lodestar-config/default";
 
+import {LocalClock} from "../../../../src/chain/clock/LocalClock.js";
+import {ChainEvent, ChainEventEmitter} from "../../../../src/chain/emitter.js";
+import {MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../../../src/constants/index.js";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import {LocalClock} from "../../../../src/chain/clock/LocalClock";
-import {ChainEvent, ChainEventEmitter} from "../../../../src/chain/emitter";
-import {MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../../../src/constants";
 
 describe("LocalClock", function () {
   const sandbox = sinon.createSandbox();

@@ -1,23 +1,25 @@
 import {routes} from "@chainsafe/lodestar-api";
-// eslint-disable-next-line no-restricted-imports
-import {Api as IBeaconStateApi} from "@chainsafe/lodestar-api/lib/routes/beacon/state";
 import {
   BeaconStateAllForks,
   CachedBeaconStateAltair,
   computeEpochAtSlot,
   getCurrentEpoch,
 } from "@chainsafe/lodestar-beacon-state-transition";
-import {ApiError} from "../../errors";
-import {ApiModules} from "../../types";
+import {ApiError} from "../../errors.js";
+import {ApiModules} from "../../types.js";
 import {
   filterStateValidatorsByStatuses,
   getStateValidatorIndex,
   getValidatorStatus,
   resolveStateId,
   toValidatorResponse,
-} from "./utils";
+} from "./utils.js";
 
-export function getBeaconStateApi({chain, config, db}: Pick<ApiModules, "chain" | "config" | "db">): IBeaconStateApi {
+export function getBeaconStateApi({
+  chain,
+  config,
+  db,
+}: Pick<ApiModules, "chain" | "config" | "db">): routes.beacon.state.Api {
   async function getState(stateId: routes.beacon.StateId): Promise<BeaconStateAllForks> {
     return await resolveStateId(config, chain, db, stateId);
   }

@@ -1,13 +1,12 @@
 import chaiAsPromised from "chai-as-promised";
 import chai, {expect} from "chai";
-import {initBLS} from "@chainsafe/lodestar-cli/src/util";
 import {createIBeaconConfig, IChainConfig} from "@chainsafe/lodestar-config";
 import {chainConfig as chainConfigDef} from "@chainsafe/lodestar-config/default";
 import {getClient} from "@chainsafe/lodestar-api";
 import {toHexString} from "@chainsafe/ssz";
-import {LogLevel, testLogger, TestLoggerOpts} from "../../../../../utils/logger";
-import {getDevBeaconNode} from "../../../../../utils/node/beacon";
-import {getAndInitDevValidators} from "../../../../../utils/node/validator";
+import {LogLevel, testLogger, TestLoggerOpts} from "../../../../../utils/logger.js";
+import {getDevBeaconNode} from "../../../../../utils/node/beacon.js";
+import {getAndInitDevValidators} from "../../../../../utils/node/validator.js";
 
 chai.use(chaiAsPromised);
 
@@ -36,10 +35,6 @@ describe("lodestar / api / impl / state", function () {
       }
     });
 
-    before(async function () {
-      await initBLS();
-    });
-
     it("should return all validators when getStateValidators called without filters", async function () {
       const validatorCount = 2;
       const bn = await getDevBeaconNode({
@@ -65,7 +60,7 @@ describe("lodestar / api / impl / state", function () {
 
       await Promise.all(validators.map((validator) => validator.start()));
 
-      const client = getClient(config, {baseUrl: `http://127.0.0.1:${restPort}`}).beacon;
+      const client = getClient({baseUrl: `http://127.0.0.1:${restPort}`}, {config}).beacon;
 
       const response = await client.getStateValidators("head");
       expect(response.data.length).to.be.equal(validatorCount);
@@ -101,7 +96,7 @@ describe("lodestar / api / impl / state", function () {
 
       await Promise.all(validators.map((validator) => validator.start()));
 
-      const client = getClient(config, {baseUrl: `http://127.0.0.1:${restPort}`}).beacon;
+      const client = getClient({baseUrl: `http://127.0.0.1:${restPort}`}, {config}).beacon;
 
       const response = await client.getStateValidators("head", {
         id: [filterPubKey],

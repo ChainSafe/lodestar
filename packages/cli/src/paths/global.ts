@@ -1,5 +1,5 @@
-import {IGlobalArgs} from "../options";
-import {getDefaultRootDir} from "./rootDir";
+import {IGlobalArgs} from "../options/index.js";
+import {getDefaultRootDir} from "./rootDir.js";
 
 export interface IGlobalPaths {
   rootDir: string;

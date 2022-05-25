@@ -1,11 +1,10 @@
 import chaiAsPromised from "chai-as-promised";
 import chai, {expect} from "chai";
-import {initBLS} from "@chainsafe/lodestar-cli/src/util";
 import {createIBeaconConfig, IChainConfig} from "@chainsafe/lodestar-config";
 import {chainConfig as chainConfigDef} from "@chainsafe/lodestar-config/default";
 import {getClient} from "@chainsafe/lodestar-api";
-import {getDevBeaconNode} from "../../utils/node/beacon";
-import {LogLevel, testLogger, TestLoggerOpts} from "../../utils/logger";
+import {getDevBeaconNode} from "../../utils/node/beacon.js";
+import {LogLevel, testLogger, TestLoggerOpts} from "../../utils/logger.js";
 
 chai.use(chaiAsPromised);
 
@@ -34,10 +33,6 @@ describe("lodestar / sync", function () {
       }
     });
 
-    before(async function () {
-      await initBLS();
-    });
-
     it("getSyncingStatus", async function () {
       this.timeout("10 min");
       const bn = await getDevBeaconNode({
@@ -52,7 +47,7 @@ describe("lodestar / sync", function () {
 
       afterEachCallbacks.push(() => bn.close());
 
-      const client = getClient(config, {baseUrl: "http://127.0.0.1:9596"}).node;
+      const client = getClient({baseUrl: "http://127.0.0.1:9596"}, {config}).node;
 
       // expect headSlot and syncDistance to be string
       await expect(client.getSyncingStatus()).to.eventually.be.deep.equal({

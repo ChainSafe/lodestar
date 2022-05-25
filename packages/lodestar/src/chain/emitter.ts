@@ -5,7 +5,7 @@ import {routes} from "@chainsafe/lodestar-api";
 import {phase0, Epoch, Slot, allForks} from "@chainsafe/lodestar-types";
 import {CheckpointWithHex, IProtoBlock} from "@chainsafe/lodestar-fork-choice";
 import {CachedBeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
-import {AttestationError, BlockError} from "./errors";
+import {AttestationError, BlockError} from "./errors/index.js";
 
 /**
  * Important chain events that occur during normal chain operation.
@@ -100,6 +100,10 @@ export enum ChainEvent {
    * A new lightclient header update is available to be broadcasted to connected light-clients
    */
   lightclientHeaderUpdate = "lightclient:header_update",
+  /**
+   * A new lightclient finalized header update is available to be broadcasted to connected light-clients
+   */
+  lightclientFinalizedUpdate = "lightclient:finalized_update",
 }
 
 export interface IChainEvents {
@@ -121,6 +125,7 @@ export interface IChainEvents {
   [ChainEvent.forkChoiceFinalized]: (checkpoint: CheckpointWithHex) => void;
 
   [ChainEvent.lightclientHeaderUpdate]: (headerUpdate: routes.events.LightclientHeaderUpdate) => void;
+  [ChainEvent.lightclientFinalizedUpdate]: (finalizedUpdate: routes.events.LightclientFinalizedUpdate) => void;
 }
 
 /**

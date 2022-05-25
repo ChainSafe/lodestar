@@ -1,7 +1,8 @@
 import {MAX_VALIDATORS_PER_COMMITTEE} from "@chainsafe/lodestar-params";
 import {phase0} from "@chainsafe/lodestar-types";
-import {CachedBeaconStateAllForks} from "../../types";
-import {verifyIndexedAttestationSignature} from "../signatureSets";
+import {CachedBeaconStateAllForks} from "../../types.js";
+import {verifySignatureSet} from "../../util/index.js";
+import {getIndexedAttestationBigintSignatureSet, getIndexedAttestationSignatureSet} from "../signatureSets/index.js";
 
 /**
  * Check if `indexedAttestation` has sorted and unique indices and a valid aggregate signature.
@@ -9,10 +10,39 @@ import {verifyIndexedAttestationSignature} from "../signatureSets";
 export function isValidIndexedAttestation(
   state: CachedBeaconStateAllForks,
   indexedAttestation: phase0.IndexedAttestation,
-  verifySignature = true
+  verifySignature: boolean
 ): boolean {
-  const indices = indexedAttestation.attestingIndices;
+  if (!isValidIndexedAttestationIndices(state, indexedAttestation.attestingIndices)) {
+    return false;
+  }
 
+  if (verifySignature) {
+    return verifySignatureSet(getIndexedAttestationSignatureSet(state, indexedAttestation));
+  } else {
+    return true;
+  }
+}
+
+export function isValidIndexedAttestationBigint(
+  state: CachedBeaconStateAllForks,
+  indexedAttestation: phase0.IndexedAttestationBigint,
+  verifySignature: boolean
+): boolean {
+  if (!isValidIndexedAttestationIndices(state, indexedAttestation.attestingIndices)) {
+    return false;
+  }
+
+  if (verifySignature) {
+    return verifySignatureSet(getIndexedAttestationBigintSignatureSet(state, indexedAttestation));
+  } else {
+    return true;
+  }
+}
+
+/**
+ * Check if `indexedAttestation` has sorted and unique indices and a valid aggregate signature.
+ */
+export function isValidIndexedAttestationIndices(state: CachedBeaconStateAllForks, indices: number[]): boolean {
   // verify max number of indices
   if (!(indices.length > 0 && indices.length <= MAX_VALIDATORS_PER_COMMITTEE)) {
     return false;
@@ -33,10 +63,5 @@ export function isValidIndexedAttestation(
     return false;
   }
 
-  // verify aggregate signature
-  if (!verifySignature) {
-    return true;
-  }
-
-  return verifyIndexedAttestationSignature(state, indexedAttestation, indices);
+  return true;
 }

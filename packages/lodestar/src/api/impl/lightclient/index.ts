@@ -1,10 +1,10 @@
+import {ApiModules} from "../types.js";
+import {resolveStateId} from "../beacon/state/utils.js";
 import {routes} from "@chainsafe/lodestar-api";
+import {linspace} from "../../../util/numpy.js";
 import {fromHexString} from "@chainsafe/ssz";
 import {ProofType, Tree} from "@chainsafe/persistent-merkle-tree";
-import {ApiModules} from "../types";
-import {resolveStateId} from "../beacon/state/utils";
-import {linspace} from "../../../util/numpy";
-import {IApiOptions} from "../../options";
+import {IApiOptions} from "../../options.js";
 
 // TODO: Import from lightclient/server package
 
@@ -48,8 +48,12 @@ export function getLightclientApi(
       return {data: updates};
     },
 
-    async getHeadUpdate() {
-      return {data: await chain.lightClientServer.getHeadUpdate()};
+    async getLatestHeadUpdate() {
+      return {data: await chain.lightClientServer.getLatestHeadUpdate()};
+    },
+
+    async getLatestFinalizedHeadUpdate() {
+      return {data: await chain.lightClientServer.getLatestFinalizedHeadUpdate()};
     },
 
     async getSnapshot(blockRoot) {

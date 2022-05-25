@@ -1,9 +1,9 @@
 import {ForkName} from "@chainsafe/lodestar-params";
 import {IForkDigestContext} from "@chainsafe/lodestar-config";
-import {RespStatus} from "../../../constants";
-import {BufferedSource, decodeErrorMessage} from "../utils";
-import {readEncodedPayload} from "../encodingStrategies";
-import {ResponseError} from "../response";
+import {RespStatus} from "../../../constants/index.js";
+import {BufferedSource, decodeErrorMessage} from "../utils/index.js";
+import {readEncodedPayload} from "../encodingStrategies/index.js";
+import {ResponseError} from "../response/index.js";
 import {
   Protocol,
   IncomingResponseBody,
@@ -11,7 +11,7 @@ import {
   contextBytesTypeByProtocol,
   getResponseSzzTypeByMethod,
   CONTEXT_BYTES_FORK_DIGEST_LENGTH,
-} from "../types";
+} from "../types.js";
 
 /**
  * Internal helper type to signal stream ended early

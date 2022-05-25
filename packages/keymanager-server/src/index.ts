@@ -1,3 +1,3 @@
-export * from "./impl";
-export * from "./server";
-export * from "./util/lockfile";
+export * from "./impl.js";
+export * from "./server.js";
+export * from "./util/lockfile.js";

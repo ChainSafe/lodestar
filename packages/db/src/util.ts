@@ -1,4 +1,4 @@
-import {Bucket} from ".";
+import {Bucket} from "./schema.js";
 
 export function getBucketNameByValue<T extends Bucket>(enumValue: T): keyof typeof Bucket {
   const keys = Object.keys(Bucket).filter((x) => {

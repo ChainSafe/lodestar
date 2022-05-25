@@ -1,11 +1,11 @@
 import {itBench} from "@dapplion/benchmark";
-import {PointFormat} from "@chainsafe/bls";
+import {PointFormat} from "@chainsafe/bls/types";
 import {
   generatePerfTestCachedStatePhase0,
   numValidators,
-} from "@chainsafe/lodestar-beacon-state-transition/test/perf/util";
-import {getPubkeysForIndices} from "../../../../../src/api/impl/validator/utils";
-import {linspace} from "../../../../../src/util/numpy";
+} from "../../../../../../beacon-state-transition/test/perf/util.js";
+import {getPubkeysForIndices} from "../../../../../src/api/impl/validator/utils.js";
+import {linspace} from "../../../../../src/util/numpy.js";
 
 // Using state.validators.persistent is the fastest way of retrieving pubkeys by far
 // Benchmark data from Wed Jun 30 2021 - Intel(R) Core(TM) i5-8250U CPU @ 1.60GHz

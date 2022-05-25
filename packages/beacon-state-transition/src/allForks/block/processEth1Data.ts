@@ -2,7 +2,7 @@ import {EPOCHS_PER_ETH1_VOTING_PERIOD, SLOTS_PER_EPOCH} from "@chainsafe/lodesta
 import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {Node} from "@chainsafe/persistent-merkle-tree";
 import {CompositeViewDU} from "@chainsafe/ssz";
-import {BeaconStateAllForks, CachedBeaconStateAllForks} from "../../types";
+import {BeaconStateAllForks, CachedBeaconStateAllForks} from "../../types.js";
 
 /**
  * Store vote counts for every eth-execution block that has votes; if any eth-execution block wins majority support within a 1024-slot

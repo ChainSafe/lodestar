@@ -2,10 +2,10 @@ import PeerId from "peer-id";
 import {Multiaddr} from "multiaddr";
 import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 import {BitArray} from "@chainsafe/ssz";
-import {Network} from "../../src/network";
-import {NodejsNode} from "../../src/network/nodejs";
-import {createPeerId} from "../../src/network";
-import {Libp2pEvent} from "../../src/constants";
+import {Network} from "../../src/network/index.js";
+import {NodejsNode} from "../../src/network/nodejs/index.js";
+import {createPeerId} from "../../src/network/index.js";
+import {Libp2pEvent} from "../../src/constants/index.js";
 
 export async function createNode(multiaddr: string, inPeerId?: PeerId): Promise<NodejsNode> {
   const peerId = inPeerId || (await createPeerId());

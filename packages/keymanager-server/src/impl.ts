@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import {SecretKey} from "@chainsafe/bls";
+import bls from "@chainsafe/bls";
 import {Keystore} from "@chainsafe/bls-keystore";
 import {
   Api,
@@ -12,26 +12,22 @@ import {
 import {fromHexString} from "@chainsafe/ssz";
 import {Interchange, SignerType, Validator} from "@chainsafe/lodestar-validator";
 import {PubkeyHex} from "@chainsafe/lodestar-validator/src/types";
-import {ILogger} from "@chainsafe/lodestar-utils";
-import {LOCK_FILE_EXT, getLockFile} from "./util/lockfile";
+import {lockFilepath, unlockFilepath} from "./util/lockfile.js";
 
 export const KEY_IMPORTED_PREFIX = "key_imported";
 
 export class KeymanagerApi implements Api {
-  constructor(
-    private readonly logger: ILogger,
-    private readonly validator: Validator,
-    private readonly importKeystoresPath: string
-  ) {}
-
-  getKeystorePathInfoForKey = (pubkey: string): {keystoreFilePath: string; lockFilePath: string} => {
-    const keystoreFilename = `${KEY_IMPORTED_PREFIX}_${pubkey}.json`;
-    const keystoreFilePath = path.join(this.importKeystoresPath, keystoreFilename);
-    return {
-      keystoreFilePath,
-      lockFilePath: `${keystoreFilePath}${LOCK_FILE_EXT}`,
-    };
-  };
+  constructor(private readonly validator: Validator, private readonly importKeystoresDirpath: string) {
+    if (fs.existsSync(importKeystoresDirpath)) {
+      // Ensure is directory
+      if (!fs.statSync(importKeystoresDirpath).isDirectory()) {
+        throw Error("importKeystoresPath is not a directory");
+      }
+    } else {
+      // Or, create empty directory
+      fs.mkdirSync(importKeystoresDirpath, {recursive: true});
+    }
+  }
 
   /**
    * List all validating pubkeys known to and decrypted by this keymanager binary
@@ -63,9 +59,9 @@ export class KeymanagerApi implements Api {
    * Users SHOULD send slashing_protection data associated with the imported pubkeys. MUST follow the format defined in
    * EIP-3076: Slashing Protection Interchange Format.
    *
-   * @param keystores JSON-encoded keystore files generated with the Launchpad
+   * @param keystoresStr JSON-encoded keystore files generated with the Launchpad
    * @param passwords Passwords to unlock imported keystore files. `passwords[i]` must unlock `keystores[i]`
-   * @param slashingProtection Slashing protection data for some of the keys of `keystores`
+   * @param slashingProtectionStr Slashing protection data for some of the keys of `keystores`
    * @returns Status result of each `request.keystores` with same length and order of `request.keystores`
    *
    * https://github.com/ethereum/keymanager-APIs/blob/0c975dae2ac6053c8245ebdb6a9f27c2f114f407/keymanager-oapi.yaml
@@ -80,6 +76,11 @@ export class KeymanagerApi implements Api {
       message?: string;
     }[];
   }> {
+    // The arguments to this function is passed in within the body of an HTTP request
+    // hence fastify will parse it into an object before this function is called.
+    // Even though the slashingProtectionStr is typed as SlashingProtectionData,
+    // at runtime, when the handler for the request is selected, it would see slashingProtectionStr
+    // as an object, hence trying to parse it using JSON.parse won't work. Instead, we cast straight to Interchange
     const interchange = (slashingProtectionStr as unknown) as Interchange;
     await this.validator.validatorStore.importInterchange(interchange);
 
@@ -101,16 +102,17 @@ export class KeymanagerApi implements Api {
           continue;
         }
 
-        const secretKey = SecretKey.fromBytes(await keystore.decrypt(password));
+        const secretKey = bls.SecretKey.fromBytes(await keystore.decrypt(password));
         const pubKey = secretKey.toPublicKey().toHex();
         this.validator.validatorStore.addSigner({type: SignerType.Local, secretKey});
 
-        const keystorePathInfo = this.getKeystorePathInfoForKey(pubKey);
+        const keystoreFilepath = this.getKeystoreFilepath(pubKey);
 
-        // Persist keys for latter restarts
-        await fs.promises.writeFile(keystorePathInfo.keystoreFilePath, keystoreStr, {encoding: "utf8"});
-        const lockFile = getLockFile();
-        lockFile.lockSync(keystorePathInfo.lockFilePath);
+        // Lock before writing keystore
+        lockFilepath(keystoreFilepath);
+
+        // Persist keys for latter restarts, directory of `keystoreFilepath` is created in the constructor
+        await fs.promises.writeFile(keystoreFilepath, keystoreStr, {encoding: "utf8"});
 
         statuses[i] = {status: ImportStatus.imported};
       } catch (e) {
@@ -137,7 +139,7 @@ export class KeymanagerApi implements Api {
    * Slashing protection data must only be returned for keys from `request.pubkeys` for which a
    * `deleted` or `not_active` status is returned.
    *
-   * @param pubkeys List of public keys to delete.
+   * @param pubkeysHex List of public keys to delete.
    * @returns Deletion status of all keys in `request.pubkeys` in the same order.
    *
    * https://github.com/ethereum/keymanager-APIs/blob/0c975dae2ac6053c8245ebdb6a9f27c2f114f407/keymanager-oapi.yaml
@@ -172,14 +174,14 @@ export class KeymanagerApi implements Api {
         // Remove from Sync committee duties
         // Remove from indices
         this.validator.removeDutiesForKey(pubkeyHex);
-        const keystorePathInfo = this.getKeystorePathInfoForKey(pubkeyHex);
+
+        const keystoreFilepath = this.getKeystoreFilepath(pubkeyHex);
+
         // Remove key from persistent storage
-        for (const keystoreFile of await fs.promises.readdir(this.importKeystoresPath)) {
-          if (keystoreFile.indexOf(pubkeyHex) !== -1) {
-            await fs.promises.unlink(keystorePathInfo.keystoreFilePath);
-            await fs.promises.unlink(keystorePathInfo.lockFilePath);
-          }
-        }
+        fs.unlinkSync(keystoreFilepath);
+
+        // Unlock last
+        unlockFilepath(keystoreFilepath);
       } catch (e) {
         statuses[i] = {status: DeletionStatus.error, message: (e as Error).message};
       }
@@ -209,5 +211,9 @@ export class KeymanagerApi implements Api {
       data: statuses,
       slashingProtection: JSON.stringify(interchangeV5),
     };
+  }
+
+  private getKeystoreFilepath(pubkeyHex: string): string {
+    return path.join(this.importKeystoresDirpath, `${KEY_IMPORTED_PREFIX}_${pubkeyHex}.json`);
   }
 }

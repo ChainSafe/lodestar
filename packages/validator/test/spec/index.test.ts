@@ -10,7 +10,7 @@ import {
   SlashingProtectionAttestation,
   InvalidBlockError,
   InvalidAttestationError,
-} from "../../src/slashingProtection";
+} from "../../src/slashingProtection/index.js";
 
 chai.use(chaiAsPromised);
 

@@ -57,7 +57,7 @@ This command will:
 
 <!-- prettier-ignore-start -->
 !!! info
-    The validator voting keypair must be "hot" so its Keystore and password are kept in disk to be available for the validator client. The withdrawal keypair is **not** kept in disk as it can be generated latter from the wallet mnemonic.
+    The validator voting keypair must be "hot" so its Keystore and password are kept in disk to be available for the validator client. The withdrawal keypair is **not** kept in disk as it can be generated later from the wallet mnemonic.
 <!-- prettier-ignore-end -->
 
 ### Import a validator keystore from Deposit Launch Pad
@@ -80,4 +80,4 @@ This command will print the public address of every active keystore.
 
 ### Submit a validator deposit
 
-DEPRECATED. Please use the official tools to perform your deposits - eth2.0-deposit-cli: https://github.com/ethereum/eth2.0-deposit-cli - Ethereum Foundation launchpad: https://launchpad.ethereum.org/en/
+DEPRECATED. Please use the official tools to perform your deposits - `staking-deposit-cli`: https://github.com/ethereum/staking-deposit-cli - Ethereum Foundation launchpad: https://launchpad.ethereum.org/en/

@@ -3,15 +3,15 @@ import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {allForks, BeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {ErrorAborted, ILogger, isErrorAborted, sleep} from "@chainsafe/lodestar-utils";
 import {AbortSignal} from "@chainsafe/abort-controller";
-import {IBeaconDb} from "../db";
-import {Eth1DepositsCache} from "./eth1DepositsCache";
-import {Eth1DataCache} from "./eth1DataCache";
-import {getEth1VotesToConsider, pickEth1Vote} from "./utils/eth1Vote";
-import {getDeposits} from "./utils/deposits";
-import {Eth1DataAndDeposits, IEth1Provider} from "./interface";
-import {Eth1Options} from "./options";
-import {HttpRpcError} from "./provider/jsonRpcHttpClient";
-import {parseEth1Block} from "./provider/eth1Provider";
+import {IBeaconDb} from "../db/index.js";
+import {Eth1DepositsCache} from "./eth1DepositsCache.js";
+import {Eth1DataCache} from "./eth1DataCache.js";
+import {getEth1VotesToConsider, pickEth1Vote} from "./utils/eth1Vote.js";
+import {getDeposits} from "./utils/deposits.js";
+import {Eth1DataAndDeposits, IEth1Provider} from "./interface.js";
+import {Eth1Options} from "./options.js";
+import {HttpRpcError} from "./provider/jsonRpcHttpClient.js";
+import {parseEth1Block} from "./provider/eth1Provider.js";
 
 const MAX_BLOCKS_PER_BLOCK_QUERY = 1000;
 const MAX_BLOCKS_PER_LOG_QUERY = 1000;
@@ -152,7 +152,12 @@ export class Eth1DepositDataTracker {
    */
   private async update(): Promise<boolean> {
     const remoteHighestBlock = await this.eth1Provider.getBlockNumber();
-    const remoteFollowBlock = Math.max(0, remoteHighestBlock - this.config.ETH1_FOLLOW_DISTANCE);
+    const remoteFollowBlock = remoteHighestBlock - this.config.ETH1_FOLLOW_DISTANCE;
+
+    // If remoteFollowBlock is not at or beyond deployBlock, there is no need to
+    // fetch and track any deposit data yet
+    if (remoteFollowBlock < this.eth1Provider.deployBlock ?? 0) return true;
+
     const hasCaughtUpDeposits = await this.updateDepositCache(remoteFollowBlock);
     const hasCaughtUpBlocks = await this.updateBlockCache(remoteFollowBlock);
     return hasCaughtUpDeposits && hasCaughtUpBlocks;
@@ -194,10 +199,17 @@ export class Eth1DepositDataTracker {
     // lowestEventBlockNumber set a lower bound of possible block range to fetch in this update
     const lowestEventBlockNumber = await this.depositsCache.getLowestDepositEventBlockNumber();
 
-    // If lowestEventBlockNumber is null = no deposits have been fetch or found yet.
-    // So there's not useful blocks to fetch until at least 1 deposit is found. So updateBlockCache() returns true
-    // because is has caught up to all possible data to fetch which is none.
-    if (lowestEventBlockNumber === null || lastProcessedDepositBlockNumber === null) {
+    // We are all caught up if:
+    //  1. If lowestEventBlockNumber is null = no deposits have been fetch or found yet.
+    //     So there's not useful blocks to fetch until at least 1 deposit is found.
+    //  2. If the remoteFollowBlock is behind the lowestEventBlockNumber. This can happen
+    //     if the EL's data was wiped and restarted. Not exiting here would other wise
+    //     cause a NO_DEPOSITS_FOR_BLOCK_RANGE error
+    if (
+      lowestEventBlockNumber === null ||
+      lastProcessedDepositBlockNumber === null ||
+      remoteFollowBlock < lowestEventBlockNumber
+    ) {
       return true;
     }
 

@@ -1,9 +1,9 @@
 import {expect} from "chai";
 import axios from "axios";
-import * as mainnet from "../../src/presets/mainnet";
-import * as minimal from "../../src/presets/minimal";
-import {ForkName, BeaconPreset} from "../../src";
-import {loadConfigYaml} from "../yaml";
+import * as mainnet from "../../src/presets/mainnet/index.js";
+import * as minimal from "../../src/presets/minimal/index.js";
+import {ForkName, BeaconPreset} from "../../src/index.js";
+import {loadConfigYaml} from "../yaml.js";
 
 // Not e2e, but slow. Run with e2e tests
 

@@ -6,20 +6,21 @@ import {
 import {IProtoBlock, IForkChoice, ExecutionStatus} from "@chainsafe/lodestar-fork-choice";
 import {DOMAIN_BEACON_ATTESTER} from "@chainsafe/lodestar-params";
 import {phase0, Slot, ssz} from "@chainsafe/lodestar-types";
+import {IBeaconChain} from "../../../src/chain/index.js";
+import {IStateRegenerator} from "../../../src/chain/regen/index.js";
+import {ZERO_HASH, ZERO_HASH_HEX} from "../../../src/constants/index.js";
 import {
   generateTestCachedBeaconStateOnlyValidators,
   getSecretKeyFromIndexCached,
-} from "@chainsafe/lodestar-beacon-state-transition/test/perf/util";
+} from "../../../../beacon-state-transition/test/perf/util.js";
+import {SeenAttesters} from "../../../src/chain/seenCache/index.js";
+import {BlsSingleThreadVerifier} from "../../../src/chain/bls/index.js";
+import {signCached} from "../cache.js";
+import {ClockStatic} from "../clock.js";
 import {BitArray, toHexString} from "@chainsafe/ssz";
 import {config} from "@chainsafe/lodestar-config/default";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {IBeaconChain} from "../../../src/chain";
-import {IStateRegenerator} from "../../../src/chain/regen";
-import {ZERO_HASH, ZERO_HASH_HEX} from "../../../src/constants";
-import {SeenAttesters} from "../../../src/chain/seenCache";
-import {BlsSingleThreadVerifier} from "../../../src/chain/bls";
-import {signCached} from "../cache";
-import {ClockStatic} from "../clock";
+import {SeenAggregatedAttestations} from "../../../src/chain/seenCache/seenAggregateAndProof.js";
 
 export type AttestationValidDataOpts = {
   currentSlot?: Slot;
@@ -115,6 +116,7 @@ export function getAttestationValidData(
     forkChoice,
     regen,
     seenAttesters: new SeenAttesters(),
+    seenAggregatedAttestations: new SeenAggregatedAttestations(null),
     bls: new BlsSingleThreadVerifier({metrics: null}),
     waitForBlockOfAttestation: () => Promise.resolve(false),
   } as Partial<IBeaconChain>) as IBeaconChain;

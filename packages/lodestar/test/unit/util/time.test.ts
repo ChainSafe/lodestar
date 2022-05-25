@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {prettyTimeDiff} from "../../../src/util/time";
+import {prettyTimeDiff} from "../../../src/util/time.js";
 
 describe("util / time / prettyTimeDiff", () => {
   const testCases: {diffMs: number; res: string}[] = [

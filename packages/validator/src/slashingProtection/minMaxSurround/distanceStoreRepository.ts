@@ -2,8 +2,8 @@ import {Bucket, encodeKey, IDatabaseApiOptions} from "@chainsafe/lodestar-db";
 import {BLSPubkey, Epoch, ssz} from "@chainsafe/lodestar-types";
 import {intToBytes} from "@chainsafe/lodestar-utils";
 import {Type} from "@chainsafe/ssz";
-import {LodestarValidatorDatabaseController} from "../../types";
-import {IDistanceEntry, IDistanceStore} from "./interface";
+import {LodestarValidatorDatabaseController} from "../../types.js";
+import {IDistanceEntry, IDistanceStore} from "./interface.js";
 
 /**
  * Manages validator db storage of min/max ranges for min/max surround vote slashing protection.

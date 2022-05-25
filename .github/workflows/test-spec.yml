@@ -43,9 +43,6 @@ jobs:
       - name: Download spec tests
         run: yarn download-spec-tests
         working-directory: packages/lodestar
-      - name: Check spec tests
-        run: yarn check-spec-tests
-        working-directory: packages/lodestar
 
       # Run them in different steps to quickly identifying which command failed
       # Otherwise just doing `yarn test:spec` you can't tell which specific suite failed
@@ -53,21 +50,9 @@ jobs:
       - name: Spec tests general
         run: yarn test:spec-general
         working-directory: packages/lodestar
-      - name: Spec tests phase0-minimal
-        run: yarn test:spec-phase0-minimal
+      - name: Spec tests minimal
+        run: yarn test:spec-minimal
         working-directory: packages/lodestar
-      - name: Spec tests phase0-mainnet
-        run: yarn test:spec-phase0-mainnet
-        working-directory: packages/lodestar
-      - name: Spec tests altair-minimal
-        run: yarn test:spec-altair-minimal
-        working-directory: packages/lodestar
-      - name: Spec tests altair-mainnet
-        run: yarn test:spec-altair-mainnet
-        working-directory: packages/lodestar
-      - name: Spec tests bellatrix-minimal
-        run: yarn test:spec-bellatrix-minimal
-        working-directory: packages/lodestar
-      - name: Spec tests bellatrix-mainnet
-        run: yarn test:spec-bellatrix-mainnet
+      - name: Spec tests mainnet
+        run: yarn test:spec-mainnet
         working-directory: packages/lodestar

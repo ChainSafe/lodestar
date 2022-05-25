@@ -1,23 +1,21 @@
-// eslint-disable-next-line no-restricted-imports
-import {Api as IBeaconPoolApi} from "@chainsafe/lodestar-api/lib/routes/beacon/pool";
+import {routes} from "@chainsafe/lodestar-api";
 import {Epoch, ssz} from "@chainsafe/lodestar-types";
 import {SYNC_COMMITTEE_SUBNET_SIZE} from "@chainsafe/lodestar-params";
+import {validateGossipAttestation} from "../../../../chain/validation/index.js";
+import {validateGossipAttesterSlashing} from "../../../../chain/validation/attesterSlashing.js";
+import {validateGossipProposerSlashing} from "../../../../chain/validation/proposerSlashing.js";
+import {validateGossipVoluntaryExit} from "../../../../chain/validation/voluntaryExit.js";
+import {validateSyncCommitteeSigOnly} from "../../../../chain/validation/syncCommittee.js";
+import {ApiModules} from "../../types.js";
 import {toHexString} from "@chainsafe/ssz";
-import {validateGossipAttestation} from "../../../../chain/validation";
-import {validateGossipAttesterSlashing} from "../../../../chain/validation/attesterSlashing";
-import {validateGossipProposerSlashing} from "../../../../chain/validation/proposerSlashing";
-import {validateGossipVoluntaryExit} from "../../../../chain/validation/voluntaryExit";
-import {validateSyncCommitteeSigOnly} from "../../../../chain/validation/syncCommittee";
-import {ApiModules} from "../../types";
-import {OpSource} from "../../../../metrics/validatorMonitor";
-import {AttestationError, GossipAction, SyncCommitteeError} from "../../../../chain/errors";
+import {AttestationError, GossipAction, SyncCommitteeError} from "../../../../chain/errors/index.js";
 
 export function getBeaconPoolApi({
   chain,
   logger,
   metrics,
   network,
-}: Pick<ApiModules, "chain" | "logger" | "metrics" | "network">): IBeaconPoolApi {
+}: Pick<ApiModules, "chain" | "logger" | "metrics" | "network">): routes.beacon.pool.Api {
   return {
     async getPoolAttestations(filters) {
       // Already filtered by slot
@@ -51,12 +49,9 @@ export function getBeaconPoolApi({
           try {
             const {indexedAttestation, subnet} = await validateGossipAttestation(chain, attestation, null);
 
-            metrics?.registerUnaggregatedAttestation(OpSource.api, seenTimestampSec, indexedAttestation);
-
-            await Promise.all([
-              network.gossip.publishBeaconAttestation(attestation, subnet),
-              chain.attestationPool.add(attestation),
-            ]);
+            chain.attestationPool.add(attestation);
+            const sentPeers = await network.gossip.publishBeaconAttestation(attestation, subnet);
+            metrics?.submitUnaggregatedAttestation(seenTimestampSec, indexedAttestation, subnet, sentPeers);
           } catch (e) {
             errors.push(e as Error);
             logger.error(

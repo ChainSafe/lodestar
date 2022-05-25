@@ -1,7 +1,7 @@
 import {AbortController} from "@chainsafe/abort-controller";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import {Api, ReqTypes, routesData, getEventSerdes} from "../routes/events";
-import {ServerRoutes} from "./utils";
+import {ServerRoutes} from "./utils/index.js";
+import {Api, ReqTypes, routesData, getEventSerdes} from "../routes/events.js";
 
 export function getRoutes(config: IChainForkConfig, api: Api): ServerRoutes<Api, ReqTypes> {
   const eventSerdes = getEventSerdes();

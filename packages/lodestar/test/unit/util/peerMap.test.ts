@@ -1,6 +1,6 @@
 import {expect} from "chai";
 import PeerId from "peer-id";
-import {PeerMap, PeerSet} from "../../../src/util/peerMap";
+import {PeerMap, PeerSet} from "../../../src/util/peerMap.js";
 
 describe("util / peerMap", () => {
   const peer1 = new PeerId(Buffer.from([0])); // Offset by one, PeerId encodes to B58String 0 as "1"

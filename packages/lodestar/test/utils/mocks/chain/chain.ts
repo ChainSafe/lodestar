@@ -1,5 +1,5 @@
-import sinon from "sinon";
 import {AbortController} from "@chainsafe/abort-controller";
+import sinon from "sinon";
 
 import {toHexString} from "@chainsafe/ssz";
 import {allForks, UintNum64, Root, Slot, ssz, Uint16, UintBn64} from "@chainsafe/lodestar-types";
@@ -7,36 +7,39 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {BeaconStateAllForks, CachedBeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {CheckpointWithHex, IForkChoice, IProtoBlock, ExecutionStatus} from "@chainsafe/lodestar-fork-choice";
+import {defaultDefaultFeeRecipient} from "@chainsafe/lodestar-validator";
 
-import {createCachedBeaconStateTest} from "@chainsafe/lodestar-beacon-state-transition/test/utils/state";
-import {ChainEventEmitter, IBeaconChain} from "../../../../src/chain";
-import {IBeaconClock} from "../../../../src/chain/clock/interface";
-import {generateEmptySignedBlock} from "../../block";
-import {CheckpointStateCache, StateContextCache} from "../../../../src/chain/stateCache";
-import {LocalClock} from "../../../../src/chain/clock";
-import {IStateRegenerator, StateRegenerator} from "../../../../src/chain/regen";
-import {StubbedBeaconDb} from "../../stub";
-import {IBlsVerifier, BlsSingleThreadVerifier} from "../../../../src/chain/bls";
-import {AttestationPool} from "../../../../src/chain/opPools/attestationPool";
+import {ChainEventEmitter, IBeaconChain} from "../../../../src/chain/index.js";
+import {IBeaconClock} from "../../../../src/chain/clock/interface.js";
+import {generateEmptySignedBlock} from "../../block.js";
+import {CheckpointStateCache, StateContextCache} from "../../../../src/chain/stateCache/index.js";
+import {LocalClock} from "../../../../src/chain/clock/index.js";
+import {IStateRegenerator, StateRegenerator} from "../../../../src/chain/regen/index.js";
+import {StubbedBeaconDb} from "../../stub/index.js";
+import {IBlsVerifier, BlsSingleThreadVerifier} from "../../../../src/chain/bls/index.js";
+import {AttestationPool} from "../../../../src/chain/opPools/attestationPool.js";
 import {
   SeenAggregators,
   SeenAttesters,
   SeenBlockProposers,
   SeenContributionAndProof,
   SeenSyncCommitteeMessages,
-} from "../../../../src/chain/seenCache";
+} from "../../../../src/chain/seenCache/index.js";
 import {
   SyncCommitteeMessagePool,
   SyncContributionAndProofPool,
   AggregatedAttestationPool,
   OpPool,
-} from "../../../../src/chain/opPools";
-import {LightClientServer} from "../../../../src/chain/lightClient";
-import {Eth1ForBlockProductionDisabled} from "../../../../src/eth1";
-import {ExecutionEngineDisabled} from "../../../../src/executionEngine";
-import {ReqRespBlockResponse} from "../../../../src/network/reqresp/types";
-import {testLogger} from "../../logger";
-import {ReprocessController} from "../../../../src/chain/reprocess";
+} from "../../../../src/chain/opPools/index.js";
+import {LightClientServer} from "../../../../src/chain/lightClient/index.js";
+import {Eth1ForBlockProductionDisabled} from "../../../../src/eth1/index.js";
+import {ExecutionEngineDisabled} from "../../../../src/executionEngine/index.js";
+import {ReqRespBlockResponse} from "../../../../src/network/reqresp/types.js";
+import {testLogger} from "../../logger.js";
+import {ReprocessController} from "../../../../src/chain/reprocess.js";
+import {createCachedBeaconStateTest} from "../../../../../beacon-state-transition/test/utils/state.js";
+import {SeenAggregatedAttestations} from "../../../../src/chain/seenCache/seenAggregateAndProof.js";
+import {BeaconProposerCache} from "../../../../src/chain/beaconProposerCache.js";
 
 /* eslint-disable @typescript-eslint/no-empty-function */
 
@@ -78,9 +81,12 @@ export class MockBeaconChain implements IBeaconChain {
   // Gossip seen cache
   readonly seenAttesters = new SeenAttesters();
   readonly seenAggregators = new SeenAggregators();
+  readonly seenAggregatedAttestations = new SeenAggregatedAttestations(null);
   readonly seenBlockProposers = new SeenBlockProposers();
   readonly seenSyncCommitteeMessages = new SeenSyncCommitteeMessages();
-  readonly seenContributionAndProof = new SeenContributionAndProof();
+  readonly seenContributionAndProof = new SeenContributionAndProof(null);
+
+  readonly beaconProposerCache = new BeaconProposerCache({defaultFeeRecipient: defaultDefaultFeeRecipient});
 
   private state: BeaconStateAllForks;
   private abortController: AbortController;
@@ -176,6 +182,8 @@ export class MockBeaconChain implements IBeaconChain {
   persistInvalidSszObject(): string | null {
     return null;
   }
+
+  async updateBeaconProposerData(): Promise<void> {}
 }
 
 function mockForkChoice(): IForkChoice {

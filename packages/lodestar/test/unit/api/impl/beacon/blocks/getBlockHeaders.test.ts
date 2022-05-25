@@ -1,14 +1,14 @@
-import {expect} from "chai";
 import {ssz} from "@chainsafe/lodestar-types";
-import {toHexString} from "@chainsafe/ssz";
 import {
   generateProtoBlock,
   generateEmptyBlock,
   generateEmptyProtoBlock,
   generateEmptySignedBlock,
   generateSignedBlock,
-} from "../../../../../utils/block";
-import {setupApiImplTestServer, ApiImplTestModules} from "../../index.test";
+} from "../../../../../utils/block.js";
+import {expect} from "chai";
+import {setupApiImplTestServer, ApiImplTestModules} from "../../index.test.js";
+import {toHexString} from "@chainsafe/ssz";
 
 describe("api - beacon - getBlockHeaders", function () {
   let server: ApiImplTestModules;

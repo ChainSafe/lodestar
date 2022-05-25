@@ -1,8 +1,8 @@
 import {Root} from "@chainsafe/lodestar-types";
-import {createIChainConfig, IChainConfig} from "./chainConfig";
-import {createIForkConfig, IForkConfig} from "./forkConfig";
-import {createICachedGenesis} from "./genesisConfig";
-import {ICachedGenesis} from "./genesisConfig/types";
+import {createIChainConfig, IChainConfig} from "./chainConfig/index.js";
+import {createIForkConfig, IForkConfig} from "./forkConfig/index.js";
+import {createICachedGenesis} from "./genesisConfig/index.js";
+import {ICachedGenesis} from "./genesisConfig/types.js";
 
 /**
  * Chain run-time configuration with additional fork schedule helpers

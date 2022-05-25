@@ -1,4 +1,4 @@
-import {profilerLogger} from "../../utils/logger";
+import {profilerLogger} from "../../utils/logger.js";
 
 describe.skip("array creation", function () {
   const logger = profilerLogger();

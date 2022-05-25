@@ -1,6 +1,6 @@
 import {allForks} from "@chainsafe/lodestar-types";
-import {RegistryMetricCreator} from "../utils/registryMetricCreator";
-import {IMetricsOptions} from "../options";
+import {RegistryMetricCreator} from "../utils/registryMetricCreator.js";
+import {LodestarMetadata} from "../options.js";
 
 export type ILodestarMetrics = ReturnType<typeof createLodestarMetrics>;
 
@@ -10,11 +10,11 @@ export type ILodestarMetrics = ReturnType<typeof createLodestarMetrics>;
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types, @typescript-eslint/explicit-function-return-type
 export function createLodestarMetrics(
   register: RegistryMetricCreator,
-  metadata: IMetricsOptions["metadata"],
+  metadata?: LodestarMetadata,
   anchorState?: Pick<allForks.BeaconState, "genesisTime">
 ) {
   if (metadata) {
-    register.static<"semver" | "branch" | "commit" | "version" | "network">({
+    register.static<keyof LodestarMetadata>({
       name: "lodestar_version",
       help: "Lodestar version",
       value: metadata,
@@ -49,9 +49,10 @@ export function createLodestarMetrics(
       help: "number of peers, labeled by client",
       labelNames: ["client"],
     }),
-    peerLongLivedSubnets: register.avgMinMax({
-      name: "lodestar_peer_long_lived_subnets_avg_min_max",
-      help: "Avg min max of amount of long lived subnets of peers",
+    peerLongLivedAttnets: register.histogram({
+      name: "lodestar_peer_long_lived_attnets_count",
+      help: "Histogram of current count of long lived attnets of connected peers",
+      buckets: [0, 4, 16, 32, 64],
     }),
     peerScore: register.avgMinMax({
       name: "lodestar_peer_score_avg_min_max",
@@ -94,9 +95,10 @@ export function createLodestarMetrics(
       name: "lodestar_peers_requested_total_to_connect",
       help: "Priorization results total peers count requested to connect",
     }),
-    peersRequestedToDisconnect: register.gauge({
+    peersRequestedToDisconnect: register.gauge<"reason">({
       name: "lodestar_peers_requested_total_to_disconnect",
       help: "Priorization results total peers count requested to disconnect",
+      labelNames: ["reason"],
     }),
     peersRequestedSubnetsToQuery: register.gauge<"type">({
       name: "lodestar_peers_requested_total_subnets_to_query",
@@ -113,6 +115,13 @@ export function createLodestarMetrics(
       help: "network.reportPeer count by reason",
       labelNames: ["reason"],
     }),
+    peerManager: {
+      heartbeatDuration: register.histogram({
+        name: "lodestar_peer_manager_heartbeat_duration_seconds",
+        help: "Peer manager heartbeat function duration in seconds",
+        buckets: [0.001, 0.01, 0.1, 1],
+      }),
+    },
 
     discovery: {
       peersToConnect: register.gauge({
@@ -318,13 +327,38 @@ export function createLodestarMetrics(
       }),
     },
 
-    apiRestResponseTime: register.histogram<"operationId">({
-      name: "lodestar_api_rest_response_time_seconds",
-      help: "Time to fullfill a request to the REST api labeled by operationId",
-      labelNames: ["operationId"],
-      // Request times range between 1ms to 100ms in normal conditions. Can get to 1-5 seconds if overloaded
-      buckets: [0.01, 0.1, 1],
-    }),
+    apiRest: {
+      responseTime: register.histogram<"operationId">({
+        name: "lodestar_api_rest_response_time_seconds",
+        help: "REST API time to fullfill a request by operationId",
+        labelNames: ["operationId"],
+        // Request times range between 1ms to 100ms in normal conditions. Can get to 1-5 seconds if overloaded
+        buckets: [0.01, 0.1, 1],
+      }),
+      requests: register.gauge<"operationId">({
+        name: "lodestar_api_rest_requests_total",
+        help: "REST API total count requests by operationId",
+        labelNames: ["operationId"],
+      }),
+      errors: register.gauge<"operationId">({
+        name: "lodestar_api_rest_errors_total",
+        help: "REST API total count of errors by operationId",
+        labelNames: ["operationId"],
+      }),
+      // Metrics for HttpActiveSocketsTracker, defined there
+      activeSockets: register.gauge({
+        name: "lodestar_api_rest_active_sockets_count",
+        help: "REST API current count of active sockets",
+      }),
+      socketsBytesRead: register.gauge({
+        name: "lodestar_api_rest_sockets_bytes_read_total",
+        help: "REST API total count of bytes read on all sockets",
+      }),
+      socketsBytesWritten: register.gauge({
+        name: "lodestar_api_rest_sockets_bytes_written_total",
+        help: "REST API total count of bytes written on all sockets",
+      }),
+    },
 
     // Beacon state transition metrics
 
@@ -489,17 +523,22 @@ export function createLodestarMetrics(
 
     // Gossip block
     gossipBlock: {
-      elappsedTimeTillReceived: register.histogram({
+      elapsedTimeTillReceived: register.histogram({
         name: "lodestar_gossip_block_elappsed_time_till_received",
         help: "Time elappsed between block slot time and the time block received via gossip",
-        buckets: [0.1, 1, 10],
+        buckets: [0.5, 1, 2, 4, 6, 12],
       }),
-      elappsedTimeTillProcessed: register.histogram({
+      elapsedTimeTillProcessed: register.histogram({
         name: "lodestar_gossip_block_elappsed_time_till_processed",
         help: "Time elappsed between block slot time and the time block processed",
-        buckets: [0.1, 1, 10],
+        buckets: [0.5, 1, 2, 4, 6, 12],
       }),
     },
+    elapsedTimeTillBecomeHead: register.histogram({
+      name: "lodestar_gossip_block_elapsed_time_till_become_head",
+      help: "Time elappsed between block slot time and the time block becomes head",
+      buckets: [0.5, 1, 2, 4, 6, 12],
+    }),
 
     backfillSync: {
       backfilledTillSlot: register.gauge({
@@ -542,12 +581,23 @@ export function createLodestarMetrics(
       }),
       prevEpochOnChainAttesterHit: register.gauge<"index">({
         name: "validator_monitor_prev_epoch_on_chain_attester_hit_total",
-        help: "Incremented if the validator is flagged as a previous epoch attester during per epoch processing",
+        help: "Incremented if validator's submitted attestation is included in some blocks",
         labelNames: ["index"],
       }),
       prevEpochOnChainAttesterMiss: register.gauge<"index">({
         name: "validator_monitor_prev_epoch_on_chain_attester_miss_total",
-        help: "Incremented if the validator is not flagged as a previous epoch attester during per epoch processing",
+        help: "Incremented if validator's submitted attestation is not included in any blocks",
+        labelNames: ["index"],
+      }),
+      prevEpochOnChainSourceAttesterHit: register.gauge<"index">({
+        name: "validator_monitor_prev_epoch_on_chain_source_attester_hit_total",
+        help: "Incremented if the validator is flagged as a previous epoch source attester during per epoch processing",
+        labelNames: ["index"],
+      }),
+      prevEpochOnChainSourceAttesterMiss: register.gauge<"index">({
+        name: "validator_monitor_prev_epoch_on_chain_source_attester_miss_total",
+        help:
+          "Incremented if the validator is not flagged as a previous epoch source attester during per epoch processing",
         labelNames: ["index"],
       }),
       prevEpochOnChainHeadAttesterHit: register.gauge<"index">({
@@ -643,6 +693,15 @@ export function createLodestarMetrics(
         help: "The delay between when the validator should send the attestation and when it was received",
         labelNames: ["index", "src"],
         buckets: [0.1, 1],
+      }),
+      unaggregatedAttestationSubmittedSentPeers: register.histogram<"index">({
+        name: "validator_monitor_unaggregated_attestation_submited_sent_peers_count",
+        help: "Number of peers that an unaggregated attestation sent to",
+        labelNames: ["index"],
+        // as of Apr 2022, most of the time we sent to >30 peers per attestations
+        // these bucket values just base on that fact to get equal range
+        // refine if we want more reasonable values
+        buckets: [0, 10, 20, 30],
       }),
       aggregatedAttestationTotal: register.gauge<"index" | "src">({
         name: "validator_monitor_aggregated_attestation_total",
@@ -748,6 +807,39 @@ export function createLodestarMetrics(
         name: "lodestar_cp_state_epoch_seconds_since_last_read",
         help: "Avg min max of all state cache items seconds since last reads",
       }),
+    },
+
+    seenCache: {
+      aggregatedAttestations: {
+        superSetCheckTotal: register.histogram({
+          name: "lodestar_seen_cache_aggregated_attestations_super_set_check_total",
+          help: "Number of times to call isNonStrictSuperSet in SeenAggregatedAttestations",
+          buckets: [1, 4, 10],
+        }),
+        isKnownCalls: register.gauge({
+          name: "lodestar_seen_cache_aggregated_attestations_is_known_call_total",
+          help: "Total times calling SeenAggregatedAttestations.isKnown",
+        }),
+        isKnownHits: register.gauge({
+          name: "lodestar_seen_cache_aggregated_attestations_is_known_hit_total",
+          help: "Total times SeenAggregatedAttestations.isKnown returning true",
+        }),
+      },
+      committeeContributions: {
+        superSetCheckTotal: register.histogram({
+          name: "lodestar_seen_cache_committee_contributions_super_set_check_total",
+          help: "Number of times to call isNonStrictSuperSet in SeenContributionAndProof",
+          buckets: [1, 4, 10],
+        }),
+        isKnownCalls: register.gauge({
+          name: "lodestar_seen_cache_committee_contributions_is_known_call_total",
+          help: "Total times calling SeenContributionAndProof.isKnown",
+        }),
+        isKnownHits: register.gauge({
+          name: "lodestar_seen_cache_committee_contributions_is_known_hit_total",
+          help: "Total times SeenContributionAndProof.isKnown returning true",
+        }),
+      },
     },
 
     regenFnCallTotal: register.gauge<"entrypoint" | "caller">({

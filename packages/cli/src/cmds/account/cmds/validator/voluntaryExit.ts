@@ -1,15 +1,15 @@
-import {readdirSync} from "node:fs";
-import inquirer from "inquirer";
 import {SignerType, SlashingProtection, Validator} from "@chainsafe/lodestar-validator";
+import {readdirSync} from "node:fs";
 import {LevelDbController} from "@chainsafe/lodestar-db";
-import {ICliCommand, initBLS} from "../../../../util";
-import {IGlobalArgs} from "../../../../options";
-import {ValidatorDirManager} from "../../../../validatorDir";
-import {getAccountPaths} from "../../paths";
-import {getBeaconConfigFromArgs} from "../../../../config";
-import {errorLogger} from "../../../../util/logger";
-import {IValidatorCliArgs, validatorOptions} from "../../../validator/options";
-import {getValidatorPaths} from "../../../validator/paths";
+import inquirer from "inquirer";
+import {ICliCommand} from "../../../../util/index.js";
+import {IGlobalArgs} from "../../../../options/index.js";
+import {ValidatorDirManager} from "../../../../validatorDir/index.js";
+import {getAccountPaths} from "../../paths.js";
+import {getBeaconConfigFromArgs} from "../../../../config/index.js";
+import {errorLogger} from "../../../../util/logger.js";
+import {IValidatorCliArgs, validatorOptions} from "../../../validator/options.js";
+import {getValidatorPaths} from "../../../validator/paths.js";
 
 /* eslint-disable no-console */
 
@@ -49,8 +49,6 @@ like to choose for the voluntary exit.",
   },
 
   handler: async (args) => {
-    await initBLS();
-
     const force = args.force;
     let publicKey = args.publicKey;
     const accountPaths = getAccountPaths(args);
@@ -91,7 +89,16 @@ BE UNTIL AT LEAST TWO YEARS AFTER THE PHASE 0 MAINNET LAUNCH.
 
     console.log(`Initiating voluntary exit for validator ${publicKey}`);
 
-    const secretKey = await validatorDirManager.decryptValidator(publicKey, {force});
+    let secretKey;
+    try {
+      secretKey = await validatorDirManager.decryptValidator(publicKey, {force});
+    } catch (e) {
+      if ((e as Error).message.indexOf("EEXIST") !== -1) {
+        console.log(`Decrypting keystore failed with error ${e}. use --force to override`);
+      }
+      throw e;
+    }
+
     console.log(`Decrypted keystore for validator ${publicKey}`);
 
     const validatorPaths = getValidatorPaths(args);

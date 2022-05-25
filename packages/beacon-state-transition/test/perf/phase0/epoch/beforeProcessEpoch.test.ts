@@ -1,7 +1,7 @@
 import {itBench} from "@dapplion/benchmark";
-import {beforeProcessEpoch} from "../../../../src";
-import {State} from "../../types";
-import {generatePerfTestCachedStatePhase0, perfStateId} from "../../util";
+import {beforeProcessEpoch} from "../../../../src/index.js";
+import {State} from "../../types.js";
+import {generatePerfTestCachedStatePhase0, perfStateId} from "../../util.js";
 
 // PERF: Two major steps:
 // 1. Iterate over state.validators. Cost = 'proportional' to $VALIDATOR_COUNT not network conditions

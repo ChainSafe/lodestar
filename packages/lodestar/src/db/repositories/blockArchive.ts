@@ -3,9 +3,9 @@ import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {Db, Repository, IKeyValue, IFilterOptions, Bucket, IDbMetrics} from "@chainsafe/lodestar-db";
 import {Slot, Root, allForks, ssz} from "@chainsafe/lodestar-types";
 import {bytesToInt} from "@chainsafe/lodestar-utils";
-import {getSignedBlockTypeFromBytes} from "../../util/multifork";
-import {getRootIndexKey, getParentRootIndexKey} from "./blockArchiveIndex";
-import {deleteParentRootIndex, deleteRootIndex, storeParentRootIndex, storeRootIndex} from "./blockArchiveIndex";
+import {getSignedBlockTypeFromBytes} from "../../util/multifork.js";
+import {getRootIndexKey, getParentRootIndexKey} from "./blockArchiveIndex.js";
+import {deleteParentRootIndex, deleteRootIndex, storeParentRootIndex, storeRootIndex} from "./blockArchiveIndex.js";
 
 export interface IBlockFilterOptions extends IFilterOptions<Slot> {
   step?: number;

@@ -42,8 +42,8 @@ jobs:
           key: spec-test-data-${{ hashFiles('packages/validator/test/spec/params.ts') }}
 
       # Misc sanity checks
-      - name: Lint Grafana Dashboard
-        run: yarn validate-gdash
+      - name: Lint Grafana dashboards
+        run: node scripts/validate-grafana-dashboard.mjs ./dashboards
       - name: Test root binary exists
         run: ./lodestar --version
       - name: Reject yarn.lock changes
@@ -53,10 +53,13 @@ jobs:
 
       - name: Check Types
         run: yarn run check-types
-      - name: README check
-        run: yarn run check-readme
+      # TODO: uncomment after https://github.com/bbc/typescript-docs-verifier/issues/17 is resolved
+      # - name: README check
+      #   run: yarn run check-readme
       - name: Lint
         run: yarn lint
+      - name: Check Build
+        run: yarn check-build
       - name: Unit tests
         run: yarn test:unit
       - name: Upload coverage data

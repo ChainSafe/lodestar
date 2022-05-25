@@ -1,2 +1,2 @@
-export {PreGenesisState} from "./preGenesisState";
-export {PreGenesisStateLastProcessedBlock} from "./preGenesisStateLastProcessedBlock";
+export {PreGenesisState} from "./preGenesisState.js";
+export {PreGenesisStateLastProcessedBlock} from "./preGenesisStateLastProcessedBlock.js";

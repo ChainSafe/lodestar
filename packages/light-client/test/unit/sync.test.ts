@@ -1,21 +1,22 @@
-import {expect} from "chai";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {BeaconStateAllForks, BeaconStateAltair} from "@chainsafe/lodestar-beacon-state-transition";
 import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {routes, Api} from "@chainsafe/lodestar-api";
 import {chainConfig as chainConfigDef} from "@chainsafe/lodestar-config/default";
 import {createIBeaconConfig, IChainConfig} from "@chainsafe/lodestar-config";
-import {toHexString} from "@chainsafe/ssz";
-import {Lightclient, LightclientEvent} from "../../src";
-import {EventsServerApi, LightclientServerApi, ServerOpts, startServer} from "../lightclientApiServer";
+import {Lightclient, LightclientEvent} from "../../src/index.js";
+import {EventsServerApi, LightclientServerApi, ServerOpts, startServer} from "../lightclientApiServer.js";
 import {
   computeLightclientUpdate,
   computeLightClientSnapshot,
   getInteropSyncCommittee,
   testLogger,
-  committeeUpdateToHeadUpdate,
+  committeeUpdateToLatestHeadUpdate,
+  committeeUpdateToLatestFinalizedHeadUpdate,
   lastInMap,
-} from "../utils";
+} from "../utils.js";
+import {toHexString} from "@chainsafe/ssz";
+import {expect} from "chai";
 
 const SOME_HASH = Buffer.alloc(32, 0xff);
 
@@ -64,8 +65,11 @@ describe("Lightclient sync", () => {
       lightclientServerApi.updates.set(period, committeeUpdate);
     }
 
-    // So the first call to getHeadUpdate() doesn't error, store the latest snapshot as latest header update
-    lightclientServerApi.latestHeadUpdate = committeeUpdateToHeadUpdate(lastInMap(lightclientServerApi.updates));
+    // So the first call to getLatestHeadUpdate() doesn't error, store the latest snapshot as latest header update
+    lightclientServerApi.latestHeadUpdate = committeeUpdateToLatestHeadUpdate(lastInMap(lightclientServerApi.updates));
+    lightclientServerApi.finalized = committeeUpdateToLatestFinalizedHeadUpdate(
+      lastInMap(lightclientServerApi.updates)
+    );
 
     // Initilize from snapshot
     const lightclient = await Lightclient.initializeFromCheckpointRoot({

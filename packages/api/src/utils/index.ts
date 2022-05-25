@@ -1,3 +1,3 @@
-export * from "./schema";
-export * from "./types";
-export * from "./urlFormat";
+export * from "./schema.js";
+export * from "./types.js";
+export * from "./urlFormat.js";

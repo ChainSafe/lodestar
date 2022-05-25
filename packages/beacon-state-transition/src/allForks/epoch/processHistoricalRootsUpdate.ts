@@ -1,7 +1,7 @@
 import {SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@chainsafe/lodestar-params";
 import {ssz} from "@chainsafe/lodestar-types";
 import {intDiv} from "@chainsafe/lodestar-utils";
-import {EpochProcess, CachedBeaconStateAllForks} from "../../types";
+import {EpochProcess, CachedBeaconStateAllForks} from "../../types.js";
 
 /**
  * Persist blockRoots and stateRoots to historicalRoots.

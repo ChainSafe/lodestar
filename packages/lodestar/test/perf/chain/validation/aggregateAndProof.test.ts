@@ -1,7 +1,7 @@
 import {itBench} from "@dapplion/benchmark";
-import {generateTestCachedBeaconStateOnlyValidators} from "@chainsafe/lodestar-beacon-state-transition/test/perf/util";
-import {validateGossipAggregateAndProof} from "../../../../src/chain/validation";
-import {getAggregateAndProofValidData} from "../../../utils/validationData/aggregateAndProof";
+import {validateGossipAggregateAndProof} from "../../../../src/chain/validation/index.js";
+import {generateTestCachedBeaconStateOnlyValidators} from "../../../../../beacon-state-transition/test/perf/util.js";
+import {getAggregateAndProofValidData} from "../../../utils/validationData/aggregateAndProof.js";
 
 describe("validate gossip signedAggregateAndProof", () => {
   const vc = 64;
@@ -17,7 +17,10 @@ describe("validate gossip signedAggregateAndProof", () => {
   for (const [id, agg] of Object.entries({struct: aggStruct})) {
     itBench({
       id: `validate gossip signedAggregateAndProof - ${id}`,
-      beforeEach: () => chain.seenAggregators["validatorIndexesByEpoch"].clear(),
+      beforeEach: () => {
+        chain.seenAggregators["validatorIndexesByEpoch"].clear();
+        chain.seenAggregatedAttestations["aggregateRootsByEpoch"].clear();
+      },
       fn: async () => {
         await validateGossipAggregateAndProof(chain, agg);
       },

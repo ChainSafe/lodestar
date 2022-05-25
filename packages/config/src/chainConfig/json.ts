@@ -1,5 +1,5 @@
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {IChainConfig, chainConfigTypes, SpecValue, SpecValueTypeName} from "./types";
+import {IChainConfig, chainConfigTypes, SpecValue, SpecValueTypeName} from "./types.js";
 
 const MAX_UINT64_JSON = "18446744073709551615";
 

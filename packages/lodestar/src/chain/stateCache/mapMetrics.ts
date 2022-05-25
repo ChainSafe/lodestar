@@ -1,4 +1,4 @@
-import {IAvgMinMax} from "../../metrics";
+import {IAvgMinMax} from "../../metrics/index.js";
 
 type MapTrackerMetrics = {
   reads: IAvgMinMax;

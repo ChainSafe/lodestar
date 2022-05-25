@@ -1,18 +1,18 @@
 import {IChainConfig} from "@chainsafe/lodestar-config";
+import {Network} from "../../src/network/index.js";
+import {getDevBeaconNode} from "../utils/node/beacon.js";
+import {waitForEvent} from "../utils/events/resolver.js";
 import {phase0} from "@chainsafe/lodestar-types";
+import {getAndInitDevValidators} from "../utils/node/validator.js";
 import {Validator} from "@chainsafe/lodestar-validator/lib";
+import {BeaconNode} from "../../src/node/index.js";
+import {ChainEvent} from "../../src/chain/index.js";
+import {testLogger, LogLevel, TestLoggerOpts} from "../utils/logger.js";
+import {connect} from "../utils/network.js";
+import {logFilesDir} from "./params.js";
+import {simTestInfoTracker} from "../utils/node/simTest.js";
 import {ILogger, sleep, TimestampFormatCode} from "@chainsafe/lodestar-utils";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import {Network} from "../../src/network";
-import {getDevBeaconNode} from "../utils/node/beacon";
-import {waitForEvent} from "../utils/events/resolver";
-import {getAndInitDevValidators} from "../utils/node/validator";
-import {BeaconNode} from "../../src/node";
-import {ChainEvent} from "../../src/chain";
-import {testLogger, LogLevel, TestLoggerOpts} from "../utils/logger";
-import {connect} from "../utils/network";
-import {simTestInfoTracker} from "../utils/node/simTest";
-import {logFilesDir} from "./params";
 
 /* eslint-disable no-console, @typescript-eslint/naming-convention */
 
@@ -28,11 +28,11 @@ describe("Run multi node single thread interop validators (no eth1) until checkp
     altairForkEpoch: number;
   }[] = [
     // Test phase0 to justification
-    {nodeCount: 4, validatorsPerNode: 8, event: ChainEvent.justified, altairForkEpoch: Infinity},
+    {nodeCount: 4, validatorsPerNode: 32, event: ChainEvent.justified, altairForkEpoch: Infinity},
     // Test altair only
-    {nodeCount: 4, validatorsPerNode: 8, event: ChainEvent.justified, altairForkEpoch: 0},
+    {nodeCount: 4, validatorsPerNode: 32, event: ChainEvent.justified, altairForkEpoch: 0},
     // Test phase -> altair fork transition
-    {nodeCount: 4, validatorsPerNode: 8, event: ChainEvent.justified, altairForkEpoch: 2},
+    {nodeCount: 4, validatorsPerNode: 32, event: ChainEvent.justified, altairForkEpoch: 2},
   ];
 
   const afterEachCallbacks: (() => Promise<unknown> | void)[] = [];
@@ -54,7 +54,7 @@ describe("Run multi node single thread interop validators (no eth1) until checkp
       const validators: Validator[] = [];
       const loggers: ILogger[] = [];
       // delay a bit so regular sync sees it's up to date and sync is completed from the beginning
-      const genesisSlotsDelay = 3;
+      const genesisSlotsDelay = 30;
       const genesisTime = Math.floor(Date.now() / 1000) + genesisSlotsDelay * testParams.SECONDS_PER_SLOT;
 
       for (let i = 0; i < nodeCount; i++) {

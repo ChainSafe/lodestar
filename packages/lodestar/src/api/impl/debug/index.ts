@@ -1,8 +1,8 @@
+import {routes} from "@chainsafe/lodestar-api";
 import {Multiaddr} from "multiaddr";
 import {createFromB58String} from "peer-id";
-import {routes} from "@chainsafe/lodestar-api";
-import {resolveStateId} from "../beacon/state/utils";
-import {ApiModules} from "../types";
+import {resolveStateId} from "../beacon/state/utils.js";
+import {ApiModules} from "../types.js";
 
 export function getDebugApi({
   chain,
@@ -25,7 +25,7 @@ export function getDebugApi({
         // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-explicit-any
         return state.serialize() as any;
       } else {
-        return {data: state};
+        return {data: state.toValue()};
       }
     },
 
@@ -36,7 +36,7 @@ export function getDebugApi({
         // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-explicit-any
         return state.serialize() as any;
       } else {
-        return {data: state, version: config.getForkName(state.slot)};
+        return {data: state.toValue(), version: config.getForkName(state.slot)};
       }
     },
 

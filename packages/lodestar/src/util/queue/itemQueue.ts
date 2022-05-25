@@ -1,7 +1,7 @@
 import {sleep} from "@chainsafe/lodestar-utils";
-import {LinkedList} from "../array";
-import {QueueError, QueueErrorCode} from "./errors";
-import {defaultQueueOpts, IQueueMetrics, JobQueueOpts, QueueType} from "./options";
+import {LinkedList} from "../array.js";
+import {QueueError, QueueErrorCode} from "./errors.js";
+import {defaultQueueOpts, IQueueMetrics, JobQueueOpts, QueueType} from "./options.js";
 
 /**
  * JobQueue that stores arguments in the job array instead of closures.

@@ -1,8 +1,10 @@
-import {expect} from "chai";
+import {ChainEventEmitter, computeAnchorCheckpoint, initializeForkChoice} from "../../../../src/chain/index.js";
+import {generateState} from "../../../utils/state.js";
 import {FAR_FUTURE_EPOCH, MAX_EFFECTIVE_BALANCE} from "@chainsafe/lodestar-params";
 import {config} from "@chainsafe/lodestar-config/default";
 import {Slot, ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
+import {generateSignedBlock} from "../../../utils/block.js";
 import {
   allForks,
   computeEpochAtSlot,
@@ -12,12 +14,10 @@ import {
   getEffectiveBalanceIncrementsZeroed,
   BeaconStateAllForks,
 } from "@chainsafe/lodestar-beacon-state-transition";
+import {expect} from "chai";
 import {toHexString} from "@chainsafe/ssz";
-import {generateSignedBlock} from "../../../utils/block";
-import {generateState} from "../../../utils/state";
-import {ChainEventEmitter, computeAnchorCheckpoint, initializeForkChoice} from "../../../../src/chain";
-import {createCachedBeaconStateTest} from "../../../utils/cachedBeaconState";
-import {generateValidators} from "../../../utils/validator";
+import {createCachedBeaconStateTest} from "../../../utils/cachedBeaconState.js";
+import {generateValidators} from "../../../utils/validator.js";
 
 describe("LodestarForkChoice", function () {
   let forkChoice: ForkChoice;

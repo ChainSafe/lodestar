@@ -4,4 +4,4 @@
 #
 # ./lodestar.sh beacon --network prater
 
-node --trace-deprecation --max-old-space-size=4096 ./packages/cli/bin/lodestar "$@"
+node --trace-deprecation --max-old-space-size=4096 ./packages/cli/bin/lodestar.js "$@"

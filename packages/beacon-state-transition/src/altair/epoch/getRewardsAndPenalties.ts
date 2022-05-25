@@ -9,15 +9,15 @@ import {
   WEIGHT_DENOMINATOR,
   ForkName,
 } from "@chainsafe/lodestar-params";
-import {CachedBeaconStateAltair, EpochProcess} from "../../types";
+import {CachedBeaconStateAltair, EpochProcess} from "../../types.js";
 import {
   FLAG_ELIGIBLE_ATTESTER,
   FLAG_PREV_HEAD_ATTESTER_UNSLASHED,
   FLAG_PREV_SOURCE_ATTESTER_UNSLASHED,
   FLAG_PREV_TARGET_ATTESTER_UNSLASHED,
   hasMarkers,
-} from "../../util/attesterStatus";
-import {isInInactivityLeak, newZeroedArray} from "../../util";
+} from "../../util/attesterStatus.js";
+import {isInInactivityLeak, newZeroedArray} from "../../util/index.js";
 
 interface IRewardPenaltyItem {
   baseReward: number;

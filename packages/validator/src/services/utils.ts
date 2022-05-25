@@ -1,7 +1,7 @@
 import {routes} from "@chainsafe/lodestar-api";
 import {CommitteeIndex, SubcommitteeIndex} from "@chainsafe/lodestar-types";
-import {AttDutyAndProof} from "./attestationDuties";
-import {SyncDutyAndProofs, SyncSelectionProof} from "./syncCommitteeDuties";
+import {AttDutyAndProof} from "./attestationDuties.js";
+import {SyncDutyAndProofs, SyncSelectionProof} from "./syncCommitteeDuties.js";
 
 /** Sync committee duty associated to a single sub committee subnet */
 export type SubcommitteeDuty = {

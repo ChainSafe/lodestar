@@ -1,4 +1,3 @@
-import deepmerge from "deepmerge";
 import {ssz} from "@chainsafe/lodestar-types";
 import {config as defaultConfig} from "@chainsafe/lodestar-config/default";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
@@ -6,8 +5,9 @@ import {allForks, phase0} from "@chainsafe/lodestar-types";
 import {IProtoBlock, ExecutionStatus} from "@chainsafe/lodestar-fork-choice";
 import {isPlainObject} from "@chainsafe/lodestar-utils";
 import {RecursivePartial} from "@chainsafe/lodestar-utils";
-import {EMPTY_SIGNATURE, ZERO_HASH} from "../../src/constants";
-import {ReqRespBlockResponse} from "../../src/network/reqresp/types";
+import deepmerge from "deepmerge";
+import {EMPTY_SIGNATURE, ZERO_HASH} from "../../src/constants/index.js";
+import {ReqRespBlockResponse} from "../../src/network/reqresp/types.js";
 
 export function generateEmptyBlock(): phase0.BeaconBlock {
   return {
@@ -66,6 +66,19 @@ export function generateEmptySignedBlockHeader(): phase0.SignedBeaconBlockHeader
   return {
     message: {
       slot: 0,
+      proposerIndex: 0,
+      parentRoot: Buffer.alloc(32),
+      stateRoot: Buffer.alloc(32),
+      bodyRoot: Buffer.alloc(32),
+    },
+    signature: EMPTY_SIGNATURE,
+  };
+}
+
+export function generateSignedBlockHeaderBn(): phase0.SignedBeaconBlockHeaderBigint {
+  return {
+    message: {
+      slot: BigInt(0),
       proposerIndex: 0,
       parentRoot: Buffer.alloc(32),
       stateRoot: Buffer.alloc(32),

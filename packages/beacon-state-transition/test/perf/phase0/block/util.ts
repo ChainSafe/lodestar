@@ -1,5 +1,5 @@
 import {altair, phase0, ssz} from "@chainsafe/lodestar-types";
-import {SecretKey} from "@chainsafe/blst";
+import bls from "@chainsafe/bls";
 import {toGindex, Tree} from "@chainsafe/persistent-merkle-tree";
 import {BitArray} from "@chainsafe/ssz";
 import {DOMAIN_DEPOSIT, SYNC_COMMITTEE_SIZE} from "@chainsafe/lodestar-params";
@@ -11,8 +11,8 @@ import {
   ZERO_HASH,
   CachedBeaconStateAllForks,
   CachedBeaconStateAltair,
-} from "../../../../src";
-import {getBlockRoot, getBlockRootAtSlot} from "../../../../src";
+} from "../../../../src/index.js";
+import {getBlockRoot, getBlockRootAtSlot} from "../../../../src/index.js";
 
 export type BlockOpts = {
   proposerSlashingLen: number;
@@ -53,11 +53,11 @@ export function getBlockPhase0(
     const proposerIndex = proposerSlashingStartIndex + i * exitedIndexStep;
     proposerSlashings.push({
       signedHeader1: {
-        message: {slot: 1_800_000, proposerIndex, parentRoot: rootA, stateRoot: rootB, bodyRoot: rootC},
+        message: {slot: BigInt(1_800_000), proposerIndex, parentRoot: rootA, stateRoot: rootB, bodyRoot: rootC},
         signature: emptySig,
       },
       signedHeader2: {
-        message: {slot: 1_800_000, proposerIndex, parentRoot: rootC, stateRoot: rootA, bodyRoot: rootB},
+        message: {slot: BigInt(1_800_000), proposerIndex, parentRoot: rootC, stateRoot: rootA, bodyRoot: rootB},
         signature: emptySig,
       },
     });
@@ -71,12 +71,12 @@ export function getBlockPhase0(
     const startIndex = attesterSlashingStartIndex + i * bitsLen * exitedIndexStep;
     const attestingIndices = linspace(startIndex, bitsLen, exitedIndexStep);
 
-    const attData: phase0.AttestationData = {
-      slot: attSlot,
-      index: 0,
+    const attData: phase0.AttestationDataBigint = {
+      slot: BigInt(attSlot),
+      index: BigInt(0),
       beaconBlockRoot: rootA,
-      source: {epoch: stateEpoch - 3, root: rootC},
-      target: {epoch: attEpoch, root: rootA},
+      source: {epoch: BigInt(stateEpoch - 3), root: rootC},
+      target: {epoch: BigInt(attEpoch), root: rootA},
     };
     attesterSlashings.push({
       attestation1: {
@@ -210,7 +210,7 @@ function getDeposits(preState: CachedBeaconStateAllForks, count: number): phase0
   depositRootViewDU["dirtyLength"] = true;
 
   for (let i = 0; i < count; i++) {
-    const sk = SecretKey.fromBytes(Buffer.alloc(32, i + 1));
+    const sk = bls.SecretKey.fromBytes(Buffer.alloc(32, i + 1));
     const pubkey = sk.toPublicKey().toBytes();
     const depositMessage: phase0.DepositMessage = {pubkey, withdrawalCredentials, amount: 32e9};
     // Sign with disposable keys

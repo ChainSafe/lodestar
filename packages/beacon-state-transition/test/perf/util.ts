@@ -1,29 +1,8 @@
-import fs from "node:fs";
-import path from "node:path";
 import {config} from "@chainsafe/lodestar-config/default";
 import {phase0, ssz, Slot, altair} from "@chainsafe/lodestar-types";
-import bls, {CoordType, PublicKey, SecretKey} from "@chainsafe/bls";
+import {CoordType, PublicKey, SecretKey} from "@chainsafe/bls/types";
+import bls from "@chainsafe/bls";
 import {BitArray, fromHexString} from "@chainsafe/ssz";
-import {createIBeaconConfig, createIChainForkConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
-import {
-  EPOCHS_PER_ETH1_VOTING_PERIOD,
-  EPOCHS_PER_HISTORICAL_VECTOR,
-  MAX_ATTESTATIONS,
-  MAX_EFFECTIVE_BALANCE,
-  SLOTS_PER_EPOCH,
-  SLOTS_PER_HISTORICAL_ROOT,
-} from "@chainsafe/lodestar-params";
-import {NetworkName, networksChainConfig} from "@chainsafe/lodestar-config/networks";
-import {getClient} from "@chainsafe/lodestar-api";
-import {interopPubkeysCached} from "../utils/interop";
-import {profilerLogger} from "../utils/logger";
-import {
-  CachedBeaconStateAllForks,
-  CachedBeaconStatePhase0,
-  CachedBeaconStateAltair,
-  BeaconStatePhase0,
-  BeaconStateAltair,
-} from "../../src/types";
 import {
   allForks,
   interopSecretKey,
@@ -33,12 +12,27 @@ import {
   newFilledArray,
   createCachedBeaconState,
   computeCommitteeCount,
-} from "../../src";
-import {testCachePath} from "../cache";
-import {getNextSyncCommittee} from "../../src/util/syncCommittee";
-import {createCachedBeaconStateTest} from "../utils/state";
-import {getEffectiveBalanceIncrements} from "../../src/cache/effectiveBalanceIncrements";
-import {getInfuraBeaconUrl} from "./infura";
+} from "../../src/index.js";
+import {createIBeaconConfig, createIChainForkConfig} from "@chainsafe/lodestar-config";
+import {
+  CachedBeaconStateAllForks,
+  CachedBeaconStatePhase0,
+  CachedBeaconStateAltair,
+  BeaconStatePhase0,
+  BeaconStateAltair,
+} from "../../src/types.js";
+import {profilerLogger} from "../utils/logger.js";
+import {interopPubkeysCached} from "../utils/interop.js";
+import {
+  EPOCHS_PER_ETH1_VOTING_PERIOD,
+  EPOCHS_PER_HISTORICAL_VECTOR,
+  MAX_ATTESTATIONS,
+  MAX_EFFECTIVE_BALANCE,
+  SLOTS_PER_EPOCH,
+  SLOTS_PER_HISTORICAL_ROOT,
+} from "@chainsafe/lodestar-params";
+import {getNextSyncCommittee} from "../../src/util/syncCommittee.js";
+import {getEffectiveBalanceIncrements} from "../../src/cache/effectiveBalanceIncrements.js";
 
 let phase0State: BeaconStatePhase0 | null = null;
 let phase0CachedState23637: CachedBeaconStatePhase0 | null = null;
@@ -445,77 +439,4 @@ export function generateTestCachedBeaconStateOnlyValidators({
     pubkey2index,
     index2pubkey,
   });
-}
-
-const initialValue = null;
-export type LazyValue<T> = {value: T};
-
-/**
- * Register a callback to compute a value in the before() block of mocha tests
- * ```ts
- * const state = beforeValue(() => getState())
- * it("test", () => {
- *   doTest(state.value)
- * })
- * ```
- */
-export function beforeValue<T>(fn: () => T | Promise<T>, timeout?: number): LazyValue<T> {
-  let value: T = (initialValue as unknown) as T;
-
-  before(async function () {
-    this.timeout(timeout ?? 300_000);
-    value = await fn();
-  });
-
-  return new Proxy<{value: T}>(
-    {value},
-    {
-      get: function (target, prop) {
-        if (prop === "value") {
-          if (value === initialValue) {
-            throw Error("beforeValue has not yet run the before() block");
-          } else {
-            return value;
-          }
-        } else {
-          return undefined;
-        }
-      },
-    }
-  );
-}
-
-/**
- * Create a network config from known network params
- */
-export function getNetworkConfig(network: NetworkName): IChainForkConfig {
-  const configNetwork = networksChainConfig[network];
-  return createIChainForkConfig(configNetwork);
-}
-
-/**
- * Download a state from Infura. Caches states in local fs by network and slot to only download once.
- */
-export async function getNetworkCachedState(
-  network: NetworkName,
-  slot: number,
-  timeout?: number
-): Promise<CachedBeaconStateAllForks> {
-  const config = getNetworkConfig(network);
-
-  const filepath = path.join(testCachePath, `state_${network}_${slot}.ssz`);
-  let stateSsz: Uint8Array;
-  if (fs.existsSync(filepath)) {
-    stateSsz = fs.readFileSync(filepath);
-  } else {
-    const client = getClient(config, {baseUrl: getInfuraBeaconUrl(network), timeoutMs: timeout ?? 300_000});
-    stateSsz =
-      computeEpochAtSlot(slot) < config.ALTAIR_FORK_EPOCH
-        ? await client.debug.getState(String(slot), "ssz")
-        : await client.debug.getStateV2(String(slot), "ssz");
-    fs.writeFileSync(filepath, stateSsz);
-  }
-
-  const stateView = config.getForkTypes(slot).BeaconState.deserializeToViewDU(stateSsz);
-  return createCachedBeaconStateTest(stateView, config);
 }

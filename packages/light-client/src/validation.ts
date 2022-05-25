@@ -1,5 +1,6 @@
 import {altair, phase0, Root, Slot, ssz} from "@chainsafe/lodestar-types";
-import {PublicKey, Signature} from "@chainsafe/bls";
+import bls from "@chainsafe/bls";
+import type {PublicKey, Signature} from "@chainsafe/bls/types";
 import {
   FINALIZED_ROOT_INDEX,
   FINALIZED_ROOT_DEPTH,
@@ -9,10 +10,11 @@ import {
   DOMAIN_SYNC_COMMITTEE,
 } from "@chainsafe/lodestar-params";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {isValidMerkleBranch} from "./utils/verifyMerkleBranch";
-import {assertZeroHashes, getParticipantPubkeys, isEmptyHeader} from "./utils/utils";
-import {SyncCommitteeFast} from "./types";
-import {computeSyncPeriodAtSlot} from "./utils/clock";
+import {routes} from "@chainsafe/lodestar-api";
+import {isValidMerkleBranch} from "./utils/verifyMerkleBranch.js";
+import {assertZeroHashes, getParticipantPubkeys, isEmptyHeader} from "./utils/utils.js";
+import {SyncCommitteeFast} from "./types.js";
+import {computeSyncPeriodAtSlot} from "./utils/clock.js";
 
 /**
  *
@@ -62,7 +64,7 @@ export function assertValidLightClientUpdate(
  *
  * Where `hashTreeRoot(state) == update.finalityHeader.stateRoot`
  */
-export function assertValidFinalityProof(update: altair.LightClientUpdate): void {
+export function assertValidFinalityProof(update: routes.lightclient.LightclientFinalizedUpdate): void {
   if (
     !isValidMerkleBranch(
       ssz.phase0.BeaconBlockHeader.hashTreeRoot(update.finalizedHeader),
@@ -166,7 +168,7 @@ export function assertValidSignedHeader(
 function isValidBlsAggregate(publicKeys: PublicKey[], message: Uint8Array, signature: Uint8Array): boolean {
   let aggPubkey: PublicKey;
   try {
-    aggPubkey = PublicKey.aggregate(publicKeys);
+    aggPubkey = bls.PublicKey.aggregate(publicKeys);
   } catch (e) {
     (e as Error).message = `Error aggregating pubkeys: ${(e as Error).message}`;
     throw e;
@@ -174,7 +176,7 @@ function isValidBlsAggregate(publicKeys: PublicKey[], message: Uint8Array, signa
 
   let sig: Signature;
   try {
-    sig = Signature.fromBytes(signature, undefined, true);
+    sig = bls.Signature.fromBytes(signature, undefined, true);
   } catch (e) {
     (e as Error).message = `Error deserializing signature: ${(e as Error).message}`;
     throw e;
