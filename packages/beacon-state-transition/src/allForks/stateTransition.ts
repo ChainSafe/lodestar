@@ -7,10 +7,10 @@ import * as altair from "../altair/index.js";
 import * as bellatrix from "../bellatrix/index.js";
 import {IBeaconStateTransitionMetrics} from "../metrics.js";
 import {EpochProcess, beforeProcessEpoch} from "../cache/epochProcess.js";
-import {verifyProposerSignature} from "./signatureSets/index.js";
 import {CachedBeaconStateAllForks, CachedBeaconStatePhase0, CachedBeaconStateAltair} from "../types.js";
-import {processSlot} from "./slot/index.js";
 import {computeEpochAtSlot} from "../util/index.js";
+import {verifyProposerSignature} from "./signatureSets/index.js";
+import {processSlot} from "./slot/index.js";
 
 type StateAllForks = CachedBeaconStateAllForks;
 type StatePhase0 = CachedBeaconStatePhase0;

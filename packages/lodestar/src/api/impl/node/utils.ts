@@ -1,5 +1,5 @@
-import {routes} from "@chainsafe/lodestar-api";
 import {Connection} from "libp2p";
+import {routes} from "@chainsafe/lodestar-api";
 import {PeerStatus} from "../../../network/index.js";
 
 /**

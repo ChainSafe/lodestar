@@ -22,14 +22,14 @@ import {CheckpointStateCache, StateContextCache, toCheckpointHex} from "../state
 import {ChainEvent} from "../emitter.js";
 import {ChainEventEmitter} from "../emitter.js";
 import {LightClientServer} from "../lightClient/index.js";
-import {getCheckpointFromState} from "./utils/checkpoint.js";
-import {PendingEvents} from "./utils/pendingEvents.js";
-import {FullyVerifiedBlock} from "./types.js";
 import {SeenAggregatedAttestations} from "../seenCache/seenAggregateAndProof.js";
 import {prepareExecutionPayload} from "../factory/block/body.js";
 import {IEth1ForBlockProduction} from "../../eth1/index.js";
 import {BeaconProposerCache} from "../beaconProposerCache.js";
 import {IBeaconClock} from "../clock/index.js";
+import {FullyVerifiedBlock} from "./types.js";
+import {PendingEvents} from "./utils/pendingEvents.js";
+import {getCheckpointFromState} from "./utils/checkpoint.js";
 
 /**
  * Fork-choice allows to import attestations from current (0) or past (1) epoch.

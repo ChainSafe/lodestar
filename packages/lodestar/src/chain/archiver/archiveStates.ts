@@ -4,9 +4,9 @@
 
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {CheckpointWithHex} from "@chainsafe/lodestar-fork-choice";
 import {IBeaconDb} from "../../db/index.js";
 import {CheckpointStateCache} from "../stateCache/index.js";
-import {CheckpointWithHex} from "@chainsafe/lodestar-fork-choice";
 
 /**
  * Minimum number of epochs between archived states

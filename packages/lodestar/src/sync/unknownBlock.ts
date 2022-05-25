@@ -1,3 +1,4 @@
+import PeerId from "peer-id";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {allForks, Root, RootHex} from "@chainsafe/lodestar-types";
@@ -7,7 +8,6 @@ import {IBeaconChain} from "../chain/index.js";
 import {IMetrics} from "../metrics/index.js";
 import {shuffle} from "../util/shuffle.js";
 import {byteArrayEquals} from "../util/bytes.js";
-import PeerId from "peer-id";
 import {BlockError, BlockErrorCode} from "../chain/errors/index.js";
 import {wrapError} from "../util/wrapError.js";
 import {pruneSetToMax} from "../util/map.js";

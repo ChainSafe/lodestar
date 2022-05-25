@@ -1,11 +1,11 @@
 import PeerId from "peer-id";
-import {IBeaconSync, ISyncModules, SyncingStatus} from "./interface.js";
-import {INetwork, NetworkEvent} from "../network/index.js";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {Slot, phase0} from "@chainsafe/lodestar-types";
+import {INetwork, NetworkEvent} from "../network/index.js";
 import {IMetrics} from "../metrics/index.js";
 import {ChainEvent, IBeaconChain} from "../chain/index.js";
+import {IBeaconSync, ISyncModules, SyncingStatus} from "./interface.js";
 import {RangeSync, RangeSyncStatus, RangeSyncEvent} from "./range/range.js";
 import {getPeerSyncType, PeerSyncType, peerSyncTypes} from "./utils/remoteSyncType.js";
 import {MIN_EPOCH_TO_START_GOSSIP} from "./constants.js";

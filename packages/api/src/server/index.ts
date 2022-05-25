@@ -1,6 +1,6 @@
+import {FastifyInstance} from "fastify";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 // eslint-disable-next-line import/no-extraneous-dependencies
-import {FastifyInstance} from "fastify";
 import {Api} from "../interface.js";
 import {ServerRoute} from "./utils/index.js";
 

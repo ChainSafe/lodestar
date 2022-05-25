@@ -1,5 +1,5 @@
-import {AbortSignal, AbortController} from "@chainsafe/abort-controller";
 import {anySignal} from "any-signal";
+import {AbortSignal, AbortController} from "@chainsafe/abort-controller";
 import {TimeoutError} from "./errors.js";
 import {sleep} from "./sleep.js";
 

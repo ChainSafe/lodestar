@@ -2,9 +2,9 @@
  * @module node
  */
 
-import {AbortController} from "@chainsafe/abort-controller";
 import LibP2p from "libp2p";
 import {Registry} from "prom-client";
+import {AbortController} from "@chainsafe/abort-controller";
 
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {phase0} from "@chainsafe/lodestar-types";

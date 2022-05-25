@@ -1,7 +1,7 @@
 import {allForks, phase0, ssz} from "@chainsafe/lodestar-types";
+import {DOMAIN_BEACON_ATTESTER} from "@chainsafe/lodestar-params";
 import {computeSigningRoot, computeStartSlotAtEpoch, ISignatureSet, SignatureSetType} from "../../util/index.js";
 import {CachedBeaconStateAllForks} from "../../types.js";
-import {DOMAIN_BEACON_ATTESTER} from "@chainsafe/lodestar-params";
 
 /** Get signature sets from all AttesterSlashing objects in a block */
 export function getAttesterSlashingsSignatureSets(

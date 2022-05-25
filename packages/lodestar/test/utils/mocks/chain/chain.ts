@@ -1,5 +1,5 @@
-import {AbortController} from "@chainsafe/abort-controller";
 import sinon from "sinon";
+import {AbortController} from "@chainsafe/abort-controller";
 
 import {toHexString} from "@chainsafe/ssz";
 import {allForks, UintNum64, Root, Slot, ssz, Uint16, UintBn64} from "@chainsafe/lodestar-types";

@@ -1,8 +1,9 @@
 import sinon from "sinon";
 import {expect} from "chai";
+import PeerId from "peer-id";
+import {Multiaddr} from "multiaddr";
 import {AbortController} from "@chainsafe/abort-controller";
 
-import PeerId from "peer-id";
 import {ENR} from "@chainsafe/discv5";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {config} from "@chainsafe/lodestar-config/default";
@@ -24,7 +25,6 @@ import {CommitteeSubscription} from "../../../src/network/subnets/index.js";
 import {GossipHandlers} from "../../../src/network/gossip/index.js";
 import {ENRKey} from "../../../src/network/metadata.js";
 import {memoOnce} from "../../utils/cache.js";
-import {Multiaddr} from "multiaddr";
 
 let port = 9000;
 const multiaddr = "/ip4/127.0.0.1/tcp/0";

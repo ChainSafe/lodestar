@@ -23,8 +23,8 @@ import {ILogger} from "@chainsafe/lodestar-utils";
 import {IEth1Provider} from "../../eth1/index.js";
 import {IEth1StreamParams} from "../../eth1/interface.js";
 import {getDepositsAndBlockStreamForGenesis, getDepositsStream} from "../../eth1/stream.js";
-import {IGenesisBuilder, IGenesisResult} from "./interface.js";
 import {DepositTree} from "../../db/repositories/depositDataRoot.js";
+import {IGenesisBuilder, IGenesisResult} from "./interface.js";
 
 export interface IGenesisBuilderKwargs {
   config: IChainForkConfig;

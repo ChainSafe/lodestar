@@ -8,10 +8,13 @@ import {
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {routes} from "@chainsafe/lodestar-api";
 import {BitArray, CompositeViewDU, toHexString} from "@chainsafe/ssz";
+import {SYNC_COMMITTEE_SIZE} from "@chainsafe/lodestar-params";
 import {IBeaconDb} from "../../db/index.js";
 import {IMetrics} from "../../metrics/index.js";
 import {MapDef, pruneSetToMax} from "../../util/map.js";
 import {ChainEvent, ChainEventEmitter} from "../emitter.js";
+import {byteArrayEquals} from "../../util/bytes.js";
+import {ZERO_HASH} from "../../constants/index.js";
 import {
   getNextSyncCommitteeBranch,
   getSyncCommitteesWitness,
@@ -19,9 +22,6 @@ import {
   getCurrentSyncCommitteeBranch,
 } from "./proofs.js";
 import {PartialLightClientUpdate} from "./types.js";
-import {SYNC_COMMITTEE_SIZE} from "@chainsafe/lodestar-params";
-import {byteArrayEquals} from "../../util/bytes.js";
-import {ZERO_HASH} from "../../constants/index.js";
 
 type DependantRootHex = RootHex;
 type BlockRooHex = RootHex;

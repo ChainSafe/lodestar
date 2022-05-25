@@ -1,7 +1,7 @@
-import {SignerType, SlashingProtection, Validator} from "@chainsafe/lodestar-validator";
 import {readdirSync} from "node:fs";
-import {LevelDbController} from "@chainsafe/lodestar-db";
 import inquirer from "inquirer";
+import {SignerType, SlashingProtection, Validator} from "@chainsafe/lodestar-validator";
+import {LevelDbController} from "@chainsafe/lodestar-db";
 import {ICliCommand} from "../../../../util/index.js";
 import {IGlobalArgs} from "../../../../options/index.js";
 import {ValidatorDirManager} from "../../../../validatorDir/index.js";

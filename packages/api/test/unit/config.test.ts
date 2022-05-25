@@ -1,3 +1,4 @@
+import {expect} from "chai";
 import {ssz} from "@chainsafe/lodestar-types";
 import {chainConfigToJson} from "@chainsafe/lodestar-config";
 import {config, chainConfig} from "@chainsafe/lodestar-config/default";
@@ -6,7 +7,6 @@ import {Api, ReqTypes, getReturnTypes} from "../../src/routes/config.js";
 import {getClient} from "../../src/client/config.js";
 import {getRoutes} from "../../src/server/config.js";
 import {runGenericServerTest} from "../utils/genericServerTest.js";
-import {expect} from "chai";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 

@@ -1,7 +1,7 @@
+import {expect} from "chai";
 import {config} from "@chainsafe/lodestar-config/default";
 import {FAR_FUTURE_EPOCH, MAX_EFFECTIVE_BALANCE} from "@chainsafe/lodestar-params";
 import {generateAttestationData} from "../../utils/attestation.js";
-import {expect} from "chai";
 import {EMPTY_SIGNATURE} from "../../../src/index.js";
 import {phase0} from "../../../src/index.js";
 import {generateCachedState} from "../../utils/state.js";

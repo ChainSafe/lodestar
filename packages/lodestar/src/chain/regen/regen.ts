@@ -13,10 +13,10 @@ import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {IMetrics} from "../../metrics/index.js";
 import {IBeaconDb} from "../../db/index.js";
 import {CheckpointStateCache, StateContextCache} from "../stateCache/index.js";
-import {IStateRegenerator, RegenCaller} from "./interface.js";
-import {RegenError, RegenErrorCode} from "./errors.js";
 import {getCheckpointFromState} from "../blocks/utils/checkpoint.js";
 import {ChainEvent, ChainEventEmitter} from "../emitter.js";
+import {IStateRegenerator, RegenCaller} from "./interface.js";
+import {RegenError, RegenErrorCode} from "./errors.js";
 
 export type RegenModules = {
   db: IBeaconDb;

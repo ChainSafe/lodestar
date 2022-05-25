@@ -19,9 +19,9 @@ import {GENESIS_SLOT, ZERO_HASH} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
 import {Eth1Provider} from "../eth1/index.js";
 import {IMetrics} from "../metrics/index.js";
+import {Eth1Options} from "../eth1/options.js";
 import {GenesisBuilder} from "./genesis/genesis.js";
 import {IGenesisResult} from "./genesis/interface.js";
-import {Eth1Options} from "../eth1/options.js";
 
 export async function persistGenesisResult(
   db: IBeaconDb,

@@ -1,5 +1,5 @@
-import {MutableVector} from "@chainsafe/persistent-ts";
 import {itBench, setBenchOpts} from "@dapplion/benchmark";
+import {MutableVector} from "@chainsafe/persistent-ts";
 import {newZeroedArray} from "../../../src/index.js";
 
 describe("effectiveBalanceIncrements", () => {

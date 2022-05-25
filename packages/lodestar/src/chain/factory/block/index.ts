@@ -9,8 +9,8 @@ import {fromHexString} from "@chainsafe/ssz";
 import {ZERO_HASH} from "../../../constants/index.js";
 import {IMetrics} from "../../../metrics/index.js";
 import {IBeaconChain} from "../../interface.js";
-import {assembleBody} from "./body.js";
 import {RegenCaller} from "../../regen/index.js";
+import {assembleBody} from "./body.js";
 
 type AssembleBlockModules = {
   chain: IBeaconChain;

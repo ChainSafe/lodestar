@@ -4,9 +4,9 @@ import {Keystore} from "@chainsafe/bls-keystore";
 import bls from "@chainsafe/bls";
 import {IEth2ValidatorKeys} from "@chainsafe/bls-keygen";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import {ValidatorDir} from "./ValidatorDir.js";
 import {encodeDepositData} from "../depositContract/depositData.js";
 import {ensureDirExists, YargsError, writeValidatorPassphrase} from "../util/index.js";
+import {ValidatorDir} from "./ValidatorDir.js";
 import {
   VOTING_KEYSTORE_FILE,
   WITHDRAWAL_KEYSTORE_FILE,

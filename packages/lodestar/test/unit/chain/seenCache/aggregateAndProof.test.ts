@@ -1,5 +1,5 @@
-import {BitArray} from "@chainsafe/ssz";
 import {expect} from "chai";
+import {BitArray} from "@chainsafe/ssz";
 import {
   AggregationInfo,
   insertDesc,

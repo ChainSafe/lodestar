@@ -1,6 +1,7 @@
 import {SinonStubbedInstance} from "sinon";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 
+import {config as minimalConfig} from "@chainsafe/lodestar-config/default";
 import {BeaconDb} from "../../../src/db/index.js";
 import {
   AttesterSlashingRepository,
@@ -13,7 +14,6 @@ import {
   StateArchiveRepository,
   VoluntaryExitRepository,
 } from "../../../src/db/repositories/index.js";
-import {config as minimalConfig} from "@chainsafe/lodestar-config/default";
 import {createStubInstance} from "../types.js";
 
 export class StubbedBeaconDb extends BeaconDb {

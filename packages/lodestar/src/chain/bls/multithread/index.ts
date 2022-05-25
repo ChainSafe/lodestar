@@ -10,15 +10,15 @@ import {AbortSignal} from "@chainsafe/abort-controller";
 import bls from "@chainsafe/bls";
 import {Implementation, PointFormat} from "@chainsafe/bls/types";
 import {ILogger} from "@chainsafe/lodestar-utils";
+import {ISignatureSet} from "@chainsafe/lodestar-beacon-state-transition";
 import {QueueError, QueueErrorCode} from "../../../util/queue/index.js";
 import {IMetrics} from "../../../metrics/index.js";
 import {IBlsVerifier, VerifySignatureOpts} from "../interface.js";
+import {getAggregatedPubkey} from "../utils.js";
+import {verifySignatureSetsMaybeBatch} from "../maybeBatch.js";
 import {BlsWorkReq, BlsWorkResult, WorkerData, WorkResultCode} from "./types.js";
 import {chunkifyMaximizeChunkSize} from "./utils.js";
 import {defaultPoolSize} from "./poolSize.js";
-import {ISignatureSet} from "@chainsafe/lodestar-beacon-state-transition";
-import {getAggregatedPubkey} from "../utils.js";
-import {verifySignatureSetsMaybeBatch} from "../maybeBatch.js";
 
 export type BlsMultiThreadWorkerPoolModules = {
   logger: ILogger;

@@ -1,9 +1,9 @@
-import {getBeaconStateApi} from "../../../../../../src/api/impl/beacon/state/index.js";
-import {config} from "@chainsafe/lodestar-config/default";
 import sinon, {SinonStubbedMember} from "sinon";
+import {expect} from "chai";
+import {config} from "@chainsafe/lodestar-config/default";
+import {getBeaconStateApi} from "../../../../../../src/api/impl/beacon/state/index.js";
 import * as stateApiUtils from "../../../../../../src/api/impl/beacon/state/utils.js";
 import {generateCachedState} from "../../../../../utils/state.js";
-import {expect} from "chai";
 import {setupApiImplTestServer, ApiImplTestModules} from "../../index.test.js";
 
 // TODO remove stub

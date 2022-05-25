@@ -12,11 +12,11 @@ import {
 import {processExecutionPayload} from "@chainsafe/lodestar-beacon-state-transition/bellatrix";
 import {ssz} from "@chainsafe/lodestar-types";
 import {ForkName} from "@chainsafe/lodestar-params";
+import {InputType} from "@chainsafe/lodestar-spec-test-util";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
 import {getConfig} from "../utils/getConfig.js";
 import {BaseSpecTest, shouldVerify, TestRunnerFn} from "../utils/types.js";
-import {InputType} from "@chainsafe/lodestar-spec-test-util";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 

@@ -7,11 +7,11 @@ import {createIBeaconConfig, IBeaconConfig, IChainConfig} from "@chainsafe/lodes
 import {KeymanagerApi, KeymanagerServer} from "@chainsafe/lodestar-keymanager-server";
 import {chainConfig as chainConfigDef} from "@chainsafe/lodestar-config/default";
 import {HttpClient} from "@chainsafe/lodestar-api";
-import {getClient} from "../../../../api/src/keymanager/client.js";
 import {ISlashingProtection, Validator} from "@chainsafe/lodestar-validator";
 import {fromHexString} from "@chainsafe/ssz";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {ssz} from "@chainsafe/lodestar-types";
+import {getClient} from "../../../../api/src/keymanager/client.js";
 import {LogLevel, testLogger, TestLoggerOpts} from "../../utils/logger.js";
 import {getDevBeaconNode} from "../../utils/node/beacon.js";
 import {getAndInitDevValidators, getAndInitValidatorsWithKeystore} from "../../utils/node/validator.js";

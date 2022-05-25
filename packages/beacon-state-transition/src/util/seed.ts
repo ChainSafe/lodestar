@@ -16,8 +16,8 @@ import {
   SYNC_COMMITTEE_SIZE,
 } from "@chainsafe/lodestar-params";
 import {BeaconStateAllForks} from "../types.js";
-import {computeStartSlotAtEpoch} from "./epoch.js";
 import {EffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements.js";
+import {computeStartSlotAtEpoch} from "./epoch.js";
 import {computeEpochAtSlot} from "./epoch.js";
 
 /**
