@@ -37,29 +37,29 @@ export function assertEqualParams(localConfig: IChainConfig, externalSpecJson: R
   const errors: string[] = [];
 
   for (const key of Object.keys(criticalParams) as (keyof typeof criticalParams)[]) {
-    // Ignore non-critical params
-    if (!criticalParams[key]) {
+    if (
+      // Ignore non-critical params
+      !criticalParams[key] ||
+      // This condition should never be true, but just in case
+      localSpecJson[key] === undefined ||
+      // The config/spec endpoint is poorly specified, so in practice each client returns a custom selection of keys.
+      // For example Lighthouse returns a manually selected list of keys that may be updated at any time.
+      // https://github.com/sigp/lighthouse/blob/bac7c3fa544495a257722aaad9cd8f72fee2f2b4/consensus/types/src/chain_spec.rs#L941
+      //
+      // So if we assert that spec critical keys are present in the spec we may break interoperability unexpectedly.
+      // So it's best to ignore keys are not defined in both specs and trust that the ones defined are sufficient
+      // to detect spec discrepancies in all cases.
+      externalSpecJson[key] === undefined
+    ) {
       continue;
-    }
-
-    // This condition should never be true, but just in case
-    if (localSpecJson[key] === undefined) {
-      errors.push(`${key} not defined in local config`);
-    }
-
-    // All consensus critical keys must be defined, otherwise we can't ensure interoperability
-    else if (externalSpecJson[key] === undefined) {
-      errors.push(`${key} not defined in external config`);
     }
 
     // Must compare JSON serialized specs, to ensure all strings are rendered in the same way
     // Must compare as lowercase to ensure checksum addresses and names have same capilatization
-    else {
-      const localValue = String(localSpecJson[key]).toLocaleLowerCase();
-      const remoteValue = String(externalSpecJson[key]).toLocaleLowerCase();
-      if (localValue !== remoteValue) {
-        errors.push(`${key} different value: ${localValue} != ${remoteValue}`);
-      }
+    const localValue = String(localSpecJson[key]).toLocaleLowerCase();
+    const remoteValue = String(externalSpecJson[key]).toLocaleLowerCase();
+    if (localValue !== remoteValue) {
+      errors.push(`${key} different value: ${localValue} != ${remoteValue}`);
     }
   }
 
