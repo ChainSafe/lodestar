@@ -83,7 +83,8 @@ module.exports = {
       },
     ],
     "@typescript-eslint/func-call-spacing": "error",
-    // "@typescript-eslint/member-ordering": "error", TODO DA revisit and re-enable
+    // TODO after upgrading es-lint, member-ordering is now leading to lint errors. Set to warning now and fix in another PR
+    "@typescript-eslint/member-ordering": "warn",
     "@typescript-eslint/no-explicit-any": "error",
     "@typescript-eslint/no-require-imports": "error",
     "@typescript-eslint/no-unused-vars": [
