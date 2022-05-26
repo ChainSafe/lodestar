@@ -67,7 +67,7 @@
     "@chainsafe/persistent-merkle-tree": "^0.4.1",
     "@chainsafe/ssz": "^0.9.1",
     "cross-fetch": "^3.1.4",
-    "eventsource": "^1.1.0",
+    "eventsource": "^2.0.2",
     "qs": "^6.10.1"
   },
   "devDependencies": {
