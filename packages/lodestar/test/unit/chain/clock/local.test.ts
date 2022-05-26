@@ -1,5 +1,4 @@
 import sinon from "sinon";
-import {AbortController} from "@chainsafe/abort-controller";
 import {expect} from "chai";
 import {config} from "@chainsafe/lodestar-config/default";
 

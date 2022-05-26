@@ -7,7 +7,6 @@ import {ForkName} from "@chainsafe/lodestar-params";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {allForks, phase0} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {AbortController} from "@chainsafe/abort-controller";
 import LibP2p from "libp2p";
 import PeerId from "peer-id";
 import {RespStatus, timeoutOptions} from "../../constants/index.js";

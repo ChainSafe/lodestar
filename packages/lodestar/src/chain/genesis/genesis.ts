@@ -6,7 +6,6 @@ import {GENESIS_EPOCH, GENESIS_SLOT} from "@chainsafe/lodestar-params";
 import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {IBeaconConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
 import {toGindex, Tree} from "@chainsafe/persistent-merkle-tree";
-import {AbortSignal} from "@chainsafe/abort-controller";
 import {
   getTemporaryBlockHeader,
   getGenesisBeaconState,

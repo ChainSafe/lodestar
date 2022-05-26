@@ -3,7 +3,6 @@ import {promisify} from "node:util";
 import rimraf from "rimraf";
 import path from "node:path";
 import {fromHexString} from "@chainsafe/ssz";
-import {AbortController} from "@chainsafe/abort-controller";
 import {GENESIS_SLOT} from "@chainsafe/lodestar-params";
 import {BeaconNode, BeaconDb, initStateFromAnchorState, createNodeJsLibp2p, nodeUtils} from "@chainsafe/lodestar";
 import {SlashingProtection, Validator, SignerType} from "@chainsafe/lodestar-validator";

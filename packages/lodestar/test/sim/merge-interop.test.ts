@@ -2,7 +2,6 @@ import fs from "node:fs";
 import net from "node:net";
 import {spawn} from "node:child_process";
 import {Context} from "mocha";
-import {AbortController, AbortSignal} from "@chainsafe/abort-controller";
 import {fromHexString} from "@chainsafe/ssz";
 import {LogLevel, sleep, TimestampFormatCode} from "@chainsafe/lodestar-utils";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";

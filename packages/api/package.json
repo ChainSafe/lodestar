@@ -60,7 +60,6 @@
     "check-readme": "typescript-docs-verifier"
   },
   "dependencies": {
-    "@chainsafe/abort-controller": "^3.0.1",
     "@chainsafe/lodestar-config": "^0.37.0",
     "@chainsafe/lodestar-params": "^0.37.0",
     "@chainsafe/lodestar-types": "^0.37.0",

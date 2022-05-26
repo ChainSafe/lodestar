@@ -1,4 +1,3 @@
-import {AbortSignal} from "@chainsafe/abort-controller";
 import {ErrorAborted} from "./errors.js";
 
 /**

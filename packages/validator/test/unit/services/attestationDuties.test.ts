@@ -1,4 +1,3 @@
-import {AbortController} from "@chainsafe/abort-controller";
 import {toBufferBE} from "bigint-buffer";
 import {expect} from "chai";
 import sinon from "sinon";

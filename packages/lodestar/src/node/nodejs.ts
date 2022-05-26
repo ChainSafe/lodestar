@@ -2,7 +2,6 @@
  * @module node
  */
 
-import {AbortController} from "@chainsafe/abort-controller";
 import LibP2p from "libp2p";
 import {Registry} from "prom-client";
 

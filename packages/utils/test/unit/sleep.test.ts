@@ -1,6 +1,5 @@
 import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
-import {AbortController} from "@chainsafe/abort-controller";
 import {sleep} from "../../src/sleep.js";
 import {ErrorAborted} from "../../src/errors.js";
 
