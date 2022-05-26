@@ -48,16 +48,18 @@ export function assertEqualParams(localConfig: IChainConfig, externalSpecJson: R
     }
 
     // All consensus critical keys must be defined, otherwise we can't ensure interoperability
-    if (externalSpecJson[key] === undefined) {
+    else if (externalSpecJson[key] === undefined) {
       errors.push(`${key} not defined in external config`);
     }
 
     // Must compare JSON serialized specs, to ensure all strings are rendered in the same way
     // Must compare as lowercase to ensure checksum addresses and names have same capilatization
-    const localValue = String(localSpecJson[key]).toLocaleLowerCase();
-    const remoteValue = String(externalSpecJson[key]).toLocaleLowerCase();
-    if (localValue !== remoteValue) {
-      errors.push(`${key} different value: ${localValue} != ${remoteValue}`);
+    else {
+      const localValue = String(localSpecJson[key]).toLocaleLowerCase();
+      const remoteValue = String(externalSpecJson[key]).toLocaleLowerCase();
+      if (localValue !== remoteValue) {
+        errors.push(`${key} different value: ${localValue} != ${remoteValue}`);
+      }
     }
   }
 
