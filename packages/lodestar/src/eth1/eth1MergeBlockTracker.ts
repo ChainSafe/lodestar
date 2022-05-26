@@ -1,4 +1,3 @@
-import {AbortSignal} from "@chainsafe/abort-controller";
 import {IChainConfig} from "@chainsafe/lodestar-config";
 import {Epoch, RootHex} from "@chainsafe/lodestar-types";
 import {ILogger, isErrorAborted, sleep} from "@chainsafe/lodestar-utils";

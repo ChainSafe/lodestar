@@ -1,6 +1,5 @@
 import PeerId from "peer-id";
 import pipe from "it-pipe";
-import {AbortSignal} from "@chainsafe/abort-controller";
 import {ILogger, TimeoutError, withTimeout} from "@chainsafe/lodestar-utils";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {REQUEST_TIMEOUT, RespStatus} from "../../../constants/index.js";

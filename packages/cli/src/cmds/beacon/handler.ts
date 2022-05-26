@@ -1,5 +1,4 @@
 import {Registry} from "prom-client";
-import {AbortController} from "@chainsafe/abort-controller";
 import {ErrorAborted} from "@chainsafe/lodestar-utils";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import {BeaconNode, BeaconDb, createNodeJsLibp2p} from "@chainsafe/lodestar";

@@ -1,6 +1,5 @@
 import {toHexString} from "@chainsafe/ssz";
 import {phase0} from "@chainsafe/lodestar-types";
-import {AbortSignal} from "@chainsafe/abort-controller";
 import {IChainConfig} from "@chainsafe/lodestar-config";
 import {fromHex} from "@chainsafe/lodestar-utils";
 

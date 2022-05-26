@@ -1,4 +1,3 @@
-import {AbortSignal} from "@chainsafe/abort-controller";
 import {ILogger} from "@chainsafe/lodestar-utils";
 
 import {CheckpointWithHex} from "@chainsafe/lodestar-fork-choice";

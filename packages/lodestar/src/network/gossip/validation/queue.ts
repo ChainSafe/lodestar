@@ -1,4 +1,3 @@
-import {AbortSignal} from "@chainsafe/abort-controller";
 import {mapValues} from "@chainsafe/lodestar-utils";
 import {IMetrics} from "../../../metrics/index.js";
 import {JobItemQueue, JobQueueOpts, QueueType} from "../../../util/queue/index.js";

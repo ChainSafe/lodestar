@@ -1,5 +1,4 @@
 import {expect} from "chai";
-import {AbortController} from "@chainsafe/abort-controller";
 import {IChainConfig} from "@chainsafe/lodestar-config";
 import {sleep} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";

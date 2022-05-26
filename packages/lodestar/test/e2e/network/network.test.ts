@@ -1,8 +1,8 @@
 import sinon from "sinon";
 import {expect} from "chai";
+
 import PeerId from "peer-id";
 import {Multiaddr} from "multiaddr";
-import {AbortController} from "@chainsafe/abort-controller";
 
 import {ENR} from "@chainsafe/discv5";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";

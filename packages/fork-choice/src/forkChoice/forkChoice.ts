@@ -505,6 +505,7 @@ export class ForkChoice implements IForkChoice {
    * Call `onTick` for all slots between `fcStore.getCurrentSlot()` and the provided `currentSlot`.
    */
   updateTime(currentSlot: Slot): void {
+    if (this.fcStore.currentSlot >= currentSlot) return;
     while (this.fcStore.currentSlot < currentSlot) {
       const previousSlot = this.fcStore.currentSlot;
       // Note: we are relying upon `onTick` to update `fcStore.time` to ensure we don't get stuck in a loop.
@@ -951,7 +952,8 @@ export class ForkChoice implements IForkChoice {
   private processAttestationQueue(): void {
     const currentSlot = this.fcStore.currentSlot;
     for (const attestation of this.queuedAttestations.values()) {
-      if (attestation.slot <= currentSlot) {
+      // Delay consideration in the fork choice until their slot is in the past.
+      if (attestation.slot < currentSlot) {
         this.queuedAttestations.delete(attestation);
         const {blockRoot, targetEpoch} = attestation;
         const blockRootHex = blockRoot;

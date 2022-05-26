@@ -1,7 +1,6 @@
 import {expect} from "chai";
 import sinon, {SinonStubbedInstance} from "sinon";
 import {config} from "@chainsafe/lodestar-config/default";
-import {AbortController} from "@chainsafe/abort-controller";
 import {ForkChoice, IProtoBlock} from "@chainsafe/lodestar-fork-choice";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";

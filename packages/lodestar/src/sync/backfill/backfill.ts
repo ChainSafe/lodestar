@@ -6,7 +6,6 @@ import {IBeaconConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
 import {phase0, Root, Slot, allForks, ssz} from "@chainsafe/lodestar-types";
 import {ErrorAborted, ILogger, sleep} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
-import {AbortSignal} from "@chainsafe/abort-controller";
 
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {IBeaconChain} from "../../chain/index.js";

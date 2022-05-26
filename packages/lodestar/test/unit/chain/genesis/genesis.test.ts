@@ -13,7 +13,6 @@ import {
 import {ValidatorIndex, phase0, ssz} from "@chainsafe/lodestar-types";
 import {ErrorAborted} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
-import {AbortController} from "@chainsafe/abort-controller";
 import {GenesisBuilder} from "../../../../src/chain/genesis/genesis.js";
 import {testLogger} from "../../../utils/logger.js";
 import {ZERO_HASH_HEX} from "../../../../src/constants/index.js";

@@ -2,7 +2,6 @@
  * @module chain
  */
 
-import {AbortSignal} from "@chainsafe/abort-controller";
 import {
   blockToHeader,
   computeEpochAtSlot,

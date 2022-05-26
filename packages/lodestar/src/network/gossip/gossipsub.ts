@@ -7,7 +7,6 @@ import {GossipsubMessage, SignaturePolicy, TopicStr} from "libp2p-gossipsub/src/
 import {PeerScore, PeerScoreParams} from "libp2p-gossipsub/src/score/index.js";
 import PeerId from "peer-id";
 import {MetricsRegister, TopicLabel, TopicStrToLabel} from "libp2p-gossipsub/src/metrics";
-import {AbortSignal} from "@chainsafe/abort-controller";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ATTESTATION_SUBNET_COUNT, ForkName, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 import {allForks, altair, phase0} from "@chainsafe/lodestar-types";
