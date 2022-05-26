@@ -173,23 +173,23 @@ function getSpecCriticalParams(localConfig: IChainConfig): Record<keyof ConfigWi
     // # AltairPreset
     /////////////////
 
-    SYNC_COMMITTEE_SIZE: true,
-    EPOCHS_PER_SYNC_COMMITTEE_PERIOD: true,
-    INACTIVITY_PENALTY_QUOTIENT_ALTAIR: true,
-    MIN_SLASHING_PENALTY_QUOTIENT_ALTAIR: true,
-    PROPORTIONAL_SLASHING_MULTIPLIER_ALTAIR: true,
+    SYNC_COMMITTEE_SIZE: altairForkRelevant,
+    EPOCHS_PER_SYNC_COMMITTEE_PERIOD: altairForkRelevant,
+    INACTIVITY_PENALTY_QUOTIENT_ALTAIR: altairForkRelevant,
+    MIN_SLASHING_PENALTY_QUOTIENT_ALTAIR: altairForkRelevant,
+    PROPORTIONAL_SLASHING_MULTIPLIER_ALTAIR: altairForkRelevant,
     MIN_SYNC_COMMITTEE_PARTICIPANTS: false, // Only relevant for lightclients
     UPDATE_TIMEOUT: false, // Only relevant for lightclients
 
     // # BellatrixPreset
     /////////////////
 
-    INACTIVITY_PENALTY_QUOTIENT_BELLATRIX: true,
-    MIN_SLASHING_PENALTY_QUOTIENT_BELLATRIX: true,
-    PROPORTIONAL_SLASHING_MULTIPLIER_BELLATRIX: true,
-    MAX_BYTES_PER_TRANSACTION: true,
-    MAX_TRANSACTIONS_PER_PAYLOAD: true,
-    BYTES_PER_LOGS_BLOOM: true,
-    MAX_EXTRA_DATA_BYTES: true,
+    INACTIVITY_PENALTY_QUOTIENT_BELLATRIX: bellatrixForkRelevant,
+    MIN_SLASHING_PENALTY_QUOTIENT_BELLATRIX: bellatrixForkRelevant,
+    PROPORTIONAL_SLASHING_MULTIPLIER_BELLATRIX: bellatrixForkRelevant,
+    MAX_BYTES_PER_TRANSACTION: bellatrixForkRelevant,
+    MAX_TRANSACTIONS_PER_PAYLOAD: bellatrixForkRelevant,
+    BYTES_PER_LOGS_BLOOM: bellatrixForkRelevant,
+    MAX_EXTRA_DATA_BYTES: bellatrixForkRelevant,
   };
 }
