@@ -126,7 +126,7 @@
     "@types/supertest": "^2.0.8",
     "@types/tmp": "^0.2.0",
     "@types/varint": "^6.0.0",
-    "eventsource": "^1.1.0",
+    "eventsource": "^2.0.2",
     "rewiremock": "^3.14.3",
     "rimraf": "^3.0.2",
     "tmp": "^0.2.1"
