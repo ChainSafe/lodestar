@@ -99,28 +99,6 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
     }
   }
 
-  /**
-   * Compute the current RangeSync state, not cached
-   */
-  get state(): RangeSyncState {
-    const syncingHeadTargets: ChainTarget[] = [];
-    for (const chain of this.chains.values()) {
-      if (chain.isSyncing) {
-        if (chain.syncType === RangeSyncType.Finalized) {
-          return {status: RangeSyncStatus.Finalized, target: chain.target};
-        } else {
-          syncingHeadTargets.push(chain.target);
-        }
-      }
-    }
-
-    if (syncingHeadTargets.length > 0) {
-      return {status: RangeSyncStatus.Head, targets: syncingHeadTargets};
-    } else {
-      return {status: RangeSyncStatus.Idle};
-    }
-  }
-
   /** Throw / return all AsyncGenerators inside every SyncChain instance */
   close(): void {
     for (const chain of this.chains.values()) {
@@ -177,6 +155,28 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
   removePeer(peerId: PeerId): void {
     for (const syncChain of this.chains.values()) {
       syncChain.removePeer(peerId);
+    }
+  }
+
+  /**
+   * Compute the current RangeSync state, not cached
+   */
+  get state(): RangeSyncState {
+    const syncingHeadTargets: ChainTarget[] = [];
+    for (const chain of this.chains.values()) {
+      if (chain.isSyncing) {
+        if (chain.syncType === RangeSyncType.Finalized) {
+          return {status: RangeSyncStatus.Finalized, target: chain.target};
+        } else {
+          syncingHeadTargets.push(chain.target);
+        }
+      }
+    }
+
+    if (syncingHeadTargets.length > 0) {
+      return {status: RangeSyncStatus.Head, targets: syncingHeadTargets};
+    } else {
+      return {status: RangeSyncStatus.Idle};
     }
   }
 

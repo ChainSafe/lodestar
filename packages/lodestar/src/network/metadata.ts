@@ -48,34 +48,6 @@ export class MetadataController {
     this._metadata = opts.metadata || ssz.altair.Metadata.defaultValue();
   }
 
-  /** Consumers that need the phase0.Metadata type can just ignore the .syncnets property */
-  get json(): altair.Metadata {
-    return this._metadata;
-  }
-  get seqNumber(): bigint {
-    return this._metadata.seqNumber;
-  }
-  get attnets(): BitArray {
-    return this._metadata.attnets;
-  }
-  set attnets(attnets: BitArray) {
-    if (this.enr) {
-      this.enr.set(ENRKey.attnets, ssz.phase0.AttestationSubnets.serialize(attnets));
-    }
-    this._metadata.seqNumber++;
-    this._metadata.attnets = attnets;
-  }
-  // eslint-disable-next-line @typescript-eslint/member-ordering
-  get syncnets(): BitArray {
-    return this._metadata.syncnets;
-  }
-  set syncnets(syncnets: BitArray) {
-    if (this.enr) {
-      this.enr.set(ENRKey.syncnets, ssz.altair.SyncSubnets.serialize(syncnets));
-    }
-    this._metadata.syncnets = syncnets;
-  }
-
   start(enr: ENR | undefined, currentFork: ForkName): void {
     this.enr = enr;
     if (this.enr) {
@@ -91,6 +63,38 @@ export class MetadataController {
         this.enr.set(ENRKey.syncnets, ssz.phase0.AttestationSubnets.serialize(this._metadata.syncnets));
       }
     }
+  }
+
+  get seqNumber(): bigint {
+    return this._metadata.seqNumber;
+  }
+
+  get syncnets(): BitArray {
+    return this._metadata.syncnets;
+  }
+
+  set syncnets(syncnets: BitArray) {
+    if (this.enr) {
+      this.enr.set(ENRKey.syncnets, ssz.altair.SyncSubnets.serialize(syncnets));
+    }
+    this._metadata.syncnets = syncnets;
+  }
+
+  get attnets(): BitArray {
+    return this._metadata.attnets;
+  }
+
+  set attnets(attnets: BitArray) {
+    if (this.enr) {
+      this.enr.set(ENRKey.attnets, ssz.phase0.AttestationSubnets.serialize(attnets));
+    }
+    this._metadata.seqNumber++;
+    this._metadata.attnets = attnets;
+  }
+
+  /** Consumers that need the phase0.Metadata type can just ignore the .syncnets property */
+  get json(): altair.Metadata {
+    return this._metadata;
   }
 
   /**
