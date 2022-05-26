@@ -1,6 +1,6 @@
 {
   "name": "@chainsafe/lodestar-db",
-  "version": "0.37.0",
+  "version": "0.38.0",
   "description": "DB modules of Lodestar",
   "author": "ChainSafe Systems",
   "homepage": "https://github.com/ChainSafe/lodestar#readme",
@@ -39,8 +39,8 @@
     "check-readme": "typescript-docs-verifier"
   },
   "dependencies": {
-    "@chainsafe/lodestar-config": "^0.37.0",
-    "@chainsafe/lodestar-utils": "^0.37.0",
+    "@chainsafe/lodestar-config": "^0.38.0",
+    "@chainsafe/lodestar-utils": "^0.38.0",
     "@chainsafe/ssz": "^0.9.1",
     "@types/levelup": "^4.3.3",
     "it-all": "^1.0.2",

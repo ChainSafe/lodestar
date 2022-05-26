@@ -11,7 +11,7 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "0.37.0",
+  "version": "0.38.0",
   "type": "module",
   "exports": {
     ".": {
@@ -64,10 +64,10 @@
   "dependencies": {
     "@chainsafe/as-sha256": "^0.3.1",
     "@chainsafe/bls": "7.1.0",
-    "@chainsafe/lodestar-config": "^0.37.0",
-    "@chainsafe/lodestar-params": "^0.37.0",
-    "@chainsafe/lodestar-types": "^0.37.0",
-    "@chainsafe/lodestar-utils": "^0.37.0",
+    "@chainsafe/lodestar-config": "^0.38.0",
+    "@chainsafe/lodestar-params": "^0.38.0",
+    "@chainsafe/lodestar-types": "^0.38.0",
+    "@chainsafe/lodestar-utils": "^0.38.0",
     "@chainsafe/persistent-merkle-tree": "^0.4.1",
     "@chainsafe/persistent-ts": "^0.19.1",
     "@chainsafe/ssz": "^0.9.1",
