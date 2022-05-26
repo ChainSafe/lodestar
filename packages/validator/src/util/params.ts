@@ -64,7 +64,7 @@ export function assertEqualParams(localConfig: IChainConfig, externalSpecJson: R
   }
 
   if (errors.length > 0) {
-    throw new NotEqualParamsError("Not equal BeaconParams\n" + errors.join("\n"));
+    throw new NotEqualParamsError("Local and remote configs are different\n" + errors.join("\n"));
   }
 }
 
