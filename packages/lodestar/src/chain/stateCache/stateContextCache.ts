@@ -32,6 +32,10 @@ export class StateContextCache {
     }
   }
 
+  get size(): number {
+    return this.cache.size;
+  }
+
   get(rootHex: RootHex): CachedBeaconStateAllForks | null {
     this.metrics?.lookups.inc();
     const item = this.cache.get(rootHex);
@@ -73,10 +77,6 @@ export class StateContextCache {
   clear(): void {
     this.cache.clear();
     this.epochIndex.clear();
-  }
-
-  get size(): number {
-    return this.cache.size;
   }
 
   /**

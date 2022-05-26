@@ -126,6 +126,18 @@ export class Network implements INetwork {
     modules.signal.addEventListener("abort", this.close.bind(this), {once: true});
   }
 
+  get discv5(): Discv5 | undefined {
+    return this.peerManager["discovery"]?.discv5;
+  }
+
+  get localMultiaddrs(): Multiaddr[] {
+    return this.libp2p.multiaddrs;
+  }
+
+  get peerId(): PeerId {
+    return this.libp2p.peerId;
+  }
+
   /** Destroy this instance. Can only be called once. */
   close(): void {
     this.chain.emitter.off(ChainEvent.clockEpoch, this.onEpoch);
@@ -155,18 +167,6 @@ export class Network implements INetwork {
     this.attnetsService.stop();
     this.syncnetsService.stop();
     await this.libp2p.stop();
-  }
-
-  get discv5(): Discv5 | undefined {
-    return this.peerManager["discovery"]?.discv5;
-  }
-
-  get localMultiaddrs(): Multiaddr[] {
-    return this.libp2p.multiaddrs;
-  }
-
-  get peerId(): PeerId {
-    return this.libp2p.peerId;
   }
 
   getEnr(): ENR | undefined {

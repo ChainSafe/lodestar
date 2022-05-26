@@ -3,6 +3,10 @@ import PeerId from "peer-id";
 export class PeerSet {
   private peerMap = new PeerMap<PeerId>();
 
+  get size(): number {
+    return this.peerMap.size;
+  }
+
   add(peer: PeerId): void {
     this.peerMap.set(peer, peer);
   }
@@ -11,10 +15,6 @@ export class PeerSet {
   }
   has(peer: PeerId): boolean {
     return this.peerMap.has(peer);
-  }
-
-  get size(): number {
-    return this.peerMap.size;
   }
   values(): PeerId[] {
     return this.peerMap.values();
@@ -28,6 +28,10 @@ export class PeerSet {
 export class PeerMap<T> {
   private map: Map<string, T> = new Map<string, T>();
   private peers: Map<string, PeerId> = new Map<string, PeerId>();
+
+  get size(): number {
+    return this.map.size;
+  }
 
   static from(peers: PeerId[]): PeerMap<void> {
     const peerMap = new PeerMap<void>();
@@ -50,9 +54,6 @@ export class PeerMap<T> {
     return this.map.delete(this.getPeerIdString(peer));
   }
 
-  get size(): number {
-    return this.map.size;
-  }
   keys(): PeerId[] {
     return Array.from(this.peers.values());
   }

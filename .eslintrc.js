@@ -83,7 +83,7 @@ module.exports = {
       },
     ],
     "@typescript-eslint/func-call-spacing": "error",
-    // "@typescript-eslint/member-ordering": "error", TODO DA revisit and re-enable
+    "@typescript-eslint/member-ordering": "error",
     "@typescript-eslint/no-explicit-any": "error",
     "@typescript-eslint/no-require-imports": "error",
     "@typescript-eslint/no-unused-vars": [

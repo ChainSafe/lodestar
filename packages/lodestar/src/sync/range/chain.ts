@@ -138,6 +138,22 @@ export class SyncChain {
     );
   }
 
+  get startEpochValue(): Epoch {
+    return this.startEpoch;
+  }
+
+  get isSyncing(): boolean {
+    return this.status === SyncChainStatus.Syncing;
+  }
+
+  get isRemovable(): boolean {
+    return this.status === SyncChainStatus.Error || this.status === SyncChainStatus.Synced;
+  }
+
+  get peers(): number {
+    return this.peerset.size;
+  }
+
   /**
    * Start syncing a new chain or an old one with an existing peer list
    * In the same call, advance the chain if localFinalizedEpoch >
@@ -204,22 +220,6 @@ export class SyncChain {
    */
   getBatchesState(): BatchMetadata[] {
     return toArr(this.batches).map((batch) => batch.getMetadata());
-  }
-
-  get startEpochValue(): Epoch {
-    return this.startEpoch;
-  }
-
-  get isSyncing(): boolean {
-    return this.status === SyncChainStatus.Syncing;
-  }
-
-  get isRemovable(): boolean {
-    return this.status === SyncChainStatus.Error || this.status === SyncChainStatus.Synced;
-  }
-
-  get peers(): number {
-    return this.peerset.size;
   }
 
   getPeers(): PeerId[] {

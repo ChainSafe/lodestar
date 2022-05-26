@@ -61,6 +61,35 @@ export class BeaconSync implements IBeaconSync {
     }
   }
 
+  get state(): SyncState {
+    const currentSlot = this.chain.clock.currentSlot;
+    const headSlot = this.chain.forkChoice.getHead().slot;
+    if (
+      // Consider node synced IF
+      // Before genesis OR
+      (currentSlot < 0 ||
+        // head is behind clock but close enough with some tolerance
+        (headSlot <= currentSlot && headSlot >= currentSlot - this.slotImportTolerance)) &&
+      // Ensure there at least one connected peer to not claim synced if has no peers
+      // Allow to bypass this conditions for local networks with a single node
+      (this.opts.isSingleNode || this.network.hasSomeConnectedPeer())
+      // TODO: Consider enabling this condition (used in Lighthouse)
+      // && headSlot > 0
+    ) {
+      return SyncState.Synced;
+    }
+
+    const rangeSyncState = this.rangeSync.state;
+    switch (rangeSyncState.status) {
+      case RangeSyncStatus.Finalized:
+        return SyncState.SyncingFinalized;
+      case RangeSyncStatus.Head:
+        return SyncState.SyncingHead;
+      case RangeSyncStatus.Idle:
+        return SyncState.Stalled;
+    }
+  }
+
   close(): void {
     this.network.events.off(NetworkEvent.peerConnected, this.addPeer);
     this.network.events.off(NetworkEvent.peerDisconnected, this.removePeer);
@@ -99,35 +128,6 @@ export class BeaconSync implements IBeaconSync {
 
   isSynced(): boolean {
     return this.state === SyncState.Synced;
-  }
-
-  get state(): SyncState {
-    const currentSlot = this.chain.clock.currentSlot;
-    const headSlot = this.chain.forkChoice.getHead().slot;
-    if (
-      // Consider node synced IF
-      // Before genesis OR
-      (currentSlot < 0 ||
-        // head is behind clock but close enough with some tolerance
-        (headSlot <= currentSlot && headSlot >= currentSlot - this.slotImportTolerance)) &&
-      // Ensure there at least one connected peer to not claim synced if has no peers
-      // Allow to bypass this conditions for local networks with a single node
-      (this.opts.isSingleNode || this.network.hasSomeConnectedPeer())
-      // TODO: Consider enabling this condition (used in Lighthouse)
-      // && headSlot > 0
-    ) {
-      return SyncState.Synced;
-    }
-
-    const rangeSyncState = this.rangeSync.state;
-    switch (rangeSyncState.status) {
-      case RangeSyncStatus.Finalized:
-        return SyncState.SyncingFinalized;
-      case RangeSyncStatus.Head:
-        return SyncState.SyncingHead;
-      case RangeSyncStatus.Idle:
-        return SyncState.Stalled;
-    }
   }
 
   /** Full debug state for lodestar API */
