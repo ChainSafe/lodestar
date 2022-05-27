@@ -2,7 +2,7 @@
  * @module chain
  */
 
-import fs from "node:fs";
+import path from "node:path";
 import {
   BeaconStateAllForks,
   CachedBeaconStateAllForks,
@@ -14,19 +14,20 @@ import {
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {allForks, UintNum64, Root, phase0, Slot, RootHex, Epoch} from "@chainsafe/lodestar-types";
-import {ILogger} from "@chainsafe/lodestar-utils";
-import {fromHexString} from "@chainsafe/ssz";
+import {ILogger, toHex} from "@chainsafe/lodestar-utils";
+import {CompositeTypeAny, fromHexString, TreeView, Type} from "@chainsafe/ssz";
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
 import {IMetrics} from "../metrics/index.js";
 import {IEth1ForBlockProduction} from "../eth1/index.js";
 import {IExecutionEngine} from "../executionEngine/index.js";
+import {ensureDir, writeIfNotExist} from "../util/file.js";
 import {CheckpointStateCache, StateContextCache} from "./stateCache/index.js";
 import {BlockProcessor, PartiallyVerifiedBlockFlags} from "./blocks/index.js";
 import {IBeaconClock, LocalClock} from "./clock/index.js";
 import {ChainEventEmitter} from "./emitter.js";
 import {handleChainEvents} from "./eventHandlers.js";
-import {IBeaconChain, SSZObjectType, ProposerPreparationData} from "./interface.js";
+import {IBeaconChain, ProposerPreparationData} from "./interface.js";
 import {IChainOptions} from "./options.js";
 import {IStateRegenerator, QueuedStateRegenerator, RegenCaller} from "./regen/index.js";
 import {initializeForkChoice} from "./forkChoice/index.js";
@@ -302,24 +303,43 @@ export class BeaconChain implements IBeaconChain {
     return this.reprocessController.waitForBlockOfAttestation(slot, root);
   }
 
-  persistInvalidSszObject(type: SSZObjectType, bytes: Uint8Array, suffix = ""): string | null {
+  persistInvalidSszValue<T>(type: Type<T>, sszObject: T, suffix?: string): void {
+    if (this.opts.persistInvalidSszObjects) {
+      void this.persistInvalidSszObject(type.typeName, type.serialize(sszObject), type.hashTreeRoot(sszObject), suffix);
+    }
+  }
+
+  persistInvalidSszView(view: TreeView<CompositeTypeAny>, suffix?: string): void {
+    if (this.opts.persistInvalidSszObjects) {
+      void this.persistInvalidSszObject(view.type.typeName, view.serialize(), view.hashTreeRoot(), suffix);
+    }
+  }
+
+  private async persistInvalidSszObject(
+    typeName: string,
+    bytes: Uint8Array,
+    root: Uint8Array,
+    suffix?: string
+  ): Promise<void> {
+    if (!this.opts.persistInvalidSszObjects) {
+      return;
+    }
+
     const now = new Date();
     // yyyy-MM-dd
-    const date = now.toISOString().split("T")[0];
+    const dateStr = now.toISOString().split("T")[0];
+
     // by default store to lodestar_archive of current dir
-    const byDate = this.opts.persistInvalidSszObjectsDir
-      ? `${this.opts.persistInvalidSszObjectsDir}/${date}`
-      : `invalidSszObjects/${date}`;
-    if (!fs.existsSync(byDate)) {
-      fs.mkdirSync(byDate, {recursive: true});
-    }
-    const fileName = `${byDate}/${type}_${suffix}.ssz`;
+    const dirpath = path.join(this.opts.persistInvalidSszObjectsDir ?? "invalid_ssz_objects", dateStr);
+    const filepath = path.join(dirpath, `${typeName}_${toHex(root)}.ssz`);
+
+    await ensureDir(dirpath);
+
     // as of Feb 17 2022 there are a lot of duplicate files stored with different date suffixes
     // remove date suffixes in file name, and check duplicate to avoid redundant persistence
-    if (!fs.existsSync(fileName)) {
-      fs.writeFileSync(fileName, bytes);
-    }
-    return fileName;
+    await writeIfNotExist(filepath, bytes);
+
+    this.logger.debug("Persisted invalid ssz object", {id: suffix, filepath});
   }
 
   async updateBeaconProposerData(epoch: Epoch, proposers: ProposerPreparationData[]): Promise<void> {

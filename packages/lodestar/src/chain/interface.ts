@@ -2,6 +2,7 @@ import {allForks, UintNum64, Root, phase0, Slot, RootHex, Epoch} from "@chainsaf
 import {CachedBeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
 
 import {IEth1ForBlockProduction} from "../eth1/index.js";
 import {IExecutionEngine} from "../executionEngine/index.js";
@@ -102,10 +103,11 @@ export interface IBeaconChain {
 
   waitForBlockOfAttestation(slot: Slot, root: RootHex): Promise<boolean>;
 
-  /** Persist bad items to persistInvalidSszObjectsDir dir, for example invalid state, attestations etc. */
-  persistInvalidSszObject(type: SSZObjectType, bytes: Uint8Array, suffix: string): string | null;
-
   updateBeaconProposerData(epoch: Epoch, proposers: ProposerPreparationData[]): Promise<void>;
+
+  persistInvalidSszValue<T>(type: Type<T>, sszObject: T | Uint8Array, suffix?: string): void;
+  /** Persist bad items to persistInvalidSszObjectsDir dir, for example invalid state, attestations etc. */
+  persistInvalidSszView(view: TreeView<CompositeTypeAny>, suffix?: string): void;
 }
 
 export type SSZObjectType =
