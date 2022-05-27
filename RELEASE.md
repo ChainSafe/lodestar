@@ -24,19 +24,19 @@ To start a new release, one of the Lodestar developers will communicate this via
 
 TODO: determine which steps may be automated and update these steps with best practices when available
 
-manual steps (as example version `v0.1.0`, commit `9fceb02`):
+manual steps (as example version `v1.1.0`, commit `9fceb02`):
 
 - The team selects a commit from `unstable` as a "release candidate" for a new version release.
-- Create a new release branch `rc/v0.1.0` at commit `9fceb02`.
-  - `git checkout -b rc/v0.1.0 9fceb02`
-- Set monorepo version to `v0.1.0-rc.0`.
-  - `lerna version v0.1.0-rc.0 --no-git-tag-version --force-publish --yes`
+- Create a new release branch `rc/v1.1.0` at commit `9fceb02`.
+  - `git checkout -b rc/v1.1.0 9fceb02`
+- Set monorepo version to `v1.1.0-rc.0`.
+  - `lerna version v1.1.0-rc.0 --no-git-tag-version --force-publish --yes`
 - Commit changes
-  - `git commit -am "v0.1.0-rc.0"`
-- Tag resulting commit as `v0.1.0-rc.0` with an annotated tag, push branch and tag.
-  - `git tag -am "v0.1.0-rc.0" v0.1.0-rc.0`
+  - `git commit -am "v1.1.0-rc.0"`
+- Tag resulting commit as `v1.1.0-rc.0` with an annotated tag, push branch and tag.
+  - `git tag -am "v1.1.0-rc.0" v1.1.0-rc.0`
   - `git push --tag`
-- Open draft PR from `rc/v0.1.0` to `stable` with title `v0.1.0 release`.
+- Open draft PR from `rc/v1.1.0` to `stable` with title `v1.1.0 release`.
 
 ### 2. Test release candidate
 
@@ -48,22 +48,22 @@ For example: After 3-5 days of testing, is performance equal or better than late
 
 - **Yes**: Continue to next release step
 - **No**: If it a small issue fixable quickly (hot-fix)?
-  - **Yes**: push a commit to branch `rc/v0.1.0` and re-start testing process with `v0.1.0-rc.1`.
-  - **No**: abort the release. Close the `v0.1.0 release` PR, delete the branch, start the whole release process over
+  - **Yes**: push a commit to branch `rc/v1.1.0` and re-start testing process with `v1.1.0-rc.1`.
+  - **No**: abort the release. Close the `v1.1.0 release` PR, delete the branch, start the whole release process over.
 
 ### 3. Merge release candidate
 
-manual steps (as example version `v0.1.0`):
+manual steps (as example version `v1.1.0`):
 
-- Ensure step 2 testing is successful and there is sufficient consensus to release `v0.1.0`.
-- Set monorepo version to `v0.1.0`.
-  - `lerna version v0.1.0 --no-git-tag-version --force-publish --yes`
+- Ensure step 2 testing is successful and there is sufficient consensus to release `v1.1.0`.
+- Set monorepo version to `v1.1.0`.
+  - `lerna version v1.1.0 --no-git-tag-version --force-publish --yes`
 - Commit changes.
-  - `git commit -am "v0.1.0"`
+  - `git commit -am "v1.1.0"`
 - Gather required PR approvals.
-- Merge `v0.1.0 release` PR to stable **with "merge commit"** strategy to preserve all history.
-- Tag resulting merge commit as `v0.1.0` with an annotated tag, push commit and tag.
-  - `git tag -am "v0.1.0" v0.1.0`
+- Merge `v1.1.0 release` PR to stable **with "merge commit"** strategy to preserve all history.
+- Tag resulting merge commit as `v1.1.0` with an annotated tag, push commit and tag.
+  - `git tag -am "v1.1.0" v1.1.0`
   - `git push --tag`
 - Open a PR to merge `stable` into `unstable` **with merge commit** strategy. This PR should be merged ASAP.
 - Publish to Social Media
@@ -72,8 +72,8 @@ manual steps (as example version `v0.1.0`):
 
 If a stable version requires an immediate hot-fix before the next minor or major release:
 
-- Create a release branch `rc/v0.1.1` from `stable`.
-- Commit the hot-fix to the `rc/v0.1.1` branch.
+- Create a release branch `rc/v1.1.1` from `stable`.
+- Commit the hot-fix to the `rc/v1.1.1` branch.
 - Adjusting to the urgency and severity of the fix, perform the above steps using this branch.
   1. Create a release candidate
   2. Test release candidate
@@ -88,7 +88,7 @@ On every commit to `unstable` a dev release is done automatically in CI. A dev r
 - is published to NPM
 - is pushed to Dockerhub
 
-The source code is mutated before release to set a version string of format `v0.1.0-dev.da9f72360`, where the appended hash is the merge commit hash to unstable that triggered this CI build. The semver version that prefixes is expected to be the next minor version beyond the latest stable version. The target consumers of such versions are automatic testing environments and other developers. They are expected to install via `dev` or `next` tags and refer to the whole version for debugging.
+The source code is mutated before release to set a version string of format `v1.1.0-dev.da9f72360`, where the appended hash is the merge commit hash to unstable that triggered this CI build. The semver version that prefixes is expected to be the next minor version from the current code. The target consumers of such versions are automatic testing environments and other developers. They are expected to install via `next` tags and refer to the whole version for debugging.
 
 ## Details
 
@@ -170,12 +170,12 @@ Lodestar used `master` as the single target for feature branches.
 
 - Main branch = `master`
 - Features merged to `master`
-- To trigger rc, branch from `master` to `v0.1.x`
+- To trigger rc, branch from `master` to `v1.1.x`
 - `master` had package.json preemptively updated to the "next" version
-- QA is done on `v0.1.x` branch
-- Fixes on rc are done on `v0.1.x`, then re-tag
-- Once released final `v0.1.0` tag is on a branch that is never merged
-- Hot-fixes are either cherry-picked from `master` or done on the `v0.1.x` branch, never merged
+- QA is done on `v1.1.x` branch
+- Fixes on rc are done on `v1.1.x`, then re-tag
+- Once released final `v1.1.0` tag is on a branch that is never merged
+- Hot-fixes are either cherry-picked from `master` or done on the `v1.1.x` branch, never merged
 
 However this had some issues:
 
