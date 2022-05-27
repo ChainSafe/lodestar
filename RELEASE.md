@@ -2,7 +2,7 @@
 
 Lodestar is blockchain node securing the Ethereum Beacon chain network. It is run by external individuals and operator entities outside of the control of the Lodestar team. We, as most other core dev teams, choose a slow conservative approach to releasing to ensure that node runners always update to stable, safe and performant versions of our software.
 
-Gitflow is a well-known strategy that suits our needs for security and stability.
+Lodestar uses a modified version of gitflow to manage releases. Gitflow is a well-known strategy that suits our needs for security and stability.
 
 ![lodestar-release](docs/images/gitflow-lodestar.png)
 
@@ -20,58 +20,44 @@ The causes for a release are varied, however here are several common ones:
 
 To start a new release, one of the Lodestar developers will communicate this via the Lodestar chat channel and seek consensus from the other developers.
 
-**0. How to do feature branches**
-
-- Create branch from latest develop
-- Once in a review-able state, open PR against develop
-
 ### 1. Create release candidate
 
-TLDR;
+TODO: determine which steps may be automated and update these steps with best practices when available
 
-```
-yarn release-candidate v0.1.0-beta.0 9fceb02
-```
-
-else, manual steps (as example version `v0.1.0`, commit `9fceb02`):
+manual steps (as example version `v0.1.0`, commit `9fceb02`):
 
 - The team selects a commit from `unstable` as a "release candidate" for a new version release.
-- Create a new release branch `v0.1.0` at commit `9fceb02`.
+- Create a new release branch `rc/v0.1.0` at commit `9fceb02`.
 - Set monorepo version to `v0.1.0-rc.0`.
-- Commit changes with message `Bump to v0.1.0-rc.0`.
-- Tag resulting commit to `v0.1.0-rc.0`, push commit and tag.
+- Commit changes
+- Tag resulting commit as `v0.1.0-rc.0` with an annotated tag, push branch and tag.
 - Draft a Github release for the `v0.1.0-rc.0` marked as "Pre-release".
-- Open PR from `v0.1.0` to `stable` with title `v0.1.0 release` and empty body (**TBH**).
+- Open draft PR from `rc/v0.1.0` to `stable` with title `v0.1.0 release`.
 
 ### 2. Test release candidate
 
-After 3-5 days of testing, is performance equal or better than latest stable?
+Once a release candidate is created, the Lodestar team begins a 3 day testing period.
+
+If there is a bug discovered during the testing period which significantly impacts performance, security or stability, and it is determined that it is no longer prudent to promote the `rc.x` candidate to `stable`, then it will await a bug fix by the team. The fix will be committed, back-ported to `unstable` and we publish and promote the new commit to `rc.x+1`. The 3 day testing period will reset.
+
+For example: After 3-5 days of testing, is performance equal or better than latest stable?
 
 - **Yes**: Continue to next release step
 - **No**: If it a small issue fixable quickly (hot-fix)?
-  - **Yes**: push a commit to branch `v0.1.0` and re-start testing process with `v0.1.0-beta.1`.
-  - **No**: abort the release. Close the `v0.1.0 release` PR, delete branch, tag and release.
-
-_LEFTOVERS_
-
-If there is a bug discovered during the pre-release testing period which significantly impacts performance, security or stability, and it is determined that it is no longer prudent to release the `beta.x` candidate as `stable`, then it will await a bug fix by the team. The fix will be committed, back-ported to `unstable` and we publish and promote the new commit to `beta.x+1`. The 3 day testing period minimums will reset.
+  - **Yes**: push a commit to branch `rc/v0.1.0` and re-start testing process with `v0.1.0-beta.1`.
+  - **No**: abort the release. Close the `v0.1.0 release` PR, delete the branch, start the whole release process over
 
 ### 3. Merge release candidate
 
-TLDR;
+manual steps (as example version `v0.1.0`):
 
-```
-yarn release-stable v0.1.0
-```
-
-else, manual steps (as example version `v0.1.0`):
-
-- Assert there is consensus head commit in branch `v0.1.0` is sufficiently stable
+- Ensure step 2 testing is successful and there is sufficient consensus to release `v0.1.0`.
 - Set monorepo version to `v0.1.0`.
-- Commit changes with message `Bump to v0.1.0`.
-- Merge `v0.1.0 release` PR to stable (with "merge commit" strategy to preserve all history, **TBD**).
-- Tag resulting merge commit to `v0.1.0`, push commit and tag.
-- Merge stable into unstable. If a direct merge is possible (no-conflicts) do that immediately. Otherwise, open a PR.
+- Commit changes.
+- Gather required PR approvals.
+- Merge `v0.1.0 release` PR to stable **with "merge commit"** strategy to preserve all history.
+- Tag resulting merge commit as `v0.1.0` with an annotated tag, push commit and tag.
+- Open a PR to merge `stable` into `unstable`. This PR should be merged ASAP.
 - Draft a Github release for the `v0.1.0`, ensure it gets the "latest" tag.
 - Publish to Social Media
 
@@ -79,28 +65,33 @@ else, manual steps (as example version `v0.1.0`):
 
 If a stable version requires an immediate hot-fix before the next minor or major release:
 
-- Create a release branch `v0.1.1` from unstable at that version tag.
-- Commit the hot-fix to the `v0.1.1` branch and port to develop.
-- Perform last steps of the stable release process:
-  - _2. Test release candidate_: adjusting the length to the urgency and severity of the fix
-  - _3. Merge release candidate_: command `release-stable` can be re-used for hot-fix releases.
+- Create a release branch `rc/v0.1.1` from unstable at that version tag.
+- Commit the hot-fix to the `rc/v0.1.1` branch.
+- Adjusting to the urgency and severity of the fix, perform the above steps using this branch.
+  1. Create a release candidate
+  2. Test release candidate
+  3. Merge release candidate
 
-## Nightly release
+## Dev release
 
-On every commit to develop a nightly / develop release is done automatically in CI. A nightly release:
+On every commit to `unstable` a dev release is done automatically in CI. A dev release:
 
 - is not tagged
 - does not have a release page
 - is published to NPM
 - is pushed to Dockerhub
 
-The source code is mutated before release to set a version string of format `v0.1.0-dev.da9f72360`, where the appended hash is the merge commit hash to unstable that triggered this CI build. The semver version that prefixes it is mostly irrelevant in practical terms. The target consumers of such versions are automatic testing environments and other developers. They are expected to install via `dev` or `next` tags and refer to the whole version for debugging.
+The source code is mutated before release to set a version string of format `v0.1.0-dev.da9f72360`, where the appended hash is the merge commit hash to unstable that triggered this CI build. The semver version that prefixes is expected to be the next minor version beyond the latest stable version. The target consumers of such versions are automatic testing environments and other developers. They are expected to install via `dev` or `next` tags and refer to the whole version for debugging.
 
 ### Details
 
 **Release CI reference**
 
-- Trigger release on tag to stable. But in CI check that: tag matches version in source + commit is latest in branch. This prevents bad rogue versions and errors
+- Publishing Lodestar (to npm, docker, github, etc) is triggered via pushing a tag. CI ensures that there is only a single valid tag where:
+  - the tag matches the version in source
+  - the commit is latest in the `stable` branch
+
+  This prevents bad rogue versions and errors from publishing bad versions of Lodestar.
 
 **How to set monorepo version**
 
@@ -108,22 +99,19 @@ The source code is mutated before release to set a version string of format `v0.
 lerna version minor --no-git-tag-version --force-publish --yes
 ```
 
-**How to draft releases**
-
-TBD
-
 **How to distribute a release**
 
 Automatic scripts in Github actions publish:
 
 - to NPM registry
 - to Dockerhub
+- to Github releases
 
 **How to test release candidates**
 
-We test the pre-release candidate on multiple servers with a variance of connected validators on a stable testnet for a minimum of three (3) days.
+We test the pre-release candidate on multiple servers with a variety of connected validators on a stable testnet for a minimum of three (3) days.
 
-The following observations must be taken into consideration before promoting the pre-release candidate to a `:stable` release:
+The following observations must be taken into consideration before promoting the release candidate to `stable`:
 
 - Are there any critical issues observed?
   - Examples: Memory leaks, abnormally high memory usage, abnormally high CPU performance, etc.
@@ -134,54 +122,45 @@ The following observations must be taken into consideration before promoting the
 
 **Edit the Release**
 
-Review the checklists, ensure they are completed and then delete them, so they don't appear in the final release notes.
+Releases are published automatically via CI.
 
-Get list of commits to `stable` for the "All Changes" section with:
+Any additional release notes should be professional, comprehensive and well considered.
 
-```
-git log --graph --pretty=format:'%s' --abbrev-commit
-```
-
-This will print a list of commits (each a squash-merged PR). Copy-paste all the commits between this release and the last release into the release notes. See previous releases for examples.
-
-Check the automatically generated Docker links to ensure that other CI runs have updated the relevant tags.
-
-The release notes should be professional, comprehensive and well considered.
-
-Have someone else review the release notes and then publish the release.
+Have someone else review the release notes and then edit the release.
 
 **Publish to Social Media**
 
 The release should be announced on the following social channels:
 
 - Email: with mailchimp.
-- Discord: Use the #announcements channel. Tag @everyone and ensure it is published to all downstream channels.
-- Twitter: Short and sweet in a single tweet, **TBD** get lodestar account.
-- Reddit: **TBD** get lodestar account.
+- Discord: Use the #lodestar-announcements channel. Tag @everyone and ensure it is published to all downstream channels.
+- Twitter: Short and sweet in a single tweet, TODO: get lodestar account.
+- Reddit: TODO: get lodestar account.
 
 ## Alternatives considered
 
 Historical context and reasons against valid alternatives to help future discussions
 
-**Master as single target**
+**Version branches**
 
-Lodestar used master as the single target for feature branches.
+Lodestar used `master` as the single target for feature branches.
 
 ![lodestar-release](docs/images/lodestar-releases.png)
 
-- Main branch = master
-- Features merged to master
-- To trigger rc, branch from master to v0.1.x
-- QA is done on v0.1.x branch
-- Fixes on rc are done on v0.1.x, then re-tag
-- Once released final v0.1.0 tag is on a branch that is never merged
-- Hot-fixes are done on new or existing v0.36.x branch, never merged
+- Main branch = `master`
+- Features merged to `master`
+- To trigger rc, branch from `master` to `v0.1.x`
+- `master` had package.json preemptively updated to the "next" version
+- QA is done on `v0.1.x` branch
+- Fixes on rc are done on `v0.1.x`, then re-tag
+- Once released final `v0.1.0` tag is on a branch that is never merged
+- Hot-fixes are either cherry-picked from `master` or done on the `v0.1.x` branch, never merged
 
 However this had some issues:
 
 - Aborted releases left master in awkward version 2 minors ahead of stable. When triggering the release again, we had to rollback master
-- Almost all release tags ended in branches not part of the master tree. This caused issues and confusing in tooling since it's not straightforward to compute the diff between commits that are not direct parents of each other
+- Almost all release tags ended in branches not part of the master tree. This caused issues since it's not straightforward to compute the diff between commits that are not direct parents of each other
 
 **Continuous integration**
 
-Another popular approach used by some entities but unsuitable for Lodestar. Given the complexity of a blockchain node, it's not possible to guarantee stable performance unless running the software for days in special conditions, not available in regular CI environments.
+Always releasing `master` is another popular approach used by some entities but unsuitable for Lodestar. Given the complexity of a blockchain node, it's not possible to guarantee stable performance unless running the software for days in special conditions, not available in regular CI environments.
