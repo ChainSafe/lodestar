@@ -17,8 +17,6 @@ export enum ExecutePayloadStatus {
   ACCEPTED = "ACCEPTED",
   /** blockHash is invalid */
   INVALID_BLOCK_HASH = "INVALID_BLOCK_HASH",
-  /** invalid terminal block */
-  INVALID_TERMINAL_BLOCK = "INVALID_TERMINAL_BLOCK",
   /** EL error */
   ELERROR = "ELERROR",
   /** EL unavailable */
@@ -32,11 +30,7 @@ export type ExecutePayloadResponse =
   | {status: ExecutePayloadStatus.VALID; latestValidHash: RootHex; validationError: null}
   | {status: ExecutePayloadStatus.INVALID; latestValidHash: RootHex; validationError: string | null}
   | {
-      status:
-        | ExecutePayloadStatus.INVALID_BLOCK_HASH
-        | ExecutePayloadStatus.INVALID_TERMINAL_BLOCK
-        | ExecutePayloadStatus.ELERROR
-        | ExecutePayloadStatus.UNAVAILABLE;
+      status: ExecutePayloadStatus.INVALID_BLOCK_HASH | ExecutePayloadStatus.ELERROR | ExecutePayloadStatus.UNAVAILABLE;
       latestValidHash: null;
       validationError: string;
     };
@@ -44,8 +38,7 @@ export type ExecutePayloadResponse =
 export type ForkChoiceUpdateStatus =
   | ExecutePayloadStatus.VALID
   | ExecutePayloadStatus.INVALID
-  | ExecutePayloadStatus.SYNCING
-  | ExecutePayloadStatus.INVALID_TERMINAL_BLOCK;
+  | ExecutePayloadStatus.SYNCING;
 
 export type PayloadAttributes = {
   timestamp: number;
