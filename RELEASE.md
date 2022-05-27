@@ -90,7 +90,7 @@ On every commit to `unstable` a dev release is done automatically in CI. A dev r
 
 The source code is mutated before release to set a version string of format `v0.1.0-dev.da9f72360`, where the appended hash is the merge commit hash to unstable that triggered this CI build. The semver version that prefixes is expected to be the next minor version beyond the latest stable version. The target consumers of such versions are automatic testing environments and other developers. They are expected to install via `dev` or `next` tags and refer to the whole version for debugging.
 
-### Details
+## Details
 
 **Release CI reference**
 
