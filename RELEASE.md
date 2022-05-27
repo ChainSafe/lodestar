@@ -53,6 +53,8 @@ For example: After 3-5 days of testing, is performance equal or better than late
 
 ### 3. Merge release candidate
 
+TODO: determine which steps may be automated and update these steps with best practices when available
+
 manual steps (as example version `v1.1.0`):
 
 - Ensure step 2 testing is successful and there is sufficient consensus to release `v1.1.0`.
@@ -71,6 +73,8 @@ manual steps (as example version `v1.1.0`):
 ## Hot-fix release
 
 If a stable version requires an immediate hot-fix before the next minor or major release:
+
+manual steps (as example version `v1.1.1`):
 
 - Create a release branch `rc/v1.1.1` from `stable`.
 - Commit the hot-fix to the `rc/v1.1.1` branch.
