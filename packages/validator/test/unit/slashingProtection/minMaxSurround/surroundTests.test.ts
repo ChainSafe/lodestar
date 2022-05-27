@@ -1,11 +1,11 @@
 import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
-import {DistanceStoreMemory, emptyPubkey} from "./utils.js";
 import {
   MinMaxSurround,
   MinMaxSurroundAttestation,
   SurroundAttestationError,
 } from "../../../../src/slashingProtection/minMaxSurround/index.js";
+import {DistanceStoreMemory, emptyPubkey} from "./utils.js";
 
 chai.use(chaiAsPromised);
 

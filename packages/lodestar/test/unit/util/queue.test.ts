@@ -1,5 +1,5 @@
-import {sleep} from "@chainsafe/lodestar-utils";
 import {expect} from "chai";
+import {sleep} from "@chainsafe/lodestar-utils";
 
 import {JobFnQueue, QueueError, QueueErrorCode, QueueType} from "../../../src/util/queue/index.js";
 import {expectLodestarError, expectRejectedWithLodestarError} from "../../utils/errors.js";

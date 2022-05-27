@@ -68,12 +68,12 @@
     "@chainsafe/ssz": "^0.9.1",
     "cross-fetch": "^3.1.4",
     "eventsource": "^2.0.2",
-    "qs": "^6.10.1"
+    "qs": "^6.10.1",
+    "fastify": "3.15.1"
   },
   "devDependencies": {
     "@types/eventsource": "^1.1.5",
-    "@types/qs": "^6.9.6",
-    "fastify": "3.15.1"
+    "@types/qs": "^6.9.6"
   },
   "peerDependencies": {
     "fastify": "3.15.1"

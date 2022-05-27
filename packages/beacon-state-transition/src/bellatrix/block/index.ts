@@ -2,11 +2,11 @@ import {bellatrix} from "@chainsafe/lodestar-types";
 
 import {CachedBeaconStateBellatrix} from "../../types.js";
 import {processBlockHeader, processEth1Data, processRandao} from "../../allForks/block/index.js";
-import {processOperations} from "./processOperations.js";
 import {processSyncAggregate} from "../../altair/block/processSyncCommittee.js";
-import {processExecutionPayload} from "./processExecutionPayload.js";
 import {ExecutionEngine} from "../executionEngine.js";
 import {isExecutionEnabled} from "../utils.js";
+import {processExecutionPayload} from "./processExecutionPayload.js";
+import {processOperations} from "./processOperations.js";
 import {processAttesterSlashing} from "./processAttesterSlashing.js";
 import {processProposerSlashing} from "./processProposerSlashing.js";
 

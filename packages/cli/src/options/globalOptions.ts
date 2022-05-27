@@ -1,6 +1,6 @@
-import {paramsOptions, IParamsArgs} from "./paramsOptions.js";
 import {NetworkName, networkNames} from "../networks/index.js";
 import {ICliCommandOptions, readFile} from "../util/index.js";
+import {paramsOptions, IParamsArgs} from "./paramsOptions.js";
 
 interface IGlobalSingleArgs {
   rootDir: string;

@@ -1,11 +1,11 @@
+import {MAX_EFFECTIVE_BALANCE} from "@chainsafe/lodestar-params";
 import {getAccountPaths} from "../../paths.js";
 import {WalletManager} from "../../../../wallet/index.js";
 import {ValidatorDirBuilder} from "../../../../validatorDir/index.js";
 import {getBeaconConfigFromArgs} from "../../../../config/index.js";
 import {ICliCommand, YargsError, readPassphraseFile, add0xPrefix, ICliCommandOptions} from "../../../../util/index.js";
-import {IAccountValidatorArgs} from "./options.js";
 import {IGlobalArgs} from "../../../../options/index.js";
-import {MAX_EFFECTIVE_BALANCE} from "@chainsafe/lodestar-params";
+import {IAccountValidatorArgs} from "./options.js";
 
 export interface IValidatorCreateArgs {
   name: string;

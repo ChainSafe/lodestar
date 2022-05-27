@@ -5,11 +5,11 @@ import {BeaconStateAltair} from "@chainsafe/lodestar-beacon-state-transition";
 import {toHexString} from "@chainsafe/ssz";
 import {chainConfig} from "@chainsafe/lodestar-config/default";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
+import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {processLightClientUpdate} from "../naive/update.js";
 import {prepareUpdateNaive, IBeaconChainLc} from "../prepareUpdateNaive.js";
 import {getInteropSyncCommittee, getSyncAggregateSigningRoot, SyncCommitteeKeys} from "../utils.js";
 import {LightClientStoreFast} from "../../src/types.js";
-import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 

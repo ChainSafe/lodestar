@@ -1,9 +1,9 @@
 import {ValidatorDirManager} from "../../../../validatorDir/index.js";
 import {getAccountPaths} from "../../paths.js";
-import {IAccountValidatorArgs} from "./options.js";
 import {ICliCommand} from "../../../../util/index.js";
 import {IGlobalArgs} from "../../../../options/index.js";
 import {add0xPrefix} from "../../../../util/format.js";
+import {IAccountValidatorArgs} from "./options.js";
 
 export type ReturnType = string[];
 

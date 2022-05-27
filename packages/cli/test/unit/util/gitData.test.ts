@@ -1,8 +1,8 @@
-import {expect} from "chai";
 import fs from "node:fs";
 import path from "node:path";
-import findUp from "find-up";
 import {fileURLToPath} from "node:url";
+import {expect} from "chai";
+import findUp from "find-up";
 import {gitDataPath, readGitDataFile} from "../../../src/util/gitData/gitDataPath.js";
 import {getGitData} from "../../../src/util/index.js";
 

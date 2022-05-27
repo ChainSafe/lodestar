@@ -3,9 +3,9 @@ import {routes} from "@chainsafe/lodestar-api";
 import {blockToHeader} from "@chainsafe/lodestar-beacon-state-transition";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
+import {fromHexString} from "@chainsafe/ssz";
 import {IBeaconDb} from "../../../../db/index.js";
 import {GENESIS_SLOT} from "../../../../constants/index.js";
-import {fromHexString} from "@chainsafe/ssz";
 import {ApiError, ValidationError} from "../../errors.js";
 
 export function toBeaconHeaderResponse(

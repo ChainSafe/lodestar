@@ -1,6 +1,6 @@
+import fs, {Dirent, Stats} from "node:fs";
 import {expect} from "chai";
 import sinon from "sinon";
-import fs, {Dirent, Stats} from "node:fs";
 import {resolveKeystorePaths} from "../../../src/cmds/validator/keys.js";
 import {isVotingKeystore} from "../../../src/util/index.js";
 

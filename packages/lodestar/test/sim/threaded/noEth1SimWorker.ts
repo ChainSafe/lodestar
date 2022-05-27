@@ -2,20 +2,20 @@
 // NOTE: @typescript*no-unsafe* rules are disabled above because `workerData` is typed as `any`
 import {parentPort, workerData} from "worker_threads";
 
+import {Multiaddr} from "multiaddr";
+import {createFromPrivKey} from "peer-id";
 import {phase0, ssz} from "@chainsafe/lodestar-types";
 
+import {sleep, TimestampFormatCode, withTimeout} from "@chainsafe/lodestar-utils";
+import {fromHexString} from "@chainsafe/ssz";
+import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {getDevBeaconNode} from "../../utils/node/beacon.js";
 import {getAndInitDevValidators} from "../../utils/node/validator.js";
 import {testLogger, LogLevel, TestLoggerOpts} from "../../utils/logger.js";
 import {connect} from "../../utils/network.js";
 import {Network} from "../../../src/network/index.js";
-import {NodeWorkerOptions, Message} from "./types.js";
-import {Multiaddr} from "multiaddr";
-import {sleep, TimestampFormatCode, withTimeout} from "@chainsafe/lodestar-utils";
-import {fromHexString} from "@chainsafe/ssz";
-import {createFromPrivKey} from "peer-id";
 import {simTestInfoTracker} from "../../utils/node/simTest.js";
-import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
+import {NodeWorkerOptions, Message} from "./types.js";
 
 /* eslint-disable no-console */
 

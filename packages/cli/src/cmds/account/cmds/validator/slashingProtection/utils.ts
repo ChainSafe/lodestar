@@ -6,8 +6,8 @@ import {YargsError} from "../../../../../util/index.js";
 import {IGlobalArgs} from "../../../../../options/index.js";
 import {getValidatorPaths} from "../../../../validator/paths.js";
 import {getBeaconConfigFromArgs} from "../../../../../config/index.js";
-import {ISlashingProtectionArgs} from "./options.js";
 import {errorLogger} from "../../../../../util/logger.js";
+import {ISlashingProtectionArgs} from "./options.js";
 
 /**
  * Returns a new SlashingProtection object instance based on global args.

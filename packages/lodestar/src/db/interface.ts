@@ -2,8 +2,8 @@
  * @module db/api/beacon
  */
 
-import {IDbMetrics} from "@chainsafe/lodestar-db";
 import {Registry} from "prom-client";
+import {IDbMetrics} from "@chainsafe/lodestar-db";
 
 import {
   AttesterSlashingRepository,

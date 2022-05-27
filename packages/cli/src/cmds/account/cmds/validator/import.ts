@@ -13,9 +13,9 @@ import {
   ICliCommand,
 } from "../../../../util/index.js";
 import {VOTING_KEYSTORE_FILE, getValidatorDirPath} from "../../../../validatorDir/paths.js";
-import {IAccountValidatorArgs} from "./options.js";
 import {getAccountPaths} from "../../paths.js";
 import {IGlobalArgs} from "../../../../options/index.js";
+import {IAccountValidatorArgs} from "./options.js";
 
 /* eslint-disable no-console */
 

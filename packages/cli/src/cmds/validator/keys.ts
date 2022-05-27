@@ -7,12 +7,12 @@ import {deriveEth2ValidatorKeys, deriveKeyFromMnemonic} from "@chainsafe/bls-key
 import {interopSecretKey} from "@chainsafe/lodestar-beacon-state-transition";
 import {externalSignerGetKeys} from "@chainsafe/lodestar-validator";
 import {lockFilepath, unlockFilepath} from "@chainsafe/lodestar-keymanager-server";
+import {fromHexString} from "@chainsafe/ssz";
 import {defaultNetwork, IGlobalArgs} from "../../options/index.js";
 import {parseRange, stripOffNewlines, YargsError} from "../../util/index.js";
 import {ValidatorDirManager} from "../../validatorDir/index.js";
 import {getAccountPaths} from "../account/paths.js";
 import {IValidatorCliArgs} from "./options.js";
-import {fromHexString} from "@chainsafe/ssz";
 
 const depositDataPattern = new RegExp(/^deposit_data-\d+\.json$/gi);
 

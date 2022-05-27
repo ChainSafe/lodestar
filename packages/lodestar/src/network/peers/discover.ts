@@ -1,7 +1,7 @@
+import crypto from "node:crypto";
 import LibP2p from "libp2p";
 import PeerId from "peer-id";
 import {Multiaddr} from "multiaddr";
-import crypto from "node:crypto";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {Discv5, ENR, IDiscv5Metrics, IDiscv5DiscoveryInputOptions} from "@chainsafe/discv5";
@@ -9,8 +9,8 @@ import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/
 import {IMetrics} from "../../metrics/index.js";
 import {ENRKey, SubnetType} from "../metadata.js";
 import {prettyPrintPeerId} from "../util.js";
-import {IPeerRpcScoreStore, ScoreState} from "./score.js";
 import {pruneSetToMax} from "../../util/map.js";
+import {IPeerRpcScoreStore, ScoreState} from "./score.js";
 import {deserializeEnrSubnets, zeroAttnets, zeroSyncnets} from "./utils/enrSubnetsDeserialize.js";
 
 /** Max number of cached ENRs after discovering a good peer */

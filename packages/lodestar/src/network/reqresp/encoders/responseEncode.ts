@@ -1,6 +1,6 @@
 import {ForkName} from "@chainsafe/lodestar-params";
-import {RespStatus, RpcResponseStatusError} from "../../../constants/index.js";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {RespStatus, RpcResponseStatusError} from "../../../constants/index.js";
 import {writeEncodedPayload} from "../encodingStrategies/index.js";
 import {encodeErrorMessage} from "../utils/index.js";
 import {

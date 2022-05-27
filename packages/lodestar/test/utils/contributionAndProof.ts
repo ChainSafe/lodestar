@@ -1,9 +1,9 @@
+import deepmerge from "deepmerge";
 import {EMPTY_SIGNATURE} from "@chainsafe/lodestar-beacon-state-transition";
 import {SYNC_COMMITTEE_SUBNET_SIZE} from "@chainsafe/lodestar-params";
 import {altair} from "@chainsafe/lodestar-types";
 import {isPlainObject, RecursivePartial} from "@chainsafe/lodestar-utils";
 import {BitArray, fromHexString} from "@chainsafe/ssz";
-import deepmerge from "deepmerge";
 
 export function generateEmptyContribution(): altair.SyncCommitteeContribution {
   return {

@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {
   BeaconNodeOptions,
   getBeaconConfigFromArgs,
@@ -12,7 +13,6 @@ import {mkdir} from "../../util/index.js";
 import {fetchBootnodes} from "../../networks/index.js";
 import {getBeaconPaths} from "../beacon/paths.js";
 import {IBeaconArgs} from "../beacon/options.js";
-import {IChainForkConfig} from "@chainsafe/lodestar-config";
 
 export type ReturnType = {
   beaconNodeOptions: BeaconNodeOptions;

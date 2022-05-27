@@ -6,11 +6,11 @@ import {defaultApiOptions, IApiOptions} from "../api/options.js";
 import {defaultChainOptions, IChainOptions} from "../chain/options.js";
 import {defaultDbOptions, IDatabaseOptions} from "../db/options.js";
 import {defaultEth1Options, Eth1Options} from "../eth1/options.js";
-import {defaultLoggerOptions, IBeaconLoggerOptions} from "./loggerOptions.js";
 import {defaultMetricsOptions, MetricsOptions} from "../metrics/options.js";
 import {defaultNetworkOptions, INetworkOptions} from "../network/options.js";
 import {defaultSyncOptions, SyncOptions} from "../sync/options.js";
 import {defaultExecutionEngineOpts, ExecutionEngineOpts} from "../executionEngine/index.js";
+import {defaultLoggerOptions, IBeaconLoggerOptions} from "./loggerOptions.js";
 // Re-export so the CLI doesn't need to depend on lodestar-api
 export {allNamespaces} from "../api/rest/index.js";
 

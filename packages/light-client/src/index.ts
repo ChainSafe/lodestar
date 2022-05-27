@@ -169,6 +169,11 @@ export class Lightclient {
     };
   }
 
+  // Embed lightweigth clock. The epoch cycles are handled with `this.runLoop()`
+  get currentSlot(): number {
+    return getCurrentSlot(this.config, this.genesisTime);
+  }
+
   static async initializeFromCheckpointRoot({
     config,
     logger,
@@ -227,11 +232,6 @@ export class Lightclient {
 
     this.status.controller.abort();
     this.status = {code: RunStatusCode.stopped};
-  }
-
-  // Embed lightweigth clock. The epoch cycles are handled with `this.runLoop()`
-  get currentSlot(): number {
-    return getCurrentSlot(this.config, this.genesisTime);
   }
 
   getHead(): phase0.BeaconBlockHeader {

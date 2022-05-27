@@ -1,18 +1,18 @@
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {phase0} from "@chainsafe/lodestar-types";
 import {toHexString} from "@chainsafe/ssz";
+import {sleep, TimestampFormatCode} from "@chainsafe/lodestar-utils";
+import {IChainConfig} from "@chainsafe/lodestar-config";
 import {getDevBeaconNode} from "../utils/node/beacon.js";
 import {waitForEvent} from "../utils/events/resolver.js";
 import {getAndInitDevValidators} from "../utils/node/validator.js";
 import {ChainEvent} from "../../src/chain/index.js";
 import {RestApiOptions} from "../../src/api/rest/index.js";
 import {testLogger, TestLoggerOpts, LogLevel} from "../utils/logger.js";
-import {logFilesDir} from "./params.js";
 import {simTestInfoTracker} from "../utils/node/simTest.js";
-import {sleep, TimestampFormatCode} from "@chainsafe/lodestar-utils";
-import {IChainConfig} from "@chainsafe/lodestar-config";
 import {INTEROP_BLOCK_HASH} from "../../src/node/utils/interop/state.js";
 import {createExternalSignerServer} from "../../../validator/test/utils/createExternalSignerServer.js";
+import {logFilesDir} from "./params.js";
 
 /* eslint-disable no-console, @typescript-eslint/naming-convention */
 

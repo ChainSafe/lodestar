@@ -1,5 +1,5 @@
-import {BitArray} from "@chainsafe/ssz";
 import {itBench, setBenchOpts} from "@dapplion/benchmark";
+import {BitArray} from "@chainsafe/ssz";
 import {intersectUint8Arrays} from "../../../src/util/bitArray.js";
 
 /**

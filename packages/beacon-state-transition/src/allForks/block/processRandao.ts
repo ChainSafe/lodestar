@@ -1,10 +1,10 @@
 import xor from "buffer-xor";
 import {digest} from "@chainsafe/as-sha256";
 import {allForks} from "@chainsafe/lodestar-types";
+import {EPOCHS_PER_HISTORICAL_VECTOR} from "@chainsafe/lodestar-params";
 import {getRandaoMix} from "../../util/index.js";
 import {verifyRandaoSignature} from "../signatureSets/index.js";
 import {CachedBeaconStateAllForks} from "../../types.js";
-import {EPOCHS_PER_HISTORICAL_VECTOR} from "@chainsafe/lodestar-params";
 
 /**
  * Commit a randao reveal to generate pseudorandomness seeds

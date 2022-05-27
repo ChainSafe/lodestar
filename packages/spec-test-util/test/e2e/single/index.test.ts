@@ -22,7 +22,7 @@ export interface ISimpleCase extends Iterable<string> {
   input: ISimpleStruct;
   output: number;
   meta?: {
-    bls_setting?: BigInt;
+    bls_setting?: bigint;
   };
 }
 

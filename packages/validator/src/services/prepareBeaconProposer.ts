@@ -1,10 +1,10 @@
 import {Epoch} from "@chainsafe/lodestar-types";
 import {Api, routes} from "@chainsafe/lodestar-api";
 
-import {ValidatorStore} from "./validatorStore.js";
-import {IndicesService} from "./indices.js";
 import {IClock, ILoggerVc} from "../util/index.js";
 import {Metrics} from "../metrics.js";
+import {ValidatorStore} from "./validatorStore.js";
+import {IndicesService} from "./indices.js";
 
 /**
  * This service is responsible for updating the BNs and/or Mev relays with

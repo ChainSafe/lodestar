@@ -1,9 +1,9 @@
 import {expect} from "chai";
 import sinon, {SinonStubbedInstance} from "sinon";
 import {ssz} from "@chainsafe/lodestar-types";
-import {ZERO_HASH_HEX} from "../../../../src/constants/index.js";
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
+import {ZERO_HASH_HEX} from "../../../../src/constants/index.js";
 import {generateProtoBlock, generateEmptySignedBlock} from "../../../utils/block.js";
 import {StubbedBeaconDb} from "../../../utils/stub/index.js";
 import {testLogger} from "../../../utils/logger.js";

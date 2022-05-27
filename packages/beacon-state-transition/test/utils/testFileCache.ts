@@ -4,11 +4,11 @@ import got from "got";
 import {getClient} from "@chainsafe/lodestar-api";
 import {NetworkName, networksChainConfig} from "@chainsafe/lodestar-config/networks";
 import {createIChainForkConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
+import {allForks} from "@chainsafe/lodestar-types";
 import {CachedBeaconStateAllForks, computeEpochAtSlot} from "../../src/index.js";
-import {getInfuraBeaconUrl} from "./infura.js";
 import {testCachePath} from "../cache.js";
 import {createCachedBeaconStateTest} from "../utils/state.js";
-import {allForks} from "@chainsafe/lodestar-types";
+import {getInfuraBeaconUrl} from "./infura.js";
 
 /**
  * Full link example:
