@@ -75,7 +75,7 @@ console.log("Success!");
 
 function getInfo(argv) {
   // Validate tag version (must be semver-ish)
-  const versionCaptureRegex=/^(v[0-9]+\.[0-9]+)\.[0-9]+(-beta\.[0-9]+)?$/
+  const versionCaptureRegex=/^(v[0-9]+\.[0-9]+)\.[0-9]+(-rc\.[0-9]+)?$/
   const versionMatch = versionCaptureRegex.exec(argv.tag);
   if (versionMatch == null) {
     exit(`Tag must match ${versionCaptureRegex}`);
