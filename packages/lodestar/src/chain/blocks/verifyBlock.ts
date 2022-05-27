@@ -270,7 +270,6 @@ export async function verifyBlockStateTransition(
       // child block will cause it to replay
 
       case ExecutePayloadStatus.INVALID_BLOCK_HASH:
-      case ExecutePayloadStatus.INVALID_TERMINAL_BLOCK:
       case ExecutePayloadStatus.ELERROR:
       case ExecutePayloadStatus.UNAVAILABLE:
         throw new BlockError(block, {
