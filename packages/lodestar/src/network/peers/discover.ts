@@ -226,13 +226,18 @@ export class PeerDiscovery {
       this.metrics?.discovery.findNodeQueryRequests.inc({action: "start"});
     }
 
-    const randomNodeId = crypto.randomBytes(64).toString("hex");
-
     this.randomNodeQuery = {code: QueryStatusCode.Active, count: 0};
     const timer = this.metrics?.discovery.findNodeQueryTime.startTimer();
 
     try {
-      const enrs = await this.discv5.findNode(randomNodeId);
+      // async version of crypto.randomBytes
+      const randomNodeId = await new Promise<Buffer>((resolve, reject) => {
+        crypto.randomBytes(64, (err, buf) => {
+          if (err) reject(err);
+          resolve(buf);
+        });
+      });
+      const enrs = await this.discv5.findNode(randomNodeId.toString("hex"));
       this.metrics?.discovery.findNodeQueryEnrCount.inc(enrs.length);
     } catch (e) {
       this.logger.error("Error on discv5.findNode()", {}, e as Error);
