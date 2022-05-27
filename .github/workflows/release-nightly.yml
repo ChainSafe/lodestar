@@ -1,4 +1,4 @@
-name: Dev release
+name: Publish dev release
 
 # only one per github sha can be run
 concurrency:

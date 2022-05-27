@@ -1,4 +1,4 @@
-name: Release
+name: Publish release
 
 # only one can tun at a time
 concurrency: cd-release
