@@ -44,7 +44,7 @@ For example: After 3-5 days of testing, is performance equal or better than late
 
 - **Yes**: Continue to next release step
 - **No**: If it a small issue fixable quickly (hot-fix)?
-  - **Yes**: push a commit to branch `rc/v0.1.0` and re-start testing process with `v0.1.0-beta.1`.
+  - **Yes**: push a commit to branch `rc/v0.1.0` and re-start testing process with `v0.1.0-rc.1`.
   - **No**: abort the release. Close the `v0.1.0 release` PR, delete the branch, start the whole release process over
 
 ### 3. Merge release candidate
