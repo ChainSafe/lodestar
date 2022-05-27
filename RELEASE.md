@@ -28,10 +28,14 @@ manual steps (as example version `v0.1.0`, commit `9fceb02`):
 
 - The team selects a commit from `unstable` as a "release candidate" for a new version release.
 - Create a new release branch `rc/v0.1.0` at commit `9fceb02`.
+  - `git checkout -b rc/v0.1.0 9fceb02`
 - Set monorepo version to `v0.1.0-rc.0`.
+  - `lerna version v0.1.0-rc.0 --no-git-tag-version --force-publish --yes`
 - Commit changes
+  - `git commit -am "v0.1.0-rc.0"`
 - Tag resulting commit as `v0.1.0-rc.0` with an annotated tag, push branch and tag.
-- Draft a Github release for the `v0.1.0-rc.0` marked as "Pre-release".
+  - `git tag -am "v0.1.0-rc.0" v0.1.0-rc.0`
+  - `git push --tag`
 - Open draft PR from `rc/v0.1.0` to `stable` with title `v0.1.0 release`.
 
 ### 2. Test release candidate
@@ -53,12 +57,15 @@ manual steps (as example version `v0.1.0`):
 
 - Ensure step 2 testing is successful and there is sufficient consensus to release `v0.1.0`.
 - Set monorepo version to `v0.1.0`.
+  - `lerna version v0.1.0 --no-git-tag-version --force-publish --yes`
 - Commit changes.
+  - `git commit -am "v0.1.0"`
 - Gather required PR approvals.
 - Merge `v0.1.0 release` PR to stable **with "merge commit"** strategy to preserve all history.
 - Tag resulting merge commit as `v0.1.0` with an annotated tag, push commit and tag.
+  - `git tag -am "v0.1.0" v0.1.0`
+  - `git push --tag`
 - Open a PR to merge `stable` into `unstable`. This PR should be merged ASAP.
-- Draft a Github release for the `v0.1.0`, ensure it gets the "latest" tag.
 - Publish to Social Media
 
 ## Hot-fix release
@@ -92,12 +99,6 @@ The source code is mutated before release to set a version string of format `v0.
   - the commit is latest in the `stable` branch
 
   This prevents bad rogue versions and errors from publishing bad versions of Lodestar.
-
-**How to set monorepo version**
-
-```
-lerna version minor --no-git-tag-version --force-publish --yes
-```
 
 **How to distribute a release**
 
