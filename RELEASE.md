@@ -92,7 +92,7 @@ On every commit to `unstable` a dev release is done automatically in CI. A dev r
 - is published to NPM
 - is pushed to Dockerhub
 
-The source code is mutated before release to set a version string of format `v1.1.0-dev.da9f72360`, where the appended hash is the merge commit hash to unstable that triggered this CI build. The semver version that prefixes is expected to be the next minor version from the current code. The target consumers of such versions are automatic testing environments and other developers. They are expected to install via `next` tags and refer to the whole version for debugging.
+The source code is mutated before release to set a version string of format `v1.1.0-dev.da9f72360`, where the appended hash is the merge commit hash to `unstable` that triggered this CI build. The semver version that prefixes is expected to be the next minor version from the current code. The target consumers of such versions are automatic testing environments and other developers. They are expected to install via `next` tags and refer to the whole version for debugging.
 
 ## Details
 
@@ -183,7 +183,7 @@ Lodestar used `master` as the single target for feature branches.
 
 However this had some issues:
 
-- Aborted releases left master in awkward version 2 minors ahead of stable. When triggering the release again, we had to rollback master
+- Aborted releases left master in awkward version 2 minors ahead of `master`. When triggering the release again, we had to rollback `master`
 - Almost all release tags ended in branches not part of the master tree. This caused issues since it's not straightforward to compute the diff between commits that are not direct parents of each other
 
 **Continuous integration**
