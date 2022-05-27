@@ -2,7 +2,6 @@
  * @module chain
  */
 
-import fs from "node:fs";
 import path from "node:path";
 import {
   BeaconStateAllForks,
@@ -22,6 +21,7 @@ import {IBeaconDb} from "../db/index.js";
 import {IMetrics} from "../metrics/index.js";
 import {IEth1ForBlockProduction} from "../eth1/index.js";
 import {IExecutionEngine} from "../executionEngine/index.js";
+import {ensureDir, writeIfNotExist} from "../util/file.js";
 import {CheckpointStateCache, StateContextCache} from "./stateCache/index.js";
 import {BlockProcessor, PartiallyVerifiedBlockFlags} from "./blocks/index.js";
 import {IBeaconClock, LocalClock} from "./clock/index.js";
@@ -305,17 +305,22 @@ export class BeaconChain implements IBeaconChain {
 
   persistInvalidSszValue<T>(type: Type<T>, sszObject: T, suffix?: string): void {
     if (this.opts.persistInvalidSszObjects) {
-      this.persistInvalidSszObject(type.typeName, type.serialize(sszObject), type.hashTreeRoot(sszObject), suffix);
+      void this.persistInvalidSszObject(type.typeName, type.serialize(sszObject), type.hashTreeRoot(sszObject), suffix);
     }
   }
 
   persistInvalidSszView(view: TreeView<CompositeTypeAny>, suffix?: string): void {
     if (this.opts.persistInvalidSszObjects) {
-      this.persistInvalidSszObject(view.type.typeName, view.serialize(), view.hashTreeRoot(), suffix);
+      void this.persistInvalidSszObject(view.type.typeName, view.serialize(), view.hashTreeRoot(), suffix);
     }
   }
 
-  private persistInvalidSszObject(typeName: string, bytes: Uint8Array, root: Uint8Array, suffix?: string): void {
+  private async persistInvalidSszObject(
+    typeName: string,
+    bytes: Uint8Array,
+    root: Uint8Array,
+    suffix?: string
+  ): Promise<void> {
     if (!this.opts.persistInvalidSszObjects) {
       return;
     }
@@ -328,15 +333,11 @@ export class BeaconChain implements IBeaconChain {
     const dirpath = path.join(this.opts.persistInvalidSszObjectsDir ?? "invalid_ssz_objects", dateStr);
     const filepath = path.join(dirpath, `${typeName}_${toHex(root)}.ssz`);
 
-    if (!fs.existsSync(dirpath)) {
-      fs.mkdirSync(dirpath, {recursive: true});
-    }
+    await ensureDir(dirpath);
 
     // as of Feb 17 2022 there are a lot of duplicate files stored with different date suffixes
     // remove date suffixes in file name, and check duplicate to avoid redundant persistence
-    if (!fs.existsSync(filepath)) {
-      fs.writeFileSync(filepath, bytes);
-    }
+    await writeIfNotExist(filepath, bytes);
 
     this.logger.debug("Persisted invalid ssz object", {id: suffix, filepath});
   }

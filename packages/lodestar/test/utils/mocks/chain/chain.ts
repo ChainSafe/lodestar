@@ -132,7 +132,7 @@ export class MockBeaconChain implements IBeaconChain {
     this.reprocessController = new ReprocessController(null);
   }
 
-  persistInvalidSszView(view: TreeView<CompositeTypeAny>, suffix?: string): void {}
+  persistInvalidSszView(_: TreeView<CompositeTypeAny>): void {}
 
   getHeadState(): CachedBeaconStateAllForks {
     return createCachedBeaconStateTest(this.state, this.config);
