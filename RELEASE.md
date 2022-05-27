@@ -125,7 +125,7 @@ The behavior differs based on whether a stable release, a release candidate, or 
   - published to docker with `next` tag
   - no github release is published
 
-**How to test release candidates**
+### How to test release candidates
 
 We test the pre-release candidate on multiple servers with a variety of connected validators on a stable testnet for a minimum of three (3) days.
 
@@ -138,7 +138,7 @@ The following observations must be taken into consideration before promoting the
 - Has any performance metric degraded comparably to the previous `stable` release? If yes, is the variance acceptable?
   - Example: Block processing times, validator miss ratios, etc.
 
-**Edit the Release**
+### Edit the Release
 
 Releases are published automatically via CI.
 
@@ -146,7 +146,7 @@ Any additional release notes should be professional, comprehensive and well cons
 
 Have someone else review the release notes and then edit the release.
 
-**Publish to Social Media**
+### Publish to Social Media
 
 The release should be announced on the following social channels:
 
