@@ -159,6 +159,9 @@ The release should be announced on the following social channels:
 
 ## Alternatives considered
 
+<details>
+  <summary>Click to expand!</summary>
+
 Historical context and reasons against valid alternatives to help future discussions
 
 **Version branches**
@@ -184,3 +187,5 @@ However this had some issues:
 **Continuous integration**
 
 Always releasing `master` is another popular approach used by some entities but unsuitable for Lodestar. Given the complexity of a blockchain node, it's not possible to guarantee stable performance unless running the software for days in special conditions, not available in regular CI environments.
+
+</details>
