@@ -72,7 +72,7 @@ manual steps (as example version `v0.1.0`):
 
 If a stable version requires an immediate hot-fix before the next minor or major release:
 
-- Create a release branch `rc/v0.1.1` from unstable at that version tag.
+- Create a release branch `rc/v0.1.1` from `stable`.
 - Commit the hot-fix to the `rc/v0.1.1` branch.
 - Adjusting to the urgency and severity of the fix, perform the above steps using this branch.
   1. Create a release candidate
