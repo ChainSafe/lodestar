@@ -94,19 +94,38 @@ The source code is mutated before release to set a version string of format `v0.
 
 **Release CI reference**
 
-- Publishing Lodestar (to npm, docker, github, etc) is triggered via pushing a tag. CI ensures that there is only a single valid tag where:
+- Publishing Lodestar (to npm, docker, github, etc) is triggered via pushing a tag.
+
+CI ensures that there is only a single valid tag where:
   - the tag matches the version in source
   - the commit is latest in the `stable` branch
 
   This prevents bad rogue versions and errors from publishing bad versions of Lodestar.
 
-**How to distribute a release**
+Release candidates are also published to npm, docker, and github via pushing a tag.
+
+**How to publish a release**
 
 Automatic scripts in Github actions publish:
 
 - to NPM registry
 - to Dockerhub
 - to Github releases
+
+The behavior differs based on whether a stable release, a release candidate, or dev release is being performed.
+
+- Stable release
+  - published to npm with `latest` dist tag
+  - published to docker with `latest` tag
+  - a full github release is published
+- Release candidate
+  - published to npm with `rc` dist tag
+  - published to docker with `rc` tag
+  - a prerelease github release is published
+- Dev release
+  - published to npm with `next` dist tag
+  - published to docker with `next` tag
+  - no github release is published
 
 **How to test release candidates**
 
