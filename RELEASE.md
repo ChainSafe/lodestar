@@ -42,7 +42,7 @@ manual steps (as example version `v0.1.0`, commit `9fceb02`):
 
 Once a release candidate is created, the Lodestar team begins a 3 day testing period.
 
-If there is a bug discovered during the testing period which significantly impacts performance, security or stability, and it is determined that it is no longer prudent to promote the `rc.x` candidate to `stable`, then it will await a bug fix by the team. The fix will be committed, back-ported to `unstable` and we publish and promote the new commit to `rc.x+1`. The 3 day testing period will reset.
+If there is a bug discovered during the testing period which significantly impacts performance, security or stability, and it is determined that it is no longer prudent to promote the `rc.x` candidate to `stable`, then it will await a bug fix by the team. The fix will be committed, may be back-ported to `unstable` and we publish and promote the new commit to `rc.x+1`. The 3 day testing period will reset.
 
 For example: After 3-5 days of testing, is performance equal or better than latest stable?
 
@@ -65,7 +65,7 @@ manual steps (as example version `v0.1.0`):
 - Tag resulting merge commit as `v0.1.0` with an annotated tag, push commit and tag.
   - `git tag -am "v0.1.0" v0.1.0`
   - `git push --tag`
-- Open a PR to merge `stable` into `unstable`. This PR should be merged ASAP.
+- Open a PR to merge `stable` into `unstable` **with merge commit** strategy. This PR should be merged ASAP.
 - Publish to Social Media
 
 ## Hot-fix release
