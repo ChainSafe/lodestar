@@ -16,7 +16,7 @@
 
 ## About this docs
 
-This documentation is open source, contribute at [github.com/chainsafe/lodestar/docs](https://github.com/ChainSafe/lodestar/tree/master/docs).
+This documentation is open source, contribute at [github.com/chainsafe/lodestar/docs](https://github.com/ChainSafe/lodestar/tree/unstable/docs).
 
 ## Need assistance?
 

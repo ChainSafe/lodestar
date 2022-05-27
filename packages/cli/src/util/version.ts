@@ -14,7 +14,7 @@ type VersionJson = {
   version: string;
 };
 
-const BRANCH_IGNORE = /^(HEAD|master|main)$/;
+const BRANCH_IGNORE = /^(HEAD|master|unstable|main)$/;
 
 /**
  * Gathers all information on package version including Git data.

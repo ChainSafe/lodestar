@@ -54,7 +54,7 @@ After 3-5 days of testing, is performance equal or better than latest stable?
 
 _LEFTOVERS_
 
-If there is a bug discovered during the pre-release testing period which significantly impacts performance, security or stability, and it is determined that it is no longer prudent to release the `beta.x` candidate as `stable`, then it will await a bug fix by the team. The fix will be committed, back-ported to `master` and we publish and promote the new commit to `beta.x+1`. The 3 day testing period minimums will reset.
+If there is a bug discovered during the pre-release testing period which significantly impacts performance, security or stability, and it is determined that it is no longer prudent to release the `beta.x` candidate as `stable`, then it will await a bug fix by the team. The fix will be committed, back-ported to `unstable` and we publish and promote the new commit to `beta.x+1`. The 3 day testing period minimums will reset.
 
 ### 3. Merge release candidate
 
@@ -79,7 +79,7 @@ else, manual steps (as example version `v0.1.0`):
 
 If a stable version requires an immediate hot-fix before the next minor or major release:
 
-- Create a release branch `v0.1.1` from master at that version tag.
+- Create a release branch `v0.1.1` from unstable at that version tag.
 - Commit the hot-fix to the `v0.1.1` branch and port to develop.
 - Perform last steps of the stable release process:
   - _2. Test release candidate_: adjusting the length to the urgency and severity of the fix
@@ -94,7 +94,7 @@ On every commit to develop a nightly / develop release is done automatically in 
 - is published to NPM
 - is pushed to Dockerhub
 
-The source code is mutated before release to set a version string of format `v0.1.0-dev.da9f72360`, where the appended hash is the merge commit hash to master that triggered this CI build. The semver version that prefixes it is mostly irrelevant in practical terms. The target consumers of such versions are automatic testing environments and other developers. They are expected to install via `dev` or `next` tags and refer to the whole version for debugging.
+The source code is mutated before release to set a version string of format `v0.1.0-dev.da9f72360`, where the appended hash is the merge commit hash to unstable that triggered this CI build. The semver version that prefixes it is mostly irrelevant in practical terms. The target consumers of such versions are automatic testing environments and other developers. They are expected to install via `dev` or `next` tags and refer to the whole version for debugging.
 
 ### Details
 

@@ -5,8 +5,8 @@ concurrency: cd-release
 
 # See for rationale https://github.com/ChainSafe/lodestar/issues/3036#issuecomment-976956044
 # When a stable release is proposed, a testing period of N days starts
-# - Tag current master to v0.33.0-beta.0
-# - Bump master to v0.34.0
+# - Tag current unstable to v0.33.0-beta.0
+# - Bump unstable to v0.34.0
 on:
   push:
     tags:
