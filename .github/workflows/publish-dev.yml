@@ -2,7 +2,7 @@ name: Publish dev release
 
 # only one per github sha can be run
 concurrency:
-  group: cd-release-nightly
+  group: cd-publish-dev
 
 on:
   push:
@@ -75,7 +75,7 @@ jobs:
         #   Do not delete code version artifacts so the next step can pick the version
         #
         # --dist-tag next:
-        #   Make this nightly version installable with `@next`
+        #   Make this dev version installable with `@next`
         #
         # --preid dev:
         #   Tag version with `dev` instead of `alpha`

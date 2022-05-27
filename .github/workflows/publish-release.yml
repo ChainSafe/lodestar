@@ -1,7 +1,7 @@
 name: Publish release
 
 # only one can tun at a time
-concurrency: cd-release
+concurrency: cd-publish-release
 
 # See for rationale https://github.com/ChainSafe/lodestar/issues/3036#issuecomment-976956044
 # When a stable release is proposed, a testing period of N days starts
