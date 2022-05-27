@@ -2,7 +2,8 @@ name: Deploy docs
 
 on:
   push:
-    branches: unstable
+    branches:
+      - stable
 
 jobs:
   docs:

@@ -1,4 +1,4 @@
-name: Release nightly
+name: Dev release
 
 # only one per github sha can be run
 concurrency:

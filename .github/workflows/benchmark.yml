@@ -7,10 +7,12 @@ concurrency: cd-benchmark-${{ github.ref }}
 on:
   push:
     branches:
+      - stable
       - unstable
       - benchmark # For debugging
   pull_request:
     branches:
+      - stable
       - unstable
 
 jobs:
