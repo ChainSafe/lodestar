@@ -22,9 +22,16 @@ To start a new release, one of the Lodestar developers will communicate this via
 
 ### 1. Create release candidate
 
-TODO: determine which steps may be automated and update these steps with best practices when available
+All-in-one script (as example version `v1.1.0`, commit `9fceb02`):
 
-manual steps (as example version `v1.1.0`, commit `9fceb02`):
+```
+yarn release:create_rc v1.1.0 9fceb02
+```
+
+- Performs all git actions and sanity checks for you.
+- **_TODO_** you must still open draft PR from `rc/v1.1.0` to `stable`.
+
+Manual steps:
 
 - The team selects a commit from `unstable` as a "release candidate" for a new version release.
 - Create a new release branch `rc/v1.1.0` at commit `9fceb02`.
@@ -57,17 +64,32 @@ TODO: determine which steps may be automated and update these steps with best pr
 
 manual steps (as for example version `v1.1.0`):
 
-- Ensure step 2 testing is successful and there is sufficient consensus to release `v1.1.0`.
+Ensure step 2 testing is successful and there is sufficient consensus to release `v1.1.0`.
+
+```
+yarn release:finalize_rc v1.1.0
+```
+
 - Set monorepo version to `v1.1.0`.
   - `lerna version v1.1.0 --no-git-tag-version --force-publish --yes`
 - Commit changes.
   - `git commit -am "v1.1.0"`
-- Gather required PR approvals.
+
+Gather required PR approvals + wait for CI to pass.
+
 - Merge `v1.1.0 release` PR to stable **with "merge commit"** strategy to preserve all history.
+
+```
+yarn release:tag_stable v1.1.0
+```
+
 - Tag resulting merge commit as `v1.1.0` with an annotated tag, push commit and tag.
   - `git tag -am "v1.1.0" v1.1.0`
   - `git push --tag`
 - Open a PR to merge `stable` into `unstable` **with merge commit** strategy. This PR should be merged ASAP.
+
+Double check that Github release is correct
+
 - Publish to Social Media
 
 ## Hot-fix release

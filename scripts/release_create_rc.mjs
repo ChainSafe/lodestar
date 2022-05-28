@@ -26,6 +26,7 @@ const MAIN_PACKAGE_PATH = "packages/lodestar";
 
   const {versionMMP, commit} = parseCmdArgs();
 
+  // TODO: Generalize to bump rc.0 to rc.1
   const rcBranchName = `rc/v${versionMMP}`;
   const packageVersion = `${versionMMP}-rc.0`;
   const tagName = `v${packageVersion}`;
