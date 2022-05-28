@@ -176,6 +176,8 @@ describe("executionEngine / ExecutionEngineHttp", function () {
 
     const payloadId = await executionEngine.notifyForkchoiceUpdate(
       genesisBlockHash,
+      //use finalizedBlockHash as safeBlockHash
+      finalizedBlockHash,
       finalizedBlockHash,
       preparePayloadParams
     );

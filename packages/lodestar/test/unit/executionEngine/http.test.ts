@@ -140,6 +140,7 @@ describe("ExecutionEngine / http", () => {
 
     await executionEngine.notifyForkchoiceUpdate(
       forkChoiceHeadData.headBlockHash,
+      forkChoiceHeadData.safeBlockHash,
       forkChoiceHeadData.finalizedBlockHash
     );
 
