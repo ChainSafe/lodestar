@@ -23,12 +23,11 @@ To start a new release, one of the Lodestar developers will communicate this via
 #### All-in-one script (for example version `v1.1.0`, commit `9fceb02`):
 
 - The team selects a commit from `unstable` as a "release candidate" for a new version release.
-- Run the script below locally write-access account capable of triggering CI.
-
-```
-yarn release:create_rc v1.1.0 9fceb02`
-```
-
+- `yarn release:create-rc 1.1.0 9fceb02`
+  - Must be run locally from a write-access account capable of triggering CI.
+  - This script may alternatively be run on the the checked out `HEAD`:
+    - `git checkout 9fceb02`
+    - `yarn release:create-rc 1.1.0`
 - Open draft PR from `rc/v1.1.0` to `stable` with title `v1.1.0 release`.
 
 #### Manual steps (for example version `v1.1.0`, commit `9fceb02`):
@@ -41,12 +40,30 @@ yarn release:create_rc v1.1.0 9fceb02`
 - Commit changes
   - `git commit -am "v1.1.0"`
   - `git push origin rc/v1.1.0`
+- Open draft PR from `rc/v1.1.0` to `stable` with title `v1.1.0 release`.
+
+### 2. Tag release candidate
+
+Tagging a release candidate will trigger CI to publish to NPM, dockerhub, and Github releases.
+
+#### All-in-one script (for example version `v1.1.0`, commit `8ab7cef`):
+
+- The team selects a commit from `rc/v1.1.0` as a commit to tag and publish.
+- `yarn release:tag-rc 1.1.0 8ab7cef`
+  - Must be run locally from a write-access account capable of triggering CI.
+  - This script may alternatively be run on the the checked out `HEAD`:
+    - `git checkout 8ab7cef`
+    - `yarn release:tag-rc 1.1.0`
+
+#### Manual steps (for example version `v1.1.0`, commit `8ab7cef`):
+
+- Check out the commit:
+  - `git checkout 8ab7cef`
 - Tag resulting commit as `v1.1.0-rc.0` with an annotated tag, and push the tag.
   - `git tag -am "v1.1.0-rc.0" v1.1.0-rc.0`
   - `git push origin v1.1.0-rc.0`
-- Open draft PR from `rc/v1.1.0` to `stable` with title `v1.1.0 release`.
 
-### 2. Test release candidate
+### 3. Test release candidate
 
 Once a release candidate is created, the Lodestar team begins a 3 day testing period.
 
@@ -56,31 +73,34 @@ For example: After 3-5 days of testing, is performance equal to or better than l
 
 - **Yes**: Continue to the next release step
 - **No**: If it a small issue fixable quickly (hot-fix)?
-  - **Yes**: push a commit to branch `rc/v1.1.0` and re-start testing process with `v1.1.0-rc.1`.
+  - **Yes**: push fixes to branch, go to step 2, incrementing the rc version
   - **No**: abort the release. Close the `v1.1.0 release` PR, delete the branch, and start the whole release process over.
 
-### 3. Merge release candidate
-
-In-Github and social steps to finalize the release
+### 4. Merge release candidate
 
 - Ensure step 2 testing is successful and there is sufficient consensus to release `v1.1.0`.
 - Approving the `v1.1.0 release` PR means a team member marks the release as safe, after personally reviewing and / or testing it.
 - Merge `v1.1.0 release` PR to stable **with "merge commit"** strategy to preserve all history.
+- Merge stable `stable` into `unstable` **with merge commit** strategy. If that's not possible, open a PR and handle conflicts latter.
+
+### 5. Tag stable release
+
+Tagging a stable release will trigger CI to publish to NPM, dockerhub, and Github releases.
 
 #### All-in-one script (for example version `v1.1.0`):
 
-```
-yarn release:tag_stable v1.1.0`
-```
-
+- `git checkout stable`
+- `yarn release:tag-stable 1.1.0`
+  - Must be run locally from a write-access account capable of triggering CI.
 #### Manual steps (for example version `v1.1.0`):
 
-- Tag resulting merge commit as `v1.1.0` with an annotated tag, push commit and tag.
+- Check out the new stable
+  - `git checkout stable`
+- Tag it as `v1.1.0` with an annotated tag, push commit and tag.
   - `git tag -am "v1.1.0" v1.1.0`
   - `git push --tag`
-- Merge stable `stable` into `unstable` **with merge commit** strategy. If that's not possible, open a PR and handle conflicts latter.
 
-### 4. Announce
+### 6. Announce
 
 - Double check that Github release is correct
 - Publish to Social Media
@@ -89,14 +109,9 @@ yarn release:tag_stable v1.1.0`
 
 If a stable version requires an immediate hot-fix before the next release, a hot-fix release is started.
 
-### Manual steps (as for example version `v1.1.1`):
-
-- Create a release branch `rc/v1.1.1` from `stable`.
-- Commit the hot-fix to the `rc/v1.1.1` branch.
-- Adjusting to the urgency and severity of the fix, perform the above steps using this branch.
-  1. Create a release candidate
-  2. Test release candidate
-  3. Merge release candidate
+The same process for a stable release is used, with the two differences.
+- The candidate commit must be chosen from the `stable` branch instead of the `unstable` branch.
+- Depending on the severity of the bug being fixed, the testing window may be decreased.
 
 ## Dev release
 

@@ -1,4 +1,13 @@
-/* eslint-disable import/no-extraneous-dependencies */
+/* eslint-disable
+  no-console,
+  @typescript-eslint/explicit-function-return-type,
+  @typescript-eslint/no-unsafe-assignment,
+  @typescript-eslint/no-unsafe-member-access,
+  @typescript-eslint/no-unsafe-call,
+  @typescript-eslint/no-unsafe-return,
+  @typescript-eslint/explicit-module-boundary-types,
+  import/no-extraneous-dependencies
+*/
 
 import child_process from "node:child_process";
 import fs from "node:fs";
@@ -6,137 +15,43 @@ import path from "node:path";
 import semver from "semver";
 import inquirer from "inquirer";
 
-const UNSTABLE_BRANCH = "unstable";
-const REPO_SLUG = "chainsafe/lodestar";
-const GIT_REPO_URL = `git@github.com:${REPO_SLUG}.git`;
-const MAIN_PACKAGE_PATH = "packages/lodestar";
-
-/* eslint-disable
-  no-console,
-  @typescript-eslint/explicit-function-return-type,
-  @typescript-eslint/no-unsafe-assignment,
-  @typescript-eslint/no-unsafe-member-access,
-  @typescript-eslint/no-unsafe-call
-*/
-
-// Scope to prevent variable conflicts with functions below
-{
-  // Get command args
-  // release_create_candidate <version> [commit]
-
-  const {versionMMP, commit} = parseCmdArgs();
-
-  // TODO: Generalize to bump rc.0 to rc.1
-  const rcBranchName = `rc/v${versionMMP}`;
-  const packageVersion = `${versionMMP}`;
-  const tagName = `v${packageVersion}-rc.0`;
-
-  // Asserts script is run in root directory
-  const mainPackageJson = readMainPackageJson();
-  const currentVersion = mainPackageJson.version;
-
-  // Assert provided version increases latest stable
-  // Note - temp: Allows equal to unblock first release after previous strategy, which bumped unstable preemptively
-  if (!semver.gte(versionMMP, currentVersion)) {
-    throw Error(`Provided version ${versionMMP} is not gte current version ${currentVersion}`);
-  }
-
-  // This script must be run from unstable branch
-  const currentBranch = shell("git rev-parse --abbrev-ref HEAD");
-  if (currentBranch !== UNSTABLE_BRANCH) {
-    throw Error(`Must be run in branch '${UNSTABLE_BRANCH}' but is in '${currentBranch}'`);
-  }
-
-  assertCommitExistsInBranch(commit, UNSTABLE_BRANCH);
-
-  // Assert rc branch does not exist in local nor remote
-  const rcBranchCommitLocal = checkBranchExistsLocal(rcBranchName);
-  if (rcBranchCommitLocal !== null) throw Error(`RC branch ${rcBranchName} already exists in local`);
-  const rcBranchCommitRemote = checkBranchExistsRemote(rcBranchName);
-  if (rcBranchCommitRemote !== null) throw Error(`RC branch ${rcBranchName} already exists in remote`);
-
-  // Must ensure git directory is clean before doing any changes.
-  // Otherwise the lerna version + commit step below could mix in changes by the user.
-  assertGitDirectoryIsClean();
-
-  // Log variables for debug
-  console.log(`
-Selected version: ${versionMMP}
-RC branch: ${rcBranchName}
-Current version: ${currentVersion}
-
-Selected commit: ${commit}
-
-${getCommitDetails(commit)}
-  `);
-
-  if (!(await confirm(`Do you want to start a release process for ${versionMMP} at commit ${commit}?`))) {
-    process.exit(1);
-  }
-
-  // Create a new release branch `rc/v1.1.0` at commit `9fceb02`
-  shell(`git checkout -b ${rcBranchName} ${commit}`);
-
-  // Set monorepo version to `1.1.0-rc.0`
-  shell(`lerna version ${packageVersion} --no-git-tag-version --force-publish --yes`);
-
-  // Commit changes
-  shell(`git commit -am "v${versionMMP}"`);
-
-  // Push branch, specifying upstream
-  shell(`git push ${GIT_REPO_URL} ${rcBranchName}`);
-
-  // TODO: Open draft PR from `rc/v1.1.0` to `stable` with title `v1.1.0 release`
-  console.log(`
-  
-  Pushed ${rcBranchName} to Github, open a release PR:
-
-  https://github.com/${REPO_SLUG}/compare/stable...${rcBranchName}
-  
-  `);
-
-  if (await confirm(`Do you want to create and publish a release candidate ${tagName}?`)) {
-    // Assert tag does not exist in local nor remote
-    const tagCommitLocal = checkTagExistsLocal(tagName);
-    if (tagCommitLocal !== null) throw Error(`tag ${tagName} already exists in local`);
-    const tagCommitRemote = checkTagExistsRemote(tagName);
-    if (tagCommitRemote !== null) throw Error(`tag ${tagName} already exists in remote`);
-
-    // Tag resulting commit as `v1.1.0-rc.0` with an annotated tag, push new tag only
-    shell(`git tag -am "${tagName}" ${tagName}`);
-    shell(`git push ${GIT_REPO_URL} ${tagName}`);
-  }
-}
-
-/////////////////////////////
+export const UNSTABLE_BRANCH = "unstable";
+export const STABLE_BRANCH = "stable";
+export const REPO_SLUG = "chainsafe/lodestar";
+export const GIT_REPO_URL = `git@github.com:${REPO_SLUG}.git`;
+export const MAIN_PACKAGE_PATH = "packages/cli";
 
 /**
  * @param {string} cmd
  * @returns {string}
  */
-function shell(cmd) {
+export function shell(cmd) {
   return child_process.execSync(cmd, {encoding: "utf8", stdio: "pipe"}).trim();
 }
 
 /**
  * ```
- * release_create_candidate <version> <commit>
+ * cmd <version> [commit]
  * ```
  * @typedef {Object} CliArgs
- * @property {string} versionMMP - Major,Minor,Patch semver version to be released '0.37.0'
+ * @property {string} versionMMP - Major.Minor.Patch semver version to be released, eg: '1.1.0'
  * @property {string} commit - Commit hash to be released (optional)
  * @returns {CliArgs}
  */
-function parseCmdArgs() {
+export function parseCmdArgs() {
   const versionArg = process.argv[2];
-  const commitArg = process.argv[3]; // Optional
+  const commitArg = process.argv[3];
 
   if (versionArg === undefined) {
     throw Error("argv[2] undefined, must provide version");
   }
 
-  if (commitArg === undefined) {
-    throw Error("argv[3] undefined, must provide commit");
+  let commit;
+  // optional arg, defaults to HEAD
+  try {
+    commit = shell(`git log -n 1 --pretty='%h' ${commitArg ?? "HEAD"}`);
+  } catch (e) {
+    throw Error(`Invalid commit ${commitArg}`);
   }
 
   const versionObj = semver.parse(versionArg);
@@ -153,7 +68,7 @@ function parseCmdArgs() {
 
   return {
     versionMMP,
-    commit: commitArg,
+    commit,
   };
 }
 
@@ -161,7 +76,7 @@ function parseCmdArgs() {
  * @param {string} commit
  * @param {string} branch
  */
-function assertCommitExistsInBranch(commit, branch) {
+export function assertCommitExistsInBranch(commit, branch) {
   /** @type {string} */
   let headCommit;
   try {
@@ -189,7 +104,7 @@ function assertCommitExistsInBranch(commit, branch) {
  * Generic confirm prompt
  * @param {string} message
  */
-async function confirm(message) {
+export async function confirm(message) {
   // CI is never interactive, skip checks
   if (process.env.CI) {
     return true;
@@ -211,7 +126,7 @@ async function confirm(message) {
  * @param {string} branch
  * @returns {string|null}
  */
-function checkBranchExistsLocal(branch) {
+export function checkBranchExistsLocal(branch) {
   try {
     return shell(`git show-ref refs/heads/${branch}`);
   } catch (e) {
@@ -224,7 +139,7 @@ function checkBranchExistsLocal(branch) {
  * @param {string} branch
  * @returns {string|null}
  */
-function checkBranchExistsRemote(branch) {
+export function checkBranchExistsRemote(branch) {
   // From https://stackoverflow.com/questions/8223906/how-to-check-if-remote-branch-exists-on-a-given-remote-repository
 
   // If branch is found returns:
@@ -251,7 +166,7 @@ function checkBranchExistsRemote(branch) {
  * @param {string} tag
  * @returns {string|null}
  */
-function checkTagExistsLocal(tag) {
+export function checkTagExistsLocal(tag) {
   try {
     return shell(`git show-ref refs/tags/${tag}`);
   } catch (e) {
@@ -264,7 +179,7 @@ function checkTagExistsLocal(tag) {
  * @param {string} tag
  * @returns {string|null}
  */
-function checkTagExistsRemote(tag) {
+export function checkTagExistsRemote(tag) {
   // Returns list of tags
   // bb944682f7f65272137de74ed18605e49257356c    refs/tags/v0.1.6
   // 771a930dc0ba86769d6862bc4dc100acc50170fa    refs/tags/v0.1.6^{}
@@ -288,7 +203,7 @@ function checkTagExistsRemote(tag) {
 /**
  * Throws if there are any tracked or untracked changes
  */
-function assertGitDirectoryIsClean() {
+export function assertGitDirectoryIsClean() {
   // From https://unix.stackexchange.com/questions/155046/determine-if-git-working-directory-is-clean-from-a-script
   const changedFileList = shell("git status --porcelain");
   if (changedFileList) {
@@ -297,12 +212,12 @@ function assertGitDirectoryIsClean() {
 }
 
 /**
- * Returns the package.json JSON of the main package (lodestar)
+ * Returns the package.json JSON of the main package (lodestar-cli)
  * @typedef {Object} PackageJson
- * @property {string} version - Clean semver version '0.37.0'
+ * @property {string} version - Clean semver version '1.1.0'
  * @returns {PackageJson}
  */
-function readMainPackageJson() {
+export function readMainPackageJson() {
   const packageJsonPath = path.join(MAIN_PACKAGE_PATH, "package.json");
 
   /** @type {string} */
@@ -329,7 +244,7 @@ function readMainPackageJson() {
  * @param {string} commit
  * @returns {string}
  */
-function getCommitDetails(commit) {
+export function getCommitDetails(commit) {
   // commit <hash>
   // Author: <author>
   // Date:   <author-date>
@@ -338,4 +253,43 @@ function getCommitDetails(commit) {
   //
   // <full-commit-message>
   return shell(`git log -n 1 ${commit} --date=relative --pretty=medium`);
+}
+
+/**
+ * Return the currently checked-out branch
+ * @returns {string}
+ */
+export function getCurrentBranch() {
+  return shell("git rev-parse --abbrev-ref HEAD");
+}
+
+/**
+ * Sync remote branches and tags
+ * @returns {void}
+ */
+export function syncGitRemote() {
+  shell("git fetch -pt");
+}
+
+/**
+ * Print usage and exit if no args or --help is provided
+ */
+export function usage(helpText) {
+  if (process.argv.includes("--help") || process.argv.includes("-h") || !process.argv[2]) {
+    console.log(helpText);
+    process.exit(1);
+  }
+}
+
+/**
+ * Compares tags to find the next, yet unpublished, rc tag
+ * @param {string} version clean major.minor.patch version
+ * @returns {string}
+ */
+export function getNextRcTag(version) {
+  const latestRc = shell(`git tag -l v${version}-rc.*`).split("\n").sort(semver.rcompare)[0];
+  if (latestRc) {
+    return `v${semver.inc(latestRc, "prerelease")}`;
+  }
+  return `v${version}-rc.0`;
 }
