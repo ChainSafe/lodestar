@@ -101,13 +101,13 @@ jobs:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Publish to npm registry (rc)
-        run: yarn run publish:release --dist-tag rc
+        run: yarn run release:publish --dist-tag rc
         if: needs.tag.outputs.is_rc == 'true'
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Publish to npm registry (release)
-        run: yarn run publish:release
+        run: yarn run release:publish
         if: needs.tag.outputs.is_stable == 'true'
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
