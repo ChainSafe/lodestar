@@ -6,9 +6,9 @@ import path from "node:path";
 import semver from "semver";
 import inquirer from "inquirer";
 
-// TODO: Change to 'unstable'
-const UNSTABLE_BRANCH = "dapplion/gitflow";
-const GIT_REPO_URL = "git@github.com:ChainSafe/lodestar.git";
+const UNSTABLE_BRANCH = "unstable";
+const REPO_SLUG = "chainsafe/lodestar";
+const GIT_REPO_URL = `git@github.com:${REPO_SLUG}.git`;
 const MAIN_PACKAGE_PATH = "packages/lodestar";
 
 /* eslint-disable
@@ -28,8 +28,8 @@ const MAIN_PACKAGE_PATH = "packages/lodestar";
 
   // TODO: Generalize to bump rc.0 to rc.1
   const rcBranchName = `rc/v${versionMMP}`;
-  const packageVersion = `${versionMMP}-rc.0`;
-  const tagName = `v${packageVersion}`;
+  const packageVersion = `${versionMMP}`;
+  const tagName = `v${packageVersion}-rc.0`;
 
   // Asserts script is run in root directory
   const mainPackageJson = readMainPackageJson();
@@ -47,7 +47,7 @@ const MAIN_PACKAGE_PATH = "packages/lodestar";
     throw Error(`Must be run in branch '${UNSTABLE_BRANCH}' but is in '${currentBranch}'`);
   }
 
-  ensureCommitExistsInBranch(commit, UNSTABLE_BRANCH);
+  assertCommitExistsInBranch(commit, UNSTABLE_BRANCH);
 
   // Assert rc branch does not exist in local nor remote
   const rcBranchCommitLocal = checkBranchExistsLocal(rcBranchName);
@@ -55,23 +55,24 @@ const MAIN_PACKAGE_PATH = "packages/lodestar";
   const rcBranchCommitRemote = checkBranchExistsRemote(rcBranchName);
   if (rcBranchCommitRemote !== null) throw Error(`RC branch ${rcBranchName} already exists in remote`);
 
-  // Assert tag does not exist in local nor remote
-  const tagCommitLocal = checkTagExistsLocal(tagName);
-  if (tagCommitLocal !== null) throw Error(`tag ${tagName} already exists in local`);
-  const tagCommitRemote = checkTagExistsRemote(tagName);
-  if (tagCommitRemote !== null) throw Error(`tag ${tagName} already exists in remote`);
+  // Must ensure git directory is clean before doing any changes.
+  // Otherwise the lerna version + commit step below could mix in changes by the user.
+  assertGitDirectoryIsClean();
 
   // Log variables for debug
   console.log(`
-  User provided version: ${versionMMP}
-  User provided commit: ${commit}
-  Current version: ${currentVersion}
-  RC branch: ${rcBranchName}
-  Package version: ${packageVersion}
-  Tag: ${tagName}
+Selected version: ${versionMMP}
+RC branch: ${rcBranchName}
+Current version: ${currentVersion}
+
+Selected commit: ${commit}
+
+${getCommitDetails(commit)}
   `);
 
-  await confirm("This action will commit and push to remote repo");
+  if (!(await confirm(`Do you want to start a release process for ${versionMMP} at commit ${commit}?`))) {
+    process.exit(1);
+  }
 
   // Create a new release branch `rc/v1.1.0` at commit `9fceb02`
   shell(`git checkout -b ${rcBranchName} ${commit}`);
@@ -80,13 +81,31 @@ const MAIN_PACKAGE_PATH = "packages/lodestar";
   shell(`lerna version ${packageVersion} --no-git-tag-version --force-publish --yes`);
 
   // Commit changes
-  shell(`git commit -am "${tagName}"`);
+  shell(`git commit -am "v${versionMMP}"`);
 
-  // Tag resulting commit as `v1.1.0-rc.0` with an annotated tag, push branch and tag
-  shell(`git tag -am "${tagName}" ${tagName}`);
-  shell("git push --tag");
+  // Push branch, specifying upstream
+  shell(`git push ${GIT_REPO_URL} ${rcBranchName}`);
 
-  // Open draft PR from `rc/v1.1.0` to `stable` with title `v1.1.0 release`
+  // TODO: Open draft PR from `rc/v1.1.0` to `stable` with title `v1.1.0 release`
+  console.log(`
+  
+  Pushed ${rcBranchName} to Github, open a release PR:
+
+  https://github.com/${REPO_SLUG}/compare/stable...${rcBranchName}
+  
+  `);
+
+  if (await confirm(`Do you want to create and publish a release candidate ${tagName}?`)) {
+    // Assert tag does not exist in local nor remote
+    const tagCommitLocal = checkTagExistsLocal(tagName);
+    if (tagCommitLocal !== null) throw Error(`tag ${tagName} already exists in local`);
+    const tagCommitRemote = checkTagExistsRemote(tagName);
+    if (tagCommitRemote !== null) throw Error(`tag ${tagName} already exists in remote`);
+
+    // Tag resulting commit as `v1.1.0-rc.0` with an annotated tag, push new tag only
+    shell(`git tag -am "${tagName}" ${tagName}`);
+    shell(`git push ${GIT_REPO_URL} ${tagName}`);
+  }
 }
 
 /////////////////////////////
@@ -142,18 +161,26 @@ function parseCmdArgs() {
  * @param {string} commit
  * @param {string} branch
  */
-function ensureCommitExistsInBranch(commit, branch) {
-  // Ensure the branch exists
+function assertCommitExistsInBranch(commit, branch) {
+  /** @type {string} */
+  let headCommit;
   try {
-    shell(`git show-branch --no-name ${branch}`);
+    // Also, ensure the branch exists first
+    headCommit = shell(`git rev-parse refs/heads/${branch}`);
   } catch (e) {
     throw Error(`Branch ${branch} does not exist: ${e.message}`);
   }
 
-  // Ensure the commit exists in the branch's last 100 commits
-  const last10Commits = shell(`git --no-pager log --oneline -n 100 --pretty=format:"%h" ${branch}`);
-  const commitMatch = last10Commits.match(commit);
-  if (commitMatch == null) {
+  // Best, safest strategy to assert ancestor-ship
+  // From https://stackoverflow.com/questions/43535132/given-a-commit-id-how-to-determine-if-current-branch-contains-the-commit
+  //
+  // git merge-base --is-ancestor parent child -> exit code 0 (YES)
+  // git merge-base --is-ancestor child parent -> exit code 1 (NO)
+  // git merge-base --is-ancestor child child  -> exit code 0 (YES)
+
+  try {
+    shell(`git merge-base --is-ancestor ${commit} ${headCommit}`);
+  } catch (e) {
     throw Error(`Commit ${commit} does not belong to branch ${branch}`);
   }
 }
@@ -164,20 +191,19 @@ function ensureCommitExistsInBranch(commit, branch) {
  */
 async function confirm(message) {
   // CI is never interactive, skip checks
-  if (process.CI) {
-    return;
+  if (process.env.CI) {
+    return true;
   }
 
   const input = await inquirer.prompt([
     {
       name: "yes",
       type: "confirm",
-      message: `Do you want to proceed? ${message}`,
+      message,
     },
   ]);
-  if (!input.yes) {
-    process.exit(1);
-  }
+
+  return Boolean(input.yes);
 }
 
 /**
@@ -260,6 +286,17 @@ function checkTagExistsRemote(tag) {
 }
 
 /**
+ * Throws if there are any tracked or untracked changes
+ */
+function assertGitDirectoryIsClean() {
+  // From https://unix.stackexchange.com/questions/155046/determine-if-git-working-directory-is-clean-from-a-script
+  const changedFileList = shell("git status --porcelain");
+  if (changedFileList) {
+    throw Error(`git directory must be clean, changed files:\n${changedFileList}`);
+  }
+}
+
+/**
  * Returns the package.json JSON of the main package (lodestar)
  * @typedef {Object} PackageJson
  * @property {string} version - Clean semver version '0.37.0'
@@ -285,4 +322,20 @@ function readMainPackageJson() {
   if (!json.version) throw Error(`Empty .version in ${packageJsonPath}`);
 
   return json;
+}
+
+/**
+ * Returns formated details about the commit
+ * @param {string} commit
+ * @returns {string}
+ */
+function getCommitDetails(commit) {
+  // commit <hash>
+  // Author: <author>
+  // Date:   <author-date>
+  //
+  // <title-line>
+  //
+  // <full-commit-message>
+  return shell(`git log -n 1 ${commit} --date=relative --pretty=medium`);
 }
