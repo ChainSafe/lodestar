@@ -17,6 +17,7 @@ import {Root, Slot, ValidatorIndex, ssz, Epoch} from "@chainsafe/lodestar-types"
 import {ExecutionStatus} from "@chainsafe/lodestar-fork-choice";
 
 import {fromHexString} from "@chainsafe/ssz";
+import {LivenessResponseData} from "@chainsafe/lodestar-api/src/routes/validator";
 import {assembleBlock} from "../../../chain/factory/block/index.js";
 import {AttestationError, AttestationErrorCode, GossipAction, SyncCommitteeError} from "../../../chain/errors/index.js";
 import {validateGossipAggregateAndProof} from "../../../chain/validation/index.js";
@@ -28,9 +29,8 @@ import {validateSyncCommitteeGossipContributionAndProof} from "../../../chain/va
 import {CommitteeSubscription} from "../../../network/subnets/index.js";
 import {ApiModules} from "../types.js";
 import {RegenCaller} from "../../../chain/regen/index.js";
+import {IBeaconChain} from "../../../chain/index.js";
 import {computeSubnetForCommitteesAtSlot, getPubkeysForIndices} from "./utils.js";
-import {LivenessResponseData} from "@chainsafe/lodestar-api/lib/routes/validator";
-import {IBeaconChain} from "../../../chain";
 
 /**
  * Validator clock may be advanced from beacon's clock. If the validator requests a resource in a

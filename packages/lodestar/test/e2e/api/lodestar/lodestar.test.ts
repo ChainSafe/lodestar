@@ -1,19 +1,18 @@
 import chaiAsPromised from "chai-as-promised";
 import chai, {expect} from "chai";
 import {createIBeaconConfig, IChainConfig} from "@chainsafe/lodestar-config";
-import {getClient} from "@chainsafe/lodestar-api/src/client/validator";
 import {chainConfig as chainConfigDef} from "@chainsafe/lodestar-config/default";
 import {phase0} from "@chainsafe/lodestar-types";
-import {LogLevel, testLogger, TestLoggerOpts} from "../../../utils/logger";
-import {getDevBeaconNode} from "../../../utils/node/beacon";
-import {waitForEvent} from "../../../utils/events/resolver";
-import {ChainEvent} from "../../../../src/chain";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import {HttpClient} from "@chainsafe/lodestar-api";
+import {getClient} from "@chainsafe/lodestar-api";
+import {LogLevel, testLogger, TestLoggerOpts} from "../../../utils/logger.js";
+import {getDevBeaconNode} from "../../../utils/node/beacon.js";
+import {waitForEvent} from "../../../utils/events/resolver.js";
+import {ChainEvent} from "../../../../src/chain/index.js";
 
 chai.use(chaiAsPromised);
 
-describe("api / impl / lodestar", function () {
+describe("api / impl / validator", function () {
   describe("getLiveness endpoint", function () {
     const SECONDS_PER_SLOT = 2;
     const ALTAIR_FORK_EPOCH = 0;
@@ -65,9 +64,9 @@ describe("api / impl / lodestar", function () {
       bn.chain.seenAttesters.add(10, 2000);
       bn.chain.seenAggregators.add(10, 3000);
 
-      const client = getClient(config, new HttpClient({baseUrl: `http://127.0.0.1:${restPort}`}));
+      const client = getClient({baseUrl: `http://127.0.0.1:${restPort}`}, {config});
 
-      await expect(client.getLiveness([1, 2, 3, 4], 0)).to.eventually.deep.equal(
+      await expect(client.validator.getLiveness([1, 2, 3, 4], 0)).to.eventually.deep.equal(
         {
           data: [
             {index: 1, epoch: 0, isLive: true},
@@ -106,26 +105,26 @@ describe("api / impl / lodestar", function () {
 
       bn.chain.observedBlockProposers.add(bn.chain.clock.currentEpoch, 1);
 
-      const client = getClient(config, new HttpClient({baseUrl: `http://127.0.0.1:${restPort}`}));
+      const client = getClient({baseUrl: `http://127.0.0.1:${restPort}`}, {config});
 
       const currentEpoch = bn.chain.clock.currentEpoch;
       const nextEpoch = currentEpoch + 1;
       const previousEpoch = currentEpoch - 1;
 
       // current epoch is fine
-      await expect(client.getLiveness([1], currentEpoch)).to.not.be.rejected;
+      await expect(client.validator.getLiveness([1], currentEpoch)).to.not.be.rejected;
       // next epoch is fine
-      await expect(client.getLiveness([1], nextEpoch)).to.not.be.rejected;
+      await expect(client.validator.getLiveness([1], nextEpoch)).to.not.be.rejected;
       // previous epoch is fine
-      await expect(client.getLiveness([1], previousEpoch)).to.not.be.rejected;
+      await expect(client.validator.getLiveness([1], previousEpoch)).to.not.be.rejected;
       // more than next epoch is not fine
-      await expect(client.getLiveness([1], currentEpoch + 2)).to.be.rejectedWith(
+      await expect(client.validator.getLiveness([1], currentEpoch + 2)).to.be.rejectedWith(
         `Request epoch ${
           currentEpoch + 2
         } is more than one epoch previous or after from the current epoch ${currentEpoch}`
       );
       // more than previous epoch is not fine
-      await expect(client.getLiveness([1], currentEpoch - 2)).to.be.rejectedWith(
+      await expect(client.validator.getLiveness([1], currentEpoch - 2)).to.be.rejectedWith(
         `Request epoch ${
           currentEpoch - 2
         } is more than one epoch previous or after from the current epoch ${currentEpoch}`

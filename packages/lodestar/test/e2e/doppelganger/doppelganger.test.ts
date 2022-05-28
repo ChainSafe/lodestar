@@ -2,16 +2,16 @@ import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {IChainConfig} from "@chainsafe/lodestar-config";
-import {createAttesterDuty, getAndInitDevValidators} from "../../utils/node/validator";
-import {ChainEvent} from "../../../src/chain";
-import {Network} from "../../../src/network";
-import {connect} from "../../utils/network";
-import {testLogger, LogLevel, TestLoggerOpts} from "../../utils/logger";
-import {getDevBeaconNode} from "../../utils/node/beacon";
-import {waitForEvent} from "../../utils/events/resolver";
-import {fromHexString} from "@chainsafe/ssz";
-import {generateAttestationData} from "@chainsafe/lodestar-beacon-state-transition/test/utils/attestation";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
+import {fromHexString} from "@chainsafe/ssz";
+import {createAttesterDuty, getAndInitDevValidators} from "../../utils/node/validator.js";
+import {ChainEvent} from "../../../src/chain/index.js";
+import {Network} from "../../../src/network/index.js";
+import {connect} from "../../utils/network.js";
+import {testLogger, LogLevel, TestLoggerOpts} from "../../utils/logger.js";
+import {getDevBeaconNode} from "../../utils/node/beacon.js";
+import {waitForEvent} from "../../utils/events/resolver.js";
+import {generateAttestationData} from "../../utils/attestation.js";
 
 chai.use(chaiAsPromised);
 

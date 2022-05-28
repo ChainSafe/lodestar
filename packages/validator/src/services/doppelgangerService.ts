@@ -4,10 +4,10 @@ import {ILogger, sleep} from "@chainsafe/lodestar-utils";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {computeEndSlotForEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {LivenessResponseData} from "@chainsafe/lodestar-api/src/routes/validator";
-import {PubkeyHex} from "../types";
-import {IClock} from "../util";
-import {Metrics} from "../metrics";
-import {IndicesService} from "./indices";
+import {PubkeyHex} from "../types.js";
+import {IClock} from "../util/index.js";
+import {Metrics} from "../metrics.js";
+import {IndicesService} from "./indices.js";
 
 // The number of epochs that must be checked before we assume that there are
 // no other duplicate validators on the network

@@ -5,7 +5,7 @@ import {CheckpointWithHex, IProtoBlock} from "@chainsafe/lodestar-fork-choice";
 import {
   CachedBeaconStateAllForks,
   computeEpochAtSlot,
-  computeStartSlotAtEpoch
+  computeStartSlotAtEpoch,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {AttestationError, BlockError, BlockErrorCode} from "./errors/index.js";
 import {ChainEvent, IChainEvents} from "./emitter.js";

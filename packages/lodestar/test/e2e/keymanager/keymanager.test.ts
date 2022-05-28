@@ -17,7 +17,7 @@ import {getDevBeaconNode} from "../../utils/node/beacon.js";
 import {
   createAttesterDuty,
   getAndInitDevValidators,
-  getAndInitValidatorsWithKeystore
+  getAndInitValidatorsWithKeystore,
 } from "../../utils/node/validator.js";
 import {getKeystoreForPubKey1, getKeystoreForPubKey2} from "../../utils/node/keymanager.js";
 import {logFilesDir} from "../../sim/params.js";
