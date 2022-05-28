@@ -23,6 +23,7 @@ To start a new release, one of the Lodestar developers will communicate this via
 #### All-in-one script (for example version `v1.1.0`, commit `9fceb02`):
 
 - The team selects a commit from `unstable` as a "release candidate" for a new version release.
+- Run the script below locally write-access account capable of triggering CI.
 
 ```
 yarn release:create_rc v1.1.0 9fceb02`
