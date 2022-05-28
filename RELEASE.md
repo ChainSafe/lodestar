@@ -2,9 +2,7 @@
 
 Lodestar is a blockchain node securing the Ethereum Beacon chain network. It is run by external individuals and operator entities outside of the control of the Lodestar team. We, as most other core dev teams, choose a slow conservative approach to releasing to ensure those node runners always update to stable, safe, and performant versions of our software.
 
-Lodestar uses a modified version of git-flow to manage releases. Gitflow is a well-known strategy that suits our needs for security and stability.
-
-![lodestar-release](docs/images/gitflow-lodestar.png)
+Lodestar uses a modified version of gitflow to manage releases. [Gitflow](https://www.atlassian.com/git/tutorials/comparing-workflows/gitflow-workflow) is a well-known strategy that suits our needs for security and stability.
 
 ## Stable release
 
@@ -22,24 +20,22 @@ To start a new release, one of the Lodestar developers will communicate this via
 
 ### 1. Create release candidate
 
-All-in-one script (as example version `v1.1.0`, commit `9fceb02`):
+#### All-in-one script (for example version `v1.1.0`, commit `9fceb02`):
 
-```
-yarn release:create_rc v1.1.0 9fceb02
-```
+- The team selects a commit from `unstable` as a "release candidate" for a new version release.
+- `yarn release:create_rc v1.1.0 9fceb02`
+- `yarn release:tag_rc v1.1.0-rc.0`
+- Open draft PR from `rc/v1.1.0` to `stable` with title `v1.1.0 release`.
 
-- Performs all git actions and sanity checks for you.
-- **_TODO_** you must still open draft PR from `rc/v1.1.0` to `stable`.
-
-Manual steps:
+#### Manual steps (for example version `v1.1.0`, commit `9fceb02`):
 
 - The team selects a commit from `unstable` as a "release candidate" for a new version release.
 - Create a new release branch `rc/v1.1.0` at commit `9fceb02`.
   - `git checkout -b rc/v1.1.0 9fceb02`
-- Set monorepo version to `v1.1.0-rc.0`.
-  - `lerna version v1.1.0-rc.0 --no-git-tag-version --force-publish --yes`
+- Set monorepo version to `v1.1.0`.
+  - `lerna version v1.1.0 --no-git-tag-version --force-publish --yes`
 - Commit changes
-  - `git commit -am "v1.1.0-rc.0"`
+  - `git commit -am "v1.1.0"`
 - Tag resulting commit as `v1.1.0-rc.0` with an annotated tag, push branch and tag.
   - `git tag -am "v1.1.0-rc.0" v1.1.0-rc.0`
   - `git push --tag`
@@ -60,43 +56,33 @@ For example: After 3-5 days of testing, is performance equal to or better than l
 
 ### 3. Merge release candidate
 
-TODO: determine which steps may be automated and update these steps with best practices when available
+#### All-in-one script (for example version `v1.1.0`):
 
-manual steps (as for example version `v1.1.0`):
-
-Ensure step 2 testing is successful and there is sufficient consensus to release `v1.1.0`.
-
-```
-yarn release:finalize_rc v1.1.0
-```
-
-- Set monorepo version to `v1.1.0`.
-  - `lerna version v1.1.0 --no-git-tag-version --force-publish --yes`
-- Commit changes.
-  - `git commit -am "v1.1.0"`
-
-Gather required PR approvals + wait for CI to pass.
-
+- Ensure step 2 testing is successful and there is sufficient consensus to release `v1.1.0`.
+- Gather required PR approvals + wait for CI to pass.
 - Merge `v1.1.0 release` PR to stable **with "merge commit"** strategy to preserve all history.
+- `yarn release:tag_stable v1.1.0`
+- Open a PR to merge `stable` into `unstable` **with merge commit** strategy. This PR should be merged ASAP.
+- Double check that Github release is correct
+- Publish to Social Media
 
-```
-yarn release:tag_stable v1.1.0
-```
+#### Manual steps (for example version `v1.1.0`):
 
+- Ensure step 2 testing is successful and there is sufficient consensus to release `v1.1.0`.
+- Gather required PR approvals + wait for CI to pass.
+- Merge `v1.1.0 release` PR to stable **with "merge commit"** strategy to preserve all history.
 - Tag resulting merge commit as `v1.1.0` with an annotated tag, push commit and tag.
   - `git tag -am "v1.1.0" v1.1.0`
   - `git push --tag`
 - Open a PR to merge `stable` into `unstable` **with merge commit** strategy. This PR should be merged ASAP.
-
-Double check that Github release is correct
-
+- Double check that Github release is correct
 - Publish to Social Media
 
 ## Hot-fix release
 
-If a stable version requires an immediate hot-fix before the next minor or major release:
+If a stable version requires an immediate hot-fix before the next release, a hot-fix release is started.
 
-manual steps (as for example version `v1.1.1`):
+### Manual steps (as for example version `v1.1.1`):
 
 - Create a release branch `rc/v1.1.1` from `stable`.
 - Commit the hot-fix to the `rc/v1.1.1` branch.
