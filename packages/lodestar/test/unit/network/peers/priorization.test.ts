@@ -3,9 +3,9 @@ import PeerId from "peer-id";
 import {phase0, altair} from "@chainsafe/lodestar-types";
 import {BitArray} from "@chainsafe/ssz";
 import {ATTESTATION_SUBNET_COUNT} from "@chainsafe/lodestar-params";
-import {ExcessPeerDisconnectReason, prioritizePeers} from "../../../../src/network/peers/utils/prioritizePeers";
-import {getAttnets, getSyncnets} from "../../../utils/network";
-import {RequestedSubnet} from "../../../../src/network/peers/utils";
+import {ExcessPeerDisconnectReason, prioritizePeers} from "../../../../src/network/peers/utils/prioritizePeers.js";
+import {getAttnets, getSyncnets} from "../../../utils/network.js";
+import {RequestedSubnet} from "../../../../src/network/peers/utils/index.js";
 
 type Result = ReturnType<typeof prioritizePeers>;
 

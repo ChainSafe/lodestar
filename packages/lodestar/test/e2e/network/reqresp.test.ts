@@ -1,33 +1,33 @@
 import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
-import {AbortController} from "@chainsafe/abort-controller";
 import PeerId from "peer-id";
+import {AbortController} from "@chainsafe/abort-controller";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {config} from "@chainsafe/lodestar-config/default";
 import {sleep as _sleep} from "@chainsafe/lodestar-utils";
 import {altair, phase0, ssz} from "@chainsafe/lodestar-types";
 import {ForkName} from "@chainsafe/lodestar-params";
 import {BitArray} from "@chainsafe/ssz";
-import {createPeerId, IReqRespOptions, Network, prettyPrintPeerId} from "../../../src/network";
-import {defaultNetworkOptions, INetworkOptions} from "../../../src/network/options";
-import {Method, Encoding} from "../../../src/network/reqresp/types";
-import {ReqRespHandlers} from "../../../src/network/reqresp/handlers";
-import {RequestError, RequestErrorCode} from "../../../src/network/reqresp/request";
-import {IRequestErrorMetadata} from "../../../src/network/reqresp/request/errors";
-import {testLogger} from "../../utils/logger";
-import {MockBeaconChain} from "../../utils/mocks/chain/chain";
-import {createNode} from "../../utils/network";
-import {generateState} from "../../utils/state";
-import {arrToSource, generateEmptySignedBlocks} from "../../unit/network/reqresp/utils";
+import {createPeerId, IReqRespOptions, Network, prettyPrintPeerId} from "../../../src/network/index.js";
+import {defaultNetworkOptions, INetworkOptions} from "../../../src/network/options.js";
+import {Method, Encoding} from "../../../src/network/reqresp/types.js";
+import {ReqRespHandlers} from "../../../src/network/reqresp/handlers/index.js";
+import {RequestError, RequestErrorCode} from "../../../src/network/reqresp/request/index.js";
+import {IRequestErrorMetadata} from "../../../src/network/reqresp/request/errors.js";
+import {testLogger} from "../../utils/logger.js";
+import {MockBeaconChain} from "../../utils/mocks/chain/chain.js";
+import {createNode} from "../../utils/network.js";
+import {generateState} from "../../utils/state.js";
+import {arrToSource, generateEmptySignedBlocks} from "../../unit/network/reqresp/utils.js";
 import {
   blocksToReqRespBlockResponses,
   generateEmptyReqRespBlockResponse,
   generateEmptySignedBlock,
-} from "../../utils/block";
-import {expectRejectedWithLodestarError} from "../../utils/errors";
-import {connect, onPeerConnect} from "../../utils/network";
-import {StubbedBeaconDb} from "../../utils/stub";
-import {GossipHandlers} from "../../../src/network/gossip";
+} from "../../utils/block.js";
+import {expectRejectedWithLodestarError} from "../../utils/errors.js";
+import {connect, onPeerConnect} from "../../utils/network.js";
+import {StubbedBeaconDb} from "../../utils/stub/index.js";
+import {GossipHandlers} from "../../../src/network/gossip/index.js";
 
 chai.use(chaiAsPromised);
 

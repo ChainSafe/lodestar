@@ -1,19 +1,19 @@
-import {AbortController} from "@chainsafe/abort-controller";
 import {expect} from "chai";
 import sinon from "sinon";
+import {AbortController} from "@chainsafe/abort-controller";
 import bls from "@chainsafe/bls";
 import {toHexString} from "@chainsafe/ssz";
 import {createIChainForkConfig} from "@chainsafe/lodestar-config";
 import {config as mainnetConfig} from "@chainsafe/lodestar-config/default";
-import {SyncCommitteeService} from "../../../src/services/syncCommittee";
-import {SyncDutyAndProofs} from "../../../src/services/syncCommitteeDuties";
-import {ValidatorStore} from "../../../src/services/validatorStore";
-import {getApiClientStub} from "../../utils/apiStub";
-import {loggerVc, testLogger} from "../../utils/logger";
-import {ClockMock} from "../../utils/clock";
-import {IndicesService} from "../../../src/services/indices";
 import {ssz} from "@chainsafe/lodestar-types";
-import {ChainHeaderTracker} from "../../../src/services/chainHeaderTracker";
+import {SyncCommitteeService} from "../../../src/services/syncCommittee.js";
+import {SyncDutyAndProofs} from "../../../src/services/syncCommitteeDuties.js";
+import {ValidatorStore} from "../../../src/services/validatorStore.js";
+import {getApiClientStub} from "../../utils/apiStub.js";
+import {loggerVc, testLogger} from "../../utils/logger.js";
+import {ClockMock} from "../../utils/clock.js";
+import {IndicesService} from "../../../src/services/indices.js";
+import {ChainHeaderTracker} from "../../../src/services/chainHeaderTracker.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 

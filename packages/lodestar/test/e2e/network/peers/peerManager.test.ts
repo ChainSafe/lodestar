@@ -1,24 +1,24 @@
-import {Connection} from "libp2p";
 import {EventEmitter} from "events";
+import {Connection} from "libp2p";
 import sinon from "sinon";
 import {expect} from "chai";
 import {config} from "@chainsafe/lodestar-config/default";
 import {BitArray} from "@chainsafe/ssz";
-import {IReqResp, ReqRespMethod} from "../../../../src/network/reqresp";
-import {PeerRpcScoreStore, PeerManager} from "../../../../src/network/peers";
-import {Eth2Gossipsub, NetworkEvent, NetworkEventBus} from "../../../../src/network";
-import {PeersData} from "../../../../src/network/peers/peersData";
-import {createNode, getAttnets, getSyncnets} from "../../../utils/network";
-import {MockBeaconChain} from "../../../utils/mocks/chain/chain";
-import {generateEmptySignedBlock} from "../../../utils/block";
-import {generateState} from "../../../utils/state";
 import {altair, phase0, ssz} from "@chainsafe/lodestar-types";
 import {sleep} from "@chainsafe/lodestar-utils";
-import {waitForEvent} from "../../../utils/events/resolver";
-import {testLogger} from "../../../utils/logger";
-import {getValidPeerId} from "../../../utils/peer";
-import {IAttnetsService} from "../../../../src/network/subnets";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
+import {IReqResp, ReqRespMethod} from "../../../../src/network/reqresp/index.js";
+import {PeerRpcScoreStore, PeerManager} from "../../../../src/network/peers/index.js";
+import {Eth2Gossipsub, NetworkEvent, NetworkEventBus} from "../../../../src/network/index.js";
+import {PeersData} from "../../../../src/network/peers/peersData.js";
+import {createNode, getAttnets, getSyncnets} from "../../../utils/network.js";
+import {MockBeaconChain} from "../../../utils/mocks/chain/chain.js";
+import {generateEmptySignedBlock} from "../../../utils/block.js";
+import {generateState} from "../../../utils/state.js";
+import {waitForEvent} from "../../../utils/events/resolver.js";
+import {testLogger} from "../../../utils/logger.js";
+import {getValidPeerId} from "../../../utils/peer.js";
+import {IAttnetsService} from "../../../../src/network/subnets/index.js";
 
 const logger = testLogger();
 

@@ -10,10 +10,10 @@ import {
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {ssz} from "@chainsafe/lodestar-types";
 import {ForkName} from "@chainsafe/lodestar-params";
-import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState";
-import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState";
-import {getConfig} from "../utils/getConfig";
-import {TestRunnerFn} from "../utils/types";
+import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
+import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
+import {getConfig} from "../utils/getConfig.js";
+import {TestRunnerFn} from "../utils/types.js";
 
 export type EpochProcessFn = (state: CachedBeaconStateAllForks, epochProcess: EpochProcess) => void;
 

@@ -1,8 +1,8 @@
 import path from "node:path";
 import fs from "node:fs";
 import {uncompress} from "snappyjs";
-import {loadYaml} from "@chainsafe/lodestar-utils";
 import jsyaml from "js-yaml";
+import {loadYaml} from "@chainsafe/lodestar-utils";
 
 /* eslint-disable
   @typescript-eslint/explicit-module-boundary-types,

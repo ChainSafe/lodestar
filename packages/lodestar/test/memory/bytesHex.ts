@@ -1,6 +1,6 @@
-import {toHexString} from "@chainsafe/ssz";
 import crypto from "node:crypto";
-import {testRunnerMemory} from "./testRunnerMemory";
+import {toHexString} from "@chainsafe/ssz";
+import {testRunnerMemory} from "./testRunnerMemory.js";
 
 // Results in Linux Dec 2021
 //

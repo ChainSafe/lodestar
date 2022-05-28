@@ -1,5 +1,5 @@
 import {SubcommitteeIndex, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
-import {MapDef} from "../../util/map";
+import {MapDef} from "../../util/map.js";
 
 /**
  * SyncCommittee signatures are only useful during a single slot according to our peer's clocks

@@ -1,4 +1,5 @@
-import bls, {PublicKey} from "@chainsafe/bls";
+import type {PublicKey} from "@chainsafe/bls/types";
+import bls from "@chainsafe/bls";
 import {Root} from "@chainsafe/lodestar-types";
 
 export enum SignatureSetType {

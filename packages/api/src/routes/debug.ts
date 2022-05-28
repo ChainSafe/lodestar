@@ -1,7 +1,6 @@
 import {ForkName} from "@chainsafe/lodestar-params";
 import {allForks, Slot, RootHex, ssz, StringType} from "@chainsafe/lodestar-types";
 import {ContainerType} from "@chainsafe/ssz";
-import {StateId} from "./beacon/state";
 import {
   ArrayOf,
   ContainerData,
@@ -14,7 +13,8 @@ import {
   ReqSerializers,
   ReqEmpty,
   ReqSerializer,
-} from "../utils";
+} from "../utils/index.js";
+import {StateId} from "./beacon/state.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 

@@ -1,7 +1,7 @@
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {Bucket, Db, IDbMetrics, Repository} from "@chainsafe/lodestar-db";
 import {allForks, ssz} from "@chainsafe/lodestar-types";
-import {getSignedBlockTypeFromBytes} from "../../util/multifork";
+import {getSignedBlockTypeFromBytes} from "../../util/multifork.js";
 
 /**
  * Blocks by root

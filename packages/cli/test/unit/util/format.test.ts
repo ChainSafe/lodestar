@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {parseRange} from "../../../src/util";
+import {parseRange} from "../../../src/util/index.js";
 
 describe("util / format / parseRange", () => {
   const testCases: {range: string; res: number[]}[] = [

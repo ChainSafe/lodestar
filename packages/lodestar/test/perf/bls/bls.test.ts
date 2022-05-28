@@ -1,6 +1,7 @@
 import {itBench} from "@dapplion/benchmark";
-import {bls, PublicKey, SecretKey, Signature} from "@chainsafe/bls";
-import {linspace} from "../../../src/util/numpy";
+import bls from "@chainsafe/bls";
+import type {PublicKey, SecretKey, Signature} from "@chainsafe/bls/types";
+import {linspace} from "../../../src/util/numpy.js";
 
 describe("BLS ops", function () {
   type Keypair = {publicKey: PublicKey; secretKey: SecretKey};

@@ -3,10 +3,10 @@ import {BLSPubkey, Epoch, Root, Slot, ssz} from "@chainsafe/lodestar-types";
 import {toHexString} from "@chainsafe/ssz";
 import {Api, routes} from "@chainsafe/lodestar-api";
 import {extendError} from "@chainsafe/lodestar-utils";
-import {IClock, differenceHex, ILoggerVc} from "../util";
-import {ValidatorStore} from "./validatorStore";
-import {PubkeyHex} from "../types";
-import {Metrics} from "../metrics";
+import {IClock, differenceHex, ILoggerVc} from "../util/index.js";
+import {PubkeyHex} from "../types.js";
+import {Metrics} from "../metrics.js";
+import {ValidatorStore} from "./validatorStore.js";
 
 /** Only retain `HISTORICAL_DUTIES_EPOCHS` duties prior to the current epoch */
 const HISTORICAL_DUTIES_EPOCHS = 2;

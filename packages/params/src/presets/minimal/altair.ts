@@ -1,4 +1,4 @@
-import {AltairPreset} from "../../interface/altair";
+import {AltairPreset} from "../../interface/altair.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 export const altair: AltairPreset = {

@@ -2,11 +2,11 @@ import {ILogger} from "@chainsafe/lodestar-utils";
 import {allForks, RootHex, Slot, phase0} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {routes} from "@chainsafe/lodestar-api";
-import {INetwork} from "../network";
-import {IBeaconChain} from "../chain";
-import {IMetrics} from "../metrics";
-import {IBeaconDb} from "../db";
-import {SyncChainDebugState} from "./range/chain";
+import {INetwork} from "../network/index.js";
+import {IBeaconChain} from "../chain/index.js";
+import {IMetrics} from "../metrics/index.js";
+import {IBeaconDb} from "../db/index.js";
+import {SyncChainDebugState} from "./range/chain.js";
 export {SyncChainDebugState};
 
 export type SyncingStatus = routes.node.SyncingStatus;

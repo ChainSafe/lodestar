@@ -15,7 +15,7 @@ import {
   DOMAIN_SYNC_COMMITTEE_SELECTION_PROOF,
   DOMAIN_VOLUNTARY_EXIT,
 } from "@chainsafe/lodestar-params";
-import {SecretKey} from "@chainsafe/bls";
+import type {SecretKey} from "@chainsafe/bls/types";
 import {
   allForks,
   altair,
@@ -30,12 +30,13 @@ import {
 } from "@chainsafe/lodestar-types";
 import {BitArray, fromHexString, toHexString} from "@chainsafe/ssz";
 import {routes} from "@chainsafe/lodestar-api";
-import {Interchange, InterchangeFormatVersion, ISlashingProtection} from "../slashingProtection";
 import {prettyBytes} from "@chainsafe/lodestar-utils";
-import {PubkeyHex} from "../types";
-import {externalSignerPostSignature} from "../util/externalSignerClient";
-import {Metrics} from "../metrics";
-import {DoppelgangerService} from "./doppelgangerService";
+import {Interchange, InterchangeFormatVersion, ISlashingProtection} from "../slashingProtection/index.js";
+import {PubkeyHex} from "../types.js";
+import {externalSignerPostSignature} from "../util/externalSignerClient.js";
+import {Metrics} from "../metrics.js";
+import {MapDef} from "../util/map.js";
+import {DoppelgangerService} from "./doppelgangerService.js";
 
 export enum SignerType {
   Local,
@@ -64,6 +65,7 @@ export type Signer = SignerLocal | SignerRemote;
  * Service that sets up and handles validator attester duties.
  */
 export class ValidatorStore {
+  readonly feeRecipientByValidatorPubkey: MapDef<PubkeyHex, string>;
   private readonly validators = new Map<PubkeyHex, Signer>();
   private readonly genesisValidatorsRoot: Root;
 
@@ -73,8 +75,10 @@ export class ValidatorStore {
     private readonly metrics: Metrics | null,
     signers: Signer[],
     genesis: phase0.Genesis,
+    defaultFeeRecipient: string,
     private doppelgangerService?: DoppelgangerService
   ) {
+    this.feeRecipientByValidatorPubkey = new MapDef<PubkeyHex, string>(() => defaultFeeRecipient);
     for (const signer of signers) {
       this.addSigner(signer);
     }

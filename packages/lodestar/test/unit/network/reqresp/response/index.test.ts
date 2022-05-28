@@ -1,17 +1,16 @@
 import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
-import {AbortController} from "@chainsafe/abort-controller";
 import {LodestarError} from "@chainsafe/lodestar-utils";
-import {RespStatus} from "../../../../../src/constants";
-import {Method, Encoding, Version} from "../../../../../src/network/reqresp/types";
-import {handleRequest, PerformRequestHandler} from "../../../../../src/network/reqresp/response";
-import {PeersData} from "../../../../../src/network/peers/peersData";
-import {expectRejectedWithLodestarError} from "../../../../utils/errors";
-import {expectEqualByteChunks, MockLibP2pStream} from "../utils";
-import {sszSnappyPing} from "../encodingStrategies/sszSnappy/testData";
-import {testLogger} from "../../../../utils/logger";
-import {getValidPeerId} from "../../../../utils/peer";
-import {config} from "../../../../utils/config";
+import {RespStatus} from "../../../../../src/constants/index.js";
+import {Method, Encoding, Version} from "../../../../../src/network/reqresp/types.js";
+import {handleRequest, PerformRequestHandler} from "../../../../../src/network/reqresp/response/index.js";
+import {PeersData} from "../../../../../src/network/peers/peersData.js";
+import {expectRejectedWithLodestarError} from "../../../../utils/errors.js";
+import {expectEqualByteChunks, MockLibP2pStream} from "../utils.js";
+import {sszSnappyPing} from "../encodingStrategies/sszSnappy/testData.js";
+import {testLogger} from "../../../../utils/logger.js";
+import {getValidPeerId} from "../../../../utils/peer.js";
+import {config} from "../../../../utils/config.js";
 
 chai.use(chaiAsPromised);
 

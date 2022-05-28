@@ -1,8 +1,8 @@
 import {expect} from "chai";
 import PeerId from "peer-id";
 import {config} from "@chainsafe/lodestar-config/default";
-import {Batch, BatchOpts} from "../../../../../src/sync/range/batch";
-import {ChainPeersBalancer} from "../../../../../src/sync/range/utils/peerBalancer";
+import {Batch, BatchOpts} from "../../../../../src/sync/range/batch.js";
+import {ChainPeersBalancer} from "../../../../../src/sync/range/utils/peerBalancer.js";
 
 describe("sync / range / peerBalancer", () => {
   const opts: BatchOpts = {epochsPerBatch: 1};

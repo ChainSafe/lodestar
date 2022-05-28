@@ -1,8 +1,8 @@
-import {phase0} from "@chainsafe/lodestar-types";
-import {MockBeaconChain} from "../../../../utils/mocks/chain/chain";
-import {assertPeerRelevance, IrrelevantPeerCode} from "../../../../../src/network/peers/utils/assertPeerRelevance";
-import {IBeaconClock} from "../../../../../src/chain/clock";
 import {expect} from "chai";
+import {phase0} from "@chainsafe/lodestar-types";
+import {MockBeaconChain} from "../../../../utils/mocks/chain/chain.js";
+import {assertPeerRelevance, IrrelevantPeerCode} from "../../../../../src/network/peers/utils/assertPeerRelevance.js";
+import {IBeaconClock} from "../../../../../src/chain/clock/index.js";
 
 describe("network / peers / utils / assertPeerRelevance", () => {
   const correctForkDigest = Buffer.alloc(4, 0);

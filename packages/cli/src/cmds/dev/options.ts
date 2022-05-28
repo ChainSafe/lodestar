@@ -1,10 +1,10 @@
 import {Options} from "yargs";
-import {ICliCommandOptions} from "../../util";
-import {beaconOptions, IBeaconArgs} from "../beacon/options";
-import {beaconNodeOptions} from "../../options";
-import {IValidatorCliArgs, validatorOptions} from "../validator/options";
-import {KeymanagerArgs, keymanagerOptions} from "../../options/keymanagerOptions";
-import {doppelgangerOptions} from "../../options/doppelgangerOptions";
+import {ICliCommandOptions} from "../../util/index.js";
+import {beaconOptions, IBeaconArgs} from "../beacon/options.js";
+import {beaconNodeOptions} from "../../options/index.js";
+import {IValidatorCliArgs, validatorOptions} from "../validator/options.js";
+import {KeymanagerArgs, keymanagerOptions} from "../../options/keymanagerOptions.js";
+import {doppelgangerOptions} from "../../options/doppelgangerOptions.js";
 
 type IDevOwnArgs = {
   genesisEth1Hash?: string;

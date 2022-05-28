@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import {defaultOptions, IBeaconNodeOptions} from "@chainsafe/lodestar";
-import {ICliCommandOptions, extractJwtHexSecret} from "../../util";
+import {ICliCommandOptions, extractJwtHexSecret} from "../../util/index.js";
 
 export type ExecutionEngineArgs = {
   "execution.urls": string[];
@@ -12,6 +12,10 @@ export function parseArgs(args: ExecutionEngineArgs): IBeaconNodeOptions["execut
   return {
     urls: args["execution.urls"],
     timeout: args["execution.timeout"],
+    /**
+     * jwtSecret is parsed as hex instead of bytes because the merge with defaults
+     * in beaconOptions messes up the bytes array as as index => value object
+     */
     jwtSecretHex: args["jwt-secret"]
       ? extractJwtHexSecret(fs.readFileSync(args["jwt-secret"], "utf-8").trim())
       : undefined,

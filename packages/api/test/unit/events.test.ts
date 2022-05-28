@@ -1,12 +1,12 @@
+import {expect} from "chai";
 import {AbortController} from "@chainsafe/abort-controller";
 import {sleep} from "@chainsafe/lodestar-utils";
 import {config} from "@chainsafe/lodestar-config/default";
-import {Api, routesData, EventType, BeaconEvent} from "../../src/routes/events";
-import {getClient} from "../../src/client/events";
-import {getRoutes} from "../../src/server/events";
-import {getMockApi, getTestServer} from "../utils/utils";
-import {registerRoutesGroup} from "../../src/server";
-import {expect} from "chai";
+import {Api, routesData, EventType, BeaconEvent} from "../../src/routes/events.js";
+import {getClient} from "../../src/client/events.js";
+import {getRoutes} from "../../src/server/events.js";
+import {getMockApi, getTestServer} from "../utils/utils.js";
+import {registerRoutesGroup} from "../../src/server/index.js";
 
 describe("events", () => {
   const rootHex = "0x" + "01".repeat(32);

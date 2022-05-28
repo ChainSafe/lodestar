@@ -1,6 +1,6 @@
 import {EffectiveBalanceIncrements} from "@chainsafe/lodestar-beacon-state-transition";
-import {IVoteTracker, HEX_ZERO_HASH} from "./interface";
-import {ProtoArrayError, ProtoArrayErrorCode} from "./errors";
+import {IVoteTracker, HEX_ZERO_HASH} from "./interface.js";
+import {ProtoArrayError, ProtoArrayErrorCode} from "./errors.js";
 
 /**
  * Returns a list of `deltas`, where there is one delta for each of the indices in `indices`

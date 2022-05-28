@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import {SecretKey} from "@chainsafe/bls";
+import bls from "@chainsafe/bls";
 import {Keystore} from "@chainsafe/bls-keystore";
 import {
   Api,
@@ -12,7 +12,7 @@ import {
 import {fromHexString} from "@chainsafe/ssz";
 import {Interchange, SignerType, Validator} from "@chainsafe/lodestar-validator";
 import {PubkeyHex} from "@chainsafe/lodestar-validator/src/types";
-import {lockFilepath, unlockFilepath} from "./util/lockfile";
+import {lockFilepath, unlockFilepath} from "./util/lockfile.js";
 
 export const KEY_IMPORTED_PREFIX = "key_imported";
 
@@ -102,7 +102,7 @@ export class KeymanagerApi implements Api {
           continue;
         }
 
-        const secretKey = SecretKey.fromBytes(await keystore.decrypt(password));
+        const secretKey = bls.SecretKey.fromBytes(await keystore.decrypt(password));
         const pubKey = secretKey.toPublicKey().toHex();
         this.validator.validatorStore.addSigner({type: SignerType.Local, secretKey});
 

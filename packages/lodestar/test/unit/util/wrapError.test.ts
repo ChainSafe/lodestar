@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {wrapError} from "../../../src/util/wrapError";
+import {wrapError} from "../../../src/util/wrapError.js";
 
 describe("util / wrapError", () => {
   const error = Error("test-error");

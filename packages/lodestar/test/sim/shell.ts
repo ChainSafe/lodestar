@@ -1,5 +1,4 @@
 import childProcess from "node:child_process";
-import {AbortSignal} from "@chainsafe/abort-controller";
 
 /**
  * If timeout is greater than 0, the parent will send the signal

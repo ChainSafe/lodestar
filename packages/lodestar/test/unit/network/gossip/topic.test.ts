@@ -1,8 +1,8 @@
 import {expect} from "chai";
 import {ForkName} from "@chainsafe/lodestar-params";
-import {GossipType, GossipEncoding, GossipTopicMap} from "../../../../src/network/gossip";
-import {parseGossipTopic, stringifyGossipTopic} from "../../../../src/network/gossip/topic";
-import {config} from "../../../utils/config";
+import {GossipType, GossipEncoding, GossipTopicMap} from "../../../../src/network/gossip/index.js";
+import {parseGossipTopic, stringifyGossipTopic} from "../../../../src/network/gossip/topic.js";
+import {config} from "../../../utils/config.js";
 
 describe("network / gossip / topic", function () {
   const encoding = GossipEncoding.ssz_snappy;

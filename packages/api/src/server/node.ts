@@ -1,6 +1,6 @@
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import {ServerRoutes, getGenericJsonServer} from "./utils";
-import {Api, ReqTypes, routesData, getReturnTypes, getReqSerializers} from "../routes/node";
+import {Api, ReqTypes, routesData, getReturnTypes, getReqSerializers} from "../routes/node.js";
+import {ServerRoutes, getGenericJsonServer} from "./utils/index.js";
 
 export function getRoutes(config: IChainForkConfig, api: Api): ServerRoutes<Api, ReqTypes> {
   // All routes return JSON, use a server auto-generator

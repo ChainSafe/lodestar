@@ -15,10 +15,10 @@ import {
   phase0,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {toHexString} from "@chainsafe/ssz";
-import {MapDef} from "../../util/map";
-import {intersectUint8Arrays, IntersectResult} from "../../util/bitArray";
-import {pruneBySlot} from "./utils";
-import {InsertOutcome} from "./types";
+import {MapDef} from "../../util/map.js";
+import {intersectUint8Arrays, IntersectResult} from "../../util/bitArray.js";
+import {pruneBySlot} from "./utils.js";
+import {InsertOutcome} from "./types.js";
 
 type DataRootHex = string;
 

@@ -3,12 +3,12 @@ import {byteArrayEquals} from "@chainsafe/ssz";
 import {IFilterOptions} from "@chainsafe/lodestar-db";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 
-import {IBeaconDb} from "../db";
-import {getEth1DataForBlocks} from "./utils/eth1Data";
-import {assertConsecutiveDeposits} from "./utils/eth1DepositEvent";
-import {getDepositsWithProofs} from "./utils/deposits";
-import {Eth1Error, Eth1ErrorCode} from "./errors";
-import {Eth1Block} from "./interface";
+import {IBeaconDb} from "../db/index.js";
+import {getEth1DataForBlocks} from "./utils/eth1Data.js";
+import {assertConsecutiveDeposits} from "./utils/eth1DepositEvent.js";
+import {getDepositsWithProofs} from "./utils/deposits.js";
+import {Eth1Error, Eth1ErrorCode} from "./errors.js";
+import {Eth1Block} from "./interface.js";
 
 export class Eth1DepositsCache {
   unsafeAllowDepositDataOverwrite: boolean;

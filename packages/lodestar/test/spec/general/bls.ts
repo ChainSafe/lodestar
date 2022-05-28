@@ -1,8 +1,9 @@
-import bls, {CoordType, Signature} from "@chainsafe/bls";
+import bls from "@chainsafe/bls";
+import {CoordType} from "@chainsafe/bls/types";
 import {InputType} from "@chainsafe/lodestar-spec-test-util";
 import {toHexString} from "@chainsafe/lodestar-utils";
 import {fromHexString} from "@chainsafe/ssz";
-import {TestRunnerFn} from "../utils/types";
+import {TestRunnerFn} from "../utils/types.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
@@ -61,7 +62,7 @@ type BlsTestCase = {
  * ```
  */
 function aggregate(input: string[]): string {
-  const pks = input.map((pkHex) => Signature.fromHex(pkHex));
+  const pks = input.map((pkHex) => bls.Signature.fromHex(pkHex));
   const agg = bls.Signature.aggregate(pks);
   return agg.toHex();
 }

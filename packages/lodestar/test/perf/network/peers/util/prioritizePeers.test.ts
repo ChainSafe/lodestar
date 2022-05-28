@@ -1,10 +1,10 @@
-import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
-import {altair, phase0} from "@chainsafe/lodestar-types";
 import {itBench} from "@dapplion/benchmark";
 import PeerId from "peer-id";
-import {defaultNetworkOptions} from "../../../../../src/network/options";
-import {prioritizePeers, RequestedSubnet} from "../../../../../src/network/peers/utils";
-import {getAttnets, getSyncnets} from "../../../../utils/network";
+import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
+import {altair, phase0} from "@chainsafe/lodestar-types";
+import {defaultNetworkOptions} from "../../../../../src/network/options.js";
+import {prioritizePeers, RequestedSubnet} from "../../../../../src/network/peers/utils/index.js";
+import {getAttnets, getSyncnets} from "../../../../utils/network.js";
 
 describe("prioritizePeers", () => {
   const seedPeers: {id: PeerId; attnets: phase0.AttestationSubnets; syncnets: altair.SyncSubnets; score: number}[] = [];

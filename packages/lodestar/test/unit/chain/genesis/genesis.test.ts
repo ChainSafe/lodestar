@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
-import {SecretKey, PublicKey} from "@chainsafe/bls";
+import type {SecretKey, PublicKey} from "@chainsafe/bls/types";
 import {DOMAIN_DEPOSIT, MAX_EFFECTIVE_BALANCE} from "@chainsafe/lodestar-params";
 import {config} from "@chainsafe/lodestar-config/default";
 import {
@@ -13,11 +13,10 @@ import {
 import {ValidatorIndex, phase0, ssz} from "@chainsafe/lodestar-types";
 import {ErrorAborted} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
-import {AbortController} from "@chainsafe/abort-controller";
-import {GenesisBuilder} from "../../../../src/chain/genesis/genesis";
-import {testLogger} from "../../../utils/logger";
-import {ZERO_HASH_HEX} from "../../../../src/constants";
-import {EthJsonRpcBlockRaw, IEth1Provider} from "../../../../src/eth1/interface";
+import {GenesisBuilder} from "../../../../src/chain/genesis/genesis.js";
+import {testLogger} from "../../../utils/logger.js";
+import {ZERO_HASH_HEX} from "../../../../src/constants/index.js";
+import {EthJsonRpcBlockRaw, IEth1Provider} from "../../../../src/eth1/interface.js";
 
 chai.use(chaiAsPromised);
 

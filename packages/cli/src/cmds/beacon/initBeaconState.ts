@@ -1,4 +1,3 @@
-import {AbortSignal} from "@chainsafe/abort-controller";
 import {ssz} from "@chainsafe/lodestar-types";
 import {createIBeaconConfig, IBeaconConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
@@ -8,16 +7,20 @@ import {
   isWithinWeakSubjectivityPeriod,
   BeaconStateAllForks,
 } from "@chainsafe/lodestar-beacon-state-transition";
-import {IBeaconDb, IBeaconNodeOptions, initStateFromAnchorState, initStateFromEth1} from "@chainsafe/lodestar";
-// eslint-disable-next-line no-restricted-imports
-import {getStateTypeFromBytes} from "@chainsafe/lodestar/lib/util/multifork";
+import {
+  IBeaconDb,
+  IBeaconNodeOptions,
+  initStateFromAnchorState,
+  initStateFromEth1,
+  getStateTypeFromBytes,
+} from "@chainsafe/lodestar";
 import {Checkpoint} from "@chainsafe/lodestar-types/phase0";
 
-import {downloadOrLoadFile} from "../../util";
-import {IBeaconArgs} from "./options";
-import {defaultNetwork, IGlobalArgs} from "../../options/globalOptions";
-import {parseWSSArgs, WSSOptions} from "../../options/wssOptions";
-import {fetchWeakSubjectivityState, getGenesisFileUrl, getCheckpointFromArg} from "../../networks";
+import {downloadOrLoadFile} from "../../util/index.js";
+import {defaultNetwork, IGlobalArgs} from "../../options/globalOptions.js";
+import {parseWSSArgs, WSSOptions} from "../../options/wssOptions.js";
+import {fetchWeakSubjectivityState, getGenesisFileUrl, getCheckpointFromArg} from "../../networks/index.js";
+import {IBeaconArgs} from "./options.js";
 
 function getCheckpointFromState(state: BeaconStateAllForks): Checkpoint {
   return {

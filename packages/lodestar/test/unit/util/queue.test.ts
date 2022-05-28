@@ -1,9 +1,8 @@
-import {sleep} from "@chainsafe/lodestar-utils";
-import {AbortController} from "@chainsafe/abort-controller";
 import {expect} from "chai";
+import {sleep} from "@chainsafe/lodestar-utils";
 
-import {JobFnQueue, QueueError, QueueErrorCode, QueueType} from "../../../src/util/queue";
-import {expectLodestarError, expectRejectedWithLodestarError} from "../../utils/errors";
+import {JobFnQueue, QueueError, QueueErrorCode, QueueType} from "../../../src/util/queue/index.js";
+import {expectLodestarError, expectRejectedWithLodestarError} from "../../utils/errors.js";
 
 describe("Job queue", () => {
   const maxLength = 3;

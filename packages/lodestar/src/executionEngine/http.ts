@@ -1,9 +1,8 @@
-import {AbortSignal} from "@chainsafe/abort-controller";
 import {bellatrix, RootHex, Root} from "@chainsafe/lodestar-types";
 import {BYTES_PER_LOGS_BLOOM} from "@chainsafe/lodestar-params";
 import {fromHex} from "@chainsafe/lodestar-utils";
 
-import {ErrorJsonRpcResponse, HttpRpcError, JsonRpcHttpClient} from "../eth1/provider/jsonRpcHttpClient";
+import {ErrorJsonRpcResponse, HttpRpcError, JsonRpcHttpClient} from "../eth1/provider/jsonRpcHttpClient.js";
 import {
   bytesToData,
   numToQuantity,
@@ -12,8 +11,8 @@ import {
   DATA,
   QUANTITY,
   quantityToBigint,
-} from "../eth1/provider/utils";
-import {IJsonRpcHttpClient} from "../eth1/provider/jsonRpcHttpClient";
+} from "../eth1/provider/utils.js";
+import {IJsonRpcHttpClient} from "../eth1/provider/jsonRpcHttpClient.js";
 import {
   ExecutePayloadStatus,
   ExecutePayloadResponse,
@@ -22,7 +21,8 @@ import {
   PayloadId,
   PayloadAttributes,
   ApiPayloadAttributes,
-} from "./interface";
+} from "./interface.js";
+import {PayloadIdCache} from "./payloadIdCache.js";
 
 export type ExecutionEngineHttpOpts = {
   urls: string[];
@@ -56,6 +56,7 @@ export const defaultExecutionEngineHttpOpts: ExecutionEngineHttpOpts = {
  * https://github.com/ethereum/execution-apis/blob/v1.0.0-alpha.1/src/engine/interop/specification.md
  */
 export class ExecutionEngineHttp implements IExecutionEngine {
+  readonly payloadIdCache = new PayloadIdCache();
   private readonly rpc: IJsonRpcHttpClient;
 
   constructor(opts: ExecutionEngineHttpOpts, signal: AbortSignal, rpc?: IJsonRpcHttpClient) {
@@ -139,7 +140,6 @@ export class ExecutionEngineHttp implements IExecutionEngine {
         return {status, latestValidHash: null, validationError: null};
 
       case ExecutePayloadStatus.INVALID_BLOCK_HASH:
-      case ExecutePayloadStatus.INVALID_TERMINAL_BLOCK:
         return {status, latestValidHash: null, validationError: validationError ?? "Malformed block"};
 
       case ExecutePayloadStatus.UNAVAILABLE:
@@ -200,7 +200,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       ? {
           timestamp: numToQuantity(payloadAttributes.timestamp),
           prevRandao: bytesToData(payloadAttributes.prevRandao),
-          suggestedFeeRecipient: bytesToData(payloadAttributes.suggestedFeeRecipient),
+          suggestedFeeRecipient: payloadAttributes.suggestedFeeRecipient,
         }
       : undefined;
 
@@ -220,8 +220,16 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     switch (status) {
       case ExecutePayloadStatus.VALID:
         // if payloadAttributes are provided, a valid payloadId is expected
-        if (payloadAttributes && (!payloadId || payloadId === "0x")) {
-          throw Error(`Received invalid payloadId=${payloadId}`);
+        if (apiPayloadAttributes) {
+          if (!payloadId || payloadId === "0x") {
+            throw Error(`Received invalid payloadId=${payloadId}`);
+          }
+
+          this.payloadIdCache.add(
+            {headBlockHash: headBlockHashData, finalizedBlockHash, ...apiPayloadAttributes},
+            payloadId
+          );
+          void this.prunePayloadIdCache();
         }
         return payloadId !== "0x" ? payloadId : null;
 
@@ -238,13 +246,6 @@ export class ExecutionEngineHttp implements IExecutionEngine {
           `Invalid ${payloadAttributes ? "prepare payload" : "forkchoice request"}, validationError=${
             validationError ?? ""
           }`
-        );
-
-      case ExecutePayloadStatus.INVALID_TERMINAL_BLOCK:
-        throw Error(
-          `Invalid terminal block for ${
-            payloadAttributes ? "prepare payload" : "forkchoice request"
-          }, validationError=${validationError ?? ""}`
         );
 
       default:
@@ -270,6 +271,10 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     });
 
     return parseExecutionPayload(executionPayloadRpc);
+  }
+
+  async prunePayloadIdCache(): Promise<void> {
+    this.payloadIdCache.prune();
   }
 }
 

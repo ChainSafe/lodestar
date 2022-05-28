@@ -7,10 +7,10 @@ import {
   isAggregatorFromCommitteeLength,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconChain} from "..";
-import {getSelectionProofSignatureSet, getAggregateAndProofSignatureSet} from "./signatureSets";
-import {AttestationError, AttestationErrorCode, GossipAction} from "../errors";
-import {getCommitteeIndices, verifyHeadBlockAndTargetRoot, verifyPropagationSlotRange} from "./attestation";
-import {RegenCaller} from "../regen";
+import {AttestationError, AttestationErrorCode, GossipAction} from "../errors/index.js";
+import {RegenCaller} from "../regen/index.js";
+import {getSelectionProofSignatureSet, getAggregateAndProofSignatureSet} from "./signatureSets/index.js";
+import {getCommitteeIndices, verifyHeadBlockAndTargetRoot, verifyPropagationSlotRange} from "./attestation.js";
 
 export async function validateGossipAggregateAndProof(
   chain: IBeaconChain,

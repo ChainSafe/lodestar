@@ -53,10 +53,13 @@ jobs:
 
       - name: Check Types
         run: yarn run check-types
-      - name: README check
-        run: yarn run check-readme
+      # TODO: uncomment after https://github.com/bbc/typescript-docs-verifier/issues/17 is resolved
+      # - name: README check
+      #   run: yarn run check-readme
       - name: Lint
         run: yarn lint
+      - name: Check Build
+        run: yarn check-build
       - name: Unit tests
         run: yarn test:unit
       - name: Upload coverage data

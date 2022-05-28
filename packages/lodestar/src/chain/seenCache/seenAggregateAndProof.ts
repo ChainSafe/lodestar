@@ -1,8 +1,8 @@
 import {Epoch, RootHex} from "@chainsafe/lodestar-types";
 import {BitArray} from "@chainsafe/ssz";
-import {IMetrics} from "../../metrics";
-import {isSuperSetOrEqual} from "../../util/bitArray";
-import {MapDef} from "../../util/map";
+import {IMetrics} from "../../metrics/index.js";
+import {isSuperSetOrEqual} from "../../util/bitArray.js";
+import {MapDef} from "../../util/map.js";
 
 /**
  * With this gossip validation condition: [IGNORE] aggregate.data.slot is within the last ATTESTATION_PROPAGATION_SLOT_RANGE slots (with a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance)

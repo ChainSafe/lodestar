@@ -6,7 +6,6 @@ import {GENESIS_EPOCH, GENESIS_SLOT} from "@chainsafe/lodestar-params";
 import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {IBeaconConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
 import {toGindex, Tree} from "@chainsafe/persistent-merkle-tree";
-import {AbortSignal} from "@chainsafe/abort-controller";
 import {
   getTemporaryBlockHeader,
   getGenesisBeaconState,
@@ -20,11 +19,11 @@ import {
   getActiveValidatorIndices,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {IEth1Provider} from "../../eth1";
-import {IEth1StreamParams} from "../../eth1/interface";
-import {getDepositsAndBlockStreamForGenesis, getDepositsStream} from "../../eth1/stream";
-import {IGenesisBuilder, IGenesisResult} from "./interface";
-import {DepositTree} from "../../db/repositories/depositDataRoot";
+import {IEth1Provider} from "../../eth1/index.js";
+import {IEth1StreamParams} from "../../eth1/interface.js";
+import {getDepositsAndBlockStreamForGenesis, getDepositsStream} from "../../eth1/stream.js";
+import {DepositTree} from "../../db/repositories/depositDataRoot.js";
+import {IGenesisBuilder, IGenesisResult} from "./interface.js";
 
 export interface IGenesisBuilderKwargs {
   config: IChainForkConfig;

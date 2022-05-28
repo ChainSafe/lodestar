@@ -1,7 +1,7 @@
 import PeerId from "peer-id";
-import {MapDef, pruneSetToMax} from "../../util/map";
-import {gossipScoreThresholds} from "../gossip/scoringParameters";
-import {IMetrics} from "../../metrics";
+import {MapDef, pruneSetToMax} from "../../util/map.js";
+import {gossipScoreThresholds} from "../gossip/scoringParameters.js";
+import {IMetrics} from "../../metrics/index.js";
 
 /** The default score for new peers */
 const DEFAULT_SCORE = 0;

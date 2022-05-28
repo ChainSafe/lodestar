@@ -2,7 +2,7 @@
  * @module metrics
  */
 
-import {HttpMetricsServerOpts} from "./server";
+import {HttpMetricsServerOpts} from "./server/index.js";
 
 export type LodestarMetadata = {
   /** "v0.16.0/developer/feature-1/ac99f2b5" */

@@ -1,15 +1,15 @@
+import {expect} from "chai";
 import {AbortController} from "@chainsafe/abort-controller";
 import {IChainConfig} from "@chainsafe/lodestar-config";
 import {sleep} from "@chainsafe/lodestar-utils";
 import {fromHexString} from "@chainsafe/ssz";
-import {expect} from "chai";
-import {Eth1Provider, IEth1Provider} from "../../../src";
-import {Eth1MergeBlockTracker, StatusCode} from "../../../src/eth1/eth1MergeBlockTracker";
-import {Eth1Options} from "../../../src/eth1/options";
-import {testLogger} from "../../utils/logger";
-import {quantityToBigint} from "../../../src/eth1/provider/utils";
-import {ZERO_HASH} from "../../../src/constants";
-import {getGoerliRpcUrl} from "../../testParams";
+import {Eth1Provider, IEth1Provider} from "../../../src/index.js";
+import {Eth1MergeBlockTracker, StatusCode} from "../../../src/eth1/eth1MergeBlockTracker.js";
+import {Eth1Options} from "../../../src/eth1/options.js";
+import {testLogger} from "../../utils/logger.js";
+import {quantityToBigint} from "../../../src/eth1/provider/utils.js";
+import {ZERO_HASH} from "../../../src/constants/index.js";
+import {getGoerliRpcUrl} from "../../testParams.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 

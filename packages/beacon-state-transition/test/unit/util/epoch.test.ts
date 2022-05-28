@@ -8,9 +8,9 @@ import {
   computeActivationExitEpoch,
   computeEpochAtSlot,
   computeEndSlotForEpoch,
-} from "../../../src/util";
+} from "../../../src/util/index.js";
 
-import {generateState} from "../../utils/state";
+import {generateState} from "../../utils/state.js";
 
 describe("computeEpochAtSlot", () => {
   const pairs = [

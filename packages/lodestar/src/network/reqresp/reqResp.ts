@@ -3,26 +3,26 @@
  */
 import {Connection} from "libp2p";
 import {HandlerProps} from "libp2p/src/registrar";
+import LibP2p from "libp2p";
+import PeerId from "peer-id";
 import {ForkName} from "@chainsafe/lodestar-params";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {allForks, phase0} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {AbortController} from "@chainsafe/abort-controller";
-import LibP2p from "libp2p";
-import PeerId from "peer-id";
-import {RespStatus, timeoutOptions} from "../../constants";
-import {IReqResp, IReqRespModules, IRateLimiter, Libp2pStream} from "./interface";
-import {sendRequest} from "./request";
-import {handleRequest, ResponseError} from "./response";
-import {onOutgoingReqRespError} from "./score";
-import {IPeerRpcScoreStore} from "../peers";
-import {assertSequentialBlocksInRange, formatProtocolId} from "./utils";
-import {MetadataController} from "../metadata";
-import {INetworkEventBus, NetworkEvent} from "../events";
-import {PeersData} from "../peers/peersData";
-import {ReqRespHandlers} from "./handlers";
-import {IMetrics} from "../../metrics";
-import {RequestError, RequestErrorCode} from "./request";
+import {RespStatus, timeoutOptions} from "../../constants/index.js";
+import {IPeerRpcScoreStore} from "../peers/index.js";
+import {MetadataController} from "../metadata.js";
+import {INetworkEventBus, NetworkEvent} from "../events.js";
+import {PeersData} from "../peers/peersData.js";
+import {IMetrics} from "../../metrics/index.js";
+import {IReqResp, IReqRespModules, IRateLimiter, Libp2pStream} from "./interface.js";
+import {sendRequest} from "./request/index.js";
+import {handleRequest, ResponseError} from "./response/index.js";
+import {onOutgoingReqRespError} from "./score.js";
+import {assertSequentialBlocksInRange, formatProtocolId} from "./utils/index.js";
+import {ReqRespHandlers} from "./handlers/index.js";
+import {RequestError, RequestErrorCode} from "./request/index.js";
 import {
   Method,
   Version,
@@ -33,8 +33,8 @@ import {
   RequestTypedContainer,
   protocolsSupported,
   IncomingResponseBody,
-} from "./types";
-import {InboundRateLimiter, RateLimiterOpts} from "./response/rateLimiter";
+} from "./types.js";
+import {InboundRateLimiter, RateLimiterOpts} from "./response/rateLimiter.js";
 
 export type IReqRespOptions = Partial<typeof timeoutOptions>;
 

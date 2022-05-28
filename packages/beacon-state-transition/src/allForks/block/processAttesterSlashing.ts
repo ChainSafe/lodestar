@@ -1,10 +1,10 @@
 import {phase0} from "@chainsafe/lodestar-types";
 import {ForkName} from "@chainsafe/lodestar-params";
 
-import {isSlashableValidator, isSlashableAttestationData, getAttesterSlashableIndices} from "../../util";
-import {CachedBeaconStateAllForks} from "../../types";
-import {slashValidatorAllForks} from "./slashValidator";
-import {isValidIndexedAttestationBigint} from "./isValidIndexedAttestation";
+import {isSlashableValidator, isSlashableAttestationData, getAttesterSlashableIndices} from "../../util/index.js";
+import {CachedBeaconStateAllForks} from "../../types.js";
+import {slashValidatorAllForks} from "./slashValidator.js";
+import {isValidIndexedAttestationBigint} from "./isValidIndexedAttestation.js";
 
 /**
  * Process an AttesterSlashing operation. Initiates the exit of a validator, decreases the balance of the slashed

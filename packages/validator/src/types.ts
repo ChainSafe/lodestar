@@ -1,7 +1,7 @@
 /**
  * @module validator
  */
-import {SecretKey} from "@chainsafe/bls";
+import type {SecretKey} from "@chainsafe/bls/types";
 import {BLSPubkey} from "@chainsafe/lodestar-types";
 import {IDatabaseController} from "@chainsafe/lodestar-db";
 

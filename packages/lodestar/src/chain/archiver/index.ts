@@ -1,12 +1,12 @@
-import {AbortSignal} from "@chainsafe/abort-controller";
 import {ILogger} from "@chainsafe/lodestar-utils";
 
-import {IBeaconDb} from "../../db";
-import {ChainEvent, IBeaconChain} from "..";
-import {archiveBlocks} from "./archiveBlocks";
-import {StatesArchiver} from "./archiveStates";
-import {JobItemQueue} from "../../util/queue";
 import {CheckpointWithHex} from "@chainsafe/lodestar-fork-choice";
+import {IBeaconDb} from "../../db/index.js";
+import {JobItemQueue} from "../../util/queue/index.js";
+import {IBeaconChain} from "../interface.js";
+import {ChainEvent} from "../emitter.js";
+import {StatesArchiver} from "./archiveStates.js";
+import {archiveBlocks} from "./archiveBlocks.js";
 
 const PROCESS_FINALIZED_CHECKPOINT_QUEUE_LEN = 256;
 

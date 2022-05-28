@@ -1,10 +1,10 @@
 import {phase0, ssz} from "@chainsafe/lodestar-types";
 
-import {computeEpochAtSlot} from "../../util";
-import {CachedBeaconStatePhase0, CachedBeaconStateAllForks} from "../../types";
-import {isValidIndexedAttestation} from "../../allForks/block";
 import {MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {toHexString} from "@chainsafe/ssz";
+import {computeEpochAtSlot} from "../../util/index.js";
+import {CachedBeaconStatePhase0, CachedBeaconStateAllForks} from "../../types.js";
+import {isValidIndexedAttestation} from "../../allForks/block/index.js";
 
 /**
  * Process an Attestation operation. Validates an attestation and appends it to state.currentEpochAttestations or

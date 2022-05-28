@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {batchItems} from "../../../src/util/batch";
+import {batchItems} from "../../../src/util/batch.js";
 
 describe("util / batch", function () {
   const testCases: {items: string[]; expected: string[][]}[] = [

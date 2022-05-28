@@ -1,4 +1,4 @@
-import {SecretKey} from "@chainsafe/bls";
+import type {SecretKey} from "@chainsafe/bls/types";
 import {toHexString} from "@chainsafe/ssz";
 
 export function memoOnce<R>(fn: () => R): () => R {

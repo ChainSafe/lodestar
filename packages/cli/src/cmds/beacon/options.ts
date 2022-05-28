@@ -8,9 +8,9 @@ import {
   enrOptions,
   IWSSArgs,
   wssOptions,
-} from "../../options";
-import {defaultBeaconPaths, IBeaconPaths} from "./paths";
-import {ICliCommandOptions, ILogArgs} from "../../util";
+} from "../../options/index.js";
+import {ICliCommandOptions, ILogArgs} from "../../util/index.js";
+import {defaultBeaconPaths, IBeaconPaths} from "./paths.js";
 
 interface IBeaconExtraArgs {
   port?: number;
@@ -98,7 +98,7 @@ export const beaconPathsOptions: ICliCommandOptions<IBeaconPaths> = {
   },
 
   persistInvalidSszObjectsDir: {
-    description: "Directory to persist invalid ssz objects",
+    description: "Enable and specify a directory to persist invalid ssz objects",
     defaultDescription: defaultBeaconPaths.persistInvalidSszObjectsDir,
     hidden: true,
     type: "string",

@@ -1,9 +1,9 @@
 import {bellatrix, ssz} from "@chainsafe/lodestar-types";
 import {toHexString, byteArrayEquals} from "@chainsafe/ssz";
-import {CachedBeaconStateBellatrix} from "../../types";
-import {getRandaoMix} from "../../util";
-import {ExecutionEngine} from "../executionEngine";
-import {isMergeTransitionComplete} from "../utils";
+import {CachedBeaconStateBellatrix} from "../../types.js";
+import {getRandaoMix} from "../../util/index.js";
+import {ExecutionEngine} from "../executionEngine.js";
+import {isMergeTransitionComplete} from "../utils.js";
 
 export function processExecutionPayload(
   state: CachedBeaconStateBellatrix,

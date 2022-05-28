@@ -13,14 +13,14 @@ import {
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IChainConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
 
-import {computeDeltas} from "../protoArray/computeDeltas";
-import {HEX_ZERO_HASH, IVoteTracker, IProtoBlock, ExecutionStatus} from "../protoArray/interface";
-import {ProtoArray} from "../protoArray/protoArray";
+import {computeDeltas} from "../protoArray/computeDeltas.js";
+import {HEX_ZERO_HASH, IVoteTracker, IProtoBlock, ExecutionStatus} from "../protoArray/interface.js";
+import {ProtoArray} from "../protoArray/protoArray.js";
 
-import {IForkChoiceMetrics} from "../metrics";
-import {ForkChoiceError, ForkChoiceErrorCode, InvalidBlockCode, InvalidAttestationCode} from "./errors";
-import {IForkChoice, ILatestMessage, IQueuedAttestation, OnBlockPrecachedData, PowBlockHex} from "./interface";
-import {IForkChoiceStore, CheckpointWithHex, toCheckpointWithHex} from "./store";
+import {IForkChoiceMetrics} from "../metrics.js";
+import {ForkChoiceError, ForkChoiceErrorCode, InvalidBlockCode, InvalidAttestationCode} from "./errors.js";
+import {IForkChoice, ILatestMessage, IQueuedAttestation, OnBlockPrecachedData, PowBlockHex} from "./interface.js";
+import {IForkChoiceStore, CheckpointWithHex, toCheckpointWithHex} from "./store.js";
 
 /* eslint-disable max-len */
 
@@ -182,7 +182,9 @@ export class ForkChoice implements IForkChoice {
 
       // Check if scores need to be calculated/updated
       if (!this.synced) {
+        // eslint-disable-next-line prefer-const
         timer = this.metrics?.forkChoiceFindHead.startTimer();
+        // eslint-disable-next-line prefer-const
         deltas = computeDeltas(this.protoArray.indices, this.votes, this.justifiedBalances, this.justifiedBalances);
         /**
          * The structure in line with deltas to propogate boost up the branch
@@ -503,6 +505,7 @@ export class ForkChoice implements IForkChoice {
    * Call `onTick` for all slots between `fcStore.getCurrentSlot()` and the provided `currentSlot`.
    */
   updateTime(currentSlot: Slot): void {
+    if (this.fcStore.currentSlot >= currentSlot) return;
     while (this.fcStore.currentSlot < currentSlot) {
       const previousSlot = this.fcStore.currentSlot;
       // Note: we are relying upon `onTick` to update `fcStore.time` to ensure we don't get stuck in a loop.
@@ -949,7 +952,8 @@ export class ForkChoice implements IForkChoice {
   private processAttestationQueue(): void {
     const currentSlot = this.fcStore.currentSlot;
     for (const attestation of this.queuedAttestations.values()) {
-      if (attestation.slot <= currentSlot) {
+      // Delay consideration in the fork choice until their slot is in the past.
+      if (attestation.slot < currentSlot) {
         this.queuedAttestations.delete(attestation);
         const {blockRoot, targetEpoch} = attestation;
         const blockRootHex = blockRoot;

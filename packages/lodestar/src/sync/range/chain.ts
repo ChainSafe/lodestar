@@ -4,15 +4,15 @@ import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transiti
 import {ErrorAborted, ILogger} from "@chainsafe/lodestar-utils";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {toHexString} from "@chainsafe/ssz";
-import {PeerAction} from "../../network";
-import {ChainSegmentError} from "../../chain/errors";
-import {ItTrigger} from "../../util/itTrigger";
-import {byteArrayEquals} from "../../util/bytes";
-import {PeerMap} from "../../util/peerMap";
-import {wrapError} from "../../util/wrapError";
-import {RangeSyncType} from "../utils/remoteSyncType";
-import {BATCH_BUFFER_SIZE, EPOCHS_PER_BATCH, BATCH_SLOT_OFFSET} from "../constants";
-import {Batch, BatchError, BatchErrorCode, BatchMetadata, BatchOpts, BatchStatus} from "./batch";
+import {PeerAction} from "../../network/index.js";
+import {ChainSegmentError} from "../../chain/errors/index.js";
+import {ItTrigger} from "../../util/itTrigger.js";
+import {byteArrayEquals} from "../../util/bytes.js";
+import {PeerMap} from "../../util/peerMap.js";
+import {wrapError} from "../../util/wrapError.js";
+import {RangeSyncType} from "../utils/remoteSyncType.js";
+import {BATCH_BUFFER_SIZE, EPOCHS_PER_BATCH, BATCH_SLOT_OFFSET} from "../constants.js";
+import {Batch, BatchError, BatchErrorCode, BatchMetadata, BatchOpts, BatchStatus} from "./batch.js";
 import {
   validateBatchesStatus,
   getNextBatchToProcess,
@@ -21,7 +21,7 @@ import {
   toArr,
   ChainPeersBalancer,
   computeMostCommonTarget,
-} from "./utils";
+} from "./utils/index.js";
 
 export type SyncChainOpts = Partial<BatchOpts>;
 

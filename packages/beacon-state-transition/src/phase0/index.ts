@@ -1,5 +1,5 @@
-export * from "./block";
-export * from "./epoch";
+export * from "./block/index.js";
+export * from "./epoch/index.js";
 
 // re-export phase0 lodestar types for ergonomic usage downstream
 // eg:

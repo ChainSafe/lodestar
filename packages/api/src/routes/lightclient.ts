@@ -12,9 +12,9 @@ import {
   ReqSerializers,
   reqEmpty,
   ReqEmpty,
-} from "../utils";
-import {queryParseProofPathsArr, querySerializeProofPathsArr} from "../utils/serdes";
-import {LightclientHeaderUpdate, LightclientFinalizedUpdate} from "./events";
+} from "../utils/index.js";
+import {queryParseProofPathsArr, querySerializeProofPathsArr} from "../utils/serdes.js";
+import {LightclientHeaderUpdate, LightclientFinalizedUpdate} from "./events.js";
 
 // Re-export for convenience when importing routes.lightclient.LightclientHeaderUpdate
 export {LightclientHeaderUpdate, LightclientFinalizedUpdate};

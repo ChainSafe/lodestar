@@ -1,6 +1,6 @@
 import {Epoch} from "@chainsafe/lodestar-types";
 import {LodestarError} from "@chainsafe/lodestar-utils";
-import {SlashingProtectionAttestation} from "../types";
+import {SlashingProtectionAttestation} from "../types.js";
 
 export enum InvalidAttestationErrorCode {
   /**

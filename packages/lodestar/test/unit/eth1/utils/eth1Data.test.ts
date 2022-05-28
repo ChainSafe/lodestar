@@ -1,18 +1,18 @@
 import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
-import {pick} from "lodash";
+import pick from "lodash/pick.js";
 import {Root, phase0, ssz} from "@chainsafe/lodestar-types";
 import {toHex} from "@chainsafe/lodestar-utils";
-import {iteratorFromArray} from "../../../utils/interator";
+import {iteratorFromArray} from "../../../utils/interator.js";
 import {
   getEth1DataForBlocks,
   getDepositsByBlockNumber,
   getDepositRootByDepositCount,
-} from "../../../../src/eth1/utils/eth1Data";
-import {Eth1Block} from "../../../../src/eth1/interface";
-import {expectRejectedWithLodestarError} from "../../../utils/errors";
-import {Eth1ErrorCode} from "../../../../src/eth1/errors";
-import {DepositTree} from "../../../../src/db/repositories/depositDataRoot";
+} from "../../../../src/eth1/utils/eth1Data.js";
+import {Eth1Block} from "../../../../src/eth1/interface.js";
+import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
+import {Eth1ErrorCode} from "../../../../src/eth1/errors.js";
+import {DepositTree} from "../../../../src/db/repositories/depositDataRoot.js";
 
 chai.use(chaiAsPromised);
 

@@ -2,8 +2,8 @@ import {allForks, CachedBeaconStateAllForks, ISignatureSet} from "@chainsafe/lod
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Root, allForks as allForkTypes, ssz, Slot} from "@chainsafe/lodestar-types";
 import {GENESIS_SLOT} from "@chainsafe/lodestar-params";
-import {IBlsVerifier} from "../../chain/bls";
-import {BackfillSyncError, BackfillSyncErrorCode} from "./errors";
+import {IBlsVerifier} from "../../chain/bls/index.js";
+import {BackfillSyncError, BackfillSyncErrorCode} from "./errors.js";
 
 export type BackfillBlockHeader = {
   slot: Slot;

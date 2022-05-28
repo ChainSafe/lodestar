@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {chunkifyInclusiveRange} from "../../../src/util/chunkify";
+import {chunkifyInclusiveRange} from "../../../src/util/chunkify.js";
 
 describe("chunkifyInclusiveRange", () => {
   const testCases: {

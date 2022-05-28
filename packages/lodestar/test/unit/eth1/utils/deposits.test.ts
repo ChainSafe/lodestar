@@ -3,13 +3,13 @@ import chaiAsPromised from "chai-as-promised";
 import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {MAX_DEPOSITS} from "@chainsafe/lodestar-params";
 import {verifyMerkleBranch} from "@chainsafe/lodestar-utils";
-import {filterBy} from "../../../utils/db";
-import {Eth1ErrorCode} from "../../../../src/eth1/errors";
-import {generateDepositData, generateDepositEvent} from "../../../utils/deposit";
-import {generateState} from "../../../utils/state";
-import {expectRejectedWithLodestarError} from "../../../utils/errors";
-import {getDeposits, getDepositsWithProofs, DepositGetter} from "../../../../src/eth1/utils/deposits";
-import {DepositTree} from "../../../../src/db/repositories/depositDataRoot";
+import {filterBy} from "../../../utils/db.js";
+import {Eth1ErrorCode} from "../../../../src/eth1/errors.js";
+import {generateDepositData, generateDepositEvent} from "../../../utils/deposit.js";
+import {generateState} from "../../../utils/state.js";
+import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
+import {getDeposits, getDepositsWithProofs, DepositGetter} from "../../../../src/eth1/utils/deposits.js";
+import {DepositTree} from "../../../../src/db/repositories/depositDataRoot.js";
 
 chai.use(chaiAsPromised);
 

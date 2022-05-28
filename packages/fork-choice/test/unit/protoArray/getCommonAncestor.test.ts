@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {ProtoArray, ExecutionStatus} from "../../../src";
+import {ProtoArray, ExecutionStatus} from "../../../src/index.js";
 
 describe("getCommonAncestor", () => {
   const blocks: {slot: number; root: string; parent: string}[] = [

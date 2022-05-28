@@ -1,6 +1,6 @@
 import path from "node:path";
-import {IGlobalArgs} from "../../options";
-import {getGlobalPaths, IGlobalPaths} from "../../paths/global";
+import {IGlobalArgs} from "../../options/index.js";
+import {getGlobalPaths, IGlobalPaths} from "../../paths/global.js";
 
 export interface IBeaconPaths {
   beaconDir: string;

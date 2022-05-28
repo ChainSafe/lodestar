@@ -1,14 +1,13 @@
-import {AbortSignal} from "@chainsafe/abort-controller";
 import {phase0, Slot, allForks, RootHex} from "@chainsafe/lodestar-types";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {CachedBeaconStateAllForks, computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
-import {CheckpointStateCache, StateContextCache, toCheckpointHex} from "../stateCache";
-import {IMetrics} from "../../metrics";
-import {JobItemQueue} from "../../util/queue";
-import {IStateRegenerator, RegenCaller, RegenFnName} from "./interface";
-import {StateRegenerator, RegenModules} from "./regen";
-import {RegenError, RegenErrorCode} from "./errors";
 import {toHexString} from "@chainsafe/ssz";
+import {CheckpointStateCache, StateContextCache, toCheckpointHex} from "../stateCache/index.js";
+import {IMetrics} from "../../metrics/index.js";
+import {JobItemQueue} from "../../util/queue/index.js";
+import {IStateRegenerator, RegenCaller, RegenFnName} from "./interface.js";
+import {StateRegenerator, RegenModules} from "./regen.js";
+import {RegenError, RegenErrorCode} from "./errors.js";
 
 const REGEN_QUEUE_MAX_LEN = 256;
 

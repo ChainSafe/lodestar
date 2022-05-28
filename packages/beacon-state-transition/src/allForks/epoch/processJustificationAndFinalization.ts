@@ -1,8 +1,8 @@
 import {GENESIS_EPOCH} from "@chainsafe/lodestar-params";
 import {BitArray} from "@chainsafe/ssz";
 import {ssz} from "@chainsafe/lodestar-types";
-import {getBlockRoot} from "../../util";
-import {CachedBeaconStateAllForks, EpochProcess} from "../../types";
+import {getBlockRoot} from "../../util/index.js";
+import {CachedBeaconStateAllForks, EpochProcess} from "../../types.js";
 
 /**
  * Update justified and finalized checkpoints depending on network participation.

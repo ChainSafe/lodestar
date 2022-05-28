@@ -1,18 +1,18 @@
-import fastify, {FastifyError, FastifyInstance} from "fastify";
-import fastifyCors from "fastify-cors";
-import bearerAuthPlugin from "fastify-bearer-auth";
 import querystring from "querystring";
 import {IncomingMessage} from "node:http";
 import crypto from "node:crypto";
 import fs from "node:fs";
+import {join} from "node:path";
+import fastify, {FastifyError, FastifyInstance} from "fastify";
+import fastifyCors from "fastify-cors";
+import bearerAuthPlugin from "fastify-bearer-auth";
 import {toHexString} from "@chainsafe/ssz";
 export {allNamespaces} from "@chainsafe/lodestar-api";
 import {Api} from "@chainsafe/lodestar-api/keymanager";
-import {getRoutes} from "@chainsafe/lodestar-api/keymanager_server";
+import {getRoutes} from "@chainsafe/lodestar-api/keymanager/server";
 import {registerRoutesGroup, RouteConfig} from "@chainsafe/lodestar-api/server";
 import {ErrorAborted, ILogger} from "@chainsafe/lodestar-utils";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import {join} from "node:path";
 
 export type RestApiOptions = {
   host: string;

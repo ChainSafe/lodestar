@@ -3,12 +3,12 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ForkName, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 import {Epoch, ssz} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {ChainEvent, IBeaconChain} from "../../chain";
-import {getActiveForks} from "../forks";
-import {Eth2Gossipsub, GossipType} from "../gossip";
-import {MetadataController} from "../metadata";
-import {RequestedSubnet, SubnetMap} from "../peers/utils";
-import {CommitteeSubscription, ISubnetsService, SubnetsServiceOpts} from "./interface";
+import {ChainEvent, IBeaconChain} from "../../chain/index.js";
+import {getActiveForks} from "../forks.js";
+import {Eth2Gossipsub, GossipType} from "../gossip/index.js";
+import {MetadataController} from "../metadata.js";
+import {RequestedSubnet, SubnetMap} from "../peers/utils/index.js";
+import {CommitteeSubscription, ISubnetsService, SubnetsServiceOpts} from "./interface.js";
 
 const gossipType = GossipType.sync_committee;
 

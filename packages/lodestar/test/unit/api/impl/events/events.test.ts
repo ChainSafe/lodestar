@@ -1,14 +1,14 @@
-import {AbortController} from "@chainsafe/abort-controller";
 import {expect} from "chai";
 import sinon, {SinonStubbedInstance} from "sinon";
+import {AbortController} from "@chainsafe/abort-controller";
 import {routes} from "@chainsafe/lodestar-api";
 import {config} from "@chainsafe/lodestar-config/default";
-import {BeaconChain, ChainEvent, ChainEventEmitter, IBeaconChain} from "../../../../../src/chain";
-import {getEventsApi} from "../../../../../src/api/impl/events";
-import {generateProtoBlock, generateEmptySignedBlock, generateSignedBlock} from "../../../../utils/block";
-import {generateAttestation, generateEmptySignedVoluntaryExit} from "../../../../utils/attestation";
-import {generateCachedState} from "../../../../utils/state";
-import {StateContextCache} from "../../../../../src/chain/stateCache";
+import {BeaconChain, ChainEvent, ChainEventEmitter, IBeaconChain} from "../../../../../src/chain/index.js";
+import {getEventsApi} from "../../../../../src/api/impl/events/index.js";
+import {generateProtoBlock, generateEmptySignedBlock, generateSignedBlock} from "../../../../utils/block.js";
+import {generateAttestation, generateEmptySignedVoluntaryExit} from "../../../../utils/attestation.js";
+import {generateCachedState} from "../../../../utils/state.js";
+import {StateContextCache} from "../../../../../src/chain/stateCache/index.js";
 
 describe("Events api impl", function () {
   describe("beacon event stream", function () {

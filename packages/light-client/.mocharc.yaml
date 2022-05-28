@@ -1,6 +1,6 @@
 colors: true
-require:
-  - ts-node/register
-  - ./test/setup.ts
 timeout: 5000
 exit: true
+extension: ["ts"]
+node-option:
+  - "loader=ts-node/esm"

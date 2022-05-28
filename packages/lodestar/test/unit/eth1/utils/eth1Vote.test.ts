@@ -3,14 +3,14 @@ import {config} from "@chainsafe/lodestar-config/default";
 import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {BeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
-import {generateState} from "../../../utils/state";
-import {filterBy} from "../../../utils/db";
+import {generateState} from "../../../utils/state.js";
+import {filterBy} from "../../../utils/db.js";
 import {
   getEth1VotesToConsider,
   pickEth1Vote,
   votingPeriodStartTime,
   Eth1DataGetter,
-} from "../../../../src/eth1/utils/eth1Vote";
+} from "../../../../src/eth1/utils/eth1Vote.js";
 
 describe("eth1 / util / eth1Vote", function () {
   function generateEth1Vote(i: number): phase0.Eth1Data {

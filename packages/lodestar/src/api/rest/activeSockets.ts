@@ -1,6 +1,6 @@
 import http, {Server} from "node:http";
 import {Socket} from "node:net";
-import {IGauge} from "../../metrics";
+import {IGauge} from "../../metrics/index.js";
 
 type SocketMetrics = {
   activeSockets: IGauge;

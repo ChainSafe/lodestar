@@ -1,5 +1,5 @@
-import {TimeoutError} from "@chainsafe/lodestar-utils";
 import {EventEmitter} from "events";
+import {TimeoutError} from "@chainsafe/lodestar-utils";
 
 export function waitForEvent<T>(
   emitter: EventEmitter,

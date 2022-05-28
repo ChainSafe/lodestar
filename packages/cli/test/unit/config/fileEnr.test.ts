@@ -1,11 +1,11 @@
-import {toHexString} from "@chainsafe/ssz";
+import {existsSync} from "node:fs";
 import {expect} from "chai";
 import {before, after} from "mocha";
-import {existsSync} from "node:fs";
 import rimraf from "rimraf";
-import {initEnr, initPeerId, readPeerId, FileENR} from "../../../src/config";
-import {testFilesDir} from "../../utils";
-import {getBeaconPaths} from "../../../src/cmds/beacon/paths";
+import {toHexString} from "@chainsafe/ssz";
+import {initEnr, initPeerId, readPeerId, FileENR} from "../../../src/config/index.js";
+import {testFilesDir} from "../../utils.js";
+import {getBeaconPaths} from "../../../src/cmds/beacon/paths.js";
 
 describe("fileENR", function () {
   const rootDir = testFilesDir;

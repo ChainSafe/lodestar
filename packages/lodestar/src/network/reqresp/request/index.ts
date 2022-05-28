@@ -1,27 +1,27 @@
-import {AbortSignal} from "@chainsafe/abort-controller";
 import pipe from "it-pipe";
 import PeerId from "peer-id";
 import {Libp2p} from "libp2p/src/connection-manager";
+import {AbortSignal} from "@chainsafe/abort-controller";
 import {IForkDigestContext} from "@chainsafe/lodestar-config";
 import {ErrorAborted, ILogger, withTimeout, TimeoutError} from "@chainsafe/lodestar-utils";
-import {timeoutOptions} from "../../../constants";
-import {prettyPrintPeerId} from "../../util";
-import {PeersData} from "../../peers/peersData";
-import {Method, Encoding, Protocol, Version, IncomingResponseBody, RequestBody} from "../types";
-import {formatProtocolId, renderRequestBody} from "../utils";
-import {ResponseError} from "../response";
-import {requestEncode} from "../encoders/requestEncode";
-import {responseDecode} from "../encoders/responseDecode";
-import {Libp2pConnection} from "../interface";
-import {collectResponses} from "./collectResponses";
-import {maxTotalResponseTimeout, responseTimeoutsHandler} from "./responseTimeoutsHandler";
+import {timeoutOptions} from "../../../constants/index.js";
+import {prettyPrintPeerId} from "../../util.js";
+import {PeersData} from "../../peers/peersData.js";
+import {Method, Encoding, Protocol, Version, IncomingResponseBody, RequestBody} from "../types.js";
+import {formatProtocolId, renderRequestBody} from "../utils/index.js";
+import {ResponseError} from "../response/index.js";
+import {requestEncode} from "../encoders/requestEncode.js";
+import {responseDecode} from "../encoders/responseDecode.js";
+import {Libp2pConnection} from "../interface.js";
+import {collectResponses} from "./collectResponses.js";
+import {maxTotalResponseTimeout, responseTimeoutsHandler} from "./responseTimeoutsHandler.js";
 import {
   RequestError,
   RequestErrorCode,
   RequestInternalError,
   IRequestErrorMetadata,
   responseStatusErrorToRequestError,
-} from "./errors";
+} from "./errors.js";
 
 export {RequestError, RequestErrorCode};
 

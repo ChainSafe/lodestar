@@ -1,14 +1,14 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {fromHexString as b} from "@chainsafe/ssz";
 import {PresetName} from "@chainsafe/lodestar-params";
-import {IChainConfig} from "../types";
+import {IChainConfig} from "../types.js";
 
 export const chainConfig: IChainConfig = {
   PRESET_BASE: PresetName.mainnet,
 
   // Transition
   // TBD, 2**256-1 is a placeholder
-  TERMINAL_TOTAL_DIFFICULTY: BigInt(115792089237316195423570985008687907853269984665640564039457584007913129639935),
+  TERMINAL_TOTAL_DIFFICULTY: BigInt("115792089237316195423570985008687907853269984665640564039457584007913129639935"),
   TERMINAL_BLOCK_HASH: b("0x0000000000000000000000000000000000000000000000000000000000000000"),
   TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH: Infinity,
 
@@ -64,7 +64,7 @@ export const chainConfig: IChainConfig = {
   MIN_PER_EPOCH_CHURN_LIMIT: 4,
   // 2**16 (= 65,536)
   CHURN_LIMIT_QUOTIENT: 65536,
-  PROPOSER_SCORE_BOOST: 70,
+  PROPOSER_SCORE_BOOST: 40,
 
   // Deposit contract
   // ---------------------------------------------------------------

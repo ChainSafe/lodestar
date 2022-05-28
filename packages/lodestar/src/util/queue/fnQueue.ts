@@ -1,5 +1,5 @@
-import {JobItemQueue} from "./itemQueue";
-import {IQueueMetrics, JobQueueOpts} from "./options";
+import {JobItemQueue} from "./itemQueue.js";
+import {IQueueMetrics, JobQueueOpts} from "./options.js";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Fn<R> = (...args: any) => Promise<R>;

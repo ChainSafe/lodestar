@@ -1,5 +1,5 @@
-import {ICliCommandOptions} from "../util";
 import {restApiOptionsDefault} from "@chainsafe/lodestar-keymanager-server";
+import {ICliCommandOptions} from "../util/index.js";
 
 export type KeymanagerArgs = {
   keymanagerEnabled?: boolean;

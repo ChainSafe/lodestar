@@ -1,10 +1,10 @@
 import {Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {ContributionAndProof, SyncCommitteeContribution} from "@chainsafe/lodestar-types/altair";
 import {toHexString} from "@chainsafe/ssz";
-import {IMetrics} from "../../metrics";
-import {isSuperSetOrEqual} from "../../util/bitArray";
-import {MapDef} from "../../util/map";
-import {AggregationInfo, insertDesc} from "./seenAggregateAndProof";
+import {IMetrics} from "../../metrics/index.js";
+import {isSuperSetOrEqual} from "../../util/bitArray.js";
+import {MapDef} from "../../util/map.js";
+import {AggregationInfo, insertDesc} from "./seenAggregateAndProof.js";
 
 /**
  * SyncCommittee aggregates are only useful for the next block they have signed.

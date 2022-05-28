@@ -1,5 +1,5 @@
 import {ssz} from "@chainsafe/lodestar-types";
-import {CachedBeaconStatePhase0} from "../../types";
+import {CachedBeaconStatePhase0} from "../../types.js";
 
 /**
  * PERF: Should have zero cost. It just moves a rootNode from one key to another. Then it creates an empty tree on the

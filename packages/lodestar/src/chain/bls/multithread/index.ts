@@ -1,22 +1,23 @@
 /* eslint-disable @typescript-eslint/strict-boolean-expressions */
-import {spawn, Worker} from "threads";
+import {spawn, Worker} from "@chainsafe/threads";
 // `threads` library creates self global variable which breaks `timeout-abort-controller` https://github.com/jacobheun/timeout-abort-controller/issues/9
 // Don't add an eslint disable here as a reminder that this has to be fixed eventually
 // eslint-disable-next-line
 // @ts-ignore
 // eslint-disable-next-line
 self = undefined;
-import {AbortSignal} from "@chainsafe/abort-controller";
-import {bls, Implementation, PointFormat} from "@chainsafe/bls";
+import bls from "@chainsafe/bls";
+import {Implementation, PointFormat} from "@chainsafe/bls/types";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {QueueError, QueueErrorCode} from "../../../util/queue";
-import {IMetrics} from "../../../metrics";
-import {IBlsVerifier, VerifySignatureOpts} from "../interface";
-import {BlsWorkReq, BlsWorkResult, WorkerData, WorkResultCode} from "./types";
-import {chunkifyMaximizeChunkSize, getDefaultPoolSize} from "./utils";
 import {ISignatureSet} from "@chainsafe/lodestar-beacon-state-transition";
-import {getAggregatedPubkey} from "../utils";
-import {verifySignatureSetsMaybeBatch} from "../maybeBatch";
+import {QueueError, QueueErrorCode} from "../../../util/queue/index.js";
+import {IMetrics} from "../../../metrics/index.js";
+import {IBlsVerifier, VerifySignatureOpts} from "../interface.js";
+import {getAggregatedPubkey} from "../utils.js";
+import {verifySignatureSetsMaybeBatch} from "../maybeBatch.js";
+import {BlsWorkReq, BlsWorkResult, WorkerData, WorkResultCode} from "./types.js";
+import {chunkifyMaximizeChunkSize} from "./utils.js";
+import {defaultPoolSize} from "./poolSize.js";
 
 export type BlsMultiThreadWorkerPoolModules = {
   logger: ILogger;
@@ -125,7 +126,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     // THe worker is not able to deserialize from uncompressed
     // `Error: err _wrapDeserialize`
     this.format = implementation === "blst-native" ? PointFormat.uncompressed : PointFormat.compressed;
-    this.workers = this.createWorkers(implementation, getDefaultPoolSize());
+    this.workers = this.createWorkers(implementation, defaultPoolSize);
 
     this.signal.addEventListener(
       "abort",
@@ -186,7 +187,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
 
     for (let i = 0; i < poolSize; i++) {
       const workerData: WorkerData = {implementation, workerId: i};
-      const worker = new Worker("./worker", {workerData} as ConstructorParameters<typeof Worker>[1]);
+      const worker = new Worker("./worker.js", {workerData} as ConstructorParameters<typeof Worker>[1]);
 
       const workerDescriptor: WorkerDescriptor = {
         worker,

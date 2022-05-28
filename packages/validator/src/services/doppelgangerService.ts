@@ -3,7 +3,6 @@ import {Api} from "@chainsafe/lodestar-api";
 import {ILogger, sleep} from "@chainsafe/lodestar-utils";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {computeEndSlotForEpoch} from "@chainsafe/lodestar-beacon-state-transition";
-import {AbortController} from "@chainsafe/abort-controller";
 import {LivenessResponseData} from "@chainsafe/lodestar-api/src/routes/validator";
 import {PubkeyHex} from "../types";
 import {IClock} from "../util";

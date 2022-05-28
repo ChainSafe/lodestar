@@ -1,13 +1,14 @@
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {phase0} from "@chainsafe/lodestar-types";
 import {BitArray} from "@chainsafe/ssz";
-import {IBeaconChain} from "../../../../src/chain";
-import {AttestationErrorCode} from "../../../../src/chain/errors";
-import {validateGossipAttestation} from "../../../../src/chain/validation";
-import {expectRejectedWithLodestarError} from "../../../utils/errors";
-import {generateTestCachedBeaconStateOnlyValidators} from "@chainsafe/lodestar-beacon-state-transition/test/perf/util";
-import {memoOnce} from "../../../utils/cache";
-import {getAttestationValidData, AttestationValidDataOpts} from "../../../utils/validationData/attestation";
+import {IBeaconChain} from "../../../../src/chain/index.js";
+import {AttestationErrorCode} from "../../../../src/chain/errors/index.js";
+import {validateGossipAttestation} from "../../../../src/chain/validation/index.js";
+import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
+// eslint-disable-next-line import/no-relative-packages
+import {generateTestCachedBeaconStateOnlyValidators} from "../../../../../beacon-state-transition/test/perf/util.js";
+import {memoOnce} from "../../../utils/cache.js";
+import {getAttestationValidData, AttestationValidDataOpts} from "../../../utils/validationData/attestation.js";
 
 describe("chain / validation / attestation", () => {
   const vc = 64;

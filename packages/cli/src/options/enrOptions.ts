@@ -1,5 +1,5 @@
 import {Options} from "yargs";
-import {IENRJson} from "../config";
+import {IENRJson} from "../config/index.js";
 
 export interface IENRArgs {
   "enr.ip"?: string;

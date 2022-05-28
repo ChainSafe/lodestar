@@ -2,7 +2,7 @@ import {isBasicType, ListBasicType, Type, isCompositeType, ListCompositeType, Ar
 import {ForkName} from "@chainsafe/lodestar-params";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {objectToExpectedCase} from "@chainsafe/lodestar-utils";
-import {Schema, SchemaDefinition} from "./schema";
+import {Schema, SchemaDefinition} from "./schema.js";
 
 // See /packages/api/src/routes/index.ts for reasoning
 

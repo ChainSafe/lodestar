@@ -1,5 +1,5 @@
 import {EFFECTIVE_BALANCE_INCREMENT} from "@chainsafe/lodestar-params";
-import {BeaconStateAllForks} from "../types";
+import {BeaconStateAllForks} from "../types.js";
 
 /**
  * Alias to allow easier refactoring.

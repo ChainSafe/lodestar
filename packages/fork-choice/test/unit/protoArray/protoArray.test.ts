@@ -1,7 +1,7 @@
-import {RootHex} from "@chainsafe/lodestar-types";
 import {expect} from "chai";
+import {RootHex} from "@chainsafe/lodestar-types";
 
-import {ProtoArray, ExecutionStatus} from "../../../src";
+import {ProtoArray, ExecutionStatus} from "../../../src/index.js";
 
 describe("ProtoArray", () => {
   it("finalized descendant", () => {

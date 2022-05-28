@@ -1,5 +1,5 @@
 import {Histogram, HistogramConfiguration} from "prom-client";
-import {IHistogram} from "../interface";
+import {IHistogram} from "../interface.js";
 
 type Labels<T extends string> = Partial<Record<T, string | number>>;
 

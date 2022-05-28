@@ -1,4 +1,4 @@
-export * from "./types";
-export * as ssz from "./sszTypes";
+export * from "./types.js";
+export * as ssz from "./sszTypes.js";
 // String type
-export {StringType} from "./utils/StringType";
+export {StringType} from "./utils/StringType.js";

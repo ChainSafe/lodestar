@@ -6,6 +6,7 @@ import {ForkName, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {chainConfig} from "@chainsafe/lodestar-config/default";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {LodestarError} from "@chainsafe/lodestar-utils";
+import {allForks} from "@chainsafe/lodestar-types";
 import {
   Method,
   Version,
@@ -13,27 +14,29 @@ import {
   Protocol,
   IncomingResponseBody,
   OutgoingResponseBody,
-} from "../../../../../src/network/reqresp/types";
-import {getResponseSzzTypeByMethod} from "../../../../../src/network/reqresp/types";
-import {SszSnappyError, SszSnappyErrorCode} from "../../../../../src/network/reqresp/encodingStrategies/sszSnappy";
-import {responseDecode} from "../../../../../src/network/reqresp/encoders/responseDecode";
+} from "../../../../../src/network/reqresp/types.js";
+import {getResponseSzzTypeByMethod} from "../../../../../src/network/reqresp/types.js";
+import {
+  SszSnappyError,
+  SszSnappyErrorCode,
+} from "../../../../../src/network/reqresp/encodingStrategies/sszSnappy/index.js";
+import {responseDecode} from "../../../../../src/network/reqresp/encoders/responseDecode.js";
 import {
   getForkNameFromResponseBody,
   responseEncodeError,
   responseEncodeSuccess,
-} from "../../../../../src/network/reqresp/encoders/responseEncode";
-import {ResponseError} from "../../../../../src/network/reqresp/response";
-import {RespStatus, ZERO_HASH} from "../../../../../src/constants";
-import {expectIsEqualSszTypeArr} from "../../../../utils/ssz";
-import {expectRejectedWithLodestarError} from "../../../../utils/errors";
-import {arrToSource, expectEqualByteChunks} from "../utils";
+} from "../../../../../src/network/reqresp/encoders/responseEncode.js";
+import {ResponseError} from "../../../../../src/network/reqresp/response/index.js";
+import {RespStatus, ZERO_HASH} from "../../../../../src/constants/index.js";
+import {expectIsEqualSszTypeArr} from "../../../../utils/ssz.js";
+import {expectRejectedWithLodestarError} from "../../../../utils/errors.js";
+import {arrToSource, expectEqualByteChunks} from "../utils.js";
 import {
   sszSnappyPing,
   sszSnappySignedBeaconBlockPhase0,
   sszSnappySignedBeaconBlockAltair,
-} from "../encodingStrategies/sszSnappy/testData";
-import {blocksToReqRespBlockResponses} from "../../../../utils/block";
-import {allForks} from "@chainsafe/lodestar-types";
+} from "../encodingStrategies/sszSnappy/testData.js";
+import {blocksToReqRespBlockResponses} from "../../../../utils/block.js";
 
 chai.use(chaiAsPromised);
 

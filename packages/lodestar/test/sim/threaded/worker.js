@@ -1,5 +1,12 @@
-const path = require("node:path");
-const {workerData} = require("worker_threads");
+import path from "node:path";
+import {workerData} from "worker_threads";
+import {fileURLToPath} from "node:url";
 
-require("ts-node").register();
-require(path.resolve(__dirname, workerData.path));
+// Global variable __dirname no longer available in ES6 modules.
+// Solutions: https://stackoverflow.com/questions/46745014/alternative-for-dirname-in-node-js-when-using-es6-modules
+// eslint-disable-next-line @typescript-eslint/naming-convention
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+await import("ts-node/esm");
+// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+await import(path.resolve(__dirname, workerData.path));

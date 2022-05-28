@@ -1,15 +1,16 @@
 import crypto from "node:crypto";
 import {bellatrix, RootHex, Root} from "@chainsafe/lodestar-types";
-import {toHexString} from "@chainsafe/ssz";
-import {ZERO_HASH, ZERO_HASH_HEX} from "../constants";
+import {toHexString, fromHexString} from "@chainsafe/ssz";
+import {BYTES_PER_LOGS_BLOOM} from "@chainsafe/lodestar-params";
+import {ZERO_HASH, ZERO_HASH_HEX} from "../constants/index.js";
 import {
   ExecutePayloadStatus,
   ExecutePayloadResponse,
   IExecutionEngine,
   PayloadId,
   PayloadAttributes,
-} from "./interface";
-import {BYTES_PER_LOGS_BLOOM} from "@chainsafe/lodestar-params";
+  PayloadIdCache,
+} from "./interface.js";
 const INTEROP_GAS_LIMIT = 30e6;
 
 export type ExecutionEngineMockOpts = {
@@ -23,6 +24,7 @@ export class ExecutionEngineMock implements IExecutionEngine {
   // Public state to check if notifyForkchoiceUpdate() is called properly
   headBlockRoot = ZERO_HASH_HEX;
   finalizedBlockRoot = ZERO_HASH_HEX;
+  readonly payloadIdCache = new PayloadIdCache();
 
   private knownBlocks = new Map<RootHex, bellatrix.ExecutionPayload>();
   private preparingPayloads = new Map<number, bellatrix.ExecutionPayload>();
@@ -105,7 +107,7 @@ export class ExecutionEngineMock implements IExecutionEngine {
     const payloadId = this.payloadId++;
     const payload: bellatrix.ExecutionPayload = {
       parentHash: headBlockHash,
-      feeRecipient: payloadAttributes.suggestedFeeRecipient,
+      feeRecipient: fromHexString(payloadAttributes.suggestedFeeRecipient),
       stateRoot: crypto.randomBytes(32),
       receiptsRoot: crypto.randomBytes(32),
       logsBloom: crypto.randomBytes(BYTES_PER_LOGS_BLOOM),

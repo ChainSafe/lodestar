@@ -1,5 +1,5 @@
 import {Epoch, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
-import {MapDef} from "../../util/map";
+import {MapDef} from "../../util/map.js";
 
 /**
  * Keeps a cache to filter block proposals from the same validator in the same slot.

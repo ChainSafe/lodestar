@@ -2,13 +2,17 @@
  * @module validator
  */
 
-export {Validator, ValidatorOptions} from "./validator";
-export {ValidatorStore, SignerType, Signer, SignerLocal, SignerRemote} from "./services/validatorStore";
-export {waitForGenesis} from "./genesis";
-export {getMetrics, Metrics, MetricsRegister} from "./metrics";
+export {Validator, ValidatorOptions, defaultDefaultFeeRecipient} from "./validator.js";
+export {ValidatorStore, SignerType, Signer, SignerLocal, SignerRemote} from "./services/validatorStore.js";
+export {waitForGenesis} from "./genesis.js";
+export {getMetrics, Metrics, MetricsRegister} from "./metrics.js";
 
 // Remote signer client
-export {externalSignerGetKeys, externalSignerPostSignature, externalSignerUpCheck} from "./util/externalSignerClient";
+export {
+  externalSignerGetKeys,
+  externalSignerPostSignature,
+  externalSignerUpCheck,
+} from "./util/externalSignerClient.js";
 
-export * from "./slashingProtection";
-export * from "./repositories";
+export * from "./slashingProtection/index.js";
+export * from "./repositories/index.js";

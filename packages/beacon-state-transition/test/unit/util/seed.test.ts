@@ -1,10 +1,10 @@
 import {expect} from "chai";
 
 import {GENESIS_EPOCH, GENESIS_SLOT, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import {getRandaoMix} from "../../../src/util";
-
-import {generateState} from "../../utils/state";
 import {toHexString} from "@chainsafe/ssz";
+import {getRandaoMix} from "../../../src/util/index.js";
+
+import {generateState} from "../../utils/state.js";
 
 describe("getRandaoMix", () => {
   const randaoMix1 = Buffer.alloc(32, 1);

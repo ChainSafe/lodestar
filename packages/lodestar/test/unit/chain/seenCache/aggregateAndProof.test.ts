@@ -1,10 +1,10 @@
-import {BitArray} from "@chainsafe/ssz";
 import {expect} from "chai";
+import {BitArray} from "@chainsafe/ssz";
 import {
   AggregationInfo,
   insertDesc,
   SeenAggregatedAttestations,
-} from "../../../../src/chain/seenCache/seenAggregateAndProof";
+} from "../../../../src/chain/seenCache/seenAggregateAndProof.js";
 
 describe("SeenAggregatedAttestations.isKnown", function () {
   const testCases: {

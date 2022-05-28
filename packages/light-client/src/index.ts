@@ -1,5 +1,4 @@
 import mitt from "mitt";
-import {AbortController} from "@chainsafe/abort-controller";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {getClient, Api, routes} from "@chainsafe/lodestar-api";
 import {altair, phase0, RootHex, ssz, SyncPeriod} from "@chainsafe/lodestar-types";
@@ -7,26 +6,26 @@ import {createIBeaconConfig, IBeaconConfig, IChainForkConfig} from "@chainsafe/l
 import {TreeOffsetProof} from "@chainsafe/persistent-merkle-tree";
 import {isErrorAborted, sleep} from "@chainsafe/lodestar-utils";
 import {fromHexString, JsonPath, toHexString} from "@chainsafe/ssz";
-import {getCurrentSlot, slotWithFutureTolerance, timeUntilNextEpoch} from "./utils/clock";
-import {isBetterUpdate, LightclientUpdateStats} from "./utils/update";
-import {deserializeSyncCommittee, isEmptyHeader, sumBits} from "./utils/utils";
-import {pruneSetToMax} from "./utils/map";
-import {isValidMerkleBranch} from "./utils/verifyMerkleBranch";
-import {SyncCommitteeFast} from "./types";
-import {chunkifyInclusiveRange} from "./utils/chunkify";
-import {LightclientEmitter, LightclientEvent} from "./events";
+import {getCurrentSlot, slotWithFutureTolerance, timeUntilNextEpoch} from "./utils/clock.js";
+import {isBetterUpdate, LightclientUpdateStats} from "./utils/update.js";
+import {deserializeSyncCommittee, isEmptyHeader, sumBits} from "./utils/utils.js";
+import {pruneSetToMax} from "./utils/map.js";
+import {isValidMerkleBranch} from "./utils/verifyMerkleBranch.js";
+import {SyncCommitteeFast} from "./types.js";
+import {chunkifyInclusiveRange} from "./utils/chunkify.js";
+import {LightclientEmitter, LightclientEvent} from "./events.js";
 import {
   assertValidSignedHeader,
   assertValidLightClientUpdate,
   activeHeader,
   assertValidFinalityProof,
-} from "./validation";
-import {GenesisData} from "./networks";
-import {getLcLoggerConsole, ILcLogger} from "./utils/logger";
-import {computeSyncPeriodAtEpoch, computeSyncPeriodAtSlot, computeEpochAtSlot} from "./utils/clock";
+} from "./validation.js";
+import {GenesisData} from "./networks.js";
+import {getLcLoggerConsole, ILcLogger} from "./utils/logger.js";
+import {computeSyncPeriodAtEpoch, computeSyncPeriodAtSlot, computeEpochAtSlot} from "./utils/clock.js";
 
 // Re-export event types
-export {LightclientEvent} from "./events";
+export {LightclientEvent} from "./events.js";
 
 export type LightclientInitArgs = {
   config: IChainForkConfig;
@@ -170,6 +169,11 @@ export class Lightclient {
     };
   }
 
+  // Embed lightweigth clock. The epoch cycles are handled with `this.runLoop()`
+  get currentSlot(): number {
+    return getCurrentSlot(this.config, this.genesisTime);
+  }
+
   static async initializeFromCheckpointRoot({
     config,
     logger,
@@ -228,11 +232,6 @@ export class Lightclient {
 
     this.status.controller.abort();
     this.status = {code: RunStatusCode.stopped};
-  }
-
-  // Embed lightweigth clock. The epoch cycles are handled with `this.runLoop()`
-  get currentSlot(): number {
-    return getCurrentSlot(this.config, this.genesisTime);
   }
 
   getHead(): phase0.BeaconBlockHeader {

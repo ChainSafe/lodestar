@@ -1,8 +1,8 @@
 import {ISignatureSet} from "@chainsafe/lodestar-beacon-state-transition";
-import {IMetrics} from "../../metrics";
-import {IBlsVerifier} from "./interface";
-import {verifySignatureSetsMaybeBatch} from "./maybeBatch";
-import {getAggregatedPubkey} from "./utils";
+import {IMetrics} from "../../metrics/index.js";
+import {IBlsVerifier} from "./interface.js";
+import {verifySignatureSetsMaybeBatch} from "./maybeBatch.js";
+import {getAggregatedPubkey} from "./utils.js";
 
 export class BlsSingleThreadVerifier implements IBlsVerifier {
   private readonly metrics: IMetrics | null;

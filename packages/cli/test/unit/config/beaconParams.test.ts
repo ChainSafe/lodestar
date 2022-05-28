@@ -1,9 +1,9 @@
-import {expect} from "chai";
 import fs from "node:fs";
+import {expect} from "chai";
 import yaml from "js-yaml";
 import {toHexString} from "@chainsafe/ssz";
-import {getTestdirPath} from "../../utils";
-import {getBeaconParams} from "../../../src/config";
+import {getTestdirPath} from "../../utils.js";
+import {getBeaconParams} from "../../../src/config/index.js";
 
 describe("config / beaconParams", () => {
   const GENESIS_FORK_VERSION_MAINNET = "0x00000000";

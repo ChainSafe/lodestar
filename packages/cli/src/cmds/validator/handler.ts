@@ -1,26 +1,24 @@
-import {AbortController} from "@chainsafe/abort-controller";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import {SignerType, Signer, SlashingProtection, Validator} from "@chainsafe/lodestar-validator";
 import {getMetrics, MetricsRegister} from "@chainsafe/lodestar-validator";
 import {KeymanagerServer, KeymanagerApi} from "@chainsafe/lodestar-keymanager-server";
 import {RegistryMetricCreator, collectNodeJSMetrics, HttpMetricsServer} from "@chainsafe/lodestar";
-import {getBeaconConfigFromArgs} from "../../config";
-import {IGlobalArgs} from "../../options";
-import {YargsError, getDefaultGraffiti, initBLS, mkdir, getCliLogger} from "../../util";
-import {onGracefulShutdown} from "../../util";
-import {getVersionData} from "../../util/version";
-import {getBeaconPaths} from "../beacon/paths";
-import {getValidatorPaths} from "./paths";
-import {IValidatorCliArgs, validatorMetricsDefaultOptions} from "./options";
-import {getLocalSecretKeys, getExternalSigners, groupExternalSignersByUrl} from "./keys";
+import {getBeaconConfigFromArgs} from "../../config/index.js";
+import {IGlobalArgs} from "../../options/index.js";
+import {YargsError, getDefaultGraffiti, mkdir, getCliLogger} from "../../util/index.js";
+import {onGracefulShutdown, parseFeeRecipient} from "../../util/index.js";
+import {getVersionData} from "../../util/version.js";
+import {getBeaconPaths} from "../beacon/paths.js";
+import {getValidatorPaths} from "./paths.js";
+import {IValidatorCliArgs, validatorMetricsDefaultOptions, defaultDefaultFeeRecipient} from "./options.js";
+import {getLocalSecretKeys, getExternalSigners, groupExternalSignersByUrl} from "./keys.js";
 
 /**
  * Runs a validator client.
  */
 export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): Promise<void> {
-  await initBLS();
-
   const graffiti = args.graffiti || getDefaultGraffiti();
+  const defaultFeeRecipient = parseFeeRecipient(args.defaultFeeRecipient ?? defaultDefaultFeeRecipient);
   const enableDoppelganger = args.enableDoppelganger;
 
   const validatorPaths = getValidatorPaths(args);
@@ -131,6 +129,7 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
       graffiti,
       enableDoppelganger,
       afterBlockDelaySlotFraction: args.afterBlockDelaySlotFraction,
+      defaultFeeRecipient,
     },
     controller.signal,
     metrics

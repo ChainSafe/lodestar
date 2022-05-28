@@ -1,19 +1,21 @@
 import {itBench, setBenchOpts} from "@dapplion/benchmark";
+import {config} from "@chainsafe/lodestar-config/default";
+import {SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
+import {LevelDbController} from "@chainsafe/lodestar-db";
+import {sleep} from "@chainsafe/lodestar-utils";
+import {defaultDefaultFeeRecipient} from "@chainsafe/lodestar-validator";
 import {
   beforeValue,
   getNetworkCachedState,
   getNetworkCachedBlock,
-} from "@chainsafe/lodestar-beacon-state-transition/test/utils";
-import {rangeSyncTest} from "@chainsafe/lodestar-beacon-state-transition/test/perf/params";
-import {config} from "@chainsafe/lodestar-config/default";
-import {SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import {BeaconChain} from "../../../src/chain";
-import {ExecutionEngineDisabled} from "../../../src/executionEngine";
-import {Eth1ForBlockProductionDisabled} from "../../../src/eth1";
-import {testLogger} from "../../utils/logger";
-import {linspace} from "../../../src/util/numpy";
-import {BeaconDb} from "../../../src";
-import {LevelDbController} from "@chainsafe/lodestar-db";
+} from "../../../../beacon-state-transition/test/utils/index.js";
+import {rangeSyncTest} from "../../../../beacon-state-transition/test/perf/params.js";
+import {BeaconChain} from "../../../src/chain/index.js";
+import {ExecutionEngineDisabled} from "../../../src/executionEngine/index.js";
+import {Eth1ForBlockProductionDisabled} from "../../../src/eth1/index.js";
+import {testLogger} from "../../utils/logger.js";
+import {linspace} from "../../../src/util/numpy.js";
+import {BeaconDb} from "../../../src/index.js";
 
 // Define this params in `packages/beacon-state-transition/test/perf/params.ts`
 // to trigger Github actions CI cache
@@ -42,7 +44,7 @@ describe("verify+import blocks - range sync perf test", () => {
       Promise.all(
         // Start at next slot, since the parent of current state's header is not known
         linspace(startSlot + 1, endSlot).map(async (slot) =>
-          getNetworkCachedBlock(network, slot, timeoutInfura).catch((e) => {
+          getNetworkCachedBlock(network, slot, timeoutInfura).catch((e: unknown) => {
             (e as Error).message = `slot ${slot} - ${(e as Error).message}`;
             throw e;
           })
@@ -72,14 +74,15 @@ describe("verify+import blocks - range sync perf test", () => {
     minRuns: 5,
     maxRuns: Infinity,
     maxMs: Infinity,
-    timeoutBench: 10 * 60 * 1000,
-    beforeEach: () => {
+    timeoutBench: 10 * 60 * 1000 + 16_000 * 5,
+    beforeEach: async () => {
       const state = stateOg.value.clone();
       const chain = new BeaconChain(
         {
           proposerBoostEnabled: true,
           safeSlotsToImportOptimistically: SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY,
           disableArchiveOnCheckpoint: true,
+          defaultFeeRecipient: defaultDefaultFeeRecipient,
         },
         {
           config: state.config,
@@ -91,6 +94,9 @@ describe("verify+import blocks - range sync perf test", () => {
           executionEngine: new ExecutionEngineDisabled(),
         }
       );
+
+      // wait for bls worker threads to warm up
+      await sleep(16_000);
 
       return chain;
     },

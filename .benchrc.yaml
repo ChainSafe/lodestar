@@ -1,8 +1,8 @@
 # Mocha opts
+extension: ["ts"]
 colors: true
-require:
-  - ts-node/register
-  - packages/lodestar/test/setupBLS.ts
+node-option:
+  - "loader=ts-node/register"
 
 # benchmark opts
 threshold: 3

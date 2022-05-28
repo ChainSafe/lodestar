@@ -1,13 +1,12 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ErrorAborted, ILogger, sleep, prettyBytes} from "@chainsafe/lodestar-utils";
-import {AbortSignal} from "@chainsafe/abort-controller";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {computeEpochAtSlot, bellatrix} from "@chainsafe/lodestar-beacon-state-transition";
-import {IBeaconChain} from "../chain";
-import {INetwork} from "../network";
-import {IBeaconSync, SyncState} from "../sync";
-import {prettyTimeDiff} from "../util/time";
-import {TimeSeries} from "../util/timeSeries";
+import {IBeaconChain} from "../chain/index.js";
+import {INetwork} from "../network/index.js";
+import {IBeaconSync, SyncState} from "../sync/index.js";
+import {prettyTimeDiff} from "../util/time.js";
+import {TimeSeries} from "../util/timeSeries.js";
 
 /** Create a warning log whenever the peer count is at or below this value */
 const WARN_PEER_COUNT = 1;

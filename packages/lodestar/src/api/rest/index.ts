@@ -1,13 +1,13 @@
+import querystring from "querystring";
 import fastify, {FastifyError, FastifyInstance} from "fastify";
 import fastifyCors from "fastify-cors";
-import querystring from "querystring";
 import {Api} from "@chainsafe/lodestar-api";
 import {registerRoutes, RouteConfig} from "@chainsafe/lodestar-api/server";
 import {ErrorAborted, ILogger} from "@chainsafe/lodestar-utils";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {IMetrics} from "../../metrics";
-import {ApiError, NodeIsSyncing} from "../impl/errors";
-import {HttpActiveSocketsTracker} from "./activeSockets";
+import {IMetrics} from "../../metrics/index.js";
+import {ApiError, NodeIsSyncing} from "../impl/errors.js";
+import {HttpActiveSocketsTracker} from "./activeSockets.js";
 export {allNamespaces} from "@chainsafe/lodestar-api";
 
 export type RestApiOptions = {

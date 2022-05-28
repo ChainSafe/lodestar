@@ -1,6 +1,6 @@
 import {expect} from "chai";
 import PeerId from "peer-id";
-import {getValidPeerId} from "../../../utils/peer";
+import {getValidPeerId} from "../../../utils/peer.js";
 
 describe("network / peers / discover", () => {
   it("PeerId API", () => {

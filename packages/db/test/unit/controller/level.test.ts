@@ -1,8 +1,8 @@
 import {expect} from "chai";
-import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import leveldown from "leveldown";
 import all from "it-all";
-import {LevelDbController} from "../../../src/controller";
+import {WinstonLogger} from "@chainsafe/lodestar-utils";
+import {LevelDbController} from "../../../src/controller/index.js";
 
 describe("LevelDB controller", () => {
   const dbLocation = "./.__testdb";

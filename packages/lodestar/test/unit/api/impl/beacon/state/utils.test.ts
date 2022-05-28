@@ -1,16 +1,16 @@
+import {expect, use} from "chai";
+import chaiAsPromised from "chai-as-promised";
+import sinon from "sinon";
 import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {config} from "@chainsafe/lodestar-config/default";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {toHexString} from "@chainsafe/ssz";
-import {expect, use} from "chai";
-import chaiAsPromised from "chai-as-promised";
-import sinon from "sinon";
-import {resolveStateId, getValidatorStatus} from "../../../../../../src/api/impl/beacon/state/utils";
-import {IBeaconChain} from "../../../../../../src/chain";
-import {PERSIST_STATE_EVERY_EPOCHS} from "../../../../../../src/chain/archiver/archiveStates";
-import {generateProtoBlock} from "../../../../../utils/block";
-import {generateCachedState, generateState} from "../../../../../utils/state";
-import {StubbedBeaconDb} from "../../../../../utils/stub";
+import {resolveStateId, getValidatorStatus} from "../../../../../../src/api/impl/beacon/state/utils.js";
+import {IBeaconChain} from "../../../../../../src/chain/index.js";
+import {PERSIST_STATE_EVERY_EPOCHS} from "../../../../../../src/chain/archiver/archiveStates.js";
+import {generateProtoBlock} from "../../../../../utils/block.js";
+import {generateCachedState, generateState} from "../../../../../utils/state.js";
+import {StubbedBeaconDb} from "../../../../../utils/stub/index.js";
 
 use(chaiAsPromised);
 

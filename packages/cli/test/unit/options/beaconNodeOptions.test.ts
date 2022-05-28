@@ -1,9 +1,9 @@
-import {expect} from "chai";
 import fs from "node:fs";
+import {expect} from "chai";
 import {IBeaconNodeOptions} from "@chainsafe/lodestar";
 import {LogLevel, RecursivePartial} from "@chainsafe/lodestar-utils";
-import {parseBeaconNodeArgs, IBeaconNodeArgs} from "../../../src/options/beaconNodeOptions";
-import {getTestdirPath} from "../../utils";
+import {parseBeaconNodeArgs, IBeaconNodeArgs} from "../../../src/options/beaconNodeOptions/index.js";
+import {getTestdirPath} from "../../utils.js";
 
 describe("options / beaconNodeOptions", () => {
   it("Should parse BeaconNodeArgs", () => {
@@ -21,6 +21,7 @@ describe("options / beaconNodeOptions", () => {
       "chain.disableBlsBatchVerify": true,
       "chain.persistInvalidSszObjects": true,
       "chain.proposerBoostEnabled": false,
+      "chain.defaultFeeRecipient": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       "safe-slots-to-import-optimistically": 256,
 
       "eth1.enabled": true,
@@ -79,6 +80,7 @@ describe("options / beaconNodeOptions", () => {
         persistInvalidSszObjects: true,
         proposerBoostEnabled: false,
         safeSlotsToImportOptimistically: 256,
+        defaultFeeRecipient: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       },
       eth1: {
         enabled: true,

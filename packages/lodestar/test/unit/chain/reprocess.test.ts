@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {ReprocessController} from "../../../src/chain/reprocess";
+import {ReprocessController} from "../../../src/chain/reprocess.js";
 
 describe("ReprocessController", function () {
   let controller: ReprocessController;

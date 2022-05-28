@@ -2,5 +2,5 @@
  * @module db/controller
  */
 
-export {Db, IDatabaseController, IFilterOptions, IKeyValue} from "./interface";
-export {LevelDbController} from "./level";
+export {Db, IDatabaseController, IFilterOptions, IKeyValue} from "./interface.js";
+export {LevelDbController} from "./level.js";

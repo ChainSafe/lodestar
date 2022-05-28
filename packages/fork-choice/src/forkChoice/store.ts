@@ -27,7 +27,7 @@ export interface IForkChoiceStore {
   bestJustifiedCheckpoint: CheckpointWithHex;
 }
 
-/* eslint-disable @typescript-eslint/naming-convention */
+/* eslint-disable @typescript-eslint/naming-convention, @typescript-eslint/member-ordering */
 
 /**
  * IForkChoiceStore implementer which emits forkChoice events on updated justified and finalized checkpoints.
@@ -54,17 +54,14 @@ export class ForkChoiceStore implements IForkChoiceStore {
   get justifiedCheckpoint(): CheckpointWithHex {
     return this._justifiedCheckpoint;
   }
-
   set justifiedCheckpoint(checkpoint: CheckpointWithHex) {
     const cp = toCheckpointWithHex(checkpoint);
     this._justifiedCheckpoint = cp;
     this.events?.onJustified(cp);
   }
-
   get finalizedCheckpoint(): CheckpointWithHex {
     return this._finalizedCheckpoint;
   }
-
   set finalizedCheckpoint(checkpoint: CheckpointWithHex) {
     const cp = toCheckpointWithHex(checkpoint);
     this._finalizedCheckpoint = cp;

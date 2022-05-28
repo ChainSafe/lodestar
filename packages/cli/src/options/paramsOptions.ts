@@ -1,7 +1,7 @@
 import {Options} from "yargs";
 import {IChainConfig, chainConfigTypes} from "@chainsafe/lodestar-config";
-import {IBeaconParamsUnparsed} from "../config/types";
-import {ObjectKeys, ICliCommandOptions} from "../util";
+import {IBeaconParamsUnparsed} from "../config/types.js";
+import {ObjectKeys, ICliCommandOptions} from "../util/index.js";
 
 // No options are statically declared
 // If an arbitraty key notation is used, it removes typesafety on most of this CLI arg parsing code.

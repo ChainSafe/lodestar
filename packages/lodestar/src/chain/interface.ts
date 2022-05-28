@@ -1,35 +1,39 @@
-import {allForks, UintNum64, Root, phase0, Slot, RootHex} from "@chainsafe/lodestar-types";
+import {allForks, UintNum64, Root, phase0, Slot, RootHex, Epoch} from "@chainsafe/lodestar-types";
 import {CachedBeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
-import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
 
-import {IEth1ForBlockProduction} from "../eth1";
-import {IExecutionEngine} from "../executionEngine";
-import {IBeaconClock} from "./clock/interface";
-import {ChainEventEmitter} from "./emitter";
-import {IStateRegenerator} from "./regen";
-import {StateContextCache, CheckpointStateCache} from "./stateCache";
-import {IBlsVerifier} from "./bls";
+import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
+import {IEth1ForBlockProduction} from "../eth1/index.js";
+import {IExecutionEngine} from "../executionEngine/index.js";
+import {IBeaconClock} from "./clock/interface.js";
+import {ChainEventEmitter} from "./emitter.js";
+import {IStateRegenerator} from "./regen/index.js";
+import {StateContextCache, CheckpointStateCache} from "./stateCache/index.js";
+import {IBlsVerifier} from "./bls/index.js";
 import {
   SeenAttesters,
   SeenAggregators,
   SeenBlockProposers,
   SeenSyncCommitteeMessages,
   SeenContributionAndProof,
-} from "./seenCache";
-import {AttestationPool, OpPool, SyncCommitteeMessagePool, SyncContributionAndProofPool} from "./opPools";
-import {LightClientServer} from "./lightClient";
-import {AggregatedAttestationPool} from "./opPools/aggregatedAttestationPool";
-import {PartiallyVerifiedBlockFlags} from "./blocks/types";
-import {ReprocessController} from "./reprocess";
-import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof";
-import {ObservedAttesters, ObservedProposers} from "./blocks/observeBlock";
+} from "./seenCache/index.js";
+import {AttestationPool, OpPool, SyncCommitteeMessagePool, SyncContributionAndProofPool} from "./opPools/index.js";
+import {LightClientServer} from "./lightClient/index.js";
+import {AggregatedAttestationPool} from "./opPools/aggregatedAttestationPool.js";
+import {PartiallyVerifiedBlockFlags} from "./blocks/types.js";
+import {ReprocessController} from "./reprocess.js";
+import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
+import {BeaconProposerCache, ProposerPreparationData} from "./beaconProposerCache.js";
+import {ObservedAttesters, ObservedProposers} from "./blocks/observeBlock.js";
 
 export type Eth2Context = {
   activeValidatorCount: number;
   currentSlot: number;
   currentEpoch: number;
 };
+
+export {ProposerPreparationData};
 
 /**
  * The IBeaconChain service deals with processing incoming blocks, advancing a state transition
@@ -71,6 +75,8 @@ export interface IBeaconChain {
   readonly seenSyncCommitteeMessages: SeenSyncCommitteeMessages;
   readonly seenContributionAndProof: SeenContributionAndProof;
 
+  readonly beaconProposerCache: BeaconProposerCache;
+
   // Validators seen cache via processing blocks
   readonly observedBlockProposers: ObservedProposers;
   readonly observedBlockAttesters: ObservedAttesters;
@@ -102,8 +108,11 @@ export interface IBeaconChain {
 
   waitForBlockOfAttestation(slot: Slot, root: RootHex): Promise<boolean>;
 
+  updateBeaconProposerData(epoch: Epoch, proposers: ProposerPreparationData[]): Promise<void>;
+
+  persistInvalidSszValue<T>(type: Type<T>, sszObject: T | Uint8Array, suffix?: string): void;
   /** Persist bad items to persistInvalidSszObjectsDir dir, for example invalid state, attestations etc. */
-  persistInvalidSszObject(type: SSZObjectType, bytes: Uint8Array, suffix: string): string | null;
+  persistInvalidSszView(view: TreeView<CompositeTypeAny>, suffix?: string): void;
 }
 
 export type SSZObjectType =

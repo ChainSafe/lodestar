@@ -1,8 +1,7 @@
-import {AbortSignal} from "@chainsafe/abort-controller";
 import {mapValues} from "@chainsafe/lodestar-utils";
-import {IMetrics} from "../../../metrics";
-import {JobItemQueue, JobQueueOpts, QueueType} from "../../../util/queue";
-import {GossipJobQueues, GossipType, GossipValidatorFn, ResolvedType, ValidatorFnsByType} from "../interface";
+import {IMetrics} from "../../../metrics/index.js";
+import {JobItemQueue, JobQueueOpts, QueueType} from "../../../util/queue/index.js";
+import {GossipJobQueues, GossipType, GossipValidatorFn, ResolvedType, ValidatorFnsByType} from "../interface.js";
 
 /**
  * Numbers from https://github.com/sigp/lighthouse/blob/b34a79dc0b02e04441ba01fd0f304d1e203d877d/beacon_node/network/src/beacon_processor/mod.rs#L69

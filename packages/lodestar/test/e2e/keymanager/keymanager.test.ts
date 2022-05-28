@@ -1,26 +1,26 @@
-import chaiAsPromised from "chai-as-promised";
-import chai, {expect} from "chai";
 import fs from "node:fs";
 import path from "node:path";
+import chaiAsPromised from "chai-as-promised";
+import chai, {expect} from "chai";
 import tmp from "tmp";
 import {createIBeaconConfig, IBeaconConfig, IChainConfig} from "@chainsafe/lodestar-config";
 import {KeymanagerApi, KeymanagerServer} from "@chainsafe/lodestar-keymanager-server";
 import {chainConfig as chainConfigDef} from "@chainsafe/lodestar-config/default";
-import {HttpClient} from "@chainsafe/lodestar-api/src";
-import {getClient} from "@chainsafe/lodestar-api/src/keymanager/client";
+import {HttpClient} from "@chainsafe/lodestar-api";
 import {ISlashingProtection, Validator} from "@chainsafe/lodestar-validator";
 import {fromHexString} from "@chainsafe/ssz";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {ssz} from "@chainsafe/lodestar-types";
-import {LogLevel, testLogger, TestLoggerOpts} from "../../utils/logger";
-import {getDevBeaconNode} from "../../utils/node/beacon";
+import {getClient} from "../../../../api/src/keymanager/client.js";
+import {LogLevel, testLogger, TestLoggerOpts} from "../../utils/logger.js";
+import {getDevBeaconNode} from "../../utils/node/beacon.js";
 import {
   createAttesterDuty,
   getAndInitDevValidators,
-  getAndInitValidatorsWithKeystore,
-} from "../../utils/node/validator";
-import {getKeystoreForPubKey1, getKeystoreForPubKey2} from "../../utils/node/keymanager";
-import {logFilesDir} from "../../sim/params";
+  getAndInitValidatorsWithKeystore
+} from "../../utils/node/validator.js";
+import {getKeystoreForPubKey1, getKeystoreForPubKey2} from "../../utils/node/keymanager.js";
+import {logFilesDir} from "../../sim/params.js";
 /* eslint-disable @typescript-eslint/naming-convention */
 
 chai.use(chaiAsPromised);

@@ -1,8 +1,8 @@
 import {expect} from "chai";
 import {toHexString} from "@chainsafe/ssz";
 import {BLSPubkey, ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
-import {getPubkeysForIndices} from "../../../../../src/api/impl/validator/utils";
 import {BeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
+import {getPubkeysForIndices} from "../../../../../src/api/impl/validator/utils.js";
 
 describe("api / impl / validator / utils", () => {
   const vc = 32;

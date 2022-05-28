@@ -1,7 +1,7 @@
-import {ICliCommand} from "../../util";
-import {IGlobalArgs} from "../../options";
-import {ILightClientArgs, lightclientOptions} from "./options";
-import {lightclientHandler} from "./handler";
+import {ICliCommand} from "../../util/index.js";
+import {IGlobalArgs} from "../../options/index.js";
+import {ILightClientArgs, lightclientOptions} from "./options.js";
+import {lightclientHandler} from "./handler.js";
 
 export const lightclient: ICliCommand<ILightClientArgs, IGlobalArgs> = {
   command: "lightclient",

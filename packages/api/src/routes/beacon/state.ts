@@ -1,6 +1,14 @@
 import {ContainerType} from "@chainsafe/ssz";
 import {phase0, CommitteeIndex, Slot, ValidatorIndex, Epoch, Root, ssz, StringType} from "@chainsafe/lodestar-types";
-import {RoutesData, ReturnTypes, ArrayOf, ContainerData, Schema, ReqSerializers, ReqSerializer} from "../../utils";
+import {
+  RoutesData,
+  ReturnTypes,
+  ArrayOf,
+  ContainerData,
+  Schema,
+  ReqSerializers,
+  ReqSerializer,
+} from "../../utils/index.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 

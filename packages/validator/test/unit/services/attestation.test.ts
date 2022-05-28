@@ -1,21 +1,21 @@
-import {AbortController} from "@chainsafe/abort-controller";
 import {expect} from "chai";
 import sinon from "sinon";
+import {AbortController} from "@chainsafe/abort-controller";
 import bls from "@chainsafe/bls";
 import {toHexString} from "@chainsafe/ssz";
 import {
   generateEmptyAttestation,
   generateEmptySignedAggregateAndProof,
-} from "@chainsafe/lodestar/test/utils/attestation";
-import {AttestationService} from "../../../src/services/attestation";
-import {AttDutyAndProof} from "../../../src/services/attestationDuties";
-import {ValidatorStore} from "../../../src/services/validatorStore";
-import {getApiClientStub} from "../../utils/apiStub";
-import {loggerVc, testLogger} from "../../utils/logger";
-import {ClockMock} from "../../utils/clock";
-import {IndicesService} from "../../../src/services/indices";
-import {ChainHeaderTracker} from "../../../src/services/chainHeaderTracker";
-import {ValidatorEventEmitter} from "../../../src/services/emitter";
+} from "../../../../lodestar/test/utils/attestation.js";
+import {AttestationService} from "../../../src/services/attestation.js";
+import {AttDutyAndProof} from "../../../src/services/attestationDuties.js";
+import {ValidatorStore} from "../../../src/services/validatorStore.js";
+import {getApiClientStub} from "../../utils/apiStub.js";
+import {loggerVc, testLogger} from "../../utils/logger.js";
+import {ClockMock} from "../../utils/clock.js";
+import {IndicesService} from "../../../src/services/indices.js";
+import {ChainHeaderTracker} from "../../../src/services/chainHeaderTracker.js";
+import {ValidatorEventEmitter} from "../../../src/services/emitter.js";
 
 describe("AttestationService", function () {
   const sandbox = sinon.createSandbox();

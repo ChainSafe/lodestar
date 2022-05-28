@@ -1,8 +1,8 @@
 import varint from "varint";
 import {source} from "stream-to-it";
-import {createCompressStream} from "@chainsafe/snappy-stream";
-import {RequestOrOutgoingResponseBody, OutgoingSerializer} from "../../types";
-import {SszSnappyError, SszSnappyErrorCode} from "./errors";
+import snappy from "@chainsafe/snappy-stream";
+import {RequestOrOutgoingResponseBody, OutgoingSerializer} from "../../types.js";
+import {SszSnappyError, SszSnappyErrorCode} from "./errors.js";
 
 /**
  * ssz_snappy encoding strategy writer.
@@ -37,7 +37,7 @@ function encodeSszSnappy(bytes: Buffer): AsyncGenerator<Buffer> {
    * To use async version (for e.g. on big payloads) instantiate the stream with
    * `createCompressStream({asyncCompress: true})`
    */
-  const stream = createCompressStream();
+  const stream = snappy.createCompressStream();
   stream.write(bytes);
   stream.end();
   return source<Buffer>(stream);

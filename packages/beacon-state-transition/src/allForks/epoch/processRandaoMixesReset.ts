@@ -1,5 +1,5 @@
 import {EPOCHS_PER_HISTORICAL_VECTOR} from "@chainsafe/lodestar-params";
-import {EpochProcess, CachedBeaconStateAllForks} from "../../types";
+import {EpochProcess, CachedBeaconStateAllForks} from "../../types.js";
 
 /**
  * Write next randaoMix

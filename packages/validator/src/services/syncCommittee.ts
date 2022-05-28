@@ -1,17 +1,16 @@
-import {AbortSignal} from "@chainsafe/abort-controller";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {Slot, CommitteeIndex, altair, Root} from "@chainsafe/lodestar-types";
 import {extendError, sleep} from "@chainsafe/lodestar-utils";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {Api} from "@chainsafe/lodestar-api";
-import {IClock, ILoggerVc} from "../util";
-import {ValidatorStore} from "./validatorStore";
-import {SyncCommitteeDutiesService, SyncDutyAndProofs} from "./syncCommitteeDuties";
-import {groupSyncDutiesBySubcommitteeIndex, SubcommitteeDuty} from "./utils";
-import {IndicesService} from "./indices";
-import {ChainHeaderTracker} from "./chainHeaderTracker";
-import {PubkeyHex} from "../types";
-import {Metrics} from "../metrics";
+import {IClock, ILoggerVc} from "../util/index.js";
+import {PubkeyHex} from "../types.js";
+import {Metrics} from "../metrics.js";
+import {ValidatorStore} from "./validatorStore.js";
+import {SyncCommitteeDutiesService, SyncDutyAndProofs} from "./syncCommitteeDuties.js";
+import {groupSyncDutiesBySubcommitteeIndex, SubcommitteeDuty} from "./utils.js";
+import {IndicesService} from "./indices.js";
+import {ChainHeaderTracker} from "./chainHeaderTracker.js";
 
 /**
  * Service that sets up and handles validator sync duties.

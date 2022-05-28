@@ -2,9 +2,9 @@ import {ValidatorIndex} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
 import {Api} from "@chainsafe/lodestar-api";
-import {ValidatorStore} from "./validatorStore";
-import {batchItems} from "../util/batch";
-import {Metrics} from "../metrics";
+import {batchItems} from "../util/batch.js";
+import {Metrics} from "../metrics.js";
+import {ValidatorStore} from "./validatorStore.js";
 
 /**
  * URLs have a limitation on size, adding an unbounded num of pubkeys will break the request.

@@ -1,11 +1,11 @@
 import "mocha";
+import http from "node:http";
 import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
-import http from "node:http";
 import {AbortController} from "@chainsafe/abort-controller";
-import {JsonRpcHttpClient} from "../../../src/eth1/provider/jsonRpcHttpClient";
-import {getGoerliRpcUrl} from "../../testParams";
-import {IRpcPayload} from "../../../src/eth1/interface";
+import {JsonRpcHttpClient} from "../../../src/eth1/provider/jsonRpcHttpClient.js";
+import {getGoerliRpcUrl} from "../../testParams.js";
+import {IRpcPayload} from "../../../src/eth1/interface.js";
 
 chai.use(chaiAsPromised);
 

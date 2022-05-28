@@ -1,4 +1,4 @@
-import {NetworkName} from "@chainsafe/lodestar-config/networks";
+import {NetworkName} from "@chainsafe/lodestar-config/networks.js";
 
 export function getInfuraBeaconUrl(network: NetworkName): string {
   const INFURA_ETH2_CREDENTIALS = process.env.INFURA_ETH2_CREDENTIALS;

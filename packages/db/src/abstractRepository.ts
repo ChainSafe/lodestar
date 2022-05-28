@@ -1,11 +1,11 @@
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {Type} from "@chainsafe/ssz";
-import {BUCKET_LENGTH} from ".";
-import {IFilterOptions, IKeyValue} from "./controller";
-import {Db} from "./controller/interface";
-import {DbMetricCounter, IDbMetrics} from "./metrics";
-import {Bucket, encodeKey as _encodeKey} from "./schema";
-import {getBucketNameByValue} from "./util";
+import {BUCKET_LENGTH} from "./const.js";
+import {IFilterOptions, IKeyValue} from "./controller/index.js";
+import {Db} from "./controller/interface.js";
+import {DbMetricCounter, IDbMetrics} from "./metrics.js";
+import {Bucket, encodeKey as _encodeKey} from "./schema.js";
+import {getBucketNameByValue} from "./util.js";
 
 export type Id = Uint8Array | string | number | bigint;
 

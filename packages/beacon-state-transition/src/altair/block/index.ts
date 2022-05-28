@@ -1,14 +1,14 @@
 import {altair} from "@chainsafe/lodestar-types";
 
-import {CachedBeaconStateAltair} from "../../types";
-import {processBlockHeader, processEth1Data, processRandao} from "../../allForks/block";
-import {processOperations} from "./processOperations";
-import {processAttestations, RootCache} from "./processAttestation";
-import {processAttesterSlashing} from "./processAttesterSlashing";
-import {processDeposit} from "./processDeposit";
-import {processProposerSlashing} from "./processProposerSlashing";
-import {processVoluntaryExit} from "./processVoluntaryExit";
-import {processSyncAggregate} from "./processSyncCommittee";
+import {CachedBeaconStateAltair} from "../../types.js";
+import {processBlockHeader, processEth1Data, processRandao} from "../../allForks/block/index.js";
+import {processOperations} from "./processOperations.js";
+import {processAttestations, RootCache} from "./processAttestation.js";
+import {processAttesterSlashing} from "./processAttesterSlashing.js";
+import {processDeposit} from "./processDeposit.js";
+import {processProposerSlashing} from "./processProposerSlashing.js";
+import {processVoluntaryExit} from "./processVoluntaryExit.js";
+import {processSyncAggregate} from "./processSyncCommittee.js";
 
 export {
   processOperations,

@@ -1,7 +1,7 @@
 import BufferList from "bl";
-import {getRequestSzzTypeByMethod, Protocol, RequestBody} from "../types";
-import {BufferedSource} from "../utils";
-import {readEncodedPayload} from "../encodingStrategies";
+import {getRequestSzzTypeByMethod, Protocol, RequestBody} from "../types.js";
+import {BufferedSource} from "../utils/index.js";
+import {readEncodedPayload} from "../encodingStrategies/index.js";
 
 /**
  * Consumes a stream source to read a `<request>`

@@ -1,13 +1,13 @@
 import "mocha";
 import {expect} from "chai";
 import {AbortController} from "@chainsafe/abort-controller";
-import {Eth1Options} from "../../../src/eth1/options";
-import {getTestnetConfig} from "../../utils/testnet";
 import {fromHexString} from "@chainsafe/ssz";
-import {goerliTestnetDepositEvents} from "../../utils/testnet";
-import {Eth1Provider, parseEth1Block} from "../../../src/eth1/provider/eth1Provider";
-import {Eth1Block} from "../../../src/eth1/interface";
-import {getGoerliRpcUrl} from "../../testParams";
+import {Eth1Options} from "../../../src/eth1/options.js";
+import {getTestnetConfig} from "../../utils/testnet.js";
+import {goerliTestnetDepositEvents} from "../../utils/testnet.js";
+import {Eth1Provider, parseEth1Block} from "../../../src/eth1/provider/eth1Provider.js";
+import {Eth1Block} from "../../../src/eth1/interface.js";
+import {getGoerliRpcUrl} from "../../testParams.js";
 
 describe("eth1 / Eth1Provider", function () {
   this.timeout("2 min");

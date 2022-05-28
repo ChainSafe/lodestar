@@ -1,6 +1,6 @@
-import {AbortController} from "@chainsafe/abort-controller";
 import {expect} from "chai";
 import sinon from "sinon";
+import {AbortController} from "@chainsafe/abort-controller";
 import bls from "@chainsafe/bls";
 import {toHexString} from "@chainsafe/ssz";
 import {createIChainForkConfig} from "@chainsafe/lodestar-config";
@@ -8,12 +8,12 @@ import {config as mainnetConfig} from "@chainsafe/lodestar-config/default";
 import {Root} from "@chainsafe/lodestar-types";
 import {sleep} from "@chainsafe/lodestar-utils";
 import {routes} from "@chainsafe/lodestar-api";
-import {generateEmptySignedBlock} from "@chainsafe/lodestar/test/utils/block";
-import {BlockProposingService} from "../../../src/services/block";
-import {ValidatorStore} from "../../../src/services/validatorStore";
-import {getApiClientStub} from "../../utils/apiStub";
-import {loggerVc} from "../../utils/logger";
-import {ClockMock} from "../../utils/clock";
+import {generateEmptySignedBlock} from "../../../../lodestar/test/utils/block.js";
+import {BlockProposingService} from "../../../src/services/block.js";
+import {ValidatorStore} from "../../../src/services/validatorStore.js";
+import {getApiClientStub} from "../../utils/apiStub.js";
+import {loggerVc} from "../../utils/logger.js";
+import {ClockMock} from "../../utils/clock.js";
 
 type ProposerDutiesRes = {dependentRoot: Root; data: routes.validator.ProposerDuty[]};
 

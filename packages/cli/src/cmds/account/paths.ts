@@ -1,6 +1,6 @@
 import path from "node:path";
-import {IGlobalArgs} from "../../options";
-import {IGlobalPaths, getGlobalPaths} from "../../paths/global";
+import {IGlobalArgs} from "../../options/index.js";
+import {IGlobalPaths, getGlobalPaths} from "../../paths/global.js";
 
 export interface IAccountPaths {
   keystoresDir: string;

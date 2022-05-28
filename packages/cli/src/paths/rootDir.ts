@@ -1,6 +1,6 @@
 import os from "node:os";
 import path from "node:path";
-import {NetworkName} from "../networks";
+import {NetworkName} from "../networks/index.js";
 
 /**
  * Follows XDG Base Directory Specification

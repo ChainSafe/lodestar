@@ -1,6 +1,6 @@
 import {expect} from "chai";
-import {chunkifyMaximizeChunkSize} from "../../../../src/chain/bls/multithread/utils";
-import {linspace} from "../../../../src/util/numpy";
+import {chunkifyMaximizeChunkSize} from "../../../../src/chain/bls/multithread/utils.js";
+import {linspace} from "../../../../src/util/numpy.js";
 
 describe("chain / bls / utils / chunkifyMaximizeChunkSize", () => {
   const minPerChunk = 3;

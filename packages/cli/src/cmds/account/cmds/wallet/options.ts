@@ -1,5 +1,5 @@
-import {defaultAccountPaths} from "../../paths";
-import {ICliCommandOptions} from "../../../../util";
+import {defaultAccountPaths} from "../../paths.js";
+import {ICliCommandOptions} from "../../../../util/index.js";
 
 export interface IAccountWalletArgs {
   walletsDir?: string;

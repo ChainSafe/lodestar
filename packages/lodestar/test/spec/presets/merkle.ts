@@ -1,11 +1,11 @@
+import {expect} from "chai";
 import {ssz} from "@chainsafe/lodestar-types";
 import {BeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {InputType} from "@chainsafe/lodestar-spec-test-util";
 import {ProofType, SingleProof, Tree} from "@chainsafe/persistent-merkle-tree";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {verifyMerkleBranch} from "@chainsafe/lodestar-utils";
-import {expect} from "chai";
-import {TestRunnerFn} from "../utils/types";
+import {TestRunnerFn} from "../utils/types.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 

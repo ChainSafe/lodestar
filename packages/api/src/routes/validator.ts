@@ -24,7 +24,7 @@ import {
   reqOnlyBody,
   ReqSerializers,
   jsonType,
-} from "../utils";
+} from "../utils/index.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
@@ -43,6 +43,15 @@ export type SyncCommitteeSubscription = {
   validatorIndex: ValidatorIndex;
   syncCommitteeIndices: number[];
   untilEpoch: Epoch;
+};
+
+/**
+ * The types used here are string instead of ssz based because the use of proposer data
+ * is just validator --> beacon json api call for `beaconProposerCache` cache update.
+ */
+export type ProposerPreparationData = {
+  validatorIndex: string;
+  feeRecipient: string;
 };
 
 export type ProposerDuty = {
@@ -205,6 +214,8 @@ export type Api = {
 
   prepareSyncCommitteeSubnets(subscriptions: SyncCommitteeSubscription[]): Promise<void>;
 
+  prepareBeaconProposer(proposers: ProposerPreparationData[]): Promise<void>;
+
   /** Returns validator indices that has been observed to be active on the network */
   getLiveness(indices: ValidatorIndex[], epoch: Epoch): Promise<{data: LivenessResponseData[]}>;
 };
@@ -225,6 +236,7 @@ export const routesData: RoutesData<Api> = {
   publishContributionAndProofs: {url: "/eth/v1/validator/contribution_and_proofs", method: "POST"},
   prepareBeaconCommitteeSubnet: {url: "/eth/v1/validator/beacon_committee_subscriptions", method: "POST"},
   prepareSyncCommitteeSubnets: {url: "/eth/v1/validator/sync_committee_subscriptions", method: "POST"},
+  prepareBeaconProposer: {url: "/eth/v1/validator/prepare_beacon_proposer", method: "POST"},
   getLiveness: {url: "/eth/v1/lodestar/liveness", method: "GET"},
 };
 
@@ -242,6 +254,7 @@ export type ReqTypes = {
   publishContributionAndProofs: {body: unknown};
   prepareBeaconCommitteeSubnet: {body: unknown};
   prepareSyncCommitteeSubnets: {body: unknown};
+  prepareBeaconProposer: {body: unknown};
   getLiveness: {query: {indices: ValidatorIndex[]; epoch: Epoch}};
 };
 
@@ -342,6 +355,13 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
     publishContributionAndProofs: reqOnlyBody(ArrayOf(ssz.altair.SignedContributionAndProof), Schema.ObjectArray),
     prepareBeaconCommitteeSubnet: reqOnlyBody(ArrayOf(BeaconCommitteeSubscription), Schema.ObjectArray),
     prepareSyncCommitteeSubnets: reqOnlyBody(ArrayOf(SyncCommitteeSubscription), Schema.ObjectArray),
+    prepareBeaconProposer: {
+      writeReq: (items: ProposerPreparationData[]) => ({body: items.map((item) => jsonType("snake").toJson(item))}),
+      parseReq: ({body}) => [
+        (body as Record<string, unknown>[]).map((item) => jsonType("snake").fromJson(item) as ProposerPreparationData),
+      ],
+      schema: {body: Schema.ObjectArray},
+    },
     getLiveness: {
       writeReq: (indices, epoch) => ({query: {indices, epoch}}),
       parseReq: ({query}) => [query.indices, query.epoch],

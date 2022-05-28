@@ -1,26 +1,26 @@
 import {BLSPubkey, Root} from "@chainsafe/lodestar-types";
 import {DatabaseService, IDatabaseApiOptions} from "@chainsafe/lodestar-db";
-import {uniqueVectorArr} from "../slashingProtection/utils";
-import {BlockBySlotRepository, SlashingProtectionBlockService} from "./block";
+import {uniqueVectorArr} from "../slashingProtection/utils.js";
+import {BlockBySlotRepository, SlashingProtectionBlockService} from "./block/index.js";
 import {
   AttestationByTargetRepository,
   AttestationLowerBoundRepository,
   SlashingProtectionAttestationService,
-} from "./attestation";
-import {ISlashingProtection} from "./interface";
+} from "./attestation/index.js";
+import {ISlashingProtection} from "./interface.js";
 import {
   IInterchangeLodestar,
   Interchange,
   InterchangeFormatVersion,
   parseInterchange,
   serializeInterchange,
-} from "./interchange";
-import {MinMaxSurround, DistanceStoreRepository} from "./minMaxSurround";
-import {SlashingProtectionBlock, SlashingProtectionAttestation} from "./types";
+} from "./interchange/index.js";
+import {MinMaxSurround, DistanceStoreRepository} from "./minMaxSurround/index.js";
+import {SlashingProtectionBlock, SlashingProtectionAttestation} from "./types.js";
 
-export {InvalidAttestationError, InvalidAttestationErrorCode} from "./attestation";
-export {InvalidBlockError, InvalidBlockErrorCode} from "./block";
-export {InterchangeError, InterchangeErrorErrorCode, Interchange, InterchangeFormat} from "./interchange";
+export {InvalidAttestationError, InvalidAttestationErrorCode} from "./attestation/index.js";
+export {InvalidBlockError, InvalidBlockErrorCode} from "./block/index.js";
+export {InterchangeError, InterchangeErrorErrorCode, Interchange, InterchangeFormat} from "./interchange/index.js";
 export {ISlashingProtection, InterchangeFormatVersion, SlashingProtectionBlock, SlashingProtectionAttestation};
 
 /**

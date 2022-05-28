@@ -1,9 +1,8 @@
 import {fetch} from "cross-fetch";
-import {AbortSignal, AbortController} from "@chainsafe/abort-controller";
 import {ErrorAborted, ILogger, TimeoutError} from "@chainsafe/lodestar-utils";
-import {ReqGeneric, RouteDef} from "../../utils";
-import {stringifyQuery, urlJoin} from "./format";
-import {Metrics} from "./metrics";
+import {ReqGeneric, RouteDef} from "../../utils/index.js";
+import {stringifyQuery, urlJoin} from "./format.js";
+import {Metrics} from "./metrics.js";
 
 export class HttpError extends Error {
   status: number;

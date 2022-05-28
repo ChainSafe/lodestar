@@ -1,4 +1,4 @@
-import {aggregatePublicKeys, PublicKey, SecretKey} from "@chainsafe/bls";
+import bls from "@chainsafe/bls";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
 import {altair, ssz} from "@chainsafe/lodestar-types";
 import {chainConfig} from "@chainsafe/lodestar-config/default";
@@ -10,9 +10,9 @@ import {
   SLOTS_PER_EPOCH,
   SYNC_COMMITTEE_SIZE,
 } from "@chainsafe/lodestar-params";
-import {assertValidLightClientUpdate} from "../../src/validation";
-import {LightClientSnapshotFast, SyncCommitteeFast} from "../../src/types";
-import {defaultBeaconBlockHeader, getSyncAggregateSigningRoot, signAndAggregate} from "../utils";
+import {assertValidLightClientUpdate} from "../../src/validation.js";
+import {LightClientSnapshotFast, SyncCommitteeFast} from "../../src/types.js";
+import {defaultBeaconBlockHeader, getSyncAggregateSigningRoot, signAndAggregate} from "../utils.js";
 
 describe("validateLightClientUpdate", () => {
   const genValiRoot = Buffer.alloc(32, 9);
@@ -34,14 +34,14 @@ describe("validateLightClientUpdate", () => {
       buffer.writeInt16BE(i + 1, 30); // Offset to ensure the SK is less than the order
       skBytes.push(buffer);
     }
-    const sks = skBytes.map((skBytes) => SecretKey.fromBytes(skBytes));
+    const sks = skBytes.map((skBytes) => bls.SecretKey.fromBytes(skBytes));
     const pks = sks.map((sk) => sk.toPublicKey());
     const pubkeys = pks.map((pk) => pk.toBytes());
 
     // Create a sync committee with the keys that will sign the `syncAggregate`
     const nextSyncCommittee: altair.SyncCommittee = {
       pubkeys,
-      aggregatePubkey: aggregatePublicKeys(pubkeys),
+      aggregatePubkey: bls.aggregatePublicKeys(pubkeys),
     };
 
     // finalizedCheckpointState must have `nextSyncCommittee`
@@ -75,7 +75,7 @@ describe("validateLightClientUpdate", () => {
 
     const syncCommittee: SyncCommitteeFast = {
       pubkeys: pks,
-      aggregatePubkey: PublicKey.fromBytes(aggregatePublicKeys(pubkeys)),
+      aggregatePubkey: bls.PublicKey.fromBytes(bls.aggregatePublicKeys(pubkeys)),
     };
 
     update = {

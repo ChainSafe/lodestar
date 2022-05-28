@@ -1,22 +1,21 @@
 import sinon from "sinon";
 import {expect} from "chai";
-import {AbortController} from "@chainsafe/abort-controller";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {config} from "@chainsafe/lodestar-config/default";
 import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {sleep} from "@chainsafe/lodestar-utils";
 
-import {getReqRespHandlers, Network} from "../../../src/network";
-import {defaultNetworkOptions, INetworkOptions} from "../../../src/network/options";
-import {GossipType, GossipHandlers} from "../../../src/network/gossip";
+import {getReqRespHandlers, Network} from "../../../src/network/index.js";
+import {defaultNetworkOptions, INetworkOptions} from "../../../src/network/options.js";
+import {GossipType, GossipHandlers} from "../../../src/network/gossip/index.js";
 
-import {generateEmptySignedBlock} from "../../utils/block";
-import {MockBeaconChain} from "../../utils/mocks/chain/chain";
-import {createNode} from "../../utils/network";
-import {generateState} from "../../utils/state";
-import {StubbedBeaconDb} from "../../utils/stub";
-import {connect, onPeerConnect} from "../../utils/network";
-import {testLogger} from "../../utils/logger";
+import {generateEmptySignedBlock} from "../../utils/block.js";
+import {MockBeaconChain} from "../../utils/mocks/chain/chain.js";
+import {createNode} from "../../utils/network.js";
+import {generateState} from "../../utils/state.js";
+import {StubbedBeaconDb} from "../../utils/stub/index.js";
+import {connect, onPeerConnect} from "../../utils/network.js";
+import {testLogger} from "../../utils/logger.js";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 

@@ -1,11 +1,11 @@
-import {AbortController} from "@chainsafe/abort-controller";
 import all from "it-all";
 import pipe from "it-pipe";
+import {AbortController} from "@chainsafe/abort-controller";
 import {LodestarError, sleep as _sleep} from "@chainsafe/lodestar-utils";
-import {timeoutOptions} from "../../../../../src/constants";
-import {responseTimeoutsHandler} from "../../../../../src/network/reqresp/request/responseTimeoutsHandler";
-import {RequestErrorCode, RequestInternalError} from "../../../../../src/network/reqresp/request/errors";
-import {expectRejectedWithLodestarError} from "../../../../utils/errors";
+import {timeoutOptions} from "../../../../../src/constants/index.js";
+import {responseTimeoutsHandler} from "../../../../../src/network/reqresp/request/responseTimeoutsHandler.js";
+import {RequestErrorCode, RequestInternalError} from "../../../../../src/network/reqresp/request/errors.js";
+import {expectRejectedWithLodestarError} from "../../../../utils/errors.js";
 
 /* eslint-disable require-yield */
 

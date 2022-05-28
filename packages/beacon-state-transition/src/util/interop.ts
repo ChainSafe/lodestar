@@ -1,6 +1,7 @@
 import {toBufferBE} from "bigint-buffer";
 import {digest} from "@chainsafe/as-sha256";
-import bls, {SecretKey} from "@chainsafe/bls";
+import type {SecretKey} from "@chainsafe/bls/types";
+import bls from "@chainsafe/bls";
 import {bytesToBigInt, intToBytes} from "@chainsafe/lodestar-utils";
 
 let curveOrder: bigint;

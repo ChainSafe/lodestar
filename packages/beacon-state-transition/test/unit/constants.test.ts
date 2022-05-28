@@ -1,6 +1,6 @@
-import * as blst from "@chainsafe/blst";
 import {expect} from "chai";
-import {G2_POINT_AT_INFINITY} from "../../src";
+import * as blst from "@chainsafe/blst";
+import {G2_POINT_AT_INFINITY} from "../../src/index.js";
 
 describe("constants", () => {
   it("G2_POINT_AT_INFINITY", () => {

@@ -1,15 +1,15 @@
-import {SignerType, SlashingProtection, Validator} from "@chainsafe/lodestar-validator";
 import {readdirSync} from "node:fs";
-import {LevelDbController} from "@chainsafe/lodestar-db";
 import inquirer from "inquirer";
-import {ICliCommand, initBLS} from "../../../../util";
-import {IGlobalArgs} from "../../../../options";
-import {ValidatorDirManager} from "../../../../validatorDir";
-import {getAccountPaths} from "../../paths";
-import {getBeaconConfigFromArgs} from "../../../../config";
-import {errorLogger} from "../../../../util/logger";
-import {IValidatorCliArgs, validatorOptions} from "../../../validator/options";
-import {getValidatorPaths} from "../../../validator/paths";
+import {SignerType, SlashingProtection, Validator} from "@chainsafe/lodestar-validator";
+import {LevelDbController} from "@chainsafe/lodestar-db";
+import {ICliCommand} from "../../../../util/index.js";
+import {IGlobalArgs} from "../../../../options/index.js";
+import {ValidatorDirManager} from "../../../../validatorDir/index.js";
+import {getAccountPaths} from "../../paths.js";
+import {getBeaconConfigFromArgs} from "../../../../config/index.js";
+import {errorLogger} from "../../../../util/logger.js";
+import {IValidatorCliArgs, validatorOptions} from "../../../validator/options.js";
+import {getValidatorPaths} from "../../../validator/paths.js";
 
 /* eslint-disable no-console */
 
@@ -49,8 +49,6 @@ like to choose for the voluntary exit.",
   },
 
   handler: async (args) => {
-    await initBLS();
-
     const force = args.force;
     let publicKey = args.publicKey;
     const accountPaths = getAccountPaths(args);

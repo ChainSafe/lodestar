@@ -1,13 +1,12 @@
-import {AbortSignal} from "@chainsafe/abort-controller";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {Slot} from "@chainsafe/lodestar-types";
 import {ILogger, sleep} from "@chainsafe/lodestar-utils";
-import {IMetrics} from "../metrics";
-import {ChainEvent} from "./emitter";
-import {IBeaconChain} from "./interface";
-import {RegenCaller} from "./regen";
+import {IMetrics} from "../metrics/index.js";
+import {ChainEvent} from "./emitter.js";
+import {IBeaconChain} from "./interface.js";
+import {RegenCaller} from "./regen/index.js";
 
 /**
  * When node is synced and 1/3 slot before an epoch, we want to prepare for the next epoch

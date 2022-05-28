@@ -1,30 +1,30 @@
 import sinon from "sinon";
 import {expect} from "chai";
-import {AbortController} from "@chainsafe/abort-controller";
 
 import PeerId from "peer-id";
+import {Multiaddr} from "multiaddr";
+
 import {ENR} from "@chainsafe/discv5";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {config} from "@chainsafe/lodestar-config/default";
 import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {sleep} from "@chainsafe/lodestar-utils";
 
-import {Network, NetworkEvent, ReqRespMethod, getReqRespHandlers} from "../../../src/network";
-import {defaultNetworkOptions, INetworkOptions} from "../../../src/network/options";
-import {GoodByeReasonCode} from "../../../src/constants";
+import {Network, NetworkEvent, ReqRespMethod, getReqRespHandlers} from "../../../src/network/index.js";
+import {defaultNetworkOptions, INetworkOptions} from "../../../src/network/options.js";
+import {GoodByeReasonCode} from "../../../src/constants/index.js";
 
-import {generateEmptySignedBlock} from "../../utils/block";
-import {MockBeaconChain} from "../../utils/mocks/chain/chain";
-import {createNode} from "../../utils/network";
-import {generateState} from "../../utils/state";
-import {StubbedBeaconDb} from "../../utils/stub";
-import {connect, disconnect, onPeerConnect, onPeerDisconnect} from "../../utils/network";
-import {testLogger} from "../../utils/logger";
-import {CommitteeSubscription} from "../../../src/network/subnets";
-import {GossipHandlers} from "../../../src/network/gossip";
-import {ENRKey} from "../../../src/network/metadata";
-import {memoOnce} from "../../utils/cache";
-import {Multiaddr} from "multiaddr";
+import {generateEmptySignedBlock} from "../../utils/block.js";
+import {MockBeaconChain} from "../../utils/mocks/chain/chain.js";
+import {createNode} from "../../utils/network.js";
+import {generateState} from "../../utils/state.js";
+import {StubbedBeaconDb} from "../../utils/stub/index.js";
+import {connect, disconnect, onPeerConnect, onPeerDisconnect} from "../../utils/network.js";
+import {testLogger} from "../../utils/logger.js";
+import {CommitteeSubscription} from "../../../src/network/subnets/index.js";
+import {GossipHandlers} from "../../../src/network/gossip/index.js";
+import {ENRKey} from "../../../src/network/metadata.js";
+import {memoOnce} from "../../utils/cache.js";
 
 let port = 9000;
 const multiaddr = "/ip4/127.0.0.1/tcp/0";

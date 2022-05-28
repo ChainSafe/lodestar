@@ -2,17 +2,17 @@
  * @module network/gossip
  */
 
-import {ForkName} from "@chainsafe/lodestar-params";
-import {allForks, altair, phase0} from "@chainsafe/lodestar-types";
-import StrictEventEmitter from "strict-event-emitter-types";
 import {EventEmitter} from "events";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import StrictEventEmitter from "strict-event-emitter-types";
 import LibP2p from "libp2p";
 import {GossipsubMessage, MessageAcceptance, PeerIdStr} from "libp2p-gossipsub/src/types";
+import {ForkName} from "@chainsafe/lodestar-params";
+import {allForks, altair, phase0} from "@chainsafe/lodestar-types";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {IBeaconChain} from "../../chain";
-import {NetworkEvent} from "../events";
-import {JobItemQueue} from "../../util/queue";
+import {IBeaconChain} from "../../chain/index.js";
+import {NetworkEvent} from "../events.js";
+import {JobItemQueue} from "../../util/queue/index.js";
 
 export enum GossipType {
   // phase0

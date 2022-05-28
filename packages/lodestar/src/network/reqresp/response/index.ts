@@ -1,17 +1,16 @@
 import PeerId from "peer-id";
 import pipe from "it-pipe";
-import {AbortSignal} from "@chainsafe/abort-controller";
 import {ILogger, TimeoutError, withTimeout} from "@chainsafe/lodestar-utils";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {REQUEST_TIMEOUT, RespStatus} from "../../../constants";
-import {prettyPrintPeerId} from "../../util";
-import {PeersData} from "../../peers/peersData";
-import {Protocol, RequestBody, OutgoingResponseBody} from "../types";
-import {renderRequestBody} from "../utils";
-import {Libp2pStream} from "../interface";
-import {requestDecode} from "../encoders/requestDecode";
-import {responseEncodeError, responseEncodeSuccess} from "../encoders/responseEncode";
-import {ResponseError} from "./errors";
+import {REQUEST_TIMEOUT, RespStatus} from "../../../constants/index.js";
+import {prettyPrintPeerId} from "../../util.js";
+import {PeersData} from "../../peers/peersData.js";
+import {Protocol, RequestBody, OutgoingResponseBody} from "../types.js";
+import {renderRequestBody} from "../utils/index.js";
+import {Libp2pStream} from "../interface.js";
+import {requestDecode} from "../encoders/requestDecode.js";
+import {responseEncodeError, responseEncodeSuccess} from "../encoders/responseEncode.js";
+import {ResponseError} from "./errors.js";
 
 export {ResponseError};
 

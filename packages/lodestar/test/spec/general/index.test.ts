@@ -1,7 +1,7 @@
-import {RunnerType} from "../utils/types";
-import {specTestIterator} from "../utils/specTestIterator";
-import {blsTestRunner} from "./bls";
-import {sszGeneric} from "./ssz_generic";
+import {RunnerType} from "../utils/types.js";
+import {specTestIterator} from "../utils/specTestIterator.js";
+import {blsTestRunner} from "./bls.js";
+import {sszGeneric} from "./ssz_generic.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 

@@ -4,12 +4,12 @@ import {computeEpochAtSlot, isAggregatorFromCommitteeLength} from "@chainsafe/lo
 import {BLSSignature, Epoch, Slot, ValidatorIndex, RootHex} from "@chainsafe/lodestar-types";
 import {Api, routes} from "@chainsafe/lodestar-api";
 import {toHexString} from "@chainsafe/ssz";
-import {IndicesService} from "./indices";
-import {IClock, ILoggerVc} from "../util";
-import {ValidatorStore} from "./validatorStore";
-import {ChainHeaderTracker, HeadEventData} from "./chainHeaderTracker";
-import {PubkeyHex} from "../types";
-import {Metrics} from "../metrics";
+import {IClock, ILoggerVc} from "../util/index.js";
+import {PubkeyHex} from "../types.js";
+import {Metrics} from "../metrics.js";
+import {IndicesService} from "./indices.js";
+import {ValidatorStore} from "./validatorStore.js";
+import {ChainHeaderTracker, HeadEventData} from "./chainHeaderTracker.js";
 
 /** Only retain `HISTORICAL_DUTIES_EPOCHS` duties prior to the current epoch. */
 const HISTORICAL_DUTIES_EPOCHS = 2;

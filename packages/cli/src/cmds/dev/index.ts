@@ -1,7 +1,7 @@
-import {ICliCommand, ICliCommandOptions} from "../../util";
-import {IGlobalArgs} from "../../options";
-import {devOptions, IDevArgs} from "./options";
-import {devHandler} from "./handler";
+import {ICliCommand, ICliCommandOptions} from "../../util/index.js";
+import {IGlobalArgs} from "../../options/index.js";
+import {devOptions, IDevArgs} from "./options.js";
+import {devHandler} from "./handler.js";
 
 export const dev: ICliCommand<IDevArgs, IGlobalArgs> = {
   command: "dev",

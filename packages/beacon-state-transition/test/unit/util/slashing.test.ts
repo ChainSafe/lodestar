@@ -1,9 +1,9 @@
 import {assert} from "chai";
 
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import {isSlashableAttestationData} from "../../../src/util";
-import {randBetween} from "../../utils/misc";
-import {generateAttestationDataBigint} from "../../utils/attestation";
+import {isSlashableAttestationData} from "../../../src/util/index.js";
+import {randBetween} from "../../utils/misc.js";
+import {generateAttestationDataBigint} from "../../utils/attestation.js";
 
 describe("isSlashableAttestationData", () => {
   it("Attestation data with the same target epoch should return true", () => {

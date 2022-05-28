@@ -1,11 +1,11 @@
 import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import varint from "varint";
-import {BufferedSource} from "../../../../../../src/network/reqresp/utils";
-import {readSszSnappyPayload} from "../../../../../../src/network/reqresp/encodingStrategies/sszSnappy";
-import {isEqualSszType} from "../../../../../utils/ssz";
-import {arrToSource} from "../../../../../../test/unit/network/reqresp/utils";
-import {goerliShadowForkBlock13249} from "./testData";
+import {BufferedSource} from "../../../../../../src/network/reqresp/utils/index.js";
+import {readSszSnappyPayload} from "../../../../../../src/network/reqresp/encodingStrategies/sszSnappy/index.js";
+import {isEqualSszType} from "../../../../../utils/ssz.js";
+import {arrToSource} from "../../../../../../test/unit/network/reqresp/utils.js";
+import {goerliShadowForkBlock13249} from "./testData.js";
 
 chai.use(chaiAsPromised);
 

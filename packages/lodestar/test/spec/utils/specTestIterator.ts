@@ -1,10 +1,10 @@
-import {ForkName} from "@chainsafe/lodestar-params";
 import fs from "node:fs";
 import path from "node:path";
-import {SPEC_TEST_LOCATION} from "../specTestVersioning";
-import {describeDirectorySpecTest} from "@chainsafe/lodestar-spec-test-util";
-import {RunnerType, TestRunner} from "./types";
 import {expect} from "chai";
+import {ForkName} from "@chainsafe/lodestar-params";
+import {describeDirectorySpecTest} from "@chainsafe/lodestar-spec-test-util";
+import {SPEC_TEST_LOCATION} from "../specTestVersioning.js";
+import {RunnerType, TestRunner} from "./types.js";
 
 const specTestsTestPath = path.join(SPEC_TEST_LOCATION, "tests");
 const ARTIFACT_FILENAMES = new Set(["._.DS_Store", ".DS_Store"]);

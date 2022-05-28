@@ -1,11 +1,11 @@
 import {computeSigningRoot} from "@chainsafe/lodestar-beacon-state-transition";
 import {DOMAIN_AGGREGATE_AND_PROOF, DOMAIN_SELECTION_PROOF} from "@chainsafe/lodestar-params";
 import {phase0, ssz} from "@chainsafe/lodestar-types";
-import {IBeaconChain} from "../../../src/chain";
-import {getSecretKeyFromIndexCached} from "@chainsafe/lodestar-beacon-state-transition/test/perf/util";
-import {SeenAggregators} from "../../../src/chain/seenCache";
-import {signCached} from "../cache";
-import {getAttestationValidData, AttestationValidDataOpts} from "./attestation";
+import {IBeaconChain} from "../../../src/chain/index.js";
+import {getSecretKeyFromIndexCached} from "../../../../beacon-state-transition/test/perf/util.js";
+import {SeenAggregators} from "../../../src/chain/seenCache/index.js";
+import {signCached} from "../cache.js";
+import {getAttestationValidData, AttestationValidDataOpts} from "./attestation.js";
 
 export type AggregateAndProofValidDataOpts = AttestationValidDataOpts;
 

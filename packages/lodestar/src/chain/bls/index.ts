@@ -1,3 +1,3 @@
-export {IBlsVerifier} from "./interface";
-export {BlsMultiThreadWorkerPool, BlsMultiThreadWorkerPoolModules} from "./multithread";
-export {BlsSingleThreadVerifier} from "./singleThread";
+export {IBlsVerifier} from "./interface.js";
+export {BlsMultiThreadWorkerPool, BlsMultiThreadWorkerPoolModules} from "./multithread/index.js";
+export {BlsSingleThreadVerifier} from "./singleThread.js";

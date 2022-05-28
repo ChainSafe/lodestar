@@ -1,4 +1,4 @@
-import {restApiOptionsDefault, RestApiOptions} from "./rest";
+import {restApiOptionsDefault, RestApiOptions} from "./rest/index.js";
 
 export interface IApiOptions {
   maxGindicesInProof?: number;

@@ -1,6 +1,6 @@
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import {IHttpClient, generateGenericJsonClient} from "./utils";
-import {Api, ReqTypes, routesData, getReqSerializers, getReturnTypes} from "../routes/node";
+import {Api, ReqTypes, routesData, getReqSerializers, getReturnTypes} from "../routes/node.js";
+import {IHttpClient, generateGenericJsonClient} from "./utils/index.js";
 
 /**
  * REST HTTP client for beacon routes

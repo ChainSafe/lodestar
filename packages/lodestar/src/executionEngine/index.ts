@@ -1,8 +1,7 @@
-import {AbortSignal} from "@chainsafe/abort-controller";
-import {IExecutionEngine} from "./interface";
-import {ExecutionEngineDisabled} from "./disabled";
-import {ExecutionEngineHttp, ExecutionEngineHttpOpts, defaultExecutionEngineHttpOpts} from "./http";
-import {ExecutionEngineMock, ExecutionEngineMockOpts} from "./mock";
+import {IExecutionEngine} from "./interface.js";
+import {ExecutionEngineDisabled} from "./disabled.js";
+import {ExecutionEngineHttp, ExecutionEngineHttpOpts, defaultExecutionEngineHttpOpts} from "./http.js";
+import {ExecutionEngineMock, ExecutionEngineMockOpts} from "./mock.js";
 
 export {IExecutionEngine, ExecutionEngineHttp, ExecutionEngineDisabled, ExecutionEngineMock};
 

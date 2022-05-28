@@ -9,20 +9,20 @@ import {
 import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/default";
 
-import {ZERO_HASH} from "../../src/constants";
-import {newZeroedBigIntArray} from "../../src/util";
+import {createIBeaconConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
+import {ZERO_HASH} from "../../src/constants/index.js";
+import {newZeroedBigIntArray} from "../../src/util/index.js";
 
-import {generateEmptyBlock} from "./block";
 import {
   BeaconStatePhase0,
   CachedBeaconStateAllForks,
   BeaconStateAllForks,
   createCachedBeaconState,
   PubkeyIndexMap,
-} from "../../src";
-import {createIBeaconConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
-import {BeaconStateCache} from "../../src/cache/stateCache";
-import {EpochContextOpts} from "../../src/cache/epochContext";
+} from "../../src/index.js";
+import {BeaconStateCache} from "../../src/cache/stateCache.js";
+import {EpochContextOpts} from "../../src/cache/epochContext.js";
+import {generateEmptyBlock} from "./block.js";
 
 /**
  * Copy of BeaconState, but all fields are marked optional to allow for swapping out variables as needed.

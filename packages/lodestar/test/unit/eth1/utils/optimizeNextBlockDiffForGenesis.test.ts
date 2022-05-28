@@ -1,6 +1,6 @@
 import {expect} from "chai";
-import {optimizeNextBlockDiffForGenesis} from "../../../../src/eth1/utils/optimizeNextBlockDiffForGenesis";
-import {Eth1Block} from "../../../../src/eth1/interface";
+import {optimizeNextBlockDiffForGenesis} from "../../../../src/eth1/utils/optimizeNextBlockDiffForGenesis.js";
+import {Eth1Block} from "../../../../src/eth1/interface.js";
 
 describe("eth1 / utils / optimizeNextBlockDiffForGenesis", function () {
   it("should return optimized block diff to find genesis time", () => {

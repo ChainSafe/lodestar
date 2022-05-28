@@ -1,17 +1,18 @@
 import fs from "node:fs";
 import path from "node:path";
-import bls, {SecretKey} from "@chainsafe/bls";
+import bls from "@chainsafe/bls";
+import type {SecretKey} from "@chainsafe/bls/types";
 import {Keystore} from "@chainsafe/bls-keystore";
 import {phase0} from "@chainsafe/lodestar-types";
 import {lockFilepath, unlockFilepath} from "@chainsafe/lodestar-keymanager-server";
-import {YargsError, readValidatorPassphrase, add0xPrefix} from "../util";
-import {decodeEth1TxData} from "../depositContract/depositData";
+import {YargsError, readValidatorPassphrase, add0xPrefix} from "../util/index.js";
+import {decodeEth1TxData} from "../depositContract/depositData.js";
 import {
   VOTING_KEYSTORE_FILE,
   WITHDRAWAL_KEYSTORE_FILE,
   ETH1_DEPOSIT_DATA_FILE,
   ETH1_DEPOSIT_AMOUNT_FILE,
-} from "./paths";
+} from "./paths.js";
 
 export interface IValidatorDirOptions {
   force: boolean;

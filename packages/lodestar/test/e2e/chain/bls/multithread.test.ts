@@ -1,11 +1,10 @@
 import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
-import {AbortController} from "@chainsafe/abort-controller";
-import {bls} from "@chainsafe/bls";
+import bls from "@chainsafe/bls";
 import {ISignatureSet, SignatureSetType} from "@chainsafe/lodestar-beacon-state-transition";
-import {BlsMultiThreadWorkerPool} from "../../../../src/chain/bls/multithread";
-import {testLogger} from "../../../utils/logger";
-import {VerifySignatureOpts} from "../../../../src/chain/bls/interface";
+import {BlsMultiThreadWorkerPool} from "../../../../src/chain/bls/multithread/index.js";
+import {testLogger} from "../../../utils/logger.js";
+import {VerifySignatureOpts} from "../../../../src/chain/bls/interface.js";
 
 chai.use(chaiAsPromised);
 

@@ -6,7 +6,7 @@ import {LevelUp} from "levelup";
 import level from "level";
 import all from "it-all";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {IDatabaseController, IDatabaseOptions, IFilterOptions, IKeyValue} from "./interface";
+import {IDatabaseController, IDatabaseOptions, IFilterOptions, IKeyValue} from "./interface.js";
 
 enum Status {
   started = "started",

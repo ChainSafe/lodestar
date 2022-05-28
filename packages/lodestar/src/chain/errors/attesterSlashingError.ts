@@ -1,4 +1,4 @@
-import {GossipActionError} from "./gossipValidation";
+import {GossipActionError} from "./gossipValidation.js";
 
 export enum AttesterSlashingErrorCode {
   ALREADY_EXISTS = "ATTESTATION_SLASHING_ERROR_ALREADY_EXISTS",

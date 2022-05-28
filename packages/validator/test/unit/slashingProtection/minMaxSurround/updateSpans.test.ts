@@ -1,6 +1,6 @@
 import {expect} from "chai";
-import {DistanceStoreMemory, storeToSpansPerEpoch, emptyPubkey} from "./utils";
-import {MinMaxSurroundAttestation, MinMaxSurround} from "../../../../src/slashingProtection/minMaxSurround";
+import {MinMaxSurroundAttestation, MinMaxSurround} from "../../../../src/slashingProtection/minMaxSurround/index.js";
+import {DistanceStoreMemory, storeToSpansPerEpoch, emptyPubkey} from "./utils.js";
 
 const updateSpansTests: {
   name: string;

@@ -1,7 +1,6 @@
 import chaiAsPromised from "chai-as-promised";
 import chai, {expect} from "chai";
 import {createIBeaconConfig, IChainConfig} from "@chainsafe/lodestar-config";
-import {HttpClient} from "@chainsafe/lodestar-api/src";
 import {getClient} from "@chainsafe/lodestar-api/src/client/validator";
 import {chainConfig as chainConfigDef} from "@chainsafe/lodestar-config/default";
 import {phase0} from "@chainsafe/lodestar-types";
@@ -10,6 +9,7 @@ import {getDevBeaconNode} from "../../../utils/node/beacon";
 import {waitForEvent} from "../../../utils/events/resolver";
 import {ChainEvent} from "../../../../src/chain";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
+import {HttpClient} from "@chainsafe/lodestar-api";
 
 chai.use(chaiAsPromised);
 

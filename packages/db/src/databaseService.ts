@@ -1,6 +1,6 @@
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import {Db} from "./controller";
-import {IDbMetrics} from "./metrics";
+import {Db} from "./controller/index.js";
+import {IDbMetrics} from "./metrics.js";
 
 export interface IDatabaseApiOptions {
   config: IChainForkConfig;

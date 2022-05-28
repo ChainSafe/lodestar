@@ -1,6 +1,6 @@
-import {createKeypairFromPeerId, ENR, ENRKey, ENRValue} from "@chainsafe/discv5";
-import {writeFile, readFile} from "../util";
 import PeerId from "peer-id";
+import {createKeypairFromPeerId, ENR, ENRKey, ENRValue} from "@chainsafe/discv5";
+import {writeFile, readFile} from "../util/index.js";
 
 /**
  * `FileENR` is an `ENR` that saves the ENR contents to a file on every modification

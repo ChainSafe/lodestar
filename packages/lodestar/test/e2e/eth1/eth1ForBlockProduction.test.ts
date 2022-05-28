@@ -1,23 +1,22 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import "mocha";
-import {expect} from "chai";
 import {promisify} from "node:util";
+import {expect} from "chai";
 import leveldown from "leveldown";
-import {AbortController} from "@chainsafe/abort-controller";
 import {sleep} from "@chainsafe/lodestar-utils";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 
-import {Eth1ForBlockProduction} from "../../../src/eth1";
-import {Eth1Options} from "../../../src/eth1/options";
-import {getTestnetConfig, medallaTestnetConfig} from "../../utils/testnet";
-import {testLogger} from "../../utils/logger";
-import {BeaconDb} from "../../../src/db";
-import {generateState} from "../../utils/state";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {ssz} from "@chainsafe/lodestar-types";
-import {Eth1Provider} from "../../../src/eth1/provider/eth1Provider";
-import {getGoerliRpcUrl} from "../../testParams";
-import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState";
+import {Eth1ForBlockProduction} from "../../../src/eth1/index.js";
+import {Eth1Options} from "../../../src/eth1/options.js";
+import {getTestnetConfig, medallaTestnetConfig} from "../../utils/testnet.js";
+import {testLogger} from "../../utils/logger.js";
+import {BeaconDb} from "../../../src/db/index.js";
+import {generateState} from "../../utils/state.js";
+import {Eth1Provider} from "../../../src/eth1/provider/eth1Provider.js";
+import {getGoerliRpcUrl} from "../../testParams.js";
+import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 
 const dbLocation = "./.__testdb";
 
