@@ -1,0 +1,29 @@
+name: Create RC
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release. Must be a plain semver '0.1.0', '1.2.3'"
+        required: true
+      commit:
+        description: "Commit from unstable branch to release"
+        required: true
+
+jobs:
+  pre-release:
+    name: create pre release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          ref: "unstable"
+      - uses: actions/setup-node@v2
+        with:
+          node-version: "lts/gallium"
+
+      - name: Config git to @actions user
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      - name: Create RC
+        run: yarn release:create_rc ${{ github.event.inputs.version }} ${{ github.event.inputs.commit }}
