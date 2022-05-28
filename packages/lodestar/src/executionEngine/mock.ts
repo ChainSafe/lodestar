@@ -82,6 +82,7 @@ export class ExecutionEngineMock implements IExecutionEngine {
    */
   async notifyForkchoiceUpdate(
     headBlockHash: Root,
+    safeBlockHash: RootHex,
     finalizedBlockHash: RootHex,
     payloadAttributes?: PayloadAttributes
   ): Promise<PayloadId> {
