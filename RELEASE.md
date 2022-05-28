@@ -23,8 +23,11 @@ To start a new release, one of the Lodestar developers will communicate this via
 #### All-in-one script (for example version `v1.1.0`, commit `9fceb02`):
 
 - The team selects a commit from `unstable` as a "release candidate" for a new version release.
-- `yarn release:create_rc v1.1.0 9fceb02`
-- `yarn release:tag_rc v1.1.0-rc.0`
+
+```
+yarn release:create_rc v1.1.0 9fceb02`
+```
+
 - Open draft PR from `rc/v1.1.0` to `stable` with title `v1.1.0 release`.
 
 #### Manual steps (for example version `v1.1.0`, commit `9fceb02`):
@@ -36,9 +39,10 @@ To start a new release, one of the Lodestar developers will communicate this via
   - `lerna version v1.1.0 --no-git-tag-version --force-publish --yes`
 - Commit changes
   - `git commit -am "v1.1.0"`
-- Tag resulting commit as `v1.1.0-rc.0` with an annotated tag, push branch and tag.
+  - `git push origin rc/v1.1.0`
+- Tag resulting commit as `v1.1.0-rc.0` with an annotated tag, and push the tag.
   - `git tag -am "v1.1.0-rc.0" v1.1.0-rc.0`
-  - `git push --tag`
+  - `git push origin v1.1.0-rc.0`
 - Open draft PR from `rc/v1.1.0` to `stable` with title `v1.1.0 release`.
 
 ### 2. Test release candidate
@@ -56,25 +60,27 @@ For example: After 3-5 days of testing, is performance equal to or better than l
 
 ### 3. Merge release candidate
 
-#### All-in-one script (for example version `v1.1.0`):
+In-Github and social steps to finalize the release
 
 - Ensure step 2 testing is successful and there is sufficient consensus to release `v1.1.0`.
-- Gather required PR approvals + wait for CI to pass.
+- Approving the `v1.1.0 release` PR means a team member marks the release as safe, after personally reviewing and / or testing it.
 - Merge `v1.1.0 release` PR to stable **with "merge commit"** strategy to preserve all history.
-- `yarn release:tag_stable v1.1.0`
-- Open a PR to merge `stable` into `unstable` **with merge commit** strategy. This PR should be merged ASAP.
-- Double check that Github release is correct
-- Publish to Social Media
+
+#### All-in-one script (for example version `v1.1.0`):
+
+```
+yarn release:tag_stable v1.1.0`
+```
 
 #### Manual steps (for example version `v1.1.0`):
 
-- Ensure step 2 testing is successful and there is sufficient consensus to release `v1.1.0`.
-- Gather required PR approvals + wait for CI to pass.
-- Merge `v1.1.0 release` PR to stable **with "merge commit"** strategy to preserve all history.
 - Tag resulting merge commit as `v1.1.0` with an annotated tag, push commit and tag.
   - `git tag -am "v1.1.0" v1.1.0`
   - `git push --tag`
-- Open a PR to merge `stable` into `unstable` **with merge commit** strategy. This PR should be merged ASAP.
+- Merge stable `stable` into `unstable` **with merge commit** strategy. If that's not possible, open a PR and handle conflicts latter.
+
+### 4. Announce
+
 - Double check that Github release is correct
 - Publish to Social Media
 
