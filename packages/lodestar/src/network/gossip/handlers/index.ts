@@ -148,7 +148,11 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
     [GossipType.beacon_aggregate_and_proof]: async (signedAggregateAndProof, _topic, _peer, seenTimestampSec) => {
       let validationResult: {indexedAttestation: phase0.IndexedAttestation; committeeIndices: number[]};
       try {
-        validationResult = await validateGossipAggregateAndProofRetryUnknownRoot(chain, signedAggregateAndProof);
+        validationResult = await validateGossipAggregateAndProofRetryUnknownRoot(
+          {chain, metrics},
+          signedAggregateAndProof,
+          seenTimestampSec
+        );
       } catch (e) {
         if (e instanceof AttestationError && e.action === GossipAction.REJECT) {
           const archivedPath = chain.persistInvalidSszObject(
@@ -163,7 +167,6 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
 
       // Handler
       const {indexedAttestation, committeeIndices} = validationResult;
-      metrics?.registerGossipAggregatedAttestation(seenTimestampSec, signedAggregateAndProof, indexedAttestation);
       const aggregatedAttestation = signedAggregateAndProof.message.aggregate;
 
       chain.aggregatedAttestationPool.add(
@@ -321,14 +324,15 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
  * both from gossip and the API. I also prevents having to catch and re-throw in multiple places.
  */
 async function validateGossipAggregateAndProofRetryUnknownRoot(
-  chain: IBeaconChain,
-  signedAggregateAndProof: phase0.SignedAggregateAndProof
+  {chain, metrics}: {chain: IBeaconChain; metrics: IMetrics | null},
+  signedAggregateAndProof: phase0.SignedAggregateAndProof,
+  seenTimestampSec: number
 ): Promise<ReturnType<typeof validateGossipAggregateAndProof>> {
   let unknownBlockRootRetries = 0;
   // eslint-disable-next-line no-constant-condition
   while (true) {
     try {
-      return await validateGossipAggregateAndProof(chain, signedAggregateAndProof);
+      return await validateGossipAggregateAndProof({chain, metrics}, signedAggregateAndProof, seenTimestampSec);
     } catch (e) {
       if (
         e instanceof AttestationError &&

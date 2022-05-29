@@ -9,12 +9,14 @@ import {
 import {IBeaconChain} from "..";
 import {AttestationError, AttestationErrorCode, GossipAction} from "../errors/index.js";
 import {RegenCaller} from "../regen/index.js";
+import {IMetrics} from "../../metrics/index.js";
 import {getSelectionProofSignatureSet, getAggregateAndProofSignatureSet} from "./signatureSets/index.js";
 import {getCommitteeIndices, verifyHeadBlockAndTargetRoot, verifyPropagationSlotRange} from "./attestation.js";
 
 export async function validateGossipAggregateAndProof(
-  chain: IBeaconChain,
-  signedAggregateAndProof: phase0.SignedAggregateAndProof
+  {chain, metrics = null}: {chain: IBeaconChain; metrics?: IMetrics | null},
+  signedAggregateAndProof: phase0.SignedAggregateAndProof,
+  seenTimestampSec: number
 ): Promise<{indexedAttestation: phase0.IndexedAttestation; committeeIndices: ValidatorIndex[]}> {
   // Do checks in this order:
   // - do early checks (w/o indexed attestation)
@@ -51,16 +53,6 @@ export async function validateGossipAggregateAndProof(
       code: AttestationErrorCode.AGGREGATOR_ALREADY_KNOWN,
       targetEpoch,
       aggregatorIndex,
-    });
-  }
-
-  // _[IGNORE]_ A valid aggregate attestation defined by `hash_tree_root(aggregate.data)` whose `aggregation_bits`
-  // is a non-strict superset has _not_ already been seen.
-  if (chain.seenAggregatedAttestations.isKnown(targetEpoch, attDataRoot, aggregationBits)) {
-    throw new AttestationError(GossipAction.IGNORE, {
-      code: AttestationErrorCode.ATTESTERS_ALREADY_KNOWN,
-      targetEpoch,
-      aggregateRoot: attDataRoot,
     });
   }
 
@@ -107,6 +99,20 @@ export async function validateGossipAggregateAndProof(
   // -- i.e. aggregate_and_proof.aggregator_index in get_beacon_committee(state, aggregate.data.slot, aggregate.data.index).
   if (!committeeIndices.includes(aggregateAndProof.aggregatorIndex)) {
     throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.AGGREGATOR_NOT_IN_COMMITTEE});
+  }
+
+  // a lot of AggregateAndProof is known by chain.seenAggregatedAttestations
+  // we want to count number of aggregated attestations include our validators' attestation before that check
+  metrics?.registerGossipAggregatedAttestation(seenTimestampSec, signedAggregateAndProof, indexedAttestation);
+
+  // _[IGNORE]_ A valid aggregate attestation defined by `hash_tree_root(aggregate.data)` whose `aggregation_bits`
+  // is a non-strict superset has _not_ already been seen.
+  if (chain.seenAggregatedAttestations.isKnown(targetEpoch, attDataRoot, aggregationBits)) {
+    throw new AttestationError(GossipAction.IGNORE, {
+      code: AttestationErrorCode.ATTESTERS_ALREADY_KNOWN,
+      targetEpoch,
+      aggregateRoot: attDataRoot,
+    });
   }
 
   // [REJECT] The aggregate_and_proof.selection_proof is a valid signature of the aggregate.data.slot

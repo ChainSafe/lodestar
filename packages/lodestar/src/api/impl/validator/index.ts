@@ -439,8 +439,9 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
           try {
             // TODO: Validate in batch
             const {indexedAttestation, committeeIndices} = await validateGossipAggregateAndProof(
-              chain,
-              signedAggregateAndProof
+              {chain, metrics},
+              signedAggregateAndProof,
+              seenTimestampSec
             );
 
             chain.aggregatedAttestationPool.add(

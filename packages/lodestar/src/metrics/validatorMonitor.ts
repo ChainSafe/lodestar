@@ -112,7 +112,7 @@ type EpochSummary = {
   /** The delay between when the attestation should have been produced and when it was observed. */
   attestationMinDelay: Seconds | null;
   /** The number of times a validators attestation was seen in an aggregate. */
-  attestationAggregateIncusions: number;
+  attestationAggregateInclusions: number;
   /** The number of times a validators attestation was seen in a block. */
   attestationBlockInclusions: number;
   /** The minimum observed inclusion distance for an attestation for this epoch.. */
@@ -137,7 +137,7 @@ function withEpochSummary(validator: MonitoredValidator, epoch: Epoch, fn: (summ
     summary = {
       attestations: 0,
       attestationMinDelay: null,
-      attestationAggregateIncusions: 0,
+      attestationAggregateInclusions: 0,
       attestationBlockInclusions: 0,
       attestationMinBlockInclusionDistance: null,
       blocks: 0,
@@ -370,7 +370,7 @@ export function createValidatorMonitor(
           metrics.validatorMonitor.attestationInAggregateTotal.inc({src, index});
           metrics.validatorMonitor.attestationInAggregateDelaySeconds.observe({src, index}, delaySec);
           withEpochSummary(validator, epoch, (summary) => {
-            summary.attestationAggregateIncusions += 1;
+            summary.attestationAggregateInclusions += 1;
           });
           logger.debug("Local validator attestation is included in AggregatedAndProof", {
             validatorIndex: validator.index,
@@ -457,7 +457,7 @@ export function createValidatorMonitor(
           metrics.validatorMonitor.prevEpochAttestationsMinDelaySeconds.observe({index}, summary.attestationMinDelay);
         metrics.validatorMonitor.prevEpochAttestationAggregateInclusions.set(
           {index},
-          summary.attestationAggregateIncusions
+          summary.attestationAggregateInclusions
         );
         metrics.validatorMonitor.prevEpochAttestationBlockInclusions.set({index}, summary.attestationBlockInclusions);
         if (summary.attestationMinBlockInclusionDistance !== null) {

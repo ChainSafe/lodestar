@@ -13,6 +13,7 @@ describe("validate gossip signedAggregateAndProof", () => {
   });
 
   const aggStruct = signedAggregateAndProof;
+  const seenTimestampSec = Date.now() / 1000;
 
   for (const [id, agg] of Object.entries({struct: aggStruct})) {
     itBench({
@@ -22,7 +23,7 @@ describe("validate gossip signedAggregateAndProof", () => {
         chain.seenAggregatedAttestations["aggregateRootsByEpoch"].clear();
       },
       fn: async () => {
-        await validateGossipAggregateAndProof(chain, agg);
+        await validateGossipAggregateAndProof({chain}, agg, seenTimestampSec);
       },
     });
   }

@@ -40,7 +40,7 @@ describe("chain / validation / aggregateAndProof", () => {
   it("Valid", async () => {
     const {chain, signedAggregateAndProof} = getValidData({});
 
-    await validateGossipAggregateAndProof(chain, signedAggregateAndProof);
+    await validateGossipAggregateAndProof({chain}, signedAggregateAndProof, Date.now() / 1000);
   });
 
   it("BAD_TARGET_EPOCH", async () => {
@@ -170,6 +170,9 @@ describe("chain / validation / aggregateAndProof", () => {
     signedAggregateAndProof: phase0.SignedAggregateAndProof,
     errorCode: AttestationErrorCode
   ): Promise<void> {
-    await expectRejectedWithLodestarError(validateGossipAggregateAndProof(chain, signedAggregateAndProof), errorCode);
+    await expectRejectedWithLodestarError(
+      validateGossipAggregateAndProof({chain}, signedAggregateAndProof, Date.now() / 1000),
+      errorCode
+    );
   }
 });
