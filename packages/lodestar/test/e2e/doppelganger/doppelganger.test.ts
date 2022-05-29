@@ -80,6 +80,7 @@ describe("doppelganger / doppelganger test", function () {
         generateAttestationData(
           bn.chain.clock.currentEpoch - 1,
           bn.chain.clock.currentEpoch,
+          committeeIndex,
           bn.chain.clock.currentSlot
         ),
         bn.chain.clock.currentEpoch
@@ -384,7 +385,12 @@ describe("doppelganger / doppelganger test", function () {
     await expect(
       validatorUnderTest.validatorStore.signAttestation(
         createAttesterDuty(fromHexString(pubKey), bn.chain.clock.currentSlot, committeeIndex, validatorIndex),
-        generateAttestationData(bn.chain.clock.currentEpoch, bn.chain.clock.currentEpoch),
+        generateAttestationData(
+          bn.chain.clock.currentEpoch,
+          bn.chain.clock.currentEpoch,
+          committeeIndex,
+          bn.chain.clock.currentSlot
+        ),
         bn.chain.clock.currentEpoch
       )
     ).to.eventually.be.rejectedWith("Doppelganger protection status is: Unknown");
@@ -405,6 +411,7 @@ describe("doppelganger / doppelganger test", function () {
         generateAttestationData(
           bn.chain.clock.currentEpoch - 1,
           bn.chain.clock.currentEpoch,
+          committeeIndex,
           bn.chain.clock.currentSlot
         ),
         bn.chain.clock.currentEpoch
