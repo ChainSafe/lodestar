@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import {promisify} from "node:util";
 import LibP2p from "libp2p";
 import PeerId from "peer-id";
 import {Multiaddr} from "multiaddr";
@@ -226,17 +227,12 @@ export class PeerDiscovery {
       this.metrics?.discovery.findNodeQueryRequests.inc({action: "start"});
     }
 
+    // async version of crypto.randomBytes
+    const randomNodeId = await promisify(crypto.randomBytes)(64);
     this.randomNodeQuery = {code: QueryStatusCode.Active, count: 0};
     const timer = this.metrics?.discovery.findNodeQueryTime.startTimer();
 
     try {
-      // async version of crypto.randomBytes
-      const randomNodeId = await new Promise<Buffer>((resolve, reject) => {
-        crypto.randomBytes(64, (err, buf) => {
-          if (err) reject(err);
-          resolve(buf);
-        });
-      });
       const enrs = await this.discv5.findNode(randomNodeId.toString("hex"));
       this.metrics?.discovery.findNodeQueryEnrCount.inc(enrs.length);
     } catch (e) {
