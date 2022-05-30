@@ -324,6 +324,7 @@ export function getMetrics(register: MetricsRegister, gitData: LodestarGitData) 
       checkDuration: register.histogram({
         name: "vc_doppelganger_check_time_seconds",
         help: "Time to complete a doppelganger check in seconds",
+        buckets: [0.5, 1, 2, 3, 6, 8]
       }),
       status: register.gauge<{validatorIndex: string}>({
         name: "vc_doppelganger_validator_status",
