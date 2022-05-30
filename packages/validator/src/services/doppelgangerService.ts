@@ -160,7 +160,7 @@ export class DoppelgangerService {
     const protectedIndices: ValidatorIndex[] = [];
 
     for (const [index, state] of this.doppelgangerStateByIndex.entries()) {
-      if (state.remainingEpochsToCheck != 0) {
+      if (state.remainingEpochsToCheck !== 0) {
         protectedIndices.push(index);
       }
     }
