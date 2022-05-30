@@ -31,5 +31,5 @@ about: Create a report to help us improve
 
 - OS: <!--[e.g. ubuntu, OSX High Siera]-->
 - Version: <!--[e.g. 22]-->
-- Branch: <!--[Master]-->
+- Branch: <!--[unstable]-->
 - Commit hash: <!--[e8232]-->

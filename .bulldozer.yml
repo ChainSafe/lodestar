@@ -46,7 +46,7 @@ merge:
   # Note: If the target branch does not match any of the specified keys, the "method" key is used instead.
   branch_method:
     develop: squash
-    master: squash
+    unstable: squash
 
   # "options" defines additional options for the individual merge methods.
   #options:

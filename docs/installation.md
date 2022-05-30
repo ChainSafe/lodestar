@@ -69,7 +69,7 @@ The [`chainsafe/lodestar`](https://hub.docker.com/r/chainsafe/lodestar) Docker H
 
 <!-- prettier-ignore-start -->
 !!! info
-    The Docker Hub image in run on CI every nightly release on `master`
+    The Docker Hub image in run on CI every dev release on `unstable`
 <!-- prettier-ignore-end -->
 
 Ensure you have Docker installed by issuing the command:

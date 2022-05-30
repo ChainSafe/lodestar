@@ -103,7 +103,7 @@ For example:
 
 ## Lodestar Monorepo
 
-We're currently experimenting with hosting the majority of lodestar packages and support packages in this repository as a [monorepo](https://en.wikipedia.org/wiki/Monorepo). We're using [Lerna](https://lerna.js.org/) to manage the packages. See [packages/](https://github.com/ChainSafe/lodestar/tree/master/packages) for a list of packages hosted in this repo.
+We're currently experimenting with hosting the majority of lodestar packages and support packages in this repository as a [monorepo](https://en.wikipedia.org/wiki/Monorepo). We're using [Lerna](https://lerna.js.org/) to manage the packages. See [packages/](https://github.com/ChainSafe/lodestar/tree/unstable/packages) for a list of packages hosted in this repo.
 
 ## Style Guide
 
@@ -133,7 +133,7 @@ We're currently experimenting with hosting the majority of lodestar packages and
 
 To edit or extend an existing Grafana dashboard with minimal diff:
 
-1. Grab the .json dashboard file from current master
+1. Grab the .json dashboard file from current unstable
 2. Import file to Grafana via the web UI at `/dashboard/import`. Give it some temporal name relevant to your work (i.e. the branch name)
 3. Do edits on the Dashboard
 4. Once done make sure to leave the exact same visual aspect as before: same refresh interval, collapsed rows, etc.

@@ -6,10 +6,10 @@ The Lodestar project is divided into Typescript packages that can be used indepe
 
 Several useful Ethereum consensus libraries are developed as part of the [Lodestar monorepo](https://github.com/ChainSafe/lodestar) and may be useful when used individually.
 
-- [params](https://github.com/ChainSafe/lodestar/tree/master/packages/params) - Ethereum consensus constants and fork names
-- [types](https://github.com/ChainSafe/lodestar/tree/master/packages/types) - Ethereum consensus datatypes, Typescript interfaces and SSZ type objects
-- [config](https://github.com/ChainSafe/lodestar/tree/master/packages/config) - Ethereum consensus run-time network configuration
-- [api](https://github.com/ChainSafe/lodestar/tree/master/packages/api) - Ethereum consensus REST API client
+- [params](https://github.com/ChainSafe/lodestar/tree/unstable/packages/params) - Ethereum consensus constants and fork names
+- [types](https://github.com/ChainSafe/lodestar/tree/unstable/packages/types) - Ethereum consensus datatypes, Typescript interfaces and SSZ type objects
+- [config](https://github.com/ChainSafe/lodestar/tree/unstable/packages/config) - Ethereum consensus run-time network configuration
+- [api](https://github.com/ChainSafe/lodestar/tree/unstable/packages/api) - Ethereum consensus REST API client
 
 ## Other libraries
 
