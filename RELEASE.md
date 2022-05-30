@@ -65,7 +65,7 @@ Tagging a release candidate will trigger CI to publish to NPM, dockerhub, and Gi
 
 ### 3. Test release candidate
 
-Once a release candidate is created, the Lodestar team begins a 3 day testing period.
+Once a release candidate is created, the Lodestar team begins a testing period.
 
 If there is a bug discovered during the testing period which significantly impacts performance, security, or stability, and it is determined that it is no longer prudent to promote the `rc.x` candidate to `stable`, then it will await a bug fix by the team. The fix will be committed, maybe back-ported to `unstable` and we publish and promote the new commit to `rc.x+1`. The 3 day testing period will reset.
 
@@ -98,7 +98,7 @@ Tagging a stable release will trigger CI to publish to NPM, dockerhub, and Githu
   - `git checkout stable`
 - Tag it as `v1.1.0` with an annotated tag, push commit and tag.
   - `git tag -am "v1.1.0" v1.1.0`
-  - `git push --tag`
+  - `git push origin v1.1.0`
 
 ### 6. Announce
 
