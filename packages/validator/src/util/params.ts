@@ -78,9 +78,11 @@ function getSpecCriticalParams(localConfig: IChainConfig): Record<keyof ConfigWi
     ///////////
 
     PRESET_BASE: false, // Not relevant, each preset value is checked below
-    TERMINAL_TOTAL_DIFFICULTY: bellatrixForkRelevant,
-    TERMINAL_BLOCK_HASH: bellatrixForkRelevant,
-    TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH: bellatrixForkRelevant,
+    // validator client behaviour does not change with this parameters, so it's not concerned about them.
+    // However, with the override ttd flag, the validator and beacon could be out of sync and prevent it from running.
+    TERMINAL_TOTAL_DIFFICULTY: false,
+    TERMINAL_BLOCK_HASH: false,
+    TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH: false,
 
     // Genesis
     MIN_GENESIS_ACTIVE_VALIDATOR_COUNT: true,
