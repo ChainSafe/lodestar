@@ -19,6 +19,8 @@ const MAX_CACHED_ENRS = 100;
 /** Max age a cached ENR will be considered for dial */
 const MAX_CACHED_ENR_AGE_MS = 5 * 60 * 1000;
 
+const randomBytesAsync = promisify(crypto.randomBytes);
+
 export type PeerDiscoveryOpts = {
   maxPeers: number;
   discv5FirstQueryDelayMs: number;
@@ -227,8 +229,9 @@ export class PeerDiscovery {
       this.metrics?.discovery.findNodeQueryRequests.inc({action: "start"});
     }
 
-    // async version of crypto.randomBytes
-    const randomNodeId = await promisify(crypto.randomBytes)(64);
+    // Use async version to prevent blocking the event loop
+    // Time to completion of this function is not critical, in case this async call add extra lag
+    const randomNodeId = await randomBytesAsync(64);
     this.randomNodeQuery = {code: QueryStatusCode.Active, count: 0};
     const timer = this.metrics?.discovery.findNodeQueryTime.startTimer();
 
