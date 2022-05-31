@@ -22,6 +22,7 @@ interface Gauge<Labels extends LabelsGeneric = never> {
 
 interface Histogram<Labels extends LabelsGeneric = never> {
   startTimer(): () => number;
+  startTimer(labels: Labels): () => number;
 
   observe(value: number): void;
   observe(labels: Labels, values: number): void;
@@ -321,15 +322,16 @@ export function getMetrics(register: MetricsRegister, gitData: LodestarGitData) 
     // Doppelganger check
 
     doppelganger: {
-      checkDuration: register.histogram({
+      checkDuration: register.histogram<{epoch: string}>({
         name: "vc_doppelganger_check_time_seconds",
         help: "Time to complete a doppelganger check in seconds",
         buckets: [0.5, 1, 2, 3, 6, 8],
+        labelNames: ["epoch"],
       }),
-      status: register.gauge<{validatorIndex: string}>({
+      status: register.gauge<{epoch: string; validatorIndex: string}>({
         name: "vc_doppelganger_validator_status",
         help: "Statuses of doppelganger check for each validator",
-        labelNames: ["validatorIndex"],
+        labelNames: ["epoch", "validatorIndex"],
       }),
     },
   };

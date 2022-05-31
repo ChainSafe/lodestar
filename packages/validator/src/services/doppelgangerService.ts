@@ -84,7 +84,7 @@ export class DoppelgangerService {
     // Run the doppelganger protection check 75% through the last slot of this epoch. This
     // *should* mean that the BN has seen the blocks and attestations for the epoch
     await sleep(this.clock.msToSlot(endSlotOfEpoch + 3 / 4));
-    const timer = this.metrics?.doppelganger.checkDuration.startTimer();
+    const timer = this.metrics?.doppelganger.checkDuration.startTimer({epoch: String(currentEpoch)});
     const indices = await this.getIndicesToCheck(currentEpoch);
     if (indices.length !== 0) {
       const previousEpoch = currentEpoch - 1;
@@ -142,6 +142,7 @@ export class DoppelgangerService {
 
         this.metrics?.doppelganger.status.set(
           {
+            epoch: String(currentEpoch),
             validatorIndex: String(validatorIndexToBeChecked.index),
           },
           doppelgangerStatusMetrics[this.getStatus(validatorIndexToBeChecked.index)]

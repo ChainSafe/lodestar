@@ -17,21 +17,23 @@ services:
         BEACON_URL: localhost:8008
         VC_URL: localhost:5064
     restart: always
-    network_mode: host
+    ports:
+      - "9090:9090"
     volumes:
       - "prometheus:/prometheus"
 
   grafana:
     build: grafana
     restart: always
-    network_mode: host
+    ports:
+      - "3000:3000"
     volumes:
       - "grafana:/var/lib/grafana"
       - "../dashboards:/dashboards"
     environment:
       # Linux:  http://localhost:9090
       # MacOSX: http://host.docker.internal:9090
-      PROMETHEUS_URL: http://localhost:9090
+      PROMETHEUS_URL: http://host.docker.internal:9090
 
 volumes:
   prometheus:
