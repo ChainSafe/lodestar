@@ -441,7 +441,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
             const {indexedAttestation, committeeIndices} = await validateGossipAggregateAndProof(
               chain,
               signedAggregateAndProof,
-              false // bypass known attesters check
+              true // skip known attesters check
             );
 
             chain.aggregatedAttestationPool.add(

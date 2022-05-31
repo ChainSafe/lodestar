@@ -15,7 +15,7 @@ import {getCommitteeIndices, verifyHeadBlockAndTargetRoot, verifyPropagationSlot
 export async function validateGossipAggregateAndProof(
   chain: IBeaconChain,
   signedAggregateAndProof: phase0.SignedAggregateAndProof,
-  validateKnownAttesters: boolean = true,
+  skipValidationKnownAttesters = false
 ): Promise<{indexedAttestation: phase0.IndexedAttestation; committeeIndices: ValidatorIndex[]}> {
   // Do checks in this order:
   // - do early checks (w/o indexed attestation)
@@ -47,7 +47,7 @@ export async function validateGossipAggregateAndProof(
   // [IGNORE] The aggregate is the first valid aggregate received for the aggregator with
   // index aggregate_and_proof.aggregator_index for the epoch aggregate.data.target.epoch.
   const aggregatorIndex = aggregateAndProof.aggregatorIndex;
-  if (validateKnownAttesters) {
+  if (!skipValidationKnownAttesters) {
     if (chain.seenAggregators.isKnown(targetEpoch, aggregatorIndex)) {
       throw new AttestationError(GossipAction.IGNORE, {
         code: AttestationErrorCode.AGGREGATOR_ALREADY_KNOWN,
