@@ -38,7 +38,7 @@ jobs:
 
     outputs:
       is_rc: ${{ steps.is_rc.outputs.is_rc }}
-      version: ${{ staps.is_rc.outputs.version }}
+      version: ${{ steps.is_rc.outputs.version }}
       tag: ${{ steps.get_tag.outputs.tag }}
       prev_tag: ${{ steps.get_prev_tag.outputs.prev_tag }}
 
