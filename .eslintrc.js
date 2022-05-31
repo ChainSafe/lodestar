@@ -27,18 +27,11 @@ module.exports = {
     "prettier/prettier": "error",
     //doesnt work, it reports false errors
     "constructor-super": "off",
-    "import/order" : [
+    "import/order": [
       "error",
-      { "groups":
-          [
-            "builtin",
-            "external",
-            "internal",
-            "parent",
-            "sibling",
-            "index",
-          ],
-      }
+      {
+        groups: ["builtin", "external", "internal", "parent", "sibling", "index"],
+      },
     ],
     "@typescript-eslint/await-thenable": "error",
     "@typescript-eslint/naming-convention": [
@@ -127,6 +120,7 @@ module.exports = {
     "import/no-relative-packages": "error",
     "@chainsafe/node/no-deprecated-api": "error",
     "new-parens": "error",
+    "no-loss-of-precision": "error",
     "no-caller": "error",
     "no-bitwise": "off",
     "no-cond-assign": "error",
@@ -166,13 +160,7 @@ module.exports = {
     // TEMP Disabled while eslint-plugin-import support ESM (Typescript does support it) https://github.com/import-js/eslint-plugin-import/issues/2170
     "import/no-unresolved": "off",
 
-    "@chainsafe/node/file-extension-in-import": [
-      "error",
-      "always",
-      {
-        "esm": true
-      }
-    ],
+    "@chainsafe/node/file-extension-in-import": ["error", "always", {esm: true}],
   },
   settings: {
     "import/internal-regex": "^@chainsafe/",
