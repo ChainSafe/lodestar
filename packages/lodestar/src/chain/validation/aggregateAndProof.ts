@@ -47,24 +47,24 @@ export async function validateGossipAggregateAndProof(
   // [IGNORE] The aggregate is the first valid aggregate received for the aggregator with
   // index aggregate_and_proof.aggregator_index for the epoch aggregate.data.target.epoch.
   const aggregatorIndex = aggregateAndProof.aggregatorIndex;
-  if (!skipValidationKnownAttesters) {
-    if (chain.seenAggregators.isKnown(targetEpoch, aggregatorIndex)) {
-      throw new AttestationError(GossipAction.IGNORE, {
-        code: AttestationErrorCode.AGGREGATOR_ALREADY_KNOWN,
-        targetEpoch,
-        aggregatorIndex,
-      });
-    }
+  if (chain.seenAggregators.isKnown(targetEpoch, aggregatorIndex)) {
+    throw new AttestationError(GossipAction.IGNORE, {
+      code: AttestationErrorCode.AGGREGATOR_ALREADY_KNOWN,
+      targetEpoch,
+      aggregatorIndex,
+    });
   }
 
   // _[IGNORE]_ A valid aggregate attestation defined by `hash_tree_root(aggregate.data)` whose `aggregation_bits`
   // is a non-strict superset has _not_ already been seen.
-  if (chain.seenAggregatedAttestations.isKnown(targetEpoch, attDataRoot, aggregationBits)) {
-    throw new AttestationError(GossipAction.IGNORE, {
-      code: AttestationErrorCode.ATTESTERS_ALREADY_KNOWN,
-      targetEpoch,
-      aggregateRoot: attDataRoot,
-    });
+  if (!skipValidationKnownAttesters) {
+    if (chain.seenAggregatedAttestations.isKnown(targetEpoch, attDataRoot, aggregationBits)) {
+      throw new AttestationError(GossipAction.IGNORE, {
+        code: AttestationErrorCode.ATTESTERS_ALREADY_KNOWN,
+        targetEpoch,
+        aggregateRoot: attDataRoot,
+      });
+    }
   }
 
   // [IGNORE] The block being voted for (attestation.data.beacon_block_root) has been seen (via both gossip
