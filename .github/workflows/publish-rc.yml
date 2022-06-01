@@ -1,4 +1,4 @@
-name: Publish release
+name: Publish release candidate
 
 # only one can tun at a time
 concurrency: cd-publish-rc
