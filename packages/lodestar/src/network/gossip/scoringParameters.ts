@@ -27,6 +27,14 @@ const VOLUNTARY_EXIT_WEIGHT = 0.05;
 const PROPOSER_SLASHING_WEIGHT = 0.05;
 const ATTESTER_SLASHING_WEIGHT = 0.05;
 
+/**
+ * Due to https://github.com/ChainSafe/lodestar/pull/4019
+ * only some first AggregateAndProof messages are accepted, others are ignored.
+ * On Prater, 70% of AggregateAndProof messages are IGNORED due to this reason.
+ * On mainnet, the number is 80%
+ */
+const ACCEPTED_AGGREGATE_AND_PROOF_RATIO = 0.25;
+
 const beaconAttestationSubnetWeight = 1 / ATTESTATION_SUBNET_COUNT;
 const maxPositiveScore =
   (MAX_IN_MESH_SCORE + MAX_FIRST_MESSAGE_DELIVERIES_SCORE) *
@@ -188,7 +196,7 @@ function getAllTopicsScoreParams(
       })
     ] = getTopicScoreParams(config, precomputedParams, {
       topicWeight: BEACON_AGGREGATE_PROOF_WEIGHT,
-      expectedMessageRate: aggregatorsPerslot,
+      expectedMessageRate: aggregatorsPerslot * ACCEPTED_AGGREGATE_AND_PROOF_RATIO,
       firstMessageDecayTime: epochDurationMs,
       meshMessageInfo: {
         decaySlots: SLOTS_PER_EPOCH * 2,

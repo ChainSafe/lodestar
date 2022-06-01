@@ -121,23 +121,29 @@ describe("computeGossipPeerScoreParams", function () {
     expect(params.timeInMeshWeight).closeTo(0.03333, TOLERANCE);
     expect(params.timeInMeshQuantum).to.be.equal(12 * 1000);
     expect(params.timeInMeshCap).to.be.equal(300.0);
-    expect(params.firstMessageDeliveriesWeight).closeTo(0.33509, TOLERANCE);
+    // 0.33509 if not filtering seen attesters
+    expect(params.firstMessageDeliveriesWeight).closeTo(1.340356, TOLERANCE);
     expect(params.firstMessageDeliveriesDecay).closeTo(0.86596, TOLERANCE);
-    expect(params.firstMessageDeliveriesCap).closeTo(119.3712, TOLERANCE);
+    // 119.3712 if not filtering seen attesters
+    expect(params.firstMessageDeliveriesCap).closeTo(29.8428, TOLERANCE);
     expect(params.invalidMessageDeliveriesWeight).closeTo(-215.0, TOLERANCE);
     expect(params.invalidMessageDeliveriesDecay).closeTo(0.99713, TOLERANCE);
 
     // Check message rate penalty params
     expect(params.meshMessageDeliveriesDecay).closeTo(0.930572, TOLERANCE);
-    expect(params.meshMessageDeliveriesCap).closeTo(68.6255, TOLERANCE);
+    // 68.6255 if not filtering seen attesters
+    expect(params.meshMessageDeliveriesCap).closeTo(17.15637, TOLERANCE);
     expect(params.meshMessageDeliveriesActivation).to.be.equal(384 * 1000);
     expect(params.meshMessageDeliveriesWindow).to.be.equal(12 * 1000);
-    expect(params.meshFailurePenaltyWeight).closeTo(-0.73044, TOLERANCE);
+    // -0.73044 if not filtering seen attesters
+    expect(params.meshFailurePenaltyWeight).closeTo(-11.68711, TOLERANCE);
     expect(params.meshFailurePenaltyDecay).closeTo(0.93057, TOLERANCE);
 
     if (penaltiesActive) {
-      expect(params.meshMessageDeliveriesWeight).closeTo(-0.7304, TOLERANCE);
-      expect(params.meshMessageDeliveriesThreshold).closeTo(17.15638, TOLERANCE);
+      // -0.7304 if not filtering seen attesters
+      expect(params.meshMessageDeliveriesWeight).closeTo(-11.68711, TOLERANCE);
+      // 17.15638 if not filtering seen attesters
+      expect(params.meshMessageDeliveriesThreshold).closeTo(4.28909, TOLERANCE);
     } else {
       expect(params.meshMessageDeliveriesWeight).to.be.equal(0.0);
       expect(params.meshMessageDeliveriesThreshold).to.be.equal(0.0);
