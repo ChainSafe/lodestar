@@ -132,7 +132,7 @@ jobs:
     if: needs.tag.outputs.is_rc == 'true'
     steps:
       - uses: actions/checkout@v2
-      - run: scripts/await-release.sh ${{ needs.tag.outputs.tag }} 900
+      - run: scripts/await-release.sh ${{ needs.tag.outputs.tag }} rc 900
       # https://github.com/docker/setup-qemu-action
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
