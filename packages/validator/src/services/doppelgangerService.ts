@@ -102,7 +102,7 @@ export class DoppelgangerService {
 
       const current: LivenessResponseData[] = (
         await this.api.validator.getLiveness(indices, currentEpoch).catch((e) => {
-          this.logger.error("Error getting liveness data for current epoch `${currentEpoch}`", {}, e as Error);
+          this.logger.error(`Error getting liveness data for current epoch ${currentEpoch}`, {}, e as Error);
           return Promise.resolve({data: []});
         })
       ).data;
