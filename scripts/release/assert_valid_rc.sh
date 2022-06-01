@@ -20,7 +20,7 @@ else
 fi
 
 # assert it exists in branch
-HEAD_COMMIT=$(git rev-parse refs/heads/$RC_BRANCH)
+HEAD_COMMIT=$(git rev-parse refs/remotes/origin/$RC_BRANCH)
 git merge-base --is-ancestor $COMMIT $HEAD_COMMIT
 
 # success
