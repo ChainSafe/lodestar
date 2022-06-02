@@ -14,8 +14,8 @@ import {deriveSecretKeys, SecretKeysArgs, secretKeysOptions} from "../util/deriv
 
 type SelfSlashArgs = SecretKeysArgs & {
   server: string;
-  slot?: string;
-  batchSize?: string;
+  slot: string;
+  batchSize: string;
 };
 
 export const selfSlashAttester: ICliCommand<SelfSlashArgs, Record<never, never>, void> = {
@@ -35,8 +35,8 @@ export const selfSlashAttester: ICliCommand<SelfSlashArgs, Record<never, never>,
       type: "string",
     },
     slot: {
-      description: "Address to connect to BeaconNode",
-      default: "http://127.0.0.1:9596",
+      description: "AttesterSlashing data slot",
+      default: "0",
       type: "string",
     },
     batchSize: {
@@ -51,8 +51,8 @@ export const selfSlashAttester: ICliCommand<SelfSlashArgs, Record<never, never>,
 export async function selfSlashAttesterHandler(args: SelfSlashArgs): Promise<void> {
   const sksAll = deriveSecretKeys(args);
 
-  const slot = args.slot ? BigInt(args.slot) : BigInt(0); // Throws if not valid
-  const batchSize = args.batchSize ? parseInt(args.batchSize) : 10;
+  const slot = BigInt(args.slot); // Throws if not valid
+  const batchSize = parseInt(args.batchSize);
 
   if (isNaN(batchSize)) throw Error(`Invalid arg batchSize ${args.batchSize}`);
   if (batchSize <= 0) throw Error(`batchSize must be > 0: ${batchSize}`);
@@ -134,7 +134,7 @@ export async function selfSlashAttesterHandler(args: SelfSlashArgs): Promise<voi
 
     successCount += attestingIndices.length;
     const indexesStr = attestingIndices.join(",");
-    console.log(`Submitted self AttesterSlashing for validators ${indexesStr} - ${++successCount}/${totalCount}`);
+    console.log(`Submitted self AttesterSlashing for validators ${indexesStr} - ${successCount}/${totalCount}`);
   }
 }
 
