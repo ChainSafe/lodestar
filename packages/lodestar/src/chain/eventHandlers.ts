@@ -197,13 +197,12 @@ export function onAttestation(this: BeaconChain, attestation: phase0.Attestation
     targetRoot: toHexString(attestation.data.target.root),
     aggregationBits: ssz.phase0.CommitteeBits.toJson(attestation.aggregationBits) as string,
   });
-  this.observedBlockAttesters.add(computeEpochAtSlot(attestation.data.slot), attestation.data.index);
 }
 
 export async function onBlock(
   this: BeaconChain,
   block: allForks.SignedBeaconBlock,
-  _postState: CachedBeaconStateAllForks
+  postState: CachedBeaconStateAllForks
 ): Promise<void> {
   const blockRoot = toHexString(this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message));
   const advancedSlot = this.clock.slotWithFutureTolerance(REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC);
@@ -215,7 +214,14 @@ export async function onBlock(
     root: blockRoot,
     delaySec: this.clock.secFromSlot(block.message.slot),
   });
-  this.observedBlockProposers.add(computeEpochAtSlot(block.message.slot), block.message.proposerIndex);
+  const epochAtSlot = computeEpochAtSlot(block.message.slot);
+  // observe the proposer for block
+  this.observedBlockProposers.add(epochAtSlot, block.message.proposerIndex);
+  // next observe the attesters in the block
+  for (const attestation of block.message.body.attestations) {
+    const attestingIndices = postState.epochCtx.getIndexedAttestation(attestation).attestingIndices;
+    this.observedBlockAttesters.addIndices(epochAtSlot, attestingIndices);
+  }
 }
 
 export async function onErrorAttestation(this: BeaconChain, err: AttestationError): Promise<void> {

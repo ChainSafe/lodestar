@@ -18,8 +18,8 @@ const MAX_EPOCHS = 3;
  * Keeps a cache to filter unaggregated attestations from the same validator in the same epoch.
  */
 export class SeenAttesters {
-  private readonly validatorIndexesByEpoch = new MapDef<Epoch, Set<ValidatorIndex>>(() => new Set<ValidatorIndex>());
-  private lowestPermissibleEpoch: Epoch = 0;
+  protected readonly validatorIndexesByEpoch = new MapDef<Epoch, Set<ValidatorIndex>>(() => new Set<ValidatorIndex>());
+  protected lowestPermissibleEpoch: Epoch = 0;
 
   isKnown(targetEpoch: Epoch, validatorIndex: ValidatorIndex): boolean {
     return this.validatorIndexesByEpoch.get(targetEpoch)?.has(validatorIndex) === true;
