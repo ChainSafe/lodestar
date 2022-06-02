@@ -237,7 +237,7 @@ export const routesData: RoutesData<Api> = {
   prepareBeaconCommitteeSubnet: {url: "/eth/v1/validator/beacon_committee_subscriptions", method: "POST"},
   prepareSyncCommitteeSubnets: {url: "/eth/v1/validator/sync_committee_subscriptions", method: "POST"},
   prepareBeaconProposer: {url: "/eth/v1/validator/prepare_beacon_proposer", method: "POST"},
-  getLiveness: {url: "/eth/v1/lodestar/liveness", method: "GET"},
+  getLiveness: {url: "/eth/v1/validator/liveness", method: "GET"},
 };
 
 /* eslint-disable @typescript-eslint/naming-convention */
