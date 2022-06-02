@@ -41,7 +41,7 @@
     "build:types:watch": "yarn run build:types --watch",
     "build:lib:watch": "yarn run build:lib --watch",
     "build:typedocs": "typedoc --exclude src/index.ts --out typedocs src",
-    "check-build": "node -e \"(async function() { await import('./lib/index.js') })()\"",
+    "check-build": "node -e \"(async function() { await import('./lib/index.js') })()\" bcli --help",
     "check-types": "tsc",
     "lint": "eslint --color --ext .ts src/",
     "lint:fix": "yarn run lint --fix",
