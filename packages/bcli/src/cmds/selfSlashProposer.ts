@@ -34,7 +34,7 @@ export const selfSlashProposer: ICliCommand<SelfSlashArgs, Record<never, never>,
       type: "string",
     },
     slot: {
-      description: "ProposerSlashing slot",
+      description: "ProposerSlashing headers slot",
       default: "0",
       type: "string",
     },

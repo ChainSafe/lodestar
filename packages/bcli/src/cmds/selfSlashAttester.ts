@@ -4,7 +4,7 @@ import {getClient} from "@chainsafe/lodestar-api";
 import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {config as chainConfig} from "@chainsafe/lodestar-config/default";
 import {createIBeaconConfig, IBeaconConfig} from "@chainsafe/lodestar-config";
-import {DOMAIN_BEACON_ATTESTER} from "@chainsafe/lodestar-params";
+import {DOMAIN_BEACON_ATTESTER, MAX_VALIDATORS_PER_COMMITTEE} from "@chainsafe/lodestar-params";
 import {toHexString} from "@chainsafe/lodestar-utils";
 import {computeSigningRoot} from "@chainsafe/lodestar-beacon-state-transition";
 import {ICliCommand} from "../util/command.js";
@@ -40,7 +40,7 @@ export const selfSlashAttester: ICliCommand<SelfSlashArgs, Record<never, never>,
       type: "string",
     },
     batchSize: {
-      description: "Send in batches of size batchSize",
+      description: "Add batchSize validators in each AttesterSlashing. Must be < MAX_VALIDATORS_PER_COMMITTEE",
       default: "10",
       type: "string",
     },
@@ -56,6 +56,7 @@ export async function selfSlashAttesterHandler(args: SelfSlashArgs): Promise<voi
 
   if (isNaN(batchSize)) throw Error(`Invalid arg batchSize ${args.batchSize}`);
   if (batchSize <= 0) throw Error(`batchSize must be > 0: ${batchSize}`);
+  if (batchSize > MAX_VALIDATORS_PER_COMMITTEE) throw Error("batchSize must be < MAX_VALIDATORS_PER_COMMITTEE");
 
   // TODO: Ask the user to confirm the range and slash action
 
