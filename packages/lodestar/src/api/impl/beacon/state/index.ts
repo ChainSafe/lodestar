@@ -27,7 +27,11 @@ export function getBeaconStateApi({
   return {
     async getStateRoot(stateId) {
       const state = await getState(stateId);
-      return {data: state.hashTreeRoot()};
+      return {
+        data: {
+          root: state.hashTreeRoot(),
+        },
+      };
     },
 
     async getStateFork(stateId) {

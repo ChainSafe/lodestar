@@ -100,7 +100,7 @@ describe("beacon", () => {
 
     getStateRoot: {
       args: ["head"],
-      res: {data: root},
+      res: {data: {root}},
     },
     getStateFork: {
       args: ["head"],

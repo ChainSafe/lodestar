@@ -77,7 +77,7 @@ export type Api = {
    * @param stateId State identifier.
    * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", "justified", \<slot\>, \<hex encoded stateRoot with 0x prefix\>.
    */
-  getStateRoot(stateId: StateId): Promise<{data: Root}>;
+  getStateRoot(stateId: StateId): Promise<{data: {root: Root}}>;
 
   /**
    * Get Fork object for requested state
@@ -269,8 +269,15 @@ export function getReturnTypes(): ReturnTypes<Api> {
     {jsonCase: "eth2"}
   );
 
+  const RootResponse = new ContainerType(
+    {
+      root: ssz.Root,
+    },
+    {jsonCase: "eth2"}
+  );
+
   return {
-    getStateRoot: ContainerData(ssz.Root),
+    getStateRoot: ContainerData(RootResponse),
     getStateFork: ContainerData(ssz.phase0.Fork),
     getStateFinalityCheckpoints: ContainerData(FinalityCheckpoints),
     getStateValidators: ContainerData(ArrayOf(ValidatorResponse)),
