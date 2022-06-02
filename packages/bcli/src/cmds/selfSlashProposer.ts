@@ -1,7 +1,5 @@
-import bls from "@chainsafe/bls";
 import type {SecretKey} from "@chainsafe/bls/types";
 import {getClient} from "@chainsafe/lodestar-api";
-import {deriveEth2ValidatorKeys, deriveKeyFromMnemonic} from "@chainsafe/bls-keygen";
 import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {config as chainConfig} from "@chainsafe/lodestar-config/default";
 import {createIBeaconConfig, IBeaconConfig} from "@chainsafe/lodestar-config";
@@ -9,22 +7,19 @@ import {DOMAIN_BEACON_PROPOSER} from "@chainsafe/lodestar-params";
 import {toHexString} from "@chainsafe/lodestar-utils";
 import {computeSigningRoot} from "@chainsafe/lodestar-beacon-state-transition";
 import {ICliCommand} from "../util/command.js";
-import {YargsError} from "../util/errors.js";
-import {parseRange} from "../util/format.js";
+import {deriveSecretKeys, SecretKeysArgs, secretKeysOptions} from "../util/deriveSecretKeys.js";
 
 /* eslint-disable no-console */
 
-type SelfSlashArgs = {
-  mnemonic?: string;
-  indexes?: string;
+type SelfSlashArgs = SecretKeysArgs & {
   server: string;
   slot?: string;
   batchSize?: string;
 };
 
 export const selfSlashProposer: ICliCommand<SelfSlashArgs, Record<never, never>, void> = {
-  command: "init",
-  describe: "Self slash validators of a provided mnemonic.",
+  command: "self-slash-proposer",
+  describe: "Self slash validators of a provided mnemonic with ProposerSlashing",
   examples: [
     {
       command: "self-slash-proposer --network prater",
@@ -32,14 +27,7 @@ export const selfSlashProposer: ICliCommand<SelfSlashArgs, Record<never, never>,
     },
   ],
   options: {
-    mnemonic: {
-      description: "Mnemonic to derive private keys from",
-      type: "string",
-    },
-    indexes: {
-      description: "Range of indexes to select, in inclusive range with notation '0:7'",
-      type: "string",
-    },
+    ...secretKeysOptions,
     server: {
       description: "Address to connect to BeaconNode",
       default: "http://127.0.0.1:9596",
@@ -60,11 +48,8 @@ export const selfSlashProposer: ICliCommand<SelfSlashArgs, Record<never, never>,
 };
 
 export async function selfSlashProposerHandler(args: SelfSlashArgs): Promise<void> {
-  if (!args.mnemonic) throw new YargsError("arg mnemonic is required");
-  if (!args.indexes) throw new YargsError("arg indexes is required");
+  const sksAll = deriveSecretKeys(args);
 
-  const masterSK = deriveKeyFromMnemonic(args.mnemonic);
-  const indexes = parseRange(args.indexes);
   const slot = args.slot ? BigInt(args.slot) : BigInt(0); // Throws if not valid
   const batchSize = args.batchSize ? parseInt(args.batchSize) : 10;
 
@@ -83,15 +68,13 @@ export async function selfSlashProposerHandler(args: SelfSlashArgs): Promise<voi
 
   const rootA = Buffer.alloc(32, 0xaa);
   const rootB = Buffer.alloc(32, 0xbb);
-  let successCount = 0; // To log progress
 
-  for (let n = 0; n < indexes.length; n += batchSize) {
-    const indexesRange = indexes.slice(n, n + batchSize);
+  // To log progress
+  let successCount = 0;
+  const totalCount = sksAll.length;
 
-    const sks = indexesRange.map((index) => {
-      const {signing} = deriveEth2ValidatorKeys(masterSK, index);
-      return bls.SecretKey.fromBytes(signing);
-    });
+  for (let n = 0; n < sksAll.length; n += batchSize) {
+    const sks = sksAll.slice(n, n + batchSize);
 
     // Retrieve the status all all validators in range at once
     const pksHex = sks.map((sk) => sk.toPublicKey().toHex());
@@ -141,7 +124,7 @@ export async function selfSlashProposerHandler(args: SelfSlashArgs): Promise<voi
 
           await client.beacon.submitPoolProposerSlashing(proposerSlashing);
 
-          console.log(`Submitted self ProposerSlashing for validator ${index} - ${++successCount}/${indexes.length}`);
+          console.log(`Submitted self ProposerSlashing for validator ${index} - ${++successCount}/${totalCount}`);
         } catch (e) {
           (e as Error).message = `Error slashing validator ${index}: ${(e as Error).message}`;
         }
