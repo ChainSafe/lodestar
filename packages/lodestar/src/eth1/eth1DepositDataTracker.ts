@@ -3,6 +3,7 @@ import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {allForks, BeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {ErrorAborted, ILogger, isErrorAborted, sleep} from "@chainsafe/lodestar-utils";
 import {IBeaconDb} from "../db/index.js";
+import {IMetrics} from "../metrics/index.js";
 import {Eth1DepositsCache} from "./eth1DepositsCache.js";
 import {Eth1DataCache} from "./eth1DataCache.js";
 import {getEth1VotesToConsider, pickEth1Vote} from "./utils/eth1Vote.js";
@@ -33,6 +34,7 @@ const ETH_MIN_FOLLOW_DISTANCE = 64;
 export type Eth1DepositDataTrackerModules = {
   config: IChainForkConfig;
   db: IBeaconDb;
+  metrics: IMetrics | null;
   logger: ILogger;
   signal: AbortSignal;
 };
@@ -45,6 +47,7 @@ export class Eth1DepositDataTracker {
   private config: IChainForkConfig;
   private logger: ILogger;
   private signal: AbortSignal;
+  private readonly metrics: IMetrics | null;
 
   // Internal modules, state
   private depositsCache: Eth1DepositsCache;
@@ -54,12 +57,13 @@ export class Eth1DepositDataTracker {
 
   constructor(
     opts: Eth1Options,
-    {config, db, logger, signal}: Eth1DepositDataTrackerModules,
+    {config, db, metrics, logger, signal}: Eth1DepositDataTrackerModules,
     private readonly eth1Provider: IEth1Provider
   ) {
     this.config = config;
-    this.signal = signal;
+    this.metrics = metrics;
     this.logger = logger;
+    this.signal = signal;
     this.eth1Provider = eth1Provider;
     this.depositsCache = new Eth1DepositsCache(opts, config, db);
     this.eth1DataCache = new Eth1DataCache(config, db);
@@ -67,6 +71,14 @@ export class Eth1DepositDataTracker {
 
     if (opts.depositContractDeployBlock === undefined) {
       this.logger.warn("No depositContractDeployBlock provided");
+    }
+
+    if (metrics) {
+      // Set constant value once
+      metrics?.eth1.eth1FollowDistanceSecondsConfig.set(config.SECONDS_PER_ETH1_BLOCK * config.ETH1_FOLLOW_DISTANCE);
+      metrics.eth1.eth1FollowDistanceDynamic.addCollect(() =>
+        metrics.eth1.eth1FollowDistanceDynamic.set(this.eth1FollowDistance)
+      );
     }
 
     this.runAutoUpdate().catch((e: Error) => {
@@ -136,6 +148,8 @@ export class Eth1DepositDataTracker {
       try {
         const hasCaughtUp = await this.update();
 
+        this.metrics?.eth1.depositTrackerIsCaughtup.set(hasCaughtUp ? 1 : 0);
+
         if (hasCaughtUp) {
           const sleepTimeMs = Math.max(AUTO_UPDATE_PERIOD_MS + lastRunMs - Date.now(), MIN_UPDATE_PERIOD_MS);
           await sleep(sleepTimeMs, this.signal);
@@ -149,6 +163,8 @@ export class Eth1DepositDataTracker {
           this.logger.error("Error updating eth1 chain cache", {}, e as Error);
           await sleep(MIN_WAIT_ON_ERORR_MS, this.signal);
         }
+
+        this.metrics?.eth1.depositTrackerUpdateErrors.inc(1);
       }
     }
   }
@@ -159,6 +175,8 @@ export class Eth1DepositDataTracker {
    */
   private async update(): Promise<boolean> {
     const remoteHighestBlock = await this.eth1Provider.getBlockNumber();
+    this.metrics?.eth1.remoteHighestBlock.set(remoteHighestBlock);
+
     const remoteFollowBlock = remoteHighestBlock - this.eth1FollowDistance;
 
     // If remoteFollowBlock is not at or beyond deployBlock, there is no need to
@@ -183,10 +201,12 @@ export class Eth1DepositDataTracker {
 
     const depositEvents = await this.eth1Provider.getDepositEvents(fromBlock, toBlock);
     this.logger.verbose("Fetched deposits", {depositCount: depositEvents.length, fromBlock, toBlock});
+    this.metrics?.eth1.depositEventsFetched.inc(depositEvents.length);
 
     await this.depositsCache.add(depositEvents);
     // Store the `toBlock` since that block may not contain
     this.lastProcessedDepositBlockNumber = toBlock;
+    this.metrics?.eth1.lastProcessedDepositBlockNumber.set(toBlock);
 
     return toBlock >= remoteFollowBlock;
   }
@@ -234,7 +254,13 @@ export class Eth1DepositDataTracker {
 
     const blocksRaw = await this.eth1Provider.getBlocksByNumber(fromBlock, toBlock);
     const blocks = blocksRaw.map(parseEth1Block);
+
     this.logger.verbose("Fetched eth1 blocks", {blockCount: blocks.length, fromBlock, toBlock});
+    this.metrics?.eth1.blocksFetched.inc(blocks.length);
+    this.metrics?.eth1.lastFetchedBlockBlockNumber.set(toBlock);
+    if (blocks.length > 0) {
+      this.metrics?.eth1.lastFetchedBlockTimestamp.set(blocks[blocks.length - 1].timestamp);
+    }
 
     const eth1Datas = await this.depositsCache.getEth1DataForBlocks(blocks, lastProcessedDepositBlockNumber);
     await this.eth1DataCache.add(eth1Datas);
