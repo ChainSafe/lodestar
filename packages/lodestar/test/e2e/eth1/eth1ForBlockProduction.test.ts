@@ -72,6 +72,7 @@ describe("eth1 / Eth1Provider", function () {
     const eth1ForBlockProduction = new Eth1ForBlockProduction(eth1Options, {
       config,
       db,
+      metrics: null,
       logger,
       signal: controller.signal,
       eth1Provider,
