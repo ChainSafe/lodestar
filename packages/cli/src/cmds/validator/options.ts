@@ -1,10 +1,14 @@
 import {defaultOptions} from "@chainsafe/lodestar";
 import {ICliCommandOptions, ILogArgs} from "../../util/index.js";
-import {accountValidatorOptions, IAccountValidatorArgs} from "../account/cmds/validator/options.js";
 import {logOptions, beaconPathsOptions} from "../beacon/options.js";
 import {IBeaconPaths} from "../beacon/paths.js";
 import {KeymanagerArgs, keymanagerOptions} from "../../options/keymanagerOptions.js";
-import {defaultValidatorPaths} from "./paths.js";
+import {defaultAccountPaths, defaultValidatorPaths} from "./paths.js";
+
+export type AccountValidatorArgs = {
+  keystoresDir?: string;
+  secretsDir?: string;
+};
 
 export const validatorMetricsDefaultOptions = {
   enabled: false,
@@ -14,7 +18,7 @@ export const validatorMetricsDefaultOptions = {
 
 export const defaultDefaultFeeRecipient = defaultOptions.chain.defaultFeeRecipient;
 
-export type IValidatorCliArgs = IAccountValidatorArgs &
+export type IValidatorCliArgs = AccountValidatorArgs &
   ILogArgs & {
     logFile: IBeaconPaths["logFile"];
     validatorsDbDir?: string;
@@ -38,6 +42,20 @@ export type IValidatorCliArgs = IAccountValidatorArgs &
     "metrics.port"?: number;
     "metrics.address"?: string;
   } & KeymanagerArgs;
+
+export const accountValidatorOptions: ICliCommandOptions<AccountValidatorArgs> = {
+  keystoresDir: {
+    description: "Directory for storing validator keystores.",
+    defaultDescription: defaultAccountPaths.keystoresDir,
+    type: "string",
+  },
+
+  secretsDir: {
+    description: "Directory for storing validator keystore secrets.",
+    defaultDescription: defaultAccountPaths.secretsDir,
+    type: "string",
+  },
+};
 
 export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
   ...accountValidatorOptions,

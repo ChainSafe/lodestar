@@ -1,7 +1,7 @@
 import {InterchangeFormatVersion} from "@chainsafe/lodestar-validator";
-import {ICliCommand, writeFile} from "../../../../../util/index.js";
-import {IGlobalArgs} from "../../../../../options/index.js";
-import {IAccountValidatorArgs} from "../options.js";
+import {ICliCommand, writeFile} from "../../../util/index.js";
+import {IGlobalArgs} from "../../../options/index.js";
+import {AccountValidatorArgs} from "../options.js";
 import {ISlashingProtectionArgs} from "./options.js";
 import {getGenesisValidatorsRoot, getSlashingProtection} from "./utils.js";
 
@@ -11,7 +11,7 @@ interface IExportArgs {
   file: string;
 }
 
-export const exportCmd: ICliCommand<IExportArgs, ISlashingProtectionArgs & IAccountValidatorArgs & IGlobalArgs> = {
+export const exportCmd: ICliCommand<IExportArgs, ISlashingProtectionArgs & AccountValidatorArgs & IGlobalArgs> = {
   command: "export",
 
   describe: "Export an interchange file.",

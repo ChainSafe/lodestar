@@ -2,11 +2,11 @@ import {Root} from "@chainsafe/lodestar-types";
 import {getClient} from "@chainsafe/lodestar-api";
 import {SlashingProtection} from "@chainsafe/lodestar-validator";
 import {LevelDbController} from "@chainsafe/lodestar-db";
-import {YargsError} from "../../../../../util/index.js";
-import {IGlobalArgs} from "../../../../../options/index.js";
-import {getValidatorPaths} from "../../../../validator/paths.js";
-import {getBeaconConfigFromArgs} from "../../../../../config/index.js";
-import {errorLogger} from "../../../../../util/logger.js";
+import {YargsError} from "../../../util/index.js";
+import {IGlobalArgs} from "../../../options/index.js";
+import {getValidatorPaths} from "../paths.js";
+import {getBeaconConfigFromArgs} from "../../../config/index.js";
+import {errorLogger} from "../../../util/logger.js";
 import {ISlashingProtectionArgs} from "./options.js";
 
 /**

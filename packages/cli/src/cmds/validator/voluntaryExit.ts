@@ -2,14 +2,13 @@ import {readdirSync} from "node:fs";
 import inquirer from "inquirer";
 import {SignerType, SlashingProtection, Validator} from "@chainsafe/lodestar-validator";
 import {LevelDbController} from "@chainsafe/lodestar-db";
-import {ICliCommand} from "../../../../util/index.js";
-import {IGlobalArgs} from "../../../../options/index.js";
-import {ValidatorDirManager} from "../../../../validatorDir/index.js";
-import {getAccountPaths} from "../../paths.js";
-import {getBeaconConfigFromArgs} from "../../../../config/index.js";
-import {errorLogger} from "../../../../util/logger.js";
-import {IValidatorCliArgs, validatorOptions} from "../../../validator/options.js";
-import {getValidatorPaths} from "../../../validator/paths.js";
+import {ICliCommand} from "../../util/index.js";
+import {IGlobalArgs} from "../../options/index.js";
+import {ValidatorDirManager} from "../../validatorDir/index.js";
+import {getBeaconConfigFromArgs} from "../../config/index.js";
+import {errorLogger} from "../../util/logger.js";
+import {IValidatorCliArgs, validatorOptions} from "./options.js";
+import {getAccountPaths, getValidatorPaths} from "./paths.js";
 
 /* eslint-disable no-console */
 
