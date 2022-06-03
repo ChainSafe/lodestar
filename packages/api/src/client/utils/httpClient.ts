@@ -80,9 +80,10 @@ export class HttpClient implements IHttpClient {
     const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
 
     // Attach global signal to this request's controller
-    const signalGlobal = this.getAbortSignal && this.getAbortSignal();
+    const onGlobalSignalAbort = controller.abort.bind(controller);
+    const signalGlobal = this.getAbortSignal?.();
     if (signalGlobal) {
-      signalGlobal.addEventListener("abort", () => controller.abort());
+      signalGlobal.addEventListener("abort", onGlobalSignalAbort);
     }
 
     const routeId = opts.routeId; // TODO: Should default to "unknown"?
@@ -130,7 +131,7 @@ export class HttpClient implements IHttpClient {
 
       clearTimeout(timeout);
       if (signalGlobal) {
-        signalGlobal.removeEventListener("abort", controller.abort);
+        signalGlobal.removeEventListener("abort", onGlobalSignalAbort);
       }
     }
   }
