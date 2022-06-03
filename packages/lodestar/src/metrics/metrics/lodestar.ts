@@ -917,5 +917,48 @@ export function createLodestarMetrics(
         labelNames: ["type"],
       }),
     },
+
+    eth1: {
+      depositTrackerIsCaughtup: register.gauge({
+        name: "lodestar_eth1_deposit_tracker_is_caughtup",
+        help: "Eth1 deposit is caught up 0=false 1=true",
+      }),
+      depositTrackerUpdateErrors: register.gauge({
+        name: "lodestar_eth1_deposit_tracker_update_errors_total",
+        help: "Eth1 deposit update loop errors total",
+      }),
+      remoteHighestBlock: register.gauge({
+        name: "lodestar_eth1_remote_highest_block",
+        help: "Eth1 current highest block number",
+      }),
+      depositEventsFetched: register.gauge({
+        name: "lodestar_eth1_deposit_events_fetched_total",
+        help: "Eth1 deposit events fetched total",
+      }),
+      lastProcessedDepositBlockNumber: register.gauge({
+        name: "lodestar_eth1_last_processed_deposit_block_number",
+        help: "Eth1 deposit tracker lastProcessedDepositBlockNumber",
+      }),
+      blocksFetched: register.gauge({
+        name: "lodestar_eth1_blocks_fetched_total",
+        help: "Eth1 blocks fetched total",
+      }),
+      lastFetchedBlockBlockNumber: register.gauge({
+        name: "lodestar_eth1_last_fetched_block_block_number",
+        help: "Eth1 deposit tracker last fetched block's block number",
+      }),
+      lastFetchedBlockTimestamp: register.gauge({
+        name: "lodestar_eth1_last_fetched_block_timestamp",
+        help: "Eth1 deposit tracker last fetched block's timestamp",
+      }),
+      eth1FollowDistanceSecondsConfig: register.gauge({
+        name: "lodestar_eth1_follow_distance_seconds_config",
+        help: "Constant with value = SECONDS_PER_ETH1_BLOCK * ETH1_FOLLOW_DISTANCE",
+      }),
+      eth1FollowDistanceDynamic: register.gauge({
+        name: "lodestar_eth1_follow_distance_dynamic",
+        help: "Eth1 dynamic follow distance changed by the deposit tracker if blocks are slow",
+      }),
+    },
   };
 }
