@@ -20,7 +20,7 @@ type ClientModules = HttpClientModules & {
 /**
  * REST HTTP client for all routes
  */
-export function getClient(opts: HttpClientOptions, modules: ClientModules): Api {
+export function getClient(opts: HttpClientOptions, modules: ClientModules): Api & {httpClient: IHttpClient} {
   const {config} = modules;
   const httpClient = modules.httpClient ?? new HttpClient(opts, modules);
 
@@ -33,5 +33,8 @@ export function getClient(opts: HttpClientOptions, modules: ClientModules): Api 
     lodestar: lodestar.getClient(config, httpClient),
     node: node.getClient(config, httpClient),
     validator: validator.getClient(config, httpClient),
+
+    // Extra for access to `IHttpClient.setAbortSignal`
+    httpClient,
   };
 }

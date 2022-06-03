@@ -158,7 +158,7 @@ describe("httpClient json client", () => {
 
     const controller = new AbortController();
     const signal = controller.signal;
-    const httpClient = new HttpClient({baseUrl, getAbortSignal: () => signal});
+    const httpClient = new HttpClient({baseUrl, signal});
 
     setTimeout(() => controller.abort(), 10);
 

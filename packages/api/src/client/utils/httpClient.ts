@@ -29,13 +29,14 @@ export interface IHttpClient {
   baseUrl: string;
   json<T>(opts: FetchOpts): Promise<T>;
   arrayBuffer(opts: FetchOpts): Promise<ArrayBuffer>;
+  setAbortSignal(signal: AbortSignal): void;
 }
 
 export type HttpClientOptions = {
   baseUrl: string;
   timeoutMs?: number;
-  /** Return an AbortSignal to be attached to all requests */
-  getAbortSignal?: () => AbortSignal | undefined;
+  /** Global AbortSignal that cancels all active requests */
+  signal?: AbortSignal;
   /** Override fetch function */
   fetch?: typeof fetch;
 };
@@ -48,7 +49,7 @@ export type HttpClientModules = {
 export class HttpClient implements IHttpClient {
   readonly baseUrl: string;
   private readonly timeoutMs: number;
-  private readonly getAbortSignal?: () => AbortSignal | undefined;
+  private signal?: AbortSignal;
   private readonly fetch: typeof fetch;
   private readonly metrics: null | Metrics;
   private readonly logger: null | ILogger;
@@ -60,10 +61,14 @@ export class HttpClient implements IHttpClient {
     this.baseUrl = opts.baseUrl;
     // A higher default timeout, validator will sets its own shorter timeoutMs
     this.timeoutMs = opts.timeoutMs ?? 60_000;
-    this.getAbortSignal = opts.getAbortSignal;
+    this.signal = opts.signal;
     this.fetch = opts.fetch ?? fetch;
     this.metrics = metrics ?? null;
     this.logger = logger ?? null;
+  }
+
+  setAbortSignal(signal: AbortSignal): void {
+    this.signal = signal;
   }
 
   async json<T>(opts: FetchOpts): Promise<T> {
@@ -80,9 +85,9 @@ export class HttpClient implements IHttpClient {
     const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
 
     // Attach global signal to this request's controller
-    const signalGlobal = this.getAbortSignal && this.getAbortSignal();
-    if (signalGlobal) {
-      signalGlobal.addEventListener("abort", () => controller.abort());
+    const onGlobalSignalAbort = controller.abort.bind(controller);
+    if (this.signal) {
+      this.signal.addEventListener("abort", onGlobalSignalAbort);
     }
 
     const routeId = opts.routeId; // TODO: Should default to "unknown"?
@@ -113,7 +118,7 @@ export class HttpClient implements IHttpClient {
       return await getBody(res);
     } catch (e) {
       if (isAbortedError(e as Error)) {
-        if (signalGlobal?.aborted) {
+        if (this.signal?.aborted) {
           throw new ErrorAborted("REST client");
         } else if (controller.signal.aborted) {
           throw new TimeoutError("request");
@@ -129,8 +134,8 @@ export class HttpClient implements IHttpClient {
       timer?.();
 
       clearTimeout(timeout);
-      if (signalGlobal) {
-        signalGlobal.removeEventListener("abort", controller.abort);
+      if (this.signal) {
+        this.signal.removeEventListener("abort", onGlobalSignalAbort);
       }
     }
   }

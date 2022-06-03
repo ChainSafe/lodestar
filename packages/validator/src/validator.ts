@@ -72,12 +72,9 @@ export class Validator {
     const api =
       typeof opts.api === "string"
         ? getClient(
-            {
-              baseUrl: opts.api,
-              // Validator would need the beacon to respond within the slot
-              timeoutMs: config.SECONDS_PER_SLOT * 1000,
-              getAbortSignal: this.getAbortSignal,
-            },
+            // Validator would need the beacon to respond within the slot
+            // TODO: Allow to config timeoutMs via CLI args
+            {baseUrl: opts.api, timeoutMs: config.SECONDS_PER_SLOT * 1000},
             {config, logger, metrics: metrics?.restApiClient}
           )
         : opts.api;
@@ -150,7 +147,7 @@ export class Validator {
       typeof opts.api === "string"
         ? // This new api instance can make do with default timeout as a faster timeout is
           // not necessary since this instance won't be used for validator duties
-          getClient({baseUrl: opts.api, getAbortSignal: () => signal}, {config, logger})
+          getClient({baseUrl: opts.api, signal}, {config, logger})
         : opts.api;
 
     const genesis = await waitForGenesis(api, opts.logger, signal);
@@ -183,6 +180,10 @@ export class Validator {
     const {signal} = controller;
     this.clock.start(signal);
     this.chainHeaderTracker.start(signal);
+
+    if (isApiHttp(this.api)) {
+      this.api.httpClient.setAbortSignal(signal);
+    }
   }
 
   /**
@@ -214,11 +215,6 @@ export class Validator {
 
     this.logger.info(`Submitted voluntary exit for ${publicKey} to the network`);
   }
-
-  /** Provide the current AbortSignal to the api instance */
-  private getAbortSignal = (): AbortSignal | undefined => {
-    return this.state.status === Status.running ? this.state.controller.signal : undefined;
-  };
 }
 
 /** Assert the same genesisValidatorRoot and genesisTime */
@@ -251,4 +247,9 @@ async function assertEqualGenesis(opts: ValidatorOptions, genesis: Genesis): Pro
     await metaDataRepository.setGenesisTime(nodeGenesisTime);
     opts.logger.info("Persisted genesisTime", nodeGenesisTime);
   }
+}
+
+/** Type-guard to check if Api client is an HTTP client or else (in-memory client) */
+function isApiHttp(api: ReturnType<typeof getClient> | Api): api is ReturnType<typeof getClient> {
+  return (api as ReturnType<typeof getClient>).httpClient !== undefined;
 }
