@@ -43,7 +43,11 @@ export type IValidatorCliArgs = AccountValidatorArgs &
     "metrics.address"?: string;
   } & KeymanagerArgs;
 
-export const accountValidatorOptions: ICliCommandOptions<AccountValidatorArgs> = {
+export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
+  ...logOptions,
+  ...keymanagerOptions,
+  logFile: beaconPathsOptions.logFile,
+
   keystoresDir: {
     description: "Directory for storing validator keystores.",
     defaultDescription: defaultAccountPaths.keystoresDir,
@@ -55,13 +59,6 @@ export const accountValidatorOptions: ICliCommandOptions<AccountValidatorArgs> =
     defaultDescription: defaultAccountPaths.secretsDir,
     type: "string",
   },
-};
-
-export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
-  ...accountValidatorOptions,
-  ...logOptions,
-  ...keymanagerOptions,
-  logFile: beaconPathsOptions.logFile,
 
   validatorsDbDir: {
     description: "Data directory for validator databases.",
