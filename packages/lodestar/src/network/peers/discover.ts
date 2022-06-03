@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import {promisify} from "node:util";
 import LibP2p from "libp2p";
 import PeerId from "peer-id";
 import {Multiaddr} from "multiaddr";
@@ -17,6 +18,8 @@ import {deserializeEnrSubnets, zeroAttnets, zeroSyncnets} from "./utils/enrSubne
 const MAX_CACHED_ENRS = 100;
 /** Max age a cached ENR will be considered for dial */
 const MAX_CACHED_ENR_AGE_MS = 5 * 60 * 1000;
+
+const randomBytesAsync = promisify(crypto.randomBytes);
 
 export type PeerDiscoveryOpts = {
   maxPeers: number;
@@ -226,13 +229,14 @@ export class PeerDiscovery {
       this.metrics?.discovery.findNodeQueryRequests.inc({action: "start"});
     }
 
-    const randomNodeId = crypto.randomBytes(64).toString("hex");
-
+    // Use async version to prevent blocking the event loop
+    // Time to completion of this function is not critical, in case this async call add extra lag
+    const randomNodeId = await randomBytesAsync(64);
     this.randomNodeQuery = {code: QueryStatusCode.Active, count: 0};
     const timer = this.metrics?.discovery.findNodeQueryTime.startTimer();
 
     try {
-      const enrs = await this.discv5.findNode(randomNodeId);
+      const enrs = await this.discv5.findNode(randomNodeId.toString("hex"));
       this.metrics?.discovery.findNodeQueryEnrCount.inc(enrs.length);
     } catch (e) {
       this.logger.error("Error on discv5.findNode()", {}, e as Error);
