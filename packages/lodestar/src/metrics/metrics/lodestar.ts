@@ -951,9 +951,13 @@ export function createLodestarMetrics(
         name: "lodestar_eth1_last_fetched_block_timestamp",
         help: "Eth1 deposit tracker last fetched block's timestamp",
       }),
-      eth1FollowDistanceSeconds: register.gauge({
-        name: "lodestar_eth1_follow_distance_seconds",
+      eth1FollowDistanceSecondsConfig: register.gauge({
+        name: "lodestar_eth1_follow_distance_seconds_config",
         help: "Constant with value = SECONDS_PER_ETH1_BLOCK * ETH1_FOLLOW_DISTANCE",
+      }),
+      eth1FollowDistanceDynamic: register.gauge({
+        name: "lodestar_eth1_follow_distance_dynamic",
+        help: "Eth1 dynamic follow distance changed by the deposit tracker if blocks are slow",
       }),
     },
   };

@@ -73,8 +73,13 @@ export class Eth1DepositDataTracker {
       this.logger.warn("No depositContractDeployBlock provided");
     }
 
-    // Set constant value once
-    metrics?.eth1.eth1FollowDistanceSeconds.set(config.SECONDS_PER_ETH1_BLOCK * config.ETH1_FOLLOW_DISTANCE);
+    if (metrics) {
+      // Set constant value once
+      metrics?.eth1.eth1FollowDistanceSecondsConfig.set(config.SECONDS_PER_ETH1_BLOCK * config.ETH1_FOLLOW_DISTANCE);
+      metrics.eth1.eth1FollowDistanceDynamic.addCollect(() =>
+        metrics.eth1.eth1FollowDistanceDynamic.set(this.eth1FollowDistance)
+      );
+    }
 
     this.runAutoUpdate().catch((e: Error) => {
       if (!(e instanceof ErrorAborted)) {
@@ -170,6 +175,8 @@ export class Eth1DepositDataTracker {
    */
   private async update(): Promise<boolean> {
     const remoteHighestBlock = await this.eth1Provider.getBlockNumber();
+    this.metrics?.eth1.remoteHighestBlock.set(remoteHighestBlock);
+
     const remoteFollowBlock = remoteHighestBlock - this.eth1FollowDistance;
     this.metrics?.eth1.remoteHighestBlock.set(remoteHighestBlock);
 
