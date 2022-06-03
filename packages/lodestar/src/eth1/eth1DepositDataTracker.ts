@@ -178,7 +178,6 @@ export class Eth1DepositDataTracker {
     this.metrics?.eth1.remoteHighestBlock.set(remoteHighestBlock);
 
     const remoteFollowBlock = remoteHighestBlock - this.eth1FollowDistance;
-    this.metrics?.eth1.remoteHighestBlock.set(remoteHighestBlock);
 
     // If remoteFollowBlock is not at or beyond deployBlock, there is no need to
     // fetch and track any deposit data yet
