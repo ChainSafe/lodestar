@@ -23,6 +23,13 @@ const RATE_LIMITED_WAIT_MS = 30 * 1000;
 /** Min time to wait on auto update loop on unknown error */
 const MIN_WAIT_ON_ERORR_MS = 1 * 1000;
 
+/** Number of blocks to download if the node detects it is lagging behind due to an inaccurate
+    relationship between block-number-based follow distance and time-based follow distance. */
+const ETH1_FOLLOW_DISTANCE_DELTA_IF_SLOW = 32;
+
+/** The absolute minimum follow distance to enforce when downloading catchup batches, from LH */
+const ETH_MIN_FOLLOW_DISTANCE = 64;
+
 export type Eth1DepositDataTrackerModules = {
   config: IChainForkConfig;
   db: IBeaconDb;
@@ -42,7 +49,8 @@ export class Eth1DepositDataTracker {
   // Internal modules, state
   private depositsCache: Eth1DepositsCache;
   private eth1DataCache: Eth1DataCache;
-  private lastProcessedDepositBlockNumber: number | null;
+  private lastProcessedDepositBlockNumber: number | null = null;
+  private eth1FollowDistance: number;
 
   constructor(
     opts: Eth1Options,
@@ -55,7 +63,7 @@ export class Eth1DepositDataTracker {
     this.eth1Provider = eth1Provider;
     this.depositsCache = new Eth1DepositsCache(opts, config, db);
     this.eth1DataCache = new Eth1DataCache(config, db);
-    this.lastProcessedDepositBlockNumber = null;
+    this.eth1FollowDistance = config.ETH1_FOLLOW_DISTANCE;
 
     if (opts.depositContractDeployBlock === undefined) {
       this.logger.warn("No depositContractDeployBlock provided");
@@ -151,7 +159,7 @@ export class Eth1DepositDataTracker {
    */
   private async update(): Promise<boolean> {
     const remoteHighestBlock = await this.eth1Provider.getBlockNumber();
-    const remoteFollowBlock = remoteHighestBlock - this.config.ETH1_FOLLOW_DISTANCE;
+    const remoteFollowBlock = remoteHighestBlock - this.eth1FollowDistance;
 
     // If remoteFollowBlock is not at or beyond deployBlock, there is no need to
     // fetch and track any deposit data yet
@@ -189,7 +197,7 @@ export class Eth1DepositDataTracker {
    * depositRoot and depositCount are inferred from already fetched deposits.
    * Calling get_deposit_root() and the smart contract for a non-latest block requires an
    * archive node, something most users don't have access too.
-   * @returns true if it has catched up to the remote follow block
+   * @returns true if it has catched up to the remote follow timestamp
    */
   private async updateBlockCache(remoteFollowBlock: number): Promise<boolean> {
     const lastCachedBlock = await this.eth1DataCache.getHighestCachedBlockNumber();
@@ -231,7 +239,51 @@ export class Eth1DepositDataTracker {
     const eth1Datas = await this.depositsCache.getEth1DataForBlocks(blocks, lastProcessedDepositBlockNumber);
     await this.eth1DataCache.add(eth1Datas);
 
-    return toBlock >= remoteFollowBlock;
+    // Note: ETH1_FOLLOW_DISTANCE_SECONDS = ETH1_FOLLOW_DISTANCE * SECONDS_PER_ETH1_BLOCK
+    // Deposit tracker must fetch blocks and deposits up to ETH1_FOLLOW_DISTANCE_SECONDS,
+    // measured in time not blocks. To vote on valid votes it must populate up to the time based follow distance.
+    // If it assumes SECONDS_PER_ETH1_BLOCK but block times are:
+    // - slower: Cache will not contain all blocks
+    // - faster: Cache will contain all required blocks + some ahead of timed follow distance
+    //
+    // For mainnet we must fetch blocks up until block.timestamp < now - 28672 sec. Based on follow distance:
+    // Block times | actual follow distance
+    // 14          | 2048
+    // 20          | 1434
+    // 30          | 956
+    // 60          | 478
+    //
+    // So if after fetching the block at ETH1_FOLLOW_DISTANCE, but it's timestamp is not greater than
+    // ETH1_FOLLOW_DISTANCE_SECONDS, reduce the ETH1_FOLLOW_DISTANCE by a small delta and fetch more blocks.
+    // Otherwise if the last fetched block if above ETH1_FOLLOW_DISTANCE_SECONDS, reduce ETH1_FOLLOW_DISTANCE.
+
+    if (toBlock < remoteFollowBlock) {
+      return false;
+    }
+
+    if (blocks.length === 0) {
+      return true;
+    }
+
+    const remoteFollowBlockTimestamp =
+      Math.round(Date.now() / 1000) - this.config.SECONDS_PER_ETH1_BLOCK * this.config.ETH1_FOLLOW_DISTANCE;
+    const blockAfterTargetTimestamp = blocks.find((block) => block.timestamp >= remoteFollowBlockTimestamp);
+
+    if (blockAfterTargetTimestamp) {
+      // Catched up to target timestamp, increase eth1FollowDistance. Limit max config.ETH1_FOLLOW_DISTANCE.
+      // If the block that's right above the timestamp has been fetched now, use it to compute the precise delta.
+      const lastBlock = blocks[blocks.length - 1];
+      const delta = Math.max(lastBlock.blockNumber - blockAfterTargetTimestamp.blockNumber, 1);
+      this.eth1FollowDistance = Math.min(this.eth1FollowDistance + delta, this.config.ETH1_FOLLOW_DISTANCE);
+
+      return true;
+    } else {
+      // Blocks are slower than expected, reduce eth1FollowDistance. Limit min CATCHUP_MIN_FOLLOW_DISTANCE
+      const delta = ETH1_FOLLOW_DISTANCE_DELTA_IF_SLOW;
+      this.eth1FollowDistance = Math.max(this.eth1FollowDistance - delta, ETH_MIN_FOLLOW_DISTANCE);
+
+      return false;
+    }
   }
 
   private getFromBlockToFetch(lastCachedBlock: number | null): number {
