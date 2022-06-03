@@ -10,7 +10,10 @@ export class ObservedAttesters extends SeenAttesters {
       throw Error(`EpochTooLow ${targetEpoch} < ${this.lowestPermissibleEpoch}`);
     }
 
-    const existingValidatorIndices = this.validatorIndexesByEpoch.getOrDefault(targetEpoch);
-    this.validatorIndexesByEpoch.set(targetEpoch, new Set([...validatorIndex, ...existingValidatorIndices]));
+    this.prune(targetEpoch);
+
+    for (const index of validatorIndex) {
+      this.validatorIndexesByEpoch.getOrDefault(targetEpoch).add(index);
+    }
   }
 }

@@ -218,9 +218,13 @@ export async function onBlock(
   // observe the proposer for block
   this.observedBlockProposers.add(epochAtSlot, block.message.proposerIndex);
   // next observe the attesters in the block
-  for (const attestation of block.message.body.attestations) {
-    const attestingIndices = postState.epochCtx.getIndexedAttestation(attestation).attestingIndices;
-    this.observedBlockAttesters.addIndices(epochAtSlot, attestingIndices);
+  // To avoid slowing down sync, only register attestations for the
+  // `observed block attesters` if they are from the previous epoch or later.
+  if (this.clock.currentEpoch <= epochAtSlot + 1) {
+    for (const attestation of block.message.body.attestations) {
+      const attestingIndices = postState.epochCtx.getIndexedAttestation(attestation).attestingIndices;
+      this.observedBlockAttesters.addIndices(epochAtSlot, attestingIndices);
+    }
   }
 }
 
