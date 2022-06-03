@@ -92,7 +92,7 @@ export async function persistOptionsAndConfig(args: IBeaconArgs & IGlobalArgs): 
     // Verify that the peerId matches the ENR
     const enr = readEnr(beaconPaths.enrFile);
     const peerIdPrev = await enr.peerId();
-    if (peerIdPrev.toB58String() !== peerId.toB58String()) {
+    if (peerIdPrev.toString() !== peerId.toString()) {
       initEnr(beaconPaths.enrFile, peerId);
     }
   }

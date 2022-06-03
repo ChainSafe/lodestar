@@ -2,8 +2,9 @@
 // NOTE: @typescript*no-unsafe* rules are disabled above because `workerData` is typed as `any`
 import {parentPort, workerData} from "worker_threads";
 
-import {Multiaddr} from "multiaddr";
-import {createFromPrivKey} from "peer-id";
+import {Multiaddr} from "@multiformats/multiaddr";
+import {createFromPrivKey} from "@libp2p/peer-id-factory";
+import {unmarshalPrivateKey} from "@libp2p/crypto/keys";
 import {phase0, ssz} from "@chainsafe/lodestar-types";
 
 import {sleep, TimestampFormatCode, withTimeout} from "@chainsafe/lodestar-utils";
@@ -49,7 +50,7 @@ async function runWorker(): Promise<void> {
     validatorCount: options.validatorCount,
     genesisTime: options.genesisTime,
     logger: loggerNode,
-    peerId: await createFromPrivKey(fromHexString(options.peerIdPrivkey)),
+    peerId: await createFromPrivKey(await unmarshalPrivateKey(fromHexString(options.peerIdPrivkey))),
   });
 
   // Only run for the first node
@@ -64,7 +65,9 @@ async function runWorker(): Promise<void> {
         if (i === nodeIndex) return; // Don't dial self
         loggerNode.info(`Connecting node ${nodeIndex} -> ${i}`);
         const multiaddrs = nodeToConnect.localMultiaddrs.map((s) => new Multiaddr(s));
-        const peerIdToConn = await createFromPrivKey(fromHexString(nodeToConnect.peerIdPrivkey));
+        const peerIdToConn = await createFromPrivKey(
+          await unmarshalPrivateKey(fromHexString(nodeToConnect.peerIdPrivkey))
+        );
         await withTimeout(() => connect(node.network as Network, peerIdToConn, multiaddrs), 10 * 1000);
         loggerNode.info(`Connected node ${nodeIndex} -> ${i}`);
       })

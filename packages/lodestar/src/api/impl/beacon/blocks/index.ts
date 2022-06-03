@@ -157,7 +157,7 @@ export function getBeaconBlockApi({
 
         chain.processBlock(signedBlock).catch((e) => {
           if (e instanceof BlockError && e.type.code === BlockErrorCode.PARENT_UNKNOWN) {
-            network.events.emit(NetworkEvent.unknownBlockParent, signedBlock, network.peerId.toB58String());
+            network.events.emit(NetworkEvent.unknownBlockParent, signedBlock, network.peerId.toString());
           }
           throw e;
         }),

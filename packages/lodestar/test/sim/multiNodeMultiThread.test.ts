@@ -2,12 +2,12 @@ import path from "node:path";
 import os from "node:os";
 import {Worker} from "worker_threads";
 import {fileURLToPath} from "node:url";
+import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
 import {phase0} from "@chainsafe/lodestar-types";
 import {toHexString} from "@chainsafe/ssz";
 import {IChainConfig} from "@chainsafe/lodestar-config";
 import {waitForEvent} from "../utils/events/resolver.js";
 import {ChainEvent} from "../../src/chain/index.js";
-import {createPeerId} from "../../src/network/index.js";
 import {logFilesDir} from "./params.js";
 import {NodeWorkerOptions} from "./threaded/types.js";
 
@@ -79,8 +79,9 @@ function runMultiNodeMultiThreadTest({nodeCount, validatorsPerNode, event, altai
 
     for (let i = 0; i < nodeCount; i++) {
       const p2pPort = 10000 + i;
-      const peerId = await createPeerId();
-      const peerIdPrivkey = toHexString(peerId.marshalPrivKey());
+      const peerId = await createSecp256k1PeerId();
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      const peerIdPrivkey = toHexString(peerId.privateKey!);
       p2pPorts.push(p2pPort);
       peerIdPrivkeys.push(peerIdPrivkey);
       nodes.push({localMultiaddrs: [`/ip4/127.0.0.1/tcp/${p2pPort}`], peerIdPrivkey});

@@ -1,9 +1,9 @@
 import {compress, uncompress} from "snappyjs";
-import {RPC} from "libp2p-gossipsub/src/message/rpc";
-import {GossipsubMessage} from "libp2p-gossipsub/src/types";
+import {Message} from "@libp2p/interface-pubsub";
 import {digest} from "@chainsafe/as-sha256";
 import {intToBytes} from "@chainsafe/lodestar-utils";
 import {ForkName} from "@chainsafe/lodestar-params";
+import {RPC} from "@chainsafe/libp2p-gossipsub/message";
 import {MESSAGE_DOMAIN_VALID_SNAPPY} from "./constants.js";
 import {GossipTopicCache} from "./topic.js";
 
@@ -11,7 +11,7 @@ import {GossipTopicCache} from "./topic.js";
  * The function used to generate a gossipsub message id
  * We use the first 8 bytes of SHA256(data) for content addressing
  */
-export function fastMsgIdFn(rpcMsg: RPC.IMessage): string {
+export function fastMsgIdFn(rpcMsg: RPC.Message): string {
   if (rpcMsg.data) {
     return Buffer.from(digest(rpcMsg.data)).slice(0, 8).toString("hex");
   } else {
@@ -22,7 +22,7 @@ export function fastMsgIdFn(rpcMsg: RPC.IMessage): string {
 /**
  * Only valid msgId. Messages that fail to snappy_decompress() are not tracked
  */
-export function msgIdFn(gossipTopicCache: GossipTopicCache, msg: GossipsubMessage): Uint8Array {
+export function msgIdFn(gossipTopicCache: GossipTopicCache, msg: Message): Uint8Array {
   const topic = gossipTopicCache.getTopic(msg.topic);
 
   let vec: Uint8Array[];

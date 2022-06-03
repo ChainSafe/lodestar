@@ -1,6 +1,7 @@
 import deepmerge from "deepmerge";
 import tmp from "tmp";
-import PeerId from "peer-id";
+import {PeerId} from "@libp2p/interface-peer-id";
+import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
 import {config as minimalConfig} from "@chainsafe/lodestar-config/default";
 import {createIBeaconConfig, createIChainForkConfig, IChainConfig} from "@chainsafe/lodestar-config";
 import {ILogger, RecursivePartial} from "@chainsafe/lodestar-utils";
@@ -11,7 +12,6 @@ import {isPlainObject} from "@chainsafe/lodestar-utils";
 import {createEnr} from "../../../../cli/src/config/enr.js";
 import {BeaconNode} from "../../../src/node/index.js";
 import {createNodeJsLibp2p} from "../../../src/network/nodejs/index.js";
-import {createPeerId} from "../../../src/network/index.js";
 import {defaultNetworkOptions} from "../../../src/network/options.js";
 import {initDevState} from "../../../src/node/utils/state.js";
 import {IBeaconNodeOptions} from "../../../src/node/options.js";
@@ -35,7 +35,7 @@ export async function getDevBeaconNode(
   const {params, validatorCount = 8, peerStoreDir} = opts;
   let {options = {}, logger, peerId} = opts;
 
-  if (!peerId) peerId = await createPeerId();
+  if (!peerId) peerId = await createSecp256k1PeerId();
   const tmpDir = tmp.dirSync({unsafeCleanup: true});
   const config = createIChainForkConfig({...minimalConfig, ...params});
   logger = logger ?? testLogger();

@@ -17,7 +17,7 @@ export function getNodeApi(opts: IApiOptions, {network, sync}: Pick<ApiModules, 
 
       return {
         data: {
-          peerId: network.peerId.toB58String(),
+          peerId: network.peerId.toString(),
           enr: enr?.encodeTxt(keypair.privateKey) || "",
           discoveryAddresses,
           p2pAddresses: network.localMultiaddrs.map((m) => m.toString()),
@@ -60,13 +60,13 @@ export function getNodeApi(opts: IApiOptions, {network, sync}: Pick<ApiModules, 
       for (const connections of network.getConnectionsByPeer().values()) {
         const relevantConnection = getRevelantConnection(connections);
         switch (relevantConnection?.stat.status) {
-          case "open":
+          case "OPEN":
             connected++;
             break;
-          case "closing":
+          case "CLOSING":
             disconnecting++;
             break;
-          case "closed":
+          case "CLOSED":
             disconnected++;
             break;
           default:

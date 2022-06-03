@@ -1,5 +1,5 @@
-import PeerId from "peer-id";
-import {Multiaddr} from "multiaddr";
+import {peerIdFromString} from "@libp2p/peer-id";
+import {Multiaddr} from "@multiformats/multiaddr";
 import {routes} from "@chainsafe/lodestar-api";
 import {getLatestWeakSubjectivityCheckpointEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {toHexString} from "@chainsafe/ssz";
@@ -124,13 +124,13 @@ export function getLodestarApi({
     },
 
     async connectPeer(peerIdStr, multiaddrStrs) {
-      const peerId = PeerId.createFromB58String(peerIdStr);
+      const peerId = peerIdFromString(peerIdStr);
       const multiaddrs = multiaddrStrs.map((multiaddrStr) => new Multiaddr(multiaddrStr));
       await network.connectToPeer(peerId, multiaddrs);
     },
 
     async disconnectPeer(peerIdStr) {
-      const peerId = PeerId.createFromB58String(peerIdStr);
+      const peerId = peerIdFromString(peerIdStr);
       await network.disconnectPeer(peerId);
     },
 

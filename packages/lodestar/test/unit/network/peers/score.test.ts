@@ -1,10 +1,10 @@
 import {expect} from "chai";
-import PeerId from "peer-id";
+import {peerIdFromString} from "@libp2p/peer-id";
 import sinon from "sinon";
 import {PeerAction, ScoreState, PeerRpcScoreStore, updateGossipsubScores} from "../../../../src/network/peers/score.js";
 
 describe("simple block provider score tracking", function () {
-  const peer = PeerId.createFromB58String("Qma9T5YraSnpRDZqRR4krcSJabThc8nwZuJV3LercPHufi");
+  const peer = peerIdFromString("Qma9T5YraSnpRDZqRR4krcSJabThc8nwZuJV3LercPHufi");
   const MIN_SCORE = -100;
 
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
@@ -44,7 +44,7 @@ describe("simple block provider score tracking", function () {
   for (const [minScore, timeToDecay] of decayTimes)
     it(`Should decay MIN_SCORE to ${minScore} after ${timeToDecay} ms`, () => {
       const {scoreStore, peerScores} = mockStore();
-      const peerScore = peerScores.get(peer.toB58String());
+      const peerScore = peerScores.get(peer.toString());
       if (peerScore) {
         peerScore["lastUpdate"] = Date.now() - timeToDecay * factorForJsBadMath;
         peerScore["lodestarScore"] = MIN_SCORE;

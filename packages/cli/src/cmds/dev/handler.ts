@@ -2,6 +2,7 @@ import fs from "node:fs";
 import {promisify} from "node:util";
 import path from "node:path";
 import rimraf from "rimraf";
+import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
 import {fromHexString} from "@chainsafe/ssz";
 import {GENESIS_SLOT} from "@chainsafe/lodestar-params";
 import {BeaconNode, BeaconDb, initStateFromAnchorState, createNodeJsLibp2p, nodeUtils} from "@chainsafe/lodestar";
@@ -11,7 +12,7 @@ import {interopSecretKey} from "@chainsafe/lodestar-beacon-state-transition";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {ACTIVE_PRESET, PresetName} from "@chainsafe/lodestar-params";
 import {onGracefulShutdown} from "../../util/process.js";
-import {createEnr, createPeerId, overwriteEnrWithCliArgs} from "../../config/index.js";
+import {createEnr, overwriteEnrWithCliArgs} from "../../config/index.js";
 import {IGlobalArgs, parseEnrArgs} from "../../options/index.js";
 import {initializeOptionsAndConfig} from "../init/handler.js";
 import {mkdir, getCliLogger, parseRange} from "../../util/index.js";
@@ -27,7 +28,7 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
   const {beaconNodeOptions, config} = await initializeOptionsAndConfig(args);
 
   // ENR setup
-  const peerId = await createPeerId();
+  const peerId = await createSecp256k1PeerId();
   const enr = createEnr(peerId);
   beaconNodeOptions.set({network: {discv5: {enr}}});
   const enrArgs = parseEnrArgs(args);

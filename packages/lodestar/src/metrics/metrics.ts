@@ -41,11 +41,11 @@ export function createMetrics(
   // Merge external registries
   for (const externalRegister of externalRegistries) {
     // Wrong types, does not return a promise
-    const metrics = (externalRegister.getMetricsAsArray() as unknown) as Resolves<
+    const metrics = externalRegister.getMetricsAsArray() as unknown as Resolves<
       typeof externalRegister.getMetricsAsArray
     >;
     for (const metric of metrics) {
-      register.registerMetric((metric as unknown) as Metric<string>);
+      register.registerMetric(metric as unknown as Metric<string>);
     }
   }
 

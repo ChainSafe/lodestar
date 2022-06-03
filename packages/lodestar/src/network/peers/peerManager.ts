@@ -1,5 +1,6 @@
-import LibP2p, {Connection} from "libp2p";
-import PeerId from "peer-id";
+import {Libp2p} from "libp2p";
+import {Connection} from "@libp2p/interface-connection";
+import {PeerId} from "@libp2p/interface-peer-id";
 import {IDiscv5DiscoveryInputOptions} from "@chainsafe/discv5";
 import {BitArray} from "@chainsafe/ssz";
 import {SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
@@ -11,7 +12,7 @@ import {GoodByeReasonCode, GOODBYE_KNOWN_CODES, Libp2pEvent} from "../../constan
 import {IMetrics} from "../../metrics/index.js";
 import {NetworkEvent, INetworkEventBus} from "../events.js";
 import {IReqResp, ReqRespMethod, RequestTypedContainer} from "../reqresp/index.js";
-import {prettyPrintPeerId} from "../util.js";
+import {getConnection, getConnectionsMap, prettyPrintPeerId} from "../util.js";
 import {ISubnetsService} from "../subnets/index.js";
 import {SubnetType} from "../metadata.js";
 import {Eth2Gossipsub} from "../gossip/gossipsub.js";
@@ -72,7 +73,7 @@ export type PeerManagerOpts = {
 };
 
 export type PeerManagerModules = {
-  libp2p: LibP2p;
+  libp2p: Libp2p;
   logger: ILogger;
   metrics: IMetrics | null;
   reqResp: IReqResp;
@@ -103,7 +104,7 @@ enum RelevantPeerStatus {
  * - Disconnect peers if over target peers
  */
 export class PeerManager {
-  private libp2p: LibP2p;
+  private libp2p: Libp2p;
   private logger: ILogger;
   private metrics: IMetrics | null;
   private reqResp: IReqResp;
@@ -156,8 +157,8 @@ export class PeerManager {
 
   async start(): Promise<void> {
     await this.discovery?.start();
-    this.libp2p.connectionManager.on(Libp2pEvent.peerConnect, this.onLibp2pPeerConnect);
-    this.libp2p.connectionManager.on(Libp2pEvent.peerDisconnect, this.onLibp2pPeerDisconnect);
+    this.libp2p.connectionManager.addEventListener(Libp2pEvent.peerConnect, this.onLibp2pPeerConnect);
+    this.libp2p.connectionManager.addEventListener(Libp2pEvent.peerDisconnect, this.onLibp2pPeerDisconnect);
     this.networkEventBus.on(NetworkEvent.reqRespRequest, this.onRequest);
 
     // On start-up will connected to existing peers in libp2p.peerStore, same as autoDial behaviour
@@ -174,8 +175,8 @@ export class PeerManager {
 
   async stop(): Promise<void> {
     await this.discovery?.stop();
-    this.libp2p.connectionManager.removeListener(Libp2pEvent.peerConnect, this.onLibp2pPeerConnect);
-    this.libp2p.connectionManager.removeListener(Libp2pEvent.peerDisconnect, this.onLibp2pPeerDisconnect);
+    this.libp2p.connectionManager.removeEventListener(Libp2pEvent.peerConnect, this.onLibp2pPeerConnect);
+    this.libp2p.connectionManager.removeEventListener(Libp2pEvent.peerDisconnect, this.onLibp2pPeerDisconnect);
     this.networkEventBus.off(NetworkEvent.reqRespRequest, this.onRequest);
     for (const interval of this.intervals) clearInterval(interval);
   }
@@ -217,7 +218,7 @@ export class PeerManager {
    */
   reStatusPeers(peers: PeerId[]): void {
     for (const peer of peers) {
-      const peerData = this.connectedPeers.get(peer.toB58String());
+      const peerData = this.connectedPeers.get(peer.toString());
       if (peerData) {
         // Set to 0 to trigger a status request after calling pingAndStatusTimeouts()
         peerData.lastStatusUnixTsMs = 0;
@@ -231,7 +232,7 @@ export class PeerManager {
    */
   private onRequest = (request: RequestTypedContainer, peer: PeerId): void => {
     try {
-      const peerData = this.connectedPeers.get(peer.toB58String());
+      const peerData = this.connectedPeers.get(peer.toString());
       if (peerData) {
         peerData.lastReceivedMsgUnixTsMs = Date.now();
       }
@@ -254,7 +255,7 @@ export class PeerManager {
    */
   private onPing(peer: PeerId, seqNumber: phase0.Ping): void {
     // if the sequence number is unknown update the peer's metadata
-    const metadata = this.connectedPeers.get(peer.toB58String())?.metadata;
+    const metadata = this.connectedPeers.get(peer.toString())?.metadata;
     if (!metadata || metadata.seqNumber < seqNumber) {
       void this.requestMetadata(peer);
     }
@@ -266,7 +267,7 @@ export class PeerManager {
   private onMetadata(peer: PeerId, metadata: allForks.Metadata): void {
     // Store metadata always in case the peer updates attnets but not the sequence number
     // Trust that the peer always sends the latest metadata (From Lighthouse)
-    const peerData = this.connectedPeers.get(peer.toB58String());
+    const peerData = this.connectedPeers.get(peer.toString());
     if (peerData) {
       peerData.metadata = {
         seqNumber: metadata.seqNumber,
@@ -284,7 +285,7 @@ export class PeerManager {
     this.logger.verbose("Received goodbye request", {peer: prettyPrintPeerId(peer), goodbye, reason});
     this.metrics?.peerGoodbyeReceived.inc({reason});
 
-    const conn = this.libp2p.connectionManager.get(peer);
+    const conn = getConnection(this.libp2p.connectionManager, peer.toString());
     if (conn && Date.now() - conn.stat.timeline.open > LONG_PEER_CONNECTION_MS) {
       this.metrics?.peerLongConnectionDisconnect.inc({reason});
     }
@@ -299,7 +300,7 @@ export class PeerManager {
    */
   private onStatus(peer: PeerId, status: phase0.Status): void {
     // reset the to-status timer of this peer
-    const peerData = this.connectedPeers.get(peer.toB58String());
+    const peerData = this.connectedPeers.get(peer.toString());
     if (peerData) peerData.lastStatusUnixTsMs = Date.now();
 
     let isIrrelevant: boolean;
@@ -329,7 +330,7 @@ export class PeerManager {
     // NOTE: Peer may not be connected anymore at this point, potential race condition
     // libp2p.connectionManager.get() returns not null if there's +1 open connections with `peer`
     if (peerData) peerData.relevantStatus = RelevantPeerStatus.relevant;
-    if (this.libp2p.connectionManager.get(peer)) {
+    if (getConnection(this.libp2p.connectionManager, peer.toString())) {
       this.networkEventBus.emit(NetworkEvent.peerConnected, peer, status);
     }
   }
@@ -347,7 +348,7 @@ export class PeerManager {
       this.onPing(peer, await this.reqResp.ping(peer));
 
       // If peer replies a PING request also update lastReceivedMsg
-      const peerData = this.connectedPeers.get(peer.toB58String());
+      const peerData = this.connectedPeers.get(peer.toString());
       if (peerData) peerData.lastReceivedMsgUnixTsMs = Date.now();
     } catch (e) {
       // TODO: Downvote peer here or in the reqResp layer
@@ -402,7 +403,7 @@ export class PeerManager {
 
     const {peersToDisconnect, peersToConnect, attnetQueries, syncnetQueries} = prioritizePeers(
       connectedHealthyPeers.map((peer) => {
-        const peerData = this.connectedPeers.get(peer.toB58String());
+        const peerData = this.connectedPeers.get(peer.toString());
         return {
           id: peer,
           attnets: peerData?.metadata?.attnets ?? null,
@@ -457,7 +458,7 @@ export class PeerManager {
     // Prune connectedPeers map in case it leaks. It has happen in previous nodes,
     // disconnect is not always called for all peers
     if (this.connectedPeers.size > connectedPeers.length * 2) {
-      const actualConnectedPeerIds = new Set(connectedPeers.map((peerId) => peerId.toB58String()));
+      const actualConnectedPeerIds = new Set(connectedPeers.map((peerId) => peerId.toString()));
       for (const [peerIdStr, peerData] of this.connectedPeers) {
         if (!actualConnectedPeerIds.has(peerIdStr)) {
           this.connectedPeers.delete(peerIdStr);
@@ -514,11 +515,12 @@ export class PeerManager {
    * Registers a peer as connected. The `direction` parameter determines if the peer is being
    * dialed or connecting to us.
    */
-  private onLibp2pPeerConnect = async (libp2pConnection: Connection): Promise<void> => {
+  private onLibp2pPeerConnect = async (evt: CustomEvent<Connection>): Promise<void> => {
+    const libp2pConnection = evt.detail;
     const {direction, status} = libp2pConnection.stat;
     const peer = libp2pConnection.remotePeer;
 
-    if (!this.connectedPeers.has(peer.toB58String())) {
+    if (!this.connectedPeers.has(peer.toString())) {
       // On connection:
       // - Outbound connections: send a STATUS and PING request
       // - Inbound connections: expect to be STATUS'd, schedule STATUS and PING for latter
@@ -538,7 +540,7 @@ export class PeerManager {
         agentClient: null,
         encodingPreference: null,
       };
-      this.connectedPeers.set(peer.toB58String(), peerData);
+      this.connectedPeers.set(peer.toString(), peerData);
 
       if (direction === "outbound") {
         // There's an issue that cause libp2p to open another connection in peer:connect event handler
@@ -569,12 +571,13 @@ export class PeerManager {
   /**
    * The libp2p Upgrader has ended a connection
    */
-  private onLibp2pPeerDisconnect = (libp2pConnection: Connection): void => {
+  private onLibp2pPeerDisconnect = (evt: CustomEvent<Connection>): void => {
+    const libp2pConnection = evt.detail;
     const {direction, status} = libp2pConnection.stat;
     const peer = libp2pConnection.remotePeer;
 
     // remove the ping and status timer for the peer
-    this.connectedPeers.delete(peer.toB58String());
+    this.connectedPeers.delete(peer.toString());
 
     this.logger.verbose("peer disconnected", {peer: prettyPrintPeerId(peer), direction, status});
     this.networkEventBus.emit(NetworkEvent.peerDisconnected, peer);
@@ -595,7 +598,7 @@ export class PeerManager {
       const reason = GOODBYE_KNOWN_CODES[goodbye.toString()] || "";
       this.metrics?.peerGoodbyeSent.inc({reason});
 
-      const conn = this.libp2p.connectionManager.get(peer);
+      const conn = getConnection(this.libp2p.connectionManager, peer.toString());
       if (conn && Date.now() - conn.stat.timeline.open > LONG_PEER_CONNECTION_MS) {
         this.metrics?.peerLongConnectionDisconnect.inc({reason});
       }
@@ -622,13 +625,13 @@ export class PeerManager {
     // peerLongLivedAttnets metric is a count
     metrics.peerLongLivedAttnets.reset();
 
-    for (const connections of this.libp2p.connectionManager.connections.values()) {
-      const openCnx = connections.find((cnx) => cnx.stat.status === "open");
+    for (const connections of getConnectionsMap(this.libp2p.connectionManager).values()) {
+      const openCnx = connections.find((cnx) => cnx.stat.status === "OPEN");
       if (openCnx) {
         const direction = openCnx.stat.direction;
         peersByDirection.set(direction, 1 + (peersByDirection.get(direction) ?? 0));
         const peerId = openCnx.remotePeer;
-        const peerData = this.connectedPeers.get(peerId.toB58String());
+        const peerData = this.connectedPeers.get(peerId.toString());
         const client = peerData?.agentClient ?? ClientKind.Unknown;
         peersByClient.set(client, 1 + (peersByClient.get(client) ?? 0));
 

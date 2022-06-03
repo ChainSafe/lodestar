@@ -21,7 +21,7 @@ describe("sync / UnknownBlockSync", () => {
   for (const {id, finalizedSlot, reportPeer} of testCases) {
     it(id, async () => {
       const peer = getValidPeerId();
-      const peerIdStr = peer.toB58String();
+      const peerIdStr = peer.toString();
       const blockA = ssz.phase0.SignedBeaconBlock.defaultValue();
       const blockB = ssz.phase0.SignedBeaconBlock.defaultValue();
       const blockC = ssz.phase0.SignedBeaconBlock.defaultValue();
@@ -82,7 +82,7 @@ describe("sync / UnknownBlockSync", () => {
 
       if (reportPeer) {
         const err = await reportPeerPromise;
-        expect(err[0].toB58String()).equal(peerIdStr);
+        expect(err[0].toString()).equal(peerIdStr);
         expect([err[1], err[2]]).to.be.deep.equal([PeerAction.LowToleranceError, "BadBlockByRoot"]);
       } else {
         // happy path

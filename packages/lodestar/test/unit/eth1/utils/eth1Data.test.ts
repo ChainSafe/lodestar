@@ -97,15 +97,8 @@ describe("eth1 / util / getEth1DataForBlocks", function () {
   ];
 
   for (const testCase of testCases) {
-    const {
-      id,
-      blocks,
-      deposits,
-      depositRootTree,
-      lastProcessedDepositBlockNumber,
-      expectedEth1Data,
-      error,
-    } = testCase();
+    const {id, blocks, deposits, depositRootTree, lastProcessedDepositBlockNumber, expectedEth1Data, error} =
+      testCase();
     it(id, async function () {
       const eth1DatasPromise = getEth1DataForBlocks(
         blocks,

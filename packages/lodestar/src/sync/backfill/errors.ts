@@ -1,4 +1,4 @@
-import PeerId from "peer-id";
+import {PeerId} from "@libp2p/interface-peer-id";
 import {LodestarError} from "@chainsafe/lodestar-utils";
 import {Root} from "@chainsafe/lodestar-types";
 

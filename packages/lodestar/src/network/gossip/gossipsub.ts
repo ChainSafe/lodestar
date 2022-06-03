@@ -1,12 +1,11 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import Libp2p from "libp2p";
-import GossipsubDefault from "libp2p-gossipsub";
-// TODO remove once Gossipsub goes ESM
-const Gossipsub = ((GossipsubDefault as unknown) as {default: unknown}).default as typeof GossipsubDefault;
-import {GossipsubMessage, SignaturePolicy, TopicStr} from "libp2p-gossipsub/src/types.js";
-import {PeerScore, PeerScoreParams} from "libp2p-gossipsub/src/score/index.js";
-import PeerId from "peer-id";
-import {MetricsRegister, TopicLabel, TopicStrToLabel} from "libp2p-gossipsub/src/metrics";
+import {Libp2p} from "libp2p";
+import {Message} from "@libp2p/interface-pubsub";
+import {PeerId} from "@libp2p/interface-peer-id";
+import {GossipSub} from "@chainsafe/libp2p-gossipsub";
+import {SignaturePolicy, TopicStr} from "@chainsafe/libp2p-gossipsub/types";
+import {PeerScore, PeerScoreParams} from "@chainsafe/libp2p-gossipsub/score";
+import {MetricsRegister, TopicLabel, TopicStrToLabel} from "@chainsafe/libp2p-gossipsub/metrics";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ATTESTATION_SUBNET_COUNT, ForkName, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 import {allForks, altair, phase0} from "@chainsafe/lodestar-types";
@@ -46,11 +45,11 @@ const GOSSIPSUB_HEARTBEAT_INTERVAL = 0.7 * 1000;
 
 // TODO: Export this type
 type GossipsubEvents = {
-  "gossipsub:message": {
+  "gossipsub:message": CustomEvent<{
     propagationSource: PeerId;
     msgId: string;
-    msg: GossipsubMessage;
-  };
+    msg: Message;
+  }>;
 };
 
 export type Eth2GossipsubModules = {
@@ -81,7 +80,7 @@ export type Eth2GossipsubOpts = {
  *
  * See https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#the-gossip-domain-gossipsub
  */
-export class Eth2Gossipsub extends Gossipsub {
+export class Eth2Gossipsub extends GossipSub {
   readonly jobQueues: GossipJobQueues;
   readonly scoreParams: Partial<PeerScoreParams>;
   private readonly config: IBeaconConfig;
@@ -100,8 +99,7 @@ export class Eth2Gossipsub extends Gossipsub {
 
     // Gossipsub parameters defined here:
     // https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#the-gossip-domain-gossipsub
-    super(modules.libp2p, {
-      gossipIncoming: true,
+    super({
       globalSignaturePolicy: SignaturePolicy.StrictNoSign,
       allowPublishToZeroPeers: opts.allowPublishToZeroPeers,
       D: GOSSIP_D,
@@ -120,7 +118,7 @@ export class Eth2Gossipsub extends Gossipsub {
       fastMsgIdFn: fastMsgIdFn,
       msgIdFn: msgIdFn.bind(msgIdFn, gossipTopicCache),
       dataTransform: new DataTransformSnappy(GOSSIP_MAX_SIZE),
-      metricsRegister: modules.metrics ? ((modules.metrics.register as unknown) as MetricsRegister) : null,
+      metricsRegister: modules.metrics ? (modules.metrics.register as unknown as MetricsRegister) : null,
       metricsTopicStrToLabel: modules.metrics ? getMetricsTopicStrToLabel(modules.config) : undefined,
       asyncValidation: true,
     });
@@ -147,7 +145,7 @@ export class Eth2Gossipsub extends Gossipsub {
       metrics.gossipMesh.peersByType.addCollect(() => this.onScrapeLodestarMetrics(metrics));
     }
 
-    this.on("gossipsub:message", this.onGossipsubMessage.bind(this));
+    this.addEventListener("gossipsub:message", this.onGossipsubMessage.bind(this));
 
     // Having access to this data is CRUCIAL for debugging. While this is a massive log, it must not be deleted.
     // Scoring issues require this dump + current peer score stats to re-calculate scores.
@@ -161,7 +159,8 @@ export class Eth2Gossipsub extends Gossipsub {
     const topicStr = this.getGossipTopicString(topic);
     const sszType = getGossipSSZType(topic);
     const messageData = (sszType.serialize as (object: GossipTypeMap[GossipType]) => Uint8Array)(object);
-    const sentPeers = await this.publish(topicStr, messageData);
+    const result = await this.publish(topicStr, messageData);
+    const sentPeers = result.recipients.length;
     this.logger.verbose("Publish to topic", {topic: topicStr, sentPeers});
     return sentPeers;
   }
@@ -348,7 +347,7 @@ export class Eth2Gossipsub extends Gossipsub {
   }
 
   private onGossipsubMessage(event: GossipsubEvents["gossipsub:message"]): void {
-    const {propagationSource, msgId, msg} = event;
+    const {propagationSource, msgId, msg} = event.detail;
 
     // Also validates that the topicStr is known
     const topic = this.gossipTopicCache.getTopic(msg.topic);

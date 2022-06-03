@@ -492,7 +492,7 @@ async function isPortInUse(port: number): Promise<boolean> {
   return await new Promise<boolean>((resolve, reject) => {
     const server = net.createServer();
     server.once("error", function (err) {
-      if (((err as unknown) as {code: string}).code === "EADDRINUSE") {
+      if ((err as unknown as {code: string}).code === "EADDRINUSE") {
         resolve(true);
       } else {
         reject(err);
@@ -515,7 +515,7 @@ async function getGenesisBlockHash(
   signal: AbortSignal
 ): Promise<string> {
   const eth1Provider = new Eth1Provider(
-    ({DEPOSIT_CONTRACT_ADDRESS: ZERO_HASH} as Partial<IChainConfig>) as IChainConfig,
+    {DEPOSIT_CONTRACT_ADDRESS: ZERO_HASH} as Partial<IChainConfig> as IChainConfig,
     {providerUrls: [providerUrl], jwtSecretHex},
     signal
   );
@@ -540,6 +540,6 @@ async function getBalance(url: string, account: string): Promise<string> {
   const response: string = await shell(
     `curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"eth_getBalance","params":["${account}","latest"],"id":67}' ${url}`
   );
-  const {result} = (JSON.parse(response) as unknown) as Record<string, string>;
+  const {result} = JSON.parse(response) as unknown as Record<string, string>;
   return result;
 }

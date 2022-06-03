@@ -2,9 +2,11 @@
  * @module network
  */
 
-import LibP2p, {Connection} from "libp2p";
-import PeerId from "peer-id";
-import {Multiaddr} from "multiaddr";
+import {Libp2p} from "libp2p";
+import {DefaultConnectionManager} from "libp2p/connection-manager";
+import {Connection} from "@libp2p/interface-connection";
+import {PeerId} from "@libp2p/interface-peer-id";
+import {Multiaddr} from "@multiformats/multiaddr";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {ATTESTATION_SUBNET_COUNT, ForkName, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
@@ -27,7 +29,7 @@ import {PeersData} from "./peers/peersData.js";
 
 interface INetworkModules {
   config: IBeaconConfig;
-  libp2p: LibP2p;
+  libp2p: Libp2p;
   logger: ILogger;
   metrics: IMetrics | null;
   chain: IBeaconChain;
@@ -48,7 +50,7 @@ export class Network implements INetwork {
   private readonly peersData: PeersData;
 
   private readonly peerManager: PeerManager;
-  private readonly libp2p: LibP2p;
+  private readonly libp2p: Libp2p;
   private readonly logger: ILogger;
   private readonly config: IBeaconConfig;
   private readonly clock: IBeaconClock;
@@ -99,6 +101,8 @@ export class Network implements INetwork {
       },
       peersData: this.peersData,
     });
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
+    void this.gossip.init((libp2p as any).components).catch((e) => this.logger.error(e));
 
     this.attnetsService = new AttnetsService(config, chain, this.gossip, metadata, logger, opts);
     this.syncnetsService = new SyncnetsService(config, chain, this.gossip, metadata, logger, opts);
@@ -133,7 +137,8 @@ export class Network implements INetwork {
   async start(): Promise<void> {
     await this.libp2p.start();
     // Stop latency monitor since we handle disconnects here and don't want additional load on the event loop
-    this.libp2p.connectionManager._latencyMonitor.stop();
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+    (this.libp2p.connectionManager as DefaultConnectionManager)["latencyMonitor"].stop();
 
     this.reqResp.start();
     this.metadata.start(this.getEnr(), this.config.getForkName(this.clock.currentSlot));
@@ -141,8 +146,11 @@ export class Network implements INetwork {
     await this.gossip.start();
     this.attnetsService.start();
     this.syncnetsService.start();
-    const multiaddresses = this.libp2p.multiaddrs.map((m) => m.toString()).join(",");
-    this.logger.info(`PeerId ${this.libp2p.peerId.toB58String()}, Multiaddrs ${multiaddresses}`);
+    const multiaddresses = this.libp2p
+      .getMultiaddrs()
+      .map((m) => m.toString())
+      .join(",");
+    this.logger.info(`PeerId ${this.libp2p.peerId.toString()}, Multiaddrs ${multiaddresses}`);
   }
 
   async stop(): Promise<void> {
@@ -161,7 +169,7 @@ export class Network implements INetwork {
   }
 
   get localMultiaddrs(): Multiaddr[] {
-    return this.libp2p.multiaddrs;
+    return this.libp2p.getMultiaddrs();
   }
 
   get peerId(): PeerId {
@@ -173,7 +181,8 @@ export class Network implements INetwork {
   }
 
   getConnectionsByPeer(): Map<string, Connection[]> {
-    return this.libp2p.connectionManager.connections;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return
+    return (this.libp2p.connectionManager as DefaultConnectionManager)["connections"];
   }
 
   getConnectedPeers(): PeerId[] {

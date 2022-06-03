@@ -1,5 +1,7 @@
 import querystring from "querystring";
 import fastify, {FastifyError, FastifyInstance} from "fastify";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
 import fastifyCors from "fastify-cors";
 import {Api} from "@chainsafe/lodestar-api";
 import {registerRoutes, RouteConfig} from "@chainsafe/lodestar-api/beacon/server";

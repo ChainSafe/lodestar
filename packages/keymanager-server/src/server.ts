@@ -4,6 +4,8 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import {join} from "node:path";
 import fastify, {FastifyError, FastifyInstance} from "fastify";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
 import fastifyCors from "fastify-cors";
 import bearerAuthPlugin from "fastify-bearer-auth";
 import {toHexString} from "@chainsafe/ssz";

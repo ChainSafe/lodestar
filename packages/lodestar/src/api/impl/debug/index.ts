@@ -1,5 +1,5 @@
-import {Multiaddr} from "multiaddr";
-import {createFromB58String} from "peer-id";
+import {Multiaddr} from "@multiformats/multiaddr";
+import {peerIdFromString} from "@libp2p/peer-id";
 import {routes} from "@chainsafe/lodestar-api";
 import {resolveStateId} from "../beacon/state/utils.js";
 import {ApiModules} from "../types.js";
@@ -41,13 +41,13 @@ export function getDebugApi({
     },
 
     async connectToPeer(peerIdStr, multiaddrStr) {
-      const peer = createFromB58String(peerIdStr);
+      const peer = peerIdFromString(peerIdStr);
       const multiaddr = multiaddrStr.map((addr) => new Multiaddr(addr));
       await network.connectToPeer(peer, multiaddr);
     },
 
     async disconnectPeer(peerIdStr) {
-      const peer = createFromB58String(peerIdStr);
+      const peer = peerIdFromString(peerIdStr);
       await network.disconnectPeer(peer);
     },
   };

@@ -1,6 +1,7 @@
 import {expect} from "chai";
-import PeerId from "peer-id";
+import {PeerId} from "@libp2p/interface-peer-id";
 import sinon, {SinonStubbedInstance} from "sinon";
+import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {IPeerRpcScoreStore, PeerAction, PeerRpcScoreStore} from "../../../../../src/network/index.js";
 import {defaultNetworkOptions} from "../../../../../src/network/options.js";
@@ -36,12 +37,12 @@ describe("ResponseRateLimiter", () => {
    * - Peer1 requests again => ok
    */
   it("requestCountPeerLimit", async () => {
-    const peerId = await PeerId.create();
+    const peerId = await createSecp256k1PeerId();
     const requestTyped = {method: Method.Ping, body: BigInt(1)} as RequestTypedContainer;
     for (let i = 0; i < defaultNetworkOptions.requestCountPeerLimit; i++) {
       expect(inboundRateLimiter.allowRequest(peerId, requestTyped)).to.be.true;
     }
-    const peerId2 = await PeerId.create();
+    const peerId2 = await createSecp256k1PeerId();
     // it's ok to request blocks for another peer
     expect(inboundRateLimiter.allowRequest(peerId2, requestTyped)).to.be.true;
     expect(peerRpcScoresStub.applyAction.calledOnce).to.be.false;
@@ -70,16 +71,16 @@ describe("ResponseRateLimiter", () => {
     const blockCount = Math.floor(defaultNetworkOptions.blockCountTotalLimit / 2);
     const requestTyped = {method: Method.BeaconBlocksByRange, body: {count: blockCount}} as RequestTypedContainer;
     for (let i = 0; i < 2; i++) {
-      expect(inboundRateLimiter.allowRequest(await PeerId.create(), requestTyped)).to.be.true;
+      expect(inboundRateLimiter.allowRequest(await createSecp256k1PeerId(), requestTyped)).to.be.true;
     }
 
     const oneBlockRequestTyped = {method: Method.BeaconBlocksByRoot, body: [Buffer.alloc(32)]} as RequestTypedContainer;
-    expect(inboundRateLimiter.allowRequest(await PeerId.create(), oneBlockRequestTyped)).to.be.false;
+    expect(inboundRateLimiter.allowRequest(await createSecp256k1PeerId(), oneBlockRequestTyped)).to.be.false;
     expect(peerRpcScoresStub.applyAction.calledOnce).to.be.false;
 
     sandbox.clock.tick(60 * 1000);
     // try again after timeout
-    expect(inboundRateLimiter.allowRequest(await PeerId.create(), oneBlockRequestTyped)).to.be.true;
+    expect(inboundRateLimiter.allowRequest(await createSecp256k1PeerId(), oneBlockRequestTyped)).to.be.true;
   });
 
   /**
@@ -94,11 +95,11 @@ describe("ResponseRateLimiter", () => {
   it("blockCountPeerLimit", async () => {
     const blockCount = Math.floor(defaultNetworkOptions.blockCountPeerLimit / 2);
     const requestTyped = {method: Method.BeaconBlocksByRange, body: {count: blockCount}} as RequestTypedContainer;
-    const peerId = await PeerId.create();
+    const peerId = await createSecp256k1PeerId();
     for (let i = 0; i < 2; i++) {
       expect(inboundRateLimiter.allowRequest(peerId, requestTyped)).to.be.true;
     }
-    const peerId2 = await PeerId.create();
+    const peerId2 = await createSecp256k1PeerId();
     const oneBlockRequestTyped = {method: Method.BeaconBlocksByRoot, body: [Buffer.alloc(32)]} as RequestTypedContainer;
     // it's ok to request blocks for another peer
     expect(inboundRateLimiter.allowRequest(peerId2, oneBlockRequestTyped)).to.be.true;
@@ -116,7 +117,7 @@ describe("ResponseRateLimiter", () => {
   });
 
   it("should remove rate tracker for disconnected peers", async () => {
-    const peerId = await PeerId.create();
+    const peerId = await createSecp256k1PeerId();
     const pruneStub = sandbox.stub(inboundRateLimiter, "pruneByPeerIdStr" as keyof InboundRateLimiter);
     inboundRateLimiter.start();
     const requestTyped = {method: Method.Ping, body: BigInt(1)} as RequestTypedContainer;
@@ -134,7 +135,7 @@ describe("ResponseRateLimiter", () => {
     this.timeout(5000);
     const peerIds: PeerId[] = [];
     for (let i = 0; i < 25; i++) {
-      peerIds.push(await PeerId.create());
+      peerIds.push(await createSecp256k1PeerId());
     }
 
     const startMem = process.memoryUsage().heapUsed;

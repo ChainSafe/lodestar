@@ -31,7 +31,7 @@ enum StreamStatus {
 export function responseDecode(
   forkDigestContext: IForkDigestContext,
   protocol: Protocol
-): (source: AsyncIterable<Buffer>) => AsyncGenerator<IncomingResponseBody> {
+): (source: AsyncIterable<Uint8Array>) => AsyncGenerator<IncomingResponseBody> {
   return async function* responseDecodeSink(source) {
     const contextBytesType = contextBytesTypeByProtocol(protocol);
     const bufferedSource = new BufferedSource(source as AsyncGenerator<Buffer>);

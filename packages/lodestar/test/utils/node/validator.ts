@@ -73,7 +73,7 @@ export async function getAndInitValidatorsWithKeystore({
   const signers: SignerLocal[] = [];
 
   const {secretKeys, unlockSecretKeys: _unlockSecretKeys} = await getLocalSecretKeys(
-    (vcConfig as unknown) as IValidatorCliArgs & IGlobalArgs
+    vcConfig as unknown as IValidatorCliArgs & IGlobalArgs
   );
   if (secretKeys.length > 0) {
     // Log pubkeys for auditing

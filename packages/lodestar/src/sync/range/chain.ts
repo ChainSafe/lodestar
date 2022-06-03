@@ -1,4 +1,4 @@
-import PeerId from "peer-id";
+import {PeerId} from "@libp2p/interface-peer-id";
 import {Epoch, Root, Slot, phase0, allForks} from "@chainsafe/lodestar-types";
 import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {ErrorAborted, ILogger} from "@chainsafe/lodestar-utils";
@@ -476,7 +476,7 @@ export class SyncChain {
         const attemptOk = batch.validationSuccess();
         for (const attempt of batch.failedProcessingAttempts) {
           if (!byteArrayEquals(attempt.hash, attemptOk.hash)) {
-            if (attemptOk.peer.toB58String() === attempt.peer.toB58String()) {
+            if (attemptOk.peer.toString() === attempt.peer.toString()) {
               // The same peer corrected its previous attempt
               this.reportPeer(attempt.peer, PeerAction.MidToleranceError, "SyncChainInvalidBatchSelf");
             } else {

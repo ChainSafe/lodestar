@@ -25,7 +25,7 @@ export function renderRequestBody(method: Method, requestBody: RequestBody): str
     }
 
     case Method.BeaconBlocksByRoot:
-      return ((requestBody as RequestBodyByMethod[Method.BeaconBlocksByRoot]) as Uint8Array[])
+      return (requestBody as RequestBodyByMethod[Method.BeaconBlocksByRoot] as Uint8Array[])
         .map((root) => toHexString(root))
         .join(",");
   }

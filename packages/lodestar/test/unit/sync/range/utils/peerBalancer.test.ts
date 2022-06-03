@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import PeerId from "peer-id";
+import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
 import {config} from "@chainsafe/lodestar-config/default";
 import {Batch, BatchOpts} from "../../../../../src/sync/range/batch.js";
 import {ChainPeersBalancer} from "../../../../../src/sync/range/utils/peerBalancer.js";
@@ -7,12 +7,12 @@ import {ChainPeersBalancer} from "../../../../../src/sync/range/utils/peerBalanc
 describe("sync / range / peerBalancer", () => {
   const opts: BatchOpts = {epochsPerBatch: 1};
 
-  it("bestPeerToRetryBatch", () => {
+  it("bestPeerToRetryBatch", async () => {
     // Run N times to make sure results are consistent with different shufflings
     for (let i = 0; i < 5; i++) {
-      const peer1 = new PeerId(Buffer.from([0])); // Offset by one, PeerId encodes to B58String 0 as "1"
-      const peer2 = new PeerId(Buffer.from([1]));
-      const peer3 = new PeerId(Buffer.from([2]));
+      const peer1 = await createSecp256k1PeerId();
+      const peer2 = await createSecp256k1PeerId();
+      const peer3 = await createSecp256k1PeerId();
       const batch0 = new Batch(0, config, opts);
       const batch1 = new Batch(1, config, opts);
 
@@ -39,13 +39,13 @@ describe("sync / range / peerBalancer", () => {
     }
   });
 
-  it("idlePeers", () => {
+  it("idlePeers", async () => {
     // Run N times to make sure results are consistent with different shufflings
     for (let i = 0; i < 5; i++) {
-      const peer1 = new PeerId(Buffer.from([0]));
-      const peer2 = new PeerId(Buffer.from([1]));
-      const peer3 = new PeerId(Buffer.from([2]));
-      const peer4 = new PeerId(Buffer.from([3]));
+      const peer1 = await createSecp256k1PeerId();
+      const peer2 = await createSecp256k1PeerId();
+      const peer3 = await createSecp256k1PeerId();
+      const peer4 = await createSecp256k1PeerId();
       const batch0 = new Batch(0, config, opts);
       const batch1 = new Batch(1, config, opts);
 
@@ -57,8 +57,8 @@ describe("sync / range / peerBalancer", () => {
 
       const idlePeers = peerBalancer.idlePeers();
 
-      const idlePeersIds = idlePeers.map((p) => p.toB58String()).sort();
-      const expectedIds = [peer3, peer4].map((p) => p.toB58String()).sort();
+      const idlePeersIds = idlePeers.map((p) => p.toString()).sort();
+      const expectedIds = [peer3, peer4].map((p) => p.toString()).sort();
       expect(idlePeersIds).to.deep.equal(expectedIds, "Wrong idlePeers (encoded as B58String)");
     }
   });

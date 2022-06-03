@@ -93,7 +93,7 @@ describe("sync / unknown block sync", function () {
     await bn2.chain.processBlock(head).catch((e) => {
       if (e instanceof BlockError && e.type.code === BlockErrorCode.PARENT_UNKNOWN) {
         // Expected
-        bn2.network.events.emit(NetworkEvent.unknownBlockParent, head, bn2.network.peerId.toB58String());
+        bn2.network.events.emit(NetworkEvent.unknownBlockParent, head, bn2.network.peerId.toString());
       } else {
         throw e;
       }

@@ -1,4 +1,4 @@
-import PeerId from "peer-id";
+import {PeerId} from "@libp2p/interface-peer-id";
 import {allForks, Epoch, phase0} from "@chainsafe/lodestar-types";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";

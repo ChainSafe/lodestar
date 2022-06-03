@@ -19,7 +19,7 @@ describe("Events api impl", function () {
     beforeEach(function () {
       chainStub = sinon.createStubInstance(BeaconChain);
       stateCacheStub = sinon.createStubInstance(StateContextCache);
-      chainStub.stateCache = (stateCacheStub as unknown) as StateContextCache;
+      chainStub.stateCache = stateCacheStub as unknown as StateContextCache;
       chainEventEmmitter = new ChainEventEmitter();
       chainStub.emitter = chainEventEmmitter;
       api = getEventsApi({config, chain: chainStub});

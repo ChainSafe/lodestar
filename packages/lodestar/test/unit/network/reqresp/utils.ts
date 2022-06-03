@@ -1,7 +1,7 @@
 import {expect} from "chai";
+import {Stream} from "@libp2p/interface-connection";
 import {Root, phase0} from "@chainsafe/lodestar-types";
 import {toHexString} from "@chainsafe/ssz";
-import {Libp2pStream} from "../../../../src/network/index.js";
 import {generateEmptySignedBlock} from "../../../utils/block.js";
 
 export function createStatus(): phase0.Status {
@@ -47,21 +47,28 @@ export function expectEqualByteChunks(chunks: Buffer[], expectedChunks: Buffer[]
  * Useful to simulate a LibP2P stream source emitting prepared bytes
  * and capture the response with a sink accessible via `this.resultChunks`
  */
-export class MockLibP2pStream implements Libp2pStream {
-  source: Libp2pStream["source"];
-  resultChunks: Buffer[] = [];
+export class MockLibP2pStream implements Stream {
+  id = "mock";
+  timeline = {
+    open: Date.now(),
+  };
+  source: Stream["source"];
+  resultChunks: Uint8Array[] = [];
 
   constructor(requestChunks: Buffer[]) {
     this.source = arrToSource(requestChunks);
   }
-
-  sink: Libp2pStream["sink"] = async (source) => {
+  sink: Stream["sink"] = async (source) => {
     for await (const chunk of source) {
       this.resultChunks.push(chunk);
     }
   };
   // eslint-disable-next-line @typescript-eslint/no-empty-function
-  close: Libp2pStream["close"] = () => {};
-  reset: Libp2pStream["reset"] = () => this.close();
-  abort: Libp2pStream["abort"] = () => this.close();
+  close: Stream["close"] = () => {};
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
+  closeRead = (): void => {};
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
+  closeWrite = (): void => {};
+  reset: Stream["reset"] = () => this.close();
+  abort: Stream["abort"] = () => this.close();
 }

@@ -39,11 +39,11 @@ describe("eth1 / pickEth1Vote", () => {
   }));
 
   itBench("pickEth1Vote - no votes", () => {
-    pickEth1Vote((stateNoVotes as unknown) as BeaconStateAllForks, votesToConsider);
+    pickEth1Vote(stateNoVotes as unknown as BeaconStateAllForks, votesToConsider);
   });
 
   itBench("pickEth1Vote - max votes", () => {
-    pickEth1Vote((stateMaxVotes as unknown) as BeaconStateAllForks, votesToConsider);
+    pickEth1Vote(stateMaxVotes as unknown as BeaconStateAllForks, votesToConsider);
   });
 });
 

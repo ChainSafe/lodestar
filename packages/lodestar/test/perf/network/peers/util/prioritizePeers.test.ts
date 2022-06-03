@@ -1,7 +1,8 @@
 import {itBench} from "@dapplion/benchmark";
-import PeerId from "peer-id";
-import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
+import {PeerId} from "@libp2p/interface-peer-id";
+import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
 import {altair, phase0} from "@chainsafe/lodestar-types";
+import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 import {defaultNetworkOptions} from "../../../../../src/network/options.js";
 import {prioritizePeers, RequestedSubnet} from "../../../../../src/network/peers/utils/index.js";
 import {getAttnets, getSyncnets} from "../../../../utils/network.js";
@@ -9,10 +10,10 @@ import {getAttnets, getSyncnets} from "../../../../utils/network.js";
 describe("prioritizePeers", () => {
   const seedPeers: {id: PeerId; attnets: phase0.AttestationSubnets; syncnets: altair.SyncSubnets; score: number}[] = [];
 
-  before(function () {
+  before(async function () {
     for (let i = 0; i < defaultNetworkOptions.maxPeers; i++) {
-      const peer = new PeerId(Buffer.from(`peer-${i}`));
-      peer.toB58String = () => `peer-${i}`;
+      const peer = await createSecp256k1PeerId();
+      peer.toString = () => `peer-${i}`;
       seedPeers.push({
         id: peer,
         attnets: getAttnets([]),

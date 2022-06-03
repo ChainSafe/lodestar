@@ -1,15 +1,15 @@
 import {expect} from "chai";
 import {getTestdirPath} from "../../utils.js";
-import {createPeerId, writePeerId, readPeerId} from "../../../src/config/index.js";
+import {createSecp256k1PeerId, writePeerId, readPeerId} from "../../../src/config/index.js";
 
 describe("config / peerId", () => {
   const peerIdFilepath = getTestdirPath("./test-peer-id.json");
 
   it("create, write and read PeerId", async () => {
-    const peerId = await createPeerId();
+    const peerId = await createSecp256k1PeerId();
     writePeerId(peerIdFilepath, peerId);
     const peerIdRead = await readPeerId(peerIdFilepath);
 
-    expect(peerIdRead.toB58String()).to.equal(peerId.toB58String());
+    expect(peerIdRead.toString()).to.equal(peerId.toString());
   });
 });
