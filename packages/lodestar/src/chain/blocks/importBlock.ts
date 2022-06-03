@@ -237,9 +237,10 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
        * the current finalized block does not contain any execution payload at all (pre MERGE_EPOCH) or if it contains a
        * zero block hash (pre TTD)
        */
+      const safeBlockHash = chain.forkChoice.getJustifiedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
       const finalizedBlockHash = chain.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
       if (headBlockHash !== ZERO_HASH_HEX) {
-        chain.executionEngine.notifyForkchoiceUpdate(headBlockHash, finalizedBlockHash).catch((e) => {
+        chain.executionEngine.notifyForkchoiceUpdate(headBlockHash, safeBlockHash, finalizedBlockHash).catch((e) => {
           chain.logger.error("Error pushing notifyForkchoiceUpdate()", {headBlockHash, finalizedBlockHash}, e);
         });
       }
@@ -284,8 +285,9 @@ async function maybeIssueNextProposerEngineFcU(
       const proposerIndex = prepareState.epochCtx.getBeaconProposer(prepareSlot);
       const feeRecipient = chain.beaconProposerCache.get(proposerIndex);
       if (feeRecipient) {
+        const safeBlockHash = chain.forkChoice.getJustifiedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
         const finalizedBlockHash = chain.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
-        return prepareExecutionPayload(chain, finalizedBlockHash, prepareState, feeRecipient);
+        return prepareExecutionPayload(chain, safeBlockHash, finalizedBlockHash, prepareState, feeRecipient);
       }
     } catch (e) {
       chain.logger.error("Error on issuing next proposer engine fcU", {}, e as Error);

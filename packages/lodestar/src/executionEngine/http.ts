@@ -191,6 +191,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
    */
   async notifyForkchoiceUpdate(
     headBlockHash: Root | RootHex,
+    safeBlockHash: RootHex,
     finalizedBlockHash: RootHex,
     payloadAttributes?: PayloadAttributes
   ): Promise<PayloadId | null> {
@@ -211,10 +212,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       payloadId,
     } = await this.rpc.fetch<EngineApiRpcReturnTypes[typeof method], EngineApiRpcParamTypes[typeof method]>({
       method,
-      params: [
-        {headBlockHash: headBlockHashData, safeBlockHash: headBlockHashData, finalizedBlockHash},
-        apiPayloadAttributes,
-      ],
+      params: [{headBlockHash: headBlockHashData, safeBlockHash, finalizedBlockHash}, apiPayloadAttributes],
     });
 
     switch (status) {
