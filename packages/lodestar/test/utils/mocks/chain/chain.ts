@@ -5,7 +5,7 @@ import {phase0, allForks, UintNum64, Root, Slot, ssz, Uint16, UintBn64} from "@c
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {BeaconStateAllForks, CachedBeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {CheckpointWithHex, IForkChoice, ProtoBlock, ExecutionStatus} from "@chainsafe/lodestar-fork-choice";
-import {defaultDefaultFeeRecipient} from "@chainsafe/lodestar-validator";
+import {defaultOptions as defaultValidatorOptions} from "@chainsafe/lodestar-validator";
 
 import {ChainEventEmitter, IBeaconChain} from "../../../../src/chain/index.js";
 import {IBeaconClock} from "../../../../src/chain/clock/interface.js";
@@ -31,7 +31,7 @@ import {
 } from "../../../../src/chain/opPools/index.js";
 import {LightClientServer} from "../../../../src/chain/lightClient/index.js";
 import {Eth1ForBlockProductionDisabled} from "../../../../src/eth1/index.js";
-import {ExecutionEngineDisabled} from "../../../../src/executionEngine/index.js";
+import {ExecutionEngineDisabled} from "../../../../src/execution/engine/index.js";
 import {ReqRespBlockResponse} from "../../../../src/network/reqresp/types.js";
 import {testLogger} from "../../logger.js";
 import {ReprocessController} from "../../../../src/chain/reprocess.js";
@@ -86,7 +86,9 @@ export class MockBeaconChain implements IBeaconChain {
   readonly seenContributionAndProof = new SeenContributionAndProof(null);
   readonly seenBlockAttesters = new SeenBlockAttesters();
 
-  readonly beaconProposerCache = new BeaconProposerCache({defaultFeeRecipient: defaultDefaultFeeRecipient});
+  readonly beaconProposerCache = new BeaconProposerCache({
+    defaultFeeRecipient: defaultValidatorOptions.defaultFeeRecipient,
+  });
 
   private state: BeaconStateAllForks;
   private abortController: AbortController;

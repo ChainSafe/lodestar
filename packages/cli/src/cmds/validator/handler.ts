@@ -1,5 +1,5 @@
 import {LevelDbController} from "@chainsafe/lodestar-db";
-import {ProcessShutdownCallback, SlashingProtection, Validator} from "@chainsafe/lodestar-validator";
+import {ProcessShutdownCallback, SlashingProtection, Validator, defaultOptions} from "@chainsafe/lodestar-validator";
 import {getMetrics, MetricsRegister} from "@chainsafe/lodestar-validator";
 import {RegistryMetricCreator, collectNodeJSMetrics, HttpMetricsServer} from "@chainsafe/lodestar";
 import {getBeaconConfigFromArgs} from "../../config/index.js";
@@ -9,7 +9,7 @@ import {onGracefulShutdown, parseFeeRecipient} from "../../util/index.js";
 import {getVersionData} from "../../util/version.js";
 import {getBeaconPaths} from "../beacon/paths.js";
 import {getAccountPaths, getValidatorPaths} from "./paths.js";
-import {IValidatorCliArgs, validatorMetricsDefaultOptions, defaultDefaultFeeRecipient} from "./options.js";
+import {IValidatorCliArgs, validatorMetricsDefaultOptions} from "./options.js";
 import {getSignersFromArgs} from "./signers/index.js";
 import {logSigners} from "./signers/logSigners.js";
 import {KeymanagerApi} from "./keymanager/impl.js";
@@ -21,7 +21,7 @@ import {KeymanagerRestApiServer} from "./keymanager/server.js";
  */
 export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): Promise<void> {
   const graffiti = args.graffiti || getDefaultGraffiti();
-  const defaultFeeRecipient = parseFeeRecipient(args.defaultFeeRecipient ?? defaultDefaultFeeRecipient);
+  const defaultFeeRecipient = parseFeeRecipient(args.defaultFeeRecipient ?? defaultOptions.defaultFeeRecipient);
   const doppelgangerProtectionEnabled = args.doppelgangerProtectionEnabled;
 
   const validatorPaths = getValidatorPaths(args);
@@ -97,6 +97,8 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
     await metricsServer.start();
   }
 
+  const builder = args["builder.enabled"] ? {enabled: true} : {};
+
   // This promise resolves once genesis is available.
   // It will wait for genesis, so this promise can be potentially very long
 
@@ -112,6 +114,7 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
       doppelgangerProtectionEnabled,
       afterBlockDelaySlotFraction: args.afterBlockDelaySlotFraction,
       defaultFeeRecipient,
+      builder,
     },
     controller.signal,
     metrics

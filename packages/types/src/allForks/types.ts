@@ -69,3 +69,9 @@ export type AllForksSSZTypes = {
   >;
   Metadata: AllForksTypeOf<typeof phase0Ssz.Metadata | typeof altairSsz.Metadata>;
 };
+
+export type FullOrBlindedExecutionPayload = bellatrix.ExecutionPayload | bellatrix.ExecutionPayloadHeader;
+export type FullOrBlindedBeaconBlockBody = BeaconBlockBody | bellatrix.BlindedBeaconBlockBody;
+export type FullOrBlindedBellatrixBeaconBlockBody = bellatrix.BeaconBlockBody | bellatrix.BlindedBeaconBlockBody;
+export type FullOrBlindedBeaconBlock = BeaconBlock | bellatrix.BlindedBeaconBlock;
+export type FullOrBlindedSignedBeaconBlock = SignedBeaconBlock | bellatrix.SignedBlindedBeaconBlock;

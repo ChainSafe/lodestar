@@ -18,13 +18,13 @@ import {processEpoch} from "./epoch/index.js";
  */
 export function stateTransition(
   state: CachedBeaconStateAllForks,
-  signedBlock: allForks.SignedBeaconBlock,
+  signedBlock: allForks.FullOrBlindedSignedBeaconBlock,
   options?: {verifyStateRoot?: boolean; verifyProposer?: boolean; verifySignatures?: boolean},
   metrics?: IBeaconStateTransitionMetrics | null
 ): CachedBeaconStateAllForks {
   const {verifyStateRoot = true, verifyProposer = true, verifySignatures = true} = options || {};
 
-  const block = signedBlock.message;
+  const block = signedBlock.message as allForks.FullOrBlindedBeaconBlock;
   const blockSlot = block.slot;
 
   let postState = state.clone();

@@ -5,7 +5,7 @@ import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
 
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {IEth1ForBlockProduction} from "../eth1/index.js";
-import {IExecutionEngine} from "../executionEngine/index.js";
+import {IExecutionEngine, IExecutionBuilder} from "../execution/index.js";
 import {IBeaconClock} from "./clock/interface.js";
 import {ChainEventEmitter} from "./emitter.js";
 import {IStateRegenerator} from "./regen/index.js";
@@ -44,6 +44,7 @@ export interface IBeaconChain {
   readonly genesisValidatorsRoot: Root;
   readonly eth1: IEth1ForBlockProduction;
   readonly executionEngine: IExecutionEngine;
+  readonly executionBuilder?: IExecutionBuilder;
   // Expose config for convenience in modularized functions
   readonly config: IBeaconConfig;
 

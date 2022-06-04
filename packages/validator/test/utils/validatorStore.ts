@@ -18,6 +18,7 @@ export function initValidatorStore(
   const logger = testLogger();
   const genesisValidatorsRoot = Buffer.alloc(32, 0xdd);
   const defaultFeeRecipient = "0x0";
+  const defaultGasLimit = 10000;
 
   const signers: Signer[] = secretKeys.map((sk) => ({
     type: SignerType.Local,
@@ -33,6 +34,7 @@ export function initValidatorStore(
     null,
     metrics,
     signers,
-    defaultFeeRecipient
+    defaultFeeRecipient,
+    defaultGasLimit
   );
 }

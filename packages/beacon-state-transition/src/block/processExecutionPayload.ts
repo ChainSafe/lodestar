@@ -1,4 +1,4 @@
-import {bellatrix, ssz} from "@chainsafe/lodestar-types";
+import {bellatrix, ssz, allForks} from "@chainsafe/lodestar-types";
 import {toHexString, byteArrayEquals} from "@chainsafe/ssz";
 import {CachedBeaconStateBellatrix} from "../types.js";
 import {getRandaoMix} from "../util/index.js";
@@ -7,7 +7,7 @@ import {isMergeTransitionComplete} from "../util/bellatrix.js";
 
 export function processExecutionPayload(
   state: CachedBeaconStateBellatrix,
-  payload: bellatrix.ExecutionPayload,
+  payload: allForks.FullOrBlindedExecutionPayload,
   executionEngine: ExecutionEngine | null
 ): void {
   // Verify consistency of the parent hash, block number, base fee per gas and gas limit
@@ -46,9 +46,17 @@ export function processExecutionPayload(
   // if executionEngine is null, executionEngine.onPayload MUST be called after running processBlock to get the
   // correct randao mix. Since executionEngine will be an async call in most cases it is called afterwards to keep
   // the state transition sync
-  if (executionEngine && !executionEngine.notifyNewPayload(payload)) {
+  if (
+    (payload as bellatrix.ExecutionPayload).transactions !== undefined &&
+    executionEngine &&
+    !executionEngine.notifyNewPayload(payload as bellatrix.ExecutionPayload)
+  ) {
     throw Error("Invalid execution payload");
   }
+
+  const transactionsRoot =
+    (payload as bellatrix.ExecutionPayloadHeader).transactionsRoot ??
+    ssz.bellatrix.Transactions.hashTreeRoot((payload as bellatrix.ExecutionPayload).transactions);
 
   // Cache execution payload header
   state.latestExecutionPayloadHeader = ssz.bellatrix.ExecutionPayloadHeader.toViewDU({
@@ -65,6 +73,6 @@ export function processExecutionPayload(
     extraData: payload.extraData,
     baseFeePerGas: payload.baseFeePerGas,
     blockHash: payload.blockHash,
-    transactionsRoot: ssz.bellatrix.Transactions.hashTreeRoot(payload.transactions),
+    transactionsRoot,
   });
 }

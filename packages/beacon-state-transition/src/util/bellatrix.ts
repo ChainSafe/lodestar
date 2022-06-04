@@ -10,10 +10,21 @@ import {
  * Execution enabled = merge is done.
  * When (A) state has execution data OR (B) block has execution data
  */
-export function isExecutionEnabled(state: BeaconStateBellatrix, body: bellatrix.BeaconBlockBody): boolean {
+export function isExecutionEnabled(
+  state: BeaconStateBellatrix,
+  body: allForks.FullOrBlindedBellatrixBeaconBlockBody
+): boolean {
   return (
     isMergeTransitionComplete(state) ||
-    !ssz.bellatrix.ExecutionPayload.equals(body.executionPayload, ssz.bellatrix.ExecutionPayload.defaultValue())
+    ((body as bellatrix.BlindedBeaconBlockBody).executionPayloadHeader !== undefined
+      ? !ssz.bellatrix.ExecutionPayloadHeader.equals(
+          (body as bellatrix.BlindedBeaconBlockBody).executionPayloadHeader,
+          ssz.bellatrix.ExecutionPayloadHeader.defaultValue()
+        )
+      : !ssz.bellatrix.ExecutionPayload.equals(
+          (body as bellatrix.BeaconBlockBody).executionPayload,
+          ssz.bellatrix.ExecutionPayload.defaultValue()
+        ))
   );
 }
 

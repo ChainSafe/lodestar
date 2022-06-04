@@ -56,6 +56,10 @@ describe("beacon / beacon", () => {
       args: [ssz.phase0.SignedBeaconBlock.defaultValue()],
       res: undefined,
     },
+    publishBlindedBlock: {
+      args: [ssz.bellatrix.SignedBlindedBeaconBlock.defaultValue()],
+      res: undefined,
+    },
 
     // pool
 

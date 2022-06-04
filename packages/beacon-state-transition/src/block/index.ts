@@ -20,7 +20,7 @@ export * from "./isValidIndexedAttestation.js";
 export function processBlock(
   fork: ForkSeq,
   state: CachedBeaconStateAllForks,
-  block: allForks.BeaconBlock,
+  block: allForks.FullOrBlindedBeaconBlock,
   verifySignatures = true,
   executionEngine: ExecutionEngine | null
 ): void {
@@ -29,12 +29,16 @@ export function processBlock(
   // The call to the process_execution_payload must happen before the call to the process_randao as the former depends
   // on the randao_mix computed with the reveal of the previous block.
   if (fork >= ForkSeq.bellatrix) {
-    if (isExecutionEnabled(state as CachedBeaconStateBellatrix, (block as bellatrix.BeaconBlock).body)) {
-      processExecutionPayload(
+    const fullOrBlindedPayload = ((block as bellatrix.BlindedBeaconBlock).body.executionPayloadHeader ??
+      (block as bellatrix.BeaconBlock).body.executionPayload) as allForks.FullOrBlindedExecutionPayload;
+
+    if (
+      isExecutionEnabled(
         state as CachedBeaconStateBellatrix,
-        (block as bellatrix.BeaconBlock).body.executionPayload,
-        executionEngine
-      );
+        block.body as allForks.FullOrBlindedBellatrixBeaconBlockBody
+      )
+    ) {
+      processExecutionPayload(state as CachedBeaconStateBellatrix, fullOrBlindedPayload, executionEngine);
     }
   }
 
