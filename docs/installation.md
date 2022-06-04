@@ -43,25 +43,12 @@ Lodestar should now be ready for use:
 ./lodestar --help
 ```
 
-## Install from NPM
+## Install from NPM [redacted]
 
-Install globally
-
-```
-npm install -g @chainsafe/lodestar-cli
-```
-
-or
-
-```
-yarn global add @chainsafe/lodestar-cli
-```
-
-Lodestar should now be ready to use:
-
-```
-lodestar --help
-```
+<!-- prettier-ignore-start -->
+!!! danger
+    For mainnet (production) usage, we only recommend installing with docker due to NPM supply chain attacks, [example here](https://hackaday.com/2021/10/22/supply-chain-attack-npm-library-used-by-facebook-and-others-was-compromised/). [Until a safer installation method has been found](https://github.com/ChainSafe/lodestar/issues/3596), do not use this install method except for experimental purposes.
+<!-- prettier-ignore-end -->
 
 ## Install with docker
 
@@ -69,7 +56,7 @@ The [`chainsafe/lodestar`](https://hub.docker.com/r/chainsafe/lodestar) Docker H
 
 <!-- prettier-ignore-start -->
 !!! info
-    The Docker Hub image in run on CI every dev release on `unstable`
+    The Docker Hub image is run on CI every dev release on `unstable`
 <!-- prettier-ignore-end -->
 
 Ensure you have Docker installed by issuing the command:
