@@ -43,7 +43,7 @@ Lodestar should now be ready for use:
 ./lodestar --help
 ```
 
-## Install from NPM [redacted]
+## Install from NPM [not recommended]
 
 <!-- prettier-ignore-start -->
 !!! danger
