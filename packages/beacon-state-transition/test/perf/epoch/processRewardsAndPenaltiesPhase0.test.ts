@@ -1,8 +1,8 @@
 import {itBench} from "@dapplion/benchmark";
-import {phase0} from "../../../../src/index.js";
-import {generatePerfTestCachedStatePhase0, numValidators} from "../../util.js";
-import {StatePhase0Epoch} from "../../types.js";
-import {FlagFactors, generateBalanceDeltasEpochProcess} from "./util.js";
+import {getAttestationDeltas} from "../../../src/epoch/getAttestationDeltas.js";
+import {generatePerfTestCachedStatePhase0, numValidators} from "../util.js";
+import {StatePhase0Epoch} from "../types.js";
+import {FlagFactors, generateBalanceDeltasEpochProcess} from "./utilPhase0.js";
 
 // - On normal mainnet conditions
 //   - prevSourceAttester: 98%
@@ -49,7 +49,7 @@ describe("phase0 getAttestationDeltas", () => {
       },
       beforeEach: ({state, epochProcess}) => ({state: state.clone(), epochProcess}),
       fn: ({state, epochProcess}) => {
-        phase0.getAttestationDeltas(state, epochProcess);
+        getAttestationDeltas(state, epochProcess);
       },
     });
   }

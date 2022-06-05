@@ -1,7 +1,8 @@
 import {itBench} from "@dapplion/benchmark";
-import {allForks, beforeProcessEpoch, CachedBeaconStateAllForks, EpochProcess} from "../../../../src/index.js";
-import {generatePerfTestCachedStatePhase0, numValidators} from "../../util.js";
-import {StateEpoch} from "../../types.js";
+import {beforeProcessEpoch, CachedBeaconStateAllForks, EpochProcess} from "../../../src/index.js";
+import {processRegistryUpdates} from "../../../src/epoch/processRegistryUpdates.js";
+import {generatePerfTestCachedStatePhase0, numValidators} from "../util.js";
+import {StateEpoch} from "../types.js";
 
 // PERF: Cost 'proportional' to only validators that active + exit. For mainnet conditions:
 // - indicesEligibleForActivationQueue: Maxing deposits triggers 512 validator mutations
@@ -61,7 +62,7 @@ describe("phase0 processRegistryUpdates", () => {
       noThreshold: notTrack,
       before: () => getRegistryUpdatesTestData(vc, lengths),
       beforeEach: async ({state, epochProcess}) => ({state: state.clone(), epochProcess}),
-      fn: ({state, epochProcess}) => allForks.processRegistryUpdates(state, epochProcess),
+      fn: ({state, epochProcess}) => processRegistryUpdates(state, epochProcess),
     });
   }
 });

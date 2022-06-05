@@ -11,10 +11,10 @@ import {
   SYNC_COMMITTEE_SIZE,
 } from "@chainsafe/lodestar-params";
 import {phase0} from "@chainsafe/lodestar-types";
-import {altair, CachedBeaconStateAllForks, CachedBeaconStateAltair} from "../../../../src/index.js";
-import {generatePerfTestCachedStateAltair, perfStateId} from "../../util.js";
-import {BlockAltairOpts, getBlockAltair} from "../../phase0/block/util.js";
-import {StateAltair} from "../../types.js";
+import {CachedBeaconStateAllForks, CachedBeaconStateAltair} from "../../../src/index.js";
+import {processAttestationsAltair} from "../../../src/block/processAttestationsAltair.js";
+import {generatePerfTestCachedStateAltair, perfStateId} from "../util.js";
+import {BlockAltairOpts, getBlockAltair} from "./util.js";
 
 type StateAttestations = {
   state: CachedBeaconStateAllForks;
@@ -72,7 +72,7 @@ describe("altair processAttestation", () => {
         return {state: stateCloned, attestations};
       },
       fn: ({state, attestations}) => {
-        altair.processAttestations(state as CachedBeaconStateAltair, attestations, false);
+        processAttestationsAltair(state as CachedBeaconStateAltair, attestations, false);
         state.commit();
         // After processAttestations normal case vc 250_000 it has to do 6802 hash64 ops
         // state.hashTreeRoot();
@@ -95,7 +95,7 @@ describe("altair processAttestation - CachedEpochParticipation.setStatus", () =>
     {name: "100% committees", ratio: 1},
   ];
   for (const {name, ratio} of testCases) {
-    itBench<StateAltair, StateAltair>({
+    itBench<CachedBeaconStateAltair, CachedBeaconStateAltair>({
       id: `altair processAttestation - setStatus - ${name} join`,
       before: () => {
         const state = generatePerfTestCachedStateAltair();

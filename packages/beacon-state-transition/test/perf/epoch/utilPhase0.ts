@@ -4,8 +4,8 @@ import {
   hasMarkers,
   IAttesterStatus,
   toAttesterFlags,
-} from "../../../../src/index.js";
-import {CachedBeaconStatePhase0, CachedBeaconStateAltair, EpochProcess} from "../../../../src/types.js";
+} from "../../../src/index.js";
+import {CachedBeaconStatePhase0, CachedBeaconStateAltair, EpochProcess} from "../../../src/types.js";
 
 /**
  * Generate an incomplete EpochProcess to simulate any network condition relevant to getAttestationDeltas

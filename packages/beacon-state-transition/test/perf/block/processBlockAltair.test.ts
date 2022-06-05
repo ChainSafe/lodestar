@@ -10,10 +10,10 @@ import {
   PresetName,
   SYNC_COMMITTEE_SIZE,
 } from "@chainsafe/lodestar-params";
-import {allForks, CachedBeaconStateAltair} from "../../../../src/index.js";
-import {cachedStateAltairPopulateCaches, generatePerfTestCachedStateAltair, perfStateId} from "../../util.js";
-import {BlockAltairOpts, getBlockAltair} from "../../phase0/block/util.js";
-import {StateBlock} from "../../types.js";
+import {CachedBeaconStateAltair, stateTransition} from "../../../src/index.js";
+import {cachedStateAltairPopulateCaches, generatePerfTestCachedStateAltair, perfStateId} from "../util.js";
+import {StateBlock} from "../types.js";
+import {BlockAltairOpts, getBlockAltair} from "./util.js";
 
 // As of Jun 12 2021
 // Process block
@@ -119,7 +119,7 @@ describe("altair processBlock", () => {
           return {state: stateCloned, block};
         },
         fn: ({state, block}) => {
-          const postState = allForks.stateTransition(state, block, {
+          const postState = stateTransition(state, block, {
             verifyProposer: false,
             verifySignatures: false,
             verifyStateRoot: false,

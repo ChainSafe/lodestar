@@ -8,8 +8,8 @@ import {
   getNextSyncCommittee,
   computeProposers,
   getSeed,
-} from "../../../../src/index.js";
-import {generatePerfTestCachedStatePhase0, numValidators} from "../../util.js";
+} from "../../../src/index.js";
+import {generatePerfTestCachedStatePhase0, numValidators} from "../util.js";
 
 describe("epoch shufflings", () => {
   let state: CachedBeaconStateAllForks;

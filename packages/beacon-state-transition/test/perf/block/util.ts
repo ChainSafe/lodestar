@@ -11,8 +11,8 @@ import {
   ZERO_HASH,
   CachedBeaconStateAllForks,
   CachedBeaconStateAltair,
-} from "../../../../src/index.js";
-import {getBlockRoot, getBlockRootAtSlot} from "../../../../src/index.js";
+} from "../../../src/index.js";
+import {getBlockRoot, getBlockRootAtSlot} from "../../../src/index.js";
 
 export type BlockOpts = {
   proposerSlashingLen: number;

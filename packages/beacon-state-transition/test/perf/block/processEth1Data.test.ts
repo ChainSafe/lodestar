@@ -1,9 +1,10 @@
 import {itBench} from "@dapplion/benchmark";
 import {ACTIVE_PRESET, PresetName, SYNC_COMMITTEE_SIZE} from "@chainsafe/lodestar-params";
 import {phase0} from "@chainsafe/lodestar-types";
-import {allForks, CachedBeaconStateAllForks, CachedBeaconStateAltair} from "../../../../src/index.js";
-import {generatePerfTestCachedStateAltair, perfStateId} from "../../util.js";
-import {getBlockAltair} from "../../phase0/block/util.js";
+import {CachedBeaconStateAllForks, CachedBeaconStateAltair} from "../../../src/index.js";
+import {processEth1Data} from "../../../src/block/processEth1Data.js";
+import {generatePerfTestCachedStateAltair, perfStateId} from "../util.js";
+import {getBlockAltair} from "./util.js";
 
 type StateEth1Data = {
   state: CachedBeaconStateAllForks;
@@ -47,7 +48,7 @@ describe("altair processEth1Data", () => {
         return {state: stateCloned, eth1Data};
       },
       fn: ({state, eth1Data}) => {
-        allForks.processEth1Data(state, eth1Data);
+        processEth1Data(state, eth1Data);
       },
     });
   }

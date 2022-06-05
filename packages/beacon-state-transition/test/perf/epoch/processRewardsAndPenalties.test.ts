@@ -1,8 +1,9 @@
 import {itBench} from "@dapplion/benchmark";
-import {altair} from "../../../../src/index.js";
-import {generatePerfTestCachedStateAltair, numValidators} from "../../util.js";
-import {FlagFactors, generateBalanceDeltasEpochProcess} from "../../phase0/epoch/util.js";
-import {StateAltairEpoch} from "../../types.js";
+import {ForkSeq} from "@chainsafe/lodestar-params";
+import {processRewardsAndPenalties} from "../../../src/epoch/processRewardsAndPenalties.js";
+import {generatePerfTestCachedStateAltair, numValidators} from "../util.js";
+import {StateAltairEpoch} from "../types.js";
+import {FlagFactors, generateBalanceDeltasEpochProcess} from "./utilPhase0.js";
 import {mutateInactivityScores} from "./util.js";
 
 // PERF: Cost = 'proportional' to $VALIDATOR_COUNT. Extra work is done per validator the more status flags are set
@@ -48,7 +49,7 @@ describe("altair processRewardsAndPenalties", () => {
         return {state, epochProcess};
       },
       beforeEach: ({state, epochProcess}) => ({state: state.clone(), epochProcess}),
-      fn: ({state, epochProcess}) => altair.processRewardsAndPenalties(state, epochProcess),
+      fn: ({state, epochProcess}) => processRewardsAndPenalties(ForkSeq.altair, state, epochProcess),
     });
   }
 });

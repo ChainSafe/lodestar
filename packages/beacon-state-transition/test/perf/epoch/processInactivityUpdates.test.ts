@@ -1,9 +1,9 @@
 import {itBench} from "@dapplion/benchmark";
-import {altair} from "../../../../src/index.js";
-import {FlagFactors, generateBalanceDeltasEpochProcess} from "../../phase0/epoch/util.js";
-import {StateAltairEpoch} from "../../types.js";
-import {generatePerfTestCachedStateAltair, numValidators} from "../../util.js";
+import {processInactivityUpdates} from "../../../src/epoch/processInactivityUpdates.js";
+import {StateAltairEpoch} from "../types.js";
+import {generatePerfTestCachedStateAltair, numValidators} from "../util.js";
 import {mutateInactivityScores} from "./util.js";
+import {FlagFactors, generateBalanceDeltasEpochProcess} from "./utilPhase0.js";
 
 // PERF: Cost = iterate over an array of size $VALIDATOR_COUNT + 'proportional' to how many validtors are inactive or
 // have been inactive in the past, i.e. that require an update to their inactivityScore. Worst case = all validators
@@ -48,7 +48,7 @@ describe("altair processInactivityUpdates", () => {
         return {state, epochProcess};
       },
       beforeEach: ({state, epochProcess}) => ({state: state.clone(), epochProcess}),
-      fn: ({state, epochProcess}) => altair.processInactivityUpdates(state, epochProcess),
+      fn: ({state, epochProcess}) => processInactivityUpdates(state, epochProcess),
     });
   }
 });

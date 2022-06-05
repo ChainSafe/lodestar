@@ -1,13 +1,14 @@
 import {itBench} from "@dapplion/benchmark";
+import {ForkSeq} from "@chainsafe/lodestar-params";
 import {
-  phase0,
   beforeProcessEpoch,
   CachedBeaconStatePhase0,
   CachedBeaconStateAllForks,
   EpochProcess,
-} from "../../../../src/index.js";
-import {generatePerfTestCachedStatePhase0, numValidators} from "../../util.js";
-import {StateEpoch} from "../../types.js";
+} from "../../../src/index.js";
+import {processSlashings} from "../../../src/epoch/processSlashings.js";
+import {generatePerfTestCachedStatePhase0, numValidators} from "../util.js";
+import {StateEpoch} from "../types.js";
 
 // PERF: Cost 'proportional' to only validators that are slashed. For mainnet conditions:
 // - indicesToSlash: max len is 8704. But it's very unlikely since it would require all validators on the same
@@ -34,7 +35,7 @@ describe("phase0 processSlashings", () => {
       minRuns: 5, // Worst case is very slow
       before: () => getProcessSlashingsTestData(indicesToSlashLen),
       beforeEach: ({state, epochProcess}) => ({state: state.clone(), epochProcess}),
-      fn: ({state, epochProcess}) => phase0.processSlashings(state as CachedBeaconStatePhase0, epochProcess),
+      fn: ({state, epochProcess}) => processSlashings(ForkSeq.phase0, state as CachedBeaconStatePhase0, epochProcess),
     });
   }
 });
