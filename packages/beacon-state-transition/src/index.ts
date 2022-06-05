@@ -2,14 +2,10 @@
  * @module chain/stateTransition
  */
 
+export * from "./stateTransition.js";
 export * from "./constants/index.js";
 export * from "./util/index.js";
 export * from "./metrics.js";
-
-export * as phase0 from "./phase0/index.js";
-export * as altair from "./altair/index.js";
-export * as bellatrix from "./bellatrix/index.js";
-export * as allForks from "./allForks/index.js";
 
 export {
   CachedBeaconStatePhase0,
