@@ -7,9 +7,7 @@ import {beforeProcessEpoch} from "./cache/epochProcess.js";
 import {CachedBeaconStateAllForks, CachedBeaconStatePhase0, CachedBeaconStateAltair} from "./types.js";
 import {computeEpochAtSlot} from "./util/index.js";
 import {verifyProposerSignature} from "./signatureSets/index.js";
-import {processSlot} from "./slot/index.js";
-import {upgradeStateToBellatrix} from "./slot/upgradeStateToBellatrix.js";
-import {upgradeStateToAltair} from "./slot/upgradeStateToAltair.js";
+import {processSlot, upgradeStateToAltair, upgradeStateToBellatrix} from "./slot/index.js";
 import {processBlock__ as processBlock__} from "./block/index.js";
 import {processEpoch as processEpoch__} from "./epoch/index.js";
 

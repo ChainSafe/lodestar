@@ -3,6 +3,9 @@ import {byteArrayEquals} from "@chainsafe/ssz";
 import {CachedBeaconStateAllForks} from "../types.js";
 import {ZERO_HASH} from "../constants/index.js";
 
+export {upgradeStateToAltair} from "./upgradeStateToAltair.js";
+export {upgradeStateToBellatrix} from "./upgradeStateToBellatrix.js";
+
 /**
  * Dial state to next slot. Common for all forks
  */

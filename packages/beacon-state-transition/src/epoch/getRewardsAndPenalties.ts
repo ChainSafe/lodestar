@@ -7,7 +7,7 @@ import {
   TIMELY_SOURCE_FLAG_INDEX,
   TIMELY_TARGET_FLAG_INDEX,
   WEIGHT_DENOMINATOR,
-  ForkName,
+  ForkSeq,
 } from "@chainsafe/lodestar-params";
 import {CachedBeaconStateAltair, EpochProcess} from "../types.js";
 import {
@@ -41,7 +41,10 @@ interface IRewardPenaltyItem {
  *   - unslashed:          100%
  *   - eligibleAttester:   98%
  */
-export function getRewardsAndPenalties(state: CachedBeaconStateAltair, process: EpochProcess): [number[], number[]] {
+export function getRewardsAndPenaltiesAltair(
+  state: CachedBeaconStateAltair,
+  process: EpochProcess
+): [number[], number[]] {
   // TODO: Is there a cheaper way to measure length that going to `state.validators`?
   const validatorCount = state.validators.length;
   const activeIncrements = process.totalActiveStakeByIncrement;
@@ -53,10 +56,10 @@ export function getRewardsAndPenalties(state: CachedBeaconStateAltair, process: 
   // so there are limited values of them like 32, 31, 30
   const rewardPenaltyItemCache = new Map<number, IRewardPenaltyItem>();
   const {config, epochCtx} = state;
-  const fork = config.getForkName(state.slot);
+  const fork = config.getForkSeq(state.slot);
 
   const inactivityPenalityMultiplier =
-    fork === ForkName.altair ? INACTIVITY_PENALTY_QUOTIENT_ALTAIR : INACTIVITY_PENALTY_QUOTIENT_BELLATRIX;
+    fork === ForkSeq.altair ? INACTIVITY_PENALTY_QUOTIENT_ALTAIR : INACTIVITY_PENALTY_QUOTIENT_BELLATRIX;
   const penaltyDenominator = config.INACTIVITY_SCORE_BIAS * inactivityPenalityMultiplier;
 
   const {statuses} = process;

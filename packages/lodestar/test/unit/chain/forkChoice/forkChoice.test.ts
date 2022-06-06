@@ -1,7 +1,7 @@
 import {expect} from "chai";
 import {FAR_FUTURE_EPOCH, MAX_EFFECTIVE_BALANCE} from "@chainsafe/lodestar-params";
 import {config} from "@chainsafe/lodestar-config/default";
-import {phase0, allForks, Slot, ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {phase0, Slot, ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {
   computeEpochAtSlot,
@@ -9,6 +9,7 @@ import {
   CachedBeaconStateAllForks,
   getEffectiveBalanceIncrementsZeroed,
   BeaconStateAllForks,
+  processSlots,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {toHexString} from "@chainsafe/ssz";
 import {generateSignedBlock} from "../../../utils/block.js";
@@ -218,7 +219,7 @@ function runStateTransition(preState: BeaconStateAllForks, signedBlock: phase0.S
   // Clone state because process slots and block are not pure
   const postState = preState.clone();
   // Process slots (including those with no blocks) since block
-  allForks.processSlots(createCachedBeaconStateTest(postState, config), signedBlock.message.slot);
+  processSlots(createCachedBeaconStateTest(postState, config), signedBlock.message.slot);
   // processBlock
   postState.latestBlockHeader = ssz.phase0.BeaconBlockHeader.toViewDU(
     getTemporaryBlockHeader(config, signedBlock.message)

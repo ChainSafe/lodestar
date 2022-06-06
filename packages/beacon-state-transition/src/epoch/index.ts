@@ -14,6 +14,8 @@ import {processSlashings} from "./processSlashings.js";
 import {processSlashingsReset} from "./processSlashingsReset.js";
 import {processSyncCommitteeUpdates} from "./processSyncCommitteeUpdates.js";
 
+// For spec tests
+export {getRewardsAndPenalties} from "./processRewardsAndPenalties.js";
 export {
   processJustificationAndFinalization,
   processInactivityUpdates,

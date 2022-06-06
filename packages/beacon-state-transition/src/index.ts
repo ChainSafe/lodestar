@@ -8,9 +8,6 @@ export * from "./util/index.js";
 export * from "./signatureSets/index.js";
 export * from "./metrics.js";
 
-export * as blockFns from "./block/index.js";
-export * as epochFns from "./epoch/index.js";
-
 export {
   CachedBeaconStatePhase0,
   CachedBeaconStateAltair,
@@ -36,6 +33,11 @@ export {
   getEffectiveBalanceIncrementsZeroed,
   getEffectiveBalanceIncrementsWithLen,
 } from "./cache/effectiveBalanceIncrements.js";
+
+// Group fns for spec tests
+export * as blockFns from "./block/index.js";
+export * as epochFns from "./epoch/index.js";
+export * as slotFns from "./slot/index.js";
 
 // BeaconChain validation
 export {isValidVoluntaryExit} from "./block/processVoluntaryExit.js";

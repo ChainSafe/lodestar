@@ -1,4 +1,9 @@
-import {BeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
+import {
+  BeaconStateAllForks,
+  CachedBeaconStateAltair,
+  CachedBeaconStatePhase0,
+  slotFns,
+} from "@chainsafe/lodestar-beacon-state-transition";
 import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {ForkName} from "@chainsafe/lodestar-params";
 import {createIChainForkConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
@@ -7,17 +12,21 @@ import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {TestRunnerFn} from "../utils/types.js";
 
 export const fork: TestRunnerFn<ForkStateCase, BeaconStateAllForks> = (forkNext) => {
-  if (forkNext === ForkName.phase0) {
-    throw Error("fork phase0 not supported");
-  }
-
   const config = createIChainForkConfig({});
   const forkPrev = getPreviousFork(config, forkNext);
 
   return {
     testFunction: (testcase) => {
       const preState = createCachedBeaconStateTest(testcase.pre, config);
-      return upgradeStateByFork[forkNext](preState);
+
+      switch (forkNext) {
+        case ForkName.phase0:
+          throw Error("fork phase0 not supported");
+        case ForkName.altair:
+          return slotFns.upgradeStateToAltair(preState as CachedBeaconStatePhase0);
+        case ForkName.bellatrix:
+          return slotFns.upgradeStateToBellatrix(preState as CachedBeaconStateAltair);
+      }
     },
     options: {
       inputTypes: inputTypeSszTreeViewDU,

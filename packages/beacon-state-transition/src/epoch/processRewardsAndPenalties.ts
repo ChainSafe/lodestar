@@ -1,9 +1,8 @@
 import {ForkSeq, GENESIS_EPOCH} from "@chainsafe/lodestar-params";
 import {ssz} from "@chainsafe/lodestar-types";
-import {EpochProcess} from "../cache/epochProcess.js";
-import {CachedBeaconStateAllForks, CachedBeaconStatePhase0, CachedBeaconStateAltair} from "../cache/stateCache.js";
+import {CachedBeaconStateAllForks, CachedBeaconStateAltair, CachedBeaconStatePhase0, EpochProcess} from "../types.js";
 import {getAttestationDeltas} from "./getAttestationDeltas.js";
-import {getRewardsAndPenalties} from "./getRewardsAndPenalties.js";
+import {getRewardsAndPenaltiesAltair} from "./getRewardsAndPenalties.js";
 
 /**
  * Iterate over all validator and compute rewards and penalties to apply to balances.
@@ -16,12 +15,7 @@ export function processRewardsAndPenalties(state: CachedBeaconStateAllForks, epo
     return;
   }
 
-  const fork = state.config.getForkSeq(state.slot);
-  const [rewards, penalties] =
-    fork === ForkSeq.phase0
-      ? getAttestationDeltas(state as CachedBeaconStatePhase0, epochProcess)
-      : getRewardsAndPenalties(state as CachedBeaconStateAltair, epochProcess);
-
+  const [rewards, penalties] = getRewardsAndPenalties(state, epochProcess);
   const balances = state.balances.getAll() as number[];
 
   for (let i = 0, len = rewards.length; i < len; i++) {
@@ -35,4 +29,15 @@ export function processRewardsAndPenalties(state: CachedBeaconStateAllForks, epo
   // For processEffectiveBalanceUpdates() to prevent having to re-compute the balances array.
   // For validator metrics
   epochProcess.balances = balances;
+}
+
+// Note: abstracted in separate function for easier spec tests
+export function getRewardsAndPenalties(
+  state: CachedBeaconStateAllForks,
+  epochProcess: EpochProcess
+): [number[], number[]] {
+  const fork = state.config.getForkSeq(state.slot);
+  return fork === ForkSeq.phase0
+    ? getAttestationDeltas(state as CachedBeaconStatePhase0, epochProcess)
+    : getRewardsAndPenaltiesAltair(state as CachedBeaconStateAltair, epochProcess);
 }

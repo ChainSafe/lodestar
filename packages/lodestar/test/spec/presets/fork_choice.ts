@@ -7,6 +7,11 @@ import {
   computeStartSlotAtEpoch,
   EffectiveBalanceIncrements,
   BeaconStateAllForks,
+  isBellatrixStateType,
+  isBellatrixBlockBodyType,
+  isMergeTransitionBlock as isMergeTransitionBlockFn,
+  processSlots,
+  stateTransition,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {InputType} from "@chainsafe/lodestar-spec-test-util";
 import {toHexString} from "@chainsafe/ssz";
@@ -99,9 +104,9 @@ export const forkChoiceTest: TestRunnerFn<ForkChoiceTestCase, void> = (fork) => 
           }
           const blockDelaySec = (tickTime - preState.genesisTime) % config.SECONDS_PER_SLOT;
           const isMergeTransitionBlock =
-            bellatrix.isBellatrixStateType(preState) &&
-            bellatrix.isBellatrixBlockBodyType(signedBlock.message.body) &&
-            bellatrix.isMergeTransitionBlock(preState, signedBlock.message.body);
+            isBellatrixStateType(preState) &&
+            isBellatrixBlockBodyType(signedBlock.message.body) &&
+            isMergeTransitionBlockFn(preState, signedBlock.message.body);
 
           try {
             if (isMergeTransitionBlock) {
@@ -238,11 +243,11 @@ function runStateTranstion(
     nextEpochSlot <= postSlot;
     nextEpochSlot += SLOTS_PER_EPOCH
   ) {
-    postState = allForks.processSlots(postState, nextEpochSlot, null);
+    postState = processSlots(postState, nextEpochSlot, null);
     cacheCheckpointState(postState, checkpointCache);
   }
   preEpoch = postState.epochCtx.epoch;
-  postState = allForks.stateTransition(postState, signedBlock, {
+  postState = stateTransition(postState, signedBlock, {
     verifyStateRoot: true,
     verifyProposer: false,
     verifySignatures: false,

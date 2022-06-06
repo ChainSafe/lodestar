@@ -19,6 +19,7 @@ const epochProcessFns: Record<string, EpochProcessFn> = {
   effective_balance_updates: epochFns.processEffectiveBalanceUpdates,
   eth1_data_reset: epochFns.processEth1DataReset,
   historical_roots_update: epochFns.processHistoricalRootsUpdate,
+  inactivity_updates: epochFns.processInactivityUpdates as EpochProcessFn,
   justification_and_finalization: epochFns.processJustificationAndFinalization,
   participation_flag_updates: epochFns.processParticipationFlagUpdates as EpochProcessFn,
   participation_record_updates: epochFns.processParticipationRecordUpdates as EpochProcessFn,
