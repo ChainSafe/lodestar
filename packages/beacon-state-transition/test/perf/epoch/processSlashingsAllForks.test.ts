@@ -35,7 +35,7 @@ describe("phase0 processSlashings", () => {
       minRuns: 5, // Worst case is very slow
       before: () => getProcessSlashingsTestData(indicesToSlashLen),
       beforeEach: ({state, epochProcess}) => ({state: state.clone(), epochProcess}),
-      fn: ({state, epochProcess}) => processSlashings(ForkSeq.phase0, state as CachedBeaconStatePhase0, epochProcess),
+      fn: ({state, epochProcess}) => processSlashings(state as CachedBeaconStatePhase0, epochProcess),
     });
   }
 });

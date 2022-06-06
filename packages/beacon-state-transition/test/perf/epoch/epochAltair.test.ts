@@ -112,7 +112,7 @@ function benchmarkAltairEpochSteps(stateOg: LazyValue<CachedBeaconStateAllForks>
   itBench({
     id: `${stateId} - altair processRewardsAndPenalties`,
     beforeEach: () => stateOg.value.clone() as CachedBeaconStateAltair,
-    fn: (state) => processRewardsAndPenalties(fork, state, epochProcess.value),
+    fn: (state) => processRewardsAndPenalties(state, epochProcess.value),
   });
 
   // TODO: Needs a better state to test with, current does not include enough actions: 17.715 us/op
@@ -126,7 +126,7 @@ function benchmarkAltairEpochSteps(stateOg: LazyValue<CachedBeaconStateAllForks>
   itBench({
     id: `${stateId} - altair processSlashings`,
     beforeEach: () => stateOg.value.clone() as CachedBeaconStateAltair,
-    fn: (state) => processSlashings(fork, state, epochProcess.value),
+    fn: (state) => processSlashings(state, epochProcess.value),
   });
 
   itBench({

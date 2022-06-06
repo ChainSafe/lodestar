@@ -94,7 +94,7 @@ function benchmarkPhase0EpochSteps(stateOg: LazyValue<CachedBeaconStateAllForks>
   itBench({
     id: `${stateId} - phase0 processRewardsAndPenalties`,
     beforeEach: () => stateOg.value.clone() as CachedBeaconStatePhase0,
-    fn: (state) => processRewardsAndPenalties(fork, state, epochProcess.value),
+    fn: (state) => processRewardsAndPenalties(state, epochProcess.value),
   });
 
   // TODO: Needs a better state to test with, current does not include enough actions: 17.715 us/op
@@ -108,7 +108,7 @@ function benchmarkPhase0EpochSteps(stateOg: LazyValue<CachedBeaconStateAllForks>
   itBench({
     id: `${stateId} - phase0 processSlashings`,
     beforeEach: () => stateOg.value.clone() as CachedBeaconStatePhase0,
-    fn: (state) => processSlashings(fork, state, epochProcess.value),
+    fn: (state) => processSlashings(state, epochProcess.value),
   });
 
   itBench({

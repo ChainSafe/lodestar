@@ -49,7 +49,7 @@ describe("altair processRewardsAndPenalties", () => {
         return {state, epochProcess};
       },
       beforeEach: ({state, epochProcess}) => ({state: state.clone(), epochProcess}),
-      fn: ({state, epochProcess}) => processRewardsAndPenalties(ForkSeq.altair, state, epochProcess),
+      fn: ({state, epochProcess}) => processRewardsAndPenalties(state, epochProcess),
     });
   }
 });
