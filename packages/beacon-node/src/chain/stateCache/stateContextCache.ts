@@ -38,7 +38,11 @@ export class StateContextCache {
     if (!item) {
       return null;
     }
+
     this.metrics?.hits.inc();
+    // clonedCount + 1 as there's a .clone() below
+    this.metrics?.stateClonedCount.observe(item.clonedCount + 1);
+
     return item.clone();
   }
 

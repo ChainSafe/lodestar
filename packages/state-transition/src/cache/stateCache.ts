@@ -5,6 +5,8 @@ import {BeaconStatePhase0, BeaconStateAltair, BeaconStateBellatrix, BeaconStateA
 export type BeaconStateCache = {
   config: IBeaconConfig;
   epochCtx: EpochContext;
+  /** Count of clones created from this BeaconStateCache instance. readonly to prevent accidental usage downstream */
+  readonly clonedCount: number;
 };
 
 /**
@@ -119,6 +121,7 @@ export function createCachedBeaconState<T extends BeaconStateAllForks>(
   return getCachedBeaconState(state, {
     config: immutableData.config,
     epochCtx: EpochContext.createFromState(state, immutableData, opts),
+    clonedCount: 0,
   });
 }
 
@@ -139,9 +142,14 @@ export function getCachedBeaconState<T extends BeaconStateAllForks>(
 
   function clone(this: T & BeaconStateCache): T & BeaconStateCache {
     const viewDUCloned = viewDUClone();
+
+    // Override `readonly` attribute in single place where `.clonedCount` is incremented
+    (this as {clonedCount: number}).clonedCount++;
+
     return getCachedBeaconState(viewDUCloned, {
       config: this.config,
       epochCtx: this.epochCtx.clone(),
+      clonedCount: 0,
     }) as T & BeaconStateCache;
   }
 
