@@ -200,6 +200,7 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
       // chain reorg
       pendingEvents.push(ChainEvent.forkChoiceReorg, newHead, oldHead, distance);
       chain.metrics?.forkChoiceReorg.inc();
+      chain.metrics?.forkChoiceReorgDistance.observe(distance);
     }
 
     // Lightclient server support (only after altair)
