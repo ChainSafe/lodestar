@@ -6,7 +6,7 @@ import {LevelDbController} from "../../../src/controller/index.js";
 
 describe("LevelDB controller", () => {
   const dbLocation = "./.__testdb";
-  const db = new LevelDbController({name: dbLocation}, {logger: new WinstonLogger()});
+  const db = new LevelDbController({name: dbLocation}, {logger: new WinstonLogger(), metrics: null});
 
   before(async () => {
     await db.start();
