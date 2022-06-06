@@ -792,7 +792,22 @@ export function createLodestarMetrics(
         labelNames: ["index", "src"],
         buckets: [0.1, 1],
       }),
+
+      // Only for known
+      proposerBalanceDiffKnown: register.histogram({
+        name: "validator_monitor_proposer_balance_diff_known_gwei",
+        help: "Balance diff of known block proposer after importing a valid block",
+        // TODO: Research what buckets make sense
+        buckets: [0, 10_000, 100_000],
+      }),
     },
+
+    proposerBalanceDiffAny: register.histogram({
+      name: "lodestar_proposer_balance_diff_any_gwei",
+      help: "Balance diff of every block proposer after importing a valid block",
+      // TODO: Research what buckets make sense
+      buckets: [0, 10_000, 100_000],
+    }),
 
     // regen metrics
 

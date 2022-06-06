@@ -51,6 +51,7 @@ export type FullyVerifiedBlock = FullyVerifiedBlockFlags & {
   block: allForks.SignedBeaconBlock;
   postState: CachedBeaconStateAllForks;
   parentBlock: ProtoBlock;
+  proposerBalanceDiff: number;
 };
 
 /**

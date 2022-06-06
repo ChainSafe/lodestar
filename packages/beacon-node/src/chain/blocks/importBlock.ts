@@ -309,6 +309,8 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
 
   // Register stat metrics about the block after importing it
   chain.metrics?.parentBlockDistance.observe(block.message.slot - parentBlock.slot);
+  chain.metrics?.proposerBalanceDiffAny.observe(fullyVerifiedBlock.proposerBalanceDiff);
+  chain.metrics?.registerImportedBlock(block.message, fullyVerifiedBlock);
 
   // Note: in-lined from previous handler of ChainEvent.block
   const blockRoot = toHexString(chain.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message));

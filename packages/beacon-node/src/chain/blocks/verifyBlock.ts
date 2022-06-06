@@ -50,7 +50,11 @@ export async function verifyBlock(
 ): Promise<FullyVerifiedBlock> {
   const parentBlock = verifyBlockSanityChecks(chain, partiallyVerifiedBlock);
 
-  const {postState, executionStatus} = await verifyBlockStateTransition(chain, partiallyVerifiedBlock, opts);
+  const {postState, executionStatus, proposerBalanceDiff} = await verifyBlockStateTransition(
+    chain,
+    partiallyVerifiedBlock,
+    opts
+  );
 
   return {
     block: partiallyVerifiedBlock.block,
@@ -58,6 +62,7 @@ export async function verifyBlock(
     parentBlock,
     skipImportingAttestations: partiallyVerifiedBlock.skipImportingAttestations,
     executionStatus,
+    proposerBalanceDiff,
   };
 }
 
@@ -128,7 +133,7 @@ export async function verifyBlockStateTransition(
   chain: VerifyBlockModules,
   partiallyVerifiedBlock: PartiallyVerifiedBlock,
   opts: BlockProcessOpts
-): Promise<{postState: CachedBeaconStateAllForks; executionStatus: ExecutionStatus}> {
+): Promise<{postState: CachedBeaconStateAllForks; executionStatus: ExecutionStatus; proposerBalanceDiff: number}> {
   const {block, validProposerSignature, validSignatures} = partiallyVerifiedBlock;
 
   // TODO: Skip in process chain segment
@@ -350,7 +355,11 @@ export async function verifyBlockStateTransition(
     logOnPowBlock(chain, block as bellatrix.SignedBeaconBlock);
   }
 
-  return {postState, executionStatus};
+  // For metric block profitability
+  const proposerIndex = block.message.proposerIndex;
+  const proposerBalanceDiff = postState.balances.get(proposerIndex) - preState.balances.get(proposerIndex);
+
+  return {postState, executionStatus, proposerBalanceDiff};
 }
 
 function logOnPowBlock(chain: VerifyBlockModules, block: bellatrix.SignedBeaconBlock): void {
