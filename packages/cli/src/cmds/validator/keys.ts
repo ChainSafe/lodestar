@@ -9,12 +9,10 @@ import {externalSignerGetKeys} from "@chainsafe/lodestar-validator";
 import {lockFilepath, unlockFilepath} from "@chainsafe/lodestar-keymanager-server";
 import {fromHexString} from "@chainsafe/ssz";
 import {defaultNetwork, IGlobalArgs} from "../../options/index.js";
-import {parseRange, stripOffNewlines, YargsError} from "../../util/index.js";
+import {isVotingKeystore, parseRange, stripOffNewlines, YargsError} from "../../util/index.js";
 import {ValidatorDirManager} from "../../validatorDir/index.js";
 import {getAccountPaths} from "../account/paths.js";
 import {IValidatorCliArgs} from "./options.js";
-
-const depositDataPattern = new RegExp(/^deposit_data-\d+\.json$/gi);
 
 export async function getLocalSecretKeys(
   args: IValidatorCliArgs & IGlobalArgs
@@ -185,7 +183,7 @@ export function resolveKeystorePaths(fileOrDirPath: string): string[] {
   if (fs.lstatSync(fileOrDirPath).isDirectory()) {
     return fs
       .readdirSync(fileOrDirPath)
-      .filter((file) => !depositDataPattern.test(file))
+      .filter((file) => isVotingKeystore(file))
       .map((file) => path.join(fileOrDirPath, file));
   } else {
     return [fileOrDirPath];
