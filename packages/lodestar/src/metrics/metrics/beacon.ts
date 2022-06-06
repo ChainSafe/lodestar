@@ -143,35 +143,49 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       help: "Count of occasions fork choice has switched to a different chain",
     }),
 
-    reqRespOutgoingRequests: register.gauge<"method">({
-      name: "beacon_reqresp_outgoing_requests_total",
-      labelNames: ["method"],
-      help: "Counts total requests done per method",
-    }),
-    reqRespOutgoingErrors: register.gauge<"method">({
-      name: "beacon_reqresp_outgoing_requests_error_total",
-      labelNames: ["method"],
-      help: "Counts total failed requests done per method",
-    }),
-    reqRespIncomingRequests: register.gauge<"method">({
-      name: "beacon_reqresp_incoming_requests_total",
-      labelNames: ["method"],
-      help: "Counts total responses handled per method",
-    }),
-    reqRespIncomingErrors: register.gauge<"method">({
-      name: "beacon_reqresp_incoming_requests_error_total",
-      help: "Counts total failed responses handled per method",
-      labelNames: ["method"],
-    }),
-    reqRespDialErrors: register.gauge({
-      name: "beacon_reqresp_dial_errors_total",
-      help: "Count total dial errors",
-    }),
-    reqRespRateLimitErrors: register.gauge<"tracker">({
-      name: "beacon_reqresp_rate_limiter_errors_total",
-      help: "Count rate limiter errors",
-      labelNames: ["tracker"],
-    }),
+    reqResp: {
+      outgoingRequests: register.gauge<"method">({
+        name: "beacon_reqresp_outgoing_requests_total",
+        help: "Counts total requests done per method",
+        labelNames: ["method"],
+      }),
+      outgoingRequestRoundtripTime: register.histogram<"method">({
+        name: "beacon_reqresp_outgoing_request_roundtrip_time_seconds",
+        help: "Histogram of outgoing requests round-trip time",
+        labelNames: ["method"],
+        buckets: [0.5, 1, 5, 15, 60],
+      }),
+      outgoingErrors: register.gauge<"method">({
+        name: "beacon_reqresp_outgoing_requests_error_total",
+        help: "Counts total failed requests done per method",
+        labelNames: ["method"],
+      }),
+      incomingRequests: register.gauge<"method">({
+        name: "beacon_reqresp_incoming_requests_total",
+        help: "Counts total responses handled per method",
+        labelNames: ["method"],
+      }),
+      incomingRequestHandlerTime: register.histogram<"method">({
+        name: "beacon_reqresp_incoming_request_handler_time_seconds",
+        help: "Histogram of incoming requests internal handling time",
+        labelNames: ["method"],
+        buckets: [0.5, 1, 5, 15, 60],
+      }),
+      incomingErrors: register.gauge<"method">({
+        name: "beacon_reqresp_incoming_requests_error_total",
+        help: "Counts total failed responses handled per method",
+        labelNames: ["method"],
+      }),
+      dialErrors: register.gauge({
+        name: "beacon_reqresp_dial_errors_total",
+        help: "Count total dial errors",
+      }),
+      rateLimitErrors: register.gauge<"tracker">({
+        name: "beacon_reqresp_rate_limiter_errors_total",
+        help: "Count rate limiter errors",
+        labelNames: ["tracker"],
+      }),
+    },
 
     blockProductionTime: register.histogram({
       name: "beacon_block_production_seconds",
