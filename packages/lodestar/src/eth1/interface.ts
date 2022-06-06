@@ -91,4 +91,6 @@ export interface IRpcPayload<P = IJson[]> {
 
 export type ReqOpts = {
   timeout?: number;
+  // To label request metrics
+  routeId?: string;
 };

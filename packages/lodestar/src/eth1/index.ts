@@ -74,7 +74,8 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
     opts: Eth1Options,
     modules: Eth1DepositDataTrackerModules & Eth1MergeBlockTrackerModules & {eth1Provider?: IEth1Provider}
   ) {
-    const eth1Provider = modules.eth1Provider || new Eth1Provider(modules.config, opts, modules.signal);
+    const eth1Provider =
+      modules.eth1Provider || new Eth1Provider(modules.config, opts, modules.signal, modules.metrics?.eth1HttpClient);
 
     this.eth1DepositDataTracker = opts.disableEth1DepositDataTracker
       ? null

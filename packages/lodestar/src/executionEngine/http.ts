@@ -13,6 +13,7 @@ import {
   quantityToBigint,
 } from "../eth1/provider/utils.js";
 import {IJsonRpcHttpClient} from "../eth1/provider/jsonRpcHttpClient.js";
+import {IMetrics} from "../metrics/index.js";
 import {
   ExecutePayloadStatus,
   ExecutePayloadResponse,
@@ -59,14 +60,13 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   readonly payloadIdCache = new PayloadIdCache();
   private readonly rpc: IJsonRpcHttpClient;
 
-  constructor(opts: ExecutionEngineHttpOpts, signal: AbortSignal, rpc?: IJsonRpcHttpClient) {
-    this.rpc =
-      rpc ??
-      new JsonRpcHttpClient(opts.urls, {
-        signal,
-        timeout: opts.timeout,
-        jwtSecret: opts.jwtSecretHex ? fromHex(opts.jwtSecretHex) : undefined,
-      });
+  constructor(opts: ExecutionEngineHttpOpts, signal: AbortSignal, metrics?: IMetrics | null) {
+    this.rpc = new JsonRpcHttpClient(opts.urls, {
+      signal,
+      timeout: opts.timeout,
+      jwtSecret: opts.jwtSecretHex ? fromHex(opts.jwtSecretHex) : undefined,
+      metrics: metrics?.executionEnginerHttpClient,
+    });
   }
 
   /**

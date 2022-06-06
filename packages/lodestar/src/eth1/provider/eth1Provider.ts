@@ -11,7 +11,7 @@ import {Eth1Block, IEth1Provider} from "../interface.js";
 import {Eth1Options} from "../options.js";
 import {isValidAddress} from "../../util/address.js";
 import {EthJsonRpcBlockRaw} from "../interface.js";
-import {JsonRpcHttpClient} from "./jsonRpcHttpClient.js";
+import {JsonRpcHttpClient, JsonRpcHttpClientMetrics} from "./jsonRpcHttpClient.js";
 import {isJsonRpcTruncatedError, quantityToNum, numToQuantity, dataToBytes} from "./utils.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
@@ -45,7 +45,8 @@ export class Eth1Provider implements IEth1Provider {
   constructor(
     config: Pick<IChainConfig, "DEPOSIT_CONTRACT_ADDRESS">,
     opts: Pick<Eth1Options, "depositContractDeployBlock" | "providerUrls" | "jwtSecretHex">,
-    signal?: AbortSignal
+    signal?: AbortSignal,
+    metrics?: JsonRpcHttpClientMetrics | null
   ) {
     this.deployBlock = opts.depositContractDeployBlock ?? 0;
     this.depositContractAddress = toHexString(config.DEPOSIT_CONTRACT_ADDRESS);
@@ -54,6 +55,7 @@ export class Eth1Provider implements IEth1Provider {
       // Don't fallback with is truncated error. Throw early and let the retry on this class handle it
       shouldNotFallback: isJsonRpcTruncatedError,
       jwtSecret: opts.jwtSecretHex ? fromHex(opts.jwtSecretHex) : undefined,
+      metrics: metrics,
     });
   }
 
