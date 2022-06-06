@@ -149,6 +149,11 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       // Add buckets up to 100 to capture high depth re-orgs. Above 100 things are going really bad.
       buckets: [1, 2, 3, 5, 7, 10, 20, 30, 50, 100],
     }),
+    parentBlockDistance: register.histogram({
+      name: "beacon_imported_block_parent_distance",
+      help: "Histogram of distance to parent block of valid imported blocks",
+      buckets: [1, 2, 3, 5, 7, 10, 20, 30, 50, 100],
+    }),
 
     reqRespOutgoingRequests: register.gauge<"method">({
       name: "beacon_reqresp_outgoing_requests_total",
