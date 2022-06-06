@@ -11,7 +11,7 @@ import {Eth1Block, IEth1Provider} from "../interface.js";
 import {Eth1Options} from "../options.js";
 import {isValidAddress} from "../../util/address.js";
 import {EthJsonRpcBlockRaw} from "../interface.js";
-import {JsonRpcHttpClient, JsonRpcHttpClientMetrics} from "./jsonRpcHttpClient.js";
+import {JsonRpcHttpClient, JsonRpcHttpClientMetrics, ReqOpts} from "./jsonRpcHttpClient.js";
 import {isJsonRpcTruncatedError, quantityToNum, numToQuantity, dataToBytes} from "./utils.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
@@ -36,6 +36,13 @@ interface IEthJsonRpcReturnTypes {
     topics: string[];
   }[];
 }
+
+// Define static options once to prevent extra allocations
+const getBlocksByNumberOpts: ReqOpts = {routeId: "getBlockByNumber_batched"};
+const getBlockByNumberOpts: ReqOpts = {routeId: "getBlockByNumber"};
+const getBlockByHashOpts: ReqOpts = {routeId: "getBlockByHash"};
+const getBlockNumberOpts: ReqOpts = {routeId: "getBlockNumber"};
+const getLogsOpts: ReqOpts = {routeId: "getLogs"};
 
 export class Eth1Provider implements IEth1Provider {
   readonly deployBlock: number;
@@ -115,7 +122,8 @@ export class Eth1Provider implements IEth1Provider {
         return Promise.all(
           blockRanges.map(([from, to]) =>
             this.rpc.fetchBatch<IEthJsonRpcReturnTypes[typeof method]>(
-              linspace(from, to).map((blockNumber) => ({method, params: [numToQuantity(blockNumber), false]}))
+              linspace(from, to).map((blockNumber) => ({method, params: [numToQuantity(blockNumber), false]})),
+              getBlocksByNumberOpts
             )
           )
         );
@@ -137,25 +145,28 @@ export class Eth1Provider implements IEth1Provider {
   async getBlockByNumber(blockNumber: number | "latest"): Promise<EthJsonRpcBlockRaw | null> {
     const method = "eth_getBlockByNumber";
     const blockNumberHex = typeof blockNumber === "string" ? blockNumber : numToQuantity(blockNumber);
-    return await this.rpc.fetch<IEthJsonRpcReturnTypes[typeof method]>({
-      method,
+    return await this.rpc.fetch<IEthJsonRpcReturnTypes[typeof method]>(
       // false = include only transaction roots, not full objects
-      params: [blockNumberHex, false],
-    });
+      {method, params: [blockNumberHex, false]},
+      getBlockByNumberOpts
+    );
   }
 
   async getBlockByHash(blockHashHex: string): Promise<EthJsonRpcBlockRaw | null> {
     const method = "eth_getBlockByHash";
-    return await this.rpc.fetch<IEthJsonRpcReturnTypes[typeof method]>({
-      method,
+    return await this.rpc.fetch<IEthJsonRpcReturnTypes[typeof method]>(
       // false = include only transaction roots, not full objects
-      params: [blockHashHex, false],
-    });
+      {method, params: [blockHashHex, false]},
+      getBlockByHashOpts
+    );
   }
 
   async getBlockNumber(): Promise<number> {
     const method = "eth_blockNumber";
-    const blockNumberRaw = await this.rpc.fetch<IEthJsonRpcReturnTypes[typeof method]>({method, params: []});
+    const blockNumberRaw = await this.rpc.fetch<IEthJsonRpcReturnTypes[typeof method]>(
+      {method, params: []},
+      getBlockNumberOpts
+    );
     return parseInt(blockNumberRaw, 16);
   }
 
@@ -176,7 +187,10 @@ export class Eth1Provider implements IEth1Provider {
       fromBlock: numToQuantity(options.fromBlock),
       toBlock: numToQuantity(options.toBlock),
     };
-    const logsRaw = await this.rpc.fetch<IEthJsonRpcReturnTypes[typeof method]>({method, params: [hexOptions]});
+    const logsRaw = await this.rpc.fetch<IEthJsonRpcReturnTypes[typeof method]>(
+      {method, params: [hexOptions]},
+      getLogsOpts
+    );
     return logsRaw.map((logRaw) => ({
       blockNumber: parseInt(logRaw.blockNumber, 16),
       data: logRaw.data,

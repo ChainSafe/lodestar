@@ -12,7 +12,7 @@ import {
   QUANTITY,
   quantityToBigint,
 } from "../eth1/provider/utils.js";
-import {IJsonRpcHttpClient} from "../eth1/provider/jsonRpcHttpClient.js";
+import {IJsonRpcHttpClient, ReqOpts} from "../eth1/provider/jsonRpcHttpClient.js";
 import {IMetrics} from "../metrics/index.js";
 import {
   ExecutePayloadStatus,
@@ -46,6 +46,11 @@ export const defaultExecutionEngineHttpOpts: ExecutionEngineHttpOpts = {
   urls: ["http://localhost:8551"],
   timeout: 12000,
 };
+
+// Define static options once to prevent extra allocations
+const notifyNewPayloadOpts: ReqOpts = {routeId: "notifyNewPayload"};
+const forkchoiceUpdatedV1Opts: ReqOpts = {routeId: "forkchoiceUpdated"};
+const getPayloadOpts: ReqOpts = {routeId: "getPayload"};
 
 /**
  * based on Ethereum JSON-RPC API and inherits the following properties of this standard:
@@ -98,10 +103,10 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     const method = "engine_newPayloadV1";
     const serializedExecutionPayload = serializeExecutionPayload(executionPayload);
     const {status, latestValidHash, validationError} = await this.rpc
-      .fetch<EngineApiRpcReturnTypes[typeof method], EngineApiRpcParamTypes[typeof method]>({
-        method,
-        params: [serializedExecutionPayload],
-      })
+      .fetch<EngineApiRpcReturnTypes[typeof method], EngineApiRpcParamTypes[typeof method]>(
+        {method, params: [serializedExecutionPayload]},
+        notifyNewPayloadOpts
+      )
       // If there are errors by EL like connection refused, internal error, they need to be
       // treated seperate from being INVALID. For now, just pass the error upstream.
       .catch((e: Error): EngineApiRpcReturnTypes[typeof method] => {
@@ -210,10 +215,10 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     const {
       payloadStatus: {status, latestValidHash: _latestValidHash, validationError},
       payloadId,
-    } = await this.rpc.fetch<EngineApiRpcReturnTypes[typeof method], EngineApiRpcParamTypes[typeof method]>({
-      method,
-      params: [{headBlockHash: headBlockHashData, safeBlockHash, finalizedBlockHash}, apiPayloadAttributes],
-    });
+    } = await this.rpc.fetch<EngineApiRpcReturnTypes[typeof method], EngineApiRpcParamTypes[typeof method]>(
+      {method, params: [{headBlockHash: headBlockHashData, safeBlockHash, finalizedBlockHash}, apiPayloadAttributes]},
+      forkchoiceUpdatedV1Opts
+    );
 
     switch (status) {
       case ExecutePayloadStatus.VALID:
@@ -263,10 +268,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     const executionPayloadRpc = await this.rpc.fetch<
       EngineApiRpcReturnTypes[typeof method],
       EngineApiRpcParamTypes[typeof method]
-    >({
-      method,
-      params: [payloadId],
-    });
+    >({method, params: [payloadId]}, getPayloadOpts);
 
     return parseExecutionPayload(executionPayloadRpc);
   }

@@ -4,7 +4,7 @@ import fetch from "cross-fetch";
 
 import {ErrorAborted, TimeoutError} from "@chainsafe/lodestar-utils";
 import {IGauge, IHistogram} from "../../metrics/interface.js";
-import {IJson, IRpcPayload, ReqOpts} from "../interface.js";
+import {IJson, IRpcPayload} from "../interface.js";
 import {encodeJwtToken} from "./jwt.js";
 /**
  * Limits the amount of response text printed with RPC or parsing errors
@@ -24,6 +24,12 @@ interface IRpcResponseError {
     message: string; // "The method eth_none does not exist/is not available"
   };
 }
+
+export type ReqOpts = {
+  timeout?: number;
+  // To label request metrics
+  routeId?: string;
+};
 
 export type JsonRpcHttpClientMetrics = {
   requestTime: IHistogram<"routeId">;
@@ -155,7 +161,8 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
     const onParentSignalAbort = (): void => controller.abort();
     this.opts?.signal?.addEventListener("abort", onParentSignalAbort, {once: true});
 
-    const routeId = opts?.routeId; // TODO: Should default to "unknown"?
+    // Default to "unknown" to prevent mixing metrics with others.
+    const routeId = opts?.routeId ?? "unknown";
     const timer = this.metrics?.requestTime.startTimer({routeId});
     this.activeRequests++;
 
