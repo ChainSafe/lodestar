@@ -18,6 +18,7 @@ import {ExecutionStatus} from "@chainsafe/lodestar-fork-choice";
 
 import {fromHexString} from "@chainsafe/ssz";
 import {LivenessResponseData} from "@chainsafe/lodestar-api/src/routes/validator";
+import {ILogger} from "@chainsafe/lodestar-utils";
 import {assembleBlock} from "../../../chain/factory/block/index.js";
 import {AttestationError, AttestationErrorCode, GossipAction, SyncCommitteeError} from "../../../chain/errors/index.js";
 import {validateGossipAggregateAndProof} from "../../../chain/validation/index.js";
@@ -603,7 +604,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
           return {
             index,
             epoch,
-            isLive: isLive(chain, index, epoch),
+            isLive: isLive(chain, index, epoch, logger),
           };
         }),
       };
@@ -611,11 +612,18 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
   };
 }
 
-function isLive(chain: IBeaconChain, index: ValidatorIndex, epoch: Epoch): boolean {
+function isLive(chain: IBeaconChain, index: ValidatorIndex, epoch: Epoch, logger: ILogger): boolean {
   const hasAttestedViaGossip = chain.seenAttesters.isKnown(epoch, index);
   const hasAttestedViaBlock = chain.observedBlockAttesters.isKnown(epoch, index);
   const hasAggregatedViaGossip = chain.seenAggregators.isKnown(epoch, index);
   const hasProposedViaBlock = chain.observedBlockProposers.isKnown(epoch, index);
 
+  logger.info(
+    `Liveness data for requested epoch=${epoch} 
+    hasAttestedViaGossip=${hasAttestedViaGossip} 
+    hasAttestedViaBlock=${hasAttestedViaBlock} 
+    hasAggregatedViaGossip=${hasAggregatedViaGossip} 
+    hasProposedViaBlock=${hasProposedViaBlock}`
+  );
   return hasAttestedViaGossip || hasAttestedViaBlock || hasAggregatedViaGossip || hasProposedViaBlock;
 }
