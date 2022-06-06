@@ -27,6 +27,18 @@ export class OpPool {
   /** Set of seen attester slashing indexes. No need to prune */
   private readonly attesterSlashingIndexes = new Set<ValidatorIndex>();
 
+  // Getters for metrics
+
+  get attesterSlashingsSize(): number {
+    return this.attesterSlashings.size;
+  }
+  get proposerSlashingsSize(): number {
+    return this.proposerSlashings.size;
+  }
+  get voluntaryExitsSize(): number {
+    return this.voluntaryExits.size;
+  }
+
   async fromPersisted(db: IBeaconDb): Promise<void> {
     const [attesterSlashings, proposerSlashings, voluntaryExits] = await Promise.all([
       db.attesterSlashing.entries(),
