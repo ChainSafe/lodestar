@@ -1,13 +1,14 @@
 import {allForks} from "@chainsafe/lodestar-types";
 import {ForkSeq, MAX_DEPOSITS} from "@chainsafe/lodestar-params";
 
-import {CachedBeaconStateAllForks, CachedBeaconStateAltair, CachedBeaconStatePhase0} from "../types.js";
-import {processAttestationsAltair} from "./processAttestationsAltair.js";
-import {processAttestationPhase0} from "./processAttestationPhase0.js";
+import {CachedBeaconStateAllForks} from "../types.js";
+import {processAttestations} from "./processAttestations.js";
 import {processProposerSlashing} from "./processProposerSlashing.js";
 import {processAttesterSlashing} from "./processAttesterSlashing.js";
 import {processDeposit} from "./processDeposit.js";
 import {processVoluntaryExit} from "./processVoluntaryExit.js";
+
+export {processProposerSlashing, processAttesterSlashing, processAttestations, processDeposit, processVoluntaryExit};
 
 export function processOperations(
   fork: ForkSeq,
@@ -29,13 +30,9 @@ export function processOperations(
   for (const attesterSlashing of body.attesterSlashings) {
     processAttesterSlashing(fork, state, attesterSlashing, verifySignatures);
   }
-  if (fork === ForkSeq.phase0) {
-    for (const attestation of body.attestations) {
-      processAttestationPhase0(state as CachedBeaconStatePhase0, attestation, verifySignatures);
-    }
-  } else {
-    processAttestationsAltair(state as CachedBeaconStateAltair, body.attestations, verifySignatures);
-  }
+
+  processAttestations(fork, state, body.attestations, verifySignatures);
+
   for (const deposit of body.deposits) {
     processDeposit(fork, state, deposit);
   }

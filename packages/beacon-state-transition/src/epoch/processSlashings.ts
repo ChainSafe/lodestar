@@ -19,7 +19,7 @@ import {CachedBeaconStateAllForks, EpochProcess} from "../types.js";
  *
  * - On normal mainnet conditions indicesToSlash = 0
  */
-export function processSlashings(fork: ForkSeq, state: CachedBeaconStateAllForks, process: EpochProcess): void {
+export function processSlashings(state: CachedBeaconStateAllForks, process: EpochProcess): void {
   // No need to compute totalSlashings if there no index to slash
   if (process.indicesToSlash.length === 0) {
     return;
@@ -35,6 +35,7 @@ export function processSlashings(fork: ForkSeq, state: CachedBeaconStateAllForks
     totalSlashings += slashings[i];
   }
 
+  const fork = state.config.getForkSeq(state.slot);
   const proportionalSlashingMultiplier =
     fork === ForkSeq.phase0
       ? PROPORTIONAL_SLASHING_MULTIPLIER

@@ -7,6 +7,9 @@ export * from "./constants/index.js";
 export * from "./util/index.js";
 export * from "./metrics.js";
 
+export * as blockFns from "./block/index.js";
+export * as epochFns from "./epoch/index.js";
+
 export {
   CachedBeaconStatePhase0,
   CachedBeaconStateAltair,

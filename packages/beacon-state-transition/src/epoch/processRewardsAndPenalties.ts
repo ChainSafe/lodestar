@@ -10,16 +10,13 @@ import {getRewardsAndPenalties} from "./getRewardsAndPenalties.js";
  *
  * PERF: Cost = 'proportional' to $VALIDATOR_COUNT. Extra work is done per validator the more status flags are set
  */
-export function processRewardsAndPenalties(
-  fork: ForkSeq,
-  state: CachedBeaconStateAllForks,
-  epochProcess: EpochProcess
-): void {
+export function processRewardsAndPenalties(state: CachedBeaconStateAllForks, epochProcess: EpochProcess): void {
   // No rewards are applied at the end of `GENESIS_EPOCH` because rewards are for work done in the previous epoch
   if (epochProcess.currentEpoch === GENESIS_EPOCH) {
     return;
   }
 
+  const fork = state.config.getForkSeq(state.slot);
   const [rewards, penalties] =
     fork === ForkSeq.phase0
       ? getAttestationDeltas(state as CachedBeaconStatePhase0, epochProcess)

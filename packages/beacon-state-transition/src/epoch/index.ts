@@ -1,4 +1,4 @@
-import {ForkSeq} from "@chainsafe/lodestar-params";
+import {ForkSeq as epochFns} from "@chainsafe/lodestar-params";
 import {CachedBeaconStateAllForks, CachedBeaconStateAltair, CachedBeaconStatePhase0, EpochProcess} from "../types.js";
 import {processEffectiveBalanceUpdates} from "./processEffectiveBalanceUpdates.js";
 import {processEth1DataReset} from "./processEth1DataReset.js";
@@ -14,28 +14,36 @@ import {processSlashings} from "./processSlashings.js";
 import {processSlashingsReset} from "./processSlashingsReset.js";
 import {processSyncCommitteeUpdates} from "./processSyncCommitteeUpdates.js";
 
-export * from "./processEffectiveBalanceUpdates.js";
-export * from "./processEth1DataReset.js";
-export * from "./processHistoricalRootsUpdate.js";
-export * from "./processRandaoMixesReset.js";
-export * from "./processSlashingsReset.js";
-export * from "./processJustificationAndFinalization.js";
-export * from "./processRegistryUpdates.js";
+export {
+  processJustificationAndFinalization,
+  processInactivityUpdates,
+  processRewardsAndPenalties,
+  processRegistryUpdates,
+  processSlashings,
+  processEth1DataReset,
+  processEffectiveBalanceUpdates,
+  processSlashingsReset,
+  processRandaoMixesReset,
+  processHistoricalRootsUpdate,
+  processParticipationRecordUpdates,
+  processParticipationFlagUpdates,
+  processSyncCommitteeUpdates,
+};
 
-export function processEpoch(fork: ForkSeq, state: CachedBeaconStateAllForks, epochProcess: EpochProcess): void {
+export function processEpoch(fork: epochFns, state: CachedBeaconStateAllForks, epochProcess: EpochProcess): void {
   processJustificationAndFinalization(state, epochProcess);
-  if (fork >= ForkSeq.altair) {
+  if (fork >= epochFns.altair) {
     processInactivityUpdates(state as CachedBeaconStateAltair, epochProcess);
   }
-  processRewardsAndPenalties(fork, state, epochProcess);
+  processRewardsAndPenalties(state, epochProcess);
   processRegistryUpdates(state, epochProcess);
-  processSlashings(fork, state, epochProcess);
+  processSlashings(state, epochProcess);
   processEth1DataReset(state, epochProcess);
   processEffectiveBalanceUpdates(state, epochProcess);
   processSlashingsReset(state, epochProcess);
   processRandaoMixesReset(state, epochProcess);
   processHistoricalRootsUpdate(state, epochProcess);
-  if (fork === ForkSeq.phase0) {
+  if (fork === epochFns.phase0) {
     processParticipationRecordUpdates(state as CachedBeaconStatePhase0);
   } else {
     processParticipationFlagUpdates(state as CachedBeaconStateAltair);
