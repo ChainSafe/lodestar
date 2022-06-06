@@ -1,5 +1,5 @@
-import {allForks, altair, BeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
-import {bellatrix, ssz} from "@chainsafe/lodestar-types";
+import {BeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
+import {allForks, altair, bellatrix, ssz} from "@chainsafe/lodestar-types";
 import {ForkName} from "@chainsafe/lodestar-params";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";

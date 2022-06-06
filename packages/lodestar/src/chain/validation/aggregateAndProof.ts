@@ -1,10 +1,9 @@
 import {toHexString} from "@chainsafe/ssz";
-import {ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {phase0, ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {
-  phase0,
-  allForks,
   computeEpochAtSlot,
   isAggregatorFromCommitteeLength,
+  getIndexedAttestationSignatureSet,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconChain} from "..";
 import {AttestationError, AttestationErrorCode, GossipAction} from "../errors/index.js";
@@ -120,7 +119,7 @@ export async function validateGossipAggregateAndProof(
   const signatureSets = [
     getSelectionProofSignatureSet(attHeadState, attSlot, aggregator, signedAggregateAndProof),
     getAggregateAndProofSignatureSet(attHeadState, attEpoch, aggregator, signedAggregateAndProof),
-    allForks.getIndexedAttestationSignatureSet(attHeadState, indexedAttestation),
+    getIndexedAttestationSignatureSet(attHeadState, indexedAttestation),
   ];
   if (!(await chain.bls.verifySignatureSets(signatureSets, {batchable: true}))) {
     throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.INVALID_SIGNATURE});

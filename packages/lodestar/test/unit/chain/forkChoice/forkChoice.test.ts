@@ -1,13 +1,11 @@
 import {expect} from "chai";
 import {FAR_FUTURE_EPOCH, MAX_EFFECTIVE_BALANCE} from "@chainsafe/lodestar-params";
 import {config} from "@chainsafe/lodestar-config/default";
-import {Slot, ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {phase0, allForks, Slot, ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {
-  allForks,
   computeEpochAtSlot,
   getTemporaryBlockHeader,
-  phase0,
   CachedBeaconStateAllForks,
   getEffectiveBalanceIncrementsZeroed,
   BeaconStateAllForks,

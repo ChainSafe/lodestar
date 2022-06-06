@@ -10,6 +10,7 @@ import {processEth1Data} from "./processEth1Data.js";
 import {processOperations} from "./processOperations.js";
 import {processRandao} from "./processRandao.js";
 
+// Spec tests
 export {processBlockHeader, processExecutionPayload, processRandao, processEth1Data, processSyncAggregate};
 export * from "./processOperations.js";
 

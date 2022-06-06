@@ -1,7 +1,5 @@
 import {expect} from "chai";
 import {
-  phase0,
-  allForks,
   computeEpochAtSlot,
   CachedBeaconStateAllForks,
   ZERO_HASH,
@@ -9,7 +7,6 @@ import {
   computeStartSlotAtEpoch,
   EffectiveBalanceIncrements,
   BeaconStateAllForks,
-  bellatrix,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {InputType} from "@chainsafe/lodestar-spec-test-util";
 import {toHexString} from "@chainsafe/ssz";
@@ -22,7 +19,7 @@ import {
   ExecutionStatus,
   PowBlockHex,
 } from "@chainsafe/lodestar-fork-choice";
-import {ssz, RootHex} from "@chainsafe/lodestar-types";
+import {phase0, allForks, bellatrix, ssz, RootHex} from "@chainsafe/lodestar-types";
 import {bnToNum} from "@chainsafe/lodestar-utils";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {

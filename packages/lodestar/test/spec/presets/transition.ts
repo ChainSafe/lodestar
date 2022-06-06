@@ -1,5 +1,5 @@
-import {allForks, BeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
-import {ssz} from "@chainsafe/lodestar-types";
+import {BeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
+import {allForks, ssz} from "@chainsafe/lodestar-types";
 import {createIChainForkConfig, IChainConfig} from "@chainsafe/lodestar-config";
 import {ForkName} from "@chainsafe/lodestar-params";
 import {bnToNum} from "@chainsafe/lodestar-utils";

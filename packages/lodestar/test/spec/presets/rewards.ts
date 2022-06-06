@@ -1,7 +1,5 @@
 import {expect} from "chai";
 import {
-  altair,
-  phase0,
   CachedBeaconStatePhase0,
   BeaconStateAllForks,
   BeaconStateAltair,
@@ -34,7 +32,7 @@ const rewardsPhase0: TestRunnerFn<RewardTestCasePhase0, Deltas> = (fork: ForkNam
       const config = getConfig(fork);
       const wrappedState = createCachedBeaconStateTest(testcase.pre, config);
       const epochProcess = beforeProcessEpoch(wrappedState);
-      return phase0.getAttestationDeltas(wrappedState as CachedBeaconStatePhase0, epochProcess);
+      return getAttestationDeltas(wrappedState as CachedBeaconStatePhase0, epochProcess);
     },
     options: {
       inputTypes: inputTypeSszTreeViewDU,
@@ -80,7 +78,7 @@ const rewardsAltair: TestRunnerFn<RewardTestCaseAltair, Deltas> = (fork) => {
       //   + set all inactivityScores to zero
       // - To get inactivity_penalty_deltas set TIMELY_HEAD_FLAG_INDEX | TIMELY_SOURCE_FLAG_INDEX to false
       //   + set PARTICIPATION_FLAG_WEIGHTS[TIMELY_TARGET_FLAG_INDEX] to zero
-      return altair.getRewardsAndPenalties(state, epochProcess);
+      return getRewardsAndPenalties(state, epochProcess);
     },
     options: {
       inputTypes: inputTypeSszTreeViewDU,

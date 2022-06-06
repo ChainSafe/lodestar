@@ -1,4 +1,4 @@
-import {Epoch, phase0, Root, Slot} from "@chainsafe/lodestar-types";
+import {Epoch, phase0} from "@chainsafe/lodestar-types";
 import {byteArrayEquals} from "@chainsafe/ssz";
 import {intSqrt} from "@chainsafe/lodestar-utils";
 
@@ -14,8 +14,9 @@ import {
   TIMELY_TARGET_WEIGHT,
   WEIGHT_DENOMINATOR,
 } from "@chainsafe/lodestar-params";
-import {getBlockRoot, getBlockRootAtSlot, increaseBalance, verifySignatureSet} from "../util/index.js";
-import {CachedBeaconStateAltair, CachedBeaconStateAllForks} from "../types.js";
+import {increaseBalance, verifySignatureSet} from "../util/index.js";
+import {CachedBeaconStateAltair} from "../types.js";
+import {RootCache} from "../util/rootCache.js";
 import {getAttestationWithIndicesSignatureSet} from "../signatureSets/indexedAttestation.js";
 import {checkpointToStr, validateAttestation} from "./processAttestationPhase0.js";
 
@@ -146,38 +147,4 @@ export function getAttestationParticipationStatus(
 
 export function checkpointValueEquals(cp1: phase0.Checkpoint, cp2: phase0.Checkpoint): boolean {
   return cp1.epoch === cp2.epoch && byteArrayEquals(cp1.root, cp2.root);
-}
-
-/**
- * Cache to prevent accessing the state tree to fetch block roots repeteadly.
- * In normal network conditions the same root is read multiple times, specially the target.
- */
-export class RootCache {
-  readonly currentJustifiedCheckpoint: phase0.Checkpoint;
-  readonly previousJustifiedCheckpoint: phase0.Checkpoint;
-  private readonly blockRootEpochCache = new Map<Epoch, Root>();
-  private readonly blockRootSlotCache = new Map<Slot, Root>();
-
-  constructor(private readonly state: CachedBeaconStateAllForks) {
-    this.currentJustifiedCheckpoint = state.currentJustifiedCheckpoint;
-    this.previousJustifiedCheckpoint = state.previousJustifiedCheckpoint;
-  }
-
-  getBlockRoot(epoch: Epoch): Root {
-    let root = this.blockRootEpochCache.get(epoch);
-    if (!root) {
-      root = getBlockRoot(this.state, epoch);
-      this.blockRootEpochCache.set(epoch, root);
-    }
-    return root;
-  }
-
-  getBlockRootAtSlot(slot: Slot): Root {
-    let root = this.blockRootSlotCache.get(slot);
-    if (!root) {
-      root = getBlockRootAtSlot(this.state, slot);
-      this.blockRootSlotCache.set(slot, root);
-    }
-    return root;
-  }
 }

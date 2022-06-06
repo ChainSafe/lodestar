@@ -5,6 +5,7 @@
 export * from "./stateTransition.js";
 export * from "./constants/index.js";
 export * from "./util/index.js";
+export * from "./signatureSets/index.js";
 export * from "./metrics.js";
 
 export * as blockFns from "./block/index.js";
@@ -35,3 +36,11 @@ export {
   getEffectiveBalanceIncrementsZeroed,
   getEffectiveBalanceIncrementsWithLen,
 } from "./cache/effectiveBalanceIncrements.js";
+
+// BeaconChain validation
+export {isValidVoluntaryExit} from "./block/processVoluntaryExit.js";
+export {assertValidProposerSlashing} from "./block/processProposerSlashing.js";
+export {assertValidAttesterSlashing} from "./block/processAttesterSlashing.js";
+
+// BeaconChain, to prepare new blocks
+export {becomesNewEth1Data} from "./block/processEth1Data.js";

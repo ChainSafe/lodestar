@@ -6,8 +6,7 @@ import {fromHexString} from "@chainsafe/ssz";
 import {LogLevel, sleep, TimestampFormatCode} from "@chainsafe/lodestar-utils";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {IChainConfig} from "@chainsafe/lodestar-config";
-import {Epoch} from "@chainsafe/lodestar-types";
-import {bellatrix} from "@chainsafe/lodestar-beacon-state-transition";
+import {bellatrix, Epoch} from "@chainsafe/lodestar-types";
 
 import {ExecutePayloadStatus} from "../../src/executionEngine/interface.js";
 import {ExecutionEngineHttp} from "../../src/executionEngine/http.js";
