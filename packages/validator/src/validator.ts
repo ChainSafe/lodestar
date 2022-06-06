@@ -136,6 +136,10 @@ export class Validator {
     this.indicesService = indicesService;
     this.emitter = emitter;
     this.chainHeaderTracker = chainHeaderTracker;
+
+    if (metrics) {
+      opts.dbOps.controller.setMetrics(metrics.db);
+    }
   }
 
   /** Waits for genesis and genesis time */
