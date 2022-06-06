@@ -2,81 +2,78 @@
 
 ## Wallet management
 
-A wallet helps to manage many validators from an easy-to-remember 12-word string (a mnemonic). All validators and withdrawal keys can be re-generated from a backed-up mnemonic.
+A wallet helps to manage many validators from a group of 12/24 words (also known as a "mnemonic" or "recovery phrase"). All validators and withdrawal keys can be re-generated from a backed-up mnemonic.
 
-The 12-word string is randomly generated during wallet creation and printed out to the terminal. It's important to make one or more backups of the mnemonic to ensure your ETH is not lost in the case of data loss. It is very important to keep your mnemonic private as it represents the ultimate control of your ETH.
+The mnemonic is randomly generated during wallet creation and printed out to the terminal. It's important to make one or more backups of the mnemonic to ensure your ETH wallets are not lost in the case of data loss. 
 
 <!-- prettier-ignore-start -->
 !!! warning
-    If you want to create a wallet for a testnet, you need to add `--network $TESTNET_NAME` to the following command
+    It is very important to keep your mnemonic private as it represents the ultimate control of your ETH wallets.
 <!-- prettier-ignore-end -->
 
 ### Create a wallet
 
-To create a wallet, use the following command:
+Lodestar is deprecating its functionality to create wallets.
 
-```bash
-lodestar account wallet create --name primary --passphraseFile primary.pass
-```
+To create a wallet, we recommend using the official [staking-deposit-cli](https://github.com/ethereum/staking-deposit-cli/releases) from the Ethereum Foundation for users comfortable with command line interfaces.
 
-This command will:
-
-- Create a hierarchical deterministic wallet identified with the name `primary`. This name can be arbitrary and is only used to reference the wallet in subsequent commands.
-- Generate a random strong password and stored in `primary.pass`.
+Alternatively, for a graphical user interface, you can use the [Stakehouse Wagyu Key Generator](https://wagyu.gg/) developed by members of the EthStaker community.
 
 <!-- prettier-ignore-start -->
 !!! info
-    `primary.pass` is not the actual passphrase, but the contents of the file `primary.pass`. This ensures you do not keep passphrases in your terminal history.
+    These tools will generate files for staking validators as well as the important mnemonic. This mnemonic must be handled and stored securely.
 <!-- prettier-ignore-end -->
-
-Next, you can create validator keys from your wallet `primary`
 
 ## Validator management
 
-Validators are represented by a BLS keypair. It is recommended to generate validator keypairs from a wallet mnemonic to ease its backup.
+Validators are represented by a BLS keypair. Use your generated mnemonic from one of the tools above to generate the keystore files required for validator duties on Lodestar. 
 
-<!-- prettier-ignore-start -->
-!!! warning
-    If you want to create a validator for a testnet, you need to add `--network $TESTNET_NAME` to all of the following commands and will use the `.$TESTNET_NAME` directory instead of `.lodestar`
-<!-- prettier-ignore-end -->
+### Import a validator keystore from your wallet to Lodestar
 
-### Create validator keypair
+To import a validator keystore that was created via one of the methods described above, you must locate the validator keystore JSONs exported by those tools (ex. `keystore-m_12381_3600_0_0_0-1654128694.json`).
 
-To create a new validator use the following command:
+Inside the keystore JSON file, you should have an [EIP-2335 conformant keystore file](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-2335.md#json-schema) such as the example below:
 
-```bash
-lodestar account validator create --name primary --passphraseFile primary.pass
+```
+{
+  "crypto": {
+    "kdf": {
+      "function": "scrypt",
+      "params": {
+        "dklen": 32,
+        "n": 262144,
+        "r": 8,
+        "p": 1,
+        "salt": "30bb9ef21d9f1f946c3c7ab70e27f453180a49d473a2a3e79ca2bc715ac4e898"
+      },
+      "message": ""
+    },
+    "checksum": {
+      "function": "sha256",
+      "params": {},
+      "message": "ba3cf1c8ba5be4f90c36bcf44ee37a779eac8c54b72121e4755b6722e95164a7"
+    },
+    "cipher": {
+      "function": "aes-128-ctr",
+      "params": {
+        "iv": "90f76d9d4d1b089e89802eac2f80b6b7"
+      },
+      "message": "8de2b0f55da54719822db6c083f0436ff94cd638be96c57b91339b438e9355f6"
+    }
+  },
+  "description": "",
+  "pubkey": "b22690ca679edd5fb9c2545f358da1427b8310e8ccf9e7e4f01ddce9b1d711a0362d35225673cce8f33911a22ae1519e",
+  "path": "m/12381/3600/0/0/0",
+  "uuid": "de83e8dc-8f95-4ea0-b9ba-cfa608ff3483",
+  "version": 4
+}
 ```
 
-This command will:
+These keystore files should be placed into your `./keystores` folder in your Lodestar directory. 
 
-- Derive a new BLS keypair from the wallet `primary`.
-- Create a new directory in `.lodestar/keystores` containing: - An encrypted Keystore with the validator voting keypair. - An eth1_deposit_data.rlp file with the precomputed Eth1 deposit transaction data ready to be submitted to the deposit contract.
-- Store the validator voting Keystore password in `.lodestar/secrets`.
-- Print the validator public key to the terminal
+Create a `password.txt` file with the password you set for your keystores and save it into your `./secrets` folder in your Lodestar directory.
 
-<!-- prettier-ignore-start -->
-!!! info
-    The validator voting keypair must be "hot" so its Keystore and password are kept in disk to be available for the validator client. The withdrawal keypair is **not** kept in disk as it can be generated later from the wallet mnemonic.
-<!-- prettier-ignore-end -->
 
-### Import a validator keystore from Deposit Launch Pad
-
-To import a keystore that was created via the ETH2.0 Deposit Launch Pad:
-
-```bash
-./lodestar account validator import --network $TESTNET_NAME --directory <path to your launchpad keys>
-```
-
-You will be prompted to enter a password. Use the same one you used to create the keys initially.
-
-To confirm your keys have been imported run:
-
-```bash
-./lodestar account validator list --network $TESTNET_NAME
-```
-
-This command will print the public address of every active keystore.
 
 ### Submit a validator deposit
 
