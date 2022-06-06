@@ -20,7 +20,7 @@ export interface ILevelDBOptions extends IDatabaseOptions {
 
 export type LevelDbControllerModules = {
   logger: ILogger;
-  metrics: ILevelDbControllerMetrics | null;
+  metrics?: ILevelDbControllerMetrics | null;
 };
 
 const BUCKET_ID_UNKNOWN = "unknown";
@@ -34,12 +34,12 @@ export class LevelDbController implements IDatabaseController<Uint8Array, Uint8A
 
   private readonly opts: ILevelDBOptions;
   private readonly logger: ILogger;
-  private readonly metrics: ILevelDbControllerMetrics | null;
+  private metrics: ILevelDbControllerMetrics | null;
 
   constructor(opts: ILevelDBOptions, {logger, metrics}: LevelDbControllerModules) {
     this.opts = opts;
     this.logger = logger;
-    this.metrics = metrics;
+    this.metrics = metrics ?? null;
     // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment
     this.db = opts.db || level(opts.name || "beaconchain", {keyEncoding: "binary", valueEncoding: "binary"});
   }
@@ -57,6 +57,15 @@ export class LevelDbController implements IDatabaseController<Uint8Array, Uint8A
     this.status = Status.stopped;
 
     await this.db.close();
+  }
+
+  /** To inject metrics after CLI initialization */
+  setMetrics(metrics: ILevelDbControllerMetrics): void {
+    if (this.metrics !== null) {
+      throw Error("metrics can only be set once");
+    } else {
+      this.metrics = metrics;
+    }
   }
 
   async clear(): Promise<void> {

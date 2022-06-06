@@ -2,6 +2,8 @@
  * @module db/controller
  */
 
+import {ILevelDbControllerMetrics} from "./metrics.js";
+
 /** Shortcut for Uint8Array based IDatabaseController */
 export type Db = IDatabaseController<Uint8Array, Uint8Array>;
 
@@ -35,6 +37,9 @@ export interface IDatabaseController<K, V> {
 
   start(): Promise<void>;
   stop(): Promise<void>;
+
+  /** To inject metrics after CLI initialization */
+  setMetrics(metrics: ILevelDbControllerMetrics): void;
 
   // Core API
 
