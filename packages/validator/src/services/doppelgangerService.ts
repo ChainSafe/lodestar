@@ -26,6 +26,8 @@ export enum DoppelgangerStatus {
   Unverified = "Unverified",
   // This pubkey is unknown to the doppelganger service
   Unknown = "Unknown",
+  // This pubkey has been detected to be active on the network
+  DoppelgangerDetected = "DoppelgangerDetected",
 }
 
 /** Map a DoppelgangerStatus to an integer for rendering in Grafana */
@@ -33,6 +35,7 @@ export const doppelgangerStatusMetrics: {[K in DoppelgangerStatus]: number} = {
   [DoppelgangerStatus.VerifiedSafe]: 0,
   [DoppelgangerStatus.Unverified]: 1,
   [DoppelgangerStatus.Unknown]: 2,
+  [DoppelgangerStatus.DoppelgangerDetected]: 3,
 };
 
 export class DoppelgangerService {
@@ -57,6 +60,7 @@ export class DoppelgangerService {
         return true;
       case DoppelgangerStatus.Unknown:
       case DoppelgangerStatus.Unverified:
+      case DoppelgangerStatus.DoppelgangerDetected:
         return false;
     }
   }
@@ -154,6 +158,14 @@ export class DoppelgangerService {
 
     if (violators.length !== 0) {
       this.logger.error(`Doppelganger detected for validator indices: ${violators}. Shutting down.`);
+      violators.forEach((index) => {
+        this.metrics?.doppelganger.status.set(
+          {
+            validatorIndex: String(index),
+          },
+          doppelgangerStatusMetrics[DoppelgangerStatus.DoppelgangerDetected]
+        );
+      });
       this.validatorController.abort();
     }
   }
