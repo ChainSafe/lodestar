@@ -54,6 +54,19 @@ export class AggregatedAttestationPool {
   );
   private lowestPermissibleSlot = 0;
 
+  /** For metrics to track size of the pool */
+  getAttestationCount(): {attestationCount: number; attestationDataCount: number} {
+    let attestationCount = 0;
+    let attestationDataCount = 0;
+    for (const attestationGroupByData of this.attestationGroupByDataHashBySlot.values()) {
+      attestationDataCount += attestationGroupByData.size;
+      for (const attestationGroup of attestationGroupByData.values()) {
+        attestationCount += attestationGroup.getAttestationCount();
+      }
+    }
+    return {attestationCount, attestationDataCount};
+  }
+
   add(attestation: phase0.Attestation, attestingIndicesCount: number, committee: ValidatorIndex[]): InsertOutcome {
     const slot = attestation.data.slot;
     const lowestPermissibleSlot = this.lowestPermissibleSlot;
@@ -209,6 +222,10 @@ export class MatchingDataAttestationGroup {
   private readonly attestations: AttestationWithIndex[] = [];
 
   constructor(readonly committee: ValidatorIndex[], readonly data: phase0.AttestationData) {}
+
+  getAttestationCount(): number {
+    return this.attestations.length;
+  }
 
   /**
    * Add an attestation.

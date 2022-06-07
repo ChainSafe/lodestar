@@ -564,6 +564,44 @@ export function createLodestarMetrics(
       }),
     },
 
+    opPool: {
+      // Note: Current opPool metrics only track current size.
+      //       I don't believe tracking total add() count is relevant since that can be seen with gossip ACCEPTs
+      aggregatedAttestationPoolSize: register.gauge({
+        name: "lodestar_oppool_aggregated_attestation_pool_size",
+        help: "Current size of the AggregatedAttestationPool = total attestations",
+      }),
+      /** This metric helps view how many overlapping attestations we keep per data on average */
+      aggregatedAttestationPoolUniqueData: register.gauge({
+        name: "lodestar_oppool_aggregated_attestation_pool_unique_data_count",
+        help: "Current size of the AggregatedAttestationPool = total attestations unique by data",
+      }),
+      attestationPoolSize: register.gauge({
+        name: "lodestar_oppool_attestation_pool_size",
+        help: "Current size of the AttestationPool = total attestations unique by data and slot",
+      }),
+      attesterSlashingPoolSize: register.gauge({
+        name: "lodestar_oppool_attester_slashing_pool_size",
+        help: "Current size of the AttesterSlashingPool",
+      }),
+      proposerSlashingPoolSize: register.gauge({
+        name: "lodestar_oppool_proposer_slashing_pool_size",
+        help: "Current size of the ProposerSlashingPool",
+      }),
+      voluntaryExitPoolSize: register.gauge({
+        name: "lodestar_oppool_voluntary_exit_pool_size",
+        help: "Current size of the VoluntaryExitPool",
+      }),
+      syncCommitteeMessagePoolSize: register.gauge({
+        name: "lodestar_oppool_sync_committee_message_pool_size",
+        help: "Current size of the SyncCommitteeMessagePool unique by slot subnet and block root",
+      }),
+      syncContributionAndProofPoolSize: register.gauge({
+        name: "lodestar_oppool_sync_contribution_and_proof_pool_pool_size",
+        help: "Current size of the SyncContributionAndProofPool unique by slot subnet and block root",
+      }),
+    },
+
     // Validator monitoring
 
     validatorMonitor: {
