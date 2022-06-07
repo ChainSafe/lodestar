@@ -1,5 +1,4 @@
 import {itBench} from "@dapplion/benchmark";
-import {ForkSeq} from "@chainsafe/lodestar-params";
 import {
   beforeProcessEpoch,
   CachedBeaconStatePhase0,

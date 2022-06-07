@@ -1,5 +1,4 @@
 import {itBench} from "@dapplion/benchmark";
-import {ForkSeq} from "@chainsafe/lodestar-params";
 import {processRewardsAndPenalties} from "../../../src/epoch/processRewardsAndPenalties.js";
 import {generatePerfTestCachedStateAltair, numValidators} from "../util.js";
 import {StateAltairEpoch} from "../types.js";
