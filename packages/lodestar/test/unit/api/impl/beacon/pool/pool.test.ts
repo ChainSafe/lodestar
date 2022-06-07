@@ -1,5 +1,7 @@
 import {expect} from "chai";
 import sinon from "sinon";
+import {SinonStubbedInstance} from "sinon";
+import {phase0} from "@chainsafe/lodestar-types";
 import {generateAttestationDataBigint} from "../../../../../../../beacon-state-transition/test/utils/attestation.js";
 import {getBeaconPoolApi} from "../../../../../../src/api/impl/beacon/pool/index.js";
 import {Network} from "../../../../../../src/network/network.js";
@@ -8,13 +10,11 @@ import {
   generateAttestationData,
   generateEmptySignedVoluntaryExit,
 } from "../../../../../utils/attestation.js";
-import {SinonStubbedInstance} from "sinon";
 import {IBeaconChain} from "../../../../../../src/chain/index.js";
 import * as attesterSlashingValidation from "../../../../../../src/chain/validation/attesterSlashing.js";
 import * as proposerSlashingValidation from "../../../../../../src/chain/validation/proposerSlashing.js";
 import * as voluntaryExitValidation from "../../../../../../src/chain/validation/voluntaryExit.js";
 
-import {phase0} from "@chainsafe/lodestar-types";
 import {Eth2Gossipsub} from "../../../../../../src/network/gossip/index.js";
 import {generateSignedBlockHeaderBn} from "../../../../../utils/block.js";
 import {setupApiImplTestServer} from "../../index.test.js";

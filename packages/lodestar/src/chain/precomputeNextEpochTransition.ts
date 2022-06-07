@@ -1,4 +1,3 @@
-import {AbortSignal} from "@chainsafe/abort-controller";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";

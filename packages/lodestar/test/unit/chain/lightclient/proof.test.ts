@@ -1,8 +1,8 @@
+import {expect} from "chai";
 import {BeaconStateAltair} from "@chainsafe/lodestar-beacon-state-transition";
 import {SYNC_COMMITTEE_SIZE} from "@chainsafe/lodestar-params";
 import {altair, ssz} from "@chainsafe/lodestar-types";
 import {verifyMerkleBranch, hash} from "@chainsafe/lodestar-utils";
-import {expect} from "chai";
 import {getNextSyncCommitteeBranch, getSyncCommitteesWitness} from "../../../../src/chain/lightClient/proofs.js";
 
 const currentSyncCommitteeGindex = 54;

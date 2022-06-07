@@ -1,9 +1,9 @@
-import {ApiModules} from "../types.js";
-import {resolveStateId} from "../beacon/state/utils.js";
 import {routes} from "@chainsafe/lodestar-api";
-import {linspace} from "../../../util/numpy.js";
 import {fromHexString} from "@chainsafe/ssz";
 import {ProofType, Tree} from "@chainsafe/persistent-merkle-tree";
+import {ApiModules} from "../types.js";
+import {resolveStateId} from "../beacon/state/utils.js";
+import {linspace} from "../../../util/numpy.js";
 import {IApiOptions} from "../../options.js";
 
 // TODO: Import from lightclient/server package

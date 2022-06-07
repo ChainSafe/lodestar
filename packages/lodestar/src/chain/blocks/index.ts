@@ -1,14 +1,13 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
-import {AbortSignal} from "@chainsafe/abort-controller";
 import {allForks} from "@chainsafe/lodestar-types";
 import {sleep} from "@chainsafe/lodestar-utils";
 import {ChainEvent} from "../emitter.js";
 import {JobItemQueue} from "../../util/queue/index.js";
 import {BlockError, BlockErrorCode, ChainSegmentError} from "../errors/index.js";
+import {BlockProcessOpts} from "../options.js";
 import {verifyBlock, VerifyBlockModules} from "./verifyBlock.js";
 import {importBlock, ImportBlockModules} from "./importBlock.js";
 import {assertLinearChainSegment} from "./utils/chainSegment.js";
-import {BlockProcessOpts} from "../options.js";
 import {PartiallyVerifiedBlock} from "./types.js";
 export {PartiallyVerifiedBlockFlags} from "./types.js";
 

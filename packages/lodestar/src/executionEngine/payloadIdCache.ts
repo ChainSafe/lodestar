@@ -1,6 +1,6 @@
+import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {pruneSetToMax} from "../util/map.js";
 import {IMetrics} from "../metrics/index.js";
-import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {DATA, QUANTITY} from "../eth1/provider/utils.js";
 
 // Idealy this only need to be set to the max head reorgs number

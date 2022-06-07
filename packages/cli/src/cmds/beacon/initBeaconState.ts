@@ -1,4 +1,3 @@
-import {AbortSignal} from "@chainsafe/abort-controller";
 import {ssz} from "@chainsafe/lodestar-types";
 import {createIBeaconConfig, IBeaconConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
@@ -18,10 +17,10 @@ import {
 import {Checkpoint} from "@chainsafe/lodestar-types/phase0";
 
 import {downloadOrLoadFile} from "../../util/index.js";
-import {IBeaconArgs} from "./options.js";
 import {defaultNetwork, IGlobalArgs} from "../../options/globalOptions.js";
 import {parseWSSArgs, WSSOptions} from "../../options/wssOptions.js";
 import {fetchWeakSubjectivityState, getGenesisFileUrl, getCheckpointFromArg} from "../../networks/index.js";
+import {IBeaconArgs} from "./options.js";
 
 function getCheckpointFromState(state: BeaconStateAllForks): Checkpoint {
   return {

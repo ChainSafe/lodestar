@@ -1,4 +1,3 @@
-import {AbortSignal} from "@chainsafe/abort-controller";
 import {Epoch, Slot} from "@chainsafe/lodestar-types";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {ErrorAborted} from "@chainsafe/lodestar-utils";
@@ -6,8 +5,8 @@ import {computeEpochAtSlot, computeTimeAtSlot, getCurrentSlot} from "@chainsafe/
 
 import {ChainEvent, ChainEventEmitter} from "../emitter.js";
 
-import {IBeaconClock} from "./interface.js";
 import {MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../constants/index.js";
+import {IBeaconClock} from "./interface.js";
 
 /**
  * A local clock, the clock time is assumed to be trusted

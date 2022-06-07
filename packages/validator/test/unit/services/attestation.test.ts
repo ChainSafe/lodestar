@@ -1,6 +1,6 @@
-import {AbortController} from "@chainsafe/abort-controller";
 import {expect} from "chai";
 import sinon from "sinon";
+import {AbortController} from "@chainsafe/abort-controller";
 import bls from "@chainsafe/bls";
 import {toHexString} from "@chainsafe/ssz";
 import {

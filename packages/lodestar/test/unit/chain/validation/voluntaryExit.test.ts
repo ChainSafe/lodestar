@@ -11,6 +11,10 @@ import {
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {ssz} from "@chainsafe/lodestar-types";
 
+import {DOMAIN_VOLUNTARY_EXIT, FAR_FUTURE_EPOCH, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
+import bls from "@chainsafe/bls";
+import {PointFormat} from "@chainsafe/bls/types";
+import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {BeaconChain} from "../../../../src/chain/index.js";
 import {StubbedChain} from "../../../utils/stub/index.js";
 import {generateState} from "../../../utils/state.js";
@@ -18,10 +22,6 @@ import {validateGossipVoluntaryExit} from "../../../../src/chain/validation/volu
 import {VoluntaryExitErrorCode} from "../../../../src/chain/errors/voluntaryExitError.js";
 import {OpPool} from "../../../../src/chain/opPools/index.js";
 import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
-import {DOMAIN_VOLUNTARY_EXIT, FAR_FUTURE_EPOCH, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import bls from "@chainsafe/bls";
-import {PointFormat} from "@chainsafe/bls/types";
-import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {createCachedBeaconStateTest} from "../../../utils/cachedBeaconState.js";
 
 describe("validate voluntary exit", () => {

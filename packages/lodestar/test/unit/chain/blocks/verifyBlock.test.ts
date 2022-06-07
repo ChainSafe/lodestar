@@ -3,10 +3,10 @@ import sinon, {SinonStubbedInstance} from "sinon";
 import {config} from "@chainsafe/lodestar-config/default";
 import {ForkChoice, IProtoBlock} from "@chainsafe/lodestar-fork-choice";
 
+import {allForks, ssz} from "@chainsafe/lodestar-types";
 import {verifyBlockSanityChecks, VerifyBlockModules} from "../../../../src/chain/blocks/verifyBlock.js";
 import {LocalClock} from "../../../../src/chain/clock/index.js";
 import {BlockErrorCode} from "../../../../src/chain/errors/index.js";
-import {allForks, ssz} from "@chainsafe/lodestar-types";
 import {expectThrowsLodestarError} from "../../../utils/errors.js";
 
 describe("chain / blocks / verifyBlock", function () {

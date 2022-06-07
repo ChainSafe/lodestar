@@ -1,9 +1,9 @@
+import {expect} from "chai";
 import {config} from "@chainsafe/lodestar-config/default";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {ssz} from "@chainsafe/lodestar-types";
 import {notNullish, sleep} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
-import {expect} from "chai";
 import {IBeaconChain} from "../../../src/chain/index.js";
 import {INetwork, IReqResp, NetworkEvent, NetworkEventBus} from "../../../src/network/index.js";
 import {UnknownBlockSync} from "../../../src/sync/unknownBlock.js";

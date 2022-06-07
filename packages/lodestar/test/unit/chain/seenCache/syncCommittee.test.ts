@@ -1,5 +1,5 @@
-import {BitArray} from "@chainsafe/ssz";
 import {expect} from "chai";
+import {BitArray} from "@chainsafe/ssz";
 import {SeenSyncCommitteeMessages, SeenContributionAndProof} from "../../../../src/chain/seenCache/index.js";
 import {generateContributionAndProof} from "../../../utils/contributionAndProof.js";
 

@@ -1,20 +1,19 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import "mocha";
-import {expect} from "chai";
 import {promisify} from "node:util";
+import {expect} from "chai";
 import leveldown from "leveldown";
-import {AbortController} from "@chainsafe/abort-controller";
 import {sleep} from "@chainsafe/lodestar-utils";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 
+import {fromHexString, toHexString} from "@chainsafe/ssz";
+import {ssz} from "@chainsafe/lodestar-types";
 import {Eth1ForBlockProduction} from "../../../src/eth1/index.js";
 import {Eth1Options} from "../../../src/eth1/options.js";
 import {getTestnetConfig, medallaTestnetConfig} from "../../utils/testnet.js";
 import {testLogger} from "../../utils/logger.js";
 import {BeaconDb} from "../../../src/db/index.js";
 import {generateState} from "../../utils/state.js";
-import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {ssz} from "@chainsafe/lodestar-types";
 import {Eth1Provider} from "../../../src/eth1/provider/eth1Provider.js";
 import {getGoerliRpcUrl} from "../../testParams.js";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
@@ -73,6 +72,7 @@ describe("eth1 / Eth1Provider", function () {
     const eth1ForBlockProduction = new Eth1ForBlockProduction(eth1Options, {
       config,
       db,
+      metrics: null,
       logger,
       signal: controller.signal,
       eth1Provider,

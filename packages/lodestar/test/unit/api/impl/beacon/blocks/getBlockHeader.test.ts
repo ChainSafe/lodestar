@@ -1,7 +1,7 @@
 import sinon from "sinon";
-import * as blockUtils from "../../../../../../src/api/impl/beacon/blocks/utils.js";
 import {expect, use} from "chai";
 import chaiAsPromised from "chai-as-promised";
+import * as blockUtils from "../../../../../../src/api/impl/beacon/blocks/utils.js";
 import {generateEmptySignedBlock} from "../../../../../utils/block.js";
 import {ApiImplTestModules, setupApiImplTestServer} from "../../index.test.js";
 import {SinonStubFn} from "../../../../../utils/types.js";

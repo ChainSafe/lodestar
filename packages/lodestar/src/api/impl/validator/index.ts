@@ -16,6 +16,7 @@ import {
 import {Root, Slot, ValidatorIndex, ssz} from "@chainsafe/lodestar-types";
 import {ExecutionStatus} from "@chainsafe/lodestar-fork-choice";
 
+import {fromHexString} from "@chainsafe/ssz";
 import {assembleBlock} from "../../../chain/factory/block/index.js";
 import {AttestationError, AttestationErrorCode, GossipAction, SyncCommitteeError} from "../../../chain/errors/index.js";
 import {validateGossipAggregateAndProof} from "../../../chain/validation/index.js";
@@ -25,10 +26,9 @@ import {toGraffitiBuffer} from "../../../util/graffiti.js";
 import {ApiError, NodeIsSyncing} from "../errors.js";
 import {validateSyncCommitteeGossipContributionAndProof} from "../../../chain/validation/syncCommitteeContributionAndProof.js";
 import {CommitteeSubscription} from "../../../network/subnets/index.js";
-import {computeSubnetForCommitteesAtSlot, getPubkeysForIndices} from "./utils.js";
 import {ApiModules} from "../types.js";
 import {RegenCaller} from "../../../chain/regen/index.js";
-import {fromHexString, toHexString} from "@chainsafe/ssz";
+import {computeSubnetForCommitteesAtSlot, getPubkeysForIndices} from "./utils.js";
 
 /**
  * Validator clock may be advanced from beacon's clock. If the validator requests a resource in a
@@ -175,6 +175,12 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
     try {
       notWhileSyncing();
       await waitForSlot(slot); // Must never request for a future slot > currentSlot
+
+      // Process the queued attestations in the forkchoice for correct head estimation
+      // forkChoice.updateTime() might have already been called by the onSlot clock
+      // handler, in which case this should just return.
+      chain.forkChoice.updateTime(slot);
+      chain.forkChoice.updateHead();
 
       timer = metrics?.blockProductionTime.startTimer();
       const block = await assembleBlock(
@@ -434,7 +440,8 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
             // TODO: Validate in batch
             const {indexedAttestation, committeeIndices} = await validateGossipAggregateAndProof(
               chain,
-              signedAggregateAndProof
+              signedAggregateAndProof,
+              true // skip known attesters check
             );
 
             chain.aggregatedAttestationPool.add(
@@ -460,12 +467,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
               e as Error
             );
             if (e instanceof AttestationError && e.action === GossipAction.REJECT) {
-              const archivedPath = chain.persistInvalidSszObject(
-                "signedAggregatedAndProof",
-                ssz.phase0.SignedAggregateAndProof.serialize(signedAggregateAndProof),
-                toHexString(ssz.phase0.SignedAggregateAndProof.hashTreeRoot(signedAggregateAndProof))
-              );
-              logger.debug("The submitted signed aggregate and proof was written to", archivedPath);
+              chain.persistInvalidSszValue(ssz.phase0.SignedAggregateAndProof, signedAggregateAndProof, "api_reject");
             }
           }
         })
@@ -511,12 +513,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
               e as Error
             );
             if (e instanceof SyncCommitteeError && e.action === GossipAction.REJECT) {
-              const archivedPath = chain.persistInvalidSszObject(
-                "contributionAndProof",
-                ssz.altair.SignedContributionAndProof.serialize(contributionAndProof),
-                toHexString(ssz.altair.SignedContributionAndProof.hashTreeRoot(contributionAndProof))
-              );
-              logger.debug("The submitted contribution adn proof was written to", archivedPath);
+              chain.persistInvalidSszValue(ssz.altair.SignedContributionAndProof, contributionAndProof, "api_reject");
             }
           }
         })

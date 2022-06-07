@@ -14,13 +14,13 @@ type VersionJson = {
   version: string;
 };
 
-const BRANCH_IGNORE = /^(HEAD|master|main)$/;
+const BRANCH_IGNORE = /^(HEAD|master|unstable|main)$/;
 
 /**
  * Gathers all information on package version including Git data.
  * @returns a version string, e.g.
  * - Stable release: `v0.36.0/80c248bb`
- * - Nightly release: `v0.36.0-dev.80c248bb/80c248bb`
+ * - Dev release: `v0.36.0-dev.80c248bb/80c248bb`
  * - Test branch: `v0.36.0/developer-feature/80c248bb`
  */
 export function getVersionData(): {
@@ -43,7 +43,7 @@ export function getVersionData(): {
   // Add commit only if present. 7 characters to be consistent with Github
   if (commit) {
     const commitShort = commit.slice(0, 7);
-    // Don't add commit if it's already in the version string (nightly versions)
+    // Don't add commit if it's already in the version string (dev versions)
     if (!localVersion || !localVersion.includes(commitShort)) {
       parts.push(commitShort);
     }

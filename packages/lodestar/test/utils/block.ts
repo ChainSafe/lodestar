@@ -1,3 +1,4 @@
+import deepmerge from "deepmerge";
 import {ssz} from "@chainsafe/lodestar-types";
 import {config as defaultConfig} from "@chainsafe/lodestar-config/default";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
@@ -5,7 +6,6 @@ import {allForks, phase0} from "@chainsafe/lodestar-types";
 import {IProtoBlock, ExecutionStatus} from "@chainsafe/lodestar-fork-choice";
 import {isPlainObject} from "@chainsafe/lodestar-utils";
 import {RecursivePartial} from "@chainsafe/lodestar-utils";
-import deepmerge from "deepmerge";
 import {EMPTY_SIGNATURE, ZERO_HASH} from "../../src/constants/index.js";
 import {ReqRespBlockResponse} from "../../src/network/reqresp/types.js";
 

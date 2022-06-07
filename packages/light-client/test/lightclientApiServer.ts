@@ -1,8 +1,8 @@
+import querystring from "querystring";
 import fastify, {FastifyInstance} from "fastify";
+import fastifyCors from "fastify-cors";
 import {Api, routes} from "@chainsafe/lodestar-api";
 import {registerRoutes} from "@chainsafe/lodestar-api/server";
-import fastifyCors from "fastify-cors";
-import querystring from "querystring";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {JsonPath} from "@chainsafe/ssz";
 import {altair, RootHex, SyncPeriod} from "@chainsafe/lodestar-types";

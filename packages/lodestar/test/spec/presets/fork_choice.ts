@@ -12,13 +12,6 @@ import {
   bellatrix,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {InputType} from "@chainsafe/lodestar-spec-test-util";
-import {
-  ChainEventEmitter,
-  initializeForkChoice,
-  CheckpointStateCache,
-  toCheckpointHex,
-  toCheckpointKey,
-} from "../../../src/chain/index.js";
 import {toHexString} from "@chainsafe/ssz";
 import {
   CheckpointWithHex,
@@ -32,6 +25,13 @@ import {
 import {ssz, RootHex} from "@chainsafe/lodestar-types";
 import {bnToNum} from "@chainsafe/lodestar-utils";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
+import {
+  ChainEventEmitter,
+  initializeForkChoice,
+  CheckpointStateCache,
+  toCheckpointHex,
+  toCheckpointKey,
+} from "../../../src/chain/index.js";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {testLogger} from "../../utils/logger.js";
 import {getConfig} from "../utils/getConfig.js";
@@ -331,7 +331,7 @@ function toSpecTestCheckpoint(checkpoint: CheckpointWithHex): SpecTestCheckpoint
 
 type Step = OnTick | OnAttestation | OnBlock | OnPowBlock | Checks;
 
-type SpecTestCheckpoint = {epoch: BigInt; root: string};
+type SpecTestCheckpoint = {epoch: bigint; root: string};
 
 // This test executes steps in sequence. There may be multiple items of the following types:
 // on_tick execution step
@@ -383,7 +383,7 @@ type Checks = {
 type ForkChoiceTestCase = {
   meta?: {
     description?: string;
-    bls_setting: BigInt;
+    bls_setting: bigint;
   };
   anchorState: BeaconStateAllForks;
   anchorBlock: allForks.BeaconBlock;

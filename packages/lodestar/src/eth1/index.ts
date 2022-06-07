@@ -48,13 +48,14 @@ export {IEth1ForBlockProduction, IEth1Provider, Eth1Provider};
 
 export function initializeEth1ForBlockProduction(
   opts: Eth1Options,
-  modules: Pick<Eth1DepositDataTrackerModules, "db" | "config" | "logger" | "signal">,
+  modules: Pick<Eth1DepositDataTrackerModules, "db" | "config" | "metrics" | "logger" | "signal">,
   anchorState: BeaconStateAllForks
 ): IEth1ForBlockProduction {
   if (opts.enabled) {
     return new Eth1ForBlockProduction(opts, {
       config: modules.config,
       db: modules.db,
+      metrics: modules.metrics,
       logger: modules.logger,
       signal: modules.signal,
       clockEpoch: computeEpochAtSlot(getCurrentSlot(modules.config, anchorState.genesisTime)),

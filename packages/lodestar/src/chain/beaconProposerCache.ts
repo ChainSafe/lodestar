@@ -1,7 +1,7 @@
-import {MapDef} from "../util/map.js";
 import {Epoch} from "@chainsafe/lodestar-types";
-import {IMetrics} from "../metrics/index.js";
 import {routes} from "@chainsafe/lodestar-api";
+import {MapDef} from "../util/map.js";
+import {IMetrics} from "../metrics/index.js";
 
 const PROPOSER_PRESERVE_EPOCHS = 2;
 

@@ -18,10 +18,10 @@ import {
   SYNC_COMMITTEE_SIZE,
 } from "@chainsafe/lodestar-params";
 
+import bls from "@chainsafe/bls";
 import {GENESIS_EPOCH, GENESIS_SLOT, ZERO_HASH} from "../../src/constants/index.js";
 import {generateEmptyBlock} from "./block.js";
 import {generateValidator, generateValidators} from "./validator.js";
-import bls from "@chainsafe/bls";
 
 /**
  * Copy of BeaconState, but all fields are marked optional to allow for swapping out variables as needed.

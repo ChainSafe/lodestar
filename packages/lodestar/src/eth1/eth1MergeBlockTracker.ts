@@ -1,12 +1,11 @@
-import {AbortSignal} from "@chainsafe/abort-controller";
 import {IChainConfig} from "@chainsafe/lodestar-config";
 import {Epoch, RootHex} from "@chainsafe/lodestar-types";
 import {ILogger, isErrorAborted, sleep} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
+import {ZERO_HASH_HEX} from "../constants/index.js";
 import {IEth1Provider, EthJsonRpcBlockRaw, PowMergeBlock} from "./interface.js";
 import {quantityToNum, quantityToBigint, dataToRootHex} from "./provider/utils.js";
-import {ZERO_HASH_HEX} from "../constants/index.js";
 
 export enum StatusCode {
   PRE_MERGE = "PRE_MERGE",

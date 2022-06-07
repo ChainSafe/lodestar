@@ -22,14 +22,14 @@ import {CheckpointStateCache, StateContextCache, toCheckpointHex} from "../state
 import {ChainEvent} from "../emitter.js";
 import {ChainEventEmitter} from "../emitter.js";
 import {LightClientServer} from "../lightClient/index.js";
-import {getCheckpointFromState} from "./utils/checkpoint.js";
-import {PendingEvents} from "./utils/pendingEvents.js";
-import {FullyVerifiedBlock} from "./types.js";
 import {SeenAggregatedAttestations} from "../seenCache/seenAggregateAndProof.js";
 import {prepareExecutionPayload} from "../factory/block/body.js";
 import {IEth1ForBlockProduction} from "../../eth1/index.js";
 import {BeaconProposerCache} from "../beaconProposerCache.js";
 import {IBeaconClock} from "../clock/index.js";
+import {FullyVerifiedBlock} from "./types.js";
+import {PendingEvents} from "./utils/pendingEvents.js";
+import {getCheckpointFromState} from "./utils/checkpoint.js";
 
 /**
  * Fork-choice allows to import attestations from current (0) or past (1) epoch.
@@ -268,8 +268,9 @@ async function maybeIssueNextProposerEngineFcU(
   state: CachedBeaconStateAllForks
 ): Promise<PayloadId | null> {
   const prepareSlot = state.slot + 1;
+  const prepareEpoch = computeEpochAtSlot(prepareSlot);
   // No need to try building block if we are not synced
-  if (prepareSlot > chain.clock.currentSlot + 1) {
+  if (prepareSlot !== chain.clock.currentSlot + 1 || prepareEpoch < chain.config.BELLATRIX_FORK_EPOCH) {
     return null;
   }
   const prepareState = allForks.processSlots(state, prepareSlot);

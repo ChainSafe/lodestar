@@ -1,4 +1,3 @@
-import {IMetrics} from "../../metrics/metrics";
 import {EventEmitter} from "events";
 import PeerId from "peer-id";
 import {StrictEventEmitter} from "strict-event-emitter-types";
@@ -7,8 +6,8 @@ import {IBeaconConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
 import {phase0, Root, Slot, allForks, ssz} from "@chainsafe/lodestar-types";
 import {ErrorAborted, ILogger, sleep} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
-import {AbortSignal} from "@chainsafe/abort-controller";
 
+import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {IBeaconChain} from "../../chain/index.js";
 import {GENESIS_SLOT, ZERO_HASH} from "../../constants/index.js";
 import {IBeaconDb} from "../../db/index.js";
@@ -16,11 +15,11 @@ import {INetwork, NetworkEvent, PeerAction} from "../../network/index.js";
 import {ItTrigger} from "../../util/itTrigger.js";
 import {PeerSet} from "../../util/peerMap.js";
 import {shuffleOne} from "../../util/shuffle.js";
-import {BackfillSyncError, BackfillSyncErrorCode} from "./errors.js";
-import {verifyBlockProposerSignature, verifyBlockSequence, BackfillBlockHeader, BackfillBlock} from "./verify.js";
-import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
+import {IMetrics} from "../../metrics/metrics";
 import {byteArrayEquals} from "../../util/bytes.js";
 import {computeAnchorCheckpoint} from "../../chain/initState.js";
+import {verifyBlockProposerSignature, verifyBlockSequence, BackfillBlockHeader, BackfillBlock} from "./verify.js";
+import {BackfillSyncError, BackfillSyncErrorCode} from "./errors.js";
 /**
  * Timeout in ms to take a break from reading a backfillBatchSize from db, as just yielding
  * to sync loop gives hardly any.

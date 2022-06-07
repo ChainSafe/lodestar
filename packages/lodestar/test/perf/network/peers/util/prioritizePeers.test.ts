@@ -1,7 +1,7 @@
-import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
-import {altair, phase0} from "@chainsafe/lodestar-types";
 import {itBench} from "@dapplion/benchmark";
 import PeerId from "peer-id";
+import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
+import {altair, phase0} from "@chainsafe/lodestar-types";
 import {defaultNetworkOptions} from "../../../../../src/network/options.js";
 import {prioritizePeers, RequestedSubnet} from "../../../../../src/network/peers/utils/index.js";
 import {getAttnets, getSyncnets} from "../../../../utils/network.js";

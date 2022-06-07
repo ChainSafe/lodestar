@@ -1,22 +1,22 @@
 import * as fs from "node:fs";
-import {add0xPrefix, ICliCommand, randomPassword} from "../../../../util/index.js";
-import {IGlobalArgs} from "../../../../options/index.js";
 import inquirer from "inquirer";
 import {validateMnemonic} from "bip39";
-import {ValidatorDirBuilder} from "../../../../validatorDir/index.js";
-import {getAccountPaths} from "../../paths.js";
+import mapValues from "lodash/mapValues.js";
 import {
   deriveEth2ValidatorKeys,
   deriveKeyFromMnemonic,
   eth2ValidatorPaths,
   IEth2ValidatorKeys,
 } from "@chainsafe/bls-keygen";
-import {IValidatorCreateArgs, validatorCreateOptions} from "./create.js";
-import mapValues from "lodash/mapValues.js";
 import bls from "@chainsafe/bls";
 import {Keystore} from "@chainsafe/bls-keystore";
-import {getBeaconConfigFromArgs} from "../../../../config/index.js";
 import {MAX_EFFECTIVE_BALANCE} from "@chainsafe/lodestar-params";
+import {getBeaconConfigFromArgs} from "../../../../config/index.js";
+import {getAccountPaths} from "../../paths.js";
+import {ValidatorDirBuilder} from "../../../../validatorDir/index.js";
+import {IGlobalArgs} from "../../../../options/index.js";
+import {add0xPrefix, ICliCommand, randomPassword} from "../../../../util/index.js";
+import {IValidatorCreateArgs, validatorCreateOptions} from "./create.js";
 
 /* eslint-disable no-console */
 

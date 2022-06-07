@@ -1,7 +1,7 @@
-import {AbortController} from "@chainsafe/abort-controller";
 import sinon from "sinon";
+import {AbortController} from "@chainsafe/abort-controller";
 
-import {toHexString} from "@chainsafe/ssz";
+import {CompositeTypeAny, toHexString, TreeView} from "@chainsafe/ssz";
 import {allForks, UintNum64, Root, Slot, ssz, Uint16, UintBn64} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {BeaconStateAllForks, CachedBeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
@@ -132,6 +132,8 @@ export class MockBeaconChain implements IBeaconChain {
     this.reprocessController = new ReprocessController(null);
   }
 
+  persistInvalidSszView(_: TreeView<CompositeTypeAny>): void {}
+
   getHeadState(): CachedBeaconStateAllForks {
     return createCachedBeaconStateTest(this.state, this.config);
   }
@@ -179,8 +181,12 @@ export class MockBeaconChain implements IBeaconChain {
     return false;
   }
 
-  persistInvalidSszObject(): string | null {
-    return null;
+  persistInvalidSszObject(): void {
+    return;
+  }
+
+  persistInvalidSszValue(): void {
+    return;
   }
 
   async updateBeaconProposerData(): Promise<void> {}

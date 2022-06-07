@@ -2,7 +2,7 @@
 
 ## Supported Versions
 
-- :hourglass_flowing_sand: Lodestar currently undergoes a quick release cycle with regular minor alpha releases published fortnightly.
+- :hourglass_flowing_sand: Lodestar currently undergoes a quick release cycle with regular minor releases published roughly fortnightly.
 - :globe_with_meridians: We encourage using the [most recently released version](https://github.com/ChainSafe/lodestar/releases/latest) before reporting an issue.
 
 ## Reporting a Vulnerability

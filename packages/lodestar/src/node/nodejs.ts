@@ -2,9 +2,9 @@
  * @module node
  */
 
-import {AbortController} from "@chainsafe/abort-controller";
 import LibP2p from "libp2p";
 import {Registry} from "prom-client";
+import {AbortController} from "@chainsafe/abort-controller";
 
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {phase0} from "@chainsafe/lodestar-types";
@@ -144,7 +144,7 @@ export class BeaconNode {
       anchorState,
       eth1: initializeEth1ForBlockProduction(
         opts.eth1,
-        {config, db, logger: logger.child(opts.logger.eth1), signal},
+        {config, db, metrics, logger: logger.child(opts.logger.eth1), signal},
         anchorState
       ),
       executionEngine: initializeExecutionEngine(opts.executionEngine, signal),

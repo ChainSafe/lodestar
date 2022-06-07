@@ -1,4 +1,3 @@
-import {AbortSignal} from "@chainsafe/abort-controller";
 import {bellatrix, RootHex, Root} from "@chainsafe/lodestar-types";
 import {BYTES_PER_LOGS_BLOOM} from "@chainsafe/lodestar-params";
 import {fromHex} from "@chainsafe/lodestar-utils";
@@ -141,7 +140,6 @@ export class ExecutionEngineHttp implements IExecutionEngine {
         return {status, latestValidHash: null, validationError: null};
 
       case ExecutePayloadStatus.INVALID_BLOCK_HASH:
-      case ExecutePayloadStatus.INVALID_TERMINAL_BLOCK:
         return {status, latestValidHash: null, validationError: validationError ?? "Malformed block"};
 
       case ExecutePayloadStatus.UNAVAILABLE:
@@ -248,13 +246,6 @@ export class ExecutionEngineHttp implements IExecutionEngine {
           `Invalid ${payloadAttributes ? "prepare payload" : "forkchoice request"}, validationError=${
             validationError ?? ""
           }`
-        );
-
-      case ExecutePayloadStatus.INVALID_TERMINAL_BLOCK:
-        throw Error(
-          `Invalid terminal block for ${
-            payloadAttributes ? "prepare payload" : "forkchoice request"
-          }, validationError=${validationError ?? ""}`
         );
 
       default:

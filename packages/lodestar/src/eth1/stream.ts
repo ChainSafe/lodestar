@@ -2,12 +2,11 @@
  * @module eth1
  */
 
-import {AbortSignal} from "@chainsafe/abort-controller";
+import {sleep} from "@chainsafe/lodestar-utils";
+import {phase0} from "@chainsafe/lodestar-types";
 import {Eth1Block, IBatchDepositEvents, IEth1Provider, IEth1StreamParams} from "./interface.js";
 import {groupDepositEventsByBlock} from "./utils/groupDepositEventsByBlock.js";
 import {optimizeNextBlockDiffForGenesis} from "./utils/optimizeNextBlockDiffForGenesis.js";
-import {sleep} from "@chainsafe/lodestar-utils";
-import {phase0} from "@chainsafe/lodestar-types";
 import {parseEth1Block} from "./provider/eth1Provider.js";
 
 /**

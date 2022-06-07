@@ -1,9 +1,8 @@
 import fs from "node:fs";
 import {promisify} from "node:util";
-import rimraf from "rimraf";
 import path from "node:path";
+import rimraf from "rimraf";
 import {fromHexString} from "@chainsafe/ssz";
-import {AbortController} from "@chainsafe/abort-controller";
 import {GENESIS_SLOT} from "@chainsafe/lodestar-params";
 import {BeaconNode, BeaconDb, initStateFromAnchorState, createNodeJsLibp2p, nodeUtils} from "@chainsafe/lodestar";
 import {SlashingProtection, Validator, SignerType} from "@chainsafe/lodestar-validator";
@@ -15,12 +14,12 @@ import {ACTIVE_PRESET, PresetName} from "@chainsafe/lodestar-params";
 import {onGracefulShutdown} from "../../util/process.js";
 import {createEnr, createPeerId, overwriteEnrWithCliArgs} from "../../config/index.js";
 import {IGlobalArgs, parseEnrArgs} from "../../options/index.js";
-import {IDevArgs} from "./options.js";
 import {initializeOptionsAndConfig} from "../init/handler.js";
 import {mkdir, getCliLogger} from "../../util/index.js";
 import {getBeaconPaths} from "../beacon/paths.js";
 import {getValidatorPaths} from "../validator/paths.js";
 import {getVersionData} from "../../util/version.js";
+import {IDevArgs} from "./options.js";
 
 /**
  * Run a beacon node with validator

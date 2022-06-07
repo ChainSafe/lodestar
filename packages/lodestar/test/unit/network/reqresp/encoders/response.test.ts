@@ -6,6 +6,7 @@ import {ForkName, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {chainConfig} from "@chainsafe/lodestar-config/default";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {LodestarError} from "@chainsafe/lodestar-utils";
+import {allForks} from "@chainsafe/lodestar-types";
 import {
   Method,
   Version,
@@ -36,7 +37,6 @@ import {
   sszSnappySignedBeaconBlockAltair,
 } from "../encodingStrategies/sszSnappy/testData.js";
 import {blocksToReqRespBlockResponses} from "../../../../utils/block.js";
-import {allForks} from "@chainsafe/lodestar-types";
 
 chai.use(chaiAsPromised);
 

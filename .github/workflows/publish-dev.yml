@@ -1,13 +1,13 @@
-name: Release nightly
+name: Publish dev release
 
 # only one per github sha can be run
 concurrency:
-  group: cd-release-nightly
+  group: cd-publish-dev
 
 on:
   push:
     branches:
-      - master
+      - unstable
 
 jobs:
   npm:
@@ -43,8 +43,9 @@ jobs:
       - name: Get version
         id: version
         run: |
-          PACKAGE_VERSION=$(node -p "require('./packages/lodestar/package.json').version")
-          export VERSION=${PACKAGE_VERSION}-dev.${GITHUB_SHA:0:10}
+          PACKAGE_VERSION=$(node -p "require('./packages/cli/package.json').version")
+          NEXT_VERSION=$(npx --yes semver --increment minor $PACKAGE_VERSION)
+          export VERSION=${NEXT_VERSION}-dev.${GITHUB_SHA:0:10}
           echo "::set-output name=version::$VERSION"
           echo PACKAGE_VERSION $PACKAGE_VERSION GITHUB_SHA $GITHUB_SHA VERSION $VERSION
 
@@ -74,7 +75,7 @@ jobs:
         #   Do not delete code version artifacts so the next step can pick the version
         #
         # --dist-tag next:
-        #   Make this nightly version installable with `@next`
+        #   Make this dev version installable with `@next`
         #
         # --preid dev:
         #   Tag version with `dev` instead of `alpha`

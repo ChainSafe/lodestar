@@ -2,7 +2,6 @@ import fs from "node:fs";
 import net from "node:net";
 import {spawn} from "node:child_process";
 import {Context} from "mocha";
-import {AbortController, AbortSignal} from "@chainsafe/abort-controller";
 import {fromHexString} from "@chainsafe/ssz";
 import {LogLevel, sleep, TimestampFormatCode} from "@chainsafe/lodestar-utils";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
@@ -12,10 +11,8 @@ import {bellatrix} from "@chainsafe/lodestar-beacon-state-transition";
 
 import {ExecutePayloadStatus} from "../../src/executionEngine/interface.js";
 import {ExecutionEngineHttp} from "../../src/executionEngine/http.js";
-import {shell} from "./shell.js";
 import {ChainEvent} from "../../src/chain/index.js";
 import {testLogger, TestLoggerOpts} from "../utils/logger.js";
-import {logFilesDir} from "./params.js";
 import {getDevBeaconNode} from "../utils/node/beacon.js";
 import {RestApiOptions} from "../../src/api/index.js";
 import {simTestInfoTracker} from "../utils/node/simTest.js";
@@ -23,6 +20,8 @@ import {getAndInitDevValidators} from "../utils/node/validator.js";
 import {Eth1Provider} from "../../src/index.js";
 import {ZERO_HASH} from "../../src/constants/index.js";
 import {bytesToData, dataToBytes, quantityToNum} from "../../src/eth1/provider/utils.js";
+import {logFilesDir} from "./params.js";
+import {shell} from "./shell.js";
 
 // NOTE: Must specify
 // EL_BINARY_DIR: File path to locate the EL executable

@@ -1,10 +1,9 @@
+import {expect} from "chai";
+import sinon, {SinonStubbedInstance} from "sinon";
 import {config} from "@chainsafe/lodestar-config/default";
-import {AbortController} from "@chainsafe/abort-controller";
 import {ForkChoice, IProtoBlock} from "@chainsafe/lodestar-fork-choice";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
-import {expect} from "chai";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import sinon, {SinonStubbedInstance} from "sinon";
 import {BeaconChain, ChainEventEmitter} from "../../../src/chain/index.js";
 import {LocalClock} from "../../../src/chain/clock/index.js";
 import {PrecomputeNextEpochTransitionScheduler} from "../../../src/chain/precomputeNextEpochTransition.js";

@@ -1,6 +1,6 @@
-import {AbortController} from "@chainsafe/abort-controller";
 import {expect} from "chai";
 import sinon, {SinonStubbedInstance} from "sinon";
+import {AbortController} from "@chainsafe/abort-controller";
 import {routes} from "@chainsafe/lodestar-api";
 import {config} from "@chainsafe/lodestar-config/default";
 import {BeaconChain, ChainEvent, ChainEventEmitter, IBeaconChain} from "../../../../../src/chain/index.js";

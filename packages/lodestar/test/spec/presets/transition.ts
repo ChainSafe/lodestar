@@ -2,11 +2,11 @@ import {allForks, BeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-tr
 import {ssz} from "@chainsafe/lodestar-types";
 import {createIChainForkConfig, IChainConfig} from "@chainsafe/lodestar-config";
 import {ForkName} from "@chainsafe/lodestar-params";
-import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
 import {bnToNum} from "@chainsafe/lodestar-utils";
+import {config} from "@chainsafe/lodestar-config/default";
+import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {TestRunnerFn} from "../utils/types.js";
-import {config} from "@chainsafe/lodestar-config/default";
 import {getPreviousFork} from "./fork.js";
 
 export const transition: TestRunnerFn<TransitionTestCase, BeaconStateAllForks> = (forkNext) => {

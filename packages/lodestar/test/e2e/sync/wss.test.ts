@@ -1,8 +1,9 @@
 import {GENESIS_SLOT, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {phase0, Slot} from "@chainsafe/lodestar-types";
 import {IChainConfig} from "@chainsafe/lodestar-config";
-import {fetchWeakSubjectivityState} from "../../../../cli/src/networks/index.js";
 import {config} from "@chainsafe/lodestar-config/default";
+import {TimestampFormatCode} from "@chainsafe/lodestar-utils";
+import {fetchWeakSubjectivityState} from "../../../../cli/src/networks/index.js";
 import {getDevBeaconNode} from "../../utils/node/beacon.js";
 import {waitForEvent} from "../../utils/events/resolver.js";
 import {getAndInitDevValidators} from "../../utils/node/validator.js";
@@ -12,7 +13,6 @@ import {testLogger, TestLoggerOpts} from "../../utils/logger.js";
 import {connect} from "../../utils/network.js";
 import {Network} from "../../../src/network/index.js";
 import {BackfillSyncEvent} from "../../../src/sync/backfill/index.js";
-import {TimestampFormatCode} from "@chainsafe/lodestar-utils";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 describe("Start from WSS", function () {

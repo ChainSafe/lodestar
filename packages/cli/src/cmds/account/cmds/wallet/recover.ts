@@ -1,7 +1,7 @@
 import * as fs from "node:fs";
+import inquirer from "inquirer";
 import {ICliCommand} from "../../../../util/index.js";
 import {IGlobalArgs} from "../../../../options/index.js";
-import inquirer from "inquirer";
 import {createWalletFromArgsAndMnemonic} from "./utils.js";
 import {IWalletCreateArgs, walletCreateOptions} from "./create.js";
 

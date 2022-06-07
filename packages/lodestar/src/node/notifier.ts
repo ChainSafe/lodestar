@@ -1,6 +1,5 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ErrorAborted, ILogger, sleep, prettyBytes} from "@chainsafe/lodestar-utils";
-import {AbortSignal} from "@chainsafe/abort-controller";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {computeEpochAtSlot, bellatrix} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconChain} from "../chain/index.js";

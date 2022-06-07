@@ -23,6 +23,7 @@ validators
 **/.nyc_output
 .tmp
 .vscode
+.npmrc
 
 # Tests artifacts
 packages/*/spec-tests

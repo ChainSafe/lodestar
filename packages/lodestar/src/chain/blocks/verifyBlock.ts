@@ -15,10 +15,10 @@ import {IBeaconClock} from "../clock/index.js";
 import {BlockProcessOpts} from "../options.js";
 import {IStateRegenerator, RegenCaller} from "../regen/index.js";
 import {IBlsVerifier} from "../bls/index.js";
-import {FullyVerifiedBlock, PartiallyVerifiedBlock} from "./types.js";
 import {ExecutePayloadStatus} from "../../executionEngine/interface.js";
 import {byteArrayEquals} from "../../util/bytes.js";
 import {IEth1ForBlockProduction} from "../../eth1/index.js";
+import {FullyVerifiedBlock, PartiallyVerifiedBlock} from "./types.js";
 import {POS_PANDA_MERGE_TRANSITION_BANNER} from "./utils/pandaMergeTransitionBanner.js";
 
 export type VerifyBlockModules = {
@@ -270,7 +270,6 @@ export async function verifyBlockStateTransition(
       // child block will cause it to replay
 
       case ExecutePayloadStatus.INVALID_BLOCK_HASH:
-      case ExecutePayloadStatus.INVALID_TERMINAL_BLOCK:
       case ExecutePayloadStatus.ELERROR:
       case ExecutePayloadStatus.UNAVAILABLE:
         throw new BlockError(block, {
