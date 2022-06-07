@@ -142,6 +142,18 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       name: "beacon_fork_choice_reorg_total",
       help: "Count of occasions fork choice has switched to a different chain",
     }),
+    forkChoiceReorgDistance: register.histogram({
+      name: "beacon_fork_choice_reorg_distance",
+      help: "Histogram of re-org distance",
+      // We need high resolution in the low range, since re-orgs are a rare but critical event.
+      // Add buckets up to 100 to capture high depth re-orgs. Above 100 things are going really bad.
+      buckets: [1, 2, 3, 5, 7, 10, 20, 30, 50, 100],
+    }),
+    parentBlockDistance: register.histogram({
+      name: "beacon_imported_block_parent_distance",
+      help: "Histogram of distance to parent block of valid imported blocks",
+      buckets: [1, 2, 3, 5, 7, 10, 20, 30, 50, 100],
+    }),
 
     reqRespOutgoingRequests: register.gauge<"method">({
       name: "beacon_reqresp_outgoing_requests_total",
