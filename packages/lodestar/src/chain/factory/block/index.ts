@@ -70,9 +70,10 @@ function computeNewStateRoot(
   const postState = stateTransition(
     state,
     blockEmptySig,
-    // verifySignatures = false since the data to assemble the block is trusted
-    // verifyProposer = false as the block signature is zero-ed
-    {verifySignatures: false, verifyProposer: false},
+    // verifyStateRoot: false  | the root in the block is zero-ed, it's being computed here
+    // verifyProposer: false   | as the block signature is zero-ed
+    // verifySignatures: false | since the data to assemble the block is trusted
+    {verifyStateRoot: false, verifyProposer: false, verifySignatures: false},
     metrics
   );
 
