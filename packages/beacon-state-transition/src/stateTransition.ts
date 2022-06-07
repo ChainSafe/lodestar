@@ -8,8 +8,8 @@ import {CachedBeaconStateAllForks, CachedBeaconStatePhase0, CachedBeaconStateAlt
 import {computeEpochAtSlot} from "./util/index.js";
 import {verifyProposerSignature} from "./signatureSets/index.js";
 import {processSlot, upgradeStateToAltair, upgradeStateToBellatrix} from "./slot/index.js";
-import {processBlock__ as processBlock__} from "./block/index.js";
-import {processEpoch as processEpoch__} from "./epoch/index.js";
+import {processBlock} from "./block/index.js";
+import {processEpoch} from "./epoch/index.js";
 
 // Multifork capable state transition
 
@@ -22,7 +22,7 @@ export function stateTransition(
   options?: {verifyStateRoot?: boolean; verifyProposer?: boolean; verifySignatures?: boolean},
   metrics?: IBeaconStateTransitionMetrics | null
 ): CachedBeaconStateAllForks {
-  const {verifyStateRoot = true, verifyProposer = true} = options || {};
+  const {verifyStateRoot = true, verifyProposer = true, verifySignatures = true} = options || {};
 
   const block = signedBlock.message;
   const blockSlot = block.slot;
@@ -44,7 +44,14 @@ export function stateTransition(
   }
 
   // Process block
-  processBlock(postState, block, options, metrics);
+  const fork = state.config.getForkSeq(block.slot);
+
+  const timer = metrics?.stfnProcessBlock.startTimer();
+  try {
+    processBlock(fork, postState, block, verifySignatures, null);
+  } finally {
+    timer?.();
+  }
 
   // Apply changes to state, must do before hashing. Note: .hashTreeRoot() automatically commits() too
   postState.commit();
@@ -62,28 +69,6 @@ export function stateTransition(
   }
 
   return postState;
-}
-
-/**
- * Multifork capable processBlock()
- *
- * Implementation Note: follows the optimizations in protolambda's eth2fastspec (https://github.com/protolambda/eth2fastspec)
- */
-export function processBlock(
-  postState: CachedBeaconStateAllForks,
-  block: allForks.BeaconBlock,
-  options?: {verifySignatures?: boolean},
-  metrics?: IBeaconStateTransitionMetrics | null
-): void {
-  const {verifySignatures = true} = options || {};
-  const fork = postState.config.getForkSeq(block.slot);
-
-  const timer = metrics?.stfnProcessBlock.startTimer();
-  try {
-    processBlock__(fork, postState, block, verifySignatures, null);
-  } finally {
-    if (timer) timer();
-  }
 }
 
 /**
@@ -132,14 +117,14 @@ function processSlotsWithTransientCache(
       const timer = metrics?.stfnEpochTransition.startTimer();
       try {
         const epochProcess = beforeProcessEpoch(postState);
-        processEpoch__(fork, postState, epochProcess);
+        processEpoch(fork, postState, epochProcess);
         const {currentEpoch, statuses, balances} = epochProcess;
         metrics?.registerValidatorStatuses(currentEpoch, statuses, balances);
 
         postState.slot++;
         postState.epochCtx.afterProcessEpoch(postState, epochProcess);
       } finally {
-        if (timer) timer();
+        timer?.();
       }
 
       // Upgrade state if exactly at epoch boundary

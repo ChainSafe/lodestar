@@ -34,11 +34,6 @@ export {
   getEffectiveBalanceIncrementsWithLen,
 } from "./cache/effectiveBalanceIncrements.js";
 
-// Group fns for spec tests
-export * as blockFns from "./block/index.js";
-export * as epochFns from "./epoch/index.js";
-export * as slotFns from "./slot/index.js";
-
 // BeaconChain validation
 export {isValidVoluntaryExit} from "./block/processVoluntaryExit.js";
 export {assertValidProposerSlashing} from "./block/processProposerSlashing.js";

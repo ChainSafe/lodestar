@@ -1,4 +1,4 @@
-import {ForkSeq as epochFns} from "@chainsafe/lodestar-params";
+import {ForkSeq} from "@chainsafe/lodestar-params";
 import {CachedBeaconStateAllForks, CachedBeaconStateAltair, CachedBeaconStatePhase0, EpochProcess} from "../types.js";
 import {processEffectiveBalanceUpdates} from "./processEffectiveBalanceUpdates.js";
 import {processEth1DataReset} from "./processEth1DataReset.js";
@@ -32,9 +32,9 @@ export {
   processSyncCommitteeUpdates,
 };
 
-export function processEpoch(fork: epochFns, state: CachedBeaconStateAllForks, epochProcess: EpochProcess): void {
+export function processEpoch(fork: ForkSeq, state: CachedBeaconStateAllForks, epochProcess: EpochProcess): void {
   processJustificationAndFinalization(state, epochProcess);
-  if (fork >= epochFns.altair) {
+  if (fork >= ForkSeq.altair) {
     processInactivityUpdates(state as CachedBeaconStateAltair, epochProcess);
   }
   processRewardsAndPenalties(state, epochProcess);
@@ -45,7 +45,7 @@ export function processEpoch(fork: epochFns, state: CachedBeaconStateAllForks, e
   processSlashingsReset(state, epochProcess);
   processRandaoMixesReset(state, epochProcess);
   processHistoricalRootsUpdate(state, epochProcess);
-  if (fork === epochFns.phase0) {
+  if (fork === ForkSeq.phase0) {
     processParticipationRecordUpdates(state as CachedBeaconStatePhase0);
   } else {
     processParticipationFlagUpdates(state as CachedBeaconStateAltair);

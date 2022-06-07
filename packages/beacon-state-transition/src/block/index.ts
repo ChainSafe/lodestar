@@ -1,4 +1,4 @@
-import {ForkSeq as blockFns} from "@chainsafe/lodestar-params";
+import {ForkSeq} from "@chainsafe/lodestar-params";
 import {allForks, altair, bellatrix} from "@chainsafe/lodestar-types";
 import {ExecutionEngine} from "../util/executionEngine.js";
 import {isExecutionEnabled} from "../util/bellatrix.js";
@@ -17,8 +17,8 @@ export * from "./processOperations.js";
 export * from "./initiateValidatorExit.js";
 export * from "./isValidIndexedAttestation.js";
 
-export function processBlock__(
-  fork: blockFns,
+export function processBlock(
+  fork: ForkSeq,
   state: CachedBeaconStateAllForks,
   block: allForks.BeaconBlock,
   verifySignatures = true,
@@ -28,7 +28,7 @@ export function processBlock__(
 
   // The call to the process_execution_payload must happen before the call to the process_randao as the former depends
   // on the randao_mix computed with the reveal of the previous block.
-  if (fork >= blockFns.bellatrix) {
+  if (fork >= ForkSeq.bellatrix) {
     if (isExecutionEnabled(state as CachedBeaconStateBellatrix, (block as bellatrix.BeaconBlock).body)) {
       processExecutionPayload(
         state as CachedBeaconStateBellatrix,
@@ -41,7 +41,7 @@ export function processBlock__(
   processRandao(state, block, verifySignatures);
   processEth1Data(state, block.body.eth1Data);
   processOperations(fork, state, block.body, verifySignatures);
-  if (fork >= blockFns.altair) {
+  if (fork >= ForkSeq.altair) {
     processSyncAggregate(state, block as altair.BeaconBlock, verifySignatures);
   }
 }

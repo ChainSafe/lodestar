@@ -3,8 +3,8 @@ import {
   EpochProcess,
   BeaconStateAllForks,
   beforeProcessEpoch,
-  epochFns,
 } from "@chainsafe/lodestar-beacon-state-transition";
+import * as epochFns from "@chainsafe/lodestar-beacon-state-transition/epoch";
 import {ssz} from "@chainsafe/lodestar-types";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";

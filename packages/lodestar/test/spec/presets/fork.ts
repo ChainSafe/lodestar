@@ -2,8 +2,8 @@ import {
   BeaconStateAllForks,
   CachedBeaconStateAltair,
   CachedBeaconStatePhase0,
-  slotFns,
 } from "@chainsafe/lodestar-beacon-state-transition";
+import * as slotFns from "@chainsafe/lodestar-beacon-state-transition/slot";
 import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {ForkName} from "@chainsafe/lodestar-params";
 import {createIChainForkConfig, IChainForkConfig} from "@chainsafe/lodestar-config";

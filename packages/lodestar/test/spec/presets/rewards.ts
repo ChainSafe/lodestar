@@ -1,5 +1,6 @@
 import {expect} from "chai";
-import {BeaconStateAllForks, beforeProcessEpoch, epochFns} from "@chainsafe/lodestar-beacon-state-transition";
+import {BeaconStateAllForks, beforeProcessEpoch} from "@chainsafe/lodestar-beacon-state-transition";
+import {getRewardsAndPenalties} from "@chainsafe/lodestar-beacon-state-transition/epoch";
 import {VectorCompositeType} from "@chainsafe/ssz";
 import {ssz} from "@chainsafe/lodestar-types";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
@@ -30,7 +31,7 @@ export const rewards: TestRunnerFn<RewardTestCase, Deltas> = (fork) => {
       //   + set all inactivityScores to zero
       // - To get inactivity_penalty_deltas set TIMELY_HEAD_FLAG_INDEX | TIMELY_SOURCE_FLAG_INDEX to false
       //   + set PARTICIPATION_FLAG_WEIGHTS[TIMELY_TARGET_FLAG_INDEX] to zero
-      return epochFns.getRewardsAndPenalties(wrappedState, epochProcess);
+      return getRewardsAndPenalties(wrappedState, epochProcess);
     },
     options: {
       inputTypes: inputTypeSszTreeViewDU,

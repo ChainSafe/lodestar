@@ -2,8 +2,8 @@ import {
   BeaconStateAllForks,
   CachedBeaconStateAllForks,
   CachedBeaconStateBellatrix,
-  blockFns,
 } from "@chainsafe/lodestar-beacon-state-transition";
+import * as blockFns from "@chainsafe/lodestar-beacon-state-transition/block";
 import {ssz, phase0, altair, bellatrix} from "@chainsafe/lodestar-types";
 import {InputType} from "@chainsafe/lodestar-spec-test-util";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
