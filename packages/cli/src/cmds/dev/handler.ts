@@ -68,7 +68,7 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
   logger.info("Lodestar", {network: args.network, ...getVersionData()});
   if (ACTIVE_PRESET === PresetName.minimal) logger.info("ACTIVE_PRESET == minimal preset");
 
-  const db = new BeaconDb({config, controller: new LevelDbController(options.db, {logger, metrics})});
+  const db = new BeaconDb({config, controller: new LevelDbController(options.db, {logger})});
   await db.start();
 
   let anchorState;
