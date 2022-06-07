@@ -20,8 +20,11 @@ type DoppelgangerState = {
 };
 
 export enum DoppelgangerStatus {
+  // This pubkey is known to the doppelganger service and has been verified safe
   VerifiedSafe = "VerifiedSafe",
+  // This pubkey is known to the doppelganger service but has not been verified safe
   Unverified = "Unverified",
+  // This pubkey is unknown to the doppelganger service
   Unknown = "Unknown",
 }
 
