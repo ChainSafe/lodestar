@@ -1,8 +1,8 @@
 import fs from "node:fs";
 import {Interchange} from "@chainsafe/lodestar-validator";
-import {ICliCommand} from "../../../../../util/index.js";
-import {IGlobalArgs} from "../../../../../options/index.js";
-import {IAccountValidatorArgs} from "../options.js";
+import {ICliCommand} from "../../../util/index.js";
+import {IGlobalArgs} from "../../../options/index.js";
+import {AccountValidatorArgs} from "../options.js";
 import {ISlashingProtectionArgs} from "./options.js";
 import {getGenesisValidatorsRoot, getSlashingProtection} from "./utils.js";
 
@@ -12,7 +12,7 @@ interface IImportArgs {
   file: string;
 }
 
-export const importCmd: ICliCommand<IImportArgs, ISlashingProtectionArgs & IAccountValidatorArgs & IGlobalArgs> = {
+export const importCmd: ICliCommand<IImportArgs, ISlashingProtectionArgs & AccountValidatorArgs & IGlobalArgs> = {
   command: "import",
 
   describe: "Import an interchange file.",

@@ -2,14 +2,13 @@ import {readdirSync} from "node:fs";
 import inquirer from "inquirer";
 import {SignerType, SlashingProtection, Validator} from "@chainsafe/lodestar-validator";
 import {LevelDbController} from "@chainsafe/lodestar-db";
-import {ICliCommand} from "../../../../util/index.js";
-import {IGlobalArgs} from "../../../../options/index.js";
-import {ValidatorDirManager} from "../../../../validatorDir/index.js";
-import {getAccountPaths} from "../../paths.js";
-import {getBeaconConfigFromArgs} from "../../../../config/index.js";
-import {errorLogger} from "../../../../util/logger.js";
-import {IValidatorCliArgs, validatorOptions} from "../../../validator/options.js";
-import {getValidatorPaths} from "../../../validator/paths.js";
+import {ICliCommand} from "../../util/index.js";
+import {IGlobalArgs} from "../../options/index.js";
+import {ValidatorDirManager} from "../../validatorDir/index.js";
+import {getBeaconConfigFromArgs} from "../../config/index.js";
+import {errorLogger} from "../../util/logger.js";
+import {IValidatorCliArgs, validatorOptions} from "./options.js";
+import {getAccountPaths, getValidatorPaths} from "./paths.js";
 
 /* eslint-disable no-console */
 
@@ -89,15 +88,12 @@ BE UNTIL AT LEAST TWO YEARS AFTER THE PHASE 0 MAINNET LAUNCH.
 
     console.log(`Initiating voluntary exit for validator ${publicKey}`);
 
-    let secretKey;
-    try {
-      secretKey = await validatorDirManager.decryptValidator(publicKey, {force});
-    } catch (e) {
-      if ((e as Error).message.indexOf("EEXIST") !== -1) {
-        console.log(`Decrypting keystore failed with error ${e}. use --force to override`);
+    const secretKey = await validatorDirManager.decryptValidator(publicKey, {force}).catch((e: Error) => {
+      if (e.message.includes("EEXIST")) {
+        console.log(`Decrypting keystore failed with error ${e.message}. use --force to override`);
       }
       throw e;
-    }
+    });
 
     console.log(`Decrypted keystore for validator ${publicKey}`);
 

@@ -11,11 +11,11 @@ import {
   isPassphraseFile,
   writeValidatorPassphrase,
   ICliCommand,
-} from "../../../../util/index.js";
-import {VOTING_KEYSTORE_FILE, getValidatorDirPath} from "../../../../validatorDir/paths.js";
-import {getAccountPaths} from "../../paths.js";
-import {IGlobalArgs} from "../../../../options/index.js";
-import {IAccountValidatorArgs} from "./options.js";
+} from "../../util/index.js";
+import {VOTING_KEYSTORE_FILE, getValidatorDirPath} from "../../validatorDir/paths.js";
+import {IGlobalArgs} from "../../options/index.js";
+import {AccountValidatorArgs} from "./options.js";
+import {getAccountPaths} from "./paths.js";
 
 /* eslint-disable no-console */
 
@@ -25,7 +25,7 @@ interface IValidatorImportArgs {
   passphraseFile?: string;
 }
 
-export const importCmd: ICliCommand<IValidatorImportArgs, IAccountValidatorArgs & IGlobalArgs> = {
+export const importCmd: ICliCommand<IValidatorImportArgs, AccountValidatorArgs & IGlobalArgs> = {
   command: "import",
 
   describe:

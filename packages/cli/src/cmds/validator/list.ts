@@ -1,13 +1,13 @@
-import {ValidatorDirManager} from "../../../../validatorDir/index.js";
-import {getAccountPaths} from "../../paths.js";
-import {ICliCommand} from "../../../../util/index.js";
-import {IGlobalArgs} from "../../../../options/index.js";
-import {add0xPrefix} from "../../../../util/format.js";
-import {IAccountValidatorArgs} from "./options.js";
+import {ValidatorDirManager} from "../../validatorDir/index.js";
+import {ICliCommand} from "../../util/index.js";
+import {IGlobalArgs} from "../../options/index.js";
+import {add0xPrefix} from "../../util/format.js";
+import {getAccountPaths} from "./paths.js";
+import {AccountValidatorArgs} from "./options.js";
 
 export type ReturnType = string[];
 
-export const list: ICliCommand<Record<never, never>, IAccountValidatorArgs & IGlobalArgs, ReturnType> = {
+export const list: ICliCommand<Record<never, never>, AccountValidatorArgs & IGlobalArgs, ReturnType> = {
   command: "list",
 
   describe: "Lists the public keys of all validators",
