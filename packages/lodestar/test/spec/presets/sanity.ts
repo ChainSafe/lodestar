@@ -1,6 +1,6 @@
 import {InputType} from "@chainsafe/lodestar-spec-test-util";
-import {allForks, BeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
-import {bellatrix, ssz} from "@chainsafe/lodestar-types";
+import {BeaconStateAllForks, processSlots, stateTransition} from "@chainsafe/lodestar-beacon-state-transition";
+import {allForks, bellatrix, ssz} from "@chainsafe/lodestar-types";
 import {ForkName} from "@chainsafe/lodestar-params";
 import {bnToNum} from "@chainsafe/lodestar-utils";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
@@ -26,7 +26,7 @@ const sanitySlots: TestRunnerFn<SanitySlotsTestCase, BeaconStateAllForks> = (for
     testFunction: (testcase) => {
       const stateTB = testcase.pre.clone();
       const state = createCachedBeaconStateTest(stateTB, getConfig(fork));
-      const postState = allForks.processSlots(state, state.slot + bnToNum(testcase.slots));
+      const postState = processSlots(state, state.slot + bnToNum(testcase.slots));
       // TODO: May be part of runStateTranstion, necessary to commit again?
       postState.commit();
       return postState;
@@ -55,7 +55,7 @@ export const sanityBlocks: TestRunnerFn<SanityBlocksTestCase, BeaconStateAllFork
       const verify = shouldVerify(testcase);
       for (let i = 0; i < testcase.meta.blocks_count; i++) {
         const signedBlock = testcase[`blocks_${i}`] as bellatrix.SignedBeaconBlock;
-        wrappedState = allForks.stateTransition(wrappedState, signedBlock, {
+        wrappedState = stateTransition(wrappedState, signedBlock, {
           verifyStateRoot: verify,
           verifyProposer: verify,
           verifySignatures: verify,

@@ -1,5 +1,5 @@
-import {allForks, altair, BeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
-import {bellatrix, ssz} from "@chainsafe/lodestar-types";
+import {BeaconStateAllForks, stateTransition} from "@chainsafe/lodestar-beacon-state-transition";
+import {altair, bellatrix, ssz} from "@chainsafe/lodestar-types";
 import {ForkName} from "@chainsafe/lodestar-params";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
@@ -16,7 +16,7 @@ export const finality: TestRunnerFn<FinalityTestCase, BeaconStateAllForks> = (fo
       for (let i = 0; i < testcase.meta.blocks_count; i++) {
         const signedBlock = testcase[`blocks_${i}`] as bellatrix.SignedBeaconBlock;
 
-        state = allForks.stateTransition(state, signedBlock, {
+        state = stateTransition(state, signedBlock, {
           verifyStateRoot: false,
           verifyProposer: verify,
           verifySignatures: verify,

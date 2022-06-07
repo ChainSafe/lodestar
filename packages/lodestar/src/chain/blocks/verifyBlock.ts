@@ -1,9 +1,15 @@
 import {
   CachedBeaconStateAllForks,
   computeStartSlotAtEpoch,
-  allForks,
-  bellatrix,
+  isBellatrixStateType,
+  isBellatrixBlockBodyType,
+  isMergeTransitionBlock as isMergeTransitionBlockFn,
+  isExecutionEnabled,
+  getAllBlockSignatureSetsExceptProposer,
+  getAllBlockSignatureSets,
+  stateTransition,
 } from "@chainsafe/lodestar-beacon-state-transition";
+import {bellatrix} from "@chainsafe/lodestar-types";
 import {toHexString} from "@chainsafe/ssz";
 import {IForkChoice, IProtoBlock, ExecutionStatus, assertValidTerminalPowBlock} from "@chainsafe/lodestar-fork-choice";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
@@ -132,14 +138,14 @@ export async function verifyBlockStateTransition(
   });
 
   const isMergeTransitionBlock =
-    bellatrix.isBellatrixStateType(preState) &&
-    bellatrix.isBellatrixBlockBodyType(block.message.body) &&
-    bellatrix.isMergeTransitionBlock(preState, block.message.body);
+    isBellatrixStateType(preState) &&
+    isBellatrixBlockBodyType(block.message.body) &&
+    isMergeTransitionBlockFn(preState, block.message.body);
 
   // STFN - per_slot_processing() + per_block_processing()
   // NOTE: `regen.getPreState()` should have dialed forward the state already caching checkpoint states
   const useBlsBatchVerify = !opts?.disableBlsBatchVerify;
-  const postState = allForks.stateTransition(
+  const postState = stateTransition(
     preState,
     block,
     {
@@ -154,9 +160,9 @@ export async function verifyBlockStateTransition(
 
   /** Not null if execution is enabled */
   const executionPayloadEnabled =
-    bellatrix.isBellatrixStateType(postState) &&
-    bellatrix.isBellatrixBlockBodyType(block.message.body) &&
-    bellatrix.isExecutionEnabled(postState, block.message.body)
+    isBellatrixStateType(postState) &&
+    isBellatrixBlockBodyType(block.message.body) &&
+    isExecutionEnabled(postState, block.message.body)
       ? block.message.body.executionPayload
       : null;
 
@@ -166,8 +172,8 @@ export async function verifyBlockStateTransition(
   // so the attester and proposer shufflings are correct.
   if (useBlsBatchVerify && !validSignatures) {
     const signatureSets = validProposerSignature
-      ? allForks.getAllBlockSignatureSetsExceptProposer(postState, block)
-      : allForks.getAllBlockSignatureSets(postState, block);
+      ? getAllBlockSignatureSetsExceptProposer(postState, block)
+      : getAllBlockSignatureSets(postState, block);
 
     if (
       signatureSets.length > 0 &&

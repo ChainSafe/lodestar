@@ -6,13 +6,12 @@ import {
   SLOTS_PER_EPOCH,
   TIMELY_SOURCE_FLAG_INDEX,
 } from "@chainsafe/lodestar-params";
-import {Epoch, Slot, ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {phase0, Epoch, Slot, ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {
   CachedBeaconStateAllForks,
   CachedBeaconStatePhase0,
   CachedBeaconStateAltair,
   computeEpochAtSlot,
-  phase0,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {toHexString} from "@chainsafe/ssz";
 import {MapDef} from "../../util/map.js";

@@ -1,9 +1,9 @@
 import {
   CachedBeaconStateAllForks,
-  computeEpochAtSlot,
-  allForks,
-  getAttesterSlashableIndices,
   BeaconStateAllForks,
+  computeEpochAtSlot,
+  getAttesterSlashableIndices,
+  isValidVoluntaryExit,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {Repository, Id} from "@chainsafe/lodestar-db";
 import {MAX_PROPOSER_SLASHINGS, MAX_VOLUNTARY_EXITS} from "@chainsafe/lodestar-params";
@@ -169,7 +169,7 @@ export class OpPool {
     for (const voluntaryExit of this.voluntaryExits.values()) {
       if (
         !toBeSlashedIndices.has(voluntaryExit.message.validatorIndex) &&
-        allForks.isValidVoluntaryExit(state, voluntaryExit, false)
+        isValidVoluntaryExit(state, voluntaryExit, false)
       ) {
         voluntaryExits.push(voluntaryExit);
         if (voluntaryExits.length >= MAX_VOLUNTARY_EXITS) {

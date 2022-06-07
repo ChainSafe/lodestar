@@ -1,4 +1,9 @@
-import {phase0, allForks, getAttesterSlashableIndices} from "@chainsafe/lodestar-beacon-state-transition";
+import {phase0} from "@chainsafe/lodestar-types";
+import {
+  getAttesterSlashableIndices,
+  assertValidAttesterSlashing,
+  getAttesterSlashingSignatureSets,
+} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconChain} from "..";
 import {AttesterSlashingError, AttesterSlashingErrorCode, GossipAction} from "../errors/index.js";
 
@@ -22,7 +27,7 @@ export async function validateGossipAttesterSlashing(
   // [REJECT] All of the conditions within process_attester_slashing pass validation.
   try {
     // verifySignature = false, verified in batch below
-    allForks.assertValidAttesterSlashing(state, attesterSlashing, false);
+    assertValidAttesterSlashing(state, attesterSlashing, false);
   } catch (e) {
     throw new AttesterSlashingError(GossipAction.REJECT, {
       code: AttesterSlashingErrorCode.INVALID,
@@ -30,7 +35,7 @@ export async function validateGossipAttesterSlashing(
     });
   }
 
-  const signatureSets = allForks.getAttesterSlashingSignatureSets(state, attesterSlashing);
+  const signatureSets = getAttesterSlashingSignatureSets(state, attesterSlashing);
   if (!(await chain.bls.verifySignatureSets(signatureSets, {batchable: true}))) {
     throw new AttesterSlashingError(GossipAction.REJECT, {
       code: AttesterSlashingErrorCode.INVALID,

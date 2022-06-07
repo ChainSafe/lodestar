@@ -1,7 +1,7 @@
 import {expect, use} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import sinon from "sinon";
-import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
+import {phase0} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/default";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {toHexString} from "@chainsafe/ssz";

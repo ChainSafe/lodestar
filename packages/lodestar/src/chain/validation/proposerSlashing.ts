@@ -1,4 +1,8 @@
-import {phase0, allForks} from "@chainsafe/lodestar-beacon-state-transition";
+import {phase0} from "@chainsafe/lodestar-types";
+import {
+  assertValidProposerSlashing,
+  getProposerSlashingSignatureSets,
+} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconChain} from "..";
 import {ProposerSlashingError, ProposerSlashingErrorCode, GossipAction} from "../errors/index.js";
 
@@ -19,7 +23,7 @@ export async function validateGossipProposerSlashing(
   // [REJECT] All of the conditions within process_proposer_slashing pass validation.
   try {
     // verifySignature = false, verified in batch below
-    allForks.assertValidProposerSlashing(state, proposerSlashing, false);
+    assertValidProposerSlashing(state, proposerSlashing, false);
   } catch (e) {
     throw new ProposerSlashingError(GossipAction.REJECT, {
       code: ProposerSlashingErrorCode.INVALID,
@@ -27,7 +31,7 @@ export async function validateGossipProposerSlashing(
     });
   }
 
-  const signatureSets = allForks.getProposerSlashingSignatureSets(state, proposerSlashing);
+  const signatureSets = getProposerSlashingSignatureSets(state, proposerSlashing);
   if (!(await chain.bls.verifySignatureSets(signatureSets, {batchable: true}))) {
     throw new ProposerSlashingError(GossipAction.REJECT, {
       code: ProposerSlashingErrorCode.INVALID,
