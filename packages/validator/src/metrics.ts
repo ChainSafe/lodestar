@@ -311,9 +311,9 @@ export function getMetrics(register: MetricsRegister, gitData: LodestarGitData) 
         buckets: [0.01, 0.1, 1, 5],
       }),
 
-      errors: register.gauge<{routeId: string}>({
-        name: "vc_rest_api_client_errors_total",
-        help: "Total count of errors calling the REST API client by routeId",
+      requestErrors: register.gauge<{routeId: string}>({
+        name: "vc_rest_api_client_request_errors_total",
+        help: "Total count of errors on REST API client requests by routeId",
         labelNames: ["routeId"],
       }),
     },
