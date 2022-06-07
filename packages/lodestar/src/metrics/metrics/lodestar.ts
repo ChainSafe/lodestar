@@ -960,5 +960,55 @@ export function createLodestarMetrics(
         help: "Eth1 dynamic follow distance changed by the deposit tracker if blocks are slow",
       }),
     },
+
+    eth1HttpClient: {
+      requestTime: register.histogram<"routeId">({
+        name: "lodestar_eth1_http_client_request_time_seconds",
+        help: "eth1 JsonHttpClient - histogram or roundtrip request times",
+        // Provide max resolution on problematic values around 1 second
+        buckets: [0.1, 0.5, 1, 2, 5, 15],
+      }),
+      requestErrors: register.gauge<"routeId">({
+        name: "lodestar_eth1_http_client_request_errors_total",
+        help: "eth1 JsonHttpClient - total count of request errors",
+      }),
+      requestUsedFallbackUrl: register.gauge({
+        name: "lodestar_eth1_http_client_request_used_fallback_url_total",
+        help: "eth1 JsonHttpClient - total count of requests on fallback url(s)",
+      }),
+      activeRequests: register.gauge({
+        name: "lodestar_eth1_http_client_active_requests",
+        help: "eth1 JsonHttpClient - current count of active requests",
+      }),
+      configUrlsCount: register.gauge({
+        name: "lodestar_eth1_http_client_config_urls_count",
+        help: "eth1 JsonHttpClient - static config urls count",
+      }),
+    },
+
+    executionEnginerHttpClient: {
+      requestTime: register.histogram<"routeId">({
+        name: "lodestar_execution_engine_http_client_request_time_seconds",
+        help: "ExecutionEngineHttp client - histogram or roundtrip request times",
+        // Provide max resolution on problematic values around 1 second
+        buckets: [0.1, 0.5, 1, 2, 5, 15],
+      }),
+      requestErrors: register.gauge<"routeId">({
+        name: "lodestar_execution_engine_http_client_request_errors_total",
+        help: "ExecutionEngineHttp client - total count of request errors",
+      }),
+      requestUsedFallbackUrl: register.gauge({
+        name: "lodestar_execution_engine_http_client_request_used_fallback_url_total",
+        help: "ExecutionEngineHttp client - total count of requests on fallback url(s)",
+      }),
+      activeRequests: register.gauge({
+        name: "lodestar_execution_engine_http_client_active_requests",
+        help: "ExecutionEngineHttp client - current count of active requests",
+      }),
+      configUrlsCount: register.gauge({
+        name: "lodestar_execution_engine_http_client_config_urls_count",
+        help: "ExecutionEngineHttp client - static config urls count",
+      }),
+    },
   };
 }
