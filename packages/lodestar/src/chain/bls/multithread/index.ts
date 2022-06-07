@@ -13,7 +13,7 @@ import {ISignatureSet} from "@chainsafe/lodestar-beacon-state-transition";
 import {QueueError, QueueErrorCode} from "../../../util/queue/index.js";
 import {IMetrics} from "../../../metrics/index.js";
 import {IBlsVerifier, VerifySignatureOpts} from "../interface.js";
-import {getAggregatedPubkey} from "../utils.js";
+import {getAggregatedPubkey, getAggregatedPubkeysCount} from "../utils.js";
 import {verifySignatureSetsMaybeBatch} from "../maybeBatch.js";
 import {BlsWorkReq, BlsWorkResult, WorkerData, WorkResultCode} from "./types.js";
 import {chunkifyMaximizeChunkSize} from "./utils.js";
@@ -144,6 +144,9 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
   }
 
   async verifySignatureSets(sets: ISignatureSet[], opts: VerifySignatureOpts = {}): Promise<boolean> {
+    // Pubkeys are aggregated in the main thread regardless if verified in workers or in main thread
+    this.metrics?.bls.aggregatedPubkeys.inc(getAggregatedPubkeysCount(sets));
+
     if (opts.verifyOnMainThread && !this.blsVerifyAllMultiThread) {
       const timer = this.metrics?.blsThreadPool.mainThreadDurationInThreadPool.startTimer();
       try {

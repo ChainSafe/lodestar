@@ -375,6 +375,13 @@ export function createLodestarMetrics(
 
     // BLS verifier thread pool and queue
 
+    bls: {
+      aggregatedPubkeys: register.gauge({
+        name: "lodestar_bls_aggregated_pubkeys_total",
+        help: "Total aggregated pubkeys for BLS validation",
+      }),
+    },
+
     blsThreadPool: {
       jobsWorkerTime: register.gauge<"workerId">({
         name: "lodestar_bls_thread_pool_time_seconds_sum",
