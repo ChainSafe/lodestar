@@ -223,9 +223,7 @@ export class BeaconChain implements IBeaconChain {
 
     handleChainEvents.bind(this)(this.abortController.signal);
 
-    if (metrics) {
-      metrics.opPool.aggregatedAttestationPoolSize.addCollect(() => this.onScrapeMetrics());
-    }
+    metrics?.opPool.aggregatedAttestationPoolSize.addCollect(() => this.onScrapeMetrics());
   }
 
   close(): void {
