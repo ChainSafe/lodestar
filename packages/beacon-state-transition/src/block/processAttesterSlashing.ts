@@ -3,7 +3,7 @@ import {ForkSeq} from "@chainsafe/lodestar-params";
 
 import {isSlashableValidator, isSlashableAttestationData, getAttesterSlashableIndices} from "../util/index.js";
 import {CachedBeaconStateAllForks} from "../types.js";
-import {slashValidatorAllForks} from "./slashValidator.js";
+import {slashValidator} from "./slashValidator.js";
 import {isValidIndexedAttestationBigint} from "./isValidIndexedAttestation.js";
 
 /**
@@ -27,7 +27,7 @@ export function processAttesterSlashing(
   // Spec requires to sort indexes beforehand
   for (const index of intersectingIndices.sort((a, b) => a - b)) {
     if (isSlashableValidator(validators.get(index), state.epochCtx.currentShuffling.epoch)) {
-      slashValidatorAllForks(fork, state, index);
+      slashValidator(fork, state, index);
       slashedAny = true;
     }
   }

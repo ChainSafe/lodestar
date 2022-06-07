@@ -15,7 +15,7 @@ import {decreaseBalance, increaseBalance} from "../util/index.js";
 import {CachedBeaconStateAllForks} from "../types.js";
 import {initiateValidatorExit} from "./initiateValidatorExit.js";
 
-export function slashValidatorAllForks(
+export function slashValidator(
   fork: ForkSeq,
   state: CachedBeaconStateAllForks,
   slashedIndex: ValidatorIndex,

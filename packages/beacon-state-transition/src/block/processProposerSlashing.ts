@@ -4,7 +4,7 @@ import {isSlashableValidator} from "../util/index.js";
 import {verifySignatureSet} from "../util/signatureSets.js";
 import {CachedBeaconStateAllForks} from "../types.js";
 import {getProposerSlashingSignatureSets} from "../signatureSets/index.js";
-import {slashValidatorAllForks} from "./slashValidator.js";
+import {slashValidator} from "./slashValidator.js";
 
 /**
  * Process a ProposerSlashing operation. Initiates the exit of a validator, decreases the balance of the slashed
@@ -20,7 +20,7 @@ export function processProposerSlashing(
 ): void {
   assertValidProposerSlashing(state, proposerSlashing, verifySignatures);
 
-  slashValidatorAllForks(fork, state, proposerSlashing.signedHeader1.message.proposerIndex);
+  slashValidator(fork, state, proposerSlashing.signedHeader1.message.proposerIndex);
 }
 
 export function assertValidProposerSlashing(
