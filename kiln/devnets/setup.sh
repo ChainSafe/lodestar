@@ -32,12 +32,16 @@ then
     cd $dataDir && git init && git remote add -f origin $setupConfigUrl && git config core.sparseCheckout true && echo "$configGitDir/*" >> .git/info/sparse-checkout && git pull --depth=1 origin main && cd $currentDir
   fi;
 
-  if [ ! -n "$(ls -A $dataDir/$configGitDir)" ] || [ ! -n "$(ls -A $dataDir/$configGitDir/genesis.json)" ] || [ ! -n "$(ls -A $dataDir/$configGitDir/genesis.ssz)" ] || [ ! -n "$(ls -A $dataDir/$configGitDir/nethermind_genesis.json)" ] || [ ! -n "$(ls -A $dataDir/$configGitDir/el_bootnode.txt)" ] || [ ! -n "$(ls -A $dataDir/$configGitDir/bootstrap_nodes.txt)" ]
+  if [ ! -n "$(ls -A $dataDir/$configGitDir)" ] || [ ! -n "$(ls -A $dataDir/$configGitDir/genesis.json)" ] || [ ! -n "$(ls -A $dataDir/$configGitDir/genesis.ssz)" ] || [ ! -n "$(ls -A $dataDir/$configGitDir/nethermind_genesis.json)" ] || [ ! -n "$(ls -A $dataDir/$configGitDir/el_bootnode.txt)" ] || ( [ ! -n "$(ls -A $dataDir/$configGitDir/bootstrap_nodes.txt)" ] && [ ! -n "$(ls -A $dataDir/$configGitDir/boot_enr.yaml)" ] )
   then
     echo "Configuration directory not setup properly, remove the data directory and run again."
     echo "exiting ..."
     exit;
   else 
+    if [ ! -n "$(ls -A $dataDir/$configGitDir/boot_enr.yaml)" ]
+    then
+      cp $dataDir/$configGitDir/bootstrap_nodes.txt $dataDir/$configGitDir/boot_enr.yaml
+    fi;
     echo "Configuration discovered!"
   fi;
 
