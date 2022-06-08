@@ -38,12 +38,10 @@ export async function validateSyncCommitteeGossipContributionAndProof(
 
   // _[IGNORE]_ A valid sync committee contribution with equal `slot`, `beacon_block_root` and `subcommittee_index` whose
   // `aggregation_bits` is non-strict superset has _not_ already been seen.
-  if (!skipValidationKnownParticipants) {
-    if (chain.seenContributionAndProof.participantsKnown(contribution)) {
-      throw new SyncCommitteeError(GossipAction.IGNORE, {
-        code: SyncCommitteeErrorCode.SYNC_COMMITTEE_PARTICIPANTS_ALREADY_KNOWN,
-      });
-    }
+  if (!skipValidationKnownParticipants && chain.seenContributionAndProof.participantsKnown(contribution)) {
+    throw new SyncCommitteeError(GossipAction.IGNORE, {
+      code: SyncCommitteeErrorCode.SYNC_COMMITTEE_PARTICIPANTS_ALREADY_KNOWN,
+    });
   }
 
   // [IGNORE] The sync committee contribution is the first valid contribution received for the aggregator with index

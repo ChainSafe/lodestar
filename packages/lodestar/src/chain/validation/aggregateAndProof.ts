@@ -57,14 +57,15 @@ export async function validateGossipAggregateAndProof(
 
   // _[IGNORE]_ A valid aggregate attestation defined by `hash_tree_root(aggregate.data)` whose `aggregation_bits`
   // is a non-strict superset has _not_ already been seen.
-  if (!skipValidationKnownAttesters) {
-    if (chain.seenAggregatedAttestations.isKnown(targetEpoch, attDataRoot, aggregationBits)) {
-      throw new AttestationError(GossipAction.IGNORE, {
-        code: AttestationErrorCode.ATTESTERS_ALREADY_KNOWN,
-        targetEpoch,
-        aggregateRoot: attDataRoot,
-      });
-    }
+  if (
+    !skipValidationKnownAttesters &&
+    chain.seenAggregatedAttestations.isKnown(targetEpoch, attDataRoot, aggregationBits)
+  ) {
+    throw new AttestationError(GossipAction.IGNORE, {
+      code: AttestationErrorCode.ATTESTERS_ALREADY_KNOWN,
+      targetEpoch,
+      aggregateRoot: attDataRoot,
+    });
   }
 
   // [IGNORE] The block being voted for (attestation.data.beacon_block_root) has been seen (via both gossip
