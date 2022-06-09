@@ -1,6 +1,4 @@
-import {gnosisChainConfig} from "@chainsafe/lodestar-config/networks";
-
-export const chainConfig = gnosisChainConfig;
+export {gnosisChainConfig as chainConfig} from "@chainsafe/lodestar-config/networks";
 
 /* eslint-disable max-len */
 
