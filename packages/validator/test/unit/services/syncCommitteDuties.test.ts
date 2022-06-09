@@ -8,12 +8,17 @@ import {createIChainForkConfig} from "@chainsafe/lodestar-config";
 import {config as mainnetConfig} from "@chainsafe/lodestar-config/default";
 import {routes} from "@chainsafe/lodestar-api";
 import {ssz} from "@chainsafe/lodestar-types";
-import {SyncCommitteeDutiesService} from "../../../src/services/syncCommitteeDuties.js";
+import {
+  SyncCommitteeDutiesService,
+  SyncDutyAndProofs,
+  SyncDutySubnet,
+} from "../../../src/services/syncCommitteeDuties.js";
 import {ValidatorStore} from "../../../src/services/validatorStore.js";
 import {getApiClientStub} from "../../utils/apiStub.js";
 import {loggerVc, testLogger} from "../../utils/logger.js";
 import {ClockMock} from "../../utils/clock.js";
 import {IndicesService} from "../../../src/services/indices.js";
+import {syncCommitteeIndicesToSubnets} from "../../../src/services/utils.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
@@ -21,6 +26,7 @@ describe("SyncCommitteeDutiesService", function () {
   const sandbox = sinon.createSandbox();
   const logger = testLogger();
   const ZERO_HASH = Buffer.alloc(32, 0);
+  const ZERO_HASH_HEX = toHexString(ZERO_HASH);
 
   const api = getApiClientStub(sandbox);
   const validatorStore = sinon.createStubInstance(ValidatorStore) as ValidatorStore &
@@ -111,16 +117,19 @@ describe("SyncCommitteeDutiesService", function () {
         Object.fromEntries(dutiesByIndex),
       ])
     );
+
     expect(dutiesByIndexByPeriodObj).to.deep.equal(
       {
-        0: {[indices[0]]: {dependentRoot: ZERO_HASH, duty}},
-        1: {[indices[0]]: {dependentRoot: ZERO_HASH, duty}},
-      },
+        0: {[indices[0]]: {dependentRoot: ZERO_HASH_HEX, duty: toSyncDutySubnet(duty)}},
+        1: {[indices[0]]: {dependentRoot: ZERO_HASH_HEX, duty: toSyncDutySubnet(duty)}},
+      } as typeof dutiesByIndexByPeriodObj,
       "Wrong dutiesService.dutiesByIndexByPeriod Map"
     );
 
     expect(await dutiesService.getDutiesAtSlot(slot)).to.deep.equal(
-      [{duty, selectionProofs: [{selectionProof: null, subcommitteeIndex: 0}]}],
+      [
+        {duty: toSyncDutySubnet(duty), selectionProofs: [{selectionProof: null, subcommitteeIndex: 0}]},
+      ] as SyncDutyAndProofs[],
       "Wrong getAttestersAtSlot()"
     );
 
@@ -180,9 +189,9 @@ describe("SyncCommitteeDutiesService", function () {
     );
     expect(dutiesByIndexByPeriodObj).to.deep.equal(
       {
-        0: {[indices[0]]: {dependentRoot: ZERO_HASH, duty}},
+        0: {[indices[0]]: {dependentRoot: ZERO_HASH_HEX, duty: toSyncDutySubnet(duty)}},
         1: {},
-      },
+      } as typeof dutiesByIndexByPeriodObj,
       "Wrong dutiesService.dutiesByIndexByPeriod Map"
     );
 
@@ -196,9 +205,9 @@ describe("SyncCommitteeDutiesService", function () {
     );
     expect(dutiesByIndexByPeriodObj).to.deep.equal(
       {
-        0: {[indices[1]]: {dependentRoot: ZERO_HASH, duty: duty2}},
+        0: {[indices[1]]: {dependentRoot: ZERO_HASH_HEX, duty: toSyncDutySubnet(duty2)}},
         1: {},
-      },
+      } as typeof dutiesByIndexByPeriodObj,
       "Wrong dutiesService.dutiesByIndexByPeriod Map"
     );
   });
@@ -245,17 +254,18 @@ describe("SyncCommitteeDutiesService", function () {
         Object.fromEntries(dutiesByIndex),
       ])
     );
+
     expect(dutiesByIndexByPeriodObj).to.deep.equal(
       {
         0: {
-          [indices[0]]: {dependentRoot: ZERO_HASH, duty: duty1},
-          [indices[1]]: {dependentRoot: ZERO_HASH, duty: duty2},
+          [indices[0]]: {dependentRoot: ZERO_HASH_HEX, duty: toSyncDutySubnet(duty1)},
+          [indices[1]]: {dependentRoot: ZERO_HASH_HEX, duty: toSyncDutySubnet(duty2)},
         },
         1: {
-          [indices[0]]: {dependentRoot: ZERO_HASH, duty: duty1},
-          [indices[1]]: {dependentRoot: ZERO_HASH, duty: duty2},
+          [indices[0]]: {dependentRoot: ZERO_HASH_HEX, duty: toSyncDutySubnet(duty1)},
+          [indices[1]]: {dependentRoot: ZERO_HASH_HEX, duty: toSyncDutySubnet(duty2)},
         },
-      },
+      } as typeof dutiesByIndexByPeriodObj,
       "Wrong dutiesService.dutiesByIndexByPeriod Map"
     );
     // then remove signer with pubkeys[0]
@@ -270,10 +280,18 @@ describe("SyncCommitteeDutiesService", function () {
     );
     expect(dutiesByIndexByPeriodObjAfterRemoval).to.deep.equal(
       {
-        0: {[indices[1]]: {dependentRoot: ZERO_HASH, duty: duty2}},
-        1: {[indices[1]]: {dependentRoot: ZERO_HASH, duty: duty2}},
-      },
+        0: {[indices[1]]: {dependentRoot: ZERO_HASH_HEX, duty: toSyncDutySubnet(duty2)}},
+        1: {[indices[1]]: {dependentRoot: ZERO_HASH_HEX, duty: toSyncDutySubnet(duty2)}},
+      } as typeof dutiesByIndexByPeriodObjAfterRemoval,
       "Wrong dutiesService.dutiesByIndexByPeriod Map"
     );
   });
 });
+
+function toSyncDutySubnet(duty: routes.validator.SyncDuty): SyncDutySubnet {
+  return {
+    pubkey: toHexString(duty.pubkey),
+    validatorIndex: duty.validatorIndex,
+    subnets: syncCommitteeIndicesToSubnets(duty.validatorSyncCommitteeIndices),
+  };
+}

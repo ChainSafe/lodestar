@@ -74,10 +74,9 @@ export class SyncContributionAndProofPool {
     const {contribution} = contributionAndProof;
     const {slot, beaconBlockRoot} = contribution;
     const rootHex = toHexString(beaconBlockRoot);
-    const lowestPermissibleSlot = this.lowestPermissibleSlot;
 
     // Reject if too old.
-    if (slot < lowestPermissibleSlot) {
+    if (slot < this.lowestPermissibleSlot) {
       return InsertOutcome.Old;
     }
 

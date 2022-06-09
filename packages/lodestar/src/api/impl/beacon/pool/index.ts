@@ -125,16 +125,33 @@ export function getBeaconPoolApi({
             // Worst case if `signature` is not valid, gossip peers will drop it and slightly downscore us.
             await validateSyncCommitteeSigOnly(chain, state, signature);
 
+            // The same validator can appear multiple times in the sync committee. It can appear multiple times per
+            // subnet even. First compute on which subnet the signature must be broadcasted to.
+            const subnets: number[] = [];
+
+            for (const indexInCommittee of indexesInCommittee) {
+              // Sync committee subnet members are just sequential in the order they appear in SyncCommitteeIndexes array
+              const subnet = Math.floor(indexInCommittee / SYNC_COMMITTEE_SUBNET_SIZE);
+              const indexInSubcommittee = indexInCommittee % SYNC_COMMITTEE_SUBNET_SIZE;
+              chain.syncCommitteeMessagePool.add(subnet, signature, indexInSubcommittee);
+
+              // Cheap de-duplication code to avoid using a Set. indexesInCommittee is always sorted
+              if (subnets.length === 0 || subnets[subnets.length - 1] !== subnet) {
+                subnets.push(subnet);
+              }
+            }
+
+            // TODO: Broadcast at once to all topics
             await Promise.all(
-              indexesInCommittee.map(async (indexInCommittee) => {
-                // Sync committee subnet members are just sequential in the order they appear in SyncCommitteeIndexes array
-                const subnet = Math.floor(indexInCommittee / SYNC_COMMITTEE_SUBNET_SIZE);
-                const indexInSubcommittee = indexInCommittee % SYNC_COMMITTEE_SUBNET_SIZE;
-                chain.syncCommitteeMessagePool.add(subnet, signature, indexInSubcommittee);
-                await network.gossip.publishSyncCommitteeSignature(signature, subnet);
-              })
+              subnets.map(async (subnet) => network.gossip.publishSyncCommitteeSignature(signature, subnet))
             );
           } catch (e) {
+            // TODO: gossipsub should allow publishing same message to different topics
+            // https://github.com/ChainSafe/js-libp2p-gossipsub/issues/272
+            if ((e as Error).message === "PublishError.Duplicate") {
+              return;
+            }
+
             errors.push(e as Error);
             logger.error(
               `Error on submitPoolSyncCommitteeSignatures [${i}]`,
