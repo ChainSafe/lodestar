@@ -41,6 +41,12 @@ export type SyncSelectionProof = {
 /** Neatly joins SyncDuty with the locally-generated `selectionProof`. */
 export type SyncDutyAndProofs = {
   duty: routes.validator.SyncDuty;
+  /**
+   * Array because the same validator can appear multiple times in the sync committee.
+   * `routes.validator.SyncDuty` `.validatorSyncCommitteeIndices` is an array for that reason.
+   * SelectionProof signs over slot + index in committee, so the length of `.selectionProofs` equals
+   * `.validatorSyncCommitteeIndices`.
+   */
   selectionProofs: SyncSelectionProof[];
 };
 
