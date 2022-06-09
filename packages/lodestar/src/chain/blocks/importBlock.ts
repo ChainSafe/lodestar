@@ -1,4 +1,4 @@
-import {ssz} from "@chainsafe/lodestar-types";
+import {altair, allForks, ssz} from "@chainsafe/lodestar-types";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {toHexString} from "@chainsafe/ssz";
 import {
@@ -6,10 +6,10 @@ import {
   CachedBeaconStateAltair,
   computeStartSlotAtEpoch,
   getEffectiveBalanceIncrementsZeroInactive,
-  altair,
   computeEpochAtSlot,
-  bellatrix,
-  allForks,
+  isBellatrixStateType,
+  RootCache,
+  processSlots,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IForkChoice, OnBlockPrecachedData, ForkChoiceError, ForkChoiceErrorCode} from "@chainsafe/lodestar-fork-choice";
 import {ILogger} from "@chainsafe/lodestar-utils";
@@ -121,7 +121,7 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
   // The latest block that is useful is at epoch N - 1 which may include attestations for epoch N - 1 or N - 2.
   if (!skipImportingAttestations && blockEpoch >= currentEpoch - FORK_CHOICE_ATT_EPOCH_LIMIT) {
     const attestations = block.message.body.attestations;
-    const rootCache = new altair.RootCache(postState);
+    const rootCache = new RootCache(postState);
     const parentSlot = chain.forkChoice.getBlock(block.message.parentRoot)?.slot;
     const invalidAttestationErrorsByCode = new Map<string, {error: Error; count: number}>();
 
@@ -200,6 +200,7 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
       // chain reorg
       pendingEvents.push(ChainEvent.forkChoiceReorg, newHead, oldHead, distance);
       chain.metrics?.forkChoiceReorg.inc();
+      chain.metrics?.forkChoiceReorgDistance.observe(distance);
     }
 
     // Lightclient server support (only after altair)
@@ -262,6 +263,9 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
   // Emit all events at once after fully completing importBlock()
   chain.emitter.emit(ChainEvent.block, block, postState);
   pendingEvents.emit();
+
+  // Register stat metrics about the block after importing it
+  chain.metrics?.parentBlockDistance.observe(block.message.slot - parentBlock.slot);
 }
 
 async function maybeIssueNextProposerEngineFcU(
@@ -274,13 +278,13 @@ async function maybeIssueNextProposerEngineFcU(
   if (prepareSlot !== chain.clock.currentSlot + 1 || prepareEpoch < chain.config.BELLATRIX_FORK_EPOCH) {
     return null;
   }
-  const prepareState = allForks.processSlots(state, prepareSlot);
+  const prepareState = processSlots(state, prepareSlot);
   // TODO wait till third/last interval of the slot to actual send an fcU
   // so that any head change is accomodated before that. However this could
   // be optimized if the last block receieved is already head. This will be
   // especially meaningful for mev boost which might have more delays
   // because of how protocol is designed
-  if (bellatrix.isBellatrixStateType(prepareState)) {
+  if (isBellatrixStateType(prepareState)) {
     try {
       const proposerIndex = prepareState.epochCtx.getBeaconProposer(prepareSlot);
       const feeRecipient = chain.beaconProposerCache.get(proposerIndex);

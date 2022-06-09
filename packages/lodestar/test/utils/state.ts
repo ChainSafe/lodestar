@@ -3,11 +3,10 @@ import {
   BeaconStateAllForks,
   CachedBeaconStateAllForks,
   createCachedBeaconState,
-  phase0,
   PubkeyIndexMap,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {BitArray} from "@chainsafe/ssz";
-import {allForks, altair, ssz} from "@chainsafe/lodestar-types";
+import {phase0, allForks, altair, ssz} from "@chainsafe/lodestar-types";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {
   EPOCHS_PER_HISTORICAL_VECTOR,

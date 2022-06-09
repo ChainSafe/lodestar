@@ -4,14 +4,13 @@ import {config} from "@chainsafe/lodestar-config/default";
 import {NetworkName} from "@chainsafe/lodestar-config/networks.js";
 import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {
-  allForks,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
   AttesterFlags,
   beforeProcessEpoch,
   parseAttesterFlags,
+  processSlots,
 } from "../../src/index.js";
-import {Validator} from "../../src/phase0/index.js";
 import {getInfuraBeaconUrl} from "../utils/infura.js";
 import {createCachedBeaconStateTest} from "../utils/state.js";
 import {csvAppend, readCsv} from "./csv.js";
@@ -60,7 +59,7 @@ const attesterFlagsCountZero: AttesterFlagsCount = {
   eligibleAttester: 0,
 };
 
-type ValidatorChangesCount = Record<keyof Omit<Validator, "pubkey" | "withdrawalCredentials">, number>;
+type ValidatorChangesCount = Record<keyof Omit<phase0.Validator, "pubkey" | "withdrawalCredentials">, number>;
 const validatorChangesCountZero: ValidatorChangesCount = {
   effectiveBalance: 0,
   slashed: 0,
@@ -97,7 +96,7 @@ async function analyzeEpochs(network: NetworkName, fromEpoch?: number): Promise<
     const postState = createCachedBeaconStateTest(stateTB, config);
 
     const epochProcess = beforeProcessEpoch(postState);
-    allForks.processSlots(postState, nextEpochSlot, null);
+    processSlots(postState, nextEpochSlot, null);
 
     const validatorCount = state.validators.length;
 

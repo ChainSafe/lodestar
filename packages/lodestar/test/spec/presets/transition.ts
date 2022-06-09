@@ -1,5 +1,5 @@
-import {allForks, BeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
-import {ssz} from "@chainsafe/lodestar-types";
+import {BeaconStateAllForks, stateTransition} from "@chainsafe/lodestar-beacon-state-transition";
+import {allForks, ssz} from "@chainsafe/lodestar-types";
 import {createIChainForkConfig, IChainConfig} from "@chainsafe/lodestar-config";
 import {ForkName} from "@chainsafe/lodestar-params";
 import {bnToNum} from "@chainsafe/lodestar-utils";
@@ -43,7 +43,7 @@ export const transition: TestRunnerFn<TransitionTestCase, BeaconStateAllForks> =
       let state = createCachedBeaconStateTest(testcase.pre, testConfig);
       for (let i = 0; i < meta.blocks_count; i++) {
         const signedBlock = testcase[`blocks_${i}`] as allForks.SignedBeaconBlock;
-        state = allForks.stateTransition(state, signedBlock, {
+        state = stateTransition(state, signedBlock, {
           verifyStateRoot: true,
           verifyProposer: false,
           verifySignatures: false,

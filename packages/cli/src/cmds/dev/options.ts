@@ -35,7 +35,7 @@ const devOwnOptions: ICliCommandOptions<IDevOwnArgs> = {
   },
 
   startValidators: {
-    description: "Start interop validators in inclusive range with notation '0:7'",
+    description: "Start interop validators in inclusive range with notation '0..7'",
     type: "string",
     group: "dev",
   },

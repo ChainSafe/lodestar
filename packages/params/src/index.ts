@@ -5,7 +5,7 @@ import {presetStatus} from "./presetStatus.js";
 import {userSelectedPreset} from "./setPreset.js";
 
 export * from "./interface/index.js";
-export {ForkName} from "./forkName.js";
+export {ForkName, ForkSeq} from "./forkName.js";
 export {presetToJson} from "./json.js";
 export {PresetName};
 

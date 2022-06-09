@@ -14,3 +14,13 @@ export function getAggregatedPubkey(signatureSet: ISignatureSet): PublicKey {
       throw Error("Unknown signature set type");
   }
 }
+
+export function getAggregatedPubkeysCount(signatureSets: ISignatureSet[]): number {
+  let pubkeysConut = 0;
+  for (const set of signatureSets) {
+    if (set.type === SignatureSetType.aggregate) {
+      pubkeysConut += set.pubkeys.length;
+    }
+  }
+  return pubkeysConut;
+}

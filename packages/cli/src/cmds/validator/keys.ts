@@ -11,7 +11,7 @@ import {fromHexString} from "@chainsafe/ssz";
 import {defaultNetwork, IGlobalArgs} from "../../options/index.js";
 import {parseRange, stripOffNewlines, YargsError} from "../../util/index.js";
 import {ValidatorDirManager} from "../../validatorDir/index.js";
-import {getAccountPaths} from "../account/paths.js";
+import {getAccountPaths} from "./paths.js";
 import {IValidatorCliArgs} from "./options.js";
 
 const depositDataPattern = new RegExp(/^deposit_data-\d+\.json$/gi);

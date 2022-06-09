@@ -1,9 +1,10 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import {ForkName} from "@chainsafe/lodestar-params";
+import {ForkName, ForkSeq} from "@chainsafe/lodestar-params";
 import {allForks, Epoch, Slot, Version} from "@chainsafe/lodestar-types";
 
 export interface IForkInfo {
   name: ForkName;
+  seq: ForkSeq;
   epoch: Epoch;
   version: Version;
 }
@@ -22,6 +23,8 @@ export interface IForkConfig {
 
   /** Get the hard-fork name at a given slot */
   getForkName(slot: Slot): ForkName;
+  /** Get the hard-fork sequence number at a given slot */
+  getForkSeq(slot: Slot): ForkSeq;
   /** Get the hard-fork version at a given slot */
   getForkVersion(slot: Slot): Version;
   /** Get SSZ types by hard-fork */

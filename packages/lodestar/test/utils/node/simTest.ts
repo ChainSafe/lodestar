@@ -1,14 +1,13 @@
 import {
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
-  allForks,
   CachedBeaconStateAllForks,
   beforeProcessEpoch,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IProtoBlock} from "@chainsafe/lodestar-fork-choice";
 import {SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@chainsafe/lodestar-params";
-import {Epoch, Slot} from "@chainsafe/lodestar-types";
+import {allForks, Epoch, Slot} from "@chainsafe/lodestar-types";
 import {Checkpoint} from "@chainsafe/lodestar-types/phase0";
 import {ILogger, mapValues} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
