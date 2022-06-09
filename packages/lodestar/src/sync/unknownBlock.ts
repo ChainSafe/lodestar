@@ -146,7 +146,14 @@ export class UnknownBlockSync {
       } else if (parentSlot <= finalizedSlot) {
         // the common ancestor of the downloading chain and canonical chain should be at least the finalized slot and
         // we should found it through forkchoice. If not, we should penalize all peers sending us this block chain
-        this.logger.error("Downloaded block parent is before finalized slot", {finalizedSlot, parentSlot});
+        // 0 - 1 - ... - n - finalizedSlot
+        //                \
+        //                parent 1 - parent 2 - ... - unknownParent block
+        this.logger.error("Downloaded block parent is before finalized slot", {
+          finalizedSlot,
+          parentSlot,
+          parentRoot: toHexString(this.config.getForkTypes(parentSlot).BeaconBlock.hashTreeRoot(signedBlock.message)),
+        });
         this.removeAndDownscoreAllDescendants(block);
       } else {
         this.onUnknownBlock(signedBlock, peerIdStr);
