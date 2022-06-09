@@ -9,13 +9,15 @@ import {RecursivePartial, fromHex} from "@chainsafe/lodestar-utils";
 import {BeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
 import * as mainnet from "./mainnet.js";
 import * as dev from "./dev.js";
+import * as gnosis from "./gnosis.js";
 import * as prater from "./prater.js";
 import * as kiln from "./kiln.js";
 import * as ropsten from "./ropsten.js";
 
-export type NetworkName = "mainnet" | "dev" | "prater" | "kiln" | "ropsten";
+export type NetworkName = "mainnet" | "dev" | "gnosis" | "prater" | "kiln" | "ropsten";
 export const networkNames: NetworkName[] = [
   "mainnet",
+  "gnosis",
   "prater",
   "kiln",
   "ropsten",
@@ -43,6 +45,8 @@ function getNetworkData(
       return mainnet;
     case "dev":
       return dev;
+    case "gnosis":
+      return gnosis;
     case "prater":
       return prater;
     case "kiln":
