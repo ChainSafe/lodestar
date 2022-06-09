@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 
 import {YargsError} from "./util/errors.js";
-import {getLodestarCli, yarg} from "./cli.js";
+import {getCli, yarg} from "./cli.js";
 import "source-map-support/register.js";
 
-const bcli = getLodestarCli();
+const flare = getCli();
 
-bcli
+flare
   .fail((msg, err) => {
     if (msg) {
       // Show command help message when no command is provided

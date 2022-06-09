@@ -5,7 +5,12 @@ import {hideBin} from "yargs/helpers";
 import {cmds} from "./cmds/index.js";
 import {registerCommandToYargs} from "./util/command.js";
 
-const topBanner = `Beacon chain debugging tool.
+const topBanner = `Beacon chain multi-purpose and debugging tool.
+
+Flare is a sudden brief burst of bright flame or light.
+In the wrong hands, can lead people astray.
+Use with care.
+
   * by ChainSafe Systems, 2018-2022`;
 const bottomBanner = `
 ✍️ Give feedback and report issues on GitHub:
@@ -17,9 +22,9 @@ export const yarg = yargs((hideBin as (args: string[]) => string[])(process.argv
  * Common factory for running the CLI and running integration tests
  * The CLI must actually be executed in a different script
  */
-export function getLodestarCli(): yargs.Argv {
+export function getCli(): yargs.Argv {
   const lodestar = yarg
-    .env("LODESTAR")
+    .env("FLARE")
     .parserConfiguration({
       // As of yargs v16.1.0 dot-notation breaks strictOptions()
       // Manually processing options is typesafe tho more verbose

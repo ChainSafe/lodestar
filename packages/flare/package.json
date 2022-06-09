@@ -1,5 +1,5 @@
 {
-  "name": "@chainsafe/bcli",
+  "name": "@chainsafe/flare",
   "version": "0.37.0",
   "description": "Beacon chain debugging tool",
   "author": "ChainSafe Systems",
@@ -32,7 +32,7 @@
     "*.js"
   ],
   "bin": {
-    "bcli": "lib/index.js"
+    "flare": "lib/index.js"
   },
   "scripts": {
     "clean": "rm -rf lib && rm -f *.tsbuildinfo",
@@ -41,7 +41,7 @@
     "build:types:watch": "yarn run build:types --watch",
     "build:lib:watch": "yarn run build:lib --watch",
     "build:typedocs": "typedoc --exclude src/index.ts --out typedocs src",
-    "check-build": "node -e \"(async function() { await import('./lib/index.js') })()\" bcli --help",
+    "check-build": "node -e \"(async function() { await import('./lib/index.js') })()\" flare --help",
     "check-types": "tsc",
     "lint": "eslint --color --ext .ts src/",
     "lint:fix": "yarn run lint --fix",
