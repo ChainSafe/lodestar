@@ -33,9 +33,8 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
   const enrArgs = parseEnrArgs(args);
   overwriteEnrWithCliArgs(enr, enrArgs, beaconNodeOptions.getWithDefaults());
 
-  // Custom paths different than regular beacon, validator paths
-  // network="dev" will store all data in separate dir than other networks
-  args.network = "dev";
+  // Note: defaults to network "dev", to all paths are custom and don't conflict with networks.
+  // Flag --reset cleans up the custom dirs on dev stop
   const beaconPaths = getBeaconPaths(args);
   const validatorPaths = getValidatorPaths(args);
   const beaconDbDir = beaconPaths.dbDir;
