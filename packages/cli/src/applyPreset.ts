@@ -1,4 +1,17 @@
-// MUST import this file first before anything and not import any Lodestar code
+// MUST import this file first before anything and not import any Lodestar code.
+//
+// ## Rationale
+//
+// Lodestar implemented PRESET / CONFIG separation to allow importing types and preset constants directly
+// see https://github.com/ChainSafe/lodestar/pull/2585
+//
+// However this prevents dynamic configuration changes which is exactly what the CLI required before.
+// - The dev command can't apply the minimal preset dynamically
+// - `--network gnosis` can't apply a different preset dynamically
+//
+// Running this file allows us to keep a static export strategy while NOT requiring users to
+// set LODESTAR_PRESET manually every time.
+
 const network = valueOfArg("network");
 const preset = valueOfArg("preset");
 
