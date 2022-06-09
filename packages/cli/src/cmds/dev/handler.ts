@@ -7,7 +7,6 @@ import {GENESIS_SLOT} from "@chainsafe/lodestar-params";
 import {BeaconNode, BeaconDb, initStateFromAnchorState, createNodeJsLibp2p, nodeUtils} from "@chainsafe/lodestar";
 import {SlashingProtection, Validator, SignerType} from "@chainsafe/lodestar-validator";
 import {LevelDbController} from "@chainsafe/lodestar-db";
-import type {SecretKey} from "@chainsafe/bls/types";
 import {interopSecretKey} from "@chainsafe/lodestar-beacon-state-transition";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {ACTIVE_PRESET, PresetName} from "@chainsafe/lodestar-params";
@@ -15,7 +14,7 @@ import {onGracefulShutdown} from "../../util/process.js";
 import {createEnr, createPeerId, overwriteEnrWithCliArgs} from "../../config/index.js";
 import {IGlobalArgs, parseEnrArgs} from "../../options/index.js";
 import {initializeOptionsAndConfig} from "../init/handler.js";
-import {mkdir, getCliLogger} from "../../util/index.js";
+import {mkdir, getCliLogger, parseRange} from "../../util/index.js";
 import {getBeaconPaths} from "../beacon/paths.js";
 import {getValidatorPaths} from "../validator/paths.js";
 import {getVersionData} from "../../util/version.js";
@@ -112,22 +111,8 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
   }, logger.info.bind(logger));
 
   if (args.startValidators) {
-    const secretKeys: SecretKey[] = [];
-    const [fromIndex, toIndex] = args.startValidators.split(":").map((s) => parseInt(s));
-    const valCount = anchorState.validators.length;
-    const maxIndex = fromIndex + valCount - 1;
-
-    if (fromIndex > toIndex) {
-      throw Error(`Invalid startValidators arg '${args.startValidators}' - fromIndex > toIndex`);
-    }
-
-    if (toIndex > maxIndex) {
-      throw Error(`Invalid startValidators arg '${args.startValidators}' - state has ${valCount} validators`);
-    }
-
-    for (let i = fromIndex; i <= toIndex; i++) {
-      secretKeys.push(interopSecretKey(i));
-    }
+    const indexes = parseRange(args.startValidators);
+    const secretKeys = indexes.map((i) => interopSecretKey(i));
 
     const dbPath = path.join(validatorsDbDir, "validators");
     fs.mkdirSync(dbPath, {recursive: true});
