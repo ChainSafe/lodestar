@@ -1,11 +1,11 @@
 import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {bytesToInt} from "@chainsafe/lodestar-utils";
-import {Db, Bucket, Repository, IDbMetrics} from "@chainsafe/lodestar-db";
+import {Db, Bucket, Repository} from "@chainsafe/lodestar-db";
 
 export class Eth1DataRepository extends Repository<number, phase0.Eth1DataOrdered> {
-  constructor(config: IChainForkConfig, db: Db, metrics?: IDbMetrics) {
-    super(config, db, Bucket.phase0_eth1Data, ssz.phase0.Eth1DataOrdered, metrics);
+  constructor(config: IChainForkConfig, db: Db) {
+    super(config, db, Bucket.phase0_eth1Data, ssz.phase0.Eth1DataOrdered);
   }
 
   decodeKey(data: Buffer): number {

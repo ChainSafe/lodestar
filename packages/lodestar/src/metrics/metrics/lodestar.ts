@@ -1055,5 +1055,28 @@ export function createLodestarMetrics(
         help: "ExecutionEngineHttp client - static config urls count",
       }),
     },
+
+    db: {
+      dbReadReq: register.gauge<"bucket">({
+        name: "lodestar_db_read_req_total",
+        help: "Total count of db read requests, may read 0 or more items",
+        labelNames: ["bucket"],
+      }),
+      dbReadItems: register.gauge<"bucket">({
+        name: "lodestar_db_read_items_total",
+        help: "Total count of db read items, item = key | value | entry",
+        labelNames: ["bucket"],
+      }),
+      dbWriteReq: register.gauge<"bucket">({
+        name: "lodestar_db_write_req_total",
+        help: "Total count of db write requests, may write 0 or more items",
+        labelNames: ["bucket"],
+      }),
+      dbWriteItems: register.gauge<"bucket">({
+        name: "lodestar_db_write_items_total",
+        help: "Total count of db write items",
+        labelNames: ["bucket"],
+      }),
+    },
   };
 }

@@ -2,6 +2,8 @@
  * @module db/controller
  */
 
+import {ILevelDbControllerMetrics} from "./metrics.js";
+
 /** Shortcut for Uint8Array based IDatabaseController */
 export type Db = IDatabaseController<Uint8Array, Uint8Array>;
 
@@ -16,7 +18,15 @@ export interface IFilterOptions<K> {
   lte?: K;
   reverse?: boolean;
   limit?: number;
+  /** For metrics */
+  bucketId?: string;
 }
+
+export type DbReqOpts = {
+  /** For metrics */
+  bucketId?: string;
+};
+
 export interface IKeyValue<K, V> {
   key: K;
   value: V;
@@ -28,16 +38,19 @@ export interface IDatabaseController<K, V> {
   start(): Promise<void>;
   stop(): Promise<void>;
 
+  /** To inject metrics after CLI initialization */
+  setMetrics(metrics: ILevelDbControllerMetrics): void;
+
   // Core API
 
-  get(key: K): Promise<V | null>;
-  put(key: K, value: V): Promise<void>;
-  delete(key: K): Promise<void>;
+  get(key: K, opts?: DbReqOpts): Promise<V | null>;
+  put(key: K, value: V, opts?: DbReqOpts): Promise<void>;
+  delete(key: K, opts?: DbReqOpts): Promise<void>;
 
   // Batch operations
 
-  batchPut(items: IKeyValue<K, V>[]): Promise<void>;
-  batchDelete(keys: K[]): Promise<void>;
+  batchPut(items: IKeyValue<K, V>[], opts?: DbReqOpts): Promise<void>;
+  batchDelete(keys: K[], opts?: DbReqOpts): Promise<void>;
 
   // Iterate over entries
 
