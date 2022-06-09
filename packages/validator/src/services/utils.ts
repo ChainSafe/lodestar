@@ -1,11 +1,11 @@
-import {routes} from "@chainsafe/lodestar-api";
+import {SYNC_COMMITTEE_SUBNET_SIZE} from "@chainsafe/lodestar-params";
 import {CommitteeIndex, SubcommitteeIndex} from "@chainsafe/lodestar-types";
 import {AttDutyAndProof} from "./attestationDuties.js";
-import {SyncDutyAndProofs, SyncSelectionProof} from "./syncCommitteeDuties.js";
+import {SyncDutyAndProofs, SyncDutySubnet, SyncSelectionProof} from "./syncCommitteeDuties.js";
 
 /** Sync committee duty associated to a single sub committee subnet */
 export type SubcommitteeDuty = {
-  duty: routes.validator.SyncDuty;
+  duty: SyncDutySubnet;
   selectionProof: SyncSelectionProof["selectionProof"];
 };
 
@@ -42,4 +42,17 @@ export function groupSyncDutiesBySubcommitteeIndex(
   }
 
   return dutiesBySubcommitteeIndex;
+}
+
+/**
+ * Given a list of indexes of a sync committee returns the list of unique subnet numbers the indexes are part of
+ */
+export function syncCommitteeIndicesToSubnets(indexesInCommittee: number[]): number[] {
+  const subnets = new Set<number>();
+
+  for (const indexInCommittee of indexesInCommittee) {
+    subnets.add(Math.floor(indexInCommittee / SYNC_COMMITTEE_SUBNET_SIZE));
+  }
+
+  return Array.from(subnets);
 }
