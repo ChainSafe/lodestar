@@ -154,6 +154,10 @@ export class Validator {
     this.clock = clock;
     this.validatorStore = validatorStore;
     this.indicesService = indicesService;
+
+    if (metrics) {
+      opts.dbOps.controller.setMetrics(metrics.db);
+    }
   }
 
   /** Waits for genesis and genesis time */

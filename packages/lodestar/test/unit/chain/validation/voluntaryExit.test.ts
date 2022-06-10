@@ -2,14 +2,13 @@ import sinon, {SinonStubbedInstance} from "sinon";
 
 import {config} from "@chainsafe/lodestar-config/default";
 import {
-  phase0,
   CachedBeaconStateAllForks,
   computeEpochAtSlot,
   computeDomain,
   computeSigningRoot,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
-import {ssz} from "@chainsafe/lodestar-types";
+import {phase0, ssz} from "@chainsafe/lodestar-types";
 
 import {DOMAIN_VOLUNTARY_EXIT, FAR_FUTURE_EPOCH, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import bls from "@chainsafe/bls";

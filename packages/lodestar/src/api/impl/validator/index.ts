@@ -443,7 +443,8 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
             // TODO: Validate in batch
             const {indexedAttestation, committeeIndices} = await validateGossipAggregateAndProof(
               chain,
-              signedAggregateAndProof
+              signedAggregateAndProof,
+              true // skip known attesters check
             );
 
             chain.aggregatedAttestationPool.add(
@@ -500,7 +501,8 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
             // TODO: Validate in batch
             const {syncCommitteeParticipants} = await validateSyncCommitteeGossipContributionAndProof(
               chain,
-              contributionAndProof
+              contributionAndProof,
+              true // skip known participants check
             );
             chain.syncContributionAndProofPool.add(contributionAndProof.message, syncCommitteeParticipants);
             await network.gossip.publishContributionAndProof(contributionAndProof);

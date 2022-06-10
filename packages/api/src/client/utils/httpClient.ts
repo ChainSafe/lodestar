@@ -80,10 +80,9 @@ export class HttpClient implements IHttpClient {
     const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
 
     // Attach global signal to this request's controller
-    const signalGlobal = this.getAbortSignal && this.getAbortSignal();
-    if (signalGlobal) {
-      signalGlobal.addEventListener("abort", () => controller.abort());
-    }
+    const onGlobalSignalAbort = controller.abort.bind(controller);
+    const signalGlobal = this.getAbortSignal?.();
+    signalGlobal?.addEventListener("abort", onGlobalSignalAbort);
 
     const routeId = opts.routeId; // TODO: Should default to "unknown"?
     const timer = this.metrics?.requestTime.startTimer({routeId});
@@ -112,6 +111,8 @@ export class HttpClient implements IHttpClient {
 
       return await getBody(res);
     } catch (e) {
+      this.metrics?.requestErrors.inc({routeId});
+
       if (isAbortedError(e as Error)) {
         if (signalGlobal?.aborted) {
           throw new ErrorAborted("REST client");
@@ -120,18 +121,14 @@ export class HttpClient implements IHttpClient {
         } else {
           throw Error("Unknown aborted error");
         }
+      } else {
+        throw e;
       }
-
-      this.metrics?.errors.inc({routeId});
-
-      throw e;
     } finally {
       timer?.();
 
       clearTimeout(timeout);
-      if (signalGlobal) {
-        signalGlobal.removeEventListener("abort", controller.abort);
-      }
+      signalGlobal?.removeEventListener("abort", onGlobalSignalAbort);
     }
   }
 }

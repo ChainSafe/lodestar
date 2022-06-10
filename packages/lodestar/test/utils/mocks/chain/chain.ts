@@ -2,10 +2,9 @@ import sinon from "sinon";
 import {AbortController} from "@chainsafe/abort-controller";
 
 import {CompositeTypeAny, toHexString, TreeView} from "@chainsafe/ssz";
-import {allForks, UintNum64, Root, Slot, ssz, Uint16, UintBn64} from "@chainsafe/lodestar-types";
+import {phase0, allForks, UintNum64, Root, Slot, ssz, Uint16, UintBn64} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {BeaconStateAllForks, CachedBeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
-import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {CheckpointWithHex, IForkChoice, IProtoBlock, ExecutionStatus} from "@chainsafe/lodestar-fork-choice";
 import {defaultDefaultFeeRecipient} from "@chainsafe/lodestar-validator";
 

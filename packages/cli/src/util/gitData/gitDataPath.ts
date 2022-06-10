@@ -14,8 +14,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 //   in Github to resolve that version to a specific commit. While this is okay, git-data.json gives
 //   a gurantee of the exact commit at build time.
 //
-// - For NPM release (nightly): canary commits include the commit, so this feature is not really
-//   necessary. However, it's more cumbersome to have conditional logic on stable / nightly.
+// - For NPM release (dev): canary commits include the commit, so this feature is not really
+//   necessary. However, it's more cumbersome to have conditional logic on stable / dev.
 //
 // - For build from source: .git folder is available in the context of the built code, so it can extract
 //   branch and commit directly without the need for .git-data.json.

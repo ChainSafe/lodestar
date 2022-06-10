@@ -130,10 +130,10 @@ export class BeaconNode {
 
     let metrics = null;
     if (opts.metrics.enabled) {
-      // Since the db is managed separately, db metrics must be manually added to the registry
-      db.metricsRegistry && metricsRegistries.push(db.metricsRegistry);
       metrics = createMetrics(opts.metrics, config, anchorState, logger.child({module: "VMON"}), metricsRegistries);
       initBeaconMetrics(metrics, anchorState);
+      // Since the db is instantiated before this, metrics must be injected manually afterwards
+      db.setMetrics(metrics.db);
     }
 
     const chain = new BeaconChain(opts.chain, {
@@ -144,7 +144,7 @@ export class BeaconNode {
       anchorState,
       eth1: initializeEth1ForBlockProduction(
         opts.eth1,
-        {config, db, logger: logger.child(opts.logger.eth1), signal},
+        {config, db, metrics, logger: logger.child(opts.logger.eth1), signal},
         anchorState
       ),
       executionEngine: initializeExecutionEngine(opts.executionEngine, signal),

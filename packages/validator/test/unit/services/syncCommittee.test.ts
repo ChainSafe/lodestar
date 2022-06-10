@@ -69,9 +69,9 @@ describe("SyncCommitteeService", function () {
     const duties: SyncDutyAndProofs[] = [
       {
         duty: {
-          pubkey: pubkeys[0],
+          pubkey: toHexString(pubkeys[0]),
           validatorIndex: 0,
-          validatorSyncCommitteeIndices: [7],
+          subnets: [0],
         },
         selectionProofs: [{selectionProof: ZERO_HASH, subcommitteeIndex: 0}],
       },

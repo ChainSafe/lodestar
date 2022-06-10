@@ -227,6 +227,8 @@ export class BeaconChain implements IBeaconChain {
     new PrecomputeNextEpochTransitionScheduler(this, this.config, metrics, this.logger, signal);
 
     handleChainEvents.bind(this)(this.abortController.signal);
+
+    metrics?.opPool.aggregatedAttestationPoolSize.addCollect(() => this.onScrapeMetrics());
   }
 
   close(): void {
@@ -345,6 +347,18 @@ export class BeaconChain implements IBeaconChain {
     await writeIfNotExist(filepath, bytes);
 
     this.logger.debug("Persisted invalid ssz object", {id: suffix, filepath});
+  }
+
+  private onScrapeMetrics(): void {
+    const {attestationCount, attestationDataCount} = this.aggregatedAttestationPool.getAttestationCount();
+    this.metrics?.opPool.aggregatedAttestationPoolSize.set(attestationCount);
+    this.metrics?.opPool.aggregatedAttestationPoolUniqueData.set(attestationDataCount);
+    this.metrics?.opPool.attestationPoolSize.set(this.attestationPool.getAttestationCount());
+    this.metrics?.opPool.attesterSlashingPoolSize.set(this.opPool.attesterSlashingsSize);
+    this.metrics?.opPool.proposerSlashingPoolSize.set(this.opPool.proposerSlashingsSize);
+    this.metrics?.opPool.voluntaryExitPoolSize.set(this.opPool.voluntaryExitsSize);
+    this.metrics?.opPool.syncCommitteeMessagePoolSize.set(this.syncCommitteeMessagePool.size);
+    this.metrics?.opPool.syncContributionAndProofPoolSize.set(this.syncContributionAndProofPool.size);
   }
 
   async updateBeaconProposerData(epoch: Epoch, proposers: ProposerPreparationData[]): Promise<void> {

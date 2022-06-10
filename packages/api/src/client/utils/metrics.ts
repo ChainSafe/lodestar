@@ -1,6 +1,6 @@
 export type Metrics = {
   requestTime: IHistogram<"routeId">;
-  errors: IGauge<"routeId">;
+  requestErrors: IGauge<"routeId">;
 };
 
 type LabelValues<T extends string> = Partial<Record<T, string | number>>;

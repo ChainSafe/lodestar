@@ -54,6 +54,8 @@ export type SignerRemote = {
   pubkeyHex: PubkeyHex;
 };
 
+type BLSPubkeyMaybeHex = BLSPubkey | string;
+
 /**
  * Validator entity capable of producing signatures. Either:
  * - local: With BLS secret key
@@ -224,7 +226,7 @@ export class ValidatorStore {
   }
 
   async signSyncCommitteeSignature(
-    pubkey: BLSPubkey,
+    pubkey: BLSPubkeyMaybeHex,
     validatorIndex: ValidatorIndex,
     slot: Slot,
     beaconBlockRoot: Root
@@ -241,7 +243,7 @@ export class ValidatorStore {
   }
 
   async signContributionAndProof(
-    duty: Pick<routes.validator.SyncDuty, "pubkey" | "validatorIndex">,
+    duty: {pubkey: BLSPubkeyMaybeHex; validatorIndex: number},
     selectionProof: BLSSignature,
     contribution: altair.SyncCommitteeContribution
   ): Promise<altair.SignedContributionAndProof> {
@@ -260,7 +262,7 @@ export class ValidatorStore {
     };
   }
 
-  async signAttestationSelectionProof(pubkey: BLSPubkey, slot: Slot): Promise<BLSSignature> {
+  async signAttestationSelectionProof(pubkey: BLSPubkeyMaybeHex, slot: Slot): Promise<BLSSignature> {
     const domain = this.config.getDomain(DOMAIN_SELECTION_PROOF, slot);
     const signingRoot = computeSigningRoot(ssz.Slot, slot, domain);
 
@@ -268,7 +270,7 @@ export class ValidatorStore {
   }
 
   async signSyncCommitteeSelectionProof(
-    pubkey: BLSPubkey | string,
+    pubkey: BLSPubkeyMaybeHex,
     slot: Slot,
     subcommitteeIndex: number
   ): Promise<BLSSignature> {
@@ -284,7 +286,7 @@ export class ValidatorStore {
   }
 
   async signVoluntaryExit(
-    pubkey: PubkeyHex,
+    pubkey: BLSPubkeyMaybeHex,
     validatorIndex: number,
     exitEpoch: Epoch
   ): Promise<phase0.SignedVoluntaryExit> {
@@ -319,7 +321,7 @@ export class ValidatorStore {
     }
   }
 
-  private async getSignature(pubkey: BLSPubkey | string, signingRoot: Uint8Array): Promise<BLSSignature> {
+  private async getSignature(pubkey: BLSPubkeyMaybeHex, signingRoot: Uint8Array): Promise<BLSSignature> {
     // TODO: Refactor indexing to not have to run toHexString() on the pubkey every time
     const pubkeyHex = typeof pubkey === "string" ? pubkey : toHexString(pubkey);
 

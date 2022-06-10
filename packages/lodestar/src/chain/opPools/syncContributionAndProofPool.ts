@@ -34,6 +34,7 @@ export type SyncContributionFast = {
 
 /** Hex string of `contribution.beaconBlockRoot` */
 type BlockRootHex = string;
+type Subnet = number;
 
 /**
  * Cache SyncCommitteeContribution and seen ContributionAndProof.
@@ -41,10 +42,10 @@ type BlockRootHex = string;
  * This stays in-memory and should be pruned per slot.
  */
 export class SyncContributionAndProofPool {
-  private readonly bestContributionBySubnetRootSlot = new MapDef<
+  private readonly bestContributionBySubnetRootBySlot = new MapDef<
     Slot,
-    MapDef<BlockRootHex, Map<number, SyncContributionFast>>
-  >(() => new MapDef<BlockRootHex, Map<number, SyncContributionFast>>(() => new Map<number, SyncContributionFast>()));
+    MapDef<BlockRootHex, Map<Subnet, SyncContributionFast>>
+  >(() => new MapDef<BlockRootHex, Map<Subnet, SyncContributionFast>>(() => new Map<number, SyncContributionFast>()));
 
   private lowestPermissibleSlot = 0;
 
@@ -55,6 +56,17 @@ export class SyncContributionAndProofPool {
     }
   }
 
+  /** Returns current count of unique SyncContributionFast by block root and subnet */
+  get size(): number {
+    let count = 0;
+    for (const bestContributionByRootBySubnet of this.bestContributionBySubnetRootBySlot.values()) {
+      for (const bestContributionByRoot of bestContributionByRootBySubnet.values()) {
+        count += bestContributionByRoot.size;
+      }
+    }
+    return count;
+  }
+
   /**
    * Only call this once we pass all validation.
    */
@@ -62,15 +74,14 @@ export class SyncContributionAndProofPool {
     const {contribution} = contributionAndProof;
     const {slot, beaconBlockRoot} = contribution;
     const rootHex = toHexString(beaconBlockRoot);
-    const lowestPermissibleSlot = this.lowestPermissibleSlot;
 
     // Reject if too old.
-    if (slot < lowestPermissibleSlot) {
+    if (slot < this.lowestPermissibleSlot) {
       return InsertOutcome.Old;
     }
 
     // Limit object per slot
-    const bestContributionBySubnetByRoot = this.bestContributionBySubnetRootSlot.getOrDefault(slot);
+    const bestContributionBySubnetByRoot = this.bestContributionBySubnetRootBySlot.getOrDefault(slot);
     if (bestContributionBySubnetByRoot.size >= MAX_ITEMS_PER_SLOT) {
       throw new OpPoolError({code: OpPoolErrorCode.REACHED_MAX_PER_SLOT});
     }
@@ -90,7 +101,7 @@ export class SyncContributionAndProofPool {
    * This is for the block factory, the same to process_sync_committee_contributions in the spec.
    */
   getAggregate(slot: Slot, prevBlockRoot: Root): altair.SyncAggregate {
-    const bestContributionBySubnet = this.bestContributionBySubnetRootSlot.get(slot)?.get(toHexString(prevBlockRoot));
+    const bestContributionBySubnet = this.bestContributionBySubnetRootBySlot.get(slot)?.get(toHexString(prevBlockRoot));
     if (!bestContributionBySubnet || bestContributionBySubnet.size === 0) {
       // TODO: Add metric for missing SyncAggregate
       // Must return signature as G2_POINT_AT_INFINITY when participating bits are empty
@@ -110,7 +121,7 @@ export class SyncContributionAndProofPool {
    * We don't want to prune by clock slot in case there's a long period of skipped slots.
    */
   prune(headSlot: Slot): void {
-    pruneBySlot(this.bestContributionBySubnetRootSlot, headSlot, SLOTS_RETAINED);
+    pruneBySlot(this.bestContributionBySubnetRootBySlot, headSlot, SLOTS_RETAINED);
     this.lowestPermissibleSlot = Math.max(headSlot - SLOTS_RETAINED, 0);
   }
 }

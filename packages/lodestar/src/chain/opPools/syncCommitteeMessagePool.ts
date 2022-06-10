@@ -44,6 +44,17 @@ export class SyncCommitteeMessagePool {
   >(() => new MapDef<Subnet, Map<BlockRootHex, ContributionFast>>(() => new Map<BlockRootHex, ContributionFast>()));
   private lowestPermissibleSlot = 0;
 
+  /** Returns current count of unique ContributionFast by block root and subnet */
+  get size(): number {
+    let count = 0;
+    for (const contributionsByRootBySubnet of this.contributionsByRootBySubnetBySlot.values()) {
+      for (const contributionsByRoot of contributionsByRootBySubnet.values()) {
+        count += contributionsByRoot.size;
+      }
+    }
+    return count;
+  }
+
   // TODO: indexInSubcommittee: number should be indicesInSyncCommittee
   add(subnet: Subnet, signature: altair.SyncCommitteeMessage, indexInSubcommittee: number): InsertOutcome {
     const {slot, beaconBlockRoot} = signature;

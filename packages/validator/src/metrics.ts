@@ -311,13 +311,35 @@ export function getMetrics(register: MetricsRegister, gitData: LodestarGitData) 
         buckets: [0.01, 0.1, 1, 5],
       }),
 
-      errors: register.gauge<{routeId: string}>({
-        name: "vc_rest_api_client_errors_total",
-        help: "Total count of errors calling the REST API client by routeId",
+      requestErrors: register.gauge<{routeId: string}>({
+        name: "vc_rest_api_client_request_errors_total",
+        help: "Total count of errors on REST API client requests by routeId",
         labelNames: ["routeId"],
       }),
     },
 
+    db: {
+      dbReadReq: register.gauge<{bucket: string}>({
+        name: "validator_db_read_req_total",
+        help: "Total count of db read requests, may read 0 or more items",
+        labelNames: ["bucket"],
+      }),
+      dbReadItems: register.gauge<{bucket: string}>({
+        name: "validator_db_read_items_total",
+        help: "Total count of db read items, item = key | value | entry",
+        labelNames: ["bucket"],
+      }),
+      dbWriteReq: register.gauge<{bucket: string}>({
+        name: "validator_db_write_req_total",
+        help: "Total count of db write requests, may write 0 or more items",
+        labelNames: ["bucket"],
+      }),
+      dbWriteItems: register.gauge<{bucket: string}>({
+        name: "validator_db_write_items_total",
+        help: "Total count of db write items",
+        labelNames: ["bucket"],
+      }),
+    },
     // Doppelganger check
 
     doppelganger: {

@@ -1,5 +1,5 @@
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import {Bucket, IDatabaseController, IDbMetrics, Repository} from "@chainsafe/lodestar-db";
+import {Bucket, IDatabaseController, Repository} from "@chainsafe/lodestar-db";
 import {phase0, ssz} from "@chainsafe/lodestar-types";
 
 /**
@@ -9,7 +9,7 @@ import {phase0, ssz} from "@chainsafe/lodestar-types";
  * Used to prepare light client updates
  */
 export class CheckpointHeaderRepository extends Repository<Uint8Array, phase0.BeaconBlockHeader> {
-  constructor(config: IChainForkConfig, db: IDatabaseController<Uint8Array, Uint8Array>, metrics?: IDbMetrics) {
-    super(config, db, Bucket.lightClient_checkpointHeader, ssz.phase0.BeaconBlockHeader, metrics);
+  constructor(config: IChainForkConfig, db: IDatabaseController<Uint8Array, Uint8Array>) {
+    super(config, db, Bucket.lightClient_checkpointHeader, ssz.phase0.BeaconBlockHeader);
   }
 }

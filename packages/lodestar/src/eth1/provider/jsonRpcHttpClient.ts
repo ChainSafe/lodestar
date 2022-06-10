@@ -3,7 +3,8 @@
 import fetch from "cross-fetch";
 
 import {ErrorAborted, TimeoutError} from "@chainsafe/lodestar-utils";
-import {IJson, IRpcPayload, ReqOpts} from "../interface.js";
+import {IGauge, IHistogram} from "../../metrics/interface.js";
+import {IJson, IRpcPayload} from "../interface.js";
 import {encodeJwtToken} from "./jwt.js";
 /**
  * Limits the amount of response text printed with RPC or parsing errors
@@ -24,6 +25,20 @@ interface IRpcResponseError {
   };
 }
 
+export type ReqOpts = {
+  timeout?: number;
+  // To label request metrics
+  routeId?: string;
+};
+
+export type JsonRpcHttpClientMetrics = {
+  requestTime: IHistogram<"routeId">;
+  requestErrors: IGauge<"routeId">;
+  requestUsedFallbackUrl: IGauge;
+  activeRequests: IGauge;
+  configUrlsCount: IGauge;
+};
+
 export interface IJsonRpcHttpClient {
   fetch<R, P = IJson[]>(payload: IRpcPayload<P>, opts?: ReqOpts): Promise<R>;
   fetchBatch<R>(rpcPayloadArr: IRpcPayload[], opts?: ReqOpts): Promise<R[]>;
@@ -31,13 +46,15 @@ export interface IJsonRpcHttpClient {
 
 export class JsonRpcHttpClient implements IJsonRpcHttpClient {
   private id = 1;
+  private activeRequests = 0;
   /**
    * Optional: If provided, use this jwt secret to HS256 encode and add a jwt token in the
    * request header which can be authenticated by the RPC server to provide access.
    * A fresh token is generated on each requests as EL spec mandates the ELs to check
    * the token freshness +-5 seconds (via `iat` property of the token claim)
    */
-  private jwtSecret?: Uint8Array;
+  private readonly jwtSecret?: Uint8Array;
+  private readonly metrics: JsonRpcHttpClientMetrics | null;
 
   constructor(
     private readonly urls: string[],
@@ -52,6 +69,7 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
        * and it might deny responses to the RPC requests.
        */
       jwtSecret?: Uint8Array;
+      metrics?: JsonRpcHttpClientMetrics | null;
     }
   ) {
     // Sanity check for all URLs to be properly defined. Otherwise it will error in loop on fetch
@@ -63,7 +81,17 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
         throw Error(`JsonRpcHttpClient.urls[${i}] is empty or undefined: ${url}`);
       }
     }
+
     this.jwtSecret = opts?.jwtSecret;
+    this.metrics = opts?.metrics ?? null;
+
+    // Set config metric gauges once
+
+    const metrics = this.metrics;
+    if (metrics) {
+      metrics.configUrlsCount.set(urls.length);
+      metrics.activeRequests.addCollect(() => metrics.activeRequests.set(this.activeRequests));
+    }
   }
 
   /**
@@ -91,9 +119,13 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
   private async fetchJson<R, T = unknown>(json: T, opts?: ReqOpts): Promise<R> {
     let lastError: Error | null = null;
 
-    for (const url of this.urls) {
+    for (let i = 0; i < this.urls.length; i++) {
+      if (i > 0) {
+        this.metrics?.requestUsedFallbackUrl.inc(1);
+      }
+
       try {
-        return await this.fetchJsonOneUrl(url, json, opts);
+        return await this.fetchJsonOneUrl<R, T>(this.urls[i], json, opts);
       } catch (e) {
         if (this.opts?.shouldNotFallback?.(e as Error)) {
           throw e;
@@ -124,15 +156,15 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
     // - request to http://missing-url.com/ failed, reason: getaddrinfo ENOTFOUND missing-url.com
 
     const controller = new AbortController();
-    const timeout = setTimeout(() => {
-      controller.abort();
-    }, opts?.timeout ?? this.opts?.timeout ?? REQUEST_TIMEOUT);
+    const timeout = setTimeout(() => controller.abort(), opts?.timeout ?? this.opts?.timeout ?? REQUEST_TIMEOUT);
 
     const onParentSignalAbort = (): void => controller.abort();
+    this.opts?.signal?.addEventListener("abort", onParentSignalAbort, {once: true});
 
-    if (this.opts?.signal) {
-      this.opts.signal.addEventListener("abort", onParentSignalAbort, {once: true});
-    }
+    // Default to "unknown" to prevent mixing metrics with others.
+    const routeId = opts?.routeId ?? "unknown";
+    const timer = this.metrics?.requestTime.startTimer({routeId});
+    this.activeRequests++;
 
     try {
       const headers: Record<string, string> = {"Content-Type": "application/json"};
@@ -154,9 +186,6 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
         body: JSON.stringify(json),
         headers,
         signal: controller.signal,
-      }).finally(() => {
-        clearTimeout(timeout);
-        this.opts?.signal?.removeEventListener("abort", onParentSignalAbort);
       });
 
       const body = await res.text();
@@ -168,6 +197,8 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
 
       return parseJson(body);
     } catch (e) {
+      this.metrics?.requestErrors.inc({routeId});
+
       if (controller.signal.aborted) {
         // controller will abort on both parent signal abort + timeout of this specific request
         if (this.opts?.signal?.aborted) {
@@ -178,6 +209,12 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
       } else {
         throw e;
       }
+    } finally {
+      timer?.();
+      this.activeRequests--;
+
+      clearTimeout(timeout);
+      this.opts?.signal?.removeEventListener("abort", onParentSignalAbort);
     }
   }
 }

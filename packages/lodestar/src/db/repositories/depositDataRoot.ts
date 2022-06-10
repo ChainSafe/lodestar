@@ -2,7 +2,7 @@ import {ByteVectorType, CompositeViewDU, ListCompositeType} from "@chainsafe/ssz
 import {Root, ssz} from "@chainsafe/lodestar-types";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {bytesToInt} from "@chainsafe/lodestar-utils";
-import {Db, Bucket, Repository, IKeyValue, IDbMetrics} from "@chainsafe/lodestar-db";
+import {Db, Bucket, Repository, IKeyValue} from "@chainsafe/lodestar-db";
 
 // TODO: Review where is best to put this type
 export type DepositTree = CompositeViewDU<ListCompositeType<ByteVectorType>>;
@@ -10,8 +10,8 @@ export type DepositTree = CompositeViewDU<ListCompositeType<ByteVectorType>>;
 export class DepositDataRootRepository extends Repository<number, Root> {
   private depositRootTree?: DepositTree;
 
-  constructor(config: IChainForkConfig, db: Db, metrics?: IDbMetrics) {
-    super(config, db, Bucket.index_depositDataRoot, ssz.Root, metrics);
+  constructor(config: IChainForkConfig, db: Db) {
+    super(config, db, Bucket.index_depositDataRoot, ssz.Root);
   }
 
   decodeKey(data: Buffer): number {

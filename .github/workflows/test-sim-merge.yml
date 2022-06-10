@@ -3,8 +3,8 @@ name: Sim merge tests
 on: [pull_request, push]
 
 env:
-  GETH_COMMIT: bb5633c5ee3975ce016636066ec790054ec469e4
-  NETHERMIND_COMMIT: 00b50532543824dbac65e8b7ab09484e44992c27
+  GETH_COMMIT: be9742721f56eb8bb7ebf4f6a03fb01b13a05408
+  NETHERMIND_COMMIT: 82f331a3e7ff21712a5f839e0a62ba7c16110e44
 
 jobs:
   sim-merge-tests:
@@ -59,7 +59,7 @@ jobs:
         with:
           dotnet-version: "6.0.x"
       - name: Clone Nethermind merge interop branch
-        run: git clone -b kiln https://github.com/g11tech/nethermind --recursive && cd nethermind && git reset --hard $NETHERMIND_COMMIT && git submodule update --init --recursive
+        run: git clone -b kiln-rebased https://github.com/g11tech/nethermind --recursive && cd nethermind && git reset --hard $NETHERMIND_COMMIT && git submodule update --init --recursive
       - name: Build Nethermind
         run: cd nethermind/src/Nethermind && dotnet build Nethermind.sln -c Release
 

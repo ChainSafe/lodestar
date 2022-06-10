@@ -1,6 +1,10 @@
-import {allForks, CachedBeaconStateAllForks, ISignatureSet} from "@chainsafe/lodestar-beacon-state-transition";
+import {
+  CachedBeaconStateAllForks,
+  ISignatureSet,
+  getProposerSignatureSet,
+} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {Root, allForks as allForkTypes, ssz, Slot} from "@chainsafe/lodestar-types";
+import {allForks, Root, allForks as allForkTypes, ssz, Slot} from "@chainsafe/lodestar-types";
 import {GENESIS_SLOT} from "@chainsafe/lodestar-params";
 import {IBlsVerifier} from "../../chain/bls/index.js";
 import {BackfillSyncError, BackfillSyncErrorCode} from "./errors.js";
@@ -48,7 +52,7 @@ export async function verifyBlockProposerSignature(
   if (blocks.length === 1 && blocks[0].message.slot === GENESIS_SLOT) return;
   const signatures = blocks.reduce((sigs: ISignatureSet[], block) => {
     // genesis block doesn't have valid signature
-    if (block.message.slot !== GENESIS_SLOT) sigs.push(allForks.getProposerSignatureSet(state, block));
+    if (block.message.slot !== GENESIS_SLOT) sigs.push(getProposerSignatureSet(state, block));
     return sigs;
   }, []);
 

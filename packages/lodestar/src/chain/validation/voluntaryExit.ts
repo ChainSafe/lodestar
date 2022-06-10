@@ -1,4 +1,5 @@
-import {phase0, allForks} from "@chainsafe/lodestar-beacon-state-transition";
+import {phase0} from "@chainsafe/lodestar-types";
+import {isValidVoluntaryExit, getVoluntaryExitSignatureSet} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconChain} from "..";
 import {VoluntaryExitError, VoluntaryExitErrorCode, GossipAction} from "../errors/index.js";
 
@@ -25,13 +26,13 @@ export async function validateGossipVoluntaryExit(
 
   // [REJECT] All of the conditions within process_voluntary_exit pass validation.
   // verifySignature = false, verified in batch below
-  if (!allForks.isValidVoluntaryExit(state, voluntaryExit, false)) {
+  if (!isValidVoluntaryExit(state, voluntaryExit, false)) {
     throw new VoluntaryExitError(GossipAction.REJECT, {
       code: VoluntaryExitErrorCode.INVALID,
     });
   }
 
-  const signatureSet = allForks.getVoluntaryExitSignatureSet(state, voluntaryExit);
+  const signatureSet = getVoluntaryExitSignatureSet(state, voluntaryExit);
   if (!(await chain.bls.verifySignatureSets([signatureSet], {batchable: true}))) {
     throw new VoluntaryExitError(GossipAction.REJECT, {
       code: VoluntaryExitErrorCode.INVALID_SIGNATURE,
