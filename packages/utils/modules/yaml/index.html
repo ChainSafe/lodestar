@@ -13,7 +13,7 @@
         <link rel="canonical" href="https://chainsafe.github.io/lodestar/packages/utils/modules/yaml/">
       
       <link rel="icon" href="../../../../assets/round-icon.ico">
-      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.2.15">
+      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.3.3">
     
     
       
@@ -21,11 +21,12 @@
       
     
     
-      <link rel="stylesheet" href="../../../../assets/stylesheets/main.c382b1dc.min.css">
+      <link rel="stylesheet" href="../../../../assets/stylesheets/main.4a0965b7.min.css">
       
         
-        <link rel="stylesheet" href="../../../../assets/stylesheets/palette.cc9b2e1e.min.css">
+        <link rel="stylesheet" href="../../../../assets/stylesheets/palette.cbb835fc.min.css">
         
+      
       
     
     
@@ -532,8 +533,36 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#schema" class="md-nav__link">
+    Schema
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#type" class="md-nav__link">
+    Type
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dump" class="md-nav__link">
+    dump
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#const-inttype" class="md-nav__link">
     Const intType
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#load" class="md-nav__link">
+    load
   </a>
   
 </li>
@@ -642,7 +671,11 @@
 <h2 id="index">Index<a class="headerlink" href="#index" title="Permanent link">&para;</a></h2>
 <h3 id="variables">Variables<a class="headerlink" href="#variables" title="Permanent link">&para;</a></h3>
 <ul>
+<li><a href="./#schema">Schema</a></li>
+<li><a href="./#type">Type</a></li>
+<li><a href="./#dump">dump</a></li>
 <li><a href="./#const-inttype">intType</a></li>
+<li><a href="./#load">load</a></li>
 <li><a href="./#const-schema">schema</a></li>
 </ul>
 <h3 id="functions">Functions<a class="headerlink" href="#functions" title="Permanent link">&para;</a></h3>
@@ -657,6 +690,18 @@
 <li><a href="./#resolveyamlinteger">resolveYamlInteger</a></li>
 </ul>
 <h2 id="variables_1">Variables<a class="headerlink" href="#variables_1" title="Permanent link">&para;</a></h2>
+<h3 id="schema">Schema<a class="headerlink" href="#schema" title="Permanent link">&para;</a></h3>
+<p>• <strong>Schema</strong>: <em>Schema</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aa9f500/packages/utils/src/yaml/schema.ts#L2">packages/utils/src/yaml/schema.ts:2</a></em></p>
+<hr />
+<h3 id="type">Type<a class="headerlink" href="#type" title="Permanent link">&para;</a></h3>
+<p>• <strong>Type</strong>: <em>Type</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aa9f500/packages/utils/src/yaml/int.ts#L5">packages/utils/src/yaml/int.ts:5</a></em></p>
+<hr />
+<h3 id="dump">dump<a class="headerlink" href="#dump" title="Permanent link">&para;</a></h3>
+<p>• <strong>dump</strong>: <em>dump</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aa9f500/packages/utils/src/yaml/index.ts#L4">packages/utils/src/yaml/index.ts:4</a></em></p>
+<hr />
 <h3 id="const-inttype"><code>Const</code> intType<a class="headerlink" href="#const-inttype" title="Permanent link">&para;</a></h3>
 <p>• <strong>intType</strong>: <em>Type‹›</em> = new Type("tag:yaml.org,2002:int", {
   kind: "scalar",
@@ -696,7 +741,11 @@
     hexadecimal: [16, "hex"],
   },
 })</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/11f6d0e/packages/utils/src/yaml/int.ts#L157">packages/utils/src/yaml/int.ts:157</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aa9f500/packages/utils/src/yaml/int.ts#L159">packages/utils/src/yaml/int.ts:159</a></em></p>
+<hr />
+<h3 id="load">load<a class="headerlink" href="#load" title="Permanent link">&para;</a></h3>
+<p>• <strong>load</strong>: <em>load</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aa9f500/packages/utils/src/yaml/index.ts#L4">packages/utils/src/yaml/index.ts:4</a></em></p>
 <hr />
 <h3 id="const-schema"><code>Const</code> schema<a class="headerlink" href="#const-schema" title="Permanent link">&para;</a></h3>
 <p>• <strong>schema</strong>: <em>Schema‹›</em> = new Schema({
@@ -704,11 +753,11 @@
   implicit: [nullType, boolType, intType, floatType],
   explicit: [],
 })</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/11f6d0e/packages/utils/src/yaml/schema.ts#L16">packages/utils/src/yaml/schema.ts:16</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aa9f500/packages/utils/src/yaml/schema.ts#L17">packages/utils/src/yaml/schema.ts:17</a></em></p>
 <h2 id="functions_1">Functions<a class="headerlink" href="#functions_1" title="Permanent link">&para;</a></h2>
 <h3 id="constructyamlinteger">constructYamlInteger<a class="headerlink" href="#constructyamlinteger" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>constructYamlInteger</strong>(<code>data</code>: string): <em>bigint</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/11f6d0e/packages/utils/src/yaml/int.ts#L109">packages/utils/src/yaml/int.ts:109</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aa9f500/packages/utils/src/yaml/int.ts#L111">packages/utils/src/yaml/int.ts:111</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -728,7 +777,7 @@
 <hr />
 <h3 id="dumpyaml">dumpYaml<a class="headerlink" href="#dumpyaml" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>dumpYaml</strong>(<code>yaml</code>: unknown): <em>string</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/11f6d0e/packages/utils/src/yaml/index.ts#L8">packages/utils/src/yaml/index.ts:8</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aa9f500/packages/utils/src/yaml/index.ts#L10">packages/utils/src/yaml/index.ts:10</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -748,7 +797,7 @@
 <hr />
 <h3 id="isdeccode">isDecCode<a class="headerlink" href="#isdeccode" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>isDecCode</strong>(<code>c</code>: number): <em>boolean</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/11f6d0e/packages/utils/src/yaml/int.ts#L20">packages/utils/src/yaml/int.ts:20</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aa9f500/packages/utils/src/yaml/int.ts#L22">packages/utils/src/yaml/int.ts:22</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -768,7 +817,7 @@
 <hr />
 <h3 id="ishexcode">isHexCode<a class="headerlink" href="#ishexcode" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>isHexCode</strong>(<code>c</code>: number): <em>boolean</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/11f6d0e/packages/utils/src/yaml/int.ts#L5">packages/utils/src/yaml/int.ts:5</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aa9f500/packages/utils/src/yaml/int.ts#L7">packages/utils/src/yaml/int.ts:7</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -788,7 +837,7 @@
 <hr />
 <h3 id="isinteger">isInteger<a class="headerlink" href="#isinteger" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>isInteger</strong>(<code>object</code>: unknown): <em>boolean</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/11f6d0e/packages/utils/src/yaml/int.ts#L153">packages/utils/src/yaml/int.ts:153</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aa9f500/packages/utils/src/yaml/int.ts#L155">packages/utils/src/yaml/int.ts:155</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -808,7 +857,7 @@
 <hr />
 <h3 id="isoctcode">isOctCode<a class="headerlink" href="#isoctcode" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>isOctCode</strong>(<code>c</code>: number): <em>boolean</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/11f6d0e/packages/utils/src/yaml/int.ts#L16">packages/utils/src/yaml/int.ts:16</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aa9f500/packages/utils/src/yaml/int.ts#L18">packages/utils/src/yaml/int.ts:18</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -828,7 +877,7 @@
 <hr />
 <h3 id="loadyaml">loadYaml<a class="headerlink" href="#loadyaml" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>loadYaml</strong>‹<strong>T</strong>›(<code>yaml</code>: string): <em>T</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/11f6d0e/packages/utils/src/yaml/index.ts#L4">packages/utils/src/yaml/index.ts:4</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aa9f500/packages/utils/src/yaml/index.ts#L6">packages/utils/src/yaml/index.ts:6</a></em></p>
 <p><strong>Type parameters:</strong></p>
 <p>▪ <strong>T</strong></p>
 <p><strong>Parameters:</strong></p>
@@ -850,7 +899,7 @@
 <hr />
 <h3 id="resolveyamlinteger">resolveYamlInteger<a class="headerlink" href="#resolveyamlinteger" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>resolveYamlInteger</strong>(<code>data</code>: string): <em>boolean</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/11f6d0e/packages/utils/src/yaml/int.ts#L24">packages/utils/src/yaml/int.ts:24</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aa9f500/packages/utils/src/yaml/int.ts#L26">packages/utils/src/yaml/int.ts:26</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -870,6 +919,7 @@
 
               
             </article>
+            
           </div>
         </div>
         
@@ -937,10 +987,10 @@
     <div class="md-dialog" data-md-component="dialog">
       <div class="md-dialog__inner md-typeset"></div>
     </div>
-    <script id="__config" type="application/json">{"base": "../../../..", "features": [], "search": "../../../../assets/javascripts/workers/search.2a1c317c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}}</script>
+    <script id="__config" type="application/json">{"base": "../../../..", "features": [], "search": "../../../../assets/javascripts/workers/search.b028fd86.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}}</script>
     
     
-      <script src="../../../../assets/javascripts/bundle.a6c66575.min.js"></script>
+      <script src="../../../../assets/javascripts/bundle.f758a944.min.js"></script>
       
     
   </body>

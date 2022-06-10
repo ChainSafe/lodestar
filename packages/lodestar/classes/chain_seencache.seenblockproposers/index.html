@@ -13,7 +13,7 @@
         <link rel="canonical" href="https://chainsafe.github.io/lodestar/packages/lodestar/classes/chain_seencache.seenblockproposers/">
       
       <link rel="icon" href="../../../../assets/round-icon.ico">
-      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.2.15">
+      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.3.3">
     
     
       
@@ -21,11 +21,12 @@
       
     
     
-      <link rel="stylesheet" href="../../../../assets/stylesheets/main.c382b1dc.min.css">
+      <link rel="stylesheet" href="../../../../assets/stylesheets/main.4a0965b7.min.css">
       
         
-        <link rel="stylesheet" href="../../../../assets/stylesheets/palette.cc9b2e1e.min.css">
+        <link rel="stylesheet" href="../../../../assets/stylesheets/palette.cbb835fc.min.css">
         
+      
       
     
     
@@ -633,15 +634,15 @@ limited by the possible shufflings in those epochs, and the stored data is very 
 <h2 id="properties_1">Properties<a class="headerlink" href="#properties_1" title="Permanent link">&para;</a></h2>
 <h3 id="private-finalizedslot"><code>Private</code> finalizedSlot<a class="headerlink" href="#private-finalizedslot" title="Permanent link">&para;</a></h3>
 <p>• <strong>finalizedSlot</strong>: <em>Epoch</em> = 0</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/11f6d0e/packages/lodestar/src/chain/seenCache/seenBlockProposers.ts#L12">packages/lodestar/src/chain/seenCache/seenBlockProposers.ts:12</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aa9f500/packages/lodestar/src/chain/seenCache/seenBlockProposers.ts#L12">packages/lodestar/src/chain/seenCache/seenBlockProposers.ts:12</a></em></p>
 <hr />
 <h3 id="private-readonly-proposerindexesbyslot"><code>Private</code> <code>Readonly</code> proposerIndexesBySlot<a class="headerlink" href="#private-readonly-proposerindexesbyslot" title="Permanent link">&para;</a></h3>
 <p>• <strong>proposerIndexesBySlot</strong>: <em><a href="../util.mapdef/">MapDef</a>‹number, Set‹number››</em> = new MapDef<Slot, Set\<ValidatorIndex>>(() =&gt; new Set<ValidatorIndex>())</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/11f6d0e/packages/lodestar/src/chain/seenCache/seenBlockProposers.ts#L11">packages/lodestar/src/chain/seenCache/seenBlockProposers.ts:11</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aa9f500/packages/lodestar/src/chain/seenCache/seenBlockProposers.ts#L11">packages/lodestar/src/chain/seenCache/seenBlockProposers.ts:11</a></em></p>
 <h2 id="methods_1">Methods<a class="headerlink" href="#methods_1" title="Permanent link">&para;</a></h2>
 <h3 id="add">add<a class="headerlink" href="#add" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>add</strong>(<code>blockSlot</code>: Slot, <code>proposerIndex</code>: ValidatorIndex): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/11f6d0e/packages/lodestar/src/chain/seenCache/seenBlockProposers.ts#L18">packages/lodestar/src/chain/seenCache/seenBlockProposers.ts:18</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aa9f500/packages/lodestar/src/chain/seenCache/seenBlockProposers.ts#L18">packages/lodestar/src/chain/seenCache/seenBlockProposers.ts:18</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -665,7 +666,7 @@ limited by the possible shufflings in those epochs, and the stored data is very 
 <hr />
 <h3 id="isknown">isKnown<a class="headerlink" href="#isknown" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>isKnown</strong>(<code>blockSlot</code>: Slot, <code>proposerIndex</code>: ValidatorIndex): <em>boolean</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/11f6d0e/packages/lodestar/src/chain/seenCache/seenBlockProposers.ts#L14">packages/lodestar/src/chain/seenCache/seenBlockProposers.ts:14</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aa9f500/packages/lodestar/src/chain/seenCache/seenBlockProposers.ts#L14">packages/lodestar/src/chain/seenCache/seenBlockProposers.ts:14</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -689,7 +690,7 @@ limited by the possible shufflings in those epochs, and the stored data is very 
 <hr />
 <h3 id="prune">prune<a class="headerlink" href="#prune" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>prune</strong>(<code>finalizedSlot</code>: Slot): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/11f6d0e/packages/lodestar/src/chain/seenCache/seenBlockProposers.ts#L26">packages/lodestar/src/chain/seenCache/seenBlockProposers.ts:26</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aa9f500/packages/lodestar/src/chain/seenCache/seenBlockProposers.ts#L26">packages/lodestar/src/chain/seenCache/seenBlockProposers.ts:26</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -709,6 +710,7 @@ limited by the possible shufflings in those epochs, and the stored data is very 
 
               
             </article>
+            
           </div>
         </div>
         
@@ -776,10 +778,10 @@ limited by the possible shufflings in those epochs, and the stored data is very 
     <div class="md-dialog" data-md-component="dialog">
       <div class="md-dialog__inner md-typeset"></div>
     </div>
-    <script id="__config" type="application/json">{"base": "../../../..", "features": [], "search": "../../../../assets/javascripts/workers/search.2a1c317c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}}</script>
+    <script id="__config" type="application/json">{"base": "../../../..", "features": [], "search": "../../../../assets/javascripts/workers/search.b028fd86.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}}</script>
     
     
-      <script src="../../../../assets/javascripts/bundle.a6c66575.min.js"></script>
+      <script src="../../../../assets/javascripts/bundle.f758a944.min.js"></script>
       
     
   </body>

@@ -13,7 +13,7 @@
         <link rel="canonical" href="https://chainsafe.github.io/lodestar/contributing/">
       
       <link rel="icon" href="../assets/round-icon.ico">
-      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.2.15">
+      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.3.3">
     
     
       
@@ -21,11 +21,12 @@
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.c382b1dc.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.4a0965b7.min.css">
       
         
-        <link rel="stylesheet" href="../assets/stylesheets/palette.cc9b2e1e.min.css">
+        <link rel="stylesheet" href="../assets/stylesheets/palette.cbb835fc.min.css">
         
+      
       
     
     
@@ -1001,7 +1002,7 @@
 <p>Add Edit on Github button to all the pages</p>
 </blockquote>
 <h2 id="lodestar-monorepo">Lodestar Monorepo<a class="headerlink" href="#lodestar-monorepo" title="Permanent link">&para;</a></h2>
-<p>We're currently experimenting with hosting the majority of lodestar packages and support packages in this repository as a <a href="https://en.wikipedia.org/wiki/Monorepo">monorepo</a>. We're using <a href="https://lerna.js.org/">Lerna</a> to manage the packages. See <a href="https://github.com/ChainSafe/lodestar/tree/master/packages">packages/</a> for a list of packages hosted in this repo.</p>
+<p>We're currently experimenting with hosting the majority of lodestar packages and support packages in this repository as a <a href="https://en.wikipedia.org/wiki/Monorepo">monorepo</a>. We're using <a href="https://lerna.js.org/">Lerna</a> to manage the packages. See <a href="https://github.com/ChainSafe/lodestar/tree/unstable/packages">packages/</a> for a list of packages hosted in this repo.</p>
 <h2 id="style-guide">Style Guide<a class="headerlink" href="#style-guide" title="Permanent link">&para;</a></h2>
 <ul>
 <li>Many module class constructors have the following signature: <code>(options, dependencies)</code></li>
@@ -1031,7 +1032,7 @@
 <h2 id="contributing-to-grafana-dashboards">Contributing to Grafana dashboards<a class="headerlink" href="#contributing-to-grafana-dashboards" title="Permanent link">&para;</a></h2>
 <p>To edit or extend an existing Grafana dashboard with minimal diff:</p>
 <ol>
-<li>Grab the .json dashboard file from current master</li>
+<li>Grab the .json dashboard file from current unstable</li>
 <li>Import file to Grafana via the web UI at <code>/dashboard/import</code>. Give it some temporal name relevant to your work (i.e. the branch name)</li>
 <li>Do edits on the Dashboard</li>
 <li>Once done make sure to leave the exact same visual aspect as before: same refresh interval, collapsed rows, etc.</li>
@@ -1137,6 +1138,7 @@
 
               
             </article>
+            
           </div>
         </div>
         
@@ -1144,7 +1146,8 @@
       
         <footer class="md-footer">
   
-    <nav class="md-footer__inner md-grid" aria-label="Footer">
+    
+    <nav class="md-footer__inner md-grid" aria-label="Footer" >
       
         
         <a href="../design/depgraph/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Lodestar package structure" rel="prev">
@@ -1224,10 +1227,10 @@
     <div class="md-dialog" data-md-component="dialog">
       <div class="md-dialog__inner md-typeset"></div>
     </div>
-    <script id="__config" type="application/json">{"base": "..", "features": [], "search": "../assets/javascripts/workers/search.2a1c317c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}}</script>
+    <script id="__config" type="application/json">{"base": "..", "features": [], "search": "../assets/javascripts/workers/search.b028fd86.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.a6c66575.min.js"></script>
+      <script src="../assets/javascripts/bundle.f758a944.min.js"></script>
       
     
   </body>

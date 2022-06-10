@@ -13,7 +13,7 @@
         <link rel="canonical" href="https://chainsafe.github.io/lodestar/packages/validator/modules/util/">
       
       <link rel="icon" href="../../../../assets/round-icon.ico">
-      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.2.15">
+      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.3.3">
     
     
       
@@ -21,11 +21,12 @@
       
     
     
-      <link rel="stylesheet" href="../../../../assets/stylesheets/main.c382b1dc.min.css">
+      <link rel="stylesheet" href="../../../../assets/stylesheets/main.4a0965b7.min.css">
       
         
-        <link rel="stylesheet" href="../../../../assets/stylesheets/palette.cc9b2e1e.min.css">
+        <link rel="stylesheet" href="../../../../assets/stylesheets/palette.cbb835fc.min.css">
         
+      
       
     
     
@@ -643,6 +644,13 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#configwithpreset" class="md-nav__link">
+    ConfigWithPreset
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#iloggervc_1" class="md-nav__link">
     ILoggerVc
   </a>
@@ -739,6 +747,13 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#getspeccriticalparams" class="md-nav__link">
+    getSpecCriticalParams
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#handlerexternalsignerresponse" class="md-nav__link">
     handlerExternalSignerResponse
   </a>
@@ -807,6 +822,7 @@
 </ul>
 <h3 id="type-aliases">Type aliases<a class="headerlink" href="#type-aliases" title="Permanent link">&para;</a></h3>
 <ul>
+<li><a href="./#configwithpreset">ConfigWithPreset</a></li>
 <li><a href="./#iloggervc">ILoggerVc</a></li>
 <li><a href="./#runeveryfn">RunEveryFn</a></li>
 </ul>
@@ -820,6 +836,7 @@
 <li><a href="./#externalsignerupcheck">externalSignerUpCheck</a></li>
 <li><a href="./#getcurrentslotaround">getCurrentSlotAround</a></li>
 <li><a href="./#getloggervc">getLoggerVc</a></li>
+<li><a href="./#getspeccriticalparams">getSpecCriticalParams</a></li>
 <li><a href="./#handlerexternalsignerresponse">handlerExternalSignerResponse</a></li>
 <li><a href="./#urljoin">urlJoin</a></li>
 </ul>
@@ -854,13 +871,17 @@
 <h3 id="urljoin">urlJoin<a class="headerlink" href="#urljoin" title="Permanent link">&para;</a></h3>
 <p>• <strong>urlJoin</strong>:</p>
 <h2 id="type-aliases_1">Type aliases<a class="headerlink" href="#type-aliases_1" title="Permanent link">&para;</a></h2>
+<h3 id="configwithpreset">ConfigWithPreset<a class="headerlink" href="#configwithpreset" title="Permanent link">&para;</a></h3>
+<p>Ƭ <strong>ConfigWithPreset</strong>: <em>IChainConfig &amp; BeaconPreset</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aa9f500/packages/validator/src/util/params.ts#L6">packages/validator/src/util/params.ts:6</a></em></p>
+<hr />
 <h3 id="iloggervc_1">ILoggerVc<a class="headerlink" href="#iloggervc_1" title="Permanent link">&para;</a></h3>
 <p>Ƭ <strong>ILoggerVc</strong>: <em>Pick‹ILogger, "error" | "warn" | "info" | "verbose" | "debug"› &amp; object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/11f6d0e/packages/validator/src/util/logger.ts#L5">packages/validator/src/util/logger.ts:5</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aa9f500/packages/validator/src/util/logger.ts#L5">packages/validator/src/util/logger.ts:5</a></em></p>
 <hr />
 <h3 id="runeveryfn">RunEveryFn<a class="headerlink" href="#runeveryfn" title="Permanent link">&para;</a></h3>
 <p>Ƭ <strong>RunEveryFn</strong>: <em>function</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/11f6d0e/packages/validator/src/util/clock.ts#L8">packages/validator/src/util/clock.ts:8</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aa9f500/packages/validator/src/util/clock.ts#L7">packages/validator/src/util/clock.ts:7</a></em></p>
 <h4 id="type-declaration">Type declaration:<a class="headerlink" href="#type-declaration" title="Permanent link">&para;</a></h4>
 <p>▸ (<code>slot</code>: <a href="../../enums/util.timeitem/#slot">Slot</a>, <code>signal</code>: AbortSignal): <em>Promise‹void›</em></p>
 <p><strong>Parameters:</strong></p>
@@ -885,8 +906,17 @@
 <h2 id="functions_1">Functions<a class="headerlink" href="#functions_1" title="Permanent link">&para;</a></h2>
 <h3 id="assertequalparams_1">assertEqualParams<a class="headerlink" href="#assertequalparams_1" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>assertEqualParams</strong>(<code>localConfig</code>: IChainConfig, <code>externalSpecJson</code>: Record‹string, string›): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/11f6d0e/packages/validator/src/util/params.ts#L8">packages/validator/src/util/params.ts:8</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aa9f500/packages/validator/src/util/params.ts#L25">packages/validator/src/util/params.ts:25</a></em></p>
 <p>Assert localConfig values match externalSpecJson. externalSpecJson may contain more values than localConfig.</p>
+<p>This check ensures that the validator is connected to a beacon node of the exact same network and params.
+Otherwise, signatures may be rejected, time may be un-equal and other bugs that are harder to debug caused
+by different parameters.</p>
+<p>This check however can't compare the full config as is, since some parameters are not critical to the spec and
+can be changed un-expectedly. Also, fork parameters can change un-expectedly, like their _FORK_VERSION or _EPOCH.
+Note that the config API endpoint is not precisely specified, so each clients can return a different set of
+parameters.</p>
+<p>So this check only compares a specific list of parameters that are consensus critical, ignoring the rest. Typed
+config and preset ensure new parameters are labeled critical or ignore, facilitating maintenance of the list.</p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -910,7 +940,7 @@
 <hr />
 <h3 id="batchitems">batchItems<a class="headerlink" href="#batchitems" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>batchItems</strong>‹<strong>T</strong>›(<code>items</code>: T[], <code>opts</code>: object): <em>T[][]</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/11f6d0e/packages/validator/src/util/batch.ts#L5">packages/validator/src/util/batch.ts:5</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aa9f500/packages/validator/src/util/batch.ts#L5">packages/validator/src/util/batch.ts:5</a></em></p>
 <p>Divide pubkeys into batches, each batch contains at most 5 http requests,
 each request can work on at most 40 pubkeys.</p>
 <p><strong>Type parameters:</strong></p>
@@ -940,7 +970,7 @@ each request can work on at most 40 pubkeys.</p>
 <hr />
 <h3 id="differencehex_1">differenceHex<a class="headerlink" href="#differencehex_1" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>differenceHex</strong>‹<strong>T</strong>›(<code>prev</code>: T[], <code>next</code>: T[]): <em>T[]</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/11f6d0e/packages/validator/src/util/difference.ts#L7">packages/validator/src/util/difference.ts:7</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aa9f500/packages/validator/src/util/difference.ts#L7">packages/validator/src/util/difference.ts:7</a></em></p>
 <p>Return items included in <code>next</code> but not in <code>prev</code></p>
 <p><strong>Type parameters:</strong></p>
 <p>▪ <strong>T</strong>: <em>Uint8Array | Root</em></p>
@@ -967,7 +997,7 @@ each request can work on at most 40 pubkeys.</p>
 <hr />
 <h3 id="externalsignergetkeys">externalSignerGetKeys<a class="headerlink" href="#externalsignergetkeys" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>externalSignerGetKeys</strong>(<code>externalSignerUrl</code>: string): <em>Promise‹string[]›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/11f6d0e/packages/validator/src/util/externalSignerClient.ts#L6">packages/validator/src/util/externalSignerClient.ts:6</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aa9f500/packages/validator/src/util/externalSignerClient.ts#L6">packages/validator/src/util/externalSignerClient.ts:6</a></em></p>
 <p>Return public keys from the server.</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -988,7 +1018,7 @@ each request can work on at most 40 pubkeys.</p>
 <hr />
 <h3 id="externalsignerpostsignature">externalSignerPostSignature<a class="headerlink" href="#externalsignerpostsignature" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>externalSignerPostSignature</strong>(<code>externalSignerUrl</code>: string, <code>pubkeyHex</code>: string, <code>signingRootHex</code>: string): <em>Promise‹string›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/11f6d0e/packages/validator/src/util/externalSignerClient.ts#L19">packages/validator/src/util/externalSignerClient.ts:19</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aa9f500/packages/validator/src/util/externalSignerClient.ts#L19">packages/validator/src/util/externalSignerClient.ts:19</a></em></p>
 <p>Return signature in bytes. Assumption that the pubkey has it's corresponding secret key in the keystore of an external signer.</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -1017,7 +1047,7 @@ each request can work on at most 40 pubkeys.</p>
 <hr />
 <h3 id="externalsignerupcheck">externalSignerUpCheck<a class="headerlink" href="#externalsignerupcheck" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>externalSignerUpCheck</strong>(<code>remoteUrl</code>: string): <em>Promise‹boolean›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/11f6d0e/packages/validator/src/util/externalSignerClient.ts#L39">packages/validator/src/util/externalSignerClient.ts:39</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aa9f500/packages/validator/src/util/externalSignerClient.ts#L39">packages/validator/src/util/externalSignerClient.ts:39</a></em></p>
 <p>Return upcheck status from server.</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -1038,7 +1068,7 @@ each request can work on at most 40 pubkeys.</p>
 <hr />
 <h3 id="getcurrentslotaround_1">getCurrentSlotAround<a class="headerlink" href="#getcurrentslotaround_1" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>getCurrentSlotAround</strong>(<code>config</code>: IChainForkConfig, <code>genesisTime</code>: TimeSeconds): <em><a href="../../enums/util.timeitem/#slot">Slot</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/11f6d0e/packages/validator/src/util/clock.ts#L123">packages/validator/src/util/clock.ts:123</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aa9f500/packages/validator/src/util/clock.ts#L122">packages/validator/src/util/clock.ts:122</a></em></p>
 <p>Same to the spec but we use Math.round instead of Math.floor.</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -1063,7 +1093,7 @@ each request can work on at most 40 pubkeys.</p>
 <hr />
 <h3 id="getloggervc_1">getLoggerVc<a class="headerlink" href="#getloggervc_1" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>getLoggerVc</strong>(<code>logger</code>: ILogger, <code>clock</code>: <a href="../../interfaces/util.iclock/">IClock</a>): <em><a href="./#iloggervc">ILoggerVc</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/11f6d0e/packages/validator/src/util/logger.ts#L9">packages/validator/src/util/logger.ts:9</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aa9f500/packages/validator/src/util/logger.ts#L9">packages/validator/src/util/logger.ts:9</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -1085,9 +1115,29 @@ each request can work on at most 40 pubkeys.</p>
 </table>
 <p><strong>Returns:</strong> <em><a href="./#iloggervc">ILoggerVc</a></em></p>
 <hr />
+<h3 id="getspeccriticalparams">getSpecCriticalParams<a class="headerlink" href="#getspeccriticalparams" title="Permanent link">&para;</a></h3>
+<p>▸ <strong>getSpecCriticalParams</strong>(<code>localConfig</code>: IChainConfig): <em>Record‹keyof ConfigWithPreset, boolean›</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aa9f500/packages/validator/src/util/params.ts#L71">packages/validator/src/util/params.ts:71</a></em></p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>localConfig</code></td>
+<td>IChainConfig</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong> <em>Record‹keyof ConfigWithPreset, boolean›</em></p>
+<hr />
 <h3 id="handlerexternalsignerresponse">handlerExternalSignerResponse<a class="headerlink" href="#handlerexternalsignerresponse" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>handlerExternalSignerResponse</strong>‹<strong>T</strong>›(<code>res</code>: Response): <em>Promise‹T›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/11f6d0e/packages/validator/src/util/externalSignerClient.ts#L49">packages/validator/src/util/externalSignerClient.ts:49</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aa9f500/packages/validator/src/util/externalSignerClient.ts#L49">packages/validator/src/util/externalSignerClient.ts:49</a></em></p>
 <p><strong>Type parameters:</strong></p>
 <p>▪ <strong>T</strong></p>
 <p><strong>Parameters:</strong></p>
@@ -1109,7 +1159,7 @@ each request can work on at most 40 pubkeys.</p>
 <hr />
 <h3 id="urljoin_1">urlJoin<a class="headerlink" href="#urljoin_1" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>urlJoin</strong>(...<code>args</code>: string[]): <em>string</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/11f6d0e/packages/validator/src/util/url.ts#L8">packages/validator/src/util/url.ts:8</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aa9f500/packages/validator/src/util/url.ts#L8">packages/validator/src/util/url.ts:8</a></em></p>
 <p>Joins multiple url parts safely
 - Does not break the protocol double slash //
 - Cleans double slashes at any point</p>
@@ -1135,6 +1185,7 @@ each request can work on at most 40 pubkeys.</p>
 
               
             </article>
+            
           </div>
         </div>
         
@@ -1202,10 +1253,10 @@ each request can work on at most 40 pubkeys.</p>
     <div class="md-dialog" data-md-component="dialog">
       <div class="md-dialog__inner md-typeset"></div>
     </div>
-    <script id="__config" type="application/json">{"base": "../../../..", "features": [], "search": "../../../../assets/javascripts/workers/search.2a1c317c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}}</script>
+    <script id="__config" type="application/json">{"base": "../../../..", "features": [], "search": "../../../../assets/javascripts/workers/search.b028fd86.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}}</script>
     
     
-      <script src="../../../../assets/javascripts/bundle.a6c66575.min.js"></script>
+      <script src="../../../../assets/javascripts/bundle.f758a944.min.js"></script>
       
     
   </body>

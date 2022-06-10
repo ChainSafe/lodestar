@@ -8,10 +8,10 @@
 <meta content="Lodestar documentation - Typescript Ethereum Consensus client" name="description"/>
 <link href="https://chainsafe.github.io/lodestar/design/depgraph/" rel="canonical"/>
 <link href="../../assets/round-icon.ico" rel="icon"/>
-<meta content="mkdocs-1.3.0, mkdocs-material-8.2.15" name="generator"/>
+<meta content="mkdocs-1.3.0, mkdocs-material-8.3.3" name="generator"/>
 <title>Lodestar package structure - Lodestar documentation</title>
-<link href="../../assets/stylesheets/main.c382b1dc.min.css" rel="stylesheet"/>
-<link href="../../assets/stylesheets/palette.cc9b2e1e.min.css" rel="stylesheet"/>
+<link href="../../assets/stylesheets/main.4a0965b7.min.css" rel="stylesheet"/>
+<link href="../../assets/stylesheets/palette.cbb835fc.min.css" rel="stylesheet"/>
 <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
 <link href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&amp;display=fallback" rel="stylesheet"/>
 <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
@@ -426,16 +426,16 @@
     lodestar--&gt;cli
     validator--&gt;cli
 
-    click cli "https://github.com/ChainSafe/lodestar/tree/master/packages/cli"
-    click lodestar "https://github.com/ChainSafe/lodestar/tree/master/packages/lodestar"
-    click validator "https://github.com/ChainSafe/lodestar/tree/master/packages/validator"
-    click db "https://github.com/ChainSafe/lodestar/tree/master/packages/db"
-    click params "https://github.com/ChainSafe/lodestar/tree/master/packages/params"
-    click state-trans "https://github.com/ChainSafe/lodestar/tree/master/packages/beacon-state-transition"
-    click fork-choice "https://github.com/ChainSafe/lodestar/tree/master/packages/fork-choice"
-    click types "https://github.com/ChainSafe/lodestar/tree/master/packages/types"
-    click utils "https://github.com/ChainSafe/lodestar/tree/master/packages/utils"
-    click config "https://github.com/ChainSafe/lodestar/tree/master/packages/config"
+    click cli "https://github.com/ChainSafe/lodestar/tree/unstable/packages/cli"
+    click lodestar "https://github.com/ChainSafe/lodestar/tree/unstable/packages/lodestar"
+    click validator "https://github.com/ChainSafe/lodestar/tree/unstable/packages/validator"
+    click db "https://github.com/ChainSafe/lodestar/tree/unstable/packages/db"
+    click params "https://github.com/ChainSafe/lodestar/tree/unstable/packages/params"
+    click state-trans "https://github.com/ChainSafe/lodestar/tree/unstable/packages/beacon-state-transition"
+    click fork-choice "https://github.com/ChainSafe/lodestar/tree/unstable/packages/fork-choice"
+    click types "https://github.com/ChainSafe/lodestar/tree/unstable/packages/types"
+    click utils "https://github.com/ChainSafe/lodestar/tree/unstable/packages/utils"
+    click config "https://github.com/ChainSafe/lodestar/tree/unstable/packages/config"
 
     classDef nodemodule fill:grey,stroke-width:2px,stroke:black,color:white;
     linkStyle default stroke:grey, fill:none,stroke-width:1.5px;
@@ -443,26 +443,26 @@
 <p>For a list of all the packages in the monorepo and a description for each, click <a href="https://github.com/ChainSafe/lodestar#packages">here</a>.</p>
 <p>Let's talk about how each package fits together in finer detail, from top to bottom, following the chart.</p>
 <h2 id="chainsafelodestar-params">@chainsafe/lodestar-params<a class="headerlink" href="#chainsafelodestar-params" title="Permanent link">¶</a></h2>
-<p><a href="https://github.com/ChainSafe/lodestar/tree/master/packages/params">@chainsafe/lodestar-params</a> contains the parameters for configuring an Ethereum Consensus network. For example, the <a href="https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/beacon-chain.md#configuration">mainnet params</a></p>
+<p><a href="https://github.com/ChainSafe/lodestar/tree/unstable/packages/params">@chainsafe/lodestar-params</a> contains the parameters for configuring an Ethereum Consensus network. For example, the <a href="https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/beacon-chain.md#configuration">mainnet params</a></p>
 <h2 id="chainsafelodestar-types">@chainsafe/lodestar-types<a class="headerlink" href="#chainsafelodestar-types" title="Permanent link">¶</a></h2>
-<p><a href="https://github.com/ChainSafe/lodestar/tree/master/packages/types">@chainsafe/lodestar-types</a> contains Eth Consensus ssz types and data structures.</p>
+<p><a href="https://github.com/ChainSafe/lodestar/tree/unstable/packages/types">@chainsafe/lodestar-types</a> contains Eth Consensus ssz types and data structures.</p>
 <h2 id="chainsafelodestar-config">@chainsafe/lodestar-config<a class="headerlink" href="#chainsafelodestar-config" title="Permanent link">¶</a></h2>
-<p><a href="https://github.com/ChainSafe/lodestar/tree/master/packages/config">@chainsafe/lodestar-config</a> combines <a href="#chainsafelodestar-params"><code>lodestar-params</code></a> and <a href="#chainsafelodestar-types"><code>lodestar-types</code></a> together to be used as a single config object across the other Lodestar packages.</p>
+<p><a href="https://github.com/ChainSafe/lodestar/tree/unstable/packages/config">@chainsafe/lodestar-config</a> combines <a href="#chainsafelodestar-params"><code>lodestar-params</code></a> and <a href="#chainsafelodestar-types"><code>lodestar-types</code></a> together to be used as a single config object across the other Lodestar packages.</p>
 <h2 id="chainsafelodestar-utils">@chainsafe/lodestar-utils<a class="headerlink" href="#chainsafelodestar-utils" title="Permanent link">¶</a></h2>
-<p><a href="https://github.com/ChainSafe/lodestar/tree/master/packages/utils">@chainsafe/lodestar-utils</a> contains various utilities that are common among the various Lodestar monorepo packages.</p>
+<p><a href="https://github.com/ChainSafe/lodestar/tree/unstable/packages/utils">@chainsafe/lodestar-utils</a> contains various utilities that are common among the various Lodestar monorepo packages.</p>
 <h2 id="chainsafelodestar-beacon-state-transition">@chainsafe/lodestar-beacon-state-transition<a class="headerlink" href="#chainsafelodestar-beacon-state-transition" title="Permanent link">¶</a></h2>
-<p><a href="https://github.com/ChainSafe/lodestar/tree/master/packages/beacon-state-transition">@chainsafe/lodestar-beacon-state-transition</a> contains the Lodestar implementation of the <a href="https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/beacon-chain.md#beacon-chain-state-transition-function">beacon state transition function</a>, which is used by <a href="#chainsafelodestar"><code>@chainsafe/lodestar</code></a> to perform the actual beacon state transition. This package also contains various functions used to calculate info about the beacon chain (such as <code>computeEpochAtSlot</code>) which are used by <a href="#chainsafelodestar-fork-choice">@chainsafe/lodestar-fork-choice</a> and <a href="#chainsafelodestar-validator">@chainsafe/lodestar-validator</a></p>
+<p><a href="https://github.com/ChainSafe/lodestar/tree/unstable/packages/beacon-state-transition">@chainsafe/lodestar-beacon-state-transition</a> contains the Lodestar implementation of the <a href="https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/beacon-chain.md#beacon-chain-state-transition-function">beacon state transition function</a>, which is used by <a href="#chainsafelodestar"><code>@chainsafe/lodestar</code></a> to perform the actual beacon state transition. This package also contains various functions used to calculate info about the beacon chain (such as <code>computeEpochAtSlot</code>) which are used by <a href="#chainsafelodestar-fork-choice">@chainsafe/lodestar-fork-choice</a> and <a href="#chainsafelodestar-validator">@chainsafe/lodestar-validator</a></p>
 <h2 id="chainsafelodestar-db">@chainsafe/lodestar-db<a class="headerlink" href="#chainsafelodestar-db" title="Permanent link">¶</a></h2>
-<p><a href="https://github.com/ChainSafe/lodestar/tree/master/packages/db">@chainsafe/lodestar-db</a> is where all persistent data about the beacon node is stored. Any package that needs to read or write persistent beacon node data depends on <code>lodestar-db</code>.</p>
+<p><a href="https://github.com/ChainSafe/lodestar/tree/unstable/packages/db">@chainsafe/lodestar-db</a> is where all persistent data about the beacon node is stored. Any package that needs to read or write persistent beacon node data depends on <code>lodestar-db</code>.</p>
 <h2 id="chainsafelodestar-fork-choice">@chainsafe/lodestar-fork-choice<a class="headerlink" href="#chainsafelodestar-fork-choice" title="Permanent link">¶</a></h2>
-<p><a href="https://github.com/ChainSafe/lodestar/tree/master/packages/fork-choice">@chainsafe/lodestar-fork-choice</a> holds the methods for reading/writing the fork choice DAG. The <a href="#chainsafelodestar"><code>@chainsafe/lodestar</code></a> package is the sole consumer of this package because the beacon node itself is what controls when the fork choice DAG is updated.
+<p><a href="https://github.com/ChainSafe/lodestar/tree/unstable/packages/fork-choice">@chainsafe/lodestar-fork-choice</a> holds the methods for reading/writing the fork choice DAG. The <a href="#chainsafelodestar"><code>@chainsafe/lodestar</code></a> package is the sole consumer of this package because the beacon node itself is what controls when the fork choice DAG is updated.
 For a good explainer on how the fork choice itself works, see the <a href="https://github.com/ethereum/annotated-spec/blob/v1.1.10/phase0/fork-choice.md">annotated fork choice spec</a>. This is an annotated version of the <a href="https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/fork-choice.md">Eth Consensus fork choice spec</a> which <code>lodestar-fork-choice</code> is based on.</p>
 <h2 id="chainsafelodestar-validator">@chainsafe/lodestar-validator<a class="headerlink" href="#chainsafelodestar-validator" title="Permanent link">¶</a></h2>
-<p><a href="https://github.com/ChainSafe/lodestar/tree/master/packages/validator">@chainsafe/lodestar-validator</a> contains the validator client. The sole consumer of this package is <a href="#chainsafelodestar-cli">@chainsafe/lodestar-cli</a>, which provides CLI access to run and configure the validator client. However, the validator client communicates to a REST API that is contained in <a href="#chainsafelodestar">@chainsafe/lodestar</a> (specifically in the <code>api</code> module) to perform the validator duties.</p>
+<p><a href="https://github.com/ChainSafe/lodestar/tree/unstable/packages/validator">@chainsafe/lodestar-validator</a> contains the validator client. The sole consumer of this package is <a href="#chainsafelodestar-cli">@chainsafe/lodestar-cli</a>, which provides CLI access to run and configure the validator client. However, the validator client communicates to a REST API that is contained in <a href="#chainsafelodestar">@chainsafe/lodestar</a> (specifically in the <code>api</code> module) to perform the validator duties.</p>
 <h2 id="chainsafelodestar">@chainsafe/lodestar<a class="headerlink" href="#chainsafelodestar" title="Permanent link">¶</a></h2>
-<p><a href="https://github.com/ChainSafe/lodestar/tree/master/packages/lodestar">@chainsafe/lodestar</a> contains the actual beacon node process itself, which is the aggregate of all the above packages and the "brain" of the Lodestar beacon chain implementation. All of the node modules live in this package as well.</p>
+<p><a href="https://github.com/ChainSafe/lodestar/tree/unstable/packages/lodestar">@chainsafe/lodestar</a> contains the actual beacon node process itself, which is the aggregate of all the above packages and the "brain" of the Lodestar beacon chain implementation. All of the node modules live in this package as well.</p>
 <h2 id="chainsafelodestar-cli">@chainsafe/lodestar-cli<a class="headerlink" href="#chainsafelodestar-cli" title="Permanent link">¶</a></h2>
-<p><a href="https://github.com/ChainSafe/lodestar/tree/master/packages/cli">@chainsafe/lodestar-cli</a> combines everything together for CLI usage and configuration of the beacon node and validator.</p>
+<p><a href="https://github.com/ChainSafe/lodestar/tree/unstable/packages/cli">@chainsafe/lodestar-cli</a> combines everything together for CLI usage and configuration of the beacon node and validator.</p>
 </article>
 </div>
 </div>
@@ -527,8 +527,8 @@ For a good explainer on how the fork choice itself works, see the <a href="https
 <div class="md-dialog" data-md-component="dialog">
 <div class="md-dialog__inner md-typeset"></div>
 </div>
-<script id="__config" type="application/json">{"base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.2a1c317c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}}</script>
-<script src="../../assets/javascripts/bundle.a6c66575.min.js"></script>
+<script id="__config" type="application/json">{"base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.b028fd86.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}}</script>
+<script src="../../assets/javascripts/bundle.f758a944.min.js"></script>
 <script src="https://unpkg.com/mermaid@8.6.4/dist/mermaid.min.js"></script><script>mermaid.initialize({
     theme: (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light'
 });</script></body>

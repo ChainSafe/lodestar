@@ -13,7 +13,7 @@
         <link rel="canonical" href="https://chainsafe.github.io/lodestar/packages/config/modules/root/">
       
       <link rel="icon" href="../../../../assets/round-icon.ico">
-      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.2.15">
+      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.3.3">
     
     
       
@@ -21,11 +21,12 @@
       
     
     
-      <link rel="stylesheet" href="../../../../assets/stylesheets/main.c382b1dc.min.css">
+      <link rel="stylesheet" href="../../../../assets/stylesheets/main.4a0965b7.min.css">
       
         
-        <link rel="stylesheet" href="../../../../assets/stylesheets/palette.cc9b2e1e.min.css">
+        <link rel="stylesheet" href="../../../../assets/stylesheets/palette.cbb835fc.min.css">
         
+      
       
     
     
@@ -593,20 +594,6 @@
   
 </li>
         
-          <li class="md-nav__item">
-  <a href="#const-mainnet" class="md-nav__link">
-    Const mainnet
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#const-minimal" class="md-nav__link">
-    Const minimal
-  </a>
-  
-</li>
-        
       </ul>
     </nav>
   
@@ -725,8 +712,6 @@
 <ul>
 <li><a href="./#const-chainconfig">chainConfig</a></li>
 <li><a href="./#const-config">config</a></li>
-<li><a href="./#const-mainnet">mainnet</a></li>
-<li><a href="./#const-minimal">minimal</a></li>
 </ul>
 <h3 id="functions">Functions<a class="headerlink" href="#functions" title="Permanent link">&para;</a></h3>
 <ul>
@@ -740,36 +725,28 @@
 <h2 id="type-aliases_1">Type aliases<a class="headerlink" href="#type-aliases_1" title="Permanent link">&para;</a></h2>
 <h3 id="ibeaconconfig">IBeaconConfig<a class="headerlink" href="#ibeaconconfig" title="Permanent link">&para;</a></h3>
 <p>Ƭ <strong>IBeaconConfig</strong>: <em><a href="./#ichainforkconfig">IChainForkConfig</a> &amp; <a href="../../interfaces/genesisconfig.icachedgenesis/">ICachedGenesis</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/11f6d0e/packages/config/src/beaconConfig.ts#L12">beaconConfig.ts:12</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aa9f500/packages/config/src/beaconConfig.ts#L12">beaconConfig.ts:12</a></em></p>
 <hr />
 <h3 id="ichainforkconfig">IChainForkConfig<a class="headerlink" href="#ichainforkconfig" title="Permanent link">&para;</a></h3>
 <p>Ƭ <strong>IChainForkConfig</strong>: <em><a href="../chainconfig/#ichainconfig">IChainConfig</a> &amp; <a href="../../interfaces/forkconfig.iforkconfig/">IForkConfig</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/11f6d0e/packages/config/src/beaconConfig.ts#L10">beaconConfig.ts:10</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aa9f500/packages/config/src/beaconConfig.ts#L10">beaconConfig.ts:10</a></em></p>
 <p>Chain run-time configuration with additional fork schedule helpers</p>
 <hr />
 <h3 id="networkname">NetworkName<a class="headerlink" href="#networkname" title="Permanent link">&para;</a></h3>
 <p>Ƭ <strong>NetworkName</strong>: <em>"mainnet" | "prater" | "kiln" | "ropsten"</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/11f6d0e/packages/config/src/networks.ts#L9">networks.ts:9</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aa9f500/packages/config/src/networks.ts#L9">networks.ts:9</a></em></p>
 <h2 id="variables_1">Variables<a class="headerlink" href="#variables_1" title="Permanent link">&para;</a></h2>
 <h3 id="const-chainconfig"><code>Const</code> chainConfig<a class="headerlink" href="#const-chainconfig" title="Permanent link">&para;</a></h3>
 <p>• <strong>chainConfig</strong>: <em><a href="../chainconfig/#ichainconfig">IChainConfig</a></em> = defaultChainConfig</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/11f6d0e/packages/config/src/default.ts#L4">default.ts:4</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aa9f500/packages/config/src/default.ts#L4">default.ts:4</a></em></p>
 <hr />
 <h3 id="const-config"><code>Const</code> config<a class="headerlink" href="#const-config" title="Permanent link">&para;</a></h3>
 <p>• <strong>config</strong>: <em><a href="./#ichainforkconfig">IChainForkConfig</a></em> = createIChainForkConfig(defaultChainConfig)</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/11f6d0e/packages/config/src/default.ts#L6">default.ts:6</a></em></p>
-<hr />
-<h3 id="const-mainnet"><code>Const</code> mainnet<a class="headerlink" href="#const-mainnet" title="Permanent link">&para;</a></h3>
-<p>• <strong>mainnet</strong>: <em><a href="./#ichainforkconfig">IChainForkConfig</a></em> = createIChainForkConfig(mainnetChainConfig)</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/11f6d0e/packages/config/src/presets.ts#L7">presets.ts:7</a></em></p>
-<hr />
-<h3 id="const-minimal"><code>Const</code> minimal<a class="headerlink" href="#const-minimal" title="Permanent link">&para;</a></h3>
-<p>• <strong>minimal</strong>: <em><a href="./#ichainforkconfig">IChainForkConfig</a></em> = createIChainForkConfig(minimalChainConfig)</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/11f6d0e/packages/config/src/presets.ts#L8">presets.ts:8</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aa9f500/packages/config/src/default.ts#L6">default.ts:6</a></em></p>
 <h2 id="functions_1">Functions<a class="headerlink" href="#functions_1" title="Permanent link">&para;</a></h2>
 <h3 id="createibeaconconfig">createIBeaconConfig<a class="headerlink" href="#createibeaconconfig" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>createIBeaconConfig</strong>(<code>chainConfig</code>: Partial‹<a href="../chainconfig/#ichainconfig">IChainConfig</a>›, <code>genesisValidatorsRoot</code>: Root): <em><a href="./#ibeaconconfig">IBeaconConfig</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/11f6d0e/packages/config/src/beaconConfig.ts#L25">beaconConfig.ts:25</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aa9f500/packages/config/src/beaconConfig.ts#L25">beaconConfig.ts:25</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -793,7 +770,7 @@
 <hr />
 <h3 id="createichainforkconfig">createIChainForkConfig<a class="headerlink" href="#createichainforkconfig" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>createIChainForkConfig</strong>(<code>chainConfig</code>: Partial‹<a href="../chainconfig/#ichainconfig">IChainConfig</a>›): <em><a href="./#ichainforkconfig">IChainForkConfig</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/11f6d0e/packages/config/src/beaconConfig.ts#L17">beaconConfig.ts:17</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aa9f500/packages/config/src/beaconConfig.ts#L17">beaconConfig.ts:17</a></em></p>
 <p>Create an <code>IBeaconConfig</code>, filling in missing values with preset defaults</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -814,22 +791,23 @@
 <h2 id="object-literals_1">Object literals<a class="headerlink" href="#object-literals_1" title="Permanent link">&para;</a></h2>
 <h3 id="const-networkschainconfig"><code>Const</code> networksChainConfig<a class="headerlink" href="#const-networkschainconfig" title="Permanent link">&para;</a></h3>
 <h3 id="networkschainconfig-object">▪ <strong>networksChainConfig</strong>: <em>object</em><a class="headerlink" href="#networkschainconfig-object" title="Permanent link">&para;</a></h3>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/11f6d0e/packages/config/src/networks.ts#L10">networks.ts:10</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aa9f500/packages/config/src/networks.ts#L10">networks.ts:10</a></em></p>
 <h3 id="kiln">kiln<a class="headerlink" href="#kiln" title="Permanent link">&para;</a></h3>
 <p>• <strong>kiln</strong>: <em><a href="../chainconfig/#ichainconfig">IChainConfig</a></em> = kilnChainConfig</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/11f6d0e/packages/config/src/networks.ts#L13">networks.ts:13</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aa9f500/packages/config/src/networks.ts#L13">networks.ts:13</a></em></p>
 <h3 id="mainnet">mainnet<a class="headerlink" href="#mainnet" title="Permanent link">&para;</a></h3>
 <p>• <strong>mainnet</strong>: <em><a href="../chainconfig/#ichainconfig">IChainConfig</a></em> = mainnetChainConfig</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/11f6d0e/packages/config/src/networks.ts#L11">networks.ts:11</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aa9f500/packages/config/src/networks.ts#L11">networks.ts:11</a></em></p>
 <h3 id="prater">prater<a class="headerlink" href="#prater" title="Permanent link">&para;</a></h3>
 <p>• <strong>prater</strong>: <em><a href="../chainconfig/#ichainconfig">IChainConfig</a></em> = praterChainConfig</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/11f6d0e/packages/config/src/networks.ts#L12">networks.ts:12</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aa9f500/packages/config/src/networks.ts#L12">networks.ts:12</a></em></p>
 <h3 id="ropsten">ropsten<a class="headerlink" href="#ropsten" title="Permanent link">&para;</a></h3>
 <p>• <strong>ropsten</strong>: <em><a href="../chainconfig/#ichainconfig">IChainConfig</a></em> = ropstenChainConfig</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/11f6d0e/packages/config/src/networks.ts#L14">networks.ts:14</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aa9f500/packages/config/src/networks.ts#L14">networks.ts:14</a></em></p>
 
               
             </article>
+            
           </div>
         </div>
         
@@ -897,10 +875,10 @@
     <div class="md-dialog" data-md-component="dialog">
       <div class="md-dialog__inner md-typeset"></div>
     </div>
-    <script id="__config" type="application/json">{"base": "../../../..", "features": [], "search": "../../../../assets/javascripts/workers/search.2a1c317c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}}</script>
+    <script id="__config" type="application/json">{"base": "../../../..", "features": [], "search": "../../../../assets/javascripts/workers/search.b028fd86.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}}</script>
     
     
-      <script src="../../../../assets/javascripts/bundle.a6c66575.min.js"></script>
+      <script src="../../../../assets/javascripts/bundle.f758a944.min.js"></script>
       
     
   </body>

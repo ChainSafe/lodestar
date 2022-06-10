@@ -13,7 +13,7 @@
         <link rel="canonical" href="https://chainsafe.github.io/lodestar/packages/lodestar/classes/chain_seencache.seencontributionandproof/">
       
       <link rel="icon" href="../../../../assets/round-icon.ico">
-      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.2.15">
+      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.3.3">
     
     
       
@@ -21,11 +21,12 @@
       
     
     
-      <link rel="stylesheet" href="../../../../assets/stylesheets/main.c382b1dc.min.css">
+      <link rel="stylesheet" href="../../../../assets/stylesheets/main.4a0965b7.min.css">
       
         
-        <link rel="stylesheet" href="../../../../assets/stylesheets/palette.cc9b2e1e.min.css">
+        <link rel="stylesheet" href="../../../../assets/stylesheets/palette.cbb835fc.min.css">
         
+      
       
     
     
@@ -680,7 +681,7 @@ This stays in-memory and should be pruned per slot.</p>
 <h2 id="constructors_1">Constructors<a class="headerlink" href="#constructors_1" title="Permanent link">&para;</a></h2>
 <h3 id="constructor">constructor<a class="headerlink" href="#constructor" title="Permanent link">&para;</a></h3>
 <p>+ <strong>new SeenContributionAndProof</strong>(<code>metrics</code>: <a href="../../modules/metrics/#imetrics">IMetrics</a> | null): <em><a href="./">SeenContributionAndProof</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/11f6d0e/packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts#L32">packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts:32</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aa9f500/packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts#L32">packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts:32</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -700,23 +701,23 @@ This stays in-memory and should be pruned per slot.</p>
 <h2 id="properties_1">Properties<a class="headerlink" href="#properties_1" title="Permanent link">&para;</a></h2>
 <h3 id="private-readonly-metrics"><code>Private</code> <code>Readonly</code> metrics<a class="headerlink" href="#private-readonly-metrics" title="Permanent link">&para;</a></h3>
 <p>• <strong>metrics</strong>: <em><a href="../../modules/metrics/#imetrics">IMetrics</a> | null</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/11f6d0e/packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts#L34">packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts:34</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aa9f500/packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts#L34">packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts:34</a></em></p>
 <hr />
 <h3 id="private-readonly-seenaggregatorbyslot"><code>Private</code> <code>Readonly</code> seenAggregatorBySlot<a class="headerlink" href="#private-readonly-seenaggregatorbyslot" title="Permanent link">&para;</a></h3>
 <p>• <strong>seenAggregatorBySlot</strong>: <em><a href="../util.mapdef/">MapDef</a>‹number, Set‹string››</em> = new MapDef<Slot, Set\<AggregatorSubnetKey>>(
     () =&gt; new Set<AggregatorSubnetKey>()
   )</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/11f6d0e/packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts#L26">packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts:26</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aa9f500/packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts#L26">packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts:26</a></em></p>
 <hr />
 <h3 id="private-readonly-seencontributionbyslot"><code>Private</code> <code>Readonly</code> seenContributionBySlot<a class="headerlink" href="#private-readonly-seencontributionbyslot" title="Permanent link">&para;</a></h3>
 <p>• <strong>seenContributionBySlot</strong>: <em><a href="../util.mapdef/">MapDef</a>‹number, <a href="../util.mapdef/">MapDef</a>‹string, <a href="../../modules/chain_seencache/#aggregationinfo">AggregationInfo</a>[]››</em> = new MapDef<Slot, MapDef\<ContributionDataKey, AggregationInfo[]>>(
     () =&gt; new MapDef(() =&gt; [])
   )</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/11f6d0e/packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts#L30">packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts:30</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aa9f500/packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts#L30">packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts:30</a></em></p>
 <h2 id="methods_1">Methods<a class="headerlink" href="#methods_1" title="Permanent link">&para;</a></h2>
 <h3 id="add">add<a class="headerlink" href="#add" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>add</strong>(<code>contributionAndProof</code>: ContributionAndProof, <code>trueBitCount</code>: number): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/11f6d0e/packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts#L69">packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts:69</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aa9f500/packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts#L69">packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts:69</a></em></p>
 <p>Register item as seen in the cache</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -741,7 +742,7 @@ This stays in-memory and should be pruned per slot.</p>
 <hr />
 <h3 id="isaggregatorknown">isAggregatorKnown<a class="headerlink" href="#isaggregatorknown" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>isAggregatorKnown</strong>(<code>slot</code>: Slot, <code>subcommitteeIndex</code>: number, <code>aggregatorIndex</code>: ValidatorIndex): <em>boolean</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/11f6d0e/packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts#L64">packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts:64</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aa9f500/packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts#L64">packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts:64</a></em></p>
 <p>Gossip validation requires to check:
 The sync committee contribution is the first valid contribution received for the aggregator with index
 contribution_and_proof.aggregator_index for the slot contribution.slot and subcommittee index contribution.subcommittee_index.</p>
@@ -772,7 +773,7 @@ contribution_and_proof.aggregator_index for the slot contribution.slot and subco
 <hr />
 <h3 id="participantsknown">participantsKnown<a class="headerlink" href="#participantsknown" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>participantsKnown</strong>(<code>contribution</code>: SyncCommitteeContribution): <em>boolean</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/11f6d0e/packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts#L40">packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts:40</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aa9f500/packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts#L40">packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts:40</a></em></p>
 <p><em>[IGNORE]</em> A valid sync committee contribution with equal <code>slot</code>, <code>beacon_block_root</code> and <code>subcommittee_index</code> whose
 <code>aggregation_bits</code> is non-strict superset has <em>not</em> already been seen.</p>
 <p><strong>Parameters:</strong></p>
@@ -794,7 +795,7 @@ contribution_and_proof.aggregator_index for the slot contribution.slot and subco
 <hr />
 <h3 id="prune">prune<a class="headerlink" href="#prune" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>prune</strong>(<code>headSlot</code>: Slot): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/11f6d0e/packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts#L83">packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts:83</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aa9f500/packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts#L83">packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts:83</a></em></p>
 <p>Prune per head slot</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -815,6 +816,7 @@ contribution_and_proof.aggregator_index for the slot contribution.slot and subco
 
               
             </article>
+            
           </div>
         </div>
         
@@ -882,10 +884,10 @@ contribution_and_proof.aggregator_index for the slot contribution.slot and subco
     <div class="md-dialog" data-md-component="dialog">
       <div class="md-dialog__inner md-typeset"></div>
     </div>
-    <script id="__config" type="application/json">{"base": "../../../..", "features": [], "search": "../../../../assets/javascripts/workers/search.2a1c317c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}}</script>
+    <script id="__config" type="application/json">{"base": "../../../..", "features": [], "search": "../../../../assets/javascripts/workers/search.b028fd86.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}}</script>
     
     
-      <script src="../../../../assets/javascripts/bundle.a6c66575.min.js"></script>
+      <script src="../../../../assets/javascripts/bundle.f758a944.min.js"></script>
       
     
   </body>

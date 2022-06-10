@@ -13,7 +13,7 @@
         <link rel="canonical" href="https://chainsafe.github.io/lodestar/packages/lodestar/classes/chain_oppools.aggregatedattestationpool/">
       
       <link rel="icon" href="../../../../assets/round-icon.ico">
-      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.2.15">
+      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.3.3">
     
     
       
@@ -21,11 +21,12 @@
       
     
     
-      <link rel="stylesheet" href="../../../../assets/stylesheets/main.c382b1dc.min.css">
+      <link rel="stylesheet" href="../../../../assets/stylesheets/main.4a0965b7.min.css">
       
         
-        <link rel="stylesheet" href="../../../../assets/stylesheets/palette.cc9b2e1e.min.css">
+        <link rel="stylesheet" href="../../../../assets/stylesheets/palette.cbb835fc.min.css">
         
+      
       
     
     
@@ -644,15 +645,15 @@ Note that we want to remove attestations with attesters that were included in th
 <p>• <strong>attestationGroupByDataHashBySlot</strong>: <em><a href="../util.mapdef/">MapDef</a>‹number, <a href="../util.mapdef/#static-map">Map</a>‹string, <a href="../chain_oppools.matchingdataattestationgroup/">MatchingDataAttestationGroup</a>‹›››</em> = new MapDef<Slot, Map\<DataRootHex, MatchingDataAttestationGroup>>(
     () =&gt; new Map<DataRootHex, MatchingDataAttestationGroup>()
   )</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/11f6d0e/packages/lodestar/src/chain/opPools/aggregatedAttestationPool.ts#L53">packages/lodestar/src/chain/opPools/aggregatedAttestationPool.ts:53</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aa9f500/packages/lodestar/src/chain/opPools/aggregatedAttestationPool.ts#L53">packages/lodestar/src/chain/opPools/aggregatedAttestationPool.ts:53</a></em></p>
 <hr />
 <h3 id="private-lowestpermissibleslot"><code>Private</code> lowestPermissibleSlot<a class="headerlink" href="#private-lowestpermissibleslot" title="Permanent link">&para;</a></h3>
 <p>• <strong>lowestPermissibleSlot</strong>: <em>number</em> = 0</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/11f6d0e/packages/lodestar/src/chain/opPools/aggregatedAttestationPool.ts#L56">packages/lodestar/src/chain/opPools/aggregatedAttestationPool.ts:56</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aa9f500/packages/lodestar/src/chain/opPools/aggregatedAttestationPool.ts#L56">packages/lodestar/src/chain/opPools/aggregatedAttestationPool.ts:56</a></em></p>
 <h2 id="methods_1">Methods<a class="headerlink" href="#methods_1" title="Permanent link">&para;</a></h2>
 <h3 id="add">add<a class="headerlink" href="#add" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>add</strong>(<code>attestation</code>: phase0.Attestation, <code>attestingIndicesCount</code>: number, <code>committee</code>: ValidatorIndex[]): <em><a href="../../enums/chain_oppools.insertoutcome/">InsertOutcome</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/11f6d0e/packages/lodestar/src/chain/opPools/aggregatedAttestationPool.ts#L58">packages/lodestar/src/chain/opPools/aggregatedAttestationPool.ts:58</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aa9f500/packages/lodestar/src/chain/opPools/aggregatedAttestationPool.ts#L58">packages/lodestar/src/chain/opPools/aggregatedAttestationPool.ts:58</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -680,7 +681,7 @@ Note that we want to remove attestations with attesters that were included in th
 <hr />
 <h3 id="getall">getAll<a class="headerlink" href="#getall" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>getAll</strong>(<code>bySlot?</code>: Slot): <em>phase0.Attestation[]</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/11f6d0e/packages/lodestar/src/chain/opPools/aggregatedAttestationPool.ts#L170">packages/lodestar/src/chain/opPools/aggregatedAttestationPool.ts:170</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aa9f500/packages/lodestar/src/chain/opPools/aggregatedAttestationPool.ts#L170">packages/lodestar/src/chain/opPools/aggregatedAttestationPool.ts:170</a></em></p>
 <p>Get all attestations optionally filtered by <code>attestation.data.slot</code></p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -703,7 +704,7 @@ Note that we want to remove attestations with attesters that were included in th
 <hr />
 <h3 id="getattestationsforblock">getAttestationsForBlock<a class="headerlink" href="#getattestationsforblock" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>getAttestationsForBlock</strong>(<code>state</code>: CachedBeaconStateAllForks): <em>phase0.Attestation[]</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/11f6d0e/packages/lodestar/src/chain/opPools/aggregatedAttestationPool.ts#L93">packages/lodestar/src/chain/opPools/aggregatedAttestationPool.ts:93</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aa9f500/packages/lodestar/src/chain/opPools/aggregatedAttestationPool.ts#L93">packages/lodestar/src/chain/opPools/aggregatedAttestationPool.ts:93</a></em></p>
 <p>Get attestations to be included in a block. Returns $MAX_ATTESTATIONS items</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -724,7 +725,7 @@ Note that we want to remove attestations with attesters that were included in th
 <hr />
 <h3 id="prune">prune<a class="headerlink" href="#prune" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>prune</strong>(<code>clockSlot</code>: Slot): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/11f6d0e/packages/lodestar/src/chain/opPools/aggregatedAttestationPool.ts#L84">packages/lodestar/src/chain/opPools/aggregatedAttestationPool.ts:84</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aa9f500/packages/lodestar/src/chain/opPools/aggregatedAttestationPool.ts#L84">packages/lodestar/src/chain/opPools/aggregatedAttestationPool.ts:84</a></em></p>
 <p>Remove attestations which are too old to be included in a block.</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -745,6 +746,7 @@ Note that we want to remove attestations with attesters that were included in th
 
               
             </article>
+            
           </div>
         </div>
         
@@ -812,10 +814,10 @@ Note that we want to remove attestations with attesters that were included in th
     <div class="md-dialog" data-md-component="dialog">
       <div class="md-dialog__inner md-typeset"></div>
     </div>
-    <script id="__config" type="application/json">{"base": "../../../..", "features": [], "search": "../../../../assets/javascripts/workers/search.2a1c317c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}}</script>
+    <script id="__config" type="application/json">{"base": "../../../..", "features": [], "search": "../../../../assets/javascripts/workers/search.b028fd86.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}}</script>
     
     
-      <script src="../../../../assets/javascripts/bundle.a6c66575.min.js"></script>
+      <script src="../../../../assets/javascripts/bundle.f758a944.min.js"></script>
       
     
   </body>

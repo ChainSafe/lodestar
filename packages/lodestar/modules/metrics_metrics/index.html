@@ -13,7 +13,7 @@
         <link rel="canonical" href="https://chainsafe.github.io/lodestar/packages/lodestar/modules/metrics_metrics/">
       
       <link rel="icon" href="../../../../assets/round-icon.ico">
-      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.2.15">
+      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.3.3">
     
     
       
@@ -21,11 +21,12 @@
       
     
     
-      <link rel="stylesheet" href="../../../../assets/stylesheets/main.c382b1dc.min.css">
+      <link rel="stylesheet" href="../../../../assets/stylesheets/main.4a0965b7.min.css">
       
         
-        <link rel="stylesheet" href="../../../../assets/stylesheets/palette.cc9b2e1e.min.css">
+        <link rel="stylesheet" href="../../../../assets/stylesheets/palette.cbb835fc.min.css">
         
+      
       
     
     
@@ -629,6 +630,13 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#eth1-object" class="md-nav__link">
+    eth1: object
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#gossipblock-object" class="md-nav__link">
     gossipBlock: object
   </a>
@@ -765,15 +773,15 @@
 <h2 id="type-aliases_1">Type aliases<a class="headerlink" href="#type-aliases_1" title="Permanent link">&para;</a></h2>
 <h3 id="ibeaconmetrics">IBeaconMetrics<a class="headerlink" href="#ibeaconmetrics" title="Permanent link">&para;</a></h3>
 <p>Ƭ <strong>IBeaconMetrics</strong>: <em>ReturnType‹typeof createBeaconMetrics›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/11f6d0e/packages/lodestar/src/metrics/metrics/beacon.ts#L3">packages/lodestar/src/metrics/metrics/beacon.ts:3</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aa9f500/packages/lodestar/src/metrics/metrics/beacon.ts#L3">packages/lodestar/src/metrics/metrics/beacon.ts:3</a></em></p>
 <hr />
 <h3 id="ilodestarmetrics">ILodestarMetrics<a class="headerlink" href="#ilodestarmetrics" title="Permanent link">&para;</a></h3>
 <p>Ƭ <strong>ILodestarMetrics</strong>: <em>ReturnType‹typeof createLodestarMetrics›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/11f6d0e/packages/lodestar/src/metrics/metrics/lodestar.ts#L5">packages/lodestar/src/metrics/metrics/lodestar.ts:5</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aa9f500/packages/lodestar/src/metrics/metrics/lodestar.ts#L5">packages/lodestar/src/metrics/metrics/lodestar.ts:5</a></em></p>
 <h2 id="functions_1">Functions<a class="headerlink" href="#functions_1" title="Permanent link">&para;</a></h2>
 <h3 id="createbeaconmetrics">createBeaconMetrics<a class="headerlink" href="#createbeaconmetrics" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>createBeaconMetrics</strong>(<code>register</code>: <a href="../../classes/metrics_utils.registrymetriccreator/">RegistryMetricCreator</a>): <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/11f6d0e/packages/lodestar/src/metrics/metrics/beacon.ts#L11">packages/lodestar/src/metrics/metrics/beacon.ts:11</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aa9f500/packages/lodestar/src/metrics/metrics/beacon.ts#L11">packages/lodestar/src/metrics/metrics/beacon.ts:11</a></em></p>
 <p>Metrics from:
 https://github.com/ethereum/beacon-metrics/ and
 https://hackmd.io/D5FmoeFZScim_squBFl8oA</p>
@@ -1053,7 +1061,7 @@ https://hackmd.io/D5FmoeFZScim_squBFl8oA</p>
 <hr />
 <h3 id="createlodestarmetrics">createLodestarMetrics<a class="headerlink" href="#createlodestarmetrics" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>createLodestarMetrics</strong>(<code>register</code>: <a href="../../classes/metrics_utils.registrymetriccreator/">RegistryMetricCreator</a>, <code>metadata?</code>: <a href="../metrics/#lodestarmetadata">LodestarMetadata</a>, <code>anchorState?</code>: Pick‹allForks.BeaconState, "genesisTime"›): <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/11f6d0e/packages/lodestar/src/metrics/metrics/lodestar.ts#L11">packages/lodestar/src/metrics/metrics/lodestar.ts:11</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aa9f500/packages/lodestar/src/metrics/metrics/lodestar.ts#L11">packages/lodestar/src/metrics/metrics/lodestar.ts:11</a></em></p>
 <p>Extra Lodestar custom metrics</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -1672,6 +1680,69 @@ https://hackmd.io/D5FmoeFZScim_squBFl8oA</p>
       })</p>
 </li>
 <li>
+<h3 id="eth1-object"><strong>eth1</strong>: <em>object</em><a class="headerlink" href="#eth1-object" title="Permanent link">&para;</a></h3>
+</li>
+<li>
+<p><strong>blocksFetched</strong>: <em><a href="../../classes/metrics_utils.gaugeextra/">GaugeExtra</a>‹string›</em> = register.gauge({
+        name: "lodestar_eth1_blocks_fetched_total",
+        help: "Eth1 blocks fetched total",
+      })</p>
+</li>
+<li>
+<p><strong>depositEventsFetched</strong>: <em><a href="../../classes/metrics_utils.gaugeextra/">GaugeExtra</a>‹string›</em> = register.gauge({
+        name: "lodestar_eth1_deposit_events_fetched_total",
+        help: "Eth1 deposit events fetched total",
+      })</p>
+</li>
+<li>
+<p><strong>depositTrackerIsCaughtup</strong>: <em><a href="../../classes/metrics_utils.gaugeextra/">GaugeExtra</a>‹string›</em> = register.gauge({
+        name: "lodestar_eth1_deposit_tracker_is_caughtup",
+        help: "Eth1 deposit is caught up 0=false 1=true",
+      })</p>
+</li>
+<li>
+<p><strong>depositTrackerUpdateErrors</strong>: <em><a href="../../classes/metrics_utils.gaugeextra/">GaugeExtra</a>‹string›</em> = register.gauge({
+        name: "lodestar_eth1_deposit_tracker_update_errors_total",
+        help: "Eth1 deposit update loop errors total",
+      })</p>
+</li>
+<li>
+<p><strong>eth1FollowDistanceDynamic</strong>: <em><a href="../../classes/metrics_utils.gaugeextra/">GaugeExtra</a>‹string›</em> = register.gauge({
+        name: "lodestar_eth1_follow_distance_dynamic",
+        help: "Eth1 dynamic follow distance changed by the deposit tracker if blocks are slow",
+      })</p>
+</li>
+<li>
+<p><strong>eth1FollowDistanceSecondsConfig</strong>: <em><a href="../../classes/metrics_utils.gaugeextra/">GaugeExtra</a>‹string›</em> = register.gauge({
+        name: "lodestar_eth1_follow_distance_seconds_config",
+        help: "Constant with value = SECONDS_PER_ETH1_BLOCK * ETH1_FOLLOW_DISTANCE",
+      })</p>
+</li>
+<li>
+<p><strong>lastFetchedBlockBlockNumber</strong>: <em><a href="../../classes/metrics_utils.gaugeextra/">GaugeExtra</a>‹string›</em> = register.gauge({
+        name: "lodestar_eth1_last_fetched_block_block_number",
+        help: "Eth1 deposit tracker last fetched block's block number",
+      })</p>
+</li>
+<li>
+<p><strong>lastFetchedBlockTimestamp</strong>: <em><a href="../../classes/metrics_utils.gaugeextra/">GaugeExtra</a>‹string›</em> = register.gauge({
+        name: "lodestar_eth1_last_fetched_block_timestamp",
+        help: "Eth1 deposit tracker last fetched block's timestamp",
+      })</p>
+</li>
+<li>
+<p><strong>lastProcessedDepositBlockNumber</strong>: <em><a href="../../classes/metrics_utils.gaugeextra/">GaugeExtra</a>‹string›</em> = register.gauge({
+        name: "lodestar_eth1_last_processed_deposit_block_number",
+        help: "Eth1 deposit tracker lastProcessedDepositBlockNumber",
+      })</p>
+</li>
+<li>
+<p><strong>remoteHighestBlock</strong>: <em><a href="../../classes/metrics_utils.gaugeextra/">GaugeExtra</a>‹string›</em> = register.gauge({
+        name: "lodestar_eth1_remote_highest_block",
+        help: "Eth1 current highest block number",
+      })</p>
+</li>
+<li>
 <h3 id="gossipblock-object"><strong>gossipBlock</strong>: <em>object</em><a class="headerlink" href="#gossipblock-object" title="Permanent link">&para;</a></h3>
 </li>
 <li>
@@ -2281,6 +2352,7 @@ https://hackmd.io/D5FmoeFZScim_squBFl8oA</p>
 
               
             </article>
+            
           </div>
         </div>
         
@@ -2348,10 +2420,10 @@ https://hackmd.io/D5FmoeFZScim_squBFl8oA</p>
     <div class="md-dialog" data-md-component="dialog">
       <div class="md-dialog__inner md-typeset"></div>
     </div>
-    <script id="__config" type="application/json">{"base": "../../../..", "features": [], "search": "../../../../assets/javascripts/workers/search.2a1c317c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}}</script>
+    <script id="__config" type="application/json">{"base": "../../../..", "features": [], "search": "../../../../assets/javascripts/workers/search.b028fd86.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}}</script>
     
     
-      <script src="../../../../assets/javascripts/bundle.a6c66575.min.js"></script>
+      <script src="../../../../assets/javascripts/bundle.f758a944.min.js"></script>
       
     
   </body>

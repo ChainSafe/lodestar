@@ -13,7 +13,7 @@
         <link rel="canonical" href="https://chainsafe.github.io/lodestar/packages/lodestar/modules/network_reqresp_encodingstrategies/">
       
       <link rel="icon" href="../../../../assets/round-icon.ico">
-      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.2.15">
+      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.3.3">
     
     
       
@@ -21,11 +21,12 @@
       
     
     
-      <link rel="stylesheet" href="../../../../assets/stylesheets/main.c382b1dc.min.css">
+      <link rel="stylesheet" href="../../../../assets/stylesheets/main.4a0965b7.min.css">
       
         
-        <link rel="stylesheet" href="../../../../assets/stylesheets/palette.cc9b2e1e.min.css">
+        <link rel="stylesheet" href="../../../../assets/stylesheets/palette.cbb835fc.min.css">
         
+      
       
     
     
@@ -572,7 +573,7 @@
 <h2 id="functions_1">Functions<a class="headerlink" href="#functions_1" title="Permanent link">&para;</a></h2>
 <h3 id="readencodedpayload">readEncodedPayload<a class="headerlink" href="#readencodedpayload" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>readEncodedPayload</strong>‹<strong>T</strong>›(<code>bufferedSource</code>: <a href="../../classes/network_reqresp_utils.bufferedsource/">BufferedSource</a>, <code>encoding</code>: <a href="../../enums/network_reqresp.encoding/">Encoding</a>, <code>type</code>: <a href="../network_reqresp/#requestorresponsetype">RequestOrResponseType</a>): <em>Promise‹T›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/11f6d0e/packages/lodestar/src/network/reqresp/encodingStrategies/index.ts#L23">packages/lodestar/src/network/reqresp/encodingStrategies/index.ts:23</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aa9f500/packages/lodestar/src/network/reqresp/encodingStrategies/index.ts#L23">packages/lodestar/src/network/reqresp/encodingStrategies/index.ts:23</a></em></p>
 <p>Consumes a stream source to read encoded header and payload as defined in the spec:
 <div class="highlight"><pre><span></span><code>&lt;encoding-dependent-header&gt; | &lt;encoded-payload&gt;
 </code></pre></div></p>
@@ -605,7 +606,7 @@
 <hr />
 <h3 id="writeencodedpayload">writeEncodedPayload<a class="headerlink" href="#writeencodedpayload" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>writeEncodedPayload</strong>‹<strong>T</strong>›(<code>body</code>: T, <code>encoding</code>: <a href="../../enums/network_reqresp.encoding/">Encoding</a>, <code>serializer</code>: <a href="../network_reqresp/#outgoingserializer">OutgoingSerializer</a>): <em>AsyncGenerator‹Buffer›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/11f6d0e/packages/lodestar/src/network/reqresp/encodingStrategies/index.ts#L43">packages/lodestar/src/network/reqresp/encodingStrategies/index.ts:43</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aa9f500/packages/lodestar/src/network/reqresp/encodingStrategies/index.ts#L43">packages/lodestar/src/network/reqresp/encodingStrategies/index.ts:43</a></em></p>
 <p>Yields byte chunks for encoded header and payload as defined in the spec:
 <div class="highlight"><pre><span></span><code>&lt;encoding-dependent-header&gt; | &lt;encoded-payload&gt;
 </code></pre></div></p>
@@ -638,6 +639,7 @@
 
               
             </article>
+            
           </div>
         </div>
         
@@ -705,10 +707,10 @@
     <div class="md-dialog" data-md-component="dialog">
       <div class="md-dialog__inner md-typeset"></div>
     </div>
-    <script id="__config" type="application/json">{"base": "../../../..", "features": [], "search": "../../../../assets/javascripts/workers/search.2a1c317c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}}</script>
+    <script id="__config" type="application/json">{"base": "../../../..", "features": [], "search": "../../../../assets/javascripts/workers/search.b028fd86.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}}</script>
     
     
-      <script src="../../../../assets/javascripts/bundle.a6c66575.min.js"></script>
+      <script src="../../../../assets/javascripts/bundle.f758a944.min.js"></script>
       
     
   </body>
