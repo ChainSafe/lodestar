@@ -50,7 +50,7 @@ export function isLocalMultiAddr(multiaddr: Multiaddr | undefined): boolean {
       // even though the documentation says otherwise.
       // This might be a bug that would be corrected in future version, in the meantime
       // the check using endsWith ensures things work in node version 18 and earlier
-      if (networkInterface.family.endsWith(String(family)) && networkInterface.address === ipStr) {
+      if (String(networkInterface.family).endsWith(String(family)) && networkInterface.address === ipStr) {
         return true;
       }
     }
