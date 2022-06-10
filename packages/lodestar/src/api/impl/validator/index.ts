@@ -595,7 +595,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
       const currentEpoch = chain.clock.currentEpoch;
       if (epoch < currentEpoch - 1 || epoch > currentEpoch + 1) {
         throw new Error(
-          `Request epoch ${epoch} is more than one epoch previous or after from the current epoch ${currentEpoch}`
+          `Request epoch ${epoch} is more than one epoch before or after the current epoch ${currentEpoch}`
         );
       }
 
