@@ -2,11 +2,11 @@ import fs from "node:fs";
 import path from "node:path";
 import {Options} from "yargs";
 import omit from "lodash/omit.js";
-import {cmds} from "../src/cmds";
-import {ICliCommand} from "../src/util";
-import {globalOptions} from "../src/options";
-import {beaconOptions} from "../src/cmds/beacon/options";
-import {renderMarkdownSections, toMarkdownTable, IMarkdownSection} from "./markdown";
+import {cmds} from "../src/cmds/index.js";
+import {ICliCommand} from "../src/util/index.js";
+import {globalOptions} from "../src/options/index.js";
+import {beaconOptions} from "../src/cmds/beacon/options.js";
+import {renderMarkdownSections, toMarkdownTable, IMarkdownSection} from "./markdown.js";
 
 // Script to generate a reference of all CLI commands and options
 // Outputs a markdown format ready to be consumed by mkdocs
@@ -65,7 +65,7 @@ function cmdToMarkdownSection(cmd: ICliCommand<any>, parentCommand?: string): IM
     if (
       cmds.some((c) => c.command === "beacon") &&
       commandJson !== "beacon" &&
-      Object.keys(beaconOptions).every((key) => cmd.options![key])
+      Object.keys(beaconOptions).every((key) => cmd.options?.[key])
     ) {
       cmd.options = omit(cmd.options, Object.keys(beaconOptions));
       body.push(`Cmd \`${commandJson}\` has all the options from the [\`beacon\` cmd](#beacon).`);
