@@ -12,7 +12,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: ["lts/fermium", "lts/gallium", 18]
+        node: ["lts/gallium", 18]
     steps:
       # <common-build> - Uses YAML anchors in the future
       - uses: actions/checkout@v2
