@@ -3,11 +3,11 @@ import net from "node:net";
 import {spawn} from "node:child_process";
 import {Context} from "mocha";
 import {fromHexString} from "@chainsafe/ssz";
+import {isBellatrixStateType, isMergeTransitionComplete} from "@chainsafe/lodestar-beacon-state-transition";
 import {LogLevel, sleep, TimestampFormatCode} from "@chainsafe/lodestar-utils";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {IChainConfig} from "@chainsafe/lodestar-config";
 import {Epoch} from "@chainsafe/lodestar-types";
-import {bellatrix} from "@chainsafe/lodestar-beacon-state-transition";
 
 import {ExecutePayloadStatus} from "../../src/executionEngine/interface.js";
 import {ExecutionEngineHttp} from "../../src/executionEngine/http.js";
@@ -385,9 +385,9 @@ describe("executionEngine / ExecutionEngineHttp", function () {
           // By this slot, ttd should be reached and merge complete
           case Number(ttd) + 3: {
             const headState = bn.chain.getHeadState();
-            const isMergeTransitionComplete =
-              bellatrix.isBellatrixStateType(headState) && bellatrix.isMergeTransitionComplete(headState);
-            if (!isMergeTransitionComplete) reject("Merge not completed");
+            if (!(isBellatrixStateType(headState) && isMergeTransitionComplete(headState))) {
+              reject("Merge not completed");
+            }
 
             // Send another tx post-merge, total amount in destination account should be double after this is included in chain
             if (TX_SCENARIOS.includes("simple")) {

@@ -1,15 +1,17 @@
 import {toHexString} from "@chainsafe/ssz";
 import {SAFE_SLOTS_TO_UPDATE_JUSTIFIED, SLOTS_PER_HISTORICAL_ROOT, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import {Slot, ValidatorIndex, phase0, allForks, ssz, RootHex, Epoch, Root} from "@chainsafe/lodestar-types";
+import {bellatrix, Slot, ValidatorIndex, phase0, allForks, ssz, RootHex, Epoch, Root} from "@chainsafe/lodestar-types";
 import {
   getCurrentInterval,
   computeSlotsSinceEpochStart,
   computeStartSlotAtEpoch,
   computeEpochAtSlot,
   ZERO_HASH,
-  bellatrix,
   EffectiveBalanceIncrements,
   BeaconStateAllForks,
+  isBellatrixBlockBodyType,
+  isBellatrixStateType,
+  isExecutionEnabled,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IChainConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
 
@@ -417,9 +419,7 @@ export class ForkChoice implements IForkChoice {
       finalizedEpoch: finalizedCheckpoint.epoch,
       finalizedRoot: toHexString(state.finalizedCheckpoint.root),
 
-      ...(bellatrix.isBellatrixBlockBodyType(block.body) &&
-      bellatrix.isBellatrixStateType(state) &&
-      bellatrix.isExecutionEnabled(state, block.body)
+      ...(isBellatrixBlockBodyType(block.body) && isBellatrixStateType(state) && isExecutionEnabled(state, block.body)
         ? {
             executionPayloadBlockHash: toHexString(block.body.executionPayload.blockHash),
             executionStatus: this.getPostMergeExecStatus(preCachedData),

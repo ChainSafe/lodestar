@@ -1,8 +1,7 @@
 import sinon, {SinonStubbedInstance} from "sinon";
 
-import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
-import {ssz} from "@chainsafe/lodestar-types";
+import {phase0, ssz} from "@chainsafe/lodestar-types";
 
 import {BeaconChain} from "../../../../src/chain/index.js";
 import {StubbedChain} from "../../../utils/stub/index.js";

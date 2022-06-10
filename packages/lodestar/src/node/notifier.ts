@@ -1,7 +1,11 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ErrorAborted, ILogger, sleep, prettyBytes} from "@chainsafe/lodestar-utils";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import {computeEpochAtSlot, bellatrix} from "@chainsafe/lodestar-beacon-state-transition";
+import {
+  computeEpochAtSlot,
+  isBellatrixCachedStateType,
+  isMergeTransitionComplete,
+} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconChain} from "../chain/index.js";
 import {INetwork} from "../network/index.js";
 import {IBeaconSync, SyncState} from "../sync/index.js";
@@ -59,15 +63,14 @@ export async function runNodeNotifier({
       const peersRow = `peers: ${connectedPeerCount}`;
       const finalizedCheckpointRow = `finalized: ${prettyBytes(finalizedRoot)}:${finalizedEpoch}`;
       const headRow = `head: ${headInfo.slot} ${prettyBytes(headInfo.blockRoot)}`;
-      const isMergeTransitionComplete =
-        bellatrix.isBellatrixCachedStateType(headState) && bellatrix.isMergeTransitionComplete(headState);
-      const executionInfo = isMergeTransitionComplete
-        ? [
-            `execution: ${headInfo.executionStatus.toLowerCase()}(${prettyBytes(
-              headInfo.executionPayloadBlockHash ?? "empty"
-            )})`,
-          ]
-        : [];
+      const executionInfo =
+        isBellatrixCachedStateType(headState) && isMergeTransitionComplete(headState)
+          ? [
+              `execution: ${headInfo.executionStatus.toLowerCase()}(${prettyBytes(
+                headInfo.executionPayloadBlockHash ?? "empty"
+              )})`,
+            ]
+          : [];
 
       // Give info about empty slots if head < clock
       const skippedSlots = clockSlot - headInfo.slot;

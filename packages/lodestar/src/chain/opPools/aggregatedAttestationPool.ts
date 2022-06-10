@@ -6,13 +6,12 @@ import {
   SLOTS_PER_EPOCH,
   TIMELY_SOURCE_FLAG_INDEX,
 } from "@chainsafe/lodestar-params";
-import {Epoch, Slot, ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {phase0, Epoch, Slot, ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {
   CachedBeaconStateAllForks,
   CachedBeaconStatePhase0,
   CachedBeaconStateAltair,
   computeEpochAtSlot,
-  phase0,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {toHexString} from "@chainsafe/ssz";
 import {MapDef} from "../../util/map.js";
@@ -54,6 +53,19 @@ export class AggregatedAttestationPool {
     () => new Map<DataRootHex, MatchingDataAttestationGroup>()
   );
   private lowestPermissibleSlot = 0;
+
+  /** For metrics to track size of the pool */
+  getAttestationCount(): {attestationCount: number; attestationDataCount: number} {
+    let attestationCount = 0;
+    let attestationDataCount = 0;
+    for (const attestationGroupByData of this.attestationGroupByDataHashBySlot.values()) {
+      attestationDataCount += attestationGroupByData.size;
+      for (const attestationGroup of attestationGroupByData.values()) {
+        attestationCount += attestationGroup.getAttestationCount();
+      }
+    }
+    return {attestationCount, attestationDataCount};
+  }
 
   add(attestation: phase0.Attestation, attestingIndicesCount: number, committee: ValidatorIndex[]): InsertOutcome {
     const slot = attestation.data.slot;
@@ -210,6 +222,10 @@ export class MatchingDataAttestationGroup {
   private readonly attestations: AttestationWithIndex[] = [];
 
   constructor(readonly committee: ValidatorIndex[], readonly data: phase0.AttestationData) {}
+
+  getAttestationCount(): number {
+    return this.attestations.length;
+  }
 
   /**
    * Add an attestation.

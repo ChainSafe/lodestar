@@ -13,18 +13,6 @@
 
 [Lodestar](https://lodestar.chainsafe.io) is a TypeScript implementation of the [Ethereum Consensus specification](https://github.com/ethereum/consensus-specs) developed by [ChainSafe Systems](https://chainsafe.io).
 
-###### Get it from the NPM Registry:
-
-```bash
-npm install -g @chainsafe/lodestar-cli
-```
-
-###### Get it from the Docker Hub:
-
-```bash
-docker pull chainsafe/lodestar
-```
-
 ## Getting started
 
 - :gear: Follow the [installation guide](https://chainsafe.github.io/lodestar/installation) to install Lodestar.

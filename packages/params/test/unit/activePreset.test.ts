@@ -1,6 +1,7 @@
 import {expect} from "chai";
 import {preset as mainnetParams} from "../../src/presets/mainnet/index.js";
 import {preset as minimalParams} from "../../src/presets/minimal/index.js";
+import {preset as gnosisParams} from "../../src/presets/gnosis/index.js";
 import {ACTIVE_PRESET, PresetName} from "../../src/index.js";
 import {setActivePreset} from "../../src/setPreset.js";
 import {setActivePreset as setActivePresetLib} from "../../src/setPreset.js";
@@ -10,6 +11,7 @@ describe("active preset", async () => {
   const params = {
     [PresetName.mainnet]: mainnetParams,
     [PresetName.minimal]: minimalParams,
+    [PresetName.gnosis]: gnosisParams,
   };
 
   it("Active preset should be set to the correct value", () => {
