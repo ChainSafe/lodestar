@@ -1,8 +1,14 @@
-# Connect to Mainnet or a Public Testnet
+# Beacon Management
+
+The following instructions are required to setup and run a Lodestar beacon node.
+
+[TOC]
+
+## Connect to Mainnet or a Public Testnet
 
 Running a Lodestar node on mainnet or a testnet only requires basic familiarity with the terminal.
 
-Make sure lodestar is installed in your local environment, following the [install guide](../../installation/). The following command should return a non error message.
+Make sure Lodestar is installed in your local environment, following the chosen install method. The following command should return a non error message.
 
 ```bash
 ./lodestar --help
@@ -12,6 +18,37 @@ For a complete list of beacon node CLI commands and options, see the [Command Li
 
 To select a known testnet or mainnet, use the `--network` flag. `mainnet` is selected by default, and a list of available networks is listed with the `--help` flag. Setting the `--network` flag will conveniently configure the beacon node or validator client for the selected network. For power users, any configuration option should be able to be overridden.
 
+## Configure the Lodestar JWT authentication token
+
+Post-Merge Ethereum will require [secure authentication with the Engine API](https://github.com/ethereum/execution-apis/blob/main/src/engine/authentication.md) connection on your chosen Execution node.
+
+<!-- prettier-ignore-start -->
+!!! info
+    Post-Merge Ethereum **requires** a secure, authenticated connection to the Execution client. We recommend setting this up now to ensure a proper configuration before the Merge.
+<!-- prettier-ignore-end -->
+
+### Generate a secret key
+
+You must generate a secret 32-byte (32 characters) hexadecimal string that will be used to authenticate with an execution node. You can use the following command in most terminals to generate a random secret: `openssl rand -hex 32`. Or you can use an [online generator](https://codebeautify.org/generate-random-hexadecimal-numbers).  Save this secret key into a text file and note where you store this file.
+
+### Configure Lodestar to locate the JWT secret
+
+When starting up a Lodestar beacon node in any configuration, ensure you add the `--jwt-secret /path/to/file` flag to point to the saved secret key file. 
+
+### Ensure JWT is configured with your Execution node
+
+**For Go Ethereum:**
+Use the `--authrpc.jwtsecret /data/jwtsecret` flag to configure the secret. Use their documentation [here](https://geth.ethereum.org/docs/interface/merge).
+
+**For Nethermind:**
+Use the `--JsonRpc.JwtSecretFile /data/jwtsecret` flag to configure the secret. Use their documentation [here](https://docs.nethermind.io/nethermind/first-steps-with-nethermind/running-nethermind-post-merge#jwtsecretfile).
+
+**For Besu:**
+Use the `--engine-jwt-secret=<FILE>` flag to configure the secret. Use their documentation [here](https://besu.hyperledger.org/en/stable/Reference/CLI/CLI-Syntax/#engine-jwt-secret).
+
+**For Erigon:**
+Use the `--authrpc.jwtsecret` flag to configure the secret. Use their documentation [here](https://github.com/ledgerwatch/erigon#authentication-api).
+
 ## Initialize a beacon node (optional)
 
 If you would like to initialize your beacon node with the basic files required to run on a testnet or mainnet before actually running the node (Especially useful for configuring a new testnet), you can run the following command:
@@ -20,7 +57,7 @@ If you would like to initialize your beacon node with the basic files required t
 ./lodestar init --network $NETWORK_NAME
 ```
 
-By default, lodestar stores all configuration and chain data at the path `$XDG_DATA_HOME/lodestar/$NETWORK_NAME`.
+By default, Lodestar stores all configuration and chain data at the path `$XDG_DATA_HOME/lodestar/$NETWORK_NAME`.
 
 ## Run a beacon node
 
@@ -73,8 +110,8 @@ A young testnet should take a few hours to sync. If you see multiple or consiste
 
 ### Weak Subjectivity
 
-If you are starting your node from blank db/genesis (or from last saved state in db) in a network which is now far ahead, your node is susceptible to something called "long range attacks".
-[Read Vitalik's illuminating post on the same](https://blog.ethereum.org/2014/11/25/proof-stake-learned-love-weak-subjectivity/)
+If you are starting your node from blank db/genesis (or from last saved state in db) in a network which is now far ahead, your node is susceptible to something called "long range attacks"
+[Read Vitalik's illuminating post on the same](https://blog.ethereum.org/2014/11/25/proof-stake-learned-love-weak-subjectivity/).
 
 If you have a synced beacon node handy (your friend's or an infrastructure provider) and a trusted checkpoint you can rely on, you can start off your beacon node in under a minute! And at the same time kicking the "long range attack" in its butt!
 
@@ -84,25 +121,8 @@ Just supply these **extra args** to your beacon node command:
 ```
 In case you really trust `weakSubjectivityServerUrl` then you may skip providing `weakSubjectivityCheckpoint`, which will then result into your beacon node syncing and starting off a finalized state from the trusted url.
 
-#### PS
-Please use this option very carefully (and at your own risk), a malicious server url can put you on a wrong chain with the danger of you loosing your funds by social engineering. 
-If possible validate your `weakSubjectivityCheckpoint` from multiple places like different client distributions, or from any other trusted sources. This will highly reduce the risk of starting off on a wrong chain.
-
-## Run a validator
-
-To start a Lodestar validator run the command:
-
-```bash
-./lodestar validator --network $NETWORK_NAME
-```
-
-You should see confirmation that modules have started.
-
-```bash
-2020-08-07 14:14:24  []                 info: Decrypted 2 validator keystores
-2020-08-07 14:14:24  [VALIDATOR 0X8BAC4815] info: Setting up validator client...
-2020-08-07 14:14:24  [VALIDATOR 0X8BAC4815] info: Setting up RPC connection...
-2020-08-07 14:14:24  []                 info: Checking genesis time and beacon node connection
-2020-08-07 14:14:24  [VALIDATOR 0X8E44237B] info: Setting up validator client...
-2020-08-07 14:14:24  [VALIDATOR 0X8E44237B] info: Setting up RPC connection...
-```
+<!-- prettier-ignore-start -->
+!!! warning
+    Please use this option very carefully (and at your own risk), a malicious server url can put you on a wrong chain with the danger of you losing your funds by social engineering. 
+If possible, validate your `weakSubjectivityCheckpoint` from multiple places (e.g. different client distributions) or from other trusted sources. This will highly reduce the risk of starting off on a malicious chain.
+<!-- prettier-ignore-end -->

@@ -16,7 +16,7 @@
 ## Getting started
 
 - :gear: Follow the [installation guide](https://chainsafe.github.io/lodestar/installation) to install Lodestar.
-- :globe_with_meridians: Run lodestar on the [Ethereum beacon chain mainnet or on a public testnet](https://chainsafe.github.io/lodestar/usage/testnet/).
+- :globe_with_meridians: Run Lodestar on the [Ethereum beacon chain mainnet or on a public testnet](https://chainsafe.github.io/lodestar/usage/beacon-management/).
 - :computer: Quickly try out the whole stack by [starting a local testnet](https://chainsafe.github.io/lodestar/usage/local).
 - :spiral_notepad: View the lodestar [CLI commands and options](https://chainsafe.github.io/lodestar/reference/cli/).
 - :nerd_face: View the [TypeDoc code documentation](https://chainsafe.github.io/lodestar/packages).

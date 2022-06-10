@@ -1,13 +1,17 @@
-# Key management
+# Validator management
 
-## Wallet management
+The following instructions are required for stakers utilizing Lodestar.
+
+[TOC]
+
+## Wallet configuration
 
 A wallet helps to manage many validators from a group of 12/24 words (also known as a "mnemonic" or "recovery phrase"). All validators and withdrawal keys can be re-generated from a backed-up mnemonic.
 
 The mnemonic is randomly generated during wallet creation and printed out to the terminal. It's important to make one or more backups of the mnemonic to ensure your ETH wallets are not lost in the case of data loss. 
 
 <!-- prettier-ignore-start -->
-!!! warning
+!!! danger
     It is very important to keep your mnemonic private as it represents the ultimate control of your ETH wallets.
 <!-- prettier-ignore-end -->
 
@@ -24,7 +28,7 @@ Alternatively, for a graphical user interface, you can use the [Stakehouse Wagyu
     These tools will generate files for staking validators as well as the important mnemonic. This mnemonic must be handled and stored securely.
 <!-- prettier-ignore-end -->
 
-## Validator management
+## Setup your validator
 
 Validators are represented by a BLS keypair. Use your generated mnemonic from one of the tools above to generate the keystore files required for validator duties on Lodestar. 
 
@@ -73,8 +77,38 @@ These keystore files should be placed into your `./keystores` folder in your Lod
 
 Create a `password.txt` file with the password you set for your keystores and save it into your `./secrets` folder in your Lodestar directory.
 
+### Configuring the fee recipient address
 
+<!-- prettier-ignore-start -->
+!!! warning
+    This feature is in review. Please use with caution and report any issues to the team through our [Discord](https://discord.gg/yjyvFRP).
+<!-- prettier-ignore-end -->
+
+Post-Merge Ethereum requires validators to set a **Fee Recipient** which allows you to receive priority fees when proposing blocks. If you do not set this address, your priority fees will be sent to the [burn address](https://etherscan.io/address/0x0000000000000000000000000000000000000000).
+
+Configure your validator client's fee recipient address by using the `--defaultFeeRecipient` flag. Ensure you specify an Ethereum address you control. An example of a fee recipient set with the address `0xB7576e9d314Df41EC5506494293Afb1bd5D3f65d` would add the following flag to their configuration: `--defaultFeeRecipient 0xB7576e9d314Df41EC5506494293Afb1bd5D3f65d`.
+
+You may choose to use the `--strictFeeRecipientCheck` flag to enable a strict check of the fee recipient address with the one returned by the beacon node for added reassurance.
 
 ### Submit a validator deposit
 
 DEPRECATED. Please use the official tools to perform your deposits - `staking-deposit-cli`: https://github.com/ethereum/staking-deposit-cli - Ethereum Foundation launchpad: https://launchpad.ethereum.org/en/
+
+## Run the validator
+
+To start a Lodestar validator run the command:
+
+```bash
+./lodestar validator --network $NETWORK_NAME
+```
+
+You should see confirmation that modules have started.
+
+```bash
+2020-08-07 14:14:24  []                 info: Decrypted 2 validator keystores
+2020-08-07 14:14:24  [VALIDATOR 0X8BAC4815] info: Setting up validator client...
+2020-08-07 14:14:24  [VALIDATOR 0X8BAC4815] info: Setting up RPC connection...
+2020-08-07 14:14:24  []                 info: Checking genesis time and beacon node connection
+2020-08-07 14:14:24  [VALIDATOR 0X8E44237B] info: Setting up validator client...
+2020-08-07 14:14:24  [VALIDATOR 0X8E44237B] info: Setting up RPC connection...
+```
