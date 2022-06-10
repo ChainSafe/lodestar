@@ -75,6 +75,11 @@ Inside the keystore JSON file, you should have an [EIP-2335 conformant keystore 
 
 These keystore files should be placed into your `./keystores` folder in your Lodestar directory. 
 
+<!-- prettier-ignore-start -->
+!!! info
+    The `./keystores` folder is the default directory for storing validator keystores. You can specify a custom path using the `--keystoresDir /path/to/folder` flag. Reference our [validator command line](https://chainsafe.github.io/lodestar/reference/cli/#validator) for more information.
+<!-- prettier-ignore-end -->
+
 Create a `password.txt` file with the password you set for your keystores and save it into your `./secrets` folder in your Lodestar directory.
 
 ### Configuring the fee recipient address
