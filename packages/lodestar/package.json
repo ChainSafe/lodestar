@@ -16,6 +16,12 @@
   "exports": {
     ".": {
       "import": "./lib/index.js"
+    },
+    "./chain": {
+      "import": "./lib/chain/index.js"
+    },
+    "./constants": {
+      "import": "./lib/constants/index.js"
     }
   },
   "typesVersions": {
