@@ -17,11 +17,26 @@
     ".": {
       "import": "./lib/index.js"
     },
+    "./api": {
+      "import": "./lib/api/index.js"
+    },
+    "./db": {
+      "import": "./lib/db/index.js"
+    },
     "./chain": {
       "import": "./lib/chain/index.js"
     },
     "./constants": {
       "import": "./lib/constants/index.js"
+    },
+    "./network": {
+      "import": "./lib/network/index.js"
+    },
+    "./node": {
+      "import": "./lib/node/index.js"
+    },
+    "./util": {
+      "import": "./lib/util/index.js"
     }
   },
   "typesVersions": {
