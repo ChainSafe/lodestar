@@ -98,7 +98,6 @@ export type Api = {
  * Define javascript values for each route
  */
 export const routesData: RoutesData<Api> = {
-  getWtfNode: {url: "/eth/v1/lodestar/wtfnode", method: "GET"},
   writeHeapdump: {url: "/eth/v1/lodestar/writeheapdump", method: "POST"},
   getLatestWeakSubjectivityCheckpointEpoch: {url: "/eth/v1/lodestar/ws_epoch", method: "GET"},
   getSyncChainsDebugState: {url: "/eth/v1/lodestar/sync-chains-debug-state", method: "GET"},
