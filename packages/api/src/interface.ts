@@ -1,11 +1,11 @@
-import {Api as BeaconApi} from "./routes/beacon/index.js";
-import {Api as ConfigApi} from "./routes/config.js";
-import {Api as DebugApi} from "./routes/debug.js";
-import {Api as EventsApi} from "./routes/events.js";
-import {Api as LightclientApi} from "./routes/lightclient.js";
-import {Api as LodestarApi} from "./routes/lodestar.js";
-import {Api as NodeApi} from "./routes/node.js";
-import {Api as ValidatorApi} from "./routes/validator.js";
+import {Api as BeaconApi} from "./beacon/routes/beacon/index.js";
+import {Api as ConfigApi} from "./beacon/routes/config.js";
+import {Api as DebugApi} from "./beacon/routes/debug.js";
+import {Api as EventsApi} from "./beacon/routes/events.js";
+import {Api as LightclientApi} from "./beacon/routes/lightclient.js";
+import {Api as LodestarApi} from "./beacon/routes/lodestar.js";
+import {Api as NodeApi} from "./beacon/routes/node.js";
+import {Api as ValidatorApi} from "./beacon/routes/validator.js";
 
 export type Api = {
   beacon: BeaconApi;

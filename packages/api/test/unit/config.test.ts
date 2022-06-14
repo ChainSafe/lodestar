@@ -3,9 +3,9 @@ import {ssz} from "@chainsafe/lodestar-types";
 import {chainConfigToJson} from "@chainsafe/lodestar-config";
 import {config, chainConfig} from "@chainsafe/lodestar-config/default";
 import {activePreset, presetToJson} from "@chainsafe/lodestar-params";
-import {Api, ReqTypes, getReturnTypes} from "../../src/routes/config.js";
-import {getClient} from "../../src/client/config.js";
-import {getRoutes} from "../../src/server/config.js";
+import {Api, ReqTypes, getReturnTypes} from "../../src/beacon/routes/config.js";
+import {getClient} from "../../src/beacon/client/config.js";
+import {getRoutes} from "../../src/beacon/server/config.js";
 import {runGenericServerTest} from "../utils/genericServerTest.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */

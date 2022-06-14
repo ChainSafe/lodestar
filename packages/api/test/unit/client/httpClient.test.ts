@@ -4,7 +4,7 @@ import chaiAsPromised from "chai-as-promised";
 import fastify, {RouteOptions} from "fastify";
 import {ErrorAborted, TimeoutError} from "@chainsafe/lodestar-utils";
 import {AbortController} from "@chainsafe/abort-controller";
-import {HttpClient, HttpError} from "../../../src/client/utils/index.js";
+import {HttpClient, HttpError} from "../../../src/utils/client/index.js";
 
 chai.use(chaiAsPromised);
 
