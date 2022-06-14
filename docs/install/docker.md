@@ -22,3 +22,7 @@ Pull, run the image and Lodestar should now be ready to use
 docker pull chainsafe/lodestar
 docker run chainsafe/lodestar --help
 ```
+<!-- prettier-ignore-start -->
+!!! info
+    Docker is the recommended setup for Lodestar. Use our [comprehensive setup guide](https://hackmd.io/@philknows/rk5cDvKmK) with Docker for detailed instructions.
+<!-- prettier-ignore-end -->
