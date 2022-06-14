@@ -6,3 +6,4 @@ export * from "./gossip/index.js";
 export * from "./reqresp/index.js";
 export * from "./util.js";
 export * from "./peers/index.js";
+//export * from "./options.js";
