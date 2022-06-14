@@ -119,8 +119,10 @@ export class Eth2Gossipsub extends Gossipsub {
       fastMsgIdFn: fastMsgIdFn,
       msgIdFn: msgIdFn.bind(msgIdFn, gossipTopicCache),
       dataTransform: new DataTransformSnappy(gossipTopicCache),
-      metricsRegister: modules.metrics ? ((modules.metrics.register as unknown) as MetricsRegister) : null,
-      metricsTopicStrToLabel: modules.metrics ? getMetricsTopicStrToLabel(modules.config) : undefined,
+      // metricsRegister: modules.metrics ? ((modules.metrics.register as unknown) as MetricsRegister) : null,
+      metricsRegister: null,
+      // metricsTopicStrToLabel: modules.metrics ? getMetricsTopicStrToLabel(modules.config) : undefined,
+      metricsTopicStrToLabel: undefined,
       asyncValidation: true,
     });
     this.scoreParams = scoreParams;
