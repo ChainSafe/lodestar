@@ -1,10 +1,10 @@
-# Beacon Management
+# Beacon management
 
 The following instructions are required to setup and run a Lodestar beacon node.
 
 [TOC]
 
-## Connect to Mainnet or a Public Testnet
+## Connect to mainnet or a public testnet
 
 Running a Lodestar node on mainnet or a testnet only requires basic familiarity with the terminal.
 
@@ -24,18 +24,18 @@ Post-Merge Ethereum will require [secure authentication with the Engine API](htt
 
 <!-- prettier-ignore-start -->
 !!! info
-    Post-Merge Ethereum **requires** a secure, authenticated connection to the Execution client. We recommend setting this up now to ensure a proper configuration before the Merge.
+    Post-Merge Ethereum **requires** a secure, authenticated connection to the Execution client on port 8551. We recommend setting this up now to ensure a proper configuration before the Merge.
 <!-- prettier-ignore-end -->
 
 ### Generate a secret key
 
-You must generate a secret 32-byte (32 characters) hexadecimal string that will be used to authenticate with an execution node. You can use the following command in most terminals to generate a random secret: `openssl rand -hex 32`. Or you can use an [online generator](https://codebeautify.org/generate-random-hexadecimal-numbers).  Save this secret key into a text file and note where you store this file.
+You must generate a secret 32-byte (64 characters) hexadecimal string that will be used to authenticate with an execution node. You can use the following command in most terminals to generate a random secret: `openssl rand -hex 32`. Or you can use an [online generator](https://codebeautify.org/generate-random-hexadecimal-numbers).  Save this secret key into a text file and note where you store this file.
 
 ### Configure Lodestar to locate the JWT secret
 
 When starting up a Lodestar beacon node in any configuration, ensure you add the `--jwt-secret /path/to/file` flag to point to the saved secret key file. 
 
-### Ensure JWT is configured with your Execution node
+### Ensure JWT is configured with your execution node
 
 **For Go Ethereum:**
 Use the `--authrpc.jwtsecret /data/jwtsecret` flag to configure the secret. Use their documentation [here](https://geth.ethereum.org/docs/interface/merge).
@@ -108,12 +108,12 @@ Jul-09 17:34:54.278 []                 info: Syncing - 3 days left - 3.00 slots/
 
 A young testnet should take a few hours to sync. If you see multiple or consistent errors in the logs, please open a [Github issue](https://github.com/ChainSafe/lodestar/issues/new) or reach out to us in [Discord](https://discord.gg/yjyvFRP). Just by reporting anomalities you are helping accelerate the progress of Ethereum Consensus, thanks for contributing!
 
-### Weak Subjectivity
+### Weak subjectivity
 
-If you are starting your node from blank db/genesis (or from last saved state in db) in a network which is now far ahead, your node is susceptible to something called "long range attacks"
+If you are starting your node from a blank db/genesis (or from last saved state in db) in a network which is now far ahead, your node is susceptible to "long range attacks."
 [Read Vitalik's illuminating post on the same](https://blog.ethereum.org/2014/11/25/proof-stake-learned-love-weak-subjectivity/).
 
-If you have a synced beacon node handy (your friend's or an infrastructure provider) and a trusted checkpoint you can rely on, you can start off your beacon node in under a minute! And at the same time kicking the "long range attack" in its butt!
+If you have a synced beacon node available (e.g. your friend's node or an infrastructure provider) and a trusted checkpoint you can rely on, you can start off your beacon node in under a minute! And at the same time kicking the "long range attack" in its butt!
 
 Just supply these **extra args** to your beacon node command:
 ```bash
@@ -123,6 +123,6 @@ In case you really trust `weakSubjectivityServerUrl` then you may skip providing
 
 <!-- prettier-ignore-start -->
 !!! warning
-    Please use this option very carefully (and at your own risk), a malicious server url can put you on a wrong chain with the danger of you losing your funds by social engineering. 
+    Please use this option very carefully (and at your own risk), a malicious server URL can put you on the wrong chain with a danger of you losing your funds by social engineering. 
 If possible, validate your `weakSubjectivityCheckpoint` from multiple places (e.g. different client distributions) or from other trusted sources. This will highly reduce the risk of starting off on a malicious chain.
 <!-- prettier-ignore-end -->
