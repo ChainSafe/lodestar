@@ -12,8 +12,8 @@ eth-consensus api compatible beacon nodes/databases/loggers.
 
 ## Getting started
 
-- Follow the [installation guide](https://chainsafe.github.io/lodestar/installation) to install Lodestar.
-- Quickly try out the whole stack by [starting a local testnet](https://chainsafe.github.io/lodestar/usage).
+- Follow the [installation guide](https://chainsafe.github.io/lodestar/) to install Lodestar.
+- Quickly try out the whole stack by [starting a local testnet](https://chainsafe.github.io/lodestar/usage/local).
 - View the [typedoc code docs](https://chainsafe.github.io/lodestar/packages).
 
 ## License
