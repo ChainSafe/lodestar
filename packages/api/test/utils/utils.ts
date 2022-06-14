@@ -23,6 +23,7 @@ export function getTestServer(): {baseUrl: string; server: FastifyInstance} {
       server.listen(port, function (err, address) {
         if (err !== null && err != undefined) {
           reject(err);
+          console.log("error on listen", err);
         } else {
           resolve(address);
         }
