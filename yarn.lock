@@ -554,48 +554,6 @@
     "@chainsafe/lodestar-types" "^0.37.0"
     "@chainsafe/ssz" "^0.9.1"
 
-"@chainsafe/lodestar-db@^0.37.0":
-  version "0.37.0"
-  resolved "https://registry.yarnpkg.com/@chainsafe/lodestar-db/-/lodestar-db-0.37.0.tgz#77f56302efd96987a18a23e7ad5afec68f2bf73e"
-  integrity sha512-9O19XltcSNo8PcNBwXryhoj7IT7N0ueQE6dYv1l6Qmhlb3jnx3Tq84R+ZQsl8ToMWd+NZ/Yl1jLrZn1ZBbPsLA==
-  dependencies:
-    "@chainsafe/lodestar-config" "^0.37.0"
-    "@chainsafe/lodestar-utils" "^0.37.0"
-    "@chainsafe/ssz" "^0.9.1"
-    "@types/levelup" "^4.3.3"
-    it-all "^1.0.2"
-    level "^7.0.0"
-    levelup "^5.0.1"
-
-"@chainsafe/lodestar-fork-choice@^0.37.0":
-  version "0.37.0"
-  resolved "https://registry.yarnpkg.com/@chainsafe/lodestar-fork-choice/-/lodestar-fork-choice-0.37.0.tgz#e7a98100385093f55183f1a2488c134c4c4ad88d"
-  integrity sha512-+rjMkfhjewSYsSvhHHi3gPGuDo/QhbnsC5Yj1I3qjC93zY///j+YkCLjLXkjTlsyhvsK/3Og9pihhKQCR6q7JQ==
-  dependencies:
-    "@chainsafe/lodestar-beacon-state-transition" "^0.37.0"
-    "@chainsafe/lodestar-config" "^0.37.0"
-    "@chainsafe/lodestar-params" "^0.37.0"
-    "@chainsafe/lodestar-types" "^0.37.0"
-    "@chainsafe/lodestar-utils" "^0.37.0"
-    "@chainsafe/ssz" "^0.9.1"
-
-"@chainsafe/lodestar-light-client@^0.37.0":
-  version "0.37.0"
-  resolved "https://registry.yarnpkg.com/@chainsafe/lodestar-light-client/-/lodestar-light-client-0.37.0.tgz#1d8f722bc48b2eaf705b5c21d0f1262e2cc3906d"
-  integrity sha512-pFqyFkPfwXIWMClltl/Afm2Rhmh6z1hgUIR6HX/+zVl11g0tmy8M88tI2iMovHVJbKl30xVJxXesyxGJsMi7gg==
-  dependencies:
-    "@chainsafe/abort-controller" "^3.0.1"
-    "@chainsafe/bls" "7.1.1"
-    "@chainsafe/lodestar-api" "^0.37.0"
-    "@chainsafe/lodestar-config" "^0.37.0"
-    "@chainsafe/lodestar-params" "^0.37.0"
-    "@chainsafe/lodestar-types" "^0.37.0"
-    "@chainsafe/lodestar-utils" "^0.37.0"
-    "@chainsafe/persistent-merkle-tree" "^0.4.1"
-    "@chainsafe/ssz" "^0.9.1"
-    cross-fetch "^3.1.4"
-    mitt "^3.0.0"
-
 "@chainsafe/lodestar-params@^0.37.0":
   version "0.37.0"
   resolved "https://registry.yarnpkg.com/@chainsafe/lodestar-params/-/lodestar-params-0.37.0.tgz#8afab6c7078ee1e7ebe040c69b1475eedec3bed3"
@@ -624,80 +582,6 @@
     winston "^3.3.3"
     winston-daily-rotate-file "^4.5.5"
     winston-transport "^4.3.0"
-
-"@chainsafe/lodestar-validator@^0.37.0":
-  version "0.37.0"
-  resolved "https://registry.yarnpkg.com/@chainsafe/lodestar-validator/-/lodestar-validator-0.37.0.tgz#aec4b6388e77db00146fc8940cbcf8bc742d6c90"
-  integrity sha512-qSRFfxFveE75Tcov2DFXO7jAwn1ObPtQYpiD82SuBcdxpoH4b1gX2X0EOZYsT9PpMxCbHBiQFtPu9PGHCh42+w==
-  dependencies:
-    "@chainsafe/abort-controller" "^3.0.1"
-    "@chainsafe/bls" "7.1.1"
-    "@chainsafe/lodestar-api" "^0.37.0"
-    "@chainsafe/lodestar-beacon-state-transition" "^0.37.0"
-    "@chainsafe/lodestar-config" "^0.37.0"
-    "@chainsafe/lodestar-db" "^0.37.0"
-    "@chainsafe/lodestar-params" "^0.37.0"
-    "@chainsafe/lodestar-types" "^0.37.0"
-    "@chainsafe/lodestar-utils" "^0.37.0"
-    "@chainsafe/ssz" "^0.9.1"
-    bigint-buffer "^1.1.5"
-    cross-fetch "^3.1.4"
-    strict-event-emitter-types "^2.0.0"
-
-"@chainsafe/lodestar@^0.37.0":
-  version "0.37.0"
-  resolved "https://registry.yarnpkg.com/@chainsafe/lodestar/-/lodestar-0.37.0.tgz#1eadc9d957965c2c4d4374ff720e7e989c032923"
-  integrity sha512-5JZp3mm4elr6LbsGL7P68mvmPdsiVa+zAHlACv1KhAopjHbnWP3peGGcgIVGundMh2DtDGFdd6KeRcElcDMWVA==
-  dependencies:
-    "@chainsafe/abort-controller" "^3.0.1"
-    "@chainsafe/as-sha256" "^0.3.1"
-    "@chainsafe/bls" "7.1.1"
-    "@chainsafe/discv5" "^0.7.1"
-    "@chainsafe/libp2p-noise" "5.0.3"
-    "@chainsafe/lodestar-api" "^0.37.0"
-    "@chainsafe/lodestar-beacon-state-transition" "^0.37.0"
-    "@chainsafe/lodestar-config" "^0.37.0"
-    "@chainsafe/lodestar-db" "^0.37.0"
-    "@chainsafe/lodestar-fork-choice" "^0.37.0"
-    "@chainsafe/lodestar-light-client" "^0.37.0"
-    "@chainsafe/lodestar-params" "^0.37.0"
-    "@chainsafe/lodestar-types" "^0.37.0"
-    "@chainsafe/lodestar-utils" "^0.37.0"
-    "@chainsafe/lodestar-validator" "^0.37.0"
-    "@chainsafe/persistent-merkle-tree" "^0.4.1"
-    "@chainsafe/snappy-stream" "5.1.1"
-    "@chainsafe/ssz" "^0.9.1"
-    "@chainsafe/threads" "^1.10.0"
-    "@ethersproject/abi" "^5.0.0"
-    "@types/datastore-level" "^3.0.0"
-    bl "^5.0.0"
-    buffer-xor "^2.0.2"
-    cross-fetch "^3.1.4"
-    datastore-core "^7.0.1"
-    datastore-level "^6.0.2"
-    deepmerge "^3.2.0"
-    fastify "3.15.1"
-    fastify-cors "^6.0.1"
-    gc-stats "^1.4.0"
-    interface-datastore "^5.1.2"
-    it-all "^1.0.4"
-    it-pipe "^1.1.0"
-    jwt-simple "0.5.6"
-    libp2p "^0.36.2"
-    libp2p-bootstrap "^0.14.0"
-    libp2p-gossipsub "^0.14.0"
-    libp2p-mdns "^0.18.0"
-    libp2p-mplex "^0.10.5"
-    libp2p-tcp "^0.17.2"
-    multiaddr "^10.0.1"
-    peer-id "^0.16.0"
-    prom-client "^13.2.0"
-    prometheus-gc-stats "^0.6.3"
-    snappyjs "^0.6.0"
-    stream-to-it "^0.2.0"
-    strict-event-emitter-types "^2.0.0"
-    varint "^6.0.0"
-    wtfnode "^0.8.4"
 
 "@chainsafe/persistent-merkle-tree@^0.4.1", "@chainsafe/persistent-merkle-tree@^0.4.2":
   version "0.4.2"
