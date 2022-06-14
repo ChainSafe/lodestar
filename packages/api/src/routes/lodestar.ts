@@ -58,8 +58,6 @@ export type LodestarNodePeer = NodePeer & {
 };
 
 export type Api = {
-  /** TODO: description */
-  getWtfNode(): Promise<{data: string}>;
   /** Trigger to write a heapdump to disk at `dirpath`. May take > 1min */
   writeHeapdump(dirpath?: string): Promise<{data: {filepath: string}}>;
   /** TODO: description */
@@ -116,7 +114,6 @@ export const routesData: RoutesData<Api> = {
 };
 
 export type ReqTypes = {
-  getWtfNode: ReqEmpty;
   writeHeapdump: {query: {dirpath?: string}};
   getLatestWeakSubjectivityCheckpointEpoch: ReqEmpty;
   getSyncChainsDebugState: ReqEmpty;
@@ -136,7 +133,6 @@ export type ReqTypes = {
 
 export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
   return {
-    getWtfNode: reqEmpty,
     writeHeapdump: {
       writeReq: (dirpath) => ({query: {dirpath}}),
       parseReq: ({query}) => [query.dirpath],
@@ -178,7 +174,6 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
 /* eslint-disable @typescript-eslint/naming-convention */
 export function getReturnTypes(): ReturnTypes<Api> {
   return {
-    getWtfNode: sameType(),
     writeHeapdump: sameType(),
     getLatestWeakSubjectivityCheckpointEpoch: sameType(),
     getSyncChainsDebugState: jsonType("camel"),
