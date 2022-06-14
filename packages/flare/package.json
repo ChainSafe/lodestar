@@ -60,7 +60,6 @@
     "blockchain"
   ],
   "dependencies": {
-    "@chainsafe/lodestar": "^0.37.0",
     "@chainsafe/lodestar-api": "^0.37.0",
     "@chainsafe/lodestar-beacon-state-transition": "^0.37.0",
     "@chainsafe/lodestar-config": "^0.37.0",
