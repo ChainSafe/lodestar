@@ -121,13 +121,13 @@ describe("api / impl / validator", function () {
       await expect(client.validator.getLiveness([1], currentEpoch + 2)).to.be.rejectedWith(
         `Request epoch ${
           currentEpoch + 2
-        } is more than one epoch previous or after from the current epoch ${currentEpoch}`
+        } is more than one epoch before or after the current epoch ${currentEpoch}`
       );
       // more than previous epoch is not fine
       await expect(client.validator.getLiveness([1], currentEpoch - 2)).to.be.rejectedWith(
         `Request epoch ${
           currentEpoch - 2
-        } is more than one epoch previous or after from the current epoch ${currentEpoch}`
+        } is more than one epoch before or after the current epoch ${currentEpoch}`
       );
     });
   });
