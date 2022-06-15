@@ -182,6 +182,7 @@ module.exports = {
       files: ["**/test/**/*.ts"],
       rules: {
         "import/no-extraneous-dependencies": "off",
+        "import/no-named-as-default-member": "off",
         "@typescript-eslint/no-explicit-any": "off",
         "func-names": "off",
       },
