@@ -76,6 +76,9 @@ export function generateGenericJsonClient<
         // eslint-disable-next-line @typescript-eslint/no-unsafe-return
         return returnType.fromJson(res) as ReturnType<Api[keyof Api]>;
       } else {
+        // We need to avoid parsing the response as the servers might just
+        // response status 200 and close the request instead of writing an
+        // empty json response
         await fetchFn.request(fetchOptsSerializer(...args));
       }
     };
