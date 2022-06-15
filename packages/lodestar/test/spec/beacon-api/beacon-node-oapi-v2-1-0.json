@@ -72,9 +72,11 @@
                 "schema": {
                   "type": "object",
                   "title": "GetGenesisResponse",
+                  "required": ["data"],
                   "properties": {
                     "data": {
                       "type": "object",
+                      "required": ["genesis_time", "genesis_validators_root", "genesis_fork_version"],
                       "properties": {
                         "genesis_time": {
                           "allOf": [
@@ -209,9 +211,11 @@
                 "schema": {
                   "title": "GetStateRootResponse",
                   "type": "object",
+                  "required": ["data"],
                   "properties": {
                     "data": {
                       "type": "object",
+                      "required": ["root"],
                       "properties": {
                         "root": {
                           "allOf": [
