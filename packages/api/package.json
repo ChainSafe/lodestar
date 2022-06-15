@@ -17,14 +17,23 @@
     ".": {
       "import": "./lib/index.js"
     },
+    "./beacon": {
+      "import": "./lib/beacon/index.js"
+    },
+    "./beacon/server": {
+      "import": "./lib/beacon/server/index.js"
+    },
+    "./builder": {
+      "import": "./lib/builder/index.js"
+    },
+    "./builder/server": {
+      "import": "./lib/builder/server/index.js"
+    },
     "./keymanager": {
       "import": "./lib/keymanager/index.js"
     },
     "./keymanager/server": {
-      "import": "./lib/keymanager/server.js"
-    },
-    "./server": {
-      "import": "./lib/server/index.js"
+      "import": "./lib/keymanager/server/index.js"
     }
   },
   "typesVersions": {

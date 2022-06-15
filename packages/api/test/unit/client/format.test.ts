@@ -1,6 +1,6 @@
 import {expect} from "chai";
-import {EventType} from "../../../src/routes/events.js";
-import {stringifyQuery} from "../../../src/client/utils/format.js";
+import {EventType} from "../../../src/beacon/routes/events.js";
+import {stringifyQuery} from "../../../src/utils/client/format.js";
 
 describe("client / utils / format", () => {
   it("Should repeat topic query", () => {
