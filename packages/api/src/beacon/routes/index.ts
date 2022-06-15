@@ -1,3 +1,12 @@
+import {Api as BeaconApi} from "./beacon/index.js";
+import {Api as ConfigApi} from "./config.js";
+import {Api as DebugApi} from "./debug.js";
+import {Api as EventsApi} from "./events.js";
+import {Api as LightclientApi} from "./lightclient.js";
+import {Api as LodestarApi} from "./lodestar.js";
+import {Api as NodeApi} from "./node.js";
+import {Api as ValidatorApi} from "./validator.js";
+
 export * as beacon from "./beacon/index.js";
 export * as config from "./config.js";
 export * as debug from "./debug.js";
@@ -6,6 +15,17 @@ export * as lightclient from "./lightclient.js";
 export * as lodestar from "./lodestar.js";
 export * as node from "./node.js";
 export * as validator from "./validator.js";
+
+export type Api = {
+  beacon: BeaconApi;
+  config: ConfigApi;
+  debug: DebugApi;
+  events: EventsApi;
+  lightclient: LightclientApi;
+  lodestar: LodestarApi;
+  node: NodeApi;
+  validator: ValidatorApi;
+};
 
 // Reasoning of the API definitions
 // ================================
