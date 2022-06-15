@@ -71,10 +71,12 @@ export function generateGenericJsonClient<
     const returnType = returnTypes[routeId as keyof ReturnTypes<Api>] as TypeJson<any> | null;
 
     return async function request(...args: Parameters<Api[keyof Api]>): Promise<any | void> {
-      const res = await fetchFn.json<unknown>(fetchOptsSerializer(...args));
       if (returnType) {
+        const res = await fetchFn.json<unknown>(fetchOptsSerializer(...args));
         // eslint-disable-next-line @typescript-eslint/no-unsafe-return
         return returnType.fromJson(res) as ReturnType<Api[keyof Api]>;
+      } else {
+        await fetchFn.request(fetchOptsSerializer(...args));
       }
     };
   }) as Api;
