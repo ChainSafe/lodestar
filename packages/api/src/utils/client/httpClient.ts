@@ -28,6 +28,7 @@ export type FetchOpts = {
 export interface IHttpClient {
   baseUrl: string;
   json<T>(opts: FetchOpts): Promise<T>;
+  request(opts: FetchOpts): Promise<void>;
   arrayBuffer(opts: FetchOpts): Promise<ArrayBuffer>;
 }
 
@@ -67,14 +68,18 @@ export class HttpClient implements IHttpClient {
   }
 
   async json<T>(opts: FetchOpts): Promise<T> {
-    return await this.request<T>(opts, (res) => res.json() as Promise<T>);
+    return await this.requestWithBody<T>(opts, (res) => res.json() as Promise<T>);
+  }
+
+  async request(opts: FetchOpts): Promise<void> {
+    return await this.requestWithBody<void>(opts, async (_res) => void 0);
   }
 
   async arrayBuffer(opts: FetchOpts): Promise<ArrayBuffer> {
-    return await this.request<ArrayBuffer>(opts, (res) => res.arrayBuffer());
+    return await this.requestWithBody<ArrayBuffer>(opts, (res) => res.arrayBuffer());
   }
 
-  private async request<T>(opts: FetchOpts, getBody: (res: Response) => Promise<T>): Promise<T> {
+  private async requestWithBody<T>(opts: FetchOpts, getBody: (res: Response) => Promise<T>): Promise<T> {
     // Implement fetch timeout
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
