@@ -1,6 +1,12 @@
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import {ServerInstance, ServerRoutes, getGenericJsonServer, registerRoute, RouteConfig} from "../utils/server/index.js";
-import {Api, ReqTypes, routesData, getReturnTypes, getReqSerializers} from "./routes.js";
+import {
+  ServerInstance,
+  ServerRoutes,
+  getGenericJsonServer,
+  registerRoute,
+  RouteConfig,
+} from "../../utils/server/index.js";
+import {Api, ReqTypes, routesData, getReturnTypes, getReqSerializers} from "../routes.js";
 
 // Re-export for convenience
 export {RouteConfig};
