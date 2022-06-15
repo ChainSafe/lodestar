@@ -3,7 +3,7 @@ import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {RouteGeneric, ReqGeneric, Resolves} from "../../src/utils/index.js";
 import {FetchOpts, HttpClient, IHttpClient} from "../../src/utils/client/index.js";
 import {ServerRoutes} from "../../src/utils/server/genericJsonServer.js";
-import {registerRoutesGroup} from "../../src/beacon/server/index.js";
+import {registerRoute} from "../../src/utils/server/registerRoute.js";
 import {getMockApi, getTestServer} from "./utils.js";
 
 type IgnoreVoid<T> = T extends void ? undefined : T;
@@ -31,8 +31,9 @@ export function runGenericServerTest<
   const httpClient = new HttpClientSpy({baseUrl});
   const client = getClient(config, httpClient);
 
-  const routes = getRoutes(config, mockApi);
-  registerRoutesGroup(server, routes);
+  for (const route of Object.values(getRoutes(config, mockApi))) {
+    registerRoute(server, route);
+  }
 
   for (const key of Object.keys(testCases)) {
     const routeId = key as keyof Api;

@@ -2,12 +2,12 @@ import {ForkName} from "@chainsafe/lodestar-params";
 import {ssz} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/default";
 import {toHexString} from "@chainsafe/ssz";
-import {Api, ReqTypes, BlockHeaderResponse, ValidatorResponse} from "../../src/beacon/routes/beacon/index.js";
-import {getClient} from "../../src/beacon/client/beacon.js";
-import {getRoutes} from "../../src/beacon/server/beacon.js";
-import {runGenericServerTest} from "../utils/genericServerTest.js";
+import {Api, ReqTypes, BlockHeaderResponse, ValidatorResponse} from "../../../src/beacon/routes/beacon/index.js";
+import {getClient} from "../../../src/beacon/client/beacon.js";
+import {getRoutes} from "../../../src/beacon/server/beacon.js";
+import {runGenericServerTest} from "../../utils/genericServerTest.js";
 
-describe("beacon", () => {
+describe("beacon / beacon", () => {
   const root = Buffer.alloc(32, 1);
   const balance = 32e9;
   const pubkeyHex = toHexString(Buffer.alloc(48, 1));

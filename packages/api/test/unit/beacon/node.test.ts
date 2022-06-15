@@ -1,11 +1,11 @@
 import {ssz} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/default";
-import {Api, ReqTypes, NodePeer} from "../../src/beacon/routes/node.js";
-import {getClient} from "../../src/beacon/client/node.js";
-import {getRoutes} from "../../src/beacon/server/node.js";
-import {runGenericServerTest} from "../utils/genericServerTest.js";
+import {Api, ReqTypes, NodePeer} from "../../../src/beacon/routes/node.js";
+import {getClient} from "../../../src/beacon/client/node.js";
+import {getRoutes} from "../../../src/beacon/server/node.js";
+import {runGenericServerTest} from "../../utils/genericServerTest.js";
 
-describe("node", () => {
+describe("beacon / node", () => {
   const peerIdStr = "peerId";
   const nodePeer: NodePeer = {
     peerId: peerIdStr,

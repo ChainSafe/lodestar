@@ -1,8 +1,8 @@
 import {config} from "@chainsafe/lodestar-config/default";
-import {Api, DeletionStatus, ImportStatus, ReqTypes} from "../../src/keymanager/routes.js";
-import {getClient} from "../../src/keymanager/client.js";
-import {getRoutes} from "../../src/keymanager/server/index.js";
-import {runGenericServerTest} from "../utils/genericServerTest.js";
+import {Api, DeletionStatus, ImportStatus, ReqTypes} from "../../../src/keymanager/routes.js";
+import {getClient} from "../../../src/keymanager/client.js";
+import {getRoutes} from "../../../src/keymanager/server/index.js";
+import {runGenericServerTest} from "../../utils/genericServerTest.js";
 
 describe("keymanager", () => {
   runGenericServerTest<Api, ReqTypes>(config, getClient, getRoutes, {

@@ -2,18 +2,19 @@ import {expect} from "chai";
 import {AbortController} from "@chainsafe/abort-controller";
 import {sleep} from "@chainsafe/lodestar-utils";
 import {config} from "@chainsafe/lodestar-config/default";
-import {Api, routesData, EventType, BeaconEvent} from "../../src/beacon/routes/events.js";
-import {getClient} from "../../src/beacon/client/events.js";
-import {getRoutes} from "../../src/beacon/server/events.js";
-import {getMockApi, getTestServer} from "../utils/utils.js";
-import {registerRoutesGroup} from "../../src/beacon/server/index.js";
+import {Api, routesData, EventType, BeaconEvent} from "../../../src/beacon/routes/events.js";
+import {getClient} from "../../../src/beacon/client/events.js";
+import {getRoutes} from "../../../src/beacon/server/events.js";
+import {registerRoute} from "../../../src/utils/server/registerRoute.js";
+import {getMockApi, getTestServer} from "../../utils/utils.js";
 
-describe("events", () => {
+describe("beacon / events", () => {
   const rootHex = "0x" + "01".repeat(32);
   const {baseUrl, server} = getTestServer();
   const mockApi = getMockApi<Api>(routesData);
-  const routes = getRoutes(config, mockApi);
-  registerRoutesGroup(server, routes);
+  for (const route of Object.values(getRoutes(config, mockApi))) {
+    registerRoute(server, route);
+  }
 
   let controller: AbortController;
   beforeEach(() => (controller = new AbortController()));

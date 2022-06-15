@@ -1,14 +1,14 @@
 import {ForkName} from "@chainsafe/lodestar-params";
 import {ssz} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/default";
-import {Api, ReqTypes} from "../../src/beacon/routes/validator.js";
-import {getClient} from "../../src/beacon/client/validator.js";
-import {getRoutes} from "../../src/beacon/server/validator.js";
-import {runGenericServerTest} from "../utils/genericServerTest.js";
+import {Api, ReqTypes} from "../../../src/beacon/routes/validator.js";
+import {getClient} from "../../../src/beacon/client/validator.js";
+import {getRoutes} from "../../../src/beacon/server/validator.js";
+import {runGenericServerTest} from "../../utils/genericServerTest.js";
 
 const ZERO_HASH = Buffer.alloc(32, 0);
 
-describe("validator", () => {
+describe("beacon / validator", () => {
   runGenericServerTest<Api, ReqTypes>(config, getClient, getRoutes, {
     getAttesterDuties: {
       args: [1000, [1, 2, 3]],
