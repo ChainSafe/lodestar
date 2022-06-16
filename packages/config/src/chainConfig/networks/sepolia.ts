@@ -8,7 +8,6 @@ import {chainConfig as mainnet} from "../presets/mainnet.js";
 export const sepoliaChainConfig: IChainConfig = {
   ...mainnet,
 
-
   // Ethereum Sepolia EL Testnet
   DEPOSIT_CHAIN_ID: 11155111,
   DEPOSIT_NETWORK_ID: 11155111,

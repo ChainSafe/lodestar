@@ -12,7 +12,7 @@ export {
   praterChainConfig,
   kilnChainConfig,
   ropstenChainConfig,
-  sepoliaChainConfig
+  sepoliaChainConfig,
 };
 
 export type NetworkName = "mainnet" | "gnosis" | "prater" | "kiln" | "ropsten" | "sepolia";
