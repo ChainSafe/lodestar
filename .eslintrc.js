@@ -182,6 +182,7 @@ module.exports = {
       files: ["**/test/**/*.ts"],
       rules: {
         "import/no-extraneous-dependencies": "off",
+        // Turned off as it floods log with warnings. Underlying issue is not critical so switching off is acceptable
         "import/no-named-as-default-member": "off",
         "@typescript-eslint/no-explicit-any": "off",
         "func-names": "off",
