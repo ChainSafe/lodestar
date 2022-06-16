@@ -11,6 +11,7 @@ import {chainConfig as chainConfigDef} from "@chainsafe/lodestar-config/default"
 import {getClient} from "@chainsafe/lodestar-api";
 import {toHexString} from "@chainsafe/ssz";
 import {ssz} from "@chainsafe/lodestar-types";
+import {HttpClient} from "@chainsafe/lodestar-api";
 import {LogLevel, testLogger, TestLoggerOpts} from "../../utils/logger.js";
 import {getDevBeaconNode} from "../../utils/node/beacon.js";
 import {isValidResponse} from "./util/api_response_validator.js";
@@ -38,6 +39,10 @@ const testParams: Pick<IChainConfig, "SECONDS_PER_SLOT"> = {
   SECONDS_PER_SLOT: 2,
 };
 
+type BeaconDataResponse = {
+  data: Record<string, unknown>;
+};
+
 const bn = await getDevBeaconNode({
   params: testParams,
   options: {
@@ -49,7 +54,9 @@ const bn = await getDevBeaconNode({
 
 // TODOS
 // Consider the style of expressing test cases in json and loop to test
+// See how to avoid eslint-disable
 
+/* eslint-disable @typescript-eslint/no-unsafe-call,@typescript-eslint/no-unsafe-assignment,@typescript-eslint/no-unsafe-member-access */
 describe("beacon api conformance test", function () {
   const afterEachCallbacks: (() => Promise<unknown> | void)[] = [];
   afterEachCallbacks.push(() => bn.close());
@@ -61,36 +68,33 @@ describe("beacon api conformance test", function () {
   });
 
   describe("beacon", function () {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment,@typescript-eslint/no-unsafe-call,@typescript-eslint/no-unsafe-member-access
-    const client = getClient({baseUrl: `http://127.0.0.1:${restPort}`}, {config}).beacon;
+    const baseUrl = `http://127.0.0.1:${restPort}`;
+    const httpClient = new HttpClient({baseUrl});
 
     it("/eth/v1/beacon/genesis - 200", async function () {
       this.timeout("10 min");
-      const path = "/eth/v1/beacon/genesis";
+      const url = "/eth/v1/beacon/genesis";
+      const specPath = url;
 
-      const response = {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access,@typescript-eslint/no-unsafe-call
-        data: ssz.phase0.Genesis.toJson((await client.getGenesis()).data),
-      };
+      const resBody = await httpClient.json<BeaconDataResponse>({url, method: "GET"});
 
-      const validatorResponse = isValidResponse(response, SPEC_FILE, {
-        path,
+      const validatorResponse = isValidResponse(resBody, SPEC_FILE, {
+        path: specPath,
         method: "get",
         status: 200,
       });
 
       expect(validatorResponse.isValid, `validating response for path: ${path} failed)}`).to.be.true;
     });
-    it("/eth/v1/beacon/states/head/root - 200 response", async function () {
-      const path = "/eth/v1/beacon/states/{state_id}/root";
-      const response = {
-        data: {
-          root: toHexString((await client.getStateRoot("head")).data.root),
-        },
-      };
 
-      const validatorResponse = isValidResponse(response, SPEC_FILE, {
-        path,
+    it("/eth/v1/beacon/states/head/root - 200 response", async function () {
+      const url = "/eth/v1/beacon/states/head/root";
+      const specPath = "/eth/v1/beacon/states/{state_id}/root";
+
+      const resBody = await httpClient.json<BeaconDataResponse>({url, method: "GET"});
+
+      const validatorResponse = isValidResponse(resBody, SPEC_FILE, {
+        path: specPath,
         method: "get",
         status: 200,
       });
