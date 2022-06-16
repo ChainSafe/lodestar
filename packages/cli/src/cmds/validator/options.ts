@@ -35,7 +35,7 @@ export type IValidatorCliArgs = AccountValidatorArgs &
     externalSignerUrl?: string;
     externalSignerPublicKeys?: string[];
     externalSignerFetchPubkeys?: boolean;
-    enableDoppelganger?: boolean;
+    doppelgangerProtectionEnabled?: boolean;
     interopIndexes?: string;
     fromMnemonic?: string;
     mnemonicIndexes?: string;

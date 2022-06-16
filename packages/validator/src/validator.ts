@@ -35,7 +35,7 @@ export type ValidatorOptions = {
   graffiti?: string;
   defaultFeeRecipient?: string;
   strictFeeRecipientCheck?: boolean;
-  enableDoppelganger?: boolean;
+  doppelgangerProtectionEnabled?: boolean;
 };
 
 // TODO: Extend the timeout, and let it be customizable
@@ -99,7 +99,7 @@ export class Validator {
     // there would not have been any activity/signing in the network, so it is pointless to wait.
     // Doppelganger should be enabled at slot > genesis slot, for example at slot 1, because
     // same validator could have been started at slot 0 with signature already published to the network
-    if (opts.enableDoppelganger && getCurrentSlot(config, genesis.genesisTime) > 0) {
+    if (opts.doppelgangerProtectionEnabled && getCurrentSlot(config, genesis.genesisTime) > 0) {
       const doppelgangerService = new DoppelgangerService(
         config,
         logger,

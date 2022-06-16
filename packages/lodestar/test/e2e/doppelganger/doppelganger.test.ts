@@ -38,7 +38,7 @@ describe("doppelganger / doppelganger test", function () {
 
   type TestConfig = {
     genesisTime?: number;
-    enableDoppelganger?: boolean;
+    doppelgangerProtectionEnabled?: boolean;
   };
 
   async function createBNAndVC(config?: TestConfig): Promise<{beaconNode: BeaconNode; validators: Validator[]}> {
@@ -62,7 +62,7 @@ describe("doppelganger / doppelganger test", function () {
       startIndex: 0,
       useRestApi: false,
       testLoggerOpts,
-      enableDoppelganger: config?.enableDoppelganger,
+      doppelgangerProtectionEnabled: config?.doppelgangerProtectionEnabled,
     });
     afterEachCallbacks.push(() => Promise.all(validatorsWithDoppelganger.map((v) => v.stop())));
 
@@ -75,7 +75,7 @@ describe("doppelganger / doppelganger test", function () {
     const committeeIndex = 0;
     const validatorIndex = 0;
 
-    const {beaconNode: bn, validators: validatorsWithDoppelganger} = await createBNAndVC({enableDoppelganger: true});
+    const {beaconNode: bn, validators: validatorsWithDoppelganger} = await createBNAndVC({doppelgangerProtectionEnabled: true});
 
     const validatorUnderTest = validatorsWithDoppelganger[0];
     const pubKey = validatorUnderTest.validatorStore.votingPubkeys()[0];
@@ -109,7 +109,7 @@ describe("doppelganger / doppelganger test", function () {
 
     const {beaconNode: bn, validators: validatorsWithDoppelganger} = await createBNAndVC({
       genesisTime,
-      enableDoppelganger: true,
+      doppelgangerProtectionEnabled: true,
     });
 
     const {beaconNode: bn2, validators: validators} = await createBNAndVC({
@@ -143,7 +143,7 @@ describe("doppelganger / doppelganger test", function () {
   it("should shut down validator if same key is active with same BN and started after genesis", async function () {
     this.timeout("10 min");
 
-    const enableDoppelganger = true;
+    const doppelgangerProtectionEnabled = true;
     const testLoggerOpts: TestLoggerOpts = {logLevel: LogLevel.info};
 
     // set genesis time 2 slots in the past
@@ -151,7 +151,7 @@ describe("doppelganger / doppelganger test", function () {
 
     const {beaconNode: bn, validators: validator0WithDoppelganger} = await createBNAndVC({
       genesisTime,
-      enableDoppelganger,
+      doppelgangerProtectionEnabled,
     });
 
     const {validators: validator0WithoutDoppelganger} = await getAndInitDevValidators({
@@ -161,7 +161,7 @@ describe("doppelganger / doppelganger test", function () {
       startIndex: 0,
       useRestApi: false,
       testLoggerOpts,
-      enableDoppelganger: false,
+      doppelgangerProtectionEnabled: false,
     });
     afterEachCallbacks.push(() => Promise.all(validator0WithoutDoppelganger.map((v) => v.stop())));
 
@@ -192,15 +192,15 @@ describe("doppelganger / doppelganger test", function () {
   it("should not shut down validator if key is different", async function () {
     this.timeout("10 min");
 
-    const enableDoppelganger = true;
+    const doppelgangerProtectionEnabled = true;
 
     const {beaconNode: bn, validators: validatorsWithDoppelganger} = await createBNAndVC({
-      enableDoppelganger,
+      doppelgangerProtectionEnabled,
     });
 
     const {beaconNode: bn2, validators: validators} = await createBNAndVC({
       genesisTime: bn.chain.getHeadState().genesisTime,
-      enableDoppelganger: false,
+      doppelgangerProtectionEnabled: false,
     });
 
     await connect(bn2.network as Network, bn.network.peerId, bn.network.localMultiaddrs);
@@ -229,14 +229,14 @@ describe("doppelganger / doppelganger test", function () {
   it("should not sign block if doppelganger period has not passed and not started at genesis", async function () {
     this.timeout("10 min");
 
-    const enableDoppelganger = true;
+    const doppelgangerProtectionEnabled = true;
 
     // set genesis time 2 slots in the past
     const genesisTime = Math.floor(Date.now() / 1000) - 2 * beaconParams.SECONDS_PER_SLOT;
 
     const {beaconNode: bn, validators: validatorsWithDoppelganger} = await createBNAndVC({
       genesisTime,
-      enableDoppelganger,
+      doppelgangerProtectionEnabled,
     });
 
     await Promise.all(validatorsWithDoppelganger.map((validator) => validator.start()));
@@ -264,13 +264,13 @@ describe("doppelganger / doppelganger test", function () {
   it("should not sign attestations if doppelganger period has not passed and started after genesis", async function () {
     this.timeout("10 min");
 
-    const enableDoppelganger = true;
+    const doppelgangerProtectionEnabled = true;
     // set genesis time 2 slots in the past
     const genesisTime = Math.floor(Date.now() / 1000) - 2 * beaconParams.SECONDS_PER_SLOT;
 
     const {beaconNode: bn, validators: validatorsWithDoppelganger} = await createBNAndVC({
       genesisTime,
-      enableDoppelganger,
+      doppelgangerProtectionEnabled,
     });
 
     await Promise.all(validatorsWithDoppelganger.map((validator) => validator.start()));

@@ -1,11 +1,11 @@
 import {ICliCommandOptions} from "../util/index.js";
 
 type DoppelgangerOps = {
-  enableDoppelganger?: boolean;
+  doppelgangerProtectionEnabled?: boolean;
 };
 
 export const doppelgangerOptions: ICliCommandOptions<DoppelgangerOps> = {
-  enableDoppelganger: {
+  doppelgangerProtectionEnabled: {
     description: "Enables Doppelganger protection",
     default: false,
     type: "boolean",

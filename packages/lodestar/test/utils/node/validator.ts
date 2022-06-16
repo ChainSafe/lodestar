@@ -25,14 +25,14 @@ export async function getAndInitValidatorsWithKeystore({
   keystorePubKey,
   useRestApi,
   testLoggerOpts,
-  enableDoppelganger = false,
+  doppelgangerProtectionEnabled = false,
 }: {
   node: BeaconNode;
   keystoreContent: string;
   keystorePubKey: string;
   useRestApi?: boolean;
   testLoggerOpts?: TestLoggerOpts;
-  enableDoppelganger?: boolean;
+  doppelgangerProtectionEnabled?: boolean;
 }): Promise<{
   validator: Validator;
   secretKeys: SecretKey[];
@@ -94,7 +94,7 @@ export async function getAndInitValidatorsWithKeystore({
     slashingProtection,
     logger,
     signers,
-    enableDoppelganger,
+    doppelgangerProtectionEnabled,
   });
 
   return {
@@ -119,7 +119,7 @@ export async function getAndInitDevValidators({
   testLoggerOpts,
   externalSignerUrl,
   defaultFeeRecipient,
-  enableDoppelganger = false,
+  doppelgangerProtectionEnabled = false,
 }: {
   node: BeaconNode;
   validatorsPerClient: number;
@@ -129,7 +129,7 @@ export async function getAndInitDevValidators({
   testLoggerOpts?: TestLoggerOpts;
   externalSignerUrl?: string;
   defaultFeeRecipient?: string;
-  enableDoppelganger?: boolean;
+  doppelgangerProtectionEnabled?: boolean;
 }): Promise<{validators: Validator[]; secretKeys: SecretKey[]}> {
   const validators: Promise<Validator>[] = [];
   const secretKeys: SecretKey[] = [];
@@ -171,7 +171,7 @@ export async function getAndInitDevValidators({
         logger,
         signers,
         defaultFeeRecipient,
-        enableDoppelganger,
+        doppelgangerProtectionEnabled,
       })
     );
   }

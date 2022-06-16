@@ -136,7 +136,7 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
         type: SignerType.Local,
         secretKey,
       })),
-      enableDoppelganger: args.enableDoppelganger,
+      doppelgangerProtectionEnabled: args.doppelgangerProtectionEnabled,
     });
 
     onGracefulShutdownCbs.push(() => validator.stop());

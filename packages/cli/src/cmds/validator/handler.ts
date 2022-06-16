@@ -19,7 +19,7 @@ import {getLocalSecretKeys, getExternalSigners, groupExternalSignersByUrl} from 
 export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): Promise<void> {
   const graffiti = args.graffiti || getDefaultGraffiti();
   const defaultFeeRecipient = parseFeeRecipient(args.defaultFeeRecipient ?? defaultDefaultFeeRecipient);
-  const enableDoppelganger = args.enableDoppelganger;
+  const doppelgangerProtectionEnabled = args.doppelgangerProtectionEnabled;
 
   const validatorPaths = getValidatorPaths(args);
   const beaconPaths = getBeaconPaths(args);
@@ -127,7 +127,7 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
       logger,
       signers,
       graffiti,
-      enableDoppelganger,
+      doppelgangerProtectionEnabled,
       afterBlockDelaySlotFraction: args.afterBlockDelaySlotFraction,
       defaultFeeRecipient,
     },

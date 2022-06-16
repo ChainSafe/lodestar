@@ -13,7 +13,7 @@ type IDevOwnArgs = {
   startValidators?: string;
   genesisTime?: number;
   reset?: boolean;
-  enableDoppelganger?: boolean;
+  doppelgangerProtectionEnabled?: boolean;
   server: string;
 } & KeymanagerArgs &
   Pick<IValidatorCliArgs, "importKeystoresPath" | "importKeystoresPassword">;
