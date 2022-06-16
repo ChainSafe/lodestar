@@ -13,14 +13,16 @@ import * as gnosis from "./gnosis.js";
 import * as prater from "./prater.js";
 import * as kiln from "./kiln.js";
 import * as ropsten from "./ropsten.js";
+import * as sepolia from "./sepolia.js";
 
-export type NetworkName = "mainnet" | "dev" | "gnosis" | "prater" | "kiln" | "ropsten";
+export type NetworkName = "mainnet" | "dev" | "gnosis" | "prater" | "kiln" | "ropsten" | "sepolia";
 export const networkNames: NetworkName[] = [
   "mainnet",
   "gnosis",
   "prater",
   "kiln",
   "ropsten",
+  "sepolia",
 
   // Leave always as last network. The order matters for the --help printout
   "dev",
@@ -53,6 +55,8 @@ function getNetworkData(
       return kiln;
     case "ropsten":
       return ropsten;
+    case "sepolia":
+      return sepolia;
     default:
       throw Error(`Network not supported: ${network}`);
   }
