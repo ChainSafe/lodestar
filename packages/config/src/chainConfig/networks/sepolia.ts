@@ -8,12 +8,15 @@ import {chainConfig as mainnet} from "../presets/mainnet.js";
 export const sepoliaChainConfig: IChainConfig = {
   ...mainnet,
 
+
   // Ethereum Sepolia EL Testnet
   DEPOSIT_CHAIN_ID: 11155111,
   DEPOSIT_NETWORK_ID: 11155111,
   // Sepolia test-deposit contract on Sepolia EL Testnet
   DEPOSIT_CONTRACT_ADDRESS: b("0x7f02C3E3c98b133055B8B348B2Ac625669Ed295D"),
 
+  // Genesis
+  MIN_GENESIS_ACTIVE_VALIDATOR_COUNT: 1300,
   // Sunday, June 19, 2022 2:00:00 PM +UTC
   MIN_GENESIS_TIME: 1655647200,
   // Sepolia genesis fork version
@@ -27,6 +30,8 @@ export const sepoliaChainConfig: IChainConfig = {
   // Bellatrix
   BELLATRIX_FORK_VERSION: b("0x90000071"),
   BELLATRIX_FORK_EPOCH: 100,
+  TERMINAL_TOTAL_DIFFICULTY: BigInt("100000000000000000000000"),
+
   // Capella
   // CAPELLA_FORK_VERSION: b("0x03001020"),
   // CAPELLA_FORK_EPOCH: Infinity,

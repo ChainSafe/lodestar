@@ -6,7 +6,14 @@ import {kilnChainConfig} from "./chainConfig/networks/kiln.js";
 import {ropstenChainConfig} from "./chainConfig/networks/ropsten.js";
 import {sepoliaChainConfig} from "./chainConfig/networks/sepolia.js";
 
-export {mainnetChainConfig, gnosisChainConfig, praterChainConfig, kilnChainConfig, ropstenChainConfig, sepoliaChainConfig};
+export {
+  mainnetChainConfig,
+  gnosisChainConfig,
+  praterChainConfig,
+  kilnChainConfig,
+  ropstenChainConfig,
+  sepoliaChainConfig
+};
 
 export type NetworkName = "mainnet" | "gnosis" | "prater" | "kiln" | "ropsten" | "sepolia";
 export const networksChainConfig: Record<NetworkName, IChainConfig> = {
