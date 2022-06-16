@@ -56,6 +56,24 @@ const bn = await getDevBeaconNode({
 // Consider the style of expressing test cases in json and loop to test
 // See how to avoid eslint-disable
 
+const testCases = [
+  {
+    specPath: "/eth/v1/beacon/genesis",
+    testUrl: "/eth/v1/beacon/genesis",
+    method: "get",
+  },
+  {
+    specPath: "/eth/v1/beacon/states/{state_id}/root",
+    testUrl: "/eth/v1/beacon/states/head/root",
+    method: "get",
+  },
+  {
+    specPath: "/eth/v1/beacon/states/{state_id}/fork",
+    testUrl: "/eth/v1/beacon/states/head/fork",
+    method: "get",
+  },
+];
+
 /* eslint-disable @typescript-eslint/no-unsafe-call,@typescript-eslint/no-unsafe-assignment,@typescript-eslint/no-unsafe-member-access */
 describe("beacon api conformance test", function () {
   const afterEachCallbacks: (() => Promise<unknown> | void)[] = [];
@@ -71,35 +89,18 @@ describe("beacon api conformance test", function () {
     const baseUrl = `http://127.0.0.1:${restPort}`;
     const httpClient = new HttpClient({baseUrl});
 
-    it("/eth/v1/beacon/genesis - 200", async function () {
-      this.timeout("10 min");
-      const url = "/eth/v1/beacon/genesis";
-      const specPath = url;
+    testCases.forEach((testCase) => {
+      it(testCase.specPath, async function () {
+        const resBody = await httpClient.json<BeaconDataResponse>({url: testCase.testUrl, method: "GET"});
 
-      const resBody = await httpClient.json<BeaconDataResponse>({url, method: "GET"});
+        const validatorResponse = isValidResponse(resBody, SPEC_FILE, {
+          path: testCase.specPath,
+          method: testCase.method.toLowerCase() as "get" | "post" | "put",
+          status: 200,
+        });
 
-      const validatorResponse = isValidResponse(resBody, SPEC_FILE, {
-        path: specPath,
-        method: "get",
-        status: 200,
+        expect(validatorResponse.isValid, `validating response for path: ${path} failed)}`).to.be.true;
       });
-
-      expect(validatorResponse.isValid, `validating response for path: ${path} failed)}`).to.be.true;
-    });
-
-    it("/eth/v1/beacon/states/head/root - 200 response", async function () {
-      const url = "/eth/v1/beacon/states/head/root";
-      const specPath = "/eth/v1/beacon/states/{state_id}/root";
-
-      const resBody = await httpClient.json<BeaconDataResponse>({url, method: "GET"});
-
-      const validatorResponse = isValidResponse(resBody, SPEC_FILE, {
-        path: specPath,
-        method: "get",
-        status: 200,
-      });
-
-      expect(validatorResponse.isValid, `validating response for path: ${path} failed)}`).to.be.true;
     });
   });
 });
