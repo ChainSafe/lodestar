@@ -52,7 +52,7 @@ export class LightclientServerApi implements routes.lightclient.Api {
     return {data: state.createProof(paths)};
   }
 
-  async getCommitteeUpdates(from: SyncPeriod, to: SyncPeriod): Promise<{data: altair.LightClientUpdate[]}> {
+  async getUpdates(from: SyncPeriod, to: SyncPeriod): Promise<{data: altair.LightClientUpdate[]}> {
     const updates: altair.LightClientUpdate[] = [];
     for (let period = from; period <= to; period++) {
       const update = this.updates.get(period);
@@ -63,7 +63,7 @@ export class LightclientServerApi implements routes.lightclient.Api {
     return {data: updates};
   }
 
-  async getLatestHeadUpdate(): Promise<{data: routes.lightclient.LightclientHeaderUpdate}> {
+  async getOptimisticUpdate(): Promise<{data: routes.lightclient.LightclientHeaderUpdate}> {
     if (!this.latestHeadUpdate) throw Error("No latest head update");
     return {data: this.latestHeadUpdate};
   }
@@ -73,7 +73,7 @@ export class LightclientServerApi implements routes.lightclient.Api {
     return {data: this.finalized};
   }
 
-  async getSnapshot(blockRoot: string): Promise<{data: routes.lightclient.LightclientSnapshotWithProof}> {
+  async getBootstrap(blockRoot: string): Promise<{data: routes.lightclient.LightclientSnapshotWithProof}> {
     const snapshot = this.snapshots.get(blockRoot);
     if (!snapshot) throw Error(`snapshot for blockRoot ${blockRoot} not available`);
     return {data: snapshot};

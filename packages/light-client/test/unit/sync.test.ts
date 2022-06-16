@@ -136,7 +136,7 @@ describe("Lightclient sync", () => {
         };
 
         lightclientServerApi.latestHeadUpdate = headUpdate;
-        eventsServerApi.emit({type: routes.events.EventType.lightclientHeaderUpdate, message: headUpdate});
+        eventsServerApi.emit({type: routes.events.EventType.lightclientOptimisticUpdate, message: headUpdate});
       }
     });
 

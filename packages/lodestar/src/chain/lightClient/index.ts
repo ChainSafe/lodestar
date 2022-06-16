@@ -218,7 +218,7 @@ export class LightClientServer {
   /**
    * API ROUTE to get `currentSyncCommittee` and `nextSyncCommittee` from a trusted state root
    */
-  async getSnapshot(blockRoot: Uint8Array): Promise<routes.lightclient.LightclientSnapshotWithProof> {
+  async getBootstrap(blockRoot: Uint8Array): Promise<routes.lightclient.LightclientSnapshotWithProof> {
     const syncCommitteeWitness = await this.db.syncCommitteeWitness.get(blockRoot);
     if (!syncCommitteeWitness) {
       throw Error(`syncCommitteeWitness not available ${toHexString(blockRoot)}`);
@@ -254,7 +254,7 @@ export class LightClientServer {
    * - Has the most bits
    * - Signed header at the oldest slot
    */
-  async getCommitteeUpdates(period: SyncPeriod): Promise<altair.LightClientUpdate> {
+  async getUpdates(period: SyncPeriod): Promise<altair.LightClientUpdate> {
     // Signature data
     const partialUpdate = await this.db.bestPartialLightClientUpdate.get(period);
     if (!partialUpdate) {
@@ -302,7 +302,7 @@ export class LightClientServer {
    * API ROUTE to poll LightclientHeaderUpdate.
    * Clients should use the SSE type `lightclient_header_update` if available
    */
-  async getLatestHeadUpdate(): Promise<routes.lightclient.LightclientHeaderUpdate> {
+  async getOptimisticUpdate(): Promise<routes.lightclient.LightclientHeaderUpdate> {
     if (this.latestHeadUpdate === null) {
       throw Error("No latest header update available");
     }
@@ -460,7 +460,7 @@ export class LightClientServer {
     // Emit update
     // - At the earliest: 6 second after the slot start
     // - After a new update has INCREMENT_THRESHOLD == 32 bits more than the previous emitted threshold
-    this.emitter.emit(ChainEvent.lightclientHeaderUpdate, headerUpdate);
+    this.emitter.emit(ChainEvent.lightclientOptimisticUpdate, headerUpdate);
 
     // Persist latest best update for getLatestHeadUpdate()
     // TODO: Once SyncAggregate are constructed from P2P too, count bits to decide "best"

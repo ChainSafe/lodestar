@@ -42,23 +42,23 @@ export function getLightclientApi(
       };
     },
 
-    async getCommitteeUpdates(from, to) {
+    async getUpdates(from, to) {
       const periods = linspace(from, to);
-      const updates = await Promise.all(periods.map((period) => chain.lightClientServer.getCommitteeUpdates(period)));
+      const updates = await Promise.all(periods.map((period) => chain.lightClientServer.getUpdates(period)));
       return {data: updates};
     },
 
-    async getLatestHeadUpdate() {
-      return {data: await chain.lightClientServer.getLatestHeadUpdate()};
+    async getOptimisticUpdate() {
+      return {data: await chain.lightClientServer.getOptimisticUpdate()};
     },
 
     async getLatestFinalizedHeadUpdate() {
       return {data: await chain.lightClientServer.getLatestFinalizedHeadUpdate()};
     },
 
-    async getSnapshot(blockRoot) {
-      const snapshotProof = await chain.lightClientServer.getSnapshot(fromHexString(blockRoot));
-      return {data: snapshotProof};
+    async getBootstrap(blockRoot) {
+      const bootstrapProof = await chain.lightClientServer.getBootstrap(fromHexString(blockRoot));
+      return {data: bootstrapProof};
     },
   };
 }
