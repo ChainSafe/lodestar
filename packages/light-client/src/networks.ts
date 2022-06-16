@@ -5,6 +5,7 @@ enum NetworkName {
   prater = "prater",
   kiln = "kiln",
   ropsten = "ropsten",
+  sepolia = "sepolia",
 }
 
 export type GenesisDataHex = {
@@ -33,5 +34,9 @@ export const networkGenesis: Record<NetworkName, GenesisDataHex> = {
   [NetworkName.ropsten]: {
     genesisTime: 1653922800,
     genesisValidatorsRoot: "0x44f1e56283ca88b35c789f7f449e52339bc1fefe3a45913a43a6d16edcd33cf1",
+  },
+  [NetworkName.sepolia]: {
+    genesisTime: 1655733600,
+    genesisValidatorsRoot: "0xd8ea171f3c94aea21ebc42a1ed61052acf3f9209c00e4efbaaddac09ed9b8078",
   },
 };
