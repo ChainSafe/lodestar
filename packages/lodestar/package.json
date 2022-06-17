@@ -144,6 +144,7 @@
     "prom-client": "^13.2.0",
     "prometheus-gc-stats": "^0.6.3",
     "snappyjs": "^0.6.0",
+    "snappy": "7.1.1",
     "stream-to-it": "^0.2.0",
     "strict-event-emitter-types": "^2.0.0",
     "varint": "^6.0.0"
