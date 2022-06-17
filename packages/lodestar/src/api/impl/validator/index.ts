@@ -17,7 +17,6 @@ import {Root, Slot, ValidatorIndex, ssz, Epoch} from "@chainsafe/lodestar-types"
 import {ExecutionStatus} from "@chainsafe/lodestar-fork-choice";
 
 import {fromHexString} from "@chainsafe/ssz";
-import {LivenessResponseData} from "@chainsafe/lodestar-api/src/routes/validator";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {assembleBlock} from "../../../chain/factory/block/index.js";
 import {AttestationError, AttestationErrorCode, GossipAction, SyncCommitteeError} from "../../../chain/errors/index.js";
@@ -588,7 +587,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
       await chain.updateBeaconProposerData(chain.clock.currentEpoch, proposers);
     },
 
-    async getLiveness(indices: ValidatorIndex[], epoch: Epoch): Promise<{data: LivenessResponseData[]}> {
+    async getLiveness(indices: ValidatorIndex[], epoch: Epoch) {
       if (indices.length === 0) {
         return {
           data: [],

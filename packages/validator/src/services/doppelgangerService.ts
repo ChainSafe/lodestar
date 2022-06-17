@@ -3,7 +3,6 @@ import {Api} from "@chainsafe/lodestar-api";
 import {ILogger, sleep} from "@chainsafe/lodestar-utils";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {computeEndSlotForEpoch} from "@chainsafe/lodestar-beacon-state-transition";
-import {LivenessResponseData} from "@chainsafe/lodestar-api/src/routes/validator";
 import {PubkeyHex} from "../types.js";
 import {IClock} from "../util/index.js";
 import {Metrics} from "../metrics.js";
@@ -12,6 +11,12 @@ import {IndicesService} from "./indices.js";
 // The number of epochs that must be checked before we assume that there are
 // no other duplicate validators on the network
 const DEFAULT_REMAINING_DETECTION_EPOCHS = 1;
+
+export type LivenessResponseData = {
+  index: ValidatorIndex;
+  epoch: Epoch;
+  isLive: boolean;
+};
 
 type DoppelgangerState = {
   epochRegistered: Epoch;
