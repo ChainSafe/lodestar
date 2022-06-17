@@ -1,6 +1,7 @@
-import {FastifyInstance} from "fastify";
-import * as fastify from "fastify";
 // eslint-disable-next-line import/no-extraneous-dependencies
+import {FastifyInstance} from "fastify";
+// eslint-disable-next-line import/no-extraneous-dependencies
+import * as fastify from "fastify";
 import {ReqGeneric} from "../types.js";
 
 export type ServerInstance = FastifyInstance;
