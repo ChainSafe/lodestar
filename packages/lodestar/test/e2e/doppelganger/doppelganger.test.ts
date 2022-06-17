@@ -75,7 +75,9 @@ describe("doppelganger / doppelganger test", function () {
     const committeeIndex = 0;
     const validatorIndex = 0;
 
-    const {beaconNode: bn, validators: validatorsWithDoppelganger} = await createBNAndVC({doppelgangerProtectionEnabled: true});
+    const {beaconNode: bn, validators: validatorsWithDoppelganger} = await createBNAndVC({
+      doppelgangerProtectionEnabled: true,
+    });
 
     const validatorUnderTest = validatorsWithDoppelganger[0];
     const pubKey = validatorUnderTest.validatorStore.votingPubkeys()[0];
