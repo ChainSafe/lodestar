@@ -11854,11 +11854,6 @@ ws@7.2.3:
   resolved "https://registry.npmjs.org/ws/-/ws-7.2.3.tgz"
   integrity sha512-HTDl9G9hbkNDk98naoR/cHDws7+EyYMOdL1BmjsZXRUjf7d+MficC4B7HLUPlSiho0vg+CWKrGIt/VJBd1xunQ==
 
-wtfnode@^0.8.4:
-  version "0.8.4"
-  resolved "https://registry.npmjs.org/wtfnode/-/wtfnode-0.8.4.tgz"
-  integrity sha512-64GEKtMt/MUBuAm+8kHqP74ojjafzu00aT0JKsmkIwYmjRQ/odO0yhbzKLm+Z9v1gMla+8dwITRKzTAlHsB+Og==
-
 xml2js@0.4.19:
   version "0.4.19"
   resolved "https://registry.npmjs.org/xml2js/-/xml2js-0.4.19.tgz"

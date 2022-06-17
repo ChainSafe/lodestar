@@ -7,10 +7,8 @@ import fastify, {FastifyError, FastifyInstance} from "fastify";
 import fastifyCors from "fastify-cors";
 import bearerAuthPlugin from "fastify-bearer-auth";
 import {toHexString} from "@chainsafe/ssz";
-export {allNamespaces} from "@chainsafe/lodestar-api";
 import {Api} from "@chainsafe/lodestar-api/keymanager";
-import {getRoutes} from "@chainsafe/lodestar-api/keymanager/server";
-import {registerRoutesGroup, RouteConfig} from "@chainsafe/lodestar-api/server";
+import {registerRoutes, RouteConfig} from "@chainsafe/lodestar-api/keymanager/server";
 import {ErrorAborted, ILogger} from "@chainsafe/lodestar-utils";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 
@@ -76,8 +74,7 @@ export class KeymanagerServer {
     });
 
     // Instantiate and register the keymanager routes
-    const routes = getRoutes(modules.config, modules.api);
-    registerRoutesGroup(server, routes);
+    registerRoutes(server, modules.config, modules.api);
 
     // To parse our ApiError -> statusCode
     server.setErrorHandler((err, req, res) => {
