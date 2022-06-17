@@ -13,7 +13,7 @@
         <link rel="canonical" href="https://chainsafe.github.io/lodestar/packages/types/modules/allforks/">
       
       <link rel="icon" href="../../../../assets/round-icon.ico">
-      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.3.3">
+      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.3.6">
     
     
       
@@ -807,7 +807,7 @@
 <h2 id="type-aliases_1">Type aliases<a class="headerlink" href="#type-aliases_1" title="Permanent link">&para;</a></h2>
 <h3 id="allforksssztypes_1">AllForksSSZTypes<a class="headerlink" href="#allforksssztypes_1" title="Permanent link">&para;</a></h3>
 <p>Ƭ <strong>AllForksSSZTypes</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aa9f500/packages/types/src/allForks/types.ts#L57">packages/types/src/allForks/types.ts:57</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/types/src/allForks/types.ts#L57">packages/types/src/allForks/types.ts:57</a></em></p>
 <p>SSZ Types known to change between forks.</p>
 <p>Re-wrapping a union of fields in a new ContainerType allows to pass a generic block to .serialize()
 - .serialize() requires a value with ONLY the common fork fields
@@ -833,7 +833,7 @@
 <hr />
 <h3 id="allforkstypeof">AllForksTypeOf<a class="headerlink" href="#allforkstypeof" title="Permanent link">&para;</a></h3>
 <p>Ƭ <strong>AllForksTypeOf</strong>: <em>CompositeType‹ValueOf‹UnionOfForkTypes›, CompositeView‹UnionOfForkTypes›, CompositeViewDU‹UnionOfForkTypes››</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aa9f500/packages/types/src/allForks/types.ts#L44">packages/types/src/allForks/types.ts:44</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/types/src/allForks/types.ts#L44">packages/types/src/allForks/types.ts:44</a></em></p>
 <p>An AllForks type must accept as any parameter the UNION of all fork types.
 The generic argument of <code>AllForksTypeOf</code> must be the union of the fork types:</p>
 <p>For example, <code>allForks.BeaconState.defaultValue()</code> must return
@@ -845,7 +845,7 @@ The generic argument of <code>AllForksTypeOf</code> must be the union of the for
 <hr />
 <h3 id="allforkstypes_1">AllForksTypes<a class="headerlink" href="#allforkstypes_1" title="Permanent link">&para;</a></h3>
 <p>Ƭ <strong>AllForksTypes</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aa9f500/packages/types/src/allForks/types.ts#L20">packages/types/src/allForks/types.ts:20</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/types/src/allForks/types.ts#L20">packages/types/src/allForks/types.ts:20</a></em></p>
 <p>Types known to change between forks</p>
 <h4 id="type-declaration_1">Type declaration:<a class="headerlink" href="#type-declaration_1" title="Permanent link">&para;</a></h4>
 <ul>
@@ -868,31 +868,31 @@ The generic argument of <code>AllForksTypeOf</code> must be the union of the for
 <hr />
 <h3 id="beaconblock_1">BeaconBlock<a class="headerlink" href="#beaconblock_1" title="Permanent link">&para;</a></h3>
 <p>Ƭ <strong>BeaconBlock</strong>: <em><a href="../phase0/#const-beaconblock">BeaconBlock</a> | <a href="../altair/#const-beaconblock">BeaconBlock</a> | <a href="../bellatrix/#const-beaconblock">BeaconBlock</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aa9f500/packages/types/src/allForks/types.ts#L12">packages/types/src/allForks/types.ts:12</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/types/src/allForks/types.ts#L12">packages/types/src/allForks/types.ts:12</a></em></p>
 <hr />
 <h3 id="beaconblockbody_1">BeaconBlockBody<a class="headerlink" href="#beaconblockbody_1" title="Permanent link">&para;</a></h3>
 <p>Ƭ <strong>BeaconBlockBody</strong>: <em><a href="../phase0/#const-beaconblockbody">BeaconBlockBody</a> | <a href="../altair/#const-beaconblockbody">BeaconBlockBody</a> | <a href="../bellatrix/#const-beaconblockbody">BeaconBlockBody</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aa9f500/packages/types/src/allForks/types.ts#L11">packages/types/src/allForks/types.ts:11</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/types/src/allForks/types.ts#L11">packages/types/src/allForks/types.ts:11</a></em></p>
 <hr />
 <h3 id="beaconstate_1">BeaconState<a class="headerlink" href="#beaconstate_1" title="Permanent link">&para;</a></h3>
 <p>Ƭ <strong>BeaconState</strong>: <em><a href="../phase0/#const-beaconstate">BeaconState</a> | <a href="../altair/#const-beaconstate">BeaconState</a> | <a href="../bellatrix/#const-beaconstate">BeaconState</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aa9f500/packages/types/src/allForks/types.ts#L14">packages/types/src/allForks/types.ts:14</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/types/src/allForks/types.ts#L14">packages/types/src/allForks/types.ts:14</a></em></p>
 <hr />
 <h3 id="metadata_1">Metadata<a class="headerlink" href="#metadata_1" title="Permanent link">&para;</a></h3>
 <p>Ƭ <strong>Metadata</strong>: <em><a href="../phase0/#const-metadata">Metadata</a> | <a href="../altair/#const-metadata">Metadata</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aa9f500/packages/types/src/allForks/types.ts#L15">packages/types/src/allForks/types.ts:15</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/types/src/allForks/types.ts#L15">packages/types/src/allForks/types.ts:15</a></em></p>
 <hr />
 <h3 id="signedbeaconblock_1">SignedBeaconBlock<a class="headerlink" href="#signedbeaconblock_1" title="Permanent link">&para;</a></h3>
 <p>Ƭ <strong>SignedBeaconBlock</strong>: <em><a href="../phase0/#const-signedbeaconblock">SignedBeaconBlock</a> | <a href="../altair/#const-signedbeaconblock">SignedBeaconBlock</a> | <a href="../bellatrix/#const-signedbeaconblock">SignedBeaconBlock</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aa9f500/packages/types/src/allForks/types.ts#L13">packages/types/src/allForks/types.ts:13</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/types/src/allForks/types.ts#L13">packages/types/src/allForks/types.ts:13</a></em></p>
 <h2 id="object-literals_1">Object literals<a class="headerlink" href="#object-literals_1" title="Permanent link">&para;</a></h2>
 <h3 id="const-allforks"><code>Const</code> allForks<a class="headerlink" href="#const-allforks" title="Permanent link">&para;</a></h3>
 <h3 id="allforks-object">▪ <strong>allForks</strong>: <em>object</em><a class="headerlink" href="#allforks-object" title="Permanent link">&para;</a></h3>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aa9f500/packages/types/src/allForks/sszTypes.ts#L9">packages/types/src/allForks/sszTypes.ts:9</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/types/src/allForks/sszTypes.ts#L9">packages/types/src/allForks/sszTypes.ts:9</a></em></p>
 <p>Index the ssz types that differ by fork
 A record of AllForksSSZTypes indexed by fork</p>
 <p>▪ <strong>altair</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aa9f500/packages/types/src/allForks/sszTypes.ts#L17">packages/types/src/allForks/sszTypes.ts:17</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/types/src/allForks/sszTypes.ts#L17">packages/types/src/allForks/sszTypes.ts:17</a></em></p>
 <ul>
 <li>
 <p><strong>BeaconBlock</strong>: <em>ContainerType‹object›</em> = altair.BeaconBlock</p>
@@ -911,7 +911,7 @@ A record of AllForksSSZTypes indexed by fork</p>
 </li>
 </ul>
 <p>▪ <strong>bellatrix</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aa9f500/packages/types/src/allForks/sszTypes.ts#L24">packages/types/src/allForks/sszTypes.ts:24</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/types/src/allForks/sszTypes.ts#L24">packages/types/src/allForks/sszTypes.ts:24</a></em></p>
 <ul>
 <li>
 <p><strong>BeaconBlock</strong>: <em>ContainerType‹object›</em> = bellatrix.BeaconBlock</p>
@@ -930,7 +930,7 @@ A record of AllForksSSZTypes indexed by fork</p>
 </li>
 </ul>
 <p>▪ <strong>phase0</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aa9f500/packages/types/src/allForks/sszTypes.ts#L10">packages/types/src/allForks/sszTypes.ts:10</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/types/src/allForks/sszTypes.ts#L10">packages/types/src/allForks/sszTypes.ts:10</a></em></p>
 <ul>
 <li>
 <p><strong>BeaconBlock</strong>: <em>ContainerType‹object›</em> = phase0.BeaconBlock</p>
@@ -1019,10 +1019,10 @@ A record of AllForksSSZTypes indexed by fork</p>
     <div class="md-dialog" data-md-component="dialog">
       <div class="md-dialog__inner md-typeset"></div>
     </div>
-    <script id="__config" type="application/json">{"base": "../../../..", "features": [], "search": "../../../../assets/javascripts/workers/search.b028fd86.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}}</script>
+    <script id="__config" type="application/json">{"base": "../../../..", "features": [], "search": "../../../../assets/javascripts/workers/search.85cb4492.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}}</script>
     
     
-      <script src="../../../../assets/javascripts/bundle.f758a944.min.js"></script>
+      <script src="../../../../assets/javascripts/bundle.a877e258.min.js"></script>
       
     
   </body>
