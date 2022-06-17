@@ -11,9 +11,19 @@ import * as mainnet from "./mainnet.js";
 import * as prater from "./prater.js";
 import * as kiln from "./kiln.js";
 import * as ropsten from "./ropsten.js";
+import * as sepolia from "./sepolia.js";
 
-export type NetworkName = "mainnet" | "prater" | "kiln" | "ropsten" | "dev";
-export const networkNames: NetworkName[] = ["mainnet", "prater", "kiln", "ropsten"];
+export type NetworkName = "mainnet" | "dev" | "prater" | "kiln" | "ropsten" | "sepolia";
+export const networkNames: NetworkName[] = [
+  "mainnet",
+  "prater",
+  "kiln",
+  "ropsten",
+  "sepolia",
+
+  // Leave always as last network. The order matters for the --help printout
+  "dev",
+];
 
 export type WeakSubjectivityFetchOptions = {
   weakSubjectivityServerUrl: string;
@@ -38,6 +48,8 @@ function getNetworkData(
       return kiln;
     case "ropsten":
       return ropsten;
+    case "sepolia":
+      return sepolia;
     default:
       throw Error(`Network not supported: ${network}`);
   }

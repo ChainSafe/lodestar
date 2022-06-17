@@ -3,13 +3,15 @@ import {mainnetChainConfig} from "./chainConfig/networks/mainnet.js";
 import {praterChainConfig} from "./chainConfig/networks/prater.js";
 import {kilnChainConfig} from "./chainConfig/networks/kiln.js";
 import {ropstenChainConfig} from "./chainConfig/networks/ropsten.js";
+import {sepoliaChainConfig} from "./chainConfig/networks/sepolia.js";
 
-export {mainnetChainConfig, praterChainConfig, kilnChainConfig, ropstenChainConfig};
+export {mainnetChainConfig, praterChainConfig, kilnChainConfig, ropstenChainConfig, sepoliaChainConfig};
 
-export type NetworkName = "mainnet" | "prater" | "kiln" | "ropsten";
+export type NetworkName = "mainnet" | "prater" | "kiln" | "ropsten" | "sepolia";
 export const networksChainConfig: Record<NetworkName, IChainConfig> = {
   mainnet: mainnetChainConfig,
   prater: praterChainConfig,
   kiln: kilnChainConfig,
   ropsten: ropstenChainConfig,
+  sepolia: sepoliaChainConfig,
 };
