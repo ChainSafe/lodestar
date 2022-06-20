@@ -9,7 +9,7 @@ import {externalSignerGetKeys} from "@chainsafe/lodestar-validator";
 import {lockFilepath, unlockFilepath} from "@chainsafe/lodestar-keymanager-server";
 import {fromHexString} from "@chainsafe/ssz";
 import {defaultNetwork, IGlobalArgs} from "../../options/index.js";
-import {isVotingKeystore, parseRange, stripOffNewlines, YargsError} from "../../util/index.js";
+import {parseRange, stripOffNewlines, YargsError} from "../../util/index.js";
 import {ValidatorDirManager} from "../../validatorDir/index.js";
 import {getAccountPaths} from "./paths.js";
 import {IValidatorCliArgs} from "./options.js";
@@ -57,7 +57,7 @@ export async function getLocalSecretKeys(
       lockFilepath(keystorePath);
     }
 
-    const secretKeys = await Promise.all(
+    const parsingResults = await Promise.allSettled(
       keystorePaths.map(async (keystorePath) => {
         const keystoreStr = fs.readFileSync(keystorePath, "utf8");
 
@@ -65,23 +65,36 @@ export async function getLocalSecretKeys(
         try {
           keystore = Keystore.parse(keystoreStr);
         } catch (e) {
-          (e as Error).message = `Error parsing keystore at ${keystorePath}: ${(e as Error).message}`;
-          throw e;
+          return Promise.reject(`Error parsing keystore file: ${path.basename(keystorePath)}: ${(e as Error).message}`);
         }
 
         return bls.SecretKey.fromBytes(await keystore.decrypt(passphrase));
       })
     );
 
-    return {
-      secretKeys,
-      unlockSecretKeys: () => {
-        for (const keystorePath of keystorePaths) {
-          // Should not throw if lock file is already deleted
-          unlockFilepath(keystorePath);
-        }
-      },
-    };
+    const secretKeys: SecretKey[] = [];
+
+    parsingResults.forEach((result) => {
+      if (result.status === "fulfilled") {
+        secretKeys.push(result.value);
+      } else {
+        console.log(result.reason);
+      }
+    });
+
+    if (secretKeys.length === 0) {
+      throw new Error("No valid keystore found in keystore path");
+    } else {
+      return {
+        secretKeys,
+        unlockSecretKeys: () => {
+          for (const keystorePath of keystorePaths) {
+            // Should not throw if lock file is already deleted
+            unlockFilepath(keystorePath);
+          }
+        },
+      };
+    }
   }
 
   // Read keys from local account manager
@@ -181,10 +194,7 @@ function isValidHttpUrl(urlStr: string): boolean {
 
 export function resolveKeystorePaths(fileOrDirPath: string): string[] {
   if (fs.lstatSync(fileOrDirPath).isDirectory()) {
-    return fs
-      .readdirSync(fileOrDirPath)
-      .filter((file) => isVotingKeystore(file))
-      .map((file) => path.join(fileOrDirPath, file));
+    return fs.readdirSync(fileOrDirPath).map((file) => path.join(fileOrDirPath, file));
   } else {
     return [fileOrDirPath];
   }
