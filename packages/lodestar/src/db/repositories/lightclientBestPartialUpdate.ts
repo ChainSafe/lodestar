@@ -1,5 +1,5 @@
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import {Bucket, IDatabaseController, IDbMetrics, Repository} from "@chainsafe/lodestar-db";
+import {Bucket, IDatabaseController, Repository} from "@chainsafe/lodestar-db";
 import {FINALIZED_ROOT_DEPTH} from "@chainsafe/lodestar-params";
 import {ssz, SyncPeriod} from "@chainsafe/lodestar-types";
 import {BooleanType, ContainerType, VectorCompositeType} from "@chainsafe/ssz";
@@ -30,10 +30,10 @@ export class BestPartialLightClientUpdateRepository extends Repository<SyncPerio
     syncAggregate: ssz.altair.SyncAggregate,
   });
 
-  constructor(config: IChainForkConfig, db: IDatabaseController<Uint8Array, Uint8Array>, metrics?: IDbMetrics) {
+  constructor(config: IChainForkConfig, db: IDatabaseController<Uint8Array, Uint8Array>) {
     // super.type will not be used
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    super(config, db, Bucket.lightClient_bestPartialLightClientUpdate, ssz.altair.LightClientUpdate as any, metrics);
+    super(config, db, Bucket.lightClient_bestPartialLightClientUpdate, ssz.altair.LightClientUpdate as any);
   }
 
   encodeValue(value: PartialLightClientUpdate): Uint8Array {

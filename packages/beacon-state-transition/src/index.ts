@@ -2,14 +2,11 @@
  * @module chain/stateTransition
  */
 
+export * from "./stateTransition.js";
 export * from "./constants/index.js";
 export * from "./util/index.js";
+export * from "./signatureSets/index.js";
 export * from "./metrics.js";
-
-export * as phase0 from "./phase0/index.js";
-export * as altair from "./altair/index.js";
-export * as bellatrix from "./bellatrix/index.js";
-export * as allForks from "./allForks/index.js";
 
 export {
   CachedBeaconStatePhase0,
@@ -36,3 +33,11 @@ export {
   getEffectiveBalanceIncrementsZeroed,
   getEffectiveBalanceIncrementsWithLen,
 } from "./cache/effectiveBalanceIncrements.js";
+
+// BeaconChain validation
+export {isValidVoluntaryExit} from "./block/processVoluntaryExit.js";
+export {assertValidProposerSlashing} from "./block/processProposerSlashing.js";
+export {assertValidAttesterSlashing} from "./block/processAttesterSlashing.js";
+
+// BeaconChain, to prepare new blocks
+export {becomesNewEth1Data} from "./block/processEth1Data.js";

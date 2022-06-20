@@ -2,18 +2,18 @@ import {BeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {Epoch, Root, Slot, ssz} from "@chainsafe/lodestar-types";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {bytesToInt} from "@chainsafe/lodestar-utils";
-import {Db, Bucket, Repository, IDbMetrics} from "@chainsafe/lodestar-db";
+import {Db, Bucket, Repository} from "@chainsafe/lodestar-db";
 import {getStateTypeFromBytes} from "../../util/multifork.js";
 import {getRootIndexKey, storeRootIndex} from "./stateArchiveIndex.js";
 
 /* eslint-disable @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call */
 
 export class StateArchiveRepository extends Repository<Slot, BeaconStateAllForks> {
-  constructor(config: IChainForkConfig, db: Db, metrics?: IDbMetrics) {
+  constructor(config: IChainForkConfig, db: Db) {
     // Pick some type but won't be used. Casted to any because no type can match `BeaconStateAllForks`
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
     const type = ssz.phase0.BeaconState as any;
-    super(config, db, Bucket.allForks_stateArchive, type, metrics);
+    super(config, db, Bucket.allForks_stateArchive, type);
   }
 
   // Overrides for multi-fork

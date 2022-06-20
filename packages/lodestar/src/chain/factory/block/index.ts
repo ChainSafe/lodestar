@@ -2,8 +2,8 @@
  * @module chain/blockAssembly
  */
 
-import {CachedBeaconStateAllForks, allForks} from "@chainsafe/lodestar-beacon-state-transition";
-import {Bytes32, Bytes96, Root, Slot} from "@chainsafe/lodestar-types";
+import {CachedBeaconStateAllForks, stateTransition} from "@chainsafe/lodestar-beacon-state-transition";
+import {allForks, Bytes32, Bytes96, Root, Slot} from "@chainsafe/lodestar-types";
 import {fromHexString} from "@chainsafe/ssz";
 
 import {ZERO_HASH} from "../../../constants/index.js";
@@ -64,9 +64,18 @@ function computeNewStateRoot(
   state: CachedBeaconStateAllForks,
   block: allForks.BeaconBlock
 ): Root {
-  const postState = state.clone();
-  // verifySignatures = false since the data to assemble the block is trusted
-  allForks.processBlock(postState, block, {verifySignatures: false}, metrics);
+  // Set signature to zero to re-use stateTransition() function which requires the SignedBeaconBlock type
+  const blockEmptySig: allForks.SignedBeaconBlock = {message: block, signature: ZERO_HASH};
+
+  const postState = stateTransition(
+    state,
+    blockEmptySig,
+    // verifyStateRoot: false  | the root in the block is zero-ed, it's being computed here
+    // verifyProposer: false   | as the block signature is zero-ed
+    // verifySignatures: false | since the data to assemble the block is trusted
+    {verifyStateRoot: false, verifyProposer: false, verifySignatures: false},
+    metrics
+  );
 
   return postState.hashTreeRoot();
 }

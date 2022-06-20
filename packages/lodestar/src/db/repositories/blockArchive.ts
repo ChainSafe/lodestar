@@ -1,6 +1,6 @@
 import all from "it-all";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import {Db, Repository, IKeyValue, IFilterOptions, Bucket, IDbMetrics} from "@chainsafe/lodestar-db";
+import {Db, Repository, IKeyValue, IFilterOptions, Bucket} from "@chainsafe/lodestar-db";
 import {Slot, Root, allForks, ssz} from "@chainsafe/lodestar-types";
 import {bytesToInt} from "@chainsafe/lodestar-utils";
 import {getSignedBlockTypeFromBytes} from "../../util/multifork.js";
@@ -21,9 +21,9 @@ export type BlockArchiveBatchPutBinaryItem = IKeyValue<Slot, Uint8Array> & {
  * Stores finalized blocks. Block slot is identifier.
  */
 export class BlockArchiveRepository extends Repository<Slot, allForks.SignedBeaconBlock> {
-  constructor(config: IChainForkConfig, db: Db, metrics?: IDbMetrics) {
+  constructor(config: IChainForkConfig, db: Db) {
     const type = ssz.phase0.SignedBeaconBlock; // Pick some type but won't be used
-    super(config, db, Bucket.allForks_blockArchive, type, metrics);
+    super(config, db, Bucket.allForks_blockArchive, type);
   }
 
   // Overrides for multi-fork

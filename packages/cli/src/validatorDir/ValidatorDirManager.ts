@@ -72,6 +72,24 @@ export class ValidatorDirManager {
    */
   async decryptAllValidators(options?: IValidatorDirOptions): Promise<SecretKey[]> {
     const validators = this.openAllValidators(options);
-    return await Promise.all(validators.map(async (validator) => validator.votingKeypair(this.secretsDir)));
+    // PPS: OOM error issue while decripting validators in parallel
+    // https://github.com/ChainSafe/lodestar/issues/4166
+    //
+    // Below call has been serialized as a hotfix for now as even for 10 vals
+    // it causes 2.5GB memory hog, which doesn't go down even when the promise
+    // resolves and all validators have been decrypted.
+    //
+    // return await Promise.all(validators.map(async (validator) =>
+    //  validator.votingKeypair(this.secretsDir)));
+    //
+    // The new serialized decryption takes full 5 minutes to decrypt 100 validators
+    // on a 100% single core engagement! This needs to be invesigated deeply and
+    // fixed most prefered to the above `Promise.all(...)` flow
+    //
+    const decryptedValidators: SecretKey[] = [];
+    for (const validator of validators) {
+      decryptedValidators.push(await validator.votingKeypair(this.secretsDir));
+    }
+    return decryptedValidators;
   }
 }

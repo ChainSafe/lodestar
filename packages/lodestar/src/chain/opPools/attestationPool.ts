@@ -60,7 +60,14 @@ export class AttestationPool {
   );
   private lowestPermissibleSlot = 0;
 
-  // TODO: Add metrics for total num of attestations in the pool
+  /** Returns current count of pre-aggregated attestations with unique data */
+  getAttestationCount(): number {
+    let attestationCount = 0;
+    for (const attestationByRoot of this.attestationByRootBySlot.values()) {
+      attestationCount += attestationByRoot.size;
+    }
+    return attestationCount;
+  }
 
   /**
    * Accepts an `VerifiedUnaggregatedAttestation` and attempts to apply it to the "naive

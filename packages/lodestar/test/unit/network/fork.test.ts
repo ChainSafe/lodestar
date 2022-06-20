@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {ForkName} from "@chainsafe/lodestar-params";
+import {ForkName, ForkSeq} from "@chainsafe/lodestar-params";
 import {IBeaconConfig, IForkInfo} from "@chainsafe/lodestar-config";
 import {getCurrentAndNextFork, getActiveForks} from "../../../src/network/forks.js";
 
@@ -15,16 +15,19 @@ function getForkConfig({
   const forks: Record<ForkName, IForkInfo> = {
     phase0: {
       name: ForkName.phase0,
+      seq: ForkSeq.phase0,
       epoch: phase0,
       version: Buffer.from([0, 0, 0, 0]),
     },
     altair: {
       name: ForkName.altair,
+      seq: ForkSeq.altair,
       epoch: altair,
       version: Buffer.from([0, 0, 0, 1]),
     },
     bellatrix: {
       name: ForkName.bellatrix,
+      seq: ForkSeq.bellatrix,
       epoch: bellatrix,
       version: Buffer.from([0, 0, 0, 2]),
     },

@@ -1,9 +1,9 @@
 import {
   CachedBeaconStateAllForks,
-  computeEpochAtSlot,
-  allForks,
-  getAttesterSlashableIndices,
   BeaconStateAllForks,
+  computeEpochAtSlot,
+  getAttesterSlashableIndices,
+  isValidVoluntaryExit,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {Repository, Id} from "@chainsafe/lodestar-db";
 import {MAX_PROPOSER_SLASHINGS, MAX_VOLUNTARY_EXITS} from "@chainsafe/lodestar-params";
@@ -26,6 +26,18 @@ export class OpPool {
   private readonly voluntaryExits = new Map<ValidatorIndex, phase0.SignedVoluntaryExit>();
   /** Set of seen attester slashing indexes. No need to prune */
   private readonly attesterSlashingIndexes = new Set<ValidatorIndex>();
+
+  // Getters for metrics
+
+  get attesterSlashingsSize(): number {
+    return this.attesterSlashings.size;
+  }
+  get proposerSlashingsSize(): number {
+    return this.proposerSlashings.size;
+  }
+  get voluntaryExitsSize(): number {
+    return this.voluntaryExits.size;
+  }
 
   async fromPersisted(db: IBeaconDb): Promise<void> {
     const [attesterSlashings, proposerSlashings, voluntaryExits] = await Promise.all([
@@ -169,7 +181,7 @@ export class OpPool {
     for (const voluntaryExit of this.voluntaryExits.values()) {
       if (
         !toBeSlashedIndices.has(voluntaryExit.message.validatorIndex) &&
-        allForks.isValidVoluntaryExit(state, voluntaryExit, false)
+        isValidVoluntaryExit(state, voluntaryExit, false)
       ) {
         voluntaryExits.push(voluntaryExit);
         if (voluntaryExits.length >= MAX_VOLUNTARY_EXITS) {

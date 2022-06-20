@@ -5,11 +5,10 @@
 import {
   blockToHeader,
   computeEpochAtSlot,
-  phase0,
   BeaconStateAllForks,
   CachedBeaconStateAllForks,
 } from "@chainsafe/lodestar-beacon-state-transition";
-import {allForks, ssz} from "@chainsafe/lodestar-types";
+import {phase0, allForks, ssz} from "@chainsafe/lodestar-types";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";

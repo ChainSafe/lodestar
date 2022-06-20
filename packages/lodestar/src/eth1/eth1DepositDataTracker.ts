@@ -1,6 +1,6 @@
 import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import {allForks, BeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
+import {BeaconStateAllForks, becomesNewEth1Data} from "@chainsafe/lodestar-beacon-state-transition";
 import {ErrorAborted, ILogger, isErrorAborted, sleep} from "@chainsafe/lodestar-utils";
 import {IBeaconDb} from "../db/index.js";
 import {IMetrics} from "../metrics/index.js";
@@ -131,7 +131,7 @@ export class Eth1DepositDataTracker {
     const eth1DataVoteView = ssz.phase0.Eth1Data.toViewDU(eth1DataVote);
 
     // Eth1 data may change due to the vote included in this block
-    const newEth1Data = allForks.becomesNewEth1Data(state, eth1DataVoteView) ? eth1DataVoteView : state.eth1Data;
+    const newEth1Data = becomesNewEth1Data(state, eth1DataVoteView) ? eth1DataVoteView : state.eth1Data;
     return await getDeposits(state, newEth1Data, this.depositsCache.get.bind(this.depositsCache));
   }
 

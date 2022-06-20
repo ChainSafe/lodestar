@@ -1,19 +1,16 @@
-import {Epoch, Root, Slot} from "@chainsafe/lodestar-types";
+import {phase0, Epoch, Root, Slot} from "@chainsafe/lodestar-types";
 import {IProtoBlock} from "@chainsafe/lodestar-fork-choice";
 import {ATTESTATION_SUBNET_COUNT, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {toHexString} from "@chainsafe/ssz";
 import {
-  allForks,
-  phase0,
   computeEpochAtSlot,
   CachedBeaconStateAllForks,
+  getIndexedAttestationSignatureSet,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconChain} from "..";
 import {AttestationError, AttestationErrorCode, GossipAction} from "../errors/index.js";
 import {MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC} from "../../constants/index.js";
 import {RegenCaller} from "../regen/index.js";
-
-const {getIndexedAttestationSignatureSet} = allForks;
 
 export async function validateGossipAttestation(
   chain: IBeaconChain,

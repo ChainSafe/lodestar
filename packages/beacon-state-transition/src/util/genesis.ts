@@ -10,10 +10,10 @@ import {
 import {Bytes32, phase0, Root, ssz, TimeSeconds} from "@chainsafe/lodestar-types";
 
 import {CompositeViewDU, ListCompositeType} from "@chainsafe/ssz";
-import {processDeposit} from "../allForks/index.js";
 import {CachedBeaconStateAllForks, BeaconStateAllForks} from "../types.js";
 import {createCachedBeaconState} from "../cache/stateCache.js";
 import {EpochContextImmutableData} from "../cache/epochContext.js";
+import {processDeposit} from "../block/processDeposit.js";
 import {computeEpochAtSlot} from "./epoch.js";
 import {getActiveValidatorIndices} from "./validator.js";
 import {getTemporaryBlockHeader} from "./blockRoot.js";
@@ -163,8 +163,8 @@ export function applyDeposits(
 
     state.eth1Data.depositCount += 1;
 
-    const forkName = config.getForkName(GENESIS_SLOT);
-    processDeposit(forkName, state, deposit);
+    const fork = config.getForkSeq(GENESIS_SLOT);
+    processDeposit(fork, state, deposit);
   }
 
   // Process activations

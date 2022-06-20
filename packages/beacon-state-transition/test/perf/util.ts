@@ -1,5 +1,5 @@
 import {config} from "@chainsafe/lodestar-config/default";
-import {phase0, ssz, Slot, altair} from "@chainsafe/lodestar-types";
+import {allForks, phase0, ssz, Slot, altair} from "@chainsafe/lodestar-types";
 import {CoordType, PublicKey, SecretKey} from "@chainsafe/bls/types";
 import bls from "@chainsafe/bls";
 import {BitArray, fromHexString} from "@chainsafe/ssz";
@@ -13,7 +13,6 @@ import {
   SLOTS_PER_HISTORICAL_ROOT,
 } from "@chainsafe/lodestar-params";
 import {
-  allForks,
   interopSecretKey,
   computeEpochAtSlot,
   getActiveValidatorIndices,
@@ -33,6 +32,7 @@ import {profilerLogger} from "../utils/logger.js";
 import {interopPubkeysCached} from "../utils/interop.js";
 import {getNextSyncCommittee} from "../../src/util/syncCommittee.js";
 import {getEffectiveBalanceIncrements} from "../../src/cache/effectiveBalanceIncrements.js";
+import {processSlots} from "../../src/index.js";
 
 let phase0State: BeaconStatePhase0 | null = null;
 let phase0CachedState23637: CachedBeaconStatePhase0 | null = null;
@@ -194,7 +194,7 @@ export function generatePerfTestCachedStatePhase0(opts?: {goBackOneSlot: boolean
     }
   }
   if (!phase0CachedState23638) {
-    phase0CachedState23638 = allForks.processSlots(
+    phase0CachedState23638 = processSlots(
       phase0CachedState23637,
       phase0CachedState23637.slot + 1
     ) as CachedBeaconStatePhase0;
@@ -235,7 +235,7 @@ export function generatePerfTestCachedStateAltair(opts?: {goBackOneSlot: boolean
     });
   }
   if (!altairCachedState23638) {
-    altairCachedState23638 = allForks.processSlots(
+    altairCachedState23638 = processSlots(
       altairCachedState23637,
       altairCachedState23637.slot + 1
     ) as CachedBeaconStateAltair;

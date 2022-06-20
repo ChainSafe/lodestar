@@ -11,7 +11,7 @@ import {fromHexString} from "@chainsafe/ssz";
 import {defaultNetwork, IGlobalArgs} from "../../options/index.js";
 import {isVotingKeystore, parseRange, stripOffNewlines, YargsError} from "../../util/index.js";
 import {ValidatorDirManager} from "../../validatorDir/index.js";
-import {getAccountPaths} from "../account/paths.js";
+import {getAccountPaths} from "./paths.js";
 import {IValidatorCliArgs} from "./options.js";
 
 export async function getLocalSecretKeys(

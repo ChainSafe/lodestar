@@ -1,9 +1,10 @@
-import {phase0, Slot, RootHex} from "@chainsafe/lodestar-types";
+import {allForks, phase0, Slot, RootHex} from "@chainsafe/lodestar-types";
 import {
-  allForks,
   CachedBeaconStateAllForks,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
+  processSlots,
+  stateTransition,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {IForkChoice, IProtoBlock} from "@chainsafe/lodestar-fork-choice";
@@ -168,7 +169,7 @@ export class StateRegenerator implements IStateRegenerator {
       try {
         // Only advances state trusting block's signture and hashes.
         // We are only running the state transition to get a specific state's data.
-        state = allForks.stateTransition(
+        state = stateTransition(
           state,
           block,
           {
@@ -221,7 +222,7 @@ async function processSlotsByCheckpoint(
 ): Promise<CachedBeaconStateAllForks> {
   let postState = await processSlotsToNearestCheckpoint(modules, preState, slot);
   if (postState.slot < slot) {
-    postState = allForks.processSlots(postState, slot, modules.metrics);
+    postState = processSlots(postState, slot, modules.metrics);
   }
   return postState;
 }
@@ -249,7 +250,7 @@ async function processSlotsToNearestCheckpoint(
     nextEpochSlot <= postSlot;
     nextEpochSlot += SLOTS_PER_EPOCH
   ) {
-    postState = allForks.processSlots(postState, nextEpochSlot, metrics);
+    postState = processSlots(postState, nextEpochSlot, metrics);
 
     // Cache state to preserve epoch transition work
     const checkpointState = postState.clone();

@@ -3,6 +3,7 @@
  */
 
 import {
+  bellatrix,
   Bytes96,
   Bytes32,
   phase0,
@@ -21,7 +22,7 @@ import {
   computeTimeAtSlot,
   getRandaoMix,
   getCurrentEpoch,
-  bellatrix,
+  isMergeTransitionComplete,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {toHex} from "@chainsafe/lodestar-utils";
@@ -138,7 +139,7 @@ export async function prepareExecutionPayload(
   // Use different POW block hash parent for block production based on merge status.
   // Returned value of null == using an empty ExecutionPayload value
   let parentHash: Root;
-  if (!bellatrix.isMergeTransitionComplete(state)) {
+  if (!isMergeTransitionComplete(state)) {
     if (
       !ssz.Root.equals(chain.config.TERMINAL_BLOCK_HASH, ZERO_HASH) &&
       getCurrentEpoch(state) < chain.config.TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH

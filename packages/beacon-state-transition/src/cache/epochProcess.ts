@@ -20,9 +20,9 @@ import {
   FLAG_CURR_TARGET_ATTESTER,
   FLAG_CURR_HEAD_ATTESTER,
 } from "../util/attesterStatus.js";
-import {statusProcessEpoch} from "../phase0/epoch/processPendingAttestations.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateAltair, CachedBeaconStatePhase0} from "..";
 import {computeBaseRewardPerIncrement} from "../util/altair.js";
+import {processPendingAttestations} from "../epoch/processPendingAttestations.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
@@ -307,7 +307,7 @@ export function beforeProcessEpoch(state: CachedBeaconStateAllForks): EpochProce
   );
 
   if (forkName === ForkName.phase0) {
-    statusProcessEpoch(
+    processPendingAttestations(
       state as CachedBeaconStatePhase0,
       statuses,
       (state as CachedBeaconStatePhase0).previousEpochAttestations.getAllReadonly(),
@@ -316,7 +316,7 @@ export function beforeProcessEpoch(state: CachedBeaconStateAllForks): EpochProce
       FLAG_PREV_TARGET_ATTESTER,
       FLAG_PREV_HEAD_ATTESTER
     );
-    statusProcessEpoch(
+    processPendingAttestations(
       state as CachedBeaconStatePhase0,
       statuses,
       (state as CachedBeaconStatePhase0).currentEpochAttestations.getAllReadonly(),
