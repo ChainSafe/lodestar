@@ -72,7 +72,7 @@ async function runWorker(): Promise<void> {
   );
 
   node.chain.emitter.on(checkpointEvent, async (checkpoint) => {
-    await Promise.all(validators.map((validator) => validator.stop()));
+    await Promise.all(validators.map((validator) => validator.close()));
     if (stopInfoTracker) stopInfoTracker();
     await node.close();
     parent.postMessage({
@@ -88,7 +88,6 @@ async function runWorker(): Promise<void> {
     startIndex,
     testLoggerOpts,
   });
-  await Promise.all(validators.map((validator) => validator.start()));
 }
 
 runWorker().catch((e: Error) => {

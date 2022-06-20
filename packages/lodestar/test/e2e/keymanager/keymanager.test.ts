@@ -66,7 +66,7 @@ describe("keymanager delete and import test", async function () {
       testLoggerOpts,
     });
 
-    afterEachCallbacks.push(() => vc1Info.validator.stop());
+    afterEachCallbacks.push(() => vc1Info.validator.close());
 
     const vc2Info = await getAndInitValidatorsWithKeystore({
       node: bn,
@@ -76,7 +76,7 @@ describe("keymanager delete and import test", async function () {
       testLoggerOpts,
     });
 
-    afterEachCallbacks.push(() => vc2Info.validator.stop());
+    afterEachCallbacks.push(() => vc2Info.validator.close());
 
     const portKM1 = 10000;
     const portKM2 = 10001;
@@ -105,7 +105,7 @@ describe("keymanager delete and import test", async function () {
     // Register clean up
     // eslint-disable-next-line @typescript-eslint/no-unsafe-call,@typescript-eslint/no-unsafe-member-access
     afterEachCallbacks.push(async () => {
-      await Promise.all([vc1Info.validator.stop(), vc2Info.validator.stop()]);
+      await Promise.all([vc1Info.validator.close(), vc2Info.validator.close()]);
       vc1Info.tempDirs.keystoreDir.removeCallback();
       vc1Info.tempDirs.passwordFile.removeCallback();
       vc2Info.tempDirs.keystoreDir.removeCallback();
@@ -337,7 +337,7 @@ describe("keymanager delete and import test", async function () {
       externalSignerUrl: opts?.useRemoteSigner ? "http://localhost:38000" : undefined,
     });
 
-    afterEachCallbacks.push(() => Promise.all(validators.map((validator) => validator.stop())));
+    afterEachCallbacks.push(() => Promise.all(validators.map((validator) => validator.close())));
 
     const keystoresDir = tmp.dirSync({unsafeCleanup: true, prefix: "keystores"});
     const tokenDir = tmp.dirSync({unsafeCleanup: true, prefix: "token"});

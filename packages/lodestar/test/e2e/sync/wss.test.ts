@@ -79,8 +79,7 @@ describe("Start from WSS", function () {
       testLoggerOpts,
     });
 
-    afterEachCallbacks.push(() => Promise.all(validators.map((v) => v.stop())));
-    await Promise.all(validators.map((v) => v.start()));
+    afterEachCallbacks.push(() => Promise.all(validators.map((v) => v.close())));
 
     try {
       await finalizedEventistener;
