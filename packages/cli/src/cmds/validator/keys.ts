@@ -58,8 +58,8 @@ export async function getLocalSecretKeys(
     }
 
     const secretKeys: SecretKey[] = [];
-    // Performing parsing sequentially as doing so concurrently leads to OOM
-    // See https://github.com/ChainSafe/lodestar/issues/4166
+    // Performing decryption of keystore sequentially as concurrently calls to
+    // keystore.decrypt leads to OOM. See https://github.com/ChainSafe/lodestar/issues/4166
     // Once the underlining issue causing the OOM is identified and fixed, the
     // parsing can be updated to be done concurrently
     for (const keystorePath of keystorePaths) {
