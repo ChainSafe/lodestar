@@ -52,8 +52,8 @@ export function getLightclientApi(
       return {data: await chain.lightClientServer.getOptimisticUpdate()};
     },
 
-    async getLatestFinalizedHeadUpdate() {
-      return {data: await chain.lightClientServer.getLatestFinalizedHeadUpdate()};
+    async getFinalityUpdate() {
+      return {data: await chain.lightClientServer.getFinalityUpdate()};
     },
 
     async getBootstrap(blockRoot) {

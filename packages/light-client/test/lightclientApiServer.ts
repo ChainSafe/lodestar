@@ -68,7 +68,7 @@ export class LightclientServerApi implements routes.lightclient.Api {
     return {data: this.latestHeadUpdate};
   }
 
-  async getLatestFinalizedHeadUpdate(): Promise<{data: routes.lightclient.LightclientFinalizedUpdate}> {
+  async getFinalityUpdate(): Promise<{data: routes.lightclient.LightclientFinalizedUpdate}> {
     if (!this.finalized) throw Error("No finalized head update");
     return {data: this.finalized};
   }

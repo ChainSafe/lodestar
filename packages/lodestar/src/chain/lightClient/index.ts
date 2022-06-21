@@ -309,7 +309,7 @@ export class LightClientServer {
     return this.latestHeadUpdate;
   }
 
-  async getLatestFinalizedHeadUpdate(): Promise<routes.lightclient.LightclientFinalizedUpdate> {
+  async getFinalityUpdate(): Promise<routes.lightclient.LightclientFinalizedUpdate> {
     // Signature data
     if (this.finalized === null) {
       throw Error("No latest header update available");

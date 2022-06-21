@@ -47,7 +47,7 @@ describe("beacon / lightclient", () => {
       args: [],
       res: {data: {syncAggregate, attestedHeader: header}},
     },
-    getLatestFinalizedHeadUpdate: {
+    getFinalityUpdate: {
       args: [],
       res: {
         data: {

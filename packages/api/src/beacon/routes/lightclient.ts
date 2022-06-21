@@ -47,7 +47,7 @@ export type Api = {
    * unless to get the very first head update after syncing, or if SSE are not supported by the server.
    */
   getOptimisticUpdate(): Promise<{data: LightclientHeaderUpdate}>;
-  getLatestFinalizedHeadUpdate(): Promise<{data: LightclientFinalizedUpdate}>;
+  getFinalityUpdate(): Promise<{data: LightclientFinalizedUpdate}>;
   /**
    * Fetch a snapshot with a proof to a trusted block root.
    * The trusted block root should be fetched with similar means to a weak subjectivity checkpoint.
@@ -63,7 +63,7 @@ export const routesData: RoutesData<Api> = {
   getStateProof: {url: "/eth/v1/light_client/proof/:stateId", method: "GET"},
   getUpdates: {url: "/eth/v1/light_client/updates", method: "GET"},
   getOptimisticUpdate: {url: "/eth/v1/light_client/optimistic_update/", method: "GET"},
-  getLatestFinalizedHeadUpdate: {url: "/eth/v1/light_client/latest_finalized_head_update/", method: "GET"},
+  getFinalityUpdate: {url: "/eth/v1/light_client/finality_update/", method: "GET"},
   getBootstrap: {url: "/eth/v1/light_client/bootstrap/:blockRoot", method: "GET"},
 };
 
@@ -71,7 +71,7 @@ export type ReqTypes = {
   getStateProof: {params: {stateId: string}; query: {paths: string[]}};
   getUpdates: {query: {from: number; to: number}};
   getOptimisticUpdate: ReqEmpty;
-  getLatestFinalizedHeadUpdate: ReqEmpty;
+  getFinalityUpdate: ReqEmpty;
   getBootstrap: {params: {blockRoot: string}};
 };
 
@@ -90,7 +90,7 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
     },
 
     getOptimisticUpdate: reqEmpty,
-    getLatestFinalizedHeadUpdate: reqEmpty,
+    getFinalityUpdate: reqEmpty,
 
     getBootstrap: {
       writeReq: (blockRoot) => ({params: {blockRoot}}),
@@ -133,7 +133,7 @@ export function getReturnTypes(): ReturnTypes<Api> {
     getStateProof: sameType(),
     getUpdates: ContainerData(ArrayOf(ssz.altair.LightClientUpdate)),
     getOptimisticUpdate: ContainerData(lightclientHeaderUpdate),
-    getLatestFinalizedHeadUpdate: ContainerData(lightclientFinalizedUpdate),
+    getFinalityUpdate: ContainerData(lightclientFinalizedUpdate),
     getBootstrap: ContainerData(lightclientSnapshotWithProofType),
   };
 }
