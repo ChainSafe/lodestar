@@ -57,30 +57,20 @@ export async function getLocalSecretKeys(
       lockFilepath(keystorePath);
     }
 
-    const parsingResults = await Promise.allSettled(
-      keystorePaths.map(async (keystorePath) => {
-        const keystoreStr = fs.readFileSync(keystorePath, "utf8");
-
-        let keystore;
-        try {
-          keystore = Keystore.parse(keystoreStr);
-        } catch (e) {
-          return Promise.reject(`Error parsing keystore file: ${path.basename(keystorePath)}: ${(e as Error).message}`);
-        }
-
-        return bls.SecretKey.fromBytes(await keystore.decrypt(passphrase));
-      })
-    );
-
     const secretKeys: SecretKey[] = [];
-
-    parsingResults.forEach((result) => {
-      if (result.status === "fulfilled") {
-        secretKeys.push(result.value);
-      } else {
-        console.log(result.reason);
+    // Performing parsing sequentially as doing so concurrently leads to OOM
+    // See https://github.com/ChainSafe/lodestar/issues/4166
+    // Once the underlining issue causing the OOM is identified and fixed, the
+    // parsing can be updated to be done concurrently
+    for (const keystorePath of keystorePaths) {
+      const keystoreStr = fs.readFileSync(keystorePath, "utf8");
+      try {
+        const keystore = Keystore.parse(keystoreStr);
+        secretKeys.push(bls.SecretKey.fromBytes(await keystore.decrypt(passphrase)));
+      } catch (e) {
+        console.log(`Error parsing keystore file: ${path.basename(keystorePath)}: ${(e as Error).message}`);
       }
-    });
+    }
 
     if (secretKeys.length === 0) {
       throw new Error("No valid keystore found in keystore path");
