@@ -58,17 +58,26 @@ export async function getLocalSecretKeys(
     }
 
     const secretKeys: SecretKey[] = [];
-    // Performing decryption of keystore sequentially as concurrently calls to
-    // keystore.decrypt leads to OOM. See https://github.com/ChainSafe/lodestar/issues/4166
-    // Once the underlining issue causing the OOM is identified and fixed, the
-    // parsing can be updated to be done concurrently
+    const keyStores: Keystore[] = [];
+
     for (const keystorePath of keystorePaths) {
-      const keystoreStr = fs.readFileSync(keystorePath, "utf8");
       try {
-        const keystore = Keystore.parse(keystoreStr);
-        secretKeys.push(bls.SecretKey.fromBytes(await keystore.decrypt(passphrase)));
+        const keystoreStr = fs.readFileSync(keystorePath, "utf8");
+        keyStores.push(Keystore.parse(keystoreStr));
       } catch (e) {
         console.log(`Error parsing keystore file: ${path.basename(keystorePath)}: ${(e as Error).message}`);
+      }
+    }
+
+    for (const keystore of keyStores) {
+      // Performing decryption of keystore sequentially as concurrently calls to
+      // keystore.decrypt leads to OOM. See https://github.com/ChainSafe/lodestar/issues/4166
+      // Once the underlining issue causing the OOM is identified and fixed, the
+      // parsing can be updated to be done concurrently
+      try {
+        secretKeys.push(bls.SecretKey.fromBytes(await keystore.decrypt(passphrase)));
+      } catch (e) {
+        console.log(`Error decrypting keystore file: ${path.basename(keystore.path)}: ${(e as Error).message}`);
       }
     }
 
