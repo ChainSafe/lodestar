@@ -35,13 +35,13 @@ export type Api = {
    */
   getStateProof(stateId: string, jsonPaths: JsonPath[]): Promise<{data: Proof}>;
   /**
-   * Returns an array of best updates in the requested periods within the inclusive range `from` - `to`.
+   * Returns an array of best updates. Starting from `startPeriod` and `count` number of sync committee period after.
    * Best is defined by (in order of priority):
    * - Is finalized update
    * - Has most bits
    * - Oldest update
    */
-  getUpdates(from: SyncPeriod, to: SyncPeriod): Promise<{data: altair.LightClientUpdate[]}>;
+  getUpdates(startPeriod: SyncPeriod, count: number): Promise<{data: altair.LightClientUpdate[]}>;
   /**
    * Returns the latest best head update available. Clients should use the SSE type `lightclient_header_update`
    * unless to get the very first head update after syncing, or if SSE are not supported by the server.
@@ -67,9 +67,10 @@ export const routesData: RoutesData<Api> = {
   getBootstrap: {url: "/eth/v1/light_client/bootstrap/:blockRoot", method: "GET"},
 };
 
+/* eslint-disable @typescript-eslint/naming-convention */
 export type ReqTypes = {
   getStateProof: {params: {stateId: string}; query: {paths: string[]}};
-  getUpdates: {query: {from: number; to: number}};
+  getUpdates: {query: {start_period: number; count: number}};
   getOptimisticUpdate: ReqEmpty;
   getFinalityUpdate: ReqEmpty;
   getBootstrap: {params: {blockRoot: string}};
@@ -84,9 +85,9 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
     },
 
     getUpdates: {
-      writeReq: (from, to) => ({query: {from, to}}),
-      parseReq: ({query}) => [query.from, query.to],
-      schema: {query: {from: Schema.UintRequired, to: Schema.UintRequired}},
+      writeReq: (start_period, count) => ({query: {start_period, count}}),
+      parseReq: ({query}) => [query.start_period, query.count],
+      schema: {query: {start_period: Schema.UintRequired, count: Schema.UintRequired}},
     },
 
     getOptimisticUpdate: reqEmpty,

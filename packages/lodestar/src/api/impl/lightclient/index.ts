@@ -42,8 +42,9 @@ export function getLightclientApi(
       };
     },
 
-    async getUpdates(from, to) {
-      const periods = linspace(from, to);
+    // eslint-disable-next-line @typescript-eslint/naming-convention
+    async getUpdates(start_period, count) {
+      const periods = linspace(start_period, start_period + count);
       const updates = await Promise.all(periods.map((period) => chain.lightClientServer.getUpdates(period)));
       return {data: updates};
     },
