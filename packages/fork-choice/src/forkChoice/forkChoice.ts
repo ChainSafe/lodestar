@@ -22,7 +22,14 @@ import {computeUnrealizedCheckpoints} from "@lodestar/state-transition/epoch";
 import {IChainConfig, IChainForkConfig} from "@lodestar/config";
 
 import {computeDeltas} from "../protoArray/computeDeltas.js";
-import {HEX_ZERO_HASH, VoteTracker, ProtoBlock, ExecutionStatus} from "../protoArray/interface.js";
+import {
+  HEX_ZERO_HASH,
+  VoteTracker,
+  ProtoBlock,
+  ExecutionStatus,
+  MaybeValidExecutionStatus,
+  LVHExecResponse,
+} from "../protoArray/interface.js";
 import {ProtoArray} from "../protoArray/protoArray.js";
 
 import {ForkChoiceError, ForkChoiceErrorCode, InvalidBlockCode, InvalidAttestationCode} from "./errors.js";
@@ -279,7 +286,7 @@ export class ForkChoice implements IForkChoice {
     state: CachedBeaconStateAllForks,
     blockDelaySec: number,
     currentSlot: Slot,
-    executionStatus: ExecutionStatus
+    executionStatus: MaybeValidExecutionStatus
   ): void {
     const {parentRoot, slot} = block;
     const parentRootHex = toHexString(parentRoot);
@@ -745,14 +752,20 @@ export class ForkChoice implements IForkChoice {
   }
 
   /**
-   * Optimistic sync validate till validated latest hash, invalidate any decendant branch if invalidate till hash provided
-   * TODO: implementation:
-   * 1. verify is_merge_block if the mergeblock has not yet been validated
-   * 2. Throw critical error and exit if a block in finalized chain gets invalidated
+   * Optimistic sync validate till validated latest hash, invalidate any decendant
+   * branch if invalidate till hash provided
+   *
+   * Proxies to protoArray's validateLatestHash and could run extra validations for the
+   * justified's status as well as validate the terminal conditions if terminal block
+   * becomes valid
    */
-  validateLatestHash(_latestValidHash: RootHex, _invalidateTillHash: RootHex | null): void {
-    // Silently ignore for now if all calls were valid
-    return;
+  validateLatestHash(execResponse: LVHExecResponse): void {
+    this.protoArray.validateLatestHash(execResponse, this.fcStore.currentSlot);
+
+    // Call findHead to validate that the forkChoice consensus has not broken down
+    // as it is possible for invalidation to invalidate the entire forkChoice if
+    // the consensus breaks down, which will cause findHead to throw
+    this.protoArray.findHead(this.fcStore.justified.checkpoint.rootHex, this.fcStore.currentSlot);
   }
 
   /**
@@ -792,13 +805,15 @@ export class ForkChoice implements IForkChoice {
     );
   }
 
-  private getPreMergeExecStatus(executionStatus: ExecutionStatus): ExecutionStatus.PreMerge {
+  private getPreMergeExecStatus(executionStatus: MaybeValidExecutionStatus): ExecutionStatus.PreMerge {
     if (executionStatus !== ExecutionStatus.PreMerge)
       throw Error(`Invalid pre-merge execution status: expected: ${ExecutionStatus.PreMerge}, got ${executionStatus}`);
     return executionStatus;
   }
 
-  private getPostMergeExecStatus(executionStatus: ExecutionStatus): ExecutionStatus.Valid | ExecutionStatus.Syncing {
+  private getPostMergeExecStatus(
+    executionStatus: MaybeValidExecutionStatus
+  ): ExecutionStatus.Valid | ExecutionStatus.Syncing {
     if (executionStatus === ExecutionStatus.PreMerge)
       throw Error(
         `Invalid post-merge execution status: expected: ${ExecutionStatus.Syncing} or ${ExecutionStatus.Valid} , got ${executionStatus}`

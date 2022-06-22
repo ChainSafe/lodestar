@@ -68,29 +68,44 @@ export async function processBlocks(
 
     // Fully verify a block to be imported immediately after. Does not produce any side-effects besides adding intermediate
     // states in the state cache through regen.
-    const {postStates, executionStatuses, proposerBalanceDeltas} = await verifyBlocksInEpoch.call(
+    const {postStates, executionStatuses, proposerBalanceDeltas, segmentExecStatus} = await verifyBlocksInEpoch.call(
       this,
       parentBlock,
       relevantBlocks,
       opts
     );
 
-    const fullyVerifiedBlocks = relevantBlocks.map(
-      (block, i): FullyVerifiedBlock => ({
-        block,
-        postState: postStates[i],
-        parentBlockSlot: parentSlots[i],
-        executionStatus: executionStatuses[i],
-        proposerBalanceDelta: proposerBalanceDeltas[i],
-        // TODO: Make this param mandatory and capture in gossip
-        seenTimestampSec: opts.seenTimestampSec ?? Math.floor(Date.now() / 1000),
-      })
-    );
+    // If segmentExecStatus has lvhForkchoice then, the entire segment should be invalid
+    // and we need to further propagate
+    if (segmentExecStatus.invalidSegmentLHV !== undefined) {
+      this.forkChoice.validateLatestHash(segmentExecStatus.invalidSegmentLHV);
+    } else if (segmentExecStatus.mayBeValidTillIndex >= 0) {
+      // Only import blocks if atleast one block was valid
+      const relevantBlocksPostExec = relevantBlocks.slice(0, segmentExecStatus.mayBeValidTillIndex + 1);
+      const fullyVerifiedBlocks = relevantBlocksPostExec.map(
+        (block, i): FullyVerifiedBlock => ({
+          block,
+          postState: postStates[i],
+          parentBlockSlot: parentSlots[i],
+          executionStatus: executionStatuses[i],
+          proposerBalanceDelta: proposerBalanceDeltas[i],
+          // TODO: Make this param mandatory and capture in gossip
+          seenTimestampSec: opts.seenTimestampSec ?? Math.floor(Date.now() / 1000),
+        })
+      );
 
-    for (const fullyVerifiedBlock of fullyVerifiedBlocks) {
-      // No need to sleep(0) here since `importBlock` includes a disk write
-      // TODO: Consider batching importBlock too if it takes significant time
-      await importBlock.call(this, fullyVerifiedBlock, opts);
+      for (const fullyVerifiedBlock of fullyVerifiedBlocks) {
+        // No need to sleep(0) here since `importBlock` includes a disk write
+        // TODO: Consider batching importBlock too if it takes significant time
+        await importBlock.call(this, fullyVerifiedBlock, opts);
+      }
+    }
+
+    // If segmentExecStatus has an execError, even if few blocks may be imported
+    // we still need to throw for this segment as it block processor will think
+    // segment imported till end, and will result next into unknown block error
+    if (segmentExecStatus.execAborted !== null) {
+      throw segmentExecStatus.execAborted.execError;
     }
   } catch (e) {
     // above functions should only throw BlockError

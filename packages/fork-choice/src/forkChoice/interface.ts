@@ -1,7 +1,7 @@
 import {EffectiveBalanceIncrements} from "@lodestar/state-transition";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {Epoch, Slot, ValidatorIndex, phase0, allForks, Root, RootHex} from "@lodestar/types";
-import {ProtoBlock, ExecutionStatus} from "../protoArray/interface.js";
+import {ProtoBlock, MaybeValidExecutionStatus, LVHExecResponse} from "../protoArray/interface.js";
 import {CheckpointWithHex} from "./store.js";
 
 export type CheckpointHex = {
@@ -70,7 +70,7 @@ export interface IForkChoice {
     state: CachedBeaconStateAllForks,
     blockDelaySec: number,
     currentSlot: Slot,
-    executionStatus: ExecutionStatus
+    executionStatus: MaybeValidExecutionStatus
   ): void;
   /**
    * Register `attestation` with the fork choice DAG so that it may influence future calls to `getHead`.
@@ -155,7 +155,7 @@ export interface IForkChoice {
   /**
    * Optimistic sync validate till validated latest hash, invalidate any decendant branch if invalidated branch decendant provided
    */
-  validateLatestHash(latestValidHash: RootHex, invalidateTillHash: RootHex | null): void;
+  validateLatestHash(execResponse: LVHExecResponse): void;
   /** Find attester dependent root of a block */
   findAttesterDependentRoot(headBlockHash: Root): RootHex | null;
 }
