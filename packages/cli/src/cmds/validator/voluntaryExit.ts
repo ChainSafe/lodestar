@@ -114,6 +114,7 @@ BE UNTIL AT LEAST TWO YEARS AFTER THE PHASE 0 MAINNET LAUNCH.
       signers: [{type: SignerType.Local, secretKey}],
       logger: errorLogger(),
       graffiti: args.graffiti,
+      closed: true,
     });
 
     await validatorClient.voluntaryExit(publicKey, args.exitEpoch);

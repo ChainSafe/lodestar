@@ -64,10 +64,8 @@ describe("sync / unknown block sync", function () {
       testLoggerOpts,
     });
 
-    afterEachCallbacks.push(() => Promise.all(validators.map((v) => v.stop())));
+    afterEachCallbacks.push(() => Promise.all(validators.map((v) => v.close())));
 
-    await Promise.all(validators.map((validator) => validator.start()));
-    afterEachCallbacks.push(() => Promise.all(validators.map((v) => v.stop())));
     // stop bn after validators
     afterEachCallbacks.push(() => bn.close());
 

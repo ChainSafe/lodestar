@@ -34,6 +34,7 @@ export type ValidatorOptions = {
   graffiti?: string;
   defaultFeeRecipient?: string;
   strictFeeRecipientCheck?: boolean;
+  closed?: boolean;
 };
 
 // TODO: Extend the timeout, and let it be customizable
@@ -42,10 +43,8 @@ export type ValidatorOptions = {
 
 enum Status {
   running,
-  stopped,
+  closed,
 }
-
-type State = {status: Status.running; controller: AbortController} | {status: Status.stopped};
 
 /**
  * Main class for the Validator client.
@@ -63,11 +62,14 @@ export class Validator {
   private readonly emitter: ValidatorEventEmitter;
   private readonly chainHeaderTracker: ChainHeaderTracker;
   private readonly logger: ILogger;
-  private state: State = {status: Status.stopped};
+  private state: Status;
+  private readonly controller: AbortController;
 
   constructor(opts: ValidatorOptions, readonly genesis: Genesis, metrics: Metrics | null = null) {
     const {dbOps, logger, slashingProtection, signers, graffiti, defaultFeeRecipient, strictFeeRecipientCheck} = opts;
     const config = createIBeaconConfig(dbOps.config, genesis.genesisValidatorsRoot);
+
+    this.controller = new AbortController();
 
     const api =
       typeof opts.api === "string"
@@ -76,7 +78,7 @@ export class Validator {
               baseUrl: opts.api,
               // Validator would need the beacon to respond within the slot
               timeoutMs: config.SECONDS_PER_SLOT * 1000,
-              getAbortSignal: this.getAbortSignal,
+              getAbortSignal: () => this.controller.signal,
             },
             {config, logger, metrics: metrics?.restApiClient}
           )
@@ -140,6 +142,16 @@ export class Validator {
     if (metrics) {
       opts.dbOps.controller.setMetrics(metrics.db);
     }
+
+    if (opts.closed) {
+      this.state = Status.closed;
+    } else {
+      // "start" the validator
+      // Instantiates block and attestation services and runs them once the chain has been started.
+      this.state = Status.running;
+      this.clock.start(this.controller.signal);
+      this.chainHeaderTracker.start(this.controller.signal);
+    }
   }
 
   /** Waits for genesis and genesis time */
@@ -178,24 +190,12 @@ export class Validator {
   }
 
   /**
-   * Instantiates block and attestation services and runs them once the chain has been started.
-   */
-  async start(): Promise<void> {
-    if (this.state.status === Status.running) return;
-    const controller = new AbortController();
-    this.state = {status: Status.running, controller};
-    const {signal} = controller;
-    this.clock.start(signal);
-    this.chainHeaderTracker.start(signal);
-  }
-
-  /**
    * Stops all validator functions.
    */
-  async stop(): Promise<void> {
-    if (this.state.status === Status.stopped) return;
-    this.state.controller.abort();
-    this.state = {status: Status.stopped};
+  async close(): Promise<void> {
+    if (this.state === Status.closed) return;
+    this.controller.abort();
+    this.state = Status.closed;
   }
 
   /**
@@ -218,11 +218,6 @@ export class Validator {
 
     this.logger.info(`Submitted voluntary exit for ${publicKey} to the network`);
   }
-
-  /** Provide the current AbortSignal to the api instance */
-  private getAbortSignal = (): AbortSignal | undefined => {
-    return this.state.status === Status.running ? this.state.controller.signal : undefined;
-  };
 }
 
 /** Assert the same genesisValidatorRoot and genesisTime */

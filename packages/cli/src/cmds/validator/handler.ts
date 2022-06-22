@@ -133,8 +133,7 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
     metrics
   );
 
-  onGracefulShutdownCbs.push(() => validator.stop());
-  await validator.start();
+  onGracefulShutdownCbs.push(() => validator.close());
 
   // Start keymanager API backend
   // Only if keymanagerEnabled flag is set to true

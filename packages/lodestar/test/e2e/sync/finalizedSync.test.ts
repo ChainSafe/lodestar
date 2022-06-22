@@ -56,10 +56,8 @@ describe("sync / finalized sync", function () {
       testLoggerOpts,
     });
 
-    afterEachCallbacks.push(() => Promise.all(validators.map((validator) => validator.stop())));
+    afterEachCallbacks.push(() => Promise.all(validators.map((validator) => validator.close())));
 
-    await Promise.all(validators.map((validator) => validator.start()));
-    afterEachCallbacks.push(() => Promise.all(validators.map((v) => v.stop())));
     // stop beacon node after validators
     afterEachCallbacks.push(() => bn.close());
 
