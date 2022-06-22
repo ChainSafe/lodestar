@@ -512,7 +512,78 @@
     protobufjs "^6.11.2"
     uint8arrays "^3.0.0"
 
-"@chainsafe/persistent-merkle-tree@^0.4.2":
+"@chainsafe/lodestar-api@^0.37.0":
+  version "0.37.0"
+  resolved "https://registry.yarnpkg.com/@chainsafe/lodestar-api/-/lodestar-api-0.37.0.tgz#d1e6d0d313af9c8f782db8fd437040f862daf545"
+  integrity sha512-9WWvxpAG2bcnfK9s5krn8d4249AtYRfAcC10RquoQYyayNTP67Arx023Zid0t3bpFH1I8MOTgGDVeGr1HuhPxQ==
+  dependencies:
+    "@chainsafe/abort-controller" "^3.0.1"
+    "@chainsafe/lodestar-config" "^0.37.0"
+    "@chainsafe/lodestar-params" "^0.37.0"
+    "@chainsafe/lodestar-types" "^0.37.0"
+    "@chainsafe/lodestar-utils" "^0.37.0"
+    "@chainsafe/persistent-merkle-tree" "^0.4.1"
+    "@chainsafe/ssz" "^0.9.1"
+    cross-fetch "^3.1.4"
+    eventsource "^1.1.0"
+    qs "^6.10.1"
+
+"@chainsafe/lodestar-beacon-state-transition@^0.37.0":
+  version "0.37.0"
+  resolved "https://registry.yarnpkg.com/@chainsafe/lodestar-beacon-state-transition/-/lodestar-beacon-state-transition-0.37.0.tgz#521b115e8251a015998da43e37e9f42ad4e0ff52"
+  integrity sha512-iUMBR2YForD70qXPym+RW0CCuLZPfD76UzTobBXa6Sgus53yBPPmKAzAArvIJEov7XQQi4UIKDLCcyR4u2DBkQ==
+  dependencies:
+    "@chainsafe/as-sha256" "^0.3.1"
+    "@chainsafe/bls" "7.1.0"
+    "@chainsafe/lodestar-config" "^0.37.0"
+    "@chainsafe/lodestar-params" "^0.37.0"
+    "@chainsafe/lodestar-types" "^0.37.0"
+    "@chainsafe/lodestar-utils" "^0.37.0"
+    "@chainsafe/persistent-merkle-tree" "^0.4.1"
+    "@chainsafe/persistent-ts" "^0.19.1"
+    "@chainsafe/ssz" "^0.9.1"
+    bigint-buffer "^1.1.5"
+    buffer-xor "^2.0.2"
+
+"@chainsafe/lodestar-config@^0.37.0":
+  version "0.37.0"
+  resolved "https://registry.yarnpkg.com/@chainsafe/lodestar-config/-/lodestar-config-0.37.0.tgz#e78fe05fd4fc73e7b559598747a745db5ba16f1a"
+  integrity sha512-I1wh1NckuPvH2cPa3UkFgMYrebHauPQLvyvTWFo+tl3tBNVDItQuAPa/zNylGQREW/OrfEwrbEWyiIp9VPY64g==
+  dependencies:
+    "@chainsafe/lodestar-params" "^0.37.0"
+    "@chainsafe/lodestar-types" "^0.37.0"
+    "@chainsafe/ssz" "^0.9.1"
+
+"@chainsafe/lodestar-params@^0.37.0":
+  version "0.37.0"
+  resolved "https://registry.yarnpkg.com/@chainsafe/lodestar-params/-/lodestar-params-0.37.0.tgz#8afab6c7078ee1e7ebe040c69b1475eedec3bed3"
+  integrity sha512-f7C646s657VdmVHZ5VxhaFr8aFRB6fAUD2C4wINZ79v36dYXYBGaqTUyLGdf0dSKT6nh40NlcHIsD0bFMfhkDg==
+
+"@chainsafe/lodestar-types@^0.37.0":
+  version "0.37.0"
+  resolved "https://registry.yarnpkg.com/@chainsafe/lodestar-types/-/lodestar-types-0.37.0.tgz#ebc585830051d30e0c877a50b431bfe02742db39"
+  integrity sha512-snDFbYUrtav9JawdMZk8ytr65Y8gZC4uSy60TCUCnHvvi+TqojZvjlX3eAwxktjlf8uailoZqDVNEh5ICzEfJw==
+  dependencies:
+    "@chainsafe/lodestar-params" "^0.37.0"
+    "@chainsafe/ssz" "^0.9.1"
+
+"@chainsafe/lodestar-utils@^0.37.0":
+  version "0.37.0"
+  resolved "https://registry.yarnpkg.com/@chainsafe/lodestar-utils/-/lodestar-utils-0.37.0.tgz#6e0a5f0cb952f2e389f9309e0adb1fd6462c39cc"
+  integrity sha512-xe89EAzpul7topE6cIthq3Jbntap8O0Ap685IDh7PqqR8Gzog9gt2nKcCd5/6wms+w6hn/XFYpvNfJLxld2ayA==
+  dependencies:
+    "@chainsafe/abort-controller" "^3.0.1"
+    "@chainsafe/as-sha256" "^0.3.1"
+    any-signal "2.1.2"
+    bigint-buffer "^1.1.5"
+    case "^1.6.3"
+    chalk "^4.1.2"
+    js-yaml "^3.13.1"
+    winston "^3.3.3"
+    winston-daily-rotate-file "^4.5.5"
+    winston-transport "^4.3.0"
+
+"@chainsafe/persistent-merkle-tree@^0.4.1", "@chainsafe/persistent-merkle-tree@^0.4.2":
   version "0.4.2"
   resolved "https://registry.yarnpkg.com/@chainsafe/persistent-merkle-tree/-/persistent-merkle-tree-0.4.2.tgz#4c9ee80cc57cd3be7208d98c40014ad38f36f7ff"
   integrity sha512-lLO3ihKPngXLTus/L7WHKaw9PnNJWizlOF1H9NNzHP6Xvh82vzg9F2bzkXhYIFshMZ2gTCEz8tq6STe7r5NDfQ==
@@ -536,7 +607,7 @@
     buffer-from "^1.1.1"
     snappy "^6.3.5"
 
-"@chainsafe/ssz@^0.9.2":
+"@chainsafe/ssz@^0.9.1", "@chainsafe/ssz@^0.9.2":
   version "0.9.2"
   resolved "https://registry.yarnpkg.com/@chainsafe/ssz/-/ssz-0.9.2.tgz#6f2552db312217b911e34bcdef9057f8a3a108f2"
   integrity sha512-r3bKiGMF7EZlsgXTyyzQbS+GJTj6MvTlY3Ms1byFZLL1H9Maht8muE2LkF3pS1zU9KY4tiJeQd+KABdhyfB9Ag==
@@ -3664,17 +3735,17 @@ cacheable-lookup@^5.0.3:
   resolved "https://registry.npmjs.org/cacheable-lookup/-/cacheable-lookup-5.0.4.tgz"
   integrity sha512-2/kNscPhpcxrOigMZzbiWF7dz8ilhb/nIHU3EyZiXWXpeq/au8qJ8VhdftMkty3n7Gj6HIGalQG8oiBNB3AJgA==
 
-cacheable-request@^7.0.1:
-  version "7.0.1"
-  resolved "https://registry.npmjs.org/cacheable-request/-/cacheable-request-7.0.1.tgz"
-  integrity sha512-lt0mJ6YAnsrBErpTMWeu5kl/tg9xMAWjavYTN6VQXM1A/teBITuNcccXsCxF0tDQQJf9DfAaX5O4e0zp0KlfZw==
+cacheable-request@^7.0.2:
+  version "7.0.2"
+  resolved "https://registry.yarnpkg.com/cacheable-request/-/cacheable-request-7.0.2.tgz#ea0d0b889364a25854757301ca12b2da77f91d27"
+  integrity sha512-pouW8/FmiPQbuGpkXQ9BAPv/Mo5xDGANgSNXzTzJ8DrKGuXOssM4wIQRjfanNRh3Yu5cfYPvcorqbhg2KIJtew==
   dependencies:
     clone-response "^1.0.2"
     get-stream "^5.1.0"
     http-cache-semantics "^4.0.0"
     keyv "^4.0.0"
     lowercase-keys "^2.0.0"
-    normalize-url "^4.1.0"
+    normalize-url "^6.0.1"
     responselike "^2.0.0"
 
 caching-transform@^4.0.0:
@@ -5160,6 +5231,11 @@ events@^3.3.0:
   resolved "https://registry.npmjs.org/events/-/events-3.3.0.tgz"
   integrity sha512-mQw+2fkQbALzQ7V0MY0IqdnXNOeTtP4r0lN9z7AAawCXgqea7bDii20AYrIBrFd/Hx0M2Ocz6S111CaFkUcb0Q==
 
+eventsource@^1.1.0:
+  version "1.1.2"
+  resolved "https://registry.yarnpkg.com/eventsource/-/eventsource-1.1.2.tgz#bc75ae1c60209e7cb1541231980460343eaea7c2"
+  integrity sha512-xAH3zWhgO2/3KIniEKYPr8plNSzlGINOUqYj0m0u7AB81iRw8b/3E73W6AuU+6klLbaSFmZnaETQ2lXPfAydrA==
+
 eventsource@^2.0.2:
   version "2.0.2"
   resolved "https://registry.yarnpkg.com/eventsource/-/eventsource-2.0.2.tgz#76dfcc02930fb2ff339520b6d290da573a9e8508"
@@ -5865,16 +5941,16 @@ globby@^11.1.0:
     slash "^3.0.0"
 
 got@^11.5.1:
-  version "11.8.2"
-  resolved "https://registry.npmjs.org/got/-/got-11.8.2.tgz"
-  integrity sha512-D0QywKgIe30ODs+fm8wMZiAcZjypcCodPNuMz5H9Mny7RJ+IjJ10BdmGW7OM7fHXP+O7r6ZwapQ/YQmMSvB0UQ==
+  version "11.8.5"
+  resolved "https://registry.yarnpkg.com/got/-/got-11.8.5.tgz#ce77d045136de56e8f024bebb82ea349bc730046"
+  integrity sha512-o0Je4NvQObAuZPHLFoRSkdG2lTgtcynqymzg2Vupdx6PorhaT5MCbIyXG6d4D94kk8ZG57QeosgdiqfJWhEhlQ==
   dependencies:
     "@sindresorhus/is" "^4.0.0"
     "@szmarczak/http-timer" "^4.0.5"
     "@types/cacheable-request" "^6.0.1"
     "@types/responselike" "^1.0.0"
     cacheable-lookup "^5.0.3"
-    cacheable-request "^7.0.1"
+    cacheable-request "^7.0.2"
     decompress-response "^6.0.0"
     http2-wrapper "^1.0.0-beta.5.2"
     lowercase-keys "^2.0.0"
@@ -8562,10 +8638,10 @@ normalize-url@^3.3.0:
   resolved "https://registry.npmjs.org/normalize-url/-/normalize-url-3.3.0.tgz"
   integrity sha512-U+JJi7duF1o+u2pynbp2zXDW2/PADgC30f0GsHZtRh+HOcXHnw137TrNlyxxRvWW5fjKd3bcLHPxofWuCjaeZg==
 
-normalize-url@^4.1.0:
-  version "4.5.0"
-  resolved "https://registry.npmjs.org/normalize-url/-/normalize-url-4.5.0.tgz"
-  integrity sha512-2s47yzUxdexf1OhyRi4Em83iQk0aPvwTddtFz4hnSSw9dCEsLEGf6SwIO8ss/19S9iBb5sJaOuTvTGDeZI00BQ==
+normalize-url@^6.0.1:
+  version "6.1.0"
+  resolved "https://registry.yarnpkg.com/normalize-url/-/normalize-url-6.1.0.tgz#40d0885b535deffe3f3147bec877d05fe4c5668a"
+  integrity sha512-DlL+XwOy3NxAQ8xuC0okPgK46iuVNAK01YN7RueYBqqFeGsBjV9XmCAzAdgt+667bCl5kPh9EqKKDwnaPG1I7A==
 
 npm-bundled@^1.0.1, npm-bundled@^1.1.1:
   version "1.1.2"
