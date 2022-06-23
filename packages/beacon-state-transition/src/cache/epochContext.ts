@@ -7,9 +7,11 @@ import {
   DOMAIN_BEACON_PROPOSER,
   EFFECTIVE_BALANCE_INCREMENT,
   FAR_FUTURE_EPOCH,
+  ForkName,
   GENESIS_EPOCH,
   PROPOSER_WEIGHT,
   SLOTS_PER_EPOCH,
+  TIMELY_TARGET_FLAG_INDEX,
   WEIGHT_DENOMINATOR,
 } from "@chainsafe/lodestar-params";
 import {LodestarError} from "@chainsafe/lodestar-utils";
@@ -49,6 +51,9 @@ export type EpochContextOpts = {
   skipSyncCommitteeCache?: boolean;
   skipSyncPubkeys?: boolean;
 };
+
+/** Same to https://github.com/ethereum/eth2.0-specs/blob/v1.1.0-alpha.5/specs/altair/beacon-chain.md#has_flag */
+const TIMELY_TARGET = 1 << TIMELY_TARGET_FLAG_INDEX;
 
 /** Defers computing proposers by persisting only the seed, and dropping it once indexes are computed */
 type ProposersDeferred = {computed: false; seed: Uint8Array} | {computed: true; indexes: ValidatorIndex[]};
@@ -198,6 +203,8 @@ export class EpochContext {
     churnLimit: number;
     exitQueueEpoch: Epoch;
     exitQueueChurn: number;
+    currentTargetUnslashedBalanceIncrements: number;
+    previousTargetUnslashedBalanceIncrements: number;
     currentSyncCommitteeIndexed: SyncCommitteeCache;
     nextSyncCommitteeIndexed: SyncCommitteeCache;
     epoch: Epoch;
@@ -219,6 +226,8 @@ export class EpochContext {
     this.churnLimit = data.churnLimit;
     this.exitQueueEpoch = data.exitQueueEpoch;
     this.exitQueueChurn = data.exitQueueChurn;
+    this.currentTargetUnslashedBalanceIncrements = data.currentTargetUnslashedBalanceIncrements;
+    this.previousTargetUnslashedBalanceIncrements = data.previousTargetUnslashedBalanceIncrements;
     this.currentSyncCommitteeIndexed = data.currentSyncCommitteeIndexed;
     this.nextSyncCommitteeIndexed = data.nextSyncCommitteeIndexed;
     this.epoch = data.epoch;
@@ -356,6 +365,28 @@ export class EpochContext {
       exitQueueChurn = 0;
     }
 
+    let previousTargetUnslashedBalanceIncrements = 0;
+    let currentTargetUnslashedBalanceIncrements = 0;
+    const forkName = config.getForkName(state.slot);
+    if (forkName !== ForkName.phase0) {
+      const previousParticipation = (state as BeaconStateAltair).previousEpochParticipation.getAll();
+      for (const [i, flag] of previousParticipation.entries()) {
+        if ((flag & TIMELY_TARGET) === TIMELY_TARGET) {
+          previousTargetUnslashedBalanceIncrements += Math.floor(
+            state.validators.get(i).effectiveBalance / EFFECTIVE_BALANCE_INCREMENT
+          );
+        }
+      }
+      const currentParticipation = (state as BeaconStateAltair).currentEpochParticipation.getAll();
+      for (const [i, flag] of currentParticipation.entries()) {
+        if ((flag & TIMELY_TARGET) === TIMELY_TARGET) {
+          currentTargetUnslashedBalanceIncrements += Math.floor(
+            state.validators.get(i).effectiveBalance / EFFECTIVE_BALANCE_INCREMENT
+          );
+        }
+      }
+    }
+
     return new EpochContext({
       config,
       pubkey2index,
@@ -373,6 +404,8 @@ export class EpochContext {
       churnLimit,
       exitQueueEpoch,
       exitQueueChurn,
+      previousTargetUnslashedBalanceIncrements,
+      currentTargetUnslashedBalanceIncrements,
       currentSyncCommitteeIndexed,
       nextSyncCommitteeIndexed,
       epoch: currentEpoch,
@@ -409,6 +442,8 @@ export class EpochContext {
       churnLimit: this.churnLimit,
       exitQueueEpoch: this.exitQueueEpoch,
       exitQueueChurn: this.exitQueueChurn,
+      previousTargetUnslashedBalanceIncrements: this.previousTargetUnslashedBalanceIncrements,
+      currentTargetUnslashedBalanceIncrements: this.currentTargetUnslashedBalanceIncrements,
       currentSyncCommitteeIndexed: this.currentSyncCommitteeIndexed,
       nextSyncCommitteeIndexed: this.nextSyncCommitteeIndexed,
       epoch: this.epoch,
@@ -470,6 +505,9 @@ export class EpochContext {
       this.syncProposerReward = Math.floor(this.syncParticipantReward * PROPOSER_WEIGHT_FACTOR);
       this.baseRewardPerIncrement = computeBaseRewardPerIncrement(this.totalActiveBalanceIncrements);
     }
+
+    this.previousTargetUnslashedBalanceIncrements = this.currentTargetUnslashedBalanceIncrements;
+    this.currentTargetUnslashedBalanceIncrements = 0;
 
     // Advance time units
     // state.slot is advanced right before calling this function

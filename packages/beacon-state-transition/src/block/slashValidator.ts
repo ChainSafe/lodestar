@@ -1,5 +1,6 @@
 import {ValidatorIndex} from "@chainsafe/lodestar-types";
 import {
+  EFFECTIVE_BALANCE_INCREMENT,
   EPOCHS_PER_SLASHINGS_VECTOR,
   ForkSeq,
   MIN_SLASHING_PENALTY_QUOTIENT,
@@ -69,10 +70,14 @@ export function slashValidator(
     const previousStatus = (state as CachedBeaconStateAltair).currentEpochParticipation.get(slashedIndex);
 
     if ((currentStatus & TIMELY_TARGET) === TIMELY_TARGET) {
-      state.epochCtx.currentTargetUnslashedBalanceIncrements -= effectiveBalance;
+      state.epochCtx.currentTargetUnslashedBalanceIncrements -= Math.floor(
+        effectiveBalance / EFFECTIVE_BALANCE_INCREMENT
+      );
     }
     if ((previousStatus & TIMELY_TARGET) === TIMELY_TARGET) {
-      state.epochCtx.previousTargetUnslashedBalanceIncrements -= effectiveBalance;
+      state.epochCtx.previousTargetUnslashedBalanceIncrements -= Math.floor(
+        effectiveBalance / EFFECTIVE_BALANCE_INCREMENT
+      );
     }
   }
 }
