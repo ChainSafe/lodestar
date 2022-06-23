@@ -11,7 +11,7 @@ import {
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {bellatrix} from "@chainsafe/lodestar-types";
 import {toHexString} from "@chainsafe/ssz";
-import {IForkChoice, IProtoBlock, ExecutionStatus, assertValidTerminalPowBlock} from "@chainsafe/lodestar-fork-choice";
+import {IForkChoice, ProtoBlock, ExecutionStatus, assertValidTerminalPowBlock} from "@chainsafe/lodestar-fork-choice";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {IMetrics} from "../../metrics/index.js";
@@ -76,7 +76,7 @@ export async function verifyBlock(
 export function verifyBlockSanityChecks(
   chain: VerifyBlockModules,
   partiallyVerifiedBlock: PartiallyVerifiedBlock
-): IProtoBlock {
+): ProtoBlock {
   const {block} = partiallyVerifiedBlock;
   const blockSlot = block.message.slot;
 

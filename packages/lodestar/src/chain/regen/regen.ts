@@ -7,7 +7,7 @@ import {
   stateTransition,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {IForkChoice, IProtoBlock} from "@chainsafe/lodestar-fork-choice";
+import {IForkChoice, ProtoBlock} from "@chainsafe/lodestar-fork-choice";
 import {sleep} from "@chainsafe/lodestar-utils";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
@@ -196,7 +196,7 @@ export class StateRegenerator implements IStateRegenerator {
     return state;
   }
 
-  private findFirstStateBlock(stateRoot: RootHex): IProtoBlock {
+  private findFirstStateBlock(stateRoot: RootHex): ProtoBlock {
     for (const block of this.modules.forkChoice.forwarditerateAncestorBlocks()) {
       if (block !== undefined) {
         return block;

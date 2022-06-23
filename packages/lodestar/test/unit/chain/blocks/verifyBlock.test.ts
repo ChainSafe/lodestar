@@ -1,7 +1,7 @@
 import sinon, {SinonStubbedInstance} from "sinon";
 
 import {config} from "@chainsafe/lodestar-config/default";
-import {ForkChoice, IProtoBlock} from "@chainsafe/lodestar-fork-choice";
+import {ForkChoice, ProtoBlock} from "@chainsafe/lodestar-fork-choice";
 
 import {allForks, ssz} from "@chainsafe/lodestar-types";
 import {verifyBlockSanityChecks, VerifyBlockModules} from "../../../../src/chain/blocks/verifyBlock.js";
@@ -25,7 +25,7 @@ describe("chain / blocks / verifyBlock", function () {
     clock = {currentSlot} as LocalClock;
     modules = ({config, forkChoice, clock} as Partial<VerifyBlockModules>) as VerifyBlockModules;
     // On first call, parentRoot is known
-    forkChoice.getBlockHex.returns({} as IProtoBlock);
+    forkChoice.getBlockHex.returns({} as ProtoBlock);
   });
 
   it("PARENT_UNKNOWN", function () {
