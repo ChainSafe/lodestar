@@ -155,6 +155,23 @@ export class EpochContext {
    */
   exitQueueChurn: number;
 
+  /**
+   * Total cumulative balance increments through epoch for current target.
+   * This value is equivalent to:
+   * - Forward current state to end-of-epoch
+   * - Run beforeProcessEpoch
+   * - epochProcess.currEpochUnslashedTargetStakeByIncrement
+   */
+  currentTargetUnslashedBalanceIncrements: number;
+  /**
+   * Total cumulative balance increments through epoch for previous target
+   * This value is equivalent to:
+   * - Forward current state to end-of-epoch
+   * - Run beforeProcessEpoch
+   * - epochProcess.prevEpochUnslashedStake.targetStakeByIncrement
+   */
+  previousTargetUnslashedBalanceIncrements: number;
+
   /** TODO: Indexed SyncCommitteeCache */
   currentSyncCommitteeIndexed: SyncCommitteeCache;
   /** TODO: Indexed SyncCommitteeCache */

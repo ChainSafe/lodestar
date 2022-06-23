@@ -382,6 +382,15 @@ export function beforeProcessEpoch(state: CachedBeaconStateAllForks): EpochProce
   if (prevHeadUnslStake < 1) prevHeadUnslStake = 1;
   if (currTargetUnslStake < 1) currTargetUnslStake = 1;
 
+  // TODO, ensure that spec tests run through this
+  if (epochCtx.currentTargetUnslashedBalanceIncrements !== currTargetUnslStake) {
+    throw Error("currentTargetUnslashedBalanceIncrements is wrong");
+  }
+  // TODO, ensure that spec tests run through this
+  if (epochCtx.previousTargetUnslashedBalanceIncrements !== prevTargetUnslStake) {
+    throw Error("previousTargetUnslashedBalanceIncrements is wrong");
+  }
+
   return {
     prevEpoch,
     currentEpoch,

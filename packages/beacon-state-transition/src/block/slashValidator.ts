@@ -7,13 +7,17 @@ import {
   MIN_SLASHING_PENALTY_QUOTIENT_BELLATRIX,
   PROPOSER_REWARD_QUOTIENT,
   PROPOSER_WEIGHT,
+  TIMELY_TARGET_FLAG_INDEX,
   WEIGHT_DENOMINATOR,
   WHISTLEBLOWER_REWARD_QUOTIENT,
 } from "@chainsafe/lodestar-params";
 
 import {decreaseBalance, increaseBalance} from "../util/index.js";
-import {CachedBeaconStateAllForks} from "../types.js";
+import {CachedBeaconStateAllForks, CachedBeaconStateAltair} from "../types.js";
 import {initiateValidatorExit} from "./initiateValidatorExit.js";
+
+/** Same to https://github.com/ethereum/eth2.0-specs/blob/v1.1.0-alpha.5/specs/altair/beacon-chain.md#has_flag */
+const TIMELY_TARGET = 1 << TIMELY_TARGET_FLAG_INDEX;
 
 export function slashValidator(
   fork: ForkSeq,
@@ -58,5 +62,17 @@ export function slashValidator(
   } else {
     increaseBalance(state, proposerIndex, proposerReward);
     increaseBalance(state, whistleblowerIndex, whistleblowerReward - proposerReward);
+  }
+
+  if (fork > ForkSeq.altair) {
+    const currentStatus = (state as CachedBeaconStateAltair).currentEpochParticipation.get(slashedIndex);
+    const previousStatus = (state as CachedBeaconStateAltair).currentEpochParticipation.get(slashedIndex);
+
+    if ((currentStatus & TIMELY_TARGET) === TIMELY_TARGET) {
+      state.epochCtx.currentTargetUnslashedBalanceIncrements -= effectiveBalance;
+    }
+    if ((previousStatus & TIMELY_TARGET) === TIMELY_TARGET) {
+      state.epochCtx.previousTargetUnslashedBalanceIncrements -= effectiveBalance;
+    }
   }
 }

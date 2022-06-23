@@ -58,10 +58,8 @@ export function processAttestationsAltair(
       }
     }
 
-    const epochParticipation =
-      data.target.epoch === epochCtx.currentShuffling.epoch
-        ? state.currentEpochParticipation
-        : state.previousEpochParticipation;
+    const inCurrentEpoch = data.target.epoch === epochCtx.currentShuffling.epoch;
+    const epochParticipation = inCurrentEpoch ? state.currentEpochParticipation : state.previousEpochParticipation;
 
     const flagsAttestation = getAttestationParticipationStatus(data, stateSlot - data.slot, epochCtx.epoch, rootCache);
 
@@ -92,6 +90,14 @@ export function processAttestationsAltair(
 
       if (totalWeight > 0) {
         totalBalanceIncrementsWithWeight += effectiveBalanceIncrements[index] * totalWeight;
+      }
+
+      if ((flagsNewSet & TIMELY_TARGET) === TIMELY_TARGET) {
+        if (inCurrentEpoch) {
+          state.epochCtx.currentTargetUnslashedBalanceIncrements += effectiveBalanceIncrements[index];
+        } else {
+          state.epochCtx.previousTargetUnslashedBalanceIncrements += effectiveBalanceIncrements[index];
+        }
       }
     }
 
