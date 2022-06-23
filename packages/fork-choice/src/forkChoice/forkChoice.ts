@@ -65,8 +65,11 @@ export class ForkChoice implements IForkChoice {
    */
   private bestJustifiedBalances: EffectiveBalanceIncrements;
 
-  /** Avoid having to compute detas all the times. */
-  private synced = false;
+  // Note: as of Jun 2022 Lodestar metrics show that 100% of the times updateHead() is called, synced = false.
+  // Because we are processing attestations from gossip, recomputing scores is always necessary
+  // /** Avoid having to compute detas all the times. */
+  // private synced = false;
+
   /** Cached head */
   private head: ProtoBlock;
   /**
@@ -177,66 +180,63 @@ export class ForkChoice implements IForkChoice {
   updateHead(): ProtoBlock {
     // balances is not changed but votes are changed
 
-    let timer;
     this.metrics?.forkChoiceRequests.inc();
-    try {
-      let deltas: number[];
+    const timer = this.metrics?.forkChoiceFindHead.startTimer();
 
-      // Check if scores need to be calculated/updated
-      if (!this.synced) {
-        // eslint-disable-next-line prefer-const
-        timer = this.metrics?.forkChoiceFindHead.startTimer();
-        // eslint-disable-next-line prefer-const
-        deltas = computeDeltas(this.protoArray.indices, this.votes, this.justifiedBalances, this.justifiedBalances);
-        /**
-         * The structure in line with deltas to propogate boost up the branch
-         * starting from the proposerIndex
-         */
-        let proposerBoost: {root: RootHex; score: number} | null = null;
-        if (this.proposerBoostEnabled && this.proposerBoostRoot) {
-          const proposerBoostScore =
-            this.justifiedProposerBoostScore ??
-            computeProposerBoostScoreFromBalances(this.justifiedBalances, {
-              slotsPerEpoch: SLOTS_PER_EPOCH,
-              proposerScoreBoost: this.config.PROPOSER_SCORE_BOOST,
-            });
-          proposerBoost = {root: this.proposerBoostRoot, score: proposerBoostScore};
-          this.justifiedProposerBoostScore = proposerBoostScore;
-        }
+    // NOTE: In current Lodestar metrics, 100% of forkChoiceRequests this.synced = false.
+    // No need to cache computeDeltas()
+    //
+    // TODO: In current Lodestar metrics, 100% of forkChoiceRequests result in a changed head.
+    // No need to cache the head anymore
 
-        this.protoArray.applyScoreChanges({
-          deltas,
-          proposerBoost,
-          justifiedEpoch: this.fcStore.justifiedCheckpoint.epoch,
-          justifiedRoot: this.fcStore.justifiedCheckpoint.rootHex,
-          finalizedEpoch: this.fcStore.finalizedCheckpoint.epoch,
-          finalizedRoot: this.fcStore.finalizedCheckpoint.rootHex,
+    // Check if scores need to be calculated/updated
+    // eslint-disable-next-line prefer-const
+    // eslint-disable-next-line prefer-const
+    const deltas = computeDeltas(this.protoArray.indices, this.votes, this.justifiedBalances, this.justifiedBalances);
+    /**
+     * The structure in line with deltas to propogate boost up the branch
+     * starting from the proposerIndex
+     */
+    let proposerBoost: {root: RootHex; score: number} | null = null;
+    if (this.proposerBoostEnabled && this.proposerBoostRoot) {
+      const proposerBoostScore =
+        this.justifiedProposerBoostScore ??
+        computeProposerBoostScoreFromBalances(this.justifiedBalances, {
+          slotsPerEpoch: SLOTS_PER_EPOCH,
+          proposerScoreBoost: this.config.PROPOSER_SCORE_BOOST,
         });
-        this.synced = true;
-      }
-
-      const headRoot = this.protoArray.findHead(this.fcStore.justifiedCheckpoint.rootHex);
-      const headIndex = this.protoArray.indices.get(headRoot);
-      if (headIndex === undefined) {
-        throw new ForkChoiceError({
-          code: ForkChoiceErrorCode.MISSING_PROTO_ARRAY_BLOCK,
-          root: headRoot,
-        });
-      }
-      const headNode = this.protoArray.nodes[headIndex];
-      if (headNode === undefined) {
-        throw new ForkChoiceError({
-          code: ForkChoiceErrorCode.MISSING_PROTO_ARRAY_BLOCK,
-          root: headRoot,
-        });
-      }
-      return (this.head = headNode);
-    } catch (e) {
-      this.metrics?.forkChoiceErrors.inc();
-      throw e;
-    } finally {
-      if (timer) timer();
+      proposerBoost = {root: this.proposerBoostRoot, score: proposerBoostScore};
+      this.justifiedProposerBoostScore = proposerBoostScore;
     }
+
+    this.protoArray.applyScoreChanges({
+      deltas,
+      proposerBoost,
+      justifiedEpoch: this.fcStore.justifiedCheckpoint.epoch,
+      justifiedRoot: this.fcStore.justifiedCheckpoint.rootHex,
+      finalizedEpoch: this.fcStore.finalizedCheckpoint.epoch,
+      finalizedRoot: this.fcStore.finalizedCheckpoint.rootHex,
+    });
+
+    const headRoot = this.protoArray.findHead(this.fcStore.justifiedCheckpoint.rootHex);
+    const headIndex = this.protoArray.indices.get(headRoot);
+    if (headIndex === undefined) {
+      throw new ForkChoiceError({
+        code: ForkChoiceErrorCode.MISSING_PROTO_ARRAY_BLOCK,
+        root: headRoot,
+      });
+    }
+    const headNode = this.protoArray.nodes[headIndex];
+    if (headNode === undefined) {
+      throw new ForkChoiceError({
+        code: ForkChoiceErrorCode.MISSING_PROTO_ARRAY_BLOCK,
+        root: headRoot,
+      });
+    }
+
+    timer?.();
+
+    return (this.head = headNode);
   }
 
   /** Very expensive function, iterates the entire ProtoArray. Called only in debug API */
@@ -369,7 +369,6 @@ export class ForkChoice implements IForkChoice {
     if (finalizedCheckpoint.epoch > this.fcStore.finalizedCheckpoint.epoch) {
       this.fcStore.finalizedCheckpoint = toCheckpointWithHex(finalizedCheckpoint);
       shouldUpdateJustified = true;
-      this.synced = false;
     }
 
     // This needs to be performed after finalized checkpoint has been updated
@@ -398,7 +397,6 @@ export class ForkChoice implements IForkChoice {
       const proposerInterval = getCurrentInterval(this.config, blockDelaySec);
       if (proposerInterval < 1) {
         this.proposerBoostRoot = blockRootHex;
-        this.synced = false;
       }
     }
 
@@ -715,7 +713,6 @@ export class ForkChoice implements IForkChoice {
   }
 
   private updateJustified(justifiedCheckpoint: CheckpointWithHex, justifiedBalances: EffectiveBalanceIncrements): void {
-    this.synced = false;
     this.justifiedBalances = justifiedBalances;
     this.justifiedProposerBoostScore = null;
     this.fcStore.justifiedCheckpoint = justifiedCheckpoint;
@@ -930,7 +927,6 @@ export class ForkChoice implements IForkChoice {
    * Add a validator's latest message to the tracked votes
    */
   private addLatestMessage(validatorIndex: ValidatorIndex, nextEpoch: Epoch, nextRoot: RootHex): void {
-    this.synced = false;
     const vote = this.votes[validatorIndex];
     if (vote === undefined) {
       this.votes[validatorIndex] = {
@@ -990,7 +986,6 @@ export class ForkChoice implements IForkChoice {
       // Since previous weight was boosted, we need would now need to recalculate the
       // scores but without the boost
       this.proposerBoostRoot = null;
-      this.synced = false;
     }
 
     const currentSlot = time;
