@@ -292,7 +292,7 @@ export class Lightclient {
           continue;
         }
 
-        // Fetch latest head to prevent a potential 12 seconds lag between syncing and getting the first head,
+        // Fetch latest optimistic head to prevent a potential 12 seconds lag between syncing and getting the first head,
         // Don't retry, this is a non-critical UX improvement
         try {
           const {data: latestOptimisticUpdate} = await this.api.lightclient.getOptimisticUpdate();
@@ -373,7 +373,7 @@ export class Lightclient {
   };
 
   /**
-   * Processes new header updates in only known synced sync periods.
+   * Processes new optimistic header updates in only known synced sync periods.
    * This headerUpdate may update the head if there's enough participation.
    */
   private processOptimisticUpdate(headerUpdate: routes.events.LightclientHeaderUpdate): void {

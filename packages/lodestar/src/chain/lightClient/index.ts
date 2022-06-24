@@ -300,7 +300,7 @@ export class LightClientServer {
 
   /**
    * API ROUTE to poll LightclientHeaderUpdate.
-   * Clients should use the SSE type `lightclient_header_update` if available
+   * Clients should use the SSE type `light_client_optimistic_update` if available
    */
   async getOptimisticUpdate(): Promise<routes.lightclient.LightclientHeaderUpdate> {
     if (this.latestHeadUpdate === null) {

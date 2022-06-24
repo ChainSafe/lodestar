@@ -97,7 +97,7 @@ export enum ChainEvent {
    */
   errorBlock = "error:block",
   /**
-   * A new lightclient header update is available to be broadcasted to connected light-clients
+   * A new lightclient optimistic header update is available to be broadcasted to connected light-clients
    */
   lightclientOptimisticUpdate = "lightclient:header_update",
   /**

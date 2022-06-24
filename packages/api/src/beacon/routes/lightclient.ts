@@ -35,7 +35,7 @@ export type Api = {
    */
   getStateProof(stateId: string, jsonPaths: JsonPath[]): Promise<{data: Proof}>;
   /**
-   * Returns an array of best updates. Starting from `startPeriod` and `count` number of sync committee period after.
+   * Returns an array of best updates given a `startPeriod` and `count` number of sync committee period to return.
    * Best is defined by (in order of priority):
    * - Is finalized update
    * - Has most bits
@@ -43,13 +43,13 @@ export type Api = {
    */
   getUpdates(startPeriod: SyncPeriod, count: number): Promise<{data: altair.LightClientUpdate[]}>;
   /**
-   * Returns the latest best head update available. Clients should use the SSE type `lightclient_header_update`
+   * Returns the latest optimistic head update available. Clients should use the SSE type `light_client_optimistic_update`
    * unless to get the very first head update after syncing, or if SSE are not supported by the server.
    */
   getOptimisticUpdate(): Promise<{data: LightclientHeaderUpdate}>;
   getFinalityUpdate(): Promise<{data: LightclientFinalizedUpdate}>;
   /**
-   * Fetch a snapshot with a proof to a trusted block root.
+   * Fetch a bootstrapping state with a proof to a trusted block root.
    * The trusted block root should be fetched with similar means to a weak subjectivity checkpoint.
    * Only block roots for checkpoints are guaranteed to be available.
    */

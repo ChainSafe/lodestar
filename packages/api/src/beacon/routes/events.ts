@@ -35,7 +35,7 @@ export enum EventType {
   finalizedCheckpoint = "finalized_checkpoint",
   /** The node has reorganized its chain */
   chainReorg = "chain_reorg",
-  /** New or better header update available */
+  /** New or better optimistic header update available */
   lightclientOptimisticUpdate = "light_client_optimistic_update",
   /** New or better finalized update available */
   lightclientFinalizedUpdate = "light_client_finalized_update",
