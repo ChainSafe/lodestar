@@ -378,11 +378,21 @@ export function beforeProcessEpoch(state: CachedBeaconStateAllForks): EpochProce
   if (forkName !== ForkName.phase0) {
     // TODO, ensure that spec tests run through this
     if (epochCtx.currentTargetUnslashedBalanceIncrements !== currTargetUnslStake) {
-      throw Error("currentTargetUnslashedBalanceIncrements is wrong, expect " + currTargetUnslStake + ", got " + epochCtx.currentTargetUnslashedBalanceIncrements);
+      throw Error(
+        "currentTargetUnslashedBalanceIncrements is wrong, expect " +
+          currTargetUnslStake +
+          ", got " +
+          epochCtx.currentTargetUnslashedBalanceIncrements
+      );
     }
     // TODO, ensure that spec tests run through this
     if (epochCtx.previousTargetUnslashedBalanceIncrements !== prevTargetUnslStake) {
-      throw Error("previousTargetUnslashedBalanceIncrements is wrong, expect " + prevTargetUnslStake + ", got " + epochCtx.previousTargetUnslashedBalanceIncrements);
+      throw Error(
+        "previousTargetUnslashedBalanceIncrements is wrong, expect " +
+          prevTargetUnslStake +
+          ", got " +
+          epochCtx.previousTargetUnslashedBalanceIncrements
+      );
     }
   }
 

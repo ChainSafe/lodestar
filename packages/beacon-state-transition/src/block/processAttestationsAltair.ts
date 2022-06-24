@@ -14,7 +14,7 @@ import {
   TIMELY_TARGET_WEIGHT,
   WEIGHT_DENOMINATOR,
 } from "@chainsafe/lodestar-params";
-import {increaseBalance, verifySignatureSet} from "../util/index.js";
+import {increaseBalance, isActiveValidator, verifySignatureSet} from "../util/index.js";
 import {CachedBeaconStateAltair} from "../types.js";
 import {RootCache} from "../util/rootCache.js";
 import {getAttestationWithIndicesSignatureSet} from "../signatureSets/indexedAttestation.js";
@@ -36,6 +36,8 @@ export function processAttestationsAltair(
   const {effectiveBalanceIncrements} = epochCtx;
   const stateSlot = state.slot;
   const rootCache = new RootCache(state);
+  const currentEpoch = epochCtx.currentShuffling.epoch;
+  const previousEpoch = currentEpoch - 1;
 
   // Process all attestations first and then increase the balance of the proposer once
   let proposerReward = 0;
@@ -58,7 +60,7 @@ export function processAttestationsAltair(
       }
     }
 
-    const inCurrentEpoch = data.target.epoch === epochCtx.currentShuffling.epoch;
+    const inCurrentEpoch = data.target.epoch === currentEpoch;
     const epochParticipation = inCurrentEpoch ? state.currentEpochParticipation : state.previousEpochParticipation;
 
     const flagsAttestation = getAttestationParticipationStatus(data, stateSlot - data.slot, epochCtx.epoch, rootCache);
@@ -93,9 +95,12 @@ export function processAttestationsAltair(
       }
 
       if ((flagsNewSet & TIMELY_TARGET) === TIMELY_TARGET) {
+        const validator = state.validators.get(index);
         if (inCurrentEpoch) {
-          state.epochCtx.currentTargetUnslashedBalanceIncrements += effectiveBalanceIncrements[index];
-        } else {
+          if (!validator.slashed && isActiveValidator(validator, currentEpoch)) {
+            state.epochCtx.currentTargetUnslashedBalanceIncrements += effectiveBalanceIncrements[index];
+          }
+        } else if (!validator.slashed && isActiveValidator(validator, previousEpoch)) {
           state.epochCtx.previousTargetUnslashedBalanceIncrements += effectiveBalanceIncrements[index];
         }
       }

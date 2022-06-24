@@ -7,7 +7,7 @@ import {
   DOMAIN_BEACON_PROPOSER,
   EFFECTIVE_BALANCE_INCREMENT,
   FAR_FUTURE_EPOCH,
-  ForkName,
+  ForkSeq,
   GENESIS_EPOCH,
   PROPOSER_WEIGHT,
   SLOTS_PER_EPOCH,
@@ -367,8 +367,8 @@ export class EpochContext {
 
     let previousTargetUnslashedBalanceIncrements = 0;
     let currentTargetUnslashedBalanceIncrements = 0;
-    const forkName = config.getForkName(state.slot);
-    if (forkName !== ForkName.phase0) {
+    const forkSeq = config.getForkSeq(state.slot);
+    if (forkSeq > ForkSeq.phase0) {
       const previousParticipation = (state as BeaconStateAltair).previousEpochParticipation.getAll();
       for (const [i, flag] of previousParticipation.entries()) {
         if ((flag & TIMELY_TARGET) === TIMELY_TARGET) {

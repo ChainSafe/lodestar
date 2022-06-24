@@ -65,9 +65,9 @@ export function slashValidator(
     increaseBalance(state, whistleblowerIndex, whistleblowerReward - proposerReward);
   }
 
-  if (fork > ForkSeq.altair) {
+  if (fork >= ForkSeq.altair) {
     const currentStatus = (state as CachedBeaconStateAltair).currentEpochParticipation.get(slashedIndex);
-    const previousStatus = (state as CachedBeaconStateAltair).currentEpochParticipation.get(slashedIndex);
+    const previousStatus = (state as CachedBeaconStateAltair).previousEpochParticipation.get(slashedIndex);
 
     if ((currentStatus & TIMELY_TARGET) === TIMELY_TARGET) {
       state.epochCtx.currentTargetUnslashedBalanceIncrements -= Math.floor(
