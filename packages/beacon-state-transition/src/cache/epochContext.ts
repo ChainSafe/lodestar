@@ -372,20 +372,29 @@ export class EpochContext {
       const previousParticipation = (state as BeaconStateAltair).previousEpochParticipation.getAll();
       for (const [i, flag] of previousParticipation.entries()) {
         if ((flag & TIMELY_TARGET) === TIMELY_TARGET) {
-          previousTargetUnslashedBalanceIncrements += Math.floor(
-            state.validators.get(i).effectiveBalance / EFFECTIVE_BALANCE_INCREMENT
-          );
+          const validator = state.validators.get(i);
+          if (isActiveValidator(validator, previousEpoch) && !validator.slashed) {
+            previousTargetUnslashedBalanceIncrements += Math.floor(
+              validator.effectiveBalance / EFFECTIVE_BALANCE_INCREMENT
+            );
+          }
         }
       }
       const currentParticipation = (state as BeaconStateAltair).currentEpochParticipation.getAll();
       for (const [i, flag] of currentParticipation.entries()) {
         if ((flag & TIMELY_TARGET) === TIMELY_TARGET) {
-          currentTargetUnslashedBalanceIncrements += Math.floor(
-            state.validators.get(i).effectiveBalance / EFFECTIVE_BALANCE_INCREMENT
-          );
+          const validator = state.validators.get(i);
+          if (isActiveValidator(validator, currentEpoch) && !validator.slashed) {
+            currentTargetUnslashedBalanceIncrements += Math.floor(
+              state.validators.get(i).effectiveBalance / EFFECTIVE_BALANCE_INCREMENT
+            );
+          }
         }
       }
     }
+
+    // otherwise got 'Error: Must commit changes before reading all nodes'
+    state.commit();
 
     return new EpochContext({
       config,

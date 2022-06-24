@@ -374,6 +374,18 @@ export function beforeProcessEpoch(state: CachedBeaconStateAllForks): EpochProce
       currTargetUnslStake += effectiveBalanceByIncrement;
     }
   }
+
+  if (forkName !== ForkName.phase0) {
+    // TODO, ensure that spec tests run through this
+    if (epochCtx.currentTargetUnslashedBalanceIncrements !== currTargetUnslStake) {
+      throw Error("currentTargetUnslashedBalanceIncrements is wrong, expect " + currTargetUnslStake + ", got " + epochCtx.currentTargetUnslashedBalanceIncrements);
+    }
+    // TODO, ensure that spec tests run through this
+    if (epochCtx.previousTargetUnslashedBalanceIncrements !== prevTargetUnslStake) {
+      throw Error("previousTargetUnslashedBalanceIncrements is wrong, expect " + prevTargetUnslStake + ", got " + epochCtx.previousTargetUnslashedBalanceIncrements);
+    }
+  }
+
   // As per spec of `get_total_balance`:
   // EFFECTIVE_BALANCE_INCREMENT Gwei minimum to avoid divisions by zero.
   // Math safe up to ~10B ETH, afterwhich this overflows uint64.
@@ -381,15 +393,6 @@ export function beforeProcessEpoch(state: CachedBeaconStateAllForks): EpochProce
   if (prevTargetUnslStake < 1) prevTargetUnslStake = 1;
   if (prevHeadUnslStake < 1) prevHeadUnslStake = 1;
   if (currTargetUnslStake < 1) currTargetUnslStake = 1;
-
-  // TODO, ensure that spec tests run through this
-  if (epochCtx.currentTargetUnslashedBalanceIncrements !== currTargetUnslStake) {
-    throw Error("currentTargetUnslashedBalanceIncrements is wrong");
-  }
-  // TODO, ensure that spec tests run through this
-  if (epochCtx.previousTargetUnslashedBalanceIncrements !== prevTargetUnslStake) {
-    throw Error("previousTargetUnslashedBalanceIncrements is wrong");
-  }
 
   return {
     prevEpoch,
