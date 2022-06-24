@@ -253,7 +253,8 @@ export class Lightclient {
     const periodRanges = chunkifyInclusiveRange(fromPeriod, toPeriod, MAX_PERIODS_PER_REQUEST);
 
     for (const [fromPeriodRng, toPeriodRng] of periodRanges) {
-      const {data: updates} = await this.api.lightclient.getUpdates(fromPeriodRng, toPeriodRng);
+      const count = toPeriodRng - fromPeriodRng + 1;
+      const {data: updates} = await this.api.lightclient.getUpdates(fromPeriodRng, count);
       for (const update of updates) {
         this.processSyncCommitteeUpdate(update);
         const headPeriod = computeSyncPeriodAtSlot(update.attestedHeader.slot);
