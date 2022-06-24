@@ -43,7 +43,7 @@ export class LightclientServerApi implements routes.lightclient.Api {
   readonly states = new Map<RootHex, BeaconStateAltair>();
   readonly updates = new Map<SyncPeriod, altair.LightClientUpdate>();
   readonly snapshots = new Map<RootHex, routes.lightclient.LightclientSnapshotWithProof>();
-  latestHeadUpdate: routes.lightclient.LightclientHeaderUpdate | null = null;
+  latestHeadUpdate: routes.lightclient.LightclientOptimisticHeaderUpdate | null = null;
   finalized: routes.lightclient.LightclientFinalizedUpdate | null = null;
 
   async getStateProof(stateId: string, paths: JsonPath[]): Promise<{data: Proof}> {
@@ -63,7 +63,7 @@ export class LightclientServerApi implements routes.lightclient.Api {
     return {data: updates};
   }
 
-  async getOptimisticUpdate(): Promise<{data: routes.lightclient.LightclientHeaderUpdate}> {
+  async getOptimisticUpdate(): Promise<{data: routes.lightclient.LightclientOptimisticHeaderUpdate}> {
     if (!this.latestHeadUpdate) throw Error("No latest head update");
     return {data: this.latestHeadUpdate};
   }

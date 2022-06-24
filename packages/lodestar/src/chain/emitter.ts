@@ -124,7 +124,7 @@ export interface IChainEvents {
   [ChainEvent.forkChoiceJustified]: (checkpoint: CheckpointWithHex) => void;
   [ChainEvent.forkChoiceFinalized]: (checkpoint: CheckpointWithHex) => void;
 
-  [ChainEvent.lightclientOptimisticUpdate]: (headerUpdate: routes.events.LightclientHeaderUpdate) => void;
+  [ChainEvent.lightclientOptimisticUpdate]: (optimisticUpdate: routes.events.LightclientOptimisticHeaderUpdate) => void;
   [ChainEvent.lightclientFinalizedUpdate]: (finalizedUpdate: routes.events.LightclientFinalizedUpdate) => void;
 }
 

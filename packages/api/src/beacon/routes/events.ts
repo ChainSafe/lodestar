@@ -5,7 +5,7 @@ import {RouteDef, TypeJson} from "../../utils/index.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
-export type LightclientHeaderUpdate = {
+export type LightclientOptimisticHeaderUpdate = {
   syncAggregate: altair.SyncAggregate;
   attestedHeader: phase0.BeaconBlockHeader;
 };
@@ -63,7 +63,7 @@ export type EventData = {
     newHeadState: RootHex;
     epoch: Epoch;
   };
-  [EventType.lightclientOptimisticUpdate]: LightclientHeaderUpdate;
+  [EventType.lightclientOptimisticUpdate]: LightclientOptimisticHeaderUpdate;
   [EventType.lightclientFinalizedUpdate]: LightclientFinalizedUpdate;
 };
 

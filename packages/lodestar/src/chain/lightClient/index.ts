@@ -166,7 +166,7 @@ export class LightClientServer {
    */
   private readonly prevHeadData = new Map<BlockRooHex, SyncAttestedData>();
   private checkpointHeaders = new Map<BlockRooHex, phase0.BeaconBlockHeader>();
-  private latestHeadUpdate: routes.lightclient.LightclientHeaderUpdate | null = null;
+  private latestHeadUpdate: routes.lightclient.LightclientOptimisticHeaderUpdate | null = null;
 
   private readonly zero: Pick<altair.LightClientUpdate, "finalityBranch" | "finalizedHeader">;
   private finalized: routes.lightclient.LightclientFinalizedUpdate | null = null;
@@ -302,7 +302,7 @@ export class LightClientServer {
    * API ROUTE to poll LightclientHeaderUpdate.
    * Clients should use the SSE type `light_client_optimistic_update` if available
    */
-  async getOptimisticUpdate(): Promise<routes.lightclient.LightclientHeaderUpdate> {
+  async getOptimisticUpdate(): Promise<routes.lightclient.LightclientOptimisticHeaderUpdate> {
     if (this.latestHeadUpdate === null) {
       throw Error("No latest header update available");
     }
@@ -452,7 +452,7 @@ export class LightClientServer {
       throw new Error("attested data period different than signature period");
     }
 
-    const headerUpdate: routes.lightclient.LightclientHeaderUpdate = {
+    const headerUpdate: routes.lightclient.LightclientOptimisticHeaderUpdate = {
       attestedHeader: attestedData.attestedHeader,
       syncAggregate,
     };

@@ -376,7 +376,7 @@ export class Lightclient {
    * Processes new optimistic header updates in only known synced sync periods.
    * This headerUpdate may update the head if there's enough participation.
    */
-  private processOptimisticUpdate(headerUpdate: routes.events.LightclientHeaderUpdate): void {
+  private processOptimisticUpdate(headerUpdate: routes.events.LightclientOptimisticHeaderUpdate): void {
     const {attestedHeader: header, syncAggregate} = headerUpdate;
 
     // Prevent registering updates for slots to far ahead
