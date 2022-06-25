@@ -47,3 +47,4 @@ Look for the .vars file in the folder to see what networks are supported. Here a
 
 1. Kiln Network:  `--devnetVars ./kiln.vars`
 2. Ropsten Network: `--devnetVars ./ropsten.vars`
+3. Sepolia Network: `--devnetVars ./sepolia.vars`
