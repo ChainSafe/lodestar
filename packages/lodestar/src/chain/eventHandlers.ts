@@ -2,11 +2,7 @@ import {toHexString} from "@chainsafe/ssz";
 import {allForks, Epoch, phase0, Slot, ssz, Version} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {CheckpointWithHex, IProtoBlock} from "@chainsafe/lodestar-fork-choice";
-import {
-  CachedBeaconStateAllForks,
-  computeEpochAtSlot,
-  computeStartSlotAtEpoch,
-} from "@chainsafe/lodestar-beacon-state-transition";
+import {CachedBeaconStateAllForks, computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {AttestationError, BlockError, BlockErrorCode} from "./errors/index.js";
 import {ChainEvent, IChainEvents} from "./emitter.js";
 import {BeaconChain} from "./chain.js";
@@ -100,8 +96,8 @@ export function onClockEpoch(this: BeaconChain, currentEpoch: Epoch): void {
   this.seenAttesters.prune(currentEpoch);
   this.seenAggregators.prune(currentEpoch);
   this.seenAggregatedAttestations.prune(currentEpoch);
+  this.seenBlockAttesters.prune(currentEpoch);
   this.beaconProposerCache.prune(currentEpoch);
-  this.observedBlockAttesters.prune(currentEpoch);
 }
 
 export function onForkVersion(this: BeaconChain, version: Version): void {
@@ -149,7 +145,6 @@ export async function onForkChoiceFinalized(this: BeaconChain, cp: CheckpointWit
   this.logger.verbose("Fork choice finalized", {epoch: cp.epoch, root: cp.rootHex});
   const finalizedSlot = computeStartSlotAtEpoch(cp.epoch);
   this.seenBlockProposers.prune(finalizedSlot);
-  this.observedBlockProposers.prune(cp.epoch);
 
   // TODO: Improve using regen here
   const headState = this.stateCache.get(this.forkChoice.getHead().stateRoot);
@@ -199,11 +194,7 @@ export function onAttestation(this: BeaconChain, attestation: phase0.Attestation
   });
 }
 
-export async function onBlock(
-  this: BeaconChain,
-  block: allForks.SignedBeaconBlock,
-  postState: CachedBeaconStateAllForks
-): Promise<void> {
+export async function onBlock(this: BeaconChain, block: allForks.SignedBeaconBlock): Promise<void> {
   const blockRoot = toHexString(this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message));
   const advancedSlot = this.clock.slotWithFutureTolerance(REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC);
 
@@ -214,18 +205,6 @@ export async function onBlock(
     root: blockRoot,
     delaySec: this.clock.secFromSlot(block.message.slot),
   });
-  const epochAtSlot = computeEpochAtSlot(block.message.slot);
-  // observe the proposer for block
-  this.observedBlockProposers.add(epochAtSlot, block.message.proposerIndex);
-  // next observe the attesters in the block
-  // To avoid slowing down sync, only register attestations for the
-  // `observed block attesters` if they are from the previous epoch or later.
-  if (this.clock.currentEpoch <= epochAtSlot + 1) {
-    for (const attestation of block.message.body.attestations) {
-      const attestingIndices = postState.epochCtx.getIndexedAttestation(attestation).attestingIndices;
-      this.observedBlockAttesters.addIndices(epochAtSlot, attestingIndices);
-    }
-  }
 }
 
 export async function onErrorAttestation(this: BeaconChain, err: AttestationError): Promise<void> {

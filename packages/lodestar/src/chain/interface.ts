@@ -25,7 +25,7 @@ import {PartiallyVerifiedBlockFlags} from "./blocks/types.js";
 import {ReprocessController} from "./reprocess.js";
 import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
 import {BeaconProposerCache, ProposerPreparationData} from "./beaconProposerCache.js";
-import {ObservedAttesters, ObservedProposers} from "./blocks/observeBlock.js";
+import {SeenBlockAttesters} from "./seenCache/seenBlockAttesters.js";
 
 export type Eth2Context = {
   activeValidatorCount: number;
@@ -74,12 +74,10 @@ export interface IBeaconChain {
   readonly seenBlockProposers: SeenBlockProposers;
   readonly seenSyncCommitteeMessages: SeenSyncCommitteeMessages;
   readonly seenContributionAndProof: SeenContributionAndProof;
+  // Seen cache for liveness checks
+  readonly seenBlockAttesters: SeenBlockAttesters;
 
   readonly beaconProposerCache: BeaconProposerCache;
-
-  // Validators seen cache via processing blocks
-  readonly observedBlockProposers: ObservedProposers;
-  readonly observedBlockAttesters: ObservedAttesters;
 
   /** Stop beacon chain processing */
   close(): void;

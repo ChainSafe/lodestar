@@ -23,6 +23,7 @@ import {ChainEvent} from "../emitter.js";
 import {ChainEventEmitter} from "../emitter.js";
 import {LightClientServer} from "../lightClient/index.js";
 import {SeenAggregatedAttestations} from "../seenCache/seenAggregateAndProof.js";
+import {SeenBlockAttesters} from "../seenCache/seenBlockAttesters.js";
 import {prepareExecutionPayload} from "../factory/block/body.js";
 import {IEth1ForBlockProduction} from "../../eth1/index.js";
 import {BeaconProposerCache} from "../beaconProposerCache.js";
@@ -42,6 +43,7 @@ export type ImportBlockModules = {
   stateCache: StateContextCache;
   checkpointStateCache: CheckpointStateCache;
   seenAggregatedAttestations: SeenAggregatedAttestations;
+  seenBlockAttesters: SeenBlockAttesters;
   beaconProposerCache: BeaconProposerCache;
   lightClientServer: LightClientServer;
   eth1: IEth1ForBlockProduction;
@@ -142,6 +144,9 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
         if (targetEpoch <= currentEpoch && targetEpoch >= currentEpoch - FORK_CHOICE_ATT_EPOCH_LIMIT) {
           chain.forkChoice.onAttestation(indexedAttestation, attDataRoot);
         }
+
+        // Note: To avoid slowing down sync, only register attestations within FORK_CHOICE_ATT_EPOCH_LIMIT
+        chain.seenBlockAttesters.addIndices(blockEpoch, indexedAttestation.attestingIndices);
 
         if (parentSlot !== undefined) {
           chain.metrics?.registerAttestationInBlock(indexedAttestation, parentSlot, rootCache);

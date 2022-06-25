@@ -52,8 +52,8 @@ import {Archiver} from "./archiver/index.js";
 import {PrecomputeNextEpochTransitionScheduler} from "./precomputeNextEpochTransition.js";
 import {ReprocessController} from "./reprocess.js";
 import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
+import {SeenBlockAttesters} from "./seenCache/seenBlockAttesters.js";
 import {BeaconProposerCache} from "./beaconProposerCache.js";
-import {ObservedAttesters, ObservedProposers} from "./blocks/observeBlock.js";
 
 export class BeaconChain implements IBeaconChain {
   readonly genesisTime: UintNum64;
@@ -88,10 +88,8 @@ export class BeaconChain implements IBeaconChain {
   readonly seenBlockProposers = new SeenBlockProposers();
   readonly seenSyncCommitteeMessages = new SeenSyncCommitteeMessages();
   readonly seenContributionAndProof: SeenContributionAndProof;
-
-  // Validators seen cache via block processing
-  readonly observedBlockProposers = new ObservedProposers();
-  readonly observedBlockAttesters = new ObservedAttesters();
+  // Seen cache for liveness checks
+  readonly seenBlockAttesters = new SeenBlockAttesters();
 
   // Global state caches
   readonly pubkey2index: PubkeyIndexMap;
@@ -204,6 +202,7 @@ export class BeaconChain implements IBeaconChain {
         stateCache,
         checkpointStateCache,
         seenAggregatedAttestations: this.seenAggregatedAttestations,
+        seenBlockAttesters: this.seenBlockAttesters,
         beaconProposerCache: this.beaconProposerCache,
         emitter,
         config,
@@ -241,12 +240,19 @@ export class BeaconChain implements IBeaconChain {
     // Caller must check that epoch is not older that current epoch - 1
     // else the caches for that epoch may already be pruned.
 
-    const hasAttestedViaGossip = this.seenAttesters.isKnown(epoch, index);
-    const hasAttestedViaBlock = this.observedBlockAttesters.isKnown(epoch, index);
-    const hasAggregatedViaGossip = this.seenAggregators.isKnown(epoch, index);
-    const hasProposedViaBlock = this.observedBlockProposers.isKnown(epoch, index);
-
-    return hasAttestedViaGossip || hasAttestedViaBlock || hasAggregatedViaGossip || hasProposedViaBlock;
+    return (
+      // Dedicated cache for liveness checks, registers attesters seen through blocks.
+      // Note: this check should be cheaper + overlap with counting participants of aggregates from gossip.
+      this.seenBlockAttesters.isKnown(epoch, index) ||
+      //
+      // Re-use gossip caches. Populated on validation of gossip + API messages
+      //   seenAttesters = single signer of unaggregated attestations
+      this.seenAttesters.isKnown(epoch, index) ||
+      //   seenAggregators = single aggregator index, not participants of the aggregate
+      this.seenAggregators.isKnown(epoch, index) ||
+      //   seenBlockProposers = single block proposer
+      this.seenBlockProposers.seenAtEpoch(epoch, index)
+    );
   }
 
   /** Populate in-memory caches with persisted data. Call at least once on startup */
