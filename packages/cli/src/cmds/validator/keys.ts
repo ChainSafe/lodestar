@@ -14,6 +14,8 @@ import {ValidatorDirManager} from "../../validatorDir/index.js";
 import {getAccountPaths} from "./paths.js";
 import {IValidatorCliArgs} from "./options.js";
 
+const depositDataPattern = new RegExp(/^deposit_data-\d+\.json$/gi);
+
 export async function getLocalSecretKeys(
   args: IValidatorCliArgs & IGlobalArgs
 ): Promise<{secretKeys: SecretKey[]; unlockSecretKeys?: () => void}> {
@@ -77,7 +79,10 @@ export async function getLocalSecretKeys(
       try {
         secretKeys.push(bls.SecretKey.fromBytes(await keystore.decrypt(passphrase)));
       } catch (e) {
-        console.log(`Error decrypting keystore file: ${path.basename(keystore.path)}: ${(e as Error).message}`);
+        (e as Error).message = `Error decrypting keystore file: ${path.basename(keystore.path)}: ${
+          (e as Error).message
+        }`;
+        throw e;
       }
     }
 
@@ -193,7 +198,10 @@ function isValidHttpUrl(urlStr: string): boolean {
 
 export function resolveKeystorePaths(fileOrDirPath: string): string[] {
   if (fs.lstatSync(fileOrDirPath).isDirectory()) {
-    return fs.readdirSync(fileOrDirPath).map((file) => path.join(fileOrDirPath, file));
+    return fs
+      .readdirSync(fileOrDirPath)
+      .filter((file) => file.endsWith(".json") && !depositDataPattern.test(file))
+      .map((file) => path.join(fileOrDirPath, file));
   } else {
     return [fileOrDirPath];
   }
