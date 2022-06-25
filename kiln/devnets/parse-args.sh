@@ -31,8 +31,24 @@ while [[ $# -gt 0 ]]; do
       withValidator=true
       shift # past argument
       ;;
+    --justEL)
+      justEL=true
+      shift # past argument
+      ;;
+    --justCL)
+      justCL=true
+      shift # past argument
+      ;;
+    --justVC)
+      justVC=true
+      shift # past argument
+      ;;
     --detached)
       detached=true
+      shift # past argument
+      ;;
+    --skipImagePull)
+      skipImagePull=true
       shift # past argument
       ;;
     *)    # unknown option
@@ -52,5 +68,17 @@ echo "detached = $detached"
 if [ -n "$withTerminal" ] && [ -n "$detached" ]
 then
   echo "Only of of --withTerminal or --detached options should be provided, exiting..."
+  exit;
+fi
+
+if [ -n "$withValidator" ] && ( [ -n "$justEL" ] || [ -n "$justEL" ] || [ -n "$justEL" ] )
+then
+  echo "--withValidator can not be just with --justEL or --justCL or --justVC. Try using only --justVC."
+  exit;
+fi;
+
+if [ -n "$justEL" ] && ( [ -n "$justCL" ] || [ -n "$justVC" ]  ) || [ -n "$justCL" ] && ( [ -n "$justEL" ] || [ -n "$justVC" ]  ) || [ -n "$justVC" ] && ( [ -n "$justEL" ] || [ -n "$justCL" ]  )
+then
+  echo "only one of --justEL, --justCL or --justVC can be used at a time. You can however start another (parallel) run(s) to spin them up separately."
   exit;
 fi
