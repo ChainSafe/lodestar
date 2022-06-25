@@ -93,12 +93,7 @@ describe("chain / lightclient", function () {
     });
 
     afterEachCallbacks.push(async () => {
-      await Promise.all(validators.map((v) => v.stop()));
-    });
-
-    await Promise.all(validators.map((validator) => validator.start()));
-    afterEachCallbacks.push(async () => {
-      await Promise.all(validators.map((v) => v.stop()));
+      await Promise.all(validators.map((v) => v.close()));
     });
 
     // This promise chain does:

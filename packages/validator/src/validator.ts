@@ -1,5 +1,5 @@
 import {IDatabaseApiOptions} from "@chainsafe/lodestar-db";
-import {Epoch, ssz} from "@chainsafe/lodestar-types";
+import {ssz} from "@chainsafe/lodestar-types";
 import {createIBeaconConfig, IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Genesis} from "@chainsafe/lodestar-types/phase0";
 import {ILogger} from "@chainsafe/lodestar-utils";
@@ -36,18 +36,17 @@ export type ValidatorOptions = {
   defaultFeeRecipient?: string;
   strictFeeRecipientCheck?: boolean;
   doppelgangerProtectionEnabled?: boolean;
+  closed?: boolean;
 };
 
 // TODO: Extend the timeout, and let it be customizable
 /// The global timeout for HTTP requests to the beacon node.
 // const HTTP_TIMEOUT_MS = 12 * 1000;
 
-export enum Status {
-  running = "running",
-  stopped = "stopped",
+enum Status {
+  running,
+  closed,
 }
-
-export type State = {status: Status.running; controller: AbortController} | {status: Status.stopped};
 
 /**
  * Main class for the Validator client.
@@ -60,18 +59,19 @@ export class Validator {
   private readonly indicesService: IndicesService;
   private readonly prepareBeaconProposerService: PrepareBeaconProposerService | null;
   private readonly config: IBeaconConfig;
-  private readonly controller: AbortController;
   private readonly api: Api;
   private readonly clock: IClock;
   private readonly emitter: ValidatorEventEmitter;
   private readonly chainHeaderTracker: ChainHeaderTracker;
   private readonly logger: ILogger;
-  private state: State = {status: Status.stopped};
+  private state: Status;
+  private readonly controller: AbortController;
 
   constructor(opts: ValidatorOptions, readonly genesis: Genesis, metrics: Metrics | null = null) {
     const {dbOps, logger, slashingProtection, signers, graffiti, defaultFeeRecipient, strictFeeRecipientCheck} = opts;
     const config = createIBeaconConfig(dbOps.config, genesis.genesisValidatorsRoot);
     this.controller = new AbortController();
+
     const api =
       typeof opts.api === "string"
         ? getClient(
@@ -79,7 +79,7 @@ export class Validator {
               baseUrl: opts.api,
               // Validator would need the beacon to respond within the slot
               timeoutMs: config.SECONDS_PER_SLOT * 1000,
-              getAbortSignal: this.getAbortSignal,
+              getAbortSignal: () => this.controller.signal,
             },
             {config, logger, metrics: metrics?.restApiClient}
           )
@@ -158,6 +158,16 @@ export class Validator {
     if (metrics) {
       opts.dbOps.controller.setMetrics(metrics.db);
     }
+
+    if (opts.closed) {
+      this.state = Status.closed;
+    } else {
+      // "start" the validator
+      // Instantiates block and attestation services and runs them once the chain has been started.
+      this.state = Status.running;
+      this.clock.start(this.controller.signal);
+      this.chainHeaderTracker.start(this.controller.signal);
+    }
   }
 
   /** Waits for genesis and genesis time */
@@ -196,33 +206,12 @@ export class Validator {
   }
 
   /**
-   * Instantiates block and attestation services and runs them once the chain has been started.
-   */
-  async start(): Promise<void> {
-    if (this.state.status === Status.running) return;
-    this.state = {status: Status.running, controller: this.controller};
-    this.controller.signal.addEventListener("abort", () => {
-      this.state = {status: Status.stopped};
-    });
-    const {signal} = this.controller;
-    this.clock.start(signal);
-    this.chainHeaderTracker.start(signal);
-  }
-
-  /**
    * Stops all validator functions.
    */
-  async stop(): Promise<void> {
-    if (this.state.status === Status.stopped) return;
-    this.state.controller.abort();
-    this.state = {status: Status.stopped};
-  }
-
-  /**
-   * Returns the status of all validator
-   */
-  getStatus(): Status {
-    return this.state.status;
+  async close(): Promise<void> {
+    if (this.state === Status.closed) return;
+    this.controller.abort();
+    this.state = Status.closed;
   }
 
   /**
@@ -236,23 +225,13 @@ export class Validator {
     }
 
     if (exitEpoch === undefined) {
-      exitEpoch = this.getCurrentEpoch(this.config, this.clock.genesisTime);
+      exitEpoch = computeEpochAtSlot(getCurrentSlot(this.config, this.clock.genesisTime));
     }
 
     const signedVoluntaryExit = await this.validatorStore.signVoluntaryExit(publicKey, stateValidator.index, exitEpoch);
     await this.api.beacon.submitPoolVoluntaryExit(signedVoluntaryExit);
 
     this.logger.info(`Submitted voluntary exit for ${publicKey} to the network`);
-  }
-
-  /** Provide the current AbortSignal to the api instance */
-  private getAbortSignal = (): AbortSignal | undefined => {
-    return this.state.status === Status.running ? this.state.controller.signal : undefined;
-  };
-
-  private getCurrentEpoch(config: IBeaconConfig, genesisTime: number): Epoch {
-    const currentSlot = getCurrentSlot(config, genesisTime);
-    return computeEpochAtSlot(currentSlot);
   }
 }
 

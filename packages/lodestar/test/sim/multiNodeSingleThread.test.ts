@@ -85,10 +85,10 @@ describe("Run multi node single thread interop validators (no eth1) until checkp
           startIndex: i * validatorsPerNode,
           testLoggerOpts,
         });
-        afterEachCallbacks.push(async () => await Promise.all(validators.map((validator) => validator.stop())));
+        afterEachCallbacks.push(async () => await Promise.all(validators.map((validator) => validator.close())));
 
         afterEachCallbacks.push(async () => {
-          await Promise.all(validators.map((validator) => validator.stop()));
+          await Promise.all(validators.map((validator) => validator.close()));
           console.log("--- Stopped all validators ---");
           // wait for 1 slot
           await sleep(1 * testParams.SECONDS_PER_SLOT * 1000);
@@ -123,9 +123,6 @@ describe("Run multi node single thread interop validators (no eth1) until checkp
           }
         }
       }
-
-      // Start all validators at once.
-      await Promise.all(validators.map((validator) => validator.start()));
 
       // Wait for justified checkpoint on all nodes
       await Promise.all(nodes.map((node) => waitForEvent<phase0.Checkpoint>(node.chain.emitter, event, 240000)));

@@ -81,7 +81,7 @@ For example: After 3-5 days of testing, is performance equal to or better than l
 - Ensure step 2 testing is successful and there is sufficient consensus to release `v1.1.0`.
 - Approving the `v1.1.0 release` PR means a team member marks the release as safe, after personally reviewing and / or testing it.
 - Merge `v1.1.0 release` PR to stable **with "merge commit"** strategy to preserve all history.
-- Merge stable `stable` into `unstable` **with merge commit** strategy. If that's not possible, open a PR and handle conflicts latter.
+- Merge stable `stable` into `unstable` **with merge commit** strategy. Due to branch protections in `unstable` must open a PR. If there are conflicts, those must be resolved manually. Gitflow may cause changes that conflict between stable and unstable, for example due to a hotfix that is backported. If that happens, disable branch protections in unstable, merge locally fixing conflicts, run lint + tests, push, and re-enable branch protections.
 
 ### 5. Tag stable release
 

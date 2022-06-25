@@ -101,7 +101,7 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
   const onGracefulShutdownCbs: (() => Promise<void>)[] = [];
   onGracefulShutdown(async () => {
     for (const cb of onGracefulShutdownCbs) await cb();
-    await Promise.all([Promise.all(validators.map((v) => v.stop())), node.close()]);
+    await Promise.all([Promise.all(validators.map((v) => v.close())), node.close()]);
     if (args.reset) {
       logger.info("Cleaning db directories");
       await promisify(rimraf)(beaconDbDir);
@@ -139,7 +139,6 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
       doppelgangerProtectionEnabled: args.doppelgangerProtectionEnabled,
     });
 
-    onGracefulShutdownCbs.push(() => validator.stop());
-    await validator.start();
+    onGracefulShutdownCbs.push(() => validator.close());
   }
 }

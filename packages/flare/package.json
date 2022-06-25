@@ -1,6 +1,6 @@
 {
   "name": "@chainsafe/flare",
-  "version": "0.37.0",
+  "version": "0.38.1",
   "description": "Beacon chain debugging tool",
   "author": "ChainSafe Systems",
   "license": "Apache-2.0",
@@ -60,10 +60,10 @@
     "blockchain"
   ],
   "dependencies": {
-    "@chainsafe/lodestar-api": "^0.37.0",
-    "@chainsafe/lodestar-beacon-state-transition": "^0.37.0",
-    "@chainsafe/lodestar-config": "^0.37.0",
-    "@chainsafe/lodestar-types": "^0.37.0",
+    "@chainsafe/lodestar-api": "^0.38.1",
+    "@chainsafe/lodestar-beacon-state-transition": "^0.38.1",
+    "@chainsafe/lodestar-config": "^0.38.1",
+    "@chainsafe/lodestar-types": "^0.38.1",
     "source-map-support": "^0.5.19",
     "yargs": "^16.1.0"
   },

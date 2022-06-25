@@ -353,10 +353,8 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     });
 
     afterEachCallbacks.push(async function () {
-      await Promise.all(validators.map((v) => v.stop()));
+      await Promise.all(validators.map((v) => v.close()));
     });
-
-    await Promise.all(validators.map((v) => v.start()));
 
     if (TX_SCENARIOS.includes("simple")) {
       // If bellatrixEpoch > 0, this is the case of pre-merge transaction submission on EL pow
@@ -418,7 +416,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
 
     // Stop chain and un-subscribe events so the execution engine won't update it's head
     // Allow some time to broadcast finalized events and complete the importBlock routine
-    await Promise.all(validators.map((v) => v.stop()));
+    await Promise.all(validators.map((v) => v.close()));
     await bn.close();
     await sleep(500);
 

@@ -132,8 +132,7 @@ describe("Run single node single thread interop validators (no eth1) until check
       }
 
       // TODO: Previous code waited for 1 slot between stopping the validators and stopInfoTracker()
-      afterEachCallbacks[1] = () => Promise.all(validators.map((v) => v.stop()));
-      await Promise.all(validators.map((v) => v.start()));
+      afterEachCallbacks[1] = () => Promise.all(validators.map((v) => v.close()));
 
       // Wait for test to complete
       await waitForEvent<phase0.Checkpoint>(bn.chain.emitter, event, timeout);
