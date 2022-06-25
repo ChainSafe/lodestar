@@ -109,10 +109,34 @@ else
   elDockerNetwork="--network host"
 fi;
 
+if [ ! -n "$skipImagePull" ]
+then
+  if [ ! -n "$justCL" ] && [ ! -n "$justVC" ]
+  then
+    if [ "$elClient" == "geth" ]
+    then
+      $dockerExec pull $GETH_IMAGE
+    elif [ "$elClient" == "nethermind" ]
+    then
+      $dockerExec pull $NETHERMIND_IMAGE
+    elif [ "$elClient" == "ethereumjs" ]
+    then
+      $dockerExec pull $ETHEREUMJS_IMAGE
+    elif [ "$elClient" == "besu" ]
+    then
+      $dockerExec pull $BESU_IMAGE
+    fi;
+  fi;
+
+  if [ ! -n "$justEL" ]
+  then
+    $dockerExec pull $LODESTAR_IMAGE
+  fi;
+fi
+
 if [ "$elClient" == "geth" ]
 then
   echo "gethImage: $GETH_IMAGE"
-  $dockerExec pull $GETH_IMAGE
 
   elName="$DEVNET_NAME-geth"
   if [ ! -n "$(ls -A $dataDir/geth)" ] && [ -n "$configGitDir" ]
@@ -130,7 +154,6 @@ then
 elif [ "$elClient" == "nethermind" ] 
 then
   echo "nethermindImage: $NETHERMIND_IMAGE"
-  $dockerExec pull $NETHERMIND_IMAGE
 
   elName="$DEVNET_NAME-nethermind"
   elCmd="$dockerCmd --name $elName $elDockerNetwork -v $currentDir/$dataDir:/data"
@@ -145,7 +168,6 @@ then
 elif [ "$elClient" == "ethereumjs" ] 
 then
   echo "ethereumjsImage: $ETHEREUMJS_IMAGE"
-  $dockerExec pull $ETHEREUMJS_IMAGE
 
   elName="$DEVNET_NAME-ethereumjs"
   elCmd="$dockerCmd --name $elName $elDockerNetwork -v $currentDir/$dataDir:/data"
@@ -155,12 +177,11 @@ then
   else
     elCmd="$elCmd $ETHEREUMJS_IMAGE"
   fi;
-  elCmd="$elCmd --datadir /data/ethereumjs --gethGenesis /config/genesis.json --jwt-secret /data/jwtsecret $ETHEREUMJS_EXTRA_ARGS "
+  elCmd="$elCmd $ETHEREUMJS_EXTRA_ARGS "
 
 elif [ "$elClient" == "besu" ] 
 then
   echo "besuImage: $BESU_IMAGE"
-  $dockerExec pull $BESU_IMAGE
 
   elName="$DEVNET_NAME-besu"
   elCmd="$dockerCmd --name $elName $elDockerNetwork -v $currentDir/$dataDir:/data"
@@ -170,11 +191,10 @@ then
   else
     elCmd="$elCmd $BESU_IMAGE"
   fi;
-  elCmd="$elCmd $BESU_IMAGE --data-path=/data --engine-jwt-secret=/data/jwtsecret $BESU_EXTRA_ARGS"
+  elCmd="$elCmd $BESU_EXTRA_ARGS"
 fi
 
 echo "lodestarImage: $LODESTAR_IMAGE"
-$dockerExec pull $LODESTAR_IMAGE
 
 if [ $platform == 'Darwin' ]
 then
@@ -206,10 +226,23 @@ fi;
 valCmd="$valCmd $LODESTAR_VALIDATOR_ARGS"
 
 echo -n $JWT_SECRET > $dataDir/jwtsecret
-run_cmd "$elCmd"
-elPid=$!
-echo "elPid= $elPid"
-terminalInfo="elPid= $elPid for $elName"
+terminalInfo=""
+
+
+if [ ! -n "$justCL" ] && [ ! -n "$justVC" ]
+then
+  cleanupEL=true
+  run_cmd "$elCmd"
+  elPid=$!
+  echo "elPid= $elPid"
+  terminalInfo="$terminalInfo elPid= $elPid for $elName"
+  if [ -n "$justEL" ]
+  then
+    # Just placeholder copy the pid into el and val pid as we do a multi wait on them later
+    clPid="$elPid"
+    valPid="$elPid"
+  fi;
+fi;
 
 if [ $platform == 'Darwin' ]
 then
@@ -217,17 +250,34 @@ then
    sleep 5
 fi
 
-run_cmd "$clCmd"
-clPid=$!
-echo "clPid= $clPid"
-terminalInfo="$terminalInfo, clPid= $clPid for $clName"
+if [ ! -n "$justEL" ] && [ ! -n "$justVC" ]
+then
+  cleanupCL=true
+  run_cmd "$clCmd"
+  clPid=$!
+  echo "clPid= $clPid"
+  terminalInfo="$terminalInfo, clPid= $clPid for $clName"
+  if [ -n "$justCL" ]
+  then
+    # Just placeholder copy the pid into el and val pid as we do a multi wait on them later
+    elPid="$clPid"
+    valPid="$clPid"
+  fi;
+fi;
 
-if [ -n "$withValidator" ]
-then 
+if [ -n "$withValidator" ] || [ -n "$justVC" ]
+then
+  cleanupVAL=true
   run_cmd "$valCmd"
   valPid=$!
   echo "valPid= $valPid"
   terminalInfo="$terminalInfo, valPid= $valPid for $elName"
+  if [ -n "$justVC" ]
+  then
+    # Just placeholder copy the pid into el and val pid as we do a multi wait on them later
+    elPid="$valPid"
+    clPid="$valPid"
+  fi;
 else 
    # hack to assign clPid to valPid for joint wait later
    valPid=$clPid
@@ -235,9 +285,19 @@ fi;
 
 cleanup() {
   echo "cleaning up"
-  $dockerExec rm $elName -f
-  $dockerExec rm $clName -f
-  $dockerExec rm $valName -f
+  # Cleanup only those that have been (tried) spinned up by this run of the script
+  if [ -n "$cleanupEL" ]
+  then
+    $dockerExec rm $elName -f
+  fi;
+  if [ -n "$cleanupCL" ]
+  then
+    $dockerExec rm $clName -f
+  fi;
+  if [ -n "$cleanupVAL" ]
+  then
+    $dockerExec rm $valName -f
+  fi
   elPid=null
   clPid=null
   valPid=null
