@@ -13,7 +13,7 @@ import {
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
-import {allForks, UintNum64, Root, phase0, Slot, RootHex, Epoch} from "@chainsafe/lodestar-types";
+import {allForks, UintNum64, Root, phase0, Slot, RootHex, Epoch, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {ILogger, toHex} from "@chainsafe/lodestar-utils";
 import {CompositeTypeAny, fromHexString, TreeView, Type} from "@chainsafe/ssz";
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
@@ -235,6 +235,18 @@ export class BeaconChain implements IBeaconChain {
     this.abortController.abort();
     this.stateCache.clear();
     this.checkpointStateCache.clear();
+  }
+
+  validatorSeenAtEpoch(index: ValidatorIndex, epoch: Epoch): boolean {
+    // Caller must check that epoch is not older that current epoch - 1
+    // else the caches for that epoch may already be pruned.
+
+    const hasAttestedViaGossip = this.seenAttesters.isKnown(epoch, index);
+    const hasAttestedViaBlock = this.observedBlockAttesters.isKnown(epoch, index);
+    const hasAggregatedViaGossip = this.seenAggregators.isKnown(epoch, index);
+    const hasProposedViaBlock = this.observedBlockProposers.isKnown(epoch, index);
+
+    return hasAttestedViaGossip || hasAttestedViaBlock || hasAggregatedViaGossip || hasProposedViaBlock;
   }
 
   /** Populate in-memory caches with persisted data. Call at least once on startup */

@@ -17,7 +17,6 @@ import {Root, Slot, ValidatorIndex, ssz, Epoch} from "@chainsafe/lodestar-types"
 import {ExecutionStatus} from "@chainsafe/lodestar-fork-choice";
 
 import {fromHexString} from "@chainsafe/ssz";
-import {ILogger} from "@chainsafe/lodestar-utils";
 import {assembleBlock} from "../../../chain/factory/block/index.js";
 import {AttestationError, AttestationErrorCode, GossipAction, SyncCommitteeError} from "../../../chain/errors/index.js";
 import {validateGossipAggregateAndProof} from "../../../chain/validation/index.js";
@@ -29,7 +28,6 @@ import {validateSyncCommitteeGossipContributionAndProof} from "../../../chain/va
 import {CommitteeSubscription} from "../../../network/subnets/index.js";
 import {ApiModules} from "../types.js";
 import {RegenCaller} from "../../../chain/regen/index.js";
-import {IBeaconChain} from "../../../chain/index.js";
 import {computeSubnetForCommitteesAtSlot, getPubkeysForIndices} from "./utils.js";
 
 /**
@@ -601,30 +599,12 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
       }
 
       return {
-        data: indices.map((index: ValidatorIndex) => {
-          return {
-            index,
-            epoch,
-            isLive: isLive(chain, index, epoch, logger),
-          };
-        }),
+        data: indices.map((index: ValidatorIndex) => ({
+          index,
+          epoch,
+          isLive: chain.validatorSeenAtEpoch(index, epoch),
+        })),
       };
     },
   };
-}
-
-function isLive(chain: IBeaconChain, index: ValidatorIndex, epoch: Epoch, logger: ILogger): boolean {
-  const hasAttestedViaGossip = chain.seenAttesters.isKnown(epoch, index);
-  const hasAttestedViaBlock = chain.observedBlockAttesters.isKnown(epoch, index);
-  const hasAggregatedViaGossip = chain.seenAggregators.isKnown(epoch, index);
-  const hasProposedViaBlock = chain.observedBlockProposers.isKnown(epoch, index);
-
-  logger.info(
-    `Liveness data for requested epoch=${epoch} 
-    hasAttestedViaGossip=${hasAttestedViaGossip} 
-    hasAttestedViaBlock=${hasAttestedViaBlock} 
-    hasAggregatedViaGossip=${hasAggregatedViaGossip} 
-    hasProposedViaBlock=${hasProposedViaBlock}`
-  );
-  return hasAttestedViaGossip || hasAttestedViaBlock || hasAggregatedViaGossip || hasProposedViaBlock;
 }

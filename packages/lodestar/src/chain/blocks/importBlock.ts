@@ -76,6 +76,8 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
   const {block, postState, parentBlock, skipImportingAttestations, executionStatus} = fullyVerifiedBlock;
   const pendingEvents = new PendingEvents(chain.emitter);
 
+  // - Observe attestations
+  // TODO
   // - Add validators to the pubkey cache
   // TODO
   // - Load shuffling caches
@@ -96,7 +98,6 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
     executionStatus,
     blockDelaySec: (Math.floor(Date.now() / 1000) - postState.genesisTime) % chain.config.SECONDS_PER_SLOT,
   };
-
   if (justifiedCheckpoint.epoch > chain.forkChoice.getJustifiedCheckpoint().epoch) {
     const state = getStateForJustifiedBalances(chain, postState, block);
     onBlockPrecachedData.justifiedBalances = getEffectiveBalanceIncrementsZeroInactive(state);

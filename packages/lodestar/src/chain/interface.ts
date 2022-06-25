@@ -1,4 +1,4 @@
-import {allForks, UintNum64, Root, phase0, Slot, RootHex, Epoch} from "@chainsafe/lodestar-types";
+import {allForks, UintNum64, Root, phase0, Slot, RootHex, Epoch, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {CachedBeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
@@ -87,6 +87,8 @@ export interface IBeaconChain {
   loadFromDisk(): Promise<void>;
   /** Persist in-memory data to the DB. Call at least once before stopping the process */
   persistToDisk(): Promise<void>;
+
+  validatorSeenAtEpoch(index: ValidatorIndex, epoch: Epoch): boolean;
 
   getHeadState(): CachedBeaconStateAllForks;
   getHeadStateAtCurrentEpoch(): Promise<CachedBeaconStateAllForks>;
