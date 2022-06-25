@@ -43,7 +43,7 @@ export function getLightclientApi(
 
     // eslint-disable-next-line @typescript-eslint/naming-convention
     async getUpdates(start_period, count) {
-      const periods = Array.from({length: count}, (x, i) => i + start_period);
+      const periods = Array.from({length: count}, (_ignored, i) => i + start_period);
       const updates = await Promise.all(periods.map((period) => chain.lightClientServer.getUpdates(period)));
       return {data: updates};
     },
