@@ -255,7 +255,7 @@ export function computeMerkleBranch(
 
 export function committeeUpdateToLatestHeadUpdate(
   committeeUpdate: altair.LightClientUpdate
-): routes.lightclient.LightclientHeaderUpdate {
+): routes.lightclient.LightclientOptimisticHeaderUpdate {
   return {
     attestedHeader: committeeUpdate.attestedHeader,
     syncAggregate: {

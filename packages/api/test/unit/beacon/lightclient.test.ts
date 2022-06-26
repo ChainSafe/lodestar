@@ -39,15 +39,15 @@ describe("beacon / lightclient", () => {
       },
       /* eslint-enable quotes */
     },
-    getCommitteeUpdates: {
+    getUpdates: {
       args: [1, 2],
       res: {data: [lightClientUpdate]},
     },
-    getLatestHeadUpdate: {
+    getOptimisticUpdate: {
       args: [],
       res: {data: {syncAggregate, attestedHeader: header}},
     },
-    getLatestFinalizedHeadUpdate: {
+    getFinalityUpdate: {
       args: [],
       res: {
         data: {
@@ -58,7 +58,7 @@ describe("beacon / lightclient", () => {
         },
       },
     },
-    getSnapshot: {
+    getBootstrap: {
       args: [toHexString(root)],
       res: {
         data: {
