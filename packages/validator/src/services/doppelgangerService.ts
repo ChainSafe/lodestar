@@ -127,7 +127,7 @@ export class DoppelgangerService {
   private detectDoppelganger(livenessData: LivenessResponseData[], currentEpoch: Epoch): void {
     const violators = [];
 
-    for (const [validatorIndex, doppelgangerState] of Array.from(this.doppelgangerStateByIndex.entries())) {
+    for (const [validatorIndex, doppelgangerState] of this.doppelgangerStateByIndex.entries()) {
       const indicesToCheck = livenessData.filter((liveness) => {
         return liveness.index === validatorIndex;
       });
