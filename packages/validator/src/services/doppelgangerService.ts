@@ -96,31 +96,30 @@ export class DoppelgangerService {
     // Run the doppelganger protection check 75% through the last slot of this epoch. This
     // *should* mean that the BN has seen the blocks and attestations for the epoch
     await sleep(this.clock.msToSlot(endSlotOfEpoch + 3 / 4));
+
     const timer = this.metrics?.doppelganger.checkDuration.startTimer();
     const indices = await this.getIndicesToCheck(currentEpoch);
+
     if (indices.length !== 0) {
       const previousEpoch = currentEpoch - 1;
       // in the current epoch also request for liveness check for past epoch in case a validator index was live
       // in the remaining 25% of the last slot of the previous epoch
       const previous =
-        previousEpoch >= 0
-          ? (
-              await this.api.validator.getLiveness(indices, previousEpoch).catch((e) => {
-                this.logger.error(`Error getting liveness data for previous epoch ${previousEpoch}`, {}, e as Error);
-                return {data: []};
-              })
-            ).data
-          : [];
+        previousEpoch < 0
+          ? {data: []}
+          : await this.api.validator.getLiveness(indices, previousEpoch).catch((e) => {
+              this.logger.error(`Error getting liveness data for previous epoch ${previousEpoch}`, {}, e as Error);
+              return {data: []};
+            });
 
-      const current: LivenessResponseData[] = (
-        await this.api.validator.getLiveness(indices, currentEpoch).catch((e) => {
-          this.logger.error(`Error getting liveness data for current epoch ${currentEpoch}`, {}, e as Error);
-          return Promise.resolve({data: []});
-        })
-      ).data;
+      const current = await this.api.validator.getLiveness(indices, currentEpoch).catch((e) => {
+        this.logger.error(`Error getting liveness data for current epoch ${currentEpoch}`, {}, e as Error);
+        return Promise.resolve({data: []});
+      });
 
-      this.detectDoppelganger([...previous, ...current], currentEpoch);
+      this.detectDoppelganger([...previous.data, ...current.data], currentEpoch);
     }
+
     timer?.();
   };
 
