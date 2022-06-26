@@ -23,7 +23,7 @@ describe("BlockDutiesService", function () {
   let pubkeys: Uint8Array[]; // Initialize pubkeys in before() so bls is already initialized
 
   before(() => {
-    const secretKeys = [bls.SecretKey.fromBytes(toBufferBE(BigInt(98), 32))];
+    const secretKeys = Array.from({length: 3}, (_, i) => bls.SecretKey.fromBytes(toBufferBE(BigInt(i + 1), 32)));
     pubkeys = secretKeys.map((sk) => sk.toPublicKey().toBytes());
     validatorStore = initValidatorStore(secretKeys, api);
   });
