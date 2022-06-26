@@ -139,8 +139,6 @@ export class ValidatorStore {
       throw Error(`Not signing block with slot ${block.slot} greater than current slot ${currentSlot}`);
     }
 
-    this.assertDoppelgangerSafe(pubkey);
-
     const proposerDomain = this.config.getDomain(DOMAIN_BEACON_PROPOSER, block.slot);
     const blockType = this.config.getForkTypes(block.slot).BeaconBlock;
     const signingRoot = computeSigningRoot(blockType, block, proposerDomain);
@@ -177,8 +175,6 @@ export class ValidatorStore {
         `Not signing attestation with target epoch ${attestationData.target.epoch} greater than current epoch ${currentEpoch}`
       );
     }
-
-    this.assertDoppelgangerSafe(duty.pubkey);
 
     this.validateAttestationDuty(duty, attestationData);
     const slot = computeStartSlotAtEpoch(attestationData.target.epoch);
@@ -301,19 +297,12 @@ export class ValidatorStore {
     };
   }
 
-  private isDoppelgangerSafe(pubKeyHex: PubkeyHex): boolean {
+  isDoppelgangerSafe(pubKeyHex: PubkeyHex): boolean {
     if (this.doppelgangerService === undefined) {
       // If doppelganger is not enabled we assumed all keys to be safe for use
       return true;
     } else {
       return this.doppelgangerService.isDoppelgangerSafe(pubKeyHex);
-    }
-  }
-
-  private assertDoppelgangerSafe(pubKey: PubkeyHex | BLSPubkey): void {
-    const pubkeyHex = typeof pubKey === "string" ? pubKey : toHexString(pubKey);
-    if (!this.isDoppelgangerSafe(pubkeyHex)) {
-      return;
     }
   }
 
