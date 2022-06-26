@@ -204,23 +204,21 @@ export class DoppelgangerService {
   }
 
   private doRegister(validatorIndices: ValidatorIndex[], epoch: Epoch): void {
-    if (validatorIndices.length > 0) {
-      for (const index of validatorIndices) {
-        if (!this.doppelgangerStateByIndex.has(index)) {
-          this.doppelgangerStateByIndex.set(index, {
-            epochRegistered: epoch,
-            epochChecked: [],
-            remainingEpochsToCheck: DEFAULT_REMAINING_DETECTION_EPOCHS,
-          });
-          // Upon registering a validator index, sets its status to unverified
-          this.metrics?.doppelganger.status.set(
-            {
-              validatorIndex: String(index),
-            },
-            doppelgangerStatusMetrics[DoppelgangerStatus.Unverified]
-          );
-          this.logger.info(`Registered index: ${index} for doppelganger protection at epoch ${epoch}`);
-        }
+    for (const index of validatorIndices) {
+      if (!this.doppelgangerStateByIndex.has(index)) {
+        this.doppelgangerStateByIndex.set(index, {
+          epochRegistered: epoch,
+          epochChecked: [],
+          remainingEpochsToCheck: DEFAULT_REMAINING_DETECTION_EPOCHS,
+        });
+        // Upon registering a validator index, sets its status to unverified
+        this.metrics?.doppelganger.status.set(
+          {
+            validatorIndex: String(index),
+          },
+          doppelgangerStatusMetrics[DoppelgangerStatus.Unverified]
+        );
+        this.logger.info(`Registered index: ${index} for doppelganger protection at epoch ${epoch}`);
       }
     }
   }
