@@ -105,7 +105,7 @@ describe("network", function () {
     await network.start();
 
     afterEachCallbacks.push(async () => {
-      chain.close();
+      await chain.close();
       controller.abort();
       await network.stop();
       sinon.restore();

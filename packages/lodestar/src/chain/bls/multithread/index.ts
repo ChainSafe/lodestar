@@ -22,7 +22,6 @@ import {defaultPoolSize} from "./poolSize.js";
 export type BlsMultiThreadWorkerPoolModules = {
   logger: ILogger;
   metrics: IMetrics | null;
-  signal: AbortSignal;
 };
 
 export type BlsMultiThreadWorkerPoolOptions = {
@@ -99,7 +98,6 @@ type WorkerDescriptor = {
 export class BlsMultiThreadWorkerPool implements IBlsVerifier {
   private readonly logger: ILogger;
   private readonly metrics: IMetrics | null;
-  private readonly signal: AbortSignal;
 
   private readonly format: PointFormat;
   private readonly workers: WorkerDescriptor[];
@@ -111,12 +109,12 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     timeout: NodeJS.Timeout;
   } | null = null;
   private blsVerifyAllMultiThread: boolean;
+  private closed = false;
 
   constructor(options: BlsMultiThreadWorkerPoolOptions, modules: BlsMultiThreadWorkerPoolModules) {
-    const {logger, metrics, signal} = modules;
+    const {logger, metrics} = modules;
     this.logger = logger;
     this.metrics = metrics;
-    this.signal = signal;
     this.blsVerifyAllMultiThread = options.blsVerifyAllMultiThread ?? false;
 
     // TODO: Allow to customize implementation
@@ -127,16 +125,6 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     // `Error: err _wrapDeserialize`
     this.format = implementation === "blst-native" ? PointFormat.uncompressed : PointFormat.compressed;
     this.workers = this.createWorkers(implementation, defaultPoolSize);
-
-    this.signal.addEventListener(
-      "abort",
-      () => {
-        this.abortAllJobs();
-        this.terminateAllWorkers();
-        if (this.bufferedJobs) clearTimeout(this.bufferedJobs.timeout);
-      },
-      {once: true}
-    );
 
     if (metrics) {
       metrics.blsThreadPool.queueLength.addCollect(() => metrics.blsThreadPool.queueLength.set(this.jobs.length));
@@ -185,6 +173,29 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     return results.every((isValid) => isValid === true);
   }
 
+  async close(): Promise<void> {
+    if (this.bufferedJobs) {
+      clearTimeout(this.bufferedJobs.timeout);
+    }
+
+    // Abort all jobs
+    for (const job of this.jobs) {
+      job.reject(new QueueError({code: QueueErrorCode.QUEUE_ABORTED}));
+    }
+    this.jobs.splice(0, this.jobs.length);
+
+    // Terminate all workers. await to ensure no workers are left hanging
+    await Promise.all(
+      Array.from(this.workers.entries()).map(([id, worker]) =>
+        // NOTE: 'threads' has not yet updated types, and NodeJS complains with
+        // [DEP0132] DeprecationWarning: Passing a callback to worker.terminate() is deprecated. It returns a Promise instead.
+        ((worker.worker.terminate() as unknown) as Promise<void>).catch((e: Error) => {
+          this.logger.error("Error terminating worker", {id}, e);
+        })
+      )
+    );
+  }
+
   private createWorkers(implementation: Implementation, poolSize: number): WorkerDescriptor[] {
     const workers: WorkerDescriptor[] = [];
 
@@ -225,7 +236,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
    * Register BLS work to be done eventually in a worker
    */
   private async queueBlsWork(workReq: BlsWorkReq): Promise<boolean> {
-    if (this.signal.aborted) {
+    if (this.closed) {
       throw new QueueError({code: QueueErrorCode.QUEUE_ABORTED});
     }
 
@@ -277,7 +288,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
    * Potentially submit jobs to an idle worker, only if there's a worker and jobs
    */
   private runJob = async (): Promise<void> => {
-    if (this.signal.aborted) {
+    if (this.closed) {
       return;
     }
 
@@ -355,7 +366,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       this.metrics?.blsThreadPool.batchSigsSuccess.inc(batchSigsSuccess);
     } catch (e) {
       // Worker communications should never reject
-      if (!this.signal.aborted) this.logger.error("BlsMultiThreadWorkerPool error", {}, e as Error);
+      if (!this.closed) this.logger.error("BlsMultiThreadWorkerPool error", {}, e as Error);
       // Reject all
       for (const job of jobs) {
         job.reject(e as Error);
@@ -396,26 +407,6 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       this.jobs.push(...this.bufferedJobs.jobs);
       this.bufferedJobs = null;
       setTimeout(this.runJob, 0);
-    }
-  };
-
-  /**
-   * Stop all JavaScript execution in the worker thread immediatelly
-   */
-  private terminateAllWorkers = (): void => {
-    for (const [id, worker] of this.workers.entries()) {
-      // NOTE: 'threads' has not yet updated types, and NodeJS complains with
-      // [DEP0132] DeprecationWarning: Passing a callback to worker.terminate() is deprecated. It returns a Promise instead.
-      ((worker.worker.terminate() as unknown) as Promise<void>).catch((e: Error) => {
-        if (e) this.logger.error("Error terminating worker", {id}, e);
-      });
-    }
-  };
-
-  private abortAllJobs = (): void => {
-    while (this.jobs.length > 0) {
-      const job = this.jobs.shift();
-      if (job) job.reject(new QueueError({code: QueueErrorCode.QUEUE_ABORTED}));
     }
   };
 

@@ -138,7 +138,7 @@ export class BeaconChain implements IBeaconChain {
     // by default, verify signatures on both main threads and worker threads
     const bls = opts.blsVerifyAllMainThread
       ? new BlsSingleThreadVerifier({metrics})
-      : new BlsMultiThreadWorkerPool(opts, {logger, metrics, signal: this.abortController.signal});
+      : new BlsMultiThreadWorkerPool(opts, {logger, metrics});
 
     const clock = new LocalClock({config, emitter, genesisTime: this.genesisTime, signal});
     const stateCache = new StateContextCache({metrics});
@@ -226,10 +226,11 @@ export class BeaconChain implements IBeaconChain {
     metrics?.opPool.aggregatedAttestationPoolSize.addCollect(() => this.onScrapeMetrics());
   }
 
-  close(): void {
+  async close(): Promise<void> {
     this.abortController.abort();
     this.stateCache.clear();
     this.checkpointStateCache.clear();
+    await this.bls.close();
   }
 
   /** Populate in-memory caches with persisted data. Call at least once on startup */

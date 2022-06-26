@@ -54,7 +54,7 @@ describe("network / peers / PeerManager", function () {
     const libp2p = await createNode("/ip4/127.0.0.1/tcp/0");
 
     afterEachCallbacks.push(async () => {
-      chain.close();
+      await chain.close();
       await libp2p.stop();
     });
 
