@@ -12,7 +12,7 @@ import {
   SignerLocal,
 } from "@chainsafe/lodestar-validator";
 import type {SecretKey} from "@chainsafe/bls/types";
-import {KEY_IMPORTED_PREFIX} from "@chainsafe/lodestar-keymanager-server";
+import {KEYSTORE_IMPORTED_PREFIX} from "@chainsafe/lodestar-keymanager-server";
 import {BeaconNode} from "../../../src/node/index.js";
 import {testLogger, TestLoggerOpts} from "../logger.js";
 import {getLocalSecretKeys} from "../../../../cli/src/cmds/validator/keys.js";
@@ -43,7 +43,8 @@ export async function getAndInitValidatorsWithKeystore({
   };
 }> {
   const keystoreDir = tmp.dirSync({unsafeCleanup: true});
-  const keystoreFile = path.join(`${keystoreDir.name}`, `${KEY_IMPORTED_PREFIX}_${keystorePubKey}.json`);
+  // TODO: This hardcoded value is necessary for a keymanager test
+  const keystoreFile = path.join(`${keystoreDir.name}`, `${KEYSTORE_IMPORTED_PREFIX}_${keystorePubKey}.json`);
 
   fs.writeFileSync(keystoreFile, keystoreContent, {encoding: "utf8", flag: "wx"});
 

@@ -1,5 +1,6 @@
 import {LevelDbController} from "@chainsafe/lodestar-db";
-import {SignerType, Signer, SlashingProtection, Validator} from "@chainsafe/lodestar-validator";
+import {SlashingProtection, Validator} from "@chainsafe/lodestar-validator";
+import {SignerType, Signer} from "@chainsafe/lodestar-validator";
 import {getMetrics, MetricsRegister} from "@chainsafe/lodestar-validator";
 import {KeymanagerServer, KeymanagerApi} from "@chainsafe/lodestar-keymanager-server";
 import {RegistryMetricCreator, collectNodeJSMetrics, HttpMetricsServer} from "@chainsafe/lodestar";
@@ -9,7 +10,7 @@ import {YargsError, getDefaultGraffiti, mkdir, getCliLogger} from "../../util/in
 import {onGracefulShutdown, parseFeeRecipient} from "../../util/index.js";
 import {getVersionData} from "../../util/version.js";
 import {getBeaconPaths} from "../beacon/paths.js";
-import {getValidatorPaths} from "./paths.js";
+import {getAccountPaths, getValidatorPaths} from "./paths.js";
 import {IValidatorCliArgs, validatorMetricsDefaultOptions, defaultDefaultFeeRecipient} from "./options.js";
 import {getLocalSecretKeys, getExternalSigners, groupExternalSignersByUrl} from "./keys.js";
 
@@ -145,8 +146,12 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
     // Use the first path in importKeystoresPath as directory to write keystores
     // KeymanagerApi must ensure that the path is a directory and not a file
     const firstImportKeystorePath = args.importKeystoresPath[0];
+    const accountPaths = getAccountPaths(args);
 
-    const keymanagerApi = new KeymanagerApi(validator, firstImportKeystorePath);
+    const keymanagerApi = new KeymanagerApi(validator, {
+      importedKeystoresDirpath: firstImportKeystorePath,
+      importedRemoteKeysDirpath: accountPaths.remoteKeysDir,
+    });
 
     const keymanagerServer = new KeymanagerServer(
       {

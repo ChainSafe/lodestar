@@ -344,7 +344,10 @@ describe("keymanager delete and import test", async function () {
     afterEachCallbacks.push(() => keystoresDir.removeCallback());
     afterEachCallbacks.push(() => tokenDir.removeCallback());
 
-    const keymanagerApi = new KeymanagerApi(validators[0], keystoresDir.name);
+    const keymanagerApi = new KeymanagerApi(validators[0], {
+      importedKeystoresDirpath: keystoresDir.name,
+      importedRemoteKeysDirpath: keystoresDir.name,
+    });
 
     return {config, validators, secretKeys, logger, keymanagerApi, tokenDir: tokenDir.name};
   }
@@ -398,7 +401,10 @@ function createKeymanager(
   config: IBeaconConfig,
   logger: WinstonLogger
 ): KeymanagerServer {
-  const keymanagerApi = new KeymanagerApi(vc, importKeystoresPath);
+  const keymanagerApi = new KeymanagerApi(vc, {
+    importedKeystoresDirpath: importKeystoresPath,
+    importedRemoteKeysDirpath: `${importKeystoresPath}_remotekeys`,
+  });
 
   return new KeymanagerServer(
     {host: "127.0.0.1", port, cors: "*", isAuthEnabled: false, tokenDir: logFilesDir},
