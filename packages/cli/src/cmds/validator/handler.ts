@@ -1,10 +1,9 @@
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import {SlashingProtection, Validator} from "@chainsafe/lodestar-validator";
-import {SignerType, SignerLocal, SignerRemote, Signer} from "@chainsafe/lodestar-validator";
+import {SignerType, Signer} from "@chainsafe/lodestar-validator";
 import {getMetrics, MetricsRegister} from "@chainsafe/lodestar-validator";
 import {KeymanagerServer, KeymanagerApi} from "@chainsafe/lodestar-keymanager-server";
 import {RegistryMetricCreator, collectNodeJSMetrics, HttpMetricsServer} from "@chainsafe/lodestar";
-import {ILogger} from "@chainsafe/lodestar-utils";
 import {getBeaconConfigFromArgs} from "../../config/index.js";
 import {IGlobalArgs} from "../../options/index.js";
 import {YargsError, getDefaultGraffiti, mkdir, getCliLogger} from "../../util/index.js";
@@ -166,38 +165,5 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
     );
     onGracefulShutdownCbs.push(() => keymanagerServer.close());
     await keymanagerServer.listen();
-  }
-}
-
-/**
- * Log each pubkeys for auditing out keys are loaded from the logs
- */
-function logSigners(logger: ILogger, signers: Signer[]): void {
-  const localSigners: SignerLocal[] = [];
-  const remoteSigners: SignerRemote[] = [];
-
-  for (const signer of signers) {
-    switch (signer.type) {
-      case SignerType.Local:
-        localSigners.push(signer);
-        break;
-      case SignerType.Remote:
-        remoteSigners.push(signer);
-        break;
-    }
-  }
-
-  if (localSigners.length > 0) {
-    logger.info(`Decrypted ${localSigners.length} local keystores`);
-    for (const signer of localSigners) {
-      logger.info(signer.secretKey.toPublicKey().toHex());
-    }
-  }
-
-  for (const {externalSignerUrl, pubkeysHex} of groupExternalSignersByUrl(remoteSigners)) {
-    logger.info(`External signers on URL: ${externalSignerUrl}`);
-    for (const pubkeyHex of pubkeysHex) {
-      logger.info(pubkeyHex);
-    }
   }
 }
