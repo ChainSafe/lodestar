@@ -1,7 +1,6 @@
 import pipe from "it-pipe";
 import PeerId from "peer-id";
 import {Libp2p} from "libp2p/src/connection-manager";
-import {AbortSignal} from "@chainsafe/abort-controller";
 import {IForkDigestContext} from "@chainsafe/lodestar-config";
 import {ErrorAborted, ILogger, withTimeout, TimeoutError} from "@chainsafe/lodestar-utils";
 import {timeoutOptions} from "../../../constants/index.js";

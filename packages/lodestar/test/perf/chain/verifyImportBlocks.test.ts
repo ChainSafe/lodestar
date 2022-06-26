@@ -116,7 +116,7 @@ describe("verify+import blocks - range sync perf test", () => {
         // so we can utilize worker threads to verify signatures
         blsVerifyOnMainThread: false,
       });
-      chain.close();
+      await chain.close();
     },
   });
 });

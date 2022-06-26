@@ -80,7 +80,7 @@ describe("gossipsub", function () {
     await Promise.all([netA.start(), netB.start()]);
 
     afterEachCallbacks.push(async () => {
-      chain.close();
+      await chain.close();
       controller.abort();
       await Promise.all([netA.stop(), netB.stop()]);
       sinon.restore();

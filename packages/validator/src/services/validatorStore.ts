@@ -30,12 +30,11 @@ import {
 } from "@chainsafe/lodestar-types";
 import {BitArray, fromHexString, toHexString} from "@chainsafe/ssz";
 import {routes} from "@chainsafe/lodestar-api";
-import {prettyBytes} from "@chainsafe/lodestar-utils";
-import {Interchange, InterchangeFormatVersion, ISlashingProtection} from "../slashingProtection/index.js";
+import {ISlashingProtection} from "../slashingProtection/index.js";
 import {PubkeyHex} from "../types.js";
 import {externalSignerPostSignature} from "../util/externalSignerClient.js";
 import {Metrics} from "../metrics.js";
-import {MapDef} from "../util/map.js";
+import {IndicesService} from "./indices.js";
 import {DoppelgangerService} from "./doppelgangerService.js";
 
 export enum SignerType {
@@ -54,7 +53,8 @@ export type SignerRemote = {
   pubkeyHex: PubkeyHex;
 };
 
-type BLSPubkeyMaybeHex = BLSPubkey | string;
+type BLSPubkeyMaybeHex = BLSPubkey | PubkeyHex;
+type Eth1Address = string;
 
 /**
  * Validator entity capable of producing signatures. Either:
@@ -63,29 +63,32 @@ type BLSPubkeyMaybeHex = BLSPubkey | string;
  */
 export type Signer = SignerLocal | SignerRemote;
 
+type ValidatorData = {
+  signer: Signer;
+  /** feeRecipient for block production, null if not explicitly configured */
+  feeRecipient: Eth1Address | null;
+};
+
 /**
  * Service that sets up and handles validator attester duties.
  */
 export class ValidatorStore {
-  readonly feeRecipientByValidatorPubkey: MapDef<PubkeyHex, string>;
-  private readonly validators = new Map<PubkeyHex, Signer>();
-  private readonly genesisValidatorsRoot: Root;
+  private readonly validators = new Map<PubkeyHex, ValidatorData>();
+  /** Initially true because there are no validators */
+  private pubkeysToDiscover: PubkeyHex[] = [];
 
   constructor(
     private readonly config: IBeaconConfig,
     private readonly slashingProtection: ISlashingProtection,
+    private readonly indicesService: IndicesService,
+    private doppelgangerService: DoppelgangerService,
     private readonly metrics: Metrics | null,
-    signers: Signer[],
-    genesis: phase0.Genesis,
-    defaultFeeRecipient: string,
-    private doppelgangerService?: DoppelgangerService
+    initialSigners: Signer[],
+    private readonly defaultFeeRecipient: string
   ) {
-    this.feeRecipientByValidatorPubkey = new MapDef<PubkeyHex, string>(() => defaultFeeRecipient);
-    for (const signer of signers) {
+    for (const signer of initialSigners) {
       this.addSigner(signer);
     }
-
-    this.genesisValidatorsRoot = genesis.genesisValidatorsRoot;
 
     if (metrics) {
       metrics.signers.addCollect(() => metrics.signers.set(this.validators.size));
@@ -96,16 +99,55 @@ export class ValidatorStore {
     this.doppelgangerService = doppelgangerService;
   }
 
+  /** Return all known indices from the validatorStore pubkeys */
+  getAllLocalIndices(): ValidatorIndex[] {
+    return this.indicesService.getAllLocalIndices();
+  }
+
+  getPubkeyOfIndex(index: ValidatorIndex): PubkeyHex | undefined {
+    return this.indicesService.index2pubkey.get(index);
+  }
+
+  pollValidatorIndices(): Promise<ValidatorIndex[]> {
+    // Consumers will call this function every epoch forever. If everyone has been discovered, skip
+    return this.indicesService.indexCount >= this.validators.size
+      ? Promise.resolve([])
+      : this.indicesService.pollValidatorIndices(Array.from(this.validators.keys()));
+  }
+
+  getFeeRecipient(pubkeyHex: PubkeyHex): string {
+    return this.validators.get(pubkeyHex)?.feeRecipient ?? this.defaultFeeRecipient;
+  }
+
+  getFeeRecipientByIndex(index: ValidatorIndex): string {
+    const pubkey = this.indicesService.index2pubkey.get(index);
+    return pubkey ? this.validators.get(pubkey)?.feeRecipient ?? this.defaultFeeRecipient : this.defaultFeeRecipient;
+  }
+
+  /** Return true if `index` is active part of this validator client */
+  hasValidatorIndex(index: ValidatorIndex): boolean {
+    return this.indicesService.index2pubkey.has(index);
+  }
+
   addSigner(signer: Signer): void {
-    this.validators.set(getSignerPubkeyHex(signer), signer);
+    const pubkey = getSignerPubkeyHex(signer);
+
+    if (!this.validators.has(pubkey)) {
+      this.pubkeysToDiscover.push(pubkey);
+      this.validators.set(pubkey, {
+        signer,
+        // TODO: Allow to customize
+        feeRecipient: null,
+      });
+    }
   }
 
   getSigner(pubkeyHex: PubkeyHex): Signer | undefined {
-    return this.validators.get(pubkeyHex);
+    return this.validators.get(pubkeyHex)?.signer;
   }
 
   removeSigner(pubkeyHex: PubkeyHex): boolean {
-    return this.validators.delete(pubkeyHex);
+    return this.indicesService.removeForKey(pubkeyHex) || this.validators.delete(pubkeyHex);
   }
 
   /** Return true if there is at least 1 pubkey registered */
@@ -119,14 +161,6 @@ export class ValidatorStore {
 
   hasVotingPubkey(pubkeyHex: PubkeyHex): boolean {
     return this.validators.has(pubkeyHex);
-  }
-
-  async importInterchange(interchange: Interchange): Promise<void> {
-    return this.slashingProtection.importInterchange(interchange, this.genesisValidatorsRoot);
-  }
-
-  async exportInterchange(pubkeys: BLSPubkey[], formatVersion: InterchangeFormatVersion): Promise<Interchange> {
-    return this.slashingProtection.exportInterchange(this.genesisValidatorsRoot, pubkeys, formatVersion);
   }
 
   async signBlock(
@@ -310,7 +344,7 @@ export class ValidatorStore {
     // TODO: Refactor indexing to not have to run toHexString() on the pubkey every time
     const pubkeyHex = typeof pubkey === "string" ? pubkey : toHexString(pubkey);
 
-    const signer = this.validators.get(pubkeyHex);
+    const signer = this.validators.get(pubkeyHex)?.signer;
     if (!signer) {
       throw Error(`Validator pubkey ${pubkeyHex} not known`);
     }

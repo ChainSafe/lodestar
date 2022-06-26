@@ -18,6 +18,7 @@ import {Map2d, Map2dArr} from "../../util/map.js";
 import {Eth2Context} from "../../chain/index.js";
 import {PeersData} from "../peers/peersData.js";
 import {ClientKind} from "../peers/client.js";
+import {GOSSIP_MAX_SIZE} from "../../constants/network.js";
 import {
   GossipJobQueues,
   GossipTopic,
@@ -118,7 +119,7 @@ export class Eth2Gossipsub extends Gossipsub {
       gossipsubIWantFollowupMs: 12 * 1000, // 12s
       fastMsgIdFn: fastMsgIdFn,
       msgIdFn: msgIdFn.bind(msgIdFn, gossipTopicCache),
-      dataTransform: new DataTransformSnappy(gossipTopicCache),
+      dataTransform: new DataTransformSnappy(GOSSIP_MAX_SIZE),
       metricsRegister: modules.metrics ? ((modules.metrics.register as unknown) as MetricsRegister) : null,
       metricsTopicStrToLabel: modules.metrics ? getMetricsTopicStrToLabel(modules.config) : undefined,
       asyncValidation: true,
@@ -348,11 +349,6 @@ export class Eth2Gossipsub extends Gossipsub {
 
   private onGossipsubMessage(event: GossipsubEvents["gossipsub:message"]): void {
     const {propagationSource, msgId, msg} = event;
-
-    // TODO: validation GOSSIP_MAX_SIZE
-    // - Should be done here after inserting the message in the mcache?
-    // - Should be done in the inboundtransform?
-    // - Should be a parameter in gossipsub: maxMsgDataSize?
 
     // Also validates that the topicStr is known
     const topic = this.gossipTopicCache.getTopic(msg.topic);

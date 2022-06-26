@@ -22,6 +22,7 @@ import {VoluntaryExitErrorCode} from "../../../../src/chain/errors/voluntaryExit
 import {OpPool} from "../../../../src/chain/opPools/index.js";
 import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
 import {createCachedBeaconStateTest} from "../../../utils/cachedBeaconState.js";
+import {BlsVerifierMock} from "../../../utils/mocks/bls.js";
 
 describe("validate voluntary exit", () => {
   const sandbox = sinon.createSandbox();
@@ -74,7 +75,7 @@ describe("validate voluntary exit", () => {
     (chainStub as {opPool: OpPool}).opPool = opPool;
     chainStub.getHeadStateAtCurrentEpoch.resolves(state);
     // TODO: Use actual BLS verification
-    chainStub.bls = {verifySignatureSets: async () => true};
+    chainStub.bls = new BlsVerifierMock(true);
   });
 
   afterEach(() => {

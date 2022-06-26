@@ -4,7 +4,6 @@
 
 import LibP2p from "libp2p";
 import {Registry} from "prom-client";
-import {AbortController} from "@chainsafe/abort-controller";
 
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {phase0} from "@chainsafe/lodestar-types";
@@ -247,7 +246,7 @@ export class BeaconNode {
       if (this.restApi) await this.restApi.close();
 
       await this.chain.persistToDisk();
-      this.chain.close();
+      await this.chain.close();
       await this.db.stop();
       if (this.controller) this.controller.abort();
       this.status = BeaconNodeStatus.closed;

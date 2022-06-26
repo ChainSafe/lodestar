@@ -13,7 +13,6 @@ import {IClock, ILoggerVc} from "../util/index.js";
 import {PubkeyHex} from "../types.js";
 import {Metrics} from "../metrics.js";
 import {ValidatorStore} from "./validatorStore.js";
-import {IndicesService} from "./indices.js";
 import {syncCommitteeIndicesToSubnets} from "./utils.js";
 
 /** Only retain `HISTORICAL_DUTIES_PERIODS` duties prior to the current periods. */
@@ -80,8 +79,7 @@ export class SyncCommitteeDutiesService {
     private readonly api: Api,
     clock: IClock,
     private readonly validatorStore: ValidatorStore,
-    private readonly indicesService: IndicesService,
-    private readonly metrics: Metrics | null
+    metrics: Metrics | null
   ) {
     // Running this task every epoch is safe since a re-org of many epochs is very unlikely
     // TODO: If the re-org event is reliable consider re-running then
@@ -146,12 +144,12 @@ export class SyncCommitteeDutiesService {
 
     await Promise.all([
       // Run pollSyncCommittees immediately for all known local indices
-      this.pollSyncCommittees(currentEpoch, this.indicesService.getAllLocalIndices()).catch((e: Error) => {
+      this.pollSyncCommittees(currentEpoch, this.validatorStore.getAllLocalIndices()).catch((e: Error) => {
         this.logger.error("Error on poll SyncDuties", {epoch: currentEpoch}, e);
       }),
 
       // At the same time fetch any remaining unknown validator indices, then poll duties for those newIndices only
-      this.indicesService
+      this.validatorStore
         .pollValidatorIndices()
         .then((newIndices) => this.pollSyncCommittees(currentEpoch, newIndices))
         .catch((e: Error) => {
@@ -247,7 +245,7 @@ export class SyncCommitteeDutiesService {
 
     for (const duty of syncDuties.data) {
       const {validatorIndex} = duty;
-      if (!this.indicesService.hasValidatorIndex(validatorIndex)) {
+      if (!this.validatorStore.hasValidatorIndex(validatorIndex)) {
         continue;
       }
       count++;

@@ -7,7 +7,6 @@ import {toHexString} from "@chainsafe/ssz";
 import {IClock, ILoggerVc} from "../util/index.js";
 import {PubkeyHex} from "../types.js";
 import {Metrics} from "../metrics.js";
-import {IndicesService} from "./indices.js";
 import {ValidatorStore} from "./validatorStore.js";
 import {ChainHeaderTracker, HeadEventData} from "./chainHeaderTracker.js";
 
@@ -38,7 +37,6 @@ export class AttestationDutiesService {
     private readonly api: Api,
     private clock: IClock,
     private readonly validatorStore: ValidatorStore,
-    private readonly indicesService: IndicesService,
     chainHeadTracker: ChainHeaderTracker,
     private readonly metrics: Metrics | null
   ) {
@@ -117,12 +115,12 @@ export class AttestationDutiesService {
   private runDutiesTasks = async (epoch: Epoch): Promise<void> => {
     await Promise.all([
       // Run pollBeaconAttesters immediately for all known local indices
-      this.pollBeaconAttesters(epoch, this.indicesService.getAllLocalIndices()).catch((e: Error) => {
+      this.pollBeaconAttesters(epoch, this.validatorStore.getAllLocalIndices()).catch((e: Error) => {
         this.logger.error("Error on poll attesters", {epoch}, e);
       }),
 
       // At the same time fetch any remaining unknown validator indices, then poll duties for those newIndices only
-      this.indicesService
+      this.validatorStore
         .pollValidatorIndices()
         .then((newIndices) => this.pollBeaconAttesters(epoch, newIndices))
         .catch((e: Error) => {
@@ -311,7 +309,7 @@ export class AttestationDutiesService {
     const logContext = {dutyEpoch, slot, oldDependentRoot, newDependentRoot};
     this.logger.debug("Redownload attester duties", logContext);
 
-    await this.pollBeaconAttestersForEpoch(dutyEpoch, this.indicesService.getAllLocalIndices())
+    await this.pollBeaconAttestersForEpoch(dutyEpoch, this.validatorStore.getAllLocalIndices())
       .then(() => {
         this.pendingDependentRootByEpoch.delete(dutyEpoch);
       })

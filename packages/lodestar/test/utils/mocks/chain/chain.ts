@@ -1,11 +1,10 @@
 import sinon from "sinon";
-import {AbortController} from "@chainsafe/abort-controller";
 
 import {CompositeTypeAny, toHexString, TreeView} from "@chainsafe/ssz";
 import {phase0, allForks, UintNum64, Root, Slot, ssz, Uint16, UintBn64} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {BeaconStateAllForks, CachedBeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
-import {CheckpointWithHex, IForkChoice, IProtoBlock, ExecutionStatus} from "@chainsafe/lodestar-fork-choice";
+import {CheckpointWithHex, IForkChoice, ProtoBlock, ExecutionStatus} from "@chainsafe/lodestar-fork-choice";
 import {defaultDefaultFeeRecipient} from "@chainsafe/lodestar-validator";
 
 import {ChainEventEmitter, IBeaconChain} from "../../../../src/chain/index.js";
@@ -165,7 +164,7 @@ export class MockBeaconChain implements IBeaconChain {
   async processBlock(): Promise<void> {}
   async processChainSegment(): Promise<void> {}
 
-  close(): void {
+  async close(): Promise<void> {
     this.abortController.abort();
   }
 
@@ -200,7 +199,7 @@ export class MockBeaconChain implements IBeaconChain {
 function mockForkChoice(): IForkChoice {
   const root = ssz.Root.defaultValue() as Uint8Array;
   const rootHex = toHexString(root);
-  const block: IProtoBlock = {
+  const block: ProtoBlock = {
     slot: 0,
     blockRoot: rootHex,
     parentRoot: rootHex,

@@ -1,7 +1,7 @@
 import {EffectiveBalanceIncrements} from "@chainsafe/lodestar-beacon-state-transition";
 import {BeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {Epoch, Slot, ValidatorIndex, phase0, allForks, Root, RootHex} from "@chainsafe/lodestar-types";
-import {IProtoBlock, ExecutionStatus} from "../protoArray/interface.js";
+import {ProtoBlock, ExecutionStatus} from "../protoArray/interface.js";
 import {CheckpointWithHex} from "./store.js";
 
 export type CheckpointHex = {
@@ -31,12 +31,12 @@ export interface IForkChoice {
    * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/fork-choice.md#get_head
    */
   getHeadRoot(): RootHex;
-  getHead(): IProtoBlock;
-  updateHead(): IProtoBlock;
+  getHead(): ProtoBlock;
+  updateHead(): ProtoBlock;
   /**
    * Retrieves all possible chain heads (leaves of fork choice tree).
    */
-  getHeads(): IProtoBlock[];
+  getHeads(): ProtoBlock[];
   getFinalizedCheckpoint(): CheckpointWithHex;
   getJustifiedCheckpoint(): CheckpointWithHex;
   /**
@@ -78,7 +78,7 @@ export interface IForkChoice {
    * will not be run here.
    */
   onAttestation(attestation: phase0.IndexedAttestation, attDataRoot?: string): void;
-  getLatestMessage(validatorIndex: ValidatorIndex): ILatestMessage | undefined;
+  getLatestMessage(validatorIndex: ValidatorIndex): LatestMessage | undefined;
   /**
    * Call `onTick` for all slots between `fcStore.getCurrentSlot()` and the provided `currentSlot`.
    */
@@ -94,12 +94,12 @@ export interface IForkChoice {
   hasBlock(blockRoot: Root): boolean;
   hasBlockHex(blockRoot: RootHex): boolean;
   /**
-   * Returns a `IProtoBlock` if the block is known **and** a descendant of the finalized root.
+   * Returns a `ProtoBlock` if the block is known **and** a descendant of the finalized root.
    */
-  getBlock(blockRoot: Root): IProtoBlock | null;
-  getBlockHex(blockRoot: RootHex): IProtoBlock | null;
-  getFinalizedBlock(): IProtoBlock;
-  getJustifiedBlock(): IProtoBlock;
+  getBlock(blockRoot: Root): ProtoBlock | null;
+  getBlockHex(blockRoot: RootHex): ProtoBlock | null;
+  getFinalizedBlock(): ProtoBlock;
+  getJustifiedBlock(): ProtoBlock;
   /**
    * Return `true` if `block_root` is equal to the finalized root, or a known descendant of it.
    */
@@ -114,26 +114,26 @@ export interface IForkChoice {
   /**
    * Prune items up to a finalized root.
    */
-  prune(finalizedRoot: RootHex): IProtoBlock[];
+  prune(finalizedRoot: RootHex): ProtoBlock[];
   setPruneThreshold(threshold: number): void;
   /**
    * Iterates backwards through ancestor block summaries, starting from a block root
    */
-  iterateAncestorBlocks(blockRoot: RootHex): IterableIterator<IProtoBlock>;
-  getAllAncestorBlocks(blockRoot: RootHex): IProtoBlock[];
+  iterateAncestorBlocks(blockRoot: RootHex): IterableIterator<ProtoBlock>;
+  getAllAncestorBlocks(blockRoot: RootHex): ProtoBlock[];
   /**
    * The same to iterateAncestorBlocks but this gets non-ancestor nodes instead of ancestor nodes.
    */
-  getAllNonAncestorBlocks(blockRoot: RootHex): IProtoBlock[];
-  getCanonicalBlockAtSlot(slot: Slot): IProtoBlock | null;
+  getAllNonAncestorBlocks(blockRoot: RootHex): ProtoBlock[];
+  getCanonicalBlockAtSlot(slot: Slot): ProtoBlock | null;
   /**
    * Iterates forwards through block summaries, exact order is not guaranteed
    */
-  forwarditerateAncestorBlocks(): IProtoBlock[];
-  getBlockSummariesByParentRoot(parentRoot: RootHex): IProtoBlock[];
-  getBlockSummariesAtSlot(slot: Slot): IProtoBlock[];
+  forwarditerateAncestorBlocks(): ProtoBlock[];
+  getBlockSummariesByParentRoot(parentRoot: RootHex): ProtoBlock[];
+  getBlockSummariesAtSlot(slot: Slot): ProtoBlock[];
   /** Returns the distance of common ancestor of nodes to newNode. Returns null if newNode is descendant of prevNode */
-  getCommonAncestorDistance(prevBlock: IProtoBlock, newBlock: IProtoBlock): number | null;
+  getCommonAncestorDistance(prevBlock: ProtoBlock, newBlock: ProtoBlock): number | null;
   /**
    * Optimistic sync validate till validated latest hash, invalidate any decendant branch if invalidated branch decendant provided
    */
@@ -155,18 +155,18 @@ export type OnBlockPrecachedData = {
   executionStatus?: ExecutionStatus;
 };
 
-export interface ILatestMessage {
+export type LatestMessage = {
   epoch: Epoch;
   root: RootHex;
-}
+};
 
 /**
  * Used for queuing attestations from the current slot. Only contains the minimum necessary
  * information about the attestation.
  */
-export interface IQueuedAttestation {
+export type QueuedAttestation = {
   slot: Slot;
   attestingIndices: ValidatorIndex[];
   blockRoot: RootHex;
   targetEpoch: Epoch;
-}
+};
