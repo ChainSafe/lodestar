@@ -313,11 +313,7 @@ export class ValidatorStore {
   private assertDoppelgangerSafe(pubKey: PubkeyHex | BLSPubkey): void {
     const pubkeyHex = typeof pubKey === "string" ? pubKey : toHexString(pubKey);
     if (!this.isDoppelgangerSafe(pubkeyHex)) {
-      throw new Error(
-        `Error using validator with pubkey ${prettyBytes(
-          pubkeyHex
-        )}. Doppelganger protection status is: ${this.doppelgangerService?.getStatus(pubkeyHex)}`
-      );
+      return;
     }
   }
 
