@@ -41,7 +41,7 @@ describe("chain / bls / multithread queue", function () {
   });
 
   async function initializePool(): Promise<BlsMultiThreadWorkerPool> {
-    const pool = new BlsMultiThreadWorkerPool({}, {logger, metrics: null, signal: controller.signal});
+    const pool = new BlsMultiThreadWorkerPool({}, {logger, metrics: null});
     // await terminating all workers
     afterEachCallbacks.push(() => pool.close());
     // Wait until initialized

@@ -15,6 +15,7 @@ import * as syncCommitteeUtils from "../../../../../beacon-state-transition/src/
 import {SinonStubFn} from "../../../utils/types.js";
 import {generateCachedStateWithPubkeys} from "../../../utils/state.js";
 import {SeenContributionAndProof} from "../../../../src/chain/seenCache/index.js";
+import {BlsVerifierMock} from "../../../utils/mocks/bls.js";
 
 // https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/altair/p2p-interface.md
 // TODO remove stub
@@ -151,7 +152,7 @@ describe.skip("Sync Committee Contribution And Proof validation", function () {
     isSyncCommitteeAggregatorStub.returns(true);
     const headState = await generateCachedStateWithPubkeys({slot: currentSlot}, config, true);
     chain.getHeadState.returns(headState);
-    chain.bls = {verifySignatureSets: async () => false};
+    chain.bls = new BlsVerifierMock(false);
     await expectRejectedWithLodestarError(
       validateSyncCommitteeGossipContributionAndProof(chain, signedContributionAndProof),
       SyncCommitteeErrorCode.INVALID_SIGNATURE

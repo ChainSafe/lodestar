@@ -10,6 +10,7 @@ import {validateGossipAttesterSlashing} from "../../../../src/chain/validation/a
 import {AttesterSlashingErrorCode} from "../../../../src/chain/errors/attesterSlashingError.js";
 import {OpPool} from "../../../../src/chain/opPools/index.js";
 import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
+import {BlsVerifierMock} from "../../../utils/mocks/bls.js";
 
 describe("GossipMessageValidator", () => {
   const sandbox = sinon.createSandbox();
@@ -19,7 +20,7 @@ describe("GossipMessageValidator", () => {
   beforeEach(() => {
     chainStub = sandbox.createStubInstance(BeaconChain) as StubbedChain;
     chainStub.forkChoice = sandbox.createStubInstance(ForkChoice);
-    chainStub.bls = {verifySignatureSets: async () => true};
+    chainStub.bls = new BlsVerifierMock(true);
     opPool = sandbox.createStubInstance(OpPool) as OpPool & SinonStubbedInstance<OpPool>;
     (chainStub as {opPool: OpPool}).opPool = opPool;
 

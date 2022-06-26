@@ -37,7 +37,7 @@ describe("gossip block validation", function () {
 
     verifySignature = sinon.stub();
     verifySignature.resolves(true);
-    chain.bls = {verifySignatureSets: verifySignature};
+    chain.bls = {verifySignatureSets: verifySignature, close: () => Promise.resolve()};
 
     forkChoice.getFinalizedCheckpoint.returns({epoch: 0, root: ZERO_HASH, rootHex: ""});
 
