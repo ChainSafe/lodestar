@@ -16,12 +16,12 @@ import {
 import {IChainConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
 
 import {computeDeltas} from "../protoArray/computeDeltas.js";
-import {HEX_ZERO_HASH, IVoteTracker, IProtoBlock, ExecutionStatus} from "../protoArray/interface.js";
+import {HEX_ZERO_HASH, VoteTracker, ProtoBlock, ExecutionStatus} from "../protoArray/interface.js";
 import {ProtoArray} from "../protoArray/protoArray.js";
 
 import {IForkChoiceMetrics} from "../metrics.js";
 import {ForkChoiceError, ForkChoiceErrorCode, InvalidBlockCode, InvalidAttestationCode} from "./errors.js";
-import {IForkChoice, ILatestMessage, IQueuedAttestation, OnBlockPrecachedData, PowBlockHex} from "./interface.js";
+import {IForkChoice, LatestMessage, QueuedAttestation, OnBlockPrecachedData, PowBlockHex} from "./interface.js";
 import {IForkChoiceStore, CheckpointWithHex, toCheckpointWithHex} from "./store.js";
 
 /* eslint-disable max-len */
@@ -49,13 +49,13 @@ export class ForkChoice implements IForkChoice {
    * Indexed by validator index
    * Each vote contains the latest message and previous message
    */
-  private readonly votes: IVoteTracker[] = [];
+  private readonly votes: VoteTracker[] = [];
 
   /**
    * Attestations that arrived at the current slot and must be queued for later processing.
    * NOT currently tracked in the protoArray
    */
-  private readonly queuedAttestations = new Set<IQueuedAttestation>();
+  private readonly queuedAttestations = new Set<QueuedAttestation>();
 
   /**
    * Balances tracked in the protoArray, or soon to be tracked
@@ -68,7 +68,7 @@ export class ForkChoice implements IForkChoice {
   /** Avoid having to compute detas all the times. */
   private synced = false;
   /** Cached head */
-  private head: IProtoBlock;
+  private head: ProtoBlock;
   /**
    * Only cache attestation data root hex if it's tree backed since it's available.
    **/
@@ -151,7 +151,7 @@ export class ForkChoice implements IForkChoice {
   /**
    * Get the cached head
    */
-  getHead(): IProtoBlock {
+  getHead(): ProtoBlock {
     return this.head;
   }
 
@@ -174,7 +174,7 @@ export class ForkChoice implements IForkChoice {
    *
    * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/fork-choice.md#get_head
    */
-  updateHead(): IProtoBlock {
+  updateHead(): ProtoBlock {
     // balances is not changed but votes are changed
 
     let timer;
@@ -240,7 +240,7 @@ export class ForkChoice implements IForkChoice {
   }
 
   /** Very expensive function, iterates the entire ProtoArray. Called only in debug API */
-  getHeads(): IProtoBlock[] {
+  getHeads(): ProtoBlock[] {
     return this.protoArray.nodes.filter((node) => node.bestChild === undefined);
   }
 
@@ -490,7 +490,7 @@ export class ForkChoice implements IForkChoice {
     }
   }
 
-  getLatestMessage(validatorIndex: ValidatorIndex): ILatestMessage | undefined {
+  getLatestMessage(validatorIndex: ValidatorIndex): LatestMessage | undefined {
     const vote = this.votes[validatorIndex];
     if (vote === undefined) {
       return undefined;
@@ -525,8 +525,8 @@ export class ForkChoice implements IForkChoice {
   hasBlock(blockRoot: Root): boolean {
     return this.hasBlockHex(toHexString(blockRoot));
   }
-  /** Returns a `IProtoBlock` if the block is known **and** a descendant of the finalized root. */
-  getBlock(blockRoot: Root): IProtoBlock | null {
+  /** Returns a `ProtoBlock` if the block is known **and** a descendant of the finalized root. */
+  getBlock(blockRoot: Root): ProtoBlock | null {
     return this.getBlockHex(toHexString(blockRoot));
   }
 
@@ -538,9 +538,9 @@ export class ForkChoice implements IForkChoice {
   }
 
   /**
-   * Returns a `IProtoBlock` if the block is known **and** a descendant of the finalized root.
+   * Returns a `ProtoBlock` if the block is known **and** a descendant of the finalized root.
    */
-  getBlockHex(blockRoot: RootHex): IProtoBlock | null {
+  getBlockHex(blockRoot: RootHex): ProtoBlock | null {
     const block = this.protoArray.getBlock(blockRoot);
     if (!block) {
       return null;
@@ -554,7 +554,7 @@ export class ForkChoice implements IForkChoice {
     return block;
   }
 
-  getJustifiedBlock(): IProtoBlock {
+  getJustifiedBlock(): ProtoBlock {
     const block = this.getBlockHex(this.fcStore.justifiedCheckpoint.rootHex);
     if (!block) {
       throw new ForkChoiceError({
@@ -565,7 +565,7 @@ export class ForkChoice implements IForkChoice {
     return block;
   }
 
-  getFinalizedBlock(): IProtoBlock {
+  getFinalizedBlock(): ProtoBlock {
     const block = this.getBlockHex(this.fcStore.finalizedCheckpoint.rootHex);
     if (!block) {
       throw new ForkChoiceError({
@@ -593,7 +593,7 @@ export class ForkChoice implements IForkChoice {
     return this.protoArray.isDescendant(ancestorRoot, descendantRoot);
   }
 
-  prune(finalizedRoot: RootHex): IProtoBlock[] {
+  prune(finalizedRoot: RootHex): ProtoBlock[] {
     return this.protoArray.maybePrune(finalizedRoot);
   }
 
@@ -605,7 +605,7 @@ export class ForkChoice implements IForkChoice {
    * Iterates backwards through block summaries, starting from a block root.
    * Return only the non-finalized blocks.
    */
-  iterateAncestorBlocks(blockRoot: RootHex): IterableIterator<IProtoBlock> {
+  iterateAncestorBlocks(blockRoot: RootHex): IterableIterator<ProtoBlock> {
     return this.protoArray.iterateAncestorNodes(blockRoot);
   }
 
@@ -613,7 +613,7 @@ export class ForkChoice implements IForkChoice {
    * Returns all blocks backwards starting from a block root.
    * Return only the non-finalized blocks.
    */
-  getAllAncestorBlocks(blockRoot: RootHex): IProtoBlock[] {
+  getAllAncestorBlocks(blockRoot: RootHex): ProtoBlock[] {
     const blocks = this.protoArray.getAllAncestorNodes(blockRoot);
     // the last node is the previous finalized one, it's there to check onBlock finalized checkpoint only.
     return blocks.slice(0, blocks.length - 1);
@@ -622,11 +622,11 @@ export class ForkChoice implements IForkChoice {
   /**
    * The same to iterateAncestorBlocks but this gets non-ancestor nodes instead of ancestor nodes.
    */
-  getAllNonAncestorBlocks(blockRoot: RootHex): IProtoBlock[] {
+  getAllNonAncestorBlocks(blockRoot: RootHex): ProtoBlock[] {
     return this.protoArray.getAllNonAncestorNodes(blockRoot);
   }
 
-  getCanonicalBlockAtSlot(slot: Slot): IProtoBlock | null {
+  getCanonicalBlockAtSlot(slot: Slot): ProtoBlock | null {
     if (slot > this.head.slot) {
       return null;
     }
@@ -644,19 +644,19 @@ export class ForkChoice implements IForkChoice {
   }
 
   /** Very expensive function, iterates the entire ProtoArray. TODO: Is this function even necessary? */
-  forwarditerateAncestorBlocks(): IProtoBlock[] {
+  forwarditerateAncestorBlocks(): ProtoBlock[] {
     return this.protoArray.nodes;
   }
 
   /** Very expensive function, iterates the entire ProtoArray. TODO: Is this function even necessary? */
-  getBlockSummariesByParentRoot(parentRoot: RootHex): IProtoBlock[] {
+  getBlockSummariesByParentRoot(parentRoot: RootHex): ProtoBlock[] {
     return this.protoArray.nodes.filter((node) => node.parentRoot === parentRoot);
   }
 
   /** Very expensive function, iterates the entire ProtoArray. TODO: Is this function even necessary? */
-  getBlockSummariesAtSlot(slot: Slot): IProtoBlock[] {
+  getBlockSummariesAtSlot(slot: Slot): ProtoBlock[] {
     const nodes = this.protoArray.nodes;
-    const blocksAtSlot: IProtoBlock[] = [];
+    const blocksAtSlot: ProtoBlock[] = [];
     for (let i = 0, len = nodes.length; i < len; i++) {
       const node = nodes[i];
       if (node.slot === slot) {
@@ -667,7 +667,7 @@ export class ForkChoice implements IForkChoice {
   }
 
   /** Returns the distance of common ancestor of nodes to newNode. Returns null if newNode is descendant of prevNode */
-  getCommonAncestorDistance(prevBlock: IProtoBlock, newBlock: IProtoBlock): number | null {
+  getCommonAncestorDistance(prevBlock: ProtoBlock, newBlock: ProtoBlock): number | null {
     const prevNode = this.protoArray.getNode(prevBlock.blockRoot);
     const newNode = this.protoArray.getNode(newBlock.blockRoot);
     if (!prevNode) throw Error(`No node if forkChoice for blockRoot ${prevBlock.blockRoot}`);

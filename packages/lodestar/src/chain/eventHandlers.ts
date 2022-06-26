@@ -1,7 +1,7 @@
 import {toHexString} from "@chainsafe/ssz";
 import {allForks, Epoch, phase0, Slot, Version} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {CheckpointWithHex, IProtoBlock} from "@chainsafe/lodestar-fork-choice";
+import {CheckpointWithHex, ProtoBlock} from "@chainsafe/lodestar-fork-choice";
 import {CachedBeaconStateAllForks, computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {AttestationError, BlockError, BlockErrorCode} from "./errors/index.js";
 import {ChainEvent, IChainEvents} from "./emitter.js";
@@ -151,7 +151,7 @@ export async function onForkChoiceFinalized(this: BeaconChain, cp: CheckpointWit
   }
 }
 
-export function onForkChoiceHead(this: BeaconChain, head: IProtoBlock): void {
+export function onForkChoiceHead(this: BeaconChain, head: ProtoBlock): void {
   const delaySec = this.clock.secFromSlot(head.slot);
   this.logger.verbose("New chain head", {
     headSlot: head.slot,
@@ -171,7 +171,7 @@ export function onForkChoiceHead(this: BeaconChain, head: IProtoBlock): void {
   }
 }
 
-export function onForkChoiceReorg(this: BeaconChain, head: IProtoBlock, oldHead: IProtoBlock, depth: number): void {
+export function onForkChoiceReorg(this: BeaconChain, head: ProtoBlock, oldHead: ProtoBlock, depth: number): void {
   this.logger.verbose("Chain reorg", {
     depth,
     previousHead: oldHead.blockRoot,

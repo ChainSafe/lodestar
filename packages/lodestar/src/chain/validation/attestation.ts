@@ -1,5 +1,5 @@
 import {phase0, Epoch, Root, Slot} from "@chainsafe/lodestar-types";
-import {IProtoBlock} from "@chainsafe/lodestar-fork-choice";
+import {ProtoBlock} from "@chainsafe/lodestar-fork-choice";
 import {ATTESTATION_SUBNET_COUNT, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {toHexString} from "@chainsafe/ssz";
 import {
@@ -199,7 +199,7 @@ export function verifyHeadBlockAndTargetRoot(
   beaconBlockRoot: Root,
   targetRoot: Root,
   attestationEpoch: Epoch
-): IProtoBlock {
+): ProtoBlock {
   const headBlock = verifyHeadBlockIsKnown(chain, beaconBlockRoot);
   verifyAttestationTargetRoot(headBlock, targetRoot, attestationEpoch);
   return headBlock;
@@ -217,7 +217,7 @@ export function verifyHeadBlockAndTargetRoot(
  * it's still fine to ignore here because there's no need for us to handle attestations that are
  * already finalized.
  */
-function verifyHeadBlockIsKnown(chain: IBeaconChain, beaconBlockRoot: Root): IProtoBlock {
+function verifyHeadBlockIsKnown(chain: IBeaconChain, beaconBlockRoot: Root): ProtoBlock {
   // TODO (LH): Enforce a maximum skip distance for unaggregated attestations.
 
   const headBlock = chain.forkChoice.getBlock(beaconBlockRoot);
@@ -235,7 +235,7 @@ function verifyHeadBlockIsKnown(chain: IBeaconChain, beaconBlockRoot: Root): IPr
  * Verifies that the `attestation.data.target.root` is indeed the target root of the block at
  * `attestation.data.beacon_block_root`.
  */
-function verifyAttestationTargetRoot(headBlock: IProtoBlock, targetRoot: Root, attestationEpoch: Epoch): void {
+function verifyAttestationTargetRoot(headBlock: ProtoBlock, targetRoot: Root, attestationEpoch: Epoch): void {
   // Check the attestation target root.
   const headBlockEpoch = computeEpochAtSlot(headBlock.slot);
 

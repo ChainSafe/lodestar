@@ -8,7 +8,7 @@ import {
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {TIMELY_SOURCE_FLAG_INDEX} from "@chainsafe/lodestar-params";
 import {generatePerfTestCachedStateAltair} from "../../../../beacon-state-transition/test/perf/util.js";
-import {IVoteTracker} from "../../../src/protoArray/interface.js";
+import {VoteTracker} from "../../../src/protoArray/interface.js";
 import {computeDeltas} from "../../../src/protoArray/computeDeltas.js";
 import {computeProposerBoostScoreFromBalances} from "../../../src/forkChoice/forkChoice.js";
 
@@ -63,7 +63,7 @@ describe("computeDeltas", () => {
   itBench({
     id: "computeDeltas",
     beforeEach: () => {
-      const votes: IVoteTracker[] = [];
+      const votes: VoteTracker[] = [];
       const epoch = originalState.epochCtx.currentShuffling.epoch;
       const committee = originalState.epochCtx.getBeaconCommittee(computeStartSlotAtEpoch(epoch), 0);
       for (let i = 0; i < 250000; i++) {

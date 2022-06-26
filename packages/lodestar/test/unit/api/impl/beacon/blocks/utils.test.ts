@@ -1,7 +1,7 @@
 import {SinonStubbedInstance} from "sinon";
 import {expect, use} from "chai";
 import chaiAsPromised from "chai-as-promised";
-import {ForkChoice, IProtoBlock, ExecutionStatus} from "@chainsafe/lodestar-fork-choice";
+import {ForkChoice, ProtoBlock, ExecutionStatus} from "@chainsafe/lodestar-fork-choice";
 import {toHexString} from "@chainsafe/ssz";
 import {resolveBlockId} from "../../../../../../src/api/impl/beacon/blocks/utils.js";
 import {generateEmptySignedBlock, generateProtoBlock} from "../../../../../utils/block.js";
@@ -21,7 +21,7 @@ describe("block api utils", function () {
     let server: ApiImplTestModules;
     let expectedBuffer: Buffer;
     let expectedRootHex: string;
-    let expectedSummary: IProtoBlock;
+    let expectedSummary: ProtoBlock;
 
     before(function () {
       expectedBuffer = Buffer.alloc(32, 2);

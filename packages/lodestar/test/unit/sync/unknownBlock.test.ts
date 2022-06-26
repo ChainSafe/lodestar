@@ -1,6 +1,6 @@
 import {expect} from "chai";
 import {config} from "@chainsafe/lodestar-config/default";
-import {IForkChoice, IProtoBlock} from "@chainsafe/lodestar-fork-choice";
+import {IForkChoice, ProtoBlock} from "@chainsafe/lodestar-fork-choice";
 import {ssz} from "@chainsafe/lodestar-types";
 import {notNullish, sleep} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
@@ -64,7 +64,7 @@ describe("sync / UnknownBlockSync", () => {
       const forkChoiceKnownRoots = new Set([blockRootHex0]);
       const forkChoice: Pick<IForkChoice, "hasBlock" | "getFinalizedBlock"> = {
         hasBlock: (root) => forkChoiceKnownRoots.has(toHexString(root)),
-        getFinalizedBlock: () => ({slot: finalizedSlot} as IProtoBlock),
+        getFinalizedBlock: () => ({slot: finalizedSlot} as ProtoBlock),
       };
 
       const chain: Partial<IBeaconChain> = {
