@@ -4,7 +4,6 @@ import {toHexString} from "@chainsafe/ssz";
 import {Api} from "@chainsafe/lodestar-api";
 import {batchItems} from "../util/batch.js";
 import {Metrics} from "../metrics.js";
-import {ValidatorStore} from "./validatorStore.js";
 
 /**
  * URLs have a limitation on size, adding an unbounded num of pubkeys will break the request.
@@ -22,15 +21,14 @@ export class IndicesService {
   // Request indices once
   private pollValidatorIndicesPromise: Promise<ValidatorIndex[]> | null = null;
 
-  constructor(
-    private readonly logger: ILogger,
-    private readonly api: Api,
-    private readonly validatorStore: ValidatorStore,
-    private readonly metrics: Metrics | null
-  ) {
+  constructor(private readonly logger: ILogger, private readonly api: Api, private readonly metrics: Metrics | null) {
     if (metrics) {
       metrics.indices.addCollect(() => metrics.indices.set(this.index2pubkey.size));
     }
+  }
+
+  get indexCount(): number {
+    return this.index2pubkey.size;
   }
 
   /** Return all known indices from the validatorStore pubkeys */
@@ -43,7 +41,7 @@ export class IndicesService {
     return this.index2pubkey.has(index);
   }
 
-  pollValidatorIndices(): Promise<ValidatorIndex[]> {
+  pollValidatorIndices(pubkeysHex: PubkeyHex[]): Promise<ValidatorIndex[]> {
     // Ensures pollValidatorIndicesInternal() is not called more than once at the same time.
     // AttestationDutiesService and SyncCommitteeDutiesService will call this function at the same time, so this will
     // cache the promise and return it to the second caller, preventing calling the API twice for the same data.
@@ -51,7 +49,7 @@ export class IndicesService {
       return this.pollValidatorIndicesPromise;
     }
 
-    this.pollValidatorIndicesPromise = this.pollValidatorIndicesInternal();
+    this.pollValidatorIndicesPromise = this.pollValidatorIndicesInternal(pubkeysHex);
     // Once the pollValidatorIndicesInternal() resolves or rejects null the cached promise so it can be called again.
     this.pollValidatorIndicesPromise.finally(() => {
       this.pollValidatorIndicesPromise = null;
@@ -59,28 +57,27 @@ export class IndicesService {
     return this.pollValidatorIndicesPromise;
   }
 
-  removeDutiesForKey(pubkey: PubkeyHex): void {
-    for (const [key, value] of this.index2pubkey) {
+  removeForKey(pubkey: PubkeyHex): boolean {
+    for (const [index, value] of this.index2pubkey) {
       if (value === pubkey) {
-        this.index2pubkey.delete(key);
+        this.index2pubkey.delete(index);
       }
     }
-
-    this.pubkey2index.delete(pubkey);
+    return this.pubkey2index.delete(pubkey);
   }
 
   /** Iterate through all the voting pubkeys in the `ValidatorStore` and attempt to learn any unknown
       validator indices. Returns the new discovered indexes */
-  private async pollValidatorIndicesInternal(): Promise<ValidatorIndex[]> {
-    const pubkeysHex = this.validatorStore.votingPubkeys().filter((pubkey) => !this.pubkey2index.has(pubkey));
+  private async pollValidatorIndicesInternal(pubkeysHex: PubkeyHex[]): Promise<ValidatorIndex[]> {
+    const pubkeysHexToDiscover = pubkeysHex.filter((pubkey) => !this.pubkey2index.has(pubkey));
 
-    if (pubkeysHex.length === 0) {
+    if (pubkeysHexToDiscover.length === 0) {
       return [];
     }
 
     // Query the remote BN to resolve a pubkey to a validator index.
     // support up to 1000 pubkeys per poll
-    const pubkeysHexBatches = batchItems(pubkeysHex, {batchSize: PUBKEYS_PER_REQUEST});
+    const pubkeysHexBatches = batchItems(pubkeysHexToDiscover, {batchSize: PUBKEYS_PER_REQUEST});
 
     const newIndices: number[] = [];
     for (const pubkeysHexBatch of pubkeysHexBatches) {

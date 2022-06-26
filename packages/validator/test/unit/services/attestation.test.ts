@@ -1,6 +1,5 @@
 import {expect} from "chai";
 import sinon from "sinon";
-import {AbortController} from "@chainsafe/abort-controller";
 import bls from "@chainsafe/bls";
 import {toHexString} from "@chainsafe/ssz";
 import {
@@ -11,15 +10,13 @@ import {AttestationService} from "../../../src/services/attestation.js";
 import {AttDutyAndProof} from "../../../src/services/attestationDuties.js";
 import {ValidatorStore} from "../../../src/services/validatorStore.js";
 import {getApiClientStub} from "../../utils/apiStub.js";
-import {loggerVc, testLogger} from "../../utils/logger.js";
+import {loggerVc} from "../../utils/logger.js";
 import {ClockMock} from "../../utils/clock.js";
-import {IndicesService} from "../../../src/services/indices.js";
 import {ChainHeaderTracker} from "../../../src/services/chainHeaderTracker.js";
 import {ValidatorEventEmitter} from "../../../src/services/emitter.js";
 
 describe("AttestationService", function () {
   const sandbox = sinon.createSandbox();
-  const logger = testLogger();
   const ZERO_HASH = Buffer.alloc(32, 0);
 
   const api = getApiClientStub(sandbox);
@@ -46,14 +43,12 @@ describe("AttestationService", function () {
 
   it("Should produce, sign, and publish an attestation + aggregate", async () => {
     const clock = new ClockMock();
-    const indicesService = new IndicesService(logger, api, validatorStore, null);
     const attestationService = new AttestationService(
       loggerVc,
       api,
       clock,
       validatorStore,
       emitter,
-      indicesService,
       chainHeadTracker,
       null
     );

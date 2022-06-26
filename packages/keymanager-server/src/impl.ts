@@ -82,7 +82,7 @@ export class KeymanagerApi implements Api {
     // at runtime, when the handler for the request is selected, it would see slashingProtectionStr
     // as an object, hence trying to parse it using JSON.parse won't work. Instead, we cast straight to Interchange
     const interchange = (slashingProtectionStr as unknown) as Interchange;
-    await this.validator.validatorStore.importInterchange(interchange);
+    await this.validator.importInterchange(interchange);
 
     const statuses: {status: ImportStatus; message?: string}[] = [];
 
@@ -189,7 +189,7 @@ export class KeymanagerApi implements Api {
 
     const pubkeysBytes = pubkeysHex.map((pubkeyHex) => fromHexString(pubkeyHex));
 
-    const interchangeV5 = await this.validator.validatorStore.exportInterchange(pubkeysBytes, {
+    const interchangeV5 = await this.validator.exportInterchange(pubkeysBytes, {
       version: "5",
     });
 
