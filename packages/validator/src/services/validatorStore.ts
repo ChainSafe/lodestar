@@ -173,6 +173,9 @@ export class ValidatorStore {
       throw Error(`Not signing block with slot ${block.slot} greater than current slot ${currentSlot}`);
     }
 
+    // Duties are filtered before-hard by doppleganger-safe, this assert should never throw
+    this.assertDoppelgangerSafe(pubkey);
+
     const proposerDomain = this.config.getDomain(DOMAIN_BEACON_PROPOSER, block.slot);
     const blockType = this.config.getForkTypes(block.slot).BeaconBlock;
     const signingRoot = computeSigningRoot(blockType, block, proposerDomain);
@@ -209,6 +212,9 @@ export class ValidatorStore {
         `Not signing attestation with target epoch ${attestationData.target.epoch} greater than current epoch ${currentEpoch}`
       );
     }
+
+    // Duties are filtered before-hard by doppleganger-safe, this assert should never throw
+    this.assertDoppelgangerSafe(duty.pubkey);
 
     this.validateAttestationDuty(duty, attestationData);
     const slot = computeStartSlotAtEpoch(attestationData.target.epoch);
@@ -385,6 +391,14 @@ export class ValidatorStore {
       throw Error(
         `Inconsistent duties during signing: duty.committeeIndex ${duty.committeeIndex} != att.committeeIndex ${data.index}`
       );
+    }
+  }
+
+  private assertDoppelgangerSafe(pubKey: PubkeyHex | BLSPubkey): void {
+    const pubkeyHex = typeof pubKey === "string" ? pubKey : toHexString(pubKey);
+    if (!this.isDoppelgangerSafe(pubkeyHex)) {
+      const status = this.doppelgangerService?.getStatus(pubkeyHex);
+      throw new Error(`Error using validator with pubkey ${pubkeyHex}. Doppelganger protection status is: ${status}`);
     }
   }
 }
