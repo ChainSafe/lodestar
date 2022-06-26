@@ -1,6 +1,5 @@
 import "mocha";
 import {expect} from "chai";
-import {AbortController} from "@chainsafe/abort-controller";
 import {fromHexString} from "@chainsafe/ssz";
 import {Eth1Options} from "../../../src/eth1/options.js";
 import {getTestnetConfig} from "../../utils/testnet.js";
