@@ -77,7 +77,7 @@ export interface IBeaconChain {
   readonly beaconProposerCache: BeaconProposerCache;
 
   /** Stop beacon chain processing */
-  close(): void;
+  close(): Promise<void>;
   /** Populate in-memory caches with persisted data. Call at least once on startup */
   loadFromDisk(): Promise<void>;
   /** Persist in-memory data to the DB. Call at least once before stopping the process */
