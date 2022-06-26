@@ -9,7 +9,6 @@ import {Metrics} from "../metrics.js";
 import {ValidatorStore} from "./validatorStore.js";
 import {AttestationDutiesService, AttDutyAndProof} from "./attestationDuties.js";
 import {groupAttDutiesByCommitteeIndex} from "./utils.js";
-import {IndicesService} from "./indices.js";
 import {ChainHeaderTracker, HeadEventData} from "./chainHeaderTracker.js";
 import {ValidatorEvent, ValidatorEventEmitter} from "./emitter.js";
 
@@ -29,20 +28,11 @@ export class AttestationService {
     private readonly clock: IClock,
     private readonly validatorStore: ValidatorStore,
     private readonly emitter: ValidatorEventEmitter,
-    indicesService: IndicesService,
     chainHeadTracker: ChainHeaderTracker,
     private readonly metrics: Metrics | null,
     private readonly opts?: AttestationServiceOpts
   ) {
-    this.dutiesService = new AttestationDutiesService(
-      logger,
-      api,
-      clock,
-      validatorStore,
-      indicesService,
-      chainHeadTracker,
-      metrics
-    );
+    this.dutiesService = new AttestationDutiesService(logger, api, clock, validatorStore, chainHeadTracker, metrics);
 
     // At most every slot, check existing duties from AttestationDutiesService and run tasks
     clock.runEverySlot(this.runAttestationTasks);

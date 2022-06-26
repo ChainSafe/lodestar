@@ -84,7 +84,7 @@ export class BlockProposingService {
       const blockFeeRecipient = (block.data as bellatrix.BeaconBlock).body.executionPayload?.feeRecipient;
       const feeRecipient = blockFeeRecipient !== undefined ? toHexString(blockFeeRecipient) : undefined;
       if (feeRecipient !== undefined) {
-        const expectedFeeRecipient = this.validatorStore.feeRecipientByValidatorPubkey.getOrDefault(pubkeyHex);
+        const expectedFeeRecipient = this.validatorStore.getFeeRecipient(pubkeyHex);
         // In Mev Builder, the feeRecipeint could differ and rewards to the feeRecipeint
         // might be included in the block transactions as indicated by the BuilderBid
         // Address this appropriately in the Mev boost PR

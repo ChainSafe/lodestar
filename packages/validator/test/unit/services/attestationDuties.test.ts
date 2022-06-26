@@ -1,7 +1,7 @@
 import {toBufferBE} from "bigint-buffer";
 import {expect} from "chai";
 import sinon from "sinon";
-import {AbortController} from "@chainsafe/abort-controller";
+import {chainConfig} from "@chainsafe/lodestar-config/default";
 import bls from "@chainsafe/bls";
 import {toHexString} from "@chainsafe/ssz";
 import {routes} from "@chainsafe/lodestar-api";
@@ -10,19 +10,18 @@ import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {AttestationDutiesService} from "../../../src/services/attestationDuties.js";
 import {ValidatorStore} from "../../../src/services/validatorStore.js";
 import {getApiClientStub} from "../../utils/apiStub.js";
-import {loggerVc, testLogger} from "../../utils/logger.js";
+import {loggerVc} from "../../utils/logger.js";
 import {ClockMock} from "../../utils/clock.js";
-import {IndicesService} from "../../../src/services/indices.js";
+import {initValidatorStore} from "../../utils/validatorStore.js";
 import {ChainHeaderTracker} from "../../../src/services/chainHeaderTracker.js";
 
 describe("AttestationDutiesService", function () {
   const sandbox = sinon.createSandbox();
-  const logger = testLogger();
   const ZERO_HASH = Buffer.alloc(32, 0);
-
   const api = getApiClientStub(sandbox);
-  const validatorStore = sinon.createStubInstance(ValidatorStore) as ValidatorStore &
-    sinon.SinonStubbedInstance<ValidatorStore>;
+
+  let validatorStore: ValidatorStore;
+
   const chainHeadTracker = sinon.createStubInstance(ChainHeaderTracker) as ChainHeaderTracker &
     sinon.SinonStubbedInstance<ChainHeaderTracker>;
   let pubkeys: Uint8Array[]; // Initialize pubkeys in before() so bls is already initialized
@@ -40,9 +39,7 @@ describe("AttestationDutiesService", function () {
   before(() => {
     const secretKeys = [bls.SecretKey.fromBytes(toBufferBE(BigInt(98), 32))];
     pubkeys = secretKeys.map((sk) => sk.toPublicKey().toBytes());
-    validatorStore.votingPubkeys.returns(pubkeys.map(toHexString));
-    validatorStore.hasVotingPubkey.returns(true);
-    validatorStore.signAttestationSelectionProof.resolves(ZERO_HASH);
+    validatorStore = initValidatorStore(secretKeys, api, chainConfig);
   });
 
   let controller: AbortController; // To stop clock
@@ -77,25 +74,14 @@ describe("AttestationDutiesService", function () {
 
     // Clock will call runAttesterDutiesTasks() immediatelly
     const clock = new ClockMock();
-    const indicesService = new IndicesService(logger, api, validatorStore, null);
-    const dutiesService = new AttestationDutiesService(
-      loggerVc,
-      api,
-      clock,
-      validatorStore,
-      indicesService,
-      chainHeadTracker,
-      null
-    );
+    const dutiesService = new AttestationDutiesService(loggerVc, api, clock, validatorStore, chainHeadTracker, null);
 
     // Trigger clock onSlot for slot 0
     await clock.tickEpochFns(0, controller.signal);
 
     // Validator index should be persisted
-    expect(Object.fromEntries(indicesService["pubkey2index"])).to.deep.equal(
-      {[toHexString(pubkeys[0])]: index},
-      "Wrong dutiesService.indices Map"
-    );
+    expect(validatorStore.getAllLocalIndices()).to.deep.equal([index], "Wrong local indices");
+    expect(validatorStore.getPubkeyOfIndex(index)).equals(toHexString(pubkeys[0]), "Wrong pubkey");
 
     // Duties for this and next epoch should be persisted
     expect(
@@ -155,16 +141,7 @@ describe("AttestationDutiesService", function () {
 
     // Clock will call runAttesterDutiesTasks() immediatelly
     const clock = new ClockMock();
-    const indicesService = new IndicesService(logger, api, validatorStore, null);
-    const dutiesService = new AttestationDutiesService(
-      loggerVc,
-      api,
-      clock,
-      validatorStore,
-      indicesService,
-      chainHeadTracker,
-      null
-    );
+    const dutiesService = new AttestationDutiesService(loggerVc, api, clock, validatorStore, chainHeadTracker, null);
 
     // Trigger clock onSlot for slot 0
     await clock.tickEpochFns(0, controller.signal);

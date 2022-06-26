@@ -9,7 +9,6 @@ import {Metrics} from "../metrics.js";
 import {ValidatorStore} from "./validatorStore.js";
 import {SyncCommitteeDutiesService, SyncDutyAndProofs} from "./syncCommitteeDuties.js";
 import {groupSyncDutiesBySubcommitteeIndex, SubcommitteeDuty} from "./utils.js";
-import {IndicesService} from "./indices.js";
 import {ChainHeaderTracker} from "./chainHeaderTracker.js";
 
 /**
@@ -25,18 +24,9 @@ export class SyncCommitteeService {
     private readonly clock: IClock,
     private readonly validatorStore: ValidatorStore,
     private readonly chainHeaderTracker: ChainHeaderTracker,
-    indicesService: IndicesService,
     private readonly metrics: Metrics | null
   ) {
-    this.dutiesService = new SyncCommitteeDutiesService(
-      config,
-      logger,
-      api,
-      clock,
-      validatorStore,
-      indicesService,
-      metrics
-    );
+    this.dutiesService = new SyncCommitteeDutiesService(config, logger, api, clock, validatorStore, metrics);
 
     // At most every slot, check existing duties from SyncCommitteeDutiesService and run tasks
     clock.runEverySlot(this.runSyncCommitteeTasks);

@@ -1,5 +1,5 @@
 import {IDatabaseApiOptions} from "@chainsafe/lodestar-db";
-import {ssz} from "@chainsafe/lodestar-types";
+import {BLSPubkey, ssz} from "@chainsafe/lodestar-types";
 import {createIBeaconConfig, IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Genesis} from "@chainsafe/lodestar-types/phase0";
 import {ILogger} from "@chainsafe/lodestar-utils";
@@ -12,8 +12,8 @@ import {BlockProposingService} from "./services/block.js";
 import {AttestationService} from "./services/attestation.js";
 import {IndicesService} from "./services/indices.js";
 import {SyncCommitteeService} from "./services/syncCommittee.js";
-import {PrepareBeaconProposerService} from "./services/prepareBeaconProposer.js";
-import {ISlashingProtection} from "./slashingProtection/index.js";
+import {pollPrepareBeaconProposer} from "./services/prepareBeaconProposer.js";
+import {Interchange, InterchangeFormatVersion, ISlashingProtection} from "./slashingProtection/index.js";
 import {assertEqualParams, getLoggerVc, NotEqualParamsError} from "./util/index.js";
 import {ChainHeaderTracker} from "./services/chainHeaderTracker.js";
 import {ValidatorEventEmitter} from "./services/emitter.js";
@@ -51,15 +51,13 @@ enum Status {
  */
 export class Validator {
   readonly validatorStore: ValidatorStore;
+  private readonly slashingProtection: ISlashingProtection;
   private readonly blockProposingService: BlockProposingService;
   private readonly attestationService: AttestationService;
   private readonly syncCommitteeService: SyncCommitteeService;
-  private readonly indicesService: IndicesService;
-  private readonly prepareBeaconProposerService: PrepareBeaconProposerService | null;
   private readonly config: IBeaconConfig;
   private readonly api: Api;
   private readonly clock: IClock;
-  private readonly emitter: ValidatorEventEmitter;
   private readonly chainHeaderTracker: ChainHeaderTracker;
   private readonly logger: ILogger;
   private state: Status;
@@ -70,6 +68,8 @@ export class Validator {
     const config = createIBeaconConfig(dbOps.config, genesis.genesisValidatorsRoot);
 
     this.controller = new AbortController();
+    const clock = new Clock(config, logger, {genesisTime: Number(genesis.genesisTime)});
+    const loggerVc = getLoggerVc(logger, clock);
 
     const api =
       typeof opts.api === "string"
@@ -84,19 +84,21 @@ export class Validator {
           )
         : opts.api;
 
-    const clock = new Clock(config, logger, {genesisTime: Number(genesis.genesisTime)});
+    const indicesService = new IndicesService(logger, api, metrics);
     const validatorStore = new ValidatorStore(
       config,
       slashingProtection,
+      indicesService,
       metrics,
       signers,
-      genesis,
       defaultFeeRecipient ?? defaultDefaultFeeRecipient
     );
-    const indicesService = new IndicesService(logger, api, validatorStore, metrics);
+    if (defaultFeeRecipient !== undefined) {
+      pollPrepareBeaconProposer(loggerVc, api, clock, validatorStore);
+    }
+
     const emitter = new ValidatorEventEmitter();
     const chainHeaderTracker = new ChainHeaderTracker(logger, api, emitter);
-    const loggerVc = getLoggerVc(logger, clock);
 
     this.blockProposingService = new BlockProposingService(config, loggerVc, api, clock, validatorStore, metrics, {
       graffiti,
@@ -109,7 +111,6 @@ export class Validator {
       clock,
       validatorStore,
       emitter,
-      indicesService,
       chainHeaderTracker,
       metrics,
       {afterBlockDelaySlotFraction: opts.afterBlockDelaySlotFraction}
@@ -122,22 +123,16 @@ export class Validator {
       clock,
       validatorStore,
       chainHeaderTracker,
-      indicesService,
       metrics
     );
-
-    this.prepareBeaconProposerService = defaultFeeRecipient
-      ? new PrepareBeaconProposerService(loggerVc, api, clock, validatorStore, indicesService, metrics)
-      : null;
 
     this.config = config;
     this.logger = logger;
     this.api = api;
     this.clock = clock;
     this.validatorStore = validatorStore;
-    this.indicesService = indicesService;
-    this.emitter = emitter;
     this.chainHeaderTracker = chainHeaderTracker;
+    this.slashingProtection = slashingProtection;
 
     if (metrics) {
       opts.dbOps.controller.setMetrics(metrics.db);
@@ -183,7 +178,7 @@ export class Validator {
   }
 
   removeDutiesForKey(pubkey: PubkeyHex): void {
-    this.indicesService.removeDutiesForKey(pubkey);
+    this.validatorStore.removeSigner(pubkey);
     this.blockProposingService.removeDutiesForKey(pubkey);
     this.attestationService.removeDutiesForKey(pubkey);
     this.syncCommitteeService.removeDutiesForKey(pubkey);
@@ -196,6 +191,14 @@ export class Validator {
     if (this.state === Status.closed) return;
     this.controller.abort();
     this.state = Status.closed;
+  }
+
+  async importInterchange(interchange: Interchange): Promise<void> {
+    return this.slashingProtection.importInterchange(interchange, this.genesis.genesisValidatorsRoot);
+  }
+
+  async exportInterchange(pubkeys: BLSPubkey[], formatVersion: InterchangeFormatVersion): Promise<Interchange> {
+    return this.slashingProtection.exportInterchange(this.genesis.genesisValidatorsRoot, pubkeys, formatVersion);
   }
 
   /**
