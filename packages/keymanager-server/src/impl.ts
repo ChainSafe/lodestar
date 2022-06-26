@@ -210,8 +210,10 @@ export class KeymanagerApi implements Api {
    */
   async listRemoteKeys(): ReturnType<Api["listRemoteKeys"]> {
     const remoteKeys: SignerDefinition[] = [];
-    for (const signer of this.validator.validatorStore.getSigners()) {
-      if (signer.type === SignerType.Remote) {
+
+    for (const pubkeyHex of this.validator.validatorStore.votingPubkeys()) {
+      const signer = this.validator.validatorStore.getSigner(pubkeyHex);
+      if (signer && signer.type === SignerType.Remote) {
         remoteKeys.push({
           pubkey: signer.pubkeyHex,
           url: signer.externalSignerUrl,
