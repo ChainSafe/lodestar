@@ -120,8 +120,6 @@ describe("doppelganger / doppelganger test", function () {
 
     await connect(bn2.network as Network, bn.network.peerId, bn.network.localMultiaddrs);
 
-    await Promise.all([...validatorsWithDoppelganger, ...validators].map((validator) => validator.start()));
-
     expect(validators[0].isRunning).to.be.equal(true, "validator without doppelganger protection should be running");
     expect(validatorsWithDoppelganger[0].isRunning).to.be.equal(
       true,
@@ -164,10 +162,6 @@ describe("doppelganger / doppelganger test", function () {
     });
     afterEachCallbacks.push(() => Promise.all(validator0WithoutDoppelganger.map((v) => v.close())));
 
-    await Promise.all(
-      [...validator0WithDoppelganger, ...validator0WithoutDoppelganger].map((validator) => validator.start())
-    );
-
     expect(validator0WithDoppelganger[0].isRunning).to.be.equal(
       true,
       "validator with doppelganger protection should be running"
@@ -204,8 +198,6 @@ describe("doppelganger / doppelganger test", function () {
 
     await connect(bn2.network as Network, bn.network.peerId, bn.network.localMultiaddrs);
 
-    await Promise.all([...validatorsWithDoppelganger, ...validators].map((validator) => validator.start()));
-
     expect(validators[0].isRunning).to.be.equal(true, "validator without doppelganger protection should be running");
     expect(validatorsWithDoppelganger[0].isRunning).to.be.equal(
       true,
@@ -234,8 +226,6 @@ describe("doppelganger / doppelganger test", function () {
       genesisTime,
       doppelgangerProtectionEnabled,
     });
-
-    await Promise.all(validatorsWithDoppelganger.map((validator) => validator.start()));
 
     const validatorUnderTest = validatorsWithDoppelganger[0];
     const pubKey = validatorUnderTest.validatorStore.votingPubkeys()[0];
@@ -268,8 +258,6 @@ describe("doppelganger / doppelganger test", function () {
       genesisTime,
       doppelgangerProtectionEnabled,
     });
-
-    await Promise.all(validatorsWithDoppelganger.map((validator) => validator.start()));
 
     const validatorUnderTest = validatorsWithDoppelganger[0];
     const pubKey = validatorUnderTest.validatorStore.votingPubkeys()[0];
