@@ -26,7 +26,7 @@ Look for the .vars file in the folder to see what networks are supported. Here a
 ##### Just run the script with arguments
 
 ```bash
-cd kiln/devnets
+cd merge-scripts
 ./setup.sh --dataDir kiln-data --elClient geth --devnetVars ./kiln.vars [--dockerWithSudo --withTerminal "gnome-terminal --disable-factory --" --withValidator]
 ```
 
@@ -39,7 +39,17 @@ cd kiln/devnets
 3. Run detached (best for leaving it to run, typically after testing 1 or 2):
    `./setup.sh --dataDir kiln-data --elClient nethermind --devnetVars ./kiln.vars --detached --dockerWithSudo`
 
-You can alternate between `geth` and `nethermind` to experiment with the ELs being out of sync ( and catching up) with `lodestar`.
+##### Supported EL clients
+
+Look for the .vars file in the folder to see what networks are supported. Here are a few examples
+
+1. Geth:  `--elClient geth`
+2. Nethermind: `--elClient nethermind`
+3. Besu: `--elClient besu`
+4. Ethereumjs: (might sync only small size testnets for now): `--elClient ethereumjs`
+
+
+You can alternate between them (without needing to reset/cleanup) to experiment with the ELs being out of sync ( and catching up) with `lodestar` via **Optimistic Sync** features.
 
 ##### Script parameters help
 
