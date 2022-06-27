@@ -64,7 +64,7 @@ describe("doppelganger / doppelganger test", function () {
       testLoggerOpts,
       doppelgangerProtectionEnabled: config?.doppelgangerProtectionEnabled,
     });
-    afterEachCallbacks.push(() => Promise.all(validatorsWithDoppelganger.map((v) => v.stop())));
+    afterEachCallbacks.push(() => Promise.all(validatorsWithDoppelganger.map((v) => v.close())));
 
     return {beaconNode: bn, validators: validatorsWithDoppelganger};
   }
@@ -162,7 +162,7 @@ describe("doppelganger / doppelganger test", function () {
       testLoggerOpts,
       doppelgangerProtectionEnabled: false,
     });
-    afterEachCallbacks.push(() => Promise.all(validator0WithoutDoppelganger.map((v) => v.stop())));
+    afterEachCallbacks.push(() => Promise.all(validator0WithoutDoppelganger.map((v) => v.close())));
 
     await Promise.all(
       [...validator0WithDoppelganger, ...validator0WithoutDoppelganger].map((validator) => validator.start())
