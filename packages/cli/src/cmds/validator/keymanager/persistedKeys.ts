@@ -191,8 +191,8 @@ export class PersistedKeysBackend implements IPersistedKeysBackend {
 
     return {
       dirpath,
-      keystoreFilepath: path.join(this.paths.secretsDir, pubkeyHex),
-      passphraseFilepath: path.join(dirpath, "voting-keystore.json"),
+      keystoreFilepath: path.join(dirpath, "voting-keystore.json"),
+      passphraseFilepath: path.join(this.paths.secretsDir, pubkeyHex),
     };
   }
 }
