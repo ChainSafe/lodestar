@@ -4,11 +4,13 @@
 
 import LibP2p from "libp2p";
 import TCP from "libp2p-tcp";
+// TODO fix this properly before merge
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+//@ts-ignore
 import Mplex from "libp2p-mplex";
-import Bootstrap from "libp2p-bootstrap";
-import MDNS from "libp2p-mdns";
 import PeerId from "peer-id";
 import {Datastore} from "interface-datastore";
+import {PeerDiscoveryFactory} from "libp2p-interfaces/src/peer-discovery/types";
 import {NOISE} from "@chainsafe/libp2p-noise";
 
 export interface ILibp2pOptions {
@@ -18,7 +20,7 @@ export interface ILibp2pOptions {
     announce?: string[];
   };
   datastore?: Datastore;
-  peerDiscovery?: (typeof Bootstrap | typeof MDNS)[];
+  peerDiscovery?: PeerDiscoveryFactory[];
   bootMultiaddrs?: string[];
   maxConnections?: number;
   minConnections?: number;
@@ -36,7 +38,7 @@ export class NodejsNode extends LibP2p {
         connEncryption: [NOISE],
         transport: [TCP],
         streamMuxer: [Mplex],
-        peerDiscovery: options.peerDiscovery || [Bootstrap, MDNS],
+        peerDiscovery: options.peerDiscovery,
       },
       dialer: {
         maxParallelDials: 100,

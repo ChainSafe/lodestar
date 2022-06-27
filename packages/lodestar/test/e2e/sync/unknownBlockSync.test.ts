@@ -89,7 +89,7 @@ describe("sync / unknown block sync", function () {
       ssz.phase0.SignedBeaconBlock.equals(block, head)
     );
 
-    await connect(bn2.network as Network, bn.network.peerId, bn.network.localMultiaddrs);
+    await connect((bn2.network as unknown) as Network, bn.network.peerId, bn.network.localMultiaddrs);
     await bn2.chain.processBlock(head).catch((e) => {
       if (e instanceof BlockError && e.type.code === BlockErrorCode.PARENT_UNKNOWN) {
         // Expected

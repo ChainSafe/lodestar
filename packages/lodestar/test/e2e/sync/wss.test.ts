@@ -120,7 +120,7 @@ describe("Start from WSS", function () {
       (slot) => slot == GENESIS_SLOT
     );
 
-    await connect(bnStartingFromWSS.network as Network, bn.network.peerId, bn.network.localMultiaddrs);
+    await connect((bnStartingFromWSS.network as unknown) as Network, bn.network.peerId, bn.network.localMultiaddrs);
 
     await waitForSynced;
   });

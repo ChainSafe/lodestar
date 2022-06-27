@@ -1,5 +1,11 @@
 import varint from "varint";
+// TODO fix this properly before merge
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+//@ts-ignore
 import {source} from "stream-to-it";
+// TODO fix this properly before merge
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+//@ts-ignore
 import snappy from "@chainsafe/snappy-stream";
 import {RequestOrOutgoingResponseBody, OutgoingSerializer} from "../../types.js";
 import {SszSnappyError, SszSnappyErrorCode} from "./errors.js";

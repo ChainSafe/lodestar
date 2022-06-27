@@ -67,7 +67,7 @@ export class DataTransformSnappy {
    */
   inboundTransform(topicStr: string, data: Uint8Array): Uint8Array {
     // No need to parse topic, everything is snappy compressed
-    return uncompress(data, this.maxSizePerMessage);
+    return uncompress(data);
   }
   /**
    * Takes the data to be published (a topic and associated data) transforms the data. The

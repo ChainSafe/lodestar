@@ -13,7 +13,7 @@ describe("options / beaconNodeOptions", () => {
       "api.rest.api": [],
       "api.rest.cors": "*",
       "api.rest.enabled": true,
-      "api.rest.host": "127.0.0.1",
+      "api.rest.address": "127.0.0.1",
       "api.rest.port": 7654,
 
       "chain.blsVerifyAllMultiThread": true,
@@ -69,7 +69,7 @@ describe("options / beaconNodeOptions", () => {
           api: [],
           cors: "*",
           enabled: true,
-          host: "127.0.0.1",
+          address: "127.0.0.1",
           port: 7654,
         },
       },

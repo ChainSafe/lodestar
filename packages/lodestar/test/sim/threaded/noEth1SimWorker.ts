@@ -65,7 +65,7 @@ async function runWorker(): Promise<void> {
         loggerNode.info(`Connecting node ${nodeIndex} -> ${i}`);
         const multiaddrs = nodeToConnect.localMultiaddrs.map((s) => new Multiaddr(s));
         const peerIdToConn = await createFromPrivKey(fromHexString(nodeToConnect.peerIdPrivkey));
-        await withTimeout(() => connect(node.network as Network, peerIdToConn, multiaddrs), 10 * 1000);
+        await withTimeout(() => connect((node.network as unknown) as Network, peerIdToConn, multiaddrs), 10 * 1000);
         loggerNode.info(`Connected node ${nodeIndex} -> ${i}`);
       })
     )

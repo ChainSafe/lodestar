@@ -11,7 +11,7 @@ import {allForks, Epoch, Slot} from "@chainsafe/lodestar-types";
 import {Checkpoint} from "@chainsafe/lodestar-types/phase0";
 import {ILogger, mapValues} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
-import {BeaconNode} from "../../../src/index.js";
+import {BeaconNode} from "@chainsafe/lodestar";
 import {ChainEvent} from "../../../src/chain/index.js";
 import {linspace} from "../../../src/util/numpy.js";
 import {RegenCaller} from "../../../src/chain/regen/index.js";

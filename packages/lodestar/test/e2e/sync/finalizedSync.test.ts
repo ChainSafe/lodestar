@@ -82,7 +82,7 @@ describe("sync / finalized sync", function () {
       ssz.phase0.SignedBeaconBlock.equals(block, head)
     );
 
-    await connect(bn2.network as Network, bn.network.peerId, bn.network.localMultiaddrs);
+    await connect((bn2.network as unknown) as Network, bn.network.peerId, bn.network.localMultiaddrs);
 
     try {
       await waitForSynced;

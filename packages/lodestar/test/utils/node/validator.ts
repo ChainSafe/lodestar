@@ -3,7 +3,7 @@ import {LevelDbController} from "@chainsafe/lodestar-db";
 import {interopSecretKey} from "@chainsafe/lodestar-beacon-state-transition";
 import {SlashingProtection, Validator, Signer, SignerType} from "@chainsafe/lodestar-validator";
 import type {SecretKey} from "@chainsafe/bls/types";
-import {BeaconNode} from "../../../src/node/index.js";
+import {BeaconNode} from "@chainsafe/lodestar";
 import {testLogger, TestLoggerOpts} from "../logger.js";
 
 export async function getAndInitDevValidators({
@@ -76,7 +76,8 @@ export async function getAndInitDevValidators({
   };
 }
 
-function getNodeApiUrl(node: BeaconNode): string {
+export function getNodeApiUrl(node: BeaconNode): string {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   const address = node.opts.api.rest.address || "127.0.0.1";
   const port = node.opts.api.rest.port || 19596;
   return `http://${address}:${port}`;

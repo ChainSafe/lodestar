@@ -9,6 +9,7 @@ import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {IChainConfig} from "@chainsafe/lodestar-config";
 import {Epoch} from "@chainsafe/lodestar-types";
 
+import {BeaconNode} from "@chainsafe/lodestar";
 import {ExecutePayloadStatus} from "../../src/executionEngine/interface.js";
 import {ExecutionEngineHttp} from "../../src/executionEngine/http.js";
 import {ChainEvent} from "../../src/chain/index.js";
@@ -311,7 +312,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     };
     const loggerNodeA = testLogger("Node-A", testLoggerOpts);
 
-    const bn = await getDevBeaconNode({
+    const bn: BeaconNode = await getDevBeaconNode({
       params: {
         ...testParams,
         ALTAIR_FORK_EPOCH: 0,
