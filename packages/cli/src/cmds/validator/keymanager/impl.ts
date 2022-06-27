@@ -198,11 +198,7 @@ export class KeymanagerApi implements Api {
     for (const pubkeyHex of this.validator.validatorStore.votingPubkeys()) {
       const signer = this.validator.validatorStore.getSigner(pubkeyHex);
       if (signer && signer.type === SignerType.Remote) {
-        remoteKeys.push({
-          pubkey: signer.pubkeyHex,
-          url: signer.externalSignerUrl,
-          readonly: false,
-        });
+        remoteKeys.push({pubkey: signer.pubkey, url: signer.url, readonly: false});
       }
     }
 
@@ -227,8 +223,8 @@ export class KeymanagerApi implements Api {
 
           this.validator.validatorStore.addSigner({
             type: SignerType.Remote,
-            pubkeyHex: remoteSigner.pubkey,
-            externalSignerUrl: remoteSigner.url,
+            pubkey: remoteSigner.pubkey,
+            url: remoteSigner.url,
           });
 
           this.persistedKeysBackend.writeRemoteKey({

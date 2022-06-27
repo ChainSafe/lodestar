@@ -41,13 +41,14 @@ Ethereum Foundation utility.",
     //
     // - recursively finds keystores in importKeystoresPath
     // - validates keystores can decrypt
-    // - writes them in persisted form
+    // - writes them in persisted form - do not lock
 
     if (!args.importKeystoresPath) {
       throw new YargsError("Must set importKeystoresPath");
     }
 
     // Collect same password for all keystores
+    // If importKeystoresPassword is not provided, interactive prompt for it
 
     const keystoreDefinitions = importKeystoreDefinitionsFromExternalDir({
       keystoresPath: args.importKeystoresPath,
@@ -58,21 +59,14 @@ Ethereum Foundation utility.",
       throw new YargsError("No keystores found");
     }
 
-    const accountPaths = getAccountPaths(args);
-    const persistedKeystoresBackend = new PersistedKeysBackend(accountPaths);
-
-    // For each keystore:
-    //
-    // - Obtain the keystore password, if the user desires.
-    // - Copy the keystore into the `validator_dir`.
-    //
-    // Skip keystores that already exist, but exit early if any operation fails.
     console.log(
       `Importing ${keystoreDefinitions.length} keystores:\n ${keystoreDefinitions
         .map((def) => def.keystorePath)
         .join("\n")}`
     );
 
+    const accountPaths = getAccountPaths(args);
+    const persistedKeystoresBackend = new PersistedKeysBackend(accountPaths);
     let importedCount = 0;
 
     for (const {keystorePath, password} of keystoreDefinitions) {

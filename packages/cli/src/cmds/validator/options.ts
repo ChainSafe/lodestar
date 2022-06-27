@@ -33,9 +33,11 @@ export type IValidatorCliArgs = AccountValidatorArgs &
 
     importKeystoresPath?: string[];
     importKeystoresPassword?: string;
-    externalSignerUrl?: string;
-    externalSignerPublicKeys?: string[];
-    externalSignerFetchPubkeys?: boolean;
+
+    "externalSigner.url"?: string;
+    "externalSigner.pubkeys"?: string[];
+    "externalSigner.fetch"?: boolean;
+
     interopIndexes?: string;
     fromMnemonic?: string;
     mnemonicIndexes?: string;
@@ -175,26 +177,30 @@ export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
 
   // Remote signer
 
-  externalSignerUrl: {
+  "externalSigner.url": {
+    alias: ["externalSignerUrl"], // Backwards compatibility
     description: "URL to connect to an external signing server",
     type: "string",
-    group: "External signer",
+    group: "externalSignerUrl",
   },
 
-  externalSignerPublicKeys: {
+  "externalSigner.pubkeys": {
+    alias: ["externalSignerPublicKeys"], // Backwards compatibility
     description:
       "List of validator public keys used by an external signer. May also provide a single string a comma separated public keys",
     type: "array",
     coerce: (pubkeys: string[]): string[] =>
       // Parse ["0x11,0x22"] to ["0x11", "0x22"]
       pubkeys.map((item) => item.split(",")).flat(1),
-    group: "External signer",
+    group: "externalSignerUrl",
   },
 
-  externalSignerFetchPubkeys: {
+  "externalSigner.fetch": {
+    alias: ["externalSignerFetchPubkeys"], // Backwards compatibility
+    conflicts: ["externalSigner.pubkeys"],
     description: "Fetch then list of pubkeys to validate from an external signer",
     type: "boolean",
-    group: "External signer",
+    group: "externalSignerUrl",
   },
 
   // Metrics

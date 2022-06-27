@@ -40,46 +40,13 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
     for (const cb of onGracefulShutdownCbs) await cb();
   }, logger.info.bind(logger));
 
-  // Ways of usage:
-  // - No initial setup, import remote signers via API
-  //   - Must persist the declaration somewhere
-  // - No initial setup, import keystores via API
-  //   - Must persist the keystores somewhere
-  // - Initial setup with keystores to import from somewhere
-  // - Initial setup with remote keys listed in args
-
-  // Options processing heriarchy
-  // --interopIndexes
-  // --fromMnemonic, then requires --mnemonicIndexes
-  // --importKeystoresPath, then requires --importKeystoresPassword
-  // --externalSignerFetchPubkeys, then requires --externalSignerUrl
-  // --externalSignerPublicKeys, then requires --externalSignerUrl
-  // else load from persisted
-  // - both remote keys and local keystores
-
-  // A validator signer is an item capable of producing signatures. Two types exist:
-  // - Local: a secret key capable of signing
-  // - Remote: a URL that supports EIP-3030 (BLS Remote Signer HTTP API)
-  //
-  // Local secret keys can be gathered from:
-  // - Local keystores existant on disk
-  // - Local keystores imported via keymanager api
-  // - Derived from a mnemonic (TESTING ONLY)
-  // - Derived from interop keys (TESTING ONLY)
-  //
-  // Remote signers need to pre-declare the list of pubkeys to validate with
-  // - Via CLI argument
-  // - Fetched directly from remote signer API
-  // - Remote signer definition imported from keymanager api
-  //
-  // Questions:
-  // - Where to persist keystores imported via remote signer API?
-  // - Where to persist remote signer definitions imported by API?
-  // - Is it necessary to know the origin of a file? If it was imported or there already?
-  // - How to handle the locks?
-
+  /**
+   * For rationale and documentation of how signers are loaded from args and disk,
+   * see {@link PersistedKeysBackend} and {@link getSignersFromArgs}
+   *
+   * Note: local signers are already locked once returned from this function.
+   */
   const signers = await getSignersFromArgs(args);
-  // TODO: Consider locking local validators here too
 
   // Ensure the validator has at least one key
   if (signers.length === 0) {
@@ -142,10 +109,6 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
   // Start keymanager API backend
   // Only if keymanagerEnabled flag is set to true
   if (args["keymanager.enabled"]) {
-    if (!args.importKeystoresPath || args.importKeystoresPath.length === 0) {
-      throw new YargsError("For keymanagerEnabled must set importKeystoresPath to at least 1 path");
-    }
-
     const accountPaths = getAccountPaths(args);
     const keymanagerApi = new KeymanagerApi(validator, new PersistedKeysBackend(accountPaths));
 

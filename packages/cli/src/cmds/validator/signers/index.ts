@@ -19,6 +19,21 @@ import {importKeystoreDefinitionsFromExternalDir, readPassphraseOrPrompt} from "
  * --externalSignerPublicKeys, then requires --externalSignerUrl
  * else load from persisted
  * - both remote keys and local keystores
+ *
+ * @returns Signers =  an item capable of producing signatures. Two types exist:
+ * - Local: a secret key capable of signing
+ * - Remote: a URL that supports EIP-3030 (BLS Remote Signer HTTP API)
+ *
+ *  Local secret keys can be gathered from:
+ * - Local keystores existant on disk
+ * - Local keystores imported via keymanager api
+ * - Derived from a mnemonic (TESTING ONLY)
+ * - Derived from interop keys (TESTING ONLY)
+ *
+ * Remote signers need to pre-declare the list of pubkeys to validate with
+ * - Via CLI argument
+ * - Fetched directly from remote signer API
+ * - Remote signer definition imported from keymanager api
  */
 export async function getSignersFromArgs(args: IValidatorCliArgs & IGlobalArgs): Promise<Signer[]> {
   // ONLY USE FOR TESTNETS - Derive interop keys
@@ -55,61 +70,40 @@ export async function getSignersFromArgs(args: IValidatorCliArgs & IGlobalArgs):
   }
 
   // Remote keys declared manually with --externalSignerPublicKeys
-  else if (args.externalSignerPublicKeys) {
-    if (args.externalSignerPublicKeys.length === 0) {
-      throw new YargsError("externalSignerPublicKeys is set to an empty list");
-    }
-    if (args.externalSignerFetchPubkeys) {
-      throw new YargsError("Flag externalSignerFetchPubkeys is ignored if externalSignerPublicKeys is set");
-    }
-
-    const {externalSignerUrl} = args;
+  else if (args["externalSigner.pubkeys"] || args["externalSigner.fetch"]) {
+    const externalSignerUrl = args["externalSigner.url"];
     if (!externalSignerUrl) {
       throw new YargsError("Must set externalSignerUrl with externalSignerPublicKeys");
     }
     if (!isValidHttpUrl(externalSignerUrl)) {
       throw new YargsError(`Invalid external signer URL ${externalSignerUrl}`);
     }
-
-    assertValidPubkeysHex(args.externalSignerPublicKeys);
-
-    return args.externalSignerPublicKeys.map((pubkeyHex) => ({type: SignerType.Remote, pubkeyHex, externalSignerUrl}));
-  }
-
-  // Fetch all keys available in remote signer
-  else if (args.externalSignerFetchPubkeys) {
-    const {externalSignerUrl} = args;
-    if (!externalSignerUrl) {
-      throw new YargsError("Must set externalSignerUrl with externalSignerFetchPubkeys");
+    if (args["externalSigner.pubkeys"] && args["externalSigner.pubkeys"].length === 0) {
+      throw new YargsError("externalSignerPublicKeys is set to an empty list");
     }
 
-    const fetchedPubkeys = await externalSignerGetKeys(externalSignerUrl);
-    assertValidPubkeysHex(fetchedPubkeys);
-    return fetchedPubkeys.map((pubkeyHex) => ({type: SignerType.Remote, pubkeyHex, externalSignerUrl}));
+    const pubkeys = args["externalSigner.pubkeys"] ?? (await externalSignerGetKeys(externalSignerUrl));
+    assertValidPubkeysHex(pubkeys);
+
+    return pubkeys.map((pubkey) => ({type: SignerType.Remote, pubkey, url: externalSignerUrl}));
   }
 
   // Read keys from local account manager
   else {
     const accountPaths = getAccountPaths(args);
     const persistedKeysBackend = new PersistedKeysBackend(accountPaths);
+
+    // Read and decrypt local keystores, imported via keymanager api or import cmd
     const keystoreDefinitions = persistedKeysBackend.readAllKeystores();
-    const remoteKeySigners = persistedKeysBackend.readAllRemoteKeys();
     const keystoreSigners = await decryptKeystoreDefinitions(keystoreDefinitions, args);
-    const remoteSigners = remoteKeySigners.map(
-      (remoteSigner): Signer => ({
-        type: SignerType.Remote,
-        pubkeyHex: remoteSigner.pubkey,
-        externalSignerUrl: remoteSigner.url,
-      })
-    );
+
+    // Read local remote keys, imported via keymanager api
+    const signerDefinitions = persistedKeysBackend.readAllRemoteKeys();
+    const remoteSigners = signerDefinitions.map(({url, pubkey}): Signer => ({type: SignerType.Remote, url, pubkey}));
+
     return [...keystoreSigners, ...remoteSigners];
   }
 }
-
-export type SignerRemote = {
-  externalSignerUrl: string;
-  pubkeyHex: string;
-};
 
 export function getSignerPubkeyHex(signer: Signer): string {
   switch (signer.type) {
@@ -117,6 +111,6 @@ export function getSignerPubkeyHex(signer: Signer): string {
       return toHexString(signer.secretKey.toPublicKey().toBytes());
 
     case SignerType.Remote:
-      return signer.pubkeyHex;
+      return signer.pubkey;
   }
 }

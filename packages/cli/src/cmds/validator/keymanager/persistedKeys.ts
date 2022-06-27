@@ -27,11 +27,24 @@ export type LocalKeystoreDefinition = {
   password: string;
 };
 
-export type WriteKeystoreDefinition = {
-  keystoreJSON: string;
-  password: string;
-};
-
+/**
+ * Class to unify read+write of keystores and remoteKeys from disk.
+ * Consumers of this class include:
+ * - validator cmd: Read all keystores + lock them, and read all remote keys
+ * - import cmd: Write keystores
+ * - list cmd: Read all keystores
+ * - keymanager importKeystores route: Write keystores + lock them
+ * - keymanager importRemoteKeys route: Write remote keys
+ *
+ * This logic ensures no inconsistencies between all methods of read + write.
+ * It also ensures that keystores lockfiles are consistent and checked in all code paths.
+ *
+ * NOTES:
+ * - Keystores imported via keymanager API behave the same and import cmd end result.
+ * - Logic to scan an external dir for keystores is the same for import cmd and validator cmd.
+ * - lockfile locks are not explicitly released. The underlying library handles that automatically
+ * - Imported remote key definitions are stored in a separate directory from imported keystores
+ */
 export class PersistedKeysBackend implements IPersistedKeysBackend {
   constructor(private readonly paths: PathArgs) {}
 
@@ -116,10 +129,8 @@ export class PersistedKeysBackend implements IPersistedKeysBackend {
     const signerDefinitions: SignerDefinition[] = [];
 
     for (const pubkey of fs.readdirSync(this.paths.remoteKeysDir)) {
-      if (fs.statSync(pubkey).isDirectory()) {
-        const {definitionFilepath} = this.getDefinitionPaths(pubkey);
-        signerDefinitions.push(readRemoteSignerDefinition(definitionFilepath));
-      }
+      const {definitionFilepath} = this.getDefinitionPaths(pubkey);
+      signerDefinitions.push(readRemoteSignerDefinition(definitionFilepath));
     }
 
     return signerDefinitions;
