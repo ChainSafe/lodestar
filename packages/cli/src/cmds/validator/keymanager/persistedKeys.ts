@@ -4,13 +4,7 @@ import bls from "@chainsafe/bls";
 import {Keystore} from "@chainsafe/bls-keystore";
 import {Signer, SignerType} from "@chainsafe/lodestar-validator";
 import {DeletionStatus, ImportStatus, PubkeyHex, SignerDefinition} from "@chainsafe/lodestar-api/keymanager";
-import {
-  readPassphraseFile,
-  rmdirSyncMaybe,
-  unlinkSyncMaybe,
-  writeFile600Perm,
-  YargsError,
-} from "../../../util/index.js";
+import {readPassphraseFile, rmdirSyncMaybe, unlinkSyncMaybe, writeFile600Perm} from "../../../util/index.js";
 import {lockFilepath} from "../../../util/lockfile.js";
 import {IPersistedKeysBackend} from "./interface.js";
 
@@ -49,10 +43,11 @@ export class PersistedKeysBackend implements IPersistedKeysBackend {
   constructor(private readonly paths: PathArgs) {}
 
   readAllKeystores(): LocalKeystoreDefinition[] {
-    const {keystoresDir, secretsDir} = this.paths;
+    const {keystoresDir} = this.paths;
 
-    if (!fs.existsSync(keystoresDir)) throw new YargsError(`keystoresDir ${keystoresDir} does not exist`);
-    if (!fs.existsSync(secretsDir)) throw new YargsError(`secretsDir ${secretsDir} does not exist`);
+    if (!fs.existsSync(keystoresDir)) {
+      return [];
+    }
 
     const keystoreDefinitions: LocalKeystoreDefinition[] = [];
 
@@ -128,6 +123,10 @@ export class PersistedKeysBackend implements IPersistedKeysBackend {
   readAllRemoteKeys(): SignerDefinition[] {
     const signerDefinitions: SignerDefinition[] = [];
 
+    if (!fs.existsSync(this.paths.remoteKeysDir)) {
+      return [];
+    }
+
     for (const pubkey of fs.readdirSync(this.paths.remoteKeysDir)) {
       const {definitionFilepath} = this.getDefinitionPaths(pubkey);
       signerDefinitions.push(readRemoteSignerDefinition(definitionFilepath));
@@ -153,6 +152,7 @@ export class PersistedKeysBackend implements IPersistedKeysBackend {
       return false;
     }
 
+    fs.mkdirSync(path.dirname(definitionFilepath), {recursive: true});
     writeRemoteSignerDefinition(definitionFilepath, remoteSigner);
 
     return true;
