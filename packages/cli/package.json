@@ -61,7 +61,6 @@
     "@chainsafe/lodestar-beacon-state-transition": "^0.38.1",
     "@chainsafe/lodestar-config": "^0.38.1",
     "@chainsafe/lodestar-db": "^0.38.1",
-    "@chainsafe/lodestar-keymanager-server": "^0.38.1",
     "@chainsafe/lodestar-light-client": "^0.38.1",
     "@chainsafe/lodestar-params": "^0.38.1",
     "@chainsafe/lodestar-types": "^0.38.1",
