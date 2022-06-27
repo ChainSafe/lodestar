@@ -4,9 +4,6 @@
 
 import LibP2p from "libp2p";
 import TCP from "libp2p-tcp";
-// TODO fix this properly before merge
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-//@ts-ignore
 import Mplex from "libp2p-mplex";
 import PeerId from "peer-id";
 import {Datastore} from "interface-datastore";
