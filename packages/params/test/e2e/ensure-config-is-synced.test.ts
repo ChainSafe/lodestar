@@ -35,6 +35,7 @@ async function downloadRemoteConfig(preset: "mainnet" | "minimal", commit: strin
     [ForkName.phase0]: `https://raw.githubusercontent.com/ethereum/consensus-specs/${commit}/presets/${preset}/phase0.yaml`,
     [ForkName.altair]: `https://raw.githubusercontent.com/ethereum/consensus-specs/${commit}/presets/${preset}/altair.yaml`,
     [ForkName.bellatrix]: `https://raw.githubusercontent.com/ethereum/consensus-specs/${commit}/presets/${preset}/bellatrix.yaml`,
+    [ForkName.capella]: `https://raw.githubusercontent.com/ethereum/consensus-specs/${commit}/presets/${preset}/capella.yaml`,
   };
 
   const downloadedParams = await Promise.all(

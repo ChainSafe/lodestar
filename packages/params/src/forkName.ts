@@ -15,4 +15,5 @@ export enum ForkSeq {
   phase0 = 0,
   altair = 1,
   bellatrix = 2,
+  capella = 3,
 }

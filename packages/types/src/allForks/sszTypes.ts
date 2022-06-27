@@ -28,4 +28,12 @@ export const allForks = {
     BeaconState: bellatrix.BeaconState,
     Metadata: altair.Metadata,
   },
+  // TODO: Implement types
+  capella: {
+    BeaconBlockBody: bellatrix.BeaconBlockBody,
+    BeaconBlock: bellatrix.BeaconBlock,
+    SignedBeaconBlock: bellatrix.SignedBeaconBlock,
+    BeaconState: bellatrix.BeaconState,
+    Metadata: altair.Metadata,
+  },
 };

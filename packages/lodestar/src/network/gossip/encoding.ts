@@ -27,30 +27,26 @@ export function msgIdFn(gossipTopicCache: GossipTopicCache, msg: GossipsubMessag
 
   let vec: Uint8Array[];
 
-  switch (topic.fork) {
-    // message id for phase0.
-    // ```
-    // SHA256(MESSAGE_DOMAIN_VALID_SNAPPY + snappy_decompress(message.data))[:20]
-    // ```
-    case ForkName.phase0:
-      vec = [MESSAGE_DOMAIN_VALID_SNAPPY, msg.data];
-      break;
+  // message id for phase0.
+  // ```
+  // SHA256(MESSAGE_DOMAIN_VALID_SNAPPY + snappy_decompress(message.data))[:20]
+  // ```
+  if (topic.fork === ForkName.phase0) {
+    vec = [MESSAGE_DOMAIN_VALID_SNAPPY, msg.data];
+  }
 
-    // message id for altair.
-    // ```
-    // SHA256(
-    //   MESSAGE_DOMAIN_VALID_SNAPPY +
-    //   uint_to_bytes(uint64(len(message.topic))) +
-    //   message.topic +
-    //   snappy_decompress(message.data)
-    // )[:20]
-    // ```
-    // https://github.com/ethereum/eth2.0-specs/blob/v1.1.0-alpha.7/specs/altair/p2p-interface.md#topics-and-messages
-    case ForkName.altair:
-    case ForkName.bellatrix: {
-      vec = [MESSAGE_DOMAIN_VALID_SNAPPY, intToBytes(msg.topic.length, 8), Buffer.from(msg.topic), msg.data];
-      break;
-    }
+  // message id for altair.
+  // ```
+  // SHA256(
+  //   MESSAGE_DOMAIN_VALID_SNAPPY +
+  //   uint_to_bytes(uint64(len(message.topic))) +
+  //   message.topic +
+  //   snappy_decompress(message.data)
+  // )[:20]
+  // ```
+  // https://github.com/ethereum/eth2.0-specs/blob/v1.1.0-alpha.7/specs/altair/p2p-interface.md#topics-and-messages
+  else {
+    vec = [MESSAGE_DOMAIN_VALID_SNAPPY, intToBytes(msg.topic.length, 8), Buffer.from(msg.topic), msg.data];
   }
 
   return digest(Buffer.concat(vec)).slice(0, 20);

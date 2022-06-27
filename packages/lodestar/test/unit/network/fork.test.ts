@@ -31,6 +31,12 @@ function getForkConfig({
       epoch: bellatrix,
       version: Buffer.from([0, 0, 0, 2]),
     },
+    capella: {
+      name: ForkName.capella,
+      seq: ForkSeq.capella,
+      epoch: Infinity,
+      version: Buffer.from([0, 0, 0, 3]),
+    },
   };
   const forksAscendingEpochOrder = Object.values(forks);
   const forksDescendingEpochOrder = Object.values(forks).reverse();
