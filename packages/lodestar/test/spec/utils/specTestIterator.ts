@@ -48,6 +48,13 @@ export function specTestIterator(configName: string, testRunners: Record<string,
   for (const forkStr of readdirSyncSpec(configDirpath)) {
     const fork = ForkName[forkStr as ForkName];
     if (fork === undefined) {
+      if (forkStr === "capella") {
+        it("capella fork disabled, and prevents passing tests", () => {
+          throw Error("capella fork disabled, and prevents passing tests");
+        });
+        continue;
+      }
+
       throw Error(`Unknown fork ${forkStr}`);
     }
 
