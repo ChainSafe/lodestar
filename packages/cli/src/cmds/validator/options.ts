@@ -162,12 +162,14 @@ export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
   },
 
   importKeystoresPath: {
+    alias: ["keystore", "directory"], // Backwards compatibility with old `validator import` cmd
     description: "Path(s) to a directory or single filepath to validator keystores, i.e. Launchpad validators",
     defaultDescription: "./keystores/*.json",
     type: "array",
   },
 
   importKeystoresPassword: {
+    alias: ["passphraseFile"], // Backwards compatibility with old `validator import` cmd
     description: "Path to a file with password to decrypt all keystores from importKeystoresPath option",
     defaultDescription: "./password.txt",
     type: "string",
