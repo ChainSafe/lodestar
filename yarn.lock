@@ -3696,6 +3696,30 @@ cacache@^15.2.0:
     tar "^6.0.2"
     unique-filename "^1.1.1"
 
+cacache@^16.1.0:
+  version "16.1.1"
+  resolved "https://registry.yarnpkg.com/cacache/-/cacache-16.1.1.tgz#4e79fb91d3efffe0630d5ad32db55cc1b870669c"
+  integrity sha512-VDKN+LHyCQXaaYZ7rA/qtkURU+/yYhviUdvqEv2LT6QPZU8jpyzEkEVAcKlKLt5dJ5BRp11ym8lo3NKLluEPLg==
+  dependencies:
+    "@npmcli/fs" "^2.1.0"
+    "@npmcli/move-file" "^2.0.0"
+    chownr "^2.0.0"
+    fs-minipass "^2.1.0"
+    glob "^8.0.1"
+    infer-owner "^1.0.4"
+    lru-cache "^7.7.1"
+    minipass "^3.1.6"
+    minipass-collect "^1.0.2"
+    minipass-flush "^1.0.5"
+    minipass-pipeline "^1.2.4"
+    mkdirp "^1.0.4"
+    p-map "^4.0.0"
+    promise-inflight "^1.0.1"
+    rimraf "^3.0.2"
+    ssri "^9.0.0"
+    tar "^6.1.11"
+    unique-filename "^1.1.1"
+
 cacheable-lookup@^6.0.4:
   version "6.0.4"
   resolved "https://registry.yarnpkg.com/cacheable-lookup/-/cacheable-lookup-6.0.4.tgz#65c0e51721bb7f9f2cb513aed6da4a1b93ad7dc8"
