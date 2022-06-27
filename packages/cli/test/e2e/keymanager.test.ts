@@ -4,19 +4,26 @@ import chaiAsPromised from "chai-as-promised";
 import chai, {expect} from "chai";
 import tmp from "tmp";
 import {createIBeaconConfig, IBeaconConfig, IChainConfig} from "@chainsafe/lodestar-config";
-import {KeymanagerApi, KeymanagerServer} from "@chainsafe/lodestar-keymanager-server";
 import {chainConfig as chainConfigDef} from "@chainsafe/lodestar-config/default";
 import {HttpClient} from "@chainsafe/lodestar-api";
-import {ISlashingProtection, Validator} from "@chainsafe/lodestar-validator";
+import {ISlashingProtection, SignerLocal, SlashingProtection, Validator} from "@chainsafe/lodestar-validator";
 import {fromHexString} from "@chainsafe/ssz";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {ssz} from "@chainsafe/lodestar-types";
-import {getClient} from "../../../../api/src/keymanager/client.js";
-import {LogLevel, testLogger, TestLoggerOpts} from "../../utils/logger.js";
-import {getDevBeaconNode} from "../../utils/node/beacon.js";
-import {getAndInitDevValidators, getAndInitValidatorsWithKeystore} from "../../utils/node/validator.js";
-import {getKeystoreForPubKey1, getKeystoreForPubKey2} from "../../utils/node/keymanager.js";
-import {logFilesDir} from "../../sim/params.js";
+import {BeaconNode} from "@chainsafe/lodestar";
+import {SecretKey} from "@chainsafe/bls/types";
+import {LevelDbController} from "@chainsafe/lodestar-db";
+import {getClient} from "@chainsafe/lodestar-api/src/keymanager/client";
+import {LogLevel, testLogger, TestLoggerOpts} from "@chainsafe/lodestar/test/utils/logger";
+import {getDevBeaconNode} from "@chainsafe/lodestar/test/utils/node/beacon";
+import {getAndInitDevValidators} from "@chainsafe/lodestar/test/utils/node/validator";
+import {getKeystoreForPubKey1, getKeystoreForPubKey2} from "@chainsafe/lodestar/test/utils/node/keymanager";
+import {logFilesDir} from "@chainsafe/lodestar/test/sim/params";
+import {KeymanagerRestApiServer} from "../../src/cmds/validator/keymanager/server.js";
+import {KeymanagerApi} from "../../src/cmds/validator/keymanager/impl.js";
+import {PersistedKeysBackend} from "../../src/cmds/validator/keymanager/persistedKeys.js";
+import {getAccountPaths} from "../../src/cmds/validator/paths.js";
+
 /* eslint-disable @typescript-eslint/naming-convention */
 
 chai.use(chaiAsPromised);
@@ -83,7 +90,6 @@ describe("keymanager delete and import test", async function () {
 
     const keymanagerServerForVC1 = createKeymanager(
       vc1Info.validator,
-      vc1Info.slashingProtection,
       vc1Info.tempDirs.keystoreDir.name,
       portKM1,
       config,
@@ -94,7 +100,6 @@ describe("keymanager delete and import test", async function () {
 
     const keymanagerServerForVC2 = createKeymanager(
       vc2Info.validator,
-      vc2Info.slashingProtection,
       vc2Info.tempDirs.keystoreDir.name,
       portKM2,
       config,
@@ -279,7 +284,7 @@ describe("keymanager delete and import test", async function () {
     }, "api.token should not be present before keymanager server is started").to.throw();
 
     // by default auth is on
-    new KeymanagerServer({tokenDir}, {config, logger, api: keymanagerApi});
+    new KeymanagerRestApiServer({tokenDir}, {config, logger, api: keymanagerApi, metrics: null});
 
     expect(
       fs.readFileSync(path.join(tokenDir, "api-token.txt")),
@@ -298,7 +303,7 @@ describe("keymanager delete and import test", async function () {
     );
 
     // by default auth is on
-    new KeymanagerServer({tokenDir}, {config, logger, api: keymanagerApi});
+    new KeymanagerRestApiServer({tokenDir}, {config, logger, api: keymanagerApi, metrics: null});
 
     expect(fs.readFileSync(path.join(tokenDir, "api-token.txt")).length).to.be.greaterThan(
       0,
@@ -339,15 +344,12 @@ describe("keymanager delete and import test", async function () {
 
     afterEachCallbacks.push(() => Promise.all(validators.map((validator) => validator.close())));
 
-    const keystoresDir = tmp.dirSync({unsafeCleanup: true, prefix: "keystores"});
+    const rootDir = tmp.dirSync({unsafeCleanup: true, prefix: "root_dir"});
     const tokenDir = tmp.dirSync({unsafeCleanup: true, prefix: "token"});
-    afterEachCallbacks.push(() => keystoresDir.removeCallback());
-    afterEachCallbacks.push(() => tokenDir.removeCallback());
+    afterEachCallbacks.push(() => rootDir.removeCallback());
 
-    const keymanagerApi = new KeymanagerApi(validators[0], {
-      importedKeystoresDirpath: keystoresDir.name,
-      importedRemoteKeysDirpath: keystoresDir.name,
-    });
+    const accountPaths = getAccountPaths({rootDir: rootDir.name});
+    const keymanagerApi = new KeymanagerApi(validators[0], new PersistedKeysBackend(accountPaths));
 
     return {config, validators, secretKeys, logger, keymanagerApi, tokenDir: tokenDir.name};
   }
@@ -359,9 +361,9 @@ describe("keymanager delete and import test", async function () {
     const kmPort = 10003;
 
     // by default auth is on
-    const keymanagerServer = new KeymanagerServer(
-      {host: "127.0.0.1", port: kmPort, cors: "*", tokenDir, isAuthEnabled: opts?.isAuthEnabled ?? true},
-      {config, logger, api: keymanagerApi}
+    const keymanagerServer = new KeymanagerRestApiServer(
+      {port: kmPort, tokenDir, isAuthEnabled: opts?.isAuthEnabled ?? true},
+      {config, logger, api: keymanagerApi, metrics: null}
     );
 
     afterEachCallbacks.push(() => keymanagerServer.close());
@@ -395,19 +397,105 @@ function createAttesterDuty(pubkey: Uint8Array, slot: number, committeeIndex: nu
 
 function createKeymanager(
   vc: Validator,
-  slashingProtection: ISlashingProtection,
-  importKeystoresPath: string,
+  rootDir: string,
   port: number,
   config: IBeaconConfig,
   logger: WinstonLogger
-): KeymanagerServer {
-  const keymanagerApi = new KeymanagerApi(vc, {
-    importedKeystoresDirpath: importKeystoresPath,
-    importedRemoteKeysDirpath: `${importKeystoresPath}_remotekeys`,
+): KeymanagerRestApiServer {
+  const accountPaths = getAccountPaths({rootDir});
+  const keymanagerApi = new KeymanagerApi(vc, new PersistedKeysBackend(accountPaths));
+
+  return new KeymanagerRestApiServer(
+    {port, isAuthEnabled: false, tokenDir: logFilesDir},
+    {config, logger: logger, api: keymanagerApi, metrics: null}
+  );
+}
+
+async function getAndInitValidatorsWithKeystore({
+  node,
+  keystoreContent,
+  keystorePubKey,
+  useRestApi,
+  testLoggerOpts,
+}: {
+  node: BeaconNode;
+  keystoreContent: string;
+  keystorePubKey: string;
+  useRestApi?: boolean;
+  testLoggerOpts?: TestLoggerOpts;
+}): Promise<{
+  validator: Validator;
+  secretKeys: SecretKey[];
+  keystoreContent: string;
+  signers: SignerLocal[];
+  slashingProtection: ISlashingProtection;
+  tempDirs: {
+    keystoreDir: DirResult;
+    passwordFile: FileResult;
+  };
+}> {
+  const keystoreDir = tmp.dirSync({unsafeCleanup: true});
+  // TODO: This hardcoded value is necessary for a keymanager test
+  const keystoreFile = path.join(`${keystoreDir.name}`, `${KEYSTORE_IMPORTED_PREFIX}_${keystorePubKey}.json`);
+
+  fs.writeFileSync(keystoreFile, keystoreContent, {encoding: "utf8", flag: "wx"});
+
+  const passwordFile = tmp.fileSync();
+  fs.writeFileSync(passwordFile.name, "test123!", {encoding: "utf8"});
+
+  const vcConfig = {
+    network: "prater",
+    importKeystoresPath: [`${keystoreDir.name}`],
+    importKeystoresPassword: `${passwordFile.name}`,
+    keymanagerEnabled: true,
+    keymanagerAuthEnabled: true,
+    keymanagerHost: "127.0.0.1",
+    keymanagerPort: 9666,
+    keymanagerCors: "*",
+  };
+
+  const logger = testLogger("Vali", testLoggerOpts);
+  const tmpDir = tmp.dirSync({unsafeCleanup: true});
+  const dbOps = {
+    config: node.config,
+    controller: new LevelDbController({name: tmpDir.name}, {logger}),
+  };
+  const slashingProtection = new SlashingProtection(dbOps);
+
+  const signers: SignerLocal[] = [];
+
+  const {secretKeys, unlockSecretKeys: _unlockSecretKeys} = await getLocalSecretKeys(
+    (vcConfig as unknown) as IValidatorCliArgs & IGlobalArgs
+  );
+  if (secretKeys.length > 0) {
+    // Log pubkeys for auditing
+    logger.info(`Decrypted ${secretKeys.length} local keystores`);
+    for (const secretKey of secretKeys) {
+      logger.info(secretKey.toPublicKey().toHex());
+      signers.push({
+        type: SignerType.Local,
+        secretKey,
+      });
+    }
+  }
+
+  const validator = await Validator.initializeFromBeaconNode({
+    dbOps,
+    api: useRestApi ? getNodeApiUrl(node) : node.api,
+    slashingProtection,
+    logger,
+    signers,
   });
 
-  return new KeymanagerServer(
-    {host: "127.0.0.1", port, cors: "*", isAuthEnabled: false, tokenDir: logFilesDir},
-    {config, logger: logger, api: keymanagerApi}
-  );
+  return {
+    validator,
+    secretKeys,
+    keystoreContent,
+    signers,
+    slashingProtection,
+    tempDirs: {
+      keystoreDir: keystoreDir,
+      passwordFile: passwordFile,
+    },
+  };
 }
