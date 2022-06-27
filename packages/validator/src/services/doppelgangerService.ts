@@ -144,6 +144,14 @@ export class DoppelgangerService {
     for (const responses of [previousEpochLiveness, currentEpochLiveness]) {
       for (const response of responses) {
         if (!response.isLive) {
+          // TODO revisit why setting the state here is necessary
+          const state = this.doppelgangerStateByPubkey.get(indicesToCheckMap.get(response.index) ?? "");
+          if (!state) {
+            this.logger.error(`Inconsistent livenessResponseData unknown index ${response.index}`);
+            continue;
+          }
+          state.remainingEpochs--;
+          state.nextEpochToCheck = response.epoch + 1;
           continue;
         }
 
