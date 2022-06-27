@@ -203,6 +203,7 @@ export class AttestationDutiesService {
     const attesterDuties = await this.api.validator.getAttesterDuties(epoch, indexArr).catch((e: Error) => {
       throw extendError(e, "Failed to obtain attester duty");
     });
+
     const dependentRoot = toHexString(attesterDuties.dependentRoot);
     const relevantDuties = attesterDuties.data.filter((duty) => {
       const pubkeyHex = toHexString(duty.pubkey);

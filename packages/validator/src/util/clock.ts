@@ -9,6 +9,9 @@ type RunEveryFn = (slot: Slot, signal: AbortSignal) => Promise<void>;
 export interface IClock {
   readonly genesisTime: number;
   readonly secondsPerSlot: number;
+
+  readonly currentEpoch: number;
+
   start(signal: AbortSignal): void;
   runEverySlot(fn: (slot: Slot, signal: AbortSignal) => Promise<void>): void;
   runEveryEpoch(fn: (epoch: Epoch, signal: AbortSignal) => Promise<void>): void;
@@ -33,6 +36,10 @@ export class Clock implements IClock {
     this.secondsPerSlot = config.SECONDS_PER_SLOT;
     this.config = config;
     this.logger = logger;
+  }
+
+  get currentEpoch(): Epoch {
+    return computeEpochAtSlot(getCurrentSlot(this.config, this.genesisTime));
   }
 
   start(signal: AbortSignal): void {

@@ -340,18 +340,16 @@ export function getMetrics(register: MetricsRegister, gitData: LodestarGitData) 
         labelNames: ["bucket"],
       }),
     },
-    // Doppelganger check
 
     doppelganger: {
-      checkDuration: register.histogram({
-        name: "vc_doppelganger_check_time_seconds",
-        help: "Time to complete a doppelganger check in seconds",
-        buckets: [0.5, 1, 2, 3, 6, 8],
+      statusCount: register.gauge<{status: string}>({
+        name: "vc_doppelganger_validator_status_count",
+        help: "Count of validators per status",
+        labelNames: ["status"],
       }),
-      status: register.gauge<{validatorIndex: string}>({
-        name: "vc_doppelganger_validator_status",
-        help: "Statuses of doppelganger check for each validator",
-        labelNames: ["validatorIndex"],
+      epochsChecked: register.gauge({
+        name: "vc_doppelganger_epochs_checked_total",
+        help: "Total count of epochs checked",
       }),
     },
   };

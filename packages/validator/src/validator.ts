@@ -86,34 +86,20 @@ export class Validator {
         : opts.api;
 
     const indicesService = new IndicesService(logger, api, metrics);
+    const doppelgangerService = opts.doppelgangerProtectionEnabled
+      ? new DoppelgangerService(logger, clock, api, indicesService, metrics)
+      : null;
     const validatorStore = new ValidatorStore(
       config,
       slashingProtection,
       indicesService,
+      doppelgangerService,
       metrics,
       signers,
       defaultFeeRecipient ?? defaultDefaultFeeRecipient
     );
     if (defaultFeeRecipient !== undefined) {
       pollPrepareBeaconProposer(loggerVc, api, clock, validatorStore);
-    }
-
-    // Do not enable doppelganger when started before genesis or first slot of genesis, because
-    // there would not have been any activity/signing in the network, so it is pointless to wait.
-    // Doppelganger should be enabled at slot > genesis slot, for example at slot 1, because
-    // same validator could have been started at slot 0 with signature already published to the network
-    if (opts.doppelgangerProtectionEnabled && getCurrentSlot(config, genesis.genesisTime) > 0) {
-      const doppelgangerService = new DoppelgangerService(
-        config,
-        logger,
-        clock,
-        api,
-        Number(genesis.genesisTime),
-        indicesService,
-        this.controller,
-        metrics
-      );
-      validatorStore.setDoppelganger(doppelgangerService);
     }
 
     const emitter = new ValidatorEventEmitter();
@@ -166,6 +152,10 @@ export class Validator {
       this.clock.start(this.controller.signal);
       this.chainHeaderTracker.start(this.controller.signal);
     }
+  }
+
+  get isRunning(): boolean {
+    return this.state === Status.running;
   }
 
   /** Waits for genesis and genesis time */

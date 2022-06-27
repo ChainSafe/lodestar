@@ -56,23 +56,26 @@ describe("api / impl / validator", function () {
       afterEachCallbacks.push(() => bn.close());
 
       // live indices at epoch of consideration, epoch 0
-      bn.chain.observedBlockProposers.add(0, 1);
-      bn.chain.seenAttesters.add(0, 2);
-      bn.chain.seenAggregators.add(0, 3);
+      bn.chain.seenBlockProposers.add(0, 1);
+      bn.chain.seenBlockAttesters.add(0, 2);
+      bn.chain.seenAttesters.add(0, 3);
+      bn.chain.seenAggregators.add(0, 4);
       // live indices at other epochs
-      bn.chain.observedBlockProposers.add(1000, 1000);
+      // TODO: Why is this?
+      bn.chain.seenBlockProposers.add(1000, 1000);
       bn.chain.seenAttesters.add(10, 2000);
       bn.chain.seenAggregators.add(10, 3000);
 
       const client = getClient({baseUrl: `http://127.0.0.1:${restPort}`}, {config});
 
-      await expect(client.validator.getLiveness([1, 2, 3, 4], 0)).to.eventually.deep.equal(
+      await expect(client.validator.getLiveness([1, 2, 3, 4, 5], 0)).to.eventually.deep.equal(
         {
           data: [
             {index: 1, epoch: 0, isLive: true},
             {index: 2, epoch: 0, isLive: true},
             {index: 3, epoch: 0, isLive: true},
-            {index: 4, epoch: 0, isLive: false},
+            {index: 4, epoch: 0, isLive: true},
+            {index: 5, epoch: 0, isLive: false},
           ],
         },
         "Wrong liveness data returned"
@@ -103,7 +106,7 @@ describe("api / impl / validator", function () {
       await waitForEvent<phase0.Checkpoint>(bn.chain.emitter, ChainEvent.clockEpoch, timeout); // wait for epoch 1
       await waitForEvent<phase0.Checkpoint>(bn.chain.emitter, ChainEvent.clockEpoch, timeout); // wait for epoch 2
 
-      bn.chain.observedBlockProposers.add(bn.chain.clock.currentEpoch, 1);
+      bn.chain.seenBlockProposers.add(bn.chain.clock.currentEpoch, 1);
 
       const client = getClient({baseUrl: `http://127.0.0.1:${restPort}`}, {config});
 

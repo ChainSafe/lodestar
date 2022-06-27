@@ -25,13 +25,6 @@ export function computeStartSlotAtEpoch(epoch: Epoch): Slot {
 }
 
 /**
- * returns the ending slot for the given start slot.
- */
-export function computeEndSlotForEpoch(epoch: Epoch): Slot {
-  return computeStartSlotAtEpoch(epoch + 1) - 1;
-}
-
-/**
  * Return the epoch at which an activation or exit triggered in ``epoch`` takes effect.
  */
 export function computeActivationExitEpoch(epoch: Epoch): Epoch {

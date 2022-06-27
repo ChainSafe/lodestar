@@ -81,7 +81,7 @@ export class ValidatorStore {
     private readonly config: IBeaconConfig,
     private readonly slashingProtection: ISlashingProtection,
     private readonly indicesService: IndicesService,
-    private doppelgangerService: DoppelgangerService,
+    private readonly doppelgangerService: DoppelgangerService | null,
     private readonly metrics: Metrics | null,
     initialSigners: Signer[],
     private readonly defaultFeeRecipient: string
@@ -93,10 +93,6 @@ export class ValidatorStore {
     if (metrics) {
       metrics.signers.addCollect(() => metrics.signers.set(this.validators.size));
     }
-  }
-
-  setDoppelganger(doppelgangerService: DoppelgangerService): void {
-    this.doppelgangerService = doppelgangerService;
   }
 
   /** Return all known indices from the validatorStore pubkeys */
@@ -139,6 +135,8 @@ export class ValidatorStore {
         // TODO: Allow to customize
         feeRecipient: null,
       });
+
+      this.doppelgangerService?.registerValidator(pubkey);
     }
   }
 
@@ -337,13 +335,9 @@ export class ValidatorStore {
     };
   }
 
-  isDoppelgangerSafe(pubKeyHex: PubkeyHex): boolean {
-    if (this.doppelgangerService === undefined) {
-      // If doppelganger is not enabled we assumed all keys to be safe for use
-      return true;
-    } else {
-      return this.doppelgangerService.isDoppelgangerSafe(pubKeyHex);
-    }
+  isDoppelgangerSafe(pubkeyHex: PubkeyHex): boolean {
+    // If doppelganger is not enabled we assumed all keys to be safe for use
+    return !this.doppelgangerService || this.doppelgangerService.isDoppelgangerSafe(pubkeyHex);
   }
 
   private async getSignature(pubkey: BLSPubkeyMaybeHex, signingRoot: Uint8Array): Promise<BLSSignature> {
@@ -397,8 +391,7 @@ export class ValidatorStore {
   private assertDoppelgangerSafe(pubKey: PubkeyHex | BLSPubkey): void {
     const pubkeyHex = typeof pubKey === "string" ? pubKey : toHexString(pubKey);
     if (!this.isDoppelgangerSafe(pubkeyHex)) {
-      const status = this.doppelgangerService?.getStatus(pubkeyHex);
-      throw new Error(`Error using validator with pubkey ${pubkeyHex}. Doppelganger protection status is: ${status}`);
+      throw new Error(`Doppelganger state for key ${pubkeyHex} is not safe`);
     }
   }
 }
