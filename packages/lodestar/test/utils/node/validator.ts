@@ -77,7 +77,6 @@ export async function getAndInitDevValidators({
 }
 
 export function getNodeApiUrl(node: BeaconNode): string {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   const address = node.opts.api.rest.address || "127.0.0.1";
   const port = node.opts.api.rest.port || 19596;
   return `http://${address}:${port}`;
