@@ -17,7 +17,7 @@ import {BeaconSync, IBeaconSync} from "../sync/index.js";
 import {BackfillSync} from "../sync/backfill/index.js";
 import {BeaconChain, IBeaconChain, initBeaconMetrics} from "../chain/index.js";
 import {createMetrics, IMetrics, HttpMetricsServer} from "../metrics/index.js";
-import {getApi, RestApi} from "../api/index.js";
+import {getApi, BeaconRestApiServer} from "../api/index.js";
 import {initializeExecutionEngine} from "../executionEngine/index.js";
 import {initializeEth1ForBlockProduction} from "../eth1/index.js";
 import {IBeaconNodeOptions} from "./options.js";
@@ -36,7 +36,7 @@ export interface IBeaconNodeModules {
   sync: IBeaconSync;
   backfillSync: BackfillSync | null;
   metricsServer?: HttpMetricsServer;
-  restApi?: RestApi;
+  restApi?: BeaconRestApiServer;
   controller?: AbortController;
 }
 
@@ -70,7 +70,7 @@ export class BeaconNode {
   network: INetwork;
   chain: IBeaconChain;
   api: Api;
-  restApi?: RestApi;
+  restApi?: BeaconRestApiServer;
   sync: IBeaconSync;
   backfillSync: BackfillSync | null;
 
@@ -203,11 +203,11 @@ export class BeaconNode {
       await metricsServer.start();
     }
 
-    const restApi = new RestApi(opts.api.rest, {
+    const restApi = new BeaconRestApiServer(opts.api.rest, {
       config,
       logger: logger.child(opts.logger.api),
       api,
-      metrics,
+      metrics: metrics ? metrics.apiRest : null,
     });
     if (opts.api.rest.enabled) {
       await restApi.listen();
