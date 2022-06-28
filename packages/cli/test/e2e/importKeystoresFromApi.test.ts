@@ -1,6 +1,9 @@
 import path from "node:path";
 import rimraf from "rimraf";
-import {DeletionStatus, ImportStatus} from "@chainsafe/lodestar-api/keymanager";
+import chai, {expect} from "chai";
+import chaiAsPromised from "chai-as-promised";
+import {DeletionStatus, getClient, ImportStatus} from "@chainsafe/lodestar-api/keymanager";
+import {config} from "@chainsafe/lodestar-config/default";
 import {Interchange} from "@chainsafe/lodestar-validator";
 import {testFilesDir} from "../utils.js";
 import {bufferStderr, describeCliTest} from "../utils/childprocRunner.js";
@@ -8,6 +11,8 @@ import {cachedPubkeysHex, cachedSeckeysHex} from "../utils/cachedKeys.js";
 import {expectDeepEquals, getAfterEachCallbacks} from "../utils/runUtils.js";
 import {expectKeys, getKeymanagerTestRunner} from "../utils/keymanagerTestRunners.js";
 import {getKeystoresStr} from "../utils/keystores.js";
+
+chai.use(chaiAsPromised);
 
 describeCliTest("import keystores from api", function ({spawnCli}) {
   const rootDir = path.join(testFilesDir, "import-keystores-test");
@@ -110,5 +115,10 @@ describeCliTest("import keystores from api", function ({spawnCli}) {
   itKeymanagerStep("different process check no keys are loaded", async function (keymanagerClient) {
     // After deleting there should be no keys
     await expectKeys(keymanagerClient, [], "Wrong listKeys");
+  });
+
+  itKeymanagerStep("reject calls without bearerToken", async function (_, {keymanagerUrl}) {
+    const keymanagerClientNoAuth = getClient({baseUrl: keymanagerUrl, bearerToken: undefined}, {config});
+    await expect(keymanagerClientNoAuth.listRemoteKeys()).to.rejectedWith("Unauthorized");
   });
 });

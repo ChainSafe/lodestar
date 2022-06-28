@@ -15,10 +15,14 @@ type KeymanagerStepOpts = {
   validatorCmdExtraArgs?: string[];
 };
 
+type KeymanagerStepCbArgs = {
+  keymanagerUrl: string;
+};
+
 export function getKeymanagerTestRunner({args: {spawnCli}, afterEachCallbacks, rootDir}: TestContext) {
   return function itKeymanagerStep(
     itName: string,
-    cb: (this: Mocha.Context, keymanagerClient: Api) => Promise<void>,
+    cb: (this: Mocha.Context, keymanagerClient: Api, args: KeymanagerStepCbArgs) => Promise<void>,
     keymanagerStepOpts?: KeymanagerStepOpts
   ): void {
     itDone(itName, async function (done) {
@@ -57,7 +61,7 @@ export function getKeymanagerTestRunner({args: {spawnCli}, afterEachCallbacks, r
       // Wrap in retry since the API may not be listening yet
       await retry(() => keymanagerClient.listRemoteKeys(), {retryDelay: 500, retries: 10});
 
-      await cb.bind(this)(keymanagerClient);
+      await cb.bind(this)(keymanagerClient, {keymanagerUrl});
 
       validatorProc.kill("SIGINT");
       await sleep(1000);
