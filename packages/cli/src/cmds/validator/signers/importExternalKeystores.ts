@@ -1,7 +1,5 @@
-import fs from "node:fs";
-import path from "node:path";
 import inquirer from "inquirer";
-import {readPassphraseFile} from "../../../util/index.js";
+import {readPassphraseFile, recursiveLookup} from "../../../util/index.js";
 import {LocalKeystoreDefinition} from "../keymanager/persistedKeys.js";
 
 /**
@@ -43,19 +41,6 @@ export async function readPassphraseOrPrompt(args: {importKeystoresPassword?: st
     console.log("Password is correct");
 
     return answers.password;
-  }
-}
-
-/**
- * Find files recursively in `dirPath`
- */
-export function recursiveLookup(dirPath: string, filepaths: string[]): void {
-  if (fs.statSync(dirPath).isDirectory()) {
-    for (const filename of fs.readdirSync(dirPath)) {
-      recursiveLookup(path.join(dirPath, filename), filepaths);
-    }
-  } else {
-    filepaths.push(dirPath);
   }
 }
 

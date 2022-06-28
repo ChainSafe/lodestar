@@ -35,6 +35,7 @@ export interface IHttpClient {
 export type HttpClientOptions = {
   baseUrl: string;
   timeoutMs?: number;
+  bearerToken?: string;
   /** Return an AbortSignal to be attached to all requests */
   getAbortSignal?: () => AbortSignal | undefined;
   /** Override fetch function */
@@ -49,6 +50,7 @@ export type HttpClientModules = {
 export class HttpClient implements IHttpClient {
   readonly baseUrl: string;
   private readonly timeoutMs: number;
+  private readonly bearerToken?: string;
   private readonly getAbortSignal?: () => AbortSignal | undefined;
   private readonly fetch: typeof fetch;
   private readonly metrics: null | Metrics;
@@ -61,6 +63,7 @@ export class HttpClient implements IHttpClient {
     this.baseUrl = opts.baseUrl;
     // A higher default timeout, validator will sets its own shorter timeoutMs
     this.timeoutMs = opts.timeoutMs ?? 60_000;
+    this.bearerToken = opts.bearerToken;
     this.getAbortSignal = opts.getAbortSignal;
     this.fetch = opts.fetch ?? fetch;
     this.metrics = metrics ?? null;
@@ -96,7 +99,12 @@ export class HttpClient implements IHttpClient {
       const url = urlJoin(this.baseUrl, opts.url) + (opts.query ? "?" + stringifyQuery(opts.query) : "");
 
       const headers = opts.headers || {};
-      if (opts.body) headers["Content-Type"] = "application/json";
+      if (opts.body && headers["Content-Type"] === undefined) {
+        headers["Content-Type"] = "application/json";
+      }
+      if (this.bearerToken && headers["Authorization"] === undefined) {
+        headers["Authorization"] = `Bearer ${this.bearerToken}`;
+      }
 
       this.logger?.debug("HttpClient request", {routeId});
 

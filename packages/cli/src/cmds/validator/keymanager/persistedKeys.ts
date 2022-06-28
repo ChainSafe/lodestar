@@ -4,7 +4,13 @@ import bls from "@chainsafe/bls";
 import {Keystore} from "@chainsafe/bls-keystore";
 import {Signer, SignerType} from "@chainsafe/lodestar-validator";
 import {DeletionStatus, ImportStatus, PubkeyHex, SignerDefinition} from "@chainsafe/lodestar-api/keymanager";
-import {readPassphraseFile, rmdirSyncMaybe, unlinkSyncMaybe, writeFile600Perm} from "../../../util/index.js";
+import {
+  getPubkeyHexFromKeystore,
+  readPassphraseFile,
+  rmdirSyncMaybe,
+  unlinkSyncMaybe,
+  writeFile600Perm,
+} from "../../../util/index.js";
 import {lockFilepath} from "../../../util/lockfile.js";
 import {IPersistedKeysBackend} from "./interface.js";
 
@@ -66,30 +72,27 @@ export class PersistedKeysBackend implements IPersistedKeysBackend {
   }
 
   writeKeystore({
-    pubkeyHex,
     keystoreStr,
     password,
     lockBeforeWrite,
     persistIfDuplicate,
   }: {
-    pubkeyHex: PubkeyHex;
     keystoreStr: string;
     password: string;
     lockBeforeWrite: boolean;
     persistIfDuplicate: boolean;
   }): boolean {
+    // Validate Keystore JSON + pubkey format.
+    // Note: while this is currently redundant, it's free to check that format is correct before writting
+    const keystore = Keystore.parse(keystoreStr);
+    const pubkeyHex = getPubkeyHexFromKeystore(keystore);
+
     const {dirpath, keystoreFilepath, passphraseFilepath} = this.getValidatorPaths(pubkeyHex);
 
     // Check if duplicate first.
     // TODO: Check that the content is actually equal. But not naively, the JSON could be formated differently
     if (!persistIfDuplicate && fs.existsSync(keystoreFilepath)) {
       return false;
-    }
-
-    const keystore = Keystore.parse(keystoreStr);
-    const pubkey = keystore.pubkey;
-    if (!pubkey) {
-      throw Error("Invalid keystore, must contain .pubkey property");
     }
 
     if (lockBeforeWrite) {
@@ -99,7 +102,7 @@ export class PersistedKeysBackend implements IPersistedKeysBackend {
 
     fs.mkdirSync(this.paths.secretsDir, {recursive: true});
     fs.mkdirSync(dirpath, {recursive: true});
-    fs.writeFileSync(keystoreFilepath, keystore.stringify());
+    fs.writeFileSync(keystoreFilepath, keystoreStr);
 
     writeFile600Perm(passphraseFilepath, password);
 

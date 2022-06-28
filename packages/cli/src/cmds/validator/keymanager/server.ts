@@ -24,7 +24,7 @@ export type KeymanagerRestApiServerModules = RestApiServerModules & {
   api: Api;
 };
 
-const apiTokenFileName = "api-token.txt";
+export const apiTokenFileName = "api-token.txt";
 
 export class KeymanagerRestApiServer extends RestApiServer {
   private readonly apiTokenPath: string;

@@ -1,6 +1,6 @@
-import {sleep} from "@chainsafe/lodestar-utils";
+import {sleep} from "./sleep.js";
 
-export interface IRetryOptions {
+export type RetryOptions = {
   /**
    * The maximum amount of times to retry the operation. Default is 5
    */
@@ -15,7 +15,7 @@ export interface IRetryOptions {
    * Miliseconds to wait before retrying again
    */
   retryDelay?: number;
-}
+};
 
 /**
  * Retry a given function on error.
@@ -23,7 +23,7 @@ export interface IRetryOptions {
  * A Number identifying the attempt. The absolute first attempt (before any retries) is 1
  * @param opts
  */
-export async function retry<A>(fn: (attempt: number) => A | Promise<A>, opts?: IRetryOptions): Promise<A> {
+export async function retry<A>(fn: (attempt: number) => A | Promise<A>, opts?: RetryOptions): Promise<A> {
   const maxRetries = opts?.retries ?? 5;
   const shouldRetry = opts?.shouldRetry;
 

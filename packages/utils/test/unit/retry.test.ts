@@ -1,6 +1,6 @@
 import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
-import {retry, IRetryOptions} from "../../../src/util/retry.js";
+import {retry, RetryOptions} from "../../src/retry.js";
 
 chai.use(chaiAsPromised);
 
@@ -8,7 +8,7 @@ describe("retry", () => {
   interface ITestCase {
     id: string;
     fn: (attempt: number) => Promise<any>;
-    opts?: IRetryOptions;
+    opts?: RetryOptions;
     result: any | Error;
   }
 

@@ -14,6 +14,7 @@ import {
 } from "@chainsafe/lodestar-api/keymanager";
 import {fromHexString} from "@chainsafe/ssz";
 import {Interchange, SignerType, Validator} from "@chainsafe/lodestar-validator";
+import {getPubkeyHexFromKeystore} from "../../../util/format.js";
 import {IPersistedKeysBackend} from "./interface.js";
 
 export class KeymanagerApi implements Api {
@@ -72,7 +73,7 @@ export class KeymanagerApi implements Api {
         }
 
         const keystore = Keystore.parse(keystoreStr);
-        const pubkeyHex = keystore.pubkey;
+        const pubkeyHex = getPubkeyHexFromKeystore(keystore);
 
         // Check for duplicates and skip keystore before decrypting
         if (this.validator.validatorStore.hasVotingPubkey(pubkeyHex)) {
@@ -86,7 +87,6 @@ export class KeymanagerApi implements Api {
         // Persist the key to disk for restarts, before adding to in-memory store
         // If the keystore exist and has a lock it will throw
         this.persistedKeysBackend.writeKeystore({
-          pubkeyHex,
           keystoreStr,
           password,
           // Lock immediately since it's gonna be used

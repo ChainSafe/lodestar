@@ -10,7 +10,6 @@ export interface IPersistedKeysBackend {
 
   /** Returns true some item is written to disk */
   writeKeystore(args: {
-    pubkeyHex: PubkeyHex;
     keystoreStr: string;
     password: string;
     lockBeforeWrite: boolean;

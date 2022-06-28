@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import {Keystore} from "@chainsafe/bls-keystore";
-import {YargsError, ICliCommand} from "../../util/index.js";
+import {YargsError, ICliCommand, getPubkeyHexFromKeystore} from "../../util/index.js";
 import {IGlobalArgs} from "../../options/index.js";
 import {validatorOptions, IValidatorCliArgs} from "./options.js";
 import {getAccountPaths} from "./paths.js";
@@ -72,10 +72,7 @@ Ethereum Foundation utility.",
     for (const {keystorePath, password} of keystoreDefinitions) {
       const keystoreStr = fs.readFileSync(keystorePath, "utf8");
       const keystore = Keystore.parse(keystoreStr);
-      const pubkeyHex = keystore.pubkey;
-      if (!pubkeyHex) {
-        throw Error("Invalid keystore, must contain .pubkey property");
-      }
+      const pubkeyHex = getPubkeyHexFromKeystore(keystore);
 
       // Check if keystore can decrypt
       if (!(await keystore.verifyPassword(password))) {
@@ -83,7 +80,6 @@ Ethereum Foundation utility.",
       }
 
       const didImportKey = persistedKeystoresBackend.writeKeystore({
-        pubkeyHex,
         keystoreStr,
         password,
         // Not used immediately

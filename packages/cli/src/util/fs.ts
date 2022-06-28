@@ -51,3 +51,18 @@ export function rmdirSyncMaybe(dirpath: string): boolean {
     else throw e;
   }
 }
+
+/**
+ * Find all files recursively in `dirPath`
+ */
+export function recursiveLookup(dirPath: string, filepaths: string[] = []): string[] {
+  if (fs.statSync(dirPath).isDirectory()) {
+    for (const filename of fs.readdirSync(dirPath)) {
+      recursiveLookup(path.join(dirPath, filename), filepaths);
+    }
+  } else {
+    filepaths.push(dirPath);
+  }
+
+  return filepaths;
+}
