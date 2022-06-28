@@ -7,31 +7,24 @@ import {fromHex, sleep, retry} from "@chainsafe/lodestar-utils";
 import {getClient} from "@chainsafe/lodestar-api/keymanager";
 import {config} from "@chainsafe/lodestar-config/default";
 import {testFilesDir} from "../utils.js";
-import {describeCliTest, execCli} from "../utils/cliRunner.js";
+import {describeCliTest, execCli} from "../utils/childprocRunner.js";
 import {getMockBeaconApiServer} from "../utils/mockBeaconApiServer.js";
-import {recursiveLookup} from "../../src/util/fs.js";
-import {apiTokenFileName} from "../../src/cmds/validator/keymanager/server.js";
+import {findApiToken, getAfterEachCallbacks, itDone} from "../utils/runUtils.js";
+import {pubkeysHex, seckeysHex} from "../utils/cachedKeys.js";
 
 /* eslint-disable no-console */
 
-describeCliTest("cmds / validator", function ({spawnCli}) {
-  const rootDir = path.join(testFilesDir, "import-and-validate-test");
+describeCliTest("import from fs then validate", function ({spawnCli}) {
+  const rootDir = path.join(testFilesDir, "import-then-validate-test");
 
   before("Clean rootDir", () => {
     rimraf.sync(rootDir);
   });
 
-  const afterEachCallbacks: (() => Promise<void> | void)[] = [];
-  afterEach(async () => {
-    while (afterEachCallbacks.length > 0) {
-      const callback = afterEachCallbacks.pop();
-      if (callback) await callback();
-    }
-  });
+  const afterEachCallbacks = getAfterEachCallbacks();
 
-  /** Generated from  const sk = bls.SecretKey.fromKeygen(Buffer.alloc(32, 0xaa)); */
-  const skHex = "0x0e5bd52621b6a8956086dcf0ecc89f0cdca56cebb2a8516c2d4252a9867fc551";
-  const pkHex = "0x8be678633e927aa0435addad5dcd5283fef6110d91362519cd6d43e61f6c017d724fa579cc4b2972134e050b6ba120c0";
+  const skHex = pubkeysHex[0];
+  const pkHex = seckeysHex[0];
   const passphrase = "AAAAAAAA0000000000";
 
   it("run 'validator import'", async () => {
@@ -68,28 +61,8 @@ describeCliTest("cmds / validator", function ({spawnCli}) {
     expect(stdout).includes(pkHex, "stdout should include imported pubkey");
   });
 
-  /**
-   * Extends Mocha it() to allow BOTH:
-   * - Resolve / reject callback promise to end test
-   * - Use done() to end test early
-   */
-  function itDone(itName: string, cb: (this: Mocha.Context, done: (err?: Error) => void) => Promise<void>): void {
-    it(itName, function () {
-      return new Promise<void>((resolve, reject) => {
-        function done(err?: Error): void {
-          if (err) reject(err);
-          else resolve();
-        }
-        cb.bind(this)(done).then(resolve, reject);
-      });
-    });
-  }
-
   itDone("run 'validator' and ensure validators are ready to sign", async function (done) {
     this.timeout("60s");
-
-    fs.mkdirSync(path.join(rootDir, "keystores"), {recursive: true});
-    fs.mkdirSync(path.join(rootDir, "secrets"), {recursive: true});
 
     const keymanagerPort = 38011;
     const beaconPort = 39011;
@@ -131,21 +104,5 @@ describeCliTest("cmds / validator", function ({spawnCli}) {
     validatorProc.kill("SIGINT");
     await sleep(1000);
     validatorProc.kill("SIGKILL");
-
-    // // No keys are imported before this test. TODO: Import some
-    // expect(stdout).includes(pkHex, "stdout should include imported pubkey");
   });
 });
-
-function findApiToken(dirpath: string): string {
-  const files = recursiveLookup(dirpath);
-  const apiTokenFilepaths = files.filter((filepath) => filepath.endsWith(apiTokenFileName));
-  switch (apiTokenFilepaths.length) {
-    case 0:
-      throw Error(`No api token file found in ${dirpath}`);
-    case 1:
-      return fs.readFileSync(apiTokenFilepaths[0], "utf8").trim();
-    default:
-      throw Error(`Too many token files found: ${apiTokenFilepaths.join(" ")}`);
-  }
-}

@@ -7,14 +7,14 @@ import {Api, DeletionStatus, getClient, ImportStatus} from "@chainsafe/lodestar-
 import {config} from "@chainsafe/lodestar-config/default";
 import {Interchange} from "@chainsafe/lodestar-validator";
 import {testFilesDir} from "../utils.js";
-import {describeCliTest} from "../utils/cliRunner.js";
+import {bufferStderr, describeCliTest} from "../utils/childprocRunner.js";
 import {getMockBeaconApiServer} from "../utils/mockBeaconApiServer.js";
 import {recursiveLookup} from "../../src/util/fs.js";
 import {apiTokenFileName} from "../../src/cmds/validator/keymanager/server.js";
 import {pubkeysHex, seckeysHex} from "../utils/cachedKeys.js";
-import {expectDeepEquals, getAfterEachCallbacks, itDone} from "../utils/runUtils.js";
+import {DoneCb, expectDeepEquals, getAfterEachCallbacks, itDone} from "../utils/runUtils.js";
 
-describeCliTest("import keystores", function ({spawnCli}) {
+describeCliTest("import keystores from api", function ({spawnCli}) {
   const rootDir = path.join(testFilesDir, "import-keystores-test");
 
   before("Clean rootDir", () => {
@@ -39,7 +39,7 @@ describeCliTest("import keystores", function ({spawnCli}) {
   };
   const slashingProtectionStr = JSON.stringify(slashingProtection);
 
-  itKeymanagerStep("run 'validator' and import remote keys via API", async function (keymanagerClient) {
+  itKeymanagerStep("run 'validator' and import remote keys from API", async function (keymanagerClient) {
     // Produce and encrypt keystores
     const keystoresStr = await Promise.all(
       pubkeys.map(async (pubkey, i) =>
@@ -69,8 +69,32 @@ describeCliTest("import keystores", function ({spawnCli}) {
       "Wrong importKeystores again response"
     );
 
-    // Attempt to run a second process and expect the key locks to throw
-    // TODO
+    // Attempt to run a second process and expect the keystore lock to throw
+    const vcProc2 = spawnCli([
+      // ⏎
+      "validator",
+      `--rootDir=${rootDir}`,
+    ]);
+
+    await new Promise<void>((resolve, reject) => {
+      // logger.error is printed to stdout, Yargs errors are printed in stderr
+      const vcProc2Stderr = bufferStderr(vcProc2);
+      vcProc2.on("exit", (code) => {
+        if (code !== null && code > 0) {
+          // process should exit with code > 0, and an error related to locks. Sample error:
+          // vc 351591:  ✖ Error: EEXIST: file already exists, open '/tmp/tmp-351554-dMctEAj7sJIz/import-keystores-test/keystores/0x8be678633e927aa0435addad5dcd5283fef6110d91362519cd6d43e61f6c017d724fa579cc4b2972134e050b6ba120c0/voting-keystore.json.lock'
+          // at Object.openSync (node:fs:585:3)
+          // at Module.exports.lockSync (/home/lion/Code/eth2.0/lodestar/node_modules/lockfile/lockfile.js:277:17)
+          if (/EEXIST.*voting-keystore\.json\.lock/.test(vcProc2Stderr.read())) {
+            resolve();
+          } else {
+            reject(Error(`Second validator proc exited with unknown error. stderr:\n${vcProc2Stderr.read()}`));
+          }
+        } else {
+          reject(Error("Second validator proc must exit code > 0"));
+        }
+      });
+    });
   });
 
   itKeymanagerStep("run 'validator' check keys are loaded + delete", async function (keymanagerClient) {
@@ -94,7 +118,10 @@ describeCliTest("import keystores", function ({spawnCli}) {
     await expectKeys(keymanagerClient, [], "Wrong listKeys");
   });
 
-  function itKeymanagerStep(itName: string, cb: (this: Mocha.Context, keymanagerClient: Api) => Promise<void>): void {
+  function itKeymanagerStep(
+    itName: string,
+    cb: (this: Mocha.Context, keymanagerClient: Api, args: {done: DoneCb}) => Promise<void>
+  ): void {
     itDone(itName, async function (done) {
       this.timeout("60s");
 
@@ -130,7 +157,7 @@ describeCliTest("import keystores", function ({spawnCli}) {
       // Wrap in retry since the API may not be listening yet
       await retry(() => keymanagerClient.listKeys(), {retryDelay: 500, retries: 10});
 
-      await cb.bind(this)(keymanagerClient);
+      await cb.bind(this)(keymanagerClient, {done});
 
       validatorProc.kill("SIGINT");
       await sleep(1000);

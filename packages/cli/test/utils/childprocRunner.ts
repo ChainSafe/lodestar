@@ -103,6 +103,17 @@ export function spawnCli(lodestarArgs: string[]): child_process.ChildProcessWith
   return proc;
 }
 
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+export function bufferStderr(proc: child_process.ChildProcessWithoutNullStreams) {
+  let data = "";
+  proc.stderr.on("data", (chunk) => {
+    data += Buffer.from(chunk).toString("utf8");
+  });
+  return {
+    read: () => data,
+  };
+}
+
 export function execCli(lodestarArgs: string[], opts?: ShellOpts): Promise<string> {
   const prefixArgs = RUN_FROM_SRC
     ? // ts-node --esm cli.ts

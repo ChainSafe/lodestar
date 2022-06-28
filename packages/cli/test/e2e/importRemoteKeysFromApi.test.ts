@@ -4,12 +4,12 @@ import {sleep, retry} from "@chainsafe/lodestar-utils";
 import {Api, DeleteRemoteKeyStatus, getClient, ImportRemoteKeyStatus} from "@chainsafe/lodestar-api/keymanager";
 import {config} from "@chainsafe/lodestar-config/default";
 import {testFilesDir} from "../utils.js";
-import {describeCliTest} from "../utils/cliRunner.js";
+import {describeCliTest} from "../utils/childprocRunner.js";
 import {getMockBeaconApiServer} from "../utils/mockBeaconApiServer.js";
 import {pubkeysHex} from "../utils/cachedKeys.js";
 import {expectDeepEquals, findApiToken, getAfterEachCallbacks, itDone} from "../utils/runUtils.js";
 
-describeCliTest("import remoteKeys", function ({spawnCli}) {
+describeCliTest("import remoteKeys from api", function ({spawnCli}) {
   const rootDir = path.join(testFilesDir, "import-remoteKeys-test");
 
   before("Clean rootDir", () => {
@@ -22,7 +22,7 @@ describeCliTest("import remoteKeys", function ({spawnCli}) {
   const url = "https://remote.signer";
   const pubkeysToAdd = [pubkeysHex[0], pubkeysHex[1]];
 
-  itKeymanagerStep("run 'validator' and import remote keys via API", async function (keymanagerClient) {
+  itKeymanagerStep("run 'validator' and import remote keys from API", async function (keymanagerClient) {
     // Wrap in retry since the API may not be listening yet
     await expectKeys(keymanagerClient, [], "Wrong listRemoteKeys before importing");
 
