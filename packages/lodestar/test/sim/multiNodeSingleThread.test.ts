@@ -3,7 +3,7 @@ import {phase0} from "@chainsafe/lodestar-types";
 import {Validator} from "@chainsafe/lodestar-validator/lib";
 import {ILogger, sleep, TimestampFormatCode} from "@chainsafe/lodestar-utils";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import {BeaconNode} from "@chainsafe/lodestar";
+import {BeaconNode} from "../../src/index.js";
 import {getDevBeaconNode} from "../utils/node/beacon.js";
 import {waitForEvent} from "../utils/events/resolver.js";
 import {getAndInitDevValidators} from "../utils/node/validator.js";
