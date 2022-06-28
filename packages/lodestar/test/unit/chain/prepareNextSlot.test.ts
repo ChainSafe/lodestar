@@ -15,11 +15,11 @@ import {BeaconProposerCache} from "../../../src/chain/beaconProposerCache.js";
 import {ExecutionEngineHttp} from "../../../src/executionEngine/http.js";
 import {IExecutionEngine, PayloadIdCache} from "../../../src/executionEngine/interface.js";
 
-describe("PrecomputeEpochScheduler", () => {
+describe("PrepareNextSlot scheduler", () => {
   const sandbox = sinon.createSandbox();
   const abortController = new AbortController();
 
-  let preComputeScheduler: PrepareNextSlotScheduler;
+  let scheduler: PrepareNextSlotScheduler;
   let forkChoiceStub: SinonStubbedInstance<ForkChoice> & ForkChoice;
   let regenStub: SinonStubbedInstance<StateRegenerator> & StateRegenerator;
   let loggerStub: SinonStubbedInstance<WinstonLogger> & WinstonLogger;
@@ -52,7 +52,7 @@ describe("PrecomputeEpochScheduler", () => {
       ExecutionEngineHttp;
     ((chainStub as unknown) as {executionEngine: IExecutionEngine}).executionEngine = executionEngineStub;
     ((chainStub as unknown) as {config: IChainForkConfig}).config = (config as unknown) as IChainForkConfig;
-    preComputeScheduler = new PrepareNextSlotScheduler(chainStub, config, null, loggerStub, abortController.signal);
+    scheduler = new PrepareNextSlotScheduler(chainStub, config, null, loggerStub, abortController.signal);
   });
 
   afterEach(() => {
@@ -61,7 +61,7 @@ describe("PrecomputeEpochScheduler", () => {
 
   it("pre bellatrix - should not run due to not last slot of epoch", async () => {
     getForkSeqStub.returns(ForkSeq.phase0);
-    await preComputeScheduler.prepareForNextSlot(3);
+    await scheduler.prepareForNextSlot(3);
     expect(forkChoiceStub.getHead.called).to.be.false;
   });
 
@@ -69,7 +69,7 @@ describe("PrecomputeEpochScheduler", () => {
     getForkSeqStub.returns(ForkSeq.phase0);
     forkChoiceStub.getHead.returns({slot: SLOTS_PER_EPOCH - 2} as ProtoBlock);
     await Promise.all([
-      preComputeScheduler.prepareForNextSlot(2 * SLOTS_PER_EPOCH - 1),
+      scheduler.prepareForNextSlot(2 * SLOTS_PER_EPOCH - 1),
       sandbox.clock.tickAsync((config.SECONDS_PER_SLOT * 1000 * 2) / 3),
     ]);
     expect(forkChoiceStub.getHead.called, "expect forkChoice.getHead to be called").to.be.true;
@@ -81,7 +81,7 @@ describe("PrecomputeEpochScheduler", () => {
     forkChoiceStub.getHead.returns({slot: SLOTS_PER_EPOCH - 1} as ProtoBlock);
     regenStub.getBlockSlotState.resolves();
     await Promise.all([
-      preComputeScheduler.prepareForNextSlot(SLOTS_PER_EPOCH - 1),
+      scheduler.prepareForNextSlot(SLOTS_PER_EPOCH - 1),
       sandbox.clock.tickAsync((config.SECONDS_PER_SLOT * 1000 * 2) / 3),
     ]);
     expect(forkChoiceStub.getHead.called, "expect forkChoice.getHead to be called").to.be.true;
@@ -94,7 +94,7 @@ describe("PrecomputeEpochScheduler", () => {
     regenStub.getBlockSlotState.rejects("Unit test error");
     expect(loggerStub.error.calledOnce).to.be.false;
     await Promise.all([
-      preComputeScheduler.prepareForNextSlot(SLOTS_PER_EPOCH - 1),
+      scheduler.prepareForNextSlot(SLOTS_PER_EPOCH - 1),
       sandbox.clock.tickAsync((config.SECONDS_PER_SLOT * 1000 * 2) / 3),
     ]);
     expect(forkChoiceStub.getHead.called, "expect forkChoice.getHead to be called").to.be.true;
@@ -106,7 +106,7 @@ describe("PrecomputeEpochScheduler", () => {
     getForkSeqStub.returns(ForkSeq.bellatrix);
     forkChoiceStub.getHead.returns({slot: SLOTS_PER_EPOCH - 2} as ProtoBlock);
     await Promise.all([
-      preComputeScheduler.prepareForNextSlot(2 * SLOTS_PER_EPOCH - 1),
+      scheduler.prepareForNextSlot(2 * SLOTS_PER_EPOCH - 1),
       sandbox.clock.tickAsync((config.SECONDS_PER_SLOT * 1000 * 2) / 3),
     ]);
     expect(forkChoiceStub.getHead.called, "expect forkChoice.getHead to be called").to.be.true;
@@ -119,7 +119,7 @@ describe("PrecomputeEpochScheduler", () => {
     const state = generateCachedBellatrixState();
     regenStub.getBlockSlotState.resolves(state);
     await Promise.all([
-      preComputeScheduler.prepareForNextSlot(SLOTS_PER_EPOCH - 1),
+      scheduler.prepareForNextSlot(SLOTS_PER_EPOCH - 1),
       sandbox.clock.tickAsync((config.SECONDS_PER_SLOT * 1000 * 2) / 3),
     ]);
     expect(forkChoiceStub.getHead.called, "expect forkChoice.getHead to be called").to.be.true;
@@ -137,7 +137,7 @@ describe("PrecomputeEpochScheduler", () => {
     ((executionEngineStub as unknown) as {payloadIdCache: PayloadIdCache}).payloadIdCache = new PayloadIdCache();
 
     await Promise.all([
-      preComputeScheduler.prepareForNextSlot(SLOTS_PER_EPOCH - 2),
+      scheduler.prepareForNextSlot(SLOTS_PER_EPOCH - 2),
       sandbox.clock.tickAsync((config.SECONDS_PER_SLOT * 1000 * 2) / 3),
     ]);
 
