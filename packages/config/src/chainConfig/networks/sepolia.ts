@@ -26,7 +26,7 @@ export const sepoliaChainConfig: IChainConfig = {
   // # Merge
   BELLATRIX_FORK_VERSION: b("0x90000071"),
   BELLATRIX_FORK_EPOCH: 100,
-  TERMINAL_TOTAL_DIFFICULTY: BigInt("100000000000000000000000"),
+  TERMINAL_TOTAL_DIFFICULTY: BigInt("17000000000000000"),
 
   // Deposit contract
   // ---------------------------------------------------------------
