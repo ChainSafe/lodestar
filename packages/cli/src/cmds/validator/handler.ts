@@ -50,7 +50,11 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
 
   // Ensure the validator has at least one key
   if (signers.length === 0) {
-    throw new YargsError("No signers found with current args");
+    if (args["keymanager.enabled"]) {
+      logger.warn("No signers found with current args, expecting to be added via keymanager");
+    } else {
+      throw new YargsError("No signers found with current args");
+    }
   }
 
   logSigners(logger, signers);

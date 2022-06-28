@@ -1,6 +1,5 @@
 import fs from "node:fs";
 import path from "node:path";
-import fetch from "node-fetch";
 import rimraf from "rimraf";
 import {expect} from "chai";
 import {Keystore} from "@chainsafe/bls-keystore";
@@ -116,17 +115,13 @@ describeCliTest("cmds / validator", function ({spawnCli}) {
       }
     });
 
-    console.log(`Waiting for keymanager URL ${keymanagerUrl} to listen...`);
-    await retry(() => fetch(keymanagerUrl), {retryDelay: 500, retries: 20});
-    console.log("Keymanager URL listening");
-
-    // Find API token from disk
+    // Wait for api-token.txt file to be written to disk and find it
     const apiToken = await retry(async () => findApiToken(rootDir), {retryDelay: 500, retries: 10});
 
     const keymanagerClient = getClient({baseUrl: keymanagerUrl, bearerToken: apiToken}, {config});
 
-    // Wrap in retry to have extra layer of reliability
-    const listKeysRes = await retry(() => keymanagerClient.listKeys(), {retryDelay: 1000, retries: 3});
+    // Wrap in retry since the API may not be listening yet
+    const listKeysRes = await retry(() => keymanagerClient.listKeys(), {retryDelay: 500, retries: 10});
 
     expect(listKeysRes.data).deep.equals(
       [{validatingPubkey: pkHex, derivationPath: "", readonly: false}],

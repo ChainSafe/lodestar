@@ -4,9 +4,14 @@ import {Api, allNamespaces} from "@chainsafe/lodestar-api";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {config} from "@chainsafe/lodestar-config/default";
 import {ssz} from "@chainsafe/lodestar-types";
+import {fromHex} from "@chainsafe/lodestar-utils";
 import {testLogger} from "../../../lodestar/test/utils/logger.js";
 
 const ZERO_HASH = Buffer.alloc(32, 0);
+
+export type MockBeaconApiOpts = {
+  genesisValidatorsRoot?: string;
+};
 
 class MockBeaconRestApiServer extends RestApiServer {
   constructor(optsArg: RestApiServerOpts, modules: RestApiServerModules, config: IChainForkConfig, api: Api) {
@@ -17,12 +22,16 @@ class MockBeaconRestApiServer extends RestApiServer {
   }
 }
 
-export function getMockBeaconApiServer(opts: RestApiServerOpts): MockBeaconRestApiServer {
+export function getMockBeaconApiServer(opts: RestApiServerOpts, apiOpts?: MockBeaconApiOpts): MockBeaconRestApiServer {
   const api = ({
     beacon: {
       // Return random genesis data, for genesisValidatorsRoot
       async getGenesis() {
-        return {data: ssz.phase0.Genesis.defaultValue()};
+        const genesis = ssz.phase0.Genesis.defaultValue();
+        if (apiOpts?.genesisValidatorsRoot) {
+          genesis.genesisValidatorsRoot = fromHex(apiOpts?.genesisValidatorsRoot);
+        }
+        return {data: genesis};
       },
 
       // Return empty to never discover the validators

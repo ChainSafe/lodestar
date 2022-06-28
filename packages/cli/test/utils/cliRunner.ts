@@ -10,7 +10,7 @@ const cliLibScriptPath = esmRelativePathJoin("../../lib/index.js");
 
 /* eslint-disable no-console */
 
-type DescribeArgs = {
+export type DescribeArgs = {
   spawnCli(args: string[]): child_process.ChildProcessWithoutNullStreams;
 };
 

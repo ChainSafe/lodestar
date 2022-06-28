@@ -95,15 +95,16 @@ export class PersistedKeysBackend implements IPersistedKeysBackend {
       return false;
     }
 
+    // Make dirs before creating the lock
+    fs.mkdirSync(this.paths.secretsDir, {recursive: true});
+    fs.mkdirSync(dirpath, {recursive: true});
+
     if (lockBeforeWrite) {
       // Lock before writing keystore
       lockFilepath(keystoreFilepath);
     }
 
-    fs.mkdirSync(this.paths.secretsDir, {recursive: true});
-    fs.mkdirSync(dirpath, {recursive: true});
     fs.writeFileSync(keystoreFilepath, keystoreStr);
-
     writeFile600Perm(passphraseFilepath, password);
 
     return true;

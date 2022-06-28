@@ -59,7 +59,7 @@ export class KeymanagerApi implements Api {
     // Even though the slashingProtectionStr is typed as SlashingProtectionData,
     // at runtime, when the handler for the request is selected, it would see slashingProtectionStr
     // as an object, hence trying to parse it using JSON.parse won't work. Instead, we cast straight to Interchange
-    const interchange = (slashingProtectionStr as unknown) as Interchange;
+    const interchange = ensureJSON<Interchange>(slashingProtectionStr);
     await this.validator.importInterchange(interchange);
 
     const statuses: {status: ImportStatus; message?: string}[] = [];
@@ -281,5 +281,16 @@ export class KeymanagerApi implements Api {
     return {
       data: results,
     };
+  }
+}
+
+/**
+ * Given a variable with JSON that maybe stringified or not, return parsed JSON
+ */
+function ensureJSON<T>(strOrJson: string | T): T {
+  if (typeof strOrJson === "string") {
+    return JSON.parse(strOrJson) as T;
+  } else {
+    return strOrJson;
   }
 }
