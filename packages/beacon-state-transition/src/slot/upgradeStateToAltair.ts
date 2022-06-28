@@ -1,10 +1,15 @@
 import {ssz} from "@chainsafe/lodestar-types";
 import {CompositeViewDU} from "@chainsafe/ssz";
+import {TIMELY_TARGET_FLAG_INDEX} from "@chainsafe/lodestar-params";
 import {CachedBeaconStatePhase0, CachedBeaconStateAltair} from "../types.js";
 import {newZeroedArray, RootCache} from "../util/index.js";
 import {getNextSyncCommittee} from "../util/syncCommittee.js";
 import {getCachedBeaconState} from "../cache/stateCache.js";
 import {getAttestationParticipationStatus} from "../block/processAttestationsAltair.js";
+import {isActiveValidator} from "../util/index.js";
+
+/** Same to https://github.com/ethereum/eth2.0-specs/blob/v1.1.0-alpha.5/specs/altair/beacon-chain.md#has_flag */
+const TIMELY_TARGET = 1 << TIMELY_TARGET_FLAG_INDEX;
 
 /**
  * Upgrade a state from phase0 to altair.
@@ -104,6 +109,7 @@ function translateParticipation(
   const {epochCtx} = state;
   const rootCache = new RootCache(state);
   const epochParticipation = state.previousEpochParticipation;
+  const previousEpoch = epochCtx.currentShuffling.epoch - 1;
 
   for (const attestation of pendingAttesations.getAllReadonly()) {
     const data = attestation.data;
@@ -120,6 +126,12 @@ function translateParticipation(
     for (const index of attestingIndices) {
       // ParticipationFlags type uses option {setBitwiseOR: true}, .set() does a |= operation
       epochParticipation.set(index, attestationFlags);
+      if ((attestationFlags & TIMELY_TARGET) === TIMELY_TARGET) {
+        const validator = state.validators.get(index);
+        if (!validator.slashed && isActiveValidator(validator, previousEpoch)) {
+          epochCtx.previousTargetUnslashedBalanceIncrements += epochCtx.effectiveBalanceIncrements[index];
+        }
+      }
     }
   }
 }

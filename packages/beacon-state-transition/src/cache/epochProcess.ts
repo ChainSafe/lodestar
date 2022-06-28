@@ -382,7 +382,9 @@ export function beforeProcessEpoch(state: CachedBeaconStateAllForks): EpochProce
         "currentTargetUnslashedBalanceIncrements is wrong, expect " +
           currTargetUnslStake +
           ", got " +
-          epochCtx.currentTargetUnslashedBalanceIncrements
+          epochCtx.currentTargetUnslashedBalanceIncrements +
+          ",current epoch " +
+          epochCtx.currentShuffling.epoch
       );
     }
     // TODO, ensure that spec tests run through this
@@ -391,7 +393,9 @@ export function beforeProcessEpoch(state: CachedBeaconStateAllForks): EpochProce
         "previousTargetUnslashedBalanceIncrements is wrong, expect " +
           prevTargetUnslStake +
           ", got " +
-          epochCtx.previousTargetUnslashedBalanceIncrements
+          epochCtx.previousTargetUnslashedBalanceIncrements +
+          ",current epoch " +
+          epochCtx.currentShuffling.epoch
       );
     }
   }
