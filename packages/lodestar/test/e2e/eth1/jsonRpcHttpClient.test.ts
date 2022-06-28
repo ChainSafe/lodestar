@@ -1,4 +1,5 @@
 import "mocha";
+import crypto from "node:crypto";
 import http from "node:http";
 import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
@@ -14,6 +15,7 @@ describe("eth1 / jsonRpcHttpClient", function () {
   const port = 36421;
   const noMethodError = {code: -32601, message: "Method not found"};
   const notInSpecError = "JSON RPC Error not in spec";
+  const randomHex = crypto.randomBytes(32).toString("hex");
 
   const testCases: {
     id: string;
@@ -24,14 +26,16 @@ describe("eth1 / jsonRpcHttpClient", function () {
     timeout?: number;
     error: any;
   }[] = [
-    {
-      id: "Bad domain",
-      url: "https://goerli.fake-website.io",
-      error: "getaddrinfo ENOTFOUND",
-    },
+    // // NOTE: This DNS query is very expensive, all cache miss. So it can timeout the tests and cause false positives
+    // {
+    //   id: "Bad domain",
+    //   url: `https://${randomHex}.com`,
+    //   error: "getaddrinfo ENOTFOUND",
+    // },
     {
       id: "Bad subdomain",
-      url: "https://fake-website.infura.io",
+      // Use random bytes to ensure no collisions
+      url: `https://${randomHex}.infura.io`,
       error: "getaddrinfo ENOTFOUND",
     },
     {
