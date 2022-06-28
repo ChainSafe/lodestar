@@ -95,12 +95,12 @@ export function processAttestationsAltair(
 
       if ((flagsNewSet & TIMELY_TARGET) === TIMELY_TARGET) {
         const validator = state.validators.get(index);
-        if (inCurrentEpoch) {
-          if (!validator.slashed) {
-            state.epochCtx.currentTargetUnslashedBalanceIncrements += effectiveBalanceIncrements[index];
+        if (!validator.slashed) {
+          if (inCurrentEpoch) {
+            epochCtx.currentTargetUnslashedBalanceIncrements += effectiveBalanceIncrements[index];
+          } else {
+            epochCtx.previousTargetUnslashedBalanceIncrements += effectiveBalanceIncrements[index];
           }
-        } else if (!validator.slashed) {
-          state.epochCtx.previousTargetUnslashedBalanceIncrements += effectiveBalanceIncrements[index];
         }
       }
     }
