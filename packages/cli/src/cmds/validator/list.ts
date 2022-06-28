@@ -1,34 +1,29 @@
-import {ValidatorDirManager} from "../../validatorDir/index.js";
 import {ICliCommand} from "../../util/index.js";
 import {IGlobalArgs} from "../../options/index.js";
-import {add0xPrefix} from "../../util/format.js";
-import {getAccountPaths} from "./paths.js";
-import {AccountValidatorArgs} from "./options.js";
+import {IValidatorCliArgs} from "./options.js";
+import {getSignerPubkeyHex, getSignersFromArgs} from "./signers/index.js";
+import {logSigners} from "./signers/logSigners.js";
 
 export type ReturnType = string[];
 
-export const list: ICliCommand<Record<never, never>, AccountValidatorArgs & IGlobalArgs, ReturnType> = {
+export const list: ICliCommand<IValidatorCliArgs, IGlobalArgs, ReturnType> = {
   command: "list",
 
   describe: "Lists the public keys of all validators",
 
   examples: [
     {
-      command: "account validator list --keystoresDir .testing/keystores",
-      description: "List all validator pubkeys in the directory .testing/keystores",
+      command: "account validator list",
+      description: "List all validator pubkeys previously imported",
     },
   ],
 
   handler: async (args) => {
-    const accountPaths = getAccountPaths(args);
+    const signers = await getSignersFromArgs(args);
 
-    const validatorDirManager = new ValidatorDirManager(accountPaths);
-    const validatorPubKeys = validatorDirManager.iterDir();
-
-    // eslint-disable-next-line no-console
-    console.log(validatorPubKeys.map(add0xPrefix).join("\n"));
+    logSigners(console, signers);
 
     // Return values for testing
-    return validatorPubKeys;
+    return signers.map(getSignerPubkeyHex);
   },
 };

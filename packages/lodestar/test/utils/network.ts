@@ -2,7 +2,7 @@ import PeerId from "peer-id";
 import {Multiaddr} from "multiaddr";
 import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 import {BitArray} from "@chainsafe/ssz";
-import {Network} from "../../src/network/index.js";
+import {INetwork, Network} from "../../src/network/index.js";
 import {NodejsNode} from "../../src/network/nodejs/index.js";
 import {createPeerId} from "../../src/network/index.js";
 import {Libp2pEvent} from "../../src/constants/index.js";
@@ -15,13 +15,18 @@ export async function createNode(multiaddr: string, inPeerId?: PeerId): Promise<
   });
 }
 
+/**
+ * TEMP: Only request required props from INetwork do to this type isse
+ */
+type INetworkDebug = Pick<INetwork, "connectToPeer" | "disconnectPeer">;
+
 // Helpers to manipulate network's libp2p instance for testing only
 
-export async function connect(network: Network, peer: PeerId, multiaddr: Multiaddr[]): Promise<void> {
+export async function connect(network: INetworkDebug, peer: PeerId, multiaddr: Multiaddr[]): Promise<void> {
   await network.connectToPeer(peer, multiaddr);
 }
 
-export async function disconnect(network: Network, peer: PeerId): Promise<void> {
+export async function disconnect(network: INetworkDebug, peer: PeerId): Promise<void> {
   await network.disconnectPeer(peer);
 }
 

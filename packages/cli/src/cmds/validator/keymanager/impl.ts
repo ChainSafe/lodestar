@@ -1,5 +1,3 @@
-import fs from "node:fs";
-import path from "node:path";
 import bls from "@chainsafe/bls";
 import {Keystore} from "@chainsafe/bls-keystore";
 import {
@@ -16,31 +14,11 @@ import {
 } from "@chainsafe/lodestar-api/keymanager";
 import {fromHexString} from "@chainsafe/ssz";
 import {Interchange, SignerType, Validator} from "@chainsafe/lodestar-validator";
-import {lockFilepath, unlockFilepath} from "./util/lockfile.js";
-
-export const KEYSTORE_IMPORTED_PREFIX = "imported_keystore";
-
-export type KeymanagerOpts = {
-  /** Directory to persist imported keystores. Must not be the same as `importedRemoteKeysDirpath` */
-  importedKeystoresDirpath: string;
-  /** Directory to persist imported remote signers. Must not be the same as `importedKeystoresDirpath` */
-  importedRemoteKeysDirpath: string;
-};
+import {getPubkeyHexFromKeystore} from "../../../util/format.js";
+import {IPersistedKeysBackend} from "./interface.js";
 
 export class KeymanagerApi implements Api {
-  constructor(private readonly validator: Validator, private readonly opts: KeymanagerOpts) {
-    for (const dirpath of [opts.importedKeystoresDirpath, opts.importedRemoteKeysDirpath]) {
-      if (fs.existsSync(dirpath)) {
-        // Ensure is directory
-        if (!fs.statSync(dirpath).isDirectory()) {
-          throw Error(`${dirpath} must be a directory`);
-        }
-      } else {
-        // Or, create empty directory
-        fs.mkdirSync(dirpath, {recursive: true});
-      }
-    }
-  }
+  constructor(private readonly validator: Validator, private readonly persistedKeysBackend: IPersistedKeysBackend) {}
 
   /**
    * List all validating pubkeys known to and decrypted by this keymanager binary
@@ -81,7 +59,7 @@ export class KeymanagerApi implements Api {
     // Even though the slashingProtectionStr is typed as SlashingProtectionData,
     // at runtime, when the handler for the request is selected, it would see slashingProtectionStr
     // as an object, hence trying to parse it using JSON.parse won't work. Instead, we cast straight to Interchange
-    const interchange = (slashingProtectionStr as unknown) as Interchange;
+    const interchange = ensureJSON<Interchange>(slashingProtectionStr);
     await this.validator.importInterchange(interchange);
 
     const statuses: {status: ImportStatus; message?: string}[] = [];
@@ -95,24 +73,31 @@ export class KeymanagerApi implements Api {
         }
 
         const keystore = Keystore.parse(keystoreStr);
+        const pubkeyHex = getPubkeyHexFromKeystore(keystore);
 
         // Check for duplicates and skip keystore before decrypting
-        if (this.validator.validatorStore.hasVotingPubkey(keystore.pubkey)) {
+        if (this.validator.validatorStore.hasVotingPubkey(pubkeyHex)) {
           statuses[i] = {status: ImportStatus.duplicate};
           continue;
         }
 
+        // Attempt to decrypt before writing to disk
         const secretKey = bls.SecretKey.fromBytes(await keystore.decrypt(password));
-        const pubKey = secretKey.toPublicKey().toHex();
+
+        // Persist the key to disk for restarts, before adding to in-memory store
+        // If the keystore exist and has a lock it will throw
+        this.persistedKeysBackend.writeKeystore({
+          keystoreStr,
+          password,
+          // Lock immediately since it's gonna be used
+          lockBeforeWrite: true,
+          // Always write, even if it's already persisted for consistency.
+          // The in-memory validatorStore is the ground truth to decide duplicates
+          persistIfDuplicate: true,
+        });
+
+        // Add to in-memory store to start validating immediately
         this.validator.validatorStore.addSigner({type: SignerType.Local, secretKey});
-
-        const keystoreFilepath = this.getKeystoreFilepath(pubKey);
-
-        // Lock before writing keystore
-        lockFilepath(keystoreFilepath);
-
-        // Persist keys for latter restarts, directory of `keystoreFilepath` is created in the constructor
-        await fs.promises.writeFile(keystoreFilepath, keystoreStr, {encoding: "utf8"});
 
         statuses[i] = {status: ImportStatus.imported};
       } catch (e) {
@@ -154,26 +139,25 @@ export class KeymanagerApi implements Api {
 
         // Skip unknown keys or remote signers
         const signer = this.validator.validatorStore.getSigner(pubkeyHex);
-        if (!signer || signer?.type === SignerType.Remote) {
-          continue;
+        if (signer && signer?.type === SignerType.Local) {
+          // Remove key from live local signer
+          deletedKey[i] = this.validator.validatorStore.removeSigner(pubkeyHex);
+
+          // Remove key from blockduties
+          // Remove from attestation duties
+          // Remove from Sync committee duties
+          // Remove from indices
+          this.validator.removeDutiesForKey(pubkeyHex);
         }
 
-        // Remove key from live local signer
-        deletedKey[i] = signer?.type === SignerType.Local && this.validator.validatorStore.removeSigner(pubkeyHex);
+        // Attempts to delete everything first, and returns status.
+        // This unlocks the keystore, so perform after deleting from in-memory store
+        const diskDeleteStatus = this.persistedKeysBackend.deleteKeystore(pubkeyHex);
 
-        // Remove key from blockduties
-        // Remove from attestation duties
-        // Remove from Sync committee duties
-        // Remove from indices
-        this.validator.removeDutiesForKey(pubkeyHex);
-
-        const keystoreFilepath = this.getKeystoreFilepath(pubkeyHex);
-
-        // Remove key from persistent storage
-        fs.unlinkSync(keystoreFilepath);
-
-        // Unlock last
-        unlockFilepath(keystoreFilepath);
+        if (diskDeleteStatus) {
+          // TODO: What if the diskDeleteStatus status is incosistent?
+          deletedKey[i] = true;
+        }
       } catch (e) {
         statuses[i] = {status: DeletionStatus.error, message: (e as Error).message};
       }
@@ -214,11 +198,7 @@ export class KeymanagerApi implements Api {
     for (const pubkeyHex of this.validator.validatorStore.votingPubkeys()) {
       const signer = this.validator.validatorStore.getSigner(pubkeyHex);
       if (signer && signer.type === SignerType.Remote) {
-        remoteKeys.push({
-          pubkey: signer.pubkeyHex,
-          url: signer.externalSignerUrl,
-          readonly: false,
-        });
+        remoteKeys.push({pubkey: signer.pubkey, url: signer.url, readonly: false});
       }
     }
 
@@ -233,21 +213,27 @@ export class KeymanagerApi implements Api {
   async importRemoteKeys(remoteSigners: SignerDefinition[]): ReturnType<Api["importRemoteKeys"]> {
     const results = remoteSigners.map(
       (remoteSigner): ResponseStatus<ImportRemoteKeyStatus> => {
-        // Check if key exists
-        if (this.validator.validatorStore.hasVotingPubkey(remoteSigner.pubkey)) {
-          return {status: ImportRemoteKeyStatus.duplicate};
-        }
-
-        // Else try to add it
         try {
+          // Check if key exists
+          if (this.validator.validatorStore.hasVotingPubkey(remoteSigner.pubkey)) {
+            return {status: ImportRemoteKeyStatus.duplicate};
+          }
+
+          // Else try to add it
+
           this.validator.validatorStore.addSigner({
             type: SignerType.Remote,
-            pubkeyHex: remoteSigner.pubkey,
-            externalSignerUrl: remoteSigner.url,
+            pubkey: remoteSigner.pubkey,
+            url: remoteSigner.url,
           });
 
-          const remoteKeyFilepath = this.getRemoteKeyFilepath(remoteSigner.pubkey);
-          writeRemoteSignerDefinition(remoteKeyFilepath, remoteSigner);
+          this.persistedKeysBackend.writeRemoteKey({
+            pubkeyHex: remoteSigner.pubkey,
+            remoteSigner,
+            // Always write, even if it's already persisted for consistency.
+            // The in-memory validatorStore is the ground truth to decide duplicates
+            persistIfDuplicate: true,
+          });
 
           return {status: ImportRemoteKeyStatus.imported};
         } catch (e) {
@@ -268,22 +254,25 @@ export class KeymanagerApi implements Api {
    */
   async deleteRemoteKeys(pubkeys: PubkeyHex[]): ReturnType<Api["deleteRemoteKeys"]> {
     const results = pubkeys.map(
-      (pubkey): ResponseStatus<DeleteRemoteKeyStatus> => {
-        // Check if key exists
-        const found = this.validator.validatorStore.removeSigner(pubkey);
-
-        if (!found) {
-          return {status: DeleteRemoteKeyStatus.not_found};
-        }
-
+      (pubkeyHex): ResponseStatus<DeleteRemoteKeyStatus> => {
         try {
-          const remoteKeyFilepath = this.getRemoteKeyFilepath(pubkey);
-          fs.unlinkSync(remoteKeyFilepath);
+          const signer = this.validator.validatorStore.getSigner(pubkeyHex);
 
-          return {status: DeleteRemoteKeyStatus.deleted};
+          // Remove key from live local signer
+          const deletedFromMemory =
+            signer && signer?.type === SignerType.Remote
+              ? this.validator.validatorStore.removeSigner(pubkeyHex)
+              : false;
+
+          // TODO: Remove duties
+
+          const deletedFromDisk = this.persistedKeysBackend.deleteRemoteKey(pubkeyHex);
+
+          return {
+            status:
+              deletedFromMemory || deletedFromDisk ? DeleteRemoteKeyStatus.deleted : DeleteRemoteKeyStatus.not_found,
+          };
         } catch (e) {
-          // TODO: Consider checking for e.code === "ENOENT" and return not_found
-          // However currently not doing so, because it's an error of inconsistency if a known key is not in disk
           return {status: DeleteRemoteKeyStatus.error, message: (e as Error).message};
         }
       }
@@ -293,51 +282,15 @@ export class KeymanagerApi implements Api {
       data: results,
     };
   }
+}
 
-  private getKeystoreFilepath(pubkeyHex: string): string {
-    return path.join(this.opts.importedKeystoresDirpath, `${KEYSTORE_IMPORTED_PREFIX}_${pubkeyHex}.json`);
+/**
+ * Given a variable with JSON that maybe stringified or not, return parsed JSON
+ */
+function ensureJSON<T>(strOrJson: string | T): T {
+  if (typeof strOrJson === "string") {
+    return JSON.parse(strOrJson) as T;
+  } else {
+    return strOrJson;
   }
-
-  private getRemoteKeyFilepath(pubkeyHex: string): string {
-    return path.join(this.opts.importedRemoteKeysDirpath, `${pubkeyHex}.json`);
-  }
-}
-
-/**
- * Read all RemoteSigner definition files from a `importedRemoteKeysDirpath`
- */
-export function readRemoteSignerDefinitions(dirpath: string): SignerDefinition[] {
-  return fs
-    .readdirSync(dirpath)
-    .filter((filename) => filename.endsWith(".json"))
-    .map((filename) => readRemoteSignerDefinition(path.join(dirpath, filename)));
-}
-
-/**
- * Validate SignerDefinition from un-trusted disk file.
- * Performs type validation and re-maps only expected properties.
- */
-export function readRemoteSignerDefinition(filepath: string): SignerDefinition {
-  const remoteSignerStr = fs.readFileSync(filepath, "utf8");
-  const remoteSignerJson = JSON.parse(remoteSignerStr) as SignerDefinition;
-  if (typeof remoteSignerJson.pubkey !== "string") throw Error(`invalid SignerDefinition.pubkey ${filepath}`);
-  if (typeof remoteSignerJson.url !== "string") throw Error(`invalid SignerDefinition.url ${filepath}`);
-  return {
-    pubkey: remoteSignerJson.pubkey,
-    url: remoteSignerJson.url,
-    readonly: false,
-  };
-}
-
-/**
- * Re-map all properties to ensure they are defined.
- * To just write `remoteSigner` is not safe since it may contain extra properties too.
- */
-export function writeRemoteSignerDefinition(filepath: string, remoteSigner: SignerDefinition): void {
-  const remoteSignerJson: SignerDefinition = {
-    pubkey: remoteSigner.pubkey,
-    url: remoteSigner.url,
-    readonly: false,
-  };
-  fs.writeFileSync(filepath, JSON.stringify(remoteSignerJson));
 }

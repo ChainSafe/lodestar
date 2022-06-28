@@ -7,5 +7,8 @@ export * from "./node/index.js";
 // Export metrics utilities to de-duplicate validator metrics
 export {RegistryMetricCreator, collectNodeJSMetrics, HttpMetricsServer} from "./metrics/index.js";
 
+// Export generic RestApi server for CLI
+export {RestApiServer, RestApiServerOpts, RestApiServerModules, RestApiServerMetrics} from "./api/rest/base.js";
+
 // Export type util for CLI - TEMP move to lodestar-types eventually
 export {getStateTypeFromBytes} from "./util/multifork.js";

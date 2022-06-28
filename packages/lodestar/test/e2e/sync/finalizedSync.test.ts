@@ -6,7 +6,6 @@ import {getDevBeaconNode} from "../../utils/node/beacon.js";
 import {waitForEvent} from "../../utils/events/resolver.js";
 import {getAndInitDevValidators} from "../../utils/node/validator.js";
 import {ChainEvent} from "../../../src/chain/index.js";
-import {Network} from "../../../src/network/index.js";
 import {connect} from "../../utils/network.js";
 import {testLogger, LogLevel, TestLoggerOpts} from "../../utils/logger.js";
 
@@ -82,7 +81,7 @@ describe("sync / finalized sync", function () {
       ssz.phase0.SignedBeaconBlock.equals(block, head)
     );
 
-    await connect(bn2.network as Network, bn.network.peerId, bn.network.localMultiaddrs);
+    await connect(bn2.network, bn.network.peerId, bn.network.localMultiaddrs);
 
     try {
       await waitForSynced;

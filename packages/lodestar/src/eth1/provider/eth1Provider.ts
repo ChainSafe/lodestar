@@ -1,11 +1,10 @@
 import {toHexString} from "@chainsafe/ssz";
 import {phase0} from "@chainsafe/lodestar-types";
 import {IChainConfig} from "@chainsafe/lodestar-config";
-import {fromHex} from "@chainsafe/lodestar-utils";
+import {fromHex, retry} from "@chainsafe/lodestar-utils";
 
 import {chunkifyInclusiveRange} from "../../util/chunkify.js";
 import {linspace} from "../../util/numpy.js";
-import {retry} from "../../util/retry.js";
 import {depositEventTopics, parseDepositLog} from "../utils/depositContract.js";
 import {Eth1Block, IEth1Provider} from "../interface.js";
 import {Eth1Options} from "../options.js";
