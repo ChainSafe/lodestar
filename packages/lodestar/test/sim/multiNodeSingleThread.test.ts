@@ -4,7 +4,6 @@ import {Validator} from "@chainsafe/lodestar-validator/lib";
 import {ILogger, sleep, TimestampFormatCode} from "@chainsafe/lodestar-utils";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {BeaconNode} from "@chainsafe/lodestar";
-import {Network} from "../../src/network/index.js";
 import {getDevBeaconNode} from "../utils/node/beacon.js";
 import {waitForEvent} from "../utils/events/resolver.js";
 import {getAndInitDevValidators} from "../utils/node/validator.js";
@@ -70,7 +69,7 @@ describe("Run multi node single thread interop validators (no eth1) until checkp
         };
         const logger = testLogger(`Node ${i}`, testLoggerOpts);
 
-        const bn: BeaconNode = await getDevBeaconNode({
+        const bn = await getDevBeaconNode({
           params: {...testParams, ALTAIR_FORK_EPOCH: altairForkEpoch},
           options: {api: {rest: {port: 10000 + i}}},
           validatorCount: nodeCount * validatorsPerNode,
@@ -119,11 +118,7 @@ describe("Run multi node single thread interop validators (no eth1) until checkp
       for (let i = 0; i < nodeCount; i++) {
         for (let j = 0; j < nodeCount; j++) {
           if (i !== j) {
-            await connect(
-              (nodes[i].network as unknown) as Network,
-              nodes[j].network.peerId,
-              nodes[j].network.localMultiaddrs
-            );
+            await connect(nodes[i].network, nodes[j].network.peerId, nodes[j].network.localMultiaddrs);
           }
         }
       }

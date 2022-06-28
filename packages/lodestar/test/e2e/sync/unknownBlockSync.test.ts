@@ -7,7 +7,7 @@ import {getDevBeaconNode} from "../../utils/node/beacon.js";
 import {waitForEvent} from "../../utils/events/resolver.js";
 import {getAndInitDevValidators} from "../../utils/node/validator.js";
 import {ChainEvent} from "../../../src/chain/index.js";
-import {Network, NetworkEvent} from "../../../src/network/index.js";
+import {NetworkEvent} from "../../../src/network/index.js";
 import {connect} from "../../utils/network.js";
 import {testLogger, LogLevel, TestLoggerOpts} from "../../utils/logger.js";
 import {BlockError, BlockErrorCode} from "../../../src/chain/errors/index.js";
@@ -89,7 +89,7 @@ describe("sync / unknown block sync", function () {
       ssz.phase0.SignedBeaconBlock.equals(block, head)
     );
 
-    await connect((bn2.network as unknown) as Network, bn.network.peerId, bn.network.localMultiaddrs);
+    await connect(bn2.network, bn.network.peerId, bn.network.localMultiaddrs);
     await bn2.chain.processBlock(head).catch((e) => {
       if (e instanceof BlockError && e.type.code === BlockErrorCode.PARENT_UNKNOWN) {
         // Expected

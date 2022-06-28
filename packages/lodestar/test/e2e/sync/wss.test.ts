@@ -11,7 +11,6 @@ import {ChainEvent} from "../../../src/chain/index.js";
 import {BeaconRestApiServerOpts} from "../../../src/api/rest/index.js";
 import {testLogger, TestLoggerOpts} from "../../utils/logger.js";
 import {connect} from "../../utils/network.js";
-import {Network} from "../../../src/network/index.js";
 import {BackfillSyncEvent} from "../../../src/sync/backfill/index.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
@@ -120,7 +119,7 @@ describe("Start from WSS", function () {
       (slot) => slot == GENESIS_SLOT
     );
 
-    await connect((bnStartingFromWSS.network as unknown) as Network, bn.network.peerId, bn.network.localMultiaddrs);
+    await connect(bnStartingFromWSS.network, bn.network.peerId, bn.network.localMultiaddrs);
 
     await waitForSynced;
   });

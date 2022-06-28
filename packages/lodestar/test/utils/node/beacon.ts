@@ -8,7 +8,7 @@ import {LevelDbController} from "@chainsafe/lodestar-db";
 import {phase0} from "@chainsafe/lodestar-types";
 import {BeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {isPlainObject} from "@chainsafe/lodestar-utils";
-import {BeaconNode, IBeaconDb} from "@chainsafe/lodestar";
+import {BeaconNode} from "../../../src/index.js";
 import {createEnr} from "../../../../cli/src/config/enr.js";
 import {createNodeJsLibp2p} from "../../../src/network/nodejs/index.js";
 import {createPeerId} from "../../../src/network/index.js";
@@ -85,7 +85,7 @@ export async function getDevBeaconNode(
   return await BeaconNode.init({
     opts: options as IBeaconNodeOptions,
     config: beaconConfig,
-    db: (db as unknown) as IBeaconDb,
+    db,
     logger,
     libp2p,
     anchorState: state,
