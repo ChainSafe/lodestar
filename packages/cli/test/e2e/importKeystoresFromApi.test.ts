@@ -1,18 +1,13 @@
-import fs from "node:fs";
 import path from "node:path";
 import rimraf from "rimraf";
-import {sleep, retry, fromHex} from "@chainsafe/lodestar-utils";
-import {Keystore} from "@chainsafe/bls-keystore";
-import {Api, DeletionStatus, getClient, ImportStatus} from "@chainsafe/lodestar-api/keymanager";
-import {config} from "@chainsafe/lodestar-config/default";
+import {DeletionStatus, ImportStatus} from "@chainsafe/lodestar-api/keymanager";
 import {Interchange} from "@chainsafe/lodestar-validator";
 import {testFilesDir} from "../utils.js";
 import {bufferStderr, describeCliTest} from "../utils/childprocRunner.js";
-import {getMockBeaconApiServer} from "../utils/mockBeaconApiServer.js";
-import {recursiveLookup} from "../../src/util/fs.js";
-import {apiTokenFileName} from "../../src/cmds/validator/keymanager/server.js";
-import {pubkeysHex, seckeysHex} from "../utils/cachedKeys.js";
-import {DoneCb, expectDeepEquals, getAfterEachCallbacks, itDone} from "../utils/runUtils.js";
+import {cachedPubkeysHex, cachedSeckeysHex} from "../utils/cachedKeys.js";
+import {expectDeepEquals, getAfterEachCallbacks} from "../utils/runUtils.js";
+import {expectKeys, getKeymanagerTestRunner} from "../utils/keymanagerTestRunners.js";
+import {getKeystoresStr} from "../utils/keystores.js";
 
 describeCliTest("import keystores from api", function ({spawnCli}) {
   const rootDir = path.join(testFilesDir, "import-keystores-test");
@@ -22,10 +17,13 @@ describeCliTest("import keystores from api", function ({spawnCli}) {
   });
 
   const afterEachCallbacks = getAfterEachCallbacks();
+  const itKeymanagerStep = getKeymanagerTestRunner({args: {spawnCli}, afterEachCallbacks, rootDir});
 
   /** Generated from  const sk = bls.SecretKey.fromKeygen(Buffer.alloc(32, 0xaa)); */
   const passphrase = "AAAAAAAA0000000000";
-  const pubkeys = [pubkeysHex[0], pubkeysHex[1]];
+  const keyCount = 2;
+  const pubkeys = cachedPubkeysHex.slice(0, keyCount);
+  const secretKeys = cachedSeckeysHex.slice(0, keyCount);
   const passphrases = pubkeys.map((_) => passphrase);
 
   const genesisValidatorsRoot = "0x0000000000000000000000000000000000000000000000000000000000000000";
@@ -41,11 +39,7 @@ describeCliTest("import keystores from api", function ({spawnCli}) {
 
   itKeymanagerStep("run 'validator' and import remote keys from API", async function (keymanagerClient) {
     // Produce and encrypt keystores
-    const keystoresStr = await Promise.all(
-      pubkeys.map(async (pubkey, i) =>
-        (await Keystore.create(passphrase, fromHex(seckeysHex[i]), fromHex(pubkey), "")).stringify()
-      )
-    );
+    const keystoresStr = await getKeystoresStr(passphrase, secretKeys);
 
     // Assert no keys to start with
     await expectKeys(keymanagerClient, [], "Wrong listKeys before importing");
@@ -117,73 +111,4 @@ describeCliTest("import keystores from api", function ({spawnCli}) {
     // After deleting there should be no keys
     await expectKeys(keymanagerClient, [], "Wrong listKeys");
   });
-
-  function itKeymanagerStep(
-    itName: string,
-    cb: (this: Mocha.Context, keymanagerClient: Api, args: {done: DoneCb}) => Promise<void>
-  ): void {
-    itDone(itName, async function (done) {
-      this.timeout("60s");
-
-      const keymanagerPort = 38011;
-      const beaconPort = 39011;
-      const keymanagerUrl = `http://localhost:${keymanagerPort}`;
-      const beaconUrl = `http://localhost:${beaconPort}`;
-
-      const beaconServer = getMockBeaconApiServer({port: beaconPort}, {genesisValidatorsRoot});
-      afterEachCallbacks.push(() => beaconServer.close());
-      await beaconServer.listen();
-
-      const validatorProc = spawnCli([
-        // ⏎
-        "validator",
-        `--rootDir=${rootDir}`,
-        "--keymanager.enabled",
-        `--keymanager.port=${keymanagerPort}`,
-        `--server=${beaconUrl}`,
-      ]);
-      // Exit early if process exits
-      validatorProc.on("exit", (code) => {
-        if (code !== null && code > 0) {
-          done(Error(`process exited with code ${code}`));
-        }
-      });
-
-      // Wait for api-token.txt file to be written to disk and find it
-      const apiToken = await retry(async () => findApiToken(rootDir), {retryDelay: 500, retries: 10});
-
-      const keymanagerClient = getClient({baseUrl: keymanagerUrl, bearerToken: apiToken}, {config});
-
-      // Wrap in retry since the API may not be listening yet
-      await retry(() => keymanagerClient.listKeys(), {retryDelay: 500, retries: 10});
-
-      await cb.bind(this)(keymanagerClient, {done});
-
-      validatorProc.kill("SIGINT");
-      await sleep(1000);
-      validatorProc.kill("SIGKILL");
-    });
-  }
-
-  async function expectKeys(keymanagerClient: Api, expectedPubkeys: string[], message: string): Promise<void> {
-    const keys = await keymanagerClient.listKeys();
-    expectDeepEquals(
-      keys.data,
-      expectedPubkeys.map((pubkey) => ({validatingPubkey: pubkey, derivationPath: "", readonly: false})),
-      message
-    );
-  }
 });
-
-function findApiToken(dirpath: string): string {
-  const files = recursiveLookup(dirpath);
-  const apiTokenFilepaths = files.filter((filepath) => filepath.endsWith(apiTokenFileName));
-  switch (apiTokenFilepaths.length) {
-    case 0:
-      throw Error(`No api token file found in ${dirpath}`);
-    case 1:
-      return fs.readFileSync(apiTokenFilepaths[0], "utf8").trim();
-    default:
-      throw Error(`Too many token files found: ${apiTokenFilepaths.join(" ")}`);
-  }
-}
