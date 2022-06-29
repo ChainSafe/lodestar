@@ -546,14 +546,16 @@
     protons-runtime "^1.0.4"
     uint8arrays "^3.0.0"
 
-"@chainsafe/libp2p-noise@6.2.0":
-  version "6.2.0"
-  resolved "https://registry.yarnpkg.com/@chainsafe/libp2p-noise/-/libp2p-noise-6.2.0.tgz#4ccbe0b753de666ef6142b0d7a93c470d400be99"
-  integrity sha512-nWu3kbFV1mtT4fL15ieyiEtpZi956UeFOpMxJiKe3EE0q5RzC91U6VQGyBQKHHowPIzsd18CHjbPq8CYPYc8Yw==
+"@chainsafe/libp2p-noise@7.0.1":
+  version "7.0.1"
+  resolved "https://registry.yarnpkg.com/@chainsafe/libp2p-noise/-/libp2p-noise-7.0.1.tgz#b095c0e729d96886c7c2281c2a90d726ecb60d80"
+  integrity sha512-V5vYb2jKlnd9jwDcxCB48RvzqHcMZsamTAd0eXZgvCujlu5VmbyaWFcuvIwFY3dHTrVcFQKntIg5WDaqmkuhcg==
   dependencies:
-    "@libp2p/crypto" "^0.22.9"
-    "@libp2p/interfaces" "^2.0.1"
-    "@libp2p/logger" "^1.1.2"
+    "@libp2p/crypto" "^1.0.0"
+    "@libp2p/interface-connection-encrypter" "^1.0.2"
+    "@libp2p/interface-keys" "^1.0.2"
+    "@libp2p/interface-peer-id" "^1.0.2"
+    "@libp2p/logger" "^2.0.0"
     "@libp2p/peer-collections" "^1.0.0"
     "@libp2p/peer-id" "^1.1.8"
     "@stablelib/chacha20poly1305" "^1.0.1"
@@ -1786,21 +1788,6 @@
     "@multiformats/multiaddr" "^10.1.5"
     err-code "^3.0.1"
 
-"@libp2p/crypto@^0.22.9":
-  version "0.22.14"
-  resolved "https://registry.yarnpkg.com/@libp2p/crypto/-/crypto-0.22.14.tgz#541a2b5c00d1557c9760ad16ba9f20eb01f08e27"
-  integrity sha512-5RyGh5ovfqrDD8Io3n5rvVnsTHBf1exIMZ/5eBw7Eoy21xkmzdF1Hy701SoSNmiCuTPXYmxT5WMy2VUDBUG6oQ==
-  dependencies:
-    "@libp2p/interfaces" "^2.0.1"
-    "@noble/ed25519" "^1.6.0"
-    "@noble/secp256k1" "^1.5.4"
-    err-code "^3.0.1"
-    iso-random-stream "^2.0.0"
-    multiformats "^9.4.5"
-    node-forge "^1.1.0"
-    protons-runtime "^1.0.4"
-    uint8arrays "^3.0.0"
-
 "@libp2p/crypto@^1.0.0":
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/@libp2p/crypto/-/crypto-1.0.0.tgz#15512cabdd862b636a4bd81c623f7083fc781280"
@@ -1994,7 +1981,7 @@
   resolved "https://registry.yarnpkg.com/@libp2p/interfaces/-/interfaces-3.0.2.tgz#ab1e8b228703eb7e316d5db546e458b422c334b8"
   integrity sha512-fBptZTwZanCg8JpQ5KCaJ/MIA7YBkAE0iXLdRPR8tKeiU7x1ww1xbxlNRRy29SspKxFIRX2JvJXhYoVgBzI2gw==
 
-"@libp2p/interfaces@^2.0.0", "@libp2p/interfaces@^2.0.1":
+"@libp2p/interfaces@^2.0.0":
   version "2.0.4"
   resolved "https://registry.yarnpkg.com/@libp2p/interfaces/-/interfaces-2.0.4.tgz#78d36637b59d864990d1c315e32f66a58f2a50df"
   integrity sha512-MfwkTFyHJtvwNxkjOjzkXyIVvKFtEW2Q3IGRJPyPQMrtB6ll0rGMTlyJ3BQS1bcD0YkNhggFm+8XiU2/0LCBhQ==
@@ -2010,16 +1997,6 @@
   version "3.0.3"
   resolved "https://registry.yarnpkg.com/@libp2p/interfaces/-/interfaces-3.0.3.tgz#b657e73a5ece0e2b18c6db04d7defe66fbd2a735"
   integrity sha512-8IIxw7TKpaYTtVfZN3jePLlm/E/VzqPpqerN+jhA+1s86akRSeyxVBYi3W9SWDSf0oIauHJSDE8KNxLceAfeag==
-
-"@libp2p/logger@^1.1.2":
-  version "1.1.6"
-  resolved "https://registry.yarnpkg.com/@libp2p/logger/-/logger-1.1.6.tgz#2f24af0fc3fc7a8f9e8e266e25569fdd94976096"
-  integrity sha512-ZKoRUt7cyHlbxHYDZ1Fn3A+ByqGABdmd4z07+1TfVvpEQSpn2IVcV0mt6ff5kUUtGuVeSrqK1/ZDzWqhgg56vg==
-  dependencies:
-    "@libp2p/interfaces" "^2.0.0"
-    debug "^4.3.3"
-    interface-datastore "^6.1.0"
-    multiformats "^9.6.3"
 
 "@libp2p/logger@^2.0.0":
   version "2.0.0"
