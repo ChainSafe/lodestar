@@ -18,7 +18,7 @@ import {assertEqualParams, getLoggerVc, NotEqualParamsError} from "./util/index.
 import {ChainHeaderTracker} from "./services/chainHeaderTracker.js";
 import {ValidatorEventEmitter} from "./services/emitter.js";
 import {ValidatorStore, Signer} from "./services/validatorStore.js";
-import {PubkeyHex} from "./types.js";
+import {ProcessShutdownCallback, PubkeyHex} from "./types.js";
 import {Metrics} from "./metrics.js";
 import {MetaDataRepository} from "./repositories/metaDataRepository.js";
 import {DoppelgangerService} from "./services/doppelgangerService.js";
@@ -31,6 +31,7 @@ export type ValidatorOptions = {
   api: Api | string;
   signers: Signer[];
   logger: ILogger;
+  processShutdownCallback: ProcessShutdownCallback;
   afterBlockDelaySlotFraction?: number;
   graffiti?: string;
   defaultFeeRecipient?: string;
@@ -87,7 +88,7 @@ export class Validator {
 
     const indicesService = new IndicesService(logger, api, metrics);
     const doppelgangerService = opts.doppelgangerProtectionEnabled
-      ? new DoppelgangerService(logger, clock, api, indicesService, metrics)
+      ? new DoppelgangerService(logger, clock, api, indicesService, opts.processShutdownCallback, metrics)
       : null;
     const validatorStore = new ValidatorStore(
       config,

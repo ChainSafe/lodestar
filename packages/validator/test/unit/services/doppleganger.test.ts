@@ -14,6 +14,7 @@ type IsLivePrevEpoch = boolean;
 type IsLiveCurrEpoch = boolean;
 
 type DoppelgangerTest = [IsLivePrevEpoch, IsLiveCurrEpoch, DoppelgangerStatus][];
+const noop = (): null => null;
 
 /**
  * Test cases data structure, each row represents an epoch:
@@ -95,7 +96,7 @@ describe("doppelganger service", () => {
       const initialEpoch = 1;
       const clock = new ClockMockMsToSlot(initialEpoch);
 
-      const doppelganger = new DoppelgangerService(logger, clock, beaconApi, indicesService, null);
+      const doppelganger = new DoppelgangerService(logger, clock, beaconApi, indicesService, noop, null);
 
       // Add validator to doppelganger
       doppelganger.registerValidator(pubkeyHex);

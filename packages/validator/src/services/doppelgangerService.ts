@@ -2,7 +2,7 @@ import {Epoch, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {Api} from "@chainsafe/lodestar-api";
 import {ILogger, sleep} from "@chainsafe/lodestar-utils";
 import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
-import {PubkeyHex} from "../types.js";
+import {ProcessShutdownCallback, PubkeyHex} from "../types.js";
 import {IClock} from "../util/index.js";
 import {Metrics} from "../metrics.js";
 import {IndicesService} from "./indices.js";
@@ -50,6 +50,7 @@ export class DoppelgangerService {
     private readonly clock: IClock,
     private readonly api: Api,
     private readonly indicesService: IndicesService,
+    private readonly processShutdownCallback: ProcessShutdownCallback,
     private readonly metrics: Metrics | null
   ) {
     this.clock.runEveryEpoch(this.pollLiveness);
@@ -200,7 +201,8 @@ export class DoppelgangerService {
         violators
       );
 
-      // TODO: Request process to shutdown
+      // Request process to shutdown
+      this.processShutdownCallback(Error("Doppelganger(s) detected"));
     }
 
     // If not there are no validators
