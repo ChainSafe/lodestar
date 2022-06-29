@@ -34,14 +34,6 @@ export enum DoppelgangerStatus {
   DoppelgangerDetected = "DoppelgangerDetected",
 }
 
-/** Map a DoppelgangerStatus to an integer for rendering in Grafana */
-export const doppelgangerStatusMetrics: {[K in DoppelgangerStatus]: number} = {
-  [DoppelgangerStatus.VerifiedSafe]: 0,
-  [DoppelgangerStatus.Unverified]: 1,
-  [DoppelgangerStatus.Unknown]: 2,
-  [DoppelgangerStatus.DoppelgangerDetected]: 3,
-};
-
 export class DoppelgangerService {
   private readonly doppelgangerStateByPubkey = new Map<PubkeyHex, DoppelgangerState>();
 
