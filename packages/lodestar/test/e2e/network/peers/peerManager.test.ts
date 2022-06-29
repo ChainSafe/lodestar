@@ -1,4 +1,3 @@
-import {EventEmitter} from "events";
 import {Connection} from "@libp2p/interface-connection";
 import sinon from "sinon";
 import {expect} from "chai";
@@ -10,7 +9,7 @@ import {sleep} from "@chainsafe/lodestar-utils";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {IReqResp, ReqRespMethod} from "../../../../src/network/reqresp/index.js";
 import {PeerRpcScoreStore, PeerManager} from "../../../../src/network/peers/index.js";
-import {Eth2Gossipsub, NetworkEvent, NetworkEventBus} from "../../../../src/network/index.js";
+import {Eth2Gossipsub, getConnectionsMap, NetworkEvent, NetworkEventBus} from "../../../../src/network/index.js";
 import {PeersData} from "../../../../src/network/peers/peersData.js";
 import {createNode, getAttnets, getSyncnets} from "../../../utils/network.js";
 import {MockBeaconChain} from "../../../utils/mocks/chain/chain.js";
@@ -158,9 +157,7 @@ describe("network / peers / PeerManager", function () {
 
     // Simualate a peer connection, get() should return truthy
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
-    (libp2p.connectionManager as DefaultConnectionManager)["connections"].set(peerId1.toString(), [
-      libp2pConnectionOutboud,
-    ]);
+    getConnectionsMap(libp2p.connectionManager).set(peerId1.toString(), [libp2pConnectionOutboud]);
 
     // Subscribe to `peerConnected` event, which must fire after checking peer relevance
     const peerConnectedPromise = waitForEvent(networkEventBus, NetworkEvent.peerConnected, this.timeout() / 2);
@@ -177,9 +174,7 @@ describe("network / peers / PeerManager", function () {
 
     // Simualate a peer connection, get() should return truthy
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
-    (libp2p.connectionManager as DefaultConnectionManager)["connections"].set(peerId1.toString(), [
-      libp2pConnectionOutboud,
-    ]);
+    getConnectionsMap(libp2p.connectionManager).set(peerId1.toString(), [libp2pConnectionOutboud]);
 
     // Subscribe to `peerConnected` event, which must fire after checking peer relevance
     const peerConnectedPromise = waitForEvent(networkEventBus, NetworkEvent.peerConnected, this.timeout() / 2);
@@ -193,10 +188,10 @@ describe("network / peers / PeerManager", function () {
 
     // Simualate a peer connection, get() should return truthy
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
-    (libp2p.connectionManager as DefaultConnectionManager)["connections"].set(peerId1.toString(), [
-      libp2pConnectionOutboud,
-    ]);
-    ((libp2p.connectionManager as any) as EventEmitter).emit("peer:connect", libp2pConnectionOutboud);
+    getConnectionsMap(libp2p.connectionManager).set(peerId1.toString(), [libp2pConnectionOutboud]);
+    (libp2p.connectionManager as DefaultConnectionManager).dispatchEvent(
+      new CustomEvent("peer:connect", {detail: libp2pConnectionOutboud})
+    );
 
     await peerConnectedPromise;
 

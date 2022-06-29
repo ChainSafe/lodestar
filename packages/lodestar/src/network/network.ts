@@ -26,6 +26,7 @@ import {IPeerRpcScoreStore, PeerAction, PeerRpcScoreStore} from "./peers/index.j
 import {INetworkEventBus, NetworkEventBus} from "./events.js";
 import {AttnetsService, SyncnetsService, CommitteeSubscription} from "./subnets/index.js";
 import {PeersData} from "./peers/peersData.js";
+import {getConnectionsMap} from "./util.js";
 
 interface INetworkModules {
   config: IBeaconConfig;
@@ -182,7 +183,7 @@ export class Network implements INetwork {
 
   getConnectionsByPeer(): Map<string, Connection[]> {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return
-    return (this.libp2p.connectionManager as DefaultConnectionManager)["connections"];
+    return getConnectionsMap(this.libp2p.connectionManager);
   }
 
   getConnectedPeers(): PeerId[] {

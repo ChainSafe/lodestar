@@ -65,11 +65,11 @@ export function prettyPrintPeerId(peerId: PeerId): string {
 }
 
 /**
- * Compat function for type mismatch reasons
+ * Get the connections map from a connection manager
  */
+// Compat function for type mismatch reasons
 export function getConnectionsMap(connectionManager: ConnectionManager): Map<string, Connection[]> {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-  return ((connectionManager as unknown) as DefaultConnectionManager)["connections"] as Map<string, Connection[]>;
+  return (connectionManager as DefaultConnectionManager)["connections"] as Map<string, Connection[]>;
 }
 
 export function getConnection(connectionManager: ConnectionManager, peerIdStr: string): Connection | undefined {
