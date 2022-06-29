@@ -1,4 +1,4 @@
-import {ssz} from "@chainsafe/lodestar-types";
+import {ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {CompositeViewDU} from "@chainsafe/ssz";
 import {TIMELY_TARGET_FLAG_INDEX} from "@chainsafe/lodestar-params";
 import {CachedBeaconStatePhase0, CachedBeaconStateAltair} from "../types.js";
@@ -111,6 +111,8 @@ function translateParticipation(
   const epochParticipation = state.previousEpochParticipation;
   const previousEpoch = epochCtx.currentShuffling.epoch - 1;
 
+  // avoid duplicate accumulation of same validator for previousTargetUnslashedBalanceIncrements
+  const previousEpochTargetValidators = new Set<ValidatorIndex>();
   for (const attestation of pendingAttesations.getAllReadonly()) {
     const data = attestation.data;
     const attestationFlags = getAttestationParticipationStatus(
@@ -126,11 +128,12 @@ function translateParticipation(
     for (const index of attestingIndices) {
       // ParticipationFlags type uses option {setBitwiseOR: true}, .set() does a |= operation
       epochParticipation.set(index, attestationFlags);
-      if ((attestationFlags & TIMELY_TARGET) === TIMELY_TARGET) {
+      if (!previousEpochTargetValidators.has(index) && (attestationFlags & TIMELY_TARGET) === TIMELY_TARGET) {
         const validator = state.validators.get(index);
         if (!validator.slashed && isActiveValidator(validator, previousEpoch)) {
           epochCtx.previousTargetUnslashedBalanceIncrements += epochCtx.effectiveBalanceIncrements[index];
         }
+        previousEpochTargetValidators.add(index);
       }
     }
   }
