@@ -111,8 +111,8 @@ export class PersistedKeysBackend implements IPersistedKeysBackend {
   }
 
   /** Returns true if some component was actually deleted */
-  deleteKeystore(pubkeyHex: PubkeyHex): boolean {
-    const {dirpath, keystoreFilepath, passphraseFilepath} = this.getValidatorPaths(pubkeyHex);
+  deleteKeystore(pubkey: PubkeyHex): boolean {
+    const {dirpath, keystoreFilepath, passphraseFilepath} = this.getValidatorPaths(pubkey);
 
     // Attempt to delete everything, retaining each status
     const deletedKeystore = unlinkSyncMaybe(keystoreFilepath);
@@ -120,6 +120,7 @@ export class PersistedKeysBackend implements IPersistedKeysBackend {
     const deletedDir = rmdirSyncMaybe(dirpath);
 
     // TODO: Unlock keystore .lock
+    // Note: not really necessary since current lockfile lib does that automatically on process exit
 
     return deletedKeystore || deletedPassphrase || deletedDir;
   }
@@ -140,15 +141,15 @@ export class PersistedKeysBackend implements IPersistedKeysBackend {
   }
 
   writeRemoteKey({
-    pubkeyHex,
-    remoteSigner,
+    pubkey,
+    url,
     persistIfDuplicate,
   }: {
-    pubkeyHex: PubkeyHex;
-    remoteSigner: SignerDefinition;
+    pubkey: PubkeyHex;
+    url: string;
     persistIfDuplicate: boolean;
   }): boolean {
-    const {definitionFilepath} = this.getDefinitionPaths(pubkeyHex);
+    const {definitionFilepath} = this.getDefinitionPaths(pubkey);
 
     // Check if duplicate first.
     // TODO: Check that the content is actually equal. But not naively, the JSON could be formated differently
@@ -157,33 +158,33 @@ export class PersistedKeysBackend implements IPersistedKeysBackend {
     }
 
     fs.mkdirSync(path.dirname(definitionFilepath), {recursive: true});
-    writeRemoteSignerDefinition(definitionFilepath, remoteSigner);
+    writeRemoteSignerDefinition(definitionFilepath, {
+      pubkey,
+      url,
+      readonly: false,
+    });
 
     return true;
   }
 
   /** Returns true if it was actually deleted */
-  deleteRemoteKey(pubkeyHex: PubkeyHex): boolean {
-    const {definitionFilepath} = this.getDefinitionPaths(pubkeyHex);
+  deleteRemoteKey(pubkey: PubkeyHex): boolean {
+    const {definitionFilepath} = this.getDefinitionPaths(pubkey);
 
     // Attempt to delete everything, retaining each status
     return unlinkSyncMaybe(definitionFilepath);
   }
 
-  private getDefinitionPaths(
-    pubkeyHex: PubkeyHex
-  ): {
-    definitionFilepath: string;
-  } {
+  private getDefinitionPaths(pubkey: PubkeyHex): {definitionFilepath: string} {
     // TODO: Ensure correct formating 0x prefixed
 
     return {
-      definitionFilepath: path.join(this.paths.remoteKeysDir, pubkeyHex),
+      definitionFilepath: path.join(this.paths.remoteKeysDir, pubkey),
     };
   }
 
   private getValidatorPaths(
-    pubkeyHex: PubkeyHex
+    pubkey: PubkeyHex
   ): {
     dirpath: string;
     keystoreFilepath: string;
@@ -191,12 +192,12 @@ export class PersistedKeysBackend implements IPersistedKeysBackend {
   } {
     // TODO: Ensure correct formating 0x prefixed
 
-    const dirpath = path.join(this.paths.keystoresDir, pubkeyHex);
+    const dirpath = path.join(this.paths.keystoresDir, pubkey);
 
     return {
       dirpath,
       keystoreFilepath: path.join(dirpath, "voting-keystore.json"),
-      passphraseFilepath: path.join(this.paths.secretsDir, pubkeyHex),
+      passphraseFilepath: path.join(this.paths.secretsDir, pubkey),
     };
   }
 }
