@@ -20,7 +20,14 @@ import {BeaconNode} from "../../../src/node/index.js";
 chai.use(chaiAsPromised);
 
 /* eslint-disable @typescript-eslint/no-unsafe-call,@typescript-eslint/no-unsafe-member-access,@typescript-eslint/no-unsafe-assignment */
-describe("doppelganger / doppelganger test", function () {
+// TODO: Reconsider this tests latter.
+// Doppelganger testing can be split in two items:
+// 1. Can a running beacon node detect liveness of the validator?
+// 2. Does the validator use the liveness data to identify doppelganger correctly?
+//
+// Attempting to do both 1. and 2. in this e2e test more expensive than necessary.
+// Unit tests in the validator cover 2., so some test in lodestar package should cover 1.
+describe.skip("doppelganger / doppelganger test", function () {
   const afterEachCallbacks: (() => Promise<unknown> | void)[] = [];
   afterEach(async () => {
     while (afterEachCallbacks.length > 0) {
