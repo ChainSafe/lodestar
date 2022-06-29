@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {Stream} from "@libp2p/interface-connection";
+import {Stream, StreamStat} from "@libp2p/interface-connection";
 import {Root, phase0} from "@chainsafe/lodestar-types";
 import {toHexString} from "@chainsafe/ssz";
 import {generateEmptySignedBlock} from "../../../utils/block.js";
@@ -39,7 +39,7 @@ export function generateEmptySignedBlocks(n = 3): phase0.SignedBeaconBlock[] {
 /**
  * Wrapper for type-safety to ensure and array of Buffers is equal with a diff in hex
  */
-export function expectEqualByteChunks(chunks: Buffer[], expectedChunks: Buffer[], message?: string): void {
+export function expectEqualByteChunks(chunks: Uint8Array[], expectedChunks: Uint8Array[], message?: string): void {
   expect(chunks.map(toHexString)).to.deep.equal(expectedChunks.map(toHexString), message);
 }
 
@@ -49,9 +49,13 @@ export function expectEqualByteChunks(chunks: Buffer[], expectedChunks: Buffer[]
  */
 export class MockLibP2pStream implements Stream {
   id = "mock";
-  timeline = {
-    open: Date.now(),
-  };
+  stat = {
+    direction: "inbound",
+    timeline: {
+      open: Date.now(),
+    },
+  } as StreamStat;
+  metadata = {};
   source: Stream["source"];
   resultChunks: Uint8Array[] = [];
 

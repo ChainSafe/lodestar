@@ -12,7 +12,7 @@ import {writeEncodedPayload} from "../encodingStrategies/index.js";
 export async function* requestEncode(
   protocol: Pick<Protocol, "method" | "encoding">,
   requestBody: RequestBody
-): AsyncGenerator<Uint8Array> {
+): AsyncGenerator<Buffer> {
   const type = getRequestSzzTypeByMethod(protocol.method);
 
   if (type && requestBody !== null) {
