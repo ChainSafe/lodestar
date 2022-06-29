@@ -14,5 +14,8 @@ export {
   externalSignerUpCheck,
 } from "./util/externalSignerClient.js";
 
+// Types
+export {ProcessShutdownCallback} from "./types.js";
+
 export * from "./slashingProtection/index.js";
 export * from "./repositories/index.js";

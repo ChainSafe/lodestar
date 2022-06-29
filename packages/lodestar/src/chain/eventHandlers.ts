@@ -1,5 +1,5 @@
 import {toHexString} from "@chainsafe/ssz";
-import {allForks, Epoch, phase0, Slot, Version} from "@chainsafe/lodestar-types";
+import {allForks, Epoch, phase0, Slot, ssz, Version} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {CheckpointWithHex, ProtoBlock} from "@chainsafe/lodestar-fork-choice";
 import {CachedBeaconStateAllForks, computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
@@ -96,6 +96,7 @@ export function onClockEpoch(this: BeaconChain, currentEpoch: Epoch): void {
   this.seenAttesters.prune(currentEpoch);
   this.seenAggregators.prune(currentEpoch);
   this.seenAggregatedAttestations.prune(currentEpoch);
+  this.seenBlockAttesters.prune(currentEpoch);
   this.beaconProposerCache.prune(currentEpoch);
 }
 
@@ -142,7 +143,8 @@ export function onForkChoiceJustified(this: BeaconChain, cp: CheckpointWithHex):
 
 export async function onForkChoiceFinalized(this: BeaconChain, cp: CheckpointWithHex): Promise<void> {
   this.logger.verbose("Fork choice finalized", {epoch: cp.epoch, root: cp.rootHex});
-  this.seenBlockProposers.prune(computeStartSlotAtEpoch(cp.epoch));
+  const finalizedSlot = computeStartSlotAtEpoch(cp.epoch);
+  this.seenBlockProposers.prune(finalizedSlot);
 
   // TODO: Improve using regen here
   const headState = this.stateCache.get(this.forkChoice.getHead().stateRoot);
@@ -183,17 +185,16 @@ export function onForkChoiceReorg(this: BeaconChain, head: ProtoBlock, oldHead: 
   });
 }
 
-export function onAttestation(this: BeaconChain, _: phase0.Attestation): void {
-  // don't want to log the processed attestations here as there are so many attestations and it takes too much disc space,
-  // users may want to keep more log files instead of unnecessary processed attestations log
-  // see https://github.com/ChainSafe/lodestar/pull/4032
+export function onAttestation(this: BeaconChain, attestation: phase0.Attestation): void {
+  this.logger.debug("Attestation processed", {
+    slot: attestation.data.slot,
+    index: attestation.data.index,
+    targetRoot: toHexString(attestation.data.target.root),
+    aggregationBits: ssz.phase0.CommitteeBits.toJson(attestation.aggregationBits) as string,
+  });
 }
 
-export async function onBlock(
-  this: BeaconChain,
-  block: allForks.SignedBeaconBlock,
-  _postState: CachedBeaconStateAllForks
-): Promise<void> {
+export async function onBlock(this: BeaconChain, block: allForks.SignedBeaconBlock): Promise<void> {
   const blockRoot = toHexString(this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message));
   const advancedSlot = this.clock.slotWithFutureTolerance(REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC);
 

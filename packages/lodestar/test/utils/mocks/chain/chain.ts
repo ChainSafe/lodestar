@@ -37,6 +37,7 @@ import {testLogger} from "../../logger.js";
 import {ReprocessController} from "../../../../src/chain/reprocess.js";
 import {createCachedBeaconStateTest} from "../../../../../beacon-state-transition/test/utils/state.js";
 import {SeenAggregatedAttestations} from "../../../../src/chain/seenCache/seenAggregateAndProof.js";
+import {SeenBlockAttesters} from "../../../../src/chain/seenCache/seenBlockAttesters.js";
 import {BeaconProposerCache} from "../../../../src/chain/beaconProposerCache.js";
 
 /* eslint-disable @typescript-eslint/no-empty-function */
@@ -83,6 +84,7 @@ export class MockBeaconChain implements IBeaconChain {
   readonly seenBlockProposers = new SeenBlockProposers();
   readonly seenSyncCommitteeMessages = new SeenSyncCommitteeMessages();
   readonly seenContributionAndProof = new SeenContributionAndProof(null);
+  readonly seenBlockAttesters = new SeenBlockAttesters();
 
   readonly beaconProposerCache = new BeaconProposerCache({defaultFeeRecipient: defaultDefaultFeeRecipient});
 
@@ -128,6 +130,10 @@ export class MockBeaconChain implements IBeaconChain {
       logger,
     });
     this.reprocessController = new ReprocessController(null);
+  }
+
+  validatorSeenAtEpoch(): boolean {
+    return false;
   }
 
   persistInvalidSszView(_: TreeView<CompositeTypeAny>): void {}

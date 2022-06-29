@@ -14,7 +14,6 @@ import {getDevBeaconNode} from "../../utils/node/beacon.js";
 import {getAndInitDevValidators} from "../../utils/node/validator.js";
 import {testLogger, LogLevel, TestLoggerOpts} from "../../utils/logger.js";
 import {connect} from "../../utils/network.js";
-import {Network} from "../../../src/network/index.js";
 import {simTestInfoTracker} from "../../utils/node/simTest.js";
 import {NodeWorkerOptions, Message} from "./types.js";
 
@@ -68,7 +67,7 @@ async function runWorker(): Promise<void> {
         const peerIdToConn = await createFromPrivKey(
           await unmarshalPrivateKey(fromHexString(nodeToConnect.peerIdPrivkey))
         );
-        await withTimeout(() => connect(node.network as Network, peerIdToConn, multiaddrs), 10 * 1000);
+        await withTimeout(() => connect(node.network, peerIdToConn, multiaddrs), 10 * 1000);
         loggerNode.info(`Connected node ${nodeIndex} -> ${i}`);
       })
     )

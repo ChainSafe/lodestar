@@ -9,7 +9,6 @@ export type IValidatorPaths = {
 export type AccountPaths = {
   keystoresDir: string;
   secretsDir: string;
-  walletsDir: string;
   remoteKeysDir: string;
 };
 
@@ -58,10 +57,8 @@ export const defaultValidatorPaths = getValidatorPaths({rootDir: "$rootDir"});
  * |       ├── eth1-deposit-data.rlp
  * |       ├── eth1-deposit-gwei.txt
  * |       └── voting-keystore.json
- * ├── wallet1.pass (arbitrary path)
- * └── wallets
- *     └── 96ae14b4-46d7-42dc-afd8-c782e9af87ef (dir)
- *         └── 96ae14b4-46d7-42dc-afd8-c782e9af87ef (json)
+ * └── remoteKeys
+ *     └── 0xa329f988c16993768299643d918a2694892c012765d896a16f.json
  * ```
  */
 // Using Pick<IGlobalArgs, "rootDir"> make changes in IGlobalArgs throw a type error here
@@ -74,13 +71,11 @@ export function getAccountPaths(
   const rootDir = globalPaths.rootDir;
   const keystoresDir = args.keystoresDir || path.join(rootDir, "keystores");
   const secretsDir = args.secretsDir || path.join(rootDir, "secrets");
-  const walletsDir = args.walletsDir || path.join(rootDir, "wallets");
-  const remoteKeysDir = args.walletsDir || path.join(rootDir, "remoteKeys");
+  const remoteKeysDir = args.remoteKeysDir || path.join(rootDir, "remoteKeys");
   return {
     ...globalPaths,
     keystoresDir,
     secretsDir,
-    walletsDir,
     remoteKeysDir,
   };
 }

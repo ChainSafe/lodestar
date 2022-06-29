@@ -14,7 +14,7 @@ import {ExecutionEngineHttp} from "../../src/executionEngine/http.js";
 import {ChainEvent} from "../../src/chain/index.js";
 import {testLogger, TestLoggerOpts} from "../utils/logger.js";
 import {getDevBeaconNode} from "../utils/node/beacon.js";
-import {RestApiOptions} from "../../src/api/index.js";
+import {BeaconRestApiServerOpts} from "../../src/api/index.js";
 import {simTestInfoTracker} from "../utils/node/simTest.js";
 import {getAndInitDevValidators} from "../utils/node/validator.js";
 import {Eth1Provider} from "../../src/index.js";
@@ -319,7 +319,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
         TERMINAL_TOTAL_DIFFICULTY: ttd,
       },
       options: {
-        api: {rest: {enabled: true} as RestApiOptions},
+        api: {rest: {enabled: true} as BeaconRestApiServerOpts},
         sync: {isSingleNode: true},
         network: {allowPublishToZeroPeers: true, discv5: null},
         // Now eth deposit/merge tracker methods directly available on engine endpoints
