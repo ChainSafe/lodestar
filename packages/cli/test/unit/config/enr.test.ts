@@ -1,6 +1,7 @@
 import {expect} from "chai";
+import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
 import {getTestdirPath} from "../../utils.js";
-import {createSecp256k1PeerId, createEnr, writeEnr, readEnr} from "../../../src/config/index.js";
+import {createEnr, writeEnr, readEnr} from "../../../src/config/index.js";
 
 describe("config / enr", () => {
   const enrFilepath = getTestdirPath("./test-enr.json");
