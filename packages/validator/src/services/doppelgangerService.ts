@@ -67,6 +67,11 @@ export class DoppelgangerService {
     // There's no activity before genesis, so doppelganger is pointless.
     const remainingEpochs = currentEpoch <= 0 ? 0 : DEFAULT_REMAINING_DETECTION_EPOCHS;
 
+    // Log here to alert that validation won't be active until remainingEpochs == 0
+    if (remainingEpochs > 0) {
+      this.logger.info("Registered validator for doppelganger", {remainingEpochs, pubkeyHex});
+    }
+
     this.doppelgangerStateByPubkey.set(pubkeyHex, {
       nextEpochToCheck: this.clock.currentEpoch + 1,
       remainingEpochs,
@@ -220,6 +225,13 @@ export class DoppelgangerService {
           state.remainingEpochs--;
           state.nextEpochToCheck = response.epoch + 1;
           this.metrics?.doppelganger.epochsChecked.inc(1);
+
+          const {remainingEpochs} = state;
+          if (remainingEpochs <= 0) {
+            this.logger.info("Doppelganger detection complete", {index: response.index});
+          } else {
+            this.logger.info("Found no doppelganger", {remainingEpochs, index: response.index});
+          }
         }
       }
     }
