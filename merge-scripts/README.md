@@ -13,7 +13,7 @@ Look for the .vars file in the folder to see what networks are supported. Here a
 1. Kiln Network ( soon to be deprecated ):  `--devnetVars ./kiln.vars`
 2. Ropsten Network: `--devnetVars ./ropsten.vars`
 3. Sepolia Network: `--devnetVars ./sepolia.vars`
-4. Mainnet Shadow fork 7: `--devnetVars ./mainnetshadow-7.vars`
+4. Mainnet Shadow fork 8: `--devnetVars ./mainnetshadow-8.vars`
 
 ###### And the much expected Mainnet merge (comming soon!)
 
