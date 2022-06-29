@@ -476,16 +476,16 @@
     node-fetch "^2.6.1"
     node-gyp "^8.4.0"
 
-"@chainsafe/discv5@^1.0.2":
-  version "1.1.0"
-  resolved "https://registry.yarnpkg.com/@chainsafe/discv5/-/discv5-1.1.0.tgz#bede826453f151f0474dbd2dfcd98fcb9a08b3a6"
-  integrity sha512-FXfG0aTEs/aAZP2mXaiLcOqQaF6l9hsVFJtpOX7cQcSIk2BZR7gcVqCGLtWKylB4yzeb30TlxZZxxEbf8rNmew==
+"@chainsafe/discv5@^1.1.1":
+  version "1.1.1"
+  resolved "https://registry.yarnpkg.com/@chainsafe/discv5/-/discv5-1.1.1.tgz#0ca70d57ac35eae2b95bc5fb0f44f1463ccb7cf5"
+  integrity sha512-QxuRzjKrsaOn1WFFEIb7C/FGqg2rGnsEN73CBxNtbbt98yg+7IUtOHb3G1F+MOML/LZH0u7asoFoLM2v4i++/w==
   dependencies:
     "@libp2p/crypto" "^1.0.0"
     "@libp2p/interface-peer-discovery" "^1.0.0"
     "@libp2p/interface-peer-id" "^1.0.2"
     "@libp2p/interface-peer-info" "^1.0.1"
-    "@libp2p/interfaces" "3.0.2"
+    "@libp2p/interfaces" "^3.0.2"
     "@libp2p/peer-id" "^1.1.13"
     "@multiformats/multiaddr" "^10.2.0"
     base64url "^3.0.1"
@@ -1975,11 +1975,6 @@
     "@libp2p/interfaces" "^3.0.0"
     "@multiformats/multiaddr" "^10.2.0"
     it-stream-types "^1.0.4"
-
-"@libp2p/interfaces@3.0.2":
-  version "3.0.2"
-  resolved "https://registry.yarnpkg.com/@libp2p/interfaces/-/interfaces-3.0.2.tgz#ab1e8b228703eb7e316d5db546e458b422c334b8"
-  integrity sha512-fBptZTwZanCg8JpQ5KCaJ/MIA7YBkAE0iXLdRPR8tKeiU7x1ww1xbxlNRRy29SspKxFIRX2JvJXhYoVgBzI2gw==
 
 "@libp2p/interfaces@^2.0.0":
   version "2.0.4"
