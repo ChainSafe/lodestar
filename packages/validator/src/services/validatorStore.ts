@@ -171,7 +171,7 @@ export class ValidatorStore {
       throw Error(`Not signing block with slot ${block.slot} greater than current slot ${currentSlot}`);
     }
 
-    // Duties are filtered before-hard by doppleganger-safe, this assert should never throw
+    // Duties are filtered before-hard by doppelganger-safe, this assert should never throw
     this.assertDoppelgangerSafe(pubkey);
 
     const proposerDomain = this.config.getDomain(DOMAIN_BEACON_PROPOSER, block.slot);
@@ -211,7 +211,7 @@ export class ValidatorStore {
       );
     }
 
-    // Duties are filtered before-hard by doppleganger-safe, this assert should never throw
+    // Duties are filtered before-hard by doppelganger-safe, this assert should never throw
     this.assertDoppelgangerSafe(duty.pubkey);
 
     this.validateAttestationDuty(duty, attestationData);

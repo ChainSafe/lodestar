@@ -89,7 +89,7 @@ export class DoppelgangerService {
     // *should* mean that the BN has seen the blocks and attestations for the epoch
     await sleep(this.clock.msToSlot(endSlotOfCurrentEpoch + 3 / 4));
 
-    // Collect indices that still need doppleganger checks
+    // Collect indices that still need doppelganger checks
     const indicesToCheck: ValidatorIndex[] = [];
     const indicesToCheckMap = new Map<ValidatorIndex, PubkeyHex>();
 

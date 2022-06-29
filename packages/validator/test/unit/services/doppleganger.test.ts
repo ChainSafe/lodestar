@@ -22,7 +22,7 @@ type DoppelgangerTest = [IsLivePrevEpoch, IsLiveCurrEpoch, DoppelgangerStatus][]
  *
  *  prev = isLive in previous epoch
  *  curr = isLive in current epoch
- *  expectedStatus = assert doppleganger status at the end of epoch
+ *  expectedStatus = assert doppelganger status at the end of epoch
  */
 const testCases: Record<string, DoppelgangerTest> = {
   "isLive first epoch": [
@@ -74,7 +74,7 @@ const testCases: Record<string, DoppelgangerTest> = {
   ],
 };
 
-describe("doppleganger service", () => {
+describe("doppelganger service", () => {
   for (const [id, testCase] of Object.entries(testCases)) {
     it(id, async () => {
       const livenessMap = new MapDef<Epoch, Map<ValidatorIndex, boolean>>(() => new Map<ValidatorIndex, boolean>());
@@ -86,7 +86,7 @@ describe("doppleganger service", () => {
       const logger = testLogger();
       const controller = new AbortController();
 
-      // Register validator to IndicesService for doppleganger to resolve pubkey -> index
+      // Register validator to IndicesService for doppelganger to resolve pubkey -> index
       const indicesService = new IndicesService(logger, beaconApi, null);
       indicesService.index2pubkey.set(index, pubkeyHex);
       indicesService.pubkey2index.set(pubkeyHex, index);
@@ -97,7 +97,7 @@ describe("doppleganger service", () => {
 
       const doppelganger = new DoppelgangerService(logger, clock, beaconApi, indicesService, null);
 
-      // Add validator to doppleganger
+      // Add validator to doppelganger
       doppelganger.registerValidator(pubkeyHex);
 
       // Go step by step
@@ -116,7 +116,7 @@ describe("doppleganger service", () => {
         // doppelganger polls for liveness 3/4 of the last slot of the epoch
         await sleep(clock.msToSlot(computeStartSlotAtEpoch(epoch + 1)));
 
-        // Assert doppleganger status
+        // Assert doppelganger status
         const status = doppelganger.getStatus(pubkeyHex);
         expect(status).equal(expectedStatus, `Wrong status at step ${step}`);
       }
