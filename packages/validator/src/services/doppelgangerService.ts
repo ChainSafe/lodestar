@@ -92,6 +92,7 @@ export class DoppelgangerService {
     await sleep(this.clock.msToSlot(endSlotOfCurrentEpoch + 3 / 4));
 
     // Collect indices that still need doppelganger checks
+    const pubkeysToCheckWithoutIndex: PubkeyHex[] = [];
     const indicesToCheck: ValidatorIndex[] = [];
     const indicesToCheckMap = new Map<ValidatorIndex, PubkeyHex>();
 
@@ -101,7 +102,19 @@ export class DoppelgangerService {
         if (index !== undefined) {
           indicesToCheck.push(index);
           indicesToCheckMap.set(index, pubkeyHex);
+        } else {
+          pubkeysToCheckWithoutIndex.push(pubkeyHex);
         }
+      }
+    }
+
+    // Attempt to collect missing indexes
+    const newIndices = await this.indicesService.pollValidatorIndices(pubkeysToCheckWithoutIndex);
+    for (const index of newIndices) {
+      const pubkey = this.indicesService.index2pubkey.get(index);
+      if (pubkey) {
+        indicesToCheck.push(index);
+        indicesToCheckMap.set(index, pubkey);
       }
     }
 
