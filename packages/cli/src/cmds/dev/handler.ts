@@ -132,10 +132,13 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
       slashingProtection,
       api,
       logger: logger.child({module: "vali"}),
+      // TODO: De-duplicate from validator cmd handler
+      processShutdownCallback: () => process.kill(process.pid, "SIGINT"),
       signers: secretKeys.map((secretKey) => ({
         type: SignerType.Local,
         secretKey,
       })),
+      doppelgangerProtectionEnabled: args.doppelgangerProtectionEnabled,
     });
 
     onGracefulShutdownCbs.push(() => validator.close());

@@ -18,9 +18,10 @@ import {assertEqualParams, getLoggerVc, NotEqualParamsError} from "./util/index.
 import {ChainHeaderTracker} from "./services/chainHeaderTracker.js";
 import {ValidatorEventEmitter} from "./services/emitter.js";
 import {ValidatorStore, Signer} from "./services/validatorStore.js";
-import {PubkeyHex} from "./types.js";
+import {ProcessShutdownCallback, PubkeyHex} from "./types.js";
 import {Metrics} from "./metrics.js";
 import {MetaDataRepository} from "./repositories/metaDataRepository.js";
+import {DoppelgangerService} from "./services/doppelgangerService.js";
 
 export const defaultDefaultFeeRecipient = "0x0000000000000000000000000000000000000000";
 
@@ -30,10 +31,12 @@ export type ValidatorOptions = {
   api: Api | string;
   signers: Signer[];
   logger: ILogger;
+  processShutdownCallback: ProcessShutdownCallback;
   afterBlockDelaySlotFraction?: number;
   graffiti?: string;
   defaultFeeRecipient?: string;
   strictFeeRecipientCheck?: boolean;
+  doppelgangerProtectionEnabled?: boolean;
   closed?: boolean;
 };
 
@@ -66,7 +69,6 @@ export class Validator {
   constructor(opts: ValidatorOptions, readonly genesis: Genesis, metrics: Metrics | null = null) {
     const {dbOps, logger, slashingProtection, signers, graffiti, defaultFeeRecipient, strictFeeRecipientCheck} = opts;
     const config = createIBeaconConfig(dbOps.config, genesis.genesisValidatorsRoot);
-
     this.controller = new AbortController();
     const clock = new Clock(config, logger, {genesisTime: Number(genesis.genesisTime)});
     const loggerVc = getLoggerVc(logger, clock);
@@ -85,10 +87,14 @@ export class Validator {
         : opts.api;
 
     const indicesService = new IndicesService(logger, api, metrics);
+    const doppelgangerService = opts.doppelgangerProtectionEnabled
+      ? new DoppelgangerService(logger, clock, api, indicesService, opts.processShutdownCallback, metrics)
+      : null;
     const validatorStore = new ValidatorStore(
       config,
       slashingProtection,
       indicesService,
+      doppelgangerService,
       metrics,
       signers,
       defaultFeeRecipient ?? defaultDefaultFeeRecipient
@@ -147,6 +153,10 @@ export class Validator {
       this.clock.start(this.controller.signal);
       this.chainHeaderTracker.start(this.controller.signal);
     }
+  }
+
+  get isRunning(): boolean {
+    return this.state === Status.running;
   }
 
   /** Waits for genesis and genesis time */
@@ -212,8 +222,7 @@ export class Validator {
     }
 
     if (exitEpoch === undefined) {
-      const currentSlot = getCurrentSlot(this.config, this.clock.genesisTime);
-      exitEpoch = computeEpochAtSlot(currentSlot);
+      exitEpoch = computeEpochAtSlot(getCurrentSlot(this.config, this.clock.genesisTime));
     }
 
     const signedVoluntaryExit = await this.validatorStore.signVoluntaryExit(publicKey, stateValidator.index, exitEpoch);

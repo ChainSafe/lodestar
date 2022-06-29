@@ -373,5 +373,17 @@ export function getMetrics(register: MetricsRegister, gitData: LodestarGitData) 
         labelNames: ["bucket"],
       }),
     },
+
+    doppelganger: {
+      statusCount: register.gauge<{status: string}>({
+        name: "vc_doppelganger_validator_status_count",
+        help: "Count of validators per status",
+        labelNames: ["status"],
+      }),
+      epochsChecked: register.gauge({
+        name: "vc_doppelganger_epochs_checked_total",
+        help: "Total count of epochs checked",
+      }),
+    },
   };
 }

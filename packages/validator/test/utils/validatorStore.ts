@@ -30,6 +30,7 @@ export function initValidatorStore(
     createIBeaconConfig(customChainConfig, genesisValidatorsRoot),
     new SlashingProtectionMock(),
     indicesService,
+    null,
     metrics,
     signers,
     defaultFeeRecipient

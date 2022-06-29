@@ -13,7 +13,7 @@ import {
   SLOTS_PER_HISTORICAL_ROOT,
   SYNC_COMMITTEE_SUBNET_SIZE,
 } from "@chainsafe/lodestar-params";
-import {Root, Slot, ValidatorIndex, ssz} from "@chainsafe/lodestar-types";
+import {Root, Slot, ValidatorIndex, ssz, Epoch} from "@chainsafe/lodestar-types";
 import {ExecutionStatus} from "@chainsafe/lodestar-fork-choice";
 
 import {fromHexString} from "@chainsafe/ssz";
@@ -583,6 +583,28 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
 
     async prepareBeaconProposer(proposers) {
       await chain.updateBeaconProposerData(chain.clock.currentEpoch, proposers);
+    },
+
+    async getLiveness(indices: ValidatorIndex[], epoch: Epoch) {
+      if (indices.length === 0) {
+        return {
+          data: [],
+        };
+      }
+      const currentEpoch = chain.clock.currentEpoch;
+      if (epoch < currentEpoch - 1 || epoch > currentEpoch + 1) {
+        throw new Error(
+          `Request epoch ${epoch} is more than one epoch before or after the current epoch ${currentEpoch}`
+        );
+      }
+
+      return {
+        data: indices.map((index: ValidatorIndex) => ({
+          index,
+          epoch,
+          isLive: chain.validatorSeenAtEpoch(index, epoch),
+        })),
+      };
     },
   };
 }

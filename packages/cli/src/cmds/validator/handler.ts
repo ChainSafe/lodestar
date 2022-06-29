@@ -1,5 +1,5 @@
 import {LevelDbController} from "@chainsafe/lodestar-db";
-import {SlashingProtection, Validator} from "@chainsafe/lodestar-validator";
+import {ProcessShutdownCallback, SlashingProtection, Validator} from "@chainsafe/lodestar-validator";
 import {getMetrics, MetricsRegister} from "@chainsafe/lodestar-validator";
 import {RegistryMetricCreator, collectNodeJSMetrics, HttpMetricsServer} from "@chainsafe/lodestar";
 import {getBeaconConfigFromArgs} from "../../config/index.js";
@@ -22,6 +22,7 @@ import {KeymanagerRestApiServer} from "./keymanager/server.js";
 export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): Promise<void> {
   const graffiti = args.graffiti || getDefaultGraffiti();
   const defaultFeeRecipient = parseFeeRecipient(args.defaultFeeRecipient ?? defaultDefaultFeeRecipient);
+  const doppelgangerProtectionEnabled = args.doppelgangerProtectionEnabled;
 
   const validatorPaths = getValidatorPaths(args);
   const beaconPaths = getBeaconPaths(args);
@@ -39,6 +40,12 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
   onGracefulShutdown(async () => {
     for (const cb of onGracefulShutdownCbs) await cb();
   }, logger.info.bind(logger));
+
+  // Callback for validator to request forced exit, in case of doppelganger detection
+  const processShutdownCallback: ProcessShutdownCallback = (err) => {
+    logger.error("Process shutdown requested", {}, err);
+    process.kill(process.pid, "SIGINT");
+  };
 
   /**
    * For rationale and documentation of how signers are loaded from args and disk,
@@ -99,8 +106,10 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
       slashingProtection,
       api: args.server,
       logger,
+      processShutdownCallback,
       signers,
       graffiti,
+      doppelgangerProtectionEnabled,
       afterBlockDelaySlotFraction: args.afterBlockDelaySlotFraction,
       defaultFeeRecipient,
     },

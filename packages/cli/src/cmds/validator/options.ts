@@ -30,6 +30,7 @@ export type IValidatorCliArgs = AccountValidatorArgs &
     afterBlockDelaySlotFraction?: number;
     defaultFeeRecipient?: string;
     strictFeeRecipientCheck?: boolean;
+    doppelgangerProtectionEnabled?: boolean;
 
     importKeystoresPath?: string[];
     importKeystoresPassword?: string;
@@ -173,6 +174,12 @@ export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
     description: "Path to a file with password to decrypt all keystores from importKeystoresPath option",
     defaultDescription: "./password.txt",
     type: "string",
+  },
+
+  doppelgangerProtectionEnabled: {
+    description: "Enables Doppelganger protection",
+    default: false,
+    type: "boolean",
   },
 
   // HIDDEN INTEROP OPTIONS

@@ -11,16 +11,16 @@ type IDevOwnArgs = {
   startValidators?: string;
   genesisTime?: number;
   reset?: boolean;
+  doppelgangerProtectionEnabled?: boolean;
   server: string;
 } & KeymanagerArgs &
-  Pick<IValidatorCliArgs, "importKeystoresPath" | "importKeystoresPassword">;
+  Pick<IValidatorCliArgs, "importKeystoresPath" | "importKeystoresPassword" | "doppelgangerProtectionEnabled">;
 
 const devOwnOptions: ICliCommandOptions<IDevOwnArgs> = {
   ...keymanagerOptions,
-  ...{
-    importKeystoresPath: validatorOptions["importKeystoresPath"],
-    importKeystoresPassword: validatorOptions["importKeystoresPassword"],
-  },
+  importKeystoresPath: validatorOptions["importKeystoresPath"],
+  importKeystoresPassword: validatorOptions["importKeystoresPassword"],
+  doppelgangerProtectionEnabled: validatorOptions["doppelgangerProtectionEnabled"],
   genesisEth1Hash: {
     description: "If present it will create genesis with this eth1 hash.",
     type: "string",

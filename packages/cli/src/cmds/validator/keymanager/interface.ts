@@ -17,13 +17,13 @@ export interface IPersistedKeysBackend {
   }): boolean;
 
   /** Returns true some item is deleted from disk */
-  deleteKeystore(pubkeyHex: PubkeyHex): boolean;
+  deleteKeystore(pubkey: PubkeyHex): boolean;
 
   readAllRemoteKeys(): SignerDefinition[];
 
   /** Returns true some item is written to disk */
-  writeRemoteKey(args: {pubkeyHex: PubkeyHex; remoteSigner: SignerDefinition; persistIfDuplicate: boolean}): boolean;
+  writeRemoteKey(args: {pubkey: PubkeyHex; url: string; persistIfDuplicate: boolean}): boolean;
 
   /** Returns true some item is deleted from disk */
-  deleteRemoteKey(pubkeyHex: PubkeyHex): boolean;
+  deleteRemoteKey(pubkey: PubkeyHex): boolean;
 }

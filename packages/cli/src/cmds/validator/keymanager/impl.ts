@@ -14,7 +14,7 @@ import {
 } from "@chainsafe/lodestar-api/keymanager";
 import {fromHexString} from "@chainsafe/ssz";
 import {Interchange, SignerType, Validator} from "@chainsafe/lodestar-validator";
-import {getPubkeyHexFromKeystore} from "../../../util/format.js";
+import {getPubkeyHexFromKeystore, isValidatePubkeyHex, isValidHttpUrl} from "../../../util/format.js";
 import {IPersistedKeysBackend} from "./interface.js";
 
 export class KeymanagerApi implements Api {
@@ -212,24 +212,27 @@ export class KeymanagerApi implements Api {
    */
   async importRemoteKeys(remoteSigners: SignerDefinition[]): ReturnType<Api["importRemoteKeys"]> {
     const results = remoteSigners.map(
-      (remoteSigner): ResponseStatus<ImportRemoteKeyStatus> => {
+      ({pubkey, url}): ResponseStatus<ImportRemoteKeyStatus> => {
         try {
+          if (!isValidatePubkeyHex(pubkey)) {
+            throw Error(`Invalid pubkey ${pubkey}`);
+          }
+          if (!isValidHttpUrl(url)) {
+            throw Error(`Invalid URL ${url}`);
+          }
+
           // Check if key exists
-          if (this.validator.validatorStore.hasVotingPubkey(remoteSigner.pubkey)) {
+          if (this.validator.validatorStore.hasVotingPubkey(pubkey)) {
             return {status: ImportRemoteKeyStatus.duplicate};
           }
 
           // Else try to add it
 
-          this.validator.validatorStore.addSigner({
-            type: SignerType.Remote,
-            pubkey: remoteSigner.pubkey,
-            url: remoteSigner.url,
-          });
+          this.validator.validatorStore.addSigner({type: SignerType.Remote, pubkey, url});
 
           this.persistedKeysBackend.writeRemoteKey({
-            pubkeyHex: remoteSigner.pubkey,
-            remoteSigner,
+            pubkey,
+            url,
             // Always write, even if it's already persisted for consistency.
             // The in-memory validatorStore is the ground truth to decide duplicates
             persistIfDuplicate: true,

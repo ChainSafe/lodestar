@@ -87,6 +87,12 @@ export type SyncDuty = {
   validatorSyncCommitteeIndices: number[];
 };
 
+export type LivenessResponseData = {
+  index: ValidatorIndex;
+  epoch: Epoch;
+  isLive: boolean;
+};
+
 export type Api = {
   /**
    * Get attester duties
@@ -209,6 +215,9 @@ export type Api = {
   prepareSyncCommitteeSubnets(subscriptions: SyncCommitteeSubscription[]): Promise<void>;
 
   prepareBeaconProposer(proposers: ProposerPreparationData[]): Promise<void>;
+
+  /** Returns validator indices that have been observed to be active on the network */
+  getLiveness(indices: ValidatorIndex[], epoch: Epoch): Promise<{data: LivenessResponseData[]}>;
 };
 
 /**
@@ -228,6 +237,7 @@ export const routesData: RoutesData<Api> = {
   prepareBeaconCommitteeSubnet: {url: "/eth/v1/validator/beacon_committee_subscriptions", method: "POST"},
   prepareSyncCommitteeSubnets: {url: "/eth/v1/validator/sync_committee_subscriptions", method: "POST"},
   prepareBeaconProposer: {url: "/eth/v1/validator/prepare_beacon_proposer", method: "POST"},
+  getLiveness: {url: "/eth/v1/validator/liveness", method: "GET"},
 };
 
 /* eslint-disable @typescript-eslint/naming-convention */
@@ -245,6 +255,7 @@ export type ReqTypes = {
   prepareBeaconCommitteeSubnet: {body: unknown};
   prepareSyncCommitteeSubnets: {body: unknown};
   prepareBeaconProposer: {body: unknown};
+  getLiveness: {query: {indices: ValidatorIndex[]; epoch: Epoch}};
 };
 
 export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
@@ -351,6 +362,11 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
       ],
       schema: {body: Schema.ObjectArray},
     },
+    getLiveness: {
+      writeReq: (indices, epoch) => ({query: {indices, epoch}}),
+      parseReq: ({query}) => [query.indices, query.epoch],
+      schema: {query: {indices: Schema.UintArray, epoch: Schema.Uint}},
+    },
   };
 }
 
@@ -399,5 +415,6 @@ export function getReturnTypes(): ReturnTypes<Api> {
     produceAttestationData: ContainerData(ssz.phase0.AttestationData),
     produceSyncCommitteeContribution: ContainerData(ssz.altair.SyncCommitteeContribution),
     getAggregatedAttestation: ContainerData(ssz.phase0.Attestation),
+    getLiveness: jsonType("camel"),
   };
 }

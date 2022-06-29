@@ -13,7 +13,7 @@ import {
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
-import {allForks, UintNum64, Root, phase0, Slot, RootHex, Epoch} from "@chainsafe/lodestar-types";
+import {allForks, UintNum64, Root, phase0, Slot, RootHex, Epoch, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {ILogger, toHex} from "@chainsafe/lodestar-utils";
 import {CompositeTypeAny, fromHexString, TreeView, Type} from "@chainsafe/ssz";
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
@@ -52,6 +52,7 @@ import {Archiver} from "./archiver/index.js";
 import {PrecomputeNextEpochTransitionScheduler} from "./precomputeNextEpochTransition.js";
 import {ReprocessController} from "./reprocess.js";
 import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
+import {SeenBlockAttesters} from "./seenCache/seenBlockAttesters.js";
 import {BeaconProposerCache} from "./beaconProposerCache.js";
 
 export class BeaconChain implements IBeaconChain {
@@ -87,6 +88,8 @@ export class BeaconChain implements IBeaconChain {
   readonly seenBlockProposers = new SeenBlockProposers();
   readonly seenSyncCommitteeMessages = new SeenSyncCommitteeMessages();
   readonly seenContributionAndProof: SeenContributionAndProof;
+  // Seen cache for liveness checks
+  readonly seenBlockAttesters = new SeenBlockAttesters();
 
   // Global state caches
   readonly pubkey2index: PubkeyIndexMap;
@@ -199,6 +202,7 @@ export class BeaconChain implements IBeaconChain {
         stateCache,
         checkpointStateCache,
         seenAggregatedAttestations: this.seenAggregatedAttestations,
+        seenBlockAttesters: this.seenBlockAttesters,
         beaconProposerCache: this.beaconProposerCache,
         emitter,
         config,
@@ -231,6 +235,25 @@ export class BeaconChain implements IBeaconChain {
     this.stateCache.clear();
     this.checkpointStateCache.clear();
     await this.bls.close();
+  }
+
+  validatorSeenAtEpoch(index: ValidatorIndex, epoch: Epoch): boolean {
+    // Caller must check that epoch is not older that current epoch - 1
+    // else the caches for that epoch may already be pruned.
+
+    return (
+      // Dedicated cache for liveness checks, registers attesters seen through blocks.
+      // Note: this check should be cheaper + overlap with counting participants of aggregates from gossip.
+      this.seenBlockAttesters.isKnown(epoch, index) ||
+      //
+      // Re-use gossip caches. Populated on validation of gossip + API messages
+      //   seenAttesters = single signer of unaggregated attestations
+      this.seenAttesters.isKnown(epoch, index) ||
+      //   seenAggregators = single aggregator index, not participants of the aggregate
+      this.seenAggregators.isKnown(epoch, index) ||
+      //   seenBlockProposers = single block proposer
+      this.seenBlockProposers.seenAtEpoch(epoch, index)
+    );
   }
 
   /** Populate in-memory caches with persisted data. Call at least once on startup */

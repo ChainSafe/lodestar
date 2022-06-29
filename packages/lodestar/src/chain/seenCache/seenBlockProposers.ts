@@ -1,3 +1,4 @@
+import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {Epoch, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {MapDef} from "../../util/map.js";
 
@@ -30,5 +31,18 @@ export class SeenBlockProposers {
         this.proposerIndexesBySlot.delete(slot);
       }
     }
+  }
+
+  seenAtEpoch(epoch: Slot, index: ValidatorIndex): boolean {
+    const fromSlot = computeStartSlotAtEpoch(epoch);
+    const toSlot = computeStartSlotAtEpoch(epoch + 1);
+
+    for (let slot = fromSlot; slot < toSlot; slot++) {
+      if (this.proposerIndexesBySlot.get(slot)?.has(index) === true) {
+        return true;
+      }
+    }
+
+    return false;
   }
 }

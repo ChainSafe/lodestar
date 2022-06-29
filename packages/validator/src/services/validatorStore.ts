@@ -25,8 +25,8 @@ import {
   phase0,
   Root,
   Slot,
-  ValidatorIndex,
   ssz,
+  ValidatorIndex,
 } from "@chainsafe/lodestar-types";
 import {BitArray, fromHexString, toHexString} from "@chainsafe/ssz";
 import {routes} from "@chainsafe/lodestar-api";
@@ -35,6 +35,7 @@ import {PubkeyHex} from "../types.js";
 import {externalSignerPostSignature} from "../util/externalSignerClient.js";
 import {Metrics} from "../metrics.js";
 import {IndicesService} from "./indices.js";
+import {DoppelgangerService} from "./doppelgangerService.js";
 
 export enum SignerType {
   Local,
@@ -80,6 +81,7 @@ export class ValidatorStore {
     private readonly config: IBeaconConfig,
     private readonly slashingProtection: ISlashingProtection,
     private readonly indicesService: IndicesService,
+    private readonly doppelgangerService: DoppelgangerService | null,
     private readonly metrics: Metrics | null,
     initialSigners: Signer[],
     private readonly defaultFeeRecipient: string
@@ -133,6 +135,8 @@ export class ValidatorStore {
         // TODO: Allow to customize
         feeRecipient: null,
       });
+
+      this.doppelgangerService?.registerValidator(pubkey);
     }
   }
 
@@ -166,6 +170,9 @@ export class ValidatorStore {
     if (block.slot > currentSlot) {
       throw Error(`Not signing block with slot ${block.slot} greater than current slot ${currentSlot}`);
     }
+
+    // Duties are filtered before-hard by doppelganger-safe, this assert should never throw
+    this.assertDoppelgangerSafe(pubkey);
 
     const proposerDomain = this.config.getDomain(DOMAIN_BEACON_PROPOSER, block.slot);
     const blockType = this.config.getForkTypes(block.slot).BeaconBlock;
@@ -203,6 +210,9 @@ export class ValidatorStore {
         `Not signing attestation with target epoch ${attestationData.target.epoch} greater than current epoch ${currentEpoch}`
       );
     }
+
+    // Duties are filtered before-hard by doppelganger-safe, this assert should never throw
+    this.assertDoppelgangerSafe(duty.pubkey);
 
     this.validateAttestationDuty(duty, attestationData);
     const slot = computeStartSlotAtEpoch(attestationData.target.epoch);
@@ -325,6 +335,11 @@ export class ValidatorStore {
     };
   }
 
+  isDoppelgangerSafe(pubkeyHex: PubkeyHex): boolean {
+    // If doppelganger is not enabled we assumed all keys to be safe for use
+    return !this.doppelgangerService || this.doppelgangerService.isDoppelgangerSafe(pubkeyHex);
+  }
+
   private async getSignature(pubkey: BLSPubkeyMaybeHex, signingRoot: Uint8Array): Promise<BLSSignature> {
     // TODO: Refactor indexing to not have to run toHexString() on the pubkey every time
     const pubkeyHex = typeof pubkey === "string" ? pubkey : toHexString(pubkey);
@@ -366,6 +381,13 @@ export class ValidatorStore {
       throw Error(
         `Inconsistent duties during signing: duty.committeeIndex ${duty.committeeIndex} != att.committeeIndex ${data.index}`
       );
+    }
+  }
+
+  private assertDoppelgangerSafe(pubKey: PubkeyHex | BLSPubkey): void {
+    const pubkeyHex = typeof pubKey === "string" ? pubKey : toHexString(pubKey);
+    if (!this.isDoppelgangerSafe(pubkeyHex)) {
+      throw new Error(`Doppelganger state for key ${pubkeyHex} is not safe`);
     }
   }
 }

@@ -15,6 +15,7 @@ export async function getAndInitDevValidators({
   testLoggerOpts,
   externalSignerUrl,
   defaultFeeRecipient,
+  doppelgangerProtectionEnabled = false,
 }: {
   node: BeaconNode;
   validatorsPerClient: number;
@@ -24,6 +25,7 @@ export async function getAndInitDevValidators({
   testLoggerOpts?: TestLoggerOpts;
   externalSignerUrl?: string;
   defaultFeeRecipient?: string;
+  doppelgangerProtectionEnabled?: boolean;
 }): Promise<{validators: Validator[]; secretKeys: SecretKey[]}> {
   const validators: Promise<Validator>[] = [];
   const secretKeys: SecretKey[] = [];
@@ -63,8 +65,11 @@ export async function getAndInitDevValidators({
         api: useRestApi ? getNodeApiUrl(node) : node.api,
         slashingProtection,
         logger,
+        // eslint-disable-next-line @typescript-eslint/no-empty-function
+        processShutdownCallback: () => {},
         signers,
         defaultFeeRecipient,
+        doppelgangerProtectionEnabled,
       })
     );
   }
