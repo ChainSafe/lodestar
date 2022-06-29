@@ -160,7 +160,7 @@
     "@types/jwt-simple": "0.5.33",
     "@types/leveldown": "^4.0.2",
     "@types/prometheus-gc-stats": "^0.6.1",
-    "@types/supertest": "^2.0.8",
+    "@types/supertest": "^2.0.12",
     "@types/tmp": "^0.2.0",
     "@types/varint": "^6.0.0",
     "eventsource": "^2.0.2",
