@@ -57,6 +57,8 @@ export class DoppelgangerService {
     if (metrics) {
       metrics.doppelganger.statusCount.addCollect(() => this.onScrapeMetrics(metrics));
     }
+
+    this.logger.info("doppelganger protection enabled", {detectionEpochs: DEFAULT_REMAINING_DETECTION_EPOCHS});
   }
 
   registerValidator(pubkeyHex: PubkeyHex): void {
