@@ -1,12 +1,13 @@
 import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
-import {phase0, ssz} from "@chainsafe/lodestar-types";
+import {routes} from "@chainsafe/lodestar-api/beacon";
+import {BLSPubkey, phase0, Slot, ssz} from "@chainsafe/lodestar-types";
 import {IChainConfig} from "@chainsafe/lodestar-config";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {fromHexString} from "@chainsafe/ssz";
 import {Validator} from "@chainsafe/lodestar-validator";
 import {PubkeyHex} from "@chainsafe/lodestar-validator/src/types";
-import {createAttesterDuty, getAndInitDevValidators} from "../../utils/node/validator.js";
+import {getAndInitDevValidators} from "../../utils/node/validator.js";
 import {ChainEvent} from "../../../src/chain/index.js";
 import {Network} from "../../../src/network/index.js";
 import {connect} from "../../utils/network.js";
@@ -306,3 +307,20 @@ describe("doppelganger / doppelganger test", function () {
     ).to.eventually.be.fulfilled;
   });
 });
+
+function createAttesterDuty(
+  pubkey: BLSPubkey,
+  currentSlot: Slot,
+  committeeIndex: number,
+  validatorIndex: number
+): routes.validator.AttesterDuty {
+  return {
+    pubkey,
+    validatorIndex,
+    committeeIndex: committeeIndex,
+    committeeLength: 1,
+    committeesAtSlot: 1,
+    validatorCommitteeIndex: 0,
+    slot: currentSlot,
+  };
+}
