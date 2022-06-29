@@ -91,14 +91,13 @@ export class DoppelgangerService {
 
     // Collect indices that still need doppelganger checks
     const pubkeysToCheckWithoutIndex: PubkeyHex[] = [];
-    const indicesToCheck: ValidatorIndex[] = [];
+    // Collect as Map for detectDoppelganger() which needs to map back index -> pubkey
     const indicesToCheckMap = new Map<ValidatorIndex, PubkeyHex>();
 
     for (const [pubkeyHex, state] of this.doppelgangerStateByPubkey.entries()) {
       if (state.remainingEpochs > 0) {
         const index = this.indicesService.pubkey2index.get(pubkeyHex);
         if (index !== undefined) {
-          indicesToCheck.push(index);
           indicesToCheckMap.set(index, pubkeyHex);
         } else {
           pubkeysToCheckWithoutIndex.push(pubkeyHex);
@@ -111,18 +110,18 @@ export class DoppelgangerService {
     for (const index of newIndices) {
       const pubkey = this.indicesService.index2pubkey.get(index);
       if (pubkey) {
-        indicesToCheck.push(index);
         indicesToCheckMap.set(index, pubkey);
       }
     }
 
-    this.logger.debug("doppelganger pollLiveness", {currentEpoch, indicesCount: indicesToCheck.length});
-    if (indicesToCheck.length === 0) {
+    this.logger.debug("doppelganger pollLiveness", {currentEpoch, indicesCount: indicesToCheckMap.size});
+    if (indicesToCheckMap.size === 0) {
       return;
     }
 
     // in the current epoch also request for liveness check for past epoch in case a validator index was live
     // in the remaining 25% of the last slot of the previous epoch
+    const indicesToCheck = Array.from(indicesToCheckMap.keys());
     const [previous, current] = await Promise.all([
       this.getLiveness(indicesToCheck, currentEpoch - 1),
       this.getLiveness(indicesToCheck, currentEpoch),
@@ -188,7 +187,7 @@ export class DoppelgangerService {
         `Doppelganger(s) detected
         A doppelganger occurs when two different validator clients run the same public key.
         This validator client detected another instance of a local validator on the network
-        and is shutting down to prevent potential slashable offences. Ensure that you are not
+        and is shutting down to prevent potential slashable offenses. Ensure that you are not
         running a duplicate or overlapping validator client`,
         violators
       );

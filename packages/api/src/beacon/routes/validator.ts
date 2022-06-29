@@ -216,7 +216,7 @@ export type Api = {
 
   prepareBeaconProposer(proposers: ProposerPreparationData[]): Promise<void>;
 
-  /** Returns validator indices that has been observed to be active on the network */
+  /** Returns validator indices that have been observed to be active on the network */
   getLiveness(indices: ValidatorIndex[], epoch: Epoch): Promise<{data: LivenessResponseData[]}>;
 };
 
