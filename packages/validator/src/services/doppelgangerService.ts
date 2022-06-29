@@ -71,6 +71,10 @@ export class DoppelgangerService {
     });
   }
 
+  getStatus(pubKeyHex: PubkeyHex): DoppelgangerStatus {
+    return getStatus(this.doppelgangerStateByPubkey.get(pubKeyHex));
+  }
+
   isDoppelgangerSafe(pubKeyHex: PubkeyHex): boolean {
     return getStatus(this.doppelgangerStateByPubkey.get(pubKeyHex)) === DoppelgangerStatus.VerifiedSafe;
   }
@@ -99,6 +103,7 @@ export class DoppelgangerService {
       }
     }
 
+    this.logger.debug("doppelganger pollLiveness", {currentEpoch, indicesCount: indicesToCheck.length});
     if (indicesToCheck.length === 0) {
       return;
     }
@@ -167,11 +172,11 @@ export class DoppelgangerService {
       }
 
       this.logger.error(
-        "Doppelganger(s) detected\n" +
-          "A doppelganger occurs when two different validator clients run the same public key. \
-          This validator client detected another instance of a local validator on the network \
-          and is shutting down to prevent potential slashable offences. Ensure that you are not \
-          running a duplicate or overlapping validator client",
+        `Doppelganger(s) detected
+        A doppelganger occurs when two different validator clients run the same public key.
+        This validator client detected another instance of a local validator on the network
+        and is shutting down to prevent potential slashable offences. Ensure that you are not
+        running a duplicate or overlapping validator client`,
         violators
       );
 

@@ -5,8 +5,8 @@ type RunEveryFn = (slot: Slot, signal: AbortSignal) => Promise<void>;
 
 export class ClockMock implements IClock {
   readonly currentEpoch: number = 0;
-  readonly genesisTime = 0;
-  readonly secondsPerSlot = 12;
+  readonly genesisTime: number = 0;
+  readonly secondsPerSlot: number = 12;
 
   private readonly everySlot: RunEveryFn[] = [];
   private readonly everyEpoch: RunEveryFn[] = [];
@@ -15,7 +15,7 @@ export class ClockMock implements IClock {
   start = (): void => {};
   runEverySlot = (fn: RunEveryFn): number => this.everySlot.push(fn);
   runEveryEpoch = (fn: RunEveryFn): number => this.everyEpoch.push(fn);
-  msToSlot = (): number => 0;
+  msToSlot = (_slot: number): number => 0;
   secFromSlot = (): number => 0;
 
   async tickSlotFns(slot: Slot, signal: AbortSignal): Promise<void> {
