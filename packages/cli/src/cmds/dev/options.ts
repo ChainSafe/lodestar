@@ -3,9 +3,8 @@ import {ICliCommandOptions} from "../../util/index.js";
 import {beaconOptions, IBeaconArgs} from "../beacon/options.js";
 import {NetworkName} from "../../networks/index.js";
 import {beaconNodeOptions, globalOptions} from "../../options/index.js";
-import {KeymanagerArgs, keymanagerOptions} from "../../options/keymanagerOptions.js";
-import {IValidatorCliArgs, validatorOptions} from "../validator/options.js";
 import {doppelgangerOptions} from "../../options/doppelgangerOptions.js";
+import {IValidatorCliArgs, validatorOptions, KeymanagerArgs, keymanagerOptions} from "../validator/options.js";
 
 type IDevOwnArgs = {
   genesisEth1Hash?: string;

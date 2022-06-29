@@ -49,8 +49,8 @@ export type SignerLocal = {
 
 export type SignerRemote = {
   type: SignerType.Remote;
-  externalSignerUrl: string;
-  pubkeyHex: PubkeyHex;
+  url: string;
+  pubkey: PubkeyHex;
 };
 
 type BLSPubkeyMaybeHex = BLSPubkey | PubkeyHex;
@@ -360,11 +360,7 @@ export class ValidatorStore {
       case SignerType.Remote: {
         const timer = this.metrics?.remoteSignTime.startTimer();
         try {
-          const signatureHex = await externalSignerPostSignature(
-            signer.externalSignerUrl,
-            pubkeyHex,
-            toHexString(signingRoot)
-          );
+          const signatureHex = await externalSignerPostSignature(signer.url, pubkeyHex, toHexString(signingRoot));
           return fromHexString(signatureHex);
         } catch (e) {
           this.metrics?.remoteSignErrors.inc();
@@ -402,6 +398,6 @@ function getSignerPubkeyHex(signer: Signer): PubkeyHex {
       return toHexString(signer.secretKey.toPublicKey().toBytes());
 
     case SignerType.Remote:
-      return signer.pubkeyHex;
+      return signer.pubkey;
   }
 }
