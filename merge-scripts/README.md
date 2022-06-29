@@ -6,31 +6,33 @@ This script is borne out of need to simplify putting together the various moving
 
 So just give it a go and fire away your merge setup command!
 
-##### Supported Networks
+### Supported Networks
 
 Look for the .vars file in the folder to see what networks are supported. Here are a few examples
 
 1. Kiln Network ( soon to be deprecated ):  `--devnetVars ./kiln.vars`
 2. Ropsten Network: `--devnetVars ./ropsten.vars`
 3. Sepolia Network: `--devnetVars ./sepolia.vars`
-4. Mainnet Shadow fork 7: `--devnetVars ./mainnetshadow-7.vars`
+4. Mainnet Shadow fork 8: `--devnetVars ./mainnetshadow-8.vars`
 
-###### And the much expected Mainnet merge (comming soon!)
+#### And the much awaited Mainnet merge!
 
-##### Requirements
+Comming soon! but you can start prepping your nodes with `--devnetVars mainnet.vars` with a placeholder TTD.
+
+### Requirements
 
 1. docker
 2. git
 3. A bash shell
 
-##### Just run the script with arguments
+### Just run the script with arguments
 
 ```bash
 cd merge-scripts
 ./setup.sh --dataDir kiln-data --elClient geth --devnetVars ./kiln.vars [--dockerWithSudo --withTerminal "gnome-terminal --disable-factory --" --withValidator]
 ```
 
-##### Example scenarios
+### Example scenarios
 
 1. Run with separate terminals launched & attached (best for testing in local) :
    `./setup.sh --dataDir kiln-data --elClient nethermind --devnetVars ./kiln.vars --withTerminal "gnome-terminal --disable-factory --" --dockerWithSudo `
@@ -39,7 +41,7 @@ cd merge-scripts
 3. Run detached (best for leaving it to run, typically after testing 1 or 2):
    `./setup.sh --dataDir kiln-data --elClient nethermind --devnetVars ./kiln.vars --detached --dockerWithSudo`
 
-##### Supported EL clients
+### Supported EL clients
 
 Look for the .vars file in the folder to see what networks are supported. Here are a few examples
 
@@ -51,7 +53,7 @@ Look for the .vars file in the folder to see what networks are supported. Here a
 
 You can alternate between them (without needing to reset/cleanup) to experiment with the ELs being out of sync ( and catching up) with `lodestar` via **Optimistic Sync** features.
 
-##### Script parameters help
+### Script parameters help
 
 1. `dataDir`: Where you want the script and client's configuration data to be setup. Should be non-existent one for the first run. (The directory if already present will skip fetching the configuration, assuming it has done previously). You can also clean indivizual directories of CL/EL between the re-runs.
 2. `elClient`: Which EL client you want, currently working with `geth` and `nethermind`
