@@ -21,32 +21,24 @@ describe("blockAssembly - body", function () {
     const chain = sandbox.createStubInstance(BeaconChain);
 
     const aggregatedAttestationPool = sinon.createStubInstance(AggregatedAttestationPool);
-    (
-      chain as unknown as {
-        aggregatedAttestationPool: SinonStubbedInstance<AggregatedAttestationPool>;
-      }
-    ).aggregatedAttestationPool = aggregatedAttestationPool;
+    ((chain as unknown) as {
+      aggregatedAttestationPool: SinonStubbedInstance<AggregatedAttestationPool>;
+    }).aggregatedAttestationPool = aggregatedAttestationPool;
 
     const opPool = sandbox.createStubInstance(OpPool);
-    (
-      chain as unknown as {
-        opPool: SinonStubbedInstance<OpPool>;
-      }
-    ).opPool = opPool;
+    ((chain as unknown) as {
+      opPool: SinonStubbedInstance<OpPool>;
+    }).opPool = opPool;
 
     const eth1 = sandbox.createStubInstance(Eth1ForBlockProduction);
     eth1.getEth1DataAndDeposits.resolves({eth1Data: state.eth1Data, deposits: [generateDeposit()]});
-    (
-      chain as unknown as {
-        eth1: SinonStubbedInstance<Eth1ForBlockProduction>;
-      }
-    ).eth1 = eth1;
+    ((chain as unknown) as {
+      eth1: SinonStubbedInstance<Eth1ForBlockProduction>;
+    }).eth1 = eth1;
 
-    (
-      chain as unknown as {
-        config: IChainForkConfig;
-      }
-    ).config = config;
+    ((chain as unknown) as {
+      config: IChainForkConfig;
+    }).config = config;
 
     return {chain, aggregatedAttestationPool, dbStub: new StubbedBeaconDb(), eth1, opPool};
   }

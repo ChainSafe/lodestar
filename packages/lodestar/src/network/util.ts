@@ -69,7 +69,7 @@ export function prettyPrintPeerId(peerId: PeerId): string {
  */
 export function getConnectionsMap(connectionManager: ConnectionManager): Map<string, Connection[]> {
   // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-  return (connectionManager as unknown as DefaultConnectionManager)["connections"] as Map<string, Connection[]>;
+  return ((connectionManager as unknown) as DefaultConnectionManager)["connections"] as Map<string, Connection[]>;
 }
 
 export function getConnection(connectionManager: ConnectionManager, peerIdStr: string): Connection | undefined {

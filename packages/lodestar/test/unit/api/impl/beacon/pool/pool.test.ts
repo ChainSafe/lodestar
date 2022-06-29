@@ -39,23 +39,19 @@ describe.skip("beacon pool api impl", function () {
     const server = setupApiImplTestServer();
     chainStub = server.chainStub;
     aggregatedAttestationPool = sinon.createStubInstance(AggregatedAttestationPool);
-    (
-      chainStub as unknown as {
-        aggregatedAttestationPool: SinonStubbedInstance<AggregatedAttestationPool>;
-      }
-    ).aggregatedAttestationPool = aggregatedAttestationPool;
+    ((chainStub as unknown) as {
+      aggregatedAttestationPool: SinonStubbedInstance<AggregatedAttestationPool>;
+    }).aggregatedAttestationPool = aggregatedAttestationPool;
     opPool = sinon.createStubInstance(OpPool);
-    (
-      chainStub as unknown as {
-        opPool: SinonStubbedInstance<OpPool>;
-      }
-    ).opPool = opPool;
+    ((chainStub as unknown) as {
+      opPool: SinonStubbedInstance<OpPool>;
+    }).opPool = opPool;
     gossipStub = sinon.createStubInstance(Eth2Gossipsub);
     gossipStub.publishAttesterSlashing = sinon.stub();
     gossipStub.publishProposerSlashing = sinon.stub();
     gossipStub.publishVoluntaryExit = sinon.stub();
     networkStub = server.networkStub;
-    networkStub.gossip = gossipStub as unknown as Eth2Gossipsub;
+    networkStub.gossip = (gossipStub as unknown) as Eth2Gossipsub;
     poolApi = getBeaconPoolApi({
       logger,
       network: networkStub,

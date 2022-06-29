@@ -85,7 +85,7 @@ describe("network / peers / PeerManager", function () {
         networkEventBus,
         attnetsService: mockSubnetsService,
         syncnetsService: mockSubnetsService,
-        gossip: {getScore: () => 0, scoreParams: {decayInterval: 1000}} as unknown as Eth2Gossipsub,
+        gossip: ({getScore: () => 0, scoreParams: {decayInterval: 1000}} as unknown) as Eth2Gossipsub,
         peersData: new PeersData(),
       },
       {
@@ -196,7 +196,7 @@ describe("network / peers / PeerManager", function () {
     (libp2p.connectionManager as DefaultConnectionManager)["connections"].set(peerId1.toString(), [
       libp2pConnectionOutboud,
     ]);
-    (libp2p.connectionManager as any as EventEmitter).emit("peer:connect", libp2pConnectionOutboud);
+    ((libp2p.connectionManager as any) as EventEmitter).emit("peer:connect", libp2pConnectionOutboud);
 
     await peerConnectedPromise;
 

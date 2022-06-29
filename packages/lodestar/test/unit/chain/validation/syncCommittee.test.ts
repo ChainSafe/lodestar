@@ -38,11 +38,9 @@ describe("Sync Committee Signature validation", function () {
 
   beforeEach(function () {
     chain = sandbox.createStubInstance(BeaconChain);
-    (
-      chain as {
-        seenSyncCommitteeMessages: SeenSyncCommitteeMessages;
-      }
-    ).seenSyncCommitteeMessages = new SeenSyncCommitteeMessages();
+    (chain as {
+      seenSyncCommitteeMessages: SeenSyncCommitteeMessages;
+    }).seenSyncCommitteeMessages = new SeenSyncCommitteeMessages();
     clockStub = sandbox.createStubInstance(LocalClock);
     chain.clock = clockStub;
     clockStub.isCurrentSlotGivenGossipDisparity.returns(true);

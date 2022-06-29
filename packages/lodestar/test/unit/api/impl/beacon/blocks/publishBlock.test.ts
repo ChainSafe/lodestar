@@ -26,7 +26,7 @@ describe("api - beacon - publishBlock", function () {
     server = setupApiImplTestServer();
     gossipStub = sinon.createStubInstance(Eth2Gossipsub);
     gossipStub.publishBeaconBlock = sinon.stub();
-    server.networkStub.gossip = gossipStub as unknown as Eth2Gossipsub;
+    server.networkStub.gossip = (gossipStub as unknown) as Eth2Gossipsub;
     chainStub = server.chainStub;
     syncStub = server.syncStub;
     chainStub.processBlock.resolves();

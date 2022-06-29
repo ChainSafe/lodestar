@@ -21,14 +21,14 @@ describe.skip("eth1 / Eth1MergeBlockTracker", function () {
   const logger = testLogger();
 
   function getConfig(ttd: bigint): IChainConfig {
-    return {
+    return ({
       // Set time units to 1s to make the test faster
       SECONDS_PER_ETH1_BLOCK: 1,
       SECONDS_PER_SLOT: 1,
       DEPOSIT_CONTRACT_ADDRESS: Buffer.alloc(32, 0),
       TERMINAL_TOTAL_DIFFICULTY: ttd,
       TERMINAL_BLOCK_HASH: ZERO_HASH,
-    } as Partial<IChainConfig> as IChainConfig;
+    } as Partial<IChainConfig>) as IChainConfig;
   }
   const eth1Config = {DEPOSIT_CONTRACT_ADDRESS: ZERO_HASH};
 

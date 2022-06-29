@@ -34,11 +34,9 @@ describe.skip("Sync Committee Contribution And Proof validation", function () {
 
   beforeEach(function () {
     chain = sandbox.createStubInstance(BeaconChain);
-    (
-      chain as {
-        seenContributionAndProof: SeenContributionAndProof;
-      }
-    ).seenContributionAndProof = new SeenContributionAndProof(null);
+    (chain as {
+      seenContributionAndProof: SeenContributionAndProof;
+    }).seenContributionAndProof = new SeenContributionAndProof(null);
     clockStub = sandbox.createStubInstance(LocalClock);
     chain.clock = clockStub;
     clockStub.isCurrentSlotGivenGossipDisparity.returns(true);

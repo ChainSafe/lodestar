@@ -115,7 +115,7 @@ export class PeerDiscovery {
       multiaddr: new Multiaddr(opts.discv5.bindAddr),
       config: opts.discv5,
       // TODO: IDiscv5Metrics is not properly defined, should remove the collect() function
-      metrics: modules.metrics?.discv5 as unknown as {
+      metrics: (modules.metrics?.discv5 as unknown) as {
         [K in keyof IMetrics["discv5"]]: IDiscv5Metrics[keyof IDiscv5Metrics];
       },
     });

@@ -19,14 +19,14 @@ describe("eth1 / Eth1MergeBlockTracker", () => {
   beforeEach(() => (controller = new AbortController()));
   afterEach(() => controller.abort());
   beforeEach(() => {
-    config = {
+    config = ({
       // Set time units to 0 to make the test as fast as possible
       SECONDS_PER_ETH1_BLOCK: 0,
       SECONDS_PER_SLOT: 0,
       // Hardcode TTD to a low value
       TERMINAL_TOTAL_DIFFICULTY: BigInt(terminalTotalDifficulty),
       TERMINAL_BLOCK_HASH: ZERO_HASH,
-    } as Partial<IChainConfig> as IChainConfig;
+    } as Partial<IChainConfig>) as IChainConfig;
   });
 
   it("Should find terminal pow block through TERMINAL_BLOCK_HASH", async () => {

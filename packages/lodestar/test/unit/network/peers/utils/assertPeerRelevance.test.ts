@@ -93,7 +93,7 @@ describe("network / peers / utils / assertPeerRelevance", () => {
   for (const {id, remote, currentSlot, irrelevantType} of testCases) {
     it(id, async () => {
       // Partial instance with only the methods needed for the test
-      const chain = {
+      const chain = ({
         getStatus: () => ({
           forkDigest: correctForkDigest,
           finalizedRoot: ZERO_HASH,
@@ -104,7 +104,7 @@ describe("network / peers / utils / assertPeerRelevance", () => {
         clock: {
           currentSlot: currentSlot ?? 0,
         } as Partial<IBeaconClock>,
-      } as Partial<MockBeaconChain> as MockBeaconChain;
+      } as Partial<MockBeaconChain>) as MockBeaconChain;
 
       expect(assertPeerRelevance(remote, chain)).to.deep.equal(irrelevantType);
     });

@@ -23,7 +23,7 @@ describe("chain / blocks / verifyBlock", function () {
     forkChoice = sinon.createStubInstance(ForkChoice);
     forkChoice.getFinalizedCheckpoint.returns({epoch: 0, root: Buffer.alloc(32), rootHex: ""});
     clock = {currentSlot} as LocalClock;
-    modules = {config, forkChoice, clock} as Partial<VerifyBlockModules> as VerifyBlockModules;
+    modules = ({config, forkChoice, clock} as Partial<VerifyBlockModules>) as VerifyBlockModules;
     // On first call, parentRoot is known
     forkChoice.getBlockHex.returns({} as ProtoBlock);
   });

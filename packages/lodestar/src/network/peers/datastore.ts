@@ -113,7 +113,7 @@ export class Eth2PeerDataStore extends BaseDatastore {
     } catch (err) {
       // this is the same to how js-datastore-level handles notFound error
       // https://github.com/ipfs/js-datastore-level/blob/38f44058dd6be858e757a1c90b8edb31590ec0bc/src/index.js#L121
-      if ((err as unknown as {notFound: boolean}).notFound) return false;
+      if (((err as unknown) as {notFound: boolean}).notFound) return false;
       throw err;
     }
     return true;

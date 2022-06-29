@@ -37,7 +37,7 @@ export class StateArchiveRepository extends Repository<Slot, BeaconStateAllForks
   }
 
   decodeKey(data: Uint8Array): number {
-    return bytesToInt(super.decodeKey(data) as unknown as Uint8Array, "be");
+    return bytesToInt((super.decodeKey(data) as unknown) as Uint8Array, "be");
   }
 
   // Index Root -> Slot

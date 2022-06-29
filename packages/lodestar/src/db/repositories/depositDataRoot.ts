@@ -15,7 +15,7 @@ export class DepositDataRootRepository extends Repository<number, Root> {
   }
 
   decodeKey(data: Buffer): number {
-    return bytesToInt(super.decodeKey(data) as unknown as Uint8Array, "be");
+    return bytesToInt((super.decodeKey(data) as unknown) as Uint8Array, "be");
   }
 
   // depositDataRoots stored by depositData index

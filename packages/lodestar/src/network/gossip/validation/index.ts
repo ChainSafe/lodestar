@@ -35,11 +35,14 @@ export function createValidatorFnsByType(
 
   const jobQueues = createValidationQueues(gossipValidatorFns, modules.signal, modules.metrics);
 
-  const validatorFnsByType = mapValues(jobQueues, (jobQueue): GossipValidatorFn => {
-    return async function gossipValidatorFnWithQueue(topic, gossipMsg, propagationSource, seenTimestampSec) {
-      return await jobQueue.push(topic, gossipMsg, propagationSource, seenTimestampSec);
-    };
-  });
+  const validatorFnsByType = mapValues(
+    jobQueues,
+    (jobQueue): GossipValidatorFn => {
+      return async function gossipValidatorFnWithQueue(topic, gossipMsg, propagationSource, seenTimestampSec) {
+        return await jobQueue.push(topic, gossipMsg, propagationSource, seenTimestampSec);
+      };
+    }
+  );
 
   return {jobQueues, validatorFnsByType};
 }

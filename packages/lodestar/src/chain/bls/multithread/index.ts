@@ -189,7 +189,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       Array.from(this.workers.entries()).map(([id, worker]) =>
         // NOTE: 'threads' has not yet updated types, and NodeJS complains with
         // [DEP0132] DeprecationWarning: Passing a callback to worker.terminate() is deprecated. It returns a Promise instead.
-        (worker.worker.terminate() as unknown as Promise<void>).catch((e: Error) => {
+        ((worker.worker.terminate() as unknown) as Promise<void>).catch((e: Error) => {
           this.logger.error("Error terminating worker", {id}, e);
         })
       )

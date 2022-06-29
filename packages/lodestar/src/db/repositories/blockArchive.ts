@@ -43,7 +43,7 @@ export class BlockArchiveRepository extends Repository<Slot, allForks.SignedBeac
   }
 
   decodeKey(data: Uint8Array): number {
-    return bytesToInt(super.decodeKey(data) as unknown as Uint8Array, "be");
+    return bytesToInt((super.decodeKey(data) as unknown) as Uint8Array, "be");
   }
 
   // Overrides to index

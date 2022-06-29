@@ -42,11 +42,9 @@ describe("gossip block validation", function () {
     forkChoice.getFinalizedCheckpoint.returns({epoch: 0, root: ZERO_HASH, rootHex: ""});
 
     // Reset seen cache
-    (
-      chain as {
-        seenBlockProposers: SeenBlockProposers;
-      }
-    ).seenBlockProposers = new SeenBlockProposers();
+    (chain as {
+      seenBlockProposers: SeenBlockProposers;
+    }).seenBlockProposers = new SeenBlockProposers();
 
     job = {signature, message: block};
   });

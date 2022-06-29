@@ -12,7 +12,9 @@ export type AggregateAndProofValidDataOpts = AttestationValidDataOpts;
 /**
  * Generate a valid gossip SignedAggregateAndProof object. Common logic for unit and perf tests
  */
-export function getAggregateAndProofValidData(opts: AggregateAndProofValidDataOpts): {
+export function getAggregateAndProofValidData(
+  opts: AggregateAndProofValidDataOpts
+): {
   chain: IBeaconChain;
   signedAggregateAndProof: phase0.SignedAggregateAndProof;
   validatorIndex: number;

@@ -18,7 +18,7 @@ export class BackfilledRanges extends Repository<Slot, Slot> {
   }
 
   decodeKey(data: Buffer): number {
-    return bytesToInt(super.decodeKey(data) as unknown as Uint8Array, "be");
+    return bytesToInt((super.decodeKey(data) as unknown) as Uint8Array, "be");
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
