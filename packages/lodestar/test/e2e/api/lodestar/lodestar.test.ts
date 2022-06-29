@@ -60,9 +60,8 @@ describe("api / impl / validator", function () {
       bn.chain.seenBlockAttesters.add(0, 2);
       bn.chain.seenAttesters.add(0, 3);
       bn.chain.seenAggregators.add(0, 4);
-      // live indices at other epochs
-      // TODO: Why is this?
-      bn.chain.seenBlockProposers.add(1000, 1000);
+      // live indices at other epochs, epoch 10
+      bn.chain.seenBlockProposers.add(10, 1000);
       bn.chain.seenAttesters.add(10, 2000);
       bn.chain.seenAggregators.add(10, 3000);
 
