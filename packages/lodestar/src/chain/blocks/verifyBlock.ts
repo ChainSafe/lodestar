@@ -162,7 +162,7 @@ export async function verifyBlockStateTransition(
   const executionPayloadEnabled =
     isBellatrixStateType(postState) &&
     isBellatrixBlockBodyType(block.message.body) &&
-    isExecutionEnabled(postState, block.message.body)
+    isExecutionEnabled(postState, block.message)
       ? block.message.body.executionPayload
       : null;
 

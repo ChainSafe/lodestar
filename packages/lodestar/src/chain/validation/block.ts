@@ -113,7 +113,7 @@ export async function validateGossipBlock(
   if (fork === ForkName.bellatrix) {
     if (!isBellatrixBlockBodyType(block.body)) throw Error("Not merge block type");
     const executionPayload = block.body.executionPayload;
-    if (isBellatrixStateType(blockState) && isExecutionEnabled(blockState, block.body)) {
+    if (isBellatrixStateType(blockState) && isExecutionEnabled(blockState, block)) {
       const expectedTimestamp = computeTimeAtSlot(config, blockSlot, chain.genesisTime);
       if (executionPayload.timestamp !== computeTimeAtSlot(config, blockSlot, chain.genesisTime)) {
         throw new BlockGossipError(GossipAction.REJECT, {
