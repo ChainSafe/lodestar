@@ -6,22 +6,22 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Lodestar documentation - Typescript Ethereum Consensus client">
+        <meta name="description" content="Lodestar Documentation - Typescript Ethereum Consensus client">
       
       
       
         <link rel="canonical" href="https://chainsafe.github.io/lodestar/packages/db/classes/root.repository/">
       
       <link rel="icon" href="../../../../assets/round-icon.ico">
-      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.3.6">
+      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.3.8">
     
     
       
-        <title>Root.repository - Lodestar documentation</title>
+        <title>Root.repository - Lodestar Documentation</title>
       
     
     
-      <link rel="stylesheet" href="../../../../assets/stylesheets/main.4a0965b7.min.css">
+      <link rel="stylesheet" href="../../../../assets/stylesheets/main.1d29e8d0.min.css">
       
         
         <link rel="stylesheet" href="../../../../assets/stylesheets/palette.cbb835fc.min.css">
@@ -84,7 +84,7 @@
 
 <header class="md-header" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="../../../.." title="Lodestar documentation" class="md-header__button md-logo" aria-label="Lodestar documentation" data-md-component="logo">
+    <a href="../../../.." title="Lodestar Documentation" class="md-header__button md-logo" aria-label="Lodestar Documentation" data-md-component="logo">
       
   <img src="../../../../assets/lodestar_icon_300.png" alt="logo">
 
@@ -96,7 +96,7 @@
       <div class="md-header__ellipsis">
         <div class="md-header__topic">
           <span class="md-ellipsis">
-            Lodestar documentation
+            Lodestar Documentation
           </span>
         </div>
         <div class="md-header__topic" data-md-component="header-topic">
@@ -203,12 +203,12 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="../../../.." title="Lodestar documentation" class="md-nav__button md-logo" aria-label="Lodestar documentation" data-md-component="logo">
+    <a href="../../../.." title="Lodestar Documentation" class="md-nav__button md-logo" aria-label="Lodestar Documentation" data-md-component="logo">
       
   <img src="../../../../assets/lodestar_icon_300.png" alt="logo">
 
     </a>
-    Lodestar documentation
+    Lodestar Documentation
   </label>
   
     <div class="md-nav__source">
@@ -234,7 +234,7 @@
   
     <li class="md-nav__item">
       <a href="../../../.." class="md-nav__link">
-        Getting started
+        Getting Started
       </a>
     </li>
   
@@ -247,10 +247,71 @@
   
   
   
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2" type="checkbox" id="__nav_2" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_2">
+          Installation
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Installation" data-md-level="1">
+        <label class="md-nav__title" for="__nav_2">
+          <span class="md-nav__icon md-icon"></span>
+          Installation
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
     <li class="md-nav__item">
-      <a href="../../../../installation/" class="md-nav__link">
-        Installation
+      <a href="../../../../install/source/" class="md-nav__link">
+        Install from source
       </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../install/npm/" class="md-nav__link">
+        Install from NPM
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../install/docker/" class="md-nav__link">
+        Install with Docker
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
     </li>
   
 
@@ -272,14 +333,14 @@
       
       
         <label class="md-nav__link" for="__nav_3">
-          CLI Usage
+          Using Lodestar
           <span class="md-nav__icon md-icon"></span>
         </label>
       
-      <nav class="md-nav" aria-label="CLI Usage" data-md-level="1">
+      <nav class="md-nav" aria-label="Using Lodestar" data-md-level="1">
         <label class="md-nav__title" for="__nav_3">
           <span class="md-nav__icon md-icon"></span>
-          CLI Usage
+          Using Lodestar
         </label>
         <ul class="md-nav__list" data-md-scrollfix>
           
@@ -289,8 +350,8 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../../usage/testnet/" class="md-nav__link">
-        Mainnet or public testnet
+      <a href="../../../../usage/beacon-management/" class="md-nav__link">
+        Beacon management
       </a>
     </li>
   
@@ -317,8 +378,8 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../../usage/key-management/" class="md-nav__link">
-        Key management
+      <a href="../../../../usage/validator-management/" class="md-nav__link">
+        Validator management
       </a>
     </li>
   
@@ -581,6 +642,13 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#private-readonly-bucketid" class="md-nav__link">
+    Private Readonly bucketId
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#protected-config" class="md-nav__link">
     Protected config
   </a>
@@ -595,15 +663,8 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#protected-optional-dbreadsmetrics" class="md-nav__link">
-    Protected Optional dbReadsMetrics
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#protected-optional-dbwritemetrics" class="md-nav__link">
-    Protected Optional dbWriteMetrics
+  <a href="#private-readonly-dbreqopts" class="md-nav__link">
+    Private Readonly dbReqOpts
   </a>
   
 </li>
@@ -897,10 +958,10 @@ indexed by root</p>
 <h3 id="properties">Properties<a class="headerlink" href="#properties" title="Permanent link">&para;</a></h3>
 <ul>
 <li><a href="./#protected-bucket">bucket</a></li>
+<li><a href="./#private-readonly-bucketid">bucketId</a></li>
 <li><a href="./#protected-config">config</a></li>
 <li><a href="./#protected-db">db</a></li>
-<li><a href="./#protected-optional-dbreadsmetrics">dbReadsMetrics</a></li>
-<li><a href="./#protected-optional-dbwritemetrics">dbWriteMetrics</a></li>
+<li><a href="./#private-readonly-dbreqopts">dbReqOpts</a></li>
 <li><a href="./#protected-type">type</a></li>
 </ul>
 <h3 id="methods">Methods<a class="headerlink" href="#methods" title="Permanent link">&para;</a></h3>
@@ -940,8 +1001,8 @@ indexed by root</p>
 </ul>
 <h2 id="constructors_1">Constructors<a class="headerlink" href="#constructors_1" title="Permanent link">&para;</a></h2>
 <h3 id="protected-constructor"><code>Protected</code> constructor<a class="headerlink" href="#protected-constructor" title="Permanent link">&para;</a></h3>
-<p>+ <strong>new Repository</strong>(<code>config</code>: IChainForkConfig, <code>db</code>: <a href="../../modules/db_controller/#db">Db</a>, <code>bucket</code>: <a href="../../enums/root.bucket/">Bucket</a>, <code>type</code>: Type‹T›, <code>metrics?</code>: <a href="../../interfaces/root.idbmetrics/">IDbMetrics</a>): <em><a href="./">Repository</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/db/src/abstractRepository.ts#L30">abstractRepository.ts:30</a></em></p>
+<p>+ <strong>new Repository</strong>(<code>config</code>: IChainForkConfig, <code>db</code>: <a href="../../modules/controller/#db">Db</a>, <code>bucket</code>: <a href="../../enums/root.bucket/">Bucket</a>, <code>type</code>: Type‹T›): <em><a href="./">Repository</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/db/src/abstractRepository.ts#L28">abstractRepository.ts:28</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -957,7 +1018,7 @@ indexed by root</p>
 </tr>
 <tr>
 <td><code>db</code></td>
-<td><a href="../../modules/db_controller/#db">Db</a></td>
+<td><a href="../../modules/controller/#db">Db</a></td>
 </tr>
 <tr>
 <td><code>bucket</code></td>
@@ -967,41 +1028,37 @@ indexed by root</p>
 <td><code>type</code></td>
 <td>Type‹T›</td>
 </tr>
-<tr>
-<td><code>metrics?</code></td>
-<td><a href="../../interfaces/root.idbmetrics/">IDbMetrics</a></td>
-</tr>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em><a href="./">Repository</a></em></p>
 <h2 id="properties_1">Properties<a class="headerlink" href="#properties_1" title="Permanent link">&para;</a></h2>
 <h3 id="protected-bucket"><code>Protected</code> bucket<a class="headerlink" href="#protected-bucket" title="Permanent link">&para;</a></h3>
 <p>• <strong>bucket</strong>: <em><a href="../../enums/root.bucket/">Bucket</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/db/src/abstractRepository.ts#L25">abstractRepository.ts:25</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/db/src/abstractRepository.ts#L24">abstractRepository.ts:24</a></em></p>
+<hr />
+<h3 id="private-readonly-bucketid"><code>Private</code> <code>Readonly</code> bucketId<a class="headerlink" href="#private-readonly-bucketid" title="Permanent link">&para;</a></h3>
+<p>• <strong>bucketId</strong>: <em>string</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/db/src/abstractRepository.ts#L25">abstractRepository.ts:25</a></em></p>
 <hr />
 <h3 id="protected-config"><code>Protected</code> config<a class="headerlink" href="#protected-config" title="Permanent link">&para;</a></h3>
 <p>• <strong>config</strong>: <em>IChainForkConfig</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/db/src/abstractRepository.ts#L21">abstractRepository.ts:21</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/db/src/abstractRepository.ts#L20">abstractRepository.ts:20</a></em></p>
 <hr />
 <h3 id="protected-db"><code>Protected</code> db<a class="headerlink" href="#protected-db" title="Permanent link">&para;</a></h3>
-<p>• <strong>db</strong>: <em><a href="../../modules/db_controller/#db">Db</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/db/src/abstractRepository.ts#L23">abstractRepository.ts:23</a></em></p>
+<p>• <strong>db</strong>: <em><a href="../../modules/controller/#db">Db</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/db/src/abstractRepository.ts#L22">abstractRepository.ts:22</a></em></p>
 <hr />
-<h3 id="protected-optional-dbreadsmetrics"><code>Protected</code> <code>Optional</code> dbReadsMetrics<a class="headerlink" href="#protected-optional-dbreadsmetrics" title="Permanent link">&para;</a></h3>
-<p>• <strong>dbReadsMetrics</strong>? : <em>ReturnType‹DbMetricCounter["labels"]›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/db/src/abstractRepository.ts#L29">abstractRepository.ts:29</a></em></p>
-<hr />
-<h3 id="protected-optional-dbwritemetrics"><code>Protected</code> <code>Optional</code> dbWriteMetrics<a class="headerlink" href="#protected-optional-dbwritemetrics" title="Permanent link">&para;</a></h3>
-<p>• <strong>dbWriteMetrics</strong>? : <em>ReturnType‹DbMetricCounter["labels"]›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/db/src/abstractRepository.ts#L30">abstractRepository.ts:30</a></em></p>
+<h3 id="private-readonly-dbreqopts"><code>Private</code> <code>Readonly</code> dbReqOpts<a class="headerlink" href="#private-readonly-dbreqopts" title="Permanent link">&para;</a></h3>
+<p>• <strong>dbReqOpts</strong>: <em><a href="../../modules/controller/#dbreqopts">DbReqOpts</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/db/src/abstractRepository.ts#L26">abstractRepository.ts:26</a></em></p>
 <hr />
 <h3 id="protected-type"><code>Protected</code> type<a class="headerlink" href="#protected-type" title="Permanent link">&para;</a></h3>
 <p>• <strong>type</strong>: <em>Type‹T›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/db/src/abstractRepository.ts#L27">abstractRepository.ts:27</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/db/src/abstractRepository.ts#L28">abstractRepository.ts:28</a></em></p>
 <h2 id="methods_1">Methods<a class="headerlink" href="#methods_1" title="Permanent link">&para;</a></h2>
 <h3 id="add">add<a class="headerlink" href="#add" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>add</strong>(<code>value</code>: T): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/db/src/abstractRepository.ts#L95">abstractRepository.ts:95</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/db/src/abstractRepository.ts#L88">abstractRepository.ts:88</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -1021,7 +1078,7 @@ indexed by root</p>
 <hr />
 <h3 id="batchadd">batchAdd<a class="headerlink" href="#batchadd" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>batchAdd</strong>(<code>values</code>: T[]): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/db/src/abstractRepository.ts#L129">abstractRepository.ts:129</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/db/src/abstractRepository.ts#L124">abstractRepository.ts:124</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -1041,7 +1098,7 @@ indexed by root</p>
 <hr />
 <h3 id="batchdelete">batchDelete<a class="headerlink" href="#batchdelete" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>batchDelete</strong>(<code>ids</code>: I[]): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/db/src/abstractRepository.ts#L124">abstractRepository.ts:124</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/db/src/abstractRepository.ts#L117">abstractRepository.ts:117</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -1060,8 +1117,8 @@ indexed by root</p>
 <p><strong>Returns:</strong> <em>Promise‹void›</em></p>
 <hr />
 <h3 id="batchput">batchPut<a class="headerlink" href="#batchput" title="Permanent link">&para;</a></h3>
-<p>▸ <strong>batchPut</strong>(<code>items</code>: <a href="../../interfaces/db_controller.ikeyvalue/">IKeyValue</a>‹I, T›[]): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/db/src/abstractRepository.ts#L103">abstractRepository.ts:103</a></em></p>
+<p>▸ <strong>batchPut</strong>(<code>items</code>: <a href="../../interfaces/controller.ikeyvalue/">IKeyValue</a>‹I, T›[]): <em>Promise‹void›</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/db/src/abstractRepository.ts#L96">abstractRepository.ts:96</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -1073,15 +1130,15 @@ indexed by root</p>
 <tbody>
 <tr>
 <td><code>items</code></td>
-<td><a href="../../interfaces/db_controller.ikeyvalue/">IKeyValue</a>‹I, T›[]</td>
+<td><a href="../../interfaces/controller.ikeyvalue/">IKeyValue</a>‹I, T›[]</td>
 </tr>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>Promise‹void›</em></p>
 <hr />
 <h3 id="batchputbinary">batchPutBinary<a class="headerlink" href="#batchputbinary" title="Permanent link">&para;</a></h3>
-<p>▸ <strong>batchPutBinary</strong>(<code>items</code>: <a href="../../interfaces/db_controller.ikeyvalue/">IKeyValue</a>‹I, Uint8Array›[]): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/db/src/abstractRepository.ts#L114">abstractRepository.ts:114</a></em></p>
+<p>▸ <strong>batchPutBinary</strong>(<code>items</code>: <a href="../../interfaces/controller.ikeyvalue/">IKeyValue</a>‹I, Uint8Array›[]): <em>Promise‹void›</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/db/src/abstractRepository.ts#L107">abstractRepository.ts:107</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -1093,7 +1150,7 @@ indexed by root</p>
 <tbody>
 <tr>
 <td><code>items</code></td>
-<td><a href="../../interfaces/db_controller.ikeyvalue/">IKeyValue</a>‹I, Uint8Array›[]</td>
+<td><a href="../../interfaces/controller.ikeyvalue/">IKeyValue</a>‹I, Uint8Array›[]</td>
 </tr>
 </tbody>
 </table>
@@ -1101,7 +1158,7 @@ indexed by root</p>
 <hr />
 <h3 id="batchremove">batchRemove<a class="headerlink" href="#batchremove" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>batchRemove</strong>(<code>values</code>: T[]): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/db/src/abstractRepository.ts#L138">abstractRepository.ts:138</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/db/src/abstractRepository.ts#L133">abstractRepository.ts:133</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -1120,8 +1177,8 @@ indexed by root</p>
 <p><strong>Returns:</strong> <em>Promise‹void›</em></p>
 <hr />
 <h3 id="binaryentriesstream">binaryEntriesStream<a class="headerlink" href="#binaryentriesstream" title="Permanent link">&para;</a></h3>
-<p>▸ <strong>binaryEntriesStream</strong>(<code>opts?</code>: <a href="../../interfaces/db_controller.ifilteroptions/">IFilterOptions</a>‹I›): <em>AsyncIterable‹<a href="../../interfaces/db_controller.ikeyvalue/">IKeyValue</a>‹Uint8Array, Uint8Array››</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/db/src/abstractRepository.ts#L172">abstractRepository.ts:172</a></em></p>
+<p>▸ <strong>binaryEntriesStream</strong>(<code>opts?</code>: <a href="../../interfaces/controller.ifilteroptions/">IFilterOptions</a>‹I›): <em>AsyncIterable‹<a href="../../interfaces/controller.ikeyvalue/">IKeyValue</a>‹Uint8Array, Uint8Array››</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/db/src/abstractRepository.ts#L163">abstractRepository.ts:163</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -1133,15 +1190,15 @@ indexed by root</p>
 <tbody>
 <tr>
 <td><code>opts?</code></td>
-<td><a href="../../interfaces/db_controller.ifilteroptions/">IFilterOptions</a>‹I›</td>
+<td><a href="../../interfaces/controller.ifilteroptions/">IFilterOptions</a>‹I›</td>
 </tr>
 </tbody>
 </table>
-<p><strong>Returns:</strong> <em>AsyncIterable‹<a href="../../interfaces/db_controller.ikeyvalue/">IKeyValue</a>‹Uint8Array, Uint8Array››</em></p>
+<p><strong>Returns:</strong> <em>AsyncIterable‹<a href="../../interfaces/controller.ikeyvalue/">IKeyValue</a>‹Uint8Array, Uint8Array››</em></p>
 <hr />
 <h3 id="protected-dbfilteroptions"><code>Protected</code> dbFilterOptions<a class="headerlink" href="#protected-dbfilteroptions" title="Permanent link">&para;</a></h3>
-<p>▸ <strong>dbFilterOptions</strong>(<code>opts?</code>: <a href="../../interfaces/db_controller.ifilteroptions/">IFilterOptions</a>‹I›): <em><a href="../../interfaces/db_controller.ifilteroptions/">IFilterOptions</a>‹Uint8Array›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/db/src/abstractRepository.ts#L256">abstractRepository.ts:256</a></em></p>
+<p>▸ <strong>dbFilterOptions</strong>(<code>opts?</code>: <a href="../../interfaces/controller.ifilteroptions/">IFilterOptions</a>‹I›): <em><a href="../../interfaces/controller.ifilteroptions/">IFilterOptions</a>‹Uint8Array›</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/db/src/abstractRepository.ts#L244">abstractRepository.ts:244</a></em></p>
 <p>Transforms opts from I to Uint8Array</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -1154,15 +1211,15 @@ indexed by root</p>
 <tbody>
 <tr>
 <td><code>opts?</code></td>
-<td><a href="../../interfaces/db_controller.ifilteroptions/">IFilterOptions</a>‹I›</td>
+<td><a href="../../interfaces/controller.ifilteroptions/">IFilterOptions</a>‹I›</td>
 </tr>
 </tbody>
 </table>
-<p><strong>Returns:</strong> <em><a href="../../interfaces/db_controller.ifilteroptions/">IFilterOptions</a>‹Uint8Array›</em></p>
+<p><strong>Returns:</strong> <em><a href="../../interfaces/controller.ifilteroptions/">IFilterOptions</a>‹Uint8Array›</em></p>
 <hr />
 <h3 id="decodekey">decodeKey<a class="headerlink" href="#decodekey" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>decodeKey</strong>(<code>key</code>: Uint8Array): <em>I</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/db/src/abstractRepository.ts#L53">abstractRepository.ts:53</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/db/src/abstractRepository.ts#L51">abstractRepository.ts:51</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -1182,7 +1239,7 @@ indexed by root</p>
 <hr />
 <h3 id="decodevalue">decodeValue<a class="headerlink" href="#decodevalue" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>decodeValue</strong>(<code>data</code>: Uint8Array): <em>T</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/db/src/abstractRepository.ts#L45">abstractRepository.ts:45</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/db/src/abstractRepository.ts#L43">abstractRepository.ts:43</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -1202,7 +1259,7 @@ indexed by root</p>
 <hr />
 <h3 id="delete">delete<a class="headerlink" href="#delete" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>delete</strong>(<code>id</code>: I): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/db/src/abstractRepository.ts#L85">abstractRepository.ts:85</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/db/src/abstractRepository.ts#L79">abstractRepository.ts:79</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -1222,7 +1279,7 @@ indexed by root</p>
 <hr />
 <h3 id="encodekey">encodeKey<a class="headerlink" href="#encodekey" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>encodeKey</strong>(<code>id</code>: I): <em>Uint8Array</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/db/src/abstractRepository.ts#L49">abstractRepository.ts:49</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/db/src/abstractRepository.ts#L47">abstractRepository.ts:47</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -1242,7 +1299,7 @@ indexed by root</p>
 <hr />
 <h3 id="encodevalue">encodeValue<a class="headerlink" href="#encodevalue" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>encodeValue</strong>(<code>value</code>: T): <em>Uint8Array</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/db/src/abstractRepository.ts#L41">abstractRepository.ts:41</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/db/src/abstractRepository.ts#L39">abstractRepository.ts:39</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -1261,8 +1318,8 @@ indexed by root</p>
 <p><strong>Returns:</strong> <em>Uint8Array</em></p>
 <hr />
 <h3 id="entries">entries<a class="headerlink" href="#entries" title="Permanent link">&para;</a></h3>
-<p>▸ <strong>entries</strong>(<code>opts?</code>: <a href="../../interfaces/db_controller.ifilteroptions/">IFilterOptions</a>‹I›): <em>Promise‹<a href="../../interfaces/db_controller.ikeyvalue/">IKeyValue</a>‹I, T›[]›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/db/src/abstractRepository.ts#L177">abstractRepository.ts:177</a></em></p>
+<p>▸ <strong>entries</strong>(<code>opts?</code>: <a href="../../interfaces/controller.ifilteroptions/">IFilterOptions</a>‹I›): <em>Promise‹<a href="../../interfaces/controller.ikeyvalue/">IKeyValue</a>‹I, T›[]›</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/db/src/abstractRepository.ts#L167">abstractRepository.ts:167</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -1274,15 +1331,15 @@ indexed by root</p>
 <tbody>
 <tr>
 <td><code>opts?</code></td>
-<td><a href="../../interfaces/db_controller.ifilteroptions/">IFilterOptions</a>‹I›</td>
+<td><a href="../../interfaces/controller.ifilteroptions/">IFilterOptions</a>‹I›</td>
 </tr>
 </tbody>
 </table>
-<p><strong>Returns:</strong> <em>Promise‹<a href="../../interfaces/db_controller.ikeyvalue/">IKeyValue</a>‹I, T›[]›</em></p>
+<p><strong>Returns:</strong> <em>Promise‹<a href="../../interfaces/controller.ikeyvalue/">IKeyValue</a>‹I, T›[]›</em></p>
 <hr />
 <h3 id="entriesstream">entriesStream<a class="headerlink" href="#entriesstream" title="Permanent link">&para;</a></h3>
-<p>▸ <strong>entriesStream</strong>(<code>opts?</code>: <a href="../../interfaces/db_controller.ifilteroptions/">IFilterOptions</a>‹I›): <em>AsyncIterable‹<a href="../../interfaces/db_controller.ikeyvalue/">IKeyValue</a>‹I, T››</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/db/src/abstractRepository.ts#L186">abstractRepository.ts:186</a></em></p>
+<p>▸ <strong>entriesStream</strong>(<code>opts?</code>: <a href="../../interfaces/controller.ifilteroptions/">IFilterOptions</a>‹I›): <em>AsyncIterable‹<a href="../../interfaces/controller.ikeyvalue/">IKeyValue</a>‹I, T››</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/db/src/abstractRepository.ts#L175">abstractRepository.ts:175</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -1294,30 +1351,30 @@ indexed by root</p>
 <tbody>
 <tr>
 <td><code>opts?</code></td>
-<td><a href="../../interfaces/db_controller.ifilteroptions/">IFilterOptions</a>‹I›</td>
+<td><a href="../../interfaces/controller.ifilteroptions/">IFilterOptions</a>‹I›</td>
 </tr>
 </tbody>
 </table>
-<p><strong>Returns:</strong> <em>AsyncIterable‹<a href="../../interfaces/db_controller.ikeyvalue/">IKeyValue</a>‹I, T››</em></p>
+<p><strong>Returns:</strong> <em>AsyncIterable‹<a href="../../interfaces/controller.ikeyvalue/">IKeyValue</a>‹I, T››</em></p>
 <hr />
 <h3 id="firstentry">firstEntry<a class="headerlink" href="#firstentry" title="Permanent link">&para;</a></h3>
-<p>▸ <strong>firstEntry</strong>(): <em>Promise‹<a href="../../interfaces/db_controller.ikeyvalue/">IKeyValue</a>‹I, T› | null›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/db/src/abstractRepository.ts#L235">abstractRepository.ts:235</a></em></p>
-<p><strong>Returns:</strong> <em>Promise‹<a href="../../interfaces/db_controller.ikeyvalue/">IKeyValue</a>‹I, T› | null›</em></p>
+<p>▸ <strong>firstEntry</strong>(): <em>Promise‹<a href="../../interfaces/controller.ikeyvalue/">IKeyValue</a>‹I, T› | null›</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/db/src/abstractRepository.ts#L223">abstractRepository.ts:223</a></em></p>
+<p><strong>Returns:</strong> <em>Promise‹<a href="../../interfaces/controller.ikeyvalue/">IKeyValue</a>‹I, T› | null›</em></p>
 <hr />
 <h3 id="firstkey">firstKey<a class="headerlink" href="#firstkey" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>firstKey</strong>(): <em>Promise‹I | null›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/db/src/abstractRepository.ts#L199">abstractRepository.ts:199</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/db/src/abstractRepository.ts#L187">abstractRepository.ts:187</a></em></p>
 <p><strong>Returns:</strong> <em>Promise‹I | null›</em></p>
 <hr />
 <h3 id="firstvalue">firstValue<a class="headerlink" href="#firstvalue" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>firstValue</strong>(): <em>Promise‹T | null›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/db/src/abstractRepository.ts#L217">abstractRepository.ts:217</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/db/src/abstractRepository.ts#L205">abstractRepository.ts:205</a></em></p>
 <p><strong>Returns:</strong> <em>Promise‹T | null›</em></p>
 <hr />
 <h3 id="get">get<a class="headerlink" href="#get" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>get</strong>(<code>id</code>: I): <em>Promise‹T | null›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/db/src/abstractRepository.ts#L57">abstractRepository.ts:57</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/db/src/abstractRepository.ts#L55">abstractRepository.ts:55</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -1337,7 +1394,7 @@ indexed by root</p>
 <hr />
 <h3 id="getbinary">getBinary<a class="headerlink" href="#getbinary" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>getBinary</strong>(<code>id</code>: I): <em>Promise‹Uint8Array | null›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/db/src/abstractRepository.ts#L64">abstractRepository.ts:64</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/db/src/abstractRepository.ts#L61">abstractRepository.ts:61</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -1357,7 +1414,7 @@ indexed by root</p>
 <hr />
 <h3 id="getid">getId<a class="headerlink" href="#getid" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>getId</strong>(<code>value</code>: T): <em>I</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/db/src/abstractRepository.ts#L91">abstractRepository.ts:91</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/db/src/abstractRepository.ts#L84">abstractRepository.ts:84</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -1377,7 +1434,7 @@ indexed by root</p>
 <hr />
 <h3 id="has">has<a class="headerlink" href="#has" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>has</strong>(<code>id</code>: I): <em>Promise‹boolean›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/db/src/abstractRepository.ts#L71">abstractRepository.ts:71</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/db/src/abstractRepository.ts#L67">abstractRepository.ts:67</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -1396,8 +1453,8 @@ indexed by root</p>
 <p><strong>Returns:</strong> <em>Promise‹boolean›</em></p>
 <hr />
 <h3 id="keys">keys<a class="headerlink" href="#keys" title="Permanent link">&para;</a></h3>
-<p>▸ <strong>keys</strong>(<code>opts?</code>: <a href="../../interfaces/db_controller.ifilteroptions/">IFilterOptions</a>‹I›): <em>Promise‹I[]›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/db/src/abstractRepository.ts#L142">abstractRepository.ts:142</a></em></p>
+<p>▸ <strong>keys</strong>(<code>opts?</code>: <a href="../../interfaces/controller.ifilteroptions/">IFilterOptions</a>‹I›): <em>Promise‹I[]›</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/db/src/abstractRepository.ts#L137">abstractRepository.ts:137</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -1409,15 +1466,15 @@ indexed by root</p>
 <tbody>
 <tr>
 <td><code>opts?</code></td>
-<td><a href="../../interfaces/db_controller.ifilteroptions/">IFilterOptions</a>‹I›</td>
+<td><a href="../../interfaces/controller.ifilteroptions/">IFilterOptions</a>‹I›</td>
 </tr>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>Promise‹I[]›</em></p>
 <hr />
 <h3 id="keysstream">keysStream<a class="headerlink" href="#keysstream" title="Permanent link">&para;</a></h3>
-<p>▸ <strong>keysStream</strong>(<code>opts?</code>: <a href="../../interfaces/db_controller.ifilteroptions/">IFilterOptions</a>‹I›): <em>AsyncIterable‹I›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/db/src/abstractRepository.ts#L148">abstractRepository.ts:148</a></em></p>
+<p>▸ <strong>keysStream</strong>(<code>opts?</code>: <a href="../../interfaces/controller.ifilteroptions/">IFilterOptions</a>‹I›): <em>AsyncIterable‹I›</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/db/src/abstractRepository.ts#L142">abstractRepository.ts:142</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -1429,30 +1486,30 @@ indexed by root</p>
 <tbody>
 <tr>
 <td><code>opts?</code></td>
-<td><a href="../../interfaces/db_controller.ifilteroptions/">IFilterOptions</a>‹I›</td>
+<td><a href="../../interfaces/controller.ifilteroptions/">IFilterOptions</a>‹I›</td>
 </tr>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>AsyncIterable‹I›</em></p>
 <hr />
 <h3 id="lastentry">lastEntry<a class="headerlink" href="#lastentry" title="Permanent link">&para;</a></h3>
-<p>▸ <strong>lastEntry</strong>(): <em>Promise‹<a href="../../interfaces/db_controller.ikeyvalue/">IKeyValue</a>‹I, T› | null›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/db/src/abstractRepository.ts#L244">abstractRepository.ts:244</a></em></p>
-<p><strong>Returns:</strong> <em>Promise‹<a href="../../interfaces/db_controller.ikeyvalue/">IKeyValue</a>‹I, T› | null›</em></p>
+<p>▸ <strong>lastEntry</strong>(): <em>Promise‹<a href="../../interfaces/controller.ikeyvalue/">IKeyValue</a>‹I, T› | null›</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/db/src/abstractRepository.ts#L232">abstractRepository.ts:232</a></em></p>
+<p><strong>Returns:</strong> <em>Promise‹<a href="../../interfaces/controller.ikeyvalue/">IKeyValue</a>‹I, T› | null›</em></p>
 <hr />
 <h3 id="lastkey">lastKey<a class="headerlink" href="#lastkey" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>lastKey</strong>(): <em>Promise‹I | null›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/db/src/abstractRepository.ts#L208">abstractRepository.ts:208</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/db/src/abstractRepository.ts#L196">abstractRepository.ts:196</a></em></p>
 <p><strong>Returns:</strong> <em>Promise‹I | null›</em></p>
 <hr />
 <h3 id="lastvalue">lastValue<a class="headerlink" href="#lastvalue" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>lastValue</strong>(): <em>Promise‹T | null›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/db/src/abstractRepository.ts#L226">abstractRepository.ts:226</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/db/src/abstractRepository.ts#L214">abstractRepository.ts:214</a></em></p>
 <p><strong>Returns:</strong> <em>Promise‹T | null›</em></p>
 <hr />
 <h3 id="put">put<a class="headerlink" href="#put" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>put</strong>(<code>id</code>: I, <code>value</code>: T): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/db/src/abstractRepository.ts#L75">abstractRepository.ts:75</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/db/src/abstractRepository.ts#L71">abstractRepository.ts:71</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -1476,7 +1533,7 @@ indexed by root</p>
 <hr />
 <h3 id="putbinary">putBinary<a class="headerlink" href="#putbinary" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>putBinary</strong>(<code>id</code>: I, <code>value</code>: Uint8Array): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/db/src/abstractRepository.ts#L80">abstractRepository.ts:80</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/db/src/abstractRepository.ts#L75">abstractRepository.ts:75</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -1500,7 +1557,7 @@ indexed by root</p>
 <hr />
 <h3 id="remove">remove<a class="headerlink" href="#remove" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>remove</strong>(<code>value</code>: T): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/db/src/abstractRepository.ts#L99">abstractRepository.ts:99</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/db/src/abstractRepository.ts#L92">abstractRepository.ts:92</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -1519,8 +1576,8 @@ indexed by root</p>
 <p><strong>Returns:</strong> <em>Promise‹void›</em></p>
 <hr />
 <h3 id="values">values<a class="headerlink" href="#values" title="Permanent link">&para;</a></h3>
-<p>▸ <strong>values</strong>(<code>opts?</code>: <a href="../../interfaces/db_controller.ifilteroptions/">IFilterOptions</a>‹I›): <em>Promise‹T[]›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/db/src/abstractRepository.ts#L157">abstractRepository.ts:157</a></em></p>
+<p>▸ <strong>values</strong>(<code>opts?</code>: <a href="../../interfaces/controller.ifilteroptions/">IFilterOptions</a>‹I›): <em>Promise‹T[]›</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/db/src/abstractRepository.ts#L150">abstractRepository.ts:150</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -1532,15 +1589,15 @@ indexed by root</p>
 <tbody>
 <tr>
 <td><code>opts?</code></td>
-<td><a href="../../interfaces/db_controller.ifilteroptions/">IFilterOptions</a>‹I›</td>
+<td><a href="../../interfaces/controller.ifilteroptions/">IFilterOptions</a>‹I›</td>
 </tr>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>Promise‹T[]›</em></p>
 <hr />
 <h3 id="valuesstream">valuesStream<a class="headerlink" href="#valuesstream" title="Permanent link">&para;</a></h3>
-<p>▸ <strong>valuesStream</strong>(<code>opts?</code>: <a href="../../interfaces/db_controller.ifilteroptions/">IFilterOptions</a>‹I›): <em>AsyncIterable‹T›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/db/src/abstractRepository.ts#L163">abstractRepository.ts:163</a></em></p>
+<p>▸ <strong>valuesStream</strong>(<code>opts?</code>: <a href="../../interfaces/controller.ifilteroptions/">IFilterOptions</a>‹I›): <em>AsyncIterable‹T›</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/db/src/abstractRepository.ts#L155">abstractRepository.ts:155</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -1552,7 +1609,7 @@ indexed by root</p>
 <tbody>
 <tr>
 <td><code>opts?</code></td>
-<td><a href="../../interfaces/db_controller.ifilteroptions/">IFilterOptions</a>‹I›</td>
+<td><a href="../../interfaces/controller.ifilteroptions/">IFilterOptions</a>‹I›</td>
 </tr>
 </tbody>
 </table>
@@ -1596,7 +1653,7 @@ indexed by root</p>
       
       
     
-    <a href="https://twitter.com/ChainSafe" target="_blank" rel="noopener" title="twitter.com" class="md-social__link">
+    <a href="https://twitter.com/ChainSafeth" target="_blank" rel="noopener" title="twitter.com" class="md-social__link">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.1.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc.--><path d="M459.37 151.716c.325 4.548.325 9.097.325 13.645 0 138.72-105.583 298.558-298.558 298.558-59.452 0-114.68-17.219-161.137-47.106 8.447.974 16.568 1.299 25.34 1.299 49.055 0 94.213-16.568 130.274-44.832-46.132-.975-84.792-31.188-98.112-72.772 6.498.974 12.995 1.624 19.818 1.624 9.421 0 18.843-1.3 27.614-3.573-48.081-9.747-84.143-51.98-84.143-102.985v-1.299c13.969 7.797 30.214 12.67 47.431 13.319-28.264-18.843-46.781-51.005-46.781-87.391 0-19.492 5.197-37.36 14.294-52.954 51.655 63.675 129.3 105.258 216.365 109.807-1.624-7.797-2.599-15.918-2.599-24.04 0-57.828 46.782-104.934 104.934-104.934 30.213 0 57.502 12.67 76.67 33.137 23.715-4.548 46.456-13.32 66.599-25.34-7.798 24.366-24.366 44.833-46.132 57.827 21.117-2.273 41.584-8.122 60.426-16.243-14.292 20.791-32.161 39.308-52.628 54.253z"/></svg>
     </a>
   
@@ -1614,7 +1671,7 @@ indexed by root</p>
       
       
     
-    <a href="https://medium.com/ChainSafe" target="_blank" rel="noopener" title="medium.com" class="md-social__link">
+    <a href="https://blog.chainsafe.io" target="_blank" rel="noopener" title="blog.chainsafe.io" class="md-social__link">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.1.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc.--><path d="M180.5 74.262C80.813 74.262 0 155.633 0 256s80.819 181.738 180.5 181.738S361 356.373 361 256 280.191 74.262 180.5 74.262Zm288.25 10.646c-49.845 0-90.245 76.619-90.245 171.095s40.406 171.1 90.251 171.1 90.251-76.619 90.251-171.1H559c0-94.503-40.4-171.095-90.248-171.095Zm139.506 17.821c-17.526 0-31.735 68.628-31.735 153.274s14.2 153.274 31.735 153.274S640 340.631 640 256c0-84.649-14.215-153.271-31.742-153.271Z"/></svg>
     </a>
   
@@ -1628,10 +1685,10 @@ indexed by root</p>
     <div class="md-dialog" data-md-component="dialog">
       <div class="md-dialog__inner md-typeset"></div>
     </div>
-    <script id="__config" type="application/json">{"base": "../../../..", "features": [], "search": "../../../../assets/javascripts/workers/search.85cb4492.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}}</script>
+    <script id="__config" type="application/json">{"base": "../../../..", "features": [], "search": "../../../../assets/javascripts/workers/search.b97dbffb.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}}</script>
     
     
-      <script src="../../../../assets/javascripts/bundle.a877e258.min.js"></script>
+      <script src="../../../../assets/javascripts/bundle.0238f547.min.js"></script>
       
     
   </body>

@@ -6,22 +6,22 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Lodestar documentation - Typescript Ethereum Consensus client">
+        <meta name="description" content="Lodestar Documentation - Typescript Ethereum Consensus client">
       
       
       
         <link rel="canonical" href="https://chainsafe.github.io/lodestar/packages/lodestar/modules/eth1_provider/">
       
       <link rel="icon" href="../../../../assets/round-icon.ico">
-      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.3.6">
+      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.3.8">
     
     
       
-        <title>Eth1 provider - Lodestar documentation</title>
+        <title>Eth1 provider - Lodestar Documentation</title>
       
     
     
-      <link rel="stylesheet" href="../../../../assets/stylesheets/main.4a0965b7.min.css">
+      <link rel="stylesheet" href="../../../../assets/stylesheets/main.1d29e8d0.min.css">
       
         
         <link rel="stylesheet" href="../../../../assets/stylesheets/palette.cbb835fc.min.css">
@@ -84,7 +84,7 @@
 
 <header class="md-header" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="../../../.." title="Lodestar documentation" class="md-header__button md-logo" aria-label="Lodestar documentation" data-md-component="logo">
+    <a href="../../../.." title="Lodestar Documentation" class="md-header__button md-logo" aria-label="Lodestar Documentation" data-md-component="logo">
       
   <img src="../../../../assets/lodestar_icon_300.png" alt="logo">
 
@@ -96,7 +96,7 @@
       <div class="md-header__ellipsis">
         <div class="md-header__topic">
           <span class="md-ellipsis">
-            Lodestar documentation
+            Lodestar Documentation
           </span>
         </div>
         <div class="md-header__topic" data-md-component="header-topic">
@@ -203,12 +203,12 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="../../../.." title="Lodestar documentation" class="md-nav__button md-logo" aria-label="Lodestar documentation" data-md-component="logo">
+    <a href="../../../.." title="Lodestar Documentation" class="md-nav__button md-logo" aria-label="Lodestar Documentation" data-md-component="logo">
       
   <img src="../../../../assets/lodestar_icon_300.png" alt="logo">
 
     </a>
-    Lodestar documentation
+    Lodestar Documentation
   </label>
   
     <div class="md-nav__source">
@@ -234,7 +234,7 @@
   
     <li class="md-nav__item">
       <a href="../../../.." class="md-nav__link">
-        Getting started
+        Getting Started
       </a>
     </li>
   
@@ -247,10 +247,71 @@
   
   
   
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2" type="checkbox" id="__nav_2" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_2">
+          Installation
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Installation" data-md-level="1">
+        <label class="md-nav__title" for="__nav_2">
+          <span class="md-nav__icon md-icon"></span>
+          Installation
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
     <li class="md-nav__item">
-      <a href="../../../../installation/" class="md-nav__link">
-        Installation
+      <a href="../../../../install/source/" class="md-nav__link">
+        Install from source
       </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../install/npm/" class="md-nav__link">
+        Install from NPM
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../install/docker/" class="md-nav__link">
+        Install with Docker
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
     </li>
   
 
@@ -272,14 +333,14 @@
       
       
         <label class="md-nav__link" for="__nav_3">
-          CLI Usage
+          Using Lodestar
           <span class="md-nav__icon md-icon"></span>
         </label>
       
-      <nav class="md-nav" aria-label="CLI Usage" data-md-level="1">
+      <nav class="md-nav" aria-label="Using Lodestar" data-md-level="1">
         <label class="md-nav__title" for="__nav_3">
           <span class="md-nav__icon md-icon"></span>
-          CLI Usage
+          Using Lodestar
         </label>
         <ul class="md-nav__list" data-md-scrollfix>
           
@@ -289,8 +350,8 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../../usage/testnet/" class="md-nav__link">
-        Mainnet or public testnet
+      <a href="../../../../usage/beacon-management/" class="md-nav__link">
+        Beacon management
       </a>
     </li>
   
@@ -317,8 +378,8 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../../usage/key-management/" class="md-nav__link">
-        Key management
+      <a href="../../../../usage/validator-management/" class="md-nav__link">
+        Validator management
       </a>
     </li>
   
@@ -540,6 +601,13 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#object-literals" class="md-nav__link">
+    Object literals
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -561,11 +629,11 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#jwtclaim" class="md-nav__link">
-    JwtClaim
+  <a href="#jsonrpchttpclientmetrics" class="md-nav__link">
+    JsonRpcHttpClientMetrics
   </a>
   
-    <nav class="md-nav" aria-label="JwtClaim">
+    <nav class="md-nav" aria-label="JsonRpcHttpClientMetrics">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -581,9 +649,49 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#jwtclaim" class="md-nav__link">
+    JwtClaim
+  </a>
+  
+    <nav class="md-nav" aria-label="JwtClaim">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#type-declaration_1" class="md-nav__link">
+    Type declaration:
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#quantity" class="md-nav__link">
     QUANTITY
   </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reqopts" class="md-nav__link">
+    ReqOpts
+  </a>
+  
+    <nav class="md-nav" aria-label="ReqOpts">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#type-declaration_2" class="md-nav__link">
+    Type declaration:
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
         
@@ -772,6 +880,124 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#object-literals_1" class="md-nav__link">
+    Object literals
+  </a>
+  
+    <nav class="md-nav" aria-label="Object literals">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#const-getblockbyhashopts" class="md-nav__link">
+    Const getBlockByHashOpts
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#getblockbyhashopts-object" class="md-nav__link">
+    ▪ getBlockByHashOpts: object
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#routeid" class="md-nav__link">
+    routeId
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#const-getblockbynumberopts" class="md-nav__link">
+    Const getBlockByNumberOpts
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#getblockbynumberopts-object" class="md-nav__link">
+    ▪ getBlockByNumberOpts: object
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#routeid_1" class="md-nav__link">
+    routeId
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#const-getblocknumberopts" class="md-nav__link">
+    Const getBlockNumberOpts
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#getblocknumberopts-object" class="md-nav__link">
+    ▪ getBlockNumberOpts: object
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#routeid_2" class="md-nav__link">
+    routeId
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#const-getblocksbynumberopts" class="md-nav__link">
+    Const getBlocksByNumberOpts
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#getblocksbynumberopts-object" class="md-nav__link">
+    ▪ getBlocksByNumberOpts: object
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#routeid_3" class="md-nav__link">
+    routeId
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#const-getlogsopts" class="md-nav__link">
+    Const getLogsOpts
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#getlogsopts-object" class="md-nav__link">
+    ▪ getLogsOpts: object
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#routeid_4" class="md-nav__link">
+    routeId
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -811,8 +1037,10 @@
 <h3 id="type-aliases">Type aliases<a class="headerlink" href="#type-aliases" title="Permanent link">&para;</a></h3>
 <ul>
 <li><a href="./#data">DATA</a></li>
+<li><a href="./#jsonrpchttpclientmetrics">JsonRpcHttpClientMetrics</a></li>
 <li><a href="./#jwtclaim">JwtClaim</a></li>
 <li><a href="./#quantity">QUANTITY</a></li>
+<li><a href="./#reqopts">ReqOpts</a></li>
 </ul>
 <h3 id="variables">Variables<a class="headerlink" href="#variables" title="Permanent link">&para;</a></h3>
 <ul>
@@ -842,17 +1070,47 @@
 <li><a href="./#quantitytobytes">quantityToBytes</a></li>
 <li><a href="./#quantitytonum">quantityToNum</a></li>
 </ul>
+<h3 id="object-literals">Object literals<a class="headerlink" href="#object-literals" title="Permanent link">&para;</a></h3>
+<ul>
+<li><a href="./#const-getblockbyhashopts">getBlockByHashOpts</a></li>
+<li><a href="./#const-getblockbynumberopts">getBlockByNumberOpts</a></li>
+<li><a href="./#const-getblocknumberopts">getBlockNumberOpts</a></li>
+<li><a href="./#const-getblocksbynumberopts">getBlocksByNumberOpts</a></li>
+<li><a href="./#const-getlogsopts">getLogsOpts</a></li>
+</ul>
 <h2 id="type-aliases_1">Type aliases<a class="headerlink" href="#type-aliases_1" title="Permanent link">&para;</a></h2>
 <h3 id="data">DATA<a class="headerlink" href="#data" title="Permanent link">&para;</a></h3>
 <p>Ƭ <strong>DATA</strong>: <em>string</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/lodestar/src/eth1/provider/utils.ts#L11">packages/lodestar/src/eth1/provider/utils.ts:11</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/lodestar/src/eth1/provider/utils.ts#L11">packages/lodestar/src/eth1/provider/utils.ts:11</a></em></p>
 <p>DATA as defined in ethereum execution layer JSON RPC https://eth.wiki/json-rpc/API</p>
+<hr />
+<h3 id="jsonrpchttpclientmetrics">JsonRpcHttpClientMetrics<a class="headerlink" href="#jsonrpchttpclientmetrics" title="Permanent link">&para;</a></h3>
+<p>Ƭ <strong>JsonRpcHttpClientMetrics</strong>: <em>object</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/lodestar/src/eth1/provider/jsonRpcHttpClient.ts#L34">packages/lodestar/src/eth1/provider/jsonRpcHttpClient.ts:34</a></em></p>
+<h4 id="type-declaration">Type declaration:<a class="headerlink" href="#type-declaration" title="Permanent link">&para;</a></h4>
+<ul>
+<li>
+<p><strong>activeRequests</strong>: <em><a href="../metrics/#igauge">IGauge</a></em></p>
+</li>
+<li>
+<p><strong>configUrlsCount</strong>: <em><a href="../metrics/#igauge">IGauge</a></em></p>
+</li>
+<li>
+<p><strong>requestErrors</strong>: <em><a href="../metrics/#igauge">IGauge</a>‹"routeId"›</em></p>
+</li>
+<li>
+<p><strong>requestTime</strong>: <em><a href="../metrics/#ihistogram">IHistogram</a>‹"routeId"›</em></p>
+</li>
+<li>
+<p><strong>requestUsedFallbackUrl</strong>: <em><a href="../metrics/#igauge">IGauge</a></em></p>
+</li>
+</ul>
 <hr />
 <h3 id="jwtclaim">JwtClaim<a class="headerlink" href="#jwtclaim" title="Permanent link">&para;</a></h3>
 <p>Ƭ <strong>JwtClaim</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/lodestar/src/eth1/provider/jwt.ts#L10">packages/lodestar/src/eth1/provider/jwt.ts:10</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/lodestar/src/eth1/provider/jwt.ts#L10">packages/lodestar/src/eth1/provider/jwt.ts:10</a></em></p>
 <p>jwt token has iat which is issued at unix timestamp, and an optional exp for expiry</p>
-<h4 id="type-declaration">Type declaration:<a class="headerlink" href="#type-declaration" title="Permanent link">&para;</a></h4>
+<h4 id="type-declaration_1">Type declaration:<a class="headerlink" href="#type-declaration_1" title="Permanent link">&para;</a></h4>
 <ul>
 <li>
 <p><strong>exp</strong>? : <em>undefined | number</em></p>
@@ -864,33 +1122,46 @@
 <hr />
 <h3 id="quantity">QUANTITY<a class="headerlink" href="#quantity" title="Permanent link">&para;</a></h3>
 <p>Ƭ <strong>QUANTITY</strong>: <em>string</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/lodestar/src/eth1/provider/utils.ts#L9">packages/lodestar/src/eth1/provider/utils.ts:9</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/lodestar/src/eth1/provider/utils.ts#L9">packages/lodestar/src/eth1/provider/utils.ts:9</a></em></p>
 <p>QUANTITY as defined in ethereum execution layer JSON RPC https://eth.wiki/json-rpc/API</p>
+<hr />
+<h3 id="reqopts">ReqOpts<a class="headerlink" href="#reqopts" title="Permanent link">&para;</a></h3>
+<p>Ƭ <strong>ReqOpts</strong>: <em>object</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/lodestar/src/eth1/provider/jsonRpcHttpClient.ts#L28">packages/lodestar/src/eth1/provider/jsonRpcHttpClient.ts:28</a></em></p>
+<h4 id="type-declaration_2">Type declaration:<a class="headerlink" href="#type-declaration_2" title="Permanent link">&para;</a></h4>
+<ul>
+<li>
+<p><strong>routeId</strong>? : <em>undefined | string</em></p>
+</li>
+<li>
+<p><strong>timeout</strong>? : <em>undefined | number</em></p>
+</li>
+</ul>
 <h2 id="variables_1">Variables<a class="headerlink" href="#variables_1" title="Permanent link">&para;</a></h2>
 <h3 id="const-request_timeout"><code>Const</code> REQUEST_TIMEOUT<a class="headerlink" href="#const-request_timeout" title="Permanent link">&para;</a></h3>
 <p>• <strong>REQUEST_TIMEOUT</strong>: <em>number</em> = 30 * 1000</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/lodestar/src/eth1/provider/jsonRpcHttpClient.ts#L12">packages/lodestar/src/eth1/provider/jsonRpcHttpClient.ts:12</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/lodestar/src/eth1/provider/jsonRpcHttpClient.ts#L13">packages/lodestar/src/eth1/provider/jsonRpcHttpClient.ts:13</a></em></p>
 <hr />
 <h3 id="decode">decode<a class="headerlink" href="#decode" title="Permanent link">&para;</a></h3>
 <p>• <strong>decode</strong>: <em>decode</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/lodestar/src/eth1/provider/jwt.ts#L7">packages/lodestar/src/eth1/provider/jwt.ts:7</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/lodestar/src/eth1/provider/jwt.ts#L7">packages/lodestar/src/eth1/provider/jwt.ts:7</a></em></p>
 <hr />
 <h3 id="encode">encode<a class="headerlink" href="#encode" title="Permanent link">&para;</a></h3>
 <p>• <strong>encode</strong>: <em>encode</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/lodestar/src/eth1/provider/jwt.ts#L7">packages/lodestar/src/eth1/provider/jwt.ts:7</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/lodestar/src/eth1/provider/jwt.ts#L7">packages/lodestar/src/eth1/provider/jwt.ts:7</a></em></p>
 <hr />
 <h3 id="const-maxstringlengthtoprint"><code>Const</code> maxStringLengthToPrint<a class="headerlink" href="#const-maxstringlengthtoprint" title="Permanent link">&para;</a></h3>
 <p>• <strong>maxStringLengthToPrint</strong>: <em>500</em> = 500</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/lodestar/src/eth1/provider/jsonRpcHttpClient.ts#L11">packages/lodestar/src/eth1/provider/jsonRpcHttpClient.ts:11</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/lodestar/src/eth1/provider/jsonRpcHttpClient.ts#L12">packages/lodestar/src/eth1/provider/jsonRpcHttpClient.ts:12</a></em></p>
 <p>Limits the amount of response text printed with RPC or parsing errors</p>
 <hr />
 <h3 id="const-roothexregex"><code>Const</code> rootHexRegex<a class="headerlink" href="#const-roothexregex" title="Permanent link">&para;</a></h3>
 <p>• <strong>rootHexRegex</strong>: <em>RegExp‹›</em> = /^0x[a-fA-F0-9]{64}$/</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/lodestar/src/eth1/provider/utils.ts#L13">packages/lodestar/src/eth1/provider/utils.ts:13</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/lodestar/src/eth1/provider/utils.ts#L13">packages/lodestar/src/eth1/provider/utils.ts:13</a></em></p>
 <h2 id="functions_1">Functions<a class="headerlink" href="#functions_1" title="Permanent link">&para;</a></h2>
 <h3 id="bytestodata">bytesToData<a class="headerlink" href="#bytestodata" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>bytesToData</strong>(<code>bytes</code>: Uint8Array): <em><a href="./#data">DATA</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/lodestar/src/eth1/provider/utils.ts#L102">packages/lodestar/src/eth1/provider/utils.ts:102</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/lodestar/src/eth1/provider/utils.ts#L102">packages/lodestar/src/eth1/provider/utils.ts:102</a></em></p>
 <p>DATA as defined in ethereum execution layer JSON RPC https://eth.wiki/json-rpc/API</p>
 <p>When encoding UNFORMATTED DATA (byte arrays, account addresses, hashes, bytecode arrays): encode as hex, prefix with
 “0x”, two hex digits per byte. Examples:</p>
@@ -920,7 +1191,7 @@
 <hr />
 <h3 id="bytestohex">bytesToHex<a class="headerlink" href="#bytestohex" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>bytesToHex</strong>(<code>bytes</code>: Uint8Array): <em>string</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/lodestar/src/eth1/provider/utils.ts#L28">packages/lodestar/src/eth1/provider/utils.ts:28</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/lodestar/src/eth1/provider/utils.ts#L28">packages/lodestar/src/eth1/provider/utils.ts:28</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -940,7 +1211,7 @@
 <hr />
 <h3 id="bytestoquantity">bytesToQuantity<a class="headerlink" href="#bytestoquantity" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>bytesToQuantity</strong>(<code>bytes</code>: Uint8Array): <em><a href="./#quantity">QUANTITY</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/lodestar/src/eth1/provider/utils.ts#L85">packages/lodestar/src/eth1/provider/utils.ts:85</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/lodestar/src/eth1/provider/utils.ts#L85">packages/lodestar/src/eth1/provider/utils.ts:85</a></em></p>
 <p>QUANTITY as defined in ethereum execution layer JSON RPC https://eth.wiki/json-rpc/API.
 Compress a 32 ByteVector into a QUANTITY</p>
 <p><strong>Parameters:</strong></p>
@@ -962,7 +1233,7 @@ Compress a 32 ByteVector into a QUANTITY</p>
 <hr />
 <h3 id="datatobytes">dataToBytes<a class="headerlink" href="#datatobytes" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>dataToBytes</strong>(<code>hex</code>: <a href="./#data">DATA</a>, <code>fixedLength?</code>: undefined | number): <em>Uint8Array</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/lodestar/src/eth1/provider/utils.ts#L109">packages/lodestar/src/eth1/provider/utils.ts:109</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/lodestar/src/eth1/provider/utils.ts#L109">packages/lodestar/src/eth1/provider/utils.ts:109</a></em></p>
 <p>DATA as defined in ethereum execution layer JSON RPC https://eth.wiki/json-rpc/API</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -987,7 +1258,7 @@ Compress a 32 ByteVector into a QUANTITY</p>
 <hr />
 <h3 id="datatoroothex">dataToRootHex<a class="headerlink" href="#datatoroothex" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>dataToRootHex</strong>(<code>hex</code>: <a href="./#data">DATA</a>, <code>id</code>: string): <em>RootHex</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/lodestar/src/eth1/provider/utils.ts#L125">packages/lodestar/src/eth1/provider/utils.ts:125</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/lodestar/src/eth1/provider/utils.ts#L125">packages/lodestar/src/eth1/provider/utils.ts:125</a></em></p>
 <p>DATA as defined in ethereum execution layer JSON RPC https://eth.wiki/json-rpc/API</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -1015,7 +1286,7 @@ Compress a 32 ByteVector into a QUANTITY</p>
 <hr />
 <h3 id="decodejwttoken">decodeJwtToken<a class="headerlink" href="#decodejwttoken" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>decodeJwtToken</strong>(<code>token</code>: string, <code>jwtSecret</code>: Buffer | Uint8Array | string, <code>algorithm</code>: TAlgorithm): <em><a href="./#jwtclaim">JwtClaim</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/lodestar/src/eth1/provider/jwt.ts#L27">packages/lodestar/src/eth1/provider/jwt.ts:27</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/lodestar/src/eth1/provider/jwt.ts#L27">packages/lodestar/src/eth1/provider/jwt.ts:27</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -1047,7 +1318,7 @@ Compress a 32 ByteVector into a QUANTITY</p>
 <hr />
 <h3 id="encodejwttoken">encodeJwtToken<a class="headerlink" href="#encodejwttoken" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>encodeJwtToken</strong>(<code>claim</code>: Record‹string, unknown› &amp; <a href="./#jwtclaim">JwtClaim</a>, <code>jwtSecret</code>: Buffer | Uint8Array | string, <code>algorithm</code>: TAlgorithm): <em>string</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/lodestar/src/eth1/provider/jwt.ts#L12">packages/lodestar/src/eth1/provider/jwt.ts:12</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/lodestar/src/eth1/provider/jwt.ts#L12">packages/lodestar/src/eth1/provider/jwt.ts:12</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -1079,7 +1350,7 @@ Compress a 32 ByteVector into a QUANTITY</p>
 <hr />
 <h3 id="isjsonrpctruncatederror">isJsonRpcTruncatedError<a class="headerlink" href="#isjsonrpctruncatederror" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>isJsonRpcTruncatedError</strong>(<code>error</code>: <a href="../../classes/api_impl.apierror/#static-error">Error</a>): <em>boolean</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/lodestar/src/eth1/provider/utils.ts#L19">packages/lodestar/src/eth1/provider/utils.ts:19</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/lodestar/src/eth1/provider/utils.ts#L19">packages/lodestar/src/eth1/provider/utils.ts:19</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -1099,7 +1370,7 @@ Compress a 32 ByteVector into a QUANTITY</p>
 <hr />
 <h3 id="numtoquantity">numToQuantity<a class="headerlink" href="#numtoquantity" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>numToQuantity</strong>(<code>num</code>: number | bigint): <em><a href="./#quantity">QUANTITY</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/lodestar/src/eth1/provider/utils.ts#L48">packages/lodestar/src/eth1/provider/utils.ts:48</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/lodestar/src/eth1/provider/utils.ts#L48">packages/lodestar/src/eth1/provider/utils.ts:48</a></em></p>
 <p>QUANTITY as defined in ethereum execution layer JSON RPC https://eth.wiki/json-rpc/API</p>
 <p>When encoding QUANTITIES (integers, numbers): encode as hex, prefix with “0x”, the most compact representation (slight exception: zero should be represented as “0x0”). Examples:
 - 0x41 (65 in decimal)
@@ -1126,7 +1397,7 @@ Compress a 32 ByteVector into a QUANTITY</p>
 <hr />
 <h3 id="numbertohex">numberToHex<a class="headerlink" href="#numbertohex" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>numberToHex</strong>(<code>n</code>: number | bigint): <em>string</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/lodestar/src/eth1/provider/utils.ts#L15">packages/lodestar/src/eth1/provider/utils.ts:15</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/lodestar/src/eth1/provider/utils.ts#L15">packages/lodestar/src/eth1/provider/utils.ts:15</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -1146,7 +1417,7 @@ Compress a 32 ByteVector into a QUANTITY</p>
 <hr />
 <h3 id="parseeth1block">parseEth1Block<a class="headerlink" href="#parseeth1block" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>parseEth1Block</strong>(<code>blockRaw</code>: <a href="../eth1/#ethjsonrpcblockraw">EthJsonRpcBlockRaw</a>): <em><a href="../eth1/#eth1block">Eth1Block</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/lodestar/src/eth1/provider/eth1Provider.ts#L186">packages/lodestar/src/eth1/provider/eth1Provider.ts:186</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/lodestar/src/eth1/provider/eth1Provider.ts#L202">packages/lodestar/src/eth1/provider/eth1Provider.ts:202</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -1166,7 +1437,7 @@ Compress a 32 ByteVector into a QUANTITY</p>
 <hr />
 <h3 id="parsejson">parseJson<a class="headerlink" href="#parsejson" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>parseJson</strong>‹<strong>T</strong>›(<code>json</code>: string): <em>T</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/lodestar/src/eth1/provider/jsonRpcHttpClient.ts#L198">packages/lodestar/src/eth1/provider/jsonRpcHttpClient.ts:198</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/lodestar/src/eth1/provider/jsonRpcHttpClient.ts#L235">packages/lodestar/src/eth1/provider/jsonRpcHttpClient.ts:235</a></em></p>
 <p>Util: Parse JSON but display the original source string in case of error
 Helps debug instances where an API returns a plain text instead of JSON,
 such as getting an HTML page due to a wrong API URL</p>
@@ -1191,7 +1462,7 @@ such as getting an HTML page due to a wrong API URL</p>
 <hr />
 <h3 id="parsejsonrpcerrorcode">parseJsonRpcErrorCode<a class="headerlink" href="#parsejsonrpcerrorcode" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>parseJsonRpcErrorCode</strong>(<code>code</code>: number): <em>string</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/lodestar/src/eth1/provider/jsonRpcHttpClient.ts#L242">packages/lodestar/src/eth1/provider/jsonRpcHttpClient.ts:242</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/lodestar/src/eth1/provider/jsonRpcHttpClient.ts#L279">packages/lodestar/src/eth1/provider/jsonRpcHttpClient.ts:279</a></em></p>
 <p>JSON RPC spec errors https://www.jsonrpc.org/specification#response_object</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -1212,7 +1483,7 @@ such as getting an HTML page due to a wrong API URL</p>
 <hr />
 <h3 id="parserpcresponse">parseRpcResponse<a class="headerlink" href="#parserpcresponse" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>parseRpcResponse</strong>‹<strong>R</strong>, <strong>P</strong>›(<code>res</code>: <a href="../../interfaces/eth1_provider.irpcresponse/">IRpcResponse</a>‹R›, <code>payload</code>: <a href="../../interfaces/eth1.irpcpayload/">IRpcPayload</a>‹P›): <em>R</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/lodestar/src/eth1/provider/jsonRpcHttpClient.ts#L185">packages/lodestar/src/eth1/provider/jsonRpcHttpClient.ts:185</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/lodestar/src/eth1/provider/jsonRpcHttpClient.ts#L222">packages/lodestar/src/eth1/provider/jsonRpcHttpClient.ts:222</a></em></p>
 <p><strong>Type parameters:</strong></p>
 <p>▪ <strong>R</strong></p>
 <p>▪ <strong>P</strong></p>
@@ -1239,7 +1510,7 @@ such as getting an HTML page due to a wrong API URL</p>
 <hr />
 <h3 id="quantitytobigint">quantityToBigint<a class="headerlink" href="#quantitytobigint" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>quantityToBigint</strong>(<code>hex</code>: <a href="./#quantity">QUANTITY</a>, <code>id</code>: string): <em>bigint</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/lodestar/src/eth1/provider/utils.ts#L65">packages/lodestar/src/eth1/provider/utils.ts:65</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/lodestar/src/eth1/provider/utils.ts#L65">packages/lodestar/src/eth1/provider/utils.ts:65</a></em></p>
 <p>QUANTITY as defined in ethereum execution layer JSON RPC https://eth.wiki/json-rpc/API.
 Typesafe fn to convert hex string to bigint. The BigInt constructor param is any</p>
 <p><strong>Parameters:</strong></p>
@@ -1268,7 +1539,7 @@ Typesafe fn to convert hex string to bigint. The BigInt constructor param is any
 <hr />
 <h3 id="quantitytobytes">quantityToBytes<a class="headerlink" href="#quantitytobytes" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>quantityToBytes</strong>(<code>hex</code>: <a href="./#quantity">QUANTITY</a>): <em>Uint8Array</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/lodestar/src/eth1/provider/utils.ts#L76">packages/lodestar/src/eth1/provider/utils.ts:76</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/lodestar/src/eth1/provider/utils.ts#L76">packages/lodestar/src/eth1/provider/utils.ts:76</a></em></p>
 <p>QUANTITY as defined in ethereum execution layer JSON RPC https://eth.wiki/json-rpc/API.</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -1289,7 +1560,7 @@ Typesafe fn to convert hex string to bigint. The BigInt constructor param is any
 <hr />
 <h3 id="quantitytonum">quantityToNum<a class="headerlink" href="#quantitytonum" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>quantityToNum</strong>(<code>hex</code>: <a href="./#quantity">QUANTITY</a>, <code>id</code>: string): <em>number</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/lodestar/src/eth1/provider/utils.ts#L55">packages/lodestar/src/eth1/provider/utils.ts:55</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/lodestar/src/eth1/provider/utils.ts#L55">packages/lodestar/src/eth1/provider/utils.ts:55</a></em></p>
 <p>QUANTITY as defined in ethereum execution layer JSON RPC https://eth.wiki/json-rpc/API</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -1314,6 +1585,41 @@ Typesafe fn to convert hex string to bigint. The BigInt constructor param is any
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>number</em></p>
+<h2 id="object-literals_1">Object literals<a class="headerlink" href="#object-literals_1" title="Permanent link">&para;</a></h2>
+<h3 id="const-getblockbyhashopts"><code>Const</code> getBlockByHashOpts<a class="headerlink" href="#const-getblockbyhashopts" title="Permanent link">&para;</a></h3>
+<h3 id="getblockbyhashopts-object">▪ <strong>getBlockByHashOpts</strong>: <em>object</em><a class="headerlink" href="#getblockbyhashopts-object" title="Permanent link">&para;</a></h3>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/lodestar/src/eth1/provider/eth1Provider.ts#L43">packages/lodestar/src/eth1/provider/eth1Provider.ts:43</a></em></p>
+<h3 id="routeid">routeId<a class="headerlink" href="#routeid" title="Permanent link">&para;</a></h3>
+<p>• <strong>routeId</strong>: <em>string</em> = "getBlockByHash"</p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/lodestar/src/eth1/provider/eth1Provider.ts#L43">packages/lodestar/src/eth1/provider/eth1Provider.ts:43</a></em></p>
+<hr />
+<h3 id="const-getblockbynumberopts"><code>Const</code> getBlockByNumberOpts<a class="headerlink" href="#const-getblockbynumberopts" title="Permanent link">&para;</a></h3>
+<h3 id="getblockbynumberopts-object">▪ <strong>getBlockByNumberOpts</strong>: <em>object</em><a class="headerlink" href="#getblockbynumberopts-object" title="Permanent link">&para;</a></h3>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/lodestar/src/eth1/provider/eth1Provider.ts#L42">packages/lodestar/src/eth1/provider/eth1Provider.ts:42</a></em></p>
+<h3 id="routeid_1">routeId<a class="headerlink" href="#routeid_1" title="Permanent link">&para;</a></h3>
+<p>• <strong>routeId</strong>: <em>string</em> = "getBlockByNumber"</p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/lodestar/src/eth1/provider/eth1Provider.ts#L42">packages/lodestar/src/eth1/provider/eth1Provider.ts:42</a></em></p>
+<hr />
+<h3 id="const-getblocknumberopts"><code>Const</code> getBlockNumberOpts<a class="headerlink" href="#const-getblocknumberopts" title="Permanent link">&para;</a></h3>
+<h3 id="getblocknumberopts-object">▪ <strong>getBlockNumberOpts</strong>: <em>object</em><a class="headerlink" href="#getblocknumberopts-object" title="Permanent link">&para;</a></h3>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/lodestar/src/eth1/provider/eth1Provider.ts#L44">packages/lodestar/src/eth1/provider/eth1Provider.ts:44</a></em></p>
+<h3 id="routeid_2">routeId<a class="headerlink" href="#routeid_2" title="Permanent link">&para;</a></h3>
+<p>• <strong>routeId</strong>: <em>string</em> = "getBlockNumber"</p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/lodestar/src/eth1/provider/eth1Provider.ts#L44">packages/lodestar/src/eth1/provider/eth1Provider.ts:44</a></em></p>
+<hr />
+<h3 id="const-getblocksbynumberopts"><code>Const</code> getBlocksByNumberOpts<a class="headerlink" href="#const-getblocksbynumberopts" title="Permanent link">&para;</a></h3>
+<h3 id="getblocksbynumberopts-object">▪ <strong>getBlocksByNumberOpts</strong>: <em>object</em><a class="headerlink" href="#getblocksbynumberopts-object" title="Permanent link">&para;</a></h3>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/lodestar/src/eth1/provider/eth1Provider.ts#L41">packages/lodestar/src/eth1/provider/eth1Provider.ts:41</a></em></p>
+<h3 id="routeid_3">routeId<a class="headerlink" href="#routeid_3" title="Permanent link">&para;</a></h3>
+<p>• <strong>routeId</strong>: <em>string</em> = "getBlockByNumber_batched"</p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/lodestar/src/eth1/provider/eth1Provider.ts#L41">packages/lodestar/src/eth1/provider/eth1Provider.ts:41</a></em></p>
+<hr />
+<h3 id="const-getlogsopts"><code>Const</code> getLogsOpts<a class="headerlink" href="#const-getlogsopts" title="Permanent link">&para;</a></h3>
+<h3 id="getlogsopts-object">▪ <strong>getLogsOpts</strong>: <em>object</em><a class="headerlink" href="#getlogsopts-object" title="Permanent link">&para;</a></h3>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/lodestar/src/eth1/provider/eth1Provider.ts#L45">packages/lodestar/src/eth1/provider/eth1Provider.ts:45</a></em></p>
+<h3 id="routeid_4">routeId<a class="headerlink" href="#routeid_4" title="Permanent link">&para;</a></h3>
+<p>• <strong>routeId</strong>: <em>string</em> = "getLogs"</p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/lodestar/src/eth1/provider/eth1Provider.ts#L45">packages/lodestar/src/eth1/provider/eth1Provider.ts:45</a></em></p>
 
               
             </article>
@@ -1353,7 +1659,7 @@ Typesafe fn to convert hex string to bigint. The BigInt constructor param is any
       
       
     
-    <a href="https://twitter.com/ChainSafe" target="_blank" rel="noopener" title="twitter.com" class="md-social__link">
+    <a href="https://twitter.com/ChainSafeth" target="_blank" rel="noopener" title="twitter.com" class="md-social__link">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.1.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc.--><path d="M459.37 151.716c.325 4.548.325 9.097.325 13.645 0 138.72-105.583 298.558-298.558 298.558-59.452 0-114.68-17.219-161.137-47.106 8.447.974 16.568 1.299 25.34 1.299 49.055 0 94.213-16.568 130.274-44.832-46.132-.975-84.792-31.188-98.112-72.772 6.498.974 12.995 1.624 19.818 1.624 9.421 0 18.843-1.3 27.614-3.573-48.081-9.747-84.143-51.98-84.143-102.985v-1.299c13.969 7.797 30.214 12.67 47.431 13.319-28.264-18.843-46.781-51.005-46.781-87.391 0-19.492 5.197-37.36 14.294-52.954 51.655 63.675 129.3 105.258 216.365 109.807-1.624-7.797-2.599-15.918-2.599-24.04 0-57.828 46.782-104.934 104.934-104.934 30.213 0 57.502 12.67 76.67 33.137 23.715-4.548 46.456-13.32 66.599-25.34-7.798 24.366-24.366 44.833-46.132 57.827 21.117-2.273 41.584-8.122 60.426-16.243-14.292 20.791-32.161 39.308-52.628 54.253z"/></svg>
     </a>
   
@@ -1371,7 +1677,7 @@ Typesafe fn to convert hex string to bigint. The BigInt constructor param is any
       
       
     
-    <a href="https://medium.com/ChainSafe" target="_blank" rel="noopener" title="medium.com" class="md-social__link">
+    <a href="https://blog.chainsafe.io" target="_blank" rel="noopener" title="blog.chainsafe.io" class="md-social__link">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.1.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc.--><path d="M180.5 74.262C80.813 74.262 0 155.633 0 256s80.819 181.738 180.5 181.738S361 356.373 361 256 280.191 74.262 180.5 74.262Zm288.25 10.646c-49.845 0-90.245 76.619-90.245 171.095s40.406 171.1 90.251 171.1 90.251-76.619 90.251-171.1H559c0-94.503-40.4-171.095-90.248-171.095Zm139.506 17.821c-17.526 0-31.735 68.628-31.735 153.274s14.2 153.274 31.735 153.274S640 340.631 640 256c0-84.649-14.215-153.271-31.742-153.271Z"/></svg>
     </a>
   
@@ -1385,10 +1691,10 @@ Typesafe fn to convert hex string to bigint. The BigInt constructor param is any
     <div class="md-dialog" data-md-component="dialog">
       <div class="md-dialog__inner md-typeset"></div>
     </div>
-    <script id="__config" type="application/json">{"base": "../../../..", "features": [], "search": "../../../../assets/javascripts/workers/search.85cb4492.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}}</script>
+    <script id="__config" type="application/json">{"base": "../../../..", "features": [], "search": "../../../../assets/javascripts/workers/search.b97dbffb.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}}</script>
     
     
-      <script src="../../../../assets/javascripts/bundle.a877e258.min.js"></script>
+      <script src="../../../../assets/javascripts/bundle.0238f547.min.js"></script>
       
     
   </body>

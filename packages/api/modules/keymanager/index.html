@@ -6,22 +6,22 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Lodestar documentation - Typescript Ethereum Consensus client">
+        <meta name="description" content="Lodestar Documentation - Typescript Ethereum Consensus client">
       
       
       
         <link rel="canonical" href="https://chainsafe.github.io/lodestar/packages/api/modules/keymanager/">
       
       <link rel="icon" href="../../../../assets/round-icon.ico">
-      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.3.6">
+      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.3.8">
     
     
       
-        <title>Keymanager - Lodestar documentation</title>
+        <title>Keymanager - Lodestar Documentation</title>
       
     
     
-      <link rel="stylesheet" href="../../../../assets/stylesheets/main.4a0965b7.min.css">
+      <link rel="stylesheet" href="../../../../assets/stylesheets/main.1d29e8d0.min.css">
       
         
         <link rel="stylesheet" href="../../../../assets/stylesheets/palette.cbb835fc.min.css">
@@ -84,7 +84,7 @@
 
 <header class="md-header" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="../../../.." title="Lodestar documentation" class="md-header__button md-logo" aria-label="Lodestar documentation" data-md-component="logo">
+    <a href="../../../.." title="Lodestar Documentation" class="md-header__button md-logo" aria-label="Lodestar Documentation" data-md-component="logo">
       
   <img src="../../../../assets/lodestar_icon_300.png" alt="logo">
 
@@ -96,7 +96,7 @@
       <div class="md-header__ellipsis">
         <div class="md-header__topic">
           <span class="md-ellipsis">
-            Lodestar documentation
+            Lodestar Documentation
           </span>
         </div>
         <div class="md-header__topic" data-md-component="header-topic">
@@ -203,12 +203,12 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="../../../.." title="Lodestar documentation" class="md-nav__button md-logo" aria-label="Lodestar documentation" data-md-component="logo">
+    <a href="../../../.." title="Lodestar Documentation" class="md-nav__button md-logo" aria-label="Lodestar Documentation" data-md-component="logo">
       
   <img src="../../../../assets/lodestar_icon_300.png" alt="logo">
 
     </a>
-    Lodestar documentation
+    Lodestar Documentation
   </label>
   
     <div class="md-nav__source">
@@ -234,7 +234,7 @@
   
     <li class="md-nav__item">
       <a href="../../../.." class="md-nav__link">
-        Getting started
+        Getting Started
       </a>
     </li>
   
@@ -247,10 +247,71 @@
   
   
   
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2" type="checkbox" id="__nav_2" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_2">
+          Installation
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Installation" data-md-level="1">
+        <label class="md-nav__title" for="__nav_2">
+          <span class="md-nav__icon md-icon"></span>
+          Installation
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
     <li class="md-nav__item">
-      <a href="../../../../installation/" class="md-nav__link">
-        Installation
+      <a href="../../../../install/source/" class="md-nav__link">
+        Install from source
       </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../install/npm/" class="md-nav__link">
+        Install from NPM
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../install/docker/" class="md-nav__link">
+        Install with Docker
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
     </li>
   
 
@@ -272,14 +333,14 @@
       
       
         <label class="md-nav__link" for="__nav_3">
-          CLI Usage
+          Using Lodestar
           <span class="md-nav__icon md-icon"></span>
         </label>
       
-      <nav class="md-nav" aria-label="CLI Usage" data-md-level="1">
+      <nav class="md-nav" aria-label="Using Lodestar" data-md-level="1">
         <label class="md-nav__title" for="__nav_3">
           <span class="md-nav__icon md-icon"></span>
-          CLI Usage
+          Using Lodestar
         </label>
         <ul class="md-nav__list" data-md-scrollfix>
           
@@ -289,8 +350,8 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../../usage/testnet/" class="md-nav__link">
-        Mainnet or public testnet
+      <a href="../../../../usage/beacon-management/" class="md-nav__link">
+        Beacon management
       </a>
     </li>
   
@@ -317,8 +378,8 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../../usage/key-management/" class="md-nav__link">
-        Key management
+      <a href="../../../../usage/validator-management/" class="md-nav__link">
+        Validator management
       </a>
     </li>
   
@@ -629,6 +690,13 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#clientmodules" class="md-nav__link">
+    ClientModules
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#importkeystoresreq" class="md-nav__link">
     ImportKeystoresReq
   </a>
@@ -757,13 +825,6 @@
   
 </li>
         
-          <li class="md-nav__item">
-  <a href="#getroutes" class="md-nav__link">
-    getRoutes
-  </a>
-  
-</li>
-        
       </ul>
     </nav>
   
@@ -834,6 +895,7 @@
 <h3 id="type-aliases">Type aliases<a class="headerlink" href="#type-aliases" title="Permanent link">&para;</a></h3>
 <ul>
 <li><a href="./#api">Api</a></li>
+<li><a href="./#clientmodules">ClientModules</a></li>
 <li><a href="./#importkeystoresreq">ImportKeystoresReq</a></li>
 <li><a href="./#keystorestr">KeystoreStr</a></li>
 <li><a href="./#listkeysresponse">ListKeysResponse</a></li>
@@ -848,7 +910,6 @@
 <li><a href="./#getclient">getClient</a></li>
 <li><a href="./#getreqserializers">getReqSerializers</a></li>
 <li><a href="./#getreturntypes">getReturnTypes</a></li>
-<li><a href="./#getroutes">getRoutes</a></li>
 </ul>
 <h3 id="object-literals">Object literals<a class="headerlink" href="#object-literals" title="Permanent link">&para;</a></h3>
 <ul>
@@ -875,7 +936,7 @@
 <h2 id="type-aliases_1">Type aliases<a class="headerlink" href="#type-aliases_1" title="Permanent link">&para;</a></h2>
 <h3 id="api_1">Api<a class="headerlink" href="#api_1" title="Permanent link">&para;</a></h3>
 <p>Ƭ <strong>Api</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/api/src/keymanager/routes.ts#L66">packages/api/src/keymanager/routes.ts:66</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/api/src/keymanager/routes.ts#L66">packages/api/src/keymanager/routes.ts:66</a></em></p>
 <h4 id="type-declaration">Type declaration:<a class="headerlink" href="#type-declaration" title="Permanent link">&para;</a></h4>
 <ul>
 <li>
@@ -889,9 +950,13 @@
 </li>
 </ul>
 <hr />
+<h3 id="clientmodules">ClientModules<a class="headerlink" href="#clientmodules" title="Permanent link">&para;</a></h3>
+<p>Ƭ <strong>ClientModules</strong>: <em><a href="../utils_client/#httpclientmodules">HttpClientModules</a> &amp; object</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/api/src/keymanager/index.ts#L11">packages/api/src/keymanager/index.ts:11</a></em></p>
+<hr />
 <h3 id="importkeystoresreq">ImportKeystoresReq<a class="headerlink" href="#importkeystoresreq" title="Permanent link">&para;</a></h3>
 <p>Ƭ <strong>ImportKeystoresReq</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/api/src/keymanager/routes.ts#L52">packages/api/src/keymanager/routes.ts:52</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/api/src/keymanager/routes.ts#L52">packages/api/src/keymanager/routes.ts:52</a></em></p>
 <h4 id="type-declaration_1">Type declaration:<a class="headerlink" href="#type-declaration_1" title="Permanent link">&para;</a></h4>
 <ul>
 <li>
@@ -907,14 +972,14 @@
 <hr />
 <h3 id="keystorestr_1">KeystoreStr<a class="headerlink" href="#keystorestr_1" title="Permanent link">&para;</a></h3>
 <p>Ƭ <strong>KeystoreStr</strong>: <em>string</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/api/src/keymanager/routes.ts#L29">packages/api/src/keymanager/routes.ts:29</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/api/src/keymanager/routes.ts#L29">packages/api/src/keymanager/routes.ts:29</a></em></p>
 <p>JSON serialized representation of a single keystore in EIP-2335: BLS12-381 Keystore format.
 <div class="highlight"><pre><span></span><code>&#39;{&quot;version&quot;:4,&quot;uuid&quot;:&quot;9f75a3fa-1e5a-49f9-be3d-f5a19779c6fa&quot;,&quot;path&quot;:&quot;m/12381/3600/0/0/0&quot;,&quot;pubkey&quot;:&quot;0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a&quot;,&quot;crypto&quot;:{&quot;kdf&quot;:{&quot;function&quot;:&quot;pbkdf2&quot;,&quot;params&quot;:{&quot;dklen&quot;:32,&quot;c&quot;:262144,&quot;prf&quot;:&quot;hmac-sha256&quot;,&quot;salt&quot;:&quot;8ff8f22ef522a40f99c6ce07fdcfc1db489d54dfbc6ec35613edf5d836fa1407&quot;},&quot;message&quot;:&quot;&quot;},&quot;checksum&quot;:{&quot;function&quot;:&quot;sha256&quot;,&quot;params&quot;:{},&quot;message&quot;:&quot;9678a69833d2576e3461dd5fa80f6ac73935ae30d69d07659a709b3cd3eddbe3&quot;},&quot;cipher&quot;:{&quot;function&quot;:&quot;aes-128-ctr&quot;,&quot;params&quot;:{&quot;iv&quot;:&quot;31b69f0ac97261e44141b26aa0da693f&quot;},&quot;message&quot;:&quot;e8228bafec4fcbaca3b827e586daad381d53339155b034e5eaae676b715ab05e&quot;}}}&#39;
 </code></pre></div></p>
 <hr />
 <h3 id="listkeysresponse">ListKeysResponse<a class="headerlink" href="#listkeysresponse" title="Permanent link">&para;</a></h3>
 <p>Ƭ <strong>ListKeysResponse</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/api/src/keymanager/routes.ts#L58">packages/api/src/keymanager/routes.ts:58</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/api/src/keymanager/routes.ts#L58">packages/api/src/keymanager/routes.ts:58</a></em></p>
 <h4 id="type-declaration_2">Type declaration:<a class="headerlink" href="#type-declaration_2" title="Permanent link">&para;</a></h4>
 <ul>
 <li>
@@ -930,14 +995,14 @@
 <hr />
 <h3 id="pubkeyhex_1">PubkeyHex<a class="headerlink" href="#pubkeyhex_1" title="Permanent link">&para;</a></h3>
 <p>Ƭ <strong>PubkeyHex</strong>: <em>string</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/api/src/keymanager/routes.ts#L45">packages/api/src/keymanager/routes.ts:45</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/api/src/keymanager/routes.ts#L45">packages/api/src/keymanager/routes.ts:45</a></em></p>
 <p>The validator's BLS public key, uniquely identifying them. <em>48-bytes, hex encoded with 0x prefix, case insensitive.</em>
 <div class="highlight"><pre><span></span><code>&quot;0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a&quot;
 </code></pre></div></p>
 <hr />
 <h3 id="reqtypes">ReqTypes<a class="headerlink" href="#reqtypes" title="Permanent link">&para;</a></h3>
 <p>Ƭ <strong>ReqTypes</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/api/src/keymanager/routes.ts#L132">packages/api/src/keymanager/routes.ts:132</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/api/src/keymanager/routes.ts#L132">packages/api/src/keymanager/routes.ts:132</a></em></p>
 <h4 id="type-declaration_3">Type declaration:<a class="headerlink" href="#type-declaration_3" title="Permanent link">&para;</a></h4>
 <ul>
 <li>
@@ -962,18 +1027,18 @@
 <hr />
 <h3 id="slashingprotectiondata_1">SlashingProtectionData<a class="headerlink" href="#slashingprotectiondata_1" title="Permanent link">&para;</a></h3>
 <p>Ƭ <strong>SlashingProtectionData</strong>: <em>string</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/api/src/keymanager/routes.ts#L37">packages/api/src/keymanager/routes.ts:37</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/api/src/keymanager/routes.ts#L37">packages/api/src/keymanager/routes.ts:37</a></em></p>
 <p>JSON serialized representation of the slash protection data in format defined in EIP-3076: Slashing Protection Interchange Format.
 <div class="highlight"><pre><span></span><code>&#39;{&quot;metadata&quot;:{&quot;interchange_format_version&quot;:&quot;5&quot;,&quot;genesis_validators_root&quot;:&quot;0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2&quot;},&quot;data&quot;:[{&quot;pubkey&quot;:&quot;0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a&quot;,&quot;signed_blocks&quot;:[],&quot;signed_attestations&quot;:[]}]}&#39;
 </code></pre></div></p>
 <hr />
 <h3 id="statuses">Statuses<a class="headerlink" href="#statuses" title="Permanent link">&para;</a></h3>
 <p>Ƭ <strong>Statuses</strong>: <em>object[]</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/api/src/keymanager/routes.ts#L47">packages/api/src/keymanager/routes.ts:47</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/api/src/keymanager/routes.ts#L47">packages/api/src/keymanager/routes.ts:47</a></em></p>
 <h2 id="functions_1">Functions<a class="headerlink" href="#functions_1" title="Permanent link">&para;</a></h2>
 <h3 id="getclient">getClient<a class="headerlink" href="#getclient" title="Permanent link">&para;</a></h3>
-<p>▸ <strong>getClient</strong>(<code>_config</code>: IChainForkConfig, <code>httpClient</code>: <a href="../../interfaces/client_utils.ihttpclient/">IHttpClient</a>): <em><a href="./#api">Api</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/api/src/keymanager/client.ts#L5">packages/api/src/keymanager/client.ts:5</a></em></p>
+<p>▸ <strong>getClient</strong>(<code>_config</code>: IChainForkConfig, <code>httpClient</code>: <a href="../../interfaces/utils_client.ihttpclient/">IHttpClient</a>): <em><a href="./#api">Api</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/api/src/keymanager/client.ts#L5">packages/api/src/keymanager/client.ts:5</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -989,15 +1054,15 @@
 </tr>
 <tr>
 <td><code>httpClient</code></td>
-<td><a href="../../interfaces/client_utils.ihttpclient/">IHttpClient</a></td>
+<td><a href="../../interfaces/utils_client.ihttpclient/">IHttpClient</a></td>
 </tr>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em><a href="./#api">Api</a></em></p>
 <hr />
 <h3 id="getclient_1">getClient<a class="headerlink" href="#getclient_1" title="Permanent link">&para;</a></h3>
-<p>▸ <strong>getClient</strong>(<code>config</code>: IChainForkConfig, <code>opts</code>: <a href="../client_utils/#httpclientoptions">HttpClientOptions</a>, <code>httpClient?</code>: <a href="../../interfaces/client_utils.ihttpclient/">IHttpClient</a>): <em><a href="./#api">Api</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/api/src/keymanager/index.ts#L12">packages/api/src/keymanager/index.ts:12</a></em></p>
+<p>▸ <strong>getClient</strong>(<code>opts</code>: <a href="../utils_client/#httpclientoptions">HttpClientOptions</a>, <code>modules</code>: <a href="./#clientmodules">ClientModules</a>): <em><a href="./#api">Api</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/api/src/keymanager/index.ts#L19">packages/api/src/keymanager/index.ts:19</a></em></p>
 <p>REST HTTP client for all keymanager routes</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -1009,16 +1074,12 @@
 </thead>
 <tbody>
 <tr>
-<td><code>config</code></td>
-<td>IChainForkConfig</td>
-</tr>
-<tr>
 <td><code>opts</code></td>
-<td><a href="../client_utils/#httpclientoptions">HttpClientOptions</a></td>
+<td><a href="../utils_client/#httpclientoptions">HttpClientOptions</a></td>
 </tr>
 <tr>
-<td><code>httpClient?</code></td>
-<td><a href="../../interfaces/client_utils.ihttpclient/">IHttpClient</a></td>
+<td><code>modules</code></td>
+<td><a href="./#clientmodules">ClientModules</a></td>
 </tr>
 </tbody>
 </table>
@@ -1026,43 +1087,19 @@
 <hr />
 <h3 id="getreqserializers">getReqSerializers<a class="headerlink" href="#getreqserializers" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>getReqSerializers</strong>(): <em><a href="../utils/#reqserializers">ReqSerializers</a>‹<a href="./#api">Api</a>, <a href="./#reqtypes">ReqTypes</a>›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/api/src/keymanager/routes.ts#L138">packages/api/src/keymanager/routes.ts:138</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/api/src/keymanager/routes.ts#L138">packages/api/src/keymanager/routes.ts:138</a></em></p>
 <p><strong>Returns:</strong> <em><a href="../utils/#reqserializers">ReqSerializers</a>‹<a href="./#api">Api</a>, <a href="./#reqtypes">ReqTypes</a>›</em></p>
 <hr />
 <h3 id="getreturntypes">getReturnTypes<a class="headerlink" href="#getreturntypes" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>getReturnTypes</strong>(): <em><a href="../utils/#returntypes">ReturnTypes</a>‹<a href="./#api">Api</a>›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/api/src/keymanager/routes.ts#L155">packages/api/src/keymanager/routes.ts:155</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/api/src/keymanager/routes.ts#L155">packages/api/src/keymanager/routes.ts:155</a></em></p>
 <p><strong>Returns:</strong> <em><a href="../utils/#returntypes">ReturnTypes</a>‹<a href="./#api">Api</a>›</em></p>
-<hr />
-<h3 id="getroutes">getRoutes<a class="headerlink" href="#getroutes" title="Permanent link">&para;</a></h3>
-<p>▸ <strong>getRoutes</strong>(<code>config</code>: IChainForkConfig, <code>api</code>: <a href="./#api">Api</a>): <em><a href="../server_utils/#serverroutes">ServerRoutes</a>‹<a href="./#api">Api</a>, <a href="./#reqtypes">ReqTypes</a>›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/api/src/keymanager/server.ts#L5">packages/api/src/keymanager/server.ts:5</a></em></p>
-<p><strong>Parameters:</strong></p>
-<table>
-<thead>
-<tr>
-<th>Name</th>
-<th>Type</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>config</code></td>
-<td>IChainForkConfig</td>
-</tr>
-<tr>
-<td><code>api</code></td>
-<td><a href="./#api">Api</a></td>
-</tr>
-</tbody>
-</table>
-<p><strong>Returns:</strong> <em><a href="../server_utils/#serverroutes">ServerRoutes</a>‹<a href="./#api">Api</a>, <a href="./#reqtypes">ReqTypes</a>›</em></p>
 <h2 id="object-literals_1">Object literals<a class="headerlink" href="#object-literals_1" title="Permanent link">&para;</a></h2>
 <h3 id="const-routesdata"><code>Const</code> routesData<a class="headerlink" href="#const-routesdata" title="Permanent link">&para;</a></h3>
 <h3 id="routesdata-object">▪ <strong>routesData</strong>: <em>object</em><a class="headerlink" href="#routesdata-object" title="Permanent link">&para;</a></h3>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/api/src/keymanager/routes.ts#L126">packages/api/src/keymanager/routes.ts:126</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/api/src/keymanager/routes.ts#L126">packages/api/src/keymanager/routes.ts:126</a></em></p>
 <p>▪ <strong>deleteKeystores</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/api/src/keymanager/routes.ts#L129">packages/api/src/keymanager/routes.ts:129</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/api/src/keymanager/routes.ts#L129">packages/api/src/keymanager/routes.ts:129</a></em></p>
 <ul>
 <li>
 <p><strong>method</strong>: <em>"DELETE"</em> = "DELETE"</p>
@@ -1072,7 +1109,7 @@
 </li>
 </ul>
 <p>▪ <strong>importKeystores</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/api/src/keymanager/routes.ts#L128">packages/api/src/keymanager/routes.ts:128</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/api/src/keymanager/routes.ts#L128">packages/api/src/keymanager/routes.ts:128</a></em></p>
 <ul>
 <li>
 <p><strong>method</strong>: <em>"POST"</em> = "POST"</p>
@@ -1082,7 +1119,7 @@
 </li>
 </ul>
 <p>▪ <strong>listKeys</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/api/src/keymanager/routes.ts#L127">packages/api/src/keymanager/routes.ts:127</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/api/src/keymanager/routes.ts#L127">packages/api/src/keymanager/routes.ts:127</a></em></p>
 <ul>
 <li>
 <p><strong>method</strong>: <em>"GET"</em> = "GET"</p>
@@ -1130,7 +1167,7 @@
       
       
     
-    <a href="https://twitter.com/ChainSafe" target="_blank" rel="noopener" title="twitter.com" class="md-social__link">
+    <a href="https://twitter.com/ChainSafeth" target="_blank" rel="noopener" title="twitter.com" class="md-social__link">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.1.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc.--><path d="M459.37 151.716c.325 4.548.325 9.097.325 13.645 0 138.72-105.583 298.558-298.558 298.558-59.452 0-114.68-17.219-161.137-47.106 8.447.974 16.568 1.299 25.34 1.299 49.055 0 94.213-16.568 130.274-44.832-46.132-.975-84.792-31.188-98.112-72.772 6.498.974 12.995 1.624 19.818 1.624 9.421 0 18.843-1.3 27.614-3.573-48.081-9.747-84.143-51.98-84.143-102.985v-1.299c13.969 7.797 30.214 12.67 47.431 13.319-28.264-18.843-46.781-51.005-46.781-87.391 0-19.492 5.197-37.36 14.294-52.954 51.655 63.675 129.3 105.258 216.365 109.807-1.624-7.797-2.599-15.918-2.599-24.04 0-57.828 46.782-104.934 104.934-104.934 30.213 0 57.502 12.67 76.67 33.137 23.715-4.548 46.456-13.32 66.599-25.34-7.798 24.366-24.366 44.833-46.132 57.827 21.117-2.273 41.584-8.122 60.426-16.243-14.292 20.791-32.161 39.308-52.628 54.253z"/></svg>
     </a>
   
@@ -1148,7 +1185,7 @@
       
       
     
-    <a href="https://medium.com/ChainSafe" target="_blank" rel="noopener" title="medium.com" class="md-social__link">
+    <a href="https://blog.chainsafe.io" target="_blank" rel="noopener" title="blog.chainsafe.io" class="md-social__link">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.1.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc.--><path d="M180.5 74.262C80.813 74.262 0 155.633 0 256s80.819 181.738 180.5 181.738S361 356.373 361 256 280.191 74.262 180.5 74.262Zm288.25 10.646c-49.845 0-90.245 76.619-90.245 171.095s40.406 171.1 90.251 171.1 90.251-76.619 90.251-171.1H559c0-94.503-40.4-171.095-90.248-171.095Zm139.506 17.821c-17.526 0-31.735 68.628-31.735 153.274s14.2 153.274 31.735 153.274S640 340.631 640 256c0-84.649-14.215-153.271-31.742-153.271Z"/></svg>
     </a>
   
@@ -1162,10 +1199,10 @@
     <div class="md-dialog" data-md-component="dialog">
       <div class="md-dialog__inner md-typeset"></div>
     </div>
-    <script id="__config" type="application/json">{"base": "../../../..", "features": [], "search": "../../../../assets/javascripts/workers/search.85cb4492.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}}</script>
+    <script id="__config" type="application/json">{"base": "../../../..", "features": [], "search": "../../../../assets/javascripts/workers/search.b97dbffb.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}}</script>
     
     
-      <script src="../../../../assets/javascripts/bundle.a877e258.min.js"></script>
+      <script src="../../../../assets/javascripts/bundle.0238f547.min.js"></script>
       
     
   </body>

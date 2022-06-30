@@ -6,22 +6,22 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Lodestar documentation - Typescript Ethereum Consensus client">
+        <meta name="description" content="Lodestar Documentation - Typescript Ethereum Consensus client">
       
       
       
         <link rel="canonical" href="https://chainsafe.github.io/lodestar/packages/db/classes/controller.leveldbcontroller/">
       
       <link rel="icon" href="../../../../assets/round-icon.ico">
-      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.3.6">
+      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.3.8">
     
     
       
-        <title>Controller.leveldbcontroller - Lodestar documentation</title>
+        <title>Controller.leveldbcontroller - Lodestar Documentation</title>
       
     
     
-      <link rel="stylesheet" href="../../../../assets/stylesheets/main.4a0965b7.min.css">
+      <link rel="stylesheet" href="../../../../assets/stylesheets/main.1d29e8d0.min.css">
       
         
         <link rel="stylesheet" href="../../../../assets/stylesheets/palette.cbb835fc.min.css">
@@ -84,7 +84,7 @@
 
 <header class="md-header" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="../../../.." title="Lodestar documentation" class="md-header__button md-logo" aria-label="Lodestar documentation" data-md-component="logo">
+    <a href="../../../.." title="Lodestar Documentation" class="md-header__button md-logo" aria-label="Lodestar Documentation" data-md-component="logo">
       
   <img src="../../../../assets/lodestar_icon_300.png" alt="logo">
 
@@ -96,7 +96,7 @@
       <div class="md-header__ellipsis">
         <div class="md-header__topic">
           <span class="md-ellipsis">
-            Lodestar documentation
+            Lodestar Documentation
           </span>
         </div>
         <div class="md-header__topic" data-md-component="header-topic">
@@ -203,12 +203,12 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="../../../.." title="Lodestar documentation" class="md-nav__button md-logo" aria-label="Lodestar documentation" data-md-component="logo">
+    <a href="../../../.." title="Lodestar Documentation" class="md-nav__button md-logo" aria-label="Lodestar Documentation" data-md-component="logo">
       
   <img src="../../../../assets/lodestar_icon_300.png" alt="logo">
 
     </a>
-    Lodestar documentation
+    Lodestar Documentation
   </label>
   
     <div class="md-nav__source">
@@ -234,7 +234,7 @@
   
     <li class="md-nav__item">
       <a href="../../../.." class="md-nav__link">
-        Getting started
+        Getting Started
       </a>
     </li>
   
@@ -247,10 +247,71 @@
   
   
   
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2" type="checkbox" id="__nav_2" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_2">
+          Installation
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Installation" data-md-level="1">
+        <label class="md-nav__title" for="__nav_2">
+          <span class="md-nav__icon md-icon"></span>
+          Installation
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
     <li class="md-nav__item">
-      <a href="../../../../installation/" class="md-nav__link">
-        Installation
+      <a href="../../../../install/source/" class="md-nav__link">
+        Install from source
       </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../install/npm/" class="md-nav__link">
+        Install from NPM
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../install/docker/" class="md-nav__link">
+        Install with Docker
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
     </li>
   
 
@@ -272,14 +333,14 @@
       
       
         <label class="md-nav__link" for="__nav_3">
-          CLI Usage
+          Using Lodestar
           <span class="md-nav__icon md-icon"></span>
         </label>
       
-      <nav class="md-nav" aria-label="CLI Usage" data-md-level="1">
+      <nav class="md-nav" aria-label="Using Lodestar" data-md-level="1">
         <label class="md-nav__title" for="__nav_3">
           <span class="md-nav__icon md-icon"></span>
-          CLI Usage
+          Using Lodestar
         </label>
         <ul class="md-nav__list" data-md-scrollfix>
           
@@ -289,8 +350,8 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../../usage/testnet/" class="md-nav__link">
-        Mainnet or public testnet
+      <a href="../../../../usage/beacon-management/" class="md-nav__link">
+        Beacon management
       </a>
     </li>
   
@@ -317,8 +378,8 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../../usage/key-management/" class="md-nav__link">
-        Key management
+      <a href="../../../../usage/validator-management/" class="md-nav__link">
+        Validator management
       </a>
     </li>
   
@@ -581,15 +642,22 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#private-logger" class="md-nav__link">
-    Private logger
+  <a href="#private-readonly-logger" class="md-nav__link">
+    Private Readonly logger
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#private-opts" class="md-nav__link">
-    Private opts
+  <a href="#private-metrics" class="md-nav__link">
+    Private metrics
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#private-readonly-opts" class="md-nav__link">
+    Private Readonly opts
   </a>
   
 </li>
@@ -692,6 +760,13 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#setmetrics" class="md-nav__link">
+    setMetrics
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#start" class="md-nav__link">
     start
   </a>
@@ -751,7 +826,7 @@
 </ul>
 <h2 id="implements">Implements<a class="headerlink" href="#implements" title="Permanent link">&para;</a></h2>
 <ul>
-<li><a href="../../interfaces/db_controller.idatabasecontroller/">IDatabaseController</a>‹Uint8Array, Uint8Array›</li>
+<li><a href="../../interfaces/controller.idatabasecontroller/">IDatabaseController</a>‹Uint8Array, Uint8Array›</li>
 </ul>
 <h2 id="index">Index<a class="headerlink" href="#index" title="Permanent link">&para;</a></h2>
 <h3 id="constructors">Constructors<a class="headerlink" href="#constructors" title="Permanent link">&para;</a></h3>
@@ -761,8 +836,9 @@
 <h3 id="properties">Properties<a class="headerlink" href="#properties" title="Permanent link">&para;</a></h3>
 <ul>
 <li><a href="./#private-db">db</a></li>
-<li><a href="./#private-logger">logger</a></li>
-<li><a href="./#private-opts">opts</a></li>
+<li><a href="./#private-readonly-logger">logger</a></li>
+<li><a href="./#private-metrics">metrics</a></li>
+<li><a href="./#private-readonly-opts">opts</a></li>
 <li><a href="./#private-status">status</a></li>
 </ul>
 <h3 id="methods">Methods<a class="headerlink" href="#methods" title="Permanent link">&para;</a></h3>
@@ -778,6 +854,7 @@
 <li><a href="./#keys">keys</a></li>
 <li><a href="./#keysstream">keysStream</a></li>
 <li><a href="./#put">put</a></li>
+<li><a href="./#setmetrics">setMetrics</a></li>
 <li><a href="./#start">start</a></li>
 <li><a href="./#stop">stop</a></li>
 <li><a href="./#values">values</a></li>
@@ -786,7 +863,7 @@
 <h2 id="constructors_1">Constructors<a class="headerlink" href="#constructors_1" title="Permanent link">&para;</a></h2>
 <h3 id="constructor">constructor<a class="headerlink" href="#constructor" title="Permanent link">&para;</a></h3>
 <p>+ <strong>new LevelDbController</strong>(<code>opts</code>: <a href="../../interfaces/controller.ileveldboptions/">ILevelDBOptions</a>, <code>__namedParameters</code>: object): <em><a href="./">LevelDbController</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/db/src/controller/level.ts#L29">controller/level.ts:29</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/db/src/controller/level.ts#L37">controller/level.ts:37</a></em></p>
 <p><strong>Parameters:</strong></p>
 <p>▪ <strong>opts</strong>: <em><a href="../../interfaces/controller.ileveldboptions/">ILevelDBOptions</a></em></p>
 <p>▪ <strong>__namedParameters</strong>: <em>object</em></p>
@@ -802,29 +879,37 @@
 <td><code>logger</code></td>
 <td>ILogger</td>
 </tr>
+<tr>
+<td><code>metrics</code></td>
+<td>undefined &#124; null &#124; <a href="../../interfaces/controller.ileveldbcontrollermetrics/">ILevelDbControllerMetrics</a></td>
+</tr>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em><a href="./">LevelDbController</a></em></p>
 <h2 id="properties_1">Properties<a class="headerlink" href="#properties_1" title="Permanent link">&para;</a></h2>
 <h3 id="private-db"><code>Private</code> db<a class="headerlink" href="#private-db" title="Permanent link">&para;</a></h3>
 <p>• <strong>db</strong>: <em>LevelUp</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/db/src/controller/level.ts#L25">controller/level.ts:25</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/db/src/controller/level.ts#L33">controller/level.ts:33</a></em></p>
 <hr />
-<h3 id="private-logger"><code>Private</code> logger<a class="headerlink" href="#private-logger" title="Permanent link">&para;</a></h3>
+<h3 id="private-readonly-logger"><code>Private</code> <code>Readonly</code> logger<a class="headerlink" href="#private-readonly-logger" title="Permanent link">&para;</a></h3>
 <p>• <strong>logger</strong>: <em>ILogger</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/db/src/controller/level.ts#L29">controller/level.ts:29</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/db/src/controller/level.ts#L36">controller/level.ts:36</a></em></p>
 <hr />
-<h3 id="private-opts"><code>Private</code> opts<a class="headerlink" href="#private-opts" title="Permanent link">&para;</a></h3>
+<h3 id="private-metrics"><code>Private</code> metrics<a class="headerlink" href="#private-metrics" title="Permanent link">&para;</a></h3>
+<p>• <strong>metrics</strong>: <em><a href="../../interfaces/controller.ileveldbcontrollermetrics/">ILevelDbControllerMetrics</a> | null</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/db/src/controller/level.ts#L37">controller/level.ts:37</a></em></p>
+<hr />
+<h3 id="private-readonly-opts"><code>Private</code> <code>Readonly</code> opts<a class="headerlink" href="#private-readonly-opts" title="Permanent link">&para;</a></h3>
 <p>• <strong>opts</strong>: <em><a href="../../interfaces/controller.ileveldboptions/">ILevelDBOptions</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/db/src/controller/level.ts#L27">controller/level.ts:27</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/db/src/controller/level.ts#L35">controller/level.ts:35</a></em></p>
 <hr />
 <h3 id="private-status"><code>Private</code> status<a class="headerlink" href="#private-status" title="Permanent link">&para;</a></h3>
 <p>• <strong>status</strong>: <em><a href="../../enums/controller.status/">Status</a></em> = Status.stopped</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/db/src/controller/level.ts#L24">controller/level.ts:24</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/db/src/controller/level.ts#L32">controller/level.ts:32</a></em></p>
 <h2 id="methods_1">Methods<a class="headerlink" href="#methods_1" title="Permanent link">&para;</a></h2>
 <h3 id="batchdelete">batchDelete<a class="headerlink" href="#batchdelete" title="Permanent link">&para;</a></h3>
-<p>▸ <strong>batchDelete</strong>(<code>keys</code>: Uint8Array[]): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/db/src/controller/level.ts#L82">controller/level.ts:82</a></em></p>
+<p>▸ <strong>batchDelete</strong>(<code>keys</code>: Uint8Array[], <code>opts?</code>: <a href="../../modules/controller/#dbreqopts">DbReqOpts</a>): <em>Promise‹void›</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/db/src/controller/level.ts#L111">controller/level.ts:111</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -838,14 +923,18 @@
 <td><code>keys</code></td>
 <td>Uint8Array[]</td>
 </tr>
+<tr>
+<td><code>opts?</code></td>
+<td><a href="../../modules/controller/#dbreqopts">DbReqOpts</a></td>
+</tr>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>Promise‹void›</em></p>
 <hr />
 <h3 id="batchput">batchPut<a class="headerlink" href="#batchput" title="Permanent link">&para;</a></h3>
-<p>▸ <strong>batchPut</strong>(<code>items</code>: <a href="../../interfaces/db_controller.ikeyvalue/">IKeyValue</a>‹Uint8Array, Uint8Array›[]): <em>Promise‹void›</em></p>
-<p><em>Implementation of <a href="../../interfaces/db_controller.idatabasecontroller/">IDatabaseController</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/db/src/controller/level.ts#L76">controller/level.ts:76</a></em></p>
+<p>▸ <strong>batchPut</strong>(<code>items</code>: <a href="../../interfaces/controller.ikeyvalue/">IKeyValue</a>‹Uint8Array, Uint8Array›[], <code>opts?</code>: <a href="../../modules/controller/#dbreqopts">DbReqOpts</a>): <em>Promise‹void›</em></p>
+<p><em>Implementation of <a href="../../interfaces/controller.idatabasecontroller/">IDatabaseController</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/db/src/controller/level.ts#L102">controller/level.ts:102</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -857,7 +946,11 @@
 <tbody>
 <tr>
 <td><code>items</code></td>
-<td><a href="../../interfaces/db_controller.ikeyvalue/">IKeyValue</a>‹Uint8Array, Uint8Array›[]</td>
+<td><a href="../../interfaces/controller.ikeyvalue/">IKeyValue</a>‹Uint8Array, Uint8Array›[]</td>
+</tr>
+<tr>
+<td><code>opts?</code></td>
+<td><a href="../../modules/controller/#dbreqopts">DbReqOpts</a></td>
 </tr>
 </tbody>
 </table>
@@ -865,12 +958,12 @@
 <hr />
 <h3 id="clear">clear<a class="headerlink" href="#clear" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>clear</strong>(): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/db/src/controller/level.ts#L53">controller/level.ts:53</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/db/src/controller/level.ts#L71">controller/level.ts:71</a></em></p>
 <p><strong>Returns:</strong> <em>Promise‹void›</em></p>
 <hr />
 <h3 id="delete">delete<a class="headerlink" href="#delete" title="Permanent link">&para;</a></h3>
-<p>▸ <strong>delete</strong>(<code>key</code>: Uint8Array): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/db/src/controller/level.ts#L72">controller/level.ts:72</a></em></p>
+<p>▸ <strong>delete</strong>(<code>key</code>: Uint8Array, <code>opts?</code>: <a href="../../modules/controller/#dbreqopts">DbReqOpts</a>): <em>Promise‹void›</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/db/src/controller/level.ts#L95">controller/level.ts:95</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -883,15 +976,19 @@
 <tr>
 <td><code>key</code></td>
 <td>Uint8Array</td>
+</tr>
+<tr>
+<td><code>opts?</code></td>
+<td><a href="../../modules/controller/#dbreqopts">DbReqOpts</a></td>
 </tr>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>Promise‹void›</em></p>
 <hr />
 <h3 id="entries">entries<a class="headerlink" href="#entries" title="Permanent link">&para;</a></h3>
-<p>▸ <strong>entries</strong>(<code>opts?</code>: <a href="../../modules/controller/#ifilteroptions">IFilterOptions</a>‹Uint8Array›): <em>Promise‹<a href="../../interfaces/db_controller.ikeyvalue/">IKeyValue</a>‹Uint8Array, Uint8Array›[]›</em></p>
-<p><em>Implementation of <a href="../../interfaces/db_controller.idatabasecontroller/">IDatabaseController</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/db/src/controller/level.ts#L108">controller/level.ts:108</a></em></p>
+<p>▸ <strong>entries</strong>(<code>opts?</code>: <a href="../../modules/controller/#ifilteroptions">IFilterOptions</a>‹Uint8Array›): <em>Promise‹<a href="../../interfaces/controller.ikeyvalue/">IKeyValue</a>‹Uint8Array, Uint8Array›[]›</em></p>
+<p><em>Implementation of <a href="../../interfaces/controller.idatabasecontroller/">IDatabaseController</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/db/src/controller/level.ts#L140">controller/level.ts:140</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -907,12 +1004,12 @@
 </tr>
 </tbody>
 </table>
-<p><strong>Returns:</strong> <em>Promise‹<a href="../../interfaces/db_controller.ikeyvalue/">IKeyValue</a>‹Uint8Array, Uint8Array›[]›</em></p>
+<p><strong>Returns:</strong> <em>Promise‹<a href="../../interfaces/controller.ikeyvalue/">IKeyValue</a>‹Uint8Array, Uint8Array›[]›</em></p>
 <hr />
 <h3 id="entriesstream">entriesStream<a class="headerlink" href="#entriesstream" title="Permanent link">&para;</a></h3>
-<p>▸ <strong>entriesStream</strong>(<code>opts?</code>: <a href="../../modules/controller/#ifilteroptions">IFilterOptions</a>‹Uint8Array›): <em>AsyncGenerator‹<a href="../../interfaces/db_controller.ikeyvalue/">IKeyValue</a>‹Uint8Array, Uint8Array››</em></p>
-<p><em>Implementation of <a href="../../interfaces/db_controller.idatabasecontroller/">IDatabaseController</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/db/src/controller/level.ts#L96">controller/level.ts:96</a></em></p>
+<p>▸ <strong>entriesStream</strong>(<code>opts?</code>: <a href="../../modules/controller/#ifilteroptions">IFilterOptions</a>‹Uint8Array›): <em>AsyncGenerator‹<a href="../../interfaces/controller.ikeyvalue/">IKeyValue</a>‹Uint8Array, Uint8Array››</em></p>
+<p><em>Implementation of <a href="../../interfaces/controller.idatabasecontroller/">IDatabaseController</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/db/src/controller/level.ts#L128">controller/level.ts:128</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -928,11 +1025,11 @@
 </tr>
 </tbody>
 </table>
-<p><strong>Returns:</strong> <em>AsyncGenerator‹<a href="../../interfaces/db_controller.ikeyvalue/">IKeyValue</a>‹Uint8Array, Uint8Array››</em></p>
+<p><strong>Returns:</strong> <em>AsyncGenerator‹<a href="../../interfaces/controller.ikeyvalue/">IKeyValue</a>‹Uint8Array, Uint8Array››</em></p>
 <hr />
 <h3 id="get">get<a class="headerlink" href="#get" title="Permanent link">&para;</a></h3>
-<p>▸ <strong>get</strong>(<code>key</code>: Uint8Array): <em>Promise‹Uint8Array | null›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/db/src/controller/level.ts#L57">controller/level.ts:57</a></em></p>
+<p>▸ <strong>get</strong>(<code>key</code>: Uint8Array, <code>opts?</code>: <a href="../../modules/controller/#dbreqopts">DbReqOpts</a>): <em>Promise‹Uint8Array | null›</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/db/src/controller/level.ts#L75">controller/level.ts:75</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -945,6 +1042,10 @@
 <tr>
 <td><code>key</code></td>
 <td>Uint8Array</td>
+</tr>
+<tr>
+<td><code>opts?</code></td>
+<td><a href="../../modules/controller/#dbreqopts">DbReqOpts</a></td>
 </tr>
 </tbody>
 </table>
@@ -952,7 +1053,7 @@
 <hr />
 <h3 id="private-iterator"><code>Private</code> iterator<a class="headerlink" href="#private-iterator" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>iterator</strong>‹<strong>T</strong>›(<code>keysOpts</code>: <a href="../../modules/controller/#streamkeysopts">StreamKeysOpts</a>, <code>getValue</code>: function, <code>opts?</code>: <a href="../../modules/controller/#ifilteroptions">IFilterOptions</a>‹Uint8Array›): <em>AsyncGenerator‹T›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/db/src/controller/level.ts#L121">controller/level.ts:121</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/db/src/controller/level.ts#L153">controller/level.ts:153</a></em></p>
 <p>Turn an abstract-leveldown iterator into an AsyncGenerator.
 Replaces https://github.com/Level/iterator-stream</p>
 <p>How to use:
@@ -989,8 +1090,8 @@ Replaces https://github.com/Level/iterator-stream</p>
 <hr />
 <h3 id="keys">keys<a class="headerlink" href="#keys" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>keys</strong>(<code>opts?</code>: <a href="../../modules/controller/#ifilteroptions">IFilterOptions</a>‹Uint8Array›): <em>Promise‹Uint8Array[]›</em></p>
-<p><em>Implementation of <a href="../../interfaces/db_controller.idatabasecontroller/">IDatabaseController</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/db/src/controller/level.ts#L100">controller/level.ts:100</a></em></p>
+<p><em>Implementation of <a href="../../interfaces/controller.idatabasecontroller/">IDatabaseController</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/db/src/controller/level.ts#L132">controller/level.ts:132</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -1010,8 +1111,8 @@ Replaces https://github.com/Level/iterator-stream</p>
 <hr />
 <h3 id="keysstream">keysStream<a class="headerlink" href="#keysstream" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>keysStream</strong>(<code>opts?</code>: <a href="../../modules/controller/#ifilteroptions">IFilterOptions</a>‹Uint8Array›): <em>AsyncGenerator‹Uint8Array›</em></p>
-<p><em>Implementation of <a href="../../interfaces/db_controller.idatabasecontroller/">IDatabaseController</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/db/src/controller/level.ts#L88">controller/level.ts:88</a></em></p>
+<p><em>Implementation of <a href="../../interfaces/controller.idatabasecontroller/">IDatabaseController</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/db/src/controller/level.ts#L120">controller/level.ts:120</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -1030,8 +1131,8 @@ Replaces https://github.com/Level/iterator-stream</p>
 <p><strong>Returns:</strong> <em>AsyncGenerator‹Uint8Array›</em></p>
 <hr />
 <h3 id="put">put<a class="headerlink" href="#put" title="Permanent link">&para;</a></h3>
-<p>▸ <strong>put</strong>(<code>key</code>: Uint8Array, <code>value</code>: Uint8Array): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/db/src/controller/level.ts#L68">controller/level.ts:68</a></em></p>
+<p>▸ <strong>put</strong>(<code>key</code>: Uint8Array, <code>value</code>: Uint8Array, <code>opts?</code>: <a href="../../modules/controller/#dbreqopts">DbReqOpts</a>): <em>Promise‹void›</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/db/src/controller/level.ts#L88">controller/level.ts:88</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -1049,26 +1150,52 @@ Replaces https://github.com/Level/iterator-stream</p>
 <td><code>value</code></td>
 <td>Uint8Array</td>
 </tr>
+<tr>
+<td><code>opts?</code></td>
+<td><a href="../../modules/controller/#dbreqopts">DbReqOpts</a></td>
+</tr>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>Promise‹void›</em></p>
 <hr />
+<h3 id="setmetrics">setMetrics<a class="headerlink" href="#setmetrics" title="Permanent link">&para;</a></h3>
+<p>▸ <strong>setMetrics</strong>(<code>metrics</code>: <a href="../../interfaces/controller.ileveldbcontrollermetrics/">ILevelDbControllerMetrics</a>): <em>void</em></p>
+<p><em>Implementation of <a href="../../interfaces/controller.idatabasecontroller/">IDatabaseController</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/db/src/controller/level.ts#L63">controller/level.ts:63</a></em></p>
+<p>To inject metrics after CLI initialization</p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>metrics</code></td>
+<td><a href="../../interfaces/controller.ileveldbcontrollermetrics/">ILevelDbControllerMetrics</a></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong> <em>void</em></p>
+<hr />
 <h3 id="start">start<a class="headerlink" href="#start" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>start</strong>(): <em>Promise‹void›</em></p>
-<p><em>Implementation of <a href="../../interfaces/db_controller.idatabasecontroller/">IDatabaseController</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/db/src/controller/level.ts#L38">controller/level.ts:38</a></em></p>
+<p><em>Implementation of <a href="../../interfaces/controller.idatabasecontroller/">IDatabaseController</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/db/src/controller/level.ts#L47">controller/level.ts:47</a></em></p>
 <p><strong>Returns:</strong> <em>Promise‹void›</em></p>
 <hr />
 <h3 id="stop">stop<a class="headerlink" href="#stop" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>stop</strong>(): <em>Promise‹void›</em></p>
-<p><em>Implementation of <a href="../../interfaces/db_controller.idatabasecontroller/">IDatabaseController</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/db/src/controller/level.ts#L46">controller/level.ts:46</a></em></p>
+<p><em>Implementation of <a href="../../interfaces/controller.idatabasecontroller/">IDatabaseController</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/db/src/controller/level.ts#L55">controller/level.ts:55</a></em></p>
 <p><strong>Returns:</strong> <em>Promise‹void›</em></p>
 <hr />
 <h3 id="values">values<a class="headerlink" href="#values" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>values</strong>(<code>opts?</code>: <a href="../../modules/controller/#ifilteroptions">IFilterOptions</a>‹Uint8Array›): <em>Promise‹Uint8Array[]›</em></p>
-<p><em>Implementation of <a href="../../interfaces/db_controller.idatabasecontroller/">IDatabaseController</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/db/src/controller/level.ts#L104">controller/level.ts:104</a></em></p>
+<p><em>Implementation of <a href="../../interfaces/controller.idatabasecontroller/">IDatabaseController</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/db/src/controller/level.ts#L136">controller/level.ts:136</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -1088,8 +1215,8 @@ Replaces https://github.com/Level/iterator-stream</p>
 <hr />
 <h3 id="valuesstream">valuesStream<a class="headerlink" href="#valuesstream" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>valuesStream</strong>(<code>opts?</code>: <a href="../../modules/controller/#ifilteroptions">IFilterOptions</a>‹Uint8Array›): <em>AsyncGenerator‹Uint8Array›</em></p>
-<p><em>Implementation of <a href="../../interfaces/db_controller.idatabasecontroller/">IDatabaseController</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/db/src/controller/level.ts#L92">controller/level.ts:92</a></em></p>
+<p><em>Implementation of <a href="../../interfaces/controller.idatabasecontroller/">IDatabaseController</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/db/src/controller/level.ts#L124">controller/level.ts:124</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -1145,7 +1272,7 @@ Replaces https://github.com/Level/iterator-stream</p>
       
       
     
-    <a href="https://twitter.com/ChainSafe" target="_blank" rel="noopener" title="twitter.com" class="md-social__link">
+    <a href="https://twitter.com/ChainSafeth" target="_blank" rel="noopener" title="twitter.com" class="md-social__link">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.1.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc.--><path d="M459.37 151.716c.325 4.548.325 9.097.325 13.645 0 138.72-105.583 298.558-298.558 298.558-59.452 0-114.68-17.219-161.137-47.106 8.447.974 16.568 1.299 25.34 1.299 49.055 0 94.213-16.568 130.274-44.832-46.132-.975-84.792-31.188-98.112-72.772 6.498.974 12.995 1.624 19.818 1.624 9.421 0 18.843-1.3 27.614-3.573-48.081-9.747-84.143-51.98-84.143-102.985v-1.299c13.969 7.797 30.214 12.67 47.431 13.319-28.264-18.843-46.781-51.005-46.781-87.391 0-19.492 5.197-37.36 14.294-52.954 51.655 63.675 129.3 105.258 216.365 109.807-1.624-7.797-2.599-15.918-2.599-24.04 0-57.828 46.782-104.934 104.934-104.934 30.213 0 57.502 12.67 76.67 33.137 23.715-4.548 46.456-13.32 66.599-25.34-7.798 24.366-24.366 44.833-46.132 57.827 21.117-2.273 41.584-8.122 60.426-16.243-14.292 20.791-32.161 39.308-52.628 54.253z"/></svg>
     </a>
   
@@ -1163,7 +1290,7 @@ Replaces https://github.com/Level/iterator-stream</p>
       
       
     
-    <a href="https://medium.com/ChainSafe" target="_blank" rel="noopener" title="medium.com" class="md-social__link">
+    <a href="https://blog.chainsafe.io" target="_blank" rel="noopener" title="blog.chainsafe.io" class="md-social__link">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.1.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc.--><path d="M180.5 74.262C80.813 74.262 0 155.633 0 256s80.819 181.738 180.5 181.738S361 356.373 361 256 280.191 74.262 180.5 74.262Zm288.25 10.646c-49.845 0-90.245 76.619-90.245 171.095s40.406 171.1 90.251 171.1 90.251-76.619 90.251-171.1H559c0-94.503-40.4-171.095-90.248-171.095Zm139.506 17.821c-17.526 0-31.735 68.628-31.735 153.274s14.2 153.274 31.735 153.274S640 340.631 640 256c0-84.649-14.215-153.271-31.742-153.271Z"/></svg>
     </a>
   
@@ -1177,10 +1304,10 @@ Replaces https://github.com/Level/iterator-stream</p>
     <div class="md-dialog" data-md-component="dialog">
       <div class="md-dialog__inner md-typeset"></div>
     </div>
-    <script id="__config" type="application/json">{"base": "../../../..", "features": [], "search": "../../../../assets/javascripts/workers/search.85cb4492.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}}</script>
+    <script id="__config" type="application/json">{"base": "../../../..", "features": [], "search": "../../../../assets/javascripts/workers/search.b97dbffb.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}}</script>
     
     
-      <script src="../../../../assets/javascripts/bundle.a877e258.min.js"></script>
+      <script src="../../../../assets/javascripts/bundle.0238f547.min.js"></script>
       
     
   </body>

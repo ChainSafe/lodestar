@@ -6,22 +6,22 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Lodestar documentation - Typescript Ethereum Consensus client">
+        <meta name="description" content="Lodestar Documentation - Typescript Ethereum Consensus client">
       
       
       
         <link rel="canonical" href="https://chainsafe.github.io/lodestar/reference/cli/">
       
       <link rel="icon" href="../../assets/round-icon.ico">
-      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.3.6">
+      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.3.8">
     
     
       
-        <title>Command line - Lodestar documentation</title>
+        <title>Command line - Lodestar Documentation</title>
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.4a0965b7.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.1d29e8d0.min.css">
       
         
         <link rel="stylesheet" href="../../assets/stylesheets/palette.cbb835fc.min.css">
@@ -84,7 +84,7 @@
 
 <header class="md-header" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="../.." title="Lodestar documentation" class="md-header__button md-logo" aria-label="Lodestar documentation" data-md-component="logo">
+    <a href="../.." title="Lodestar Documentation" class="md-header__button md-logo" aria-label="Lodestar Documentation" data-md-component="logo">
       
   <img src="../../assets/lodestar_icon_300.png" alt="logo">
 
@@ -96,7 +96,7 @@
       <div class="md-header__ellipsis">
         <div class="md-header__topic">
           <span class="md-ellipsis">
-            Lodestar documentation
+            Lodestar Documentation
           </span>
         </div>
         <div class="md-header__topic" data-md-component="header-topic">
@@ -203,12 +203,12 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="../.." title="Lodestar documentation" class="md-nav__button md-logo" aria-label="Lodestar documentation" data-md-component="logo">
+    <a href="../.." title="Lodestar Documentation" class="md-nav__button md-logo" aria-label="Lodestar Documentation" data-md-component="logo">
       
   <img src="../../assets/lodestar_icon_300.png" alt="logo">
 
     </a>
-    Lodestar documentation
+    Lodestar Documentation
   </label>
   
     <div class="md-nav__source">
@@ -234,7 +234,7 @@
   
     <li class="md-nav__item">
       <a href="../.." class="md-nav__link">
-        Getting started
+        Getting Started
       </a>
     </li>
   
@@ -247,10 +247,71 @@
   
   
   
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2" type="checkbox" id="__nav_2" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_2">
+          Installation
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Installation" data-md-level="1">
+        <label class="md-nav__title" for="__nav_2">
+          <span class="md-nav__icon md-icon"></span>
+          Installation
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
     <li class="md-nav__item">
-      <a href="../../installation/" class="md-nav__link">
-        Installation
+      <a href="../../install/source/" class="md-nav__link">
+        Install from source
       </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../install/npm/" class="md-nav__link">
+        Install from NPM
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../install/docker/" class="md-nav__link">
+        Install with Docker
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
     </li>
   
 
@@ -272,14 +333,14 @@
       
       
         <label class="md-nav__link" for="__nav_3">
-          CLI Usage
+          Using Lodestar
           <span class="md-nav__icon md-icon"></span>
         </label>
       
-      <nav class="md-nav" aria-label="CLI Usage" data-md-level="1">
+      <nav class="md-nav" aria-label="Using Lodestar" data-md-level="1">
         <label class="md-nav__title" for="__nav_3">
           <span class="md-nav__icon md-icon"></span>
-          CLI Usage
+          Using Lodestar
         </label>
         <ul class="md-nav__list" data-md-scrollfix>
           
@@ -289,8 +350,8 @@
   
   
     <li class="md-nav__item">
-      <a href="../../usage/testnet/" class="md-nav__link">
-        Mainnet or public testnet
+      <a href="../../usage/beacon-management/" class="md-nav__link">
+        Beacon management
       </a>
     </li>
   
@@ -317,8 +378,8 @@
   
   
     <li class="md-nav__item">
-      <a href="../../usage/key-management/" class="md-nav__link">
-        Key management
+      <a href="../../usage/validator-management/" class="md-nav__link">
+        Validator management
       </a>
     </li>
   
@@ -433,6 +494,60 @@
     validator
   </a>
   
+    <nav class="md-nav" aria-label="validator">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#validator-slashing-protection" class="md-nav__link">
+    validator slashing-protection
+  </a>
+  
+    <nav class="md-nav" aria-label="validator slashing-protection">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#validator-slashing-protection-import" class="md-nav__link">
+    validator slashing-protection  import
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#validator-slashing-protection-export" class="md-nav__link">
+    validator slashing-protection  export
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#validator-import" class="md-nav__link">
+    validator import
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#validator-list" class="md-nav__link">
+    validator list
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#validator-voluntary-exit" class="md-nav__link">
+    validator voluntary-exit
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -443,131 +558,9 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#account" class="md-nav__link">
-    account
+  <a href="#account-subcommands" class="md-nav__link">
+    account [subcommands..]
   </a>
-  
-    <nav class="md-nav" aria-label="account">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#account-validator" class="md-nav__link">
-    account  validator
-  </a>
-  
-    <nav class="md-nav" aria-label="account  validator">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#account-validator-create" class="md-nav__link">
-    account  validator  create
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#account-validator-deposit" class="md-nav__link">
-    account  validator  deposit
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#account-validator-import" class="md-nav__link">
-    account  validator  import
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#account-validator-list" class="md-nav__link">
-    account  validator  list
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#account-validator-recover" class="md-nav__link">
-    account  validator  recover
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#account-validator-slashing-protection" class="md-nav__link">
-    account  validator  slashing-protection
-  </a>
-  
-    <nav class="md-nav" aria-label="account  validator  slashing-protection">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#account-validator-slashing-protection-import" class="md-nav__link">
-    account  validator  slashing-protection  import
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#account-validator-slashing-protection-export" class="md-nav__link">
-    account  validator  slashing-protection  export
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#account-validator-voluntary-exit" class="md-nav__link">
-    account  validator  voluntary-exit
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#account-wallet" class="md-nav__link">
-    account  wallet
-  </a>
-  
-    <nav class="md-nav" aria-label="account  wallet">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#account-wallet-create" class="md-nav__link">
-    account  wallet  create
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#account-wallet-list" class="md-nav__link">
-    account  wallet  list
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#account-wallet-recover" class="md-nav__link">
-    account  wallet  recover
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -723,6 +716,60 @@
     validator
   </a>
   
+    <nav class="md-nav" aria-label="validator">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#validator-slashing-protection" class="md-nav__link">
+    validator slashing-protection
+  </a>
+  
+    <nav class="md-nav" aria-label="validator slashing-protection">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#validator-slashing-protection-import" class="md-nav__link">
+    validator slashing-protection  import
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#validator-slashing-protection-export" class="md-nav__link">
+    validator slashing-protection  export
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#validator-import" class="md-nav__link">
+    validator import
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#validator-list" class="md-nav__link">
+    validator list
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#validator-voluntary-exit" class="md-nav__link">
+    validator voluntary-exit
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -733,131 +780,9 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#account" class="md-nav__link">
-    account
+  <a href="#account-subcommands" class="md-nav__link">
+    account [subcommands..]
   </a>
-  
-    <nav class="md-nav" aria-label="account">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#account-validator" class="md-nav__link">
-    account  validator
-  </a>
-  
-    <nav class="md-nav" aria-label="account  validator">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#account-validator-create" class="md-nav__link">
-    account  validator  create
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#account-validator-deposit" class="md-nav__link">
-    account  validator  deposit
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#account-validator-import" class="md-nav__link">
-    account  validator  import
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#account-validator-list" class="md-nav__link">
-    account  validator  list
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#account-validator-recover" class="md-nav__link">
-    account  validator  recover
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#account-validator-slashing-protection" class="md-nav__link">
-    account  validator  slashing-protection
-  </a>
-  
-    <nav class="md-nav" aria-label="account  validator  slashing-protection">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#account-validator-slashing-protection-import" class="md-nav__link">
-    account  validator  slashing-protection  import
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#account-validator-slashing-protection-export" class="md-nav__link">
-    account  validator  slashing-protection  export
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#account-validator-voluntary-exit" class="md-nav__link">
-    account  validator  voluntary-exit
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#account-wallet" class="md-nav__link">
-    account  wallet
-  </a>
-  
-    <nav class="md-nav" aria-label="account  wallet">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#account-wallet-create" class="md-nav__link">
-    account  wallet  create
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#account-wallet-list" class="md-nav__link">
-    account  wallet  list
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#account-wallet-recover" class="md-nav__link">
-    account  wallet  recover
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -1270,6 +1195,7 @@
 <div class="highlight"><pre><span></span><code>validator --network prater
 </code></pre></div>
 <p><strong>Options</strong></p>
+<p>The options below apply to all subcommands.</p>
 <table>
 <thead>
 <tr>
@@ -1280,18 +1206,6 @@
 </tr>
 </thead>
 <tbody>
-<tr>
-<td><code>--keystoresDir</code></td>
-<td>string</td>
-<td>Directory for storing validator keystores.</td>
-<td>$rootDir/keystores</td>
-</tr>
-<tr>
-<td><code>--secretsDir</code></td>
-<td>string</td>
-<td>Directory for storing validator keystore secrets.</td>
-<td>$rootDir/secrets</td>
-</tr>
 <tr>
 <td><code>--logLevel</code></td>
 <td>string</td>
@@ -1351,6 +1265,18 @@
 <td>string</td>
 <td>Path to output all logs to a persistent log file</td>
 <td></td>
+</tr>
+<tr>
+<td><code>--keystoresDir</code></td>
+<td>string</td>
+<td>Directory for storing validator keystores.</td>
+<td>$rootDir/keystores</td>
+</tr>
+<tr>
+<td><code>--secretsDir</code></td>
+<td>string</td>
+<td>Directory for storing validator keystore secrets.</td>
+<td>$rootDir/secrets</td>
 </tr>
 <tr>
 <td><code>--validatorsDbDir</code></td>
@@ -1438,71 +1364,8 @@
 </tr>
 </tbody>
 </table>
-<h2 id="lightclient"><code>lightclient</code><a class="headerlink" href="#lightclient" title="Permanent link">&para;</a></h2>
-<p>Run lightclient</p>
-<p><strong>Examples</strong></p>
-<p>Run lightclient with prater network</p>
-<div class="highlight"><pre><span></span><code>lightclient --network prater
-</code></pre></div>
-<p><strong>Options</strong></p>
-<table>
-<thead>
-<tr>
-<th>Option</th>
-<th>Type</th>
-<th>Description</th>
-<th>Default</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>--logLevel</code></td>
-<td>string</td>
-<td>Logging verbosity level</td>
-<td>info</td>
-</tr>
-<tr>
-<td><code>--logLevelFile</code></td>
-<td>string</td>
-<td>Logging verbosity level for file transport</td>
-<td>info</td>
-</tr>
-<tr>
-<td><code>--logRotate</code></td>
-<td>boolean</td>
-<td>Daily rotate log files</td>
-<td></td>
-</tr>
-<tr>
-<td><code>--logMaxFiles</code></td>
-<td>number</td>
-<td>Number of log files to maintain while rotating logs(if provided with logRotate)</td>
-<td></td>
-</tr>
-<tr>
-<td><code>--logFile</code></td>
-<td>string</td>
-<td>Path to output all logs to a persistent log file</td>
-<td></td>
-</tr>
-<tr>
-<td><code>--beaconApiUrl</code></td>
-<td>string</td>
-<td>Url to a beacon node that support lightclient API</td>
-<td></td>
-</tr>
-<tr>
-<td><code>--checkpointRoot</code></td>
-<td>string</td>
-<td>Checkpoint root hex string to sync the lightclient from, start with 0x</td>
-<td></td>
-</tr>
-</tbody>
-</table>
-<h2 id="account"><code>account</code><a class="headerlink" href="#account" title="Permanent link">&para;</a></h2>
-<p>Utilities for generating and managing Ethereum Consensus accounts</p>
-<h3 id="account-validator"><code>account  validator</code><a class="headerlink" href="#account-validator" title="Permanent link">&para;</a></h3>
-<p>Provides commands for managing Ethereum Consensus validators.</p>
+<h3 id="validator-slashing-protection"><code>validator slashing-protection</code><a class="headerlink" href="#validator-slashing-protection" title="Permanent link">&para;</a></h3>
+<p>Import or export slashing protection data to or from another client.</p>
 <p><strong>Options</strong></p>
 <p>The options below apply to all subcommands.</p>
 <table>
@@ -1516,24 +1379,24 @@
 </thead>
 <tbody>
 <tr>
-<td><code>--keystoresDir</code></td>
+<td><code>--server</code></td>
 <td>string</td>
-<td>Directory for storing validator keystores.</td>
-<td>$rootDir/keystores</td>
+<td>Address to connect to BeaconNode</td>
+<td>http://127.0.0.1:9596</td>
 </tr>
 <tr>
-<td><code>--secretsDir</code></td>
-<td>string</td>
-<td>Directory for storing validator keystore secrets.</td>
-<td>$rootDir/secrets</td>
+<td><code>--force</code></td>
+<td>boolean</td>
+<td>If genesisValidatorsRoot can't be fetched from the Beacon node, use a zero hash</td>
+<td></td>
 </tr>
 </tbody>
 </table>
-<h4 id="account-validator-create"><code>account  validator  create</code><a class="headerlink" href="#account-validator-create" title="Permanent link">&para;</a></h4>
-<p>Creates new validators from an existing EIP-2386 wallet using the EIP-2333 HD key derivation scheme. Creates a new directory per validator with a voting keystore, withdrawal keystore, and pre-computed deposit RPL data</p>
+<h4 id="validator-slashing-protection-import"><code>validator slashing-protection  import</code><a class="headerlink" href="#validator-slashing-protection-import" title="Permanent link">&para;</a></h4>
+<p>Import an interchange file.</p>
 <p><strong>Examples</strong></p>
-<p>Create a validator from HD wallet named 'primary'</p>
-<div class="highlight"><pre><span></span><code>account validator create --name primary --passphraseFile primary.pass
+<p>Import an interchange file to the slashing protection DB</p>
+<div class="highlight"><pre><span></span><code>account validator slashing-protection import --network prater --file interchange.json
 </code></pre></div>
 <p><strong>Options</strong></p>
 <table>
@@ -1547,42 +1410,39 @@
 </thead>
 <tbody>
 <tr>
-<td><code>--name</code></td>
+<td><code>--file</code></td>
 <td>string</td>
-<td>Use the wallet identified by this name</td>
+<td>The slashing protection interchange file to import (.json).</td>
 <td></td>
-</tr>
-<tr>
-<td><code>--passphraseFile</code></td>
-<td>string</td>
-<td>A path to a file containing the password which will unlock the wallet.</td>
-<td></td>
-</tr>
-<tr>
-<td><code>--depositGwei</code></td>
-<td>string</td>
-<td>The GWEI value of the deposit amount. Defaults to the minimum amount required for an active validator (MAX_EFFECTIVE_BALANCE)</td>
-<td></td>
-</tr>
-<tr>
-<td><code>--storeWithdrawalKeystore</code></td>
-<td>boolean</td>
-<td>If present, the withdrawal keystore will be stored alongside the voting keypair. It is generally recommended to <em>not</em> store the withdrawal key and instead generate them from the wallet seed when required.</td>
-<td></td>
-</tr>
-<tr>
-<td><code>--count</code></td>
-<td>number</td>
-<td>The number of validators to create</td>
-<td>1</td>
 </tr>
 </tbody>
 </table>
-<h4 id="account-validator-deposit"><code>account  validator  deposit</code><a class="headerlink" href="#account-validator-deposit" title="Permanent link">&para;</a></h4>
-<p>DEPRECATED. Please use the official tools to perform your deposits - eth2.0-deposit-cli: https://github.com/ethereum/eth2.0-deposit-cli - Ethereum Foundation launchpad: https://launchpad.ethereum.org</p>
+<h4 id="validator-slashing-protection-export"><code>validator slashing-protection  export</code><a class="headerlink" href="#validator-slashing-protection-export" title="Permanent link">&para;</a></h4>
+<p>Export an interchange file.</p>
 <p><strong>Examples</strong></p>
+<p>Export an interchange JSON file for all validators in the slashing protection DB</p>
+<div class="highlight"><pre><span></span><code>account validator slashing-protection export --network prater --file interchange.json
+</code></pre></div>
 <p><strong>Options</strong></p>
-<h4 id="account-validator-import"><code>account  validator  import</code><a class="headerlink" href="#account-validator-import" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--file</code></td>
+<td>string</td>
+<td>The slashing protection interchange file to export to (.json).</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h3 id="validator-import"><code>validator import</code><a class="headerlink" href="#validator-import" title="Permanent link">&para;</a></h3>
 <p>Imports one or more EIP-2335 keystores into a Lodestar validator client directory, requesting passwords interactively. The directory flag provides a convenient method for importing a directory of keys generated by the eth2-deposit-cli Ethereum Foundation utility.</p>
 <p><strong>Examples</strong></p>
 <p>Import validator keystores generated with the Ethereum Foundation Staking Launchpad</p>
@@ -1619,140 +1479,13 @@
 </tr>
 </tbody>
 </table>
-<h4 id="account-validator-list"><code>account  validator  list</code><a class="headerlink" href="#account-validator-list" title="Permanent link">&para;</a></h4>
+<h3 id="validator-list"><code>validator list</code><a class="headerlink" href="#validator-list" title="Permanent link">&para;</a></h3>
 <p>Lists the public keys of all validators</p>
 <p><strong>Examples</strong></p>
 <p>List all validator pubkeys in the directory .testing/keystores</p>
 <div class="highlight"><pre><span></span><code>account validator list --keystoresDir .testing/keystores
 </code></pre></div>
-<h4 id="account-validator-recover"><code>account  validator  recover</code><a class="headerlink" href="#account-validator-recover" title="Permanent link">&para;</a></h4>
-<p>Recovers validator private keys given a BIP-39 mnemonic phrase.   If you did not specify a <code>--firstIndex</code> or count <code>--count</code>, by default this will   only recover the keys associated with the validator at index 0 for an HD wallet   in accordance with the EIP-2333 spec.</p>
-<p><strong>Examples</strong></p>
-<p>Recover validator</p>
-<div class="highlight"><pre><span></span><code>account validator recover
-</code></pre></div>
-<p><strong>Options</strong></p>
-<table>
-<thead>
-<tr>
-<th>Option</th>
-<th>Type</th>
-<th>Description</th>
-<th>Default</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>--count</code></td>
-<td>number</td>
-<td>The number of validators to create</td>
-<td>1</td>
-</tr>
-<tr>
-<td><code>--depositGwei</code></td>
-<td>string</td>
-<td>The GWEI value of the deposit amount. Defaults to the minimum amount required for an active validator (MAX_EFFECTIVE_BALANCE)</td>
-<td></td>
-</tr>
-<tr>
-<td><code>--storeWithdrawalKeystore</code></td>
-<td>boolean</td>
-<td>If present, the withdrawal keystore will be stored alongside the voting keypair. It is generally recommended to <em>not</em> store the withdrawal key and instead generate them from the wallet seed when required.</td>
-<td></td>
-</tr>
-<tr>
-<td><code>--mnemonicInputPath</code></td>
-<td>string</td>
-<td>If present, the mnemonic will be read in from this file.</td>
-<td></td>
-</tr>
-<tr>
-<td><code>--firstIndex</code></td>
-<td>number</td>
-<td>The first of consecutive key indexes you wish to recover.</td>
-<td></td>
-</tr>
-</tbody>
-</table>
-<h4 id="account-validator-slashing-protection"><code>account  validator  slashing-protection</code><a class="headerlink" href="#account-validator-slashing-protection" title="Permanent link">&para;</a></h4>
-<p>Import or export slashing protection data to or from another client.</p>
-<p><strong>Options</strong></p>
-<p>The options below apply to all subcommands.</p>
-<table>
-<thead>
-<tr>
-<th>Option</th>
-<th>Type</th>
-<th>Description</th>
-<th>Default</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>--server</code></td>
-<td>string</td>
-<td>Address to connect to BeaconNode</td>
-<td>http://127.0.0.1:9596</td>
-</tr>
-<tr>
-<td><code>--force</code></td>
-<td>boolean</td>
-<td>If genesisValidatorsRoot can't be fetched from the Beacon node, use a zero hash</td>
-<td></td>
-</tr>
-</tbody>
-</table>
-<h5 id="account-validator-slashing-protection-import"><code>account  validator  slashing-protection  import</code><a class="headerlink" href="#account-validator-slashing-protection-import" title="Permanent link">&para;</a></h5>
-<p>Import an interchange file.</p>
-<p><strong>Examples</strong></p>
-<p>Import an interchange file to the slashing protection DB</p>
-<div class="highlight"><pre><span></span><code>account validator slashing-protection import --network prater --file interchange.json
-</code></pre></div>
-<p><strong>Options</strong></p>
-<table>
-<thead>
-<tr>
-<th>Option</th>
-<th>Type</th>
-<th>Description</th>
-<th>Default</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>--file</code></td>
-<td>string</td>
-<td>The slashing protection interchange file to import (.json).</td>
-<td></td>
-</tr>
-</tbody>
-</table>
-<h5 id="account-validator-slashing-protection-export"><code>account  validator  slashing-protection  export</code><a class="headerlink" href="#account-validator-slashing-protection-export" title="Permanent link">&para;</a></h5>
-<p>Export an interchange file.</p>
-<p><strong>Examples</strong></p>
-<p>Export an interchange JSON file for all validators in the slashing protection DB</p>
-<div class="highlight"><pre><span></span><code>account validator slashing-protection export --network prater --file interchange.json
-</code></pre></div>
-<p><strong>Options</strong></p>
-<table>
-<thead>
-<tr>
-<th>Option</th>
-<th>Type</th>
-<th>Description</th>
-<th>Default</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>--file</code></td>
-<td>string</td>
-<td>The slashing protection interchange file to export to (.json).</td>
-<td></td>
-</tr>
-</tbody>
-</table>
-<h4 id="account-validator-voluntary-exit"><code>account  validator  voluntary-exit</code><a class="headerlink" href="#account-validator-voluntary-exit" title="Permanent link">&para;</a></h4>
+<h3 id="validator-voluntary-exit"><code>validator voluntary-exit</code><a class="headerlink" href="#validator-voluntary-exit" title="Permanent link">&para;</a></h3>
 <p>Performs a voluntary exit for a given validator (as identified via <code>publicKey</code>.  If no <code>publicKey</code> is provided, a prompt will ask the user which validator they would like to choose for the voluntary exit.</p>
 <p><strong>Examples</strong></p>
 <p>Perform a voluntary exit for the validator who has a public key 0xF00</p>
@@ -1769,18 +1502,6 @@
 </tr>
 </thead>
 <tbody>
-<tr>
-<td><code>--keystoresDir</code></td>
-<td>string</td>
-<td>Directory for storing validator keystores.</td>
-<td>$rootDir/keystores</td>
-</tr>
-<tr>
-<td><code>--secretsDir</code></td>
-<td>string</td>
-<td>Directory for storing validator keystore secrets.</td>
-<td>$rootDir/secrets</td>
-</tr>
 <tr>
 <td><code>--logLevel</code></td>
 <td>string</td>
@@ -1840,6 +1561,18 @@
 <td>string</td>
 <td>Path to output all logs to a persistent log file</td>
 <td></td>
+</tr>
+<tr>
+<td><code>--keystoresDir</code></td>
+<td>string</td>
+<td>Directory for storing validator keystores.</td>
+<td>$rootDir/keystores</td>
+</tr>
+<tr>
+<td><code>--secretsDir</code></td>
+<td>string</td>
+<td>Directory for storing validator keystore secrets.</td>
+<td>$rootDir/secrets</td>
 </tr>
 <tr>
 <td><code>--validatorsDbDir</code></td>
@@ -1939,33 +1672,11 @@
 </tr>
 </tbody>
 </table>
-<h3 id="account-wallet"><code>account  wallet</code><a class="headerlink" href="#account-wallet" title="Permanent link">&para;</a></h3>
-<p>Provides commands for managing Ethereum Consensus wallets.</p>
-<p><strong>Options</strong></p>
-<p>The options below apply to all subcommands.</p>
-<table>
-<thead>
-<tr>
-<th>Option</th>
-<th>Type</th>
-<th>Description</th>
-<th>Default</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>--walletsDir</code></td>
-<td>string</td>
-<td>Directory for storing wallets.</td>
-<td>$rootDir/wallets</td>
-</tr>
-</tbody>
-</table>
-<h4 id="account-wallet-create"><code>account  wallet  create</code><a class="headerlink" href="#account-wallet-create" title="Permanent link">&para;</a></h4>
-<p>Creates a new HD (hierarchical-deterministic) EIP-2386 wallet</p>
+<h2 id="lightclient"><code>lightclient</code><a class="headerlink" href="#lightclient" title="Permanent link">&para;</a></h2>
+<p>Run lightclient</p>
 <p><strong>Examples</strong></p>
-<p>Create an HD wallet named 'primary'</p>
-<div class="highlight"><pre><span></span><code>account wallet create --name primary --passphraseFile primary.pass
+<p>Run lightclient with prater network</p>
+<div class="highlight"><pre><span></span><code>lightclient --network prater
 </code></pre></div>
 <p><strong>Options</strong></p>
 <table>
@@ -1979,98 +1690,51 @@
 </thead>
 <tbody>
 <tr>
-<td><code>--walletsDir</code></td>
+<td><code>--logLevel</code></td>
 <td>string</td>
-<td>Directory for storing wallets.</td>
-<td>$rootDir/wallets</td>
+<td>Logging verbosity level</td>
+<td>info</td>
 </tr>
 <tr>
-<td><code>--name</code></td>
+<td><code>--logLevelFile</code></td>
 <td>string</td>
-<td>The wallet will be created with this name. It is not allowed to create two wallets with the same name for the same --base-dir.</td>
+<td>Logging verbosity level for file transport</td>
+<td>info</td>
+</tr>
+<tr>
+<td><code>--logRotate</code></td>
+<td>boolean</td>
+<td>Daily rotate log files</td>
 <td></td>
 </tr>
 <tr>
-<td><code>--passphraseFile</code></td>
-<td>string</td>
-<td>A path to a file containing the password which will unlock the wallet. If the file does not exist, a random password will be generated and saved at that path. To avoid confusion, if the file does not already exist it must include a '.pass' suffix.</td>
+<td><code>--logMaxFiles</code></td>
+<td>number</td>
+<td>Number of log files to maintain while rotating logs(if provided with logRotate)</td>
 <td></td>
 </tr>
 <tr>
-<td><code>--type</code></td>
+<td><code>--logFile</code></td>
 <td>string</td>
-<td>The type of wallet to create. Only HD (hierarchical-deterministic) wallets are supported presently.</td>
-<td>hd</td>
-</tr>
-<tr>
-<td><code>--mnemonicOutputPath</code></td>
-<td>string</td>
-<td>If present, the mnemonic will be saved to this file</td>
-<td></td>
-</tr>
-</tbody>
-</table>
-<h4 id="account-wallet-list"><code>account  wallet  list</code><a class="headerlink" href="#account-wallet-list" title="Permanent link">&para;</a></h4>
-<p>Lists the names of all wallets</p>
-<p><strong>Examples</strong></p>
-<p>List all wallets in .network/wallets</p>
-<div class="highlight"><pre><span></span><code>account wallet list --walletsDir .network/wallets
-</code></pre></div>
-<h4 id="account-wallet-recover"><code>account  wallet  recover</code><a class="headerlink" href="#account-wallet-recover" title="Permanent link">&para;</a></h4>
-<p>Recovers an EIP-2386 wallet from a given a BIP-39 mnemonic phrase.</p>
-<p><strong>Examples</strong></p>
-<p>Recover wallet</p>
-<div class="highlight"><pre><span></span><code>account wallet recover
-</code></pre></div>
-<p><strong>Options</strong></p>
-<table>
-<thead>
-<tr>
-<th>Option</th>
-<th>Type</th>
-<th>Description</th>
-<th>Default</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>--walletsDir</code></td>
-<td>string</td>
-<td>Directory for storing wallets.</td>
-<td>$rootDir/wallets</td>
-</tr>
-<tr>
-<td><code>--name</code></td>
-<td>string</td>
-<td>The wallet will be created with this name. It is not allowed to create two wallets with the same name for the same --base-dir.</td>
+<td>Path to output all logs to a persistent log file</td>
 <td></td>
 </tr>
 <tr>
-<td><code>--passphraseFile</code></td>
+<td><code>--beaconApiUrl</code></td>
 <td>string</td>
-<td>A path to a file containing the password which will unlock the wallet. If the file does not exist, a random password will be generated and saved at that path. To avoid confusion, if the file does not already exist it must include a '.pass' suffix.</td>
+<td>Url to a beacon node that support lightclient API</td>
 <td></td>
 </tr>
 <tr>
-<td><code>--type</code></td>
+<td><code>--checkpointRoot</code></td>
 <td>string</td>
-<td>The type of wallet to create. Only HD (hierarchical-deterministic) wallets are supported presently.</td>
-<td>hd</td>
-</tr>
-<tr>
-<td><code>--mnemonicOutputPath</code></td>
-<td>string</td>
-<td>If present, the mnemonic will be saved to this file</td>
-<td></td>
-</tr>
-<tr>
-<td><code>--mnemonicInputPath</code></td>
-<td>string</td>
-<td>If present, the mnemonic will be read in from this file.</td>
+<td>Checkpoint root hex string to sync the lightclient from, start with 0x</td>
 <td></td>
 </tr>
 </tbody>
 </table>
+<h2 id="account-subcommands"><code>account [subcommands..]</code><a class="headerlink" href="#account-subcommands" title="Permanent link">&para;</a></h2>
+<p>DEPRECATED</p>
 <h2 id="init"><code>init</code><a class="headerlink" href="#init" title="Permanent link">&para;</a></h2>
 <p>Initialize Lodestar directories and files necessary to run a beacon chain node. This step is not required, and should only be used to prepare special configurations</p>
 <p><strong>Examples</strong></p>
@@ -2097,6 +1761,12 @@
 </tr>
 </thead>
 <tbody>
+<tr>
+<td><code>--network</code></td>
+<td>string</td>
+<td>Name of the Ethereum Consensus chain network to join</td>
+<td>dev</td>
+</tr>
 <tr>
 <td><code>--keymanagerEnabled</code></td>
 <td>boolean</td>
@@ -2154,7 +1824,7 @@
 <tr>
 <td><code>--startValidators</code></td>
 <td>string</td>
-<td>Start interop validators in inclusive range with notation '0:7'</td>
+<td>Start interop validators in inclusive range with notation '0..7'</td>
 <td></td>
 </tr>
 <tr>
@@ -2252,7 +1922,7 @@
       
       
     
-    <a href="https://twitter.com/ChainSafe" target="_blank" rel="noopener" title="twitter.com" class="md-social__link">
+    <a href="https://twitter.com/ChainSafeth" target="_blank" rel="noopener" title="twitter.com" class="md-social__link">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.1.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc.--><path d="M459.37 151.716c.325 4.548.325 9.097.325 13.645 0 138.72-105.583 298.558-298.558 298.558-59.452 0-114.68-17.219-161.137-47.106 8.447.974 16.568 1.299 25.34 1.299 49.055 0 94.213-16.568 130.274-44.832-46.132-.975-84.792-31.188-98.112-72.772 6.498.974 12.995 1.624 19.818 1.624 9.421 0 18.843-1.3 27.614-3.573-48.081-9.747-84.143-51.98-84.143-102.985v-1.299c13.969 7.797 30.214 12.67 47.431 13.319-28.264-18.843-46.781-51.005-46.781-87.391 0-19.492 5.197-37.36 14.294-52.954 51.655 63.675 129.3 105.258 216.365 109.807-1.624-7.797-2.599-15.918-2.599-24.04 0-57.828 46.782-104.934 104.934-104.934 30.213 0 57.502 12.67 76.67 33.137 23.715-4.548 46.456-13.32 66.599-25.34-7.798 24.366-24.366 44.833-46.132 57.827 21.117-2.273 41.584-8.122 60.426-16.243-14.292 20.791-32.161 39.308-52.628 54.253z"/></svg>
     </a>
   
@@ -2270,7 +1940,7 @@
       
       
     
-    <a href="https://medium.com/ChainSafe" target="_blank" rel="noopener" title="medium.com" class="md-social__link">
+    <a href="https://blog.chainsafe.io" target="_blank" rel="noopener" title="blog.chainsafe.io" class="md-social__link">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.1.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc.--><path d="M180.5 74.262C80.813 74.262 0 155.633 0 256s80.819 181.738 180.5 181.738S361 356.373 361 256 280.191 74.262 180.5 74.262Zm288.25 10.646c-49.845 0-90.245 76.619-90.245 171.095s40.406 171.1 90.251 171.1 90.251-76.619 90.251-171.1H559c0-94.503-40.4-171.095-90.248-171.095Zm139.506 17.821c-17.526 0-31.735 68.628-31.735 153.274s14.2 153.274 31.735 153.274S640 340.631 640 256c0-84.649-14.215-153.271-31.742-153.271Z"/></svg>
     </a>
   
@@ -2284,10 +1954,10 @@
     <div class="md-dialog" data-md-component="dialog">
       <div class="md-dialog__inner md-typeset"></div>
     </div>
-    <script id="__config" type="application/json">{"base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.85cb4492.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}}</script>
+    <script id="__config" type="application/json">{"base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.b97dbffb.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.a877e258.min.js"></script>
+      <script src="../../assets/javascripts/bundle.0238f547.min.js"></script>
       
     
   </body>

@@ -6,22 +6,22 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Lodestar documentation - Typescript Ethereum Consensus client">
+        <meta name="description" content="Lodestar Documentation - Typescript Ethereum Consensus client">
       
       
       
         <link rel="canonical" href="https://chainsafe.github.io/lodestar/packages/validator/modules/root/">
       
       <link rel="icon" href="../../../../assets/round-icon.ico">
-      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.3.6">
+      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.3.8">
     
     
       
-        <title>Root - Lodestar documentation</title>
+        <title>Root - Lodestar Documentation</title>
       
     
     
-      <link rel="stylesheet" href="../../../../assets/stylesheets/main.4a0965b7.min.css">
+      <link rel="stylesheet" href="../../../../assets/stylesheets/main.1d29e8d0.min.css">
       
         
         <link rel="stylesheet" href="../../../../assets/stylesheets/palette.cbb835fc.min.css">
@@ -84,7 +84,7 @@
 
 <header class="md-header" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="../../../.." title="Lodestar documentation" class="md-header__button md-logo" aria-label="Lodestar documentation" data-md-component="logo">
+    <a href="../../../.." title="Lodestar Documentation" class="md-header__button md-logo" aria-label="Lodestar Documentation" data-md-component="logo">
       
   <img src="../../../../assets/lodestar_icon_300.png" alt="logo">
 
@@ -96,7 +96,7 @@
       <div class="md-header__ellipsis">
         <div class="md-header__topic">
           <span class="md-ellipsis">
-            Lodestar documentation
+            Lodestar Documentation
           </span>
         </div>
         <div class="md-header__topic" data-md-component="header-topic">
@@ -203,12 +203,12 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="../../../.." title="Lodestar documentation" class="md-nav__button md-logo" aria-label="Lodestar documentation" data-md-component="logo">
+    <a href="../../../.." title="Lodestar Documentation" class="md-nav__button md-logo" aria-label="Lodestar Documentation" data-md-component="logo">
       
   <img src="../../../../assets/lodestar_icon_300.png" alt="logo">
 
     </a>
-    Lodestar documentation
+    Lodestar Documentation
   </label>
   
     <div class="md-nav__source">
@@ -234,7 +234,7 @@
   
     <li class="md-nav__item">
       <a href="../../../.." class="md-nav__link">
-        Getting started
+        Getting Started
       </a>
     </li>
   
@@ -247,10 +247,71 @@
   
   
   
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2" type="checkbox" id="__nav_2" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_2">
+          Installation
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Installation" data-md-level="1">
+        <label class="md-nav__title" for="__nav_2">
+          <span class="md-nav__icon md-icon"></span>
+          Installation
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
     <li class="md-nav__item">
-      <a href="../../../../installation/" class="md-nav__link">
-        Installation
+      <a href="../../../../install/source/" class="md-nav__link">
+        Install from source
       </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../install/npm/" class="md-nav__link">
+        Install from NPM
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../install/docker/" class="md-nav__link">
+        Install with Docker
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
     </li>
   
 
@@ -272,14 +333,14 @@
       
       
         <label class="md-nav__link" for="__nav_3">
-          CLI Usage
+          Using Lodestar
           <span class="md-nav__icon md-icon"></span>
         </label>
       
-      <nav class="md-nav" aria-label="CLI Usage" data-md-level="1">
+      <nav class="md-nav" aria-label="Using Lodestar" data-md-level="1">
         <label class="md-nav__title" for="__nav_3">
           <span class="md-nav__icon md-icon"></span>
-          CLI Usage
+          Using Lodestar
         </label>
         <ul class="md-nav__list" data-md-scrollfix>
           
@@ -289,8 +350,8 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../../usage/testnet/" class="md-nav__link">
-        Mainnet or public testnet
+      <a href="../../../../usage/beacon-management/" class="md-nav__link">
+        Beacon management
       </a>
     </li>
   
@@ -317,8 +378,8 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../../usage/key-management/" class="md-nav__link">
-        Key management
+      <a href="../../../../usage/validator-management/" class="md-nav__link">
+        Validator management
       </a>
     </li>
   
@@ -797,6 +858,13 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#db-object" class="md-nav__link">
+    db: object
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#restapiclient-object" class="md-nav__link">
     restApiClient: object
   </a>
@@ -882,11 +950,11 @@
 <h2 id="type-aliases_1">Type aliases<a class="headerlink" href="#type-aliases_1" title="Permanent link">&para;</a></h2>
 <h3 id="avgminmaxconfig">AvgMinMaxConfig<a class="headerlink" href="#avgminmaxconfig" title="Permanent link">&para;</a></h3>
 <p>Ƭ <strong>AvgMinMaxConfig</strong>: <em><a href="./#gaugeconfig">GaugeConfig</a>‹Labels›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/validator/src/metrics.ts#L52">packages/validator/src/metrics.ts:52</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/validator/src/metrics.ts#L52">packages/validator/src/metrics.ts:52</a></em></p>
 <hr />
 <h3 id="blskeypair">BLSKeypair<a class="headerlink" href="#blskeypair" title="Permanent link">&para;</a></h3>
 <p>Ƭ <strong>BLSKeypair</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/validator/src/types.ts#L12">packages/validator/src/types.ts:12</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/validator/src/types.ts#L12">packages/validator/src/types.ts:12</a></em></p>
 <h4 id="type-declaration">Type declaration:<a class="headerlink" href="#type-declaration" title="Permanent link">&para;</a></h4>
 <ul>
 <li>
@@ -899,7 +967,7 @@
 <hr />
 <h3 id="collectfn">CollectFn<a class="headerlink" href="#collectfn" title="Permanent link">&para;</a></h3>
 <p>Ƭ <strong>CollectFn</strong>: <em>function</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/validator/src/metrics.ts#L7">packages/validator/src/metrics.ts:7</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/validator/src/metrics.ts#L7">packages/validator/src/metrics.ts:7</a></em></p>
 <h4 id="type-declaration_1">Type declaration:<a class="headerlink" href="#type-declaration_1" title="Permanent link">&para;</a></h4>
 <p>▸ (<code>metric</code>: <a href="../../interfaces/root.gauge/">Gauge</a>‹Labels›): <em>void</em></p>
 <p><strong>Parameters:</strong></p>
@@ -920,7 +988,7 @@
 <hr />
 <h3 id="gaugeconfig">GaugeConfig<a class="headerlink" href="#gaugeconfig" title="Permanent link">&para;</a></h3>
 <p>Ƭ <strong>GaugeConfig</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/validator/src/metrics.ts#L39">packages/validator/src/metrics.ts:39</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/validator/src/metrics.ts#L39">packages/validator/src/metrics.ts:39</a></em></p>
 <h4 id="type-declaration_2">Type declaration:<a class="headerlink" href="#type-declaration_2" title="Permanent link">&para;</a></h4>
 <ul>
 <li>
@@ -936,7 +1004,7 @@
 <hr />
 <h3 id="genesisinfo">GenesisInfo<a class="headerlink" href="#genesisinfo" title="Permanent link">&para;</a></h3>
 <p>Ƭ <strong>GenesisInfo</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/validator/src/types.ts#L8">packages/validator/src/types.ts:8</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/validator/src/types.ts#L8">packages/validator/src/types.ts:8</a></em></p>
 <h4 id="type-declaration_3">Type declaration:<a class="headerlink" href="#type-declaration_3" title="Permanent link">&para;</a></h4>
 <ul>
 <li><strong>startTime</strong>: <em>number</em></li>
@@ -944,7 +1012,7 @@
 <hr />
 <h3 id="histogramconfig">HistogramConfig<a class="headerlink" href="#histogramconfig" title="Permanent link">&para;</a></h3>
 <p>Ƭ <strong>HistogramConfig</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/validator/src/metrics.ts#L45">packages/validator/src/metrics.ts:45</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/validator/src/metrics.ts#L45">packages/validator/src/metrics.ts:45</a></em></p>
 <h4 id="type-declaration_4">Type declaration:<a class="headerlink" href="#type-declaration_4" title="Permanent link">&para;</a></h4>
 <ul>
 <li>
@@ -963,11 +1031,11 @@
 <hr />
 <h3 id="labelsgeneric">LabelsGeneric<a class="headerlink" href="#labelsgeneric" title="Permanent link">&para;</a></h3>
 <p>Ƭ <strong>LabelsGeneric</strong>: <em>Record‹string, string | undefined›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/validator/src/metrics.ts#L6">packages/validator/src/metrics.ts:6</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/validator/src/metrics.ts#L6">packages/validator/src/metrics.ts:6</a></em></p>
 <hr />
 <h3 id="lodestargitdata">LodestarGitData<a class="headerlink" href="#lodestargitdata" title="Permanent link">&para;</a></h3>
 <p>Ƭ <strong>LodestarGitData</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/validator/src/metrics.ts#L62">packages/validator/src/metrics.ts:62</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/validator/src/metrics.ts#L62">packages/validator/src/metrics.ts:62</a></em></p>
 <h4 id="type-declaration_5">Type declaration:<a class="headerlink" href="#type-declaration_5" title="Permanent link">&para;</a></h4>
 <ul>
 <li>
@@ -983,26 +1051,26 @@
 <hr />
 <h3 id="lodestarvalidatordatabasecontroller">LodestarValidatorDatabaseController<a class="headerlink" href="#lodestarvalidatordatabasecontroller" title="Permanent link">&para;</a></h3>
 <p>Ƭ <strong>LodestarValidatorDatabaseController</strong>: <em>Pick‹IDatabaseController‹Uint8Array, Uint8Array›, "get" | "start" | "values" | "batchPut" | "keys" | "get" | "put"›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/validator/src/types.ts#L25">packages/validator/src/types.ts:25</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/validator/src/types.ts#L25">packages/validator/src/types.ts:25</a></em></p>
 <hr />
 <h3 id="metrics">Metrics<a class="headerlink" href="#metrics" title="Permanent link">&para;</a></h3>
 <p>Ƭ <strong>Metrics</strong>: <em>ReturnType‹typeof getMetrics›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/validator/src/metrics.ts#L60">packages/validator/src/metrics.ts:60</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/validator/src/metrics.ts#L60">packages/validator/src/metrics.ts:60</a></em></p>
 <hr />
 <h3 id="pubkeyhex">PubkeyHex<a class="headerlink" href="#pubkeyhex" title="Permanent link">&para;</a></h3>
 <p>Ƭ <strong>PubkeyHex</strong>: <em>string</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/validator/src/types.ts#L23">packages/validator/src/types.ts:23</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/validator/src/types.ts#L23">packages/validator/src/types.ts:23</a></em></p>
 <p>The validator's BLS public key, uniquely identifying them. <em>48-bytes, hex encoded with 0x prefix, case insensitive.</em>
 <div class="highlight"><pre><span></span><code>&quot;0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a&quot;
 </code></pre></div></p>
 <hr />
 <h3 id="state">State<a class="headerlink" href="#state" title="Permanent link">&para;</a></h3>
 <p>Ƭ <strong>State</strong>: <em>object | object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/validator/src/validator.ts#L48">packages/validator/src/validator.ts:48</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/validator/src/validator.ts#L48">packages/validator/src/validator.ts:48</a></em></p>
 <hr />
 <h3 id="validatoroptions">ValidatorOptions<a class="headerlink" href="#validatoroptions" title="Permanent link">&para;</a></h3>
 <p>Ƭ <strong>ValidatorOptions</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/validator/src/validator.ts#L27">packages/validator/src/validator.ts:27</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/validator/src/validator.ts#L27">packages/validator/src/validator.ts:27</a></em></p>
 <h4 id="type-declaration_6">Type declaration:<a class="headerlink" href="#type-declaration_6" title="Permanent link">&para;</a></h4>
 <ul>
 <li>
@@ -1036,16 +1104,16 @@
 <h2 id="variables_1">Variables<a class="headerlink" href="#variables_1" title="Permanent link">&para;</a></h2>
 <h3 id="const-waiting_for_genesis_poll_ms"><code>Const</code> WAITING_FOR_GENESIS_POLL_MS<a class="headerlink" href="#const-waiting_for_genesis_poll_ms" title="Permanent link">&para;</a></h3>
 <p>• <strong>WAITING_FOR_GENESIS_POLL_MS</strong>: <em>number</em> = 12 * 1000</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/validator/src/genesis.ts#L6">packages/validator/src/genesis.ts:6</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/validator/src/genesis.ts#L6">packages/validator/src/genesis.ts:6</a></em></p>
 <p>The time between polls when waiting for genesis</p>
 <hr />
 <h3 id="const-defaultdefaultfeerecipient"><code>Const</code> defaultDefaultFeeRecipient<a class="headerlink" href="#const-defaultdefaultfeerecipient" title="Permanent link">&para;</a></h3>
 <p>• <strong>defaultDefaultFeeRecipient</strong>: <em>"0x0000000000000000000000000000000000000000"</em> = "0x0000000000000000000000000000000000000000"</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/validator/src/validator.ts#L25">packages/validator/src/validator.ts:25</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/validator/src/validator.ts#L25">packages/validator/src/validator.ts:25</a></em></p>
 <h2 id="functions_1">Functions<a class="headerlink" href="#functions_1" title="Permanent link">&para;</a></h2>
 <h3 id="assertequalgenesis">assertEqualGenesis<a class="headerlink" href="#assertequalgenesis" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>assertEqualGenesis</strong>(<code>opts</code>: <a href="./#validatoroptions">ValidatorOptions</a>, <code>genesis</code>: Genesis): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/validator/src/validator.ts#L225">packages/validator/src/validator.ts:225</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/validator/src/validator.ts#L229">packages/validator/src/validator.ts:229</a></em></p>
 <p>Assert the same genesisValidatorRoot and genesisTime</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -1070,7 +1138,7 @@
 <hr />
 <h3 id="getmetrics">getMetrics<a class="headerlink" href="#getmetrics" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>getMetrics</strong>(<code>register</code>: <a href="../../interfaces/root.metricsregister/">MetricsRegister</a>, <code>gitData</code>: <a href="./#lodestargitdata">LodestarGitData</a>): <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/validator/src/metrics.ts#L75">packages/validator/src/metrics.ts:75</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/validator/src/metrics.ts#L75">packages/validator/src/metrics.ts:75</a></em></p>
 <p>A collection of metrics used throughout the Gossipsub behaviour.</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -1326,12 +1394,43 @@
     })</p>
 </li>
 <li>
+<h3 id="db-object"><strong>db</strong>: <em>object</em><a class="headerlink" href="#db-object" title="Permanent link">&para;</a></h3>
+</li>
+<li>
+<p><strong>dbReadItems</strong>: <em><a href="../../interfaces/root.gauge/">Gauge</a>‹object›</em> = register.gauge&lt;{bucket: string}&gt;({
+        name: "validator_db_read_items_total",
+        help: "Total count of db read items, item = key | value | entry",
+        labelNames: ["bucket"],
+      })</p>
+</li>
+<li>
+<p><strong>dbReadReq</strong>: <em><a href="../../interfaces/root.gauge/">Gauge</a>‹object›</em> = register.gauge&lt;{bucket: string}&gt;({
+        name: "validator_db_read_req_total",
+        help: "Total count of db read requests, may read 0 or more items",
+        labelNames: ["bucket"],
+      })</p>
+</li>
+<li>
+<p><strong>dbWriteItems</strong>: <em><a href="../../interfaces/root.gauge/">Gauge</a>‹object›</em> = register.gauge&lt;{bucket: string}&gt;({
+        name: "validator_db_write_items_total",
+        help: "Total count of db write items",
+        labelNames: ["bucket"],
+      })</p>
+</li>
+<li>
+<p><strong>dbWriteReq</strong>: <em><a href="../../interfaces/root.gauge/">Gauge</a>‹object›</em> = register.gauge&lt;{bucket: string}&gt;({
+        name: "validator_db_write_req_total",
+        help: "Total count of db write requests, may write 0 or more items",
+        labelNames: ["bucket"],
+      })</p>
+</li>
+<li>
 <h3 id="restapiclient-object"><strong>restApiClient</strong>: <em>object</em><a class="headerlink" href="#restapiclient-object" title="Permanent link">&para;</a></h3>
 </li>
 <li>
-<p><strong>errors</strong>: <em><a href="../../interfaces/root.gauge/">Gauge</a>‹object›</em> = register.gauge&lt;{routeId: string}&gt;({
-        name: "vc_rest_api_client_errors_total",
-        help: "Total count of errors calling the REST API client by routeId",
+<p><strong>requestErrors</strong>: <em><a href="../../interfaces/root.gauge/">Gauge</a>‹object›</em> = register.gauge&lt;{routeId: string}&gt;({
+        name: "vc_rest_api_client_request_errors_total",
+        help: "Total count of errors on REST API client requests by routeId",
         labelNames: ["routeId"],
       })</p>
 </li>
@@ -1348,7 +1447,7 @@
 <hr />
 <h3 id="waitforgenesis">waitForGenesis<a class="headerlink" href="#waitforgenesis" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>waitForGenesis</strong>(<code>api</code>: Api, <code>logger</code>: ILogger, <code>signal?</code>: AbortSignal): <em>Promise‹Genesis›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5cb67b1/packages/validator/src/genesis.ts#L8">packages/validator/src/genesis.ts:8</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/validator/src/genesis.ts#L8">packages/validator/src/genesis.ts:8</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -1412,7 +1511,7 @@
       
       
     
-    <a href="https://twitter.com/ChainSafe" target="_blank" rel="noopener" title="twitter.com" class="md-social__link">
+    <a href="https://twitter.com/ChainSafeth" target="_blank" rel="noopener" title="twitter.com" class="md-social__link">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.1.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc.--><path d="M459.37 151.716c.325 4.548.325 9.097.325 13.645 0 138.72-105.583 298.558-298.558 298.558-59.452 0-114.68-17.219-161.137-47.106 8.447.974 16.568 1.299 25.34 1.299 49.055 0 94.213-16.568 130.274-44.832-46.132-.975-84.792-31.188-98.112-72.772 6.498.974 12.995 1.624 19.818 1.624 9.421 0 18.843-1.3 27.614-3.573-48.081-9.747-84.143-51.98-84.143-102.985v-1.299c13.969 7.797 30.214 12.67 47.431 13.319-28.264-18.843-46.781-51.005-46.781-87.391 0-19.492 5.197-37.36 14.294-52.954 51.655 63.675 129.3 105.258 216.365 109.807-1.624-7.797-2.599-15.918-2.599-24.04 0-57.828 46.782-104.934 104.934-104.934 30.213 0 57.502 12.67 76.67 33.137 23.715-4.548 46.456-13.32 66.599-25.34-7.798 24.366-24.366 44.833-46.132 57.827 21.117-2.273 41.584-8.122 60.426-16.243-14.292 20.791-32.161 39.308-52.628 54.253z"/></svg>
     </a>
   
@@ -1430,7 +1529,7 @@
       
       
     
-    <a href="https://medium.com/ChainSafe" target="_blank" rel="noopener" title="medium.com" class="md-social__link">
+    <a href="https://blog.chainsafe.io" target="_blank" rel="noopener" title="blog.chainsafe.io" class="md-social__link">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.1.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc.--><path d="M180.5 74.262C80.813 74.262 0 155.633 0 256s80.819 181.738 180.5 181.738S361 356.373 361 256 280.191 74.262 180.5 74.262Zm288.25 10.646c-49.845 0-90.245 76.619-90.245 171.095s40.406 171.1 90.251 171.1 90.251-76.619 90.251-171.1H559c0-94.503-40.4-171.095-90.248-171.095Zm139.506 17.821c-17.526 0-31.735 68.628-31.735 153.274s14.2 153.274 31.735 153.274S640 340.631 640 256c0-84.649-14.215-153.271-31.742-153.271Z"/></svg>
     </a>
   
@@ -1444,10 +1543,10 @@
     <div class="md-dialog" data-md-component="dialog">
       <div class="md-dialog__inner md-typeset"></div>
     </div>
-    <script id="__config" type="application/json">{"base": "../../../..", "features": [], "search": "../../../../assets/javascripts/workers/search.85cb4492.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}}</script>
+    <script id="__config" type="application/json">{"base": "../../../..", "features": [], "search": "../../../../assets/javascripts/workers/search.b97dbffb.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}}</script>
     
     
-      <script src="../../../../assets/javascripts/bundle.a877e258.min.js"></script>
+      <script src="../../../../assets/javascripts/bundle.0238f547.min.js"></script>
       
     
   </body>
