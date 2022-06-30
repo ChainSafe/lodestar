@@ -103,7 +103,7 @@
     "@chainsafe/as-sha256": "^0.3.1",
     "@chainsafe/bls": "7.1.1",
     "@chainsafe/discv5": "^1.1.1",
-    "@chainsafe/libp2p-gossipsub": "^3.0.1",
+    "@chainsafe/libp2p-gossipsub": "^3.0.2",
     "@chainsafe/libp2p-noise": "7.0.1",
     "@chainsafe/lodestar-api": "^0.38.1",
     "@chainsafe/lodestar-beacon-state-transition": "^0.38.1",

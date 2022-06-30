@@ -520,10 +520,10 @@
   optionalDependencies:
     "@node-rs/crc32" "1.1.0"
 
-"@chainsafe/libp2p-gossipsub@^3.0.1":
-  version "3.0.1"
-  resolved "https://registry.yarnpkg.com/@chainsafe/libp2p-gossipsub/-/libp2p-gossipsub-3.0.1.tgz#cfa1e5db8951c09acfa20032864183910606dbcf"
-  integrity sha512-NMyPVD+CWmSSQ5qFRKDPzEs7vc3wAmNRUKxoM8ZrX2FKgn1p1LXhiBH+Q/oknUbvjLJkRFbnPkCNmgpXDX3gjQ==
+"@chainsafe/libp2p-gossipsub@^3.0.2":
+  version "3.0.2"
+  resolved "https://registry.yarnpkg.com/@chainsafe/libp2p-gossipsub/-/libp2p-gossipsub-3.0.2.tgz#b9dff52775b8e621699533ecc72ca9e4720138d1"
+  integrity sha512-7r6NLcxNHgttbSznpt6Jk0gZWlZorGtJGMeKISiDh7uqIP42suCqfdbkvb0PK3iAkUttWUPyVHIJ5s5RDmyaKQ==
   dependencies:
     "@libp2p/components" "^2.0.0"
     "@libp2p/crypto" "^1.0.0"
