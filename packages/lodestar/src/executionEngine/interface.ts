@@ -81,6 +81,7 @@ export interface IExecutionEngine {
    */
   notifyForkchoiceUpdate(
     headBlockHash: Root | RootHex,
+    safeBlockHash: RootHex,
     finalizedBlockHash: RootHex,
     payloadAttributes?: PayloadAttributes
   ): Promise<PayloadId | null>;

@@ -9,7 +9,7 @@ import {
   PubkeyIndexMap,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {BLSPubkey, phase0} from "@chainsafe/lodestar-types";
-import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
+import {stateTransition, processSlots} from "@chainsafe/lodestar-beacon-state-transition";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {Epoch, ValidatorIndex, Slot} from "@chainsafe/lodestar-types";
@@ -219,7 +219,7 @@ async function getFinalizedState(
 
   // process blocks up to the requested slot
   for await (const block of db.blockArchive.valuesStream({gt: state.slot, lte: slot})) {
-    state = allForks.stateTransition(state, block, {
+    state = stateTransition(state, block, {
       verifyStateRoot: false,
       verifyProposer: false,
       verifySignatures: false,
@@ -229,7 +229,7 @@ async function getFinalizedState(
   }
   // due to skip slots, may need to process empty slots to reach the requested slot
   if (state.slot < slot) {
-    state = allForks.processSlots(state, slot);
+    state = processSlots(state, slot);
   }
   return state;
 }

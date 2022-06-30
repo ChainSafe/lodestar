@@ -15,7 +15,8 @@ import {
  */
 export async function validateSyncCommitteeGossipContributionAndProof(
   chain: IBeaconChain,
-  signedContributionAndProof: altair.SignedContributionAndProof
+  signedContributionAndProof: altair.SignedContributionAndProof,
+  skipValidationKnownParticipants = false
 ): Promise<{syncCommitteeParticipants: number}> {
   const contributionAndProof = signedContributionAndProof.message;
   const {contribution, aggregatorIndex} = contributionAndProof;
@@ -37,7 +38,7 @@ export async function validateSyncCommitteeGossipContributionAndProof(
 
   // _[IGNORE]_ A valid sync committee contribution with equal `slot`, `beacon_block_root` and `subcommittee_index` whose
   // `aggregation_bits` is non-strict superset has _not_ already been seen.
-  if (chain.seenContributionAndProof.participantsKnown(contribution)) {
+  if (!skipValidationKnownParticipants && chain.seenContributionAndProof.participantsKnown(contribution)) {
     throw new SyncCommitteeError(GossipAction.IGNORE, {
       code: SyncCommitteeErrorCode.SYNC_COMMITTEE_PARTICIPANTS_ALREADY_KNOWN,
     });

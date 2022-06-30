@@ -1,17 +1,19 @@
 import {PresetName} from "./presetName.js";
 import {preset as mainnet} from "./presets/mainnet/index.js";
 import {preset as minimal} from "./presets/minimal/index.js";
+import {preset as gnosis} from "./presets/gnosis/index.js";
 import {presetStatus} from "./presetStatus.js";
 import {userSelectedPreset} from "./setPreset.js";
 
 export * from "./interface/index.js";
-export {ForkName} from "./forkName.js";
+export {ForkName, ForkSeq} from "./forkName.js";
 export {presetToJson} from "./json.js";
 export {PresetName};
 
 const presets = {
   [PresetName.mainnet]: mainnet,
   [PresetName.minimal]: minimal,
+  [PresetName.gnosis]: gnosis,
 };
 
 // Once this file is imported, freeze the preset so calling setActivePreset() will throw an error

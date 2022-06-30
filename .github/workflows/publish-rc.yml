@@ -121,7 +121,6 @@ jobs:
         with:
           id: ${{ steps.create_release.outputs.id }}
           tag: ${{ needs.tag.outputs.tag }}
-          delete_orphan_tag: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

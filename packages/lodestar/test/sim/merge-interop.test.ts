@@ -3,11 +3,11 @@ import net from "node:net";
 import {spawn} from "node:child_process";
 import {Context} from "mocha";
 import {fromHexString} from "@chainsafe/ssz";
+import {isBellatrixStateType, isMergeTransitionComplete} from "@chainsafe/lodestar-beacon-state-transition";
 import {LogLevel, sleep, TimestampFormatCode} from "@chainsafe/lodestar-utils";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {IChainConfig} from "@chainsafe/lodestar-config";
 import {Epoch} from "@chainsafe/lodestar-types";
-import {bellatrix} from "@chainsafe/lodestar-beacon-state-transition";
 
 import {ExecutePayloadStatus} from "../../src/executionEngine/interface.js";
 import {ExecutionEngineHttp} from "../../src/executionEngine/http.js";
@@ -176,6 +176,8 @@ describe("executionEngine / ExecutionEngineHttp", function () {
 
     const payloadId = await executionEngine.notifyForkchoiceUpdate(
       genesisBlockHash,
+      //use finalizedBlockHash as safeBlockHash
+      finalizedBlockHash,
       finalizedBlockHash,
       preparePayloadParams
     );
@@ -211,7 +213,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
      * curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"engine_forkchoiceUpdatedV1","params":[{"headBlockHash":"0x3559e851470f6e7bbed1db474980683e8c315bfce99b2a6ef47c057c04de7858", "safeBlockHash":"0x3559e851470f6e7bbed1db474980683e8c315bfce99b2a6ef47c057c04de7858", "finalizedBlockHash":"0x3b8fb240d288781d4aac94d3fd16809ee413bc99294a085798a589dae51ddd4a"}, null],"id":67}' http://localhost:8550
      **/
 
-    await executionEngine.notifyForkchoiceUpdate(bytesToData(payload.blockHash), genesisBlockHash);
+    await executionEngine.notifyForkchoiceUpdate(bytesToData(payload.blockHash), genesisBlockHash, genesisBlockHash);
 
     if (TX_SCENARIOS.includes("simple")) {
       const balance = await getBalance(jsonRpcUrl, "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
@@ -383,9 +385,9 @@ describe("executionEngine / ExecutionEngineHttp", function () {
           // By this slot, ttd should be reached and merge complete
           case Number(ttd) + 3: {
             const headState = bn.chain.getHeadState();
-            const isMergeTransitionComplete =
-              bellatrix.isBellatrixStateType(headState) && bellatrix.isMergeTransitionComplete(headState);
-            if (!isMergeTransitionComplete) reject("Merge not completed");
+            if (!(isBellatrixStateType(headState) && isMergeTransitionComplete(headState))) {
+              reject("Merge not completed");
+            }
 
             // Send another tx post-merge, total amount in destination account should be double after this is included in chain
             if (TX_SCENARIOS.includes("simple")) {

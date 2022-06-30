@@ -3,6 +3,7 @@
  */
 
 import {
+  bellatrix,
   Bytes96,
   Bytes32,
   phase0,
@@ -21,7 +22,7 @@ import {
   computeTimeAtSlot,
   getRandaoMix,
   getCurrentEpoch,
-  bellatrix,
+  isMergeTransitionComplete,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {toHex} from "@chainsafe/lodestar-utils";
@@ -88,29 +89,20 @@ export async function assembleBody(
   }
 
   if (blockEpoch >= chain.config.BELLATRIX_FORK_EPOCH) {
-    // TODO: Optimize this flow
-    // - Call prepareExecutionPayload as early as possible
-    // - Call prepareExecutionPayload again if parameters change
-
-    const finalizedBlockHash = chain.forkChoice.getFinalizedBlock().executionPayloadBlockHash;
+    const safeBlockHash = chain.forkChoice.getJustifiedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
+    const finalizedBlockHash = chain.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
     const feeRecipient = chain.beaconProposerCache.getOrDefault(proposerIndex);
 
     // prepareExecutionPayload will throw error via notifyForkchoiceUpdate if
     // the EL returns Syncing on this request to prepare a payload
     //
-    // TODO:
-    // The payloadId should be extracted from the ones cached in the execution engine
-    // by the advance firing of the fcU. If no entry in the cache is available then
-    // continue with the usual firing, but this will most likely not generate a full
-    // block. However some timing consideration can be done here to bundle some time
-    // for the same.
-    //
-    // For MeV boost integration as well, this is where the execution header will be
+    // For MeV boost integration, this is where the execution header will be
     // fetched from the payload id and a blinded block will be produced instead of
     // fullblock for the validator to sign
     const payloadId = await prepareExecutionPayload(
       chain,
-      finalizedBlockHash ?? ZERO_HASH_HEX,
+      safeBlockHash,
+      finalizedBlockHash,
       currentState as CachedBeaconStateBellatrix,
       feeRecipient
     );
@@ -139,6 +131,7 @@ export async function prepareExecutionPayload(
     executionEngine: IExecutionEngine;
     config: IChainForkConfig;
   },
+  safeBlockHash: RootHex,
   finalizedBlockHash: RootHex,
   state: CachedBeaconStateBellatrix,
   suggestedFeeRecipient: string
@@ -146,7 +139,7 @@ export async function prepareExecutionPayload(
   // Use different POW block hash parent for block production based on merge status.
   // Returned value of null == using an empty ExecutionPayload value
   let parentHash: Root;
-  if (!bellatrix.isMergeTransitionComplete(state)) {
+  if (!isMergeTransitionComplete(state)) {
     if (
       !ssz.Root.equals(chain.config.TERMINAL_BLOCK_HASH, ZERO_HASH) &&
       getCurrentEpoch(state) < chain.config.TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH
@@ -180,7 +173,7 @@ export async function prepareExecutionPayload(
       prevRandao: toHex(prevRandao),
       suggestedFeeRecipient,
     }) ??
-    (await chain.executionEngine.notifyForkchoiceUpdate(parentHash, finalizedBlockHash, {
+    (await chain.executionEngine.notifyForkchoiceUpdate(parentHash, safeBlockHash, finalizedBlockHash, {
       timestamp,
       prevRandao,
       suggestedFeeRecipient,

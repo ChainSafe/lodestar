@@ -3,9 +3,10 @@ import {
   CachedBeaconStateAllForks,
   computeEpochAtSlot,
   getCurrentSlot,
+  isBellatrixStateType,
+  isMergeTransitionComplete,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {Root} from "@chainsafe/lodestar-types";
-import {bellatrix} from "@chainsafe/lodestar-beacon-state-transition";
 import {fromHexString} from "@chainsafe/ssz";
 import {IEth1ForBlockProduction, Eth1DataAndDeposits, IEth1Provider, PowMergeBlock} from "./interface.js";
 import {Eth1DepositDataTracker, Eth1DepositDataTrackerModules} from "./eth1DepositDataTracker.js";
@@ -59,8 +60,7 @@ export function initializeEth1ForBlockProduction(
       logger: modules.logger,
       signal: modules.signal,
       clockEpoch: computeEpochAtSlot(getCurrentSlot(modules.config, anchorState.genesisTime)),
-      isMergeTransitionComplete:
-        bellatrix.isBellatrixStateType(anchorState) && bellatrix.isMergeTransitionComplete(anchorState),
+      isMergeTransitionComplete: isBellatrixStateType(anchorState) && isMergeTransitionComplete(anchorState),
     });
   } else {
     return new Eth1ForBlockProductionDisabled();
@@ -74,7 +74,8 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
     opts: Eth1Options,
     modules: Eth1DepositDataTrackerModules & Eth1MergeBlockTrackerModules & {eth1Provider?: IEth1Provider}
   ) {
-    const eth1Provider = modules.eth1Provider || new Eth1Provider(modules.config, opts, modules.signal);
+    const eth1Provider =
+      modules.eth1Provider || new Eth1Provider(modules.config, opts, modules.signal, modules.metrics?.eth1HttpClient);
 
     this.eth1DepositDataTracker = opts.disableEth1DepositDataTracker
       ? null

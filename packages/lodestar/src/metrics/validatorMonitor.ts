@@ -1,11 +1,11 @@
 import {
   computeEpochAtSlot,
-  altair,
   IAttesterStatus,
   parseAttesterFlags,
+  RootCache,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
+import {allForks} from "@chainsafe/lodestar-types";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {Epoch, Slot, ValidatorIndex, ssz} from "@chainsafe/lodestar-types";
@@ -44,11 +44,7 @@ export interface IValidatorMonitor {
     signedAggregateAndProof: SignedAggregateAndProof,
     indexedAttestation: IndexedAttestation
   ): void;
-  registerAttestationInBlock(
-    indexedAttestation: IndexedAttestation,
-    parentSlot: Slot,
-    rootCache: altair.RootCache
-  ): void;
+  registerAttestationInBlock(indexedAttestation: IndexedAttestation, parentSlot: Slot, rootCache: RootCache): void;
   scrapeMetrics(slotClock: Slot): void;
 }
 

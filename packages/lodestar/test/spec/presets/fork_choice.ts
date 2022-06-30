@@ -1,7 +1,5 @@
 import {expect} from "chai";
 import {
-  phase0,
-  allForks,
   computeEpochAtSlot,
   CachedBeaconStateAllForks,
   ZERO_HASH,
@@ -9,7 +7,11 @@ import {
   computeStartSlotAtEpoch,
   EffectiveBalanceIncrements,
   BeaconStateAllForks,
-  bellatrix,
+  isBellatrixStateType,
+  isBellatrixBlockBodyType,
+  isMergeTransitionBlock as isMergeTransitionBlockFn,
+  processSlots,
+  stateTransition,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {InputType} from "@chainsafe/lodestar-spec-test-util";
 import {toHexString} from "@chainsafe/ssz";
@@ -22,7 +24,7 @@ import {
   ExecutionStatus,
   PowBlockHex,
 } from "@chainsafe/lodestar-fork-choice";
-import {ssz, RootHex} from "@chainsafe/lodestar-types";
+import {phase0, allForks, bellatrix, ssz, RootHex} from "@chainsafe/lodestar-types";
 import {bnToNum} from "@chainsafe/lodestar-utils";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {
@@ -102,9 +104,9 @@ export const forkChoiceTest: TestRunnerFn<ForkChoiceTestCase, void> = (fork) => 
           }
           const blockDelaySec = (tickTime - preState.genesisTime) % config.SECONDS_PER_SLOT;
           const isMergeTransitionBlock =
-            bellatrix.isBellatrixStateType(preState) &&
-            bellatrix.isBellatrixBlockBodyType(signedBlock.message.body) &&
-            bellatrix.isMergeTransitionBlock(preState, signedBlock.message.body);
+            isBellatrixStateType(preState) &&
+            isBellatrixBlockBodyType(signedBlock.message.body) &&
+            isMergeTransitionBlockFn(preState, signedBlock.message.body);
 
           try {
             if (isMergeTransitionBlock) {
@@ -241,11 +243,11 @@ function runStateTranstion(
     nextEpochSlot <= postSlot;
     nextEpochSlot += SLOTS_PER_EPOCH
   ) {
-    postState = allForks.processSlots(postState, nextEpochSlot, null);
+    postState = processSlots(postState, nextEpochSlot, null);
     cacheCheckpointState(postState, checkpointCache);
   }
   preEpoch = postState.epochCtx.epoch;
-  postState = allForks.stateTransition(postState, signedBlock, {
+  postState = stateTransition(postState, signedBlock, {
     verifyStateRoot: true,
     verifyProposer: false,
     verifySignatures: false,
