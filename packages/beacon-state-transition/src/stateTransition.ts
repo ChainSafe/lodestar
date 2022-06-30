@@ -24,7 +24,7 @@ export function stateTransition(
 ): CachedBeaconStateAllForks {
   const {verifyStateRoot = true, verifyProposer = true, verifySignatures = true} = options || {};
 
-  const block = signedBlock.message as allForks.FullOrBlindedBeaconBlock;
+  const block = signedBlock.message;
   const blockSlot = block.slot;
 
   let postState = state.clone();

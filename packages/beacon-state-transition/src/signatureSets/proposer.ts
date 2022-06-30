@@ -1,6 +1,6 @@
 import {DOMAIN_BEACON_PROPOSER} from "@chainsafe/lodestar-params";
-import {allForks, ssz, bellatrix} from "@chainsafe/lodestar-types";
-import {computeSigningRoot} from "../util/index.js";
+import {allForks, ssz} from "@chainsafe/lodestar-types";
+import {computeSigningRoot, isBlindedBeaconBlock} from "../util/index.js";
 import {ISignatureSet, SignatureSetType, verifySignatureSet} from "../util/signatureSets.js";
 import {CachedBeaconStateAllForks} from "../types.js";
 
@@ -19,10 +19,9 @@ export function getProposerSignatureSet(
   const {config, epochCtx} = state;
   const domain = state.config.getDomain(DOMAIN_BEACON_PROPOSER, signedBlock.message.slot);
 
-  const blockType =
-    (signedBlock.message as bellatrix.BlindedBeaconBlock).body.executionPayloadHeader !== undefined
-      ? ssz.bellatrix.BlindedBeaconBlock
-      : config.getForkTypes(signedBlock.message.slot).BeaconBlock;
+  const blockType = isBlindedBeaconBlock(signedBlock.message)
+    ? ssz.bellatrix.BlindedBeaconBlock
+    : config.getForkTypes(signedBlock.message.slot).BeaconBlock;
 
   return {
     type: SignatureSetType.single,

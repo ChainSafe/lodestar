@@ -1,7 +1,7 @@
 import {ForkSeq} from "@chainsafe/lodestar-params";
-import {allForks, altair, bellatrix} from "@chainsafe/lodestar-types";
+import {allForks, altair} from "@chainsafe/lodestar-types";
 import {ExecutionEngine} from "../util/executionEngine.js";
-import {isExecutionEnabled} from "../util/bellatrix.js";
+import {getFullOrBlindedPayload, isExecutionEnabled} from "../util/bellatrix.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateBellatrix} from "../types.js";
 import {processExecutionPayload} from "./processExecutionPayload.js";
 import {processSyncAggregate} from "./processSyncCommittee.js";
@@ -29,15 +29,9 @@ export function processBlock(
   // The call to the process_execution_payload must happen before the call to the process_randao as the former depends
   // on the randao_mix computed with the reveal of the previous block.
   if (fork >= ForkSeq.bellatrix) {
-    const fullOrBlindedPayload = ((block as bellatrix.BlindedBeaconBlock).body.executionPayloadHeader ??
-      (block as bellatrix.BeaconBlock).body.executionPayload) as allForks.FullOrBlindedExecutionPayload;
+    const fullOrBlindedPayload = getFullOrBlindedPayload(block);
 
-    if (
-      isExecutionEnabled(
-        state as CachedBeaconStateBellatrix,
-        block.body as allForks.FullOrBlindedBellatrixBeaconBlockBody
-      )
-    ) {
+    if (isExecutionEnabled(state as CachedBeaconStateBellatrix, block)) {
       processExecutionPayload(state as CachedBeaconStateBellatrix, fullOrBlindedPayload, executionEngine);
     }
   }

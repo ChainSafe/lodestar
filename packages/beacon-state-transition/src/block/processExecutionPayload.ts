@@ -1,9 +1,9 @@
-import {bellatrix, ssz, allForks} from "@chainsafe/lodestar-types";
+import {ssz, allForks} from "@chainsafe/lodestar-types";
 import {toHexString, byteArrayEquals} from "@chainsafe/ssz";
 import {CachedBeaconStateBellatrix} from "../types.js";
 import {getRandaoMix} from "../util/index.js";
 import {ExecutionEngine} from "../util/executionEngine.js";
-import {isMergeTransitionComplete} from "../util/bellatrix.js";
+import {isExecutionPayload, isMergeTransitionComplete} from "../util/bellatrix.js";
 
 export function processExecutionPayload(
   state: CachedBeaconStateBellatrix,
@@ -14,7 +14,7 @@ export function processExecutionPayload(
   // with respect to the previous execution payload header
   if (isMergeTransitionComplete(state)) {
     const {latestExecutionPayloadHeader} = state;
-    if (!byteArrayEquals(payload.parentHash as Uint8Array, latestExecutionPayloadHeader.blockHash as Uint8Array)) {
+    if (!byteArrayEquals(payload.parentHash, latestExecutionPayloadHeader.blockHash)) {
       throw Error(
         `Invalid execution payload parentHash ${toHexString(payload.parentHash)} latest blockHash ${toHexString(
           latestExecutionPayloadHeader.blockHash
@@ -25,7 +25,7 @@ export function processExecutionPayload(
 
   // Verify random
   const expectedRandom = getRandaoMix(state, state.epochCtx.epoch);
-  if (!byteArrayEquals(payload.prevRandao as Uint8Array, expectedRandom as Uint8Array)) {
+  if (!byteArrayEquals(payload.prevRandao, expectedRandom)) {
     throw Error(
       `Invalid execution payload random ${toHexString(payload.prevRandao)} expected=${toHexString(expectedRandom)}`
     );
@@ -46,17 +46,13 @@ export function processExecutionPayload(
   // if executionEngine is null, executionEngine.onPayload MUST be called after running processBlock to get the
   // correct randao mix. Since executionEngine will be an async call in most cases it is called afterwards to keep
   // the state transition sync
-  if (
-    (payload as bellatrix.ExecutionPayload).transactions !== undefined &&
-    executionEngine &&
-    !executionEngine.notifyNewPayload(payload as bellatrix.ExecutionPayload)
-  ) {
+  if (isExecutionPayload(payload) && executionEngine && !executionEngine.notifyNewPayload(payload)) {
     throw Error("Invalid execution payload");
   }
 
-  const transactionsRoot =
-    (payload as bellatrix.ExecutionPayloadHeader).transactionsRoot ??
-    ssz.bellatrix.Transactions.hashTreeRoot((payload as bellatrix.ExecutionPayload).transactions);
+  const transactionsRoot = isExecutionPayload(payload)
+    ? ssz.bellatrix.Transactions.hashTreeRoot(payload.transactions)
+    : payload.transactionsRoot;
 
   // Cache execution payload header
   state.latestExecutionPayloadHeader = ssz.bellatrix.ExecutionPayloadHeader.toViewDU({
