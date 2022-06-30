@@ -1,6 +1,4 @@
 import {allForks, bellatrix, ssz} from "@chainsafe/lodestar-types";
-import {byteArrayEquals} from "@chainsafe/ssz";
-import {ZERO_HASH} from "../constants/constants.js";
 import {
   BeaconStateBellatrix,
   BeaconStateAllForks,
@@ -21,7 +19,17 @@ export function isExecutionEnabled(state: BeaconStateBellatrix, block: allForks.
   const payload = getFullOrBlindedPayload(block);
   // Note: spec says to check all payload is zero-ed. However a state-root cannot be zero for any non-empty payload
   // TODO: Consider comparing with the payload root if this assumption is not correct.
-  return !byteArrayEquals(payload.stateRoot, ZERO_HASH);
+  // return !byteArrayEquals(payload.stateRoot, ZERO_HASH);
+
+  // UPDATE: stateRoot comparision should have been enough with zero hash, but spec tests were failing
+  // Revisit this later to fix specs and make this efficient
+  return isExecutionPayload(payload)
+    ? !ssz.bellatrix.ExecutionPayload.equals(payload, ssz.bellatrix.ExecutionPayload.defaultValue())
+    : !ssz.bellatrix.ExecutionPayloadHeader.equals(
+        state.latestExecutionPayloadHeader,
+        // TODO: Performance
+        ssz.bellatrix.ExecutionPayloadHeader.defaultValue()
+      );
 }
 
 /**
