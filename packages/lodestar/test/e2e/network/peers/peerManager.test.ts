@@ -1,4 +1,5 @@
 import {Connection} from "@libp2p/interface-connection";
+import {CustomEvent} from "@libp2p/interfaces/events";
 import sinon from "sinon";
 import {expect} from "chai";
 import {DefaultConnectionManager} from "libp2p/connection-manager";
