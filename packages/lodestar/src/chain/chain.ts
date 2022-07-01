@@ -20,7 +20,7 @@ import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
 import {IMetrics} from "../metrics/index.js";
 import {IEth1ForBlockProduction} from "../eth1/index.js";
-import {IExecutionEngine} from "../executionEngine/index.js";
+import {IExecutionEngine, IExecutionBuilder} from "../execution/index.js";
 import {ensureDir, writeIfNotExist} from "../util/file.js";
 import {CheckpointStateCache, StateContextCache} from "./stateCache/index.js";
 import {BlockProcessor, PartiallyVerifiedBlockFlags} from "./blocks/index.js";
@@ -60,6 +60,7 @@ export class BeaconChain implements IBeaconChain {
   readonly genesisValidatorsRoot: Root;
   readonly eth1: IEth1ForBlockProduction;
   readonly executionEngine: IExecutionEngine;
+  readonly executionBuilder?: IExecutionBuilder;
   // Expose config for convenience in modularized functions
   readonly config: IBeaconConfig;
   readonly anchorStateLatestBlockSlot: Slot;
@@ -115,6 +116,7 @@ export class BeaconChain implements IBeaconChain {
       anchorState,
       eth1,
       executionEngine,
+      executionBuilder,
     }: {
       config: IBeaconConfig;
       db: IBeaconDb;
@@ -123,6 +125,7 @@ export class BeaconChain implements IBeaconChain {
       anchorState: BeaconStateAllForks;
       eth1: IEth1ForBlockProduction;
       executionEngine: IExecutionEngine;
+      executionBuilder?: IExecutionBuilder;
     }
   ) {
     this.opts = opts;
@@ -135,6 +138,7 @@ export class BeaconChain implements IBeaconChain {
     this.genesisValidatorsRoot = anchorState.genesisValidatorsRoot;
     this.eth1 = eth1;
     this.executionEngine = executionEngine;
+    this.executionBuilder = executionBuilder;
 
     const signal = this.abortController.signal;
     const emitter = new ChainEventEmitter();

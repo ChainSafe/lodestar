@@ -1,5 +1,4 @@
 import {bellatrix, Root, RootHex} from "@chainsafe/lodestar-types";
-
 import {PayloadIdCache, PayloadId, ApiPayloadAttributes} from "./payloadIdCache.js";
 
 export {PayloadIdCache, PayloadId, ApiPayloadAttributes};

@@ -3,7 +3,7 @@ import {expect} from "chai";
 import {ssz} from "@chainsafe/lodestar-types";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {config} from "@chainsafe/lodestar-config/default";
-import {assembleBody} from "../../../../../src/chain/factory/block/body.js";
+import {assembleBody, BlockType} from "../../../../../src/chain/factory/block/body.js";
 import {generateCachedState} from "../../../../utils/state.js";
 import {generateEmptyAttestation} from "../../../../utils/attestation.js";
 import {generateEmptySignedVoluntaryExit} from "../../../../utils/voluntaryExits.js";
@@ -53,13 +53,14 @@ describe("blockAssembly - body", function () {
     aggregatedAttestationPool.getAttestationsForBlock.returns([generateEmptyAttestation()]);
     dbStub.depositDataRoot.getDepositRootTreeAtIndex.resolves(ssz.phase0.DepositDataRootList.defaultViewDU());
 
-    const result = await assembleBody(chain, generateCachedState(), {
+    const result = await assembleBody({type: BlockType.Full, chain}, generateCachedState(), {
       randaoReveal: Buffer.alloc(96, 0),
       graffiti: Buffer.alloc(32, 0),
       blockSlot: 1,
       parentSlot: 0,
       parentBlockRoot: Buffer.alloc(32, 0),
       proposerIndex: 1000,
+      proposerPubKey: Buffer.alloc(48, 0),
     });
     expect(result).to.not.be.null;
     expect(result.randaoReveal.length).to.be.equal(96);

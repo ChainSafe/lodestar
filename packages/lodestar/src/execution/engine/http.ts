@@ -2,7 +2,7 @@ import {bellatrix, RootHex, Root} from "@chainsafe/lodestar-types";
 import {BYTES_PER_LOGS_BLOOM} from "@chainsafe/lodestar-params";
 import {fromHex} from "@chainsafe/lodestar-utils";
 
-import {ErrorJsonRpcResponse, HttpRpcError, JsonRpcHttpClient} from "../eth1/provider/jsonRpcHttpClient.js";
+import {ErrorJsonRpcResponse, HttpRpcError, JsonRpcHttpClient} from "../../eth1/provider/jsonRpcHttpClient.js";
 import {
   bytesToData,
   numToQuantity,
@@ -11,9 +11,9 @@ import {
   DATA,
   QUANTITY,
   quantityToBigint,
-} from "../eth1/provider/utils.js";
-import {IJsonRpcHttpClient, ReqOpts} from "../eth1/provider/jsonRpcHttpClient.js";
-import {IMetrics} from "../metrics/index.js";
+} from "../../eth1/provider/utils.js";
+import {IJsonRpcHttpClient, ReqOpts} from "../../eth1/provider/jsonRpcHttpClient.js";
+import {IMetrics} from "../../metrics/index.js";
 import {
   ExecutePayloadStatus,
   ExecutePayloadResponse,
@@ -119,15 +119,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
 
     switch (status) {
       case ExecutePayloadStatus.VALID:
-        if (latestValidHash == null) {
-          return {
-            status: ExecutePayloadStatus.ELERROR,
-            latestValidHash: null,
-            validationError: `Invalid null latestValidHash for status=${status}`,
-          };
-        } else {
-          return {status, latestValidHash, validationError: null};
-        }
+        return {status, latestValidHash: latestValidHash ?? "0x0", validationError: null};
 
       case ExecutePayloadStatus.INVALID:
         if (latestValidHash == null) {

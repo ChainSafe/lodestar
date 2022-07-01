@@ -15,13 +15,13 @@ import {IForkChoice, ProtoBlock, ExecutionStatus, assertValidTerminalPowBlock} f
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {IMetrics} from "../../metrics/index.js";
-import {IExecutionEngine} from "../../executionEngine/index.js";
+import {IExecutionEngine} from "../../execution/engine/index.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {IBeaconClock} from "../clock/index.js";
 import {BlockProcessOpts} from "../options.js";
 import {IStateRegenerator, RegenCaller} from "../regen/index.js";
 import {IBlsVerifier} from "../bls/index.js";
-import {ExecutePayloadStatus} from "../../executionEngine/interface.js";
+import {ExecutePayloadStatus} from "../../execution/engine/interface.js";
 import {byteArrayEquals} from "../../util/bytes.js";
 import {IEth1ForBlockProduction} from "../../eth1/index.js";
 import {FullyVerifiedBlock, PartiallyVerifiedBlock} from "./types.js";
@@ -162,7 +162,7 @@ export async function verifyBlockStateTransition(
   const executionPayloadEnabled =
     isBellatrixStateType(postState) &&
     isBellatrixBlockBodyType(block.message.body) &&
-    isExecutionEnabled(postState, block.message.body)
+    isExecutionEnabled(postState, block.message)
       ? block.message.body.executionPayload
       : null;
 

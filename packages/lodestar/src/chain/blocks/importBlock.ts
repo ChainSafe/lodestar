@@ -15,7 +15,7 @@ import {IForkChoice, OnBlockPrecachedData, ForkChoiceError, ForkChoiceErrorCode}
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {IMetrics} from "../../metrics/index.js";
-import {IExecutionEngine, PayloadId} from "../../executionEngine/interface.js";
+import {IExecutionEngine, PayloadId} from "../../execution/engine/interface.js";
 import {IBeaconDb} from "../../db/index.js";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {CheckpointStateCache, StateContextCache, toCheckpointHex} from "../stateCache/index.js";
