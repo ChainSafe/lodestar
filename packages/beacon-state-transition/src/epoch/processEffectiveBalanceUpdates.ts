@@ -59,17 +59,16 @@ export function processEffectiveBalanceUpdates(state: CachedBeaconStateAllForks,
       const newEffectiveBalanceIncrement = Math.floor(effectiveBalance / EFFECTIVE_BALANCE_INCREMENT);
       const deltaEffectiveBalanceIncrement = newEffectiveBalanceIncrement - effectiveBalanceIncrement;
       if (forkSeq > ForkSeq.phase0) {
-        const currentParticipation = (state as BeaconStateAltair).currentEpochParticipation.getAll();
+        const altairState = state as BeaconStateAltair;
         // currentTargetUnslashedBalanceIncrements is transfered to previousTargetUnslashedBalanceIncrements in afterEpochProcess
         // at epoch transition of next epoch (in EpochProcess), prevTargetUnslStake is calculated based on newEffectiveBalanceIncrement
-        if (!validator.slashed && (currentParticipation[i] & TIMELY_TARGET) === TIMELY_TARGET) {
+        if (!validator.slashed && (altairState.currentEpochParticipation.get(i) & TIMELY_TARGET) === TIMELY_TARGET) {
           epochCtx.currentTargetUnslashedBalanceIncrements += deltaEffectiveBalanceIncrement;
         }
 
         // previousTargetUnslashedBalanceIncrements is also used after this (in slashValidators())
         // it needs to go with the new effectiveBalance as well
-        const previousParticipation = (state as BeaconStateAltair).previousEpochParticipation.getAll();
-        if (!validator.slashed && (previousParticipation[i] & TIMELY_TARGET) === TIMELY_TARGET) {
+        if (!validator.slashed && (altairState.previousEpochParticipation.get(i) & TIMELY_TARGET) === TIMELY_TARGET) {
           epochCtx.previousTargetUnslashedBalanceIncrements += deltaEffectiveBalanceIncrement;
         }
       }
