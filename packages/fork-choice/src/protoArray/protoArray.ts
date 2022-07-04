@@ -1,4 +1,4 @@
-import {Epoch, RootHex} from "@chainsafe/lodestar-types";
+import {Epoch, RootHex} from "@lodestar/types";
 
 import {ProtoBlock, ProtoNode, HEX_ZERO_HASH} from "./interface.js";
 import {ProtoArrayError, ProtoArrayErrorCode} from "./errors.js";

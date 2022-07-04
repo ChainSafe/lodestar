@@ -1,7 +1,7 @@
-import {BeaconPreset} from "@chainsafe/lodestar-params";
-import {IChainConfig} from "@chainsafe/lodestar-config";
-import {Bytes32, UintNum64, phase0, ssz} from "@chainsafe/lodestar-types";
-import {mapValues} from "@chainsafe/lodestar-utils";
+import {BeaconPreset} from "@lodestar/params";
+import {IChainConfig} from "@lodestar/config";
+import {Bytes32, UintNum64, phase0, ssz} from "@lodestar/types";
+import {mapValues} from "@lodestar/utils";
 import {ByteVectorType, ContainerType} from "@chainsafe/ssz";
 import {
   ArrayOf,

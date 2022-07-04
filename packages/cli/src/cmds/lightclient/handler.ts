@@ -1,5 +1,5 @@
-import {getClient} from "@chainsafe/lodestar-api";
-import {Lightclient} from "@chainsafe/lodestar-light-client";
+import {getClient} from "@lodestar/api";
+import {Lightclient} from "@lodestar/light-client";
 import {fromHexString} from "@chainsafe/ssz";
 import {getBeaconConfigFromArgs} from "../../config/beaconParams.js";
 import {IGlobalArgs} from "../../options/index.js";

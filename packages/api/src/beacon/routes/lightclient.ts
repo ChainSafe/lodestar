@@ -1,7 +1,7 @@
 import {ContainerType, JsonPath, VectorCompositeType} from "@chainsafe/ssz";
 import {Proof} from "@chainsafe/persistent-merkle-tree";
-import {FINALIZED_ROOT_DEPTH} from "@chainsafe/lodestar-params";
-import {altair, phase0, ssz, SyncPeriod} from "@chainsafe/lodestar-types";
+import {FINALIZED_ROOT_DEPTH} from "@lodestar/params";
+import {altair, phase0, ssz, SyncPeriod} from "@lodestar/types";
 import {
   ArrayOf,
   ReturnTypes,

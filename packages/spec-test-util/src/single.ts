@@ -2,7 +2,7 @@ import fs from "node:fs";
 import {basename, join, parse} from "node:path";
 import {expect} from "chai";
 import {uncompress} from "snappyjs";
-import {loadYaml} from "@chainsafe/lodestar-utils";
+import {loadYaml} from "@lodestar/utils";
 
 /* eslint-disable
   @typescript-eslint/no-unsafe-assignment,

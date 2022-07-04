@@ -1,4 +1,4 @@
-import {config} from "@chainsafe/lodestar-config/default";
+import {config} from "@lodestar/config/default";
 import {
   Api,
   DeleteRemoteKeyStatus,

@@ -12,8 +12,8 @@ Typescript REST client for the [Ethereum Consensus API spec](https://github.com/
 ## Usage
 
 ```typescript
-import {getClient} from "@chainsafe/lodestar-api";
-import {config} from "@chainsafe/lodestar-config/default";
+import {getClient} from "@lodestar/api";
+import {config} from "@lodestar/config/default";
 
 const api = getClient({
   baseUrl: "http://localhost:9596",

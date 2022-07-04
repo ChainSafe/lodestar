@@ -1,4 +1,4 @@
-import {defaultOptions} from "@chainsafe/lodestar-validator";
+import {defaultOptions} from "@lodestar/validator";
 import {ICliCommandOptions, ILogArgs} from "../../util/index.js";
 import {logOptions, beaconPathsOptions} from "../beacon/options.js";
 import {IBeaconPaths} from "../beacon/paths.js";

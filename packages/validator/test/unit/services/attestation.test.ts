@@ -5,7 +5,7 @@ import {toHexString} from "@chainsafe/ssz";
 import {
   generateEmptyAttestation,
   generateEmptySignedAggregateAndProof,
-} from "../../../../lodestar/test/utils/attestation.js";
+} from "../../../../beacon-node/test/utils/attestation.js";
 import {AttestationService} from "../../../src/services/attestation.js";
 import {AttDutyAndProof} from "../../../src/services/attestationDuties.js";
 import {ValidatorStore} from "../../../src/services/validatorStore.js";

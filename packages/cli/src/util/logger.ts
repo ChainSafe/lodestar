@@ -1,5 +1,5 @@
-import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
+import {IChainForkConfig} from "@lodestar/config";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
   ILogger,
   LogLevel,
@@ -8,7 +8,7 @@ import {
   WinstonLogger,
   TimestampFormat,
   TimestampFormatCode,
-} from "@chainsafe/lodestar-utils";
+} from "@lodestar/utils";
 
 export interface ILogArgs {
   logLevel?: LogLevel;

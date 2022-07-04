@@ -1,5 +1,5 @@
-import {Epoch, RootHex} from "@chainsafe/lodestar-types";
-import {LodestarError} from "@chainsafe/lodestar-utils";
+import {Epoch, RootHex} from "@lodestar/types";
+import {LodestarError} from "@lodestar/utils";
 
 export enum ProtoArrayErrorCode {
   FINALIZED_NODE_UNKNOWN = "PROTO_ARRAY_ERROR_FINALIZED_NODE_UNKNOWN",

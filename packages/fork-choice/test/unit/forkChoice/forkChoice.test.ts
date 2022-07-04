@@ -1,7 +1,7 @@
 import {expect} from "chai";
-import {config} from "@chainsafe/lodestar-config/default";
+import {config} from "@lodestar/config/default";
 import {fromHexString} from "@chainsafe/ssz";
-import {getEffectiveBalanceIncrementsZeroed} from "@chainsafe/lodestar-beacon-state-transition";
+import {getEffectiveBalanceIncrementsZeroed} from "@lodestar/state-transition";
 import {ForkChoice, IForkChoiceStore, ProtoBlock, ProtoArray, ExecutionStatus} from "../../../src/index.js";
 
 describe("Forkchoice", function () {

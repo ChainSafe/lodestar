@@ -1,5 +1,5 @@
-import {SYNC_COMMITTEE_SIZE} from "@chainsafe/lodestar-params";
-import {Slot} from "@chainsafe/lodestar-types";
+import {SYNC_COMMITTEE_SIZE} from "@lodestar/params";
+import {Slot} from "@lodestar/types";
 
 export type LightclientUpdateStats = {
   isFinalized: boolean;

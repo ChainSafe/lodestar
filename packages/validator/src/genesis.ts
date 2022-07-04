@@ -1,6 +1,6 @@
-import {Genesis} from "@chainsafe/lodestar-types/phase0";
-import {ILogger, sleep} from "@chainsafe/lodestar-utils";
-import {Api} from "@chainsafe/lodestar-api";
+import {Genesis} from "@lodestar/types/phase0";
+import {ILogger, sleep} from "@lodestar/utils";
+import {Api} from "@lodestar/api";
 
 /** The time between polls when waiting for genesis */
 const WAITING_FOR_GENESIS_POLL_MS = 12 * 1000;

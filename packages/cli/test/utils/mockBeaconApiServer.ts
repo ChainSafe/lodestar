@@ -1,11 +1,11 @@
-import {RestApiServer, RestApiServerOpts, RestApiServerModules} from "@chainsafe/lodestar";
-import {registerRoutes} from "@chainsafe/lodestar-api/beacon/server";
-import {Api, allNamespaces} from "@chainsafe/lodestar-api";
-import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import {config} from "@chainsafe/lodestar-config/default";
-import {ssz} from "@chainsafe/lodestar-types";
-import {fromHex} from "@chainsafe/lodestar-utils";
-import {testLogger} from "../../../lodestar/test/utils/logger.js";
+import {RestApiServer, RestApiServerOpts, RestApiServerModules} from "@lodestar/beacon-node";
+import {registerRoutes} from "@lodestar/api/beacon/server";
+import {Api, allNamespaces} from "@lodestar/api";
+import {IChainForkConfig} from "@lodestar/config";
+import {config} from "@lodestar/config/default";
+import {ssz} from "@lodestar/types";
+import {fromHex} from "@lodestar/utils";
+import {testLogger} from "../../../beacon-node/test/utils/logger.js";
 
 const ZERO_HASH = Buffer.alloc(32, 0);
 

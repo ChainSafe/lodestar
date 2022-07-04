@@ -1,4 +1,4 @@
-import {ACTIVE_PRESET, PresetName} from "@chainsafe/lodestar-params";
+import {ACTIVE_PRESET, PresetName} from "@lodestar/params";
 import {IChainConfig} from "./types.js";
 import {chainConfig as mainnet} from "./presets/mainnet.js";
 import {chainConfig as minimal} from "./presets/minimal.js";

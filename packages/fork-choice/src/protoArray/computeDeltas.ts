@@ -1,4 +1,4 @@
-import {EffectiveBalanceIncrements} from "@chainsafe/lodestar-beacon-state-transition";
+import {EffectiveBalanceIncrements} from "@lodestar/state-transition";
 import {VoteTracker, HEX_ZERO_HASH} from "./interface.js";
 import {ProtoArrayError, ProtoArrayErrorCode} from "./errors.js";
 

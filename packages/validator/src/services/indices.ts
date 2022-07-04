@@ -1,7 +1,7 @@
-import {ValidatorIndex} from "@chainsafe/lodestar-types";
-import {ILogger} from "@chainsafe/lodestar-utils";
+import {ValidatorIndex} from "@lodestar/types";
+import {ILogger} from "@lodestar/utils";
 import {toHexString} from "@chainsafe/ssz";
-import {Api} from "@chainsafe/lodestar-api";
+import {Api} from "@lodestar/api";
 import {batchItems} from "../util/index.js";
 import {Metrics} from "../metrics.js";
 

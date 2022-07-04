@@ -4,7 +4,7 @@ RUN apk update && apk add --no-cache g++ make python3 && rm -rf /var/cache/apk/*
 
 ARG VERSION=latest
 ENV VERSION=$VERSION
-RUN npm install @chainsafe/lodestar-cli@$VERSION
+RUN npm install @chainsafe/lodestar@$VERSION
 
 FROM node:16-alpine
 WORKDIR /usr/app

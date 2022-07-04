@@ -1,5 +1,5 @@
-import {ssz} from "@chainsafe/lodestar-types";
-import {config} from "@chainsafe/lodestar-config/default";
+import {ssz} from "@lodestar/types";
+import {config} from "@lodestar/config/default";
 import {Api, ReqTypes, NodePeer} from "../../../src/beacon/routes/node.js";
 import {getClient} from "../../../src/beacon/client/node.js";
 import {getRoutes} from "../../../src/beacon/server/node.js";

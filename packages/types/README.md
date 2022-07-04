@@ -1,6 +1,6 @@
 # lodestar-types
 
-[![npm](https://img.shields.io/npm/v/@chainsafe/lodestar-types)](https://www.npmjs.com/package/@chainsafe/lodestar-types)
+[![npm](https://img.shields.io/npm/v/@lodestar/types)](https://www.npmjs.com/package/@lodestar/types)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Eth Consensus Spec v1.1.10](https://img.shields.io/badge/ETH%20consensus--spec-1.1.10-blue)](https://github.com/ethereum/consensus-specs/releases/tag/v1.1.10)
 ![ES Version](https://img.shields.io/badge/ES-2020-yellow)
@@ -13,7 +13,7 @@ Lodestar defines all datatypes defined in the [Ethereum Consensus spec](https://
 ## Installation
 
 ```sh
-npm install @chainsafe/lodestar-types
+npm install @lodestar/types
 ```
 
 ## Usage
@@ -30,7 +30,7 @@ Lodestar types are all defined as typescript interfaces. These interfaces can be
 These interfaces are accessible via named exports.
 
 ```typescript
-import {Epoch} from "@chainsafe/lodestar-types";
+import {Epoch} from "@lodestar/types";
 
 const x: Epoch = 5;
 ```
@@ -41,7 +41,7 @@ Lodestar types are also defined as SSZ objects. These "Type" objects provide con
 
 ```typescript
 import {Type} from "@chainsafe/ssz";
-import {ssz, Epoch} from "@chainsafe/lodestar-types";
+import {ssz, Epoch} from "@lodestar/types";
 
 const EpochType: Type<Epoch> = ssz.Epoch;
 
@@ -53,7 +53,7 @@ const e = EpochType.defaultValue();
 Lodestar types support multiple different consensus forks. In order to easily differentiate types that may change across forks, types are organized in namespaces according to the fork in which they're introduced. Types introduced in phase 0 are available under the `phase0` namespace. Types introduced in altair are available under the `altair` namespace.
 
 ```typescript
-import {altair, phase0, ssz} from "@chainsafe/lodestar-types";
+import {altair, phase0, ssz} from "@lodestar/types";
 
 const phase0State: phase0.BeaconState = ssz.phase0.BeaconState.defaultValue();
 const altairState: altair.BeaconState = ssz.altair.BeaconState.defaultValue();
@@ -62,7 +62,7 @@ const altairState: altair.BeaconState = ssz.altair.BeaconState.defaultValue();
 Primitive types are directly available without a namespace.
 
 ```typescript
-import {Epoch, ssz} from "@chainsafe/lodestar-types";
+import {Epoch, ssz} from "@lodestar/types";
 
 const epoch: Epoch = ssz.Epoch.defaultValue();
 ```
@@ -70,8 +70,8 @@ const epoch: Epoch = ssz.Epoch.defaultValue();
 In some cases, we need interfaces that accept types across all forks, eg: when the fork is not known ahead of time. Typescript interfaces for this purpose are exported under the `allForks` namespace. SSZ Types typed to these interfaces are also provided under an `allForks` namespace, but keyed by `ForkName`.
 
 ```typescript
-import {ForkName} from "@chainsafe/lodestar-params";
-import {allForks, ssz} from "@chainsafe/lodestar-types";
+import {ForkName} from "@lodestar/params";
+import {allForks, ssz} from "@lodestar/types";
 
 const state: allForks.BeaconState = ssz.allForks[ForkName.phase0].BeaconState.defaultValue();
 ```

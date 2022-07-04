@@ -1,5 +1,5 @@
 import {Options} from "yargs";
-import {IChainConfig, chainConfigTypes} from "@chainsafe/lodestar-config";
+import {IChainConfig, chainConfigTypes} from "@lodestar/config";
 import {IBeaconParamsUnparsed} from "../config/types.js";
 import {ObjectKeys, ICliCommandOptions} from "../util/index.js";
 

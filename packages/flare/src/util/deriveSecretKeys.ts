@@ -1,7 +1,7 @@
 import bls from "@chainsafe/bls";
 import type {SecretKey} from "@chainsafe/bls/types";
 import {deriveEth2ValidatorKeys, deriveKeyFromMnemonic} from "@chainsafe/bls-keygen";
-import {interopSecretKey} from "@chainsafe/lodestar-beacon-state-transition";
+import {interopSecretKey} from "@lodestar/state-transition";
 import {YargsError} from "./errors.js";
 import {parseRange} from "./format.js";
 import {ICliCommandOptions} from "./command.js";

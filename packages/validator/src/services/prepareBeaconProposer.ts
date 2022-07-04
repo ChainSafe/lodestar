@@ -1,8 +1,8 @@
-import {Epoch, bellatrix} from "@chainsafe/lodestar-types";
-import {Api, routes} from "@chainsafe/lodestar-api";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {Epoch, bellatrix} from "@lodestar/types";
+import {Api, routes} from "@lodestar/api";
+import {IBeaconConfig} from "@lodestar/config";
 import {fromHexString} from "@chainsafe/ssz";
-import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
 
 import {IClock, ILoggerVc, batchItems} from "../util/index.js";
 import {Metrics} from "../metrics.js";

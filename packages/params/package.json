@@ -1,5 +1,5 @@
 {
-  "name": "@chainsafe/lodestar-params",
+  "name": "@lodestar/params",
   "version": "0.38.1",
   "description": "Chain parameters required for lodestar",
   "author": "ChainSafe Systems",

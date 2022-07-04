@@ -1,6 +1,6 @@
-import {EffectiveBalanceIncrements} from "@chainsafe/lodestar-beacon-state-transition";
-import {BeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
-import {Epoch, Slot, ValidatorIndex, phase0, allForks, Root, RootHex} from "@chainsafe/lodestar-types";
+import {EffectiveBalanceIncrements} from "@lodestar/state-transition";
+import {BeaconStateAllForks} from "@lodestar/state-transition";
+import {Epoch, Slot, ValidatorIndex, phase0, allForks, Root, RootHex} from "@lodestar/types";
 import {ProtoBlock, ExecutionStatus} from "../protoArray/interface.js";
 import {CheckpointWithHex} from "./store.js";
 

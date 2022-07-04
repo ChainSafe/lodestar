@@ -1,4 +1,4 @@
-import {IChainForkConfig} from "@chainsafe/lodestar-config";
+import {IChainForkConfig} from "@lodestar/config";
 import {serializeProof} from "@chainsafe/persistent-merkle-tree";
 import {Api, ReqTypes, routesData, getReturnTypes, getReqSerializers} from "../routes/lightclient.js";
 import {ServerRoutes, getGenericJsonServer} from "../../utils/server/index.js";

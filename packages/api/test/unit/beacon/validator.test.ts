@@ -1,6 +1,6 @@
-import {ForkName} from "@chainsafe/lodestar-params";
-import {ssz} from "@chainsafe/lodestar-types";
-import {config} from "@chainsafe/lodestar-config/default";
+import {ForkName} from "@lodestar/params";
+import {ssz} from "@lodestar/types";
+import {config} from "@lodestar/config/default";
 import {Api, ReqTypes} from "../../../src/beacon/routes/validator.js";
 import {getClient} from "../../../src/beacon/client/validator.js";
 import {getRoutes} from "../../../src/beacon/server/validator.js";

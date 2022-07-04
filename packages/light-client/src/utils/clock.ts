@@ -1,6 +1,6 @@
-import {IChainConfig} from "@chainsafe/lodestar-config";
-import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import {Epoch, Slot, SyncPeriod} from "@chainsafe/lodestar-types";
+import {IChainConfig} from "@lodestar/config";
+import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {Epoch, Slot, SyncPeriod} from "@lodestar/types";
 
 export function getCurrentSlot(config: IChainConfig, genesisTime: number): Slot {
   const diffInSeconds = Date.now() / 1000 - genesisTime;

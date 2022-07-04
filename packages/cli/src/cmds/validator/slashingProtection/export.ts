@@ -1,4 +1,4 @@
-import {InterchangeFormatVersion} from "@chainsafe/lodestar-validator";
+import {InterchangeFormatVersion} from "@lodestar/validator";
 import {ICliCommand, writeFile} from "../../../util/index.js";
 import {IGlobalArgs} from "../../../options/index.js";
 import {AccountValidatorArgs} from "../options.js";

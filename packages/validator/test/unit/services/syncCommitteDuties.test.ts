@@ -3,10 +3,10 @@ import {expect} from "chai";
 import sinon from "sinon";
 import bls from "@chainsafe/bls";
 import {toHexString} from "@chainsafe/ssz";
-import {createIChainForkConfig} from "@chainsafe/lodestar-config";
-import {config as mainnetConfig} from "@chainsafe/lodestar-config/default";
-import {routes} from "@chainsafe/lodestar-api";
-import {ssz} from "@chainsafe/lodestar-types";
+import {createIChainForkConfig} from "@lodestar/config";
+import {config as mainnetConfig} from "@lodestar/config/default";
+import {routes} from "@lodestar/api";
+import {ssz} from "@lodestar/types";
 import {
   SyncCommitteeDutiesService,
   SyncDutyAndProofs,

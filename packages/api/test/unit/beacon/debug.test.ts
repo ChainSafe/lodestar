@@ -1,8 +1,8 @@
 import {expect} from "chai";
-import {ForkName} from "@chainsafe/lodestar-params";
-import {ssz} from "@chainsafe/lodestar-types";
+import {ForkName} from "@lodestar/params";
+import {ssz} from "@lodestar/types";
 import {toHexString} from "@chainsafe/ssz";
-import {config} from "@chainsafe/lodestar-config/default";
+import {config} from "@lodestar/config/default";
 import {Api, ReqTypes, routesData} from "../../../src/beacon/routes/debug.js";
 import {getClient} from "../../../src/beacon/client/debug.js";
 import {getRoutes} from "../../../src/beacon/server/debug.js";

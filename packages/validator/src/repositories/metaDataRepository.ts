@@ -1,6 +1,6 @@
-import {Bucket, encodeKey, IDatabaseApiOptions} from "@chainsafe/lodestar-db";
-import {Root, UintNum64} from "@chainsafe/lodestar-types";
-import {ssz} from "@chainsafe/lodestar-types";
+import {Bucket, encodeKey, IDatabaseApiOptions} from "@lodestar/db";
+import {Root, UintNum64} from "@lodestar/types";
+import {ssz} from "@lodestar/types";
 import {LodestarValidatorDatabaseController} from "../types.js";
 
 const GENESIS_VALIDATORS_ROOT = Buffer.from("GENESIS_VALIDATORS_ROOT");

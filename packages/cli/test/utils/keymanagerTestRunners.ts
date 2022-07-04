@@ -1,6 +1,6 @@
-import {sleep, retry} from "@chainsafe/lodestar-utils";
-import {Api, getClient} from "@chainsafe/lodestar-api/keymanager";
-import {config} from "@chainsafe/lodestar-config/default";
+import {sleep, retry} from "@lodestar/utils";
+import {Api, getClient} from "@lodestar/api/keymanager";
+import {config} from "@lodestar/config/default";
 import {getMockBeaconApiServer} from "./mockBeaconApiServer.js";
 import {AfterEachCallback, expectDeepEquals, findApiToken, itDone} from "./runUtils.js";
 import {DescribeArgs} from "./childprocRunner.js";

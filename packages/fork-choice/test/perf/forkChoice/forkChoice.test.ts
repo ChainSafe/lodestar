@@ -1,9 +1,9 @@
 import {itBench} from "@dapplion/benchmark";
-import {config} from "@chainsafe/lodestar-config/default";
-import {AttestationData, IndexedAttestation} from "@chainsafe/lodestar-types/phase0";
-import {ATTESTATION_SUBNET_COUNT} from "@chainsafe/lodestar-params";
-import {getEffectiveBalanceIncrementsZeroed} from "@chainsafe/lodestar-beacon-state-transition";
-import {ssz} from "@chainsafe/lodestar-types";
+import {config} from "@lodestar/config/default";
+import {AttestationData, IndexedAttestation} from "@lodestar/types/phase0";
+import {ATTESTATION_SUBNET_COUNT} from "@lodestar/params";
+import {getEffectiveBalanceIncrementsZeroed} from "@lodestar/state-transition";
+import {ssz} from "@lodestar/types";
 import {fromHexString} from "@chainsafe/ssz";
 import {ExecutionStatus, ForkChoice, IForkChoiceStore, ProtoBlock, ProtoArray} from "../../../src/index.js";
 

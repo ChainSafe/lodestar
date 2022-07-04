@@ -1,4 +1,4 @@
-import {PresetName} from "@chainsafe/lodestar-params";
+import {PresetName} from "@lodestar/params";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 

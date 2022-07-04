@@ -1,6 +1,6 @@
-import {getClient} from "@chainsafe/lodestar-api";
-import {config} from "@chainsafe/lodestar-config/default";
-import {NetworkName} from "@chainsafe/lodestar-config/networks.js";
+import {getClient} from "@lodestar/api";
+import {config} from "@lodestar/config/default";
+import {NetworkName} from "@lodestar/config/networks.js";
 
 // To populate packages/light-client/src/networks.ts
 //

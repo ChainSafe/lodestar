@@ -3,7 +3,7 @@ import path from "node:path";
 import rimraf from "rimraf";
 import {expect} from "chai";
 import {Keystore} from "@chainsafe/bls-keystore";
-import {fromHex} from "@chainsafe/lodestar-utils";
+import {fromHex} from "@lodestar/utils";
 import {ReturnType as ValidatorListReturnType} from "../../src/cmds/validator/list.js";
 import {testFilesDir} from "../utils.js";
 import {getCliInMemoryRunner} from "../utils/inMemoryRunner.js";

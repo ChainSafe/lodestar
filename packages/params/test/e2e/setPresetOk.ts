@@ -2,11 +2,11 @@
 // This script is should be run in an e2e !!
 // It demostrates how to properly change the Lodestar preset safely
 
-// 1. Import from @chainsafe/lodestar-params/setPreset only
+// 1. Import from @lodestar/params/setPreset only
 import {setActivePreset, PresetName} from "../../src/setPreset.js";
 setActivePreset(PresetName.minimal);
 
-// 2. Import from any other @chainsafe/lodestar-params paths
+// 2. Import from any other @lodestar/params paths
 import {expect} from "chai";
 
 const {SLOTS_PER_EPOCH} = await import("../../src/index.js");

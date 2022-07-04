@@ -1,4 +1,4 @@
-import {IChainForkConfig} from "@chainsafe/lodestar-config";
+import {IChainForkConfig} from "@lodestar/config";
 import {Api} from "../routes/index.js";
 import {ServerInstance, ServerRoute, RouteConfig, registerRoute} from "../../utils/server/index.js";
 

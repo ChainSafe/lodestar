@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {IChainForkConfig} from "@chainsafe/lodestar-config";
+import {IChainForkConfig} from "@lodestar/config";
 import {RouteGeneric, ReqGeneric, Resolves} from "../../src/utils/index.js";
 import {FetchOpts, HttpClient, IHttpClient} from "../../src/utils/client/index.js";
 import {ServerRoutes} from "../../src/utils/server/genericJsonServer.js";

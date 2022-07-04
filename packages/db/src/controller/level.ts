@@ -5,7 +5,7 @@
 import {LevelUp} from "levelup";
 import level from "level";
 import all from "it-all";
-import {ILogger} from "@chainsafe/lodestar-utils";
+import {ILogger} from "@lodestar/utils";
 import {DbReqOpts, IDatabaseController, IDatabaseOptions, IFilterOptions, IKeyValue} from "./interface.js";
 import {ILevelDbControllerMetrics} from "./metrics.js";
 
