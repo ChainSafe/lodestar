@@ -25,6 +25,7 @@ export function getTestServer(): {baseUrl: string; server: FastifyInstance} {
           reject(err);
           console.log("error on listen", err);
         } else {
+          console.log("listen on", address);
           resolve(address);
         }
       });
