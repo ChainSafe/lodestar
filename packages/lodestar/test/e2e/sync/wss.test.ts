@@ -8,10 +8,9 @@ import {getDevBeaconNode} from "../../utils/node/beacon.js";
 import {waitForEvent} from "../../utils/events/resolver.js";
 import {getAndInitDevValidators} from "../../utils/node/validator.js";
 import {ChainEvent} from "../../../src/chain/index.js";
-import {RestApiOptions} from "../../../src/api/rest/index.js";
+import {BeaconRestApiServerOpts} from "../../../src/api/rest/index.js";
 import {testLogger, TestLoggerOpts} from "../../utils/logger.js";
 import {connect} from "../../utils/network.js";
-import {Network} from "../../../src/network/index.js";
 import {BackfillSyncEvent} from "../../../src/sync/backfill/index.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
@@ -57,7 +56,7 @@ describe("Start from WSS", function () {
       params: {...testParams, ALTAIR_FORK_EPOCH: Infinity},
       options: {
         api: {
-          rest: {enabled: true, api: ["debug"]} as RestApiOptions,
+          rest: {enabled: true, api: ["debug"]} as BeaconRestApiServerOpts,
         },
         sync: {isSingleNode: true},
         network: {allowPublishToZeroPeers: true},
@@ -79,8 +78,7 @@ describe("Start from WSS", function () {
       testLoggerOpts,
     });
 
-    afterEachCallbacks.push(() => Promise.all(validators.map((v) => v.stop())));
-    await Promise.all(validators.map((v) => v.start()));
+    afterEachCallbacks.push(() => Promise.all(validators.map((v) => v.close())));
 
     try {
       await finalizedEventistener;
@@ -99,7 +97,7 @@ describe("Start from WSS", function () {
     const bnStartingFromWSS = await getDevBeaconNode({
       params: {...testParams, ALTAIR_FORK_EPOCH: Infinity},
       options: {
-        api: {rest: {enabled: true, port: 9587} as RestApiOptions},
+        api: {rest: {enabled: true, port: 9587} as BeaconRestApiServerOpts},
         sync: {isSingleNode: true, backfillBatchSize: 64},
       },
       validatorCount: 32,
@@ -121,7 +119,7 @@ describe("Start from WSS", function () {
       (slot) => slot == GENESIS_SLOT
     );
 
-    await connect(bnStartingFromWSS.network as Network, bn.network.peerId, bn.network.localMultiaddrs);
+    await connect(bnStartingFromWSS.network, bn.network.peerId, bn.network.localMultiaddrs);
 
     await waitForSynced;
   });

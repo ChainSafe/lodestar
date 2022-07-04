@@ -56,9 +56,7 @@ describe("lodestar / api / impl / state", function () {
         useRestApi: false,
         testLoggerOpts,
       });
-      afterEachCallbacks.push(() => Promise.all(validators.map((validator) => validator.stop())));
-
-      await Promise.all(validators.map((validator) => validator.start()));
+      afterEachCallbacks.push(() => Promise.all(validators.map((validator) => validator.close())));
 
       const client = getClient({baseUrl: `http://127.0.0.1:${restPort}`}, {config}).beacon;
 
@@ -92,9 +90,7 @@ describe("lodestar / api / impl / state", function () {
         useRestApi: false,
         testLoggerOpts,
       });
-      afterEachCallbacks.push(() => Promise.all(validators.map((validator) => validator.stop())));
-
-      await Promise.all(validators.map((validator) => validator.start()));
+      afterEachCallbacks.push(() => Promise.all(validators.map((validator) => validator.close())));
 
       const client = getClient({baseUrl: `http://127.0.0.1:${restPort}`}, {config}).beacon;
 

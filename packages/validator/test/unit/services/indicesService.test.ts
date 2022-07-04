@@ -3,7 +3,6 @@ import {expect} from "chai";
 import sinon from "sinon";
 import bls from "@chainsafe/bls";
 import {toHexString} from "@chainsafe/ssz";
-import {ValidatorStore} from "../../../src/services/validatorStore.js";
 import {getApiClientStub} from "../../utils/apiStub.js";
 import {testLogger} from "../../utils/logger.js";
 import {IndicesService} from "../../../src/services/indices.js";
@@ -12,8 +11,6 @@ describe("IndicesService", function () {
   const sandbox = sinon.createSandbox();
   const logger = testLogger();
   const api = getApiClientStub(sandbox);
-  const validatorStore = sinon.createStubInstance(ValidatorStore) as ValidatorStore &
-    sinon.SinonStubbedInstance<ValidatorStore>;
 
   let pubkeys: Uint8Array[]; // Initialize pubkeys in before() so bls is already initialized
 
@@ -26,7 +23,7 @@ describe("IndicesService", function () {
   });
 
   it("Should remove pubkey", async function () {
-    const indicesService = new IndicesService(logger, api, validatorStore, null);
+    const indicesService = new IndicesService(logger, api, null);
     const firstValidatorIndex = 0;
     const secondValidatorIndex = 1;
 
@@ -40,7 +37,7 @@ describe("IndicesService", function () {
     indicesService.pubkey2index.set(pubkey2, secondValidatorIndex);
 
     // remove pubkey2
-    indicesService.removeDutiesForKey(pubkey2);
+    indicesService.removeForKey(pubkey2);
 
     expect(Object.fromEntries(indicesService.index2pubkey)).to.deep.equal(
       {

@@ -5,7 +5,7 @@ import {
   ExecutionEngineHttp,
   parseExecutionPayload,
   serializeExecutionPayload,
-} from "../../../src/executionEngine/http.js";
+} from "../../../src/execution/engine/http.js";
 
 chai.use(chaiAsPromised);
 

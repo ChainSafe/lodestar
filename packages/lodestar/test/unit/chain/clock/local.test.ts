@@ -1,6 +1,5 @@
 import sinon from "sinon";
 import {expect} from "chai";
-import {AbortController} from "@chainsafe/abort-controller";
 import {config} from "@chainsafe/lodestar-config/default";
 
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";

@@ -13,7 +13,6 @@ import {getDevBeaconNode} from "../../utils/node/beacon.js";
 import {getAndInitDevValidators} from "../../utils/node/validator.js";
 import {testLogger, LogLevel, TestLoggerOpts} from "../../utils/logger.js";
 import {connect} from "../../utils/network.js";
-import {Network} from "../../../src/network/index.js";
 import {simTestInfoTracker} from "../../utils/node/simTest.js";
 import {NodeWorkerOptions, Message} from "./types.js";
 
@@ -65,14 +64,14 @@ async function runWorker(): Promise<void> {
         loggerNode.info(`Connecting node ${nodeIndex} -> ${i}`);
         const multiaddrs = nodeToConnect.localMultiaddrs.map((s) => new Multiaddr(s));
         const peerIdToConn = await createFromPrivKey(fromHexString(nodeToConnect.peerIdPrivkey));
-        await withTimeout(() => connect(node.network as Network, peerIdToConn, multiaddrs), 10 * 1000);
+        await withTimeout(() => connect(node.network, peerIdToConn, multiaddrs), 10 * 1000);
         loggerNode.info(`Connected node ${nodeIndex} -> ${i}`);
       })
     )
   );
 
   node.chain.emitter.on(checkpointEvent, async (checkpoint) => {
-    await Promise.all(validators.map((validator) => validator.stop()));
+    await Promise.all(validators.map((validator) => validator.close()));
     if (stopInfoTracker) stopInfoTracker();
     await node.close();
     parent.postMessage({
@@ -88,7 +87,6 @@ async function runWorker(): Promise<void> {
     startIndex,
     testLoggerOpts,
   });
-  await Promise.all(validators.map((validator) => validator.start()));
 }
 
 runWorker().catch((e: Error) => {

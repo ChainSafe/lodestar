@@ -8,7 +8,7 @@ export interface IApiArgs {
   "api.rest.api": string[];
   "api.rest.cors": string;
   "api.rest.enabled": boolean;
-  "api.rest.host": string;
+  "api.rest.address": string;
   "api.rest.port": number;
 }
 
@@ -19,7 +19,7 @@ export function parseArgs(args: IApiArgs): IBeaconNodeOptions["api"] {
       api: args["api.rest.api"] as IBeaconNodeOptions["api"]["rest"]["api"],
       cors: args["api.rest.cors"],
       enabled: args["api.rest.enabled"],
-      host: args["api.rest.host"],
+      address: args["api.rest.address"],
       port: args["api.rest.port"],
     },
   };
@@ -62,10 +62,12 @@ export const options: ICliCommandOptions<IApiArgs> = {
     group: "api",
   },
 
-  "api.rest.host": {
+  "api.rest.address": {
+    // For backwards compatibility
+    alias: ["api.rest.host"],
     type: "string",
     description: "Set host for HTTP API",
-    defaultDescription: defaultOptions.api.rest.host,
+    defaultDescription: defaultOptions.api.rest.address,
     group: "api",
   },
 

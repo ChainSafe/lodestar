@@ -27,4 +27,8 @@ export class BlsSingleThreadVerifier implements IBlsVerifier {
       if (timer) timer();
     }
   }
+
+  async close(): Promise<void> {
+    // nothing to do
+  }
 }

@@ -15,7 +15,7 @@ import {IForkChoice, OnBlockPrecachedData, ForkChoiceError, ForkChoiceErrorCode}
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {IMetrics} from "../../metrics/index.js";
-import {IExecutionEngine, PayloadId} from "../../executionEngine/interface.js";
+import {IExecutionEngine, PayloadId} from "../../execution/engine/interface.js";
 import {IBeaconDb} from "../../db/index.js";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {CheckpointStateCache, StateContextCache, toCheckpointHex} from "../stateCache/index.js";
@@ -23,10 +23,12 @@ import {ChainEvent} from "../emitter.js";
 import {ChainEventEmitter} from "../emitter.js";
 import {LightClientServer} from "../lightClient/index.js";
 import {SeenAggregatedAttestations} from "../seenCache/seenAggregateAndProof.js";
+import {SeenBlockAttesters} from "../seenCache/seenBlockAttesters.js";
 import {prepareExecutionPayload} from "../factory/block/body.js";
 import {IEth1ForBlockProduction} from "../../eth1/index.js";
 import {BeaconProposerCache} from "../beaconProposerCache.js";
 import {IBeaconClock} from "../clock/index.js";
+import {ReprocessController, REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC} from "../reprocess.js";
 import {FullyVerifiedBlock} from "./types.js";
 import {PendingEvents} from "./utils/pendingEvents.js";
 import {getCheckpointFromState} from "./utils/checkpoint.js";
@@ -42,7 +44,9 @@ export type ImportBlockModules = {
   stateCache: StateContextCache;
   checkpointStateCache: CheckpointStateCache;
   seenAggregatedAttestations: SeenAggregatedAttestations;
+  seenBlockAttesters: SeenBlockAttesters;
   beaconProposerCache: BeaconProposerCache;
+  reprocessController: ReprocessController;
   lightClientServer: LightClientServer;
   eth1: IEth1ForBlockProduction;
   executionEngine: IExecutionEngine;
@@ -143,10 +147,16 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
           chain.forkChoice.onAttestation(indexedAttestation, attDataRoot);
         }
 
+        // Note: To avoid slowing down sync, only register attestations within FORK_CHOICE_ATT_EPOCH_LIMIT
+        chain.seenBlockAttesters.addIndices(blockEpoch, indexedAttestation.attestingIndices);
+
         if (parentSlot !== undefined) {
           chain.metrics?.registerAttestationInBlock(indexedAttestation, parentSlot, rootCache);
         }
 
+        // don't want to log the processed attestations here as there are so many attestations and it takes too much disc space,
+        // users may want to keep more log files instead of unnecessary processed attestations log
+        // see https://github.com/ChainSafe/lodestar/pull/4032
         pendingEvents.push(ChainEvent.attestation, attestation);
       } catch (e) {
         // a block has a lot of attestations and it may has same error, we don't want to log all of them
@@ -182,6 +192,35 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
     const cp = getCheckpointFromState(checkpointState);
     chain.checkpointStateCache.add(cp, checkpointState);
     pendingEvents.push(ChainEvent.checkpoint, cp, checkpointState);
+
+    // Note: in-lined code from previos handler of ChainEvent.checkpoint
+    chain.logger.verbose("Checkpoint processed", toCheckpointHex(cp));
+
+    chain.metrics?.currentValidators.set(
+      {status: "active"},
+      checkpointState.epochCtx.currentShuffling.activeIndices.length
+    );
+    const parentBlockSummary = chain.forkChoice.getBlock(checkpointState.latestBlockHeader.parentRoot);
+
+    if (parentBlockSummary) {
+      const justifiedCheckpoint = checkpointState.currentJustifiedCheckpoint;
+      const justifiedEpoch = justifiedCheckpoint.epoch;
+      const preJustifiedEpoch = parentBlockSummary.justifiedEpoch;
+      if (justifiedEpoch > preJustifiedEpoch) {
+        chain.emitter.emit(ChainEvent.justified, justifiedCheckpoint, checkpointState);
+        chain.logger.verbose("Checkpoint justified", toCheckpointHex(cp));
+        chain.metrics?.previousJustifiedEpoch.set(checkpointState.previousJustifiedCheckpoint.epoch);
+        chain.metrics?.currentJustifiedEpoch.set(cp.epoch);
+      }
+      const finalizedCheckpoint = checkpointState.finalizedCheckpoint;
+      const finalizedEpoch = finalizedCheckpoint.epoch;
+      const preFinalizedEpoch = parentBlockSummary.finalizedEpoch;
+      if (finalizedEpoch > preFinalizedEpoch) {
+        chain.emitter.emit(ChainEvent.finalized, finalizedCheckpoint, checkpointState);
+        chain.logger.verbose("Checkpoint finalized", toCheckpointHex(cp));
+        chain.metrics?.finalizedEpoch.set(cp.epoch);
+      }
+    }
   }
 
   // Emit ChainEvent.forkChoiceHead event
@@ -198,6 +237,16 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
     const distance = chain.forkChoice.getCommonAncestorDistance(oldHead, newHead);
     if (distance !== null) {
       // chain reorg
+      chain.metrics?.forkChoiceReorg.inc();
+      chain.logger.verbose("Chain reorg", {
+        depth: distance,
+        previousHead: oldHead.blockRoot,
+        previousHeadParent: oldHead.parentRoot,
+        previousSlot: oldHead.slot,
+        newHead: newHead.blockRoot,
+        newHeadParent: newHead.parentRoot,
+        newSlot: newHead.slot,
+      });
       pendingEvents.push(ChainEvent.forkChoiceReorg, newHead, oldHead, distance);
       chain.metrics?.forkChoiceReorg.inc();
       chain.metrics?.forkChoiceReorgDistance.observe(distance);
@@ -266,6 +315,18 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
 
   // Register stat metrics about the block after importing it
   chain.metrics?.parentBlockDistance.observe(block.message.slot - parentBlock.slot);
+
+  // Note: in-lined from previous handler of ChainEvent.block
+  const blockRoot = toHexString(chain.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message));
+  const advancedSlot = chain.clock.slotWithFutureTolerance(REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC);
+
+  chain.reprocessController.onBlockImported({slot: block.message.slot, root: blockRoot}, advancedSlot);
+
+  chain.logger.verbose("Block processed", {
+    slot: block.message.slot,
+    root: blockRoot,
+    delaySec: chain.clock.secFromSlot(block.message.slot),
+  });
 }
 
 async function maybeIssueNextProposerEngineFcU(

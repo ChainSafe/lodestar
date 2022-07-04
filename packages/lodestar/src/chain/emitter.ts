@@ -3,9 +3,8 @@ import StrictEventEmitter from "strict-event-emitter-types";
 
 import {routes} from "@chainsafe/lodestar-api";
 import {phase0, Epoch, Slot, allForks} from "@chainsafe/lodestar-types";
-import {CheckpointWithHex, IProtoBlock} from "@chainsafe/lodestar-fork-choice";
+import {CheckpointWithHex, ProtoBlock} from "@chainsafe/lodestar-fork-choice";
 import {CachedBeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
-import {AttestationError, BlockError} from "./errors/index.js";
 
 /**
  * Important chain events that occur during normal chain operation.
@@ -85,21 +84,9 @@ export enum ChainEvent {
    */
   forkChoiceFinalized = "forkChoice:finalized",
   /**
-   * This event signals that the chain has errored while processing an attestation.
-   *
-   * This event is guaranteed to be triggered after any attestation fed to the chain fails at any stage of processing.
+   * A new lightclient optimistic header update is available to be broadcasted to connected light-clients
    */
-  errorAttestation = "error:attestation",
-  /**
-   * This event signals that the chain has errored while processing a block.
-   *
-   * This event is guaranteed to be triggered after any block fed to the chain fails at any stage of processing.
-   */
-  errorBlock = "error:block",
-  /**
-   * A new lightclient header update is available to be broadcasted to connected light-clients
-   */
-  lightclientHeaderUpdate = "lightclient:header_update",
+  lightclientOptimisticUpdate = "lightclient:header_update",
   /**
    * A new lightclient finalized header update is available to be broadcasted to connected light-clients
    */
@@ -109,8 +96,6 @@ export enum ChainEvent {
 export interface IChainEvents {
   [ChainEvent.attestation]: (attestation: phase0.Attestation) => void;
   [ChainEvent.block]: (signedBlock: allForks.SignedBeaconBlock, postState: CachedBeaconStateAllForks) => void;
-  [ChainEvent.errorAttestation]: (error: AttestationError) => void;
-  [ChainEvent.errorBlock]: (error: BlockError) => void;
 
   [ChainEvent.checkpoint]: (checkpoint: phase0.Checkpoint, state: CachedBeaconStateAllForks) => void;
   [ChainEvent.justified]: (checkpoint: phase0.Checkpoint, state: CachedBeaconStateAllForks) => void;
@@ -119,12 +104,12 @@ export interface IChainEvents {
   [ChainEvent.clockSlot]: (slot: Slot) => void;
   [ChainEvent.clockEpoch]: (epoch: Epoch) => void;
 
-  [ChainEvent.forkChoiceHead]: (head: IProtoBlock) => void;
-  [ChainEvent.forkChoiceReorg]: (head: IProtoBlock, oldHead: IProtoBlock, depth: number) => void;
+  [ChainEvent.forkChoiceHead]: (head: ProtoBlock) => void;
+  [ChainEvent.forkChoiceReorg]: (head: ProtoBlock, oldHead: ProtoBlock, depth: number) => void;
   [ChainEvent.forkChoiceJustified]: (checkpoint: CheckpointWithHex) => void;
   [ChainEvent.forkChoiceFinalized]: (checkpoint: CheckpointWithHex) => void;
 
-  [ChainEvent.lightclientHeaderUpdate]: (headerUpdate: routes.events.LightclientHeaderUpdate) => void;
+  [ChainEvent.lightclientOptimisticUpdate]: (optimisticUpdate: routes.events.LightclientOptimisticHeaderUpdate) => void;
   [ChainEvent.lightclientFinalizedUpdate]: (finalizedUpdate: routes.events.LightclientFinalizedUpdate) => void;
 }
 

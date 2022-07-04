@@ -1,5 +1,5 @@
-site_name: Lodestar documentation
-site_description: Lodestar documentation - Typescript Ethereum Consensus client
+site_name: Lodestar Documentation
+site_description: Lodestar Documentation - Typescript Ethereum Consensus client
 site_url: https://chainsafe.github.io/lodestar
 
 repo_name: chainsafe/lodestar
@@ -57,20 +57,23 @@ extra:
     - icon: fontawesome/brands/github-alt
       link: https://github.com/ChainSafe/lodestar
     - icon: fontawesome/brands/twitter
-      link: https://twitter.com/ChainSafe
+      link: https://twitter.com/ChainSafeth
     - icon: fontawesome/brands/discord
       link: https://discord.gg/yjyvFRP
     - icon: fontawesome/brands/medium
-      link: https://medium.com/ChainSafe
+      link: https://blog.chainsafe.io
 
 # Customize left navigation menu
 nav:
-  - Getting started: index.md
-  - Installation: installation.md
-  - CLI Usage:
-      - Mainnet or public testnet: usage/testnet.md
+  - Getting Started: index.md
+  - Installation:
+      - Install from source: install/source.md
+      - Install from NPM: install/npm.md
+      - Install with Docker: install/docker.md
+  - Using Lodestar:
+      - Beacon management: usage/beacon-management.md
       - Local testnet: usage/local.md
-      - Key management: usage/key-management.md
+      - Validator management: usage/validator-management.md
       - Prometheus & Grafana Setup: usage/prometheus-grafana.md
   - Reference:
       - Command line: reference/cli.md

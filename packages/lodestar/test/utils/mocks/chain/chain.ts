@@ -1,12 +1,11 @@
 import sinon from "sinon";
-import {AbortController} from "@chainsafe/abort-controller";
 
 import {CompositeTypeAny, toHexString, TreeView} from "@chainsafe/ssz";
 import {phase0, allForks, UintNum64, Root, Slot, ssz, Uint16, UintBn64} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {BeaconStateAllForks, CachedBeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
-import {CheckpointWithHex, IForkChoice, IProtoBlock, ExecutionStatus} from "@chainsafe/lodestar-fork-choice";
-import {defaultDefaultFeeRecipient} from "@chainsafe/lodestar-validator";
+import {CheckpointWithHex, IForkChoice, ProtoBlock, ExecutionStatus} from "@chainsafe/lodestar-fork-choice";
+import {defaultOptions as defaultValidatorOptions} from "@chainsafe/lodestar-validator";
 
 import {ChainEventEmitter, IBeaconChain} from "../../../../src/chain/index.js";
 import {IBeaconClock} from "../../../../src/chain/clock/interface.js";
@@ -32,12 +31,13 @@ import {
 } from "../../../../src/chain/opPools/index.js";
 import {LightClientServer} from "../../../../src/chain/lightClient/index.js";
 import {Eth1ForBlockProductionDisabled} from "../../../../src/eth1/index.js";
-import {ExecutionEngineDisabled} from "../../../../src/executionEngine/index.js";
+import {ExecutionEngineDisabled} from "../../../../src/execution/engine/index.js";
 import {ReqRespBlockResponse} from "../../../../src/network/reqresp/types.js";
 import {testLogger} from "../../logger.js";
 import {ReprocessController} from "../../../../src/chain/reprocess.js";
 import {createCachedBeaconStateTest} from "../../../../../beacon-state-transition/test/utils/state.js";
 import {SeenAggregatedAttestations} from "../../../../src/chain/seenCache/seenAggregateAndProof.js";
+import {SeenBlockAttesters} from "../../../../src/chain/seenCache/seenBlockAttesters.js";
 import {BeaconProposerCache} from "../../../../src/chain/beaconProposerCache.js";
 
 /* eslint-disable @typescript-eslint/no-empty-function */
@@ -84,8 +84,11 @@ export class MockBeaconChain implements IBeaconChain {
   readonly seenBlockProposers = new SeenBlockProposers();
   readonly seenSyncCommitteeMessages = new SeenSyncCommitteeMessages();
   readonly seenContributionAndProof = new SeenContributionAndProof(null);
+  readonly seenBlockAttesters = new SeenBlockAttesters();
 
-  readonly beaconProposerCache = new BeaconProposerCache({defaultFeeRecipient: defaultDefaultFeeRecipient});
+  readonly beaconProposerCache = new BeaconProposerCache({
+    defaultFeeRecipient: defaultValidatorOptions.defaultFeeRecipient,
+  });
 
   private state: BeaconStateAllForks;
   private abortController: AbortController;
@@ -131,6 +134,10 @@ export class MockBeaconChain implements IBeaconChain {
     this.reprocessController = new ReprocessController(null);
   }
 
+  validatorSeenAtEpoch(): boolean {
+    return false;
+  }
+
   persistInvalidSszView(_: TreeView<CompositeTypeAny>): void {}
 
   getHeadState(): CachedBeaconStateAllForks {
@@ -159,7 +166,7 @@ export class MockBeaconChain implements IBeaconChain {
   async processBlock(): Promise<void> {}
   async processChainSegment(): Promise<void> {}
 
-  close(): void {
+  async close(): Promise<void> {
     this.abortController.abort();
   }
 
@@ -194,7 +201,7 @@ export class MockBeaconChain implements IBeaconChain {
 function mockForkChoice(): IForkChoice {
   const root = ssz.Root.defaultValue() as Uint8Array;
   const rootHex = toHexString(root);
-  const block: IProtoBlock = {
+  const block: ProtoBlock = {
     slot: 0,
     blockRoot: rootHex,
     parentRoot: rootHex,

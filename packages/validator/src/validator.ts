@@ -1,5 +1,5 @@
 import {IDatabaseApiOptions} from "@chainsafe/lodestar-db";
-import {ssz} from "@chainsafe/lodestar-types";
+import {BLSPubkey, ssz} from "@chainsafe/lodestar-types";
 import {createIBeaconConfig, IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Genesis} from "@chainsafe/lodestar-types/phase0";
 import {ILogger} from "@chainsafe/lodestar-utils";
@@ -12,17 +12,21 @@ import {BlockProposingService} from "./services/block.js";
 import {AttestationService} from "./services/attestation.js";
 import {IndicesService} from "./services/indices.js";
 import {SyncCommitteeService} from "./services/syncCommittee.js";
-import {PrepareBeaconProposerService} from "./services/prepareBeaconProposer.js";
-import {ISlashingProtection} from "./slashingProtection/index.js";
+import {pollPrepareBeaconProposer, pollBuilderValidatorRegistration} from "./services/prepareBeaconProposer.js";
+import {Interchange, InterchangeFormatVersion, ISlashingProtection} from "./slashingProtection/index.js";
 import {assertEqualParams, getLoggerVc, NotEqualParamsError} from "./util/index.js";
 import {ChainHeaderTracker} from "./services/chainHeaderTracker.js";
 import {ValidatorEventEmitter} from "./services/emitter.js";
 import {ValidatorStore, Signer} from "./services/validatorStore.js";
-import {PubkeyHex} from "./types.js";
+import {ProcessShutdownCallback, PubkeyHex} from "./types.js";
 import {Metrics} from "./metrics.js";
 import {MetaDataRepository} from "./repositories/metaDataRepository.js";
+import {DoppelgangerService} from "./services/doppelgangerService.js";
 
-export const defaultDefaultFeeRecipient = "0x0000000000000000000000000000000000000000";
+export const defaultOptions = {
+  defaultFeeRecipient: "0x0000000000000000000000000000000000000000",
+  defaultGasLimit: 30_000_000,
+};
 
 export type ValidatorOptions = {
   slashingProtection: ISlashingProtection;
@@ -30,10 +34,15 @@ export type ValidatorOptions = {
   api: Api | string;
   signers: Signer[];
   logger: ILogger;
+  processShutdownCallback: ProcessShutdownCallback;
   afterBlockDelaySlotFraction?: number;
   graffiti?: string;
   defaultFeeRecipient?: string;
   strictFeeRecipientCheck?: boolean;
+  doppelgangerProtectionEnabled?: boolean;
+  closed?: boolean;
+  gasLimit?: number;
+  builder: {enabled?: boolean};
 };
 
 // TODO: Extend the timeout, and let it be customizable
@@ -42,32 +51,42 @@ export type ValidatorOptions = {
 
 enum Status {
   running,
-  stopped,
+  closed,
 }
-
-type State = {status: Status.running; controller: AbortController} | {status: Status.stopped};
 
 /**
  * Main class for the Validator client.
  */
 export class Validator {
   readonly validatorStore: ValidatorStore;
+  private readonly slashingProtection: ISlashingProtection;
   private readonly blockProposingService: BlockProposingService;
   private readonly attestationService: AttestationService;
   private readonly syncCommitteeService: SyncCommitteeService;
-  private readonly indicesService: IndicesService;
-  private readonly prepareBeaconProposerService: PrepareBeaconProposerService | null;
   private readonly config: IBeaconConfig;
   private readonly api: Api;
   private readonly clock: IClock;
-  private readonly emitter: ValidatorEventEmitter;
   private readonly chainHeaderTracker: ChainHeaderTracker;
   private readonly logger: ILogger;
-  private state: State = {status: Status.stopped};
+  private state: Status;
+  private readonly controller: AbortController;
 
   constructor(opts: ValidatorOptions, readonly genesis: Genesis, metrics: Metrics | null = null) {
-    const {dbOps, logger, slashingProtection, signers, graffiti, defaultFeeRecipient, strictFeeRecipientCheck} = opts;
+    const {
+      dbOps,
+      logger,
+      slashingProtection,
+      signers,
+      graffiti,
+      defaultFeeRecipient,
+      strictFeeRecipientCheck,
+      gasLimit,
+      builder,
+    } = opts;
     const config = createIBeaconConfig(dbOps.config, genesis.genesisValidatorsRoot);
+    this.controller = new AbortController();
+    const clock = new Clock(config, logger, {genesisTime: Number(genesis.genesisTime)});
+    const loggerVc = getLoggerVc(logger, clock);
 
     const api =
       typeof opts.api === "string"
@@ -76,29 +95,38 @@ export class Validator {
               baseUrl: opts.api,
               // Validator would need the beacon to respond within the slot
               timeoutMs: config.SECONDS_PER_SLOT * 1000,
-              getAbortSignal: this.getAbortSignal,
+              getAbortSignal: () => this.controller.signal,
             },
             {config, logger, metrics: metrics?.restApiClient}
           )
         : opts.api;
 
-    const clock = new Clock(config, logger, {genesisTime: Number(genesis.genesisTime)});
+    const indicesService = new IndicesService(logger, api, metrics);
+    const doppelgangerService = opts.doppelgangerProtectionEnabled
+      ? new DoppelgangerService(logger, clock, api, indicesService, opts.processShutdownCallback, metrics)
+      : null;
     const validatorStore = new ValidatorStore(
       config,
       slashingProtection,
+      indicesService,
+      doppelgangerService,
       metrics,
       signers,
-      genesis,
-      defaultFeeRecipient ?? defaultDefaultFeeRecipient
+      defaultFeeRecipient ?? defaultOptions.defaultFeeRecipient,
+      gasLimit ?? defaultOptions.defaultGasLimit
     );
-    const indicesService = new IndicesService(logger, api, validatorStore, metrics);
+    pollPrepareBeaconProposer(config, loggerVc, api, clock, validatorStore, metrics);
+    if (builder.enabled) {
+      pollBuilderValidatorRegistration(config, loggerVc, api, clock, validatorStore, metrics);
+    }
+
     const emitter = new ValidatorEventEmitter();
     const chainHeaderTracker = new ChainHeaderTracker(logger, api, emitter);
-    const loggerVc = getLoggerVc(logger, clock);
 
     this.blockProposingService = new BlockProposingService(config, loggerVc, api, clock, validatorStore, metrics, {
       graffiti,
       strictFeeRecipientCheck,
+      builder,
     });
 
     this.attestationService = new AttestationService(
@@ -107,7 +135,6 @@ export class Validator {
       clock,
       validatorStore,
       emitter,
-      indicesService,
       chainHeaderTracker,
       metrics,
       {afterBlockDelaySlotFraction: opts.afterBlockDelaySlotFraction}
@@ -120,26 +147,34 @@ export class Validator {
       clock,
       validatorStore,
       chainHeaderTracker,
-      indicesService,
       metrics
     );
-
-    this.prepareBeaconProposerService = defaultFeeRecipient
-      ? new PrepareBeaconProposerService(loggerVc, api, clock, validatorStore, indicesService, metrics)
-      : null;
 
     this.config = config;
     this.logger = logger;
     this.api = api;
     this.clock = clock;
     this.validatorStore = validatorStore;
-    this.indicesService = indicesService;
-    this.emitter = emitter;
     this.chainHeaderTracker = chainHeaderTracker;
+    this.slashingProtection = slashingProtection;
 
     if (metrics) {
       opts.dbOps.controller.setMetrics(metrics.db);
     }
+
+    if (opts.closed) {
+      this.state = Status.closed;
+    } else {
+      // "start" the validator
+      // Instantiates block and attestation services and runs them once the chain has been started.
+      this.state = Status.running;
+      this.clock.start(this.controller.signal);
+      this.chainHeaderTracker.start(this.controller.signal);
+    }
+  }
+
+  get isRunning(): boolean {
+    return this.state === Status.running;
   }
 
   /** Waits for genesis and genesis time */
@@ -171,31 +206,27 @@ export class Validator {
   }
 
   removeDutiesForKey(pubkey: PubkeyHex): void {
-    this.indicesService.removeDutiesForKey(pubkey);
+    this.validatorStore.removeSigner(pubkey);
     this.blockProposingService.removeDutiesForKey(pubkey);
     this.attestationService.removeDutiesForKey(pubkey);
     this.syncCommitteeService.removeDutiesForKey(pubkey);
   }
 
   /**
-   * Instantiates block and attestation services and runs them once the chain has been started.
-   */
-  async start(): Promise<void> {
-    if (this.state.status === Status.running) return;
-    const controller = new AbortController();
-    this.state = {status: Status.running, controller};
-    const {signal} = controller;
-    this.clock.start(signal);
-    this.chainHeaderTracker.start(signal);
-  }
-
-  /**
    * Stops all validator functions.
    */
-  async stop(): Promise<void> {
-    if (this.state.status === Status.stopped) return;
-    this.state.controller.abort();
-    this.state = {status: Status.stopped};
+  async close(): Promise<void> {
+    if (this.state === Status.closed) return;
+    this.controller.abort();
+    this.state = Status.closed;
+  }
+
+  async importInterchange(interchange: Interchange): Promise<void> {
+    return this.slashingProtection.importInterchange(interchange, this.genesis.genesisValidatorsRoot);
+  }
+
+  async exportInterchange(pubkeys: BLSPubkey[], formatVersion: InterchangeFormatVersion): Promise<Interchange> {
+    return this.slashingProtection.exportInterchange(this.genesis.genesisValidatorsRoot, pubkeys, formatVersion);
   }
 
   /**
@@ -209,8 +240,7 @@ export class Validator {
     }
 
     if (exitEpoch === undefined) {
-      const currentSlot = getCurrentSlot(this.config, this.clock.genesisTime);
-      exitEpoch = computeEpochAtSlot(currentSlot);
+      exitEpoch = computeEpochAtSlot(getCurrentSlot(this.config, this.clock.genesisTime));
     }
 
     const signedVoluntaryExit = await this.validatorStore.signVoluntaryExit(publicKey, stateValidator.index, exitEpoch);
@@ -218,11 +248,6 @@ export class Validator {
 
     this.logger.info(`Submitted voluntary exit for ${publicKey} to the network`);
   }
-
-  /** Provide the current AbortSignal to the api instance */
-  private getAbortSignal = (): AbortSignal | undefined => {
-    return this.state.status === Status.running ? this.state.controller.signal : undefined;
-  };
 }
 
 /** Assert the same genesisValidatorRoot and genesisTime */

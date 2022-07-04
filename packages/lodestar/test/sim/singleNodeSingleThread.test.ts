@@ -7,7 +7,7 @@ import {getDevBeaconNode} from "../utils/node/beacon.js";
 import {waitForEvent} from "../utils/events/resolver.js";
 import {getAndInitDevValidators} from "../utils/node/validator.js";
 import {ChainEvent} from "../../src/chain/index.js";
-import {RestApiOptions} from "../../src/api/rest/index.js";
+import {BeaconRestApiServerOpts} from "../../src/api/rest/index.js";
 import {testLogger, TestLoggerOpts, LogLevel} from "../utils/logger.js";
 import {simTestInfoTracker} from "../utils/node/simTest.js";
 import {INTEROP_BLOCK_HASH} from "../../src/node/utils/interop/state.js";
@@ -97,7 +97,7 @@ describe("Run single node single thread interop validators (no eth1) until check
       const bn = await getDevBeaconNode({
         params: {...testParams, ALTAIR_FORK_EPOCH: altairEpoch, BELLATRIX_FORK_EPOCH: bellatrixEpoch},
         options: {
-          api: {rest: {enabled: true} as RestApiOptions},
+          api: {rest: {enabled: true} as BeaconRestApiServerOpts},
           sync: {isSingleNode: true},
           network: {allowPublishToZeroPeers: true},
           executionEngine: {mode: "mock", genesisBlockHash: toHexString(INTEROP_BLOCK_HASH)},
@@ -132,8 +132,7 @@ describe("Run single node single thread interop validators (no eth1) until check
       }
 
       // TODO: Previous code waited for 1 slot between stopping the validators and stopInfoTracker()
-      afterEachCallbacks[1] = () => Promise.all(validators.map((v) => v.stop()));
-      await Promise.all(validators.map((v) => v.start()));
+      afterEachCallbacks[1] = () => Promise.all(validators.map((v) => v.close()));
 
       // Wait for test to complete
       await waitForEvent<phase0.Checkpoint>(bn.chain.emitter, event, timeout);

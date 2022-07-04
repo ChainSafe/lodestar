@@ -1,7 +1,6 @@
 import {toBufferBE} from "bigint-buffer";
 import {expect} from "chai";
 import sinon from "sinon";
-import {AbortController} from "@chainsafe/abort-controller";
 import bls from "@chainsafe/bls";
 import {toHexString} from "@chainsafe/ssz";
 import {createIChainForkConfig} from "@chainsafe/lodestar-config";
@@ -15,25 +14,25 @@ import {
 } from "../../../src/services/syncCommitteeDuties.js";
 import {ValidatorStore} from "../../../src/services/validatorStore.js";
 import {getApiClientStub} from "../../utils/apiStub.js";
-import {loggerVc, testLogger} from "../../utils/logger.js";
+import {loggerVc} from "../../utils/logger.js";
 import {ClockMock} from "../../utils/clock.js";
-import {IndicesService} from "../../../src/services/indices.js";
+import {initValidatorStore} from "../../utils/validatorStore.js";
 import {syncCommitteeIndicesToSubnets} from "../../../src/services/utils.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
 describe("SyncCommitteeDutiesService", function () {
   const sandbox = sinon.createSandbox();
-  const logger = testLogger();
+
   const ZERO_HASH = Buffer.alloc(32, 0);
   const ZERO_HASH_HEX = toHexString(ZERO_HASH);
 
   const api = getApiClientStub(sandbox);
-  const validatorStore = sinon.createStubInstance(ValidatorStore) as ValidatorStore &
-    sinon.SinonStubbedInstance<ValidatorStore>;
+
+  let validatorStore: ValidatorStore;
   let pubkeys: Uint8Array[]; // Initialize pubkeys in before() so bls is already initialized
 
-  const config = createIChainForkConfig({
+  const altair0Config = createIChainForkConfig({
     ...mainnetConfig,
     ALTAIR_FORK_EPOCH: 0, // Activate Altair immediatelly
   });
@@ -53,10 +52,7 @@ describe("SyncCommitteeDutiesService", function () {
       bls.SecretKey.fromBytes(toBufferBE(BigInt(99), 32)),
     ];
     pubkeys = secretKeys.map((sk) => sk.toPublicKey().toBytes());
-    validatorStore.votingPubkeys.returns(pubkeys.map(toHexString));
-    validatorStore.hasVotingPubkey.returns(true);
-    validatorStore.signAttestationSelectionProof.resolves(ZERO_HASH);
-    validatorStore.signSyncCommitteeSelectionProof.resolves(ZERO_HASH);
+    validatorStore = initValidatorStore(secretKeys, api, altair0Config);
   });
 
   let controller: AbortController; // To stop clock
@@ -87,28 +83,17 @@ describe("SyncCommitteeDutiesService", function () {
 
     // Clock will call runAttesterDutiesTasks() immediatelly
     const clock = new ClockMock();
-    const indicesService = new IndicesService(logger, api, validatorStore, null);
-    const dutiesService = new SyncCommitteeDutiesService(
-      config,
-      loggerVc,
-      api,
-      clock,
-      validatorStore,
-      indicesService,
-      null
-    );
+    const dutiesService = new SyncCommitteeDutiesService(altair0Config, loggerVc, api, clock, validatorStore, null);
 
     // Trigger clock onSlot for slot 0
     await clock.tickEpochFns(0, controller.signal);
 
     // Validator index should be persisted
-    expect(Object.fromEntries(indicesService["pubkey2index"])).to.deep.equal(
-      {
-        [toHexString(pubkeys[0])]: indices[0],
-        [toHexString(pubkeys[1])]: indices[1],
-      },
-      "Wrong dutiesService.indices Map"
-    );
+    // Validator index should be persisted
+    expect(validatorStore.getAllLocalIndices()).to.deep.equal(indices, "Wrong local indices");
+    for (let i = 0; i < indices.length; i++) {
+      expect(validatorStore.getPubkeyOfIndex(indices[i])).equals(toHexString(pubkeys[i]), `Wrong pubkey[${i}]`);
+    }
 
     // Duties for this and next epoch should be persisted
     const dutiesByIndexByPeriodObj = Object.fromEntries(
@@ -166,16 +151,7 @@ describe("SyncCommitteeDutiesService", function () {
 
     // Clock will call runAttesterDutiesTasks() immediatelly
     const clock = new ClockMock();
-    const indicesService = new IndicesService(logger, api, validatorStore, null);
-    const dutiesService = new SyncCommitteeDutiesService(
-      config,
-      loggerVc,
-      api,
-      clock,
-      validatorStore,
-      indicesService,
-      null
-    );
+    const dutiesService = new SyncCommitteeDutiesService(altair0Config, loggerVc, api, clock, validatorStore, null);
 
     // Trigger clock onSlot for slot 0
     await clock.tickEpochFns(0, controller.signal);
@@ -233,16 +209,7 @@ describe("SyncCommitteeDutiesService", function () {
 
     // Clock will call runAttesterDutiesTasks() immediatelly
     const clock = new ClockMock();
-    const indicesService = new IndicesService(logger, api, validatorStore, null);
-    const dutiesService = new SyncCommitteeDutiesService(
-      config,
-      loggerVc,
-      api,
-      clock,
-      validatorStore,
-      indicesService,
-      null
-    );
+    const dutiesService = new SyncCommitteeDutiesService(altair0Config, loggerVc, api, clock, validatorStore, null);
 
     // Trigger clock onSlot for slot 0
     await clock.tickEpochFns(0, controller.signal);

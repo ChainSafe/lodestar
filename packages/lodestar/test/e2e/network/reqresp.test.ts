@@ -1,7 +1,6 @@
 import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import PeerId from "peer-id";
-import {AbortController} from "@chainsafe/abort-controller";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {config} from "@chainsafe/lodestar-config/default";
 import {sleep as _sleep} from "@chainsafe/lodestar-utils";
@@ -107,7 +106,7 @@ describe("network / ReqResp", function () {
     await connected;
 
     afterEachCallbacks.push(async () => {
-      chain.close();
+      await chain.close();
       controller.abort();
       await Promise.all([netA.stop(), netB.stop()]);
     });

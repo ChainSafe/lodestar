@@ -11,7 +11,7 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "0.38.0",
+  "version": "0.38.1",
   "type": "module",
   "exports": {
     ".": {
@@ -104,16 +104,16 @@
     "@chainsafe/bls": "7.1.1",
     "@chainsafe/discv5": "^0.7.1",
     "@chainsafe/libp2p-noise": "5.0.3",
-    "@chainsafe/lodestar-api": "^0.38.0",
-    "@chainsafe/lodestar-beacon-state-transition": "^0.38.0",
-    "@chainsafe/lodestar-config": "^0.38.0",
-    "@chainsafe/lodestar-db": "^0.38.0",
-    "@chainsafe/lodestar-fork-choice": "^0.38.0",
-    "@chainsafe/lodestar-light-client": "^0.38.0",
-    "@chainsafe/lodestar-params": "^0.38.0",
-    "@chainsafe/lodestar-types": "^0.38.0",
-    "@chainsafe/lodestar-utils": "^0.38.0",
-    "@chainsafe/lodestar-validator": "^0.38.0",
+    "@chainsafe/lodestar-api": "^0.38.1",
+    "@chainsafe/lodestar-beacon-state-transition": "^0.38.1",
+    "@chainsafe/lodestar-config": "^0.38.1",
+    "@chainsafe/lodestar-db": "^0.38.1",
+    "@chainsafe/lodestar-fork-choice": "^0.38.1",
+    "@chainsafe/lodestar-light-client": "^0.38.1",
+    "@chainsafe/lodestar-params": "^0.38.1",
+    "@chainsafe/lodestar-types": "^0.38.1",
+    "@chainsafe/lodestar-utils": "^0.38.1",
+    "@chainsafe/lodestar-validator": "^0.38.1",
     "@chainsafe/persistent-merkle-tree": "^0.4.2",
     "@chainsafe/snappy-stream": "5.1.1",
     "@chainsafe/ssz": "^0.9.2",
@@ -127,6 +127,7 @@
     "datastore-level": "^6.0.2",
     "deepmerge": "^3.2.0",
     "fastify": "3.15.1",
+    "fastify-bearer-auth": "6.1.0",
     "fastify-cors": "^6.0.1",
     "gc-stats": "^1.4.0",
     "interface-datastore": "^5.1.2",
@@ -143,11 +144,10 @@
     "peer-id": "^0.16.0",
     "prom-client": "^13.2.0",
     "prometheus-gc-stats": "^0.6.3",
-    "snappyjs": "^0.6.0",
+    "snappyjs": "^0.7.0",
     "stream-to-it": "^0.2.0",
     "strict-event-emitter-types": "^2.0.0",
-    "varint": "^6.0.0",
-    "wtfnode": "^0.8.4"
+    "varint": "^6.0.0"
   },
   "devDependencies": {
     "@types/bl": "^5.0.1",

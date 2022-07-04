@@ -3,7 +3,7 @@ import {
   computeSigningRoot,
   computeStartSlotAtEpoch,
 } from "@chainsafe/lodestar-beacon-state-transition";
-import {IProtoBlock, IForkChoice, ExecutionStatus} from "@chainsafe/lodestar-fork-choice";
+import {ProtoBlock, IForkChoice, ExecutionStatus} from "@chainsafe/lodestar-fork-choice";
 import {DOMAIN_BEACON_ATTESTER} from "@chainsafe/lodestar-params";
 import {phase0, Slot, ssz} from "@chainsafe/lodestar-types";
 import {BitArray, toHexString} from "@chainsafe/ssz";
@@ -50,7 +50,7 @@ export function getAttestationValidData(
   const clock = new ClockStatic(currentSlot);
 
   // Add block to forkChoice
-  const headBlock: IProtoBlock = {
+  const headBlock: ProtoBlock = {
     slot: attSlot,
     blockRoot: toHexString(beaconBlockRoot),
     parentRoot: ZERO_HASH_HEX,
