@@ -215,7 +215,8 @@ fi;
 clCmd="$clCmd $LODESTAR_EXTRA_ARGS"
 
 valName="$DEVNET_NAME-validator"
-valCmd="$dockerCmd --name $valName $clDockerNetwork -v $currentDir/$dataDir:/data"
+# we are additionally mounting current dir to /currentDir if anyone wants to provide keystores
+valCmd="$dockerCmd --name $valName $clDockerNetwork -v $currentDir:/currentDir -v $currentDir/$dataDir:/data"
 # mount and use config
 if [ -n "$configGitDir" ]
 then
