@@ -407,8 +407,6 @@ export function beforeProcessEpoch(state: CachedBeaconStateAllForks): EpochProce
   if (prevTargetUnslStake < 1) prevTargetUnslStake = 1;
   if (prevHeadUnslStake < 1) prevHeadUnslStake = 1;
   if (currTargetUnslStake < 1) currTargetUnslStake = 1;
-  if (epochCtx.currentTargetUnslashedBalanceIncrements < 1) epochCtx.currentTargetUnslashedBalanceIncrements = 1;
-  if (epochCtx.previousTargetUnslashedBalanceIncrements < 1) epochCtx.previousTargetUnslashedBalanceIncrements = 1;
 
   return {
     prevEpoch,
