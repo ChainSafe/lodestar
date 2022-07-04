@@ -5,7 +5,7 @@ import {mapValues} from "@chainsafe/lodestar-utils";
 
 export function getTestServer(): {baseUrl: string; server: FastifyInstance} {
   const port = Math.floor(Math.random() * (65535 - 49152)) + 49152;
-  const baseUrl = `http://127.0.0.1:${port}`;
+  const baseUrl = `http://localhost:${port}`;
 
   const server = fastify({
     ajv: {customOptions: {coerceTypes: "array"}},
