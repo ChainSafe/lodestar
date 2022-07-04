@@ -85,6 +85,8 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
       metricsRegistries,
     });
 
+    if (args.attachToGlobalThis) ((globalThis as unknown) as {bn: BeaconNode}).bn = node;
+
     abortController.signal.addEventListener("abort", () => node.close(), {once: true});
   } catch (e) {
     await db.stop();
