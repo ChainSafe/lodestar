@@ -5,11 +5,10 @@
 import {
   blockToHeader,
   computeEpochAtSlot,
-  phase0,
   BeaconStateAllForks,
   CachedBeaconStateAllForks,
 } from "@chainsafe/lodestar-beacon-state-transition";
-import {allForks, ssz} from "@chainsafe/lodestar-types";
+import {phase0, allForks, ssz} from "@chainsafe/lodestar-types";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
@@ -18,9 +17,9 @@ import {GENESIS_SLOT, ZERO_HASH} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
 import {Eth1Provider} from "../eth1/index.js";
 import {IMetrics} from "../metrics/index.js";
+import {Eth1Options} from "../eth1/options.js";
 import {GenesisBuilder} from "./genesis/genesis.js";
 import {IGenesisResult} from "./genesis/interface.js";
-import {Eth1Options} from "../eth1/options.js";
 
 export async function persistGenesisResult(
   db: IBeaconDb,

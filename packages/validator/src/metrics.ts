@@ -311,10 +311,78 @@ export function getMetrics(register: MetricsRegister, gitData: LodestarGitData) 
         buckets: [0.01, 0.1, 1, 5],
       }),
 
-      errors: register.gauge<{routeId: string}>({
-        name: "vc_rest_api_client_errors_total",
-        help: "Total count of errors calling the REST API client by routeId",
+      requestErrors: register.gauge<{routeId: string}>({
+        name: "vc_rest_api_client_request_errors_total",
+        help: "Total count of errors on REST API client requests by routeId",
         labelNames: ["routeId"],
+      }),
+    },
+
+    keymanagerApiRest: {
+      responseTime: register.histogram<{operationId: string}>({
+        name: "vc_keymanager_api_rest_response_time_seconds",
+        help: "REST API time to fullfill a request by operationId",
+        labelNames: ["operationId"],
+        // Request times range between 1ms to 100ms in normal conditions. Can get to 1-5 seconds if overloaded
+        buckets: [0.01, 0.1, 1],
+      }),
+      requests: register.gauge<{operationId: string}>({
+        name: "vc_keymanager_api_rest_requests_total",
+        help: "REST API total count requests by operationId",
+        labelNames: ["operationId"],
+      }),
+      errors: register.gauge<{operationId: string}>({
+        name: "vc_keymanager_api_rest_errors_total",
+        help: "REST API total count of errors by operationId",
+        labelNames: ["operationId"],
+      }),
+      // Metrics for HttpActiveSocketsTracker, defined there
+      activeSockets: register.gauge({
+        name: "vc_keymanager_api_rest_active_sockets_count",
+        help: "REST API current count of active sockets",
+      }),
+      socketsBytesRead: register.gauge({
+        name: "vc_keymanager_api_rest_sockets_bytes_read_total",
+        help: "REST API total count of bytes read on all sockets",
+      }),
+      socketsBytesWritten: register.gauge({
+        name: "vc_keymanager_api_rest_sockets_bytes_written_total",
+        help: "REST API total count of bytes written on all sockets",
+      }),
+    },
+
+    db: {
+      dbReadReq: register.gauge<{bucket: string}>({
+        name: "validator_db_read_req_total",
+        help: "Total count of db read requests, may read 0 or more items",
+        labelNames: ["bucket"],
+      }),
+      dbReadItems: register.gauge<{bucket: string}>({
+        name: "validator_db_read_items_total",
+        help: "Total count of db read items, item = key | value | entry",
+        labelNames: ["bucket"],
+      }),
+      dbWriteReq: register.gauge<{bucket: string}>({
+        name: "validator_db_write_req_total",
+        help: "Total count of db write requests, may write 0 or more items",
+        labelNames: ["bucket"],
+      }),
+      dbWriteItems: register.gauge<{bucket: string}>({
+        name: "validator_db_write_items_total",
+        help: "Total count of db write items",
+        labelNames: ["bucket"],
+      }),
+    },
+
+    doppelganger: {
+      statusCount: register.gauge<{status: string}>({
+        name: "vc_doppelganger_validator_status_count",
+        help: "Count of validators per status",
+        labelNames: ["status"],
+      }),
+      epochsChecked: register.gauge({
+        name: "vc_doppelganger_epochs_checked_total",
+        help: "Total count of epochs checked",
       }),
     },
   };

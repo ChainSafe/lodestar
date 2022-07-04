@@ -2,15 +2,18 @@ import sinon, {SinonStubbedInstance} from "sinon";
 
 import {config} from "@chainsafe/lodestar-config/default";
 import {
-  phase0,
   CachedBeaconStateAllForks,
   computeEpochAtSlot,
   computeDomain,
   computeSigningRoot,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
-import {ssz} from "@chainsafe/lodestar-types";
+import {phase0, ssz} from "@chainsafe/lodestar-types";
 
+import {DOMAIN_VOLUNTARY_EXIT, FAR_FUTURE_EPOCH, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
+import bls from "@chainsafe/bls";
+import {PointFormat} from "@chainsafe/bls/types";
+import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {BeaconChain} from "../../../../src/chain/index.js";
 import {StubbedChain} from "../../../utils/stub/index.js";
 import {generateState} from "../../../utils/state.js";
@@ -18,11 +21,8 @@ import {validateGossipVoluntaryExit} from "../../../../src/chain/validation/volu
 import {VoluntaryExitErrorCode} from "../../../../src/chain/errors/voluntaryExitError.js";
 import {OpPool} from "../../../../src/chain/opPools/index.js";
 import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
-import {DOMAIN_VOLUNTARY_EXIT, FAR_FUTURE_EPOCH, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import bls from "@chainsafe/bls";
-import {PointFormat} from "@chainsafe/bls/types";
-import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {createCachedBeaconStateTest} from "../../../utils/cachedBeaconState.js";
+import {BlsVerifierMock} from "../../../utils/mocks/bls.js";
 
 describe("validate voluntary exit", () => {
   const sandbox = sinon.createSandbox();
@@ -75,7 +75,7 @@ describe("validate voluntary exit", () => {
     (chainStub as {opPool: OpPool}).opPool = opPool;
     chainStub.getHeadStateAtCurrentEpoch.resolves(state);
     // TODO: Use actual BLS verification
-    chainStub.bls = {verifySignatureSets: async () => true};
+    chainStub.bls = new BlsVerifierMock(true);
   });
 
   afterEach(() => {

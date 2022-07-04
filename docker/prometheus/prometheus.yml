@@ -6,4 +6,4 @@ scrape_configs:
     static_configs:
       # This tag is to be replaced in the Dockerfile with sed
       # Modified datasource to work with a network_mode: host
-      - targets: ["#BEACON_URL"]
+      - targets: ["#BEACON_URL", "#VC_URL"]

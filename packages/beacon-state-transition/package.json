@@ -11,23 +11,20 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "0.37.0",
+  "version": "0.38.1",
   "type": "module",
   "exports": {
     ".": {
       "import": "./lib/index.js"
     },
-    "./allForks": {
-      "import": "./lib/allForks/index.js"
+    "./block": {
+      "import": "./lib/block/index.js"
     },
-    "./phase0": {
-      "import": "./lib/phase0/index.js"
+    "./epoch": {
+      "import": "./lib/epoch/index.js"
     },
-    "./altair": {
-      "import": "./lib/altair/index.js"
-    },
-    "./bellatrix": {
-      "import": "./lib/bellatrix/index.js"
+    "./slot": {
+      "import": "./lib/slot/index.js"
     }
   },
   "typesVersions": {
@@ -64,13 +61,13 @@
   "dependencies": {
     "@chainsafe/as-sha256": "^0.3.1",
     "@chainsafe/bls": "7.1.0",
-    "@chainsafe/lodestar-config": "^0.37.0",
-    "@chainsafe/lodestar-params": "^0.37.0",
-    "@chainsafe/lodestar-types": "^0.37.0",
-    "@chainsafe/lodestar-utils": "^0.37.0",
-    "@chainsafe/persistent-merkle-tree": "^0.4.1",
+    "@chainsafe/lodestar-config": "^0.38.1",
+    "@chainsafe/lodestar-params": "^0.38.1",
+    "@chainsafe/lodestar-types": "^0.38.1",
+    "@chainsafe/lodestar-utils": "^0.38.1",
+    "@chainsafe/persistent-merkle-tree": "^0.4.2",
     "@chainsafe/persistent-ts": "^0.19.1",
-    "@chainsafe/ssz": "^0.9.1",
+    "@chainsafe/ssz": "^0.9.2",
     "bigint-buffer": "^1.1.5",
     "buffer-xor": "^2.0.2"
   },

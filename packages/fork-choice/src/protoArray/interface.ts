@@ -7,11 +7,11 @@ export const HEX_ZERO_HASH = "0x000000000000000000000000000000000000000000000000
 /**
  * Simplified 'latest message' with previous message
  */
-export interface IVoteTracker {
+export type VoteTracker = {
   currentRoot: RootHex;
   nextRoot: RootHex;
   nextEpoch: Epoch;
-}
+};
 
 export enum ExecutionStatus {
   Valid = "Valid",
@@ -28,7 +28,7 @@ type BlockExecution =
  * A simplified version of BeaconBlock
  */
 
-export type IProtoBlock = BlockExecution & {
+export type ProtoBlock = BlockExecution & {
   /**
    * The slot is not necessary for ProtoArray,
    * it just exists so external components can easily query the block slot.
@@ -60,7 +60,7 @@ export type IProtoBlock = BlockExecution & {
  * A block root with additional metadata required to form a DAG
  * with vote weights and best blocks stored as metadata
  */
-export type IProtoNode = IProtoBlock & {
+export type ProtoNode = ProtoBlock & {
   parent?: number;
   weight: number;
   bestChild?: number;

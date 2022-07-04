@@ -1,10 +1,11 @@
-import {allForks, UintNum64, Root, phase0, Slot, RootHex, Epoch} from "@chainsafe/lodestar-types";
+import {allForks, UintNum64, Root, phase0, Slot, RootHex, Epoch, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {CachedBeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
-import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
 
+import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {IEth1ForBlockProduction} from "../eth1/index.js";
-import {IExecutionEngine} from "../executionEngine/index.js";
+import {IExecutionEngine, IExecutionBuilder} from "../execution/index.js";
 import {IBeaconClock} from "./clock/interface.js";
 import {ChainEventEmitter} from "./emitter.js";
 import {IStateRegenerator} from "./regen/index.js";
@@ -24,6 +25,7 @@ import {PartiallyVerifiedBlockFlags} from "./blocks/types.js";
 import {ReprocessController} from "./reprocess.js";
 import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
 import {BeaconProposerCache, ProposerPreparationData} from "./beaconProposerCache.js";
+import {SeenBlockAttesters} from "./seenCache/seenBlockAttesters.js";
 
 export type Eth2Context = {
   activeValidatorCount: number;
@@ -42,6 +44,7 @@ export interface IBeaconChain {
   readonly genesisValidatorsRoot: Root;
   readonly eth1: IEth1ForBlockProduction;
   readonly executionEngine: IExecutionEngine;
+  readonly executionBuilder?: IExecutionBuilder;
   // Expose config for convenience in modularized functions
   readonly config: IBeaconConfig;
 
@@ -72,15 +75,19 @@ export interface IBeaconChain {
   readonly seenBlockProposers: SeenBlockProposers;
   readonly seenSyncCommitteeMessages: SeenSyncCommitteeMessages;
   readonly seenContributionAndProof: SeenContributionAndProof;
+  // Seen cache for liveness checks
+  readonly seenBlockAttesters: SeenBlockAttesters;
 
   readonly beaconProposerCache: BeaconProposerCache;
 
   /** Stop beacon chain processing */
-  close(): void;
+  close(): Promise<void>;
   /** Populate in-memory caches with persisted data. Call at least once on startup */
   loadFromDisk(): Promise<void>;
   /** Persist in-memory data to the DB. Call at least once before stopping the process */
   persistToDisk(): Promise<void>;
+
+  validatorSeenAtEpoch(index: ValidatorIndex, epoch: Epoch): boolean;
 
   getHeadState(): CachedBeaconStateAllForks;
   getHeadStateAtCurrentEpoch(): Promise<CachedBeaconStateAllForks>;
@@ -102,10 +109,11 @@ export interface IBeaconChain {
 
   waitForBlockOfAttestation(slot: Slot, root: RootHex): Promise<boolean>;
 
-  /** Persist bad items to persistInvalidSszObjectsDir dir, for example invalid state, attestations etc. */
-  persistInvalidSszObject(type: SSZObjectType, bytes: Uint8Array, suffix: string): string | null;
-
   updateBeaconProposerData(epoch: Epoch, proposers: ProposerPreparationData[]): Promise<void>;
+
+  persistInvalidSszValue<T>(type: Type<T>, sszObject: T | Uint8Array, suffix?: string): void;
+  /** Persist bad items to persistInvalidSszObjectsDir dir, for example invalid state, attestations etc. */
+  persistInvalidSszView(view: TreeView<CompositeTypeAny>, suffix?: string): void;
 }
 
 export type SSZObjectType =

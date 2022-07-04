@@ -1,5 +1,6 @@
-export * as routes from "./routes/index.js";
-export * from "./interface.js";
-export {getClient, HttpClient, HttpClientOptions, HttpError} from "./client/index.js";
+// Re-exporting beacon only for backwards compatibility
+export * from "./beacon/index.js";
 
-// Node: Don't export server here so it's not bundled to all consumers
+export {HttpClient, IHttpClient, HttpClientOptions, HttpClientModules, HttpError} from "./utils/client/index.js";
+
+// NOTE: Don't export server here so it's not bundled to all consumers

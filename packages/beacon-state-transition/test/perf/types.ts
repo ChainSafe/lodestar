@@ -1,9 +1,5 @@
-import {
-  allForks,
-  CachedBeaconStateAllForks,
-  CachedBeaconStatePhase0,
-  CachedBeaconStateAltair,
-} from "../../src/index.js";
+import {allForks} from "@chainsafe/lodestar-types";
+import {CachedBeaconStateAllForks, CachedBeaconStatePhase0, CachedBeaconStateAltair} from "../../src/index.js";
 import {EpochProcess} from "../../src/types.js";
 
 // Type aliases to typesafe itBench() calls

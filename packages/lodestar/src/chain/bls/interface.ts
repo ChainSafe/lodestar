@@ -40,4 +40,7 @@ export interface IBlsVerifier {
    * Signature checks above could be done here for convienence as well
    */
   verifySignatureSets(sets: ISignatureSet[], opts?: VerifySignatureOpts): Promise<boolean>;
+
+  /** For multithread pool awaits terminating all workers */
+  close(): Promise<void>;
 }

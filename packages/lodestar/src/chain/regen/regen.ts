@@ -1,22 +1,23 @@
-import {phase0, Slot, RootHex} from "@chainsafe/lodestar-types";
+import {allForks, phase0, Slot, RootHex} from "@chainsafe/lodestar-types";
 import {
-  allForks,
   CachedBeaconStateAllForks,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
+  processSlots,
+  stateTransition,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {IForkChoice, IProtoBlock} from "@chainsafe/lodestar-fork-choice";
+import {IForkChoice, ProtoBlock} from "@chainsafe/lodestar-fork-choice";
 import {sleep} from "@chainsafe/lodestar-utils";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {IMetrics} from "../../metrics/index.js";
 import {IBeaconDb} from "../../db/index.js";
 import {CheckpointStateCache, StateContextCache} from "../stateCache/index.js";
-import {IStateRegenerator, RegenCaller} from "./interface.js";
-import {RegenError, RegenErrorCode} from "./errors.js";
 import {getCheckpointFromState} from "../blocks/utils/checkpoint.js";
 import {ChainEvent, ChainEventEmitter} from "../emitter.js";
+import {IStateRegenerator, RegenCaller} from "./interface.js";
+import {RegenError, RegenErrorCode} from "./errors.js";
 
 export type RegenModules = {
   db: IBeaconDb;
@@ -168,7 +169,7 @@ export class StateRegenerator implements IStateRegenerator {
       try {
         // Only advances state trusting block's signture and hashes.
         // We are only running the state transition to get a specific state's data.
-        state = allForks.stateTransition(
+        state = stateTransition(
           state,
           block,
           {
@@ -195,7 +196,7 @@ export class StateRegenerator implements IStateRegenerator {
     return state;
   }
 
-  private findFirstStateBlock(stateRoot: RootHex): IProtoBlock {
+  private findFirstStateBlock(stateRoot: RootHex): ProtoBlock {
     for (const block of this.modules.forkChoice.forwarditerateAncestorBlocks()) {
       if (block !== undefined) {
         return block;
@@ -221,7 +222,7 @@ async function processSlotsByCheckpoint(
 ): Promise<CachedBeaconStateAllForks> {
   let postState = await processSlotsToNearestCheckpoint(modules, preState, slot);
   if (postState.slot < slot) {
-    postState = allForks.processSlots(postState, slot, modules.metrics);
+    postState = processSlots(postState, slot, modules.metrics);
   }
   return postState;
 }
@@ -249,7 +250,7 @@ async function processSlotsToNearestCheckpoint(
     nextEpochSlot <= postSlot;
     nextEpochSlot += SLOTS_PER_EPOCH
   ) {
-    postState = allForks.processSlots(postState, nextEpochSlot, metrics);
+    postState = processSlots(postState, nextEpochSlot, metrics);
 
     // Cache state to preserve epoch transition work
     const checkpointState = postState.clone();

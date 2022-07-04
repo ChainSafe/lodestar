@@ -1,8 +1,8 @@
 import chai from "chai";
 import chaiAsPromised from "chai-as-promised";
 import pipe from "it-pipe";
-import {allForks} from "@chainsafe/lodestar-types";
 import all from "it-all";
+import {allForks} from "@chainsafe/lodestar-types";
 import {ForkName} from "@chainsafe/lodestar-params";
 import {
   Method,

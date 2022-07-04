@@ -76,3 +76,11 @@ will give a result similar to the following:
   }
 }
 ```
+
+## Post-Merge local testnet
+
+To set up a local testnet with a Post-Merge configuration, you may need to add the following parameters (in addition to the parameters described above) to your `lodestar dev` command:
+
+- `--params.ALTAIR_FORK_EPOCH 0`
+- `--params.BELLATRIX_FORK_EPOCH 0`
+- `--terminal-total-difficulty-override 0`

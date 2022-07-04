@@ -4,8 +4,8 @@ import {BitArray} from "@chainsafe/ssz";
 import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 import {shuffle} from "../../../util/shuffle.js";
 import {sortBy} from "../../../util/sortBy.js";
-import {RequestedSubnet} from "./subnetMap.js";
 import {MapDef} from "../../../util/map.js";
+import {RequestedSubnet} from "./subnetMap.js";
 
 /** Target number of peers we'd like to have connected to a given long-lived subnet */
 const TARGET_SUBNET_PEERS = 6;

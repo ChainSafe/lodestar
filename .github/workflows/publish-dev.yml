@@ -1,0 +1,123 @@
+name: Publish dev release
+
+# only one per github sha can be run
+concurrency:
+  group: cd-publish-dev
+
+on:
+  push:
+    branches:
+      - unstable
+
+jobs:
+  npm:
+    name: Publish to NPM Registry
+    runs-on: ubuntu-latest
+    steps:
+      # <common-build> - Uses YAML anchors in the future
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v2
+        with:
+          node-version: "lts/gallium"
+          registry-url: "https://registry.npmjs.org"
+      - name: Node.js version
+        id: node
+        run: echo "::set-output name=v8CppApiVersion::$(node --print "process.versions.modules")"
+      - name: Restore dependencies
+        uses: actions/cache@master
+        id: cache-deps
+        with:
+          path: |
+            node_modules
+            packages/*/node_modules
+          key: ${{ runner.os }}-${{ steps.node.outputs.v8CppApiVersion }}-${{ hashFiles('**/yarn.lock', '**/package.json') }}
+      - name: Install & build
+        if: steps.cache-deps.outputs.cache-hit != 'true'
+        run: yarn install --frozen-lockfile --ignore-optional && yarn build
+      - name: Build
+        run: yarn build
+        if: steps.cache-deps.outputs.cache-hit == 'true'
+      # </common-build>
+      - name: Get version
+        id: version
+        run: |
+          PACKAGE_VERSION=$(node -p "require('./packages/cli/package.json').version")
+          NEXT_VERSION=$(npx --yes semver --increment minor $PACKAGE_VERSION)
+          export VERSION=${NEXT_VERSION}-dev.${GITHUB_SHA:0:10}
+          echo "::set-output name=version::$VERSION"
+          echo PACKAGE_VERSION $PACKAGE_VERSION GITHUB_SHA $GITHUB_SHA VERSION $VERSION
+
+      - name: Change and commit version
+        # Write version before publishing so it's picked up by `lerna publish from-package`.
+        # It must also be committed to ensure a clean git tree, otherwise `lerna publish` errors.
+        # This "temp" commit doesn't change the actually release commit which is captured above.
+        # git-data is also correct, since it's generated at build time, before `lerna version` run.
+        run: |
+          node_modules/.bin/lerna version ${{ steps.version.outputs.version }} \
+          --force-publish \
+          --exact \
+          --yes \
+          --no-git-tag-version
+
+          git config user.name 'temp'
+          git config user.email 'temp@github.com'
+          git commit -am "${{ steps.version.outputs.version }}"
+
+      - name: Publish to npm registry
+        # Note: before https://github.com/ChainSafe/lodestar/commit/28e2c74cf0f1bede8b09c8c9fec26f54b367e3fd
+        # We used `lerna publish --canary` option. However, since we now publish must version on branches,
+        # i.e. v0.35.x branch, lerna fails to detect the latest version and publishes canary versions as
+        # `0.34.0-dev.173+28e2c74cf0` instead of `0.36.0-dev.4+28e2c74cf0`, which creates confusion.
+        #
+        # --no-git-reset:
+        #   Do not delete code version artifacts so the next step can pick the version
+        #
+        # --dist-tag next:
+        #   Make this dev version installable with `@next`
+        #
+        # --preid dev:
+        #   Tag version with `dev` instead of `alpha`
+        #
+        # --force-publish:
+        #   lerna doesn't want to publish anything otherwise - "lerna success No changed packages
+        #   to publish"
+        # --exact
+        #   lerna will link the dependencies of monorepo packages without ^ operator as npm
+        #   is apparently bad at resolving ^ dependencies of the canary versions. For e.g
+        #   @chainsafe/lodestar-cli@^0.34.0-dev.4 resolves to => 0.34.0
+        #
+        # NOTE: Using --preid dev.$(git rev-parse --short=7 HEAD) results in `0.24.3-dev.3ddb91d.0+3ddb91d`
+        run: |
+          node_modules/.bin/lerna publish from-package \
+          --yes \
+          --no-verify-access \
+          --dist-tag next \
+          --no-git-reset \
+          --force-publish \
+          --exact
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+
+  docker:
+    name: Publish to Docker Hub
+    runs-on: ubuntu-latest
+    needs: npm
+    steps:
+      - uses: actions/checkout@v2
+      # https://github.com/docker/setup-qemu-action
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+      # https://github.com/docker/setup-buildx-action
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+      - name: Login to Docker Hub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - run: docker buildx build --push --tag chainsafe/lodestar:next --platform linux/amd64 --build-arg VERSION=${{ needs.npm.outputs.version }} .
+      - run: docker run chainsafe/lodestar:next --help

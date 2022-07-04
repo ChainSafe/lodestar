@@ -2,16 +2,15 @@ import {phase0, Slot, ssz} from "@chainsafe/lodestar-types";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {extendError, sleep} from "@chainsafe/lodestar-utils";
 import {Api} from "@chainsafe/lodestar-api";
+import {toHexString} from "@chainsafe/ssz";
 import {IClock, ILoggerVc} from "../util/index.js";
+import {PubkeyHex} from "../types.js";
+import {Metrics} from "../metrics.js";
 import {ValidatorStore} from "./validatorStore.js";
 import {AttestationDutiesService, AttDutyAndProof} from "./attestationDuties.js";
 import {groupAttDutiesByCommitteeIndex} from "./utils.js";
-import {IndicesService} from "./indices.js";
-import {toHexString} from "@chainsafe/ssz";
 import {ChainHeaderTracker, HeadEventData} from "./chainHeaderTracker.js";
 import {ValidatorEvent, ValidatorEventEmitter} from "./emitter.js";
-import {PubkeyHex} from "../types.js";
-import {Metrics} from "../metrics.js";
 
 type AttestationServiceOpts = {
   afterBlockDelaySlotFraction?: number;
@@ -29,20 +28,11 @@ export class AttestationService {
     private readonly clock: IClock,
     private readonly validatorStore: ValidatorStore,
     private readonly emitter: ValidatorEventEmitter,
-    indicesService: IndicesService,
     chainHeadTracker: ChainHeaderTracker,
     private readonly metrics: Metrics | null,
     private readonly opts?: AttestationServiceOpts
   ) {
-    this.dutiesService = new AttestationDutiesService(
-      logger,
-      api,
-      clock,
-      validatorStore,
-      indicesService,
-      chainHeadTracker,
-      metrics
-    );
+    this.dutiesService = new AttestationDutiesService(logger, api, clock, validatorStore, chainHeadTracker, metrics);
 
     // At most every slot, check existing duties from AttestationDutiesService and run tasks
     clock.runEverySlot(this.runAttestationTasks);

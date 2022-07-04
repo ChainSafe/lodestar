@@ -1,12 +1,12 @@
+import {expect} from "chai";
+import sinon from "sinon";
+import {SinonStubbedInstance} from "sinon";
 import {config} from "@chainsafe/lodestar-config/default";
 import {config as minimalConfig} from "@chainsafe/lodestar-config/default";
 import {altair, phase0, ssz} from "@chainsafe/lodestar-types";
 import {ZERO_HASH} from "@chainsafe/lodestar-beacon-state-transition";
 import {ForkChoice, IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {toHexString} from "@chainsafe/ssz";
-import {expect} from "chai";
-import sinon from "sinon";
-import {SinonStubbedInstance} from "sinon";
 import * as stateApiUtils from "../../../../../src/api/impl/beacon/state/utils.js";
 import {getDebugApi} from "../../../../../src/api/impl/debug/index.js";
 import {INetwork, Network} from "../../../../../src/network/index.js";

@@ -2,6 +2,7 @@ import {IBeaconNodeOptions} from "@chainsafe/lodestar";
 import {RecursivePartial} from "@chainsafe/lodestar-utils";
 import {removeUndefinedRecursive} from "../../util/index.js";
 import * as api from "./api.js";
+import * as builder from "./builder.js";
 import * as chain from "./chain.js";
 import * as eth1 from "./eth1.js";
 import * as execution from "./execution.js";
@@ -14,6 +15,7 @@ export type IBeaconNodeArgs = api.IApiArgs &
   chain.IChainArgs &
   eth1.IEth1Args &
   execution.ExecutionEngineArgs &
+  builder.ExecutionBuilderArgs &
   logger.ILoggerArgs &
   metrics.IMetricsArgs &
   network.INetworkArgs &
@@ -27,6 +29,7 @@ export function parseBeaconNodeArgs(args: IBeaconNodeArgs): RecursivePartial<IBe
     // db: {},
     eth1: eth1.parseArgs(args),
     executionEngine: execution.parseArgs(args),
+    executionBuilder: builder.parseArgs(args),
     logger: logger.parseArgs(args),
     metrics: metrics.parseArgs(args),
     network: network.parseArgs(args),
@@ -39,6 +42,7 @@ export const beaconNodeOptions = {
   ...chain.options,
   ...eth1.options,
   ...execution.options,
+  ...builder.options,
   ...logger.options,
   ...metrics.options,
   ...network.options,

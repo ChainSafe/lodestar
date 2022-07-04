@@ -1,6 +1,6 @@
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {Slot, ssz} from "@chainsafe/lodestar-types";
-import {IDatabaseController, Bucket, IDbMetrics, Repository} from "@chainsafe/lodestar-db";
+import {IDatabaseController, Bucket, Repository} from "@chainsafe/lodestar-db";
 import {bytesToInt} from "@chainsafe/lodestar-utils";
 
 /**
@@ -13,8 +13,8 @@ import {bytesToInt} from "@chainsafe/lodestar-utils";
  * jump directly to 800 and delete the key 1000.
  */
 export class BackfilledRanges extends Repository<Slot, Slot> {
-  constructor(config: IChainForkConfig, db: IDatabaseController<Uint8Array, Uint8Array>, metrics?: IDbMetrics) {
-    super(config, db, Bucket.backfilled_ranges, ssz.Slot, metrics);
+  constructor(config: IChainForkConfig, db: IDatabaseController<Uint8Array, Uint8Array>) {
+    super(config, db, Bucket.backfilled_ranges, ssz.Slot);
   }
 
   decodeKey(data: Buffer): number {

@@ -1,14 +1,14 @@
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {phase0, ssz} from "@chainsafe/lodestar-types";
-import {Db, Bucket, Repository, IDbMetrics} from "@chainsafe/lodestar-db";
+import {Db, Bucket, Repository} from "@chainsafe/lodestar-db";
 
 /**
  * DepositData indexed by deposit index
  * Removed when included on chain or old
  */
 export class DepositEventRepository extends Repository<number, phase0.DepositEvent> {
-  constructor(config: IChainForkConfig, db: Db, metrics?: IDbMetrics) {
-    super(config, db, Bucket.phase0_depositEvent, ssz.phase0.DepositEvent, metrics);
+  constructor(config: IChainForkConfig, db: Db) {
+    super(config, db, Bucket.phase0_depositEvent, ssz.phase0.DepositEvent);
   }
 
   async deleteOld(depositCount: number): Promise<void> {

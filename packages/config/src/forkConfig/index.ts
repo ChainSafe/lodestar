@@ -1,4 +1,4 @@
-import {GENESIS_EPOCH, ForkName, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
+import {GENESIS_EPOCH, ForkName, SLOTS_PER_EPOCH, ForkSeq} from "@chainsafe/lodestar-params";
 import {Slot, allForks, Version, ssz} from "@chainsafe/lodestar-types";
 import {IChainConfig} from "../chainConfig/index.js";
 import {IForkConfig, IForkInfo} from "./types.js";
@@ -6,10 +6,21 @@ import {IForkConfig, IForkInfo} from "./types.js";
 export * from "./types.js";
 
 export function createIForkConfig(config: IChainConfig): IForkConfig {
-  const phase0 = {name: ForkName.phase0, epoch: GENESIS_EPOCH, version: config.GENESIS_FORK_VERSION};
-  const altair = {name: ForkName.altair, epoch: config.ALTAIR_FORK_EPOCH, version: config.ALTAIR_FORK_VERSION};
+  const phase0 = {
+    name: ForkName.phase0,
+    seq: ForkSeq.phase0,
+    epoch: GENESIS_EPOCH,
+    version: config.GENESIS_FORK_VERSION,
+  };
+  const altair = {
+    name: ForkName.altair,
+    seq: ForkSeq.altair,
+    epoch: config.ALTAIR_FORK_EPOCH,
+    version: config.ALTAIR_FORK_VERSION,
+  };
   const bellatrix = {
     name: ForkName.bellatrix,
+    seq: ForkSeq.bellatrix,
     epoch: config.BELLATRIX_FORK_EPOCH,
     version: config.BELLATRIX_FORK_VERSION,
   };
@@ -38,6 +49,9 @@ export function createIForkConfig(config: IChainConfig): IForkConfig {
     },
     getForkName(slot: Slot): ForkName {
       return this.getForkInfo(slot).name;
+    },
+    getForkSeq(slot: Slot): ForkSeq {
+      return this.getForkInfo(slot).seq;
     },
     getForkVersion(slot: Slot): Version {
       return this.getForkInfo(slot).version;

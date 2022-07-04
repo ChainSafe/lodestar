@@ -1,3 +1,4 @@
+import PeerId from "peer-id";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {allForks, Root, RootHex} from "@chainsafe/lodestar-types";
@@ -7,7 +8,6 @@ import {IBeaconChain} from "../chain/index.js";
 import {IMetrics} from "../metrics/index.js";
 import {shuffle} from "../util/shuffle.js";
 import {byteArrayEquals} from "../util/bytes.js";
-import PeerId from "peer-id";
 import {BlockError, BlockErrorCode} from "../chain/errors/index.js";
 import {wrapError} from "../util/wrapError.js";
 import {pruneSetToMax} from "../util/map.js";
@@ -136,15 +136,30 @@ export class UnknownBlockSync {
 
     if (!res.err) {
       const {signedBlock, peerIdStr} = res.result;
+      const parentSlot = signedBlock.message.slot;
+      const finalizedSlot = this.chain.forkChoice.getFinalizedBlock().slot;
       if (this.chain.forkChoice.hasBlock(signedBlock.message.parentRoot)) {
         // Bingo! Process block. Add to pending blocks anyway for recycle the cache that prevents duplicate processing
         this.processBlock(this.addToPendingBlocks(signedBlock, peerIdStr)).catch((e) => {
           this.logger.error("Unexpect error - processBlock", {}, e);
         });
+      } else if (parentSlot <= finalizedSlot) {
+        // the common ancestor of the downloading chain and canonical chain should be at least the finalized slot and
+        // we should found it through forkchoice. If not, we should penalize all peers sending us this block chain
+        // 0 - 1 - ... - n - finalizedSlot
+        //                \
+        //                parent 1 - parent 2 - ... - unknownParent block
+        this.logger.error("Downloaded block parent is before finalized slot", {
+          finalizedSlot,
+          parentSlot,
+          parentRoot: toHexString(this.config.getForkTypes(parentSlot).BeaconBlock.hashTreeRoot(signedBlock.message)),
+        });
+        this.removeAndDownscoreAllDescendants(block);
       } else {
         this.onUnknownBlock(signedBlock, peerIdStr);
       }
     } else {
+      // parentSlot > finalizedSlot, continue downloading parent of parent
       block.downloadAttempts++;
       const errorData = {root: block.parentBlockRootHex, attempts: block.downloadAttempts};
       if (block.downloadAttempts > MAX_ATTEMPTS_PER_BLOCK) {

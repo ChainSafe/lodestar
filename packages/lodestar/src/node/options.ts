@@ -6,11 +6,16 @@ import {defaultApiOptions, IApiOptions} from "../api/options.js";
 import {defaultChainOptions, IChainOptions} from "../chain/options.js";
 import {defaultDbOptions, IDatabaseOptions} from "../db/options.js";
 import {defaultEth1Options, Eth1Options} from "../eth1/options.js";
-import {defaultLoggerOptions, IBeaconLoggerOptions} from "./loggerOptions.js";
 import {defaultMetricsOptions, MetricsOptions} from "../metrics/options.js";
 import {defaultNetworkOptions, INetworkOptions} from "../network/options.js";
 import {defaultSyncOptions, SyncOptions} from "../sync/options.js";
-import {defaultExecutionEngineOpts, ExecutionEngineOpts} from "../executionEngine/index.js";
+import {
+  defaultExecutionEngineOpts,
+  ExecutionEngineOpts,
+  ExecutionBuilderOpts,
+  defaultExecutionBuilderOpts,
+} from "../execution/index.js";
+import {defaultLoggerOptions, IBeaconLoggerOptions} from "./loggerOptions.js";
 // Re-export so the CLI doesn't need to depend on lodestar-api
 export {allNamespaces} from "../api/rest/index.js";
 
@@ -20,6 +25,7 @@ export interface IBeaconNodeOptions {
   db: IDatabaseOptions;
   eth1: Eth1Options;
   executionEngine: ExecutionEngineOpts;
+  executionBuilder: ExecutionBuilderOpts;
   logger: IBeaconLoggerOptions;
   metrics: MetricsOptions;
   network: INetworkOptions;
@@ -32,6 +38,7 @@ export const defaultOptions: IBeaconNodeOptions = {
   db: defaultDbOptions,
   eth1: defaultEth1Options,
   executionEngine: defaultExecutionEngineOpts,
+  executionBuilder: defaultExecutionBuilderOpts,
   logger: defaultLoggerOptions,
   metrics: defaultMetricsOptions,
   network: defaultNetworkOptions,

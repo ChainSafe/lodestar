@@ -7,9 +7,10 @@ import {Slot} from "@chainsafe/lodestar-types";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {ForkChoice, ProtoArray, ForkChoiceStore, ExecutionStatus} from "@chainsafe/lodestar-fork-choice";
 import {
-  getEffectiveBalanceIncrementsZeroInactive,
   CachedBeaconStateAllForks,
-  bellatrix,
+  getEffectiveBalanceIncrementsZeroInactive,
+  isBellatrixStateType,
+  isMergeTransitionComplete,
 } from "@chainsafe/lodestar-beacon-state-transition";
 
 import {computeAnchorCheckpoint} from "../initState.js";
@@ -66,7 +67,7 @@ export function initializeForkChoice(
       finalizedEpoch: finalizedCheckpoint.epoch,
       finalizedRoot: toHexString(finalizedCheckpoint.root),
 
-      ...(bellatrix.isBellatrixStateType(state) && bellatrix.isMergeTransitionComplete(state)
+      ...(isBellatrixStateType(state) && isMergeTransitionComplete(state)
         ? {
             executionPayloadBlockHash: toHexString(state.latestExecutionPayloadHeader.blockHash),
             executionStatus: blockHeader.slot === GENESIS_SLOT ? ExecutionStatus.Valid : ExecutionStatus.Syncing,

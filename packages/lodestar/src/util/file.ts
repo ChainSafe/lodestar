@@ -4,19 +4,29 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import {promisify} from "node:util";
 
-/**
- * Recursively ensures directory exists by creating any missing directories
- * @param {string} filePath
- */
-export function ensureDirectoryExistence(filePath: string): boolean {
-  const dirname = path.dirname(filePath);
-  if (fs.existsSync(dirname)) {
+/** Ensure a directory exists */
+export async function ensureDir(path: string): Promise<void> {
+  try {
+    await promisify(fs.stat)(path);
+  } catch (_) {
+    // not exists
+    await promisify(fs.mkdir)(path, {recursive: true});
+  }
+}
+
+/** Write data to a file if it does not exist */
+export async function writeIfNotExist(filepath: string, bytes: Uint8Array): Promise<boolean> {
+  try {
+    await promisify(fs.stat)(filepath);
+    return false;
+    // file exists, do nothing
+  } catch (_) {
+    // not exists
+    await promisify(fs.writeFile)(filepath, bytes);
     return true;
   }
-  ensureDirectoryExistence(dirname);
-  fs.mkdirSync(dirname);
-  return true;
 }
 
 export function rmDir(dir: string): void {

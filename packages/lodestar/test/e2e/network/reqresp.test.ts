@@ -106,7 +106,7 @@ describe("network / ReqResp", function () {
     await connected;
 
     afterEachCallbacks.push(async () => {
-      chain.close();
+      await chain.close();
       controller.abort();
       await Promise.all([netA.stop(), netB.stop()]);
     });

@@ -1,12 +1,11 @@
 /**
  * @module metrics
  */
+import {collectDefaultMetrics, Metric, Registry} from "prom-client";
+import gcStats from "prometheus-gc-stats";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {BeaconStateAllForks, getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import {collectDefaultMetrics, Counter, Metric, Registry} from "prom-client";
-import gcStats from "prometheus-gc-stats";
-import {DbMetricLabels, IDbMetrics} from "@chainsafe/lodestar-db";
 import {createBeaconMetrics, IBeaconMetrics} from "./metrics/beacon.js";
 import {createLodestarMetrics, ILodestarMetrics} from "./metrics/lodestar.js";
 import {MetricsOptions} from "./options.js";
@@ -70,25 +69,6 @@ export function collectNodeJSMetrics(register: Registry): void {
   // - nodejs_gc_pause_seconds_total: Time spent in GC in seconds
   // - nodejs_gc_reclaimed_bytes_total: The number of bytes GC has freed
   gcStats(register)();
-}
-
-export function createDbMetrics(): {metrics: IDbMetrics; registry: Registry} {
-  const metrics = {
-    dbReads: new Counter<DbMetricLabels>({
-      name: "lodestar_db_reads",
-      labelNames: ["bucket"],
-      help: "Number of db reads, contains bucket label.",
-    }),
-    dbWrites: new Counter<DbMetricLabels>({
-      name: "lodestar_db_writes",
-      labelNames: ["bucket"],
-      help: "Number of db writes and deletes, contains bucket label.",
-    }),
-  };
-  const registry = new Registry();
-  registry.registerMetric(metrics.dbReads);
-  registry.registerMetric(metrics.dbWrites);
-  return {metrics, registry};
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

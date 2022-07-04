@@ -1,11 +1,11 @@
-import {digest} from "@chainsafe/as-sha256";
 import {compress, uncompress} from "snappyjs";
+import {RPC} from "libp2p-gossipsub/src/message/rpc";
+import {GossipsubMessage} from "libp2p-gossipsub/src/types";
+import {digest} from "@chainsafe/as-sha256";
 import {intToBytes} from "@chainsafe/lodestar-utils";
 import {ForkName} from "@chainsafe/lodestar-params";
 import {MESSAGE_DOMAIN_VALID_SNAPPY} from "./constants.js";
 import {GossipTopicCache} from "./topic.js";
-import {RPC} from "libp2p-gossipsub/src/message/rpc";
-import {GossipsubMessage} from "libp2p-gossipsub/src/types";
 
 /**
  * The function used to generate a gossipsub message id
@@ -57,7 +57,7 @@ export function msgIdFn(gossipTopicCache: GossipTopicCache, msg: GossipsubMessag
 }
 
 export class DataTransformSnappy {
-  constructor(private readonly gossipTopicCache: GossipTopicCache) {}
+  constructor(private readonly maxSizePerMessage: number) {}
 
   /**
    * Takes the data published by peers on a topic and transforms the data.
@@ -67,13 +67,16 @@ export class DataTransformSnappy {
    */
   inboundTransform(topicStr: string, data: Uint8Array): Uint8Array {
     // No need to parse topic, everything is snappy compressed
-    return uncompress(data);
+    return uncompress(data, this.maxSizePerMessage);
   }
   /**
    * Takes the data to be published (a topic and associated data) transforms the data. The
    * transformed data will then be used to create a `RawGossipsubMessage` to be sent to peers.
    */
   outboundTransform(topicStr: string, data: Uint8Array): Uint8Array {
+    if (data.length > this.maxSizePerMessage) {
+      throw Error(`ssz_snappy encoded data length ${length} > ${this.maxSizePerMessage}`);
+    }
     // No need to parse topic, everything is snappy compressed
     return compress(data);
   }

@@ -16,6 +16,14 @@ describe("chain / bls / multithread queue", function () {
   beforeEach(() => (controller = new AbortController()));
   afterEach(() => controller.abort());
 
+  const afterEachCallbacks: (() => Promise<void> | void)[] = [];
+  afterEach(async () => {
+    while (afterEachCallbacks.length > 0) {
+      const callback = afterEachCallbacks.pop();
+      if (callback) await callback();
+    }
+  });
+
   const sets: ISignatureSet[] = [];
   before("generate test data", () => {
     for (let i = 0; i < 3; i++) {
@@ -33,7 +41,9 @@ describe("chain / bls / multithread queue", function () {
   });
 
   async function initializePool(): Promise<BlsMultiThreadWorkerPool> {
-    const pool = new BlsMultiThreadWorkerPool({}, {logger, metrics: null, signal: controller.signal});
+    const pool = new BlsMultiThreadWorkerPool({}, {logger, metrics: null});
+    // await terminating all workers
+    afterEachCallbacks.push(() => pool.close());
     // Wait until initialized
     await pool["waitTillInitialized"]();
     return pool;

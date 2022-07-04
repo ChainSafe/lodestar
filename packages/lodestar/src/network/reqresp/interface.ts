@@ -8,8 +8,8 @@ import {IPeerRpcScoreStore} from "../peers/index.js";
 import {MetadataController} from "../metadata.js";
 import {INetworkEventBus} from "../events.js";
 import {PeersData} from "../peers/peersData.js";
-import {ReqRespHandlers} from "./handlers/index.js";
 import {IMetrics} from "../../metrics/index.js";
+import {ReqRespHandlers} from "./handlers/index.js";
 import {RequestTypedContainer} from "./types.js";
 
 export interface IReqResp {

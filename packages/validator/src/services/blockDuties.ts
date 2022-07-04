@@ -4,9 +4,9 @@ import {toHexString} from "@chainsafe/ssz";
 import {Api, routes} from "@chainsafe/lodestar-api";
 import {extendError} from "@chainsafe/lodestar-utils";
 import {IClock, differenceHex, ILoggerVc} from "../util/index.js";
-import {ValidatorStore} from "./validatorStore.js";
 import {PubkeyHex} from "../types.js";
 import {Metrics} from "../metrics.js";
+import {ValidatorStore} from "./validatorStore.js";
 
 /** Only retain `HISTORICAL_DUTIES_EPOCHS` duties prior to the current epoch */
 const HISTORICAL_DUTIES_EPOCHS = 2;
@@ -156,9 +156,10 @@ export class BlockDutiesService {
       throw extendError(e, "Error on getProposerDuties");
     });
     const dependentRoot = proposerDuties.dependentRoot;
-    const relevantDuties = proposerDuties.data.filter((duty) =>
-      this.validatorStore.hasVotingPubkey(toHexString(duty.pubkey))
-    );
+    const relevantDuties = proposerDuties.data.filter((duty) => {
+      const pubkeyHex = toHexString(duty.pubkey);
+      return this.validatorStore.hasVotingPubkey(pubkeyHex) && this.validatorStore.isDoppelgangerSafe(pubkeyHex);
+    });
 
     this.logger.debug("Downloaded proposer duties", {
       epoch,

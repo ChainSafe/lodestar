@@ -4,7 +4,7 @@
 
 Mocha / Chai utility for interacting with eth2.0 spec tests. 
 
-For usage see [spec tests]("https://github.com/ChainSafe/lodestar/tree/master/packages/lodestar/test/spec")
+For usage see [spec tests]("https://github.com/ChainSafe/lodestar/tree/unstable/packages/lodestar/test/spec")
 
 ## License
 

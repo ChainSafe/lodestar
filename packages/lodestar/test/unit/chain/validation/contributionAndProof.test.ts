@@ -1,7 +1,9 @@
-import {defaultChainConfig} from "@chainsafe/lodestar-config";
 import sinon from "sinon";
 import {SinonStubbedInstance} from "sinon";
+import {defaultChainConfig} from "@chainsafe/lodestar-config";
 import {BitArray} from "@chainsafe/ssz";
+import {SLOTS_PER_EPOCH, SYNC_COMMITTEE_SUBNET_SIZE} from "@chainsafe/lodestar-params";
+import {createIChainForkConfig} from "@chainsafe/lodestar-config";
 import {BeaconChain, IBeaconChain} from "../../../../src/chain/index.js";
 import {LocalClock} from "../../../../src/chain/clock/index.js";
 import {SyncCommitteeErrorCode} from "../../../../src/chain/errors/syncCommitteeError.js";
@@ -12,9 +14,8 @@ import {validateSyncCommitteeGossipContributionAndProof} from "../../../../src/c
 import * as syncCommitteeUtils from "../../../../../beacon-state-transition/src/util/aggregator.js";
 import {SinonStubFn} from "../../../utils/types.js";
 import {generateCachedStateWithPubkeys} from "../../../utils/state.js";
-import {SLOTS_PER_EPOCH, SYNC_COMMITTEE_SUBNET_SIZE} from "@chainsafe/lodestar-params";
-import {createIChainForkConfig} from "@chainsafe/lodestar-config";
 import {SeenContributionAndProof} from "../../../../src/chain/seenCache/index.js";
+import {BlsVerifierMock} from "../../../utils/mocks/bls.js";
 
 // https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/altair/p2p-interface.md
 // TODO remove stub
@@ -151,7 +152,7 @@ describe.skip("Sync Committee Contribution And Proof validation", function () {
     isSyncCommitteeAggregatorStub.returns(true);
     const headState = await generateCachedStateWithPubkeys({slot: currentSlot}, config, true);
     chain.getHeadState.returns(headState);
-    chain.bls = {verifySignatureSets: async () => false};
+    chain.bls = new BlsVerifierMock(false);
     await expectRejectedWithLodestarError(
       validateSyncCommitteeGossipContributionAndProof(chain, signedContributionAndProof),
       SyncCommitteeErrorCode.INVALID_SIGNATURE

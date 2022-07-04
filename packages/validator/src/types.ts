@@ -26,3 +26,9 @@ export type LodestarValidatorDatabaseController = Pick<
   IDatabaseController<Uint8Array, Uint8Array>,
   "get" | "start" | "values" | "batchPut" | "keys" | "get" | "put"
 >;
+
+/**
+ * Callback to request a parent process to shudown.
+ * This could be an AbortController, but sending a message upwards is very useful to log a reason for shudown
+ */
+export type ProcessShutdownCallback = (err: Error) => void;

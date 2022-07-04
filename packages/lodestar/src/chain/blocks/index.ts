@@ -1,19 +1,23 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
 import {allForks} from "@chainsafe/lodestar-types";
-import {sleep} from "@chainsafe/lodestar-utils";
-import {ChainEvent} from "../emitter.js";
+import {sleep, toHex} from "@chainsafe/lodestar-utils";
 import {JobItemQueue} from "../../util/queue/index.js";
 import {BlockError, BlockErrorCode, ChainSegmentError} from "../errors/index.js";
+import {BlockProcessOpts} from "../options.js";
+import {IBeaconChain} from "../interface.js";
 import {verifyBlock, VerifyBlockModules} from "./verifyBlock.js";
 import {importBlock, ImportBlockModules} from "./importBlock.js";
 import {assertLinearChainSegment} from "./utils/chainSegment.js";
-import {BlockProcessOpts} from "../options.js";
 import {PartiallyVerifiedBlock} from "./types.js";
 export {PartiallyVerifiedBlockFlags} from "./types.js";
 
 const QUEUE_MAX_LENGHT = 256;
 
-export type ProcessBlockModules = VerifyBlockModules & ImportBlockModules;
+export type ProcessBlockModules = VerifyBlockModules &
+  ImportBlockModules & {
+    persistInvalidSszValue: IBeaconChain["persistInvalidSszValue"];
+    persistInvalidSszView: IBeaconChain["persistInvalidSszView"];
+  };
 
 /**
  * BlockProcessor processes block jobs in a queued fashion, one after the other.
@@ -55,13 +59,13 @@ export class BlockProcessor {
  * All other effects are provided by downstream event handlers
  */
 export async function processBlock(
-  modules: ProcessBlockModules,
+  chain: ProcessBlockModules,
   partiallyVerifiedBlock: PartiallyVerifiedBlock,
   opts: BlockProcessOpts
 ): Promise<void> {
   try {
-    const fullyVerifiedBlock = await verifyBlock(modules, partiallyVerifiedBlock, opts);
-    await importBlock(modules, fullyVerifiedBlock);
+    const fullyVerifiedBlock = await verifyBlock(chain, partiallyVerifiedBlock, opts);
+    await importBlock(chain, fullyVerifiedBlock);
   } catch (e) {
     // above functions should only throw BlockError
     const err = getBlockError(e, partiallyVerifiedBlock.block);
@@ -75,7 +79,12 @@ export async function processBlock(
       return;
     }
 
-    modules.emitter.emit(ChainEvent.errorBlock, err);
+    if (!(err instanceof BlockError)) {
+      chain.logger.error("Non BlockError received", {}, err);
+      return;
+    }
+
+    onBlockError(chain, err);
 
     throw err;
   }
@@ -85,20 +94,20 @@ export async function processBlock(
  * Similar to processBlockJob but this process a chain segment
  */
 export async function processChainSegment(
-  modules: ProcessBlockModules,
+  chain: ProcessBlockModules,
   partiallyVerifiedBlocks: PartiallyVerifiedBlock[],
   opts: BlockProcessOpts
 ): Promise<void> {
   const blocks = partiallyVerifiedBlocks.map((b) => b.block);
-  assertLinearChainSegment(modules.config, blocks);
+  assertLinearChainSegment(chain.config, blocks);
 
   let importedBlocks = 0;
 
   for (const partiallyVerifiedBlock of partiallyVerifiedBlocks) {
     try {
       // TODO: Re-use preState
-      const fullyVerifiedBlock = await verifyBlock(modules, partiallyVerifiedBlock, opts);
-      await importBlock(modules, fullyVerifiedBlock);
+      const fullyVerifiedBlock = await verifyBlock(chain, partiallyVerifiedBlock, opts);
+      await importBlock(chain, fullyVerifiedBlock);
       importedBlocks++;
 
       // this avoids keeping our node busy processing blocks
@@ -117,7 +126,13 @@ export async function processChainSegment(
         continue;
       }
 
-      modules.emitter.emit(ChainEvent.errorBlock, err);
+      // TODO: De-duplicate with logic above
+      // ChainEvent.errorBlock
+      if (!(err instanceof BlockError)) {
+        chain.logger.error("Non BlockError received", {}, err);
+      } else {
+        onBlockError(chain, err);
+      }
 
       // Convert to ChainSegmentError to append `importedBlocks` data
       const chainSegmentError = new ChainSegmentError(partiallyVerifiedBlock.block, err.type, importedBlocks);
@@ -136,5 +151,33 @@ function getBlockError(e: unknown, block: allForks.SignedBeaconBlock): BlockErro
     return blockError;
   } else {
     return new BlockError(block, {code: BlockErrorCode.BEACON_CHAIN_ERROR, error: e as Error});
+  }
+}
+
+function onBlockError(chain: ProcessBlockModules, err: BlockError): void {
+  // err type data may contain CachedBeaconState which is too much to log
+  const slimError = new Error();
+  slimError.message = err.message;
+  slimError.stack = err.stack;
+  chain.logger.error("Block error", {slot: err.signedBlock.message.slot, errCode: err.type.code}, slimError);
+
+  if (err.type.code === BlockErrorCode.INVALID_SIGNATURE) {
+    const {signedBlock} = err;
+    const blockSlot = signedBlock.message.slot;
+    const {state} = err.type;
+    const forkTypes = chain.config.getForkTypes(blockSlot);
+    chain.persistInvalidSszValue(forkTypes.SignedBeaconBlock, signedBlock, `${blockSlot}_invalid_signature`);
+    chain.persistInvalidSszView(state, `${state.slot}_invalid_signature`);
+  } else if (err.type.code === BlockErrorCode.INVALID_STATE_ROOT) {
+    const {signedBlock} = err;
+    const blockSlot = signedBlock.message.slot;
+    const {preState, postState} = err.type;
+    const forkTypes = chain.config.getForkTypes(blockSlot);
+    const invalidRoot = toHex(postState.hashTreeRoot());
+
+    const suffix = `slot_${blockSlot}_invalid_state_root_${invalidRoot}`;
+    chain.persistInvalidSszValue(forkTypes.SignedBeaconBlock, signedBlock, suffix);
+    chain.persistInvalidSszView(preState, `${suffix}_preState`);
+    chain.persistInvalidSszView(postState, `${suffix}_postState`);
   }
 }

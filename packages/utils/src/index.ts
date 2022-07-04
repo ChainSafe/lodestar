@@ -6,6 +6,7 @@ export * from "./errors.js";
 export * from "./format.js";
 export * from "./math.js";
 export * from "./objects.js";
+export {retry, RetryOptions} from "./retry.js";
 export * from "./notNullish.js";
 export * from "./sleep.js";
 export * from "./sort.js";

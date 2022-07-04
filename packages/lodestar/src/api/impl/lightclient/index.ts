@@ -1,9 +1,8 @@
-import {ApiModules} from "../types.js";
-import {resolveStateId} from "../beacon/state/utils.js";
 import {routes} from "@chainsafe/lodestar-api";
-import {linspace} from "../../../util/numpy.js";
 import {fromHexString} from "@chainsafe/ssz";
 import {ProofType, Tree} from "@chainsafe/persistent-merkle-tree";
+import {ApiModules} from "../types.js";
+import {resolveStateId} from "../beacon/state/utils.js";
 import {IApiOptions} from "../../options.js";
 
 // TODO: Import from lightclient/server package
@@ -42,23 +41,24 @@ export function getLightclientApi(
       };
     },
 
-    async getCommitteeUpdates(from, to) {
-      const periods = linspace(from, to);
-      const updates = await Promise.all(periods.map((period) => chain.lightClientServer.getCommitteeUpdates(period)));
+    // eslint-disable-next-line @typescript-eslint/naming-convention
+    async getUpdates(start_period, count) {
+      const periods = Array.from({length: count}, (_ignored, i) => i + start_period);
+      const updates = await Promise.all(periods.map((period) => chain.lightClientServer.getUpdates(period)));
       return {data: updates};
     },
 
-    async getLatestHeadUpdate() {
-      return {data: await chain.lightClientServer.getLatestHeadUpdate()};
+    async getOptimisticUpdate() {
+      return {data: await chain.lightClientServer.getOptimisticUpdate()};
     },
 
-    async getLatestFinalizedHeadUpdate() {
-      return {data: await chain.lightClientServer.getLatestFinalizedHeadUpdate()};
+    async getFinalityUpdate() {
+      return {data: await chain.lightClientServer.getFinalityUpdate()};
     },
 
-    async getSnapshot(blockRoot) {
-      const snapshotProof = await chain.lightClientServer.getSnapshot(fromHexString(blockRoot));
-      return {data: snapshotProof};
+    async getBootstrap(blockRoot) {
+      const bootstrapProof = await chain.lightClientServer.getBootstrap(fromHexString(blockRoot));
+      return {data: bootstrapProof};
     },
   };
 }

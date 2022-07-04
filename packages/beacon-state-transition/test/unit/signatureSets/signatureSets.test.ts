@@ -1,14 +1,14 @@
 import crypto from "node:crypto";
+import {expect} from "chai";
 import bls from "@chainsafe/bls";
 import {config} from "@chainsafe/lodestar-config/default";
-import {ValidatorIndex, BLSSignature} from "@chainsafe/lodestar-types";
-import {ZERO_HASH} from "../../../src/constants/index.js";
-import {generateCachedState} from "../../utils/state.js";
-import {generateValidators} from "../../utils/validator.js";
-import {expect} from "chai";
-import {phase0, allForks} from "../../../src/index.js";
+import {phase0, ValidatorIndex, BLSSignature} from "@chainsafe/lodestar-types";
 import {FAR_FUTURE_EPOCH, MAX_EFFECTIVE_BALANCE} from "@chainsafe/lodestar-params";
 import {BitArray} from "@chainsafe/ssz";
+import {ZERO_HASH} from "../../../src/constants/index.js";
+import {getAllBlockSignatureSets} from "../../../src/signatureSets/index.js";
+import {generateCachedState} from "../../utils/state.js";
+import {generateValidators} from "../../utils/validator.js";
 
 const EMPTY_SIGNATURE = Buffer.alloc(96);
 
@@ -63,7 +63,7 @@ describe("signatureSets", () => {
 
     const state = generateCachedState(config, {validators});
 
-    const signatureSets = allForks.getAllBlockSignatureSets(state, signedBlock);
+    const signatureSets = getAllBlockSignatureSets(state, signedBlock);
     expect(signatureSets.length).to.equal(
       // block signature
       1 +

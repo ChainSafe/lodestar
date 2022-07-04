@@ -1,5 +1,5 @@
 import {SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY} from "@chainsafe/lodestar-params";
-import {defaultDefaultFeeRecipient} from "@chainsafe/lodestar-validator";
+import {defaultOptions as defaultValidatorOptions} from "@chainsafe/lodestar-validator";
 import {ArchiverOpts} from "./archiver/index.js";
 import {ForkChoiceOpts} from "./forkChoice/index.js";
 
@@ -30,9 +30,7 @@ export const defaultChainOptions: IChainOptions = {
   blsVerifyAllMainThread: false,
   blsVerifyAllMultiThread: false,
   disableBlsBatchVerify: false,
-  persistInvalidSszObjects: true,
-  persistInvalidSszObjectsDir: "",
   proposerBoostEnabled: true,
   safeSlotsToImportOptimistically: SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY,
-  defaultFeeRecipient: defaultDefaultFeeRecipient,
+  defaultFeeRecipient: defaultValidatorOptions.defaultFeeRecipient,
 };

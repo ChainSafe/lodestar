@@ -1,14 +1,13 @@
-import {IChainConfig} from "@chainsafe/lodestar-config";
 import {assert} from "chai";
+import {IChainConfig} from "@chainsafe/lodestar-config";
+import {phase0, ssz} from "@chainsafe/lodestar-types";
+import {fromHexString} from "@chainsafe/ssz";
 import {getDevBeaconNode} from "../../utils/node/beacon.js";
 import {waitForEvent} from "../../utils/events/resolver.js";
-import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {getAndInitDevValidators} from "../../utils/node/validator.js";
 import {ChainEvent} from "../../../src/chain/index.js";
-import {Network} from "../../../src/network/index.js";
 import {connect} from "../../utils/network.js";
 import {testLogger, LogLevel, TestLoggerOpts} from "../../utils/logger.js";
-import {fromHexString} from "@chainsafe/ssz";
 
 describe("sync / finalized sync", function () {
   const validatorCount = 8;
@@ -56,10 +55,8 @@ describe("sync / finalized sync", function () {
       testLoggerOpts,
     });
 
-    afterEachCallbacks.push(() => Promise.all(validators.map((validator) => validator.stop())));
+    afterEachCallbacks.push(() => Promise.all(validators.map((validator) => validator.close())));
 
-    await Promise.all(validators.map((validator) => validator.start()));
-    afterEachCallbacks.push(() => Promise.all(validators.map((v) => v.stop())));
     // stop beacon node after validators
     afterEachCallbacks.push(() => bn.close());
 
@@ -84,7 +81,7 @@ describe("sync / finalized sync", function () {
       ssz.phase0.SignedBeaconBlock.equals(block, head)
     );
 
-    await connect(bn2.network as Network, bn.network.peerId, bn.network.localMultiaddrs);
+    await connect(bn2.network, bn.network.peerId, bn.network.localMultiaddrs);
 
     try {
       await waitForSynced;

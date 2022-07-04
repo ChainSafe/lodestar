@@ -2,7 +2,7 @@ import http, {Server} from "node:http";
 import {Socket} from "node:net";
 import {IGauge} from "../../metrics/index.js";
 
-type SocketMetrics = {
+export type SocketMetrics = {
   activeSockets: IGauge;
   socketsBytesRead: IGauge;
   socketsBytesWritten: IGauge;

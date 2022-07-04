@@ -1,9 +1,9 @@
-import {config} from "@chainsafe/lodestar-config/default";
-import {ForkChoice, IProtoBlock} from "@chainsafe/lodestar-fork-choice";
-import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {expect} from "chai";
-import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import sinon, {SinonStubbedInstance} from "sinon";
+import {config} from "@chainsafe/lodestar-config/default";
+import {ForkChoice, ProtoBlock} from "@chainsafe/lodestar-fork-choice";
+import {WinstonLogger} from "@chainsafe/lodestar-utils";
+import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {BeaconChain, ChainEventEmitter} from "../../../src/chain/index.js";
 import {LocalClock} from "../../../src/chain/clock/index.js";
 import {PrecomputeNextEpochTransitionScheduler} from "../../../src/chain/precomputeNextEpochTransition.js";
@@ -51,7 +51,7 @@ describe("PrecomputeEpochScheduler", () => {
   });
 
   it("should skip, headSlot is less than clock slot", async () => {
-    forkChoiceStub.getHead.returns({slot: SLOTS_PER_EPOCH - 2} as IProtoBlock);
+    forkChoiceStub.getHead.returns({slot: SLOTS_PER_EPOCH - 2} as ProtoBlock);
     await Promise.all([
       preComputeScheduler.prepareForNextEpoch(SLOTS_PER_EPOCH - 1),
       sandbox.clock.tickAsync((config.SECONDS_PER_SLOT * 1000 * 2) / 3),
@@ -61,7 +61,7 @@ describe("PrecomputeEpochScheduler", () => {
   });
 
   it("should run regen.getBlockSlotState", async () => {
-    forkChoiceStub.getHead.returns({slot: SLOTS_PER_EPOCH - 1} as IProtoBlock);
+    forkChoiceStub.getHead.returns({slot: SLOTS_PER_EPOCH - 1} as ProtoBlock);
     regenStub.getBlockSlotState.resolves();
     await Promise.all([
       preComputeScheduler.prepareForNextEpoch(SLOTS_PER_EPOCH - 1),
@@ -72,7 +72,7 @@ describe("PrecomputeEpochScheduler", () => {
   });
 
   it("should handle regen.getBlockSlotState error", async () => {
-    forkChoiceStub.getHead.returns({slot: SLOTS_PER_EPOCH - 1} as IProtoBlock);
+    forkChoiceStub.getHead.returns({slot: SLOTS_PER_EPOCH - 1} as ProtoBlock);
     regenStub.getBlockSlotState.rejects("Unit test error");
     expect(loggerStub.error.calledOnce).to.be.false;
     await Promise.all([

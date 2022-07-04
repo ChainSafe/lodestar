@@ -1,11 +1,11 @@
+import deepmerge from "deepmerge";
 import {ssz} from "@chainsafe/lodestar-types";
 import {config as defaultConfig} from "@chainsafe/lodestar-config/default";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {allForks, phase0} from "@chainsafe/lodestar-types";
-import {IProtoBlock, ExecutionStatus} from "@chainsafe/lodestar-fork-choice";
+import {ProtoBlock, ExecutionStatus} from "@chainsafe/lodestar-fork-choice";
 import {isPlainObject} from "@chainsafe/lodestar-utils";
 import {RecursivePartial} from "@chainsafe/lodestar-utils";
-import deepmerge from "deepmerge";
 import {EMPTY_SIGNATURE, ZERO_HASH} from "../../src/constants/index.js";
 import {ReqRespBlockResponse} from "../../src/network/reqresp/types.js";
 
@@ -100,7 +100,7 @@ export function generateSignedBlock(
   );
 }
 
-export function generateEmptyProtoBlock(): IProtoBlock {
+export function generateEmptyProtoBlock(): ProtoBlock {
   const rootHex = "0x" + "00".repeat(32);
   return {
     slot: 0,
@@ -118,8 +118,8 @@ export function generateEmptyProtoBlock(): IProtoBlock {
   };
 }
 
-export function generateProtoBlock(overrides: RecursivePartial<IProtoBlock> = {}): IProtoBlock {
-  return deepmerge<IProtoBlock, RecursivePartial<IProtoBlock>>(generateEmptyProtoBlock(), overrides, {
+export function generateProtoBlock(overrides: RecursivePartial<ProtoBlock> = {}): ProtoBlock {
+  return deepmerge<ProtoBlock, RecursivePartial<ProtoBlock>>(generateEmptyProtoBlock(), overrides, {
     isMergeableObject: isPlainObject,
   });
 }

@@ -1,3 +1,5 @@
+import fs from "node:fs";
+import got from "got";
 import {SLOTS_PER_EPOCH, ForkName} from "@chainsafe/lodestar-params";
 import {getClient} from "@chainsafe/lodestar-api";
 import {IBeaconNodeOptions, getStateTypeFromBytes} from "@chainsafe/lodestar";
@@ -5,15 +7,26 @@ import {IChainConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
 import {Checkpoint} from "@chainsafe/lodestar-types/phase0";
 import {RecursivePartial, fromHex} from "@chainsafe/lodestar-utils";
 import {BeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
-import fs from "node:fs";
-import got from "got";
 import * as mainnet from "./mainnet.js";
+import * as dev from "./dev.js";
+import * as gnosis from "./gnosis.js";
 import * as prater from "./prater.js";
 import * as kiln from "./kiln.js";
 import * as ropsten from "./ropsten.js";
+import * as sepolia from "./sepolia.js";
 
-export type NetworkName = "mainnet" | "prater" | "kiln" | "ropsten" | "dev";
-export const networkNames: NetworkName[] = ["mainnet", "prater", "kiln", "ropsten"];
+export type NetworkName = "mainnet" | "dev" | "gnosis" | "prater" | "kiln" | "ropsten" | "sepolia";
+export const networkNames: NetworkName[] = [
+  "mainnet",
+  "gnosis",
+  "prater",
+  "kiln",
+  "ropsten",
+  "sepolia",
+
+  // Leave always as last network. The order matters for the --help printout
+  "dev",
+];
 
 export type WeakSubjectivityFetchOptions = {
   weakSubjectivityServerUrl: string;
@@ -26,18 +39,24 @@ function getNetworkData(
   chainConfig: IChainConfig;
   depositContractDeployBlock: number;
   genesisFileUrl: string | null;
-  bootnodesFileUrl: string;
+  bootnodesFileUrl: string | null;
   bootEnrs: string[];
 } {
   switch (network) {
     case "mainnet":
       return mainnet;
+    case "dev":
+      return dev;
+    case "gnosis":
+      return gnosis;
     case "prater":
       return prater;
     case "kiln":
       return kiln;
     case "ropsten":
       return ropsten;
+    case "sepolia":
+      return sepolia;
     default:
       throw Error(`Network not supported: ${network}`);
   }
@@ -75,6 +94,10 @@ export function getGenesisFileUrl(network: NetworkName): string | null {
  */
 export async function fetchBootnodes(network: NetworkName): Promise<string[]> {
   const bootnodesFileUrl = getNetworkData(network).bootnodesFileUrl;
+  if (bootnodesFileUrl === null) {
+    return [];
+  }
+
   const bootnodesFile = await got.get(bootnodesFileUrl).text();
 
   const enrs: string[] = [];

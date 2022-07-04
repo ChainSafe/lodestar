@@ -1,7 +1,8 @@
+import crypto from "node:crypto";
+import {promisify} from "node:util";
 import LibP2p from "libp2p";
 import PeerId from "peer-id";
 import {Multiaddr} from "multiaddr";
-import crypto from "node:crypto";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {Discv5, ENR, IDiscv5Metrics, IDiscv5DiscoveryInputOptions} from "@chainsafe/discv5";
@@ -9,14 +10,16 @@ import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/
 import {IMetrics} from "../../metrics/index.js";
 import {ENRKey, SubnetType} from "../metadata.js";
 import {prettyPrintPeerId} from "../util.js";
-import {IPeerRpcScoreStore, ScoreState} from "./score.js";
 import {pruneSetToMax} from "../../util/map.js";
+import {IPeerRpcScoreStore, ScoreState} from "./score.js";
 import {deserializeEnrSubnets, zeroAttnets, zeroSyncnets} from "./utils/enrSubnetsDeserialize.js";
 
 /** Max number of cached ENRs after discovering a good peer */
 const MAX_CACHED_ENRS = 100;
 /** Max age a cached ENR will be considered for dial */
 const MAX_CACHED_ENR_AGE_MS = 5 * 60 * 1000;
+
+const randomBytesAsync = promisify(crypto.randomBytes);
 
 export type PeerDiscoveryOpts = {
   maxPeers: number;
@@ -226,13 +229,14 @@ export class PeerDiscovery {
       this.metrics?.discovery.findNodeQueryRequests.inc({action: "start"});
     }
 
-    const randomNodeId = crypto.randomBytes(64).toString("hex");
-
+    // Use async version to prevent blocking the event loop
+    // Time to completion of this function is not critical, in case this async call add extra lag
+    const randomNodeId = await randomBytesAsync(64);
     this.randomNodeQuery = {code: QueryStatusCode.Active, count: 0};
     const timer = this.metrics?.discovery.findNodeQueryTime.startTimer();
 
     try {
-      const enrs = await this.discv5.findNode(randomNodeId);
+      const enrs = await this.discv5.findNode(randomNodeId.toString("hex"));
       this.metrics?.discovery.findNodeQueryEnrCount.inc(enrs.length);
     } catch (e) {
       this.logger.error("Error on discv5.findNode()", {}, e as Error);

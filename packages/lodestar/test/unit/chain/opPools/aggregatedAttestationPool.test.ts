@@ -1,10 +1,10 @@
+import {expect} from "chai";
 import type {SecretKey} from "@chainsafe/bls/types";
 import bls from "@chainsafe/bls";
 import {BitArray, fromHexString} from "@chainsafe/ssz";
 import {createIChainForkConfig, defaultChainConfig} from "@chainsafe/lodestar-config";
 import {CachedBeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import {expect} from "chai";
 import {ssz, phase0} from "@chainsafe/lodestar-types";
 import {
   AggregatedAttestationPool,

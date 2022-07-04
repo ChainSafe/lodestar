@@ -5,15 +5,15 @@ import {
   isSyncCommitteeAggregator,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import {BLSSignature, Epoch, Root, Slot, SyncPeriod, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {BLSSignature, Epoch, RootHex, Slot, SyncPeriod, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {toHexString} from "@chainsafe/ssz";
 import {Api, routes} from "@chainsafe/lodestar-api";
 import {extendError} from "@chainsafe/lodestar-utils";
-import {IndicesService} from "./indices.js";
 import {IClock, ILoggerVc} from "../util/index.js";
-import {ValidatorStore} from "./validatorStore.js";
 import {PubkeyHex} from "../types.js";
 import {Metrics} from "../metrics.js";
+import {ValidatorStore} from "./validatorStore.js";
+import {syncCommitteeIndicesToSubnets} from "./utils.js";
 
 /** Only retain `HISTORICAL_DUTIES_PERIODS` duties prior to the current periods. */
 const HISTORICAL_DUTIES_PERIODS = 2;
@@ -32,6 +32,18 @@ const ALTAIR_FORK_LOOKAHEAD_EPOCHS = 0;
 /** How many epochs prior from a subscription starting, ask the node to subscribe */
 const SUBSCRIPTIONS_LOOKAHEAD_EPOCHS = 2;
 
+export type SyncDutySubnet = {
+  pubkey: string;
+  /** Index of validator in validator registry. */
+  validatorIndex: ValidatorIndex;
+  /**
+   * The indices of the validator in the sync committee.
+   * The same validator can appear multiples in the sync committee. Given how sync messages are constructor, the
+   * validator client only cares in which subnets the validator is in, not the specific index.
+   */
+  subnets: number[];
+};
+
 export type SyncSelectionProof = {
   /** This value is only set to not null if the proof indicates that the validator is an aggregator. */
   selectionProof: BLSSignature | null;
@@ -40,12 +52,18 @@ export type SyncSelectionProof = {
 
 /** Neatly joins SyncDuty with the locally-generated `selectionProof`. */
 export type SyncDutyAndProofs = {
-  duty: routes.validator.SyncDuty;
+  duty: SyncDutySubnet;
+  /**
+   * Array because the same validator can appear multiple times in the sync committee.
+   * `routes.validator.SyncDuty` `.validatorSyncCommitteeIndices` is an array for that reason.
+   * SelectionProof signs over slot + index in committee, so the length of `.selectionProofs` equals
+   * `.validatorSyncCommitteeIndices`.
+   */
   selectionProofs: SyncSelectionProof[];
 };
 
 // To assist with readability
-type DutyAtPeriod = {dependentRoot: Root; duty: routes.validator.SyncDuty};
+type DutyAtPeriod = {dependentRoot: RootHex; duty: SyncDutySubnet};
 
 /**
  * Validators are part of a static long (~27h) sync committee, and part of static subnets.
@@ -61,8 +79,7 @@ export class SyncCommitteeDutiesService {
     private readonly api: Api,
     clock: IClock,
     private readonly validatorStore: ValidatorStore,
-    private readonly indicesService: IndicesService,
-    private readonly metrics: Metrics | null
+    metrics: Metrics | null
   ) {
     // Running this task every epoch is safe since a re-org of many epochs is very unlikely
     // TODO: If the re-org event is reliable consider re-running then
@@ -109,7 +126,7 @@ export class SyncCommitteeDutiesService {
   removeDutiesForKey(pubkey: PubkeyHex): void {
     for (const [syncPeriod, validatorDutyAtPeriodMap] of this.dutiesByIndexByPeriod) {
       for (const [validatorIndex, dutyAtPeriod] of validatorDutyAtPeriodMap) {
-        if (toHexString(dutyAtPeriod.duty.pubkey) === pubkey) {
+        if (dutyAtPeriod.duty.pubkey === pubkey) {
           validatorDutyAtPeriodMap.delete(validatorIndex);
           if (validatorDutyAtPeriodMap.size === 0) {
             this.dutiesByIndexByPeriod.delete(syncPeriod);
@@ -127,12 +144,12 @@ export class SyncCommitteeDutiesService {
 
     await Promise.all([
       // Run pollSyncCommittees immediately for all known local indices
-      this.pollSyncCommittees(currentEpoch, this.indicesService.getAllLocalIndices()).catch((e: Error) => {
+      this.pollSyncCommittees(currentEpoch, this.validatorStore.getAllLocalIndices()).catch((e: Error) => {
         this.logger.error("Error on poll SyncDuties", {epoch: currentEpoch}, e);
       }),
 
       // At the same time fetch any remaining unknown validator indices, then poll duties for those newIndices only
-      this.indicesService
+      this.validatorStore
         .pollValidatorIndices()
         .then((newIndices) => this.pollSyncCommittees(currentEpoch, newIndices))
         .catch((e: Error) => {
@@ -188,7 +205,9 @@ export class SyncCommitteeDutiesService {
             if (currentEpoch >= fromEpoch - SUBSCRIPTIONS_LOOKAHEAD_EPOCHS) {
               syncCommitteeSubscriptions.push({
                 validatorIndex,
-                syncCommitteeIndices: dutyAtEpoch.duty.validatorSyncCommitteeIndices,
+                // prepareSyncCommitteeSubnets does not care about which specific index in the sync committee the
+                // validator is, but at what subnets is it participating.
+                syncCommitteeIndices: dutyAtEpoch.duty.subnets.map((subnet) => subnet * SYNC_COMMITTEE_SUBNET_SIZE),
                 untilEpoch,
                 // No need to send isAggregator here since the beacon node will assume validator always aggregates
               });
@@ -220,16 +239,29 @@ export class SyncCommitteeDutiesService {
       throw extendError(e, "Failed to obtain SyncDuties");
     });
 
-    const dependentRoot = syncDuties.dependentRoot;
+    const dependentRoot = toHexString(syncDuties.dependentRoot);
     const dutiesByIndex = new Map<ValidatorIndex, DutyAtPeriod>();
     let count = 0;
 
     for (const duty of syncDuties.data) {
       const {validatorIndex} = duty;
-      if (!this.indicesService.hasValidatorIndex(validatorIndex)) {
+      if (!this.validatorStore.hasValidatorIndex(validatorIndex)) {
         continue;
       }
       count++;
+
+      // Note: For networks where `state.validators.length < SYNC_COMMITTEE_SIZE` the same validator can appear
+      // multiple times in the sync committee. So `routes.validator.SyncDuty` `.validatorSyncCommitteeIndices`
+      // is an array, with all of those apparences.
+      //
+      // Validator signs two messages:
+      // `SyncCommitteeMessage`:
+      //  - depends on slot, blockRoot, and validatorIndex.
+      //  - Validator signs and publishes only one message regardless of validatorSyncCommitteeIndices length
+      // `SyncCommitteeContribution`:
+      //  - depends on slot, blockRoot, validatorIndex, and subnet.
+      //  - Validator must sign and publish only one message per subnet MAX. Regarless of validatorSyncCommitteeIndices
+      const subnets = syncCommitteeIndicesToSubnets(duty.validatorSyncCommitteeIndices);
 
       // TODO: Enable dependentRoot functionality
       // Meanwhile just overwrite them, since the latest duty will be older and less likely to re-org
@@ -240,9 +272,12 @@ export class SyncCommitteeDutiesService {
       // - The dependent root has changed, signalling a re-org.
       //
       // if (reorg) this.metrics?.syncCommitteeDutiesReorg.inc()
-
+      //
       // Using `alreadyWarnedReorg` avoids excessive logs.
-      dutiesByIndex.set(validatorIndex, {dependentRoot, duty});
+
+      // TODO: Use memory-efficient toHexString()
+      const pubkeyHex = toHexString(duty.pubkey);
+      dutiesByIndex.set(validatorIndex, {dependentRoot, duty: {pubkey: pubkeyHex, validatorIndex, subnets}});
     }
 
     // these could be redundant duties due to the state of next period query reorged
@@ -251,25 +286,17 @@ export class SyncCommitteeDutiesService {
     const period = computeSyncPeriodAtEpoch(epoch);
     this.dutiesByIndexByPeriod.set(period, dutiesByIndex);
 
-    this.logger.debug("Downloaded SyncDuties", {
-      epoch,
-      dependentRoot: toHexString(dependentRoot),
-      count,
-    });
+    this.logger.debug("Downloaded SyncDuties", {epoch, dependentRoot, count});
   }
 
-  private async getSelectionProofs(slot: Slot, duty: routes.validator.SyncDuty): Promise<SyncSelectionProof[]> {
-    // Fast indexing with precomputed pubkeyHex. Fallback to toHexString(duty.pubkey)
-    const pubkey = this.indicesService.index2pubkey.get(duty.validatorIndex) ?? toHexString(duty.pubkey);
-
+  private async getSelectionProofs(slot: Slot, duty: SyncDutySubnet): Promise<SyncSelectionProof[]> {
     const dutiesAndProofs: SyncSelectionProof[] = [];
-    for (const index of duty.validatorSyncCommitteeIndices) {
-      const subcommitteeIndex = Math.floor(index / SYNC_COMMITTEE_SUBNET_SIZE);
-      const selectionProof = await this.validatorStore.signSyncCommitteeSelectionProof(pubkey, slot, subcommitteeIndex);
+    for (const subnet of duty.subnets) {
+      const selectionProof = await this.validatorStore.signSyncCommitteeSelectionProof(duty.pubkey, slot, subnet);
       dutiesAndProofs.push({
         // selectionProof === null is used to check if is aggregator
         selectionProof: isSyncCommitteeAggregator(selectionProof) ? selectionProof : null,
-        subcommitteeIndex,
+        subcommitteeIndex: subnet,
       });
     }
     return dutiesAndProofs;

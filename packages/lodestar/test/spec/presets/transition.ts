@@ -1,12 +1,12 @@
-import {allForks, BeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
-import {ssz} from "@chainsafe/lodestar-types";
+import {BeaconStateAllForks, stateTransition} from "@chainsafe/lodestar-beacon-state-transition";
+import {allForks, ssz} from "@chainsafe/lodestar-types";
 import {createIChainForkConfig, IChainConfig} from "@chainsafe/lodestar-config";
 import {ForkName} from "@chainsafe/lodestar-params";
-import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
 import {bnToNum} from "@chainsafe/lodestar-utils";
+import {config} from "@chainsafe/lodestar-config/default";
+import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {TestRunnerFn} from "../utils/types.js";
-import {config} from "@chainsafe/lodestar-config/default";
 import {getPreviousFork} from "./fork.js";
 
 export const transition: TestRunnerFn<TransitionTestCase, BeaconStateAllForks> = (forkNext) => {
@@ -43,7 +43,7 @@ export const transition: TestRunnerFn<TransitionTestCase, BeaconStateAllForks> =
       let state = createCachedBeaconStateTest(testcase.pre, testConfig);
       for (let i = 0; i < meta.blocks_count; i++) {
         const signedBlock = testcase[`blocks_${i}`] as allForks.SignedBeaconBlock;
-        state = allForks.stateTransition(state, signedBlock, {
+        state = stateTransition(state, signedBlock, {
           verifyStateRoot: true,
           verifyProposer: false,
           verifySignatures: false,

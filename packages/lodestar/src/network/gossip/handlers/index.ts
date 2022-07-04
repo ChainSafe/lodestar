@@ -1,5 +1,5 @@
-import {toHexString} from "@chainsafe/ssz";
 import PeerId from "peer-id";
+import {toHexString} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {ILogger, prettyBytes} from "@chainsafe/lodestar-utils";
@@ -75,7 +75,8 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
   return {
     [GossipType.beacon_block]: async (signedBlock, topic, peerIdStr, seenTimestampSec) => {
       const slot = signedBlock.message.slot;
-      const blockHex = prettyBytes(config.getForkTypes(slot).BeaconBlock.hashTreeRoot(signedBlock.message));
+      const forkTypes = config.getForkTypes(slot);
+      const blockHex = prettyBytes(forkTypes.BeaconBlock.hashTreeRoot(signedBlock.message));
       const delaySec = chain.clock.secFromSlot(slot, seenTimestampSec);
       logger.verbose("Received gossip block", {
         slot: slot,
@@ -96,12 +97,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
         }
 
         if (e instanceof BlockGossipError && e.action === GossipAction.REJECT) {
-          const archivedPath = chain.persistInvalidSszObject(
-            "signedBlock",
-            config.getForkTypes(slot).SignedBeaconBlock.serialize(signedBlock),
-            `gossip_slot_${slot}`
-          );
-          logger.debug("The invalid gossip block was written to", archivedPath);
+          chain.persistInvalidSszValue(forkTypes.SignedBeaconBlock, signedBlock, `gossip_reject_slot_${slot}`);
         }
 
         throw e;
@@ -151,12 +147,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
         validationResult = await validateGossipAggregateAndProofRetryUnknownRoot(chain, signedAggregateAndProof);
       } catch (e) {
         if (e instanceof AttestationError && e.action === GossipAction.REJECT) {
-          const archivedPath = chain.persistInvalidSszObject(
-            "signedAggregatedAndProof",
-            ssz.phase0.SignedAggregateAndProof.serialize(signedAggregateAndProof),
-            toHexString(ssz.phase0.SignedAggregateAndProof.hashTreeRoot(signedAggregateAndProof))
-          );
-          logger.debug("The invalid gossip aggregate and proof was written to", archivedPath, e);
+          chain.persistInvalidSszValue(ssz.phase0.SignedAggregateAndProof, signedAggregateAndProof, "gossip_reject");
         }
         throw e;
       }
@@ -191,12 +182,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
         validationResult = await validateGossipAttestationRetryUnknownRoot(chain, attestation, subnet);
       } catch (e) {
         if (e instanceof AttestationError && e.action === GossipAction.REJECT) {
-          const archivedPath = chain.persistInvalidSszObject(
-            "attestation",
-            ssz.phase0.Attestation.serialize(attestation),
-            toHexString(ssz.phase0.Attestation.hashTreeRoot(attestation))
-          );
-          logger.debug("The invalid gossip attestation was written to", archivedPath);
+          chain.persistInvalidSszValue(ssz.phase0.Attestation, attestation, "gossip_reject");
         }
         throw e;
       }
@@ -268,12 +254,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
         contributionAndProof
       ).catch((e) => {
         if (e instanceof SyncCommitteeError && e.action === GossipAction.REJECT) {
-          const archivedPath = chain.persistInvalidSszObject(
-            "contributionAndProof",
-            ssz.altair.SignedContributionAndProof.serialize(contributionAndProof),
-            toHexString(ssz.altair.SignedContributionAndProof.hashTreeRoot(contributionAndProof))
-          );
-          logger.debug("The invalid gossip contribution and proof was written to", archivedPath);
+          chain.persistInvalidSszValue(ssz.altair.SignedContributionAndProof, contributionAndProof, "gossip_reject");
         }
         throw e;
       });
@@ -293,12 +274,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
         indexInSubcommittee = (await validateGossipSyncCommittee(chain, syncCommittee, subnet)).indexInSubcommittee;
       } catch (e) {
         if (e instanceof SyncCommitteeError && e.action === GossipAction.REJECT) {
-          const archivedPath = chain.persistInvalidSszObject(
-            "syncCommittee",
-            ssz.altair.SyncCommitteeMessage.serialize(syncCommittee),
-            toHexString(ssz.altair.SyncCommitteeMessage.hashTreeRoot(syncCommittee))
-          );
-          logger.debug("The invalid gossip sync committee was written to", archivedPath);
+          chain.persistInvalidSszValue(ssz.altair.SyncCommitteeMessage, syncCommittee, "gossip_reject");
         }
         throw e;
       }

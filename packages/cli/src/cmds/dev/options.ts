@@ -1,9 +1,9 @@
 import {Options} from "yargs";
 import {ICliCommandOptions} from "../../util/index.js";
 import {beaconOptions, IBeaconArgs} from "../beacon/options.js";
-import {beaconNodeOptions} from "../../options/index.js";
-import {IValidatorCliArgs, validatorOptions} from "../validator/options.js";
-import {KeymanagerArgs, keymanagerOptions} from "../../options/keymanagerOptions.js";
+import {NetworkName} from "../../networks/index.js";
+import {beaconNodeOptions, globalOptions} from "../../options/index.js";
+import {IValidatorCliArgs, validatorOptions, KeymanagerArgs, keymanagerOptions} from "../validator/options.js";
 
 type IDevOwnArgs = {
   genesisEth1Hash?: string;
@@ -11,16 +11,16 @@ type IDevOwnArgs = {
   startValidators?: string;
   genesisTime?: number;
   reset?: boolean;
+  doppelgangerProtectionEnabled?: boolean;
   server: string;
 } & KeymanagerArgs &
-  Pick<IValidatorCliArgs, "importKeystoresPath" | "importKeystoresPassword">;
+  Pick<IValidatorCliArgs, "importKeystoresPath" | "importKeystoresPassword" | "doppelgangerProtectionEnabled">;
 
 const devOwnOptions: ICliCommandOptions<IDevOwnArgs> = {
   ...keymanagerOptions,
-  ...{
-    importKeystoresPath: validatorOptions["importKeystoresPath"],
-    importKeystoresPassword: validatorOptions["importKeystoresPassword"],
-  },
+  importKeystoresPath: validatorOptions["importKeystoresPath"],
+  importKeystoresPassword: validatorOptions["importKeystoresPassword"],
+  doppelgangerProtectionEnabled: validatorOptions["doppelgangerProtectionEnabled"],
   genesisEth1Hash: {
     description: "If present it will create genesis with this eth1 hash.",
     type: "string",
@@ -35,7 +35,7 @@ const devOwnOptions: ICliCommandOptions<IDevOwnArgs> = {
   },
 
   startValidators: {
-    description: "Start interop validators in inclusive range with notation '0:7'",
+    description: "Start interop validators in inclusive range with notation '0..7'",
     type: "string",
     group: "dev",
   },
@@ -68,6 +68,13 @@ const devOwnOptions: ICliCommandOptions<IDevOwnArgs> = {
  * Note: use beaconNodeOptions and globalOptions to make sure option key is correct
  */
 const externalOptionsOverrides: {[k: string]: Options} = {
+  // Custom paths different than regular beacon, validator paths
+  // network="dev" will store all data in separate dir than other networks
+  network: {
+    ...globalOptions.network,
+    default: "dev" as NetworkName,
+  },
+
   "sync.isSingleNode": {
     ...beaconNodeOptions["sync.isSingleNode"],
     defaultDescription: undefined,

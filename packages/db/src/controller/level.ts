@@ -6,7 +6,8 @@ import {LevelUp} from "levelup";
 import level from "level";
 import all from "it-all";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {IDatabaseController, IDatabaseOptions, IFilterOptions, IKeyValue} from "./interface.js";
+import {DbReqOpts, IDatabaseController, IDatabaseOptions, IFilterOptions, IKeyValue} from "./interface.js";
+import {ILevelDbControllerMetrics} from "./metrics.js";
 
 enum Status {
   started = "started",
@@ -17,6 +18,13 @@ export interface ILevelDBOptions extends IDatabaseOptions {
   db?: LevelUp;
 }
 
+export type LevelDbControllerModules = {
+  logger: ILogger;
+  metrics?: ILevelDbControllerMetrics | null;
+};
+
+const BUCKET_ID_UNKNOWN = "unknown";
+
 /**
  * The LevelDB implementation of DB
  */
@@ -24,13 +32,14 @@ export class LevelDbController implements IDatabaseController<Uint8Array, Uint8A
   private status = Status.stopped;
   private db: LevelUp;
 
-  private opts: ILevelDBOptions;
+  private readonly opts: ILevelDBOptions;
+  private readonly logger: ILogger;
+  private metrics: ILevelDbControllerMetrics | null;
 
-  private logger: ILogger;
-
-  constructor(opts: ILevelDBOptions, {logger}: {logger: ILogger}) {
+  constructor(opts: ILevelDBOptions, {logger, metrics}: LevelDbControllerModules) {
     this.opts = opts;
     this.logger = logger;
+    this.metrics = metrics ?? null;
     // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment
     this.db = opts.db || level(opts.name || "beaconchain", {keyEncoding: "binary", valueEncoding: "binary"});
   }
@@ -50,12 +59,23 @@ export class LevelDbController implements IDatabaseController<Uint8Array, Uint8A
     await this.db.close();
   }
 
+  /** To inject metrics after CLI initialization */
+  setMetrics(metrics: ILevelDbControllerMetrics): void {
+    if (this.metrics !== null) {
+      throw Error("metrics can only be set once");
+    } else {
+      this.metrics = metrics;
+    }
+  }
+
   async clear(): Promise<void> {
     await this.db.clear();
   }
 
-  async get(key: Uint8Array): Promise<Uint8Array | null> {
+  async get(key: Uint8Array, opts?: DbReqOpts): Promise<Uint8Array | null> {
     try {
+      this.metrics?.dbReadReq.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, 1);
+      this.metrics?.dbReadItems.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, 1);
       return (await this.db.get(key)) as Uint8Array | null;
     } catch (e) {
       if ((e as NotFoundError).notFound) {
@@ -65,21 +85,33 @@ export class LevelDbController implements IDatabaseController<Uint8Array, Uint8A
     }
   }
 
-  async put(key: Uint8Array, value: Uint8Array): Promise<void> {
+  async put(key: Uint8Array, value: Uint8Array, opts?: DbReqOpts): Promise<void> {
+    this.metrics?.dbWriteReq.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, 1);
+    this.metrics?.dbWriteItems.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, 1);
+
     await this.db.put(key, value);
   }
 
-  async delete(key: Uint8Array): Promise<void> {
+  async delete(key: Uint8Array, opts?: DbReqOpts): Promise<void> {
+    this.metrics?.dbWriteReq.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, 1);
+    this.metrics?.dbWriteItems.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, 1);
+
     await this.db.del(key);
   }
 
-  async batchPut(items: IKeyValue<Uint8Array, Uint8Array>[]): Promise<void> {
+  async batchPut(items: IKeyValue<Uint8Array, Uint8Array>[], opts?: DbReqOpts): Promise<void> {
+    this.metrics?.dbWriteReq.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, 1);
+    this.metrics?.dbWriteItems.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, items.length);
+
     const batch = this.db.batch();
     for (const item of items) batch.put(item.key, item.value);
     await batch.write();
   }
 
-  async batchDelete(keys: Uint8Array[]): Promise<void> {
+  async batchDelete(keys: Uint8Array[], opts?: DbReqOpts): Promise<void> {
+    this.metrics?.dbWriteReq.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, 1);
+    this.metrics?.dbWriteItems.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, keys.length);
+
     const batch = this.db.batch();
     for (const key of keys) batch.del(key);
     await batch.write();
@@ -123,6 +155,9 @@ export class LevelDbController implements IDatabaseController<Uint8Array, Uint8A
     getValue: (key: Uint8Array, value: Uint8Array) => T,
     opts?: IFilterOptions<Uint8Array>
   ): AsyncGenerator<T> {
+    this.metrics?.dbWriteReq.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, 1);
+    let itemsRead = 0;
+
     // Entries = { keys: true, values: true }
     // Keys =    { keys: true, values: false }
     // Values =  { keys: false, values: true }
@@ -149,9 +184,14 @@ export class LevelDbController implements IDatabaseController<Uint8Array, Uint8A
           return; // Done
         }
 
+        // Count metrics after done condition
+        itemsRead++;
+
         yield getValue(key, value);
       }
     } finally {
+      this.metrics?.dbWriteItems.inc(itemsRead);
+
       // TODO: Should we await here?
       await new Promise<void>((resolve, reject) => {
         iterator.end((err) => {

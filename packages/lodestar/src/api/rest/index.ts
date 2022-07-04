@@ -1,136 +1,51 @@
-import fastify, {FastifyError, FastifyInstance} from "fastify";
-import fastifyCors from "fastify-cors";
-import querystring from "querystring";
 import {Api} from "@chainsafe/lodestar-api";
-import {registerRoutes, RouteConfig} from "@chainsafe/lodestar-api/server";
+import {registerRoutes} from "@chainsafe/lodestar-api/beacon/server";
 import {ErrorAborted, ILogger} from "@chainsafe/lodestar-utils";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {IMetrics} from "../../metrics/index.js";
-import {ApiError, NodeIsSyncing} from "../impl/errors.js";
-import {HttpActiveSocketsTracker} from "./activeSockets.js";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
+import {NodeIsSyncing} from "../impl/errors.js";
+import {RestApiServer, RestApiServerModules, RestApiServerMetrics} from "./base.js";
 export {allNamespaces} from "@chainsafe/lodestar-api";
 
-export type RestApiOptions = {
+export type BeaconRestApiServerOpts = {
   enabled: boolean;
   api: (keyof Api)[];
-  host: string;
-  cors: string;
   port: number;
+  cors?: string;
+  address?: string;
 };
 
-export const restApiOptionsDefault: RestApiOptions = {
+export const beaconRestApiServerOpts: BeaconRestApiServerOpts = {
   enabled: true,
   // ApiNamespace "debug" is not turned on by default
   api: ["beacon", "config", "events", "node", "validator"],
-  host: "127.0.0.1",
+  address: "127.0.0.1",
   port: 9596,
   cors: "*",
 };
 
-export interface IRestApiModules {
-  config: IBeaconConfig;
+export type BeaconRestApiServerModules = RestApiServerModules & {
+  config: IChainForkConfig;
   logger: ILogger;
   api: Api;
-  metrics: IMetrics | null;
-}
+  metrics: RestApiServerMetrics | null;
+};
 
 /**
  * REST API powered by `fastify` server.
  */
-export class RestApi {
-  private readonly opts: RestApiOptions;
-  private readonly server: FastifyInstance;
-  private readonly logger: ILogger;
-  private readonly activeSockets: HttpActiveSocketsTracker;
+export class BeaconRestApiServer extends RestApiServer {
+  constructor(optsArg: Partial<BeaconRestApiServerOpts>, modules: BeaconRestApiServerModules) {
+    const opts = {...beaconRestApiServerOpts, ...optsArg};
 
-  constructor(optsArg: Partial<RestApiOptions>, modules: IRestApiModules) {
-    // Apply opts defaults
-    const opts = {...restApiOptionsDefault, ...optsArg};
-    const {config, logger, api, metrics} = modules;
-
-    const server = fastify({
-      logger: false,
-      ajv: {customOptions: {coerceTypes: "array"}},
-      querystringParser: querystring.parse,
-    });
-
-    this.activeSockets = new HttpActiveSocketsTracker(server.server, metrics ? metrics.apiRest : null);
+    super(opts, modules);
 
     // Instantiate and register the routes with matching namespace in `opts.api`
-    registerRoutes(server, config, api, opts.api);
-
-    // To parse our ApiError -> statusCode
-    server.setErrorHandler((err, req, res) => {
-      if ((err as FastifyError).validation) {
-        void res.status(400).send((err as FastifyError).validation);
-      } else {
-        // Convert our custom ApiError into status code
-        const statusCode = err instanceof ApiError ? err.statusCode : 500;
-        void res.status(statusCode).send(err);
-      }
-    });
-
-    if (opts.cors) {
-      void server.register(fastifyCors, {origin: opts.cors});
-    }
-
-    // Log all incoming request to debug (before parsing). TODO: Should we hook latter in the lifecycle? https://www.fastify.io/docs/latest/Lifecycle/
-    // Note: Must be an async method so fastify can continue the release lifecycle. Otherwise we must call done() or the request stalls
-    server.addHook("onRequest", async (req, res) => {
-      const {operationId} = res.context.config as RouteConfig;
-      this.logger.debug(`Req ${req.id} ${req.ip} ${operationId}`);
-      metrics?.apiRest.requests.inc({operationId});
-    });
-
-    // Log after response
-    server.addHook("onResponse", async (req, res) => {
-      const {operationId} = res.context.config as RouteConfig;
-      this.logger.debug(`Res ${req.id} ${operationId} - ${res.raw.statusCode}`);
-      metrics?.apiRest.responseTime.observe({operationId}, res.getResponseTime() / 1000);
-    });
-
-    server.addHook("onError", async (req, res, err) => {
-      // Don't log ErrorAborted errors, they happen on node shutdown and are not usefull
-      // Don't log NodeISSyncing errors, they happen very frequently while syncing and the validator polls duties
-      if (err instanceof ErrorAborted || err instanceof NodeIsSyncing) return;
-
-      const {operationId} = res.context.config as RouteConfig;
-      this.logger.error(`Req ${req.id} ${operationId} error`, {}, err);
-      metrics?.apiRest.errors.inc({operationId});
-    });
-
-    this.opts = opts;
-    this.server = server;
-    this.logger = logger;
+    registerRoutes(this.server, modules.config, modules.api, opts.api);
   }
 
-  /**
-   * Start the REST API server.
-   */
-  async listen(): Promise<void> {
-    // TODO: Consider if necessary. The consumer could just not call this function
-    if (!this.opts.enabled) return;
-
-    try {
-      const address = await this.server.listen(this.opts.port, this.opts.host);
-      this.logger.info("Started REST api server", {address, namespaces: this.opts.api.join(",")});
-    } catch (e) {
-      this.logger.error("Error starting REST api server", {host: this.opts.host, port: this.opts.port}, e as Error);
-      throw e;
-    }
-  }
-
-  /**
-   * Close the server instance and terminate all existing connections.
-   */
-  async close(): Promise<void> {
-    // In NodeJS land calling close() only causes new connections to be rejected.
-    // Existing connections can prevent .close() from resolving for potentially forever.
-    // In Lodestar case when the BeaconNode wants to close we will just abruptly terminate
-    // all existing connections for a fast shutdown.
-    // Inspired by https://github.com/gajus/http-terminator/
-    this.activeSockets.destroyAll();
-
-    await this.server.close();
+  protected shouldIgnoreError(err: Error): boolean {
+    // Don't log ErrorAborted errors, they happen on node shutdown and are not usefull
+    // Don't log NodeISSyncing errors, they happen very frequently while syncing and the validator polls duties
+    return err instanceof ErrorAborted || err instanceof NodeIsSyncing;
   }
 }

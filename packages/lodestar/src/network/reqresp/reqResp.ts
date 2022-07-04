@@ -3,24 +3,24 @@
  */
 import {Connection} from "libp2p";
 import {HandlerProps} from "libp2p/src/registrar";
+import LibP2p from "libp2p";
+import PeerId from "peer-id";
 import {ForkName} from "@chainsafe/lodestar-params";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {allForks, phase0} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import LibP2p from "libp2p";
-import PeerId from "peer-id";
 import {RespStatus, timeoutOptions} from "../../constants/index.js";
+import {IPeerRpcScoreStore} from "../peers/index.js";
+import {MetadataController} from "../metadata.js";
+import {INetworkEventBus, NetworkEvent} from "../events.js";
+import {PeersData} from "../peers/peersData.js";
+import {IMetrics} from "../../metrics/index.js";
 import {IReqResp, IReqRespModules, IRateLimiter, Libp2pStream} from "./interface.js";
 import {sendRequest} from "./request/index.js";
 import {handleRequest, ResponseError} from "./response/index.js";
 import {onOutgoingReqRespError} from "./score.js";
-import {IPeerRpcScoreStore} from "../peers/index.js";
 import {assertSequentialBlocksInRange, formatProtocolId} from "./utils/index.js";
-import {MetadataController} from "../metadata.js";
-import {INetworkEventBus, NetworkEvent} from "../events.js";
-import {PeersData} from "../peers/peersData.js";
 import {ReqRespHandlers} from "./handlers/index.js";
-import {IMetrics} from "../../metrics/index.js";
 import {RequestError, RequestErrorCode} from "./request/index.js";
 import {
   Method,
@@ -149,9 +149,10 @@ export class ReqResp implements IReqResp {
     body: RequestBody,
     maxResponses = 1
   ): Promise<T> {
-    try {
-      this.metrics?.reqRespOutgoingRequests.inc({method});
+    this.metrics?.reqResp.outgoingRequests.inc({method});
+    const timer = this.metrics?.reqResp.outgoingRequestRoundtripTime.startTimer();
 
+    try {
       const encoding = this.peersData.getEncodingPreference(peerId.toB58String()) ?? Encoding.SSZ_SNAPPY;
       const result = await sendRequest<T>(
         {forkDigestContext: this.config, logger: this.logger, libp2p: this.libp2p, peersData: this.peersData},
@@ -168,18 +169,20 @@ export class ReqResp implements IReqResp {
 
       return result;
     } catch (e) {
-      this.metrics?.reqRespOutgoingErrors.inc({method});
+      this.metrics?.reqResp.outgoingErrors.inc({method});
 
       const peerAction = onOutgoingReqRespError(e as Error, method);
       if (
         e instanceof RequestError &&
         (e.type.code === RequestErrorCode.DIAL_ERROR || e.type.code === RequestErrorCode.DIAL_TIMEOUT)
       ) {
-        this.metrics?.reqRespDialErrors.inc();
+        this.metrics?.reqResp.dialErrors.inc();
       }
       if (peerAction !== null) this.peerRpcScores.applyAction(peerId, peerAction);
 
       throw e;
+    } finally {
+      timer?.();
     }
   }
 
@@ -193,9 +196,10 @@ export class ReqResp implements IReqResp {
         this.peersData.setEncodingPreference(peerId.toB58String(), encoding);
       }
 
-      try {
-        this.metrics?.reqRespIncomingRequests.inc({method});
+      this.metrics?.reqResp.incomingRequests.inc({method});
+      const timer = this.metrics?.reqResp.incomingRequestHandlerTime.startTimer();
 
+      try {
         await handleRequest(
           {config: this.config, logger: this.logger, peersData: this.peersData},
           this.onRequest.bind(this),
@@ -207,10 +211,12 @@ export class ReqResp implements IReqResp {
         );
         // TODO: Do success peer scoring here
       } catch {
-        this.metrics?.reqRespIncomingErrors.inc({method});
+        this.metrics?.reqResp.incomingErrors.inc({method});
 
         // TODO: Do error peer scoring here
         // Must not throw since this is an event handler
+      } finally {
+        timer?.();
       }
     };
   }

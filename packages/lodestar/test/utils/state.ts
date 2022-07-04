@@ -3,11 +3,10 @@ import {
   BeaconStateAllForks,
   CachedBeaconStateAllForks,
   createCachedBeaconState,
-  phase0,
   PubkeyIndexMap,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {BitArray} from "@chainsafe/ssz";
-import {allForks, altair, ssz} from "@chainsafe/lodestar-types";
+import {phase0, allForks, altair, ssz} from "@chainsafe/lodestar-types";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {
   EPOCHS_PER_HISTORICAL_VECTOR,
@@ -18,10 +17,10 @@ import {
   SYNC_COMMITTEE_SIZE,
 } from "@chainsafe/lodestar-params";
 
+import bls from "@chainsafe/bls";
 import {GENESIS_EPOCH, GENESIS_SLOT, ZERO_HASH} from "../../src/constants/index.js";
 import {generateEmptyBlock} from "./block.js";
 import {generateValidator, generateValidators} from "./validator.js";
-import bls from "@chainsafe/bls";
 
 /**
  * Copy of BeaconState, but all fields are marked optional to allow for swapping out variables as needed.

@@ -4,21 +4,19 @@ import bls from "@chainsafe/bls";
 import {toHexString} from "@chainsafe/ssz";
 import {createIChainForkConfig} from "@chainsafe/lodestar-config";
 import {config as mainnetConfig} from "@chainsafe/lodestar-config/default";
+import {ssz} from "@chainsafe/lodestar-types";
 import {SyncCommitteeService} from "../../../src/services/syncCommittee.js";
 import {SyncDutyAndProofs} from "../../../src/services/syncCommitteeDuties.js";
 import {ValidatorStore} from "../../../src/services/validatorStore.js";
 import {getApiClientStub} from "../../utils/apiStub.js";
-import {loggerVc, testLogger} from "../../utils/logger.js";
+import {loggerVc} from "../../utils/logger.js";
 import {ClockMock} from "../../utils/clock.js";
-import {IndicesService} from "../../../src/services/indices.js";
-import {ssz} from "@chainsafe/lodestar-types";
 import {ChainHeaderTracker} from "../../../src/services/chainHeaderTracker.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
 describe("SyncCommitteeService", function () {
   const sandbox = sinon.createSandbox();
-  const logger = testLogger();
   const ZERO_HASH = Buffer.alloc(32, 0);
 
   const api = getApiClientStub(sandbox);
@@ -49,7 +47,6 @@ describe("SyncCommitteeService", function () {
 
   it("Should produce, sign, and publish a sync committee + contribution", async () => {
     const clock = new ClockMock();
-    const indicesService = new IndicesService(logger, api, validatorStore, null);
     const syncCommitteeService = new SyncCommitteeService(
       config,
       loggerVc,
@@ -57,7 +54,6 @@ describe("SyncCommitteeService", function () {
       clock,
       validatorStore,
       chainHeaderTracker,
-      indicesService,
       null
     );
 
@@ -68,9 +64,9 @@ describe("SyncCommitteeService", function () {
     const duties: SyncDutyAndProofs[] = [
       {
         duty: {
-          pubkey: pubkeys[0],
+          pubkey: toHexString(pubkeys[0]),
           validatorIndex: 0,
-          validatorSyncCommitteeIndices: [7],
+          subnets: [0],
         },
         selectionProofs: [{selectionProof: ZERO_HASH, subcommitteeIndex: 0}],
       },

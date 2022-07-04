@@ -1,7 +1,4 @@
 import {ByteListType, ByteVectorType, ContainerType, ListCompositeType, VectorCompositeType} from "@chainsafe/ssz";
-import {ssz as primitiveSsz} from "../primitive/index.js";
-import {ssz as phase0Ssz} from "../phase0/index.js";
-import {ssz as altairSsz} from "../altair/index.js";
 import {
   BYTES_PER_LOGS_BLOOM,
   HISTORICAL_ROOTS_LIMIT,
@@ -10,8 +7,21 @@ import {
   MAX_EXTRA_DATA_BYTES,
   SLOTS_PER_HISTORICAL_ROOT,
 } from "@chainsafe/lodestar-params";
+import {ssz as primitiveSsz} from "../primitive/index.js";
+import {ssz as phase0Ssz} from "../phase0/index.js";
+import {ssz as altairSsz} from "../altair/index.js";
 
-const {Bytes20, Bytes32, UintNum64, Slot, ValidatorIndex, Root, BLSSignature, UintBn256: Uint256} = primitiveSsz;
+const {
+  Bytes20,
+  Bytes32,
+  UintNum64,
+  Slot,
+  ValidatorIndex,
+  Root,
+  BLSSignature,
+  UintBn256: Uint256,
+  BLSPubkey,
+} = primitiveSsz;
 
 /**
  * ByteList[MAX_BYTES_PER_TRANSACTION]
@@ -150,4 +160,67 @@ export const BeaconState = new ContainerType(
     latestExecutionPayloadHeader: ExecutionPayloadHeader, // [New in Merge]
   },
   {typeName: "BeaconState", jsonCase: "eth2"}
+);
+
+export const BlindedBeaconBlockBody = new ContainerType(
+  {
+    ...altairSsz.BeaconBlockBody.fields,
+    executionPayloadHeader: ExecutionPayloadHeader,
+  },
+  {typeName: "BlindedBeaconBlockBody", jsonCase: "eth2", cachePermanentRootStruct: true}
+);
+
+export const BlindedBeaconBlock = new ContainerType(
+  {
+    slot: Slot,
+    proposerIndex: ValidatorIndex,
+    // Reclare expandedType() with altair block and altair state
+    parentRoot: Root,
+    stateRoot: Root,
+    body: BlindedBeaconBlockBody,
+  },
+  {typeName: "BlindedBeaconBlock", jsonCase: "eth2", cachePermanentRootStruct: true}
+);
+
+export const SignedBlindedBeaconBlock = new ContainerType(
+  {
+    message: BlindedBeaconBlock,
+    signature: BLSSignature,
+  },
+  {typeName: "SignedBlindedBeaconBlock", jsonCase: "eth2"}
+);
+
+export const ValidatorRegistrationV1 = new ContainerType(
+  {
+    feeRecipient: Bytes20,
+    gasLimit: UintNum64,
+    timestamp: UintNum64,
+    pubkey: BLSPubkey,
+  },
+  {typeName: "ValidatorRegistrationV1", jsonCase: "eth2"}
+);
+
+export const SignedValidatorRegistrationV1 = new ContainerType(
+  {
+    message: ValidatorRegistrationV1,
+    signature: BLSSignature,
+  },
+  {typeName: "SignedValidatorRegistrationV1", jsonCase: "eth2"}
+);
+
+export const BuilderBid = new ContainerType(
+  {
+    header: ExecutionPayloadHeader,
+    value: Uint256,
+    pubkey: BLSPubkey,
+  },
+  {typeName: "BuilderBid", jsonCase: "eth2"}
+);
+
+export const SignedBuilderBid = new ContainerType(
+  {
+    message: BuilderBid,
+    signature: BLSSignature,
+  },
+  {typeName: "SignedBuilderBid", jsonCase: "eth2"}
 );

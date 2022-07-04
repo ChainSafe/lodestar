@@ -2,7 +2,7 @@ import {ISignatureSet} from "@chainsafe/lodestar-beacon-state-transition";
 import {IMetrics} from "../../metrics/index.js";
 import {IBlsVerifier} from "./interface.js";
 import {verifySignatureSetsMaybeBatch} from "./maybeBatch.js";
-import {getAggregatedPubkey} from "./utils.js";
+import {getAggregatedPubkey, getAggregatedPubkeysCount} from "./utils.js";
 
 export class BlsSingleThreadVerifier implements IBlsVerifier {
   private readonly metrics: IMetrics | null;
@@ -12,7 +12,9 @@ export class BlsSingleThreadVerifier implements IBlsVerifier {
   }
 
   async verifySignatureSets(sets: ISignatureSet[]): Promise<boolean> {
+    this.metrics?.bls.aggregatedPubkeys.inc(getAggregatedPubkeysCount(sets));
     const timer = this.metrics?.blsThreadPool.mainThreadDurationInThreadPool.startTimer();
+
     try {
       return verifySignatureSetsMaybeBatch(
         sets.map((set) => ({
@@ -24,5 +26,9 @@ export class BlsSingleThreadVerifier implements IBlsVerifier {
     } finally {
       if (timer) timer();
     }
+  }
+
+  async close(): Promise<void> {
+    // nothing to do
   }
 }

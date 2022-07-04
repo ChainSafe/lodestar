@@ -1,12 +1,12 @@
-import {computeCommitteeCount} from "@chainsafe/lodestar-beacon-state-transition";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {ATTESTATION_SUBNET_COUNT, SLOTS_PER_EPOCH, TARGET_AGGREGATORS_PER_COMMITTEE} from "@chainsafe/lodestar-params";
 import {PeerScoreThresholds} from "libp2p-gossipsub/src/score/index.js";
 import {
   defaultTopicScoreParams,
   PeerScoreParams,
   TopicScoreParams,
 } from "libp2p-gossipsub/src/score/peer-score-params.js";
+import {computeCommitteeCount} from "@chainsafe/lodestar-beacon-state-transition";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {ATTESTATION_SUBNET_COUNT, SLOTS_PER_EPOCH, TARGET_AGGREGATORS_PER_COMMITTEE} from "@chainsafe/lodestar-params";
 import {Eth2Context} from "../../chain/index.js";
 import {getActiveForks} from "../forks.js";
 import {Eth2GossipsubModules} from "./gossipsub.js";

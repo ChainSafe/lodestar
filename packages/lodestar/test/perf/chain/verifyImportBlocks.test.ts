@@ -1,21 +1,21 @@
 import {itBench, setBenchOpts} from "@dapplion/benchmark";
+import {config} from "@chainsafe/lodestar-config/default";
+import {SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
+import {LevelDbController} from "@chainsafe/lodestar-db";
+import {sleep} from "@chainsafe/lodestar-utils";
+import {defaultOptions as defaultValidatorOptions} from "@chainsafe/lodestar-validator";
 import {
   beforeValue,
   getNetworkCachedState,
   getNetworkCachedBlock,
 } from "../../../../beacon-state-transition/test/utils/index.js";
 import {rangeSyncTest} from "../../../../beacon-state-transition/test/perf/params.js";
-import {config} from "@chainsafe/lodestar-config/default";
-import {SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {BeaconChain} from "../../../src/chain/index.js";
-import {ExecutionEngineDisabled} from "../../../src/executionEngine/index.js";
+import {ExecutionEngineDisabled} from "../../../src/execution/engine/index.js";
 import {Eth1ForBlockProductionDisabled} from "../../../src/eth1/index.js";
 import {testLogger} from "../../utils/logger.js";
 import {linspace} from "../../../src/util/numpy.js";
 import {BeaconDb} from "../../../src/index.js";
-import {LevelDbController} from "@chainsafe/lodestar-db";
-import {sleep} from "@chainsafe/lodestar-utils";
-import {defaultDefaultFeeRecipient} from "@chainsafe/lodestar-validator";
 
 // Define this params in `packages/beacon-state-transition/test/perf/params.ts`
 // to trigger Github actions CI cache
@@ -82,7 +82,7 @@ describe("verify+import blocks - range sync perf test", () => {
           proposerBoostEnabled: true,
           safeSlotsToImportOptimistically: SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY,
           disableArchiveOnCheckpoint: true,
-          defaultFeeRecipient: defaultDefaultFeeRecipient,
+          defaultFeeRecipient: defaultValidatorOptions.defaultFeeRecipient,
         },
         {
           config: state.config,
@@ -116,7 +116,7 @@ describe("verify+import blocks - range sync perf test", () => {
         // so we can utilize worker threads to verify signatures
         blsVerifyOnMainThread: false,
       });
-      chain.close();
+      await chain.close();
     },
   });
 });

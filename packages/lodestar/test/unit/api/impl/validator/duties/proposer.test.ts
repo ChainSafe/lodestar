@@ -4,6 +4,8 @@ import chaiAsPromised from "chai-as-promised";
 import {config} from "@chainsafe/lodestar-config/default";
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 
+import {ssz} from "@chainsafe/lodestar-types";
+import {MAX_EFFECTIVE_BALANCE, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {IBeaconChain} from "../../../../../../src/chain/index.js";
 import {LocalClock} from "../../../../../../src/chain/clock/index.js";
 import {FAR_FUTURE_EPOCH} from "../../../../../../src/constants/index.js";
@@ -16,8 +18,6 @@ import {StubbedBeaconDb} from "../../../../../utils/stub/index.js";
 import {setupApiImplTestServer, ApiImplTestModules} from "../../index.test.js";
 import {testLogger} from "../../../../../utils/logger.js";
 import {createCachedBeaconStateTest} from "../../../../../utils/cachedBeaconState.js";
-import {ssz} from "@chainsafe/lodestar-types";
-import {MAX_EFFECTIVE_BALANCE, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 
 use(chaiAsPromised);
 

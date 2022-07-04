@@ -1,18 +1,19 @@
-import {BLSPubkey, Slot, bellatrix} from "@chainsafe/lodestar-types";
+import {BLSPubkey, Slot, BLSSignature, allForks, bellatrix} from "@chainsafe/lodestar-types";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {ForkName} from "@chainsafe/lodestar-params";
 import {extendError, prettyBytes} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
 import {Api} from "@chainsafe/lodestar-api";
 import {IClock, ILoggerVc} from "../util/index.js";
-import {ValidatorStore} from "./validatorStore.js";
-import {BlockDutiesService, GENESIS_SLOT} from "./blockDuties.js";
 import {PubkeyHex} from "../types.js";
 import {Metrics} from "../metrics.js";
+import {ValidatorStore} from "./validatorStore.js";
+import {BlockDutiesService, GENESIS_SLOT} from "./blockDuties.js";
 
 type BlockProposingServiceOpts = {
   graffiti?: string;
   strictFeeRecipientCheck?: boolean;
+  builder: {enabled?: boolean};
 };
 
 /**
@@ -77,50 +78,101 @@ export class BlockProposingService {
       this.logger.debug("Producing block", debugLogCtx);
       this.metrics?.proposerStepCallProduceBlock.observe(this.clock.secFromSlot(slot));
 
-      const block = await this.produceBlock(slot, randaoReveal, graffiti).catch((e: Error) => {
-        this.metrics?.blockProposingErrors.inc({error: "produce"});
-        throw extendError(e, "Failed to produce block");
-      });
-      const blockFeeRecipient = (block.data as bellatrix.BeaconBlock).body.executionPayload?.feeRecipient;
-      const feeRecipient = blockFeeRecipient !== undefined ? toHexString(blockFeeRecipient) : undefined;
-      if (feeRecipient !== undefined) {
-        const expectedFeeRecipient = this.validatorStore.feeRecipientByValidatorPubkey.getOrDefault(pubkeyHex);
-        // In Mev Builder, the feeRecipeint could differ and rewards to the feeRecipeint
-        // might be included in the block transactions as indicated by the BuilderBid
-        // Address this appropriately in the Mev boost PR
-        //
-        // Even for engine, there isn't any clarity as of now how to proceed with the
-        // the divergence of feeRecipient, the argument being that the bn <> engine setup
-        // has implied trust and are user-agents of the same entity.
-        // A better approach would be to have engine also provide something akin to BuilderBid
-        //
-        // The following conversation in the interop R&D channel can provide some context
-        // https://discord.com/channels/595666850260713488/892088344438255616/978374892678426695
-        // For now providing a strick check flag to enable disable this
-        if (feeRecipient !== expectedFeeRecipient && this.opts.strictFeeRecipientCheck) {
-          throw Error(`Invalid feeRecipient=${feeRecipient}, expected=${expectedFeeRecipient}`);
+      const expectedFeeRecipient = this.validatorStore.getFeeRecipient(pubkeyHex);
+      const block = await this.produceBlockWrapper(slot, randaoReveal, graffiti, expectedFeeRecipient).catch(
+        (e: Error) => {
+          this.metrics?.blockProposingErrors.inc({error: "produce"});
+          throw extendError(e, "Failed to produce block");
         }
-      }
-      this.logger.debug("Produced block", {...debugLogCtx, feeRecipient});
+      );
+
+      this.logger.debug("Produced block", {...debugLogCtx, ...block.debugLogCtx});
       this.metrics?.blocksProduced.inc();
 
       const signedBlock = await this.validatorStore.signBlock(pubkey, block.data, slot);
 
       this.metrics?.proposerStepCallPublishBlock.observe(this.clock.secFromSlot(slot));
 
-      await this.api.beacon.publishBlock(signedBlock).catch((e: Error) => {
+      await this.publishBlockWrapper(signedBlock).catch((e: Error) => {
         this.metrics?.blockProposingErrors.inc({error: "publish"});
         throw extendError(e, "Failed to publish block");
       });
-      this.logger.info("Published block", {...logCtx, graffiti, feeRecipient});
+      this.logger.info("Published block", {...logCtx, graffiti, ...block.debugLogCtx});
       this.metrics?.blocksPublished.inc();
     } catch (e) {
       this.logger.error("Error proposing block", logCtx, e as Error);
     }
   }
 
+  private publishBlockWrapper = async (signedBlock: allForks.FullOrBlindedSignedBeaconBlock): Promise<void> => {
+    return (signedBlock.message.body as bellatrix.BlindedBeaconBlockBody).executionPayloadHeader !== undefined
+      ? this.api.beacon.publishBlindedBlock(signedBlock as bellatrix.SignedBlindedBeaconBlock)
+      : this.api.beacon.publishBlock(signedBlock as allForks.SignedBeaconBlock);
+  };
+
+  private produceBlockWrapper = async (
+    slot: Slot,
+    randaoReveal: BLSSignature,
+    graffiti: string,
+    expectedFeeRecipient: string
+  ): Promise<{data: allForks.FullOrBlindedBeaconBlock} & {debugLogCtx: Record<string, string>}> => {
+    const blindedBlockPromise = this.opts.builder.enabled
+      ? this.api.validator.produceBlindedBlock(slot, randaoReveal, graffiti).catch((e: Error) => {
+          this.logger.error("Failed to produce builder block", {}, e as Error);
+          return null;
+        })
+      : null;
+
+    const fullBlockPromise = this.produceBlock(slot, randaoReveal, graffiti).catch((e: Error) => {
+      this.logger.error("Failed to produce builder block", {}, e as Error);
+      return null;
+    });
+
+    await Promise.all([blindedBlockPromise, fullBlockPromise]);
+
+    const blindedBlock = await blindedBlockPromise;
+    const fullBlock = await fullBlockPromise;
+
+    // A metric on the choice between blindedBlock and normal block can be applied
+    if (blindedBlock) {
+      const debugLogCtx = {source: "builder"};
+      return {...blindedBlock, debugLogCtx};
+    } else {
+      const debugLogCtx = {source: "engine"};
+      if (!fullBlock) {
+        throw Error("Failed to produce engine or builder block");
+      }
+      const blockFeeRecipient = (fullBlock.data as bellatrix.BeaconBlock).body.executionPayload?.feeRecipient;
+      const feeRecipient = blockFeeRecipient !== undefined ? toHexString(blockFeeRecipient) : undefined;
+      if (feeRecipient !== undefined) {
+        // In Mev Builder, the feeRecipient could differ and rewards to the feeRecipeint
+        // might be included in the block transactions as indicated by the BuilderBid
+        // Address this appropriately in the Mev boost PR
+        //
+        // Even for engine, there could be divergence of feeRecipient the argument being
+        // that the bn <> engine setup has implied trust and are user-agents of the same entity.
+        // A better approach would be to have engine also provide something akin to BuilderBid
+        //
+        // The following conversation in the interop R&D channel can provide some context
+        // https://discord.com/channels/595666850260713488/892088344438255616/978374892678426695
+        //
+        // For now providing a strick check flag to enable disable this
+        if (feeRecipient !== expectedFeeRecipient && this.opts.strictFeeRecipientCheck) {
+          throw Error(`Invalid feeRecipient=${feeRecipient}, expected=${expectedFeeRecipient}`);
+        }
+        Object.assign(debugLogCtx, {feeRecipient});
+      }
+      return {...fullBlock, debugLogCtx};
+      // throw Error("random")
+    }
+  };
+
   /** Wrapper around the API's different methods for producing blocks across forks */
-  private produceBlock: Api["validator"]["produceBlock"] = (slot, randaoReveal, graffiti) => {
+  private produceBlock: Api["validator"]["produceBlock"] = async (
+    slot,
+    randaoReveal,
+    graffiti
+  ): Promise<{data: allForks.BeaconBlock}> => {
     switch (this.config.getForkName(slot)) {
       case ForkName.phase0:
         return this.api.validator.produceBlock(slot, randaoReveal, graffiti);

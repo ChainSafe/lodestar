@@ -1,5 +1,5 @@
-import {ILogger} from "@chainsafe/lodestar-utils";
 import PeerId from "peer-id";
+import {ILogger} from "@chainsafe/lodestar-utils";
 import {IMetrics} from "../../../metrics/index.js";
 import {MapDef} from "../../../util/map.js";
 import {IPeerRpcScoreStore, PeerAction} from "../../peers/score.js";
@@ -110,7 +110,7 @@ export class InboundRateLimiter implements IRateLimiter {
       });
       this.peerRpcScores.applyAction(peerId, PeerAction.Fatal, "RateLimit");
       if (this.metrics) {
-        this.metrics.reqRespRateLimitErrors.inc({tracker: "requestCountPeerTracker"});
+        this.metrics.reqResp.rateLimitErrors.inc({tracker: "requestCountPeerTracker"});
       }
       return false;
     }
@@ -136,14 +136,14 @@ export class InboundRateLimiter implements IRateLimiter {
         });
         this.peerRpcScores.applyAction(peerId, PeerAction.Fatal, "RateLimit");
         if (this.metrics) {
-          this.metrics.reqRespRateLimitErrors.inc({tracker: "blockCountPeerTracker"});
+          this.metrics.reqResp.rateLimitErrors.inc({tracker: "blockCountPeerTracker"});
         }
         return false;
       }
 
       if (this.blockCountTotalTracker.requestObjects(numBlock) === 0) {
         if (this.metrics) {
-          this.metrics.reqRespRateLimitErrors.inc({tracker: "blockCountTotalTracker"});
+          this.metrics.reqResp.rateLimitErrors.inc({tracker: "blockCountTotalTracker"});
         }
         // don't apply penalty
         return false;

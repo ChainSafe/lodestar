@@ -1,10 +1,10 @@
 import {SinonStubbedInstance} from "sinon";
-import {ForkChoice, IProtoBlock, ExecutionStatus} from "@chainsafe/lodestar-fork-choice";
-import {resolveBlockId} from "../../../../../../src/api/impl/beacon/blocks/utils.js";
 import {expect, use} from "chai";
-import {toHexString} from "@chainsafe/ssz";
-import {generateEmptySignedBlock, generateProtoBlock} from "../../../../../utils/block.js";
 import chaiAsPromised from "chai-as-promised";
+import {ForkChoice, ProtoBlock, ExecutionStatus} from "@chainsafe/lodestar-fork-choice";
+import {toHexString} from "@chainsafe/ssz";
+import {resolveBlockId} from "../../../../../../src/api/impl/beacon/blocks/utils.js";
+import {generateEmptySignedBlock, generateProtoBlock} from "../../../../../utils/block.js";
 import {StubbedBeaconDb} from "../../../../../utils/stub/index.js";
 import {GENESIS_SLOT} from "../../../../../../src/constants/index.js";
 import {bufferEqualsMatcher} from "../../../../../utils/sinon/matcher.js";
@@ -21,7 +21,7 @@ describe("block api utils", function () {
     let server: ApiImplTestModules;
     let expectedBuffer: Buffer;
     let expectedRootHex: string;
-    let expectedSummary: IProtoBlock;
+    let expectedSummary: ProtoBlock;
 
     before(function () {
       expectedBuffer = Buffer.alloc(32, 2);

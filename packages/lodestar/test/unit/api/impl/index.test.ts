@@ -1,13 +1,13 @@
-import {config} from "@chainsafe/lodestar-config/default";
 import {SinonSandbox, SinonStubbedInstance} from "sinon";
 import sinon from "sinon";
+import {config} from "@chainsafe/lodestar-config/default";
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {getBeaconBlockApi} from "../../../../src/api/impl/beacon/blocks/index.js";
 import {BeaconChain} from "../../../../src/chain/index.js";
 import {Network} from "../../../../src/network/index.js";
 import {BeaconSync} from "../../../../src/sync/index.js";
 import {StubbedBeaconDb} from "../../../utils/stub/index.js";
-import {IChainForkConfig} from "@chainsafe/lodestar-config";
 
 export type ApiImplTestModules = {
   sandbox: SinonSandbox;

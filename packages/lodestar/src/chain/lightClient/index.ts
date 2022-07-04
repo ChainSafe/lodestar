@@ -8,10 +8,13 @@ import {
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {routes} from "@chainsafe/lodestar-api";
 import {BitArray, CompositeViewDU, toHexString} from "@chainsafe/ssz";
+import {SYNC_COMMITTEE_SIZE} from "@chainsafe/lodestar-params";
 import {IBeaconDb} from "../../db/index.js";
 import {IMetrics} from "../../metrics/index.js";
 import {MapDef, pruneSetToMax} from "../../util/map.js";
 import {ChainEvent, ChainEventEmitter} from "../emitter.js";
+import {byteArrayEquals} from "../../util/bytes.js";
+import {ZERO_HASH} from "../../constants/index.js";
 import {
   getNextSyncCommitteeBranch,
   getSyncCommitteesWitness,
@@ -19,9 +22,6 @@ import {
   getCurrentSyncCommitteeBranch,
 } from "./proofs.js";
 import {PartialLightClientUpdate} from "./types.js";
-import {SYNC_COMMITTEE_SIZE} from "@chainsafe/lodestar-params";
-import {byteArrayEquals} from "../../util/bytes.js";
-import {ZERO_HASH} from "../../constants/index.js";
 
 type DependantRootHex = RootHex;
 type BlockRooHex = RootHex;
@@ -166,7 +166,7 @@ export class LightClientServer {
    */
   private readonly prevHeadData = new Map<BlockRooHex, SyncAttestedData>();
   private checkpointHeaders = new Map<BlockRooHex, phase0.BeaconBlockHeader>();
-  private latestHeadUpdate: routes.lightclient.LightclientHeaderUpdate | null = null;
+  private latestHeadUpdate: routes.lightclient.LightclientOptimisticHeaderUpdate | null = null;
 
   private readonly zero: Pick<altair.LightClientUpdate, "finalityBranch" | "finalizedHeader">;
   private finalized: routes.lightclient.LightclientFinalizedUpdate | null = null;
@@ -218,7 +218,7 @@ export class LightClientServer {
   /**
    * API ROUTE to get `currentSyncCommittee` and `nextSyncCommittee` from a trusted state root
    */
-  async getSnapshot(blockRoot: Uint8Array): Promise<routes.lightclient.LightclientSnapshotWithProof> {
+  async getBootstrap(blockRoot: Uint8Array): Promise<routes.lightclient.LightclientSnapshotWithProof> {
     const syncCommitteeWitness = await this.db.syncCommitteeWitness.get(blockRoot);
     if (!syncCommitteeWitness) {
       throw Error(`syncCommitteeWitness not available ${toHexString(blockRoot)}`);
@@ -254,7 +254,7 @@ export class LightClientServer {
    * - Has the most bits
    * - Signed header at the oldest slot
    */
-  async getCommitteeUpdates(period: SyncPeriod): Promise<altair.LightClientUpdate> {
+  async getUpdates(period: SyncPeriod): Promise<altair.LightClientUpdate> {
     // Signature data
     const partialUpdate = await this.db.bestPartialLightClientUpdate.get(period);
     if (!partialUpdate) {
@@ -300,16 +300,16 @@ export class LightClientServer {
 
   /**
    * API ROUTE to poll LightclientHeaderUpdate.
-   * Clients should use the SSE type `lightclient_header_update` if available
+   * Clients should use the SSE type `light_client_optimistic_update` if available
    */
-  async getLatestHeadUpdate(): Promise<routes.lightclient.LightclientHeaderUpdate> {
+  async getOptimisticUpdate(): Promise<routes.lightclient.LightclientOptimisticHeaderUpdate> {
     if (this.latestHeadUpdate === null) {
       throw Error("No latest header update available");
     }
     return this.latestHeadUpdate;
   }
 
-  async getLatestFinalizedHeadUpdate(): Promise<routes.lightclient.LightclientFinalizedUpdate> {
+  async getFinalityUpdate(): Promise<routes.lightclient.LightclientFinalizedUpdate> {
     // Signature data
     if (this.finalized === null) {
       throw Error("No latest header update available");
@@ -452,7 +452,7 @@ export class LightClientServer {
       throw new Error("attested data period different than signature period");
     }
 
-    const headerUpdate: routes.lightclient.LightclientHeaderUpdate = {
+    const headerUpdate: routes.lightclient.LightclientOptimisticHeaderUpdate = {
       attestedHeader: attestedData.attestedHeader,
       syncAggregate,
     };
@@ -460,7 +460,7 @@ export class LightClientServer {
     // Emit update
     // - At the earliest: 6 second after the slot start
     // - After a new update has INCREMENT_THRESHOLD == 32 bits more than the previous emitted threshold
-    this.emitter.emit(ChainEvent.lightclientHeaderUpdate, headerUpdate);
+    this.emitter.emit(ChainEvent.lightclientOptimisticUpdate, headerUpdate);
 
     // Persist latest best update for getLatestHeadUpdate()
     // TODO: Once SyncAggregate are constructed from P2P too, count bits to decide "best"

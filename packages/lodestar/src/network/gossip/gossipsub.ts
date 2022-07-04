@@ -6,6 +6,7 @@ const Gossipsub = ((GossipsubDefault as unknown) as {default: unknown}).default 
 import {GossipsubMessage, SignaturePolicy, TopicStr} from "libp2p-gossipsub/src/types.js";
 import {PeerScore, PeerScoreParams} from "libp2p-gossipsub/src/score/index.js";
 import PeerId from "peer-id";
+import {MetricsRegister, TopicLabel, TopicStrToLabel} from "libp2p-gossipsub/src/metrics";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ATTESTATION_SUBNET_COUNT, ForkName, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 import {allForks, altair, phase0} from "@chainsafe/lodestar-types";
@@ -13,6 +14,11 @@ import {ILogger} from "@chainsafe/lodestar-utils";
 import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 
 import {IMetrics} from "../../metrics/index.js";
+import {Map2d, Map2dArr} from "../../util/map.js";
+import {Eth2Context} from "../../chain/index.js";
+import {PeersData} from "../peers/peersData.js";
+import {ClientKind} from "../peers/client.js";
+import {GOSSIP_MAX_SIZE} from "../../constants/network.js";
 import {
   GossipJobQueues,
   GossipTopic,
@@ -25,7 +31,6 @@ import {
 import {getGossipSSZType, GossipTopicCache, stringifyGossipTopic} from "./topic.js";
 import {DataTransformSnappy, fastMsgIdFn, msgIdFn} from "./encoding.js";
 import {createValidatorFnsByType} from "./validation/index.js";
-import {Map2d, Map2dArr} from "../../util/map.js";
 
 import {
   computeGossipPeerScoreParams,
@@ -34,10 +39,6 @@ import {
   GOSSIP_D_HIGH,
   GOSSIP_D_LOW,
 } from "./scoringParameters.js";
-import {Eth2Context} from "../../chain/index.js";
-import {MetricsRegister, TopicLabel, TopicStrToLabel} from "libp2p-gossipsub/src/metrics";
-import {PeersData} from "../peers/peersData.js";
-import {ClientKind} from "../peers/client.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 /** As specified in https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md */
@@ -118,7 +119,7 @@ export class Eth2Gossipsub extends Gossipsub {
       gossipsubIWantFollowupMs: 12 * 1000, // 12s
       fastMsgIdFn: fastMsgIdFn,
       msgIdFn: msgIdFn.bind(msgIdFn, gossipTopicCache),
-      dataTransform: new DataTransformSnappy(gossipTopicCache),
+      dataTransform: new DataTransformSnappy(GOSSIP_MAX_SIZE),
       metricsRegister: modules.metrics ? ((modules.metrics.register as unknown) as MetricsRegister) : null,
       metricsTopicStrToLabel: modules.metrics ? getMetricsTopicStrToLabel(modules.config) : undefined,
       asyncValidation: true,
@@ -348,11 +349,6 @@ export class Eth2Gossipsub extends Gossipsub {
 
   private onGossipsubMessage(event: GossipsubEvents["gossipsub:message"]): void {
     const {propagationSource, msgId, msg} = event;
-
-    // TODO: validation GOSSIP_MAX_SIZE
-    // - Should be done here after inserting the message in the mcache?
-    // - Should be done in the inboundtransform?
-    // - Should be a parameter in gossipsub: maxMsgDataSize?
 
     // Also validates that the topicStr is known
     const topic = this.gossipTopicCache.getTopic(msg.topic);

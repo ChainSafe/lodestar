@@ -1,11 +1,11 @@
-import {config} from "@chainsafe/lodestar-config/default";
 import {itBench} from "@dapplion/benchmark";
+import {config} from "@chainsafe/lodestar-config/default";
 import {AttestationData, IndexedAttestation} from "@chainsafe/lodestar-types/phase0";
 import {ATTESTATION_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 import {getEffectiveBalanceIncrementsZeroed} from "@chainsafe/lodestar-beacon-state-transition";
 import {ssz} from "@chainsafe/lodestar-types";
 import {fromHexString} from "@chainsafe/ssz";
-import {ExecutionStatus, ForkChoice, IForkChoiceStore, IProtoBlock, ProtoArray} from "../../../src/index.js";
+import {ExecutionStatus, ForkChoice, IForkChoiceStore, ProtoBlock, ProtoArray} from "../../../src/index.js";
 
 describe("ForkChoice", () => {
   let forkchoice: ForkChoice;
@@ -35,7 +35,7 @@ describe("ForkChoice", () => {
 
       executionPayloadBlockHash: null,
       executionStatus: ExecutionStatus.PreMerge,
-    } as Omit<IProtoBlock, "targetRoot">);
+    } as Omit<ProtoBlock, "targetRoot">);
 
     const fcStore: IForkChoiceStore = {
       currentSlot: genesisSlot,
@@ -50,7 +50,7 @@ describe("ForkChoice", () => {
     // assume there are 64 unfinalized blocks, this number does not make a difference in term of performance
     for (let i = 1; i < 64; i++) {
       const blockRoot = i < 10 ? blockRootPrefix + "0" + i : blockRootPrefix + i;
-      const block: IProtoBlock = {
+      const block: ProtoBlock = {
         slot: genesisSlot + i,
         blockRoot,
         parentRoot: parentBlockRoot,

@@ -1,8 +1,8 @@
-import fastify, {FastifyInstance} from "fastify";
-import {Api, routes} from "@chainsafe/lodestar-api";
-import {registerRoutes} from "@chainsafe/lodestar-api/server";
-import fastifyCors from "fastify-cors";
 import querystring from "querystring";
+import fastify, {FastifyInstance} from "fastify";
+import fastifyCors from "fastify-cors";
+import {Api, routes} from "@chainsafe/lodestar-api";
+import {registerRoutes} from "@chainsafe/lodestar-api/beacon/server";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {JsonPath} from "@chainsafe/ssz";
 import {altair, RootHex, SyncPeriod} from "@chainsafe/lodestar-types";
@@ -43,7 +43,7 @@ export class LightclientServerApi implements routes.lightclient.Api {
   readonly states = new Map<RootHex, BeaconStateAltair>();
   readonly updates = new Map<SyncPeriod, altair.LightClientUpdate>();
   readonly snapshots = new Map<RootHex, routes.lightclient.LightclientSnapshotWithProof>();
-  latestHeadUpdate: routes.lightclient.LightclientHeaderUpdate | null = null;
+  latestHeadUpdate: routes.lightclient.LightclientOptimisticHeaderUpdate | null = null;
   finalized: routes.lightclient.LightclientFinalizedUpdate | null = null;
 
   async getStateProof(stateId: string, paths: JsonPath[]): Promise<{data: Proof}> {
@@ -52,7 +52,7 @@ export class LightclientServerApi implements routes.lightclient.Api {
     return {data: state.createProof(paths)};
   }
 
-  async getCommitteeUpdates(from: SyncPeriod, to: SyncPeriod): Promise<{data: altair.LightClientUpdate[]}> {
+  async getUpdates(from: SyncPeriod, to: SyncPeriod): Promise<{data: altair.LightClientUpdate[]}> {
     const updates: altair.LightClientUpdate[] = [];
     for (let period = from; period <= to; period++) {
       const update = this.updates.get(period);
@@ -63,17 +63,17 @@ export class LightclientServerApi implements routes.lightclient.Api {
     return {data: updates};
   }
 
-  async getLatestHeadUpdate(): Promise<{data: routes.lightclient.LightclientHeaderUpdate}> {
+  async getOptimisticUpdate(): Promise<{data: routes.lightclient.LightclientOptimisticHeaderUpdate}> {
     if (!this.latestHeadUpdate) throw Error("No latest head update");
     return {data: this.latestHeadUpdate};
   }
 
-  async getLatestFinalizedHeadUpdate(): Promise<{data: routes.lightclient.LightclientFinalizedUpdate}> {
+  async getFinalityUpdate(): Promise<{data: routes.lightclient.LightclientFinalizedUpdate}> {
     if (!this.finalized) throw Error("No finalized head update");
     return {data: this.finalized};
   }
 
-  async getSnapshot(blockRoot: string): Promise<{data: routes.lightclient.LightclientSnapshotWithProof}> {
+  async getBootstrap(blockRoot: string): Promise<{data: routes.lightclient.LightclientSnapshotWithProof}> {
     const snapshot = this.snapshots.get(blockRoot);
     if (!snapshot) throw Error(`snapshot for blockRoot ${blockRoot} not available`);
     return {data: snapshot};

@@ -8,7 +8,7 @@
 
 
 # From https://stackoverflow.com/questions/10641361/get-all-files-that-have-been-modified-in-git-branch
-MERGE_BASE=$(git merge-base $GITHUB_REF master)
+MERGE_BASE=$(git merge-base $GITHUB_REF unstable)
 CHANGED_FILES=$(git diff --name-only $GITHUB_REF $MERGE_BASE)
 
 

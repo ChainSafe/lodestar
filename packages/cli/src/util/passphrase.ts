@@ -1,7 +1,4 @@
 import fs from "node:fs";
-import {stripOffNewlines} from "./stripOffNewlines.js";
-import {writeFile600Perm} from "./fs.js";
-import {getValidatorPassphrasePath} from "../validatorDir/paths.js";
 
 /**
  * Utility to read file as UTF8 and strip any trailing new lines.
@@ -9,7 +6,8 @@ import {getValidatorPassphrasePath} from "../validatorDir/paths.js";
  */
 export function readPassphraseFile(passphraseFile: string): string {
   const data = fs.readFileSync(passphraseFile, "utf8");
-  const passphrase = stripOffNewlines(data);
+  // Remove trailing new lines '\n' or '\r' if any
+  const passphrase = data.replace(/[\n|\r]+$/g, "");
 
   // Validate the passphraseFile contents to prevent the user to create a wallet with a password
   // that is the contents a random unintended file
@@ -24,26 +22,4 @@ export function readPassphraseFile(passphraseFile: string): string {
   }
 
   return passphrase;
-}
-
-export function readValidatorPassphrase({secretsDir, pubkey}: {secretsDir: string; pubkey: string}): string {
-  const notPrefixedPath = getValidatorPassphrasePath({secretsDir, pubkey});
-  const prefixedPath = getValidatorPassphrasePath({secretsDir, pubkey, prefixed: true});
-  if (fs.existsSync(notPrefixedPath)) {
-    return readPassphraseFile(notPrefixedPath);
-  } else {
-    return readPassphraseFile(prefixedPath);
-  }
-}
-
-export function writeValidatorPassphrase({
-  secretsDir,
-  pubkey,
-  passphrase,
-}: {
-  secretsDir: string;
-  pubkey: string;
-  passphrase: string;
-}): void {
-  writeFile600Perm(getValidatorPassphrasePath({secretsDir, pubkey, prefixed: true}), passphrase);
 }

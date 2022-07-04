@@ -9,16 +9,16 @@ import {
   PubkeyIndexMap,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {BLSPubkey, phase0} from "@chainsafe/lodestar-types";
-import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
+import {stateTransition, processSlots} from "@chainsafe/lodestar-beacon-state-transition";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {Epoch, ValidatorIndex, Slot} from "@chainsafe/lodestar-types";
 import {fromHexString} from "@chainsafe/ssz";
+import {sleep, assert} from "@chainsafe/lodestar-utils";
 import {IBeaconChain} from "../../../../chain/index.js";
 import {StateContextCache} from "../../../../chain/stateCache/index.js";
 import {IBeaconDb} from "../../../../db/index.js";
 import {ApiError, ValidationError} from "../../errors.js";
-import {sleep, assert} from "@chainsafe/lodestar-utils";
 
 type ResolveStateIdOpts = {
   /**
@@ -219,7 +219,7 @@ async function getFinalizedState(
 
   // process blocks up to the requested slot
   for await (const block of db.blockArchive.valuesStream({gt: state.slot, lte: slot})) {
-    state = allForks.stateTransition(state, block, {
+    state = stateTransition(state, block, {
       verifyStateRoot: false,
       verifyProposer: false,
       verifySignatures: false,
@@ -229,7 +229,7 @@ async function getFinalizedState(
   }
   // due to skip slots, may need to process empty slots to reach the requested slot
   if (state.slot < slot) {
-    state = allForks.processSlots(state, slot);
+    state = processSlots(state, slot);
   }
   return state;
 }

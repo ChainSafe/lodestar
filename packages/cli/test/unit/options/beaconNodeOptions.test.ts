@@ -1,5 +1,5 @@
-import {expect} from "chai";
 import fs from "node:fs";
+import {expect} from "chai";
 import {IBeaconNodeOptions} from "@chainsafe/lodestar";
 import {LogLevel, RecursivePartial} from "@chainsafe/lodestar-utils";
 import {parseBeaconNodeArgs, IBeaconNodeArgs} from "../../../src/options/beaconNodeOptions/index.js";
@@ -13,7 +13,7 @@ describe("options / beaconNodeOptions", () => {
       "api.rest.api": [],
       "api.rest.cors": "*",
       "api.rest.enabled": true,
-      "api.rest.host": "127.0.0.1",
+      "api.rest.address": "127.0.0.1",
       "api.rest.port": 7654,
 
       "chain.blsVerifyAllMultiThread": true,
@@ -31,8 +31,12 @@ describe("options / beaconNodeOptions", () => {
       "eth1.disableEth1DepositDataTracker": true,
       "eth1.unsafeAllowDepositDataOverwrite": false,
 
-      "execution.urls": ["http://localhost:8550"],
+      "execution.urls": ["http://localhost:8551"],
       "execution.timeout": 12000,
+
+      "builder.enabled": false,
+      "builder.urls": ["http://localhost:8661"],
+      "builder.timeout": 12000,
 
       "logger.eth1.level": "debug",
       "logger.unknown.level": "debug",
@@ -69,7 +73,7 @@ describe("options / beaconNodeOptions", () => {
           api: [],
           cors: "*",
           enabled: true,
-          host: "127.0.0.1",
+          address: "127.0.0.1",
           port: 7654,
         },
       },
@@ -90,7 +94,12 @@ describe("options / beaconNodeOptions", () => {
         unsafeAllowDepositDataOverwrite: false,
       },
       executionEngine: {
-        urls: ["http://localhost:8550"],
+        urls: ["http://localhost:8551"],
+        timeout: 12000,
+      },
+      executionBuilder: {
+        enabled: false,
+        urls: ["http://localhost:8661"],
         timeout: 12000,
       },
       logger: {

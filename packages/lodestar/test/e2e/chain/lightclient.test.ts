@@ -5,7 +5,7 @@ import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {TimestampFormatCode} from "@chainsafe/lodestar-utils";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {Lightclient} from "@chainsafe/lodestar-light-client";
-import {IProtoBlock} from "@chainsafe/lodestar-fork-choice";
+import {ProtoBlock} from "@chainsafe/lodestar-fork-choice";
 import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {testLogger, LogLevel, TestLoggerOpts} from "../../utils/logger.js";
 import {getDevBeaconNode} from "../../utils/node/beacon.js";
@@ -93,12 +93,7 @@ describe("chain / lightclient", function () {
     });
 
     afterEachCallbacks.push(async () => {
-      await Promise.all(validators.map((v) => v.stop()));
-    });
-
-    await Promise.all(validators.map((validator) => validator.start()));
-    afterEachCallbacks.push(async () => {
-      await Promise.all(validators.map((v) => v.stop()));
+      await Promise.all(validators.map((v) => v.close()));
     });
 
     // This promise chain does:
@@ -108,7 +103,7 @@ describe("chain / lightclient", function () {
     // 4. On every new beacon node head, check that the lightclient is following closely
     //   - If too far behind error the test
     //   - If beacon node reaches the finality slot, resolve test
-    const promiseUntilHead = new Promise<IProtoBlock>((resolve) => {
+    const promiseUntilHead = new Promise<ProtoBlock>((resolve) => {
       bn.chain.emitter.on(ChainEvent.forkChoiceHead, async (head) => {
         // Wait for the second slot so syncCommitteeWitness is available
         if (head.slot > 2) {

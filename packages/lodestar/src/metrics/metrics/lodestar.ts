@@ -375,6 +375,13 @@ export function createLodestarMetrics(
 
     // BLS verifier thread pool and queue
 
+    bls: {
+      aggregatedPubkeys: register.gauge({
+        name: "lodestar_bls_aggregated_pubkeys_total",
+        help: "Total aggregated pubkeys for BLS validation",
+      }),
+    },
+
     blsThreadPool: {
       jobsWorkerTime: register.gauge<"workerId">({
         name: "lodestar_bls_thread_pool_time_seconds_sum",
@@ -561,6 +568,44 @@ export function createLodestarMetrics(
       status: register.gauge({
         name: "lodestar_backfill_sync_status",
         help: "Current backfill syncing status: [Aborted, Pending, Syncing, Completed]",
+      }),
+    },
+
+    opPool: {
+      // Note: Current opPool metrics only track current size.
+      //       I don't believe tracking total add() count is relevant since that can be seen with gossip ACCEPTs
+      aggregatedAttestationPoolSize: register.gauge({
+        name: "lodestar_oppool_aggregated_attestation_pool_size",
+        help: "Current size of the AggregatedAttestationPool = total attestations",
+      }),
+      /** This metric helps view how many overlapping attestations we keep per data on average */
+      aggregatedAttestationPoolUniqueData: register.gauge({
+        name: "lodestar_oppool_aggregated_attestation_pool_unique_data_count",
+        help: "Current size of the AggregatedAttestationPool = total attestations unique by data",
+      }),
+      attestationPoolSize: register.gauge({
+        name: "lodestar_oppool_attestation_pool_size",
+        help: "Current size of the AttestationPool = total attestations unique by data and slot",
+      }),
+      attesterSlashingPoolSize: register.gauge({
+        name: "lodestar_oppool_attester_slashing_pool_size",
+        help: "Current size of the AttesterSlashingPool",
+      }),
+      proposerSlashingPoolSize: register.gauge({
+        name: "lodestar_oppool_proposer_slashing_pool_size",
+        help: "Current size of the ProposerSlashingPool",
+      }),
+      voluntaryExitPoolSize: register.gauge({
+        name: "lodestar_oppool_voluntary_exit_pool_size",
+        help: "Current size of the VoluntaryExitPool",
+      }),
+      syncCommitteeMessagePoolSize: register.gauge({
+        name: "lodestar_oppool_sync_committee_message_pool_size",
+        help: "Current size of the SyncCommitteeMessagePool unique by slot subnet and block root",
+      }),
+      syncContributionAndProofPoolSize: register.gauge({
+        name: "lodestar_oppool_sync_contribution_and_proof_pool_pool_size",
+        help: "Current size of the SyncContributionAndProofPool unique by slot subnet and block root",
       }),
     },
 
@@ -915,6 +960,126 @@ export function createLodestarMetrics(
         name: "lodestar_lightclient_server_persisted_updates_total",
         help: "Total number of persisted updates by finalized type",
         labelNames: ["type"],
+      }),
+    },
+
+    eth1: {
+      depositTrackerIsCaughtup: register.gauge({
+        name: "lodestar_eth1_deposit_tracker_is_caughtup",
+        help: "Eth1 deposit is caught up 0=false 1=true",
+      }),
+      depositTrackerUpdateErrors: register.gauge({
+        name: "lodestar_eth1_deposit_tracker_update_errors_total",
+        help: "Eth1 deposit update loop errors total",
+      }),
+      remoteHighestBlock: register.gauge({
+        name: "lodestar_eth1_remote_highest_block",
+        help: "Eth1 current highest block number",
+      }),
+      depositEventsFetched: register.gauge({
+        name: "lodestar_eth1_deposit_events_fetched_total",
+        help: "Eth1 deposit events fetched total",
+      }),
+      lastProcessedDepositBlockNumber: register.gauge({
+        name: "lodestar_eth1_last_processed_deposit_block_number",
+        help: "Eth1 deposit tracker lastProcessedDepositBlockNumber",
+      }),
+      blocksFetched: register.gauge({
+        name: "lodestar_eth1_blocks_fetched_total",
+        help: "Eth1 blocks fetched total",
+      }),
+      lastFetchedBlockBlockNumber: register.gauge({
+        name: "lodestar_eth1_last_fetched_block_block_number",
+        help: "Eth1 deposit tracker last fetched block's block number",
+      }),
+      lastFetchedBlockTimestamp: register.gauge({
+        name: "lodestar_eth1_last_fetched_block_timestamp",
+        help: "Eth1 deposit tracker last fetched block's timestamp",
+      }),
+      eth1FollowDistanceSecondsConfig: register.gauge({
+        name: "lodestar_eth1_follow_distance_seconds_config",
+        help: "Constant with value = SECONDS_PER_ETH1_BLOCK * ETH1_FOLLOW_DISTANCE",
+      }),
+      eth1FollowDistanceDynamic: register.gauge({
+        name: "lodestar_eth1_follow_distance_dynamic",
+        help: "Eth1 dynamic follow distance changed by the deposit tracker if blocks are slow",
+      }),
+    },
+
+    eth1HttpClient: {
+      requestTime: register.histogram<"routeId">({
+        name: "lodestar_eth1_http_client_request_time_seconds",
+        help: "eth1 JsonHttpClient - histogram or roundtrip request times",
+        labelNames: ["routeId"],
+        // Provide max resolution on problematic values around 1 second
+        buckets: [0.1, 0.5, 1, 2, 5, 15],
+      }),
+      requestErrors: register.gauge<"routeId">({
+        name: "lodestar_eth1_http_client_request_errors_total",
+        help: "eth1 JsonHttpClient - total count of request errors",
+        labelNames: ["routeId"],
+      }),
+      requestUsedFallbackUrl: register.gauge({
+        name: "lodestar_eth1_http_client_request_used_fallback_url_total",
+        help: "eth1 JsonHttpClient - total count of requests on fallback url(s)",
+      }),
+      activeRequests: register.gauge({
+        name: "lodestar_eth1_http_client_active_requests",
+        help: "eth1 JsonHttpClient - current count of active requests",
+      }),
+      configUrlsCount: register.gauge({
+        name: "lodestar_eth1_http_client_config_urls_count",
+        help: "eth1 JsonHttpClient - static config urls count",
+      }),
+    },
+
+    executionEnginerHttpClient: {
+      requestTime: register.histogram<"routeId">({
+        name: "lodestar_execution_engine_http_client_request_time_seconds",
+        help: "ExecutionEngineHttp client - histogram or roundtrip request times",
+        labelNames: ["routeId"],
+        // Provide max resolution on problematic values around 1 second
+        buckets: [0.1, 0.5, 1, 2, 5, 15],
+      }),
+      requestErrors: register.gauge<"routeId">({
+        name: "lodestar_execution_engine_http_client_request_errors_total",
+        help: "ExecutionEngineHttp client - total count of request errors",
+        labelNames: ["routeId"],
+      }),
+      requestUsedFallbackUrl: register.gauge({
+        name: "lodestar_execution_engine_http_client_request_used_fallback_url_total",
+        help: "ExecutionEngineHttp client - total count of requests on fallback url(s)",
+      }),
+      activeRequests: register.gauge({
+        name: "lodestar_execution_engine_http_client_active_requests",
+        help: "ExecutionEngineHttp client - current count of active requests",
+      }),
+      configUrlsCount: register.gauge({
+        name: "lodestar_execution_engine_http_client_config_urls_count",
+        help: "ExecutionEngineHttp client - static config urls count",
+      }),
+    },
+
+    db: {
+      dbReadReq: register.gauge<"bucket">({
+        name: "lodestar_db_read_req_total",
+        help: "Total count of db read requests, may read 0 or more items",
+        labelNames: ["bucket"],
+      }),
+      dbReadItems: register.gauge<"bucket">({
+        name: "lodestar_db_read_items_total",
+        help: "Total count of db read items, item = key | value | entry",
+        labelNames: ["bucket"],
+      }),
+      dbWriteReq: register.gauge<"bucket">({
+        name: "lodestar_db_write_req_total",
+        help: "Total count of db write requests, may write 0 or more items",
+        labelNames: ["bucket"],
+      }),
+      dbWriteItems: register.gauge<"bucket">({
+        name: "lodestar_db_write_items_total",
+        help: "Total count of db write items",
+        labelNames: ["bucket"],
       }),
     },
   };

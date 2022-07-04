@@ -2,9 +2,7 @@
  * @module db/api/beacon
  */
 
-import {IDbMetrics} from "@chainsafe/lodestar-db";
-import {Registry} from "prom-client";
-
+import {ILevelDbControllerMetrics} from "@chainsafe/lodestar-db";
 import {
   AttesterSlashingRepository,
   BlockArchiveRepository,
@@ -29,9 +27,6 @@ import {PreGenesisState, PreGenesisStateLastProcessedBlock} from "./single/index
  * but instead expose relevent beacon chain objects
  */
 export interface IBeaconDb {
-  metrics?: IDbMetrics;
-  metricsRegistry?: Registry;
-
   // unfinalized blocks
   block: BlockRepository;
 
@@ -63,13 +58,10 @@ export interface IBeaconDb {
 
   backfilledRanges: BackfilledRanges;
 
-  /**
-   * Start the connection to the db instance and open the db store.
-   */
+  /** Start the connection to the db instance and open the db store. */
   start(): Promise<void>;
-
-  /**
-   *  Stop the connection to the db instance and close the db store.
-   */
+  /**  Stop the connection to the db instance and close the db store. */
   stop(): Promise<void>;
+  /** To inject metrics after CLI initialization */
+  setMetrics(metrics: ILevelDbControllerMetrics): void;
 }

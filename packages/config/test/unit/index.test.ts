@@ -1,5 +1,5 @@
-import {ForkName} from "@chainsafe/lodestar-params";
 import {expect} from "chai";
+import {ForkName} from "@chainsafe/lodestar-params";
 import {config} from "../../src/default.js";
 
 describe("forks", () => {

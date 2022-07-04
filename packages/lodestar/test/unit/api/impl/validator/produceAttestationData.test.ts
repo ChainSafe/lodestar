@@ -1,13 +1,13 @@
-import {config} from "@chainsafe/lodestar-config/default";
-import {IProtoBlock} from "@chainsafe/lodestar-fork-choice";
 import sinon, {SinonStubbedInstance} from "sinon";
+import chaiAsPromised from "chai-as-promised";
+import {use, expect} from "chai";
+import {config} from "@chainsafe/lodestar-config/default";
+import {ProtoBlock} from "@chainsafe/lodestar-fork-choice";
 import {IBeaconSync, SyncState} from "../../../../../src/sync/interface.js";
 import {ApiModules} from "../../../../../src/api/impl/types.js";
 import {getValidatorApi} from "../../../../../src/api/impl/validator/index.js";
 import {LocalClock} from "../../../../../src/chain/clock/index.js";
 import {testLogger} from "../../../../utils/logger.js";
-import chaiAsPromised from "chai-as-promised";
-import {use, expect} from "chai";
 import {ApiImplTestModules, setupApiImplTestServer} from "../index.test.js";
 
 use(chaiAsPromised);
@@ -38,7 +38,7 @@ describe("api - validator - produceAttestationData", function () {
     const headSlot = 0;
     server.chainStub.clock = {currentSlot} as LocalClock;
     sinon.replaceGetter(syncStub, "state", () => SyncState.SyncingFinalized);
-    server.forkChoiceStub.getHead.returns({slot: headSlot} as IProtoBlock);
+    server.forkChoiceStub.getHead.returns({slot: headSlot} as ProtoBlock);
 
     // Should not allow any call to validator API
     const api = getValidatorApi(modules);

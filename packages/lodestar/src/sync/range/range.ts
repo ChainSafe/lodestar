@@ -9,9 +9,9 @@ import {IBeaconChain} from "../../chain/index.js";
 import {INetwork} from "../../network/index.js";
 import {IMetrics} from "../../metrics/index.js";
 import {RangeSyncType, getRangeSyncType, rangeSyncTypes} from "../utils/remoteSyncType.js";
+import {PartiallyVerifiedBlockFlags} from "../../chain/blocks/index.js";
 import {updateChains} from "./utils/index.js";
 import {ChainTarget, SyncChainFns, SyncChain, SyncChainOpts, SyncChainDebugState} from "./chain.js";
-import {PartiallyVerifiedBlockFlags} from "../../chain/blocks/index.js";
 
 export enum RangeSyncEvent {
   completedChain = "RangeSync-completedChain",

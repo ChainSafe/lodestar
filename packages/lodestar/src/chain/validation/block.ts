@@ -1,6 +1,13 @@
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import {computeStartSlotAtEpoch, computeTimeAtSlot, bellatrix} from "@chainsafe/lodestar-beacon-state-transition";
-import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
+import {allForks} from "@chainsafe/lodestar-types";
+import {
+  computeStartSlotAtEpoch,
+  computeTimeAtSlot,
+  isBellatrixBlockBodyType,
+  isBellatrixStateType,
+  isExecutionEnabled,
+  getProposerSignatureSet,
+} from "@chainsafe/lodestar-beacon-state-transition";
 import {sleep} from "@chainsafe/lodestar-utils";
 import {ForkName} from "@chainsafe/lodestar-params";
 import {toHexString} from "@chainsafe/ssz";
@@ -104,9 +111,9 @@ export async function validateGossipBlock(
   // [REJECT] The block's execution payload timestamp is correct with respect to the slot
   // -- i.e. execution_payload.timestamp == compute_timestamp_at_slot(state, block.slot).
   if (fork === ForkName.bellatrix) {
-    if (!bellatrix.isBellatrixBlockBodyType(block.body)) throw Error("Not merge block type");
+    if (!isBellatrixBlockBodyType(block.body)) throw Error("Not merge block type");
     const executionPayload = block.body.executionPayload;
-    if (bellatrix.isBellatrixStateType(blockState) && bellatrix.isExecutionEnabled(blockState, block.body)) {
+    if (isBellatrixStateType(blockState) && isExecutionEnabled(blockState, block)) {
       const expectedTimestamp = computeTimeAtSlot(config, blockSlot, chain.genesisTime);
       if (executionPayload.timestamp !== computeTimeAtSlot(config, blockSlot, chain.genesisTime)) {
         throw new BlockGossipError(GossipAction.REJECT, {
@@ -119,7 +126,7 @@ export async function validateGossipBlock(
   }
 
   // [REJECT] The proposer signature, signed_beacon_block.signature, is valid with respect to the proposer_index pubkey.
-  const signatureSet = allForks.getProposerSignatureSet(blockState, signedBlock);
+  const signatureSet = getProposerSignatureSet(blockState, signedBlock);
   // Don't batch so verification is not delayed
   if (!(await chain.bls.verifySignatureSets([signatureSet], {verifyOnMainThread: true}))) {
     throw new BlockGossipError(GossipAction.REJECT, {

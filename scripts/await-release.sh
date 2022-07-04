@@ -9,12 +9,13 @@ declare PACKAGE="@chainsafe/lodestar-cli"
 # Using `npm view -j` to get all available versions as JSON
 declare CMD_NPM="npm view -j $PACKAGE"
 
-# Using `jq` to get the latest version
-declare VERSION_LATEST=$($CMD_NPM | jq -r '."dist-tags".latest')
+# Using `jq` to get the dist-tag version
+declare VERSION_LATEST=$($CMD_NPM | jq -r ".\"dist-tags\".$DIST_TAG")
 
 # Usage: scripts/await-release.sh $VERSION $TIMEOUT
 declare VERSION_EXPECTED=$(echo $1 | tr -d 'v')
-declare TIMEOUT=$2
+declare DIST_TAG=$2
+declare TIMEOUT=$3
 
 declare TIME=0
 declare SLEEP=5
@@ -23,7 +24,7 @@ declare SLEEP=5
 ### Note: that this script will already exit here in case everything is fine 
 ###       and only delay in case there is a discrepancy between the versions
 while [[ "$VERSION_EXPECTED" != "$VERSION_LATEST" ]]; do
-    echo "Expected version $VERSION_EXPECTED does not match latest version $VERSION_LATEST in NPM registry. Trying again in $SLEEP..."
+    echo "Expected version $VERSION_EXPECTED does not match $DIST_TAG version $VERSION_LATEST in NPM registry. Trying again in $SLEEP..."
     TIME=$(($TIME+$SLEEP))
 
     # Allow the CI to timeout
@@ -35,5 +36,5 @@ while [[ "$VERSION_EXPECTED" != "$VERSION_LATEST" ]]; do
     
     # Force clean cache before retrying
     npm cache clean --force
-    VERSION_LATEST=$($CMD_NPM | jq -r '."dist-tags".latest')
+    VERSION_LATEST=$($CMD_NPM | jq -r ".\"dist-tags\".$DIST_TAG")
 done

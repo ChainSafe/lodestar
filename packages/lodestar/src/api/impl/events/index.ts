@@ -3,11 +3,11 @@ import {
   computeStartSlotAtEpoch,
   getBlockRootAtSlot,
 } from "@chainsafe/lodestar-beacon-state-transition";
+import {routes} from "@chainsafe/lodestar-api";
+import {toHexString} from "@chainsafe/ssz";
 import {ApiModules} from "../types.js";
 import {ChainEvent, IChainEvents} from "../../../chain/index.js";
-import {routes} from "@chainsafe/lodestar-api";
 import {ApiError} from "../errors.js";
-import {toHexString} from "@chainsafe/ssz";
 
 /**
  * Mapping of internal `ChainEvents` to API spec events
@@ -19,7 +19,7 @@ const chainEventMap = {
   [routes.events.EventType.voluntaryExit]: ChainEvent.block as const,
   [routes.events.EventType.finalizedCheckpoint]: ChainEvent.finalized as const,
   [routes.events.EventType.chainReorg]: ChainEvent.forkChoiceReorg as const,
-  [routes.events.EventType.lightclientHeaderUpdate]: ChainEvent.lightclientHeaderUpdate as const,
+  [routes.events.EventType.lightclientOptimisticUpdate]: ChainEvent.lightclientOptimisticUpdate as const,
   [routes.events.EventType.lightclientFinalizedUpdate]: ChainEvent.lightclientFinalizedUpdate as const,
 };
 
@@ -80,7 +80,7 @@ export function getEventsApi({chain, config}: Pick<ApiModules, "chain" | "config
         oldHeadState: oldHead.stateRoot,
       },
     ],
-    [routes.events.EventType.lightclientHeaderUpdate]: (headerUpdate) => [headerUpdate],
+    [routes.events.EventType.lightclientOptimisticUpdate]: (headerUpdate) => [headerUpdate],
     [routes.events.EventType.lightclientFinalizedUpdate]: (headerUpdate) => [headerUpdate],
   };
 

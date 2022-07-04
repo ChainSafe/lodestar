@@ -1,5 +1,8 @@
 import sinon from "sinon";
 import {SinonStubbedInstance} from "sinon";
+import {Epoch} from "@chainsafe/lodestar-types";
+import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
+import {createIChainForkConfig, defaultChainConfig} from "@chainsafe/lodestar-config";
 import {BeaconChain, IBeaconChain} from "../../../../src/chain/index.js";
 import {LocalClock} from "../../../../src/chain/clock/index.js";
 import {SyncCommitteeErrorCode} from "../../../../src/chain/errors/syncCommitteeError.js";
@@ -7,10 +10,8 @@ import {validateGossipSyncCommittee} from "../../../../src/chain/validation/sync
 import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
 import {generateCachedState} from "../../../utils/state.js";
 import {generateSyncCommitteeSignature} from "../../../utils/syncCommittee.js";
-import {Epoch} from "@chainsafe/lodestar-types";
-import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import {createIChainForkConfig, defaultChainConfig} from "@chainsafe/lodestar-config";
 import {SeenSyncCommitteeMessages} from "../../../../src/chain/seenCache/index.js";
+import {BlsVerifierMock} from "../../../utils/mocks/bls.js";
 
 // https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/altair/p2p-interface.md
 describe("Sync Committee Signature validation", function () {
@@ -107,7 +108,7 @@ describe("Sync Committee Signature validation", function () {
     const headState = generateCachedState({slot: currentSlot}, config, true);
 
     chain.getHeadState.returns(headState);
-    chain.bls = {verifySignatureSets: async () => false};
+    chain.bls = new BlsVerifierMock(false);
     await expectRejectedWithLodestarError(
       validateGossipSyncCommittee(chain, syncCommittee, 0),
       SyncCommitteeErrorCode.INVALID_SIGNATURE

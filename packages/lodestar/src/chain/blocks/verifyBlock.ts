@@ -1,24 +1,30 @@
 import {
   CachedBeaconStateAllForks,
   computeStartSlotAtEpoch,
-  allForks,
-  bellatrix,
+  isBellatrixStateType,
+  isBellatrixBlockBodyType,
+  isMergeTransitionBlock as isMergeTransitionBlockFn,
+  isExecutionEnabled,
+  getAllBlockSignatureSetsExceptProposer,
+  getAllBlockSignatureSets,
+  stateTransition,
 } from "@chainsafe/lodestar-beacon-state-transition";
+import {bellatrix} from "@chainsafe/lodestar-types";
 import {toHexString} from "@chainsafe/ssz";
-import {IForkChoice, IProtoBlock, ExecutionStatus, assertValidTerminalPowBlock} from "@chainsafe/lodestar-fork-choice";
+import {IForkChoice, ProtoBlock, ExecutionStatus, assertValidTerminalPowBlock} from "@chainsafe/lodestar-fork-choice";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {IMetrics} from "../../metrics/index.js";
-import {IExecutionEngine} from "../../executionEngine/index.js";
+import {IExecutionEngine} from "../../execution/engine/index.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {IBeaconClock} from "../clock/index.js";
 import {BlockProcessOpts} from "../options.js";
 import {IStateRegenerator, RegenCaller} from "../regen/index.js";
 import {IBlsVerifier} from "../bls/index.js";
-import {FullyVerifiedBlock, PartiallyVerifiedBlock} from "./types.js";
-import {ExecutePayloadStatus} from "../../executionEngine/interface.js";
+import {ExecutePayloadStatus} from "../../execution/engine/interface.js";
 import {byteArrayEquals} from "../../util/bytes.js";
 import {IEth1ForBlockProduction} from "../../eth1/index.js";
+import {FullyVerifiedBlock, PartiallyVerifiedBlock} from "./types.js";
 import {POS_PANDA_MERGE_TRANSITION_BANNER} from "./utils/pandaMergeTransitionBanner.js";
 
 export type VerifyBlockModules = {
@@ -70,7 +76,7 @@ export async function verifyBlock(
 export function verifyBlockSanityChecks(
   chain: VerifyBlockModules,
   partiallyVerifiedBlock: PartiallyVerifiedBlock
-): IProtoBlock {
+): ProtoBlock {
   const {block} = partiallyVerifiedBlock;
   const blockSlot = block.message.slot;
 
@@ -132,14 +138,14 @@ export async function verifyBlockStateTransition(
   });
 
   const isMergeTransitionBlock =
-    bellatrix.isBellatrixStateType(preState) &&
-    bellatrix.isBellatrixBlockBodyType(block.message.body) &&
-    bellatrix.isMergeTransitionBlock(preState, block.message.body);
+    isBellatrixStateType(preState) &&
+    isBellatrixBlockBodyType(block.message.body) &&
+    isMergeTransitionBlockFn(preState, block.message.body);
 
   // STFN - per_slot_processing() + per_block_processing()
   // NOTE: `regen.getPreState()` should have dialed forward the state already caching checkpoint states
   const useBlsBatchVerify = !opts?.disableBlsBatchVerify;
-  const postState = allForks.stateTransition(
+  const postState = stateTransition(
     preState,
     block,
     {
@@ -154,9 +160,9 @@ export async function verifyBlockStateTransition(
 
   /** Not null if execution is enabled */
   const executionPayloadEnabled =
-    bellatrix.isBellatrixStateType(postState) &&
-    bellatrix.isBellatrixBlockBodyType(block.message.body) &&
-    bellatrix.isExecutionEnabled(postState, block.message.body)
+    isBellatrixStateType(postState) &&
+    isBellatrixBlockBodyType(block.message.body) &&
+    isExecutionEnabled(postState, block.message)
       ? block.message.body.executionPayload
       : null;
 
@@ -166,8 +172,8 @@ export async function verifyBlockStateTransition(
   // so the attester and proposer shufflings are correct.
   if (useBlsBatchVerify && !validSignatures) {
     const signatureSets = validProposerSignature
-      ? allForks.getAllBlockSignatureSetsExceptProposer(postState, block)
-      : allForks.getAllBlockSignatureSets(postState, block);
+      ? getAllBlockSignatureSetsExceptProposer(postState, block)
+      : getAllBlockSignatureSets(postState, block);
 
     if (
       signatureSets.length > 0 &&
@@ -270,7 +276,6 @@ export async function verifyBlockStateTransition(
       // child block will cause it to replay
 
       case ExecutePayloadStatus.INVALID_BLOCK_HASH:
-      case ExecutePayloadStatus.INVALID_TERMINAL_BLOCK:
       case ExecutePayloadStatus.ELERROR:
       case ExecutePayloadStatus.UNAVAILABLE:
         throw new BlockError(block, {

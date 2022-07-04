@@ -9,11 +9,11 @@ import {parseEnrArgs} from "../../options/enrOptions.js";
 import {onGracefulShutdown, getCliLogger} from "../../util/index.js";
 import {FileENR, overwriteEnrWithCliArgs, readPeerId} from "../../config/index.js";
 import {initializeOptionsAndConfig, persistOptionsAndConfig} from "../init/handler.js";
+import {getVersionData} from "../../util/version.js";
+import {deleteOldPeerstorePreV036} from "../../migrations/index.js";
 import {IBeaconArgs} from "./options.js";
 import {getBeaconPaths} from "./paths.js";
 import {initBeaconState} from "./initBeaconState.js";
-import {getVersionData} from "../../util/version.js";
-import {deleteOldPeerstorePreV036} from "../../migrations/index.js";
 
 /**
  * Runs a beacon node.
@@ -59,7 +59,6 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
   const db = new BeaconDb({
     config,
     controller: new LevelDbController(options.db, {logger: logger.child(options.logger.db)}),
-    metrics: options.metrics.enabled,
   });
 
   await db.start();

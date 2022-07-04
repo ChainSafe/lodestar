@@ -1,11 +1,12 @@
+import {expect} from "chai";
 import {config} from "@chainsafe/lodestar-config/default";
 import {FAR_FUTURE_EPOCH, MAX_EFFECTIVE_BALANCE} from "@chainsafe/lodestar-params";
+import {phase0} from "@chainsafe/lodestar-types";
 import {generateAttestationData} from "../../utils/attestation.js";
-import {expect} from "chai";
 import {EMPTY_SIGNATURE} from "../../../src/index.js";
-import {phase0} from "../../../src/index.js";
 import {generateCachedState} from "../../utils/state.js";
 import {generateValidators} from "../../utils/validator.js";
+import {isValidIndexedAttestation} from "../../../src/block/isValidIndexedAttestation.js";
 
 describe("validate indexed attestation", () => {
   const state = generateCachedState(config, {
@@ -44,7 +45,7 @@ describe("validate indexed attestation", () => {
         data: attestationData,
         signature: EMPTY_SIGNATURE,
       };
-      expect(phase0.isValidIndexedAttestation(state, indexedAttestation, false)).to.be.equal(testValue.expectedValue);
+      expect(isValidIndexedAttestation(state, indexedAttestation, false)).to.be.equal(testValue.expectedValue);
     });
   }
 });

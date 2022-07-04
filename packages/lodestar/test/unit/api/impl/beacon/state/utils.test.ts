@@ -1,10 +1,10 @@
-import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
-import {config} from "@chainsafe/lodestar-config/default";
-import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import {toHexString} from "@chainsafe/ssz";
 import {expect, use} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import sinon from "sinon";
+import {phase0} from "@chainsafe/lodestar-types";
+import {config} from "@chainsafe/lodestar-config/default";
+import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
+import {toHexString} from "@chainsafe/ssz";
 import {resolveStateId, getValidatorStatus} from "../../../../../../src/api/impl/beacon/state/utils.js";
 import {IBeaconChain} from "../../../../../../src/chain/index.js";
 import {PERSIST_STATE_EVERY_EPOCHS} from "../../../../../../src/chain/archiver/archiveStates.js";

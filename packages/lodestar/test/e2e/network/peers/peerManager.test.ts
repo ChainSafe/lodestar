@@ -1,9 +1,12 @@
-import {Connection} from "libp2p";
 import {EventEmitter} from "events";
+import {Connection} from "libp2p";
 import sinon from "sinon";
 import {expect} from "chai";
 import {config} from "@chainsafe/lodestar-config/default";
 import {BitArray} from "@chainsafe/ssz";
+import {altair, phase0, ssz} from "@chainsafe/lodestar-types";
+import {sleep} from "@chainsafe/lodestar-utils";
+import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {IReqResp, ReqRespMethod} from "../../../../src/network/reqresp/index.js";
 import {PeerRpcScoreStore, PeerManager} from "../../../../src/network/peers/index.js";
 import {Eth2Gossipsub, NetworkEvent, NetworkEventBus} from "../../../../src/network/index.js";
@@ -12,13 +15,10 @@ import {createNode, getAttnets, getSyncnets} from "../../../utils/network.js";
 import {MockBeaconChain} from "../../../utils/mocks/chain/chain.js";
 import {generateEmptySignedBlock} from "../../../utils/block.js";
 import {generateState} from "../../../utils/state.js";
-import {altair, phase0, ssz} from "@chainsafe/lodestar-types";
-import {sleep} from "@chainsafe/lodestar-utils";
 import {waitForEvent} from "../../../utils/events/resolver.js";
 import {testLogger} from "../../../utils/logger.js";
 import {getValidPeerId} from "../../../utils/peer.js";
 import {IAttnetsService} from "../../../../src/network/subnets/index.js";
-import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 
 const logger = testLogger();
 
@@ -54,7 +54,7 @@ describe("network / peers / PeerManager", function () {
     const libp2p = await createNode("/ip4/127.0.0.1/tcp/0");
 
     afterEachCallbacks.push(async () => {
-      chain.close();
+      await chain.close();
       await libp2p.stop();
     });
 

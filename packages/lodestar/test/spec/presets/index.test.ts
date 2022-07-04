@@ -1,5 +1,6 @@
 import {ACTIVE_PRESET} from "@chainsafe/lodestar-params";
 import {RunnerType} from "../utils/types.js";
+import {specTestIterator} from "../utils/specTestIterator.js";
 import {epochProcessing} from "./epoch_processing.js";
 import {finality} from "./finality.js";
 import {fork} from "./fork.js";
@@ -12,7 +13,6 @@ import {sanity, sanityBlocks} from "./sanity.js";
 import {shuffling} from "./shuffling.js";
 import {sszStatic} from "./ssz_static.js";
 import {transition} from "./transition.js";
-import {specTestIterator} from "../utils/specTestIterator.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 

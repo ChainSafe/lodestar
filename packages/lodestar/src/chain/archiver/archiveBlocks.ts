@@ -2,10 +2,10 @@ import {fromHexString} from "@chainsafe/ssz";
 import {Epoch, Slot} from "@chainsafe/lodestar-types";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {IBeaconDb} from "../../db/index.js";
-import {BlockArchiveBatchPutBinaryItem} from "../../db/repositories/index.js";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {IBeaconDb} from "../../db/index.js";
+import {BlockArchiveBatchPutBinaryItem} from "../../db/repositories/index.js";
 import {LightClientServer} from "../lightClient/index.js";
 
 // Process in chunks to avoid OOM

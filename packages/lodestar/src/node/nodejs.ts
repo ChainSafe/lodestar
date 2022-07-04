@@ -17,8 +17,8 @@ import {BeaconSync, IBeaconSync} from "../sync/index.js";
 import {BackfillSync} from "../sync/backfill/index.js";
 import {BeaconChain, IBeaconChain, initBeaconMetrics} from "../chain/index.js";
 import {createMetrics, IMetrics, HttpMetricsServer} from "../metrics/index.js";
-import {getApi, RestApi} from "../api/index.js";
-import {initializeExecutionEngine} from "../executionEngine/index.js";
+import {getApi, BeaconRestApiServer} from "../api/index.js";
+import {initializeExecutionEngine, initializeExecutionBuilder} from "../execution/index.js";
 import {initializeEth1ForBlockProduction} from "../eth1/index.js";
 import {IBeaconNodeOptions} from "./options.js";
 import {runNodeNotifier} from "./notifier.js";
@@ -36,7 +36,7 @@ export interface IBeaconNodeModules {
   sync: IBeaconSync;
   backfillSync: BackfillSync | null;
   metricsServer?: HttpMetricsServer;
-  restApi?: RestApi;
+  restApi?: BeaconRestApiServer;
   controller?: AbortController;
 }
 
@@ -70,7 +70,7 @@ export class BeaconNode {
   network: INetwork;
   chain: IBeaconChain;
   api: Api;
-  restApi?: RestApi;
+  restApi?: BeaconRestApiServer;
   sync: IBeaconSync;
   backfillSync: BackfillSync | null;
 
@@ -129,10 +129,10 @@ export class BeaconNode {
 
     let metrics = null;
     if (opts.metrics.enabled) {
-      // Since the db is managed separately, db metrics must be manually added to the registry
-      db.metricsRegistry && metricsRegistries.push(db.metricsRegistry);
       metrics = createMetrics(opts.metrics, config, anchorState, logger.child({module: "VMON"}), metricsRegistries);
       initBeaconMetrics(metrics, anchorState);
+      // Since the db is instantiated before this, metrics must be injected manually afterwards
+      db.setMetrics(metrics.db);
     }
 
     const chain = new BeaconChain(opts.chain, {
@@ -143,10 +143,13 @@ export class BeaconNode {
       anchorState,
       eth1: initializeEth1ForBlockProduction(
         opts.eth1,
-        {config, db, logger: logger.child(opts.logger.eth1), signal},
+        {config, db, metrics, logger: logger.child(opts.logger.eth1), signal},
         anchorState
       ),
       executionEngine: initializeExecutionEngine(opts.executionEngine, signal),
+      executionBuilder: opts.executionBuilder.enabled
+        ? initializeExecutionBuilder(opts.executionBuilder, config)
+        : undefined,
     });
 
     // Load persisted data from disk to in-memory caches
@@ -203,11 +206,11 @@ export class BeaconNode {
       await metricsServer.start();
     }
 
-    const restApi = new RestApi(opts.api.rest, {
+    const restApi = new BeaconRestApiServer(opts.api.rest, {
       config,
       logger: logger.child(opts.logger.api),
       api,
-      metrics,
+      metrics: metrics ? metrics.apiRest : null,
     });
     if (opts.api.rest.enabled) {
       await restApi.listen();
@@ -246,7 +249,7 @@ export class BeaconNode {
       if (this.restApi) await this.restApi.close();
 
       await this.chain.persistToDisk();
-      this.chain.close();
+      await this.chain.close();
       await this.db.stop();
       if (this.controller) this.controller.abort();
       this.status = BeaconNodeStatus.closed;

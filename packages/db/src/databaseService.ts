@@ -1,11 +1,10 @@
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
+import {ILevelDbControllerMetrics} from "./controller/metrics.js";
 import {Db} from "./controller/index.js";
-import {IDbMetrics} from "./metrics.js";
 
 export interface IDatabaseApiOptions {
   config: IChainForkConfig;
   controller: Db;
-  metrics?: IDbMetrics;
 }
 
 export abstract class DatabaseService {
@@ -23,5 +22,10 @@ export abstract class DatabaseService {
 
   async stop(): Promise<void> {
     await this.db.stop();
+  }
+
+  /** To inject metrics after CLI initialization */
+  setMetrics(metrics: ILevelDbControllerMetrics): void {
+    this.db.setMetrics(metrics);
   }
 }

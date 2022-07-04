@@ -3,9 +3,12 @@ import {
   computeSigningRoot,
   computeStartSlotAtEpoch,
 } from "@chainsafe/lodestar-beacon-state-transition";
-import {IProtoBlock, IForkChoice, ExecutionStatus} from "@chainsafe/lodestar-fork-choice";
+import {ProtoBlock, IForkChoice, ExecutionStatus} from "@chainsafe/lodestar-fork-choice";
 import {DOMAIN_BEACON_ATTESTER} from "@chainsafe/lodestar-params";
 import {phase0, Slot, ssz} from "@chainsafe/lodestar-types";
+import {BitArray, toHexString} from "@chainsafe/ssz";
+import {config} from "@chainsafe/lodestar-config/default";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconChain} from "../../../src/chain/index.js";
 import {IStateRegenerator} from "../../../src/chain/regen/index.js";
 import {ZERO_HASH, ZERO_HASH_HEX} from "../../../src/constants/index.js";
@@ -17,9 +20,6 @@ import {SeenAttesters} from "../../../src/chain/seenCache/index.js";
 import {BlsSingleThreadVerifier} from "../../../src/chain/bls/index.js";
 import {signCached} from "../cache.js";
 import {ClockStatic} from "../clock.js";
-import {BitArray, toHexString} from "@chainsafe/ssz";
-import {config} from "@chainsafe/lodestar-config/default";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {SeenAggregatedAttestations} from "../../../src/chain/seenCache/seenAggregateAndProof.js";
 
 export type AttestationValidDataOpts = {
@@ -50,7 +50,7 @@ export function getAttestationValidData(
   const clock = new ClockStatic(currentSlot);
 
   // Add block to forkChoice
-  const headBlock: IProtoBlock = {
+  const headBlock: ProtoBlock = {
     slot: attSlot,
     blockRoot: toHexString(beaconBlockRoot),
     parentRoot: ZERO_HASH_HEX,

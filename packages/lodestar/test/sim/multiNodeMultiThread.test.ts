@@ -1,15 +1,15 @@
 import path from "node:path";
 import os from "node:os";
 import {Worker} from "worker_threads";
+import {fileURLToPath} from "node:url";
 import {phase0} from "@chainsafe/lodestar-types";
 import {toHexString} from "@chainsafe/ssz";
+import {IChainConfig} from "@chainsafe/lodestar-config";
 import {waitForEvent} from "../utils/events/resolver.js";
 import {ChainEvent} from "../../src/chain/index.js";
 import {createPeerId} from "../../src/network/index.js";
 import {logFilesDir} from "./params.js";
 import {NodeWorkerOptions} from "./threaded/types.js";
-import {IChainConfig} from "@chainsafe/lodestar-config";
-import {fileURLToPath} from "node:url";
 
 // Global variable __dirname no longer available in ES6 modules.
 // Solutions: https://stackoverflow.com/questions/46745014/alternative-for-dirname-in-node-js-when-using-es6-modules
