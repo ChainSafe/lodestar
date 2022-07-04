@@ -12,8 +12,8 @@ import {
   PubkeyIndexMap,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {allForks, UintNum64, Root, phase0, Slot, RootHex, Epoch, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {CheckpointWithHex, IForkChoice, ProtoBlock} from "@chainsafe/lodestar-fork-choice";
 import {ILogger, toHex} from "@chainsafe/lodestar-utils";
 import {CompositeTypeAny, fromHexString, TreeView, Type} from "@chainsafe/ssz";
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
@@ -26,7 +26,6 @@ import {CheckpointStateCache, StateContextCache} from "./stateCache/index.js";
 import {BlockProcessor, PartiallyVerifiedBlockFlags} from "./blocks/index.js";
 import {IBeaconClock, LocalClock} from "./clock/index.js";
 import {ChainEventEmitter} from "./emitter.js";
-import {handleChainEvents} from "./eventHandlers.js";
 import {IBeaconChain, ProposerPreparationData} from "./interface.js";
 import {IChainOptions} from "./options.js";
 import {IStateRegenerator, QueuedStateRegenerator, RegenCaller} from "./regen/index.js";
@@ -54,6 +53,7 @@ import {ReprocessController} from "./reprocess.js";
 import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
 import {SeenBlockAttesters} from "./seenCache/seenBlockAttesters.js";
 import {BeaconProposerCache} from "./beaconProposerCache.js";
+import {ChainEvent} from "./index.js";
 
 export class BeaconChain implements IBeaconChain {
   readonly genesisTime: UintNum64;
@@ -208,10 +208,13 @@ export class BeaconChain implements IBeaconChain {
         seenAggregatedAttestations: this.seenAggregatedAttestations,
         seenBlockAttesters: this.seenBlockAttesters,
         beaconProposerCache: this.beaconProposerCache,
+        reprocessController: this.reprocessController,
         emitter,
         config,
         logger,
         metrics,
+        persistInvalidSszValue: this.persistInvalidSszValue.bind(this),
+        persistInvalidSszView: this.persistInvalidSszView.bind(this),
       },
       opts,
       signal
@@ -229,9 +232,14 @@ export class BeaconChain implements IBeaconChain {
     this.archiver = new Archiver(db, this, logger, signal, opts);
     new PrecomputeNextEpochTransitionScheduler(this, this.config, metrics, this.logger, signal);
 
-    handleChainEvents.bind(this)(this.abortController.signal);
-
     metrics?.opPool.aggregatedAttestationPoolSize.addCollect(() => this.onScrapeMetrics());
+
+    // Event handlers
+    this.emitter.addListener(ChainEvent.clockSlot, this.onClockSlot.bind(this));
+    this.emitter.addListener(ChainEvent.clockEpoch, this.onClockEpoch.bind(this));
+    this.emitter.addListener(ChainEvent.forkChoiceFinalized, this.onForkChoiceFinalized.bind(this));
+    this.emitter.addListener(ChainEvent.forkChoiceJustified, this.onForkChoiceJustified.bind(this));
+    this.emitter.addListener(ChainEvent.forkChoiceHead, this.onForkChoiceHead.bind(this));
   }
 
   async close(): Promise<void> {
@@ -382,6 +390,64 @@ export class BeaconChain implements IBeaconChain {
     this.metrics?.opPool.voluntaryExitPoolSize.set(this.opPool.voluntaryExitsSize);
     this.metrics?.opPool.syncCommitteeMessagePoolSize.set(this.syncCommitteeMessagePool.size);
     this.metrics?.opPool.syncContributionAndProofPoolSize.set(this.syncContributionAndProofPool.size);
+  }
+
+  private onClockSlot(slot: Slot): void {
+    this.logger.verbose("Clock slot", {slot});
+
+    // CRITICAL UPDATE
+    this.forkChoice.updateTime(slot);
+
+    this.metrics?.clockSlot.set(slot);
+
+    this.attestationPool.prune(slot);
+    this.aggregatedAttestationPool.prune(slot);
+    this.syncCommitteeMessagePool.prune(slot);
+    this.seenSyncCommitteeMessages.prune(slot);
+    this.reprocessController.onSlot(slot);
+  }
+
+  private onClockEpoch(epoch: Epoch): void {
+    this.seenAttesters.prune(epoch);
+    this.seenAggregators.prune(epoch);
+    this.seenAggregatedAttestations.prune(epoch);
+    this.seenBlockAttesters.prune(epoch);
+    this.beaconProposerCache.prune(epoch);
+  }
+
+  private onForkChoiceHead(head: ProtoBlock): void {
+    const delaySec = this.clock.secFromSlot(head.slot);
+    this.logger.verbose("New chain head", {
+      headSlot: head.slot,
+      headRoot: head.blockRoot,
+      delaySec,
+    });
+    this.syncContributionAndProofPool.prune(head.slot);
+    this.seenContributionAndProof.prune(head.slot);
+
+    if (this.metrics) {
+      this.metrics.headSlot.set(head.slot);
+      // Only track "recent" blocks. Otherwise sync can distort this metrics heavily.
+      // We want to track recent blocks coming from gossip, unknown block sync, and API.
+      if (delaySec < 64 * this.config.SECONDS_PER_SLOT) {
+        this.metrics.elapsedTimeTillBecomeHead.observe(delaySec);
+      }
+    }
+  }
+
+  private onForkChoiceJustified(this: BeaconChain, cp: CheckpointWithHex): void {
+    this.logger.verbose("Fork choice justified", {epoch: cp.epoch, root: cp.rootHex});
+  }
+
+  private onForkChoiceFinalized(this: BeaconChain, cp: CheckpointWithHex): void {
+    this.logger.verbose("Fork choice finalized", {epoch: cp.epoch, root: cp.rootHex});
+    this.seenBlockProposers.prune(computeStartSlotAtEpoch(cp.epoch));
+
+    // TODO: Improve using regen here
+    const headState = this.stateCache.get(this.forkChoice.getHead().stateRoot);
+    if (headState) {
+      this.opPool.pruneAll(headState);
+    }
   }
 
   async updateBeaconProposerData(epoch: Epoch, proposers: ProposerPreparationData[]): Promise<void> {
