@@ -5,7 +5,7 @@ import {getClient} from "@chainsafe/lodestar-api";
 import {IBeaconNodeOptions, getStateTypeFromBytes} from "@chainsafe/lodestar";
 import {IChainConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
 import {Checkpoint} from "@chainsafe/lodestar-types/phase0";
-import {RecursivePartial, fromHex} from "@chainsafe/lodestar-utils";
+import {RecursivePartial, fromHex, callFnWhenAwait, ILogger} from "@chainsafe/lodestar-utils";
 import {BeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
 import * as mainnet from "./mainnet.js";
 import * as dev from "./dev.js";
@@ -167,6 +167,7 @@ export function enrsToNetworkConfig(enrs: string[]): RecursivePartial<IBeaconNod
  */
 export async function fetchWeakSubjectivityState(
   config: IChainForkConfig,
+  logger: ILogger,
   {weakSubjectivityServerUrl, weakSubjectivityCheckpoint}: WeakSubjectivityFetchOptions
 ): Promise<{wsState: BeaconStateAllForks; wsCheckpoint: Checkpoint}> {
   try {
@@ -181,9 +182,18 @@ export async function fetchWeakSubjectivityState(
       wsCheckpoint = finalized;
     }
     const stateSlot = wsCheckpoint.epoch * SLOTS_PER_EPOCH;
-    const stateBytes = await (config.getForkName(stateSlot) === ForkName.phase0
-      ? api.debug.getState(`${stateSlot}`, "ssz")
-      : api.debug.getStateV2(`${stateSlot}`, "ssz"));
+    // TODO: timeout param for api? or only increase timeout for getState
+    // const timeout = 3 * 60 * 1000;
+    const getStatePromise =
+      config.getForkName(stateSlot) === ForkName.phase0
+        ? api.debug.getState(`${stateSlot}`, "ssz")
+        : api.debug.getStateV2(`${stateSlot}`, "ssz");
+
+    const stateBytes = await callFnWhenAwait(
+      getStatePromise,
+      () => logger.info("Download in progress, please wait ..."),
+      30 * 1000
+    );
 
     return {wsState: getStateTypeFromBytes(config, stateBytes).deserializeToViewDU(stateBytes), wsCheckpoint};
   } catch (e) {

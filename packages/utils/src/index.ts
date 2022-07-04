@@ -13,3 +13,4 @@ export * from "./sort.js";
 export * from "./timeout.js";
 export {RecursivePartial, bnToNum} from "./types.js";
 export * from "./verifyMerkleBranch.js";
+export * from "./promise.js";
