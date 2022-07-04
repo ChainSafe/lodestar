@@ -1,11 +1,6 @@
 import {Epoch, ValidatorIndex} from "@lodestar/types";
 import {intDiv} from "@lodestar/utils";
-import {
-  EPOCHS_PER_SLASHINGS_VECTOR,
-  FAR_FUTURE_EPOCH,
-  ForkName,
-  MAX_EFFECTIVE_BALANCE,
-} from "@lodestar/params";
+import {EPOCHS_PER_SLASHINGS_VECTOR, FAR_FUTURE_EPOCH, ForkName, MAX_EFFECTIVE_BALANCE} from "@lodestar/params";
 
 import {
   IAttesterStatus,

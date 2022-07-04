@@ -1,10 +1,6 @@
 import {altair, phase0, Root, RootHex, Slot, ssz, SyncPeriod} from "@lodestar/types";
 import {IChainForkConfig} from "@lodestar/config";
-import {
-  CachedBeaconStateAltair,
-  computeSyncPeriodAtEpoch,
-  computeSyncPeriodAtSlot,
-} from "@lodestar/state-transition";
+import {CachedBeaconStateAltair, computeSyncPeriodAtEpoch, computeSyncPeriodAtSlot} from "@lodestar/state-transition";
 import {ILogger} from "@lodestar/utils";
 import {routes} from "@lodestar/api";
 import {BitArray, CompositeViewDU, toHexString} from "@chainsafe/ssz";

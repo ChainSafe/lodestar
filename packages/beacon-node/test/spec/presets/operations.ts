@@ -1,8 +1,4 @@
-import {
-  BeaconStateAllForks,
-  CachedBeaconStateAllForks,
-  CachedBeaconStateBellatrix,
-} from "@lodestar/state-transition";
+import {BeaconStateAllForks, CachedBeaconStateAllForks, CachedBeaconStateBellatrix} from "@lodestar/state-transition";
 import * as blockFns from "@lodestar/state-transition/block";
 import {ssz, phase0, altair, bellatrix} from "@lodestar/types";
 import {InputType} from "@lodestar/spec-test-util";

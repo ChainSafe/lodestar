@@ -1,9 +1,4 @@
-import {
-  computeEpochAtSlot,
-  IAttesterStatus,
-  parseAttesterFlags,
-  RootCache,
-} from "@lodestar/state-transition";
+import {computeEpochAtSlot, IAttesterStatus, parseAttesterFlags, RootCache} from "@lodestar/state-transition";
 import {ILogger} from "@lodestar/utils";
 import {allForks} from "@lodestar/types";
 import {IChainForkConfig} from "@lodestar/config";

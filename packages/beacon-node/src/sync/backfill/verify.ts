@@ -1,8 +1,4 @@
-import {
-  CachedBeaconStateAllForks,
-  ISignatureSet,
-  getProposerSignatureSet,
-} from "@lodestar/state-transition";
+import {CachedBeaconStateAllForks, ISignatureSet, getProposerSignatureSet} from "@lodestar/state-transition";
 import {IBeaconConfig} from "@lodestar/config";
 import {allForks, Root, allForks as allForkTypes, ssz, Slot} from "@lodestar/types";
 import {GENESIS_SLOT} from "@lodestar/params";

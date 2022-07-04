@@ -1,8 +1,4 @@
-import {
-  computeEpochAtSlot,
-  computeStartSlotAtEpoch,
-  getBlockRootAtSlot,
-} from "@lodestar/state-transition";
+import {computeEpochAtSlot, computeStartSlotAtEpoch, getBlockRootAtSlot} from "@lodestar/state-transition";
 import {routes} from "@lodestar/api";
 import {toHexString} from "@chainsafe/ssz";
 import {ApiModules} from "../types.js";

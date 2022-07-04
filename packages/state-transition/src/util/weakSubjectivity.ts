@@ -1,10 +1,5 @@
 import {IBeaconConfig, IChainForkConfig} from "@lodestar/config";
-import {
-  EFFECTIVE_BALANCE_INCREMENT,
-  MAX_DEPOSITS,
-  MAX_EFFECTIVE_BALANCE,
-  SLOTS_PER_EPOCH,
-} from "@lodestar/params";
+import {EFFECTIVE_BALANCE_INCREMENT, MAX_DEPOSITS, MAX_EFFECTIVE_BALANCE, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Epoch, Root} from "@lodestar/types";
 import {ssz} from "@lodestar/types";
 import {Checkpoint} from "@lodestar/types/phase0";

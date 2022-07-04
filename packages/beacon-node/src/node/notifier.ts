@@ -1,11 +1,7 @@
 import {IBeaconConfig} from "@lodestar/config";
 import {ErrorAborted, ILogger, sleep, prettyBytes} from "@lodestar/utils";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {
-  computeEpochAtSlot,
-  isBellatrixCachedStateType,
-  isMergeTransitionComplete,
-} from "@lodestar/state-transition";
+import {computeEpochAtSlot, isBellatrixCachedStateType, isMergeTransitionComplete} from "@lodestar/state-transition";
 import {IBeaconChain} from "../chain/index.js";
 import {INetwork} from "../network/index.js";
 import {IBeaconSync, SyncState} from "../sync/index.js";

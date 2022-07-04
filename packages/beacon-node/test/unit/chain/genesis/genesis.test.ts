@@ -4,12 +4,7 @@ import chaiAsPromised from "chai-as-promised";
 import type {SecretKey, PublicKey} from "@chainsafe/bls/types";
 import {DOMAIN_DEPOSIT, MAX_EFFECTIVE_BALANCE} from "@lodestar/params";
 import {config} from "@lodestar/config/default";
-import {
-  computeDomain,
-  computeSigningRoot,
-  interopSecretKey,
-  ZERO_HASH,
-} from "@lodestar/state-transition";
+import {computeDomain, computeSigningRoot, interopSecretKey, ZERO_HASH} from "@lodestar/state-transition";
 import {ValidatorIndex, phase0, ssz} from "@lodestar/types";
 import {ErrorAborted} from "@lodestar/utils";
 import {toHexString} from "@chainsafe/ssz";

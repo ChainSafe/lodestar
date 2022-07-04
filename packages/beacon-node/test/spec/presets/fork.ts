@@ -1,8 +1,4 @@
-import {
-  BeaconStateAllForks,
-  CachedBeaconStateAltair,
-  CachedBeaconStatePhase0,
-} from "@lodestar/state-transition";
+import {BeaconStateAllForks, CachedBeaconStateAltair, CachedBeaconStatePhase0} from "@lodestar/state-transition";
 import * as slotFns from "@lodestar/state-transition/slot";
 import {phase0, ssz} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";

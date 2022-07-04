@@ -1,9 +1,5 @@
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
-import {
-  computeSyncPeriodAtEpoch,
-  computeSyncPeriodAtSlot,
-  isSyncCommitteeAggregator,
-} from "@lodestar/state-transition";
+import {computeSyncPeriodAtEpoch, computeSyncPeriodAtSlot, isSyncCommitteeAggregator} from "@lodestar/state-transition";
 import {IChainForkConfig} from "@lodestar/config";
 import {BLSSignature, Epoch, RootHex, Slot, SyncPeriod, ValidatorIndex} from "@lodestar/types";
 import {toHexString} from "@chainsafe/ssz";
