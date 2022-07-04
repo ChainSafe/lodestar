@@ -1,11 +1,16 @@
 import {
   EFFECTIVE_BALANCE_INCREMENT,
+  ForkSeq,
   HYSTERESIS_DOWNWARD_MULTIPLIER,
   HYSTERESIS_QUOTIENT,
   HYSTERESIS_UPWARD_MULTIPLIER,
   MAX_EFFECTIVE_BALANCE,
+  TIMELY_TARGET_FLAG_INDEX,
 } from "@chainsafe/lodestar-params";
-import {EpochProcess, CachedBeaconStateAllForks} from "../types.js";
+import {EpochProcess, CachedBeaconStateAllForks, BeaconStateAltair} from "../types.js";
+
+/** Same to https://github.com/ethereum/eth2.0-specs/blob/v1.1.0-alpha.5/specs/altair/beacon-chain.md#has_flag */
+const TIMELY_TARGET = 1 << TIMELY_TARGET_FLAG_INDEX;
 
 /**
  * Update effective balances if validator.balance has changed enough
@@ -23,6 +28,7 @@ export function processEffectiveBalanceUpdates(state: CachedBeaconStateAllForks,
   const UPWARD_THRESHOLD = HYSTERESIS_INCREMENT * HYSTERESIS_UPWARD_MULTIPLIER;
   const {validators, epochCtx} = state;
   const {effectiveBalanceIncrements} = epochCtx;
+  const forkSeq = epochCtx.config.getForkSeq(state.slot);
   let nextEpochTotalActiveBalanceByIncrement = 0;
 
   // update effective balances with hysteresis
@@ -47,9 +53,26 @@ export function processEffectiveBalanceUpdates(state: CachedBeaconStateAllForks,
       effectiveBalance = Math.min(balance - (balance % EFFECTIVE_BALANCE_INCREMENT), MAX_EFFECTIVE_BALANCE);
       // Update the state tree
       // Should happen rarely, so it's fine to update the tree
-      validators.get(i).effectiveBalance = effectiveBalance;
+      const validator = validators.get(i);
+      validator.effectiveBalance = effectiveBalance;
       // Also update the fast cached version
-      effectiveBalanceIncrement = Math.floor(effectiveBalance / EFFECTIVE_BALANCE_INCREMENT);
+      const newEffectiveBalanceIncrement = Math.floor(effectiveBalance / EFFECTIVE_BALANCE_INCREMENT);
+      const deltaEffectiveBalanceIncrement = newEffectiveBalanceIncrement - effectiveBalanceIncrement;
+      if (forkSeq > ForkSeq.phase0) {
+        const altairState = state as BeaconStateAltair;
+        // currentTargetUnslashedBalanceIncrements is transfered to previousTargetUnslashedBalanceIncrements in afterEpochProcess
+        // at epoch transition of next epoch (in EpochProcess), prevTargetUnslStake is calculated based on newEffectiveBalanceIncrement
+        if (!validator.slashed && (altairState.currentEpochParticipation.get(i) & TIMELY_TARGET) === TIMELY_TARGET) {
+          epochCtx.currentTargetUnslashedBalanceIncrements += deltaEffectiveBalanceIncrement;
+        }
+
+        // previousTargetUnslashedBalanceIncrements is also used after this (in slashValidators())
+        // it needs to go with the new effectiveBalance as well
+        if (!validator.slashed && (altairState.previousEpochParticipation.get(i) & TIMELY_TARGET) === TIMELY_TARGET) {
+          epochCtx.previousTargetUnslashedBalanceIncrements += deltaEffectiveBalanceIncrement;
+        }
+      }
+      effectiveBalanceIncrement = newEffectiveBalanceIncrement;
       effectiveBalanceIncrements[i] = effectiveBalanceIncrement;
     }
 
