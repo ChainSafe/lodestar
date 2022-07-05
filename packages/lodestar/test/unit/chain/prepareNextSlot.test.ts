@@ -12,8 +12,9 @@ import {StateRegenerator} from "../../../src/chain/regen/index.js";
 import {SinonStubFn} from "../../utils/types.js";
 import {generateCachedBellatrixState} from "../../utils/state.js";
 import {BeaconProposerCache} from "../../../src/chain/beaconProposerCache.js";
-import {ExecutionEngineHttp} from "../../../src/executionEngine/http.js";
-import {IExecutionEngine, PayloadIdCache} from "../../../src/executionEngine/interface.js";
+import {PayloadIdCache} from "../../../src/execution/engine/payloadIdCache.js";
+import {ExecutionEngineHttp} from "../../../src/execution/engine/http.js";
+import {IExecutionEngine} from "../../../src/execution/engine/interface.js";
 
 describe("PrepareNextSlot scheduler", () => {
   const sandbox = sinon.createSandbox();
