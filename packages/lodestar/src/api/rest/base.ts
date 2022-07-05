@@ -1,7 +1,7 @@
 import querystring from "querystring";
-import fastify, {FastifyError, FastifyInstance} from "fastify";
-import fastifyCors from "fastify-cors";
-import bearerAuthPlugin from "fastify-bearer-auth";
+import fastify, {FastifyError, FastifyInstance, FastifyPluginCallback} from "fastify";
+import fastifyCors, {FastifyCorsOptions, FastifyCorsOptionsDelegate, FastifyPluginOptionsDelegate} from "@fastify/cors";
+import bearerAuthPlugin, {FastifyBearerAuthOptions} from "@fastify/bearer-auth";
 import {RouteConfig} from "@chainsafe/lodestar-api/beacon/server";
 import {ErrorAborted, ILogger} from "@chainsafe/lodestar-utils";
 import {IGauge, IHistogram} from "../../metrics/index.js";
@@ -58,11 +58,21 @@ export class RestApiServer {
     });
 
     if (opts.cors) {
-      void server.register(fastifyCors, {origin: opts.cors});
+      type FastifyCorsv4 = FastifyPluginCallback<
+        FastifyCorsOptions | FastifyPluginOptionsDelegate<FastifyCorsOptionsDelegate>
+      >;
+      // @ts-expect-error @fastify/cors@8.0.0 has an incorrect definition of fastify@v4 types
+      const fastifyCorsv4 = fastifyCors as FastifyCorsv4;
+      void server.register(fastifyCorsv4, {origin: opts.cors});
     }
 
     if (opts.bearerToken) {
-      void server.register(bearerAuthPlugin, {keys: new Set([opts.bearerToken])});
+      type BearerAuthPluginv4 = FastifyPluginCallback<FastifyBearerAuthOptions>;
+      // Note: use @ts-expect-error on the minimal set of castings possible. Type is declared out of @ts-expect-error
+      // and the type is used outside of @ts-expect-error.
+      // @ts-expect-error @fastify/bearer-auth@8.0.0 has an incorrect definition of fastify@v4 types
+      const bearerAuthPluginv4 = bearerAuthPlugin as BearerAuthPluginv4;
+      void server.register(bearerAuthPluginv4, {keys: new Set([opts.bearerToken])});
     }
 
     // Log all incoming request to debug (before parsing). TODO: Should we hook latter in the lifecycle? https://www.fastify.io/docs/latest/Lifecycle/
