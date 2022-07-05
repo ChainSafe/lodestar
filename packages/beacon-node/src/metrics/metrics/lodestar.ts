@@ -1004,10 +1004,27 @@ export function createLodestarMetrics(
     },
 
     lightclientServer: {
-      persistedUpdates: register.gauge<"type">({
-        name: "lodestar_lightclient_server_persisted_updates_total",
-        help: "Total number of persisted updates by finalized type",
-        labelNames: ["type"],
+      onSyncAggregate: register.gauge<"event">({
+        name: "lodestar_lightclient_server_on_sync_aggregate_event_total",
+        help: "Total number of relevant events onSyncAggregate fn",
+        labelNames: ["event"],
+      }),
+      highestSlot: register.gauge<"item">({
+        name: "lodestar_lightclient_server_higest_slot",
+        help: "Current highest slot of items stored by LightclientServer",
+        labelNames: ["item"],
+      }),
+      updateNotBetter: register.gauge({
+        name: "lodestar_lightclient_server_event_update_not_better_total",
+        help: "Total number of cache hits in LightclientServer.prevHeadData",
+      }),
+      attestedDataCacheMiss: register.gauge({
+        name: "lodestar_lightclient_server_attested_cache_miss_total",
+        help: "Total number of cache miss in LightclientServer.prevHeadData",
+      }),
+      attestedDataDiffPeriod: register.gauge({
+        name: "lodestar_lightclient_server_attested_data_diff_period_total",
+        help: "Total number of times a syncAggregate is a different period than attested data",
       }),
     },
 
