@@ -60,10 +60,10 @@
     "blockchain"
   ],
   "dependencies": {
-    "@chainsafe/lodestar-api": "^0.37.0",
-    "@chainsafe/lodestar-beacon-state-transition": "^0.37.0",
-    "@chainsafe/lodestar-config": "^0.37.0",
-    "@chainsafe/lodestar-types": "^0.37.0",
+    "@chainsafe/lodestar-api": "^0.39.0",
+    "@chainsafe/lodestar-beacon-state-transition": "^0.39.0",
+    "@chainsafe/lodestar-config": "^0.39.0",
+    "@chainsafe/lodestar-types": "^0.39.0",
     "source-map-support": "^0.5.19",
     "yargs": "^16.1.0"
   },
