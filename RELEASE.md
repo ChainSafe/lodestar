@@ -205,6 +205,7 @@ This section is to guide the Release Manager tasked with the next version releas
 - Disable "Allow merge commits" under the Lodestar repository settings
 - Complete Step 5: Tag stable release
 - Double check that Github release is correct and inform the Project Manager of completion
+- Update lodestar_dockerhub_tag in production repository
 - Deploy new stable release to `stable` group of servers
 - Confirm attestations and monitor for any issues
 
