@@ -13,7 +13,7 @@
         <link rel="canonical" href="https://chainsafe.github.io/lodestar/packages/lodestar/classes/eth1_provider.eth1provider/">
       
       <link rel="icon" href="../../../../assets/round-icon.ico">
-      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.3.8">
+      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.3.9">
     
     
       
@@ -782,7 +782,7 @@
 <h2 id="constructors_1">Constructors<a class="headerlink" href="#constructors_1" title="Permanent link">&para;</a></h2>
 <h3 id="constructor">constructor<a class="headerlink" href="#constructor" title="Permanent link">&para;</a></h3>
 <p>+ <strong>new Eth1Provider</strong>(<code>config</code>: Pick‹IChainConfig, "DEPOSIT_CONTRACT_ADDRESS"›, <code>opts</code>: Pick‹<a href="../../modules/eth1/#eth1options">Eth1Options</a>, "depositContractDeployBlock" | "providerUrls" | "jwtSecretHex"›, <code>signal?</code>: AbortSignal, <code>metrics?</code>: <a href="../../modules/eth1_provider/#jsonrpchttpclientmetrics">JsonRpcHttpClientMetrics</a> | null): <em><a href="./">Eth1Provider</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/lodestar/src/eth1/provider/eth1Provider.ts#L50">packages/lodestar/src/eth1/provider/eth1Provider.ts:50</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5822980/packages/lodestar/src/eth1/provider/eth1Provider.ts#L50">packages/lodestar/src/eth1/provider/eth1Provider.ts:50</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -815,20 +815,20 @@
 <h3 id="readonly-deployblock"><code>Readonly</code> deployBlock<a class="headerlink" href="#readonly-deployblock" title="Permanent link">&para;</a></h3>
 <p>• <strong>deployBlock</strong>: <em>number</em></p>
 <p><em>Implementation of <a href="../../interfaces/eth1.ieth1provider/">IEth1Provider</a>.<a href="../../interfaces/eth1.ieth1provider/#deployblock">deployBlock</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/lodestar/src/eth1/provider/eth1Provider.ts#L48">packages/lodestar/src/eth1/provider/eth1Provider.ts:48</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5822980/packages/lodestar/src/eth1/provider/eth1Provider.ts#L48">packages/lodestar/src/eth1/provider/eth1Provider.ts:48</a></em></p>
 <hr />
 <h3 id="private-readonly-depositcontractaddress"><code>Private</code> <code>Readonly</code> depositContractAddress<a class="headerlink" href="#private-readonly-depositcontractaddress" title="Permanent link">&para;</a></h3>
 <p>• <strong>depositContractAddress</strong>: <em>string</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/lodestar/src/eth1/provider/eth1Provider.ts#L49">packages/lodestar/src/eth1/provider/eth1Provider.ts:49</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5822980/packages/lodestar/src/eth1/provider/eth1Provider.ts#L49">packages/lodestar/src/eth1/provider/eth1Provider.ts:49</a></em></p>
 <hr />
 <h3 id="private-readonly-rpc"><code>Private</code> <code>Readonly</code> rpc<a class="headerlink" href="#private-readonly-rpc" title="Permanent link">&para;</a></h3>
 <p>• <strong>rpc</strong>: <em><a href="../eth1_provider.jsonrpchttpclient/">JsonRpcHttpClient</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/lodestar/src/eth1/provider/eth1Provider.ts#L50">packages/lodestar/src/eth1/provider/eth1Provider.ts:50</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5822980/packages/lodestar/src/eth1/provider/eth1Provider.ts#L50">packages/lodestar/src/eth1/provider/eth1Provider.ts:50</a></em></p>
 <h2 id="methods_1">Methods<a class="headerlink" href="#methods_1" title="Permanent link">&para;</a></h2>
 <h3 id="getblockbyhash">getBlockByHash<a class="headerlink" href="#getblockbyhash" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>getBlockByHash</strong>(<code>blockHashHex</code>: string): <em>Promise‹<a href="../../modules/eth1/#ethjsonrpcblockraw">EthJsonRpcBlockRaw</a> | null›</em></p>
 <p><em>Implementation of <a href="../../interfaces/eth1.ieth1provider/">IEth1Provider</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/lodestar/src/eth1/provider/eth1Provider.ts#L155">packages/lodestar/src/eth1/provider/eth1Provider.ts:155</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5822980/packages/lodestar/src/eth1/provider/eth1Provider.ts#L155">packages/lodestar/src/eth1/provider/eth1Provider.ts:155</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -849,7 +849,7 @@
 <h3 id="getblockbynumber">getBlockByNumber<a class="headerlink" href="#getblockbynumber" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>getBlockByNumber</strong>(<code>blockNumber</code>: number | "latest"): <em>Promise‹<a href="../../modules/eth1/#ethjsonrpcblockraw">EthJsonRpcBlockRaw</a> | null›</em></p>
 <p><em>Implementation of <a href="../../interfaces/eth1.ieth1provider/">IEth1Provider</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/lodestar/src/eth1/provider/eth1Provider.ts#L145">packages/lodestar/src/eth1/provider/eth1Provider.ts:145</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5822980/packages/lodestar/src/eth1/provider/eth1Provider.ts#L145">packages/lodestar/src/eth1/provider/eth1Provider.ts:145</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -870,13 +870,13 @@
 <h3 id="getblocknumber">getBlockNumber<a class="headerlink" href="#getblocknumber" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>getBlockNumber</strong>(): <em>Promise‹number›</em></p>
 <p><em>Implementation of <a href="../../interfaces/eth1.ieth1provider/">IEth1Provider</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/lodestar/src/eth1/provider/eth1Provider.ts#L164">packages/lodestar/src/eth1/provider/eth1Provider.ts:164</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5822980/packages/lodestar/src/eth1/provider/eth1Provider.ts#L164">packages/lodestar/src/eth1/provider/eth1Provider.ts:164</a></em></p>
 <p><strong>Returns:</strong> <em>Promise‹number›</em></p>
 <hr />
 <h3 id="getblocksbynumber">getBlocksByNumber<a class="headerlink" href="#getblocksbynumber" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>getBlocksByNumber</strong>(<code>fromBlock</code>: number, <code>toBlock</code>: number): <em>Promise‹<a href="../../modules/eth1/#ethjsonrpcblockraw">EthJsonRpcBlockRaw</a>[]›</em></p>
 <p><em>Implementation of <a href="../../interfaces/eth1.ieth1provider/">IEth1Provider</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/lodestar/src/eth1/provider/eth1Provider.ts#L113">packages/lodestar/src/eth1/provider/eth1Provider.ts:113</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5822980/packages/lodestar/src/eth1/provider/eth1Provider.ts#L113">packages/lodestar/src/eth1/provider/eth1Provider.ts:113</a></em></p>
 <p>Fetches an arbitrary array of block numbers in batch</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -901,7 +901,7 @@
 <hr />
 <h3 id="getcode">getCode<a class="headerlink" href="#getcode" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>getCode</strong>(<code>address</code>: string): <em>Promise‹string›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/lodestar/src/eth1/provider/eth1Provider.ts#L173">packages/lodestar/src/eth1/provider/eth1Provider.ts:173</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5822980/packages/lodestar/src/eth1/provider/eth1Provider.ts#L173">packages/lodestar/src/eth1/provider/eth1Provider.ts:173</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -922,7 +922,7 @@
 <h3 id="getdepositevents">getDepositEvents<a class="headerlink" href="#getdepositevents" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>getDepositEvents</strong>(<code>fromBlock</code>: number, <code>toBlock</code>: number): <em>Promise‹phase0.DepositEvent[]›</em></p>
 <p><em>Implementation of <a href="../../interfaces/eth1.ieth1provider/">IEth1Provider</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/lodestar/src/eth1/provider/eth1Provider.ts#L80">packages/lodestar/src/eth1/provider/eth1Provider.ts:80</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5822980/packages/lodestar/src/eth1/provider/eth1Provider.ts#L80">packages/lodestar/src/eth1/provider/eth1Provider.ts:80</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -946,7 +946,7 @@
 <hr />
 <h3 id="getlogs">getLogs<a class="headerlink" href="#getlogs" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>getLogs</strong>(<code>options</code>: object): <em>Promise‹object[]›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/lodestar/src/eth1/provider/eth1Provider.ts#L178">packages/lodestar/src/eth1/provider/eth1Provider.ts:178</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5822980/packages/lodestar/src/eth1/provider/eth1Provider.ts#L178">packages/lodestar/src/eth1/provider/eth1Provider.ts:178</a></em></p>
 <p><strong>Parameters:</strong></p>
 <p>▪ <strong>options</strong>: <em>object</em></p>
 <table>
@@ -980,7 +980,7 @@
 <h3 id="validatecontract">validateContract<a class="headerlink" href="#validatecontract" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>validateContract</strong>(): <em>Promise‹void›</em></p>
 <p><em>Implementation of <a href="../../interfaces/eth1.ieth1provider/">IEth1Provider</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/lodestar/src/eth1/provider/eth1Provider.ts#L69">packages/lodestar/src/eth1/provider/eth1Provider.ts:69</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5822980/packages/lodestar/src/eth1/provider/eth1Provider.ts#L69">packages/lodestar/src/eth1/provider/eth1Provider.ts:69</a></em></p>
 <p><strong>Returns:</strong> <em>Promise‹void›</em></p>
 
               
@@ -1056,7 +1056,7 @@
     <script id="__config" type="application/json">{"base": "../../../..", "features": [], "search": "../../../../assets/javascripts/workers/search.b97dbffb.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}}</script>
     
     
-      <script src="../../../../assets/javascripts/bundle.0238f547.min.js"></script>
+      <script src="../../../../assets/javascripts/bundle.6c7ad80a.min.js"></script>
       
     
   </body>

@@ -13,7 +13,7 @@
         <link rel="canonical" href="https://chainsafe.github.io/lodestar/packages/cli/modules/util_gitdata/">
       
       <link rel="icon" href="../../../../assets/round-icon.ico">
-      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.3.8">
+      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.3.9">
     
     
       
@@ -757,7 +757,7 @@
 <h2 id="type-aliases_1">Type aliases<a class="headerlink" href="#type-aliases_1" title="Permanent link">&para;</a></h2>
 <h3 id="gitdata">GitData<a class="headerlink" href="#gitdata" title="Permanent link">&para;</a></h3>
 <p>Ƭ <strong>GitData</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/cli/src/util/gitData/gitDataPath.ts#L34">packages/cli/src/util/gitData/gitDataPath.ts:34</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5822980/packages/cli/src/util/gitData/gitDataPath.ts#L34">packages/cli/src/util/gitData/gitDataPath.ts:34</a></em></p>
 <p>Git data type used to construct version information string and persistence.</p>
 <h4 id="type-declaration">Type declaration:<a class="headerlink" href="#type-declaration" title="Permanent link">&para;</a></h4>
 <ul>
@@ -771,47 +771,47 @@
 <h2 id="variables_1">Variables<a class="headerlink" href="#variables_1" title="Permanent link">&para;</a></h2>
 <h3 id="const-__dirname"><code>Const</code> __dirname<a class="headerlink" href="#const-__dirname" title="Permanent link">&para;</a></h3>
 <p>• <strong>__dirname</strong>: <em>string</em> = path.dirname(fileURLToPath(import.meta.url))</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/cli/src/util/gitData/gitDataPath.ts#L8">packages/cli/src/util/gitData/gitDataPath.ts:8</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5822980/packages/cli/src/util/gitData/gitDataPath.ts#L8">packages/cli/src/util/gitData/gitDataPath.ts:8</a></em></p>
 <hr />
 <h3 id="const-gitdatapath"><code>Const</code> gitDataPath<a class="headerlink" href="#const-gitdatapath" title="Permanent link">&para;</a></h3>
 <p>• <strong>gitDataPath</strong>: <em>string</em> = path.resolve(__dirname, "../../../.git-data.json")</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/cli/src/util/gitData/gitDataPath.ts#L31">packages/cli/src/util/gitData/gitDataPath.ts:31</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5822980/packages/cli/src/util/gitData/gitDataPath.ts#L31">packages/cli/src/util/gitData/gitDataPath.ts:31</a></em></p>
 <p>WARNING!! If you change this path make sure to update:
 - 'packages/cli/package.json' -&gt; .files -&gt; <code>".git-data.json"</code></p>
 <h2 id="functions_1">Functions<a class="headerlink" href="#functions_1" title="Permanent link">&para;</a></h2>
 <h3 id="getbranch">getBranch<a class="headerlink" href="#getbranch" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>getBranch</strong>(): <em>string</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/cli/src/util/gitData/index.ts#L49">packages/cli/src/util/gitData/index.ts:49</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5822980/packages/cli/src/util/gitData/index.ts#L49">packages/cli/src/util/gitData/index.ts:49</a></em></p>
 <p>Tries to get branch from git CLI.</p>
 <p><strong>Returns:</strong> <em>string</em></p>
 <hr />
 <h3 id="getcommit">getCommit<a class="headerlink" href="#getcommit" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>getCommit</strong>(): <em>string</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/cli/src/util/gitData/index.ts#L58">packages/cli/src/util/gitData/index.ts:58</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5822980/packages/cli/src/util/gitData/index.ts#L58">packages/cli/src/util/gitData/index.ts:58</a></em></p>
 <p>Tries to get commit from git from git CLI.</p>
 <p><strong>Returns:</strong> <em>string</em></p>
 <hr />
 <h3 id="getgitdata">getGitData<a class="headerlink" href="#getgitdata" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>getGitData</strong>(): <em><a href="./#gitdata">GitData</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/cli/src/util/gitData/index.ts#L41">packages/cli/src/util/gitData/index.ts:41</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5822980/packages/cli/src/util/gitData/index.ts#L41">packages/cli/src/util/gitData/index.ts:41</a></em></p>
 <p>Gets git data containing current branch and commit info from CLI.</p>
 <p><strong>Returns:</strong> <em><a href="./#gitdata">GitData</a></em></p>
 <hr />
 <h3 id="readandgetgitdata">readAndGetGitData<a class="headerlink" href="#readandgetgitdata" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>readAndGetGitData</strong>(): <em><a href="./#gitdata">GitData</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/cli/src/util/gitData/index.ts#L8">packages/cli/src/util/gitData/index.ts:8</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5822980/packages/cli/src/util/gitData/index.ts#L8">packages/cli/src/util/gitData/index.ts:8</a></em></p>
 <p>Reads git data from a persisted file or local git data at build time.</p>
 <p><strong>Returns:</strong> <em><a href="./#gitdata">GitData</a></em></p>
 <hr />
 <h3 id="readgitdatafile">readGitDataFile<a class="headerlink" href="#readgitdatafile" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>readGitDataFile</strong>(): <em><a href="./#gitdata">GitData</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/cli/src/util/gitData/gitDataPath.ts#L47">packages/cli/src/util/gitData/gitDataPath.ts:47</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5822980/packages/cli/src/util/gitData/gitDataPath.ts#L47">packages/cli/src/util/gitData/gitDataPath.ts:47</a></em></p>
 <p>Reads the persistent git data file.</p>
 <p><strong>Returns:</strong> <em><a href="./#gitdata">GitData</a></em></p>
 <hr />
 <h3 id="shellsilent">shellSilent<a class="headerlink" href="#shellsilent" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>shellSilent</strong>(<code>cmd</code>: string): <em>string</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/cli/src/util/gitData/index.ts#L67">packages/cli/src/util/gitData/index.ts:67</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5822980/packages/cli/src/util/gitData/index.ts#L67">packages/cli/src/util/gitData/index.ts:67</a></em></p>
 <p>Silent shell that won't pollute stdout, or stderr</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -832,7 +832,7 @@
 <hr />
 <h3 id="writegitdatafile">writeGitDataFile<a class="headerlink" href="#writegitdatafile" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>writeGitDataFile</strong>(<code>gitData</code>: <a href="./#gitdata">GitData</a>): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d3d940/packages/cli/src/util/gitData/gitDataPath.ts#L42">packages/cli/src/util/gitData/gitDataPath.ts:42</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5822980/packages/cli/src/util/gitData/gitDataPath.ts#L42">packages/cli/src/util/gitData/gitDataPath.ts:42</a></em></p>
 <p>Writes a persistent git data file.</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -924,7 +924,7 @@
     <script id="__config" type="application/json">{"base": "../../../..", "features": [], "search": "../../../../assets/javascripts/workers/search.b97dbffb.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}}</script>
     
     
-      <script src="../../../../assets/javascripts/bundle.0238f547.min.js"></script>
+      <script src="../../../../assets/javascripts/bundle.6c7ad80a.min.js"></script>
       
     
   </body>
