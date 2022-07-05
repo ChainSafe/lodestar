@@ -185,8 +185,6 @@ export async function fetchWeakSubjectivityState(
       wsCheckpoint = finalized;
     }
     const stateSlot = wsCheckpoint.epoch * SLOTS_PER_EPOCH;
-    // TODO: timeout param for api? or only increase timeout for getState
-    // const timeout = 3 * 60 * 1000;
     const getStatePromise =
       config.getForkName(stateSlot) === ForkName.phase0
         ? api.debug.getState(`${stateSlot}`, "ssz")
