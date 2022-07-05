@@ -222,8 +222,7 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
 
   // Emit ChainEvent.forkChoiceHead event
   const oldHead = chain.forkChoice.getHead();
-  chain.forkChoice.updateHead();
-  const newHead = chain.forkChoice.getHead();
+  const newHead = chain.forkChoice.updateHead();
   const currFinalizedEpoch = chain.forkChoice.getFinalizedCheckpoint().epoch;
 
   if (newHead.blockRoot !== oldHead.blockRoot) {

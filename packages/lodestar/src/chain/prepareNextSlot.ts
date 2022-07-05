@@ -61,7 +61,8 @@ export class PrepareNextSlotScheduler {
     // At 1/3 slot time before the next slot, we either prepare payload or precompute epoch transition
     await sleep(slotMs - slotMs / SCHEDULER_LOOKAHEAD_FACTOR, this.signal);
 
-    const {slot: headSlot, blockRoot: headRoot} = this.chain.forkChoice.getHead();
+    // calling updateHead() here before we produce a block to reduce reorg possibility
+    const {slot: headSlot, blockRoot: headRoot} = this.chain.forkChoice.updateHead();
     const nextEpoch = computeEpochAtSlot(clockSlot) + 1;
     // Do nothing at pre genesis
     if (nextEpoch <= GENESIS_EPOCH) return;
