@@ -33,6 +33,9 @@ export type WeakSubjectivityFetchOptions = {
   weakSubjectivityCheckpoint?: string;
 };
 
+// log to screen every 30s when downloading state from a lodestar node
+const GET_STATE_LOG_INTERVAL = 30 * 1000;
+
 function getNetworkData(
   network: NetworkName
 ): {
@@ -192,7 +195,7 @@ export async function fetchWeakSubjectivityState(
     const stateBytes = await callFnWhenAwait(
       getStatePromise,
       () => logger.info("Download in progress, please wait ..."),
-      30 * 1000
+      GET_STATE_LOG_INTERVAL
     );
 
     return {wsState: getStateTypeFromBytes(config, stateBytes).deserializeToViewDU(stateBytes), wsCheckpoint};
