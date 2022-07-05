@@ -24,8 +24,9 @@ import {GenesisData} from "./networks.js";
 import {getLcLoggerConsole, ILcLogger} from "./utils/logger.js";
 import {computeSyncPeriodAtEpoch, computeSyncPeriodAtSlot, computeEpochAtSlot} from "./utils/clock.js";
 
-// Re-export event types
+// Re-export types
 export {LightclientEvent} from "./events.js";
+export {SyncCommitteeFast} from "./types.js";
 
 export type LightclientInitArgs = {
   config: IChainForkConfig;
