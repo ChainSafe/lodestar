@@ -198,6 +198,8 @@ export async function fetchWeakSubjectivityState(
       GET_STATE_LOG_INTERVAL
     );
 
+    logger.info("Download completed");
+
     return {wsState: getStateTypeFromBytes(config, stateBytes).deserializeToViewDU(stateBytes), wsCheckpoint};
   } catch (e) {
     throw new Error(
