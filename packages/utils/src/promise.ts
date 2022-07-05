@@ -12,13 +12,13 @@ export async function callFnWhenAwait<T>(
   const logFn = async (): Promise<undefined> => {
     while (t === undefined) {
       await sleep(interval);
-      fn();
+      if (t === undefined) fn();
     }
     return undefined;
   };
 
   t = await Promise.race([p, logFn()]);
-  // should not happen
+  // should not happen since p doesn not resolve to undefined
   if (t === undefined) {
     throw new Error("Unexpected error: Timeout");
   }

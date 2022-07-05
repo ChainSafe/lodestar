@@ -18,6 +18,8 @@ describe("callFnWhenAwait util", function () {
     const result = await Promise.all([callFnWhenAwait(p, stub, 2 * 1000), sandbox.clock.tickAsync(5000)]);
     expect(result[0]).to.be.equal("done");
     expect(stub.calledTwice).to.be.true;
+    await sandbox.clock.tickAsync(5000);
+    expect(stub.calledTwice).to.be.true;
   });
 
   it("should throw error", async () => {
