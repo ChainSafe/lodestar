@@ -2,8 +2,8 @@ import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {Api, ReqTypes, routesData, getReqSerializers, getReturnTypes, StateFormat} from "../routes/debug.js";
 import {IHttpClient, getFetchOptsSerializers, generateGenericJsonClient} from "../../utils/client/index.js";
 
-// As Jul 2022, it takes up to 3 minutes to download states
-const GET_STATE_TIMEOUT_MS = 3 * 60 * 1000;
+// As Jul 2022, it takes up to 3 mins to download states so make this 5 mins for reservation
+const GET_STATE_TIMEOUT_MS = 5 * 60 * 1000;
 
 /**
  * REST HTTP client for debug routes
