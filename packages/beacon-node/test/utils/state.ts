@@ -4,6 +4,8 @@ import {
   CachedBeaconStateAllForks,
   createCachedBeaconState,
   PubkeyIndexMap,
+  CachedBeaconStateBellatrix,
+  BeaconStateBellatrix,
 } from "@lodestar/state-transition";
 import {BitArray} from "@chainsafe/ssz";
 import {phase0, allForks, altair, ssz} from "@lodestar/types";
@@ -19,8 +21,6 @@ import {
 } from "@lodestar/params";
 
 import bls from "@chainsafe/bls";
-import {CachedBeaconStateBellatrix} from "@chainsafe/lodestar-beacon-state-transition";
-import {BeaconStateBellatrix} from "@chainsafe/lodestar-beacon-state-transition";
 import {GENESIS_EPOCH, GENESIS_SLOT, ZERO_HASH} from "../../src/constants/index.js";
 import {generateEmptyBlock} from "./block.js";
 import {generateValidator, generateValidators} from "./validator.js";
