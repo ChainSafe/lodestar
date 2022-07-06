@@ -1,4 +1,4 @@
-export {minimalChainConfig as chainConfig} from "@chainsafe/lodestar-config/presets";
+export {minimalChainConfig as chainConfig} from "@lodestar/config/presets";
 
 /* eslint-disable max-len */
 

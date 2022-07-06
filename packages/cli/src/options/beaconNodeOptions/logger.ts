@@ -1,6 +1,6 @@
 import {Options} from "yargs";
-import {LogLevel, LogLevels} from "@chainsafe/lodestar-utils";
-import {defaultOptions, IBeaconNodeOptions} from "@chainsafe/lodestar";
+import {LogLevel, LogLevels} from "@lodestar/utils";
+import {defaultOptions, IBeaconNodeOptions} from "@lodestar/beacon-node";
 import {ICliCommandOptions, ObjectKeys} from "../../util/index.js";
 
 // No options are statically declared

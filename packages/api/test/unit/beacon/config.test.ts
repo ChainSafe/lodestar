@@ -1,8 +1,8 @@
 import {expect} from "chai";
-import {ssz} from "@chainsafe/lodestar-types";
-import {chainConfigToJson} from "@chainsafe/lodestar-config";
-import {config, chainConfig} from "@chainsafe/lodestar-config/default";
-import {activePreset, presetToJson} from "@chainsafe/lodestar-params";
+import {ssz} from "@lodestar/types";
+import {chainConfigToJson} from "@lodestar/config";
+import {config, chainConfig} from "@lodestar/config/default";
+import {activePreset, presetToJson} from "@lodestar/params";
 import {Api, ReqTypes, getReturnTypes} from "../../../src/beacon/routes/config.js";
 import {getClient} from "../../../src/beacon/client/config.js";
 import {getRoutes} from "../../../src/beacon/server/config.js";
@@ -15,24 +15,26 @@ describe("beacon / config", () => {
   const presetJson = presetToJson(activePreset);
   const jsonSpec = {...configJson, ...presetJson};
 
-  runGenericServerTest<Api, ReqTypes>(config, getClient, getRoutes, {
-    getDepositContract: {
-      args: [],
-      res: {
-        data: {
-          chainId: 1,
-          address: Buffer.alloc(20, 1),
+  describe("Run generic server test", () => {
+    runGenericServerTest<Api, ReqTypes>(config, getClient, getRoutes, {
+      getDepositContract: {
+        args: [],
+        res: {
+          data: {
+            chainId: 1,
+            address: Buffer.alloc(20, 1),
+          },
         },
       },
-    },
-    getForkSchedule: {
-      args: [],
-      res: {data: [ssz.phase0.Fork.defaultValue()]},
-    },
-    getSpec: {
-      args: [],
-      res: {data: jsonSpec},
-    },
+      getForkSchedule: {
+        args: [],
+        res: {data: [ssz.phase0.Fork.defaultValue()]},
+      },
+      getSpec: {
+        args: [],
+        res: {data: jsonSpec},
+      },
+    });
   });
 
   it("Serialize Partial Spec object", () => {

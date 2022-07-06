@@ -1,4 +1,4 @@
-import {phase0, Slot, RootHex} from "@chainsafe/lodestar-types";
+import {phase0, Slot, RootHex} from "@lodestar/types";
 import {toHexString} from "@chainsafe/ssz";
 
 /**

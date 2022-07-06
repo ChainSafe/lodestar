@@ -1,6 +1,6 @@
 import {toHexString} from "@chainsafe/ssz";
-import {SAFE_SLOTS_TO_UPDATE_JUSTIFIED, SLOTS_PER_HISTORICAL_ROOT, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import {bellatrix, Slot, ValidatorIndex, phase0, allForks, ssz, RootHex, Epoch, Root} from "@chainsafe/lodestar-types";
+import {SAFE_SLOTS_TO_UPDATE_JUSTIFIED, SLOTS_PER_HISTORICAL_ROOT, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {bellatrix, Slot, ValidatorIndex, phase0, allForks, ssz, RootHex, Epoch, Root} from "@lodestar/types";
 import {
   getCurrentInterval,
   computeSlotsSinceEpochStart,
@@ -12,8 +12,8 @@ import {
   isBellatrixBlockBodyType,
   isBellatrixStateType,
   isExecutionEnabled,
-} from "@chainsafe/lodestar-beacon-state-transition";
-import {IChainConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
+} from "@lodestar/state-transition";
+import {IChainConfig, IChainForkConfig} from "@lodestar/config";
 
 import {computeDeltas} from "../protoArray/computeDeltas.js";
 import {HEX_ZERO_HASH, VoteTracker, ProtoBlock, ExecutionStatus} from "../protoArray/interface.js";
@@ -337,7 +337,7 @@ export class ForkChoice implements IForkChoice {
     // (https://github.com/ethereum/consensus-specs/blob/dev/specs/bellatrix/fork-choice.md#on_block)
     //
     // However this check has been moved to the `verifyBlockStateTransition` in
-    // `packages/lodestar/src/chain/blocks/verifyBlock.ts` as:
+    // `packages/beacon-node/src/chain/blocks/verifyBlock.ts` as:
     //
     //  1. Its prudent to fail fast and not try importing a block in forkChoice.
     //  2. Also the data to run such a validation is readily available there.

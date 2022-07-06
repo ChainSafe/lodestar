@@ -1,7 +1,7 @@
-import {LevelDbController} from "@chainsafe/lodestar-db";
-import {ProcessShutdownCallback, SlashingProtection, Validator, defaultOptions} from "@chainsafe/lodestar-validator";
-import {getMetrics, MetricsRegister} from "@chainsafe/lodestar-validator";
-import {RegistryMetricCreator, collectNodeJSMetrics, HttpMetricsServer} from "@chainsafe/lodestar";
+import {LevelDbController} from "@lodestar/db";
+import {ProcessShutdownCallback, SlashingProtection, Validator, defaultOptions} from "@lodestar/validator";
+import {getMetrics, MetricsRegister} from "@lodestar/validator";
+import {RegistryMetricCreator, collectNodeJSMetrics, HttpMetricsServer} from "@lodestar/beacon-node";
 import {getBeaconConfigFromArgs} from "../../config/index.js";
 import {IGlobalArgs} from "../../options/index.js";
 import {YargsError, getDefaultGraffiti, mkdir, getCliLogger} from "../../util/index.js";

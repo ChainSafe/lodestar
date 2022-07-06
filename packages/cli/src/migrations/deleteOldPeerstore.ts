@@ -1,6 +1,6 @@
 import * as fs from "node:fs";
-import {LevelDbController} from "@chainsafe/lodestar-db";
-import {ILogger} from "@chainsafe/lodestar-utils";
+import {LevelDbController} from "@lodestar/db";
+import {ILogger} from "@lodestar/utils";
 
 /**
  * As of libp2p v0.36.0 (https://github.com/libp2p/js-libp2p/commit/978eb3676fad5d5d50ddb28d1a7868f448cbb20b)

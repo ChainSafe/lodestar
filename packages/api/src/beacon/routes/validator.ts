@@ -1,5 +1,5 @@
 import {ContainerType, fromHexString, toHexString, Type} from "@chainsafe/ssz";
-import {ForkName} from "@chainsafe/lodestar-params";
+import {ForkName} from "@lodestar/params";
 import {
   allForks,
   altair,
@@ -14,7 +14,7 @@ import {
   ssz,
   UintNum64,
   ValidatorIndex,
-} from "@chainsafe/lodestar-types";
+} from "@lodestar/types";
 import {
   RoutesData,
   ReturnTypes,

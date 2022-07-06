@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {getEffectiveBalanceIncrementsZeroed} from "@chainsafe/lodestar-beacon-state-transition";
+import {getEffectiveBalanceIncrementsZeroed} from "@lodestar/state-transition";
 
 import {computeDeltas} from "../../../src/protoArray/computeDeltas.js";
 

@@ -168,19 +168,19 @@ Status labels only apply to pull requests.
 
 The Module labels should be applied to all issues and pull requests if possible.
 
-- `mod1-beaconchain`: The @chainsafe/lodestar beacon-chain module.
-- `mod2-validator`: The @chainsafe/lodestar-validator module.
-- `mod3-lightclient`: The @chainsafe/lodestar-light-client module.
-- `mod4-api`: The @chainsafe/lodestar-api module.
-- `mod5-cli`: The @chainsafe/lodestar-cli module.
-- `mod6-statetransition`: The @chainsafe/lodestar-beacon-state-transition module.
-- `mod7-types`: The @chainsafe/lodestar-types module.
-- `mod8-params`: The @chainsafe/lodestar-params module.
-- `mod9-utils`: The @chainsafe/lodestar-utils module.
-- `moda-config`: The @chainsafe/lodestar-config module.
-- `modb-database`: The @chainsafe/lodestar-db module.
-- `modc-forkchoice`: The @chainsafe/lodestar-fork-choice module.
-- `modd-spectests`: The @chainsafe/lodestar-spec-test-\* modules.
+- `mod1-beaconchain`: The @lodestar/beacon-node beacon-chain module.
+- `mod2-validator`: The @lodestar/validator module.
+- `mod3-lightclient`: The @lodestar/light-client module.
+- `mod4-api`: The @lodestar/api module.
+- `mod5-cli`: The @chainsafe/lodestar module.
+- `mod6-statetransition`: The @lodestar/state-transition module.
+- `mod7-types`: The @lodestar/types module.
+- `mod8-params`: The @lodestar/params module.
+- `mod9-utils`: The @lodestar/utils module.
+- `moda-config`: The @lodestar/config module.
+- `modb-database`: The @lodestar/db module.
+- `modc-forkchoice`: The @lodestar/fork-choice module.
+- `modd-spectests`: The @lodestar/spec-test-\* modules.
 
 ###### `scope.*` Scope Indicator
 

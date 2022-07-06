@@ -1,8 +1,8 @@
 import {expect} from "chai";
-import {ForkName} from "@chainsafe/lodestar-params";
-import {ssz} from "@chainsafe/lodestar-types";
+import {ForkName} from "@lodestar/params";
+import {ssz} from "@lodestar/types";
 import {toHexString} from "@chainsafe/ssz";
-import {config} from "@chainsafe/lodestar-config/default";
+import {config} from "@lodestar/config/default";
 import {Api, ReqTypes, routesData} from "../../../src/beacon/routes/debug.js";
 import {getClient} from "../../../src/beacon/client/debug.js";
 import {getRoutes} from "../../../src/beacon/server/debug.js";
@@ -16,27 +16,29 @@ describe("beacon / debug", function () {
   this.timeout(30 * 1000);
   const root = Buffer.alloc(32, 1);
 
-  runGenericServerTest<Api, ReqTypes>(config, getClient, getRoutes, {
-    getHeads: {
-      args: [],
-      res: {data: [{slot: 1, root: toHexString(root)}]},
-    },
-    getState: {
-      args: ["head", "json"],
-      res: {data: ssz.phase0.BeaconState.defaultValue()},
-    },
-    getStateV2: {
-      args: ["head", "json"],
-      res: {data: ssz.altair.BeaconState.defaultValue(), version: ForkName.altair},
-    },
-    connectToPeer: {
-      args: ["peerId", ["multiaddr1", "multiaddr2"]],
-      res: undefined,
-    },
-    disconnectPeer: {
-      args: ["peerId"],
-      res: undefined,
-    },
+  describe("Run generic server test", () => {
+    runGenericServerTest<Api, ReqTypes>(config, getClient, getRoutes, {
+      getHeads: {
+        args: [],
+        res: {data: [{slot: 1, root: toHexString(root)}]},
+      },
+      getState: {
+        args: ["head", "json"],
+        res: {data: ssz.phase0.BeaconState.defaultValue()},
+      },
+      getStateV2: {
+        args: ["head", "json"],
+        res: {data: ssz.altair.BeaconState.defaultValue(), version: ForkName.altair},
+      },
+      connectToPeer: {
+        args: ["peerId", ["multiaddr1", "multiaddr2"]],
+        res: undefined,
+      },
+      disconnectPeer: {
+        args: ["peerId"],
+        res: undefined,
+      },
+    });
   });
 
   // Get state by SSZ

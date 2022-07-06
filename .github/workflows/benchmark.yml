@@ -50,8 +50,8 @@ jobs:
       - name: Restore performance state cache
         uses: actions/cache@master
         with:
-          path: packages/beacon-state-transition/test-cache
-          key: perf-states-${{ hashFiles('packages/beacon-state-transition/test/perf/params.ts') }}
+          path: packages/state-transition/test-cache
+          key: perf-states-${{ hashFiles('packages/state-transition/test/perf/params.ts') }}
 
       - name: Run benchmarks
         run: yarn benchmark

@@ -1,5 +1,5 @@
 import EventSource from "eventsource";
-import {IChainForkConfig} from "@chainsafe/lodestar-config";
+import {IChainForkConfig} from "@lodestar/config";
 import {Api, BeaconEvent, routesData, getEventSerdes} from "../routes/events.js";
 import {stringifyQuery} from "../../utils/client/format.js";
 

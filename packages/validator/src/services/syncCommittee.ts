@@ -1,8 +1,8 @@
-import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import {Slot, CommitteeIndex, altair, Root} from "@chainsafe/lodestar-types";
-import {extendError, sleep} from "@chainsafe/lodestar-utils";
-import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
-import {Api} from "@chainsafe/lodestar-api";
+import {IChainForkConfig} from "@lodestar/config";
+import {Slot, CommitteeIndex, altair, Root} from "@lodestar/types";
+import {extendError, sleep} from "@lodestar/utils";
+import {computeEpochAtSlot} from "@lodestar/state-transition";
+import {Api} from "@lodestar/api";
 import {IClock, ILoggerVc} from "../util/index.js";
 import {PubkeyHex} from "../types.js";
 import {Metrics} from "../metrics.js";

@@ -1,6 +1,6 @@
 import {PeerId} from "@libp2p/interface-peer-id";
 import {Multiaddr} from "@multiformats/multiaddr";
-import {IBeaconNodeOptions} from "@chainsafe/lodestar";
+import {IBeaconNodeOptions} from "@lodestar/beacon-node";
 import {ENR, createKeypairFromPeerId} from "@chainsafe/discv5";
 import {writeFile, readFile} from "../util/index.js";
 import {FileENR} from "./fileEnr.js";

@@ -1,4 +1,4 @@
-import {phase0, altair, CommitteeIndex, Slot, ssz} from "@chainsafe/lodestar-types";
+import {phase0, altair, CommitteeIndex, Slot, ssz} from "@lodestar/types";
 import {
   RoutesData,
   ReturnTypes,

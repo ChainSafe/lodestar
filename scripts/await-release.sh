@@ -4,7 +4,7 @@
 sudo apt install jq # sudo without password on ubuntu-latest
 
 # Using the lodestar-cli packacke to reference against
-declare PACKAGE="@chainsafe/lodestar-cli"
+declare PACKAGE="@chainsafe/lodestar"
 
 # Using `npm view -j` to get all available versions as JSON
 declare CMD_NPM="npm view -j $PACKAGE"

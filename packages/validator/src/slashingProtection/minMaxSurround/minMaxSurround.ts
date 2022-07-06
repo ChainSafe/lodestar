@@ -1,4 +1,4 @@
-import {BLSPubkey} from "@chainsafe/lodestar-types";
+import {BLSPubkey} from "@lodestar/types";
 import {IMinMaxSurround, IDistanceEntry, IDistanceStore, MinMaxSurroundAttestation} from "./interface.js";
 import {SurroundAttestationError, SurroundAttestationErrorCode} from "./errors.js";
 

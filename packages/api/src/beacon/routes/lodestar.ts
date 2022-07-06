@@ -1,4 +1,4 @@
-import {Epoch, RootHex, Slot} from "@chainsafe/lodestar-types";
+import {Epoch, RootHex, Slot} from "@lodestar/types";
 import {
   jsonType,
   ReqEmpty,

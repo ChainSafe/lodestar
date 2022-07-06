@@ -1,14 +1,10 @@
-import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SYNC_COMMITTEE_SUBNET_SIZE} from "@chainsafe/lodestar-params";
-import {
-  computeSyncPeriodAtEpoch,
-  computeSyncPeriodAtSlot,
-  isSyncCommitteeAggregator,
-} from "@chainsafe/lodestar-beacon-state-transition";
-import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import {BLSSignature, Epoch, RootHex, Slot, SyncPeriod, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
+import {computeSyncPeriodAtEpoch, computeSyncPeriodAtSlot, isSyncCommitteeAggregator} from "@lodestar/state-transition";
+import {IChainForkConfig} from "@lodestar/config";
+import {BLSSignature, Epoch, RootHex, Slot, SyncPeriod, ValidatorIndex} from "@lodestar/types";
 import {toHexString} from "@chainsafe/ssz";
-import {Api, routes} from "@chainsafe/lodestar-api";
-import {extendError} from "@chainsafe/lodestar-utils";
+import {Api, routes} from "@lodestar/api";
+import {extendError} from "@lodestar/utils";
 import {IClock, ILoggerVc} from "../util/index.js";
 import {PubkeyHex} from "../types.js";
 import {Metrics} from "../metrics.js";

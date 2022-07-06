@@ -1,5 +1,5 @@
 import {Options} from "yargs";
-import {defaultLogLevel, LogLevels} from "@chainsafe/lodestar-utils";
+import {defaultLogLevel, LogLevels} from "@lodestar/utils";
 import {
   beaconNodeOptions,
   paramsOptions,

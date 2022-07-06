@@ -1,5 +1,5 @@
 import {fetch} from "cross-fetch";
-import {ErrorAborted, ILogger, TimeoutError} from "@chainsafe/lodestar-utils";
+import {ErrorAborted, ILogger, TimeoutError} from "@lodestar/utils";
 import {ReqGeneric, RouteDef} from "../index.js";
 import {stringifyQuery, urlJoin} from "./format.js";
 import {Metrics} from "./metrics.js";

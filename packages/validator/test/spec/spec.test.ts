@@ -4,10 +4,10 @@ import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import rimraf from "rimraf";
 import {fromHexString} from "@chainsafe/ssz";
-import {LevelDbController} from "@chainsafe/lodestar-db";
-import {LogLevel, WinstonLogger} from "@chainsafe/lodestar-utils";
-import {config} from "@chainsafe/lodestar-config/default";
-import {ZERO_HASH} from "@chainsafe/lodestar-beacon-state-transition";
+import {LevelDbController} from "@lodestar/db";
+import {LogLevel, WinstonLogger} from "@lodestar/utils";
+import {config} from "@lodestar/config/default";
+import {ZERO_HASH} from "@lodestar/state-transition";
 import {
   SlashingProtection,
   InterchangeError,

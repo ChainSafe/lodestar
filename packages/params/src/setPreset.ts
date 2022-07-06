@@ -23,14 +23,14 @@ export let userSelectedPreset: PresetName | null = null;
 export function setActivePreset(presetName: PresetName): void {
   if (presetStatus.frozen) {
     throw Error(`Lodestar preset is already frozen. You must call setActivePreset() at the top of your
-application entry point, before importing @chainsafe/lodestar-params, or any library that may import it.
+application entry point, before importing @lodestar/params, or any library that may import it.
 
 \`\`\`
 // index.ts
-import {setActivePreset, PresetName} from "@chainsafe/lodestar-params/preset"
+import {setActivePreset, PresetName} from "@lodestar/params/preset"
 setActivePreset(PresetName.minimal)
 // Now you can safely import from other paths and consume params
-import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params"
+import {SLOTS_PER_EPOCH} from "@lodestar/params"
 console.log({SLOTS_PER_EPOCH})
 \`\`\`
 `);

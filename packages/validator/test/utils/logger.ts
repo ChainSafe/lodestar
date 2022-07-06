@@ -1,4 +1,4 @@
-import {WinstonLogger, LogLevel} from "@chainsafe/lodestar-utils";
+import {WinstonLogger, LogLevel} from "@lodestar/utils";
 import {getLoggerVc} from "../../src/util/index.js";
 import {ClockMock} from "./clock.js";
 

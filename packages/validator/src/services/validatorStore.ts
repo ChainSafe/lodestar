@@ -4,8 +4,8 @@ import {
   computeStartSlotAtEpoch,
   computeDomain,
   ZERO_HASH,
-} from "@chainsafe/lodestar-beacon-state-transition";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+} from "@lodestar/state-transition";
+import {IBeaconConfig} from "@lodestar/config";
 import {
   DOMAIN_AGGREGATE_AND_PROOF,
   DOMAIN_BEACON_ATTESTER,
@@ -17,7 +17,7 @@ import {
   DOMAIN_SYNC_COMMITTEE_SELECTION_PROOF,
   DOMAIN_VOLUNTARY_EXIT,
   DOMAIN_APPLICATION_BUILDER,
-} from "@chainsafe/lodestar-params";
+} from "@lodestar/params";
 import type {SecretKey} from "@chainsafe/bls/types";
 import {
   allForks,
@@ -32,9 +32,9 @@ import {
   ssz,
   ValidatorIndex,
   ExecutionAddress,
-} from "@chainsafe/lodestar-types";
+} from "@lodestar/types";
 import {BitArray, fromHexString, toHexString} from "@chainsafe/ssz";
-import {routes} from "@chainsafe/lodestar-api";
+import {routes} from "@lodestar/api";
 import {ISlashingProtection} from "../slashingProtection/index.js";
 import {PubkeyHex} from "../types.js";
 import {externalSignerPostSignature} from "../util/externalSignerClient.js";

@@ -1,4 +1,4 @@
-import {RootHex} from "@chainsafe/lodestar-types";
+import {RootHex} from "@lodestar/types";
 
 enum NetworkName {
   mainnet = "mainnet",

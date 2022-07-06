@@ -1,11 +1,11 @@
 import querystring from "querystring";
 import fastify, {FastifyInstance} from "fastify";
 import fastifyCors from "fastify-cors";
-import {Api, routes} from "@chainsafe/lodestar-api";
-import {registerRoutes} from "@chainsafe/lodestar-api/beacon/server";
-import {IChainForkConfig} from "@chainsafe/lodestar-config";
+import {Api, routes} from "@lodestar/api";
+import {registerRoutes} from "@lodestar/api/beacon/server";
+import {IChainForkConfig} from "@lodestar/config";
 import {JsonPath} from "@chainsafe/ssz";
-import {altair, RootHex, SyncPeriod} from "@chainsafe/lodestar-types";
+import {altair, RootHex, SyncPeriod} from "@lodestar/types";
 import {Proof} from "@chainsafe/persistent-merkle-tree";
 import {BeaconStateAltair} from "./types.js";
 

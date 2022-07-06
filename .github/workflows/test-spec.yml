@@ -38,21 +38,21 @@ jobs:
       - name: Restore spec tests cache
         uses: actions/cache@master
         with:
-          path: packages/lodestar/spec-tests
-          key: spec-test-data-${{ hashFiles('packages/lodestar/test/spec/specTestVersioning.ts') }}
+          path: packages/beacon-node/spec-tests
+          key: spec-test-data-${{ hashFiles('packages/beacon-node/test/spec/specTestVersioning.ts') }}
       - name: Download spec tests
         run: yarn download-spec-tests
-        working-directory: packages/lodestar
+        working-directory: packages/beacon-node
 
       # Run them in different steps to quickly identifying which command failed
       # Otherwise just doing `yarn test:spec` you can't tell which specific suite failed
       # many of the suites have identical names for minimal and mainnet
       - name: Spec tests general
         run: yarn test:spec-general
-        working-directory: packages/lodestar
+        working-directory: packages/beacon-node
       - name: Spec tests minimal
         run: yarn test:spec-minimal
-        working-directory: packages/lodestar
+        working-directory: packages/beacon-node
       - name: Spec tests mainnet
         run: yarn test:spec-mainnet
-        working-directory: packages/lodestar
+        working-directory: packages/beacon-node

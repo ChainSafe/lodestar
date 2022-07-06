@@ -1,4 +1,4 @@
-export {gnosisChainConfig as chainConfig} from "@chainsafe/lodestar-config/networks";
+export {gnosisChainConfig as chainConfig} from "@lodestar/config/networks";
 
 /* eslint-disable max-len */
 

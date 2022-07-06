@@ -1,5 +1,5 @@
-import {ForkName} from "@chainsafe/lodestar-params";
-import {DomainType, ForkDigest, Slot} from "@chainsafe/lodestar-types";
+import {ForkName} from "@lodestar/params";
+import {DomainType, ForkDigest, Slot} from "@lodestar/types";
 
 export type ForkDigestHex = string;
 

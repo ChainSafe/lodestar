@@ -1,5 +1,5 @@
-import {ssz} from "@chainsafe/lodestar-types";
-import {config} from "@chainsafe/lodestar-config/default";
+import {ssz} from "@lodestar/types";
+import {config} from "@lodestar/config/default";
 import {ProofType} from "@chainsafe/persistent-merkle-tree";
 import {toHexString} from "@chainsafe/ssz";
 import {Api, ReqTypes} from "../../../src/beacon/routes/lightclient.js";

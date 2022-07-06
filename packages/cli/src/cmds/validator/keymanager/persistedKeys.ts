@@ -2,8 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 import bls from "@chainsafe/bls";
 import {Keystore} from "@chainsafe/bls-keystore";
-import {Signer, SignerType} from "@chainsafe/lodestar-validator";
-import {DeletionStatus, ImportStatus, PubkeyHex, SignerDefinition} from "@chainsafe/lodestar-api/keymanager";
+import {Signer, SignerType} from "@lodestar/validator";
+import {DeletionStatus, ImportStatus, PubkeyHex, SignerDefinition} from "@lodestar/api/keymanager";
 import {
   getPubkeyHexFromKeystore,
   readPassphraseFile,
