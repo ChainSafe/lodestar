@@ -12,12 +12,13 @@ import {
   SLOTS_PER_EPOCH,
   SLOTS_PER_HISTORICAL_ROOT,
   SYNC_COMMITTEE_SUBNET_SIZE,
+  ForkName,
 } from "@chainsafe/lodestar-params";
-import {Root, Slot, ValidatorIndex, ssz, Epoch} from "@chainsafe/lodestar-types";
+import {Root, Slot, ValidatorIndex, ssz, Epoch, BLSSignature} from "@chainsafe/lodestar-types";
 import {ExecutionStatus} from "@chainsafe/lodestar-fork-choice";
 
 import {fromHexString} from "@chainsafe/ssz";
-import {assembleBlock} from "../../../chain/factory/block/index.js";
+import {assembleBlock, BlockType, AssembledBlockType} from "../../../chain/factory/block/index.js";
 import {AttestationError, AttestationErrorCode, GossipAction, SyncCommitteeError} from "../../../chain/errors/index.js";
 import {validateGossipAggregateAndProof} from "../../../chain/validation/index.js";
 import {ZERO_HASH} from "../../../constants/index.js";
@@ -165,11 +166,28 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
       );
   }
 
+  const produceBlindedBlock: routes.validator.Api["produceBlindedBlock"] = async function produceBlindedBlock(
+    slot,
+    randaoReveal,
+    graffiti
+  ) {
+    return produceBlockWrapper(BlockType.Blinded, slot, randaoReveal, graffiti);
+  };
+
   const produceBlock: routes.validator.Api["produceBlockV2"] = async function produceBlock(
     slot,
     randaoReveal,
     graffiti
   ) {
+    return produceBlockWrapper(BlockType.Full, slot, randaoReveal, graffiti);
+  };
+
+  async function produceBlockWrapper<T extends BlockType>(
+    type: T,
+    slot: Slot,
+    randaoReveal: BLSSignature,
+    graffiti: string
+  ): Promise<{data: AssembledBlockType<T>; version: ForkName}> {
     let timer;
     metrics?.blockProductionRequests.inc();
     try {
@@ -184,7 +202,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
 
       timer = metrics?.blockProductionTime.startTimer();
       const block = await assembleBlock(
-        {chain, metrics},
+        {type, chain, metrics},
         {
           slot,
           randaoReveal,
@@ -196,11 +214,12 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
     } finally {
       if (timer) timer();
     }
-  };
+  }
 
   return {
     produceBlock: produceBlock,
     produceBlockV2: produceBlock,
+    produceBlindedBlock,
 
     async produceAttestationData(committeeIndex, slot) {
       notWhileSyncing();
@@ -605,6 +624,10 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
           isLive: chain.validatorSeenAtEpoch(index, epoch),
         })),
       };
+    },
+
+    async registerValidator(registrations) {
+      return chain.executionBuilder?.registerValidator(registrations);
     },
   };
 }

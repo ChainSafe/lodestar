@@ -5,7 +5,6 @@ import {routes} from "@chainsafe/lodestar-api";
 import {phase0, Epoch, Slot, allForks} from "@chainsafe/lodestar-types";
 import {CheckpointWithHex, ProtoBlock} from "@chainsafe/lodestar-fork-choice";
 import {CachedBeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
-import {AttestationError, BlockError} from "./errors/index.js";
 
 /**
  * Important chain events that occur during normal chain operation.
@@ -85,18 +84,6 @@ export enum ChainEvent {
    */
   forkChoiceFinalized = "forkChoice:finalized",
   /**
-   * This event signals that the chain has errored while processing an attestation.
-   *
-   * This event is guaranteed to be triggered after any attestation fed to the chain fails at any stage of processing.
-   */
-  errorAttestation = "error:attestation",
-  /**
-   * This event signals that the chain has errored while processing a block.
-   *
-   * This event is guaranteed to be triggered after any block fed to the chain fails at any stage of processing.
-   */
-  errorBlock = "error:block",
-  /**
    * A new lightclient optimistic header update is available to be broadcasted to connected light-clients
    */
   lightclientOptimisticUpdate = "lightclient:header_update",
@@ -109,8 +96,6 @@ export enum ChainEvent {
 export interface IChainEvents {
   [ChainEvent.attestation]: (attestation: phase0.Attestation) => void;
   [ChainEvent.block]: (signedBlock: allForks.SignedBeaconBlock, postState: CachedBeaconStateAllForks) => void;
-  [ChainEvent.errorAttestation]: (error: AttestationError) => void;
-  [ChainEvent.errorBlock]: (error: BlockError) => void;
 
   [ChainEvent.checkpoint]: (checkpoint: phase0.Checkpoint, state: CachedBeaconStateAllForks) => void;
   [ChainEvent.justified]: (checkpoint: phase0.Checkpoint, state: CachedBeaconStateAllForks) => void;

@@ -150,7 +150,7 @@ async function initFromWSState(
       throw e;
     }
 
-    const {wsState, wsCheckpoint} = await fetchWeakSubjectivityState(chainForkConfig, wssOpts);
+    const {wsState, wsCheckpoint} = await fetchWeakSubjectivityState(chainForkConfig, logger, wssOpts);
     const config = createIBeaconConfig(chainForkConfig, wsState.genesisValidatorsRoot);
     const store = lastDbState ?? wsState;
     return initAndVerifyWeakSubjectivityState(config, db, logger, store, wsState, wsCheckpoint);

@@ -3,7 +3,13 @@ import {ExecutionEngineDisabled} from "./disabled.js";
 import {ExecutionEngineHttp, ExecutionEngineHttpOpts, defaultExecutionEngineHttpOpts} from "./http.js";
 import {ExecutionEngineMock, ExecutionEngineMockOpts} from "./mock.js";
 
-export {IExecutionEngine, ExecutionEngineHttp, ExecutionEngineDisabled, ExecutionEngineMock};
+export {
+  IExecutionEngine,
+  ExecutionEngineHttp,
+  ExecutionEngineDisabled,
+  ExecutionEngineMock,
+  defaultExecutionEngineHttpOpts,
+};
 
 export type ExecutionEngineOpts =
   | ({mode?: "http"} & ExecutionEngineHttpOpts)

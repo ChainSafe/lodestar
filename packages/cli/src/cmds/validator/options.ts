@@ -1,4 +1,4 @@
-import {defaultOptions} from "@chainsafe/lodestar";
+import {defaultOptions} from "@chainsafe/lodestar-validator";
 import {ICliCommandOptions, ILogArgs} from "../../util/index.js";
 import {logOptions, beaconPathsOptions} from "../beacon/options.js";
 import {IBeaconPaths} from "../beacon/paths.js";
@@ -17,8 +17,6 @@ export const validatorMetricsDefaultOptions = {
   address: "127.0.0.1",
 };
 
-export const defaultDefaultFeeRecipient = defaultOptions.chain.defaultFeeRecipient;
-
 export type IValidatorCliArgs = AccountValidatorArgs &
   KeymanagerArgs &
   ILogArgs & {
@@ -31,6 +29,8 @@ export type IValidatorCliArgs = AccountValidatorArgs &
     defaultFeeRecipient?: string;
     strictFeeRecipientCheck?: boolean;
     doppelgangerProtectionEnabled?: boolean;
+    defaultGasLimit?: number;
+    "builder.enabled"?: boolean;
 
     importKeystoresPath?: string[];
     importKeystoresPassword?: string;
@@ -152,14 +152,26 @@ export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
 
   defaultFeeRecipient: {
     description:
-      "Specify fee recipient default for collecting the EL block fees and rewards (a hex string representing 20 bytes address: ^0x[a-fA-F0-9]{40}$). It would be possible (WIP) to override this per validator key using config or keymanager API.",
-    defaultDescription: defaultDefaultFeeRecipient,
+      "Specify fee recipient default for collecting the EL block fees and rewards (a hex string representing 20 bytes address: ^0x[a-fA-F0-9]{40}$). It would be possible (WIP) to override this per validator key using config or keymanager API. Only used post merge.",
+    defaultDescription: defaultOptions.defaultFeeRecipient,
     type: "string",
   },
 
   strictFeeRecipientCheck: {
     description: "Enable strict checking of the validator's feeRecipient with the one returned by engine",
     type: "boolean",
+  },
+
+  defaultGasLimit: {
+    description: "Suggested gasLimit to the engine/builder for building execution payloads. Only used post merge.",
+    defaultDescription: `${defaultOptions.defaultGasLimit}`,
+    type: "number",
+  },
+
+  "builder.enabled": {
+    type: "boolean",
+    description: "Enable execution payload production via a builder for better rewards",
+    group: "builder",
   },
 
   importKeystoresPath: {

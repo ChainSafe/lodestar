@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import {bellatrix, RootHex, Root} from "@chainsafe/lodestar-types";
 import {toHexString, fromHexString} from "@chainsafe/ssz";
 import {BYTES_PER_LOGS_BLOOM} from "@chainsafe/lodestar-params";
-import {ZERO_HASH, ZERO_HASH_HEX} from "../constants/index.js";
+import {ZERO_HASH, ZERO_HASH_HEX} from "../../constants/index.js";
 import {
   ExecutePayloadStatus,
   ExecutePayloadResponse,

@@ -305,10 +305,15 @@ export class Eth1DepositDataTracker {
       return true;
     } else {
       // Blocks are slower than expected, reduce eth1FollowDistance. Limit min CATCHUP_MIN_FOLLOW_DISTANCE
-      const delta = ETH1_FOLLOW_DISTANCE_DELTA_IF_SLOW;
-      this.eth1FollowDistance = Math.max(this.eth1FollowDistance - delta, ETH_MIN_FOLLOW_DISTANCE);
+      const delta =
+        this.eth1FollowDistance -
+        Math.max(this.eth1FollowDistance - ETH1_FOLLOW_DISTANCE_DELTA_IF_SLOW, ETH_MIN_FOLLOW_DISTANCE);
+      this.eth1FollowDistance = this.eth1FollowDistance - delta;
 
-      return false;
+      // Even if the blocks are slow, when we are all caught up as there is no
+      // further possibility to reduce follow distance, we need to call it quits
+      // for now, else it leads to an incessant poll on the EL
+      return delta === 0;
     }
   }
 

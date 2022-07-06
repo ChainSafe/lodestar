@@ -17,6 +17,8 @@ export interface IClock {
   runEveryEpoch(fn: (epoch: Epoch, signal: AbortSignal) => Promise<void>): void;
   msToSlot(slot: Slot): number;
   secFromSlot(slot: Slot): number;
+  getCurrentSlot(): Slot;
+  getCurrentEpoch(): Epoch;
 }
 
 export enum TimeItem {
@@ -50,6 +52,14 @@ export class Clock implements IClock {
         }
       });
     }
+  }
+
+  getCurrentSlot(): Slot {
+    return getCurrentSlot(this.config, this.genesisTime);
+  }
+
+  getCurrentEpoch(): Epoch {
+    return computeEpochAtSlot(getCurrentSlot(this.config, this.genesisTime));
   }
 
   runEverySlot(fn: RunEveryFn): void {

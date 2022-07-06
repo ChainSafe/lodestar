@@ -31,8 +31,12 @@ describe("options / beaconNodeOptions", () => {
       "eth1.disableEth1DepositDataTracker": true,
       "eth1.unsafeAllowDepositDataOverwrite": false,
 
-      "execution.urls": ["http://localhost:8550"],
+      "execution.urls": ["http://localhost:8551"],
       "execution.timeout": 12000,
+
+      "builder.enabled": false,
+      "builder.urls": ["http://localhost:8661"],
+      "builder.timeout": 12000,
 
       "logger.eth1.level": "debug",
       "logger.unknown.level": "debug",
@@ -90,7 +94,12 @@ describe("options / beaconNodeOptions", () => {
         unsafeAllowDepositDataOverwrite: false,
       },
       executionEngine: {
-        urls: ["http://localhost:8550"],
+        urls: ["http://localhost:8551"],
+        timeout: 12000,
+      },
+      executionBuilder: {
+        enabled: false,
+        urls: ["http://localhost:8661"],
         timeout: 12000,
       },
       logger: {

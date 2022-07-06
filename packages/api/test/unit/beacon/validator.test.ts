@@ -46,6 +46,10 @@ describe("beacon / validator", () => {
       args: [32000, Buffer.alloc(96, 1), "graffiti"],
       res: {data: ssz.altair.BeaconBlock.defaultValue(), version: ForkName.altair},
     },
+    produceBlindedBlock: {
+      args: [32000, Buffer.alloc(96, 1), "graffiti"],
+      res: {data: ssz.bellatrix.BlindedBeaconBlock.defaultValue(), version: ForkName.bellatrix},
+    },
     produceAttestationData: {
       args: [2, 32000],
       res: {data: ssz.phase0.AttestationData.defaultValue()},
@@ -81,6 +85,10 @@ describe("beacon / validator", () => {
     getLiveness: {
       args: [[0], 0],
       res: {data: []},
+    },
+    registerValidator: {
+      args: [[ssz.bellatrix.SignedValidatorRegistrationV1.defaultValue()]],
+      res: undefined,
     },
   });
 

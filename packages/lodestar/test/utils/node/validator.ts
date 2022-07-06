@@ -16,6 +16,7 @@ export async function getAndInitDevValidators({
   externalSignerUrl,
   defaultFeeRecipient,
   doppelgangerProtectionEnabled = false,
+  builder = {},
 }: {
   node: BeaconNode;
   validatorsPerClient: number;
@@ -26,6 +27,7 @@ export async function getAndInitDevValidators({
   externalSignerUrl?: string;
   defaultFeeRecipient?: string;
   doppelgangerProtectionEnabled?: boolean;
+  builder?: {enabled?: boolean};
 }): Promise<{validators: Validator[]; secretKeys: SecretKey[]}> {
   const validators: Promise<Validator>[] = [];
   const secretKeys: SecretKey[] = [];
@@ -70,6 +72,7 @@ export async function getAndInitDevValidators({
         signers,
         defaultFeeRecipient,
         doppelgangerProtectionEnabled,
+        builder,
       })
     );
   }

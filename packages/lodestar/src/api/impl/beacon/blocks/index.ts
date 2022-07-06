@@ -1,4 +1,5 @@
 import {routes} from "@chainsafe/lodestar-api";
+
 import {computeTimeAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {SLOTS_PER_HISTORICAL_ROOT} from "@chainsafe/lodestar-params";
 import {sleep} from "@chainsafe/lodestar-utils";
@@ -133,6 +134,13 @@ export function getBeaconBlockApi({
       // Slow path
       const block = await resolveBlockId(chain.forkChoice, db, blockId);
       return {data: config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message)};
+    },
+
+    async publishBlindedBlock(signedBlindedBlock) {
+      const executionBuilder = chain.executionBuilder;
+      if (!executionBuilder) throw Error("exeutionBuilder required to publish SignedBlindedBeaconBlock");
+      const signedBlock = await executionBuilder.submitSignedBlindedBlock(signedBlindedBlock);
+      return await this.publishBlock(signedBlock);
     },
 
     async publishBlock(signedBlock) {

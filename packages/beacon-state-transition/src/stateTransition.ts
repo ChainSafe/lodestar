@@ -18,7 +18,7 @@ import {processEpoch} from "./epoch/index.js";
  */
 export function stateTransition(
   state: CachedBeaconStateAllForks,
-  signedBlock: allForks.SignedBeaconBlock,
+  signedBlock: allForks.FullOrBlindedSignedBeaconBlock,
   options?: {verifyStateRoot?: boolean; verifyProposer?: boolean; verifySignatures?: boolean},
   metrics?: IBeaconStateTransitionMetrics | null
 ): CachedBeaconStateAllForks {
