@@ -1,4 +1,4 @@
-import {PubkeyHex, SignerDefinition} from "@chainsafe/lodestar-api/keymanager";
+import {PubkeyHex, SignerDefinition} from "@lodestar/api/keymanager";
 
 export type LocalKeystoreDefinition = {
   keystorePath: string;

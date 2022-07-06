@@ -1,5 +1,5 @@
-import {phase0} from "@chainsafe/lodestar-types";
-import {intToBytes} from "@chainsafe/lodestar-utils";
+import {phase0} from "@lodestar/types";
+import {intToBytes} from "@lodestar/utils";
 
 /**
  * Generates a fake fork data test purposes.

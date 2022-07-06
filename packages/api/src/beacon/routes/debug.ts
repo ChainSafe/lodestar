@@ -1,5 +1,5 @@
-import {ForkName} from "@chainsafe/lodestar-params";
-import {allForks, Slot, RootHex, ssz, StringType} from "@chainsafe/lodestar-types";
+import {ForkName} from "@lodestar/params";
+import {allForks, Slot, RootHex, ssz, StringType} from "@lodestar/types";
 import {ContainerType} from "@chainsafe/ssz";
 import {
   ArrayOf,

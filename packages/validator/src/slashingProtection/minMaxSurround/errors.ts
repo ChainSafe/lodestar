@@ -1,4 +1,4 @@
-import {LodestarError} from "@chainsafe/lodestar-utils";
+import {LodestarError} from "@lodestar/utils";
 import {MinMaxSurroundAttestation} from "./interface.js";
 
 export enum SurroundAttestationErrorCode {

@@ -1,4 +1,4 @@
-import {Root} from "@chainsafe/lodestar-types";
+import {Root} from "@lodestar/types";
 import {isEqualRoot} from "../utils.js";
 import {InterchangeError, InterchangeErrorErrorCode} from "./errors.js";
 import {Interchange, IInterchangeLodestar} from "./types.js";

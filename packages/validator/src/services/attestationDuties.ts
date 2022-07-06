@@ -1,8 +1,8 @@
-import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import {extendError, sleep} from "@chainsafe/lodestar-utils";
-import {computeEpochAtSlot, isAggregatorFromCommitteeLength} from "@chainsafe/lodestar-beacon-state-transition";
-import {BLSSignature, Epoch, Slot, ValidatorIndex, RootHex} from "@chainsafe/lodestar-types";
-import {Api, routes} from "@chainsafe/lodestar-api";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {extendError, sleep} from "@lodestar/utils";
+import {computeEpochAtSlot, isAggregatorFromCommitteeLength} from "@lodestar/state-transition";
+import {BLSSignature, Epoch, Slot, ValidatorIndex, RootHex} from "@lodestar/types";
+import {Api, routes} from "@lodestar/api";
 import {toHexString} from "@chainsafe/ssz";
 import {IClock, ILoggerVc} from "../util/index.js";
 import {PubkeyHex} from "../types.js";

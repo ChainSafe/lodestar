@@ -1,4 +1,4 @@
-# `@chainsafe/lodestar-db`
+# `@lodestar/db`
 
 > This package is part of [ChainSafe's Lodestar](https://lodestar.chainsafe.io) project
 

@@ -1,4 +1,4 @@
-import {ACTIVE_PRESET} from "@chainsafe/lodestar-params";
+import {ACTIVE_PRESET} from "@lodestar/params";
 import {IChainConfig} from "./types.js";
 import {defaultChainConfig} from "./default.js";
 

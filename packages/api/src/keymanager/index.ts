@@ -1,4 +1,4 @@
-import {IChainForkConfig} from "@chainsafe/lodestar-config";
+import {IChainForkConfig} from "@lodestar/config";
 import {} from "../beacon/client/index.js";
 import {IHttpClient, HttpClient, HttpClientModules, HttpClientOptions} from "../utils/client/index.js";
 import {Api} from "./routes.js";

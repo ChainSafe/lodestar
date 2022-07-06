@@ -1,10 +1,10 @@
 import {expect} from "chai";
-import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import {BeaconStateAllForks, BeaconStateAltair} from "@chainsafe/lodestar-beacon-state-transition";
-import {phase0, ssz} from "@chainsafe/lodestar-types";
-import {routes, Api} from "@chainsafe/lodestar-api";
-import {chainConfig as chainConfigDef} from "@chainsafe/lodestar-config/default";
-import {createIBeaconConfig, IChainConfig} from "@chainsafe/lodestar-config";
+import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {BeaconStateAllForks, BeaconStateAltair} from "@lodestar/state-transition";
+import {phase0, ssz} from "@lodestar/types";
+import {routes, Api} from "@lodestar/api";
+import {chainConfig as chainConfigDef} from "@lodestar/config/default";
+import {createIBeaconConfig, IChainConfig} from "@lodestar/config";
 import {toHexString} from "@chainsafe/ssz";
 import {Lightclient, LightclientEvent} from "../../src/index.js";
 import {EventsServerApi, LightclientServerApi, ServerOpts, startServer} from "../lightclientApiServer.js";

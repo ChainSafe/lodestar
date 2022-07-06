@@ -1,4 +1,4 @@
-import {phase0, SyncPeriod} from "@chainsafe/lodestar-types";
+import {phase0, SyncPeriod} from "@lodestar/types";
 
 export enum LightclientEvent {
   /**

@@ -1,11 +1,11 @@
-import {IDatabaseApiOptions} from "@chainsafe/lodestar-db";
-import {BLSPubkey, ssz} from "@chainsafe/lodestar-types";
-import {createIBeaconConfig, IBeaconConfig} from "@chainsafe/lodestar-config";
-import {Genesis} from "@chainsafe/lodestar-types/phase0";
-import {ILogger} from "@chainsafe/lodestar-utils";
-import {getClient, Api} from "@chainsafe/lodestar-api";
+import {IDatabaseApiOptions} from "@lodestar/db";
+import {BLSPubkey, ssz} from "@lodestar/types";
+import {createIBeaconConfig, IBeaconConfig} from "@lodestar/config";
+import {Genesis} from "@lodestar/types/phase0";
+import {ILogger} from "@lodestar/utils";
+import {getClient, Api} from "@lodestar/api";
 import {toHexString} from "@chainsafe/ssz";
-import {computeEpochAtSlot, getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {computeEpochAtSlot, getCurrentSlot} from "@lodestar/state-transition";
 import {Clock, IClock} from "./util/clock.js";
 import {waitForGenesis} from "./genesis.js";
 import {BlockProposingService} from "./services/block.js";

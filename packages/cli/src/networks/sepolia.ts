@@ -1,4 +1,4 @@
-export {sepoliaChainConfig as chainConfig} from "@chainsafe/lodestar-config/networks";
+export {sepoliaChainConfig as chainConfig} from "@lodestar/config/networks";
 
 /* eslint-disable max-len */
 

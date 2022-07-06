@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {SYNC_COMMITTEE_SUBNET_SIZE} from "@chainsafe/lodestar-params";
+import {SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
 import {syncCommitteeIndicesToSubnets} from "../../../src/services/utils.js";
 
 describe("services / utils / syncCommitteeIndicesToSubnets", () => {

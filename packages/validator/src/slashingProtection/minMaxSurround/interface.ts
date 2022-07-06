@@ -1,4 +1,4 @@
-import {BLSPubkey, Epoch} from "@chainsafe/lodestar-types";
+import {BLSPubkey, Epoch} from "@lodestar/types";
 
 export type MinMaxSurroundAttestation = {
   targetEpoch: number;

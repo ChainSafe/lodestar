@@ -1,4 +1,4 @@
-import {IChainForkConfig} from "@chainsafe/lodestar-config";
+import {IChainForkConfig} from "@lodestar/config";
 import {Type} from "@chainsafe/ssz";
 import {BUCKET_LENGTH} from "./const.js";
 import {IFilterOptions, IKeyValue} from "./controller/index.js";

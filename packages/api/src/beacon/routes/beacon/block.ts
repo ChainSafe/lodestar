@@ -1,7 +1,7 @@
 import {ContainerType} from "@chainsafe/ssz";
-import {ForkName} from "@chainsafe/lodestar-params";
-import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import {phase0, allForks, Slot, Root, ssz, bellatrix} from "@chainsafe/lodestar-types";
+import {ForkName} from "@lodestar/params";
+import {IChainForkConfig} from "@lodestar/config";
+import {phase0, allForks, Slot, Root, ssz, bellatrix} from "@lodestar/types";
 
 import {
   RoutesData,

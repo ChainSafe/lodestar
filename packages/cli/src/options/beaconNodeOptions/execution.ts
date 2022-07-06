@@ -1,5 +1,5 @@
 import fs from "node:fs";
-import {defaultOptions, IBeaconNodeOptions} from "@chainsafe/lodestar";
+import {defaultOptions, IBeaconNodeOptions} from "@lodestar/beacon-node";
 import {ICliCommandOptions, extractJwtHexSecret} from "../../util/index.js";
 
 export type ExecutionEngineArgs = {

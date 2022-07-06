@@ -1,9 +1,9 @@
 import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import rimraf from "rimraf";
-import {LevelDbController} from "@chainsafe/lodestar-db";
-import {LogLevel, WinstonLogger} from "@chainsafe/lodestar-utils";
-import {config} from "@chainsafe/lodestar-config/default";
+import {LevelDbController} from "@lodestar/db";
+import {LogLevel, WinstonLogger} from "@lodestar/utils";
+import {config} from "@lodestar/config/default";
 import {
   SlashingProtection,
   SlashingProtectionBlock,

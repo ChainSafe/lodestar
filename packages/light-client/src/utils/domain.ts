@@ -1,6 +1,6 @@
 // Only used by processDeposit +  lightclient
 
-import {Epoch, Version, Root, DomainType, phase0, ssz, Domain} from "@chainsafe/lodestar-types";
+import {Epoch, Version, Root, DomainType, phase0, ssz, Domain} from "@lodestar/types";
 import {Type} from "@chainsafe/ssz";
 
 /**

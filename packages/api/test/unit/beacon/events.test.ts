@@ -1,6 +1,6 @@
 import {expect} from "chai";
-import {sleep} from "@chainsafe/lodestar-utils";
-import {config} from "@chainsafe/lodestar-config/default";
+import {sleep} from "@lodestar/utils";
+import {config} from "@lodestar/config/default";
 import {Api, routesData, EventType, BeaconEvent} from "../../../src/beacon/routes/events.js";
 import {getClient} from "../../../src/beacon/client/events.js";
 import {getRoutes} from "../../../src/beacon/server/events.js";

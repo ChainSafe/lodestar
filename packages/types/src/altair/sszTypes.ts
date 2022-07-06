@@ -9,7 +9,7 @@ import {
   VALIDATOR_REGISTRY_LIMIT,
   EPOCHS_PER_SYNC_COMMITTEE_PERIOD,
   SLOTS_PER_EPOCH,
-} from "@chainsafe/lodestar-params";
+} from "@lodestar/params";
 import * as phase0Ssz from "../phase0/sszTypes.js";
 import * as primitiveSsz from "../primitive/sszTypes.js";
 

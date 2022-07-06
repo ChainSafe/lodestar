@@ -1,5 +1,5 @@
 import fs from "node:fs";
-import {Interchange} from "@chainsafe/lodestar-validator";
+import {Interchange} from "@lodestar/validator";
 import {ICliCommand} from "../../../util/index.js";
 import {IGlobalArgs} from "../../../options/index.js";
 import {AccountValidatorArgs} from "../options.js";

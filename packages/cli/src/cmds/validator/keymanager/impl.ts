@@ -11,9 +11,9 @@ import {
   SlashingProtectionData,
   SignerDefinition,
   ImportRemoteKeyStatus,
-} from "@chainsafe/lodestar-api/keymanager";
+} from "@lodestar/api/keymanager";
 import {fromHexString} from "@chainsafe/ssz";
-import {Interchange, SignerType, Validator} from "@chainsafe/lodestar-validator";
+import {Interchange, SignerType, Validator} from "@lodestar/validator";
 import {getPubkeyHexFromKeystore, isValidatePubkeyHex, isValidHttpUrl} from "../../../util/format.js";
 import {IPersistedKeysBackend} from "./interface.js";
 

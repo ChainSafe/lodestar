@@ -1,4 +1,4 @@
-import {BLSPubkey} from "@chainsafe/lodestar-types";
+import {BLSPubkey} from "@lodestar/types";
 import {isEqualNonZeroRoot} from "../utils.js";
 import {SlashingProtectionBlock} from "../types.js";
 import {InvalidBlockError, InvalidBlockErrorCode} from "./errors.js";

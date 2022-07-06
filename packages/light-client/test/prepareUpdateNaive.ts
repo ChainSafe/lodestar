@@ -1,6 +1,6 @@
-import {altair, phase0, Root, ssz} from "@chainsafe/lodestar-types";
+import {altair, phase0, Root, ssz} from "@lodestar/types";
 import {CompositeViewDU} from "@chainsafe/ssz";
-import {FINALIZED_ROOT_GINDEX, NEXT_SYNC_COMMITTEE_GINDEX, SLOTS_PER_HISTORICAL_ROOT} from "@chainsafe/lodestar-params";
+import {FINALIZED_ROOT_GINDEX, NEXT_SYNC_COMMITTEE_GINDEX, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
 import {computeEpochAtSlot} from "../src/utils/clock.js";
 import {getForkVersion} from "../src/utils/domain.js";

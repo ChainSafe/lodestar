@@ -1,8 +1,8 @@
 import {expect} from "chai";
-import {ssz} from "@chainsafe/lodestar-types";
-import {chainConfigToJson} from "@chainsafe/lodestar-config";
-import {config, chainConfig} from "@chainsafe/lodestar-config/default";
-import {activePreset, presetToJson} from "@chainsafe/lodestar-params";
+import {ssz} from "@lodestar/types";
+import {chainConfigToJson} from "@lodestar/config";
+import {config, chainConfig} from "@lodestar/config/default";
+import {activePreset, presetToJson} from "@lodestar/params";
 import {Api, ReqTypes, getReturnTypes} from "../../../src/beacon/routes/config.js";
 import {getClient} from "../../../src/beacon/client/config.js";
 import {getRoutes} from "../../../src/beacon/server/config.js";

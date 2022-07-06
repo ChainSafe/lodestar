@@ -1,7 +1,7 @@
 import bls from "@chainsafe/bls";
 import {deriveEth2ValidatorKeys, deriveKeyFromMnemonic} from "@chainsafe/bls-keygen";
-import {interopSecretKey} from "@chainsafe/lodestar-beacon-state-transition";
-import {externalSignerGetKeys, Signer, SignerType} from "@chainsafe/lodestar-validator";
+import {interopSecretKey} from "@lodestar/state-transition";
+import {externalSignerGetKeys, Signer, SignerType} from "@lodestar/validator";
 import {toHexString} from "@chainsafe/ssz";
 import {defaultNetwork, IGlobalArgs} from "../../../options/index.js";
 import {assertValidPubkeysHex, isValidHttpUrl, parseRange, YargsError} from "../../../util/index.js";

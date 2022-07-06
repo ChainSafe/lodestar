@@ -5,9 +5,9 @@ import {
   computeStartSlotAtEpoch,
   EffectiveBalanceIncrements,
   getEffectiveBalanceIncrementsZeroed,
-} from "@chainsafe/lodestar-beacon-state-transition";
-import {TIMELY_SOURCE_FLAG_INDEX} from "@chainsafe/lodestar-params";
-import {generatePerfTestCachedStateAltair} from "../../../../beacon-state-transition/test/perf/util.js";
+} from "@lodestar/state-transition";
+import {TIMELY_SOURCE_FLAG_INDEX} from "@lodestar/params";
+import {generatePerfTestCachedStateAltair} from "../../../../state-transition/test/perf/util.js";
 import {VoteTracker} from "../../../src/protoArray/interface.js";
 import {computeDeltas} from "../../../src/protoArray/computeDeltas.js";
 import {computeProposerBoostScoreFromBalances} from "../../../src/forkChoice/forkChoice.js";

@@ -1,6 +1,6 @@
 import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
-import {interopSecretKeys} from "@chainsafe/lodestar-beacon-state-transition";
+import {interopSecretKeys} from "@lodestar/state-transition";
 import {toHexString} from "@chainsafe/ssz";
 import type {PublicKey} from "@chainsafe/bls/types";
 import bls from "@chainsafe/bls";

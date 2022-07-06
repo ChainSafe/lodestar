@@ -46,7 +46,7 @@ jobs:
 
       - name: Test Lodestar <> Geth interop
         run: yarn test:sim:merge-interop
-        working-directory: packages/lodestar
+        working-directory: packages/beacon-node
         env:
           EL_BINARY_DIR: ../../go-ethereum/build/bin
           EL_SCRIPT_DIR: kiln/geth
@@ -65,7 +65,7 @@ jobs:
 
       - name: Test Lodestar <> Nethermind interop
         run: yarn test:sim:merge-interop
-        working-directory: packages/lodestar
+        working-directory: packages/beacon-node
         env:
           EL_BINARY_DIR: ../../nethermind/src/Nethermind/Nethermind.Runner
           EL_SCRIPT_DIR: kiln/nethermind
@@ -77,4 +77,4 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: debug-test-logs
-          path: packages/lodestar/test-logs
+          path: packages/beacon-node/test-logs
