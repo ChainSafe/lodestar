@@ -1,5 +1,5 @@
-import {HttpError} from "@chainsafe/lodestar-api";
-import {LogData, ILogger, isErrorAborted} from "@chainsafe/lodestar-utils";
+import {HttpError} from "@lodestar/api";
+import {LogData, ILogger, isErrorAborted} from "@lodestar/utils";
 import {IClock} from "./clock.js";
 
 export type ILoggerVc = Pick<ILogger, "error" | "warn" | "info" | "verbose" | "debug"> & {

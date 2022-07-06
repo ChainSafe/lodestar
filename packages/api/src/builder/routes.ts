@@ -1,4 +1,4 @@
-import {ssz, bellatrix, Slot, Root, BLSPubkey} from "@chainsafe/lodestar-types";
+import {ssz, bellatrix, Slot, Root, BLSPubkey} from "@lodestar/types";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {
   ReturnTypes,

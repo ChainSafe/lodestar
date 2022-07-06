@@ -1,7 +1,7 @@
-import {Epoch, ValidatorIndex} from "@chainsafe/lodestar-types";
-import {Api} from "@chainsafe/lodestar-api";
-import {ILogger, sleep} from "@chainsafe/lodestar-utils";
-import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
+import {Epoch, ValidatorIndex} from "@lodestar/types";
+import {Api} from "@lodestar/api";
+import {ILogger, sleep} from "@lodestar/utils";
+import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {ProcessShutdownCallback, PubkeyHex} from "../types.js";
 import {IClock} from "../util/index.js";
 import {Metrics} from "../metrics.js";

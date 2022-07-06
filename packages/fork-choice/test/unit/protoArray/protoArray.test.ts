@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {RootHex} from "@chainsafe/lodestar-types";
+import {RootHex} from "@lodestar/types";
 
 import {ProtoArray, ExecutionStatus} from "../../../src/index.js";
 

@@ -1,5 +1,5 @@
-import {config} from "@chainsafe/lodestar-config/default";
-import {ssz} from "@chainsafe/lodestar-types";
+import {config} from "@lodestar/config/default";
+import {ssz} from "@lodestar/types";
 import {fromHexString} from "@chainsafe/ssz";
 
 import {Api, ReqTypes} from "../../../src/builder/routes.js";

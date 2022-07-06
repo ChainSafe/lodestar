@@ -1,7 +1,7 @@
-import {Api, routes} from "@chainsafe/lodestar-api";
-import {ILogger} from "@chainsafe/lodestar-utils";
-import {Slot, Root, RootHex} from "@chainsafe/lodestar-types";
-import {GENESIS_SLOT} from "@chainsafe/lodestar-params";
+import {Api, routes} from "@lodestar/api";
+import {ILogger} from "@lodestar/utils";
+import {Slot, Root, RootHex} from "@lodestar/types";
+import {GENESIS_SLOT} from "@lodestar/params";
 import {fromHexString} from "@chainsafe/ssz";
 import {ValidatorEvent, ValidatorEventEmitter} from "./emitter.js";
 

@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import {expect} from "chai";
-import {IBeaconNodeOptions} from "@chainsafe/lodestar";
-import {LogLevel, RecursivePartial} from "@chainsafe/lodestar-utils";
+import {IBeaconNodeOptions} from "@lodestar/beacon-node";
+import {LogLevel, RecursivePartial} from "@lodestar/utils";
 import {parseBeaconNodeArgs, IBeaconNodeArgs} from "../../../src/options/beaconNodeOptions/index.js";
 import {getTestdirPath} from "../../utils.js";
 

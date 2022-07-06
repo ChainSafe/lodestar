@@ -1,7 +1,7 @@
-import {phase0, Slot, ssz} from "@chainsafe/lodestar-types";
-import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
-import {extendError, sleep} from "@chainsafe/lodestar-utils";
-import {Api} from "@chainsafe/lodestar-api";
+import {phase0, Slot, ssz} from "@lodestar/types";
+import {computeEpochAtSlot} from "@lodestar/state-transition";
+import {extendError, sleep} from "@lodestar/utils";
+import {Api} from "@lodestar/api";
 import {toHexString} from "@chainsafe/ssz";
 import {IClock, ILoggerVc} from "../util/index.js";
 import {PubkeyHex} from "../types.js";

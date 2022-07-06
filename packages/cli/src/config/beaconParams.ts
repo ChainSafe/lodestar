@@ -4,7 +4,7 @@ import {
   createIChainConfig,
   IChainForkConfig,
   chainConfigFromJson,
-} from "@chainsafe/lodestar-config";
+} from "@lodestar/config";
 import {readFile} from "../util/index.js";
 import {getNetworkBeaconParams, NetworkName} from "../networks/index.js";
 import {getGlobalPaths, IGlobalPaths} from "../paths/global.js";

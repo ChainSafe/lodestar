@@ -1,11 +1,11 @@
 import type {SecretKey} from "@chainsafe/bls/types";
-import {getClient} from "@chainsafe/lodestar-api";
-import {phase0, ssz} from "@chainsafe/lodestar-types";
-import {config as chainConfig} from "@chainsafe/lodestar-config/default";
-import {createIBeaconConfig, IBeaconConfig} from "@chainsafe/lodestar-config";
-import {DOMAIN_BEACON_PROPOSER} from "@chainsafe/lodestar-params";
-import {toHexString} from "@chainsafe/lodestar-utils";
-import {computeSigningRoot} from "@chainsafe/lodestar-beacon-state-transition";
+import {getClient} from "@lodestar/api";
+import {phase0, ssz} from "@lodestar/types";
+import {config as chainConfig} from "@lodestar/config/default";
+import {createIBeaconConfig, IBeaconConfig} from "@lodestar/config";
+import {DOMAIN_BEACON_PROPOSER} from "@lodestar/params";
+import {toHexString} from "@lodestar/utils";
+import {computeSigningRoot} from "@lodestar/state-transition";
 import {ICliCommand} from "../util/command.js";
 import {deriveSecretKeys, SecretKeysArgs, secretKeysOptions} from "../util/deriveSecretKeys.js";
 

@@ -1,7 +1,7 @@
 /**
  * @module db/schema
  */
-import {intToBytes} from "@chainsafe/lodestar-utils";
+import {intToBytes} from "@lodestar/utils";
 import {BUCKET_LENGTH} from "./const.js";
 
 // Buckets are separate database namespaces

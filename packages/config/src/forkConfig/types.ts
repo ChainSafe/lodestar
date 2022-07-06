@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import {ForkName, ForkSeq} from "@chainsafe/lodestar-params";
-import {allForks, Epoch, Slot, Version} from "@chainsafe/lodestar-types";
+import {ForkName, ForkSeq} from "@lodestar/params";
+import {allForks, Epoch, Slot, Version} from "@lodestar/types";
 
 export interface IForkInfo {
   name: ForkName;

@@ -1,5 +1,5 @@
-import {SYNC_COMMITTEE_SUBNET_SIZE} from "@chainsafe/lodestar-params";
-import {CommitteeIndex, SubcommitteeIndex} from "@chainsafe/lodestar-types";
+import {SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
+import {CommitteeIndex, SubcommitteeIndex} from "@lodestar/types";
 import {AttDutyAndProof} from "./attestationDuties.js";
 import {SyncDutyAndProofs, SyncDutySubnet, SyncSelectionProof} from "./syncCommitteeDuties.js";
 

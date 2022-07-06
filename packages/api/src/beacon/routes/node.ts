@@ -1,4 +1,4 @@
-import {allForks, ssz, StringType} from "@chainsafe/lodestar-types";
+import {allForks, ssz, StringType} from "@lodestar/types";
 import {ContainerType} from "@chainsafe/ssz";
 import {
   ArrayOf,

@@ -1,10 +1,10 @@
 import mitt from "mitt";
-import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import {getClient, Api, routes} from "@chainsafe/lodestar-api";
-import {altair, phase0, RootHex, ssz, SyncPeriod} from "@chainsafe/lodestar-types";
-import {createIBeaconConfig, IBeaconConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
+import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {getClient, Api, routes} from "@lodestar/api";
+import {altair, phase0, RootHex, ssz, SyncPeriod} from "@lodestar/types";
+import {createIBeaconConfig, IBeaconConfig, IChainForkConfig} from "@lodestar/config";
 import {TreeOffsetProof} from "@chainsafe/persistent-merkle-tree";
-import {isErrorAborted, sleep} from "@chainsafe/lodestar-utils";
+import {isErrorAborted, sleep} from "@lodestar/utils";
 import {fromHexString, JsonPath, toHexString} from "@chainsafe/ssz";
 import {getCurrentSlot, slotWithFutureTolerance, timeUntilNextEpoch} from "./utils/clock.js";
 import {isBetterUpdate, LightclientUpdateStats} from "./utils/update.js";

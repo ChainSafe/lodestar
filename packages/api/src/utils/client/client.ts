@@ -1,4 +1,4 @@
-import {mapValues} from "@chainsafe/lodestar-utils";
+import {mapValues} from "@lodestar/utils";
 import {compileRouteUrlFormater} from "../urlFormat.js";
 import {
   RouteDef,

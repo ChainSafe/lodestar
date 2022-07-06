@@ -1,4 +1,4 @@
-import {Root} from "@chainsafe/lodestar-types";
+import {Root} from "@lodestar/types";
 import {toHexString} from "@chainsafe/ssz";
 
 /**

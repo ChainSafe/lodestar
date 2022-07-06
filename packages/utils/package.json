@@ -1,5 +1,5 @@
 {
-  "name": "@chainsafe/lodestar-utils",
+  "name": "@lodestar/utils",
   "description": "Utilities required across multiple lodestar packages",
   "license": "Apache-2.0",
   "author": "ChainSafe Systems",

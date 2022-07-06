@@ -1,5 +1,5 @@
-import {Signer, SignerLocal, SignerRemote, SignerType} from "@chainsafe/lodestar-validator";
-import {ILogger} from "@chainsafe/lodestar-utils";
+import {Signer, SignerLocal, SignerRemote, SignerType} from "@lodestar/validator";
+import {ILogger} from "@lodestar/utils";
 
 /**
  * Log each pubkeys for auditing out keys are loaded from the logs

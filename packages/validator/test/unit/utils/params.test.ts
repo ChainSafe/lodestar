@@ -1,6 +1,6 @@
 import {expect} from "chai";
-import {chainConfigToJson} from "@chainsafe/lodestar-config";
-import {chainConfig} from "@chainsafe/lodestar-config/default";
+import {chainConfigToJson} from "@lodestar/config";
+import {chainConfig} from "@lodestar/config/default";
 import {assertEqualParams, NotEqualParamsError} from "../../../src/util/params.js";
 
 describe("utils / params / assertEqualParams", () => {

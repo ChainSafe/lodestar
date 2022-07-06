@@ -1,7 +1,7 @@
 import querystring from "querystring";
 import fastify, {FastifyInstance} from "fastify";
 import Sinon from "sinon";
-import {mapValues} from "@chainsafe/lodestar-utils";
+import {mapValues} from "@lodestar/utils";
 
 export function getTestServer(): {baseUrl: string; server: FastifyInstance} {
   const port = Math.floor(Math.random() * (65535 - 49152)) + 49152;

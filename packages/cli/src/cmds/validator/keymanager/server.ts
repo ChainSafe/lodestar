@@ -1,11 +1,11 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import {RestApiServer, RestApiServerOpts, RestApiServerModules} from "@chainsafe/lodestar";
+import {RestApiServer, RestApiServerOpts, RestApiServerModules} from "@lodestar/beacon-node";
 import {toHexString} from "@chainsafe/ssz";
-import {Api} from "@chainsafe/lodestar-api/keymanager";
-import {registerRoutes} from "@chainsafe/lodestar-api/keymanager/server";
-import {IChainForkConfig} from "@chainsafe/lodestar-config";
+import {Api} from "@lodestar/api/keymanager";
+import {registerRoutes} from "@lodestar/api/keymanager/server";
+import {IChainForkConfig} from "@lodestar/config";
 
 export type KeymanagerRestApiServerOpts = RestApiServerOpts & {
   isAuthEnabled: boolean;

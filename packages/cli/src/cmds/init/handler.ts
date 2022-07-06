@@ -1,5 +1,5 @@
 import fs from "node:fs";
-import {IChainForkConfig} from "@chainsafe/lodestar-config";
+import {IChainForkConfig} from "@lodestar/config";
 import {
   BeaconNodeOptions,
   getBeaconConfigFromArgs,

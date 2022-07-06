@@ -1,4 +1,4 @@
-import {Epoch, Slot, RootHex} from "@chainsafe/lodestar-types";
+import {Epoch, Slot, RootHex} from "@lodestar/types";
 
 // RootHex is a root as a hex string
 // Used for lightweight and easy comparison

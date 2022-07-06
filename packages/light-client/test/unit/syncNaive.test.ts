@@ -1,11 +1,11 @@
 import {expect} from "chai";
 import bls from "@chainsafe/bls";
-import {altair, phase0, Root, ssz, SyncPeriod} from "@chainsafe/lodestar-types";
-import {BeaconStateAltair} from "@chainsafe/lodestar-beacon-state-transition";
+import {altair, phase0, Root, ssz, SyncPeriod} from "@lodestar/types";
+import {BeaconStateAltair} from "@lodestar/state-transition";
 import {toHexString} from "@chainsafe/ssz";
-import {chainConfig} from "@chainsafe/lodestar-config/default";
-import {createIBeaconConfig} from "@chainsafe/lodestar-config";
-import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
+import {chainConfig} from "@lodestar/config/default";
+import {createIBeaconConfig} from "@lodestar/config";
+import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {processLightClientUpdate} from "../naive/update.js";
 import {prepareUpdateNaive, IBeaconChainLc} from "../prepareUpdateNaive.js";
 import {getInteropSyncCommittee, getSyncAggregateSigningRoot, SyncCommitteeKeys} from "../utils.js";
