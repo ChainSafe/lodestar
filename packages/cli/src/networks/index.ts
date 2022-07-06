@@ -5,7 +5,7 @@ import {getClient} from "@lodestar/api";
 import {IBeaconNodeOptions, getStateTypeFromBytes} from "@lodestar/beacon-node";
 import {IChainConfig, IChainForkConfig} from "@lodestar/config";
 import {Checkpoint} from "@lodestar/types/phase0";
-import {RecursivePartial, fromHex} from "@lodestar/utils";
+import {RecursivePartial, fromHex, callFnWhenAwait, ILogger} from "@lodestar/utils";
 import {BeaconStateAllForks} from "@lodestar/state-transition";
 import * as mainnet from "./mainnet.js";
 import * as dev from "./dev.js";
@@ -32,6 +32,9 @@ export type WeakSubjectivityFetchOptions = {
   weakSubjectivityServerUrl: string;
   weakSubjectivityCheckpoint?: string;
 };
+
+// log to screen every 30s when downloading state from a lodestar node
+const GET_STATE_LOG_INTERVAL = 30 * 1000;
 
 function getNetworkData(
   network: NetworkName
@@ -167,6 +170,7 @@ export function enrsToNetworkConfig(enrs: string[]): RecursivePartial<IBeaconNod
  */
 export async function fetchWeakSubjectivityState(
   config: IChainForkConfig,
+  logger: ILogger,
   {weakSubjectivityServerUrl, weakSubjectivityCheckpoint}: WeakSubjectivityFetchOptions
 ): Promise<{wsState: BeaconStateAllForks; wsCheckpoint: Checkpoint}> {
   try {
@@ -181,13 +185,26 @@ export async function fetchWeakSubjectivityState(
       wsCheckpoint = finalized;
     }
     const stateSlot = wsCheckpoint.epoch * SLOTS_PER_EPOCH;
-    const stateBytes = await (config.getForkName(stateSlot) === ForkName.phase0
-      ? api.debug.getState(`${stateSlot}`, "ssz")
-      : api.debug.getStateV2(`${stateSlot}`, "ssz"));
+    const getStatePromise =
+      config.getForkName(stateSlot) === ForkName.phase0
+        ? api.debug.getState(`${stateSlot}`, "ssz")
+        : api.debug.getStateV2(`${stateSlot}`, "ssz");
+
+    const stateBytes = await callFnWhenAwait(
+      getStatePromise,
+      () => logger.info("Download in progress, please wait..."),
+      GET_STATE_LOG_INTERVAL
+    );
+
+    logger.info("Download completed");
 
     return {wsState: getStateTypeFromBytes(config, stateBytes).deserializeToViewDU(stateBytes), wsCheckpoint};
   } catch (e) {
-    throw new Error("Unable to fetch weak subjectivity state: " + (e as Error).message);
+    throw new Error(
+      "Unable to fetch weak subjectivity state: " +
+        (e as Error).message +
+        ". Consider downloading a state manually and using the --weakSubjectivityStateFile option."
+    );
   }
 }
 

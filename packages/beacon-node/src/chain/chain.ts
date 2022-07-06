@@ -48,7 +48,7 @@ import {
 } from "./opPools/index.js";
 import {LightClientServer} from "./lightClient/index.js";
 import {Archiver} from "./archiver/index.js";
-import {PrecomputeNextEpochTransitionScheduler} from "./precomputeNextEpochTransition.js";
+import {PrepareNextSlotScheduler} from "./prepareNextSlot.js";
 import {ReprocessController} from "./reprocess.js";
 import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
 import {SeenBlockAttesters} from "./seenCache/seenBlockAttesters.js";
@@ -230,7 +230,7 @@ export class BeaconChain implements IBeaconChain {
     this.lightClientServer = lightClientServer;
 
     this.archiver = new Archiver(db, this, logger, signal, opts);
-    new PrecomputeNextEpochTransitionScheduler(this, this.config, metrics, this.logger, signal);
+    new PrepareNextSlotScheduler(this, this.config, metrics, this.logger, signal);
 
     metrics?.opPool.aggregatedAttestationPoolSize.addCollect(() => this.onScrapeMetrics());
 

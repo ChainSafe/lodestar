@@ -187,8 +187,27 @@ The release should be announced on the following social channels:
 
 - Email: with Mailchimp.
 - Discord: Use the #lodestar-announcements channel. Tag @everyone and ensure it is published to all downstream channels.
-- Twitter: Short and sweet in a single tweet, TODO: get Lodestar account.
+- Twitter: Short and sweet in a single tweet with twitter.com/lodestar_eth
 - Reddit: TODO: get Lodestar account.
+
+# Release Manager Checklist
+This section is to guide the Release Manager tasked with the next version release to ensure all items have been completed.
+- Start thread on communication channels for new release
+- Confirm consensus on `unstable` release candidate commit
+- Complete Step 1: Create release candidate
+- Complete Step 2: Tag release candidate
+- Deploy `rc.x` candidate to `beta` group of servers
+- If there are `rc.x` hot fixes, push to branch and increment the `rc.x` version.
+- Team members conduct Release Candidate Metrics Review
+- A Lodestar team member must mark the release candidate as safe, after personally reviewing and / or testing it
+- Temporarily enable "Allow merge commits" under the Lodestar repository settings
+- Release Manager can now complete Step 4: Merge release candidate.
+- Disable "Allow merge commits" under the Lodestar repository settings
+- Complete Step 5: Tag stable release
+- Double check that Github release is correct and inform the Project Manager of completion
+- Update lodestar_dockerhub_tag in production repository
+- Deploy new stable release to `stable` group of servers
+- Confirm attestations and monitor for any issues
 
 ## Alternatives considered
 
