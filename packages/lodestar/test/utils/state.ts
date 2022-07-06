@@ -12,12 +12,15 @@ import {
   EPOCHS_PER_HISTORICAL_VECTOR,
   EPOCHS_PER_SLASHINGS_VECTOR,
   FAR_FUTURE_EPOCH,
+  ForkSeq,
   MAX_EFFECTIVE_BALANCE,
   SLOTS_PER_HISTORICAL_ROOT,
   SYNC_COMMITTEE_SIZE,
 } from "@chainsafe/lodestar-params";
 
 import bls from "@chainsafe/bls";
+import {CachedBeaconStateBellatrix} from "@chainsafe/lodestar-beacon-state-transition";
+import {BeaconStateBellatrix} from "@chainsafe/lodestar-beacon-state-transition";
 import {GENESIS_EPOCH, GENESIS_SLOT, ZERO_HASH} from "../../src/constants/index.js";
 import {generateEmptyBlock} from "./block.js";
 import {generateValidator, generateValidators} from "./validator.js";
@@ -39,7 +42,7 @@ type TestBeaconState = Partial<allForks.BeaconState>;
 export function generateState(
   opts: TestBeaconState = {},
   config = minimalConfig,
-  isAltair = false,
+  forkSeq: ForkSeq = ForkSeq.phase0,
   withPubkey = false
 ): BeaconStateAllForks {
   const validatorOpts = {
@@ -106,26 +109,36 @@ export function generateState(
     ...opts,
   };
 
-  if (isAltair) {
-    const defaultAltairState: altair.BeaconState = {
-      ...ssz.altair.BeaconState.defaultValue(),
-      ...defaultState,
-      previousEpochParticipation: [...[0xff, 0xff], ...Array.from({length: numValidators - 2}, () => 0)],
-      currentEpochParticipation: [...[0xff, 0xff], ...Array.from({length: numValidators - 2}, () => 0)],
-      currentSyncCommittee: {
-        pubkeys: Array.from({length: SYNC_COMMITTEE_SIZE}, (_, i) => validators[i % validators.length].pubkey),
-        aggregatePubkey: ssz.BLSPubkey.defaultValue(),
-      },
-      nextSyncCommittee: {
-        pubkeys: Array.from({length: SYNC_COMMITTEE_SIZE}, (_, i) => validators[i % validators.length].pubkey),
-        aggregatePubkey: ssz.BLSPubkey.defaultValue(),
-      },
-    };
-
-    return ssz.altair.BeaconState.toViewDU(defaultAltairState);
-  } else {
+  if (forkSeq === ForkSeq.phase0) {
     return ssz.phase0.BeaconState.toViewDU(defaultState);
   }
+
+  const defaultAltairState: altair.BeaconState = {
+    ...ssz.altair.BeaconState.defaultValue(),
+    ...defaultState,
+    previousEpochParticipation: [...[0xff, 0xff], ...Array.from({length: numValidators - 2}, () => 0)],
+    currentEpochParticipation: [...[0xff, 0xff], ...Array.from({length: numValidators - 2}, () => 0)],
+    currentSyncCommittee: {
+      pubkeys: Array.from({length: SYNC_COMMITTEE_SIZE}, (_, i) => validators[i % validators.length].pubkey),
+      aggregatePubkey: ssz.BLSPubkey.defaultValue(),
+    },
+    nextSyncCommittee: {
+      pubkeys: Array.from({length: SYNC_COMMITTEE_SIZE}, (_, i) => validators[i % validators.length].pubkey),
+      aggregatePubkey: ssz.BLSPubkey.defaultValue(),
+    },
+  };
+
+  if (forkSeq === ForkSeq.altair) {
+    return ssz.altair.BeaconState.toViewDU(defaultAltairState);
+  }
+
+  const payloadHeader = ssz.bellatrix.ExecutionPayloadHeader.defaultValue();
+
+  // Bellatrix
+  return ssz.bellatrix.BeaconState.toViewDU({
+    ...defaultAltairState,
+    latestExecutionPayloadHeader: {...payloadHeader, blockNumber: 2022},
+  });
 }
 
 /**
@@ -136,8 +149,40 @@ export function generateCachedState(
   config = minimalConfig,
   isAltair = false
 ): CachedBeaconStateAllForks {
-  const state = generateState(opts, config, isAltair);
+  const state = generateState(opts, config, isAltair ? ForkSeq.altair : ForkSeq.phase0);
   return createCachedBeaconState(state, {
+    config: createIBeaconConfig(config, state.genesisValidatorsRoot),
+    // This is a performance test, there's no need to have a global shared cache of keys
+    pubkey2index: new PubkeyIndexMap(),
+    index2pubkey: [],
+  });
+}
+
+/**
+ * This generates state with default pubkey
+ */
+export function generateCachedAltairState(
+  opts: TestBeaconState = {},
+  config = minimalConfig
+): CachedBeaconStateAllForks {
+  const state = generateState(opts, config, ForkSeq.altair);
+  return createCachedBeaconState(state, {
+    config: createIBeaconConfig(config, state.genesisValidatorsRoot),
+    // This is a performance test, there's no need to have a global shared cache of keys
+    pubkey2index: new PubkeyIndexMap(),
+    index2pubkey: [],
+  });
+}
+
+/**
+ * This generates state with default pubkey
+ */
+export function generateCachedBellatrixState(
+  opts: TestBeaconState = {},
+  config = minimalConfig
+): CachedBeaconStateBellatrix {
+  const state = generateState(opts, config, ForkSeq.bellatrix);
+  return createCachedBeaconState(state as BeaconStateBellatrix, {
     config: createIBeaconConfig(config, state.genesisValidatorsRoot),
     // This is a performance test, there's no need to have a global shared cache of keys
     pubkey2index: new PubkeyIndexMap(),

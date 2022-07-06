@@ -13,7 +13,7 @@ import {INetwork, Network} from "../../../../../src/network/index.js";
 import {IBeaconChain} from "../../../../../src/chain/index.js";
 import {generateProtoBlock} from "../../../../utils/block.js";
 import {StubbedBeaconDb} from "../../../../utils/stub/index.js";
-import {generateState} from "../../../../utils/state.js";
+import {generateCachedAltairState, generateState} from "../../../../utils/state.js";
 import {setupApiImplTestServer} from "../index.test.js";
 import {SinonStubFn} from "../../../../utils/types.js";
 
@@ -60,7 +60,7 @@ describe.skip("api - debug - beacon", function () {
   });
 
   it("getStateV2 - should be able to convert to json", async function () {
-    resolveStateIdStub.resolves(generateState({}, minimalConfig, true));
+    resolveStateIdStub.resolves(generateCachedAltairState({}, minimalConfig));
     const {data: state} = await debugApi.getStateV2("something");
     expect(() => ssz.altair.BeaconState.toJson(state as altair.BeaconState)).to.not.throw();
   });

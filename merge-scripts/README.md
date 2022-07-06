@@ -1,6 +1,6 @@
 # Easy script to join the Ethereum networks
 
-This is a setup to run and join the merge devnets, testnets (and mainnet soon!)  with a single shell command. This script will pull the appropriate images and config and spin up the EL client and lodestar.
+This is a setup to run and join the merge devnets, testnets (and mainnet soon!) with a single shell command. This script will pull the appropriate images and config and spin up the EL client and lodestar.
 
 This script is borne out of need to simplify putting together the various moving parts of the post merge ethereum setup so that the users can have super fast onboarding, easy switch/test EL clients as well as can take inspiration for how to match/debug the configurations for their customized setups.
 
@@ -10,7 +10,7 @@ So just give it a go and fire away your merge setup command!
 
 Look for the .vars file in the folder to see what networks are supported. Here are a few examples
 
-1. Kiln Network ( soon to be deprecated ):  `--devnetVars ./kiln.vars`
+1. Kiln Network ( soon to be deprecated ): `--devnetVars ./kiln.vars`
 2. Ropsten Network: `--devnetVars ./ropsten.vars`
 3. Sepolia Network: `--devnetVars ./sepolia.vars`
 4. Mainnet Shadow fork 8: `--devnetVars ./mainnetshadow-8.vars`
@@ -45,11 +45,10 @@ cd merge-scripts
 
 Look for the .vars file in the folder to see what networks are supported. Here are a few examples
 
-1. Geth:  `--elClient geth`
+1. Geth: `--elClient geth`
 2. Nethermind: `--elClient nethermind`
 3. Besu: `--elClient besu`
 4. Ethereumjs: (might sync only small size testnets for now): `--elClient ethereumjs`
-
 
 You can alternate between them (without needing to reset/cleanup) to experiment with the ELs being out of sync ( and catching up) with `lodestar` via **Optimistic Sync** features.
 
