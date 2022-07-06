@@ -7,15 +7,13 @@ import {
   computeStartSlotAtEpoch,
   getEffectiveBalanceIncrementsZeroInactive,
   computeEpochAtSlot,
-  isBellatrixStateType,
   RootCache,
-  processSlots,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IForkChoice, OnBlockPrecachedData, ForkChoiceError, ForkChoiceErrorCode} from "@chainsafe/lodestar-fork-choice";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {IMetrics} from "../../metrics/index.js";
-import {IExecutionEngine, PayloadId} from "../../execution/engine/interface.js";
+import {IExecutionEngine} from "../../execution/engine/interface.js";
 import {IBeaconDb} from "../../db/index.js";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {CheckpointStateCache, StateContextCache, toCheckpointHex} from "../stateCache/index.js";
@@ -24,7 +22,6 @@ import {ChainEventEmitter} from "../emitter.js";
 import {LightClientServer} from "../lightClient/index.js";
 import {SeenAggregatedAttestations} from "../seenCache/seenAggregateAndProof.js";
 import {SeenBlockAttesters} from "../seenCache/seenBlockAttesters.js";
-import {prepareExecutionPayload} from "../factory/block/body.js";
 import {IEth1ForBlockProduction} from "../../eth1/index.js";
 import {BeaconProposerCache} from "../beaconProposerCache.js";
 import {IBeaconClock} from "../clock/index.js";
@@ -225,8 +222,7 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
 
   // Emit ChainEvent.forkChoiceHead event
   const oldHead = chain.forkChoice.getHead();
-  chain.forkChoice.updateHead();
-  const newHead = chain.forkChoice.getHead();
+  const newHead = chain.forkChoice.updateHead();
   const currFinalizedEpoch = chain.forkChoice.getFinalizedCheckpoint().epoch;
 
   if (newHead.blockRoot !== oldHead.blockRoot) {
@@ -268,34 +264,32 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
     }
   }
 
-  void maybeIssueNextProposerEngineFcU(chain, postState).then((payloadId) => {
-    // NOTE: forkChoice.fsStore.finalizedCheckpoint MUST only change is response to an onBlock event
-    // Notify execution layer of head and finalized updates only if has already
-    // not been done via payloadId generation. But even if this fcU follows the
-    // payloadId one, there is no harm as the ELs will just ignore it.
-    if (payloadId === null && (newHead.blockRoot !== oldHead.blockRoot || currFinalizedEpoch !== prevFinalizedEpoch)) {
-      /**
-       * On post BELLATRIX_EPOCH but pre TTD, blocks include empty execution payload with a zero block hash.
-       * The consensus clients must not send notifyForkchoiceUpdate before TTD since the execution client will error.
-       * So we must check that:
-       * - `headBlockHash !== null` -> Pre BELLATRIX_EPOCH
-       * - `headBlockHash !== ZERO_HASH` -> Pre TTD
-       */
-      const headBlockHash = chain.forkChoice.getHead().executionPayloadBlockHash ?? ZERO_HASH_HEX;
-      /**
-       * After BELLATRIX_EPOCH and TTD it's okay to send a zero hash block hash for the finalized block. This will happen if
-       * the current finalized block does not contain any execution payload at all (pre MERGE_EPOCH) or if it contains a
-       * zero block hash (pre TTD)
-       */
-      const safeBlockHash = chain.forkChoice.getJustifiedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
-      const finalizedBlockHash = chain.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
-      if (headBlockHash !== ZERO_HASH_HEX) {
-        chain.executionEngine.notifyForkchoiceUpdate(headBlockHash, safeBlockHash, finalizedBlockHash).catch((e) => {
-          chain.logger.error("Error pushing notifyForkchoiceUpdate()", {headBlockHash, finalizedBlockHash}, e);
-        });
-      }
+  // NOTE: forkChoice.fsStore.finalizedCheckpoint MUST only change in response to an onBlock event
+  // Notifying EL of head and finalized updates as below is usually done within the 1st 4s of the slot.
+  // If there is an advanced payload generation in the next slot, we'll notify EL again 4s before next
+  // slot via PrepareNextSlotScheduler. There is no harm updating the ELs with same data, it will just ignore it.
+  if (newHead.blockRoot !== oldHead.blockRoot || currFinalizedEpoch !== prevFinalizedEpoch) {
+    /**
+     * On post BELLATRIX_EPOCH but pre TTD, blocks include empty execution payload with a zero block hash.
+     * The consensus clients must not send notifyForkchoiceUpdate before TTD since the execution client will error.
+     * So we must check that:
+     * - `headBlockHash !== null` -> Pre BELLATRIX_EPOCH
+     * - `headBlockHash !== ZERO_HASH` -> Pre TTD
+     */
+    const headBlockHash = chain.forkChoice.getHead().executionPayloadBlockHash ?? ZERO_HASH_HEX;
+    /**
+     * After BELLATRIX_EPOCH and TTD it's okay to send a zero hash block hash for the finalized block. This will happen if
+     * the current finalized block does not contain any execution payload at all (pre MERGE_EPOCH) or if it contains a
+     * zero block hash (pre TTD)
+     */
+    const safeBlockHash = chain.forkChoice.getJustifiedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
+    const finalizedBlockHash = chain.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
+    if (headBlockHash !== ZERO_HASH_HEX) {
+      chain.executionEngine.notifyForkchoiceUpdate(headBlockHash, safeBlockHash, finalizedBlockHash).catch((e) => {
+        chain.logger.error("Error pushing notifyForkchoiceUpdate()", {headBlockHash, finalizedBlockHash}, e);
+      });
     }
-  });
+  }
 
   // Emit ChainEvent.block event
   //
@@ -327,38 +321,6 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
     root: blockRoot,
     delaySec: chain.clock.secFromSlot(block.message.slot),
   });
-}
-
-async function maybeIssueNextProposerEngineFcU(
-  chain: ImportBlockModules,
-  state: CachedBeaconStateAllForks
-): Promise<PayloadId | null> {
-  const prepareSlot = state.slot + 1;
-  const prepareEpoch = computeEpochAtSlot(prepareSlot);
-  // No need to try building block if we are not synced
-  if (prepareSlot !== chain.clock.currentSlot + 1 || prepareEpoch < chain.config.BELLATRIX_FORK_EPOCH) {
-    return null;
-  }
-  const prepareState = processSlots(state, prepareSlot);
-  // TODO wait till third/last interval of the slot to actual send an fcU
-  // so that any head change is accomodated before that. However this could
-  // be optimized if the last block receieved is already head. This will be
-  // especially meaningful for mev boost which might have more delays
-  // because of how protocol is designed
-  if (isBellatrixStateType(prepareState)) {
-    try {
-      const proposerIndex = prepareState.epochCtx.getBeaconProposer(prepareSlot);
-      const feeRecipient = chain.beaconProposerCache.get(proposerIndex);
-      if (feeRecipient) {
-        const safeBlockHash = chain.forkChoice.getJustifiedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
-        const finalizedBlockHash = chain.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
-        return prepareExecutionPayload(chain, safeBlockHash, finalizedBlockHash, prepareState, feeRecipient);
-      }
-    } catch (e) {
-      chain.logger.error("Error on issuing next proposer engine fcU", {}, e as Error);
-    }
-  }
-  return null;
 }
 
 /**
