@@ -192,7 +192,7 @@ export async function fetchWeakSubjectivityState(
 
     const stateBytes = await callFnWhenAwait(
       getStatePromise,
-      () => logger.info("Download in progress, please wait ..."),
+      () => logger.info("Download in progress, please wait..."),
       GET_STATE_LOG_INTERVAL
     );
 
@@ -203,7 +203,7 @@ export async function fetchWeakSubjectivityState(
     throw new Error(
       "Unable to fetch weak subjectivity state: " +
         (e as Error).message +
-        ". Consider downloading the state manually using debug api and use --weakSubjectivityStateFile option."
+        ". Consider downloading a state manually and using the --weakSubjectivityStateFile option."
     );
   }
 }
