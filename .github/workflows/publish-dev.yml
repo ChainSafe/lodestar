@@ -119,5 +119,6 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - run: docker buildx build --push --tag chainsafe/lodestar:next --platform linux/amd64 --build-arg VERSION=${{ needs.npm.outputs.version }} .
+      - name: Build and push
+      - run: docker buildx build --push --tag chainsafe/lodestar:next --platform linux/amd64,linux/arm64 --build-arg VERSION=${{ needs.npm.outputs.version }} .
       - run: docker run chainsafe/lodestar:next --help
