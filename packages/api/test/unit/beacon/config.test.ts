@@ -15,24 +15,26 @@ describe("beacon / config", () => {
   const presetJson = presetToJson(activePreset);
   const jsonSpec = {...configJson, ...presetJson};
 
-  runGenericServerTest<Api, ReqTypes>(config, getClient, getRoutes, {
-    getDepositContract: {
-      args: [],
-      res: {
-        data: {
-          chainId: 1,
-          address: Buffer.alloc(20, 1),
+  describe("Run generic server test", () => {
+    runGenericServerTest<Api, ReqTypes>(config, getClient, getRoutes, {
+      getDepositContract: {
+        args: [],
+        res: {
+          data: {
+            chainId: 1,
+            address: Buffer.alloc(20, 1),
+          },
         },
       },
-    },
-    getForkSchedule: {
-      args: [],
-      res: {data: [ssz.phase0.Fork.defaultValue()]},
-    },
-    getSpec: {
-      args: [],
-      res: {data: jsonSpec},
-    },
+      getForkSchedule: {
+        args: [],
+        res: {data: [ssz.phase0.Fork.defaultValue()]},
+      },
+      getSpec: {
+        args: [],
+        res: {data: jsonSpec},
+      },
+    });
   });
 
   it("Serialize Partial Spec object", () => {

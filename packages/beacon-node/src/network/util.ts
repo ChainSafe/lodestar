@@ -30,8 +30,8 @@ export function isLocalMultiAddr(multiaddr: Multiaddr | undefined): boolean {
 
   const interfaces = networkInterfaces();
   const tuples = multiaddr.tuples();
-  const isIPv4: boolean = tuples[0][0] === 4;
-  const family = isIPv4 ? "IPv4" : "IPv6";
+  const family = tuples[0][0];
+  const isIPv4: boolean = family === 4;
   const ip = tuples[0][1];
 
   if (!ip) {
@@ -46,7 +46,11 @@ export function isLocalMultiAddr(multiaddr: Multiaddr | undefined): boolean {
 
   for (const networkInterfaces of Object.values(interfaces)) {
     for (const networkInterface of networkInterfaces || []) {
-      if (networkInterface.family === family && networkInterface.address === ipStr) {
+      // since node version 18, the netowrkinterface family returns 4 | 6 instead of ipv4 | ipv6,
+      // even though the documentation says otherwise.
+      // This might be a bug that would be corrected in future version, in the meantime
+      // the check using endsWith ensures things work in node version 18 and earlier
+      if (String(networkInterface.family).endsWith(String(family)) && networkInterface.address === ipStr) {
         return true;
       }
     }
