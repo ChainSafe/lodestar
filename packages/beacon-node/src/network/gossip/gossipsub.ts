@@ -1,8 +1,6 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {Libp2p} from "libp2p";
-import {Message} from "@libp2p/interface-pubsub";
-import {PeerId} from "@libp2p/interface-peer-id";
-import {GossipSub} from "@chainsafe/libp2p-gossipsub";
+import {GossipSub, GossipsubEvents} from "@chainsafe/libp2p-gossipsub";
 import {SignaturePolicy, TopicStr} from "@chainsafe/libp2p-gossipsub/types";
 import {PeerScore, PeerScoreParams} from "@chainsafe/libp2p-gossipsub/score";
 import {MetricsRegister, TopicLabel, TopicStrToLabel} from "@chainsafe/libp2p-gossipsub/metrics";
@@ -42,15 +40,6 @@ import {
 /* eslint-disable @typescript-eslint/naming-convention */
 /** As specified in https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md */
 const GOSSIPSUB_HEARTBEAT_INTERVAL = 0.7 * 1000;
-
-// TODO: Export this type
-type GossipsubEvents = {
-  "gossipsub:message": CustomEvent<{
-    propagationSource: PeerId;
-    msgId: string;
-    msg: Message;
-  }>;
-};
 
 export type Eth2GossipsubModules = {
   config: IBeaconConfig;
