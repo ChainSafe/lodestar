@@ -100,7 +100,7 @@ jobs:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Publish to npm registry (release)
-        run: yarn run release:publish
+        run: node scripts/release/publish.mjs latest
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 

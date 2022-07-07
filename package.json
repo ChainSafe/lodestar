@@ -38,7 +38,6 @@
     "release:create-rc": "node scripts/release/create_rc.mjs",
     "release:tag-rc": "node scripts/release/tag_rc.mjs",
     "release:tag-stable": "node scripts/release/tag_stable.mjs",
-    "release:publish": "lerna publish from-package --yes --no-verify-access",
     "check-readme": "lerna run check-readme"
   },
   "devDependencies": {

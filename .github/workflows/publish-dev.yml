@@ -54,37 +54,7 @@ jobs:
         run: node scripts/release/set_version.mjs ${{ steps.version.outputs.version }} exact
 
       - name: Publish to npm registry
-        # Note: before https://github.com/ChainSafe/lodestar/commit/28e2c74cf0f1bede8b09c8c9fec26f54b367e3fd
-        # We used `lerna publish --canary` option. However, since we now publish must version on branches,
-        # i.e. v0.35.x branch, lerna fails to detect the latest version and publishes canary versions as
-        # `0.34.0-dev.173+28e2c74cf0` instead of `0.36.0-dev.4+28e2c74cf0`, which creates confusion.
-        #
-        # --no-git-reset:
-        #   Do not delete code version artifacts so the next step can pick the version
-        #
-        # --dist-tag next:
-        #   Make this dev version installable with `@next`
-        #
-        # --preid dev:
-        #   Tag version with `dev` instead of `alpha`
-        #
-        # --force-publish:
-        #   lerna doesn't want to publish anything otherwise - "lerna success No changed packages
-        #   to publish"
-        # --exact
-        #   lerna will link the dependencies of monorepo packages without ^ operator as npm
-        #   is apparently bad at resolving ^ dependencies of the canary versions. For e.g
-        #   @chainsafe/lodestar@^0.34.0-dev.4 resolves to => 0.34.0
-        #
-        # NOTE: Using --preid dev.$(git rev-parse --short=7 HEAD) results in `0.24.3-dev.3ddb91d.0+3ddb91d`
-        run: |
-          node_modules/.bin/lerna publish from-package \
-          --yes \
-          --no-verify-access \
-          --dist-tag next \
-          --no-git-reset \
-          --force-publish \
-          --exact
+        run: node scripts/release/publish.mjs next
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
     outputs:

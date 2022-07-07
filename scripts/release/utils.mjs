@@ -23,10 +23,11 @@ export const MAIN_PACKAGE_PATH = "packages/cli";
 
 /**
  * @param {string} cmd
+ * @param {child_process.ExecSyncOptionsWithStringEncoding|undefined} opts
  * @returns {string}
  */
-export function shell(cmd) {
-  return child_process.execSync(cmd, {encoding: "utf8", stdio: "pipe"}).trim();
+export function shell(cmd, opts = {}) {
+  return child_process.execSync(cmd, {encoding: "utf8", stdio: "pipe", opts}).trim();
 }
 
 /**
