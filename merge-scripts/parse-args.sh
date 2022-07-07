@@ -27,8 +27,12 @@ while [[ $# -gt 0 ]]; do
       dockerWithSudo=true
       shift # past argument
       ;;
-    --withValidator)
-      withValidator=true
+    --withValidatorMnemonic)
+      withValidatorMnemonic=true
+      shift # past argument
+      ;;
+    --withValidatorKeystore)
+      withValidatorKeystore=true
       shift # past argument
       ;;
     --justEL)
@@ -57,28 +61,18 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+# key won't ever get assigned in while loop if there is no arg, in that case print usage
+if [[ ! -n "$key" ]];
+then
+  echo "usage: ./setup.sh --dataDir <data dir> --elClient <geth | nethermind | ethereumjs | besu> --devetVars <devnet vars file> [--dockerWithSudo --withTerminal \"gnome-terminal --disable-factory --\"]"
+  echo "example: ./setup.sh --dataDir kiln-data --elClient nethermind --devnetVars ./kiln.vars --dockerWithSudo --withTerminal \"gnome-terminal --disable-factory --\""
+  echo "Note: if running on macOS where gnome-terminal is not available, remove the gnome-terminal related flags."
+  echo "example: ./setup.sh --dataDir kiln-data --elClient geth --devnetVars ./kiln.vars"
+  exit;
+fi;
+
 echo "elClient = $elClient"
 echo "dataDir = $dataDir"
 echo "devnetVars = $devnetVars"
 echo "withTerminal = $withTerminal"
 echo "dockerWithSudo = $dockerWithSudo"
-echo "withValidator = $withValidator"
-echo "detached = $detached"
-
-if [ -n "$withTerminal" ] && [ -n "$detached" ]
-then
-  echo "Only of of --withTerminal or --detached options should be provided, exiting..."
-  exit;
-fi
-
-if [ -n "$withValidator" ] && ( [ -n "$justEL" ] || [ -n "$justEL" ] || [ -n "$justEL" ] )
-then
-  echo "--withValidator can not be just with --justEL or --justCL or --justVC. Try using only --justVC."
-  exit;
-fi;
-
-if [ -n "$justEL" ] && ( [ -n "$justCL" ] || [ -n "$justVC" ]  ) || [ -n "$justCL" ] && ( [ -n "$justEL" ] || [ -n "$justVC" ]  ) || [ -n "$justVC" ] && ( [ -n "$justEL" ] || [ -n "$justCL" ]  )
-then
-  echo "only one of --justEL, --justCL or --justVC can be used at a time. You can however start another (parallel) run(s) to spin them up separately."
-  exit;
-fi
