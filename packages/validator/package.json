@@ -24,12 +24,10 @@
     "build:typedocs": "typedoc --exclude src/index.ts --out typedocs src",
     "check-build": "node -e \"(async function() { await import('./lib/index.js') })()\"",
     "check-types": "tsc",
-    "check-readme": "typescript-docs-verifier",
     "lint": "eslint --color --ext .ts src/ test/",
     "test:unit": "nyc --cache-dir .nyc_output/.cache -e .ts mocha 'test/unit/**/*.test.ts'",
     "test:e2e": "yarn run download-spec-tests && mocha 'test/spec/**/*.test.ts'",
-    "download-spec-tests": "node --loader=ts-node/esm test/spec/downloadTests.ts",
-    "coverage": "codecov -F lodestar-validator"
+    "download-spec-tests": "node --loader=ts-node/esm test/spec/downloadTests.ts"
   },
   "repository": {
     "type": "git",

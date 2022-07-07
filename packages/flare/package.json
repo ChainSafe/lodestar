@@ -40,9 +40,7 @@
     "build:typedocs": "typedoc --exclude src/index.ts --out typedocs src",
     "check-build": "node -e \"(async function() { await import('./lib/index.js') })()\" flare --help",
     "check-types": "tsc",
-    "check-readme": "typescript-docs-verifier",
     "lint": "eslint --color --ext .ts src/",
-    "pretest": "yarn run check-types",
     "test:unit": "nyc --cache-dir .nyc_output/.cache -e .ts mocha 'test/unit/**/*.test.ts'",
     "test:e2e": "echo 'n/a'"
   },
