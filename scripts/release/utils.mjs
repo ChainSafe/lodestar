@@ -55,6 +55,9 @@ export function parseCmdArgs() {
   }
 
   const versionObj = semver.parse(versionArg);
+  if (!versionObj) {
+    throw Error(`Invalid semver '${versionArg}'`);
+  }
 
   // Re-format version to drop any prefixes or suffixes
   const versionMMP = [versionObj.major, versionObj.minor, versionObj.patch].join(".");
@@ -272,11 +275,23 @@ export function syncGitRemote() {
 }
 
 /**
- * Print usage and exit if no args or --help is provided
+ * Print help and exit if --help or -h
+ * @param {string} helpText
  */
-export function usage(helpText) {
-  if (process.argv.includes("--help") || process.argv.includes("-h") || !process.argv[2]) {
+export function help(helpText) {
+  if (process.argv.includes("--help") || process.argv.includes("-h")) {
     console.log(helpText);
+    process.exit(0);
+  }
+}
+
+/**
+ * @param {boolean} shouldExit
+ * @param {string} errorMsg
+ */
+export function exitIf(shouldExit, errorMsg) {
+  if (shouldExit) {
+    console.log(errorMsg);
     process.exit(1);
   }
 }

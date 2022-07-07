@@ -88,21 +88,9 @@ jobs:
           release_name: Release ${{ needs.tag.outputs.tag }}
           prerelease: true
 
-      - name: Change and commit version
-        # Write version before publishing so it's picked up by `lerna publish from-package`.
-        # It must also be committed to ensure a clean git tree, otherwise `lerna publish` errors.
-        # This "temp" commit doesn't change the actually release commit which is captured above.
-        # git-data is also correct, since it's generated at build time, before `lerna version` run.
-        run: |
-          node_modules/.bin/lerna version ${{ needs.tag.outputs.version }} \
-          --force-publish \
-          --exact \
-          --yes \
-          --no-git-tag-version
-
-          git config user.name 'temp'
-          git config user.email 'temp@github.com'
-          git commit -am "${{ needs.tag.outputs.version }}"
+      - name: Set rc version
+        # Set all mono-repo packages to the same new version. Update their dependency versions too
+        run: node scripts/release/set_version.mjs ${{ steps.version.outputs.version }} exact
 
       # From https://github.com/lerna/lerna/issues/2404
       - run: echo //registry.npmjs.org/:_authToken=${NPM_TOKEN} > .npmrc

@@ -23,11 +23,11 @@ import {
   REPO_SLUG,
   getCurrentBranch,
   syncGitRemote,
-  usage,
+  help,
   STABLE_BRANCH,
 } from "./utils.mjs";
 
-usage(`
+help(`
 Create a Lodestar release candidate.
 
 Usage:
@@ -81,7 +81,7 @@ const rcBranchCommitRemote = checkBranchExistsRemote(rcBranchName);
 if (rcBranchCommitRemote !== null) throw Error(`Branch ${rcBranchName} already exists in remote`);
 
 // Must ensure git directory is clean before doing any changes.
-// Otherwise the lerna version + commit step below could mix in changes by the user.
+// TODO: Why?
 assertGitDirectoryIsClean();
 
 // Log variables for debug
@@ -102,8 +102,8 @@ if (!(await confirm(`Do you want to create a release candidate for ${versionMMP}
 // Create a new release branch `rc/v1.1.0` at commit `9fceb02`
 shell(`git checkout -b ${rcBranchName} ${commit}`);
 
-// Set monorepo version to `1.1.0`
-shell(`lerna version ${packageVersion} --no-git-tag-version --force-publish --yes`);
+// Set monorepo version to `1.1.0`. Use tilde to apply only patch releases, not minor
+shell(`node scripts/release/set_version.mjs ${packageVersion} tilde`);
 
 // Commit changes
 shell(`git commit -am "v${versionMMP}"`);

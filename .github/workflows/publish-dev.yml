@@ -49,21 +49,9 @@ jobs:
           echo "::set-output name=version::$VERSION"
           echo PACKAGE_VERSION $PACKAGE_VERSION GITHUB_SHA $GITHUB_SHA VERSION $VERSION
 
-      - name: Change and commit version
-        # Write version before publishing so it's picked up by `lerna publish from-package`.
-        # It must also be committed to ensure a clean git tree, otherwise `lerna publish` errors.
-        # This "temp" commit doesn't change the actually release commit which is captured above.
-        # git-data is also correct, since it's generated at build time, before `lerna version` run.
-        run: |
-          node_modules/.bin/lerna version ${{ steps.version.outputs.version }} \
-          --force-publish \
-          --exact \
-          --yes \
-          --no-git-tag-version
-
-          git config user.name 'temp'
-          git config user.email 'temp@github.com'
-          git commit -am "${{ steps.version.outputs.version }}"
+      - name: Set dev version
+        # Set all mono-repo packages to the same new version. Update their dependency versions too
+        run: node scripts/release/set_version.mjs ${{ steps.version.outputs.version }} exact
 
       - name: Publish to npm registry
         # Note: before https://github.com/ChainSafe/lodestar/commit/28e2c74cf0f1bede8b09c8c9fec26f54b367e3fd

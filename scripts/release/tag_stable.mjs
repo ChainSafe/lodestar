@@ -15,7 +15,8 @@ import {
   shell,
   STABLE_BRANCH,
   syncGitRemote,
-  usage,
+  help,
+  exitIf,
 } from "./utils.mjs";
 
 /* eslint-disable
@@ -26,7 +27,7 @@ import {
   @typescript-eslint/no-unsafe-call
 */
 
-usage(`
+help(`
 Publish a Lodestar stable release.
 
 Usage:
@@ -34,6 +35,7 @@ Usage:
 
 See https://github.com/ChainSafe/lodestar/blob/unstable/RELEASE.md#3-merge-release-candidate
 `);
+exitIf(!process.argv[2], "<version> not set");
 
 // Get command args
 // tag_rc <version> [commit]
@@ -67,7 +69,7 @@ const tagCommitRemote = checkTagExistsRemote(tagName);
 if (tagCommitRemote !== null) throw Error(`tag ${tagName} already exists in remote`);
 
 // Must ensure git directory is clean before doing any changes.
-// Otherwise the lerna version + commit step below could mix in changes by the user.
+// TODO: Why?
 assertGitDirectoryIsClean();
 
 // Log variables for debug

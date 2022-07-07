@@ -9,15 +9,16 @@ import {
   checkTagExistsLocal,
   checkTagExistsRemote,
   confirm,
+  exitIf,
   getCommitDetails,
   getCurrentBranch,
   getNextRcTag,
   GIT_REPO_URL,
+  help,
   parseCmdArgs,
   readMainPackageJson,
   shell,
   syncGitRemote,
-  usage,
 } from "./utils.mjs";
 
 /* eslint-disable
@@ -28,7 +29,7 @@ import {
   @typescript-eslint/no-unsafe-call
 */
 
-usage(`
+help(`
 Publish a Lodestar release candidate.
 
 Usage:
@@ -36,6 +37,7 @@ Usage:
 
 See https://github.com/ChainSafe/lodestar/blob/unstable/RELEASE.md#1-create-release-candidate
 `);
+exitIf(!process.argv[2], "<version> not set");
 
 // Get command args
 // tag_rc <version> [commit]
@@ -77,7 +79,7 @@ const tagCommitRemote = checkTagExistsRemote(tagName);
 if (tagCommitRemote !== null) throw Error(`tag ${tagName} already exists in remote`);
 
 // Must ensure git directory is clean before doing any changes.
-// Otherwise the lerna version + commit step below could mix in changes by the user.
+// TODO: Why?
 assertGitDirectoryIsClean();
 
 // Log variables for debug
