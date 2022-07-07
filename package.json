@@ -24,7 +24,7 @@
     "clean": "rm -rf ./packages/*/lib ./packages/*/*.tsbuildinfo",
     "build": "yarn clean && yarn workspaces run build",
     "build:docs": "yarn workspaces run build:typedocs && yarn workspaces run build:refdocs && ./scripts/prepare-docs.sh",
-    "build:ifchanged": "lerna exec -- ../../scripts/build_if_changed.sh",
+    "build:ifchanged": "yarn workspaces exec -- ../../scripts/build_if_changed.sh",
     "lint": "yarn workspaces run lint --no-bail",
     "check-build": "yarn workspaces run check-build",
     "check-types": "yarn workspaces run check-types --no-bail",
@@ -38,7 +38,7 @@
     "release:create-rc": "node scripts/release/create_rc.mjs",
     "release:tag-rc": "node scripts/release/tag_rc.mjs",
     "release:tag-stable": "node scripts/release/tag_stable.mjs",
-    "check-readme": "lerna run check-readme"
+    "check-readme": "yarn workspaces run check-readme"
   },
   "devDependencies": {
     "@chainsafe/eslint-plugin-node": "^11.2.3",

@@ -92,11 +92,6 @@ jobs:
         # Set all mono-repo packages to the same new version. Update their dependency versions too
         run: node scripts/release/set_version.mjs ${{ steps.version.outputs.version }} exact
 
-      # From https://github.com/lerna/lerna/issues/2404
-      - run: echo //registry.npmjs.org/:_authToken=${NPM_TOKEN} > .npmrc
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-
       - name: Publish to npm registry
         run: node scripts/release/publish.mjs rc
         env:

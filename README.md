@@ -30,13 +30,12 @@
 ## Prerequisites
 
 - :gear: [NodeJS](https://nodejs.org/) (LTS/Gallium)
-- :toolbox: [Yarn](https://yarnpkg.com/)/[Lerna](https://lerna.js.org/)
+- :toolbox: [Yarn](https://yarnpkg.com/)
 
 ###### Developer Quickstart:
 
 ```bash
-lerna bootstrap
-yarn build
+yarn && yarn build
 ./lodestar --help
 ```
 

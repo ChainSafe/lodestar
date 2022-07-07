@@ -5,22 +5,21 @@ Thanks for your contribution to Lodestar. It's people like you that push the Eth
 ## Prerequisites
 
 - :gear: [NodeJS](https://nodejs.org/) (LTS/Gallium)
-- :toolbox: [Yarn](https://yarnpkg.com/)/[Lerna](https://lerna.js.org/)
+- :toolbox: [Yarn](https://yarnpkg.com/)
 
 ## Getting Started
 
-- :gear: Run `lerna bootstrap` or `yarn install` to install dependencies.
+- :gear: Run `yarn install` to install dependencies.
 - :gear: Run `yarn build` to build lib from source.
 - :package: A `lodestar` binary will be bundled in `./packages/cli/bin`.
 - :computer: Run `./lodestar --help` to get a list of available commands and argurments.
 
 ## Tests
 
-- :test_tube: Run `lerna run test:spec-min` for minimal spec tests.
-- :test_tube: Run `lerna run test:spec-main` for mainnet spec tests.
-- :test_tube: Run `lerna run test:unit` for unit tests.
-- :test_tube: Run `lerna run test:e2e` for end-to-end tests.
-- :test_tube: Run `lerna run test` to run all tests.
+- :test_tube: Run `yarn test:spec-min` for minimal spec tests.
+- :test_tube: Run `yarn test:spec-main` for mainnet spec tests.
+- :test_tube: Run `yarn test:unit` for unit tests.
+- :test_tube: Run `yarn test:e2e` for end-to-end tests.
 
 ### Debugging spec tests
 
@@ -103,7 +102,7 @@ For example:
 
 ## Lodestar Monorepo
 
-We're currently experimenting with hosting the majority of lodestar packages and support packages in this repository as a [monorepo](https://en.wikipedia.org/wiki/Monorepo). We're using [Lerna](https://lerna.js.org/) to manage the packages. See [packages/](https://github.com/ChainSafe/lodestar/tree/unstable/packages) for a list of packages hosted in this repo.
+We're currently experimenting with hosting the majority of lodestar packages and support packages in this repository as a [monorepo](https://en.wikipedia.org/wiki/Monorepo). See [packages/](https://github.com/ChainSafe/lodestar/tree/unstable/packages) for a list of packages hosted in this repo.
 
 ## Style Guide
 

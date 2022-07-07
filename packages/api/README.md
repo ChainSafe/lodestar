@@ -15,9 +15,7 @@ Typescript REST client for the [Ethereum Consensus API spec](https://github.com/
 import {getClient} from "@lodestar/api";
 import {config} from "@lodestar/config/default";
 
-const api = getClient({
-  baseUrl: "http://localhost:9596",
-}, {config});
+const api = getClient({baseUrl: "http://localhost:9596"}, {config});
 
 api.beacon
   .getStateValidator(
@@ -29,7 +27,6 @@ api.beacon
 
 ## Prerequisites
 
-- [Lerna](https://github.com/lerna/lerna)
 - [Yarn](https://yarnpkg.com/)
 
 ## What you need

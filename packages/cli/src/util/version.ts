@@ -29,8 +29,8 @@ export function getVersionData(): {
 } {
   const parts: string[] = [];
 
-  /** Returns local version from `lerna.json` or `package.json` as `"0.28.2"` */
-  const localVersion = readCliPackageJson() || readVersionFromLernaJson();
+  /** Returns local version from `package.json` as `"0.28.2"` */
+  const localVersion = readCliPackageJson();
   if (localVersion) {
     parts.push(`v${localVersion}`);
   }
@@ -54,15 +54,6 @@ export function getVersionData(): {
     version: parts.length > 0 ? parts.join("/") : "unknown",
     commit,
   };
-}
-
-/** Read version information from lerna.json */
-function readVersionFromLernaJson(): string | undefined {
-  const filePath = findUp.sync("lerna.json", {cwd: __dirname});
-  if (!filePath) return undefined;
-
-  const lernaJson = JSON.parse(fs.readFileSync(filePath, "utf8")) as VersionJson;
-  return lernaJson.version;
 }
 
 /** Read version information from package.json */

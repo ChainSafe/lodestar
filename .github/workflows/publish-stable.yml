@@ -94,11 +94,7 @@ jobs:
           release_name: Release ${{ needs.tag.outputs.tag }}
           prerelease: false
 
-      # From https://github.com/lerna/lerna/issues/2404
-      - run: echo //registry.npmjs.org/:_authToken=${NPM_TOKEN} > .npmrc
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-
+      # Version is already set in source, and checked in "Assert tag == package.json version"
       - name: Publish to npm registry (release)
         run: node scripts/release/publish.mjs latest
         env:

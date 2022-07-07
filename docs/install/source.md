@@ -13,22 +13,16 @@ Clone the repo locally.
 git clone https://github.com/chainsafe/lodestar.git
 ```
 
-Install across all packages. Lodestar follows a [monorepo](https://github.com/lerna/lerna) structure, so all commands below must be run in the project root. Use the `--ignore-optional` flag to prevent downloading the Ethereum Consensus spec tests.
+Install across all packages. Lodestar follows a monorepo structure, so all commands below must be run in the project root.
 
 ```bash
-yarn install --ignore-optional
+yarn install
 ```
 
 Build across all packages.
 
 ```bash
 yarn run build
-```
-
-Or if you are using [Lerna](https://lerna.js.org/):
-
-```bash
-lerna bootstrap
 ```
 
 Lodestar should now be ready for use.

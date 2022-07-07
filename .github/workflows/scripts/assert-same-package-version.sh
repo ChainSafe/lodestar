@@ -3,7 +3,7 @@
 # 
 # If that's not the case, no version will be published to NPM and a faulty image will be published to dockerhub
 
-LOCAL_VERSION=$(jq -r .version lerna.json)
+LOCAL_VERSION=$(jq -r .version packages/cli/package.json)
 
 if [ -z "$TAG" ]; then
   echo "ENV TAG is empty"
