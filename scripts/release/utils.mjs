@@ -20,6 +20,9 @@ export const STABLE_BRANCH = "stable";
 export const REPO_SLUG = "chainsafe/lodestar";
 export const GIT_REPO_URL = `git@github.com:${REPO_SLUG}.git`;
 export const MAIN_PACKAGE_PATH = "packages/cli";
+// TODO: Allow to customize
+// TODO: Assumes run from repo root
+const workspacesPath = "./packages";
 
 /**
  * @param {string} cmd
@@ -55,25 +58,31 @@ export function parseCmdArgs() {
     throw Error(`Invalid commit ${commitArg}`);
   }
 
-  const versionObj = semver.parse(versionArg);
-  if (!versionObj) {
-    throw Error(`Invalid semver '${versionArg}'`);
-  }
-
   // Re-format version to drop any prefixes or suffixes
-  const versionMMP = [versionObj.major, versionObj.minor, versionObj.patch].join(".");
+  const versionMMP = cleanVersion(versionArg);
 
-  try {
-    if (versionObj.includePrerelease) throw Error("Includes pre-release");
-    if (semver.clean(versionArg) !== versionMMP) throw Error("No clean major.minor.path version");
-  } catch (e) {
-    throw Error(`Bad argv[2] semver version '${versionArg}': ${e.message}`);
+  if (semver.clean(versionArg) !== versionMMP) {
+    throw Error(`argv[2] version '${versionArg}' is not a clean major.minor.path version`);
   }
 
   return {
     versionMMP,
     commit,
   };
+}
+
+/**
+ * @param {string} versionArg `v1.0.0`
+ * @param {string} version clean `1.0.0`
+ */
+export function cleanVersion(versionArg) {
+  const versionObj = semver.parse(versionArg);
+  if (!versionObj) {
+    throw Error(`Invalid semver '${versionArg}'`);
+  }
+
+  // Re-format version to drop any prefixes or suffixes
+  return [versionObj.major, versionObj.minor, versionObj.patch].join(".");
 }
 
 /**
@@ -308,4 +317,22 @@ export function getNextRcTag(version) {
     return `v${semver.inc(latestRc, "prerelease")}`;
   }
   return `v${version}-rc.0`;
+}
+
+/**
+ * Resolve paths of monorepo packages dirpaths
+ * @returns {string[]}
+ */
+export function resolveMonorepoDirpaths() {
+  const pkgDirpaths = [];
+
+  for (const dirname of fs.readdirSync(workspacesPath)) {
+    const dirpath = path.join(workspacesPath, dirname);
+    const pkgPath = path.join(dirpath, "package.json");
+    if (fs.existsSync(pkgPath)) {
+      pkgDirpaths.push(dirpath);
+    }
+  }
+
+  return pkgDirpaths;
 }
