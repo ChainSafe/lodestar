@@ -1,5 +1,7 @@
 import {BLSPubkey, Root} from "@lodestar/types";
 import {DatabaseService, IDatabaseApiOptions} from "@lodestar/db";
+import {toHexString} from "@chainsafe/ssz";
+import {ILogger} from "@lodestar/utils";
 import {uniqueVectorArr} from "../slashingProtection/utils.js";
 import {BlockBySlotRepository, SlashingProtectionBlockService} from "./block/index.js";
 import {
@@ -22,7 +24,6 @@ export {InvalidAttestationError, InvalidAttestationErrorCode} from "./attestatio
 export {InvalidBlockError, InvalidBlockErrorCode} from "./block/index.js";
 export {InterchangeError, InterchangeErrorErrorCode, Interchange, InterchangeFormat} from "./interchange/index.js";
 export {ISlashingProtection, InterchangeFormatVersion, SlashingProtectionBlock, SlashingProtectionAttestation};
-
 /**
  * Handles slashing protection for validator proposer and attester duties as well as slashing protection
  * during a validator interchange import/export process.
@@ -55,9 +56,10 @@ export class SlashingProtection extends DatabaseService implements ISlashingProt
     await this.attestationService.checkAndInsertAttestation(pubKey, attestation);
   }
 
-  async importInterchange(interchange: Interchange, genesisValidatorsRoot: Root): Promise<void> {
+  async importInterchange(interchange: Interchange, genesisValidatorsRoot: Root, logger?: ILogger): Promise<void> {
     const {data} = parseInterchange(interchange, genesisValidatorsRoot);
     for (const validator of data) {
+      logger?.info(`Importing logs for Validator ${toHexString(validator.pubkey)}`);
       await this.blockService.importBlocks(validator.pubkey, validator.signedBlocks);
       await this.attestationService.importAttestations(validator.pubkey, validator.signedAttestations);
     }
@@ -66,16 +68,19 @@ export class SlashingProtection extends DatabaseService implements ISlashingProt
   async exportInterchange(
     genesisValidatorsRoot: Root,
     pubkeys: BLSPubkey[],
-    formatVersion: InterchangeFormatVersion
+    formatVersion: InterchangeFormatVersion,
+    logger?: ILogger
   ): Promise<Interchange> {
     const validatorData: IInterchangeLodestar["data"] = [];
     for (const pubkey of pubkeys) {
+      logger?.info(`Exporting logs for Validator ${toHexString(pubkey)}`);
       validatorData.push({
         pubkey,
         signedBlocks: await this.blockService.exportBlocks(pubkey),
         signedAttestations: await this.attestationService.exportAttestations(pubkey),
       });
     }
+    logger?.verbose("Serializing Interchange");
     return serializeInterchange({data: validatorData, genesisValidatorsRoot}, formatVersion);
   }
 
