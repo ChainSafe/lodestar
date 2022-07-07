@@ -5,6 +5,19 @@ DOCS_DIR=docs
 # exit when any command fails
 set -e
 
+# BUILD
+# =====
+
+# Build typedocs for all packages
+scripts/foreach.sh typedoc --exclude src/index.ts --out typedocs src
+
+# Build CLI reference doc
+(cd packages/cli && yarn build:refdocs)
+
+
+# PREPARE
+# =======
+
 # Move typedoc documentation to the packages dir
 rm -rf $DOCS_DIR/packages
 mkdir -p $DOCS_DIR/packages
