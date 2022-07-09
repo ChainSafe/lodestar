@@ -24,7 +24,7 @@
     "clean": "rm -rf ./packages/*/lib ./packages/*/*.tsbuildinfo",
     "build": "yarn clean && yarn workspaces run build",
     "build:docs": "scripts/build_docs.sh",
-    "build:ifchanged": "yarn workspaces exec -- ../../scripts/build_if_changed.sh",
+    "build:ifchanged": "scripts/foreach.sh ../../scripts/build_if_changed.sh",
     "check-build": "yarn workspaces run check-build",
     "check-types": "yarn workspaces run check-types",
     "check-readme": "scripts/foreach.sh typescript-docs-verifier",
