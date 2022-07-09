@@ -13,11 +13,11 @@ Look for the .vars file in the folder to see what networks are supported. Here a
 1. Kiln Network ( soon to be deprecated ): `--devnetVars ./kiln.vars`
 2. Ropsten Network: `--devnetVars ./ropsten.vars`
 3. Sepolia Network: `--devnetVars ./sepolia.vars`
-4. Mainnet Shadow fork 8: `--devnetVars ./mainnetshadow-8.vars`
+4. Mainnet Shadow fork 9: `--devnetVars ./mainnetshadow-9.vars`
 
 #### And the much awaited Mainnet merge!
 
-Comming soon! but you can start prepping your nodes with `--devnetVars mainnet.vars` with a placeholder TTD.
+Comming soon! but you can start prepping your nodes with `--devnetVars mainnet.vars` with has a high placeholder TTD.
 
 ### Requirements
 

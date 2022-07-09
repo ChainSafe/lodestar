@@ -7,11 +7,16 @@ then
 fi
 if [ -n "$withValidatorMnemonic" ]
 then
+  if [ "$DEVNET_NAME" == "mainnet" ]
+  then
+    echo "withValidatorMnemonic is not safe to use on mainnet, please use withValidatorKeystore with correctly set LODESTAR_VALIDATOR_KEYSTORE_ARGS, exiting..."
+    exit;
+  fi;
   withValidator="withValidatorMnemonic";
   validatorKeyArgs="$LODESTAR_VALIDATOR_MNEMONIC_ARGS"
   if [ ! -n "$validatorKeyArgs" ]
   then
-    echo "To run validator with mnemonic, you need to set LODESTAR_VALIDATOR_MNEMONIC_ARGS"
+    echo "To run validator with mnemonic, you need to set LODESTAR_VALIDATOR_MNEMONIC_ARGS, exiting..."
     exit;
   fi;
 fi;
@@ -22,7 +27,7 @@ then
   validatorKeyArgs="$LODESTAR_VALIDATOR_KEYSTORE_ARGS"
   if [ ! -n "$validatorKeyArgs" ]
   then
-    echo "To run validator with keystores, you need to set LODESTAR_VALIDATOR_KEYSTORE_ARGS"
+    echo "To run validator with keystores, you need to set LODESTAR_VALIDATOR_KEYSTORE_ARGS, exiting ..."
     exit;
   fi;
 fi;
@@ -44,13 +49,13 @@ fi
 
 if [ -n "$withValidator" ] && ( [ -n "$justEL" ] || [ -n "$justEL" ] || [ -n "$justEL" ] )
 then
-  echo "--withValidator can not be just with --justEL or --justCL or --justVC. Try using only --justVC."
+  echo "--withValidator can not be just with --justEL or --justCL or --justVC. Try using only --justVC, exiting..."
   exit;
 fi;
 
 if [ -n "$justEL" ] && ( [ -n "$justCL" ] || [ -n "$justVC" ]  ) || [ -n "$justCL" ] && ( [ -n "$justEL" ] || [ -n "$justVC" ]  ) || [ -n "$justVC" ] && ( [ -n "$justEL" ] || [ -n "$justCL" ]  )
 then
-  echo "only one of --justEL, --justCL or --justVC can be used at a time. You can however start another (parallel) run(s) to spin them up separately."
+  echo "only one of --justEL, --justCL or --justVC can be used at a time. You can however start another (parallel) run(s) to spin them up separately, exiting..."
   exit;
 fi
 
