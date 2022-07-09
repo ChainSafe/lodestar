@@ -1,7 +1,16 @@
 import {expect} from "chai";
-import {chainConfigToJson} from "@lodestar/config";
+import {chainConfigToJson, IChainConfig} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
+import {networksChainConfig} from "@lodestar/config/networks";
 import {assertEqualParams, NotEqualParamsError} from "../../../src/util/params.js";
+import {lightHouseKilnConfig, prysmKilnConfig, tekuKilnConfig, nimbusKilnConfig} from "./interopConfigs.js";
+
+const testCases: {name: string; items: [IChainConfig, Record<string, string>]}[] = [
+  {name: "lighthouse", items: [networksChainConfig.kiln, lightHouseKilnConfig]},
+  {name: "prysm", items: [networksChainConfig.kiln, prysmKilnConfig]},
+  {name: "teku", items: [networksChainConfig.kiln, tekuKilnConfig]},
+  {name: "nimbus", items: [networksChainConfig.kiln, nimbusKilnConfig]},
+];
 
 describe("utils / params / assertEqualParams", () => {
   it("default == default", () => {
@@ -24,4 +33,10 @@ describe("utils / params / assertEqualParams", () => {
     delete chainConfigJson["DEPOSIT_CONTRACT_ADDRESS"];
     assertEqualParams(chainConfig, chainConfigJson);
   });
+
+  for (const {name, items} of testCases) {
+    it(`${name} kiln == lodestar kiln`, () => {
+      assertEqualParams(items[0], items[1]);
+    });
+  }
 });
