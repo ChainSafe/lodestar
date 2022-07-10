@@ -1,5 +1,5 @@
 name: Tests
-
+permissions: read-all
 on: [pull_request, push]
 
 env:
@@ -33,7 +33,8 @@ jobs:
         run: yarn build
         if: steps.cache-deps.outputs.cache-hit == 'true'
       # </common-build>
-
+defaults:
+	
       # Cache validator slashing protection data tests
       - name: Restore spec tests cache
         uses: actions/cache@master
