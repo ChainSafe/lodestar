@@ -1,23 +1,19 @@
 import {expect} from "chai";
 import {toHexString} from "@chainsafe/ssz";
-import {LevelDbController} from "@lodestar/db";
 import {config} from "@lodestar/config/default";
 import {ssz} from "@lodestar/types";
 import {BeaconDb} from "../../../src/index.js";
 import {initDevState} from "../../../src/node/utils/state.js";
 import {testLogger} from "../../utils/logger.js";
 import {interopDeposits} from "../../../src/node/utils/interop/deposits.js";
+import {startTmpBeaconDb} from "../../utils/db.js";
 
 describe("interop / initDevState", () => {
   let db: BeaconDb;
   const logger = testLogger();
 
   before(async () => {
-    db = new BeaconDb({
-      config,
-      controller: new LevelDbController({name: ".tmpdb"}, {logger}),
-    });
-    await db.start();
+    db = await startTmpBeaconDb(config, logger);
   });
 
   after(async () => {
