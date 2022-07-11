@@ -185,7 +185,7 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
   // - Write block and state to snapshot_cache
   if (block.message.slot % SLOTS_PER_EPOCH === 0) {
     // Cache state to preserve epoch transition work
-    const checkpointState = postState.clone();
+    const checkpointState = postState;
     const cp = getCheckpointFromState(checkpointState);
     chain.checkpointStateCache.add(cp, checkpointState);
     pendingEvents.push(ChainEvent.checkpoint, cp, checkpointState);

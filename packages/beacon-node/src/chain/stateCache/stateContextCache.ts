@@ -43,7 +43,7 @@ export class StateContextCache {
     // clonedCount + 1 as there's a .clone() below
     this.metrics?.stateClonedCount.observe(item.clonedCount + 1);
 
-    return item.clone();
+    return item;
   }
 
   add(item: CachedBeaconStateAllForks): void {
@@ -52,7 +52,7 @@ export class StateContextCache {
       return;
     }
     this.metrics?.adds.inc();
-    this.cache.set(key, item.clone());
+    this.cache.set(key, item);
     const epoch = item.epochCtx.currentShuffling.epoch;
     const blockRoots = this.epochIndex.get(epoch);
     if (blockRoots) {
