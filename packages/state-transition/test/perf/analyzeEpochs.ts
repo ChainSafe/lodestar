@@ -104,7 +104,7 @@ async function analyzeEpochs(network: NetworkName, fromEpoch?: number): Promise<
     const validatorKeys = Object.keys(validatorChangesCountZero) as (keyof typeof validatorChangesCountZero)[];
     for (let i = 0; i < validatorCount; i++) {
       const validatorPrev = state.validators[i];
-      const validatorNext = postState.validators.get(i);
+      const validatorNext = postState.validators.getReadonly(i);
       for (const key of validatorKeys) {
         const valuePrev = validatorPrev[key];
         const valueNext = validatorNext[key];

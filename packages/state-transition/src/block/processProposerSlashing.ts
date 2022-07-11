@@ -49,7 +49,7 @@ export function assertValidProposerSlashing(
   }
 
   // verify the proposer is slashable
-  const proposer = state.validators.get(header1.proposerIndex);
+  const proposer = state.validators.getReadonly(header1.proposerIndex);
   if (!isSlashableValidator(proposer, state.epochCtx.epoch)) {
     throw new Error("ProposerSlashing proposer is not slashable");
   }
