@@ -835,6 +835,11 @@ export function createLodestarMetrics(
         name: "lodestar_state_cache_seconds_since_last_read",
         help: "Avg min max of all state cache items seconds since last reads",
       }),
+      stateClonedCount: register.histogram({
+        name: "lodestar_state_cache_state_cloned_clount",
+        help: "Histogram of cloned count per state every time state.clone() is called",
+        buckets: [1, 2, 5, 10, 50, 250],
+      }),
     },
 
     cpStateCache: {
@@ -865,6 +870,11 @@ export function createLodestarMetrics(
       secondsSinceLastRead: register.avgMinMax({
         name: "lodestar_cp_state_epoch_seconds_since_last_read",
         help: "Avg min max of all state cache items seconds since last reads",
+      }),
+      stateClonedCount: register.histogram({
+        name: "lodestar_cp_state_cache_state_cloned_clount",
+        help: "Histogram of cloned count per state every time state.clone() is called",
+        buckets: [1, 2, 5, 10, 50, 250],
       }),
     },
 

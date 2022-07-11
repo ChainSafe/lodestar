@@ -36,13 +36,20 @@ export class CheckpointStateCache {
     this.metrics?.lookups.inc();
     const cpKey = toCheckpointKey(cp);
     const item = this.cache.get(cpKey);
-    if (item) {
-      this.metrics?.hits.inc();
-      if (cpKey === this.preComputedCheckpoint) {
-        this.preComputedCheckpointHits = (this.preComputedCheckpointHits ?? 0) + 1;
-      }
+
+    if (!item) {
+      return null;
     }
-    return item ? item.clone() : null;
+
+    this.metrics?.hits.inc();
+    // clonedCount + 1 as there's a .clone() below
+    this.metrics?.stateClonedCount.observe(item.clonedCount + 1);
+
+    if (cpKey === this.preComputedCheckpoint) {
+      this.preComputedCheckpointHits = (this.preComputedCheckpointHits ?? 0) + 1;
+    }
+
+    return item.clone();
   }
 
   add(cp: phase0.Checkpoint, item: CachedBeaconStateAllForks): void {
