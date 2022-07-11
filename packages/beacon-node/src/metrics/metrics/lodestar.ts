@@ -792,7 +792,21 @@ export function createLodestarMetrics(
         labelNames: ["index", "src"],
         buckets: [0.1, 1],
       }),
+
+      // Only for known
+      proposerBalanceDiffKnown: register.histogram({
+        name: "validator_monitor_proposer_balance_diff_known_gwei",
+        help: "Balance diff of known block proposer after importing a valid block",
+        // Jul22 mainnet block reward is consistently between 29,000,000-28,000,000 GWei
+        buckets: [10_000, 100_000, 1e6, 10e6, 20e6, 50e6, 100e6, 1000e6],
+      }),
     },
+
+    proposerBalanceDiffAny: register.histogram({
+      name: "lodestar_proposer_balance_diff_any_gwei",
+      help: "Balance diff of every block proposer after importing a valid block",
+      buckets: [10_000, 100_000, 1e6, 10e6, 20e6, 50e6, 100e6, 1000e6],
+    }),
 
     // regen metrics
 
