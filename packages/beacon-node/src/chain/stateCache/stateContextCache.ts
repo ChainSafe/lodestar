@@ -4,6 +4,7 @@ import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {routes} from "@lodestar/api";
 import {IMetrics} from "../../metrics/index.js";
 import {MapTracker} from "./mapMetrics.js";
+import {stateInternalCachePopulated} from "./stateContextCheckpointsCache.js";
 
 const MAX_STATES = 3 * 32;
 
@@ -42,8 +43,19 @@ export class StateContextCache {
     this.metrics?.hits.inc();
     // clonedCount + 1 as there's a .clone() below
     this.metrics?.stateClonedCount.observe(item.clonedCount + 1);
+    if (!stateInternalCachePopulated(item)) {
+      this.metrics?.stateInternalCacheMiss.inc();
+    }
 
-    return item.clone();
+    // Clone first to account for metrics below
+    const itemCloned = item.clone();
+
+    this.metrics?.stateClonedCount.observe(item.clonedCount);
+    if (!stateInternalCachePopulated(item)) {
+      this.metrics?.stateInternalCacheMiss.inc();
+    }
+
+    return itemCloned;
   }
 
   add(item: CachedBeaconStateAllForks): void {
