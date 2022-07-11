@@ -135,6 +135,7 @@ export function getCachedBeaconState<T extends BeaconStateAllForks>(
   const cachedState = state as T & BeaconStateCache;
   cachedState.config = cache.config;
   cachedState.epochCtx = cache.epochCtx;
+  (cachedState as {clonedCount: number}).clonedCount = cache.clonedCount;
 
   // Overwrite .clone function to preserve cache
   // TreeViewDU.clone() creates a new object that does not have the attached cache
