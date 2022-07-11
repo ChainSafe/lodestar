@@ -1,6 +1,6 @@
 import {fromHexString} from "@chainsafe/ssz";
 import {Epoch, Slot} from "@lodestar/types";
-import {IForkChoice} from "@lodestar/fork-choice";
+import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {ILogger, toHex} from "@lodestar/utils";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
@@ -26,15 +26,14 @@ type BlockRootSlot = {slot: Slot; root: Uint8Array};
  */
 export async function archiveBlocks(
   db: IBeaconDb,
-  forkChoice: IForkChoice,
   lightclientServer: LightClientServer,
   logger: ILogger,
-  finalizedCheckpoint: {rootHex: string; epoch: Epoch}
+  finalizedCheckpoint: {rootHex: string; epoch: Epoch},
+  {
+    finalizedCanonicalBlocks,
+    finalizedNonCanonicalBlocks,
+  }: {finalizedCanonicalBlocks: ProtoBlock[]; finalizedNonCanonicalBlocks: ProtoBlock[]}
 ): Promise<void> {
-  // Use fork choice to determine the blocks to archive and delete
-  const finalizedCanonicalBlocks = forkChoice.getAllAncestorBlocks(finalizedCheckpoint.rootHex);
-  const finalizedNonCanonicalBlocks = forkChoice.getAllNonAncestorBlocks(finalizedCheckpoint.rootHex);
-
   const finalizedCanonicalBlockRoots: BlockRootSlot[] = finalizedCanonicalBlocks.map((block) => ({
     slot: block.slot,
     root: fromHexString(block.blockRoot),

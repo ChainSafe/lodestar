@@ -177,6 +177,13 @@ export async function importBlock(
     chain.checkpointStateCache.add(cp, checkpointState);
     pendingEvents.push(ChainEvent.checkpoint, cp, checkpointState);
 
+    // Prune checkpointStateCache once per checkpoint
+    // TODO: This should be done in the checkpointStateCache itself, or on clock epoch
+    chain.checkpointStateCache.prune(
+      chain.forkChoice.getFinalizedCheckpoint().epoch,
+      chain.forkChoice.getJustifiedCheckpoint().epoch
+    );
+
     // Note: in-lined code from previos handler of ChainEvent.checkpoint
     chain.logger.verbose("Checkpoint processed", toCheckpointHex(cp));
 
@@ -216,6 +223,11 @@ export async function importBlock(
     // new head
     pendingEvents.push(ChainEvent.forkChoiceHead, newHead);
     chain.metrics?.forkChoiceChangedHead.inc();
+
+    // Prune stateCache
+    // TODO: Pruning every head may be too much, review strategy
+    // TODO: If we pin the head state this may not be necessary
+    chain.stateCache.prune(newHead.stateRoot);
 
     const distance = chain.forkChoice.getCommonAncestorDistance(oldHead, newHead);
     if (distance !== null) {
