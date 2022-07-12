@@ -74,7 +74,7 @@ export type ImportBlockModules = {
  * - Send events after everything is done
  */
 export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock: FullyVerifiedBlock): Promise<void> {
-  const {block, postState, parentBlock, skipImportingAttestations, executionStatus} = fullyVerifiedBlock;
+  const {block, postState, parentBlockSlot, skipImportingAttestations, executionStatus} = fullyVerifiedBlock;
   const pendingEvents = new PendingEvents(chain.emitter);
 
   // - Observe attestations
@@ -256,7 +256,7 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
         chain.lightClientServer.onImportBlockHead(
           block.message as altair.BeaconBlock,
           postState as CachedBeaconStateAltair,
-          parentBlock
+          parentBlockSlot
         );
       } catch (e) {
         chain.logger.error("Error lightClientServer.onImportBlock", {slot: block.message.slot}, e as Error);
@@ -308,7 +308,7 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
   pendingEvents.emit();
 
   // Register stat metrics about the block after importing it
-  chain.metrics?.parentBlockDistance.observe(block.message.slot - parentBlock.slot);
+  chain.metrics?.parentBlockDistance.observe(block.message.slot - parentBlockSlot);
   chain.metrics?.proposerBalanceDiffAny.observe(fullyVerifiedBlock.proposerBalanceDiff);
   chain.metrics?.registerImportedBlock(block.message, fullyVerifiedBlock);
 

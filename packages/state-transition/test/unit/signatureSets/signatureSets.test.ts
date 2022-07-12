@@ -6,7 +6,7 @@ import {phase0, ValidatorIndex, BLSSignature} from "@lodestar/types";
 import {FAR_FUTURE_EPOCH, MAX_EFFECTIVE_BALANCE} from "@lodestar/params";
 import {BitArray} from "@chainsafe/ssz";
 import {ZERO_HASH} from "../../../src/constants/index.js";
-import {getAllBlockSignatureSets} from "../../../src/signatureSets/index.js";
+import {getBlockSignatureSets} from "../../../src/signatureSets/index.js";
 import {generateCachedState} from "../../utils/state.js";
 import {generateValidators} from "../../utils/validator.js";
 
@@ -63,7 +63,7 @@ describe("signatureSets", () => {
 
     const state = generateCachedState(config, {validators});
 
-    const signatureSets = getAllBlockSignatureSets(state, signedBlock);
+    const signatureSets = getBlockSignatureSets(state, signedBlock);
     expect(signatureSets.length).to.equal(
       // block signature
       1 +
