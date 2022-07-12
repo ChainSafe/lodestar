@@ -5,8 +5,7 @@ import {
   isBellatrixBlockBodyType,
   isMergeTransitionBlock as isMergeTransitionBlockFn,
   isExecutionEnabled,
-  getAllBlockSignatureSetsExceptProposer,
-  getAllBlockSignatureSets,
+  getBlockSignatureSets,
   stateTransition,
 } from "@lodestar/state-transition";
 import {bellatrix} from "@lodestar/types";
@@ -176,9 +175,9 @@ export async function verifyBlockStateTransition(
   // NOTE: If in the future multiple blocks signatures are verified at once, all blocks must be in the same epoch
   // so the attester and proposer shufflings are correct.
   if (useBlsBatchVerify && !validSignatures) {
-    const signatureSets = validProposerSignature
-      ? getAllBlockSignatureSetsExceptProposer(postState, block)
-      : getAllBlockSignatureSets(postState, block);
+    const signatureSets = getBlockSignatureSets(postState, block, {
+      skipProposerSignature: validProposerSignature,
+    });
 
     if (
       signatureSets.length > 0 &&
