@@ -840,6 +840,10 @@ export function createLodestarMetrics(
         help: "Histogram of cloned count per state every time state.clone() is called",
         buckets: [1, 2, 5, 10, 50, 250],
       }),
+      stateInternalCacheMiss: register.gauge({
+        name: "lodestar_state_cache_state_internal_cache_miss",
+        help: "Retrieved state does not have its internal cache populated",
+      }),
     },
 
     cpStateCache: {
@@ -875,6 +879,10 @@ export function createLodestarMetrics(
         name: "lodestar_cp_state_cache_state_cloned_clount",
         help: "Histogram of cloned count per state every time state.clone() is called",
         buckets: [1, 2, 5, 10, 50, 250],
+      }),
+      stateInternalCacheMiss: register.gauge({
+        name: "lodestar_cp_state_cache_state_internal_cache_miss",
+        help: "Retrieved state does not have its internal cache populated",
       }),
     },
 
