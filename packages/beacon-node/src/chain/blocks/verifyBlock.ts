@@ -59,7 +59,7 @@ export async function verifyBlock(
   return {
     block: partiallyVerifiedBlock.block,
     postState,
-    parentBlock,
+    parentBlockSlot: parentBlock.slot,
     skipImportingAttestations: partiallyVerifiedBlock.skipImportingAttestations,
     executionStatus,
     proposerBalanceDiff,
