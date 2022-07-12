@@ -15,7 +15,7 @@
     "build:types:watch": "lerna run build:types:watch --parallel",
     "build:watch": "run-p build:lib:watch build:types:watch",
     "build:ifchanged": "lerna exec -- ../../scripts/build_if_changed.sh",
-    "lint": "lerna run lint --no-bail",
+    "lint": "eslint --color --ext .ts packages/*/src packages/*/test",
     "check-build": "lerna run check-build",
     "check-types": "lerna run check-types --no-bail",
     "coverage": "lerna run coverage --no-bail",
