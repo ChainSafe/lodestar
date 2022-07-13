@@ -9,11 +9,20 @@ import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {Epoch, RootHex} from "@lodestar/types";
 import {toHexString} from "@lodestar/utils";
 
+/** The number of validator balance sets that are cached within `CheckpointBalancesCache`. */
+const MAX_BALANCE_CACHE_SIZE = 4;
+
+type BalancesCacheItem = {
+  rootHex: RootHex;
+  epoch: Epoch;
+  balances: EffectiveBalanceIncrements;
+};
+
 /**
  * Cache EffectiveBalanceIncrements of checkpoint blocks
  */
 export class CheckpointBalancesCache {
-  private readonly balancesByRootByEpoch = new Map<Epoch, Map<RootHex, EffectiveBalanceIncrements>>();
+  private readonly items: BalancesCacheItem[] = [];
 
   /**
    * Inspect the given `state` and determine the root of the block at the first slot of
@@ -26,30 +35,18 @@ export class CheckpointBalancesCache {
     const epochBoundaryRoot =
       epochBoundarySlot === state.slot ? blockRootHex : toHexString(getBlockRootAtSlot(state, epochBoundarySlot));
 
-    if (this.balancesByRootByEpoch.get(epoch)?.get(epochBoundaryRoot) === undefined) {
-      // expect to reach this once per epoch
-      let balancesByRoot = this.balancesByRootByEpoch.get(epoch);
-      if (balancesByRoot === undefined) {
-        balancesByRoot = new Map<RootHex, EffectiveBalanceIncrements>();
-        this.balancesByRootByEpoch.set(epoch, balancesByRoot);
-        balancesByRoot.set(epochBoundaryRoot, getEffectiveBalanceIncrementsZeroInactive(state));
+    const index = this.items.findIndex((item) => item.epoch === epoch && item.rootHex == epochBoundaryRoot);
+    if (index === -1) {
+      if (this.items.length === MAX_BALANCE_CACHE_SIZE) {
+        this.items.shift();
       }
+      // expect to reach this once per epoch
+      this.items.push({epoch, rootHex: epochBoundaryRoot, balances: getEffectiveBalanceIncrementsZeroInactive(state)});
     }
   }
 
   get(checkpoint: CheckpointWithHex): EffectiveBalanceIncrements | undefined {
     const {rootHex, epoch} = checkpoint;
-    return this.balancesByRootByEpoch.get(epoch)?.get(rootHex);
-  }
-
-  /** Prune is called per finalized checkpoint */
-  prune(finalizedEpoch: Epoch): void {
-    for (const epoch of this.balancesByRootByEpoch.keys()) {
-      if (epoch < finalizedEpoch) {
-        this.balancesByRootByEpoch.delete(epoch);
-      } else {
-        break;
-      }
-    }
+    return this.items.find((item) => item.epoch === epoch && item.rootHex === rootHex)?.balances;
   }
 }
