@@ -141,9 +141,13 @@ export interface IForkChoice {
   getAllNonAncestorBlocks(blockRoot: RootHex): ProtoBlock[];
   getCanonicalBlockAtSlot(slot: Slot): ProtoBlock | null;
   /**
-   * Iterates forwards through block summaries, exact order is not guaranteed
+   * Returns all ProtoBlock known to fork-choice. Must not mutated the returned array
    */
   forwarditerateAncestorBlocks(): ProtoBlock[];
+  /**
+   * Iterates forward descendants of blockRoot. Does not yield blockRoot itself
+   */
+  forwardIterateDescendants(blockRoot: RootHex): IterableIterator<ProtoBlock>;
   getBlockSummariesByParentRoot(parentRoot: RootHex): ProtoBlock[];
   getBlockSummariesAtSlot(slot: Slot): ProtoBlock[];
   /** Returns the distance of common ancestor of nodes to newNode. Returns null if newNode is descendant of prevNode */

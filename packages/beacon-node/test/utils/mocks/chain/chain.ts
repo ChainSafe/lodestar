@@ -242,16 +242,17 @@ function mockForkChoice(): IForkChoice {
     isDescendant: () => true,
     prune: () => [block],
     setPruneThreshold: () => {},
-    iterateAncestorBlocks: function* () {
-      yield block;
-    },
+    iterateAncestorBlocks: emptyGenerator,
     getAllAncestorBlocks: () => [block],
     getAllNonAncestorBlocks: () => [block],
     getCanonicalBlockAtSlot: () => block,
     forwarditerateAncestorBlocks: () => [block],
+    forwardIterateDescendants: emptyGenerator,
     getBlockSummariesByParentRoot: () => [block],
     getBlockSummariesAtSlot: () => [block],
     getCommonAncestorDistance: () => null,
     validateLatestHash: () => {},
   };
 }
+
+function* emptyGenerator<T>(): IterableIterator<T> {}

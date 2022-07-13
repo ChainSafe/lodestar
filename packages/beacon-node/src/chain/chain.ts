@@ -6,6 +6,7 @@ import path from "node:path";
 import {
   BeaconStateAllForks,
   CachedBeaconStateAllForks,
+  computeEpochAtSlot,
   computeStartSlotAtEpoch,
   createCachedBeaconState,
   EffectiveBalanceIncrements,
@@ -372,7 +373,7 @@ export class BeaconChain implements IBeaconChain {
     } else {
       // not expected, need metrics
       this.metrics?.balancesCache.misses.inc();
-      const state = this.closestStateToCheckpoint(checkpoint);
+      const state = this.closestJustifiedBalancesStateToCheckpoint(checkpoint);
       this.logger.debug("Not able to get checkpoint balances from cache", {
         epoch: checkpoint.epoch,
         root: checkpoint.rootHex,
@@ -388,40 +389,71 @@ export class BeaconChain implements IBeaconChain {
    * - Some old states (including to-be justified checkpoint) may / must be dropped from the cache
    * - Thus, there is no guarantee that the state for a justified checkpoint will be available in the cache
    */
-  private closestStateToCheckpoint(checkpoint: CheckpointWithHex): CachedBeaconStateAllForks {
+  private closestJustifiedBalancesStateToCheckpoint(checkpoint: CheckpointWithHex): CachedBeaconStateAllForks {
     const state = this.checkpointStateCache.get(checkpoint);
     if (state) {
       // most of the time it should go here
       return state;
     }
 
-    // If it's not found, then find the oldest state in the same chain as this one
-    const checkpointSlot = computeStartSlotAtEpoch(checkpoint.epoch);
-    const head = this.forkChoice.getHead();
-
-    // the worse case is to return the head state
-    let oldestState = this.getHeadState();
-    for (const parentBlock of this.forkChoice.iterateAncestorBlocks(head.blockRoot)) {
-      // We want at least a state at the slot 0 of checkpoint.epoch
-      if (parentBlock.slot < checkpointSlot) {
-        break;
-      }
-
-      const parentBlockState = this.stateCache.get(parentBlock.stateRoot);
-      if (parentBlockState) {
-        oldestState = parentBlockState;
+    // Find a state in the same branch of checkpoint at same epoch. Balances should exactly the same
+    for (const descendantBlock of this.forkChoice.forwardIterateDescendants(checkpoint.rootHex)) {
+      if (computeEpochAtSlot(descendantBlock.slot) === checkpoint.epoch) {
+        const descendantBlockState = this.stateCache.get(descendantBlock.stateRoot);
+        if (descendantBlockState) {
+          this.logger.warn("currentJustifiedCheckpoint state not avail, using descendant state in same epoch", {
+            checkpointEpoch: checkpoint.epoch,
+            checkpointRoot: checkpoint.rootHex,
+            stateSlot: descendantBlock.slot,
+            stateRoot: descendantBlock.stateRoot,
+          });
+          return descendantBlockState;
+        }
       }
     }
 
-    this.logger.warn("State for currentJustifiedCheckpoint not available, using closest state", {
+    // Find a state in the same branch of checkpoint at a latter epoch. Balances are not the same, but should be close
+    // Note: must call .forwardIterateDescendants() again since nodes are not sorted
+    for (const descendantBlock of this.forkChoice.forwardIterateDescendants(checkpoint.rootHex)) {
+      if (computeEpochAtSlot(descendantBlock.slot) > checkpoint.epoch) {
+        const descendantBlockState = this.stateCache.get(descendantBlock.stateRoot);
+        if (descendantBlockState) {
+          this.logger.warn("currentJustifiedCheckpoint state not avail, using descendant state in latter epoch", {
+            checkpointEpoch: checkpoint.epoch,
+            checkpointRoot: checkpoint.rootHex,
+            stateSlot: descendantBlock.slot,
+            stateRoot: descendantBlock.stateRoot,
+          });
+          return descendantBlockState;
+        }
+      }
+    }
+
+    // Find a state in the same branch of checkpoint at a previous epoch. Balances are not the same, and differ more
+    for (const parentBlock of this.forkChoice.iterateAncestorBlocks(checkpoint.rootHex)) {
+      const parentBlockState = this.stateCache.get(parentBlock.stateRoot);
+      if (parentBlockState) {
+        this.logger.warn("currentJustifiedCheckpoint state not avail, using ancestore state in previous epoch", {
+          checkpointEpoch: checkpoint.epoch,
+          checkpointRoot: checkpoint.rootHex,
+          stateSlot: parentBlock.slot,
+          stateRoot: parentBlock.stateRoot,
+        });
+      }
+    }
+
+    // If there no state available in the same branch of checkpoint, pick the head state.
+    // Note: this should never happen.
+    // Note: head state may not be available either until regen refactor
+    const headState = this.getHeadState();
+    this.logger.error("State for currentJustifiedCheckpoint not available, using head state", {
       checkpointEpoch: checkpoint.epoch,
       checkpointRoot: checkpoint.rootHex,
-      stateSlot: oldestState.slot,
-      headSlot: head.slot,
-      stateRoot: toHexString(oldestState.hashTreeRoot()),
+      stateSlot: headState.slot,
+      stateRoot: toHexString(headState.hashTreeRoot()),
     });
 
-    return oldestState;
+    return headState;
   }
 
   private async persistInvalidSszObject(

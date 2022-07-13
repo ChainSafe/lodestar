@@ -629,6 +629,26 @@ export class ForkChoice implements IForkChoice {
     return this.protoArray.nodes;
   }
 
+  *forwardIterateDescendants(blockRoot: RootHex): IterableIterator<ProtoBlock> {
+    const rootsInChain = new Set([blockRoot]);
+
+    const blockIndex = this.protoArray.indices.get(blockRoot);
+    if (blockIndex === undefined) {
+      throw new ForkChoiceError({
+        code: ForkChoiceErrorCode.MISSING_PROTO_ARRAY_BLOCK,
+        root: blockRoot,
+      });
+    }
+
+    for (let i = blockIndex + 1; i < this.protoArray.nodes.length; i++) {
+      const node = this.protoArray.nodes[i];
+      if (rootsInChain.has(node.parentRoot)) {
+        rootsInChain.add(node.blockRoot);
+        yield node;
+      }
+    }
+  }
+
   /** Very expensive function, iterates the entire ProtoArray. TODO: Is this function even necessary? */
   getBlockSummariesByParentRoot(parentRoot: RootHex): ProtoBlock[] {
     return this.protoArray.nodes.filter((node) => node.parentRoot === parentRoot);
