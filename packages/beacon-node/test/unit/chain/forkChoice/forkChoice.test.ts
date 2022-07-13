@@ -2,7 +2,7 @@ import {expect} from "chai";
 import {FAR_FUTURE_EPOCH, MAX_EFFECTIVE_BALANCE} from "@lodestar/params";
 import {config} from "@lodestar/config/default";
 import {phase0, Slot, ssz, ValidatorIndex} from "@lodestar/types";
-import {ForkChoice} from "@lodestar/fork-choice";
+import {CheckpointWithHex, ExecutionStatus, ForkChoice} from "@lodestar/fork-choice";
 import {
   computeEpochAtSlot,
   getTemporaryBlockHeader,
@@ -41,6 +41,8 @@ describe("LodestarForkChoice", function () {
   justifiedBalances[0] = 1;
   justifiedBalances[1] = 2;
   justifiedBalances[2] = 3;
+  const executionStatus = ExecutionStatus.PreMerge;
+  const blockDelaySec = 0;
 
   const hashBlock = (block: phase0.BeaconBlock): string => toHexString(ssz.phase0.BeaconBlock.hashTreeRoot(block));
 
@@ -53,7 +55,14 @@ describe("LodestarForkChoice", function () {
   beforeEach(() => {
     const emitter = new ChainEventEmitter();
     const currentSlot = 40;
-    forkChoice = initializeForkChoice(config, emitter, currentSlot, state, false);
+    forkChoice = initializeForkChoice(
+      config,
+      emitter,
+      currentSlot,
+      state,
+      false,
+      (_: CheckpointWithHex) => justifiedBalances
+    );
   });
 
   describe("forkchoice", function () {
@@ -79,15 +88,15 @@ describe("LodestarForkChoice", function () {
       expect(orphanedBlockHex > parentBlockHex).to.be.true;
       forkChoice.updateTime(childBlock.message.slot);
 
-      forkChoice.onBlock(targetBlock.message, targetState, {justifiedBalances, blockDelaySec: 0});
-      forkChoice.onBlock(orphanedBlock.message, orphanedState);
+      forkChoice.onBlock(targetBlock.message, targetState, blockDelaySec, executionStatus);
+      forkChoice.onBlock(orphanedBlock.message, orphanedState, blockDelaySec, executionStatus);
       let head = forkChoice.getHead();
       expect(head.slot).to.be.equal(orphanedBlock.message.slot);
-      forkChoice.onBlock(parentBlock.message, parentState);
+      forkChoice.onBlock(parentBlock.message, parentState, blockDelaySec, executionStatus);
       // tie break condition causes head to be orphaned block (based on hex root comparison)
       head = forkChoice.getHead();
       expect(head.slot).to.be.equal(orphanedBlock.message.slot);
-      forkChoice.onBlock(childBlock.message, childState);
+      forkChoice.onBlock(childBlock.message, childState, blockDelaySec, executionStatus);
       head = forkChoice.getHead();
       // without vote, head gets stuck at orphaned block
       expect(head.slot).to.be.equal(orphanedBlock.message.slot);
@@ -145,12 +154,12 @@ describe("LodestarForkChoice", function () {
       });
       forkChoice.updateTime(128);
 
-      forkChoice.onBlock(block08.message, state08, {justifiedBalances, blockDelaySec: 0});
-      forkChoice.onBlock(block12.message, state12, {justifiedBalances, blockDelaySec: 0});
-      forkChoice.onBlock(block16.message, state16, {justifiedBalances, blockDelaySec: 0});
-      forkChoice.onBlock(block20.message, state20, {justifiedBalances, blockDelaySec: 0});
-      forkChoice.onBlock(block24.message, state24, {justifiedBalances, blockDelaySec: 0});
-      forkChoice.onBlock(block28.message, state28, {justifiedBalances, blockDelaySec: 0});
+      forkChoice.onBlock(block08.message, state08, blockDelaySec, executionStatus);
+      forkChoice.onBlock(block12.message, state12, blockDelaySec, executionStatus);
+      forkChoice.onBlock(block16.message, state16, blockDelaySec, executionStatus);
+      forkChoice.onBlock(block20.message, state20, blockDelaySec, executionStatus);
+      forkChoice.onBlock(block24.message, state24, blockDelaySec, executionStatus);
+      forkChoice.onBlock(block28.message, state28, blockDelaySec, executionStatus);
       expect(forkChoice.getAllAncestorBlocks(hashBlock(block16.message)).length).to.be.equal(
         3,
         "getAllAncestorBlocks should return 3 blocks"
@@ -163,7 +172,7 @@ describe("LodestarForkChoice", function () {
       expect(forkChoice.getBlockHex(hashBlock(block12.message))).to.be.not.null;
       expect(forkChoice.hasBlockHex(hashBlock(block08.message))).to.be.true;
       expect(forkChoice.hasBlockHex(hashBlock(block12.message))).to.be.true;
-      forkChoice.onBlock(block32.message, state32, {justifiedBalances, blockDelaySec: 0});
+      forkChoice.onBlock(block32.message, state32, blockDelaySec, executionStatus);
       forkChoice.prune(hashBlock(block16.message));
       expect(forkChoice.getAllAncestorBlocks(hashBlock(block16.message)).length).to.be.equal(
         0,
@@ -195,11 +204,10 @@ describe("LodestarForkChoice", function () {
       const {block: parentBlock, state: parentState} = makeChild({block: targetBlock, state: targetState}, 34);
       const {block: childBlock, state: childState} = makeChild({block: parentBlock, state: parentState}, 35);
       forkChoice.updateTime(35);
-
-      forkChoice.onBlock(targetBlock.message, targetState, {justifiedBalances, blockDelaySec: 0});
-      forkChoice.onBlock(orphanedBlock.message, orphanedState);
-      forkChoice.onBlock(parentBlock.message, parentState);
-      forkChoice.onBlock(childBlock.message, childState);
+      forkChoice.onBlock(targetBlock.message, targetState, blockDelaySec, executionStatus);
+      forkChoice.onBlock(orphanedBlock.message, orphanedState, blockDelaySec, executionStatus);
+      forkChoice.onBlock(parentBlock.message, parentState, blockDelaySec, executionStatus);
+      forkChoice.onBlock(childBlock.message, childState, blockDelaySec, executionStatus);
       const childBlockRoot = toHexString(ssz.phase0.BeaconBlock.hashTreeRoot(childBlock.message));
       // the old way to get non canonical blocks
       const nonCanonicalSummaries = forkChoice

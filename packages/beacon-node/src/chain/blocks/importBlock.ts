@@ -5,11 +5,10 @@ import {
   CachedBeaconStateAllForks,
   CachedBeaconStateAltair,
   computeStartSlotAtEpoch,
-  getEffectiveBalanceIncrementsZeroInactive,
   computeEpochAtSlot,
   RootCache,
 } from "@lodestar/state-transition";
-import {IForkChoice, OnBlockPrecachedData, ForkChoiceError, ForkChoiceErrorCode} from "@lodestar/fork-choice";
+import {IForkChoice, ForkChoiceError, ForkChoiceErrorCode} from "@lodestar/fork-choice";
 import {ILogger} from "@lodestar/utils";
 import {IChainForkConfig} from "@lodestar/config";
 import {IMetrics} from "../../metrics/index.js";
@@ -93,19 +92,9 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
   //
   // current justified checkpoint should be prev epoch or current epoch if it's just updated
   // it should always have epochBalances there bc it's a checkpoint state, ie got through processEpoch
-  const justifiedCheckpoint = postState.currentJustifiedCheckpoint;
-
-  const onBlockPrecachedData: OnBlockPrecachedData = {
-    executionStatus,
-    blockDelaySec: (Math.floor(Date.now() / 1000) - postState.genesisTime) % chain.config.SECONDS_PER_SLOT,
-  };
-  if (justifiedCheckpoint.epoch > chain.forkChoice.getJustifiedCheckpoint().epoch) {
-    const state = getStateForJustifiedBalances(chain, postState, block);
-    onBlockPrecachedData.justifiedBalances = getEffectiveBalanceIncrementsZeroInactive(state);
-  }
-
   const prevFinalizedEpoch = chain.forkChoice.getFinalizedCheckpoint().epoch;
-  chain.forkChoice.onBlock(block.message, postState, onBlockPrecachedData);
+  const blockDelaySec = (Math.floor(Date.now() / 1000) - postState.genesisTime) % chain.config.SECONDS_PER_SLOT;
+  chain.forkChoice.onBlock(block.message, postState, blockDelaySec, executionStatus);
 
   // - Register state and block to the validator monitor
   // TODO

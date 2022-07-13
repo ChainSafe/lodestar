@@ -2,7 +2,6 @@ import {itBench} from "@dapplion/benchmark";
 import {config} from "@lodestar/config/default";
 import {AttestationData, IndexedAttestation} from "@lodestar/types/phase0";
 import {ATTESTATION_SUBNET_COUNT} from "@lodestar/params";
-import {getEffectiveBalanceIncrementsZeroed} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {fromHexString} from "@chainsafe/ssz";
 import {ExecutionStatus, ForkChoice, IForkChoiceStore, ProtoBlock, ProtoArray} from "../../../src/index.js";
@@ -36,19 +35,27 @@ describe("ForkChoice", () => {
       executionPayloadBlockHash: null,
       executionStatus: ExecutionStatus.PreMerge,
     } as Omit<ProtoBlock, "targetRoot">);
-
+    // assume there are 64 unfinalized blocks, this number does not make a difference in term of performance
+    const numBlocks = 64;
+    const balances = new Uint8Array(Array.from({length: numBlocks}, () => 32));
     const fcStore: IForkChoiceStore = {
       currentSlot: genesisSlot,
-      justifiedCheckpoint: {epoch: genesisEpoch, root: fromHexString(finalizedRoot), rootHex: finalizedRoot},
+      justified: {
+        checkpoint: {epoch: genesisEpoch, root: fromHexString(finalizedRoot), rootHex: finalizedRoot},
+        balances,
+      },
+      bestJustified: {
+        checkpoint: {epoch: genesisEpoch, root: fromHexString(finalizedRoot), rootHex: finalizedRoot},
+        balances,
+      },
       finalizedCheckpoint: {epoch: genesisEpoch, root: fromHexString(finalizedRoot), rootHex: finalizedRoot},
-      bestJustifiedCheckpoint: {epoch: genesisEpoch, root: fromHexString(finalizedRoot), rootHex: finalizedRoot},
+      justifiedBalancesGetter: () => balances,
     };
 
-    forkchoice = new ForkChoice(config, fcStore, protoArr, getEffectiveBalanceIncrementsZeroed(0), false);
+    forkchoice = new ForkChoice(config, fcStore, protoArr,false);
 
     let parentBlockRoot = finalizedRoot;
-    // assume there are 64 unfinalized blocks, this number does not make a difference in term of performance
-    for (let i = 1; i < 64; i++) {
+    for (let i = 1; i < numBlocks; i++) {
       const blockRoot = i < 10 ? blockRootPrefix + "0" + i : blockRootPrefix + i;
       const block: ProtoBlock = {
         slot: genesisSlot + i,

@@ -12,6 +12,7 @@ import {
   isMergeTransitionBlock as isMergeTransitionBlockFn,
   processSlots,
   stateTransition,
+  isExecutionEnabled,
 } from "@lodestar/state-transition";
 import {InputType} from "@lodestar/spec-test-util";
 import {toHexString} from "@chainsafe/ssz";
@@ -59,8 +60,18 @@ export const forkChoiceTest: TestRunnerFn<ForkChoiceTestCase, void> = (fork) => 
       const config = getConfig(fork);
       let state = createCachedBeaconStateTest(anchorState, config);
 
+      function justifiedBalancesGetter(checkpoint: CheckpointWithHex): EffectiveBalanceIncrements {
+        const justifiedState = checkpointStateCache.get(checkpoint);
+        if (!justifiedState) {
+          const checkpointHexKey = toCheckpointKey(checkpoint);
+          const cachedCps = checkpointStateCache.dumpCheckpointKeys().join(", ");
+          throw Error(`No justifiedState for checkpoint ${checkpointHexKey}. Available: ${cachedCps}`);
+        }
+        return getEffectiveBalanceIncrementsZeroInactive(justifiedState);
+      }
+
       const emitter = new ChainEventEmitter();
-      const forkchoice = initializeForkChoice(config, emitter, currentSlot, state, true);
+      const forkchoice = initializeForkChoice(config, emitter, currentSlot, state, true, justifiedBalancesGetter);
 
       const checkpointStateCache = new CheckpointStateCache({});
       const stateCache = new Map<string, CachedBeaconStateAllForks>();
@@ -272,11 +283,15 @@ function runStateTranstion(
     justifiedBalances = getEffectiveBalanceIncrementsZeroInactive(justifiedState);
   }
 
+  const executionStatus =
+    isBellatrixBlockBodyType(signedBlock.message.body) &&
+    isBellatrixStateType(postState) &&
+    isExecutionEnabled(postState, signedBlock.message)
+      ? ExecutionStatus.Valid
+      : ExecutionStatus.PreMerge;
+
   try {
-    forkchoice.onBlock(signedBlock.message, postState, {
-      blockDelaySec,
-      justifiedBalances,
-    });
+    forkchoice.onBlock(signedBlock.message, postState, blockDelaySec, executionStatus);
     for (const attestation of signedBlock.message.body.attestations) {
       try {
         const indexedAttestation = postState.epochCtx.getIndexedAttestation(attestation);

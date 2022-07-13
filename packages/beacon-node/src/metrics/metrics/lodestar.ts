@@ -886,6 +886,17 @@ export function createLodestarMetrics(
       }),
     },
 
+    balancesCache: {
+      hits: register.counter({
+        name: "lodestar_balances_cache_hits_total",
+        help: "Total number of balances cache hits",
+      }),
+      misses: register.counter({
+        name: "lodestar_balances_cache_missess_total",
+        help: "Total number of balances cache misses",
+      }),
+    },
+
     seenCache: {
       aggregatedAttestations: {
         superSetCheckTotal: register.histogram({

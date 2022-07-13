@@ -8,6 +8,8 @@ import {
   CachedBeaconStateAllForks,
   computeStartSlotAtEpoch,
   createCachedBeaconState,
+  EffectiveBalanceIncrements,
+  getEffectiveBalanceIncrementsZeroInactive,
   Index2PubkeyCache,
   PubkeyIndexMap,
 } from "@lodestar/state-transition";
@@ -53,6 +55,7 @@ import {ReprocessController} from "./reprocess.js";
 import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
 import {SeenBlockAttesters} from "./seenCache/seenBlockAttesters.js";
 import {BeaconProposerCache} from "./beaconProposerCache.js";
+import {CheckpointBalancesCache} from "./balancesCache.js";
 import {ChainEvent} from "./index.js";
 
 export class BeaconChain implements IBeaconChain {
@@ -97,6 +100,7 @@ export class BeaconChain implements IBeaconChain {
   readonly index2pubkey: Index2PubkeyCache;
 
   readonly beaconProposerCache: BeaconProposerCache;
+  readonly checkpointBalancesCache: CheckpointBalancesCache;
 
   protected readonly blockProcessor: BlockProcessor;
   protected readonly db: IBeaconDb;
@@ -159,6 +163,7 @@ export class BeaconChain implements IBeaconChain {
     this.index2pubkey = [];
 
     this.beaconProposerCache = new BeaconProposerCache(opts);
+    this.checkpointBalancesCache = new CheckpointBalancesCache();
 
     // Restore state caches
     const cachedState = createCachedBeaconState(anchorState, {
@@ -176,6 +181,7 @@ export class BeaconChain implements IBeaconChain {
       clock.currentSlot,
       cachedState,
       opts.proposerBoostEnabled,
+      this.justifiedBalancesGetter.bind(this),
       metrics
     );
     const regen = new QueuedStateRegenerator({
@@ -350,6 +356,30 @@ export class BeaconChain implements IBeaconChain {
   persistInvalidSszView(view: TreeView<CompositeTypeAny>, suffix?: string): void {
     if (this.opts.persistInvalidSszObjects) {
       void this.persistInvalidSszObject(view.type.typeName, view.serialize(), view.hashTreeRoot(), suffix);
+    }
+  }
+
+  // Assumptions + invariant this function is based on:
+  // - There can be N parallel chains progressing at the same time (interlaced)
+  // - Our cache can only persist X states at once to prevent OOM
+  // - Some old states (including to-be justified checkpoint) may / must be dropped from the cache
+  // - Thus, there is no guarantee that the state for a justified checkpoint will be available in the cache
+  // - `ForkChoice.onBlock` must never throw for a block that is valid with respect to the network.
+  // - `justifiedBalancesGetter()` must never throw and it should always return a state.
+  private justifiedBalancesGetter(checkpoint: CheckpointWithHex): EffectiveBalanceIncrements {
+    const effectiveBalances = this.checkpointBalancesCache.get(checkpoint);
+    if (effectiveBalances) {
+      this.metrics?.balancesCache.hits.inc();
+      return effectiveBalances;
+    } else {
+      // not expected, need metrics
+      this.metrics?.balancesCache.misses.inc();
+      const state = this.checkpointStateCache.get(checkpoint);
+      if (!state) {
+        throw new Error(`Not able to get state for checkpoint ${checkpoint.epoch}:${checkpoint.rootHex}`);
+      }
+      this.logger.debug("Not able to get checkpoint balances", {epoch: checkpoint.epoch, root: checkpoint.rootHex});
+      return getEffectiveBalanceIncrementsZeroInactive(state);
     }
   }
 

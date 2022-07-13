@@ -9,6 +9,18 @@ export type CheckpointHex = {
   root: RootHex;
 };
 
+export type CheckpointsWithHex = {
+  justifiedCheckpoint: CheckpointWithHex;
+  finalizedCheckpoint: CheckpointWithHex;
+};
+
+export type CheckpointHexWithBalance = {
+  checkpoint: CheckpointWithHex;
+  balances: EffectiveBalanceIncrements;
+};
+
+export type JustifiedBalancesGetter = (checkpoint: CheckpointWithHex) => EffectiveBalanceIncrements;
+
 export interface IForkChoice {
   /**
    * Returns the block root of an ancestor of `block_root` at the given `slot`. (Note: `slot` refers
@@ -54,11 +66,13 @@ export interface IForkChoice {
    * ## Notes:
    *
    * The supplied block **must** pass the `state_transition` function as it will not be run here.
-   *
-   * `preCachedData` includes data necessary for validation included in the spec but some data is
-   * pre-fetched in advance to keep the fork-choice fully syncronous
    */
-  onBlock(block: allForks.BeaconBlock, state: BeaconStateAllForks, preCachedData?: OnBlockPrecachedData): void;
+  onBlock(
+    block: allForks.BeaconBlock,
+    state: BeaconStateAllForks,
+    blockDelaySec: number,
+    executionStatus: ExecutionStatus
+  ): void;
   /**
    * Register `attestation` with the fork choice DAG so that it may influence future calls to `getHead`.
    *
@@ -145,14 +159,6 @@ export type PowBlockHex = {
   blockHash: RootHex;
   parentHash: RootHex;
   totalDifficulty: bigint;
-};
-
-export type OnBlockPrecachedData = {
-  /** `justifiedBalances` balances of justified state which is updated synchronously. */
-  justifiedBalances?: EffectiveBalanceIncrements;
-  /** Time in seconds when the block was received */
-  blockDelaySec: number;
-  executionStatus?: ExecutionStatus;
 };
 
 export type LatestMessage = {

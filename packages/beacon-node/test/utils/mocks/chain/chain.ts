@@ -39,6 +39,7 @@ import {createCachedBeaconStateTest} from "../../../../../state-transition/test/
 import {SeenAggregatedAttestations} from "../../../../src/chain/seenCache/seenAggregateAndProof.js";
 import {SeenBlockAttesters} from "../../../../src/chain/seenCache/seenBlockAttesters.js";
 import {BeaconProposerCache} from "../../../../src/chain/beaconProposerCache.js";
+import {CheckpointBalancesCache} from "../../../../src/chain/balancesCache.js";
 
 /* eslint-disable @typescript-eslint/no-empty-function */
 
@@ -89,6 +90,7 @@ export class MockBeaconChain implements IBeaconChain {
   readonly beaconProposerCache = new BeaconProposerCache({
     defaultFeeRecipient: defaultValidatorOptions.defaultFeeRecipient,
   });
+  readonly checkpointBalancesCache = new CheckpointBalancesCache();
 
   private state: BeaconStateAllForks;
   private abortController: AbortController;

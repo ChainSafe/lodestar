@@ -19,10 +19,6 @@ export type FullyVerifiedBlockFlags = {
    * Used by range sync.
    */
   ignoreIfFinalized?: boolean;
-  /**
-   * If the execution payload couldnt be verified because of EL syncing status, used in optimistic sync or for merge block
-   */
-  executionStatus?: ExecutionStatus;
 };
 
 export type PartiallyVerifiedBlockFlags = FullyVerifiedBlockFlags & {
@@ -52,6 +48,10 @@ export type FullyVerifiedBlock = FullyVerifiedBlockFlags & {
   postState: CachedBeaconStateAllForks;
   parentBlockSlot: Slot;
   proposerBalanceDiff: number;
+  /**
+   * If the execution payload couldnt be verified because of EL syncing status, used in optimistic sync or for merge block
+   */
+  executionStatus: ExecutionStatus;
 };
 
 /**
