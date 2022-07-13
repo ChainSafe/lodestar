@@ -356,7 +356,6 @@ export class ForkChoice implements IForkChoice {
     // null = not providing pre-computed justified balances, may trigger .justifiedBalancesGetter()
     this.updateCheckpoints(state.slot, justifiedCheckpoint, finalizedCheckpoint, null);
 
-
     const targetSlot = computeStartSlotAtEpoch(computeEpochAtSlot(slot));
     const targetRoot = slot === targetSlot ? blockRoot : state.blockRoots.get(targetSlot % SLOTS_PER_HISTORICAL_ROOT);
 

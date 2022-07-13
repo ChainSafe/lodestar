@@ -17,7 +17,7 @@ import {IBeaconConfig} from "@lodestar/config";
 import {allForks, UintNum64, Root, phase0, Slot, RootHex, Epoch, ValidatorIndex} from "@lodestar/types";
 import {CheckpointWithHex, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {ILogger, toHex} from "@lodestar/utils";
-import {CompositeTypeAny, fromHexString, TreeView, Type} from "@chainsafe/ssz";
+import {CompositeTypeAny, fromHexString, toHexString, TreeView, Type} from "@chainsafe/ssz";
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
 import {IMetrics} from "../metrics/index.js";
@@ -359,13 +359,10 @@ export class BeaconChain implements IBeaconChain {
     }
   }
 
-  // Assumptions + invariant this function is based on:
-  // - There can be N parallel chains progressing at the same time (interlaced)
-  // - Our cache can only persist X states at once to prevent OOM
-  // - Some old states (including to-be justified checkpoint) may / must be dropped from the cache
-  // - Thus, there is no guarantee that the state for a justified checkpoint will be available in the cache
-  // - `ForkChoice.onBlock` must never throw for a block that is valid with respect to the network.
-  // - `justifiedBalancesGetter()` must never throw and it should always return a state.
+  /**
+   * `ForkChoice.onBlock` must never throw for a block that is valid with respect to the network
+   * `justifiedBalancesGetter()` must never throw and it should always return a state.
+   */
   private justifiedBalancesGetter(checkpoint: CheckpointWithHex): EffectiveBalanceIncrements {
     const effectiveBalances = this.checkpointBalancesCache.get(checkpoint);
     if (effectiveBalances) {
@@ -374,13 +371,56 @@ export class BeaconChain implements IBeaconChain {
     } else {
       // not expected, need metrics
       this.metrics?.balancesCache.misses.inc();
-      const state = this.checkpointStateCache.get(checkpoint);
-      if (!state) {
-        throw new Error(`Not able to get state for checkpoint ${checkpoint.epoch}:${checkpoint.rootHex}`);
-      }
-      this.logger.debug("Not able to get checkpoint balances", {epoch: checkpoint.epoch, root: checkpoint.rootHex});
+      const state = this.closestStateToCheckpoint(checkpoint);
+      this.logger.debug("Not able to get checkpoint balances from cache", {
+        epoch: checkpoint.epoch,
+        root: checkpoint.rootHex,
+        stateSlot: state.slot,
+      });
       return getEffectiveBalanceIncrementsZeroInactive(state);
     }
+  }
+
+  /**
+   * - Assumptions + invariant this function is based on:
+   * - Our cache can only persist X states at once to prevent OOM
+   * - Some old states (including to-be justified checkpoint) may / must be dropped from the cache
+   * - Thus, there is no guarantee that the state for a justified checkpoint will be available in the cache
+   */
+  private closestStateToCheckpoint(checkpoint: CheckpointWithHex): CachedBeaconStateAllForks {
+    const state = this.checkpointStateCache.get(checkpoint);
+    if (state) {
+      // most of the time it should go here
+      return state;
+    }
+
+    // If it's not found, then find the oldest state in the same chain as this one
+    const checkpointSlot = computeStartSlotAtEpoch(checkpoint.epoch);
+    const head = this.forkChoice.getHead();
+
+    // the worse case is to return the head state
+    let oldestState = this.getHeadState();
+    for (const parentBlock of this.forkChoice.iterateAncestorBlocks(head.blockRoot)) {
+      // We want at least a state at the slot 0 of checkpoint.epoch
+      if (parentBlock.slot < checkpointSlot) {
+        break;
+      }
+
+      const parentBlockState = this.stateCache.get(parentBlock.stateRoot);
+      if (parentBlockState) {
+        oldestState = parentBlockState;
+      }
+    }
+
+    this.logger.warn("State for currentJustifiedCheckpoint not available, using closest state", {
+      checkpointEpoch: checkpoint.epoch,
+      checkpointRoot: checkpoint.rootHex,
+      stateSlot: oldestState.slot,
+      headSlot: head.slot,
+      stateRoot: toHexString(oldestState.hashTreeRoot()),
+    });
+
+    return oldestState;
   }
 
   private async persistInvalidSszObject(

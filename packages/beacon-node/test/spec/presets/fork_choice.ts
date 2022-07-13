@@ -268,7 +268,6 @@ function runStateTranstion(
     cacheCheckpointState(postState, checkpointCache);
   }
   // same logic like in state transition https://github.com/ChainSafe/lodestar/blob/f6778740075fe2b75edf94d1db0b5691039cb500/packages/lodestar/src/chain/blocks/stateTransition.ts#L101
-  let justifiedBalances: EffectiveBalanceIncrements | undefined;
   const checkpointHex = toCheckpointHex(postState.currentJustifiedCheckpoint);
   const justifiedState = checkpointCache.get(checkpointHex);
   if (
@@ -280,7 +279,6 @@ function runStateTranstion(
       const cachedCps = checkpointCache.dumpCheckpointKeys().join(", ");
       throw Error(`No justifiedState for checkpoint ${checkpointHexKey}. Available: ${cachedCps}`);
     }
-    justifiedBalances = getEffectiveBalanceIncrementsZeroInactive(justifiedState);
   }
 
   const executionStatus =
