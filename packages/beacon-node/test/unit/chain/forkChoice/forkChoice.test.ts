@@ -8,7 +8,6 @@ import {
   getTemporaryBlockHeader,
   CachedBeaconStateAllForks,
   getEffectiveBalanceIncrementsZeroed,
-  BeaconStateAllForks,
   processSlots,
 } from "@lodestar/state-transition";
 import {toHexString} from "@chainsafe/ssz";
@@ -20,19 +19,22 @@ import {generateValidators} from "../../../utils/validator.js";
 
 describe("LodestarForkChoice", function () {
   let forkChoice: ForkChoice;
-  const anchorState = generateState(
-    {
-      slot: 0,
-      validators: generateValidators(3, {
-        effectiveBalance: MAX_EFFECTIVE_BALANCE,
-        activationEpoch: 0,
-        exitEpoch: FAR_FUTURE_EPOCH,
-        withdrawableEpoch: FAR_FUTURE_EPOCH,
-      }),
-      balances: Array.from({length: 3}, () => 0),
-      // Jan 01 2020
-      genesisTime: 1577836800,
-    },
+  const anchorState = createCachedBeaconStateTest(
+    generateState(
+      {
+        slot: 0,
+        validators: generateValidators(3, {
+          effectiveBalance: MAX_EFFECTIVE_BALANCE,
+          activationEpoch: 0,
+          exitEpoch: FAR_FUTURE_EPOCH,
+          withdrawableEpoch: FAR_FUTURE_EPOCH,
+        }),
+        balances: Array.from({length: 3}, () => 0),
+        // Jan 01 2020
+        genesisTime: 1577836800,
+      },
+      config
+    ),
     config
   );
 
@@ -223,7 +225,10 @@ describe("LodestarForkChoice", function () {
 });
 
 // lightweight state transtion function for this test
-function runStateTransition(preState: BeaconStateAllForks, signedBlock: phase0.SignedBeaconBlock): BeaconStateAllForks {
+function runStateTransition(
+  preState: CachedBeaconStateAllForks,
+  signedBlock: phase0.SignedBeaconBlock
+): CachedBeaconStateAllForks {
   // Clone state because process slots and block are not pure
   const postState = preState.clone();
   // Process slots (including those with no blocks) since block
@@ -237,9 +242,9 @@ function runStateTransition(preState: BeaconStateAllForks, signedBlock: phase0.S
 
 // create a child block/state from a parent block/state and a provided slot
 function makeChild(
-  parent: {block: phase0.SignedBeaconBlock; state: BeaconStateAllForks},
+  parent: {block: phase0.SignedBeaconBlock; state: CachedBeaconStateAllForks},
   slot: Slot
-): {block: phase0.SignedBeaconBlock; state: BeaconStateAllForks} {
+): {block: phase0.SignedBeaconBlock; state: CachedBeaconStateAllForks} {
   const childBlock = generateSignedBlock({message: {slot}});
   const parentRoot = ssz.phase0.BeaconBlock.hashTreeRoot(parent.block.message);
   childBlock.message.parentRoot = parentRoot;
