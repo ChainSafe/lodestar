@@ -1,4 +1,4 @@
-# Contribution Guidlines
+# Contribution Guidelines
 
 Thanks for your contribution to Lodestar. It's people like you that push the Ethereum ecosystem forward.
 
@@ -22,7 +22,7 @@ Thanks for your contribution to Lodestar. It's people like you that push the Eth
 - :test_tube: Run `lerna run test:e2e` for end-to-end tests.
 - :test_tube: Run `lerna run test` to run all tests.
 
-### Debugging spec tests
+### Debugging Spec Tests
 
 - To fix errors always focus on passing all minimal tests first without running mainnet tests.
 - Spec tests often compare full expected vs actual states in JSON format. To better understand the diff it's convenient to use mocha's option `--inline-diffs`.
@@ -49,7 +49,7 @@ docker-compose up -d
 
 ###### Beacon node and validator:
 
-First, you must have keystores and their secrets available locally at `./keystores` and `./secrets`
+First, you must have keystores and their secrets available locally at `./keystores` and your password.txt in `./secrets`
 
 ```
 docker-compose -f docker-compose.yml -f docker-compose.validator.yml up -d
@@ -61,35 +61,35 @@ docker-compose -f docker-compose.yml -f docker-compose.validator.yml up -d
 docker-compose -f docker/docker-compose.local.yml up -d
 ```
 
-## First-time Contributor?
+## First Time Contributor?
 
 Unsure where to begin contributing to Lodestar? Here are some ideas!
 
 - :pencil2: See any typos? See any verbiage that should be changed or updated? Go for it! Github makes it easy to make contributions right from the browser.
-- :mag_right: Look through our [outstanding unassigned issues](https://github.com/ChainSafe/lodestar/issues?q=is%3Aopen+is%3Aissue+no%3Aassignee). (Hint: look for issues labeled `meta0-goodfirstissue` or `meta1-helpwanted`!)
+- :mag_right: Look through our [outstanding unassigned issues](https://github.com/ChainSafe/lodestar/issues?q=is%3Aopen+is%3Aissue+no%3Aassignee). (Hint: look for issues labeled `meta-good-first-issue` or `meta-help-wanted`!)
 - :speech_balloon: Join our [Discord chat](https://discord.gg/aMxzVcr)!
   [![Discord](https://img.shields.io/discord/593655374469660673.svg?label=Discord&logo=discord)](https://discord.gg/aMxzVcr)
 
-## Reporting a bug?
+## Reporting A Bug?
 
 - :spiral_notepad: [Create a new issue!](https://github.com/ChainSafe/lodestar/issues/new/choose) Select the type of issue that best fits, and please fill out as much of the information as you can.
 
-## Contribution process
+## Contribution Process
 
 1. Make sure you're familiar with our contribution guidelines _(this document)_!
 2. Create your [own fork](https://github.com/ChainSafe/lodestar/fork) of this repository.
 3. Make your changes in your local fork.
 4. If you've made a code change, make sure to lint and test your changes (`yarn lint` and `yarn test:unit`).
-5. Make a pull request! We review PRs on a regular basis.
+5. Make an open pull request when you're ready for it to be reviewed. We review PRs on a regular basis. See Pull request etiquette for more information.
 6. You may be asked to sign a Contributor License Agreement (CLA). We make it relatively painless with CLA-bot.
 
-## Github style guide
+## Github Style Guide
 
-**Branch naming**
+**Branch Naming**
 
 If you are contributing from this repo prefix the branch name with your Github username (i.e. `myusername/short-description`)
 
-**Pull request naming**
+**Pull Request Naming**
 
 Pull request titles must be:
 
@@ -101,12 +101,20 @@ For example:
 
 > Add Edit on Github button to all the pages
 
+**Pull Request Etiquette** 
+
+- Pull requests should remain as drafts when they are not ready for review by maintainers. Open pull requests signal to the maintainers that it's ready for review.
+- If your pull request is no longer applicable or validated to fix an issue, close your pull request.
+- If your pull request is fixable and needs additional changes or commits within a short period of time, switch your pull request into a draft until it's ready.
+- Otherwise, close your pull request and [create a new issue instead.](https://github.com/ChainSafe/lodestar/issues/new/choose)
+
 ## Lodestar Monorepo
 
 We're currently experimenting with hosting the majority of lodestar packages and support packages in this repository as a [monorepo](https://en.wikipedia.org/wiki/Monorepo). We're using [Lerna](https://lerna.js.org/) to manage the packages. See [packages/](https://github.com/ChainSafe/lodestar/tree/unstable/packages) for a list of packages hosted in this repo.
 
 ## Style Guide
 
+- Lodestar has migrated to using ES modules.
 - Many module class constructors have the following signature: `(options, dependencies)`
   - e.g.: `public constructor(opts: IExampleOptions, {db, logger}: IExampleModules)`
 - Modules should be designed to _"do one thing and do it well!"_
@@ -118,8 +126,6 @@ We're currently experimenting with hosting the majority of lodestar packages and
     - Functions and variables should be [`camelCase`](https://en.wikipedia.org/wiki/Camel_case), classes should be [`PascalCase`](http://wiki.c2.com/?PascalCase), constants should be `UPPERCASE_WITH_UNDERSCORES`.
     - Use `"` instead of `'`
     - All functions should have types declared for all parameters and return value
-    - All interfaces should be prefixed with a `I`
-      - e.g.: `IMyInterface`
     - You shouldn't be using TypeScript's `any`
     - Private class properties should not be prefixed with a `_`
       - e.g.: `private dirty;`, not `private _dirty;`
@@ -128,6 +134,18 @@ We're currently experimenting with hosting the majority of lodestar packages and
   - run `yarn check-types` from the command line
 - Make sure that the tests are still passing:
   - run `yarn test:unit` from the command line
+- Commenting: If your code does something that is not obvious or deviates from standards, leave a comment for other developers to explain your logic and reasoning.
+  - Use `//` commenting format unless it's a comment you want people to see in their IDE.
+  - Use `/** **/` commenting format for documenting a function/variable.
+- Code whitespace can be helpful for reading complex code, please add some.
+- For unit tests, we forbid import stubbing when other approaches are feasible.
+- Logging framework: When determining which log level to use for providing information to users, consider the level of importance and whether the alert is actionable (Warning, Error, Fatal).
+  - Trace: Describes events showing step by step execution which can be ignored during standard operation.
+  - Debug: Useful information for debugging purposes.
+  - Info: Purely informative logs which can be ignored during normal operation.
+  - Warning: Unexpected behaviour, but the application continues to function and key operations are unaffected.
+  - Error: One or more main functionalities are not working, preventing some functions from working properly.
+  - Fatal: One or more main functionalities are not working and preventing the application from fulfilling its duties.
 
 ## Contributing to Grafana dashboards
 
@@ -142,105 +160,66 @@ To edit or extend an existing Grafana dashboard with minimal diff:
 
 ## Label Guide
 
-Issues and pull-requests are subject to the following labeling guidelines.
+Issues and pull requests are subject to the following labeling guidelines.
 
-- Each PR **must have** a `status.*` label indicating the status.
-- Each Issue or PR **must have** a `mod.*` or `scope.*` label indicating which parts of the code are relevant.
-- All other labels allow for further evaluation, e.g., priority, amount of work required, etc.
+- PRs may have a status label to indicate deviation from the normal process such as `status-blocked` or `status-do-not-merge`
+- Issues and PRs will be tagged with a `scope` and `prio` to indicate type and priority for triaging.
+- All other labels allow for further evaluation and organization.
 
 Label descriptions can be found below.
 
-###### `status.*` Pull Request Status
+###### `status.*` Issues and Pull Request Status
 
-Status labels only apply to pull requests.
+Status labels apply to issues and pull requests which deviate from normal processes.
 
-- `status0-blocked`: This is blocked by another issue that requires resolving first.
-- `status1-donotmerge`: Merging this issue will break the build. Do not merge!
-- `status2-onice`: This work is on ice as per the reasons described by the author.
-- `status3-needsreview`: This pull-request needs a review.
-- `status4-needschanges`: This pull-request has issues that needs to be addressed first.
-- `status5-mergeready`: This pull-request has been reviewed well and can be merged.
-- `status6-bulldozer`: Pull request is reviewed and can be merged (used by the bulldozer bot).
-- `status7-opendiscussion`: This work is still being discussed.
-- `status9-workinprogress`: This work is still in progress and not ready for review.
-
-###### `mod.*` Relevant Modules and Components
-
-The Module labels should be applied to all issues and pull requests if possible.
-
-- `mod1-beaconchain`: The @lodestar/beacon-node beacon-chain module.
-- `mod2-validator`: The @lodestar/validator module.
-- `mod3-lightclient`: The @lodestar/light-client module.
-- `mod4-api`: The @lodestar/api module.
-- `mod5-cli`: The @chainsafe/lodestar module.
-- `mod6-statetransition`: The @lodestar/state-transition module.
-- `mod7-types`: The @lodestar/types module.
-- `mod8-params`: The @lodestar/params module.
-- `mod9-utils`: The @lodestar/utils module.
-- `moda-config`: The @lodestar/config module.
-- `modb-database`: The @lodestar/db module.
-- `modc-forkchoice`: The @lodestar/fork-choice module.
-- `modd-spectests`: The @lodestar/spec-test-\* modules.
+- `status-blocked`: This is blocked by another issue that requires resolving first.
+- `status-do-not-merge`: Merging this issue will break the build. Do not merge!
 
 ###### `scope.*` Scope Indicator
 
 Scope is comparable to Module labels but less strict with the definition of components. It applies to both, issues and pull requests.
 
-- `scope1-audits`: Resolves issue identified in the first audit.
-- `scope2-memory`: Issues to reduce and improve memory usage.
-- `scope3-performance`: Performance issue and ideas to improve performance.
-- `scope4-benchmarks`: All issues with regards to benchmarking.
-- `scope5-networking`: All issues related to networking, gossip, and libp2p.
-- `scope6-metrics`: All issues with regards to the exposed metrics.
-- `scope7-ssz`: All issues related to SSZ serialization and deserialization.
-- `scope8-bls`: All issues related to BLS and cryptography used.
-- `scope9-testnetdebugging`: Issues uncovered through running a node on a public testnet.
-- `scopea-eth1`: All issues related to the Eth1 provider.
-- `scopeb-ci`: All issues related to the Continuous Integration and Github Workflows.
-- `scopec-documentation`: All issues related to the Lodestar documentation.
+- `scope-cpu-performance`: Performance issue and ideas to improve performance.
+- `scope-documentation`: All issues related to the Lodestar documentation.
+- `scope-interop`: Issues that fix interop issues between Lodestar and CL, EL or tooling.
+- `scope-light-clients`: All issues regarding light client development.
+- `scope-logging`: Issue about logs: hygeine, format issues, improvements.
+- `scope-memory`: Issues to reduce and improve memory usage.
+- `scope-metrics`: All issues with regards to the exposed metrics.
+- `scope-networking`: All issues related to networking, gossip, and libp2p.
+- `scope-profitability`: Issues to directly improve validator performance and its profitability.
+- `scope-security`: Issues that fix security issues: DOS, key leak, CVEs.
+- `scope-testing`: Issues for adding test coverage, fixing existing tests or testing strategies
+- `scope-testnet-debugging`: Issues uncovered through running a node on a public testnet.
+- `scope-ux`: Issues for CLI UX or general consumer UX.
 
 ###### `prio.*` Prioritization Indicator
 
 A simple indicator of issue prioritization. It mainly applies to issues.
 
 - `prio0-critical`: Drop everything to resolve this immediately.
-- `prio2-high`: Resolve issues as soon as possible.
-- `prio5-medium`: Resolve this some time soon (tm).
-- `prio7-low`: This is nice to have.
-- `prio9-none`: We might get back to this one day (maybe).
-
-###### `q.*` Effort Quantization
-
-Effort estimations can help planning to tackle issues that are particulary easy or difficult with regard of work force required. It mainly applies to issues (before work is started).
-
-- `q0-trivial`: Can be fixed by anyone with access to a computer.
-- `q2-easy`: Can be fixed by copy and pasting from StackOverflow.
-- `q3-medium`: A fair chunk of work, not necessarily very hard but not trivial either
-- `q5-substantial`: Can be fixed by a developer with decent experience.
-- `q7-involved`: Can be fixed by a team of developers and probably takes some time.
-- `q9-epic`: Can only be fixed by John Skeet. ;)
+- `prio1-high`: Resolve issues as soon as possible.
+- `prio2-medium`: Resolve this some time soon (tm).
+- `prio3-low`: This is nice to have.
 
 ###### `spec.*` Ethereum Consensus Spec Version Target
 
 Issues that target a specific version of the Ethereum consensus spec, shall be tagged accordingly.
 
-- `spec0-phase0`: Issues targeting the initial Ethereum consensus spec version.
-- `spec1-altair`: Issues targeting the Altair Ethereum consensus spec version.
-- `spec3-bellatrix`: Issues targeting the Bellatrix Ethereum consensus spec version.
-- `spec5-phase1`: Issues targeting the Phase1 Ethereum consensus spec version.
-- `spec7-phase2`: Issues targeting the Phase2 Ethereum consensus spec version.
+- `spec-phase0`: Issues targeting the initial Ethereum consensus spec version.
+- `spec-altair`: Issues targeting the Altair Ethereum consensus spec version.
+- `spec-bellatrix`: Issues targeting the Bellatrix Ethereum consensus spec version.
 
 ###### `meta.*` Meta Labels to organize Miscelaneous Issues
 
-- `meta0-goodfirstissue`: Good first issues for newcomers and first-time contributors.
-- `meta1-helpwanted`: The author indicates that additional help is wanted.
-- `meta2-breakingchange`: Introduces breaking changes to DB, Validator, Beacon Node, or CLI interfaces. Handle with care!
-- `meta4-cosmetic`: The changes introduces are barely touching any code.
-- `meta5-technicaldebt`: Issues introducing or resolving technical debts.
-- `meta6-discussion`: Indicates a topic that requires input from various developers.
-- `meta7-botstale`: Label for stale issues (applied by the stale bot).
-- `meta8-excludefromchangelog`: This work is not relevant for the changelog (used by Github actions). Use sparingly!
-- `meta9-dependencies`: Pull requests that update a dependency (used by Dependabot).
+- `meta-breaking-change`: Introduces breaking changes to DB, Validator, Beacon Node, or CLI interfaces. Handle with care!
+- `meta-dependencies`: Pull requests that update a dependency.
+- `meta-discussion`: Indicates a topic that requires input from various developers.
+- `meta-good-first-issue`: Good first issues for newcomers and first-time contributors.
+- `meta-help-wanted`: The author indicates that additional help is wanted.
+- `meta-pm`: Issues relating to Project Management tasks.
+- `meta-stale`: Label for stale issues applied by the stale bot.
+- `meta-technicaldebt`: Issues introducing or resolving technical debts.
 
 ## Community
 
