@@ -19,6 +19,7 @@ import {IEth1ForBlockProduction} from "../../eth1/index.js";
 import {BeaconProposerCache} from "../beaconProposerCache.js";
 import {IBeaconClock} from "../clock/index.js";
 import {ReprocessController, REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC} from "../reprocess.js";
+import {CheckpointBalancesCache} from "../balancesCache.js";
 import {FullyVerifiedBlock} from "./types.js";
 import {PendingEvents} from "./utils/pendingEvents.js";
 import {getCheckpointFromState} from "./utils/checkpoint.js";
@@ -36,6 +37,7 @@ export type ImportBlockModules = {
   seenAggregatedAttestations: SeenAggregatedAttestations;
   seenBlockAttesters: SeenBlockAttesters;
   beaconProposerCache: BeaconProposerCache;
+  checkpointBalancesCache: CheckpointBalancesCache;
   reprocessController: ReprocessController;
   lightClientServer: LightClientServer;
   eth1: IEth1ForBlockProduction;
@@ -88,6 +90,9 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
   // it should always have epochBalances there bc it's a checkpoint state, ie got through processEpoch
   const prevFinalizedEpoch = chain.forkChoice.getFinalizedCheckpoint().epoch;
   const blockDelaySec = (Math.floor(Date.now() / 1000) - postState.genesisTime) % chain.config.SECONDS_PER_SLOT;
+  const blockRoot = toHexString(chain.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message));
+  // Should compute checkpoint balances before forkchoice.onBlock
+  chain.checkpointBalancesCache.processState(blockRoot, postState);
   chain.forkChoice.onBlock(block.message, postState, blockDelaySec, executionStatus);
 
   // - Register state and block to the validator monitor
@@ -295,8 +300,6 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
   chain.metrics?.proposerBalanceDiffAny.observe(fullyVerifiedBlock.proposerBalanceDiff);
   chain.metrics?.registerImportedBlock(block.message, fullyVerifiedBlock);
 
-  // Note: in-lined from previous handler of ChainEvent.block
-  const blockRoot = toHexString(chain.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message));
   const advancedSlot = chain.clock.slotWithFutureTolerance(REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC);
 
   chain.reprocessController.onBlockImported({slot: block.message.slot, root: blockRoot}, advancedSlot);

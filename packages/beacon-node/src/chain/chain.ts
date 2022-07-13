@@ -214,6 +214,7 @@ export class BeaconChain implements IBeaconChain {
         seenAggregatedAttestations: this.seenAggregatedAttestations,
         seenBlockAttesters: this.seenBlockAttesters,
         beaconProposerCache: this.beaconProposerCache,
+        checkpointBalancesCache: this.checkpointBalancesCache,
         reprocessController: this.reprocessController,
         emitter,
         config,
