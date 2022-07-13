@@ -1,5 +1,5 @@
 import {EffectiveBalanceIncrements} from "@lodestar/state-transition";
-import {BeaconStateAllForks} from "@lodestar/state-transition";
+import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {Epoch, Slot, ValidatorIndex, phase0, allForks, Root, RootHex} from "@lodestar/types";
 import {ProtoBlock, ExecutionStatus} from "../protoArray/interface.js";
 import {CheckpointWithHex} from "./store.js";
@@ -18,8 +18,6 @@ export type CheckpointHexWithBalance = {
   checkpoint: CheckpointWithHex;
   balances: EffectiveBalanceIncrements;
 };
-
-export type JustifiedBalancesGetter = (checkpoint: CheckpointWithHex) => EffectiveBalanceIncrements;
 
 export interface IForkChoice {
   /**
@@ -69,7 +67,7 @@ export interface IForkChoice {
    */
   onBlock(
     block: allForks.BeaconBlock,
-    state: BeaconStateAllForks,
+    state: CachedBeaconStateAllForks,
     blockDelaySec: number,
     executionStatus: ExecutionStatus
   ): void;

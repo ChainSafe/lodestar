@@ -12,7 +12,7 @@ import {
   computeEpochAtSlot,
   ZERO_HASH,
   EffectiveBalanceIncrements,
-  BeaconStateAllForks,
+  CachedBeaconStateAllForks,
   isBellatrixBlockBodyType,
   isBellatrixStateType,
   isExecutionEnabled,
@@ -26,7 +26,7 @@ import {ProtoArray} from "../protoArray/protoArray.js";
 import {IForkChoiceMetrics} from "../metrics.js";
 import {ForkChoiceError, ForkChoiceErrorCode, InvalidBlockCode, InvalidAttestationCode} from "./errors.js";
 import {IForkChoice, LatestMessage, QueuedAttestation, PowBlockHex} from "./interface.js";
-import {IForkChoiceStore, CheckpointWithHex, toCheckpointWithHex} from "./store.js";
+import {IForkChoiceStore, CheckpointWithHex, toCheckpointWithHex, JustifiedBalances} from "./store.js";
 
 /* eslint-disable max-len */
 
@@ -265,7 +265,7 @@ export class ForkChoice implements IForkChoice {
    */
   onBlock(
     block: allForks.BeaconBlock,
-    state: BeaconStateAllForks,
+    state: CachedBeaconStateAllForks,
     blockDelaySec: number,
     executionStatus: ExecutionStatus
   ): void {
@@ -353,9 +353,12 @@ export class ForkChoice implements IForkChoice {
 
     const justifiedCheckpoint = toCheckpointWithHex(state.currentJustifiedCheckpoint);
     const finalizedCheckpoint = toCheckpointWithHex(state.finalizedCheckpoint);
-    // null = not providing pre-computed justified balances, may trigger .justifiedBalancesGetter()
-    this.updateCheckpoints(state.slot, justifiedCheckpoint, finalizedCheckpoint, null);
 
+    // Justified balances for `justifiedCheckpoint` are new to the fork-choice. Compute them on demand only if
+    // the justified checkpoint changes
+    this.updateCheckpoints(state.slot, justifiedCheckpoint, finalizedCheckpoint, () =>
+      this.fcStore.justifiedBalancesGetter(justifiedCheckpoint, state)
+    );
     const targetSlot = computeStartSlotAtEpoch(computeEpochAtSlot(slot));
     const targetRoot = slot === targetSlot ? blockRoot : state.blockRoots.get(targetSlot % SLOTS_PER_HISTORICAL_ROOT);
 
@@ -380,33 +383,6 @@ export class ForkChoice implements IForkChoice {
           }
         : {executionPayloadBlockHash: null, executionStatus: this.getPreMergeExecStatus(executionStatus)}),
     });
-  }
-
-  updateCheckpoints(
-    stateSlot: Slot,
-    justifiedCheckpoint: CheckpointWithHex,
-    finalizedCheckpoint: CheckpointWithHex,
-    justifiedBalances: EffectiveBalanceIncrements | null
-  ): void {
-    // Update justified checkpoint.
-    if (justifiedCheckpoint.epoch > this.fcStore.justified.checkpoint.epoch) {
-      if (justifiedCheckpoint.epoch > this.fcStore.bestJustified.checkpoint.epoch) {
-        this.fcStore.bestJustified = {
-          checkpoint: justifiedCheckpoint,
-          balances: justifiedBalances ?? this.fcStore.justifiedBalancesGetter(justifiedCheckpoint),
-        };
-      }
-
-      if (this.shouldUpdateJustifiedCheckpoint(justifiedCheckpoint, stateSlot)) {
-        this.updateJustified(justifiedCheckpoint, justifiedBalances);
-      }
-    }
-
-    // Update finalized checkpoint.
-    if (finalizedCheckpoint.epoch > this.fcStore.finalizedCheckpoint.epoch) {
-      this.fcStore.finalizedCheckpoint = finalizedCheckpoint;
-      this.updateJustified(justifiedCheckpoint, justifiedBalances);
-    }
   }
 
   /**
@@ -711,18 +687,6 @@ export class ForkChoice implements IForkChoice {
     return executionStatus;
   }
 
-  private updateJustified(
-    justifiedCheckpoint: CheckpointWithHex,
-    justifiedBalances: EffectiveBalanceIncrements | null
-  ): void {
-    this.fcStore.justified = {
-      checkpoint: justifiedCheckpoint,
-      balances: justifiedBalances ?? this.fcStore.justifiedBalancesGetter(justifiedCheckpoint),
-    };
-    // TODO: Is this necessary?
-    this.justifiedProposerBoostScore = null;
-  }
-
   /**
    * Returns `true` if the given `store` should be updated to set
    * `state.current_justified_checkpoint` its `justified_checkpoint`.
@@ -771,6 +735,51 @@ export class ForkChoice implements IForkChoice {
     }
 
     return true;
+  }
+
+  /**
+   * Why `getJustifiedBalances` getter?
+   * - updateCheckpoints() is called in both on_block and on_tick.
+   * - Our cache strategy to get justified balances is incomplete, it can't regen all possible states.
+   * - If the justified state is not available it will get one that is "closest" to the justified checkpoint.
+   * - As a last resort fallback the state that references the new justified checkpoint is close or equal to the
+   *   desired justified state. However, the state is available only in the on_block handler
+   * - `getJustifiedBalances` makes the dynamics of justified balances cache easier to reason about
+   *
+   * **`on_block`**:
+   * May need the justified balances of:
+   * - justifiedCheckpoint
+   * These balances are not immediately available so the getter calls a cache fn `() => cache.getBalances()`
+   *
+   * **`on_tick`**
+   * May need the justified balances of:
+   * - bestJustified: Already available in `CheckpointHexWithBalance`
+   * Since this balances are already available the getter is just `() => balances`, without cache iteraction
+   */
+  private updateCheckpoints(
+    stateSlot: Slot,
+    justifiedCheckpoint: CheckpointWithHex,
+    finalizedCheckpoint: CheckpointWithHex,
+    getJustifiedBalances: () => JustifiedBalances
+  ): void {
+    // Update justified checkpoint.
+    if (justifiedCheckpoint.epoch > this.fcStore.justified.checkpoint.epoch) {
+      if (justifiedCheckpoint.epoch > this.fcStore.bestJustified.checkpoint.epoch) {
+        this.fcStore.bestJustified = {checkpoint: justifiedCheckpoint, balances: getJustifiedBalances()};
+      }
+
+      if (this.shouldUpdateJustifiedCheckpoint(justifiedCheckpoint, stateSlot)) {
+        this.fcStore.justified = {checkpoint: justifiedCheckpoint, balances: getJustifiedBalances()};
+        this.justifiedProposerBoostScore = null;
+      }
+    }
+
+    // Update finalized checkpoint.
+    if (finalizedCheckpoint.epoch > this.fcStore.finalizedCheckpoint.epoch) {
+      this.fcStore.finalizedCheckpoint = finalizedCheckpoint;
+      this.fcStore.justified = {checkpoint: justifiedCheckpoint, balances: getJustifiedBalances()};
+      this.justifiedProposerBoostScore = null;
+    }
   }
 
   /**
@@ -999,7 +1008,8 @@ export class ForkChoice implements IForkChoice {
       const ancestorAtFinalizedSlot = this.getAncestor(this.fcStore.bestJustified.checkpoint.rootHex, finalizedSlot);
       if (ancestorAtFinalizedSlot === this.fcStore.finalizedCheckpoint.rootHex) {
         // Provide pre-computed balances for bestJustified, will never trigger .justifiedBalancesGetter()
-        this.updateJustified(this.fcStore.bestJustified.checkpoint, this.fcStore.bestJustified.balances);
+        this.fcStore.justified = this.fcStore.bestJustified;
+        this.justifiedProposerBoostScore = null;
       }
     }
   }

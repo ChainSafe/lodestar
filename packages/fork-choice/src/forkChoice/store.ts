@@ -1,7 +1,7 @@
-import {EffectiveBalanceIncrements} from "@lodestar/state-transition";
+import {EffectiveBalanceIncrements, CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {phase0, Slot, RootHex} from "@lodestar/types";
 import {toHexString} from "@chainsafe/ssz";
-import {CheckpointHexWithBalance, JustifiedBalancesGetter} from "./interface.js";
+import {CheckpointHexWithBalance} from "./interface.js";
 
 /**
  * Stores checkpoints in a hybrid format:
@@ -9,6 +9,19 @@ import {CheckpointHexWithBalance, JustifiedBalancesGetter} from "./interface.js"
  * - Root in string hex for fast comparisions inside the fork-choice
  */
 export type CheckpointWithHex = phase0.Checkpoint & {rootHex: RootHex};
+
+export type JustifiedBalances = EffectiveBalanceIncrements;
+
+/**
+ * Returns the justified balances of checkpoint.
+ * MUST not throw an error in any case, related to cache miss. Either trigger regen or approximate from a close state.
+ * `blockState` is maybe used as a fallback state to get balances since it's very close to desired justified state.
+ * @param blockState state that declares justified checkpoint `checkpoint`
+ */
+export type JustifiedBalancesGetter = (
+  checkpoint: CheckpointWithHex,
+  blockState: CachedBeaconStateAllForks
+) => JustifiedBalances;
 
 /**
  * Approximates the `Store` in "Ethereum Consensus -- Beacon Chain Fork Choice":
@@ -63,7 +76,6 @@ export class ForkChoiceStore implements IForkChoiceStore {
   get justified(): CheckpointHexWithBalance {
     return this._justified;
   }
-
   set justified(justified: CheckpointHexWithBalance) {
     this._justified = justified;
     this.events?.onJustified(justified.checkpoint);

@@ -887,13 +887,18 @@ export function createLodestarMetrics(
     },
 
     balancesCache: {
-      hits: register.counter({
-        name: "lodestar_balances_cache_hits_total",
-        help: "Total number of balances cache hits",
+      requests: register.counter({
+        name: "lodestar_balances_cache_requests_total",
+        help: "Total number of balances cache requests",
       }),
       misses: register.counter({
         name: "lodestar_balances_cache_missess_total",
         help: "Total number of balances cache misses",
+      }),
+      closestStateResult: register.counter<"stateId">({
+        name: "lodestar_balances_cache_closest_state_result_total",
+        help: "Total number of stateIds returned as closest justified balances state by id",
+        labelNames: ["stateId"],
       }),
     },
 
