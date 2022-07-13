@@ -1,5 +1,7 @@
+import {EffectiveBalanceIncrements, CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {phase0, Slot, RootHex} from "@lodestar/types";
 import {toHexString} from "@chainsafe/ssz";
+import {CheckpointHexWithBalance} from "./interface.js";
 
 /**
  * Stores checkpoints in a hybrid format:
@@ -7,6 +9,19 @@ import {toHexString} from "@chainsafe/ssz";
  * - Root in string hex for fast comparisions inside the fork-choice
  */
 export type CheckpointWithHex = phase0.Checkpoint & {rootHex: RootHex};
+
+export type JustifiedBalances = EffectiveBalanceIncrements;
+
+/**
+ * Returns the justified balances of checkpoint.
+ * MUST not throw an error in any case, related to cache miss. Either trigger regen or approximate from a close state.
+ * `blockState` is maybe used as a fallback state to get balances since it's very close to desired justified state.
+ * @param blockState state that declares justified checkpoint `checkpoint`
+ */
+export type JustifiedBalancesGetter = (
+  checkpoint: CheckpointWithHex,
+  blockState: CachedBeaconStateAllForks
+) => JustifiedBalances;
 
 /**
  * Approximates the `Store` in "Ethereum Consensus -- Beacon Chain Fork Choice":
@@ -22,9 +37,10 @@ export type CheckpointWithHex = phase0.Checkpoint & {rootHex: RootHex};
  */
 export interface IForkChoiceStore {
   currentSlot: Slot;
-  justifiedCheckpoint: CheckpointWithHex;
+  justified: CheckpointHexWithBalance;
+  bestJustified: CheckpointHexWithBalance;
   finalizedCheckpoint: CheckpointWithHex;
-  bestJustifiedCheckpoint: CheckpointWithHex;
+  justifiedBalancesGetter: JustifiedBalancesGetter;
 }
 
 /* eslint-disable @typescript-eslint/naming-convention, @typescript-eslint/member-ordering */
@@ -33,32 +49,38 @@ export interface IForkChoiceStore {
  * IForkChoiceStore implementer which emits forkChoice events on updated justified and finalized checkpoints.
  */
 export class ForkChoiceStore implements IForkChoiceStore {
-  bestJustifiedCheckpoint: CheckpointWithHex;
-  private _justifiedCheckpoint: CheckpointWithHex;
+  private _justified: CheckpointHexWithBalance;
+  bestJustified: CheckpointHexWithBalance;
   private _finalizedCheckpoint: CheckpointWithHex;
 
   constructor(
     public currentSlot: Slot,
     justifiedCheckpoint: phase0.Checkpoint,
     finalizedCheckpoint: phase0.Checkpoint,
+    justifiedBalances: EffectiveBalanceIncrements,
+    public justifiedBalancesGetter: JustifiedBalancesGetter,
     private readonly events?: {
       onJustified: (cp: CheckpointWithHex) => void;
       onFinalized: (cp: CheckpointWithHex) => void;
     }
   ) {
-    this._justifiedCheckpoint = toCheckpointWithHex(justifiedCheckpoint);
+    const justified: CheckpointHexWithBalance = {
+      checkpoint: toCheckpointWithHex(justifiedCheckpoint),
+      balances: justifiedBalances,
+    };
+    this._justified = justified;
+    this.bestJustified = justified;
     this._finalizedCheckpoint = toCheckpointWithHex(finalizedCheckpoint);
-    this.bestJustifiedCheckpoint = this._justifiedCheckpoint;
   }
 
-  get justifiedCheckpoint(): CheckpointWithHex {
-    return this._justifiedCheckpoint;
+  get justified(): CheckpointHexWithBalance {
+    return this._justified;
   }
-  set justifiedCheckpoint(checkpoint: CheckpointWithHex) {
-    const cp = toCheckpointWithHex(checkpoint);
-    this._justifiedCheckpoint = cp;
-    this.events?.onJustified(cp);
+  set justified(justified: CheckpointHexWithBalance) {
+    this._justified = justified;
+    this.events?.onJustified(justified.checkpoint);
   }
+
   get finalizedCheckpoint(): CheckpointWithHex {
     return this._finalizedCheckpoint;
   }

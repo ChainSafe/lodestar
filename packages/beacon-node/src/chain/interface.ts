@@ -26,6 +26,7 @@ import {ReprocessController} from "./reprocess.js";
 import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
 import {BeaconProposerCache, ProposerPreparationData} from "./beaconProposerCache.js";
 import {SeenBlockAttesters} from "./seenCache/seenBlockAttesters.js";
+import {CheckpointBalancesCache} from "./balancesCache.js";
 
 export type Eth2Context = {
   activeValidatorCount: number;
@@ -79,6 +80,7 @@ export interface IBeaconChain {
   readonly seenBlockAttesters: SeenBlockAttesters;
 
   readonly beaconProposerCache: BeaconProposerCache;
+  readonly checkpointBalancesCache: CheckpointBalancesCache;
 
   /** Stop beacon chain processing */
   close(): Promise<void>;
