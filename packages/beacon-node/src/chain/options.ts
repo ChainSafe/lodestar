@@ -24,6 +24,10 @@ export type BlockProcessOpts = {
    * Override SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY
    */
   safeSlotsToImportOptimistically: number;
+  /**
+   * Assert progressive balances the same to EpochProcess
+   */
+  assertCorrectProgressiveBalances?: boolean;
 };
 
 export const defaultChainOptions: IChainOptions = {
@@ -33,4 +37,5 @@ export const defaultChainOptions: IChainOptions = {
   proposerBoostEnabled: true,
   safeSlotsToImportOptimistically: SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY,
   defaultFeeRecipient: defaultValidatorOptions.defaultFeeRecipient,
+  assertCorrectProgressiveBalances: false,
 };

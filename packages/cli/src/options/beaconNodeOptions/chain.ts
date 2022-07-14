@@ -8,6 +8,7 @@ export interface IChainArgs {
   "chain.persistInvalidSszObjects": boolean;
   "chain.proposerBoostEnabled": boolean;
   "chain.defaultFeeRecipient": string;
+  "chain.assertCorrectProgressiveBalances": boolean;
   "safe-slots-to-import-optimistically": number;
   // this is defined as part of IBeaconPaths
   // "chain.persistInvalidSszObjectsDir": string;
@@ -23,6 +24,7 @@ export function parseArgs(args: IChainArgs): IBeaconNodeOptions["chain"] {
     persistInvalidSszObjectsDir: undefined as any,
     proposerBoostEnabled: args["chain.proposerBoostEnabled"],
     defaultFeeRecipient: args["chain.defaultFeeRecipient"],
+    assertCorrectProgressiveBalances: args["chain.assertCorrectProgressiveBalances"],
     safeSlotsToImportOptimistically: args["safe-slots-to-import-optimistically"],
   };
 }
@@ -73,6 +75,12 @@ Will double processing times. Use only for debugging purposes.",
       "Specify fee recipient default for collecting the EL block fees and rewards (a hex string representing 20 bytes address: ^0x[a-fA-F0-9]{40}$) in case validator fails to update for a validator index before calling produceBlock.",
     defaultDescription: defaultOptions.chain.defaultFeeRecipient,
     type: "string",
+    group: "chain",
+  },
+
+  "chain.assertCorrectProgressiveBalances": {
+    description: "Enable asserting the progressive balances",
+    type: "boolean",
     group: "chain",
   },
 
