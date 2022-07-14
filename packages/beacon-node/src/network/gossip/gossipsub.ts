@@ -237,7 +237,7 @@ export class Eth2Gossipsub extends GossipSub {
   private onScrapeLodestarMetrics(metrics: IMetrics): void {
     const mesh = this["mesh"] as Map<string, Set<string>>;
     const topics = this["topics"] as Map<string, Set<string>>;
-    const peers = this["peers"] as Map<string, unknown>;
+    const peers = this["peers"] as Set<string>;
     const score = this["score"] as PeerScore;
     const meshPeersByClient = new Map<string, number>();
     const meshPeerIdStrs = new Set<string>();

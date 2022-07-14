@@ -520,10 +520,10 @@
   optionalDependencies:
     "@node-rs/crc32" "1.1.0"
 
-"@chainsafe/libp2p-gossipsub@^3.0.2":
-  version "3.0.2"
-  resolved "https://registry.yarnpkg.com/@chainsafe/libp2p-gossipsub/-/libp2p-gossipsub-3.0.2.tgz#b9dff52775b8e621699533ecc72ca9e4720138d1"
-  integrity sha512-7r6NLcxNHgttbSznpt6Jk0gZWlZorGtJGMeKISiDh7uqIP42suCqfdbkvb0PK3iAkUttWUPyVHIJ5s5RDmyaKQ==
+"@chainsafe/libp2p-gossipsub@^3.1.0":
+  version "3.1.0"
+  resolved "https://registry.yarnpkg.com/@chainsafe/libp2p-gossipsub/-/libp2p-gossipsub-3.1.0.tgz#7855302c6c370016ceb1b8c88afd2971042a09fd"
+  integrity sha512-N8vO5QG5tHqEPYPtDHOYEXE0MK3BPkIR80thx7KtCqeNOzR4B5l94XlSN2YzytTTg6tvjbR4ZGqFLoTocMRxBg==
   dependencies:
     "@libp2p/components" "^2.0.0"
     "@libp2p/crypto" "^1.0.0"
@@ -538,10 +538,13 @@
     "@libp2p/peer-record" "^2.0.0"
     "@libp2p/pubsub" "^3.0.0"
     "@libp2p/topology" "^3.0.0"
+    abortable-iterator "^4.0.2"
     denque "^1.5.0"
     err-code "^3.0.1"
     iso-random-stream "^2.0.2"
+    it-length-prefixed "^7.0.1"
     it-pipe "^2.0.3"
+    it-pushable "^3.0.0"
     multiformats "^9.6.4"
     protons-runtime "^1.0.4"
     uint8arrays "^3.0.0"
