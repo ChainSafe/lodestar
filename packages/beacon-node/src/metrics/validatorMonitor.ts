@@ -22,6 +22,7 @@ export interface IValidatorMonitor {
   registerLocalValidator(index: number): void;
   registerValidatorStatuses(currentEpoch: Epoch, statuses: IAttesterStatus[], balances?: number[]): void;
   registerBeaconBlock(src: OpSource, seenTimestampSec: Seconds, block: allForks.BeaconBlock): void;
+  registerImportedBlock(block: allForks.BeaconBlock, data: {proposerBalanceDiff: number}): void;
   submitUnaggregatedAttestation(
     seenTimestampSec: number,
     indexedAttestation: IndexedAttestation,
@@ -272,6 +273,12 @@ export function createValidatorMonitor(
       if (validator) {
         metrics.validatorMonitor.beaconBlockTotal.inc({src, index});
         metrics.validatorMonitor.beaconBlockDelaySeconds.observe({src, index}, delaySec);
+      }
+    },
+
+    registerImportedBlock(block, {proposerBalanceDiff}) {
+      if (validators.has(block.proposerIndex)) {
+        metrics.validatorMonitor.proposerBalanceDiffKnown.observe(proposerBalanceDiff);
       }
     },
 

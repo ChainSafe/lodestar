@@ -7,6 +7,7 @@ import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
 import {shouldVerify, TestRunnerFn} from "../utils/types.js";
 import {getConfig} from "../utils/getConfig.js";
+import {assertCorrectProgressiveBalances} from "../config.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
@@ -26,7 +27,7 @@ const sanitySlots: TestRunnerFn<SanitySlotsTestCase, BeaconStateAllForks> = (for
     testFunction: (testcase) => {
       const stateTB = testcase.pre.clone();
       const state = createCachedBeaconStateTest(stateTB, getConfig(fork));
-      const postState = processSlots(state, state.slot + bnToNum(testcase.slots));
+      const postState = processSlots(state, state.slot + bnToNum(testcase.slots), {assertCorrectProgressiveBalances});
       // TODO: May be part of runStateTranstion, necessary to commit again?
       postState.commit();
       return postState;
@@ -59,6 +60,7 @@ export const sanityBlocks: TestRunnerFn<SanityBlocksTestCase, BeaconStateAllFork
           verifyStateRoot: verify,
           verifyProposer: verify,
           verifySignatures: verify,
+          assertCorrectProgressiveBalances,
         });
       }
       return wrappedState;

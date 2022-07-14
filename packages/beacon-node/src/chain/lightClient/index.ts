@@ -186,11 +186,7 @@ export class LightClientServer {
    * - Persist state witness
    * - Use block's syncAggregate
    */
-  onImportBlockHead(
-    block: altair.BeaconBlock,
-    postState: CachedBeaconStateAltair,
-    parentBlock: {blockRoot: RootHex; slot: Slot}
-  ): void {
+  onImportBlockHead(block: altair.BeaconBlock, postState: CachedBeaconStateAltair, parentBlockSlot: Slot): void {
     // What is the syncAggregate signing?
     // From the state-transition
     // ```
@@ -206,7 +202,7 @@ export class LightClientServer {
       this.logger.error("Error onSyncAggregate", {}, e);
     });
 
-    this.persistPostBlockImportData(block, postState, parentBlock).catch((e) => {
+    this.persistPostBlockImportData(block, postState, parentBlockSlot).catch((e) => {
       this.logger.error("Error persistPostBlockImportData", {}, e);
     });
   }
@@ -327,7 +323,7 @@ export class LightClientServer {
   private async persistPostBlockImportData(
     block: altair.BeaconBlock,
     postState: CachedBeaconStateAltair,
-    parentBlock: {blockRoot: RootHex; slot: Slot}
+    parentBlockSlot: Slot
   ): Promise<void> {
     const blockSlot = block.slot;
 
@@ -355,11 +351,11 @@ export class LightClientServer {
     }
 
     // Only store next sync committee once per dependant root
-    const parentBlockPeriod = computeSyncPeriodAtSlot(parentBlock.slot);
+    const parentBlockPeriod = computeSyncPeriodAtSlot(parentBlockSlot);
     const period = computeSyncPeriodAtSlot(blockSlot);
     if (parentBlockPeriod < period) {
       // If the parentBlock is in a previous epoch it must be the dependantRoot of this epoch transition
-      const dependantRoot = parentBlock.blockRoot;
+      const dependantRoot = toHexString(block.parentRoot);
       const periodDependantRoots = this.knownSyncCommittee.getOrDefault(period);
       if (!periodDependantRoots.has(dependantRoot)) {
         periodDependantRoots.add(dependantRoot);

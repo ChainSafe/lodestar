@@ -12,6 +12,7 @@ import {
   isMergeTransitionBlock as isMergeTransitionBlockFn,
   processSlots,
   stateTransition,
+  isExecutionEnabled,
 } from "@lodestar/state-transition";
 import {InputType} from "@lodestar/spec-test-util";
 import {toHexString} from "@chainsafe/ssz";
@@ -38,6 +39,7 @@ import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {testLogger} from "../../utils/logger.js";
 import {getConfig} from "../utils/getConfig.js";
 import {TestRunnerFn} from "../utils/types.js";
+import {assertCorrectProgressiveBalances} from "../config.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
@@ -59,8 +61,18 @@ export const forkChoiceTest: TestRunnerFn<ForkChoiceTestCase, void> = (fork) => 
       const config = getConfig(fork);
       let state = createCachedBeaconStateTest(anchorState, config);
 
+      function justifiedBalancesGetter(checkpoint: CheckpointWithHex): EffectiveBalanceIncrements {
+        const justifiedState = checkpointStateCache.get(checkpoint);
+        if (!justifiedState) {
+          const checkpointHexKey = toCheckpointKey(checkpoint);
+          const cachedCps = checkpointStateCache.dumpCheckpointKeys().join(", ");
+          throw Error(`No justifiedState for checkpoint ${checkpointHexKey}. Available: ${cachedCps}`);
+        }
+        return getEffectiveBalanceIncrementsZeroInactive(justifiedState);
+      }
+
       const emitter = new ChainEventEmitter();
-      const forkchoice = initializeForkChoice(config, emitter, currentSlot, state, true);
+      const forkchoice = initializeForkChoice(config, emitter, currentSlot, state, true, justifiedBalancesGetter);
 
       const checkpointStateCache = new CheckpointStateCache({});
       const stateCache = new Map<string, CachedBeaconStateAllForks>();
@@ -243,7 +255,7 @@ function runStateTranstion(
     nextEpochSlot <= postSlot;
     nextEpochSlot += SLOTS_PER_EPOCH
   ) {
-    postState = processSlots(postState, nextEpochSlot, null);
+    postState = processSlots(postState, nextEpochSlot, {assertCorrectProgressiveBalances});
     cacheCheckpointState(postState, checkpointCache);
   }
   preEpoch = postState.epochCtx.epoch;
@@ -251,13 +263,13 @@ function runStateTranstion(
     verifyStateRoot: true,
     verifyProposer: false,
     verifySignatures: false,
+    assertCorrectProgressiveBalances,
   });
   const postEpoch = postState.epochCtx.epoch;
   if (postEpoch > preEpoch) {
     cacheCheckpointState(postState, checkpointCache);
   }
   // same logic like in state transition https://github.com/ChainSafe/lodestar/blob/f6778740075fe2b75edf94d1db0b5691039cb500/packages/lodestar/src/chain/blocks/stateTransition.ts#L101
-  let justifiedBalances: EffectiveBalanceIncrements | undefined;
   const checkpointHex = toCheckpointHex(postState.currentJustifiedCheckpoint);
   const justifiedState = checkpointCache.get(checkpointHex);
   if (
@@ -269,14 +281,17 @@ function runStateTranstion(
       const cachedCps = checkpointCache.dumpCheckpointKeys().join(", ");
       throw Error(`No justifiedState for checkpoint ${checkpointHexKey}. Available: ${cachedCps}`);
     }
-    justifiedBalances = getEffectiveBalanceIncrementsZeroInactive(justifiedState);
   }
 
+  const executionStatus =
+    isBellatrixBlockBodyType(signedBlock.message.body) &&
+    isBellatrixStateType(postState) &&
+    isExecutionEnabled(postState, signedBlock.message)
+      ? ExecutionStatus.Valid
+      : ExecutionStatus.PreMerge;
+
   try {
-    forkchoice.onBlock(signedBlock.message, postState, {
-      blockDelaySec,
-      justifiedBalances,
-    });
+    forkchoice.onBlock(signedBlock.message, postState, blockDelaySec, executionStatus);
     for (const attestation of signedBlock.message.body.attestations) {
       try {
         const indexedAttestation = postState.epochCtx.getIndexedAttestation(attestation);

@@ -6,8 +6,11 @@ import path from "node:path";
 import {
   BeaconStateAllForks,
   CachedBeaconStateAllForks,
+  computeEpochAtSlot,
   computeStartSlotAtEpoch,
   createCachedBeaconState,
+  EffectiveBalanceIncrements,
+  getEffectiveBalanceIncrementsZeroInactive,
   Index2PubkeyCache,
   PubkeyIndexMap,
 } from "@lodestar/state-transition";
@@ -53,6 +56,7 @@ import {ReprocessController} from "./reprocess.js";
 import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
 import {SeenBlockAttesters} from "./seenCache/seenBlockAttesters.js";
 import {BeaconProposerCache} from "./beaconProposerCache.js";
+import {CheckpointBalancesCache} from "./balancesCache.js";
 import {ChainEvent} from "./index.js";
 
 export class BeaconChain implements IBeaconChain {
@@ -97,6 +101,7 @@ export class BeaconChain implements IBeaconChain {
   readonly index2pubkey: Index2PubkeyCache;
 
   readonly beaconProposerCache: BeaconProposerCache;
+  readonly checkpointBalancesCache: CheckpointBalancesCache;
 
   protected readonly blockProcessor: BlockProcessor;
   protected readonly db: IBeaconDb;
@@ -159,6 +164,7 @@ export class BeaconChain implements IBeaconChain {
     this.index2pubkey = [];
 
     this.beaconProposerCache = new BeaconProposerCache(opts);
+    this.checkpointBalancesCache = new CheckpointBalancesCache();
 
     // Restore state caches
     const cachedState = createCachedBeaconState(anchorState, {
@@ -176,6 +182,7 @@ export class BeaconChain implements IBeaconChain {
       clock.currentSlot,
       cachedState,
       opts.proposerBoostEnabled,
+      this.justifiedBalancesGetter.bind(this),
       metrics
     );
     const regen = new QueuedStateRegenerator({
@@ -208,6 +215,7 @@ export class BeaconChain implements IBeaconChain {
         seenAggregatedAttestations: this.seenAggregatedAttestations,
         seenBlockAttesters: this.seenBlockAttesters,
         beaconProposerCache: this.beaconProposerCache,
+        checkpointBalancesCache: this.checkpointBalancesCache,
         reprocessController: this.reprocessController,
         emitter,
         config,
@@ -351,6 +359,95 @@ export class BeaconChain implements IBeaconChain {
     if (this.opts.persistInvalidSszObjects) {
       void this.persistInvalidSszObject(view.type.typeName, view.serialize(), view.hashTreeRoot(), suffix);
     }
+  }
+
+  /**
+   * `ForkChoice.onBlock` must never throw for a block that is valid with respect to the network
+   * `justifiedBalancesGetter()` must never throw and it should always return a state.
+   * @param blockState state that declares justified checkpoint `checkpoint`
+   */
+  private justifiedBalancesGetter(
+    checkpoint: CheckpointWithHex,
+    blockState: CachedBeaconStateAllForks
+  ): EffectiveBalanceIncrements {
+    this.metrics?.balancesCache.requests.inc();
+
+    const effectiveBalances = this.checkpointBalancesCache.get(checkpoint);
+    if (effectiveBalances) {
+      return effectiveBalances;
+    } else {
+      // not expected, need metrics
+      this.metrics?.balancesCache.misses.inc();
+      this.logger.debug("checkpointBalances cache miss", {
+        epoch: checkpoint.epoch,
+        root: checkpoint.rootHex,
+      });
+
+      const {state, stateId, shouldWarn} = this.closestJustifiedBalancesStateToCheckpoint(checkpoint, blockState);
+      this.metrics?.balancesCache.closestStateResult.inc({stateId});
+      if (shouldWarn) {
+        this.logger.warn("currentJustifiedCheckpoint state not avail, using closest state", {
+          checkpointEpoch: checkpoint.epoch,
+          checkpointRoot: checkpoint.rootHex,
+          stateId,
+          stateSlot: state.slot,
+          stateRoot: toHex(state.hashTreeRoot()),
+        });
+      }
+
+      return getEffectiveBalanceIncrementsZeroInactive(state);
+    }
+  }
+
+  /**
+   * - Assumptions + invariant this function is based on:
+   * - Our cache can only persist X states at once to prevent OOM
+   * - Some old states (including to-be justified checkpoint) may / must be dropped from the cache
+   * - Thus, there is no guarantee that the state for a justified checkpoint will be available in the cache
+   * @param blockState state that declares justified checkpoint `checkpoint`
+   */
+  private closestJustifiedBalancesStateToCheckpoint(
+    checkpoint: CheckpointWithHex,
+    blockState: CachedBeaconStateAllForks
+  ): {state: CachedBeaconStateAllForks; stateId: string; shouldWarn: boolean} {
+    const state = this.checkpointStateCache.get(checkpoint);
+    if (state) {
+      return {state, stateId: "checkpoint_state", shouldWarn: false};
+    }
+
+    // Check if blockState is in the same epoch, not need to iterate the fork-choice then
+    if (computeEpochAtSlot(blockState.slot) === checkpoint.epoch) {
+      return {state: blockState, stateId: "block_state_same_epoch", shouldWarn: true};
+    }
+
+    // Find a state in the same branch of checkpoint at same epoch. Balances should exactly the same
+    for (const descendantBlock of this.forkChoice.forwardIterateDescendants(checkpoint.rootHex)) {
+      if (computeEpochAtSlot(descendantBlock.slot) === checkpoint.epoch) {
+        const descendantBlockState = this.stateCache.get(descendantBlock.stateRoot);
+        if (descendantBlockState) {
+          return {state: descendantBlockState, stateId: "descendant_state_same_epoch", shouldWarn: true};
+        }
+      }
+    }
+
+    // Check if blockState is in the next epoch, not need to iterate the fork-choice then
+    if (computeEpochAtSlot(blockState.slot) === checkpoint.epoch + 1) {
+      return {state: blockState, stateId: "block_state_next_epoch", shouldWarn: true};
+    }
+
+    // Find a state in the same branch of checkpoint at a latter epoch. Balances are not the same, but should be close
+    // Note: must call .forwardIterateDescendants() again since nodes are not sorted
+    for (const descendantBlock of this.forkChoice.forwardIterateDescendants(checkpoint.rootHex)) {
+      if (computeEpochAtSlot(descendantBlock.slot) > checkpoint.epoch) {
+        const descendantBlockState = this.stateCache.get(descendantBlock.stateRoot);
+        if (descendantBlockState) {
+          return {state: blockState, stateId: "descendant_state_latter_epoch", shouldWarn: true};
+        }
+      }
+    }
+
+    // If there's no state available in the same branch of checkpoint use blockState regardless of its epoch
+    return {state: blockState, stateId: "block_state_any_epoch", shouldWarn: true};
   }
 
   private async persistInvalidSszObject(

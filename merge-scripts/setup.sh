@@ -3,7 +3,13 @@
 
 source parse-args.sh
 source "./fixed.vars"
+if [ ! -n "$devnetVars" ] 
+then
+  echo "You need to specify the corresponding network.vars file, for e.g. kiln.vars, exiting ..."
+  exit;
+fi;
 source $devnetVars
+source validate.sh
 
 currentDir=$(pwd)
 setupConfigUrl=https://github.com/eth-clients/merge-testnets.git
@@ -12,15 +18,6 @@ configGitDir=$CONFIG_GIT_DIR
 
 gethImage=$GETH_IMAGE
 nethermindImage=$NETHERMIND_IMAGE
-
-if [ ! -n "$dataDir" ] || [ ! -n "$devnetVars" ] || ([ "$elClient" != "geth" ] && [ "$elClient" != "nethermind" ] && [ "$elClient" != "ethereumjs" ] && [ "$elClient" != "besu" ]) 
-then
-  echo "usage: ./setup.sh --dataDir <data dir> --elClient <geth | nethermind | ethereumjs | besu> --devetVars <devnet vars file> [--dockerWithSudo --withTerminal \"gnome-terminal --disable-factory --\"]"
-  echo "example: ./setup.sh --dataDir kiln-data --elClient nethermind --devnetVars ./kiln.vars --dockerWithSudo --withTerminal \"gnome-terminal --disable-factory --\""
-  echo "Note: if running on macOS where gnome-terminal is not available, remove the gnome-terminal related flags."
-  echo "example: ./setup.sh --dataDir kiln-data --elClient geth --devnetVars ./kiln.vars"
-  exit;
-fi
 
 
 mkdir $dataDir && mkdir $dataDir/lodestar && mkdir $dataDir/geth && mkdir $dataDir/nethermind && mkdir $dataDir/ethereumjs && mkdir $dataDir/besu
@@ -215,7 +212,8 @@ fi;
 clCmd="$clCmd $LODESTAR_EXTRA_ARGS"
 
 valName="$DEVNET_NAME-validator"
-valCmd="$dockerCmd --name $valName $clDockerNetwork -v $currentDir/$dataDir:/data"
+# we are additionally mounting current dir to /currentDir if anyone wants to provide keystores
+valCmd="$dockerCmd --name $valName $clDockerNetwork -v $currentDir:/currentDir -v $currentDir/$dataDir:/data"
 # mount and use config
 if [ -n "$configGitDir" ]
 then
@@ -223,7 +221,7 @@ then
 else
   valCmd="$valCmd $LODESTAR_IMAGE validator"
 fi;
-valCmd="$valCmd $LODESTAR_VALIDATOR_ARGS"
+valCmd="$valCmd $LODESTAR_VALIDATOR_ARGS $validatorKeyArgs"
 
 echo -n $JWT_SECRET > $dataDir/jwtsecret
 terminalInfo=""

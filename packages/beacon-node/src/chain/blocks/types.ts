@@ -1,6 +1,6 @@
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
-import {ProtoBlock, ExecutionStatus} from "@lodestar/fork-choice";
-import {allForks} from "@lodestar/types";
+import {ExecutionStatus} from "@lodestar/fork-choice";
+import {allForks, Slot} from "@lodestar/types";
 
 export type FullyVerifiedBlockFlags = {
   /**
@@ -19,10 +19,6 @@ export type FullyVerifiedBlockFlags = {
    * Used by range sync.
    */
   ignoreIfFinalized?: boolean;
-  /**
-   * If the execution payload couldnt be verified because of EL syncing status, used in optimistic sync or for merge block
-   */
-  executionStatus?: ExecutionStatus;
 };
 
 export type PartiallyVerifiedBlockFlags = FullyVerifiedBlockFlags & {
@@ -50,7 +46,12 @@ export type PartiallyVerifiedBlockFlags = FullyVerifiedBlockFlags & {
 export type FullyVerifiedBlock = FullyVerifiedBlockFlags & {
   block: allForks.SignedBeaconBlock;
   postState: CachedBeaconStateAllForks;
-  parentBlock: ProtoBlock;
+  parentBlockSlot: Slot;
+  proposerBalanceDiff: number;
+  /**
+   * If the execution payload couldnt be verified because of EL syncing status, used in optimistic sync or for merge block
+   */
+  executionStatus: ExecutionStatus;
 };
 
 /**

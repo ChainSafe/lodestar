@@ -1,5 +1,5 @@
 import {EffectiveBalanceIncrements} from "@lodestar/state-transition";
-import {BeaconStateAllForks} from "@lodestar/state-transition";
+import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {Epoch, Slot, ValidatorIndex, phase0, allForks, Root, RootHex} from "@lodestar/types";
 import {ProtoBlock, ExecutionStatus} from "../protoArray/interface.js";
 import {CheckpointWithHex} from "./store.js";
@@ -7,6 +7,16 @@ import {CheckpointWithHex} from "./store.js";
 export type CheckpointHex = {
   epoch: Epoch;
   root: RootHex;
+};
+
+export type CheckpointsWithHex = {
+  justifiedCheckpoint: CheckpointWithHex;
+  finalizedCheckpoint: CheckpointWithHex;
+};
+
+export type CheckpointHexWithBalance = {
+  checkpoint: CheckpointWithHex;
+  balances: EffectiveBalanceIncrements;
 };
 
 export interface IForkChoice {
@@ -54,11 +64,13 @@ export interface IForkChoice {
    * ## Notes:
    *
    * The supplied block **must** pass the `state_transition` function as it will not be run here.
-   *
-   * `preCachedData` includes data necessary for validation included in the spec but some data is
-   * pre-fetched in advance to keep the fork-choice fully syncronous
    */
-  onBlock(block: allForks.BeaconBlock, state: BeaconStateAllForks, preCachedData?: OnBlockPrecachedData): void;
+  onBlock(
+    block: allForks.BeaconBlock,
+    state: CachedBeaconStateAllForks,
+    blockDelaySec: number,
+    executionStatus: ExecutionStatus
+  ): void;
   /**
    * Register `attestation` with the fork choice DAG so that it may influence future calls to `getHead`.
    *
@@ -127,9 +139,13 @@ export interface IForkChoice {
   getAllNonAncestorBlocks(blockRoot: RootHex): ProtoBlock[];
   getCanonicalBlockAtSlot(slot: Slot): ProtoBlock | null;
   /**
-   * Iterates forwards through block summaries, exact order is not guaranteed
+   * Returns all ProtoBlock known to fork-choice. Must not mutated the returned array
    */
   forwarditerateAncestorBlocks(): ProtoBlock[];
+  /**
+   * Iterates forward descendants of blockRoot. Does not yield blockRoot itself
+   */
+  forwardIterateDescendants(blockRoot: RootHex): IterableIterator<ProtoBlock>;
   getBlockSummariesByParentRoot(parentRoot: RootHex): ProtoBlock[];
   getBlockSummariesAtSlot(slot: Slot): ProtoBlock[];
   /** Returns the distance of common ancestor of nodes to newNode. Returns null if newNode is descendant of prevNode */
@@ -145,14 +161,6 @@ export type PowBlockHex = {
   blockHash: RootHex;
   parentHash: RootHex;
   totalDifficulty: bigint;
-};
-
-export type OnBlockPrecachedData = {
-  /** `justifiedBalances` balances of justified state which is updated synchronously. */
-  justifiedBalances?: EffectiveBalanceIncrements;
-  /** Time in seconds when the block was received */
-  blockDelaySec: number;
-  executionStatus?: ExecutionStatus;
 };
 
 export type LatestMessage = {

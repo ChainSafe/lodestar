@@ -3,6 +3,7 @@ import {CompositeViewDU} from "@chainsafe/ssz";
 import {CachedBeaconStatePhase0, CachedBeaconStateAltair} from "../types.js";
 import {newZeroedArray, RootCache} from "../util/index.js";
 import {getNextSyncCommittee} from "../util/syncCommittee.js";
+import {sumTargetUnslashedBalanceIncrements} from "../util/targetUnslashedBalance.js";
 import {getCachedBeaconState} from "../cache/stateCache.js";
 import {getAttestationParticipationStatus} from "../block/processAttestationsAltair.js";
 
@@ -90,6 +91,25 @@ export function upgradeStateToAltair(statePhase0: CachedBeaconStatePhase0): Cach
   // TODO: This could only drop the caches of index 15,16. However this would couple this code tightly with SSZ ViewDU
   //       internals. If the cache is not cleared, consuming the ViewDU instance could break in strange ways.
   stateAltair["clearCache"]();
+
+  // TODO: describe issue. Compute progressive target balances
+  //
+  // Note: in EpochContext.afterProcessEpoch previousTargetUnslashedBalanceIncrements is overwritten,
+  //       currentTargetUnslashedBalanceIncrements is rotated to previousTargetUnslashedBalanceIncrements
+  //
+  // Here target balance is computed in full, which is slightly less performant than doing so in the loop
+  // above but gurantees consistency with EpochContext.createFromState(). Note execution order below:
+  // ```
+  // processEpoch()
+  // epochCtx.afterProcessEpoch()
+  // if (...) upgradeStateToAltair()
+  // ```
+  const previousEpoch = stateAltair.epochCtx.epoch - 1;
+  stateAltair.epochCtx.previousTargetUnslashedBalanceIncrements = sumTargetUnslashedBalanceIncrements(
+    stateAltair.previousEpochParticipation.getAll(),
+    previousEpoch,
+    stateAltair.validators.getAllReadonlyValues()
+  );
 
   return stateAltair;
 }

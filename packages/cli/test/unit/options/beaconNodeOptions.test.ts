@@ -22,6 +22,7 @@ describe("options / beaconNodeOptions", () => {
       "chain.persistInvalidSszObjects": true,
       "chain.proposerBoostEnabled": false,
       "chain.defaultFeeRecipient": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "chain.assertCorrectProgressiveBalances": true,
       "safe-slots-to-import-optimistically": 256,
 
       "eth1.enabled": true,
@@ -85,6 +86,7 @@ describe("options / beaconNodeOptions", () => {
         proposerBoostEnabled: false,
         safeSlotsToImportOptimistically: 256,
         defaultFeeRecipient: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        assertCorrectProgressiveBalances: true,
       },
       eth1: {
         enabled: true,

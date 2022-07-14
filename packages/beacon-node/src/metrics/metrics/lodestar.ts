@@ -792,7 +792,21 @@ export function createLodestarMetrics(
         labelNames: ["index", "src"],
         buckets: [0.1, 1],
       }),
+
+      // Only for known
+      proposerBalanceDiffKnown: register.histogram({
+        name: "validator_monitor_proposer_balance_diff_known_gwei",
+        help: "Balance diff of known block proposer after importing a valid block",
+        // Jul22 mainnet block reward is consistently between 29,000,000-28,000,000 GWei
+        buckets: [10_000, 100_000, 1e6, 10e6, 20e6, 50e6, 100e6, 1000e6],
+      }),
     },
+
+    proposerBalanceDiffAny: register.histogram({
+      name: "lodestar_proposer_balance_diff_any_gwei",
+      help: "Balance diff of every block proposer after importing a valid block",
+      buckets: [10_000, 100_000, 1e6, 10e6, 20e6, 50e6, 100e6, 1000e6],
+    }),
 
     // regen metrics
 
@@ -820,6 +834,15 @@ export function createLodestarMetrics(
       secondsSinceLastRead: register.avgMinMax({
         name: "lodestar_state_cache_seconds_since_last_read",
         help: "Avg min max of all state cache items seconds since last reads",
+      }),
+      stateClonedCount: register.histogram({
+        name: "lodestar_state_cache_state_cloned_clount",
+        help: "Histogram of cloned count per state every time state.clone() is called",
+        buckets: [1, 2, 5, 10, 50, 250],
+      }),
+      stateInternalCacheMiss: register.gauge({
+        name: "lodestar_state_cache_state_internal_cache_miss",
+        help: "Retrieved state does not have its internal cache populated",
       }),
     },
 
@@ -851,6 +874,31 @@ export function createLodestarMetrics(
       secondsSinceLastRead: register.avgMinMax({
         name: "lodestar_cp_state_epoch_seconds_since_last_read",
         help: "Avg min max of all state cache items seconds since last reads",
+      }),
+      stateClonedCount: register.histogram({
+        name: "lodestar_cp_state_cache_state_cloned_clount",
+        help: "Histogram of cloned count per state every time state.clone() is called",
+        buckets: [1, 2, 5, 10, 50, 250],
+      }),
+      stateInternalCacheMiss: register.gauge({
+        name: "lodestar_cp_state_cache_state_internal_cache_miss",
+        help: "Retrieved state does not have its internal cache populated",
+      }),
+    },
+
+    balancesCache: {
+      requests: register.counter({
+        name: "lodestar_balances_cache_requests_total",
+        help: "Total number of balances cache requests",
+      }),
+      misses: register.counter({
+        name: "lodestar_balances_cache_missess_total",
+        help: "Total number of balances cache misses",
+      }),
+      closestStateResult: register.counter<"stateId">({
+        name: "lodestar_balances_cache_closest_state_result_total",
+        help: "Total number of stateIds returned as closest justified balances state by id",
+        labelNames: ["stateId"],
       }),
     },
 

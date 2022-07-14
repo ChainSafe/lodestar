@@ -1,7 +1,6 @@
 import {expect} from "chai";
 import {config} from "@lodestar/config/default";
 import {fromHexString} from "@chainsafe/ssz";
-import {getEffectiveBalanceIncrementsZeroed} from "@lodestar/state-transition";
 import {ForkChoice, IForkChoiceStore, ProtoBlock, ProtoArray, ExecutionStatus} from "../../../src/index.js";
 
 describe("Forkchoice", function () {
@@ -48,14 +47,21 @@ describe("Forkchoice", function () {
 
   const fcStore: IForkChoiceStore = {
     currentSlot: block.slot,
-    justifiedCheckpoint: {epoch: genesisEpoch, root: fromHexString(finalizedRoot), rootHex: finalizedRoot},
+    justified: {
+      checkpoint: {epoch: genesisEpoch, root: fromHexString(finalizedRoot), rootHex: finalizedRoot},
+      balances: new Uint8Array([32]),
+    },
+    bestJustified: {
+      checkpoint: {epoch: genesisEpoch, root: fromHexString(finalizedRoot), rootHex: finalizedRoot},
+      balances: new Uint8Array([32]),
+    },
     finalizedCheckpoint: {epoch: genesisEpoch, root: fromHexString(finalizedRoot), rootHex: finalizedRoot},
-    bestJustifiedCheckpoint: {epoch: genesisEpoch, root: fromHexString(finalizedRoot), rootHex: finalizedRoot},
+    justifiedBalancesGetter: () => new Uint8Array([32]),
   };
 
   it("getAllAncestorBlocks", function () {
     protoArr.onBlock(block);
-    const forkchoice = new ForkChoice(config, fcStore, protoArr, getEffectiveBalanceIncrementsZeroed(0), false);
+    const forkchoice = new ForkChoice(config, fcStore, protoArr, false);
     const summaries = forkchoice.getAllAncestorBlocks(finalizedDesc);
     // there are 2 blocks in protoArray but iterateAncestorBlocks should only return non-finalized blocks
     expect(summaries.length).to.be.equals(1, "should not return the finalized block");

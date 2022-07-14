@@ -5,8 +5,7 @@ import {
   isBellatrixBlockBodyType,
   isMergeTransitionBlock as isMergeTransitionBlockFn,
   isExecutionEnabled,
-  getAllBlockSignatureSetsExceptProposer,
-  getAllBlockSignatureSets,
+  getBlockSignatureSets,
   stateTransition,
 } from "@lodestar/state-transition";
 import {bellatrix} from "@lodestar/types";
@@ -50,14 +49,19 @@ export async function verifyBlock(
 ): Promise<FullyVerifiedBlock> {
   const parentBlock = verifyBlockSanityChecks(chain, partiallyVerifiedBlock);
 
-  const {postState, executionStatus} = await verifyBlockStateTransition(chain, partiallyVerifiedBlock, opts);
+  const {postState, executionStatus, proposerBalanceDiff} = await verifyBlockStateTransition(
+    chain,
+    partiallyVerifiedBlock,
+    opts
+  );
 
   return {
     block: partiallyVerifiedBlock.block,
     postState,
-    parentBlock,
+    parentBlockSlot: parentBlock.slot,
     skipImportingAttestations: partiallyVerifiedBlock.skipImportingAttestations,
     executionStatus,
+    proposerBalanceDiff,
   };
 }
 
@@ -128,7 +132,7 @@ export async function verifyBlockStateTransition(
   chain: VerifyBlockModules,
   partiallyVerifiedBlock: PartiallyVerifiedBlock,
   opts: BlockProcessOpts
-): Promise<{postState: CachedBeaconStateAllForks; executionStatus: ExecutionStatus}> {
+): Promise<{postState: CachedBeaconStateAllForks; executionStatus: ExecutionStatus; proposerBalanceDiff: number}> {
   const {block, validProposerSignature, validSignatures} = partiallyVerifiedBlock;
 
   // TODO: Skip in process chain segment
@@ -154,6 +158,7 @@ export async function verifyBlockStateTransition(
       // if block is trusted don't verify proposer or op signature
       verifyProposer: !useBlsBatchVerify && !validSignatures && !validProposerSignature,
       verifySignatures: !useBlsBatchVerify && !validSignatures,
+      assertCorrectProgressiveBalances: opts.assertCorrectProgressiveBalances,
     },
     chain.metrics
   );
@@ -171,9 +176,9 @@ export async function verifyBlockStateTransition(
   // NOTE: If in the future multiple blocks signatures are verified at once, all blocks must be in the same epoch
   // so the attester and proposer shufflings are correct.
   if (useBlsBatchVerify && !validSignatures) {
-    const signatureSets = validProposerSignature
-      ? getAllBlockSignatureSetsExceptProposer(postState, block)
-      : getAllBlockSignatureSets(postState, block);
+    const signatureSets = getBlockSignatureSets(postState, block, {
+      skipProposerSignature: validProposerSignature,
+    });
 
     if (
       signatureSets.length > 0 &&
@@ -350,7 +355,11 @@ export async function verifyBlockStateTransition(
     logOnPowBlock(chain, block as bellatrix.SignedBeaconBlock);
   }
 
-  return {postState, executionStatus};
+  // For metric block profitability
+  const proposerIndex = block.message.proposerIndex;
+  const proposerBalanceDiff = postState.balances.get(proposerIndex) - preState.balances.get(proposerIndex);
+
+  return {postState, executionStatus, proposerBalanceDiff};
 }
 
 function logOnPowBlock(chain: VerifyBlockModules, block: bellatrix.SignedBeaconBlock): void {
