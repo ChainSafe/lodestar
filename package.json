@@ -58,7 +58,7 @@
     "prettier": "^2.0.5",
     "sinon": "^9.0.2",
     "supertest": "^4.0.2",
-    "ts-node": "^10.7.0",
+    "ts-node": "^10.9.1",
     "typedoc": "^0.19.2",
     "typedoc-plugin-external-module-name": "^4.0.3",
     "typedoc-plugin-internal-external": "^2.2.0",
