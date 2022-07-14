@@ -65,7 +65,7 @@ export function slashValidator(
     increaseBalance(state, whistleblowerIndex, whistleblowerReward - proposerReward);
   }
 
-  // Unrealized checkpoints issue pull-up tips N+1: Compute progressive target balances
+  // TODO: describe issue. Compute progressive target balances
   // if a validator is slashed, lookup their participation and remove from the cumulative values
   if (fork >= ForkSeq.altair) {
     const {previousEpochParticipation, currentEpochParticipation} = state as CachedBeaconStateAltair;

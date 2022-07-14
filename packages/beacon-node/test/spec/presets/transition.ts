@@ -7,6 +7,7 @@ import {config} from "@lodestar/config/default";
 import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {TestRunnerFn} from "../utils/types.js";
+import {assertCorrectProgressiveBalances} from "../config.js";
 import {getPreviousFork} from "./fork.js";
 
 export const transition: TestRunnerFn<TransitionTestCase, BeaconStateAllForks> = (forkNext) => {
@@ -47,7 +48,7 @@ export const transition: TestRunnerFn<TransitionTestCase, BeaconStateAllForks> =
           verifyStateRoot: true,
           verifyProposer: false,
           verifySignatures: false,
-          assertCorrectProgressiveBalances: true,
+          assertCorrectProgressiveBalances,
         });
       }
       return state;

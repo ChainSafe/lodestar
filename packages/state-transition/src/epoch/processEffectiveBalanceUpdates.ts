@@ -57,7 +57,7 @@ export function processEffectiveBalanceUpdates(state: CachedBeaconStateAllForks,
       // Also update the fast cached version
       const newEffectiveBalanceIncrement = Math.floor(effectiveBalance / EFFECTIVE_BALANCE_INCREMENT);
 
-      // Unrealized checkpoints issue pull-up tips N+1: Compute progressive target balances
+      // TODO: describe issue. Compute progressive target balances
       // Must update target balances for consistency, see comments below
       if (forkSeq >= ForkSeq.altair) {
         const deltaEffectiveBalanceIncrement = newEffectiveBalanceIncrement - effectiveBalanceIncrement;

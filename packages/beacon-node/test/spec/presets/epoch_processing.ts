@@ -10,6 +10,7 @@ import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
 import {getConfig} from "../utils/getConfig.js";
 import {TestRunnerFn} from "../utils/types.js";
+import {assertCorrectProgressiveBalances} from "../config.js";
 
 export type EpochProcessFn = (state: CachedBeaconStateAllForks, epochProcess: EpochProcess) => void;
 
@@ -57,8 +58,7 @@ export const epochProcessing: TestRunnerFn<EpochProcessingTestCase, BeaconStateA
       const stateTB = testcase.pre.clone();
       const state = createCachedBeaconStateTest(stateTB, config);
 
-      const assertCorrectProgressiveBalances = true;
-      const epochProcess = beforeProcessEpoch(state, assertCorrectProgressiveBalances);
+      const epochProcess = beforeProcessEpoch(state, {assertCorrectProgressiveBalances});
       epochProcessFn(state, epochProcess);
       state.commit();
 

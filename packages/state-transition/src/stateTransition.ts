@@ -3,7 +3,7 @@ import {allForks, Slot, ssz} from "@lodestar/types";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {toHexString} from "@chainsafe/ssz";
 import {IBeaconStateTransitionMetrics} from "./metrics.js";
-import {beforeProcessEpoch} from "./cache/epochProcess.js";
+import {beforeProcessEpoch, EpochProcessOpts} from "./cache/epochProcess.js";
 import {CachedBeaconStateAllForks, CachedBeaconStatePhase0, CachedBeaconStateAltair} from "./types.js";
 import {computeEpochAtSlot} from "./util/index.js";
 import {verifyProposerSignature} from "./signatureSets/index.js";
@@ -13,26 +13,22 @@ import {processEpoch} from "./epoch/index.js";
 
 // Multifork capable state transition
 
+export type StateTransitionOpts = EpochProcessOpts & {
+  verifyStateRoot?: boolean;
+  verifyProposer?: boolean;
+  verifySignatures?: boolean;
+};
+
 /**
  * Implementation Note: follows the optimizations in protolambda's eth2fastspec (https://github.com/protolambda/eth2fastspec)
  */
 export function stateTransition(
   state: CachedBeaconStateAllForks,
   signedBlock: allForks.FullOrBlindedSignedBeaconBlock,
-  options?: {
-    verifyStateRoot?: boolean;
-    verifyProposer?: boolean;
-    verifySignatures?: boolean;
-    assertCorrectProgressiveBalances?: boolean;
-  },
+  options?: StateTransitionOpts,
   metrics?: IBeaconStateTransitionMetrics | null
 ): CachedBeaconStateAllForks {
-  const {
-    verifyStateRoot = true,
-    verifyProposer = true,
-    verifySignatures = true,
-    assertCorrectProgressiveBalances = false,
-  } = options || {};
+  const {verifyStateRoot = true, verifyProposer = true, verifySignatures = true} = options || {};
 
   const block = signedBlock.message;
   const blockSlot = block.slot;
@@ -44,7 +40,7 @@ export function stateTransition(
 
   // Process slots (including those with no blocks) since block.
   // Includes state upgrades
-  postState = processSlotsWithTransientCache(postState, blockSlot, assertCorrectProgressiveBalances, metrics);
+  postState = processSlotsWithTransientCache(postState, blockSlot, options, metrics);
 
   // Verify proposer signature only
   if (verifyProposer) {
@@ -89,15 +85,15 @@ export function stateTransition(
 export function processSlots(
   state: CachedBeaconStateAllForks,
   slot: Slot,
-  metrics?: IBeaconStateTransitionMetrics | null,
-  assertCorrectProgressiveBalances = false
+  epochProcessOpts?: EpochProcessOpts,
+  metrics?: IBeaconStateTransitionMetrics | null
 ): CachedBeaconStateAllForks {
   let postState = state.clone();
 
   // State is already a ViewDU, which won't commit changes. Equivalent to .setStateCachesAsTransient()
   // postState.setStateCachesAsTransient();
 
-  postState = processSlotsWithTransientCache(postState, slot, assertCorrectProgressiveBalances, metrics);
+  postState = processSlotsWithTransientCache(postState, slot, epochProcessOpts, metrics);
 
   // Apply changes to state, must do before hashing
   postState.commit();
@@ -111,7 +107,7 @@ export function processSlots(
 function processSlotsWithTransientCache(
   postState: CachedBeaconStateAllForks,
   slot: Slot,
-  assertCorrectProgressiveBalances: boolean,
+  epochProcessOpts?: EpochProcessOpts,
   metrics?: IBeaconStateTransitionMetrics | null
 ): CachedBeaconStateAllForks {
   const {config} = postState;
@@ -128,7 +124,7 @@ function processSlotsWithTransientCache(
       const fork = postState.config.getForkSeq(postState.slot);
       const timer = metrics?.stfnEpochTransition.startTimer();
       try {
-        const epochProcess = beforeProcessEpoch(postState, assertCorrectProgressiveBalances);
+        const epochProcess = beforeProcessEpoch(postState, epochProcessOpts);
         processEpoch(fork, postState, epochProcess);
         const {currentEpoch, statuses, balances} = epochProcess;
         metrics?.registerValidatorStatuses(currentEpoch, statuses, balances);

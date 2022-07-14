@@ -1,6 +1,6 @@
 import {Epoch, ValidatorIndex} from "@lodestar/types";
 import {intDiv} from "@lodestar/utils";
-import {EPOCHS_PER_SLASHINGS_VECTOR, FAR_FUTURE_EPOCH, ForkName, MAX_EFFECTIVE_BALANCE} from "@lodestar/params";
+import {EPOCHS_PER_SLASHINGS_VECTOR, FAR_FUTURE_EPOCH, ForkSeq, MAX_EFFECTIVE_BALANCE} from "@lodestar/params";
 
 import {
   IAttesterStatus,
@@ -20,6 +20,13 @@ import {computeBaseRewardPerIncrement} from "../util/altair.js";
 import {processPendingAttestations} from "../epoch/processPendingAttestations.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
+
+export type EpochProcessOpts = {
+  /**
+   * Assert progressive balances the same to EpochProcess
+   */
+  assertCorrectProgressiveBalances?: boolean;
+};
 
 /**
  * EpochProcess is the parent object of:
@@ -163,12 +170,9 @@ export interface EpochProcess {
   isActiveNextEpoch: boolean[];
 }
 
-export function beforeProcessEpoch(
-  state: CachedBeaconStateAllForks,
-  assertCorrectProgressiveBalances = false
-): EpochProcess {
+export function beforeProcessEpoch(state: CachedBeaconStateAllForks, opts?: EpochProcessOpts): EpochProcess {
   const {config, epochCtx} = state;
-  const forkName = config.getForkName(state.slot);
+  const forkSeq = config.getForkSeq(state.slot);
   const currentEpoch = epochCtx.currentShuffling.epoch;
   const prevEpoch = epochCtx.previousShuffling.epoch;
   const nextEpoch = currentEpoch + 1;
@@ -304,7 +308,7 @@ export function beforeProcessEpoch(
     (a, b) => validators[a].activationEligibilityEpoch - validators[b].activationEligibilityEpoch || a - b
   );
 
-  if (forkName === ForkName.phase0) {
+  if (forkSeq === ForkSeq.phase0) {
     processPendingAttestations(
       state as CachedBeaconStatePhase0,
       statuses,
@@ -373,27 +377,17 @@ export function beforeProcessEpoch(
     }
   }
 
-  if (assertCorrectProgressiveBalances) {
-    // Unrealized checkpoints issue pull-up tips N+1: To compute progressive target balances
-    if (forkName !== ForkName.phase0) {
+  if (opts?.assertCorrectProgressiveBalances) {
+    // TODO: describe issue. Compute progressive target balances
+    if (forkSeq >= ForkSeq.altair) {
       if (epochCtx.currentTargetUnslashedBalanceIncrements !== currTargetUnslStake) {
         throw Error(
-          "currentTargetUnslashedBalanceIncrements is wrong, expect " +
-            currTargetUnslStake +
-            ", got " +
-            epochCtx.currentTargetUnslashedBalanceIncrements +
-            ",current epoch " +
-            epochCtx.currentShuffling.epoch
+          `currentTargetUnslashedBalanceIncrements is wrong, expect ${currTargetUnslStake} got ${epochCtx.currentTargetUnslashedBalanceIncrements} epoch ${epochCtx.epoch}`
         );
       }
       if (epochCtx.previousTargetUnslashedBalanceIncrements !== prevTargetUnslStake) {
         throw Error(
-          "previousTargetUnslashedBalanceIncrements is wrong, expect " +
-            prevTargetUnslStake +
-            ", got " +
-            epochCtx.previousTargetUnslashedBalanceIncrements +
-            ",current epoch " +
-            epochCtx.currentShuffling.epoch
+          `previousTargetUnslashedBalanceIncrements is wrong, expect ${prevTargetUnslStake} got ${epochCtx.previousTargetUnslashedBalanceIncrements} epoch ${epochCtx.epoch}`
         );
       }
     }

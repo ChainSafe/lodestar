@@ -93,7 +93,7 @@ export function processAttestationsAltair(
         totalBalanceIncrementsWithWeight += effectiveBalanceIncrements[index] * totalWeight;
       }
 
-      // Unrealized checkpoints issue pull-up tips N+1: Compute progressive target balances
+      // TODO: describe issue. Compute progressive target balances
       // When processing each attestation, increase the cummulative target balance. Only applies post-altair
       if ((flagsNewSet & TIMELY_TARGET) === TIMELY_TARGET) {
         const validator = state.validators.get(index);

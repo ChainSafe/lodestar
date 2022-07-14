@@ -6,7 +6,7 @@ import {isActiveValidator} from "./validator.js";
 const TIMELY_TARGET = 1 << TIMELY_TARGET_FLAG_INDEX;
 
 /**
- * Unrealized checkpoints issue pull-up tips N+1: Compute progressive target balances
+ * TODO: describe issue. Compute progressive target balances
  * Compute balances from zero, note this state could be mid-epoch so target balances != 0
  * @param participation from `state.previousEpochParticipation.getAll()`
  * @param epoch either currentEpoch or previousEpoch

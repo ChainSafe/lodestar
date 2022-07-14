@@ -92,7 +92,7 @@ export function upgradeStateToAltair(statePhase0: CachedBeaconStatePhase0): Cach
   //       internals. If the cache is not cleared, consuming the ViewDU instance could break in strange ways.
   stateAltair["clearCache"]();
 
-  // Unrealized checkpoints issue pull-up tips N+1: Compute progressive target balances
+  // TODO: describe issue. Compute progressive target balances
   //
   // Note: in EpochContext.afterProcessEpoch previousTargetUnslashedBalanceIncrements is overwritten,
   //       currentTargetUnslashedBalanceIncrements is rotated to previousTargetUnslashedBalanceIncrements

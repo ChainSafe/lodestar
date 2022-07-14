@@ -364,7 +364,7 @@ export class EpochContext {
       exitQueueChurn = 0;
     }
 
-    // Unrealized checkpoints issue pull-up tips N+1: Compute progressive target balances
+    // TODO: describe issue. Compute progressive target balances
     // Compute balances from zero, note this state could be mid-epoch so target balances != 0
     let previousTargetUnslashedBalanceIncrements = 0;
     let currentTargetUnslashedBalanceIncrements = 0;

@@ -39,6 +39,7 @@ import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {testLogger} from "../../utils/logger.js";
 import {getConfig} from "../utils/getConfig.js";
 import {TestRunnerFn} from "../utils/types.js";
+import {assertCorrectProgressiveBalances} from "../config.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
@@ -249,13 +250,12 @@ function runStateTranstion(
   const postSlot = signedBlock.message.slot - 1;
   let preEpoch = computeEpochAtSlot(preSlot);
   let postState = preState.clone();
-  const assertCorrectProgressiveBalances = true;
   for (
     let nextEpochSlot = computeStartSlotAtEpoch(preEpoch + 1);
     nextEpochSlot <= postSlot;
     nextEpochSlot += SLOTS_PER_EPOCH
   ) {
-    postState = processSlots(postState, nextEpochSlot, null, assertCorrectProgressiveBalances);
+    postState = processSlots(postState, nextEpochSlot, {assertCorrectProgressiveBalances});
     cacheCheckpointState(postState, checkpointCache);
   }
   preEpoch = postState.epochCtx.epoch;
