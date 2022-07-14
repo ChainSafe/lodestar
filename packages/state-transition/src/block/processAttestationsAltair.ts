@@ -36,6 +36,7 @@ export function processAttestationsAltair(
   const {effectiveBalanceIncrements} = epochCtx;
   const stateSlot = state.slot;
   const rootCache = new RootCache(state);
+  const currentEpoch = epochCtx.currentShuffling.epoch;
 
   // Process all attestations first and then increase the balance of the proposer once
   let proposerReward = 0;
@@ -58,10 +59,8 @@ export function processAttestationsAltair(
       }
     }
 
-    const epochParticipation =
-      data.target.epoch === epochCtx.currentShuffling.epoch
-        ? state.currentEpochParticipation
-        : state.previousEpochParticipation;
+    const inCurrentEpoch = data.target.epoch === currentEpoch;
+    const epochParticipation = inCurrentEpoch ? state.currentEpochParticipation : state.previousEpochParticipation;
 
     const flagsAttestation = getAttestationParticipationStatus(data, stateSlot - data.slot, epochCtx.epoch, rootCache);
 
@@ -92,6 +91,19 @@ export function processAttestationsAltair(
 
       if (totalWeight > 0) {
         totalBalanceIncrementsWithWeight += effectiveBalanceIncrements[index] * totalWeight;
+      }
+
+      // Unrealized checkpoints issue pull-up tips N+1: Compute progressive target balances
+      // When processing each attestation, increase the cummulative target balance. Only applies post-altair
+      if ((flagsNewSet & TIMELY_TARGET) === TIMELY_TARGET) {
+        const validator = state.validators.get(index);
+        if (!validator.slashed) {
+          if (inCurrentEpoch) {
+            epochCtx.currentTargetUnslashedBalanceIncrements += effectiveBalanceIncrements[index];
+          } else {
+            epochCtx.previousTargetUnslashedBalanceIncrements += effectiveBalanceIncrements[index];
+          }
+        }
       }
     }
 

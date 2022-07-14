@@ -369,6 +369,33 @@ export function beforeProcessEpoch(state: CachedBeaconStateAllForks): EpochProce
       currTargetUnslStake += effectiveBalanceByIncrement;
     }
   }
+
+  // Unrealized checkpoints issue pull-up tips N+1: To compute progressive target balances
+  if (forkName !== ForkName.phase0) {
+    // TODO, ensure that spec tests run through this
+    if (epochCtx.currentTargetUnslashedBalanceIncrements !== currTargetUnslStake) {
+      throw Error(
+        "currentTargetUnslashedBalanceIncrements is wrong, expect " +
+          currTargetUnslStake +
+          ", got " +
+          epochCtx.currentTargetUnslashedBalanceIncrements +
+          ",current epoch " +
+          epochCtx.currentShuffling.epoch
+      );
+    }
+    // TODO, ensure that spec tests run through this
+    if (epochCtx.previousTargetUnslashedBalanceIncrements !== prevTargetUnslStake) {
+      throw Error(
+        "previousTargetUnslashedBalanceIncrements is wrong, expect " +
+          prevTargetUnslStake +
+          ", got " +
+          epochCtx.previousTargetUnslashedBalanceIncrements +
+          ",current epoch " +
+          epochCtx.currentShuffling.epoch
+      );
+    }
+  }
+
   // As per spec of `get_total_balance`:
   // EFFECTIVE_BALANCE_INCREMENT Gwei minimum to avoid divisions by zero.
   // Math safe up to ~10B ETH, afterwhich this overflows uint64.

@@ -7,6 +7,7 @@ import {
   DOMAIN_BEACON_PROPOSER,
   EFFECTIVE_BALANCE_INCREMENT,
   FAR_FUTURE_EPOCH,
+  ForkSeq,
   GENESIS_EPOCH,
   PROPOSER_WEIGHT,
   SLOTS_PER_EPOCH,
@@ -26,6 +27,7 @@ import {
 } from "../util/index.js";
 import {computeEpochShuffling, IEpochShuffling} from "../util/epochShuffling.js";
 import {computeBaseRewardPerIncrement, computeSyncParticipantReward} from "../util/syncCommittee.js";
+import {sumTargetUnslashedBalanceIncrements} from "../util/targetUnslashedBalance.js";
 import {EffectiveBalanceIncrements, getEffectiveBalanceIncrementsWithLen} from "./effectiveBalanceIncrements.js";
 import {Index2PubkeyCache, PubkeyIndexMap, syncPubkeys} from "./pubkeyCache.js";
 import {BeaconStateAllForks, BeaconStateAltair} from "./types.js";
@@ -155,6 +157,25 @@ export class EpochContext {
    */
   exitQueueChurn: number;
 
+  /**
+   * Total cumulative balance increments through epoch for current target.
+   * Required for unrealized checkpoints issue pull-up tips N+1. Otherwise must run epoch transition every block
+   * This value is equivalent to:
+   * - Forward current state to end-of-epoch
+   * - Run beforeProcessEpoch
+   * - epochProcess.currEpochUnslashedTargetStakeByIncrement
+   */
+  currentTargetUnslashedBalanceIncrements: number;
+  /**
+   * Total cumulative balance increments through epoch for previous target.
+   * Required for unrealized checkpoints issue pull-up tips N+1. Otherwise must run epoch transition every block
+   * This value is equivalent to:
+   * - Forward current state to end-of-epoch
+   * - Run beforeProcessEpoch
+   * - epochProcess.prevEpochUnslashedStake.targetStakeByIncrement
+   */
+  previousTargetUnslashedBalanceIncrements: number;
+
   /** TODO: Indexed SyncCommitteeCache */
   currentSyncCommitteeIndexed: SyncCommitteeCache;
   /** TODO: Indexed SyncCommitteeCache */
@@ -181,6 +202,8 @@ export class EpochContext {
     churnLimit: number;
     exitQueueEpoch: Epoch;
     exitQueueChurn: number;
+    currentTargetUnslashedBalanceIncrements: number;
+    previousTargetUnslashedBalanceIncrements: number;
     currentSyncCommitteeIndexed: SyncCommitteeCache;
     nextSyncCommitteeIndexed: SyncCommitteeCache;
     epoch: Epoch;
@@ -202,6 +225,8 @@ export class EpochContext {
     this.churnLimit = data.churnLimit;
     this.exitQueueEpoch = data.exitQueueEpoch;
     this.exitQueueChurn = data.exitQueueChurn;
+    this.currentTargetUnslashedBalanceIncrements = data.currentTargetUnslashedBalanceIncrements;
+    this.previousTargetUnslashedBalanceIncrements = data.previousTargetUnslashedBalanceIncrements;
     this.currentSyncCommitteeIndexed = data.currentSyncCommitteeIndexed;
     this.nextSyncCommitteeIndexed = data.nextSyncCommitteeIndexed;
     this.epoch = data.epoch;
@@ -339,6 +364,25 @@ export class EpochContext {
       exitQueueChurn = 0;
     }
 
+    // Unrealized checkpoints issue pull-up tips N+1: Compute progressive target balances
+    // Compute balances from zero, note this state could be mid-epoch so target balances != 0
+    let previousTargetUnslashedBalanceIncrements = 0;
+    let currentTargetUnslashedBalanceIncrements = 0;
+
+    if (config.getForkSeq(state.slot) >= ForkSeq.altair) {
+      const {previousEpochParticipation, currentEpochParticipation} = state as BeaconStateAltair;
+      previousTargetUnslashedBalanceIncrements = sumTargetUnslashedBalanceIncrements(
+        previousEpochParticipation.getAll(),
+        previousEpoch,
+        validators
+      );
+      currentTargetUnslashedBalanceIncrements = sumTargetUnslashedBalanceIncrements(
+        currentEpochParticipation.getAll(),
+        currentEpoch,
+        validators
+      );
+    }
+
     return new EpochContext({
       config,
       pubkey2index,
@@ -356,6 +400,8 @@ export class EpochContext {
       churnLimit,
       exitQueueEpoch,
       exitQueueChurn,
+      previousTargetUnslashedBalanceIncrements,
+      currentTargetUnslashedBalanceIncrements,
       currentSyncCommitteeIndexed,
       nextSyncCommitteeIndexed,
       epoch: currentEpoch,
@@ -392,6 +438,8 @@ export class EpochContext {
       churnLimit: this.churnLimit,
       exitQueueEpoch: this.exitQueueEpoch,
       exitQueueChurn: this.exitQueueChurn,
+      previousTargetUnslashedBalanceIncrements: this.previousTargetUnslashedBalanceIncrements,
+      currentTargetUnslashedBalanceIncrements: this.currentTargetUnslashedBalanceIncrements,
       currentSyncCommitteeIndexed: this.currentSyncCommitteeIndexed,
       nextSyncCommitteeIndexed: this.nextSyncCommitteeIndexed,
       epoch: this.epoch,
@@ -453,6 +501,9 @@ export class EpochContext {
       this.syncProposerReward = Math.floor(this.syncParticipantReward * PROPOSER_WEIGHT_FACTOR);
       this.baseRewardPerIncrement = computeBaseRewardPerIncrement(this.totalActiveBalanceIncrements);
     }
+
+    this.previousTargetUnslashedBalanceIncrements = this.currentTargetUnslashedBalanceIncrements;
+    this.currentTargetUnslashedBalanceIncrements = 0;
 
     // Advance time units
     // state.slot is advanced right before calling this function
