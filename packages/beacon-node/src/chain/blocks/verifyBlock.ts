@@ -62,6 +62,8 @@ export async function verifyBlock(
     skipImportingAttestations: partiallyVerifiedBlock.skipImportingAttestations,
     executionStatus,
     proposerBalanceDiff,
+    // TODO: Make this param mandatory and capture in gossip
+    seenTimestampSec: partiallyVerifiedBlock.seenTimestampSec ?? Math.floor(Date.now() / 1000),
   };
 }
 

@@ -117,6 +117,7 @@ export class BeaconChain implements IBeaconChain {
       config,
       db,
       logger,
+      clock,
       metrics,
       anchorState,
       eth1,
@@ -126,6 +127,8 @@ export class BeaconChain implements IBeaconChain {
       config: IBeaconConfig;
       db: IBeaconDb;
       logger: ILogger;
+      /** Used for testing to supply fake clock */
+      clock?: IBeaconClock;
       metrics: IMetrics | null;
       anchorState: BeaconStateAllForks;
       eth1: IEth1ForBlockProduction;
@@ -152,7 +155,7 @@ export class BeaconChain implements IBeaconChain {
       ? new BlsSingleThreadVerifier({metrics})
       : new BlsMultiThreadWorkerPool(opts, {logger, metrics});
 
-    const clock = new LocalClock({config, emitter, genesisTime: this.genesisTime, signal});
+    if (!clock) clock = new LocalClock({config, emitter, genesisTime: this.genesisTime, signal});
     const stateCache = new StateContextCache({metrics});
     const checkpointStateCache = new CheckpointStateCache({metrics});
 

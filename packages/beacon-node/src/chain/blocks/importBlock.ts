@@ -89,7 +89,7 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
   // current justified checkpoint should be prev epoch or current epoch if it's just updated
   // it should always have epochBalances there bc it's a checkpoint state, ie got through processEpoch
   const prevFinalizedEpoch = chain.forkChoice.getFinalizedCheckpoint().epoch;
-  const blockDelaySec = (Math.floor(Date.now() / 1000) - postState.genesisTime) % chain.config.SECONDS_PER_SLOT;
+  const blockDelaySec = (fullyVerifiedBlock.seenTimestampSec - postState.genesisTime) % chain.config.SECONDS_PER_SLOT;
   const blockRoot = toHexString(chain.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message));
   // Should compute checkpoint balances before forkchoice.onBlock
   chain.checkpointBalancesCache.processState(blockRoot, postState);
