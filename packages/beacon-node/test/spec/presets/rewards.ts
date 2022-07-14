@@ -17,7 +17,8 @@ export const rewards: TestRunnerFn<RewardTestCase, Deltas> = (fork) => {
     testFunction: (testcase) => {
       const config = getConfig(fork);
       const wrappedState = createCachedBeaconStateTest(testcase.pre, config);
-      const epochProcess = beforeProcessEpoch(wrappedState);
+      const assertCorrectProgressiveBalances = true;
+      const epochProcess = beforeProcessEpoch(wrappedState, assertCorrectProgressiveBalances);
 
       // To debug this test and get granular results you can tweak inputs to get more granular results
       //

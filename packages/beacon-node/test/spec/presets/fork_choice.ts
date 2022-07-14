@@ -249,12 +249,13 @@ function runStateTranstion(
   const postSlot = signedBlock.message.slot - 1;
   let preEpoch = computeEpochAtSlot(preSlot);
   let postState = preState.clone();
+  const assertCorrectProgressiveBalances = true;
   for (
     let nextEpochSlot = computeStartSlotAtEpoch(preEpoch + 1);
     nextEpochSlot <= postSlot;
     nextEpochSlot += SLOTS_PER_EPOCH
   ) {
-    postState = processSlots(postState, nextEpochSlot, null);
+    postState = processSlots(postState, nextEpochSlot, null, assertCorrectProgressiveBalances);
     cacheCheckpointState(postState, checkpointCache);
   }
   preEpoch = postState.epochCtx.epoch;
@@ -262,6 +263,7 @@ function runStateTranstion(
     verifyStateRoot: true,
     verifyProposer: false,
     verifySignatures: false,
+    assertCorrectProgressiveBalances,
   });
   const postEpoch = postState.epochCtx.epoch;
   if (postEpoch > preEpoch) {

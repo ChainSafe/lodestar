@@ -26,7 +26,8 @@ const sanitySlots: TestRunnerFn<SanitySlotsTestCase, BeaconStateAllForks> = (for
     testFunction: (testcase) => {
       const stateTB = testcase.pre.clone();
       const state = createCachedBeaconStateTest(stateTB, getConfig(fork));
-      const postState = processSlots(state, state.slot + bnToNum(testcase.slots));
+      const assertCorrectProgressiveBalances = true;
+      const postState = processSlots(state, state.slot + bnToNum(testcase.slots), null, assertCorrectProgressiveBalances);
       // TODO: May be part of runStateTranstion, necessary to commit again?
       postState.commit();
       return postState;
@@ -59,6 +60,7 @@ export const sanityBlocks: TestRunnerFn<SanityBlocksTestCase, BeaconStateAllFork
           verifyStateRoot: verify,
           verifyProposer: verify,
           verifySignatures: verify,
+          assertCorrectProgressiveBalances: true,
         });
       }
       return wrappedState;

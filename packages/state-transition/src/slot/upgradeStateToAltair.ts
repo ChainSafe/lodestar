@@ -92,6 +92,25 @@ export function upgradeStateToAltair(statePhase0: CachedBeaconStatePhase0): Cach
   //       internals. If the cache is not cleared, consuming the ViewDU instance could break in strange ways.
   stateAltair["clearCache"]();
 
+  // Unrealized checkpoints issue pull-up tips N+1: Compute progressive target balances
+  //
+  // Note: in EpochContext.afterProcessEpoch previousTargetUnslashedBalanceIncrements is overwritten,
+  //       currentTargetUnslashedBalanceIncrements is rotated to previousTargetUnslashedBalanceIncrements
+  //
+  // Here target balance is computed in full, which is slightly less performant than doing so in the loop
+  // above but gurantees consistency with EpochContext.createFromState(). Note execution order below:
+  // ```
+  // processEpoch()
+  // epochCtx.afterProcessEpoch()
+  // if (...) upgradeStateToAltair()
+  // ```
+  const previousEpoch = stateAltair.epochCtx.epoch - 1;
+  stateAltair.epochCtx.previousTargetUnslashedBalanceIncrements = sumTargetUnslashedBalanceIncrements(
+    stateAltair.previousEpochParticipation.getAll(),
+    previousEpoch,
+    stateAltair.validators.getAllReadonlyValues()
+  );
+
   return stateAltair;
 }
 
@@ -105,7 +124,6 @@ function translateParticipation(
   const {epochCtx} = state;
   const rootCache = new RootCache(state);
   const epochParticipation = state.previousEpochParticipation;
-  const previousEpoch = epochCtx.currentShuffling.epoch - 1;
 
   for (const attestation of pendingAttesations.getAllReadonly()) {
     const data = attestation.data;
@@ -124,22 +142,4 @@ function translateParticipation(
       epochParticipation.set(index, attestationFlags);
     }
   }
-
-  // Unrealized checkpoints issue pull-up tips N+1: Compute progressive target balances
-  //
-  // Note: in EpochContext.afterProcessEpoch previousTargetUnslashedBalanceIncrements is overwritten,
-  //       currentTargetUnslashedBalanceIncrements is rotated to previousTargetUnslashedBalanceIncrements
-  //
-  // Here target balance is computed in full, which is slightly less performant than doing so in the loop
-  // above but gurantees consistency with EpochContext.createFromState(). Note execution order below:
-  // ```
-  // processEpoch()
-  // epochCtx.afterProcessEpoch()
-  // if (...) upgradeStateToAltair()
-  // ```
-  epochCtx.previousTargetUnslashedBalanceIncrements = sumTargetUnslashedBalanceIncrements(
-    state.previousEpochParticipation.getAll(),
-    previousEpoch,
-    state.validators.getAllReadonlyValues()
-  );
 }

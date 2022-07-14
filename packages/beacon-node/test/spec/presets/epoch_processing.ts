@@ -57,7 +57,8 @@ export const epochProcessing: TestRunnerFn<EpochProcessingTestCase, BeaconStateA
       const stateTB = testcase.pre.clone();
       const state = createCachedBeaconStateTest(stateTB, config);
 
-      const epochProcess = beforeProcessEpoch(state);
+      const assertCorrectProgressiveBalances = true;
+      const epochProcess = beforeProcessEpoch(state, assertCorrectProgressiveBalances);
       epochProcessFn(state, epochProcess);
       state.commit();
 

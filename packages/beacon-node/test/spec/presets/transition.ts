@@ -47,6 +47,7 @@ export const transition: TestRunnerFn<TransitionTestCase, BeaconStateAllForks> =
           verifyStateRoot: true,
           verifyProposer: false,
           verifySignatures: false,
+          assertCorrectProgressiveBalances: true,
         });
       }
       return state;

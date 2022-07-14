@@ -19,10 +19,20 @@ import {processEpoch} from "./epoch/index.js";
 export function stateTransition(
   state: CachedBeaconStateAllForks,
   signedBlock: allForks.FullOrBlindedSignedBeaconBlock,
-  options?: {verifyStateRoot?: boolean; verifyProposer?: boolean; verifySignatures?: boolean},
+  options?: {
+    verifyStateRoot?: boolean;
+    verifyProposer?: boolean;
+    verifySignatures?: boolean;
+    assertCorrectProgressiveBalances?: boolean;
+  },
   metrics?: IBeaconStateTransitionMetrics | null
 ): CachedBeaconStateAllForks {
-  const {verifyStateRoot = true, verifyProposer = true, verifySignatures = true} = options || {};
+  const {
+    verifyStateRoot = true,
+    verifyProposer = true,
+    verifySignatures = true,
+    assertCorrectProgressiveBalances = false,
+  } = options || {};
 
   const block = signedBlock.message;
   const blockSlot = block.slot;
@@ -34,7 +44,7 @@ export function stateTransition(
 
   // Process slots (including those with no blocks) since block.
   // Includes state upgrades
-  postState = processSlotsWithTransientCache(postState, blockSlot, metrics);
+  postState = processSlotsWithTransientCache(postState, blockSlot, assertCorrectProgressiveBalances, metrics);
 
   // Verify proposer signature only
   if (verifyProposer) {
@@ -79,14 +89,15 @@ export function stateTransition(
 export function processSlots(
   state: CachedBeaconStateAllForks,
   slot: Slot,
-  metrics?: IBeaconStateTransitionMetrics | null
+  metrics?: IBeaconStateTransitionMetrics | null,
+  assertCorrectProgressiveBalances = false
 ): CachedBeaconStateAllForks {
   let postState = state.clone();
 
   // State is already a ViewDU, which won't commit changes. Equivalent to .setStateCachesAsTransient()
   // postState.setStateCachesAsTransient();
 
-  postState = processSlotsWithTransientCache(postState, slot, metrics);
+  postState = processSlotsWithTransientCache(postState, slot, assertCorrectProgressiveBalances, metrics);
 
   // Apply changes to state, must do before hashing
   postState.commit();
@@ -100,6 +111,7 @@ export function processSlots(
 function processSlotsWithTransientCache(
   postState: CachedBeaconStateAllForks,
   slot: Slot,
+  assertCorrectProgressiveBalances: boolean,
   metrics?: IBeaconStateTransitionMetrics | null
 ): CachedBeaconStateAllForks {
   const {config} = postState;
@@ -116,7 +128,7 @@ function processSlotsWithTransientCache(
       const fork = postState.config.getForkSeq(postState.slot);
       const timer = metrics?.stfnEpochTransition.startTimer();
       try {
-        const epochProcess = beforeProcessEpoch(postState);
+        const epochProcess = beforeProcessEpoch(postState, assertCorrectProgressiveBalances);
         processEpoch(fork, postState, epochProcess);
         const {currentEpoch, statuses, balances} = epochProcess;
         metrics?.registerValidatorStatuses(currentEpoch, statuses, balances);

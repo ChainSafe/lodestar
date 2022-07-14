@@ -163,7 +163,10 @@ export interface EpochProcess {
   isActiveNextEpoch: boolean[];
 }
 
-export function beforeProcessEpoch(state: CachedBeaconStateAllForks): EpochProcess {
+export function beforeProcessEpoch(
+  state: CachedBeaconStateAllForks,
+  assertCorrectProgressiveBalances = false
+): EpochProcess {
   const {config, epochCtx} = state;
   const forkName = config.getForkName(state.slot);
   const currentEpoch = epochCtx.currentShuffling.epoch;
@@ -370,29 +373,29 @@ export function beforeProcessEpoch(state: CachedBeaconStateAllForks): EpochProce
     }
   }
 
-  // Unrealized checkpoints issue pull-up tips N+1: To compute progressive target balances
-  if (forkName !== ForkName.phase0) {
-    // TODO, ensure that spec tests run through this
-    if (epochCtx.currentTargetUnslashedBalanceIncrements !== currTargetUnslStake) {
-      throw Error(
-        "currentTargetUnslashedBalanceIncrements is wrong, expect " +
-          currTargetUnslStake +
-          ", got " +
-          epochCtx.currentTargetUnslashedBalanceIncrements +
-          ",current epoch " +
-          epochCtx.currentShuffling.epoch
-      );
-    }
-    // TODO, ensure that spec tests run through this
-    if (epochCtx.previousTargetUnslashedBalanceIncrements !== prevTargetUnslStake) {
-      throw Error(
-        "previousTargetUnslashedBalanceIncrements is wrong, expect " +
-          prevTargetUnslStake +
-          ", got " +
-          epochCtx.previousTargetUnslashedBalanceIncrements +
-          ",current epoch " +
-          epochCtx.currentShuffling.epoch
-      );
+  if (assertCorrectProgressiveBalances) {
+    // Unrealized checkpoints issue pull-up tips N+1: To compute progressive target balances
+    if (forkName !== ForkName.phase0) {
+      if (epochCtx.currentTargetUnslashedBalanceIncrements !== currTargetUnslStake) {
+        throw Error(
+          "currentTargetUnslashedBalanceIncrements is wrong, expect " +
+            currTargetUnslStake +
+            ", got " +
+            epochCtx.currentTargetUnslashedBalanceIncrements +
+            ",current epoch " +
+            epochCtx.currentShuffling.epoch
+        );
+      }
+      if (epochCtx.previousTargetUnslashedBalanceIncrements !== prevTargetUnslStake) {
+        throw Error(
+          "previousTargetUnslashedBalanceIncrements is wrong, expect " +
+            prevTargetUnslStake +
+            ", got " +
+            epochCtx.previousTargetUnslashedBalanceIncrements +
+            ",current epoch " +
+            epochCtx.currentShuffling.epoch
+        );
+      }
     }
   }
 

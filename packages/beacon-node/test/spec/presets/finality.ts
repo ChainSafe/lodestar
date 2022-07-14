@@ -20,6 +20,7 @@ export const finality: TestRunnerFn<FinalityTestCase, BeaconStateAllForks> = (fo
           verifyStateRoot: false,
           verifyProposer: verify,
           verifySignatures: verify,
+          assertCorrectProgressiveBalances: true,
         });
       }
 
