@@ -90,13 +90,13 @@ function getOptionsTable(options: Record<string, Options>, {showHidden}: {showHi
     return "";
   }
 
+  /* eslint-disable @typescript-eslint/naming-convention */
   return toMarkdownTable(
-    // @ts-ignore
     visibleOptions.map(([key, opt]) => ({
       Option: `\`--${key}\``,
-      Type: opt.type,
-      Description: opt.description,
-      Default: opt.defaultDescription || opt.default || "",
+      Type: opt.type ?? "",
+      Description: opt.description ?? "",
+      Default: String(opt.defaultDescription || opt.default || ""),
     })),
     ["Option", "Type", "Description", "Default"]
   );
