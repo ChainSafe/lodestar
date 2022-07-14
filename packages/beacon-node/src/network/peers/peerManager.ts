@@ -543,11 +543,9 @@ export class PeerManager {
       this.connectedPeers.set(peer.toString(), peerData);
 
       if (direction === "outbound") {
-        // There's an issue that cause libp2p to open another connection in peer:connect event handler
-        // This causes the sim test multiThreadSingleNode fails because no gossip block is received
-        // TODO: remove setTimeout once this is done
-        // https://github.com/libp2p/js-libp2p/pull/1171
-        setTimeout(() => this.pingAndStatusTimeouts(), 0);
+        //this.pingAndStatusTimeouts();
+        void this.requestPing(peer);
+        void this.requestStatus(peer, this.chain.getStatus());
       }
 
       // AgentVersion was set in libp2p IdentifyService, 'peer:connect' event handler
