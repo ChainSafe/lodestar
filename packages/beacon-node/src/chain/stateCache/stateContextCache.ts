@@ -65,7 +65,7 @@ export class StateContextCache {
     }
     this.metrics?.adds.inc();
     this.cache.set(key, item.clone());
-    const epoch = item.epochCtx.currentShuffling.epoch;
+    const epoch = item.epochCtx.epoch;
     const blockRoots = this.epochIndex.get(epoch);
     if (blockRoots) {
       blockRoots.add(key);
@@ -78,7 +78,7 @@ export class StateContextCache {
     const key = toHexString(root);
     const item = this.cache.get(key);
     if (!item) return;
-    this.epochIndex.get(item.epochCtx.currentShuffling.epoch)?.delete(key);
+    this.epochIndex.get(item.epochCtx.epoch)?.delete(key);
     this.cache.delete(key);
   }
 
@@ -107,7 +107,7 @@ export class StateContextCache {
         if (key !== headStateRootHex) {
           const item = this.cache.get(key);
           if (item) {
-            this.epochIndex.get(item.epochCtx.currentShuffling.epoch)?.delete(key);
+            this.epochIndex.get(item.epochCtx.epoch)?.delete(key);
             this.cache.delete(key);
           }
         }

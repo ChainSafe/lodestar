@@ -173,7 +173,7 @@ export interface EpochProcess {
 export function beforeProcessEpoch(state: CachedBeaconStateAllForks, opts?: EpochProcessOpts): EpochProcess {
   const {config, epochCtx} = state;
   const forkSeq = config.getForkSeq(state.slot);
-  const currentEpoch = epochCtx.currentShuffling.epoch;
+  const currentEpoch = epochCtx.epoch;
   const prevEpoch = epochCtx.previousShuffling.epoch;
   const nextEpoch = currentEpoch + 1;
   // active validator indices for nextShuffling is ready, we want to precalculate for the one after that

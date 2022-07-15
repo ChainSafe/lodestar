@@ -31,7 +31,7 @@ export function isValidVoluntaryExit(
   const {config, epochCtx} = state;
   const voluntaryExit = signedVoluntaryExit.message;
   const validator = state.validators.get(voluntaryExit.validatorIndex);
-  const currentEpoch = epochCtx.currentShuffling.epoch;
+  const currentEpoch = epochCtx.epoch;
 
   return (
     // verify the validator is active
