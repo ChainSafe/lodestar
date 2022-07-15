@@ -1,34 +1,16 @@
 import {expect} from "chai";
-import {
-  computeEpochAtSlot,
-  CachedBeaconStateAllForks,
-  ZERO_HASH,
-  BeaconStateAllForks,
-  isBellatrixStateType,
-} from "@lodestar/state-transition";
+import {BeaconStateAllForks, isBellatrixStateType} from "@lodestar/state-transition";
 import {InputType} from "@lodestar/spec-test-util";
 import {toHexString} from "@chainsafe/ssz";
-import {
-  CheckpointWithHex,
-  PowBlockHex,
-  ForkChoice,
-} from "@lodestar/fork-choice";
+import {CheckpointWithHex, ForkChoice} from "@lodestar/fork-choice";
 import {phase0, allForks, bellatrix, ssz, RootHex} from "@lodestar/types";
 import {bnToNum} from "@lodestar/utils";
 import {createIBeaconConfig} from "@lodestar/config";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {
-  CheckpointStateCache,
-  toCheckpointHex,
-  toCheckpointKey,
-  BeaconChain,
-  ChainEvent,
-} from "../../../src/chain/index.js";
+import {BeaconChain, ChainEvent} from "../../../src/chain/index.js";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {testLogger} from "../../utils/logger.js";
 import {getConfig} from "../utils/getConfig.js";
 import {TestRunnerFn} from "../utils/types.js";
-import {assertCorrectProgressiveBalances} from "../config.js";
 import {IEth1ForBlockProduction} from "../../../src/eth1/index.js";
 import {ExecutionEngineMock} from "../../../src/execution/index.js";
 import {defaultChainOptions} from "../../../src/chain/options.js";
@@ -55,11 +37,7 @@ export const forkChoiceTest: TestRunnerFn<ForkChoiceTestCase, void> = (fork) => 
       const {steps, anchorState} = testcase;
       const currentSlot = anchorState.slot;
       const config = getConfig(fork);
-      let state = createCachedBeaconStateTest(anchorState, config);
-
-      const checkpointStateCache = new CheckpointStateCache({});
-      const stateCache = new Map<string, CachedBeaconStateAllForks>();
-      cacheState(state, stateCache);
+      const state = createCachedBeaconStateTest(anchorState, config);
 
       /** This is to track test's tickTime to be used in proposer boost */
       let tickTime = 0;
@@ -138,7 +116,6 @@ export const forkChoiceTest: TestRunnerFn<ForkChoiceTestCase, void> = (fork) => 
             } catch (e) {
               if (isValid) throw e;
             }
-
           }
           // pow_block step
           else if (isPowBlock(step)) {
@@ -259,109 +236,6 @@ export const forkChoiceTest: TestRunnerFn<ForkChoiceTestCase, void> = (fork) => 
   };
 };
 
-<<<<<<< HEAD
-function runStateTranstion(
-  preState: CachedBeaconStateAllForks,
-  signedBlock: allForks.SignedBeaconBlock,
-  forkchoice: IForkChoice,
-  checkpointCache: CheckpointStateCache,
-  blockDelaySec: number
-): CachedBeaconStateAllForks {
-  const preSlot = preState.slot;
-  const postSlot = signedBlock.message.slot - 1;
-  let preEpoch = computeEpochAtSlot(preSlot);
-  let postState = preState.clone();
-  for (
-    let nextEpochSlot = computeStartSlotAtEpoch(preEpoch + 1);
-    nextEpochSlot <= postSlot;
-    nextEpochSlot += SLOTS_PER_EPOCH
-  ) {
-    postState = processSlots(postState, nextEpochSlot, {assertCorrectProgressiveBalances});
-    cacheCheckpointState(postState, checkpointCache);
-  }
-  preEpoch = postState.epochCtx.epoch;
-  postState = stateTransition(postState, signedBlock, {
-    verifyStateRoot: true,
-    verifyProposer: false,
-    verifySignatures: false,
-    assertCorrectProgressiveBalances,
-  });
-  const postEpoch = postState.epochCtx.epoch;
-  if (postEpoch > preEpoch) {
-    cacheCheckpointState(postState, checkpointCache);
-  }
-  // same logic like in state transition https://github.com/ChainSafe/lodestar/blob/f6778740075fe2b75edf94d1db0b5691039cb500/packages/lodestar/src/chain/blocks/stateTransition.ts#L101
-  const checkpointHex = toCheckpointHex(postState.currentJustifiedCheckpoint);
-  const justifiedState = checkpointCache.get(checkpointHex);
-  if (
-    postState.currentJustifiedCheckpoint.epoch > forkchoice.getJustifiedCheckpoint().epoch ||
-    postState.finalizedCheckpoint.epoch > forkchoice.getFinalizedCheckpoint().epoch
-  ) {
-    if (!justifiedState) {
-      const checkpointHexKey = toCheckpointKey(checkpointHex);
-      const cachedCps = checkpointCache.dumpCheckpointKeys().join(", ");
-      throw Error(`No justifiedState for checkpoint ${checkpointHexKey}. Available: ${cachedCps}`);
-    }
-  }
-
-  const executionStatus =
-    isBellatrixBlockBodyType(signedBlock.message.body) &&
-    isBellatrixStateType(postState) &&
-    isExecutionEnabled(postState, signedBlock.message)
-      ? ExecutionStatus.Valid
-      : ExecutionStatus.PreMerge;
-
-  try {
-    forkchoice.onBlock(signedBlock.message, postState, blockDelaySec, executionStatus);
-    for (const attestation of signedBlock.message.body.attestations) {
-      try {
-        const indexedAttestation = postState.epochCtx.getIndexedAttestation(attestation);
-        forkchoice.onAttestation(indexedAttestation);
-      } catch (e) {
-        if (e instanceof ForkChoiceError && e.type.code === ForkChoiceErrorCode.INVALID_ATTESTATION) {
-          logger.debug("INVALID_ATTESTATION onAttestation", e.type.err);
-        } else {
-          logger.error("Error onAttestation", {}, e as Error);
-        }
-      }
-    }
-  } catch (e) {
-    if (e instanceof ForkChoiceError && e.type.code === ForkChoiceErrorCode.INVALID_BLOCK) {
-      logger.debug("INVALID_BLOCK onBlock", e.type.err);
-    } else {
-      logger.error("Error onBlock", {}, e as Error);
-    }
-  }
-  return postState;
-}
-
-=======
->>>>>>> f525ae0062 (Fix forkchoice spec tests)
-function cacheCheckpointState(checkpointState: CachedBeaconStateAllForks, checkpointCache: CheckpointStateCache): void {
-  const slot = checkpointState.slot;
-  if (slot % SLOTS_PER_EPOCH !== 0) {
-    throw new Error(`Invalid checkpoint state slot ${checkpointState.slot}`);
-  }
-  const blockHeader = ssz.phase0.BeaconBlockHeader.clone(checkpointState.latestBlockHeader);
-  if (ssz.Root.equals(blockHeader.stateRoot, ZERO_HASH)) {
-    blockHeader.stateRoot = checkpointState.hashTreeRoot();
-  }
-  const cp: phase0.Checkpoint = {
-    root: ssz.phase0.BeaconBlockHeader.hashTreeRoot(blockHeader),
-    epoch: computeEpochAtSlot(slot),
-  };
-  checkpointCache.add(cp, checkpointState);
-}
-
-function cacheState(wrappedState: CachedBeaconStateAllForks, stateCache: Map<string, CachedBeaconStateAllForks>): void {
-  const blockHeader = ssz.phase0.BeaconBlockHeader.clone(wrappedState.latestBlockHeader);
-  if (ssz.Root.equals(blockHeader.stateRoot, ZERO_HASH)) {
-    blockHeader.stateRoot = wrappedState.hashTreeRoot();
-  }
-  const blockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(blockHeader);
-  stateCache.set(toHexString(blockRoot), wrappedState);
-}
-
 function toSpecTestCheckpoint(checkpoint: CheckpointWithHex): SpecTestCheckpoint {
   return {
     epoch: BigInt(checkpoint.epoch),
@@ -451,17 +325,6 @@ function isPowBlock(step: Step): step is OnPowBlock {
 
 function isCheck(step: Step): step is Checks {
   return typeof (step as Checks).checks === "object";
-}
-
-function serializePowBlock(powBlock: bellatrix.PowBlock | undefined): PowBlockHex | undefined {
-  if (powBlock) {
-    return {
-      blockHash: toHexString(powBlock.blockHash),
-      parentHash: toHexString(powBlock.parentHash),
-      totalDifficulty: BigInt(powBlock.totalDifficulty),
-    };
-  }
-  return;
 }
 
 class Eth1ForBlockProductionMock implements IEth1ForBlockProduction {
