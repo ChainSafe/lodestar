@@ -26,12 +26,14 @@ export class ExecutionEngineMock implements IExecutionEngine {
   finalizedBlockRoot = ZERO_HASH_HEX;
   readonly payloadIdCache = new PayloadIdCache();
 
-  private knownBlocks = new Map<RootHex, bellatrix.ExecutionPayload>();
+  private knownBlocks = new Map<RootHex, bellatrix.PowBlock>();
+  private knownPayloads = new Map<RootHex, bellatrix.ExecutionPayload>();
+
   private preparingPayloads = new Map<number, bellatrix.ExecutionPayload>();
   private payloadId = 0;
 
   constructor(opts: ExecutionEngineMockOpts) {
-    this.knownBlocks.set(opts.genesisBlockHash, {
+    this.knownPayloads.set(opts.genesisBlockHash, {
       parentHash: ZERO_HASH,
       feeRecipient: Buffer.alloc(20, 0),
       stateRoot: ZERO_HASH,
@@ -47,6 +49,19 @@ export class ExecutionEngineMock implements IExecutionEngine {
       blockHash: ZERO_HASH,
       transactions: [],
     });
+
+    this.knownBlocks.set(opts.genesisBlockHash, {
+      blockHash: fromHexString(opts.genesisBlockHash),
+      parentHash: ZERO_HASH,
+      totalDifficulty: BigInt(0),
+    });
+  }
+
+  /**
+   * Non-spec method just to add more known blocks to this mock.
+   */
+  async notifyNewPowBlock(powBlock: bellatrix.PowBlock): Promise<void> {
+    this.knownBlocks.set(toHexString(powBlock.blockHash), powBlock);
   }
 
   /**
@@ -62,11 +77,12 @@ export class ExecutionEngineMock implements IExecutionEngine {
    */
   async notifyNewPayload(executionPayload: bellatrix.ExecutionPayload): Promise<ExecutePayloadResponse> {
     // Only validate that parent is known
-    if (!this.knownBlocks.has(toHexString(executionPayload.parentHash))) {
-      return {status: ExecutePayloadStatus.INVALID, latestValidHash: this.headBlockRoot, validationError: null};
+    const parentHash = toHexString(executionPayload.parentHash);
+    if (!this.knownBlocks.has(parentHash) && !this.knownPayloads.has(parentHash)) {
+      return {status: ExecutePayloadStatus.SYNCING, latestValidHash: null, validationError: null};
     }
 
-    this.knownBlocks.set(toHexString(executionPayload.blockHash), executionPayload);
+    this.knownPayloads.set(toHexString(executionPayload.blockHash), executionPayload);
     return {
       status: ExecutePayloadStatus.VALID,
       latestValidHash: toHexString(executionPayload.blockHash),
@@ -98,7 +114,7 @@ export class ExecutionEngineMock implements IExecutionEngine {
     this.finalizedBlockRoot = finalizedBlockHash;
 
     const parentHashHex = headBlockHashHex;
-    const parentPayload = this.knownBlocks.get(parentHashHex);
+    const parentPayload = this.knownPayloads.get(parentHashHex);
     if (!parentPayload) {
       throw Error(`Unknown parentHash ${parentHashHex}`);
     }

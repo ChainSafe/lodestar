@@ -3,24 +3,13 @@ import {
   computeEpochAtSlot,
   CachedBeaconStateAllForks,
   ZERO_HASH,
-  computeStartSlotAtEpoch,
   BeaconStateAllForks,
   isBellatrixStateType,
-  isBellatrixBlockBodyType,
-  isMergeTransitionBlock as isMergeTransitionBlockFn,
-  processSlots,
-  stateTransition,
-  isExecutionEnabled,
 } from "@lodestar/state-transition";
 import {InputType} from "@lodestar/spec-test-util";
 import {toHexString} from "@chainsafe/ssz";
 import {
   CheckpointWithHex,
-  ForkChoiceError,
-  ForkChoiceErrorCode,
-  IForkChoice,
-  assertValidTerminalPowBlock,
-  ExecutionStatus,
   PowBlockHex,
   ForkChoice,
 } from "@lodestar/fork-choice";
@@ -40,11 +29,13 @@ import {testLogger} from "../../utils/logger.js";
 import {getConfig} from "../utils/getConfig.js";
 import {TestRunnerFn} from "../utils/types.js";
 import {assertCorrectProgressiveBalances} from "../config.js";
-import {Eth1ForBlockProductionDisabled} from "../../../src/eth1/index.js";
-import {ExecutionEngineDisabled} from "../../../src/execution/index.js";
+import {IEth1ForBlockProduction} from "../../../src/eth1/index.js";
+import {ExecutionEngineMock} from "../../../src/execution/index.js";
 import {defaultChainOptions} from "../../../src/chain/options.js";
 import {getStubbedBeaconDb} from "../../utils/mocks/db.js";
 import {ClockStopped} from "../../utils/mocks/clock.js";
+import {ZERO_HASH_HEX} from "../../../src/constants/constants.js";
+import {PowMergeBlock} from "../../../src/eth1/interface.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
@@ -73,6 +64,12 @@ export const forkChoiceTest: TestRunnerFn<ForkChoiceTestCase, void> = (fork) => 
       /** This is to track test's tickTime to be used in proposer boost */
       let tickTime = 0;
       const clock = new ClockStopped(currentSlot);
+      const eth1 = new Eth1ForBlockProductionMock();
+      const executionEngine = new ExecutionEngineMock({
+        genesisBlockHash: isBellatrixStateType(anchorState)
+          ? toHexString(anchorState.latestExecutionPayloadHeader.blockHash)
+          : ZERO_HASH_HEX,
+      });
 
       const chain = new BeaconChain(
         {
@@ -89,8 +86,8 @@ export const forkChoiceTest: TestRunnerFn<ForkChoiceTestCase, void> = (fork) => 
           clock,
           metrics: null,
           anchorState,
-          eth1: new Eth1ForBlockProductionDisabled(),
-          executionEngine: new ExecutionEngineDisabled(),
+          eth1,
+          executionEngine,
           executionBuilder: undefined,
         }
       );
@@ -113,7 +110,8 @@ export const forkChoiceTest: TestRunnerFn<ForkChoiceTestCase, void> = (fork) => 
             logger.debug(`Step ${i}/${stepsLen} attestation`, {root: step.attestation, valid: Boolean(step.valid)});
             const attestation = testcase.attestations.get(step.attestation);
             if (!attestation) throw Error(`No attestation ${step.attestation}`);
-            chain.forkChoice.onAttestation(state.epochCtx.getIndexedAttestation(attestation));
+            const headState = chain.getHeadState();
+            chain.forkChoice.onAttestation(headState.epochCtx.getIndexedAttestation(attestation));
           }
 
           // block step
@@ -131,6 +129,7 @@ export const forkChoiceTest: TestRunnerFn<ForkChoiceTestCase, void> = (fork) => 
             logger.debug(`Step ${i}/${stepsLen} block`, {
               slot: signedBlock.message.slot,
               root: toHexString(blockRoot),
+              parentRoot: toHexString(signedBlock.message.parentRoot),
               isValid,
             });
 
@@ -140,42 +139,17 @@ export const forkChoiceTest: TestRunnerFn<ForkChoiceTestCase, void> = (fork) => 
               if (isValid) throw e;
             }
 
-            // Never run
-            if (process === null) {
-              const preState = stateCache.get(toHexString(signedBlock.message.parentRoot));
-              if (!preState) {
-                continue;
-                // should not throw error, on_block_bad_parent_root test wants this
-              }
-              const blockDelaySec = (tickTime - preState.genesisTime) % config.SECONDS_PER_SLOT;
-              const isMergeTransitionBlock =
-                isBellatrixStateType(preState) &&
-                isBellatrixBlockBodyType(signedBlock.message.body) &&
-                isMergeTransitionBlockFn(preState, signedBlock.message.body);
-
-              try {
-                if (isMergeTransitionBlock) {
-                  const mergeBlock = signedBlock.message as bellatrix.BeaconBlock;
-
-                  const powBlockRootHex = toHexString(mergeBlock.body.executionPayload.parentHash);
-                  const powBlock = serializePowBlock(testcase.powBlocks.get(`pow_block_${powBlockRootHex}`));
-                  const powBlockParent = serializePowBlock(
-                    powBlock && testcase.powBlocks.get(`pow_block_${powBlock.parentHash}`)
-                  );
-                  assertValidTerminalPowBlock(config, mergeBlock, {
-                    executionStatus: powBlock !== undefined ? ExecutionStatus.Valid : ExecutionStatus.Syncing,
-                    powBlock,
-                    powBlockParent,
-                  });
-                }
-
-                state = runStateTranstion(preState, signedBlock, chain.forkChoice, checkpointStateCache, blockDelaySec);
-                // TODO: May be part of runStateTranstion, necessary to commit again?
-                state.commit();
-                cacheState(state, stateCache);
-              } catch (e) {
-                if (isValid) throw e;
-              }
+          }
+          // pow_block step
+          else if (isPowBlock(step)) {
+            const powBlock = testcase.powBlocks.get(step.pow_block);
+            logger.debug(`Step ${i}/${stepsLen} pow-block`, {
+              blockHash: powBlock?.blockHash ? toHexString(powBlock.blockHash) : "",
+              parentHash: powBlock?.parentHash ? toHexString(powBlock.parentHash) : "",
+            });
+            eth1.setPowBlock(powBlock);
+            if (powBlock) {
+              await executionEngine.notifyNewPowBlock(powBlock);
             }
           }
 
@@ -285,6 +259,7 @@ export const forkChoiceTest: TestRunnerFn<ForkChoiceTestCase, void> = (fork) => 
   };
 };
 
+<<<<<<< HEAD
 function runStateTranstion(
   preState: CachedBeaconStateAllForks,
   signedBlock: allForks.SignedBeaconBlock,
@@ -360,6 +335,8 @@ function runStateTranstion(
   return postState;
 }
 
+=======
+>>>>>>> f525ae0062 (Fix forkchoice spec tests)
 function cacheCheckpointState(checkpointState: CachedBeaconStateAllForks, checkpointCache: CheckpointStateCache): void {
   const slot = checkpointState.slot;
   if (slot % SLOTS_PER_EPOCH !== 0) {
@@ -468,6 +445,10 @@ function isBlock(step: Step): step is OnBlock {
   return typeof (step as OnBlock).block === "string";
 }
 
+function isPowBlock(step: Step): step is OnPowBlock {
+  return typeof (step as OnPowBlock).pow_block === "string";
+}
+
 function isCheck(step: Step): step is Checks {
   return typeof (step as Checks).checks === "object";
 }
@@ -481,4 +462,35 @@ function serializePowBlock(powBlock: bellatrix.PowBlock | undefined): PowBlockHe
     };
   }
   return;
+}
+
+class Eth1ForBlockProductionMock implements IEth1ForBlockProduction {
+  private items = new Map<string, PowMergeBlock>();
+  async getEth1DataAndDeposits(): Promise<never> {
+    throw Error("Not implemented");
+  }
+
+  getTerminalPowBlock(): never {
+    throw Error("Not implemented");
+  }
+
+  mergeCompleted(): never {
+    throw Error("Not implemented");
+  }
+
+  async getPowBlock(powBlockHash: string): Promise<PowMergeBlock | null> {
+    return this.items.get(powBlockHash) ?? null;
+  }
+
+  setPowBlock(powBlock: bellatrix.PowBlock | undefined): void {
+    if (!powBlock) return;
+
+    this.items.set(toHexString(powBlock.blockHash), {
+      // not used by verifyBlock()
+      number: 0,
+      blockHash: toHexString(powBlock.blockHash),
+      parentHash: toHexString(powBlock.parentHash),
+      totalDifficulty: powBlock.totalDifficulty,
+    });
+  }
 }
