@@ -36,7 +36,7 @@ export function processAttestationsAltair(
   const {effectiveBalanceIncrements} = epochCtx;
   const stateSlot = state.slot;
   const rootCache = new RootCache(state);
-  const currentEpoch = epochCtx.currentShuffling.epoch;
+  const currentEpoch = epochCtx.epoch;
 
   // Process all attestations first and then increase the balance of the proposer once
   let proposerReward = 0;
