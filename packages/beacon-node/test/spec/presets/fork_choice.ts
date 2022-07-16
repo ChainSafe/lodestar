@@ -56,7 +56,7 @@ export const forkChoiceTest: TestRunnerFn<ForkChoiceTestCase, void> = (fork) => 
           // Do not start workers
           blsVerifyAllMainThread: true,
           // Do not run any archiver tasks
-          disableArchiveOnCheckpoint: false,
+          disableArchiveOnCheckpoint: true,
           assertCorrectProgressiveBalances,
         },
         {
