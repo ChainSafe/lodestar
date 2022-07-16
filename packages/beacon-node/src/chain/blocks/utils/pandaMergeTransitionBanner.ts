@@ -1,6 +1,9 @@
 /* eslint-disable no-useless-escape */
 // Note: 1 extra new line for space
-export const POS_PANDA_MERGE_TRANSITION_BANNER = `
+// Note: String.raw preserve backslash character
+//       see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/raw
+//       from https://stackoverflow.com/questions/30466581/preserve-all-backslashes-in-a-string
+export const POS_PANDA_MERGE_TRANSITION_BANNER = String.raw`
 
                                               _,..._,m,      |,                       _,..._,m,      |,
                                             ,/'      '"";     | |,                   /'      '"";     | |,
