@@ -30,6 +30,8 @@ export type BlockProcessOpts = {
    * Assert progressive balances the same to EpochProcess
    */
   assertCorrectProgressiveBalances?: boolean;
+  /** Used for fork_choice spec tests */
+  disableOnBlockError?: boolean;
 };
 
 export const defaultChainOptions: IChainOptions = {

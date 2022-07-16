@@ -84,7 +84,9 @@ export async function processBlock(
       return;
     }
 
-    onBlockError(chain, err);
+    if (!opts.disableOnBlockError) {
+      onBlockError(chain, err);
+    }
 
     throw err;
   }
@@ -130,7 +132,7 @@ export async function processChainSegment(
       // ChainEvent.errorBlock
       if (!(err instanceof BlockError)) {
         chain.logger.error("Non BlockError received", {}, err);
-      } else {
+      } else if (!opts.disableOnBlockError) {
         onBlockError(chain, err);
       }
 
