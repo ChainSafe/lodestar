@@ -199,7 +199,7 @@ export class BeaconChain implements IBeaconChain {
       signal,
     });
 
-    const lightClientServer = new LightClientServer({config, db, metrics, emitter, logger});
+    const lightClientServer = new LightClientServer(opts, {config, db, metrics, emitter, logger});
 
     this.reprocessController = new ReprocessController(this.metrics);
 

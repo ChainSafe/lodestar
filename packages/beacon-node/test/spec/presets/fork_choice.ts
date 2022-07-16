@@ -57,6 +57,9 @@ export const forkChoiceTest: TestRunnerFn<ForkChoiceTestCase, void> = (fork) => 
           blsVerifyAllMainThread: true,
           // Do not run any archiver tasks
           disableArchiveOnCheckpoint: true,
+          // Since the tests have deep-reorgs attested data is not available often printing lots of error logs.
+          // While this function is only called for head blocks, best to disable.
+          disableLightClientServerOnImportBlockHead: true,
           assertCorrectProgressiveBalances,
         },
         {

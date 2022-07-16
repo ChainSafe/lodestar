@@ -2,11 +2,13 @@ import {SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY} from "@lodestar/params";
 import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
 import {ArchiverOpts} from "./archiver/index.js";
 import {ForkChoiceOpts} from "./forkChoice/index.js";
+import {LightClientServerOpts} from "./lightClient/index.js";
 
 // eslint-disable-next-line @typescript-eslint/ban-types
 export type IChainOptions = BlockProcessOpts &
   ForkChoiceOpts &
-  ArchiverOpts & {
+  ArchiverOpts &
+  LightClientServerOpts & {
     blsVerifyAllMainThread?: boolean;
     blsVerifyAllMultiThread?: boolean;
     persistInvalidSszObjects?: boolean;
