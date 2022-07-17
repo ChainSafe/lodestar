@@ -29,7 +29,7 @@ import {IChainForkConfig} from "@lodestar/config";
 import {toHex} from "@lodestar/utils";
 
 import {IBeaconChain} from "../../interface.js";
-import {PayloadId, IExecutionEngine, IExecutionBuilder} from "../../../execution/index.js";
+import {IExecutionEngine, IExecutionBuilder} from "../../../execution/index.js";
 import {ZERO_HASH, ZERO_HASH_HEX} from "../../../constants/index.js";
 import {IEth1ForBlockProduction} from "../../../eth1/index.js";
 import {numToQuantity} from "../../../eth1/provider/utils.js";
@@ -122,39 +122,26 @@ export async function assembleBody<T extends BlockType>(
           feeRecipient
         );
       }
+
       // For MeV boost integration, this is where the execution header will be
       // fetched from the payload id and a blinded block will be produced instead of
       // fullblock for the validator to sign
-
-      const executionPayloadHeader = await prepareExecutionPayloadHeader(
+      (blockBody as bellatrix.BlindedBeaconBlockBody).executionPayloadHeader = await prepareExecutionPayloadHeader(
         chain,
         currentState as CachedBeaconStateBellatrix,
         proposerPubKey
       );
-      (blockBody as bellatrix.BlindedBeaconBlockBody).executionPayloadHeader = executionPayloadHeader;
     } else {
-      // prepareExecutionPayload will throw error via notifyForkchoiceUpdate if
-      // the EL returns Syncing on this request to prepare a payload
-      try {
-        const payloadId = await prepareExecutionPayload(
-          chain,
-          safeBlockHash,
-          finalizedBlockHash ?? ZERO_HASH_HEX,
-          currentState as CachedBeaconStateBellatrix,
-          feeRecipient
-        );
-        const executionPayload = payloadId ? await chain.executionEngine.getPayload(payloadId) : null;
-        if (executionPayload === null) throw Error("Empty executionPayload");
-        (blockBody as bellatrix.BeaconBlockBody).executionPayload =
-          executionPayload ?? ssz.bellatrix.ExecutionPayload.defaultValue();
-      } catch (e) {
-        // If the state is post merge, the empty/default payload will not be
-        // accepted by the engine. Else we can propose with empty payload
-        // and let someone else build a merge transition payload
-        (blockBody as bellatrix.BeaconBlockBody).executionPayload = ssz.bellatrix.ExecutionPayload.defaultValue();
-      }
+      (blockBody as bellatrix.BeaconBlockBody).executionPayload = await prepareExecutionPayload(
+        chain,
+        safeBlockHash,
+        finalizedBlockHash ?? ZERO_HASH_HEX,
+        currentState as CachedBeaconStateBellatrix,
+        feeRecipient
+      );
     }
   }
+
   return blockBody as AssembledBodyType<T>;
 }
 
@@ -175,28 +162,50 @@ export async function prepareExecutionPayload(
   finalizedBlockHash: RootHex,
   state: CachedBeaconStateBellatrix,
   suggestedFeeRecipient: string
-): Promise<PayloadId | null> {
-  const parentHash = extractExecutionPayloadParentHash(chain, state);
-  if (parentHash === null) return null;
+): Promise<bellatrix.ExecutionPayload> {
+  const parentHashRes = getExecutionPayloadParentHash(chain, state);
+  if (parentHashRes.isPremerge) {
+    // Before finding the merge block, put empty ExecutionPayload to signal merge block not found
+    return ssz.bellatrix.ExecutionPayload.defaultValue();
+  }
 
+  const {parentHash} = parentHashRes;
   const timestamp = computeTimeAtSlot(chain.config, state.slot, state.genesisTime);
   const prevRandao = getRandaoMix(state, state.epochCtx.epoch);
 
-  const payloadId =
-    chain.executionEngine.payloadIdCache.get({
-      headBlockHash: toHex(parentHash),
-      finalizedBlockHash,
-      timestamp: numToQuantity(timestamp),
-      prevRandao: toHex(prevRandao),
-      suggestedFeeRecipient,
-    }) ??
-    (await chain.executionEngine.notifyForkchoiceUpdate(toHex(parentHash), safeBlockHash, finalizedBlockHash, {
+  const payloadIdCached = chain.executionEngine.payloadIdCache.get({
+    headBlockHash: toHex(parentHash),
+    finalizedBlockHash,
+    timestamp: numToQuantity(timestamp),
+    prevRandao: toHex(prevRandao),
+    suggestedFeeRecipient,
+  });
+
+  if (payloadIdCached !== undefined) {
+    return await chain.executionEngine.getPayload(payloadIdCached);
+  }
+
+  // prepareExecutionPayload will throw error via notifyForkchoiceUpdate if
+  // the EL returns Syncing on this request to prepare a payload
+  // TODO: Handle only this case, DO NOT put a generic try / catch that discards all errors
+  const payloadId = await chain.executionEngine.notifyForkchoiceUpdate(
+    toHex(parentHash),
+    safeBlockHash,
+    finalizedBlockHash,
+    {
       timestamp,
       prevRandao,
       suggestedFeeRecipient,
-    }));
-  if (!payloadId) throw new Error("InvalidPayloadId: Null");
-  return payloadId;
+    }
+  );
+
+  // Should never happen, notifyForkchoiceUpdate() with payload attributes always returns payloadId
+  if (payloadId === null) {
+    throw Error("notifyForkchoiceUpdate returned payloadId null");
+  }
+
+  // TODO: This request is very close to notifyForkchoiceUpdate(), should it wait for ~20ms?
+  return await chain.executionEngine.getPayload(payloadId);
 }
 
 async function prepareExecutionPayloadHeader(
@@ -208,25 +217,34 @@ async function prepareExecutionPayloadHeader(
   state: CachedBeaconStateBellatrix,
   proposerPubKey: BLSPubkey
 ): Promise<bellatrix.ExecutionPayloadHeader> {
-  if (!chain.executionBuilder) throw Error("executionBuilder required");
+  if (!chain.executionBuilder) {
+    throw Error("executionBuilder required");
+  }
 
-  const parentHash = extractExecutionPayloadParentHash(chain, state);
-  if (parentHash === null) throw Error(`Invalid parentHash=${parentHash} for builder getPayloadHeader`);
+  const parentHashRes = getExecutionPayloadParentHash(chain, state);
 
+  if (parentHashRes.isPremerge) {
+    // TODO: Is this okay?
+    throw Error("Execution builder disabled pre-merge");
+  }
+
+  const {parentHash} = parentHashRes;
   return chain.executionBuilder.getPayloadHeader(state.slot, parentHash, proposerPubKey);
 }
 
-function extractExecutionPayloadParentHash(
+function getExecutionPayloadParentHash(
   chain: {
     eth1: IEth1ForBlockProduction;
     config: IChainForkConfig;
   },
   state: CachedBeaconStateBellatrix
-): Root | null {
+): {isPremerge: true} | {isPremerge: false; parentHash: Root} {
   // Use different POW block hash parent for block production based on merge status.
   // Returned value of null == using an empty ExecutionPayload value
-  let parentHash: Root;
-  if (!isMergeTransitionComplete(state)) {
+  if (isMergeTransitionComplete(state)) {
+    // Post-merge, normal payload
+    return {isPremerge: false, parentHash: state.latestExecutionPayloadHeader.blockHash};
+  } else {
     if (
       !ssz.Root.equals(chain.config.TERMINAL_BLOCK_HASH, ZERO_HASH) &&
       getCurrentEpoch(state) < chain.config.TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH
@@ -236,19 +254,16 @@ function extractExecutionPayloadParentHash(
           chain.config.TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH
         }, actual: ${getCurrentEpoch(state)}`
       );
+
     const terminalPowBlockHash = chain.eth1.getTerminalPowBlock();
     if (terminalPowBlockHash === null) {
       // Pre-merge, no prepare payload call is needed
-      return null;
+      return {isPremerge: true};
     } else {
       // Signify merge via producing on top of the last PoW block
-      parentHash = terminalPowBlockHash;
+      return {isPremerge: false, parentHash: terminalPowBlockHash};
     }
-  } else {
-    // Post-merge, normal payload
-    parentHash = state.latestExecutionPayloadHeader.blockHash;
   }
-  return parentHash;
 }
 
 /** process_sync_committee_contributions is implemented in syncCommitteeContribution.getSyncAggregate */
