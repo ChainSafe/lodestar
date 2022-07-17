@@ -1,7 +1,3 @@
-/**
- * @module chain/stateTransition/util
- */
-
 import {Epoch, Slot, Root, phase0, allForks} from "@lodestar/types";
 import {IChainForkConfig} from "@lodestar/config";
 

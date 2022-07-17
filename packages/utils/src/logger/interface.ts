@@ -1,7 +1,3 @@
-/**
- * @module logger
- */
-
 import {Writable} from "node:stream";
 import {LogData} from "./json.js";
 

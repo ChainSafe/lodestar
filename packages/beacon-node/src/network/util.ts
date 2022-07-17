@@ -1,12 +1,9 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/**
- * @module network
- */
-
 import {networkInterfaces} from "node:os";
 import PeerId from "peer-id";
 import {Multiaddr} from "multiaddr";
 import {ENR} from "@chainsafe/discv5";
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 // peers
 

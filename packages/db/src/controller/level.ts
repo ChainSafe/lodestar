@@ -1,7 +1,3 @@
-/**
- * @module db/controller/impl
- */
-
 import {LevelUp} from "levelup";
 import level from "level";
 import all from "it-all";

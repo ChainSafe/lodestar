@@ -1,7 +1,3 @@
-/**
- * @module chain
- */
-
 import path from "node:path";
 import {
   BeaconStateAllForks,

@@ -1,7 +1,3 @@
-/**
- * @module chain/forkChoice
- */
-
 import {toHexString} from "@chainsafe/ssz";
 import {Slot} from "@lodestar/types";
 import {IChainForkConfig} from "@lodestar/config";
