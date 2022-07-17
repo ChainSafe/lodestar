@@ -1,6 +1,6 @@
 import {computeEpochAtSlot, isBellatrixStateType} from "@lodestar/state-transition";
 import {IChainForkConfig} from "@lodestar/config";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Slot} from "@lodestar/types";
 import {ILogger, sleep} from "@lodestar/utils";
 import {GENESIS_SLOT, ZERO_HASH_HEX} from "../constants/constants.js";
@@ -57,7 +57,10 @@ export class PrepareNextSlotScheduler {
 
     // Early return if we are pre-genesis
     //  or we are pre-bellatrix and this is not an epoch transition
-    if (prepareSlot <= GENESIS_SLOT || (prepareEpoch < this.config.BELLATRIX_FORK_EPOCH && !isEpochTransition)) {
+    if (
+      prepareSlot <= GENESIS_SLOT ||
+      (this.config.getForkSeq(prepareEpoch) < ForkSeq.bellatrix && !isEpochTransition)
+    ) {
       return;
     }
 
