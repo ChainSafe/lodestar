@@ -52,15 +52,17 @@ export class KeymanagerApi implements Api {
   async importKeystores(
     keystoresStr: KeystoreStr[],
     passwords: string[],
-    slashingProtectionStr: SlashingProtectionData
+    slashingProtectionStr?: SlashingProtectionData
   ): ReturnType<Api["importKeystores"]> {
-    // The arguments to this function is passed in within the body of an HTTP request
-    // hence fastify will parse it into an object before this function is called.
-    // Even though the slashingProtectionStr is typed as SlashingProtectionData,
-    // at runtime, when the handler for the request is selected, it would see slashingProtectionStr
-    // as an object, hence trying to parse it using JSON.parse won't work. Instead, we cast straight to Interchange
-    const interchange = ensureJSON<Interchange>(slashingProtectionStr);
-    await this.validator.importInterchange(interchange);
+    if (slashingProtectionStr) {
+      // The arguments to this function is passed in within the body of an HTTP request
+      // hence fastify will parse it into an object before this function is called.
+      // Even though the slashingProtectionStr is typed as SlashingProtectionData,
+      // at runtime, when the handler for the request is selected, it would see slashingProtectionStr
+      // as an object, hence trying to parse it using JSON.parse won't work. Instead, we cast straight to Interchange
+      const interchange = ensureJSON<Interchange>(slashingProtectionStr);
+      await this.validator.importInterchange(interchange);
+    }
 
     const statuses: {status: ImportStatus; message?: string}[] = [];
 

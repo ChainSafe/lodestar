@@ -114,7 +114,7 @@ export type Api = {
   importKeystores(
     keystoresStr: KeystoreStr[],
     passwords: string[],
-    slashingProtectionStr: SlashingProtectionData
+    slashingProtectionStr?: SlashingProtectionData
   ): Promise<{
     data: ResponseStatus<ImportStatus>[];
   }>;
@@ -184,7 +184,7 @@ export type ReqTypes = {
     body: {
       keystores: KeystoreStr[];
       passwords: string[];
-      slashingProtection: SlashingProtectionData;
+      slashingProtection?: SlashingProtectionData;
     };
   };
   deleteKeystores: {body: {pubkeys: string[]}};
