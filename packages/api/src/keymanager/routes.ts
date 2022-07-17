@@ -178,13 +178,15 @@ export const routesData: RoutesData<Api> = {
   deleteRemoteKeys: {url: "/eth/v1/remotekeys", method: "DELETE"},
 };
 
+/* eslint-disable @typescript-eslint/naming-convention */
+
 export type ReqTypes = {
   listKeys: ReqEmpty;
   importKeystores: {
     body: {
       keystores: KeystoreStr[];
       passwords: string[];
-      slashingProtection: SlashingProtectionData;
+      slashing_protection: SlashingProtectionData;
     };
   };
   deleteKeystores: {body: {pubkeys: string[]}};
@@ -192,7 +194,7 @@ export type ReqTypes = {
   listRemoteKeys: ReqEmpty;
   importRemoteKeys: {
     body: {
-      remoteKeys: Pick<SignerDefinition, "pubkey" | "url">[];
+      remote_keys: Pick<SignerDefinition, "pubkey" | "url">[];
     };
   };
   deleteRemoteKeys: {body: {pubkeys: string[]}};
@@ -202,8 +204,8 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
   return {
     listKeys: reqEmpty,
     importKeystores: {
-      writeReq: (keystores, passwords, slashingProtection) => ({body: {keystores, passwords, slashingProtection}}),
-      parseReq: ({body: {keystores, passwords, slashingProtection}}) => [keystores, passwords, slashingProtection],
+      writeReq: (keystores, passwords, slashing_protection) => ({body: {keystores, passwords, slashing_protection}}),
+      parseReq: ({body: {keystores, passwords, slashing_protection}}) => [keystores, passwords, slashing_protection],
       schema: {body: Schema.Object},
     },
     deleteKeystores: {
@@ -214,8 +216,8 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
 
     listRemoteKeys: reqEmpty,
     importRemoteKeys: {
-      writeReq: (remoteKeys) => ({body: {remoteKeys}}),
-      parseReq: ({body: {remoteKeys}}) => [remoteKeys],
+      writeReq: (remote_keys) => ({body: {remote_keys}}),
+      parseReq: ({body: {remote_keys}}) => [remote_keys],
       schema: {body: Schema.Object},
     },
     deleteRemoteKeys: {
