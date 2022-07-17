@@ -30,7 +30,7 @@ export class CheckpointBalancesCache {
    * add the effective balances from the `state` to the cache.
    */
   processState(blockRootHex: RootHex, state: CachedBeaconStateAllForks): void {
-    const epoch = state.epochCtx.currentShuffling.epoch;
+    const epoch = state.epochCtx.epoch;
     const epochBoundarySlot = computeStartSlotAtEpoch(epoch);
     const epochBoundaryRoot =
       epochBoundarySlot === state.slot ? blockRootHex : toHexString(getBlockRootAtSlot(state, epochBoundarySlot));

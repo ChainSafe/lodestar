@@ -21,7 +21,7 @@ export function getLatestWeakSubjectivityCheckpointEpoch(
   config: IChainForkConfig,
   state: CachedBeaconStateAllForks
 ): Epoch {
-  return state.epochCtx.currentShuffling.epoch - computeWeakSubjectivityPeriodCachedState(config, state);
+  return state.epochCtx.epoch - computeWeakSubjectivityPeriodCachedState(config, state);
 }
 
 /**

@@ -190,7 +190,7 @@ export async function prepareExecutionPayload(
       prevRandao: toHex(prevRandao),
       suggestedFeeRecipient,
     }) ??
-    (await chain.executionEngine.notifyForkchoiceUpdate(parentHash, safeBlockHash, finalizedBlockHash, {
+    (await chain.executionEngine.notifyForkchoiceUpdate(toHex(parentHash), safeBlockHash, finalizedBlockHash, {
       timestamp,
       prevRandao,
       suggestedFeeRecipient,

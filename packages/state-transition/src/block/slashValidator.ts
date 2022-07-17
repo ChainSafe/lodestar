@@ -27,7 +27,7 @@ export function slashValidator(
   whistleblowerIndex?: ValidatorIndex
 ): void {
   const {epochCtx} = state;
-  const epoch = epochCtx.currentShuffling.epoch;
+  const epoch = epochCtx.epoch;
   const validator = state.validators.get(slashedIndex);
 
   // TODO: Bellatrix initiateValidatorExit validators.update() with the one below
