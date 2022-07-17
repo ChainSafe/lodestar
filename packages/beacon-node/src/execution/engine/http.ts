@@ -1,4 +1,4 @@
-import {bellatrix, RootHex, Root} from "@lodestar/types";
+import {bellatrix, RootHex} from "@lodestar/types";
 import {BYTES_PER_LOGS_BLOOM} from "@lodestar/params";
 import {fromHex} from "@lodestar/utils";
 
@@ -187,13 +187,12 @@ export class ExecutionEngineHttp implements IExecutionEngine {
    * If any of the above fails due to errors unrelated to the normal processing flow of the method, client software MUST respond with an error object.
    */
   async notifyForkchoiceUpdate(
-    headBlockHash: Root | RootHex,
+    headBlockHash: RootHex,
     safeBlockHash: RootHex,
     finalizedBlockHash: RootHex,
     payloadAttributes?: PayloadAttributes
   ): Promise<PayloadId | null> {
     const method = "engine_forkchoiceUpdatedV1";
-    const headBlockHashData = typeof headBlockHash === "string" ? headBlockHash : bytesToData(headBlockHash);
     const apiPayloadAttributes: ApiPayloadAttributes | undefined = payloadAttributes
       ? {
           timestamp: numToQuantity(payloadAttributes.timestamp),
@@ -208,7 +207,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       payloadStatus: {status, latestValidHash: _latestValidHash, validationError},
       payloadId,
     } = await this.rpc.fetch<EngineApiRpcReturnTypes[typeof method], EngineApiRpcParamTypes[typeof method]>(
-      {method, params: [{headBlockHash: headBlockHashData, safeBlockHash, finalizedBlockHash}, apiPayloadAttributes]},
+      {method, params: [{headBlockHash, safeBlockHash, finalizedBlockHash}, apiPayloadAttributes]},
       forkchoiceUpdatedV1Opts
     );
 
@@ -220,10 +219,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
             throw Error(`Received invalid payloadId=${payloadId}`);
           }
 
-          this.payloadIdCache.add(
-            {headBlockHash: headBlockHashData, finalizedBlockHash, ...apiPayloadAttributes},
-            payloadId
-          );
+          this.payloadIdCache.add({headBlockHash, finalizedBlockHash, ...apiPayloadAttributes}, payloadId);
           void this.prunePayloadIdCache();
         }
         return payloadId !== "0x" ? payloadId : null;

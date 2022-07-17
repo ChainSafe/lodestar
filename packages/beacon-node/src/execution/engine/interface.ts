@@ -1,4 +1,4 @@
-import {bellatrix, Root, RootHex} from "@lodestar/types";
+import {bellatrix, RootHex} from "@lodestar/types";
 import {PayloadIdCache, PayloadId, ApiPayloadAttributes} from "./payloadIdCache.js";
 
 export {PayloadIdCache, PayloadId, ApiPayloadAttributes};
@@ -79,7 +79,7 @@ export interface IExecutionEngine {
    * Should be called in response to fork-choice head and finalized events
    */
   notifyForkchoiceUpdate(
-    headBlockHash: Root | RootHex,
+    headBlockHash: RootHex,
     safeBlockHash: RootHex,
     finalizedBlockHash: RootHex,
     payloadAttributes?: PayloadAttributes
