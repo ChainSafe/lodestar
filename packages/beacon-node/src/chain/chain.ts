@@ -22,7 +22,7 @@ import {IEth1ForBlockProduction} from "../eth1/index.js";
 import {IExecutionEngine, IExecutionBuilder} from "../execution/index.js";
 import {ensureDir, writeIfNotExist} from "../util/file.js";
 import {CheckpointStateCache, StateContextCache} from "./stateCache/index.js";
-import {BlockProcessor, PartiallyVerifiedBlockFlags} from "./blocks/index.js";
+import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
 import {IBeaconClock, LocalClock} from "./clock/index.js";
 import {ChainEventEmitter} from "./emitter.js";
 import {IBeaconChain, ProposerPreparationData} from "./interface.js";
@@ -314,12 +314,12 @@ export class BeaconChain implements IBeaconChain {
     return await this.db.block.get(fromHexString(block.blockRoot));
   }
 
-  async processBlock(block: allForks.SignedBeaconBlock, flags?: PartiallyVerifiedBlockFlags): Promise<void> {
-    return await this.blockProcessor.processBlockJob({...flags, block});
+  async processBlock(block: allForks.SignedBeaconBlock, opts?: ImportBlockOpts): Promise<void> {
+    return await this.blockProcessor.processBlocksJob([block], opts);
   }
 
-  async processChainSegment(blocks: allForks.SignedBeaconBlock[], flags?: PartiallyVerifiedBlockFlags): Promise<void> {
-    return await this.blockProcessor.processChainSegment(blocks.map((block) => ({...flags, block})));
+  async processChainSegment(blocks: allForks.SignedBeaconBlock[], opts?: ImportBlockOpts): Promise<void> {
+    return await this.blockProcessor.processBlocksJob(blocks, opts);
   }
 
   getStatus(): phase0.Status {

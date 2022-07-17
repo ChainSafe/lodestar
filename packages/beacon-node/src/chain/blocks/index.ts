@@ -1,15 +1,15 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
 import {allForks} from "@lodestar/types";
-import {sleep, toHex} from "@lodestar/utils";
+import {toHex} from "@lodestar/utils";
 import {JobItemQueue} from "../../util/queue/index.js";
-import {BlockError, BlockErrorCode, ChainSegmentError} from "../errors/index.js";
+import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
 import {IBeaconChain} from "../interface.js";
 import {verifyBlock, VerifyBlockModules} from "./verifyBlock.js";
 import {importBlock, ImportBlockModules} from "./importBlock.js";
 import {assertLinearChainSegment} from "./utils/chainSegment.js";
-import {PartiallyVerifiedBlock} from "./types.js";
-export {PartiallyVerifiedBlockFlags} from "./types.js";
+import {ImportBlockOpts} from "./types.js";
+export {ImportBlockOpts} from "./types.js";
 
 const QUEUE_MAX_LENGHT = 256;
 
@@ -23,28 +23,20 @@ export type ProcessBlockModules = VerifyBlockModules &
  * BlockProcessor processes block jobs in a queued fashion, one after the other.
  */
 export class BlockProcessor {
-  readonly jobQueue: JobItemQueue<[PartiallyVerifiedBlock[] | PartiallyVerifiedBlock], void>;
+  readonly jobQueue: JobItemQueue<[allForks.SignedBeaconBlock[], ImportBlockOpts], void>;
 
   constructor(modules: ProcessBlockModules, opts: BlockProcessOpts, signal: AbortSignal) {
-    this.jobQueue = new JobItemQueue(
-      (job) => {
-        if (!Array.isArray(job)) {
-          return processBlock(modules, job, opts);
-        } else {
-          return processChainSegment(modules, job, opts);
-        }
+    this.jobQueue = new JobItemQueue<[allForks.SignedBeaconBlock[], ImportBlockOpts], void>(
+      (job, importOpts) => {
+        return processBlocks(modules, job, {...opts, ...importOpts});
       },
       {maxLength: QUEUE_MAX_LENGHT, signal},
       modules.metrics ? modules.metrics.blockProcessorQueue : undefined
     );
   }
 
-  async processBlockJob(job: PartiallyVerifiedBlock): Promise<void> {
-    await this.jobQueue.push(job);
-  }
-
-  async processChainSegment(job: PartiallyVerifiedBlock[]): Promise<void> {
-    await this.jobQueue.push(job);
+  async processBlocksJob(job: allForks.SignedBeaconBlock[], opts: ImportBlockOpts = {}): Promise<void> {
+    await this.jobQueue.push(job, opts);
   }
 }
 
@@ -58,89 +50,38 @@ export class BlockProcessor {
  *
  * All other effects are provided by downstream event handlers
  */
-export async function processBlock(
+export async function processBlocks(
   chain: ProcessBlockModules,
-  partiallyVerifiedBlock: PartiallyVerifiedBlock,
-  opts: BlockProcessOpts
+  blocks: allForks.SignedBeaconBlock[],
+  opts: BlockProcessOpts & ImportBlockOpts
 ): Promise<void> {
+  if (blocks.length === 0) {
+    return; // TODO: or throw?
+  } else if (blocks.length > 1) {
+    assertLinearChainSegment(chain.config, blocks);
+  }
+
   try {
-    const fullyVerifiedBlock = await verifyBlock(chain, partiallyVerifiedBlock, opts);
-    await importBlock(chain, fullyVerifiedBlock);
+    for (const block of blocks) {
+      const fullyVerifiedBlock = await verifyBlock(chain, block, opts);
+
+      // No need to sleep(0) here since `importBlock` includes a disk write
+      // TODO: Consider batching importBlock too if it takes significant time
+      await importBlock(chain, fullyVerifiedBlock, opts);
+    }
   } catch (e) {
     // above functions should only throw BlockError
-    const err = getBlockError(e, partiallyVerifiedBlock.block);
+    const err = getBlockError(e, blocks[0]);
 
-    if (
-      partiallyVerifiedBlock.ignoreIfKnown &&
-      (err.type.code === BlockErrorCode.ALREADY_KNOWN || err.type.code === BlockErrorCode.GENESIS_BLOCK)
-    ) {
-      // Flag ignoreIfKnown causes BlockErrorCodes ALREADY_KNOWN, GENESIS_BLOCK to resolve.
-      // Return before emitting to not cause loud logging.
-      return;
-    }
-
+    // TODO: De-duplicate with logic above
+    // ChainEvent.errorBlock
     if (!(err instanceof BlockError)) {
       chain.logger.error("Non BlockError received", {}, err);
-      return;
-    }
-
-    if (!opts.disableOnBlockError) {
+    } else if (!opts.disableOnBlockError) {
       onBlockError(chain, err);
     }
 
     throw err;
-  }
-}
-
-/**
- * Similar to processBlockJob but this process a chain segment
- */
-export async function processChainSegment(
-  chain: ProcessBlockModules,
-  partiallyVerifiedBlocks: PartiallyVerifiedBlock[],
-  opts: BlockProcessOpts
-): Promise<void> {
-  const blocks = partiallyVerifiedBlocks.map((b) => b.block);
-  assertLinearChainSegment(chain.config, blocks);
-
-  let importedBlocks = 0;
-
-  for (const partiallyVerifiedBlock of partiallyVerifiedBlocks) {
-    try {
-      // TODO: Re-use preState
-      const fullyVerifiedBlock = await verifyBlock(chain, partiallyVerifiedBlock, opts);
-      await importBlock(chain, fullyVerifiedBlock);
-      importedBlocks++;
-
-      // this avoids keeping our node busy processing blocks
-      await sleep(0);
-    } catch (e) {
-      // above functions should only throw BlockError
-      const err = getBlockError(e, partiallyVerifiedBlock.block);
-
-      if (
-        partiallyVerifiedBlock.ignoreIfKnown &&
-        (err.type.code === BlockErrorCode.ALREADY_KNOWN || err.type.code === BlockErrorCode.GENESIS_BLOCK)
-      ) {
-        continue;
-      }
-      if (partiallyVerifiedBlock.ignoreIfFinalized && err.type.code == BlockErrorCode.WOULD_REVERT_FINALIZED_SLOT) {
-        continue;
-      }
-
-      // TODO: De-duplicate with logic above
-      // ChainEvent.errorBlock
-      if (!(err instanceof BlockError)) {
-        chain.logger.error("Non BlockError received", {}, err);
-      } else if (!opts.disableOnBlockError) {
-        onBlockError(chain, err);
-      }
-
-      // Convert to ChainSegmentError to append `importedBlocks` data
-      const chainSegmentError = new ChainSegmentError(partiallyVerifiedBlock.block, err.type, importedBlocks);
-      chainSegmentError.stack = err.stack;
-      throw chainSegmentError;
-    }
   }
 }
 

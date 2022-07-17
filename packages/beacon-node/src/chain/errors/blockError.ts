@@ -112,22 +112,6 @@ export class BlockError extends LodestarError<BlockErrorType> {
   }
 }
 
-export class ChainSegmentError extends LodestarError<BlockErrorType> {
-  /**
-   * Number of blocks successfully imported before the error
-   */
-  importedBlocks: number;
-
-  constructor(readonly signedBlock: allForks.SignedBeaconBlock, type: BlockErrorType, importedBlocks: number) {
-    super(type);
-    this.importedBlocks = importedBlocks;
-  }
-
-  getMetadata(): Record<string, string | number | null> {
-    return renderBlockErrorType(this.type);
-  }
-}
-
 export function renderBlockErrorType(type: BlockErrorType): Record<string, string | number | null> {
   switch (type.code) {
     case BlockErrorCode.PRESTATE_MISSING:
