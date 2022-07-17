@@ -38,6 +38,8 @@ export type PartiallyVerifiedBlockFlags = FullyVerifiedBlockFlags & {
    * Verify signatures on main thread or not.
    */
   blsVerifyOnMainThread?: boolean;
+  /** Seen timestamp seconds */
+  seenTimestampSec?: number;
 };
 
 /**
@@ -52,6 +54,8 @@ export type FullyVerifiedBlock = FullyVerifiedBlockFlags & {
    * If the execution payload couldnt be verified because of EL syncing status, used in optimistic sync or for merge block
    */
   executionStatus: ExecutionStatus;
+  /** Seen timestamp seconds */
+  seenTimestampSec: number;
 };
 
 /**

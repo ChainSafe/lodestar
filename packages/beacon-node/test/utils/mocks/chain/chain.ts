@@ -126,13 +126,16 @@ export class MockBeaconChain implements IBeaconChain {
       metrics: null,
       emitter: this.emitter,
     });
-    this.lightClientServer = new LightClientServer({
-      config: this.config,
-      db: db,
-      metrics: null,
-      emitter: this.emitter,
-      logger,
-    });
+    this.lightClientServer = new LightClientServer(
+      {},
+      {
+        config: this.config,
+        db: db,
+        metrics: null,
+        emitter: this.emitter,
+        logger,
+      }
+    );
     this.reprocessController = new ReprocessController(null);
   }
 

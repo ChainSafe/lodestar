@@ -19,6 +19,10 @@ import {
 } from "./proofs.js";
 import {PartialLightClientUpdate} from "./types.js";
 
+export type LightClientServerOpts = {
+  disableLightClientServerOnImportBlockHead?: boolean;
+};
+
 type DependantRootHex = RootHex;
 type BlockRooHex = RootHex;
 
@@ -167,7 +171,7 @@ export class LightClientServer {
   private readonly zero: Pick<altair.LightClientUpdate, "finalityBranch" | "finalizedHeader">;
   private finalized: routes.lightclient.LightclientFinalizedUpdate | null = null;
 
-  constructor(modules: LightClientServerModules) {
+  constructor(private readonly opts: LightClientServerOpts, modules: LightClientServerModules) {
     const {config, db, metrics, emitter, logger} = modules;
     this.config = config;
     this.db = db;
@@ -187,6 +191,13 @@ export class LightClientServer {
    * - Use block's syncAggregate
    */
   onImportBlockHead(block: altair.BeaconBlock, postState: CachedBeaconStateAltair, parentBlockSlot: Slot): void {
+    // TEMP: To disable this functionality for fork_choice spec tests.
+    // Since the tests have deep-reorgs attested data is not available often printing lots of error logs.
+    // While this function is only called for head blocks, best to disable.
+    if (this.opts.disableLightClientServerOnImportBlockHead) {
+      return;
+    }
+
     // What is the syncAggregate signing?
     // From the state-transition
     // ```
@@ -435,7 +446,7 @@ export class LightClientServer {
       if (this.prevHeadData.size === 0) {
         return;
       } else {
-        throw Error("attestedData not available");
+        throw Error(`attestedData for ${signedBlockRootHex} not available`);
       }
     }
 
