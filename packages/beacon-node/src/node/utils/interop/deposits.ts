@@ -1,7 +1,7 @@
 import {digest} from "@chainsafe/as-sha256";
 import {phase0, ssz} from "@lodestar/types";
 import {toGindex, Tree} from "@chainsafe/persistent-merkle-tree";
-import {IChainForkConfig} from "@lodestar/config";
+import {IChainConfig} from "@lodestar/config";
 import {computeDomain, computeSigningRoot, interopSecretKeys, ZERO_HASH} from "@lodestar/state-transition";
 import {BLS_WITHDRAWAL_PREFIX, DOMAIN_DEPOSIT, MAX_EFFECTIVE_BALANCE} from "@lodestar/params";
 import {DepositTree} from "../../../db/repositories/depositDataRoot.js";
@@ -10,7 +10,7 @@ import {DepositTree} from "../../../db/repositories/depositDataRoot.js";
  * Compute and return deposit data from other validators.
  */
 export function interopDeposits(
-  config: IChainForkConfig,
+  config: IChainConfig,
   depositDataRootList: DepositTree,
   validatorCount: number
 ): phase0.Deposit[] {

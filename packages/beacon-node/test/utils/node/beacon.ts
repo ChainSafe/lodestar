@@ -80,7 +80,7 @@ export async function getDevBeaconNode(
     }
   );
 
-  const state = opts.anchorState || (await initDevState(config, db, validatorCount, opts));
+  const state = opts.anchorState || initDevState(config, validatorCount, opts).state;
   const beaconConfig = createIBeaconConfig(config, state.genesisValidatorsRoot);
   return await BeaconNode.init({
     opts: options as IBeaconNodeOptions,
