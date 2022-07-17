@@ -1,7 +1,3 @@
-/**
- * @module chain/blockAssembly
- */
-
 import {CachedBeaconStateAllForks, stateTransition} from "@lodestar/state-transition";
 import {allForks, Bytes32, Bytes96, Root, Slot} from "@lodestar/types";
 import {fromHexString} from "@chainsafe/ssz";

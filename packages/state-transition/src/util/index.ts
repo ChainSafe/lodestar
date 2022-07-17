@@ -1,7 +1,3 @@
-/**
- * @module chain/stateTransition/util
- */
-
 export * from "./aggregator.js";
 export * from "./array.js";
 export * from "./attestation.js";

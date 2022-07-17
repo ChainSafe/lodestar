@@ -1,6 +1,3 @@
-/**
- * @module validator
- */
 import type {SecretKey} from "@chainsafe/bls/types";
 import {BLSPubkey} from "@lodestar/types";
 import {IDatabaseController} from "@lodestar/db";

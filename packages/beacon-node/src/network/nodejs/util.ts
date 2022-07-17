@@ -1,7 +1,3 @@
-/**
- * @module network/nodejs
- */
-
 import PeerId from "peer-id";
 import LibP2p from "libp2p";
 import {ENR} from "@chainsafe/discv5";

@@ -1,7 +1,3 @@
-/**
- * @module logger
- */
-
 import {Writable} from "node:stream";
 import winston from "winston";
 import type {Logger} from "winston";

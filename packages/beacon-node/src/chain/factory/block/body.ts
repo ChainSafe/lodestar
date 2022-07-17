@@ -1,7 +1,3 @@
-/**
- * @module chain/blockAssembly
- */
-
 import {
   bellatrix,
   Bytes96,

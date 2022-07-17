@@ -1,7 +1,3 @@
-/**
- * @module eth1
- */
-
 import {IBeaconConfig} from "@lodestar/config";
 import {phase0, Root, RootHex} from "@lodestar/types";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";

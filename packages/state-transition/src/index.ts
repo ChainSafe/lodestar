@@ -1,7 +1,3 @@
-/**
- * @module chain/stateTransition
- */
-
 export * from "./stateTransition.js";
 export * from "./constants/index.js";
 export * from "./util/index.js";

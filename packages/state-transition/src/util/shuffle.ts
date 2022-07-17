@@ -1,6 +1,3 @@
-/**
- * @module util/objects
- */
 import {digest} from "@chainsafe/as-sha256";
 import {SHUFFLE_ROUND_COUNT} from "@lodestar/params";
 import {ValidatorIndex, Bytes32} from "@lodestar/types";

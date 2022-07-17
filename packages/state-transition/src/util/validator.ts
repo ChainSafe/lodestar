@@ -1,7 +1,3 @@
-/**
- * @module chain/stateTransition/util
- */
-
 import {Epoch, phase0, ValidatorIndex} from "@lodestar/types";
 import {intDiv} from "@lodestar/utils";
 import {IChainForkConfig} from "@lodestar/config";

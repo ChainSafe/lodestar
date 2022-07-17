@@ -1,7 +1,3 @@
-/**
- * @module chain
- */
-
 import {
   blockToHeader,
   computeEpochAtSlot,
