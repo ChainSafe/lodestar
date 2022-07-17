@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import {bellatrix, RootHex, Root} from "@lodestar/types";
+import {bellatrix, RootHex} from "@lodestar/types";
 import {toHexString, fromHexString} from "@chainsafe/ssz";
 import {BYTES_PER_LOGS_BLOOM} from "@lodestar/params";
 import {ZERO_HASH, ZERO_HASH_HEX} from "../../constants/index.js";
@@ -81,23 +81,22 @@ export class ExecutionEngineMock implements IExecutionEngine {
    * 2. Client software MUST respond with 4: Unknown block error if the payload identified by either the headBlockHash or the finalizedBlockHash is unknown.
    */
   async notifyForkchoiceUpdate(
-    headBlockHash: Root,
+    headBlockHash: RootHex,
     safeBlockHash: RootHex,
     finalizedBlockHash: RootHex,
     payloadAttributes?: PayloadAttributes
   ): Promise<PayloadId> {
-    const headBlockHashHex = toHexString(headBlockHash);
-    if (!this.knownBlocks.has(headBlockHashHex)) {
-      throw Error(`Unknown headBlockHash ${headBlockHashHex}`);
+    if (!this.knownBlocks.has(headBlockHash)) {
+      throw Error(`Unknown headBlockHash ${headBlockHash}`);
     }
     if (!this.knownBlocks.has(finalizedBlockHash)) {
       throw Error(`Unknown finalizedBlockHash ${finalizedBlockHash}`);
     }
 
-    this.headBlockRoot = headBlockHashHex;
+    this.headBlockRoot = headBlockHash;
     this.finalizedBlockRoot = finalizedBlockHash;
 
-    const parentHashHex = headBlockHashHex;
+    const parentHashHex = headBlockHash;
     const parentPayload = this.knownBlocks.get(parentHashHex);
     if (!parentPayload) {
       throw Error(`Unknown parentHash ${parentHashHex}`);
@@ -107,7 +106,7 @@ export class ExecutionEngineMock implements IExecutionEngine {
 
     const payloadId = this.payloadId++;
     const payload: bellatrix.ExecutionPayload = {
-      parentHash: headBlockHash,
+      parentHash: fromHexString(headBlockHash),
       feeRecipient: fromHexString(payloadAttributes.suggestedFeeRecipient),
       stateRoot: crypto.randomBytes(32),
       receiptsRoot: crypto.randomBytes(32),
