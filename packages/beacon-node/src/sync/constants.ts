@@ -43,7 +43,7 @@ export const EPOCHS_PER_BATCH = 1;
 /**
  * The maximum number of batches to queue before requesting more.
  * In good network conditions downloading batches is much faster than processing them
- *A number > 10 epochs worth results in wasted progress when the chain completes syncing
+ * A number > 10 epochs worth results in wasted progress when the chain completes syncing
  *
  * TODO: When switching branches usually all batches in AwaitingProcessing are dropped, could it be optimized?
  */

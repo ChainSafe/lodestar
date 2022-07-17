@@ -22,7 +22,7 @@ export interface IValidatorMonitor {
   registerLocalValidator(index: number): void;
   registerValidatorStatuses(currentEpoch: Epoch, statuses: IAttesterStatus[], balances?: number[]): void;
   registerBeaconBlock(src: OpSource, seenTimestampSec: Seconds, block: allForks.BeaconBlock): void;
-  registerImportedBlock(block: allForks.BeaconBlock, data: {proposerBalanceDiff: number}): void;
+  registerImportedBlock(block: allForks.BeaconBlock, data: {proposerBalanceDelta: number}): void;
   submitUnaggregatedAttestation(
     seenTimestampSec: number,
     indexedAttestation: IndexedAttestation,
@@ -276,9 +276,9 @@ export function createValidatorMonitor(
       }
     },
 
-    registerImportedBlock(block, {proposerBalanceDiff}) {
+    registerImportedBlock(block, {proposerBalanceDelta}) {
       if (validators.has(block.proposerIndex)) {
-        metrics.validatorMonitor.proposerBalanceDiffKnown.observe(proposerBalanceDiff);
+        metrics.validatorMonitor.proposerBalanceDeltaKnown.observe(proposerBalanceDelta);
       }
     },
 
