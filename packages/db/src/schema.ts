@@ -1,6 +1,3 @@
-/**
- * @module db/schema
- */
 import {intToBytes} from "@lodestar/utils";
 import {BUCKET_LENGTH} from "./const.js";
 

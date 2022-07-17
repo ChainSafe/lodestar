@@ -1,6 +1,6 @@
 import {Epoch, ValidatorIndex} from "@lodestar/types";
 import {intDiv} from "@lodestar/utils";
-import {EPOCHS_PER_SLASHINGS_VECTOR, FAR_FUTURE_EPOCH, ForkName, MAX_EFFECTIVE_BALANCE} from "@lodestar/params";
+import {EPOCHS_PER_SLASHINGS_VECTOR, FAR_FUTURE_EPOCH, ForkSeq, MAX_EFFECTIVE_BALANCE} from "@lodestar/params";
 
 import {
   IAttesterStatus,
@@ -20,6 +20,13 @@ import {computeBaseRewardPerIncrement} from "../util/altair.js";
 import {processPendingAttestations} from "../epoch/processPendingAttestations.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
+
+export type EpochProcessOpts = {
+  /**
+   * Assert progressive balances the same to EpochProcess
+   */
+  assertCorrectProgressiveBalances?: boolean;
+};
 
 /**
  * EpochProcess is the parent object of:
@@ -163,10 +170,10 @@ export interface EpochProcess {
   isActiveNextEpoch: boolean[];
 }
 
-export function beforeProcessEpoch(state: CachedBeaconStateAllForks): EpochProcess {
+export function beforeProcessEpoch(state: CachedBeaconStateAllForks, opts?: EpochProcessOpts): EpochProcess {
   const {config, epochCtx} = state;
-  const forkName = config.getForkName(state.slot);
-  const currentEpoch = epochCtx.currentShuffling.epoch;
+  const forkSeq = config.getForkSeq(state.slot);
+  const currentEpoch = epochCtx.epoch;
   const prevEpoch = epochCtx.previousShuffling.epoch;
   const nextEpoch = currentEpoch + 1;
   // active validator indices for nextShuffling is ready, we want to precalculate for the one after that
@@ -301,7 +308,7 @@ export function beforeProcessEpoch(state: CachedBeaconStateAllForks): EpochProce
     (a, b) => validators[a].activationEligibilityEpoch - validators[b].activationEligibilityEpoch || a - b
   );
 
-  if (forkName === ForkName.phase0) {
+  if (forkSeq === ForkSeq.phase0) {
     processPendingAttestations(
       state as CachedBeaconStatePhase0,
       statuses,
@@ -369,6 +376,23 @@ export function beforeProcessEpoch(state: CachedBeaconStateAllForks): EpochProce
       currTargetUnslStake += effectiveBalanceByIncrement;
     }
   }
+
+  if (opts?.assertCorrectProgressiveBalances) {
+    // TODO: describe issue. Compute progressive target balances
+    if (forkSeq >= ForkSeq.altair) {
+      if (epochCtx.currentTargetUnslashedBalanceIncrements !== currTargetUnslStake) {
+        throw Error(
+          `currentTargetUnslashedBalanceIncrements is wrong, expect ${currTargetUnslStake} got ${epochCtx.currentTargetUnslashedBalanceIncrements} epoch ${epochCtx.epoch}`
+        );
+      }
+      if (epochCtx.previousTargetUnslashedBalanceIncrements !== prevTargetUnslStake) {
+        throw Error(
+          `previousTargetUnslashedBalanceIncrements is wrong, expect ${prevTargetUnslStake} got ${epochCtx.previousTargetUnslashedBalanceIncrements} epoch ${epochCtx.epoch}`
+        );
+      }
+    }
+  }
+
   // As per spec of `get_total_balance`:
   // EFFECTIVE_BALANCE_INCREMENT Gwei minimum to avoid divisions by zero.
   // Math safe up to ~10B ETH, afterwhich this overflows uint64.

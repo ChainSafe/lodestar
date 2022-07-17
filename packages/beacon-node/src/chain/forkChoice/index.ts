@@ -1,11 +1,7 @@
-/**
- * @module chain/forkChoice
- */
-
 import {toHexString} from "@chainsafe/ssz";
 import {Slot} from "@lodestar/types";
 import {IChainForkConfig} from "@lodestar/config";
-import {ForkChoice, ProtoArray, ForkChoiceStore, ExecutionStatus} from "@lodestar/fork-choice";
+import {ForkChoice, ProtoArray, ForkChoiceStore, ExecutionStatus, JustifiedBalancesGetter} from "@lodestar/fork-choice";
 import {
   CachedBeaconStateAllForks,
   getEffectiveBalanceIncrementsZeroInactive,
@@ -33,6 +29,7 @@ export function initializeForkChoice(
   currentSlot: Slot,
   state: CachedBeaconStateAllForks,
   proposerBoostEnabled: boolean,
+  justifiedBalancesGetter: JustifiedBalancesGetter,
   metrics?: IMetrics | null
 ): ForkChoice {
   const {blockHeader, checkpoint} = computeAnchorCheckpoint(config, state);
@@ -51,10 +48,17 @@ export function initializeForkChoice(
   return new ForkChoice(
     config,
 
-    new ForkChoiceStore(currentSlot, justifiedCheckpoint, finalizedCheckpoint, {
-      onJustified: (cp) => emitter.emit(ChainEvent.forkChoiceJustified, cp),
-      onFinalized: (cp) => emitter.emit(ChainEvent.forkChoiceFinalized, cp),
-    }),
+    new ForkChoiceStore(
+      currentSlot,
+      justifiedCheckpoint,
+      finalizedCheckpoint,
+      justifiedBalances,
+      justifiedBalancesGetter,
+      {
+        onJustified: (cp) => emitter.emit(ChainEvent.forkChoiceJustified, cp),
+        onFinalized: (cp) => emitter.emit(ChainEvent.forkChoiceFinalized, cp),
+      }
+    ),
 
     ProtoArray.initialize({
       slot: blockHeader.slot,
@@ -75,7 +79,6 @@ export function initializeForkChoice(
         : {executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge}),
     }),
 
-    justifiedBalances,
     proposerBoostEnabled,
     metrics
   );

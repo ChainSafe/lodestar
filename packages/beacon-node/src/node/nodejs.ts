@@ -1,7 +1,3 @@
-/**
- * @module node
- */
-
 import LibP2p from "libp2p";
 import {Registry} from "prom-client";
 

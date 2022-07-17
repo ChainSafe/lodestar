@@ -21,11 +21,12 @@ import {
 import {AttestationPool, OpPool, SyncCommitteeMessagePool, SyncContributionAndProofPool} from "./opPools/index.js";
 import {LightClientServer} from "./lightClient/index.js";
 import {AggregatedAttestationPool} from "./opPools/aggregatedAttestationPool.js";
-import {PartiallyVerifiedBlockFlags} from "./blocks/types.js";
+import {ImportBlockOpts} from "./blocks/types.js";
 import {ReprocessController} from "./reprocess.js";
 import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
 import {BeaconProposerCache, ProposerPreparationData} from "./beaconProposerCache.js";
 import {SeenBlockAttesters} from "./seenCache/seenBlockAttesters.js";
+import {CheckpointBalancesCache} from "./balancesCache.js";
 
 export type Eth2Context = {
   activeValidatorCount: number;
@@ -79,6 +80,7 @@ export interface IBeaconChain {
   readonly seenBlockAttesters: SeenBlockAttesters;
 
   readonly beaconProposerCache: BeaconProposerCache;
+  readonly checkpointBalancesCache: CheckpointBalancesCache;
 
   /** Stop beacon chain processing */
   close(): Promise<void>;
@@ -101,9 +103,9 @@ export interface IBeaconChain {
   getCanonicalBlockAtSlot(slot: Slot): Promise<allForks.SignedBeaconBlock | null>;
 
   /** Process a block until complete */
-  processBlock(signedBlock: allForks.SignedBeaconBlock, flags?: PartiallyVerifiedBlockFlags): Promise<void>;
+  processBlock(block: allForks.SignedBeaconBlock, opts?: ImportBlockOpts): Promise<void>;
   /** Process a chain of blocks until complete */
-  processChainSegment(signedBlocks: allForks.SignedBeaconBlock[], flags?: PartiallyVerifiedBlockFlags): Promise<void>;
+  processChainSegment(blocks: allForks.SignedBeaconBlock[], opts?: ImportBlockOpts): Promise<void>;
 
   getStatus(): phase0.Status;
 

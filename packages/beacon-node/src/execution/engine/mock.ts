@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
-import {bellatrix, RootHex, Root} from "@lodestar/types";
-import {toHexString, fromHexString} from "@chainsafe/ssz";
+import {bellatrix, RootHex} from "@lodestar/types";
+import {fromHex, toHex} from "@lodestar/utils";
 import {BYTES_PER_LOGS_BLOOM} from "@lodestar/params";
 import {ZERO_HASH, ZERO_HASH_HEX} from "../../constants/index.js";
 import {
@@ -17,130 +17,226 @@ export type ExecutionEngineMockOpts = {
   genesisBlockHash: string;
 };
 
+type ExecutionBlock = {
+  parentHash: RootHex;
+  blockHash: RootHex;
+  timestamp: number;
+  blockNumber: number;
+};
+
 /**
  * Mock ExecutionEngine for fast prototyping and unit testing
  */
 export class ExecutionEngineMock implements IExecutionEngine {
   // Public state to check if notifyForkchoiceUpdate() is called properly
-  headBlockRoot = ZERO_HASH_HEX;
-  finalizedBlockRoot = ZERO_HASH_HEX;
+  headBlockHash = ZERO_HASH_HEX;
+  safeBlockHash = ZERO_HASH_HEX;
+  finalizedBlockHash = ZERO_HASH_HEX;
   readonly payloadIdCache = new PayloadIdCache();
 
-  private knownBlocks = new Map<RootHex, bellatrix.ExecutionPayload>();
-  private preparingPayloads = new Map<number, bellatrix.ExecutionPayload>();
+  /** Known valid blocks, both pre-merge and post-merge */
+  private readonly validBlocks = new Map<RootHex, ExecutionBlock>();
+  /** Preparing payloads to be retrieved via engine_getPayloadV1 */
+  private readonly preparingPayloads = new Map<number, bellatrix.ExecutionPayload>();
+
   private payloadId = 0;
 
   constructor(opts: ExecutionEngineMockOpts) {
-    this.knownBlocks.set(opts.genesisBlockHash, {
-      parentHash: ZERO_HASH,
-      feeRecipient: Buffer.alloc(20, 0),
-      stateRoot: ZERO_HASH,
-      receiptsRoot: ZERO_HASH,
-      logsBloom: Buffer.alloc(BYTES_PER_LOGS_BLOOM, 0),
-      prevRandao: ZERO_HASH,
-      blockNumber: 0,
-      gasLimit: INTEROP_GAS_LIMIT,
-      gasUsed: 0,
+    this.validBlocks.set(opts.genesisBlockHash, {
+      parentHash: ZERO_HASH_HEX,
+      blockHash: ZERO_HASH_HEX,
       timestamp: 0,
-      extraData: ZERO_HASH,
-      baseFeePerGas: BigInt(0),
-      blockHash: ZERO_HASH,
-      transactions: [],
+      blockNumber: 0,
     });
   }
 
   /**
    * `engine_newPayloadV1`
-   *
-   * 1. Client software MUST validate the payload according to the execution environment rule set with modifications to this rule set defined in the Block Validity section of EIP-3675 and respond with the validation result.
-   * 2. Client software MUST defer persisting a valid payload until the corresponding engine_consensusValidated message deems the payload valid with respect to the proof-of-stake consensus rules.
-   * 3. Client software MUST discard the payload if it's deemed invalid.
-   * 4. The call MUST be responded with SYNCING status while the sync process is in progress and thus the execution cannot yet be validated.
-   * 5. In the case when the parent block is unknown, client software MUST pull the block from the network and take one of the following actions depending on the parent block properties:
-   * 6. If the parent block is a PoW block as per EIP-3675 definition, then all missing dependencies of the payload MUST be pulled from the network and validated accordingly. The call MUST be responded according to the validity of the payload and the chain of its ancestors.
-   *    If the parent block is a PoS block as per EIP-3675 definition, then the call MAY be responded with SYNCING status and sync process SHOULD be initiated accordingly.
    */
   async notifyNewPayload(executionPayload: bellatrix.ExecutionPayload): Promise<ExecutePayloadResponse> {
-    // Only validate that parent is known
-    if (!this.knownBlocks.has(toHexString(executionPayload.parentHash))) {
-      return {status: ExecutePayloadStatus.INVALID, latestValidHash: this.headBlockRoot, validationError: null};
+    const blockHash = toHex(executionPayload.blockHash);
+    const parentHash = toHex(executionPayload.parentHash);
+
+    // 1. Client software MUST validate blockHash value as being equivalent to Keccak256(RLP(ExecutionBlockHeader)),
+    //    where ExecutionBlockHeader is the execution layer block header (the former PoW block header structure).
+    //    Fields of this object are set to the corresponding payload values and constant values according to the Block
+    //    structure section of EIP-3675, extended with the corresponding section of EIP-4399. Client software MUST run
+    //    this validation in all cases even if this branch or any other branches of the block tree are in an active sync
+    //    process.
+    //
+    // > Mock does not do this validation
+
+    // 2. Client software MAY initiate a sync process if requisite data for payload validation is missing. Sync process
+    // is specified in the Sync section.
+    //
+    // > N/A: Mock can't sync
+
+    // 3. Client software MUST validate the payload if it extends the canonical chain and requisite data for the
+    //    validation is locally available. The validation process is specified in the Payload validation section.
+    //
+    // > Mock only validates that parent is known
+    if (!this.validBlocks.has(parentHash)) {
+      // if requisite data for the payload's acceptance or validation is missing
+      // return {status: SYNCING, latestValidHash: null, validationError: null}
+      return {status: ExecutePayloadStatus.SYNCING, latestValidHash: null, validationError: null};
     }
 
-    this.knownBlocks.set(toHexString(executionPayload.blockHash), executionPayload);
-    return {
-      status: ExecutePayloadStatus.VALID,
-      latestValidHash: toHexString(executionPayload.blockHash),
-      validationError: null,
-    };
+    // 4. Client software MAY NOT validate the payload if the payload doesn't belong to the canonical chain.
+    //
+    // > N/A: Mock does not track the chain dag
+
+    // Mock logic: persist valid payload as part of canonical chain
+
+    this.validBlocks.set(blockHash, {
+      parentHash,
+      blockHash,
+      timestamp: executionPayload.timestamp,
+      blockNumber: executionPayload.blockNumber,
+    });
+
+    // IF the payload has been fully validated while processing the call
+    // RETURN payload status from the Payload validation process
+    // If validation succeeds, the response MUST contain {status: VALID, latestValidHash: payload.blockHash}
+    return {status: ExecutePayloadStatus.VALID, latestValidHash: blockHash, validationError: null};
   }
 
   /**
-   * `engine_forkchoiceUpdated`
-   *
-   * 1. This method call maps on the POS_FORKCHOICE_UPDATED event of EIP-3675 and MUST be processed according to the specification defined in the EIP.
-   * 2. Client software MUST respond with 4: Unknown block error if the payload identified by either the headBlockHash or the finalizedBlockHash is unknown.
+   * `engine_forkchoiceUpdatedV1`
    */
   async notifyForkchoiceUpdate(
-    headBlockHash: Root,
+    headBlockHash: RootHex,
     safeBlockHash: RootHex,
     finalizedBlockHash: RootHex,
     payloadAttributes?: PayloadAttributes
-  ): Promise<PayloadId> {
-    const headBlockHashHex = toHexString(headBlockHash);
-    if (!this.knownBlocks.has(headBlockHashHex)) {
-      throw Error(`Unknown headBlockHash ${headBlockHashHex}`);
+  ): Promise<PayloadId | null> {
+    // 1. Client software MAY initiate a sync process if forkchoiceState.headBlockHash references an unknown payload or
+    //    a payload that can't be validated because data that are requisite for the validation is missing. The sync
+    //    process is specified in the Sync section.
+    //
+    // > N/A: Mock can't sync
+
+    // 2. Client software MAY skip an update of the forkchoice state and MUST NOT begin a payload build process if
+    //    forkchoiceState.headBlockHash references an ancestor of the head of canonical chain. In the case of such an
+    //    event, client software MUST return {payloadStatus:
+    //    {status: VALID, latestValidHash: forkchoiceState.headBlockHash, validationError: null}, payloadId: null}.
+    //
+    // > TODO
+
+    // 3. If forkchoiceState.headBlockHash references a PoW block, client software MUST validate this block with
+    //    respect to terminal block conditions according to EIP-3675. This check maps to the transition block validity
+    //    section of the EIP. Additionally, if this validation fails, client software MUST NOT update the forkchoice
+    //    state and MUST NOT begin a payload build process.
+    //
+    // > TODO
+
+    // 4. Before updating the forkchoice state, client software MUST ensure the validity of the payload referenced by
+    //    forkchoiceState.headBlockHash, and MAY validate the payload while processing the call. The validation process
+    //    is specified in the Payload validation section. If the validation process fails, client software MUST NOT
+    //    update the forkchoice state and MUST NOT begin a payload build process.
+    //
+    // > N/A payload already validated
+    const headBlock = this.validBlocks.get(headBlockHash);
+    if (!headBlock) {
+      // IF references an unknown payload or a payload that can't be validated because requisite data is missing
+      // RETURN {payloadStatus: {status: SYNCING, latestValidHash: null, validationError: null}, payloadId: null}
+      //
+      // > TODO: Implement
+
+      throw Error(`Unknown headBlock ${headBlockHash}`);
     }
-    if (!this.knownBlocks.has(finalizedBlockHash)) {
+
+    // 5. Client software MUST update its forkchoice state if payloads referenced by forkchoiceState.headBlockHash and
+    //    forkchoiceState.finalizedBlockHash are VALID.
+    if (!this.validBlocks.has(finalizedBlockHash)) {
       throw Error(`Unknown finalizedBlockHash ${finalizedBlockHash}`);
     }
+    this.headBlockHash = headBlockHash;
+    this.safeBlockHash = safeBlockHash;
+    this.finalizedBlockHash = finalizedBlockHash;
 
-    this.headBlockRoot = headBlockHashHex;
-    this.finalizedBlockRoot = finalizedBlockHash;
+    // 6. Client software MUST return -38002: Invalid forkchoice state error if the payload referenced by
+    //    forkchoiceState.headBlockHash is VALID and a payload referenced by either forkchoiceState.finalizedBlockHash
+    //    or forkchoiceState.safeBlockHash does not belong to the chain defined by forkchoiceState.headBlockHash.
+    //
+    // > N/A: Mock does not track the chain dag
 
-    const parentHashHex = headBlockHashHex;
-    const parentPayload = this.knownBlocks.get(parentHashHex);
-    if (!parentPayload) {
-      throw Error(`Unknown parentHash ${parentHashHex}`);
+    if (payloadAttributes) {
+      // 7. Client software MUST ensure that payloadAttributes.timestamp is greater than timestamp of a block referenced
+      //    by forkchoiceState.headBlockHash. If this condition isn't held client software MUST respond with
+      //   `-38003: Invalid payload attributes` and MUST NOT begin a payload build process.
+      //    In such an event, the forkchoiceState update MUST NOT be rolled back.
+      if (headBlock.timestamp > payloadAttributes.timestamp) {
+        throw Error("Invalid payload attributes");
+      }
+
+      // 8. Client software MUST begin a payload build process building on top of forkchoiceState.headBlockHash and
+      //    identified via buildProcessId value if payloadAttributes is not null and the forkchoice state has been
+      //    updated successfully. The build process is specified in the Payload building section.
+      const payloadId = this.payloadId++;
+      this.preparingPayloads.set(payloadId, {
+        parentHash: fromHex(headBlockHash),
+        feeRecipient: fromHex(payloadAttributes.suggestedFeeRecipient),
+        stateRoot: crypto.randomBytes(32),
+        receiptsRoot: crypto.randomBytes(32),
+        logsBloom: crypto.randomBytes(BYTES_PER_LOGS_BLOOM),
+        prevRandao: payloadAttributes.prevRandao,
+        blockNumber: headBlock.blockNumber + 1,
+        gasLimit: INTEROP_GAS_LIMIT,
+        gasUsed: Math.floor(0.5 * INTEROP_GAS_LIMIT),
+        timestamp: payloadAttributes.timestamp,
+        extraData: ZERO_HASH,
+        baseFeePerGas: BigInt(0),
+        blockHash: crypto.randomBytes(32),
+        transactions: [crypto.randomBytes(512)],
+      });
+
+      // IF the payload is deemed VALID and the build process has begun
+      // {payloadStatus: {status: VALID, latestValidHash: forkchoiceState.headBlockHash, validationError: null}, payloadId: buildProcessId}
+      return String(payloadId as number);
     }
 
-    if (!payloadAttributes) throw Error("InvalidPayloadAttributes");
-
-    const payloadId = this.payloadId++;
-    const payload: bellatrix.ExecutionPayload = {
-      parentHash: headBlockHash,
-      feeRecipient: fromHexString(payloadAttributes.suggestedFeeRecipient),
-      stateRoot: crypto.randomBytes(32),
-      receiptsRoot: crypto.randomBytes(32),
-      logsBloom: crypto.randomBytes(BYTES_PER_LOGS_BLOOM),
-      prevRandao: payloadAttributes.prevRandao,
-      blockNumber: parentPayload.blockNumber + 1,
-      gasLimit: INTEROP_GAS_LIMIT,
-      gasUsed: Math.floor(0.5 * INTEROP_GAS_LIMIT),
-      timestamp: payloadAttributes.timestamp,
-      extraData: ZERO_HASH,
-      baseFeePerGas: BigInt(0),
-      blockHash: crypto.randomBytes(32),
-      transactions: [crypto.randomBytes(512)],
-    };
-    this.preparingPayloads.set(payloadId, payload);
-
-    return payloadId.toString();
+    // Don't start build process
+    else {
+      // IF the payload is deemed VALID and a build process hasn't been started
+      // {payloadStatus: {status: VALID, latestValidHash: forkchoiceState.headBlockHash, validationError: null}, payloadId: null}
+      return null;
+    }
   }
 
   /**
-   * `engine_getPayload`
+   * `engine_getPayloadV1`
    *
    * 1. Given the payloadId client software MUST respond with the most recent version of the payload that is available in the corresponding building process at the time of receiving the call.
    * 2. The call MUST be responded with 5: Unavailable payload error if the building process identified by the payloadId doesn't exist.
    * 3. Client software MAY stop the corresponding building process after serving this call.
    */
   async getPayload(payloadId: PayloadId): Promise<bellatrix.ExecutionPayload> {
+    // 1. Given the payloadId client software MUST return the most recent version of the payload that is available in
+    //    the corresponding build process at the time of receiving the call.
     const payloadIdNbr = Number(payloadId);
     const payload = this.preparingPayloads.get(payloadIdNbr);
+
+    // 2. The call MUST return -38001: Unknown payload error if the build process identified by the payloadId does not
+    //    exist.
     if (!payload) {
       throw Error(`Unknown payloadId ${payloadId}`);
     }
+
+    // 3. Client software MAY stop the corresponding build process after serving this call.
     this.preparingPayloads.delete(payloadIdNbr);
+
     return payload;
+  }
+
+  /**
+   * Non-spec method just to add more known blocks to this mock.
+   */
+  addPowBlock(powBlock: bellatrix.PowBlock): void {
+    this.validBlocks.set(toHex(powBlock.blockHash), {
+      parentHash: toHex(powBlock.parentHash),
+      blockHash: toHex(powBlock.blockHash),
+      timestamp: 0,
+      blockNumber: 0,
+    });
   }
 }

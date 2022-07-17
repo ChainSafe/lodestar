@@ -1,7 +1,7 @@
 import {fromHexString} from "@chainsafe/ssz";
 import {Epoch, Slot} from "@lodestar/types";
 import {IForkChoice} from "@lodestar/fork-choice";
-import {ILogger} from "@lodestar/utils";
+import {ILogger, toHex} from "@lodestar/utils";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {IBeaconDb} from "../../db/index.js";
@@ -91,7 +91,7 @@ async function migrateBlocksFromHotToColdDb(db: IBeaconDb, blocks: BlockRootSlot
       canonicalBlocks.map(async (block) => {
         const blockBuffer = await db.block.getBinary(block.root);
         if (!blockBuffer) {
-          throw Error(`No block found for slot ${block.slot} root ${block.root}`);
+          throw Error(`No block found for slot ${block.slot} root ${toHex(block.root)}`);
         }
         return {
           key: block.slot,

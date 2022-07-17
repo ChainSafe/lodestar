@@ -1,7 +1,3 @@
-/**
- * @module constants
- */
-
 export const DEPOSIT_CONTRACT_TREE_DEPTH = 2 ** 5; // 32
 export const GENESIS_SLOT = 0;
 export const GENESIS_EPOCH = 0;

@@ -5,6 +5,7 @@ import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
 import {shouldVerify, TestRunnerFn} from "../utils/types.js";
 import {getConfig} from "../utils/getConfig.js";
+import {assertCorrectProgressiveBalances} from "../config.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
@@ -20,6 +21,7 @@ export const finality: TestRunnerFn<FinalityTestCase, BeaconStateAllForks> = (fo
           verifyStateRoot: false,
           verifyProposer: verify,
           verifySignatures: verify,
+          assertCorrectProgressiveBalances,
         });
       }
 

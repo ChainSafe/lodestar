@@ -1,43 +1,24 @@
 import {expect} from "chai";
-import {
-  computeEpochAtSlot,
-  CachedBeaconStateAllForks,
-  ZERO_HASH,
-  getEffectiveBalanceIncrementsZeroInactive,
-  computeStartSlotAtEpoch,
-  EffectiveBalanceIncrements,
-  BeaconStateAllForks,
-  isBellatrixStateType,
-  isBellatrixBlockBodyType,
-  isMergeTransitionBlock as isMergeTransitionBlockFn,
-  processSlots,
-  stateTransition,
-} from "@lodestar/state-transition";
+import {BeaconStateAllForks, isBellatrixStateType} from "@lodestar/state-transition";
 import {InputType} from "@lodestar/spec-test-util";
 import {toHexString} from "@chainsafe/ssz";
-import {
-  CheckpointWithHex,
-  ForkChoiceError,
-  ForkChoiceErrorCode,
-  IForkChoice,
-  assertValidTerminalPowBlock,
-  ExecutionStatus,
-  PowBlockHex,
-} from "@lodestar/fork-choice";
+import {CheckpointWithHex, ForkChoice} from "@lodestar/fork-choice";
 import {phase0, allForks, bellatrix, ssz, RootHex} from "@lodestar/types";
 import {bnToNum} from "@lodestar/utils";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {
-  ChainEventEmitter,
-  initializeForkChoice,
-  CheckpointStateCache,
-  toCheckpointHex,
-  toCheckpointKey,
-} from "../../../src/chain/index.js";
+import {createIBeaconConfig} from "@lodestar/config";
+import {BeaconChain, ChainEvent} from "../../../src/chain/index.js";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {testLogger} from "../../utils/logger.js";
 import {getConfig} from "../utils/getConfig.js";
 import {TestRunnerFn} from "../utils/types.js";
+import {IEth1ForBlockProduction} from "../../../src/eth1/index.js";
+import {ExecutionEngineMock} from "../../../src/execution/index.js";
+import {defaultChainOptions} from "../../../src/chain/options.js";
+import {getStubbedBeaconDb} from "../../utils/mocks/db.js";
+import {ClockStopped} from "../../utils/mocks/clock.js";
+import {ZERO_HASH_HEX} from "../../../src/constants/constants.js";
+import {PowMergeBlock} from "../../../src/eth1/interface.js";
+import {assertCorrectProgressiveBalances} from "../config.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
@@ -53,129 +34,171 @@ const logger = testLogger("spec-test");
 
 export const forkChoiceTest: TestRunnerFn<ForkChoiceTestCase, void> = (fork) => {
   return {
-    testFunction: (testcase) => {
+    testFunction: async (testcase) => {
       const {steps, anchorState} = testcase;
       const currentSlot = anchorState.slot;
       const config = getConfig(fork);
-      let state = createCachedBeaconStateTest(anchorState, config);
-
-      const emitter = new ChainEventEmitter();
-      const forkchoice = initializeForkChoice(config, emitter, currentSlot, state, true);
-
-      const checkpointStateCache = new CheckpointStateCache({});
-      const stateCache = new Map<string, CachedBeaconStateAllForks>();
-      cacheState(state, stateCache);
+      const state = createCachedBeaconStateTest(anchorState, config);
 
       /** This is to track test's tickTime to be used in proposer boost */
       let tickTime = 0;
+      const clock = new ClockStopped(currentSlot);
+      const eth1 = new Eth1ForBlockProductionMock();
+      const executionEngine = new ExecutionEngineMock({
+        genesisBlockHash: isBellatrixStateType(anchorState)
+          ? toHexString(anchorState.latestExecutionPayloadHeader.blockHash)
+          : ZERO_HASH_HEX,
+      });
 
-      for (const [i, step] of steps.entries()) {
-        if (isTick(step)) {
-          tickTime = bnToNum(step.tick);
-          const currentSlot = Math.floor(tickTime / config.SECONDS_PER_SLOT);
-          logger.debug("Step tick", {currentSlot, valid: Boolean(step.valid), time: tickTime});
-          forkchoice.updateTime(currentSlot);
+      const chain = new BeaconChain(
+        {
+          ...defaultChainOptions,
+          // Do not start workers
+          blsVerifyAllMainThread: true,
+          // Do not run any archiver tasks
+          disableArchiveOnCheckpoint: true,
+          // Since the tests have deep-reorgs attested data is not available often printing lots of error logs.
+          // While this function is only called for head blocks, best to disable.
+          disableLightClientServerOnImportBlockHead: true,
+          // No need to log BlockErrors, the spec test runner will only log them if not not expected
+          // Otherwise spec tests logs get cluttered with expected errors
+          disableOnBlockError: true,
+          assertCorrectProgressiveBalances,
+        },
+        {
+          config: createIBeaconConfig(config, state.genesisValidatorsRoot),
+          db: getStubbedBeaconDb(),
+          logger,
+          clock,
+          metrics: null,
+          anchorState,
+          eth1,
+          executionEngine,
+          executionBuilder: undefined,
         }
+      );
 
-        // attestation step
-        else if (isAttestation(step)) {
-          logger.debug("Step attestation", {root: step.attestation, valid: Boolean(step.valid)});
-          const attestation = testcase.attestations.get(step.attestation);
-          if (!attestation) throw Error(`No attestation ${step.attestation}`);
-          forkchoice.onAttestation(state.epochCtx.getIndexedAttestation(attestation));
-        }
+      const stepsLen = steps.length;
+      logger.debug("Fork choice test", {steps: stepsLen});
 
-        // block step
-        else if (isBlock(step)) {
-          logger.debug("Step block", {root: step.block, valid: Boolean(step.valid)});
-          const validBlock = Boolean(step.valid ?? true);
-
-          const signedBlock = testcase.blocks.get(step.block);
-          if (!signedBlock) throw Error(`No block ${step.block}`);
-
-          // Log the BeaconBlock root instead of the SignedBeaconBlock root, forkchoice references BeaconBlock roots
-          const blockRoot = config.getForkTypes(signedBlock.message.slot).BeaconBlock.hashTreeRoot(signedBlock.message);
-          logger.debug("Step block", {slot: signedBlock.message.slot, root: toHexString(blockRoot)});
-
-          const preState = stateCache.get(toHexString(signedBlock.message.parentRoot));
-          if (!preState) {
-            continue;
-            // should not throw error, on_block_bad_parent_root test wants this
+      try {
+        for (const [i, step] of steps.entries()) {
+          if (isTick(step)) {
+            tickTime = bnToNum(step.tick);
+            const currentSlot = Math.floor(tickTime / config.SECONDS_PER_SLOT);
+            logger.debug(`Step ${i}/${stepsLen} tick`, {currentSlot, valid: Boolean(step.valid), time: tickTime});
+            chain.emitter.emit(ChainEvent.clockSlot, currentSlot);
+            clock.setSlot(currentSlot);
           }
-          const blockDelaySec = (tickTime - preState.genesisTime) % config.SECONDS_PER_SLOT;
-          const isMergeTransitionBlock =
-            isBellatrixStateType(preState) &&
-            isBellatrixBlockBodyType(signedBlock.message.body) &&
-            isMergeTransitionBlockFn(preState, signedBlock.message.body);
 
-          try {
-            if (isMergeTransitionBlock) {
-              const mergeBlock = signedBlock.message as bellatrix.BeaconBlock;
+          // attestation step
+          else if (isAttestation(step)) {
+            logger.debug(`Step ${i}/${stepsLen} attestation`, {root: step.attestation, valid: Boolean(step.valid)});
+            const attestation = testcase.attestations.get(step.attestation);
+            if (!attestation) throw Error(`No attestation ${step.attestation}`);
+            const headState = chain.getHeadState();
+            chain.forkChoice.onAttestation(headState.epochCtx.getIndexedAttestation(attestation));
+          }
 
-              const powBlockRootHex = toHexString(mergeBlock.body.executionPayload.parentHash);
-              const powBlock = serializePowBlock(testcase.powBlocks.get(`pow_block_${powBlockRootHex}`));
-              const powBlockParent = serializePowBlock(
-                powBlock && testcase.powBlocks.get(`pow_block_${powBlock.parentHash}`)
-              );
-              assertValidTerminalPowBlock(config, mergeBlock, {
-                executionStatus: powBlock !== undefined ? ExecutionStatus.Valid : ExecutionStatus.Syncing,
-                powBlock,
-                powBlockParent,
-              });
+          // block step
+          else if (isBlock(step)) {
+            const isValid = Boolean(step.valid ?? true);
+            const signedBlock = testcase.blocks.get(step.block);
+            if (!signedBlock) {
+              throw Error(`No block ${step.block}`);
             }
 
-            state = runStateTranstion(preState, signedBlock, forkchoice, checkpointStateCache, blockDelaySec);
-            // TODO: May be part of runStateTranstion, necessary to commit again?
-            state.commit();
-            cacheState(state, stateCache);
-          } catch (e) {
-            if (validBlock) throw e;
+            // Log the BeaconBlock root instead of the SignedBeaconBlock root, forkchoice references BeaconBlock roots
+            const blockRoot = config
+              .getForkTypes(signedBlock.message.slot)
+              .BeaconBlock.hashTreeRoot(signedBlock.message);
+            logger.debug(`Step ${i}/${stepsLen} block`, {
+              slot: signedBlock.message.slot,
+              root: toHexString(blockRoot),
+              parentRoot: toHexString(signedBlock.message.parentRoot),
+              isValid,
+            });
+
+            try {
+              await chain.processBlock(signedBlock, {seenTimestampSec: tickTime});
+              if (!isValid) throw Error("Expect error since this is a negative test");
+            } catch (e) {
+              if (isValid) throw e;
+            }
+          }
+
+          // **on_merge_block execution**
+          // Adds PowBlock data which is required for executing on_block(store, block).
+          // The file is located in the same folder (see below). PowBlocks should be used as return values for
+          // get_pow_block(hash: Hash32) -> PowBlock function if hashes match.
+          else if (isPowBlock(step)) {
+            const powBlock = testcase.powBlocks.get(step.pow_block);
+            if (!powBlock) throw Error(`pow_block ${step.pow_block} not found`);
+            logger.debug(`Step ${i}/${stepsLen} pow_block`, {
+              blockHash: toHexString(powBlock.blockHash),
+              parentHash: toHexString(powBlock.parentHash),
+            });
+            // Register PowBlock for `get_pow_block(hash: Hash32)` calls in verifyBlock
+            eth1.addPowBlock(powBlock);
+            // Register PowBlock to allow validation in execution engine
+            executionEngine.addPowBlock(powBlock);
+          }
+
+          // checks step
+          else if (isCheck(step)) {
+            logger.debug(`Step ${i}/${stepsLen} check`);
+
+            // Forkchoice head is computed lazily only on request
+            const head = chain.forkChoice.updateHead();
+            const proposerBootRoot = (chain.forkChoice as ForkChoice).getProposerBoostRoot();
+
+            if (step.checks.head !== undefined) {
+              expect(head.slot).to.be.equal(bnToNum(step.checks.head.slot), `Invalid head slot at step ${i}`);
+              expect(head.blockRoot).to.be.equal(step.checks.head.root, `Invalid head root at step ${i}`);
+            }
+            if (step.checks.proposer_boost_root !== undefined) {
+              expect(proposerBootRoot).to.be.equal(
+                step.checks.proposer_boost_root,
+                `Invalid proposer boost root at step ${i}`
+              );
+            }
+            // time in spec mapped to Slot in our forkchoice implementation.
+            // Compare in slots because proposer boost steps doesn't always come on
+            // slot boundary.
+            if (step.checks.time !== undefined && step.checks.time > 0)
+              expect(chain.forkChoice.getTime()).to.be.equal(
+                Math.floor(bnToNum(step.checks.time) / config.SECONDS_PER_SLOT),
+                `Invalid forkchoice time at step ${i}`
+              );
+            if (step.checks.justified_checkpoint) {
+              expect(toSpecTestCheckpoint(chain.forkChoice.getJustifiedCheckpoint())).to.be.deep.equal(
+                step.checks.justified_checkpoint,
+                `Invalid justified checkpoint at step ${i}`
+              );
+            }
+            if (step.checks.finalized_checkpoint) {
+              expect(toSpecTestCheckpoint(chain.forkChoice.getFinalizedCheckpoint())).to.be.deep.equal(
+                step.checks.finalized_checkpoint,
+                `Invalid finalized checkpoint at step ${i}`
+              );
+            }
+            if (step.checks.best_justified_checkpoint) {
+              expect(
+                toSpecTestCheckpoint((chain.forkChoice as ForkChoice).getBestJustifiedCheckpoint())
+              ).to.be.deep.equal(
+                step.checks.best_justified_checkpoint,
+                `Invalid best justified checkpoint at step ${i}`
+              );
+            }
+          }
+
+          // None of the above
+          else {
+            throw Error(`Unknown step ${i}/${stepsLen}: ${JSON.stringify(Object.keys(step))}`);
           }
         }
-
-        // checks step
-        else if (isCheck(step)) {
-          // Forkchoice head is computed lazily only on request
-          const head = forkchoice.updateHead();
-          const proposerBootRoot = forkchoice.getProposerBoostRoot();
-
-          if (step.checks.head !== undefined) {
-            expect(head.slot).to.be.equal(bnToNum(step.checks.head.slot), `Invalid head slot at step ${i}`);
-            expect(head.blockRoot).to.be.equal(step.checks.head.root, `Invalid head root at step ${i}`);
-          }
-          if (step.checks.proposer_boost_root !== undefined) {
-            expect(proposerBootRoot).to.be.equal(
-              step.checks.proposer_boost_root,
-              `Invalid proposer boost root at step ${i}`
-            );
-          }
-          // time in spec mapped to Slot in our forkchoice implementation.
-          // Compare in slots because proposer boost steps doesn't always come on
-          // slot boundary.
-          if (step.checks.time !== undefined && step.checks.time > 0)
-            expect(forkchoice.getTime()).to.be.equal(
-              Math.floor(bnToNum(step.checks.time) / config.SECONDS_PER_SLOT),
-              `Invalid forkchoice time at step ${i}`
-            );
-          if (step.checks.justified_checkpoint) {
-            expect(toSpecTestCheckpoint(forkchoice.getJustifiedCheckpoint())).to.be.deep.equal(
-              step.checks.justified_checkpoint,
-              `Invalid justified checkpoint at step ${i}`
-            );
-          }
-          if (step.checks.finalized_checkpoint) {
-            expect(toSpecTestCheckpoint(forkchoice.getFinalizedCheckpoint())).to.be.deep.equal(
-              step.checks.finalized_checkpoint,
-              `Invalid finalized checkpoint at step ${i}`
-            );
-          }
-          if (step.checks.best_justified_checkpoint) {
-            expect(toSpecTestCheckpoint(forkchoice.getBestJustifiedCheckpoint())).to.be.deep.equal(
-              step.checks.best_justified_checkpoint,
-              `Invalid best justified checkpoint at step ${i}`
-            );
-          }
-        }
+      } finally {
+        await chain.close();
       }
     },
 
@@ -226,103 +249,6 @@ export const forkChoiceTest: TestRunnerFn<ForkChoiceTestCase, void> = (fork) => 
     },
   };
 };
-
-function runStateTranstion(
-  preState: CachedBeaconStateAllForks,
-  signedBlock: allForks.SignedBeaconBlock,
-  forkchoice: IForkChoice,
-  checkpointCache: CheckpointStateCache,
-  blockDelaySec: number
-): CachedBeaconStateAllForks {
-  const preSlot = preState.slot;
-  const postSlot = signedBlock.message.slot - 1;
-  let preEpoch = computeEpochAtSlot(preSlot);
-  let postState = preState.clone();
-  for (
-    let nextEpochSlot = computeStartSlotAtEpoch(preEpoch + 1);
-    nextEpochSlot <= postSlot;
-    nextEpochSlot += SLOTS_PER_EPOCH
-  ) {
-    postState = processSlots(postState, nextEpochSlot, null);
-    cacheCheckpointState(postState, checkpointCache);
-  }
-  preEpoch = postState.epochCtx.epoch;
-  postState = stateTransition(postState, signedBlock, {
-    verifyStateRoot: true,
-    verifyProposer: false,
-    verifySignatures: false,
-  });
-  const postEpoch = postState.epochCtx.epoch;
-  if (postEpoch > preEpoch) {
-    cacheCheckpointState(postState, checkpointCache);
-  }
-  // same logic like in state transition https://github.com/ChainSafe/lodestar/blob/f6778740075fe2b75edf94d1db0b5691039cb500/packages/lodestar/src/chain/blocks/stateTransition.ts#L101
-  let justifiedBalances: EffectiveBalanceIncrements | undefined;
-  const checkpointHex = toCheckpointHex(postState.currentJustifiedCheckpoint);
-  const justifiedState = checkpointCache.get(checkpointHex);
-  if (
-    postState.currentJustifiedCheckpoint.epoch > forkchoice.getJustifiedCheckpoint().epoch ||
-    postState.finalizedCheckpoint.epoch > forkchoice.getFinalizedCheckpoint().epoch
-  ) {
-    if (!justifiedState) {
-      const checkpointHexKey = toCheckpointKey(checkpointHex);
-      const cachedCps = checkpointCache.dumpCheckpointKeys().join(", ");
-      throw Error(`No justifiedState for checkpoint ${checkpointHexKey}. Available: ${cachedCps}`);
-    }
-    justifiedBalances = getEffectiveBalanceIncrementsZeroInactive(justifiedState);
-  }
-
-  try {
-    forkchoice.onBlock(signedBlock.message, postState, {
-      blockDelaySec,
-      justifiedBalances,
-    });
-    for (const attestation of signedBlock.message.body.attestations) {
-      try {
-        const indexedAttestation = postState.epochCtx.getIndexedAttestation(attestation);
-        forkchoice.onAttestation(indexedAttestation);
-      } catch (e) {
-        if (e instanceof ForkChoiceError && e.type.code === ForkChoiceErrorCode.INVALID_ATTESTATION) {
-          logger.debug("INVALID_ATTESTATION onAttestation", e.type.err);
-        } else {
-          logger.error("Error onAttestation", {}, e as Error);
-        }
-      }
-    }
-  } catch (e) {
-    if (e instanceof ForkChoiceError && e.type.code === ForkChoiceErrorCode.INVALID_BLOCK) {
-      logger.debug("INVALID_BLOCK onBlock", e.type.err);
-    } else {
-      logger.error("Error onBlock", {}, e as Error);
-    }
-  }
-  return postState;
-}
-
-function cacheCheckpointState(checkpointState: CachedBeaconStateAllForks, checkpointCache: CheckpointStateCache): void {
-  const slot = checkpointState.slot;
-  if (slot % SLOTS_PER_EPOCH !== 0) {
-    throw new Error(`Invalid checkpoint state slot ${checkpointState.slot}`);
-  }
-  const blockHeader = ssz.phase0.BeaconBlockHeader.clone(checkpointState.latestBlockHeader);
-  if (ssz.Root.equals(blockHeader.stateRoot, ZERO_HASH)) {
-    blockHeader.stateRoot = checkpointState.hashTreeRoot();
-  }
-  const cp: phase0.Checkpoint = {
-    root: ssz.phase0.BeaconBlockHeader.hashTreeRoot(blockHeader),
-    epoch: computeEpochAtSlot(slot),
-  };
-  checkpointCache.add(cp, checkpointState);
-}
-
-function cacheState(wrappedState: CachedBeaconStateAllForks, stateCache: Map<string, CachedBeaconStateAllForks>): void {
-  const blockHeader = ssz.phase0.BeaconBlockHeader.clone(wrappedState.latestBlockHeader);
-  if (ssz.Root.equals(blockHeader.stateRoot, ZERO_HASH)) {
-    blockHeader.stateRoot = wrappedState.hashTreeRoot();
-  }
-  const blockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(blockHeader);
-  stateCache.set(toHexString(blockRoot), wrappedState);
-}
 
 function toSpecTestCheckpoint(checkpoint: CheckpointWithHex): SpecTestCheckpoint {
   return {
@@ -396,7 +322,7 @@ type ForkChoiceTestCase = {
 };
 
 function isTick(step: Step): step is OnTick {
-  return (step as OnTick).tick > 0;
+  return (step as OnTick).tick >= 0;
 }
 
 function isAttestation(step: Step): step is OnAttestation {
@@ -407,17 +333,39 @@ function isBlock(step: Step): step is OnBlock {
   return typeof (step as OnBlock).block === "string";
 }
 
+function isPowBlock(step: Step): step is OnPowBlock {
+  return typeof (step as OnPowBlock).pow_block === "string";
+}
+
 function isCheck(step: Step): step is Checks {
   return typeof (step as Checks).checks === "object";
 }
 
-function serializePowBlock(powBlock: bellatrix.PowBlock | undefined): PowBlockHex | undefined {
-  if (powBlock) {
-    return {
+class Eth1ForBlockProductionMock implements IEth1ForBlockProduction {
+  private items = new Map<string, PowMergeBlock>();
+  async getEth1DataAndDeposits(): Promise<never> {
+    throw Error("Not implemented");
+  }
+
+  getTerminalPowBlock(): never {
+    throw Error("Not implemented");
+  }
+
+  mergeCompleted(): never {
+    throw Error("Not implemented");
+  }
+
+  async getPowBlock(powBlockHash: string): Promise<PowMergeBlock | null> {
+    return this.items.get(powBlockHash) ?? null;
+  }
+
+  addPowBlock(powBlock: bellatrix.PowBlock): void {
+    this.items.set(toHexString(powBlock.blockHash), {
+      // not used by verifyBlock()
+      number: 0,
       blockHash: toHexString(powBlock.blockHash),
       parentHash: toHexString(powBlock.parentHash),
-      totalDifficulty: BigInt(powBlock.totalDifficulty),
-    };
+      totalDifficulty: powBlock.totalDifficulty,
+    });
   }
-  return;
 }

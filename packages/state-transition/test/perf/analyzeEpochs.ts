@@ -96,7 +96,7 @@ async function analyzeEpochs(network: NetworkName, fromEpoch?: number): Promise<
     const postState = createCachedBeaconStateTest(stateTB, config);
 
     const epochProcess = beforeProcessEpoch(postState);
-    processSlots(postState, nextEpochSlot, null);
+    processSlots(postState, nextEpochSlot);
 
     const validatorCount = state.validators.length;
 

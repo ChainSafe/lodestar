@@ -26,7 +26,7 @@ export function processAttesterSlashing(
   const validators = state.validators; // Get the validators sub tree once for all indices
   // Spec requires to sort indexes beforehand
   for (const index of intersectingIndices.sort((a, b) => a - b)) {
-    if (isSlashableValidator(validators.getReadonly(index), state.epochCtx.currentShuffling.epoch)) {
+    if (isSlashableValidator(validators.getReadonly(index), state.epochCtx.epoch)) {
       slashValidator(fork, state, index);
       slashedAny = true;
     }

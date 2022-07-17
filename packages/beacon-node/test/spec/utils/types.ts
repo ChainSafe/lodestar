@@ -11,7 +11,7 @@ export type TestRunnerFn<TestCase, Result> = (
   testHandler: string,
   testSuite: string
 ) => {
-  testFunction: (testCase: TestCase, directoryName: string) => Result;
+  testFunction: (testCase: TestCase, directoryName: string) => Result | Promise<Result>;
   options: Partial<ISpecTestOptions<TestCase, Result>>;
 };
 

@@ -18,8 +18,11 @@ on:
 jobs:
   run:
     runs-on: ubuntu-latest
+    # Skip for dependabot PRs, secrets are not made available and will fail
     # Don't run on forks. Forks don't have access to the S3 credentials and the workflow will fail
-    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+    if: |
+      github.actor != 'dependabot[bot]' &&
+      ( github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository )
 
     steps:
       # <common-build> - Uses YAML anchors in the future

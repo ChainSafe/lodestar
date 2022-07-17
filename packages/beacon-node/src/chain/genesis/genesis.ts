@@ -1,7 +1,3 @@
-/**
- * @module chain/genesis
- */
-
 import {GENESIS_EPOCH, GENESIS_SLOT} from "@lodestar/params";
 import {phase0, ssz} from "@lodestar/types";
 import {IBeaconConfig, IChainForkConfig} from "@lodestar/config";

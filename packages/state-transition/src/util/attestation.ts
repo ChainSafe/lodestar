@@ -1,7 +1,3 @@
-/**
- * @module chain/stateTransition/util
- */
-
 import {MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {phase0, Slot, ssz, ValidatorIndex} from "@lodestar/types";
 

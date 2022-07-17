@@ -40,7 +40,7 @@ export type RegenQueueItem = {
 
 export type BlockProcessorQueueItem = {
   blockSlots: Slot[];
-  jobOpts: Record<string, boolean | undefined>;
+  jobOpts: Record<string, string | number | boolean | undefined>;
   addedTimeMs: number;
 };
 

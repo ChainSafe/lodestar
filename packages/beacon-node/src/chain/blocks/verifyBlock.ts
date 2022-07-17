@@ -8,7 +8,7 @@ import {
   getBlockSignatureSets,
   stateTransition,
 } from "@lodestar/state-transition";
-import {bellatrix} from "@lodestar/types";
+import {allForks, bellatrix} from "@lodestar/types";
 import {toHexString} from "@chainsafe/ssz";
 import {IForkChoice, ProtoBlock, ExecutionStatus, assertValidTerminalPowBlock} from "@lodestar/fork-choice";
 import {IChainForkConfig} from "@lodestar/config";
@@ -23,7 +23,7 @@ import {IBlsVerifier} from "../bls/index.js";
 import {ExecutePayloadStatus} from "../../execution/engine/interface.js";
 import {byteArrayEquals} from "../../util/bytes.js";
 import {IEth1ForBlockProduction} from "../../eth1/index.js";
-import {FullyVerifiedBlock, PartiallyVerifiedBlock} from "./types.js";
+import {FullyVerifiedBlock, ImportBlockOpts} from "./types.js";
 import {POS_PANDA_MERGE_TRANSITION_BANNER} from "./utils/pandaMergeTransitionBanner.js";
 
 export type VerifyBlockModules = {
@@ -44,24 +44,21 @@ export type VerifyBlockModules = {
  */
 export async function verifyBlock(
   chain: VerifyBlockModules,
-  partiallyVerifiedBlock: PartiallyVerifiedBlock,
-  opts: BlockProcessOpts
+  block: allForks.SignedBeaconBlock,
+  opts: ImportBlockOpts & BlockProcessOpts
 ): Promise<FullyVerifiedBlock> {
-  const parentBlock = verifyBlockSanityChecks(chain, partiallyVerifiedBlock);
+  const parentBlock = verifyBlockSanityChecks(chain, block);
 
-  const {postState, executionStatus, proposerBalanceDiff} = await verifyBlockStateTransition(
-    chain,
-    partiallyVerifiedBlock,
-    opts
-  );
+  const {postState, executionStatus, proposerBalanceDiff} = await verifyBlockStateTransition(chain, block, opts);
 
   return {
-    block: partiallyVerifiedBlock.block,
+    block,
     postState,
     parentBlockSlot: parentBlock.slot,
-    skipImportingAttestations: partiallyVerifiedBlock.skipImportingAttestations,
     executionStatus,
     proposerBalanceDiff,
+    // TODO: Make this param mandatory and capture in gossip
+    seenTimestampSec: opts.seenTimestampSec ?? Math.floor(Date.now() / 1000),
   };
 }
 
@@ -77,11 +74,7 @@ export async function verifyBlock(
  *   - Not finalized slot
  *   - Not already known
  */
-export function verifyBlockSanityChecks(
-  chain: VerifyBlockModules,
-  partiallyVerifiedBlock: PartiallyVerifiedBlock
-): ProtoBlock {
-  const {block} = partiallyVerifiedBlock;
+export function verifyBlockSanityChecks(chain: VerifyBlockModules, block: allForks.SignedBeaconBlock): ProtoBlock {
   const blockSlot = block.message.slot;
 
   // Not genesis block
@@ -130,10 +123,10 @@ export function verifyBlockSanityChecks(
  */
 export async function verifyBlockStateTransition(
   chain: VerifyBlockModules,
-  partiallyVerifiedBlock: PartiallyVerifiedBlock,
-  opts: BlockProcessOpts
+  block: allForks.SignedBeaconBlock,
+  opts: ImportBlockOpts & BlockProcessOpts
 ): Promise<{postState: CachedBeaconStateAllForks; executionStatus: ExecutionStatus; proposerBalanceDiff: number}> {
-  const {block, validProposerSignature, validSignatures} = partiallyVerifiedBlock;
+  const {validProposerSignature, validSignatures} = opts;
 
   // TODO: Skip in process chain segment
   // Retrieve preState from cache (regen)
@@ -158,6 +151,7 @@ export async function verifyBlockStateTransition(
       // if block is trusted don't verify proposer or op signature
       verifyProposer: !useBlsBatchVerify && !validSignatures && !validProposerSignature,
       verifySignatures: !useBlsBatchVerify && !validSignatures,
+      assertCorrectProgressiveBalances: opts.assertCorrectProgressiveBalances,
     },
     chain.metrics
   );
@@ -182,7 +176,7 @@ export async function verifyBlockStateTransition(
     if (
       signatureSets.length > 0 &&
       !(await chain.bls.verifySignatureSets(signatureSets, {
-        verifyOnMainThread: partiallyVerifiedBlock?.blsVerifyOnMainThread,
+        verifyOnMainThread: opts?.blsVerifyOnMainThread,
       }))
     ) {
       throw new BlockError(block, {code: BlockErrorCode.INVALID_SIGNATURE, state: postState});
