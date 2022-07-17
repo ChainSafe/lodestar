@@ -29,7 +29,7 @@ import {IChainForkConfig} from "@lodestar/config";
 import {toHex} from "@lodestar/utils";
 
 import {IBeaconChain} from "../../interface.js";
-import {IExecutionEngine, IExecutionBuilder} from "../../../execution/index.js";
+import {PayloadId, IExecutionEngine, IExecutionBuilder} from "../../../execution/index.js";
 import {ZERO_HASH, ZERO_HASH_HEX} from "../../../constants/index.js";
 import {IEth1ForBlockProduction} from "../../../eth1/index.js";
 import {numToQuantity} from "../../../eth1/provider/utils.js";
@@ -132,13 +132,19 @@ export async function assembleBody<T extends BlockType>(
         proposerPubKey
       );
     } else {
-      (blockBody as bellatrix.BeaconBlockBody).executionPayload = await prepareExecutionPayload(
+      const payloadId = await prepareExecutionPayload(
         chain,
         safeBlockHash,
         finalizedBlockHash ?? ZERO_HASH_HEX,
         currentState as CachedBeaconStateBellatrix,
         feeRecipient
       );
+      // payloadId is only null when execution is pre-merge,
+      // Else it always ether returns payloadId or errors.
+      (blockBody as bellatrix.BeaconBlockBody).executionPayload =
+        payloadId !== null
+          ? await chain.executionEngine.getPayload(payloadId)
+          : ssz.bellatrix.ExecutionPayload.defaultValue();
     }
   }
 
@@ -162,11 +168,11 @@ export async function prepareExecutionPayload(
   finalizedBlockHash: RootHex,
   state: CachedBeaconStateBellatrix,
   suggestedFeeRecipient: string
-): Promise<bellatrix.ExecutionPayload> {
+): Promise<PayloadId | null> {
   const parentHashRes = getExecutionPayloadParentHash(chain, state);
   if (parentHashRes.isPremerge) {
-    // Before finding the merge block, put empty ExecutionPayload to signal merge block not found
-    return ssz.bellatrix.ExecutionPayload.defaultValue();
+    // Return null only if the execution is pre-merge
+    return null;
   }
 
   const {parentHash} = parentHashRes;
@@ -181,31 +187,27 @@ export async function prepareExecutionPayload(
     suggestedFeeRecipient,
   });
 
-  if (payloadIdCached !== undefined) {
-    return await chain.executionEngine.getPayload(payloadIdCached);
-  }
-
   // prepareExecutionPayload will throw error via notifyForkchoiceUpdate if
   // the EL returns Syncing on this request to prepare a payload
   // TODO: Handle only this case, DO NOT put a generic try / catch that discards all errors
-  const payloadId = await chain.executionEngine.notifyForkchoiceUpdate(
-    toHex(parentHash),
-    safeBlockHash,
-    finalizedBlockHash,
-    {
+  const payloadId =
+    payloadIdCached ??
+    (await chain.executionEngine.notifyForkchoiceUpdate(toHex(parentHash), safeBlockHash, finalizedBlockHash, {
       timestamp,
       prevRandao,
       suggestedFeeRecipient,
-    }
-  );
+    }));
 
-  // Should never happen, notifyForkchoiceUpdate() with payload attributes always returns payloadId
+  // Should never happen, notifyForkchoiceUpdate() with payload attributes always
+  // returns payloadId
   if (payloadId === null) {
     throw Error("notifyForkchoiceUpdate returned payloadId null");
   }
 
-  // TODO: This request is very close to notifyForkchoiceUpdate(), should it wait for ~20ms?
-  return await chain.executionEngine.getPayload(payloadId);
+  // We are only returning payloadId here because prepareExecutionPayload is also called from
+  // prepareNextSlot, which is an advance call to execution engine to start building payload
+  // Actual payload isn't produced till getPayload is called.
+  return payloadId;
 }
 
 async function prepareExecutionPayloadHeader(
