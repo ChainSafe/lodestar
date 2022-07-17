@@ -11,6 +11,7 @@ import {
   createCachedBeaconState,
   EffectiveBalanceIncrements,
   getEffectiveBalanceIncrementsZeroInactive,
+  isCachedBeaconState,
   Index2PubkeyCache,
   PubkeyIndexMap,
 } from "@lodestar/state-transition";
@@ -162,19 +163,27 @@ export class BeaconChain implements IBeaconChain {
     this.seenAggregatedAttestations = new SeenAggregatedAttestations(metrics);
     this.seenContributionAndProof = new SeenContributionAndProof(metrics);
 
-    // Initialize single global instance of state caches
-    this.pubkey2index = new PubkeyIndexMap();
-    this.index2pubkey = [];
-
     this.beaconProposerCache = new BeaconProposerCache(opts);
     this.checkpointBalancesCache = new CheckpointBalancesCache();
 
     // Restore state caches
-    const cachedState = createCachedBeaconState(anchorState, {
-      config,
-      pubkey2index: this.pubkey2index,
-      index2pubkey: this.index2pubkey,
-    });
+    // anchorState may already by a CachedBeaconState. If so, don't create the cache again, since deserializing all
+    // pubkeys takes ~30 seconds for 350k keys (mainnet 2022Q2).
+    // When the BeaconStateCache is created in eth1 genesis builder it may be incorrect. Until we can ensure that
+    // it's safe to re-use _ANY_ BeaconStateCache, this option is disabled by default and only used in tests.
+    const cachedState =
+      isCachedBeaconState(anchorState) && opts.skipCreateStateCacheIfAvailable
+        ? anchorState
+        : createCachedBeaconState(anchorState, {
+            config,
+            pubkey2index: new PubkeyIndexMap(),
+            index2pubkey: [],
+          });
+
+    // Persist single global instance of state caches
+    this.pubkey2index = cachedState.epochCtx.pubkey2index;
+    this.index2pubkey = cachedState.epochCtx.index2pubkey;
+
     const {checkpoint} = computeAnchorCheckpoint(config, anchorState);
     stateCache.add(cachedState);
     checkpointStateCache.add(checkpoint, cachedState);
