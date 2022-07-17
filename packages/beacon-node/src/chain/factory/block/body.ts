@@ -151,7 +151,7 @@ export async function assembleBody<T extends BlockType>(
         // if pre-merge
 
         if (!isMergeTransitionComplete(currentState as CachedBeaconStateBellatrix)) {
-          logger?.verbose(
+          logger?.warn(
             "Fetch payload from the execution failed, however since we are still pre-merge proceeding with an empty one.",
             {},
             e as Error
