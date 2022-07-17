@@ -115,6 +115,7 @@ export const forkChoiceTest: TestRunnerFn<ForkChoiceTestCase, void> = (fork) => 
 
             try {
               await chain.processBlock(signedBlock, {seenTimestampSec: tickTime});
+              if (!isValid) throw Error("Expect error since this is a negative test");
             } catch (e) {
               if (isValid) throw e;
             }
