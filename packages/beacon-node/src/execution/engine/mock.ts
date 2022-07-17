@@ -97,16 +97,16 @@ export class ExecutionEngineMock implements IExecutionEngine {
    * 2. Client software MUST respond with 4: Unknown block error if the payload identified by either the headBlockHash or the finalizedBlockHash is unknown.
    */
   async notifyForkchoiceUpdate(
-    headBlockHash: Root,
+    headBlockHash: Root | RootHex,
     safeBlockHash: RootHex,
     finalizedBlockHash: RootHex,
     payloadAttributes?: PayloadAttributes
-  ): Promise<PayloadId> {
-    const headBlockHashHex = toHexString(headBlockHash);
-    if (!this.knownBlocks.has(headBlockHashHex)) {
-      throw Error(`Unknown headBlockHash ${headBlockHashHex}`);
+  ): Promise<PayloadId | null> {
+    const headBlockHashHex = typeof headBlockHash === "string" ? headBlockHash : toHexString(headBlockHash);
+    if (!this.knownPayloads.has(headBlockHashHex) && !this.knownBlocks.has(headBlockHashHex)) {
+      throw Error(`Unknown headBlockHash ${headBlockHash}`);
     }
-    if (!this.knownBlocks.has(finalizedBlockHash)) {
+    if (!this.knownPayloads.has(finalizedBlockHash) && !this.knownBlocks.has(finalizedBlockHash)) {
       throw Error(`Unknown finalizedBlockHash ${finalizedBlockHash}`);
     }
 
@@ -119,11 +119,11 @@ export class ExecutionEngineMock implements IExecutionEngine {
       throw Error(`Unknown parentHash ${parentHashHex}`);
     }
 
-    if (!payloadAttributes) throw Error("InvalidPayloadAttributes");
+    if (!payloadAttributes) return null;
 
     const payloadId = this.payloadId++;
     const payload: bellatrix.ExecutionPayload = {
-      parentHash: headBlockHash,
+      parentHash: typeof headBlockHash === "string" ? fromHexString(headBlockHash) : headBlockHash,
       feeRecipient: fromHexString(payloadAttributes.suggestedFeeRecipient),
       stateRoot: crypto.randomBytes(32),
       receiptsRoot: crypto.randomBytes(32),
