@@ -5,7 +5,6 @@ import {ErrorAborted, ILogger} from "@lodestar/utils";
 import {IChainForkConfig} from "@lodestar/config";
 import {toHexString} from "@chainsafe/ssz";
 import {PeerAction} from "../../network/index.js";
-import {ChainSegmentError} from "../../chain/errors/index.js";
 import {ItTrigger} from "../../util/itTrigger.js";
 import {byteArrayEquals} from "../../util/bytes.js";
 import {PeerMap} from "../../util/peerMap.js";
@@ -439,9 +438,10 @@ export class SyncChain {
 
       // At least one block was successfully verified and imported, so we can be sure all
       // previous batches are valid and we only need to download the current failed batch.
-      if (res.err instanceof ChainSegmentError && res.err.importedBlocks > 0) {
-        this.advanceChain(batch.startEpoch);
-      }
+      // TODO: Disabled for now
+      // if (res.err instanceof ChainSegmentError && res.err.importedBlocks > 0) {
+      //   this.advanceChain(batch.startEpoch);
+      // }
 
       // The current batch could not be processed, so either this or previous batches are invalid.
       // All previous batches (AwaitingValidation) are potentially faulty and marked for retry.
