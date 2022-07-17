@@ -132,25 +132,27 @@ export async function assembleBody<T extends BlockType>(
         proposerPubKey
       );
     } else {
+      // try catch payload fetch here, because there is still a recovery path possible if we
+      // are pre-merge. We don't care the same for builder segment as the execution block
+      // will takeover if the builder flow was activated and errors
       try {
-        const payloadId = await prepareExecutionPayload(
+        const prepareRes = await prepareExecutionPayload(
           chain,
           safeBlockHash,
           finalizedBlockHash ?? ZERO_HASH_HEX,
           currentState as CachedBeaconStateBellatrix,
           feeRecipient
         );
-        // payloadId is only null when execution is pre-merge,
-        // Else it always ether returns payloadId or errors.
-        (blockBody as bellatrix.BeaconBlockBody).executionPayload =
-          payloadId !== null
-            ? await chain.executionEngine.getPayload(payloadId)
-            : ssz.bellatrix.ExecutionPayload.defaultValue();
+        (blockBody as bellatrix.BeaconBlockBody).executionPayload = prepareRes.isPremerge
+          ? ssz.bellatrix.ExecutionPayload.defaultValue()
+          : await chain.executionEngine.getPayload(prepareRes.payloadId);
       } catch (e) {
-        // ok we don't have an execution payload here, so we can assign a
+        // ok we don't have an execution payload here, so we can assign an empty one
+        // if pre-merge
+
         if (!isMergeTransitionComplete(currentState as CachedBeaconStateBellatrix)) {
           logger?.verbose(
-            "Fetch payload from the execution failed, however since we are still pre-merge, we can proceed with an empty one and still propose.",
+            "Fetch payload from the execution failed, however since we are still pre-merge proceeding with an empty one.",
             {},
             e as Error
           );
@@ -184,11 +186,11 @@ export async function prepareExecutionPayload(
   finalizedBlockHash: RootHex,
   state: CachedBeaconStateBellatrix,
   suggestedFeeRecipient: string
-): Promise<PayloadId | null> {
+): Promise<{isPremerge: true} | {isPremerge: false; payloadId: PayloadId}> {
   const parentHashRes = getExecutionPayloadParentHash(chain, state);
   if (parentHashRes.isPremerge) {
     // Return null only if the execution is pre-merge
-    return null;
+    return {isPremerge: true};
   }
 
   const {parentHash} = parentHashRes;
@@ -223,7 +225,7 @@ export async function prepareExecutionPayload(
   // We are only returning payloadId here because prepareExecutionPayload is also called from
   // prepareNextSlot, which is an advance call to execution engine to start building payload
   // Actual payload isn't produced till getPayload is called.
-  return payloadId;
+  return {isPremerge: false, payloadId};
 }
 
 async function prepareExecutionPayloadHeader(
