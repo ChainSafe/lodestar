@@ -26,7 +26,7 @@ import {
   isMergeTransitionComplete,
 } from "@lodestar/state-transition";
 import {IChainForkConfig} from "@lodestar/config";
-import {toHex} from "@lodestar/utils";
+import {toHex, ILogger} from "@lodestar/utils";
 
 import {IBeaconChain} from "../../interface.js";
 import {PayloadId, IExecutionEngine, IExecutionBuilder} from "../../../execution/index.js";
@@ -46,7 +46,7 @@ export type AssembledBlockType<T extends BlockType> = T extends BlockType.Full
   : bellatrix.BlindedBeaconBlock;
 
 export async function assembleBody<T extends BlockType>(
-  {type, chain}: {type: T; chain: IBeaconChain},
+  {type, chain, logger}: {type: T; chain: IBeaconChain; logger?: ILogger},
   currentState: CachedBeaconStateAllForks,
   {
     randaoReveal,
@@ -132,19 +132,35 @@ export async function assembleBody<T extends BlockType>(
         proposerPubKey
       );
     } else {
-      const payloadId = await prepareExecutionPayload(
-        chain,
-        safeBlockHash,
-        finalizedBlockHash ?? ZERO_HASH_HEX,
-        currentState as CachedBeaconStateBellatrix,
-        feeRecipient
-      );
-      // payloadId is only null when execution is pre-merge,
-      // Else it always ether returns payloadId or errors.
-      (blockBody as bellatrix.BeaconBlockBody).executionPayload =
-        payloadId !== null
-          ? await chain.executionEngine.getPayload(payloadId)
-          : ssz.bellatrix.ExecutionPayload.defaultValue();
+      try {
+        const payloadId = await prepareExecutionPayload(
+          chain,
+          safeBlockHash,
+          finalizedBlockHash ?? ZERO_HASH_HEX,
+          currentState as CachedBeaconStateBellatrix,
+          feeRecipient
+        );
+        // payloadId is only null when execution is pre-merge,
+        // Else it always ether returns payloadId or errors.
+        (blockBody as bellatrix.BeaconBlockBody).executionPayload =
+          payloadId !== null
+            ? await chain.executionEngine.getPayload(payloadId)
+            : ssz.bellatrix.ExecutionPayload.defaultValue();
+      } catch (e) {
+        // ok we don't have an execution payload here, so we can assign a
+        if (!isMergeTransitionComplete(currentState as CachedBeaconStateBellatrix)) {
+          logger?.verbose(
+            "Fetch payload from the execution failed, however since we are still pre-merge, we can proceed with an empty one and still propose.",
+            {},
+            e as Error
+          );
+          (blockBody as bellatrix.BeaconBlockBody).executionPayload = ssz.bellatrix.ExecutionPayload.defaultValue();
+        } else {
+          // since merge transition is complete, we need a valid payload even if with an
+          // empty (transactions) one. defaultValue isn't gonna cut it!
+          throw e;
+        }
+      }
     }
   }
 

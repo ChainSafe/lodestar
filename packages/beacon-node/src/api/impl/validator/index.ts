@@ -202,7 +202,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
 
       timer = metrics?.blockProductionTime.startTimer();
       const block = await assembleBlock(
-        {type, chain, metrics},
+        {type, chain, metrics, logger},
         {
           slot,
           randaoReveal,
