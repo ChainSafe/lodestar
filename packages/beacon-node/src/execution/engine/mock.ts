@@ -48,19 +48,6 @@ export class ExecutionEngineMock implements IExecutionEngine {
       timestamp: 0,
       blockNumber: 0,
     });
-
-    this.knownBlocks.set(opts.genesisBlockHash, {
-      blockHash: fromHexString(opts.genesisBlockHash),
-      parentHash: ZERO_HASH,
-      totalDifficulty: BigInt(0),
-    });
-  }
-
-  /**
-   * Non-spec method just to add more known blocks to this mock.
-   */
-  async notifyNewPowBlock(powBlock: bellatrix.PowBlock): Promise<void> {
-    this.knownBlocks.set(toHexString(powBlock.blockHash), powBlock);
   }
 
   /**
