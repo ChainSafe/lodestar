@@ -4,27 +4,26 @@ import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {config} from "@lodestar/config/default";
 import {generateEmptySignedBlock} from "../../../utils/block.js";
 import {expectThrowsLodestarError} from "../../../utils/errors.js";
-import {Batch, BatchOpts, BatchStatus, BatchErrorCode, BatchError} from "../../../../src/sync/range/batch.js";
+import {Batch, BatchStatus, BatchErrorCode, BatchError} from "../../../../src/sync/range/batch.js";
+import {EPOCHS_PER_BATCH} from "../../../../src/sync/constants.js";
 
 describe("sync / range / batch", () => {
-  const opts: BatchOpts = {epochsPerBatch: 2};
-
   // Common mock data
   const startEpoch = 0;
   const peer = new PeerId(Buffer.from("lodestar"));
   const blocksDownloaded = [generateEmptySignedBlock()];
 
   it("Should return correct blockByRangeRequest", () => {
-    const batch = new Batch(startEpoch, config, opts);
+    const batch = new Batch(startEpoch, config);
     expect(batch.request).to.deep.equal({
-      startSlot: 1,
-      count: SLOTS_PER_EPOCH * opts.epochsPerBatch,
+      startSlot: 0,
+      count: SLOTS_PER_EPOCH * EPOCHS_PER_BATCH,
       step: 1,
     });
   });
 
   it("Complete state flow", () => {
-    const batch = new Batch(startEpoch, config, opts);
+    const batch = new Batch(startEpoch, config);
 
     // Instantion: AwaitingDownload
     expect(batch.state.status).to.equal(BatchStatus.AwaitingDownload, "Wrong status on instantiation");
@@ -75,7 +74,7 @@ describe("sync / range / batch", () => {
   });
 
   it("Should throw on inconsistent state - downloadingSuccess", () => {
-    const batch = new Batch(startEpoch, config, opts);
+    const batch = new Batch(startEpoch, config);
 
     expectThrowsLodestarError(
       () => batch.downloadingSuccess(blocksDownloaded),
@@ -89,7 +88,7 @@ describe("sync / range / batch", () => {
   });
 
   it("Should throw on inconsistent state - startProcessing", () => {
-    const batch = new Batch(startEpoch, config, opts);
+    const batch = new Batch(startEpoch, config);
 
     expectThrowsLodestarError(
       () => batch.startProcessing(),
@@ -103,7 +102,7 @@ describe("sync / range / batch", () => {
   });
 
   it("Should throw on inconsistent state - processingSuccess", () => {
-    const batch = new Batch(startEpoch, config, opts);
+    const batch = new Batch(startEpoch, config);
 
     expectThrowsLodestarError(
       () => batch.processingSuccess(),
