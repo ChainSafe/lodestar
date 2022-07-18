@@ -40,6 +40,7 @@ describe("lodestar / sync", function () {
         options: {
           sync: {isSingleNode: true},
           api: {rest: {enabled: true, port: restPort}},
+          chain: {blsVerifyAllMainThread: true},
         },
         validatorCount,
         logger: loggerNodeA,

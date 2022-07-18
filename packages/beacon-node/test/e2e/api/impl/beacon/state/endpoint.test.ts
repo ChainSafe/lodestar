@@ -42,6 +42,7 @@ describe("lodestar / api / impl / state", function () {
         options: {
           sync: {isSingleNode: true},
           api: {rest: {enabled: true, port: restPort}},
+          chain: {blsVerifyAllMainThread: true},
         },
         validatorCount,
         logger: loggerNodeA,
@@ -76,6 +77,7 @@ describe("lodestar / api / impl / state", function () {
         options: {
           sync: {isSingleNode: true},
           api: {rest: {enabled: true, port: restPort}},
+          chain: {blsVerifyAllMainThread: true},
         },
         validatorCount,
         logger: loggerNodeA,
