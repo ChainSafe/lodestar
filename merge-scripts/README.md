@@ -13,7 +13,8 @@ Look for the .vars file in the folder to see what networks are supported. Here a
 1. Kiln Network ( soon to be deprecated ): `--devnetVars ./kiln.vars`
 2. Ropsten Network: `--devnetVars ./ropsten.vars`
 3. Sepolia Network: `--devnetVars ./sepolia.vars`
-4. Mainnet Shadow fork 9: `--devnetVars ./mainnetshadow-9.vars`
+4. Goerli Network: `--devnetVars ./goerli.vars`
+5. Mainnet Shadow fork 9: `--devnetVars ./mainnetshadow-9.vars`
 
 #### And the much awaited Mainnet merge!
 
@@ -29,17 +30,17 @@ Comming soon! but you can start prepping your nodes with `--devnetVars mainnet.v
 
 ```bash
 cd merge-scripts
-./setup.sh --dataDir kiln-data --elClient geth --devnetVars ./kiln.vars [--dockerWithSudo --withTerminal "gnome-terminal --disable-factory --" --withValidator]
+./setup.sh --dataDir goerli-data --elClient nethermind --devnetVars ./goerli.vars [--dockerWithSudo --withTerminal "gnome-terminal --disable-factory --" --withValidator]
 ```
 
 ### Example scenarios
 
 1. Run with separate terminals launched & attached (best for testing in local) :
-   `./setup.sh --dataDir kiln-data --elClient nethermind --devnetVars ./kiln.vars --withTerminal "gnome-terminal --disable-factory --" --dockerWithSudo `
+   `./setup.sh --dataDir goerli-data --elClient nethermind --devnetVars ./goerli.vars --withTerminal "gnome-terminal --disable-factory --" --dockerWithSudo `
 2. Run _in-terminal_ attached with logs interleaved (best for testing in remote shell) :
-   `./setup.sh --dataDir kiln-data --elClient nethermind --devnetVars ./kiln.vars --dockerWithSudo`
+   `./setup.sh --dataDir goerli-data --elClient nethermind --devnetVars ./goerli.vars --dockerWithSudo`
 3. Run detached (best for leaving it to run, typically after testing 1 or 2):
-   `./setup.sh --dataDir kiln-data --elClient nethermind --devnetVars ./kiln.vars --detached --dockerWithSudo`
+   `./setup.sh --dataDir goerli-data --elClient nethermind --devnetVars ./goerli.vars --detached --dockerWithSudo`
 
 ### Supported EL clients
 
