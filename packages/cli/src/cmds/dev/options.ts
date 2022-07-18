@@ -3,7 +3,7 @@ import {ICliCommandOptions} from "../../util/index.js";
 import {beaconOptions, IBeaconArgs} from "../beacon/options.js";
 import {NetworkName} from "../../networks/index.js";
 import {beaconNodeOptions, globalOptions} from "../../options/index.js";
-import {IValidatorCliArgs, validatorOptions, KeymanagerArgs, keymanagerOptions} from "../validator/options.js";
+import {IValidatorCliArgs, validatorOptions} from "../validator/options.js";
 
 type IDevOwnArgs = {
   genesisEth1Hash?: string;
@@ -11,16 +11,9 @@ type IDevOwnArgs = {
   startValidators?: string;
   genesisTime?: number;
   reset?: boolean;
-  doppelgangerProtectionEnabled?: boolean;
-  server: string;
-} & KeymanagerArgs &
-  Pick<IValidatorCliArgs, "importKeystoresPath" | "importKeystoresPassword" | "doppelgangerProtectionEnabled">;
+};
 
 const devOwnOptions: ICliCommandOptions<IDevOwnArgs> = {
-  ...keymanagerOptions,
-  importKeystoresPath: validatorOptions["importKeystoresPath"],
-  importKeystoresPassword: validatorOptions["importKeystoresPassword"],
-  doppelgangerProtectionEnabled: validatorOptions["doppelgangerProtectionEnabled"],
   genesisEth1Hash: {
     description: "If present it will create genesis with this eth1 hash.",
     type: "string",
@@ -30,6 +23,7 @@ const devOwnOptions: ICliCommandOptions<IDevOwnArgs> = {
   genesisValidators: {
     alias: ["c"],
     description: "If present it will create genesis with interop validators and start chain.",
+    default: 8,
     type: "number",
     group: "dev",
   },
@@ -42,6 +36,7 @@ const devOwnOptions: ICliCommandOptions<IDevOwnArgs> = {
 
   genesisTime: {
     description: "genesis_time to initialize interop genesis state",
+    defaultDescription: "now",
     type: "number",
     group: "dev",
   },
@@ -52,12 +47,6 @@ const devOwnOptions: ICliCommandOptions<IDevOwnArgs> = {
     type: "boolean",
     group: "dev",
   },
-
-  server: {
-    description: "Address to connect to BeaconNode. Pass 'memory' for in memory communication",
-    default: "http://127.0.0.1:9596",
-    type: "string",
-  },
 };
 
 /**
@@ -67,7 +56,7 @@ const devOwnOptions: ICliCommandOptions<IDevOwnArgs> = {
  * - and have api enabled by default (as it's used by validator)
  * Note: use beaconNodeOptions and globalOptions to make sure option key is correct
  */
-const externalOptionsOverrides: {[k: string]: Options} = {
+const externalOptionsOverrides: Partial<Record<"network" | keyof typeof beaconNodeOptions, Options>> = {
   // Custom paths different than regular beacon, validator paths
   // network="dev" will store all data in separate dir than other networks
   network: {
@@ -109,8 +98,9 @@ const externalOptionsOverrides: {[k: string]: Options} = {
 
 export const devOptions = {
   ...beaconOptions,
+  ...validatorOptions,
   ...externalOptionsOverrides,
   ...devOwnOptions,
 };
 
-export type IDevArgs = IBeaconArgs & IDevOwnArgs;
+export type IDevArgs = IBeaconArgs & IValidatorCliArgs & IDevOwnArgs;

@@ -2,31 +2,20 @@ import {IChainForkConfig} from "@lodestar/config";
 import {BeaconStateAllForks} from "@lodestar/state-transition";
 import {phase0, ssz} from "@lodestar/types";
 import {IBeaconDb} from "../../db/index.js";
-import {GENESIS_SLOT} from "../../constants/index.js";
 import {interopDeposits} from "./interop/deposits.js";
 import {getInteropState, InteropStateOpts} from "./interop/state.js";
 
-export async function initDevState(
+export function initDevState(
   config: IChainForkConfig,
-  db: IBeaconDb,
   validatorCount: number,
   interopStateOpts: InteropStateOpts
-): Promise<BeaconStateAllForks> {
+): {deposits: phase0.Deposit[]; state: BeaconStateAllForks} {
   const deposits = interopDeposits(config, ssz.phase0.DepositDataRootList.defaultViewDU(), validatorCount);
-  await storeDeposits(db, deposits);
-  const state = getInteropState(
-    config,
-    interopStateOpts,
-    deposits,
-    await db.depositDataRoot.getDepositRootTreeAtIndex(validatorCount - 1)
-  );
-  const block = config.getForkTypes(GENESIS_SLOT).SignedBeaconBlock.defaultValue();
-  block.message.stateRoot = state.hashTreeRoot();
-  await db.blockArchive.add(block);
-  return state;
+  const state = getInteropState(config, interopStateOpts, deposits);
+  return {deposits, state};
 }
 
-async function storeDeposits(db: IBeaconDb, deposits: phase0.Deposit[]): Promise<void> {
+export async function writeDeposits(db: IBeaconDb, deposits: phase0.Deposit[]): Promise<void> {
   for (let i = 0; i < deposits.length; i++) {
     await Promise.all([
       db.depositEvent.put(i, {
