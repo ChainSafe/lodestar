@@ -301,7 +301,7 @@ export async function importBlock(
 
   // Register stat metrics about the block after importing it
   chain.metrics?.parentBlockDistance.observe(block.message.slot - parentBlockSlot);
-  chain.metrics?.proposerBalanceDiffAny.observe(fullyVerifiedBlock.proposerBalanceDiff);
+  chain.metrics?.proposerBalanceDeltaAny.observe(fullyVerifiedBlock.proposerBalanceDelta);
   chain.metrics?.registerImportedBlock(block.message, fullyVerifiedBlock);
 
   const advancedSlot = chain.clock.slotWithFutureTolerance(REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC);
