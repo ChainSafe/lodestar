@@ -49,7 +49,7 @@ export async function verifyBlockStateTransition(
   chain: VerifyBlockModules,
   block: allForks.SignedBeaconBlock,
   opts: ImportBlockOpts & BlockProcessOpts
-): Promise<{postState: CachedBeaconStateAllForks; executionStatus: ExecutionStatus; proposerBalanceDiff: number}> {
+): Promise<{postState: CachedBeaconStateAllForks; executionStatus: ExecutionStatus; proposerBalanceDelta: number}> {
   const {validProposerSignature, validSignatures} = opts;
 
   // TODO: Skip in process chain segment
@@ -274,9 +274,9 @@ export async function verifyBlockStateTransition(
 
   // For metric block profitability
   const proposerIndex = block.message.proposerIndex;
-  const proposerBalanceDiff = postState.balances.get(proposerIndex) - preState.balances.get(proposerIndex);
+  const proposerBalanceDelta = postState.balances.get(proposerIndex) - preState.balances.get(proposerIndex);
 
-  return {postState, executionStatus, proposerBalanceDiff};
+  return {postState, executionStatus, proposerBalanceDelta};
 }
 
 function logOnPowBlock(chain: VerifyBlockModules, block: bellatrix.SignedBeaconBlock): void {

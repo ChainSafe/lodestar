@@ -73,14 +73,14 @@ export async function processBlocks(
     for (const [i, block] of relevantBlocks.entries()) {
       // Fully verify a block to be imported immediately after. Does not produce any side-effects besides adding intermediate
       // states in the state cache through regen.
-      const {postState, executionStatus, proposerBalanceDiff} = await verifyBlockStateTransition(chain, block, opts);
+      const {postState, executionStatus, proposerBalanceDelta} = await verifyBlockStateTransition(chain, block, opts);
 
       const fullyVerifiedBlock: FullyVerifiedBlock = {
         block,
         postState,
         parentBlockSlot: parentSlots[i],
         executionStatus,
-        proposerBalanceDiff,
+        proposerBalanceDelta,
         // TODO: Make this param mandatory and capture in gossip
         seenTimestampSec: opts.seenTimestampSec ?? Math.floor(Date.now() / 1000),
       };
