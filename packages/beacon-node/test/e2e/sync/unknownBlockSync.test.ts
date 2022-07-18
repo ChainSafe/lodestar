@@ -48,7 +48,11 @@ describe("sync / unknown block sync", function () {
 
     const bn = await getDevBeaconNode({
       params: testParams,
-      options: {sync: {isSingleNode: true}, network: {allowPublishToZeroPeers: true}},
+      options: {
+        sync: {isSingleNode: true},
+        network: {allowPublishToZeroPeers: true},
+        chain: {blsVerifyAllMainThread: true},
+      },
       validatorCount,
       logger: loggerNodeA,
     });
@@ -74,7 +78,11 @@ describe("sync / unknown block sync", function () {
 
     const bn2 = await getDevBeaconNode({
       params: testParams,
-      options: {api: {rest: {enabled: false}}, sync: {disableRangeSync: true}},
+      options: {
+        api: {rest: {enabled: false}},
+        sync: {disableRangeSync: true},
+        chain: {blsVerifyAllMainThread: true},
+      },
       validatorCount,
       genesisTime: bn.chain.getHeadState().genesisTime,
       logger: loggerNodeB,
