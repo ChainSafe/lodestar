@@ -5,10 +5,11 @@ import {JobItemQueue} from "../../util/queue/index.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
 import {IBeaconChain} from "../interface.js";
-import {verifyBlock, VerifyBlockModules} from "./verifyBlock.js";
+import {VerifyBlockModules, verifyBlockStateTransition} from "./verifyBlock.js";
 import {importBlock, ImportBlockModules} from "./importBlock.js";
 import {assertLinearChainSegment} from "./utils/chainSegment.js";
-import {ImportBlockOpts} from "./types.js";
+import {FullyVerifiedBlock, ImportBlockOpts} from "./types.js";
+import {verifyBlocksSanityChecks} from "./verifyBlocksSanityChecks.js";
 export {ImportBlockOpts} from "./types.js";
 
 const QUEUE_MAX_LENGHT = 256;
@@ -62,8 +63,27 @@ export async function processBlocks(
   }
 
   try {
-    for (const block of blocks) {
-      const fullyVerifiedBlock = await verifyBlock(chain, block, opts);
+    const {relevantBlocks, parentSlots} = verifyBlocksSanityChecks(chain, blocks, opts);
+
+    // No relevant blocks, skip verifyBlocksInEpoch()
+    if (relevantBlocks.length === 0) {
+      return;
+    }
+
+    for (const [i, block] of relevantBlocks.entries()) {
+      // Fully verify a block to be imported immediately after. Does not produce any side-effects besides adding intermediate
+      // states in the state cache through regen.
+      const {postState, executionStatus, proposerBalanceDiff} = await verifyBlockStateTransition(chain, block, opts);
+
+      const fullyVerifiedBlock: FullyVerifiedBlock = {
+        block,
+        postState,
+        parentBlockSlot: parentSlots[i],
+        executionStatus,
+        proposerBalanceDiff,
+        // TODO: Make this param mandatory and capture in gossip
+        seenTimestampSec: opts.seenTimestampSec ?? Math.floor(Date.now() / 1000),
+      };
 
       // No need to sleep(0) here since `importBlock` includes a disk write
       // TODO: Consider batching importBlock too if it takes significant time

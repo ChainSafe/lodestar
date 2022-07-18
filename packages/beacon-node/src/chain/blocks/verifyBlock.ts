@@ -1,6 +1,5 @@
 import {
   CachedBeaconStateAllForks,
-  computeStartSlotAtEpoch,
   isBellatrixStateType,
   isBellatrixBlockBodyType,
   isMergeTransitionBlock as isMergeTransitionBlockFn,
@@ -10,7 +9,7 @@ import {
 } from "@lodestar/state-transition";
 import {allForks, bellatrix} from "@lodestar/types";
 import {toHexString} from "@chainsafe/ssz";
-import {IForkChoice, ProtoBlock, ExecutionStatus, assertValidTerminalPowBlock} from "@lodestar/fork-choice";
+import {IForkChoice, ExecutionStatus, assertValidTerminalPowBlock} from "@lodestar/fork-choice";
 import {IChainForkConfig} from "@lodestar/config";
 import {ILogger} from "@lodestar/utils";
 import {IMetrics} from "../../metrics/index.js";
@@ -23,7 +22,7 @@ import {IBlsVerifier} from "../bls/index.js";
 import {ExecutePayloadStatus} from "../../execution/engine/interface.js";
 import {byteArrayEquals} from "../../util/bytes.js";
 import {IEth1ForBlockProduction} from "../../eth1/index.js";
-import {FullyVerifiedBlock, ImportBlockOpts} from "./types.js";
+import {ImportBlockOpts} from "./types.js";
 import {POS_PANDA_MERGE_TRANSITION_BANNER} from "./utils/pandaMergeTransitionBanner.js";
 
 export type VerifyBlockModules = {
@@ -37,81 +36,6 @@ export type VerifyBlockModules = {
   config: IChainForkConfig;
   metrics: IMetrics | null;
 };
-
-/**
- * Fully verify a block to be imported immediately after. Does not produce any side-effects besides adding intermediate
- * states in the state cache through regen.
- */
-export async function verifyBlock(
-  chain: VerifyBlockModules,
-  block: allForks.SignedBeaconBlock,
-  opts: ImportBlockOpts & BlockProcessOpts
-): Promise<FullyVerifiedBlock> {
-  const parentBlock = verifyBlockSanityChecks(chain, block);
-
-  const {postState, executionStatus, proposerBalanceDiff} = await verifyBlockStateTransition(chain, block, opts);
-
-  return {
-    block,
-    postState,
-    parentBlockSlot: parentBlock.slot,
-    executionStatus,
-    proposerBalanceDiff,
-    // TODO: Make this param mandatory and capture in gossip
-    seenTimestampSec: opts.seenTimestampSec ?? Math.floor(Date.now() / 1000),
-  };
-}
-
-/**
- * Verifies som early cheap sanity checks on the block before running the full state transition.
- *
- * - Parent is known to the fork-choice
- * - Check skipped slots limit
- * - check_block_relevancy()
- *   - Block not in the future
- *   - Not genesis block
- *   - Block's slot is < Infinity
- *   - Not finalized slot
- *   - Not already known
- */
-export function verifyBlockSanityChecks(chain: VerifyBlockModules, block: allForks.SignedBeaconBlock): ProtoBlock {
-  const blockSlot = block.message.slot;
-
-  // Not genesis block
-  if (blockSlot === 0) {
-    throw new BlockError(block, {code: BlockErrorCode.GENESIS_BLOCK});
-  }
-
-  // Not finalized slot
-  const finalizedSlot = computeStartSlotAtEpoch(chain.forkChoice.getFinalizedCheckpoint().epoch);
-  if (blockSlot <= finalizedSlot) {
-    throw new BlockError(block, {code: BlockErrorCode.WOULD_REVERT_FINALIZED_SLOT, blockSlot, finalizedSlot});
-  }
-
-  // Parent is known to the fork-choice
-  const parentRoot = toHexString(block.message.parentRoot);
-  const parentBlock = chain.forkChoice.getBlockHex(parentRoot);
-  if (!parentBlock) {
-    throw new BlockError(block, {code: BlockErrorCode.PARENT_UNKNOWN, parentRoot});
-  }
-
-  // Check skipped slots limit
-  // TODO
-
-  // Block not in the future, also checks for infinity
-  const currentSlot = chain.clock.currentSlot;
-  if (blockSlot > currentSlot) {
-    throw new BlockError(block, {code: BlockErrorCode.FUTURE_SLOT, blockSlot, currentSlot});
-  }
-
-  // Not already known
-  const blockHash = toHexString(chain.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message));
-  if (chain.forkChoice.hasBlockHex(blockHash)) {
-    throw new BlockError(block, {code: BlockErrorCode.ALREADY_KNOWN, root: blockHash});
-  }
-
-  return parentBlock;
-}
 
 /**
  * Verifies a block is fully valid running the full state transition. To relieve the main thread signatures are
