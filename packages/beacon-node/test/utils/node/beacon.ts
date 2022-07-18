@@ -6,6 +6,7 @@ import {createIBeaconConfig, createIChainForkConfig, IChainConfig} from "@lodest
 import {ILogger, RecursivePartial} from "@lodestar/utils";
 import {LevelDbController} from "@lodestar/db";
 import {phase0} from "@lodestar/types";
+import {GENESIS_SLOT} from "@lodestar/params";
 import {BeaconStateAllForks} from "@lodestar/state-transition";
 import {isPlainObject} from "@lodestar/utils";
 import {BeaconNode} from "../../../src/index.js";
@@ -13,7 +14,7 @@ import {createEnr} from "../../../../cli/src/config/enr.js";
 import {createNodeJsLibp2p} from "../../../src/network/nodejs/index.js";
 import {createPeerId} from "../../../src/network/index.js";
 import {defaultNetworkOptions} from "../../../src/network/options.js";
-import {initDevState} from "../../../src/node/utils/state.js";
+import {initDevState, writeDeposits} from "../../../src/node/utils/state.js";
 import {IBeaconNodeOptions} from "../../../src/node/options.js";
 import {defaultOptions} from "../../../src/node/options.js";
 import {BeaconDb} from "../../../src/db/index.js";
@@ -80,15 +81,26 @@ export async function getDevBeaconNode(
     }
   );
 
-  const state = opts.anchorState || initDevState(config, validatorCount, opts).state;
-  const beaconConfig = createIBeaconConfig(config, state.genesisValidatorsRoot);
+  let anchorState = opts.anchorState;
+  if (!anchorState) {
+    const {state, deposits} = initDevState(config, validatorCount, opts);
+    anchorState = state;
+
+    // Is it necessary to persist deposits and genesis block?
+    await writeDeposits(db, deposits);
+    const block = config.getForkTypes(GENESIS_SLOT).SignedBeaconBlock.defaultValue();
+    block.message.stateRoot = state.hashTreeRoot();
+    await db.blockArchive.add(block);
+  }
+
+  const beaconConfig = createIBeaconConfig(config, anchorState.genesisValidatorsRoot);
   return await BeaconNode.init({
     opts: options as IBeaconNodeOptions,
     config: beaconConfig,
     db,
     logger,
     libp2p,
-    anchorState: state,
+    anchorState,
     wsCheckpoint: opts.wsCheckpoint,
   });
 }
