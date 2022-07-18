@@ -6,6 +6,8 @@ This script is borne out of need to simplify putting together the various moving
 
 So just give it a go and fire away your merge setup command!
 
+A comprehensive setup guide on how to use this merge script can be found here: https://hackmd.io/@philknows/rJegZyH9q
+
 ### Supported Networks
 
 Look for the .vars file in the folder to see what networks are supported. Here are a few examples
