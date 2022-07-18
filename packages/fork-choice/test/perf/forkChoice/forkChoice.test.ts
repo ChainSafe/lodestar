@@ -21,20 +21,23 @@ describe("ForkChoice", () => {
   const genesisStateRoot = stateRootPrefix + "00";
 
   function initializeForkChoice(): void {
-    protoArr = ProtoArray.initialize({
-      slot: genesisSlot,
-      stateRoot: genesisStateRoot,
-      parentRoot,
-      blockRoot: finalizedRoot,
+    protoArr = ProtoArray.initialize(
+      {
+        slot: genesisSlot,
+        stateRoot: genesisStateRoot,
+        parentRoot,
+        blockRoot: finalizedRoot,
 
-      justifiedEpoch: genesisEpoch,
-      justifiedRoot: genesisRoot,
-      finalizedEpoch: genesisEpoch,
-      finalizedRoot: genesisRoot,
+        justifiedEpoch: genesisEpoch,
+        justifiedRoot: genesisRoot,
+        finalizedEpoch: genesisEpoch,
+        finalizedRoot: genesisRoot,
 
-      executionPayloadBlockHash: null,
-      executionStatus: ExecutionStatus.PreMerge,
-    } as Omit<ProtoBlock, "targetRoot">);
+        executionPayloadBlockHash: null,
+        executionStatus: ExecutionStatus.PreMerge,
+      } as Omit<ProtoBlock, "targetRoot">,
+      genesisSlot
+    );
     // assume there are 64 unfinalized blocks, this number does not make a difference in term of performance
     const numBlocks = 64;
     const balances = new Uint8Array(Array.from({length: numBlocks}, () => 32));
@@ -48,7 +51,12 @@ describe("ForkChoice", () => {
         checkpoint: {epoch: genesisEpoch, root: fromHexString(finalizedRoot), rootHex: finalizedRoot},
         balances,
       },
+      unrealizedJustified: {
+        checkpoint: {epoch: genesisEpoch, root: fromHexString(finalizedRoot), rootHex: finalizedRoot},
+        balances,
+      },
       finalizedCheckpoint: {epoch: genesisEpoch, root: fromHexString(finalizedRoot), rootHex: finalizedRoot},
+      unrealizedFinalizedCheckpoint: {epoch: genesisEpoch, root: fromHexString(finalizedRoot), rootHex: finalizedRoot},
       justifiedBalancesGetter: () => balances,
     };
 
@@ -68,12 +76,16 @@ describe("ForkChoice", () => {
         justifiedRoot: i < 32 ? genesisRoot : blockRootPrefix + "32",
         finalizedEpoch: genesisEpoch,
         finalizedRoot: genesisRoot,
+        unrealizedJustifiedEpoch: i < 32 ? genesisEpoch : genesisEpoch + 1,
+        unrealizedJustifiedRoot: i < 32 ? genesisRoot : blockRootPrefix + "32",
+        unrealizedFinalizedEpoch: genesisEpoch,
+        unrealizedFinalizedRoot: genesisRoot,
 
         executionPayloadBlockHash: null,
         executionStatus: ExecutionStatus.PreMerge,
       };
 
-      protoArr.onBlock(block);
+      protoArr.onBlock(block, block.slot);
       parentBlockRoot = blockRoot;
     }
   }

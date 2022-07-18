@@ -1,7 +1,7 @@
 import {GENESIS_EPOCH} from "@lodestar/params";
 import {BitArray} from "@chainsafe/ssz";
 import {ssz} from "@lodestar/types";
-import {getBlockRoot} from "../util/index.js";
+import {computeEpochAtSlot, getBlockRoot} from "../util/index.js";
 import {CachedBeaconStateAllForks, EpochProcess} from "../types.js";
 
 /**
@@ -13,14 +13,30 @@ export function processJustificationAndFinalization(
   state: CachedBeaconStateAllForks,
   epochProcess: EpochProcess
 ): void {
-  const previousEpoch = epochProcess.prevEpoch;
-  const currentEpoch = epochProcess.currentEpoch;
-
   // Initial FFG checkpoint values have a `0x00` stub for `root`.
   // Skip FFG updates in the first two epochs to avoid corner cases that might result in modifying this stub.
-  if (currentEpoch <= GENESIS_EPOCH + 1) {
+  if (epochProcess.currentEpoch <= GENESIS_EPOCH + 1) {
     return;
   }
+  weighJustificationAndFinalization(
+    state,
+    epochProcess.totalActiveStakeByIncrement,
+    epochProcess.prevEpochUnslashedStake.targetStakeByIncrement,
+    epochProcess.currEpochUnslashedTargetStakeByIncrement
+  );
+}
+
+/**
+ * Updates `state` checkpoints based on previous and current target balance
+ */
+export function weighJustificationAndFinalization(
+  state: CachedBeaconStateAllForks,
+  totalActiveBalance: number,
+  previousEpochTargetBalance: number,
+  currentEpochTargetBalance: number
+): void {
+  const currentEpoch = computeEpochAtSlot(state.slot);
+  const previousEpoch = currentEpoch - 1;
 
   const oldPreviousJustifiedCheckpoint = state.previousJustifiedCheckpoint;
   const oldCurrentJustifiedCheckpoint = state.currentJustifiedCheckpoint;
@@ -35,14 +51,14 @@ export function processJustificationAndFinalization(
   }
   bits[0] = false;
 
-  if (epochProcess.prevEpochUnslashedStake.targetStakeByIncrement * 3 >= epochProcess.totalActiveStakeByIncrement * 2) {
+  if (previousEpochTargetBalance * 3 >= totalActiveBalance * 2) {
     state.currentJustifiedCheckpoint = ssz.phase0.Checkpoint.toViewDU({
       epoch: previousEpoch,
       root: getBlockRoot(state, previousEpoch),
     });
     bits[1] = true;
   }
-  if (epochProcess.currEpochUnslashedTargetStakeByIncrement * 3 >= epochProcess.totalActiveStakeByIncrement * 2) {
+  if (currentEpochTargetBalance * 3 >= totalActiveBalance * 2) {
     state.currentJustifiedCheckpoint = ssz.phase0.Checkpoint.toViewDU({
       epoch: currentEpoch,
       root: getBlockRoot(state, currentEpoch),

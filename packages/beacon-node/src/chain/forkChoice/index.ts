@@ -60,24 +60,31 @@ export function initializeForkChoice(
       }
     ),
 
-    ProtoArray.initialize({
-      slot: blockHeader.slot,
-      parentRoot: toHexString(blockHeader.parentRoot),
-      stateRoot: toHexString(blockHeader.stateRoot),
-      blockRoot: toHexString(checkpoint.root),
+    ProtoArray.initialize(
+      {
+        slot: blockHeader.slot,
+        parentRoot: toHexString(blockHeader.parentRoot),
+        stateRoot: toHexString(blockHeader.stateRoot),
+        blockRoot: toHexString(checkpoint.root),
 
-      justifiedEpoch: justifiedCheckpoint.epoch,
-      justifiedRoot: toHexString(justifiedCheckpoint.root),
-      finalizedEpoch: finalizedCheckpoint.epoch,
-      finalizedRoot: toHexString(finalizedCheckpoint.root),
+        justifiedEpoch: justifiedCheckpoint.epoch,
+        justifiedRoot: toHexString(justifiedCheckpoint.root),
+        finalizedEpoch: finalizedCheckpoint.epoch,
+        finalizedRoot: toHexString(finalizedCheckpoint.root),
+        unrealizedJustifiedEpoch: justifiedCheckpoint.epoch,
+        unrealizedJustifiedRoot: toHexString(justifiedCheckpoint.root),
+        unrealizedFinalizedEpoch: finalizedCheckpoint.epoch,
+        unrealizedFinalizedRoot: toHexString(finalizedCheckpoint.root),
 
-      ...(isBellatrixStateType(state) && isMergeTransitionComplete(state)
-        ? {
-            executionPayloadBlockHash: toHexString(state.latestExecutionPayloadHeader.blockHash),
-            executionStatus: blockHeader.slot === GENESIS_SLOT ? ExecutionStatus.Valid : ExecutionStatus.Syncing,
-          }
-        : {executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge}),
-    }),
+        ...(isBellatrixStateType(state) && isMergeTransitionComplete(state)
+          ? {
+              executionPayloadBlockHash: toHexString(state.latestExecutionPayloadHeader.blockHash),
+              executionStatus: blockHeader.slot === GENESIS_SLOT ? ExecutionStatus.Valid : ExecutionStatus.Syncing,
+            }
+          : {executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge}),
+      },
+      currentSlot
+    ),
 
     proposerBoostEnabled,
     metrics

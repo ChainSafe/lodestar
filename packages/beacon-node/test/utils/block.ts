@@ -113,6 +113,10 @@ export function generateEmptyProtoBlock(): ProtoBlock {
     justifiedRoot: rootHex,
     finalizedEpoch: 0,
     finalizedRoot: rootHex,
+    unrealizedJustifiedEpoch: 0,
+    unrealizedJustifiedRoot: rootHex,
+    unrealizedFinalizedEpoch: 0,
+    unrealizedFinalizedRoot: rootHex,
 
     ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
   };

@@ -69,6 +69,15 @@ export interface IForkChoice {
     block: allForks.BeaconBlock,
     state: CachedBeaconStateAllForks,
     blockDelaySec: number,
+    currentSlot: Slot,
+    /**
+     * Compute by running process_justification_and_finalization on `state`, and returning
+     * state.justified_checkpoint, state.finalized_checkpoint
+     */
+    unrealizedCheckpoints: {
+      justifiedCheckpoint: phase0.Checkpoint;
+      finalizedCheckpoint: phase0.Checkpoint;
+    },
     executionStatus: ExecutionStatus
   ): void;
   /**
