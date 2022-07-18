@@ -158,3 +158,12 @@ export function getCachedBeaconState<T extends BeaconStateAllForks>(
 
   return cachedState;
 }
+
+/**
+ * Typeguard to check if a state contains a BeaconStateCache
+ */
+export function isCachedBeaconState<T extends BeaconStateAllForks>(
+  state: T | (T & BeaconStateCache)
+): state is T & BeaconStateCache {
+  return (state as T & BeaconStateCache).epochCtx !== undefined;
+}

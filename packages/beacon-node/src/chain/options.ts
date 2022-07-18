@@ -13,6 +13,7 @@ export type IChainOptions = BlockProcessOpts &
     blsVerifyAllMultiThread?: boolean;
     persistInvalidSszObjects?: boolean;
     persistInvalidSszObjectsDir?: string;
+    skipCreateStateCacheIfAvailable?: boolean;
     defaultFeeRecipient: string;
   };
 
