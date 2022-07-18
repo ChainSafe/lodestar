@@ -47,15 +47,12 @@ export class CheckpointStateCache {
       this.preComputedCheckpointHits = (this.preComputedCheckpointHits ?? 0) + 1;
     }
 
-    // Clone first to account for metrics below
-    const itemCloned = item.clone();
-
     this.metrics?.stateClonedCount.observe(item.clonedCount);
     if (!stateInternalCachePopulated(item)) {
       this.metrics?.stateInternalCacheMiss.inc();
     }
 
-    return itemCloned;
+    return item;
   }
 
   add(cp: phase0.Checkpoint, item: CachedBeaconStateAllForks): void {
@@ -65,7 +62,7 @@ export class CheckpointStateCache {
       return;
     }
     this.metrics?.adds.inc();
-    this.cache.set(key, item.clone());
+    this.cache.set(key, item);
     this.epochIndex.getOrDefault(cp.epoch).add(cpHex.rootHex);
   }
 

@@ -41,21 +41,12 @@ export class StateContextCache {
     }
 
     this.metrics?.hits.inc();
-    // clonedCount + 1 as there's a .clone() below
-    this.metrics?.stateClonedCount.observe(item.clonedCount + 1);
-    if (!stateInternalCachePopulated(item)) {
-      this.metrics?.stateInternalCacheMiss.inc();
-    }
-
-    // Clone first to account for metrics below
-    const itemCloned = item.clone();
-
     this.metrics?.stateClonedCount.observe(item.clonedCount);
     if (!stateInternalCachePopulated(item)) {
       this.metrics?.stateInternalCacheMiss.inc();
     }
 
-    return itemCloned;
+    return item;
   }
 
   add(item: CachedBeaconStateAllForks): void {
@@ -64,7 +55,7 @@ export class StateContextCache {
       return;
     }
     this.metrics?.adds.inc();
-    this.cache.set(key, item.clone());
+    this.cache.set(key, item);
     const epoch = item.epochCtx.epoch;
     const blockRoots = this.epochIndex.get(epoch);
     if (blockRoots) {

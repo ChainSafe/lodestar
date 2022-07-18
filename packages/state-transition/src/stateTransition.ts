@@ -33,6 +33,7 @@ export function stateTransition(
   const block = signedBlock.message;
   const blockSlot = block.slot;
 
+  // .clone() before mutating state in state transition
   let postState = state.clone();
 
   // State is already a ViewDU, which won't commit changes. Equivalent to .setStateCachesAsTransient()
@@ -88,6 +89,7 @@ export function processSlots(
   epochProcessOpts?: EpochProcessOpts,
   metrics?: IBeaconStateTransitionMetrics | null
 ): CachedBeaconStateAllForks {
+  // .clone() before mutating state in state transition
   let postState = state.clone();
 
   // State is already a ViewDU, which won't commit changes. Equivalent to .setStateCachesAsTransient()
