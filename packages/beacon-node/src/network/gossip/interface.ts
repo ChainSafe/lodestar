@@ -1,7 +1,3 @@
-/**
- * @module network/gossip
- */
-
 import {EventEmitter} from "events";
 import StrictEventEmitter from "strict-event-emitter-types";
 import LibP2p from "libp2p";

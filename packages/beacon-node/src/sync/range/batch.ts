@@ -1,16 +1,10 @@
 import PeerId from "peer-id";
 import {allForks, Epoch, phase0} from "@lodestar/types";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {IChainForkConfig} from "@lodestar/config";
 import {LodestarError} from "@lodestar/utils";
-import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {BATCH_SLOT_OFFSET, MAX_BATCH_DOWNLOAD_ATTEMPTS, MAX_BATCH_PROCESSING_ATTEMPTS} from "../constants.js";
-import {ChainSegmentError, BlockErrorCode} from "../../chain/errors/index.js";
-import {hashBlocks} from "./utils/index.js";
-
-export type BatchOpts = {
-  epochsPerBatch: Epoch;
-};
+import {MAX_BATCH_DOWNLOAD_ATTEMPTS, MAX_BATCH_PROCESSING_ATTEMPTS} from "../constants.js";
+import {BlockError, BlockErrorCode} from "../../chain/errors/index.js";
+import {getBatchSlotRange, hashBlocks} from "./utils/index.js";
 
 /**
  * Current state of a batch
@@ -54,14 +48,15 @@ export type BatchMetadata = {
 };
 
 /**
- * Batches are downloaded excluding the first block of the epoch assuming it has already been
- * downloaded.
+ * Batches are downloaded at the first block of the epoch.
  *
  * For example:
  *
  * Epoch boundary |                                   |
  *  ... | 30 | 31 | 32 | 33 | 34 | ... | 61 | 62 | 63 | 64 | 65 |
- *       Batch 1       |              Batch 2              |  Batch 3
+ *     Batch 1    |              Batch 2              |  Batch 3
+ *
+ * Jul2022: Offset changed from 1 to 0, see rationale in {@link BATCH_SLOT_OFFSET}
  */
 export class Batch {
   readonly startEpoch: Epoch;
@@ -77,15 +72,14 @@ export class Batch {
   private readonly failedDownloadAttempts: PeerId[] = [];
   private readonly config: IChainForkConfig;
 
-  constructor(startEpoch: Epoch, config: IChainForkConfig, opts: BatchOpts) {
-    const startSlot = computeStartSlotAtEpoch(startEpoch) + BATCH_SLOT_OFFSET;
-    const endSlot = startSlot + opts.epochsPerBatch * SLOTS_PER_EPOCH;
+  constructor(startEpoch: Epoch, config: IChainForkConfig) {
+    const {startSlot, count} = getBatchSlotRange(startEpoch);
 
     this.config = config;
     this.startEpoch = startEpoch;
     this.request = {
-      startSlot: startSlot,
-      count: endSlot - startSlot,
+      startSlot,
+      count,
       step: 1,
     };
   }
@@ -172,7 +166,7 @@ export class Batch {
       throw new BatchError(this.wrongStatusErrorType(BatchStatus.Processing));
     }
 
-    if (err instanceof ChainSegmentError && err.type.code === BlockErrorCode.EXECUTION_ENGINE_ERROR) {
+    if (err instanceof BlockError && err.type.code === BlockErrorCode.EXECUTION_ENGINE_ERROR) {
       this.onExecutionEngineError(this.state.attempt);
     } else {
       this.onProcessingError(this.state.attempt);
@@ -187,7 +181,7 @@ export class Batch {
       throw new BatchError(this.wrongStatusErrorType(BatchStatus.AwaitingValidation));
     }
 
-    if (err instanceof ChainSegmentError && err.type.code === BlockErrorCode.EXECUTION_ENGINE_ERROR) {
+    if (err instanceof BlockError && err.type.code === BlockErrorCode.EXECUTION_ENGINE_ERROR) {
       this.onExecutionEngineError(this.state.attempt);
     } else {
       this.onProcessingError(this.state.attempt);

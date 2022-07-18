@@ -1,7 +1,3 @@
-/**
- * @module db/api/beacon
- */
-
 import {DatabaseService, IDatabaseApiOptions} from "@lodestar/db";
 import {IBeaconDb} from "./interface.js";
 import {

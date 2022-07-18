@@ -1,6 +1,3 @@
-/**
- * @module network
- */
 import {Connection} from "libp2p";
 import {HandlerProps} from "libp2p/src/registrar";
 import LibP2p from "libp2p";

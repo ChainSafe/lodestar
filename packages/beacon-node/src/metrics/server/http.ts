@@ -1,6 +1,3 @@
-/**
- * @module metrics/server
- */
 import http from "node:http";
 import {Registry} from "prom-client";
 import {ILogger} from "@lodestar/utils";

@@ -1,7 +1,3 @@
-/**
- * @module db/controller
- */
-
 import {ILevelDbControllerMetrics} from "./metrics.js";
 
 /** Shortcut for Uint8Array based IDatabaseController */

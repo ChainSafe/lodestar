@@ -1,7 +1,3 @@
-/**
- * @module chain/stateTransition/util
- */
-
 import {digest} from "@chainsafe/as-sha256";
 import {Epoch, Bytes32, DomainType, ValidatorIndex} from "@lodestar/types";
 import {assert, bytesToBigInt, intToBytes} from "@lodestar/utils";

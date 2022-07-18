@@ -15,11 +15,12 @@ import * as kiln from "./kiln.js";
 import * as ropsten from "./ropsten.js";
 import * as sepolia from "./sepolia.js";
 
-export type NetworkName = "mainnet" | "dev" | "gnosis" | "prater" | "kiln" | "ropsten" | "sepolia";
+export type NetworkName = "mainnet" | "dev" | "gnosis" | "prater" | "goerli" | "kiln" | "ropsten" | "sepolia";
 export const networkNames: NetworkName[] = [
   "mainnet",
   "gnosis",
   "prater",
+  "goerli",
   "kiln",
   "ropsten",
   "sepolia",
@@ -53,6 +54,7 @@ function getNetworkData(
     case "gnosis":
       return gnosis;
     case "prater":
+    case "goerli":
       return prater;
     case "kiln":
       return kiln;

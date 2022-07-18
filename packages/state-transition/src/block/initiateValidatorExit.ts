@@ -1,5 +1,6 @@
 import {FAR_FUTURE_EPOCH} from "@lodestar/params";
-import {phase0} from "@lodestar/types";
+import {CompositeViewDU} from "@chainsafe/ssz";
+import {ssz} from "@lodestar/types";
 import {CachedBeaconStateAllForks} from "../types.js";
 
 /**
@@ -22,7 +23,10 @@ import {CachedBeaconStateAllForks} from "../types.js";
  * ```
  * Forcing consumers to pass the SubTree of `validator` directly mitigates this issue.
  */
-export function initiateValidatorExit(state: CachedBeaconStateAllForks, validator: phase0.Validator): void {
+export function initiateValidatorExit(
+  state: CachedBeaconStateAllForks,
+  validator: CompositeViewDU<typeof ssz.phase0.Validator>
+): void {
   const {config, epochCtx} = state;
 
   // return if validator already initiated exit

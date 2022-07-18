@@ -1,10 +1,7 @@
-/**
- * @module chain/blockAssembly
- */
-
 import {CachedBeaconStateAllForks, stateTransition} from "@lodestar/state-transition";
 import {allForks, Bytes32, Bytes96, Root, Slot} from "@lodestar/types";
 import {fromHexString} from "@chainsafe/ssz";
+import {ILogger} from "@lodestar/utils";
 
 import {ZERO_HASH} from "../../../constants/index.js";
 import {IMetrics} from "../../../metrics/index.js";
@@ -15,11 +12,12 @@ import {assembleBody, BlockType, AssembledBlockType} from "./body.js";
 type AssembleBlockModules = {
   chain: IBeaconChain;
   metrics: IMetrics | null;
+  logger?: ILogger;
 };
 
 export {BlockType, AssembledBlockType};
 export async function assembleBlock<T extends BlockType>(
-  {chain, metrics, type}: AssembleBlockModules & {type: T},
+  {chain, metrics, logger, type}: AssembleBlockModules & {type: T},
   {
     randaoReveal,
     graffiti,
@@ -42,7 +40,7 @@ export async function assembleBlock<T extends BlockType>(
     proposerIndex,
     parentRoot: parentBlockRoot,
     stateRoot: ZERO_HASH,
-    body: await assembleBody<T>({type, chain}, state, {
+    body: await assembleBody<T>({type, chain, logger}, state, {
       randaoReveal,
       graffiti,
       blockSlot: slot,

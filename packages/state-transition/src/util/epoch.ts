@@ -1,7 +1,3 @@
-/**
- * @module chain/stateTransition/util
- */
-
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, GENESIS_EPOCH, MAX_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {allForks, Epoch, Slot, SyncPeriod} from "@lodestar/types";
 

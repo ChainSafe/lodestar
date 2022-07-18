@@ -83,6 +83,7 @@ describe("verify+import blocks - range sync perf test", () => {
           safeSlotsToImportOptimistically: SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY,
           disableArchiveOnCheckpoint: true,
           defaultFeeRecipient: defaultValidatorOptions.defaultFeeRecipient,
+          skipCreateStateCacheIfAvailable: true,
         },
         {
           config: state.config,

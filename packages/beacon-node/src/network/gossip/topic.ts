@@ -1,7 +1,3 @@
-/**
- * @module network/gossip
- */
-
 import {ssz} from "@lodestar/types";
 import {IForkDigestContext} from "@lodestar/config";
 import {GossipType, GossipTopic, GossipEncoding} from "./interface.js";

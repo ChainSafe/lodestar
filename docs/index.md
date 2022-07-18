@@ -11,7 +11,6 @@
 - Run a beacon node on [mainnet or a public testnet](usage/beacon-management.md).
 - Utilize the whole stack by [starting a local testnet](usage/local).
 - View the Lodestar [CLI commands and options](https://chainsafe.github.io/lodestar/reference/cli/)
-- View the [typedoc code docs](packages).
 - Prospective contributors can read the [contributing section](https://chainsafe.github.io/lodestar/contributing/) to understand how we develop and test on Lodestar.
 - If you have questions [submit an issue](https://github.com/ChainSafe/lodestar/issues/new) or join us on [Discord](https://discord.gg/yjyvFRP)!
 - Please note our [security policy](https://github.com/ChainSafe/lodestar/blob/unstable/SECURITY.md).
@@ -27,7 +26,6 @@ Hardware specifications minimum / recommended, to run the Lodestar client.
 | Memory    | 4GB RAM                          | 8GB RAM                           |
 | Storage   | 20GB available space SSD         | 100GB available space SSD         |
 | Internet  | Broadband connection             | Broadband connection              |
-
 
 ## About these docs
 

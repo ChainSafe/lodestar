@@ -1,7 +1,3 @@
-/**
- * @module chain
- */
-
 import path from "node:path";
 import {
   BeaconStateAllForks,
@@ -11,6 +7,7 @@ import {
   createCachedBeaconState,
   EffectiveBalanceIncrements,
   getEffectiveBalanceIncrementsZeroInactive,
+  isCachedBeaconState,
   Index2PubkeyCache,
   PubkeyIndexMap,
 } from "@lodestar/state-transition";
@@ -26,7 +23,7 @@ import {IEth1ForBlockProduction} from "../eth1/index.js";
 import {IExecutionEngine, IExecutionBuilder} from "../execution/index.js";
 import {ensureDir, writeIfNotExist} from "../util/file.js";
 import {CheckpointStateCache, StateContextCache} from "./stateCache/index.js";
-import {BlockProcessor, PartiallyVerifiedBlockFlags} from "./blocks/index.js";
+import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
 import {IBeaconClock, LocalClock} from "./clock/index.js";
 import {ChainEventEmitter} from "./emitter.js";
 import {IBeaconChain, ProposerPreparationData} from "./interface.js";
@@ -162,19 +159,27 @@ export class BeaconChain implements IBeaconChain {
     this.seenAggregatedAttestations = new SeenAggregatedAttestations(metrics);
     this.seenContributionAndProof = new SeenContributionAndProof(metrics);
 
-    // Initialize single global instance of state caches
-    this.pubkey2index = new PubkeyIndexMap();
-    this.index2pubkey = [];
-
     this.beaconProposerCache = new BeaconProposerCache(opts);
     this.checkpointBalancesCache = new CheckpointBalancesCache();
 
     // Restore state caches
-    const cachedState = createCachedBeaconState(anchorState, {
-      config,
-      pubkey2index: this.pubkey2index,
-      index2pubkey: this.index2pubkey,
-    });
+    // anchorState may already by a CachedBeaconState. If so, don't create the cache again, since deserializing all
+    // pubkeys takes ~30 seconds for 350k keys (mainnet 2022Q2).
+    // When the BeaconStateCache is created in eth1 genesis builder it may be incorrect. Until we can ensure that
+    // it's safe to re-use _ANY_ BeaconStateCache, this option is disabled by default and only used in tests.
+    const cachedState =
+      isCachedBeaconState(anchorState) && opts.skipCreateStateCacheIfAvailable
+        ? anchorState
+        : createCachedBeaconState(anchorState, {
+            config,
+            pubkey2index: new PubkeyIndexMap(),
+            index2pubkey: [],
+          });
+
+    // Persist single global instance of state caches
+    this.pubkey2index = cachedState.epochCtx.pubkey2index;
+    this.index2pubkey = cachedState.epochCtx.index2pubkey;
+
     const {checkpoint} = computeAnchorCheckpoint(config, anchorState);
     stateCache.add(cachedState);
     checkpointStateCache.add(checkpoint, cachedState);
@@ -318,12 +323,12 @@ export class BeaconChain implements IBeaconChain {
     return await this.db.block.get(fromHexString(block.blockRoot));
   }
 
-  async processBlock(block: allForks.SignedBeaconBlock, flags?: PartiallyVerifiedBlockFlags): Promise<void> {
-    return await this.blockProcessor.processBlockJob({...flags, block});
+  async processBlock(block: allForks.SignedBeaconBlock, opts?: ImportBlockOpts): Promise<void> {
+    return await this.blockProcessor.processBlocksJob([block], opts);
   }
 
-  async processChainSegment(blocks: allForks.SignedBeaconBlock[], flags?: PartiallyVerifiedBlockFlags): Promise<void> {
-    return await this.blockProcessor.processChainSegment(blocks.map((block) => ({...flags, block})));
+  async processChainSegment(blocks: allForks.SignedBeaconBlock[], opts?: ImportBlockOpts): Promise<void> {
+    return await this.blockProcessor.processBlocksJob(blocks, opts);
   }
 
   getStatus(): phase0.Status {

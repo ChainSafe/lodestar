@@ -1,6 +1,3 @@
-/**
- * @module metrics
- */
 import {collectDefaultMetrics, Metric, Registry} from "prom-client";
 import gcStats from "prometheus-gc-stats";
 import {ILogger} from "@lodestar/utils";
