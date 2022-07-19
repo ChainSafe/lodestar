@@ -1,7 +1,14 @@
 import {toHexString} from "@chainsafe/ssz";
 import {Slot} from "@lodestar/types";
 import {IChainForkConfig} from "@lodestar/config";
-import {ForkChoice, ProtoArray, ForkChoiceStore, ExecutionStatus, JustifiedBalancesGetter} from "@lodestar/fork-choice";
+import {
+  ForkChoice,
+  ProtoArray,
+  ForkChoiceStore,
+  ExecutionStatus,
+  JustifiedBalancesGetter,
+  ForkChoiceOpts,
+} from "@lodestar/fork-choice";
 import {
   CachedBeaconStateAllForks,
   getEffectiveBalanceIncrementsZeroInactive,
@@ -15,11 +22,7 @@ import {IMetrics} from "../../metrics/index.js";
 import {ChainEvent} from "../emitter.js";
 import {GENESIS_SLOT} from "../../constants/index.js";
 
-export type ForkChoiceOpts = {
-  terminalTotalDifficulty?: bigint;
-  proposerBoostEnabled: boolean;
-  computeUnrealized: boolean;
-};
+export {ForkChoiceOpts};
 
 /**
  * Fork Choice extended with a ChainEventEmitter
@@ -29,8 +32,7 @@ export function initializeForkChoice(
   emitter: ChainEventEmitter,
   currentSlot: Slot,
   state: CachedBeaconStateAllForks,
-  proposerBoostEnabled: boolean,
-  computeUnrealized: boolean,
+  opts: ForkChoiceOpts,
   justifiedBalancesGetter: JustifiedBalancesGetter,
   metrics?: IMetrics | null
 ): ForkChoice {
@@ -88,8 +90,7 @@ export function initializeForkChoice(
       currentSlot
     ),
 
-    proposerBoostEnabled,
-    computeUnrealized,
+    opts,
     metrics
   );
 }

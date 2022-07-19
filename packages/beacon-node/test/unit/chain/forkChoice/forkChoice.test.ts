@@ -62,8 +62,7 @@ describe("LodestarForkChoice", function () {
       emitter,
       currentSlot,
       state,
-      false,
-      false,
+      {},
       (_: CheckpointWithHex) => justifiedBalances
     );
   });
