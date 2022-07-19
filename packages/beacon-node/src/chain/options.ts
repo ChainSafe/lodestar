@@ -33,6 +33,8 @@ export type BlockProcessOpts = {
   assertCorrectProgressiveBalances?: boolean;
   /** Used for fork_choice spec tests */
   disableOnBlockError?: boolean;
+  /** Used for fork_choice spec tests */
+  disablePrepareNextSlot?: boolean;
 };
 
 export const defaultChainOptions: IChainOptions = {

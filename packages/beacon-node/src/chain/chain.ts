@@ -246,7 +246,10 @@ export class BeaconChain implements IBeaconChain {
     this.lightClientServer = lightClientServer;
 
     this.archiver = new Archiver(db, this, logger, signal, opts);
-    new PrepareNextSlotScheduler(this, this.config, metrics, this.logger, signal);
+    // always run PrepareNextSlotScheduler except for fork_choice spec tests
+    if (!opts?.disablePrepareNextSlot) {
+      new PrepareNextSlotScheduler(this, this.config, metrics, this.logger, signal);
+    }
 
     metrics?.opPool.aggregatedAttestationPoolSize.addCollect(() => this.onScrapeMetrics());
 
