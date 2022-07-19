@@ -64,7 +64,7 @@ done
 # key won't ever get assigned in while loop if there is no arg, in that case print usage
 if [[ ! -n "$key" ]];
 then
-  echo "usage: ./setup.sh --dataDir <data dir> --elClient <geth | nethermind | ethereumjs | besu> --devetVars <devnet vars file> [--dockerWithSudo --withTerminal \"gnome-terminal --disable-factory --\"]"
+  echo "usage: ./setup.sh --dataDir <data dir> --elClient <geth | nethermind | ethereumjs | besu | erigon> --devetVars <devnet vars file> [--dockerWithSudo --withTerminal \"gnome-terminal --disable-factory --\"]"
   echo "example: ./setup.sh --dataDir kiln-data --elClient nethermind --devnetVars ./kiln.vars --dockerWithSudo --withTerminal \"gnome-terminal --disable-factory --\""
   echo "Note: if running on macOS where gnome-terminal is not available, remove the gnome-terminal related flags."
   echo "example: ./setup.sh --dataDir kiln-data --elClient geth --devnetVars ./kiln.vars"
