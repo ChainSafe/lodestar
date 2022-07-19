@@ -73,7 +73,7 @@ describe("Forkchoice", function () {
 
   it("getAllAncestorBlocks", function () {
     protoArr.onBlock(block, block.slot);
-    const forkchoice = new ForkChoice(config, fcStore, protoArr, false);
+    const forkchoice = new ForkChoice(config, fcStore, protoArr, false, false);
     const summaries = forkchoice.getAllAncestorBlocks(finalizedDesc);
     // there are 2 blocks in protoArray but iterateAncestorBlocks should only return non-finalized blocks
     expect(summaries.length).to.be.equals(1, "should not return the finalized block");

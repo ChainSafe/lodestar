@@ -60,7 +60,7 @@ describe("ForkChoice", () => {
       justifiedBalancesGetter: () => balances,
     };
 
-    forkchoice = new ForkChoice(config, fcStore, protoArr, false);
+    forkchoice = new ForkChoice(config, fcStore, protoArr, false, false);
 
     let parentBlockRoot = finalizedRoot;
     for (let i = 1; i < numBlocks; i++) {
