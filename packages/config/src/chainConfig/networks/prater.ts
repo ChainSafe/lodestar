@@ -21,12 +21,16 @@ export const praterChainConfig: IChainConfig = {
   // Customized for Prater: 1919188 seconds (Mar-23-2021 02:00:00 PM +UTC)
   GENESIS_DELAY: 1919188,
 
+  // Transition
+  // Expected August 10, 2022
+  TERMINAL_TOTAL_DIFFICULTY: BigInt("10790000"),
+
   // Forking
   ALTAIR_FORK_VERSION: b("0x01001020"),
   ALTAIR_FORK_EPOCH: 36660,
   // Bellatrix
   BELLATRIX_FORK_VERSION: b("0x02001020"),
-  BELLATRIX_FORK_EPOCH: Infinity,
+  BELLATRIX_FORK_EPOCH: 112260,
   // Sharding
   SHARDING_FORK_VERSION: b("0x03001020"),
   SHARDING_FORK_EPOCH: Infinity,
