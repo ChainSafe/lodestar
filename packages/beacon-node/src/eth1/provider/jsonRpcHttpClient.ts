@@ -117,13 +117,13 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
    */
   async fetchWithRetries<R, P = IJson[]>(payload: IRpcPayload<P>, opts?: ReqOpts): Promise<R> {
     const routeId = opts?.routeId ?? "unknown";
-    return await retry(
+    const res = await retry<IRpcResponse<R>>(
       async (attempt) => {
         /** If this is a retry, increment the retry counter for this method */
         if (attempt > 1) {
           this.opts?.metrics?.retryCount.inc({routeId});
         }
-        return this.fetch(payload, opts);
+        return await this.fetchJson({jsonrpc: "2.0", id: this.id++, ...payload}, opts);
       },
       {
         retries: opts?.retryAttempts ?? this.opts?.retryAttempts ?? 1,
@@ -131,6 +131,7 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
         shouldRetry: opts?.shouldRetry,
       }
     );
+    return parseRpcResponse(res, payload);
   }
 
   /**
