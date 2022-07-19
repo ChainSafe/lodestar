@@ -5,7 +5,7 @@ import {JobItemQueue} from "../../util/queue/index.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
 import {IBeaconChain} from "../interface.js";
-import {VerifyBlockModules, verifyBlockStateTransition} from "./verifyBlock.js";
+import {VerifyBlockModules, verifyBlocksInEpoch} from "./verifyBlock.js";
 import {importBlock, ImportBlockModules} from "./importBlock.js";
 import {assertLinearChainSegment} from "./utils/chainSegment.js";
 import {FullyVerifiedBlock, ImportBlockOpts} from "./types.js";
@@ -70,21 +70,27 @@ export async function processBlocks(
       return;
     }
 
-    for (const [i, block] of relevantBlocks.entries()) {
-      // Fully verify a block to be imported immediately after. Does not produce any side-effects besides adding intermediate
-      // states in the state cache through regen.
-      const {postState, executionStatus, proposerBalanceDelta} = await verifyBlockStateTransition(chain, block, opts);
+    // Fully verify a block to be imported immediately after. Does not produce any side-effects besides adding intermediate
+    // states in the state cache through regen.
+    const {postStates, executionStatuses, proposerBalanceDeltas} = await verifyBlocksInEpoch(
+      chain,
+      relevantBlocks,
+      opts
+    );
 
-      const fullyVerifiedBlock: FullyVerifiedBlock = {
+    const fullyVerifiedBlocks = relevantBlocks.map(
+      (block, i): FullyVerifiedBlock => ({
         block,
-        postState,
+        postState: postStates[i],
         parentBlockSlot: parentSlots[i],
-        executionStatus,
-        proposerBalanceDelta,
+        executionStatus: executionStatuses[i],
+        proposerBalanceDelta: proposerBalanceDeltas[i],
         // TODO: Make this param mandatory and capture in gossip
         seenTimestampSec: opts.seenTimestampSec ?? Math.floor(Date.now() / 1000),
-      };
+      })
+    );
 
+    for (const fullyVerifiedBlock of fullyVerifiedBlocks) {
       // No need to sleep(0) here since `importBlock` includes a disk write
       // TODO: Consider batching importBlock too if it takes significant time
       await importBlock(chain, fullyVerifiedBlock, opts);

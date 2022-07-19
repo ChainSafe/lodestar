@@ -31,8 +31,7 @@ export function verifyBlocksSanityChecks(
   const relevantBlocks: allForks.SignedBeaconBlock[] = [];
   const parentSlots: Slot[] = [];
 
-  for (let i = 0; i < blocks.length; i++) {
-    const block = blocks[i];
+  for (const block of blocks) {
     const blockSlot = block.message.slot;
 
     // Not genesis block

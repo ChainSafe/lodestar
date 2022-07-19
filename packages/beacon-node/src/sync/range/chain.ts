@@ -96,7 +96,8 @@ export class SyncChain {
   readonly firstBatchEpoch: Epoch;
   /**
    * The start of the chain segment. Any epoch previous to this one has been validated.
-   * But the `lastEpochWithProcessBlocks` may not be valid entirely. The
+   * Note: lastEpochWithProcessBlocks` signals the epoch at which 1 or more blocks have been processed
+   * successfully. So that epoch itself may or may not be valid.
    */
   private lastEpochWithProcessBlocks: Epoch;
   private status = SyncChainStatus.Stopped;
