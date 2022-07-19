@@ -63,6 +63,9 @@ export const forkChoiceTest: TestRunnerFn<ForkChoiceTestCase, void> = (fork) => 
           // No need to log BlockErrors, the spec test runner will only log them if not not expected
           // Otherwise spec tests logs get cluttered with expected errors
           disableOnBlockError: true,
+          // PrepareNextSlot scheduler is used to precompute epoch transition and prepare for the next payload
+          // we don't use these in fork choice spec tests
+          disablePrepareNextSlot: true,
           assertCorrectProgressiveBalances,
         },
         {
