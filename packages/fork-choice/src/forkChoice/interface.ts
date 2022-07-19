@@ -19,15 +19,6 @@ export type CheckpointHexWithBalance = {
   balances: EffectiveBalanceIncrements;
 };
 
-/**
- * Compute by running process_justification_and_finalization on `state`, and returning
- * state.justified_checkpoint, state.finalized_checkpoint
- */
-export type UnrealizedCheckpointsGetter = () => {
-  justifiedCheckpoint: phase0.Checkpoint;
-  finalizedCheckpoint: phase0.Checkpoint;
-};
-
 export interface IForkChoice {
   /**
    * Returns the block root of an ancestor of `block_root` at the given `slot`. (Note: `slot` refers
@@ -79,7 +70,6 @@ export interface IForkChoice {
     state: CachedBeaconStateAllForks,
     blockDelaySec: number,
     currentSlot: Slot,
-    unrealizedCheckpointsGetter: UnrealizedCheckpointsGetter,
     executionStatus: ExecutionStatus
   ): void;
   /**

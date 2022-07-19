@@ -5,7 +5,6 @@ import {CachedBeaconStateAltair, computeEpochAtSlot, RootCache} from "@lodestar/
 import {IForkChoice, ForkChoiceError, ForkChoiceErrorCode} from "@lodestar/fork-choice";
 import {ILogger} from "@lodestar/utils";
 import {IChainForkConfig} from "@lodestar/config";
-import {computeUnrealizedCheckpoints} from "@lodestar/state-transition/epoch";
 import {IMetrics} from "../../metrics/index.js";
 import {IExecutionEngine} from "../../execution/engine/interface.js";
 import {IBeaconDb} from "../../db/index.js";
@@ -93,14 +92,7 @@ export async function importBlock(
   const blockRoot = toHexString(chain.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message));
   // Should compute checkpoint balances before forkchoice.onBlock
   chain.checkpointBalancesCache.processState(blockRoot, postState);
-  chain.forkChoice.onBlock(
-    block.message,
-    postState,
-    blockDelaySec,
-    chain.clock.currentSlot,
-    () => computeUnrealizedCheckpoints(postState),
-    executionStatus
-  );
+  chain.forkChoice.onBlock(block.message, postState, blockDelaySec, chain.clock.currentSlot, executionStatus);
 
   // - Register state and block to the validator monitor
   // TODO

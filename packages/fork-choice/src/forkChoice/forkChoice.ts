@@ -17,6 +17,7 @@ import {
   isBellatrixStateType,
   isExecutionEnabled,
 } from "@lodestar/state-transition";
+import {computeUnrealizedCheckpoints} from "@lodestar/state-transition/epoch";
 import {IChainConfig, IChainForkConfig} from "@lodestar/config";
 
 import {computeDeltas} from "../protoArray/computeDeltas.js";
@@ -25,7 +26,7 @@ import {ProtoArray} from "../protoArray/protoArray.js";
 
 import {IForkChoiceMetrics} from "../metrics.js";
 import {ForkChoiceError, ForkChoiceErrorCode, InvalidBlockCode, InvalidAttestationCode} from "./errors.js";
-import {IForkChoice, LatestMessage, QueuedAttestation, PowBlockHex, UnrealizedCheckpointsGetter} from "./interface.js";
+import {IForkChoice, LatestMessage, QueuedAttestation, PowBlockHex} from "./interface.js";
 import {IForkChoiceStore, CheckpointWithHex, toCheckpointWithHex, JustifiedBalances} from "./store.js";
 
 /* eslint-disable max-len */
@@ -270,7 +271,6 @@ export class ForkChoice implements IForkChoice {
     state: CachedBeaconStateAllForks,
     blockDelaySec: number,
     currentSlot: Slot,
-    unrealizedCheckpointsGetter: UnrealizedCheckpointsGetter,
     executionStatus: ExecutionStatus
   ): void {
     const {parentRoot, slot} = block;
@@ -393,7 +393,7 @@ export class ForkChoice implements IForkChoice {
       };
     } else {
       // compute new, happens 2/3 first blocks of epoch as monitored in mainnet
-      const unrealized = unrealizedCheckpointsGetter();
+      const unrealized = computeUnrealizedCheckpoints(state);
       unrealizedJustifiedCheckpoint = toCheckpointWithHex(unrealized.justifiedCheckpoint);
       unrealizedFinalizedCheckpoint = toCheckpointWithHex(unrealized.finalizedCheckpoint);
     }
@@ -428,7 +428,6 @@ export class ForkChoice implements IForkChoice {
 
     const targetSlot = computeStartSlotAtEpoch(blockEpoch);
     const targetRoot = slot === targetSlot ? blockRoot : state.blockRoots.get(targetSlot % SLOTS_PER_HISTORICAL_ROOT);
-
     // This does not apply a vote to the block, it just makes fork choice aware of the block so
     // it can still be identified as the head even if it doesn't have any votes.
     this.protoArray.onBlock(
