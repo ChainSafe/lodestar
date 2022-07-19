@@ -13,20 +13,23 @@ describe("Forkchoice", function () {
   const parentRoot = "0x853d08094d83f1db67159144db54ec0c882eb9715184c4bde8f4191c926a1671";
   const finalizedDesc = "0x37487efdbfbeeb82d7d35c6eb96438c4576f645b0f4c0386184592abab4b1736";
 
-  const protoArr = ProtoArray.initialize({
-    slot: genesisSlot,
-    stateRoot,
-    parentRoot,
-    blockRoot: finalizedRoot,
+  const protoArr = ProtoArray.initialize(
+    {
+      slot: genesisSlot,
+      stateRoot,
+      parentRoot,
+      blockRoot: finalizedRoot,
 
-    justifiedEpoch: genesisEpoch,
-    justifiedRoot: genesisRoot,
-    finalizedEpoch: genesisEpoch,
-    finalizedRoot: genesisRoot,
+      justifiedEpoch: genesisEpoch,
+      justifiedRoot: genesisRoot,
+      finalizedEpoch: genesisEpoch,
+      finalizedRoot: genesisRoot,
 
-    executionPayloadBlockHash: null,
-    executionStatus: ExecutionStatus.PreMerge,
-  } as Omit<ProtoBlock, "targetRoot">);
+      executionPayloadBlockHash: null,
+      executionStatus: ExecutionStatus.PreMerge,
+    } as Omit<ProtoBlock, "targetRoot">,
+    genesisSlot
+  );
 
   // Add block that is a finalized descendant.
   const block: ProtoBlock = {
@@ -40,6 +43,10 @@ describe("Forkchoice", function () {
     justifiedRoot: genesisRoot,
     finalizedEpoch: genesisEpoch,
     finalizedRoot: genesisRoot,
+    unrealizedJustifiedEpoch: genesisEpoch,
+    unrealizedJustifiedRoot: genesisRoot,
+    unrealizedFinalizedEpoch: genesisEpoch,
+    unrealizedFinalizedRoot: genesisRoot,
 
     executionPayloadBlockHash: null,
     executionStatus: ExecutionStatus.PreMerge,
@@ -55,13 +62,18 @@ describe("Forkchoice", function () {
       checkpoint: {epoch: genesisEpoch, root: fromHexString(finalizedRoot), rootHex: finalizedRoot},
       balances: new Uint8Array([32]),
     },
+    unrealizedJustified: {
+      checkpoint: {epoch: genesisEpoch, root: fromHexString(finalizedRoot), rootHex: finalizedRoot},
+      balances: new Uint8Array([32]),
+    },
     finalizedCheckpoint: {epoch: genesisEpoch, root: fromHexString(finalizedRoot), rootHex: finalizedRoot},
+    unrealizedFinalizedCheckpoint: {epoch: genesisEpoch, root: fromHexString(finalizedRoot), rootHex: finalizedRoot},
     justifiedBalancesGetter: () => new Uint8Array([32]),
   };
 
   it("getAllAncestorBlocks", function () {
-    protoArr.onBlock(block);
-    const forkchoice = new ForkChoice(config, fcStore, protoArr, false);
+    protoArr.onBlock(block, block.slot);
+    const forkchoice = new ForkChoice(config, fcStore, protoArr);
     const summaries = forkchoice.getAllAncestorBlocks(finalizedDesc);
     // there are 2 blocks in protoArray but iterateAncestorBlocks should only return non-finalized blocks
     expect(summaries.length).to.be.equals(1, "should not return the finalized block");

@@ -69,6 +69,7 @@ export interface IForkChoice {
     block: allForks.BeaconBlock,
     state: CachedBeaconStateAllForks,
     blockDelaySec: number,
+    currentSlot: Slot,
     executionStatus: ExecutionStatus
   ): void;
   /**

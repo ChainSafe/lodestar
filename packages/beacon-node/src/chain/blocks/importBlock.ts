@@ -87,17 +87,12 @@ export async function importBlock(
 
   // - Register block with fork-hoice
 
-  // TODO IDEA: Lighthouse keeps a cache of checkpoint balances internally in the forkchoice store to be used latter
-  // Ref: https://github.com/sigp/lighthouse/blob/f9bba92db3468321b28ddd9010e26b359f88bafe/beacon_node/beacon_chain/src/beacon_fork_choice_store.rs#L79
-  //
-  // current justified checkpoint should be prev epoch or current epoch if it's just updated
-  // it should always have epochBalances there bc it's a checkpoint state, ie got through processEpoch
   const prevFinalizedEpoch = chain.forkChoice.getFinalizedCheckpoint().epoch;
   const blockDelaySec = (fullyVerifiedBlock.seenTimestampSec - postState.genesisTime) % chain.config.SECONDS_PER_SLOT;
   const blockRoot = toHexString(chain.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message));
   // Should compute checkpoint balances before forkchoice.onBlock
   chain.checkpointBalancesCache.processState(blockRoot, postState);
-  chain.forkChoice.onBlock(block.message, postState, blockDelaySec, executionStatus);
+  chain.forkChoice.onBlock(block.message, postState, blockDelaySec, chain.clock.currentSlot, executionStatus);
 
   // - Register state and block to the validator monitor
   // TODO

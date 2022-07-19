@@ -29,6 +29,7 @@ const ANCHOR_BLOCK_FILE_NAME = "anchor_block";
 const BLOCK_FILE_NAME = "^(block)_([0-9a-zA-Z]+)$";
 const POW_BLOCK_FILE_NAME = "^(pow_block)_([0-9a-zA-Z]+)$";
 const ATTESTATION_FILE_NAME = "^(attestation)_([0-9a-zA-Z])+$";
+const ATTESTER_SLASHING_FILE_NAME = "^(attester_slashing)_([0-9a-zA-Z])+$";
 
 const logger = testLogger("spec-test");
 
@@ -67,6 +68,7 @@ export const forkChoiceTest: TestRunnerFn<ForkChoiceTestCase, void> = (fork) => 
           // we don't use these in fork choice spec tests
           disablePrepareNextSlot: true,
           assertCorrectProgressiveBalances,
+          computeUnrealized: false,
         },
         {
           config: createIBeaconConfig(config, state.genesisValidatorsRoot),
@@ -216,6 +218,7 @@ export const forkChoiceTest: TestRunnerFn<ForkChoiceTestCase, void> = (fork) => 
         [BLOCK_FILE_NAME]: ssz[fork].SignedBeaconBlock,
         [POW_BLOCK_FILE_NAME]: ssz.bellatrix.PowBlock,
         [ATTESTATION_FILE_NAME]: ssz.phase0.Attestation,
+        [ATTESTER_SLASHING_FILE_NAME]: ssz.phase0.AttesterSlashing,
       },
       mapToTestCase: (t: Record<string, any>) => {
         // t has input file name as key

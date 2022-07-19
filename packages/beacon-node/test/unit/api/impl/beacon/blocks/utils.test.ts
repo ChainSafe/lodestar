@@ -37,6 +37,10 @@ describe("block api utils", function () {
         finalizedRoot: expectedRootHex,
         justifiedEpoch: 0,
         justifiedRoot: expectedRootHex,
+        unrealizedFinalizedEpoch: 0,
+        unrealizedFinalizedRoot: expectedRootHex,
+        unrealizedJustifiedEpoch: 0,
+        unrealizedJustifiedRoot: expectedRootHex,
 
         ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
       };

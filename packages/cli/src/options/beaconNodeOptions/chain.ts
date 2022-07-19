@@ -10,6 +10,7 @@ export interface IChainArgs {
   // as this is defined as part of IBeaconPaths
   // "chain.persistInvalidSszObjectsDir": string;
   "chain.proposerBoostEnabled": boolean;
+  "chain.computeUnrealized": boolean;
   "chain.defaultFeeRecipient": string;
   "chain.assertCorrectProgressiveBalances": boolean;
   "chain.maxSkipSlots": number;
@@ -25,6 +26,7 @@ export function parseArgs(args: IChainArgs): IBeaconNodeOptions["chain"] {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
     persistInvalidSszObjectsDir: undefined as any,
     proposerBoostEnabled: args["chain.proposerBoostEnabled"],
+    computeUnrealized: args["chain.computeUnrealized"],
     defaultFeeRecipient: args["chain.defaultFeeRecipient"],
     assertCorrectProgressiveBalances: args["chain.assertCorrectProgressiveBalances"],
     maxSkipSlots: args["chain.maxSkipSlots"],
@@ -70,6 +72,13 @@ Will double processing times. Use only for debugging purposes.",
     type: "boolean",
     description: "Enable proposer boost to reward a timely block",
     defaultDescription: String(defaultOptions.chain.proposerBoostEnabled),
+    group: "chain",
+  },
+
+  "chain.computeUnrealized": {
+    type: "boolean",
+    description: "Compute unrealized checkpoints and use it in fork choice or not",
+    defaultDescription: String(defaultOptions.chain.computeUnrealized),
     group: "chain",
   },
 

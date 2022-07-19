@@ -113,7 +113,8 @@ export function describeDirectorySpecTest<TestCase extends {meta?: any}, Result>
       }
 
       // Use full path here, not just `testSubDirname` to allow usage of `mocha --grep`
-      it(`${name}/${testSubDirname}`, async function () {
+      const testName = `${name}/${testSubDirname}`;
+      it(testName, async function () {
         // some tests require to load meta.yaml first in order to know respective ssz types.
         const metaFilePath = join(testSubDirPath, "meta.yaml");
         const meta: TestCase["meta"] = fs.existsSync(metaFilePath)
@@ -122,7 +123,7 @@ export function describeDirectorySpecTest<TestCase extends {meta?: any}, Result>
 
         let testCase = loadInputFiles(testSubDirPath, options, meta);
         if (options.mapToTestCase) testCase = options.mapToTestCase(testCase);
-        if (options.shouldSkip && options.shouldSkip(testCase, name, 0)) {
+        if (options.shouldSkip && options.shouldSkip(testCase, testName, 0)) {
           this.skip();
           return;
         }
