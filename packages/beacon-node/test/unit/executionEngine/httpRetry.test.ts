@@ -1,11 +1,12 @@
 import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import {fastify} from "fastify";
-import {AbortController} from "@chainsafe/abort-controller";
+
 import {fromHexString} from "@chainsafe/ssz";
-import {ExecutionEngineHttp} from "../../../src/executionEngine/http";
-import {defaultExecutionEngineHttpOpts} from "../../../lib/executionEngine/http";
-import {bytesToData, numToQuantity} from "../../../src/eth1/provider/utils";
+
+import {ExecutionEngineHttp, defaultExecutionEngineHttpOpts} from "../../../src/execution/engine/http.js";
+
+import {bytesToData, numToQuantity} from "../../../src/eth1/provider/utils.js";
 
 chai.use(chaiAsPromised);
 
@@ -59,9 +60,6 @@ describe("ExecutionEngine / http ", () => {
 
   describe("notifyForkchoiceUpdate", async function () {
     it("notifyForkchoiceUpdate no retry when no pay load attributes", async function () {
-      /**
-       *  curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"engine_forkchoiceUpdated","params":[{"headBlockHash":"0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174", "finalizedBlockHash":"0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174"}],"id":67}' http://localhost:8545
-       */
       errorResponsesBeforeSuccess = 2;
       const forkChoiceHeadData = {
         headBlockHash: "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
@@ -75,10 +73,11 @@ describe("ExecutionEngine / http ", () => {
         result: {payloadStatus: {status: "VALID", latestValidHash: null, validationError: null}, payloadId: "0x"},
       };
 
-      expect(errorResponsesBeforeSuccess).to.be.equal(2, "errorResponsesBeforeSuccess should not be 2 before request");
+      expect(errorResponsesBeforeSuccess).to.be.equal(2, "errorResponsesBeforeSuccess should be 2 before request");
       try {
         await executionEngine.notifyForkchoiceUpdate(
           forkChoiceHeadData.headBlockHash,
+          forkChoiceHeadData.safeBlockHash,
           forkChoiceHeadData.finalizedBlockHash
         );
       } catch (err) {
@@ -92,9 +91,7 @@ describe("ExecutionEngine / http ", () => {
 
     it("notifyForkchoiceUpdate with retry when pay load attributes", async function () {
       this.timeout("10 min");
-      /**
-       *  curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"engine_forkchoiceUpdated","params":[{"headBlockHash":"0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174", "finalizedBlockHash":"0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174"}, {timestamp: "1647036763", prevRandao: "0x0000000000000000000000000000000000000000000000000000000000000000", suggestedFeeRecipient: "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b"}}],"id":67}' http://localhost:8545
-       */
+
       errorResponsesBeforeSuccess = defaultExecutionEngineHttpOpts.retryAttempts - 1;
       const forkChoiceHeadData = {
         headBlockHash: "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
@@ -104,7 +101,7 @@ describe("ExecutionEngine / http ", () => {
       const payloadAttributes = {
         timestamp: 1647036763,
         prevRandao: fromHexString("0x0000000000000000000000000000000000000000000000000000000000000000"),
-        suggestedFeeRecipient: fromHexString("0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b"),
+        suggestedFeeRecipient: "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b",
       };
 
       const request = {
@@ -115,7 +112,7 @@ describe("ExecutionEngine / http ", () => {
           {
             timestamp: numToQuantity(payloadAttributes.timestamp),
             prevRandao: bytesToData(payloadAttributes.prevRandao),
-            suggestedFeeRecipient: bytesToData(payloadAttributes.suggestedFeeRecipient),
+            suggestedFeeRecipient: payloadAttributes.suggestedFeeRecipient,
           },
         ],
       };
@@ -134,6 +131,7 @@ describe("ExecutionEngine / http ", () => {
       );
       await executionEngine.notifyForkchoiceUpdate(
         forkChoiceHeadData.headBlockHash,
+        forkChoiceHeadData.safeBlockHash,
         forkChoiceHeadData.finalizedBlockHash,
         payloadAttributes
       );

@@ -213,8 +213,10 @@ export class ExecutionEngineHttp implements IExecutionEngine {
         }
       : undefined;
 
-    // TODO: propogate latestValidHash to the forkchoice, for now ignore it as we
-    // currently do not propogate the validation status up the forkchoice
+    // If we are just fcUing and not asking execution for payload, retry is not required
+    // and we can move on, as the next fcU will be issued soon on the new slot
+    const fcUReqOpts =
+      payloadAttributes !== undefined ? forkchoiceUpdatedV1Opts : {...forkchoiceUpdatedV1Opts, retryAttempts: 1};
     const {
       payloadStatus: {status, latestValidHash: _latestValidHash, validationError},
       payloadId,
@@ -223,7 +225,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
         method,
         params: [{headBlockHash, safeBlockHash, finalizedBlockHash}, apiPayloadAttributes],
       },
-      forkchoiceUpdatedV1Opts
+      fcUReqOpts
     );
 
     switch (status) {
