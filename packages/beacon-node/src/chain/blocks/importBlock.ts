@@ -88,7 +88,6 @@ export async function importBlock(
 
   // - Register block with fork-hoice
 
-  const unrealizedCheckpoints = computeUnrealizedCheckpoints(postState);
   const prevFinalizedEpoch = chain.forkChoice.getFinalizedCheckpoint().epoch;
   const blockDelaySec = (fullyVerifiedBlock.seenTimestampSec - postState.genesisTime) % chain.config.SECONDS_PER_SLOT;
   const blockRoot = toHexString(chain.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message));
@@ -99,7 +98,7 @@ export async function importBlock(
     postState,
     blockDelaySec,
     chain.clock.currentSlot,
-    unrealizedCheckpoints,
+    () => computeUnrealizedCheckpoints(postState),
     executionStatus
   );
 

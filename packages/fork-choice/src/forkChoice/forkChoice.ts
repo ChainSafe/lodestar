@@ -1,4 +1,4 @@
-import {toHexString} from "@chainsafe/ssz";
+import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {
   SAFE_SLOTS_TO_UPDATE_JUSTIFIED,
   SLOTS_PER_HISTORICAL_ROOT,
@@ -25,7 +25,7 @@ import {ProtoArray} from "../protoArray/protoArray.js";
 
 import {IForkChoiceMetrics} from "../metrics.js";
 import {ForkChoiceError, ForkChoiceErrorCode, InvalidBlockCode, InvalidAttestationCode} from "./errors.js";
-import {IForkChoice, LatestMessage, QueuedAttestation, PowBlockHex} from "./interface.js";
+import {IForkChoice, LatestMessage, QueuedAttestation, PowBlockHex, UnrealizedCheckpointsGetter} from "./interface.js";
 import {IForkChoiceStore, CheckpointWithHex, toCheckpointWithHex, JustifiedBalances} from "./store.js";
 
 /* eslint-disable max-len */
@@ -270,20 +270,14 @@ export class ForkChoice implements IForkChoice {
     state: CachedBeaconStateAllForks,
     blockDelaySec: number,
     currentSlot: Slot,
-    /**
-     * Compute by running process_justification_and_finalization on `state`, and returning
-     * state.justified_checkpoint, state.finalized_checkpoint
-     */
-    unrealized: {
-      justifiedCheckpoint: phase0.Checkpoint;
-      finalizedCheckpoint: phase0.Checkpoint;
-    },
+    unrealizedCheckpointsGetter: UnrealizedCheckpointsGetter,
     executionStatus: ExecutionStatus
   ): void {
     const {parentRoot, slot} = block;
     const parentRootHex = toHexString(parentRoot);
     // Parent block must be known
-    if (!this.protoArray.hasBlock(parentRootHex)) {
+    const parentBlock = this.protoArray.getBlock(parentRootHex);
+    if (!parentBlock) {
       throw new ForkChoiceError({
         code: ForkChoiceErrorCode.INVALID_BLOCK,
         err: {
@@ -371,8 +365,43 @@ export class ForkChoice implements IForkChoice {
       this.fcStore.justifiedBalancesGetter(justifiedCheckpoint, state)
     );
 
-    const unrealizedJustifiedCheckpoint = toCheckpointWithHex(unrealized.justifiedCheckpoint);
-    const unrealizedFinalizedCheckpoint = toCheckpointWithHex(unrealized.finalizedCheckpoint);
+    // If the parent checkpoints are already at the same epoch as the block being imported,
+    // it's impossible for the unrealized checkpoints to differ from the parent's. This
+    // holds true because:
+    //
+    // 1. A child block cannot have lower FFG checkpoints than its parent.
+    // 2. A block in epoch `N` cannot contain attestations which would justify an epoch higher than `N`.
+    // 3. A block in epoch `N` cannot contain attestations which would finalize an epoch higher than `N - 1`.
+    //
+    // This is an optimization. It should reduce the amount of times we run
+    // `process_justification_and_finalization` by approximately 1/3rd when the chain is
+    // performing optimally.
+    const blockEpoch = computeEpochAtSlot(slot);
+    let unrealizedJustifiedCheckpoint: CheckpointWithHex | undefined = undefined;
+    let unrealizedFinalizedCheckpoint: CheckpointWithHex | undefined = undefined;
+    if (parentBlock.unrealizedJustifiedEpoch === blockEpoch && parentBlock.unrealizedFinalizedEpoch >= blockEpoch) {
+      // reuse from parent, happens at 1/3 last blocks of epoch as monitored in mainnet
+      unrealizedJustifiedCheckpoint = {
+        epoch: parentBlock.unrealizedJustifiedEpoch,
+        root: fromHexString(parentBlock.unrealizedJustifiedRoot),
+        rootHex: parentBlock.unrealizedJustifiedRoot,
+      };
+      unrealizedFinalizedCheckpoint = {
+        epoch: parentBlock.unrealizedFinalizedEpoch,
+        root: fromHexString(parentBlock.unrealizedFinalizedRoot),
+        rootHex: parentBlock.unrealizedFinalizedRoot,
+      };
+    } else {
+      // compute new, happens 2/3 first blocks of epoch as monitored in mainnet
+      const unrealized = unrealizedCheckpointsGetter();
+      unrealizedJustifiedCheckpoint = toCheckpointWithHex(unrealized.justifiedCheckpoint);
+      unrealizedFinalizedCheckpoint = toCheckpointWithHex(unrealized.finalizedCheckpoint);
+    }
+
+    if (unrealizedJustifiedCheckpoint === undefined || unrealizedFinalizedCheckpoint === undefined) {
+      // never happen
+      throw Error("Cannot compute unrealized checkpoints");
+    }
 
     // Un-realized checkpoints
     // Update best known unrealized justified & finalized checkpoints
@@ -382,19 +411,22 @@ export class ForkChoice implements IForkChoice {
         balances: this.fcStore.justifiedBalancesGetter(unrealizedJustifiedCheckpoint, state),
       };
     }
-    if (unrealized.finalizedCheckpoint.epoch > this.fcStore.unrealizedFinalizedCheckpoint.epoch) {
+    if (unrealizedFinalizedCheckpoint.epoch > this.fcStore.unrealizedFinalizedCheckpoint.epoch) {
       this.fcStore.unrealizedFinalizedCheckpoint = unrealizedFinalizedCheckpoint;
     }
 
     // If block is from past epochs, try to update store's justified & finalized checkpoints right away
-    if (computeEpochAtSlot(block.slot) < computeEpochAtSlot(currentSlot)) {
+    if (blockEpoch < computeEpochAtSlot(currentSlot)) {
       // Compute justified balances for unrealizedJustifiedCheckpoint on demand
+      if (unrealizedJustifiedCheckpoint === undefined) {
+        throw Error();
+      }
       this.updateCheckpoints(state.slot, unrealizedJustifiedCheckpoint, unrealizedFinalizedCheckpoint, () =>
-        this.fcStore.justifiedBalancesGetter(unrealizedJustifiedCheckpoint, state)
+        this.fcStore.justifiedBalancesGetter(unrealizedJustifiedCheckpoint as CheckpointWithHex, state)
       );
     }
 
-    const targetSlot = computeStartSlotAtEpoch(computeEpochAtSlot(slot));
+    const targetSlot = computeStartSlotAtEpoch(blockEpoch);
     const targetRoot = slot === targetSlot ? blockRoot : state.blockRoots.get(targetSlot % SLOTS_PER_HISTORICAL_ROOT);
 
     // This does not apply a vote to the block, it just makes fork choice aware of the block so
