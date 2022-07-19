@@ -190,6 +190,7 @@ export class BeaconChain implements IBeaconChain {
       clock.currentSlot,
       cachedState,
       opts.proposerBoostEnabled,
+      opts.computeUnrealized,
       this.justifiedBalancesGetter.bind(this),
       metrics
     );

@@ -18,6 +18,7 @@ import {GENESIS_SLOT} from "../../constants/index.js";
 export type ForkChoiceOpts = {
   terminalTotalDifficulty?: bigint;
   proposerBoostEnabled: boolean;
+  computeUnrealized: boolean;
 };
 
 /**
@@ -29,6 +30,7 @@ export function initializeForkChoice(
   currentSlot: Slot,
   state: CachedBeaconStateAllForks,
   proposerBoostEnabled: boolean,
+  computeUnrealized: boolean,
   justifiedBalancesGetter: JustifiedBalancesGetter,
   metrics?: IMetrics | null
 ): ForkChoice {
@@ -87,6 +89,7 @@ export function initializeForkChoice(
     ),
 
     proposerBoostEnabled,
+    computeUnrealized,
     metrics
   );
 }

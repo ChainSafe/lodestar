@@ -65,6 +65,7 @@ export const forkChoiceTest: TestRunnerFn<ForkChoiceTestCase, void> = (fork) => 
           // Otherwise spec tests logs get cluttered with expected errors
           disableOnBlockError: true,
           assertCorrectProgressiveBalances,
+          computeUnrealized: false,
         },
         {
           config: createIBeaconConfig(config, state.genesisValidatorsRoot),

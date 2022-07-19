@@ -40,6 +40,7 @@ export const defaultChainOptions: IChainOptions = {
   blsVerifyAllMultiThread: false,
   disableBlsBatchVerify: false,
   proposerBoostEnabled: true,
+  computeUnrealized: false,
   safeSlotsToImportOptimistically: SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY,
   defaultFeeRecipient: defaultValidatorOptions.defaultFeeRecipient,
   assertCorrectProgressiveBalances: false,

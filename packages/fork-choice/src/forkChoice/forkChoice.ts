@@ -88,6 +88,7 @@ export class ForkChoice implements IForkChoice {
     /** The underlying representation of the block DAG. */
     private readonly protoArray: ProtoArray,
     private readonly proposerBoostEnabled: boolean,
+    private readonly computeUnrealized: boolean,
     private readonly metrics?: IForkChoiceMetrics | null
   ) {
     this.head = this.updateHead();
@@ -393,7 +394,12 @@ export class ForkChoice implements IForkChoice {
       };
     } else {
       // compute new, happens 2/3 first blocks of epoch as monitored in mainnet
-      const unrealized = computeUnrealizedCheckpoints(state);
+      const unrealized = this.computeUnrealized
+        ? computeUnrealizedCheckpoints(state)
+        : {
+            justifiedCheckpoint,
+            finalizedCheckpoint,
+          };
       unrealizedJustifiedCheckpoint = toCheckpointWithHex(unrealized.justifiedCheckpoint);
       unrealizedFinalizedCheckpoint = toCheckpointWithHex(unrealized.finalizedCheckpoint);
     }
