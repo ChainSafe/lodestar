@@ -120,7 +120,7 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
     return await retry(
       async (attempt) => {
         /** If this is a retry, increment the retry counter for this method */
-        if (attempt > 0) {
+        if (attempt > 1) {
           this.opts?.metrics?.retryCount.inc({routeId});
         }
         return this.fetch(payload, opts);
