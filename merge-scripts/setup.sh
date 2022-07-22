@@ -20,7 +20,7 @@ gethImage=$GETH_IMAGE
 nethermindImage=$NETHERMIND_IMAGE
 
 
-mkdir $dataDir && mkdir $dataDir/lodestar && mkdir $dataDir/geth && mkdir $dataDir/nethermind && mkdir $dataDir/ethereumjs && mkdir $dataDir/besu
+mkdir $dataDir && mkdir $dataDir/lodestar && mkdir $dataDir/geth && mkdir $dataDir/nethermind && mkdir $dataDir/ethereumjs && mkdir $dataDir/besu && mkdir $dataDir/erigon
 
 if [ -n "$configGitDir" ]
 then
@@ -122,6 +122,9 @@ then
     elif [ "$elClient" == "besu" ]
     then
       $dockerExec pull $BESU_IMAGE
+    elif [ "$elClient" == "erigon" ]
+    then
+      $dockerExec pull $ERIGON_IMAGE
     fi;
   fi;
 
@@ -189,6 +192,19 @@ then
     elCmd="$elCmd $BESU_IMAGE"
   fi;
   elCmd="$elCmd $BESU_EXTRA_ARGS"
+elif [ "$elClient" == "erigon" ] 
+then
+  echo "erigonImage: $ERIGON_IMAGE"
+
+  elName="$DEVNET_NAME-erigon"
+  elCmd="$dockerCmd --name $elName $elDockerNetwork -v $currentDir/$dataDir:/data"
+  if [ -n "$configGitDir" ]
+  then
+    elCmd="$elCmd -v $currentDir/$dataDir/$configGitDir:/config  $ERIGON_IMAGE --bootnodes=$EXTRA_BOOTNODES$bootNode"
+  else
+    elCmd="$elCmd $ERIGON_IMAGE"
+  fi;
+  elCmd="$elCmd $ERIGON_EXTRA_ARGS"
 fi
 
 echo "lodestarImage: $LODESTAR_IMAGE"
