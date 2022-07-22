@@ -75,7 +75,7 @@ export async function assembleBody<T extends BlockType>(
   // }
 
   const [attesterSlashings, proposerSlashings, voluntaryExits] = chain.opPool.getSlashingsAndExits(currentState);
-  const attestations = chain.aggregatedAttestationPool.getAttestationsForBlock(currentState);
+  const attestations = chain.aggregatedAttestationPool.getAttestationsForBlock(chain.forkChoice, currentState);
   const {eth1Data, deposits} = await chain.eth1.getEth1DataAndDeposits(currentState);
 
   const blockBody: phase0.BeaconBlockBody = {

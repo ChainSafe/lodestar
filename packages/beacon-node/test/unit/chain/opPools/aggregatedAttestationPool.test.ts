@@ -1,11 +1,14 @@
 import {expect} from "chai";
+import {SinonStubbedInstance} from "sinon";
+import sinon from "sinon";
 import type {SecretKey} from "@chainsafe/bls/types";
 import bls from "@chainsafe/bls";
 import {BitArray, fromHexString} from "@chainsafe/ssz";
 import {createIChainForkConfig, defaultChainConfig} from "@lodestar/config";
-import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
+import {CachedBeaconStateAllForks, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ssz, phase0} from "@lodestar/types";
+import {ForkChoice, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {
   AggregatedAttestationPool,
   aggregateInto,
@@ -17,6 +20,7 @@ import {linspace} from "../../../../src/util/numpy.js";
 import {generateAttestation, generateEmptyAttestation} from "../../../utils/attestation.js";
 import {generateCachedState} from "../../../utils/state.js";
 import {renderBitArray} from "../../../utils/render.js";
+import {ZERO_HASH_HEX} from "../../../../src/constants/constants.js";
 
 /** Valid signature of random data to prevent BLS errors */
 const validSignature = fromHexString(
@@ -34,10 +38,17 @@ describe("AggregatedAttestationPool", function () {
   let altairState: CachedBeaconStateAllForks;
   const attestation = generateAttestation({data: {slot: currentSlot, target: {epoch: currentEpoch}}});
   const committee = [0, 1, 2, 3];
+  let forkchoiceStub: SinonStubbedInstance<IForkChoice>;
+  const sandbox = sinon.createSandbox();
 
   beforeEach(() => {
     pool = new AggregatedAttestationPool();
     altairState = originalState.clone();
+    forkchoiceStub = sandbox.createStubInstance(ForkChoice);
+  });
+
+  this.afterEach(() => {
+    sandbox.restore();
   });
 
   it("getParticipationFn", () => {
@@ -53,14 +64,26 @@ describe("AggregatedAttestationPool", function () {
   const testCases: {name: string; attestingBits: number[]; isReturned: boolean}[] = [
     {name: "all validators are seen", attestingBits: [0b00000011], isReturned: false},
     {name: "all validators are NOT seen", attestingBits: [0b00001100], isReturned: true},
-    {name: "one is seen and one is NOT", attestingBits: [0b00001100], isReturned: true},
+    {name: "one is seen and one is NOT", attestingBits: [0b00001101], isReturned: true},
   ];
 
   for (const {name, attestingBits, isReturned} of testCases) {
     it(name, function () {
       const aggregationBits = new BitArray(new Uint8Array(attestingBits), 8);
       pool.add({...attestation, aggregationBits}, aggregationBits.getTrueBitIndexes().length, committee);
-      expect(pool.getAttestationsForBlock(altairState).length > 0).to.equal(isReturned, "Wrong attestation isReturned");
+      forkchoiceStub.iterateAncestorBlocks.returns(
+        (function* blockGen(): IterableIterator<ProtoBlock> {
+          yield {slot: computeStartSlotAtEpoch(currentEpoch - 1) - 1, blockRoot: ZERO_HASH_HEX} as ProtoBlock;
+        })()
+      );
+      expect(pool.getAttestationsForBlock(forkchoiceStub, altairState).length > 0).to.equal(
+        isReturned,
+        "Wrong attestation isReturned"
+      );
+      expect(
+        forkchoiceStub.iterateAncestorBlocks.calledOnce,
+        "forkchoice should be called to check pivot block"
+      ).to.be.true;
     });
   }
 
@@ -69,7 +92,28 @@ describe("AggregatedAttestationPool", function () {
     // all attesters are not seen
     const attestingIndices = [2, 3];
     pool.add(attestation, attestingIndices.length, committee);
-    expect(pool.getAttestationsForBlock(altairState)).to.be.deep.equal([], "no attestation since incorrect source");
+    expect(pool.getAttestationsForBlock(forkchoiceStub, altairState)).to.be.deep.equal(
+      [],
+      "no attestation since incorrect source"
+    );
+    expect(forkchoiceStub.iterateAncestorBlocks.calledOnce, "forkchoice should not be called").to.be.false;
+  });
+
+  it("incompatible shuffling - incorrect pivot block root", function () {
+    // all attesters are not seen
+    const attestingIndices = [2, 3];
+    pool.add(attestation, attestingIndices.length, committee);
+    forkchoiceStub.iterateAncestorBlocks.returns(
+      (function* blockGen(): IterableIterator<ProtoBlock> {
+        yield {slot: computeStartSlotAtEpoch(currentEpoch - 1) - 1, blockRoot: "0xWeird"} as ProtoBlock;
+      })()
+    );
+    expect(pool.getAttestationsForBlock(forkchoiceStub, altairState)).to.be.deep.equal(
+      [],
+      "no attestation since incorrect pivot block root"
+    );
+    expect(forkchoiceStub.iterateAncestorBlocks.calledOnce, "forkchoice should be called to check pivot block").to.be
+      .true;
   });
 });
 
