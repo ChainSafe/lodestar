@@ -144,4 +144,5 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Build and push
-        run: docker buildx build --push --tag chainsafe/lodestar:rc --tag chainsafe/lodestar:${{ needs.tag.outputs.tag }} --platform linux/amd64 --build-arg VERSION=${{ needs.tag.outputs.tag }} .
+        run: docker buildx build --push --tag chainsafe/lodestar:rc --tag chainsafe/lodestar:${{ needs.tag.outputs.tag }} --platform linux/amd64,linux/arm64 --build-arg VERSION=${{ needs.tag.outputs.tag }} .
+      - run: docker run chainsafe/lodestar:${{ needs.tag.outputs.tag }} --help

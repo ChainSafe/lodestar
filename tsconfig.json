@@ -3,7 +3,8 @@
   "compilerOptions": {
     "emitDeclarationOnly": false,
     "incremental": false,
-    "typeRoots": ["node_modules/@types", "./packages/lodestar/types"],
+    // Required to run benchmark command from root directory
+    "typeRoots": ["node_modules/@types", "./types"],
     "noEmit": true
   }
 }

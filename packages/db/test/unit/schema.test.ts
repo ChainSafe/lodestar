@@ -1,5 +1,5 @@
 import {assert} from "chai";
-import {intToBytes} from "@chainsafe/lodestar-utils";
+import {intToBytes} from "@lodestar/utils";
 import {Bucket, encodeKey} from "../../src/schema.js";
 import {BUCKET_LENGTH} from "../../src/index.js";
 

@@ -1,5 +1,5 @@
-import {BLSPubkey, Root} from "@chainsafe/lodestar-types";
-import {DatabaseService, IDatabaseApiOptions} from "@chainsafe/lodestar-db";
+import {BLSPubkey, Root} from "@lodestar/types";
+import {DatabaseService, IDatabaseApiOptions} from "@lodestar/db";
 import {uniqueVectorArr} from "../slashingProtection/utils.js";
 import {BlockBySlotRepository, SlashingProtectionBlockService} from "./block/index.js";
 import {

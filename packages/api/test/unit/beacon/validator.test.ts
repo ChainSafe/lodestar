@@ -1,6 +1,6 @@
-import {ForkName} from "@chainsafe/lodestar-params";
-import {ssz} from "@chainsafe/lodestar-types";
-import {config} from "@chainsafe/lodestar-config/default";
+import {ForkName} from "@lodestar/params";
+import {ssz} from "@lodestar/types";
+import {config} from "@lodestar/config/default";
 import {Api, ReqTypes} from "../../../src/beacon/routes/validator.js";
 import {getClient} from "../../../src/beacon/client/validator.js";
 import {getRoutes} from "../../../src/beacon/server/validator.js";
@@ -46,6 +46,10 @@ describe("beacon / validator", () => {
       args: [32000, Buffer.alloc(96, 1), "graffiti"],
       res: {data: ssz.altair.BeaconBlock.defaultValue(), version: ForkName.altair},
     },
+    produceBlindedBlock: {
+      args: [32000, Buffer.alloc(96, 1), "graffiti"],
+      res: {data: ssz.bellatrix.BlindedBeaconBlock.defaultValue(), version: ForkName.bellatrix},
+    },
     produceAttestationData: {
       args: [2, 32000],
       res: {data: ssz.phase0.AttestationData.defaultValue()},
@@ -76,6 +80,14 @@ describe("beacon / validator", () => {
     },
     prepareBeaconProposer: {
       args: [[{validatorIndex: "1", feeRecipient: "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b"}]],
+      res: undefined,
+    },
+    getLiveness: {
+      args: [[0], 0],
+      res: {data: []},
+    },
+    registerValidator: {
+      args: [[ssz.bellatrix.SignedValidatorRegistrationV1.defaultValue()]],
       res: undefined,
     },
   });

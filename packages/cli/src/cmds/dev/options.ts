@@ -3,8 +3,7 @@ import {ICliCommandOptions} from "../../util/index.js";
 import {beaconOptions, IBeaconArgs} from "../beacon/options.js";
 import {NetworkName} from "../../networks/index.js";
 import {beaconNodeOptions, globalOptions} from "../../options/index.js";
-import {KeymanagerArgs, keymanagerOptions} from "../../options/keymanagerOptions.js";
-import {IValidatorCliArgs, validatorOptions} from "../validator/options.js";
+import {IValidatorCliArgs, validatorOptions, KeymanagerArgs, keymanagerOptions} from "../validator/options.js";
 
 type IDevOwnArgs = {
   genesisEth1Hash?: string;
@@ -12,16 +11,16 @@ type IDevOwnArgs = {
   startValidators?: string;
   genesisTime?: number;
   reset?: boolean;
+  doppelgangerProtectionEnabled?: boolean;
   server: string;
 } & KeymanagerArgs &
-  Pick<IValidatorCliArgs, "importKeystoresPath" | "importKeystoresPassword">;
+  Pick<IValidatorCliArgs, "importKeystoresPath" | "importKeystoresPassword" | "doppelgangerProtectionEnabled">;
 
 const devOwnOptions: ICliCommandOptions<IDevOwnArgs> = {
   ...keymanagerOptions,
-  ...{
-    importKeystoresPath: validatorOptions["importKeystoresPath"],
-    importKeystoresPassword: validatorOptions["importKeystoresPassword"],
-  },
+  importKeystoresPath: validatorOptions["importKeystoresPath"],
+  importKeystoresPassword: validatorOptions["importKeystoresPassword"],
+  doppelgangerProtectionEnabled: validatorOptions["doppelgangerProtectionEnabled"],
   genesisEth1Hash: {
     description: "If present it will create genesis with this eth1 hash.",
     type: "string",

@@ -1,7 +1,7 @@
 import {isBasicType, ListBasicType, Type, isCompositeType, ListCompositeType, ArrayType} from "@chainsafe/ssz";
-import {ForkName} from "@chainsafe/lodestar-params";
-import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import {objectToExpectedCase} from "@chainsafe/lodestar-utils";
+import {ForkName} from "@lodestar/params";
+import {IChainForkConfig} from "@lodestar/config";
+import {objectToExpectedCase} from "@lodestar/utils";
 import {Schema, SchemaDefinition} from "./schema.js";
 
 // See /packages/api/src/routes/index.ts for reasoning

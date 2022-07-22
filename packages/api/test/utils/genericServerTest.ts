@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {IChainForkConfig} from "@chainsafe/lodestar-config";
+import {IChainForkConfig} from "@lodestar/config";
 import {RouteGeneric, ReqGeneric, Resolves} from "../../src/utils/index.js";
 import {FetchOpts, HttpClient, IHttpClient} from "../../src/utils/client/index.js";
 import {ServerRoutes} from "../../src/utils/server/genericJsonServer.js";
@@ -53,8 +53,8 @@ export function runGenericServerTest<
       }
 
       // Assert server handler called with correct args
-      expect(mockApi[routeId].callCount).to.equal(1, `mockApi[${routeId}] must be called once`);
-      expect(mockApi[routeId].getCall(0).args).to.deep.equal(testCase.args, `mockApi[${routeId}] wrong args`);
+      expect(mockApi[routeId].callCount).to.equal(1, `mockApi[${routeId as string}] must be called once`);
+      expect(mockApi[routeId].getCall(0).args).to.deep.equal(testCase.args, `mockApi[${routeId as string}] wrong args`);
 
       // Assert returned value is correct
       expect(res).to.deep.equal(testCase.res, "Wrong returned value");

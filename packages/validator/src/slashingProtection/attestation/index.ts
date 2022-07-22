@@ -1,4 +1,4 @@
-import {BLSPubkey} from "@chainsafe/lodestar-types";
+import {BLSPubkey} from "@lodestar/types";
 import {isEqualNonZeroRoot, minEpoch} from "../utils.js";
 import {MinMaxSurround, SurroundAttestationError, SurroundAttestationErrorCode} from "../minMaxSurround/index.js";
 import {SlashingProtectionAttestation} from "../types.js";

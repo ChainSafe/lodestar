@@ -1,4 +1,4 @@
-import {IChainForkConfig} from "@chainsafe/lodestar-config";
+import {IChainForkConfig} from "@lodestar/config";
 import {Api, ReqTypes, routesData, getReturnTypes, getReqSerializers} from "../routes/beacon/index.js";
 import {ServerRoutes, getGenericJsonServer} from "../../utils/server/index.js";
 

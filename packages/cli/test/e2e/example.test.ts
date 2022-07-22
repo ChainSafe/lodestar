@@ -3,10 +3,10 @@ import path from "node:path";
 import rimraf from "rimraf";
 import {expect} from "chai";
 import {Keystore} from "@chainsafe/bls-keystore";
-import {fromHex} from "@chainsafe/lodestar-utils";
+import {fromHex} from "@lodestar/utils";
 import {ReturnType as ValidatorListReturnType} from "../../src/cmds/validator/list.js";
 import {testFilesDir} from "../utils.js";
-import {getLodestarCliTestRunner} from "./commandRunner.js";
+import {getCliInMemoryRunner} from "../utils/inMemoryRunner.js";
 
 /* eslint-disable no-console */
 
@@ -14,7 +14,7 @@ type ConsoleKeys = "log" | "warn" | "error";
 const consoleKeys: ConsoleKeys[] = ["log", "warn", "error"];
 
 describe("cmds / validator", function () {
-  const lodestar = getLodestarCliTestRunner();
+  const lodestar = getCliInMemoryRunner();
 
   const rootDir = testFilesDir;
 

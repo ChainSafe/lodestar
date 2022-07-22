@@ -1,4 +1,4 @@
-import {IChainForkConfig} from "@chainsafe/lodestar-config";
+import {IChainForkConfig} from "@lodestar/config";
 import {ILevelDbControllerMetrics} from "./controller/metrics.js";
 import {Db} from "./controller/index.js";
 

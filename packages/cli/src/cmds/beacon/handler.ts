@@ -1,9 +1,9 @@
 import {Registry} from "prom-client";
-import {ErrorAborted} from "@chainsafe/lodestar-utils";
-import {LevelDbController} from "@chainsafe/lodestar-db";
-import {BeaconNode, BeaconDb, createNodeJsLibp2p} from "@chainsafe/lodestar";
-import {createIBeaconConfig} from "@chainsafe/lodestar-config";
-import {ACTIVE_PRESET, PresetName} from "@chainsafe/lodestar-params";
+import {ErrorAborted} from "@lodestar/utils";
+import {LevelDbController} from "@lodestar/db";
+import {BeaconNode, BeaconDb, createNodeJsLibp2p} from "@lodestar/beacon-node";
+import {createIBeaconConfig} from "@lodestar/config";
+import {ACTIVE_PRESET, PresetName} from "@lodestar/params";
 import {IGlobalArgs} from "../../options/index.js";
 import {parseEnrArgs} from "../../options/enrOptions.js";
 import {onGracefulShutdown, getCliLogger} from "../../util/index.js";
@@ -84,6 +84,8 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
       wsCheckpoint,
       metricsRegistries,
     });
+
+    if (args.attachToGlobalThis) ((globalThis as unknown) as {bn: BeaconNode}).bn = node;
 
     abortController.signal.addEventListener("abort", () => node.close(), {once: true});
   } catch (e) {

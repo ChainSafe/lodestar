@@ -1,5 +1,5 @@
 import {Options} from "yargs";
-import {defaultLogLevel, LogLevels} from "@chainsafe/lodestar-utils";
+import {defaultLogLevel, LogLevels} from "@lodestar/utils";
 import {
   beaconNodeOptions,
   paramsOptions,
@@ -142,7 +142,22 @@ export const beaconPathsOptions: ICliCommandOptions<IBeaconPaths> = {
   },
 };
 
-export type IBeaconArgs = IBeaconExtraArgs & ILogArgs & IBeaconPaths & IBeaconNodeArgs & IENRArgs & IWSSArgs;
+export type DebugArgs = {attachToGlobalThis: boolean};
+export const debugOptions: ICliCommandOptions<DebugArgs> = {
+  attachToGlobalThis: {
+    hidden: true,
+    description: "Attach the beacon node to `globalThis`. Useful to inspect a running beacon node.",
+    type: "boolean",
+  },
+};
+
+export type IBeaconArgs = IBeaconExtraArgs &
+  ILogArgs &
+  IBeaconPaths &
+  IBeaconNodeArgs &
+  IENRArgs &
+  IWSSArgs &
+  DebugArgs;
 
 export const beaconOptions: {[k: string]: Options} = {
   ...beaconExtraOptions,
@@ -152,4 +167,5 @@ export const beaconOptions: {[k: string]: Options} = {
   ...paramsOptions,
   ...enrOptions,
   ...wssOptions,
+  ...debugOptions,
 };

@@ -1,5 +1,5 @@
-import {Root} from "@chainsafe/lodestar-types";
-import {LodestarError} from "@chainsafe/lodestar-utils";
+import {Root} from "@lodestar/types";
+import {LodestarError} from "@lodestar/utils";
 
 export enum InterchangeErrorErrorCode {
   UNSUPPORTED_FORMAT = "ERR_INTERCHANGE_UNSUPPORTED_FORMAT",

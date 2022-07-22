@@ -1,20 +1,20 @@
-import {ssz} from "@chainsafe/lodestar-types";
-import {createIBeaconConfig, IBeaconConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
-import {ILogger} from "@chainsafe/lodestar-utils";
+import {ssz} from "@lodestar/types";
+import {createIBeaconConfig, IBeaconConfig, IChainForkConfig} from "@lodestar/config";
+import {ILogger} from "@lodestar/utils";
 import {
   computeEpochAtSlot,
   getLatestBlockRoot,
   isWithinWeakSubjectivityPeriod,
   BeaconStateAllForks,
-} from "@chainsafe/lodestar-beacon-state-transition";
+} from "@lodestar/state-transition";
 import {
   IBeaconDb,
   IBeaconNodeOptions,
   initStateFromAnchorState,
   initStateFromEth1,
   getStateTypeFromBytes,
-} from "@chainsafe/lodestar";
-import {Checkpoint} from "@chainsafe/lodestar-types/phase0";
+} from "@lodestar/beacon-node";
+import {Checkpoint} from "@lodestar/types/phase0";
 
 import {downloadOrLoadFile} from "../../util/index.js";
 import {defaultNetwork, IGlobalArgs} from "../../options/globalOptions.js";
@@ -150,7 +150,7 @@ async function initFromWSState(
       throw e;
     }
 
-    const {wsState, wsCheckpoint} = await fetchWeakSubjectivityState(chainForkConfig, wssOpts);
+    const {wsState, wsCheckpoint} = await fetchWeakSubjectivityState(chainForkConfig, logger, wssOpts);
     const config = createIBeaconConfig(chainForkConfig, wsState.genesisValidatorsRoot);
     const store = lastDbState ?? wsState;
     return initAndVerifyWeakSubjectivityState(config, db, logger, store, wsState, wsCheckpoint);

@@ -1,5 +1,5 @@
-import {GENESIS_EPOCH, ForkName, SLOTS_PER_EPOCH, ForkSeq} from "@chainsafe/lodestar-params";
-import {Slot, allForks, Version, ssz} from "@chainsafe/lodestar-types";
+import {GENESIS_EPOCH, ForkName, SLOTS_PER_EPOCH, ForkSeq} from "@lodestar/params";
+import {Slot, allForks, Version, ssz} from "@lodestar/types";
 import {IChainConfig} from "../chainConfig/index.js";
 import {IForkConfig, IForkInfo} from "./types.js";
 

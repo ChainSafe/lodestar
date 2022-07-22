@@ -1,5 +1,5 @@
 {
-  "name": "@chainsafe/lodestar-utils",
+  "name": "@lodestar/utils",
   "description": "Utilities required across multiple lodestar packages",
   "license": "Apache-2.0",
   "author": "ChainSafe Systems",
@@ -11,7 +11,7 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "0.39.0",
+  "version": "0.41.0",
   "type": "module",
   "exports": "./lib/index.js",
   "files": [

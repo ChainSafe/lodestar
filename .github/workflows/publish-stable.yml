@@ -44,7 +44,7 @@ jobs:
           echo ::set-output name=tag_commit::$TAG_COMMIT
 
     outputs:
-      is_stable: ${{ steps.release_type.stable_commit == steps.release_type.tag_commit }}
+      is_stable: ${{ steps.release_type.outputs.stable_commit == steps.release_type.outputs.tag_commit }}
       tag: ${{ steps.get_tag.outputs.tag }}
       prev_tag: ${{ steps.get_prev_tag.outputs.prev_tag }}
 
@@ -134,5 +134,5 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Build and push
-        run: docker buildx build --push --tag chainsafe/lodestar:latest --tag chainsafe/lodestar:${{ needs.tag.outputs.tag }} --platform linux/amd64 --build-arg VERSION=${{ needs.tag.outputs.tag }} .
+        run: docker buildx build --push --tag chainsafe/lodestar:latest --tag chainsafe/lodestar:${{ needs.tag.outputs.tag }} --platform linux/amd64,linux/arm64 --build-arg VERSION=${{ needs.tag.outputs.tag }} .
       - run: docker run chainsafe/lodestar:${{ needs.tag.outputs.tag }} --help

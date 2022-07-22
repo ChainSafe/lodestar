@@ -1,4 +1,4 @@
-export {mainnetChainConfig as chainConfig} from "@chainsafe/lodestar-config/networks";
+export {mainnetChainConfig as chainConfig} from "@lodestar/config/networks";
 
 /* eslint-disable max-len */
 

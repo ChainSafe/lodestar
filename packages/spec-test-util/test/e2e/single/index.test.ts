@@ -3,7 +3,7 @@ import {unlinkSync, writeFileSync} from "node:fs";
 import path, {join} from "node:path";
 import {fileURLToPath} from "node:url";
 import {ContainerType, Type} from "@chainsafe/ssz";
-import {ssz} from "@chainsafe/lodestar-types";
+import {ssz} from "@lodestar/types";
 import {describeDirectorySpecTest, InputType, loadYamlFile} from "../../../src/single.js";
 
 // Global variable __dirname no longer available in ES6 modules.

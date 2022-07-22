@@ -2,7 +2,7 @@
  * @module validator
  */
 
-export {Validator, ValidatorOptions, defaultDefaultFeeRecipient} from "./validator.js";
+export {Validator, ValidatorOptions, defaultOptions} from "./validator.js";
 export {ValidatorStore, SignerType, Signer, SignerLocal, SignerRemote} from "./services/validatorStore.js";
 export {waitForGenesis} from "./genesis.js";
 export {getMetrics, Metrics, MetricsRegister} from "./metrics.js";
@@ -13,6 +13,9 @@ export {
   externalSignerPostSignature,
   externalSignerUpCheck,
 } from "./util/externalSignerClient.js";
+
+// Types
+export {ProcessShutdownCallback} from "./types.js";
 
 export * from "./slashingProtection/index.js";
 export * from "./repositories/index.js";

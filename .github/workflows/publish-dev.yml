@@ -86,7 +86,7 @@ jobs:
         # --exact
         #   lerna will link the dependencies of monorepo packages without ^ operator as npm
         #   is apparently bad at resolving ^ dependencies of the canary versions. For e.g
-        #   @chainsafe/lodestar-cli@^0.34.0-dev.4 resolves to => 0.34.0
+        #   @chainsafe/lodestar@^0.34.0-dev.4 resolves to => 0.34.0
         #
         # NOTE: Using --preid dev.$(git rev-parse --short=7 HEAD) results in `0.24.3-dev.3ddb91d.0+3ddb91d`
         run: |
@@ -119,5 +119,6 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - run: docker buildx build --push --tag chainsafe/lodestar:next --platform linux/amd64 --build-arg VERSION=${{ needs.npm.outputs.version }} .
+      - name: Build and push
+        run: docker buildx build --push --tag chainsafe/lodestar:next --platform linux/amd64,linux/arm64 --build-arg VERSION=${{ needs.npm.outputs.version }} .
       - run: docker run chainsafe/lodestar:next --help

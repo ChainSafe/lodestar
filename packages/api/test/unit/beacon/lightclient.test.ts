@@ -1,5 +1,5 @@
-import {ssz} from "@chainsafe/lodestar-types";
-import {config} from "@chainsafe/lodestar-config/default";
+import {ssz} from "@lodestar/types";
+import {config} from "@lodestar/config/default";
 import {ProofType} from "@chainsafe/persistent-merkle-tree";
 import {toHexString} from "@chainsafe/ssz";
 import {Api, ReqTypes} from "../../../src/beacon/routes/lightclient.js";
@@ -39,15 +39,15 @@ describe("beacon / lightclient", () => {
       },
       /* eslint-enable quotes */
     },
-    getCommitteeUpdates: {
+    getUpdates: {
       args: [1, 2],
       res: {data: [lightClientUpdate]},
     },
-    getLatestHeadUpdate: {
+    getOptimisticUpdate: {
       args: [],
       res: {data: {syncAggregate, attestedHeader: header}},
     },
-    getLatestFinalizedHeadUpdate: {
+    getFinalityUpdate: {
       args: [],
       res: {
         data: {
@@ -58,7 +58,7 @@ describe("beacon / lightclient", () => {
         },
       },
     },
-    getSnapshot: {
+    getBootstrap: {
       args: [toHexString(root)],
       res: {
         data: {

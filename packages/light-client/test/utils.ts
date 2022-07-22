@@ -1,7 +1,7 @@
 import {PointFormat, PublicKey, SecretKey} from "@chainsafe/bls/types";
 import bls from "@chainsafe/bls";
-import {routes} from "@chainsafe/lodestar-api";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {routes} from "@lodestar/api";
+import {IBeaconConfig} from "@lodestar/config";
 import {
   DOMAIN_SYNC_COMMITTEE,
   EPOCHS_PER_SYNC_COMMITTEE_PERIOD,
@@ -11,8 +11,8 @@ import {
   NEXT_SYNC_COMMITTEE_DEPTH,
   SLOTS_PER_EPOCH,
   SYNC_COMMITTEE_SIZE,
-} from "@chainsafe/lodestar-params";
-import {altair, phase0, Slot, ssz, SyncPeriod} from "@chainsafe/lodestar-types";
+} from "@lodestar/params";
+import {altair, phase0, Slot, ssz, SyncPeriod} from "@lodestar/types";
 import {hash} from "@chainsafe/persistent-merkle-tree";
 import {BitArray, fromHexString} from "@chainsafe/ssz";
 import {SyncCommitteeFast} from "../src/types.js";
@@ -255,7 +255,7 @@ export function computeMerkleBranch(
 
 export function committeeUpdateToLatestHeadUpdate(
   committeeUpdate: altair.LightClientUpdate
-): routes.lightclient.LightclientHeaderUpdate {
+): routes.lightclient.LightclientOptimisticHeaderUpdate {
   return {
     attestedHeader: committeeUpdate.attestedHeader,
     syncAggregate: {

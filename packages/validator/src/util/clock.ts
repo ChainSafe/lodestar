@@ -1,19 +1,24 @@
-import {ErrorAborted, ILogger, isErrorAborted, sleep} from "@chainsafe/lodestar-utils";
-import {GENESIS_SLOT, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import {Epoch, Slot, TimeSeconds} from "@chainsafe/lodestar-types";
-import {computeEpochAtSlot, getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {ErrorAborted, ILogger, isErrorAborted, sleep} from "@lodestar/utils";
+import {GENESIS_SLOT, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {IChainForkConfig} from "@lodestar/config";
+import {Epoch, Slot, TimeSeconds} from "@lodestar/types";
+import {computeEpochAtSlot, getCurrentSlot} from "@lodestar/state-transition";
 
 type RunEveryFn = (slot: Slot, signal: AbortSignal) => Promise<void>;
 
 export interface IClock {
   readonly genesisTime: number;
   readonly secondsPerSlot: number;
+
+  readonly currentEpoch: number;
+
   start(signal: AbortSignal): void;
   runEverySlot(fn: (slot: Slot, signal: AbortSignal) => Promise<void>): void;
   runEveryEpoch(fn: (epoch: Epoch, signal: AbortSignal) => Promise<void>): void;
   msToSlot(slot: Slot): number;
   secFromSlot(slot: Slot): number;
+  getCurrentSlot(): Slot;
+  getCurrentEpoch(): Epoch;
 }
 
 export enum TimeItem {
@@ -35,6 +40,10 @@ export class Clock implements IClock {
     this.logger = logger;
   }
 
+  get currentEpoch(): Epoch {
+    return computeEpochAtSlot(getCurrentSlot(this.config, this.genesisTime));
+  }
+
   start(signal: AbortSignal): void {
     for (const {timeItem, fn} of this.fns) {
       this.runAtMostEvery(timeItem, signal, fn).catch((e: Error) => {
@@ -43,6 +52,14 @@ export class Clock implements IClock {
         }
       });
     }
+  }
+
+  getCurrentSlot(): Slot {
+    return getCurrentSlot(this.config, this.genesisTime);
+  }
+
+  getCurrentEpoch(): Epoch {
+    return computeEpochAtSlot(getCurrentSlot(this.config, this.genesisTime));
   }
 
   runEverySlot(fn: RunEveryFn): void {

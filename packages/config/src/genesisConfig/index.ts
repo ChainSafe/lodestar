@@ -1,5 +1,5 @@
-import {ForkName} from "@chainsafe/lodestar-params";
-import {DomainType, ForkDigest, phase0, Root, Slot, ssz, Version} from "@chainsafe/lodestar-types";
+import {ForkName} from "@lodestar/params";
+import {DomainType, ForkDigest, phase0, Root, Slot, ssz, Version} from "@lodestar/types";
 import {toHexString} from "@chainsafe/ssz";
 import {IChainForkConfig} from "../beaconConfig.js";
 import {ForkDigestHex, ICachedGenesis} from "./types.js";

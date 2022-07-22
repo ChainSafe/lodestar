@@ -1,12 +1,12 @@
 import fs from "node:fs";
 import got from "got";
-import {SLOTS_PER_EPOCH, ForkName} from "@chainsafe/lodestar-params";
-import {getClient} from "@chainsafe/lodestar-api";
-import {IBeaconNodeOptions, getStateTypeFromBytes} from "@chainsafe/lodestar";
-import {IChainConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
-import {Checkpoint} from "@chainsafe/lodestar-types/phase0";
-import {RecursivePartial, fromHex} from "@chainsafe/lodestar-utils";
-import {BeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
+import {SLOTS_PER_EPOCH, ForkName} from "@lodestar/params";
+import {getClient} from "@lodestar/api";
+import {IBeaconNodeOptions, getStateTypeFromBytes} from "@lodestar/beacon-node";
+import {IChainConfig, IChainForkConfig} from "@lodestar/config";
+import {Checkpoint} from "@lodestar/types/phase0";
+import {RecursivePartial, fromHex, callFnWhenAwait, ILogger} from "@lodestar/utils";
+import {BeaconStateAllForks} from "@lodestar/state-transition";
 import * as mainnet from "./mainnet.js";
 import * as dev from "./dev.js";
 import * as gnosis from "./gnosis.js";
@@ -15,11 +15,12 @@ import * as kiln from "./kiln.js";
 import * as ropsten from "./ropsten.js";
 import * as sepolia from "./sepolia.js";
 
-export type NetworkName = "mainnet" | "dev" | "gnosis" | "prater" | "kiln" | "ropsten" | "sepolia";
+export type NetworkName = "mainnet" | "dev" | "gnosis" | "prater" | "goerli" | "kiln" | "ropsten" | "sepolia";
 export const networkNames: NetworkName[] = [
   "mainnet",
   "gnosis",
   "prater",
+  "goerli",
   "kiln",
   "ropsten",
   "sepolia",
@@ -32,6 +33,9 @@ export type WeakSubjectivityFetchOptions = {
   weakSubjectivityServerUrl: string;
   weakSubjectivityCheckpoint?: string;
 };
+
+// log to screen every 30s when downloading state from a lodestar node
+const GET_STATE_LOG_INTERVAL = 30 * 1000;
 
 function getNetworkData(
   network: NetworkName
@@ -50,6 +54,7 @@ function getNetworkData(
     case "gnosis":
       return gnosis;
     case "prater":
+    case "goerli":
       return prater;
     case "kiln":
       return kiln;
@@ -167,6 +172,7 @@ export function enrsToNetworkConfig(enrs: string[]): RecursivePartial<IBeaconNod
  */
 export async function fetchWeakSubjectivityState(
   config: IChainForkConfig,
+  logger: ILogger,
   {weakSubjectivityServerUrl, weakSubjectivityCheckpoint}: WeakSubjectivityFetchOptions
 ): Promise<{wsState: BeaconStateAllForks; wsCheckpoint: Checkpoint}> {
   try {
@@ -181,13 +187,26 @@ export async function fetchWeakSubjectivityState(
       wsCheckpoint = finalized;
     }
     const stateSlot = wsCheckpoint.epoch * SLOTS_PER_EPOCH;
-    const stateBytes = await (config.getForkName(stateSlot) === ForkName.phase0
-      ? api.debug.getState(`${stateSlot}`, "ssz")
-      : api.debug.getStateV2(`${stateSlot}`, "ssz"));
+    const getStatePromise =
+      config.getForkName(stateSlot) === ForkName.phase0
+        ? api.debug.getState(`${stateSlot}`, "ssz")
+        : api.debug.getStateV2(`${stateSlot}`, "ssz");
+
+    const stateBytes = await callFnWhenAwait(
+      getStatePromise,
+      () => logger.info("Download in progress, please wait..."),
+      GET_STATE_LOG_INTERVAL
+    );
+
+    logger.info("Download completed");
 
     return {wsState: getStateTypeFromBytes(config, stateBytes).deserializeToViewDU(stateBytes), wsCheckpoint};
   } catch (e) {
-    throw new Error("Unable to fetch weak subjectivity state: " + (e as Error).message);
+    throw new Error(
+      "Unable to fetch weak subjectivity state: " +
+        (e as Error).message +
+        ". Consider downloading a state manually and using the --weakSubjectivityStateFile option."
+    );
   }
 }
 

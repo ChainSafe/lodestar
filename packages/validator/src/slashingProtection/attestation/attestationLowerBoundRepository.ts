@@ -1,5 +1,5 @@
-import {BLSPubkey, Epoch, ssz} from "@chainsafe/lodestar-types";
-import {Bucket, encodeKey, IDatabaseApiOptions} from "@chainsafe/lodestar-db";
+import {BLSPubkey, Epoch, ssz} from "@lodestar/types";
+import {Bucket, encodeKey, IDatabaseApiOptions} from "@lodestar/db";
 import {ContainerType, Type} from "@chainsafe/ssz";
 import {LodestarValidatorDatabaseController} from "../../types.js";
 

@@ -1,6 +1,6 @@
 # lodestar-params
 
-[![npm](https://img.shields.io/npm/v/@chainsafe/lodestar-types)](https://www.npmjs.com/package/@chainsafe/lodestar-types)
+[![npm](https://img.shields.io/npm/v/@lodestar/types)](https://www.npmjs.com/package/@lodestar/types)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Eth Consensus Spec v1.1.10](https://img.shields.io/badge/ETH%20consensus--spec-1.1.10-blue)](https://github.com/ethereum/consensus-specs/releases/tag/v1.1.10)
 ![ES Version](https://img.shields.io/badge/ES-2020-yellow)
@@ -14,7 +14,7 @@ Lodestar defines all constants and presets defined in the [Ethereum Consensus sp
 ## Installation
 
 ```sh
-npm install @chainsafe/lodestar-params
+npm install @lodestar/params
 ```
 
 ## Usage
@@ -30,7 +30,7 @@ The Lodestar params package contains several items used in all downstream Lodest
 Many downstream components are namespaced on fork names, or otherwise rely on knowing the fork names ahead of time. The Lodestar params package exports an enum `ForkName` the enumerates all known fork names.
 
 ```typescript
-import {ForkName} from "@chainsafe/lodestar-params";
+import {ForkName} from "@lodestar/params";
 
 // dummy data
 let forkName = "phase0";
@@ -48,7 +48,7 @@ switch (forkName) {
 All constants defined in the spec are exported verbatim.
 
 ```typescript
-import {GENESIS_SLOT} from "@chainsafe/lodestar-params";
+import {GENESIS_SLOT} from "@lodestar/params";
 ```
 
 ### Presets
@@ -58,7 +58,7 @@ Presets are "constants"-ish defined in the spec that can only be configured at b
 The active preset is exported under the `ACTIVE_PRESET` named export.
 
 ```typescript
-import {ACTIVE_PRESET, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
+import {ACTIVE_PRESET, SLOTS_PER_EPOCH} from "@lodestar/params";
 ```
 
 The preset may be set in one of two ways:

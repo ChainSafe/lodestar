@@ -1,8 +1,8 @@
-import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
-import {BLSPubkey, Epoch, Root, Slot, ssz} from "@chainsafe/lodestar-types";
+import {computeEpochAtSlot} from "@lodestar/state-transition";
+import {BLSPubkey, Epoch, Root, Slot, ssz} from "@lodestar/types";
 import {toHexString} from "@chainsafe/ssz";
-import {Api, routes} from "@chainsafe/lodestar-api";
-import {extendError} from "@chainsafe/lodestar-utils";
+import {Api, routes} from "@lodestar/api";
+import {extendError} from "@lodestar/utils";
 import {IClock, differenceHex, ILoggerVc} from "../util/index.js";
 import {PubkeyHex} from "../types.js";
 import {Metrics} from "../metrics.js";
@@ -156,9 +156,10 @@ export class BlockDutiesService {
       throw extendError(e, "Error on getProposerDuties");
     });
     const dependentRoot = proposerDuties.dependentRoot;
-    const relevantDuties = proposerDuties.data.filter((duty) =>
-      this.validatorStore.hasVotingPubkey(toHexString(duty.pubkey))
-    );
+    const relevantDuties = proposerDuties.data.filter((duty) => {
+      const pubkeyHex = toHexString(duty.pubkey);
+      return this.validatorStore.hasVotingPubkey(pubkeyHex) && this.validatorStore.isDoppelgangerSafe(pubkeyHex);
+    });
 
     this.logger.debug("Downloaded proposer duties", {
       epoch,

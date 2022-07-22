@@ -1,5 +1,5 @@
-import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import {phase0, ssz} from "@chainsafe/lodestar-types";
+import {IChainForkConfig} from "@lodestar/config";
+import {phase0, ssz} from "@lodestar/types";
 import {RoutesData, ReturnTypes, reqEmpty, ContainerData} from "../../../utils/index.js";
 import * as block from "./block.js";
 import * as pool from "./pool.js";

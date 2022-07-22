@@ -1,15 +1,15 @@
 import bls from "@chainsafe/bls";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
-import {altair, ssz} from "@chainsafe/lodestar-types";
-import {chainConfig} from "@chainsafe/lodestar-config/default";
-import {createIBeaconConfig} from "@chainsafe/lodestar-config";
+import {altair, ssz} from "@lodestar/types";
+import {chainConfig} from "@lodestar/config/default";
+import {createIBeaconConfig} from "@lodestar/config";
 import {
   EPOCHS_PER_SYNC_COMMITTEE_PERIOD,
   FINALIZED_ROOT_GINDEX,
   NEXT_SYNC_COMMITTEE_GINDEX,
   SLOTS_PER_EPOCH,
   SYNC_COMMITTEE_SIZE,
-} from "@chainsafe/lodestar-params";
+} from "@lodestar/params";
 import {assertValidLightClientUpdate} from "../../src/validation.js";
 import {LightClientSnapshotFast, SyncCommitteeFast} from "../../src/types.js";
 import {defaultBeaconBlockHeader, getSyncAggregateSigningRoot, signAndAggregate} from "../utils.js";

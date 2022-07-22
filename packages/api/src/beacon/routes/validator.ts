@@ -1,5 +1,5 @@
 import {ContainerType, fromHexString, toHexString, Type} from "@chainsafe/ssz";
-import {ForkName} from "@chainsafe/lodestar-params";
+import {ForkName} from "@lodestar/params";
 import {
   allForks,
   altair,
@@ -8,12 +8,13 @@ import {
   CommitteeIndex,
   Epoch,
   phase0,
+  bellatrix,
   Root,
   Slot,
   ssz,
   UintNum64,
   ValidatorIndex,
-} from "@chainsafe/lodestar-types";
+} from "@lodestar/types";
 import {
   RoutesData,
   ReturnTypes,
@@ -87,6 +88,12 @@ export type SyncDuty = {
   validatorSyncCommitteeIndices: number[];
 };
 
+export type LivenessResponseData = {
+  index: ValidatorIndex;
+  epoch: Epoch;
+  isLive: boolean;
+};
+
 export type Api = {
   /**
    * Get attester duties
@@ -151,6 +158,12 @@ export type Api = {
     graffiti: string
   ): Promise<{data: allForks.BeaconBlock; version: ForkName}>;
 
+  produceBlindedBlock(
+    slot: Slot,
+    randaoReveal: BLSSignature,
+    graffiti: string
+  ): Promise<{data: bellatrix.BlindedBeaconBlock; version: ForkName}>;
+
   /**
    * Produce an attestation data
    * Requests that the beacon node produce an AttestationData.
@@ -209,6 +222,11 @@ export type Api = {
   prepareSyncCommitteeSubnets(subscriptions: SyncCommitteeSubscription[]): Promise<void>;
 
   prepareBeaconProposer(proposers: ProposerPreparationData[]): Promise<void>;
+
+  /** Returns validator indices that have been observed to be active on the network */
+  getLiveness(indices: ValidatorIndex[], epoch: Epoch): Promise<{data: LivenessResponseData[]}>;
+
+  registerValidator(registrations: bellatrix.SignedValidatorRegistrationV1[]): Promise<void>;
 };
 
 /**
@@ -220,6 +238,7 @@ export const routesData: RoutesData<Api> = {
   getSyncCommitteeDuties: {url: "/eth/v1/validator/duties/sync/:epoch", method: "POST"},
   produceBlock: {url: "/eth/v1/validator/blocks/:slot", method: "GET"},
   produceBlockV2: {url: "/eth/v2/validator/blocks/:slot", method: "GET"},
+  produceBlindedBlock: {url: "/eth/v2/validator/blinded_blocks/:slot", method: "GET"},
   produceAttestationData: {url: "/eth/v1/validator/attestation_data", method: "GET"},
   produceSyncCommitteeContribution: {url: "/eth/v1/validator/sync_committee_contribution", method: "GET"},
   getAggregatedAttestation: {url: "/eth/v1/validator/aggregate_attestation", method: "GET"},
@@ -228,6 +247,8 @@ export const routesData: RoutesData<Api> = {
   prepareBeaconCommitteeSubnet: {url: "/eth/v1/validator/beacon_committee_subscriptions", method: "POST"},
   prepareSyncCommitteeSubnets: {url: "/eth/v1/validator/sync_committee_subscriptions", method: "POST"},
   prepareBeaconProposer: {url: "/eth/v1/validator/prepare_beacon_proposer", method: "POST"},
+  getLiveness: {url: "/eth/v1/validator/liveness", method: "GET"},
+  registerValidator: {url: "/eth/v1/validator/register_validator", method: "POST"},
 };
 
 /* eslint-disable @typescript-eslint/naming-convention */
@@ -237,6 +258,7 @@ export type ReqTypes = {
   getSyncCommitteeDuties: {params: {epoch: Epoch}; body: ValidatorIndex[]};
   produceBlock: {params: {slot: number}; query: {randao_reveal: string; grafitti: string}};
   produceBlockV2: {params: {slot: number}; query: {randao_reveal: string; grafitti: string}};
+  produceBlindedBlock: {params: {slot: number}; query: {randao_reveal: string; grafitti: string}};
   produceAttestationData: {query: {slot: number; committee_index: number}};
   produceSyncCommitteeContribution: {query: {slot: number; subcommittee_index: number; beacon_block_root: string}};
   getAggregatedAttestation: {query: {attestation_data_root: string; slot: number}};
@@ -245,6 +267,8 @@ export type ReqTypes = {
   prepareBeaconCommitteeSubnet: {body: unknown};
   prepareSyncCommitteeSubnets: {body: unknown};
   prepareBeaconProposer: {body: unknown};
+  getLiveness: {query: {indices: ValidatorIndex[]; epoch: Epoch}};
+  registerValidator: {body: unknown};
 };
 
 export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
@@ -309,6 +333,7 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
 
     produceBlock: produceBlock,
     produceBlockV2: produceBlock,
+    produceBlindedBlock: produceBlock,
 
     produceAttestationData: {
       writeReq: (index, slot) => ({query: {slot, committee_index: index}}),
@@ -351,6 +376,12 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
       ],
       schema: {body: Schema.ObjectArray},
     },
+    getLiveness: {
+      writeReq: (indices, epoch) => ({query: {indices, epoch}}),
+      parseReq: ({query}) => [query.indices, query.epoch],
+      schema: {query: {indices: Schema.UintArray, epoch: Schema.Uint}},
+    },
+    registerValidator: reqOnlyBody(ArrayOf(ssz.bellatrix.SignedValidatorRegistrationV1), Schema.ObjectArray),
   };
 }
 
@@ -396,8 +427,10 @@ export function getReturnTypes(): ReturnTypes<Api> {
     getSyncCommitteeDuties: WithDependentRoot(ArrayOf(SyncDuty)),
     produceBlock: ContainerData(ssz.phase0.BeaconBlock),
     produceBlockV2: WithVersion((fork: ForkName) => ssz[fork].BeaconBlock),
+    produceBlindedBlock: WithVersion((_fork: ForkName) => ssz.bellatrix.BlindedBeaconBlock),
     produceAttestationData: ContainerData(ssz.phase0.AttestationData),
     produceSyncCommitteeContribution: ContainerData(ssz.altair.SyncCommitteeContribution),
     getAggregatedAttestation: ContainerData(ssz.phase0.Attestation),
+    getLiveness: jsonType("camel"),
   };
 }

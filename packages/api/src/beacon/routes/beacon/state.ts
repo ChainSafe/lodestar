@@ -1,5 +1,5 @@
 import {ContainerType} from "@chainsafe/ssz";
-import {phase0, CommitteeIndex, Slot, ValidatorIndex, Epoch, Root, ssz, StringType} from "@chainsafe/lodestar-types";
+import {phase0, CommitteeIndex, Slot, ValidatorIndex, Epoch, Root, ssz, StringType} from "@lodestar/types";
 import {
   RoutesData,
   ReturnTypes,

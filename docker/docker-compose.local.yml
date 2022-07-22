@@ -15,6 +15,7 @@ services:
         # Linux:  http://localhost:8008
         # MacOSX: http://host.docker.internal:8008
         BEACON_URL: localhost:8008
+        VC_URL: localhost:5064
     restart: always
     network_mode: host
     volumes:

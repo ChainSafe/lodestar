@@ -1,5 +1,5 @@
 import {fetch} from "cross-fetch";
-import {ErrorAborted, ILogger, TimeoutError} from "@chainsafe/lodestar-utils";
+import {ErrorAborted, ILogger, TimeoutError} from "@lodestar/utils";
 import {ReqGeneric, RouteDef} from "../index.js";
 import {stringifyQuery, urlJoin} from "./format.js";
 import {Metrics} from "./metrics.js";
@@ -23,6 +23,7 @@ export type FetchOpts = {
   headers?: ReqGeneric["headers"];
   /** Optional, for metrics */
   routeId?: string;
+  timeoutMs?: number;
 };
 
 export interface IHttpClient {
@@ -35,6 +36,7 @@ export interface IHttpClient {
 export type HttpClientOptions = {
   baseUrl: string;
   timeoutMs?: number;
+  bearerToken?: string;
   /** Return an AbortSignal to be attached to all requests */
   getAbortSignal?: () => AbortSignal | undefined;
   /** Override fetch function */
@@ -49,6 +51,7 @@ export type HttpClientModules = {
 export class HttpClient implements IHttpClient {
   readonly baseUrl: string;
   private readonly timeoutMs: number;
+  private readonly bearerToken?: string;
   private readonly getAbortSignal?: () => AbortSignal | undefined;
   private readonly fetch: typeof fetch;
   private readonly metrics: null | Metrics;
@@ -61,6 +64,7 @@ export class HttpClient implements IHttpClient {
     this.baseUrl = opts.baseUrl;
     // A higher default timeout, validator will sets its own shorter timeoutMs
     this.timeoutMs = opts.timeoutMs ?? 60_000;
+    this.bearerToken = opts.bearerToken;
     this.getAbortSignal = opts.getAbortSignal;
     this.fetch = opts.fetch ?? fetch;
     this.metrics = metrics ?? null;
@@ -82,7 +86,7 @@ export class HttpClient implements IHttpClient {
   private async requestWithBody<T>(opts: FetchOpts, getBody: (res: Response) => Promise<T>): Promise<T> {
     // Implement fetch timeout
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
+    const timeout = setTimeout(() => controller.abort(), opts.timeoutMs ?? this.timeoutMs);
 
     // Attach global signal to this request's controller
     const onGlobalSignalAbort = controller.abort.bind(controller);
@@ -96,7 +100,12 @@ export class HttpClient implements IHttpClient {
       const url = urlJoin(this.baseUrl, opts.url) + (opts.query ? "?" + stringifyQuery(opts.query) : "");
 
       const headers = opts.headers || {};
-      if (opts.body) headers["Content-Type"] = "application/json";
+      if (opts.body && headers["Content-Type"] === undefined) {
+        headers["Content-Type"] = "application/json";
+      }
+      if (this.bearerToken && headers["Authorization"] === undefined) {
+        headers["Authorization"] = `Bearer ${this.bearerToken}`;
+      }
 
       this.logger?.debug("HttpClient request", {routeId});
 

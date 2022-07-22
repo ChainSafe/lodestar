@@ -1,4 +1,4 @@
-import {Epoch, Root, ssz} from "@chainsafe/lodestar-types";
+import {Epoch, Root, ssz} from "@lodestar/types";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 
 export const blsPubkeyLen = 48;

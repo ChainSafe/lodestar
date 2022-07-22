@@ -1,15 +1,16 @@
 import {expect} from "chai";
 import sinon from "sinon";
-import {AbortController} from "@chainsafe/abort-controller";
+import {toBufferBE} from "bigint-buffer";
 import bls from "@chainsafe/bls";
 import {toHexString} from "@chainsafe/ssz";
-import {Root} from "@chainsafe/lodestar-types";
-import {routes} from "@chainsafe/lodestar-api";
+import {Root} from "@lodestar/types";
+import {routes} from "@lodestar/api";
 import {BlockDutiesService} from "../../../src/services/blockDuties.js";
 import {ValidatorStore} from "../../../src/services/validatorStore.js";
 import {getApiClientStub} from "../../utils/apiStub.js";
 import {loggerVc} from "../../utils/logger.js";
 import {ClockMock} from "../../utils/clock.js";
+import {initValidatorStore} from "../../utils/validatorStore.js";
 
 type ProposerDutiesRes = {dependentRoot: Root; data: routes.validator.ProposerDuty[]};
 
@@ -18,16 +19,13 @@ describe("BlockDutiesService", function () {
   const ZERO_HASH = Buffer.alloc(32, 0);
 
   const api = getApiClientStub(sandbox);
-  const validatorStore = sinon.createStubInstance(ValidatorStore) as ValidatorStore &
-    sinon.SinonStubbedInstance<ValidatorStore>;
+  let validatorStore: ValidatorStore;
   let pubkeys: Uint8Array[]; // Initialize pubkeys in before() so bls is already initialized
 
   before(() => {
-    const secretKeys = Array.from({length: 3}, (_, i) => bls.SecretKey.fromBytes(Buffer.alloc(32, i + 1)));
+    const secretKeys = Array.from({length: 3}, (_, i) => bls.SecretKey.fromBytes(toBufferBE(BigInt(i + 1), 32)));
     pubkeys = secretKeys.map((sk) => sk.toPublicKey().toBytes());
-    validatorStore.votingPubkeys.returns(pubkeys.map(toHexString));
-    validatorStore.hasVotingPubkey.returns(true);
-    validatorStore.hasSomeValidators.returns(true);
+    validatorStore = initValidatorStore(secretKeys, api);
   });
 
   let controller: AbortController; // To stop clock

@@ -1,7 +1,7 @@
 import bls from "@chainsafe/bls";
 import type {PublicKey} from "@chainsafe/bls/types";
-import {altair, Root, ssz} from "@chainsafe/lodestar-types";
-import {BeaconBlockHeader} from "@chainsafe/lodestar-types/phase0";
+import {altair, Root, ssz} from "@lodestar/types";
+import {BeaconBlockHeader} from "@lodestar/types/phase0";
 import {BitArray} from "@chainsafe/ssz";
 import {SyncCommitteeFast} from "../types.js";
 

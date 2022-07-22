@@ -1,14 +1,13 @@
 import {expect} from "chai";
 import sinon from "sinon";
-import {AbortController} from "@chainsafe/abort-controller";
 import bls from "@chainsafe/bls";
 import {toHexString} from "@chainsafe/ssz";
-import {createIChainForkConfig} from "@chainsafe/lodestar-config";
-import {config as mainnetConfig} from "@chainsafe/lodestar-config/default";
-import {Root} from "@chainsafe/lodestar-types";
-import {sleep} from "@chainsafe/lodestar-utils";
-import {routes} from "@chainsafe/lodestar-api";
-import {generateEmptySignedBlock} from "../../../../lodestar/test/utils/block.js";
+import {createIChainForkConfig} from "@lodestar/config";
+import {config as mainnetConfig} from "@lodestar/config/default";
+import {Root} from "@lodestar/types";
+import {sleep} from "@lodestar/utils";
+import {routes} from "@lodestar/api";
+import {generateEmptySignedBlock} from "../../../../beacon-node/test/utils/block.js";
 import {BlockProposingService} from "../../../src/services/block.js";
 import {ValidatorStore} from "../../../src/services/validatorStore.js";
 import {getApiClientStub} from "../../utils/apiStub.js";
@@ -48,7 +47,7 @@ describe("BlockDutiesService", function () {
     api.validator.getProposerDuties.resolves(duties);
 
     const clock = new ClockMock();
-    const blockService = new BlockProposingService(config, loggerVc, api, clock, validatorStore, null, {});
+    const blockService = new BlockProposingService(config, loggerVc, api, clock, validatorStore, null, {builder: {}});
 
     const signedBlock = generateEmptySignedBlock();
     validatorStore.signRandao.resolves(signedBlock.message.body.randaoReveal);

@@ -1,7 +1,7 @@
 import {ContainerType, JsonPath, VectorCompositeType} from "@chainsafe/ssz";
 import {Proof} from "@chainsafe/persistent-merkle-tree";
-import {FINALIZED_ROOT_DEPTH} from "@chainsafe/lodestar-params";
-import {altair, phase0, ssz, SyncPeriod} from "@chainsafe/lodestar-types";
+import {FINALIZED_ROOT_DEPTH} from "@lodestar/params";
+import {altair, phase0, ssz, SyncPeriod} from "@lodestar/types";
 import {
   ArrayOf,
   ReturnTypes,
@@ -14,10 +14,10 @@ import {
   ReqEmpty,
 } from "../../utils/index.js";
 import {queryParseProofPathsArr, querySerializeProofPathsArr} from "../../utils/serdes.js";
-import {LightclientHeaderUpdate, LightclientFinalizedUpdate} from "./events.js";
+import {LightclientOptimisticHeaderUpdate, LightclientFinalizedUpdate} from "./events.js";
 
-// Re-export for convenience when importing routes.lightclient.LightclientHeaderUpdate
-export {LightclientHeaderUpdate, LightclientFinalizedUpdate};
+// Re-export for convenience when importing routes.lightclient.LightclientOptimisticHeaderUpdate
+export {LightclientOptimisticHeaderUpdate, LightclientFinalizedUpdate};
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
@@ -35,44 +35,45 @@ export type Api = {
    */
   getStateProof(stateId: string, jsonPaths: JsonPath[]): Promise<{data: Proof}>;
   /**
-   * Returns an array of best updates in the requested periods within the inclusive range `from` - `to`.
+   * Returns an array of best updates given a `startPeriod` and `count` number of sync committee period to return.
    * Best is defined by (in order of priority):
    * - Is finalized update
    * - Has most bits
    * - Oldest update
    */
-  getCommitteeUpdates(from: SyncPeriod, to: SyncPeriod): Promise<{data: altair.LightClientUpdate[]}>;
+  getUpdates(startPeriod: SyncPeriod, count: number): Promise<{data: altair.LightClientUpdate[]}>;
   /**
-   * Returns the latest best head update available. Clients should use the SSE type `lightclient_header_update`
+   * Returns the latest optimistic head update available. Clients should use the SSE type `light_client_optimistic_update`
    * unless to get the very first head update after syncing, or if SSE are not supported by the server.
    */
-  getLatestHeadUpdate(): Promise<{data: LightclientHeaderUpdate}>;
-  getLatestFinalizedHeadUpdate(): Promise<{data: LightclientFinalizedUpdate}>;
+  getOptimisticUpdate(): Promise<{data: LightclientOptimisticHeaderUpdate}>;
+  getFinalityUpdate(): Promise<{data: LightclientFinalizedUpdate}>;
   /**
-   * Fetch a snapshot with a proof to a trusted block root.
+   * Fetch a bootstrapping state with a proof to a trusted block root.
    * The trusted block root should be fetched with similar means to a weak subjectivity checkpoint.
    * Only block roots for checkpoints are guaranteed to be available.
    */
-  getSnapshot(blockRoot: string): Promise<{data: LightclientSnapshotWithProof}>;
+  getBootstrap(blockRoot: string): Promise<{data: LightclientSnapshotWithProof}>;
 };
 
 /**
  * Define javascript values for each route
  */
 export const routesData: RoutesData<Api> = {
-  getStateProof: {url: "/eth/v1/lightclient/proof/:stateId", method: "GET"},
-  getCommitteeUpdates: {url: "/eth/v1/lightclient/committee_updates", method: "GET"},
-  getLatestHeadUpdate: {url: "/eth/v1/lightclient/latest_head_update/", method: "GET"},
-  getLatestFinalizedHeadUpdate: {url: "/eth/v1/lightclient/latest_finalized_head_update/", method: "GET"},
-  getSnapshot: {url: "/eth/v1/lightclient/snapshot/:blockRoot", method: "GET"},
+  getStateProof: {url: "/eth/v1/light_client/proof/:stateId", method: "GET"},
+  getUpdates: {url: "/eth/v1/light_client/updates", method: "GET"},
+  getOptimisticUpdate: {url: "/eth/v1/light_client/optimistic_update/", method: "GET"},
+  getFinalityUpdate: {url: "/eth/v1/light_client/finality_update/", method: "GET"},
+  getBootstrap: {url: "/eth/v1/light_client/bootstrap/:blockRoot", method: "GET"},
 };
 
+/* eslint-disable @typescript-eslint/naming-convention */
 export type ReqTypes = {
   getStateProof: {params: {stateId: string}; query: {paths: string[]}};
-  getCommitteeUpdates: {query: {from: number; to: number}};
-  getLatestHeadUpdate: ReqEmpty;
-  getLatestFinalizedHeadUpdate: ReqEmpty;
-  getSnapshot: {params: {blockRoot: string}};
+  getUpdates: {query: {start_period: number; count: number}};
+  getOptimisticUpdate: ReqEmpty;
+  getFinalityUpdate: ReqEmpty;
+  getBootstrap: {params: {blockRoot: string}};
 };
 
 export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
@@ -83,16 +84,16 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
       schema: {params: {stateId: Schema.StringRequired}, body: Schema.AnyArray},
     },
 
-    getCommitteeUpdates: {
-      writeReq: (from, to) => ({query: {from, to}}),
-      parseReq: ({query}) => [query.from, query.to],
-      schema: {query: {from: Schema.UintRequired, to: Schema.UintRequired}},
+    getUpdates: {
+      writeReq: (start_period, count) => ({query: {start_period, count}}),
+      parseReq: ({query}) => [query.start_period, query.count],
+      schema: {query: {start_period: Schema.UintRequired, count: Schema.UintRequired}},
     },
 
-    getLatestHeadUpdate: reqEmpty,
-    getLatestFinalizedHeadUpdate: reqEmpty,
+    getOptimisticUpdate: reqEmpty,
+    getFinalityUpdate: reqEmpty,
 
-    getSnapshot: {
+    getBootstrap: {
       writeReq: (blockRoot) => ({params: {blockRoot}}),
       parseReq: ({params}) => [params.blockRoot],
       schema: {params: {blockRoot: Schema.StringRequired}},
@@ -131,9 +132,9 @@ export function getReturnTypes(): ReturnTypes<Api> {
   return {
     // Just sent the proof JSON as-is
     getStateProof: sameType(),
-    getCommitteeUpdates: ContainerData(ArrayOf(ssz.altair.LightClientUpdate)),
-    getLatestHeadUpdate: ContainerData(lightclientHeaderUpdate),
-    getLatestFinalizedHeadUpdate: ContainerData(lightclientFinalizedUpdate),
-    getSnapshot: ContainerData(lightclientSnapshotWithProofType),
+    getUpdates: ContainerData(ArrayOf(ssz.altair.LightClientUpdate)),
+    getOptimisticUpdate: ContainerData(lightclientHeaderUpdate),
+    getFinalityUpdate: ContainerData(lightclientFinalizedUpdate),
+    getBootstrap: ContainerData(lightclientSnapshotWithProofType),
   };
 }

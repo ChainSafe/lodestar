@@ -3,7 +3,13 @@
 
 source parse-args.sh
 source "./fixed.vars"
+if [ ! -n "$devnetVars" ] 
+then
+  echo "You need to specify the corresponding network.vars file, for e.g. kiln.vars, exiting ..."
+  exit;
+fi;
 source $devnetVars
+source validate.sh
 
 currentDir=$(pwd)
 setupConfigUrl=https://github.com/eth-clients/merge-testnets.git
@@ -12,15 +18,6 @@ configGitDir=$CONFIG_GIT_DIR
 
 gethImage=$GETH_IMAGE
 nethermindImage=$NETHERMIND_IMAGE
-
-if [ ! -n "$dataDir" ] || [ ! -n "$devnetVars" ] || ([ "$elClient" != "geth" ] && [ "$elClient" != "nethermind" ] && [ "$elClient" != "ethereumjs" ] && [ "$elClient" != "besu" ]) 
-then
-  echo "usage: ./setup.sh --dataDir <data dir> --elClient <geth | nethermind | ethereumjs | besu> --devetVars <devnet vars file> [--dockerWithSudo --withTerminal \"gnome-terminal --disable-factory --\"]"
-  echo "example: ./setup.sh --dataDir kiln-data --elClient nethermind --devnetVars ./kiln.vars --dockerWithSudo --withTerminal \"gnome-terminal --disable-factory --\""
-  echo "Note: if running on macOS where gnome-terminal is not available, remove the gnome-terminal related flags."
-  echo "example: ./setup.sh --dataDir kiln-data --elClient geth --devnetVars ./kiln.vars"
-  exit;
-fi
 
 
 mkdir $dataDir && mkdir $dataDir/lodestar && mkdir $dataDir/geth && mkdir $dataDir/nethermind && mkdir $dataDir/ethereumjs && mkdir $dataDir/besu
@@ -109,10 +106,34 @@ else
   elDockerNetwork="--network host"
 fi;
 
+if [ ! -n "$skipImagePull" ]
+then
+  if [ ! -n "$justCL" ] && [ ! -n "$justVC" ]
+  then
+    if [ "$elClient" == "geth" ]
+    then
+      $dockerExec pull $GETH_IMAGE
+    elif [ "$elClient" == "nethermind" ]
+    then
+      $dockerExec pull $NETHERMIND_IMAGE
+    elif [ "$elClient" == "ethereumjs" ]
+    then
+      $dockerExec pull $ETHEREUMJS_IMAGE
+    elif [ "$elClient" == "besu" ]
+    then
+      $dockerExec pull $BESU_IMAGE
+    fi;
+  fi;
+
+  if [ ! -n "$justEL" ]
+  then
+    $dockerExec pull $LODESTAR_IMAGE
+  fi;
+fi
+
 if [ "$elClient" == "geth" ]
 then
   echo "gethImage: $GETH_IMAGE"
-  $dockerExec pull $GETH_IMAGE
 
   elName="$DEVNET_NAME-geth"
   if [ ! -n "$(ls -A $dataDir/geth)" ] && [ -n "$configGitDir" ]
@@ -130,7 +151,6 @@ then
 elif [ "$elClient" == "nethermind" ] 
 then
   echo "nethermindImage: $NETHERMIND_IMAGE"
-  $dockerExec pull $NETHERMIND_IMAGE
 
   elName="$DEVNET_NAME-nethermind"
   elCmd="$dockerCmd --name $elName $elDockerNetwork -v $currentDir/$dataDir:/data"
@@ -145,7 +165,6 @@ then
 elif [ "$elClient" == "ethereumjs" ] 
 then
   echo "ethereumjsImage: $ETHEREUMJS_IMAGE"
-  $dockerExec pull $ETHEREUMJS_IMAGE
 
   elName="$DEVNET_NAME-ethereumjs"
   elCmd="$dockerCmd --name $elName $elDockerNetwork -v $currentDir/$dataDir:/data"
@@ -155,12 +174,11 @@ then
   else
     elCmd="$elCmd $ETHEREUMJS_IMAGE"
   fi;
-  elCmd="$elCmd --datadir /data/ethereumjs --gethGenesis /config/genesis.json --jwt-secret /data/jwtsecret $ETHEREUMJS_EXTRA_ARGS "
+  elCmd="$elCmd $ETHEREUMJS_EXTRA_ARGS "
 
 elif [ "$elClient" == "besu" ] 
 then
   echo "besuImage: $BESU_IMAGE"
-  $dockerExec pull $BESU_IMAGE
 
   elName="$DEVNET_NAME-besu"
   elCmd="$dockerCmd --name $elName $elDockerNetwork -v $currentDir/$dataDir:/data"
@@ -170,11 +188,10 @@ then
   else
     elCmd="$elCmd $BESU_IMAGE"
   fi;
-  elCmd="$elCmd $BESU_IMAGE --data-path=/data --engine-jwt-secret=/data/jwtsecret $BESU_EXTRA_ARGS"
+  elCmd="$elCmd $BESU_EXTRA_ARGS"
 fi
 
 echo "lodestarImage: $LODESTAR_IMAGE"
-$dockerExec pull $LODESTAR_IMAGE
 
 if [ $platform == 'Darwin' ]
 then
@@ -195,7 +212,8 @@ fi;
 clCmd="$clCmd $LODESTAR_EXTRA_ARGS"
 
 valName="$DEVNET_NAME-validator"
-valCmd="$dockerCmd --name $valName $clDockerNetwork -v $currentDir/$dataDir:/data"
+# we are additionally mounting current dir to /currentDir if anyone wants to provide keystores
+valCmd="$dockerCmd --name $valName $clDockerNetwork -v $currentDir:/currentDir -v $currentDir/$dataDir:/data"
 # mount and use config
 if [ -n "$configGitDir" ]
 then
@@ -203,13 +221,26 @@ then
 else
   valCmd="$valCmd $LODESTAR_IMAGE validator"
 fi;
-valCmd="$valCmd $LODESTAR_VALIDATOR_ARGS"
+valCmd="$valCmd $LODESTAR_VALIDATOR_ARGS $validatorKeyArgs"
 
 echo -n $JWT_SECRET > $dataDir/jwtsecret
-run_cmd "$elCmd"
-elPid=$!
-echo "elPid= $elPid"
-terminalInfo="elPid= $elPid for $elName"
+terminalInfo=""
+
+
+if [ ! -n "$justCL" ] && [ ! -n "$justVC" ]
+then
+  cleanupEL=true
+  run_cmd "$elCmd"
+  elPid=$!
+  echo "elPid= $elPid"
+  terminalInfo="$terminalInfo elPid= $elPid for $elName"
+  if [ -n "$justEL" ]
+  then
+    # Just placeholder copy the pid into el and val pid as we do a multi wait on them later
+    clPid="$elPid"
+    valPid="$elPid"
+  fi;
+fi;
 
 if [ $platform == 'Darwin' ]
 then
@@ -217,17 +248,34 @@ then
    sleep 5
 fi
 
-run_cmd "$clCmd"
-clPid=$!
-echo "clPid= $clPid"
-terminalInfo="$terminalInfo, clPid= $clPid for $clName"
+if [ ! -n "$justEL" ] && [ ! -n "$justVC" ]
+then
+  cleanupCL=true
+  run_cmd "$clCmd"
+  clPid=$!
+  echo "clPid= $clPid"
+  terminalInfo="$terminalInfo, clPid= $clPid for $clName"
+  if [ -n "$justCL" ]
+  then
+    # Just placeholder copy the pid into el and val pid as we do a multi wait on them later
+    elPid="$clPid"
+    valPid="$clPid"
+  fi;
+fi;
 
-if [ -n "$withValidator" ]
-then 
+if [ -n "$withValidator" ] || [ -n "$justVC" ]
+then
+  cleanupVAL=true
   run_cmd "$valCmd"
   valPid=$!
   echo "valPid= $valPid"
   terminalInfo="$terminalInfo, valPid= $valPid for $elName"
+  if [ -n "$justVC" ]
+  then
+    # Just placeholder copy the pid into el and val pid as we do a multi wait on them later
+    elPid="$valPid"
+    clPid="$valPid"
+  fi;
 else 
    # hack to assign clPid to valPid for joint wait later
    valPid=$clPid
@@ -235,9 +283,19 @@ fi;
 
 cleanup() {
   echo "cleaning up"
-  $dockerExec rm $elName -f
-  $dockerExec rm $clName -f
-  $dockerExec rm $valName -f
+  # Cleanup only those that have been (tried) spinned up by this run of the script
+  if [ -n "$cleanupEL" ]
+  then
+    $dockerExec rm $elName -f
+  fi;
+  if [ -n "$cleanupCL" ]
+  then
+    $dockerExec rm $clName -f
+  fi;
+  if [ -n "$cleanupVAL" ]
+  then
+    $dockerExec rm $valName -f
+  fi
   elPid=null
   clPid=null
   valPid=null

@@ -3,13 +3,13 @@ import {promisify} from "node:util";
 import path from "node:path";
 import rimraf from "rimraf";
 import {fromHexString} from "@chainsafe/ssz";
-import {GENESIS_SLOT} from "@chainsafe/lodestar-params";
-import {BeaconNode, BeaconDb, initStateFromAnchorState, createNodeJsLibp2p, nodeUtils} from "@chainsafe/lodestar";
-import {SlashingProtection, Validator, SignerType} from "@chainsafe/lodestar-validator";
-import {LevelDbController} from "@chainsafe/lodestar-db";
-import {interopSecretKey} from "@chainsafe/lodestar-beacon-state-transition";
-import {createIBeaconConfig} from "@chainsafe/lodestar-config";
-import {ACTIVE_PRESET, PresetName} from "@chainsafe/lodestar-params";
+import {GENESIS_SLOT} from "@lodestar/params";
+import {BeaconNode, BeaconDb, initStateFromAnchorState, createNodeJsLibp2p, nodeUtils} from "@lodestar/beacon-node";
+import {SlashingProtection, Validator, SignerType} from "@lodestar/validator";
+import {LevelDbController} from "@lodestar/db";
+import {interopSecretKey} from "@lodestar/state-transition";
+import {createIBeaconConfig} from "@lodestar/config";
+import {ACTIVE_PRESET, PresetName} from "@lodestar/params";
 import {onGracefulShutdown} from "../../util/process.js";
 import {createEnr, createPeerId, overwriteEnrWithCliArgs} from "../../config/index.js";
 import {IGlobalArgs, parseEnrArgs} from "../../options/index.js";
@@ -101,7 +101,7 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
   const onGracefulShutdownCbs: (() => Promise<void>)[] = [];
   onGracefulShutdown(async () => {
     for (const cb of onGracefulShutdownCbs) await cb();
-    await Promise.all([Promise.all(validators.map((v) => v.stop())), node.close()]);
+    await Promise.all([Promise.all(validators.map((v) => v.close())), node.close()]);
     if (args.reset) {
       logger.info("Cleaning db directories");
       await promisify(rimraf)(beaconDbDir);
@@ -132,13 +132,16 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
       slashingProtection,
       api,
       logger: logger.child({module: "vali"}),
+      // TODO: De-duplicate from validator cmd handler
+      processShutdownCallback: () => process.kill(process.pid, "SIGINT"),
       signers: secretKeys.map((secretKey) => ({
         type: SignerType.Local,
         secretKey,
       })),
+      doppelgangerProtectionEnabled: args.doppelgangerProtectionEnabled,
+      builder: {},
     });
 
-    onGracefulShutdownCbs.push(() => validator.stop());
-    await validator.start();
+    onGracefulShutdownCbs.push(() => validator.close());
   }
 }
