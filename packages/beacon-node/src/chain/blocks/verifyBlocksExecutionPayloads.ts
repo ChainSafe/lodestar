@@ -107,10 +107,11 @@ export async function verifyBlocksExecutionPayload(
   //    - or we have already imported a post-merge parent of first block of this chain in forkchoice
   const lastBlock = blocks[blocks.length - 1];
   let isOptimisticallySafe =
-    isMergeTransitionComplete(preState0 as BeaconStateBellatrix) ||
+    (isBellatrixStateType(preState0) && isMergeTransitionComplete(preState0 as BeaconStateBellatrix)) ||
     lastBlock.message.slot + opts.safeSlotsToImportOptimistically < chain.clock.currentSlot;
-  const firstBlock = blocks[0];
+
   if (!isOptimisticallySafe) {
+    const firstBlock = blocks[0];
     const parentRoot = toHexString(firstBlock.message.parentRoot);
     const parentBlock = chain.forkChoice.getBlockHex(parentRoot);
     if (!parentBlock) {
@@ -119,6 +120,7 @@ export async function verifyBlocksExecutionPayload(
         parentRoot,
       });
     }
+
     // isOptimisticallySafe if we have already imported a post-merge parent of this block
     if (parentBlock.executionStatus !== ExecutionStatus.PreMerge) {
       isOptimisticallySafe = true;
