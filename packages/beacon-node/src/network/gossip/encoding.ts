@@ -53,7 +53,7 @@ export function msgIdFn(gossipTopicCache: GossipTopicCache, msg: GossipsubMessag
     }
   }
 
-  return digest(Buffer.concat(vec)).slice(0, 20);
+  return Buffer.from(digest(Buffer.concat(vec))).slice(0, 20);
 }
 
 export class DataTransformSnappy {
