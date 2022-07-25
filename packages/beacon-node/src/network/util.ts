@@ -64,7 +64,7 @@ export function clearMultiaddrUDP(enr: ENR): void {
   enr.delete("udp6");
 }
 
-export function prettyPrintPeerId(peerId: PeerId): string {
-  const id = peerId.toB58String();
+export function prettyPrintPeerId(peerId: PeerId | string): string {
+  const id = typeof peerId === "string" ? peerId : peerId.toB58String();
   return `${id.substr(0, 2)}...${id.substr(id.length - 6, id.length)}`;
 }
