@@ -1,5 +1,4 @@
-import all from "it-all";
-import pipe from "it-pipe";
+import {pipeline} from "node:stream/promises";
 import {expect} from "chai";
 import varint from "varint";
 
@@ -8,6 +7,7 @@ import {allForks, ssz} from "@lodestar/types";
 import {reqRespBlockResponseSerializer} from "../../../../../../src/network/reqresp/types.js";
 import {writeSszSnappyPayload} from "../../../../../../src/network/reqresp/encodingStrategies/sszSnappy/index.js";
 import {RequestOrOutgoingResponseBody} from "../../../../../../src/network/reqresp/types.js";
+import {all, AllFn} from "../../../../../utils/stream.js";
 import {goerliShadowForkBlock13249} from "./testData.js";
 
 describe("network / reqresp / sszSnappy / encode", () => {
@@ -24,9 +24,9 @@ describe("network / reqresp / sszSnappy / encode", () => {
           : deserializedBody);
 
       it(id, async () => {
-        const encodedChunks = await pipe(
+        const encodedChunks = await pipeline(
           writeSszSnappyPayload(reqrespBody as RequestOrOutgoingResponseBody, reqRespBlockResponseSerializer),
-          all
+          all as AllFn<Buffer>
         );
         const encodedStream = Buffer.concat(encodedChunks);
         const expectedStreamed = Buffer.concat([Buffer.from(varint.encode(bytes.length)), streamedBody]);

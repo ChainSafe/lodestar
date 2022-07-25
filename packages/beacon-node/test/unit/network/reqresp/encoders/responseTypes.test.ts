@@ -1,7 +1,6 @@
+import {pipeline} from "node:stream/promises";
 import chai from "chai";
 import chaiAsPromised from "chai-as-promised";
-import pipe from "it-pipe";
-import all from "it-all";
 import {allForks} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
 import {
@@ -11,6 +10,7 @@ import {
   OutgoingResponseBody,
   getResponseSzzTypeByMethod,
   IncomingResponseBodyByMethod,
+  IncomingResponseBody,
 } from "../../../../../src/network/reqresp/types.js";
 import {responseDecode} from "../../../../../src/network/reqresp/encoders/responseDecode.js";
 import {responseEncodeSuccess} from "../../../../../src/network/reqresp/encoders/responseEncode.js";
@@ -18,6 +18,7 @@ import {arrToSource, createStatus, generateEmptySignedBlocks} from "../utils.js"
 import {expectIsEqualSszTypeArr} from "../../../../utils/ssz.js";
 import {config} from "../../../../utils/config.js";
 import {blocksToReqRespBlockResponses} from "../../../../utils/block.js";
+import {all, AllFn} from "../../../../utils/stream.js";
 
 chai.use(chaiAsPromised);
 
@@ -56,11 +57,12 @@ describe("network / reqresp / encoders / responseTypes", () => {
         for (const [i, responseChunks] of responsesChunks.entries()) {
           it(`${encoding} v${version} ${method} - resp ${i}`, async function () {
             const protocol = {method, version, encoding};
-            const returnedResponses = await pipe(
+            const returnedResponses = await pipeline(
               arrToSource(lodestarResponseBodies[i]),
               responseEncodeSuccess(config, protocol),
-              responseDecode(config, protocol),
-              all
+              // eslint-disable-next-line @typescript-eslint/no-empty-function
+              responseDecode(config, protocol, {onFirstHeader: () => {}, onFirstResponseChunk: () => {}}),
+              all as AllFn<IncomingResponseBody>
             );
 
             const type = getResponseSzzTypeByMethod(protocol, forkName);

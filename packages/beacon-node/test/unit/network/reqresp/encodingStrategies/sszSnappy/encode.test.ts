@@ -1,5 +1,4 @@
-import all from "it-all";
-import pipe from "it-pipe";
+import {pipeline} from "node:stream/promises";
 import {allForks, ssz} from "@lodestar/types";
 import {LodestarError} from "@lodestar/utils";
 import {
@@ -14,6 +13,7 @@ import {
 } from "../../../../../../src/network/reqresp/encodingStrategies/sszSnappy/index.js";
 import {expectRejectedWithLodestarError} from "../../../../../utils/errors.js";
 import {expectEqualByteChunks} from "../../utils.js";
+import {all, AllFn} from "../../../../../utils/stream.js";
 import {blocksToReqRespBlockResponses} from "../../../../../utils/block.js";
 import {RequestOrOutgoingResponseBody} from "../../../../../../src/network/reqresp/types.js";
 import {sszSnappyPing, sszSnappyStatus, sszSnappySignedBeaconBlockPhase0} from "./testData.js";
@@ -29,12 +29,12 @@ describe("network / reqresp / sszSnappy / encode", () => {
           type === ssz.phase0.SignedBeaconBlock
             ? blocksToReqRespBlockResponses([testCase.body] as allForks.SignedBeaconBlock[])[0]
             : testCase.body;
-        const encodedChunks = await pipe(
+        const encodedChunks = await pipeline(
           writeSszSnappyPayload(
             body as RequestOrOutgoingResponseBody,
             type === ssz.phase0.SignedBeaconBlock ? reqRespBlockResponseSerializer : type
           ),
-          all
+          all as AllFn<Buffer>
         );
         expectEqualByteChunks(encodedChunks, chunks);
       });
@@ -62,7 +62,7 @@ describe("network / reqresp / sszSnappy / encode", () => {
     for (const {id, type, body, error} of testCases) {
       it(id, async () => {
         await expectRejectedWithLodestarError(
-          pipe(writeSszSnappyPayload(body as RequestOrOutgoingResponseBody, type), all),
+          pipeline(writeSszSnappyPayload(body as RequestOrOutgoingResponseBody, type), all),
           error
         );
       });

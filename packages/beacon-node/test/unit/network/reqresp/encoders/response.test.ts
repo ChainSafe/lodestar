@@ -1,7 +1,6 @@
+import {pipeline} from "node:stream/promises";
 import chai from "chai";
 import chaiAsPromised from "chai-as-promised";
-import pipe from "it-pipe";
-import all from "it-all";
 import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {chainConfig} from "@lodestar/config/default";
 import {createIBeaconConfig} from "@lodestar/config";
@@ -37,6 +36,7 @@ import {
   sszSnappySignedBeaconBlockAltair,
 } from "../encodingStrategies/sszSnappy/testData.js";
 import {blocksToReqRespBlockResponses} from "../../../../utils/block.js";
+import {all, AllFn} from "../../../../utils/stream.js";
 
 chai.use(chaiAsPromised);
 
@@ -259,11 +259,10 @@ describe("network / reqresp / encoders / response - Success and error cases", ()
         const lodestarResponseBodies =
           protocol.method === Method.BeaconBlocksByRange || protocol.method === Method.BeaconBlocksByRoot
             ? blocksToReqRespBlockResponses([chunk.body] as allForks.SignedBeaconBlock[], config)
-            : [chunk.body];
-        yield* pipe(
-          arrToSource(lodestarResponseBodies as OutgoingResponseBody[]),
-          responseEncodeSuccess(config, protocol)
-        );
+            : ([chunk.body] as OutgoingResponseBody[]);
+
+        // one level pipe: transform(source())
+        yield* responseEncodeSuccess(config, protocol)(arrToSource(lodestarResponseBodies));
       } else {
         yield* responseEncodeError(chunk.status, chunk.errorMessage);
       }
@@ -286,7 +285,12 @@ describe("network / reqresp / encoders / response - Success and error cases", ()
 
     if (chunks) {
       it(`${id} - responseDecode`, async () => {
-        const responseDecodePromise = pipe(arrToSource(chunks), responseDecode(config, protocol), all);
+        const responseDecodePromise = pipeline(
+          arrToSource(chunks),
+          // eslint-disable-next-line @typescript-eslint/no-empty-function
+          responseDecode(config, protocol, {onFirstHeader: () => {}, onFirstResponseChunk: () => {}}),
+          all as AllFn<IncomingResponseBody>
+        );
 
         if (decodeError) {
           await expectRejectedWithLodestarError(responseDecodePromise, decodeError);

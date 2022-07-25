@@ -1,7 +1,7 @@
 import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
-import all from "it-all";
 import {ItTrigger} from "../../../src/util/itTrigger.js";
+import {all} from "../../utils/stream.js";
 
 chai.use(chaiAsPromised);
 

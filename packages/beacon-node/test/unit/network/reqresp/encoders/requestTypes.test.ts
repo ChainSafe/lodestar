@@ -1,6 +1,6 @@
+import {pipeline} from "node:stream/promises";
 import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
-import pipe from "it-pipe";
 import {phase0} from "@lodestar/types";
 import {Method, Encoding, getRequestSzzTypeByMethod, RequestBody} from "../../../../../src/network/reqresp/types.js";
 import {requestEncode} from "../../../../../src/network/reqresp/encoders/requestEncode.js";
@@ -40,7 +40,7 @@ describe("network / reqresp / encoders / request - types", () => {
 
       for (const [i, request] of requests.entries()) {
         it(`${encoding} ${method} - req ${i}`, async () => {
-          const returnedRequest = await pipe(
+          const returnedRequest = await pipeline(
             requestEncode({method, encoding}, request),
             requestDecode({method, encoding})
           );

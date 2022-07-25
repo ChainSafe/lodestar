@@ -1,5 +1,5 @@
+import {pipeline} from "node:stream/promises";
 import PeerId from "peer-id";
-import pipe from "it-pipe";
 import {ILogger, TimeoutError, withTimeout} from "@lodestar/utils";
 import {IBeaconConfig} from "@lodestar/config";
 import {REQUEST_TIMEOUT, RespStatus} from "../../../constants/index.js";
@@ -49,14 +49,14 @@ export async function handleRequest(
   const logCtx = {method: protocol.method, client, peer: prettyPrintPeerId(peerId), requestId};
 
   let responseError: Error | null = null;
-  await pipe(
+  await pipeline(
     // Yields success chunks and error chunks in the same generator
     // This syntax allows to recycle stream.sink to send success and error chunks without returning
     // in case request whose body is a List fails at chunk_i > 0, without breaking out of the for..await..of
     (async function* requestHandlerSource() {
       try {
         const requestBody = await withTimeout(
-          () => pipe(stream.source, requestDecode(protocol)),
+          () => pipeline(stream.source, requestDecode(protocol)),
           REQUEST_TIMEOUT,
           signal
         ).catch((e: unknown) => {
@@ -69,13 +69,12 @@ export async function handleRequest(
 
         logger.debug("Resp received request", {...logCtx, body: renderRequestBody(protocol.method, requestBody)});
 
-        yield* pipe(
-          performRequestHandler(protocol, requestBody, peerId),
-          // NOTE: Do not log the resp chunk contents, logs get extremely cluttered
-          // Note: Not logging on each chunk since after 1 year it hasn't add any value when debugging
-          // onChunk(() => logger.debug("Resp sending chunk", logCtx)),
-          responseEncodeSuccess(config, protocol)
-        );
+        // NOTE: Do not log the resp chunk contents, logs get extremely cluttered
+        // Note: Not logging on each chunk since after 1 year it hasn't add any value when debugging
+        // onChunk(() => logger.debug("Resp sending chunk", logCtx)),
+
+        // one level pipe: transform(source())
+        yield* responseEncodeSuccess(config, protocol)(performRequestHandler(protocol, requestBody, peerId));
       } catch (e) {
         const status = e instanceof ResponseError ? e.status : RespStatus.SERVER_ERROR;
         yield* responseEncodeError(status, (e as Error).message);

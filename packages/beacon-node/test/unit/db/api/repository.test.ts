@@ -1,12 +1,12 @@
 import sinon, {SinonStubbedInstance} from "sinon";
 import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
-import all from "it-all";
 
 import {ContainerType} from "@chainsafe/ssz";
 import {Bytes32, ssz} from "@lodestar/types";
 import {config} from "@lodestar/config/default";
 import {Db, LevelDbController, Repository, Bucket} from "@lodestar/db";
+import {all} from "../../../utils/stream.js";
 
 chai.use(chaiAsPromised);
 
