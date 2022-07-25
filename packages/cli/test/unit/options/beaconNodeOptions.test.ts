@@ -36,6 +36,8 @@ describe("options / beaconNodeOptions", () => {
 
       "execution.urls": ["http://localhost:8551"],
       "execution.timeout": 12000,
+      "execution.retryDelay": 2000,
+      "execution.retryAttempts": 1,
 
       "builder.enabled": false,
       "builder.urls": ["http://localhost:8661"],
@@ -101,6 +103,8 @@ describe("options / beaconNodeOptions", () => {
       },
       executionEngine: {
         urls: ["http://localhost:8551"],
+        retryAttempts: 1,
+        retryDelay: 2000,
         timeout: 12000,
       },
       executionBuilder: {
