@@ -135,7 +135,7 @@ export async function verifyBlocksExecutionPayload(
     }
 
     const {executionStatus} = await verifyBlockExecutionPayload(chain, block, preState0, opts, isOptimisticallySafe);
-    // It becomes optimistically  safefor following blocks if a post-merge block is deemed fit
+    // It becomes optimistically  safe for following blocks if a post-merge block is deemed fit
     // for import. If it would not have been safe verifyBlockExecutionPayload would throw error
     // and we would not be here.
     isOptimisticallySafe ||= executionStatus !== ExecutionStatus.PreMerge;
