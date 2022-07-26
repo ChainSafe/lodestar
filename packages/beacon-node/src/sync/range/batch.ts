@@ -1,5 +1,5 @@
 import PeerId from "peer-id";
-import {allForks, Epoch, phase0} from "@lodestar/types";
+import {allForks, Epoch, phase0, RootHex} from "@lodestar/types";
 import {IChainForkConfig} from "@lodestar/config";
 import {LodestarError} from "@lodestar/utils";
 import {MAX_BATCH_DOWNLOAD_ATTEMPTS, MAX_BATCH_PROCESSING_ATTEMPTS} from "../constants.js";
@@ -32,7 +32,7 @@ export type Attempt = {
   /** The peer that made the attempt */
   peer: PeerId;
   /** The hash of the blocks of the attempt */
-  hash: Uint8Array;
+  hash: RootHex;
 };
 
 export type BatchState =

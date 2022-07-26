@@ -1,5 +1,4 @@
 import {itBench} from "@dapplion/benchmark";
-import {byteArrayConcat} from "../../../src/util/bytes.js";
 
 describe("bytes utils", function () {
   const roots: Uint8Array[] = [];
@@ -11,14 +10,6 @@ describe("bytes utils", function () {
       roots.push(new Uint8Array(Array.from({length: 32}, () => i)));
     }
     buffers = roots.map((root) => Buffer.from(root.buffer));
-  });
-
-  itBench({
-    id: `byteArrayConcat ${count} items`,
-    fn: () => {
-      byteArrayConcat(roots);
-    },
-    runsFactor: 1000,
   });
 
   itBench({
