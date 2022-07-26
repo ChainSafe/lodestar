@@ -1,6 +1,6 @@
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {IChainForkConfig} from "@lodestar/config";
-import {IForkChoice} from "@lodestar/fork-choice";
+import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {allForks, Slot} from "@lodestar/types";
 import {toHexString} from "@lodestar/utils";
 import {IBeaconClock} from "../clock/interface.js";
@@ -23,13 +23,21 @@ export function verifyBlocksSanityChecks(
   chain: {forkChoice: IForkChoice; clock: IBeaconClock; config: IChainForkConfig},
   blocks: allForks.SignedBeaconBlock[],
   opts: ImportBlockOpts
-): {relevantBlocks: allForks.SignedBeaconBlock[]; parentSlots: Slot[]} {
+): {relevantBlocks: allForks.SignedBeaconBlock[]; parentSlots: Slot[]; parentBlock: ProtoBlock} {
   if (blocks.length === 0) {
     throw Error("Empty partiallyVerifiedBlocks");
   }
 
   const relevantBlocks: allForks.SignedBeaconBlock[] = [];
   const parentSlots: Slot[] = [];
+
+  // When importing a block segment, only the first NON-IGNORED block must be known to the fork-choice.
+  const firstBlock = blocks[0];
+  const parentRoot = toHexString(firstBlock.message.parentRoot);
+  const parentBlock = chain.forkChoice.getBlockHex(parentRoot);
+  if (!parentBlock) {
+    throw new BlockError(firstBlock, {code: BlockErrorCode.PARENT_UNKNOWN, parentRoot});
+  }
 
   for (const block of blocks) {
     const blockSlot = block.message.slot;
@@ -57,18 +65,11 @@ export function verifyBlocksSanityChecks(
 
     let parentBlockSlot: Slot;
 
-    // When importing a block segment, only the first NON-IGNORED block must be known to the fork-choice.
     if (relevantBlocks.length > 0) {
       parentBlockSlot = relevantBlocks[relevantBlocks.length - 1].message.slot;
     } else {
       // Parent is known to the fork-choice
-      const parentRoot = toHexString(block.message.parentRoot);
-      const parentBlock = chain.forkChoice.getBlockHex(parentRoot);
-      if (!parentBlock) {
-        throw new BlockError(block, {code: BlockErrorCode.PARENT_UNKNOWN, parentRoot});
-      } else {
-        parentBlockSlot = parentBlock.slot;
-      }
+      parentBlockSlot = parentBlock.slot;
     }
 
     // Block not in the future, also checks for infinity
@@ -95,5 +96,5 @@ export function verifyBlocksSanityChecks(
     parentSlots.push(parentBlockSlot);
   }
 
-  return {relevantBlocks, parentSlots};
+  return {relevantBlocks, parentSlots, parentBlock};
 }

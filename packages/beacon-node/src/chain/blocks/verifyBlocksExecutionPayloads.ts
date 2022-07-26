@@ -4,12 +4,10 @@ import {
   isBellatrixBlockBodyType,
   isMergeTransitionBlock as isMergeTransitionBlockFn,
   isExecutionEnabled,
-  isMergeTransitionComplete,
-  BeaconStateBellatrix,
 } from "@lodestar/state-transition";
 import {bellatrix, allForks} from "@lodestar/types";
 import {toHexString} from "@chainsafe/ssz";
-import {IForkChoice, ExecutionStatus, assertValidTerminalPowBlock} from "@lodestar/fork-choice";
+import {IForkChoice, ExecutionStatus, assertValidTerminalPowBlock, ProtoBlock} from "@lodestar/fork-choice";
 import {IChainForkConfig} from "@lodestar/config";
 import {ErrorAborted, ILogger} from "@lodestar/utils";
 import {IExecutionEngine} from "../../execution/engine/index.js";
@@ -35,6 +33,7 @@ type VerifyBlockModules = {
  */
 export async function verifyBlocksExecutionPayload(
   chain: VerifyBlockModules,
+  parentBlock: ProtoBlock,
   blocks: allForks.SignedBeaconBlock[],
   preState0: CachedBeaconStateAllForks,
   signal: AbortSignal,
@@ -43,14 +42,11 @@ export async function verifyBlocksExecutionPayload(
   const executionStatuses: ExecutionStatus[] = [];
   let mergeBlockFound: bellatrix.BeaconBlock | null = null;
 
-  // We need to track and keep updating if its safe to optimistically import these blocks.
-  // The following is how we determine for a block if its safe:
-  //
-  // (but we need to modify this check for this segment of blocks because it checks if the
-  //  parent of any block imported in forkchoice is post-merge and currently we could only
-  //  have blocks[0]'s parent imported in the chain as this is no longer one by one verify +
-  //  import.)
-  //
+  // Error in the same way as verifyBlocksSanityChecks if empty blocks
+  if (blocks.length === 0) {
+    throw Error("Empty partiallyVerifiedBlocks");
+  }
+
   // For a block with SYNCING status (called optimistic block), it's okay to import with
   // SYNCING status as EL could switch into syncing
   //
@@ -64,6 +60,15 @@ export async function verifyBlocksExecutionPayload(
   //
   // Once EL catches up again and respond VALID, the fork choice will be updated which
   // will either validate or prune invalid blocks
+  //
+  // We need to track and keep updating if its safe to optimistically import these blocks.
+  // The following is how we determine for a block if its safe:
+  //
+  // (but we need to modify this check for this segment of blocks because it checks if the
+  //  parent of any block imported in forkchoice is post-merge and currently we could only
+  //  have blocks[0]'s parent imported in the chain as this is no longer one by one verify +
+  //  import.)
+  //
   //
   // When to import such blocks:
   // From: https://github.com/ethereum/consensus-specs/pull/2844
@@ -87,8 +92,6 @@ export async function verifyBlocksExecutionPayload(
   //      then throw error
   //
   //
-  //       - if we are are not yet in post merge world (preState0's isMergeTransitionComplete
-  //         is false) and
   //       - if we haven't yet imported a post merge ancestor in forkchoice i.e.
   //       - and we are syncing close to the clockSlot, i.e. merge Transition could be underway
   //
@@ -99,33 +102,15 @@ export async function verifyBlocksExecutionPayload(
   //    This means that the merge transition could be underway and we can't afford to import
   //    a block which is not fully validated as it could affect liveliness of the network.
   //
-
+  //
   // For this segment of blocks:
   //   We are optimistically safe with respec to this entire block segment if:
-  //    - we have transitioned to post-merge world or
   //    - all the blocks are way behind the current slot
   //    - or we have already imported a post-merge parent of first block of this chain in forkchoice
   const lastBlock = blocks[blocks.length - 1];
   let isOptimisticallySafe =
-    (isBellatrixStateType(preState0) && isMergeTransitionComplete(preState0 as BeaconStateBellatrix)) ||
+    parentBlock.executionStatus !== ExecutionStatus.PreMerge ||
     lastBlock.message.slot + opts.safeSlotsToImportOptimistically < chain.clock.currentSlot;
-
-  if (!isOptimisticallySafe) {
-    const firstBlock = blocks[0];
-    const parentRoot = toHexString(firstBlock.message.parentRoot);
-    const parentBlock = chain.forkChoice.getBlockHex(parentRoot);
-    if (!parentBlock) {
-      throw new BlockError(firstBlock, {
-        code: BlockErrorCode.PARENT_UNKNOWN,
-        parentRoot,
-      });
-    }
-
-    // isOptimisticallySafe if we have already imported a post-merge parent of this block
-    if (parentBlock.executionStatus !== ExecutionStatus.PreMerge) {
-      isOptimisticallySafe = true;
-    }
-  }
 
   for (const block of blocks) {
     // If blocks are invalid in consensus the main promise could resolve before this loop ends.
@@ -138,8 +123,9 @@ export async function verifyBlocksExecutionPayload(
     // It becomes optimistically  safe for following blocks if a post-merge block is deemed fit
     // for import. If it would not have been safe verifyBlockExecutionPayload would throw error
     // and we would not be here.
-    isOptimisticallySafe ||= executionStatus !== ExecutionStatus.PreMerge;
-    executionStatuses.push(executionStatus);
+    if (executionStatus !== ExecutionStatus.PreMerge) {
+      isOptimisticallySafe = true;
+    }
 
     const isMergeTransitionBlock =
       isBellatrixStateType(preState0) &&
