@@ -186,6 +186,14 @@ module.exports = {
   },
   overrides: [
     {
+      files: ["**/*.config.js", "**/*.config.mjs", "**/*.config.cjs", "**/*.config.ts"],
+      rules: {
+        "import/no-extraneous-dependencies": "off",
+        "import/no-relative-packages": "off",
+        "@typescript-eslint/naming-convention": "off"
+      },
+    },
+    {
       files: ["**/test/**/*.ts"],
       rules: {
         "import/no-extraneous-dependencies": "off",
