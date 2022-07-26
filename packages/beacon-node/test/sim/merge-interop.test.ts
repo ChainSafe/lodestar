@@ -20,6 +20,7 @@ import {getAndInitDevValidators} from "../utils/node/validator.js";
 import {Eth1Provider} from "../../src/index.js";
 import {ZERO_HASH} from "../../src/constants/index.js";
 import {bytesToData, dataToBytes, quantityToNum} from "../../src/eth1/provider/utils.js";
+import {defaultExecutionEngineHttpOpts} from "../../src/execution/engine/http.js";
 import {logFilesDir} from "./params.js";
 import {shell} from "./shell.js";
 
@@ -46,6 +47,8 @@ import {shell} from "./shell.js";
 const terminalTotalDifficultyPreMerge = 10;
 const TX_SCENARIOS = process.env.TX_SCENARIOS?.split(",") || [];
 const jwtSecretHex = "0xdc6457099f127cf0bac78de8b297df04951281909db4f58b43def7c7151e765d";
+const retryAttempts = defaultExecutionEngineHttpOpts.retryAttempts;
+const retryDelay = defaultExecutionEngineHttpOpts.retryDelay;
 
 describe("executionEngine / ExecutionEngineHttp", function () {
   this.timeout("10min");
@@ -157,7 +160,10 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     }
 
     const controller = new AbortController();
-    const executionEngine = new ExecutionEngineHttp({urls: [engineApiUrl], jwtSecretHex}, controller.signal);
+    const executionEngine = new ExecutionEngineHttp(
+      {urls: [engineApiUrl], jwtSecretHex, retryAttempts, retryDelay},
+      {signal: controller.signal}
+    );
 
     // 1. Prepare a payload
 

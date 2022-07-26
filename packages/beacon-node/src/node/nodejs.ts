@@ -142,7 +142,7 @@ export class BeaconNode {
         {config, db, metrics, logger: logger.child(opts.logger.eth1), signal},
         anchorState
       ),
-      executionEngine: initializeExecutionEngine(opts.executionEngine, signal),
+      executionEngine: initializeExecutionEngine(opts.executionEngine, {metrics, signal}),
       executionBuilder: opts.executionBuilder.enabled
         ? initializeExecutionBuilder(opts.executionBuilder, config)
         : undefined,
