@@ -63,10 +63,11 @@ export async function processBlocks(
   }
 
   try {
-    const {relevantBlocks, parentSlots} = verifyBlocksSanityChecks(chain, blocks, opts);
+    const {relevantBlocks, parentSlots, parentBlock} = verifyBlocksSanityChecks(chain, blocks, opts);
 
     // No relevant blocks, skip verifyBlocksInEpoch()
-    if (relevantBlocks.length === 0) {
+    if (relevantBlocks.length === 0 || parentBlock === null) {
+      // parentBlock can only be null if relevantBlocks are empty
       return;
     }
 
@@ -74,6 +75,7 @@ export async function processBlocks(
     // states in the state cache through regen.
     const {postStates, executionStatuses, proposerBalanceDeltas} = await verifyBlocksInEpoch(
       chain,
+      parentBlock,
       relevantBlocks,
       opts
     );

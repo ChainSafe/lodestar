@@ -7,7 +7,7 @@ import {
 } from "@lodestar/state-transition";
 import {bellatrix, allForks} from "@lodestar/types";
 import {toHexString} from "@chainsafe/ssz";
-import {IForkChoice, ExecutionStatus, assertValidTerminalPowBlock} from "@lodestar/fork-choice";
+import {IForkChoice, ExecutionStatus, assertValidTerminalPowBlock, ProtoBlock} from "@lodestar/fork-choice";
 import {IChainForkConfig} from "@lodestar/config";
 import {ErrorAborted, ILogger} from "@lodestar/utils";
 import {IExecutionEngine} from "../../execution/engine/index.js";
@@ -33,6 +33,7 @@ type VerifyBlockModules = {
  */
 export async function verifyBlocksExecutionPayload(
   chain: VerifyBlockModules,
+  parentBlock: ProtoBlock,
   blocks: allForks.SignedBeaconBlock[],
   preState0: CachedBeaconStateAllForks,
   signal: AbortSignal,
@@ -41,6 +42,76 @@ export async function verifyBlocksExecutionPayload(
   const executionStatuses: ExecutionStatus[] = [];
   let mergeBlockFound: bellatrix.BeaconBlock | null = null;
 
+  // Error in the same way as verifyBlocksSanityChecks if empty blocks
+  if (blocks.length === 0) {
+    throw Error("Empty partiallyVerifiedBlocks");
+  }
+
+  // For a block with SYNCING status (called optimistic block), it's okay to import with
+  // SYNCING status as EL could switch into syncing
+  //
+  // 1. On intial startup/restart
+  // 2. When some reorg might have occured and EL doesn't has a parent root
+  //    (observed on devnets)
+  // 3. Because of some unavailable (and potentially invalid) root but there is no way
+  //    of knowing if this is invalid/unavailable. For unavailable block, some proposer
+  //    will (sooner or later) build on the available parent head which will
+  //    eventually win in fork-choice as other validators vote on VALID blocks.
+  //
+  // Once EL catches up again and respond VALID, the fork choice will be updated which
+  // will either validate or prune invalid blocks
+  //
+  // We need to track and keep updating if its safe to optimistically import these blocks.
+  // The following is how we determine for a block if its safe:
+  //
+  // (but we need to modify this check for this segment of blocks because it checks if the
+  //  parent of any block imported in forkchoice is post-merge and currently we could only
+  //  have blocks[0]'s parent imported in the chain as this is no longer one by one verify +
+  //  import.)
+  //
+  //
+  // When to import such blocks:
+  // From: https://github.com/ethereum/consensus-specs/pull/2844
+  // A block MUST NOT be optimistically imported, unless either of the following
+  // conditions are met:
+  //
+  // 1. Parent of the block has execution
+  //
+  //     Since with the sync optimizations, the previous block might not have been in the
+  //     forkChoice yet, so the below check could fail for safeSlotsToImportOptimistically
+  //
+  //     Luckily, we can depend on the preState0 to see if we are already post merge w.r.t
+  //     the blocks we are importing.
+  //
+  //     Or in other words if
+  //       - block status is syncing
+  //       - and we are not in a post merge world and is parent is not optimistically safe
+  //       - and we are syncing close to the chain head i.e. clock slot
+  //       - and parent is optimistically safe
+  //
+  //      then throw error
+  //
+  //
+  //       - if we haven't yet imported a post merge ancestor in forkchoice i.e.
+  //       - and we are syncing close to the clockSlot, i.e. merge Transition could be underway
+  //
+  //
+  // 2. The current slot (as per the system clock) is at least
+  //    SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY ahead of the slot of the block being
+  //    imported.
+  //    This means that the merge transition could be underway and we can't afford to import
+  //    a block which is not fully validated as it could affect liveliness of the network.
+  //
+  //
+  // For this segment of blocks:
+  //   We are optimistically safe with respec to this entire block segment if:
+  //    - all the blocks are way behind the current slot
+  //    - or we have already imported a post-merge parent of first block of this chain in forkchoice
+  const lastBlock = blocks[blocks.length - 1];
+  let isOptimisticallySafe =
+    parentBlock.executionStatus !== ExecutionStatus.PreMerge ||
+    lastBlock.message.slot + opts.safeSlotsToImportOptimistically < chain.clock.currentSlot;
+
   for (const block of blocks) {
     // If blocks are invalid in consensus the main promise could resolve before this loop ends.
     // In that case stop sending blocks to execution engine
@@ -48,7 +119,13 @@ export async function verifyBlocksExecutionPayload(
       throw new ErrorAborted("verifyBlockExecutionPayloads");
     }
 
-    const {executionStatus} = await verifyBlockExecutionPayload(chain, block, preState0, opts);
+    const {executionStatus} = await verifyBlockExecutionPayload(chain, block, preState0, opts, isOptimisticallySafe);
+    // It becomes optimistically  safe for following blocks if a post-merge block is deemed fit
+    // for import. If it would not have been safe verifyBlockExecutionPayload would throw error
+    // and we would not be here.
+    if (executionStatus !== ExecutionStatus.PreMerge) {
+      isOptimisticallySafe = true;
+    }
     executionStatuses.push(executionStatus);
 
     const isMergeTransitionBlock =
@@ -122,7 +199,8 @@ export async function verifyBlockExecutionPayload(
   chain: VerifyBlockModules,
   block: allForks.SignedBeaconBlock,
   preState0: CachedBeaconStateAllForks,
-  opts: BlockProcessOpts
+  opts: BlockProcessOpts,
+  isOptimisticallySafe: boolean
 ): Promise<{executionStatus: ExecutionStatus}> {
   /** Not null if execution is enabled */
   const executionPayloadEnabled =
@@ -168,43 +246,17 @@ export async function verifyBlockExecutionPayload(
     // Accepted and Syncing have the same treatment, as final validation of block is pending
     case ExecutePayloadStatus.ACCEPTED:
     case ExecutePayloadStatus.SYNCING: {
-      // It's okay to ignore SYNCING status as EL could switch into syncing
-      // 1. On intial startup/restart
-      // 2. When some reorg might have occured and EL doesn't has a parent root
-      //    (observed on devnets)
-      // 3. Because of some unavailable (and potentially invalid) root but there is no way
-      //    of knowing if this is invalid/unavailable. For unavailable block, some proposer
-      //    will (sooner or later) build on the available parent head which will
-      //    eventually win in fork-choice as other validators vote on VALID blocks.
-      // Once EL catches up again and respond VALID, the fork choice will be updated which
-      // will either validate or prune invalid blocks
-      //
-      // When to import such blocks:
-      // From: https://github.com/ethereum/consensus-specs/pull/2844
-      // A block MUST NOT be optimistically imported, unless either of the following
-      // conditions are met:
-      //
-      // 1. Parent of the block has execution
-      // 2. The justified checkpoint has execution enabled
-      // 3. The current slot (as per the system clock) is at least
-      //    SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY ahead of the slot of the block being
-      //    imported.
-
-      const parentRoot = toHexString(block.message.parentRoot);
-      const parentBlock = chain.forkChoice.getBlockHex(parentRoot);
-      const justifiedBlock = chain.forkChoice.getJustifiedBlock();
-
+      // Check if the entire segment was deemed safe or, this block specifically itself if not in
+      // the safeSlotsToImportOptimistically window of current slot, then we can import else
+      // we need to throw and not import his block
       if (
-        !parentBlock ||
-        // Following condition is the !(Not) of the safe import condition
-        (parentBlock.executionStatus === ExecutionStatus.PreMerge &&
-          justifiedBlock.executionStatus === ExecutionStatus.PreMerge &&
-          block.message.slot + opts.safeSlotsToImportOptimistically > chain.clock.currentSlot)
+        !isOptimisticallySafe &&
+        block.message.slot + opts.safeSlotsToImportOptimistically >= chain.clock.currentSlot
       ) {
         throw new BlockError(block, {
           code: BlockErrorCode.EXECUTION_ENGINE_ERROR,
           execStatus: ExecutePayloadStatus.UNSAFE_OPTIMISTIC_STATUS,
-          errorMessage: `not safe to import ${execResult.status} payload within ${opts.safeSlotsToImportOptimistically} of currentSlot, status=${execResult.status}`,
+          errorMessage: `not safe to import ${execResult.status} payload within ${opts.safeSlotsToImportOptimistically} of currentSlot`,
         });
       }
 

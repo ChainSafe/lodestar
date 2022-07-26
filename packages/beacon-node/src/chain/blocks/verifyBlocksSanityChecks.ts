@@ -1,6 +1,6 @@
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {IChainForkConfig} from "@lodestar/config";
-import {IForkChoice} from "@lodestar/fork-choice";
+import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {allForks, Slot} from "@lodestar/types";
 import {toHexString} from "@lodestar/utils";
 import {IBeaconClock} from "../clock/interface.js";
@@ -23,13 +23,14 @@ export function verifyBlocksSanityChecks(
   chain: {forkChoice: IForkChoice; clock: IBeaconClock; config: IChainForkConfig},
   blocks: allForks.SignedBeaconBlock[],
   opts: ImportBlockOpts
-): {relevantBlocks: allForks.SignedBeaconBlock[]; parentSlots: Slot[]} {
+): {relevantBlocks: allForks.SignedBeaconBlock[]; parentSlots: Slot[]; parentBlock: ProtoBlock | null} {
   if (blocks.length === 0) {
     throw Error("Empty partiallyVerifiedBlocks");
   }
 
   const relevantBlocks: allForks.SignedBeaconBlock[] = [];
   const parentSlots: Slot[] = [];
+  let parentBlock: ProtoBlock | null = null;
 
   for (const block of blocks) {
     const blockSlot = block.message.slot;
@@ -57,16 +58,16 @@ export function verifyBlocksSanityChecks(
 
     let parentBlockSlot: Slot;
 
-    // When importing a block segment, only the first NON-IGNORED block must be known to the fork-choice.
     if (relevantBlocks.length > 0) {
       parentBlockSlot = relevantBlocks[relevantBlocks.length - 1].message.slot;
     } else {
-      // Parent is known to the fork-choice
+      // When importing a block segment, only the first NON-IGNORED block must be known to the fork-choice.
       const parentRoot = toHexString(block.message.parentRoot);
-      const parentBlock = chain.forkChoice.getBlockHex(parentRoot);
+      parentBlock = chain.forkChoice.getBlockHex(parentRoot);
       if (!parentBlock) {
         throw new BlockError(block, {code: BlockErrorCode.PARENT_UNKNOWN, parentRoot});
       } else {
+        // Parent is known to the fork-choice
         parentBlockSlot = parentBlock.slot;
       }
     }
@@ -95,5 +96,11 @@ export function verifyBlocksSanityChecks(
     parentSlots.push(parentBlockSlot);
   }
 
-  return {relevantBlocks, parentSlots};
+  // Just assert to be over cautious and for purposes to be more explicit for someone
+  // going through the code segment
+  if (parentBlock === null && relevantBlocks.length > 0) {
+    throw Error(`Internal error, parentBlock should not be null for relevantBlocks=${relevantBlocks.length}`);
+  }
+
+  return {relevantBlocks, parentSlots, parentBlock};
 }

@@ -1,7 +1,7 @@
 import {CachedBeaconStateAllForks, computeEpochAtSlot} from "@lodestar/state-transition";
 import {allForks, bellatrix} from "@lodestar/types";
 import {toHexString} from "@chainsafe/ssz";
-import {IForkChoice, ExecutionStatus} from "@lodestar/fork-choice";
+import {IForkChoice, ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {IChainForkConfig} from "@lodestar/config";
 import {ILogger} from "@lodestar/utils";
 import {IMetrics} from "../../metrics/index.js";
@@ -43,6 +43,7 @@ export type VerifyBlockModules = {
  */
 export async function verifyBlocksInEpoch(
   chain: VerifyBlockModules,
+  parentBlock: ProtoBlock,
   blocks: allForks.SignedBeaconBlock[],
   opts: BlockProcessOpts & ImportBlockOpts
 ): Promise<{
@@ -88,7 +89,7 @@ export async function verifyBlocksInEpoch(
       verifyBlocksSignatures(chain, preState0, blocks, opts),
 
       // Execution payloads
-      verifyBlocksExecutionPayload(chain, blocks, preState0, abortController.signal, opts),
+      verifyBlocksExecutionPayload(chain, parentBlock, blocks, preState0, abortController.signal, opts),
     ]);
 
     if (mergeBlockFound !== null) {
