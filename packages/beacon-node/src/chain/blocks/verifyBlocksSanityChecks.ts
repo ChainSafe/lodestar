@@ -23,21 +23,14 @@ export function verifyBlocksSanityChecks(
   chain: {forkChoice: IForkChoice; clock: IBeaconClock; config: IChainForkConfig},
   blocks: allForks.SignedBeaconBlock[],
   opts: ImportBlockOpts
-): {relevantBlocks: allForks.SignedBeaconBlock[]; parentSlots: Slot[]; parentBlock: ProtoBlock} {
+): {relevantBlocks: allForks.SignedBeaconBlock[]; parentSlots: Slot[]; parentBlock: ProtoBlock | null} {
   if (blocks.length === 0) {
     throw Error("Empty partiallyVerifiedBlocks");
   }
 
   const relevantBlocks: allForks.SignedBeaconBlock[] = [];
   const parentSlots: Slot[] = [];
-
-  // When importing a block segment, only the first NON-IGNORED block must be known to the fork-choice.
-  const firstBlock = blocks[0];
-  const parentRoot = toHexString(firstBlock.message.parentRoot);
-  const parentBlock = chain.forkChoice.getBlockHex(parentRoot);
-  if (!parentBlock) {
-    throw new BlockError(firstBlock, {code: BlockErrorCode.PARENT_UNKNOWN, parentRoot});
-  }
+  let parentBlock: ProtoBlock | null = null;
 
   for (const block of blocks) {
     const blockSlot = block.message.slot;
@@ -68,8 +61,15 @@ export function verifyBlocksSanityChecks(
     if (relevantBlocks.length > 0) {
       parentBlockSlot = relevantBlocks[relevantBlocks.length - 1].message.slot;
     } else {
-      // Parent is known to the fork-choice
-      parentBlockSlot = parentBlock.slot;
+      // When importing a block segment, only the first NON-IGNORED block must be known to the fork-choice.
+      const parentRoot = toHexString(block.message.parentRoot);
+      parentBlock = chain.forkChoice.getBlockHex(parentRoot);
+      if (!parentBlock) {
+        throw new BlockError(block, {code: BlockErrorCode.PARENT_UNKNOWN, parentRoot});
+      } else {
+        // Parent is known to the fork-choice
+        parentBlockSlot = parentBlock.slot;
+      }
     }
 
     // Block not in the future, also checks for infinity
@@ -94,6 +94,12 @@ export function verifyBlocksSanityChecks(
     // Block is relevant
     relevantBlocks.push(block);
     parentSlots.push(parentBlockSlot);
+  }
+
+  // Just assert to be over cautious and for purposes to be more explicit for someone
+  // going through the code segment
+  if (parentBlock === null && relevantBlocks.length > 0) {
+    throw Error(`Internal error, parentBlock should not be null for relevantBlocks=${relevantBlocks.length}`);
   }
 
   return {relevantBlocks, parentSlots, parentBlock};

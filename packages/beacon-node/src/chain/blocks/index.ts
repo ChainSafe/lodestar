@@ -66,7 +66,8 @@ export async function processBlocks(
     const {relevantBlocks, parentSlots, parentBlock} = verifyBlocksSanityChecks(chain, blocks, opts);
 
     // No relevant blocks, skip verifyBlocksInEpoch()
-    if (relevantBlocks.length === 0) {
+    if (relevantBlocks.length === 0 || parentBlock === null) {
+      // parentBlock can only be null if relevantBlocks are empty
       return;
     }
 

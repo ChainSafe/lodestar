@@ -126,6 +126,7 @@ export async function verifyBlocksExecutionPayload(
     if (executionStatus !== ExecutionStatus.PreMerge) {
       isOptimisticallySafe = true;
     }
+    executionStatuses.push(executionStatus);
 
     const isMergeTransitionBlock =
       isBellatrixStateType(preState0) &&
