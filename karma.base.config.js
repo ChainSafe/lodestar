@@ -7,6 +7,6 @@ module.exports = {
     "test/**/*.ts": ["webpack"],
   },
   reporters: ["spec"],
-  browsers: ["ChromeHeadless"],
+  browsers: ["ChromeHeadless", "Electron", "FirefoxHeadless"],
   singleRun: true,
 };
