@@ -1,7 +1,7 @@
 module.exports = {
   basePath: "",
   frameworks: ["webpack", "mocha", "chai"],
-  files: ["test/unit/**/*.test.ts"],
+  files: ["test/unit/**/!(*.node).test.ts"],
   exclude: [],
   preprocessors: {
     "test/**/*.ts": ["webpack"],
