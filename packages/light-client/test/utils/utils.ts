@@ -168,7 +168,9 @@ export function computeLightclientUpdate(config: IBeaconConfig, period: SyncPeri
 /**
  * Creates a LightclientSnapshotWithProof that passes validation
  */
-export function computeLightClientSnapshot(period: SyncPeriod): {
+export function computeLightClientSnapshot(
+  period: SyncPeriod
+): {
   snapshot: routes.lightclient.LightclientSnapshotWithProof;
   checkpointRoot: Uint8Array;
 } {
