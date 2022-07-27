@@ -72,6 +72,8 @@ jobs:
         run: yarn test:unit
       - name: Upload coverage data
         run: yarn coverage
+      - name: Browser tests
+        run: yarn test:browsers
       - name: E2e tests
         run: yarn test:e2e
         env:
