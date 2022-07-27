@@ -1,8 +1,8 @@
-import webpack from "webpack";
-import ResolveTypeScriptPlugin from "resolve-typescript-plugin";
+const webpack = require("webpack");
+const ResolveTypeScriptPlugin = require("resolve-typescript-plugin");
 
-export default {
-  mode: "development",
+module.exports = {
+  mode: "production",
   target: "web",
   experiments: {
     topLevelAwait: true,
@@ -48,12 +48,16 @@ export default {
       http: require.resolve("stream-http"),
       https: require.resolve("https-browserify"),
       "@chainsafe/blst": false,
+      process: false,
       fs: false,
       os: false,
       zlib: false,
       stream: false,
       crypto: false,
       url: false,
+    },
+    alias: {
+      process: "process/browser.js",
     },
     extensions: [".ts", ".js"],
   },

@@ -52,10 +52,7 @@
     "lint:fix": "yarn run lint --fix",
     "pretest": "yarn run check-types",
     "test": "yarn test:unit && yarn test:e2e",
-    "test:browser": "yarn test:browser:electron && yarn test:browser:chrome && yarn test:browser:firefox",
-    "test:browser:electron": "yarn run cypress run --browser electron",
-    "test:browser:chrome": "yarn run cypress run --browser chrome",
-    "test:browser:firefox": "yarn run cypress run --browser firefox",
+    "test:browsers": "yarn karma start karma.config.cjs",
     "test:unit": "LODESTAR_PRESET=minimal nyc --cache-dir .nyc_output/.cache -e .ts mocha 'test/unit/**/*.test.ts'",
     "check-readme": "typescript-docs-verifier"
   },
@@ -77,5 +74,8 @@
     "beacon",
     "light-client",
     "blockchain"
-  ]
+  ],
+  "devDependencies": {
+    "mockttp": "^3.2.2"
+  }
 }

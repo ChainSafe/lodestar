@@ -1,5 +1,5 @@
 import {PointFormat, PublicKey, SecretKey} from "@chainsafe/bls/types";
-import bls from "@chainsafe/bls";
+import bls from "@chainsafe/bls/switchable";
 import {routes} from "@lodestar/api";
 import {IBeaconConfig} from "@lodestar/config";
 import {
@@ -15,9 +15,9 @@ import {
 import {altair, phase0, Slot, ssz, SyncPeriod} from "@lodestar/types";
 import {hash} from "@chainsafe/persistent-merkle-tree";
 import {BitArray, fromHexString} from "@chainsafe/ssz";
-import {SyncCommitteeFast} from "../src/types.js";
-import {computeSigningRoot} from "../src/utils/domain.js";
-import {getLcLoggerConsole} from "../src/utils/logger.js";
+import {SyncCommitteeFast} from "../../src/types.js";
+import {computeSigningRoot} from "../../src/utils/domain.js";
+import {getLcLoggerConsole} from "../../src/utils/logger.js";
 
 const CURRENT_SYNC_COMMITTEE_INDEX = 22;
 const CURRENT_SYNC_COMMITTEE_DEPTH = 5;
@@ -168,9 +168,10 @@ export function computeLightclientUpdate(config: IBeaconConfig, period: SyncPeri
 /**
  * Creates a LightclientSnapshotWithProof that passes validation
  */
-export function computeLightClientSnapshot(
-  period: SyncPeriod
-): {snapshot: routes.lightclient.LightclientSnapshotWithProof; checkpointRoot: Uint8Array} {
+export function computeLightClientSnapshot(period: SyncPeriod): {
+  snapshot: routes.lightclient.LightclientSnapshotWithProof;
+  checkpointRoot: Uint8Array;
+} {
   const currentSyncCommittee = getInteropSyncCommittee(period).syncCommittee;
 
   const {root: headerStateRoot, proof: currentSyncCommitteeBranch} = computeMerkleBranch(

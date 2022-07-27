@@ -1,4 +1,5 @@
 import {expect} from "chai";
+import {init} from "@chainsafe/bls/switchable";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {BeaconStateAllForks, BeaconStateAltair} from "@lodestar/state-transition";
 import {phase0, ssz} from "@lodestar/types";
@@ -7,7 +8,8 @@ import {chainConfig as chainConfigDef} from "@lodestar/config/default";
 import {createIBeaconConfig, IChainConfig} from "@lodestar/config";
 import {toHexString} from "@chainsafe/ssz";
 import {Lightclient, LightclientEvent} from "../../src/index.js";
-import {EventsServerApi, LightclientServerApi, ServerOpts, startServer} from "../lightclientApiServer.js";
+import {ServerOpts, startServer, LightclientServerApiMock} from "../mocks/LightclientServerApiMock.js";
+import {EventsServerApiMock} from "../mocks/EventsServerApiMock.js";
 import {
   computeLightclientUpdate,
   computeLightClientSnapshot,
@@ -16,12 +18,20 @@ import {
   committeeUpdateToLatestHeadUpdate,
   committeeUpdateToLatestFinalizedHeadUpdate,
   lastInMap,
-} from "../utils.js";
+} from "../utils/utils.js";
+import {isNode} from "../../src/utils/utils.js";
 
 const SOME_HASH = Buffer.alloc(32, 0xff);
 
-describe("Lightclient sync", () => {
+describe("sync", () => {
   const afterEachCbs: (() => Promise<unknown> | unknown)[] = [];
+
+  before("init bls", async () => {
+    // This process has to be done manually because of an issue in Karma runner
+    // https://github.com/karma-runner/karma/issues/3804
+    await init(isNode ? "blst-native" : "herumi");
+  });
+
   afterEach(async () => {
     await Promise.all(afterEachCbs);
     afterEachCbs.length = 0;
@@ -45,15 +55,14 @@ describe("Lightclient sync", () => {
     const config = createIBeaconConfig(chainConfig, genesisValidatorsRoot);
 
     // Create server impl mock backed
-    const lightclientServerApi = new LightclientServerApi();
-    const eventsServerApi = new EventsServerApi();
+    const lightclientServerApi = new LightclientServerApiMock();
+    const eventsServerApi = new EventsServerApiMock();
     // Start server
     const opts: ServerOpts = {host: "127.0.0.1", port: 15000};
-    const server = await startServer(opts, config, ({
+    await startServer(opts, config, ({
       lightclient: lightclientServerApi,
       events: eventsServerApi,
     } as Partial<Api>) as Api);
-    afterEachCbs.push(() => server.close());
 
     // Populate initial snapshot
     const {snapshot, checkpointRoot} = computeLightClientSnapshot(initialPeriod);
@@ -72,7 +81,7 @@ describe("Lightclient sync", () => {
       lastInMap(lightclientServerApi.updates)
     );
 
-    // Initilize from snapshot
+    // Initialize from snapshot
     const lightclient = await Lightclient.initializeFromCheckpointRoot({
       config,
       logger: testLogger,

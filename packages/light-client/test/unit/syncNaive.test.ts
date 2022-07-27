@@ -1,26 +1,29 @@
 import {expect} from "chai";
-import bls from "@chainsafe/bls";
-import {altair, phase0, Root, ssz, SyncPeriod} from "@lodestar/types";
-import {BeaconStateAltair} from "@lodestar/state-transition";
-import {toHexString} from "@chainsafe/ssz";
-import {chainConfig} from "@lodestar/config/default";
+import bls, {init} from "@chainsafe/bls/switchable";
 import {createIBeaconConfig} from "@lodestar/config";
+import {chainConfig} from "@lodestar/config/default";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {processLightClientUpdate} from "../naive/update.js";
-import {prepareUpdateNaive, IBeaconChainLc} from "../prepareUpdateNaive.js";
-import {getInteropSyncCommittee, getSyncAggregateSigningRoot, SyncCommitteeKeys} from "../utils.js";
+import {altair, ssz, SyncPeriod} from "@lodestar/types";
 import {LightClientStoreFast} from "../../src/types.js";
+import {BeaconChainLcMock} from "../mocks/BeaconChainLcMock.js";
+import {processLightClientUpdate} from "../naive/update.js";
+import {IBeaconChainLc, prepareUpdateNaive} from "../utils/prepareUpdateNaive.js";
+import {getInteropSyncCommittee, getSyncAggregateSigningRoot, SyncCommitteeKeys} from "../utils/utils.js";
+import {isNode} from "../../src/utils/utils.js";
 
-/* eslint-disable @typescript-eslint/naming-convention */
+function getSyncCommittee(
+  syncCommitteesKeys: Map<SyncPeriod, SyncCommitteeKeys>,
+  period: SyncPeriod
+): SyncCommitteeKeys {
+  let syncCommitteeKeys = syncCommitteesKeys.get(period);
+  if (!syncCommitteeKeys) {
+    syncCommitteeKeys = getInteropSyncCommittee(period);
+    syncCommitteesKeys.set(period, syncCommitteeKeys);
+  }
+  return syncCommitteeKeys;
+}
 
-describe("Lightclient flow", () => {
-  before("BLS sanity check", () => {
-    const sk = bls.SecretKey.fromBytes(Buffer.alloc(32, 1));
-    expect(sk.toPublicKey().toHex()).to.equal(
-      "0xaa1a1c26055a329817a5759d877a2795f9499b97d6056edde0eea39512f24e8bc874b4471f0501127abb1ea0d9f68ac1"
-    );
-  });
-
+describe("syncNaive", () => {
   // Fixed params
   const genValiRoot = Buffer.alloc(32, 9);
   const config = createIBeaconConfig(chainConfig, genValiRoot);
@@ -29,14 +32,18 @@ describe("Lightclient flow", () => {
   let updateData: {chain: IBeaconChainLc; blockWithSyncAggregate: altair.BeaconBlock};
   let update: altair.LightClientUpdate;
 
-  function getSyncCommittee(period: SyncPeriod): SyncCommitteeKeys {
-    let syncCommitteeKeys = syncCommitteesKeys.get(period);
-    if (!syncCommitteeKeys) {
-      syncCommitteeKeys = getInteropSyncCommittee(period);
-      syncCommitteesKeys.set(period, syncCommitteeKeys);
-    }
-    return syncCommitteeKeys;
-  }
+  before("init bls", async () => {
+    // This process has to be done manually because of an issue in Karma runner
+    // https://github.com/karma-runner/karma/issues/3804
+    await init(isNode ? "blst-native" : "herumi");
+  });
+
+  before("BLS sanity check", () => {
+    const sk = bls.SecretKey.fromBytes(Buffer.alloc(32, 1));
+    expect(sk.toPublicKey().toHex()).to.equal(
+      "0xaa1a1c26055a329817a5759d877a2795f9499b97d6056edde0eea39512f24e8bc874b4471f0501127abb1ea0d9f68ac1"
+    );
+  });
 
   before("Generate data for prepareUpdate", () => {
     // Create a state that has as nextSyncCommittee the committee 2
@@ -44,7 +51,7 @@ describe("Lightclient flow", () => {
     const headerBlockSlot = finalizedBlockSlot + 1;
 
     const finalizedState = ssz.altair.BeaconState.defaultValue();
-    finalizedState.nextSyncCommittee = getSyncCommittee(0).syncCommittee;
+    finalizedState.nextSyncCommittee = getSyncCommittee(syncCommitteesKeys, 0).syncCommittee;
     const finalizedBlockHeader = ssz.phase0.BeaconBlockHeader.defaultValue();
     finalizedBlockHeader.slot = finalizedBlockSlot;
     finalizedBlockHeader.stateRoot = ssz.altair.BeaconState.hashTreeRoot(finalizedState);
@@ -67,11 +74,11 @@ describe("Lightclient flow", () => {
     // Create a signature from current committee to "attest" syncAttestedBlockHeader
     const signingRoot = getSyncAggregateSigningRoot(config, syncAttestedBlockHeader);
     const blockWithSyncAggregate = ssz.altair.BeaconBlock.defaultValue();
-    blockWithSyncAggregate.body.syncAggregate = getSyncCommittee(0).signAndAggregate(signingRoot);
+    blockWithSyncAggregate.body.syncAggregate = getSyncCommittee(syncCommitteesKeys, 0).signAndAggregate(signingRoot);
     blockWithSyncAggregate.stateRoot = ssz.altair.BeaconState.hashTreeRoot(stateWithSyncAggregate);
 
     // Simulate BeaconChain module with a memory map of blocks and states
-    const chainMock = new MockBeaconChainLc(
+    const chainMock = new BeaconChainLcMock(
       [finalizedBlockHeader, syncAttestedBlockHeader],
       [finalizedState, syncAttestedState, stateWithSyncAggregate]
     );
@@ -79,53 +86,24 @@ describe("Lightclient flow", () => {
     updateData = {chain: chainMock, blockWithSyncAggregate};
   });
 
-  it("Prepare altair update", async () => {
+  it("should prepare altair update", async () => {
     if (updateData === undefined) throw Error("Prev test failed");
 
     update = await prepareUpdateNaive(updateData.chain, updateData.blockWithSyncAggregate);
   });
 
-  it("Process altair update", () => {
+  it("should process altair update", () => {
     if (update === undefined) throw Error("Prev test failed");
 
     const store: LightClientStoreFast = {
       bestUpdates: new Map<SyncPeriod, altair.LightClientUpdate>(),
       snapshot: {
         header: ssz.phase0.BeaconBlockHeader.defaultValue(),
-        currentSyncCommittee: getSyncCommittee(0).syncCommitteeFast,
-        nextSyncCommittee: getSyncCommittee(0).syncCommitteeFast,
+        currentSyncCommittee: getSyncCommittee(syncCommitteesKeys, 0).syncCommitteeFast,
+        nextSyncCommittee: getSyncCommittee(syncCommitteesKeys, 0).syncCommitteeFast,
       },
     };
 
-    processLightClientUpdate(config, store, update, currentSlot);
+    expect(() => processLightClientUpdate(config, store, update, currentSlot)).to.not.throw();
   });
 });
-
-/**
- * Mock BeaconChainLc interface that returns the blockHeaders and states given at the constructor.
- * Throws for any unknown root
- */
-class MockBeaconChainLc implements IBeaconChainLc {
-  private readonly blockHeaders = new Map<string, phase0.BeaconBlockHeader>();
-  private readonly states = new Map<string, altair.BeaconState>();
-
-  constructor(blockHeaders: phase0.BeaconBlockHeader[], states: altair.BeaconState[]) {
-    for (const blockHeader of blockHeaders)
-      this.blockHeaders.set(toHexString(ssz.phase0.BeaconBlockHeader.hashTreeRoot(blockHeader)), blockHeader);
-    for (const state of states) this.states.set(toHexString(ssz.altair.BeaconState.hashTreeRoot(state)), state);
-  }
-
-  async getBlockHeaderByRoot(blockRoot: Root): Promise<phase0.BeaconBlockHeader> {
-    const rootHex = toHexString(blockRoot);
-    const blockHeader = this.blockHeaders.get(rootHex);
-    if (!blockHeader) throw Error(`No blockHeader for ${rootHex}`);
-    return blockHeader;
-  }
-
-  async getStateByRoot(stateRoot: Root): Promise<BeaconStateAltair> {
-    const rootHex = toHexString(stateRoot);
-    const state = this.states.get(rootHex);
-    if (!state) throw Error(`No state for ${rootHex}`);
-    return ssz.altair.BeaconState.toViewDU(state);
-  }
-}
