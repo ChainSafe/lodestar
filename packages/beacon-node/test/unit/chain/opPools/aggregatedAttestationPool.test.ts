@@ -5,10 +5,10 @@ import type {SecretKey} from "@chainsafe/bls/types";
 import bls from "@chainsafe/bls";
 import {BitArray, fromHexString} from "@chainsafe/ssz";
 import {createIChainForkConfig, defaultChainConfig} from "@lodestar/config";
-import {CachedBeaconStateAllForks, computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ssz, phase0} from "@lodestar/types";
-import {ForkChoice, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
+import {ForkChoice, IForkChoice} from "@lodestar/fork-choice";
 import {
   AggregatedAttestationPool,
   aggregateInto,
@@ -71,17 +71,13 @@ describe("AggregatedAttestationPool", function () {
     it(name, function () {
       const aggregationBits = new BitArray(new Uint8Array(attestingBits), 8);
       pool.add({...attestation, aggregationBits}, aggregationBits.getTrueBitIndexes().length, committee);
-      forkchoiceStub.iterateAncestorBlocks.returns(
-        (function* blockGen(): IterableIterator<ProtoBlock> {
-          yield {slot: computeStartSlotAtEpoch(currentEpoch - 1) - 1, blockRoot: ZERO_HASH_HEX} as ProtoBlock;
-        })()
-      );
+      forkchoiceStub.findAttesterDependentRoot.returns(ZERO_HASH_HEX);
       expect(pool.getAttestationsForBlock(forkchoiceStub, altairState).length > 0).to.equal(
         isReturned,
         "Wrong attestation isReturned"
       );
       expect(
-        forkchoiceStub.iterateAncestorBlocks.calledOnce,
+        forkchoiceStub.findAttesterDependentRoot.calledOnce,
         "forkchoice should be called to check pivot block"
       ).to.be.true;
     });
@@ -103,17 +99,13 @@ describe("AggregatedAttestationPool", function () {
     // all attesters are not seen
     const attestingIndices = [2, 3];
     pool.add(attestation, attestingIndices.length, committee);
-    forkchoiceStub.iterateAncestorBlocks.returns(
-      (function* blockGen(): IterableIterator<ProtoBlock> {
-        yield {slot: computeStartSlotAtEpoch(currentEpoch - 1) - 1, blockRoot: "0xWeird"} as ProtoBlock;
-      })()
-    );
+    forkchoiceStub.findAttesterDependentRoot.returns("0xWeird");
     expect(pool.getAttestationsForBlock(forkchoiceStub, altairState)).to.be.deep.equal(
       [],
       "no attestation since incorrect pivot block root"
     );
-    expect(forkchoiceStub.iterateAncestorBlocks.calledOnce, "forkchoice should be called to check pivot block").to.be
-      .true;
+    expect(forkchoiceStub.findAttesterDependentRoot.calledOnce, "forkchoice should be called to check pivot block").to
+      .be.true;
   });
 });
 

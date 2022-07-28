@@ -439,14 +439,7 @@ export function isValidAttestationData(
   // pivot block is the same as the current state's pivot block. If it is, then the
   // attestation's shuffling is the same as the current state's.
   // To account for skipped slots, find the first block at *or before* the pivot slot.
-  let pivotBlockRoot = "";
-  for (const protoBlock of forkChoice.iterateAncestorBlocks(toHexString(data.beaconBlockRoot))) {
-    if (protoBlock.slot <= pivotSlot) {
-      pivotBlockRoot = protoBlock.blockRoot;
-      break;
-    }
-  }
-
+  const pivotBlockRoot = forkChoice.findAttesterDependentRoot(data.beaconBlockRoot);
   return pivotBlockRoot === statePivotBlockRoot;
 }
 
