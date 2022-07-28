@@ -18,7 +18,8 @@ import {isNode} from "../../src/utils/utils.js";
 
 describe("validation", function () {
   // In browser test this process is taking more time than default 2000ms
-  this.timeout(10000);
+  // specially on the CI
+  this.timeout(15000);
 
   const genValiRoot = Buffer.alloc(32, 9);
   const config = createIBeaconConfig(chainConfig, genValiRoot);
