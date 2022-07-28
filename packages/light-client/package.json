@@ -74,8 +74,5 @@
     "beacon",
     "light-client",
     "blockchain"
-  ],
-  "devDependencies": {
-    "mockttp": "^3.2.2"
-  }
+  ]
 }
