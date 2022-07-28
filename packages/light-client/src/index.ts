@@ -189,6 +189,12 @@ export class Lightclient {
     genesisData: GenesisData;
     checkpointRoot: phase0.Checkpoint["root"];
   }): Promise<Lightclient> {
+    // Initialize the BLS implementation. This may requires intializing the WebAssembly instance
+    // so why it's a an async process. This should be initialized once before any bls operations.
+    // This process has to be done manually because of an issue in Karma runner
+    // https://github.com/karma-runner/karma/issues/3804
+    await initBls(isNode ? "blst-native" : "herumi");
+
     const api = getClient({baseUrl: beaconApiUrl}, {config});
 
     // Fetch bootstrap state with proof at the trusted block root
@@ -252,6 +258,12 @@ export class Lightclient {
   }
 
   async sync(fromPeriod: SyncPeriod, toPeriod: SyncPeriod): Promise<void> {
+    // Initialize the BLS implementation. This may requires intializing the WebAssembly instance
+    // so why it's a an async process. This should be initialized once before any bls operations.
+    // This process has to be done manually because of an issue in Karma runner
+    // https://github.com/karma-runner/karma/issues/3804
+    await initBls(isNode ? "blst-native" : "herumi");
+
     const periodRanges = chunkifyInclusiveRange(fromPeriod, toPeriod, MAX_PERIODS_PER_REQUEST);
 
     for (const [fromPeriodRng, toPeriodRng] of periodRanges) {
