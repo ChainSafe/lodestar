@@ -7,6 +7,12 @@ module.exports = {
     "test/**/*.ts": ["webpack"],
   },
   reporters: ["spec"],
-  browsers: ["ChromeHeadless", "Electron", "FirefoxHeadless"],
+  browsers: ["ChromeHeadlessCI", "Electron", "FirefoxHeadless"],
+  customLaunchers: {
+    ChromeHeadlessCI: {
+      base: "ChromeHeadless",
+      flags: ["--no-sandbox"],
+    },
+  },
   singleRun: true,
 };
