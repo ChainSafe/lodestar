@@ -16,7 +16,10 @@ import {LightClientSnapshotFast, SyncCommitteeFast} from "../../src/types.js";
 import {defaultBeaconBlockHeader, getSyncAggregateSigningRoot, signAndAggregate} from "../utils/utils.js";
 import {isNode} from "../../src/utils/utils.js";
 
-describe("validation", () => {
+describe("validation", function () {
+  // In browser test this process is taking more time than default 2000ms
+  this.timeout(10000);
+
   const genValiRoot = Buffer.alloc(32, 9);
   const config = createIBeaconConfig(chainConfig, genValiRoot);
 
@@ -30,9 +33,6 @@ describe("validation", () => {
   });
 
   before("prepare data", function () {
-    // In browser test this process is taking more time than default 2000ms
-    this.timeout(10000);
-
     // Update slot must > snapshot slot
     // updatePeriod must == snapshotPeriod + 1
     const snapshotHeaderSlot = 1;

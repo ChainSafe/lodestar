@@ -8,7 +8,7 @@ import {chainConfig as chainConfigDef} from "@lodestar/config/default";
 import {createIBeaconConfig, IChainConfig} from "@lodestar/config";
 import {toHexString} from "@chainsafe/ssz";
 import {Lightclient, LightclientEvent} from "../../src/index.js";
-import {ServerOpts, startServer, LightclientServerApiMock} from "../mocks/LightclientServerApiMock.js";
+import {LightclientServerApiMock} from "../mocks/LightclientServerApiMock.js";
 import {EventsServerApiMock} from "../mocks/EventsServerApiMock.js";
 import {
   computeLightclientUpdate,
@@ -19,6 +19,7 @@ import {
   committeeUpdateToLatestFinalizedHeadUpdate,
   lastInMap,
 } from "../utils/utils.js";
+import {startServer, ServerOpts} from "../utils/server.js";
 import {isNode} from "../../src/utils/utils.js";
 
 const SOME_HASH = Buffer.alloc(32, 0xff);

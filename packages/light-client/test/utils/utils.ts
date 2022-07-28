@@ -1,20 +1,20 @@
-import {PointFormat, PublicKey, SecretKey} from "@chainsafe/bls/types";
 import bls from "@chainsafe/bls/switchable";
+import {PointFormat, PublicKey, SecretKey} from "@chainsafe/bls/types";
+import {hash} from "@chainsafe/persistent-merkle-tree";
+import {BitArray, fromHexString} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {IBeaconConfig} from "@lodestar/config";
 import {
   DOMAIN_SYNC_COMMITTEE,
   EPOCHS_PER_SYNC_COMMITTEE_PERIOD,
-  FINALIZED_ROOT_INDEX,
   FINALIZED_ROOT_DEPTH,
-  NEXT_SYNC_COMMITTEE_INDEX,
+  FINALIZED_ROOT_INDEX,
   NEXT_SYNC_COMMITTEE_DEPTH,
+  NEXT_SYNC_COMMITTEE_INDEX,
   SLOTS_PER_EPOCH,
   SYNC_COMMITTEE_SIZE,
 } from "@lodestar/params";
 import {altair, phase0, Slot, ssz, SyncPeriod} from "@lodestar/types";
-import {hash} from "@chainsafe/persistent-merkle-tree";
-import {BitArray, fromHexString} from "@chainsafe/ssz";
 import {SyncCommitteeFast} from "../../src/types.js";
 import {computeSigningRoot} from "../../src/utils/domain.js";
 import {getLcLoggerConsole} from "../../src/utils/logger.js";

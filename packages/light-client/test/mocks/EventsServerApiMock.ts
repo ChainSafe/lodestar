@@ -22,7 +22,6 @@ export class EventsServerApiMock implements routes.events.Api {
   }
 
   eventstream(topics: routes.events.EventType[], signal: AbortSignal, onEvent: OnEvent): void {
-    console.log("eventstream:", topics, signal, onEvent);
     for (const topic of typeof topics === "string" ? [topics] : topics) {
       let onEvents = this.onEventsByTopic.get(topic);
       if (!onEvents) {

@@ -6,7 +6,7 @@ import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/param
 import {altair, ssz, SyncPeriod} from "@lodestar/types";
 import {LightClientStoreFast} from "../../src/types.js";
 import {BeaconChainLcMock} from "../mocks/BeaconChainLcMock.js";
-import {processLightClientUpdate} from "../naive/update.js";
+import {processLightClientUpdate} from "../utils/naive/update.js";
 import {IBeaconChainLc, prepareUpdateNaive} from "../utils/prepareUpdateNaive.js";
 import {getInteropSyncCommittee, getSyncAggregateSigningRoot, SyncCommitteeKeys} from "../utils/utils.js";
 import {isNode} from "../../src/utils/utils.js";
@@ -23,7 +23,10 @@ function getSyncCommittee(
   return syncCommitteeKeys;
 }
 
-describe("syncNaive", () => {
+describe("syncNaive", function () {
+  // In browser test this process is taking more time than default 2000ms
+  this.timeout(10000);
+
   // Fixed params
   const genValiRoot = Buffer.alloc(32, 9);
   const config = createIBeaconConfig(chainConfig, genValiRoot);
