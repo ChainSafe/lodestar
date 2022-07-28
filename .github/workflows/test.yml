@@ -73,7 +73,10 @@ jobs:
       - name: Upload coverage data
         run: yarn coverage
       - name: Browser tests
-        run: yarn test:browsers
+        run: |
+          export DISPLAY=':99.0'
+          Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
+          yarn test:browsers
       - name: E2e tests
         run: yarn test:e2e
         env:
