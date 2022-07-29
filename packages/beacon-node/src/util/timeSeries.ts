@@ -31,6 +31,18 @@ export class TimeSeries {
   clear(): void {
     this.points = [];
   }
+
+  numPoints(): number {
+    return this.points.length;
+  }
+
+  lastUpdate(): Point {
+    if (this.points.length === 0) {
+      throw Error("No update present");
+    }
+    const [time, value] = this.points[this.points.length - 1];
+    return [Math.floor((time + this.startTimeSec) * 1000), value];
+  }
 }
 
 /**

@@ -59,14 +59,34 @@ export async function runNodeNotifier({
       const peersRow = `peers: ${connectedPeerCount}`;
       const finalizedCheckpointRow = `finalized: ${prettyBytes(finalizedRoot)}:${finalizedEpoch}`;
       const headRow = `head: ${headInfo.slot} ${prettyBytes(headInfo.blockRoot)}`;
-      const executionInfo =
-        isBellatrixCachedStateType(headState) && isMergeTransitionComplete(headState)
-          ? [
-              `execution: ${headInfo.executionStatus.toLowerCase()}(${prettyBytes(
-                headInfo.executionPayloadBlockHash ?? "empty"
-              )})`,
-            ]
-          : [];
+
+      let executionInfo: string[];
+      let mergeInfo: string[];
+      if (clockEpoch >= config.BELLATRIX_FORK_EPOCH) {
+        if (isBellatrixCachedStateType(headState) && isMergeTransitionComplete(headState)) {
+          executionInfo = [
+            `execution: ${headInfo.executionStatus.toLowerCase()}(${prettyBytes(
+              headInfo.executionPayloadBlockHash ?? "empty"
+            )})`,
+          ];
+          mergeInfo = [];
+        } else {
+          // pre-merge
+          executionInfo = [`execution: ${headInfo.executionStatus.toLowerCase()}`];
+          const mergeData = chain.eth1.getMergeTimeLeft();
+          if (mergeData !== null) {
+            mergeInfo = [
+              `td: ${mergeData.lastUpdate.td}(${prettyTimeDiff(Date.now() - mergeData.lastUpdate.time)} ago)`,
+              `merge in: ${prettyTimeDiff(1000 * mergeData.mergeSecondsLeft)}`,
+            ];
+          } else {
+            mergeInfo = [];
+          }
+        }
+      } else {
+        executionInfo = [];
+        mergeInfo = [];
+      }
 
       // Give info about empty slots if head < clock
       const skippedSlots = clockSlot - headInfo.slot;
@@ -90,19 +110,36 @@ export async function runNodeNotifier({
             ...executionInfo,
             finalizedCheckpointRow,
             peersRow,
+            ...mergeInfo,
           ];
           break;
         }
 
         case SyncState.Synced: {
           // Synced - clock - head - finalized - peers
-          nodeState = ["Synced", clockSlotRow, headRow, ...executionInfo, finalizedCheckpointRow, peersRow];
+          nodeState = [
+            "Synced",
+            clockSlotRow,
+            headRow,
+            ...executionInfo,
+            finalizedCheckpointRow,
+            peersRow,
+            ...mergeInfo,
+          ];
           break;
         }
 
         case SyncState.Stalled: {
           // Searching peers - peers - head - finalized - clock
-          nodeState = ["Searching peers", peersRow, clockSlotRow, headRow, ...executionInfo, finalizedCheckpointRow];
+          nodeState = [
+            "Searching peers",
+            peersRow,
+            clockSlotRow,
+            headRow,
+            ...executionInfo,
+            finalizedCheckpointRow,
+            ...mergeInfo,
+          ];
         }
       }
       logger.info(nodeState.join(" - "));

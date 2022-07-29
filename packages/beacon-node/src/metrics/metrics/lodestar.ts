@@ -1052,6 +1052,52 @@ export function createLodestarMetrics(
         name: "lodestar_eth1_follow_distance_dynamic",
         help: "Eth1 dynamic follow distance changed by the deposit tracker if blocks are slow",
       }),
+
+      // Merge Search info
+      eth1MergeStatus: register.gauge<"terminalTotalDifficulty">({
+        name: "lodestar_eth1_merge_status",
+        help: "Eth1 Merge Status 0 PRE_MERGE 1 SEARCHING 2 FOUND 3 POST_MERGE",
+        labelNames: ["terminalTotalDifficulty"],
+      }),
+      eth1MergeBlockStatus: register.gauge({
+        name: "lodestar_eth1_merge_block_status",
+        help: "Eth1 Merge Status 0 NOT_STARTED 1 SEARCHING 2 FOUND",
+      }),
+      eth1MergeTTD: register.gauge({
+        name: "lodestar_eth1_merge_ttd",
+        help: "TTD set for the merge",
+      }),
+
+      // Latest block details
+      eth1LatestBlockTD: register.gauge({
+        name: "lodestar_eth1_latest_block_ttd",
+        help: "Eth1 latest Block ttd",
+      }),
+      eth1LatestBlockNumber: register.gauge({
+        name: "lodestar_eth1_latest_block_number",
+        help: "Eth1 latest Block Number",
+      }),
+
+      // Last searched block details
+      eth1MergeLastSearchedBlockNumber: register.gauge({
+        name: "lodestar_eth1_merge_last_searched_block_number",
+        help: "Last searched block number",
+      }),
+      eth1MergeLastSearchedBlockTD: register.gauge({
+        name: "lodestar_eth1_merge_last_searched_block_td",
+        help: "Last searched block td",
+      }),
+
+      // Merge details
+      eth1MergeBlockDetails: register.gauge<"terminalBlockHash" | "terminalBlockNumber" | "terminalBlockTD">({
+        name: "lodestar_eth1_merge_block_details",
+        help: "If found then 1 with terminal block details",
+        labelNames: ["terminalBlockHash", "terminalBlockNumber", "terminalBlockTD"],
+      }),
+      eth1TimeLeftForMerge: register.gauge({
+        name: "lodestar_eth1_time_left_for_merge",
+        help: "Eth1 time left for merge",
+      }),
     },
 
     eth1HttpClient: {
