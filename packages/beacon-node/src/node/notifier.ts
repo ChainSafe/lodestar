@@ -32,6 +32,11 @@ export async function runNodeNotifier({
   const SLOTS_PER_SYNC_COMMITTEE_PERIOD = SLOTS_PER_EPOCH * EPOCHS_PER_SYNC_COMMITTEE_PERIOD;
   const timeSeries = new TimeSeries({maxPoints: 10});
   let hasLowPeerCount = false; // Only log once
+  /**
+   * Should the td info for impending merge be shown in expanded form, once flipped on
+   * should keep showing in expanded form
+   */
+  let expandedTDInfo = false;
 
   try {
     while (!signal.aborted) {
@@ -75,10 +80,28 @@ export async function runNodeNotifier({
           executionInfo = [`execution: ${headInfo.executionStatus.toLowerCase()}`];
           const mergeData = chain.eth1.getMergeUpdate();
           if (mergeData !== null) {
-            const lastUpdate =
-              mergeData.lastUpdate !== null
-                ? `${mergeData.lastUpdate.td}(${prettyTimeDiff(Date.now() - mergeData.lastUpdate.time)} ago)`
-                : "?";
+            // See if we need to expand the td info
+            let lastUpdate;
+            if (mergeData.lastUpdate !== null) {
+              const lastUpdateTime = `${prettyTimeDiff(Date.now() - mergeData.lastUpdate.time)} ago`;
+              // This small trick gives us the %age in two decimal places
+              const mergeCompletePercentage =
+                Math.floor(Number((mergeData.lastUpdate.td * BigInt(10000)) / config.TERMINAL_TOTAL_DIFFICULTY)) / 100;
+              if (expandedTDInfo === false) {
+                // Either time to merge < 12 hours, or we are at 99% merge resolution
+                expandedTDInfo =
+                  (mergeData.mergeSecondsLeft !== null && mergeData.mergeSecondsLeft < 12 * 3600) ||
+                  mergeCompletePercentage > 99.99;
+              }
+              if (expandedTDInfo) {
+                lastUpdate = `${mergeData.lastUpdate.td} / ${config.TERMINAL_TOTAL_DIFFICULTY} (${lastUpdateTime})`;
+              } else {
+                lastUpdate = `${mergeCompletePercentage}% of ${config.TERMINAL_TOTAL_DIFFICULTY} (${lastUpdateTime})`;
+              }
+            } else {
+              lastUpdate = "?";
+            }
+
             const mergeSecondsLeft =
               mergeData.mergeSecondsLeft !== null ? `${prettyTimeDiff(1000 * mergeData.mergeSecondsLeft)}` : "?";
             mergeInfo = [`execution td: ${lastUpdate}`, `merge in: ${mergeSecondsLeft}`];
