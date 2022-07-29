@@ -374,4 +374,8 @@ class Eth1ForBlockProductionMock implements IEth1ForBlockProduction {
       totalDifficulty: powBlock.totalDifficulty,
     });
   }
+
+  getMergeUpdate(): never {
+    throw Error("Not implemented");
+  }
 }

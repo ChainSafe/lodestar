@@ -61,6 +61,7 @@ describe.skip("eth1 / Eth1MergeBlockTracker", function () {
         signal: controller.signal,
         clockEpoch: 0,
         isMergeTransitionComplete: false,
+        metrics: null,
       },
       eth1Provider as IEth1Provider
     );
@@ -98,6 +99,7 @@ describe.skip("eth1 / Eth1MergeBlockTracker", function () {
         signal: controller.signal,
         clockEpoch: 0,
         isMergeTransitionComplete: false,
+        metrics: null,
       },
       eth1Provider as IEth1Provider
     );
@@ -135,6 +137,7 @@ describe.skip("eth1 / Eth1MergeBlockTracker", function () {
         signal: controller.signal,
         clockEpoch: 0,
         isMergeTransitionComplete: false,
+        metrics: null,
       },
       eth1Provider as IEth1Provider
     );
