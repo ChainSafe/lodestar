@@ -73,12 +73,15 @@ export async function runNodeNotifier({
         } else {
           // pre-merge
           executionInfo = [`execution: ${headInfo.executionStatus.toLowerCase()}`];
-          const mergeData = chain.eth1.getMergeTimeLeft();
+          const mergeData = chain.eth1.getMergeUpdate();
           if (mergeData !== null) {
-            mergeInfo = [
-              `td: ${mergeData.lastUpdate.td}(${prettyTimeDiff(Date.now() - mergeData.lastUpdate.time)} ago)`,
-              `merge in: ${prettyTimeDiff(1000 * mergeData.mergeSecondsLeft)}`,
-            ];
+            const lastUpdate =
+              mergeData.lastUpdate !== null
+                ? `${mergeData.lastUpdate.td}(${prettyTimeDiff(Date.now() - mergeData.lastUpdate.time)} ago)`
+                : "?";
+            const mergeSecondsLeft =
+              mergeData.mergeSecondsLeft !== null ? `${prettyTimeDiff(1000 * mergeData.mergeSecondsLeft)}` : "?";
+            mergeInfo = [`execution td: ${lastUpdate}`, `merge in: ${mergeSecondsLeft}`];
           } else {
             mergeInfo = [];
           }

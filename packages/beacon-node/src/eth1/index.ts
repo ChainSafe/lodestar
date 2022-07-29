@@ -8,7 +8,7 @@ import {
 } from "@lodestar/state-transition";
 import {Root} from "@lodestar/types";
 import {fromHexString} from "@chainsafe/ssz";
-import {IEth1ForBlockProduction, Eth1DataAndDeposits, IEth1Provider, PowMergeBlock} from "./interface.js";
+import {IEth1ForBlockProduction, Eth1DataAndDeposits, IEth1Provider, PowMergeBlock, MergeUpdate} from "./interface.js";
 import {Eth1DepositDataTracker, Eth1DepositDataTrackerModules} from "./eth1DepositDataTracker.js";
 import {Eth1MergeBlockTracker, Eth1MergeBlockTrackerModules} from "./eth1MergeBlockTracker.js";
 import {Eth1Options} from "./options.js";
@@ -105,8 +105,8 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
     return this.eth1MergeBlockTracker.getPowBlock(powBlockHash);
   }
 
-  getMergeTimeLeft(): {mergeSecondsLeft: number; lastUpdate: {time: number; td: bigint}} | null {
-    return this.eth1MergeBlockTracker.getMergeTimeLeft();
+  getMergeUpdate(): MergeUpdate {
+    return this.eth1MergeBlockTracker.getMergeUpdate();
   }
 }
 
@@ -138,7 +138,7 @@ export class Eth1ForBlockProductionDisabled implements IEth1ForBlockProduction {
   async getPowBlock(): Promise<never> {
     throw Error("eth1 must be enabled to verify merge block");
   }
-  getMergeTimeLeft(): {mergeSecondsLeft: number; lastUpdate: {time: number; td: bigint}} | null {
+  getMergeUpdate(): MergeUpdate {
     return null;
   }
 }

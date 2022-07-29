@@ -6,7 +6,7 @@ import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {IMetrics} from "../metrics/index.js";
 import {ZERO_HASH_HEX} from "../constants/index.js";
 import {TimeSeries} from "../util/timeSeries.js";
-import {IEth1Provider, EthJsonRpcBlockRaw, PowMergeBlock} from "./interface.js";
+import {IEth1Provider, EthJsonRpcBlockRaw, PowMergeBlock, MergeUpdate} from "./interface.js";
 import {quantityToNum, quantityToBigint, dataToRootHex} from "./provider/utils.js";
 
 export enum StatusCode {
@@ -168,16 +168,20 @@ export class Eth1MergeBlockTracker {
     return this.mergeBlock;
   }
 
-  getMergeTimeLeft(): {mergeSecondsLeft: number; lastUpdate: {time: number; td: bigint}} | null {
-    if (this.status === StatusCode.NOT_SET || this.mergeSecondsLeft === null) {
+  getMergeUpdate(): MergeUpdate {
+    if (this.status === StatusCode.NOT_SET) {
       return null;
     } else {
+      const lastUpdate =
+        this.latestBlock !== null && this.latestBlockTime !== null
+          ? {time: this.latestBlockTime, td: this.latestBlock.totalDifficulty}
+          : null;
       if (this.latestBlock === null || this.latestBlockTime === null) {
         throw Error("Internal Error, latestBlock should be present with mergeSecondsLeft");
       }
       return {
         mergeSecondsLeft: this.mergeSecondsLeft,
-        lastUpdate: {time: this.latestBlockTime, td: this.latestBlock.totalDifficulty},
+        lastUpdate,
       };
     }
   }

@@ -36,6 +36,8 @@ export type Eth1DataAndDeposits = {
   deposits: phase0.Deposit[];
 };
 
+export type MergeUpdate = {mergeSecondsLeft: number | null; lastUpdate: {time: number; td: bigint} | null} | null;
+
 export interface IEth1ForBlockProduction {
   getEth1DataAndDeposits(state: CachedBeaconStateAllForks): Promise<Eth1DataAndDeposits>;
 
@@ -45,7 +47,7 @@ export interface IEth1ForBlockProduction {
   mergeCompleted(): void;
   /** Get a POW block by hash checking the local cache first */
   getPowBlock(powBlockHash: string): Promise<PowMergeBlock | null>;
-  getMergeTimeLeft(): {mergeSecondsLeft: number; lastUpdate: {time: number; td: bigint}} | null;
+  getMergeUpdate(): MergeUpdate;
 }
 
 /** Different Eth1Block from phase0.Eth1Block with blockHash */
