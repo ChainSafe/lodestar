@@ -1,4 +1,3 @@
-import {SinonStubbedInstance} from "sinon";
 import sinon from "sinon";
 import {itBench} from "@dapplion/benchmark";
 import {expect} from "chai";
@@ -10,7 +9,7 @@ import {
 } from "@lodestar/state-transition";
 import {HISTORICAL_ROOTS_LIMIT, SLOTS_PER_EPOCH, TIMELY_SOURCE_FLAG_INDEX} from "@lodestar/params";
 import {BitArray, toHexString} from "@chainsafe/ssz";
-import {ExecutionStatus, ForkChoice, IForkChoice, ProtoArray} from "@lodestar/fork-choice";
+import {ExecutionStatus, ForkChoice, IForkChoiceStore, ProtoArray} from "@lodestar/fork-choice";
 import {AggregatedAttestationPool} from "../../../../src/chain/opPools/aggregatedAttestationPool.js";
 import {generatePerfTestCachedStateAltair} from "../../../../../state-transition/test/perf/util.js";
 import {computeAnchorCheckpoint} from "../../../../src/chain/initState.js";
@@ -27,7 +26,7 @@ function flagIsTimelySource(flag: number): boolean {
 describe("getAttestationsForBlock", () => {
   let originalState: CachedBeaconStateAltair;
   let protoArray: ProtoArray;
-  let forkchoiceStub: SinonStubbedInstance<IForkChoice>;
+  let forkchoice: ForkChoice;
   const sandbox = sinon.createSandbox();
 
   before(function () {
@@ -45,10 +44,16 @@ describe("getAttestationsForBlock", () => {
     expect(numCurrentEpochParticipation).to.equal(250000, "Wrong numCurrentEpochParticipation");
 
     const {blockHeader, checkpoint} = computeAnchorCheckpoint(originalState.config, originalState);
-    const finalizedCheckpoint = {...checkpoint};
+    // TODO figure out why getBlockRootAtSlot(originalState, justfifiedSlot) is not the same to justifiedCheckpoint.root
+    const finalizedEpoch = originalState.finalizedCheckpoint.epoch;
+    const finalizedCheckpoint = {
+      epoch: finalizedEpoch,
+      root: getBlockRootAtSlot(originalState, computeStartSlotAtEpoch(finalizedEpoch)),
+    };
+    const justifiedEpoch = originalState.currentJustifiedCheckpoint.epoch;
     const justifiedCheckpoint = {
-      ...checkpoint,
-      epoch: checkpoint.epoch === 0 ? checkpoint.epoch : checkpoint.epoch + 1,
+      epoch: justifiedEpoch,
+      root: getBlockRootAtSlot(originalState, computeStartSlotAtEpoch(justifiedEpoch)),
     };
 
     protoArray = ProtoArray.initialize(
@@ -72,8 +77,7 @@ describe("getAttestationsForBlock", () => {
       originalState.slot
     );
 
-    for (let epochSlot = 0; epochSlot < SLOTS_PER_EPOCH; epochSlot++) {
-      const slot = originalState.slot - SLOTS_PER_EPOCH + epochSlot;
+    for (let slot = computeStartSlotAtEpoch(finalizedCheckpoint.epoch); slot < originalState.slot; slot++) {
       const epoch = computeEpochAtSlot(slot);
       protoArray.onBlock(
         {
@@ -96,11 +100,26 @@ describe("getAttestationsForBlock", () => {
         slot
       );
     }
-    forkchoiceStub = sandbox.createStubInstance(ForkChoice);
-    const lastBlockRoot = toHexString(getBlockRootAtSlot(originalState, originalState.slot - 1));
-    // instead of having a real Forkchoice instance which needs a complicated setup
-    // we create same backing ProtoArray, this has the same performance to the real iterateAncestorBlocks()
-    forkchoiceStub.iterateAncestorBlocks.returns(protoArray.iterateAncestorNodes(lastBlockRoot));
+
+    const fcStore: IForkChoiceStore = {
+      currentSlot: originalState.slot,
+      justified: {
+        checkpoint: {...justifiedCheckpoint, rootHex: toHexString(justifiedCheckpoint.root)},
+        balances: originalState.epochCtx.effectiveBalanceIncrements,
+      },
+      bestJustified: {
+        checkpoint: {...justifiedCheckpoint, rootHex: toHexString(justifiedCheckpoint.root)},
+        balances: originalState.epochCtx.effectiveBalanceIncrements,
+      },
+      unrealizedJustified: {
+        checkpoint: {...justifiedCheckpoint, rootHex: toHexString(justifiedCheckpoint.root)},
+        balances: originalState.epochCtx.effectiveBalanceIncrements,
+      },
+      finalizedCheckpoint: {...finalizedCheckpoint, rootHex: toHexString(finalizedCheckpoint.root)},
+      unrealizedFinalizedCheckpoint: {...finalizedCheckpoint, rootHex: toHexString(finalizedCheckpoint.root)},
+      justifiedBalancesGetter: () => originalState.epochCtx.effectiveBalanceIncrements,
+    };
+    forkchoice = new ForkChoice(originalState.config, fcStore, protoArray);
   });
 
   after(() => {
@@ -112,7 +131,7 @@ describe("getAttestationsForBlock", () => {
     beforeEach: () => getAggregatedAttestationPool(originalState),
     fn: (pool) => {
       // logger.info("Number of attestations in pool", pool.getAll().length);
-      pool.getAttestationsForBlock(forkchoiceStub, originalState);
+      pool.getAttestationsForBlock(forkchoice, originalState);
     },
   });
 });
