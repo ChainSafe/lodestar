@@ -275,8 +275,16 @@ export class Eth1MergeBlockTracker {
     ) {
       return;
     }
-    this.logger.info(` Finding previous blocks : ${this.lastSearchedBlock.totalDifficulty} `);
+    if (this.lastSearchedBlock.number <= 0) {
+      // The genesis block itself if the merge block
+      this.setTerminalPowBlock(this.lastSearchedBlock);
+      return;
+    }
 
+    this.logger.debug("Searching previous blocks for terminal block", {
+      number: this.lastSearchedBlock.number,
+      td: this.lastSearchedBlock.totalDifficulty,
+    });
     // First do a binary search but lopsided towards the lastSearchedBlock to establish
     // a new lower bound to lastSearchedBlock where lastSearchedBlock.totalDifficultty
     // is still >= TERMINAL_TOTAL_DIFFICULTY
