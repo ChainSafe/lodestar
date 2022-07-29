@@ -105,7 +105,7 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
     return this.eth1MergeBlockTracker.getPowBlock(powBlockHash);
   }
 
-  getMergeTimeLeft(): {mergeSecondsLeft: number; lastUpdate: {time: number; td: number}} | null {
+  getMergeTimeLeft(): {mergeSecondsLeft: number; lastUpdate: {time: number; td: bigint}} | null {
     return this.eth1MergeBlockTracker.getMergeTimeLeft();
   }
 }
@@ -138,7 +138,7 @@ export class Eth1ForBlockProductionDisabled implements IEth1ForBlockProduction {
   async getPowBlock(): Promise<never> {
     throw Error("eth1 must be enabled to verify merge block");
   }
-  getMergeTimeLeft(): {mergeSecondsLeft: number; lastUpdate: {time: number; td: number}} | null {
+  getMergeTimeLeft(): {mergeSecondsLeft: number; lastUpdate: {time: number; td: bigint}} | null {
     return null;
   }
 }

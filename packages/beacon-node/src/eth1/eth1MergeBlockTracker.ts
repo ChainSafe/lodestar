@@ -69,6 +69,7 @@ export class Eth1MergeBlockTracker {
    */
   private mergeBlock: PowMergeBlock | null = null;
   private latestBlock: PowMergeBlock | null = null;
+  private latestBlockTime: number | null = null;
   private lastSearchedBlock: PowMergeBlock | null = null;
 
   private readonly blocksByHashCache = new Map<RootHex, PowMergeBlock>();
@@ -102,6 +103,7 @@ export class Eth1MergeBlockTracker {
           // Set latestBlock stats
           metrics.eth1.eth1LatestBlockNumber.set(this.latestBlock.number);
           metrics.eth1.eth1LatestBlockTD.set(Number(this.latestBlock.totalDifficulty));
+          metrics.eth1.eth1LatestBlockTime.set(this.latestBlockTime ?? Date.now());
         }
 
         // Set time to merge
@@ -166,12 +168,17 @@ export class Eth1MergeBlockTracker {
     return this.mergeBlock;
   }
 
-  getMergeTimeLeft(): {mergeSecondsLeft: number; lastUpdate: {time: number; td: number}} | null {
+  getMergeTimeLeft(): {mergeSecondsLeft: number; lastUpdate: {time: number; td: bigint}} | null {
     if (this.status === StatusCode.NOT_SET || this.mergeSecondsLeft === null) {
       return null;
     } else {
-      const [time, td] = this.mergeTimeseries.lastUpdate();
-      return {mergeSecondsLeft: this.mergeSecondsLeft, lastUpdate: {time, td}};
+      if (this.latestBlock === null || this.latestBlockTime === null) {
+        throw Error("Internal Error, latestBlock should be present with mergeSecondsLeft");
+      }
+      return {
+        mergeSecondsLeft: this.mergeSecondsLeft,
+        lastUpdate: {time: this.latestBlockTime, td: this.latestBlock.totalDifficulty},
+      };
     }
   }
 
@@ -376,6 +383,7 @@ export class Eth1MergeBlockTracker {
     }
     const latestBlock = toPowBlock(latestBlockRaw);
     this.latestBlock = latestBlock;
+    this.latestBlockTime = quantityToNum(latestBlockRaw.timestamp) * 1000;
 
     // Set time to merge
     this.mergeTimeseries.addPoint(

@@ -45,7 +45,7 @@ export interface IEth1ForBlockProduction {
   mergeCompleted(): void;
   /** Get a POW block by hash checking the local cache first */
   getPowBlock(powBlockHash: string): Promise<PowMergeBlock | null>;
-  getMergeTimeLeft(): {mergeSecondsLeft: number; lastUpdate: {time: number; td: number}} | null;
+  getMergeTimeLeft(): {mergeSecondsLeft: number; lastUpdate: {time: number; td: bigint}} | null;
 }
 
 /** Different Eth1Block from phase0.Eth1Block with blockHash */

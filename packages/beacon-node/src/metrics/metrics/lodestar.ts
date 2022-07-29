@@ -1077,6 +1077,10 @@ export function createLodestarMetrics(
         name: "lodestar_eth1_latest_block_number",
         help: "Eth1 latest Block Number",
       }),
+      eth1LatestBlockTime: register.gauge({
+        name: "lodestar_eth1_latest_block_time",
+        help: "Eth1 latest Block Time",
+      }),
 
       // Last searched block details
       eth1MergeLastSearchedBlockNumber: register.gauge({
