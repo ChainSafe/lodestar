@@ -87,7 +87,7 @@ export async function runNodeNotifier({
               if (expandedTDInfo === false) {
                 // Either time to merge < 12 hours, or we are at 99% merge resolution
                 expandedTDInfo =
-                  (mergeData.mergeSecondsLeft !== null && mergeData.mergeSecondsLeft < 10) ||
+                  (mergeData.mergeSecondsLeft !== null && mergeData.mergeSecondsLeft < 12 * 3600) ||
                   mergeCompletePercentage > 99.99;
               }
               if (expandedTDInfo) {
