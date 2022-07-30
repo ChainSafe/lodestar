@@ -66,7 +66,6 @@ export async function runNodeNotifier({
       const headRow = `head: ${headInfo.slot} ${prettyBytes(headInfo.blockRoot)}`;
 
       let executionInfo: string[];
-      let mergeInfo: string[];
       if (clockEpoch >= config.BELLATRIX_FORK_EPOCH) {
         if (isBellatrixCachedStateType(headState) && isMergeTransitionComplete(headState)) {
           executionInfo = [
@@ -74,10 +73,8 @@ export async function runNodeNotifier({
               headInfo.executionPayloadBlockHash ?? "empty"
             )})`,
           ];
-          mergeInfo = [];
         } else {
           // pre-merge
-          executionInfo = [`execution: ${headInfo.executionStatus.toLowerCase()}`];
           const mergeData = chain.eth1.getMergeUpdate();
           if (mergeData !== null) {
             // See if we need to expand the td info
@@ -90,13 +87,13 @@ export async function runNodeNotifier({
               if (expandedTDInfo === false) {
                 // Either time to merge < 12 hours, or we are at 99% merge resolution
                 expandedTDInfo =
-                  (mergeData.mergeSecondsLeft !== null && mergeData.mergeSecondsLeft < 12 * 3600) ||
+                  (mergeData.mergeSecondsLeft !== null && mergeData.mergeSecondsLeft < 10) ||
                   mergeCompletePercentage > 99.99;
               }
               if (expandedTDInfo) {
-                lastUpdate = `${mergeData.lastUpdate.td} / ${config.TERMINAL_TOTAL_DIFFICULTY} (${lastUpdateTime})`;
+                lastUpdate = `${mergeData.lastUpdate.td} / ${config.TERMINAL_TOTAL_DIFFICULTY} - ${lastUpdateTime}`;
               } else {
-                lastUpdate = `${mergeCompletePercentage}% of ${config.TERMINAL_TOTAL_DIFFICULTY} (${lastUpdateTime})`;
+                lastUpdate = `${mergeCompletePercentage}% of ${config.TERMINAL_TOTAL_DIFFICULTY} - ${lastUpdateTime}`;
               }
             } else {
               lastUpdate = "?";
@@ -104,14 +101,16 @@ export async function runNodeNotifier({
 
             const mergeSecondsLeft =
               mergeData.mergeSecondsLeft !== null ? `${prettyTimeDiff(1000 * mergeData.mergeSecondsLeft)}` : "?";
-            mergeInfo = [`execution td: ${lastUpdate}`, `merge in: ${mergeSecondsLeft}`];
+            executionInfo = [
+              `execution: ${headInfo.executionStatus.toLowerCase()}(td: ${lastUpdate})`,
+              `merge in: ${mergeSecondsLeft}`,
+            ];
           } else {
-            mergeInfo = [];
+            executionInfo = [`execution: ${headInfo.executionStatus.toLowerCase()}(merge not set)`];
           }
         }
       } else {
         executionInfo = [];
-        mergeInfo = [];
       }
 
       // Give info about empty slots if head < clock
@@ -136,36 +135,19 @@ export async function runNodeNotifier({
             ...executionInfo,
             finalizedCheckpointRow,
             peersRow,
-            ...mergeInfo,
           ];
           break;
         }
 
         case SyncState.Synced: {
           // Synced - clock - head - finalized - peers
-          nodeState = [
-            "Synced",
-            clockSlotRow,
-            headRow,
-            ...executionInfo,
-            finalizedCheckpointRow,
-            peersRow,
-            ...mergeInfo,
-          ];
+          nodeState = ["Synced", clockSlotRow, headRow, ...executionInfo, finalizedCheckpointRow, peersRow];
           break;
         }
 
         case SyncState.Stalled: {
           // Searching peers - peers - head - finalized - clock
-          nodeState = [
-            "Searching peers",
-            peersRow,
-            clockSlotRow,
-            headRow,
-            ...executionInfo,
-            finalizedCheckpointRow,
-            ...mergeInfo,
-          ];
+          nodeState = ["Searching peers", peersRow, clockSlotRow, headRow, ...executionInfo, finalizedCheckpointRow];
         }
       }
       logger.info(nodeState.join(" - "));
