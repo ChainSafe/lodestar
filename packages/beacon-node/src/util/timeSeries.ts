@@ -27,6 +27,15 @@ export class TimeSeries {
     return linearRegression(this.points).m;
   }
 
+  /**
+   * Compute x point at which y = 0.
+   * From eq `y = b + m*x` then solve for `0 = b + m*x`
+   */
+  computeY0Point(): number {
+    const {m, b} = linearRegression(this.points);
+    return -b / m;
+  }
+
   /** Remove all entries */
   clear(): void {
     this.points = [];

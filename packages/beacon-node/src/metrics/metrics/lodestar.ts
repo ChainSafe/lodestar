@@ -1054,42 +1054,44 @@ export function createLodestarMetrics(
       }),
 
       // Merge Search info
-      eth1MergeStatus: register.gauge<"terminalTotalDifficulty">({
+      eth1MergeStatus: register.gauge({
         name: "lodestar_eth1_merge_status",
         help: "Eth1 Merge Status 0 PRE_MERGE 1 SEARCHING 2 FOUND 3 POST_MERGE",
-        labelNames: ["terminalTotalDifficulty"],
       }),
-      eth1MergeBlockStatus: register.gauge({
-        name: "lodestar_eth1_merge_block_status",
-        help: "Eth1 Merge Status 0 NOT_STARTED 1 SEARCHING 2 FOUND",
+      eth1MergeTDFactor: register.gauge({
+        name: "lodestar_eth1_merge_td_factor",
+        help: "TTD set for the merge",
       }),
       eth1MergeTTD: register.gauge({
         name: "lodestar_eth1_merge_ttd",
-        help: "TTD set for the merge",
+        help: "TTD set for the merge scaled down by td_factor",
+      }),
+
+      eth1PollMergeBlockErrors: register.gauge({
+        name: "lodestar_eth1_poll_merge_block_errors_total",
+        help: "Total count of errors polling merge block",
+      }),
+      getTerminalPowBlockPromiseCacheHit: register.gauge({
+        name: "lodestar_eth1_get_terminal_pow_block_promise_cache_hit_total",
+        help: "Total count of skipped runs in poll merge block, because a previous promise existed",
+      }),
+      eth1ParentBlocksFetched: register.gauge({
+        name: "lodestar_eth1_parent_blocks_fetched_total",
+        help: "Total count of parent blocks fetched searching for merge block",
       }),
 
       // Latest block details
       eth1LatestBlockTD: register.gauge({
         name: "lodestar_eth1_latest_block_ttd",
-        help: "Eth1 latest Block ttd",
+        help: "Eth1 latest Block td scaled down by td_factor",
       }),
       eth1LatestBlockNumber: register.gauge({
         name: "lodestar_eth1_latest_block_number",
-        help: "Eth1 latest Block Number",
+        help: "Eth1 latest block number",
       }),
-      eth1LatestBlockTime: register.gauge({
-        name: "lodestar_eth1_latest_block_time",
-        help: "Eth1 latest Block Time",
-      }),
-
-      // Last searched block details
-      eth1MergeLastSearchedBlockNumber: register.gauge({
-        name: "lodestar_eth1_merge_last_searched_block_number",
-        help: "Last searched block number",
-      }),
-      eth1MergeLastSearchedBlockTD: register.gauge({
-        name: "lodestar_eth1_merge_last_searched_block_td",
-        help: "Last searched block td",
+      eth1LatestBlockTimestamp: register.gauge({
+        name: "lodestar_eth1_latest_block_timestamp",
+        help: "Eth1 latest block timestamp",
       }),
 
       // Merge details
@@ -1097,10 +1099,6 @@ export function createLodestarMetrics(
         name: "lodestar_eth1_merge_block_details",
         help: "If found then 1 with terminal block details",
         labelNames: ["terminalBlockHash", "terminalBlockNumber", "terminalBlockTD"],
-      }),
-      eth1TimeLeftForMerge: register.gauge({
-        name: "lodestar_eth1_time_left_for_merge",
-        help: "Eth1 time left for merge",
       }),
     },
 

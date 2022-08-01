@@ -1,14 +1,7 @@
-import {
-  BeaconStateAllForks,
-  CachedBeaconStateAllForks,
-  computeEpochAtSlot,
-  getCurrentSlot,
-  isBellatrixStateType,
-  isMergeTransitionComplete,
-} from "@lodestar/state-transition";
+import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {Root} from "@lodestar/types";
 import {fromHexString} from "@chainsafe/ssz";
-import {IEth1ForBlockProduction, Eth1DataAndDeposits, IEth1Provider, PowMergeBlock, MergeUpdate} from "./interface.js";
+import {IEth1ForBlockProduction, Eth1DataAndDeposits, IEth1Provider, PowMergeBlock, TDProgress} from "./interface.js";
 import {Eth1DepositDataTracker, Eth1DepositDataTrackerModules} from "./eth1DepositDataTracker.js";
 import {Eth1MergeBlockTracker, Eth1MergeBlockTrackerModules} from "./eth1MergeBlockTracker.js";
 import {Eth1Options} from "./options.js";
@@ -49,8 +42,7 @@ export {IEth1ForBlockProduction, IEth1Provider, Eth1Provider};
 
 export function initializeEth1ForBlockProduction(
   opts: Eth1Options,
-  modules: Pick<Eth1DepositDataTrackerModules, "db" | "config" | "metrics" | "logger" | "signal">,
-  anchorState: BeaconStateAllForks
+  modules: Pick<Eth1DepositDataTrackerModules, "db" | "config" | "metrics" | "logger" | "signal">
 ): IEth1ForBlockProduction {
   if (opts.enabled) {
     return new Eth1ForBlockProduction(opts, {
@@ -59,13 +51,12 @@ export function initializeEth1ForBlockProduction(
       metrics: modules.metrics,
       logger: modules.logger,
       signal: modules.signal,
-      clockEpoch: computeEpochAtSlot(getCurrentSlot(modules.config, anchorState.genesisTime)),
-      isMergeTransitionComplete: isBellatrixStateType(anchorState) && isMergeTransitionComplete(anchorState),
     });
   } else {
     return new Eth1ForBlockProductionDisabled();
   }
 }
+
 export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
   private readonly eth1DepositDataTracker: Eth1DepositDataTracker | null;
   private readonly eth1MergeBlockTracker: Eth1MergeBlockTracker;
@@ -92,8 +83,8 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
     }
   }
 
-  getTerminalPowBlock(): Root | null {
-    const block = this.eth1MergeBlockTracker.getTerminalPowBlock();
+  async getTerminalPowBlock(): Promise<Root | null> {
+    const block = await this.eth1MergeBlockTracker.getTerminalPowBlockFromCache();
     return block && fromHexString(block.blockHash);
   }
 
@@ -105,8 +96,12 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
     return this.eth1MergeBlockTracker.getPowBlock(powBlockHash);
   }
 
-  getMergeUpdate(): MergeUpdate {
-    return this.eth1MergeBlockTracker.getMergeUpdate();
+  getTDProgress(): TDProgress | null {
+    return this.eth1MergeBlockTracker.getTDProgress();
+  }
+
+  startPollingMergeBlock(): void {
+    return this.eth1MergeBlockTracker.startPollingMergeBlock();
   }
 }
 
@@ -126,7 +121,7 @@ export class Eth1ForBlockProductionDisabled implements IEth1ForBlockProduction {
   /**
    * Will miss the oportunity to propose the merge block but will still produce valid blocks
    */
-  getTerminalPowBlock(): Root | null {
+  async getTerminalPowBlock(): Promise<Root | null> {
     return null;
   }
 
@@ -135,10 +130,15 @@ export class Eth1ForBlockProductionDisabled implements IEth1ForBlockProduction {
   }
 
   /** Will not be able to validate the merge block */
-  async getPowBlock(): Promise<never> {
+  async getPowBlock(_powBlockHash: string): Promise<PowMergeBlock | null> {
     throw Error("eth1 must be enabled to verify merge block");
   }
-  getMergeUpdate(): MergeUpdate {
+
+  getTDProgress(): TDProgress | null {
     return null;
+  }
+
+  startPollingMergeBlock(): void {
+    // Ignore
   }
 }
