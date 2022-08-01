@@ -64,24 +64,23 @@ describe("eth1 / Eth1MergeBlockTracker", () => {
         config,
         logger,
         signal: controller.signal,
-        clockEpoch: 0,
-        isMergeTransitionComplete: false,
         metrics: null,
       },
       eth1Provider as IEth1Provider
     );
+    eth1MergeBlockTracker.startPollingMergeBlock();
 
     // Wait for Eth1MergeBlockTracker to find at least one merge block
     while (!controller.signal.aborted) {
-      if (eth1MergeBlockTracker.getTerminalPowBlock()) break;
+      if (await eth1MergeBlockTracker.getTerminalPowBlock()) break;
       await sleep(10, controller.signal);
     }
 
     // Status should acknowlege merge block is found
-    expect(eth1MergeBlockTracker["status"]).to.equal(StatusCode.FOUND, "Wrong StatusCode");
+    expect(eth1MergeBlockTracker["status"].code).to.equal(StatusCode.FOUND, "Wrong StatusCode");
 
     // Given the total difficulty offset the block that has TTD is the `difficultyOffset`nth block
-    expect(eth1MergeBlockTracker.getTerminalPowBlock()).to.deep.equal(
+    expect(await eth1MergeBlockTracker.getTerminalPowBlock()).to.deep.equal(
       terminalPowBlock,
       "Wrong found terminal pow block"
     );
@@ -90,25 +89,24 @@ describe("eth1 / Eth1MergeBlockTracker", () => {
   it("Should find terminal pow block polling future 'latest' blocks", async () => {
     // Set current network totalDifficulty to behind terminalTotalDifficulty by 5.
     // Then on each call to getBlockByNumber("latest") increase totalDifficulty by 1.
-    const difficultyOffset = 5;
-    const totalDifficulty = terminalTotalDifficulty - difficultyOffset;
+    const numOfBlocks = 5;
+    const difficulty = 1;
 
     let latestBlockPointer = 0;
+
     const blocks: EthJsonRpcBlockRaw[] = [];
     const blocksByHash = new Map<string, EthJsonRpcBlockRaw>();
 
-    function getLatestBlock(i: number): EthJsonRpcBlockRaw {
+    for (let i = 0; i < numOfBlocks + 1; i++) {
       const block: EthJsonRpcBlockRaw = {
         number: toHex(i),
         hash: toRootHex(i + 1),
         parentHash: toRootHex(i),
         // Latest block is under TTD, so past block search is stopped
-        totalDifficulty: toHex(totalDifficulty + i),
+        totalDifficulty: toHex(terminalTotalDifficulty - numOfBlocks * difficulty + i * difficulty),
         timestamp: "0x0",
       };
       blocks.push(block);
-      blocksByHash.set(block.hash, block);
-      return block;
     }
 
     const eth1Provider: IEth1Provider = {
@@ -116,7 +114,13 @@ describe("eth1 / Eth1MergeBlockTracker", () => {
       getBlockNumber: async () => 0,
       getBlockByNumber: async (blockNumber) => {
         // On each call simulate that the eth1 chain advances 1 block with +1 totalDifficulty
-        if (blockNumber === "latest") return getLatestBlock(latestBlockPointer++);
+        if (blockNumber === "latest") {
+          if (latestBlockPointer >= blocks.length) {
+            throw Error("Fetched too many blocks");
+          } else {
+            return blocks[latestBlockPointer++];
+          }
+        }
         return blocks[blockNumber];
       },
       getBlockByHash: async (blockHashHex) => blocksByHash.get(blockHashHex) ?? null,
@@ -131,68 +135,77 @@ describe("eth1 / Eth1MergeBlockTracker", () => {
       },
     };
 
-    const eth1MergeBlockTracker = new Eth1MergeBlockTracker(
-      {
-        config,
-        logger,
-        signal: controller.signal,
-        clockEpoch: 0,
-        isMergeTransitionComplete: false,
-        metrics: null,
-      },
-      eth1Provider as IEth1Provider
-    );
-
-    // Wait for Eth1MergeBlockTracker to find at least one merge block
-    while (!controller.signal.aborted) {
-      if (eth1MergeBlockTracker.getTerminalPowBlock()) break;
-      await sleep(10, controller.signal);
-    }
-
-    // Status should acknowlege merge block is found
-    expect(eth1MergeBlockTracker["status"]).to.equal(StatusCode.FOUND, "Wrong StatusCode");
-
-    // Given the total difficulty offset the block that has TTD is the `difficultyOffset`nth block
-    expect(eth1MergeBlockTracker.getTerminalPowBlock()).to.deep.equal(
-      toPowBlock(blocks[difficultyOffset]),
-      "Wrong found terminal pow block"
-    );
+    await runFindMergeBlockTest(eth1Provider, blocks[blocks.length - 1]);
   });
 
   it("Should find terminal pow block fetching past blocks", async () => {
     // Set current network totalDifficulty to behind terminalTotalDifficulty by 5.
     // Then on each call to getBlockByNumber("latest") increase totalDifficulty by 1.
-    const difficultyOffset = 5;
-    const totalDifficulty = terminalTotalDifficulty - difficultyOffset;
 
+    const numOfBlocks = 5;
+    const difficulty = 1;
+    const ttdOffset = 1 * difficulty;
+    const hashOffset = 100;
     const blocks: EthJsonRpcBlockRaw[] = [];
-    const blocksByHash = new Map<string, EthJsonRpcBlockRaw>();
 
-    for (let i = 0; i < difficultyOffset * 2; i++) {
+    for (let i = 0; i < numOfBlocks * 2; i++) {
+      const block: EthJsonRpcBlockRaw = {
+        number: toHex(hashOffset + i),
+        hash: toRootHex(hashOffset + i + 1),
+        parentHash: toRootHex(hashOffset + i),
+        // Latest block is under TTD, so past block search is stopped
+        totalDifficulty: toHex(terminalTotalDifficulty + i * difficulty - ttdOffset),
+        timestamp: "0x0",
+      };
+      blocks.push(block);
+    }
+
+    // Before last block (with ttdOffset = 1) is the merge block
+    const expectedMergeBlock = blocks[ttdOffset];
+
+    const eth1Provider = mockEth1ProviderFromBlocks(blocks);
+    await runFindMergeBlockTest(eth1Provider, expectedMergeBlock);
+  });
+
+  it("Should find terminal pow block fetching past blocks till genesis", async () => {
+    // There's no block with TD < TTD, searcher should stop at genesis block
+
+    const numOfBlocks = 5;
+    const difficulty = 1;
+    const blocks: EthJsonRpcBlockRaw[] = [];
+
+    for (let i = 0; i < numOfBlocks * 2; i++) {
       const block: EthJsonRpcBlockRaw = {
         number: toHex(i),
         hash: toRootHex(i + 1),
         parentHash: toRootHex(i),
         // Latest block is under TTD, so past block search is stopped
-        totalDifficulty: toHex(totalDifficulty + i),
+        totalDifficulty: toHex(terminalTotalDifficulty + i * difficulty + 1),
         timestamp: "0x0",
       };
       blocks.push(block);
+    }
+
+    // Merge block must be genesis block
+    const expectedMergeBlock = blocks[0];
+
+    const eth1Provider = mockEth1ProviderFromBlocks(blocks);
+    await runFindMergeBlockTest(eth1Provider, expectedMergeBlock);
+  });
+
+  function mockEth1ProviderFromBlocks(blocks: EthJsonRpcBlockRaw[]): IEth1Provider {
+    const blocksByHash = new Map<string, EthJsonRpcBlockRaw>();
+
+    for (const block of blocks) {
       blocksByHash.set(block.hash, block);
     }
 
-    // Return a latest block that's over TTD but its parent doesn't exit to cancel future searches
-    const latestBlock: EthJsonRpcBlockRaw = {
-      ...blocks[blocks.length - 1],
-      parentHash: toRootHex(0xffffffff),
-    };
-
-    const eth1Provider: IEth1Provider = {
+    return {
       deployBlock: 0,
       getBlockNumber: async () => 0,
       getBlockByNumber: async (blockNumber) => {
         // Always return the same block with totalDifficulty > TTD and unknown parent
-        if (blockNumber === "latest") return latestBlock;
+        if (blockNumber === "latest") return blocks[blocks.length - 1];
         return blocks[blockNumber];
       },
       getBlockByHash: async (blockHashHex) => blocksByHash.get(blockHashHex) ?? null,
@@ -204,34 +217,38 @@ describe("eth1 / Eth1MergeBlockTracker", () => {
         throw Error("Not implemented");
       },
     };
+  }
 
+  async function runFindMergeBlockTest(
+    eth1Provider: IEth1Provider,
+    expectedMergeBlock: EthJsonRpcBlockRaw
+  ): Promise<void> {
     const eth1MergeBlockTracker = new Eth1MergeBlockTracker(
       {
         config,
         logger,
         signal: controller.signal,
-        clockEpoch: 0,
-        isMergeTransitionComplete: false,
         metrics: null,
       },
       eth1Provider as IEth1Provider
     );
+    eth1MergeBlockTracker.startPollingMergeBlock();
 
     // Wait for Eth1MergeBlockTracker to find at least one merge block
     while (!controller.signal.aborted) {
-      if (eth1MergeBlockTracker.getTerminalPowBlock()) break;
+      if (await eth1MergeBlockTracker.getTerminalPowBlock()) break;
       await sleep(10, controller.signal);
     }
 
     // Status should acknowlege merge block is found
-    expect(eth1MergeBlockTracker["status"]).to.equal(StatusCode.FOUND, "Wrong StatusCode");
+    expect(eth1MergeBlockTracker["status"].code).to.equal(StatusCode.FOUND, "Wrong StatusCode");
 
     // Given the total difficulty offset the block that has TTD is the `difficultyOffset`nth block
-    expect(eth1MergeBlockTracker.getTerminalPowBlock()).to.deep.equal(
-      toPowBlock(blocks[difficultyOffset]),
+    expect(await eth1MergeBlockTracker.getTerminalPowBlock()).to.deep.equal(
+      toPowBlock(expectedMergeBlock),
       "Wrong found terminal pow block"
     );
-  });
+  }
 });
 
 function toHex(num: number | bigint): string {

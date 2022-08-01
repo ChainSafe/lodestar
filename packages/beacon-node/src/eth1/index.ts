@@ -84,7 +84,7 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
   }
 
   async getTerminalPowBlock(): Promise<Root | null> {
-    const block = await this.eth1MergeBlockTracker.getTerminalPowBlockFromCache();
+    const block = await this.eth1MergeBlockTracker.getTerminalPowBlock();
     return block && fromHexString(block.blockHash);
   }
 

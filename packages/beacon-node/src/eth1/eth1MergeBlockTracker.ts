@@ -105,7 +105,7 @@ export class Eth1MergeBlockTracker {
   /**
    * Returns the most recent POW block that satisfies the merge block condition
    */
-  async getTerminalPowBlockFromCache(): Promise<PowMergeBlock | null> {
+  async getTerminalPowBlock(): Promise<PowMergeBlock | null> {
     switch (this.status.code) {
       case StatusCode.STOPPED:
         // If not module is not polling fetch the mergeBlock explicitly
