@@ -4866,23 +4866,19 @@
                   "options": {
                     "0": {
                       "index": 0,
-                      "text": "NOT_SET"
+                      "text": "STOPPED"
                     },
                     "1": {
                       "index": 1,
-                      "text": "PRE_MERGE"
+                      "text": "SEARCHING"
                     },
                     "2": {
                       "index": 2,
-                      "text": "SEARCHING"
+                      "text": "FOUND"
                     },
                     "3": {
                       "index": 3,
-                      "text": "FOUND"
-                    },
-                    "4": {
-                      "index": 4,
-                      "text": "POST_MERGE"
+                      "text": "MERGE_COMPLETE"
                     }
                   },
                   "type": "value"
@@ -4981,17 +4977,17 @@
               "values": false
             },
             "text": {},
-            "textMode": "name"
+            "textMode": "auto"
           },
           "pluginVersion": "8.0.6",
           "targets": [
             {
               "exemplar": false,
-              "expr": "lodestar_eth1_merge_status",
+              "expr": "lodestar_eth1_merge_ttd",
               "format": "time_series",
-              "instant": true,
+              "instant": false,
               "interval": "",
-              "legendFormat": "{{terminalTotalDifficulty}}",
+              "legendFormat": "",
               "refId": "A"
             }
           ],
@@ -5055,25 +5051,7 @@
           "datasource": null,
           "fieldConfig": {
             "defaults": {
-              "mappings": [
-                {
-                  "options": {
-                    "0": {
-                      "index": 0,
-                      "text": "NOT_STARTED"
-                    },
-                    "1": {
-                      "index": 1,
-                      "text": "SEARCHING"
-                    },
-                    "2": {
-                      "index": 2,
-                      "text": "FOUND"
-                    }
-                  },
-                  "type": "value"
-                }
-              ],
+              "mappings": [],
               "thresholds": {
                 "mode": "absolute",
                 "steps": [
@@ -5113,14 +5091,14 @@
           "targets": [
             {
               "exemplar": false,
-              "expr": "lodestar_eth1_merge_block_status",
+              "expr": "lodestar_eth1_parent_blocks_fetched_total",
               "hide": false,
               "interval": "",
               "legendFormat": "",
               "refId": "A"
             }
           ],
-          "title": "Terminal Block",
+          "title": "Parents fetched",
           "type": "stat"
         },
         {
@@ -5258,8 +5236,7 @@
                     "value": null
                   }
                 ]
-              },
-              "unit": "s"
+              }
             },
             "overrides": []
           },
@@ -5289,14 +5266,14 @@
           "targets": [
             {
               "exemplar": false,
-              "expr": "lodestar_eth1_time_left_for_merge",
+              "expr": "lodestar_eth1_merge_td_factor",
               "hide": false,
               "interval": "",
-              "legendFormat": "latest block ttd",
+              "legendFormat": "td factor",
               "refId": "A"
             }
           ],
-          "title": "Time to merge",
+          "title": "TD factor",
           "type": "stat"
         },
         {
@@ -5396,7 +5373,7 @@
           "targets": [
             {
               "exemplar": false,
-              "expr": "lodestar_eth1_latest_block_time",
+              "expr": "lodestar_eth1_latest_block_timestamp",
               "hide": false,
               "interval": "",
               "legendFormat": "latest block ttd",
@@ -5449,14 +5426,14 @@
           "targets": [
             {
               "exemplar": false,
-              "expr": "lodestar_eth1_merge_last_searched_block_number",
+              "expr": "lodestar_eth1_get_terminal_pow_block_promise_cache_hit_total",
               "hide": false,
               "interval": "",
-              "legendFormat": "latest block ttd",
+              "legendFormat": "cache hits",
               "refId": "A"
             }
           ],
-          "title": "Last Searched Num",
+          "title": "Promise cache hits",
           "type": "stat"
         },
         {
@@ -5678,14 +5655,14 @@
           "targets": [
             {
               "exemplar": false,
-              "expr": "lodestar_eth1_merge_last_searched_block_number",
+              "expr": "rate(lodestar_eth1_poll_merge_block_errors_total[$__rate_interval])",
               "hide": false,
               "interval": "",
-              "legendFormat": "last searched block",
+              "legendFormat": "polling errors",
               "refId": "A"
             }
           ],
-          "title": "Last Searched block Number",
+          "title": "Error rate",
           "type": "timeseries"
         },
         {
@@ -5764,10 +5741,10 @@
           "targets": [
             {
               "exemplar": false,
-              "expr": "lodestar_eth1_merge_last_searched_block_td",
+              "expr": "lodestar_eth1_latest_block_ttd",
               "hide": false,
               "interval": "",
-              "legendFormat": "last searched block td",
+              "legendFormat": "lastest block td",
               "refId": "A"
             },
             {
@@ -5779,7 +5756,7 @@
               "refId": "B"
             }
           ],
-          "title": "Last Searched block",
+          "title": "Latest TD vs TTD",
           "type": "timeseries"
         }
       ],

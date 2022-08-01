@@ -96,7 +96,7 @@ export class Eth1MergeBlockTracker {
           // Set latestBlock stats
           metrics.eth1.eth1LatestBlockNumber.set(this.latestEth1Block.number);
           metrics.eth1.eth1LatestBlockTD.set(Number(this.latestEth1Block.totalDifficulty / this.safeTDFactor));
-          metrics.eth1.eth1LatestBlockTimestamp.set(this.latestEth1Block.timestamp);
+          metrics.eth1.eth1LatestBlockTimestamp.set(this.latestEth1Block.timestamp * 1000);
         }
       });
     }
@@ -135,7 +135,7 @@ export class Eth1MergeBlockTracker {
       return {
         ttdHit: false,
         tdFactor: this.safeTDFactor,
-        tdDiffScaled: Number((this.latestEth1Block.totalDifficulty / this.safeTDFactor) as bigint),
+        tdDiffScaled: Number((tdDiff / this.safeTDFactor) as bigint),
         ttd: this.config.TERMINAL_TOTAL_DIFFICULTY,
         td: this.latestEth1Block.totalDifficulty,
         timestamp: this.latestEth1Block.timestamp,

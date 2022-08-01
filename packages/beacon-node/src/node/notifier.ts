@@ -71,10 +71,12 @@ export async function runNodeNotifier(modules: NodeNotifierModules): Promise<voi
       // Notifier log lines must be kept at a reasonable max width otherwise it's very hard to read
       const tdProgress = chain.eth1.getTDProgress();
       if (tdProgress !== null && !tdProgress.ttdHit) {
-        tdTimeSeries.addPoint(tdProgress.tdDiffScaled, tdProgress.timestamp);
+        // TimeSeries accept time in Ms while timestamp is in Sec
+        tdTimeSeries.addPoint(tdProgress.tdDiffScaled, tdProgress.timestamp * 1000);
 
         const timestampTDD = tdTimeSeries.computeY0Point();
-        const secToTTD = Math.floor(Date.now() / 1000) - timestampTDD;
+        // It is possible to get ttd estimate with an error at imminent merge
+        const secToTTD = Math.max(Math.floor(timestampTDD - Date.now() / 1000), 0);
         const timeLeft = isFinite(secToTTD) ? prettyTimeDiffSec(secToTTD) : "?";
 
         logger.info(`TTD in ${timeLeft} current TD ${tdProgress.td} / ${tdProgress.ttd}`);
