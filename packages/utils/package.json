@@ -33,6 +33,7 @@
     "lint:fix": "yarn run lint --fix",
     "pretest": "yarn run check-types",
     "test:unit": "mocha 'test/**/*.test.ts'",
+    "test:browsers": "yarn karma start karma.config.cjs",
     "check-readme": "typescript-docs-verifier"
   },
   "types": "lib/index.d.ts",

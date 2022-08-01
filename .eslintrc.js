@@ -186,6 +186,20 @@ module.exports = {
   },
   overrides: [
     {
+      files: ["**/*.config.js", "**/*.config.mjs", "**/*.config.cjs", "**/*.config.ts"],
+      rules: {
+        // Allow importing packages from dev dependencies
+        "import/no-extraneous-dependencies": "off",
+        // Allow importing and mixing different configurations
+        "import/no-relative-packages": "off",
+        "@typescript-eslint/naming-convention": "off",
+        // Allow require in CJS modules
+        "@typescript-eslint/no-var-requires": "off",
+        // Allow require in CJS modules
+        "@typescript-eslint/no-require-imports": "off",
+      },
+    },
+    {
       files: ["**/test/**/*.ts"],
       rules: {
         "import/no-extraneous-dependencies": "off",

@@ -1,8 +1,8 @@
 import {expect} from "chai";
 import {isValidMerkleBranch} from "../../src/utils/verifyMerkleBranch.js";
-import {computeMerkleBranch} from "../utils.js";
+import {computeMerkleBranch} from "../utils/utils.js";
 
-describe("test utils", () => {
+describe("utils", () => {
   it("constructMerkleBranch", () => {
     const leaf = Buffer.alloc(32, 0xdd);
     const depth = 5;
