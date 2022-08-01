@@ -33,7 +33,7 @@ export class TimeSeries {
    */
   computeY0Point(): number {
     const {m, b} = linearRegression(this.points);
-    // The X cordinate system has been shifted right by startTimeSec, so return the
+    // The X cordinate system has been shifted left by startTimeSec, so return the
     // projection in original coordinated system
     return -b / m + this.startTimeSec;
   }
