@@ -5,7 +5,6 @@ import {IChainForkConfig} from "@lodestar/config";
 import {toHexString} from "@chainsafe/ssz";
 import {PeerAction} from "../../network/index.js";
 import {ItTrigger} from "../../util/itTrigger.js";
-import {byteArrayEquals} from "../../util/bytes.js";
 import {PeerMap} from "../../util/peerMap.js";
 import {wrapError} from "../../util/wrapError.js";
 import {RangeSyncType} from "../utils/remoteSyncType.js";
@@ -483,7 +482,7 @@ export class SyncChain {
         // The last batch attempt is right, all others are wrong. Penalize other peers
         const attemptOk = batch.validationSuccess();
         for (const attempt of batch.failedProcessingAttempts) {
-          if (!byteArrayEquals(attempt.hash, attemptOk.hash)) {
+          if (attempt.hash !== attemptOk.hash) {
             if (attemptOk.peer.toB58String() === attempt.peer.toB58String()) {
               // The same peer corrected its previous attempt
               this.reportPeer(attempt.peer, PeerAction.MidToleranceError, "SyncChainInvalidBatchSelf");
