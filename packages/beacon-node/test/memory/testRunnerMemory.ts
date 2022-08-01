@@ -8,6 +8,10 @@ export type TestRunnerMemoryOpts<T> = {
   convergeFactor?: number;
 };
 
+if (global.gc === undefined) {
+  throw Error("Must enable global.gc");
+}
+
 export async function testRunnerMemoryGc<T>(opts: TestRunnerMemoryOpts<T>): Promise<void> {
   const {
     getInstance,
@@ -25,11 +29,11 @@ export async function testRunnerMemoryGc<T>(opts: TestRunnerMemoryOpts<T>): Prom
   const usedMemoryArr: number[] = [];
 
   for (let n = 0; n < rounds; n++) {
-    global.gc();
-    global.gc();
+    global.gc?.();
+    global.gc?.();
     await new Promise((r) => setTimeout(r, 100));
-    global.gc();
-    global.gc();
+    global.gc?.();
+    global.gc?.();
 
     const totalUsedMemoryPrev = computeUsedMemory(process.memoryUsage());
 
@@ -38,11 +42,11 @@ export async function testRunnerMemoryGc<T>(opts: TestRunnerMemoryOpts<T>): Prom
       refs.push(getInstance(i));
     }
 
-    global.gc();
-    global.gc();
+    global.gc?.();
+    global.gc?.();
     await new Promise((r) => setTimeout(r, 100));
-    global.gc();
-    global.gc();
+    global.gc?.();
+    global.gc?.();
 
     const totalUsedMemory = computeUsedMemory(process.memoryUsage());
 
@@ -98,8 +102,8 @@ export function testRunnerMemory<T>(opts: TestRunnerMemoryOpts<T>): number {
     // local vars will get garbage collected and won't show up in the .m result
 
     if (i % sampleEvery === 0) {
-      global.gc();
-      global.gc();
+      global.gc?.();
+      global.gc?.();
 
       const memoryUsage = process.memoryUsage();
       const usedMemory = computeUsedMemory(memoryUsage);
