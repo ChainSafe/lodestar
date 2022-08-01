@@ -56,7 +56,7 @@ export async function runNodeNotifier(modules: NodeNotifierModules): Promise<voi
       const finalizedEpoch = headState.finalizedCheckpoint.epoch;
       const finalizedRoot = headState.finalizedCheckpoint.root;
       const headSlot = headInfo.slot;
-      headSlotTimeSeries.addPoint(headSlot, Date.now());
+      headSlotTimeSeries.addPoint(headSlot, Math.floor(Date.now() / 1000));
 
       const peersRow = `peers: ${connectedPeerCount}`;
       const finalizedCheckpointRow = `finalized: ${prettyBytes(finalizedRoot)}:${finalizedEpoch}`;
@@ -71,8 +71,7 @@ export async function runNodeNotifier(modules: NodeNotifierModules): Promise<voi
       // Notifier log lines must be kept at a reasonable max width otherwise it's very hard to read
       const tdProgress = chain.eth1.getTDProgress();
       if (tdProgress !== null && !tdProgress.ttdHit) {
-        // TimeSeries accept time in Ms while timestamp is in Sec
-        tdTimeSeries.addPoint(tdProgress.tdDiffScaled, tdProgress.timestamp * 1000);
+        tdTimeSeries.addPoint(tdProgress.tdDiffScaled, tdProgress.timestamp);
 
         const timestampTDD = tdTimeSeries.computeY0Point();
         // It is possible to get ttd estimate with an error at imminent merge

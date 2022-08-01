@@ -11,9 +11,9 @@ export class TimeSeries {
   }
 
   /** Add TimeSeries entry for value at current time */
-  addPoint(value: number, timeMs = Date.now()): void {
+  addPoint(value: number, timeSec = Math.floor(Date.now() / 1000)): void {
     // Substract initial time so x values are not big and cause rounding errors
-    const time = timeMs / 1000 - this.startTimeSec;
+    const time = timeSec - this.startTimeSec;
     this.points.push([time, value]);
 
     // Limit length by removing old entries
