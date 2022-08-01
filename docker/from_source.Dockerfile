@@ -23,12 +23,12 @@ FROM node:16-alpine as build
 WORKDIR /usr/app
 RUN apk update && apk add --no-cache g++ make python3 && rm -rf /var/cache/apk/*
 
-# Installs all deps in the root yarn.lock, which are most of them. To cache before copying the src
-COPY package.json yarn.lock ./
-RUN yarn install --non-interactive --frozen-lockfile --ignore-scripts
-
 COPY . .
-RUN yarn install --non-interactive --frozen-lockfile && yarn build
+
+RUN yarn install --non-interactive --frozen-lockfile && \
+  yarn build && \
+  yarn install --non-interactive --frozen-lockfile --production && \
+  packages/*/src
 
 # To have access to the specific branch and commit used to build this source,
 # a git-data.json file is created by persisting git data at build time. Then,
