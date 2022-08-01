@@ -183,13 +183,13 @@ export const BeaconState = new ContainerType(
   {typeName: "BeaconState", jsonCase: "eth2"}
 );
 
-export const LightClientSnapshot = new ContainerType(
+export const LightClientBootstrap = new ContainerType(
   {
     header: phase0Ssz.BeaconBlockHeader,
     currentSyncCommittee: SyncCommittee,
     nextSyncCommittee: SyncCommittee,
   },
-  {typeName: "LightClientSnapshot", jsonCase: "eth2"}
+  {typeName: "LightClientBootstrap", jsonCase: "eth2"}
 );
 
 export const LightClientUpdate = new ContainerType(
@@ -207,7 +207,7 @@ export const LightClientUpdate = new ContainerType(
 
 export const LightClientStore = new ContainerType(
   {
-    snapshot: LightClientSnapshot,
+    snapshot: LightClientBootstrap,
     validUpdates: new ListCompositeType(LightClientUpdate, EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH),
   },
   {typeName: "LightClientStore", jsonCase: "eth2"}

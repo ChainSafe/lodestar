@@ -21,7 +21,7 @@ export {LightclientOptimisticHeaderUpdate, LightclientFinalizedUpdate};
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
-export type LightclientSnapshotWithProof = {
+export type LightClientBootstrap = {
   header: phase0.BeaconBlockHeader;
   currentSyncCommittee: altair.SyncCommittee;
   /** Single branch proof from state root to currentSyncCommittee */
@@ -53,7 +53,7 @@ export type Api = {
    * The trusted block root should be fetched with similar means to a weak subjectivity checkpoint.
    * Only block roots for checkpoints are guaranteed to be available.
    */
-  getBootstrap(blockRoot: string): Promise<{data: LightclientSnapshotWithProof}>;
+  getBootstrap(blockRoot: string): Promise<{data: LightClientBootstrap}>;
 };
 
 /**
