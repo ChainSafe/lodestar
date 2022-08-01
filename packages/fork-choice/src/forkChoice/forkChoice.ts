@@ -753,6 +753,43 @@ export class ForkChoice implements IForkChoice {
     return;
   }
 
+  /**
+   * Find dependent root of a head block
+   * epoch - 2 | epoch - 1 | epoch
+   * pivotSlot |     -     | blockSlot
+   */
+  findAttesterDependentRoot(headBlockHash: Root): RootHex | null {
+    let block = this.getBlock(headBlockHash);
+    if (!block) return null;
+    const {slot} = block;
+    // The shuffling is determined by the block at the end of the target epoch
+    // minus the shuffling lookahead (usually 2). We call this the "pivot".
+    const pivotSlot = computeStartSlotAtEpoch(computeEpochAtSlot(slot) - 1) - 1;
+
+    // 1st hop: target block
+    block = this.getBlockHex(block.targetRoot);
+    if (!block) return null;
+    if (block.slot <= pivotSlot) return block.blockRoot;
+    // or parent of target block
+    block = this.getBlockHex(block.parentRoot);
+    if (!block) return null;
+    if (block.slot <= pivotSlot) return block.blockRoot;
+
+    // 2nd hop: go back 1 more epoch, target block
+    block = this.getBlockHex(block.targetRoot);
+    if (!block) return null;
+    if (block.slot <= pivotSlot) return block.blockRoot;
+    // or parent of target block
+    block = this.getBlockHex(block.parentRoot);
+    if (!block) return null;
+    // most of the time, in a stable network, it reaches here
+    if (block.slot <= pivotSlot) return block.blockRoot;
+
+    throw Error(
+      `Not able to find attester dependent root for head ${headBlockHash}, slot ${slot}, pivotSlot ${pivotSlot}, last tried slot ${block.slot}`
+    );
+  }
+
   private getPreMergeExecStatus(executionStatus: ExecutionStatus): ExecutionStatus.PreMerge {
     if (executionStatus !== ExecutionStatus.PreMerge)
       throw Error(`Invalid pre-merge execution status: expected: ${ExecutionStatus.PreMerge}, got ${executionStatus}`);
