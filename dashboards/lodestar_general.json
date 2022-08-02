@@ -5373,7 +5373,7 @@
           "targets": [
             {
               "exemplar": false,
-              "expr": "lodestar_eth1_latest_block_timestamp",
+              "expr": "lodestar_eth1_latest_block_timestamp * 1000",
               "hide": false,
               "interval": "",
               "legendFormat": "latest block ttd",
