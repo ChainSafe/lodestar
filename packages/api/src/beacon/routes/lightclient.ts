@@ -102,7 +102,7 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
 }
 
 export function getReturnTypes(): ReturnTypes<Api> {
-  const lightclientSnapshotWithProofType = new ContainerType(
+  const lightclientBootstrap = new ContainerType(
     {
       header: ssz.phase0.BeaconBlockHeader,
       currentSyncCommittee: ssz.altair.SyncCommittee,
@@ -135,6 +135,6 @@ export function getReturnTypes(): ReturnTypes<Api> {
     getUpdates: ContainerData(ArrayOf(ssz.altair.LightClientUpdate)),
     getOptimisticUpdate: ContainerData(lightclientHeaderUpdate),
     getFinalityUpdate: ContainerData(lightclientFinalizedUpdate),
-    getBootstrap: ContainerData(lightclientSnapshotWithProofType),
+    getBootstrap: ContainerData(lightclientBootstrap),
   };
 }

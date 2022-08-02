@@ -30,6 +30,7 @@ describe("network / reqresp / encoders / responseTypes", () => {
     [Method.Metadata]: [],
     [Method.BeaconBlocksByRange]: [generateEmptySignedBlocks(2)],
     [Method.BeaconBlocksByRoot]: [generateEmptySignedBlocks(2)],
+    [Method.LightClientBootstrap]: [],
   };
 
   const encodings: Encoding[] = [Encoding.SSZ_SNAPPY];

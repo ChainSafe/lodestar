@@ -109,7 +109,7 @@ export async function sendRequest<T extends IncomingResponseBody | IncomingRespo
     const protocol = protocols.get(protocolId);
     if (!protocol) throw Error(`dialProtocol selected unknown protocolId ${protocolId}`);
 
-    logger.debug("Req  sending request", {...logCtx, body: renderRequestBody(method, requestBody)});
+    logger.debug("Req sending request", {...logCtx, body: renderRequestBody(method, requestBody)});
 
     // Spec: The requester MUST close the write side of the stream once it finishes writing the request message
     // Impl: stream.sink is closed automatically by js-libp2p-mplex when piped source is exhausted

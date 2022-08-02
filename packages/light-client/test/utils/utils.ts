@@ -166,12 +166,12 @@ export function computeLightclientUpdate(config: IBeaconConfig, period: SyncPeri
 }
 
 /**
- * Creates a LightclientSnapshotWithProof that passes validation
+ * Creates a LightClientBootstrap that passes validation
  */
 export function computeLightClientSnapshot(
   period: SyncPeriod
 ): {
-  snapshot: routes.lightclient.LightclientSnapshotWithProof;
+  snapshot: routes.lightclient.LightClientBootstrap;
   checkpointRoot: Uint8Array;
 } {
   const currentSyncCommittee = getInteropSyncCommittee(period).syncCommittee;

@@ -1,16 +1,18 @@
 import {ForkName} from "@lodestar/params";
-import {allForks, phase0, ssz, Slot} from "@lodestar/types";
+import {allForks, phase0, ssz, Slot, altair} from "@lodestar/types";
 
 export const protocolPrefix = "/eth2/beacon_chain/req";
 
 /** ReqResp protocol names or methods. Each Method can have multiple versions and encodings */
 export enum Method {
+  // Phase 0
   Status = "status",
   Goodbye = "goodbye",
   Ping = "ping",
   Metadata = "metadata",
   BeaconBlocksByRange = "beacon_blocks_by_range",
   BeaconBlocksByRoot = "beacon_blocks_by_root",
+  LightClientBootstrap = "light_client_bootstrap",
 }
 
 /** RPC Versions */
@@ -43,6 +45,7 @@ export const protocolsSupported: [Method, Version, Encoding][] = [
   [Method.BeaconBlocksByRange, Version.V2, Encoding.SSZ_SNAPPY],
   [Method.BeaconBlocksByRoot, Version.V1, Encoding.SSZ_SNAPPY],
   [Method.BeaconBlocksByRoot, Version.V2, Encoding.SSZ_SNAPPY],
+  [Method.LightClientBootstrap, Version.V2, Encoding.SSZ_SNAPPY],
 ];
 
 export const isSingleResponseChunkByMethod: {[K in Method]: boolean} = {
@@ -52,6 +55,7 @@ export const isSingleResponseChunkByMethod: {[K in Method]: boolean} = {
   [Method.Metadata]: true,
   [Method.BeaconBlocksByRange]: false, // A stream, 0 or more response chunks
   [Method.BeaconBlocksByRoot]: false,
+  [Method.LightClientBootstrap]: true, // TODO DA: confirm
 };
 
 export const CONTEXT_BYTES_FORK_DIGEST_LENGTH = 4;
@@ -70,6 +74,8 @@ export function contextBytesTypeByProtocol(protocol: Protocol): ContextBytesType
     case Method.Ping:
     case Method.Metadata:
       return ContextBytesType.Empty;
+    case Method.LightClientBootstrap:
+      return ContextBytesType.ForkDigest; // TODO DA confirm
     case Method.BeaconBlocksByRange:
     case Method.BeaconBlocksByRoot:
       switch (protocol.version) {
@@ -97,6 +103,8 @@ export function getRequestSzzTypeByMethod(method: Method) {
       return ssz.phase0.BeaconBlocksByRangeRequest;
     case Method.BeaconBlocksByRoot:
       return ssz.phase0.BeaconBlocksByRootRequest;
+    case Method.LightClientBootstrap:
+      return ssz.altair.BlockRoot;
   }
 }
 
@@ -107,6 +115,7 @@ export type RequestBodyByMethod = {
   [Method.Metadata]: null;
   [Method.BeaconBlocksByRange]: phase0.BeaconBlocksByRangeRequest;
   [Method.BeaconBlocksByRoot]: phase0.BeaconBlocksByRootRequest;
+  [Method.LightClientBootstrap]: altair.BlockRoot;
 };
 
 /** Response SSZ type for each method and ForkName */
@@ -128,6 +137,8 @@ export function getResponseSzzTypeByMethod(protocol: Protocol, forkName: ForkNam
     case Method.BeaconBlocksByRoot:
       // SignedBeaconBlock type is changed in altair
       return ssz[forkName].SignedBeaconBlock;
+    case Method.LightClientBootstrap:
+      return ssz.altair.LightClientBootstrap;
   }
 }
 
@@ -148,6 +159,8 @@ export function getOutgoingSerializerByMethod(protocol: Protocol): OutgoingSeria
     case Method.BeaconBlocksByRange:
     case Method.BeaconBlocksByRoot:
       return reqRespBlockResponseSerializer;
+    case Method.LightClientBootstrap:
+      return ssz.altair.LightClientBootstrap;
   }
 }
 
@@ -156,6 +169,7 @@ type CommonResponseBodyByMethod = {
   [Method.Goodbye]: phase0.Goodbye;
   [Method.Ping]: phase0.Ping;
   [Method.Metadata]: phase0.Metadata;
+  [Method.LightClientBootstrap]: altair.LightClientBootstrap;
 };
 
 // Used internally by lodestar to response to beacon_blocks_by_range and beacon_blocks_by_root

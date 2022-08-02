@@ -183,6 +183,8 @@ export const BeaconState = new ContainerType(
   {typeName: "BeaconState", jsonCase: "eth2"}
 );
 
+export const BlockRoot = Root;
+
 export const LightClientBootstrap = new ContainerType(
   {
     header: phase0Ssz.BeaconBlockHeader,
