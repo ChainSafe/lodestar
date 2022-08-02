@@ -13,7 +13,7 @@ import {
 } from "@lodestar/state-transition";
 import {IBeaconConfig} from "@lodestar/config";
 import {allForks, UintNum64, Root, phase0, Slot, RootHex, Epoch, ValidatorIndex} from "@lodestar/types";
-import {CheckpointWithHex, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
+import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {ILogger, toHex} from "@lodestar/utils";
 import {CompositeTypeAny, fromHexString, TreeView, Type} from "@chainsafe/ssz";
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
@@ -521,6 +521,17 @@ export class BeaconChain implements IBeaconChain {
     this.seenAggregatedAttestations.prune(epoch);
     this.seenBlockAttesters.prune(epoch);
     this.beaconProposerCache.prune(epoch);
+
+    // Poll for merge block in the background to speed-up block production. Only if:
+    // - after BELLATRIX_FORK_EPOCH
+    // - Beacon node synced
+    // - head state not isMergeTransitionComplete
+    if (this.config.BELLATRIX_FORK_EPOCH - epoch < 1) {
+      const head = this.forkChoice.getHead();
+      if (epoch - computeEpochAtSlot(head.slot) < 5 && head.executionStatus === ExecutionStatus.PreMerge) {
+        this.eth1.startPollingMergeBlock();
+      }
+    }
   }
 
   private onForkChoiceHead(head: ProtoBlock): void {
