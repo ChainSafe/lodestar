@@ -11,7 +11,7 @@ import {GossipTopicCache} from "./topic.js";
  * The function used to generate a gossipsub message id
  * We use the first 8 bytes of SHA256(data) for content addressing
  */
-export function fastMsgIdFn(rpcMsg: RPC.Message): string {
+export function fastMsgIdFn(rpcMsg: RPC.IMessage): string {
   if (rpcMsg.data) {
     return Buffer.from(digest(rpcMsg.data)).slice(0, 8).toString("hex");
   } else {
