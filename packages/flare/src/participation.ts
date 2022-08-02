@@ -1,14 +1,10 @@
-import {ssz} from "@lodestar/types";
-import {getClient} from "@lodestar/api";
-import {config} from "@lodestar/config/default";
-import {TIMELY_HEAD_FLAG_INDEX, TIMELY_SOURCE_FLAG_INDEX, TIMELY_TARGET_FLAG_INDEX} from "@lodestar/params";
+import {altair} from "@lodestar/types";
+import {ForkName, TIMELY_HEAD_FLAG_INDEX, TIMELY_SOURCE_FLAG_INDEX, TIMELY_TARGET_FLAG_INDEX} from "@lodestar/params";
+import {downloadHeadState} from "./downloadHeadState.js";
 
 /* eslint-disable no-console */
 
-const client = getClient({baseUrl: "http://localhost:4000"}, {config});
-
-const stateBytes = await client.debug.getStateV2("head", "ssz");
-const state = ssz.bellatrix.BeaconState.deserialize(stateBytes);
+const {state, fork} = await downloadHeadState();
 
 const TIMELY_SOURCE = 1 << TIMELY_SOURCE_FLAG_INDEX;
 const TIMELY_TARGET = 1 << TIMELY_TARGET_FLAG_INDEX;
@@ -18,8 +14,15 @@ const sourceByK = new Map<number, number>();
 const targetByK = new Map<number, number>();
 const headByK = new Map<number, number>();
 
-for (let i = 0; i < state.previousEpochParticipation.length; i++) {
-  const flags = state.previousEpochParticipation[i];
+if (fork === ForkName.phase0) {
+  throw Error("State still in phase0");
+}
+
+const stateAltair = state as altair.BeaconState;
+const validatorCount = stateAltair.previousEpochParticipation.length;
+
+for (let i = 0; i < validatorCount; i++) {
+  const flags = stateAltair.previousEpochParticipation[i];
   const {source, target, head} = parseParticipation(flags);
 
   const k = i - (i % 1000);
@@ -33,7 +36,7 @@ for (let i = 0; i < state.previousEpochParticipation.length; i++) {
 
 console.log("indexes   sorc targ head");
 
-for (let k = 0; k < state.previousEpochParticipation.length; k += 1000) {
+for (let k = 0; k < validatorCount; k += 1000) {
   const values = [sourceByK.get(k) ?? 0, targetByK.get(k) ?? 0, headByK.get(k) ?? 0]
     .map((val) => val.toString(10).padStart(4))
     .join(" ");

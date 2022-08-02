@@ -1,14 +1,10 @@
 import {ssz} from "@lodestar/types";
-import {getClient} from "@lodestar/api";
-import {config} from "@lodestar/config/default";
 import {toHex} from "@lodestar/utils";
+import {downloadHeadState} from "./downloadHeadState.js";
 
 /* eslint-disable no-console */
 
-const client = getClient({baseUrl: "http://localhost:4000"}, {config});
-
-const stateBytes = await client.debug.getStateV2("head", "ssz");
-const state = ssz.bellatrix.BeaconState.deserialize(stateBytes);
+const {state} = await downloadHeadState();
 
 const votesByJson = new Map<string, number>();
 
