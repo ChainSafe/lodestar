@@ -41,8 +41,6 @@ export interface IEth1ForBlockProduction {
 
   /** Returns the most recent POW block that satisfies the merge block condition */
   getTerminalPowBlock(): Promise<Root | null>;
-  /** Call when merge is irrevocably completed to stop polling unnecessary data from the eth1 node */
-  mergeCompleted(): void;
   /** Get a POW block by hash checking the local cache first */
   getPowBlock(powBlockHash: string): Promise<PowMergeBlock | null>;
 

@@ -88,10 +88,6 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
     return block && fromHexString(block.blockHash);
   }
 
-  mergeCompleted(): void {
-    this.eth1MergeBlockTracker.mergeCompleted();
-  }
-
   getPowBlock(powBlockHash: string): Promise<PowMergeBlock | null> {
     return this.eth1MergeBlockTracker.getPowBlock(powBlockHash);
   }
@@ -123,10 +119,6 @@ export class Eth1ForBlockProductionDisabled implements IEth1ForBlockProduction {
    */
   async getTerminalPowBlock(): Promise<Root | null> {
     return null;
-  }
-
-  mergeCompleted(): void {
-    // Ignore
   }
 
   /** Will not be able to validate the merge block */

@@ -13,14 +13,12 @@ export enum StatusCode {
   STOPPED = "STOPPED",
   SEARCHING = "SEARCHING",
   FOUND = "FOUND",
-  MERGE_COMPLETE = "MERGE_COMPLETE",
 }
 
 type Status =
   | {code: StatusCode.STOPPED}
   | {code: StatusCode.SEARCHING}
-  | {code: StatusCode.FOUND; mergeBlock: PowMergeBlock}
-  | {code: StatusCode.MERGE_COMPLETE};
+  | {code: StatusCode.FOUND; mergeBlock: PowMergeBlock};
 
 /** For metrics, index order = declaration order of StatusCode  */
 const statusCodeIdx = enumToIndexMap(StatusCode);
@@ -117,10 +115,6 @@ export class Eth1MergeBlockTracker {
 
       case StatusCode.FOUND:
         return this.status.mergeBlock;
-
-      case StatusCode.MERGE_COMPLETE:
-        // For better debugging in case this module stops searching too early
-        throw Error("Must not request mergeBlock on MERGE_COMPLETE");
     }
   }
 
@@ -144,16 +138,6 @@ export class Eth1MergeBlockTracker {
       return {
         ttdHit: true,
       };
-    }
-  }
-
-  /**
-   * Call when merge is irrevocably completed to stop polling unnecessary data from the eth1 node
-   */
-  mergeCompleted(): void {
-    if (this.status.code !== StatusCode.MERGE_COMPLETE) {
-      this.status = {code: StatusCode.MERGE_COMPLETE};
-      this.close();
     }
   }
 
@@ -196,7 +180,12 @@ export class Eth1MergeBlockTracker {
     });
 
     const interval = setInterval(() => {
-      void this.pollTerminalPowBlockFromEth1();
+      // Pre-emptively try to find merge block and cache it if found.
+      // Future callers of getTerminalPowBlock() will re-use the cached found mergeBlock.
+      this.getTerminalPowBlockFromEth1().catch((e) => {
+        this.logger.error("Error on findMergeBlock", {}, e as Error);
+        this.metrics?.eth1.eth1PollMergeBlockErrors.inc();
+      });
     }, this.config.SECONDS_PER_ETH1_BLOCK * 1000);
 
     this.intervals.push(interval);
@@ -206,46 +195,41 @@ export class Eth1MergeBlockTracker {
     this.intervals.forEach(clearInterval);
   }
 
-  private setTerminalBlock(mergeBlock: PowMergeBlock): void {
-    if (this.status.code !== StatusCode.MERGE_COMPLETE) {
-      this.status = {code: StatusCode.FOUND, mergeBlock};
-      this.metrics?.eth1.eth1MergeBlockDetails.set(
-        {
-          terminalBlockHash: mergeBlock.blockHash,
-          // Convert all number/bigints to string labels
-          terminalBlockNumber: mergeBlock.number.toString(10),
-          terminalBlockTD: mergeBlock.totalDifficulty.toString(10),
-        },
-        1
-      );
-    }
-  }
-
-  private async pollTerminalPowBlockFromEth1(): Promise<void> {
-    try {
-      const mergeBlock = await this.getTerminalPowBlockFromEth1();
-      if (mergeBlock) {
-        this.logger.info("Terminal POW block found!", {
-          hash: mergeBlock.blockHash,
-          number: mergeBlock.number,
-          totalDifficulty: mergeBlock.totalDifficulty,
-        });
-      }
-      // It is possible for status to be updated to merge complete or found or stopped
-      if (this.status.code != StatusCode.SEARCHING) {
-        this.close();
-      }
-    } catch (e) {
-      this.logger.error("Error on findMergeBlock", {}, e as Error);
-      this.metrics?.eth1.eth1PollMergeBlockErrors.inc();
-    }
-  }
-
   private async getTerminalPowBlockFromEth1(): Promise<PowMergeBlock | null> {
     if (!this.getTerminalPowBlockFromEth1Promise) {
-      this.getTerminalPowBlockFromEth1Promise = this.unsafeGetTerminalPowBlockFromEth1().finally(() => {
-        this.getTerminalPowBlockFromEth1Promise = null;
-      });
+      this.getTerminalPowBlockFromEth1Promise = this.internalGetTerminalPowBlockFromEth1()
+        .then((mergeBlock) => {
+          // Persist found merge block here to affect both caller paths:
+          // - internal searcher
+          // - external caller if STOPPED
+          if (mergeBlock && this.status.code != StatusCode.FOUND) {
+            if (this.status.code === StatusCode.SEARCHING) {
+              this.close();
+            }
+
+            this.logger.info("Terminal POW block found!", {
+              hash: mergeBlock.blockHash,
+              number: mergeBlock.number,
+              totalDifficulty: mergeBlock.totalDifficulty,
+            });
+
+            this.status = {code: StatusCode.FOUND, mergeBlock};
+            this.metrics?.eth1.eth1MergeBlockDetails.set(
+              {
+                terminalBlockHash: mergeBlock.blockHash,
+                // Convert all number/bigints to string labels
+                terminalBlockNumber: mergeBlock.number.toString(10),
+                terminalBlockTD: mergeBlock.totalDifficulty.toString(10),
+              },
+              1
+            );
+          }
+
+          return mergeBlock;
+        })
+        .finally(() => {
+          this.getTerminalPowBlockFromEth1Promise = null;
+        });
     } else {
       // This should no happen, since getTerminalPowBlockFromEth1() should resolve faster than SECONDS_PER_ETH1_BLOCK.
       // else something is wrong: the el-cl comms are two slow, or the backsearch got stuck in a deep search.
@@ -256,17 +240,16 @@ export class Eth1MergeBlockTracker {
   }
 
   /**
-   * **unsafe** since it can create multiple backward searches that overload the eth1 client.
+   * **internal** + **unsafe** since it can create multiple backward searches that overload the eth1 client.
    * Must be called in a wrapper to ensure that there's only once concurrent call to this fn.
    */
-  private async unsafeGetTerminalPowBlockFromEth1(): Promise<PowMergeBlock | null> {
+  private async internalGetTerminalPowBlockFromEth1(): Promise<PowMergeBlock | null> {
     // Search merge block by hash
     // Terminal block hash override takes precedence over terminal total difficulty
     const terminalBlockHash = toHexString(this.config.TERMINAL_BLOCK_HASH);
     if (terminalBlockHash !== ZERO_HASH_HEX) {
       const block = await this.getPowBlock(terminalBlockHash);
       if (block) {
-        this.setTerminalBlock(block);
         return block;
       } else {
         // if a TERMINAL_BLOCK_HASH other than ZERO_HASH is configured and we can't find it, return NONE
@@ -305,7 +288,6 @@ export class Eth1MergeBlockTracker {
 
         // Allow genesis block to reach TTD https://github.com/ethereum/consensus-specs/pull/2719
         if (block.parentHash === ZERO_HASH_HEX) {
-          this.setTerminalBlock(block);
           return block;
         }
 
@@ -319,7 +301,6 @@ export class Eth1MergeBlockTracker {
         // block.td > TTD && parent.td < TTD => block is mergeBlock
         if (parent.totalDifficulty < this.config.TERMINAL_TOTAL_DIFFICULTY) {
           // Is terminal total difficulty block AND has verified block -> parent relationship
-          this.setTerminalBlock(block);
           return block;
         } else {
           block = parent;
