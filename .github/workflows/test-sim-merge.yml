@@ -1,6 +1,14 @@
 name: Sim merge tests
 
-on: [pull_request, push]
+on:
+  push:
+    branches:
+      - stable
+      - unstable
+  pull_request:
+    branches:
+      - stable
+      - unstable
 
 env:
   GETH_COMMIT: be9742721f56eb8bb7ebf4f6a03fb01b13a05408

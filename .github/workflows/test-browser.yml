@@ -1,6 +1,14 @@
 name: Browser tests
 
-on: [pull_request, push]
+on:
+  push:
+    branches:
+      - stable
+      - unstable
+  pull_request:
+    branches:
+      - stable
+      - unstable
 
 jobs:
   tests-main:
