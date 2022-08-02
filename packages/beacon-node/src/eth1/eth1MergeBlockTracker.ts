@@ -206,6 +206,21 @@ export class Eth1MergeBlockTracker {
     this.intervals.forEach(clearInterval);
   }
 
+  private setTerminalBlock(mergeBlock: PowMergeBlock): void {
+    if (this.status.code !== StatusCode.MERGE_COMPLETE) {
+      this.status = {code: StatusCode.FOUND, mergeBlock};
+      this.metrics?.eth1.eth1MergeBlockDetails.set(
+        {
+          terminalBlockHash: mergeBlock.blockHash,
+          // Convert all number/bigints to string labels
+          terminalBlockNumber: mergeBlock.number.toString(10),
+          terminalBlockTD: mergeBlock.totalDifficulty.toString(10),
+        },
+        1
+      );
+    }
+  }
+
   private async pollTerminalPowBlockFromEth1(): Promise<void> {
     try {
       const mergeBlock = await this.getTerminalPowBlockFromEth1();
@@ -215,21 +230,9 @@ export class Eth1MergeBlockTracker {
           number: mergeBlock.number,
           totalDifficulty: mergeBlock.totalDifficulty,
         });
-
-        if (this.status.code !== StatusCode.MERGE_COMPLETE) {
-          this.status = {code: StatusCode.FOUND, mergeBlock};
-
-          this.metrics?.eth1.eth1MergeBlockDetails.set(
-            {
-              terminalBlockHash: mergeBlock.blockHash,
-              // Convert all number/bigints to string labels
-              terminalBlockNumber: mergeBlock.number.toString(10),
-              terminalBlockTD: mergeBlock.totalDifficulty.toString(10),
-            },
-            1
-          );
-        }
-
+      }
+      // It is possible for status to be updated to merge complete or found or stopped
+      if (this.status.code != StatusCode.SEARCHING) {
         this.close();
       }
     } catch (e) {
@@ -263,6 +266,7 @@ export class Eth1MergeBlockTracker {
     if (terminalBlockHash !== ZERO_HASH_HEX) {
       const block = await this.getPowBlock(terminalBlockHash);
       if (block) {
+        this.setTerminalBlock(block);
         return block;
       } else {
         // if a TERMINAL_BLOCK_HASH other than ZERO_HASH is configured and we can't find it, return NONE
@@ -301,6 +305,7 @@ export class Eth1MergeBlockTracker {
 
         // Allow genesis block to reach TTD https://github.com/ethereum/consensus-specs/pull/2719
         if (block.parentHash === ZERO_HASH_HEX) {
+          this.setTerminalBlock(block);
           return block;
         }
 
@@ -314,6 +319,7 @@ export class Eth1MergeBlockTracker {
         // block.td > TTD && parent.td < TTD => block is mergeBlock
         if (parent.totalDifficulty < this.config.TERMINAL_TOTAL_DIFFICULTY) {
           // Is terminal total difficulty block AND has verified block -> parent relationship
+          this.setTerminalBlock(block);
           return block;
         } else {
           block = parent;
