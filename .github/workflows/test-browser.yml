@@ -1,4 +1,4 @@
-name: Tests
+name: Browser tests
 
 on:
   push:
@@ -43,16 +43,7 @@ jobs:
         if: steps.cache-deps.outputs.cache-hit == 'true'
       # </common-build>
 
-      # Cache validator slashing protection data tests
-      - name: Restore spec tests cache
-        uses: actions/cache@master
-        with:
-          path: packages/validator/spec-tests
-          key: spec-test-data-${{ hashFiles('packages/validator/test/spec/params.ts') }}
-
       # Misc sanity checks
-      - name: Lint Grafana dashboards
-        run: node scripts/validate-grafana-dashboard.mjs ./dashboards
       - name: Test root binary exists
         run: ./lodestar --version
       - name: Reject yarn.lock changes
@@ -60,20 +51,8 @@ jobs:
         # Run only on forks
         if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}
 
-      - name: Check Types
-        run: yarn run check-types
-      # Test docs generation, even if not published
-      - name: Build docs
-        run: yarn build:docs
-      # TODO: uncomment after https://github.com/bbc/typescript-docs-verifier/issues/17 is resolved
-      # - name: README check
-      #   run: yarn run check-readme
-
-      - name: Lint
-        run: yarn lint
-      - name: Check Build
-        run: yarn check-build
-      - name: Unit tests
-        run: yarn test:unit
-      - name: Upload coverage data
-        run: yarn coverage
+      - name: Browser tests
+        run: |
+          export DISPLAY=':99.0'
+          Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
+          yarn test:browsers
