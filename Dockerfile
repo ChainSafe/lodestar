@@ -6,8 +6,7 @@ COPY . .
 
 RUN yarn install --non-interactive --frozen-lockfile && \
   yarn build && \
-  yarn install --non-interactive --frozen-lockfile --production && \
-  packages/*/src
+  yarn install --non-interactive --frozen-lockfile --production
 
 # To have access to the specific branch and commit used to build this source,
 # a git-data.json file is created by persisting git data at build time. Then,
