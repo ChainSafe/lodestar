@@ -22,6 +22,9 @@ export function getReqRespHandlers({db, chain}: {db: IBeaconDb; chain: IBeaconCh
       yield chain.getStatus();
     },
     async *onLightClientBootstrap(req) {
+      // TODO: Error handling. From spec:
+      // When a LightClientBootstrap instance cannot be
+      // produced for a given block root, peers SHOULD respond with error code 3: ResourceUnavailable
       yield await chain.lightClientServer.getBootstrap(req);
     },
 
