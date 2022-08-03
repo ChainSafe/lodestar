@@ -126,7 +126,7 @@
     "@libp2p/interface-peer-id": "^1.0.2",
     "@libp2p/interface-pubsub": "^1.0.1",
     "@libp2p/mdns": "^2.0.1",
-    "@libp2p/mplex": "^3.0.0",
+    "@libp2p/mplex": "^4.0.3",
     "@libp2p/peer-id-factory": "^1.0.15",
     "@libp2p/tcp": "^3.0.1",
     "@multiformats/multiaddr": "^10.2.0",
