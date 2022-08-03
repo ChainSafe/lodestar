@@ -520,10 +520,10 @@
   optionalDependencies:
     "@node-rs/crc32" "1.1.0"
 
-"@chainsafe/libp2p-gossipsub@^3.1.0":
-  version "3.1.0"
-  resolved "https://registry.yarnpkg.com/@chainsafe/libp2p-gossipsub/-/libp2p-gossipsub-3.1.0.tgz#7855302c6c370016ceb1b8c88afd2971042a09fd"
-  integrity sha512-N8vO5QG5tHqEPYPtDHOYEXE0MK3BPkIR80thx7KtCqeNOzR4B5l94XlSN2YzytTTg6tvjbR4ZGqFLoTocMRxBg==
+"@chainsafe/libp2p-gossipsub@^3.5.0":
+  version "3.5.0"
+  resolved "https://registry.yarnpkg.com/@chainsafe/libp2p-gossipsub/-/libp2p-gossipsub-3.5.0.tgz#f335f7516107a5b92a19179bf19d376851db033d"
+  integrity sha512-2Lp2dfWpO17dKAzOmnIQqaoPx0MA/dRLPj1q1QSCafW6+obOPGIUJcw1i1+AcBzizDdlZxmmrQx07FlYc0n+Vw==
   dependencies:
     "@libp2p/components" "^2.0.0"
     "@libp2p/crypto" "^1.0.0"
@@ -541,12 +541,11 @@
     abortable-iterator "^4.0.2"
     denque "^1.5.0"
     err-code "^3.0.1"
-    iso-random-stream "^2.0.2"
     it-length-prefixed "^7.0.1"
     it-pipe "^2.0.3"
     it-pushable "^3.0.0"
     multiformats "^9.6.4"
-    protons-runtime "^1.0.4"
+    protobufjs "^6.11.2"
     uint8arrays "^3.0.0"
 
 "@chainsafe/libp2p-noise@7.0.1":
@@ -7423,14 +7422,6 @@ iso-random-stream@^2.0.0:
   version "2.0.0"
   resolved "https://registry.npmjs.org/iso-random-stream/-/iso-random-stream-2.0.0.tgz"
   integrity sha512-lGuIu104KfBV9ubYTSaE3GeAr6I69iggXxBHbTBc5u/XKlwlWl0LCytnkIZissaKqvxablwRD9B3ktVnmIUnEg==
-  dependencies:
-    events "^3.3.0"
-    readable-stream "^3.4.0"
-
-iso-random-stream@^2.0.2:
-  version "2.0.2"
-  resolved "https://registry.npmjs.org/iso-random-stream/-/iso-random-stream-2.0.2.tgz"
-  integrity sha512-yJvs+Nnelic1L2vH2JzWvvPQFA4r7kSTnpST/+LkAQjSz0hos2oqLD+qIVi9Qk38Hoe7mNDt3j0S27R58MVjLQ==
   dependencies:
     events "^3.3.0"
     readable-stream "^3.4.0"
