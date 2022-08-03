@@ -33,6 +33,8 @@ describe("options / beaconNodeOptions", () => {
       "eth1.depositContractDeployBlock": 1625314,
       "eth1.disableEth1DepositDataTracker": true,
       "eth1.unsafeAllowDepositDataOverwrite": false,
+      "eth1.forcedEth1DataVote":
+        "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa0000000000000000bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
 
       "execution.urls": ["http://localhost:8551"],
       "execution.timeout": 12000,
@@ -100,6 +102,8 @@ describe("options / beaconNodeOptions", () => {
         depositContractDeployBlock: 1625314,
         disableEth1DepositDataTracker: true,
         unsafeAllowDepositDataOverwrite: false,
+        forcedEth1DataVote:
+          "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa0000000000000000bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
       },
       executionEngine: {
         urls: ["http://localhost:8551"],

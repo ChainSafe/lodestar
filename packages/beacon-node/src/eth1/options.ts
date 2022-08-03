@@ -9,6 +9,11 @@ export type Eth1Options = {
   jwtSecretHex?: string;
   depositContractDeployBlock?: number;
   unsafeAllowDepositDataOverwrite: boolean;
+  /**
+   * Vote for a specific eth1_data regardless of validity and existing votes.
+   * hex encoded ssz serialized Eth1Data type.
+   */
+  forcedEth1DataVote?: string;
 };
 
 export const defaultEth1Options: Eth1Options = {
