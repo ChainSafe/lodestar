@@ -107,6 +107,7 @@ export function getForkNameFromResponseBody<K extends Method>(
     case Method.BeaconBlocksByRoot:
       return config.getForkName(requestTyped.body.slot);
     case Method.LightClientBootstrap:
+    case Method.LightClientUpdate:
       return ForkName.altair;
   }
 }

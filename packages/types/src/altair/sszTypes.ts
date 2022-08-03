@@ -207,6 +207,14 @@ export const LightClientUpdate = new ContainerType(
   {typeName: "LightClientUpdate", jsonCase: "eth2"}
 );
 
+export const LightClientByRangeRequest = new ContainerType(
+  {
+    startPeriod: UintNum64,
+    count: UintNum64,
+  },
+  {typeName: "LightClientByRangeRequest", jsonCase: "eth2"}
+);
+
 export const LightClientStore = new ContainerType(
   {
     snapshot: LightClientBootstrap,

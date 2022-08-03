@@ -31,5 +31,10 @@ export function renderRequestBody(method: Method, requestBody: RequestBody): str
 
     case Method.LightClientBootstrap:
       return toHexString((requestBody as RequestBodyByMethod[Method.LightClientBootstrap]) as Uint8Array);
+
+    case Method.LightClientUpdate: {
+      const updateRequest = requestBody as RequestBodyByMethod[Method.LightClientUpdate];
+      return `${updateRequest.startPeriod},${updateRequest.count}`;
+    }
   }
 }
