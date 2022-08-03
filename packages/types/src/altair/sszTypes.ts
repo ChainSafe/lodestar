@@ -189,7 +189,7 @@ export const LightClientBootstrap = new ContainerType(
   {
     header: phase0Ssz.BeaconBlockHeader,
     currentSyncCommittee: SyncCommittee,
-    nextSyncCommittee: SyncCommittee,
+    currentSyncCommitteeBranch: new VectorCompositeType(Bytes32, NEXT_SYNC_COMMITTEE_DEPTH),
   },
   {typeName: "LightClientBootstrap", jsonCase: "eth2"}
 );

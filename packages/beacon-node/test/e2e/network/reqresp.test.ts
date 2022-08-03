@@ -83,6 +83,7 @@ describe("network / ReqResp", function () {
       onStatus: notImplemented,
       onBeaconBlocksByRange: notImplemented,
       onBeaconBlocksByRoot: notImplemented,
+      onLightClientBootstrap: notImplemented,
       ...reqRespHandlersPartial,
     };
 

@@ -253,7 +253,9 @@ export class ReqResp implements IReqResp {
       case Method.BeaconBlocksByRoot:
         yield* this.reqRespHandlers.onBeaconBlocksByRoot(requestTyped.body);
         break;
-
+      case Method.LightClientBootstrap:
+        yield* this.reqRespHandlers.onLightClientBootstrap(requestTyped.body);
+        break;
       default:
         throw Error(`Unsupported method ${protocol.method}`);
     }

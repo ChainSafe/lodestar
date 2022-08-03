@@ -221,7 +221,7 @@ export class LightClientServer {
   /**
    * API ROUTE to get `currentSyncCommittee` and `nextSyncCommittee` from a trusted state root
    */
-  async getBootstrap(blockRoot: Uint8Array): Promise<routes.lightclient.LightClientBootstrap> {
+  async getBootstrap(blockRoot: Uint8Array): Promise<altair.LightClientBootstrap> {
     const syncCommitteeWitness = await this.db.syncCommitteeWitness.get(blockRoot);
     if (!syncCommitteeWitness) {
       throw Error(`syncCommitteeWitness not available ${toHexString(blockRoot)}`);
