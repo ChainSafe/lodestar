@@ -146,3 +146,5 @@ jobs:
       - name: Build and push
         run: docker buildx build --push --tag chainsafe/lodestar:rc --tag chainsafe/lodestar:${{ needs.tag.outputs.tag }} --platform linux/amd64,linux/arm64 --build-arg VERSION=${{ needs.tag.outputs.tag }} .
       - run: docker run chainsafe/lodestar:${{ needs.tag.outputs.tag }} --help
+      # Display history to know byte size of each layer
+      - run: docker image history chainsafe/lodestar:rc
