@@ -1,6 +1,6 @@
 import {Gauge, Histogram} from "prom-client";
 
-export type IGauge<T extends string = string> = Pick<Gauge<T>, "inc" | "set"> & {
+export type IGauge<T extends string = string> = Pick<Gauge<T>, "inc" | "dec" | "set"> & {
   addCollect: (collectFn: () => void) => void;
 };
 
