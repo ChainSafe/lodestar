@@ -4,6 +4,7 @@ import {IBeaconDb} from "../../../db/index.js";
 import {ReqRespBlockResponse} from "../types.js";
 import {onBeaconBlocksByRange} from "./beaconBlocksByRange.js";
 import {onBeaconBlocksByRoot} from "./beaconBlocksByRoot.js";
+import {onLightclientBootstrap} from "./lightclientBootstrap.js";
 
 export type ReqRespHandlers = {
   onStatus(): AsyncIterable<phase0.Status>;
@@ -22,10 +23,7 @@ export function getReqRespHandlers({db, chain}: {db: IBeaconDb; chain: IBeaconCh
       yield chain.getStatus();
     },
     async *onLightClientBootstrap(req) {
-      // TODO: Error handling. From spec:
-      // When a LightClientBootstrap instance cannot be
-      // produced for a given block root, peers SHOULD respond with error code 3: ResourceUnavailable
-      yield await chain.lightClientServer.getBootstrap(req);
+      yield* onLightclientBootstrap(req, chain);
     },
 
     async *onBeaconBlocksByRange(req) {
