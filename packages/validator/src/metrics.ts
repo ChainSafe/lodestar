@@ -13,6 +13,10 @@ interface Gauge<Labels extends LabelsGeneric = never> {
   inc(labels: Labels, value?: number): void;
   inc(arg1?: Labels | number, arg2?: number): void;
 
+  dec(value?: number): void;
+  dec(labels: Labels, value?: number): void;
+  dec(arg1?: Labels | number, arg2?: number): void;
+
   set(value: number): void;
   set(labels: Labels, value: number): void;
   set(arg1?: Labels | number, arg2?: number): void;
