@@ -7,6 +7,7 @@ import {onBeaconBlocksByRoot} from "./beaconBlocksByRoot.js";
 import {onLightclientBootstrap} from "./lightclientBootstrap.js";
 import {onLightclientUpdate} from "./lightclientUpdate.js";
 import {onLightClientFinalityUpdate} from "./lightclientFinalityUpdate.js";
+import {onLightClientOptimisticUpdate} from "./lightclientOptimisticUpdate.js";
 
 export type ReqRespHandlers = {
   onStatus(): AsyncIterable<phase0.Status>;
@@ -15,6 +16,7 @@ export type ReqRespHandlers = {
   onLightClientBootstrap(req: altair.BlockRoot): AsyncIterable<altair.LightClientBootstrap>;
   onLightClientUpdate(req: altair.LightClientUpdateByRangeRequest): AsyncIterable<altair.LightClientUpdate[]>;
   onLightClientFinalityUpdate(): AsyncIterable<altair.LightClientFinalityUpdate>;
+  onLightClientOptimisitcUpdate(): AsyncIterable<altair.LightClientOptimisticUpdate>;
 };
 
 /**
@@ -42,6 +44,9 @@ export function getReqRespHandlers({db, chain}: {db: IBeaconDb; chain: IBeaconCh
     },
     async *onLightClientFinalityUpdate() {
       yield* onLightClientFinalityUpdate(chain);
+    },
+    async *onLightClientOptimisitcUpdate() {
+      yield* onLightClientOptimisticUpdate(chain);
     },
   };
 }

@@ -219,6 +219,15 @@ export const LightClientFinalityUpdate = new ContainerType(
   {typeName: "LightClientFinalityUpdate", jsonCase: "eth2"}
 );
 
+export const LightClientOptimisticUpdate = new ContainerType(
+  {
+    attestedHeader: phase0Ssz.BeaconBlockHeader,
+    syncAggregate: SyncAggregate,
+    signatureSlot: Slot,
+  },
+  {typeName: "LightClientOptimisticUpdate", jsonCase: "eth2"}
+);
+
 export const LightClientByRangeRequest = new ContainerType(
   {
     startPeriod: UintNum64,

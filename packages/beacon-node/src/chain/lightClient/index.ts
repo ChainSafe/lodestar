@@ -2,7 +2,6 @@ import {altair, phase0, Root, RootHex, Slot, ssz, SyncPeriod} from "@lodestar/ty
 import {IChainForkConfig} from "@lodestar/config";
 import {CachedBeaconStateAltair, computeSyncPeriodAtEpoch, computeSyncPeriodAtSlot} from "@lodestar/state-transition";
 import {ILogger} from "@lodestar/utils";
-import {routes} from "@lodestar/api";
 import {BitArray, CompositeViewDU, toHexString} from "@chainsafe/ssz";
 import {SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 import {IBeaconDb} from "../../db/index.js";
@@ -166,7 +165,7 @@ export class LightClientServer {
    */
   private readonly prevHeadData = new Map<BlockRooHex, SyncAttestedData>();
   private checkpointHeaders = new Map<BlockRooHex, phase0.BeaconBlockHeader>();
-  private latestHeadUpdate: routes.lightclient.LightclientOptimisticHeaderUpdate | null = null;
+  private latestHeadUpdate: altair.LightClientOptimisticUpdate | null = null;
 
   private readonly zero: Pick<altair.LightClientUpdate, "finalityBranch" | "finalizedHeader">;
   private finalized: altair.LightClientFinalityUpdate | null = null;
@@ -266,7 +265,7 @@ export class LightClientServer {
    * API ROUTE to poll LightclientHeaderUpdate.
    * Clients should use the SSE type `light_client_optimistic_update` if available
    */
-  async getOptimisticUpdate(): Promise<routes.lightclient.LightclientOptimisticHeaderUpdate> {
+  async getOptimisticUpdate(): Promise<altair.LightClientOptimisticUpdate> {
     if (this.latestHeadUpdate === null) {
       throw Error("No latest header update available");
     }
@@ -416,9 +415,10 @@ export class LightClientServer {
       throw new Error("attested data period different than signature period");
     }
 
-    const headerUpdate: routes.lightclient.LightclientOptimisticHeaderUpdate = {
+    const headerUpdate: altair.LightClientOptimisticUpdate = {
       attestedHeader: attestedData.attestedHeader,
       syncAggregate,
+      signatureSlot: attestedData.attestedHeader.slot, //TODO DA confirm
     };
 
     // Emit update

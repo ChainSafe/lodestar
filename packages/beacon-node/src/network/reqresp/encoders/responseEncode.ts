@@ -109,6 +109,7 @@ export function getForkNameFromResponseBody<K extends Method>(
     case Method.LightClientBootstrap:
     case Method.LightClientUpdate:
     case Method.LightClientFinalityUpdate:
+    case Method.LightClientOptimisticUpdate:
       return ForkName.altair;
   }
 }

@@ -18,6 +18,7 @@ export function renderRequestBody(method: Method, requestBody: RequestBody): str
 
     case Method.Metadata:
     case Method.LightClientFinalityUpdate:
+    case Method.LightClientOptimisticUpdate:
       return "null";
 
     case Method.BeaconBlocksByRange: {
