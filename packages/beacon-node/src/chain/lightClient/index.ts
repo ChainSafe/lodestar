@@ -257,48 +257,9 @@ export class LightClientServer {
    * - Has the most bits
    * - Signed header at the oldest slot
    */
-  async getUpdates(period: SyncPeriod): Promise<altair.LightClientUpdate> {
-    // Signature data
-    const partialUpdate = await this.db.bestPartialLightClientUpdate.get(period);
-    if (!partialUpdate) {
-      throw Error(`No partialUpdate available for period ${period}`);
-    }
-
-    const syncCommitteeWitnessBlockRoot = partialUpdate.isFinalized
-      ? (partialUpdate.finalizedCheckpoint.root as Uint8Array)
-      : partialUpdate.blockRoot;
-
-    const syncCommitteeWitness = await this.db.syncCommitteeWitness.get(syncCommitteeWitnessBlockRoot);
-    if (!syncCommitteeWitness) {
-      throw Error(`finalizedBlockRoot not available ${toHexString(syncCommitteeWitnessBlockRoot)}`);
-    }
-
-    const nextSyncCommittee = await this.db.syncCommittee.get(syncCommitteeWitness.nextSyncCommitteeRoot);
-    if (!nextSyncCommittee) {
-      throw Error("nextSyncCommittee not available");
-    }
-
-    if (partialUpdate.isFinalized) {
-      return {
-        attestedHeader: partialUpdate.attestedHeader,
-        nextSyncCommittee: nextSyncCommittee,
-        nextSyncCommitteeBranch: getNextSyncCommitteeBranch(syncCommitteeWitness),
-        finalizedHeader: partialUpdate.finalizedHeader,
-        finalityBranch: partialUpdate.finalityBranch,
-        syncAggregate: partialUpdate.syncAggregate,
-        forkVersion: this.config.getForkVersion(partialUpdate.attestedHeader.slot),
-      };
-    } else {
-      return {
-        attestedHeader: partialUpdate.attestedHeader,
-        nextSyncCommittee: nextSyncCommittee,
-        nextSyncCommitteeBranch: getNextSyncCommitteeBranch(syncCommitteeWitness),
-        finalizedHeader: this.zero.finalizedHeader,
-        finalityBranch: this.zero.finalityBranch,
-        syncAggregate: partialUpdate.syncAggregate,
-        forkVersion: this.config.getForkVersion(partialUpdate.attestedHeader.slot),
-      };
-    }
+  async getUpdates(startPeriod: SyncPeriod, count: number): Promise<altair.LightClientUpdate[]> {
+    const periods: number[] = Array.from({length: count}, (_ignored, i) => i + startPeriod);
+    return await Promise.all(periods.map((period) => this.doGetUpdate(period)));
   }
 
   /**
@@ -492,6 +453,50 @@ export class LightClientServer {
 
     // Check if this update is better, otherwise ignore
     await this.maybeStoreNewBestPartialUpdate(syncPeriod, syncAggregate, attestedData);
+  }
+
+  private async doGetUpdate(period: number): Promise<altair.LightClientUpdate> {
+    // Signature data
+    const partialUpdate = await this.db.bestPartialLightClientUpdate.get(period);
+    if (!partialUpdate) {
+      throw Error(`No partialUpdate available for period ${period}`);
+    }
+
+    const syncCommitteeWitnessBlockRoot = partialUpdate.isFinalized
+      ? (partialUpdate.finalizedCheckpoint.root as Uint8Array)
+      : partialUpdate.blockRoot;
+
+    const syncCommitteeWitness = await this.db.syncCommitteeWitness.get(syncCommitteeWitnessBlockRoot);
+    if (!syncCommitteeWitness) {
+      throw Error(`finalizedBlockRoot not available ${toHexString(syncCommitteeWitnessBlockRoot)}`);
+    }
+
+    const nextSyncCommittee = await this.db.syncCommittee.get(syncCommitteeWitness.nextSyncCommitteeRoot);
+    if (!nextSyncCommittee) {
+      throw Error("nextSyncCommittee not available");
+    }
+
+    if (partialUpdate.isFinalized) {
+      return {
+        attestedHeader: partialUpdate.attestedHeader,
+        nextSyncCommittee: nextSyncCommittee,
+        nextSyncCommitteeBranch: getNextSyncCommitteeBranch(syncCommitteeWitness),
+        finalizedHeader: partialUpdate.finalizedHeader,
+        finalityBranch: partialUpdate.finalityBranch,
+        syncAggregate: partialUpdate.syncAggregate,
+        forkVersion: this.config.getForkVersion(partialUpdate.attestedHeader.slot),
+      };
+    } else {
+      return {
+        attestedHeader: partialUpdate.attestedHeader,
+        nextSyncCommittee: nextSyncCommittee,
+        nextSyncCommitteeBranch: getNextSyncCommitteeBranch(syncCommitteeWitness),
+        finalizedHeader: this.zero.finalizedHeader,
+        finalityBranch: this.zero.finalityBranch,
+        syncAggregate: partialUpdate.syncAggregate,
+        forkVersion: this.config.getForkVersion(partialUpdate.attestedHeader.slot),
+      };
+    }
   }
 
   /**
