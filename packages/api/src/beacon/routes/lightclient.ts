@@ -1,6 +1,5 @@
 import {ContainerType, JsonPath, VectorCompositeType} from "@chainsafe/ssz";
 import {Proof} from "@chainsafe/persistent-merkle-tree";
-import {FINALIZED_ROOT_DEPTH} from "@lodestar/params";
 import {altair, phase0, ssz, SyncPeriod} from "@lodestar/types";
 import {
   ArrayOf,
@@ -119,22 +118,13 @@ export function getReturnTypes(): ReturnTypes<Api> {
     {jsonCase: "eth2"}
   );
 
-  const LightclientFinalityUpdate = new ContainerType(
-    {
-      attestedHeader: ssz.phase0.BeaconBlockHeader,
-      finalizedHeader: ssz.phase0.BeaconBlockHeader,
-      finalityBranch: new VectorCompositeType(ssz.Bytes32, FINALIZED_ROOT_DEPTH),
-      syncAggregate: ssz.altair.SyncAggregate,
-    },
-    {jsonCase: "eth2"}
-  );
-
+  // TODO DA why redefine types here when types in ssz.<fork> can be used?
   return {
     // Just sent the proof JSON as-is
     getStateProof: sameType(),
     getUpdates: ContainerData(ArrayOf(ssz.altair.LightClientUpdate)),
     getOptimisticUpdate: ContainerData(lightclientHeaderUpdate),
-    getFinalityUpdate: ContainerData(LightclientFinalityUpdate),
+    getFinalityUpdate: ContainerData(ssz.altair.LightClientFinalityUpdate),
     getBootstrap: ContainerData(lightclientBootstrap),
   };
 }

@@ -169,7 +169,7 @@ export class LightClientServer {
   private latestHeadUpdate: routes.lightclient.LightclientOptimisticHeaderUpdate | null = null;
 
   private readonly zero: Pick<altair.LightClientUpdate, "finalityBranch" | "finalizedHeader">;
-  private finalized: routes.lightclient.LightclientFinalityUpdate | null = null;
+  private finalized: altair.LightClientFinalityUpdate | null = null;
 
   constructor(private readonly opts: LightClientServerOpts, modules: LightClientServerModules) {
     const {config, db, metrics, emitter, logger} = modules;
@@ -273,7 +273,7 @@ export class LightClientServer {
     return this.latestHeadUpdate;
   }
 
-  async getFinalityUpdate(): Promise<routes.lightclient.LightclientFinalityUpdate> {
+  async getFinalityUpdate(): Promise<altair.LightClientFinalityUpdate> {
     // Signature data
     if (this.finalized === null) {
       throw Error("No latest header update available");
@@ -446,6 +446,7 @@ export class LightClientServer {
           finalizedHeader,
           syncAggregate,
           finalityBranch: attestedData.finalityBranch,
+          signatureSlot: finalizedHeader.slot,
         };
         this.emitter.emit(ChainEvent.LightclientFinalityUpdate, this.finalized);
       }
