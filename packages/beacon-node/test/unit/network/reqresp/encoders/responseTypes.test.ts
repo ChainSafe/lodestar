@@ -30,7 +30,11 @@ describe("network / reqresp / encoders / responseTypes", () => {
     [Method.Metadata]: [],
     [Method.BeaconBlocksByRange]: [generateEmptySignedBlocks(2)],
     [Method.BeaconBlocksByRoot]: [generateEmptySignedBlocks(2)],
+    // TODO DA update tests
     [Method.LightClientBootstrap]: [],
+    [Method.LightClientUpdate]: [],
+    [Method.LightClientFinalityUpdate]: [],
+    [Method.LightClientOptimisticUpdate]: [],
   };
 
   const encodings: Encoding[] = [Encoding.SSZ_SNAPPY];
