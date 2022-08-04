@@ -335,11 +335,7 @@ export class Lightclient {
           controller.signal,
           this.onSSE
         );
-        this.api.events.eventstream(
-          [routes.events.EventType.lightclientFinalizedUpdate],
-          controller.signal,
-          this.onSSE
-        );
+        this.api.events.eventstream([routes.events.EventType.lightclientFinalityUpdate], controller.signal, this.onSSE);
       }
 
       // When close to the end of a sync period poll for sync committee updates
@@ -380,7 +376,7 @@ export class Lightclient {
           this.processOptimisticUpdate(event.message);
           break;
 
-        case routes.events.EventType.lightclientFinalizedUpdate:
+        case routes.events.EventType.lightclientFinalityUpdate:
           this.processFinalizedUpdate(event.message);
           break;
 
@@ -474,7 +470,7 @@ export class Lightclient {
    * Processes new header updates in only known synced sync periods.
    * This headerUpdate may update the head if there's enough participation.
    */
-  private processFinalizedUpdate(finalizedUpdate: routes.events.LightclientFinalizedUpdate): void {
+  private processFinalizedUpdate(finalizedUpdate: routes.events.LightclientFinalityUpdate): void {
     // Validate sync aggregate of the attested header and other conditions like future update, period etc
     // and may be move head
     this.processOptimisticUpdate(finalizedUpdate);

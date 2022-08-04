@@ -194,6 +194,7 @@ export const LightClientBootstrap = new ContainerType(
   {typeName: "LightClientBootstrap", jsonCase: "eth2"}
 );
 
+// TODO DA add signature_slot
 export const LightClientUpdate = new ContainerType(
   {
     attestedHeader: phase0Ssz.BeaconBlockHeader,
@@ -205,6 +206,17 @@ export const LightClientUpdate = new ContainerType(
     forkVersion: Version,
   },
   {typeName: "LightClientUpdate", jsonCase: "eth2"}
+);
+
+export const LightClientFinalityUpdate = new ContainerType(
+  {
+    attestedHeader: phase0Ssz.BeaconBlockHeader,
+    finalizedHeader: phase0Ssz.BeaconBlockHeader,
+    finalityBranch: new VectorCompositeType(Bytes32, FINALIZED_ROOT_DEPTH),
+    syncAggregate: SyncAggregate,
+    signatureSlot: Slot,
+  },
+  {typeName: "LightClientFinalityUpdate", jsonCase: "eth2"}
 );
 
 export const LightClientByRangeRequest = new ContainerType(

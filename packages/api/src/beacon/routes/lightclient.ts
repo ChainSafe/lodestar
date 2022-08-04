@@ -14,10 +14,10 @@ import {
   ReqEmpty,
 } from "../../utils/index.js";
 import {queryParseProofPathsArr, querySerializeProofPathsArr} from "../../utils/serdes.js";
-import {LightclientOptimisticHeaderUpdate, LightclientFinalizedUpdate} from "./events.js";
+import {LightclientOptimisticHeaderUpdate, LightclientFinalityUpdate} from "./events.js";
 
 // Re-export for convenience when importing routes.lightclient.LightclientOptimisticHeaderUpdate
-export {LightclientOptimisticHeaderUpdate, LightclientFinalizedUpdate};
+export {LightclientOptimisticHeaderUpdate, LightclientFinalityUpdate};
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
@@ -47,7 +47,7 @@ export type Api = {
    * unless to get the very first head update after syncing, or if SSE are not supported by the server.
    */
   getOptimisticUpdate(): Promise<{data: LightclientOptimisticHeaderUpdate}>;
-  getFinalityUpdate(): Promise<{data: LightclientFinalizedUpdate}>;
+  getFinalityUpdate(): Promise<{data: LightclientFinalityUpdate}>;
   /**
    * Fetch a bootstrapping state with a proof to a trusted block root.
    * The trusted block root should be fetched with similar means to a weak subjectivity checkpoint.
@@ -119,7 +119,7 @@ export function getReturnTypes(): ReturnTypes<Api> {
     {jsonCase: "eth2"}
   );
 
-  const lightclientFinalizedUpdate = new ContainerType(
+  const LightclientFinalityUpdate = new ContainerType(
     {
       attestedHeader: ssz.phase0.BeaconBlockHeader,
       finalizedHeader: ssz.phase0.BeaconBlockHeader,
@@ -134,7 +134,7 @@ export function getReturnTypes(): ReturnTypes<Api> {
     getStateProof: sameType(),
     getUpdates: ContainerData(ArrayOf(ssz.altair.LightClientUpdate)),
     getOptimisticUpdate: ContainerData(lightclientHeaderUpdate),
-    getFinalityUpdate: ContainerData(lightclientFinalizedUpdate),
+    getFinalityUpdate: ContainerData(LightclientFinalityUpdate),
     getBootstrap: ContainerData(lightclientBootstrap),
   };
 }

@@ -9,7 +9,7 @@ export class LightclientServerApiMock implements routes.lightclient.Api {
   readonly updates = new Map<SyncPeriod, altair.LightClientUpdate>();
   readonly snapshots = new Map<RootHex, routes.lightclient.LightClientBootstrap>();
   latestHeadUpdate: routes.lightclient.LightclientOptimisticHeaderUpdate | null = null;
-  finalized: routes.lightclient.LightclientFinalizedUpdate | null = null;
+  finalized: routes.lightclient.LightclientFinalityUpdate | null = null;
 
   async getStateProof(stateId: string, paths: JsonPath[]): Promise<{data: Proof}> {
     const state = this.states.get(stateId);
@@ -33,7 +33,7 @@ export class LightclientServerApiMock implements routes.lightclient.Api {
     return {data: this.latestHeadUpdate};
   }
 
-  async getFinalityUpdate(): Promise<{data: routes.lightclient.LightclientFinalizedUpdate}> {
+  async getFinalityUpdate(): Promise<{data: routes.lightclient.LightclientFinalityUpdate}> {
     if (!this.finalized) throw Error("No finalized head update");
     return {data: this.finalized};
   }

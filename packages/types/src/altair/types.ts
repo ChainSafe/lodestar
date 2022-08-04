@@ -17,5 +17,6 @@ export type BeaconState = ValueOf<typeof ssz.BeaconState>;
 export type LightClientBootstrap = ValueOf<typeof ssz.LightClientBootstrap>;
 export type BlockRoot = ValueOf<typeof ssz.BlockRoot>;
 export type LightClientUpdate = ValueOf<typeof ssz.LightClientUpdate>;
+export type LightClientFinalityUpdate = ValueOf<typeof ssz.LightClientFinalityUpdate>;
 export type LightClientUpdateByRangeRequest = ValueOf<typeof ssz.LightClientByRangeRequest>;
 export type LightClientStore = ValueOf<typeof ssz.LightClientStore>;

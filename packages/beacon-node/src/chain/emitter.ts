@@ -90,7 +90,7 @@ export enum ChainEvent {
   /**
    * A new lightclient finalized header update is available to be broadcasted to connected light-clients
    */
-  lightclientFinalizedUpdate = "lightclient:finalized_update",
+  LightclientFinalityUpdate = "lightclient:finality_update",
 }
 
 export interface IChainEvents {
@@ -110,7 +110,7 @@ export interface IChainEvents {
   [ChainEvent.forkChoiceFinalized]: (checkpoint: CheckpointWithHex) => void;
 
   [ChainEvent.lightclientOptimisticUpdate]: (optimisticUpdate: routes.events.LightclientOptimisticHeaderUpdate) => void;
-  [ChainEvent.lightclientFinalizedUpdate]: (finalizedUpdate: routes.events.LightclientFinalizedUpdate) => void;
+  [ChainEvent.LightclientFinalityUpdate]: (finalizedUpdate: routes.events.LightclientFinalityUpdate) => void;
 }
 
 /**

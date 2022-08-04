@@ -108,6 +108,7 @@ export function getForkNameFromResponseBody<K extends Method>(
       return config.getForkName(requestTyped.body.slot);
     case Method.LightClientBootstrap:
     case Method.LightClientUpdate:
+    case Method.LightClientFinalityUpdate:
       return ForkName.altair;
   }
 }

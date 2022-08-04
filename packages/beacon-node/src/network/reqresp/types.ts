@@ -14,6 +14,7 @@ export enum Method {
   BeaconBlocksByRoot = "beacon_blocks_by_root",
   LightClientBootstrap = "light_client_bootstrap",
   LightClientUpdate = "light_client_updates_by_range",
+  LightClientFinalityUpdate = "light_client_finality_update",
 }
 
 /** RPC Versions */
@@ -48,6 +49,7 @@ export const protocolsSupported: [Method, Version, Encoding][] = [
   [Method.BeaconBlocksByRoot, Version.V2, Encoding.SSZ_SNAPPY],
   [Method.LightClientBootstrap, Version.V2, Encoding.SSZ_SNAPPY],
   [Method.LightClientUpdate, Version.V2, Encoding.SSZ_SNAPPY],
+  [Method.LightClientFinalityUpdate, Version.V2, Encoding.SSZ_SNAPPY],
 ];
 
 export const isSingleResponseChunkByMethod: {[K in Method]: boolean} = {
@@ -59,6 +61,7 @@ export const isSingleResponseChunkByMethod: {[K in Method]: boolean} = {
   [Method.BeaconBlocksByRoot]: false,
   [Method.LightClientBootstrap]: true, // TODO DA: confirm
   [Method.LightClientUpdate]: false, // TODO DA: confirm
+  [Method.LightClientFinalityUpdate]: true, // TODO DA: confirm
 };
 
 export const CONTEXT_BYTES_FORK_DIGEST_LENGTH = 4;
@@ -79,6 +82,7 @@ export function contextBytesTypeByProtocol(protocol: Protocol): ContextBytesType
       return ContextBytesType.Empty;
     case Method.LightClientBootstrap:
     case Method.LightClientUpdate:
+    case Method.LightClientFinalityUpdate:
       return ContextBytesType.ForkDigest; // TODO DA confirm
     case Method.BeaconBlocksByRange:
     case Method.BeaconBlocksByRoot:
@@ -102,6 +106,7 @@ export function getRequestSzzTypeByMethod(method: Method) {
     case Method.Ping:
       return ssz.phase0.Ping;
     case Method.Metadata:
+    case Method.LightClientFinalityUpdate:
       return null;
     case Method.BeaconBlocksByRange:
       return ssz.phase0.BeaconBlocksByRangeRequest;
@@ -123,6 +128,7 @@ export type RequestBodyByMethod = {
   [Method.BeaconBlocksByRoot]: phase0.BeaconBlocksByRootRequest;
   [Method.LightClientBootstrap]: altair.BlockRoot;
   [Method.LightClientUpdate]: altair.LightClientUpdateByRangeRequest;
+  [Method.LightClientFinalityUpdate]: null;
 };
 
 /** Response SSZ type for each method and ForkName */
@@ -148,6 +154,8 @@ export function getResponseSzzTypeByMethod(protocol: Protocol, forkName: ForkNam
       return ssz.altair.LightClientBootstrap;
     case Method.LightClientUpdate:
       return ssz.altair.LightClientUpdate;
+    case Method.LightClientFinalityUpdate:
+      return ssz.altair.LightClientFinalityUpdate;
   }
 }
 
@@ -172,6 +180,8 @@ export function getOutgoingSerializerByMethod(protocol: Protocol): OutgoingSeria
       return ssz.altair.LightClientBootstrap;
     case Method.LightClientUpdate:
       return ssz.altair.LightClientUpdate;
+    case Method.LightClientFinalityUpdate:
+      return ssz.altair.LightClientFinalityUpdate;
   }
 }
 
@@ -182,6 +192,7 @@ type CommonResponseBodyByMethod = {
   [Method.Metadata]: phase0.Metadata;
   [Method.LightClientBootstrap]: altair.LightClientBootstrap;
   [Method.LightClientUpdate]: altair.LightClientUpdate;
+  [Method.LightClientFinalityUpdate]: altair.LightClientFinalityUpdate;
 };
 
 // Used internally by lodestar to response to beacon_blocks_by_range and beacon_blocks_by_root

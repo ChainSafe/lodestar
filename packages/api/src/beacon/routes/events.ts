@@ -10,7 +10,7 @@ export type LightclientOptimisticHeaderUpdate = {
   attestedHeader: phase0.BeaconBlockHeader;
 };
 
-export type LightclientFinalizedUpdate = {
+export type LightclientFinalityUpdate = {
   attestedHeader: phase0.BeaconBlockHeader;
   finalizedHeader: phase0.BeaconBlockHeader;
   finalityBranch: Uint8Array[];
@@ -37,8 +37,8 @@ export enum EventType {
   chainReorg = "chain_reorg",
   /** New or better optimistic header update available */
   lightclientOptimisticUpdate = "light_client_optimistic_update",
-  /** New or better finalized update available */
-  lightclientFinalizedUpdate = "light_client_finalized_update",
+  /** New or better finality update available */
+  lightclientFinalityUpdate = "light_client_finality_update",
 }
 
 export type EventData = {
@@ -64,7 +64,7 @@ export type EventData = {
     epoch: Epoch;
   };
   [EventType.lightclientOptimisticUpdate]: LightclientOptimisticHeaderUpdate;
-  [EventType.lightclientFinalizedUpdate]: LightclientFinalizedUpdate;
+  [EventType.lightclientFinalityUpdate]: LightclientFinalityUpdate;
 };
 
 export type BeaconEvent = {[K in EventType]: {type: K; message: EventData[K]}}[EventType];
@@ -150,7 +150,7 @@ export function getTypeByEvent(): {[K in EventType]: Type<EventData[K]>} {
       },
       {jsonCase: "eth2"}
     ),
-    [EventType.lightclientFinalizedUpdate]: new ContainerType(
+    [EventType.lightclientFinalityUpdate]: new ContainerType(
       {
         attestedHeader: ssz.phase0.BeaconBlockHeader,
         finalizedHeader: ssz.phase0.BeaconBlockHeader,

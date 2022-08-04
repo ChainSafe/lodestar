@@ -270,7 +270,7 @@ export function committeeUpdateToLatestHeadUpdate(
 
 export function committeeUpdateToLatestFinalizedHeadUpdate(
   committeeUpdate: altair.LightClientUpdate
-): routes.lightclient.LightclientFinalizedUpdate {
+): routes.lightclient.LightclientFinalityUpdate {
   return {
     attestedHeader: committeeUpdate.attestedHeader,
     finalizedHeader: committeeUpdate.finalizedHeader,

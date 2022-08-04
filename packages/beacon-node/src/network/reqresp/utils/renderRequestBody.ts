@@ -17,6 +17,7 @@ export function renderRequestBody(method: Method, requestBody: RequestBody): str
       return (requestBody as RequestBodyByMethod[Method.Ping]).toString(10);
 
     case Method.Metadata:
+    case Method.LightClientFinalityUpdate:
       return "null";
 
     case Method.BeaconBlocksByRange: {
