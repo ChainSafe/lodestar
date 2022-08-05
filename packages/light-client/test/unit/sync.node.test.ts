@@ -79,7 +79,8 @@ describe("sync", () => {
     lightclientServerApi.latestHeadUpdate = committeeUpdateToLatestHeadUpdate(lastInMap(lightclientServerApi.updates));
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     lightclientServerApi.finalized = committeeUpdateToLatestFinalizedHeadUpdate(
-      lastInMap(lightclientServerApi.updates)
+      lastInMap(lightclientServerApi.updates),
+      targetSlot
     );
 
     // Initialize from snapshot

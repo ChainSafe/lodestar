@@ -269,8 +269,9 @@ export function committeeUpdateToLatestHeadUpdate(
 }
 
 export function committeeUpdateToLatestFinalizedHeadUpdate(
-  committeeUpdate: altair.LightClientUpdate
-): routes.lightclient.LightclientFinalityUpdate {
+  committeeUpdate: altair.LightClientUpdate,
+  signatureSlot: Slot
+): altair.LightClientFinalityUpdate {
   return {
     attestedHeader: committeeUpdate.attestedHeader,
     finalizedHeader: committeeUpdate.finalizedHeader,
@@ -279,6 +280,7 @@ export function committeeUpdateToLatestFinalizedHeadUpdate(
       syncCommitteeBits: committeeUpdate.syncAggregate.syncCommitteeBits,
       syncCommitteeSignature: committeeUpdate.syncAggregate.syncCommitteeSignature,
     },
+    signatureSlot,
   };
 }
 
