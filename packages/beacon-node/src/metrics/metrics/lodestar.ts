@@ -1123,10 +1123,12 @@ export function createLodestarMetrics(
       requestUsedFallbackUrl: register.gauge({
         name: "lodestar_eth1_http_client_request_used_fallback_url_total",
         help: "eth1 JsonHttpClient - total count of requests on fallback url(s)",
+        labelNames: ["routeId"],
       }),
       activeRequests: register.gauge({
         name: "lodestar_eth1_http_client_active_requests",
         help: "eth1 JsonHttpClient - current count of active requests",
+        labelNames: ["routeId"],
       }),
       configUrlsCount: register.gauge({
         name: "lodestar_eth1_http_client_config_urls_count",
@@ -1155,10 +1157,12 @@ export function createLodestarMetrics(
       requestUsedFallbackUrl: register.gauge({
         name: "lodestar_execution_engine_http_client_request_used_fallback_url_total",
         help: "ExecutionEngineHttp client - total count of requests on fallback url(s)",
+        labelNames: ["routeId"],
       }),
       activeRequests: register.gauge({
         name: "lodestar_execution_engine_http_client_active_requests",
         help: "ExecutionEngineHttp client - current count of active requests",
+        labelNames: ["routeId"],
       }),
       configUrlsCount: register.gauge({
         name: "lodestar_execution_engine_http_client_config_urls_count",

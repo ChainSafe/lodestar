@@ -38,10 +38,10 @@ export type ReqOpts = {
 export type JsonRpcHttpClientMetrics = {
   requestTime: IHistogram<"routeId">;
   requestErrors: IGauge<"routeId">;
-  requestUsedFallbackUrl: IGauge;
-  activeRequests: IGauge;
+  requestUsedFallbackUrl: IGauge<"routeId">;
+  activeRequests: IGauge<"routeId">;
   configUrlsCount: IGauge;
-  retryCount: IGauge;
+  retryCount: IGauge<"routeId">;
 };
 
 export interface IJsonRpcHttpClient {
@@ -52,7 +52,6 @@ export interface IJsonRpcHttpClient {
 
 export class JsonRpcHttpClient implements IJsonRpcHttpClient {
   private id = 1;
-  private activeRequests = 0;
   /**
    * Optional: If provided, use this jwt secret to HS256 encode and add a jwt token in the
    * request header which can be authenticated by the RPC server to provide access.
@@ -101,7 +100,6 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
     this.metrics = opts?.metrics ?? null;
 
     this.metrics?.configUrlsCount.set(urls.length);
-    this.metrics?.activeRequests.addCollect(() => this.metrics?.activeRequests.set(this.activeRequests));
   }
 
   /**
@@ -117,6 +115,7 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
    */
   async fetchWithRetries<R, P = IJson[]>(payload: IRpcPayload<P>, opts?: ReqOpts): Promise<R> {
     const routeId = opts?.routeId ?? "unknown";
+
     const res = await retry<IRpcResponse<R>>(
       async (attempt) => {
         /** If this is a retry, increment the retry counter for this method */
@@ -149,11 +148,12 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
   }
 
   private async fetchJson<R, T = unknown>(json: T, opts?: ReqOpts): Promise<R> {
+    const routeId = opts?.routeId ?? "unknown";
     let lastError: Error | null = null;
 
     for (let i = 0; i < this.urls.length; i++) {
       if (i > 0) {
-        this.metrics?.requestUsedFallbackUrl.inc(1);
+        this.metrics?.requestUsedFallbackUrl.inc({routeId});
       }
 
       try {
@@ -196,7 +196,7 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
     // Default to "unknown" to prevent mixing metrics with others.
     const routeId = opts?.routeId ?? "unknown";
     const timer = this.metrics?.requestTime.startTimer({routeId});
-    this.activeRequests++;
+    this.metrics?.activeRequests.inc({routeId}, 1);
 
     try {
       const headers: Record<string, string> = {"Content-Type": "application/json"};
@@ -243,7 +243,7 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
       }
     } finally {
       timer?.();
-      this.activeRequests--;
+      this.metrics?.activeRequests.dec({routeId}, 1);
 
       clearTimeout(timeout);
       this.opts?.signal?.removeEventListener("abort", onParentSignalAbort);
