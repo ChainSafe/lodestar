@@ -21,9 +21,6 @@ export function getLodestarApi({
 
   return {
     async writeHeapdump(dirpath = ".") {
-      // Browser interop
-      if (typeof require !== "function") throw Error("NodeJS only");
-
       if (writingHeapdump) {
         throw Error("Already writing heapdump");
       }
