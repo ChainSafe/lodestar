@@ -55,6 +55,7 @@ describe("beacon / lightclient", () => {
           attestedHeader: header,
           finalizedHeader: lightClientUpdate.finalizedHeader,
           finalityBranch: lightClientUpdate.finalityBranch,
+          signatureSlot: 1,
         },
       },
     },
