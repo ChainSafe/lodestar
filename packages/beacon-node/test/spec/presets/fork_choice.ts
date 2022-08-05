@@ -11,7 +11,7 @@ import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {testLogger} from "../../utils/logger.js";
 import {getConfig} from "../utils/getConfig.js";
 import {TestRunnerFn} from "../utils/types.js";
-import {IEth1ForBlockProduction} from "../../../src/eth1/index.js";
+import {Eth1ForBlockProductionDisabled} from "../../../src/eth1/index.js";
 import {ExecutionEngineMock} from "../../../src/execution/index.js";
 import {defaultChainOptions} from "../../../src/chain/options.js";
 import {getStubbedBeaconDb} from "../../utils/mocks/db.js";
@@ -347,19 +347,9 @@ function isCheck(step: Step): step is Checks {
   return typeof (step as Checks).checks === "object";
 }
 
-class Eth1ForBlockProductionMock implements IEth1ForBlockProduction {
+// Extend Eth1ForBlockProductionDisabled to not have to re-implement new methods
+class Eth1ForBlockProductionMock extends Eth1ForBlockProductionDisabled {
   private items = new Map<string, PowMergeBlock>();
-  async getEth1DataAndDeposits(): Promise<never> {
-    throw Error("Not implemented");
-  }
-
-  getTerminalPowBlock(): never {
-    throw Error("Not implemented");
-  }
-
-  mergeCompleted(): never {
-    throw Error("Not implemented");
-  }
 
   async getPowBlock(powBlockHash: string): Promise<PowMergeBlock | null> {
     return this.items.get(powBlockHash) ?? null;

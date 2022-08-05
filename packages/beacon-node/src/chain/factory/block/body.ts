@@ -183,7 +183,7 @@ export async function prepareExecutionPayload(
   state: CachedBeaconStateBellatrix,
   suggestedFeeRecipient: string
 ): Promise<{isPremerge: true} | {isPremerge: false; payloadId: PayloadId}> {
-  const parentHashRes = getExecutionPayloadParentHash(chain, state);
+  const parentHashRes = await getExecutionPayloadParentHash(chain, state);
   if (parentHashRes.isPremerge) {
     // Return null only if the execution is pre-merge
     return {isPremerge: true};
@@ -237,7 +237,7 @@ async function prepareExecutionPayloadHeader(
     throw Error("executionBuilder required");
   }
 
-  const parentHashRes = getExecutionPayloadParentHash(chain, state);
+  const parentHashRes = await getExecutionPayloadParentHash(chain, state);
 
   if (parentHashRes.isPremerge) {
     // TODO: Is this okay?
@@ -248,13 +248,13 @@ async function prepareExecutionPayloadHeader(
   return chain.executionBuilder.getPayloadHeader(state.slot, parentHash, proposerPubKey);
 }
 
-function getExecutionPayloadParentHash(
+async function getExecutionPayloadParentHash(
   chain: {
     eth1: IEth1ForBlockProduction;
     config: IChainForkConfig;
   },
   state: CachedBeaconStateBellatrix
-): {isPremerge: true} | {isPremerge: false; parentHash: Root} {
+): Promise<{isPremerge: true} | {isPremerge: false; parentHash: Root}> {
   // Use different POW block hash parent for block production based on merge status.
   // Returned value of null == using an empty ExecutionPayload value
   if (isMergeTransitionComplete(state)) {
@@ -271,7 +271,7 @@ function getExecutionPayloadParentHash(
         }, actual: ${getCurrentEpoch(state)}`
       );
 
-    const terminalPowBlockHash = chain.eth1.getTerminalPowBlock();
+    const terminalPowBlockHash = await chain.eth1.getTerminalPowBlock();
     if (terminalPowBlockHash === null) {
       // Pre-merge, no prepare payload call is needed
       return {isPremerge: true};

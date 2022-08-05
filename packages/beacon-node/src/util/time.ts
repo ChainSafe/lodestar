@@ -1,8 +1,7 @@
 /**
  * Render a time difference in human readable form
  */
-export function prettyTimeDiff(diffMs: number): string {
-  const secDiff = diffMs / 1000;
+export function prettyTimeDiffSec(secDiff: number): string {
   const minDiff = secDiff / 60;
   const hourDiff = minDiff / 60;
   const daysDiff = hourDiff / 24;
