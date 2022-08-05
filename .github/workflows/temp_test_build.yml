@@ -1,13 +1,12 @@
-name: Temp test build
+name: Temp test docker buildx
 
 on:
   push:
 
 jobs:
   docker:
-    name: Publish to Docker Hub
+    name: Temp test docker buildx
     runs-on: ubuntu-latest
-    needs: npm
     steps:
       - uses: actions/checkout@v2
       # https://github.com/docker/setup-qemu-action
