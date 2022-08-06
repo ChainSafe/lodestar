@@ -14,10 +14,10 @@ import {loggerVc} from "../../utils/logger.js";
 import {ClockMock} from "../../utils/clock.js";
 import {initValidatorStore} from "../../utils/validatorStore.js";
 import {ChainHeaderTracker} from "../../../src/services/chainHeaderTracker.js";
+import {ZERO_HASH_HEX} from "../utils/constants.js";
 
 describe("AttestationDutiesService", function () {
   const sandbox = sinon.createSandbox();
-  const ZERO_HASH = Buffer.alloc(32, 0);
   const api = getApiClientStub(sandbox);
 
   let validatorStore: ValidatorStore;
@@ -67,7 +67,7 @@ describe("AttestationDutiesService", function () {
       validatorIndex: index,
       pubkey: pubkeys[0],
     };
-    api.validator.getAttesterDuties.resolves({dependentRoot: ZERO_HASH, data: [duty]});
+    api.validator.getAttesterDuties.resolves({dependentRoot: ZERO_HASH_HEX, data: [duty]});
 
     // Accept all subscriptions
     api.validator.prepareBeaconCommitteeSubnet.resolves();
@@ -134,7 +134,7 @@ describe("AttestationDutiesService", function () {
       validatorIndex: index,
       pubkey: pubkeys[0],
     };
-    api.validator.getAttesterDuties.resolves({dependentRoot: ZERO_HASH, data: [duty]});
+    api.validator.getAttesterDuties.resolves({dependentRoot: ZERO_HASH_HEX, data: [duty]});
 
     // Accept all subscriptions
     api.validator.prepareBeaconCommitteeSubnet.resolves();

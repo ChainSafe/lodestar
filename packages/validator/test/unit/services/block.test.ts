@@ -4,7 +4,7 @@ import bls from "@chainsafe/bls";
 import {toHexString} from "@chainsafe/ssz";
 import {createIChainForkConfig} from "@lodestar/config";
 import {config as mainnetConfig} from "@lodestar/config/default";
-import {Root} from "@lodestar/types";
+import {RootHex} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 import {routes} from "@lodestar/api";
 import {generateEmptySignedBlock} from "../../../../beacon-node/test/utils/block.js";
@@ -13,12 +13,12 @@ import {ValidatorStore} from "../../../src/services/validatorStore.js";
 import {getApiClientStub} from "../../utils/apiStub.js";
 import {loggerVc} from "../../utils/logger.js";
 import {ClockMock} from "../../utils/clock.js";
+import {ZERO_HASH_HEX} from "../utils/constants.js";
 
-type ProposerDutiesRes = {dependentRoot: Root; data: routes.validator.ProposerDuty[]};
+type ProposerDutiesRes = {dependentRoot: RootHex; data: routes.validator.ProposerDuty[]};
 
 describe("BlockDutiesService", function () {
   const sandbox = sinon.createSandbox();
-  const ZERO_HASH = Buffer.alloc(32, 0);
 
   const api = getApiClientStub(sandbox);
   const validatorStore = sinon.createStubInstance(ValidatorStore) as ValidatorStore &
@@ -41,7 +41,7 @@ describe("BlockDutiesService", function () {
     // Reply with some duties
     const slot = 0; // genesisTime is right now, so test with slot = currentSlot
     const duties: ProposerDutiesRes = {
-      dependentRoot: ZERO_HASH,
+      dependentRoot: ZERO_HASH_HEX,
       data: [{slot: slot, validatorIndex: 0, pubkey: pubkeys[0]}],
     };
     api.validator.getProposerDuties.resolves(duties);

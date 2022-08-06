@@ -18,14 +18,12 @@ import {loggerVc} from "../../utils/logger.js";
 import {ClockMock} from "../../utils/clock.js";
 import {initValidatorStore} from "../../utils/validatorStore.js";
 import {syncCommitteeIndicesToSubnets} from "../../../src/services/utils.js";
+import {ZERO_HASH_HEX} from "../utils/constants.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
 describe("SyncCommitteeDutiesService", function () {
   const sandbox = sinon.createSandbox();
-
-  const ZERO_HASH = Buffer.alloc(32, 0);
-  const ZERO_HASH_HEX = toHexString(ZERO_HASH);
 
   const api = getApiClientStub(sandbox);
 
@@ -76,7 +74,7 @@ describe("SyncCommitteeDutiesService", function () {
       validatorIndex: indices[0],
       validatorSyncCommitteeIndices: [7],
     };
-    api.validator.getSyncCommitteeDuties.resolves({dependentRoot: ZERO_HASH, data: [duty]});
+    api.validator.getSyncCommitteeDuties.resolves({dependentRoot: ZERO_HASH_HEX, data: [duty]});
 
     // Accept all subscriptions
     api.validator.prepareSyncCommitteeSubnets.resolves();
@@ -136,10 +134,14 @@ describe("SyncCommitteeDutiesService", function () {
     };
     api.validator.getSyncCommitteeDuties
       .withArgs(0, sinon.match.any)
-      .resolves({dependentRoot: ZERO_HASH, data: [duty]});
+      .resolves({dependentRoot: ZERO_HASH_HEX, data: [duty]});
     // sync period 1 should all return empty
-    api.validator.getSyncCommitteeDuties.withArgs(256, sinon.match.any).resolves({dependentRoot: ZERO_HASH, data: []});
-    api.validator.getSyncCommitteeDuties.withArgs(257, sinon.match.any).resolves({dependentRoot: ZERO_HASH, data: []});
+    api.validator.getSyncCommitteeDuties
+      .withArgs(256, sinon.match.any)
+      .resolves({dependentRoot: ZERO_HASH_HEX, data: []});
+    api.validator.getSyncCommitteeDuties
+      .withArgs(257, sinon.match.any)
+      .resolves({dependentRoot: ZERO_HASH_HEX, data: []});
     const duty2: routes.validator.SyncDuty = {
       pubkey: pubkeys[1],
       validatorIndex: indices[1],
@@ -147,7 +149,7 @@ describe("SyncCommitteeDutiesService", function () {
     };
     api.validator.getSyncCommitteeDuties
       .withArgs(1, sinon.match.any)
-      .resolves({dependentRoot: ZERO_HASH, data: [duty2]});
+      .resolves({dependentRoot: ZERO_HASH_HEX, data: [duty2]});
 
     // Clock will call runAttesterDutiesTasks() immediatelly
     const clock = new ClockMock();
@@ -202,7 +204,7 @@ describe("SyncCommitteeDutiesService", function () {
     };
     api.validator.getSyncCommitteeDuties
       .withArgs(sinon.match.any, sinon.match.any)
-      .resolves({dependentRoot: ZERO_HASH, data: [duty1, duty2]});
+      .resolves({dependentRoot: ZERO_HASH_HEX, data: [duty1, duty2]});
 
     // Accept all subscriptions
     api.validator.prepareSyncCommitteeSubnets.resolves();

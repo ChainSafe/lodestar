@@ -235,7 +235,7 @@ export class SyncCommitteeDutiesService {
       throw extendError(e, "Failed to obtain SyncDuties");
     });
 
-    const dependentRoot = toHexString(syncDuties.dependentRoot);
+    const dependentRoot = syncDuties.dependentRoot;
     const dutiesByIndex = new Map<ValidatorIndex, DutyAtPeriod>();
     let count = 0;
 

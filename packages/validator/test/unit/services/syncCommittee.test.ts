@@ -12,12 +12,12 @@ import {getApiClientStub} from "../../utils/apiStub.js";
 import {loggerVc} from "../../utils/logger.js";
 import {ClockMock} from "../../utils/clock.js";
 import {ChainHeaderTracker} from "../../../src/services/chainHeaderTracker.js";
+import {ZERO_HASH, ZERO_HASH_HEX} from "../utils/constants.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
 describe("SyncCommitteeService", function () {
   const sandbox = sinon.createSandbox();
-  const ZERO_HASH = Buffer.alloc(32, 0);
 
   const api = getApiClientStub(sandbox);
   const validatorStore = sinon.createStubInstance(ValidatorStore) as ValidatorStore &
@@ -74,7 +74,7 @@ describe("SyncCommitteeService", function () {
 
     // Return empty replies to duties service
     api.beacon.getStateValidators.resolves({data: []});
-    api.validator.getSyncCommitteeDuties.resolves({dependentRoot: ZERO_HASH, data: []});
+    api.validator.getSyncCommitteeDuties.resolves({dependentRoot: ZERO_HASH_HEX, data: []});
 
     // Mock duties service to return some duties directly
     syncCommitteeService["dutiesService"].getDutiesAtSlot = sinon.stub().returns(duties);

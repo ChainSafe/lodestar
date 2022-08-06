@@ -204,7 +204,7 @@ export class AttestationDutiesService {
       throw extendError(e, "Failed to obtain attester duty");
     });
 
-    const dependentRoot = toHexString(attesterDuties.dependentRoot);
+    const dependentRoot = attesterDuties.dependentRoot;
     const relevantDuties = attesterDuties.data.filter((duty) => {
       const pubkeyHex = toHexString(duty.pubkey);
       return this.validatorStore.hasVotingPubkey(pubkeyHex) && this.validatorStore.isDoppelgangerSafe(pubkeyHex);

@@ -14,6 +14,8 @@ import {
   ssz,
   UintNum64,
   ValidatorIndex,
+  RootHex,
+  StringType,
 } from "@lodestar/types";
 import {
   RoutesData,
@@ -111,7 +113,7 @@ export type Api = {
   getAttesterDuties(
     epoch: Epoch,
     validatorIndices: ValidatorIndex[]
-  ): Promise<{data: AttesterDuty[]; dependentRoot: Root}>;
+  ): Promise<{data: AttesterDuty[]; dependentRoot: RootHex}>;
 
   /**
    * Get block proposers duties
@@ -124,12 +126,12 @@ export type Api = {
    * @returns any Success response
    * @throws ApiError
    */
-  getProposerDuties(epoch: Epoch): Promise<{data: ProposerDuty[]; dependentRoot: Root}>;
+  getProposerDuties(epoch: Epoch): Promise<{data: ProposerDuty[]; dependentRoot: RootHex}>;
 
   getSyncCommitteeDuties(
     epoch: number,
     validatorIndices: ValidatorIndex[]
-  ): Promise<{data: SyncDuty[]; dependentRoot: Root}>;
+  ): Promise<{data: SyncDuty[]; dependentRoot: RootHex}>;
 
   /**
    * Produce a new block, without signature.
@@ -386,9 +388,11 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
 }
 
 export function getReturnTypes(): ReturnTypes<Api> {
+  const rootHexType = new StringType();
+
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   const WithDependentRoot = <T>(dataType: Type<T>) =>
-    new ContainerType({data: dataType, dependentRoot: ssz.Root}, {jsonCase: "snake"});
+    new ContainerType({data: dataType, dependentRoot: rootHexType}, {jsonCase: "snake"});
 
   const AttesterDuty = new ContainerType(
     {

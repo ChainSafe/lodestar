@@ -7,6 +7,7 @@ import {getRoutes} from "../../../src/beacon/server/validator.js";
 import {runGenericServerTest} from "../../utils/genericServerTest.js";
 
 const ZERO_HASH = Buffer.alloc(32, 0);
+const ZERO_HASH_HEX = "0x" + ZERO_HASH.toString("hex");
 
 describe("beacon / validator", () => {
   runGenericServerTest<Api, ReqTypes>(config, getClient, getRoutes, {
@@ -24,18 +25,18 @@ describe("beacon / validator", () => {
             slot: 7,
           },
         ],
-        dependentRoot: ZERO_HASH,
+        dependentRoot: ZERO_HASH_HEX,
       },
     },
     getProposerDuties: {
       args: [1000],
-      res: {data: [{slot: 1, validatorIndex: 2, pubkey: Buffer.alloc(48, 3)}], dependentRoot: ZERO_HASH},
+      res: {data: [{slot: 1, validatorIndex: 2, pubkey: Buffer.alloc(48, 3)}], dependentRoot: ZERO_HASH_HEX},
     },
     getSyncCommitteeDuties: {
       args: [1000, [1, 2, 3]],
       res: {
         data: [{pubkey: Buffer.alloc(48, 1), validatorIndex: 2, validatorSyncCommitteeIndices: [3]}],
-        dependentRoot: ZERO_HASH,
+        dependentRoot: ZERO_HASH_HEX,
       },
     },
     produceBlock: {
