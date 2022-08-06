@@ -24,7 +24,7 @@ export class BlockProcessor {
   constructor(chain: BeaconChain, metrics: IMetrics | null, opts: BlockProcessOpts, signal: AbortSignal) {
     this.jobQueue = new JobItemQueue<[allForks.SignedBeaconBlock[], ImportBlockOpts], void>(
       (job, importOpts) => {
-        return processBlocks.bind(chain)(job, {...opts, ...importOpts});
+        return processBlocks.call(chain, job, {...opts, ...importOpts});
       },
       {maxLength: QUEUE_MAX_LENGHT, signal},
       metrics?.blockProcessorQueue ?? undefined
@@ -68,7 +68,8 @@ export async function processBlocks(
 
     // Fully verify a block to be imported immediately after. Does not produce any side-effects besides adding intermediate
     // states in the state cache through regen.
-    const {postStates, executionStatuses, proposerBalanceDeltas} = await verifyBlocksInEpoch.bind(this)(
+    const {postStates, executionStatuses, proposerBalanceDeltas} = await verifyBlocksInEpoch.call(
+      this,
       parentBlock,
       relevantBlocks,
       opts
@@ -89,7 +90,7 @@ export async function processBlocks(
     for (const fullyVerifiedBlock of fullyVerifiedBlocks) {
       // No need to sleep(0) here since `importBlock` includes a disk write
       // TODO: Consider batching importBlock too if it takes significant time
-      await importBlock.bind(this)(fullyVerifiedBlock, opts);
+      await importBlock.call(this, fullyVerifiedBlock, opts);
     }
   } catch (e) {
     // above functions should only throw BlockError
