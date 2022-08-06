@@ -217,7 +217,7 @@ export class AttestationDutiesService {
     });
 
     const priorDependentRoot = this.dutiesByIndexByEpoch.get(epoch)?.dependentRoot;
-    const dependentRootChanged = priorDependentRoot !== undefined && priorDependentRoot !== dependentRoot;
+    const dependentRootChanged = priorDependentRoot !== dependentRoot;
 
     if (!priorDependentRoot || dependentRootChanged) {
       const dutiesByIndex = new Map<ValidatorIndex, AttDutyAndProof>();
@@ -231,8 +231,8 @@ export class AttestationDutiesService {
     if (priorDependentRoot && dependentRootChanged) {
       this.metrics?.attesterDutiesReorg.inc();
       this.logger.warn("Attester duties re-org. This may happen from time to time", {
-        priorDependentRoot: priorDependentRoot,
-        dependentRoot: dependentRoot,
+        priorDependentRoot,
+        dependentRoot,
         epoch,
       });
     }

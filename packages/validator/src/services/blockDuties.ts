@@ -161,11 +161,7 @@ export class BlockDutiesService {
       return this.validatorStore.hasVotingPubkey(pubkeyHex) && this.validatorStore.isDoppelgangerSafe(pubkeyHex);
     });
 
-    this.logger.debug("Downloaded proposer duties", {
-      epoch,
-      dependentRoot: dependentRoot,
-      count: relevantDuties.length,
-    });
+    this.logger.debug("Downloaded proposer duties", {epoch, dependentRoot, count: relevantDuties.length});
 
     const prior = this.proposers.get(epoch);
     this.proposers.set(epoch, {dependentRoot, data: relevantDuties});
