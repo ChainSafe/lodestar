@@ -53,13 +53,13 @@ export interface IBeaconChain {
   /** The initial slot that the chain is started with */
   readonly anchorStateLatestBlockSlot: Slot;
 
-  bls: IBlsVerifier;
-  forkChoice: IForkChoice;
-  clock: IBeaconClock;
-  emitter: ChainEventEmitter;
-  stateCache: StateContextCache;
-  checkpointStateCache: CheckpointStateCache;
-  regen: IStateRegenerator;
+  readonly bls: IBlsVerifier;
+  readonly forkChoice: IForkChoice;
+  readonly clock: IBeaconClock;
+  readonly emitter: ChainEventEmitter;
+  readonly stateCache: StateContextCache;
+  readonly checkpointStateCache: CheckpointStateCache;
+  readonly regen: IStateRegenerator;
   readonly lightClientServer: LightClientServer;
   readonly reprocessController: ReprocessController;
 

@@ -66,13 +66,13 @@ export class BeaconChain implements IBeaconChain {
   readonly config: IBeaconConfig;
   readonly anchorStateLatestBlockSlot: Slot;
 
-  bls: IBlsVerifier;
-  forkChoice: IForkChoice;
-  clock: IBeaconClock;
-  emitter: ChainEventEmitter;
-  stateCache: StateContextCache;
-  checkpointStateCache: CheckpointStateCache;
-  regen: IStateRegenerator;
+  readonly bls: IBlsVerifier;
+  readonly forkChoice: IForkChoice;
+  readonly clock: IBeaconClock;
+  readonly emitter: ChainEventEmitter;
+  readonly stateCache: StateContextCache;
+  readonly checkpointStateCache: CheckpointStateCache;
+  readonly regen: IStateRegenerator;
   readonly lightClientServer: LightClientServer;
   readonly reprocessController: ReprocessController;
 

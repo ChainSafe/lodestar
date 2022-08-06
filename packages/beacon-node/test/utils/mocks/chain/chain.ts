@@ -6,7 +6,6 @@ import {IBeaconConfig} from "@lodestar/config";
 import {BeaconStateAllForks, CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {CheckpointWithHex, IForkChoice, ProtoBlock, ExecutionStatus} from "@lodestar/fork-choice";
 import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
-import {ILogger} from "@lodestar/utils";
 
 import {ChainEventEmitter, IBeaconChain} from "../../../../src/chain/index.js";
 import {IBeaconClock} from "../../../../src/chain/clock/interface.js";
@@ -59,7 +58,6 @@ export class MockBeaconChain implements IBeaconChain {
   readonly eth1 = new Eth1ForBlockProductionDisabled();
   readonly executionEngine = new ExecutionEngineDisabled();
   readonly config: IBeaconConfig;
-  readonly logger: ILogger;
   readonly opts: IChainOptions = {
     persistInvalidSszObjectsDir: "",
     proposerBoostEnabled: false,
@@ -105,7 +103,7 @@ export class MockBeaconChain implements IBeaconChain {
   private abortController: AbortController;
 
   constructor({genesisTime, chainId, networkId, state, config}: IMockChainParams) {
-    this.logger = testLogger();
+    const logger = testLogger();
     this.genesisTime = genesisTime ?? state.genesisTime;
     this.genesisValidatorsRoot = state.genesisValidatorsRoot;
     this.bls = sinon.createStubInstance(BlsSingleThreadVerifier);
@@ -142,7 +140,7 @@ export class MockBeaconChain implements IBeaconChain {
         db: db,
         metrics: null,
         emitter: this.emitter,
-        logger: this.logger,
+        logger,
       }
     );
     this.reprocessController = new ReprocessController(null);
