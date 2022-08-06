@@ -13,7 +13,7 @@ import {ImportBlockOpts} from "./types.js";
  * Since all data is known in advance all signatures are verified at once in parallel.
  */
 export async function verifyBlocksSignatures(
-  chain: {bls: IBlsVerifier},
+  bls: IBlsVerifier,
   preState0: CachedBeaconStateAllForks,
   blocks: allForks.SignedBeaconBlock[],
   opts: ImportBlockOpts
@@ -31,7 +31,7 @@ export async function verifyBlocksSignatures(
         Promise.resolve(true)
       : //
         // Verify signatures per block to track which block is invalid
-        chain.bls.verifySignatureSets(
+        bls.verifySignatureSets(
           getBlockSignatureSets(preState0, block, {skipProposerSignature: opts.validProposerSignature})
         );
 

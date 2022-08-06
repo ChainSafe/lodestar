@@ -64,15 +64,17 @@ export class BeaconChain implements IBeaconChain {
   readonly executionBuilder?: IExecutionBuilder;
   // Expose config for convenience in modularized functions
   readonly config: IBeaconConfig;
+  readonly logger: ILogger;
+
   readonly anchorStateLatestBlockSlot: Slot;
 
-  bls: IBlsVerifier;
-  forkChoice: IForkChoice;
-  clock: IBeaconClock;
-  emitter: ChainEventEmitter;
-  stateCache: StateContextCache;
-  checkpointStateCache: CheckpointStateCache;
-  regen: IStateRegenerator;
+  readonly bls: IBlsVerifier;
+  readonly forkChoice: IForkChoice;
+  readonly clock: IBeaconClock;
+  readonly emitter: ChainEventEmitter;
+  readonly stateCache: StateContextCache;
+  readonly checkpointStateCache: CheckpointStateCache;
+  readonly regen: IStateRegenerator;
   readonly lightClientServer: LightClientServer;
   readonly reprocessController: ReprocessController;
 
@@ -103,7 +105,6 @@ export class BeaconChain implements IBeaconChain {
 
   protected readonly blockProcessor: BlockProcessor;
   protected readonly db: IBeaconDb;
-  protected readonly logger: ILogger;
   protected readonly metrics: IMetrics | null;
   private readonly archiver: Archiver;
   private abortController = new AbortController();
@@ -208,33 +209,7 @@ export class BeaconChain implements IBeaconChain {
 
     this.reprocessController = new ReprocessController(this.metrics);
 
-    this.blockProcessor = new BlockProcessor(
-      {
-        clock,
-        bls,
-        regen,
-        executionEngine,
-        eth1,
-        db,
-        forkChoice,
-        lightClientServer,
-        stateCache,
-        checkpointStateCache,
-        seenAggregatedAttestations: this.seenAggregatedAttestations,
-        seenBlockAttesters: this.seenBlockAttesters,
-        beaconProposerCache: this.beaconProposerCache,
-        checkpointBalancesCache: this.checkpointBalancesCache,
-        reprocessController: this.reprocessController,
-        emitter,
-        config,
-        logger,
-        metrics,
-        persistInvalidSszValue: this.persistInvalidSszValue.bind(this),
-        persistInvalidSszView: this.persistInvalidSszView.bind(this),
-      },
-      opts,
-      signal
-    );
+    this.blockProcessor = new BlockProcessor(this, metrics, opts, signal);
 
     this.forkChoice = forkChoice;
     this.clock = clock;
