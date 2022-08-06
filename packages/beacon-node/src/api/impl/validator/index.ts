@@ -1,19 +1,6 @@
 import {routes} from "@lodestar/api";
-import {
-  CachedBeaconStateAllForks,
-  computeStartSlotAtEpoch,
-  proposerShufflingDecisionRoot,
-  attesterShufflingDecisionRoot,
-  getBlockRootAtSlot,
-  computeEpochAtSlot,
-} from "@lodestar/state-transition";
-import {
-  GENESIS_SLOT,
-  SLOTS_PER_EPOCH,
-  SLOTS_PER_HISTORICAL_ROOT,
-  SYNC_COMMITTEE_SUBNET_SIZE,
-  ForkName,
-} from "@lodestar/params";
+import {computeStartSlotAtEpoch, getBlockRootAtSlot, computeEpochAtSlot} from "@lodestar/state-transition";
+import {SLOTS_PER_EPOCH, SYNC_COMMITTEE_SUBNET_SIZE, ForkName} from "@lodestar/params";
 import {Root, Slot, ValidatorIndex, ssz, Epoch, BLSSignature} from "@lodestar/types";
 import {ExecutionStatus} from "@lodestar/fork-choice";
 
@@ -21,7 +8,7 @@ import {fromHexString} from "@chainsafe/ssz";
 import {assembleBlock, BlockType, AssembledBlockType} from "../../../chain/factory/block/index.js";
 import {AttestationError, AttestationErrorCode, GossipAction, SyncCommitteeError} from "../../../chain/errors/index.js";
 import {validateGossipAggregateAndProof} from "../../../chain/validation/index.js";
-import {ZERO_HASH} from "../../../constants/index.js";
+import {ZERO_HASH_HEX} from "../../../constants/index.js";
 import {SyncState} from "../../../sync/index.js";
 import {toGraffitiBuffer} from "../../../util/graffiti.js";
 import {ApiError, NodeIsSyncing} from "../errors.js";
@@ -57,27 +44,6 @@ const SYNC_TOLERANCE_EPOCHS = 1;
  * See `@lodestar/validator/src/api` for the client implementation).
  */
 export function getValidatorApi({chain, config, logger, metrics, network, sync}: ApiModules): routes.validator.Api {
-  let genesisBlockRoot: Root | null = null;
-
-  /** Compute and cache the genesis block root */
-  async function getGenesisBlockRoot(state: CachedBeaconStateAllForks): Promise<Root> {
-    if (!genesisBlockRoot) {
-      // Close to genesis the genesis block may not be available in the DB
-      if (state.slot < SLOTS_PER_HISTORICAL_ROOT) {
-        genesisBlockRoot = state.blockRoots.get(0);
-      }
-
-      const genesisBlock = await chain.getCanonicalBlockAtSlot(GENESIS_SLOT);
-      if (genesisBlock) {
-        genesisBlockRoot = config.getForkTypes(genesisBlock.message.slot).SignedBeaconBlock.hashTreeRoot(genesisBlock);
-      }
-    }
-
-    // If for some reason the genesisBlockRoot is not able don't prevent validators from
-    // proposing or attesting. If the genesisBlockRoot is wrong, at worst it may trigger a re-fetch of the duties
-    return genesisBlockRoot || ZERO_HASH;
-  }
-
   /**
    * If advancing the local clock `MAX_API_CLOCK_DISPARITY_MS` ticks to the requested slot, wait for its start
    * Prevents the validator from getting errors from the API if the clock is a bit advanced
@@ -325,13 +291,11 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
         duties.push({slot: startSlot + i, validatorIndex: indexes[i], pubkey: pubkeys[i]});
       }
 
-      // Returns `null` on the one-off scenario where the genesis block decides its own shuffling.
-      // It should be set to the latest block applied to `self` or the genesis block root.
-      const dependentRoot = proposerShufflingDecisionRoot(state) || (await getGenesisBlockRoot(state));
-
       return {
         data: duties,
-        dependentRoot,
+        // shuffling's dependant root is for attesters which has 1 epoch lookahead.
+        // Proposer lookahead is 0, so we get here shuffling of state epoch + 1 (next)
+        dependentRoot: state.epochCtx.nextShuffling.dependantRoot,
       };
     },
 
@@ -375,11 +339,9 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
         }
       }
 
-      const dependentRoot = attesterShufflingDecisionRoot(state, epoch) || (await getGenesisBlockRoot(state));
-
       return {
         data: duties,
-        dependentRoot,
+        dependentRoot: state.epochCtx.getShufflingAtEpoch(epoch).dependantRoot,
       };
     },
 
@@ -433,7 +395,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
       return {
         data: duties,
         // TODO: Compute a proper dependentRoot for this syncCommittee shuffling
-        dependentRoot: ZERO_HASH,
+        dependentRoot: ZERO_HASH_HEX,
       };
     },
 

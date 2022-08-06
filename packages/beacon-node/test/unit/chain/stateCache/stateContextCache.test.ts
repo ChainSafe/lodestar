@@ -5,7 +5,7 @@ import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Root} from "@lodestar/types";
 import {StateContextCache} from "../../../../src/chain/stateCache/index.js";
 import {generateCachedState} from "../../../utils/state.js";
-import {ZERO_HASH} from "../../../../src/constants/index.js";
+import {ZERO_HASH, ZERO_HASH_HEX} from "../../../../src/constants/index.js";
 
 describe("StateContextCache", function () {
   let cache: StateContextCache;
@@ -16,6 +16,7 @@ describe("StateContextCache", function () {
     shuffling: [],
     committees: [],
     committeesPerSlot: 1,
+    dependantRoot: ZERO_HASH_HEX,
   };
 
   beforeEach(function () {

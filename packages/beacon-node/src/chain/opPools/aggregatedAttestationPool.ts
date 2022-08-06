@@ -13,8 +13,6 @@ import {
   CachedBeaconStatePhase0,
   CachedBeaconStateAltair,
   computeEpochAtSlot,
-  computeStartSlotAtEpoch,
-  getBlockRootAtSlot,
 } from "@lodestar/state-transition";
 import {toHexString} from "@chainsafe/ssz";
 import {EpochDifference, IForkChoice} from "@lodestar/fork-choice";
@@ -436,8 +434,7 @@ export function isValidAttestationData(
 
   // Otherwise the shuffling is determined by the block at the end of the target epoch
   // minus the shuffling lookahead (usually 2). We call this the "pivot".
-  const pivotSlot = computeStartSlotAtEpoch(targetEpoch - 1) - 1;
-  const statePivotBlockRoot = toHexString(getBlockRootAtSlot(state, pivotSlot));
+  const stateDependantRoot = state.epochCtx.getShufflingAtEpoch(targetEpoch).dependantRoot;
 
   // Use fork choice's view of the block DAG to quickly evaluate whether the attestation's
   // pivot block is the same as the current state's pivot block. If it is, then the
@@ -449,8 +446,8 @@ export function isValidAttestationData(
     throw Error(`Attestation data.beaconBlockRoot ${beaconBlockRootHex} not found in forkchoice`);
   }
 
-  const pivotBlockRoot = forkChoice.getDependantRoot(beaconBlock, EpochDifference.previous);
-  return pivotBlockRoot === statePivotBlockRoot;
+  const attestationDependantRoot = forkChoice.getDependantRoot(beaconBlock, EpochDifference.previous);
+  return attestationDependantRoot === stateDependantRoot;
 }
 
 function flagIsTimelySource(flag: number): boolean {
