@@ -1,4 +1,4 @@
-import {allForks, UintNum64, Root, phase0, Slot, RootHex, Epoch, ValidatorIndex} from "@lodestar/types";
+import {allForks, bellatrix, UintNum64, Root, phase0, Slot, RootHex, Epoch, ValidatorIndex} from "@lodestar/types";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {IBeaconConfig} from "@lodestar/config";
 import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
@@ -29,6 +29,7 @@ import {BeaconProposerCache, ProposerPreparationData} from "./beaconProposerCach
 import {SeenBlockAttesters} from "./seenCache/seenBlockAttesters.js";
 import {CheckpointBalancesCache} from "./balancesCache.js";
 import {IChainOptions} from "./options.js";
+import {AssembledBlockType, BlockAttributes, BlockType} from "./produceBlock/produceBlockBody.js";
 
 export type Eth2Context = {
   activeValidatorCount: number;
@@ -36,6 +37,7 @@ export type Eth2Context = {
   currentEpoch: number;
 };
 
+export {BlockType, AssembledBlockType};
 export {ProposerPreparationData};
 
 /**
@@ -105,6 +107,9 @@ export interface IBeaconChain {
    * @param slot
    */
   getCanonicalBlockAtSlot(slot: Slot): Promise<allForks.SignedBeaconBlock | null>;
+
+  produceBlock(blockAttributes: BlockAttributes): Promise<allForks.BeaconBlock>;
+  produceBlindedBlock(blockAttributes: BlockAttributes): Promise<bellatrix.BlindedBeaconBlock>;
 
   /** Process a block until complete */
   processBlock(block: allForks.SignedBeaconBlock, opts?: ImportBlockOpts): Promise<void>;

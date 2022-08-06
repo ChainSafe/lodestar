@@ -1,6 +1,5 @@
 import {
   bellatrix,
-  Bytes96,
   Bytes32,
   phase0,
   allForks,
@@ -11,6 +10,7 @@ import {
   ssz,
   ValidatorIndex,
   BLSPubkey,
+  BLSSignature,
 } from "@lodestar/types";
 import {
   CachedBeaconStateAllForks,
@@ -22,14 +22,12 @@ import {
   isMergeTransitionComplete,
 } from "@lodestar/state-transition";
 import {IChainForkConfig} from "@lodestar/config";
-import {toHex, ILogger, sleep} from "@lodestar/utils";
-
-import {IBeaconChain} from "../../interface.js";
-import {PayloadId, IExecutionEngine, IExecutionBuilder} from "../../../execution/index.js";
-import {ZERO_HASH, ZERO_HASH_HEX} from "../../../constants/index.js";
-import {IEth1ForBlockProduction} from "../../../eth1/index.js";
-import {numToQuantity} from "../../../eth1/provider/utils.js";
-import {IMetrics} from "../../../metrics/index.js";
+import {toHex, sleep} from "@lodestar/utils";
+import type {BeaconChain} from "../chain.js";
+import {PayloadId, IExecutionEngine, IExecutionBuilder} from "../../execution/index.js";
+import {ZERO_HASH, ZERO_HASH_HEX} from "../../constants/index.js";
+import {IEth1ForBlockProduction} from "../../eth1/index.js";
+import {numToQuantity} from "../../eth1/provider/utils.js";
 
 // Time to provide the EL to generate a payload from new payload id
 const PAYLOAD_GENERATION_TIME_MS = 500;
@@ -38,6 +36,12 @@ enum PayloadPreparationType {
   Cached = "Cached",
   Reorged = "Reorged",
 }
+
+export type BlockAttributes = {
+  randaoReveal: BLSSignature;
+  graffiti: Bytes32;
+  slot: Slot;
+};
 
 export enum BlockType {
   Full,
@@ -50,21 +54,19 @@ export type AssembledBlockType<T extends BlockType> = T extends BlockType.Full
   ? allForks.BeaconBlock
   : bellatrix.BlindedBeaconBlock;
 
-export async function assembleBody<T extends BlockType>(
-  {type, chain, logger, metrics}: {type: T; chain: IBeaconChain; logger?: ILogger; metrics?: IMetrics | null},
+export async function produceBlockBody<T extends BlockType>(
+  this: BeaconChain,
+  blockType: T,
   currentState: CachedBeaconStateAllForks,
   {
     randaoReveal,
     graffiti,
-    blockSlot,
+    slot: blockSlot,
     parentSlot,
     parentBlockRoot,
     proposerIndex,
     proposerPubKey,
-  }: {
-    randaoReveal: Bytes96;
-    graffiti: Bytes32;
-    blockSlot: Slot;
+  }: BlockAttributes & {
     parentSlot: Slot;
     parentBlockRoot: Root;
     proposerIndex: ValidatorIndex;
@@ -83,9 +85,9 @@ export async function assembleBody<T extends BlockType>(
   //   }
   // }
 
-  const [attesterSlashings, proposerSlashings, voluntaryExits] = chain.opPool.getSlashingsAndExits(currentState);
-  const attestations = chain.aggregatedAttestationPool.getAttestationsForBlock(chain.forkChoice, currentState);
-  const {eth1Data, deposits} = await chain.eth1.getEth1DataAndDeposits(currentState);
+  const [attesterSlashings, proposerSlashings, voluntaryExits] = this.opPool.getSlashingsAndExits(currentState);
+  const attestations = this.aggregatedAttestationPool.getAttestationsForBlock(this.forkChoice, currentState);
+  const {eth1Data, deposits} = await this.eth1.getEth1DataAndDeposits(currentState);
 
   const blockBody: phase0.BeaconBlockBody = {
     randaoReveal,
@@ -100,27 +102,27 @@ export async function assembleBody<T extends BlockType>(
 
   const blockEpoch = computeEpochAtSlot(blockSlot);
 
-  if (blockEpoch >= chain.config.ALTAIR_FORK_EPOCH) {
-    (blockBody as altair.BeaconBlockBody).syncAggregate = chain.syncContributionAndProofPool.getAggregate(
+  if (blockEpoch >= this.config.ALTAIR_FORK_EPOCH) {
+    (blockBody as altair.BeaconBlockBody).syncAggregate = this.syncContributionAndProofPool.getAggregate(
       parentSlot,
       parentBlockRoot
     );
   }
 
-  if (blockEpoch >= chain.config.BELLATRIX_FORK_EPOCH) {
-    const safeBlockHash = chain.forkChoice.getJustifiedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
-    const finalizedBlockHash = chain.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
-    const feeRecipient = chain.beaconProposerCache.getOrDefault(proposerIndex);
+  if (blockEpoch >= this.config.BELLATRIX_FORK_EPOCH) {
+    const safeBlockHash = this.forkChoice.getJustifiedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
+    const finalizedBlockHash = this.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
+    const feeRecipient = this.beaconProposerCache.getOrDefault(proposerIndex);
 
-    if (type === BlockType.Blinded) {
-      if (!chain.executionBuilder) throw Error("Execution Builder not available");
+    if (blockType === BlockType.Blinded) {
+      if (!this.executionBuilder) throw Error("Execution Builder not available");
 
       // This path will not be used in the production, but is here just for merge mock
       // tests because merge-mock requires an fcU to be issued prior to fetch payload
       // header.
-      if (chain.executionBuilder.issueLocalFcUForBlockProduction) {
+      if (this.executionBuilder.issueLocalFcUForBlockProduction) {
         await prepareExecutionPayload(
-          chain,
+          this,
           safeBlockHash,
           finalizedBlockHash ?? ZERO_HASH_HEX,
           currentState as CachedBeaconStateBellatrix,
@@ -132,7 +134,7 @@ export async function assembleBody<T extends BlockType>(
       // fetched from the payload id and a blinded block will be produced instead of
       // fullblock for the validator to sign
       (blockBody as bellatrix.BlindedBeaconBlockBody).executionPayloadHeader = await prepareExecutionPayloadHeader(
-        chain,
+        this,
         currentState as CachedBeaconStateBellatrix,
         proposerPubKey
       );
@@ -142,7 +144,7 @@ export async function assembleBody<T extends BlockType>(
       // will takeover if the builder flow was activated and errors
       try {
         const prepareRes = await prepareExecutionPayload(
-          chain,
+          this,
           safeBlockHash,
           finalizedBlockHash ?? ZERO_HASH_HEX,
           currentState as CachedBeaconStateBellatrix,
@@ -160,22 +162,22 @@ export async function assembleBody<T extends BlockType>(
             // See: https://discord.com/channels/595666850260713488/892088344438255616/1009882079632314469
             await sleep(PAYLOAD_GENERATION_TIME_MS);
           }
-          const payload = await chain.executionEngine.getPayload(payloadId);
+          const payload = await this.executionEngine.getPayload(payloadId);
           (blockBody as bellatrix.BeaconBlockBody).executionPayload = payload;
 
-          const fetchedTime = Date.now() / 1000 - computeTimeAtSlot(chain.config, blockSlot, chain.genesisTime);
-          metrics?.blockPayload.payloadFetchedTime.observe({prepType}, fetchedTime);
+          const fetchedTime = Date.now() / 1000 - computeTimeAtSlot(this.config, blockSlot, this.genesisTime);
+          this.metrics?.blockPayload.payloadFetchedTime.observe({prepType}, fetchedTime);
           if (payload.transactions.length === 0) {
-            metrics?.blockPayload.emptyPayloads.inc({prepType});
+            this.metrics?.blockPayload.emptyPayloads.inc({prepType});
           }
         }
       } catch (e) {
-        metrics?.blockPayload.payloadFetchErrors.inc();
+        this.metrics?.blockPayload.payloadFetchErrors.inc();
         // ok we don't have an execution payload here, so we can assign an empty one
         // if pre-merge
 
         if (!isMergeTransitionComplete(currentState as CachedBeaconStateBellatrix)) {
-          logger?.warn(
+          this.logger?.warn(
             "Fetch payload from the execution failed, however since we are still pre-merge proceeding with an empty one.",
             {},
             e as Error
