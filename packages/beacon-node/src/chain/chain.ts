@@ -607,7 +607,7 @@ export class BeaconChain implements IBeaconChain {
 
     if (finalizedState) {
       // should be after ArchiveBlocksTask to handle restart cleanly
-      const {archivedState, deletedEpochs} = await maybeArchiveState(this.db, finalizedState, finalized);
+      const {archivedState, deletedSlots: deletedEpochs} = await maybeArchiveState(this.db, finalizedState, finalized);
       if (archivedState) {
         this.logger.verbose("Archived finalized state", {
           epoch: finalized.epoch,

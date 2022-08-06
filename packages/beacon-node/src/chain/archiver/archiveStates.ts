@@ -1,5 +1,6 @@
 import {Slot} from "@lodestar/types";
-import {computeEpochAtSlot} from "@lodestar/state-transition";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {IBeaconDb} from "../../db/index.js";
@@ -30,47 +31,55 @@ export async function maybeArchiveState(
   db: IBeaconDb,
   finalizedState: CachedBeaconStateAllForks,
   finalized: CheckpointWithHex
-): Promise<{archivedState: boolean; deletedEpochs: Slot[]}> {
+): Promise<{archivedState: boolean; deletedSlots: Slot[]}> {
   const lastStoredSlot = await db.stateArchive.lastKey();
   const lastStoredEpoch = computeEpochAtSlot(lastStoredSlot ?? 0);
 
   if (finalized.epoch - lastStoredEpoch > PERSIST_TEMP_STATE_EVERY_EPOCHS) {
     await db.stateArchive.put(finalizedState.slot, finalizedState);
 
-    // HEEEEEYYY!!: `db.stateArchive` indexes by slot or epoch?? Mixed use
-    const storedEpochs = await db.stateArchive.keys({
-      lt: finalized.epoch,
-      // Only check the current and previous intervals
-      gte: Math.max(0, (Math.floor(finalized.epoch / PERSIST_STATE_EVERY_EPOCHS) - 1) * PERSIST_STATE_EVERY_EPOCHS),
+    const fromEpoch = computeStartSlotAtEpoch(finalized.epoch);
+    // Only check the current and previous intervals
+    const toEpoch = Math.max(
+      0,
+      (Math.floor(finalized.epoch / PERSIST_STATE_EVERY_EPOCHS) - 1) * PERSIST_STATE_EVERY_EPOCHS
+    );
+
+    const storedStateSlots = await db.stateArchive.keys({
+      lte: computeStartSlotAtEpoch(fromEpoch),
+      gte: computeStartSlotAtEpoch(toEpoch),
     });
-    const statesToDelete = computeEpochsToDelete(storedEpochs, PERSIST_STATE_EVERY_EPOCHS);
-    if (statesToDelete.length > 0) {
-      await db.stateArchive.batchDelete(statesToDelete);
+
+    const statesSlotsToDelete = computeStateSlotsToDelete(storedStateSlots, PERSIST_STATE_EVERY_EPOCHS);
+    if (statesSlotsToDelete.length > 0) {
+      await db.stateArchive.batchDelete(statesSlotsToDelete);
     }
 
-    return {archivedState: true, deletedEpochs: statesToDelete};
+    return {archivedState: true, deletedSlots: statesSlotsToDelete};
   }
 
   // Don't archive finalized state
   else {
-    return {archivedState: false, deletedEpochs: []};
+    return {archivedState: false, deletedSlots: []};
   }
 }
 
 /**
  * Keeps first epoch per interval of persistEveryEpochs, deletes the rest
  */
-export function computeEpochsToDelete(storedEpochs: number[], persistEveryEpochs: number): number[] {
-  const epochBuckets = new Set<number>();
-  const toDelete = new Set<number>();
-  for (const epoch of storedEpochs) {
-    const epochBucket = epoch - (epoch % persistEveryEpochs);
-    if (epochBuckets.has(epochBucket)) {
-      toDelete.add(epoch);
+export function computeStateSlotsToDelete(storedStateSlots: number[], persistEveryEpochs: number): number[] {
+  const persistEverySlots = persistEveryEpochs * SLOTS_PER_EPOCH;
+  const intervalsWithStates = new Set<number>();
+  const stateSlotsToDelete = new Set<number>();
+
+  for (const epoch of storedStateSlots) {
+    const interval = Math.floor(epoch / persistEverySlots);
+    if (intervalsWithStates.has(interval)) {
+      stateSlotsToDelete.add(epoch);
     } else {
-      epochBuckets.add(epochBucket);
+      intervalsWithStates.add(interval);
     }
   }
 
-  return Array.from(toDelete.values());
+  return Array.from(stateSlotsToDelete.values());
 }
