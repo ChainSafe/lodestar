@@ -6,7 +6,6 @@ import {ForkChoice} from "@lodestar/fork-choice";
 
 import {ssz} from "@lodestar/types";
 import {MAX_EFFECTIVE_BALANCE, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {IBeaconChain} from "../../../../../../src/chain/index.js";
 import {LocalClock} from "../../../../../../src/chain/clock/index.js";
 import {FAR_FUTURE_EPOCH} from "../../../../../../src/constants/index.js";
 import {getValidatorApi} from "../../../../../../src/api/impl/validator/index.js";
@@ -14,7 +13,7 @@ import {ApiModules} from "../../../../../../src/api/impl/types.js";
 import {generateState} from "../../../../../utils/state.js";
 import {IBeaconSync} from "../../../../../../src/sync/index.js";
 import {generateValidators} from "../../../../../utils/validator.js";
-import {StubbedBeaconDb} from "../../../../../utils/stub/index.js";
+import {StubbedBeaconDb, StubbedChainMutable} from "../../../../../utils/stub/index.js";
 import {setupApiImplTestServer, ApiImplTestModules} from "../../index.test.js";
 import {testLogger} from "../../../../../utils/logger.js";
 import {createCachedBeaconStateTest} from "../../../../../utils/cachedBeaconState.js";
@@ -24,7 +23,7 @@ use(chaiAsPromised);
 describe("get proposers api impl", function () {
   const logger = testLogger();
 
-  let chainStub: SinonStubbedInstance<IBeaconChain>,
+  let chainStub: StubbedChainMutable<"clock" | "forkChoice">,
     syncStub: SinonStubbedInstance<IBeaconSync>,
     dbStub: StubbedBeaconDb;
 

@@ -15,7 +15,7 @@ import bls from "@chainsafe/bls";
 import {PointFormat} from "@chainsafe/bls/types";
 import {createIBeaconConfig} from "@lodestar/config";
 import {BeaconChain} from "../../../../src/chain/index.js";
-import {StubbedChain} from "../../../utils/stub/index.js";
+import {StubbedChainMutable} from "../../../utils/stub/index.js";
 import {generateState} from "../../../utils/state.js";
 import {validateGossipVoluntaryExit} from "../../../../src/chain/validation/voluntaryExit.js";
 import {VoluntaryExitErrorCode} from "../../../../src/chain/errors/voluntaryExitError.js";
@@ -23,6 +23,8 @@ import {OpPool} from "../../../../src/chain/opPools/index.js";
 import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
 import {createCachedBeaconStateTest} from "../../../utils/cachedBeaconState.js";
 import {BlsVerifierMock} from "../../../utils/mocks/bls.js";
+
+type StubbedChain = StubbedChainMutable<"forkChoice" | "bls">;
 
 describe("validate voluntary exit", () => {
   const sandbox = sinon.createSandbox();

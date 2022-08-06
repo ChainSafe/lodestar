@@ -15,6 +15,7 @@ import {BeaconProposerCache} from "../../../src/chain/beaconProposerCache.js";
 import {PayloadIdCache} from "../../../src/execution/engine/payloadIdCache.js";
 import {ExecutionEngineHttp} from "../../../src/execution/engine/http.js";
 import {IExecutionEngine} from "../../../src/execution/engine/interface.js";
+import {StubbedChainMutable} from "../../utils/stub/index.js";
 
 describe("PrepareNextSlot scheduler", () => {
   const sandbox = sinon.createSandbox();
@@ -30,7 +31,9 @@ describe("PrepareNextSlot scheduler", () => {
 
   beforeEach(() => {
     sandbox.useFakeTimers();
-    const chainStub = sandbox.createStubInstance(BeaconChain) as SinonStubbedInstance<BeaconChain> & BeaconChain;
+    const chainStub = sandbox.createStubInstance(BeaconChain) as StubbedChainMutable<
+      "clock" | "forkChoice" | "emitter" | "regen"
+    >;
     const clockStub = sandbox.createStubInstance(LocalClock) as SinonStubbedInstance<LocalClock> & LocalClock;
     chainStub.clock = clockStub;
     forkChoiceStub = sandbox.createStubInstance(ForkChoice) as SinonStubbedInstance<ForkChoice> & ForkChoice;
