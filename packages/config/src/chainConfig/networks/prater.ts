@@ -26,7 +26,7 @@ export const praterChainConfig: IChainConfig = {
   ALTAIR_FORK_EPOCH: 36660,
   // Bellatrix
   BELLATRIX_FORK_VERSION: b("0x02001020"),
-  BELLATRIX_FORK_EPOCH: Infinity,
+  BELLATRIX_FORK_EPOCH: 112260,
   // Sharding
   SHARDING_FORK_VERSION: b("0x03001020"),
   SHARDING_FORK_EPOCH: Infinity,
