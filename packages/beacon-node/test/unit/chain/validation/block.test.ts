@@ -3,7 +3,7 @@ import {config} from "@lodestar/config/default";
 import {ForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {allForks, ssz} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
-import {BeaconChain, IBeaconChain} from "../../../../src/chain/index.js";
+import {BeaconChain} from "../../../../src/chain/index.js";
 import {LocalClock} from "../../../../src/chain/clock/index.js";
 import {StateRegenerator} from "../../../../src/chain/regen/index.js";
 import {validateGossipBlock} from "../../../../src/chain/validation/index.js";
@@ -13,9 +13,12 @@ import {SinonStubFn} from "../../../utils/types.js";
 import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
 import {SeenBlockProposers} from "../../../../src/chain/seenCache/index.js";
 import {EMPTY_SIGNATURE, ZERO_HASH} from "../../../../src/constants/index.js";
+import {StubbedChainMutable} from "../../../utils/stub/index.js";
+
+type StubbedChain = StubbedChainMutable<"clock" | "forkChoice" | "regen" | "bls">;
 
 describe("gossip block validation", function () {
-  let chain: SinonStubbedInstance<IBeaconChain>;
+  let chain: StubbedChain;
   let forkChoice: SinonStubbedInstance<ForkChoice>;
   let regen: SinonStubbedInstance<StateRegenerator>;
   let verifySignature: SinonStubFn<() => Promise<boolean>>;

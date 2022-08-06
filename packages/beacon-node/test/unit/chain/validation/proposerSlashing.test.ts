@@ -4,13 +4,15 @@ import {ForkChoice} from "@lodestar/fork-choice";
 import {phase0, ssz} from "@lodestar/types";
 
 import {BeaconChain} from "../../../../src/chain/index.js";
-import {StubbedChain} from "../../../utils/stub/index.js";
+import {StubbedChainMutable} from "../../../utils/stub/index.js";
 import {generateCachedState} from "../../../utils/state.js";
 import {ProposerSlashingErrorCode} from "../../../../src/chain/errors/proposerSlashingError.js";
 import {validateGossipProposerSlashing} from "../../../../src/chain/validation/proposerSlashing.js";
 import {OpPool} from "../../../../src/chain/opPools/index.js";
 import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
 import {BlsVerifierMock} from "../../../utils/mocks/bls.js";
+
+type StubbedChain = StubbedChainMutable<"forkChoice" | "bls">;
 
 describe("validate proposer slashing", () => {
   const sandbox = sinon.createSandbox();
