@@ -1,7 +1,10 @@
+import {byteArrayEquals} from "@chainsafe/ssz";
+import {GENESIS_SLOT} from "@lodestar/params";
 import {Epoch, Root, Slot} from "@lodestar/types";
-import {CachedBeaconStateAllForks} from "../types.js";
+import {ZERO_HASH} from "../constants/constants.js";
+import {BeaconStateAllForks} from "../types.js";
 import {getBlockRootAtSlot} from "./blockRoot.js";
-import {computeStartSlotAtEpoch} from "./epoch.js";
+import {computeEpochAtSlot, computeStartSlotAtEpoch} from "./epoch.js";
 
 /**
  * Returns the block root which decided the proposer shuffling for the current epoch. This root
@@ -10,10 +13,10 @@ import {computeStartSlotAtEpoch} from "./epoch.js";
  * Returns `null` on the one-off scenario where the genesis block decides its own shuffling.
  * It should be set to the latest block applied to this `state` or the genesis block root.
  */
-export function proposerShufflingDecisionRoot(state: CachedBeaconStateAllForks): Root | null {
+export function proposerShufflingDecisionRoot(state: BeaconStateAllForks): Root {
   const decisionSlot = proposerShufflingDecisionSlot(state);
-  if (state.slot == decisionSlot) {
-    return null;
+  if (state.slot === decisionSlot) {
+    return getGenesisBlockRoot(state);
   } else {
     return getBlockRootAtSlot(state, decisionSlot);
   }
@@ -23,8 +26,8 @@ export function proposerShufflingDecisionRoot(state: CachedBeaconStateAllForks):
  * Returns the slot at which the proposer shuffling was decided. The block root at this slot
  * can be used to key the proposer shuffling for the current epoch.
  */
-function proposerShufflingDecisionSlot(state: CachedBeaconStateAllForks): Slot {
-  const startSlot = computeStartSlotAtEpoch(state.epochCtx.epoch);
+function proposerShufflingDecisionSlot(state: BeaconStateAllForks): Slot {
+  const startSlot = computeStartSlotAtEpoch(computeEpochAtSlot(state.slot));
   return Math.max(startSlot - 1, 0);
 }
 
@@ -35,10 +38,10 @@ function proposerShufflingDecisionSlot(state: CachedBeaconStateAllForks): Slot {
  * Returns `null` on the one-off scenario where the genesis block decides its own shuffling.
  * It should be set to the latest block applied to this `state` or the genesis block root.
  */
-export function attesterShufflingDecisionRoot(state: CachedBeaconStateAllForks, requestedEpoch: Epoch): Root | null {
+export function attesterShufflingDecisionRoot(state: BeaconStateAllForks, requestedEpoch: Epoch): Root {
   const decisionSlot = attesterShufflingDecisionSlot(state, requestedEpoch);
-  if (state.slot == decisionSlot) {
-    return null;
+  if (state.slot === decisionSlot) {
+    return getGenesisBlockRoot(state);
   } else {
     return getBlockRootAtSlot(state, decisionSlot);
   }
@@ -48,7 +51,7 @@ export function attesterShufflingDecisionRoot(state: CachedBeaconStateAllForks, 
  * Returns the slot at which the proposer shuffling was decided. The block root at this slot
  * can be used to key the proposer shuffling for the current epoch.
  */
-function attesterShufflingDecisionSlot(state: CachedBeaconStateAllForks, requestedEpoch: Epoch): Slot {
+function attesterShufflingDecisionSlot(state: BeaconStateAllForks, requestedEpoch: Epoch): Slot {
   const epoch = attesterShufflingDecisionEpoch(state, requestedEpoch);
   const slot = computeStartSlotAtEpoch(epoch);
   return Math.max(slot - 1, 0);
@@ -63,8 +66,8 @@ function attesterShufflingDecisionSlot(state: CachedBeaconStateAllForks, request
  * - `EpochTooLow` when `requestedEpoch` is more than 1 prior to `currentEpoch`.
  * - `EpochTooHigh` when `requestedEpoch` is more than 1 after `currentEpoch`.
  */
-function attesterShufflingDecisionEpoch(state: CachedBeaconStateAllForks, requestedEpoch: Epoch): Epoch {
-  const currentEpoch = state.epochCtx.epoch;
+function attesterShufflingDecisionEpoch(state: BeaconStateAllForks, requestedEpoch: Epoch): Epoch {
+  const currentEpoch = computeEpochAtSlot(state.slot);
 
   // Next
   if (requestedEpoch === currentEpoch + 1) return currentEpoch;
@@ -78,4 +81,20 @@ function attesterShufflingDecisionEpoch(state: CachedBeaconStateAllForks, reques
   } else {
     throw Error(`EpochTooHigh: current ${currentEpoch} requested ${requestedEpoch}`);
   }
+}
+
+function getGenesisBlockRoot(state: BeaconStateAllForks): Root {
+  if (state.slot === GENESIS_SLOT) {
+    // Clone only if necessary
+    let latestBlockHeader = state.latestBlockHeader;
+
+    if (byteArrayEquals(latestBlockHeader.stateRoot, ZERO_HASH)) {
+      latestBlockHeader = latestBlockHeader.clone(false);
+      latestBlockHeader.stateRoot = state.hashTreeRoot();
+    }
+
+    return latestBlockHeader.hashTreeRoot();
+  }
+
+  return getBlockRootAtSlot(state, GENESIS_SLOT);
 }
