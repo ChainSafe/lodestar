@@ -1,7 +1,7 @@
 import {altair, ssz} from "@lodestar/types";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {toHexString} from "@chainsafe/ssz";
-import {CachedBeaconStateAltair, computeEpochAtSlot, RootCache} from "@lodestar/state-transition";
+import {CachedBeaconStateAltair, computeEpochAtSlot, getBlockRootAtSlot} from "@lodestar/state-transition";
 import {IForkChoice, ForkChoiceError, ForkChoiceErrorCode} from "@lodestar/fork-choice";
 import {ILogger} from "@lodestar/utils";
 import {IChainForkConfig} from "@lodestar/config";
@@ -109,7 +109,6 @@ export async function importBlock(
   // The latest block that is useful is at epoch N - 1 which may include attestations for epoch N - 1 or N - 2.
   if (!opts.skipImportingAttestations && blockEpoch >= currentEpoch - FORK_CHOICE_ATT_EPOCH_LIMIT) {
     const attestations = block.message.body.attestations;
-    const rootCache = new RootCache(postState);
     const invalidAttestationErrorsByCode = new Map<string, {error: Error; count: number}>();
 
     for (const attestation of attestations) {
@@ -133,7 +132,7 @@ export async function importBlock(
         // Note: To avoid slowing down sync, only register attestations within FORK_CHOICE_ATT_EPOCH_LIMIT
         chain.seenBlockAttesters.addIndices(blockEpoch, indexedAttestation.attestingIndices);
 
-        const correctHead = ssz.Root.equals(rootCache.getBlockRootAtSlot(slot), beaconBlockRoot);
+        const correctHead = ssz.Root.equals(getBlockRootAtSlot(postState, slot), beaconBlockRoot);
         chain.metrics?.registerAttestationInBlock(indexedAttestation, parentBlockSlot, correctHead);
 
         // don't want to log the processed attestations here as there are so many attestations and it takes too much disc space,

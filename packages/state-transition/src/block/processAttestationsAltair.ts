@@ -14,9 +14,8 @@ import {
   TIMELY_TARGET_WEIGHT,
   WEIGHT_DENOMINATOR,
 } from "@lodestar/params";
-import {increaseBalance, verifySignatureSet} from "../util/index.js";
+import {getBlockRoot, getBlockRootAtSlot, increaseBalance, verifySignatureSet} from "../util/index.js";
 import {CachedBeaconStateAltair} from "../types.js";
-import {RootCache} from "../util/rootCache.js";
 import {getAttestationWithIndicesSignatureSet} from "../signatureSets/indexedAttestation.js";
 import {checkpointToStr, validateAttestation} from "./processAttestationPhase0.js";
 
@@ -35,7 +34,6 @@ export function processAttestationsAltair(
   const {epochCtx} = state;
   const {effectiveBalanceIncrements} = epochCtx;
   const stateSlot = state.slot;
-  const rootCache = new RootCache(state);
   const currentEpoch = epochCtx.epoch;
 
   // Process all attestations first and then increase the balance of the proposer once
@@ -62,7 +60,7 @@ export function processAttestationsAltair(
     const inCurrentEpoch = data.target.epoch === currentEpoch;
     const epochParticipation = inCurrentEpoch ? state.currentEpochParticipation : state.previousEpochParticipation;
 
-    const flagsAttestation = getAttestationParticipationStatus(data, stateSlot - data.slot, epochCtx.epoch, rootCache);
+    const flagsAttestation = getAttestationParticipationStatus(data, stateSlot - data.slot, epochCtx.epoch, state);
 
     // For each participant, update their participation
     // In epoch processing, this participation info is used to calculate balance updates
@@ -123,10 +121,10 @@ export function getAttestationParticipationStatus(
   data: phase0.AttestationData,
   inclusionDelay: number,
   currentEpoch: Epoch,
-  rootCache: RootCache
+  state: CachedBeaconStateAltair
 ): number {
   const justifiedCheckpoint =
-    data.target.epoch === currentEpoch ? rootCache.currentJustifiedCheckpoint : rootCache.previousJustifiedCheckpoint;
+    data.target.epoch === currentEpoch ? state.currentJustifiedCheckpoint : state.previousJustifiedCheckpoint;
 
   // The source and target votes are part of the FFG vote, the head vote is part of the fork choice vote
   // Both are tracked to properly incentivise validators
@@ -143,11 +141,11 @@ export function getAttestationParticipationStatus(
     );
   }
 
-  const isMatchingTarget = byteArrayEquals(data.target.root, rootCache.getBlockRoot(data.target.epoch));
+  const isMatchingTarget = byteArrayEquals(data.target.root, getBlockRoot(state, data.target.epoch));
 
   // a timely head is only be set if the target is _also_ matching
   const isMatchingHead =
-    isMatchingTarget && byteArrayEquals(data.beaconBlockRoot, rootCache.getBlockRootAtSlot(data.slot));
+    isMatchingTarget && byteArrayEquals(data.beaconBlockRoot, getBlockRootAtSlot(state, data.slot));
 
   let flags = 0;
   if (isMatchingSource && inclusionDelay <= intSqrt(SLOTS_PER_EPOCH)) flags |= TIMELY_SOURCE;

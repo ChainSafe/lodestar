@@ -1,7 +1,7 @@
 import {ssz} from "@lodestar/types";
 import {CompositeViewDU} from "@chainsafe/ssz";
 import {CachedBeaconStatePhase0, CachedBeaconStateAltair} from "../types.js";
-import {newZeroedArray, RootCache} from "../util/index.js";
+import {newZeroedArray} from "../util/index.js";
 import {getNextSyncCommittee} from "../util/syncCommittee.js";
 import {sumTargetUnslashedBalanceIncrements} from "../util/targetUnslashedBalance.js";
 import {getCachedBeaconState} from "../cache/stateCache.js";
@@ -122,17 +122,11 @@ function translateParticipation(
   pendingAttesations: CompositeViewDU<typeof ssz.phase0.EpochAttestations>
 ): void {
   const {epochCtx} = state;
-  const rootCache = new RootCache(state);
   const epochParticipation = state.previousEpochParticipation;
 
   for (const attestation of pendingAttesations.getAllReadonly()) {
     const data = attestation.data;
-    const attestationFlags = getAttestationParticipationStatus(
-      data,
-      attestation.inclusionDelay,
-      epochCtx.epoch,
-      rootCache
-    );
+    const attestationFlags = getAttestationParticipationStatus(data, attestation.inclusionDelay, epochCtx.epoch, state);
 
     const committeeIndices = epochCtx.getBeaconCommittee(data.slot, data.index);
     const attestingIndices = attestation.aggregationBits.intersectValues(committeeIndices);
