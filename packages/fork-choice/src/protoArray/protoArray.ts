@@ -613,6 +613,14 @@ export class ProtoArray {
     };
   }
 
+  getBlockReadonly(blockRoot: RootHex): ProtoBlock {
+    const node = this.getNode(blockRoot);
+    if (!node) {
+      throw Error(`No block for root ${blockRoot}`);
+    }
+    return node;
+  }
+
   /**
    * Returns `true` if the `descendantRoot` has an ancestor with `ancestorRoot`.
    * Always returns `false` if either input roots are unknown.

@@ -6,6 +6,7 @@ import {
   SLOTS_PER_EPOCH,
   TIMELY_SOURCE_FLAG_INDEX,
 } from "@lodestar/params";
+import {toHex} from "@lodestar/utils";
 import {phase0, Epoch, Slot, ssz, ValidatorIndex} from "@lodestar/types";
 import {
   CachedBeaconStateAllForks,
@@ -16,7 +17,7 @@ import {
   getBlockRootAtSlot,
 } from "@lodestar/state-transition";
 import {toHexString} from "@chainsafe/ssz";
-import {IForkChoice} from "@lodestar/fork-choice";
+import {EpochDifference, IForkChoice} from "@lodestar/fork-choice";
 import {MapDef} from "../../util/map.js";
 import {intersectUint8Arrays, IntersectResult} from "../../util/bitArray.js";
 import {pruneBySlot} from "./utils.js";
@@ -424,12 +425,15 @@ export function isValidAttestationData(
     return false;
   }
 
-  if (!ssz.phase0.Checkpoint.equals(data.source, justifiedCheckpoint)) return false;
+  if (!ssz.phase0.Checkpoint.equals(data.source, justifiedCheckpoint)) {
+    return false;
+  }
 
   // Shuffling can't have changed if we're in the first few epochs
   if (stateEpoch < 2) {
     return true;
   }
+
   // Otherwise the shuffling is determined by the block at the end of the target epoch
   // minus the shuffling lookahead (usually 2). We call this the "pivot".
   const pivotSlot = computeStartSlotAtEpoch(targetEpoch - 1) - 1;
@@ -439,7 +443,13 @@ export function isValidAttestationData(
   // pivot block is the same as the current state's pivot block. If it is, then the
   // attestation's shuffling is the same as the current state's.
   // To account for skipped slots, find the first block at *or before* the pivot slot.
-  const pivotBlockRoot = forkChoice.findAttesterDependentRoot(data.beaconBlockRoot);
+  const beaconBlockRootHex = toHex(data.beaconBlockRoot);
+  const beaconBlock = forkChoice.getBlockHex(beaconBlockRootHex);
+  if (!beaconBlock) {
+    throw Error(`Attestation data.beaconBlockRoot ${beaconBlockRootHex} not found in forkchoice`);
+  }
+
+  const pivotBlockRoot = forkChoice.getDependantRoot(beaconBlock, EpochDifference.previous);
   return pivotBlockRoot === statePivotBlockRoot;
 }
 

@@ -2,7 +2,7 @@ export {ProtoArray} from "./protoArray/protoArray.js";
 export {ProtoBlock, ProtoNode, ExecutionStatus} from "./protoArray/interface.js";
 
 export {ForkChoice, ForkChoiceOpts, assertValidTerminalPowBlock} from "./forkChoice/forkChoice.js";
-export {IForkChoice, PowBlockHex} from "./forkChoice/interface.js";
+export {IForkChoice, PowBlockHex, EpochDifference} from "./forkChoice/interface.js";
 export {ForkChoiceStore, IForkChoiceStore, CheckpointWithHex, JustifiedBalancesGetter} from "./forkChoice/store.js";
 export {
   InvalidAttestation,

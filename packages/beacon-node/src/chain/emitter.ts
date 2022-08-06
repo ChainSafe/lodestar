@@ -93,6 +93,8 @@ export enum ChainEvent {
   lightclientFinalizedUpdate = "lightclient:finalized_update",
 }
 
+export type ChainEventHeadData = routes.events.EventData[routes.events.EventType.head];
+
 export interface IChainEvents {
   [ChainEvent.attestation]: (attestation: phase0.Attestation) => void;
   [ChainEvent.block]: (signedBlock: allForks.SignedBeaconBlock, postState: CachedBeaconStateAllForks) => void;
@@ -104,7 +106,7 @@ export interface IChainEvents {
   [ChainEvent.clockSlot]: (slot: Slot) => void;
   [ChainEvent.clockEpoch]: (epoch: Epoch) => void;
 
-  [ChainEvent.forkChoiceHead]: (head: ProtoBlock) => void;
+  [ChainEvent.forkChoiceHead]: (data: ChainEventHeadData) => void;
   [ChainEvent.forkChoiceReorg]: (head: ProtoBlock, oldHead: ProtoBlock, depth: number) => void;
   [ChainEvent.forkChoiceJustified]: (checkpoint: CheckpointWithHex) => void;
   [ChainEvent.forkChoiceFinalized]: (checkpoint: CheckpointWithHex) => void;

@@ -5,12 +5,11 @@ import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {TimestampFormatCode} from "@lodestar/utils";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Lightclient} from "@lodestar/light-client";
-import {ProtoBlock} from "@lodestar/fork-choice";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {testLogger, LogLevel, TestLoggerOpts} from "../../utils/logger.js";
 import {getDevBeaconNode} from "../../utils/node/beacon.js";
 import {getAndInitDevValidators} from "../../utils/node/validator.js";
-import {ChainEvent} from "../../../src/chain/index.js";
+import {ChainEvent, ChainEventHeadData} from "../../../src/chain/index.js";
 
 describe("chain / lightclient", function () {
   /**
@@ -104,7 +103,7 @@ describe("chain / lightclient", function () {
     // 4. On every new beacon node head, check that the lightclient is following closely
     //   - If too far behind error the test
     //   - If beacon node reaches the finality slot, resolve test
-    const promiseUntilHead = new Promise<ProtoBlock>((resolve) => {
+    const promiseUntilHead = new Promise<ChainEventHeadData>((resolve) => {
       bn.chain.emitter.on(ChainEvent.forkChoiceHead, async (head) => {
         // Wait for the second slot so syncCommitteeWitness is available
         if (head.slot > 2) {
@@ -123,7 +122,7 @@ describe("chain / lightclient", function () {
           genesisTime: bn.chain.genesisTime,
           genesisValidatorsRoot: bn.chain.genesisValidatorsRoot as Uint8Array,
         },
-        checkpointRoot: fromHexString(head.blockRoot),
+        checkpointRoot: fromHexString(head.block),
       });
 
       afterEachCallbacks.push(async () => {

@@ -4,7 +4,12 @@ import {routes} from "@lodestar/api";
 import {config} from "@lodestar/config/default";
 import {BeaconChain, ChainEvent, ChainEventEmitter, IBeaconChain} from "../../../../../src/chain/index.js";
 import {getEventsApi} from "../../../../../src/api/impl/events/index.js";
-import {generateProtoBlock, generateEmptySignedBlock, generateSignedBlock} from "../../../../utils/block.js";
+import {
+  generateProtoBlock,
+  generateEmptySignedBlock,
+  generateSignedBlock,
+  protoBlockToHeadData,
+} from "../../../../utils/block.js";
 import {generateAttestation, generateEmptySignedVoluntaryExit} from "../../../../utils/attestation.js";
 import {generateCachedState} from "../../../../utils/state.js";
 import {StateContextCache} from "../../../../../src/chain/stateCache/index.js";
@@ -43,7 +48,7 @@ describe("Events api impl", function () {
       const headBlock = generateProtoBlock();
       stateCacheStub.get.withArgs(headBlock.stateRoot).returns(generateCachedState({slot: 1000}));
       chainEventEmmitter.emit(ChainEvent.forkChoiceReorg, headBlock, headBlock, 2);
-      chainEventEmmitter.emit(ChainEvent.forkChoiceHead, headBlock);
+      chainEventEmmitter.emit(ChainEvent.forkChoiceHead, protoBlockToHeadData(headBlock));
 
       expect(events).to.have.length(1, "Wrong num of received events");
       expect(events[0].type).to.equal(routes.events.EventType.head);
@@ -55,7 +60,7 @@ describe("Events api impl", function () {
 
       const headBlock = generateProtoBlock();
       stateCacheStub.get.withArgs(headBlock.stateRoot).returns(generateCachedState({slot: 1000}));
-      chainEventEmmitter.emit(ChainEvent.forkChoiceHead, headBlock);
+      chainEventEmmitter.emit(ChainEvent.forkChoiceHead, protoBlockToHeadData(headBlock));
 
       expect(events).to.have.length(1, "Wrong num of received events");
       expect(events[0].type).to.equal(routes.events.EventType.head);

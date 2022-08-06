@@ -6,8 +6,9 @@ import {allForks, phase0} from "@lodestar/types";
 import {ProtoBlock, ExecutionStatus} from "@lodestar/fork-choice";
 import {isPlainObject} from "@lodestar/utils";
 import {RecursivePartial} from "@lodestar/utils";
-import {EMPTY_SIGNATURE, ZERO_HASH} from "../../src/constants/index.js";
+import {EMPTY_SIGNATURE, ZERO_HASH, ZERO_HASH_HEX} from "../../src/constants/index.js";
 import {ReqRespBlockResponse} from "../../src/network/reqresp/types.js";
+import {ChainEventHeadData} from "../../src/chain/emitter.js";
 
 export function generateEmptyBlock(): phase0.BeaconBlock {
   return {
@@ -126,4 +127,15 @@ export function generateProtoBlock(overrides: RecursivePartial<ProtoBlock> = {})
   return deepmerge<ProtoBlock, RecursivePartial<ProtoBlock>>(generateEmptyProtoBlock(), overrides, {
     isMergeableObject: isPlainObject,
   });
+}
+
+export function protoBlockToHeadData(block: ProtoBlock): ChainEventHeadData {
+  return {
+    slot: block.slot,
+    block: block.blockRoot,
+    state: block.stateRoot,
+    epochTransition: false,
+    previousDutyDependentRoot: ZERO_HASH_HEX,
+    currentDutyDependentRoot: ZERO_HASH_HEX,
+  };
 }

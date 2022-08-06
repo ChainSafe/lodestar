@@ -27,7 +27,7 @@ import {ProtoArray} from "../protoArray/protoArray.js";
 
 import {IForkChoiceMetrics} from "../metrics.js";
 import {ForkChoiceError, ForkChoiceErrorCode, InvalidBlockCode, InvalidAttestationCode} from "./errors.js";
-import {IForkChoice, LatestMessage, QueuedAttestation, PowBlockHex} from "./interface.js";
+import {IForkChoice, LatestMessage, QueuedAttestation, PowBlockHex, EpochDifference} from "./interface.js";
 import {IForkChoiceStore, CheckpointWithHex, toCheckpointWithHex, JustifiedBalances} from "./store.js";
 
 /* eslint-disable max-len */
@@ -754,40 +754,56 @@ export class ForkChoice implements IForkChoice {
   }
 
   /**
-   * Find dependent root of a head block
-   * epoch - 2 | epoch - 1 | epoch
-   * pivotSlot |     -     | blockSlot
+   * A dependant root is the block root of the last block before the state transition that decided a specific shuffling
+   *
+   * For proposer shuffling with 0 epochs of lookahead = previous immediate epoch transition
+   * For attester shuffling with 1 epochs of lookahead = last epoch's epoch transition
+   *
+   * ```
+   *         epoch: 0       1       2       3       4
+   *                |-------|-------|=======|-------|
+   * dependant root A -------------^
+   * dependant root B -----^
+   * ```
+   * - proposer shuffling for a block in epoch 2: dependant root A (EpochDifference = 0)
+   * - attester shuffling for a block in epoch 2: dependant root B (EpochDifference = 1)
    */
-  findAttesterDependentRoot(headBlockHash: Root): RootHex | null {
-    let block = this.getBlock(headBlockHash);
-    if (!block) return null;
-    const {slot} = block;
-    // The shuffling is determined by the block at the end of the target epoch
-    // minus the shuffling lookahead (usually 2). We call this the "pivot".
-    const pivotSlot = computeStartSlotAtEpoch(computeEpochAtSlot(slot) - 1) - 1;
+  getDependantRoot(block: ProtoBlock, epochDifference: EpochDifference): RootHex {
+    // The navigation at the end of the while loop will always progress backwards,
+    // jumping to a block with a strictly less slot number. So the condition `blockEpoch < atEpoch`
+    // is guaranteed to happen. Given the use of target blocks for faster navigation, it will take
+    // at most `2 * (blockEpoch - atEpoch + 1)` iterations to find the dependant root.
 
-    // 1st hop: target block
-    block = this.getBlockHex(block.targetRoot);
-    if (!block) return null;
-    if (block.slot <= pivotSlot) return block.blockRoot;
-    // or parent of target block
-    block = this.getBlockHex(block.parentRoot);
-    if (!block) return null;
-    if (block.slot <= pivotSlot) return block.blockRoot;
+    const beforeSlot = block.slot - (block.slot % SLOTS_PER_EPOCH) - epochDifference * SLOTS_PER_EPOCH;
 
-    // 2nd hop: go back 1 more epoch, target block
-    block = this.getBlockHex(block.targetRoot);
-    if (!block) return null;
-    if (block.slot <= pivotSlot) return block.blockRoot;
-    // or parent of target block
-    block = this.getBlockHex(block.parentRoot);
-    if (!block) return null;
-    // most of the time, in a stable network, it reaches here
-    if (block.slot <= pivotSlot) return block.blockRoot;
+    // Special case close to genesis block, return the genesis block root
+    if (beforeSlot <= 0) {
+      const genesisBlock = this.protoArray.nodes[0];
+      if (genesisBlock === undefined || genesisBlock.slot !== 0) {
+        throw Error("Genesis block not available");
+      }
+      return genesisBlock.blockRoot;
+    }
 
-    throw Error(
-      `Not able to find attester dependent root for head ${headBlockHash}, slot ${slot}, pivotSlot ${pivotSlot}, last tried slot ${block.slot}`
-    );
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      // Dependant root must be in epoch less than `beforeSlot`
+      if (block.slot < beforeSlot) {
+        return block.blockRoot;
+      }
+
+      // Skip one last jump if there's no skipped slot at first slot of the epoch
+      if (block.slot === beforeSlot) {
+        return block.parentRoot;
+      }
+
+      block =
+        block.blockRoot === block.targetRoot
+          ? // For the first slot of the epoch, a block is it's own target
+            this.protoArray.getBlockReadonly(block.parentRoot)
+          : // else we can navigate much faster jumping to the target block
+            this.protoArray.getBlockReadonly(block.targetRoot);
+    }
   }
 
   private getPreMergeExecStatus(executionStatus: ExecutionStatus): ExecutionStatus.PreMerge {

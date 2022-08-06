@@ -13,7 +13,7 @@ import {
 } from "@lodestar/state-transition";
 import {IBeaconConfig} from "@lodestar/config";
 import {allForks, UintNum64, Root, phase0, Slot, RootHex, Epoch, ValidatorIndex} from "@lodestar/types";
-import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
+import {CheckpointWithHex, ExecutionStatus, IForkChoice} from "@lodestar/fork-choice";
 import {ILogger, toHex} from "@lodestar/utils";
 import {CompositeTypeAny, fromHexString, TreeView, Type} from "@chainsafe/ssz";
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
@@ -25,7 +25,7 @@ import {ensureDir, writeIfNotExist} from "../util/file.js";
 import {CheckpointStateCache, StateContextCache} from "./stateCache/index.js";
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
 import {IBeaconClock, LocalClock} from "./clock/index.js";
-import {ChainEventEmitter} from "./emitter.js";
+import {ChainEventEmitter, ChainEventHeadData} from "./emitter.js";
 import {IBeaconChain, ProposerPreparationData} from "./interface.js";
 import {IChainOptions} from "./options.js";
 import {IStateRegenerator, QueuedStateRegenerator, RegenCaller} from "./regen/index.js";
@@ -534,11 +534,11 @@ export class BeaconChain implements IBeaconChain {
     }
   }
 
-  private onForkChoiceHead(head: ProtoBlock): void {
+  private onForkChoiceHead(head: ChainEventHeadData): void {
     const delaySec = this.clock.secFromSlot(head.slot);
     this.logger.verbose("New chain head", {
       headSlot: head.slot,
-      headRoot: head.blockRoot,
+      headRoot: head.block,
       delaySec,
     });
     this.syncContributionAndProofPool.prune(head.slot);

@@ -1,8 +1,13 @@
 import {altair, ssz} from "@lodestar/types";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {toHexString} from "@chainsafe/ssz";
-import {CachedBeaconStateAltair, computeEpochAtSlot, RootCache} from "@lodestar/state-transition";
-import {IForkChoice, ForkChoiceError, ForkChoiceErrorCode} from "@lodestar/fork-choice";
+import {
+  CachedBeaconStateAltair,
+  computeEpochAtSlot,
+  computeStartSlotAtEpoch,
+  RootCache,
+} from "@lodestar/state-transition";
+import {IForkChoice, ForkChoiceError, ForkChoiceErrorCode, EpochDifference} from "@lodestar/fork-choice";
 import {ILogger} from "@lodestar/utils";
 import {IChainForkConfig} from "@lodestar/config";
 import {IMetrics} from "../../metrics/index.js";
@@ -214,7 +219,14 @@ export async function importBlock(
 
   if (newHead.blockRoot !== oldHead.blockRoot) {
     // new head
-    pendingEvents.push(ChainEvent.forkChoiceHead, newHead);
+    pendingEvents.push(ChainEvent.forkChoiceHead, {
+      block: newHead.blockRoot,
+      epochTransition: computeStartSlotAtEpoch(computeEpochAtSlot(newHead.slot)) === newHead.slot,
+      slot: newHead.slot,
+      state: newHead.stateRoot,
+      previousDutyDependentRoot: chain.forkChoice.getDependantRoot(newHead, EpochDifference.previous),
+      currentDutyDependentRoot: chain.forkChoice.getDependantRoot(newHead, EpochDifference.current),
+    });
     chain.metrics?.forkChoiceChangedHead.inc();
 
     const distance = chain.forkChoice.getCommonAncestorDistance(oldHead, newHead);
