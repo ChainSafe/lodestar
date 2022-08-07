@@ -20,7 +20,7 @@ Ethereum Foundation utility.",
 
   examples: [
     {
-      command: "account validator import --network prater --keystores $HOME/eth2.0-deposit-cli/validator_keys",
+      command: "validator import --network prater --keystores $HOME/eth2.0-deposit-cli/validator_keys",
       description: "Import validator keystores generated with the Ethereum Foundation Staking Launchpad",
     },
   ],
