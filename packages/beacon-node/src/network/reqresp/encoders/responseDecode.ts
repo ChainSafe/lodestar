@@ -30,11 +30,18 @@ enum StreamStatus {
  */
 export function responseDecode(
   forkDigestContext: IForkDigestContext,
-  protocol: Protocol
-): (source: AsyncIterable<Buffer>) => AsyncGenerator<IncomingResponseBody> {
+  protocol: Protocol,
+  cbs: {
+    onFirstHeader: () => void;
+    onFirstResponseChunk: () => void;
+  }
+): (source: AsyncIterable<Buffer>) => AsyncIterable<IncomingResponseBody> {
   return async function* responseDecodeSink(source) {
     const contextBytesType = contextBytesTypeByProtocol(protocol);
     const bufferedSource = new BufferedSource(source as AsyncGenerator<Buffer>);
+
+    let readFirstHeader = false;
+    let readFirstResponseChunk = false;
 
     // Consumers of `responseDecode()` may limit the number of <response_chunk> and break out of the while loop
     while (!bufferedSource.isDone) {
@@ -44,6 +51,11 @@ export function responseDecode(
       // The happens when source ends before readResultHeader() can fetch 1 byte
       if (status === StreamStatus.Ended) {
         break;
+      }
+
+      if (!readFirstHeader) {
+        cbs.onFirstHeader();
+        readFirstHeader = true;
       }
 
       // For multiple chunks, only the last chunk is allowed to have a non-zero error
@@ -57,6 +69,11 @@ export function responseDecode(
       const type = getResponseSzzTypeByMethod(protocol, forkName);
 
       yield await readEncodedPayload(bufferedSource, protocol.encoding, type);
+
+      if (!readFirstResponseChunk) {
+        cbs.onFirstResponseChunk();
+        readFirstResponseChunk = true;
+      }
     }
   };
 }
