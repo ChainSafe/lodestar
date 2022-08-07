@@ -78,33 +78,31 @@ export async function importBlock(
   if (!opts.skipImportingAttestations && blockEpoch >= currentEpoch - FORK_CHOICE_ATT_EPOCH_LIMIT) {
     const attestations = block.message.body.attestations;
     const rootCache = new RootCache(postState);
-    const parentSlot = this.forkChoice.getBlock(block.message.parentRoot)?.slot;
     const invalidAttestationErrorsByCode = new Map<string, {error: Error; count: number}>();
 
     for (const attestation of attestations) {
       try {
         const indexedAttestation = postState.epochCtx.getIndexedAttestation(attestation);
-        const targetEpoch = attestation.data.target.epoch;
+        const {target, slot, beaconBlockRoot} = attestation.data;
 
         const attDataRoot = toHexString(ssz.phase0.AttestationData.hashTreeRoot(indexedAttestation.data));
         this.seenAggregatedAttestations.add(
-          targetEpoch,
+          target.epoch,
           attDataRoot,
           {aggregationBits: attestation.aggregationBits, trueBitCount: indexedAttestation.attestingIndices.length},
           true
         );
         // Duplicated logic from fork-choice onAttestation validation logic.
         // Attestations outside of this range will be dropped as Errors, so no need to import
-        if (targetEpoch <= currentEpoch && targetEpoch >= currentEpoch - FORK_CHOICE_ATT_EPOCH_LIMIT) {
+        if (target.epoch <= currentEpoch && target.epoch >= currentEpoch - FORK_CHOICE_ATT_EPOCH_LIMIT) {
           this.forkChoice.onAttestation(indexedAttestation, attDataRoot);
         }
 
         // Note: To avoid slowing down sync, only register attestations within FORK_CHOICE_ATT_EPOCH_LIMIT
         this.seenBlockAttesters.addIndices(blockEpoch, indexedAttestation.attestingIndices);
 
-        if (parentSlot !== undefined) {
-          this.metrics?.registerAttestationInBlock(indexedAttestation, parentSlot, rootCache);
-        }
+        const correctHead = ssz.Root.equals(rootCache.getBlockRootAtSlot(slot), beaconBlockRoot);
+        this.metrics?.registerAttestationInBlock(indexedAttestation, parentBlockSlot, correctHead);
 
         // don't want to log the processed attestations here as there are so many attestations and it takes too much disc space,
         // users may want to keep more log files instead of unnecessary processed attestations log
