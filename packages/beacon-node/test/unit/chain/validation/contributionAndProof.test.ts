@@ -4,7 +4,7 @@ import {defaultChainConfig} from "@lodestar/config";
 import {BitArray} from "@chainsafe/ssz";
 import {SLOTS_PER_EPOCH, SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
 import {createIChainForkConfig} from "@lodestar/config";
-import {BeaconChain, IBeaconChain} from "../../../../src/chain/index.js";
+import {BeaconChain} from "../../../../src/chain/index.js";
 import {LocalClock} from "../../../../src/chain/clock/index.js";
 import {SyncCommitteeErrorCode} from "../../../../src/chain/errors/syncCommitteeError.js";
 import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
@@ -16,12 +16,15 @@ import {SinonStubFn} from "../../../utils/types.js";
 import {generateCachedStateWithPubkeys} from "../../../utils/state.js";
 import {SeenContributionAndProof} from "../../../../src/chain/seenCache/index.js";
 import {BlsVerifierMock} from "../../../utils/mocks/bls.js";
+import {StubbedChainMutable} from "../../../utils/stub/index.js";
+
+type StubbedChain = StubbedChainMutable<"clock" | "bls">;
 
 // https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/altair/p2p-interface.md
 // TODO remove stub
 describe.skip("Sync Committee Contribution And Proof validation", function () {
   const sandbox = sinon.createSandbox();
-  let chain: SinonStubbedInstance<IBeaconChain>;
+  let chain: StubbedChain;
   let clockStub: SinonStubbedInstance<LocalClock>;
   let isSyncCommitteeAggregatorStub: SinonStubFn<typeof syncCommitteeUtils["isSyncCommitteeAggregator"]>;
 
