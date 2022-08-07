@@ -176,14 +176,14 @@ export function getReturnTypes(): ReturnTypes<Api> {
   return {
     writeHeapdump: sameType(),
     getLatestWeakSubjectivityCheckpointEpoch: sameType(),
-    getSyncChainsDebugState: jsonType("camel"),
-    getGossipQueueItems: jsonType("camel"),
-    getRegenQueueItems: jsonType("camel"),
-    getBlockProcessorQueueItems: jsonType("camel"),
-    getStateCacheItems: jsonType("camel"),
-    getCheckpointStateCacheItems: jsonType("camel"),
-    getGossipPeerScoreStats: jsonType("camel"),
-    getPeers: jsonType("camel"),
-    discv5GetKadValues: jsonType("camel"),
+    getSyncChainsDebugState: jsonType("snake"),
+    getGossipQueueItems: jsonType("snake"),
+    getRegenQueueItems: jsonType("snake"),
+    getBlockProcessorQueueItems: jsonType("snake"),
+    getStateCacheItems: jsonType("snake"),
+    getCheckpointStateCacheItems: jsonType("snake"),
+    getGossipPeerScoreStats: jsonType("snake"),
+    getPeers: jsonType("snake"),
+    discv5GetKadValues: jsonType("snake"),
   };
 }

@@ -431,6 +431,6 @@ export function getReturnTypes(): ReturnTypes<Api> {
     produceAttestationData: ContainerData(ssz.phase0.AttestationData),
     produceSyncCommitteeContribution: ContainerData(ssz.altair.SyncCommitteeContribution),
     getAggregatedAttestation: ContainerData(ssz.phase0.Attestation),
-    getLiveness: jsonType("camel"),
+    getLiveness: jsonType("snake"),
   };
 }

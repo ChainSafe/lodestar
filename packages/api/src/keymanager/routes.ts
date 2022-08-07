@@ -231,12 +231,12 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
 /* eslint-disable @typescript-eslint/naming-convention */
 export function getReturnTypes(): ReturnTypes<Api> {
   return {
-    listKeys: jsonType("camel"),
-    importKeystores: jsonType("camel"),
-    deleteKeystores: jsonType("camel"),
+    listKeys: jsonType("snake"),
+    importKeystores: jsonType("snake"),
+    deleteKeystores: jsonType("snake"),
 
-    listRemoteKeys: jsonType("camel"),
-    importRemoteKeys: jsonType("camel"),
-    deleteRemoteKeys: jsonType("camel"),
+    listRemoteKeys: jsonType("snake"),
+    importRemoteKeys: jsonType("snake"),
+    deleteRemoteKeys: jsonType("snake"),
   };
 }
