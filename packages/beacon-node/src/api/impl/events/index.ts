@@ -16,7 +16,7 @@ const chainEventMap = {
   [routes.events.EventType.finalizedCheckpoint]: ChainEvent.finalized as const,
   [routes.events.EventType.chainReorg]: ChainEvent.forkChoiceReorg as const,
   [routes.events.EventType.lightclientOptimisticUpdate]: ChainEvent.lightclientOptimisticUpdate as const,
-  [routes.events.EventType.lightclientFinalityUpdate]: ChainEvent.LightclientFinalityUpdate as const,
+  [routes.events.EventType.lightclientFinalityUpdate]: ChainEvent.lightclientFinalityUpdate as const,
 };
 
 export function getEventsApi({chain, config}: Pick<ApiModules, "chain" | "config">): routes.events.Api {

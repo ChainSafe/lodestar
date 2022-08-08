@@ -6,19 +6,19 @@ import {ILogger} from "@lodestar/utils";
 import {ATTESTATION_SUBNET_COUNT, ForkName, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {Discv5, ENR} from "@chainsafe/discv5";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
-import {Epoch} from "@lodestar/types";
+import {altair, Epoch} from "@lodestar/types";
 import {IMetrics} from "../metrics/index.js";
 import {ChainEvent, IBeaconChain, IBeaconClock} from "../chain/index.js";
 import {INetworkOptions} from "./options.js";
 import {INetwork} from "./interface.js";
-import {ReqResp, IReqResp, IReqRespOptions, ReqRespHandlers} from "./reqresp/index.js";
-import {Eth2Gossipsub, GossipType, GossipHandlers, getGossipHandlers} from "./gossip/index.js";
+import {IReqResp, IReqRespOptions, ReqResp, ReqRespHandlers} from "./reqresp/index.js";
+import {Eth2Gossipsub, getGossipHandlers, GossipHandlers, GossipType} from "./gossip/index.js";
 import {MetadataController} from "./metadata.js";
-import {getActiveForks, FORK_EPOCH_LOOKAHEAD} from "./forks.js";
+import {FORK_EPOCH_LOOKAHEAD, getActiveForks} from "./forks.js";
 import {PeerManager} from "./peers/peerManager.js";
 import {IPeerRpcScoreStore, PeerAction, PeerRpcScoreStore} from "./peers/index.js";
 import {INetworkEventBus, NetworkEventBus} from "./events.js";
-import {AttnetsService, SyncnetsService, CommitteeSubscription} from "./subnets/index.js";
+import {AttnetsService, CommitteeSubscription, SyncnetsService} from "./subnets/index.js";
 import {PeersData} from "./peers/peersData.js";
 
 interface INetworkModules {
@@ -118,6 +118,8 @@ export class Network implements INetwork {
     );
 
     this.chain.emitter.on(ChainEvent.clockEpoch, this.onEpoch);
+    this.chain.emitter.on(ChainEvent.lightclientFinalityUpdate, this.onLightclientFinalityUpdate);
+    this.chain.emitter.on(ChainEvent.lightclientOptimisticUpdate, this.onLightclientOptimisticUpdate);
     modules.signal.addEventListener("abort", this.close.bind(this), {once: true});
   }
 
@@ -306,6 +308,8 @@ export class Network implements INetwork {
     // Any fork after altair included
     if (fork !== ForkName.phase0) {
       this.gossip.subscribeTopic({type: GossipType.sync_committee_contribution_and_proof, fork});
+      //TODO DA: Revisit
+      this.gossip.subscribeTopic({type: GossipType.light_client_finality_update, fork});
     }
 
     if (this.opts.subscribeAllSubnets) {
@@ -330,6 +334,8 @@ export class Network implements INetwork {
     // Any fork after altair included
     if (fork !== ForkName.phase0) {
       this.gossip.unsubscribeTopic({type: GossipType.sync_committee_contribution_and_proof, fork});
+      //TODO DA: Revisit
+      this.gossip.unsubscribeTopic({type: GossipType.light_client_finality_update, fork});
     }
 
     if (this.opts.subscribeAllSubnets) {
@@ -341,4 +347,12 @@ export class Network implements INetwork {
       }
     }
   };
+
+  private onLightclientFinalityUpdate(finalityUpdate: altair.LightClientFinalityUpdate): void {
+    void this.gossip.publishLightClientFinalityUpdate(finalityUpdate);
+  }
+
+  private onLightclientOptimisticUpdate(optimisticUpdate: altair.LightClientOptimisticUpdate): void {
+    void this.gossip.publishLightClientOptimisticUpdate(optimisticUpdate);
+  }
 }

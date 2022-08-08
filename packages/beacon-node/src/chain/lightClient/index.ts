@@ -448,7 +448,7 @@ export class LightClientServer {
           finalityBranch: attestedData.finalityBranch,
           signatureSlot: finalizedHeader.slot,
         };
-        this.emitter.emit(ChainEvent.LightclientFinalityUpdate, this.finalized);
+        this.emitter.emit(ChainEvent.lightclientFinalityUpdate, this.finalized);
       }
     }
 

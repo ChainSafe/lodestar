@@ -1,8 +1,7 @@
 import {EventEmitter} from "events";
 import StrictEventEmitter from "strict-event-emitter-types";
 
-import {routes} from "@lodestar/api";
-import {phase0, Epoch, Slot, allForks} from "@lodestar/types";
+import {phase0, Epoch, Slot, allForks, altair} from "@lodestar/types";
 import {CheckpointWithHex, ProtoBlock} from "@lodestar/fork-choice";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 
@@ -90,7 +89,7 @@ export enum ChainEvent {
   /**
    * A new lightclient finalized header update is available to be broadcasted to connected light-clients
    */
-  LightclientFinalityUpdate = "lightclient:finality_update",
+  lightclientFinalityUpdate = "lightclient:finality_update",
 }
 
 export interface IChainEvents {
@@ -109,8 +108,8 @@ export interface IChainEvents {
   [ChainEvent.forkChoiceJustified]: (checkpoint: CheckpointWithHex) => void;
   [ChainEvent.forkChoiceFinalized]: (checkpoint: CheckpointWithHex) => void;
 
-  [ChainEvent.lightclientOptimisticUpdate]: (optimisticUpdate: routes.events.LightclientOptimisticHeaderUpdate) => void;
-  [ChainEvent.LightclientFinalityUpdate]: (finalizedUpdate: routes.events.LightclientFinalityUpdate) => void;
+  [ChainEvent.lightclientOptimisticUpdate]: (optimisticUpdate: altair.LightClientOptimisticUpdate) => void;
+  [ChainEvent.lightclientFinalityUpdate]: (finalizedUpdate: altair.LightClientFinalityUpdate) => void;
 }
 
 /**

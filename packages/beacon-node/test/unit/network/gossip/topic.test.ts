@@ -57,6 +57,18 @@ describe("network / gossip / topic", function () {
         topicStr: "/eth2/8e04f66f/sync_committee_5/ssz_snappy",
       },
     ],
+    [GossipType.light_client_finality_update]: [
+      {
+        topic: {type: GossipType.light_client_finality_update, fork: ForkName.altair, encoding},
+        topicStr: "/eth2/8e04f66f/light_client_finality_update/ssz_snappy",
+      },
+    ],
+    [GossipType.light_client_optimistic_update]: [
+      {
+        topic: {type: GossipType.light_client_optimistic_update, fork: ForkName.altair, encoding},
+        topicStr: "/eth2/8e04f66f/light_client_optimistic_update/ssz_snappy",
+      },
+    ],
   };
 
   for (const topics of Object.values(testCases)) {

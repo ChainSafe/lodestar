@@ -21,6 +21,8 @@ export enum GossipType {
   // altair
   sync_committee_contribution_and_proof = "sync_committee_contribution_and_proof",
   sync_committee = "sync_committee",
+  light_client_finality_update = "light_client_finality_update",
+  light_client_optimistic_update = "light_client_optimistic_update",
 }
 
 export enum GossipEncoding {
@@ -47,6 +49,8 @@ export type GossipTopicTypeMap = {
     type: GossipType.sync_committee_contribution_and_proof;
   };
   [GossipType.sync_committee]: {type: GossipType.sync_committee; subnet: number};
+  [GossipType.light_client_finality_update]: {type: GossipType.light_client_finality_update};
+  [GossipType.light_client_optimistic_update]: {type: GossipType.light_client_optimistic_update};
 };
 
 export type GossipTopicMap = {
@@ -67,6 +71,8 @@ export type GossipTypeMap = {
   [GossipType.attester_slashing]: phase0.AttesterSlashing;
   [GossipType.sync_committee_contribution_and_proof]: altair.SignedContributionAndProof;
   [GossipType.sync_committee]: altair.SyncCommitteeMessage;
+  [GossipType.light_client_finality_update]: altair.LightClientFinalityUpdate;
+  [GossipType.light_client_optimistic_update]: altair.LightClientOptimisticUpdate;
 };
 
 export type GossipFnByType = {

@@ -1,6 +1,6 @@
 import {ssz} from "@lodestar/types";
 import {IForkDigestContext} from "@lodestar/config";
-import {GossipType, GossipTopic, GossipEncoding} from "./interface.js";
+import {GossipEncoding, GossipTopic, GossipType} from "./interface.js";
 import {DEFAULT_ENCODING} from "./constants.js";
 
 export interface IGossipTopicCache {
@@ -56,6 +56,8 @@ function stringifyGossipTopicType(topic: GossipTopic): string {
     case GossipType.proposer_slashing:
     case GossipType.attester_slashing:
     case GossipType.sync_committee_contribution_and_proof:
+    case GossipType.light_client_finality_update:
+    case GossipType.light_client_optimistic_update:
       return topic.type;
     case GossipType.beacon_attestation:
     case GossipType.sync_committee:

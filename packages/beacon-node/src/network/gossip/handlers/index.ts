@@ -287,6 +287,20 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
         logger.error("Error adding to syncCommittee pool", {subnet}, e as Error);
       }
     },
+
+    [GossipType.light_client_finality_update]: async () => {
+      // TODO DA Revisit
+      // What should a full node do on light_client_finality_update?
+      // Should a full node only publish the message and never handle it?
+      return Promise.resolve();
+    },
+
+    [GossipType.light_client_optimistic_update]: async () => {
+      // TODO DA Revisit
+      // What should a full node do on light_client_optimistic_update?
+      // Should a full node only publish the message and never handle it?
+      return Promise.resolve();
+    },
   };
 }
 
