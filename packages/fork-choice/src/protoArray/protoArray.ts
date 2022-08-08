@@ -440,8 +440,7 @@ export class ProtoArray {
       // Only invalidate if this is post merge, and either parent is invalid or the
       // concensus has failed
       if (parent?.executionStatus === ExecutionStatus.Invalid) {
-        // node should never have pre-merge execution status as its parent is unvalid
-        // still keeping it here for completeness and to record any consensus breakdown
+        // check and flip node status to invalid
         if (node.executionStatus === ExecutionStatus.Valid) {
           // This is a catastrophe, and indicates consensus failure and a non
           // recoverable damage. There is no further processing that can be done.
@@ -456,8 +455,11 @@ export class ProtoArray {
             ...this.lvhError,
           });
         } else {
-          if (node.executionStatus === ExecutionStatus.PreMerge)
+          // node should never have pre-merge execution status as its parent is unvalid
+          // still keeping it here for completeness and to record any consensus breakdown
+          if (node.executionStatus === ExecutionStatus.PreMerge) {
             throw Error("Internal Error in LVH invalidation, pre-merge block has invalid parent");
+          }
           node.executionStatus = ExecutionStatus.Invalid;
           node.bestChild = undefined;
           node.bestDescendant = undefined;
@@ -465,7 +467,7 @@ export class ProtoArray {
       }
     }
 
-    // update the forkchoice
+    // update the forkchoice as the invalidation can change the entire forkchoice DAG
     this.applyScoreChanges({
       deltas: Array.from({length: this.nodes.length}, () => 0),
       proposerBoost: this.previousProposerBoost,
