@@ -54,13 +54,18 @@ export function createLodestarMetrics(
       help: "Histogram of current count of long lived attnets of connected peers",
       buckets: [0, 4, 16, 32, 64],
     }),
-    peerScore: register.avgMinMax({
-      name: "lodestar_peer_score_avg_min_max",
-      help: "Avg min max of peer score at lodestar side",
+    peerScore: register.histogram({
+      name: "lodestar_app_peer_score",
+      help: "Current peer score at lodestar app side",
+      // Min score = -100, max score = 100, disconnect = -20, ban = -50
+      buckets: [-100, -50, -20, 0, 25],
     }),
-    peerConnectionLength: register.avgMinMax({
-      name: "lodestar_peer_connection_seconds_avg_min_max",
-      help: "Avg min max of peer connection length in second",
+    peerConnectionLength: register.histogram({
+      name: "lodestar_peer_connection_seconds",
+      help: "Current peer connection length in second",
+      // Have good resolution on shorter times. After 1 day, don't count any longer
+      //        5s 20s 1m  3m   10m  30m   1h    6h     24h
+      buckets: [5, 20, 60, 180, 600, 1200, 3600, 21600, 86400],
     }),
     peersSync: register.gauge({
       name: "lodestar_peers_sync_count",
@@ -482,10 +487,11 @@ export function createLodestarMetrics(
         help: "Count of sync chains by syncType",
         labelNames: ["syncType"],
       }),
-      syncChainsPeers: register.avgMinMax<"syncType">({
+      syncChainsPeers: register.histogram<"syncType">({
         name: "lodestar_sync_chains_peer_count_by_type",
         help: "Count of sync chain peers by syncType",
         labelNames: ["syncType"],
+        buckets: [0, 2, 5, 15, 50],
       }),
       syncChainHighestTargetSlotCompleted: register.gauge({
         name: "lodestar_sync_chain_highest_target_slot_completed",
