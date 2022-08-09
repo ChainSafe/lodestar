@@ -612,185 +612,176 @@ export function createLodestarMetrics(
     // Validator monitoring
 
     validatorMonitor: {
-      validatorsTotal: register.gauge({
-        name: "validator_monitor_validators_total",
+      validatorsConnected: register.gauge({
+        name: "validator_monitor_validators",
         help: "Count of validators that are specifically monitored by this beacon node",
         labelNames: ["index"],
       }),
 
       // Validator Monitor Metrics (per-epoch summaries)
+      // Only track prevEpochOnChainBalance per index
       prevEpochOnChainBalance: register.gauge<"index">({
-        name: "validator_monitor_prev_epoch_on_chain_balance_total",
+        name: "validator_monitor_prev_epoch_on_chain_balance",
         help: "Balance of validator after an epoch",
         labelNames: ["index"],
       }),
-      prevEpochOnChainAttesterHit: register.gauge<"index">({
+      prevEpochOnChainAttesterHit: register.gauge({
         name: "validator_monitor_prev_epoch_on_chain_attester_hit_total",
         help: "Incremented if validator's submitted attestation is included in some blocks",
-        labelNames: ["index"],
       }),
-      prevEpochOnChainAttesterMiss: register.gauge<"index">({
+      prevEpochOnChainAttesterMiss: register.gauge({
         name: "validator_monitor_prev_epoch_on_chain_attester_miss_total",
         help: "Incremented if validator's submitted attestation is not included in any blocks",
-        labelNames: ["index"],
       }),
-      prevEpochOnChainSourceAttesterHit: register.gauge<"index">({
+      prevEpochOnChainSourceAttesterHit: register.gauge({
         name: "validator_monitor_prev_epoch_on_chain_source_attester_hit_total",
         help: "Incremented if the validator is flagged as a previous epoch source attester during per epoch processing",
-        labelNames: ["index"],
       }),
-      prevEpochOnChainSourceAttesterMiss: register.gauge<"index">({
+      prevEpochOnChainSourceAttesterMiss: register.gauge({
         name: "validator_monitor_prev_epoch_on_chain_source_attester_miss_total",
         help:
           "Incremented if the validator is not flagged as a previous epoch source attester during per epoch processing",
-        labelNames: ["index"],
       }),
-      prevEpochOnChainHeadAttesterHit: register.gauge<"index">({
+      prevEpochOnChainHeadAttesterHit: register.gauge({
         name: "validator_monitor_prev_epoch_on_chain_head_attester_hit_total",
         help: "Incremented if the validator is flagged as a previous epoch head attester during per epoch processing",
-        labelNames: ["index"],
       }),
-      prevEpochOnChainHeadAttesterMiss: register.gauge<"index">({
+      prevEpochOnChainHeadAttesterMiss: register.gauge({
         name: "validator_monitor_prev_epoch_on_chain_head_attester_miss_total",
         help:
           "Incremented if the validator is not flagged as a previous epoch head attester during per epoch processing",
-        labelNames: ["index"],
       }),
-      prevOnChainAttesterCorrectHead: register.gauge<"index">({
+      prevOnChainAttesterCorrectHead: register.gauge({
         name: "validator_monitor_prev_epoch_on_chain_attester_correct_head_total",
-        help: "Incremented if the validator votes correct head",
-        labelNames: ["index"],
+        help: "Total count of times a validator votes correct head",
       }),
-      prevEpochOnChainTargetAttesterHit: register.gauge<"index">({
+      prevOnChainAttesterIncorrectHead: register.gauge({
+        name: "validator_monitor_prev_epoch_on_chain_attester_incorrect_head_total",
+        help: "Total count of times a validator votes incorrect head",
+      }),
+      prevEpochOnChainTargetAttesterHit: register.gauge({
         name: "validator_monitor_prev_epoch_on_chain_target_attester_hit_total",
         help: "Incremented if the validator is flagged as a previous epoch target attester during per epoch processing",
-        labelNames: ["index"],
       }),
-      prevEpochOnChainTargetAttesterMiss: register.gauge<"index">({
+      prevEpochOnChainTargetAttesterMiss: register.gauge({
         name: "validator_monitor_prev_epoch_on_chain_target_attester_miss_total",
         help:
           "Incremented if the validator is not flagged as a previous epoch target attester during per epoch processing",
-        labelNames: ["index"],
       }),
-      prevEpochOnChainInclusionDistance: register.gauge<"index">({
+      prevEpochOnChainInclusionDistance: register.histogram({
         name: "validator_monitor_prev_epoch_on_chain_inclusion_distance",
         help: "The attestation inclusion distance calculated during per epoch processing",
-        labelNames: ["index"],
+        // min inclusion distance is 1, usual values are 1,2,3 max is 32 (1 epoch)
+        buckets: [1, 2, 3, 5, 10, 32],
       }),
-      prevEpochAttestationsTotal: register.gauge<"index">({
-        name: "validator_monitor_prev_epoch_attestations_total",
+      prevEpochAttestations: register.histogram({
+        name: "validator_monitor_prev_epoch_attestations",
         help: "The number of unagg. attestations seen in the previous epoch",
-        labelNames: ["index"],
+        buckets: [0, 1, 2, 3],
       }),
-      prevEpochAttestationsMinDelaySeconds: register.histogram<"index">({
+      prevEpochAttestationsMinDelaySeconds: register.histogram({
         name: "validator_monitor_prev_epoch_attestations_min_delay_seconds",
         help: "The min delay between when the validator should send the attestation and when it was received",
-        labelNames: ["index"],
-        buckets: [0.1, 1],
+        buckets: [0.1, 0.25, 0.5, 1, 2, 5, 10],
       }),
-      prevEpochAttestationAggregateInclusions: register.gauge<"index">({
-        name: "validator_monitor_prev_epoch_attestation_aggregate_inclusions_total",
+      prevEpochAttestationAggregateInclusions: register.histogram({
+        name: "validator_monitor_prev_epoch_attestation_aggregate_inclusions",
         help: "The count of times an attestation was seen inside an aggregate",
-        labelNames: ["index"],
+        buckets: [0, 1, 2, 3, 5, 10],
       }),
-      prevEpochAttestationBlockInclusions: register.gauge<"index">({
-        name: "validator_monitor_prev_epoch_attestation_block_inclusions_total",
+      prevEpochAttestationBlockInclusions: register.histogram({
+        name: "validator_monitor_prev_epoch_attestation_block_inclusions",
         help: "The count of times an attestation was seen inside a block",
-        labelNames: ["index"],
+        buckets: [0, 1, 2, 3, 5],
       }),
-      prevEpochAttestationBlockMinInclusionDistance: register.gauge<"index">({
+      prevEpochAttestationBlockMinInclusionDistance: register.histogram({
         name: "validator_monitor_prev_epoch_attestation_block_min_inclusion_distance",
         help: "The minimum inclusion distance observed for the inclusion of an attestation in a block",
-        labelNames: ["index"],
+        buckets: [1, 2, 3, 5, 10, 32],
       }),
-      prevEpochBeaconBlocksTotal: register.gauge<"index">({
-        name: "validator_monitor_prev_epoch_beacon_blocks_total",
+      prevEpochBeaconBlocks: register.histogram({
+        name: "validator_monitor_prev_epoch_beacon_blocks",
         help: "The number of beacon_blocks seen in the previous epoch",
-        labelNames: ["index"],
+        buckets: [0, 1, 2, 3, 5, 10],
       }),
-      prevEpochBeaconBlocksMinDelaySeconds: register.histogram<"index">({
+      prevEpochBeaconBlocksMinDelaySeconds: register.histogram({
         name: "validator_monitor_prev_epoch_beacon_blocks_min_delay_seconds",
         help: "The min delay between when the validator should send the block and when it was received",
-        labelNames: ["index"],
-        buckets: [0.1, 1],
+        buckets: [0.1, 0.25, 0.5, 1, 2, 5, 10],
       }),
-      prevEpochAggregatesTotal: register.gauge<"index">({
-        name: "validator_monitor_prev_epoch_aggregates_total",
+      prevEpochAggregatesTotal: register.histogram({
+        name: "validator_monitor_prev_epoch_aggregates",
         help: "The number of aggregates seen in the previous epoch",
-        labelNames: ["index"],
+        buckets: [0, 1, 2, 3, 5, 10],
       }),
-      prevEpochAggregatesMinDelaySeconds: register.histogram<"index">({
+      prevEpochAggregatesMinDelaySeconds: register.histogram({
         name: "validator_monitor_prev_epoch_aggregates_min_delay_seconds",
         help: "The min delay between when the validator should send the aggregate and when it was received",
-        labelNames: ["index"],
-        buckets: [0.1, 1],
+        buckets: [0.1, 0.25, 0.5, 1, 2, 5, 10],
       }),
 
       // Validator Monitor Metrics (real-time)
 
-      unaggregatedAttestationTotal: register.gauge<"index" | "src">({
+      unaggregatedAttestationTotal: register.gauge<"src">({
         name: "validator_monitor_unaggregated_attestation_total",
         help: "Number of unaggregated attestations seen",
-        labelNames: ["index", "src"],
+        labelNames: ["src"],
       }),
-      unaggregatedAttestationDelaySeconds: register.histogram<"index" | "src">({
+      unaggregatedAttestationDelaySeconds: register.histogram<"src">({
         name: "validator_monitor_unaggregated_attestation_delay_seconds",
         help: "The delay between when the validator should send the attestation and when it was received",
-        labelNames: ["index", "src"],
-        buckets: [0.1, 1],
+        labelNames: ["src"],
+        buckets: [0.1, 0.25, 0.5, 1, 2, 5, 10],
       }),
-      unaggregatedAttestationSubmittedSentPeers: register.histogram<"index">({
+      unaggregatedAttestationSubmittedSentPeers: register.histogram({
         name: "validator_monitor_unaggregated_attestation_submited_sent_peers_count",
         help: "Number of peers that an unaggregated attestation sent to",
-        labelNames: ["index"],
         // as of Apr 2022, most of the time we sent to >30 peers per attestations
         // these bucket values just base on that fact to get equal range
         // refine if we want more reasonable values
         buckets: [0, 10, 20, 30],
       }),
-      aggregatedAttestationTotal: register.gauge<"index" | "src">({
+      aggregatedAttestationTotal: register.gauge<"src">({
         name: "validator_monitor_aggregated_attestation_total",
         help: "Number of aggregated attestations seen",
-        labelNames: ["index", "src"],
+        labelNames: ["src"],
       }),
-      aggregatedAttestationDelaySeconds: register.histogram<"index" | "src">({
+      aggregatedAttestationDelaySeconds: register.histogram<"src">({
         name: "validator_monitor_aggregated_attestation_delay_seconds",
         help: "The delay between then the validator should send the aggregate and when it was received",
-        labelNames: ["index", "src"],
-        buckets: [0.1, 1],
+        labelNames: ["src"],
+        buckets: [0.1, 0.25, 0.5, 1, 2, 5, 10],
       }),
-      attestationInAggregateTotal: register.gauge<"index" | "src">({
+      attestationInAggregateTotal: register.gauge<"src">({
         name: "validator_monitor_attestation_in_aggregate_total",
         help: "Number of times an attestation has been seen in an aggregate",
-        labelNames: ["index", "src"],
+        labelNames: ["src"],
       }),
-      attestationInAggregateDelaySeconds: register.histogram<"index" | "src">({
+      attestationInAggregateDelaySeconds: register.histogram<"src">({
         name: "validator_monitor_attestation_in_aggregate_delay_seconds",
         help: "The delay between when the validator should send the aggregate and when it was received",
-        labelNames: ["index", "src"],
-        buckets: [0.1, 1],
+        labelNames: ["src"],
+        buckets: [0.1, 0.25, 0.5, 1, 2, 5, 10],
       }),
-      attestationInBlockTotal: register.gauge<"index">({
+      attestationInBlockTotal: register.gauge({
         name: "validator_monitor_attestation_in_block_total",
         help: "Number of times an attestation has been seen in a block",
-        labelNames: ["index"],
       }),
-      attestationInBlockDelaySlots: register.histogram<"index">({
+      attestationInBlockDelaySlots: register.histogram({
         name: "validator_monitor_attestation_in_block_delay_slots",
         help: "The excess slots (beyond the minimum delay) between the attestation slot and the block slot",
-        labelNames: ["index"],
-        buckets: [0.1, 1],
+        buckets: [0.1, 0.25, 0.5, 1, 2, 5, 10],
       }),
-      beaconBlockTotal: register.gauge<"index" | "src">({
+      beaconBlockTotal: register.gauge<"src">({
         name: "validator_monitor_beacon_block_total",
         help: "Total number of beacon blocks seen",
-        labelNames: ["index", "src"],
+        labelNames: ["src"],
       }),
-      beaconBlockDelaySeconds: register.histogram<"index" | "src">({
+      beaconBlockDelaySeconds: register.histogram<"src">({
         name: "validator_monitor_beacon_block_delay_seconds",
         help: "The delay between when the validator should send the block and when it was received",
-        labelNames: ["index", "src"],
-        buckets: [0.1, 1],
+        labelNames: ["src"],
+        buckets: [0.1, 0.25, 0.5, 1, 2, 5, 10],
       }),
 
       // Only for known
