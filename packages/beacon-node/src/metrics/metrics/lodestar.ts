@@ -324,6 +324,7 @@ export function createLodestarMetrics(
       jobTime: register.histogram({
         name: "lodestar_block_processor_queue_job_time_seconds",
         help: "Time to process block processor queue job in seconds",
+        buckets: [0.1, 1, 10, 100],
       }),
       jobWaitTime: register.histogram({
         name: "lodestar_block_processor_queue_job_wait_time_seconds",
@@ -370,12 +371,15 @@ export function createLodestarMetrics(
     stfnEpochTransition: register.histogram({
       name: "lodestar_stfn_epoch_transition_seconds",
       help: "Time to process a single epoch transition in seconds",
-      buckets: [0.1, 1, 10],
+      // Epoch transitions are 100ms on very fast clients, and average 800ms on heavy networks
+      buckets: [0.01, 0.05, 0.1, 0.2, 0.5, 0.75, 1, 1.25, 1.5, 3, 10],
     }),
     stfnProcessBlock: register.histogram({
       name: "lodestar_stfn_process_block_seconds",
       help: "Time to process a single block in seconds",
-      buckets: [0.1, 1, 10],
+      // TODO: Add metrics for each step
+      // Block processing can take 5-40ms, 100ms max
+      buckets: [0.005, 0.01, 0.02, 0.05, 0.1, 1],
     }),
 
     // BLS verifier thread pool and queue
@@ -436,17 +440,24 @@ export function createLodestarMetrics(
       latencyToWorker: register.histogram({
         name: "lodestar_bls_thread_pool_latency_to_worker",
         help: "Time from sending the job to the worker and the worker receiving it",
-        buckets: [0.1],
+        buckets: [0.001, 0.003, 0.01, 0.03, 0.1],
       }),
       latencyFromWorker: register.histogram({
         name: "lodestar_bls_thread_pool_latency_from_worker",
         help: "Time from the worker sending the result and the main thread receiving it",
-        buckets: [0.1],
+        buckets: [0.001, 0.003, 0.01, 0.03, 0.1],
       }),
       mainThreadDurationInThreadPool: register.histogram({
         name: "lodestar_bls_thread_pool_main_thread_time_seconds",
         help: "Time to verify signatures in main thread with thread pool mode",
-        buckets: [0.1, 1],
+        // Time can vary significantly, so just track usage ratio
+        buckets: [0],
+      }),
+      timePerSigSet: register.histogram({
+        name: "lodestar_bls_worker_thread_time_per_sigset_seconds",
+        help: "Time to verify each sigset with worker thread mode",
+        // Time per sig ~0.9ms on good machines
+        buckets: [0.5e-3, 0.75e-3, 1e-3, 1.5e-3, 2e-3, 5e-3],
       }),
     },
 
@@ -455,7 +466,13 @@ export function createLodestarMetrics(
       singleThreadDuration: register.histogram({
         name: "lodestar_bls_single_thread_time_seconds",
         help: "Time to verify signatures with single thread mode",
-        buckets: [0.1, 1],
+        buckets: [0],
+      }),
+      timePerSigSet: register.histogram({
+        name: "lodestar_bls_single_thread_time_per_sigset_seconds",
+        help: "Time to verify each sigset with single thread mode",
+        // Time per sig ~0.9ms on good machines
+        buckets: [0.5e-3, 0.75e-3, 1e-3, 1.5e-3, 2e-3, 5e-3],
       }),
     },
 
