@@ -29,6 +29,10 @@ import {
 import {INetwork} from "../../interface.js";
 import {NetworkEvent} from "../../events.js";
 import {PeerAction} from "../../peers/index.js";
+import {
+  validateLightClientFinalityUpdate,
+  validateLightClientOptimisticUpdate,
+} from "../../../chain/validation/lightClient.js";
 
 /**
  * Gossip handler options as part of network options
@@ -288,17 +292,14 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       }
     },
 
-    [GossipType.light_client_finality_update]: async () => {
-      // TODO DA Revisit
-      // What should a full node do on light_client_finality_update?
-      // Should a full node only publish the message and never handle it?
-      return Promise.resolve();
+    [GossipType.light_client_finality_update]: async (lightClientFinalityUpdate) => {
+      // Full node only validates and propagate light_client_finality_update - TODO DA Confirm
+      await validateLightClientFinalityUpdate(chain, lightClientFinalityUpdate);
     },
 
-    [GossipType.light_client_optimistic_update]: async () => {
-      // TODO DA Revisit
-      // What should a full node do on light_client_optimistic_update?
-      // Should a full node only publish the message and never handle it?
+    [GossipType.light_client_optimistic_update]: async (lightClientOptimisticUpdate) => {
+      // Full node only validates and propagate light_client_optimistic_update - TODO DA Confirm
+      await validateLightClientOptimisticUpdate(chain, lightClientOptimisticUpdate);
       return Promise.resolve();
     },
   };

@@ -86,6 +86,12 @@ export type GossipFnByType = {
     signedContributionAndProof: altair.SignedContributionAndProof
   ) => Promise<void> | void;
   [GossipType.sync_committee]: (syncCommittee: altair.SyncCommitteeMessage) => Promise<void> | void;
+  [GossipType.light_client_finality_update]: (
+    lightClientFinalityUpdate: altair.LightClientFinalityUpdate
+  ) => Promise<void> | void;
+  [GossipType.light_client_optimistic_update]: (
+    lightClientOptimisticUpdate: altair.LightClientOptimisticUpdate
+  ) => Promise<void> | void;
 };
 
 export type GossipFn = GossipFnByType[keyof GossipFnByType];
