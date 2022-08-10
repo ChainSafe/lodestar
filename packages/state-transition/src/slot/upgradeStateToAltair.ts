@@ -117,7 +117,7 @@ export function upgradeStateToAltair(statePhase0: CachedBeaconStatePhase0): Cach
 /**
  * Translate_participation in https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/altair/fork.md
  */
-function translateParticipation(
+export function translateParticipation(
   state: CachedBeaconStateAltair,
   pendingAttesations: CompositeViewDU<typeof ssz.phase0.EpochAttestations>
 ): void {

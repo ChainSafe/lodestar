@@ -1,5 +1,5 @@
 import {Epoch, phase0, Root, Slot} from "@lodestar/types";
-import {CachedBeaconStateAllForks} from "../types.js";
+import {BeaconStateAllForks} from "../types.js";
 import {getBlockRoot, getBlockRootAtSlot} from "./blockRoot.js";
 
 /**
@@ -12,7 +12,7 @@ export class RootCache {
   private readonly blockRootEpochCache = new Map<Epoch, Root>();
   private readonly blockRootSlotCache = new Map<Slot, Root>();
 
-  constructor(private readonly state: CachedBeaconStateAllForks) {
+  constructor(private readonly state: BeaconStateAllForks) {
     this.currentJustifiedCheckpoint = state.currentJustifiedCheckpoint;
     this.previousJustifiedCheckpoint = state.previousJustifiedCheckpoint;
   }
