@@ -221,7 +221,10 @@ export async function importBlock(
   // Notifying EL of head and finalized updates as below is usually done within the 1st 4s of the slot.
   // If there is an advanced payload generation in the next slot, we'll notify EL again 4s before next
   // slot via PrepareNextSlotScheduler. There is no harm updating the ELs with same data, it will just ignore it.
-  if (newHead.blockRoot !== oldHead.blockRoot || currFinalizedEpoch !== prevFinalizedEpoch) {
+  if (
+    !this.opts.disableImportExecutionFcU &&
+    (newHead.blockRoot !== oldHead.blockRoot || currFinalizedEpoch !== prevFinalizedEpoch)
+  ) {
     /**
      * On post BELLATRIX_EPOCH but pre TTD, blocks include empty execution payload with a zero block hash.
      * The consensus clients must not send notifyForkchoiceUpdate before TTD since the execution client will error.
