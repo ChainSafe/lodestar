@@ -1,3 +1,4 @@
+import {Uint8ArrayList} from "uint8arraylist";
 import {ForkName} from "@lodestar/params";
 import {IForkDigestContext} from "@lodestar/config";
 import {RespStatus} from "../../../constants/index.js";
@@ -31,10 +32,10 @@ enum StreamStatus {
 export function responseDecode(
   forkDigestContext: IForkDigestContext,
   protocol: Protocol
-): (source: AsyncIterable<Uint8Array>) => AsyncGenerator<IncomingResponseBody> {
+): (source: AsyncIterable<Uint8ArrayList>) => AsyncGenerator<IncomingResponseBody> {
   return async function* responseDecodeSink(source) {
     const contextBytesType = contextBytesTypeByProtocol(protocol);
-    const bufferedSource = new BufferedSource(source as AsyncGenerator<Buffer>);
+    const bufferedSource = new BufferedSource(source as AsyncGenerator<Uint8ArrayList>);
 
     // Consumers of `responseDecode()` may limit the number of <response_chunk> and break out of the while loop
     while (!bufferedSource.isDone) {
@@ -101,7 +102,7 @@ export async function readErrorMessage(bufferedSource: BufferedSource): Promise<
     try {
       return decodeErrorMessage(bytes);
     } catch {
-      return bytes.toString("hex");
+      return Buffer.prototype.toString.call(bytes, "hex");
     }
   }
 
@@ -133,7 +134,7 @@ export async function readForkName(
 /**
  * Consumes a stream source to read `<context-bytes>`, where it's a fixed-width 4 byte
  */
-export async function readContextBytesForkDigest(bufferedSource: BufferedSource): Promise<Buffer> {
+export async function readContextBytesForkDigest(bufferedSource: BufferedSource): Promise<Uint8Array> {
   for await (const buffer of bufferedSource) {
     if (buffer.length >= CONTEXT_BYTES_FORK_DIGEST_LENGTH) {
       const bytes = buffer.slice(0, CONTEXT_BYTES_FORK_DIGEST_LENGTH);

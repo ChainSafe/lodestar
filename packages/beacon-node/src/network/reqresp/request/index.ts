@@ -1,6 +1,7 @@
-import pipe from "it-pipe";
+import {pipe} from "it-pipe";
 import {PeerId} from "@libp2p/interface-peer-id";
 import {Libp2p} from "libp2p";
+import {Uint8ArrayList} from "uint8arraylist";
 import {IForkDigestContext} from "@lodestar/config";
 import {ErrorAborted, ILogger, withTimeout, TimeoutError} from "@lodestar/utils";
 import {timeoutOptions} from "../../../constants/index.js";
@@ -133,7 +134,7 @@ export async function sendRequest<T extends IncomingResponseBody | IncomingRespo
       const responses = await withTimeout(
         () =>
           pipe(
-            stream.source as AsyncIterable<Buffer>,
+            stream.source as AsyncIterable<Uint8ArrayList>,
             responseTimeoutsHandler(responseDecode(forkDigestContext, protocol), options),
             collectResponses(method, maxResponses)
           ),

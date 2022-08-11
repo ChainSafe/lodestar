@@ -1,4 +1,5 @@
-import pipe from "it-pipe";
+import {pipe} from "it-pipe";
+import {Uint8ArrayList} from "uint8arraylist";
 import {timeoutOptions} from "../../../constants/index.js";
 import {abortableSource} from "../../../util/abortableSource.js";
 import {onChunk} from "../utils/index.js";
@@ -16,9 +17,9 @@ export function maxTotalResponseTimeout(maxResponses = 1, options?: Partial<type
  * - RESP_TIMEOUT: Requester allows a further RESP_TIMEOUT for each subsequent response_chunk
  */
 export function responseTimeoutsHandler<T>(
-  responseDecoder: (source: AsyncIterable<Buffer>) => AsyncGenerator<T>,
+  responseDecoder: (source: AsyncIterable<Uint8ArrayList>) => AsyncGenerator<T>,
   options?: Partial<typeof timeoutOptions>
-): (source: AsyncIterable<Buffer>) => AsyncGenerator<T> {
+): (source: AsyncIterable<Uint8ArrayList>) => AsyncGenerator<T> {
   return async function* responseTimeoutsHandlerTransform(source) {
     const {TTFB_TIMEOUT, RESP_TIMEOUT} = {...timeoutOptions, ...options};
 

@@ -1,6 +1,7 @@
-import pipe from "it-pipe";
+import {pipe} from "it-pipe";
 import {PeerId} from "@libp2p/interface-peer-id";
 import {Stream} from "@libp2p/interface-connection";
+import {Uint8ArrayList} from "uint8arraylist";
 import {ILogger, TimeoutError, withTimeout} from "@lodestar/utils";
 import {IBeaconConfig} from "@lodestar/config";
 import {REQUEST_TIMEOUT, RespStatus} from "../../../constants/index.js";
@@ -56,7 +57,7 @@ export async function handleRequest(
     (async function* requestHandlerSource() {
       try {
         const requestBody = await withTimeout(
-          () => pipe(stream.source as AsyncIterable<Buffer>, requestDecode(protocol)),
+          () => pipe(stream.source as AsyncIterable<Uint8ArrayList>, requestDecode(protocol)),
           REQUEST_TIMEOUT,
           signal
         ).catch((e: unknown) => {

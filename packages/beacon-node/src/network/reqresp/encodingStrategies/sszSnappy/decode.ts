@@ -1,5 +1,5 @@
-import BufferList from "bl";
 import varint from "varint";
+import {Uint8ArrayList} from "uint8arraylist";
 import {MAX_VARINT_BYTES} from "../../../../constants/index.js";
 import {BufferedSource} from "../../utils/index.js";
 import {RequestOrResponseType, RequestOrIncomingResponseBody} from "../../types.js";
@@ -74,9 +74,9 @@ async function readSszSnappyHeader(bufferedSource: BufferedSource, type: Request
  * Reads `<encoded-payload>` for ssz-snappy and decompress.
  * The returned bytes can be SSZ deseralized
  */
-async function readSszSnappyBody(bufferedSource: BufferedSource, sszDataLength: number): Promise<Buffer> {
+async function readSszSnappyBody(bufferedSource: BufferedSource, sszDataLength: number): Promise<Uint8Array> {
   const decompressor = new SnappyFramesUncompress();
-  const uncompressedData = new BufferList();
+  const uncompressedData = new Uint8ArrayList();
   let readBytes = 0;
 
   for await (const buffer of bufferedSource) {
@@ -93,7 +93,7 @@ async function readSszSnappyBody(bufferedSource: BufferedSource, sszDataLength: 
 
     // stream contents can be passed through a buffered Snappy reader to decompress frame by frame
     try {
-      const uncompressed = decompressor.uncompress(buffer.slice());
+      const uncompressed = decompressor.uncompress(buffer);
       buffer.consume(buffer.length);
       if (uncompressed !== null) {
         uncompressedData.append(uncompressed);
@@ -113,7 +113,7 @@ async function readSszSnappyBody(bufferedSource: BufferedSource, sszDataLength: 
     }
 
     // buffer.length === n
-    return uncompressedData.slice(0, sszDataLength);
+    return uncompressedData.subarray(0, sszDataLength);
   }
 
   // SHOULD consider invalid: An early EOF before fully reading the declared length-prefix worth of SSZ bytes
@@ -124,7 +124,10 @@ async function readSszSnappyBody(bufferedSource: BufferedSource, sszDataLength: 
  * Deseralizes SSZ body.
  * `isSszTree` option allows the SignedBeaconBlock type to be deserialized as a tree
  */
-function deserializeSszBody<T extends RequestOrIncomingResponseBody>(bytes: Buffer, type: RequestOrResponseType): T {
+function deserializeSszBody<T extends RequestOrIncomingResponseBody>(
+  bytes: Uint8Array,
+  type: RequestOrResponseType
+): T {
   try {
     return type.deserialize(bytes) as T;
   } catch (e) {

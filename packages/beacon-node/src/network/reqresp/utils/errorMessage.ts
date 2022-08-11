@@ -20,7 +20,7 @@ export function encodeErrorMessage(errorMessage: string): Buffer {
 /**
  * Decodes error message from network bytes and removes non printable, non ascii characters.
  */
-export function decodeErrorMessage(errorMessage: Buffer): string {
+export function decodeErrorMessage(errorMessage: Uint8Array): string {
   const encoder = new TextDecoder();
   // remove non ascii characters from string
   return encoder.decode(errorMessage.slice(0, 256)).replace(/[^\x20-\x7F]/g, "");

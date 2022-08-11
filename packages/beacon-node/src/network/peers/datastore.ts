@@ -1,5 +1,5 @@
 import {BaseDatastore} from "datastore-core";
-import LevelDatastore from "datastore-level";
+import {LevelDatastore} from "datastore-level";
 import {Key, KeyQuery, Query, Options, Pair} from "interface-datastore";
 
 type MemoryItem = {
