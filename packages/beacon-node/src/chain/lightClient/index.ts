@@ -280,6 +280,10 @@ export class LightClientServer {
     return this.finalized;
   }
 
+  getLatestFinalitySlot(): Slot | undefined {
+    return this.finalized?.finalizedHeader.slot;
+  }
+
   /**
    * With forkchoice data compute which block roots will never become checkpoints and prune them.
    */
