@@ -10,6 +10,7 @@ export interface IChainArgs {
   // as this is defined as part of IBeaconPaths
   // "chain.persistInvalidSszObjectsDir": string;
   "chain.proposerBoostEnabled": boolean;
+  "chain.disableImportExecutionFcU": boolean;
   "chain.computeUnrealized": boolean;
   "chain.defaultFeeRecipient": string;
   "chain.assertCorrectProgressiveBalances": boolean;
@@ -26,6 +27,7 @@ export function parseArgs(args: IChainArgs): IBeaconNodeOptions["chain"] {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
     persistInvalidSszObjectsDir: undefined as any,
     proposerBoostEnabled: args["chain.proposerBoostEnabled"],
+    disableImportExecutionFcU: args["chain.disableImportExecutionFcU"],
     computeUnrealized: args["chain.computeUnrealized"],
     defaultFeeRecipient: args["chain.defaultFeeRecipient"],
     assertCorrectProgressiveBalances: args["chain.assertCorrectProgressiveBalances"],
@@ -72,6 +74,13 @@ Will double processing times. Use only for debugging purposes.",
     type: "boolean",
     description: "Enable proposer boost to reward a timely block",
     defaultDescription: String(defaultOptions.chain.proposerBoostEnabled),
+    group: "chain",
+  },
+
+  "chain.disableImportExecutionFcU": {
+    hidden: true,
+    type: "boolean",
+    description: "Disable issuing FcUs to the execution engine on block import",
     group: "chain",
   },
 
