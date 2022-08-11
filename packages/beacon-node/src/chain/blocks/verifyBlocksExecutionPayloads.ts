@@ -139,6 +139,10 @@ export async function verifyBlocksExecutionPayload(
     executionStatuses.push(executionStatus);
 
     const isMergeTransitionBlock =
+      // If the merge block is found, stop the search as the isMergeTransitionBlockFn condition
+      // will still evalute to true for the following blocks leading to errors (while syncing)
+      // as the preState0 still belongs to the pre state of the first block on segment
+      mergeBlockFound === null &&
       isBellatrixStateType(preState0) &&
       isBellatrixBlockBodyType(block.message.body) &&
       isMergeTransitionBlockFn(preState0, block.message.body);
