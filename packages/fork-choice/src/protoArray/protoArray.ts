@@ -242,74 +242,6 @@ export class ProtoArray {
     }
   }
 
-  getNodeIndexFromLVH(latestValidExecHash: RootHex, ancestorOfIndex: number): number | null {
-    let nodeIndex = this.nodes[ancestorOfIndex].parent;
-    while (nodeIndex !== undefined && nodeIndex >= 0) {
-      const node = this.getNodeFromIndex(nodeIndex);
-      if (
-        (node.executionStatus === ExecutionStatus.PreMerge && latestValidExecHash === ZERO_HASH_HEX) ||
-        node.executionPayloadBlockHash === latestValidExecHash
-      ) {
-        break;
-      }
-      nodeIndex = node.parent;
-    }
-    return nodeIndex !== undefined ? nodeIndex : null;
-  }
-
-  invalidateNodeByIndex(nodeIndex: number): ProtoNode {
-    const invalidNode = this.getNodeFromIndex(nodeIndex);
-
-    // If node to be invalidated is pre-merge or valid,it is a catastrophe,
-    // and indicates consensus failure and a non recoverable damage.
-    //
-    // There is no further processing that can be done.
-    // Just assign error for marking proto-array perma damaged and throw!
-    if (
-      invalidNode.executionStatus === ExecutionStatus.Valid ||
-      invalidNode.executionStatus === ExecutionStatus.PreMerge
-    ) {
-      const lvhCode =
-        invalidNode.executionStatus === ExecutionStatus.Valid
-          ? LVHExecErrorCode.ValidToInvalid
-          : LVHExecErrorCode.PreMergeToInvalid;
-
-      this.lvhError = {
-        lvhCode,
-        blockRoot: invalidNode.blockRoot,
-        execHash: invalidNode.executionPayloadBlockHash ?? ZERO_HASH_HEX,
-      };
-      throw new ProtoArrayError({
-        code: ProtoArrayErrorCode.INVALID_LVH_EXECUTION_RESPONSE,
-        ...this.lvhError,
-      });
-    }
-
-    invalidNode.executionStatus = ExecutionStatus.Invalid;
-    invalidNode.bestChild = undefined;
-    invalidNode.bestDescendant = undefined;
-
-    return invalidNode;
-  }
-
-  validateNodeByIndex(nodeIndex: number): ProtoNode {
-    const validNode = this.getNodeFromIndex(nodeIndex);
-    if (validNode.executionStatus === ExecutionStatus.Invalid) {
-      this.lvhError = {
-        lvhCode: LVHExecErrorCode.InvalidToValid,
-        blockRoot: validNode.blockRoot,
-        execHash: validNode.executionPayloadBlockHash,
-      };
-      throw new ProtoArrayError({
-        code: ProtoArrayErrorCode.INVALID_LVH_EXECUTION_RESPONSE,
-        ...this.lvhError,
-      });
-    } else if (validNode.executionStatus === ExecutionStatus.Syncing) {
-      validNode.executionStatus = ExecutionStatus.Valid;
-    }
-    return validNode;
-  }
-
   /**
    * Optimistic sync validate till validated latest hash, invalidate any decendant branch
    * if invalidate till hash provided. If consensus fails, this will invalidate entire
@@ -387,7 +319,7 @@ export class ProtoArray {
     }
   }
 
-  propagateValidExecutionStatusByIndex(validNodeIndex: number): void {
+  private propagateValidExecutionStatusByIndex(validNodeIndex: number): void {
     let nodeIndex: number | undefined = validNodeIndex;
     // propagate till we keep encountering syncing status
     while (nodeIndex !== undefined) {
@@ -409,7 +341,7 @@ export class ProtoArray {
    * latestValidHashIndex >=0 implies invalidate the chain upwards from invalidateTillIndex
    */
 
-  propagateInValidExecutionStatusByIndex(
+  private propagateInValidExecutionStatusByIndex(
     invalidateFromIndex: number,
     latestValidHashIndex: number,
     currentSlot: Slot
@@ -443,6 +375,74 @@ export class ProtoArray {
       finalizedRoot: this.finalizedRoot,
       currentSlot,
     });
+  }
+
+  private getNodeIndexFromLVH(latestValidExecHash: RootHex, ancestorOfIndex: number): number | null {
+    let nodeIndex = this.nodes[ancestorOfIndex].parent;
+    while (nodeIndex !== undefined && nodeIndex >= 0) {
+      const node = this.getNodeFromIndex(nodeIndex);
+      if (
+        (node.executionStatus === ExecutionStatus.PreMerge && latestValidExecHash === ZERO_HASH_HEX) ||
+        node.executionPayloadBlockHash === latestValidExecHash
+      ) {
+        break;
+      }
+      nodeIndex = node.parent;
+    }
+    return nodeIndex !== undefined ? nodeIndex : null;
+  }
+
+  private invalidateNodeByIndex(nodeIndex: number): ProtoNode {
+    const invalidNode = this.getNodeFromIndex(nodeIndex);
+
+    // If node to be invalidated is pre-merge or valid,it is a catastrophe,
+    // and indicates consensus failure and a non recoverable damage.
+    //
+    // There is no further processing that can be done.
+    // Just assign error for marking proto-array perma damaged and throw!
+    if (
+      invalidNode.executionStatus === ExecutionStatus.Valid ||
+      invalidNode.executionStatus === ExecutionStatus.PreMerge
+    ) {
+      const lvhCode =
+        invalidNode.executionStatus === ExecutionStatus.Valid
+          ? LVHExecErrorCode.ValidToInvalid
+          : LVHExecErrorCode.PreMergeToInvalid;
+
+      this.lvhError = {
+        lvhCode,
+        blockRoot: invalidNode.blockRoot,
+        execHash: invalidNode.executionPayloadBlockHash ?? ZERO_HASH_HEX,
+      };
+      throw new ProtoArrayError({
+        code: ProtoArrayErrorCode.INVALID_LVH_EXECUTION_RESPONSE,
+        ...this.lvhError,
+      });
+    }
+
+    invalidNode.executionStatus = ExecutionStatus.Invalid;
+    invalidNode.bestChild = undefined;
+    invalidNode.bestDescendant = undefined;
+
+    return invalidNode;
+  }
+
+  private validateNodeByIndex(nodeIndex: number): ProtoNode {
+    const validNode = this.getNodeFromIndex(nodeIndex);
+    if (validNode.executionStatus === ExecutionStatus.Invalid) {
+      this.lvhError = {
+        lvhCode: LVHExecErrorCode.InvalidToValid,
+        blockRoot: validNode.blockRoot,
+        execHash: validNode.executionPayloadBlockHash,
+      };
+      throw new ProtoArrayError({
+        code: ProtoArrayErrorCode.INVALID_LVH_EXECUTION_RESPONSE,
+        ...this.lvhError,
+      });
+    } else if (validNode.executionStatus === ExecutionStatus.Syncing) {
+      validNode.executionStatus = ExecutionStatus.Valid;
+    }
+    return validNode;
   }
 
   /**
@@ -930,7 +930,7 @@ export class ProtoArray {
     return this.indices.size;
   }
 
-  getNodeFromIndex(index: number): ProtoNode {
+  private getNodeFromIndex(index: number): ProtoNode {
     const node = this.nodes[index];
     if (node === undefined) {
       throw new ProtoArrayError({code: ProtoArrayErrorCode.INVALID_NODE_INDEX, index});

@@ -631,9 +631,9 @@ function collectProtoarrayValidationStatus(fcArray: ProtoArray): ValidationTestC
   for (const fcRoot of fcRoots) {
     const fcNode = fcArray.getNode(fcRoot);
     const bestChild =
-      fcNode?.bestChild !== undefined ? fcArray.getNodeFromIndex(fcNode.bestChild).blockRoot : undefined;
+      fcNode?.bestChild !== undefined ? fcArray["getNodeFromIndex"](fcNode.bestChild).blockRoot : undefined;
     const bestDescendant =
-      fcNode?.bestDescendant !== undefined ? fcArray.getNodeFromIndex(fcNode.bestDescendant).blockRoot : undefined;
+      fcNode?.bestDescendant !== undefined ? fcArray["getNodeFromIndex"](fcNode.bestDescendant).blockRoot : undefined;
     expectedForkChoice.push({
       root: fcRoot,
       bestChild,
