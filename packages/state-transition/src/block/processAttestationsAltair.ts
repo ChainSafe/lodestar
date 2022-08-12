@@ -33,7 +33,7 @@ export function processAttestationsAltair(
   verifySignature = true
 ): void {
   const {epochCtx} = state;
-  const {effectiveBalanceIncrements} = epochCtx;
+  const {effectiveBalanceIncrements, slashedArr} = epochCtx;
   const stateSlot = state.slot;
   const rootCache = new RootCache(state);
   const currentEpoch = epochCtx.epoch;
@@ -96,8 +96,7 @@ export function processAttestationsAltair(
       // TODO: describe issue. Compute progressive target balances
       // When processing each attestation, increase the cummulative target balance. Only applies post-altair
       if ((flagsNewSet & TIMELY_TARGET) === TIMELY_TARGET) {
-        const validator = state.validators.get(index);
-        if (!validator.slashed) {
+        if (!slashedArr.get(index)) {
           if (inCurrentEpoch) {
             epochCtx.currentTargetUnslashedBalanceIncrements += effectiveBalanceIncrements[index];
           } else {

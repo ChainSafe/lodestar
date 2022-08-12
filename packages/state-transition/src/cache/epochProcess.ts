@@ -18,6 +18,7 @@ import {
 import {CachedBeaconStateAllForks, CachedBeaconStateAltair, CachedBeaconStatePhase0} from "..";
 import {computeBaseRewardPerIncrement} from "../util/altair.js";
 import {processPendingAttestations} from "../epoch/processPendingAttestations.js";
+import {LazyBitArray, LazyBitArrayBuilder} from "../util/lazyBitArray.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
@@ -168,6 +169,12 @@ export interface EpochProcess {
    * Used in `processEffectiveBalanceUpdates` to save one loop over validators after epoch process.
    */
   isActiveNextEpoch: boolean[];
+
+  /**
+   * Accessing state.validators.get() is expensive in terms of memory.
+   * Used in `processAttestationAltair` to get validator.slashed
+   */
+  slashedArr: LazyBitArray;
 }
 
 export function beforeProcessEpoch(state: CachedBeaconStateAllForks, opts?: EpochProcessOpts): EpochProcess {
@@ -203,11 +210,13 @@ export function beforeProcessEpoch(state: CachedBeaconStateAllForks, opts?: Epoc
   epochCtx.beforeEpochTransition();
 
   const effectiveBalancesByIncrements = epochCtx.effectiveBalanceIncrements;
+  const slashedArrBuilder = new LazyBitArrayBuilder(validatorCount);
 
   for (let i = 0; i < validatorCount; i++) {
     const validator = validators[i];
     const status = createIAttesterStatus();
 
+    slashedArrBuilder.append(i, validator.slashed);
     if (validator.slashed) {
       if (slashingsEpoch === validator.withdrawableEpoch) {
         indicesToSlash.push(i);
@@ -420,6 +429,7 @@ export function beforeProcessEpoch(state: CachedBeaconStateAllForks, opts?: Epoc
     nextEpochShufflingActiveValidatorIndices,
     // to be updated in processEffectiveBalanceUpdates
     nextEpochTotalActiveBalanceByIncrement: 0,
+    slashedArr: slashedArrBuilder.build(),
     isActiveNextEpoch,
     statuses,
 

@@ -8,6 +8,7 @@ export class LazyBitArray {
   constructor(private bitArray: BitArray) {}
 
   set(bitIndex: number, bit: boolean): void {
+    // only clone on the first set()
     if (!this.isDirty) {
       this.isDirty = true;
       this.bitArray = this.bitArray.clone();
@@ -19,7 +20,10 @@ export class LazyBitArray {
     return this.bitArray.get(bitIndex);
   }
 
-  clone(): LazyBitArray {
+  clone(forceClone = false): LazyBitArray {
+    if (forceClone) {
+      this.bitArray = this.bitArray.clone();
+    }
     // the real clone only happens on the 1st set
     return new LazyBitArray(this.bitArray);
   }

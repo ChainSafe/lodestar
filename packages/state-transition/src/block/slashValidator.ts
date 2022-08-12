@@ -34,6 +34,7 @@ export function slashValidator(
   initiateValidatorExit(state, validator);
 
   validator.slashed = true;
+  epochCtx.slashedArr.set(slashedIndex, true);
   validator.withdrawableEpoch = Math.max(validator.withdrawableEpoch, epoch + EPOCHS_PER_SLASHINGS_VECTOR);
 
   const {effectiveBalance} = validator;

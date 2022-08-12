@@ -28,6 +28,7 @@ import {
 import {computeEpochShuffling, IEpochShuffling} from "../util/epochShuffling.js";
 import {computeBaseRewardPerIncrement, computeSyncParticipantReward} from "../util/syncCommittee.js";
 import {sumTargetUnslashedBalanceIncrements} from "../util/targetUnslashedBalance.js";
+import {LazyBitArray, LazyBitArrayBuilder} from "../util/lazyBitArray.js";
 import {EffectiveBalanceIncrements, getEffectiveBalanceIncrementsWithLen} from "./effectiveBalanceIncrements.js";
 import {Index2PubkeyCache, PubkeyIndexMap, syncPubkeys} from "./pubkeyCache.js";
 import {BeaconStateAllForks, BeaconStateAltair} from "./types.js";
@@ -176,6 +177,13 @@ export class EpochContext {
    */
   previousTargetUnslashedBalanceIncrements: number;
 
+  /**
+   * Accesing state.validators.get(i) is expensive in terms of heap if we do it frequently so we cache validator.slashed here.
+   * When processing a block, we only clone this if there are slashed validators inside it.
+   * see https://github.com/ChainSafe/lodestar/issues/4397
+   */
+  slashedArr: LazyBitArray;
+
   /** TODO: Indexed SyncCommitteeCache */
   currentSyncCommitteeIndexed: SyncCommitteeCache;
   /** TODO: Indexed SyncCommitteeCache */
@@ -204,6 +212,7 @@ export class EpochContext {
     exitQueueChurn: number;
     currentTargetUnslashedBalanceIncrements: number;
     previousTargetUnslashedBalanceIncrements: number;
+    slashedArr: LazyBitArray;
     currentSyncCommitteeIndexed: SyncCommitteeCache;
     nextSyncCommitteeIndexed: SyncCommitteeCache;
     epoch: Epoch;
@@ -227,6 +236,7 @@ export class EpochContext {
     this.exitQueueChurn = data.exitQueueChurn;
     this.currentTargetUnslashedBalanceIncrements = data.currentTargetUnslashedBalanceIncrements;
     this.previousTargetUnslashedBalanceIncrements = data.previousTargetUnslashedBalanceIncrements;
+    this.slashedArr = data.slashedArr;
     this.currentSyncCommitteeIndexed = data.currentSyncCommitteeIndexed;
     this.nextSyncCommitteeIndexed = data.nextSyncCommitteeIndexed;
     this.epoch = data.epoch;
@@ -266,6 +276,7 @@ export class EpochContext {
     const previousActiveIndices: ValidatorIndex[] = [];
     const currentActiveIndices: ValidatorIndex[] = [];
     const nextActiveIndices: ValidatorIndex[] = [];
+    const lazyBitArrayBuilder = new LazyBitArrayBuilder(validatorCount);
 
     for (let i = 0; i < validatorCount; i++) {
       const validator = validators[i];
@@ -294,6 +305,8 @@ export class EpochContext {
           exitQueueChurn += 1;
         }
       }
+
+      lazyBitArrayBuilder.append(i, validator.slashed);
     }
 
     // Spec: `EFFECTIVE_BALANCE_INCREMENT` Gwei minimum to avoid divisions by zero
@@ -383,6 +396,8 @@ export class EpochContext {
       );
     }
 
+    const slashedArr = lazyBitArrayBuilder.build();
+
     return new EpochContext({
       config,
       pubkey2index,
@@ -402,6 +417,7 @@ export class EpochContext {
       exitQueueChurn,
       previousTargetUnslashedBalanceIncrements,
       currentTargetUnslashedBalanceIncrements,
+      slashedArr,
       currentSyncCommitteeIndexed,
       nextSyncCommitteeIndexed,
       epoch: currentEpoch,
@@ -440,6 +456,7 @@ export class EpochContext {
       exitQueueChurn: this.exitQueueChurn,
       previousTargetUnslashedBalanceIncrements: this.previousTargetUnslashedBalanceIncrements,
       currentTargetUnslashedBalanceIncrements: this.currentTargetUnslashedBalanceIncrements,
+      slashedArr: this.slashedArr.clone(),
       currentSyncCommitteeIndexed: this.currentSyncCommitteeIndexed,
       nextSyncCommitteeIndexed: this.nextSyncCommitteeIndexed,
       epoch: this.epoch,
@@ -456,6 +473,7 @@ export class EpochContext {
     epochProcess: {
       nextEpochShufflingActiveValidatorIndices: ValidatorIndex[];
       nextEpochTotalActiveBalanceByIncrement: number;
+      slashedArr: LazyBitArray;
     }
   ): void {
     this.previousShuffling = this.currentShuffling;
@@ -513,6 +531,7 @@ export class EpochContext {
     // ```
     this.epoch = computeEpochAtSlot(state.slot);
     this.syncPeriod = computeSyncPeriodAtEpoch(this.epoch);
+    this.slashedArr = epochProcess.slashedArr;
   }
 
   beforeEpochTransition(): void {
