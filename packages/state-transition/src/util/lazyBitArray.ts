@@ -4,8 +4,11 @@ import {BitArray} from "@chainsafe/ssz";
  * Same to BitArray but it only so a copy on the 1st set to save memory.
  */
 export class LazyBitArray {
-  private isDirty = false;
-  constructor(private bitArray: BitArray) {}
+  isDirty = false;
+  bitArray: BitArray;
+  constructor(bitArray: BitArray) {
+    this.bitArray = bitArray;
+  }
 
   set(bitIndex: number, bit: boolean): void {
     // only clone on the first set()
