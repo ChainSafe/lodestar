@@ -319,7 +319,7 @@ function extractSegmentResponseFromError(
           invalidSegmentLHV = {
             executionStatus: ExecutionStatus.Invalid,
             latestValidExecHash: lvhResponse.latestValidExecHash,
-            invalidateTillBlockHash: parentBlock.blockRoot,
+            invalidateFromBlockHash: parentBlock.blockRoot,
           };
         }
       }
@@ -385,7 +385,7 @@ export async function verifyBlockExecutionPayload(
       const lvhResponse = {
         executionStatus,
         latestValidExecHash: execResult.latestValidHash,
-        invalidateTillBlockHash: toHexString(block.message.parentRoot),
+        invalidateFromBlockHash: toHexString(block.message.parentRoot),
       };
       const execError = new BlockError(block, {
         code: BlockErrorCode.EXECUTION_ENGINE_ERROR,

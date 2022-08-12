@@ -140,7 +140,8 @@ export class ProtoArray {
           : 0;
 
       // If this node's execution status has been marked invalid, then the weight of the node
-      // needs to be taken out of consideration
+      // needs to be taken out of consideration after which the node weight will become 0
+      // for subsequent iterations of applyScoreChanges
       const nodeDelta =
         node.executionStatus === ExecutionStatus.Invalid
           ? -node.weight
@@ -241,6 +242,74 @@ export class ProtoArray {
     }
   }
 
+  getNodeIndexFromLVH(latestValidExecHash: RootHex, ancestorOfIndex: number): number | null {
+    let nodeIndex = this.nodes[ancestorOfIndex].parent;
+    while (nodeIndex !== undefined && nodeIndex >= 0) {
+      const node = this.getNodeFromIndex(nodeIndex);
+      if (
+        (node.executionStatus === ExecutionStatus.PreMerge && latestValidExecHash === ZERO_HASH_HEX) ||
+        node.executionPayloadBlockHash === latestValidExecHash
+      ) {
+        break;
+      }
+      nodeIndex = node.parent;
+    }
+    return nodeIndex !== undefined ? nodeIndex : null;
+  }
+
+  invalidateNodeByIndex(nodeIndex: number): ProtoNode {
+    const invalidNode = this.getNodeFromIndex(nodeIndex);
+
+    // If node to be invalidated is pre-merge or valid,it is a catastrophe,
+    // and indicates consensus failure and a non recoverable damage.
+    //
+    // There is no further processing that can be done.
+    // Just assign error for marking proto-array perma damaged and throw!
+    if (
+      invalidNode.executionStatus === ExecutionStatus.Valid ||
+      invalidNode.executionStatus === ExecutionStatus.PreMerge
+    ) {
+      const lvhCode =
+        invalidNode.executionStatus === ExecutionStatus.Valid
+          ? LVHExecErrorCode.ValidToInvalid
+          : LVHExecErrorCode.PreMergeToInvalid;
+
+      this.lvhError = {
+        lvhCode,
+        blockRoot: invalidNode.blockRoot,
+        execHash: invalidNode.executionPayloadBlockHash ?? ZERO_HASH_HEX,
+      };
+      throw new ProtoArrayError({
+        code: ProtoArrayErrorCode.INVALID_LVH_EXECUTION_RESPONSE,
+        ...this.lvhError,
+      });
+    }
+
+    invalidNode.executionStatus = ExecutionStatus.Invalid;
+    invalidNode.bestChild = undefined;
+    invalidNode.bestDescendant = undefined;
+
+    return invalidNode;
+  }
+
+  validateNodeByIndex(nodeIndex: number): ProtoNode {
+    const validNode = this.getNodeFromIndex(nodeIndex);
+    if (validNode.executionStatus === ExecutionStatus.Invalid) {
+      this.lvhError = {
+        lvhCode: LVHExecErrorCode.InvalidToValid,
+        blockRoot: validNode.blockRoot,
+        execHash: validNode.executionPayloadBlockHash,
+      };
+      throw new ProtoArrayError({
+        code: ProtoArrayErrorCode.INVALID_LVH_EXECUTION_RESPONSE,
+        ...this.lvhError,
+      });
+    } else if (validNode.executionStatus === ExecutionStatus.Syncing) {
+      validNode.executionStatus = ExecutionStatus.Valid;
+    }
+    return validNode;
+  }
+
   /**
    * Optimistic sync validate till validated latest hash, invalidate any decendant branch
    * if invalidate till hash provided. If consensus fails, this will invalidate entire
@@ -288,96 +357,45 @@ export class ProtoArray {
       // Mark chain ii) as Invalid if LVH is found and non null, else only invalidate invalid_payload
       // if its in fcU.
       //
-      const {invalidateTillBlockHash, latestValidExecHash} = execResponse;
-      const invalidateTillIndex = this.indices.get(invalidateTillBlockHash);
-      if (invalidateTillIndex === undefined) {
-        throw Error(`Unable to find invalidateTillBlockHash=${invalidateTillBlockHash} in forkChoice`);
+      const {invalidateFromBlockHash, latestValidExecHash} = execResponse;
+      const invalidateFromIndex = this.indices.get(invalidateFromBlockHash);
+      if (invalidateFromIndex === undefined) {
+        throw Error(`Unable to find invalidateFromBlockHash=${invalidateFromBlockHash} in forkChoice`);
       }
-      /**
-       * There are following invalidation scenarios for latestValidHashIndex
-       *  1. If the LVH is 0x00..00, then all the post merge ancestors of the invalidateTillIndex
-       *     are invalid.
-       *
-       *     If no such ancestor is in forkchoice, represented by -1, the entire chain gets
-       *     invalidated and as consequence, the subtree. However the disjoint subtrees will
-       *     still stay valid
-       *
-       *  2. If the LVH is found, so we just need to traverse up from invalidateTillIndex
-       *     and invalidate parents.
-       *
-       *  3. If the LVH is null or not found, represented with latestValidHashIndex=undefined,
-       *     then just invalidate the invalid_payload and bug out.
-       *
-       *     Ideally in not found scenario we should invalidate the entire chain upwards, but
-       *     it is possible (and observed in the testnets) that the EL was
-       *
-       *       i) buggy: that the LVH was not really the parent of the invalid block, but on
-       *          some side chain
-       *       ii) lazy: that invalidation was result of simple check and the EL just responded
-       *           with a bogus LVH
-       *
-       *     So we will just invalidate the current payload and let future responses take care
-       *     to be as robust as possible.
-       */
-      let latestValidHashIndex: number | undefined = undefined;
-      if (latestValidExecHash !== null) {
-        let nodeIndex = this.nodes[invalidateTillIndex].parent;
-
-        while (nodeIndex !== undefined && nodeIndex >= 0) {
-          const node = this.getNodeFromIndex(nodeIndex);
-          if (
-            (node.executionStatus === ExecutionStatus.PreMerge && latestValidExecHash === ZERO_HASH_HEX) ||
-            node.executionPayloadBlockHash === latestValidExecHash
-          ) {
-            latestValidHashIndex = nodeIndex;
-            break;
-          }
-          nodeIndex = node.parent;
-        }
-
-        // Even if we haven't found the latestValidHashIndex, EL has signalled here that the
-        // entire chain is invalid with this special response and hence we can safely
-        // invalidate the chain and its subtree via setting latestValidHashIndex as -1
-        if (latestValidHashIndex === undefined && latestValidExecHash === ZERO_HASH_HEX) {
-          latestValidHashIndex = -1;
-        }
+      const latestValidHashIndex =
+        latestValidExecHash !== null ? this.getNodeIndexFromLVH(latestValidExecHash, invalidateFromIndex) : null;
+      if (latestValidHashIndex === null) {
+        /**
+         *  If the LVH is null or not found, represented with latestValidHashIndex=undefined,
+         *   then just invalidate the invalid_payload and bug out.
+         *
+         *   Ideally in not found scenario we should invalidate the entire chain upwards, but
+         *   it is possible (and observed in the testnets) that the EL was
+         *
+         *     i) buggy: that the LVH was not really the parent of the invalid block, but on
+         *        some side chain
+         *     ii) lazy: that invalidation was result of simple check and the EL just
+         *         responded with a bogus LVH
+         *
+         *   So we will just invalidate the current payload and let future responses take care
+         *   to be as robust as possible.
+         */
+        this.invalidateNodeByIndex(invalidateFromIndex);
+      } else {
+        this.propagateInValidExecutionStatusByIndex(invalidateFromIndex, latestValidHashIndex, currentSlot);
       }
-
-      this.propagateInValidExecutionStatusByIndex(invalidateTillIndex, latestValidHashIndex, currentSlot);
     }
   }
 
   propagateValidExecutionStatusByIndex(validNodeIndex: number): void {
-    let node: ProtoNode | undefined = this.getNodeFromIndex(validNodeIndex);
+    let nodeIndex: number | undefined = validNodeIndex;
     // propagate till we keep encountering syncing status
-    while (
-      node !== undefined &&
-      node.executionStatus !== ExecutionStatus.Valid &&
-      node.executionStatus !== ExecutionStatus.PreMerge
-    ) {
-      switch (node.executionStatus) {
-        case ExecutionStatus.Invalid:
-          // This is a catastrophe, and indicates consensus failure and a non
-          // recoverable damage. There is no further processing that can be done.
-          // Just assign error for marking proto-array perma damaged and throw!
-          this.lvhError = {
-            lvhCode: LVHExecErrorCode.InvalidToValid,
-            blockRoot: node.blockRoot,
-            execHash: node.executionPayloadBlockHash,
-          };
-          throw new ProtoArrayError({
-            code: ProtoArrayErrorCode.INVALID_LVH_EXECUTION_RESPONSE,
-            ...this.lvhError,
-          });
-
-        case ExecutionStatus.Syncing:
-          // If the node is valid and its parent is marked syncing, we need to
-          // propagate the execution status up
-          node.executionStatus = ExecutionStatus.Valid;
-          break;
+    while (nodeIndex !== undefined) {
+      const validNode = this.validateNodeByIndex(nodeIndex);
+      if (validNode.executionStatus === ExecutionStatus.PreMerge) {
+        break;
       }
-
-      node = node.parent !== undefined ? this.getNodeByIndex(node.parent) : undefined;
+      nodeIndex = validNode.parent;
     }
   }
 
@@ -392,44 +410,14 @@ export class ProtoArray {
    */
 
   propagateInValidExecutionStatusByIndex(
-    invalidateTillIndex: number,
-    latestValidHashIndex: number | undefined,
+    invalidateFromIndex: number,
+    latestValidHashIndex: number,
     currentSlot: Slot
   ): void {
-    let invalidateIndex: number = invalidateTillIndex;
-    // If latestValidHashIndex is undefined, i.e. we didn't find the LVH, only
-    // invalidate invalidateTillIndex
-    const invalidateUntilIndex = latestValidHashIndex ?? invalidateTillIndex - 1;
-
-    while (invalidateIndex > invalidateUntilIndex) {
-      const invalidNode = this.getNodeFromIndex(invalidateIndex);
-
-      if (invalidNode.executionStatus === ExecutionStatus.PreMerge) {
-        // This is also problematic case since lvh should have come as `0x00..00` with forkchoice
-        // passing us correct latestValidHashIndex. But we can be forgiving here and breakout
-        // if we reach pre-merge
-        break;
-      } else if (invalidNode.executionStatus === ExecutionStatus.Valid) {
-        // This is a catastrophe, and indicates consensus failure and a non
-        // recoverable damage. There is no further processing that can be done.
-        // Just assign error for marking proto-array perma damaged and throw!
-        this.lvhError = {
-          lvhCode: LVHExecErrorCode.ValidToInvalid,
-          blockRoot: invalidNode.blockRoot,
-          execHash: invalidNode.executionPayloadBlockHash,
-        };
-        throw new ProtoArrayError({
-          code: ProtoArrayErrorCode.INVALID_LVH_EXECUTION_RESPONSE,
-          ...this.lvhError,
-        });
-      }
-
-      invalidNode.executionStatus = ExecutionStatus.Invalid;
-      if (invalidNode.parent === undefined) {
-        // We have invalidated the entire chain in forkchoice, so time to exit and
-        // move to phase 2
-        break;
-      }
+    // Pass 1: mark invalidateFromIndex and its parents invalid
+    let invalidateIndex: number | undefined = invalidateFromIndex;
+    while (invalidateIndex !== undefined && invalidateIndex > latestValidHashIndex) {
+      const invalidNode = this.invalidateNodeByIndex(invalidateIndex);
       invalidateIndex = invalidNode.parent;
     }
 
@@ -441,29 +429,7 @@ export class ProtoArray {
       // concensus has failed
       if (parent?.executionStatus === ExecutionStatus.Invalid) {
         // check and flip node status to invalid
-        if (node.executionStatus === ExecutionStatus.Valid) {
-          // This is a catastrophe, and indicates consensus failure and a non
-          // recoverable damage. There is no further processing that can be done.
-          // Just assign error for marking proto-array perma damaged and throw!
-          this.lvhError = {
-            lvhCode: LVHExecErrorCode.ValidToInvalid,
-            blockRoot: node.blockRoot,
-            execHash: node.executionPayloadBlockHash,
-          };
-          throw new ProtoArrayError({
-            code: ProtoArrayErrorCode.INVALID_LVH_EXECUTION_RESPONSE,
-            ...this.lvhError,
-          });
-        } else {
-          // node should never have pre-merge execution status as its parent is unvalid
-          // still keeping it here for completeness and to record any consensus breakdown
-          if (node.executionStatus === ExecutionStatus.PreMerge) {
-            throw Error("Internal Error in LVH invalidation, pre-merge block has invalid parent");
-          }
-          node.executionStatus = ExecutionStatus.Invalid;
-          node.bestChild = undefined;
-          node.bestDescendant = undefined;
-        }
+        this.invalidateNodeByIndex(nodeIndex);
       }
     }
 
