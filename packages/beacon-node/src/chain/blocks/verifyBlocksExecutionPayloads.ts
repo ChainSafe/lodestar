@@ -372,7 +372,7 @@ function getSegmentErrorResponse(
 
     // If there is no valid in the segment then we have to propagate invalid response
     // in forkchoice as well, also mergeBlockFound has to be null
-    if (lvhFound) {
+    if (!lvhFound) {
       // if the parentBlock is also not the lvh, then we need to propagate this
       // up the forkchoice as parentBlock of the segment is supposed to be in
       // forkchoice.
