@@ -81,9 +81,9 @@ export async function processBlocks(
       if (segmentExecStatus.invalidSegmentLHV !== undefined) {
         this.forkChoice.validateLatestHash(segmentExecStatus.invalidSegmentLHV);
       }
-
       throw segmentExecStatus.execAborted.execError;
     }
+
     const {executionStatuses} = segmentExecStatus;
     const fullyVerifiedBlocks = relevantBlocks.map(
       (block, i): FullyVerifiedBlock => ({

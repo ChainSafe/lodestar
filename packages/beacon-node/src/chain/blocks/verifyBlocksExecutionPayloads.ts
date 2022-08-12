@@ -360,9 +360,9 @@ function getSegmentErrorResponse(
   ) {
     let lvhFound = false;
     for (let mayBeLVHIndex = blockIndex - 1; mayBeLVHIndex >= 0; mayBeLVHIndex--) {
-      // ok we found the index in post merge block
+      const block = blocks[mayBeLVHIndex];
       if (
-        toHexString((blocks[mayBeLVHIndex].message.body as bellatrix.BeaconBlockBody).executionPayload.blockHash) ===
+        toHexString((block.message.body as bellatrix.BeaconBlockBody).executionPayload.blockHash) ===
         lvhResponse.latestValidExecHash
       ) {
         lvhFound = true;
@@ -371,21 +371,19 @@ function getSegmentErrorResponse(
     }
 
     // If there is no valid in the segment then we have to propagate invalid response
-    // in forkchoice as well, also mergeBlockFound has to be null
-    if (!lvhFound) {
-      // if the parentBlock is also not the lvh, then we need to propagate this
-      // up the forkchoice as parentBlock of the segment is supposed to be in
-      // forkchoice.
-      if (
-        parentBlock.executionStatus !== ExecutionStatus.PreMerge &&
-        parentBlock.executionPayloadBlockHash !== lvhResponse.latestValidExecHash
-      ) {
-        invalidSegmentLHV = {
-          executionStatus: ExecutionStatus.Invalid,
-          latestValidExecHash: lvhResponse.latestValidExecHash,
-          invalidateFromBlockHash: parentBlock.blockRoot,
-        };
-      }
+    // in forkchoice as well if
+    //  - if the parentBlock is also not the lvh
+    //  - and parentBlock is not pre merhe
+    if (
+      !lvhFound &&
+      parentBlock.executionStatus !== ExecutionStatus.PreMerge &&
+      parentBlock.executionPayloadBlockHash !== lvhResponse.latestValidExecHash
+    ) {
+      invalidSegmentLHV = {
+        executionStatus: ExecutionStatus.Invalid,
+        latestValidExecHash: lvhResponse.latestValidExecHash,
+        invalidateFromBlockHash: parentBlock.blockRoot,
+      };
     }
   }
   const execAborted = {blockIndex, execError};
