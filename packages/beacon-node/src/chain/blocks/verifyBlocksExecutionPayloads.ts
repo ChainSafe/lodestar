@@ -37,27 +37,22 @@ export type VerifyBlockExecutionPayloadModules = {
 type ExecAbortType = {blockIndex: number; execError: BlockError};
 export type SegmentExecStatus =
   | {
-      mayBeValidTillIndex: number;
-      execAborted: ExecAbortType | null;
-      invalidSegmentLHV: undefined;
+      execAborted: null;
+      executionStatuses: MaybeValidExecutionStatus[];
+      mergeBlockFound: bellatrix.BeaconBlock | null;
     }
-  | {mayBeValidTillIndex: number; execAborted: ExecAbortType; invalidSegmentLHV: LVHInvalidResponse};
+  | {execAborted: ExecAbortType; invalidSegmentLHV?: LVHInvalidResponse; mergeBlockFound: null};
 
 type VerifyExecutionErrorResponse =
   | {executionStatus: ExecutionStatus.Invalid; lvhResponse: LVHInvalidResponse; execError: BlockError}
-  | {executionStatus: null; execError: BlockError};
+  | {executionStatus: null; lvhResponse: undefined; execError: BlockError};
 
 type VerifyBlockExecutionResponse =
   | VerifyExecutionErrorResponse
   | {executionStatus: ExecutionStatus.Valid; lvhResponse: LVHValidResponse; execError: null}
   | {executionStatus: ExecutionStatus.Syncing; lvhResponse?: LVHValidResponse; execError: null}
-  | {executionStatus: ExecutionStatus.PreMerge; execError: null};
+  | {executionStatus: ExecutionStatus.PreMerge; lvhResponse: undefined; execError: null};
 
-type VerifySegmentExecutionResponse = {
-  executionStatuses: MaybeValidExecutionStatus[];
-  mergeBlockFound: bellatrix.BeaconBlock | null;
-  segmentExecStatus: SegmentExecStatus;
-};
 /**
  * Verifies 1 or more execution payloads from a linear sequence of blocks.
  *
@@ -70,7 +65,7 @@ export async function verifyBlocksExecutionPayload(
   preState0: CachedBeaconStateAllForks,
   signal: AbortSignal,
   opts: BlockProcessOpts
-): Promise<VerifySegmentExecutionResponse> {
+): Promise<SegmentExecStatus> {
   const executionStatuses: MaybeValidExecutionStatus[] = [];
   let mergeBlockFound: bellatrix.BeaconBlock | null = null;
 
@@ -164,13 +159,7 @@ export async function verifyBlocksExecutionPayload(
 
     // If execError has happened, then we need to extract the segmentExecStatus and return
     if (verifyResponse.execError !== null) {
-      return extractSegmentResponseFromError(
-        {verifyResponse, blockIndex},
-        parentBlock,
-        blocks,
-        executionStatuses,
-        mergeBlockFound
-      );
+      return getSegmentErrorResponse({verifyResponse, blockIndex}, parentBlock, blocks);
     }
 
     // If we are here then its because executionStatus is one of MaybeValidExecutionStatus
@@ -247,98 +236,11 @@ export async function verifyBlocksExecutionPayload(
     }
   }
 
-  const segmentExecStatus = {mayBeValidTillIndex: blocks.length - 1, execAborted: null} as SegmentExecStatus;
-
   return {
+    execAborted: null,
     executionStatuses,
     mergeBlockFound,
-    segmentExecStatus,
   };
-}
-
-function extractSegmentResponseFromError(
-  {verifyResponse, blockIndex}: {verifyResponse: VerifyExecutionErrorResponse; blockIndex: number},
-  parentBlock: ProtoBlock,
-  blocks: allForks.SignedBeaconBlock[],
-  executionStatuses: MaybeValidExecutionStatus[],
-  mergeBlockFound: bellatrix.BeaconBlock | null
-): VerifySegmentExecutionResponse {
-  const {execError} = verifyResponse;
-
-  if (verifyResponse.executionStatus === null) {
-    const segmentExecStatus = {
-      mayBeValidTillIndex: blockIndex - 1,
-      execAborted: {blockIndex, execError},
-    } as SegmentExecStatus;
-    return {executionStatuses, mergeBlockFound, segmentExecStatus};
-  }
-  // If we had an invalid status we need to inspect up the chain and see if the latestValidExecHash
-  // belong to any of the previous block, if it does then the story stops at that block
-  else {
-    const {lvhResponse} = verifyResponse;
-
-    if (lvhResponse.latestValidExecHash !== null) {
-      let invalidSegmentLHV: LVHInvalidResponse | undefined = undefined;
-      // see if latestValidExecHash belongs to the previous segment of blocks
-      let mayBeValidTillIndex = blockIndex - 1;
-
-      // Lets see if latestValidExecHash is in the parents of this segment
-      //  i) If LVH is 0x00..00, then we will either hit a pre-merge block here
-      //  ii) or a block where LVH is found, so we set mayBeValidTillIndex is
-      //      that block itself
-      //  iii) if not found, then we need to create a invalidSegmentLHV for
-      //       forkchoice if the parentBlock is not pre-merge and its
-      //       execHash doesn't match LVH
-      for (; mayBeValidTillIndex >= 0; mayBeValidTillIndex--) {
-        // if the block is premerge, then stop there, mergeBlockFound has to be null
-        if (executionStatuses[mayBeValidTillIndex] === ExecutionStatus.PreMerge) {
-          mergeBlockFound = null;
-          break;
-        }
-        // ok we found the index in post merge block
-        else if (
-          toHexString(
-            (blocks[mayBeValidTillIndex].message.body as bellatrix.BeaconBlockBody).executionPayload.blockHash
-          ) === lvhResponse.latestValidExecHash
-        ) {
-          break;
-        }
-      }
-
-      // If there is no valid in the segment then we have to propagate invalid response
-      // in forkchoice as well, also mergeBlockFound has to be null
-      if (mayBeValidTillIndex < 0) {
-        mergeBlockFound = null;
-        // if the parentBlock is also not the lvh, then we need to propagate this
-        // up the forkchoice as parentBlock of the segment is supposed to be in
-        // forkchoice.
-        if (
-          parentBlock.executionStatus !== ExecutionStatus.PreMerge &&
-          parentBlock.executionPayloadBlockHash !== lvhResponse.latestValidExecHash
-        ) {
-          invalidSegmentLHV = {
-            executionStatus: ExecutionStatus.Invalid,
-            latestValidExecHash: lvhResponse.latestValidExecHash,
-            invalidateFromBlockHash: parentBlock.blockRoot,
-          };
-        }
-      }
-
-      const segmentExecStatus = {
-        mayBeValidTillIndex,
-        execAborted: {blockIndex, execError},
-        invalidSegmentLHV,
-      } as SegmentExecStatus;
-      return {executionStatuses, mergeBlockFound, segmentExecStatus};
-    } else {
-      // null means only this block is deemed invalid for now
-      const segmentExecStatus = {
-        mayBeValidTillIndex: blockIndex - 1,
-        execAborted: {blockIndex, execError},
-      } as SegmentExecStatus;
-      return {executionStatuses, mergeBlockFound, segmentExecStatus};
-    }
-  }
 }
 
 /**
@@ -367,7 +269,7 @@ export async function verifyBlockExecutionPayload(
 
   if (!executionPayloadEnabled) {
     // isExecutionEnabled() -> false
-    return {executionStatus: ExecutionStatus.PreMerge, execError: null};
+    return {executionStatus: ExecutionStatus.PreMerge, execError: null} as VerifyBlockExecutionResponse;
   }
 
   // TODO: Handle better notifyNewPayload() returning error is syncing
@@ -407,7 +309,7 @@ export async function verifyBlockExecutionPayload(
           execStatus: ExecutePayloadStatus.UNSAFE_OPTIMISTIC_STATUS,
           errorMessage: `not safe to import ${execResult.status} payload within ${opts.safeSlotsToImportOptimistically} of currentSlot`,
         });
-        return {executionStatus: null, execError};
+        return {executionStatus: null, execError} as VerifyBlockExecutionResponse;
       }
 
       return {executionStatus: ExecutionStatus.Syncing, execError: null};
@@ -438,7 +340,54 @@ export async function verifyBlockExecutionPayload(
         execStatus: execResult.status,
         errorMessage: execResult.validationError,
       });
-      return {executionStatus: null, execError};
+      return {executionStatus: null, execError} as VerifyBlockExecutionResponse;
     }
   }
+}
+
+function getSegmentErrorResponse(
+  {verifyResponse, blockIndex}: {verifyResponse: VerifyExecutionErrorResponse; blockIndex: number},
+  parentBlock: ProtoBlock,
+  blocks: allForks.SignedBeaconBlock[]
+): SegmentExecStatus {
+  const {executionStatus, lvhResponse, execError} = verifyResponse;
+  let invalidSegmentLHV: LVHInvalidResponse | undefined = undefined;
+
+  if (
+    executionStatus === ExecutionStatus.Invalid &&
+    lvhResponse !== undefined &&
+    lvhResponse.latestValidExecHash !== null
+  ) {
+    let lvhFound = false;
+    for (let mayBeLVHIndex = blockIndex - 1; mayBeLVHIndex >= 0; mayBeLVHIndex--) {
+      // ok we found the index in post merge block
+      if (
+        toHexString((blocks[mayBeLVHIndex].message.body as bellatrix.BeaconBlockBody).executionPayload.blockHash) ===
+        lvhResponse.latestValidExecHash
+      ) {
+        lvhFound = true;
+        break;
+      }
+    }
+
+    // If there is no valid in the segment then we have to propagate invalid response
+    // in forkchoice as well, also mergeBlockFound has to be null
+    if (lvhFound) {
+      // if the parentBlock is also not the lvh, then we need to propagate this
+      // up the forkchoice as parentBlock of the segment is supposed to be in
+      // forkchoice.
+      if (
+        parentBlock.executionStatus !== ExecutionStatus.PreMerge &&
+        parentBlock.executionPayloadBlockHash !== lvhResponse.latestValidExecHash
+      ) {
+        invalidSegmentLHV = {
+          executionStatus: ExecutionStatus.Invalid,
+          latestValidExecHash: lvhResponse.latestValidExecHash,
+          invalidateFromBlockHash: parentBlock.blockRoot,
+        };
+      }
+    }
+  }
+  const execAborted = {blockIndex, execError};
+  return {execAborted, invalidSegmentLHV} as SegmentExecStatus;
 }

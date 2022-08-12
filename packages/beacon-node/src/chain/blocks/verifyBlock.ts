@@ -1,7 +1,7 @@
 import {CachedBeaconStateAllForks, computeEpochAtSlot} from "@lodestar/state-transition";
 import {allForks, bellatrix} from "@lodestar/types";
 import {toHexString} from "@chainsafe/ssz";
-import {MaybeValidExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
+import {ProtoBlock} from "@lodestar/fork-choice";
 import {IChainForkConfig} from "@lodestar/config";
 import {ILogger} from "@lodestar/utils";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
@@ -32,7 +32,6 @@ export async function verifyBlocksInEpoch(
   opts: BlockProcessOpts & ImportBlockOpts
 ): Promise<{
   postStates: CachedBeaconStateAllForks[];
-  executionStatuses: MaybeValidExecutionStatus[];
   proposerBalanceDeltas: number[];
   segmentExecStatus: SegmentExecStatus;
 }> {
@@ -65,11 +64,7 @@ export async function verifyBlocksInEpoch(
   const abortController = new AbortController();
 
   try {
-    const [
-      {postStates, proposerBalanceDeltas},
-      ,
-      {executionStatuses, mergeBlockFound, segmentExecStatus},
-    ] = await Promise.all([
+    const [{postStates, proposerBalanceDeltas}, , segmentExecStatus] = await Promise.all([
       // Run state transition only
       // TODO: Ensure it yields to allow flushing to workers and engine API
       verifyBlocksStateTransitionOnly(preState0, blocks, this.metrics, abortController.signal, opts),
@@ -81,14 +76,13 @@ export async function verifyBlocksInEpoch(
       verifyBlocksExecutionPayload(this, parentBlock, blocks, preState0, abortController.signal, opts),
     ]);
 
-    logIfSegmentExecError(this.logger, blocks, segmentExecStatus);
-    if (mergeBlockFound !== null) {
+    if (segmentExecStatus.mergeBlockFound !== null) {
       // merge block found and is fully valid = state transition + signatures + execution payload.
       // TODO: Will this banner be logged during syncing?
-      logOnPowBlock(this.logger, this.config, mergeBlockFound);
+      logOnPowBlock(this.logger, this.config, segmentExecStatus.mergeBlockFound);
     }
 
-    return {postStates, executionStatuses, proposerBalanceDeltas, segmentExecStatus};
+    return {postStates, proposerBalanceDeltas, segmentExecStatus};
   } finally {
     abortController.abort();
   }
@@ -105,30 +99,4 @@ function logOnPowBlock(logger: ILogger, config: IChainForkConfig, mergeBlock: be
     executionHash: mergeExecutionHash,
     powHash: mergePowHash,
   });
-}
-
-function logIfSegmentExecError(
-  logger: ILogger,
-  blocks: allForks.SignedBeaconBlock[],
-  segmentExecStatus: SegmentExecStatus
-): void {
-  if (segmentExecStatus.execAborted !== null) {
-    const startSlot = blocks[0].message.slot;
-    const count = blocks.length;
-
-    const failedBlock = blocks[segmentExecStatus.execAborted.blockIndex];
-    const failedSlot = failedBlock.message.slot;
-    const executionPayload = (failedBlock.message.body as bellatrix.BeaconBlockBody).executionPayload;
-    const blockHash = toHexString(executionPayload.blockHash);
-    const blockNumber = executionPayload.blockNumber;
-
-    if (blocks.length > 1) {
-      logger.error("Execution verification failed for a block in segment", {startSlot, count, failedSlot});
-    }
-    logger.error(
-      "Execution Verification failed",
-      {failedSlot, blockNumber, blockHash},
-      segmentExecStatus.execAborted.execError as Error
-    );
-  }
 }
