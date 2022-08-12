@@ -76,7 +76,7 @@ export async function verifyBlocksInEpoch(
       verifyBlocksExecutionPayload(this, parentBlock, blocks, preState0, abortController.signal, opts),
     ]);
 
-    if (segmentExecStatus.mergeBlockFound !== null) {
+    if (segmentExecStatus.execAborted === null && segmentExecStatus.mergeBlockFound !== null) {
       // merge block found and is fully valid = state transition + signatures + execution payload.
       // TODO: Will this banner be logged during syncing?
       logOnPowBlock(this.logger, this.config, segmentExecStatus.mergeBlockFound);
