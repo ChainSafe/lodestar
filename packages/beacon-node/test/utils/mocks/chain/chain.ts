@@ -245,6 +245,7 @@ function mockForkChoice(): IForkChoice {
   const checkpoint: CheckpointWithHex = {epoch: 0, root, rootHex};
 
   return {
+    irrecoverableError: undefined,
     getAncestor: () => rootHex,
     getHeadRoot: () => rootHex,
     getHead: () => block,

@@ -34,6 +34,13 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
   }, logger.info.bind(logger));
 
   logger.info("Lodestar", {network, version, commit});
+  // Callback for beacon to request forced exit, for e.g. in case of irrecoverable 
+  // forkchoice errors
+  const processShutdownCallback: ProcessShutdownCallback = (err) => {
+    logger.error("Process shutdown requested", {}, err);
+    process.kill(process.pid, "SIGINT");
+  };
+
   if (ACTIVE_PRESET === PresetName.minimal) logger.info("ACTIVE_PRESET == minimal preset");
 
   // additional metrics registries
@@ -61,6 +68,7 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
       config: beaconConfig,
       db,
       logger,
+      processShutdownCallback,
       libp2p: await createNodeJsLibp2p(peerId, options.network, {peerStoreDir: beaconPaths.peerStoreDir}),
       anchorState,
       wsCheckpoint,

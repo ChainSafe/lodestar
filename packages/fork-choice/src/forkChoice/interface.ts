@@ -20,6 +20,7 @@ export type CheckpointHexWithBalance = {
 };
 
 export interface IForkChoice {
+  irrecoverableError?: Error;
   /**
    * Returns the block root of an ancestor of `block_root` at the given `slot`. (Note: `slot` refers
    * to the block that is *returned*, not the one that is supplied.)
@@ -159,7 +160,6 @@ export interface IForkChoice {
   /** Find attester dependent root of a block */
   findAttesterDependentRoot(headBlockHash: Root): RootHex | null;
   /** Get critical error from forkChoice */
-  checkSaneForkChoice(): void;
 }
 
 /** Same to the PowBlock but we want RootHex to work with forkchoice conveniently */

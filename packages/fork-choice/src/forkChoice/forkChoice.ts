@@ -31,6 +31,7 @@ import {
   LVHExecResponse,
 } from "../protoArray/interface.js";
 import {ProtoArray} from "../protoArray/protoArray.js";
+import {ProtoArrayError, ProtoArrayErrorCode} from "../protoArray/errors.js";
 
 import {ForkChoiceError, ForkChoiceErrorCode, InvalidBlockCode, InvalidAttestationCode} from "./errors.js";
 import {IForkChoice, LatestMessage, QueuedAttestation, PowBlockHex} from "./interface.js";
@@ -61,6 +62,7 @@ export type ForkChoiceOpts = {
  * - Time is not updated automatically, updateTime MUST be called every slot
  */
 export class ForkChoice implements IForkChoice {
+  irrecoverableError?: Error;
   /**
    * Votes currently tracked in the protoArray
    * Indexed by validator index
@@ -142,13 +144,6 @@ export class ForkChoice implements IForkChoice {
       // Root is older or equal than queried slot, thus a skip slot. Return most recent root prior to slot.
       return blockRoot;
     }
-  }
-
-  /**
-   * Successful call if no critical errors, else throws
-   */
-  checkSaneForkChoice(): void {
-    this.protoArray.findHead(this.fcStore.justified.checkpoint.rootHex, this.fcStore.currentSlot);
   }
 
   /**
@@ -767,12 +762,13 @@ export class ForkChoice implements IForkChoice {
    * becomes valid
    */
   validateLatestHash(execResponse: LVHExecResponse): void {
-    this.protoArray.validateLatestHash(execResponse, this.fcStore.currentSlot);
-
-    // Call findHead to validate that the forkChoice consensus has not broken down
-    // as it is possible for invalidation to invalidate the entire forkChoice if
-    // the consensus breaks down, which will cause findHead to throw
-    this.protoArray.findHead(this.fcStore.justified.checkpoint.rootHex, this.fcStore.currentSlot);
+    try {
+      this.protoArray.validateLatestHash(execResponse, this.fcStore.currentSlot);
+    } catch (e) {
+      if (e instanceof ProtoArrayError && e.type.code === ProtoArrayErrorCode.INVALID_LVH_EXECUTION_RESPONSE) {
+        this.irrecoverableError = e;
+      }
+    }
   }
 
   /**
