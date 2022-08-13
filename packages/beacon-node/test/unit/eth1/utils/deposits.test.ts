@@ -143,7 +143,7 @@ describe("eth1 / util / deposits", function () {
             eth1Data.depositRoot
           ),
           `Wrong merkle proof on deposit ${index}`
-        ).to.be.true;
+        ).to.equal(true);
       }
     });
   });

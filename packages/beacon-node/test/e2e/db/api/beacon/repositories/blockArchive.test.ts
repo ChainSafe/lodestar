@@ -68,7 +68,7 @@ describe("BlockArchiveRepository", function () {
 
     // make sure they are the same except for slot
     savedBlock2.message.slot = sampleBlock.message.slot;
-    expect(ssz.phase0.SignedBeaconBlock.equals(savedBlock1, savedBlock2)).to.be.true;
+    expect(ssz.phase0.SignedBeaconBlock.equals(savedBlock1, savedBlock2)).to.equal(true);
   });
 
   it("batchPutBinary should be faster than batchPut", async () => {

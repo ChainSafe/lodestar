@@ -43,46 +43,46 @@ describe("database repository", function () {
     controller.get.resolves(TestSSZType.serialize(item) as Buffer);
     const result = await repository.get("id");
     expect(result).to.be.deep.equal(item);
-    expect(controller.get.calledOnce).to.be.true;
+    expect(controller.get.calledOnce).to.equal(true);
   });
 
   it("should return null if item not found", async function () {
     controller.get.resolves(null);
     const result = await repository.get("id");
     expect(result).to.be.deep.equal(null);
-    expect(controller.get.calledOnce).to.be.true;
+    expect(controller.get.calledOnce).to.equal(true);
   });
 
   it("should return true if item exists", async function () {
     const item = {bool: true, bytes: Buffer.alloc(32)};
     controller.get.resolves(TestSSZType.serialize(item) as Buffer);
     const result = await repository.has("id");
-    expect(result).to.be.true;
-    expect(controller.get.calledOnce).to.be.true;
+    expect(result).to.equal(true);
+    expect(controller.get.calledOnce).to.equal(true);
   });
 
   it("should return false if item doesnt exists", async function () {
     controller.get.resolves(null);
     const result = await repository.has("id");
-    expect(result).to.be.false;
-    expect(controller.get.calledOnce).to.be.true;
+    expect(result).to.equal(false);
+    expect(controller.get.calledOnce).to.equal(true);
   });
 
   it("should store with hashTreeRoot as id", async function () {
     const item = {bool: true, bytes: Buffer.alloc(32)};
     await expect(repository.add(item)).to.not.be.rejected;
-    expect(controller.put.calledOnce).to.be.true;
+    expect(controller.put.calledOnce).to.equal(true);
   });
 
   it("should store with given id", async function () {
     const item = {bool: true, bytes: Buffer.alloc(32)};
     await expect(repository.put("1", item)).to.not.be.rejected;
-    expect(controller.put.calledOnce).to.be.true;
+    expect(controller.put.calledOnce).to.equal(true);
   });
 
   it("should delete", async function () {
     await expect(repository.delete("1")).to.not.be.rejected;
-    expect(controller.delete.calledOnce).to.be.true;
+    expect(controller.delete.calledOnce).to.equal(true);
   });
 
   it("should return all items", async function () {
@@ -92,12 +92,12 @@ describe("database repository", function () {
     controller.values.resolves(items as Buffer[]);
     const result = await repository.values();
     expect(result).to.be.deep.equal([item, item, item]);
-    expect(controller.values.calledOnce).to.be.true;
+    expect(controller.values.calledOnce).to.equal(true);
   });
 
   it("should return range of items", async function () {
     await repository.values({gt: "a", lt: "b"});
-    expect(controller.values.calledOnce).to.be.true;
+    expect(controller.values.calledOnce).to.equal(true);
   });
 
   it("should delete given items", async function () {
