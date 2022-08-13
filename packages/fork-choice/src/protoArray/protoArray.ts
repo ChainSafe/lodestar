@@ -449,7 +449,7 @@ export class ProtoArray {
    * Follows the best-descendant links to find the best-block (i.e., head-block).
    */
   findHead(justifiedRoot: RootHex, currentSlot: Slot): RootHex {
-    if (this.lvhError !== undefined) {
+    if (!this.lvhError) {
       throw new ProtoArrayError({
         code: ProtoArrayErrorCode.INVALID_LVH_EXECUTION_RESPONSE,
         ...this.lvhError,
