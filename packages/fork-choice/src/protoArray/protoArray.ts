@@ -9,7 +9,7 @@ export const DEFAULT_PRUNE_THRESHOLD = 0;
 type ProposerBoost = {root: RootHex; score: number};
 
 const ZERO_HASH = Buffer.alloc(32, 0);
-const ZERO_HASH_HEX = toHexString(ZERO_HASH);
+const ZERO_HASH_HEX = toHexString(Buffer.alloc(32, 0));
 
 export class ProtoArray {
   // Do not attempt to prune the tree unless it has at least this many nodes.
