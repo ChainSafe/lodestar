@@ -1,7 +1,7 @@
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
 import {computeSyncPeriodAtEpoch, computeSyncPeriodAtSlot, isSyncCommitteeAggregator} from "@lodestar/state-transition";
 import {IChainForkConfig} from "@lodestar/config";
-import {BLSSignature, Epoch, RootHex, Slot, SyncPeriod, ValidatorIndex} from "@lodestar/types";
+import {BLSSignature, Epoch, Slot, SyncPeriod, ValidatorIndex} from "@lodestar/types";
 import {toHexString} from "@chainsafe/ssz";
 import {Api, routes} from "@lodestar/api";
 import {extendError} from "@lodestar/utils";
@@ -59,7 +59,7 @@ export type SyncDutyAndProofs = {
 };
 
 // To assist with readability
-type DutyAtPeriod = {dependentRoot: RootHex; duty: SyncDutySubnet};
+type DutyAtPeriod = {duty: SyncDutySubnet};
 
 /**
  * Validators are part of a static long (~27h) sync committee, and part of static subnets.
@@ -235,7 +235,6 @@ export class SyncCommitteeDutiesService {
       throw extendError(e, "Failed to obtain SyncDuties");
     });
 
-    const dependentRoot = toHexString(syncDuties.dependentRoot);
     const dutiesByIndex = new Map<ValidatorIndex, DutyAtPeriod>();
     let count = 0;
 
@@ -273,7 +272,7 @@ export class SyncCommitteeDutiesService {
 
       // TODO: Use memory-efficient toHexString()
       const pubkeyHex = toHexString(duty.pubkey);
-      dutiesByIndex.set(validatorIndex, {dependentRoot, duty: {pubkey: pubkeyHex, validatorIndex, subnets}});
+      dutiesByIndex.set(validatorIndex, {duty: {pubkey: pubkeyHex, validatorIndex, subnets}});
     }
 
     // these could be redundant duties due to the state of next period query reorged
@@ -282,7 +281,7 @@ export class SyncCommitteeDutiesService {
     const period = computeSyncPeriodAtEpoch(epoch);
     this.dutiesByIndexByPeriod.set(period, dutiesByIndex);
 
-    this.logger.debug("Downloaded SyncDuties", {epoch, dependentRoot, count});
+    this.logger.debug("Downloaded SyncDuties", {epoch, count});
   }
 
   private async getSelectionProofs(slot: Slot, duty: SyncDutySubnet): Promise<SyncSelectionProof[]> {
