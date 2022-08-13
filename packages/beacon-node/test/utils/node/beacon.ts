@@ -99,6 +99,8 @@ export async function getDevBeaconNode(
     config: beaconConfig,
     db,
     logger,
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
+    processShutdownCallback: () => {},
     libp2p,
     anchorState,
     wsCheckpoint: opts.wsCheckpoint,
