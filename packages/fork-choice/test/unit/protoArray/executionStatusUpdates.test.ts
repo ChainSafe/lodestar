@@ -16,6 +16,7 @@ type ValidationTestCase = {
 };
 
 type TestBlock = {slot: number; root: string; parent: string; executionStatus: MaybeValidExecutionStatus};
+type TestCase = [string, string | undefined, string | undefined, ExecutionStatus];
 const blocks: TestBlock[] = [
   {slot: 1, root: "1A", parent: "0", executionStatus: ExecutionStatus.Syncing},
   {slot: 2, root: "2A", parent: "1A", executionStatus: ExecutionStatus.Syncing},
@@ -30,21 +31,26 @@ for (const block of blocks) {
   fcRoots.push(block.root);
 }
 
-const expectedPreValidationFC: ValidationTestCase[] = [
-  {
-    root: "0",
-    bestChild: "1A",
-    bestDescendant: "3B",
-    executionStatus: ExecutionStatus.PreMerge,
-  },
-  {root: "1A", bestChild: "2B", bestDescendant: "3B", executionStatus: ExecutionStatus.Syncing},
-  {root: "2A", bestChild: "3A", bestDescendant: "3A", executionStatus: ExecutionStatus.Syncing},
-  {root: "3A", bestChild: undefined, bestDescendant: undefined, executionStatus: ExecutionStatus.Syncing},
-  {root: "2B", bestChild: "3B", bestDescendant: "3B", executionStatus: ExecutionStatus.Syncing},
-  {root: "3B", bestChild: undefined, bestDescendant: undefined, executionStatus: ExecutionStatus.Syncing},
-  {root: "2C", bestChild: "3C", bestDescendant: "3C", executionStatus: ExecutionStatus.Syncing},
-  {root: "3C", bestChild: undefined, bestDescendant: undefined, executionStatus: ExecutionStatus.Syncing},
+function toFcTestCase(testCases: TestCase[]): ValidationTestCase[] {
+  return testCases.map((testCase) => ({
+    root: testCase[0],
+    bestChild: testCase[1],
+    bestDescendant: testCase[2],
+    executionStatus: testCase[3],
+  }));
+}
+
+const expectedPreValidationFC1: TestCase[] = [
+  ["0", "1A", "3B", ExecutionStatus.PreMerge],
+  ["1A", "2B", "3B", ExecutionStatus.Syncing],
+  ["2A", "3A", "3A", ExecutionStatus.Syncing],
+  ["3A", undefined, undefined, ExecutionStatus.Syncing],
+  ["2B", "3B", "3B", ExecutionStatus.Syncing],
+  ["3B", undefined, undefined, ExecutionStatus.Syncing],
+  ["2C", "3C", "3C", ExecutionStatus.Syncing],
+  ["3C", undefined, undefined, ExecutionStatus.Syncing],
 ];
+const expectedPreValidationFC: ValidationTestCase[] = toFcTestCase(expectedPreValidationFC1);
 
 /**
  * Set up the following forkchoice  (~~ parent not in forkchoice, possibly bogus/NA)
@@ -144,56 +150,18 @@ describe("executionStatus / normal updates", () => {
 
   const invalidate3CValidate2CForkChoice = collectProtoarrayValidationStatus(fc);
   it("correcly invalidate 3C and validate 2C only", () => {
-    expect(invalidate3CValidate2CForkChoice).to.be.deep.equal([
-      {
-        root: "0",
-        bestChild: "1A",
-        bestDescendant: "3B",
-        executionStatus: ExecutionStatus.PreMerge,
-      },
-      {
-        root: "1A",
-        bestChild: "2B",
-        bestDescendant: "3B",
-        executionStatus: "Syncing",
-      },
-      {
-        root: "2A",
-        bestChild: "3A",
-        bestDescendant: "3A",
-        executionStatus: "Syncing",
-      },
-      {
-        root: "3A",
-        bestChild: undefined,
-        bestDescendant: undefined,
-        executionStatus: "Syncing",
-      },
-      {
-        root: "2B",
-        bestChild: "3B",
-        bestDescendant: "3B",
-        executionStatus: "Syncing",
-      },
-      {
-        root: "3B",
-        bestChild: undefined,
-        bestDescendant: undefined,
-        executionStatus: "Syncing",
-      },
-      {
-        root: "2C",
-        bestChild: undefined,
-        bestDescendant: undefined,
-        executionStatus: "Syncing",
-      },
-      {
-        root: "3C",
-        bestChild: undefined,
-        bestDescendant: undefined,
-        executionStatus: "Invalid",
-      },
-    ]);
+    expect(invalidate3CValidate2CForkChoice).to.be.deep.equal(
+      toFcTestCase([
+        ["0", "1A", "3B", ExecutionStatus.PreMerge],
+        ["1A", "2B", "3B", ExecutionStatus.Syncing],
+        ["2A", "3A", "3A", ExecutionStatus.Syncing],
+        ["3A", undefined, undefined, ExecutionStatus.Syncing],
+        ["2B", "3B", "3B", ExecutionStatus.Syncing],
+        ["3B", undefined, undefined, ExecutionStatus.Syncing],
+        ["2C", undefined, undefined, ExecutionStatus.Syncing],
+        ["3C", undefined, undefined, ExecutionStatus.Invalid],
+      ])
+    );
   });
 
   /**
@@ -212,56 +180,18 @@ describe("executionStatus / normal updates", () => {
   );
   const validate3B2B1A = collectProtoarrayValidationStatus(fc);
   it("Validate 3B, 2B, 1A", () => {
-    expect(validate3B2B1A).to.be.deep.equal([
-      {
-        root: "0",
-        bestChild: "1A",
-        bestDescendant: "3B",
-        executionStatus: ExecutionStatus.PreMerge,
-      },
-      {
-        root: "1A",
-        bestChild: "2B",
-        bestDescendant: "3B",
-        executionStatus: "Valid",
-      },
-      {
-        root: "2A",
-        bestChild: "3A",
-        bestDescendant: "3A",
-        executionStatus: "Syncing",
-      },
-      {
-        root: "3A",
-        bestChild: undefined,
-        bestDescendant: undefined,
-        executionStatus: "Syncing",
-      },
-      {
-        root: "2B",
-        bestChild: "3B",
-        bestDescendant: "3B",
-        executionStatus: "Valid",
-      },
-      {
-        root: "3B",
-        bestChild: undefined,
-        bestDescendant: undefined,
-        executionStatus: "Valid",
-      },
-      {
-        root: "2C",
-        bestChild: undefined,
-        bestDescendant: undefined,
-        executionStatus: "Syncing",
-      },
-      {
-        root: "3C",
-        bestChild: undefined,
-        bestDescendant: undefined,
-        executionStatus: "Invalid",
-      },
-    ]);
+    expect(validate3B2B1A).to.be.deep.equal(
+      toFcTestCase([
+        ["0", "1A", "3B", ExecutionStatus.PreMerge],
+        ["1A", "2B", "3B", ExecutionStatus.Valid],
+        ["2A", "3A", "3A", ExecutionStatus.Syncing],
+        ["3A", undefined, undefined, ExecutionStatus.Syncing],
+        ["2B", "3B", "3B", ExecutionStatus.Valid],
+        ["3B", undefined, undefined, ExecutionStatus.Valid],
+        ["2C", undefined, undefined, ExecutionStatus.Syncing],
+        ["3C", undefined, undefined, ExecutionStatus.Invalid],
+      ])
+    );
   });
 
   /**
@@ -282,56 +212,18 @@ describe("executionStatus / normal updates", () => {
   );
   const invalidate3A2A = collectProtoarrayValidationStatus(fc);
   it("Invalidate 3A, 2A with 2A loosing its bestChild, bestDescendant", () => {
-    expect(invalidate3A2A).to.be.deep.equal([
-      {
-        root: "0",
-        bestChild: "1A",
-        bestDescendant: "3B",
-        executionStatus: ExecutionStatus.PreMerge,
-      },
-      {
-        root: "1A",
-        bestChild: "2B",
-        bestDescendant: "3B",
-        executionStatus: "Valid",
-      },
-      {
-        root: "2A",
-        bestChild: undefined,
-        bestDescendant: undefined,
-        executionStatus: "Invalid",
-      },
-      {
-        root: "3A",
-        bestChild: undefined,
-        bestDescendant: undefined,
-        executionStatus: "Invalid",
-      },
-      {
-        root: "2B",
-        bestChild: "3B",
-        bestDescendant: "3B",
-        executionStatus: "Valid",
-      },
-      {
-        root: "3B",
-        bestChild: undefined,
-        bestDescendant: undefined,
-        executionStatus: "Valid",
-      },
-      {
-        root: "2C",
-        bestChild: undefined,
-        bestDescendant: undefined,
-        executionStatus: "Syncing",
-      },
-      {
-        root: "3C",
-        bestChild: undefined,
-        bestDescendant: undefined,
-        executionStatus: "Invalid",
-      },
-    ]);
+    expect(invalidate3A2A).to.be.deep.equal(
+      toFcTestCase([
+        ["0", "1A", "3B", ExecutionStatus.PreMerge],
+        ["1A", "2B", "3B", ExecutionStatus.Valid],
+        ["2A", undefined, undefined, ExecutionStatus.Invalid],
+        ["3A", undefined, undefined, ExecutionStatus.Invalid],
+        ["2B", "3B", "3B", ExecutionStatus.Valid],
+        ["3B", undefined, undefined, ExecutionStatus.Valid],
+        ["2C", undefined, undefined, ExecutionStatus.Syncing],
+        ["3C", undefined, undefined, ExecutionStatus.Invalid],
+      ])
+    );
   });
 });
 
@@ -367,56 +259,18 @@ describe("executionStatus / invalidate all postmerge chain", () => {
   );
   const postMergeInvalidated = collectProtoarrayValidationStatus(fc);
   it("all post merge blocks should be invalidated except Cs", () => {
-    expect(postMergeInvalidated).to.be.deep.equal([
-      {
-        root: "0",
-        bestChild: undefined,
-        bestDescendant: undefined,
-        executionStatus: ExecutionStatus.PreMerge,
-      },
-      {
-        root: "1A",
-        bestChild: undefined,
-        bestDescendant: undefined,
-        executionStatus: "Invalid",
-      },
-      {
-        root: "2A",
-        bestChild: undefined,
-        bestDescendant: undefined,
-        executionStatus: "Invalid",
-      },
-      {
-        root: "3A",
-        bestChild: undefined,
-        bestDescendant: undefined,
-        executionStatus: "Invalid",
-      },
-      {
-        root: "2B",
-        bestChild: undefined,
-        bestDescendant: undefined,
-        executionStatus: "Invalid",
-      },
-      {
-        root: "3B",
-        bestChild: undefined,
-        bestDescendant: undefined,
-        executionStatus: "Invalid",
-      },
-      {
-        root: "2C",
-        bestChild: "3C",
-        bestDescendant: "3C",
-        executionStatus: "Syncing",
-      },
-      {
-        root: "3C",
-        bestChild: undefined,
-        bestDescendant: undefined,
-        executionStatus: "Syncing",
-      },
-    ]);
+    expect(postMergeInvalidated).to.be.deep.equal(
+      toFcTestCase([
+        ["0", undefined, undefined, ExecutionStatus.PreMerge],
+        ["1A", undefined, undefined, ExecutionStatus.Invalid],
+        ["2A", undefined, undefined, ExecutionStatus.Invalid],
+        ["3A", undefined, undefined, ExecutionStatus.Invalid],
+        ["2B", undefined, undefined, ExecutionStatus.Invalid],
+        ["3B", undefined, undefined, ExecutionStatus.Invalid],
+        ["2C", "3C", "3C", ExecutionStatus.Syncing],
+        ["3C", undefined, undefined, ExecutionStatus.Syncing],
+      ])
+    );
   });
 
   const fcHead = fc.findHead("0", 3);
@@ -456,56 +310,18 @@ describe("executionStatus / poision forkchoice if we invalidate previous valid",
   );
   const validate3B2B1A = collectProtoarrayValidationStatus(fc);
   it("Validate 3B, 2B, 1A", () => {
-    expect(validate3B2B1A).to.be.deep.equal([
-      {
-        root: "0",
-        bestChild: "1A",
-        bestDescendant: "3B",
-        executionStatus: ExecutionStatus.PreMerge,
-      },
-      {
-        root: "1A",
-        bestChild: "2B",
-        bestDescendant: "3B",
-        executionStatus: "Valid",
-      },
-      {
-        root: "2A",
-        bestChild: "3A",
-        bestDescendant: "3A",
-        executionStatus: "Syncing",
-      },
-      {
-        root: "3A",
-        bestChild: undefined,
-        bestDescendant: undefined,
-        executionStatus: "Syncing",
-      },
-      {
-        root: "2B",
-        bestChild: "3B",
-        bestDescendant: "3B",
-        executionStatus: "Valid",
-      },
-      {
-        root: "3B",
-        bestChild: undefined,
-        bestDescendant: undefined,
-        executionStatus: "Valid",
-      },
-      {
-        root: "2C",
-        bestChild: "3C",
-        bestDescendant: "3C",
-        executionStatus: "Syncing",
-      },
-      {
-        root: "3C",
-        bestChild: undefined,
-        bestDescendant: undefined,
-        executionStatus: "Syncing",
-      },
-    ]);
+    expect(validate3B2B1A).to.be.deep.equal(
+      toFcTestCase([
+        ["0", "1A", "3B", ExecutionStatus.PreMerge],
+        ["1A", "2B", "3B", ExecutionStatus.Valid],
+        ["2A", "3A", "3A", ExecutionStatus.Syncing],
+        ["3A", undefined, undefined, ExecutionStatus.Syncing],
+        ["2B", "3B", "3B", ExecutionStatus.Valid],
+        ["3B", undefined, undefined, ExecutionStatus.Valid],
+        ["2C", "3C", "3C", ExecutionStatus.Syncing],
+        ["3C", undefined, undefined, ExecutionStatus.Syncing],
+      ])
+    );
   });
 
   it("protoarray should be poisioned with a buggy LVH response", () => {
@@ -557,56 +373,18 @@ describe("executionStatus / poision forkchoice if we validate previous invalid",
   );
   const validate3B2B1A = collectProtoarrayValidationStatus(fc);
   it("Inalidate 3B, 2B, 1A", () => {
-    expect(validate3B2B1A).to.be.deep.equal([
-      {
-        root: "0",
-        bestChild: undefined,
-        bestDescendant: undefined,
-        executionStatus: ExecutionStatus.PreMerge,
-      },
-      {
-        root: "1A",
-        bestChild: undefined,
-        bestDescendant: undefined,
-        executionStatus: "Invalid",
-      },
-      {
-        root: "2A",
-        bestChild: undefined,
-        bestDescendant: undefined,
-        executionStatus: "Invalid",
-      },
-      {
-        root: "3A",
-        bestChild: undefined,
-        bestDescendant: undefined,
-        executionStatus: "Invalid",
-      },
-      {
-        root: "2B",
-        bestChild: undefined,
-        bestDescendant: undefined,
-        executionStatus: "Invalid",
-      },
-      {
-        root: "3B",
-        bestChild: undefined,
-        bestDescendant: undefined,
-        executionStatus: "Invalid",
-      },
-      {
-        root: "2C",
-        bestChild: "3C",
-        bestDescendant: "3C",
-        executionStatus: "Syncing",
-      },
-      {
-        root: "3C",
-        bestChild: undefined,
-        bestDescendant: undefined,
-        executionStatus: "Syncing",
-      },
-    ]);
+    expect(validate3B2B1A).to.be.deep.equal(
+      toFcTestCase([
+        ["0", undefined, undefined, ExecutionStatus.PreMerge],
+        ["1A", undefined, undefined, ExecutionStatus.Invalid],
+        ["2A", undefined, undefined, ExecutionStatus.Invalid],
+        ["3A", undefined, undefined, ExecutionStatus.Invalid],
+        ["2B", undefined, undefined, ExecutionStatus.Invalid],
+        ["3B", undefined, undefined, ExecutionStatus.Invalid],
+        ["2C", "3C", "3C", ExecutionStatus.Syncing],
+        ["3C", undefined, undefined, ExecutionStatus.Syncing],
+      ])
+    );
   });
 
   it("protoarray should be poisioned with a buggy LVH response", () => {
