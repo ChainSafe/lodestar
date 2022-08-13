@@ -523,6 +523,12 @@ export class BeaconChain implements IBeaconChain {
     this.logger.verbose("Clock slot", {slot});
 
     // CRITICAL UPDATE
+    try {
+      this.forkChoice.checkSaneForkChoice();
+    } catch (e) {
+      this.logger.error("Critical error in forkChoice, shutting down gracefully", {}, e as Error);
+      process.kill(process.pid, "SIGINT");
+    }
     this.forkChoice.updateTime(slot);
 
     this.metrics?.clockSlot.set(slot);

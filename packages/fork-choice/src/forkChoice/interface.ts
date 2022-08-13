@@ -158,6 +158,8 @@ export interface IForkChoice {
   validateLatestHash(execResponse: LVHExecResponse): void;
   /** Find attester dependent root of a block */
   findAttesterDependentRoot(headBlockHash: Root): RootHex | null;
+  /** Get critical error from forkChoice */
+  checkSaneForkChoice(): void;
 }
 
 /** Same to the PowBlock but we want RootHex to work with forkchoice conveniently */

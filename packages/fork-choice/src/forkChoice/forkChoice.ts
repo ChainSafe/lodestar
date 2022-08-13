@@ -145,6 +145,13 @@ export class ForkChoice implements IForkChoice {
   }
 
   /**
+   * Successful call if no critical errors, else throws
+   */
+  checkSaneForkChoice(): void {
+    this.protoArray.findHead(this.fcStore.justified.checkpoint.rootHex, this.fcStore.currentSlot);
+  }
+
+  /**
    * Get the cached head root
    */
   getHeadRoot(): RootHex {
