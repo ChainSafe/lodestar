@@ -8,7 +8,6 @@ import {ProtoArrayError, ProtoArrayErrorCode, LVHExecError, LVHExecErrorCode} fr
 export const DEFAULT_PRUNE_THRESHOLD = 0;
 type ProposerBoost = {root: RootHex; score: number};
 
-const ZERO_HASH = Buffer.alloc(32, 0);
 const ZERO_HASH_HEX = toHexString(Buffer.alloc(32, 0));
 
 export class ProtoArray {
@@ -23,7 +22,7 @@ export class ProtoArray {
   indices = new Map<RootHex, number>();
   lvhError?: LVHExecError;
 
-  private previousProposerBoost?: ProposerBoost | null = null;
+  private previousProposerBoost: ProposerBoost | null = null;
 
   constructor({
     pruneThreshold,
@@ -89,7 +88,7 @@ export class ProtoArray {
     currentSlot,
   }: {
     deltas: number[];
-    proposerBoost?: ProposerBoost | null;
+    proposerBoost: ProposerBoost | null;
     justifiedEpoch: Epoch;
     justifiedRoot: RootHex;
     finalizedEpoch: Epoch;
@@ -449,7 +448,7 @@ export class ProtoArray {
    * Follows the best-descendant links to find the best-block (i.e., head-block).
    */
   findHead(justifiedRoot: RootHex, currentSlot: Slot): RootHex {
-    if (!this.lvhError) {
+    if (this.lvhError) {
       throw new ProtoArrayError({
         code: ProtoArrayErrorCode.INVALID_LVH_EXECUTION_RESPONSE,
         ...this.lvhError,
