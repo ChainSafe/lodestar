@@ -56,7 +56,7 @@ export async function sendRequest<T extends IncomingResponseBody | IncomingRespo
 ): Promise<T> {
   const {REQUEST_TIMEOUT, DIAL_TIMEOUT} = {...timeoutOptions, ...options};
   const peerIdStr = peerId.toB58String();
-  const peerIdStrShort = prettyPrintPeerId(peerIdStr);
+  const peerIdStrShort = prettyPrintPeerId(peerId);
   const client = peersData.getPeerKind(peerIdStr);
   const logCtx = {method, encoding, client, peer: peerIdStrShort, requestId};
 
