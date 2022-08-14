@@ -126,10 +126,7 @@ export type Api = {
    */
   getProposerDuties(epoch: Epoch): Promise<{data: ProposerDuty[]; dependentRoot: Root}>;
 
-  getSyncCommitteeDuties(
-    epoch: number,
-    validatorIndices: ValidatorIndex[]
-  ): Promise<{data: SyncDuty[]; dependentRoot: Root}>;
+  getSyncCommitteeDuties(epoch: number, validatorIndices: ValidatorIndex[]): Promise<{data: SyncDuty[]}>;
 
   /**
    * Produce a new block, without signature.
@@ -424,7 +421,7 @@ export function getReturnTypes(): ReturnTypes<Api> {
   return {
     getAttesterDuties: WithDependentRoot(ArrayOf(AttesterDuty)),
     getProposerDuties: WithDependentRoot(ArrayOf(ProposerDuty)),
-    getSyncCommitteeDuties: WithDependentRoot(ArrayOf(SyncDuty)),
+    getSyncCommitteeDuties: ContainerData(ArrayOf(SyncDuty)),
     produceBlock: ContainerData(ssz.phase0.BeaconBlock),
     produceBlockV2: WithVersion((fork: ForkName) => ssz[fork].BeaconBlock),
     produceBlindedBlock: WithVersion((_fork: ForkName) => ssz.bellatrix.BlindedBeaconBlock),
