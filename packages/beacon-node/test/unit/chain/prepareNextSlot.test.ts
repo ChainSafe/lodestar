@@ -66,7 +66,7 @@ describe("PrepareNextSlot scheduler", () => {
   it("pre bellatrix - should not run due to not last slot of epoch", async () => {
     getForkSeqStub.returns(ForkSeq.phase0);
     await scheduler.prepareForNextSlot(3);
-    expect(forkChoiceStub.updateHead.called).to.be.false;
+    expect(forkChoiceStub.updateHead.called).to.equal(false);
   });
 
   it("pre bellatrix - should skip, headSlot is more than 1 epoch to prepare slot", async () => {
@@ -76,8 +76,8 @@ describe("PrepareNextSlot scheduler", () => {
       scheduler.prepareForNextSlot(2 * SLOTS_PER_EPOCH - 1),
       sandbox.clock.tickAsync((config.SECONDS_PER_SLOT * 1000 * 2) / 3),
     ]);
-    expect(forkChoiceStub.updateHead.called, "expect forkChoice.updateHead to be called").to.be.true;
-    expect(regenStub.getBlockSlotState.called, "expect regen.getBlockSlotState not to be called").to.be.false;
+    expect(forkChoiceStub.updateHead.called, "expect forkChoice.updateHead to be called").to.equal(true);
+    expect(regenStub.getBlockSlotState.called, "expect regen.getBlockSlotState not to be called").to.equal(false);
   });
 
   it("pre bellatrix - should run regen.getBlockSlotState", async () => {
@@ -88,22 +88,22 @@ describe("PrepareNextSlot scheduler", () => {
       scheduler.prepareForNextSlot(SLOTS_PER_EPOCH - 1),
       sandbox.clock.tickAsync((config.SECONDS_PER_SLOT * 1000 * 2) / 3),
     ]);
-    expect(forkChoiceStub.updateHead.called, "expect forkChoice.updateHead to be called").to.be.true;
-    expect(regenStub.getBlockSlotState.called, "expect regen.getBlockSlotState to be called").to.be.true;
+    expect(forkChoiceStub.updateHead.called, "expect forkChoice.updateHead to be called").to.equal(true);
+    expect(regenStub.getBlockSlotState.called, "expect regen.getBlockSlotState to be called").to.equal(true);
   });
 
   it("pre bellatrix - should handle regen.getBlockSlotState error", async () => {
     getForkSeqStub.returns(ForkSeq.phase0);
     forkChoiceStub.updateHead.returns({slot: SLOTS_PER_EPOCH - 1} as ProtoBlock);
     regenStub.getBlockSlotState.rejects("Unit test error");
-    expect(loggerStub.error.calledOnce).to.be.false;
+    expect(loggerStub.error.calledOnce).to.equal(false);
     await Promise.all([
       scheduler.prepareForNextSlot(SLOTS_PER_EPOCH - 1),
       sandbox.clock.tickAsync((config.SECONDS_PER_SLOT * 1000 * 2) / 3),
     ]);
-    expect(forkChoiceStub.updateHead.called, "expect forkChoice.updateHead to be called").to.be.true;
-    expect(regenStub.getBlockSlotState.called, "expect regen.getBlockSlotState to be called").to.be.true;
-    expect(loggerStub.error.calledOnce, "expect log error on rejected regen.getBlockSlotState").to.be.true;
+    expect(forkChoiceStub.updateHead.called, "expect forkChoice.updateHead to be called").to.equal(true);
+    expect(regenStub.getBlockSlotState.called, "expect regen.getBlockSlotState to be called").to.equal(true);
+    expect(loggerStub.error.calledOnce, "expect log error on rejected regen.getBlockSlotState").to.equal(true);
   });
 
   it("bellatrix - should skip, headSlot is more than 1 epoch to prepare slot", async () => {
@@ -113,8 +113,8 @@ describe("PrepareNextSlot scheduler", () => {
       scheduler.prepareForNextSlot(2 * SLOTS_PER_EPOCH - 1),
       sandbox.clock.tickAsync((config.SECONDS_PER_SLOT * 1000 * 2) / 3),
     ]);
-    expect(forkChoiceStub.updateHead.called, "expect forkChoice.updateHead to be called").to.be.true;
-    expect(regenStub.getBlockSlotState.called, "expect regen.getBlockSlotState not to be called").to.be.false;
+    expect(forkChoiceStub.updateHead.called, "expect forkChoice.updateHead to be called").to.equal(true);
+    expect(regenStub.getBlockSlotState.called, "expect regen.getBlockSlotState not to be called").to.equal(false);
   });
 
   it("bellatrix - should skip, no block proposer", async () => {
@@ -126,8 +126,8 @@ describe("PrepareNextSlot scheduler", () => {
       scheduler.prepareForNextSlot(SLOTS_PER_EPOCH - 1),
       sandbox.clock.tickAsync((config.SECONDS_PER_SLOT * 1000 * 2) / 3),
     ]);
-    expect(forkChoiceStub.updateHead.called, "expect forkChoice.updateHead to be called").to.be.true;
-    expect(regenStub.getBlockSlotState.called, "expect regen.getBlockSlotState to be called").to.be.true;
+    expect(forkChoiceStub.updateHead.called, "expect forkChoice.updateHead to be called").to.equal(true);
+    expect(regenStub.getBlockSlotState.called, "expect regen.getBlockSlotState to be called").to.equal(true);
   });
 
   it("bellatrix - should prepare payload", async () => {
@@ -145,10 +145,12 @@ describe("PrepareNextSlot scheduler", () => {
       sandbox.clock.tickAsync((config.SECONDS_PER_SLOT * 1000 * 2) / 3),
     ]);
 
-    expect(forkChoiceStub.updateHead.called, "expect forkChoice.updateHead to be called").to.be.true;
-    expect(regenStub.getBlockSlotState.called, "expect regen.getBlockSlotState to be called").to.be.true;
-    expect(forkChoiceStub.getJustifiedBlock.called, "expect forkChoice.getJustifiedBlock to be called").to.be.true;
-    expect(forkChoiceStub.getFinalizedBlock.called, "expect forkChoice.getFinalizedBlock to be called").to.be.true;
-    expect(executionEngineStub.notifyForkchoiceUpdate.calledOnce, "expect CL call notifyForkchoiceUpdate").to.be.true;
+    expect(forkChoiceStub.updateHead.called, "expect forkChoice.updateHead to be called").to.equal(true);
+    expect(regenStub.getBlockSlotState.called, "expect regen.getBlockSlotState to be called").to.equal(true);
+    expect(forkChoiceStub.getJustifiedBlock.called, "expect forkChoice.getJustifiedBlock to be called").to.equal(true);
+    expect(forkChoiceStub.getFinalizedBlock.called, "expect forkChoice.getFinalizedBlock to be called").to.equal(true);
+    expect(executionEngineStub.notifyForkchoiceUpdate.calledOnce, "expect CL call notifyForkchoiceUpdate").to.equal(
+      true
+    );
   });
 });

@@ -53,7 +53,7 @@ describe("block archiver task", function () {
       dbStub.block.batchDelete.calledWith(
         [blocks[4], blocks[3], blocks[1], blocks[0]].map((summary) => fromHexString(summary.blockRoot))
       )
-    ).to.be.true;
+    ).to.equal(true);
     // delete non canonical blocks
     expect(dbStub.block.batchDelete.calledWith([blocks[2]].map((summary) => fromHexString(summary.blockRoot)))).to.be
       .true;

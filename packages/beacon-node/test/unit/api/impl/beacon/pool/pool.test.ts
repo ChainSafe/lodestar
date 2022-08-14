@@ -102,13 +102,13 @@ describe.skip("beacon pool api impl", function () {
     it("should broadcast", async function () {
       validateGossipAttesterSlashing.resolves();
       await poolApi.submitPoolAttesterSlashing(atterterSlashing);
-      expect(gossipStub.publishAttesterSlashing.calledOnceWithExactly(atterterSlashing)).to.be.true;
+      expect(gossipStub.publishAttesterSlashing.calledOnceWithExactly(atterterSlashing)).to.equal(true);
     });
 
     it("should not broadcast", async function () {
       validateGossipAttesterSlashing.throws(new Error("unit test error"));
       await poolApi.submitPoolAttesterSlashing(atterterSlashing).catch(() => ({}));
-      expect(gossipStub.publishAttesterSlashing.calledOnce).to.be.false;
+      expect(gossipStub.publishAttesterSlashing.calledOnce).to.equal(false);
     });
   });
 
@@ -121,13 +121,13 @@ describe.skip("beacon pool api impl", function () {
     it("should broadcast", async function () {
       validateGossipProposerSlashing.resolves();
       await poolApi.submitPoolProposerSlashing(proposerSlashing);
-      expect(gossipStub.publishProposerSlashing.calledOnceWithExactly(proposerSlashing)).to.be.true;
+      expect(gossipStub.publishProposerSlashing.calledOnceWithExactly(proposerSlashing)).to.equal(true);
     });
 
     it("should not broadcast", async function () {
       validateGossipProposerSlashing.throws(new Error("unit test error"));
       await poolApi.submitPoolProposerSlashing(proposerSlashing).catch(() => ({}));
-      expect(gossipStub.publishProposerSlashing.calledOnce).to.be.false;
+      expect(gossipStub.publishProposerSlashing.calledOnce).to.equal(false);
     });
   });
 
@@ -137,13 +137,13 @@ describe.skip("beacon pool api impl", function () {
     it("should broadcast", async function () {
       validateVoluntaryExit.resolves();
       await poolApi.submitPoolVoluntaryExit(voluntaryExit);
-      expect(gossipStub.publishVoluntaryExit.calledOnceWithExactly(voluntaryExit)).to.be.true;
+      expect(gossipStub.publishVoluntaryExit.calledOnceWithExactly(voluntaryExit)).to.equal(true);
     });
 
     it("should not broadcast", async function () {
       validateVoluntaryExit.throws(new Error("unit test error"));
       await poolApi.submitPoolVoluntaryExit(voluntaryExit).catch(() => ({}));
-      expect(gossipStub.publishVoluntaryExit.calledOnce).to.be.false;
+      expect(gossipStub.publishVoluntaryExit.calledOnce).to.equal(false);
     });
   });
 });

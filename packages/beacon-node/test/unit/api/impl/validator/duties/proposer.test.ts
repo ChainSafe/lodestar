@@ -78,8 +78,10 @@ describe("get proposers api impl", function () {
     const {data: result} = await api.getProposerDuties(1);
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     expect(result.length).to.be.equal(SLOTS_PER_EPOCH, "result should be equals to slots per epoch");
-    expect(stubGetNextBeaconProposer.called, "stubGetBeaconProposer function should not have been called").to.be.true;
-    expect(stubGetBeaconProposer.called, "stubGetBeaconProposer function should have been called").to.be.false;
+    expect(stubGetNextBeaconProposer.called, "stubGetBeaconProposer function should not have been called").to.equal(
+      true
+    );
+    expect(stubGetBeaconProposer.called, "stubGetBeaconProposer function should have been called").to.equal(false);
   });
 
   it("should have different proposer for current and next epoch", async function () {
