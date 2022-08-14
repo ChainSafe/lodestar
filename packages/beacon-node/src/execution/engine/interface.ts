@@ -1,4 +1,5 @@
 import {bellatrix, RootHex} from "@lodestar/types";
+import {DATA, QUANTITY} from "../../eth1/provider/utils.js";
 import {PayloadIdCache, PayloadId, ApiPayloadAttributes} from "./payloadIdCache.js";
 
 export {PayloadIdCache, PayloadId, ApiPayloadAttributes};
@@ -47,6 +48,12 @@ export type PayloadAttributes = {
   suggestedFeeRecipient: string;
 };
 
+export type TransitionConfigurationV1 = {
+  terminalTotalDifficulty: QUANTITY;
+  terminalBlockHash: DATA;
+  terminalBlockNumber: QUANTITY;
+};
+
 /**
  * Execution engine represents an abstract protocol to interact with execution clients. Potential transports include:
  * - JSON RPC over network
@@ -93,4 +100,8 @@ export interface IExecutionEngine {
    * https://github.com/ethereum/consensus-specs/blob/dev/specs/merge/validator.md#get_payload
    */
   getPayload(payloadId: PayloadId): Promise<bellatrix.ExecutionPayload>;
+
+  exchangeTransitionConfigurationV1(
+    transitionConfiguration: TransitionConfigurationV1
+  ): Promise<TransitionConfigurationV1>;
 }
