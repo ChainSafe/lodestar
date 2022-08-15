@@ -7,8 +7,6 @@ import {ssz} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
 import {testLogger} from "../../../beacon-node/test/utils/logger.js";
 
-const ZERO_HASH = Buffer.alloc(32, 0);
-
 export type MockBeaconApiOpts = {
   genesisValidatorsRoot?: string;
 };
@@ -55,7 +53,7 @@ export function getMockBeaconApiServer(opts: RestApiServerOpts, apiOpts?: MockBe
 
     validator: {
       async getProposerDuties() {
-        return {data: [], dependentRoot: ZERO_HASH};
+        return {data: [], dependentRoot: "0x"};
       },
       async prepareBeaconProposer() {
         // Do nothing
