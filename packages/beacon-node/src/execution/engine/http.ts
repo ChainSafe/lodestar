@@ -295,7 +295,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     transitionConfiguration: TransitionConfigurationV1
   ): Promise<TransitionConfigurationV1> {
     const method = "engine_exchangeTransitionConfigurationV1";
-    const exchangeTransitionConfigurationV1Res = await this.rpc.fetchWithRetries<
+    return await this.rpc.fetchWithRetries<
       EngineApiRpcReturnTypes[typeof method],
       EngineApiRpcParamTypes[typeof method]
     >(
@@ -305,7 +305,6 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       },
       exchageTransitionConfigOpts
     );
-    return exchangeTransitionConfigurationV1Res;
   }
 
   async prunePayloadIdCache(): Promise<void> {

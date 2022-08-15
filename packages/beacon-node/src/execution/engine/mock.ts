@@ -232,12 +232,8 @@ export class ExecutionEngineMock implements IExecutionEngine {
   async exchangeTransitionConfigurationV1(
     transitionConfiguration: TransitionConfigurationV1
   ): Promise<TransitionConfigurationV1> {
-    const resTransitionConfig = {
-      terminalTotalDifficulty: transitionConfiguration.terminalTotalDifficulty,
-      terminalBlockHash: transitionConfiguration.terminalBlockHash,
-      terminalBlockNumber: transitionConfiguration.terminalBlockNumber,
-    };
-    return resTransitionConfig;
+    // echo same configuration from consensus, which will be considered valid
+    return transitionConfiguration;
   }
 
   /**
