@@ -60,11 +60,11 @@ export type Api = {
  * Define javascript values for each route
  */
 export const routesData: RoutesData<Api> = {
-  getStateProof: {url: "/eth/v1/light_client/proof/:stateId", method: "GET"},
-  getUpdates: {url: "/eth/v1/light_client/updates", method: "GET"},
-  getOptimisticUpdate: {url: "/eth/v1/light_client/optimistic_update/", method: "GET"},
-  getFinalityUpdate: {url: "/eth/v1/light_client/finality_update/", method: "GET"},
-  getBootstrap: {url: "/eth/v1/light_client/bootstrap/:blockRoot", method: "GET"},
+  getStateProof: {url: "/eth/v1/beacon/light_client/proof/:stateId", method: "GET"},
+  getUpdates: {url: "/eth/v1/beacon/light_client/updates", method: "GET"},
+  getOptimisticUpdate: {url: "/eth/v1/beacon/light_client/optimistic_update/", method: "GET"},
+  getFinalityUpdate: {url: "/eth/v1/beacon/light_client/finality_update/", method: "GET"},
+  getBootstrap: {url: "/eth/v1/beacon/light_client/bootstrap/:blockRoot", method: "GET"},
 };
 
 /* eslint-disable @typescript-eslint/naming-convention */
