@@ -8,7 +8,6 @@ import {fromHexString} from "@chainsafe/ssz";
 import {assembleBlock, BlockType, AssembledBlockType} from "../../../chain/factory/block/index.js";
 import {AttestationError, AttestationErrorCode, GossipAction, SyncCommitteeError} from "../../../chain/errors/index.js";
 import {validateGossipAggregateAndProof} from "../../../chain/validation/index.js";
-import {ZERO_HASH_HEX} from "../../../constants/index.js";
 import {SyncState} from "../../../sync/index.js";
 import {toGraffitiBuffer} from "../../../util/graffiti.js";
 import {ApiError, NodeIsSyncing} from "../errors.js";

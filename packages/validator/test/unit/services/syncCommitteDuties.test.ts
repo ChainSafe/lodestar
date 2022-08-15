@@ -18,7 +18,6 @@ import {loggerVc} from "../../utils/logger.js";
 import {ClockMock} from "../../utils/clock.js";
 import {initValidatorStore} from "../../utils/validatorStore.js";
 import {syncCommitteeIndicesToSubnets} from "../../../src/services/utils.js";
-import {ZERO_HASH_HEX} from "../utils/constants.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 

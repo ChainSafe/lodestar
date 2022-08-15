@@ -12,7 +12,7 @@ import {getApiClientStub} from "../../utils/apiStub.js";
 import {loggerVc} from "../../utils/logger.js";
 import {ClockMock} from "../../utils/clock.js";
 import {ChainHeaderTracker} from "../../../src/services/chainHeaderTracker.js";
-import {ZERO_HASH, ZERO_HASH_HEX} from "../utils/constants.js";
+import {ZERO_HASH} from "../utils/constants.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
