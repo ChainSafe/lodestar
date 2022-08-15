@@ -52,7 +52,7 @@ export class AttestationService {
     // A validator should create and broadcast the attestation to the associated attestation subnet when either
     // (a) the validator has received a valid block from the expected block proposer for the assigned slot or
     // (b) one-third of the slot has transpired (SECONDS_PER_SLOT / 3 seconds after the start of slot) -- whichever comes first.
-    await Promise.race([sleep(this.clock.msToSlot(slot + 1 / 3), signal), this.waitForBlockSlot(slot)]);
+    await Promise.race([this.waitForBlockSlot(slot), sleep(this.clock.msToSlot(slot + 1 / 3), signal)]);
     this.metrics?.attesterStepCallProduceAttestation.observe(this.clock.secFromSlot(slot + 1 / 3));
 
     // Beacon node's endpoint produceAttestationData return data is not dependant on committeeIndex.
@@ -94,6 +94,16 @@ export class AttestationService {
           resolve();
         }
       };
+      // The waitForBlockSlot should execute once per slot
+      // And per slot there should be a ValidatorEvent.chainHead event emitted
+      // In the unexpected situation where ValidatorEvent.chainHead is never emitted
+      // or is emitted but takes longer to propagate to the validator,
+      // to prevent accumulating listeners for ValidatorEvent.chainHead and triggering
+      // MaxListenersExceededWarning clear listener for ValidatorEvent.chainHead
+      // if any before setting a new one.
+      if (this.emitter.listenerCount(ValidatorEvent.chainHead) > 0) {
+        this.emitter.off(ValidatorEvent.chainHead, headListener);
+      }
       this.emitter.on(ValidatorEvent.chainHead, headListener);
     });
   }
