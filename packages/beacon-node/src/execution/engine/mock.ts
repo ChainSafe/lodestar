@@ -10,6 +10,7 @@ import {
   PayloadId,
   PayloadAttributes,
   PayloadIdCache,
+  TransitionConfigurationV1,
 } from "./interface.js";
 const INTEROP_GAS_LIMIT = 30e6;
 
@@ -226,6 +227,17 @@ export class ExecutionEngineMock implements IExecutionEngine {
     this.preparingPayloads.delete(payloadIdNbr);
 
     return payload;
+  }
+
+  async exchangeTransitionConfigurationV1(
+    transitionConfiguration: TransitionConfigurationV1
+  ): Promise<TransitionConfigurationV1> {
+    const resTransitionConfig = {
+      terminalTotalDifficulty: transitionConfiguration.terminalTotalDifficulty,
+      terminalBlockHash: transitionConfiguration.terminalBlockHash,
+      terminalBlockNumber: transitionConfiguration.terminalBlockNumber,
+    };
+    return resTransitionConfig;
   }
 
   /**

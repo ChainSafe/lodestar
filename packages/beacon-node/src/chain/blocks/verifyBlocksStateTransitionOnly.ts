@@ -16,9 +16,9 @@ import {ImportBlockOpts} from "./types.js";
  *   - Check state root matches
  */
 export async function verifyBlocksStateTransitionOnly(
-  chain: {metrics: IMetrics | null},
   preState0: CachedBeaconStateAllForks,
   blocks: allForks.SignedBeaconBlock[],
+  metrics: IMetrics | null,
   signal: AbortSignal,
   opts: BlockProcessOpts & ImportBlockOpts
 ): Promise<{postStates: CachedBeaconStateAllForks[]; proposerBalanceDeltas: number[]}> {
@@ -43,7 +43,7 @@ export async function verifyBlocksStateTransitionOnly(
         verifyProposer: !useBlsBatchVerify && !validSignatures && !validProposerSignature,
         verifySignatures: !useBlsBatchVerify && !validSignatures,
       },
-      chain.metrics
+      metrics
     );
 
     // Check state root matches

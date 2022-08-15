@@ -394,8 +394,6 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
 
       return {
         data: duties,
-        // TODO: Compute a proper dependentRoot for this syncCommittee shuffling
-        dependentRoot: ZERO_HASH_HEX,
       };
     },
 

@@ -10,9 +10,8 @@ import {toHexString} from "@chainsafe/ssz";
 import * as stateApiUtils from "../../../../../src/api/impl/beacon/state/utils.js";
 import {getDebugApi} from "../../../../../src/api/impl/debug/index.js";
 import {INetwork, Network} from "../../../../../src/network/index.js";
-import {IBeaconChain} from "../../../../../src/chain/index.js";
 import {generateProtoBlock} from "../../../../utils/block.js";
-import {StubbedBeaconDb} from "../../../../utils/stub/index.js";
+import {StubbedBeaconDb, StubbedChainMutable} from "../../../../utils/stub/index.js";
 import {generateCachedAltairState, generateState} from "../../../../utils/state.js";
 import {setupApiImplTestServer} from "../index.test.js";
 import {SinonStubFn} from "../../../../utils/types.js";
@@ -20,7 +19,7 @@ import {SinonStubFn} from "../../../../utils/types.js";
 // TODO remove stub
 describe.skip("api - debug - beacon", function () {
   let debugApi: ReturnType<typeof getDebugApi>;
-  let chainStub: SinonStubbedInstance<IBeaconChain>;
+  let chainStub: StubbedChainMutable<"forkChoice">;
   let forkchoiceStub: SinonStubbedInstance<IForkChoice>;
   let dbStub: StubbedBeaconDb;
   let networkStub: SinonStubbedInstance<INetwork>;

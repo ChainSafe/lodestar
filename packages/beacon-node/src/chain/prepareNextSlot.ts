@@ -5,6 +5,8 @@ import {Slot} from "@lodestar/types";
 import {ILogger, sleep} from "@lodestar/utils";
 import {GENESIS_SLOT, ZERO_HASH_HEX} from "../constants/constants.js";
 import {IMetrics} from "../metrics/index.js";
+import {bytesToData, numToQuantity} from "../eth1/provider/utils.js";
+import {TransitionConfigurationV1} from "../execution/engine/interface.js";
 import {ChainEvent} from "./emitter.js";
 import {prepareExecutionPayload} from "./factory/block/body.js";
 import {IBeaconChain} from "./interface.js";
@@ -28,6 +30,7 @@ const PREPARE_EPOCH_LIMIT = 1;
  *
  */
 export class PrepareNextSlotScheduler {
+  private transitionConfig: TransitionConfigurationV1 | null = null;
   constructor(
     private readonly chain: IBeaconChain,
     private readonly config: IChainForkConfig,
@@ -36,11 +39,24 @@ export class PrepareNextSlotScheduler {
     private readonly signal: AbortSignal
   ) {
     this.chain.emitter.on(ChainEvent.clockSlot, this.prepareForNextSlot);
+    // If the merge is configured
+    if (isFinite(this.config.BELLATRIX_FORK_EPOCH)) {
+      this.transitionConfig = {
+        terminalTotalDifficulty: numToQuantity(this.config.TERMINAL_TOTAL_DIFFICULTY),
+        terminalBlockHash: bytesToData(this.config.TERMINAL_BLOCK_HASH),
+        /** terminalBlockNumber has to be set to zero for now as per specs */
+        terminalBlockNumber: numToQuantity(0),
+      };
+      this.chain.emitter.on(ChainEvent.clockSlot, this.performExchangeTransitionHB);
+    }
 
     this.signal.addEventListener(
       "abort",
       () => {
         this.chain.emitter.off(ChainEvent.clockSlot, this.prepareForNextSlot);
+        if (this.transitionConfig) {
+          this.chain.emitter.off(ChainEvent.clockSlot, this.performExchangeTransitionHB);
+        }
       },
       {once: true}
     );
@@ -136,6 +152,26 @@ export class PrepareNextSlotScheduler {
     } catch (e) {
       this.metrics?.precomputeNextEpochTransition.count.inc({result: "error"}, 1);
       this.logger.error("Failed to run prepareForNextSlot", {nextEpoch, isEpochTransition, prepareSlot}, e as Error);
+    }
+  };
+
+  /**
+   * perform heart beat for EL lest it logs warning that CL is not connected
+   */
+  performExchangeTransitionHB = async (_clockSlot: Slot): Promise<void> => {
+    const transitionConfig = this.transitionConfig;
+    if (transitionConfig) {
+      const elTransitionConfig = await this.chain.executionEngine.exchangeTransitionConfigurationV1(transitionConfig);
+      if (
+        elTransitionConfig.terminalTotalDifficulty !== transitionConfig.terminalTotalDifficulty ||
+        elTransitionConfig.terminalBlockHash !== transitionConfig.terminalBlockHash
+      ) {
+        this.logger.error(
+          `Transition config mismatch, actual=${JSON.stringify(elTransitionConfig)}, expected=${JSON.stringify(
+            transitionConfig
+          )}`
+        );
+      }
     }
   };
 }

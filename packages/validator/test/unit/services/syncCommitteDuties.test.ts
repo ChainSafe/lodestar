@@ -74,7 +74,7 @@ describe("SyncCommitteeDutiesService", function () {
       validatorIndex: indices[0],
       validatorSyncCommitteeIndices: [7],
     };
-    api.validator.getSyncCommitteeDuties.resolves({dependentRoot: ZERO_HASH_HEX, data: [duty]});
+    api.validator.getSyncCommitteeDuties.resolves({data: [duty]});
 
     // Accept all subscriptions
     api.validator.prepareSyncCommitteeSubnets.resolves();
@@ -103,8 +103,8 @@ describe("SyncCommitteeDutiesService", function () {
 
     expect(dutiesByIndexByPeriodObj).to.deep.equal(
       {
-        0: {[indices[0]]: {dependentRoot: ZERO_HASH_HEX, duty: toSyncDutySubnet(duty)}},
-        1: {[indices[0]]: {dependentRoot: ZERO_HASH_HEX, duty: toSyncDutySubnet(duty)}},
+        0: {[indices[0]]: {duty: toSyncDutySubnet(duty)}},
+        1: {[indices[0]]: {duty: toSyncDutySubnet(duty)}},
       } as typeof dutiesByIndexByPeriodObj,
       "Wrong dutiesService.dutiesByIndexByPeriod Map"
     );
@@ -132,24 +132,16 @@ describe("SyncCommitteeDutiesService", function () {
       validatorIndex: indices[0],
       validatorSyncCommitteeIndices: [7],
     };
-    api.validator.getSyncCommitteeDuties
-      .withArgs(0, sinon.match.any)
-      .resolves({dependentRoot: ZERO_HASH_HEX, data: [duty]});
+    api.validator.getSyncCommitteeDuties.withArgs(0, sinon.match.any).resolves({data: [duty]});
     // sync period 1 should all return empty
-    api.validator.getSyncCommitteeDuties
-      .withArgs(256, sinon.match.any)
-      .resolves({dependentRoot: ZERO_HASH_HEX, data: []});
-    api.validator.getSyncCommitteeDuties
-      .withArgs(257, sinon.match.any)
-      .resolves({dependentRoot: ZERO_HASH_HEX, data: []});
+    api.validator.getSyncCommitteeDuties.withArgs(256, sinon.match.any).resolves({data: []});
+    api.validator.getSyncCommitteeDuties.withArgs(257, sinon.match.any).resolves({data: []});
     const duty2: routes.validator.SyncDuty = {
       pubkey: pubkeys[1],
       validatorIndex: indices[1],
       validatorSyncCommitteeIndices: [5],
     };
-    api.validator.getSyncCommitteeDuties
-      .withArgs(1, sinon.match.any)
-      .resolves({dependentRoot: ZERO_HASH_HEX, data: [duty2]});
+    api.validator.getSyncCommitteeDuties.withArgs(1, sinon.match.any).resolves({data: [duty2]});
 
     // Clock will call runAttesterDutiesTasks() immediatelly
     const clock = new ClockMock();
@@ -167,7 +159,7 @@ describe("SyncCommitteeDutiesService", function () {
     );
     expect(dutiesByIndexByPeriodObj).to.deep.equal(
       {
-        0: {[indices[0]]: {dependentRoot: ZERO_HASH_HEX, duty: toSyncDutySubnet(duty)}},
+        0: {[indices[0]]: {duty: toSyncDutySubnet(duty)}},
         1: {},
       } as typeof dutiesByIndexByPeriodObj,
       "Wrong dutiesService.dutiesByIndexByPeriod Map"
@@ -183,7 +175,7 @@ describe("SyncCommitteeDutiesService", function () {
     );
     expect(dutiesByIndexByPeriodObj).to.deep.equal(
       {
-        0: {[indices[1]]: {dependentRoot: ZERO_HASH_HEX, duty: toSyncDutySubnet(duty2)}},
+        0: {[indices[1]]: {duty: toSyncDutySubnet(duty2)}},
         1: {},
       } as typeof dutiesByIndexByPeriodObj,
       "Wrong dutiesService.dutiesByIndexByPeriod Map"
@@ -202,9 +194,7 @@ describe("SyncCommitteeDutiesService", function () {
       validatorIndex: indices[1],
       validatorSyncCommitteeIndices: [7],
     };
-    api.validator.getSyncCommitteeDuties
-      .withArgs(sinon.match.any, sinon.match.any)
-      .resolves({dependentRoot: ZERO_HASH_HEX, data: [duty1, duty2]});
+    api.validator.getSyncCommitteeDuties.withArgs(sinon.match.any, sinon.match.any).resolves({data: [duty1, duty2]});
 
     // Accept all subscriptions
     api.validator.prepareSyncCommitteeSubnets.resolves();
@@ -227,12 +217,12 @@ describe("SyncCommitteeDutiesService", function () {
     expect(dutiesByIndexByPeriodObj).to.deep.equal(
       {
         0: {
-          [indices[0]]: {dependentRoot: ZERO_HASH_HEX, duty: toSyncDutySubnet(duty1)},
-          [indices[1]]: {dependentRoot: ZERO_HASH_HEX, duty: toSyncDutySubnet(duty2)},
+          [indices[0]]: {duty: toSyncDutySubnet(duty1)},
+          [indices[1]]: {duty: toSyncDutySubnet(duty2)},
         },
         1: {
-          [indices[0]]: {dependentRoot: ZERO_HASH_HEX, duty: toSyncDutySubnet(duty1)},
-          [indices[1]]: {dependentRoot: ZERO_HASH_HEX, duty: toSyncDutySubnet(duty2)},
+          [indices[0]]: {duty: toSyncDutySubnet(duty1)},
+          [indices[1]]: {duty: toSyncDutySubnet(duty2)},
         },
       } as typeof dutiesByIndexByPeriodObj,
       "Wrong dutiesService.dutiesByIndexByPeriod Map"
@@ -249,8 +239,8 @@ describe("SyncCommitteeDutiesService", function () {
     );
     expect(dutiesByIndexByPeriodObjAfterRemoval).to.deep.equal(
       {
-        0: {[indices[1]]: {dependentRoot: ZERO_HASH_HEX, duty: toSyncDutySubnet(duty2)}},
-        1: {[indices[1]]: {dependentRoot: ZERO_HASH_HEX, duty: toSyncDutySubnet(duty2)}},
+        0: {[indices[1]]: {duty: toSyncDutySubnet(duty2)}},
+        1: {[indices[1]]: {duty: toSyncDutySubnet(duty2)}},
       } as typeof dutiesByIndexByPeriodObjAfterRemoval,
       "Wrong dutiesService.dutiesByIndexByPeriod Map"
     );

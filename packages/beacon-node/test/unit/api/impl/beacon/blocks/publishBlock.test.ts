@@ -3,7 +3,6 @@ import chaiAsPromised from "chai-as-promised";
 import sinon, {SinonStubbedInstance} from "sinon";
 import {allForks} from "@lodestar/types";
 import {getBeaconBlockApi} from "../../../../../../src/api/impl/beacon/blocks/index.js";
-import {BeaconChain} from "../../../../../../src/chain/index.js";
 import {Eth2Gossipsub} from "../../../../../../src/network/gossip/index.js";
 import {generateEmptySignedBlock} from "../../../../../utils/block.js";
 import {BeaconSync} from "../../../../../../src/sync/index.js";
@@ -14,7 +13,7 @@ use(chaiAsPromised);
 describe("api - beacon - publishBlock", function () {
   let gossipStub: SinonStubbedInstance<Eth2Gossipsub>;
   let block: allForks.SignedBeaconBlock;
-  let chainStub: SinonStubbedInstance<BeaconChain>;
+  let chainStub: ApiImplTestModules["chainStub"];
   let syncStub: SinonStubbedInstance<BeaconSync>;
   let server: ApiImplTestModules;
 
@@ -43,7 +42,7 @@ describe("api - beacon - publishBlock", function () {
 
     syncStub.isSynced.returns(true);
     await expect(blockApi.publishBlock(block)).to.be.fulfilled;
-    expect(chainStub.processBlock.calledOnceWith(block)).to.be.true;
-    expect(gossipStub.publishBeaconBlock.calledOnceWith(block)).to.be.true;
+    expect(chainStub.processBlock.calledOnceWith(block)).to.equal(true);
+    expect(gossipStub.publishBeaconBlock.calledOnceWith(block)).to.equal(true);
   });
 });

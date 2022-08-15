@@ -69,7 +69,7 @@ describe("withTimeout", function () {
     const controller = new AbortController();
 
     controller.abort();
-    expect(controller.signal.aborted, "Signal should already be aborted").to.be.true;
+    expect(controller.signal.aborted, "Signal should already be aborted").to.equal(true);
 
     await expect(withTimeout(() => pause(shortTimeoutMs, data), shortTimeoutMs, controller.signal)).to.rejectedWith(
       ErrorAborted

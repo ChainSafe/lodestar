@@ -9,9 +9,9 @@ describe("file util", function () {
 
   describe("ensureDir", function () {
     it("create dir if not exists", async () => {
-      expect(fs.existsSync(dirPath), `${dirPath} should not exist`).to.be.false;
+      expect(fs.existsSync(dirPath), `${dirPath} should not exist`).to.equal(false);
       await ensureDir(dirPath);
-      expect(fs.existsSync(dirPath), `${dirPath} should exist`).to.be.true;
+      expect(fs.existsSync(dirPath), `${dirPath} should exist`).to.equal(true);
       fs.rmdirSync(dirPath);
     });
   });
@@ -28,8 +28,8 @@ describe("file util", function () {
     });
 
     it("write to a non-existed file", async () => {
-      expect(fs.existsSync(filePath)).to.be.false;
-      expect(await writeIfNotExist(filePath, data)).to.be.true;
+      expect(fs.existsSync(filePath)).to.equal(false);
+      expect(await writeIfNotExist(filePath, data)).to.equal(true);
       const bytes = fs.readFileSync(filePath);
       expect(new Uint8Array(bytes)).to.be.deep.equals(data);
 
@@ -39,7 +39,7 @@ describe("file util", function () {
 
     it("write to an existing file", async () => {
       fs.writeFileSync(filePath, new Uint8Array([3, 4]));
-      expect(await writeIfNotExist(filePath, data)).to.be.false;
+      expect(await writeIfNotExist(filePath, data)).to.equal(false);
       const bytes = fs.readFileSync(filePath);
       expect(new Uint8Array(bytes)).not.to.be.deep.equals(data);
 
