@@ -67,12 +67,6 @@ export class Eth1MergeBlockTracker {
     this.logger = logger;
     this.metrics = metrics;
 
-    // eth1MergeStatus
-    this.logger.info("Starting search for terminal POW block", {
-      // eslint-disable-next-line @typescript-eslint/naming-convention
-      TERMINAL_TOTAL_DIFFICULTY: this.config.TERMINAL_TOTAL_DIFFICULTY,
-    });
-
     this.status = {code: StatusCode.STOPPED};
 
     signal.addEventListener("abort", () => this.close(), {once: true});
