@@ -111,6 +111,7 @@ export class BeaconChain implements IBeaconChain {
   private readonly archiver: Archiver;
   private abortController = new AbortController();
   private successfulExchangeTransition = false;
+  private readonly exchangeTransitionConfigurationEverySlots: number;
 
   constructor(
     opts: IChainOptions,
@@ -148,6 +149,10 @@ export class BeaconChain implements IBeaconChain {
     this.eth1 = eth1;
     this.executionEngine = executionEngine;
     this.executionBuilder = executionBuilder;
+    // From https://github.com/ethereum/execution-apis/blob/main/src/engine/specification.md#specification-3
+    // > Consensus Layer client software SHOULD poll this endpoint every 60 seconds.
+    // Align to a multiple of SECONDS_PER_SLOT for nicer logs
+    this.exchangeTransitionConfigurationEverySlots = Math.floor(60 / this.config.SECONDS_PER_SLOT);
 
     const signal = this.abortController.signal;
     const emitter = new ChainEventEmitter();
@@ -492,7 +497,7 @@ export class BeaconChain implements IBeaconChain {
     this.seenSyncCommitteeMessages.prune(slot);
     this.reprocessController.onSlot(slot);
 
-    if (isFinite(this.config.BELLATRIX_FORK_EPOCH)) {
+    if (isFinite(this.config.BELLATRIX_FORK_EPOCH) && slot % this.exchangeTransitionConfigurationEverySlots === 0) {
       this.exchangeTransitionConfiguration().catch((e) => {
         // Should never throw
         this.logger.error("Error on exchangeTransitionConfiguration", {}, e as Error);
