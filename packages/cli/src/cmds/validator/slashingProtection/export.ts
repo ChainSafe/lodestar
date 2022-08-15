@@ -25,7 +25,7 @@ export const exportCmd: ICliCommand<
 
   examples: [
     {
-      command: "account validator slashing-protection export --network prater --file interchange.json",
+      command: "validator slashing-protection export --network prater --file interchange.json",
       description: "Export an interchange JSON file for all validators in the slashing protection DB",
     },
   ],

@@ -79,7 +79,7 @@ describe("AggregatedAttestationPool", function () {
       expect(
         forkchoiceStub.findAttesterDependentRoot.calledOnce,
         "forkchoice should be called to check pivot block"
-      ).to.be.true;
+      ).to.equal(true);
     });
   }
 
@@ -92,7 +92,7 @@ describe("AggregatedAttestationPool", function () {
       [],
       "no attestation since incorrect source"
     );
-    expect(forkchoiceStub.iterateAncestorBlocks.calledOnce, "forkchoice should not be called").to.be.false;
+    expect(forkchoiceStub.iterateAncestorBlocks.calledOnce, "forkchoice should not be called").to.equal(false);
   });
 
   it("incompatible shuffling - incorrect pivot block root", function () {

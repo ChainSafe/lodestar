@@ -66,8 +66,8 @@ describe("node api implementation", function () {
         },
       } as MetadataController;
       const {data: identity} = await api.getNetworkIdentity();
-      expect(identity.peerId.startsWith("16")).to.be.true;
-      expect(identity.enr.startsWith("enr:-")).to.be.true;
+      expect(identity.peerId.startsWith("16")).to.equal(true);
+      expect(identity.enr.startsWith("enr:-")).to.equal(true);
       expect(identity.discoveryAddresses.length).to.equal(1);
       expect(identity.discoveryAddresses[0]).to.equal("/ip4/127.0.0.1/tcp/36001");
       expect(identity.p2pAddresses.length).to.equal(1);
@@ -192,7 +192,7 @@ describe("node api implementation", function () {
   describe("getVersion", function () {
     it("success", async function () {
       const {data} = await api.getNodeVersion();
-      expect(data.version.startsWith("Lodestar"), `data must start with 'Lodestar': ${data.version}`).to.be.true;
+      expect(data.version.startsWith("Lodestar"), `data must start with 'Lodestar': ${data.version}`).to.equal(true);
     });
   });
 });

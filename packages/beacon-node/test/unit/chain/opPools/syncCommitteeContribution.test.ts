@@ -37,7 +37,7 @@ describe("chain / opPools / SyncContributionAndProofPool", function () {
     });
     cache.add(newContributionAndProof, syncCommitteeParticipants);
     const aggregate = cache.getAggregate(slot, beaconBlockRoot);
-    expect(ssz.altair.SyncAggregate.equals(aggregate, ssz.altair.SyncAggregate.defaultValue())).to.be.false;
+    expect(ssz.altair.SyncAggregate.equals(aggregate, ssz.altair.SyncAggregate.defaultValue())).to.equal(false);
     // TODO Test it's correct. Modify the contributions above so they have 1 bit set to true
     expect(aggregate.syncCommitteeBits.bitLen).to.be.equal(32);
   });

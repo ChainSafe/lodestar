@@ -22,6 +22,7 @@ import {
   PayloadId,
   PayloadAttributes,
   ApiPayloadAttributes,
+  TransitionConfigurationV1,
 } from "./interface.js";
 import {PayloadIdCache} from "./payloadIdCache.js";
 
@@ -60,6 +61,7 @@ export const defaultExecutionEngineHttpOpts: ExecutionEngineHttpOpts = {
 const notifyNewPayloadOpts: ReqOpts = {routeId: "notifyNewPayload"};
 const forkchoiceUpdatedV1Opts: ReqOpts = {routeId: "forkchoiceUpdated"};
 const getPayloadOpts: ReqOpts = {routeId: "getPayload"};
+const exchageTransitionConfigOpts: ReqOpts = {routeId: "exchangeTransitionConfiguration"};
 
 /**
  * based on Ethereum JSON-RPC API and inherits the following properties of this standard:
@@ -283,6 +285,28 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     return parseExecutionPayload(executionPayloadRpc);
   }
 
+  /**
+   * `engine_exchangeTransitionConfigurationV1`
+   *
+   * An api method for EL<>CL transition config matching and heartbeat
+   */
+
+  async exchangeTransitionConfigurationV1(
+    transitionConfiguration: TransitionConfigurationV1
+  ): Promise<TransitionConfigurationV1> {
+    const method = "engine_exchangeTransitionConfigurationV1";
+    return await this.rpc.fetchWithRetries<
+      EngineApiRpcReturnTypes[typeof method],
+      EngineApiRpcParamTypes[typeof method]
+    >(
+      {
+        method,
+        params: [transitionConfiguration],
+      },
+      exchageTransitionConfigOpts
+    );
+  }
+
   async prunePayloadIdCache(): Promise<void> {
     this.payloadIdCache.prune();
   }
@@ -308,6 +332,10 @@ type EngineApiRpcParamTypes = {
    * 1. payloadId: QUANTITY, 64 Bits - Identifier of the payload building process
    */
   engine_getPayloadV1: [QUANTITY];
+  /**
+   * 1. Object - Instance of TransitionConfigurationV1
+   */
+  engine_exchangeTransitionConfigurationV1: [TransitionConfigurationV1];
 };
 
 type EngineApiRpcReturnTypes = {
@@ -328,6 +356,10 @@ type EngineApiRpcReturnTypes = {
    * payloadId | Error: QUANTITY, 64 Bits - Identifier of the payload building process
    */
   engine_getPayloadV1: ExecutionPayloadRpc;
+  /**
+   * Object - Instance of TransitionConfigurationV1
+   */
+  engine_exchangeTransitionConfigurationV1: TransitionConfigurationV1;
 };
 
 type ExecutionPayloadRpc = {

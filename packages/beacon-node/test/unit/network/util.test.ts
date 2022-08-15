@@ -17,12 +17,12 @@ async function createPeerId(): Promise<PeerId> {
 describe("Test isLocalMultiAddr", () => {
   it("should return true for 127.0.0.1", () => {
     const multi0 = new Multiaddr("/ip4/127.0.0.1/udp/30303");
-    expect(isLocalMultiAddr(multi0)).to.be.true;
+    expect(isLocalMultiAddr(multi0)).to.equal(true);
   });
 
   it("should return false for 0.0.0.0", () => {
     const multi0 = new Multiaddr("/ip4/0.0.0.0/udp/30303");
-    expect(isLocalMultiAddr(multi0)).to.be.false;
+    expect(isLocalMultiAddr(multi0)).to.equal(false);
   });
 });
 

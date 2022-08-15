@@ -6,7 +6,6 @@ import {ForkChoice} from "@lodestar/fork-choice";
 
 import {ssz} from "@lodestar/types";
 import {MAX_EFFECTIVE_BALANCE, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {IBeaconChain} from "../../../../../../src/chain/index.js";
 import {LocalClock} from "../../../../../../src/chain/clock/index.js";
 import {FAR_FUTURE_EPOCH} from "../../../../../../src/constants/index.js";
 import {getValidatorApi} from "../../../../../../src/api/impl/validator/index.js";
@@ -14,7 +13,7 @@ import {ApiModules} from "../../../../../../src/api/impl/types.js";
 import {generateState} from "../../../../../utils/state.js";
 import {IBeaconSync} from "../../../../../../src/sync/index.js";
 import {generateValidators} from "../../../../../utils/validator.js";
-import {StubbedBeaconDb} from "../../../../../utils/stub/index.js";
+import {StubbedBeaconDb, StubbedChainMutable} from "../../../../../utils/stub/index.js";
 import {setupApiImplTestServer, ApiImplTestModules} from "../../index.test.js";
 import {testLogger} from "../../../../../utils/logger.js";
 import {createCachedBeaconStateTest} from "../../../../../utils/cachedBeaconState.js";
@@ -24,7 +23,7 @@ use(chaiAsPromised);
 describe("get proposers api impl", function () {
   const logger = testLogger();
 
-  let chainStub: SinonStubbedInstance<IBeaconChain>,
+  let chainStub: StubbedChainMutable<"clock" | "forkChoice">,
     syncStub: SinonStubbedInstance<IBeaconSync>,
     dbStub: StubbedBeaconDb;
 
@@ -79,8 +78,10 @@ describe("get proposers api impl", function () {
     const {data: result} = await api.getProposerDuties(1);
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     expect(result.length).to.be.equal(SLOTS_PER_EPOCH, "result should be equals to slots per epoch");
-    expect(stubGetNextBeaconProposer.called, "stubGetBeaconProposer function should not have been called").to.be.true;
-    expect(stubGetBeaconProposer.called, "stubGetBeaconProposer function should have been called").to.be.false;
+    expect(stubGetNextBeaconProposer.called, "stubGetBeaconProposer function should not have been called").to.equal(
+      true
+    );
+    expect(stubGetBeaconProposer.called, "stubGetBeaconProposer function should have been called").to.equal(false);
   });
 
   it("should have different proposer for current and next epoch", async function () {

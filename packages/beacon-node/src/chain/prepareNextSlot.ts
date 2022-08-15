@@ -5,6 +5,7 @@ import {Slot} from "@lodestar/types";
 import {ILogger, sleep} from "@lodestar/utils";
 import {GENESIS_SLOT, ZERO_HASH_HEX} from "../constants/constants.js";
 import {IMetrics} from "../metrics/index.js";
+import {TransitionConfigurationV1} from "../execution/engine/interface.js";
 import {ChainEvent} from "./emitter.js";
 import {prepareExecutionPayload} from "./factory/block/body.js";
 import {IBeaconChain} from "./interface.js";
@@ -28,6 +29,7 @@ const PREPARE_EPOCH_LIMIT = 1;
  *
  */
 export class PrepareNextSlotScheduler {
+  private transitionConfig: TransitionConfigurationV1 | null = null;
   constructor(
     private readonly chain: IBeaconChain,
     private readonly config: IChainForkConfig,
@@ -36,7 +38,6 @@ export class PrepareNextSlotScheduler {
     private readonly signal: AbortSignal
   ) {
     this.chain.emitter.on(ChainEvent.clockSlot, this.prepareForNextSlot);
-
     this.signal.addEventListener(
       "abort",
       () => {
