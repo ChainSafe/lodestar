@@ -90,6 +90,12 @@ export type Api = {
 
   /** Dump Discv5 Kad values */
   discv5GetKadValues(): Promise<{data: string[]}>;
+
+  /**
+   * Dump level-db entry keys for a given Bucket declared in code, or for all buckets.
+   * @param bucket must be the string name of a bucket entry: `allForks_blockArchive`
+   */
+  dumpDbBucketKeys(bucket?: string): Promise<Record<string, string[]>>;
 };
 
 /**
@@ -111,6 +117,7 @@ export const routesData: RoutesData<Api> = {
   disconnectPeer: {url: "/eth/v1/lodestar/disconnect_peer", method: "POST"},
   getPeers: {url: "/eth/v1/lodestar/peers", method: "GET"},
   discv5GetKadValues: {url: "/eth/v1/debug/discv5-kad-values", method: "GET"},
+  dumpDbBucketKeys: {url: "/eth/v1/debug/dump-db-bucket-keys", method: "GET"},
 };
 
 export type ReqTypes = {
@@ -129,6 +136,7 @@ export type ReqTypes = {
   disconnectPeer: {query: {peerId: string}};
   getPeers: {query: {state?: PeerState[]; direction?: PeerDirection[]}};
   discv5GetKadValues: ReqEmpty;
+  dumpDbBucketKeys: {query: {bucket?: string}};
 };
 
 export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
@@ -168,6 +176,11 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
       schema: {query: {state: Schema.StringArray, direction: Schema.StringArray}},
     },
     discv5GetKadValues: reqEmpty,
+    dumpDbBucketKeys: {
+      writeReq: (bucket) => ({query: {bucket}}),
+      parseReq: ({query}) => [query.bucket],
+      schema: {params: {bucket: Schema.String}},
+    },
   };
 }
 
@@ -185,5 +198,6 @@ export function getReturnTypes(): ReturnTypes<Api> {
     getGossipPeerScoreStats: jsonType("snake"),
     getPeers: jsonType("snake"),
     discv5GetKadValues: jsonType("snake"),
+    dumpDbBucketKeys: sameType(),
   };
 }
