@@ -99,6 +99,6 @@ export function computeEpochShuffling(
     shuffling,
     committees,
     committeesPerSlot,
-    dependantRoot: toHex(attesterShufflingDecisionRoot(state, epoch - 1)),
+    dependantRoot: toHex(attesterShufflingDecisionRoot(state, epoch)),
   };
 }
