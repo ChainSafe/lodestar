@@ -158,35 +158,21 @@ export function getLodestarApi({
       };
     },
 
-    async dumpDbBucketKeys(bucketReq?) {
-      const keysByBucket: Record<string, string[]> = {};
-
-      // Find requested repo and return keys from that one
-      if (bucketReq) {
-        for (const repo of Object.values(db) as IBeaconDb[keyof IBeaconDb][]) {
-          if (repo instanceof Repository) {
-            const bucket = (repo as RepositoryAny)["bucket"];
-            if (bucket === bucket || Bucket[bucket] === bucketReq) {
-              keysByBucket[Bucket[bucket]] = stringifyKeys(await repo.keys());
-              return keysByBucket;
-            }
+    async dumpDbBucketKeys(bucketReq) {
+      for (const repo of Object.values(db) as IBeaconDb[keyof IBeaconDb][]) {
+        if (repo instanceof Repository) {
+          const bucket = (repo as RepositoryAny)["bucket"];
+          if (bucket === bucket || Bucket[bucket] === bucketReq) {
+            return stringifyKeys(await repo.keys());
           }
         }
-
-        throw Error(`Unknown Bucket '${bucketReq}' available: ${Object.keys(Bucket).join(", ")}`);
       }
 
-      // Return keys from all repos
-      else {
-        for (const repo of Object.values(db) as IBeaconDb[keyof IBeaconDb][]) {
-          if (repo instanceof Repository) {
-            const bucket = (repo as RepositoryAny)["bucket"];
-            keysByBucket[Bucket[bucket]] = stringifyKeys(await repo.keys());
-          }
-        }
+      throw Error(`Unknown Bucket '${bucketReq}' available: ${Object.keys(Bucket).join(", ")}`);
+    },
 
-        return keysByBucket;
-      }
+    async dumpDbStateIndex() {
+      return db.stateArchive.dumpRootIndexEntries();
     },
   };
 }
