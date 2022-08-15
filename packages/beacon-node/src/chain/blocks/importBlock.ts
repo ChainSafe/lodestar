@@ -145,9 +145,9 @@ export async function importBlock(
 
     // Prune checkpointStateCache once per checkpoint
     // TODO: This should be done in the checkpointStateCache itself, or on clock epoch
-    chain.checkpointStateCache.prune(
-      chain.forkChoice.getFinalizedCheckpoint().epoch,
-      chain.forkChoice.getJustifiedCheckpoint().epoch
+    this.checkpointStateCache.prune(
+      this.forkChoice.getFinalizedCheckpoint().epoch,
+      this.forkChoice.getJustifiedCheckpoint().epoch
     );
 
     // Note: in-lined code from previos handler of ChainEvent.checkpoint
