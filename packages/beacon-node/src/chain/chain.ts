@@ -574,7 +574,7 @@ export class BeaconChain implements IBeaconChain {
       // - If there is a missmatch in configuration with Geth, see https://github.com/ethereum/go-ethereum/blob/0016eb7eeeb42568c8c20d0cb560ddfc9a938fad/eth/catalyst/api.go#L301
       this.successfulExchangeTransition = false;
 
-      this.logger.warn("Could not validate transition configuration with execution client", clConfig, elConfigRes.err);
+      this.logger.warn("Could not validate transition configuration with execution client", {}, elConfigRes.err);
     } else {
       // Note: This code is useless when connected to Geth. If there's a configuration mismatch Geth returns an
       // error instead of its own transition configuration, so we can't do this comparision.
