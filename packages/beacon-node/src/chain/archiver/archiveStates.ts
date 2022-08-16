@@ -72,10 +72,10 @@ export function computeStateSlotsToDelete(storedStateSlots: number[], persistEve
   const intervalsWithStates = new Set<number>();
   const stateSlotsToDelete = new Set<number>();
 
-  for (const epoch of storedStateSlots) {
-    const interval = Math.floor(epoch / persistEverySlots);
+  for (const slot of storedStateSlots) {
+    const interval = Math.floor(slot / persistEverySlots);
     if (intervalsWithStates.has(interval)) {
-      stateSlotsToDelete.add(epoch);
+      stateSlotsToDelete.add(slot);
     } else {
       intervalsWithStates.add(interval);
     }
