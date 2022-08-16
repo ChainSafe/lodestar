@@ -96,7 +96,7 @@ export function processAttestationsAltair(
       // TODO: describe issue. Compute progressive target balances
       // When processing each attestation, increase the cummulative target balance. Only applies post-altair
       if ((flagsNewSet & TIMELY_TARGET) === TIMELY_TARGET) {
-        const validator = state.validators.get(index);
+        const validator = state.validators.getReadonly(index);
         if (!validator.slashed) {
           if (inCurrentEpoch) {
             epochCtx.currentTargetUnslashedBalanceIncrements += effectiveBalanceIncrements[index];
