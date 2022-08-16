@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import LevelDatastore from "datastore-level";
+import {LevelDatastore} from "datastore-level";
 import {Key} from "interface-datastore";
 import sinon from "sinon";
 import {Eth2PeerDataStore} from "../../../../src/network/peers/datastore.js";

@@ -1,5 +1,6 @@
 import {expect} from "chai";
 import {Stream, StreamStat} from "@libp2p/interface-connection";
+import {Uint8ArrayList} from "uint8arraylist";
 import {Root, phase0} from "@lodestar/types";
 import {toHexString} from "@chainsafe/ssz";
 import {generateEmptySignedBlock} from "../../../utils/block.js";
@@ -59,12 +60,12 @@ export class MockLibP2pStream implements Stream {
   source: Stream["source"];
   resultChunks: Uint8Array[] = [];
 
-  constructor(requestChunks: Buffer[]) {
+  constructor(requestChunks: Uint8ArrayList[]) {
     this.source = arrToSource(requestChunks);
   }
   sink: Stream["sink"] = async (source) => {
     for await (const chunk of source) {
-      this.resultChunks.push(chunk);
+      this.resultChunks.push(chunk.subarray());
     }
   };
   // eslint-disable-next-line @typescript-eslint/no-empty-function

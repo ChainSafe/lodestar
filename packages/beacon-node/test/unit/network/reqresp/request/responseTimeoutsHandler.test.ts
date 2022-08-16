@@ -1,5 +1,5 @@
 import all from "it-all";
-import pipe from "it-pipe";
+import {pipe} from "it-pipe";
 import {LodestarError, sleep as _sleep} from "@lodestar/utils";
 import {timeoutOptions} from "../../../../../src/constants/index.js";
 import {responseTimeoutsHandler} from "../../../../../src/network/reqresp/request/responseTimeoutsHandler.js";
@@ -21,7 +21,7 @@ describe("network / reqresp / request / responseTimeoutsHandler", () => {
     id: string;
     timeouts?: Partial<typeof timeoutOptions>;
     source: () => AsyncGenerator<Buffer>;
-    responseDecoder: (source: AsyncIterable<Buffer>) => AsyncGenerator<Buffer>;
+    responseDecoder: (source: AsyncIterable<Uint8Array>) => AsyncGenerator<Uint8Array>;
     error?: LodestarError<any>;
   }[] = [
     {
@@ -107,7 +107,7 @@ describe("network / reqresp / request / responseTimeoutsHandler", () => {
 
   for (const {id, timeouts, source, responseDecoder, error} of testCases) {
     it(id, async () => {
-      const testPromise = pipe(source(), responseTimeoutsHandler(responseDecoder, timeouts), all);
+      const testPromise = pipe(source() as any, responseTimeoutsHandler(responseDecoder as any, timeouts), all);
 
       if (error) {
         await expectRejectedWithLodestarError(testPromise, error);

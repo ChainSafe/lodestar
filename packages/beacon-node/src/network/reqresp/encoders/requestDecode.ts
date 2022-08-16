@@ -11,7 +11,7 @@ import {readEncodedPayload} from "../encodingStrategies/index.js";
  */
 export function requestDecode(
   protocol: Pick<Protocol, "method" | "encoding">
-): Sink<Uint8ArrayList, Promise<RequestBody>> {
+): Sink<Uint8Array | Uint8ArrayList, Promise<RequestBody>> {
   return async function requestDecodeSink(source) {
     const type = getRequestSzzTypeByMethod(protocol.method);
     if (!type) {

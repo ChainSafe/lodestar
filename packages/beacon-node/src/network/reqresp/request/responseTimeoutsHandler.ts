@@ -17,7 +17,7 @@ export function maxTotalResponseTimeout(maxResponses = 1, options?: Partial<type
  * - RESP_TIMEOUT: Requester allows a further RESP_TIMEOUT for each subsequent response_chunk
  */
 export function responseTimeoutsHandler<T>(
-  responseDecoder: (source: AsyncIterable<Uint8ArrayList>) => AsyncGenerator<T>,
+  responseDecoder: (source: AsyncIterable<Uint8Array | Uint8ArrayList>) => AsyncGenerator<T>,
   options?: Partial<typeof timeoutOptions>
 ): (source: AsyncIterable<Uint8ArrayList>) => AsyncGenerator<T> {
   return async function* responseTimeoutsHandlerTransform(source) {
