@@ -1,9 +1,8 @@
-import {Slot} from "@lodestar/types";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {ILogger} from "@lodestar/utils";
+import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {CheckpointWithHex} from "@lodestar/fork-choice";
-import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {IBeaconDb} from "../../db/index.js";
+import {CheckpointStateCache} from "../stateCache/index.js";
 
 /**
  * Minimum number of epochs between archived states
@@ -16,70 +15,77 @@ export const PERSIST_STATE_EVERY_EPOCHS = 1024;
 const PERSIST_TEMP_STATE_EVERY_EPOCHS = 32;
 
 /**
- * Persist states every some epochs to
- * - Minimize disk space, storing the least states possible
- * - Minimize the sync progress lost on unexpected crash, storing temp state every few epochs
+ * Archives finalized states from active bucket to archive bucket.
  *
- * At epoch `e` there will be states peristed at intervals of `PERSIST_STATE_EVERY_EPOCHS` = 32
- * and one at `PERSIST_TEMP_STATE_EVERY_EPOCHS` = 1024
- * ```
- *        |                |             |           .
- * epoch - 1024*2    epoch - 1024    epoch - 32    epoch
- * ```
+ * Only the new finalized state is stored to disk
  */
-export async function maybeArchiveState(
-  db: IBeaconDb,
-  finalizedState: CachedBeaconStateAllForks,
-  finalized: CheckpointWithHex
-): Promise<{archivedState: boolean; deletedSlots: Slot[]}> {
-  const lastStoredSlot = await db.stateArchive.lastKey();
-  const lastStoredEpoch = computeEpochAtSlot(lastStoredSlot ?? 0);
+export class StatesArchiver {
+  constructor(
+    private readonly checkpointStateCache: CheckpointStateCache,
+    private readonly db: IBeaconDb,
+    private readonly logger: ILogger
+  ) {}
 
-  if (finalized.epoch - lastStoredEpoch > PERSIST_TEMP_STATE_EVERY_EPOCHS) {
-    await db.stateArchive.put(finalizedState.slot, finalizedState);
+  /**
+   * Persist states every some epochs to
+   * - Minimize disk space, storing the least states possible
+   * - Minimize the sync progress lost on unexpected crash, storing temp state every few epochs
+   *
+   * At epoch `e` there will be states peristed at intervals of `PERSIST_STATE_EVERY_EPOCHS` = 32
+   * and one at `PERSIST_TEMP_STATE_EVERY_EPOCHS` = 1024
+   * ```
+   *        |                |             |           .
+   * epoch - 1024*2    epoch - 1024    epoch - 32    epoch
+   * ```
+   */
+  async maybeArchiveState(finalized: CheckpointWithHex): Promise<void> {
+    const lastStoredSlot = await this.db.stateArchive.lastKey();
+    const lastStoredEpoch = computeEpochAtSlot(lastStoredSlot ?? 0);
 
-    const fromEpoch = computeStartSlotAtEpoch(finalized.epoch);
-    // Only check the current and previous intervals
-    const toEpoch = Math.max(
-      0,
-      (Math.floor(finalized.epoch / PERSIST_STATE_EVERY_EPOCHS) - 1) * PERSIST_STATE_EVERY_EPOCHS
-    );
+    if (finalized.epoch - lastStoredEpoch > PERSIST_TEMP_STATE_EVERY_EPOCHS) {
+      await this.archiveState(finalized);
 
-    const storedStateSlots = await db.stateArchive.keys({
-      lte: computeStartSlotAtEpoch(fromEpoch),
-      gte: computeStartSlotAtEpoch(toEpoch),
-    });
-
-    const statesSlotsToDelete = computeStateSlotsToDelete(storedStateSlots, PERSIST_STATE_EVERY_EPOCHS);
-    if (statesSlotsToDelete.length > 0) {
-      await db.stateArchive.batchDelete(statesSlotsToDelete);
+      const storedEpochs = await this.db.stateArchive.keys({
+        lt: finalized.epoch,
+        // Only check the current and previous intervals
+        gte: Math.max(0, (Math.floor(finalized.epoch / PERSIST_STATE_EVERY_EPOCHS) - 1) * PERSIST_STATE_EVERY_EPOCHS),
+      });
+      const statesToDelete = computeEpochsToDelete(storedEpochs, PERSIST_STATE_EVERY_EPOCHS);
+      if (statesToDelete.length > 0) {
+        await this.db.stateArchive.batchDelete(statesToDelete);
+      }
     }
-
-    return {archivedState: true, deletedSlots: statesSlotsToDelete};
   }
 
-  // Don't archive finalized state
-  else {
-    return {archivedState: false, deletedSlots: []};
+  /**
+   * Archives finalized states from active bucket to archive bucket.
+   * Only the new finalized state is stored to disk
+   */
+  async archiveState(finalized: CheckpointWithHex): Promise<void> {
+    const finalizedState = this.checkpointStateCache.get(finalized);
+    if (!finalizedState) {
+      throw Error("No state in cache for finalized checkpoint state epoch #" + finalized.epoch);
+    }
+    await this.db.stateArchive.put(finalizedState.slot, finalizedState);
+    // don't delete states before the finalized state, auto-prune will take care of it
+    this.logger.verbose("Archive states completed", {finalizedEpoch: finalized.epoch});
   }
 }
 
 /**
  * Keeps first epoch per interval of persistEveryEpochs, deletes the rest
  */
-export function computeStateSlotsToDelete(storedStateSlots: number[], persistEveryEpochs: number): number[] {
-  const persistEverySlots = persistEveryEpochs * SLOTS_PER_EPOCH;
-  const intervalsWithStates = new Set<number>();
-  const stateSlotsToDelete = new Set<number>();
-
-  for (const slot of storedStateSlots) {
-    const interval = Math.floor(slot / persistEverySlots);
-    if (intervalsWithStates.has(interval)) {
-      stateSlotsToDelete.add(slot);
+export function computeEpochsToDelete(storedEpochs: number[], persistEveryEpochs: number): number[] {
+  const epochBuckets = new Set<number>();
+  const toDelete = new Set<number>();
+  for (const epoch of storedEpochs) {
+    const epochBucket = epoch - (epoch % persistEveryEpochs);
+    if (epochBuckets.has(epochBucket)) {
+      toDelete.add(epoch);
     } else {
-      intervalsWithStates.add(interval);
+      epochBuckets.add(epochBucket);
     }
   }
 
-  return Array.from(stateSlotsToDelete.values());
+  return Array.from(toDelete.values());
 }

@@ -49,7 +49,7 @@ import {
   OpPool,
 } from "./opPools/index.js";
 import {LightClientServer} from "./lightClient/index.js";
-import {archiveBlocks, maybeArchiveState, updateBackfillRange} from "./archiver/index.js";
+import {Archiver} from "./archiver/index.js";
 import {PrepareNextSlotScheduler} from "./prepareNextSlot.js";
 import {ReprocessController} from "./reprocess.js";
 import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
@@ -108,6 +108,7 @@ export class BeaconChain implements IBeaconChain {
   protected readonly blockProcessor: BlockProcessor;
   protected readonly db: IBeaconDb;
   protected readonly metrics: IMetrics | null;
+  private readonly archiver: Archiver;
   private abortController = new AbortController();
   private successfulExchangeTransition = false;
   private readonly exchangeTransitionConfigurationEverySlots: number;
@@ -227,6 +228,7 @@ export class BeaconChain implements IBeaconChain {
     this.emitter = emitter;
     this.lightClientServer = lightClientServer;
 
+    this.archiver = new Archiver(db, this, logger, signal, opts);
     // always run PrepareNextSlotScheduler except for fork_choice spec tests
     if (!opts?.disablePrepareNextSlot) {
       new PrepareNextSlotScheduler(this, this.config, metrics, this.logger, signal);
@@ -275,14 +277,8 @@ export class BeaconChain implements IBeaconChain {
 
   /** Persist in-memory data to the DB. Call at least once before stopping the process */
   async persistToDisk(): Promise<void> {
+    await this.archiver.persistToDisk();
     await this.opPool.toPersisted(this.db);
-
-    // TODO: Is this necessary? We archive the current finalized state on finalization
-    // TODO: Should it error if the state is not available? This is a shutdown sequence, nothing todo
-    const finalizedState = this.checkpointStateCache.get(this.forkChoice.getFinalizedCheckpoint());
-    if (finalizedState) {
-      await this.db.stateArchive.put(finalizedState.slot, finalizedState);
-    }
   }
 
   getHeadState(): CachedBeaconStateAllForks {
@@ -561,68 +557,6 @@ export class BeaconChain implements IBeaconChain {
     if (headState) {
       this.opPool.pruneAll(headState);
     }
-
-    if (!this.opts.disableArchiveOnCheckpoint) {
-      // Archive state and blocks
-      // TODO: When is the best time to perform this actions?
-      // TODO: Only perform one archive at a time
-      this.archiveFinalizedStateAndBlocks(cp).catch((e) => {
-        this.logger.error("Error processing finalized checkpoint", {epoch: cp.epoch}, e as Error);
-      });
-    }
-  }
-
-  private async archiveFinalizedStateAndBlocks(finalized: CheckpointWithHex): Promise<void> {
-    const finalizedEpoch = finalized.epoch;
-    const finalizedBlock = this.forkChoice.getBlockHex(finalized.rootHex);
-    this.logger.verbose("Start processing finalized checkpoint", {epoch: finalizedEpoch});
-
-    // Use fork choice to determine the blocks to archive and delete
-    const finalizedCanonicalBlocks = this.forkChoice.getAllAncestorBlocks(finalized.rootHex);
-    const finalizedNonCanonicalBlocks = this.forkChoice.getAllNonAncestorBlocks(finalized.rootHex);
-    // After capturing the list of finalized canonical and non-canonical blocks,
-    // prune fork-choice before running any async task
-    this.forkChoice.prune(finalized.rootHex);
-
-    // Get finalize state, then prune caches immediately to release memory
-    const finalizedState = this.checkpointStateCache.get(finalized);
-    this.checkpointStateCache.pruneFinalized(finalizedEpoch);
-    this.stateCache.deleteAllBeforeEpoch(finalizedEpoch);
-
-    // Move canonical blocks to cold db, delete non-canonical blocks
-    await archiveBlocks(this.db, this.lightClientServer, this.logger, finalized, {
-      finalizedCanonicalBlocks,
-      finalizedNonCanonicalBlocks,
-    });
-
-    if (finalizedState) {
-      // should be after ArchiveBlocksTask to handle restart cleanly
-      const {archivedState, deletedSlots} = await maybeArchiveState(this.db, finalizedState, finalized);
-      if (archivedState) {
-        this.logger.verbose("Archived finalized state", {
-          epoch: finalized.epoch,
-          deletedEpochs: deletedSlots.map((slot) => computeEpochAtSlot(slot)).join(","),
-        });
-      } else {
-        this.logger.verbose("Archive finalized state skipped", {epoch: finalized.epoch});
-      }
-    } else {
-      this.logger.error(`No state in cache for finalized checkpoint state epoch ${finalized.epoch}`);
-    }
-
-    if (finalizedBlock) {
-      await updateBackfillRange(
-        {db: this.db, logger: this.logger},
-        finalizedBlock,
-        finalized,
-        this.anchorStateLatestBlockSlot
-      );
-    } else {
-      // Should never happen, or this.forkChoice.prune(finalized.rootHex) will throw before getting here
-      this.logger.error(`Finalized block root not found in fork-choice ${finalized.rootHex}`);
-    }
-
-    this.logger.verbose("Finish processing finalized checkpoint", {epoch: finalizedEpoch});
   }
 
   /**
