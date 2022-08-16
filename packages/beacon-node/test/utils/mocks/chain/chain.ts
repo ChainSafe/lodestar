@@ -6,6 +6,7 @@ import {IBeaconConfig} from "@lodestar/config";
 import {BeaconStateAllForks, CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {CheckpointWithHex, IForkChoice, ProtoBlock, ExecutionStatus} from "@lodestar/fork-choice";
 import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
+import {ILogger} from "@lodestar/utils";
 
 import {ChainEventEmitter, IBeaconChain} from "../../../../src/chain/index.js";
 import {IBeaconClock} from "../../../../src/chain/clock/interface.js";
@@ -40,6 +41,7 @@ import {SeenAggregatedAttestations} from "../../../../src/chain/seenCache/seenAg
 import {SeenBlockAttesters} from "../../../../src/chain/seenCache/seenBlockAttesters.js";
 import {BeaconProposerCache} from "../../../../src/chain/beaconProposerCache.js";
 import {CheckpointBalancesCache} from "../../../../src/chain/balancesCache.js";
+import {IChainOptions} from "../../../../src/chain/options.js";
 
 /* eslint-disable @typescript-eslint/no-empty-function */
 
@@ -57,6 +59,13 @@ export class MockBeaconChain implements IBeaconChain {
   readonly eth1 = new Eth1ForBlockProductionDisabled();
   readonly executionEngine = new ExecutionEngineDisabled();
   readonly config: IBeaconConfig;
+  readonly logger: ILogger;
+  readonly opts: IChainOptions = {
+    persistInvalidSszObjectsDir: "",
+    proposerBoostEnabled: false,
+    safeSlotsToImportOptimistically: 0,
+    defaultFeeRecipient: "0x0000000000000000000000000000000000000000",
+  };
   readonly anchorStateLatestBlockSlot: Slot;
 
   readonly bls: IBlsVerifier;
@@ -96,7 +105,7 @@ export class MockBeaconChain implements IBeaconChain {
   private abortController: AbortController;
 
   constructor({genesisTime, chainId, networkId, state, config}: IMockChainParams) {
-    const logger = testLogger();
+    this.logger = testLogger();
     this.genesisTime = genesisTime ?? state.genesisTime;
     this.genesisValidatorsRoot = state.genesisValidatorsRoot;
     this.bls = sinon.createStubInstance(BlsSingleThreadVerifier);
@@ -126,13 +135,16 @@ export class MockBeaconChain implements IBeaconChain {
       metrics: null,
       emitter: this.emitter,
     });
-    this.lightClientServer = new LightClientServer({
-      config: this.config,
-      db: db,
-      metrics: null,
-      emitter: this.emitter,
-      logger,
-    });
+    this.lightClientServer = new LightClientServer(
+      {},
+      {
+        config: this.config,
+        db: db,
+        metrics: null,
+        emitter: this.emitter,
+        logger: this.logger,
+      }
+    );
     this.reprocessController = new ReprocessController(null);
   }
 
@@ -214,6 +226,10 @@ function mockForkChoice(): IForkChoice {
     justifiedRoot: rootHex,
     finalizedEpoch: 0,
     finalizedRoot: rootHex,
+    unrealizedJustifiedEpoch: 0,
+    unrealizedJustifiedRoot: rootHex,
+    unrealizedFinalizedEpoch: 0,
+    unrealizedFinalizedRoot: rootHex,
 
     ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
   };
@@ -252,6 +268,7 @@ function mockForkChoice(): IForkChoice {
     getBlockSummariesAtSlot: () => [block],
     getCommonAncestorDistance: () => null,
     validateLatestHash: () => {},
+    findAttesterDependentRoot: () => block.blockRoot,
   };
 }
 

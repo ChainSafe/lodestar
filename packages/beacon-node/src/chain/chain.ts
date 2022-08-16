@@ -1,7 +1,3 @@
-/**
- * @module chain
- */
-
 import path from "node:path";
 import {
   BeaconStateAllForks,
@@ -11,22 +7,25 @@ import {
   createCachedBeaconState,
   EffectiveBalanceIncrements,
   getEffectiveBalanceIncrementsZeroInactive,
+  isCachedBeaconState,
   Index2PubkeyCache,
   PubkeyIndexMap,
 } from "@lodestar/state-transition";
 import {IBeaconConfig} from "@lodestar/config";
 import {allForks, UintNum64, Root, phase0, Slot, RootHex, Epoch, ValidatorIndex} from "@lodestar/types";
-import {CheckpointWithHex, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
+import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {ILogger, toHex} from "@lodestar/utils";
 import {CompositeTypeAny, fromHexString, TreeView, Type} from "@chainsafe/ssz";
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
 import {IMetrics} from "../metrics/index.js";
+import {bytesToData, numToQuantity} from "../eth1/provider/utils.js";
+import {wrapError} from "../util/wrapError.js";
 import {IEth1ForBlockProduction} from "../eth1/index.js";
-import {IExecutionEngine, IExecutionBuilder} from "../execution/index.js";
+import {IExecutionEngine, IExecutionBuilder, TransitionConfigurationV1} from "../execution/index.js";
 import {ensureDir, writeIfNotExist} from "../util/file.js";
 import {CheckpointStateCache, StateContextCache} from "./stateCache/index.js";
-import {BlockProcessor, PartiallyVerifiedBlockFlags} from "./blocks/index.js";
+import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
 import {IBeaconClock, LocalClock} from "./clock/index.js";
 import {ChainEventEmitter} from "./emitter.js";
 import {IBeaconChain, ProposerPreparationData} from "./interface.js";
@@ -67,15 +66,17 @@ export class BeaconChain implements IBeaconChain {
   readonly executionBuilder?: IExecutionBuilder;
   // Expose config for convenience in modularized functions
   readonly config: IBeaconConfig;
+  readonly logger: ILogger;
+
   readonly anchorStateLatestBlockSlot: Slot;
 
-  bls: IBlsVerifier;
-  forkChoice: IForkChoice;
-  clock: IBeaconClock;
-  emitter: ChainEventEmitter;
-  stateCache: StateContextCache;
-  checkpointStateCache: CheckpointStateCache;
-  regen: IStateRegenerator;
+  readonly bls: IBlsVerifier;
+  readonly forkChoice: IForkChoice;
+  readonly clock: IBeaconClock;
+  readonly emitter: ChainEventEmitter;
+  readonly stateCache: StateContextCache;
+  readonly checkpointStateCache: CheckpointStateCache;
+  readonly regen: IStateRegenerator;
   readonly lightClientServer: LightClientServer;
   readonly reprocessController: ReprocessController;
 
@@ -102,14 +103,15 @@ export class BeaconChain implements IBeaconChain {
 
   readonly beaconProposerCache: BeaconProposerCache;
   readonly checkpointBalancesCache: CheckpointBalancesCache;
+  readonly opts: IChainOptions;
 
   protected readonly blockProcessor: BlockProcessor;
   protected readonly db: IBeaconDb;
-  protected readonly logger: ILogger;
   protected readonly metrics: IMetrics | null;
-  protected readonly opts: IChainOptions;
   private readonly archiver: Archiver;
   private abortController = new AbortController();
+  private successfulExchangeTransition = false;
+  private readonly exchangeTransitionConfigurationEverySlots: number;
 
   constructor(
     opts: IChainOptions,
@@ -117,6 +119,7 @@ export class BeaconChain implements IBeaconChain {
       config,
       db,
       logger,
+      clock,
       metrics,
       anchorState,
       eth1,
@@ -126,6 +129,8 @@ export class BeaconChain implements IBeaconChain {
       config: IBeaconConfig;
       db: IBeaconDb;
       logger: ILogger;
+      /** Used for testing to supply fake clock */
+      clock?: IBeaconClock;
       metrics: IMetrics | null;
       anchorState: BeaconStateAllForks;
       eth1: IEth1ForBlockProduction;
@@ -144,6 +149,10 @@ export class BeaconChain implements IBeaconChain {
     this.eth1 = eth1;
     this.executionEngine = executionEngine;
     this.executionBuilder = executionBuilder;
+    // From https://github.com/ethereum/execution-apis/blob/main/src/engine/specification.md#specification-3
+    // > Consensus Layer client software SHOULD poll this endpoint every 60 seconds.
+    // Align to a multiple of SECONDS_PER_SLOT for nicer logs
+    this.exchangeTransitionConfigurationEverySlots = Math.floor(60 / this.config.SECONDS_PER_SLOT);
 
     const signal = this.abortController.signal;
     const emitter = new ChainEventEmitter();
@@ -152,26 +161,34 @@ export class BeaconChain implements IBeaconChain {
       ? new BlsSingleThreadVerifier({metrics})
       : new BlsMultiThreadWorkerPool(opts, {logger, metrics});
 
-    const clock = new LocalClock({config, emitter, genesisTime: this.genesisTime, signal});
+    if (!clock) clock = new LocalClock({config, emitter, genesisTime: this.genesisTime, signal});
     const stateCache = new StateContextCache({metrics});
     const checkpointStateCache = new CheckpointStateCache({metrics});
 
     this.seenAggregatedAttestations = new SeenAggregatedAttestations(metrics);
     this.seenContributionAndProof = new SeenContributionAndProof(metrics);
 
-    // Initialize single global instance of state caches
-    this.pubkey2index = new PubkeyIndexMap();
-    this.index2pubkey = [];
-
     this.beaconProposerCache = new BeaconProposerCache(opts);
     this.checkpointBalancesCache = new CheckpointBalancesCache();
 
     // Restore state caches
-    const cachedState = createCachedBeaconState(anchorState, {
-      config,
-      pubkey2index: this.pubkey2index,
-      index2pubkey: this.index2pubkey,
-    });
+    // anchorState may already by a CachedBeaconState. If so, don't create the cache again, since deserializing all
+    // pubkeys takes ~30 seconds for 350k keys (mainnet 2022Q2).
+    // When the BeaconStateCache is created in eth1 genesis builder it may be incorrect. Until we can ensure that
+    // it's safe to re-use _ANY_ BeaconStateCache, this option is disabled by default and only used in tests.
+    const cachedState =
+      isCachedBeaconState(anchorState) && opts.skipCreateStateCacheIfAvailable
+        ? anchorState
+        : createCachedBeaconState(anchorState, {
+            config,
+            pubkey2index: new PubkeyIndexMap(),
+            index2pubkey: [],
+          });
+
+    // Persist single global instance of state caches
+    this.pubkey2index = cachedState.epochCtx.pubkey2index;
+    this.index2pubkey = cachedState.epochCtx.index2pubkey;
+
     const {checkpoint} = computeAnchorCheckpoint(config, anchorState);
     stateCache.add(cachedState);
     checkpointStateCache.add(checkpoint, cachedState);
@@ -181,7 +198,7 @@ export class BeaconChain implements IBeaconChain {
       emitter,
       clock.currentSlot,
       cachedState,
-      opts.proposerBoostEnabled,
+      opts,
       this.justifiedBalancesGetter.bind(this),
       metrics
     );
@@ -196,37 +213,11 @@ export class BeaconChain implements IBeaconChain {
       signal,
     });
 
-    const lightClientServer = new LightClientServer({config, db, metrics, emitter, logger});
+    const lightClientServer = new LightClientServer(opts, {config, db, metrics, emitter, logger});
 
     this.reprocessController = new ReprocessController(this.metrics);
 
-    this.blockProcessor = new BlockProcessor(
-      {
-        clock,
-        bls,
-        regen,
-        executionEngine,
-        eth1,
-        db,
-        forkChoice,
-        lightClientServer,
-        stateCache,
-        checkpointStateCache,
-        seenAggregatedAttestations: this.seenAggregatedAttestations,
-        seenBlockAttesters: this.seenBlockAttesters,
-        beaconProposerCache: this.beaconProposerCache,
-        checkpointBalancesCache: this.checkpointBalancesCache,
-        reprocessController: this.reprocessController,
-        emitter,
-        config,
-        logger,
-        metrics,
-        persistInvalidSszValue: this.persistInvalidSszValue.bind(this),
-        persistInvalidSszView: this.persistInvalidSszView.bind(this),
-      },
-      opts,
-      signal
-    );
+    this.blockProcessor = new BlockProcessor(this, metrics, opts, signal);
 
     this.forkChoice = forkChoice;
     this.clock = clock;
@@ -238,7 +229,10 @@ export class BeaconChain implements IBeaconChain {
     this.lightClientServer = lightClientServer;
 
     this.archiver = new Archiver(db, this, logger, signal, opts);
-    new PrepareNextSlotScheduler(this, this.config, metrics, this.logger, signal);
+    // always run PrepareNextSlotScheduler except for fork_choice spec tests
+    if (!opts?.disablePrepareNextSlot) {
+      new PrepareNextSlotScheduler(this, this.config, metrics, this.logger, signal);
+    }
 
     metrics?.opPool.aggregatedAttestationPoolSize.addCollect(() => this.onScrapeMetrics());
 
@@ -315,12 +309,12 @@ export class BeaconChain implements IBeaconChain {
     return await this.db.block.get(fromHexString(block.blockRoot));
   }
 
-  async processBlock(block: allForks.SignedBeaconBlock, flags?: PartiallyVerifiedBlockFlags): Promise<void> {
-    return await this.blockProcessor.processBlockJob({...flags, block});
+  async processBlock(block: allForks.SignedBeaconBlock, opts?: ImportBlockOpts): Promise<void> {
+    return await this.blockProcessor.processBlocksJob([block], opts);
   }
 
-  async processChainSegment(blocks: allForks.SignedBeaconBlock[], flags?: PartiallyVerifiedBlockFlags): Promise<void> {
-    return await this.blockProcessor.processChainSegment(blocks.map((block) => ({...flags, block})));
+  async processChainSegment(blocks: allForks.SignedBeaconBlock[], opts?: ImportBlockOpts): Promise<void> {
+    return await this.blockProcessor.processBlocksJob(blocks, opts);
   }
 
   getStatus(): phase0.Status {
@@ -502,6 +496,13 @@ export class BeaconChain implements IBeaconChain {
     this.syncCommitteeMessagePool.prune(slot);
     this.seenSyncCommitteeMessages.prune(slot);
     this.reprocessController.onSlot(slot);
+
+    if (isFinite(this.config.BELLATRIX_FORK_EPOCH) && slot % this.exchangeTransitionConfigurationEverySlots === 0) {
+      this.exchangeTransitionConfiguration().catch((e) => {
+        // Should never throw
+        this.logger.error("Error on exchangeTransitionConfiguration", {}, e as Error);
+      });
+    }
   }
 
   private onClockEpoch(epoch: Epoch): void {
@@ -510,6 +511,17 @@ export class BeaconChain implements IBeaconChain {
     this.seenAggregatedAttestations.prune(epoch);
     this.seenBlockAttesters.prune(epoch);
     this.beaconProposerCache.prune(epoch);
+
+    // Poll for merge block in the background to speed-up block production. Only if:
+    // - after BELLATRIX_FORK_EPOCH
+    // - Beacon node synced
+    // - head state not isMergeTransitionComplete
+    if (this.config.BELLATRIX_FORK_EPOCH - epoch < 1) {
+      const head = this.forkChoice.getHead();
+      if (epoch - computeEpochAtSlot(head.slot) < 5 && head.executionStatus === ExecutionStatus.PreMerge) {
+        this.eth1.startPollingMergeBlock();
+      }
+    }
   }
 
   private onForkChoiceHead(head: ProtoBlock): void {
@@ -544,6 +556,52 @@ export class BeaconChain implements IBeaconChain {
     const headState = this.stateCache.get(this.forkChoice.getHead().stateRoot);
     if (headState) {
       this.opPool.pruneAll(headState);
+    }
+  }
+
+  /**
+   * perform heart beat for EL lest it logs warning that CL is not connected
+   */
+  private async exchangeTransitionConfiguration(): Promise<void> {
+    const clConfig: TransitionConfigurationV1 = {
+      terminalTotalDifficulty: numToQuantity(this.config.TERMINAL_TOTAL_DIFFICULTY),
+      terminalBlockHash: bytesToData(this.config.TERMINAL_BLOCK_HASH),
+      /** terminalBlockNumber has to be set to zero for now as per specs */
+      terminalBlockNumber: numToQuantity(0),
+    };
+
+    const elConfigRes = await wrapError(this.executionEngine.exchangeTransitionConfigurationV1(clConfig));
+
+    if (elConfigRes.err) {
+      // Note: Will throw an error if:
+      // - EL endpoint is offline, unreachable, port not exposed, etc
+      // - JWT secret is not properly configured
+      // - If there is a missmatch in configuration with Geth, see https://github.com/ethereum/go-ethereum/blob/0016eb7eeeb42568c8c20d0cb560ddfc9a938fad/eth/catalyst/api.go#L301
+      this.successfulExchangeTransition = false;
+
+      this.logger.warn("Could not validate transition configuration with execution client", {}, elConfigRes.err);
+    } else {
+      // Note: This code is useless when connected to Geth. If there's a configuration mismatch Geth returns an
+      // error instead of its own transition configuration, so we can't do this comparision.
+      const elConfig = elConfigRes.result;
+      const keysToCheck: (keyof TransitionConfigurationV1)[] = ["terminalTotalDifficulty", "terminalBlockHash"];
+      const errors: string[] = [];
+
+      for (const key of keysToCheck) {
+        if (elConfig[key] !== clConfig[key]) {
+          errors.push(`different ${key} (cl ${clConfig[key]} el ${elConfig[key]})`);
+        }
+      }
+
+      if (errors.length > 0) {
+        this.logger.warn(`Transition configuration mismatch: ${errors.join(", ")}`);
+      } else {
+        // Only log once per successful call
+        if (!this.successfulExchangeTransition) {
+          this.logger.info("Validated transition configuration with execution client", clConfig);
+          this.successfulExchangeTransition = true;
+        }
+      }
     }
   }
 

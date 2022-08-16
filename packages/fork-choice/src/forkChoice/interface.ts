@@ -69,6 +69,7 @@ export interface IForkChoice {
     block: allForks.BeaconBlock,
     state: CachedBeaconStateAllForks,
     blockDelaySec: number,
+    currentSlot: Slot,
     executionStatus: ExecutionStatus
   ): void;
   /**
@@ -154,6 +155,8 @@ export interface IForkChoice {
    * Optimistic sync validate till validated latest hash, invalidate any decendant branch if invalidated branch decendant provided
    */
   validateLatestHash(latestValidHash: RootHex, invalidateTillHash: RootHex | null): void;
+  /** Find attester dependent root of a block */
+  findAttesterDependentRoot(headBlockHash: Root): RootHex | null;
 }
 
 /** Same to the PowBlock but we want RootHex to work with forkchoice conveniently */

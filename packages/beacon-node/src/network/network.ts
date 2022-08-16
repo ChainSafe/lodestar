@@ -1,7 +1,3 @@
-/**
- * @module network
- */
-
 import {Libp2p} from "libp2p";
 import {DefaultConnectionManager} from "libp2p/connection-manager";
 import {Connection} from "@libp2p/interface-connection";

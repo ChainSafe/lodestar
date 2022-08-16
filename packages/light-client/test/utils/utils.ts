@@ -1,23 +1,23 @@
+import bls from "@chainsafe/bls/switchable";
 import {PointFormat, PublicKey, SecretKey} from "@chainsafe/bls/types";
-import bls from "@chainsafe/bls";
+import {hash} from "@chainsafe/persistent-merkle-tree";
+import {BitArray, fromHexString} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {IBeaconConfig} from "@lodestar/config";
 import {
   DOMAIN_SYNC_COMMITTEE,
   EPOCHS_PER_SYNC_COMMITTEE_PERIOD,
-  FINALIZED_ROOT_INDEX,
   FINALIZED_ROOT_DEPTH,
-  NEXT_SYNC_COMMITTEE_INDEX,
+  FINALIZED_ROOT_INDEX,
   NEXT_SYNC_COMMITTEE_DEPTH,
+  NEXT_SYNC_COMMITTEE_INDEX,
   SLOTS_PER_EPOCH,
   SYNC_COMMITTEE_SIZE,
 } from "@lodestar/params";
 import {altair, phase0, Slot, ssz, SyncPeriod} from "@lodestar/types";
-import {hash} from "@chainsafe/persistent-merkle-tree";
-import {BitArray, fromHexString} from "@chainsafe/ssz";
-import {SyncCommitteeFast} from "../src/types.js";
-import {computeSigningRoot} from "../src/utils/domain.js";
-import {getLcLoggerConsole} from "../src/utils/logger.js";
+import {SyncCommitteeFast} from "../../src/types.js";
+import {computeSigningRoot} from "../../src/utils/domain.js";
+import {getLcLoggerConsole} from "../../src/utils/logger.js";
 
 const CURRENT_SYNC_COMMITTEE_INDEX = 22;
 const CURRENT_SYNC_COMMITTEE_DEPTH = 5;
@@ -170,7 +170,10 @@ export function computeLightclientUpdate(config: IBeaconConfig, period: SyncPeri
  */
 export function computeLightClientSnapshot(
   period: SyncPeriod
-): {snapshot: routes.lightclient.LightclientSnapshotWithProof; checkpointRoot: Uint8Array} {
+): {
+  snapshot: routes.lightclient.LightclientSnapshotWithProof;
+  checkpointRoot: Uint8Array;
+} {
   const currentSyncCommittee = getInteropSyncCommittee(period).syncCommittee;
 
   const {root: headerStateRoot, proof: currentSyncCommitteeBranch} = computeMerkleBranch(

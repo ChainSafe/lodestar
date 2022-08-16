@@ -28,7 +28,7 @@ describe("LevelDB controller", () => {
     await db.put(key, value);
     expect(await db.get(key)).to.be.deep.equal(value);
     await db.delete(key);
-    expect(await db.get(key)).to.be.null;
+    expect(await db.get(key)).to.equal(null);
   });
 
   it("test batchPut", async () => {

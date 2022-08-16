@@ -1,8 +1,4 @@
 /**
- * @module util/math
- */
-
-/**
  * Return the min number between two big numbers.
  */
 export function bigIntMin(a: bigint, b: bigint): bigint {

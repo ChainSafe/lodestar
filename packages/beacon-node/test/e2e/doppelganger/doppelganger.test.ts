@@ -56,7 +56,11 @@ describe.skip("doppelganger / doppelganger test", function () {
 
     const bn = await getDevBeaconNode({
       params: beaconParams,
-      options: {sync: {isSingleNode: true}, api: {rest: {enabled: false}}},
+      options: {
+        sync: {isSingleNode: true},
+        api: {rest: {enabled: false}},
+        chain: {blsVerifyAllMainThread: true},
+      },
       validatorCount,
       logger: loggerNodeA,
       genesisTime: config?.genesisTime,

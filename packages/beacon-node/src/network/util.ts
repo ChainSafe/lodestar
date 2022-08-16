@@ -1,8 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/**
- * @module network
- */
-
 import {networkInterfaces} from "node:os";
 import {PeerId} from "@libp2p/interface-peer-id";
 import {Multiaddr} from "@multiformats/multiaddr";
@@ -10,6 +5,8 @@ import {Connection} from "@libp2p/interface-connection";
 import {ConnectionManager} from "@libp2p/interface-connection-manager";
 import {DefaultConnectionManager} from "libp2p/connection-manager";
 import {ENR} from "@chainsafe/discv5";
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 // peers
 

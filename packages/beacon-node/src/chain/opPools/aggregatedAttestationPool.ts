@@ -12,8 +12,11 @@ import {
   CachedBeaconStatePhase0,
   CachedBeaconStateAltair,
   computeEpochAtSlot,
+  computeStartSlotAtEpoch,
+  getBlockRootAtSlot,
 } from "@lodestar/state-transition";
 import {toHexString} from "@chainsafe/ssz";
+import {IForkChoice} from "@lodestar/fork-choice";
 import {MapDef} from "../../util/map.js";
 import {intersectUint8Arrays, IntersectResult} from "../../util/bitArray.js";
 import {pruneBySlot} from "./utils.js";
@@ -102,7 +105,7 @@ export class AggregatedAttestationPool {
   /**
    * Get attestations to be included in a block. Returns $MAX_ATTESTATIONS items
    */
-  getAttestationsForBlock(state: CachedBeaconStateAllForks): phase0.Attestation[] {
+  getAttestationsForBlock(forkChoice: IForkChoice, state: CachedBeaconStateAllForks): phase0.Attestation[] {
     const stateSlot = state.slot;
     const stateEpoch = state.epochCtx.epoch;
     const statePrevEpoch = stateEpoch - 1;
@@ -112,7 +115,6 @@ export class AggregatedAttestationPool {
     const attestationsByScore: AttestationWithScore[] = [];
 
     const slots = Array.from(this.attestationGroupByDataHashBySlot.keys()).sort((a, b) => b - a);
-    const {previousJustifiedCheckpoint, currentJustifiedCheckpoint} = state;
     slot: for (const slot of slots) {
       const attestationGroupByDataHash = this.attestationGroupByDataHashBySlot.get(slot);
       // should not happen
@@ -132,14 +134,7 @@ export class AggregatedAttestationPool {
 
       const attestationGroups = Array.from(attestationGroupByDataHash.values());
       for (const attestationGroup of attestationGroups) {
-        if (
-          !isValidAttestationData(
-            stateEpoch,
-            previousJustifiedCheckpoint,
-            currentJustifiedCheckpoint,
-            attestationGroup.data
-          )
-        ) {
+        if (!isValidAttestationData(forkChoice, state, attestationGroup.data)) {
           continue;
         }
         const participation = getParticipation(epoch, attestationGroup.committee);
@@ -403,23 +398,49 @@ export function extractParticipation(
 }
 
 /**
- * The state transition accepts incorrect target and head attestations.
- * We only need to validate the source checkpoint.
+ * Do those validations:
+ *   - Validate the source checkpoint
+ *   - Since we validated attestation's signature in gossip validation function,
+ *     we only need to validate the shuffling of attestation
+ *     is compatible to this state.
+ *     (see https://github.com/ChainSafe/lodestar/issues/4333)
  * @returns
  */
 export function isValidAttestationData(
-  currentEpoch: Epoch,
-  previousJustifiedCheckpoint: phase0.Checkpoint,
-  currentJustifiedCheckpoint: phase0.Checkpoint,
+  forkChoice: IForkChoice,
+  state: CachedBeaconStateAllForks,
   data: phase0.AttestationData
 ): boolean {
+  const {previousJustifiedCheckpoint, currentJustifiedCheckpoint} = state;
   let justifiedCheckpoint;
-  if (data.target.epoch === currentEpoch) {
+  const stateEpoch = state.epochCtx.epoch;
+  const targetEpoch = data.target.epoch;
+
+  if (targetEpoch === stateEpoch) {
     justifiedCheckpoint = currentJustifiedCheckpoint;
-  } else {
+  } else if (targetEpoch === stateEpoch - 1) {
     justifiedCheckpoint = previousJustifiedCheckpoint;
+  } else {
+    return false;
   }
-  return ssz.phase0.Checkpoint.equals(data.source, justifiedCheckpoint);
+
+  if (!ssz.phase0.Checkpoint.equals(data.source, justifiedCheckpoint)) return false;
+
+  // Shuffling can't have changed if we're in the first few epochs
+  if (stateEpoch < 2) {
+    return true;
+  }
+  // Otherwise the shuffling is determined by the block at the end of the target epoch
+  // minus the shuffling lookahead (usually 2). We call this the "pivot".
+  const pivotSlot = computeStartSlotAtEpoch(targetEpoch - 1) - 1;
+  const statePivotBlockRoot = toHexString(getBlockRootAtSlot(state, pivotSlot));
+
+  // Use fork choice's view of the block DAG to quickly evaluate whether the attestation's
+  // pivot block is the same as the current state's pivot block. If it is, then the
+  // attestation's shuffling is the same as the current state's.
+  // To account for skipped slots, find the first block at *or before* the pivot slot.
+  const pivotBlockRoot = forkChoice.findAttesterDependentRoot(data.beaconBlockRoot);
+  return pivotBlockRoot === statePivotBlockRoot;
 }
 
 function flagIsTimelySource(flag: number): boolean {

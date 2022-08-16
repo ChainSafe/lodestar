@@ -51,6 +51,6 @@ describe("snappy frames uncompress", function () {
   it("should return null if not enough data", function () {
     const decompress = new SnappyFramesUncompress();
 
-    expect(decompress.uncompress(new Uint8ArrayList(Buffer.alloc(3, 1)))).to.be.null;
+    expect(decompress.uncompress(new Uint8ArrayList(Buffer.alloc(3, 1)))).to.equal(null);
   });
 });

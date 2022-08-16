@@ -1,7 +1,3 @@
-/**
- * @module network/gossip
- */
-
 import {EventEmitter} from "events";
 import {Libp2p} from "libp2p";
 import {Message} from "@libp2p/interface-pubsub";

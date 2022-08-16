@@ -1,6 +1,3 @@
-/**
- * @module network
- */
 import {Libp2p} from "libp2p";
 import {PeerId} from "@libp2p/interface-peer-id";
 import {Connection, Stream} from "@libp2p/interface-connection";

@@ -6,12 +6,16 @@ export interface IChainArgs {
   "chain.blsVerifyAllMainThread": boolean;
   "chain.disableBlsBatchVerify": boolean;
   "chain.persistInvalidSszObjects": boolean;
+  // No need to define chain.persistInvalidSszObjects as part of IChainArgs
+  // as this is defined as part of IBeaconPaths
+  // "chain.persistInvalidSszObjectsDir": string;
   "chain.proposerBoostEnabled": boolean;
+  "chain.disableImportExecutionFcU": boolean;
+  "chain.computeUnrealized": boolean;
   "chain.defaultFeeRecipient": string;
   "chain.assertCorrectProgressiveBalances": boolean;
+  "chain.maxSkipSlots": number;
   "safe-slots-to-import-optimistically": number;
-  // this is defined as part of IBeaconPaths
-  // "chain.persistInvalidSszObjectsDir": string;
 }
 
 export function parseArgs(args: IChainArgs): IBeaconNodeOptions["chain"] {
@@ -23,8 +27,11 @@ export function parseArgs(args: IChainArgs): IBeaconNodeOptions["chain"] {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
     persistInvalidSszObjectsDir: undefined as any,
     proposerBoostEnabled: args["chain.proposerBoostEnabled"],
+    disableImportExecutionFcU: args["chain.disableImportExecutionFcU"],
+    computeUnrealized: args["chain.computeUnrealized"],
     defaultFeeRecipient: args["chain.defaultFeeRecipient"],
     assertCorrectProgressiveBalances: args["chain.assertCorrectProgressiveBalances"],
+    maxSkipSlots: args["chain.maxSkipSlots"],
     safeSlotsToImportOptimistically: args["safe-slots-to-import-optimistically"],
   };
 }
@@ -70,11 +77,32 @@ Will double processing times. Use only for debugging purposes.",
     group: "chain",
   },
 
+  "chain.disableImportExecutionFcU": {
+    hidden: true,
+    type: "boolean",
+    description: "Disable issuing FcUs to the execution engine on block import",
+    group: "chain",
+  },
+
+  "chain.computeUnrealized": {
+    type: "boolean",
+    description: "Compute unrealized checkpoints and use it in fork choice or not",
+    defaultDescription: String(defaultOptions.chain.computeUnrealized),
+    group: "chain",
+  },
+
   "chain.defaultFeeRecipient": {
+    type: "string",
     description:
       "Specify fee recipient default for collecting the EL block fees and rewards (a hex string representing 20 bytes address: ^0x[a-fA-F0-9]{40}$) in case validator fails to update for a validator index before calling produceBlock.",
     defaultDescription: defaultOptions.chain.defaultFeeRecipient,
-    type: "string",
+    group: "chain",
+  },
+
+  "chain.maxSkipSlots": {
+    hidden: true,
+    type: "number",
+    description: "Refuse to skip more than this many slots when processing a block or attestation",
     group: "chain",
   },
 

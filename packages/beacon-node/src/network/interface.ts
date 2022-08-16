@@ -1,6 +1,3 @@
-/**
- * @module network
- */
 import {Connection} from "@libp2p/interface-connection";
 import {Multiaddr} from "@multiformats/multiaddr";
 import {PeerId} from "@libp2p/interface-peer-id";

@@ -1,9 +1,9 @@
 import {config} from "@lodestar/config/default";
+import {ILogger} from "@lodestar/utils";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {Epoch, phase0, Slot} from "@lodestar/types";
+import {Epoch, phase0, Slot, ssz} from "@lodestar/types";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {linspace} from "../../../../src/util/numpy.js";
-import {generateEmptyBlock, generateEmptySignedBlock} from "../../../utils/block.js";
 import {SyncChain, SyncChainFns, ChainTarget} from "../../../../src/sync/range/chain.js";
 import {RangeSyncType} from "../../../../src/sync/utils/remoteSyncType.js";
 import {ZERO_HASH} from "../../../../src/constants/index.js";
@@ -52,6 +52,7 @@ describe("sync / range / chain", () => {
   const logger = testLogger();
   const ACCEPT_BLOCK = Buffer.alloc(96, 0);
   const REJECT_BLOCK = Buffer.alloc(96, 1);
+  const zeroBlockBody = ssz.phase0.BeaconBlockBody.defaultValue();
   const interval: NodeJS.Timeout | null = null;
 
   // eslint-disable-next-line @typescript-eslint/no-empty-function
@@ -81,7 +82,7 @@ describe("sync / range / chain", () => {
           const shouldReject = badBlocks?.has(i);
           if (shouldReject) badBlocks?.delete(i);
           blocks.push({
-            message: generateEmptyBlock(),
+            message: generateEmptyBlock(i),
             signature: shouldReject ? REJECT_BLOCK : ACCEPT_BLOCK,
           });
         }
@@ -97,7 +98,7 @@ describe("sync / range / chain", () => {
           startEpoch,
           target,
           syncType,
-          {processChainSegment, downloadBeaconBlocksByRange, reportPeer, onEnd},
+          logSyncChainFns(logger, {processChainSegment, downloadBeaconBlocksByRange, reportPeer, onEnd}),
           {config, logger}
         );
 
@@ -116,9 +117,16 @@ describe("sync / range / chain", () => {
 
     // eslint-disable-next-line @typescript-eslint/no-empty-function
     const processChainSegment: SyncChainFns["processChainSegment"] = async () => {};
-    const downloadBeaconBlocksByRange: SyncChainFns["downloadBeaconBlocksByRange"] = async () => [
-      generateEmptySignedBlock(),
-    ];
+    const downloadBeaconBlocksByRange: SyncChainFns["downloadBeaconBlocksByRange"] = async (peer, request) => {
+      const blocks: phase0.SignedBeaconBlock[] = [];
+      for (let i = request.startSlot; i < request.startSlot + request.count; i += request.step) {
+        blocks.push({
+          message: generateEmptyBlock(i),
+          signature: ACCEPT_BLOCK,
+        });
+      }
+      return blocks;
+    };
 
     const target: ChainTarget = {slot: computeStartSlotAtEpoch(targetEpoch), root: ZERO_HASH};
     const syncType = RangeSyncType.Finalized;
@@ -129,7 +137,7 @@ describe("sync / range / chain", () => {
         startEpoch,
         target,
         syncType,
-        {processChainSegment, downloadBeaconBlocksByRange, reportPeer, onEnd},
+        logSyncChainFns(logger, {processChainSegment, downloadBeaconBlocksByRange, reportPeer, onEnd}),
         {config, logger}
       );
 
@@ -141,4 +149,35 @@ describe("sync / range / chain", () => {
       initialSync.startSyncing(startEpoch);
     });
   });
+
+  function generateEmptyBlock(slot: Slot): phase0.BeaconBlock {
+    return {
+      slot,
+      proposerIndex: 0,
+      parentRoot: Buffer.alloc(32),
+      stateRoot: ZERO_HASH,
+      body: zeroBlockBody,
+    };
+  }
 });
+
+function logSyncChainFns(logger: ILogger, fns: SyncChainFns): SyncChainFns {
+  return {
+    processChainSegment(blocks, syncType) {
+      logger.debug("mock processChainSegment", {blocks: blocks.map((b) => b.message.slot).join(",")});
+      return fns.processChainSegment(blocks, syncType);
+    },
+    downloadBeaconBlocksByRange(peer, request) {
+      logger.debug("mock downloadBeaconBlocksByRange", request);
+      return fns.downloadBeaconBlocksByRange(peer, request);
+    },
+    reportPeer(peer, action, actionName) {
+      logger.debug("mock reportPeer", {peer: peer.toB58String(), action, actionName});
+      return fns.reportPeer(peer, action, actionName);
+    },
+    onEnd(err, target) {
+      logger.debug("mock onEnd", {target: target?.slot}, err ?? undefined);
+      return fns.onEnd(err, target);
+    },
+  };
+}

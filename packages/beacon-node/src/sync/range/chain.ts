@@ -1,29 +1,26 @@
 import {PeerId} from "@libp2p/interface-peer-id";
 import {Epoch, Root, Slot, phase0, allForks} from "@lodestar/types";
-import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {ErrorAborted, ILogger} from "@lodestar/utils";
 import {IChainForkConfig} from "@lodestar/config";
 import {toHexString} from "@chainsafe/ssz";
 import {PeerAction} from "../../network/index.js";
-import {ChainSegmentError} from "../../chain/errors/index.js";
 import {ItTrigger} from "../../util/itTrigger.js";
-import {byteArrayEquals} from "../../util/bytes.js";
 import {PeerMap} from "../../util/peerMap.js";
 import {wrapError} from "../../util/wrapError.js";
 import {RangeSyncType} from "../utils/remoteSyncType.js";
-import {BATCH_BUFFER_SIZE, EPOCHS_PER_BATCH, BATCH_SLOT_OFFSET} from "../constants.js";
-import {Batch, BatchError, BatchErrorCode, BatchMetadata, BatchOpts, BatchStatus} from "./batch.js";
+import {BATCH_BUFFER_SIZE, EPOCHS_PER_BATCH} from "../constants.js";
+import {Batch, BatchError, BatchErrorCode, BatchMetadata, BatchStatus} from "./batch.js";
 import {
   validateBatchesStatus,
   getNextBatchToProcess,
-  toBeProcessedStartEpoch,
   toBeDownloadedStartEpoch,
   toArr,
   ChainPeersBalancer,
   computeMostCommonTarget,
+  batchStartEpochIsAfterSlot,
+  isSyncChainDone,
+  getBatchSlotRange,
 } from "./utils/index.js";
-
-export type SyncChainOpts = Partial<BatchOpts>;
 
 export type SyncChainModules = {
   config: IChainForkConfig;
@@ -71,7 +68,7 @@ export type SyncChainDebugState = {
 export enum SyncChainStatus {
   Stopped = "Stopped",
   Syncing = "Syncing",
-  Synced = "Synced",
+  Done = "Done",
   Error = "Error",
 }
 
@@ -95,8 +92,13 @@ export class SyncChain {
   /** Number of validated epochs. For the SyncRange to prevent switching chains too fast */
   validatedEpochs = 0;
 
-  /** The start of the chain segment. Any epoch previous to this one has been validated. */
-  private startEpoch: Epoch;
+  readonly firstBatchEpoch: Epoch;
+  /**
+   * The start of the chain segment. Any epoch previous to this one has been validated.
+   * Note: lastEpochWithProcessBlocks` signals the epoch at which 1 or more blocks have been processed
+   * successfully. So that epoch itself may or may not be valid.
+   */
+  private lastEpochWithProcessBlocks: Epoch;
   private status = SyncChainStatus.Stopped;
 
   private readonly processChainSegment: SyncChainFns["processChainSegment"];
@@ -110,17 +112,16 @@ export class SyncChain {
 
   private readonly logger: ILogger;
   private readonly config: IChainForkConfig;
-  private readonly opts: BatchOpts;
 
   constructor(
-    startEpoch: Epoch,
+    initialBatchEpoch: Epoch,
     initialTarget: ChainTarget,
     syncType: RangeSyncType,
     fns: SyncChainFns,
-    modules: SyncChainModules,
-    opts?: SyncChainOpts
+    modules: SyncChainModules
   ) {
-    this.startEpoch = startEpoch;
+    this.firstBatchEpoch = initialBatchEpoch;
+    this.lastEpochWithProcessBlocks = initialBatchEpoch;
     this.target = initialTarget;
     this.syncType = syncType;
     this.processChainSegment = fns.processChainSegment;
@@ -128,7 +129,6 @@ export class SyncChain {
     this.reportPeer = fns.reportPeer;
     this.config = modules.config;
     this.logger = modules.logger;
-    this.opts = {epochsPerBatch: opts?.epochsPerBatch ?? EPOCHS_PER_BATCH};
     this.logId = `${syncType}`;
 
     // Trigger event on parent class
@@ -149,17 +149,24 @@ export class SyncChain {
       case SyncChainStatus.Syncing:
         return; // Skip, already started
       case SyncChainStatus.Error:
-      case SyncChainStatus.Synced:
+      case SyncChainStatus.Done:
         throw new SyncChainStartError(`Attempted to start an ended SyncChain ${this.status}`);
     }
 
     this.status = SyncChainStatus.Syncing;
 
+    this.logger.debug("SyncChain startSyncing", {
+      localFinalizedEpoch,
+      lastEpochWithProcessBlocks: this.lastEpochWithProcessBlocks,
+      targetSlot: this.target.slot,
+    });
+
     // to avoid dropping local progress, we advance the chain with its batch boundaries.
     // get the aligned epoch that produces a batch containing the `localFinalizedEpoch`
-    const localFinalizedEpochAligned =
-      this.startEpoch + Math.floor((localFinalizedEpoch - this.startEpoch) / EPOCHS_PER_BATCH) * EPOCHS_PER_BATCH;
-    this.advanceChain(localFinalizedEpochAligned);
+    const lastEpochWithProcessBlocksAligned =
+      this.lastEpochWithProcessBlocks +
+      Math.floor((localFinalizedEpoch - this.lastEpochWithProcessBlocks) / EPOCHS_PER_BATCH) * EPOCHS_PER_BATCH;
+    this.advanceChain(lastEpochWithProcessBlocksAligned);
 
     // Potentially download new batches and process pending
     this.triggerBatchDownloader();
@@ -206,8 +213,9 @@ export class SyncChain {
     return toArr(this.batches).map((batch) => batch.getMetadata());
   }
 
-  get startEpochValue(): Epoch {
-    return this.startEpoch;
+  get lastValidatedSlot(): Slot {
+    // Last epoch of the batch after the last one validated
+    return getBatchSlotRange(this.lastEpochWithProcessBlocks + EPOCHS_PER_BATCH).startSlot - 1;
   }
 
   get isSyncing(): boolean {
@@ -215,7 +223,7 @@ export class SyncChain {
   }
 
   get isRemovable(): boolean {
-    return this.status === SyncChainStatus.Error || this.status === SyncChainStatus.Synced;
+    return this.status === SyncChainStatus.Error || this.status === SyncChainStatus.Done;
   }
 
   get peers(): number {
@@ -233,7 +241,7 @@ export class SyncChain {
       targetSlot: this.target.slot,
       syncType: this.syncType,
       status: this.status,
-      startEpoch: this.startEpoch,
+      startEpoch: this.lastEpochWithProcessBlocks,
       peers: this.peers,
       batches: this.getBatchesState(),
     };
@@ -261,9 +269,8 @@ export class SyncChain {
         // TODO: Consider running this check less often after the sync is well tested
         validateBatchesStatus(toArr(this.batches));
 
-        // If startEpoch of the next batch to be processed > targetEpoch -> Done
-        const toBeProcessedEpoch = toBeProcessedStartEpoch(toArr(this.batches), this.startEpoch, this.opts);
-        if (computeStartSlotAtEpoch(toBeProcessedEpoch) >= this.target.slot) {
+        // Returns true if SyncChain has processed all possible blocks with slot <= target.slot
+        if (isSyncChainDone(toArr(this.batches), this.lastEpochWithProcessBlocks, this.target.slot)) {
           break;
         }
 
@@ -272,8 +279,8 @@ export class SyncChain {
         if (batch) await this.processBatch(batch);
       }
 
-      this.status = SyncChainStatus.Synced;
-      this.logger.verbose("SyncChain Synced", {id: this.logId});
+      this.status = SyncChainStatus.Done;
+      this.logger.verbose("SyncChain Done", {id: this.logId});
     } catch (e) {
       if (e instanceof ErrorAborted) {
         return; // Ignore
@@ -367,11 +374,10 @@ export class SyncChain {
     }
 
     // This line decides the starting epoch of the next batch. MUST ensure no duplicate batch for the same startEpoch
-    const startEpoch = toBeDownloadedStartEpoch(batches, this.startEpoch, this.opts);
-    const toBeDownloadedSlot = computeStartSlotAtEpoch(startEpoch) + BATCH_SLOT_OFFSET;
+    const startEpoch = toBeDownloadedStartEpoch(batches, this.lastEpochWithProcessBlocks);
 
-    // Don't request batches beyond the target head slot
-    if (toBeDownloadedSlot > this.target.slot) {
+    // Don't request batches beyond the target head slot. The to-be-downloaded batch must be strictly after target.slot
+    if (batchStartEpochIsAfterSlot(startEpoch, this.target.slot)) {
       return null;
     }
 
@@ -380,7 +386,7 @@ export class SyncChain {
       return null;
     }
 
-    const batch = new Batch(startEpoch, this.config, this.opts);
+    const batch = new Batch(startEpoch, this.config);
     this.batches.set(startEpoch, batch);
     return batch;
   }
@@ -439,9 +445,10 @@ export class SyncChain {
 
       // At least one block was successfully verified and imported, so we can be sure all
       // previous batches are valid and we only need to download the current failed batch.
-      if (res.err instanceof ChainSegmentError && res.err.importedBlocks > 0) {
-        this.advanceChain(batch.startEpoch);
-      }
+      // TODO: Disabled for now
+      // if (res.err instanceof ChainSegmentError && res.err.importedBlocks > 0) {
+      //   this.advanceChain(batch.startEpoch);
+      // }
 
       // The current batch could not be processed, so either this or previous batches are invalid.
       // All previous batches (AwaitingValidation) are potentially faulty and marked for retry.
@@ -459,23 +466,23 @@ export class SyncChain {
   }
 
   /**
-   * Drops any batches previous to `newStartEpoch` and updates the chain boundaries
+   * Drops any batches previous to `newLatestValidatedEpoch` and updates the chain boundaries
    */
-  private advanceChain(newStartEpoch: Epoch): void {
+  private advanceChain(newLastEpochWithProcessBlocks: Epoch): void {
     // make sure this epoch produces an advancement
-    if (newStartEpoch <= this.startEpoch) {
+    if (newLastEpochWithProcessBlocks <= this.lastEpochWithProcessBlocks) {
       return;
     }
 
     for (const [batchKey, batch] of this.batches.entries()) {
-      if (batch.startEpoch < newStartEpoch) {
+      if (batch.startEpoch < newLastEpochWithProcessBlocks) {
         this.batches.delete(batchKey);
         this.validatedEpochs += EPOCHS_PER_BATCH;
 
         // The last batch attempt is right, all others are wrong. Penalize other peers
         const attemptOk = batch.validationSuccess();
         for (const attempt of batch.failedProcessingAttempts) {
-          if (!byteArrayEquals(attempt.hash, attemptOk.hash)) {
+          if (attempt.hash !== attemptOk.hash) {
             if (attemptOk.peer.toString() === attempt.peer.toString()) {
               // The same peer corrected its previous attempt
               this.reportPeer(attempt.peer, PeerAction.MidToleranceError, "SyncChainInvalidBatchSelf");
@@ -488,7 +495,7 @@ export class SyncChain {
       }
     }
 
-    this.startEpoch = newStartEpoch;
+    this.lastEpochWithProcessBlocks = newLastEpochWithProcessBlocks;
   }
 }
 

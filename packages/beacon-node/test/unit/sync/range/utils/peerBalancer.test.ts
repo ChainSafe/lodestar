@@ -1,20 +1,18 @@
 import {expect} from "chai";
 import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
 import {config} from "@lodestar/config/default";
-import {Batch, BatchOpts} from "../../../../../src/sync/range/batch.js";
+import {Batch} from "../../../../../src/sync/range/batch.js";
 import {ChainPeersBalancer} from "../../../../../src/sync/range/utils/peerBalancer.js";
 
 describe("sync / range / peerBalancer", () => {
-  const opts: BatchOpts = {epochsPerBatch: 1};
-
   it("bestPeerToRetryBatch", async () => {
     // Run N times to make sure results are consistent with different shufflings
     for (let i = 0; i < 5; i++) {
       const peer1 = await createSecp256k1PeerId();
       const peer2 = await createSecp256k1PeerId();
       const peer3 = await createSecp256k1PeerId();
-      const batch0 = new Batch(0, config, opts);
-      const batch1 = new Batch(1, config, opts);
+      const batch0 = new Batch(0, config);
+      const batch1 = new Batch(1, config);
 
       // Batch zero has a failedDownloadAttempt with peer0
       batch0.startDownloading(peer1);
@@ -46,8 +44,8 @@ describe("sync / range / peerBalancer", () => {
       const peer2 = await createSecp256k1PeerId();
       const peer3 = await createSecp256k1PeerId();
       const peer4 = await createSecp256k1PeerId();
-      const batch0 = new Batch(0, config, opts);
-      const batch1 = new Batch(1, config, opts);
+      const batch0 = new Batch(0, config);
+      const batch1 = new Batch(1, config);
 
       // peer1 and peer2 are busy downloading
       batch0.startDownloading(peer1);

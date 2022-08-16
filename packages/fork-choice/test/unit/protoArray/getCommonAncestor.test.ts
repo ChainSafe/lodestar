@@ -24,35 +24,49 @@ describe("getCommonAncestor", () => {
     {nodeA: "1A", nodeB: "3C", ancestor: null},
   ];
 
-  const fc = ProtoArray.initialize({
-    slot: 0,
-    stateRoot: "-",
-    parentRoot: "-",
-    blockRoot: "0",
-
-    justifiedEpoch: 0,
-    justifiedRoot: "-",
-    finalizedEpoch: 0,
-    finalizedRoot: "-",
-
-    ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
-  });
-
-  for (const block of blocks) {
-    fc.onBlock({
-      slot: block.slot,
-      blockRoot: block.root,
-      parentRoot: block.parent,
+  const fc = ProtoArray.initialize(
+    {
+      slot: 0,
       stateRoot: "-",
-      targetRoot: "-",
+      parentRoot: "-",
+      blockRoot: "0",
 
       justifiedEpoch: 0,
       justifiedRoot: "-",
       finalizedEpoch: 0,
       finalizedRoot: "-",
+      unrealizedJustifiedEpoch: 0,
+      unrealizedJustifiedRoot: "-",
+      unrealizedFinalizedEpoch: 0,
+      unrealizedFinalizedRoot: "-",
 
       ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
-    });
+    },
+    0
+  );
+
+  for (const block of blocks) {
+    fc.onBlock(
+      {
+        slot: block.slot,
+        blockRoot: block.root,
+        parentRoot: block.parent,
+        stateRoot: "-",
+        targetRoot: "-",
+
+        justifiedEpoch: 0,
+        justifiedRoot: "-",
+        finalizedEpoch: 0,
+        finalizedRoot: "-",
+        unrealizedJustifiedEpoch: 0,
+        unrealizedJustifiedRoot: "-",
+        unrealizedFinalizedEpoch: 0,
+        unrealizedFinalizedRoot: "-",
+
+        ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
+      },
+      block.slot
+    );
   }
 
   for (const {nodeA, nodeB, ancestor} of testCases) {
@@ -63,6 +77,7 @@ describe("getCommonAncestor", () => {
     });
   }
 
+  const lastSlot = blocks.reverse()[0].slot;
   const deltas = Array.from({length: fc.nodes.length}, () => 0);
   fc.applyScoreChanges({
     deltas,
@@ -71,6 +86,7 @@ describe("getCommonAncestor", () => {
     justifiedRoot: "-",
     finalizedEpoch: 0,
     finalizedRoot: "-",
+    currentSlot: lastSlot,
   });
   const weightsAfterCall1 = fc.nodes.map((nrow) => nrow.weight);
 
@@ -82,6 +98,7 @@ describe("getCommonAncestor", () => {
     justifiedRoot: "-",
     finalizedEpoch: 0,
     finalizedRoot: "-",
+    currentSlot: lastSlot,
   });
   const weightsAfterCall2 = fc.nodes.map((nrow) => nrow.weight);
 

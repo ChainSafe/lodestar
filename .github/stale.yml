@@ -12,17 +12,17 @@ onlyLabels: []
 
 # Issues or Pull Requests with these labels will never be considered stale. Set to `[]` to disable
 exemptLabels:
-  - "meta-goodfirstissue"
-  - "meta-helpwanted"
+  - "Epic"
+  - "meta-good-first-issue"
+  - "meta-help-wanted"
   - "meta-discussion"
-  - "prio0-critical"
-  - "prio2-high"
-  - "prio5-medium"
-  - "prio7-low"
-  - "status0-blocked"
-  - "status1-donotmerge"
-  - "status2-onice"
-  - "status7-opendiscussion"
+  - "meta-pm"
+  - "prio-critical"
+  - "prio-high"
+  - "prio-medium"
+  - "prio-low"
+  - "status-blocked"
+  - "status-do-not-merge"
 
 # Set to true to ignore issues in a project (defaults to false)
 exemptProjects: false

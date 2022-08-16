@@ -80,11 +80,11 @@ describe("updateGossipsubScores", function () {
       ]),
       2
     );
-    expect(peerRpcScoresStub.updateGossipsubScore.calledWith("a", 10, false)).to.be.true;
+    expect(peerRpcScoresStub.updateGossipsubScore.calledWith("a", 10, false)).to.equal(true);
     // should ignore b d since they are 2 biggest negative scores
-    expect(peerRpcScoresStub.updateGossipsubScore.calledWith("b", -10, true)).to.be.true;
-    expect(peerRpcScoresStub.updateGossipsubScore.calledWith("d", -5, true)).to.be.true;
+    expect(peerRpcScoresStub.updateGossipsubScore.calledWith("b", -10, true)).to.equal(true);
+    expect(peerRpcScoresStub.updateGossipsubScore.calledWith("d", -5, true)).to.equal(true);
     // should not ignore c as it's lowest negative scores
-    expect(peerRpcScoresStub.updateGossipsubScore.calledWith("c", -20, false)).to.be.true;
+    expect(peerRpcScoresStub.updateGossipsubScore.calledWith("c", -20, false)).to.equal(true);
   });
 });

@@ -6,6 +6,7 @@ import {getEffectiveBalanceIncrementsZeroInactive} from "../../../src/util/index
 describe("getEffectiveBalanceIncrementsZeroInactive", () => {
   itBench<State, State>({
     id: `getEffectiveBalanceIncrementsZeroInactive - ${perfStateId}`,
+    noThreshold: true,
     before: () => generatePerfTestCachedStatePhase0() as State,
     beforeEach: (state) => state.clone(),
     fn: (state) => {

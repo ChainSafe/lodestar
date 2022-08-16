@@ -139,7 +139,7 @@ export class OpPool {
 
     for (const proposerSlashing of this.proposerSlashings.values()) {
       const index = proposerSlashing.signedHeader1.message.proposerIndex;
-      const validator = state.validators.get(index);
+      const validator = state.validators.getReadonly(index);
       if (!validator.slashed && validator.activationEpoch <= stateEpoch && stateEpoch < validator.withdrawableEpoch) {
         proposerSlashings.push(proposerSlashing);
         // Set of validators to be slashed, so we don't attempt to construct invalid attester slashings.
@@ -156,7 +156,7 @@ export class OpPool {
       const slashableIndices = new Set<ValidatorIndex>();
       for (let i = 0; i < attesterSlashing.intersectingIndices.length; i++) {
         const index = attesterSlashing.intersectingIndices[i];
-        const validator = state.validators.get(index);
+        const validator = state.validators.getReadonly(index);
 
         // If we already have a slashing for this index, we can continue on to the next slashing
         if (toBeSlashedIndices.has(index)) {
@@ -232,7 +232,7 @@ export class OpPool {
         //
         // We cannot check the `slashed` field since the `head` is not finalized and
         // a fork could un-slash someone.
-        if (headState.validators.get(index).exitEpoch > finalizedEpoch) {
+        if (headState.validators.getReadonly(index).exitEpoch > finalizedEpoch) {
           continue attesterSlashing;
         }
       }
@@ -249,7 +249,7 @@ export class OpPool {
     const finalizedEpoch = headState.finalizedCheckpoint.epoch;
     for (const [key, proposerSlashing] of this.proposerSlashings.entries()) {
       const index = proposerSlashing.signedHeader1.message.proposerIndex;
-      if (headState.validators.get(index).exitEpoch <= finalizedEpoch) {
+      if (headState.validators.getReadonly(index).exitEpoch <= finalizedEpoch) {
         this.proposerSlashings.delete(key);
       }
     }

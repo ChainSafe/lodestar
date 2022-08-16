@@ -1,4 +1,5 @@
-import {Epoch, RootHex} from "@lodestar/types";
+import {Epoch, RootHex, Slot} from "@lodestar/types";
+import {computeEpochAtSlot} from "@lodestar/state-transition";
 
 import {ProtoBlock, ProtoNode, HEX_ZERO_HASH} from "./interface.js";
 import {ProtoArrayError, ProtoArrayErrorCode} from "./errors.js";
@@ -14,8 +15,8 @@ export class ProtoArray {
   justifiedRoot: RootHex;
   finalizedEpoch: Epoch;
   finalizedRoot: RootHex;
-  nodes: ProtoNode[];
-  indices: Map<RootHex, number>;
+  nodes: ProtoNode[] = [];
+  indices = new Map<RootHex, number>();
 
   private previousProposerBoost?: ProposerBoost | null = null;
 
@@ -37,11 +38,9 @@ export class ProtoArray {
     this.justifiedRoot = justifiedRoot;
     this.finalizedEpoch = finalizedEpoch;
     this.finalizedRoot = finalizedRoot;
-    this.nodes = [];
-    this.indices = new Map<string, number>();
   }
 
-  static initialize(block: Omit<ProtoBlock, "targetRoot">): ProtoArray {
+  static initialize(block: Omit<ProtoBlock, "targetRoot">, currentSlot: Slot): ProtoArray {
     const protoArray = new ProtoArray({
       pruneThreshold: DEFAULT_PRUNE_THRESHOLD,
       justifiedEpoch: block.justifiedEpoch,
@@ -49,11 +48,14 @@ export class ProtoArray {
       finalizedEpoch: block.finalizedEpoch,
       finalizedRoot: block.finalizedRoot,
     });
-    protoArray.onBlock({
-      ...block,
-      // We are using the blockROot as the targetRoot, since it always lies on an epoch boundary
-      targetRoot: block.blockRoot,
-    } as ProtoBlock);
+    protoArray.onBlock(
+      {
+        ...block,
+        // We are using the blockROot as the targetRoot, since it always lies on an epoch boundary
+        targetRoot: block.blockRoot,
+      } as ProtoBlock,
+      currentSlot
+    );
     return protoArray;
   }
 
@@ -79,6 +81,7 @@ export class ProtoArray {
     justifiedRoot,
     finalizedEpoch,
     finalizedRoot,
+    currentSlot,
   }: {
     deltas: number[];
     proposerBoost: ProposerBoost | null;
@@ -86,6 +89,7 @@ export class ProtoArray {
     justifiedRoot: RootHex;
     finalizedEpoch: Epoch;
     finalizedRoot: RootHex;
+    currentSlot: Slot;
   }): void {
     if (deltas.length !== this.indices.size) {
       throw new ProtoArrayError({
@@ -173,7 +177,7 @@ export class ProtoArray {
       // If the node has a parent, try to update its best-child and best-descendant.
       const parentIndex = node.parent;
       if (parentIndex !== undefined) {
-        this.maybeUpdateBestChildAndDescendant(parentIndex, nodeIndex);
+        this.maybeUpdateBestChildAndDescendant(parentIndex, nodeIndex, currentSlot);
       }
     }
     // Update the previous proposer boost
@@ -185,7 +189,7 @@ export class ProtoArray {
    *
    * It is only sane to supply an undefined parent for the genesis block
    */
-  onBlock(block: ProtoBlock): void {
+  onBlock(block: ProtoBlock, currentSlot: Slot): void {
     // If the block is already known, simply ignore it
     if (this.indices.has(block.blockRoot)) {
       return;
@@ -207,7 +211,7 @@ export class ProtoArray {
     let parentIndex = node.parent;
     let n: ProtoNode | undefined = node;
     while (parentIndex !== undefined) {
-      this.maybeUpdateBestChildAndDescendant(parentIndex, nodeIndex);
+      this.maybeUpdateBestChildAndDescendant(parentIndex, nodeIndex, currentSlot);
       nodeIndex = parentIndex;
       n = this.getNodeByIndex(nodeIndex);
       parentIndex = n?.parent;
@@ -217,7 +221,7 @@ export class ProtoArray {
   /**
    * Follows the best-descendant links to find the best-block (i.e., head-block).
    */
-  findHead(justifiedRoot: RootHex): RootHex {
+  findHead(justifiedRoot: RootHex, currentSlot: Slot): RootHex {
     const justifiedIndex = this.indices.get(justifiedRoot);
     if (justifiedIndex === undefined) {
       throw new ProtoArrayError({
@@ -251,7 +255,7 @@ export class ProtoArray {
      * blocks = get_filtered_block_tree(store)
      * head = store.justified_checkpoint.root
      */
-    if (bestDescendantIndex !== justifiedIndex && !this.nodeIsViableForHead(bestNode)) {
+    if (bestDescendantIndex !== justifiedIndex && !this.nodeIsViableForHead(bestNode, currentSlot)) {
       throw new ProtoArrayError({
         code: ProtoArrayErrorCode.INVALID_BEST_NODE,
         startRoot: justifiedRoot,
@@ -366,7 +370,7 @@ export class ProtoArray {
    * - The child is not the best child but becomes the best child.
    * - The child is not the best child and does not become the best child.
    */
-  maybeUpdateBestChildAndDescendant(parentIndex: number, childIndex: number): void {
+  maybeUpdateBestChildAndDescendant(parentIndex: number, childIndex: number, currentSlot: Slot): void {
     const childNode = this.nodes[childIndex];
     if (childNode === undefined) {
       throw new ProtoArrayError({
@@ -383,7 +387,7 @@ export class ProtoArray {
       });
     }
 
-    const childLeadsToViableHead = this.nodeLeadsToViableHead(childNode);
+    const childLeadsToViableHead = this.nodeLeadsToViableHead(childNode, currentSlot);
 
     // These three variables are aliases to the three options that we may set the
     // parent.bestChild and parent.bestDescendent to.
@@ -414,7 +418,7 @@ export class ProtoArray {
           });
         }
 
-        const bestChildLeadsToViableHead = this.nodeLeadsToViableHead(bestChildNode);
+        const bestChildLeadsToViableHead = this.nodeLeadsToViableHead(bestChildNode, currentSlot);
 
         if (childLeadsToViableHead && !bestChildLeadsToViableHead) {
           // the child leads to a viable head, but the current best-child doesn't
@@ -454,7 +458,7 @@ export class ProtoArray {
    * Indicates if the node itself is viable for the head, or if it's best descendant is viable
    * for the head.
    */
-  nodeLeadsToViableHead(node: ProtoNode): boolean {
+  nodeLeadsToViableHead(node: ProtoNode, currentSlot: Slot): boolean {
     let bestDescendantIsViableForHead: boolean;
     const bestDescendantIndex = node.bestDescendant;
     if (bestDescendantIndex !== undefined) {
@@ -465,12 +469,12 @@ export class ProtoArray {
           index: bestDescendantIndex,
         });
       }
-      bestDescendantIsViableForHead = this.nodeIsViableForHead(bestDescendantNode);
+      bestDescendantIsViableForHead = this.nodeIsViableForHead(bestDescendantNode, currentSlot);
     } else {
       bestDescendantIsViableForHead = false;
     }
 
-    return bestDescendantIsViableForHead || this.nodeIsViableForHead(node);
+    return bestDescendantIsViableForHead || this.nodeIsViableForHead(node, currentSlot);
   }
 
   /**
@@ -481,12 +485,20 @@ export class ProtoArray {
    * Any node that has a different finalized or justified epoch should not be viable for the
    * head.
    */
-  nodeIsViableForHead(node: ProtoNode): boolean {
+  nodeIsViableForHead(node: ProtoNode, currentSlot: Slot): boolean {
+    // If block is from a previous epoch, filter using unrealized justification & finalization information
+    // If block is from the current epoch, filter using the head state's justification & finalization information
+    const isFromPrevEpoch = computeEpochAtSlot(node.slot) < computeEpochAtSlot(currentSlot);
+    const nodeJustifiedEpoch = isFromPrevEpoch ? node.unrealizedJustifiedEpoch : node.justifiedEpoch;
+    const nodeJustifiedRoot = isFromPrevEpoch ? node.unrealizedJustifiedRoot : node.justifiedRoot;
+    const nodeFinalizedEpoch = isFromPrevEpoch ? node.unrealizedFinalizedEpoch : node.finalizedEpoch;
+    const nodeFinalizedRoot = isFromPrevEpoch ? node.unrealizedFinalizedRoot : node.finalizedRoot;
+
     const correctJustified =
-      (node.justifiedEpoch === this.justifiedEpoch && node.justifiedRoot === this.justifiedRoot) ||
+      (nodeJustifiedEpoch === this.justifiedEpoch && nodeJustifiedRoot === this.justifiedRoot) ||
       this.justifiedEpoch === 0;
     const correctFinalized =
-      (node.finalizedEpoch === this.finalizedEpoch && node.finalizedRoot === this.finalizedRoot) ||
+      (nodeFinalizedEpoch === this.finalizedEpoch && nodeFinalizedRoot === this.finalizedRoot) ||
       this.finalizedEpoch === 0;
     return correctJustified && correctFinalized;
   }

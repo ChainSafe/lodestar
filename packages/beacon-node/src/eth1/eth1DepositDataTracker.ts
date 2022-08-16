@@ -1,7 +1,7 @@
 import {phase0, ssz} from "@lodestar/types";
 import {IChainForkConfig} from "@lodestar/config";
 import {BeaconStateAllForks, becomesNewEth1Data} from "@lodestar/state-transition";
-import {ErrorAborted, ILogger, isErrorAborted, sleep} from "@lodestar/utils";
+import {ErrorAborted, fromHex, ILogger, isErrorAborted, sleep} from "@lodestar/utils";
 import {IBeaconDb} from "../db/index.js";
 import {IMetrics} from "../metrics/index.js";
 import {Eth1DepositsCache} from "./eth1DepositsCache.js";
@@ -54,6 +54,7 @@ export class Eth1DepositDataTracker {
   private eth1DataCache: Eth1DataCache;
   private lastProcessedDepositBlockNumber: number | null = null;
   private eth1FollowDistance: number;
+  private readonly forcedEth1DataVote: phase0.Eth1Data | null;
 
   constructor(
     opts: Eth1Options,
@@ -68,6 +69,10 @@ export class Eth1DepositDataTracker {
     this.depositsCache = new Eth1DepositsCache(opts, config, db);
     this.eth1DataCache = new Eth1DataCache(config, db);
     this.eth1FollowDistance = config.ETH1_FOLLOW_DISTANCE;
+
+    this.forcedEth1DataVote = opts.forcedEth1DataVote
+      ? ssz.phase0.Eth1Data.deserialize(fromHex(opts.forcedEth1DataVote))
+      : null;
 
     if (opts.depositContractDeployBlock === undefined) {
       this.logger.warn("No depositContractDeployBlock provided");
@@ -92,7 +97,7 @@ export class Eth1DepositDataTracker {
    * Return eth1Data and deposits ready for block production for a given state
    */
   async getEth1DataAndDeposits(state: BeaconStateAllForks): Promise<Eth1DataAndDeposits> {
-    const eth1Data = await this.getEth1Data(state);
+    const eth1Data = this.forcedEth1DataVote ?? (await this.getEth1Data(state));
     const deposits = await this.getDeposits(state, eth1Data);
     return {eth1Data, deposits};
   }

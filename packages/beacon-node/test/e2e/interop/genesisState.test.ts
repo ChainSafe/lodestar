@@ -2,24 +2,10 @@ import {expect} from "chai";
 import {toHexString} from "@chainsafe/ssz";
 import {config} from "@lodestar/config/default";
 import {ssz} from "@lodestar/types";
-import {BeaconDb} from "../../../src/index.js";
 import {initDevState} from "../../../src/node/utils/state.js";
-import {testLogger} from "../../utils/logger.js";
 import {interopDeposits} from "../../../src/node/utils/interop/deposits.js";
-import {startTmpBeaconDb} from "../../utils/db.js";
 
 describe("interop / initDevState", () => {
-  let db: BeaconDb;
-  const logger = testLogger();
-
-  before(async () => {
-    db = await startTmpBeaconDb(config, logger);
-  });
-
-  after(async () => {
-    await db.stop();
-  });
-
   it("Create interop deposits", () => {
     const deposits = interopDeposits(config, ssz.phase0.DepositDataRootList.defaultViewDU(), 1);
 
@@ -72,9 +58,9 @@ describe("interop / initDevState", () => {
     ]);
   });
 
-  it("Create correct genesisState", async () => {
+  it("Create correct genesisState", () => {
     const validatorCount = 8;
-    const state = await initDevState(config, db, validatorCount, {
+    const {state} = initDevState(config, validatorCount, {
       genesisTime: 1644000000,
       eth1BlockHash: Buffer.alloc(32, 0xaa),
       eth1Timestamp: 1644000000,

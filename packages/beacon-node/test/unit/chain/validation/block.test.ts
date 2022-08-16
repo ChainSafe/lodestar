@@ -3,7 +3,7 @@ import {config} from "@lodestar/config/default";
 import {ForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {allForks, ssz} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
-import {BeaconChain, IBeaconChain} from "../../../../src/chain/index.js";
+import {BeaconChain} from "../../../../src/chain/index.js";
 import {LocalClock} from "../../../../src/chain/clock/index.js";
 import {StateRegenerator} from "../../../../src/chain/regen/index.js";
 import {validateGossipBlock} from "../../../../src/chain/validation/index.js";
@@ -13,9 +13,12 @@ import {SinonStubFn} from "../../../utils/types.js";
 import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
 import {SeenBlockProposers} from "../../../../src/chain/seenCache/index.js";
 import {EMPTY_SIGNATURE, ZERO_HASH} from "../../../../src/constants/index.js";
+import {StubbedChainMutable} from "../../../utils/stub/index.js";
+
+type StubbedChain = StubbedChainMutable<"clock" | "forkChoice" | "regen" | "bls">;
 
 describe("gossip block validation", function () {
-  let chain: SinonStubbedInstance<IBeaconChain>;
+  let chain: StubbedChain;
   let forkChoice: SinonStubbedInstance<ForkChoice>;
   let regen: SinonStubbedInstance<StateRegenerator>;
   let verifySignature: SinonStubFn<() => Promise<boolean>>;
@@ -25,6 +28,7 @@ describe("gossip block validation", function () {
   const block = ssz.phase0.BeaconBlock.defaultValue();
   block.slot = clockSlot;
   const signature = EMPTY_SIGNATURE;
+  const maxSkipSlots = 10;
 
   beforeEach(function () {
     chain = sinon.createStubInstance(BeaconChain);
@@ -34,6 +38,9 @@ describe("gossip block validation", function () {
     forkChoice.getBlockHex.returns(null);
     chain.forkChoice = forkChoice;
     regen = chain.regen = sinon.createStubInstance(StateRegenerator);
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    (chain as any).opts = {maxSkipSlots};
 
     verifySignature = sinon.stub();
     verifySignature.resolves(true);
@@ -98,6 +105,18 @@ describe("gossip block validation", function () {
     await expectRejectedWithLodestarError(
       validateGossipBlock(config, chain, job, ForkName.phase0),
       BlockErrorCode.PARENT_UNKNOWN
+    );
+  });
+
+  it("TOO_MANY_SKIPPED_SLOTS", async function () {
+    // Return not known for proposed block
+    forkChoice.getBlockHex.onCall(0).returns(null);
+    // Return parent block with 1 slot way back than maxSkipSlots
+    forkChoice.getBlockHex.onCall(1).returns({slot: block.slot - (maxSkipSlots + 1)} as ProtoBlock);
+
+    await expectRejectedWithLodestarError(
+      validateGossipBlock(config, chain, job, ForkName.phase0),
+      BlockErrorCode.TOO_MANY_SKIPPED_SLOTS
     );
   });
 

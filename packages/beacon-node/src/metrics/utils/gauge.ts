@@ -54,6 +54,16 @@ export class GaugeChild<T extends string> implements IGauge {
     }
   }
 
+  dec(value?: number): void;
+  dec(labels: Labels<T>, value?: number): void;
+  dec(arg1?: Labels<T> | number, arg2?: number): void {
+    if (typeof arg1 === "object") {
+      this.gauge.dec({...this.labelsParent, ...arg1}, arg2 ?? 1);
+    } else {
+      this.gauge.dec(this.labelsParent, arg1 ?? 1);
+    }
+  }
+
   set(value: number): void;
   set(labels: Labels<T>, value: number): void;
   set(arg1?: Labels<T> | number, arg2?: number): void {

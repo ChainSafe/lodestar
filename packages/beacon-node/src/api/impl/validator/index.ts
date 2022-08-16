@@ -202,7 +202,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
 
       timer = metrics?.blockProductionTime.startTimer();
       const block = await assembleBlock(
-        {type, chain, metrics},
+        {type, chain, metrics, logger},
         {
           slot,
           randaoReveal,
@@ -432,8 +432,6 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
 
       return {
         data: duties,
-        // TODO: Compute a proper dependentRoot for this syncCommittee shuffling
-        dependentRoot: ZERO_HASH,
       };
     },
 

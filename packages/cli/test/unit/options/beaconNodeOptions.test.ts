@@ -21,8 +21,11 @@ describe("options / beaconNodeOptions", () => {
       "chain.disableBlsBatchVerify": true,
       "chain.persistInvalidSszObjects": true,
       "chain.proposerBoostEnabled": false,
+      "chain.disableImportExecutionFcU": false,
+      "chain.computeUnrealized": true,
       "chain.defaultFeeRecipient": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       "chain.assertCorrectProgressiveBalances": true,
+      "chain.maxSkipSlots": 100,
       "safe-slots-to-import-optimistically": 256,
 
       "eth1.enabled": true,
@@ -31,9 +34,13 @@ describe("options / beaconNodeOptions", () => {
       "eth1.depositContractDeployBlock": 1625314,
       "eth1.disableEth1DepositDataTracker": true,
       "eth1.unsafeAllowDepositDataOverwrite": false,
+      "eth1.forcedEth1DataVote":
+        "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa0000000000000000bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
 
       "execution.urls": ["http://localhost:8551"],
       "execution.timeout": 12000,
+      "execution.retryDelay": 2000,
+      "execution.retryAttempts": 1,
 
       "builder.enabled": false,
       "builder.urls": ["http://localhost:8661"],
@@ -84,9 +91,12 @@ describe("options / beaconNodeOptions", () => {
         disableBlsBatchVerify: true,
         persistInvalidSszObjects: true,
         proposerBoostEnabled: false,
+        disableImportExecutionFcU: false,
+        computeUnrealized: true,
         safeSlotsToImportOptimistically: 256,
         defaultFeeRecipient: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         assertCorrectProgressiveBalances: true,
+        maxSkipSlots: 100,
       },
       eth1: {
         enabled: true,
@@ -94,9 +104,13 @@ describe("options / beaconNodeOptions", () => {
         depositContractDeployBlock: 1625314,
         disableEth1DepositDataTracker: true,
         unsafeAllowDepositDataOverwrite: false,
+        forcedEth1DataVote:
+          "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa0000000000000000bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
       },
       executionEngine: {
         urls: ["http://localhost:8551"],
+        retryAttempts: 1,
+        retryDelay: 2000,
         timeout: 12000,
       },
       executionBuilder: {

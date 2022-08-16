@@ -33,7 +33,7 @@ export function processRegistryUpdates(state: CachedBeaconStateAllForks, epochPr
 
   // set new activation eligibilities
   for (const index of epochProcess.indicesEligibleForActivationQueue) {
-    validators.get(index).activationEligibilityEpoch = epochCtx.currentShuffling.epoch + 1;
+    validators.get(index).activationEligibilityEpoch = epochCtx.epoch + 1;
   }
 
   const finalityEpoch = state.finalizedCheckpoint.epoch;

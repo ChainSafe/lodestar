@@ -31,7 +31,7 @@ export function processAttestationPhase0(
     proposerIndex: epochCtx.getBeaconProposer(slot),
   });
 
-  if (data.target.epoch === epochCtx.currentShuffling.epoch) {
+  if (data.target.epoch === epochCtx.epoch) {
     if (!ssz.phase0.Checkpoint.equals(data.source, state.currentJustifiedCheckpoint)) {
       throw new Error(
         `Attestation source does not equal current justified checkpoint: source=${checkpointToStr(
@@ -68,12 +68,10 @@ export function validateAttestation(state: CachedBeaconStateAllForks, attestatio
         `committeeIndex=${data.index} committeeCount=${committeeCount}`
     );
   }
-  if (
-    !(data.target.epoch === epochCtx.previousShuffling.epoch || data.target.epoch === epochCtx.currentShuffling.epoch)
-  ) {
+  if (!(data.target.epoch === epochCtx.previousShuffling.epoch || data.target.epoch === epochCtx.epoch)) {
     throw new Error(
       "Attestation target epoch not in previous or current epoch: " +
-        `targetEpoch=${data.target.epoch} currentEpoch=${epochCtx.currentShuffling.epoch}`
+        `targetEpoch=${data.target.epoch} currentEpoch=${epochCtx.epoch}`
     );
   }
   if (!(data.target.epoch === computedEpoch)) {

@@ -1,4 +1,4 @@
-import bls from "@chainsafe/bls";
+import bls from "@chainsafe/bls/switchable";
 import type {PublicKey} from "@chainsafe/bls/types";
 import {altair, Root, ssz} from "@lodestar/types";
 import {BeaconBlockHeader} from "@lodestar/types/phase0";
@@ -74,3 +74,7 @@ export function isEmptyHeader(header: BeaconBlockHeader): boolean {
   const emptyValue = ssz.phase0.BeaconBlockHeader.defaultValue();
   return ssz.phase0.BeaconBlockHeader.equals(emptyValue, header);
 }
+
+// Thanks https://github.com/iliakan/detect-node/blob/master/index.esm.js
+export const isNode =
+  Object.prototype.toString.call(typeof process !== "undefined" ? process : 0) === "[object process]";

@@ -1,11 +1,14 @@
-/**
- * @module chain/forkChoice
- */
-
 import {toHexString} from "@chainsafe/ssz";
 import {Slot} from "@lodestar/types";
 import {IChainForkConfig} from "@lodestar/config";
-import {ForkChoice, ProtoArray, ForkChoiceStore, ExecutionStatus, JustifiedBalancesGetter} from "@lodestar/fork-choice";
+import {
+  ForkChoice,
+  ProtoArray,
+  ForkChoiceStore,
+  ExecutionStatus,
+  JustifiedBalancesGetter,
+  ForkChoiceOpts,
+} from "@lodestar/fork-choice";
 import {
   CachedBeaconStateAllForks,
   getEffectiveBalanceIncrementsZeroInactive,
@@ -19,10 +22,7 @@ import {IMetrics} from "../../metrics/index.js";
 import {ChainEvent} from "../emitter.js";
 import {GENESIS_SLOT} from "../../constants/index.js";
 
-export type ForkChoiceOpts = {
-  terminalTotalDifficulty?: bigint;
-  proposerBoostEnabled: boolean;
-};
+export {ForkChoiceOpts};
 
 /**
  * Fork Choice extended with a ChainEventEmitter
@@ -32,7 +32,7 @@ export function initializeForkChoice(
   emitter: ChainEventEmitter,
   currentSlot: Slot,
   state: CachedBeaconStateAllForks,
-  proposerBoostEnabled: boolean,
+  opts: ForkChoiceOpts,
   justifiedBalancesGetter: JustifiedBalancesGetter,
   metrics?: IMetrics | null
 ): ForkChoice {
@@ -64,26 +64,33 @@ export function initializeForkChoice(
       }
     ),
 
-    ProtoArray.initialize({
-      slot: blockHeader.slot,
-      parentRoot: toHexString(blockHeader.parentRoot),
-      stateRoot: toHexString(blockHeader.stateRoot),
-      blockRoot: toHexString(checkpoint.root),
+    ProtoArray.initialize(
+      {
+        slot: blockHeader.slot,
+        parentRoot: toHexString(blockHeader.parentRoot),
+        stateRoot: toHexString(blockHeader.stateRoot),
+        blockRoot: toHexString(checkpoint.root),
 
-      justifiedEpoch: justifiedCheckpoint.epoch,
-      justifiedRoot: toHexString(justifiedCheckpoint.root),
-      finalizedEpoch: finalizedCheckpoint.epoch,
-      finalizedRoot: toHexString(finalizedCheckpoint.root),
+        justifiedEpoch: justifiedCheckpoint.epoch,
+        justifiedRoot: toHexString(justifiedCheckpoint.root),
+        finalizedEpoch: finalizedCheckpoint.epoch,
+        finalizedRoot: toHexString(finalizedCheckpoint.root),
+        unrealizedJustifiedEpoch: justifiedCheckpoint.epoch,
+        unrealizedJustifiedRoot: toHexString(justifiedCheckpoint.root),
+        unrealizedFinalizedEpoch: finalizedCheckpoint.epoch,
+        unrealizedFinalizedRoot: toHexString(finalizedCheckpoint.root),
 
-      ...(isBellatrixStateType(state) && isMergeTransitionComplete(state)
-        ? {
-            executionPayloadBlockHash: toHexString(state.latestExecutionPayloadHeader.blockHash),
-            executionStatus: blockHeader.slot === GENESIS_SLOT ? ExecutionStatus.Valid : ExecutionStatus.Syncing,
-          }
-        : {executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge}),
-    }),
+        ...(isBellatrixStateType(state) && isMergeTransitionComplete(state)
+          ? {
+              executionPayloadBlockHash: toHexString(state.latestExecutionPayloadHeader.blockHash),
+              executionStatus: blockHeader.slot === GENESIS_SLOT ? ExecutionStatus.Valid : ExecutionStatus.Syncing,
+            }
+          : {executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge}),
+      },
+      currentSlot
+    ),
 
-    proposerBoostEnabled,
+    opts,
     metrics
   );
 }

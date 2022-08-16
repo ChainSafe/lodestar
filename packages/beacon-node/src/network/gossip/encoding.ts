@@ -13,7 +13,7 @@ import {GossipTopicCache} from "./topic.js";
  */
 export function fastMsgIdFn(rpcMsg: RPC.IMessage): string {
   if (rpcMsg.data) {
-    return Buffer.from(digest(rpcMsg.data)).slice(0, 8).toString("hex");
+    return Buffer.from(digest(rpcMsg.data)).subarray(0, 8).toString("hex");
   } else {
     return "0000000000000000";
   }
@@ -53,7 +53,7 @@ export function msgIdFn(gossipTopicCache: GossipTopicCache, msg: Message): Uint8
     }
   }
 
-  return digest(Buffer.concat(vec)).slice(0, 20);
+  return Buffer.from(digest(Buffer.concat(vec))).subarray(0, 20);
 }
 
 export class DataTransformSnappy {

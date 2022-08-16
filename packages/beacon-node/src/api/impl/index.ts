@@ -1,7 +1,3 @@
-/**
- * @module rpc/api
- */
-
 export * from "./validator/index.js";
 export * from "./beacon/index.js";
 export * from "./node/index.js";

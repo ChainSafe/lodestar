@@ -41,21 +41,12 @@ export class StateContextCache {
     }
 
     this.metrics?.hits.inc();
-    // clonedCount + 1 as there's a .clone() below
-    this.metrics?.stateClonedCount.observe(item.clonedCount + 1);
-    if (!stateInternalCachePopulated(item)) {
-      this.metrics?.stateInternalCacheMiss.inc();
-    }
-
-    // Clone first to account for metrics below
-    const itemCloned = item.clone();
-
     this.metrics?.stateClonedCount.observe(item.clonedCount);
     if (!stateInternalCachePopulated(item)) {
       this.metrics?.stateInternalCacheMiss.inc();
     }
 
-    return itemCloned;
+    return item;
   }
 
   add(item: CachedBeaconStateAllForks): void {
@@ -64,8 +55,8 @@ export class StateContextCache {
       return;
     }
     this.metrics?.adds.inc();
-    this.cache.set(key, item.clone());
-    const epoch = item.epochCtx.currentShuffling.epoch;
+    this.cache.set(key, item);
+    const epoch = item.epochCtx.epoch;
     const blockRoots = this.epochIndex.get(epoch);
     if (blockRoots) {
       blockRoots.add(key);
@@ -78,7 +69,7 @@ export class StateContextCache {
     const key = toHexString(root);
     const item = this.cache.get(key);
     if (!item) return;
-    this.epochIndex.get(item.epochCtx.currentShuffling.epoch)?.delete(key);
+    this.epochIndex.get(item.epochCtx.epoch)?.delete(key);
     this.cache.delete(key);
   }
 
@@ -107,7 +98,7 @@ export class StateContextCache {
         if (key !== headStateRootHex) {
           const item = this.cache.get(key);
           if (item) {
-            this.epochIndex.get(item.epochCtx.currentShuffling.epoch)?.delete(key);
+            this.epochIndex.get(item.epochCtx.epoch)?.delete(key);
             this.cache.delete(key);
           }
         }

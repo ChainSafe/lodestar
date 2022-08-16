@@ -1,17 +1,17 @@
 import {expect} from "chai";
 import {config} from "@lodestar/config/default";
-import {Epoch} from "@lodestar/types";
+import {Epoch, Slot} from "@lodestar/types";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {getValidPeerId} from "../../../../utils/peer.js";
-import {Batch, BatchOpts, BatchStatus} from "../../../../../src/sync/range/batch.js";
+import {Batch, BatchStatus} from "../../../../../src/sync/range/batch.js";
 import {
   validateBatchesStatus,
   getNextBatchToProcess,
-  toBeProcessedStartEpoch,
+  isSyncChainDone,
   toBeDownloadedStartEpoch,
 } from "../../../../../src/sync/range/utils/batches.js";
 
 describe("sync / range / batches", () => {
-  const opts: BatchOpts = {epochsPerBatch: 2};
   const peer = getValidPeerId();
 
   describe("validateBatchesStatus", () => {
@@ -131,45 +131,56 @@ describe("sync / range / batches", () => {
     }
   });
 
-  describe("toBeProcessedStartEpoch", () => {
+  describe("isSyncChainDone", () => {
     const testCases: {
       id: string;
       batches: [Epoch, BatchStatus][];
-      startEpoch: Epoch;
-      result: Epoch;
+      latestValidatedEpoch: Epoch;
+      targetSlot: Slot;
+      isDone: boolean;
     }[] = [
       {
-        id: "Return next batch after AwaitingValidation-s",
+        id: "Latest AwaitingValidation is beyond target",
         batches: [
           [0, BatchStatus.AwaitingValidation],
-          [2, BatchStatus.AwaitingValidation],
-          [4, BatchStatus.Processing],
-          [6, BatchStatus.AwaitingDownload],
+          [1, BatchStatus.AwaitingValidation],
+          [2, BatchStatus.Processing],
+          [3, BatchStatus.AwaitingDownload],
         ],
-        startEpoch: 0,
-        result: 4,
+        latestValidatedEpoch: 0,
+        targetSlot: 1 * SLOTS_PER_EPOCH, // = Last AwaitingValidation
+        isDone: true,
       },
       {
-        id: "No AwaitingValidation, next to process is first batch",
+        id: "latestValidatedEpoch is beyond target",
         batches: [
           [4, BatchStatus.Processing],
-          [6, BatchStatus.AwaitingDownload],
+          [5, BatchStatus.AwaitingDownload],
         ],
-        startEpoch: 4,
-        result: 4,
+        latestValidatedEpoch: 3,
+        targetSlot: 2 * SLOTS_PER_EPOCH, // Previous to
+        isDone: true,
       },
       {
-        id: "Empty, return startEpoch",
+        id: "No batches not done",
         batches: [],
-        startEpoch: 0,
-        result: 0,
+        latestValidatedEpoch: 0,
+        targetSlot: 1 * SLOTS_PER_EPOCH,
+        isDone: false,
+      },
+      {
+        id: "Zero case, not done",
+        batches: [],
+        latestValidatedEpoch: 0,
+        targetSlot: 0 * SLOTS_PER_EPOCH,
+        isDone: false,
       },
     ];
 
-    for (const {id, batches, startEpoch, result} of testCases) {
+    for (const {id, batches, latestValidatedEpoch, targetSlot, isDone} of testCases) {
       it(id, () => {
         const _batches = batches.map(([batchStartEpoch, batchStatus]) => createBatch(batchStatus, batchStartEpoch));
-        expect(toBeProcessedStartEpoch(_batches, startEpoch, opts)).to.equal(result);
+        expect(isSyncChainDone(_batches, latestValidatedEpoch, targetSlot)).to.equal(isDone);
       });
     }
   });
@@ -185,12 +196,12 @@ describe("sync / range / batches", () => {
         id: "Regular case, pick the next available spot",
         batches: [
           [0, BatchStatus.AwaitingValidation],
-          [2, BatchStatus.AwaitingValidation],
-          [4, BatchStatus.Processing],
-          [6, BatchStatus.AwaitingDownload],
+          [1, BatchStatus.AwaitingValidation],
+          [2, BatchStatus.Processing],
+          [3, BatchStatus.AwaitingDownload],
         ],
         startEpoch: 0,
-        result: 8,
+        result: 4,
       },
       {
         id: "Empty, return startEpoch",
@@ -203,13 +214,13 @@ describe("sync / range / batches", () => {
     for (const {id, batches, startEpoch, result} of testCases) {
       it(id, () => {
         const _batches = batches.map(([batchStartEpoch, batchStatus]) => createBatch(batchStatus, batchStartEpoch));
-        expect(toBeDownloadedStartEpoch(_batches, startEpoch, opts)).to.equal(result);
+        expect(toBeDownloadedStartEpoch(_batches, startEpoch)).to.equal(result);
       });
     }
   });
 
   function createBatch(status: BatchStatus, startEpoch = 0): Batch {
-    const batch = new Batch(startEpoch, config, opts);
+    const batch = new Batch(startEpoch, config);
 
     if (status === BatchStatus.AwaitingDownload) return batch;
 

@@ -93,67 +93,61 @@ const defaultOptions: ISpecTestOptions<any, any> = {
 export function describeDirectorySpecTest<TestCase extends {meta?: any}, Result>(
   name: string,
   testCaseDirectoryPath: string,
-  testFunction: (testCase: TestCase, directoryName: string) => Result,
+  testFunction: (testCase: TestCase, directoryName: string) => Result | Promise<Result>,
   options: Partial<ISpecTestOptions<TestCase, Result>>
 ): void {
   options = {...defaultOptions, ...options};
   if (!isDirectory(testCaseDirectoryPath)) {
     throw new Error(`${testCaseDirectoryPath} is not directory`);
   }
+
   describe(name, function () {
     if (options.timeout !== undefined) {
       this.timeout(options.timeout || "10 min");
     }
 
-    const testCases = fs
-      .readdirSync(testCaseDirectoryPath)
-      .map((name) => join(testCaseDirectoryPath, name))
-      .filter(isDirectory);
+    for (const testSubDirname of fs.readdirSync(testCaseDirectoryPath)) {
+      const testSubDirPath = join(testCaseDirectoryPath, testSubDirname);
+      if (!isDirectory(testSubDirPath)) {
+        continue;
+      }
 
-    for (const [index, testCaseDirectory] of testCases.entries()) {
-      generateTestCase(testCaseDirectory, index, testFunction, options);
+      // Use full path here, not just `testSubDirname` to allow usage of `mocha --grep`
+      const testName = `${name}/${testSubDirname}`;
+      it(testName, async function () {
+        // some tests require to load meta.yaml first in order to know respective ssz types.
+        const metaFilePath = join(testSubDirPath, "meta.yaml");
+        const meta: TestCase["meta"] = fs.existsSync(metaFilePath)
+          ? loadYaml(fs.readFileSync(metaFilePath, "utf8"))
+          : undefined;
+
+        let testCase = loadInputFiles(testSubDirPath, options, meta);
+        if (options.mapToTestCase) testCase = options.mapToTestCase(testCase);
+        if (options.shouldSkip && options.shouldSkip(testCase, testName, 0)) {
+          this.skip();
+          return;
+        }
+
+        if (options.shouldError?.(testCase)) {
+          try {
+            await testFunction(testCase, name);
+          } catch (e) {
+            return;
+          }
+        } else {
+          const result = await testFunction(testCase, name);
+          if (!options.getExpected) throw Error("getExpected is not defined");
+          if (!options.expectFunc) throw Error("expectFunc is not defined");
+          const expected = options.getExpected(testCase);
+          options.expectFunc(testCase, expected, result);
+        }
+      });
     }
   });
 }
 
 export function loadYamlFile(path: string): Record<string, unknown> {
   return loadYaml(fs.readFileSync(path, "utf8"));
-}
-
-function generateTestCase<TestCase extends {meta?: any}, Result>(
-  testCaseDirectoryPath: string,
-  index: number,
-  testFunction: (...args: any) => Result,
-  options: ISpecTestOptions<TestCase, Result>
-): void {
-  const name = basename(testCaseDirectoryPath);
-  it(name, function () {
-    // some tests require to load meta.yaml first in order to know respective ssz types.
-    const metaFilePath = join(testCaseDirectoryPath, "meta.yaml");
-    let meta: TestCase["meta"] = undefined;
-    if (fs.existsSync(metaFilePath)) {
-      meta = loadYaml(fs.readFileSync(metaFilePath, "utf8"));
-    }
-    let testCase = loadInputFiles(testCaseDirectoryPath, options, meta);
-    if (options.mapToTestCase) testCase = options.mapToTestCase(testCase);
-    if (options.shouldSkip && options.shouldSkip(testCase, name, index)) {
-      this.skip();
-      return;
-    }
-    if (options.shouldError && options.shouldError(testCase)) {
-      try {
-        testFunction(testCase, name);
-      } catch (e) {
-        return;
-      }
-    } else {
-      const result = testFunction(testCase, name);
-      if (!options.getExpected) throw Error("getExpected is not defined");
-      if (!options.expectFunc) throw Error("expectFunc is not defined");
-      const expected = options.getExpected(testCase);
-      options.expectFunc(testCase, expected, result);
-    }
-  });
 }
 
 function loadInputFiles<TestCase extends {meta?: any}, Result>(

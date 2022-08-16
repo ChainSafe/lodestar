@@ -57,7 +57,7 @@ export function getBeaconStateApi({
         for (const id of filters.id) {
           const validatorIndex = getStateValidatorIndex(id, state, pubkey2index);
           if (validatorIndex != null) {
-            const validator = validators.get(validatorIndex);
+            const validator = validators.getReadonly(validatorIndex);
             if (filters.statuses && !filters.statuses.includes(getValidatorStatus(validator, currentEpoch))) {
               continue;
             }
@@ -99,7 +99,7 @@ export function getBeaconStateApi({
       return {
         data: toValidatorResponse(
           validatorIndex,
-          state.validators.get(validatorIndex),
+          state.validators.getReadonly(validatorIndex),
           state.balances.get(validatorIndex),
           getCurrentEpoch(state)
         ),

@@ -1,7 +1,3 @@
-/**
- * @module eth1
- */
-
 import {Interface} from "@ethersproject/abi";
 import {fromHexString} from "@chainsafe/ssz";
 import {phase0, ssz} from "@lodestar/types";

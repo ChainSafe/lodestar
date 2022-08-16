@@ -1,5 +1,5 @@
 import {defaultOptions} from "@lodestar/validator";
-import {ICliCommandOptions, ILogArgs} from "../../util/index.js";
+import {ensure0xPrefix, ICliCommandOptions, ILogArgs} from "../../util/index.js";
 import {logOptions, beaconPathsOptions} from "../beacon/options.js";
 import {IBeaconPaths} from "../beacon/paths.js";
 import {keymanagerRestApiServerOptsDefault} from "./keymanager/server.js";
@@ -210,9 +210,13 @@ export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
     description:
       "List of validator public keys used by an external signer. May also provide a single string a comma separated public keys",
     type: "array",
+    string: true, // Ensures the pubkey string is not automatically converted to numbers
     coerce: (pubkeys: string[]): string[] =>
       // Parse ["0x11,0x22"] to ["0x11", "0x22"]
-      pubkeys.map((item) => item.split(",")).flat(1),
+      pubkeys
+        .map((item) => item.split(","))
+        .flat(1)
+        .map(ensure0xPrefix),
     group: "externalSignerUrl",
   },
 

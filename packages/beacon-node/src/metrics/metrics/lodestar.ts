@@ -794,17 +794,17 @@ export function createLodestarMetrics(
       }),
 
       // Only for known
-      proposerBalanceDiffKnown: register.histogram({
-        name: "validator_monitor_proposer_balance_diff_known_gwei",
-        help: "Balance diff of known block proposer after importing a valid block",
+      proposerBalanceDeltaKnown: register.histogram({
+        name: "validator_monitor_proposer_balance_delta_known_gwei",
+        help: "Balance delta of known block proposer after importing a valid block",
         // Jul22 mainnet block reward is consistently between 29,000,000-28,000,000 GWei
         buckets: [10_000, 100_000, 1e6, 10e6, 20e6, 50e6, 100e6, 1000e6],
       }),
     },
 
-    proposerBalanceDiffAny: register.histogram({
-      name: "lodestar_proposer_balance_diff_any_gwei",
-      help: "Balance diff of every block proposer after importing a valid block",
+    proposerBalanceDeltaAny: register.histogram({
+      name: "lodestar_proposer_balance_delta_any_gwei",
+      help: "Balance delta of every block proposer after importing a valid block",
       buckets: [10_000, 100_000, 1e6, 10e6, 20e6, 50e6, 100e6, 1000e6],
     }),
 
@@ -1004,10 +1004,27 @@ export function createLodestarMetrics(
     },
 
     lightclientServer: {
-      persistedUpdates: register.gauge<"type">({
-        name: "lodestar_lightclient_server_persisted_updates_total",
-        help: "Total number of persisted updates by finalized type",
-        labelNames: ["type"],
+      onSyncAggregate: register.gauge<"event">({
+        name: "lodestar_lightclient_server_on_sync_aggregate_event_total",
+        help: "Total number of relevant events onSyncAggregate fn",
+        labelNames: ["event"],
+      }),
+      highestSlot: register.gauge<"item">({
+        name: "lodestar_lightclient_server_higest_slot",
+        help: "Current highest slot of items stored by LightclientServer",
+        labelNames: ["item"],
+      }),
+      updateNotBetter: register.gauge({
+        name: "lodestar_lightclient_server_event_update_not_better_total",
+        help: "Total number of cache hits in LightclientServer.prevHeadData",
+      }),
+      attestedDataCacheMiss: register.gauge({
+        name: "lodestar_lightclient_server_attested_cache_miss_total",
+        help: "Total number of cache miss in LightclientServer.prevHeadData",
+      }),
+      attestedDataDiffPeriod: register.gauge({
+        name: "lodestar_lightclient_server_attested_data_diff_period_total",
+        help: "Total number of times a syncAggregate is a different period than attested data",
       }),
     },
 
@@ -1052,6 +1069,54 @@ export function createLodestarMetrics(
         name: "lodestar_eth1_follow_distance_dynamic",
         help: "Eth1 dynamic follow distance changed by the deposit tracker if blocks are slow",
       }),
+
+      // Merge Search info
+      eth1MergeStatus: register.gauge({
+        name: "lodestar_eth1_merge_status",
+        help: "Eth1 Merge Status 0 PRE_MERGE 1 SEARCHING 2 FOUND 3 POST_MERGE",
+      }),
+      eth1MergeTDFactor: register.gauge({
+        name: "lodestar_eth1_merge_td_factor",
+        help: "TTD set for the merge",
+      }),
+      eth1MergeTTD: register.gauge({
+        name: "lodestar_eth1_merge_ttd",
+        help: "TTD set for the merge scaled down by td_factor",
+      }),
+
+      eth1PollMergeBlockErrors: register.gauge({
+        name: "lodestar_eth1_poll_merge_block_errors_total",
+        help: "Total count of errors polling merge block",
+      }),
+      getTerminalPowBlockPromiseCacheHit: register.gauge({
+        name: "lodestar_eth1_get_terminal_pow_block_promise_cache_hit_total",
+        help: "Total count of skipped runs in poll merge block, because a previous promise existed",
+      }),
+      eth1ParentBlocksFetched: register.gauge({
+        name: "lodestar_eth1_parent_blocks_fetched_total",
+        help: "Total count of parent blocks fetched searching for merge block",
+      }),
+
+      // Latest block details
+      eth1LatestBlockTD: register.gauge({
+        name: "lodestar_eth1_latest_block_ttd",
+        help: "Eth1 latest Block td scaled down by td_factor",
+      }),
+      eth1LatestBlockNumber: register.gauge({
+        name: "lodestar_eth1_latest_block_number",
+        help: "Eth1 latest block number",
+      }),
+      eth1LatestBlockTimestamp: register.gauge({
+        name: "lodestar_eth1_latest_block_timestamp",
+        help: "Eth1 latest block timestamp",
+      }),
+
+      // Merge details
+      eth1MergeBlockDetails: register.gauge<"terminalBlockHash" | "terminalBlockNumber" | "terminalBlockTD">({
+        name: "lodestar_eth1_merge_block_details",
+        help: "If found then 1 with terminal block details",
+        labelNames: ["terminalBlockHash", "terminalBlockNumber", "terminalBlockTD"],
+      }),
     },
 
     eth1HttpClient: {
@@ -1067,13 +1132,20 @@ export function createLodestarMetrics(
         help: "eth1 JsonHttpClient - total count of request errors",
         labelNames: ["routeId"],
       }),
+      retryCount: register.gauge<"routeId">({
+        name: "lodestar_eth1_http_client_request_retries_total",
+        help: "eth1 JsonHttpClient - total count of request retries",
+        labelNames: ["routeId"],
+      }),
       requestUsedFallbackUrl: register.gauge({
         name: "lodestar_eth1_http_client_request_used_fallback_url_total",
         help: "eth1 JsonHttpClient - total count of requests on fallback url(s)",
+        labelNames: ["routeId"],
       }),
       activeRequests: register.gauge({
         name: "lodestar_eth1_http_client_active_requests",
         help: "eth1 JsonHttpClient - current count of active requests",
+        labelNames: ["routeId"],
       }),
       configUrlsCount: register.gauge({
         name: "lodestar_eth1_http_client_config_urls_count",
@@ -1094,13 +1166,20 @@ export function createLodestarMetrics(
         help: "ExecutionEngineHttp client - total count of request errors",
         labelNames: ["routeId"],
       }),
+      retryCount: register.gauge<"routeId">({
+        name: "lodestar_execution_engine_http_client_request_retries_total",
+        help: "ExecutionEngineHttp client - total count of request retries",
+        labelNames: ["routeId"],
+      }),
       requestUsedFallbackUrl: register.gauge({
         name: "lodestar_execution_engine_http_client_request_used_fallback_url_total",
         help: "ExecutionEngineHttp client - total count of requests on fallback url(s)",
+        labelNames: ["routeId"],
       }),
       activeRequests: register.gauge({
         name: "lodestar_execution_engine_http_client_active_requests",
         help: "ExecutionEngineHttp client - current count of active requests",
+        labelNames: ["routeId"],
       }),
       configUrlsCount: register.gauge({
         name: "lodestar_execution_engine_http_client_config_urls_count",
