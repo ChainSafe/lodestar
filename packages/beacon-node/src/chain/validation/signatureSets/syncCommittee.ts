@@ -11,7 +11,7 @@ export function getSyncCommitteeSignatureSet(
   state: CachedBeaconStateAllForks,
   syncCommittee: altair.SyncCommitteeMessage
 ): ISignatureSet {
-  const domain = state.config.getDomain(DOMAIN_SYNC_COMMITTEE, syncCommittee.slot);
+  const domain = state.config.getDomain(state.slot, DOMAIN_SYNC_COMMITTEE, syncCommittee.slot);
 
   return {
     type: SignatureSetType.single,

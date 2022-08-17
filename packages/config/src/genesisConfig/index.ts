@@ -1,4 +1,4 @@
-import {ForkName} from "@lodestar/params";
+import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {DomainType, ForkDigest, phase0, Root, Slot, ssz, Version} from "@lodestar/types";
 import {toHexString} from "@chainsafe/ssz";
 import {IChainForkConfig} from "../beaconConfig.js";
@@ -22,8 +22,13 @@ export function createICachedGenesis(chainForkConfig: IChainForkConfig, genesisV
   }
 
   return {
-    getDomain(domainType: DomainType, slot: Slot): Uint8Array {
-      const forkInfo = chainForkConfig.getForkInfo(slot);
+    getDomain(stateSlot: Slot, domainType: DomainType, messageSlot?: Slot): Uint8Array {
+      const stateForkInfo = chainForkConfig.getForkInfo(stateSlot);
+      const epoch = Math.floor(messageSlot ?? stateSlot / SLOTS_PER_EPOCH);
+      const forkInfo =
+        epoch < stateForkInfo.epoch
+          ? chainForkConfig.forksAscendingEpochOrder[Math.max(stateForkInfo.seq - 1, 0)] // previous
+          : stateForkInfo; // current
       let domainByType = domainCache.get(forkInfo.name);
       if (!domainByType) {
         domainByType = new Map<DomainType, Uint8Array>();

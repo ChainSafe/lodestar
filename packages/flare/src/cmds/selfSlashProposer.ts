@@ -135,7 +135,7 @@ export async function selfSlashProposerHandler(args: SelfSlashArgs): Promise<voi
 
 function signHeaderBigint(config: IBeaconConfig, sk: SecretKey, header: phase0.BeaconBlockHeaderBigint): Uint8Array {
   const slot = Number(header.slot as bigint);
-  const proposerDomain = config.getDomain(DOMAIN_BEACON_PROPOSER, slot);
+  const proposerDomain = config.getDomain(slot, DOMAIN_BEACON_PROPOSER);
   const signingRoot = computeSigningRoot(ssz.phase0.BeaconBlockHeaderBigint, header, proposerDomain);
   return sk.sign(signingRoot).toBytes();
 }
