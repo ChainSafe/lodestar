@@ -6,23 +6,27 @@ import {IForkConfig, IForkInfo} from "./types.js";
 export * from "./types.js";
 
 export function createIForkConfig(config: IChainConfig): IForkConfig {
-  const phase0 = {
+  const phase0: IForkInfo = {
     name: ForkName.phase0,
     seq: ForkSeq.phase0,
     epoch: GENESIS_EPOCH,
     version: config.GENESIS_FORK_VERSION,
+    // Will never be used
+    prevForkName: ForkName.phase0,
   };
-  const altair = {
+  const altair: IForkInfo = {
     name: ForkName.altair,
     seq: ForkSeq.altair,
     epoch: config.ALTAIR_FORK_EPOCH,
     version: config.ALTAIR_FORK_VERSION,
+    prevForkName: ForkName.phase0,
   };
-  const bellatrix = {
+  const bellatrix: IForkInfo = {
     name: ForkName.bellatrix,
     seq: ForkSeq.bellatrix,
     epoch: config.BELLATRIX_FORK_EPOCH,
     version: config.BELLATRIX_FORK_VERSION,
+    prevForkName: ForkName.altair,
   };
 
   /** Forks in order order of occurence, `phase0` first */
