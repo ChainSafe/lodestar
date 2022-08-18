@@ -2829,15 +2829,15 @@
   resolved "https://registry.npmjs.org/@types/node/-/node-14.14.43.tgz"
   integrity sha512-3pwDJjp1PWacPTpH0LcfhgjvurQvrZFBrC6xxjaUEZ7ifUtT32jtjPxEMMblpqd2Mvx+k8haqQJLQxolyGN/cQ==
 
-"@types/node@>=10.0.0", "@types/node@^18.6.1":
-  version "18.7.6"
-  resolved "https://registry.yarnpkg.com/@types/node/-/node-18.7.6.tgz#31743bc5772b6ac223845e18c3fc26f042713c83"
-  integrity sha512-EdxgKRXgYsNITy5mjjXjVE/CS8YENSdhiagGrLqjG0pvA2owgJ6i4l7wy/PFZGC0B1/H20lWKN7ONVDNYDZm7A==
-
 "@types/node@11.11.6":
   version "11.11.6"
   resolved "https://registry.yarnpkg.com/@types/node/-/node-11.11.6.tgz#df929d1bb2eee5afdda598a41930fe50b43eaa6a"
   integrity sha512-Exw4yUWMBXM3X+8oqzJNRqZSwUAaS4+7NdvHqQuFi/d+synz++xmX3QIf+BFqneW8N31R8Ky+sikfZUXq07ggQ==
+
+"@types/node@>=10.0.0", "@types/node@^18.6.1":
+  version "18.7.6"
+  resolved "https://registry.yarnpkg.com/@types/node/-/node-18.7.6.tgz#31743bc5772b6ac223845e18c3fc26f042713c83"
+  integrity sha512-EdxgKRXgYsNITy5mjjXjVE/CS8YENSdhiagGrLqjG0pvA2owgJ6i4l7wy/PFZGC0B1/H20lWKN7ONVDNYDZm7A==
 
 "@types/node@>=13.7.0":
   version "16.6.2"
@@ -5983,21 +5983,13 @@ fastify-bearer-auth@6.1.0:
   dependencies:
     fastify-plugin "^3.0.0"
 
-"fastify-cors-deprecated@npm:fastify-cors@6.0.3":
-  version "6.0.3"
-  resolved "https://registry.yarnpkg.com/fastify-cors/-/fastify-cors-6.0.3.tgz#1907f92c3f855a18ef6fb6213186c73cf0bbf9e4"
-  integrity sha512-fMbXubKKyBHHCfSBtsCi3+7VyVRdhJQmGes5gM+eGKkRErCdm0NaYO0ozd31BQBL1ycoTIjbqOZhJo4RTF/Vlg==
+fastify-cors@^6.0.1:
+  version "6.0.1"
+  resolved "https://registry.npmjs.org/fastify-cors/-/fastify-cors-6.0.1.tgz"
+  integrity sha512-eeNTdQNmBsqHL87we+X74n9+H0hTDX0cXGVdyZjGf9om2pZfigAZwuSxaUUE2pLP9tp5+rEd5kejKQ8+ZCvAoA==
   dependencies:
     fastify-plugin "^3.0.0"
     vary "^1.1.2"
-
-fastify-cors@^6.0.1:
-  version "6.1.0"
-  resolved "https://registry.yarnpkg.com/fastify-cors/-/fastify-cors-6.1.0.tgz#b47bd7faf29113a884e59413ee198a9c323cf180"
-  integrity sha512-QBKz32IoY/iuT74CunRY1XOSpjSTIOh9E3FxulXIBhd0D2vdgG0kDvy0eG6HA/88sRfWHeba43LkGEXPz0Rh8g==
-  dependencies:
-    fastify-cors-deprecated "npm:fastify-cors@6.0.3"
-    process-warning "^1.0.0"
 
 fastify-error@^0.3.0:
   version "0.3.1"
@@ -12449,7 +12441,7 @@ varint@^6.0.0:
   resolved "https://registry.yarnpkg.com/varint/-/varint-6.0.0.tgz#9881eb0ce8feaea6512439d19ddf84bf551661d0"
   integrity sha512-cXEIW6cfr15lFv563k4GuVuW/fiwjknytD37jIOLSdSWuOI6WnO/oKwmP2FQTU2l01LP8/M5TSAJpzUaGe3uWg==
 
-vary@^1, vary@^1.1.2:
+vary@^1:
   version "1.1.2"
   resolved "https://registry.yarnpkg.com/vary/-/vary-1.1.2.tgz#2299f02c6ded30d4a5961b0b9f74524a18f634fc"
   integrity sha512-BNGbWLfd0eUPabhkXUVm0j8uuvREyTh5ovRa/dyow/BqAbZJyC+5fU+IzQOzmAKzYqYRAISoRhdQr3eIZ/PXqg==
