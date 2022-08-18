@@ -71,6 +71,10 @@ export class DoppelgangerService {
     });
   }
 
+  unregisterValidator(pubkeyHex: PubkeyHex): void {
+    this.doppelgangerStateByPubkey.delete(pubkeyHex);
+  }
+
   getStatus(pubKeyHex: PubkeyHex): DoppelgangerStatus {
     return getStatus(this.doppelgangerStateByPubkey.get(pubKeyHex));
   }

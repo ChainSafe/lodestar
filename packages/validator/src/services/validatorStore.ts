@@ -151,6 +151,8 @@ export class ValidatorStore {
   }
 
   removeSigner(pubkeyHex: PubkeyHex): boolean {
+    this.doppelgangerService?.unregisterValidator(pubkeyHex);
+
     return this.indicesService.removeForKey(pubkeyHex) || this.validators.delete(pubkeyHex);
   }
 
