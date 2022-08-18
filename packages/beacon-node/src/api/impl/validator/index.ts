@@ -85,9 +85,14 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
   async function waitForSlot(slot: Slot): Promise<void> {
     const slotStartSec = chain.genesisTime + slot * config.SECONDS_PER_SLOT;
     const msToSlot = slotStartSec * 1000 - Date.now();
-    if (msToSlot > 0 && msToSlot < MAX_API_CLOCK_DISPARITY_MS) {
+
+    if (msToSlot > MAX_API_CLOCK_DISPARITY_MS) {
+      throw Error(`Requested slot ${slot} is in the future`);
+    } else if (msToSlot > 0) {
       await chain.clock.waitForSlot(slot);
     }
+
+    // else, clock already in slot or slot is in the past
   }
 
   /**
