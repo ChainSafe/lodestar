@@ -108,6 +108,11 @@ Jul-09 17:34:54.278 []                 info: Syncing - 3 days left - 3.00 slots/
 
 A young testnet should take a few hours to sync. If you see multiple or consistent errors in the logs, please open a [Github issue](https://github.com/ChainSafe/lodestar/issues/new) or reach out to us in [Discord](https://discord.gg/yjyvFRP). Just by reporting anomalities you are helping accelerate the progress of Ethereum Consensus, thanks for contributing!
 
+<!-- prettier-ignore-start -->
+!!! warning
+    It is dangerous to expose your Beacon APIs publicly as there is no default authentication mechanism provided. Ensure your beacon node host is not exposing ports 8545 or 9596 outside of your internal network. 
+<!-- prettier-ignore-end -->
+
 ### Weak subjectivity
 
 If you are starting your node from a blank db/genesis (or from last saved state in db) in a network which is now far ahead, your node is susceptible to "long range attacks."
