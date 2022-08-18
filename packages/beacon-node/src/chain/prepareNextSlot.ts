@@ -1,4 +1,4 @@
-import {computeEpochAtSlot, isBellatrixStateType} from "@lodestar/state-transition";
+import {computeEpochAtSlot, isBellatrixStateType, computeTimeAtSlot} from "@lodestar/state-transition";
 import {IChainForkConfig} from "@lodestar/config";
 import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Slot} from "@lodestar/types";
@@ -60,7 +60,7 @@ export class PrepareNextSlotScheduler {
     //  or we are pre-bellatrix and this is not an epoch transition
     if (
       prepareSlot <= GENESIS_SLOT ||
-      (this.config.getForkSeq(prepareEpoch) < ForkSeq.bellatrix && !isEpochTransition)
+      (this.config.getForkSeq(prepareSlot) < ForkSeq.bellatrix && !isEpochTransition)
     ) {
       return;
     }
@@ -120,6 +120,10 @@ export class PrepareNextSlotScheduler {
         const proposerIndex = prepareState.epochCtx.getBeaconProposer(prepareSlot);
         const feeRecipient = this.chain.beaconProposerCache.get(proposerIndex);
         if (feeRecipient) {
+          const preparationTime =
+            computeTimeAtSlot(this.config, prepareSlot, this.chain.genesisTime) - Date.now() / 1000;
+          this.metrics?.blockPayload.payloadAdvancePrepTime.observe(preparationTime);
+
           const safeBlockHash = this.chain.forkChoice.getJustifiedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
           const finalizedBlockHash =
             this.chain.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
