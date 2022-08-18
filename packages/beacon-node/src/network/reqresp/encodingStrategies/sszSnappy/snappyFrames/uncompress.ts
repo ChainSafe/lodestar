@@ -23,12 +23,12 @@ export class SnappyFramesUncompress {
 
       const type = getChunkType(this.buffer.get(0));
       const frameSize = getFrameSize(this.buffer, 1);
-      const data = this.buffer.subarray(4, 4 + frameSize);
 
       if (this.buffer.length - 4 < frameSize) {
         break;
       }
 
+      const data = this.buffer.subarray(4, 4 + frameSize);
       this.buffer.consume(4 + frameSize);
 
       if (!this.state.foundIdentifier && type !== ChunkType.IDENTIFIER) {
