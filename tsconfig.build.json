@@ -1,7 +1,8 @@
 {
   "compilerOptions": {
     "target": "es2019",
-    "lib": ["es2020", "esnext.bigint", "es2020.string", "es2020.symbol.wellknown"],
+    // todo: until we can import AbortSignal separately, we need "dom"
+    "lib": ["es2020", "esnext.bigint", "es2020.string", "es2020.symbol.wellknown", "dom"],
 
     "module": "esnext",
     "moduleResolution": "node",
