@@ -8,7 +8,6 @@ import {IGlobalArgs} from "../../options/index.js";
 import {onGracefulShutdown, getCliLogger} from "../../util/index.js";
 import {initializeOptionsAndConfig} from "../init/handler.js";
 import {getVersionData} from "../../util/version.js";
-import {deleteOldPeerstorePreV036} from "../../migrations/index.js";
 import {IBeaconArgs} from "./options.js";
 import {getBeaconPaths} from "./paths.js";
 import {initBeaconState} from "./initBeaconState.js";
@@ -32,9 +31,6 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
 
   logger.info("Lodestar", {network: args.network, version, commit});
   if (ACTIVE_PRESET === PresetName.minimal) logger.info("ACTIVE_PRESET == minimal preset");
-
-  // peerstore migration
-  await deleteOldPeerstorePreV036(beaconPaths.peerStoreDir, logger);
 
   // additional metrics registries
   const metricsRegistries: Registry[] = [];
