@@ -4,7 +4,7 @@ import {ICliCommandOptions, extractJwtHexSecret} from "../../util/index.js";
 import {ExecutionEngineArgs} from "./execution.js";
 
 export interface IEth1Args {
-  "eth1.enabled": boolean;
+  eth1: boolean;
   "eth1.providerUrl": string;
   "eth1.providerUrls": string[];
   "eth1.depositContractDeployBlock": number;
@@ -34,7 +34,7 @@ export function parseArgs(args: IEth1Args & Partial<ExecutionEngineArgs>): IBeac
   }
 
   return {
-    enabled: args["eth1.enabled"],
+    enabled: args["eth1"],
     providerUrls,
     jwtSecretHex,
     depositContractDeployBlock: args["eth1.depositContractDeployBlock"],
@@ -45,7 +45,7 @@ export function parseArgs(args: IEth1Args & Partial<ExecutionEngineArgs>): IBeac
 }
 
 export const options: ICliCommandOptions<IEth1Args> = {
-  "eth1.enabled": {
+  eth1: {
     description: "Whether to follow the eth1 chain",
     type: "boolean",
     defaultDescription: String(defaultOptions.eth1.enabled),

@@ -28,7 +28,7 @@ describe("options / beaconNodeOptions", () => {
       "chain.maxSkipSlots": 100,
       "safe-slots-to-import-optimistically": 256,
 
-      "eth1.enabled": true,
+      "eth1": true,
       "eth1.providerUrl": "http://my.node:8545",
       "eth1.providerUrls": ["http://my.node:8545"],
       "eth1.depositContractDeployBlock": 1625314,
@@ -166,7 +166,7 @@ describe("options / beaconNodeOptions", () => {
 
     // Cast to match the expected fully defined type
     const beaconNodeArgsPartial = {
-      "eth1.enabled": true,
+      "eth1": true,
       "execution.urls": ["http://my.node:8551"],
       "jwt-secret": jwtSecretFile,
     } as IBeaconNodeArgs;

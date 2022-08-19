@@ -85,7 +85,7 @@ const externalOptionsOverrides: Partial<Record<"network" | keyof typeof beaconNo
     default: 1,
   },
   "eth1.enabled": {
-    ...beaconNodeOptions["eth1.enabled"],
+    ...beaconNodeOptions["eth1"],
     defaultDescription: undefined,
     default: false,
   },
