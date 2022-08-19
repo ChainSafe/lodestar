@@ -10,7 +10,7 @@ packages/cli/bin/lodestar dev \
   --enr.ip 127.0.0.1 \
   --dataDir .lodestar/node2 \
   --reset \
-  --api.rest.enabled \
+  --rest \
   --api.rest.api '*' \
   --metrics \
   --metrics.serverPort 8009 \
