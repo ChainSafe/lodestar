@@ -34,9 +34,9 @@ import {IMetrics} from "../../../metrics/index.js";
 // Time to provide the EL to generate a payload from new payload id
 const PAYLOAD_GENERATION_TIME_MS = 500;
 enum PayloadPreparationType {
-  Fresh,
-  Cached,
-  Reorged,
+  Fresh = "Fresh",
+  Cached = "Cached",
+  Reorged = "Reorged",
 }
 
 export enum BlockType {
@@ -163,8 +163,8 @@ export async function assembleBody<T extends BlockType>(
           const payload = await chain.executionEngine.getPayload(payloadId);
           (blockBody as bellatrix.BeaconBlockBody).executionPayload = payload;
 
-          const fetchTime = Date.now() / 1000 - computeTimeAtSlot(chain.config, blockSlot, chain.genesisTime);
-          metrics?.blockPayload.payloadFetchTime.observe({prepType}, fetchTime);
+          const fetchedTime = Date.now() / 1000 - computeTimeAtSlot(chain.config, blockSlot, chain.genesisTime);
+          metrics?.blockPayload.payloadFetchedTime.observe({prepType}, fetchedTime);
           if (payload.transactions.length === 0) {
             metrics?.blockPayload.emptyPayloads.inc({prepType});
           }
