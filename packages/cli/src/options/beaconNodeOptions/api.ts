@@ -63,8 +63,6 @@ export const options: ICliCommandOptions<IApiArgs> = {
   },
 
   "rest.address": {
-    // For backwards compatibility
-    alias: ["api.rest.host"],
     type: "string",
     description: "Set host for HTTP API",
     defaultDescription: defaultOptions.api.rest.address,
