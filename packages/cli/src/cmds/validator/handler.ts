@@ -21,7 +21,7 @@ import {KeymanagerRestApiServer} from "./keymanager/server.js";
  */
 export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): Promise<void> {
   const graffiti = args.graffiti || getDefaultGraffiti();
-  const defaultFeeRecipient = parseFeeRecipient(args.defaultFeeRecipient ?? defaultOptions.defaultFeeRecipient);
+  const suggestedFeeRecipient = parseFeeRecipient(args.suggestedFeeRecipient ?? defaultOptions.defaultFeeRecipient);
   const doppelgangerProtectionEnabled = args.doppelgangerProtectionEnabled;
 
   const validatorPaths = getValidatorPaths(args);
@@ -113,7 +113,7 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
       graffiti,
       doppelgangerProtectionEnabled,
       afterBlockDelaySlotFraction: args.afterBlockDelaySlotFraction,
-      defaultFeeRecipient,
+      suggestedFeeRecipient,
       builder,
     },
     controller.signal,

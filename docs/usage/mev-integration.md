@@ -27,7 +27,7 @@ All you have to do is:
 2. Run lodestar VC with these additional flags
 
 ```shell
---builder --defaultFeeRecipient <your ethereum address>
+--builder --suggestedFeeRecipient <your ethereum address>
 ```
 
 There are some more builder flags available in lodestar cli (for both beacon and validator) which you may inspect and use.
