@@ -71,6 +71,7 @@ export const options: ICliCommandOptions<INetworkArgs> = {
   "network.maxPeers": {
     type: "number",
     description: "The maximum number of connections allowed",
+    hidden: true,
     defaultDescription: String(defaultOptions.network.maxPeers),
     group: "network",
   },
@@ -85,6 +86,7 @@ export const options: ICliCommandOptions<INetworkArgs> = {
   "network.bootMultiaddrs": {
     type: "array",
     description: "Libp2p peers to connect to on boot",
+    hidden: true,
     defaultDescription: JSON.stringify(defaultOptions.network.bootMultiaddrs),
     group: "network",
   },
@@ -106,6 +108,7 @@ export const options: ICliCommandOptions<INetworkArgs> = {
   "network.connectToDiscv5Bootnodes": {
     type: "boolean",
     description: "Attempt direct connection to discv5 bootnodes from network.discv5.bootEnrs option",
+    hidden: true,
     defaultDescription: String(defaultOptions.network.connectToDiscv5Bootnodes === true),
     group: "network",
   },
@@ -113,6 +116,7 @@ export const options: ICliCommandOptions<INetworkArgs> = {
   "network.discv5FirstQueryDelayMs": {
     type: "number",
     description: "Delay the 1st heart beat of Peer Manager after starting Discv5",
+    hidden: true,
     defaultDescription: String(defaultOptions.network.discv5FirstQueryDelayMs),
     group: "network",
   },
