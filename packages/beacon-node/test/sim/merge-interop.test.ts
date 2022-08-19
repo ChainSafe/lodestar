@@ -50,7 +50,7 @@ const jwtSecretHex = "0xdc6457099f127cf0bac78de8b297df04951281909db4f58b43def7c7
 const retryAttempts = defaultExecutionEngineHttpOpts.retryAttempts;
 const retryDelay = defaultExecutionEngineHttpOpts.retryDelay;
 
-describe("executionEngine / ExecutionEngineHttp", function () {
+describe.skip("executionEngine / ExecutionEngineHttp", function () {
   this.timeout("10min");
 
   const dataPath = fs.mkdtempSync("lodestar-test-merge-interop");
