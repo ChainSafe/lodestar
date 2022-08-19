@@ -8,7 +8,7 @@ packages/cli/bin/lodestar dev \
   --genesisValidators 8 \
   --genesisTime $GENESIS_TIME \
   --enr.ip 127.0.0.1 \
-  --rootDir .lodestar/node2 \
+  --dataDir .lodestar/node2 \
   --reset \
   --api.rest.enabled \
   --api.rest.api '*' \

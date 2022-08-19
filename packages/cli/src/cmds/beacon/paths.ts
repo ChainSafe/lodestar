@@ -18,7 +18,7 @@ export interface IBeaconPaths {
  * Defines the path structure of the files relevant to the beacon node
  *
  * ```bash
- * $rootDir
+ * $dataDir
  * └── $beaconDir
  *     ├── beacon.config.json
  *     ├── peer-id.json
@@ -26,15 +26,15 @@ export interface IBeaconPaths {
  *     └── chain-db
  * ```
  */
-// Using Pick<IGlobalArgs, "rootDir"> make changes in IGlobalArgs throw a type error here
+// Using Pick<IGlobalArgs, "dataDir"> make changes in IGlobalArgs throw a type error here
 export function getBeaconPaths(
-  args: Partial<IBeaconPaths> & Pick<IGlobalArgs, "rootDir">
+  args: Partial<IBeaconPaths> & Pick<IGlobalArgs, "dataDir">
 ): IBeaconPaths & IGlobalPaths {
   // Compute global paths first
   const globalPaths = getGlobalPaths(args);
 
-  const rootDir = globalPaths.rootDir;
-  const beaconDir = rootDir;
+  const dataDir = globalPaths.dataDir;
+  const beaconDir = dataDir;
   const dbDir = args.dbDir || path.join(beaconDir, "chain-db");
   const persistInvalidSszObjectsDir = args.persistInvalidSszObjectsDir || path.join(beaconDir, "invalidSszObjects");
   const peerStoreDir = args.peerStoreDir || path.join(beaconDir, "peerstore");
@@ -61,4 +61,4 @@ export function getBeaconPaths(
 /**
  * Constructs representations of the path structure to show in command's description
  */
-export const defaultBeaconPaths = getBeaconPaths({rootDir: "$rootDir"});
+export const defaultBeaconPaths = getBeaconPaths({dataDir: "$dataDir"});

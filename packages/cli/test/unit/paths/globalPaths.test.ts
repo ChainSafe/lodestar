@@ -3,7 +3,7 @@ import {getGlobalPaths} from "../../../src/paths/global.js";
 
 describe("paths / global", () => {
   process.env.XDG_DATA_HOME = "/my-root-dir";
-  const defaultRootDir = "/my-root-dir/lodestar/mainnet";
+  const defaultdataDir = "/my-root-dir/lodestar/mainnet";
 
   const testCases: {
     id: string;
@@ -14,7 +14,7 @@ describe("paths / global", () => {
       id: "Default paths",
       args: {},
       globalPaths: {
-        rootDir: defaultRootDir,
+        dataDir: defaultdataDir,
         paramsFile: undefined,
       },
     },
@@ -22,15 +22,15 @@ describe("paths / global", () => {
       id: "Network paths",
       args: {network: "goerli"},
       globalPaths: {
-        rootDir: "/my-root-dir/lodestar/goerli",
+        dataDir: "/my-root-dir/lodestar/goerli",
         paramsFile: undefined,
       },
     },
     {
-      id: "Custom rootDir",
-      args: {rootDir: "./attack-network"},
+      id: "Custom dataDir",
+      args: {dataDir: "./attack-network"},
       globalPaths: {
-        rootDir: "./attack-network",
+        dataDir: "./attack-network",
         paramsFile: undefined,
       },
     },
@@ -38,7 +38,7 @@ describe("paths / global", () => {
       id: "Custom paramsFile",
       args: {paramsFile: "/tmp/custom-config.yaml"},
       globalPaths: {
-        rootDir: defaultRootDir,
+        dataDir: defaultdataDir,
         paramsFile: "/tmp/custom-config.yaml",
       },
     },
@@ -46,7 +46,7 @@ describe("paths / global", () => {
       id: "Custom relative paramsFile",
       args: {paramsFile: "custom-config.yaml"},
       globalPaths: {
-        rootDir: defaultRootDir,
+        dataDir: defaultdataDir,
         paramsFile: "custom-config.yaml",
       },
     },

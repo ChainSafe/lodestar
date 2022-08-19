@@ -8,7 +8,7 @@ To start, download Prometheus from https://prometheus.io/download/.
 Unzip the downloaded .zip file and run Prometheus from it's installed location with the lodestar prometheus.yml passed in as the config file
 
 ```
-./prometheus --config.file=$rootDir/prometheus.yml
+./prometheus --config.file=$dataDir/prometheus.yml
 ```
 
 <!-- prettier-ignore-start -->

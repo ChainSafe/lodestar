@@ -74,7 +74,7 @@ export async function persistOptionsAndConfig(args: IBeaconArgs & IGlobalArgs): 
   const beaconPaths = getBeaconPaths(args);
 
   // initialize directories
-  mkdir(beaconPaths.rootDir);
+  mkdir(beaconPaths.dataDir);
   mkdir(beaconPaths.beaconDir);
   mkdir(beaconPaths.dbDir);
 

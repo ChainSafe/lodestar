@@ -36,11 +36,11 @@ describe("config / beaconNodeOptions", () => {
 
   it("Should return options with injected custom bootnodes", async () => {
     const expectedBootEnr = "enr:-KG4QOWkRj";
-    const rootDir = testFilesDir;
+    const dataDir = testFilesDir;
     const bootnodesFile = path.join(testFilesDir, "bootnodesFile.txt");
     fs.writeFileSync(bootnodesFile, expectedBootEnr);
 
-    const beaconPaths = getBeaconPaths({rootDir});
+    const beaconPaths = getBeaconPaths({dataDir});
     beaconPaths.bootnodesFile = bootnodesFile;
 
     const beaconNodeOptions = new BeaconNodeOptions({
@@ -58,11 +58,11 @@ describe("config / beaconNodeOptions", () => {
     const bootnodesFileContent = "enr:-KG4QOWkRj";
     const expectedBootEnr = "enr:-W4gMj";
 
-    const rootDir = testFilesDir;
+    const dataDir = testFilesDir;
     const bootnodesFile = path.join(testFilesDir, "bootnodesFile.txt");
     fs.writeFileSync(bootnodesFile, bootnodesFileContent);
 
-    const beaconPaths = getBeaconPaths({rootDir});
+    const beaconPaths = getBeaconPaths({dataDir});
     beaconPaths.bootnodesFile = bootnodesFile;
 
     const beaconNodeOptions = new BeaconNodeOptions({

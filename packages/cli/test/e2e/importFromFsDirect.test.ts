@@ -11,17 +11,17 @@ import {getKeystoresStr} from "../utils/keystores.js";
 /* eslint-disable no-console */
 
 describeCliTest("import from fs same cmd as validate", function ({spawnCli}) {
-  const rootDir = path.join(testFilesDir, "import-and-validate-test");
-  const importFromDir = path.join(rootDir, "eth2.0_deposit_out");
+  const dataDir = path.join(testFilesDir, "import-and-validate-test");
+  const importFromDir = path.join(dataDir, "eth2.0_deposit_out");
   const passphraseFilepath = path.join(importFromDir, "password.text");
 
-  before("Clean rootDir", () => {
-    rimraf.sync(rootDir);
+  before("Clean dataDir", () => {
+    rimraf.sync(dataDir);
     rimraf.sync(importFromDir);
   });
 
   const afterEachCallbacks = getAfterEachCallbacks();
-  const itKeymanagerStep = getKeymanagerTestRunner({args: {spawnCli}, afterEachCallbacks, rootDir});
+  const itKeymanagerStep = getKeymanagerTestRunner({args: {spawnCli}, afterEachCallbacks, dataDir});
 
   const passphrase = "AAAAAAAA0000000000";
   const keyCount = 2;
