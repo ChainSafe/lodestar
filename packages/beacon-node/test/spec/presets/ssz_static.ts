@@ -49,7 +49,7 @@ export const sszStatic = (fork: ForkName, typeName: string, testSuite: string, t
   const sszTypeNoUint = replaceUintTypeWithUintBigintType(sszType);
 
   for (const testCase of fs.readdirSync(testSuiteDirpath)) {
-    if (testSuiteDirpath.includes("LightClientUpdate/ssz_random")) {
+    if (testSuiteDirpath.includes("LightClientUpdate")) {
       continue;
     }
     it(testCase, function () {
