@@ -19,7 +19,7 @@ Unzip the downloaded .zip file and run Prometheus from it's installed location w
 Then run the Lodestar beacon node with
 
 ```
-lodestar --metrics.enabled=true --metrics.serverPort=8008
+lodestar --metrics=true --metrics.serverPort=8008
 ```
 
 Navigate to http://localhost:9090/ in your browser to verify that Prometheus is monitoring Lodestar

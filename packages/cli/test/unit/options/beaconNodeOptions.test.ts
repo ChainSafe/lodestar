@@ -49,7 +49,7 @@ describe("options / beaconNodeOptions", () => {
       "logger.eth1.level": "debug",
       "logger.unknown.level": "debug",
 
-      "metrics.enabled": true,
+      "metrics": true,
       "metrics.port": 8765,
       "metrics.address": "0.0.0.0",
 

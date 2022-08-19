@@ -11,7 +11,7 @@ packages/cli/bin/lodestar dev \
   --reset \
   --api.rest.enabled \
   --api.rest.api '*' \
-  --metrics.enabled \
+  --metrics \
   --logLevel debug \
   --eth1.enabled false \
   --network.requestCountPeerLimit 1000000 \

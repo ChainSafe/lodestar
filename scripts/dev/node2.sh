@@ -12,7 +12,7 @@ packages/cli/bin/lodestar dev \
   --reset \
   --api.rest.enabled \
   --api.rest.api '*' \
-  --metrics.enabled \
+  --metrics \
   --metrics.serverPort 8009 \
   --logLevel debug \
   --eth1.enabled false \

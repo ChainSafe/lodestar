@@ -43,7 +43,7 @@ export type IValidatorCliArgs = AccountValidatorArgs &
     fromMnemonic?: string;
     mnemonicIndexes?: string;
 
-    "metrics.enabled"?: boolean;
+    metrics?: boolean;
     "metrics.port"?: number;
     "metrics.address"?: string;
   };
@@ -230,7 +230,7 @@ export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
 
   // Metrics
 
-  "metrics.enabled": {
+  metrics: {
     type: "boolean",
     description: "Enable the Prometheus metrics HTTP server",
     defaultDescription: String(validatorMetricsDefaultOptions.enabled),

@@ -79,7 +79,7 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
   // Create metrics registry if metrics are enabled
   // Send version and network data for static registries
 
-  const register = args["metrics.enabled"] ? new RegistryMetricCreator() : null;
+  const register = args["metrics"] ? new RegistryMetricCreator() : null;
   const metrics =
     register && getMetrics((register as unknown) as MetricsRegister, {version, commit, network: args.network});
 
