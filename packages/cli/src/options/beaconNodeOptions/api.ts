@@ -26,6 +26,13 @@ export function parseArgs(args: IApiArgs): IBeaconNodeOptions["api"] {
 }
 
 export const options: ICliCommandOptions<IApiArgs> = {
+  rest: {
+    type: "boolean",
+    description: "Enable/disable HTTP API",
+    defaultDescription: String(defaultOptions.api.rest.enabled),
+    group: "api",
+  },
+
   "api.maxGindicesInProof": {
     hidden: true,
     type: "number",
@@ -52,13 +59,6 @@ export const options: ICliCommandOptions<IApiArgs> = {
     type: "string",
     description: "Configures the Access-Control-Allow-Origin CORS header for HTTP API",
     defaultDescription: defaultOptions.api.rest.cors,
-    group: "api",
-  },
-
-  rest: {
-    type: "boolean",
-    description: "Enable/disable HTTP API",
-    defaultDescription: String(defaultOptions.api.rest.enabled),
     group: "api",
   },
 
