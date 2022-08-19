@@ -71,6 +71,7 @@ Will double processing times. Use only for debugging purposes.",
   },
 
   "chain.proposerBoostEnabled": {
+    hidden: true,
     type: "boolean",
     description: "Enable proposer boost to reward a timely block",
     defaultDescription: String(defaultOptions.chain.proposerBoostEnabled),
@@ -85,6 +86,7 @@ Will double processing times. Use only for debugging purposes.",
   },
 
   "chain.computeUnrealized": {
+    hidden: true,
     type: "boolean",
     description: "Compute unrealized checkpoints and use it in fork choice or not",
     defaultDescription: String(defaultOptions.chain.computeUnrealized),
@@ -107,6 +109,7 @@ Will double processing times. Use only for debugging purposes.",
   },
 
   "chain.assertCorrectProgressiveBalances": {
+    hidden: true,
     description: "Enable asserting the progressive balances",
     type: "boolean",
     group: "chain",
