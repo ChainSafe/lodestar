@@ -25,22 +25,26 @@ export const beaconExtraOptions: ICliCommandOptions<IBeaconExtraArgs> = {
     type: "number",
     // TODO: Derive from BeaconNode defaults
     defaultDescription: "9000",
+    group: "network",
   },
 
   discoveryPort: {
     description: "The UDP port that discovery will listen on. Defaults to `port`",
     type: "number",
     defaultDescription: "`port`",
+    group: "network",
   },
 
   forceGenesis: {
     description: "Force beacon to create genesis without file",
     type: "boolean",
+    hidden: true,
   },
 
   genesisStateFile: {
     description: "Path or URL to download a genesis state file in ssz-encoded format",
     type: "string",
+    hidden: true,
   },
 };
 
