@@ -13,7 +13,7 @@ packages/cli/bin/lodestar dev \
   --api.rest.api '*' \
   --metrics \
   --logLevel debug \
-  --eth1.enabled false \
+  --eth1 false \
   --network.requestCountPeerLimit 1000000 \
   --network.blockCountTotalLimit 1000000 \
   --network.blockCountPeerLimit 1000000

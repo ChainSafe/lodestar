@@ -15,7 +15,7 @@ packages/cli/bin/lodestar dev \
   --metrics \
   --metrics.serverPort 8009 \
   --logLevel debug \
-  --eth1.enabled false \
+  --eth1 false \
   --port 9001 \
   --api.rest.port 9597 \
   --network.connectToDiscv5Bootnodes true \
