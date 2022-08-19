@@ -89,7 +89,7 @@ const externalOptionsOverrides: Partial<Record<"network" | keyof typeof beaconNo
     defaultDescription: undefined,
     default: false,
   },
-  "api.rest.enabled": {
+  rest: {
     ...beaconNodeOptions["rest"],
     defaultDescription: undefined,
     default: true,
