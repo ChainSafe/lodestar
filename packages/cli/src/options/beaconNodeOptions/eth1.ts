@@ -55,6 +55,7 @@ export const options: ICliCommandOptions<IEth1Args> = {
   },
 
   "eth1.depositContractDeployBlock": {
+    hidden: true,
     description: "Block number at which the deposit contract contract was deployed",
     type: "number",
     defaultDescription: String(defaultOptions.eth1.depositContractDeployBlock),
