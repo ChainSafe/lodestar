@@ -42,8 +42,10 @@ export type RpcResponseStatusError = Exclude<RespStatus, RespStatus.SUCCESS>;
 
 /** The maximum allowed size of uncompressed gossip messages. */
 export const GOSSIP_MAX_SIZE = 2 ** 20;
+export const GOSSIP_MAX_SIZE_BELLATRIX = 10 * GOSSIP_MAX_SIZE;
 /** The maximum allowed size of uncompressed req/resp chunked responses. */
 export const MAX_CHUNK_SIZE = 2 ** 20;
+export const MAX_CHUNK_SIZE_BELLATRIX = 10 * MAX_CHUNK_SIZE;
 /** The maximum time to wait for first byte of request response (time-to-first-byte). */
 export const TTFB_TIMEOUT = 5 * 1000; // 5 sec
 /** The maximum time for complete response transfer. */
