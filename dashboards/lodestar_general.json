@@ -14878,7 +14878,7 @@
           },
           "targets": [
             {
-              "exemplar": true,
+              "exemplar": false,
               "expr": "delta(beacon_block_payload_prepare_time_count[$__interval])",
               "interval": "",
               "legendFormat": "fcUs delta",
@@ -15121,7 +15121,7 @@
           },
           "targets": [
             {
-              "exemplar": true,
+              "exemplar": false,
               "expr": "beacon_block_payload_errors_total",
               "interval": "",
               "legendFormat": "errors",
