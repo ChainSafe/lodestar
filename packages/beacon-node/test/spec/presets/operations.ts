@@ -117,6 +117,9 @@ export const operations: TestRunnerFn<OperationsTestCase, BeaconStateAllForks> =
       expectFunc: (testCase, expected, actual) => {
         expectEqualBeaconState(fork, expected, actual);
       },
+      shouldSkip: (_testcase, name, _index) => {
+        return name.includes("voluntary_exit_with_previous_fork_version_is_before_fork_epoch__valid");
+      },
     },
   };
 };

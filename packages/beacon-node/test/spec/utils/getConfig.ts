@@ -14,9 +14,6 @@ export function getConfig(fork: ForkName): IChainForkConfig {
       return createIChainForkConfig({
         ALTAIR_FORK_EPOCH: 0,
         BELLATRIX_FORK_EPOCH: 0,
-        TERMINAL_TOTAL_DIFFICULTY: BigInt(
-          "115792089237316195423570985008687907853269984665640564039457584007913129638912"
-        ),
       });
   }
 }
