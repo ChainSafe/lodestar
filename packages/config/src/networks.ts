@@ -5,13 +5,7 @@ import {goerliChainConfig} from "./chainConfig/networks/goerli.js";
 import {ropstenChainConfig} from "./chainConfig/networks/ropsten.js";
 import {sepoliaChainConfig} from "./chainConfig/networks/sepolia.js";
 
-export {
-  mainnetChainConfig,
-  gnosisChainConfig,
-  goerliChainConfig,
-  ropstenChainConfig,
-  sepoliaChainConfig,
-};
+export {mainnetChainConfig, gnosisChainConfig, goerliChainConfig, ropstenChainConfig, sepoliaChainConfig};
 
 export type NetworkName = "mainnet" | "gnosis" | "goerli" | "ropsten" | "sepolia";
 export const networksChainConfig: Record<NetworkName, IChainConfig> = {
