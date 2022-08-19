@@ -10,7 +10,7 @@ import {NetworkName} from "@lodestar/config/networks.js";
 
 /* eslint-disable no-console */
 
-const networksInInfura: NetworkName[] = ["mainnet", "prater"];
+const networksInInfura: NetworkName[] = ["mainnet", "goerli"];
 
 async function getGenesisData(): Promise<void> {
   for (const network of networksInInfura) {

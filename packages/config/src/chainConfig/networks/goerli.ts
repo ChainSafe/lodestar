@@ -5,7 +5,7 @@ import {chainConfig as mainnet} from "../presets/mainnet.js";
 
 /* eslint-disable max-len */
 
-export const praterChainConfig: IChainConfig = {
+export const goerliChainConfig: IChainConfig = {
   ...mainnet,
 
   // Ethereum Goerli testnet
