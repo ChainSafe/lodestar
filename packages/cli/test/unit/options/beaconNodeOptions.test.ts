@@ -23,7 +23,7 @@ describe("options / beaconNodeOptions", () => {
       "chain.proposerBoostEnabled": false,
       "chain.disableImportExecutionFcU": false,
       "chain.computeUnrealized": true,
-      "chain.defaultFeeRecipient": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "suggestedFeeRecipient": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       "chain.assertCorrectProgressiveBalances": true,
       "chain.maxSkipSlots": 100,
       "safe-slots-to-import-optimistically": 256,

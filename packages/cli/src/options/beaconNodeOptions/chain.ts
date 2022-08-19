@@ -12,7 +12,7 @@ export interface IChainArgs {
   "chain.proposerBoostEnabled": boolean;
   "chain.disableImportExecutionFcU": boolean;
   "chain.computeUnrealized": boolean;
-  "chain.defaultFeeRecipient": string;
+  suggestedFeeRecipient: string;
   "chain.assertCorrectProgressiveBalances": boolean;
   "chain.maxSkipSlots": number;
   "safe-slots-to-import-optimistically": number;
@@ -29,7 +29,7 @@ export function parseArgs(args: IChainArgs): IBeaconNodeOptions["chain"] {
     proposerBoostEnabled: args["chain.proposerBoostEnabled"],
     disableImportExecutionFcU: args["chain.disableImportExecutionFcU"],
     computeUnrealized: args["chain.computeUnrealized"],
-    defaultFeeRecipient: args["chain.defaultFeeRecipient"],
+    defaultFeeRecipient: args["suggestedFeeRecipient"],
     assertCorrectProgressiveBalances: args["chain.assertCorrectProgressiveBalances"],
     maxSkipSlots: args["chain.maxSkipSlots"],
     safeSlotsToImportOptimistically: args["safe-slots-to-import-optimistically"],
@@ -91,7 +91,7 @@ Will double processing times. Use only for debugging purposes.",
     group: "chain",
   },
 
-  "chain.defaultFeeRecipient": {
+  suggestedFeeRecipient: {
     type: "string",
     description:
       "Specify fee recipient default for collecting the EL block fees and rewards (a hex string representing 20 bytes address: ^0x[a-fA-F0-9]{40}$) in case validator fails to update for a validator index before calling produceBlock.",
