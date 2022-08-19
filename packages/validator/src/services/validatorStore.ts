@@ -37,6 +37,7 @@ import {routes} from "@lodestar/api";
 import {ISlashingProtection} from "../slashingProtection/index.js";
 import {PubkeyHex} from "../types.js";
 import {externalSignerPostSignature} from "../util/externalSignerClient.js";
+import {ValidatorRegistrationCache} from "../util/validatorRegistrationCache.js";
 import {Metrics} from "../metrics.js";
 import {IndicesService} from "./indices.js";
 import {DoppelgangerService} from "./doppelgangerService.js";
@@ -106,6 +107,8 @@ export const defaultOptions = {
  */
 export class ValidatorStore {
   private readonly validators = new Map<PubkeyHex, ValidatorData>();
+  private readonly validatorRegistrationCache = new ValidatorRegistrationCache();
+
   /** Initially true because there are no validators */
   private pubkeysToDiscover: PubkeyHex[] = [];
   private readonly defaultProposerConfig: DefaultProposerConfig;
@@ -431,6 +434,26 @@ export class ValidatorStore {
       message: validatorRegistation,
       signature: await this.getSignature(pubkey, signingRoot),
     };
+  }
+
+  async getValidatorRegistration(
+    pubKey: PubkeyHex,
+    feeRecipient: string,
+    slot: Slot
+  ): Promise<bellatrix.SignedValidatorRegistrationV1> {
+    const gasLimit = this.gasLimit;
+    let validatorRegistration: bellatrix.SignedValidatorRegistrationV1 | undefined;
+    if ((validatorRegistration = this.validatorRegistrationCache.get({pubKey, feeRecipient, gasLimit}))) {
+      return validatorRegistration;
+    } else {
+      validatorRegistration = await this.signValidatorRegistration(
+        fromHexString(pubKey),
+        fromHexString(feeRecipient),
+        slot
+      );
+      this.validatorRegistrationCache.add({pubKey, feeRecipient, gasLimit}, validatorRegistration);
+      return validatorRegistration;
+    }
   }
 
   private async getSignature(pubkey: BLSPubkeyMaybeHex, signingRoot: Uint8Array): Promise<BLSSignature> {
