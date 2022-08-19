@@ -10,7 +10,7 @@ packages/cli/bin/lodestar dev \
   --dataDir .lodestar/node1 \
   --reset \
   --rest \
-  --api.rest.api '*' \
+  --rest.namespace '*' \
   --metrics \
   --logLevel debug \
   --eth1 false \

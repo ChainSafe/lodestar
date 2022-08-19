@@ -11,7 +11,7 @@ packages/cli/bin/lodestar dev \
   --dataDir .lodestar/node2 \
   --reset \
   --rest \
-  --api.rest.api '*' \
+  --rest.namespace '*' \
   --metrics \
   --metrics.serverPort 8009 \
   --logLevel debug \
