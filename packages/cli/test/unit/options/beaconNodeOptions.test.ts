@@ -53,7 +53,7 @@ describe("options / beaconNodeOptions", () => {
       "metrics.port": 8765,
       "metrics.address": "0.0.0.0",
 
-      "network.discv5.enabled": true,
+      "discv5": true,
       "network.discv5.bindAddr": "addr",
       "network.discv5.bootEnrs": ["enr:-somedata"],
       "network.maxPeers": 30,

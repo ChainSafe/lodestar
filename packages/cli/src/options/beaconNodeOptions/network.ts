@@ -2,7 +2,7 @@ import {defaultOptions, IBeaconNodeOptions} from "@lodestar/beacon-node";
 import {ICliCommandOptions} from "../../util/index.js";
 
 export interface INetworkArgs {
-  "network.discv5.enabled": boolean;
+  discv5: boolean;
   "network.discv5.bindAddr": string;
   "network.discv5.bootEnrs": string[];
   "network.maxPeers": number;
@@ -23,7 +23,7 @@ export interface INetworkArgs {
 export function parseArgs(args: INetworkArgs): IBeaconNodeOptions["network"] {
   return {
     discv5: {
-      enabled: args["network.discv5.enabled"],
+      enabled: args["discv5"],
       bindAddr: args["network.discv5.bindAddr"],
       bootEnrs: args["network.discv5.bootEnrs"],
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
@@ -46,7 +46,7 @@ export function parseArgs(args: INetworkArgs): IBeaconNodeOptions["network"] {
 }
 
 export const options: ICliCommandOptions<INetworkArgs> = {
-  "network.discv5.enabled": {
+  discv5: {
     type: "boolean",
     // TODO: Add `network.discv5.enabled` to the `IDiscv5DiscoveryInputOptions` type
     description: "Enable discv5",
