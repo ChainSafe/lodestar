@@ -10,11 +10,11 @@ describe("options / beaconNodeOptions", () => {
     // Cast to match the expected fully defined type
     const beaconNodeArgsPartial = {
       "api.maxGindicesInProof": 1000,
-      "api.rest.api": [],
-      "api.rest.cors": "*",
-      "api.rest.enabled": true,
-      "api.rest.address": "127.0.0.1",
-      "api.rest.port": 7654,
+      "rest.namespace": [],
+      "rest.cors": "*",
+      "rest": true,
+      "rest.address": "127.0.0.1",
+      "rest.port": 7654,
 
       "chain.blsVerifyAllMultiThread": true,
       "chain.blsVerifyAllMainThread": true,
