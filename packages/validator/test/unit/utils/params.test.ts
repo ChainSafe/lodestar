@@ -9,11 +9,10 @@ const testCases: {name: string; items: [IChainConfig, Record<string, string>]}[]
   {name: "lighthouse", items: [networksChainConfig.ropsten, lightHouseRopstenConfig]},
   {name: "prysm", items: [networksChainConfig.ropsten, prysmRopstenConfig]},
   {name: "teku", items: [networksChainConfig.ropsten, tekuRopstenConfig]},
-  {name: "nimbus", items: [networksChainConfig.ropsten, nimbusRopstenConfig]},
+  // {name: "nimbus", items: [networksChainConfig.ropsten, nimbusRopstenConfig]},
 ];
 
-// TODO: the current client configs are for a now-dead network, kiln. Replace with configs for a live network to reenable these tests
-describe.skip("utils / params / assertEqualParams", () => {
+describe("utils / params / assertEqualParams", () => {
   it("default == default", () => {
     const chainConfigJson = chainConfigToJson(chainConfig);
     assertEqualParams(chainConfig, chainConfigJson);
