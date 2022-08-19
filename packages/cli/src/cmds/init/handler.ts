@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import PeerId from "peer-id";
 import {IChainForkConfig} from "@lodestar/config";
 import {
   BeaconNodeOptions,
@@ -7,29 +8,37 @@ import {
   initEnr,
   readPeerId,
   readEnr,
+  FileENR,
+  overwriteEnrWithCliArgs,
 } from "../../config/index.js";
-import {IGlobalArgs, parseBeaconNodeArgs} from "../../options/index.js";
+import {IGlobalArgs, parseBeaconNodeArgs, parseEnrArgs} from "../../options/index.js";
 import {mkdir} from "../../util/index.js";
 import {fetchBootnodes} from "../../networks/index.js";
 import {getBeaconPaths} from "../beacon/paths.js";
 import {IBeaconArgs} from "../beacon/options.js";
+import {getVersionData} from "../../util/version.js";
 
 export type ReturnType = {
   beaconNodeOptions: BeaconNodeOptions;
   config: IChainForkConfig;
+  peerId: PeerId;
 };
 
 /**
  * Initialize lodestar-cli with an on-disk configuration
  */
 export async function initHandler(args: IBeaconArgs & IGlobalArgs): Promise<ReturnType> {
-  const {beaconNodeOptions, config} = await initializeOptionsAndConfig(args);
-  await persistOptionsAndConfig(args);
-  return {beaconNodeOptions, config};
+  const {beaconNodeOptions, config, peerId} = await initializeOptionsAndConfig(args);
+  return {beaconNodeOptions, config, peerId};
 }
 
 export async function initializeOptionsAndConfig(args: IBeaconArgs & IGlobalArgs): Promise<ReturnType> {
   const beaconPaths = getBeaconPaths(args);
+
+  // initialize directories
+  mkdir(beaconPaths.dataDir);
+  mkdir(beaconPaths.beaconDir);
+  mkdir(beaconPaths.dbDir);
 
   const beaconNodeOptions = new BeaconNodeOptions({
     network: args.network || "mainnet",
@@ -61,22 +70,16 @@ export async function initializeOptionsAndConfig(args: IBeaconArgs & IGlobalArgs
     beaconNodeOptions.set({network: {discv5: {bindAddr: `/ip4/0.0.0.0/udp/${args.discoveryPort}`}}});
   }
 
-  // initialize params file, if it doesn't exist
-  const config = getBeaconConfigFromArgs(args);
+  const {version, commit} = getVersionData();
+  // TODO: Rename db.name to db.path or db.location
+  beaconNodeOptions.set({db: {name: beaconPaths.dbDir}});
+  beaconNodeOptions.set({chain: {persistInvalidSszObjectsDir: beaconPaths.persistInvalidSszObjectsDir}});
+  // Add metrics metadata to show versioning + network info in Prometheus + Grafana
+  beaconNodeOptions.set({metrics: {metadata: {version, commit, network: args.network}}});
+  // Add detailed version string for API node/version endpoint
+  beaconNodeOptions.set({api: {version}});
 
-  return {beaconNodeOptions, config};
-}
-
-/**
- * Write options and configs to disk
- */
-export async function persistOptionsAndConfig(args: IBeaconArgs & IGlobalArgs): Promise<void> {
-  const beaconPaths = getBeaconPaths(args);
-
-  // initialize directories
-  mkdir(beaconPaths.dataDir);
-  mkdir(beaconPaths.beaconDir);
-  mkdir(beaconPaths.dbDir);
+  // ENR setup
 
   // Initialize peerId if does not exist
   if (!fs.existsSync(beaconPaths.peerIdFile)) {
@@ -96,4 +99,15 @@ export async function persistOptionsAndConfig(args: IBeaconArgs & IGlobalArgs): 
       initEnr(beaconPaths.enrFile, peerId);
     }
   }
+
+  const enr = FileENR.initFromFile(beaconPaths.enrFile, peerId);
+  const enrArgs = parseEnrArgs(args);
+  overwriteEnrWithCliArgs(enr, enrArgs, beaconNodeOptions.getWithDefaults());
+  const enrUpdate = !enrArgs.ip && !enrArgs.ip6;
+  beaconNodeOptions.set({network: {discv5: {enr, enrUpdate}}});
+
+  // initialize params file, if it doesn't exist
+  const config = getBeaconConfigFromArgs(args);
+
+  return {beaconNodeOptions, config, peerId};
 }
