@@ -113,7 +113,7 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
       graffiti,
       doppelgangerProtectionEnabled,
       afterBlockDelaySlotFraction: args.afterBlockDelaySlotFraction,
-      suggestedFeeRecipient,
+      defaultFeeRecipient: suggestedFeeRecipient,
       builder,
     },
     controller.signal,
