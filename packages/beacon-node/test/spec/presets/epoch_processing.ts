@@ -74,6 +74,9 @@ export const epochProcessing: TestRunnerFn<EpochProcessingTestCase, BeaconStateA
       expectFunc: (testCase, expected, actual) => {
         expectEqualBeaconState(fork, expected, actual);
       },
+      shouldSkip: (_testcase, name, _index) => {
+        return name.includes("invalid_large_withdrawable_epoch");
+      },
     },
   };
 };

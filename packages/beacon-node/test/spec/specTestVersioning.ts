@@ -14,6 +14,6 @@ import {fileURLToPath} from "node:url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export const SPEC_TEST_REPO_URL = "https://github.com/ethereum/consensus-spec-tests";
-export const SPEC_TEST_VERSION = "v1.1.10";
+export const SPEC_TEST_VERSION = "v1.2.0-rc.3";
 // Target directory is the host package root: 'packages/*/spec-tests'
 export const SPEC_TEST_LOCATION = path.join(__dirname, "../../spec-tests");

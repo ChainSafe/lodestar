@@ -46,6 +46,10 @@ export function specTestIterator(configName: string, testRunners: Record<string,
 
   const configDirpath = path.join(specTestsTestPath, configName);
   for (const forkStr of readdirSyncSpec(configDirpath)) {
+    // TODO enable capella
+    if (forkStr === "capella") {
+      continue;
+    }
     const fork = ForkName[forkStr as ForkName];
     if (fork === undefined) {
       throw Error(`Unknown fork ${forkStr}`);
@@ -53,6 +57,10 @@ export function specTestIterator(configName: string, testRunners: Record<string,
 
     const forkDirpath = path.join(configDirpath, fork);
     for (const testRunnerName of readdirSyncSpec(forkDirpath)) {
+      // We don't have runner for light client yet
+      if (testRunnerName === "light_client") {
+        continue;
+      }
       const testRunnerDirpath = path.join(forkDirpath, testRunnerName);
 
       const testRunner = testRunners[testRunnerName];
@@ -65,7 +73,6 @@ export function specTestIterator(configName: string, testRunners: Record<string,
         for (const testSuite of readdirSyncSpec(testHandlerDirpath)) {
           const testId = `${configName}/${fork}/${testRunnerName}/${testHandler}/${testSuite}`;
           const testSuiteDirpath = path.join(testHandlerDirpath, testSuite);
-
           // Specific logic for ssz_static since it has one extra level of directories
           if (testRunner.type === RunnerType.custom) {
             describe(testId, () => {
