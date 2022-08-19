@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 
-export const lightHouseKilnConfig = {
+export const lightHouseRopstenConfig = {
   PRESET_BASE: "mainnet",
   TERMINAL_TOTAL_DIFFICULTY: "20000000000000",
   TERMINAL_BLOCK_HASH: "0x0000000000000000000000000000000000000000000000000000000000000000",
@@ -79,7 +79,7 @@ export const lightHouseKilnConfig = {
   DOMAIN_BEACON_ATTESTER: "0x01000000",
 };
 
-export const prysmKilnConfig = {
+export const prysmRopstenConfig = {
   ALTAIR_FORK_EPOCH: "50",
   ALTAIR_FORK_VERSION: "0x70000070",
   BASE_REWARD_FACTOR: "64",
@@ -180,7 +180,7 @@ export const prysmKilnConfig = {
   WHISTLEBLOWER_REWARD_QUOTIENT: "512",
 };
 
-export const tekuKilnConfig = {
+export const tekuRopstenConfig = {
   DEPOSIT_CONTRACT_ADDRESS: "0x4242424242424242424242424242424242424242",
   MIN_ATTESTATION_INCLUSION_DELAY: "1",
   SLOTS_PER_EPOCH: "32",
@@ -272,7 +272,7 @@ export const tekuKilnConfig = {
   MAX_TRANSACTIONS_PER_PAYLOAD: "1048576",
 };
 
-export const nimbusKilnConfig = {
+export const nimbusRopstenConfig = {
   MAX_COMMITTEES_PER_SLOT: "64",
   TARGET_COMMITTEE_SIZE: "128",
   MAX_VALIDATORS_PER_COMMITTEE: "2048",
