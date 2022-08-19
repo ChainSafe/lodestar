@@ -23,7 +23,7 @@ export const selfSlashAttester: ICliCommand<SelfSlashArgs, Record<never, never>,
   describe: "Self slash validators of a provided mnemonic with AttesterSlashing",
   examples: [
     {
-      command: "self-slash-proposer --network prater",
+      command: "self-slash-proposer --network goerli",
       description: "Self slash validators of a provided mnemonic",
     },
   ],
