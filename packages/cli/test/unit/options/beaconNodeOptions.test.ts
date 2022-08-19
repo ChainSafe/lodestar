@@ -42,7 +42,7 @@ describe("options / beaconNodeOptions", () => {
       "execution.retryDelay": 2000,
       "execution.retryAttempts": 1,
 
-      "builder.enabled": false,
+      "builder": false,
       "builder.urls": ["http://localhost:8661"],
       "builder.timeout": 12000,
 

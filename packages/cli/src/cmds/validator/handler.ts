@@ -97,7 +97,7 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
     await metricsServer.start();
   }
 
-  const builder = args["builder.enabled"] ? {enabled: true} : {};
+  const builder = args["builder"] ? {enabled: true} : {};
 
   // This promise resolves once genesis is available.
   // It will wait for genesis, so this promise can be potentially very long

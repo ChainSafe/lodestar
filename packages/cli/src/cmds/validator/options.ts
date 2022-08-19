@@ -30,7 +30,7 @@ export type IValidatorCliArgs = AccountValidatorArgs &
     strictFeeRecipientCheck?: boolean;
     doppelgangerProtectionEnabled?: boolean;
     defaultGasLimit?: number;
-    "builder.enabled"?: boolean;
+    builder?: boolean;
 
     importKeystoresPath?: string[];
     importKeystoresPassword?: string;
@@ -168,7 +168,7 @@ export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
     type: "number",
   },
 
-  "builder.enabled": {
+  builder: {
     type: "boolean",
     description: "Enable execution payload production via a builder for better rewards",
     group: "builder",
