@@ -17,6 +17,6 @@ packages/cli/bin/lodestar dev \
   --logLevel debug \
   --eth1 false \
   --port 9001 \
-  --api.rest.port 9597 \
+  --rest.port 9597 \
   --network.connectToDiscv5Bootnodes true \
   --network.discv5.bootEnrs $ENR
