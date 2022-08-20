@@ -23,12 +23,23 @@ export function createICachedGenesis(chainForkConfig: IChainForkConfig, genesisV
 
   return {
     getDomain(stateSlot: Slot, domainType: DomainType, messageSlot?: Slot): Uint8Array {
-      const stateForkInfo = chainForkConfig.getForkInfo(stateSlot);
+      // ```py
+      // def get_domain(state: BeaconState, domain_type: DomainType, epoch: Epoch=None) -> Domain:
+      //   """
+      //   Return the signature domain (fork version concatenated with domain type) of a message.
+      //   """
+      //   epoch = get_current_epoch(state) if epoch is None else epoch
+      //   fork_version = state.fork.previous_version if epoch < state.fork.epoch else state.fork.current_version
+      //   return compute_domain(domain_type, fork_version, state.genesis_validators_root)
+      // ```
+
       const epoch = Math.floor(messageSlot ?? stateSlot / SLOTS_PER_EPOCH);
-      const forkInfo =
-        epoch < stateForkInfo.epoch
-          ? chainForkConfig.forksAscendingEpochOrder[Math.max(stateForkInfo.seq - 1, 0)] // previous
-          : stateForkInfo; // current
+      // Get pre-computed fork schedule, which _should_ match the one in the state
+      const stateForkInfo = chainForkConfig.getForkInfo(stateSlot);
+      // Only allow to select either current or previous fork respective of the fork schedule at stateSlot
+      const forkName = epoch < stateForkInfo.epoch ? stateForkInfo.prevForkName : stateForkInfo.name;
+      const forkInfo = chainForkConfig.forks[forkName];
+
       let domainByType = domainCache.get(forkInfo.name);
       if (!domainByType) {
         domainByType = new Map<DomainType, Uint8Array>();
