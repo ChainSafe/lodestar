@@ -182,7 +182,7 @@ export class ValidatorStore {
     // Duties are filtered before-hard by doppelganger-safe, this assert should never throw
     this.assertDoppelgangerSafe(pubkey);
 
-    const proposerDomain = this.config.getDomain(DOMAIN_BEACON_PROPOSER, blindedOrFull.slot);
+    const proposerDomain = this.config.getDomain(blindedOrFull.slot, DOMAIN_BEACON_PROPOSER, blindedOrFull.slot);
     const blockType =
       (blindedOrFull.body as bellatrix.BlindedBeaconBlockBody).executionPayloadHeader !== undefined
         ? ssz.bellatrix.BlindedBeaconBlock
@@ -202,7 +202,7 @@ export class ValidatorStore {
 
   async signRandao(pubkey: BLSPubkey, slot: Slot): Promise<BLSSignature> {
     const epoch = computeEpochAtSlot(slot);
-    const randaoDomain = this.config.getDomain(DOMAIN_RANDAO, slot);
+    const randaoDomain = this.config.getDomain(slot, DOMAIN_RANDAO);
     const randaoSigningRoot = computeSigningRoot(ssz.Epoch, epoch, randaoDomain);
 
     return await this.getSignature(pubkey, randaoSigningRoot);
@@ -225,7 +225,7 @@ export class ValidatorStore {
 
     this.validateAttestationDuty(duty, attestationData);
     const slot = computeStartSlotAtEpoch(attestationData.target.epoch);
-    const domain = this.config.getDomain(DOMAIN_BEACON_ATTESTER, slot);
+    const domain = this.config.getDomain(slot, DOMAIN_BEACON_ATTESTER);
     const signingRoot = computeSigningRoot(ssz.phase0.AttestationData, attestationData, domain);
 
     try {
@@ -259,7 +259,7 @@ export class ValidatorStore {
       selectionProof,
     };
 
-    const domain = this.config.getDomain(DOMAIN_AGGREGATE_AND_PROOF, aggregate.data.slot);
+    const domain = this.config.getDomain(duty.slot, DOMAIN_AGGREGATE_AND_PROOF);
     const signingRoot = computeSigningRoot(ssz.phase0.AggregateAndProof, aggregateAndProof, domain);
 
     return {
@@ -274,7 +274,7 @@ export class ValidatorStore {
     slot: Slot,
     beaconBlockRoot: Root
   ): Promise<altair.SyncCommitteeMessage> {
-    const domain = this.config.getDomain(DOMAIN_SYNC_COMMITTEE, slot);
+    const domain = this.config.getDomain(slot, DOMAIN_SYNC_COMMITTEE);
     const signingRoot = computeSigningRoot(ssz.Root, beaconBlockRoot, domain);
 
     return {
@@ -296,7 +296,7 @@ export class ValidatorStore {
       selectionProof,
     };
 
-    const domain = this.config.getDomain(DOMAIN_CONTRIBUTION_AND_PROOF, contribution.slot);
+    const domain = this.config.getDomain(contribution.slot, DOMAIN_CONTRIBUTION_AND_PROOF);
     const signingRoot = computeSigningRoot(ssz.altair.ContributionAndProof, contributionAndProof, domain);
 
     return {
@@ -306,7 +306,7 @@ export class ValidatorStore {
   }
 
   async signAttestationSelectionProof(pubkey: BLSPubkeyMaybeHex, slot: Slot): Promise<BLSSignature> {
-    const domain = this.config.getDomain(DOMAIN_SELECTION_PROOF, slot);
+    const domain = this.config.getDomain(slot, DOMAIN_SELECTION_PROOF);
     const signingRoot = computeSigningRoot(ssz.Slot, slot, domain);
 
     return await this.getSignature(pubkey, signingRoot);
@@ -317,7 +317,7 @@ export class ValidatorStore {
     slot: Slot,
     subcommitteeIndex: number
   ): Promise<BLSSignature> {
-    const domain = this.config.getDomain(DOMAIN_SYNC_COMMITTEE_SELECTION_PROOF, slot);
+    const domain = this.config.getDomain(slot, DOMAIN_SYNC_COMMITTEE_SELECTION_PROOF);
     const signingData: altair.SyncAggregatorSelectionData = {
       slot,
       subcommitteeIndex,
@@ -333,7 +333,7 @@ export class ValidatorStore {
     validatorIndex: number,
     exitEpoch: Epoch
   ): Promise<phase0.SignedVoluntaryExit> {
-    const domain = this.config.getDomain(DOMAIN_VOLUNTARY_EXIT, computeStartSlotAtEpoch(exitEpoch));
+    const domain = this.config.getDomain(computeStartSlotAtEpoch(exitEpoch), DOMAIN_VOLUNTARY_EXIT);
 
     const voluntaryExit: phase0.VoluntaryExit = {epoch: exitEpoch, validatorIndex};
     const signingRoot = computeSigningRoot(ssz.phase0.VoluntaryExit, voluntaryExit, domain);

@@ -8,7 +8,7 @@ export function getSyncCommitteeContributionSignatureSet(
   contribution: altair.SyncCommitteeContribution,
   pubkeys: PublicKey[]
 ): ISignatureSet {
-  const domain = state.config.getDomain(DOMAIN_SYNC_COMMITTEE, contribution.slot);
+  const domain = state.config.getDomain(state.slot, DOMAIN_SYNC_COMMITTEE, contribution.slot);
   return {
     type: SignatureSetType.aggregate,
     pubkeys,
