@@ -9,7 +9,7 @@ import {
   IWSSArgs,
   wssOptions,
 } from "../../options/index.js";
-import {ICliCommandOptions, ILogArgs} from "../../util/index.js";
+import {defaultLogMaxFiles, ICliCommandOptions, ILogArgs} from "../../util/index.js";
 import {defaultBeaconPaths, IBeaconPaths} from "./paths.js";
 
 interface IBeaconExtraArgs {
@@ -39,7 +39,7 @@ export const logOptions: ICliCommandOptions<ILogArgs> = {
     type: "string",
   },
 
-  logLevelFile: {
+  logFileLevel: {
     choices: LogLevels,
     description: "Logging verbosity level for file transport",
     defaultDescription: defaultLogLevel,
@@ -58,13 +58,8 @@ export const logOptions: ICliCommandOptions<ILogArgs> = {
     type: "string",
   },
 
-  logRotate: {
-    description: "Daily rotate log files",
-    type: "boolean",
-  },
-
-  logMaxFiles: {
-    description: "Number of log files to maintain while rotating logs(if provided with logRotate)",
+  logFileDailyRotate: {
+    description: `Daily rotate log files, set to an integer to limit the file count, else defaults to ${defaultLogMaxFiles}`,
     type: "number",
   },
 };

@@ -2,6 +2,7 @@ import {defaultOptions, IBeaconNodeOptions} from "@lodestar/beacon-node";
 import {ICliCommandOptions} from "../../util/index.js";
 
 const defaultListenAddress = "0.0.0.0";
+const defaultP2pPort = 9000;
 
 export interface INetworkArgs {
   discv5?: boolean;
@@ -24,8 +25,8 @@ export interface INetworkArgs {
 
 export function parseArgs(args: INetworkArgs): IBeaconNodeOptions["network"] {
   const listenAddress = args.listenAddress || defaultListenAddress;
-  const udpPort = args.discoveryPort ?? args.port ?? 9000;
-  const tcpPort = args.port ?? 9000;
+  const udpPort = args.discoveryPort ?? args.port ?? defaultP2pPort;
+  const tcpPort = args.port ?? defaultP2pPort;
 
   return {
     discv5: {
@@ -71,7 +72,7 @@ export const options: ICliCommandOptions<INetworkArgs> = {
     description: "The TCP/UDP port to listen on. The UDP port can be modified by the --discovery-port flag.",
     type: "number",
     // TODO: Derive from BeaconNode defaults
-    defaultDescription: "9000",
+    defaultDescription: String(defaultP2pPort),
     group: "network",
   },
 
