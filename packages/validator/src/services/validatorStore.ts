@@ -182,7 +182,7 @@ export class ValidatorStore {
     // Duties are filtered before-hard by doppelganger-safe, this assert should never throw
     this.assertDoppelgangerSafe(pubkey);
 
-    const proposerDomain = this.config.getDomain(currentSlot, DOMAIN_BEACON_PROPOSER, blindedOrFull.slot);
+    const proposerDomain = this.config.getDomain(blindedOrFull.slot, DOMAIN_BEACON_PROPOSER, blindedOrFull.slot);
     const blockType =
       (blindedOrFull.body as bellatrix.BlindedBeaconBlockBody).executionPayloadHeader !== undefined
         ? ssz.bellatrix.BlindedBeaconBlock
