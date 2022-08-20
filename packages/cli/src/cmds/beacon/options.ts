@@ -13,28 +13,11 @@ import {ICliCommandOptions, ILogArgs} from "../../util/index.js";
 import {defaultBeaconPaths, IBeaconPaths} from "./paths.js";
 
 interface IBeaconExtraArgs {
-  port?: number;
-  discoveryPort?: number;
   forceGenesis?: boolean;
   genesisStateFile?: string;
 }
 
 export const beaconExtraOptions: ICliCommandOptions<IBeaconExtraArgs> = {
-  port: {
-    description: "The TCP/UDP port to listen on. The UDP port can be modified by the --discovery-port flag.",
-    type: "number",
-    // TODO: Derive from BeaconNode defaults
-    defaultDescription: "9000",
-    group: "network",
-  },
-
-  discoveryPort: {
-    description: "The UDP port that discovery will listen on. Defaults to `port`",
-    type: "number",
-    defaultDescription: "`port`",
-    group: "network",
-  },
-
   forceGenesis: {
     description: "Force beacon to create genesis without file",
     type: "boolean",

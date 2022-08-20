@@ -79,8 +79,8 @@ const externalOptionsOverrides: Partial<Record<"network" | keyof typeof beaconNo
     defaultDescription: undefined,
     default: 1,
   },
-  "network.targetPeers": {
-    ...beaconNodeOptions["network.targetPeers"],
+  targetPeers: {
+    ...beaconNodeOptions["targetPeers"],
     defaultDescription: undefined,
     default: 1,
   },
