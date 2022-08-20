@@ -91,7 +91,9 @@ export const operations: TestRunnerFn<OperationsTestCase, BeaconStateAllForks> =
   return {
     testFunction: (testcase) => {
       const state = testcase.pre.clone();
-      const cachedState = createCachedBeaconStateTest(state, getConfig(fork));
+      const epoch = (state.fork as phase0.Fork).epoch;
+      const cachedState = createCachedBeaconStateTest(state, getConfig(fork, epoch));
+
       operationFn(cachedState, testcase);
       state.commit();
       return state;
@@ -116,9 +118,6 @@ export const operations: TestRunnerFn<OperationsTestCase, BeaconStateAllForks> =
       getExpected: (testCase) => testCase.post,
       expectFunc: (testCase, expected, actual) => {
         expectEqualBeaconState(fork, expected, actual);
-      },
-      shouldSkip: (_testcase, name, _index) => {
-        return !name.includes("voluntary_exit_with_previous_fork_version_is_before_fork_epoch__valid");
       },
     },
   };

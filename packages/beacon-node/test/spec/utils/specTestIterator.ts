@@ -58,7 +58,7 @@ export function specTestIterator(configName: string, testRunners: Record<string,
     const forkDirpath = path.join(configDirpath, fork);
     for (const testRunnerName of readdirSyncSpec(forkDirpath)) {
       // We don't have runner for light client yet
-      if (testRunnerName !== "operations") {
+      if (testRunnerName === "light_client") {
         continue;
       }
       const testRunnerDirpath = path.join(forkDirpath, testRunnerName);
