@@ -43,7 +43,7 @@ describeCliTest("import from fs then validate", function ({spawnCli}) {
       // ⏎
       "validator import",
       `--dataDir ${dataDir}`,
-      `--importKeystoresPath ${importFromDir}`,
+      `--importKeystores ${importFromDir}`,
       `--importKeystoresPassword ${passphraseFilepath}`,
     ]);
 

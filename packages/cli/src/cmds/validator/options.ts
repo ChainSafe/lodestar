@@ -32,7 +32,7 @@ export type IValidatorCliArgs = AccountValidatorArgs &
     defaultGasLimit?: number;
     builder?: boolean;
 
-    importKeystoresPath?: string[];
+    importKeystores?: string[];
     importKeystoresPassword?: string;
 
     "externalSigner.url"?: string;
@@ -169,8 +169,8 @@ export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
     group: "builder",
   },
 
-  importKeystoresPath: {
-    alias: ["keystore", "directory"], // Backwards compatibility with old `validator import` cmdx
+  importKeystores: {
+    alias: ["keystore"], // Backwards compatibility with old `validator import` cmdx
     description: "Path(s) to a directory or single filepath to validator keystores, i.e. Launchpad validators",
     defaultDescription: "./keystores/*.json",
     type: "array",
@@ -178,7 +178,7 @@ export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
 
   importKeystoresPassword: {
     alias: ["passphraseFile"], // Backwards compatibility with old `validator import` cmd
-    description: "Path to a file with password to decrypt all keystores from importKeystoresPath option",
+    description: "Path to a file with password to decrypt all keystores from importKeystores option",
     defaultDescription: "./password.txt",
     type: "string",
   },

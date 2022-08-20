@@ -39,7 +39,7 @@ describeCliTest("import from fs same cmd as validate", function ({spawnCli}) {
     }
   });
 
-  // Check that there are not keys loaded without adding extra args `--importKeystoresPath`
+  // Check that there are not keys loaded without adding extra args `--importKeystores`
   itKeymanagerStep("run 'validator' check keys are loaded", async function (keymanagerClient) {
     await expectKeys(keymanagerClient, [], "Wrong listKeys response data");
   });
@@ -51,10 +51,7 @@ describeCliTest("import from fs same cmd as validate", function ({spawnCli}) {
       await expectKeys(keymanagerClient, pubkeys, "Wrong listKeys response data");
     },
     {
-      validatorCmdExtraArgs: [
-        `--importKeystoresPath=${importFromDir}`,
-        `--importKeystoresPassword=${passphraseFilepath}`,
-      ],
+      validatorCmdExtraArgs: [`--importKeystores=${importFromDir}`, `--importKeystoresPassword=${passphraseFilepath}`],
     }
   );
 });
