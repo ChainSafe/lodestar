@@ -167,13 +167,13 @@ export function enrsToNetworkConfig(enrs: string[]): RecursivePartial<IBeaconNod
 export async function fetchWeakSubjectivityState(
   config: IChainForkConfig,
   logger: ILogger,
-  {weakSubjectivityServerUrl, weakSubjectivityCheckpoint}: WeakSubjectivityFetchOptions
+  {checkpointSyncUrl, wssCheckpoint}: {checkpointSyncUrl: string; wssCheckpoint?: string}
 ): Promise<{wsState: BeaconStateAllForks; wsCheckpoint: Checkpoint}> {
   try {
     let wsCheckpoint;
-    const api = getClient({baseUrl: weakSubjectivityServerUrl}, {config});
-    if (weakSubjectivityCheckpoint) {
-      wsCheckpoint = getCheckpointFromArg(weakSubjectivityCheckpoint);
+    const api = getClient({baseUrl: checkpointSyncUrl}, {config});
+    if (wssCheckpoint) {
+      wsCheckpoint = getCheckpointFromArg(wssCheckpoint);
     } else {
       const {
         data: {finalized},

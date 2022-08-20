@@ -1,8 +1,8 @@
 import {IGlobalArgs} from "../options/index.js";
-import {getDefaultRootDir} from "./rootDir.js";
+import {getDefaultDataDir} from "./rootDir.js";
 
 export interface IGlobalPaths {
-  rootDir: string;
+  dataDir: string;
   paramsFile?: string;
 }
 
@@ -10,18 +10,18 @@ export interface IGlobalPaths {
  * Defines the path structure of the globally used files
  *
  * ```bash
- * $rootDir
+ * $dataDir
  * └── $paramsFile
  * ```
  */
 export function getGlobalPaths(args: Partial<IGlobalArgs>): IGlobalPaths {
-  // Set rootDir to network name iff rootDir is not set explicitly
-  const rootDir = args.rootDir || getDefaultRootDir(args.network);
+  // Set dataDir to network name iff dataDir is not set explicitly
+  const dataDir = args.dataDir || getDefaultDataDir(args.network);
   const paramsFile = args.paramsFile;
   return {
-    rootDir,
+    dataDir,
     paramsFile,
   };
 }
 
-export const defaultGlobalPaths = getGlobalPaths({rootDir: "$rootDir"});
+export const defaultGlobalPaths = getGlobalPaths({dataDir: "$dataDir"});

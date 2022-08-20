@@ -8,7 +8,7 @@ import {DescribeArgs} from "./childprocRunner.js";
 type TestContext = {
   args: DescribeArgs;
   afterEachCallbacks: AfterEachCallback[];
-  rootDir: string;
+  dataDir: string;
 };
 
 type KeymanagerStepOpts = {
@@ -19,7 +19,7 @@ type KeymanagerStepCbArgs = {
   keymanagerUrl: string;
 };
 
-export function getKeymanagerTestRunner({args: {spawnCli}, afterEachCallbacks, rootDir}: TestContext) {
+export function getKeymanagerTestRunner({args: {spawnCli}, afterEachCallbacks, dataDir}: TestContext) {
   return function itKeymanagerStep(
     itName: string,
     cb: (this: Mocha.Context, keymanagerClient: Api, args: KeymanagerStepCbArgs) => Promise<void>,
@@ -40,8 +40,8 @@ export function getKeymanagerTestRunner({args: {spawnCli}, afterEachCallbacks, r
       const validatorProc = spawnCli([
         // ⏎
         "validator",
-        `--rootDir=${rootDir}`,
-        "--keymanager.enabled",
+        `--dataDir=${dataDir}`,
+        "--keymanager",
         "--keymanager.address=localhost",
         `--keymanager.port=${keymanagerPort}`,
         `--server=${beaconUrl}`,
@@ -55,7 +55,7 @@ export function getKeymanagerTestRunner({args: {spawnCli}, afterEachCallbacks, r
       });
 
       // Wait for api-token.txt file to be written to disk and find it
-      const apiToken = await retry(async () => findApiToken(rootDir), {retryDelay: 500, retries: 10});
+      const apiToken = await retry(async () => findApiToken(dataDir), {retryDelay: 500, retries: 10});
 
       const keymanagerClient = getClient({baseUrl: keymanagerUrl, bearerToken: apiToken}, {config});
 

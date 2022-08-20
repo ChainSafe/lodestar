@@ -4,7 +4,7 @@ import {IBeaconArgs, beaconOptions} from "../beacon/options.js";
 import {getBeaconPaths} from "../beacon/paths.js";
 import {initHandler, ReturnType} from "./handler.js";
 
-const defaultBeaconPathsGoerli = getBeaconPaths({rootDir: ".goerli"});
+const defaultBeaconPathsGoerli = getBeaconPaths({dataDir: ".goerli"});
 
 export {ReturnType};
 
