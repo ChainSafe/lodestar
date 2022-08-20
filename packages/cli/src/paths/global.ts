@@ -1,5 +1,5 @@
 import {IGlobalArgs} from "../options/index.js";
-import {getDefaultdataDir} from "./rootDir.js";
+import {getDefaultDataDir} from "./rootDir.js";
 
 export interface IGlobalPaths {
   dataDir: string;
@@ -16,7 +16,7 @@ export interface IGlobalPaths {
  */
 export function getGlobalPaths(args: Partial<IGlobalArgs>): IGlobalPaths {
   // Set dataDir to network name iff dataDir is not set explicitly
-  const dataDir = args.dataDir || getDefaultdataDir(args.network);
+  const dataDir = args.dataDir || getDefaultDataDir(args.network);
   const paramsFile = args.paramsFile;
   return {
     dataDir,

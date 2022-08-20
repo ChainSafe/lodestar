@@ -3,7 +3,7 @@ import {getGlobalPaths} from "../../../src/paths/global.js";
 
 describe("paths / global", () => {
   process.env.XDG_DATA_HOME = "/my-root-dir";
-  const defaultdataDir = "/my-root-dir/lodestar/mainnet";
+  const defaultDataDir = "/my-root-dir/lodestar/mainnet";
 
   const testCases: {
     id: string;
@@ -14,7 +14,7 @@ describe("paths / global", () => {
       id: "Default paths",
       args: {},
       globalPaths: {
-        dataDir: defaultdataDir,
+        dataDir: defaultDataDir,
         paramsFile: undefined,
       },
     },
@@ -38,7 +38,7 @@ describe("paths / global", () => {
       id: "Custom paramsFile",
       args: {paramsFile: "/tmp/custom-config.yaml"},
       globalPaths: {
-        dataDir: defaultdataDir,
+        dataDir: defaultDataDir,
         paramsFile: "/tmp/custom-config.yaml",
       },
     },
@@ -46,7 +46,7 @@ describe("paths / global", () => {
       id: "Custom relative paramsFile",
       args: {paramsFile: "custom-config.yaml"},
       globalPaths: {
-        dataDir: defaultdataDir,
+        dataDir: defaultDataDir,
         paramsFile: "custom-config.yaml",
       },
     },
