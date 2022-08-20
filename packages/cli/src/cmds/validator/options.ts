@@ -58,35 +58,30 @@ export type KeymanagerArgs = {
 
 export const keymanagerOptions: ICliCommandOptions<KeymanagerArgs> = {
   "keymanager.enabled": {
-    alias: ["keymanagerEnabled"], // Backwards compatibility
     type: "boolean",
     description: "Enable keymanager API server",
     default: false,
     group: "keymanager",
   },
   "keymanager.authEnabled": {
-    alias: ["keymanagerAuthEnabled"], // Backwards compatibility
     type: "boolean",
     description: "Enable token bearer authentication for keymanager API server",
     default: true,
     group: "keymanager",
   },
   "keymanager.port": {
-    alias: ["keymanagerPort"], // Backwards compatibility
     type: "number",
     description: "Set port for keymanager API",
     defaultDescription: String(keymanagerRestApiServerOptsDefault.port),
     group: "keymanager",
   },
   "keymanager.address": {
-    alias: ["keymanagerHost"], // Backwards compatibility
     type: "string",
     description: "Set host for keymanager API",
     defaultDescription: keymanagerRestApiServerOptsDefault.address,
     group: "keymanager",
   },
   "keymanager.cors": {
-    alias: ["keymanagerCors"], // Backwards compatibility
     type: "string",
     description: "Configures the Access-Control-Allow-Origin CORS header for keymanager API",
     defaultDescription: keymanagerRestApiServerOptsDefault.cors,
@@ -175,7 +170,7 @@ export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
   },
 
   importKeystoresPath: {
-    alias: ["keystore", "directory"], // Backwards compatibility with old `validator import` cmd
+    alias: ["keystore", "directory"], // Backwards compatibility with old `validator import` cmdx
     description: "Path(s) to a directory or single filepath to validator keystores, i.e. Launchpad validators",
     defaultDescription: "./keystores/*.json",
     type: "array",
@@ -199,14 +194,12 @@ export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
   // Remote signer
 
   "externalSigner.url": {
-    alias: ["externalSignerUrl"], // Backwards compatibility
     description: "URL to connect to an external signing server",
     type: "string",
     group: "externalSignerUrl",
   },
 
   "externalSigner.pubkeys": {
-    alias: ["externalSignerPublicKeys"], // Backwards compatibility
     description:
       "List of validator public keys used by an external signer. May also provide a single string a comma separated public keys",
     type: "array",
@@ -221,7 +214,6 @@ export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
   },
 
   "externalSigner.fetch": {
-    alias: ["externalSignerFetchPubkeys"], // Backwards compatibility
     conflicts: ["externalSigner.pubkeys"],
     description: "Fetch then list of pubkeys to validate from an external signer",
     type: "boolean",

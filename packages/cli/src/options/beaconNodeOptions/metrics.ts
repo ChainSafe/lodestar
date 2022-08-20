@@ -25,7 +25,6 @@ export const options: ICliCommandOptions<IMetricsArgs> = {
 
   "metrics.port": {
     type: "number",
-    alias: ["metrics.serverPort"], // For backwards compatibility
     description: "Listen TCP port for the Prometheus metrics HTTP server",
     defaultDescription: String(defaultOptions.metrics.port),
     group: "metrics",
@@ -33,7 +32,6 @@ export const options: ICliCommandOptions<IMetricsArgs> = {
 
   "metrics.address": {
     type: "string",
-    alias: ["metrics.listenAddr"], // For backwards compatibility
     description: "Listen address for the Prometheus metrics HTTP server",
     defaultDescription: String(defaultOptions.metrics.address),
     group: "metrics",
