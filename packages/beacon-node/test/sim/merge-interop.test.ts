@@ -36,7 +36,7 @@ import {shell} from "./shell.js";
 // Example:
 // ```
 // $ EL_BINARY_DIR=/home/lion/Code/eth2.0/merge-interop/go-ethereum/build/bin \
-//   EL_SCRIPT_DIR=kiln/geth ETH_PORT=8545 ENGINE_PORT=8551 TX_SCENARIOS=simple \
+//   EL_SCRIPT_DIR=geth ETH_PORT=8545 ENGINE_PORT=8551 TX_SCENARIOS=simple \
 //   ../../node_modules/.bin/mocha test/sim/merge.test.ts
 // ```
 
@@ -50,7 +50,7 @@ const jwtSecretHex = "0xdc6457099f127cf0bac78de8b297df04951281909db4f58b43def7c7
 const retryAttempts = defaultExecutionEngineHttpOpts.retryAttempts;
 const retryDelay = defaultExecutionEngineHttpOpts.retryDelay;
 
-describe.skip("executionEngine / ExecutionEngineHttp", function () {
+describe("executionEngine / ExecutionEngineHttp", function () {
   this.timeout("10min");
 
   const dataPath = fs.mkdtempSync("lodestar-test-merge-interop");
@@ -129,7 +129,7 @@ describe.skip("executionEngine / ExecutionEngineHttp", function () {
     fs.mkdirSync(dataPath, {recursive: true});
 
     startELProcess({
-      runScriptPath: `../../${process.env.EL_SCRIPT_DIR}/${elScript}`,
+      runScriptPath: `./test/scripts/el-interop/${process.env.EL_SCRIPT_DIR}/${elScript}`,
       TTD: `${ttd}`,
       DATA_DIR: dataPath,
     });
