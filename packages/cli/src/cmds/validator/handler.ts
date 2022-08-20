@@ -57,7 +57,7 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
 
   // Ensure the validator has at least one key
   if (signers.length === 0) {
-    if (args["keymanager.enabled"]) {
+    if (args["keymanager"]) {
       logger.warn("No signers found with current args, expecting to be added via keymanager");
     } else {
       throw new YargsError("No signers found with current args");
@@ -124,7 +124,7 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
 
   // Start keymanager API backend
   // Only if keymanagerEnabled flag is set to true
-  if (args["keymanager.enabled"]) {
+  if (args["keymanager"]) {
     const accountPaths = getAccountPaths(args);
     const keymanagerApi = new KeymanagerApi(validator, new PersistedKeysBackend(accountPaths));
 

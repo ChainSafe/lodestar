@@ -49,7 +49,7 @@ export type IValidatorCliArgs = AccountValidatorArgs &
   };
 
 export type KeymanagerArgs = {
-  "keymanager.enabled"?: boolean;
+  keymanager?: boolean;
   "keymanager.authEnabled"?: boolean;
   "keymanager.port"?: number;
   "keymanager.address"?: string;
@@ -57,7 +57,7 @@ export type KeymanagerArgs = {
 };
 
 export const keymanagerOptions: ICliCommandOptions<KeymanagerArgs> = {
-  "keymanager.enabled": {
+  keymanager: {
     type: "boolean",
     description: "Enable keymanager API server",
     default: false,

@@ -41,7 +41,7 @@ export function getKeymanagerTestRunner({args: {spawnCli}, afterEachCallbacks, d
         // ⏎
         "validator",
         `--dataDir=${dataDir}`,
-        "--keymanager.enabled",
+        "--keymanager",
         "--keymanager.address=localhost",
         `--keymanager.port=${keymanagerPort}`,
         `--server=${beaconUrl}`,
