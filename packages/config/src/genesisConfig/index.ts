@@ -33,7 +33,7 @@ export function createICachedGenesis(chainForkConfig: IChainForkConfig, genesisV
       //   return compute_domain(domain_type, fork_version, state.genesis_validators_root)
       // ```
 
-      const epoch = Math.floor(messageSlot ?? stateSlot / SLOTS_PER_EPOCH);
+      const epoch = Math.floor((messageSlot ?? stateSlot) / SLOTS_PER_EPOCH);
       // Get pre-computed fork schedule, which _should_ match the one in the state
       const stateForkInfo = chainForkConfig.getForkInfo(stateSlot);
       // Only allow to select either current or previous fork respective of the fork schedule at stateSlot
