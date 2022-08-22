@@ -196,11 +196,7 @@ export async function fetchWeakSubjectivityState(
 
     return {wsState: getStateTypeFromBytes(config, stateBytes).deserializeToViewDU(stateBytes), wsCheckpoint};
   } catch (e) {
-    throw new Error(
-      "Unable to fetch weak subjectivity state: " +
-        (e as Error).message +
-        ". Consider downloading a state manually and using the --weakSubjectivityStateFile option."
-    );
+    throw new Error("Unable to fetch weak subjectivity state: " + (e as Error).message);
   }
 }
 
