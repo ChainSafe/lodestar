@@ -5,7 +5,7 @@ import all from "it-all";
 import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {chainConfig} from "@lodestar/config/default";
 import {createIBeaconConfig} from "@lodestar/config";
-import {LodestarError} from "@lodestar/utils";
+import {fromHex, LodestarError} from "@lodestar/utils";
 import {allForks} from "@lodestar/types";
 import {
   Method,
@@ -236,8 +236,12 @@ describe("network / reqresp / encoders / response - Success and error cases", ()
     },
     {
       id: "SERVER_ERROR - with error message",
-      decodeError: new ResponseError(RespStatus.SERVER_ERROR, "TEST_ERROR"),
-      chunks: [Buffer.from([RespStatus.SERVER_ERROR]), Buffer.from("TEST_ERROR")],
+      decodeError: new ResponseError(RespStatus.SERVER_ERROR, "sNaPpYIzTEST_ERROR"),
+      chunks: [
+        Buffer.from([RespStatus.SERVER_ERROR]),
+        fromHexBuf("0x0a"),
+        fromHexBuf("0xff060000734e61507059010e000049b97aaf544553545f4552524f52"),
+      ],
       responseChunks: [{status: RespStatus.SERVER_ERROR, errorMessage: "TEST_ERROR"}],
     },
     // This last two error cases are not possible to encode since are invalid. Test decoding only
@@ -265,7 +269,7 @@ describe("network / reqresp / encoders / response - Success and error cases", ()
           responseEncodeSuccess(config, protocol)
         );
       } else {
-        yield* responseEncodeError(chunk.status, chunk.errorMessage);
+        yield* responseEncodeError(protocol, chunk.status, chunk.errorMessage);
       }
     }
   }
@@ -326,4 +330,8 @@ function onlySuccessChunks(responseChunks: ResponseChunk[]): IncomingResponseBod
     if (chunk.status === RespStatus.SUCCESS) bodyArr.push(chunk.body);
   }
   return bodyArr;
+}
+
+function fromHexBuf(hex: string): Buffer {
+  return Buffer.from(fromHex(hex));
 }

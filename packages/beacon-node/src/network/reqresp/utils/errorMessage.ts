@@ -1,3 +1,6 @@
+import {encodeSszSnappy} from "../encodingStrategies/sszSnappy/encode.js";
+import {Encoding} from "../types.js";
+
 // ErrorMessage schema:
 //
 // (
@@ -12,9 +15,14 @@
 /**
  * Encodes a UTF-8 string to 256 bytes max
  */
-export function encodeErrorMessage(errorMessage: string): Buffer {
+export async function* encodeErrorMessage(errorMessage: string, encoding: Encoding): AsyncGenerator<Buffer> {
   const encoder = new TextEncoder();
-  return Buffer.from(encoder.encode(errorMessage).slice(0, 256));
+  const bytes = Buffer.from(encoder.encode(errorMessage).slice(0, 256));
+
+  switch (encoding) {
+    case Encoding.SSZ_SNAPPY:
+      yield* encodeSszSnappy(bytes);
+  }
 }
 
 /**
