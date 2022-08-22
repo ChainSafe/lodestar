@@ -84,6 +84,7 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
       wsCheckpoint,
       metricsRegistries,
     });
+    await node.start();
 
     if (args.attachToGlobalThis) ((globalThis as unknown) as {bn: BeaconNode}).bn = node;
 

@@ -33,7 +33,8 @@ export interface IBeaconNodeModules {
   backfillSync: BackfillSync | null;
   metricsServer?: HttpMetricsServer;
   restApi?: BeaconRestApiServer;
-  controller?: AbortController;
+  controller: AbortController;
+  logger: ILogger;
 }
 
 export interface IBeaconNodeInitModules {
@@ -69,9 +70,10 @@ export class BeaconNode {
   restApi?: BeaconRestApiServer;
   sync: IBeaconSync;
   backfillSync: BackfillSync | null;
+  logger: ILogger;
 
   status: BeaconNodeStatus;
-  private controller?: AbortController;
+  private controller: AbortController;
 
   constructor({
     opts,
@@ -86,6 +88,7 @@ export class BeaconNode {
     sync,
     backfillSync,
     controller,
+    logger,
   }: IBeaconNodeModules) {
     this.opts = opts;
     this.config = config;
@@ -99,6 +102,7 @@ export class BeaconNode {
     this.sync = sync;
     this.backfillSync = backfillSync;
     this.controller = controller;
+    this.logger = logger;
 
     this.status = BeaconNodeStatus.started;
   }
@@ -119,9 +123,6 @@ export class BeaconNode {
   }: IBeaconNodeInitModules): Promise<T> {
     const controller = new AbortController();
     const signal = controller.signal;
-
-    // start db if not already started
-    await db.start();
 
     let metrics = null;
     if (opts.metrics.enabled) {
@@ -150,9 +151,6 @@ export class BeaconNode {
         : undefined,
     });
 
-    // Load persisted data from disk to in-memory caches
-    await chain.loadFromDisk();
-
     const network = new Network(opts.network, {
       config,
       libp2p,
@@ -162,6 +160,7 @@ export class BeaconNode {
       reqRespHandlers: getReqRespHandlers({db, chain}),
       signal,
     });
+
     const sync = new BeaconSync(opts.sync, {
       config,
       db,
@@ -200,9 +199,6 @@ export class BeaconNode {
     const metricsServer = metrics
       ? new HttpMetricsServer(opts.metrics, {register: metrics.register, logger: logger.child(opts.logger.metrics)})
       : undefined;
-    if (metricsServer) {
-      await metricsServer.start();
-    }
 
     const restApi = new BeaconRestApiServer(opts.api.rest, {
       config,
@@ -210,13 +206,6 @@ export class BeaconNode {
       api,
       metrics: metrics ? metrics.apiRest : null,
     });
-    if (opts.api.rest.enabled) {
-      await restApi.listen();
-    }
-
-    await network.start();
-
-    void runNodeNotifier({network, chain, sync, config, logger, signal});
 
     return new this({
       opts,
@@ -231,7 +220,36 @@ export class BeaconNode {
       sync,
       backfillSync,
       controller,
+      logger,
     }) as T;
+  }
+
+  // Start beacon node services
+  async start(): Promise<void> {
+    // start db if not already started
+    await this.db.start();
+
+    // Load persisted data from disk to in-memory caches
+    await this.chain.loadFromDisk();
+
+    if (this.metricsServer) {
+      await this.metricsServer?.start();
+    }
+
+    if (this.opts.api.rest.enabled) {
+      await this.restApi?.listen();
+    }
+
+    await this.network.start();
+
+    void runNodeNotifier({
+      network: this.network,
+      chain: this.chain,
+      sync: this.sync,
+      config: this.config,
+      logger: this.logger,
+      signal: this.controller.signal,
+    });
   }
 
   /**
@@ -249,7 +267,7 @@ export class BeaconNode {
       await this.chain.persistToDisk();
       await this.chain.close();
       await this.db.stop();
-      if (this.controller) this.controller.abort();
+      this.controller.abort();
       this.status = BeaconNodeStatus.closed;
     }
   }

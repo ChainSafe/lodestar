@@ -94,7 +94,8 @@ export async function getDevBeaconNode(
   }
 
   const beaconConfig = createIBeaconConfig(config, anchorState.genesisValidatorsRoot);
-  return await BeaconNode.init({
+
+  const node = await BeaconNode.init({
     opts: options as IBeaconNodeOptions,
     config: beaconConfig,
     db,
@@ -103,6 +104,9 @@ export async function getDevBeaconNode(
     anchorState,
     wsCheckpoint: opts.wsCheckpoint,
   });
+  await node.start();
+
+  return node;
 }
 
 function overwriteTargetArrayIfItems(target: unknown[], source: unknown[]): unknown[] {
