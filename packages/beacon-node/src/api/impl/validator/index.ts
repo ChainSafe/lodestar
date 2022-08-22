@@ -83,6 +83,10 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
    * Prevents the validator from getting errors from the API if the clock is a bit advanced
    */
   async function waitForSlot(slot: Slot): Promise<void> {
+    if (slot <= 0) {
+      return;
+    }
+
     const slotStartSec = chain.genesisTime + slot * config.SECONDS_PER_SLOT;
     const msToSlot = slotStartSec * 1000 - Date.now();
 
