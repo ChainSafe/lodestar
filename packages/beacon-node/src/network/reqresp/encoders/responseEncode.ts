@@ -57,6 +57,7 @@ export function responseEncodeSuccess(
  * fn yields exactly one `<error_response>` and afterwards the stream must be terminated
  */
 export async function* responseEncodeError(
+  protocol: Protocol,
   status: RpcResponseStatusError,
   errorMessage: string
 ): AsyncGenerator<Buffer> {
@@ -65,7 +66,7 @@ export async function* responseEncodeError(
 
   // <error_message>? is optional
   if (errorMessage) {
-    yield encodeErrorMessage(errorMessage);
+    yield* encodeErrorMessage(errorMessage, protocol.encoding);
   }
 }
 

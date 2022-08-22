@@ -7,6 +7,8 @@ import {SnappyFramesUncompress} from "./snappyFrames/uncompress.js";
 import {maxEncodedLen} from "./utils.js";
 import {SszSnappyError, SszSnappyErrorCode} from "./errors.js";
 
+export type RequestOrResponseTypeRead = Pick<RequestOrResponseType, "minSize" | "maxSize" | "deserialize">;
+
 /**
  * ssz_snappy encoding strategy reader.
  * Consumes a stream source to read encoded header and payload as defined in the spec:
@@ -16,7 +18,7 @@ import {SszSnappyError, SszSnappyErrorCode} from "./errors.js";
  */
 export async function readSszSnappyPayload<T extends RequestOrIncomingResponseBody>(
   bufferedSource: BufferedSource,
-  type: RequestOrResponseType
+  type: RequestOrResponseTypeRead
 ): Promise<T> {
   const sszDataLength = await readSszSnappyHeader(bufferedSource, type);
 
@@ -28,7 +30,10 @@ export async function readSszSnappyPayload<T extends RequestOrIncomingResponseBo
  * Reads `<encoding-dependent-header>` for ssz-snappy.
  * encoding-header ::= the length of the raw SSZ bytes, encoded as an unsigned protobuf varint
  */
-async function readSszSnappyHeader(bufferedSource: BufferedSource, type: RequestOrResponseType): Promise<number> {
+export async function readSszSnappyHeader(
+  bufferedSource: BufferedSource,
+  type: Pick<RequestOrResponseType, "minSize" | "maxSize">
+): Promise<number> {
   for await (const buffer of bufferedSource) {
     // Get next bytes if empty
     if (buffer.length === 0) {
@@ -74,7 +79,7 @@ async function readSszSnappyHeader(bufferedSource: BufferedSource, type: Request
  * Reads `<encoded-payload>` for ssz-snappy and decompress.
  * The returned bytes can be SSZ deseralized
  */
-async function readSszSnappyBody(bufferedSource: BufferedSource, sszDataLength: number): Promise<Buffer> {
+export async function readSszSnappyBody(bufferedSource: BufferedSource, sszDataLength: number): Promise<Buffer> {
   const decompressor = new SnappyFramesUncompress();
   const uncompressedData = new BufferList();
   let readBytes = 0;
@@ -124,7 +129,10 @@ async function readSszSnappyBody(bufferedSource: BufferedSource, sszDataLength: 
  * Deseralizes SSZ body.
  * `isSszTree` option allows the SignedBeaconBlock type to be deserialized as a tree
  */
-function deserializeSszBody<T extends RequestOrIncomingResponseBody>(bytes: Buffer, type: RequestOrResponseType): T {
+function deserializeSszBody<T extends RequestOrIncomingResponseBody>(
+  bytes: Buffer,
+  type: RequestOrResponseTypeRead
+): T {
   try {
     return type.deserialize(bytes) as T;
   } catch (e) {
