@@ -200,7 +200,7 @@ export class Network implements INetwork {
     this.peerManager.reStatusPeers(peers);
   }
 
-  reportPeer(peer: PeerId, action: PeerAction, actionName?: string): void {
+  reportPeer(peer: PeerId, action: PeerAction, actionName: string): void {
     this.peerRpcScores.applyAction(peer, action, actionName);
   }
 

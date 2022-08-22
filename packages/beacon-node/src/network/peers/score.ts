@@ -79,7 +79,7 @@ type PeerIdStr = string;
 export interface IPeerRpcScoreStore {
   getScore(peer: PeerId): number;
   getScoreState(peer: PeerId): ScoreState;
-  applyAction(peer: PeerId, action: PeerAction, actionName?: string): void;
+  applyAction(peer: PeerId, action: PeerAction, actionName: string): void;
   update(): void;
   updateGossipsubScore(peerId: PeerIdStr, newScore: number, ignore: boolean): void;
 }
@@ -112,7 +112,7 @@ export class PeerRpcScoreStore implements IPeerRpcScoreStore {
     return scoreToState(this.getScore(peer));
   }
 
-  applyAction(peer: PeerId, action: PeerAction, actionName?: string): void {
+  applyAction(peer: PeerId, action: PeerAction, actionName: string): void {
     const peerScore = this.scores.getOrDefault(peer.toB58String());
     peerScore.add(peerActionScore[action]);
 
