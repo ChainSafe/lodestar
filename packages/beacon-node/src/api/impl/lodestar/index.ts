@@ -1,6 +1,8 @@
 import PeerId from "peer-id";
 import {Multiaddr} from "multiaddr";
 import {routes} from "@lodestar/api";
+import {Bucket, Repository} from "@lodestar/db";
+import {toHex} from "@lodestar/utils";
 import {getLatestWeakSubjectivityCheckpointEpoch} from "@lodestar/state-transition";
 import {toHexString} from "@chainsafe/ssz";
 import {IChainForkConfig} from "@lodestar/config";
@@ -8,15 +10,17 @@ import {ssz} from "@lodestar/types";
 import {BeaconChain} from "../../../chain/index.js";
 import {QueuedStateRegenerator, RegenRequest} from "../../../chain/regen/index.js";
 import {GossipType} from "../../../network/index.js";
+import {IBeaconDb} from "../../../db/interface.js";
 import {ApiModules} from "../types.js";
 import {formatNodePeer} from "../node/utils.js";
 
 export function getLodestarApi({
   chain,
   config,
+  db,
   network,
   sync,
-}: Pick<ApiModules, "chain" | "config" | "network" | "sync">): routes.lodestar.Api {
+}: Pick<ApiModules, "chain" | "config" | "db" | "network" | "sync">): routes.lodestar.Api {
   let writingHeapdump = false;
 
   return {
@@ -153,6 +157,23 @@ export function getLodestarApi({
         data: network.discv5?.kadValues().map((enr) => enr.encodeTxt()) ?? [],
       };
     },
+
+    async dumpDbBucketKeys(bucketReq) {
+      for (const repo of Object.values(db) as IBeaconDb[keyof IBeaconDb][]) {
+        if (repo instanceof Repository) {
+          const bucket = (repo as RepositoryAny)["bucket"];
+          if (bucket === bucket || Bucket[bucket] === bucketReq) {
+            return stringifyKeys(await repo.keys());
+          }
+        }
+      }
+
+      throw Error(`Unknown Bucket '${bucketReq}' available: ${Object.keys(Bucket).join(", ")}`);
+    },
+
+    async dumpDbStateIndex() {
+      return db.stateArchive.dumpRootIndexEntries();
+    },
   };
 }
 
@@ -180,4 +201,17 @@ function regenRequestToJson(config: IChainForkConfig, regenRequest: RegenRequest
         root: regenRequest.args[0],
       };
   }
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type RepositoryAny = Repository<any, any>;
+
+function stringifyKeys(keys: (Uint8Array | number | string)[]): string[] {
+  return keys.map((key) => {
+    if (key instanceof Uint8Array) {
+      return toHex(key);
+    } else {
+      return `${key}`;
+    }
+  });
 }

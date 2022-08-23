@@ -11,7 +11,7 @@ export function ensure0xPrefix(hex: string): string {
 }
 
 export function isValidatePubkeyHex(pubkeyHex: string): boolean {
-  return /0x[0-9a-fA-F]{96}/.test(pubkeyHex);
+  return /^0x[0-9a-fA-F]{96}$/.test(pubkeyHex);
 }
 
 export function getPubkeyHexFromKeystore(keystore: {pubkey?: string}): string {

@@ -14,7 +14,7 @@ export function getSelectionProofSignatureSet(
   aggregator: PublicKey,
   aggregateAndProof: phase0.SignedAggregateAndProof
 ): ISignatureSet {
-  const selectionProofDomain = state.config.getDomain(DOMAIN_SELECTION_PROOF, slot);
+  const selectionProofDomain = state.config.getDomain(state.slot, DOMAIN_SELECTION_PROOF, slot);
 
   return {
     type: SignatureSetType.single,

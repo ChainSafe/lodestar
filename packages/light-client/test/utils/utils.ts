@@ -48,7 +48,7 @@ export function getSyncAggregateSigningRoot(
   config: IBeaconConfig,
   syncAttestedBlockHeader: phase0.BeaconBlockHeader
 ): Uint8Array {
-  const domain = config.getDomain(DOMAIN_SYNC_COMMITTEE, syncAttestedBlockHeader.slot);
+  const domain = config.getDomain(syncAttestedBlockHeader.slot, DOMAIN_SYNC_COMMITTEE);
   return computeSigningRoot(ssz.phase0.BeaconBlockHeader, syncAttestedBlockHeader, domain);
 }
 

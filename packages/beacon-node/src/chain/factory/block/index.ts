@@ -40,7 +40,7 @@ export async function assembleBlock<T extends BlockType>(
     proposerIndex,
     parentRoot: parentBlockRoot,
     stateRoot: ZERO_HASH,
-    body: await assembleBody<T>({type, chain, logger}, state, {
+    body: await assembleBody<T>({type, chain, logger, metrics}, state, {
       randaoReveal,
       graffiti,
       blockSlot: slot,

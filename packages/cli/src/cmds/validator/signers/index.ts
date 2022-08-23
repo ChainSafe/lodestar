@@ -14,7 +14,7 @@ import {importKeystoreDefinitionsFromExternalDir, readPassphraseOrPrompt} from "
  * Options processing heriarchy
  * --interopIndexes
  * --fromMnemonic, then requires --mnemonicIndexes
- * --importKeystoresPath, then requires --importKeystoresPassword
+ * --importKeystores, then requires --importKeystoresPassword
  * --externalSignerFetchPubkeys, then requires --externalSignerUrl
  * --externalSignerPublicKeys, then requires --externalSignerUrl
  * else load from persisted
@@ -60,9 +60,9 @@ export async function getSignersFromArgs(args: IValidatorCliArgs & IGlobalArgs):
   }
 
   // Import JSON keystores and run
-  else if (args.importKeystoresPath) {
+  else if (args.importKeystores) {
     const keystoreDefinitions = importKeystoreDefinitionsFromExternalDir({
-      keystoresPath: args.importKeystoresPath,
+      keystoresPath: args.importKeystores,
       password: await readPassphraseOrPrompt(args),
     });
 

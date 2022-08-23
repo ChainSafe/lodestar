@@ -17,18 +17,19 @@ export async function* writeSszSnappyPayload<T extends RequestOrOutgoingResponse
 ): AsyncGenerator<Buffer> {
   const serializedBody = serializeSszBody(body, serializer);
 
-  // MUST encode the length of the raw SSZ bytes, encoded as an unsigned protobuf varint
-  yield Buffer.from(varint.encode(serializedBody.length));
-
-  // By first computing and writing the SSZ byte length, the SSZ encoder can then directly
-  // write the chunk contents to the stream. Snappy writer compresses frame by frame
   yield* encodeSszSnappy(serializedBody);
 }
 
 /**
  * Buffered Snappy writer
  */
-function encodeSszSnappy(bytes: Buffer): AsyncGenerator<Buffer> {
+export async function* encodeSszSnappy(bytes: Buffer): AsyncGenerator<Buffer> {
+  // MUST encode the length of the raw SSZ bytes, encoded as an unsigned protobuf varint
+  yield Buffer.from(varint.encode(bytes.length));
+
+  // By first computing and writing the SSZ byte length, the SSZ encoder can then directly
+  // write the chunk contents to the stream. Snappy writer compresses frame by frame
+
   /**
    * Use sync version (default) for compress as it is almost 2x faster than async
    * one and most payloads are "1 chunk" and 100kb payloads (which would mostly be
@@ -40,7 +41,7 @@ function encodeSszSnappy(bytes: Buffer): AsyncGenerator<Buffer> {
   const stream = snappy.createCompressStream();
   stream.write(bytes);
   stream.end();
-  return source<Buffer>(stream);
+  yield* source<Buffer>(stream);
 }
 
 /**

@@ -1,7 +1,7 @@
 import {BeaconStateAllForks} from "@lodestar/state-transition";
-import {Epoch, Root, Slot, ssz} from "@lodestar/types";
+import {Epoch, Root, RootHex, Slot, ssz} from "@lodestar/types";
 import {IChainForkConfig} from "@lodestar/config";
-import {bytesToInt} from "@lodestar/utils";
+import {bytesToInt, toHex} from "@lodestar/utils";
 import {Db, Bucket, Repository} from "@lodestar/db";
 import {getStateTypeFromBytes} from "../../util/multifork.js";
 import {getRootIndexKey, storeRootIndex} from "./stateArchiveIndex.js";
@@ -48,6 +48,17 @@ export class StateArchiveRepository extends Repository<Slot, BeaconStateAllForks
       return this.get(slot);
     }
     return null;
+  }
+
+  async dumpRootIndexEntries(): Promise<{root: RootHex; slot: Slot}[]> {
+    const entries = await this.db.entries({
+      lte: getRootIndexKey(Buffer.alloc(32, 0xff)),
+      gte: getRootIndexKey(Buffer.alloc(32, 0x00)),
+    });
+    return entries.map((entry) => ({
+      root: toHex(entry.key),
+      slot: bytesToInt(entry.value, "be"),
+    }));
   }
 
   private async getSlotByRoot(root: Root): Promise<Slot | null> {

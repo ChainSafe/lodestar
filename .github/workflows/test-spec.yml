@@ -1,14 +1,6 @@
 name: Spec tests
 
-on:
-  push:
-    branches:
-      - stable
-      - unstable
-  pull_request:
-    branches:
-      - stable
-      - unstable
+on: [pull_request, push]
 
 jobs:
   tests-spec:

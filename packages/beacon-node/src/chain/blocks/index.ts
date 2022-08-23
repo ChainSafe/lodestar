@@ -101,11 +101,7 @@ export async function processBlocks(
     if (!(err instanceof BlockError)) {
       this.logger.error("Non BlockError received", {}, err);
     } else if (!opts.disableOnBlockError) {
-      // err type data may contain CachedBeaconState which is too much to log
-      const slimError = new Error();
-      slimError.message = err.message;
-      slimError.stack = err.stack;
-      this.logger.error("Block error", {slot: err.signedBlock.message.slot, errCode: err.type.code}, slimError);
+      this.logger.error("Block error", {slot: err.signedBlock.message.slot}, err);
 
       if (err.type.code === BlockErrorCode.INVALID_SIGNATURE) {
         const {signedBlock} = err;

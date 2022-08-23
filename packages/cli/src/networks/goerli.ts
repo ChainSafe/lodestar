@@ -1,4 +1,4 @@
-export {praterChainConfig as chainConfig} from "@lodestar/config/networks";
+export {goerliChainConfig as chainConfig} from "@lodestar/config/networks";
 
 /* eslint-disable max-len */
 

@@ -23,7 +23,7 @@ export const selfSlashAttester: ICliCommand<SelfSlashArgs, Record<never, never>,
   describe: "Self slash validators of a provided mnemonic with AttesterSlashing",
   examples: [
     {
-      command: "self-slash-proposer --network prater",
+      command: "self-slash-proposer --network goerli",
       description: "Self slash validators of a provided mnemonic",
     },
   ],
@@ -145,7 +145,7 @@ function signAttestationDataBigint(
   data: phase0.AttestationDataBigint
 ): Uint8Array {
   const slot = Number(data.slot as bigint);
-  const proposerDomain = config.getDomain(DOMAIN_BEACON_ATTESTER, slot);
+  const proposerDomain = config.getDomain(slot, DOMAIN_BEACON_ATTESTER);
   const signingRoot = computeSigningRoot(ssz.phase0.AttestationDataBigint, data, proposerDomain);
 
   const sigs = sks.map((sk) => sk.sign(signingRoot));
