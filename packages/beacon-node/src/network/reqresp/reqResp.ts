@@ -168,14 +168,15 @@ export class ReqResp implements IReqResp {
     } catch (e) {
       this.metrics?.reqResp.outgoingErrors.inc({method});
 
-      const peerAction = onOutgoingReqRespError(e as Error, method);
-      if (
-        e instanceof RequestError &&
-        (e.type.code === RequestErrorCode.DIAL_ERROR || e.type.code === RequestErrorCode.DIAL_TIMEOUT)
-      ) {
-        this.metrics?.reqResp.dialErrors.inc();
+      if (e instanceof RequestError) {
+        if (e.type.code === RequestErrorCode.DIAL_ERROR || e.type.code === RequestErrorCode.DIAL_TIMEOUT) {
+          this.metrics?.reqResp.dialErrors.inc();
+        }
+        const peerAction = onOutgoingReqRespError(e, method);
+        if (peerAction !== null) {
+          this.peerRpcScores.applyAction(peerId, peerAction, e.type.code);
+        }
       }
-      if (peerAction !== null) this.peerRpcScores.applyAction(peerId, peerAction);
 
       throw e;
     } finally {
