@@ -22,13 +22,22 @@ import {
   isMergeTransitionComplete,
 } from "@lodestar/state-transition";
 import {IChainForkConfig} from "@lodestar/config";
-import {toHex, ILogger} from "@lodestar/utils";
+import {toHex, ILogger, sleep} from "@lodestar/utils";
 
 import {IBeaconChain} from "../../interface.js";
 import {PayloadId, IExecutionEngine, IExecutionBuilder} from "../../../execution/index.js";
 import {ZERO_HASH, ZERO_HASH_HEX} from "../../../constants/index.js";
 import {IEth1ForBlockProduction} from "../../../eth1/index.js";
 import {numToQuantity} from "../../../eth1/provider/utils.js";
+import {IMetrics} from "../../../metrics/index.js";
+
+// Time to provide the EL to generate a payload from new payload id
+const PAYLOAD_GENERATION_TIME_MS = 500;
+enum PayloadPreparationType {
+  Fresh = "Fresh",
+  Cached = "Cached",
+  Reorged = "Reorged",
+}
 
 export enum BlockType {
   Full,
@@ -42,7 +51,7 @@ export type AssembledBlockType<T extends BlockType> = T extends BlockType.Full
   : bellatrix.BlindedBeaconBlock;
 
 export async function assembleBody<T extends BlockType>(
-  {type, chain, logger}: {type: T; chain: IBeaconChain; logger?: ILogger},
+  {type, chain, logger, metrics}: {type: T; chain: IBeaconChain; logger?: ILogger; metrics?: IMetrics | null},
   currentState: CachedBeaconStateAllForks,
   {
     randaoReveal,
@@ -139,10 +148,29 @@ export async function assembleBody<T extends BlockType>(
           currentState as CachedBeaconStateBellatrix,
           feeRecipient
         );
-        (blockBody as bellatrix.BeaconBlockBody).executionPayload = prepareRes.isPremerge
-          ? ssz.bellatrix.ExecutionPayload.defaultValue()
-          : await chain.executionEngine.getPayload(prepareRes.payloadId);
+        if (prepareRes.isPremerge) {
+          (blockBody as bellatrix.BeaconBlockBody).executionPayload = ssz.bellatrix.ExecutionPayload.defaultValue();
+        } else {
+          const {prepType, payloadId} = prepareRes;
+          if (prepType !== PayloadPreparationType.Cached) {
+            // Wait for 500ms to allow EL to add some txs to the payload
+            // the pitfalls of this have been put forward here, but 500ms delay for block proposal
+            // seems marginal even with unhealthy network
+            //
+            // See: https://discord.com/channels/595666850260713488/892088344438255616/1009882079632314469
+            await sleep(PAYLOAD_GENERATION_TIME_MS);
+          }
+          const payload = await chain.executionEngine.getPayload(payloadId);
+          (blockBody as bellatrix.BeaconBlockBody).executionPayload = payload;
+
+          const fetchedTime = Date.now() / 1000 - computeTimeAtSlot(chain.config, blockSlot, chain.genesisTime);
+          metrics?.blockPayload.payloadFetchedTime.observe({prepType}, fetchedTime);
+          if (payload.transactions.length === 0) {
+            metrics?.blockPayload.emptyPayloads.inc({prepType});
+          }
+        }
       } catch (e) {
+        metrics?.blockPayload.payloadFetchErrors.inc();
         // ok we don't have an execution payload here, so we can assign an empty one
         // if pre-merge
 
@@ -182,7 +210,7 @@ export async function prepareExecutionPayload(
   finalizedBlockHash: RootHex,
   state: CachedBeaconStateBellatrix,
   suggestedFeeRecipient: string
-): Promise<{isPremerge: true} | {isPremerge: false; payloadId: PayloadId}> {
+): Promise<{isPremerge: true} | {isPremerge: false; prepType: PayloadPreparationType; payloadId: PayloadId}> {
   const parentHashRes = await getExecutionPayloadParentHash(chain, state);
   if (parentHashRes.isPremerge) {
     // Return null only if the execution is pre-merge
@@ -204,13 +232,32 @@ export async function prepareExecutionPayload(
   // prepareExecutionPayload will throw error via notifyForkchoiceUpdate if
   // the EL returns Syncing on this request to prepare a payload
   // TODO: Handle only this case, DO NOT put a generic try / catch that discards all errors
-  const payloadId =
-    payloadIdCached ??
-    (await chain.executionEngine.notifyForkchoiceUpdate(toHex(parentHash), safeBlockHash, finalizedBlockHash, {
-      timestamp,
-      prevRandao,
-      suggestedFeeRecipient,
-    }));
+  let payloadId: PayloadId | null;
+  let prepType: PayloadPreparationType;
+
+  if (payloadIdCached) {
+    payloadId = payloadIdCached;
+    prepType = PayloadPreparationType.Cached;
+  } else {
+    // If there was a payload assigned to this timestamp, it would imply that there some sort
+    // of payload reorg, i.e. head, fee recipient or any other fcu param changed
+    if (chain.executionEngine.payloadIdCache.hasPayload({timestamp: numToQuantity(timestamp)})) {
+      prepType = PayloadPreparationType.Reorged;
+    } else {
+      prepType = PayloadPreparationType.Fresh;
+    }
+
+    payloadId = await chain.executionEngine.notifyForkchoiceUpdate(
+      toHex(parentHash),
+      safeBlockHash,
+      finalizedBlockHash,
+      {
+        timestamp,
+        prevRandao,
+        suggestedFeeRecipient,
+      }
+    );
+  }
 
   // Should never happen, notifyForkchoiceUpdate() with payload attributes always
   // returns payloadId
@@ -221,7 +268,7 @@ export async function prepareExecutionPayload(
   // We are only returning payloadId here because prepareExecutionPayload is also called from
   // prepareNextSlot, which is an advance call to execution engine to start building payload
   // Actual payload isn't produced till getPayload is called.
-  return {isPremerge: false, payloadId};
+  return {isPremerge: false, payloadId, prepType};
 }
 
 async function prepareExecutionPayloadHeader(

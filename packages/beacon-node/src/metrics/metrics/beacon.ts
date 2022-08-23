@@ -212,5 +212,26 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       name: "beacon_block_production_successes_total",
       help: "Count of blocks successfully produced",
     }),
+    blockPayload: {
+      payloadAdvancePrepTime: register.histogram({
+        name: "beacon_block_payload_prepare_time",
+        help: "Time for perparing payload in advance",
+        buckets: [0.1, 1, 3, 5, 10],
+      }),
+      payloadFetchedTime: register.histogram<"prepType">({
+        name: "beacon_block_payload_fetched_time",
+        help: "Time to fetch the payload from EL",
+        labelNames: ["prepType"],
+      }),
+      emptyPayloads: register.gauge<"prepType">({
+        name: "beacon_block_payload_empty_total",
+        help: "Count of payload with empty transactions",
+        labelNames: ["prepType"],
+      }),
+      payloadFetchErrors: register.gauge({
+        name: "beacon_block_payload_errors_total",
+        help: "Count of errors while fetching payloads",
+      }),
+    },
   };
 }

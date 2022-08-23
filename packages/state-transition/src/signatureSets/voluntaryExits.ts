@@ -25,7 +25,7 @@ export function getVoluntaryExitSignatureSet(
 ): ISignatureSet {
   const {epochCtx} = state;
   const slot = computeStartSlotAtEpoch(signedVoluntaryExit.message.epoch);
-  const domain = state.config.getDomain(DOMAIN_VOLUNTARY_EXIT, slot);
+  const domain = state.config.getDomain(state.slot, DOMAIN_VOLUNTARY_EXIT, slot);
 
   return {
     type: SignatureSetType.single,

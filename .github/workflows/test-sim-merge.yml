@@ -1,14 +1,6 @@
 name: Sim merge tests
 
-on:
-  push:
-    branches:
-      - stable
-      - unstable
-  pull_request:
-    branches:
-      - stable
-      - unstable
+on: [pull_request, push]
 
 env:
   GETH_COMMIT: be9742721f56eb8bb7ebf4f6a03fb01b13a05408
@@ -57,7 +49,7 @@ jobs:
         working-directory: packages/beacon-node
         env:
           EL_BINARY_DIR: ../../go-ethereum/build/bin
-          EL_SCRIPT_DIR: kiln/geth
+          EL_SCRIPT_DIR: geth
           ENGINE_PORT: 8551
           ETH_PORT: 8545
           TX_SCENARIOS: simple
@@ -76,7 +68,7 @@ jobs:
         working-directory: packages/beacon-node
         env:
           EL_BINARY_DIR: ../../nethermind/src/Nethermind/Nethermind.Runner
-          EL_SCRIPT_DIR: kiln/nethermind
+          EL_SCRIPT_DIR: nethermind
           ENGINE_PORT: 8551
           ETH_PORT: 8545
 

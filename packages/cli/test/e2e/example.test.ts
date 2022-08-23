@@ -16,7 +16,7 @@ const consoleKeys: ConsoleKeys[] = ["log", "warn", "error"];
 describe("cmds / validator", function () {
   const lodestar = getCliInMemoryRunner();
 
-  const rootDir = testFilesDir;
+  const dataDir = testFilesDir;
 
   const consoleData: {[P in ConsoleKeys]: string} = {
     log: "",
@@ -44,8 +44,8 @@ describe("cmds / validator", function () {
     }
   });
 
-  before("Clean rootDir", () => {
-    rimraf.sync(rootDir);
+  before("Clean dataDir", () => {
+    rimraf.sync(dataDir);
   });
 
   /** Generated from  const sk = bls.SecretKey.fromKeygen(Buffer.alloc(32, 0xaa)); */
@@ -56,16 +56,16 @@ describe("cmds / validator", function () {
     const passphrase = "AAAAAAAA0000000000";
     const keystore = await Keystore.create(passphrase, fromHex(skHex), fromHex(pkHex), "");
 
-    fs.mkdirSync(rootDir, {recursive: true});
-    const keystoreFilepath = path.join(rootDir, "keystore.json");
-    const passphraseFilepath = path.join(rootDir, "password.text");
+    fs.mkdirSync(dataDir, {recursive: true});
+    const keystoreFilepath = path.join(dataDir, "keystore.json");
+    const passphraseFilepath = path.join(dataDir, "password.text");
     fs.writeFileSync(passphraseFilepath, passphrase);
     fs.writeFileSync(keystoreFilepath, keystore.stringify());
 
     const res = await lodestar<ValidatorListReturnType>([
       // ⏎
       "validator import",
-      `--rootDir ${rootDir}`,
+      `--dataDir ${dataDir}`,
       `--keystore ${keystoreFilepath}`,
       `--passphraseFile ${passphraseFilepath}`,
     ]);
@@ -74,13 +74,13 @@ describe("cmds / validator", function () {
   });
 
   it("should list validators", async function () {
-    fs.mkdirSync(path.join(rootDir, "keystores"), {recursive: true});
-    fs.mkdirSync(path.join(rootDir, "secrets"), {recursive: true});
+    fs.mkdirSync(path.join(dataDir, "keystores"), {recursive: true});
+    fs.mkdirSync(path.join(dataDir, "secrets"), {recursive: true});
 
     const validatorPubKeys = await lodestar<ValidatorListReturnType>([
       // ⏎
       "validator list",
-      `--rootDir ${rootDir}`,
+      `--dataDir ${dataDir}`,
     ]);
 
     // No keys are imported before this test. TODO: Import some

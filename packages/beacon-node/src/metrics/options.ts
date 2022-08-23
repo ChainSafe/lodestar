@@ -5,7 +5,7 @@ export type LodestarMetadata = {
   version: string;
   /** "4f816b16dfde718e2d74f95f2c8292596138c248" */
   commit: string;
-  /** "prater" */
+  /** "goerli" */
   network: string;
 };
 

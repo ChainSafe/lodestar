@@ -210,7 +210,7 @@ describe("network / ReqResp", function () {
     await expectRejectedWithLodestarError(
       netA.reqResp.beaconBlocksByRange(netB.peerId, {startSlot: 0, step: 1, count: 3}),
       new RequestError(
-        {code: RequestErrorCode.SERVER_ERROR, errorMessage: testErrorMessage},
+        {code: RequestErrorCode.SERVER_ERROR, errorMessage: "sNaPpYa" + testErrorMessage},
         formatMetadata(Method.BeaconBlocksByRange, Encoding.SSZ_SNAPPY, netB.peerId)
       )
     );
@@ -229,7 +229,7 @@ describe("network / ReqResp", function () {
     await expectRejectedWithLodestarError(
       netA.reqResp.beaconBlocksByRange(netB.peerId, {startSlot: 0, step: 1, count: 3}),
       new RequestError(
-        {code: RequestErrorCode.SERVER_ERROR, errorMessage: testErrorMessage},
+        {code: RequestErrorCode.SERVER_ERROR, errorMessage: "sNaPpYa" + testErrorMessage},
         formatMetadata(Method.BeaconBlocksByRange, Encoding.SSZ_SNAPPY, netB.peerId)
       )
     );

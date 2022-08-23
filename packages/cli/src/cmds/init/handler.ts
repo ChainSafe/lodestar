@@ -52,15 +52,6 @@ export async function initializeOptionsAndConfig(args: IBeaconArgs & IGlobalArgs
     }
   }
 
-  // Apply port option
-  if (args.port !== undefined) {
-    beaconNodeOptions.set({network: {localMultiaddrs: [`/ip4/0.0.0.0/tcp/${args.port}`]}});
-    const discoveryPort = args.discoveryPort ?? args.port;
-    beaconNodeOptions.set({network: {discv5: {bindAddr: `/ip4/0.0.0.0/udp/${discoveryPort}`}}});
-  } else if (args.discoveryPort !== undefined) {
-    beaconNodeOptions.set({network: {discv5: {bindAddr: `/ip4/0.0.0.0/udp/${args.discoveryPort}`}}});
-  }
-
   // initialize params file, if it doesn't exist
   const config = getBeaconConfigFromArgs(args);
 
@@ -74,7 +65,7 @@ export async function persistOptionsAndConfig(args: IBeaconArgs & IGlobalArgs): 
   const beaconPaths = getBeaconPaths(args);
 
   // initialize directories
-  mkdir(beaconPaths.rootDir);
+  mkdir(beaconPaths.dataDir);
   mkdir(beaconPaths.beaconDir);
   mkdir(beaconPaths.dbDir);
 

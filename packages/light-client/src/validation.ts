@@ -154,7 +154,7 @@ export function assertValidSignedHeader(
 
   const signingRoot = ssz.phase0.SigningData.hashTreeRoot({
     objectRoot: signedHeaderRoot,
-    domain: config.getDomain(DOMAIN_SYNC_COMMITTEE, signedHeaderSlot),
+    domain: config.getDomain(signedHeaderSlot, DOMAIN_SYNC_COMMITTEE),
   });
 
   if (!isValidBlsAggregate(participantPubkeys, signingRoot, syncAggregate.syncCommitteeSignature)) {
