@@ -17,7 +17,7 @@ export function processRandao(
   verifySignature = true
 ): void {
   const {epochCtx} = state;
-  const epoch = epochCtx.currentShuffling.epoch;
+  const epoch = epochCtx.epoch;
   const randaoReveal = block.body.randaoReveal;
 
   // verify RANDAO reveal

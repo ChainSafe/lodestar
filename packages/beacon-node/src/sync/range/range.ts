@@ -1,17 +1,17 @@
 import {EventEmitter} from "events";
 import StrictEventEmitter from "strict-event-emitter-types";
 import PeerId from "peer-id";
-import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {IBeaconConfig} from "@lodestar/config";
-import {Epoch, Slot, phase0} from "@lodestar/types";
-import {ILogger} from "@lodestar/utils";
+import {Epoch, phase0} from "@lodestar/types";
+import {ILogger, toHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../chain/index.js";
 import {INetwork} from "../../network/index.js";
 import {IMetrics} from "../../metrics/index.js";
-import {RangeSyncType, getRangeSyncType, rangeSyncTypes} from "../utils/remoteSyncType.js";
-import {PartiallyVerifiedBlockFlags} from "../../chain/blocks/index.js";
+import {RangeSyncType, rangeSyncTypes, getRangeSyncTarget} from "../utils/remoteSyncType.js";
+import {ImportBlockOpts} from "../../chain/blocks/index.js";
 import {updateChains} from "./utils/index.js";
-import {ChainTarget, SyncChainFns, SyncChain, SyncChainOpts, SyncChainDebugState} from "./chain.js";
+import {ChainTarget, SyncChainFns, SyncChain, SyncChainDebugState} from "./chain.js";
 
 export enum RangeSyncEvent {
   completedChain = "RangeSync-completedChain",
@@ -45,7 +45,7 @@ export type RangeSyncModules = {
   logger: ILogger;
 };
 
-export type RangeSyncOpts = SyncChainOpts & {
+export type RangeSyncOpts = {
   disableProcessAsChainSegment?: boolean;
 };
 
@@ -112,32 +112,14 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
    */
   addPeer(peerId: PeerId, localStatus: phase0.Status, peerStatus: phase0.Status): void {
     // Compute if we should do a Finalized or Head sync with this peer
-    const syncType = getRangeSyncType(localStatus, peerStatus, this.chain.forkChoice);
-    this.logger.debug("Sync peer joined", {peer: peerId.toB58String(), syncType});
-
-    let startEpoch: Slot;
-    let target: ChainTarget;
-    switch (syncType) {
-      case RangeSyncType.Finalized: {
-        startEpoch = localStatus.finalizedEpoch;
-        target = {
-          slot: computeStartSlotAtEpoch(peerStatus.finalizedEpoch),
-          root: peerStatus.finalizedRoot,
-        };
-        break;
-      }
-
-      case RangeSyncType.Head: {
-        // The new peer has the same finalized (earlier filters should prevent a peer with an
-        // earlier finalized chain from reaching here).
-        startEpoch = Math.min(computeEpochAtSlot(localStatus.headSlot), peerStatus.finalizedEpoch);
-        target = {
-          slot: peerStatus.headSlot,
-          root: peerStatus.headRoot,
-        };
-        break;
-      }
-    }
+    const {syncType, startEpoch, target} = getRangeSyncTarget(localStatus, peerStatus, this.chain.forkChoice);
+    this.logger.debug("Sync peer joined", {
+      peer: peerId.toB58String(),
+      syncType,
+      startEpoch,
+      targetSlot: target.slot,
+      targetRoot: toHex(target.root),
+    });
 
     // If the peer existed in any other chain, remove it.
     // re-status'd peers can exist in multiple finalized chains, only one sync at a time
@@ -190,7 +172,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
   /** Convenience method for `SyncChain` */
   private processChainSegment: SyncChainFns["processChainSegment"] = async (blocks, syncType) => {
     // Not trusted, verify signatures
-    const flags: PartiallyVerifiedBlockFlags = {
+    const flags: ImportBlockOpts = {
       // Only skip importing attestations for finalized sync. For head sync attestation are valuable.
       // Importing attestations also triggers a head update, see https://github.com/ChainSafe/lodestar/issues/3804
       // TODO: Review if this is okay, can we prevent some attacks by importing attestations?
@@ -247,12 +229,17 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
           reportPeer: this.reportPeer,
           onEnd: this.onSyncChainEnd,
         },
-        {config: this.config, logger: this.logger},
-        this.opts
+        {config: this.config, logger: this.logger}
       );
       this.chains.set(syncType, syncChain);
-      this.logger.verbose("Added syncChain", {syncType});
+
       this.metrics?.syncRange.syncChainsEvents.inc({syncType: syncChain.syncType, event: "add"});
+      this.logger.debug("SyncChain added", {
+        syncType,
+        firstEpoch: syncChain.firstBatchEpoch,
+        targetSlot: syncChain.target.slot,
+        targetRoot: toHex(syncChain.target.root),
+      });
     }
 
     syncChain.addPeer(peer, target);
@@ -275,8 +262,17 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
       ) {
         syncChain.remove();
         this.chains.delete(id);
-        this.logger.debug("Removed syncChain", {id: syncChain.logId});
+
         this.metrics?.syncRange.syncChainsEvents.inc({syncType: syncChain.syncType, event: "remove"});
+        this.logger.debug("SyncChain removed", {
+          id: syncChain.logId,
+          localFinalizedSlot,
+          lastValidatedSlot: syncChain.lastValidatedSlot,
+          firstEpoch: syncChain.firstBatchEpoch,
+          targetSlot: syncChain.target.slot,
+          targetRoot: toHex(syncChain.target.root),
+          validatedEpochs: syncChain.validatedEpochs,
+        });
 
         // Re-status peers from successful chain. Potentially trigger a Head sync
         this.network.reStatusPeers(syncChain.getPeers());

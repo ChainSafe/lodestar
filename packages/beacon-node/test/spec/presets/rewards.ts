@@ -7,6 +7,7 @@ import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
 import {getConfig} from "../utils/getConfig.js";
 import {TestRunnerFn} from "../utils/types.js";
+import {assertCorrectProgressiveBalances} from "../config.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
@@ -17,7 +18,7 @@ export const rewards: TestRunnerFn<RewardTestCase, Deltas> = (fork) => {
     testFunction: (testcase) => {
       const config = getConfig(fork);
       const wrappedState = createCachedBeaconStateTest(testcase.pre, config);
-      const epochProcess = beforeProcessEpoch(wrappedState);
+      const epochProcess = beforeProcessEpoch(wrappedState, {assertCorrectProgressiveBalances});
 
       // To debug this test and get granular results you can tweak inputs to get more granular results
       //

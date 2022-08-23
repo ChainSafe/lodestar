@@ -87,6 +87,21 @@ export async function validateGossipBlock(
     throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.PARENT_UNKNOWN, parentRoot});
   }
 
+  // [IGNORE] The attestation head block is too far behind the attestation slot, causing many skip slots.
+  // This is deemed a DoS risk because we need to get the proposerShuffling. To get the shuffling we have
+  // to do a bunch of epoch transitions, the longer the distance between the parent and block,
+  // the more we have to do. epochTransitions are expensive ~750ms, so we must limit how many a
+  // single bad block can trigger
+  // Note: Ensure this check is done before calling chain.regen.getBlockSlotStat as this is the function that does various epoch transitions.
+  // Note: This validation check is not part of the spec.
+  if (chain.opts.maxSkipSlots != null && parentBlock.slot + chain.opts.maxSkipSlots < blockSlot) {
+    throw new BlockGossipError(GossipAction.IGNORE, {
+      code: BlockErrorCode.TOO_MANY_SKIPPED_SLOTS,
+      parentSlot: parentBlock.slot,
+      blockSlot,
+    });
+  }
+
   // [REJECT] The block is from a higher slot than its parent.
   if (parentBlock.slot >= blockSlot) {
     throw new BlockGossipError(GossipAction.IGNORE, {

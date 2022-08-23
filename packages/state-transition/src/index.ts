@@ -1,7 +1,3 @@
-/**
- * @module chain/stateTransition
- */
-
 export * from "./stateTransition.js";
 export * from "./constants/index.js";
 export * from "./util/index.js";
@@ -21,7 +17,7 @@ export {
 } from "./types.js";
 
 // Main state caches
-export {createCachedBeaconState, BeaconStateCache} from "./cache/stateCache.js";
+export {createCachedBeaconState, BeaconStateCache, isCachedBeaconState} from "./cache/stateCache.js";
 export {EpochContext, EpochContextImmutableData, createEmptyEpochContextImmutableData} from "./cache/epochContext.js";
 export {EpochProcess, beforeProcessEpoch} from "./cache/epochProcess.js";
 

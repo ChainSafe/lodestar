@@ -52,15 +52,17 @@ export class KeymanagerApi implements Api {
   async importKeystores(
     keystoresStr: KeystoreStr[],
     passwords: string[],
-    slashingProtectionStr: SlashingProtectionData
+    slashingProtectionStr?: SlashingProtectionData
   ): ReturnType<Api["importKeystores"]> {
-    // The arguments to this function is passed in within the body of an HTTP request
-    // hence fastify will parse it into an object before this function is called.
-    // Even though the slashingProtectionStr is typed as SlashingProtectionData,
-    // at runtime, when the handler for the request is selected, it would see slashingProtectionStr
-    // as an object, hence trying to parse it using JSON.parse won't work. Instead, we cast straight to Interchange
-    const interchange = ensureJSON<Interchange>(slashingProtectionStr);
-    await this.validator.importInterchange(interchange);
+    if (slashingProtectionStr) {
+      // The arguments to this function is passed in within the body of an HTTP request
+      // hence fastify will parse it into an object before this function is called.
+      // Even though the slashingProtectionStr is typed as SlashingProtectionData,
+      // at runtime, when the handler for the request is selected, it would see slashingProtectionStr
+      // as an object, hence trying to parse it using JSON.parse won't work. Instead, we cast straight to Interchange
+      const interchange = ensureJSON<Interchange>(slashingProtectionStr);
+      await this.validator.importInterchange(interchange);
+    }
 
     const statuses: {status: ImportStatus; message?: string}[] = [];
 
@@ -136,6 +138,10 @@ export class KeymanagerApi implements Api {
     for (let i = 0; i < pubkeysHex.length; i++) {
       try {
         const pubkeyHex = pubkeysHex[i];
+
+        if (!isValidatePubkeyHex(pubkeyHex)) {
+          throw Error(`Invalid pubkey ${pubkeyHex}`);
+        }
 
         // Skip unknown keys or remote signers
         const signer = this.validator.validatorStore.getSigner(pubkeyHex);
@@ -259,6 +265,10 @@ export class KeymanagerApi implements Api {
     const results = pubkeys.map(
       (pubkeyHex): ResponseStatus<DeleteRemoteKeyStatus> => {
         try {
+          if (!isValidatePubkeyHex(pubkeyHex)) {
+            throw Error(`Invalid pubkey ${pubkeyHex}`);
+          }
+
           const signer = this.validator.validatorStore.getSigner(pubkeyHex);
 
           // Remove key from live local signer

@@ -4,6 +4,7 @@ import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {routes} from "@lodestar/api";
 import {IMetrics} from "../../metrics/index.js";
 import {MapTracker} from "./mapMetrics.js";
+import {stateInternalCachePopulated} from "./stateContextCheckpointsCache.js";
 
 const MAX_STATES = 3 * 32;
 
@@ -38,8 +39,14 @@ export class StateContextCache {
     if (!item) {
       return null;
     }
+
     this.metrics?.hits.inc();
-    return item.clone();
+    this.metrics?.stateClonedCount.observe(item.clonedCount);
+    if (!stateInternalCachePopulated(item)) {
+      this.metrics?.stateInternalCacheMiss.inc();
+    }
+
+    return item;
   }
 
   add(item: CachedBeaconStateAllForks): void {
@@ -48,8 +55,8 @@ export class StateContextCache {
       return;
     }
     this.metrics?.adds.inc();
-    this.cache.set(key, item.clone());
-    const epoch = item.epochCtx.currentShuffling.epoch;
+    this.cache.set(key, item);
+    const epoch = item.epochCtx.epoch;
     const blockRoots = this.epochIndex.get(epoch);
     if (blockRoots) {
       blockRoots.add(key);
@@ -62,7 +69,7 @@ export class StateContextCache {
     const key = toHexString(root);
     const item = this.cache.get(key);
     if (!item) return;
-    this.epochIndex.get(item.epochCtx.currentShuffling.epoch)?.delete(key);
+    this.epochIndex.get(item.epochCtx.epoch)?.delete(key);
     this.cache.delete(key);
   }
 
@@ -91,7 +98,7 @@ export class StateContextCache {
         if (key !== headStateRootHex) {
           const item = this.cache.get(key);
           if (item) {
-            this.epochIndex.get(item.epochCtx.currentShuffling.epoch)?.delete(key);
+            this.epochIndex.get(item.epochCtx.epoch)?.delete(key);
             this.cache.delete(key);
           }
         }

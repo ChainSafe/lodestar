@@ -11,9 +11,9 @@ export class TimeSeries {
   }
 
   /** Add TimeSeries entry for value at current time */
-  addPoint(value: number, timeMs = Date.now()): void {
+  addPoint(value: number, timeSec = Math.floor(Date.now() / 1000)): void {
     // Substract initial time so x values are not big and cause rounding errors
-    const time = timeMs / 1000 - this.startTimeSec;
+    const time = timeSec - this.startTimeSec;
     this.points.push([time, value]);
 
     // Limit length by removing old entries
@@ -27,9 +27,24 @@ export class TimeSeries {
     return linearRegression(this.points).m;
   }
 
+  /**
+   * Compute x point at which y = 0.
+   * From eq `y = b + m*x` then solve for `0 = b + m*x`
+   */
+  computeY0Point(): number {
+    const {m, b} = linearRegression(this.points);
+    // The X cordinate system has been shifted left by startTimeSec, so return the
+    // projection in original coordinated system
+    return -b / m + this.startTimeSec;
+  }
+
   /** Remove all entries */
   clear(): void {
     this.points = [];
+  }
+
+  numPoints(): number {
+    return this.points.length;
   }
 }
 

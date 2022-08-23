@@ -112,8 +112,6 @@ import {config as chainConfig} from "@lodestar/config/default";
 let genesisValidatorsRoot: Uint8Array = new Uint8Array();
 
 const config: IBeaconConfig = createIBeaconConfig(chainConfig, genesisValidatorsRoot);
-
-const domain = config.getDomain(DOMAIN_DEPOSIT, GENESIS_SLOT);
 ```
 
 ## License

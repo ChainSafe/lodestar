@@ -1,7 +1,3 @@
-/**
- * @module eth1
- */
-
 import {sleep} from "@lodestar/utils";
 import {phase0} from "@lodestar/types";
 import {Eth1Block, IBatchDepositEvents, IEth1Provider, IEth1StreamParams} from "./interface.js";

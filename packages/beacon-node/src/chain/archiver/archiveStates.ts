@@ -1,7 +1,3 @@
-/**
- * @module tasks
- */
-
 import {ILogger} from "@lodestar/utils";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {CheckpointWithHex} from "@lodestar/fork-choice";

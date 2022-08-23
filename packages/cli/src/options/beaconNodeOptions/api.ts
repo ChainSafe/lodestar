@@ -5,27 +5,34 @@ const enabledAll = "*";
 
 export interface IApiArgs {
   "api.maxGindicesInProof": number;
-  "api.rest.api": string[];
-  "api.rest.cors": string;
-  "api.rest.enabled": boolean;
-  "api.rest.address": string;
-  "api.rest.port": number;
+  "rest.namespace": string[];
+  "rest.cors": string;
+  rest: boolean;
+  "rest.address": string;
+  "rest.port": number;
 }
 
 export function parseArgs(args: IApiArgs): IBeaconNodeOptions["api"] {
   return {
     maxGindicesInProof: args["api.maxGindicesInProof"],
     rest: {
-      api: args["api.rest.api"] as IBeaconNodeOptions["api"]["rest"]["api"],
-      cors: args["api.rest.cors"],
-      enabled: args["api.rest.enabled"],
-      address: args["api.rest.address"],
-      port: args["api.rest.port"],
+      api: args["rest.namespace"] as IBeaconNodeOptions["api"]["rest"]["api"],
+      cors: args["rest.cors"],
+      enabled: args["rest"],
+      address: args["rest.address"],
+      port: args["rest.port"],
     },
   };
 }
 
 export const options: ICliCommandOptions<IApiArgs> = {
+  rest: {
+    type: "boolean",
+    description: "Enable/disable HTTP API",
+    defaultDescription: String(defaultOptions.api.rest.enabled),
+    group: "api",
+  },
+
   "api.maxGindicesInProof": {
     hidden: true,
     type: "number",
@@ -34,7 +41,7 @@ export const options: ICliCommandOptions<IApiArgs> = {
     group: "api",
   },
 
-  "api.rest.api": {
+  "rest.namespace": {
     type: "array",
     choices: [...allNamespaces, enabledAll],
     description: `Pick namespaces to expose for HTTP API. Set to '${enabledAll}' to enable all namespaces`,
@@ -48,30 +55,21 @@ export const options: ICliCommandOptions<IApiArgs> = {
     },
   },
 
-  "api.rest.cors": {
+  "rest.cors": {
     type: "string",
     description: "Configures the Access-Control-Allow-Origin CORS header for HTTP API",
     defaultDescription: defaultOptions.api.rest.cors,
     group: "api",
   },
 
-  "api.rest.enabled": {
-    type: "boolean",
-    description: "Enable/disable HTTP API",
-    defaultDescription: String(defaultOptions.api.rest.enabled),
-    group: "api",
-  },
-
-  "api.rest.address": {
-    // For backwards compatibility
-    alias: ["api.rest.host"],
+  "rest.address": {
     type: "string",
     description: "Set host for HTTP API",
     defaultDescription: defaultOptions.api.rest.address,
     group: "api",
   },
 
-  "api.rest.port": {
+  "rest.port": {
     type: "number",
     description: "Set port for HTTP API",
     defaultDescription: String(defaultOptions.api.rest.port),

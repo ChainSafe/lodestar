@@ -1,9 +1,9 @@
-import {computeEpochAtSlot, IAttesterStatus, parseAttesterFlags, RootCache} from "@lodestar/state-transition";
+import {computeEpochAtSlot, IAttesterStatus, parseAttesterFlags} from "@lodestar/state-transition";
 import {ILogger} from "@lodestar/utils";
 import {allForks} from "@lodestar/types";
 import {IChainForkConfig} from "@lodestar/config";
 import {MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {Epoch, Slot, ValidatorIndex, ssz} from "@lodestar/types";
+import {Epoch, Slot, ValidatorIndex} from "@lodestar/types";
 import {IndexedAttestation, SignedAggregateAndProof} from "@lodestar/types/phase0";
 import {ILodestarMetrics} from "./metrics/lodestar.js";
 
@@ -22,6 +22,7 @@ export interface IValidatorMonitor {
   registerLocalValidator(index: number): void;
   registerValidatorStatuses(currentEpoch: Epoch, statuses: IAttesterStatus[], balances?: number[]): void;
   registerBeaconBlock(src: OpSource, seenTimestampSec: Seconds, block: allForks.BeaconBlock): void;
+  registerImportedBlock(block: allForks.BeaconBlock, data: {proposerBalanceDelta: number}): void;
   submitUnaggregatedAttestation(
     seenTimestampSec: number,
     indexedAttestation: IndexedAttestation,
@@ -39,7 +40,7 @@ export interface IValidatorMonitor {
     signedAggregateAndProof: SignedAggregateAndProof,
     indexedAttestation: IndexedAttestation
   ): void;
-  registerAttestationInBlock(indexedAttestation: IndexedAttestation, parentSlot: Slot, rootCache: RootCache): void;
+  registerAttestationInBlock(indexedAttestation: IndexedAttestation, parentSlot: Slot, correctHead: boolean): void;
   scrapeMetrics(slotClock: Slot): void;
 }
 
@@ -275,6 +276,12 @@ export function createValidatorMonitor(
       }
     },
 
+    registerImportedBlock(block, {proposerBalanceDelta}) {
+      if (validators.has(block.proposerIndex)) {
+        metrics.validatorMonitor.proposerBalanceDeltaKnown.observe(proposerBalanceDelta);
+      }
+    },
+
     submitUnaggregatedAttestation(seenTimestampSec, indexedAttestation, subnet, sentPeers) {
       const data = indexedAttestation.data;
       // Returns the duration between when the attestation `data` could be produced (1/3rd through the slot) and `seenTimestamp`.
@@ -373,13 +380,13 @@ export function createValidatorMonitor(
     },
 
     // Register that the `indexed_attestation` was included in a *valid* `BeaconBlock`.
-    registerAttestationInBlock(indexedAttestation, parentSlot, rootCache): void {
+    registerAttestationInBlock(indexedAttestation, parentSlot, correctHead): void {
       const data = indexedAttestation.data;
       // optimal inclusion distance, not to count skipped slots between data.slot and blockSlot
       const inclusionDistance = Math.max(parentSlot - data.slot, 0) + 1;
       const delay = inclusionDistance - MIN_ATTESTATION_INCLUSION_DELAY;
       const epoch = computeEpochAtSlot(data.slot);
-      let correctHead: boolean | null = null;
+
       for (const index of indexedAttestation.attestingIndices) {
         const validator = validators.get(index);
         if (validator) {
@@ -397,9 +404,6 @@ export function createValidatorMonitor(
               summary.attestationMinBlockInclusionDistance = inclusionDistance;
             }
 
-            if (correctHead === null) {
-              correctHead = ssz.Root.equals(rootCache.getBlockRootAtSlot(data.slot), data.beaconBlockRoot);
-            }
             summary.attestationCorrectHead = correctHead;
           });
 

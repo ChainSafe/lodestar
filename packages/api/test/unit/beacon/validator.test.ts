@@ -35,7 +35,6 @@ describe("beacon / validator", () => {
       args: [1000, [1, 2, 3]],
       res: {
         data: [{pubkey: Buffer.alloc(48, 1), validatorIndex: 2, validatorSyncCommitteeIndices: [3]}],
-        dependentRoot: ZERO_HASH,
       },
     },
     produceBlock: {

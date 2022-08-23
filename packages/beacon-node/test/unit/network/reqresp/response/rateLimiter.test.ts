@@ -39,23 +39,23 @@ describe("ResponseRateLimiter", () => {
     const peerId = await PeerId.create();
     const requestTyped = {method: Method.Ping, body: BigInt(1)} as RequestTypedContainer;
     for (let i = 0; i < defaultNetworkOptions.requestCountPeerLimit; i++) {
-      expect(inboundRateLimiter.allowRequest(peerId, requestTyped)).to.be.true;
+      expect(inboundRateLimiter.allowRequest(peerId, requestTyped)).to.equal(true);
     }
     const peerId2 = await PeerId.create();
     // it's ok to request blocks for another peer
-    expect(inboundRateLimiter.allowRequest(peerId2, requestTyped)).to.be.true;
-    expect(peerRpcScoresStub.applyAction.calledOnce).to.be.false;
+    expect(inboundRateLimiter.allowRequest(peerId2, requestTyped)).to.equal(true);
+    expect(peerRpcScoresStub.applyAction.calledOnce).to.equal(false);
     // not ok for the same peer id as it reached the limit
-    expect(inboundRateLimiter.allowRequest(peerId, requestTyped)).to.be.false;
+    expect(inboundRateLimiter.allowRequest(peerId, requestTyped)).to.equal(false);
     // this peer id abuses us
     expect(
       peerRpcScoresStub.applyAction.calledOnceWith(peerId, PeerAction.Fatal, sinon.match.any),
       "peer1 is banned due to requestCountPeerLimit"
-    ).to.be.true;
+    ).to.equal(true);
 
     sandbox.clock.tick(60 * 1000);
     // try again after timeout
-    expect(inboundRateLimiter.allowRequest(peerId, requestTyped)).to.be.true;
+    expect(inboundRateLimiter.allowRequest(peerId, requestTyped)).to.equal(true);
   });
 
   /**
@@ -70,16 +70,16 @@ describe("ResponseRateLimiter", () => {
     const blockCount = Math.floor(defaultNetworkOptions.blockCountTotalLimit / 2);
     const requestTyped = {method: Method.BeaconBlocksByRange, body: {count: blockCount}} as RequestTypedContainer;
     for (let i = 0; i < 2; i++) {
-      expect(inboundRateLimiter.allowRequest(await PeerId.create(), requestTyped)).to.be.true;
+      expect(inboundRateLimiter.allowRequest(await PeerId.create(), requestTyped)).to.equal(true);
     }
 
     const oneBlockRequestTyped = {method: Method.BeaconBlocksByRoot, body: [Buffer.alloc(32)]} as RequestTypedContainer;
-    expect(inboundRateLimiter.allowRequest(await PeerId.create(), oneBlockRequestTyped)).to.be.false;
-    expect(peerRpcScoresStub.applyAction.calledOnce).to.be.false;
+    expect(inboundRateLimiter.allowRequest(await PeerId.create(), oneBlockRequestTyped)).to.equal(false);
+    expect(peerRpcScoresStub.applyAction.calledOnce).to.equal(false);
 
     sandbox.clock.tick(60 * 1000);
     // try again after timeout
-    expect(inboundRateLimiter.allowRequest(await PeerId.create(), oneBlockRequestTyped)).to.be.true;
+    expect(inboundRateLimiter.allowRequest(await PeerId.create(), oneBlockRequestTyped)).to.equal(true);
   });
 
   /**
@@ -96,23 +96,23 @@ describe("ResponseRateLimiter", () => {
     const requestTyped = {method: Method.BeaconBlocksByRange, body: {count: blockCount}} as RequestTypedContainer;
     const peerId = await PeerId.create();
     for (let i = 0; i < 2; i++) {
-      expect(inboundRateLimiter.allowRequest(peerId, requestTyped)).to.be.true;
+      expect(inboundRateLimiter.allowRequest(peerId, requestTyped)).to.equal(true);
     }
     const peerId2 = await PeerId.create();
     const oneBlockRequestTyped = {method: Method.BeaconBlocksByRoot, body: [Buffer.alloc(32)]} as RequestTypedContainer;
     // it's ok to request blocks for another peer
-    expect(inboundRateLimiter.allowRequest(peerId2, oneBlockRequestTyped)).to.be.true;
+    expect(inboundRateLimiter.allowRequest(peerId2, oneBlockRequestTyped)).to.equal(true);
     // not ok for the same peer id as it reached the limit
-    expect(inboundRateLimiter.allowRequest(peerId, oneBlockRequestTyped)).to.be.false;
+    expect(inboundRateLimiter.allowRequest(peerId, oneBlockRequestTyped)).to.equal(false);
     // this peer id abuses us
     expect(
       peerRpcScoresStub.applyAction.calledOnceWith(peerId, PeerAction.Fatal, sinon.match.any),
       "peer1 is banned due to blockCountPeerLimit"
-    ).to.be.true;
+    ).to.equal(true);
 
     sandbox.clock.tick(60 * 1000);
     // try again after timeout
-    expect(inboundRateLimiter.allowRequest(peerId, oneBlockRequestTyped)).to.be.true;
+    expect(inboundRateLimiter.allowRequest(peerId, oneBlockRequestTyped)).to.equal(true);
   });
 
   it("should remove rate tracker for disconnected peers", async () => {
@@ -120,14 +120,14 @@ describe("ResponseRateLimiter", () => {
     const pruneStub = sandbox.stub(inboundRateLimiter, "pruneByPeerIdStr" as keyof InboundRateLimiter);
     inboundRateLimiter.start();
     const requestTyped = {method: Method.Ping, body: BigInt(1)} as RequestTypedContainer;
-    expect(inboundRateLimiter.allowRequest(peerId, requestTyped)).to.be.true;
+    expect(inboundRateLimiter.allowRequest(peerId, requestTyped)).to.equal(true);
 
     // no request is made in 5 minutes
     sandbox.clock.tick(5 * 60 * 1000);
-    expect(pruneStub.calledOnce).to.be.false;
+    expect(pruneStub.calledOnce).to.equal(false);
     // wait for 5 more minutes for the timer to run
     sandbox.clock.tick(5 * 60 * 1000);
-    expect(pruneStub.calledOnce, "prune is not called").to.be.true;
+    expect(pruneStub.calledOnce, "prune is not called").to.equal(true);
   });
 
   it.skip("rateLimiter memory usage", async function () {

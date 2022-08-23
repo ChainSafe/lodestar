@@ -1,4 +1,4 @@
-import {IBeaconConfig, IChainForkConfig} from "@lodestar/config";
+import {IChainForkConfig} from "@lodestar/config";
 import {
   EFFECTIVE_BALANCE_INCREMENT,
   EPOCHS_PER_HISTORICAL_VECTOR,
@@ -219,7 +219,7 @@ export function initializeBeaconStateFromEth1(
   const stateView = getGenesisBeaconState(
     // CachedBeaconcState is used for convinience only, we return BeaconStateAllForks anyway
     // so it's safe to do a cast here, we can't use get domain until we have genesisValidatorRoot
-    config as IBeaconConfig,
+    config,
     ssz.phase0.Eth1Data.defaultValue(),
     getTemporaryBlockHeader(config, config.getForkTypes(GENESIS_SLOT).BeaconBlock.defaultValue())
   );

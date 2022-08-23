@@ -4,22 +4,17 @@ import {ICliCommandOptions, extractJwtHexSecret} from "../../util/index.js";
 import {ExecutionEngineArgs} from "./execution.js";
 
 export interface IEth1Args {
-  "eth1.enabled": boolean;
-  "eth1.providerUrl": string;
+  eth1: boolean;
   "eth1.providerUrls": string[];
   "eth1.depositContractDeployBlock": number;
   "eth1.disableEth1DepositDataTracker": boolean;
   "eth1.unsafeAllowDepositDataOverwrite": boolean;
+  "eth1.forcedEth1DataVote": string;
 }
 
 export function parseArgs(args: IEth1Args & Partial<ExecutionEngineArgs>): IBeaconNodeOptions["eth1"] {
-  // Support deprecated flag 'eth1.providerUrl' only if 'eth1.providerUrls' is not defined
-  // Safe default to '--eth1.providerUrl' only if it's defined. Prevent returning providerUrls: [undefined]
   let jwtSecretHex: string | undefined;
   let providerUrls = args["eth1.providerUrls"];
-  if (providerUrls === undefined && args["eth1.providerUrl"]) {
-    providerUrls = [args["eth1.providerUrl"]];
-  }
 
   // If no providerUrls are explicitly provided, we should pick the execution endpoint
   // because as per Kiln spec v2.1, execution *must* host the `eth_` methods necessary
@@ -33,27 +28,21 @@ export function parseArgs(args: IEth1Args & Partial<ExecutionEngineArgs>): IBeac
   }
 
   return {
-    enabled: args["eth1.enabled"],
+    enabled: args["eth1"],
     providerUrls,
     jwtSecretHex,
     depositContractDeployBlock: args["eth1.depositContractDeployBlock"],
     disableEth1DepositDataTracker: args["eth1.disableEth1DepositDataTracker"],
     unsafeAllowDepositDataOverwrite: args["eth1.unsafeAllowDepositDataOverwrite"],
+    forcedEth1DataVote: args["eth1.forcedEth1DataVote"],
   };
 }
 
 export const options: ICliCommandOptions<IEth1Args> = {
-  "eth1.enabled": {
+  eth1: {
     description: "Whether to follow the eth1 chain",
     type: "boolean",
     defaultDescription: String(defaultOptions.eth1.enabled),
-    group: "eth1",
-  },
-
-  "eth1.providerUrl": {
-    description: "[DEPRECATED] Url to Eth1 node with enabled rpc",
-    type: "string",
-    defaultDescription: "[DEPRECATED]",
     group: "eth1",
   },
 
@@ -66,6 +55,7 @@ export const options: ICliCommandOptions<IEth1Args> = {
   },
 
   "eth1.depositContractDeployBlock": {
+    hidden: true,
     description: "Block number at which the deposit contract contract was deployed",
     type: "number",
     defaultDescription: String(defaultOptions.eth1.depositContractDeployBlock),
@@ -86,6 +76,13 @@ export const options: ICliCommandOptions<IEth1Args> = {
       "Allow the deposit tracker to overwrite previously fetched and saved deposit event data. Warning!!! This is an unsafe operation, so enable this flag only if you know what you are doing.",
     type: "boolean",
     defaultDescription: String(defaultOptions.eth1.unsafeAllowDepositDataOverwrite),
+    group: "eth1",
+  },
+
+  "eth1.forcedEth1DataVote": {
+    hidden: true,
+    description: "Vote for a specific eth1_data regardless of all conditions. Hex encoded ssz serialized Eth1Data type",
+    type: "string",
     group: "eth1",
   },
 };

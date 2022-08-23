@@ -1,7 +1,12 @@
 import {expect} from "chai";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 
-import {byteArrayConcat, byteArrayEquals} from "../../../src/util/bytes.js";
+import {byteArrayEquals} from "../../../src/util/bytes.js";
+
+/** Reference implementation of byteArrayConcat */
+function byteArrayConcat(bytesArr: Uint8Array[]): Uint8Array {
+  return Buffer.concat(bytesArr);
+}
 
 describe("util / bytes", () => {
   describe("byteArrayConcat", () => {

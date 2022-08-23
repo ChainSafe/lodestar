@@ -14,51 +14,72 @@ describe("ProtoArray", () => {
     const finalizedDesc = "2";
     const notFinalizedDesc = "3";
     const unknown = "4";
-    const fc = ProtoArray.initialize({
-      slot: genesisSlot,
-      stateRoot,
-      parentRoot,
-      blockRoot: finalizedRoot,
+    const fc = ProtoArray.initialize(
+      {
+        slot: genesisSlot,
+        stateRoot,
+        parentRoot,
+        blockRoot: finalizedRoot,
 
-      justifiedEpoch: genesisEpoch,
-      justifiedRoot: stateRoot,
-      finalizedEpoch: genesisEpoch,
-      finalizedRoot: stateRoot,
+        justifiedEpoch: genesisEpoch,
+        justifiedRoot: stateRoot,
+        finalizedEpoch: genesisEpoch,
+        finalizedRoot: stateRoot,
+        unrealizedJustifiedEpoch: genesisEpoch,
+        unrealizedJustifiedRoot: stateRoot,
+        unrealizedFinalizedEpoch: genesisEpoch,
+        unrealizedFinalizedRoot: stateRoot,
 
-      ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
-    });
+        ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
+      },
+      genesisSlot
+    );
 
     // Add block that is a finalized descendant.
-    fc.onBlock({
-      slot: genesisSlot + 1,
-      blockRoot: finalizedDesc,
-      parentRoot: finalizedRoot,
-      stateRoot,
-      targetRoot: finalizedRoot,
+    fc.onBlock(
+      {
+        slot: genesisSlot + 1,
+        blockRoot: finalizedDesc,
+        parentRoot: finalizedRoot,
+        stateRoot,
+        targetRoot: finalizedRoot,
 
-      justifiedEpoch: genesisEpoch,
-      justifiedRoot: stateRoot,
-      finalizedEpoch: genesisEpoch,
-      finalizedRoot: stateRoot,
+        justifiedEpoch: genesisEpoch,
+        justifiedRoot: stateRoot,
+        finalizedEpoch: genesisEpoch,
+        finalizedRoot: stateRoot,
+        unrealizedJustifiedEpoch: genesisEpoch,
+        unrealizedJustifiedRoot: stateRoot,
+        unrealizedFinalizedEpoch: genesisEpoch,
+        unrealizedFinalizedRoot: stateRoot,
 
-      ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
-    });
+        ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
+      },
+      genesisSlot + 1
+    );
 
     // Add block that is *not* a finalized descendant.
-    fc.onBlock({
-      slot: genesisSlot + 1,
-      blockRoot: notFinalizedDesc,
-      parentRoot: unknown,
-      stateRoot,
-      targetRoot: finalizedRoot,
+    fc.onBlock(
+      {
+        slot: genesisSlot + 1,
+        blockRoot: notFinalizedDesc,
+        parentRoot: unknown,
+        stateRoot,
+        targetRoot: finalizedRoot,
 
-      justifiedEpoch: genesisEpoch,
-      justifiedRoot: stateRoot,
-      finalizedEpoch: genesisEpoch,
-      finalizedRoot: stateRoot,
+        justifiedEpoch: genesisEpoch,
+        justifiedRoot: stateRoot,
+        finalizedEpoch: genesisEpoch,
+        finalizedRoot: stateRoot,
+        unrealizedJustifiedEpoch: genesisEpoch,
+        unrealizedJustifiedRoot: stateRoot,
+        unrealizedFinalizedEpoch: genesisEpoch,
+        unrealizedFinalizedRoot: stateRoot,
 
-      ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
-    });
+        ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
+      },
+      genesisSlot + 1
+    );
 
     // ancestorRoot, descendantRoot, isDescendant
     type Assertion = [RootHex, RootHex, boolean];

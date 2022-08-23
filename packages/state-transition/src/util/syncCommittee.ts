@@ -26,7 +26,7 @@ export function getNextSyncCommittee(
   const indices = getNextSyncCommitteeIndices(state, activeValidatorIndices, effectiveBalanceIncrements);
 
   // Using the index2pubkey cache is slower because it needs the serialized pubkey.
-  const pubkeys = indices.map((index) => state.validators.get(index).pubkey);
+  const pubkeys = indices.map((index) => state.validators.getReadonly(index).pubkey);
 
   return {
     indices,

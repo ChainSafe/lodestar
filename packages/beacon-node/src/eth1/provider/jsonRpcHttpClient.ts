@@ -2,7 +2,7 @@
 // Note: isomorphic-fetch is not well mantained and does not support abort signals
 import fetch from "cross-fetch";
 
-import {ErrorAborted, TimeoutError} from "@lodestar/utils";
+import {ErrorAborted, TimeoutError, retry} from "@lodestar/utils";
 import {IGauge, IHistogram} from "../../metrics/interface.js";
 import {IJson, IRpcPayload} from "../interface.js";
 import {encodeJwtToken} from "./jwt.js";
@@ -29,24 +29,29 @@ export type ReqOpts = {
   timeout?: number;
   // To label request metrics
   routeId?: string;
+  // retry opts
+  retryAttempts?: number;
+  retryDelay?: number;
+  shouldRetry?: (lastError: Error) => boolean;
 };
 
 export type JsonRpcHttpClientMetrics = {
   requestTime: IHistogram<"routeId">;
   requestErrors: IGauge<"routeId">;
-  requestUsedFallbackUrl: IGauge;
-  activeRequests: IGauge;
+  requestUsedFallbackUrl: IGauge<"routeId">;
+  activeRequests: IGauge<"routeId">;
   configUrlsCount: IGauge;
+  retryCount: IGauge<"routeId">;
 };
 
 export interface IJsonRpcHttpClient {
   fetch<R, P = IJson[]>(payload: IRpcPayload<P>, opts?: ReqOpts): Promise<R>;
+  fetchWithRetries<R, P = IJson[]>(payload: IRpcPayload<P>, opts?: ReqOpts): Promise<R>;
   fetchBatch<R>(rpcPayloadArr: IRpcPayload[], opts?: ReqOpts): Promise<R[]>;
 }
 
 export class JsonRpcHttpClient implements IJsonRpcHttpClient {
   private id = 1;
-  private activeRequests = 0;
   /**
    * Optional: If provided, use this jwt secret to HS256 encode and add a jwt token in the
    * request header which can be authenticated by the RPC server to provide access.
@@ -64,11 +69,20 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
       /** If returns true, do not fallback to other urls and throw early */
       shouldNotFallback?: (error: Error) => boolean;
       /**
-       * If provided, the requests to the RPC server will be bundled with a HS256 encoded
-       * token using this secret. Otherwise the requests to the RPC server will be unauthorized
+       * Optional: If provided, use this jwt secret to HS256 encode and add a jwt token in the
+       * request header which can be authenticated by the RPC server to provide access.
+       * A fresh token is generated on each requests as EL spec mandates the ELs to check
+       * the token freshness +-5 seconds (via `iat` property of the token claim)
+       *
+       * Otherwise the requests to the RPC server will be unauthorized
        * and it might deny responses to the RPC requests.
        */
       jwtSecret?: Uint8Array;
+      /** Retry attempts */
+      retryAttempts?: number;
+      /** Retry delay, only relevant with retry attempts */
+      retryDelay?: number;
+      /** Metrics for retry, could be expanded later */
       metrics?: JsonRpcHttpClientMetrics | null;
     }
   ) {
@@ -85,13 +99,7 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
     this.jwtSecret = opts?.jwtSecret;
     this.metrics = opts?.metrics ?? null;
 
-    // Set config metric gauges once
-
-    const metrics = this.metrics;
-    if (metrics) {
-      metrics.configUrlsCount.set(urls.length);
-      metrics.activeRequests.addCollect(() => metrics.activeRequests.set(this.activeRequests));
-    }
+    this.metrics?.configUrlsCount.set(urls.length);
   }
 
   /**
@@ -99,6 +107,29 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
    */
   async fetch<R, P = IJson[]>(payload: IRpcPayload<P>, opts?: ReqOpts): Promise<R> {
     const res: IRpcResponse<R> = await this.fetchJson({jsonrpc: "2.0", id: this.id++, ...payload}, opts);
+    return parseRpcResponse(res, payload);
+  }
+
+  /**
+   * Perform RPC request with retry
+   */
+  async fetchWithRetries<R, P = IJson[]>(payload: IRpcPayload<P>, opts?: ReqOpts): Promise<R> {
+    const routeId = opts?.routeId ?? "unknown";
+
+    const res = await retry<IRpcResponse<R>>(
+      async (attempt) => {
+        /** If this is a retry, increment the retry counter for this method */
+        if (attempt > 1) {
+          this.opts?.metrics?.retryCount.inc({routeId});
+        }
+        return await this.fetchJson({jsonrpc: "2.0", id: this.id++, ...payload}, opts);
+      },
+      {
+        retries: opts?.retryAttempts ?? this.opts?.retryAttempts ?? 1,
+        retryDelay: opts?.retryDelay ?? this.opts?.retryAttempts ?? 0,
+        shouldRetry: opts?.shouldRetry,
+      }
+    );
     return parseRpcResponse(res, payload);
   }
 
@@ -117,11 +148,12 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
   }
 
   private async fetchJson<R, T = unknown>(json: T, opts?: ReqOpts): Promise<R> {
+    const routeId = opts?.routeId ?? "unknown";
     let lastError: Error | null = null;
 
     for (let i = 0; i < this.urls.length; i++) {
       if (i > 0) {
-        this.metrics?.requestUsedFallbackUrl.inc(1);
+        this.metrics?.requestUsedFallbackUrl.inc({routeId});
       }
 
       try {
@@ -164,7 +196,7 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
     // Default to "unknown" to prevent mixing metrics with others.
     const routeId = opts?.routeId ?? "unknown";
     const timer = this.metrics?.requestTime.startTimer({routeId});
-    this.activeRequests++;
+    this.metrics?.activeRequests.inc({routeId}, 1);
 
     try {
       const headers: Record<string, string> = {"Content-Type": "application/json"};
@@ -211,7 +243,7 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
       }
     } finally {
       timer?.();
-      this.activeRequests--;
+      this.metrics?.activeRequests.dec({routeId}, 1);
 
       clearTimeout(timeout);
       this.opts?.signal?.removeEventListener("abort", onParentSignalAbort);

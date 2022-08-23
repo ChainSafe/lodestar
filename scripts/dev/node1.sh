@@ -7,13 +7,13 @@ packages/cli/bin/lodestar dev \
   --startValidators 0:7 \
   --genesisTime $GENESIS_TIME \
   --enr.ip 127.0.0.1 \
-  --rootDir .lodestar/node1 \
+  --dataDir .lodestar/node1 \
   --reset \
-  --api.rest.enabled \
-  --api.rest.api '*' \
-  --metrics.enabled \
+  --rest \
+  --rest.namespace '*' \
+  --metrics \
   --logLevel debug \
-  --eth1.enabled false \
+  --eth1 false \
   --network.requestCountPeerLimit 1000000 \
   --network.blockCountTotalLimit 1000000 \
   --network.blockCountPeerLimit 1000000

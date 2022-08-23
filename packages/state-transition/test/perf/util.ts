@@ -60,6 +60,7 @@ export const perfStateId = `${numValidators} vs - 7PWei`;
 /** Cache interop secret keys */
 const secretKeyByModIndex = new Map<number, SecretKey>();
 const epoch = 23638;
+export const perfStateEpoch = epoch;
 
 // eslint-disable-next-line @typescript-eslint/explicit-function-return-type, @typescript-eslint/explicit-module-boundary-types
 export function getPubkeys(vc = numValidators) {

@@ -1,4 +1,5 @@
-import bls from "@chainsafe/bls";
+import {expect} from "chai";
+import bls, {init} from "@chainsafe/bls/switchable";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
 import {altair, ssz} from "@lodestar/types";
 import {chainConfig} from "@lodestar/config/default";
@@ -12,16 +13,27 @@ import {
 } from "@lodestar/params";
 import {assertValidLightClientUpdate} from "../../src/validation.js";
 import {LightClientSnapshotFast, SyncCommitteeFast} from "../../src/types.js";
-import {defaultBeaconBlockHeader, getSyncAggregateSigningRoot, signAndAggregate} from "../utils.js";
+import {defaultBeaconBlockHeader, getSyncAggregateSigningRoot, signAndAggregate} from "../utils/utils.js";
+import {isNode} from "../../src/utils/utils.js";
 
-describe("validateLightClientUpdate", () => {
+describe("validation", function () {
+  // In browser test this process is taking more time than default 2000ms
+  // specially on the CI
+  this.timeout(15000);
+
   const genValiRoot = Buffer.alloc(32, 9);
   const config = createIBeaconConfig(chainConfig, genValiRoot);
 
   let update: altair.LightClientUpdate;
   let snapshot: LightClientSnapshotFast;
 
-  before("Prepare data", () => {
+  before("prepare bls", async () => {
+    // This process has to be done manually because of an issue in Karma runner
+    // https://github.com/karma-runner/karma/issues/3804
+    await init(isNode ? "blst-native" : "herumi");
+  });
+
+  before("prepare data", function () {
     // Update slot must > snapshot slot
     // updatePeriod must == snapshotPeriod + 1
     const snapshotHeaderSlot = 1;
@@ -95,7 +107,7 @@ describe("validateLightClientUpdate", () => {
     };
   });
 
-  it("Validate valid update", () => {
-    assertValidLightClientUpdate(config, snapshot.nextSyncCommittee, update);
+  it("should validate valid update", () => {
+    expect(() => assertValidLightClientUpdate(config, snapshot.nextSyncCommittee, update)).to.not.throw();
   });
 });

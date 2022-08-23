@@ -1,6 +1,11 @@
 import {IExecutionEngine} from "./interface.js";
 import {ExecutionEngineDisabled} from "./disabled.js";
-import {ExecutionEngineHttp, ExecutionEngineHttpOpts, defaultExecutionEngineHttpOpts} from "./http.js";
+import {
+  ExecutionEngineHttp,
+  ExecutionEngineModules,
+  ExecutionEngineHttpOpts,
+  defaultExecutionEngineHttpOpts,
+} from "./http.js";
 import {ExecutionEngineMock, ExecutionEngineMockOpts} from "./mock.js";
 
 export {
@@ -15,10 +20,12 @@ export type ExecutionEngineOpts =
   | ({mode?: "http"} & ExecutionEngineHttpOpts)
   | ({mode: "mock"} & ExecutionEngineMockOpts)
   | {mode: "disabled"};
-
 export const defaultExecutionEngineOpts: ExecutionEngineOpts = defaultExecutionEngineHttpOpts;
 
-export function initializeExecutionEngine(opts: ExecutionEngineOpts, signal: AbortSignal): IExecutionEngine {
+export function initializeExecutionEngine(
+  opts: ExecutionEngineOpts,
+  modules: ExecutionEngineModules
+): IExecutionEngine {
   switch (opts.mode) {
     case "mock":
       return new ExecutionEngineMock(opts);
@@ -26,6 +33,6 @@ export function initializeExecutionEngine(opts: ExecutionEngineOpts, signal: Abo
       return new ExecutionEngineDisabled();
     case "http":
     default:
-      return new ExecutionEngineHttp(opts, signal);
+      return new ExecutionEngineHttp(opts, modules);
   }
 }

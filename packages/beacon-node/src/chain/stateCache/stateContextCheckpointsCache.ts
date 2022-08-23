@@ -36,13 +36,23 @@ export class CheckpointStateCache {
     this.metrics?.lookups.inc();
     const cpKey = toCheckpointKey(cp);
     const item = this.cache.get(cpKey);
-    if (item) {
-      this.metrics?.hits.inc();
-      if (cpKey === this.preComputedCheckpoint) {
-        this.preComputedCheckpointHits = (this.preComputedCheckpointHits ?? 0) + 1;
-      }
+
+    if (!item) {
+      return null;
     }
-    return item ? item.clone() : null;
+
+    this.metrics?.hits.inc();
+
+    if (cpKey === this.preComputedCheckpoint) {
+      this.preComputedCheckpointHits = (this.preComputedCheckpointHits ?? 0) + 1;
+    }
+
+    this.metrics?.stateClonedCount.observe(item.clonedCount);
+    if (!stateInternalCachePopulated(item)) {
+      this.metrics?.stateInternalCacheMiss.inc();
+    }
+
+    return item;
   }
 
   add(cp: phase0.Checkpoint, item: CachedBeaconStateAllForks): void {
@@ -52,7 +62,7 @@ export class CheckpointStateCache {
       return;
     }
     this.metrics?.adds.inc();
-    this.cache.set(key, item.clone());
+    this.cache.set(key, item);
     this.epochIndex.getOrDefault(cp.epoch).add(cpHex.rootHex);
   }
 
@@ -152,3 +162,16 @@ export function toCheckpointHex(checkpoint: phase0.Checkpoint): CheckpointHex {
 export function toCheckpointKey(cp: CheckpointHex): string {
   return `${cp.rootHex}:${cp.epoch}`;
 }
+
+/**
+ * Given a CachedBeaconState, check if validators array internal cache is populated.
+ * This cache is populated during epoch transition, and should be preserved for performance.
+ * If the cache is missing too often, means that our clone strategy is not working well.
+ */
+export function stateInternalCachePopulated(state: CachedBeaconStateAllForks): boolean {
+  return ((state.validators as unknown) as ViewDU).nodesPopulated === true;
+}
+
+type ViewDU = {
+  nodesPopulated: boolean;
+};

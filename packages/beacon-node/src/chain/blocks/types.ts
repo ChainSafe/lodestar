@@ -1,8 +1,8 @@
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
-import {ProtoBlock, ExecutionStatus} from "@lodestar/fork-choice";
-import {allForks} from "@lodestar/types";
+import {ExecutionStatus} from "@lodestar/fork-choice";
+import {allForks, Slot} from "@lodestar/types";
 
-export type FullyVerifiedBlockFlags = {
+export type ImportBlockOpts = {
   /**
    * TEMP: Review if this is safe, Lighthouse always imports attestations even in finalized sync.
    */
@@ -20,12 +20,13 @@ export type FullyVerifiedBlockFlags = {
    */
   ignoreIfFinalized?: boolean;
   /**
-   * If the execution payload couldnt be verified because of EL syncing status, used in optimistic sync or for merge block
+   * From RangeSync module, we won't attest to this block so it's okay to ignore a SYNCING message from execution layer
    */
-  executionStatus?: ExecutionStatus;
-};
-
-export type PartiallyVerifiedBlockFlags = FullyVerifiedBlockFlags & {
+  fromRangeSync?: boolean;
+  /**
+   * Verify signatures on main thread or not.
+   */
+  blsVerifyOnMainThread?: boolean;
   /**
    * Metadata: `true` if only the block proposer signature has been verified
    */
@@ -34,28 +35,22 @@ export type PartiallyVerifiedBlockFlags = FullyVerifiedBlockFlags & {
    * Metadata: `true` if all the signatures including the proposer signature have been verified
    */
   validSignatures?: boolean;
-  /**
-   * From RangeSync module, we won't attest to this block so it's okay to ignore a SYNCING message from execution layer
-   */
-  fromRangeSync?: boolean;
-  /**
-   * Verify signatures on main thread or not.
-   */
-  blsVerifyOnMainThread?: boolean;
+  /** Seen timestamp seconds */
+  seenTimestampSec?: number;
 };
 
 /**
  * A wrapper around a `SignedBeaconBlock` that indicates that this block is fully verified and ready to import
  */
-export type FullyVerifiedBlock = FullyVerifiedBlockFlags & {
+export type FullyVerifiedBlock = {
   block: allForks.SignedBeaconBlock;
   postState: CachedBeaconStateAllForks;
-  parentBlock: ProtoBlock;
-};
-
-/**
- * A wrapper around a block that's partially verified: after gossip validation `validProposerSignature = true`
- */
-export type PartiallyVerifiedBlock = PartiallyVerifiedBlockFlags & {
-  block: allForks.SignedBeaconBlock;
+  parentBlockSlot: Slot;
+  proposerBalanceDelta: number;
+  /**
+   * If the execution payload couldnt be verified because of EL syncing status, used in optimistic sync or for merge block
+   */
+  executionStatus: ExecutionStatus;
+  /** Seen timestamp seconds */
+  seenTimestampSec: number;
 };

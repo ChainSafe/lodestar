@@ -43,13 +43,13 @@ export function getSignedBlockTypeFromBytes(
 }
 
 export function getSlotFromBytes(bytes: Buffer | Uint8Array): Slot {
-  return bytesToInt(bytes.slice(SLOT_BYTES_POSITION_IN_BLOCK, SLOT_BYTES_POSITION_IN_BLOCK + SLOT_BYTE_COUNT));
+  return bytesToInt(bytes.subarray(SLOT_BYTES_POSITION_IN_BLOCK, SLOT_BYTES_POSITION_IN_BLOCK + SLOT_BYTE_COUNT));
 }
 
 export function getStateTypeFromBytes(
   config: IChainForkConfig,
   bytes: Buffer | Uint8Array
 ): allForks.AllForksSSZTypes["BeaconState"] {
-  const slot = bytesToInt(bytes.slice(SLOT_BYTES_POSITION_IN_STATE, SLOT_BYTES_POSITION_IN_STATE + SLOT_BYTE_COUNT));
+  const slot = bytesToInt(bytes.subarray(SLOT_BYTES_POSITION_IN_STATE, SLOT_BYTES_POSITION_IN_STATE + SLOT_BYTE_COUNT));
   return config.getForkTypes(slot).BeaconState;
 }

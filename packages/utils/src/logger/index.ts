@@ -1,7 +1,3 @@
-/**
- * @module logger
- */
-
 export * from "./interface.js";
 export * from "./format.js";
 export * from "./transport.js";

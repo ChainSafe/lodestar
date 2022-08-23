@@ -38,7 +38,11 @@ describe("sync / finalized sync", function () {
 
     const bn = await getDevBeaconNode({
       params: beaconParams,
-      options: {sync: {isSingleNode: true}, network: {allowPublishToZeroPeers: true}},
+      options: {
+        sync: {isSingleNode: true},
+        network: {allowPublishToZeroPeers: true},
+        chain: {blsVerifyAllMainThread: true},
+      },
       validatorCount,
       genesisTime,
       logger: loggerNodeA,

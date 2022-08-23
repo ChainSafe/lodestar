@@ -1,7 +1,3 @@
-/**
- * @module node
- */
-
 import LibP2p from "libp2p";
 import {Registry} from "prom-client";
 
@@ -141,12 +137,14 @@ export class BeaconNode {
       logger: logger.child(opts.logger.chain),
       metrics,
       anchorState,
-      eth1: initializeEth1ForBlockProduction(
-        opts.eth1,
-        {config, db, metrics, logger: logger.child(opts.logger.eth1), signal},
-        anchorState
-      ),
-      executionEngine: initializeExecutionEngine(opts.executionEngine, signal),
+      eth1: initializeEth1ForBlockProduction(opts.eth1, {
+        config,
+        db,
+        metrics,
+        logger: logger.child(opts.logger.eth1),
+        signal,
+      }),
+      executionEngine: initializeExecutionEngine(opts.executionEngine, {metrics, signal}),
       executionBuilder: opts.executionBuilder.enabled
         ? initializeExecutionBuilder(opts.executionBuilder, config)
         : undefined,

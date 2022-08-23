@@ -1,15 +1,18 @@
 import {defaultOptions, IBeaconNodeOptions} from "@lodestar/beacon-node";
 import {ICliCommandOptions} from "../../util/index.js";
 
+const defaultListenAddress = "0.0.0.0";
+const defaultP2pPort = 9000;
+
 export interface INetworkArgs {
-  "network.discv5.enabled": boolean;
-  "network.discv5.bindAddr": string;
-  "network.discv5.bootEnrs": string[];
+  discv5?: boolean;
+  listenAddress?: string;
+  port?: number;
+  discoveryPort?: number;
+  bootnodes?: string[];
+  targetPeers: number;
+  subscribeAllSubnets: boolean;
   "network.maxPeers": number;
-  "network.targetPeers": number;
-  "network.bootMultiaddrs": string[];
-  "network.localMultiaddrs": string[];
-  "network.subscribeAllSubnets": boolean;
   "network.connectToDiscv5Bootnodes": boolean;
   "network.discv5FirstQueryDelayMs": number;
   "network.requestCountPeerLimit": number;
@@ -21,19 +24,23 @@ export interface INetworkArgs {
 }
 
 export function parseArgs(args: INetworkArgs): IBeaconNodeOptions["network"] {
+  const listenAddress = args.listenAddress || defaultListenAddress;
+  const udpPort = args.discoveryPort ?? args.port ?? defaultP2pPort;
+  const tcpPort = args.port ?? defaultP2pPort;
+
   return {
     discv5: {
-      enabled: args["network.discv5.enabled"],
-      bindAddr: args["network.discv5.bindAddr"],
-      bootEnrs: args["network.discv5.bootEnrs"],
+      enabled: args["discv5"] ?? true,
+      bindAddr: `/ip4/${listenAddress}/udp/${udpPort}`,
+      // TODO: Okay to set to empty array?
+      bootEnrs: args["bootnodes"] ?? [],
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
       enr: undefined as any,
     },
     maxPeers: args["network.maxPeers"],
-    targetPeers: args["network.targetPeers"],
-    bootMultiaddrs: args["network.bootMultiaddrs"],
-    localMultiaddrs: args["network.localMultiaddrs"],
-    subscribeAllSubnets: args["network.subscribeAllSubnets"],
+    targetPeers: args["targetPeers"],
+    localMultiaddrs: [`/ip4/${listenAddress}/tcp/${tcpPort}`],
+    subscribeAllSubnets: args["subscribeAllSubnets"],
     connectToDiscv5Bootnodes: args["network.connectToDiscv5Bootnodes"],
     discv5FirstQueryDelayMs: args["network.discv5FirstQueryDelayMs"],
     requestCountPeerLimit: args["network.requestCountPeerLimit"],
@@ -46,7 +53,7 @@ export function parseArgs(args: INetworkArgs): IBeaconNodeOptions["network"] {
 }
 
 export const options: ICliCommandOptions<INetworkArgs> = {
-  "network.discv5.enabled": {
+  discv5: {
     type: "boolean",
     // TODO: Add `network.discv5.enabled` to the `IDiscv5DiscoveryInputOptions` type
     description: "Enable discv5",
@@ -54,58 +61,61 @@ export const options: ICliCommandOptions<INetworkArgs> = {
     group: "network",
   },
 
-  "network.discv5.bindAddr": {
+  listenAddress: {
     type: "string",
-    description: "Local multiaddress to listen on for discv5",
-    defaultDescription: (defaultOptions.network.discv5 || {}).bindAddr || "",
+    description: "The address to listen for p2p UDP and TCP connections",
+    defaultDescription: defaultListenAddress,
     group: "network",
   },
 
-  "network.discv5.bootEnrs": {
+  port: {
+    description: "The TCP/UDP port to listen on. The UDP port can be modified by the --discovery-port flag.",
+    type: "number",
+    // TODO: Derive from BeaconNode defaults
+    defaultDescription: String(defaultP2pPort),
+    group: "network",
+  },
+
+  discoveryPort: {
+    description: "The UDP port that discovery will listen on. Defaults to `port`",
+    type: "number",
+    defaultDescription: "`port`",
+    group: "network",
+  },
+
+  bootnodes: {
     type: "array",
     description: "Bootnodes for discv5 discovery",
     defaultDescription: JSON.stringify((defaultOptions.network.discv5 || {}).bootEnrs || []),
     group: "network",
   },
 
-  "network.maxPeers": {
-    type: "number",
-    description: "The maximum number of connections allowed",
-    defaultDescription: String(defaultOptions.network.maxPeers),
-    group: "network",
-  },
-
-  "network.targetPeers": {
+  targetPeers: {
     type: "number",
     description: "The target connected peers. Above this number peers will be disconnected",
     defaultDescription: String(defaultOptions.network.targetPeers),
     group: "network",
   },
 
-  "network.bootMultiaddrs": {
-    type: "array",
-    description: "Libp2p peers to connect to on boot",
-    defaultDescription: JSON.stringify(defaultOptions.network.bootMultiaddrs),
-    group: "network",
-  },
-
-  "network.localMultiaddrs": {
-    type: "array",
-    description: "Local listening addresses for req/resp and gossip",
-    defaultDescription: defaultOptions.network.localMultiaddrs.join(" "),
-    group: "network",
-  },
-
-  "network.subscribeAllSubnets": {
+  subscribeAllSubnets: {
     type: "boolean",
     description: "Subscribe to all subnets regardless of validator count",
     defaultDescription: String(defaultOptions.network.subscribeAllSubnets === true),
     group: "network",
   },
 
+  "network.maxPeers": {
+    hidden: true,
+    type: "number",
+    description: "The maximum number of connections allowed",
+    defaultDescription: String(defaultOptions.network.maxPeers),
+    group: "network",
+  },
+
   "network.connectToDiscv5Bootnodes": {
     type: "boolean",
     description: "Attempt direct connection to discv5 bootnodes from network.discv5.bootEnrs option",
+    hidden: true,
     defaultDescription: String(defaultOptions.network.connectToDiscv5Bootnodes === true),
     group: "network",
   },
@@ -113,6 +123,7 @@ export const options: ICliCommandOptions<INetworkArgs> = {
   "network.discv5FirstQueryDelayMs": {
     type: "number",
     description: "Delay the 1st heart beat of Peer Manager after starting Discv5",
+    hidden: true,
     defaultDescription: String(defaultOptions.network.discv5FirstQueryDelayMs),
     group: "network",
   },

@@ -5,21 +5,13 @@ import {fromHexString} from "@chainsafe/ssz";
 /**
  * 0x prefix a string if not prefixed already
  */
-export function add0xPrefix(hex: string): string {
-  if (!hex.startsWith("0x")) {
-    return `0x${hex}`;
-  } else {
-    return hex;
-  }
-}
-
 export function ensure0xPrefix(hex: string): string {
   if (!hex.startsWith("0x")) hex = `0x${hex}`;
   return hex;
 }
 
 export function isValidatePubkeyHex(pubkeyHex: string): boolean {
-  return /0x[0-9a-fA-F]{96}/.test(pubkeyHex);
+  return /^0x[0-9a-fA-F]{96}$/.test(pubkeyHex);
 }
 
 export function getPubkeyHexFromKeystore(keystore: {pubkey?: string}): string {

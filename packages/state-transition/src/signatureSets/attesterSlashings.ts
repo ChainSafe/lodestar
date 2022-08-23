@@ -29,7 +29,7 @@ export function getIndexedAttestationBigintSignatureSet(
 ): ISignatureSet {
   const {index2pubkey} = state.epochCtx;
   const slot = computeStartSlotAtEpoch(Number(indexedAttestation.data.target.epoch as bigint));
-  const domain = state.config.getDomain(DOMAIN_BEACON_ATTESTER, slot);
+  const domain = state.config.getDomain(state.slot, DOMAIN_BEACON_ATTESTER, slot);
 
   return {
     type: SignatureSetType.aggregate,

@@ -1,5 +1,5 @@
 import {defaultOptions} from "@lodestar/validator";
-import {ICliCommandOptions, ILogArgs} from "../../util/index.js";
+import {ensure0xPrefix, ICliCommandOptions, ILogArgs} from "../../util/index.js";
 import {logOptions, beaconPathsOptions} from "../beacon/options.js";
 import {IBeaconPaths} from "../beacon/paths.js";
 import {keymanagerRestApiServerOptsDefault} from "./keymanager/server.js";
@@ -26,13 +26,13 @@ export type IValidatorCliArgs = AccountValidatorArgs &
     force: boolean;
     graffiti: string;
     afterBlockDelaySlotFraction?: number;
-    defaultFeeRecipient?: string;
+    suggestedFeeRecipient?: string;
     strictFeeRecipientCheck?: boolean;
     doppelgangerProtectionEnabled?: boolean;
     defaultGasLimit?: number;
-    "builder.enabled"?: boolean;
+    builder?: boolean;
 
-    importKeystoresPath?: string[];
+    importKeystores?: string[];
     importKeystoresPassword?: string;
 
     "externalSigner.url"?: string;
@@ -43,13 +43,13 @@ export type IValidatorCliArgs = AccountValidatorArgs &
     fromMnemonic?: string;
     mnemonicIndexes?: string;
 
-    "metrics.enabled"?: boolean;
+    metrics?: boolean;
     "metrics.port"?: number;
     "metrics.address"?: string;
   };
 
 export type KeymanagerArgs = {
-  "keymanager.enabled"?: boolean;
+  keymanager?: boolean;
   "keymanager.authEnabled"?: boolean;
   "keymanager.port"?: number;
   "keymanager.address"?: string;
@@ -57,36 +57,31 @@ export type KeymanagerArgs = {
 };
 
 export const keymanagerOptions: ICliCommandOptions<KeymanagerArgs> = {
-  "keymanager.enabled": {
-    alias: ["keymanagerEnabled"], // Backwards compatibility
+  keymanager: {
     type: "boolean",
     description: "Enable keymanager API server",
     default: false,
     group: "keymanager",
   },
   "keymanager.authEnabled": {
-    alias: ["keymanagerAuthEnabled"], // Backwards compatibility
     type: "boolean",
     description: "Enable token bearer authentication for keymanager API server",
     default: true,
     group: "keymanager",
   },
   "keymanager.port": {
-    alias: ["keymanagerPort"], // Backwards compatibility
     type: "number",
     description: "Set port for keymanager API",
     defaultDescription: String(keymanagerRestApiServerOptsDefault.port),
     group: "keymanager",
   },
   "keymanager.address": {
-    alias: ["keymanagerHost"], // Backwards compatibility
     type: "string",
     description: "Set host for keymanager API",
     defaultDescription: keymanagerRestApiServerOptsDefault.address,
     group: "keymanager",
   },
   "keymanager.cors": {
-    alias: ["keymanagerCors"], // Backwards compatibility
     type: "string",
     description: "Configures the Access-Control-Allow-Origin CORS header for keymanager API",
     defaultDescription: keymanagerRestApiServerOptsDefault.cors,
@@ -150,7 +145,7 @@ export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
     type: "number",
   },
 
-  defaultFeeRecipient: {
+  suggestedFeeRecipient: {
     description:
       "Specify fee recipient default for collecting the EL block fees and rewards (a hex string representing 20 bytes address: ^0x[a-fA-F0-9]{40}$). It would be possible (WIP) to override this per validator key using config or keymanager API. Only used post merge.",
     defaultDescription: defaultOptions.defaultFeeRecipient,
@@ -168,14 +163,14 @@ export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
     type: "number",
   },
 
-  "builder.enabled": {
+  builder: {
     type: "boolean",
     description: "Enable execution payload production via a builder for better rewards",
     group: "builder",
   },
 
-  importKeystoresPath: {
-    alias: ["keystore", "directory"], // Backwards compatibility with old `validator import` cmd
+  importKeystores: {
+    alias: ["keystore"], // Backwards compatibility with old `validator import` cmdx
     description: "Path(s) to a directory or single filepath to validator keystores, i.e. Launchpad validators",
     defaultDescription: "./keystores/*.json",
     type: "array",
@@ -183,7 +178,7 @@ export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
 
   importKeystoresPassword: {
     alias: ["passphraseFile"], // Backwards compatibility with old `validator import` cmd
-    description: "Path to a file with password to decrypt all keystores from importKeystoresPath option",
+    description: "Path to a file with password to decrypt all keystores from importKeystores option",
     defaultDescription: "./password.txt",
     type: "string",
   },
@@ -199,25 +194,26 @@ export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
   // Remote signer
 
   "externalSigner.url": {
-    alias: ["externalSignerUrl"], // Backwards compatibility
     description: "URL to connect to an external signing server",
     type: "string",
     group: "externalSignerUrl",
   },
 
   "externalSigner.pubkeys": {
-    alias: ["externalSignerPublicKeys"], // Backwards compatibility
     description:
       "List of validator public keys used by an external signer. May also provide a single string a comma separated public keys",
     type: "array",
+    string: true, // Ensures the pubkey string is not automatically converted to numbers
     coerce: (pubkeys: string[]): string[] =>
       // Parse ["0x11,0x22"] to ["0x11", "0x22"]
-      pubkeys.map((item) => item.split(",")).flat(1),
+      pubkeys
+        .map((item) => item.split(","))
+        .flat(1)
+        .map(ensure0xPrefix),
     group: "externalSignerUrl",
   },
 
   "externalSigner.fetch": {
-    alias: ["externalSignerFetchPubkeys"], // Backwards compatibility
     conflicts: ["externalSigner.pubkeys"],
     description: "Fetch then list of pubkeys to validate from an external signer",
     type: "boolean",
@@ -226,7 +222,7 @@ export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
 
   // Metrics
 
-  "metrics.enabled": {
+  metrics: {
     type: "boolean",
     description: "Enable the Prometheus metrics HTTP server",
     defaultDescription: String(validatorMetricsDefaultOptions.enabled),

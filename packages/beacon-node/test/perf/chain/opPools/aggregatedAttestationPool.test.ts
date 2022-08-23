@@ -1,3 +1,4 @@
+import sinon from "sinon";
 import {itBench} from "@dapplion/benchmark";
 import {expect} from "chai";
 import {
@@ -6,10 +7,12 @@ import {
   computeStartSlotAtEpoch,
   getBlockRootAtSlot,
 } from "@lodestar/state-transition";
-import {SLOTS_PER_EPOCH, TIMELY_SOURCE_FLAG_INDEX} from "@lodestar/params";
-import {BitArray} from "@chainsafe/ssz";
+import {HISTORICAL_ROOTS_LIMIT, SLOTS_PER_EPOCH, TIMELY_SOURCE_FLAG_INDEX} from "@lodestar/params";
+import {BitArray, toHexString} from "@chainsafe/ssz";
+import {ExecutionStatus, ForkChoice, IForkChoiceStore, ProtoArray} from "@lodestar/fork-choice";
 import {AggregatedAttestationPool} from "../../../../src/chain/opPools/aggregatedAttestationPool.js";
 import {generatePerfTestCachedStateAltair} from "../../../../../state-transition/test/perf/util.js";
+import {computeAnchorCheckpoint} from "../../../../src/chain/initState.js";
 
 /** Same to https://github.com/ethereum/eth2.0-specs/blob/v1.1.0-alpha.5/specs/altair/beacon-chain.md#has_flag */
 const TIMELY_SOURCE = 1 << TIMELY_SOURCE_FLAG_INDEX;
@@ -22,6 +25,9 @@ function flagIsTimelySource(flag: number): boolean {
 //     ✓ getAttestationsForBlock                                             4.410948 ops/s    226.7086 ms/op        -         64 runs   51.8 s
 describe("getAttestationsForBlock", () => {
   let originalState: CachedBeaconStateAltair;
+  let protoArray: ProtoArray;
+  let forkchoice: ForkChoice;
+  const sandbox = sinon.createSandbox();
 
   before(function () {
     this.timeout(2 * 60 * 1000); // Generating the states for the first time is very slow
@@ -36,6 +42,88 @@ describe("getAttestationsForBlock", () => {
 
     expect(numPreviousEpochParticipation).to.equal(250000, "Wrong numPreviousEpochParticipation");
     expect(numCurrentEpochParticipation).to.equal(250000, "Wrong numCurrentEpochParticipation");
+
+    const {blockHeader, checkpoint} = computeAnchorCheckpoint(originalState.config, originalState);
+    // TODO figure out why getBlockRootAtSlot(originalState, justfifiedSlot) is not the same to justifiedCheckpoint.root
+    const finalizedEpoch = originalState.finalizedCheckpoint.epoch;
+    const finalizedCheckpoint = {
+      epoch: finalizedEpoch,
+      root: getBlockRootAtSlot(originalState, computeStartSlotAtEpoch(finalizedEpoch)),
+    };
+    const justifiedEpoch = originalState.currentJustifiedCheckpoint.epoch;
+    const justifiedCheckpoint = {
+      epoch: justifiedEpoch,
+      root: getBlockRootAtSlot(originalState, computeStartSlotAtEpoch(justifiedEpoch)),
+    };
+
+    protoArray = ProtoArray.initialize(
+      {
+        slot: blockHeader.slot,
+        parentRoot: toHexString(blockHeader.parentRoot),
+        stateRoot: toHexString(blockHeader.stateRoot),
+        blockRoot: toHexString(checkpoint.root),
+
+        justifiedEpoch: justifiedCheckpoint.epoch,
+        justifiedRoot: toHexString(justifiedCheckpoint.root),
+        finalizedEpoch: finalizedCheckpoint.epoch,
+        finalizedRoot: toHexString(finalizedCheckpoint.root),
+        unrealizedJustifiedEpoch: justifiedCheckpoint.epoch,
+        unrealizedJustifiedRoot: toHexString(justifiedCheckpoint.root),
+        unrealizedFinalizedEpoch: finalizedCheckpoint.epoch,
+        unrealizedFinalizedRoot: toHexString(finalizedCheckpoint.root),
+        executionPayloadBlockHash: null,
+        executionStatus: ExecutionStatus.PreMerge,
+      },
+      originalState.slot
+    );
+
+    for (let slot = computeStartSlotAtEpoch(finalizedCheckpoint.epoch); slot < originalState.slot; slot++) {
+      const epoch = computeEpochAtSlot(slot);
+      protoArray.onBlock(
+        {
+          slot,
+          blockRoot: toHexString(getBlockRootAtSlot(originalState, slot)),
+          parentRoot: toHexString(getBlockRootAtSlot(originalState, slot - 1)),
+          stateRoot: toHexString(originalState.stateRoots.get(slot % HISTORICAL_ROOTS_LIMIT)),
+          targetRoot: toHexString(getBlockRootAtSlot(originalState, computeStartSlotAtEpoch(epoch))),
+          justifiedEpoch: justifiedCheckpoint.epoch,
+          justifiedRoot: toHexString(justifiedCheckpoint.root),
+          finalizedEpoch: finalizedCheckpoint.epoch,
+          finalizedRoot: toHexString(finalizedCheckpoint.root),
+          unrealizedJustifiedEpoch: justifiedCheckpoint.epoch,
+          unrealizedJustifiedRoot: toHexString(justifiedCheckpoint.root),
+          unrealizedFinalizedEpoch: finalizedCheckpoint.epoch,
+          unrealizedFinalizedRoot: toHexString(finalizedCheckpoint.root),
+          executionPayloadBlockHash: null,
+          executionStatus: ExecutionStatus.PreMerge,
+        },
+        slot
+      );
+    }
+
+    const fcStore: IForkChoiceStore = {
+      currentSlot: originalState.slot,
+      justified: {
+        checkpoint: {...justifiedCheckpoint, rootHex: toHexString(justifiedCheckpoint.root)},
+        balances: originalState.epochCtx.effectiveBalanceIncrements,
+      },
+      bestJustified: {
+        checkpoint: {...justifiedCheckpoint, rootHex: toHexString(justifiedCheckpoint.root)},
+        balances: originalState.epochCtx.effectiveBalanceIncrements,
+      },
+      unrealizedJustified: {
+        checkpoint: {...justifiedCheckpoint, rootHex: toHexString(justifiedCheckpoint.root)},
+        balances: originalState.epochCtx.effectiveBalanceIncrements,
+      },
+      finalizedCheckpoint: {...finalizedCheckpoint, rootHex: toHexString(finalizedCheckpoint.root)},
+      unrealizedFinalizedCheckpoint: {...finalizedCheckpoint, rootHex: toHexString(finalizedCheckpoint.root)},
+      justifiedBalancesGetter: () => originalState.epochCtx.effectiveBalanceIncrements,
+    };
+    forkchoice = new ForkChoice(originalState.config, fcStore, protoArray);
+  });
+
+  after(() => {
+    sandbox.restore();
   });
 
   itBench({
@@ -43,7 +131,7 @@ describe("getAttestationsForBlock", () => {
     beforeEach: () => getAggregatedAttestationPool(originalState),
     fn: (pool) => {
       // logger.info("Number of attestations in pool", pool.getAll().length);
-      pool.getAttestationsForBlock(originalState);
+      pool.getAttestationsForBlock(forkchoice, originalState);
     },
   });
 });

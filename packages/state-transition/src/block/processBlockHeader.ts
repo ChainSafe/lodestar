@@ -52,7 +52,7 @@ export function processBlockHeader(state: CachedBeaconStateAllForks, block: allF
   });
 
   // verify proposer is not slashed. Only once per block, may use the slower read from tree
-  if (state.validators.get(proposerIndex).slashed) {
+  if (state.validators.getReadonly(proposerIndex).slashed) {
     throw new Error("Block proposer is slashed");
   }
 }

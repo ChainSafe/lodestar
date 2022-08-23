@@ -1,20 +1,18 @@
 import {expect} from "chai";
 import PeerId from "peer-id";
 import {config} from "@lodestar/config/default";
-import {Batch, BatchOpts} from "../../../../../src/sync/range/batch.js";
+import {Batch} from "../../../../../src/sync/range/batch.js";
 import {ChainPeersBalancer} from "../../../../../src/sync/range/utils/peerBalancer.js";
 
 describe("sync / range / peerBalancer", () => {
-  const opts: BatchOpts = {epochsPerBatch: 1};
-
   it("bestPeerToRetryBatch", () => {
     // Run N times to make sure results are consistent with different shufflings
     for (let i = 0; i < 5; i++) {
       const peer1 = new PeerId(Buffer.from([0])); // Offset by one, PeerId encodes to B58String 0 as "1"
       const peer2 = new PeerId(Buffer.from([1]));
       const peer3 = new PeerId(Buffer.from([2]));
-      const batch0 = new Batch(0, config, opts);
-      const batch1 = new Batch(1, config, opts);
+      const batch0 = new Batch(0, config);
+      const batch1 = new Batch(1, config);
 
       // Batch zero has a failedDownloadAttempt with peer0
       batch0.startDownloading(peer1);
@@ -46,8 +44,8 @@ describe("sync / range / peerBalancer", () => {
       const peer2 = new PeerId(Buffer.from([1]));
       const peer3 = new PeerId(Buffer.from([2]));
       const peer4 = new PeerId(Buffer.from([3]));
-      const batch0 = new Batch(0, config, opts);
-      const batch1 = new Batch(1, config, opts);
+      const batch0 = new Batch(0, config);
+      const batch1 = new Batch(1, config);
 
       // peer1 and peer2 are busy downloading
       batch0.startDownloading(peer1);

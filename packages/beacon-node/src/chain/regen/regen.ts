@@ -222,7 +222,7 @@ async function processSlotsByCheckpoint(
 ): Promise<CachedBeaconStateAllForks> {
   let postState = await processSlotsToNearestCheckpoint(modules, preState, slot);
   if (postState.slot < slot) {
-    postState = processSlots(postState, slot, modules.metrics);
+    postState = processSlots(postState, slot, {}, modules.metrics);
   }
   return postState;
 }
@@ -242,7 +242,7 @@ async function processSlotsToNearestCheckpoint(
   const preSlot = preState.slot;
   const postSlot = slot;
   const preEpoch = computeEpochAtSlot(preSlot);
-  let postState = preState.clone();
+  let postState = preState;
   const {checkpointStateCache, emitter, metrics} = modules;
 
   for (
@@ -250,10 +250,11 @@ async function processSlotsToNearestCheckpoint(
     nextEpochSlot <= postSlot;
     nextEpochSlot += SLOTS_PER_EPOCH
   ) {
-    postState = processSlots(postState, nextEpochSlot, metrics);
+    // processSlots calls .clone() before mutating
+    postState = processSlots(postState, nextEpochSlot, {}, metrics);
 
     // Cache state to preserve epoch transition work
-    const checkpointState = postState.clone();
+    const checkpointState = postState;
     const cp = getCheckpointFromState(checkpointState);
     checkpointStateCache.add(cp, checkpointState);
     emitter.emit(ChainEvent.checkpoint, cp, checkpointState);

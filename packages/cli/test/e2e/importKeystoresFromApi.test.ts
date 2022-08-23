@@ -15,14 +15,14 @@ import {getKeystoresStr} from "../utils/keystores.js";
 chai.use(chaiAsPromised);
 
 describeCliTest("import keystores from api", function ({spawnCli}) {
-  const rootDir = path.join(testFilesDir, "import-keystores-test");
+  const dataDir = path.join(testFilesDir, "import-keystores-test");
 
-  before("Clean rootDir", () => {
-    rimraf.sync(rootDir);
+  before("Clean dataDir", () => {
+    rimraf.sync(dataDir);
   });
 
   const afterEachCallbacks = getAfterEachCallbacks();
-  const itKeymanagerStep = getKeymanagerTestRunner({args: {spawnCli}, afterEachCallbacks, rootDir});
+  const itKeymanagerStep = getKeymanagerTestRunner({args: {spawnCli}, afterEachCallbacks, dataDir});
 
   /** Generated from  const sk = bls.SecretKey.fromKeygen(Buffer.alloc(32, 0xaa)); */
   const passphrase = "AAAAAAAA0000000000";
@@ -72,7 +72,7 @@ describeCliTest("import keystores from api", function ({spawnCli}) {
     const vcProc2 = spawnCli([
       // ⏎
       "validator",
-      `--rootDir=${rootDir}`,
+      `--dataDir=${dataDir}`,
     ]);
 
     await new Promise<void>((resolve, reject) => {

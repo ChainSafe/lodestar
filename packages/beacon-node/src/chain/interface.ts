@@ -2,6 +2,7 @@ import {allForks, UintNum64, Root, phase0, Slot, RootHex, Epoch, ValidatorIndex}
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {IBeaconConfig} from "@lodestar/config";
 import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
+import {ILogger} from "@lodestar/utils";
 
 import {IForkChoice} from "@lodestar/fork-choice";
 import {IEth1ForBlockProduction} from "../eth1/index.js";
@@ -21,11 +22,13 @@ import {
 import {AttestationPool, OpPool, SyncCommitteeMessagePool, SyncContributionAndProofPool} from "./opPools/index.js";
 import {LightClientServer} from "./lightClient/index.js";
 import {AggregatedAttestationPool} from "./opPools/aggregatedAttestationPool.js";
-import {PartiallyVerifiedBlockFlags} from "./blocks/types.js";
+import {ImportBlockOpts} from "./blocks/types.js";
 import {ReprocessController} from "./reprocess.js";
 import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
 import {BeaconProposerCache, ProposerPreparationData} from "./beaconProposerCache.js";
 import {SeenBlockAttesters} from "./seenCache/seenBlockAttesters.js";
+import {CheckpointBalancesCache} from "./balancesCache.js";
+import {IChainOptions} from "./options.js";
 
 export type Eth2Context = {
   activeValidatorCount: number;
@@ -47,17 +50,18 @@ export interface IBeaconChain {
   readonly executionBuilder?: IExecutionBuilder;
   // Expose config for convenience in modularized functions
   readonly config: IBeaconConfig;
+  readonly logger: ILogger;
 
   /** The initial slot that the chain is started with */
   readonly anchorStateLatestBlockSlot: Slot;
 
-  bls: IBlsVerifier;
-  forkChoice: IForkChoice;
-  clock: IBeaconClock;
-  emitter: ChainEventEmitter;
-  stateCache: StateContextCache;
-  checkpointStateCache: CheckpointStateCache;
-  regen: IStateRegenerator;
+  readonly bls: IBlsVerifier;
+  readonly forkChoice: IForkChoice;
+  readonly clock: IBeaconClock;
+  readonly emitter: ChainEventEmitter;
+  readonly stateCache: StateContextCache;
+  readonly checkpointStateCache: CheckpointStateCache;
+  readonly regen: IStateRegenerator;
   readonly lightClientServer: LightClientServer;
   readonly reprocessController: ReprocessController;
 
@@ -79,6 +83,8 @@ export interface IBeaconChain {
   readonly seenBlockAttesters: SeenBlockAttesters;
 
   readonly beaconProposerCache: BeaconProposerCache;
+  readonly checkpointBalancesCache: CheckpointBalancesCache;
+  readonly opts: IChainOptions;
 
   /** Stop beacon chain processing */
   close(): Promise<void>;
@@ -101,9 +107,9 @@ export interface IBeaconChain {
   getCanonicalBlockAtSlot(slot: Slot): Promise<allForks.SignedBeaconBlock | null>;
 
   /** Process a block until complete */
-  processBlock(signedBlock: allForks.SignedBeaconBlock, flags?: PartiallyVerifiedBlockFlags): Promise<void>;
+  processBlock(block: allForks.SignedBeaconBlock, opts?: ImportBlockOpts): Promise<void>;
   /** Process a chain of blocks until complete */
-  processChainSegment(signedBlocks: allForks.SignedBeaconBlock[], flags?: PartiallyVerifiedBlockFlags): Promise<void>;
+  processChainSegment(blocks: allForks.SignedBeaconBlock[], opts?: ImportBlockOpts): Promise<void>;
 
   getStatus(): phase0.Status;
 

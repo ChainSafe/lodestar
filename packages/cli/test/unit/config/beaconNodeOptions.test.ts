@@ -5,20 +5,20 @@ import {defaultOptions} from "@lodestar/beacon-node";
 import {getBeaconPaths} from "../../../src/cmds/beacon/paths.js";
 import {BeaconNodeOptions, mergeBeaconNodeOptions} from "../../../src/config/index.js";
 import {enrsToNetworkConfig, parseBootnodesFile} from "../../../src/networks/index.js";
-import {bootEnrs as praterBootEnrs} from "../../../src/networks/prater.js";
+import {bootEnrs as goerliBootEnrs} from "../../../src/networks/goerli.js";
 import {testFilesDir} from "../../utils.js";
 import {extractJwtHexSecret} from "../../../src/util/index.js";
 
 describe("config / beaconNodeOptions", () => {
-  it("Should return prater options", () => {
+  it("Should return goerli options", () => {
     const beaconNodeOptions = new BeaconNodeOptions({
-      network: "prater",
+      network: "goerli",
       beaconNodeOptionsCli: {},
     });
 
     // Asserts only part of the data structure to avoid unnecesary duplicate code
     const optionsPartial = beaconNodeOptions.get();
-    expect(optionsPartial?.network?.discv5?.bootEnrs).to.deep.equal(praterBootEnrs);
+    expect(optionsPartial?.network?.discv5?.bootEnrs).to.deep.equal(goerliBootEnrs);
   });
 
   it("Should return added partial options", () => {
@@ -36,15 +36,15 @@ describe("config / beaconNodeOptions", () => {
 
   it("Should return options with injected custom bootnodes", async () => {
     const expectedBootEnr = "enr:-KG4QOWkRj";
-    const rootDir = testFilesDir;
+    const dataDir = testFilesDir;
     const bootnodesFile = path.join(testFilesDir, "bootnodesFile.txt");
     fs.writeFileSync(bootnodesFile, expectedBootEnr);
 
-    const beaconPaths = getBeaconPaths({rootDir});
+    const beaconPaths = getBeaconPaths({dataDir});
     beaconPaths.bootnodesFile = bootnodesFile;
 
     const beaconNodeOptions = new BeaconNodeOptions({
-      network: "prater",
+      network: "goerli",
       bootnodesFile: beaconPaths.bootnodesFile,
       beaconNodeOptionsCli: {},
     });
@@ -58,15 +58,15 @@ describe("config / beaconNodeOptions", () => {
     const bootnodesFileContent = "enr:-KG4QOWkRj";
     const expectedBootEnr = "enr:-W4gMj";
 
-    const rootDir = testFilesDir;
+    const dataDir = testFilesDir;
     const bootnodesFile = path.join(testFilesDir, "bootnodesFile.txt");
     fs.writeFileSync(bootnodesFile, bootnodesFileContent);
 
-    const beaconPaths = getBeaconPaths({rootDir});
+    const beaconPaths = getBeaconPaths({dataDir});
     beaconPaths.bootnodesFile = bootnodesFile;
 
     const beaconNodeOptions = new BeaconNodeOptions({
-      network: "prater",
+      network: "goerli",
       bootnodesFile: beaconPaths.bootnodesFile,
       beaconNodeOptionsCli: enrsToNetworkConfig([expectedBootEnr]),
     });

@@ -18,18 +18,21 @@ function getForkConfig({
       seq: ForkSeq.phase0,
       epoch: phase0,
       version: Buffer.from([0, 0, 0, 0]),
+      prevForkName: ForkName.phase0,
     },
     altair: {
       name: ForkName.altair,
       seq: ForkSeq.altair,
       epoch: altair,
       version: Buffer.from([0, 0, 0, 1]),
+      prevForkName: ForkName.phase0,
     },
     bellatrix: {
       name: ForkName.bellatrix,
       seq: ForkSeq.bellatrix,
       epoch: bellatrix,
       version: Buffer.from([0, 0, 0, 2]),
+      prevForkName: ForkName.altair,
     },
   };
   const forksAscendingEpochOrder = Object.values(forks);

@@ -10,49 +10,57 @@ describe("options / beaconNodeOptions", () => {
     // Cast to match the expected fully defined type
     const beaconNodeArgsPartial = {
       "api.maxGindicesInProof": 1000,
-      "api.rest.api": [],
-      "api.rest.cors": "*",
-      "api.rest.enabled": true,
-      "api.rest.address": "127.0.0.1",
-      "api.rest.port": 7654,
+      "rest.namespace": [],
+      "rest.cors": "*",
+      rest: true,
+      "rest.address": "127.0.0.1",
+      "rest.port": 7654,
 
       "chain.blsVerifyAllMultiThread": true,
       "chain.blsVerifyAllMainThread": true,
       "chain.disableBlsBatchVerify": true,
       "chain.persistInvalidSszObjects": true,
       "chain.proposerBoostEnabled": false,
-      "chain.defaultFeeRecipient": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "chain.disableImportExecutionFcU": false,
+      "chain.computeUnrealized": true,
+      suggestedFeeRecipient: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "chain.assertCorrectProgressiveBalances": true,
+      "chain.maxSkipSlots": 100,
       "safe-slots-to-import-optimistically": 256,
 
-      "eth1.enabled": true,
+      eth1: true,
       "eth1.providerUrl": "http://my.node:8545",
       "eth1.providerUrls": ["http://my.node:8545"],
       "eth1.depositContractDeployBlock": 1625314,
       "eth1.disableEth1DepositDataTracker": true,
       "eth1.unsafeAllowDepositDataOverwrite": false,
+      "eth1.forcedEth1DataVote":
+        "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa0000000000000000bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
 
       "execution.urls": ["http://localhost:8551"],
       "execution.timeout": 12000,
+      "execution.retryDelay": 2000,
+      "execution.retryAttempts": 1,
 
-      "builder.enabled": false,
+      builder: false,
       "builder.urls": ["http://localhost:8661"],
       "builder.timeout": 12000,
 
       "logger.eth1.level": "debug",
       "logger.unknown.level": "debug",
 
-      "metrics.enabled": true,
+      metrics: true,
       "metrics.port": 8765,
       "metrics.address": "0.0.0.0",
 
-      "network.discv5.enabled": true,
-      "network.discv5.bindAddr": "addr",
-      "network.discv5.bootEnrs": ["enr:-somedata"],
+      discv5: true,
+      listenAddress: "127.0.0.1",
+      port: 9001,
+      discoveryPort: 9002,
+      bootnodes: ["enr:-somedata"],
+      targetPeers: 25,
+      subscribeAllSubnets: true,
       "network.maxPeers": 30,
-      "network.targetPeers": 25,
-      "network.bootMultiaddrs": [],
-      "network.localMultiaddrs": [],
-      "network.subscribeAllSubnets": true,
       "network.connectToDiscv5Bootnodes": true,
       "network.discv5FirstQueryDelayMs": 1000,
       "network.requestCountPeerLimit": 5,
@@ -61,6 +69,7 @@ describe("options / beaconNodeOptions", () => {
       "network.rateTrackerTimeoutMs": 60000,
       "network.dontSendGossipAttestationsToForkchoice": true,
       "network.allowPublishToZeroPeers": true,
+
       "sync.isSingleNode": true,
       "sync.disableProcessAsChainSegment": true,
       "sync.backfillBatchSize": 64,
@@ -83,8 +92,12 @@ describe("options / beaconNodeOptions", () => {
         disableBlsBatchVerify: true,
         persistInvalidSszObjects: true,
         proposerBoostEnabled: false,
+        disableImportExecutionFcU: false,
+        computeUnrealized: true,
         safeSlotsToImportOptimistically: 256,
         defaultFeeRecipient: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        assertCorrectProgressiveBalances: true,
+        maxSkipSlots: 100,
       },
       eth1: {
         enabled: true,
@@ -92,9 +105,13 @@ describe("options / beaconNodeOptions", () => {
         depositContractDeployBlock: 1625314,
         disableEth1DepositDataTracker: true,
         unsafeAllowDepositDataOverwrite: false,
+        forcedEth1DataVote:
+          "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa0000000000000000bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
       },
       executionEngine: {
         urls: ["http://localhost:8551"],
+        retryAttempts: 1,
+        retryDelay: 2000,
         timeout: 12000,
       },
       executionBuilder: {
@@ -115,13 +132,12 @@ describe("options / beaconNodeOptions", () => {
       network: {
         discv5: {
           enabled: true,
-          bindAddr: "addr",
+          bindAddr: "/ip4/127.0.0.1/udp/9002",
           bootEnrs: ["enr:-somedata"],
         },
         maxPeers: 30,
         targetPeers: 25,
-        bootMultiaddrs: [],
-        localMultiaddrs: [],
+        localMultiaddrs: ["/ip4/127.0.0.1/tcp/9001"],
         subscribeAllSubnets: true,
         connectToDiscv5Bootnodes: true,
         discv5FirstQueryDelayMs: 1000,
@@ -150,7 +166,7 @@ describe("options / beaconNodeOptions", () => {
 
     // Cast to match the expected fully defined type
     const beaconNodeArgsPartial = {
-      "eth1.enabled": true,
+      eth1: true,
       "execution.urls": ["http://my.node:8551"],
       "jwt-secret": jwtSecretFile,
     } as IBeaconNodeArgs;

@@ -1,7 +1,3 @@
-/**
- * @module db/api/beacon
- */
-
 import {ILevelDbControllerMetrics} from "@lodestar/db";
 import {
   AttesterSlashingRepository,

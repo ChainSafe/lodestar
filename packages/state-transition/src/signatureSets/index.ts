@@ -20,20 +20,13 @@ export * from "./voluntaryExits.js";
  * Includes all signatures on the block (except the deposit signatures) for verification.
  * Deposits are not included because they can legally have invalid signatures.
  */
-export function getAllBlockSignatureSets(
+export function getBlockSignatureSets(
   state: CachedBeaconStateAllForks,
-  signedBlock: allForks.SignedBeaconBlock
-): ISignatureSet[] {
-  return [getProposerSignatureSet(state, signedBlock), ...getAllBlockSignatureSetsExceptProposer(state, signedBlock)];
-}
-
-/**
- * Includes all signatures on the block (except the deposit signatures) for verification.
- * Useful since block proposer signature is verified beforehand on gossip validation
- */
-export function getAllBlockSignatureSetsExceptProposer(
-  state: CachedBeaconStateAllForks,
-  signedBlock: allForks.SignedBeaconBlock
+  signedBlock: allForks.SignedBeaconBlock,
+  opts?: {
+    /** Useful since block proposer signature is verified beforehand on gossip validation */
+    skipProposerSignature?: boolean;
+  }
 ): ISignatureSet[] {
   const signatureSets = [
     getRandaoRevealSignatureSet(state, signedBlock.message),
@@ -42,6 +35,10 @@ export function getAllBlockSignatureSetsExceptProposer(
     ...getAttestationsSignatureSets(state, signedBlock),
     ...getVoluntaryExitsSignatureSets(state, signedBlock),
   ];
+
+  if (!opts?.skipProposerSignature) {
+    signatureSets.push(getProposerSignatureSet(state, signedBlock));
+  }
 
   // Only after altair fork, validate tSyncCommitteeSignature
   if (computeEpochAtSlot(signedBlock.message.slot) >= state.config.ALTAIR_FORK_EPOCH) {

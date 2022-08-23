@@ -80,9 +80,11 @@ describe("verify+import blocks - range sync perf test", () => {
       const chain = new BeaconChain(
         {
           proposerBoostEnabled: true,
+          computeUnrealized: false,
           safeSlotsToImportOptimistically: SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY,
           disableArchiveOnCheckpoint: true,
           defaultFeeRecipient: defaultValidatorOptions.defaultFeeRecipient,
+          skipCreateStateCacheIfAvailable: true,
         },
         {
           config: state.config,

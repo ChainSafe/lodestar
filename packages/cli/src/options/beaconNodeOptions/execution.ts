@@ -5,6 +5,8 @@ import {ICliCommandOptions, extractJwtHexSecret} from "../../util/index.js";
 export type ExecutionEngineArgs = {
   "execution.urls": string[];
   "execution.timeout": number;
+  "execution.retryAttempts": number;
+  "execution.retryDelay": number;
   "jwt-secret"?: string;
 };
 
@@ -12,6 +14,8 @@ export function parseArgs(args: ExecutionEngineArgs): IBeaconNodeOptions["execut
   return {
     urls: args["execution.urls"],
     timeout: args["execution.timeout"],
+    retryAttempts: args["execution.retryAttempts"],
+    retryDelay: args["execution.retryDelay"],
     /**
      * jwtSecret is parsed as hex instead of bytes because the merge with defaults
      * in beaconOptions messes up the bytes array as as index => value object
@@ -36,6 +40,22 @@ export const options: ICliCommandOptions<ExecutionEngineArgs> = {
     type: "number",
     defaultDescription:
       defaultOptions.executionEngine.mode === "http" ? String(defaultOptions.executionEngine.timeout) : "",
+    group: "execution",
+  },
+
+  "execution.retryAttempts": {
+    description: "Number of retry attempts when calling execution engine API",
+    type: "number",
+    defaultDescription:
+      defaultOptions.executionEngine.mode === "http" ? String(defaultOptions.executionEngine.retryAttempts) : "1",
+    group: "execution",
+  },
+
+  "execution.retryDelay": {
+    description: "Delay time in milliseconds between retries when retrying calls to the execution engine API",
+    type: "number",
+    defaultDescription:
+      defaultOptions.executionEngine.mode === "http" ? String(defaultOptions.executionEngine.retryDelay) : "0",
     group: "execution",
   },
 

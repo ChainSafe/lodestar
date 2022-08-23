@@ -32,6 +32,8 @@ export {
   processSyncCommitteeUpdates,
 };
 
+export {computeUnrealizedCheckpoints} from "./computeUnrealizedCheckpoints.js";
+
 export function processEpoch(fork: ForkSeq, state: CachedBeaconStateAllForks, epochProcess: EpochProcess): void {
   processJustificationAndFinalization(state, epochProcess);
   if (fork >= ForkSeq.altair) {

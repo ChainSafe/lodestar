@@ -54,6 +54,10 @@ export type ProtoBlock = BlockExecution & {
   justifiedRoot: RootHex;
   finalizedEpoch: Epoch;
   finalizedRoot: RootHex;
+  unrealizedJustifiedEpoch: Epoch;
+  unrealizedJustifiedRoot: RootHex;
+  unrealizedFinalizedEpoch: Epoch;
+  unrealizedFinalizedRoot: RootHex;
 };
 
 /**

@@ -10,12 +10,13 @@
 [![Maintainability](https://api.codeclimate.com/v1/badges/678099476c401e1af503/maintainability)](https://codeclimate.com/github/ChainSafe/lodestar/maintainability)
 ![ES Version](https://img.shields.io/badge/ES-2020-yellow)
 ![Node Version](https://img.shields.io/badge/node-16.x-green)
+[![gitpoap badge](https://public-api.gitpoap.io/v1/repo/ChainSafe/lodestar/badge)](https://www.gitpoap.io/gh/ChainSafe/lodestar)
 
 [Lodestar](https://lodestar.chainsafe.io) is a TypeScript implementation of the [Ethereum Consensus specification](https://github.com/ethereum/consensus-specs) developed by [ChainSafe Systems](https://chainsafe.io).
 
 ## Getting started
 
-- :gear: Follow the installation method for [source install](https://chainsafe.github.io/lodestar/install/source.md), [NPM install](https://chainsafe.github.io/lodestar/install/npm.md), or [Docker install](https://chainsafe.github.io/lodestar/install/docker.md) to install Lodestar. Or use our [comprehensive setup guide](https://hackmd.io/@philknows/rk5cDvKmK).
+- :gear: Follow the installation method for [source install](https://chainsafe.github.io/lodestar/install/source/), [NPM install](https://chainsafe.github.io/lodestar/install/npm/), or [Docker install](https://chainsafe.github.io/lodestar/install/docker/) to install Lodestar. Or use our [comprehensive setup guide](https://hackmd.io/@philknows/rk5cDvKmK).
 - :books: Use [Lodestar libraries](https://chainsafe.github.io/lodestar/libraries) in your next Ethereum Typescript project.
 - :globe_with_meridians: Run a beacon node on [mainnet or a public testnet](https://chainsafe.github.io/lodestar/usage/beacon-management.md).
 - :computer: Utilize the whole stack by [starting a local testnet](https://chainsafe.github.io/lodestar/usage/local).

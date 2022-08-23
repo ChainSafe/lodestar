@@ -9,38 +9,25 @@ import {
   IWSSArgs,
   wssOptions,
 } from "../../options/index.js";
-import {ICliCommandOptions, ILogArgs} from "../../util/index.js";
+import {defaultLogMaxFiles, ICliCommandOptions, ILogArgs} from "../../util/index.js";
 import {defaultBeaconPaths, IBeaconPaths} from "./paths.js";
 
 interface IBeaconExtraArgs {
-  port?: number;
-  discoveryPort?: number;
   forceGenesis?: boolean;
   genesisStateFile?: string;
 }
 
 export const beaconExtraOptions: ICliCommandOptions<IBeaconExtraArgs> = {
-  port: {
-    description: "The TCP/UDP port to listen on. The UDP port can be modified by the --discovery-port flag.",
-    type: "number",
-    // TODO: Derive from BeaconNode defaults
-    defaultDescription: "9000",
-  },
-
-  discoveryPort: {
-    description: "The UDP port that discovery will listen on. Defaults to `port`",
-    type: "number",
-    defaultDescription: "`port`",
-  },
-
   forceGenesis: {
     description: "Force beacon to create genesis without file",
     type: "boolean",
+    hidden: true,
   },
 
   genesisStateFile: {
     description: "Path or URL to download a genesis state file in ssz-encoded format",
     type: "string",
+    hidden: true,
   },
 };
 
@@ -52,7 +39,7 @@ export const logOptions: ICliCommandOptions<ILogArgs> = {
     type: "string",
   },
 
-  logLevelFile: {
+  logFileLevel: {
     choices: LogLevels,
     description: "Logging verbosity level for file transport",
     defaultDescription: defaultLogLevel,
@@ -71,13 +58,8 @@ export const logOptions: ICliCommandOptions<ILogArgs> = {
     type: "string",
   },
 
-  logRotate: {
-    description: "Daily rotate log files",
-    type: "boolean",
-  },
-
-  logMaxFiles: {
-    description: "Number of log files to maintain while rotating logs(if provided with logRotate)",
+  logFileDailyRotate: {
+    description: `Daily rotate log files, set to an integer to limit the file count, else defaults to ${defaultLogMaxFiles}`,
     type: "number",
   },
 };

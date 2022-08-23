@@ -1,4 +1,4 @@
-import {bellatrix, RootHex, Root} from "@lodestar/types";
+import {bellatrix, RootHex} from "@lodestar/types";
 import {BYTES_PER_LOGS_BLOOM} from "@lodestar/params";
 import {fromHex} from "@lodestar/utils";
 
@@ -22,11 +22,19 @@ import {
   PayloadId,
   PayloadAttributes,
   ApiPayloadAttributes,
+  TransitionConfigurationV1,
 } from "./interface.js";
 import {PayloadIdCache} from "./payloadIdCache.js";
 
+export type ExecutionEngineModules = {
+  signal: AbortSignal;
+  metrics?: IMetrics | null;
+};
+
 export type ExecutionEngineHttpOpts = {
   urls: string[];
+  retryAttempts: number;
+  retryDelay: number;
   timeout?: number;
   /**
    * 256 bit jwt secret in hex format without the leading 0x. If provided, the execution engine
@@ -44,6 +52,8 @@ export const defaultExecutionEngineHttpOpts: ExecutionEngineHttpOpts = {
    * port/url, one can override this and skip providing a jwt secret.
    */
   urls: ["http://localhost:8551"],
+  retryAttempts: 3,
+  retryDelay: 2000,
   timeout: 12000,
 };
 
@@ -51,6 +61,7 @@ export const defaultExecutionEngineHttpOpts: ExecutionEngineHttpOpts = {
 const notifyNewPayloadOpts: ReqOpts = {routeId: "notifyNewPayload"};
 const forkchoiceUpdatedV1Opts: ReqOpts = {routeId: "forkchoiceUpdated"};
 const getPayloadOpts: ReqOpts = {routeId: "getPayload"};
+const exchageTransitionConfigOpts: ReqOpts = {routeId: "exchangeTransitionConfiguration"};
 
 /**
  * based on Ethereum JSON-RPC API and inherits the following properties of this standard:
@@ -65,12 +76,12 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   readonly payloadIdCache = new PayloadIdCache();
   private readonly rpc: IJsonRpcHttpClient;
 
-  constructor(opts: ExecutionEngineHttpOpts, signal: AbortSignal, metrics?: IMetrics | null) {
+  constructor(opts: ExecutionEngineHttpOpts, {metrics, signal}: ExecutionEngineModules) {
     this.rpc = new JsonRpcHttpClient(opts.urls, {
+      ...opts,
       signal,
-      timeout: opts.timeout,
-      jwtSecret: opts.jwtSecretHex ? fromHex(opts.jwtSecretHex) : undefined,
       metrics: metrics?.executionEnginerHttpClient,
+      jwtSecret: opts.jwtSecretHex ? fromHex(opts.jwtSecretHex) : undefined,
     });
   }
 
@@ -103,12 +114,15 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     const method = "engine_newPayloadV1";
     const serializedExecutionPayload = serializeExecutionPayload(executionPayload);
     const {status, latestValidHash, validationError} = await this.rpc
-      .fetch<EngineApiRpcReturnTypes[typeof method], EngineApiRpcParamTypes[typeof method]>(
-        {method, params: [serializedExecutionPayload]},
+      .fetchWithRetries<EngineApiRpcReturnTypes[typeof method], EngineApiRpcParamTypes[typeof method]>(
+        {
+          method,
+          params: [serializedExecutionPayload],
+        },
         notifyNewPayloadOpts
       )
       // If there are errors by EL like connection refused, internal error, they need to be
-      // treated seperate from being INVALID. For now, just pass the error upstream.
+      // treated separate from being INVALID. For now, just pass the error upstream.
       .catch((e: Error): EngineApiRpcReturnTypes[typeof method] => {
         if (e instanceof HttpRpcError || e instanceof ErrorJsonRpcResponse) {
           return {status: ExecutePayloadStatus.ELERROR, latestValidHash: null, validationError: e.message};
@@ -187,13 +201,12 @@ export class ExecutionEngineHttp implements IExecutionEngine {
    * If any of the above fails due to errors unrelated to the normal processing flow of the method, client software MUST respond with an error object.
    */
   async notifyForkchoiceUpdate(
-    headBlockHash: Root | RootHex,
+    headBlockHash: RootHex,
     safeBlockHash: RootHex,
     finalizedBlockHash: RootHex,
     payloadAttributes?: PayloadAttributes
   ): Promise<PayloadId | null> {
     const method = "engine_forkchoiceUpdatedV1";
-    const headBlockHashData = typeof headBlockHash === "string" ? headBlockHash : bytesToData(headBlockHash);
     const apiPayloadAttributes: ApiPayloadAttributes | undefined = payloadAttributes
       ? {
           timestamp: numToQuantity(payloadAttributes.timestamp),
@@ -202,14 +215,19 @@ export class ExecutionEngineHttp implements IExecutionEngine {
         }
       : undefined;
 
-    // TODO: propogate latestValidHash to the forkchoice, for now ignore it as we
-    // currently do not propogate the validation status up the forkchoice
+    // If we are just fcUing and not asking execution for payload, retry is not required
+    // and we can move on, as the next fcU will be issued soon on the new slot
+    const fcUReqOpts =
+      payloadAttributes !== undefined ? forkchoiceUpdatedV1Opts : {...forkchoiceUpdatedV1Opts, retryAttempts: 1};
     const {
       payloadStatus: {status, latestValidHash: _latestValidHash, validationError},
       payloadId,
-    } = await this.rpc.fetch<EngineApiRpcReturnTypes[typeof method], EngineApiRpcParamTypes[typeof method]>(
-      {method, params: [{headBlockHash: headBlockHashData, safeBlockHash, finalizedBlockHash}, apiPayloadAttributes]},
-      forkchoiceUpdatedV1Opts
+    } = await this.rpc.fetchWithRetries<EngineApiRpcReturnTypes[typeof method], EngineApiRpcParamTypes[typeof method]>(
+      {
+        method,
+        params: [{headBlockHash, safeBlockHash, finalizedBlockHash}, apiPayloadAttributes],
+      },
+      fcUReqOpts
     );
 
     switch (status) {
@@ -220,10 +238,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
             throw Error(`Received invalid payloadId=${payloadId}`);
           }
 
-          this.payloadIdCache.add(
-            {headBlockHash: headBlockHashData, finalizedBlockHash, ...apiPayloadAttributes},
-            payloadId
-          );
+          this.payloadIdCache.add({headBlockHash, finalizedBlockHash, ...apiPayloadAttributes}, payloadId);
           void this.prunePayloadIdCache();
         }
         return payloadId !== "0x" ? payloadId : null;
@@ -257,12 +272,39 @@ export class ExecutionEngineHttp implements IExecutionEngine {
    */
   async getPayload(payloadId: PayloadId): Promise<bellatrix.ExecutionPayload> {
     const method = "engine_getPayloadV1";
-    const executionPayloadRpc = await this.rpc.fetch<
+    const executionPayloadRpc = await this.rpc.fetchWithRetries<
       EngineApiRpcReturnTypes[typeof method],
       EngineApiRpcParamTypes[typeof method]
-    >({method, params: [payloadId]}, getPayloadOpts);
-
+    >(
+      {
+        method,
+        params: [payloadId],
+      },
+      getPayloadOpts
+    );
     return parseExecutionPayload(executionPayloadRpc);
+  }
+
+  /**
+   * `engine_exchangeTransitionConfigurationV1`
+   *
+   * An api method for EL<>CL transition config matching and heartbeat
+   */
+
+  async exchangeTransitionConfigurationV1(
+    transitionConfiguration: TransitionConfigurationV1
+  ): Promise<TransitionConfigurationV1> {
+    const method = "engine_exchangeTransitionConfigurationV1";
+    return await this.rpc.fetchWithRetries<
+      EngineApiRpcReturnTypes[typeof method],
+      EngineApiRpcParamTypes[typeof method]
+    >(
+      {
+        method,
+        params: [transitionConfiguration],
+      },
+      exchageTransitionConfigOpts
+    );
   }
 
   async prunePayloadIdCache(): Promise<void> {
@@ -290,6 +332,10 @@ type EngineApiRpcParamTypes = {
    * 1. payloadId: QUANTITY, 64 Bits - Identifier of the payload building process
    */
   engine_getPayloadV1: [QUANTITY];
+  /**
+   * 1. Object - Instance of TransitionConfigurationV1
+   */
+  engine_exchangeTransitionConfigurationV1: [TransitionConfigurationV1];
 };
 
 type EngineApiRpcReturnTypes = {
@@ -310,6 +356,10 @@ type EngineApiRpcReturnTypes = {
    * payloadId | Error: QUANTITY, 64 Bits - Identifier of the payload building process
    */
   engine_getPayloadV1: ExecutionPayloadRpc;
+  /**
+   * Object - Instance of TransitionConfigurationV1
+   */
+  engine_exchangeTransitionConfigurationV1: TransitionConfigurationV1;
 };
 
 type ExecutionPayloadRpc = {

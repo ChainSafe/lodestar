@@ -1,5 +1,5 @@
 import {altair, phase0, Root, Slot, ssz} from "@lodestar/types";
-import bls from "@chainsafe/bls";
+import bls from "@chainsafe/bls/switchable";
 import type {PublicKey, Signature} from "@chainsafe/bls/types";
 import {
   FINALIZED_ROOT_INDEX,
@@ -154,7 +154,7 @@ export function assertValidSignedHeader(
 
   const signingRoot = ssz.phase0.SigningData.hashTreeRoot({
     objectRoot: signedHeaderRoot,
-    domain: config.getDomain(DOMAIN_SYNC_COMMITTEE, signedHeaderSlot),
+    domain: config.getDomain(signedHeaderSlot, DOMAIN_SYNC_COMMITTEE),
   });
 
   if (!isValidBlsAggregate(participantPubkeys, signingRoot, syncAggregate.syncCommitteeSignature)) {

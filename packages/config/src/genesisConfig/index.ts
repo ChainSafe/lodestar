@@ -1,4 +1,4 @@
-import {ForkName} from "@lodestar/params";
+import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {DomainType, ForkDigest, phase0, Root, Slot, ssz, Version} from "@lodestar/types";
 import {toHexString} from "@chainsafe/ssz";
 import {IChainForkConfig} from "../beaconConfig.js";
@@ -22,8 +22,24 @@ export function createICachedGenesis(chainForkConfig: IChainForkConfig, genesisV
   }
 
   return {
-    getDomain(domainType: DomainType, slot: Slot): Uint8Array {
-      const forkInfo = chainForkConfig.getForkInfo(slot);
+    getDomain(stateSlot: Slot, domainType: DomainType, messageSlot?: Slot): Uint8Array {
+      // ```py
+      // def get_domain(state: BeaconState, domain_type: DomainType, epoch: Epoch=None) -> Domain:
+      //   """
+      //   Return the signature domain (fork version concatenated with domain type) of a message.
+      //   """
+      //   epoch = get_current_epoch(state) if epoch is None else epoch
+      //   fork_version = state.fork.previous_version if epoch < state.fork.epoch else state.fork.current_version
+      //   return compute_domain(domain_type, fork_version, state.genesis_validators_root)
+      // ```
+
+      const epoch = Math.floor((messageSlot ?? stateSlot) / SLOTS_PER_EPOCH);
+      // Get pre-computed fork schedule, which _should_ match the one in the state
+      const stateForkInfo = chainForkConfig.getForkInfo(stateSlot);
+      // Only allow to select either current or previous fork respective of the fork schedule at stateSlot
+      const forkName = epoch < stateForkInfo.epoch ? stateForkInfo.prevForkName : stateForkInfo.name;
+      const forkInfo = chainForkConfig.forks[forkName];
+
       let domainByType = domainCache.get(forkInfo.name);
       if (!domainByType) {
         domainByType = new Map<DomainType, Uint8Array>();

@@ -1,6 +1,3 @@
-/**
- * @module chain/stateTransition/util
- */
 import {Epoch, Version, Root, DomainType, phase0, ssz} from "@lodestar/types";
 
 // Only used by processDeposit +  lightclient

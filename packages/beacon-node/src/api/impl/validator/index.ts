@@ -83,11 +83,20 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
    * Prevents the validator from getting errors from the API if the clock is a bit advanced
    */
   async function waitForSlot(slot: Slot): Promise<void> {
+    if (slot <= 0) {
+      return;
+    }
+
     const slotStartSec = chain.genesisTime + slot * config.SECONDS_PER_SLOT;
     const msToSlot = slotStartSec * 1000 - Date.now();
-    if (msToSlot > 0 && msToSlot < MAX_API_CLOCK_DISPARITY_MS) {
+
+    if (msToSlot > MAX_API_CLOCK_DISPARITY_MS) {
+      throw Error(`Requested slot ${slot} is in the future`);
+    } else if (msToSlot > 0) {
       await chain.clock.waitForSlot(slot);
     }
+
+    // else, clock already in slot or slot is in the past
   }
 
   /**
@@ -202,7 +211,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
 
       timer = metrics?.blockProductionTime.startTimer();
       const block = await assembleBlock(
-        {type, chain, metrics},
+        {type, chain, metrics, logger},
         {
           slot,
           randaoReveal,
@@ -432,8 +441,6 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
 
       return {
         data: duties,
-        // TODO: Compute a proper dependentRoot for this syncCommittee shuffling
-        dependentRoot: ZERO_HASH,
       };
     },
 
