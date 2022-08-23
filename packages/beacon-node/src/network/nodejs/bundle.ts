@@ -18,6 +18,7 @@ export interface ILibp2pOptions {
   bootMultiaddrs?: string[];
   maxConnections?: number;
   minConnections?: number;
+  metrics?: boolean;
 }
 
 export async function createNodejsLibp2p(options: ILibp2pOptions): Promise<Libp2p> {
@@ -40,6 +41,9 @@ export async function createNodejsLibp2p(options: ILibp2pOptions): Promise<Libp2
     transports: [new TCP()],
     streamMuxers: [new Mplex()],
     peerDiscovery,
+    metrics: {
+      enabled: Boolean(options.metrics),
+    },
     connectionManager: {
       // dialer config
       maxParallelDials: 100,

@@ -9,6 +9,7 @@ import {createNodejsLibp2p as _createNodejsLibp2p} from "./bundle.js";
 export type NodeJsLibp2pOpts = {
   peerStoreDir?: string;
   disablePeerDiscovery?: boolean;
+  metrics?: boolean;
 };
 
 /**
@@ -20,7 +21,7 @@ export type NodeJsLibp2pOpts = {
 export async function createNodeJsLibp2p(
   peerIdOrPromise: PeerId | Promise<PeerId>,
   networkOpts: Partial<INetworkOptions> = {},
-  nodeJsLibp2pOpts: NodeJsLibp2pOpts = {}
+  nodeJsLibp2pOpts: NodeJsLibp2pOpts = {},
 ): Promise<Libp2p> {
   const peerId = await Promise.resolve(peerIdOrPromise);
   const localMultiaddrs = networkOpts.localMultiaddrs || defaultNetworkOptions.localMultiaddrs;
@@ -71,5 +72,6 @@ export async function createNodeJsLibp2p(
     minConnections: networkOpts.targetPeers,
     // If peer discovery is enabled let the default in NodejsNode
     peerDiscovery: disablePeerDiscovery ? [] : undefined,
+    metrics: nodeJsLibp2pOpts.metrics,
   });
 }
