@@ -32,11 +32,6 @@ export function createLodestarMetrics(
   }
 
   return {
-    clockSlot: register.gauge({
-      name: "lodestar_clock_slot",
-      help: "Current clock slot",
-    }),
-
     // Peers
 
     peersByDirection: register.gauge<"direction">({

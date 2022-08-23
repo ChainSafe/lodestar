@@ -334,6 +334,20 @@ export class BeaconChain implements IBeaconChain {
     };
   }
 
+  recomputeForkChoiceHead(): ProtoBlock {
+    this.metrics?.forkChoice.requests.inc();
+    const timer = this.metrics?.forkChoice.findHead.startTimer();
+
+    try {
+      return this.forkChoice.updateHead();
+    } catch (e) {
+      this.metrics?.forkChoice.errors.inc();
+      throw e;
+    } finally {
+      timer?.();
+    }
+  }
+
   /**
    * Returns Promise that resolves either on block found or once 1 slot passes.
    * Used to handle unknown block root for both unaggregated and aggregated attestations.
