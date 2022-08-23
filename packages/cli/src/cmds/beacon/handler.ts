@@ -1,3 +1,4 @@
+import {setMaxListeners} from "node:events";
 import {Registry} from "prom-client";
 import {ErrorAborted} from "@lodestar/utils";
 import {LevelDbController} from "@lodestar/db";
@@ -41,6 +42,10 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
   const options = beaconNodeOptions.getWithDefaults();
 
   const abortController = new AbortController();
+  // We set infinity to prevent MaxListenersExceededWarning which get logged when listeners > 10
+  // Since it is perfectly fine to have listeners > 10
+  setMaxListeners(Infinity, abortController.signal);
+
   const logger = getCliLogger(args, beaconPaths, config);
 
   onGracefulShutdown(async () => {

@@ -1,4 +1,5 @@
 import path from "node:path";
+import {setMaxListeners} from "node:events";
 import {
   BeaconStateAllForks,
   CachedBeaconStateAllForks,
@@ -156,6 +157,12 @@ export class BeaconChain implements IBeaconChain {
 
     const signal = this.abortController.signal;
     const emitter = new ChainEventEmitter();
+
+    // We set infinity to prevent MaxListenersExceededWarning which get logged when listeners > 10
+    // Since it is perfectly fine to have listeners > 10
+    emitter.setMaxListeners(Infinity);
+    setMaxListeners(Infinity, signal);
+
     // by default, verify signatures on both main threads and worker threads
     const bls = opts.blsVerifyAllMainThread
       ? new BlsSingleThreadVerifier({metrics})

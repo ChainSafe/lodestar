@@ -1,3 +1,4 @@
+import {setMaxListeners} from "node:events";
 import {IDatabaseApiOptions} from "@lodestar/db";
 import {BLSPubkey, ssz} from "@lodestar/types";
 import {createIBeaconConfig, IBeaconConfig} from "@lodestar/config";
@@ -85,6 +86,10 @@ export class Validator {
     } = opts;
     const config = createIBeaconConfig(dbOps.config, genesis.genesisValidatorsRoot);
     this.controller = new AbortController();
+    // We set infinity to prevent MaxListenersExceededWarning which get logged when listeners > 10
+    // Since it is perfectly fine to have listeners > 10
+    setMaxListeners(Infinity, this.controller.signal);
+
     const clock = new Clock(config, logger, {genesisTime: Number(genesis.genesisTime)});
     const loggerVc = getLoggerVc(logger, clock);
 
@@ -121,6 +126,10 @@ export class Validator {
     }
 
     const emitter = new ValidatorEventEmitter();
+    // Validator event emitter can have more than 10 listeners in a normal course of operation
+    // We set infinity to prevent MaxListenersExceededWarning which get logged when listeners > 10
+    emitter.setMaxListeners(Infinity);
+
     const chainHeaderTracker = new ChainHeaderTracker(logger, api, emitter);
 
     this.blockProposingService = new BlockProposingService(config, loggerVc, api, clock, validatorStore, metrics, {

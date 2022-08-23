@@ -94,16 +94,6 @@ export class AttestationService {
           resolve();
         }
       };
-      // The waitForBlockSlot should execute once per slot
-      // And per slot there should be a ValidatorEvent.chainHead event emitted
-      // In the unexpected situation where ValidatorEvent.chainHead is never emitted
-      // or is emitted but takes longer to propagate to the validator,
-      // to prevent accumulating listeners for ValidatorEvent.chainHead and triggering
-      // MaxListenersExceededWarning clear listener for ValidatorEvent.chainHead
-      // if any before setting a new one.
-      if (this.emitter.listenerCount(ValidatorEvent.chainHead) > 0) {
-        this.emitter.off(ValidatorEvent.chainHead, headListener);
-      }
       this.emitter.on(ValidatorEvent.chainHead, headListener);
     });
   }

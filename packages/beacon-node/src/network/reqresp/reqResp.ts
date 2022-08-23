@@ -1,3 +1,4 @@
+import {setMaxListeners} from "node:events";
 import {Connection} from "libp2p";
 import {HandlerProps} from "libp2p/src/registrar";
 import LibP2p from "libp2p";
@@ -44,12 +45,12 @@ export class ReqResp implements IReqResp {
   private libp2p: LibP2p;
   private readonly peersData: PeersData;
   private logger: ILogger;
+  private controller: AbortController;
   private reqRespHandlers: ReqRespHandlers;
   private metadataController: MetadataController;
   private peerRpcScores: IPeerRpcScoreStore;
   private inboundRateLimiter: IRateLimiter;
   private networkEventBus: INetworkEventBus;
-  private controller = new AbortController();
   private options?: IReqRespOptions;
   private reqCount = 0;
   private respCount = 0;
@@ -67,10 +68,13 @@ export class ReqResp implements IReqResp {
     this.networkEventBus = modules.networkEventBus;
     this.options = options;
     this.metrics = modules.metrics;
+    this.controller = new AbortController();
+    // We set infinity to prevent MaxListenersExceededWarning which get logged when listeners > 10
+    // Since it is perfectly fine to have listeners > 10
+    setMaxListeners(Infinity, this.controller.signal);
   }
 
   async start(): Promise<void> {
-    this.controller = new AbortController();
     for (const [method, version, encoding] of protocolsSupported) {
       await this.libp2p.handle(
         formatProtocolId(method, version, encoding),
