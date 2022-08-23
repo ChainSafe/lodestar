@@ -4,7 +4,7 @@ import {computeEpochAtSlot, isAggregatorFromCommitteeLength} from "@lodestar/sta
 import {BLSSignature, Epoch, Slot, ValidatorIndex, RootHex} from "@lodestar/types";
 import {Api, routes} from "@lodestar/api";
 import {toHexString} from "@chainsafe/ssz";
-import {IClock, ILoggerVc} from "../util/index.js";
+import {batchItems, IClock, ILoggerVc} from "../util/index.js";
 import {PubkeyHex} from "../types.js";
 import {Metrics} from "../metrics.js";
 import {ValidatorStore} from "./validatorStore.js";
@@ -12,6 +12,12 @@ import {ChainHeaderTracker, HeadEventData} from "./chainHeaderTracker.js";
 
 /** Only retain `HISTORICAL_DUTIES_EPOCHS` duties prior to the current epoch. */
 const HISTORICAL_DUTIES_EPOCHS = 2;
+
+/**
+ * On lodestar test nodes, we can have up to 1k validators per node. On a node with too many validators,
+ * it can cause "Request body is too large" issue for http post.
+ **/
+const SUBSCRIPTIONS_PER_REQUEST = 1000;
 
 /** Neatly joins the server-generated `AttesterData` with the locally-generated `selectionProof`. */
 export type AttDutyAndProof = {
@@ -184,10 +190,15 @@ export class AttestationDutiesService {
 
     // If there are any subscriptions, push them out to the beacon node.
     if (beaconCommitteeSubscriptions.length > 0) {
-      // TODO: Should log or throw?
-      await this.api.validator.prepareBeaconCommitteeSubnet(beaconCommitteeSubscriptions).catch((e: Error) => {
-        throw extendError(e, "Failed to subscribe to beacon committee subnets");
-      });
+      const subscriptionsBatches = batchItems(beaconCommitteeSubscriptions, {batchSize: SUBSCRIPTIONS_PER_REQUEST});
+      await Promise.all(
+        subscriptionsBatches.map(
+          async (subscriptions) =>
+            await this.api.validator.prepareBeaconCommitteeSubnet(subscriptions).catch((e: Error) => {
+              throw extendError(e, "Failed to subscribe to beacon committee subnets");
+            })
+        )
+      );
     }
   }
 
