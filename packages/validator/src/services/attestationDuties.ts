@@ -193,14 +193,9 @@ export class AttestationDutiesService {
     // If there are any subscriptions, push them out to the beacon node.
     if (beaconCommitteeSubscriptions.length > 0) {
       const subscriptionsBatches = batchItems(beaconCommitteeSubscriptions, {batchSize: SUBSCRIPTIONS_PER_REQUEST});
-      await Promise.all(
-        subscriptionsBatches.map(
-          async (subscriptions) =>
-            await this.api.validator.prepareBeaconCommitteeSubnet(subscriptions).catch((e: Error) => {
-              throw extendError(e, "Failed to subscribe to beacon committee subnets");
-            })
-        )
-      );
+      await Promise.all(subscriptionsBatches.map(this.api.validator.prepareBeaconCommitteeSubnet)).catch((e: Error) => {
+        throw extendError(e, "Failed to subscribe to beacon committee subnets");
+      });
     }
   }
 
