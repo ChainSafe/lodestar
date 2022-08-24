@@ -41,6 +41,8 @@ import {
 /** As specified in https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md */
 const GOSSIPSUB_HEARTBEAT_INTERVAL = 0.7 * 1000;
 
+const MAX_OUTBOUND_BUFFER_SIZE = 2 ** 24; // 16MB
+
 export type Eth2GossipsubModules = {
   config: IBeaconConfig;
   libp2p: Libp2p;
@@ -118,6 +120,8 @@ export class Eth2Gossipsub extends GossipSub {
       metricsRegister: modules.metrics ? ((modules.metrics.register as unknown) as MetricsRegister) : null,
       metricsTopicStrToLabel: modules.metrics ? getMetricsTopicStrToLabel(modules.config) : undefined,
       asyncValidation: true,
+
+      maxOutboundBufferSize: MAX_OUTBOUND_BUFFER_SIZE,
     });
     this.scoreParams = scoreParams;
     this.config = config;
