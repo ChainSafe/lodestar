@@ -271,7 +271,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "rate(lodestar_bls_aggregated_pubkeys_total[$rate_interval])",
           "interval": "",
           "legendFormat": "pubkeys / sec",
@@ -1003,7 +1003,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "delta(lodestar_bls_thread_pool_error_jobs_signature_sets_count[$rate_interval])\n/\n(\n    delta(lodestar_bls_thread_pool_success_jobs_signature_sets_count[$rate_interval])\n    + delta(lodestar_bls_thread_pool_error_jobs_signature_sets_count[$rate_interval])\n)",
           "interval": "",
           "legendFormat": "sig_error_rate",
@@ -1014,7 +1014,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "rate(lodestar_bls_thread_pool_batch_retries_total[$rate_interval])",
           "hide": false,
           "interval": "",

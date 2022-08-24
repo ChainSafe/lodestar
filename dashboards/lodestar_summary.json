@@ -312,7 +312,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "beacon_head_slot",
           "hide": false,
           "interval": "",
@@ -574,7 +574,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "rate(process_cpu_user_seconds_total{scrape_location=\"beacon\"} [1m])",
           "interval": "",
           "legendFormat": "",
@@ -628,7 +628,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "process_heap_bytes{scrape_location=\"beacon\"}",
           "interval": "",
           "legendFormat": "",
@@ -931,7 +931,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "nodejs_version_info{scrape_location=\"beacon\"}",
           "interval": "",
           "legendFormat": "{{version}}",
@@ -1029,7 +1029,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "lodestar_gossip_peer_score_by_threshold_count{threshold=\"mesh\"}",
           "hide": false,
           "interval": "",
@@ -1155,7 +1155,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "1 - avg(validator_monitor_prev_epoch_on_chain_attester_correct_head_total)",
           "hide": false,
           "interval": "",
@@ -1243,7 +1243,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "avg(lodestar_gossip_mesh_peers_by_type_count) by (instance)",
           "hide": false,
           "interval": "",
@@ -1255,7 +1255,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "avg(lodestar_gossip_mesh_peers_by_beacon_attestation_subnet_count > 0) by (instance)",
           "hide": false,
           "interval": "",
@@ -1427,7 +1427,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "lodestar_peers_by_client_count",
           "hide": false,
           "instant": false,
@@ -1515,7 +1515,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "rate(beacon_fork_choice_find_head_seconds_sum[$rate_interval])",
           "interval": "",
           "legendFormat": "fork_choice_find_head",
@@ -1526,7 +1526,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "rate(lodestar_block_processor_queue_job_time_seconds_sum[$rate_interval])",
           "hide": false,
           "interval": "",
@@ -1538,7 +1538,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "rate(lodestar_stfn_epoch_transition_seconds_sum[$rate_interval])",
           "hide": false,
           "interval": "",
@@ -1550,7 +1550,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "rate(lodestar_stfn_process_block_seconds_sum[$rate_interval])",
           "hide": false,
           "interval": "",
@@ -1562,7 +1562,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "sum(rate(nodejs_gc_duration_seconds_sum{scrape_location=\"beacon\"} [$rate_interval])) by (instance)",
           "hide": false,
           "interval": "",
@@ -1574,7 +1574,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "sum(rate(nodejs_gc_pause_seconds_total{scrape_location=\"beacon\"} [$rate_interval])) by (instance)",
           "hide": false,
           "interval": "",
@@ -1586,7 +1586,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "sum(rate(lodestar_bls_thread_pool_time_seconds_sum[$rate_interval])) by (instance)",
           "hide": false,
           "interval": "",
@@ -1673,7 +1673,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "rate(beacon_reqresp_outgoing_request_roundtrip_time_seconds_sum[$rate_interval])\n/\nrate(beacon_reqresp_outgoing_request_roundtrip_time_seconds_count[$rate_interval])",
           "interval": "",
           "legendFormat": "reqresp_outgoing_roundtrip",
@@ -1684,7 +1684,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "rate(lodestar_eth1_http_client_request_time_seconds_sum{routeId=\"getBlockNumber\"}[$rate_interval])\n/\nrate(lodestar_eth1_http_client_request_time_seconds_count{routeId=\"getBlockNumber\"}[$rate_interval])",
           "hide": false,
           "interval": "",
@@ -1696,7 +1696,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "avg_over_time( scrape_duration_seconds{scrape_location=\"beacon\"} [$rate_interval])",
           "hide": false,
           "interval": "",
@@ -1708,7 +1708,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "avg_over_time( scrape_duration_seconds{scrape_location=\"validator\"} [$rate_interval])",
           "hide": false,
           "interval": "",
@@ -1720,7 +1720,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "rate(vc_rest_api_client_request_time_seconds_sum{routeId=\"produceAttestationData\"}[$rate_interval])\n/\nrate(vc_rest_api_client_request_time_seconds_count{routeId=\"produceAttestationData\"}[$rate_interval])",
           "hide": false,
           "interval": "",
@@ -1789,7 +1789,7 @@
                 "type": "prometheus",
                 "uid": "${DS_PROMETHEUS}"
               },
-              "exemplar": true,
+              "exemplar": false,
               "expr": "beacon_head_slot",
               "interval": "",
               "legendFormat": "",
@@ -1847,7 +1847,7 @@
                 "type": "prometheus",
                 "uid": "${DS_PROMETHEUS}"
               },
-              "exemplar": true,
+              "exemplar": false,
               "expr": "beacon_finalized_epoch",
               "interval": "",
               "legendFormat": "",
@@ -1905,7 +1905,7 @@
                 "type": "prometheus",
                 "uid": "${DS_PROMETHEUS}"
               },
-              "exemplar": true,
+              "exemplar": false,
               "expr": "beacon_previous_justified_epoch",
               "interval": "",
               "legendFormat": "",
@@ -1963,7 +1963,7 @@
                 "type": "prometheus",
                 "uid": "${DS_PROMETHEUS}"
               },
-              "exemplar": true,
+              "exemplar": false,
               "expr": "beacon_current_justified_epoch",
               "interval": "",
               "legendFormat": "",
@@ -2021,7 +2021,7 @@
                 "type": "prometheus",
                 "uid": "${DS_PROMETHEUS}"
               },
-              "exemplar": true,
+              "exemplar": false,
               "expr": "beacon_current_validators{status=\"active\"}",
               "hide": false,
               "interval": "",
@@ -2033,7 +2033,7 @@
                 "type": "prometheus",
                 "uid": "${DS_PROMETHEUS}"
               },
-              "exemplar": true,
+              "exemplar": false,
               "expr": "beacon_current_active_validators",
               "hide": true,
               "interval": "",
@@ -2092,7 +2092,7 @@
                 "type": "prometheus",
                 "uid": "${DS_PROMETHEUS}"
               },
-              "exemplar": true,
+              "exemplar": false,
               "expr": "beacon_processed_deposits_total",
               "interval": "",
               "legendFormat": "",
@@ -2176,7 +2176,7 @@
                 "type": "prometheus",
                 "uid": "${DS_PROMETHEUS}"
               },
-              "exemplar": true,
+              "exemplar": false,
               "expr": "delta(beacon_fork_choice_reorg_total[$rate_interval])",
               "interval": "",
               "legendFormat": "",

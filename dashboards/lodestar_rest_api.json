@@ -160,7 +160,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "rate(lodestar_api_rest_response_time_seconds_sum[$rate_interval])\n/\nrate(lodestar_api_rest_response_time_seconds_count[$rate_interval])",
           "format": "time_series",
           "interval": "",
@@ -249,7 +249,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "12 * rate(lodestar_api_rest_requests_total[$rate_interval])",
           "interval": "",
           "legendFormat": "{{operationId}}",
@@ -335,7 +335,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "rate(lodestar_api_rest_sockets_bytes_written_total[$rate_interval])",
           "interval": "",
           "legendFormat": "written",
@@ -346,7 +346,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "-rate(lodestar_api_rest_sockets_bytes_read_total[$rate_interval])",
           "hide": false,
           "interval": "",
@@ -432,7 +432,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "lodestar_api_rest_active_sockets_count",
           "interval": "",
           "legendFormat": "{{operationId}}",
@@ -517,7 +517,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "rate(lodestar_api_rest_errors_total[$rate_interval])",
           "interval": "",
           "legendFormat": "{{operationId}}",
@@ -602,7 +602,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "",
           "interval": "",
           "legendFormat": "{{operationId}}",

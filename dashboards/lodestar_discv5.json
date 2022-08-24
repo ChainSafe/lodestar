@@ -661,7 +661,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "rate(lodestar_discv5_lookup_count[$rate_interval])",
           "hide": false,
           "interval": "",

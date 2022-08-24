@@ -1224,7 +1224,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "rate(lodestar_proposer_balance_delta_any_gwei_sum[32m])\n/\nrate(lodestar_proposer_balance_delta_any_gwei_count[32m])",
           "hide": false,
           "interval": "",
@@ -1236,7 +1236,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "histogram_quantile(0.25, sum(rate(lodestar_proposer_balance_delta_any_gwei_bucket[32m])) by (le))",
           "hide": false,
           "interval": "",
@@ -1248,7 +1248,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "histogram_quantile(0.10, sum(rate(lodestar_proposer_balance_delta_any_gwei_bucket[32m])) by (le))",
           "hide": false,
           "interval": "",

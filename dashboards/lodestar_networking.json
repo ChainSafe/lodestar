@@ -181,7 +181,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "lodestar_peers_by_client_count",
           "format": "time_series",
           "interval": "",
@@ -972,7 +972,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "rate(lodestar_peers_report_peer_count[$rate_interval]) > 0",
           "format": "time_series",
           "interval": "",
@@ -1104,7 +1104,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "lodestar_peer_long_lived_attnets_count_bucket",
           "format": "heatmap",
           "interval": "",
@@ -1209,7 +1209,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "rate(lodestar_peer_long_connection_disconnect_total[$rate_interval]) > 0",
           "format": "time_series",
           "interval": "",
@@ -1428,7 +1428,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "rate(lodestar_peer_connected_total[$rate_interval])>0",
           "format": "time_series",
           "instant": false,
@@ -1442,7 +1442,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "rate(lodestar_peer_disconnected_total[$rate_interval])>0",
           "hide": false,
           "interval": "",

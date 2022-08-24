@@ -578,7 +578,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "rate(lodestar_execution_engine_http_client_request_used_fallback_url_total[$rate_interval])",
           "hide": false,
           "interval": "",
@@ -1197,7 +1197,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "rate(lodestar_eth1_http_client_request_used_fallback_url_total[$rate_interval])",
           "hide": false,
           "interval": "",
@@ -1386,7 +1386,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "rate(lodestar_eth1_deposit_events_fetched_total[32m])",
           "hide": false,
           "interval": "",
@@ -1592,7 +1592,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "(lodestar_eth1_merge_ttd - lodestar_eth1_latest_block_ttd)\n/\nrate(lodestar_eth1_latest_block_ttd[32m])",
           "hide": false,
           "interval": "",
@@ -1654,7 +1654,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "(time()\n+\n(lodestar_eth1_merge_ttd - lodestar_eth1_latest_block_ttd)\n/\nrate(lodestar_eth1_latest_block_ttd[32m])\n)*1000",
           "hide": false,
           "interval": "",

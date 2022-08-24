@@ -415,7 +415,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "lodestar_oppool_aggregated_attestation_pool_size",
           "interval": "",
           "legendFormat": "aggregated_attestation",
@@ -426,7 +426,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "lodestar_oppool_aggregated_attestation_pool_unique_data_count",
           "hide": false,
           "interval": "",
@@ -438,7 +438,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "lodestar_oppool_attestation_pool_size",
           "hide": false,
           "interval": "",
@@ -450,7 +450,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "lodestar_oppool_attester_slashing_pool_size",
           "hide": false,
           "interval": "",
@@ -462,7 +462,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "lodestar_oppool_proposer_slashing_pool_size",
           "hide": false,
           "interval": "",
@@ -474,7 +474,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "lodestar_oppool_voluntary_exit_pool_size",
           "hide": false,
           "interval": "",
@@ -486,7 +486,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "lodestar_oppool_sync_committee_message_pool_size",
           "hide": false,
           "interval": "",
@@ -498,7 +498,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "lodestar_oppool_sync_contribution_and_proof_pool_pool_size",
           "hide": false,
           "interval": "",
