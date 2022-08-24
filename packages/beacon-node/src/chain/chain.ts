@@ -199,8 +199,7 @@ export class BeaconChain implements IBeaconChain {
       clock.currentSlot,
       cachedState,
       opts,
-      this.justifiedBalancesGetter.bind(this),
-      metrics
+      this.justifiedBalancesGetter.bind(this)
     );
     const regen = new QueuedStateRegenerator({
       config,
@@ -332,6 +331,20 @@ export class BeaconChain implements IBeaconChain {
       headRoot: fromHexString(head.blockRoot),
       headSlot: head.slot,
     };
+  }
+
+  recomputeForkChoiceHead(): ProtoBlock {
+    this.metrics?.forkChoice.requests.inc();
+    const timer = this.metrics?.forkChoice.findHead.startTimer();
+
+    try {
+      return this.forkChoice.updateHead();
+    } catch (e) {
+      this.metrics?.forkChoice.errors.inc();
+      throw e;
+    } finally {
+      timer?.();
+    }
   }
 
   /**

@@ -147,7 +147,7 @@ export class ReqResp implements IReqResp {
     maxResponses = 1
   ): Promise<T> {
     this.metrics?.reqResp.outgoingRequests.inc({method});
-    const timer = this.metrics?.reqResp.outgoingRequestRoundtripTime.startTimer();
+    const timer = this.metrics?.reqResp.outgoingRequestRoundtripTime.startTimer({method});
 
     try {
       const encoding = this.peersData.getEncodingPreference(peerId.toB58String()) ?? Encoding.SSZ_SNAPPY;
@@ -195,7 +195,7 @@ export class ReqResp implements IReqResp {
       }
 
       this.metrics?.reqResp.incomingRequests.inc({method});
-      const timer = this.metrics?.reqResp.incomingRequestHandlerTime.startTimer();
+      const timer = this.metrics?.reqResp.incomingRequestHandlerTime.startTimer({method});
 
       try {
         await handleRequest(

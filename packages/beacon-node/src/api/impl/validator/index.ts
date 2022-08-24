@@ -207,7 +207,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
       // forkChoice.updateTime() might have already been called by the onSlot clock
       // handler, in which case this should just return.
       chain.forkChoice.updateTime(slot);
-      chain.forkChoice.updateHead();
+      chain.recomputeForkChoiceHead();
 
       timer = metrics?.blockProductionTime.startTimer();
       const block = await assembleBlock(
