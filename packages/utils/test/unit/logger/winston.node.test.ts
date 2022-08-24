@@ -37,7 +37,7 @@ describe("winston logger", () => {
         output: {
           human: "[]                 \u001b[33mwarn\u001b[39m: foo bar meta=data",
           // eslint-disable-next-line quotes
-          json: `{"module":"","context":{"meta":"data"},"level":"warn","message":"foo bar"}`,
+          json: `{"context":{"meta":"data"},"level":"warn","message":"foo bar","module":""}`,
         },
       },
 
@@ -48,7 +48,7 @@ describe("winston logger", () => {
         output: {
           human: "[]                 \u001b[33mwarn\u001b[39m: big int data=1",
           // eslint-disable-next-line quotes
-          json: `{"module":"","context":{"data":"1"},"level":"warn","message":"big int"}`,
+          json: `{"context":{"data":"1"},"level":"warn","message":"big int","module":""}`,
         },
       },
 
@@ -63,7 +63,7 @@ describe("winston logger", () => {
           output: {
             human: `[]                 \u001b[33mwarn\u001b[39m: foo bar code=SAMPLE_ERROR, data=foo=bar\n${error.stack}`,
             // eslint-disable-next-line quotes
-            json: `{"module":"","error":{"code":"SAMPLE_ERROR","data":{"foo":"bar"},"stack":"$STACK"},"level":"warn","message":"foo bar"}`,
+            json: `{"error":{"code":"SAMPLE_ERROR","data":{"foo":"bar"},"stack":"$STACK"},"level":"warn","message":"foo bar","module":""}`,
           },
         };
       },
