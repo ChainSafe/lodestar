@@ -60,7 +60,20 @@
   "graphTooltip": 0,
   "id": null,
   "iteration": 1661333771247,
-  "links": [],
+  "links": [
+    {
+      "asDropdown": true,
+      "icon": "external link",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": ["lodestar"],
+      "targetBlank": false,
+      "title": "Lodestar dashboards",
+      "tooltip": "",
+      "type": "dashboards",
+      "url": ""
+    }
+  ],
   "liveNow": false,
   "panels": [
     {
@@ -2310,7 +2323,7 @@
   "refresh": false,
   "schemaVersion": 35,
   "style": "dark",
-  "tags": [],
+  "tags": ["lodestar"],
   "templating": {
     "list": [
       {
