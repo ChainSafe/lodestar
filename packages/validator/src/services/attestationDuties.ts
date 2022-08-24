@@ -14,10 +14,12 @@ import {ChainHeaderTracker, HeadEventData} from "./chainHeaderTracker.js";
 const HISTORICAL_DUTIES_EPOCHS = 2;
 
 /**
- * On lodestar test nodes, we can have up to 1k validators per node. On a node with too many validators,
- * it can cause "Request body is too large" issue for http post.
+ * This is to prevent the "Request body is too large" issue for http post.
+ * Typical server accept up to1MB (2 ** 20 bytes) of request body, for example fastify and nginx.
+ * A typical subscription request is 107 bytes in length, make it 120 to buffer.
+ * This number is Math.floor(2 ** 20 / 120)
  **/
-const SUBSCRIPTIONS_PER_REQUEST = 1000;
+const SUBSCRIPTIONS_PER_REQUEST = 8738;
 
 /** Neatly joins the server-generated `AttesterData` with the locally-generated `selectionProof`. */
 export type AttDutyAndProof = {
