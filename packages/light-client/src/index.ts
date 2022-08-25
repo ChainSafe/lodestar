@@ -16,7 +16,6 @@ import {SyncCommitteeFast} from "./types.js";
 import {chunkifyInclusiveRange} from "./utils/chunkify.js";
 import {LightclientEmitter, LightclientEvent} from "./events.js";
 import {assertValidSignedHeader, assertValidLightClientUpdate, assertValidFinalityProof} from "./validation.js";
-import {GenesisData} from "./networks.js";
 import {getLcLoggerConsole, ILcLogger} from "./utils/logger.js";
 import {computeSyncPeriodAtEpoch, computeSyncPeriodAtSlot, computeEpochAtSlot} from "./utils/clock.js";
 
@@ -24,13 +23,15 @@ import {computeSyncPeriodAtEpoch, computeSyncPeriodAtSlot, computeEpochAtSlot} f
 export {LightclientEvent} from "./events.js";
 export {SyncCommitteeFast} from "./types.js";
 
+export type GenesisData = {
+  genesisTime: number;
+  genesisValidatorsRoot: RootHex | Uint8Array;
+};
+
 export type LightclientInitArgs = {
   config: IChainForkConfig;
   logger?: ILcLogger;
-  genesisData: {
-    genesisTime: number;
-    genesisValidatorsRoot: RootHex | Uint8Array;
-  };
+  genesisData: GenesisData;
   beaconApiUrl: string;
   snapshot: {
     header: phase0.BeaconBlockHeader;

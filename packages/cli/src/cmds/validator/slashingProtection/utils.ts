@@ -1,5 +1,7 @@
 import {Root} from "@lodestar/types";
 import {getClient} from "@lodestar/api";
+import {fromHex} from "@lodestar/utils";
+import {genesisData, NetworkName} from "@lodestar/config/networks";
 import {SlashingProtection} from "@lodestar/validator";
 import {LevelDbController} from "@lodestar/db";
 import {YargsError} from "../../../util/index.js";
@@ -28,6 +30,11 @@ export function getSlashingProtection(args: IGlobalArgs): SlashingProtection {
  */
 export async function getGenesisValidatorsRoot(args: IGlobalArgs & ISlashingProtectionArgs): Promise<Root> {
   const server = args.server;
+
+  const networkGenesis = genesisData[args.network as NetworkName];
+  if (networkGenesis !== undefined) {
+    return fromHex(networkGenesis.genesisValidatorsRoot);
+  }
 
   const config = getBeaconConfigFromArgs(args);
   const api = getClient({baseUrl: server}, {config});
