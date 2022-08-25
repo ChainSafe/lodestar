@@ -4,13 +4,12 @@ import fetch from "cross-fetch";
  * Return public keys from the server.
  */
 export async function externalSignerGetKeys(externalSignerUrl: string): Promise<string[]> {
-  const res = await fetch(`${externalSignerUrl}/keys`, {
+  const res = await fetch(`${externalSignerUrl}/api/v1/eth2/publicKeys`, {
     method: "GET",
     headers: {"Content-Type": "application/json"},
   });
 
-  const data = await handlerExternalSignerResponse<{keys: string[]}>(res);
-  return data.keys;
+  return await handlerExternalSignerResponse<string[]>(res);
 }
 
 /**
