@@ -11,5 +11,5 @@ docker pull ethereum/client-go:latest
 
 ```bash
 cd packages/lodestar
-EL_BINARY_DIR=ethereum/client-go:latest EL_SCRIPT_DIR=kiln/gethdocker ETH_PORT=8545 ENGINE_PORT=8551 TX_SCENARIOS=simple yarn mocha test/sim/merge-interop.test.ts
+EL_BINARY_DIR=ethereum/client-go:latest EL_SCRIPT_DIR=gethdocker ETH_PORT=8545 ENGINE_PORT=8551 TX_SCENARIOS=simple yarn mocha test/sim/merge-interop.test.ts
 ```

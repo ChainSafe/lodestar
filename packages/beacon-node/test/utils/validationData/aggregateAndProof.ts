@@ -30,7 +30,7 @@ export function getAggregateAndProofValidData(
   (chain as {seenAggregators: IBeaconChain["seenAggregators"]}).seenAggregators = new SeenAggregators();
 
   const aggregatorIndex = validatorIndex;
-  const proofDomain = state.config.getDomain(DOMAIN_SELECTION_PROOF, attSlot);
+  const proofDomain = state.config.getDomain(state.slot, DOMAIN_SELECTION_PROOF, attSlot);
   const proofSigningRoot = computeSigningRoot(ssz.Slot, attSlot, proofDomain);
 
   const aggregateAndProof: phase0.AggregateAndProof = {
@@ -39,7 +39,7 @@ export function getAggregateAndProofValidData(
     selectionProof: signCached(sk, proofSigningRoot),
   };
 
-  const aggDomain = state.config.getDomain(DOMAIN_AGGREGATE_AND_PROOF, attSlot);
+  const aggDomain = state.config.getDomain(state.slot, DOMAIN_AGGREGATE_AND_PROOF, attSlot);
   const aggSigningRoot = computeSigningRoot(ssz.phase0.AggregateAndProof, aggregateAndProof, aggDomain);
 
   const signedAggregateAndProof: phase0.SignedAggregateAndProof = {

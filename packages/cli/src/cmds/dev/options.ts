@@ -79,18 +79,18 @@ const externalOptionsOverrides: Partial<Record<"network" | keyof typeof beaconNo
     defaultDescription: undefined,
     default: 1,
   },
-  "network.targetPeers": {
-    ...beaconNodeOptions["network.targetPeers"],
+  targetPeers: {
+    ...beaconNodeOptions["targetPeers"],
     defaultDescription: undefined,
     default: 1,
   },
-  "eth1.enabled": {
-    ...beaconNodeOptions["eth1.enabled"],
+  eth1: {
+    ...beaconNodeOptions["eth1"],
     defaultDescription: undefined,
     default: false,
   },
-  "api.rest.enabled": {
-    ...beaconNodeOptions["api.rest.enabled"],
+  rest: {
+    ...beaconNodeOptions["rest"],
     defaultDescription: undefined,
     default: true,
   },

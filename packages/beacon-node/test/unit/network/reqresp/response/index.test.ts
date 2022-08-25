@@ -1,6 +1,6 @@
 import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
-import {LodestarError} from "@lodestar/utils";
+import {LodestarError, fromHex} from "@lodestar/utils";
 import {RespStatus} from "../../../../../src/constants/index.js";
 import {Method, Encoding, Version} from "../../../../../src/network/reqresp/types.js";
 import {handleRequest, PerformRequestHandler} from "../../../../../src/network/reqresp/response/index.js";
@@ -52,7 +52,8 @@ describe("network / reqresp / response / handleRequest", async () => {
         ...sszSnappyPing.chunks,
         // Chunk 2 - error, with errorMessage
         Buffer.from([RespStatus.SERVER_ERROR]),
-        Buffer.from("TEST_ERROR"),
+        Buffer.from(fromHex("0x0a")),
+        Buffer.from(fromHex("0xff060000734e61507059010e000049b97aaf544553545f4552524f52")),
       ],
     },
   ];

@@ -8,8 +8,8 @@ export const beacon: ICliCommand<IBeaconArgs, IGlobalArgs> = {
   describe: "Run a beacon chain node",
   examples: [
     {
-      command: "beacon --network prater",
-      description: "Run a beacon chain node and connect to the prater testnet",
+      command: "beacon --network goerli",
+      description: "Run a beacon chain node and connect to the goerli testnet",
     },
   ],
   options: beaconOptions as ICliCommandOptions<IBeaconArgs>,

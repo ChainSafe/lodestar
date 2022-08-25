@@ -10,18 +10,15 @@ import {BeaconStateAllForks} from "@lodestar/state-transition";
 import * as mainnet from "./mainnet.js";
 import * as dev from "./dev.js";
 import * as gnosis from "./gnosis.js";
-import * as prater from "./prater.js";
-import * as kiln from "./kiln.js";
+import * as goerli from "./goerli.js";
 import * as ropsten from "./ropsten.js";
 import * as sepolia from "./sepolia.js";
 
-export type NetworkName = "mainnet" | "dev" | "gnosis" | "prater" | "goerli" | "kiln" | "ropsten" | "sepolia";
+export type NetworkName = "mainnet" | "dev" | "gnosis" | "goerli" | "ropsten" | "sepolia";
 export const networkNames: NetworkName[] = [
   "mainnet",
   "gnosis",
-  "prater",
   "goerli",
-  "kiln",
   "ropsten",
   "sepolia",
 
@@ -53,11 +50,8 @@ function getNetworkData(
       return dev;
     case "gnosis":
       return gnosis;
-    case "prater":
     case "goerli":
-      return prater;
-    case "kiln":
-      return kiln;
+      return goerli;
     case "ropsten":
       return ropsten;
     case "sepolia":
@@ -173,13 +167,13 @@ export function enrsToNetworkConfig(enrs: string[]): RecursivePartial<IBeaconNod
 export async function fetchWeakSubjectivityState(
   config: IChainForkConfig,
   logger: ILogger,
-  {weakSubjectivityServerUrl, weakSubjectivityCheckpoint}: WeakSubjectivityFetchOptions
+  {checkpointSyncUrl, wssCheckpoint}: {checkpointSyncUrl: string; wssCheckpoint?: string}
 ): Promise<{wsState: BeaconStateAllForks; wsCheckpoint: Checkpoint}> {
   try {
     let wsCheckpoint;
-    const api = getClient({baseUrl: weakSubjectivityServerUrl}, {config});
-    if (weakSubjectivityCheckpoint) {
-      wsCheckpoint = getCheckpointFromArg(weakSubjectivityCheckpoint);
+    const api = getClient({baseUrl: checkpointSyncUrl}, {config});
+    if (wssCheckpoint) {
+      wsCheckpoint = getCheckpointFromArg(wssCheckpoint);
     } else {
       const {
         data: {finalized},
@@ -202,11 +196,7 @@ export async function fetchWeakSubjectivityState(
 
     return {wsState: getStateTypeFromBytes(config, stateBytes).deserializeToViewDU(stateBytes), wsCheckpoint};
   } catch (e) {
-    throw new Error(
-      "Unable to fetch weak subjectivity state: " +
-        (e as Error).message +
-        ". Consider downloading a state manually and using the --weakSubjectivityStateFile option."
-    );
+    throw new Error("Unable to fetch weak subjectivity state: " + (e as Error).message);
   }
 }
 

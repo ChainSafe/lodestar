@@ -13,6 +13,7 @@ export function getContributionAndProofSignatureSet(
 ): ISignatureSet {
   const {epochCtx} = state;
   const domain = state.config.getDomain(
+    state.slot,
     DOMAIN_CONTRIBUTION_AND_PROOF,
     signedContributionAndProof.message.contribution.slot
   );

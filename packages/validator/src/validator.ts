@@ -206,7 +206,6 @@ export class Validator {
   }
 
   removeDutiesForKey(pubkey: PubkeyHex): void {
-    this.validatorStore.removeSigner(pubkey);
     this.blockProposingService.removeDutiesForKey(pubkey);
     this.attestationService.removeDutiesForKey(pubkey);
     this.syncCommitteeService.removeDutiesForKey(pubkey);

@@ -91,7 +91,9 @@ export const operations: TestRunnerFn<OperationsTestCase, BeaconStateAllForks> =
   return {
     testFunction: (testcase) => {
       const state = testcase.pre.clone();
-      const cachedState = createCachedBeaconStateTest(state, getConfig(fork));
+      const epoch = (state.fork as phase0.Fork).epoch;
+      const cachedState = createCachedBeaconStateTest(state, getConfig(fork, epoch));
+
       operationFn(cachedState, testcase);
       state.commit();
       return state;

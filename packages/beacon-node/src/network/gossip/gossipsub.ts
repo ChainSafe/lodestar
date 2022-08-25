@@ -18,7 +18,7 @@ import {Map2d, Map2dArr} from "../../util/map.js";
 import {Eth2Context} from "../../chain/index.js";
 import {PeersData} from "../peers/peersData.js";
 import {ClientKind} from "../peers/client.js";
-import {GOSSIP_MAX_SIZE} from "../../constants/network.js";
+import {GOSSIP_MAX_SIZE, GOSSIP_MAX_SIZE_BELLATRIX} from "../../constants/network.js";
 import {
   GossipJobQueues,
   GossipTopic,
@@ -97,6 +97,7 @@ export class Eth2Gossipsub extends Gossipsub {
     const gossipTopicCache = new GossipTopicCache(modules.config);
 
     const scoreParams = computeGossipPeerScoreParams(modules);
+    const {config, logger, metrics, signal, gossipHandlers, peersData} = modules;
 
     // Gossipsub parameters defined here:
     // https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#the-gossip-domain-gossipsub
@@ -119,13 +120,19 @@ export class Eth2Gossipsub extends Gossipsub {
       gossipsubIWantFollowupMs: 12 * 1000, // 12s
       fastMsgIdFn: fastMsgIdFn,
       msgIdFn: msgIdFn.bind(msgIdFn, gossipTopicCache),
-      dataTransform: new DataTransformSnappy(GOSSIP_MAX_SIZE),
+      // Use the bellatrix max size if the merge is configured. pre-merge using this size
+      // could only be an issue on outgoing payloads, its highly unlikely we will send out
+      // a chunk bigger than GOSSIP_MAX_SIZE pre merge even on mainnet network.
+      //
+      // TODO: figure out a way to dynamically transition to the size
+      dataTransform: new DataTransformSnappy(
+        isFinite(config.BELLATRIX_FORK_EPOCH) ? GOSSIP_MAX_SIZE_BELLATRIX : GOSSIP_MAX_SIZE
+      ),
       metricsRegister: modules.metrics ? ((modules.metrics.register as unknown) as MetricsRegister) : null,
       metricsTopicStrToLabel: modules.metrics ? getMetricsTopicStrToLabel(modules.config) : undefined,
       asyncValidation: true,
     });
     this.scoreParams = scoreParams;
-    const {config, logger, metrics, signal, gossipHandlers, peersData} = modules;
     this.config = config;
     this.logger = logger;
     this.peersData = peersData;

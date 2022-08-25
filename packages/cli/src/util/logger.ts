@@ -10,13 +10,14 @@ import {
   TimestampFormatCode,
 } from "@lodestar/utils";
 
+export const defaultLogMaxFiles = 5;
+
 export interface ILogArgs {
   logLevel?: LogLevel;
-  logLevelFile?: LogLevel;
+  logFileLevel?: LogLevel;
   logFormatGenesisTime?: number;
   logFormatId?: string;
-  logRotate?: boolean;
-  logMaxFiles?: number;
+  logFileDailyRotate?: number;
 }
 
 export function errorLogger(): ILogger {
@@ -32,9 +33,14 @@ export function getCliLogger(args: ILogArgs, paths: {logFile?: string}, config: 
     transports.push({
       type: TransportType.file,
       filename: paths.logFile,
-      level: args.logLevelFile,
-      rotate: args.logRotate,
-      maxfiles: args.logMaxFiles,
+      level: args.logFileLevel,
+      // yargs populates with undefined if just set but with no arg
+      // $ ./bin/lodestar.js beacon --logFileDailyRotate
+      // args = {
+      //   logFileDailyRotate: undefined,
+      // }
+      rotate: "logFileDailyRotate" in args,
+      maxfiles: args.logFileDailyRotate ?? defaultLogMaxFiles,
     });
   }
 
