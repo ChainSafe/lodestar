@@ -15,12 +15,7 @@ import {isValidMerkleBranch} from "./utils/verifyMerkleBranch.js";
 import {SyncCommitteeFast} from "./types.js";
 import {chunkifyInclusiveRange} from "./utils/chunkify.js";
 import {LightclientEmitter, LightclientEvent} from "./events.js";
-import {
-  assertValidSignedHeader,
-  assertValidLightClientUpdate,
-  activeHeader,
-  assertValidFinalityProof,
-} from "./validation.js";
+import {assertValidSignedHeader, assertValidLightClientUpdate, assertValidFinalityProof} from "./validation.js";
 import {GenesisData} from "./networks.js";
 import {getLcLoggerConsole, ILcLogger} from "./utils/logger.js";
 import {computeSyncPeriodAtEpoch, computeSyncPeriodAtSlot, computeEpochAtSlot} from "./utils/clock.js";
@@ -535,7 +530,7 @@ export class Lightclient {
    */
   private processSyncCommitteeUpdate(update: altair.LightClientUpdate): void {
     // Prevent registering updates for slots too far in the future
-    const updateSlot = activeHeader(update).slot;
+    const updateSlot = update.attestedHeader.slot;
     if (updateSlot > slotWithFutureTolerance(this.config, this.genesisTime, MAX_CLOCK_DISPARITY_SEC)) {
       throw Error(`updateSlot ${updateSlot} is too far in the future, currentSlot ${this.currentSlot}`);
     }

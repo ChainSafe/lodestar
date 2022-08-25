@@ -55,18 +55,6 @@ export async function prepareUpdateNaive(
   //                                                   │             syncAttestedState             │
   //                                                   └───────────────────────────────────────────┘
   //                                                     │
-  //                                                     │ state.finalizedCheckpoint
-  //                                                     ▼
-  //                                                   ┌───────────────────────────────────────────┐
-  //                                                   │         finalizedCheckpointBlock   <<<<   │
-  //                                                   └───────────────────────────────────────────┘
-  //                                                     │
-  //                                                     │ block.stateRoot
-  //                                                     ▼
-  //                                                   ┌───────────────────────────────────────────┐
-  //                                                   │         finalizedCheckpointState          │
-  //                                                   └───────────────────────────────────────────┘
-  //                                                     │
   //                                                     │ state.nextSyncCommittee
   //                                                     ▼
   //                                                   ┌───────────────────────────────────────────┐
@@ -100,16 +88,15 @@ export async function prepareUpdateNaive(
   const syncAttestedStateTree = new Tree(syncAttestedState.node);
   const finalityBranch = syncAttestedStateTree.getSingleProof(BigInt(FINALIZED_ROOT_GINDEX));
 
-  // Get `nextSyncCommittee` from a finalized state so the lightclient can safely transition to the next committee
-  const finalizedCheckpointState = await chain.getStateByRoot(finalizedCheckpointBlockHeader.stateRoot);
+  // Get `nextSyncCommittee` from a attested state so the lightclient can safely transition to the next committee
   // Prove that the `nextSyncCommittee` is included in a finalized state "attested" by the current sync committee
-  finalizedCheckpointState.commit();
-  const finalizedCheckpointStateTree = new Tree(finalizedCheckpointState.node);
+  syncAttestedState.commit();
+  const finalizedCheckpointStateTree = new Tree(syncAttestedState.node);
   const nextSyncCommitteeBranch = finalizedCheckpointStateTree.getSingleProof(BigInt(NEXT_SYNC_COMMITTEE_GINDEX));
 
   return {
     attestedHeader: syncAttestedBlockHeader,
-    nextSyncCommittee: finalizedCheckpointState.nextSyncCommittee.toValue(),
+    nextSyncCommittee: syncAttestedState.nextSyncCommittee.toValue(),
     nextSyncCommitteeBranch: nextSyncCommitteeBranch,
     finalizedHeader: finalizedCheckpointBlockHeader,
     finalityBranch: finalityBranch,
