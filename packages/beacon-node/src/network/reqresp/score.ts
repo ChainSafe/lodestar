@@ -20,36 +20,34 @@ const multiStreamSelectErrorCodes = {
   protocolSelectionFailed: "protocol selection failed",
 };
 
-export function onOutgoingReqRespError(e: Error, method: Method): PeerAction | null {
-  if (e instanceof RequestError) {
-    switch (e.type.code) {
-      case RequestErrorCode.INVALID_REQUEST:
-        return PeerAction.LowToleranceError;
+export function onOutgoingReqRespError(e: RequestError, method: Method): PeerAction | null {
+  switch (e.type.code) {
+    case RequestErrorCode.INVALID_REQUEST:
+      return PeerAction.LowToleranceError;
 
-      case RequestErrorCode.SERVER_ERROR:
-        return PeerAction.MidToleranceError;
-      case RequestErrorCode.UNKNOWN_ERROR_STATUS:
-        return PeerAction.HighToleranceError;
+    case RequestErrorCode.SERVER_ERROR:
+      return PeerAction.MidToleranceError;
+    case RequestErrorCode.UNKNOWN_ERROR_STATUS:
+      return PeerAction.HighToleranceError;
 
-      case RequestErrorCode.DIAL_TIMEOUT:
-      case RequestErrorCode.DIAL_ERROR:
-        return e.message.includes(multiStreamSelectErrorCodes.protocolSelectionFailed) && method === Method.Ping
-          ? PeerAction.Fatal
-          : PeerAction.LowToleranceError;
-      // TODO: Detect SSZDecodeError and return PeerAction.Fatal
+    case RequestErrorCode.DIAL_TIMEOUT:
+    case RequestErrorCode.DIAL_ERROR:
+      return e.message.includes(multiStreamSelectErrorCodes.protocolSelectionFailed) && method === Method.Ping
+        ? PeerAction.Fatal
+        : PeerAction.LowToleranceError;
+    // TODO: Detect SSZDecodeError and return PeerAction.Fatal
 
-      case RequestErrorCode.TTFB_TIMEOUT:
-      case RequestErrorCode.RESP_TIMEOUT:
-        switch (method) {
-          case Method.Ping:
-            return PeerAction.LowToleranceError;
-          case Method.BeaconBlocksByRange:
-          case Method.BeaconBlocksByRoot:
-            return PeerAction.MidToleranceError;
-          default:
-            return null;
-        }
-    }
+    case RequestErrorCode.TTFB_TIMEOUT:
+    case RequestErrorCode.RESP_TIMEOUT:
+      switch (method) {
+        case Method.Ping:
+          return PeerAction.LowToleranceError;
+        case Method.BeaconBlocksByRange:
+        case Method.BeaconBlocksByRoot:
+          return PeerAction.MidToleranceError;
+        default:
+          return null;
+      }
   }
 
   if (e.message.includes(libp2pErrorCodes.ERR_UNSUPPORTED_PROTOCOL)) {
