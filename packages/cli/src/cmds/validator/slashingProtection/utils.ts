@@ -2,6 +2,9 @@ import {Root} from "@lodestar/types";
 import {getClient} from "@lodestar/api";
 import {SlashingProtection} from "@lodestar/validator";
 import {LevelDbController} from "@lodestar/db";
+import {networkGenesis} from "@lodestar/light-client/lib/networks";
+import {fromHexString} from "@chainsafe/ssz";
+
 import {YargsError} from "../../../util/index.js";
 import {IGlobalArgs} from "../../../options/index.js";
 import {getValidatorPaths} from "../paths.js";
@@ -30,16 +33,19 @@ export async function getGenesisValidatorsRoot(args: IGlobalArgs & ISlashingProt
   const server = args.server;
 
   const config = getBeaconConfigFromArgs(args);
-  const api = getClient({baseUrl: server}, {config});
-  const genesis = await api.beacon.getGenesis();
 
-  if (genesis !== undefined) {
-    return genesis.data.genesisValidatorsRoot;
-  } else {
-    if (args.force) {
-      return Buffer.alloc(32, 0);
-    } else {
-      throw new YargsError(`Can't get genesisValidatorsRoot from Beacon node at ${server}`);
+  if (args.fetchCustomGenesis || !(args.network in networkGenesis)) {
+    const api = getClient({baseUrl: server}, {config});
+    const genesis = await api.beacon.getGenesis();
+    if (genesis !== undefined) {
+      return genesis.data.genesisValidatorsRoot;
     }
+  } else {
+    return fromHexString(networkGenesis[args.network as keyof typeof networkGenesis].genesisValidatorsRoot);
+  }
+  if (args.force) {
+    return Buffer.alloc(32, 0);
+  } else {
+    throw new YargsError(`Can't get genesisValidatorsRoot from Beacon node at ${server}`);
   }
 }
