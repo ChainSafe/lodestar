@@ -19,6 +19,7 @@ export function createIForkConfig(config: IChainConfig): IForkConfig {
     seq: ForkSeq.altair,
     epoch: config.ALTAIR_FORK_EPOCH,
     version: config.ALTAIR_FORK_VERSION,
+    prevVersion: phase0.version,
     prevForkName: ForkName.phase0,
   };
   const bellatrix = {
@@ -26,6 +27,7 @@ export function createIForkConfig(config: IChainConfig): IForkConfig {
     seq: ForkSeq.bellatrix,
     epoch: config.BELLATRIX_FORK_EPOCH,
     version: config.BELLATRIX_FORK_VERSION,
+    prevVersion: altair.prevVersion,
     prevForkName: ForkName.altair,
   };
 
