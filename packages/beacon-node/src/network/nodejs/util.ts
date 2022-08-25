@@ -71,5 +71,6 @@ export async function createNodeJsLibp2p(
     minConnections: networkOpts.targetPeers,
     // If peer discovery is enabled let the default in NodejsNode
     peerDiscovery: disablePeerDiscovery ? [] : undefined,
+    lodestarVersion: networkOpts.version,
   });
 }

@@ -18,6 +18,7 @@ export interface ILibp2pOptions {
   bootMultiaddrs?: string[];
   maxConnections?: number;
   minConnections?: number;
+  lodestarVersion?: string;
 }
 
 export class NodejsNode extends LibP2p {
@@ -28,6 +29,7 @@ export class NodejsNode extends LibP2p {
         listen: options.addresses.listen,
         announce: options.addresses.announce || [],
       },
+      host: options.lodestarVersion ? {agentVersion: `js-libp2p/lodestar-${options.lodestarVersion}`} : undefined,
       modules: {
         connEncryption: [NOISE],
         transport: [TCP],

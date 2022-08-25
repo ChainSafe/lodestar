@@ -30,6 +30,8 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
   beaconNodeOptions.set({metrics: {metadata: {version, commit, network: args.network}}});
   // Add detailed version string for API node/version endpoint
   beaconNodeOptions.set({api: {version}});
+  // Add simple version string for libp2p agent version
+  beaconNodeOptions.set({network: {version: version.split("/")[0]}});
 
   // ENR setup
   const peerId = await readPeerId(beaconPaths.peerIdFile);
