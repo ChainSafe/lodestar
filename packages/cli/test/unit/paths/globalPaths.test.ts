@@ -36,7 +36,7 @@ describe("paths / global", () => {
 
   for (const {id, args, globalPaths} of testCases) {
     it(id, () => {
-      expect(getGlobalPaths(args, network)).to.deep.equal(globalPaths);
+      expect(getGlobalPaths(args, args.network ?? network)).to.deep.equal(globalPaths);
     });
   }
 });
