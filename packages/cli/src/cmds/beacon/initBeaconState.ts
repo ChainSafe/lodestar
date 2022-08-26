@@ -89,7 +89,13 @@ export async function initBeaconState(
   const lastDbState = await db.stateArchive.lastValue();
 
   if (args.checkpointSyncUrl) {
-    return await initFromWSState(lastDbState, args, chainForkConfig, db, logger);
+    return await initFromWSState(
+      lastDbState,
+      {checkpointSyncUrl: args.checkpointSyncUrl, wssCheckpoint: args.wssCheckpoint},
+      chainForkConfig,
+      db,
+      logger
+    );
   } else if (lastDbState) {
     // start the chain from the latest stored state in the db
     const config = createIBeaconConfig(chainForkConfig, lastDbState.genesisValidatorsRoot);

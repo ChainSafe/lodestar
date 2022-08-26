@@ -1,20 +1,14 @@
+import path from "node:path";
 import {Registry} from "prom-client";
+import {createKeypairFromPeerId, ENR} from "@chainsafe/discv5";
 import {ErrorAborted} from "@lodestar/utils";
 import {LevelDbController} from "@lodestar/db";
 import {BeaconNode, BeaconDb, createNodeJsLibp2p} from "@lodestar/beacon-node";
 import {createIBeaconConfig} from "@lodestar/config";
 import {ACTIVE_PRESET, PresetName} from "@lodestar/params";
 import {defaultNetwork, IGlobalArgs, parseBeaconNodeArgs} from "../../options/index.js";
-import {parseEnrArgs} from "../../options/enrOptions.js";
-import {onGracefulShutdown, getCliLogger, mkdir} from "../../util/index.js";
-import {
-  BeaconNodeOptions,
-  createPeerId,
-  getBeaconConfigFromArgs,
-  initENRandSave,
-  overwriteEnrWithCliArgs,
-  readPeerId,
-} from "../../config/index.js";
+import {onGracefulShutdown, getCliLogger, mkdir, writeFile} from "../../util/index.js";
+import {BeaconNodeOptions, createPeerId, FileENR, getBeaconConfigFromArgs, readPeerId} from "../../config/index.js";
 import {getNetworkBootnodes, getNetworkData, readBootnodes} from "../../networks/index.js";
 import {getVersionData} from "../../util/version.js";
 import {IBeaconArgs} from "./options.js";
@@ -58,14 +52,22 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
   mkdir(beaconPaths.beaconDir);
   mkdir(beaconPaths.dbDir);
 
-  // ENR setup
-  // Create new PeerId everytime
+  // Create new PeerId everytime by default, unless peerIdFile is provided
   const peerId = args.peerIdFile ? await readPeerId(args.peerIdFile) : await createPeerId();
-  const enr = initENRandSave(beaconPaths.enrFile, peerId);
-  const enrArgs = parseEnrArgs(args);
-  overwriteEnrWithCliArgs(enr, enrArgs, beaconNodeOptions.getWithDefaults());
-  const enrUpdate = !enrArgs.ip && !enrArgs.ip6;
-  beaconNodeOptions.set({network: {discv5: {enr, enrUpdate}}});
+  const enr = ENR.createV4(createKeypairFromPeerId(peerId).publicKey);
+  overwriteEnrWithCliArgs(enr, args);
+
+  // Persist ENR and PeerId in beaconDir fixed paths for debugging
+  const pIdPath = path.join(beaconPaths.beaconDir, "peer_id.json");
+  const enrPath = path.join(beaconPaths.beaconDir, "enr");
+  writeFile(pIdPath, peerId.toJSON());
+  const fileENR = FileENR.initFromENR(enrPath, peerId, enr);
+  fileENR.saveToFile();
+
+  // Inject ENR to beacon options
+  beaconNodeOptions.set({network: {discv5: {enr: fileENR, enrUpdate: !enr.ip && !enr.ip6}}});
+
+  // Render final options
   const options = beaconNodeOptions.getWithDefaults();
 
   const abortController = new AbortController();
@@ -121,4 +123,18 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
       throw e;
     }
   }
+}
+
+export function overwriteEnrWithCliArgs(enr: ENR, args: IBeaconArgs): void {
+  if (args.listenAddress != null) enr.ip = args.listenAddress;
+  if (args.port != null) enr.tcp = args.port;
+  if (args.port != null) enr.udp = args.port;
+  if (args.discoveryPort != null) enr.udp = args.discoveryPort;
+
+  if (args["enr.ip"] != null) enr.ip = args["enr.ip"];
+  if (args["enr.tcp"] != null) enr.tcp = args["enr.tcp"];
+  if (args["enr.udp"] != null) enr.udp = args["enr.udp"];
+  if (args["enr.ip6"] != null) enr.ip6 = args["enr.ip6"];
+  if (args["enr.tcp6"] != null) enr.tcp6 = args["enr.tcp6"];
+  if (args["enr.udp6"] != null) enr.udp6 = args["enr.udp6"];
 }

@@ -1,4 +1,3 @@
-import fs from "node:fs";
 import PeerId from "peer-id";
 import {writeFile, readFile} from "../util/index.js";
 
@@ -12,16 +11,4 @@ export function writePeerId(filepath: string, peerId: PeerId): void {
 
 export async function readPeerId(filepath: string): Promise<PeerId> {
   return await PeerId.createFromJSON(readFile(filepath));
-}
-
-export async function initPeerId(filepath: string): Promise<void> {
-  writePeerId(filepath, await createPeerId());
-}
-
-export function readPeerIdIfExists(filepath: string): Promise<PeerId> {
-  if (fs.existsSync(filepath)) {
-    return readPeerId(filepath);
-  } else {
-    return createPeerId();
-  }
 }
