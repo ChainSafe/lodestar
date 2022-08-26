@@ -133,7 +133,7 @@ export async function beaconHandlerInit(args: IBeaconArgs & IGlobalArgs) {
 }
 
 export function overwriteEnrWithCliArgs(enr: ENR, args: IBeaconArgs): void {
-  if (args.listenAddress != null) enr.ip = args.listenAddress;
+  // TODO: Not sure if we should propagate this options to the ENR
   if (args.port != null) enr.tcp = args.port;
   if (args.port != null) enr.udp = args.port;
   if (args.discoveryPort != null) enr.udp = args.discoveryPort;
