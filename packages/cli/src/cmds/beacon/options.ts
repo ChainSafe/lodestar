@@ -17,6 +17,7 @@ interface IBeaconExtraArgs {
   genesisStateFile?: string;
   configFile?: string;
   bootnodesFile?: string;
+  peerIdFile?: string;
 }
 
 export const beaconExtraOptions: ICliCommandOptions<IBeaconExtraArgs> = {
@@ -27,19 +28,26 @@ export const beaconExtraOptions: ICliCommandOptions<IBeaconExtraArgs> = {
   },
 
   genesisStateFile: {
+    hidden: true,
     description: "Path or URL to download a genesis state file in ssz-encoded format",
     type: "string",
-    hidden: true,
   },
 
   configFile: {
-    description: "Beacon node configuration file path",
+    hidden: true,
+    description: "[DEPRECATED] Beacon node configuration file path",
     type: "string",
   },
 
   bootnodesFile: {
     hidden: true,
     description: "Bootnodes file path",
+    type: "string",
+  },
+
+  peerIdFile: {
+    hidden: true,
+    description: "Use existing PeerId file and prevent generating a new one on each restart",
     type: "string",
   },
 };
@@ -103,13 +111,6 @@ export const beaconPathsOptions: ICliCommandOptions<IBeaconPaths> = {
     hidden: true,
     description: "Peer store directory",
     defaultDescription: defaultBeaconPaths.peerStoreDir,
-    type: "string",
-  },
-
-  peerIdFile: {
-    hidden: true,
-    description: "Peer ID file path",
-    defaultDescription: defaultBeaconPaths.peerIdFile,
     type: "string",
   },
 

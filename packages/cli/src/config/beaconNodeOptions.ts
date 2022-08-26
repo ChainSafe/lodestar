@@ -1,36 +1,13 @@
 import deepmerge from "deepmerge";
 import {defaultOptions, IBeaconNodeOptions} from "@lodestar/beacon-node";
 import {isPlainObject, RecursivePartial} from "@lodestar/utils";
-import {writeFile, readFile} from "../util/index.js";
-import {getInjectableBootEnrs, getNetworkBeaconNodeOptions, NetworkName} from "../networks/index.js";
+import {writeFile} from "../util/index.js";
 
 export class BeaconNodeOptions {
-  private beaconNodeOptions: RecursivePartial<IBeaconNodeOptions>;
-
   /**
-   * Reads, parses and merges BeaconNodeOptions from (in order)
-   * - Network options (diff)
-   * - existing options file
-   * - CLI flags
+   * Convenience class to deep merge nested options
    */
-  constructor({
-    network,
-    configFile,
-    bootnodesFile,
-    beaconNodeOptionsCli,
-  }: {
-    network?: NetworkName;
-    configFile?: string;
-    bootnodesFile?: string;
-    beaconNodeOptionsCli: RecursivePartial<IBeaconNodeOptions>;
-  }) {
-    this.beaconNodeOptions = mergeBeaconNodeOptions(
-      network ? getNetworkBeaconNodeOptions(network) : {},
-      configFile ? readBeaconNodeOptions(configFile) : {},
-      bootnodesFile ? getInjectableBootEnrs(bootnodesFile) : {},
-      beaconNodeOptionsCli
-    );
-  }
+  constructor(private beaconNodeOptions: RecursivePartial<IBeaconNodeOptions>) {}
 
   /**
    * Returns current options
@@ -53,14 +30,6 @@ export class BeaconNodeOptions {
 
 export function writeBeaconNodeOptions(filename: string, config: Partial<IBeaconNodeOptions>): void {
   writeFile(filename, config);
-}
-
-/**
- * This needs to be a synchronous function because it will be run as part of the yargs 'build' step
- * If the config file is not found, the default values will apply.
- */
-export function readBeaconNodeOptions(filepath: string): RecursivePartial<IBeaconNodeOptions> {
-  return readFile(filepath);
 }
 
 /**

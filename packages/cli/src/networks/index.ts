@@ -2,10 +2,10 @@ import fs from "node:fs";
 import got from "got";
 import {SLOTS_PER_EPOCH, ForkName} from "@lodestar/params";
 import {getClient} from "@lodestar/api";
-import {IBeaconNodeOptions, getStateTypeFromBytes} from "@lodestar/beacon-node";
+import {getStateTypeFromBytes} from "@lodestar/beacon-node";
 import {IChainConfig, IChainForkConfig} from "@lodestar/config";
 import {Checkpoint} from "@lodestar/types/phase0";
-import {RecursivePartial, fromHex, callFnWhenAwait, ILogger} from "@lodestar/utils";
+import {fromHex, callFnWhenAwait, ILogger} from "@lodestar/utils";
 import {BeaconStateAllForks} from "@lodestar/state-transition";
 import * as mainnet from "./mainnet.js";
 import * as dev from "./dev.js";
@@ -34,7 +34,7 @@ export type WeakSubjectivityFetchOptions = {
 // log to screen every 30s when downloading state from a lodestar node
 const GET_STATE_LOG_INTERVAL = 30 * 1000;
 
-function getNetworkData(
+export function getNetworkData(
   network: NetworkName
 ): {
   chainConfig: IChainConfig;
@@ -65,21 +65,6 @@ export function getNetworkBeaconParams(network: NetworkName): IChainConfig {
   return getNetworkData(network).chainConfig;
 }
 
-export function getNetworkBeaconNodeOptions(network: NetworkName): RecursivePartial<IBeaconNodeOptions> {
-  const {depositContractDeployBlock, bootEnrs} = getNetworkData(network);
-  return {
-    eth1: {
-      depositContractDeployBlock,
-    },
-    network: {
-      discv5: {
-        enabled: true,
-        bootEnrs,
-      },
-    },
-  };
-}
-
 /**
  * Get genesisStateFile URL to download. Returns null if not available
  */
@@ -106,6 +91,20 @@ export async function fetchBootnodes(network: NetworkName): Promise<string[]> {
     if (line.includes("enr:")) enrs.push("enr:" + line.split("enr:")[1]);
   }
   return enrs;
+}
+
+export async function getNetworkBootnodes(network: NetworkName): Promise<string[]> {
+  const bootnodes = [...getNetworkData(network).bootEnrs];
+
+  try {
+    const bootEnrs = await fetchBootnodes(network);
+    bootnodes.push(...bootEnrs);
+  } catch (e) {
+    // eslint-disable-next-line no-console
+    console.error(`Error fetching latest bootnodes: ${(e as Error).stack}`);
+  }
+
+  return bootnodes;
 }
 
 /**
@@ -141,24 +140,6 @@ export function parseBootnodesFile(bootnodesFile: string): string[] {
     }
   }
   return enrs;
-}
-
-/**
- * Parses a file to get a list of bootnodes for a network if given a valid path,
- * and returns the bootnodes in an "injectable" network options format.
- */
-export function getInjectableBootEnrs(bootnodesFilepath: string): RecursivePartial<IBeaconNodeOptions> {
-  const bootEnrs = readBootnodes(bootnodesFilepath);
-  const injectableBootEnrs = enrsToNetworkConfig(bootEnrs);
-
-  return injectableBootEnrs;
-}
-
-/**
- * Given an array of bootnodes, returns them in an injectable format
- */
-export function enrsToNetworkConfig(enrs: string[]): RecursivePartial<IBeaconNodeOptions> {
-  return {network: {discv5: {bootEnrs: enrs}}};
 }
 
 /**

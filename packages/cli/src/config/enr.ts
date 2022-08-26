@@ -32,6 +32,12 @@ export function initEnr(filepath: string, peerId: PeerId): void {
   FileENR.initFromENR(filepath, peerId, createEnr(peerId) as FileENR).saveToFile();
 }
 
+export function initENRandSave(filepath: string, peerId: PeerId): ENR {
+  const enr = FileENR.initFromENR(filepath, peerId, createEnr(peerId) as FileENR);
+  enr.saveToFile();
+  return enr;
+}
+
 export function overwriteEnrWithCliArgs(enr: ENR, enrArgs: IENRJson, options: IBeaconNodeOptions): void {
   if (options.network.localMultiaddrs.length) {
     try {
