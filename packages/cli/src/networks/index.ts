@@ -7,6 +7,7 @@ import {IChainConfig, IChainForkConfig} from "@lodestar/config";
 import {Checkpoint} from "@lodestar/types/phase0";
 import {fromHex, callFnWhenAwait, ILogger} from "@lodestar/utils";
 import {BeaconStateAllForks} from "@lodestar/state-transition";
+import {parseBootnodesFile} from "../util/format.js";
 import * as mainnet from "./mainnet.js";
 import * as dev from "./dev.js";
 import * as gnosis from "./gnosis.js";
@@ -83,25 +84,21 @@ export async function fetchBootnodes(network: NetworkName): Promise<string[]> {
   }
 
   const bootnodesFile = await got.get(bootnodesFileUrl).text();
-
-  const enrs: string[] = [];
-  for (const line of bootnodesFile.trim().split(/\r?\n/)) {
-    // File may contain a row with '### Ethereum Node Records'
-    // File may be YAML, with `- enr:-KG4QOWkRj`
-    if (line.includes("enr:")) enrs.push("enr:" + line.split("enr:")[1]);
-  }
-  return enrs;
+  return parseBootnodesFile(bootnodesFile);
 }
 
 export async function getNetworkBootnodes(network: NetworkName): Promise<string[]> {
   const bootnodes = [...getNetworkData(network).bootEnrs];
 
-  try {
-    const bootEnrs = await fetchBootnodes(network);
-    bootnodes.push(...bootEnrs);
-  } catch (e) {
-    // eslint-disable-next-line no-console
-    console.error(`Error fetching latest bootnodes: ${(e as Error).stack}`);
+  // Hidden option for testing
+  if (!process.env.SKIP_FETCH_NETWORK_BOOTNODES) {
+    try {
+      const bootEnrs = await fetchBootnodes(network);
+      bootnodes.push(...bootEnrs);
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error(`Error fetching latest bootnodes: ${(e as Error).stack}`);
+    }
   }
 
   return bootnodes;
@@ -120,26 +117,6 @@ export function readBootnodes(bootnodesFilePath: string): string[] {
   }
 
   return bootnodes;
-}
-
-/**
- * Parses a file to get a list of bootnodes for a network.
- * Bootnodes file is expected to contain bootnode ENR's concatenated by newlines, or commas for
- * parsing plaintext, YAML, JSON and/or env files.
- */
-export function parseBootnodesFile(bootnodesFile: string): string[] {
-  const enrs = [];
-  for (const line of bootnodesFile.trim().split(/\r?\n/)) {
-    for (const entry of line.split(",")) {
-      const sanitizedEntry = entry.replace(/['",[\]{}.]+/g, "").trim();
-
-      if (sanitizedEntry.includes("enr:-")) {
-        const parsedEnr = `enr:-${sanitizedEntry.split("enr:-")[1]}`;
-        enrs.push(parsedEnr);
-      }
-    }
-  }
-  return enrs;
 }
 
 /**

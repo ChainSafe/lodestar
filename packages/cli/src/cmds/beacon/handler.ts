@@ -19,56 +19,12 @@ import {initBeaconState} from "./initBeaconState.js";
  * Runs a beacon node.
  */
 export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<void> {
-  const config = getBeaconConfigFromArgs(args);
-  const network = args.network ?? config.CONFIG_NAME ?? defaultNetwork;
-
-  const beaconNodeOptions = new BeaconNodeOptions(parseBeaconNodeArgs(args));
-
-  const {version, commit} = getVersionData();
-  const beaconPaths = getBeaconPaths(args, network);
-  // TODO: Rename db.name to db.path or db.location
-  beaconNodeOptions.set({db: {name: beaconPaths.dbDir}});
-  beaconNodeOptions.set({chain: {persistInvalidSszObjectsDir: beaconPaths.persistInvalidSszObjectsDir}});
-  // Add metrics metadata to show versioning + network info in Prometheus + Grafana
-  beaconNodeOptions.set({metrics: {metadata: {version, commit, network}}});
-  // Add detailed version string for API node/version endpoint
-  beaconNodeOptions.set({api: {version}});
-
-  // Fetch extra bootnodes
-  const extraBootnodes = ([] as string[]).concat(
-    args.bootnodesFile ? readBootnodes(args.bootnodesFile) : [],
-    args.network ? await getNetworkBootnodes(args.network) : []
-  );
-  beaconNodeOptions.set({network: {discv5: {bootEnrs: extraBootnodes}}});
-
-  // Set known depositContractDeployBlock
-  if (args.network) {
-    const {depositContractDeployBlock} = getNetworkData(args.network);
-    beaconNodeOptions.set({eth1: {depositContractDeployBlock}});
-  }
+  const {config, options, beaconPaths, network, version, commit, peerId} = await beaconHandlerInit(args);
 
   // initialize directories
   mkdir(beaconPaths.dataDir);
   mkdir(beaconPaths.beaconDir);
   mkdir(beaconPaths.dbDir);
-
-  // Create new PeerId everytime by default, unless peerIdFile is provided
-  const peerId = args.peerIdFile ? await readPeerId(args.peerIdFile) : await createPeerId();
-  const enr = ENR.createV4(createKeypairFromPeerId(peerId).publicKey);
-  overwriteEnrWithCliArgs(enr, args);
-
-  // Persist ENR and PeerId in beaconDir fixed paths for debugging
-  const pIdPath = path.join(beaconPaths.beaconDir, "peer_id.json");
-  const enrPath = path.join(beaconPaths.beaconDir, "enr");
-  writeFile(pIdPath, peerId.toJSON());
-  const fileENR = FileENR.initFromENR(enrPath, peerId, enr);
-  fileENR.saveToFile();
-
-  // Inject ENR to beacon options
-  beaconNodeOptions.set({network: {discv5: {enr: fileENR, enrUpdate: !enr.ip && !enr.ip6}}});
-
-  // Render final options
-  const options = beaconNodeOptions.getWithDefaults();
 
   const abortController = new AbortController();
   const logger = getCliLogger(args, beaconPaths, config);
@@ -123,6 +79,58 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
       throw e;
     }
   }
+}
+
+/** Separate function to simplify unit testing of options merging */
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+export async function beaconHandlerInit(args: IBeaconArgs & IGlobalArgs) {
+  const config = getBeaconConfigFromArgs(args);
+  const network = args.network ?? config.CONFIG_NAME ?? defaultNetwork;
+
+  const beaconNodeOptions = new BeaconNodeOptions(parseBeaconNodeArgs(args));
+
+  const {version, commit} = getVersionData();
+  const beaconPaths = getBeaconPaths(args, network);
+  // TODO: Rename db.name to db.path or db.location
+  beaconNodeOptions.set({db: {name: beaconPaths.dbDir}});
+  beaconNodeOptions.set({chain: {persistInvalidSszObjectsDir: beaconPaths.persistInvalidSszObjectsDir}});
+  // Add metrics metadata to show versioning + network info in Prometheus + Grafana
+  beaconNodeOptions.set({metrics: {metadata: {version, commit, network}}});
+  // Add detailed version string for API node/version endpoint
+  beaconNodeOptions.set({api: {version}});
+
+  // Fetch extra bootnodes
+  const extraBootnodes = (beaconNodeOptions.get().network?.discv5?.bootEnrs ?? []).concat(
+    args.bootnodesFile ? readBootnodes(args.bootnodesFile) : [],
+    args.network ? await getNetworkBootnodes(args.network) : []
+  );
+  beaconNodeOptions.set({network: {discv5: {bootEnrs: extraBootnodes}}});
+
+  // Set known depositContractDeployBlock
+  if (args.network) {
+    const {depositContractDeployBlock} = getNetworkData(args.network);
+    beaconNodeOptions.set({eth1: {depositContractDeployBlock}});
+  }
+
+  // Create new PeerId everytime by default, unless peerIdFile is provided
+  const peerId = args.peerIdFile ? await readPeerId(args.peerIdFile) : await createPeerId();
+  const enr = ENR.createV4(createKeypairFromPeerId(peerId).publicKey);
+  overwriteEnrWithCliArgs(enr, args);
+
+  // Persist ENR and PeerId in beaconDir fixed paths for debugging
+  const pIdPath = path.join(beaconPaths.beaconDir, "peer_id.json");
+  const enrPath = path.join(beaconPaths.beaconDir, "enr");
+  writeFile(pIdPath, peerId.toJSON());
+  const fileENR = FileENR.initFromENR(enrPath, peerId, enr);
+  fileENR.saveToFile();
+
+  // Inject ENR to beacon options
+  beaconNodeOptions.set({network: {discv5: {enr: fileENR, enrUpdate: !enr.ip && !enr.ip6}}});
+
+  // Render final options
+  const options = beaconNodeOptions.getWithDefaults();
+
+  return {config, options, beaconPaths, network, version, commit, peerId};
 }
 
 export function overwriteEnrWithCliArgs(enr: ENR, args: IBeaconArgs): void {
