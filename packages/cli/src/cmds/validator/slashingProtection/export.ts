@@ -1,6 +1,6 @@
 import {InterchangeFormatVersion} from "@lodestar/validator";
 import {ICliCommand, writeFile} from "../../../util/index.js";
-import {defaultNetwork, IGlobalArgs} from "../../../options/index.js";
+import {IGlobalArgs} from "../../../options/index.js";
 import {AccountValidatorArgs} from "../options.js";
 import {getCliLogger, ILogArgs} from "../../../util/index.js";
 import {getBeaconConfigFromArgs} from "../../../config/index.js";
@@ -39,9 +39,8 @@ export const exportCmd: ICliCommand<
   },
 
   handler: async (args) => {
-    const network = args.network ?? defaultNetwork;
+    const {config, network} = getBeaconConfigFromArgs(args);
     const beaconPaths = getBeaconPaths(args, network);
-    const config = getBeaconConfigFromArgs(args);
     const logger = getCliLogger(args, beaconPaths, config);
 
     const {validatorsDbDir: dbPath} = getValidatorPaths(args, network);

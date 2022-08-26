@@ -3,7 +3,7 @@ import {ProcessShutdownCallback, SlashingProtection, Validator, defaultOptions} 
 import {getMetrics, MetricsRegister} from "@lodestar/validator";
 import {RegistryMetricCreator, collectNodeJSMetrics, HttpMetricsServer} from "@lodestar/beacon-node";
 import {getBeaconConfigFromArgs} from "../../config/index.js";
-import {defaultNetwork, IGlobalArgs} from "../../options/index.js";
+import {IGlobalArgs} from "../../options/index.js";
 import {YargsError, getDefaultGraffiti, mkdir, getCliLogger} from "../../util/index.js";
 import {onGracefulShutdown, parseFeeRecipient} from "../../util/index.js";
 import {getVersionData} from "../../util/version.js";
@@ -20,12 +20,12 @@ import {KeymanagerRestApiServer} from "./keymanager/server.js";
  * Runs a validator client.
  */
 export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): Promise<void> {
+  const {config, network} = getBeaconConfigFromArgs(args);
+
   const graffiti = args.graffiti || getDefaultGraffiti();
   const suggestedFeeRecipient = parseFeeRecipient(args.suggestedFeeRecipient ?? defaultOptions.defaultFeeRecipient);
   const doppelgangerProtectionEnabled = args.doppelgangerProtectionEnabled;
 
-  const config = getBeaconConfigFromArgs(args);
-  const network = args.network ?? config.CONFIG_NAME ?? defaultNetwork;
   const beaconPaths = getBeaconPaths(args, network);
   const validatorPaths = getValidatorPaths(args, network);
 

@@ -6,7 +6,7 @@ import {LevelDbController} from "@lodestar/db";
 import {BeaconNode, BeaconDb, createNodeJsLibp2p} from "@lodestar/beacon-node";
 import {createIBeaconConfig} from "@lodestar/config";
 import {ACTIVE_PRESET, PresetName} from "@lodestar/params";
-import {defaultNetwork, IGlobalArgs, parseBeaconNodeArgs} from "../../options/index.js";
+import {IGlobalArgs, parseBeaconNodeArgs} from "../../options/index.js";
 import {onGracefulShutdown, getCliLogger, mkdir, writeFile} from "../../util/index.js";
 import {BeaconNodeOptions, createPeerId, FileENR, getBeaconConfigFromArgs, readPeerId} from "../../config/index.js";
 import {getNetworkBootnodes, getNetworkData, readBootnodes} from "../../networks/index.js";
@@ -84,8 +84,7 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
 /** Separate function to simplify unit testing of options merging */
 // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export async function beaconHandlerInit(args: IBeaconArgs & IGlobalArgs) {
-  const config = getBeaconConfigFromArgs(args);
-  const network = args.network ?? config.CONFIG_NAME ?? defaultNetwork;
+  const {config, network} = getBeaconConfigFromArgs(args);
 
   const beaconNodeOptions = new BeaconNodeOptions(parseBeaconNodeArgs(args));
 
