@@ -107,6 +107,12 @@ export const defaultOptions = {
  */
 export class ValidatorStore {
   private readonly validators = new Map<PubkeyHex, ValidatorData>();
+  /**
+   * This cache stores SignedValidatorRegistrationV1 data for a validator so that
+   * we do not create and send new registration objects to avoid DOSing the builder
+   *
+   * See: https://github.com/ChainSafe/lodestar/issues/4208
+   */
   private readonly validatorRegistrationCache = new ValidatorRegistrationCache();
 
   /** Initially true because there are no validators */

@@ -10,6 +10,13 @@ type RegistrationKeyAttributes = {
   gasLimit: number;
 };
 
+/**
+ * This cache stores the bellatrix.SignedValidatorRegistrationV1 objects as mev boosts wants
+ * us to send an old regsitration object if there are no changes in the registration data.
+ *
+ * This could potentially be to prevent a DOS attack as every epoch the public builders would have
+ * a hard time processing and verifying the registrations from potentially half a million validators
+ */
 export class ValidatorRegistrationCache {
   private readonly validatorRegistrationMap = new Map<
     string,
