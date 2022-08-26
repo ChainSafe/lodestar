@@ -49,8 +49,13 @@ export const exportCmd: ICliCommand<
     const formatVersion: InterchangeFormatVersion = {version: "4", format: "complete"};
     logger.info("Exporting the slashing protection logs", {...formatVersion, dbPath});
 
-    const genesisValidatorsRoot = await getGenesisValidatorsRoot(args);
-    const slashingProtection = getSlashingProtection(args, network);
+    const {slashingProtection, metadata} = getSlashingProtection(args, network);
+
+    // When exporting validator DB should already have genesisValidatorsRoot persisted.
+    // For legacy node and general fallback, fetch from:
+    // - known genesis data from existing network
+    // - else fetch from beacon node
+    const genesisValidatorsRoot = (await metadata.getGenesisValidatorsRoot()) ?? (await getGenesisValidatorsRoot(args));
 
     logger.verbose("Fetching the pubkeys from the slashingProtection db");
     const pubkeys = await slashingProtection.listPubkeys();

@@ -2,8 +2,8 @@ import {Root} from "@lodestar/types";
 import {getClient} from "@lodestar/api";
 import {fromHex} from "@lodestar/utils";
 import {genesisData, NetworkName} from "@lodestar/config/networks";
-import {SlashingProtection} from "@lodestar/validator";
-import {LevelDbController} from "@lodestar/db";
+import {SlashingProtection, MetaDataRepository} from "@lodestar/validator";
+import {IDatabaseApiOptions, LevelDbController} from "@lodestar/db";
 import {YargsError} from "../../../util/index.js";
 import {IGlobalArgs} from "../../../options/index.js";
 import {getValidatorPaths} from "../paths.js";
@@ -14,15 +14,24 @@ import {ISlashingProtectionArgs} from "./options.js";
 /**
  * Returns a new SlashingProtection object instance based on global args.
  */
-export function getSlashingProtection(args: IGlobalArgs, network: string): SlashingProtection {
+export function getSlashingProtection(
+  args: IGlobalArgs,
+  network: string
+): {slashingProtection: SlashingProtection; metadata: MetaDataRepository} {
   const validatorPaths = getValidatorPaths(args, network);
   const dbPath = validatorPaths.validatorsDbDir;
   const {config} = getBeaconConfigFromArgs(args);
   const logger = errorLogger();
-  return new SlashingProtection({
+
+  const dbOpts: IDatabaseApiOptions = {
     config,
     controller: new LevelDbController({name: dbPath}, {logger}),
-  });
+  };
+
+  return {
+    slashingProtection: new SlashingProtection(dbOpts),
+    metadata: new MetaDataRepository(dbOpts),
+  };
 }
 
 /**

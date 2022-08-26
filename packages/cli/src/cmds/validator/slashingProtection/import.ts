@@ -47,13 +47,20 @@ export const importCmd: ICliCommand<
     const {validatorsDbDir: dbPath} = getValidatorPaths(args, network);
 
     logger.info("Importing the slashing protection logs", {dbPath});
-    const genesisValidatorsRoot = await getGenesisValidatorsRoot(args);
-    const slashingProtection = getSlashingProtection(args, network);
+
+    const {slashingProtection, metadata} = getSlashingProtection(args, network);
+
+    // Fetch genesisValidatorsRoot from:
+    // - existing cached in validator DB
+    // - known genesis data from existing network
+    // - else fetch from beacon node
+    const genesisValidatorsRoot = (await metadata.getGenesisValidatorsRoot()) ?? (await getGenesisValidatorsRoot(args));
 
     logger.verbose("Reading the slashing protection logs", {file: args.file});
-    const importFile = await fs.promises.readFile(args.file, "utf8");
-    const importFileJson = JSON.parse(importFile) as Interchange;
-    await slashingProtection.importInterchange(importFileJson, genesisValidatorsRoot, logger);
+    const interchangeStr = await fs.promises.readFile(args.file, "utf8");
+    const interchangeJson = JSON.parse(interchangeStr) as Interchange;
+
+    await slashingProtection.importInterchange(interchangeJson, genesisValidatorsRoot, logger);
     logger.info("Import completed successfully");
   },
 };
