@@ -113,7 +113,8 @@ export class Validator {
       metrics,
       signers,
       defaultFeeRecipient ?? defaultOptions.defaultFeeRecipient,
-      gasLimit ?? defaultOptions.defaultGasLimit
+      gasLimit ?? defaultOptions.defaultGasLimit,
+      genesis.genesisValidatorsRoot
     );
     pollPrepareBeaconProposer(config, loggerVc, api, clock, validatorStore, metrics);
     if (builder.enabled) {

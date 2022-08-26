@@ -35,6 +35,7 @@ export function initValidatorStore(
     metrics,
     signers,
     defaultFeeRecipient,
-    defaultGasLimit
+    defaultGasLimit,
+    genesisValidatorsRoot
   );
 }

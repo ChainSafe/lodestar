@@ -90,7 +90,8 @@ export class ValidatorStore {
     private readonly metrics: Metrics | null,
     initialSigners: Signer[],
     private readonly defaultFeeRecipient: string,
-    private readonly gasLimit: number
+    private readonly gasLimit: number,
+    private readonly genesisValidatorRoot: Root
   ) {
     for (const signer of initialSigners) {
       this.addSigner(signer);
