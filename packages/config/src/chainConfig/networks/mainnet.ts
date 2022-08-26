@@ -8,6 +8,8 @@ import {chainConfig as mainnet} from "../presets/mainnet.js";
 export const mainnetChainConfig: IChainConfig = {
   ...mainnet,
 
+  CONFIG_NAME: "mainnet",
+
   DEPOSIT_CONTRACT_ADDRESS: b("0x00000000219ab540356cBB839Cbe05303d7705Fa"),
 
   DEPOSIT_CHAIN_ID: 1,

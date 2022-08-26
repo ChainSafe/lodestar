@@ -6,6 +6,7 @@ import {IChainConfig} from "../types.js";
 export const chainConfig: IChainConfig = {
   // Extends the minimal preset
   PRESET_BASE: PresetName.minimal,
+  CONFIG_NAME: "minimal",
 
   // Transition
   // 2**256-2**10 for testing minimal network

@@ -1,5 +1,5 @@
 import {ICliCommand} from "../../util/index.js";
-import {IGlobalArgs} from "../../options/index.js";
+import {defaultNetwork, IGlobalArgs} from "../../options/index.js";
 import {IValidatorCliArgs} from "./options.js";
 import {getSignerPubkeyHex, getSignersFromArgs} from "./signers/index.js";
 import {logSigners} from "./signers/logSigners.js";
@@ -19,7 +19,8 @@ export const list: ICliCommand<IValidatorCliArgs, IGlobalArgs, ReturnType> = {
   ],
 
   handler: async (args) => {
-    const signers = await getSignersFromArgs(args);
+    const network = args.network ?? defaultNetwork;
+    const signers = await getSignersFromArgs(args, network);
 
     logSigners(console, signers);
 

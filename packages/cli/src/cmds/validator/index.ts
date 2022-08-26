@@ -15,7 +15,7 @@ export const validator: ICliCommand<IValidatorCliArgs, IGlobalArgs> = {
       command: "validator --network goerli",
       description:
         "Run one validator client with all the keystores available in the directory" +
-        ` ${getAccountPaths({dataDir: ".goerli"}).keystoresDir}`,
+        ` ${getAccountPaths({dataDir: ".goerli"}, "goerli").keystoresDir}`,
     },
   ],
   options: validatorOptions,

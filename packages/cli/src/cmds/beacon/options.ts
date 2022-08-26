@@ -15,6 +15,8 @@ import {defaultBeaconPaths, IBeaconPaths} from "./paths.js";
 interface IBeaconExtraArgs {
   forceGenesis?: boolean;
   genesisStateFile?: string;
+  configFile?: string;
+  bootnodesFile?: string;
 }
 
 export const beaconExtraOptions: ICliCommandOptions<IBeaconExtraArgs> = {
@@ -28,6 +30,17 @@ export const beaconExtraOptions: ICliCommandOptions<IBeaconExtraArgs> = {
     description: "Path or URL to download a genesis state file in ssz-encoded format",
     type: "string",
     hidden: true,
+  },
+
+  configFile: {
+    description: "Beacon node configuration file path",
+    type: "string",
+  },
+
+  bootnodesFile: {
+    hidden: true,
+    description: "Bootnodes file path",
+    type: "string",
   },
 };
 
@@ -86,11 +99,6 @@ export const beaconPathsOptions: ICliCommandOptions<IBeaconPaths> = {
     type: "string",
   },
 
-  configFile: {
-    description: "Beacon node configuration file path",
-    type: "string",
-  },
-
   peerStoreDir: {
     hidden: true,
     description: "Peer store directory",
@@ -114,12 +122,6 @@ export const beaconPathsOptions: ICliCommandOptions<IBeaconPaths> = {
 
   logFile: {
     description: "Path to output all logs to a persistent log file",
-    type: "string",
-  },
-
-  bootnodesFile: {
-    hidden: true,
-    description: "Bootnodes file path",
     type: "string",
   },
 };

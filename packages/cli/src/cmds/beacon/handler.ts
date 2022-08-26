@@ -4,7 +4,7 @@ import {LevelDbController} from "@lodestar/db";
 import {BeaconNode, BeaconDb, createNodeJsLibp2p} from "@lodestar/beacon-node";
 import {createIBeaconConfig} from "@lodestar/config";
 import {ACTIVE_PRESET, PresetName} from "@lodestar/params";
-import {IGlobalArgs} from "../../options/index.js";
+import {defaultNetwork, IGlobalArgs} from "../../options/index.js";
 import {parseEnrArgs} from "../../options/enrOptions.js";
 import {onGracefulShutdown, getCliLogger} from "../../util/index.js";
 import {FileENR, overwriteEnrWithCliArgs, readPeerId} from "../../config/index.js";
@@ -19,15 +19,16 @@ import {initBeaconState} from "./initBeaconState.js";
  */
 export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<void> {
   const {beaconNodeOptions, config} = await initializeOptionsAndConfig(args);
-  await persistOptionsAndConfig(args);
+  const network = args.network ?? config.CONFIG_NAME ?? defaultNetwork;
+  await persistOptionsAndConfig(args, network);
 
   const {version, commit} = getVersionData();
-  const beaconPaths = getBeaconPaths(args);
+  const beaconPaths = getBeaconPaths(args, network);
   // TODO: Rename db.name to db.path or db.location
   beaconNodeOptions.set({db: {name: beaconPaths.dbDir}});
   beaconNodeOptions.set({chain: {persistInvalidSszObjectsDir: beaconPaths.persistInvalidSszObjectsDir}});
   // Add metrics metadata to show versioning + network info in Prometheus + Grafana
-  beaconNodeOptions.set({metrics: {metadata: {version, commit, network: args.network}}});
+  beaconNodeOptions.set({metrics: {metadata: {version, commit, network}}});
   // Add detailed version string for API node/version endpoint
   beaconNodeOptions.set({api: {version}});
 
@@ -47,7 +48,7 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
     abortController.abort();
   }, logger.info.bind(logger));
 
-  logger.info("Lodestar", {network: args.network, version, commit});
+  logger.info("Lodestar", {network, version, commit});
   if (ACTIVE_PRESET === PresetName.minimal) logger.info("ACTIVE_PRESET == minimal preset");
 
   // additional metrics registries

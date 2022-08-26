@@ -7,7 +7,7 @@ import {
 } from "@lodestar/config";
 import {readFile} from "../util/index.js";
 import {getNetworkBeaconParams, NetworkName} from "../networks/index.js";
-import {getGlobalPaths, IGlobalPaths} from "../paths/global.js";
+import {IGlobalPaths} from "../paths/global.js";
 import {parseBeaconParamsArgs, parseTerminalPowArgs, ITerminalPowArgs} from "../options/index.js";
 import {IBeaconParamsUnparsed} from "./types.js";
 
@@ -37,7 +37,7 @@ export function getBeaconConfigFromArgs(args: IBeaconParamsCliArgs): IChainForkC
 export function getBeaconParamsFromArgs(args: IBeaconParamsCliArgs): IChainConfig {
   return getBeaconParams({
     network: args.network,
-    paramsFile: getGlobalPaths(args).paramsFile,
+    paramsFile: args.paramsFile,
     additionalParamsCli: {
       ...parseBeaconParamsArgs(args as Record<string, string | number>),
       ...parseTerminalPowArgs(args as ITerminalPowArgs),

@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import {Interchange} from "@lodestar/validator";
 import {ICliCommand} from "../../../util/index.js";
-import {IGlobalArgs} from "../../../options/index.js";
+import {defaultNetwork, IGlobalArgs} from "../../../options/index.js";
 import {AccountValidatorArgs} from "../options.js";
 import {getCliLogger, ILogArgs} from "../../../util/index.js";
 import {getBeaconConfigFromArgs} from "../../../config/index.js";
@@ -40,15 +40,16 @@ export const importCmd: ICliCommand<
   },
 
   handler: async (args) => {
-    const beaconPaths = getBeaconPaths(args);
+    const network = args.network ?? defaultNetwork;
+    const beaconPaths = getBeaconPaths(args, network);
     const config = getBeaconConfigFromArgs(args);
     const logger = getCliLogger(args, beaconPaths, config);
 
-    const {validatorsDbDir: dbPath} = getValidatorPaths(args);
+    const {validatorsDbDir: dbPath} = getValidatorPaths(args, network);
 
     logger.info("Importing the slashing protection logs", {dbPath});
     const genesisValidatorsRoot = await getGenesisValidatorsRoot(args);
-    const slashingProtection = getSlashingProtection(args);
+    const slashingProtection = getSlashingProtection(args, network);
 
     logger.verbose("Reading the slashing protection logs", {file: args.file});
     const importFile = await fs.promises.readFile(args.file, "utf8");

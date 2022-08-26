@@ -9,7 +9,7 @@ import {
   readPeerId,
   readEnr,
 } from "../../config/index.js";
-import {IGlobalArgs, parseBeaconNodeArgs} from "../../options/index.js";
+import {defaultNetwork, IGlobalArgs, parseBeaconNodeArgs} from "../../options/index.js";
 import {mkdir} from "../../util/index.js";
 import {fetchBootnodes} from "../../networks/index.js";
 import {getBeaconPaths} from "../beacon/paths.js";
@@ -25,17 +25,18 @@ export type ReturnType = {
  */
 export async function initHandler(args: IBeaconArgs & IGlobalArgs): Promise<ReturnType> {
   const {beaconNodeOptions, config} = await initializeOptionsAndConfig(args);
-  await persistOptionsAndConfig(args);
+
+  // TODO: Is it really necessary to persist ENR and PeerId?
+  const network = args.network ?? config.CONFIG_NAME ?? defaultNetwork;
+  await persistOptionsAndConfig(args, network);
   return {beaconNodeOptions, config};
 }
 
 export async function initializeOptionsAndConfig(args: IBeaconArgs & IGlobalArgs): Promise<ReturnType> {
-  const beaconPaths = getBeaconPaths(args);
-
   const beaconNodeOptions = new BeaconNodeOptions({
-    network: args.network || "mainnet",
-    configFile: beaconPaths.configFile,
-    bootnodesFile: beaconPaths.bootnodesFile,
+    network: args.network,
+    configFile: args.configFile,
+    bootnodesFile: args.bootnodesFile,
     beaconNodeOptionsCli: parseBeaconNodeArgs(args),
   });
 
@@ -62,8 +63,8 @@ export async function initializeOptionsAndConfig(args: IBeaconArgs & IGlobalArgs
 /**
  * Write options and configs to disk
  */
-export async function persistOptionsAndConfig(args: IBeaconArgs & IGlobalArgs): Promise<void> {
-  const beaconPaths = getBeaconPaths(args);
+export async function persistOptionsAndConfig(args: IBeaconArgs & IGlobalArgs, network: string): Promise<void> {
+  const beaconPaths = getBeaconPaths(args, network);
 
   // initialize directories
   mkdir(beaconPaths.dataDir);

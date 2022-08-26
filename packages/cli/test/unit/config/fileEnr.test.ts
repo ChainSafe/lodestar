@@ -4,7 +4,7 @@ import {before, after} from "mocha";
 import rimraf from "rimraf";
 import {toHexString} from "@chainsafe/ssz";
 import {initEnr, initPeerId, readPeerId, FileENR} from "../../../src/config/index.js";
-import {testFilesDir} from "../../utils.js";
+import {networkDev, testFilesDir} from "../../utils.js";
 import {getBeaconPaths} from "../../../src/cmds/beacon/paths.js";
 
 describe("fileENR", function () {
@@ -19,7 +19,7 @@ describe("fileENR", function () {
   });
 
   it("create ENR from file", async function () {
-    const beaconPaths = getBeaconPaths({dataDir});
+    const beaconPaths = getBeaconPaths({dataDir}, networkDev);
     const enrFilePath = beaconPaths.enrFile;
     const peerIdFile = beaconPaths.peerIdFile;
     await initPeerId(peerIdFile);

@@ -14,8 +14,8 @@ import {ISlashingProtectionArgs} from "./options.js";
 /**
  * Returns a new SlashingProtection object instance based on global args.
  */
-export function getSlashingProtection(args: IGlobalArgs): SlashingProtection {
-  const validatorPaths = getValidatorPaths(args);
+export function getSlashingProtection(args: IGlobalArgs, network: string): SlashingProtection {
+  const validatorPaths = getValidatorPaths(args, network);
   const dbPath = validatorPaths.validatorsDbDir;
   const config = getBeaconConfigFromArgs(args);
   const logger = errorLogger();

@@ -16,10 +16,16 @@ import {IDevArgs} from "./options.js";
  * Run a beacon node with validator
  */
 export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
+  // TODO: Is this necessary?
+  const network = "dev";
+  if (args.network && args.network !== network) {
+    throw Error(`Must not run dev command with network '${args.network}', only 'dev' network`);
+  }
+
   // Note: defaults to network "dev", to all paths are custom and don't conflict with networks.
   // Flag --reset cleans up the custom dirs on dev stop
-  const beaconDbDir = getBeaconPaths(args).dbDir;
-  const validatorsDbDir = getValidatorPaths(args).validatorsDbDir;
+  const beaconDbDir = getBeaconPaths(args, network).dbDir;
+  const validatorsDbDir = getValidatorPaths(args, network).validatorsDbDir;
 
   // Remove slashing protection db. Otherwise the validators won't be able to propose nor attest
   // until the clock reach a higher slot than the previous run of the dev command
@@ -36,11 +42,6 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
       await promisify(rimraf)(beaconDbDir);
       await promisify(rimraf)(validatorsDbDir);
     });
-  }
-
-  // TODO: Is this necessary?
-  if (args.network !== "dev") {
-    throw Error(`Must not run dev command with network '${args.network}', only 'dev' network`);
   }
 
   // To be able to recycle beacon handler pass the genesis state via file
