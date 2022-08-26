@@ -17,7 +17,7 @@ import {ISlashingProtectionArgs} from "./options.js";
 export function getSlashingProtection(args: IGlobalArgs, network: string): SlashingProtection {
   const validatorPaths = getValidatorPaths(args, network);
   const dbPath = validatorPaths.validatorsDbDir;
-  const config = getBeaconConfigFromArgs(args);
+  const {config} = getBeaconConfigFromArgs(args);
   const logger = errorLogger();
   return new SlashingProtection({
     config,
@@ -36,7 +36,7 @@ export async function getGenesisValidatorsRoot(args: IGlobalArgs & ISlashingProt
     return fromHex(networkGenesis.genesisValidatorsRoot);
   }
 
-  const config = getBeaconConfigFromArgs(args);
+  const {config} = getBeaconConfigFromArgs(args);
   const api = getClient({baseUrl: server}, {config});
   const genesis = await api.beacon.getGenesis();
 
