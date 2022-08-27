@@ -236,6 +236,15 @@ export class ForkChoice implements IForkChoice {
     return (this.head = headNode);
   }
 
+  /**
+   * An iteration over protoArray to get present slots, to be called pre-emptively
+   * from prepareNextSlot to prevent delay on produceBlindedBlock
+   * @param windowStart is the slot after which (excluding) to provide present slots
+   */
+  getSlotsPresent(windowStart: number): number {
+    return this.protoArray.nodes.filter((node) => node.slot > windowStart).length;
+  }
+
   /** Very expensive function, iterates the entire ProtoArray. Called only in debug API */
   getHeads(): ProtoBlock[] {
     return this.protoArray.nodes.filter((node) => node.bestChild === undefined);

@@ -120,6 +120,14 @@ export class PrepareNextSlotScheduler {
         const proposerIndex = prepareState.epochCtx.getBeaconProposer(prepareSlot);
         const feeRecipient = this.chain.beaconProposerCache.get(proposerIndex);
         if (feeRecipient) {
+          // Update if the builder flow can be used with this proposer, it might lead to
+          // an api call to the builder to check its status, so we will not await for
+          // its completion here as we want to trigger local execution here without
+          // delay
+          this.chain.updateBuilderStatus(clockSlot).catch((e) => {
+            this.logger.error("Updating builder status failed", {prepareSlot}, e as Error);
+          });
+
           const preparationTime =
             computeTimeAtSlot(this.config, prepareSlot, this.chain.genesisTime) - Date.now() / 1000;
           this.metrics?.blockPayload.payloadAdvancePrepTime.observe(preparationTime);
