@@ -18,6 +18,7 @@ import {getGenesisValidatorsRoot} from "./slashingProtection/utils.js";
 type VoluntaryExitArgs = {
   exitEpoch?: number;
   pubkeys?: string[];
+  yes?: boolean;
 };
 
 export const voluntaryExit: ICliCommand<VoluntaryExitArgs, IValidatorCliArgs & IGlobalArgs> = {
@@ -53,6 +54,11 @@ like to choose for the voluntary exit.",
           .flat(1)
           .map(ensure0xPrefix),
     },
+
+    yes: {
+      description: "Skip confirmation prompt",
+      type: "boolean",
+    },
   },
 
   handler: async (args) => {
@@ -73,17 +79,18 @@ like to choose for the voluntary exit.",
     const signersToExit = selectSignersToExit(args, signers);
     const validatorsToExit = await resolveValidatorIndexes(client, signersToExit);
 
-    const confirmation = await inquirer.prompt<{yes: boolean}>([
-      {
-        name: "yes",
-        type: "confirm",
-        message: `Confirm to exit pubkeys at epoch ${exitEpoch} from network ${network}?
+    if (!args.yes) {
+      const confirmation = await inquirer.prompt<{yes: boolean}>([
+        {
+          name: "yes",
+          type: "confirm",
+          message: `Confirm to exit pubkeys at epoch ${exitEpoch} from network ${network}?
 ${validatorsToExit.map((v) => `${v.pubkey} ${v.index} ${v.status}`).join("\n")}`,
-      },
-    ]);
-
-    if (!confirmation.yes) {
-      return;
+        },
+      ]);
+      if (!confirmation.yes) {
+        throw new YargsError("not confirmed");
+      }
     }
 
     for (const [i, {index, signer, pubkey}] of validatorsToExit.entries()) {
