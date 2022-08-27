@@ -210,6 +210,7 @@ export class MockBeaconChain implements IBeaconChain {
   }
 
   async updateBeaconProposerData(): Promise<void> {}
+  async updateBuilderStatus(): Promise<void> {}
 }
 
 function mockForkChoice(): IForkChoice {
@@ -250,6 +251,7 @@ function mockForkChoice(): IForkChoice {
     getTime: () => 0,
     hasBlock: () => true,
     hasBlockHex: () => true,
+    getSlotsPresent: () => 0,
     getBlock: () => block,
     getBlockHex: () => block,
     getFinalizedBlock: () => block,
