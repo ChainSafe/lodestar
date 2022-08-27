@@ -11,7 +11,6 @@ import {IGlobalArgs} from "../../options/index.js";
 import {getBeaconConfigFromArgs} from "../../config/index.js";
 import {IValidatorCliArgs} from "./options.js";
 import {getSignersFromArgs} from "./signers/index.js";
-import {getGenesisValidatorsRoot} from "./slashingProtection/utils.js";
 
 /* eslint-disable no-console */
 
@@ -64,13 +63,14 @@ like to choose for the voluntary exit.",
   handler: async (args) => {
     const network = args.network;
 
-    // Fetch genesisValidatorsRoot from known network or beacon node
+    // Fetch genesisValidatorsRoot always from beacon node
+    // Do not use known networks cache, it defaults to mainnet for devnets
     const chainForkConfig = getBeaconConfigFromArgs(args);
-    const genesisValidatorsRoot = await getGenesisValidatorsRoot(args);
+    const client = getClient({baseUrl: args.server}, {config: chainForkConfig});
+    const {genesisValidatorsRoot} = (await client.beacon.getGenesis()).data;
     const config = createIBeaconConfig(chainForkConfig, genesisValidatorsRoot);
 
     // Fetch exitEpoch from latest header if unspecified
-    const client = getClient({baseUrl: args.server}, {config: chainForkConfig});
     const exitEpoch =
       args.exitEpoch ?? computeEpochAtSlot((await client.beacon.getBlockHeader("head")).data.header.message.slot);
 
