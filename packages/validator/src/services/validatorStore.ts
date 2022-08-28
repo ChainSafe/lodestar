@@ -37,7 +37,7 @@ import {BitArray, fromHexString, toHexString} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {ISlashingProtection} from "../slashingProtection/index.js";
 import {PubkeyHex} from "../types.js";
-import {externalSignerPostSignature} from "../util/externalSignerClient.js";
+import {externalSignerPostSignature, Web3SignerForkInfo, SignableRequest} from "../util/externalSignerClient.js";
 import {Metrics} from "../metrics.js";
 import {IndicesService} from "./indices.js";
 import {DoppelgangerService} from "./doppelgangerService.js";
@@ -196,7 +196,17 @@ export class ValidatorStore {
       this.metrics?.slashingProtectionBlockError.inc();
       throw e;
     }
-    const signature = await this.getSignature(pubkey, signingRoot);
+
+    const signableRequest: SignableRequest = {
+      type: "BLOCK_V2",
+      singablePayload: {
+        version: this.config.getForkInfo(blindedOrFull.slot).name,
+        block: blindedOrFull,
+      },
+      forkInfo: this.getForkInfo(currentSlot),
+    };
+
+    const signature = await this.getSignature(pubkey, signingRoot, signableRequest);
 
     return {message: blindedOrFull, signature} as allForks.FullOrBlindedSignedBeaconBlock;
   }
@@ -206,7 +216,15 @@ export class ValidatorStore {
     const randaoDomain = this.config.getDomain(slot, DOMAIN_RANDAO);
     const randaoSigningRoot = computeSigningRoot(ssz.Epoch, epoch, randaoDomain);
 
-    return await this.getSignature(pubkey, randaoSigningRoot);
+    const signableRequest: SignableRequest = {
+      type: "RANDAO_REVEAL",
+      singablePayload: {
+        epoch,
+      },
+      forkInfo: this.getForkInfo(slot),
+    };
+
+    return await this.getSignature(pubkey, randaoSigningRoot, signableRequest);
   }
 
   async signAttestation(
@@ -240,10 +258,16 @@ export class ValidatorStore {
       throw e;
     }
 
+    const signableRequest: SignableRequest = {
+      type: "ATTESTATION",
+      singablePayload: attestationData,
+      forkInfo: this.getForkInfo(attestationData.slot),
+    };
+
     return {
       aggregationBits: BitArray.fromSingleBit(duty.committeeLength, duty.validatorCommitteeIndex),
       data: attestationData,
-      signature: await this.getSignature(duty.pubkey, signingRoot),
+      signature: await this.getSignature(duty.pubkey, signingRoot, signableRequest),
     };
   }
 
@@ -263,9 +287,15 @@ export class ValidatorStore {
     const domain = this.config.getDomain(duty.slot, DOMAIN_AGGREGATE_AND_PROOF);
     const signingRoot = computeSigningRoot(ssz.phase0.AggregateAndProof, aggregateAndProof, domain);
 
+    const signableRequest: SignableRequest = {
+      type: "AGGREGATE_AND_PROOF",
+      singablePayload: aggregateAndProof,
+      forkInfo: this.getForkInfo(aggregateAndProof.aggregate.data.slot),
+    };
+
     return {
       message: aggregateAndProof,
-      signature: await this.getSignature(duty.pubkey, signingRoot),
+      signature: await this.getSignature(duty.pubkey, signingRoot, signableRequest),
     };
   }
 
@@ -278,11 +308,20 @@ export class ValidatorStore {
     const domain = this.config.getDomain(slot, DOMAIN_SYNC_COMMITTEE);
     const signingRoot = computeSigningRoot(ssz.Root, beaconBlockRoot, domain);
 
+    const signableRequest: SignableRequest = {
+      type: "SYNC_COMMITTEE_MESSAGE",
+      singablePayload: {
+        beaconBlockRoot,
+        slot,
+      },
+      forkInfo: this.getForkInfo(slot),
+    };
+
     return {
       slot,
       validatorIndex,
       beaconBlockRoot,
-      signature: await this.getSignature(pubkey, signingRoot),
+      signature: await this.getSignature(pubkey, signingRoot, signableRequest),
     };
   }
 
@@ -300,9 +339,15 @@ export class ValidatorStore {
     const domain = this.config.getDomain(contribution.slot, DOMAIN_CONTRIBUTION_AND_PROOF);
     const signingRoot = computeSigningRoot(ssz.altair.ContributionAndProof, contributionAndProof, domain);
 
+    const signableRequest: SignableRequest = {
+      type: "SYNC_COMMITTEE_CONTRIBUTION_AND_PROOF",
+      singablePayload: contributionAndProof,
+      forkInfo: this.getForkInfo(contributionAndProof.contribution.slot),
+    };
+
     return {
       message: contributionAndProof,
-      signature: await this.getSignature(duty.pubkey, signingRoot),
+      signature: await this.getSignature(duty.pubkey, signingRoot, signableRequest),
     };
   }
 
@@ -310,7 +355,15 @@ export class ValidatorStore {
     const domain = this.config.getDomain(slot, DOMAIN_SELECTION_PROOF);
     const signingRoot = computeSigningRoot(ssz.Slot, slot, domain);
 
-    return await this.getSignature(pubkey, signingRoot);
+    const signableRequest: SignableRequest = {
+      type: "AGGREGATION_SLOT",
+      singablePayload: {
+        slot,
+      },
+      forkInfo: this.getForkInfo(slot),
+    };
+
+    return await this.getSignature(pubkey, signingRoot, signableRequest);
   }
 
   async signSyncCommitteeSelectionProof(
@@ -326,7 +379,16 @@ export class ValidatorStore {
 
     const signingRoot = computeSigningRoot(ssz.altair.SyncAggregatorSelectionData, signingData, domain);
 
-    return await this.getSignature(pubkey, signingRoot);
+    const singableRequest: SignableRequest = {
+      type: "SYNC_COMMITTEE_SELECTION_PROOF",
+      singablePayload: {
+        slot,
+        subcommitteeIndex: String(subcommitteeIndex),
+      },
+      forkInfo: this.getForkInfo(slot),
+    };
+
+    return await this.getSignature(pubkey, signingRoot, singableRequest);
   }
 
   async signVoluntaryExit(
@@ -339,9 +401,14 @@ export class ValidatorStore {
     const voluntaryExit: phase0.VoluntaryExit = {epoch: exitEpoch, validatorIndex};
     const signingRoot = computeSigningRoot(ssz.phase0.VoluntaryExit, voluntaryExit, domain);
 
+    const signableRequest: SignableRequest = {
+      type: "VOLUNTARY_EXIT",
+      singablePayload: voluntaryExit,
+    };
+
     return {
       message: voluntaryExit,
-      signature: await this.getSignature(pubkey, signingRoot),
+      signature: await this.getSignature(pubkey, signingRoot, signableRequest),
     };
   }
 
@@ -365,13 +432,21 @@ export class ValidatorStore {
     };
     const domain = computeDomain(DOMAIN_APPLICATION_BUILDER, this.config.GENESIS_FORK_VERSION, ZERO_HASH);
     const signingRoot = computeSigningRoot(ssz.bellatrix.ValidatorRegistrationV1, validatorRegistation, domain);
+    const signableRequest: SignableRequest = {
+      type: "VALIDATOR_REGISTRATION",
+      singablePayload: validatorRegistation,
+    };
     return {
       message: validatorRegistation,
-      signature: await this.getSignature(pubkey, signingRoot),
+      signature: await this.getSignature(pubkey, signingRoot, signableRequest),
     };
   }
 
-  private async getSignature(pubkey: BLSPubkeyMaybeHex, signingRoot: Uint8Array): Promise<BLSSignature> {
+  private async getSignature(
+    pubkey: BLSPubkeyMaybeHex,
+    signingRoot: Uint8Array,
+    signableRequest: SignableRequest
+  ): Promise<BLSSignature> {
     // TODO: Refactor indexing to not have to run toHexString() on the pubkey every time
     const pubkeyHex = typeof pubkey === "string" ? pubkey : toHexString(pubkey);
 
@@ -391,7 +466,12 @@ export class ValidatorStore {
       case SignerType.Remote: {
         const timer = this.metrics?.remoteSignTime.startTimer();
         try {
-          const signatureHex = await externalSignerPostSignature(signer.url, pubkeyHex, toHexString(signingRoot));
+          const signatureHex = await externalSignerPostSignature(
+            signer.url,
+            pubkeyHex,
+            toHexString(signingRoot),
+            signableRequest
+          );
           return fromHexString(signatureHex);
         } catch (e) {
           this.metrics?.remoteSignErrors.inc();
@@ -420,6 +500,18 @@ export class ValidatorStore {
     if (!this.isDoppelgangerSafe(pubkeyHex)) {
       throw new Error(`Doppelganger state for key ${pubkeyHex} is not safe`);
     }
+  }
+
+  private getForkInfo(slot: Slot): Web3SignerForkInfo {
+    const forkInfo = this.config.getForkInfo(slot);
+    return {
+      fork: {
+        previousVersion: forkInfo.prevVersion,
+        currentVersion: forkInfo.version,
+        epoch: forkInfo.epoch,
+      },
+      genesisValidatorRoot: this.genesisValidatorRoot,
+    };
   }
 }
 

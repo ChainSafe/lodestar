@@ -8,6 +8,7 @@ import {
   externalSignerGetKeys,
   externalSignerPostSignature,
   externalSignerUpCheck,
+  SignableRequest,
 } from "../../../src/util/externalSignerClient.js";
 import {createExternalSignerServer} from "../../utils/createExternalSignerServer.js";
 
@@ -18,6 +19,12 @@ describe("External signer server", () => {
   const externalSignerUrl = `http://localhost:${port}`;
   let server: ReturnType<typeof createExternalSignerServer>;
   let pubkeys: PublicKey[];
+  const signableRequest: SignableRequest = {
+    singablePayload: {
+      slot: 0,
+    },
+    type: "AGGREGATION_SLOT",
+  };
 
   before(async () => {
     const secretKeys = interopSecretKeys(8);
@@ -35,7 +42,7 @@ describe("External signer server", () => {
     expect(response).to.deep.equal(true);
   });
 
-  it("should GET /keys successfully", async () => {
+  it("should GET /api/v1/eth2/publicKeys successfully", async () => {
     const pubkeysResponse = await externalSignerGetKeys(externalSignerUrl);
     expect(pubkeysResponse).to.deep.equal(pubkeys.map((pubkey) => pubkey.toHex()));
   });
@@ -46,7 +53,12 @@ describe("External signer server", () => {
 
     for (let i = 0; i < pubkeys.length; i++) {
       const pubkey = pubkeys[i];
-      const sigHex = await externalSignerPostSignature(externalSignerUrl, pubkey.toHex(), signingRootHex);
+      const sigHex = await externalSignerPostSignature(
+        externalSignerUrl,
+        pubkey.toHex(),
+        signingRootHex,
+        signableRequest
+      );
       const isValid = bls.Signature.fromHex(sigHex).verify(pubkey, signingRoot);
       expect(isValid).to.equal(true, `Invalid signature for pubkey[${i}]`);
     }
@@ -57,8 +69,8 @@ describe("External signer server", () => {
     const unknownPubkey =
       "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 
-    await expect(externalSignerPostSignature(externalSignerUrl, unknownPubkey, signingRoot)).to.be.rejectedWith(
-      `pubkey not known ${unknownPubkey}`
-    );
+    await expect(
+      externalSignerPostSignature(externalSignerUrl, unknownPubkey, signingRoot, signableRequest)
+    ).to.be.rejectedWith(`pubkey not known ${unknownPubkey}`);
   });
 });
