@@ -1,27 +1,27 @@
 import {routes} from "@lodestar/api";
-import {chainConfigToJson} from "@lodestar/config";
+import {chainConfigToJson, IChainConfig, specValuesToJson} from "@lodestar/config";
 import {activePreset, presetToJson} from "@lodestar/params";
 import {ApiModules} from "../types.js";
+import {specConstants} from "./constants.js";
+
+/**
+ * Retrieve specification configuration used on this node.  The configuration should include:
+ *  - Constants for all hard forks known by the beacon node, for example the
+ *    [phase 0](https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/beacon-chain.md#constants) and
+ *    [altair](https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/altair/beacon-chain.md#constants) values
+ *  - Presets for all hard forks supplied to the beacon node, for example the
+ *    [phase 0](https://github.com/ethereum/consensus-specs/blob/v1.1.10/presets/mainnet/phase0.yaml) and
+ *    [altair](https://github.com/ethereum/consensus.0-specs/blob/v1.1.10/presets/mainnet/altair.yaml) values
+ *  - Configuration for the beacon node, for example the [mainnet](https://github.com/ethereum/consensus-specs/blob/v1.1.10/configs/mainnet.yaml) values
+ */
+export function renderJsonSpec(config: IChainConfig): Record<string, string> {
+  const configJson = chainConfigToJson(config);
+  const presetJson = presetToJson(activePreset);
+  const constantsJson = specValuesToJson(specConstants);
+  return {...configJson, ...presetJson, ...constantsJson};
+}
 
 export function getConfigApi({config}: Pick<ApiModules, "config">): routes.config.Api {
-  // Retrieve specification configuration used on this node.  The configuration should include:
-  //  - Constants for all hard forks known by the beacon node, for example the
-  //    [phase 0](https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/beacon-chain.md#constants) and
-  //    [altair](https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/altair/beacon-chain.md#constants) values
-  //  - Presets for all hard forks supplied to the beacon node, for example the
-  //    [phase 0](https://github.com/ethereum/consensus-specs/blob/v1.1.10/presets/mainnet/phase0.yaml) and
-  //    [altair](https://github.com/ethereum/consensus.0-specs/blob/v1.1.10/presets/mainnet/altair.yaml) values
-  //  - Configuration for the beacon node, for example the [mainnet](https://github.com/ethereum/consensus-specs/blob/v1.1.10/configs/mainnet.yaml) values
-
-  let jsonSpec: Record<string, string> | null = null;
-  function getJsonSpec(): Record<string, string> {
-    // TODO: Include static constants exported in @lodestar/params (i.e. DOMAIN_BEACON_PROPOSER)
-    const configJson = chainConfigToJson(config);
-    const presetJson = presetToJson(activePreset);
-    jsonSpec = {...configJson, ...presetJson};
-    return jsonSpec;
-  }
-
   return {
     async getForkSchedule() {
       const forkInfos = Object.values(config.forks);
@@ -44,7 +44,7 @@ export function getConfigApi({config}: Pick<ApiModules, "config">): routes.confi
 
     async getSpec() {
       return {
-        data: getJsonSpec(),
+        data: renderJsonSpec(config),
       };
     },
   };

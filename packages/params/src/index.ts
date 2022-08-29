@@ -154,12 +154,6 @@ export const SYNC_COMMITTEE_SUBNET_SIZE = Math.floor(SYNC_COMMITTEE_SIZE / SYNC_
 
 export const MAX_REQUEST_BLOCKS = 2 ** 10; // 1024
 
-// Bellatrix constants - Spec v1.0.1
-// Genesis testing settings
-// Note: These configuration settings do not apply to the mainnet and are utilized only by pure Merge testing.
-export const GENESIS_GAS_LIMIT = 30000000;
-export const GENESIS_BASE_FEE_PER_GAS = BigInt(1000000000);
-
 // Lightclient pre-computed
 /**
  * ```ts
