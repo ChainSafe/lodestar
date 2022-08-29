@@ -49,7 +49,7 @@ export const testData: GenericServerTestCases<Api> = {
   },
   getSyncingStatus: {
     args: [],
-    res: {data: {headSlot: "1", syncDistance: "2", isSyncing: false}},
+    res: {data: {headSlot: "1", syncDistance: "2", isSyncing: false, isOptimistic: true}},
   },
   getHealth: {
     args: [],

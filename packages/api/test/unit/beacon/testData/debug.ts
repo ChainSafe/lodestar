@@ -4,12 +4,16 @@ import {toHexString} from "@chainsafe/ssz";
 import {Api} from "../../../../src/beacon/routes/debug.js";
 import {GenericServerTestCases} from "../../../utils/genericServerTest.js";
 
-const root = Buffer.alloc(32, 1);
+const rootHex = toHexString(Buffer.alloc(32, 1));
 
 export const testData: GenericServerTestCases<Api> = {
-  getHeads: {
+  getDebugChainHeads: {
     args: [],
-    res: {data: [{slot: 1, root: toHexString(root)}]},
+    res: {data: [{slot: 1, root: rootHex}]},
+  },
+  getDebugChainHeadsV2: {
+    args: [],
+    res: {data: [{slot: 1, root: rootHex, executionOptimistic: true}]},
   },
   getState: {
     args: ["head", "json"],

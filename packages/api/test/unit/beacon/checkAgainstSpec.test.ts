@@ -1,6 +1,7 @@
 import Ajv, {ErrorObject} from "ajv";
 import {expect} from "chai";
 import {config} from "@lodestar/config/default";
+import {ReqGeneric} from "../../../src/utils/types.js";
 import {readOpenApiSpec} from "../../openApiParser.js";
 import {routes} from "../../../src/beacon/index.js";
 // Import all testData and merge below
@@ -99,6 +100,11 @@ for (const [operationId, routeSpec] of openApiSpec.entries()) {
           }
         }
 
+        // Stringify param and query to simulate rendering in HTTP query
+        // TODO: Review conversions in fastify and other servers
+        stringifyProperties((reqJson as ReqGeneric).params ?? {});
+        stringifyProperties((reqJson as ReqGeneric).query ?? {});
+
         // Validate response
         validateSchema(routeSpec.requestSchema, reqJson, "request");
       });
@@ -150,4 +156,15 @@ function validateSchema(schema: Parameters<typeof ajv.compile>[0], json: unknown
 function prettyAjvErrors(errors: ErrorObject[] | null | undefined): string {
   if (!errors) return "";
   return errors.map((e) => `${e.instancePath ?? "."} - ${e.message}`).join("\n");
+}
+
+function stringifyProperties(obj: Record<string, unknown>): Record<string, unknown> {
+  for (const key of Object.keys(obj)) {
+    const value = obj[key];
+    if (typeof value === "number") {
+      obj[key] = value.toString(10);
+    }
+  }
+
+  return obj;
 }

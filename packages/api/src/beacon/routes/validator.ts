@@ -113,7 +113,7 @@ export type Api = {
   getAttesterDuties(
     epoch: Epoch,
     validatorIndices: ValidatorIndex[]
-  ): Promise<{data: AttesterDuty[]; dependentRoot: Root}>;
+  ): Promise<{executionOptimistic: ExecutionOptimistic; data: AttesterDuty[]; dependentRoot: Root}>;
 
   /**
    * Get block proposers duties
@@ -126,7 +126,9 @@ export type Api = {
    * @returns any Success response
    * @throws ApiError
    */
-  getProposerDuties(epoch: Epoch): Promise<{data: ProposerDuty[]; dependentRoot: Root}>;
+  getProposerDuties(
+    epoch: Epoch
+  ): Promise<{executionOptimistic: ExecutionOptimistic; data: ProposerDuty[]; dependentRoot: Root}>;
 
   getSyncCommitteeDuties(
     epoch: number,
@@ -235,12 +237,12 @@ export type Api = {
  * Define javascript values for each route
  */
 export const routesData: RoutesData<Api> = {
-  getAttesterDuties: {url: "/eth/v1/validator/duties/attester/:epoch", method: "POST"},
-  getProposerDuties: {url: "/eth/v1/validator/duties/proposer/:epoch", method: "GET"},
-  getSyncCommitteeDuties: {url: "/eth/v1/validator/duties/sync/:epoch", method: "POST"},
+  getAttesterDuties: {url: "/eth/v1/validator/duties/attester/{epoch}", method: "POST"},
+  getProposerDuties: {url: "/eth/v1/validator/duties/proposer/{epoch}", method: "GET"},
+  getSyncCommitteeDuties: {url: "/eth/v1/validator/duties/sync/{epoch}", method: "POST"},
   produceBlock: {url: "/eth/v1/validator/blocks/{slot}", method: "GET"},
   produceBlockV2: {url: "/eth/v2/validator/blocks/{slot}", method: "GET"},
-  produceBlindedBlock: {url: "/eth/v2/validator/blinded_blocks/{slot}", method: "GET"},
+  produceBlindedBlock: {url: "/eth/v1/validator/blinded_blocks/{slot}", method: "GET"},
   produceAttestationData: {url: "/eth/v1/validator/attestation_data", method: "GET"},
   produceSyncCommitteeContribution: {url: "/eth/v1/validator/sync_committee_contribution", method: "GET"},
   getAggregatedAttestation: {url: "/eth/v1/validator/aggregate_attestation", method: "GET"},
@@ -389,8 +391,15 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
 
 export function getReturnTypes(): ReturnTypes<Api> {
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  const WithDependentRoot = <T>(dataType: Type<T>) =>
-    new ContainerType({data: dataType, dependentRoot: ssz.Root}, {jsonCase: "snake"});
+  const WithDependentRootExecutionOptimistic = <T>(dataType: Type<T>) =>
+    new ContainerType(
+      {
+        executionOptimistic: ssz.Boolean,
+        data: dataType,
+        dependentRoot: ssz.Root,
+      },
+      {jsonCase: "eth2"}
+    );
 
   const AttesterDuty = new ContainerType(
     {
@@ -424,8 +433,8 @@ export function getReturnTypes(): ReturnTypes<Api> {
   );
 
   return {
-    getAttesterDuties: WithDependentRoot(ArrayOf(AttesterDuty)),
-    getProposerDuties: WithDependentRoot(ArrayOf(ProposerDuty)),
+    getAttesterDuties: WithDependentRootExecutionOptimistic(ArrayOf(AttesterDuty)),
+    getProposerDuties: WithDependentRootExecutionOptimistic(ArrayOf(ProposerDuty)),
     getSyncCommitteeDuties: ContainerDataExecutionOptimistic(ArrayOf(SyncDuty)),
     produceBlock: ContainerData(ssz.phase0.BeaconBlock),
     produceBlockV2: WithVersion((fork: ForkName) => ssz[fork].BeaconBlock),

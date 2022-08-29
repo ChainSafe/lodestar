@@ -9,6 +9,7 @@ export const testData: GenericServerTestCases<Api> = {
   getAttesterDuties: {
     args: [1000, [1, 2, 3]],
     res: {
+      executionOptimistic: true,
       data: [
         {
           pubkey: Buffer.alloc(48, 1),
@@ -25,7 +26,11 @@ export const testData: GenericServerTestCases<Api> = {
   },
   getProposerDuties: {
     args: [1000],
-    res: {data: [{slot: 1, validatorIndex: 2, pubkey: Buffer.alloc(48, 3)}], dependentRoot: ZERO_HASH},
+    res: {
+      executionOptimistic: true,
+      data: [{slot: 1, validatorIndex: 2, pubkey: Buffer.alloc(48, 3)}],
+      dependentRoot: ZERO_HASH,
+    },
   },
   getSyncCommitteeDuties: {
     args: [1000, [1, 2, 3]],
