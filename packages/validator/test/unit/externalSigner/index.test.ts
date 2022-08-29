@@ -21,7 +21,7 @@ describe("External signer server", () => {
   let pubkeys: PublicKey[];
   const signableRequest: SignableMessage = {
     singablePayload: {
-      slot: 0,
+      slot: "0",
     },
     type: "AGGREGATION_SLOT",
   };

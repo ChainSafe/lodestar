@@ -358,7 +358,7 @@ export class ValidatorStore {
     const signableMessage: SignableMessage = {
       type: "AGGREGATION_SLOT",
       singablePayload: {
-        slot,
+        slot: String(slot),
       },
       forkInfo: this.getForkInfo(slot),
     };

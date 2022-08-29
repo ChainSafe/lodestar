@@ -3,6 +3,7 @@ import {BeaconBlock, AggregateAndProof, AttestationData, VoluntaryExit, Fork} fr
 import {SyncCommitteeContribution} from "@lodestar/types/altair";
 import {ValidatorRegistrationV1} from "@lodestar/types/bellatrix";
 import {Epoch, Root, Slot} from "@lodestar/types";
+import {toHexString} from "@chainsafe/ssz";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
@@ -21,7 +22,7 @@ type Web3SignerRequestType =
   | "VALIDATOR_REGISTRATION";
 
 export type Web3SignerAggregationSlotMsg = {
-  slot: Slot;
+  slot: string;
 };
 export type Web3SignerAggregateAndProofMsg = AggregateAndProof;
 export type Web3SignerAttestationMsg = AttestationData;
@@ -130,23 +131,36 @@ async function handlerExternalSignerResponse<T>(res: Response): Promise<T> {
 }
 
 function convertToRequest(signableRequest: SignableMessage): Record<string, unknown> {
+  if (signableRequest.forkInfo === undefined) {
+    throw new Error("Attempt to call remote signer without fork info");
+  }
+
+  const forkInfo = {
+    fork: {
+      previous_version: toHexString(signableRequest.forkInfo?.fork.previousVersion),
+      current_version: toHexString(signableRequest.forkInfo?.fork.currentVersion),
+      epoch: String(signableRequest.forkInfo?.fork.epoch),
+    },
+    genesis_validators_root: toHexString(signableRequest.forkInfo?.genesisValidatorRoot),
+  };
+
   if (signableRequest.type === "SYNC_COMMITTEE_SELECTION_PROOF") {
     return {
       type: signableRequest.type,
       sync_aggregator_selection_data: signableRequest.singablePayload,
-      fork_info: signableRequest.forkInfo,
+      fork_info: forkInfo,
     };
   } else if (signableRequest.type === "SYNC_COMMITTEE_CONTRIBUTION_AND_PROOF") {
     return {
       type: signableRequest.type,
       contribution_and_proof: signableRequest.singablePayload,
-      fork_info: signableRequest.forkInfo,
+      fork_info: forkInfo,
     };
   } else {
     return {
       type: signableRequest.type,
       [signableRequest.type.toLocaleLowerCase()]: signableRequest.singablePayload,
-      fork_info: signableRequest.forkInfo,
+      fork_info: forkInfo,
     };
   }
 }

@@ -27,7 +27,7 @@ chai.use(chaiAsPromised);
 //
 // Attempting to do both 1. and 2. in this e2e test more expensive than necessary.
 // Unit tests in the validator cover 2., so some test in lodestar package should cover 1.
-describe("doppelganger / doppelganger test", function () {
+describe.skip("doppelganger / doppelganger test", function () {
   const afterEachCallbacks: (() => Promise<unknown> | void)[] = [];
   afterEach(async () => {
     while (afterEachCallbacks.length > 0) {
@@ -173,6 +173,7 @@ describe("doppelganger / doppelganger test", function () {
       useRestApi: false,
       testLoggerOpts,
       doppelgangerProtectionEnabled: false,
+      externalSignerUrl: "http://localhost:9000",
     });
     afterEachCallbacks.push(() => Promise.all(validator0WithoutDoppelganger.map((v) => v.close())));
 
