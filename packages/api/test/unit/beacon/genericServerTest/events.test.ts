@@ -1,11 +1,11 @@
 import {expect} from "chai";
 import {sleep} from "@lodestar/utils";
 import {config} from "@lodestar/config/default";
-import {Api, routesData, EventType, BeaconEvent} from "../../../src/beacon/routes/events.js";
-import {getClient} from "../../../src/beacon/client/events.js";
-import {getRoutes} from "../../../src/beacon/server/events.js";
-import {registerRoute} from "../../../src/utils/server/registerRoute.js";
-import {getMockApi, getTestServer} from "../../utils/utils.js";
+import {Api, routesData, EventType, BeaconEvent} from "../../../../src/beacon/routes/events.js";
+import {getClient} from "../../../../src/beacon/client/events.js";
+import {getRoutes} from "../../../../src/beacon/server/events.js";
+import {registerRoute} from "../../../../src/utils/server/registerRoute.js";
+import {getMockApi, getTestServer} from "../../../utils/utils.js";
 
 describe("beacon / events", () => {
   const rootHex = "0x" + "01".repeat(32);

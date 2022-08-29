@@ -7,7 +7,7 @@ type Token = {type: TokenType; start: number};
 type Args = Record<string, string | number>;
 
 /**
- * Compile a route URL formater with syntax `/path/:var1/:var2`.
+ * Compile a route URL formater with syntax `/path/{var1}/{var2}`.
  * Returns a function that expects an object `{var1: 1, var2: 2}`, and returns`/path/1/2`.
  *
  * It's cheap enough to be neglibible. For the sample input below it costs:
@@ -22,7 +22,7 @@ export function compileRouteUrlFormater(path: string): (arg: Args) => string {
   for (let i = 0, len = path.length; i < len; i++) {
     const currentToken: Token | undefined = tokens[tokens.length - 1];
     switch (path[i]) {
-      case ":": {
+      case "{": {
         if (currentToken !== undefined && currentToken.type === TokenType.Variable) {
           throw Error(`Invalid path token ':' not closed: ${path}`);
         }
@@ -30,9 +30,9 @@ export function compileRouteUrlFormater(path: string): (arg: Args) => string {
         break;
       }
 
-      case "/": {
+      case "}": {
         if (currentToken === undefined || currentToken.type === TokenType.Variable) {
-          tokens.push({type: TokenType.String, start: i});
+          tokens.push({type: TokenType.String, start: i + 1});
         }
         break;
       }
@@ -59,7 +59,7 @@ export function compileRouteUrlFormater(path: string): (arg: Args) => string {
         return () => part;
 
       case TokenType.Variable: {
-        const argKey = part.slice(1); // remove prepended ":"
+        const argKey = part.slice(1, part.length - 1); // remove prefix "{" and suffix "}"
         return (args: Args) => args[argKey];
       }
     }
