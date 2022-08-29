@@ -2,6 +2,7 @@ import {dirname} from "node:path";
 import {fileURLToPath} from "node:url";
 import {ChildProcess, spawn} from "node:child_process";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {Slot} from "@lodestar/types";
 import {SimulationOptionalParams, SimulationParams} from "./types.js";
 
 // Global variable __dirname no longer available in ES6 modules.
@@ -14,11 +15,6 @@ export const defaultSimulationParams: SimulationOptionalParams = {
   withExternalSigner: false,
   slotsPerEpoch: SLOTS_PER_EPOCH,
   secondsPerSlot: 2,
-  // 1 epoch of margin of error
-  epochsOfMargin: 1,
-  // Give extra 5 seconds of margin
-  timeoutSetupMargin: 5 * 1000,
-
   // delay a bit so regular sync sees it's up to date and sync is completed from the beginning
   // allow time for bls worker threads to warm up
   genesisSlotsDelay: 20,
@@ -74,3 +70,18 @@ export const closeChildProcess = async (childProcess: ChildProcess, signal?: "SI
     childProcess.kill(signal);
   });
 };
+
+export const waitForSlot = async (params: SimulationParams, slot: Slot): Promise<void> {
+  if (slot <= 0) {
+    return;
+  }
+
+  const slotStartSec = params.genesisTime + slot * params.secondsPerSlot;
+  const msToSlot = slotStartSec * 1000 - Date.now();
+
+  if (msToSlot < 0) {
+    throw Error("Requested slot is in past");
+  }
+
+  await new Promise((resolve) => setTimeout(resolve, msToSlot));
+}

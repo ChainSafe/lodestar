@@ -18,13 +18,12 @@ export const LodestarBeaconNodeProcess: BeaconNodeConstructor = class LodestarBe
   static totalProcessCount = 0;
   readonly params: SimulationParams;
   api!: Api;
-  secretKeys: Record<number, SecretKey[]> = {};
+  readonly secretKeys: Record<number, SecretKey[]> = {};
+  readonly address: string;
+  readonly port: number;
+  readonly restPort: number;
 
   private rootDir: string;
-  private address: string;
-  private port: number;
-  private restPort: number;
-
   private beaconProcess!: ChildProcess;
   private validatorProcesses: ChildProcess[] = [];
   private beaconCliArgs: IBeaconArgs & IGlobalArgs;
@@ -35,7 +34,7 @@ export const LodestarBeaconNodeProcess: BeaconNodeConstructor = class LodestarBe
     this.rootDir = rootDir;
     LodestarBeaconNodeProcess.totalProcessCount += 1;
 
-    this.address = `127.0.0.${LodestarBeaconNodeProcess.totalProcessCount}`;
+    this.address = "127.0.0.1";
     this.port = 4000 + LodestarBeaconNodeProcess.totalProcessCount;
     this.restPort = 5000 + LodestarBeaconNodeProcess.totalProcessCount;
 
@@ -122,6 +121,7 @@ export const LodestarBeaconNodeProcess: BeaconNodeConstructor = class LodestarBe
             "--importKeystoresPassword",
             `${this.rootDir}/validator_${clientIndex}/password.txt`,
           ],
+          // TODO: Add different check for validator health
           async () => this.ready()
         )
       );
