@@ -8,7 +8,7 @@ import {
   externalSignerGetKeys,
   externalSignerPostSignature,
   externalSignerUpCheck,
-  SignableRequest,
+  SignableMessage,
 } from "../../../src/util/externalSignerClient.js";
 import {createExternalSignerServer} from "../../utils/createExternalSignerServer.js";
 
@@ -19,7 +19,7 @@ describe("External signer server", () => {
   const externalSignerUrl = `http://localhost:${port}`;
   let server: ReturnType<typeof createExternalSignerServer>;
   let pubkeys: PublicKey[];
-  const signableRequest: SignableRequest = {
+  const signableRequest: SignableMessage = {
     singablePayload: {
       slot: 0,
     },

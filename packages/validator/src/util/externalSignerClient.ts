@@ -50,7 +50,7 @@ export type Web3SignerSyncCommitteeContributionAndProofMsg = {
 
 export type Web3SignerValidatorRegistrationMsg = ValidatorRegistrationV1;
 
-export type SignableRequest = {
+export type SignableMessage = {
   type: Web3SignerRequestType;
   singablePayload: SingablePayload;
   forkInfo?: Web3SignerForkInfo;
@@ -92,13 +92,13 @@ export async function externalSignerPostSignature(
   externalSignerUrl: string,
   pubkeyHex: string,
   signingRootHex: string,
-  signableRequest: SignableRequest
+  signableMessage: SignableMessage
 ): Promise<string> {
   const res = await fetch(`${externalSignerUrl}/api/v1/eth2/sign/${pubkeyHex}`, {
     method: "POST",
     headers: {"Content-Type": "application/json"},
     body: JSON.stringify({
-      ...convertToRequest(signableRequest),
+      ...convertToRequest(signableMessage),
       ...{signingRoot: signingRootHex},
     }),
   });
@@ -129,7 +129,7 @@ async function handlerExternalSignerResponse<T>(res: Response): Promise<T> {
   return JSON.parse(await res.text()) as T;
 }
 
-function convertToRequest(signableRequest: SignableRequest): Record<string, unknown> {
+function convertToRequest(signableRequest: SignableMessage): Record<string, unknown> {
   if (signableRequest.type === "SYNC_COMMITTEE_SELECTION_PROOF") {
     return {
       type: signableRequest.type,
