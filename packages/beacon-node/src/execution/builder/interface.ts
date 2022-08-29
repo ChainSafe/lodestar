@@ -8,7 +8,8 @@ export interface IExecutionBuilder {
    */
   readonly issueLocalFcUForBlockProduction?: boolean;
   status: boolean;
-  updateStatus(shouldEnable: boolean): Promise<void>;
+  updateStatus(shouldEnable: boolean): void;
+  checkStatus(): Promise<void>;
   registerValidator(registrations: bellatrix.SignedValidatorRegistrationV1[]): Promise<void>;
   getPayloadHeader(slot: Slot, parentHash: Root, proposerPubKey: BLSPubkey): Promise<bellatrix.ExecutionPayloadHeader>;
   submitSignedBlindedBlock(signedBlock: bellatrix.SignedBlindedBeaconBlock): Promise<bellatrix.SignedBeaconBlock>;

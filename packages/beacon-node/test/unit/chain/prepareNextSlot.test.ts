@@ -138,7 +138,7 @@ describe("PrepareNextSlot scheduler", () => {
     forkChoiceStub.updateHead.returns({slot: SLOTS_PER_EPOCH - 3} as ProtoBlock);
     forkChoiceStub.getJustifiedBlock.returns({} as ProtoBlock);
     forkChoiceStub.getFinalizedBlock.returns({} as ProtoBlock);
-    updateBuilderStatus.resolves(void 0);
+    updateBuilderStatus.returns(void 0);
     const state = generateCachedBellatrixState();
     regenStub.getBlockSlotState.resolves(state);
     beaconProposerCacheStub.get.returns("0x fee recipient address");

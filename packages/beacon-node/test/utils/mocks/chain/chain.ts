@@ -210,7 +210,7 @@ export class MockBeaconChain implements IBeaconChain {
   }
 
   async updateBeaconProposerData(): Promise<void> {}
-  async updateBuilderStatus(): Promise<void> {}
+  updateBuilderStatus(): void {}
 }
 
 function mockForkChoice(): IForkChoice {

@@ -32,18 +32,17 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
     this.issueLocalFcUForBlockProduction = opts.issueLocalFcUForBlockProduction;
   }
 
-  async updateStatus(shouldEnable: boolean): Promise<void> {
-    if (shouldEnable) {
-      try {
-        // the checkStatus call returns 200 if everything is good
-        await this.api.checkStatus();
-        this.status = true;
-      } catch (e) {
-        this.status = false;
-        throw e;
-      }
-    } else {
+  updateStatus(shouldEnable: boolean): void {
+    this.status = shouldEnable;
+  }
+
+  async checkStatus(): Promise<void> {
+    try {
+      await this.api.checkStatus();
+    } catch (e) {
+      // Disable if the status was enabled
       this.status = false;
+      throw e;
     }
   }
 

@@ -634,13 +634,14 @@ export class BeaconChain implements IBeaconChain {
     });
   }
 
-  async updateBuilderStatus(clockSlot: Slot): Promise<void> {
+  updateBuilderStatus(clockSlot: Slot): void {
     const executionBuilder = this.executionBuilder;
     if (executionBuilder) {
       const slotsPresent = this.forkChoice.getSlotsPresent(clockSlot - this.faultInspectionWindow);
       const previousStatus = executionBuilder.status;
       const shouldEnable = slotsPresent >= this.faultInspectionWindow - this.allowedFaults;
-      await executionBuilder.updateStatus(shouldEnable);
+
+      executionBuilder.updateStatus(shouldEnable);
       // The status changed we should log
       const status = executionBuilder.status;
       if (status !== previousStatus) {
@@ -648,6 +649,14 @@ export class BeaconChain implements IBeaconChain {
           status,
           slotsPresent,
           window: this.faultInspectionWindow,
+          allowedFaults: this.allowedFaults,
+        });
+      } else {
+        this.logger.verbose("Execution builder status", {
+          status,
+          slotsPresent,
+          window: this.faultInspectionWindow,
+          allowedFaults: this.allowedFaults,
         });
       }
     }
