@@ -19,9 +19,17 @@ describe("External signer server", () => {
   const externalSignerUrl = `http://localhost:${port}`;
   let server: ReturnType<typeof createExternalSignerServer>;
   let pubkeys: PublicKey[];
-  const signableRequest: SignableMessage = {
+  const signableMessage: SignableMessage = {
     singablePayload: {
       slot: "0",
+    },
+    forkInfo: {
+      fork: {
+        previousVersion: Buffer.alloc(0),
+        currentVersion: Buffer.alloc(0),
+        epoch: 0,
+      },
+      genesisValidatorRoot: Buffer.alloc(0),
     },
     type: "AGGREGATION_SLOT",
   };
@@ -57,7 +65,7 @@ describe("External signer server", () => {
         externalSignerUrl,
         pubkey.toHex(),
         signingRootHex,
-        signableRequest
+        signableMessage
       );
       const isValid = bls.Signature.fromHex(sigHex).verify(pubkey, signingRoot);
       expect(isValid).to.equal(true, `Invalid signature for pubkey[${i}]`);
@@ -70,7 +78,7 @@ describe("External signer server", () => {
       "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 
     await expect(
-      externalSignerPostSignature(externalSignerUrl, unknownPubkey, signingRoot, signableRequest)
+      externalSignerPostSignature(externalSignerUrl, unknownPubkey, signingRoot, signableMessage)
     ).to.be.rejectedWith(`pubkey not known ${unknownPubkey}`);
   });
 });

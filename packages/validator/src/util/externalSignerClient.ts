@@ -130,36 +130,39 @@ async function handlerExternalSignerResponse<T>(res: Response): Promise<T> {
   return JSON.parse(await res.text()) as T;
 }
 
-function convertToRequest(signableRequest: SignableMessage): Record<string, unknown> {
-  if (signableRequest.forkInfo === undefined) {
-    throw new Error("Attempt to call remote signer without fork info");
+function convertToRequest(signableMessage: SignableMessage): Record<string, unknown> {
+  let forkInfo;
+  if (signableMessage.type != "DEPOSIT" && signableMessage.type != "VALIDATOR_REGISTRATION") {
+    if (signableMessage.forkInfo === undefined) {
+      throw new Error("Attempt to call remote signer without fork info");
+    }
+
+    forkInfo = {
+      fork: {
+        previous_version: toHexString(signableMessage.forkInfo.fork.previousVersion),
+        current_version: toHexString(signableMessage.forkInfo.fork.currentVersion),
+        epoch: String(signableMessage.forkInfo.fork.epoch),
+      },
+      genesis_validators_root: toHexString(signableMessage.forkInfo.genesisValidatorRoot),
+    };
   }
 
-  const forkInfo = {
-    fork: {
-      previous_version: toHexString(signableRequest.forkInfo?.fork.previousVersion),
-      current_version: toHexString(signableRequest.forkInfo?.fork.currentVersion),
-      epoch: String(signableRequest.forkInfo?.fork.epoch),
-    },
-    genesis_validators_root: toHexString(signableRequest.forkInfo?.genesisValidatorRoot),
-  };
-
-  if (signableRequest.type === "SYNC_COMMITTEE_SELECTION_PROOF") {
+  if (signableMessage.type === "SYNC_COMMITTEE_SELECTION_PROOF") {
     return {
-      type: signableRequest.type,
-      sync_aggregator_selection_data: signableRequest.singablePayload,
+      type: signableMessage.type,
+      sync_aggregator_selection_data: signableMessage.singablePayload,
       fork_info: forkInfo,
     };
-  } else if (signableRequest.type === "SYNC_COMMITTEE_CONTRIBUTION_AND_PROOF") {
+  } else if (signableMessage.type === "SYNC_COMMITTEE_CONTRIBUTION_AND_PROOF") {
     return {
-      type: signableRequest.type,
-      contribution_and_proof: signableRequest.singablePayload,
+      type: signableMessage.type,
+      contribution_and_proof: signableMessage.singablePayload,
       fork_info: forkInfo,
     };
   } else {
     return {
-      type: signableRequest.type,
-      [signableRequest.type.toLocaleLowerCase()]: signableRequest.singablePayload,
+      type: signableMessage.type,
+      [signableMessage.type.toLocaleLowerCase()]: signableMessage.singablePayload,
       fork_info: forkInfo,
     };
   }
