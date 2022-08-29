@@ -1,6 +1,5 @@
 import type {SecretKey} from "@chainsafe/bls/types";
 import {Api} from "@lodestar/api";
-import {ChainEvent} from "@lodestar/beacon-node/chain";
 import {BeaconStateAllForks} from "@lodestar/state-transition/";
 
 export type SimulationRequiredParams = {
@@ -8,7 +7,6 @@ export type SimulationRequiredParams = {
   validatorClients: number;
   altairEpoch: number;
   bellatrixEpoch: number;
-  chainEvent: ChainEvent.justified | ChainEvent.finalized;
 };
 
 export type SimulationOptionalParams = {
@@ -16,15 +14,12 @@ export type SimulationOptionalParams = {
   withExternalSigner: boolean;
   slotsPerEpoch: number;
   secondsPerSlot: number;
-  epochsOfMargin: number;
-  timeoutSetupMargin: number;
   genesisSlotsDelay: number;
   anchorState?: BeaconStateAllForks;
 };
 
 export type RunTimeSimulationParams = {
   genesisTime: number;
-  expectedTimeout: number;
 };
 
 export interface BeaconNodeProcess {
@@ -33,6 +28,9 @@ export interface BeaconNodeProcess {
   stop(): Promise<void>;
   secretKeys: Record<number, SecretKey[]>;
   api: Api;
+  address: string;
+  port: number;
+  restPort: number;
 }
 
 export interface BeaconNodeConstructor {
