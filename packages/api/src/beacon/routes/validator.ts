@@ -25,7 +25,9 @@ import {
   reqOnlyBody,
   ReqSerializers,
   jsonType,
+  ContainerDataExecutionOptimistic,
 } from "../../utils/index.js";
+import {ExecutionOptimistic} from "./beacon/block.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
@@ -126,7 +128,10 @@ export type Api = {
    */
   getProposerDuties(epoch: Epoch): Promise<{data: ProposerDuty[]; dependentRoot: Root}>;
 
-  getSyncCommitteeDuties(epoch: number, validatorIndices: ValidatorIndex[]): Promise<{data: SyncDuty[]}>;
+  getSyncCommitteeDuties(
+    epoch: number,
+    validatorIndices: ValidatorIndex[]
+  ): Promise<{executionOptimistic: ExecutionOptimistic; data: SyncDuty[]}>;
 
   /**
    * Produce a new block, without signature.
@@ -233,9 +238,9 @@ export const routesData: RoutesData<Api> = {
   getAttesterDuties: {url: "/eth/v1/validator/duties/attester/:epoch", method: "POST"},
   getProposerDuties: {url: "/eth/v1/validator/duties/proposer/:epoch", method: "GET"},
   getSyncCommitteeDuties: {url: "/eth/v1/validator/duties/sync/:epoch", method: "POST"},
-  produceBlock: {url: "/eth/v1/validator/blocks/:slot", method: "GET"},
-  produceBlockV2: {url: "/eth/v2/validator/blocks/:slot", method: "GET"},
-  produceBlindedBlock: {url: "/eth/v2/validator/blinded_blocks/:slot", method: "GET"},
+  produceBlock: {url: "/eth/v1/validator/blocks/{slot}", method: "GET"},
+  produceBlockV2: {url: "/eth/v2/validator/blocks/{slot}", method: "GET"},
+  produceBlindedBlock: {url: "/eth/v2/validator/blinded_blocks/{slot}", method: "GET"},
   produceAttestationData: {url: "/eth/v1/validator/attestation_data", method: "GET"},
   produceSyncCommitteeContribution: {url: "/eth/v1/validator/sync_committee_contribution", method: "GET"},
   getAggregatedAttestation: {url: "/eth/v1/validator/aggregate_attestation", method: "GET"},
@@ -421,7 +426,7 @@ export function getReturnTypes(): ReturnTypes<Api> {
   return {
     getAttesterDuties: WithDependentRoot(ArrayOf(AttesterDuty)),
     getProposerDuties: WithDependentRoot(ArrayOf(ProposerDuty)),
-    getSyncCommitteeDuties: ContainerData(ArrayOf(SyncDuty)),
+    getSyncCommitteeDuties: ContainerDataExecutionOptimistic(ArrayOf(SyncDuty)),
     produceBlock: ContainerData(ssz.phase0.BeaconBlock),
     produceBlockV2: WithVersion((fork: ForkName) => ssz[fork].BeaconBlock),
     produceBlindedBlock: WithVersion((_fork: ForkName) => ssz.bellatrix.BlindedBeaconBlock),

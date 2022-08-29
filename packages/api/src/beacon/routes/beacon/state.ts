@@ -35,7 +35,7 @@ export type ValidatorStatus =
 
 export type ValidatorFilters = {
   id?: ValidatorId[];
-  statuses?: ValidatorStatus[];
+  status?: ValidatorStatus[];
 };
 export type CommitteesFilters = {
   epoch?: Epoch;
@@ -186,7 +186,7 @@ export type ReqTypes = {
   getStateFork: StateIdOnlyReq;
   getStateRoot: StateIdOnlyReq;
   getStateValidator: {params: {state_id: StateId; validator_id: ValidatorId}};
-  getStateValidators: {params: {state_id: StateId}; query: {id?: ValidatorId[]; statuses?: ValidatorStatus[]}};
+  getStateValidators: {params: {state_id: StateId}; query: {id?: ValidatorId[]; status?: ValidatorStatus[]}};
   getStateValidatorBalances: {params: {state_id: StateId}; query: {id?: ValidatorId[]}};
 };
 
@@ -233,7 +233,7 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
       parseReq: ({params, query}) => [params.state_id, query],
       schema: {
         params: {state_id: Schema.StringRequired},
-        query: {id: Schema.UintOrStringArray, statuses: Schema.StringArray},
+        query: {id: Schema.UintOrStringArray, status: Schema.StringArray},
       },
     },
 

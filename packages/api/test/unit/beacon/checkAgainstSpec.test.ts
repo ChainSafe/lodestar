@@ -25,6 +25,13 @@ ajv.addKeyword({
 
 const openApiSpec = readOpenApiSpec();
 
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
+// TEMP: Rename some properties to match spec
+openApiSpec.set("submitPoolAttesterSlashing", openApiSpec.get("submitPoolAttesterSlashings")!);
+openApiSpec.set("submitPoolProposerSlashing", openApiSpec.get("submitPoolProposerSlashings")!);
+openApiSpec.delete("submitPoolAttesterSlashings");
+openApiSpec.delete("submitPoolProposerSlashings");
+
 const testDatas = {
   ...beaconTestData,
   ...configTestData,
@@ -66,6 +73,12 @@ for (const [operationId, routeSpec] of openApiSpec.entries()) {
     const {requestSchema, responseOkSchema} = routeSpec;
     const routeId = operationId as keyof typeof testDatas;
     const testData = testDatas[routeId];
+
+    before("route is defined", () => {
+      if (testData == null) {
+        throw Error(`${routeId} not defined`);
+      }
+    });
 
     it(`${operationId}_route`, function () {
       const routeData = routesData[routeId];
@@ -124,7 +137,12 @@ function validateSchema(schema: Parameters<typeof ajv.compile>[0], json: unknown
   const valid = <boolean>validate(json);
   if (!valid) {
     throw Error(
-      [`Invalid ${id} against spec schema`, prettyAjvErrors(validate.errors), JSON.stringify(json)].join("\n\n")
+      [
+        `Invalid ${id} against spec schema`,
+        prettyAjvErrors(validate.errors),
+        // Limit the max amount of JSON dumped as the full state is too big
+        JSON.stringify(json).slice(0, 1000),
+      ].join("\n\n")
     );
   }
 }

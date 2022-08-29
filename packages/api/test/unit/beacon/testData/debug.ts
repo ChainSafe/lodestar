@@ -13,18 +13,10 @@ export const testData: GenericServerTestCases<Api> = {
   },
   getState: {
     args: ["head", "json"],
-    res: {data: ssz.phase0.BeaconState.defaultValue()},
+    res: {executionOptimistic: true, data: ssz.phase0.BeaconState.defaultValue()},
   },
   getStateV2: {
     args: ["head", "json"],
-    res: {data: ssz.altair.BeaconState.defaultValue(), version: ForkName.altair},
-  },
-  connectToPeer: {
-    args: ["peerId", ["multiaddr1", "multiaddr2"]],
-    res: undefined,
-  },
-  disconnectPeer: {
-    args: ["peerId"],
-    res: undefined,
+    res: {executionOptimistic: true, data: ssz.altair.BeaconState.defaultValue(), version: ForkName.altair},
   },
 };

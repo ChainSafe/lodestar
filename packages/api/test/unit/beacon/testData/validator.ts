@@ -30,6 +30,7 @@ export const testData: GenericServerTestCases<Api> = {
   getSyncCommitteeDuties: {
     args: [1000, [1, 2, 3]],
     res: {
+      executionOptimistic: true,
       data: [{pubkey: Buffer.alloc(48, 1), validatorIndex: 2, validatorSyncCommitteeIndices: [3]}],
     },
   },

@@ -118,7 +118,7 @@ export const testData: GenericServerTestCases<Api> = {
     },
   },
   getStateValidators: {
-    args: ["head", {id: [pubkeyHex, "1300"], statuses: ["active_ongoing"]}],
+    args: ["head", {id: [pubkeyHex, "1300"], status: ["active_ongoing"]}],
     res: {executionOptimistic: true, data: [validatorResponse]},
   },
   getStateValidator: {
