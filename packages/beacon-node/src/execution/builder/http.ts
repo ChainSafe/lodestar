@@ -22,12 +22,28 @@ export const defaultExecutionBuilderHttpOpts: ExecutionBuilderHttpOpts = {
 export class ExecutionBuilderHttp implements IExecutionBuilder {
   readonly api: BuilderApi;
   readonly issueLocalFcUForBlockProduction?: boolean;
+  // Builder needs to be explicity enabled using updateStatus
+  status = false;
 
   constructor(opts: ExecutionBuilderHttpOpts, config: IChainForkConfig) {
     const baseUrl = opts.urls[0];
     if (!baseUrl) throw Error("No Url provided for executionBuilder");
     this.api = getClient({baseUrl, timeoutMs: opts.timeout}, {config});
     this.issueLocalFcUForBlockProduction = opts.issueLocalFcUForBlockProduction;
+  }
+
+  updateStatus(shouldEnable: boolean): void {
+    this.status = shouldEnable;
+  }
+
+  async checkStatus(): Promise<void> {
+    try {
+      await this.api.checkStatus();
+    } catch (e) {
+      // Disable if the status was enabled
+      this.status = false;
+      throw e;
+    }
   }
 
   async registerValidator(registrations: bellatrix.SignedValidatorRegistrationV1[]): Promise<void> {
