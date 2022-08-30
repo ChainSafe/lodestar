@@ -1,9 +1,9 @@
-import Ajv, {ErrorObject} from "ajv";
-import {expect} from "chai";
+import path from "node:path";
+import {fileURLToPath} from "node:url";
 import {config} from "@lodestar/config/default";
-import {ReqGeneric} from "../../../src/utils/types.js";
-import {readOpenApiSpec} from "../../openApiParser.js";
+import {OpenApiFile} from "../../utils/parseOpenApiSpec.js";
 import {routes} from "../../../src/beacon/index.js";
+import {runTestCheckAgainstSpec} from "../../utils/checkAgainstSpec.js";
 // Import all testData and merge below
 import {testData as beaconTestData} from "./testData/beacon.js";
 import {testData as configTestData} from "./testData/config.js";
@@ -12,34 +12,16 @@ import {testData as lightclientTestData} from "./testData/lightclient.js";
 import {testData as nodeTestData} from "./testData/node.js";
 import {testData as validatorTestData} from "./testData/validator.js";
 
-const ajv = new Ajv({
-  // strict: true,
-  // strictSchema: true,
-  allErrors: true,
-});
+// Global variable __dirname no longer available in ES6 modules.
+// Solutions: https://stackoverflow.com/questions/46745014/alternative-for-dirname-in-node-js-when-using-es6-modules
+// eslint-disable-next-line @typescript-eslint/naming-convention
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-ajv.addKeyword({
-  keyword: "example",
-  validate: () => true,
-  errors: false,
-});
-
-const openApiSpec = readOpenApiSpec();
-
-/* eslint-disable @typescript-eslint/no-non-null-assertion */
-// TEMP: Rename some properties to match spec
-openApiSpec.set("submitPoolAttesterSlashing", openApiSpec.get("submitPoolAttesterSlashings")!);
-openApiSpec.set("submitPoolProposerSlashing", openApiSpec.get("submitPoolProposerSlashings")!);
-openApiSpec.delete("submitPoolAttesterSlashings");
-openApiSpec.delete("submitPoolProposerSlashings");
-
-const testDatas = {
-  ...beaconTestData,
-  ...configTestData,
-  ...debugTestData,
-  ...lightclientTestData,
-  ...nodeTestData,
-  ...validatorTestData,
+const version = "v2.3.0";
+const openApiFile: OpenApiFile = {
+  url: `https://github.com/ethereum/beacon-APIs/releases/download/${version}/beacon-node-oapi.json`,
+  filepath: path.join(__dirname, "../../../oapi-schemas/beacon-node-oapi.json"),
+  version: RegExp(version),
 };
 
 const routesData = {
@@ -69,104 +51,13 @@ const returnTypes = {
   ...routes.validator.getReturnTypes(),
 };
 
-for (const [operationId, routeSpec] of openApiSpec.entries()) {
-  describe(operationId, () => {
-    const {requestSchema, responseOkSchema} = routeSpec;
-    const routeId = operationId as keyof typeof testDatas;
-    const testData = testDatas[routeId];
+const testDatas = {
+  ...beaconTestData,
+  ...configTestData,
+  ...debugTestData,
+  ...lightclientTestData,
+  ...nodeTestData,
+  ...validatorTestData,
+};
 
-    before("route is defined", () => {
-      if (testData == null) {
-        throw Error(`${routeId} not defined`);
-      }
-    });
-
-    it(`${operationId}_route`, function () {
-      const routeData = routesData[routeId];
-      expect(routeData.method.toLowerCase()).to.equal(routeSpec.method.toLowerCase(), "Wrong method");
-      expect(routeData.url).to.equal(routeSpec.url, "Wrong url");
-    });
-
-    if (requestSchema != null) {
-      it(`${operationId}_request`, function () {
-        const reqJson = reqSerializers[routeId].writeReq(...(testData.args as [never]));
-
-        if (operationId === "publishBlock" || operationId === "publishBlindedBlock") {
-          // For some reason AJV invalidates valid blocks if multiple forks are defined with oneOf
-          // `.data - should match exactly one schema in oneOf`
-          // Dropping all definitions except (phase0) pases the validation
-          if (routeSpec.requestSchema?.oneOf) {
-            routeSpec.requestSchema = routeSpec.requestSchema?.oneOf[0];
-          }
-        }
-
-        // Stringify param and query to simulate rendering in HTTP query
-        // TODO: Review conversions in fastify and other servers
-        stringifyProperties((reqJson as ReqGeneric).params ?? {});
-        stringifyProperties((reqJson as ReqGeneric).query ?? {});
-
-        // Validate response
-        validateSchema(routeSpec.requestSchema, reqJson, "request");
-      });
-    }
-
-    if (responseOkSchema) {
-      it(`${operationId}_response`, function () {
-        const resJson = returnTypes[operationId as keyof typeof returnTypes].toJson(testData.res as any);
-
-        // Patch for getBlockV2
-        if (operationId === "getBlockV2" || operationId === "getStateV2") {
-          // For some reason AJV invalidates valid blocks if multiple forks are defined with oneOf
-          // `.data - should match exactly one schema in oneOf`
-          // Dropping all definitions except (phase0) pases the validation
-          if (responseOkSchema.properties?.data.oneOf) {
-            responseOkSchema.properties.data = responseOkSchema.properties.data.oneOf[1];
-          }
-        }
-
-        // Validate response
-        validateSchema(responseOkSchema, resJson, "response");
-      });
-    }
-  });
-}
-
-function validateSchema(schema: Parameters<typeof ajv.compile>[0], json: unknown, id: string): void {
-  let validate: ReturnType<typeof ajv.compile>;
-
-  try {
-    validate = ajv.compile(schema);
-  } catch (e) {
-    // eslint-disable-next-line no-console
-    console.error(JSON.stringify(schema, null, 2));
-    throw e;
-  }
-
-  const valid = <boolean>validate(json);
-  if (!valid) {
-    throw Error(
-      [
-        `Invalid ${id} against spec schema`,
-        prettyAjvErrors(validate.errors),
-        // Limit the max amount of JSON dumped as the full state is too big
-        JSON.stringify(json).slice(0, 1000),
-      ].join("\n\n")
-    );
-  }
-}
-
-function prettyAjvErrors(errors: ErrorObject[] | null | undefined): string {
-  if (!errors) return "";
-  return errors.map((e) => `${e.instancePath ?? "."} - ${e.message}`).join("\n");
-}
-
-function stringifyProperties(obj: Record<string, unknown>): Record<string, unknown> {
-  for (const key of Object.keys(obj)) {
-    const value = obj[key];
-    if (typeof value === "number") {
-      obj[key] = value.toString(10);
-    }
-  }
-
-  return obj;
-}
+await runTestCheckAgainstSpec(openApiFile, routesData, reqSerializers, returnTypes, testDatas);

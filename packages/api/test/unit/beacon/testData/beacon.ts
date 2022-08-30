@@ -79,11 +79,11 @@ export const testData: GenericServerTestCases<Api> = {
     args: [[ssz.phase0.Attestation.defaultValue()]],
     res: undefined,
   },
-  submitPoolAttesterSlashing: {
+  submitPoolAttesterSlashings: {
     args: [ssz.phase0.AttesterSlashing.defaultValue()],
     res: undefined,
   },
-  submitPoolProposerSlashing: {
+  submitPoolProposerSlashings: {
     args: [ssz.phase0.ProposerSlashing.defaultValue()],
     res: undefined,
   },

@@ -1,4 +1,8 @@
-import fs from "node:fs";
+export type OpenApiFile = {
+  url: string;
+  filepath: string;
+  version: RegExp;
+};
 
 /** "getBlockRoot" */
 type OperationId = string;
@@ -14,8 +18,11 @@ type JsonSchema = {
   oneOf?: JsonSchema[];
 };
 
-type OpenApiJson = {
+export type OpenApiJson = {
   paths: Record<RouteUrl, Record<HttpMethod, RouteDefinition>>;
+  info: {
+    version: string;
+  };
 };
 
 type Content = {
@@ -65,11 +72,7 @@ enum ContentType {
   json = "application/json",
 }
 
-const openApiJson = JSON.parse(
-  fs.readFileSync("/home/lion/Code/eth2.0/lodestar/packages/api/beacon-node-oapi.json", "utf8")
-) as OpenApiJson;
-
-export function readOpenApiSpec(): Map<OperationId, RouteSpec> {
+export function parseOpenApiSpec(openApiJson: OpenApiJson): Map<OperationId, RouteSpec> {
   const routes = new Map<OperationId, RouteSpec>();
 
   for (const [routeUrl, routesByMethod] of Object.entries(openApiJson.paths)) {
