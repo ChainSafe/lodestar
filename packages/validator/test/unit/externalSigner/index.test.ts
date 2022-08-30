@@ -21,7 +21,10 @@ describe("External signer server", () => {
   let pubkeys: PublicKey[];
   const signableMessage: SignableMessage = {
     singablePayload: {
-      slot: "0",
+      type: "AGGREGATION_SLOT",
+      data: {
+        slot: "0",
+      },
     },
     forkInfo: {
       fork: {
@@ -31,7 +34,6 @@ describe("External signer server", () => {
       },
       genesisValidatorRoot: Buffer.alloc(0),
     },
-    type: "AGGREGATION_SLOT",
   };
 
   before(async () => {

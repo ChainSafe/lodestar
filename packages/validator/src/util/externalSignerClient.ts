@@ -2,57 +2,142 @@ import fetch from "cross-fetch";
 import {BeaconBlock, AggregateAndProof, AttestationData, VoluntaryExit, Fork} from "@lodestar/types/phase0";
 import {SyncCommitteeContribution} from "@lodestar/types/altair";
 import {ValidatorRegistrationV1} from "@lodestar/types/bellatrix";
-import {Epoch, Root, Slot} from "@lodestar/types";
+import {altair, Epoch, phase0, Root, Slot, ssz} from "@lodestar/types";
 import {toHexString} from "@chainsafe/ssz";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
-type Web3SignerRequestType =
-  | "AGGREGATION_SLOT"
-  | "AGGREGATE_AND_PROOF"
-  | "ATTESTATION"
-  | "BLOCK"
-  | "BLOCK_V2"
-  | "DEPOSIT"
-  | "RANDAO_REVEAL"
-  | "VOLUNTARY_EXIT"
-  | "SYNC_COMMITTEE_MESSAGE"
-  | "SYNC_COMMITTEE_SELECTION_PROOF"
-  | "SYNC_COMMITTEE_CONTRIBUTION_AND_PROOF"
-  | "VALIDATOR_REGISTRATION";
+const serializerMap = {
+  ["AGGREGATION_SLOT"]: (data: Record<string, unknown>) => {
+    return data;
+  },
+  ["AGGREGATE_AND_PROOF"]: (data: Record<string, unknown>) => {
+    return ssz.phase0.AggregateAndProof.toJson(data as AggregateAndProof);
+  },
+  ["ATTESTATION"]: (data: Record<string, unknown>) => {
+    return ssz.phase0.AttestationData.toJson(data as AttestationData);
+  },
+  ["BLOCK"]: (data: Record<string, unknown>) => {
+    return {
+      version: data.version,
+      block: ssz.phase0.BeaconBlock.toJson(data.block as phase0.BeaconBlock), // TODO DA confirm version
+    };
+  },
+  ["BLOCK_V2"]: (data: Record<string, unknown>) => {
+    return {
+      version: data.version,
+      block: ssz.altair.BeaconBlock.toJson(data.block as altair.BeaconBlock), // TODO DA confirm version
+    };
+  },
+  ["DEPOSIT"]: (data: Record<string, unknown>) => {
+    return data;
+  },
+  ["RANDAO_REVEAL"]: (data: Record<string, unknown>) => {
+    return {
+      epoch: String(data.epoch),
+    };
+  },
+  ["VOLUNTARY_EXIT"]: (data: Record<string, unknown>) => {
+    return ssz.phase0.VoluntaryExit.toJson(data as VoluntaryExit);
+  },
+  ["SYNC_COMMITTEE_MESSAGE"]: (data: Record<string, unknown>) => {
+    return {
+      beaconBlockRoot: data.beaconBlockRoot,
+      slot: String(data.slot),
+    };
+  },
+  ["SYNC_COMMITTEE_SELECTION_PROOF"]: (data: Record<string, unknown>) => {
+    return {
+      slot: String(data.slot),
+      subcommitteeIndex: data.subcommitteeIndex,
+    };
+  },
+  ["SYNC_COMMITTEE_CONTRIBUTION_AND_PROOF"]: (data: Record<string, unknown>) => {
+    return {
+      aggregatorIndex: data.aggregatorIndex,
+      selectionProof: data.selectionProof,
+      contribution: ssz.altair.SyncCommitteeContribution.toJson(data.contribution as SyncCommitteeContribution),
+    };
+  },
+  ["VALIDATOR_REGISTRATION"]: (data: Record<string, unknown>) => {
+    return ssz.bellatrix.ValidatorRegistrationV1.toJson(data as ValidatorRegistrationV1);
+  },
+};
 
 export type Web3SignerAggregationSlotMsg = {
-  slot: string;
+  type: "AGGREGATION_SLOT";
+  data: {
+    slot: string;
+  };
 };
-export type Web3SignerAggregateAndProofMsg = AggregateAndProof;
-export type Web3SignerAttestationMsg = AttestationData;
+
+export type Web3SignerAggregateAndProofMsg = {
+  type: "AGGREGATE_AND_PROOF";
+  data: AggregateAndProof;
+};
+export type Web3SignerAttestationMsg = {
+  type: "ATTESTATION";
+  data: AttestationData;
+};
 export type Web3SignerBlockV2Msg = {
-  version: string;
-  block: BeaconBlock;
+  type: "BLOCK_V2";
+  data: {
+    version: string;
+    block: BeaconBlock;
+  };
+};
+
+export type Web3SignerDepositMsg = {
+  type: "DEPOSIT";
+  data: {
+    pubKey: string;
+    withdrawalCredentials: string;
+    amount: string;
+    genesisForkVersion: string;
+  };
 };
 
 export type Web3SignerRandaoRevealMsg = {
-  epoch: Epoch;
+  type: "RANDAO_REVEAL";
+  data: {
+    epoch: Epoch;
+  };
 };
-export type Web3SignerVoluntaryExitMsg = VoluntaryExit;
+
+export type Web3SignerVoluntaryExitMsg = {
+  type: "VOLUNTARY_EXIT";
+  data: VoluntaryExit;
+};
 export type Web3SignerSyncCommitteeMessageMsg = {
-  beaconBlockRoot: Uint8Array;
-  slot: Slot;
+  type: "SYNC_COMMITTEE_MESSAGE";
+  data: {
+    beaconBlockRoot: Uint8Array;
+    slot: Slot;
+  };
 };
 export type Web3SignerSyncCommitteeSelectionProofMsg = {
-  slot: Slot;
-  subcommitteeIndex: string;
-};
-export type Web3SignerSyncCommitteeContributionAndProofMsg = {
-  aggregatorIndex: number;
-  selectionProof: Uint8Array;
-  contribution: SyncCommitteeContribution;
+  type: "SYNC_COMMITTEE_SELECTION_PROOF";
+  data: {
+    slot: Slot;
+    subcommitteeIndex: string;
+  };
 };
 
-export type Web3SignerValidatorRegistrationMsg = ValidatorRegistrationV1;
+export type Web3SignerSyncCommitteeContributionAndProofMsg = {
+  type: "SYNC_COMMITTEE_CONTRIBUTION_AND_PROOF";
+  data: {
+    aggregatorIndex: number;
+    selectionProof: Uint8Array;
+    contribution: SyncCommitteeContribution;
+  };
+};
+
+export type Web3SignerValidatorRegistrationMsg = {
+  type: "VALIDATOR_REGISTRATION";
+  data: ValidatorRegistrationV1;
+};
 
 export type SignableMessage = {
-  type: Web3SignerRequestType;
   singablePayload: SingablePayload;
   forkInfo?: Web3SignerForkInfo;
 };
@@ -62,6 +147,7 @@ export type SingablePayload =
   | Web3SignerAggregateAndProofMsg
   | Web3SignerAttestationMsg
   | Web3SignerBlockV2Msg
+  | Web3SignerDepositMsg
   | Web3SignerRandaoRevealMsg
   | Web3SignerVoluntaryExitMsg
   | Web3SignerSyncCommitteeMessageMsg
@@ -132,7 +218,10 @@ async function handlerExternalSignerResponse<T>(res: Response): Promise<T> {
 
 function convertToRequest(signableMessage: SignableMessage): Record<string, unknown> {
   let forkInfo;
-  if (signableMessage.type != "DEPOSIT" && signableMessage.type != "VALIDATOR_REGISTRATION") {
+  const signableType = signableMessage.singablePayload.type;
+  const data = signableMessage.singablePayload.data;
+
+  if (signableType != "DEPOSIT" && signableType != "VALIDATOR_REGISTRATION") {
     if (signableMessage.forkInfo === undefined) {
       throw new Error("Attempt to call remote signer without fork info");
     }
@@ -147,23 +236,25 @@ function convertToRequest(signableMessage: SignableMessage): Record<string, unkn
     };
   }
 
-  if (signableMessage.type === "SYNC_COMMITTEE_SELECTION_PROOF") {
+  const requestObj = {
+    type: signableType,
+    fork_info: forkInfo,
+  };
+
+  if (signableType === "SYNC_COMMITTEE_SELECTION_PROOF") {
     return {
-      type: signableMessage.type,
-      sync_aggregator_selection_data: signableMessage.singablePayload,
-      fork_info: forkInfo,
+      ...requestObj,
+      sync_aggregator_selection_data: serializerMap[signableType](data),
     };
-  } else if (signableMessage.type === "SYNC_COMMITTEE_CONTRIBUTION_AND_PROOF") {
+  } else if (signableType === "SYNC_COMMITTEE_CONTRIBUTION_AND_PROOF") {
     return {
-      type: signableMessage.type,
-      contribution_and_proof: signableMessage.singablePayload,
-      fork_info: forkInfo,
+      ...requestObj,
+      contribution_and_proof: serializerMap[signableType](data),
     };
   } else {
     return {
-      type: signableMessage.type,
-      [signableMessage.type.toLocaleLowerCase()]: signableMessage.singablePayload,
-      fork_info: forkInfo,
+      ...requestObj,
+      [signableType.toLocaleLowerCase()]: serializerMap[signableType](data as Record<string, unknown>),
     };
   }
 }

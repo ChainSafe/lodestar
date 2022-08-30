@@ -198,10 +198,12 @@ export class ValidatorStore {
     }
 
     const signableMessage: SignableMessage = {
-      type: "BLOCK_V2",
       singablePayload: {
-        version: this.config.getForkInfo(blindedOrFull.slot).name,
-        block: blindedOrFull,
+        type: "BLOCK_V2",
+        data: {
+          version: this.config.getForkInfo(blindedOrFull.slot).name,
+          block: blindedOrFull,
+        },
       },
       forkInfo: this.getForkInfo(currentSlot),
     };
@@ -217,9 +219,11 @@ export class ValidatorStore {
     const randaoSigningRoot = computeSigningRoot(ssz.Epoch, epoch, randaoDomain);
 
     const signableMessage: SignableMessage = {
-      type: "RANDAO_REVEAL",
       singablePayload: {
-        epoch,
+        type: "RANDAO_REVEAL",
+        data: {
+          epoch,
+        },
       },
       forkInfo: this.getForkInfo(slot),
     };
@@ -259,8 +263,10 @@ export class ValidatorStore {
     }
 
     const signableMessage: SignableMessage = {
-      type: "ATTESTATION",
-      singablePayload: attestationData,
+      singablePayload: {
+        type: "ATTESTATION",
+        data: attestationData,
+      },
       forkInfo: this.getForkInfo(attestationData.slot),
     };
 
@@ -288,8 +294,10 @@ export class ValidatorStore {
     const signingRoot = computeSigningRoot(ssz.phase0.AggregateAndProof, aggregateAndProof, domain);
 
     const signableMessage: SignableMessage = {
-      type: "AGGREGATE_AND_PROOF",
-      singablePayload: aggregateAndProof,
+      singablePayload: {
+        type: "AGGREGATE_AND_PROOF",
+        data: aggregateAndProof,
+      },
       forkInfo: this.getForkInfo(aggregateAndProof.aggregate.data.slot),
     };
 
@@ -309,10 +317,12 @@ export class ValidatorStore {
     const signingRoot = computeSigningRoot(ssz.Root, beaconBlockRoot, domain);
 
     const signableMessage: SignableMessage = {
-      type: "SYNC_COMMITTEE_MESSAGE",
       singablePayload: {
-        beaconBlockRoot,
-        slot,
+        type: "SYNC_COMMITTEE_MESSAGE",
+        data: {
+          beaconBlockRoot,
+          slot,
+        },
       },
       forkInfo: this.getForkInfo(slot),
     };
@@ -340,8 +350,10 @@ export class ValidatorStore {
     const signingRoot = computeSigningRoot(ssz.altair.ContributionAndProof, contributionAndProof, domain);
 
     const signableMessage: SignableMessage = {
-      type: "SYNC_COMMITTEE_CONTRIBUTION_AND_PROOF",
-      singablePayload: contributionAndProof,
+      singablePayload: {
+        type: "SYNC_COMMITTEE_CONTRIBUTION_AND_PROOF",
+        data: contributionAndProof,
+      },
       forkInfo: this.getForkInfo(contributionAndProof.contribution.slot),
     };
 
@@ -356,9 +368,11 @@ export class ValidatorStore {
     const signingRoot = computeSigningRoot(ssz.Slot, slot, domain);
 
     const signableMessage: SignableMessage = {
-      type: "AGGREGATION_SLOT",
       singablePayload: {
-        slot: String(slot),
+        type: "AGGREGATION_SLOT",
+        data: {
+          slot: String(slot),
+        },
       },
       forkInfo: this.getForkInfo(slot),
     };
@@ -380,10 +394,12 @@ export class ValidatorStore {
     const signingRoot = computeSigningRoot(ssz.altair.SyncAggregatorSelectionData, signingData, domain);
 
     const singableRequest: SignableMessage = {
-      type: "SYNC_COMMITTEE_SELECTION_PROOF",
       singablePayload: {
-        slot,
-        subcommitteeIndex: String(subcommitteeIndex),
+        type: "SYNC_COMMITTEE_SELECTION_PROOF",
+        data: {
+          slot,
+          subcommitteeIndex: String(subcommitteeIndex),
+        },
       },
       forkInfo: this.getForkInfo(slot),
     };
@@ -402,8 +418,10 @@ export class ValidatorStore {
     const signingRoot = computeSigningRoot(ssz.phase0.VoluntaryExit, voluntaryExit, domain);
 
     const signableMessage: SignableMessage = {
-      type: "VOLUNTARY_EXIT",
-      singablePayload: voluntaryExit,
+      singablePayload: {
+        type: "VOLUNTARY_EXIT",
+        data: voluntaryExit,
+      },
     };
 
     return {
@@ -433,8 +451,10 @@ export class ValidatorStore {
     const domain = computeDomain(DOMAIN_APPLICATION_BUILDER, this.config.GENESIS_FORK_VERSION, ZERO_HASH);
     const signingRoot = computeSigningRoot(ssz.bellatrix.ValidatorRegistrationV1, validatorRegistation, domain);
     const signableMessage: SignableMessage = {
-      type: "VALIDATOR_REGISTRATION",
-      singablePayload: validatorRegistation,
+      singablePayload: {
+        type: "VALIDATOR_REGISTRATION",
+        data: validatorRegistation,
+      },
     };
     return {
       message: validatorRegistation,
