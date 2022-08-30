@@ -2,7 +2,7 @@ import {EventEmitter} from "events";
 import StrictEventEmitter from "strict-event-emitter-types";
 
 import {routes} from "@lodestar/api";
-import {phase0, Epoch, Slot, allForks} from "@lodestar/types";
+import {phase0, Epoch, Slot, allForks, altair} from "@lodestar/types";
 import {CheckpointWithHex, ProtoBlock} from "@lodestar/fork-choice";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 
@@ -22,6 +22,8 @@ export enum ChainEvent {
    * This event is guaranteed to be emitted after every attestation fed to the chain has successfully been passed to the fork choice.
    */
   attestation = "attestation",
+  /** The node has received a valid sync committee SignedContributionAndProof (from P2P or API) */
+  contributionAndProof = "contribution_and_proof",
   /**
    * This event signals that the chain has successfully processed a valid block.
    *
@@ -95,6 +97,7 @@ export enum ChainEvent {
 
 export interface IChainEvents {
   [ChainEvent.attestation]: (attestation: phase0.Attestation) => void;
+  [ChainEvent.contributionAndProof]: (contributionAndProof: altair.SignedContributionAndProof) => void;
   [ChainEvent.block]: (signedBlock: allForks.SignedBeaconBlock, postState: CachedBeaconStateAllForks) => void;
 
   [ChainEvent.checkpoint]: (checkpoint: phase0.Checkpoint, state: CachedBeaconStateAllForks) => void;

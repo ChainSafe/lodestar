@@ -6,9 +6,9 @@ import {
   getCurrentEpoch,
 } from "@lodestar/state-transition";
 import {ApiError} from "../../errors.js";
-import {ApiModules} from "../../types.js";
+import {ApiModules, IS_OPTIMISTIC_TEMP} from "../../types.js";
 import {
-  filterStateValidatorsByStatuses,
+  filterStateValidatorsByStatus,
   getStateValidatorIndex,
   getValidatorStatus,
   resolveStateId,
@@ -27,17 +27,24 @@ export function getBeaconStateApi({
   return {
     async getStateRoot(stateId) {
       const state = await getState(stateId);
-      return {data: state.hashTreeRoot()};
+      return {
+        executionOptimistic: IS_OPTIMISTIC_TEMP,
+        data: {root: state.hashTreeRoot()},
+      };
     },
 
     async getStateFork(stateId) {
       const state = await getState(stateId);
-      return {data: state.fork};
+      return {
+        executionOptimistic: IS_OPTIMISTIC_TEMP,
+        data: state.fork,
+      };
     },
 
     async getStateFinalityCheckpoints(stateId) {
       const state = await getState(stateId);
       return {
+        executionOptimistic: IS_OPTIMISTIC_TEMP,
         data: {
           currentJustified: state.currentJustifiedCheckpoint,
           previousJustified: state.previousJustifiedCheckpoint,
@@ -58,7 +65,7 @@ export function getBeaconStateApi({
           const validatorIndex = getStateValidatorIndex(id, state, pubkey2index);
           if (validatorIndex != null) {
             const validator = validators.getReadonly(validatorIndex);
-            if (filters.statuses && !filters.statuses.includes(getValidatorStatus(validator, currentEpoch))) {
+            if (filters.status && !filters.status.includes(getValidatorStatus(validator, currentEpoch))) {
               continue;
             }
             const validatorResponse = toValidatorResponse(
@@ -70,10 +77,16 @@ export function getBeaconStateApi({
             validatorResponses.push(validatorResponse);
           }
         }
-        return {data: validatorResponses};
-      } else if (filters?.statuses) {
-        const validatorsByStatus = filterStateValidatorsByStatuses(filters.statuses, state, pubkey2index, currentEpoch);
-        return {data: validatorsByStatus};
+        return {
+          executionOptimistic: IS_OPTIMISTIC_TEMP,
+          data: validatorResponses,
+        };
+      } else if (filters?.status) {
+        const validatorsByStatus = filterStateValidatorsByStatus(filters.status, state, pubkey2index, currentEpoch);
+        return {
+          executionOptimistic: IS_OPTIMISTIC_TEMP,
+          data: validatorsByStatus,
+        };
       }
 
       // TODO: This loops over the entire state, it's a DOS vector
@@ -84,7 +97,10 @@ export function getBeaconStateApi({
         resp.push(toValidatorResponse(i, validatorsArr[i], balancesArr[i], currentEpoch));
       }
 
-      return {data: resp};
+      return {
+        executionOptimistic: IS_OPTIMISTIC_TEMP,
+        data: resp,
+      };
     },
 
     async getStateValidator(stateId, validatorId) {
@@ -97,6 +113,7 @@ export function getBeaconStateApi({
       }
 
       return {
+        executionOptimistic: IS_OPTIMISTIC_TEMP,
         data: toValidatorResponse(
           validatorIndex,
           state.validators.getReadonly(validatorIndex),
@@ -125,7 +142,10 @@ export function getBeaconStateApi({
             }
           }
         }
-        return {data: balances};
+        return {
+          executionOptimistic: IS_OPTIMISTIC_TEMP,
+          data: balances,
+        };
       }
 
       // TODO: This loops over the entire state, it's a DOS vector
@@ -134,7 +154,10 @@ export function getBeaconStateApi({
       for (let i = 0; i < balancesArr.length; i++) {
         resp.push({index: i, balance: balancesArr[i]});
       }
-      return {data: resp};
+      return {
+        executionOptimistic: IS_OPTIMISTIC_TEMP,
+        data: resp,
+      };
     },
 
     async getEpochCommittees(stateId, filters) {
@@ -165,7 +188,10 @@ export function getBeaconStateApi({
         });
       });
 
-      return {data: committesFlat};
+      return {
+        executionOptimistic: IS_OPTIMISTIC_TEMP,
+        data: committesFlat,
+      };
     },
 
     /**
@@ -191,6 +217,7 @@ export function getBeaconStateApi({
       const syncCommitteeCache = stateCached.epochCtx.getIndexedSyncCommitteeAtEpoch(epoch ?? stateEpoch);
 
       return {
+        executionOptimistic: IS_OPTIMISTIC_TEMP,
         data: {
           validators: syncCommitteeCache.validatorIndices,
           // TODO: This is not used by the validator and will be deprecated soon

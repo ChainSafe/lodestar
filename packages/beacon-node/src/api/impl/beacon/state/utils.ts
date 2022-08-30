@@ -172,7 +172,7 @@ async function stateBySlot(
   return await db.stateArchive.get(slot);
 }
 
-export function filterStateValidatorsByStatuses(
+export function filterStateValidatorsByStatus(
   statuses: string[],
   state: BeaconStateAllForks,
   pubkey2index: PubkeyIndexMap,
