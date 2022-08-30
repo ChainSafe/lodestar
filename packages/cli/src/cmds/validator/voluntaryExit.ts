@@ -1,5 +1,10 @@
 import inquirer from "inquirer";
-import {computeSigningRoot, computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {
+  computeSigningRoot,
+  computeEpochAtSlot,
+  computeStartSlotAtEpoch,
+  getCurrentSlot,
+} from "@lodestar/state-transition";
 import {DOMAIN_VOLUNTARY_EXIT} from "@lodestar/params";
 import {createIBeaconConfig} from "@lodestar/config";
 import {ssz, phase0} from "@lodestar/types";
@@ -67,12 +72,11 @@ like to choose for the voluntary exit.",
     // Do not use known networks cache, it defaults to mainnet for devnets
     const chainForkConfig = getBeaconConfigFromArgs(args);
     const client = getClient({baseUrl: args.server}, {config: chainForkConfig});
-    const {genesisValidatorsRoot} = (await client.beacon.getGenesis()).data;
+    const {genesisValidatorsRoot, genesisTime} = (await client.beacon.getGenesis()).data;
     const config = createIBeaconConfig(chainForkConfig, genesisValidatorsRoot);
 
-    // Fetch exitEpoch from latest header if unspecified
-    const exitEpoch =
-      args.exitEpoch ?? computeEpochAtSlot((await client.beacon.getBlockHeader("head")).data.header.message.slot);
+    // Set exitEpoch to current epoch if unspecified
+    const exitEpoch = args.exitEpoch ?? computeEpochAtSlot(getCurrentSlot(config, genesisTime));
 
     // Select signers to exit
     const signers = await getSignersFromArgs(args);
