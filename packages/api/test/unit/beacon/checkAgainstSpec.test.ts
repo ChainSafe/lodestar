@@ -115,11 +115,13 @@ for (const [operationId, routeSpec] of openApiSpec.entries()) {
         const resJson = returnTypes[operationId as keyof typeof returnTypes].toJson(testData.res as any);
 
         // Patch for getBlockV2
-        if (operationId === "getBlockV2") {
+        if (operationId === "getBlockV2" || operationId === "getStateV2") {
           // For some reason AJV invalidates valid blocks if multiple forks are defined with oneOf
           // `.data - should match exactly one schema in oneOf`
           // Dropping all definitions except (phase0) pases the validation
-          responseOkSchema.properties?.data.oneOf?.splice(1);
+          if (responseOkSchema.properties?.data.oneOf) {
+            responseOkSchema.properties.data = responseOkSchema.properties.data.oneOf[1];
+          }
         }
 
         // Validate response

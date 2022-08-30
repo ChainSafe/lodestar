@@ -260,9 +260,9 @@ export type ReqTypes = {
   getAttesterDuties: {params: {epoch: Epoch}; body: ValidatorIndex[]};
   getProposerDuties: {params: {epoch: Epoch}};
   getSyncCommitteeDuties: {params: {epoch: Epoch}; body: ValidatorIndex[]};
-  produceBlock: {params: {slot: number}; query: {randao_reveal: string; grafitti: string}};
-  produceBlockV2: {params: {slot: number}; query: {randao_reveal: string; grafitti: string}};
-  produceBlindedBlock: {params: {slot: number}; query: {randao_reveal: string; grafitti: string}};
+  produceBlock: {params: {slot: number}; query: {randao_reveal: string; graffiti: string}};
+  produceBlockV2: {params: {slot: number}; query: {randao_reveal: string; graffiti: string}};
+  produceBlindedBlock: {params: {slot: number}; query: {randao_reveal: string; graffiti: string}};
   produceAttestationData: {query: {slot: number; committee_index: number}};
   produceSyncCommitteeContribution: {query: {slot: number; subcommittee_index: number; beacon_block_root: string}};
   getAggregatedAttestation: {query: {attestation_data_root: string; slot: number}};
@@ -297,14 +297,14 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
   );
 
   const produceBlock: ReqSerializers<Api, ReqTypes>["produceBlock"] = {
-    writeReq: (slot, randaoReveal, grafitti) => ({
+    writeReq: (slot, randaoReveal, graffiti) => ({
       params: {slot},
-      query: {randao_reveal: toHexString(randaoReveal), grafitti},
+      query: {randao_reveal: toHexString(randaoReveal), graffiti},
     }),
-    parseReq: ({params, query}) => [params.slot, fromHexString(query.randao_reveal), query.grafitti],
+    parseReq: ({params, query}) => [params.slot, fromHexString(query.randao_reveal), query.graffiti],
     schema: {
       params: {slot: Schema.UintRequired},
-      query: {randao_reveal: Schema.StringRequired, grafitti: Schema.String},
+      query: {randao_reveal: Schema.StringRequired, graffiti: Schema.String},
     },
   };
 

@@ -4,6 +4,8 @@ import {Api} from "../../../../src/beacon/routes/validator.js";
 import {GenericServerTestCases} from "../../../utils/genericServerTest.js";
 
 const ZERO_HASH = Buffer.alloc(32, 0);
+const randaoReveal = Buffer.alloc(96, 1);
+const graffiti = "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2";
 
 export const testData: GenericServerTestCases<Api> = {
   getAttesterDuties: {
@@ -40,15 +42,15 @@ export const testData: GenericServerTestCases<Api> = {
     },
   },
   produceBlock: {
-    args: [32000, Buffer.alloc(96, 1), "graffiti"],
+    args: [32000, randaoReveal, graffiti],
     res: {data: ssz.phase0.BeaconBlock.defaultValue()},
   },
   produceBlockV2: {
-    args: [32000, Buffer.alloc(96, 1), "graffiti"],
+    args: [32000, randaoReveal, graffiti],
     res: {data: ssz.altair.BeaconBlock.defaultValue(), version: ForkName.altair},
   },
   produceBlindedBlock: {
-    args: [32000, Buffer.alloc(96, 1), "graffiti"],
+    args: [32000, randaoReveal, graffiti],
     res: {data: ssz.bellatrix.BlindedBeaconBlock.defaultValue(), version: ForkName.bellatrix},
   },
   produceAttestationData: {
