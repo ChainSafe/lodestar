@@ -171,10 +171,10 @@ export class BeaconChain implements IBeaconChain {
       opts.faultInspectionWindow ?? SLOTS_PER_EPOCH + Math.floor(Math.random() * SLOTS_PER_EPOCH),
       SLOTS_PER_EPOCH
     );
-    // allowedFaults should be <= faultInspectionWindow
+    // allowedFaults should be < faultInspectionWindow, limiting them to faultInspectionWindow/2
     this.allowedFaults = Math.min(
-      opts.allowedFaults ?? Math.floor((Math.random() * SLOTS_PER_EPOCH) / 2),
-      this.faultInspectionWindow - 1
+      opts.allowedFaults ?? Math.floor(this.faultInspectionWindow / 2),
+      Math.floor(this.faultInspectionWindow / 2)
     );
 
     const signal = this.abortController.signal;
