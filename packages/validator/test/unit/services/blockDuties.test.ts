@@ -12,7 +12,7 @@ import {loggerVc} from "../../utils/logger.js";
 import {ClockMock} from "../../utils/clock.js";
 import {initValidatorStore} from "../../utils/validatorStore.js";
 
-type ProposerDutiesRes = {dependentRoot: Root; data: routes.validator.ProposerDuty[]};
+type ProposerDutiesRes = {dependentRoot: Root; data: routes.validator.ProposerDuty[]; executionOptimistic: boolean};
 
 describe("BlockDutiesService", function () {
   const sandbox = sinon.createSandbox();
@@ -37,6 +37,7 @@ describe("BlockDutiesService", function () {
     const slot = 0; // genesisTime is right now, so test with slot = currentSlot
     const duties: ProposerDutiesRes = {
       dependentRoot: ZERO_HASH,
+      executionOptimistic: false,
       data: [{slot: slot, validatorIndex: 0, pubkey: pubkeys[0]}],
     };
     api.validator.getProposerDuties.resolves(duties);
@@ -68,10 +69,12 @@ describe("BlockDutiesService", function () {
     const DIFF_HASH = Buffer.alloc(32, 1);
     const dutiesBeforeReorg: ProposerDutiesRes = {
       dependentRoot: ZERO_HASH,
+      executionOptimistic: false,
       data: [{slot: 1, validatorIndex: 0, pubkey: pubkeys[0]}],
     };
     const dutiesAfterReorg: ProposerDutiesRes = {
       dependentRoot: DIFF_HASH,
+      executionOptimistic: false,
       data: [{slot: 1, validatorIndex: 1, pubkey: pubkeys[1]}],
     };
 
@@ -115,6 +118,7 @@ describe("BlockDutiesService", function () {
     const slot = 0; // genesisTime is right now, so test with slot = currentSlot
     const duties: ProposerDutiesRes = {
       dependentRoot: ZERO_HASH,
+      executionOptimistic: false,
       data: [
         {slot: slot, validatorIndex: 0, pubkey: pubkeys[0]},
         {slot: slot, validatorIndex: 1, pubkey: pubkeys[1]},
@@ -124,6 +128,7 @@ describe("BlockDutiesService", function () {
 
     const dutiesRemoved: ProposerDutiesRes = {
       dependentRoot: ZERO_HASH,
+      executionOptimistic: false,
       data: [
         {slot: slot, validatorIndex: 1, pubkey: pubkeys[1]},
         {slot: 33, validatorIndex: 2, pubkey: pubkeys[2]},

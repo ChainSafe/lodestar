@@ -90,7 +90,7 @@ export type ReqTypes = {
 export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
   const getState: ReqSerializer<Api["getState"], ReqTypes["getState"]> = {
     writeReq: (state_id, format) => ({
-      params: {state_id},
+      params: {state_id: String(state_id)},
       headers: {accept: format === "ssz" ? mimeTypeSSZ : ""},
     }),
     parseReq: ({params, headers}) => [params.state_id, headers.accept === mimeTypeSSZ ? "ssz" : "json"],

@@ -1,5 +1,5 @@
 import {ContainerType} from "@chainsafe/ssz";
-import {phase0, CommitteeIndex, Slot, ValidatorIndex, Epoch, Root, ssz, StringType} from "@lodestar/types";
+import {phase0, CommitteeIndex, Slot, ValidatorIndex, Epoch, Root, ssz, StringType, RootHex} from "@lodestar/types";
 import {
   RoutesData,
   ReturnTypes,
@@ -12,7 +12,7 @@ import {
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
-export type StateId = string | "head" | "genesis" | "finalized" | "justified";
+export type StateId = RootHex | Slot | "head" | "genesis" | "finalized" | "justified";
 export type ValidatorId = string | number;
 
 /**
@@ -192,7 +192,7 @@ export type ReqTypes = {
 
 export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
   const stateIdOnlyReq: ReqSerializer<Api["getStateFork"], StateIdOnlyReq> = {
-    writeReq: (state_id) => ({params: {state_id}}),
+    writeReq: (state_id) => ({params: {state_id: String(state_id)}}),
     parseReq: ({params}) => [params.state_id],
     schema: {params: {state_id: Schema.StringRequired}},
   };

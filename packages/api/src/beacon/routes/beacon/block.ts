@@ -1,7 +1,7 @@
 import {ContainerType} from "@chainsafe/ssz";
 import {ForkName} from "@lodestar/params";
 import {IChainForkConfig} from "@lodestar/config";
-import {phase0, allForks, Slot, Root, ssz, bellatrix} from "@lodestar/types";
+import {phase0, allForks, Slot, Root, ssz, bellatrix, RootHex} from "@lodestar/types";
 
 import {
   RoutesData,
@@ -20,7 +20,7 @@ import {
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
-export type BlockId = "head" | "genesis" | "finalized" | string;
+export type BlockId = RootHex | Slot | "head" | "genesis" | "finalized";
 
 /**
  * True if the response references an unverified execution payload. Optimistic information may be invalidated at
@@ -142,7 +142,7 @@ export type ReqTypes = {
 
 export function getReqSerializers(config: IChainForkConfig): ReqSerializers<Api, ReqTypes> {
   const blockIdOnlyReq: ReqSerializer<Api["getBlock"], BlockIdOnlyReq> = {
-    writeReq: (block_id) => ({params: {block_id}}),
+    writeReq: (block_id) => ({params: {block_id: String(block_id)}}),
     parseReq: ({params}) => [params.block_id],
     schema: {params: {block_id: Schema.StringRequired}},
   };
