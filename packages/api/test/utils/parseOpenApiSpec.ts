@@ -29,6 +29,12 @@ type Content = {
   /** `"application/json"` */
   [contentType: string]: {
     schema: JsonSchema;
+    examples?: {
+      [exampleName: string]: {
+        description: string;
+        value: string;
+      };
+    };
   };
 };
 

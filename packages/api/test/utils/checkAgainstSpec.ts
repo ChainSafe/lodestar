@@ -1,9 +1,8 @@
 import Ajv, {ErrorObject} from "ajv";
 import {expect} from "chai";
 import {ReqGeneric, ReqSerializer, ReturnTypes, RouteDef} from "../../src/utils/types.js";
-import {OpenApiFile, parseOpenApiSpec} from "./parseOpenApiSpec.js";
+import {OpenApiJson, parseOpenApiSpec} from "./parseOpenApiSpec.js";
 import {GenericServerTestCases} from "./genericServerTest.js";
-import {fetchOpenApiSpec} from "./fetchOpenApiSpec.js";
 
 const ajv = new Ajv({
   // strict: true,
@@ -18,14 +17,13 @@ ajv.addKeyword({
   errors: false,
 });
 
-export async function runTestCheckAgainstSpec(
-  openApiFile: OpenApiFile,
+export function runTestCheckAgainstSpec(
+  openApiJson: OpenApiJson,
   routesData: Record<string, RouteDef>,
   reqSerializers: Record<string, ReqSerializer<any, any>>,
   returnTypes: Record<string, ReturnTypes<any>[string]>,
   testDatas: Record<string, GenericServerTestCases<any>[string]>
-): Promise<void> {
-  const openApiJson = await fetchOpenApiSpec(openApiFile);
+): void {
   const openApiSpec = parseOpenApiSpec(openApiJson);
 
   for (const [operationId, routeSpec] of openApiSpec.entries()) {
@@ -33,15 +31,18 @@ export async function runTestCheckAgainstSpec(
       const {requestSchema, responseOkSchema} = routeSpec;
       const routeId = operationId as keyof typeof testDatas;
       const testData = testDatas[routeId];
+      const routeData = routesData[routeId];
 
       before("route is defined", () => {
+        if (routeData == null) {
+          throw Error(`No routeData for ${routeId}`);
+        }
         if (testData == null) {
-          throw Error(`${routeId} not defined`);
+          throw Error(`No testData for ${routeId}`);
         }
       });
 
       it(`${operationId}_route`, function () {
-        const routeData = routesData[routeId];
         expect(routeData.method.toLowerCase()).to.equal(routeSpec.method.toLowerCase(), "Wrong method");
         expect(routeData.url).to.equal(routeSpec.url, "Wrong url");
       });
