@@ -176,6 +176,16 @@ export function getReturnTypes(): ReturnTypes<Api> {
     {jsonCase: "eth2"}
   );
 
+  const PeerCount = new ContainerType(
+    {
+      disconnected: ssz.UintNum64,
+      connecting: ssz.UintNum64,
+      connected: ssz.UintNum64,
+      disconnecting: ssz.UintNum64,
+    },
+    {jsonCase: "eth2"}
+  );
+
   return {
     //
     // TODO: Consider just converting the JSON case without custom types
@@ -185,7 +195,7 @@ export function getReturnTypes(): ReturnTypes<Api> {
     // Use jsonType() to translate the casing in a generic way.
     getPeers: jsonType("snake"),
     getPeer: jsonType("snake"),
-    getPeerCount: jsonType("snake"),
+    getPeerCount: ContainerData(PeerCount),
     getNodeVersion: jsonType("snake"),
     getSyncingStatus: jsonType("snake"),
     getHealth: sameType(),

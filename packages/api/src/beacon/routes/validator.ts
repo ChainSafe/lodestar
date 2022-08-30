@@ -27,6 +27,7 @@ import {
   jsonType,
   ContainerDataExecutionOptimistic,
 } from "../../utils/index.js";
+import {fromU64Str, toU64Str, U64Str} from "../../utils/serdes.js";
 import {ExecutionOptimistic} from "./beacon/block.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
@@ -257,9 +258,9 @@ export const routesData: RoutesData<Api> = {
 
 /* eslint-disable @typescript-eslint/naming-convention */
 export type ReqTypes = {
-  getAttesterDuties: {params: {epoch: Epoch}; body: ValidatorIndex[]};
+  getAttesterDuties: {params: {epoch: Epoch}; body: U64Str[]};
   getProposerDuties: {params: {epoch: Epoch}};
-  getSyncCommitteeDuties: {params: {epoch: Epoch}; body: ValidatorIndex[]};
+  getSyncCommitteeDuties: {params: {epoch: Epoch}; body: U64Str[]};
   produceBlock: {params: {slot: number}; query: {randao_reveal: string; graffiti: string}};
   produceBlockV2: {params: {slot: number}; query: {randao_reveal: string; graffiti: string}};
   produceBlindedBlock: {params: {slot: number}; query: {randao_reveal: string; graffiti: string}};
@@ -310,11 +311,11 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
 
   return {
     getAttesterDuties: {
-      writeReq: (epoch, validatorIndexes) => ({params: {epoch}, body: validatorIndexes}),
-      parseReq: ({params, body}) => [params.epoch, body],
+      writeReq: (epoch, indexes) => ({params: {epoch}, body: indexes.map((i) => toU64Str(i))}),
+      parseReq: ({params, body}) => [params.epoch, body.map((i) => fromU64Str(i))],
       schema: {
         params: {epoch: Schema.UintRequired},
-        body: Schema.UintArray,
+        body: Schema.StringArray,
       },
     },
 
@@ -327,11 +328,11 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
     },
 
     getSyncCommitteeDuties: {
-      writeReq: (epoch, validatorIndexes) => ({params: {epoch}, body: validatorIndexes}),
-      parseReq: ({params, body}) => [params.epoch, body],
+      writeReq: (epoch, indexes) => ({params: {epoch}, body: indexes.map((i) => toU64Str(i))}),
+      parseReq: ({params, body}) => [params.epoch, body.map((i) => fromU64Str(i))],
       schema: {
         params: {epoch: Schema.UintRequired},
-        body: Schema.UintArray,
+        body: Schema.StringArray,
       },
     },
 
