@@ -1,0 +1,20 @@
+proposer_config:
+  '0xa99a76ed7796f7be22d5b7e85deeb7c5677e88e511e0b337618f8c4eb61349b4bf2d153f649f7b53359fe8b94a38e44c':
+    graffiti: 123
+    strict_fee_recipient_check: "true"
+    fee_recipient: '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+    builder:
+      enabled: true
+      gas_limit: "30000000"
+  '0xa4855c83d868f772a579133d9f23818008417b743e8447e235d8eb78b1d8f8a9f63f98c551beb7de254400f89592314d':
+    fee_recipient: '0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'
+    builder:
+      enabled: "true"
+      gas_limit: "35000000"
+default_config:
+  graffiti: 'default graffiti'
+  strict_fee_recipient_check: true
+  fee_recipient: '0xcccccccccccccccccccccccccccccccccccccccc'
+  builder:
+    enabled: true
+    gas_limit: "30000000"

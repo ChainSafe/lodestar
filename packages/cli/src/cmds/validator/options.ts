@@ -27,6 +27,7 @@ export type IValidatorCliArgs = AccountValidatorArgs &
     graffiti: string;
     afterBlockDelaySlotFraction?: number;
     suggestedFeeRecipient?: string;
+    proposerSettingsFile?: string;
     strictFeeRecipientCheck?: boolean;
     doppelgangerProtectionEnabled?: boolean;
     defaultGasLimit?: number;
@@ -143,6 +144,11 @@ export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
     hidden: true,
     description: "Delay before publishing attestations if block comes early, as a fraction of SECONDS_PER_SLOT",
     type: "number",
+  },
+
+  proposerSettingsFile: {
+    description: "proposer setting yaml file",
+    type: "string",
   },
 
   suggestedFeeRecipient: {
