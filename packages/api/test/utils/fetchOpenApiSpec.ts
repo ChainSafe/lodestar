@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import path from "node:path";
 import fetch from "cross-fetch";
 import {OpenApiFile, OpenApiJson} from "./parseOpenApiSpec.js";
 
@@ -17,8 +18,10 @@ export async function fetchOpenApiSpec(openApiFile: OpenApiFile): Promise<OpenAp
   console.log(`Downloading oapi file from ${openApiFile.url}`);
   const openApiStr = await fetch(openApiFile.url).then((res) => res.text());
 
-  const openApiJson = JSON.parse(openApiStr) as OpenApiJson;
   // Parse before writting to ensure it's proper JSON
+  const openApiJson = JSON.parse(openApiStr) as OpenApiJson;
+
+  fs.mkdirSync(path.dirname(openApiFile.filepath), {recursive: true});
   fs.writeFileSync(openApiFile.filepath, openApiStr);
 
   if (!openApiFile.version.test(openApiJson.info.version)) {
