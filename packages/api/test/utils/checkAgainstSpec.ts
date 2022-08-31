@@ -17,6 +17,8 @@ ajv.addKeyword({
   errors: false,
 });
 
+ajv.addFormat("hex", /^0x[a-fA-F0-9]+$/);
+
 export function runTestCheckAgainstSpec(
   openApiJson: OpenApiJson,
   routesData: Record<string, RouteDef>,

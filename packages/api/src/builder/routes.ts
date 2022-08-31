@@ -32,7 +32,7 @@ export type Api = {
 export const routesData: RoutesData<Api> = {
   checkStatus: {url: "/eth/v1/builder/status", method: "GET"},
   registerValidator: {url: "/eth/v1/builder/validators", method: "POST"},
-  getPayloadHeader: {url: "/eth/v1/builder/header/:slot/:parent_hash/:pubkey", method: "GET"},
+  getPayloadHeader: {url: "/eth/v1/builder/header/{slot}/{parent_hash}/{pubkey}", method: "GET"},
   submitSignedBlindedBlock: {url: "/eth/v1/builder/blinded_blocks", method: "POST"},
 };
 
