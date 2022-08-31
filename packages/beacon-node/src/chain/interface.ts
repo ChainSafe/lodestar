@@ -120,6 +120,7 @@ export interface IBeaconChain {
   persistInvalidSszValue<T>(type: Type<T>, sszObject: T | Uint8Array, suffix?: string): void;
   /** Persist bad items to persistInvalidSszObjectsDir dir, for example invalid state, attestations etc. */
   persistInvalidSszView(view: TreeView<CompositeTypeAny>, suffix?: string): void;
+  updateBuilderStatus(clockSlot: Slot): void;
 }
 
 export type SSZObjectType =
