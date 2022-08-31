@@ -1,4 +1,5 @@
 import type {SecretKey} from "@chainsafe/bls/types";
+import {ENR} from "@chainsafe/discv5";
 import {Api} from "@lodestar/api";
 import {Api as KeyManagerApi} from "@lodestar/api/keymanager";
 import {IChainForkConfig} from "@lodestar/config";
@@ -27,7 +28,10 @@ export type RunTimeSimulationParams = {
 export interface BeaconNodeProcess {
   ready(): Promise<boolean>;
   start(): Promise<void>;
+  init(): Promise<void>;
   stop(): Promise<void>;
+  connect(node: BeaconNodeProcess): void;
+  enr: string;
   api: Api;
   address: string;
   port: number;
