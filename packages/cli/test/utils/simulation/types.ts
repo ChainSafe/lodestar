@@ -1,5 +1,7 @@
 import type {SecretKey} from "@chainsafe/bls/types";
 import {Api} from "@lodestar/api";
+import {Api as KeyManagerApi} from "@lodestar/api/keymanager";
+import {IChainForkConfig} from "@lodestar/config";
 import {BeaconStateAllForks} from "@lodestar/state-transition/";
 
 export type SimulationRequiredParams = {
@@ -12,7 +14,6 @@ export type SimulationRequiredParams = {
 export type SimulationOptionalParams = {
   validatorsPerClient: number;
   withExternalSigner: boolean;
-  slotsPerEpoch: number;
   secondsPerSlot: number;
   genesisSlotsDelay: number;
   anchorState?: BeaconStateAllForks;
@@ -20,13 +21,13 @@ export type SimulationOptionalParams = {
 
 export type RunTimeSimulationParams = {
   genesisTime: number;
+  slotsPerEpoch: number;
 };
 
 export interface BeaconNodeProcess {
   ready(): Promise<boolean>;
   start(): Promise<void>;
   stop(): Promise<void>;
-  secretKeys: Record<number, SecretKey[]>;
   api: Api;
   address: string;
   port: number;
@@ -35,6 +36,26 @@ export interface BeaconNodeProcess {
 
 export interface BeaconNodeConstructor {
   new (params: SimulationParams, rootDir: string): BeaconNodeProcess;
+}
+
+export interface ValidatorProcess {
+  ready(): Promise<boolean>;
+  start(): Promise<void>;
+  stop(): Promise<void>;
+  secretKeys: SecretKey[];
+  keyManagerApi: KeyManagerApi;
+}
+
+export interface ValidatorConstructor {
+  new (
+    params: SimulationParams,
+    options: {
+      rootDir: string;
+      clientIndex: number;
+      server: string;
+      config: IChainForkConfig;
+    }
+  ): ValidatorProcess;
 }
 
 export type SimulationParams = SimulationRequiredParams & Required<SimulationOptionalParams> & RunTimeSimulationParams;
