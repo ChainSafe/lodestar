@@ -35,20 +35,34 @@ export class SimulationEnvironment {
       slotsPerEpoch: this.params.slotsPerEpoch,
       signal: this.controller.signal,
     });
+
+    for (let i = 1; i <= this.params.beaconNodes; i += 1) {
+      const nodeRootDir = `${this.rootDir}/node-${i}`;
+      this.nodes.push(new LodestarBeaconNodeProcess(this.params, nodeRootDir));
+    }
   }
 
   async start(): Promise<void> {
     await mkdir(this.rootDir);
+
     for (let i = 1; i <= this.params.beaconNodes; i += 1) {
-      const nodeRootDir = `${this.rootDir}/node-${i}`;
-      this.nodes.push(new LodestarBeaconNodeProcess(this.params, nodeRootDir));
-      await this.nodes[i - 1].start();
+      await this.nodes[i - 1].init();
     }
+
+    await Promise.all(this.nodes.map((p) => p.start()));
   }
 
   async stop(): Promise<void> {
     this.controller.abort();
     await Promise.all(this.nodes.map((p) => p.stop()));
     await rm(this.rootDir, {recursive: true});
+  }
+
+  connectNodesToFirstNode(): void {
+    const firstNode = this.nodes[0];
+    for (let i = 1; i < this.params.beaconNodes; i += 1) {
+      const node = this.nodes[i];
+      node.connect(firstNode);
+    }
   }
 }
