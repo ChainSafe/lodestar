@@ -84,7 +84,7 @@ runTestCheckAgainstSpec(openApiJson, routesData, reqSerializers, returnTypes, te
 // The function runTestCheckAgainstSpec() can't handle those, so the custom code before:
 // - Parse example JSON from eventstream examples
 // - Assert that our test data matches the JSON from examples
-describe("eventstream event data", () => {
+describe.skip("eventstream event data", () => {
   // Additional test for eventstream events
   // "examples": {
   //   "head": {

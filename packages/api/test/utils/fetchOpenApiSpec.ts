@@ -19,11 +19,11 @@ export async function fetchOpenApiSpec(openApiFile: OpenApiFile): Promise<OpenAp
 
   const openApiJson = JSON.parse(openApiStr) as OpenApiJson;
   // Parse before writting to ensure it's proper JSON
+  fs.writeFileSync(openApiFile.filepath, openApiStr);
+
   if (!openApiFile.version.test(openApiJson.info.version)) {
     throw Error(`Downloaded oapi file version ${openApiJson.info.version} doesn't match ${openApiFile.version}`);
   }
-
-  fs.writeFileSync(openApiFile.filepath, openApiStr);
 
   return openApiJson;
 }
