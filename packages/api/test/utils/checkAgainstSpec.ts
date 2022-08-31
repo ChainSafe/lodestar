@@ -1,7 +1,7 @@
 import Ajv, {ErrorObject} from "ajv";
 import {expect} from "chai";
 import {ReqGeneric, ReqSerializer, ReturnTypes, RouteDef} from "../../src/utils/types.js";
-import {OpenApiJson, parseOpenApiSpec} from "./parseOpenApiSpec.js";
+import {applyRecursively, OpenApiJson, parseOpenApiSpec, ParseOpenApiSpecOpts} from "./parseOpenApiSpec.js";
 import {GenericServerTestCases} from "./genericServerTest.js";
 
 const ajv = new Ajv({
@@ -24,9 +24,10 @@ export function runTestCheckAgainstSpec(
   routesData: Record<string, RouteDef>,
   reqSerializers: Record<string, ReqSerializer<any, any>>,
   returnTypes: Record<string, ReturnTypes<any>[string]>,
-  testDatas: Record<string, GenericServerTestCases<any>[string]>
+  testDatas: Record<string, GenericServerTestCases<any>[string]>,
+  opts?: ParseOpenApiSpecOpts
 ): void {
-  const openApiSpec = parseOpenApiSpec(openApiJson);
+  const openApiSpec = parseOpenApiSpec(openApiJson, opts);
 
   for (const [operationId, routeSpec] of openApiSpec.entries()) {
     describe(operationId, () => {
@@ -102,17 +103,25 @@ function validateSchema(schema: Parameters<typeof ajv.compile>[0], json: unknown
   } catch (e) {
     // eslint-disable-next-line no-console
     console.error(JSON.stringify(schema, null, 2));
+    (e as Error).message = `${id} schema - ${(e as Error).message}`;
     throw e;
   }
 
   const valid = <boolean>validate(json);
   if (!valid) {
+    // Remove descriptions, for better clarity in rendering on errors
+    applyRecursively(schema, (obj) => {
+      delete obj.description;
+    });
+
     throw Error(
       [
         `Invalid ${id} against spec schema`,
         prettyAjvErrors(validate.errors),
         // Limit the max amount of JSON dumped as the full state is too big
         JSON.stringify(json).slice(0, 1000),
+        // Dump schema too
+        JSON.stringify(schema).slice(0, 1000),
       ].join("\n\n")
     );
   }
