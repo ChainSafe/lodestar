@@ -16,6 +16,10 @@ export type IChainOptions = BlockProcessOpts &
     skipCreateStateCacheIfAvailable?: boolean;
     defaultFeeRecipient: string;
     maxSkipSlots?: number;
+    /** Window to inspect missed slots for enabling/disabling builder circuit breaker */
+    faultInspectionWindow?: number;
+    /** Number of missed slots allowed in the faultInspectionWindow for builder circuit*/
+    allowedFaults?: number;
   };
 
 export type BlockProcessOpts = {
