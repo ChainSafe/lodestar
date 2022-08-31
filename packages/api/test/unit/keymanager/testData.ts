@@ -24,11 +24,11 @@ export const testData: GenericServerTestCases<Api> = {
     },
   },
   importKeystores: {
-    args: [["key1"], ["pass1"], "slash_protection"],
+    args: [[pubkeyRand], ["pass1"], "slash_protection"],
     res: {data: [{status: ImportStatus.imported}]},
   },
-  deleteKeystores: {
-    args: [["key1"]],
+  deleteKeys: {
+    args: [[pubkeyRand]],
     res: {data: [{status: DeletionStatus.deleted}], slashingProtection: "slash_protection"},
   },
 
@@ -49,7 +49,7 @@ export const testData: GenericServerTestCases<Api> = {
     res: {data: [{status: ImportRemoteKeyStatus.imported}]},
   },
   deleteRemoteKeys: {
-    args: [["key1"]],
+    args: [[pubkeyRand]],
     res: {data: [{status: DeleteRemoteKeyStatus.deleted}]},
   },
 };

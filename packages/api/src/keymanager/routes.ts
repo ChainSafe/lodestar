@@ -1,4 +1,13 @@
-import {ReturnTypes, RoutesData, Schema, reqEmpty, ReqSerializers, ReqEmpty, jsonType} from "../utils/index.js";
+import {
+  ReturnTypes,
+  RoutesData,
+  Schema,
+  reqEmpty,
+  ReqSerializers,
+  ReqEmpty,
+  jsonType,
+  ReqSerializer,
+} from "../utils/index.js";
 
 export enum ImportStatus {
   /** Keystore successfully decrypted and imported to keymanager permanent storage */
@@ -82,6 +91,21 @@ export type SlashingProtectionData = string;
  */
 export type PubkeyHex = string;
 
+/**
+ * Ethereum execution layer 20 byte address
+ */
+export type EthAddress = string;
+
+export type FeeRecipient = {
+  pubkey: PubkeyHex;
+  ethaddress: EthAddress;
+};
+
+export type GasLimit = {
+  pubkey: PubkeyHex;
+  gasLimit: number;
+};
+
 export type Api = {
   /**
    * List all validating pubkeys known to and decrypted by this keymanager binary
@@ -140,7 +164,7 @@ export type Api = {
    *
    * https://github.com/ethereum/keymanager-APIs/blob/0c975dae2ac6053c8245ebdb6a9f27c2f114f407/keymanager-oapi.yaml
    */
-  deleteKeystores(
+  deleteKeys(
     pubkeysHex: string[]
   ): Promise<{
     data: ResponseStatus<DeletionStatus>[];
@@ -166,19 +190,81 @@ export type Api = {
   ): Promise<{
     data: ResponseStatus<DeleteRemoteKeyStatus>[];
   }>;
+
+  /**
+   * List the validator public key to eth address mapping for fee recipient feature on a specific public key.
+   * The validator public key will return with the default fee recipient address if a specific one was not found.
+   *
+   * WARNING: The fee_recipient is not used on Phase0 or Altair networks.
+   */
+  listFeeRecipient(pubkey: PubkeyHex): Promise<{data: FeeRecipient}>;
+
+  /**
+   * Sets the validator client fee recipient mapping which will then update the beacon node.
+   * Existing mappings for the same validator public key will be overwritten.
+   * Specific Public keys not mapped will continue to use the default address for fee recipient in accordance to the startup of the validator client and beacon node.
+   * Cannot specify the 0x00 fee recipient address through the API.
+   *
+   * WARNING: The fee_recipient is not used on Phase0 or Altair networks.
+   */
+  setFeeRecipient(pubkey: PubkeyHex, ethaddress: EthAddress): Promise<void>;
+
+  /**
+   * Delete a configured fee recipient mapping for the specified public key.
+   */
+  deleteFeeRecipient(pubkey: PubkeyHex): Promise<void>;
+
+  /**
+   * Get the execution gas limit for an individual validator. This gas limit is the one used by the
+   * validator when proposing blocks via an external builder. If no limit has been set explicitly for
+   * a key then the process-wide default will be returned.
+   *
+   * The server may return a 400 status code if no external builder is configured.
+   *
+   * WARNING: The gas_limit is not used on Phase0 or Altair networks.
+   */
+  getGasLimit(pubkey: PubkeyHex): Promise<{data: GasLimit}>;
+
+  /**
+   * Set the gas limit for an individual validator. This limit will be propagated to the beacon
+   * node for use on future block proposals. The beacon node is responsible for informing external
+   * block builders of the change.
+   *
+   * The server may return a 400 status code if no external builder is configured.
+   *
+   * WARNING: The gas_limit is not used on Phase0 or Altair networks.
+   */
+  setGasLimit(pubkey: PubkeyHex, gasLimit: number): Promise<void>;
+
+  /**
+   * Delete a configured gas limit for the specified public key.
+   *
+   * The server may return a 400 status code if no external builder is configured.
+   */
+  deleteGasLimit(pubkey: PubkeyHex): Promise<void>;
 };
 
 export const routesData: RoutesData<Api> = {
   listKeys: {url: "/eth/v1/keystores", method: "GET"},
   importKeystores: {url: "/eth/v1/keystores", method: "POST"},
-  deleteKeystores: {url: "/eth/v1/keystores", method: "DELETE"},
+  deleteKeys: {url: "/eth/v1/keystores", method: "DELETE"},
 
   listRemoteKeys: {url: "/eth/v1/remotekeys", method: "GET"},
   importRemoteKeys: {url: "/eth/v1/remotekeys", method: "POST"},
   deleteRemoteKeys: {url: "/eth/v1/remotekeys", method: "DELETE"},
+
+  listFeeRecipient: {url: "/eth/v1/validator/{pubkey}/feerecipient", method: "GET"},
+  setFeeRecipient: {url: "/eth/v1/validator/{pubkey}/feerecipient", method: "POST"},
+  deleteFeeRecipient: {url: "/eth/v1/validator/{pubkey}/feerecipient", method: "DELETE"},
+
+  getGasLimit: {url: "/eth/v1/validator/{pubkey}/gas_limit", method: "GET"},
+  setGasLimit: {url: "/eth/v1/validator/{pubkey}/gas_limit", method: "POST"},
+  deleteGasLimit: {url: "/eth/v1/validator/{pubkey}/gas_limit", method: "DELETE"},
 };
 
 /* eslint-disable @typescript-eslint/naming-convention */
+
+type PubkeyOnlyReq = {params: {pubkey: string}};
 
 export type ReqTypes = {
   listKeys: ReqEmpty;
@@ -189,7 +275,7 @@ export type ReqTypes = {
       slashing_protection?: SlashingProtectionData;
     };
   };
-  deleteKeystores: {body: {pubkeys: string[]}};
+  deleteKeys: {body: {pubkeys: string[]}};
 
   listRemoteKeys: ReqEmpty;
   importRemoteKeys: {
@@ -198,9 +284,27 @@ export type ReqTypes = {
     };
   };
   deleteRemoteKeys: {body: {pubkeys: string[]}};
+
+  listFeeRecipient: PubkeyOnlyReq;
+  setFeeRecipient: PubkeyOnlyReq & {
+    body: {ethaddress: EthAddress};
+  };
+  deleteFeeRecipient: PubkeyOnlyReq;
+
+  getGasLimit: PubkeyOnlyReq;
+  setGasLimit: PubkeyOnlyReq & {
+    body: {gas_limit: number};
+  };
+  deleteGasLimit: PubkeyOnlyReq;
 };
 
 export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
+  const pubkeyOnlyReq: ReqSerializer<Api["listFeeRecipient"], PubkeyOnlyReq> = {
+    writeReq: (pubkey) => ({params: {pubkey}}),
+    parseReq: ({params}) => [params.pubkey],
+    schema: {params: {pubkey: Schema.StringRequired}},
+  };
+
   return {
     listKeys: reqEmpty,
     importKeystores: {
@@ -208,7 +312,7 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
       parseReq: ({body: {keystores, passwords, slashing_protection}}) => [keystores, passwords, slashing_protection],
       schema: {body: Schema.Object},
     },
-    deleteKeystores: {
+    deleteKeys: {
       writeReq: (pubkeys) => ({body: {pubkeys}}),
       parseReq: ({body: {pubkeys}}) => [pubkeys],
       schema: {body: Schema.Object},
@@ -225,6 +329,22 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
       parseReq: ({body: {pubkeys}}) => [pubkeys],
       schema: {body: Schema.Object},
     },
+
+    listFeeRecipient: pubkeyOnlyReq,
+    setFeeRecipient: {
+      writeReq: (pubkey, ethaddress) => ({params: {pubkey}, body: {ethaddress}}),
+      parseReq: ({params, body}) => [params.pubkey, body.ethaddress],
+      schema: {body: Schema.Object},
+    },
+    deleteFeeRecipient: pubkeyOnlyReq,
+
+    getGasLimit: pubkeyOnlyReq,
+    setGasLimit: {
+      writeReq: (pubkey, gas_limit) => ({params: {pubkey}, body: {gas_limit}}),
+      parseReq: ({params, body}) => [params.pubkey, body.gas_limit],
+      schema: {body: Schema.Object},
+    },
+    deleteGasLimit: pubkeyOnlyReq,
   };
 }
 
@@ -233,10 +353,14 @@ export function getReturnTypes(): ReturnTypes<Api> {
   return {
     listKeys: jsonType("snake"),
     importKeystores: jsonType("snake"),
-    deleteKeystores: jsonType("snake"),
+    deleteKeys: jsonType("snake"),
 
     listRemoteKeys: jsonType("snake"),
     importRemoteKeys: jsonType("snake"),
     deleteRemoteKeys: jsonType("snake"),
+
+    listFeeRecipient: jsonType("snake"),
+
+    getGasLimit: jsonType("snake"),
   };
 }

@@ -84,6 +84,7 @@ enum ContentType {
 
 export type ParseOpenApiSpecOpts = {
   routesDropOneOf?: string[];
+  setOperationIdToCamelCase: boolean;
 };
 
 export function parseOpenApiSpec(openApiJson: OpenApiJson, opts?: ParseOpenApiSpecOpts): Map<OperationId, RouteSpec> {
@@ -92,8 +93,13 @@ export function parseOpenApiSpec(openApiJson: OpenApiJson, opts?: ParseOpenApiSp
   for (const [routeUrl, routesByMethod] of Object.entries(openApiJson.paths)) {
     for (const [httpMethod, routeDefinition] of Object.entries(routesByMethod)) {
       const responseOkSchema = routeDefinition.responses[StatusCode.ok]?.content?.[ContentType.json]?.schema;
+      let operationId = routeDefinition.operationId;
 
-      const dropOneOf = opts?.routesDropOneOf?.includes(routeDefinition.operationId);
+      if (opts?.setOperationIdToCamelCase) {
+        operationId = operationId[0].toLowerCase() + operationId.slice(1);
+      }
+
+      const dropOneOf = opts?.routesDropOneOf?.includes(operationId);
 
       // Force all properties to have required, else ajv won't validate missing properties
       if (responseOkSchema) {
@@ -109,7 +115,7 @@ export function parseOpenApiSpec(openApiJson: OpenApiJson, opts?: ParseOpenApiSp
       const requestSchema = buildReqSchema(routeDefinition);
       preprocessSchema(requestSchema, {dropOneOf});
 
-      routes.set(routeDefinition.operationId, {
+      routes.set(operationId, {
         url: routeUrl,
         method: httpMethod,
         responseOkSchema,

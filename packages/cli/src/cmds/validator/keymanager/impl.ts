@@ -131,7 +131,7 @@ export class KeymanagerApi implements Api {
    *
    * https://github.com/ethereum/keymanager-APIs/blob/0c975dae2ac6053c8245ebdb6a9f27c2f114f407/keymanager-oapi.yaml
    */
-  async deleteKeystores(pubkeysHex: PubkeyHex[]): ReturnType<Api["deleteKeystores"]> {
+  async deleteKeys(pubkeysHex: PubkeyHex[]): ReturnType<Api["deleteKeys"]> {
     const deletedKey: boolean[] = [];
     const statuses = new Array<{status: DeletionStatus; message?: string}>(pubkeysHex.length);
 
