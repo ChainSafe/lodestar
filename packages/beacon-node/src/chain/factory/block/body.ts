@@ -292,7 +292,7 @@ async function prepareExecutionPayloadHeader(
   }
 
   const {parentHash} = parentHashRes;
-  return chain.executionBuilder.getPayloadHeader(state.slot, parentHash, proposerPubKey);
+  return chain.executionBuilder.getHeader(state.slot, parentHash, proposerPubKey);
 }
 
 async function getExecutionPayloadParentHash(

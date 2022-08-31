@@ -185,10 +185,7 @@ export function getReturnTypes(): ReturnTypes<Api> {
 
   return {
     getBlock: ContainerData(ssz.phase0.SignedBeaconBlock),
-    // Teku returns fork as UPPERCASE
-    getBlockV2: WithExecutionOptimistic(
-      WithVersion((fork: ForkName) => ssz[fork.toLowerCase() as ForkName].SignedBeaconBlock)
-    ),
+    getBlockV2: WithExecutionOptimistic(WithVersion((fork) => ssz[fork].SignedBeaconBlock)),
     getBlockAttestations: ContainerDataExecutionOptimistic(ArrayOf(ssz.phase0.Attestation)),
     getBlockHeader: ContainerDataExecutionOptimistic(BeaconHeaderResType),
     getBlockHeaders: ContainerDataExecutionOptimistic(ArrayOf(BeaconHeaderResType)),
