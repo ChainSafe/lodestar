@@ -1,6 +1,8 @@
 import {mkdir, rm} from "node:fs/promises";
 import tmp from "tmp";
+import {activePreset} from "@lodestar/params";
 import {BeaconNodeProcess, SimulationOptionalParams, SimulationParams, SimulationRequiredParams} from "./types.js";
+import {EpochClock} from "./EpochClock.js";
 import {LodestarBeaconNodeProcess, defaultSimulationParams, getSimulationId} from "./index.js";
 
 export class SimulationEnvironment {
@@ -8,6 +10,8 @@ export class SimulationEnvironment {
   readonly id: string;
   readonly rootDir: string;
   readonly nodes: BeaconNodeProcess[] = [];
+  readonly clock: EpochClock;
+  readonly controller: AbortController;
 
   constructor(params: SimulationRequiredParams & Partial<SimulationOptionalParams>) {
     const paramsWithDefaults = {...defaultSimulationParams, ...params} as SimulationRequiredParams &
@@ -19,10 +23,18 @@ export class SimulationEnvironment {
     this.params = {
       ...paramsWithDefaults,
       genesisTime,
+      slotsPerEpoch: activePreset.SLOTS_PER_EPOCH,
     } as SimulationParams;
 
+    this.controller = new AbortController();
     this.id = getSimulationId(this.params);
     this.rootDir = `${tmp.dirSync({unsafeCleanup: true}).name}/${this.id}`;
+    this.clock = new EpochClock({
+      genesisTime,
+      secondsPerSlot: this.params.secondsPerSlot,
+      slotsPerEpoch: this.params.slotsPerEpoch,
+      signal: this.controller.signal,
+    });
   }
 
   async start(): Promise<void> {
@@ -35,6 +47,7 @@ export class SimulationEnvironment {
   }
 
   async stop(): Promise<void> {
+    this.controller.abort();
     await Promise.all(this.nodes.map((p) => p.stop()));
     await rm(this.rootDir, {recursive: true});
   }

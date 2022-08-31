@@ -1,7 +1,6 @@
 import {dirname} from "node:path";
 import {fileURLToPath} from "node:url";
 import {ChildProcess, spawn} from "node:child_process";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Slot} from "@lodestar/types";
 import {SimulationOptionalParams, SimulationParams} from "./types.js";
 
@@ -11,10 +10,9 @@ import {SimulationOptionalParams, SimulationParams} from "./types.js";
 export const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export const defaultSimulationParams: SimulationOptionalParams = {
-  validatorsPerClient: 32 * 4,
+  validatorsPerClient: 32,
   withExternalSigner: false,
-  slotsPerEpoch: SLOTS_PER_EPOCH,
-  secondsPerSlot: 2,
+  secondsPerSlot: 4,
   // delay a bit so regular sync sees it's up to date and sync is completed from the beginning
   // allow time for bls worker threads to warm up
   genesisSlotsDelay: 20,
@@ -36,14 +34,16 @@ export const getSimulationId = ({
 export const spawnProcessAndWait = async (
   module: string,
   args: string[],
-  ready: (childProcess: ChildProcess) => Promise<boolean>
+  ready: (childProcess: ChildProcess) => Promise<boolean>,
+  message: string
 ): Promise<ChildProcess> => {
   return new Promise((resolve, reject) => {
     void (async () => {
       const childProcess = spawn(module, args, {
         detached: false,
         stdio: "inherit",
-        env: process.env,
+        // eslint-disable-next-line @typescript-eslint/naming-convention
+        env: {...process.env, NODE_ENV: "test"},
       });
 
       childProcess.on("error", reject);
@@ -57,7 +57,7 @@ export const spawnProcessAndWait = async (
           clearInterval(intervalId);
           resolve(childProcess);
         } else {
-          console.log("Waiting for beacon node to start.");
+          console.info(message);
         }
       }, 1000);
     })();
@@ -71,7 +71,7 @@ export const closeChildProcess = async (childProcess: ChildProcess, signal?: "SI
   });
 };
 
-export const waitForSlot = async (params: SimulationParams, slot: Slot): Promise<void> {
+export const waitForSlot = async (params: SimulationParams, slot: Slot): Promise<void> => {
   if (slot <= 0) {
     return;
   }
@@ -84,4 +84,4 @@ export const waitForSlot = async (params: SimulationParams, slot: Slot): Promise
   }
 
   await new Promise((resolve) => setTimeout(resolve, msToSlot));
-}
+};

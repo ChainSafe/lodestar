@@ -18,11 +18,13 @@ export function finalityAssertions(env: SimulationEnvironment): void {
   describe("finality", () => {
     for (let n = 0; n < env.params.beaconNodes; n++) {
       describe(`beacon node "${n}"`, () => {
-        it("should have proper finality", async () => {
+        it("should have proper finality", async function () {
           const node = env.nodes[n];
+
+          await env.clock.waitForEndOfEpoch(1);
+
           const checkpoints = await node.api.beacon.getStateFinalityCheckpoints("head");
-          const header = await node.api.beacon.getBlockHeaders({});
-          const currentSlot = header.data[0].header.message.slot;
+          const currentSlot = env.clock.currentSlot;
           const previousJustifiedSlot = checkpoints.data.previousJustified.epoch;
           const currentJustifiedSlot = checkpoints.data.currentJustified.epoch;
           const finalizedSlot = checkpoints.data.finalized.epoch;
@@ -58,7 +60,7 @@ export function forkAssertions(env: SimulationEnvironment): void {
             await waitForSlot(env.params, expectedSlot);
 
             // await node.api.getBlock();
-            // Match ic the block is from the right fork
+            // Match if the block is from the right fork
           });
         });
 
@@ -103,7 +105,8 @@ export function nodeAssertions(env: SimulationEnvironment): void {
           expect(syncStatus.data.syncDistance).to.equal("0");
         });
 
-        it("should have correct number of validators");
+        // NOT POSSIBLE
+        it.skip("should have correct number of validator clients");
 
         describe("validator - n", () => {
           it("should have correct status");
@@ -184,6 +187,47 @@ export function slashingAssertions(env: SimulationEnvironment): void {
         describe("propose double block to detect slasher", () => {
           it("should slash expected number of validator");
           it("should make a validator loose balance");
+        });
+      });
+    }
+  });
+}
+
+export function participationAssertions(env: SimulationEnvironment): void {
+  describe("participation", () => {
+    for (let n = 0; n < env.params.beaconNodes; n++) {
+      describe(`beacon node "${n}"`, () => {
+        it("should have correct participation rate");
+      });
+    }
+  });
+}
+
+export function missedBlocksAssertions(env: SimulationEnvironment): void {
+  describe("missing blocks", () => {
+    before(async () => {
+      // Wait for end of one epoch
+      console.log(`Waiting for end of epoch ${env.clock.currentEpoch + 1}`);
+      await env.clock.waitForEndOfEpoch(env.clock.currentEpoch + 1);
+    });
+
+    for (let n = 0; n < env.params.beaconNodes; n++) {
+      describe(`beacon node "${n}"`, () => {
+        it("should have no missed blocks", async () => {
+          let missedBlocks = 0;
+
+          for (let i = 0; i < env.params.slotsPerEpoch * env.clock.currentEpoch; i++) {
+            try {
+              const block = await env.nodes[n].api.beacon.getBlock(i);
+              if (block.data.message.slot !== i) {
+                missedBlocks += 1;
+              }
+            } catch {
+              missedBlocks += 1;
+            }
+          }
+
+          expect(missedBlocks).to.equal(0);
         });
       });
     }
