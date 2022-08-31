@@ -127,7 +127,7 @@
     "@libp2p/mdns": "^3.0.0",
     "@libp2p/mplex": "^5.0.0",
     "@libp2p/peer-id-factory": "^1.0.18",
-    "@libp2p/tcp": "^3.0.3",
+    "@libp2p/tcp": "^3.0.5",
     "@multiformats/multiaddr": "^10.3.3",
     "@types/datastore-level": "^3.0.0",
     "buffer-xor": "^2.0.2",

@@ -2258,10 +2258,10 @@
     uint8arraylist "^2.0.0"
     uint8arrays "^3.0.0"
 
-"@libp2p/tcp@^3.0.3":
-  version "3.0.3"
-  resolved "https://registry.yarnpkg.com/@libp2p/tcp/-/tcp-3.0.3.tgz#259fdb3577a86ff8ec223e9e1f42417ee8708fd2"
-  integrity sha512-XllEq2HiS3NokXm93esNyd9R6pcX0gD8CQUli7APDX1ZGZYcPosnLWxwFVruXQsAvfRNlvCMNMPDnIOtPZDDuA==
+"@libp2p/tcp@^3.0.5":
+  version "3.0.5"
+  resolved "https://registry.yarnpkg.com/@libp2p/tcp/-/tcp-3.0.5.tgz#da7c556677fcb54c20c9bd25cb520bf255225f86"
+  integrity sha512-qNXm61b36wJ1FQ97vyrRhz/Oxvsts+eT20jyUDyaYi9lH6f1zqQCsZkad0/iNp8Y7SBNBck/RYc1JcuZntHxfw==
   dependencies:
     "@libp2p/interface-connection" "^3.0.1"
     "@libp2p/interface-transport" "^1.0.0"
