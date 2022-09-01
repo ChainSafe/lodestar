@@ -1,14 +1,15 @@
+import path from "node:path";
 import {Registry} from "prom-client";
+import {createKeypairFromPeerId, ENR} from "@chainsafe/discv5";
 import {ErrorAborted} from "@lodestar/utils";
 import {LevelDbController} from "@lodestar/db";
 import {BeaconNode, BeaconDb, createNodeJsLibp2p} from "@lodestar/beacon-node";
 import {createIBeaconConfig} from "@lodestar/config";
 import {ACTIVE_PRESET, PresetName} from "@lodestar/params";
-import {IGlobalArgs} from "../../options/index.js";
-import {parseEnrArgs} from "../../options/enrOptions.js";
-import {onGracefulShutdown, getCliLogger} from "../../util/index.js";
-import {FileENR, overwriteEnrWithCliArgs, readPeerId} from "../../config/index.js";
-import {initializeOptionsAndConfig, persistOptionsAndConfig} from "../init/handler.js";
+import {IGlobalArgs, parseBeaconNodeArgs} from "../../options/index.js";
+import {onGracefulShutdown, getCliLogger, mkdir, writeFile} from "../../util/index.js";
+import {BeaconNodeOptions, createPeerId, FileENR, getBeaconConfigFromArgs} from "../../config/index.js";
+import {getNetworkBootnodes, getNetworkData, readBootnodes} from "../../networks/index.js";
 import {getVersionData} from "../../util/version.js";
 import {IBeaconArgs} from "./options.js";
 import {getBeaconPaths} from "./paths.js";
@@ -18,27 +19,12 @@ import {initBeaconState} from "./initBeaconState.js";
  * Runs a beacon node.
  */
 export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<void> {
-  const {beaconNodeOptions, config} = await initializeOptionsAndConfig(args);
-  await persistOptionsAndConfig(args);
+  const {config, options, beaconPaths, network, version, commit, peerId} = await beaconHandlerInit(args);
 
-  const {version, commit} = getVersionData();
-  const beaconPaths = getBeaconPaths(args);
-  // TODO: Rename db.name to db.path or db.location
-  beaconNodeOptions.set({db: {name: beaconPaths.dbDir}});
-  beaconNodeOptions.set({chain: {persistInvalidSszObjectsDir: beaconPaths.persistInvalidSszObjectsDir}});
-  // Add metrics metadata to show versioning + network info in Prometheus + Grafana
-  beaconNodeOptions.set({metrics: {metadata: {version, commit, network: args.network}}});
-  // Add detailed version string for API node/version endpoint
-  beaconNodeOptions.set({api: {version}});
-
-  // ENR setup
-  const peerId = await readPeerId(beaconPaths.peerIdFile);
-  const enr = FileENR.initFromFile(beaconPaths.enrFile, peerId);
-  const enrArgs = parseEnrArgs(args);
-  overwriteEnrWithCliArgs(enr, enrArgs, beaconNodeOptions.getWithDefaults());
-  const enrUpdate = !enrArgs.ip && !enrArgs.ip6;
-  beaconNodeOptions.set({network: {discv5: {enr, enrUpdate}}});
-  const options = beaconNodeOptions.getWithDefaults();
+  // initialize directories
+  mkdir(beaconPaths.dataDir);
+  mkdir(beaconPaths.beaconDir);
+  mkdir(beaconPaths.dbDir);
 
   const abortController = new AbortController();
   const logger = getCliLogger(args, beaconPaths, config);
@@ -47,7 +33,7 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
     abortController.abort();
   }, logger.info.bind(logger));
 
-  logger.info("Lodestar", {network: args.network, version, commit});
+  logger.info("Lodestar", {network, version, commit});
   if (ACTIVE_PRESET === PresetName.minimal) logger.info("ACTIVE_PRESET == minimal preset");
 
   // additional metrics registries
@@ -93,4 +79,69 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
       throw e;
     }
   }
+}
+
+/** Separate function to simplify unit testing of options merging */
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+export async function beaconHandlerInit(args: IBeaconArgs & IGlobalArgs) {
+  const {config, network} = getBeaconConfigFromArgs(args);
+
+  const beaconNodeOptions = new BeaconNodeOptions(parseBeaconNodeArgs(args));
+
+  const {version, commit} = getVersionData();
+  const beaconPaths = getBeaconPaths(args, network);
+  // TODO: Rename db.name to db.path or db.location
+  beaconNodeOptions.set({db: {name: beaconPaths.dbDir}});
+  beaconNodeOptions.set({chain: {persistInvalidSszObjectsDir: beaconPaths.persistInvalidSszObjectsDir}});
+  // Add metrics metadata to show versioning + network info in Prometheus + Grafana
+  beaconNodeOptions.set({metrics: {metadata: {version, commit, network}}});
+  // Add detailed version string for API node/version endpoint
+  beaconNodeOptions.set({api: {version}});
+
+  // Fetch extra bootnodes
+  const extraBootnodes = (beaconNodeOptions.get().network?.discv5?.bootEnrs ?? []).concat(
+    args.bootnodesFile ? readBootnodes(args.bootnodesFile) : [],
+    args.network ? await getNetworkBootnodes(args.network) : []
+  );
+  beaconNodeOptions.set({network: {discv5: {bootEnrs: extraBootnodes}}});
+
+  // Set known depositContractDeployBlock
+  if (args.network) {
+    const {depositContractDeployBlock} = getNetworkData(args.network);
+    beaconNodeOptions.set({eth1: {depositContractDeployBlock}});
+  }
+
+  // Create new PeerId everytime by default, unless peerIdFile is provided
+  const peerId = await createPeerId();
+  const enr = ENR.createV4(createKeypairFromPeerId(peerId).publicKey);
+  overwriteEnrWithCliArgs(enr, args);
+
+  // Persist ENR and PeerId in beaconDir fixed paths for debugging
+  const pIdPath = path.join(beaconPaths.beaconDir, "peer_id.json");
+  const enrPath = path.join(beaconPaths.beaconDir, "enr");
+  writeFile(pIdPath, peerId.toJSON());
+  const fileENR = FileENR.initFromENR(enrPath, peerId, enr);
+  fileENR.saveToFile();
+
+  // Inject ENR to beacon options
+  beaconNodeOptions.set({network: {discv5: {enr: fileENR, enrUpdate: !enr.ip && !enr.ip6}}});
+
+  // Render final options
+  const options = beaconNodeOptions.getWithDefaults();
+
+  return {config, options, beaconPaths, network, version, commit, peerId};
+}
+
+export function overwriteEnrWithCliArgs(enr: ENR, args: IBeaconArgs): void {
+  // TODO: Not sure if we should propagate this options to the ENR
+  if (args.port != null) enr.tcp = args.port;
+  if (args.port != null) enr.udp = args.port;
+  if (args.discoveryPort != null) enr.udp = args.discoveryPort;
+
+  if (args["enr.ip"] != null) enr.ip = args["enr.ip"];
+  if (args["enr.tcp"] != null) enr.tcp = args["enr.tcp"];
+  if (args["enr.udp"] != null) enr.udp = args["enr.udp"];
+  if (args["enr.ip6"] != null) enr.ip6 = args["enr.ip6"];
+  if (args["enr.tcp6"] != null) enr.tcp6 = args["enr.tcp6"];
+  if (args["enr.udp6"] != null) enr.udp6 = args["enr.udp6"];
 }

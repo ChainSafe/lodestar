@@ -12,9 +12,9 @@ const MIN_SCORE_BEFORE_BAN = -50;
 // If a peer has a lodestar score below this constant all other score parts will get ignored and
 // the peer will get banned regardless of the other parts.
 const MIN_LODESTAR_SCORE_BEFORE_BAN = -60.0;
-/** The maximum score a peer can obtain */
+/** The maximum score a peer can obtain. Update metrics.peerScore if this changes */
 const MAX_SCORE = 100;
-/** The minimum score a peer can obtain */
+/** The minimum score a peer can obtain. Update metrics.peerScore if this changes */
 const MIN_SCORE = -100;
 /** Drop score if absolute value is below this threshold */
 const SCORE_THRESHOLD = 1;

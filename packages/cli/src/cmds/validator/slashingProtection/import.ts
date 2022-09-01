@@ -40,15 +40,15 @@ export const importCmd: ICliCommand<
   },
 
   handler: async (args) => {
-    const beaconPaths = getBeaconPaths(args);
-    const config = getBeaconConfigFromArgs(args);
+    const {config, network} = getBeaconConfigFromArgs(args);
+    const beaconPaths = getBeaconPaths(args, network);
     const logger = getCliLogger(args, beaconPaths, config);
 
-    const {validatorsDbDir: dbPath} = getValidatorPaths(args);
+    const {validatorsDbDir: dbPath} = getValidatorPaths(args, network);
 
     logger.info("Importing the slashing protection logs", {dbPath});
 
-    const {slashingProtection, metadata} = getSlashingProtection(args);
+    const {slashingProtection, metadata} = getSlashingProtection(args, network);
 
     // Fetch genesisValidatorsRoot from:
     // - existing cached in validator DB

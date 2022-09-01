@@ -7,6 +7,14 @@ import {PresetName} from "@lodestar/params";
  */
 export type IChainConfig = {
   PRESET_BASE: PresetName;
+  /**
+   * Free-form short name of the network that this configuration applies to - known
+   * canonical network names include:
+   * * 'mainnet' - there can be only one
+   * * 'prater' - testnet
+   * Must match the regex: [a-z0-9\-]
+   */
+  CONFIG_NAME: string;
 
   // Transition
   TERMINAL_TOTAL_DIFFICULTY: bigint;
@@ -55,6 +63,7 @@ export type IChainConfig = {
 
 export const chainConfigTypes: SpecTypes<IChainConfig> = {
   PRESET_BASE: "string",
+  CONFIG_NAME: "string",
 
   // Transition
   TERMINAL_TOTAL_DIFFICULTY: "bigint",

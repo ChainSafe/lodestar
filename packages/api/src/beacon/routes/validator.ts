@@ -25,7 +25,10 @@ import {
   reqOnlyBody,
   ReqSerializers,
   jsonType,
+  ContainerDataExecutionOptimistic,
 } from "../../utils/index.js";
+import {fromU64Str, toU64Str, U64Str} from "../../utils/serdes.js";
+import {ExecutionOptimistic} from "./beacon/block.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
@@ -111,7 +114,7 @@ export type Api = {
   getAttesterDuties(
     epoch: Epoch,
     validatorIndices: ValidatorIndex[]
-  ): Promise<{data: AttesterDuty[]; dependentRoot: Root}>;
+  ): Promise<{executionOptimistic: ExecutionOptimistic; data: AttesterDuty[]; dependentRoot: Root}>;
 
   /**
    * Get block proposers duties
@@ -124,9 +127,14 @@ export type Api = {
    * @returns any Success response
    * @throws ApiError
    */
-  getProposerDuties(epoch: Epoch): Promise<{data: ProposerDuty[]; dependentRoot: Root}>;
+  getProposerDuties(
+    epoch: Epoch
+  ): Promise<{executionOptimistic: ExecutionOptimistic; data: ProposerDuty[]; dependentRoot: Root}>;
 
-  getSyncCommitteeDuties(epoch: number, validatorIndices: ValidatorIndex[]): Promise<{data: SyncDuty[]}>;
+  getSyncCommitteeDuties(
+    epoch: number,
+    validatorIndices: ValidatorIndex[]
+  ): Promise<{executionOptimistic: ExecutionOptimistic; data: SyncDuty[]}>;
 
   /**
    * Produce a new block, without signature.
@@ -230,12 +238,12 @@ export type Api = {
  * Define javascript values for each route
  */
 export const routesData: RoutesData<Api> = {
-  getAttesterDuties: {url: "/eth/v1/validator/duties/attester/:epoch", method: "POST"},
-  getProposerDuties: {url: "/eth/v1/validator/duties/proposer/:epoch", method: "GET"},
-  getSyncCommitteeDuties: {url: "/eth/v1/validator/duties/sync/:epoch", method: "POST"},
-  produceBlock: {url: "/eth/v1/validator/blocks/:slot", method: "GET"},
-  produceBlockV2: {url: "/eth/v2/validator/blocks/:slot", method: "GET"},
-  produceBlindedBlock: {url: "/eth/v2/validator/blinded_blocks/:slot", method: "GET"},
+  getAttesterDuties: {url: "/eth/v1/validator/duties/attester/{epoch}", method: "POST"},
+  getProposerDuties: {url: "/eth/v1/validator/duties/proposer/{epoch}", method: "GET"},
+  getSyncCommitteeDuties: {url: "/eth/v1/validator/duties/sync/{epoch}", method: "POST"},
+  produceBlock: {url: "/eth/v1/validator/blocks/{slot}", method: "GET"},
+  produceBlockV2: {url: "/eth/v2/validator/blocks/{slot}", method: "GET"},
+  produceBlindedBlock: {url: "/eth/v1/validator/blinded_blocks/{slot}", method: "GET"},
   produceAttestationData: {url: "/eth/v1/validator/attestation_data", method: "GET"},
   produceSyncCommitteeContribution: {url: "/eth/v1/validator/sync_committee_contribution", method: "GET"},
   getAggregatedAttestation: {url: "/eth/v1/validator/aggregate_attestation", method: "GET"},
@@ -250,12 +258,12 @@ export const routesData: RoutesData<Api> = {
 
 /* eslint-disable @typescript-eslint/naming-convention */
 export type ReqTypes = {
-  getAttesterDuties: {params: {epoch: Epoch}; body: ValidatorIndex[]};
+  getAttesterDuties: {params: {epoch: Epoch}; body: U64Str[]};
   getProposerDuties: {params: {epoch: Epoch}};
-  getSyncCommitteeDuties: {params: {epoch: Epoch}; body: ValidatorIndex[]};
-  produceBlock: {params: {slot: number}; query: {randao_reveal: string; grafitti: string}};
-  produceBlockV2: {params: {slot: number}; query: {randao_reveal: string; grafitti: string}};
-  produceBlindedBlock: {params: {slot: number}; query: {randao_reveal: string; grafitti: string}};
+  getSyncCommitteeDuties: {params: {epoch: Epoch}; body: U64Str[]};
+  produceBlock: {params: {slot: number}; query: {randao_reveal: string; graffiti: string}};
+  produceBlockV2: {params: {slot: number}; query: {randao_reveal: string; graffiti: string}};
+  produceBlindedBlock: {params: {slot: number}; query: {randao_reveal: string; graffiti: string}};
   produceAttestationData: {query: {slot: number; committee_index: number}};
   produceSyncCommitteeContribution: {query: {slot: number; subcommittee_index: number; beacon_block_root: string}};
   getAggregatedAttestation: {query: {attestation_data_root: string; slot: number}};
@@ -290,24 +298,24 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
   );
 
   const produceBlock: ReqSerializers<Api, ReqTypes>["produceBlock"] = {
-    writeReq: (slot, randaoReveal, grafitti) => ({
+    writeReq: (slot, randaoReveal, graffiti) => ({
       params: {slot},
-      query: {randao_reveal: toHexString(randaoReveal), grafitti},
+      query: {randao_reveal: toHexString(randaoReveal), graffiti},
     }),
-    parseReq: ({params, query}) => [params.slot, fromHexString(query.randao_reveal), query.grafitti],
+    parseReq: ({params, query}) => [params.slot, fromHexString(query.randao_reveal), query.graffiti],
     schema: {
       params: {slot: Schema.UintRequired},
-      query: {randao_reveal: Schema.StringRequired, grafitti: Schema.String},
+      query: {randao_reveal: Schema.StringRequired, graffiti: Schema.String},
     },
   };
 
   return {
     getAttesterDuties: {
-      writeReq: (epoch, validatorIndexes) => ({params: {epoch}, body: validatorIndexes}),
-      parseReq: ({params, body}) => [params.epoch, body],
+      writeReq: (epoch, indexes) => ({params: {epoch}, body: indexes.map((i) => toU64Str(i))}),
+      parseReq: ({params, body}) => [params.epoch, body.map((i) => fromU64Str(i))],
       schema: {
         params: {epoch: Schema.UintRequired},
-        body: Schema.UintArray,
+        body: Schema.StringArray,
       },
     },
 
@@ -320,11 +328,11 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
     },
 
     getSyncCommitteeDuties: {
-      writeReq: (epoch, validatorIndexes) => ({params: {epoch}, body: validatorIndexes}),
-      parseReq: ({params, body}) => [params.epoch, body],
+      writeReq: (epoch, indexes) => ({params: {epoch}, body: indexes.map((i) => toU64Str(i))}),
+      parseReq: ({params, body}) => [params.epoch, body.map((i) => fromU64Str(i))],
       schema: {
         params: {epoch: Schema.UintRequired},
-        body: Schema.UintArray,
+        body: Schema.StringArray,
       },
     },
 
@@ -384,8 +392,15 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
 
 export function getReturnTypes(): ReturnTypes<Api> {
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  const WithDependentRoot = <T>(dataType: Type<T>) =>
-    new ContainerType({data: dataType, dependentRoot: ssz.Root}, {jsonCase: "snake"});
+  const WithDependentRootExecutionOptimistic = <T>(dataType: Type<T>) =>
+    new ContainerType(
+      {
+        executionOptimistic: ssz.Boolean,
+        data: dataType,
+        dependentRoot: ssz.Root,
+      },
+      {jsonCase: "eth2"}
+    );
 
   const AttesterDuty = new ContainerType(
     {
@@ -419,9 +434,9 @@ export function getReturnTypes(): ReturnTypes<Api> {
   );
 
   return {
-    getAttesterDuties: WithDependentRoot(ArrayOf(AttesterDuty)),
-    getProposerDuties: WithDependentRoot(ArrayOf(ProposerDuty)),
-    getSyncCommitteeDuties: ContainerData(ArrayOf(SyncDuty)),
+    getAttesterDuties: WithDependentRootExecutionOptimistic(ArrayOf(AttesterDuty)),
+    getProposerDuties: WithDependentRootExecutionOptimistic(ArrayOf(ProposerDuty)),
+    getSyncCommitteeDuties: ContainerDataExecutionOptimistic(ArrayOf(SyncDuty)),
     produceBlock: ContainerData(ssz.phase0.BeaconBlock),
     produceBlockV2: WithVersion((fork: ForkName) => ssz[fork].BeaconBlock),
     produceBlindedBlock: WithVersion((_fork: ForkName) => ssz.bellatrix.BlindedBeaconBlock),

@@ -7,6 +7,7 @@ import {INetwork, NetworkEvent, PeerAction} from "../network/index.js";
 import {IBeaconChain} from "../chain/index.js";
 import {IMetrics} from "../metrics/index.js";
 import {shuffle} from "../util/shuffle.js";
+import {createFromB58String} from "../util/peerId.js";
 import {byteArrayEquals} from "../util/bytes.js";
 import {BlockError, BlockErrorCode} from "../chain/errors/index.js";
 import {wrapError} from "../util/wrapError.js";
@@ -310,7 +311,7 @@ export class UnknownBlockSync {
 
       for (const peerIdStr of block.peerIdStrs) {
         // TODO: Refactor peerRpcScores to work with peerIdStr only
-        const peer = PeerId.createFromB58String(peerIdStr);
+        const peer = createFromB58String(peerIdStr);
         this.network.reportPeer(peer, PeerAction.LowToleranceError, "BadBlockByRoot");
       }
     }

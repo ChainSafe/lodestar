@@ -11,6 +11,8 @@ import {chainConfig as mainnet} from "../presets/mainnet.js";
 export const ropstenChainConfig: IChainConfig = {
   ...mainnet,
 
+  CONFIG_NAME: "ropsten",
+
   // Genesis
   // ---------------------------------------------------------------
   MIN_GENESIS_ACTIVE_VALIDATOR_COUNT: 100000,

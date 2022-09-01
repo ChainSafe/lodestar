@@ -4,7 +4,7 @@ import {IBeaconConfig} from "@lodestar/config";
 import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
 import {ILogger} from "@lodestar/utils";
 
-import {IForkChoice} from "@lodestar/fork-choice";
+import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {IEth1ForBlockProduction} from "../eth1/index.js";
 import {IExecutionEngine, IExecutionBuilder} from "../execution/index.js";
 import {IBeaconClock} from "./clock/interface.js";
@@ -112,6 +112,8 @@ export interface IBeaconChain {
   processChainSegment(blocks: allForks.SignedBeaconBlock[], opts?: ImportBlockOpts): Promise<void>;
 
   getStatus(): phase0.Status;
+
+  recomputeForkChoiceHead(): ProtoBlock;
 
   waitForBlockOfAttestation(slot: Slot, root: RootHex): Promise<boolean>;
 

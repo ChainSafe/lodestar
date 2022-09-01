@@ -18,7 +18,7 @@ import {Checkpoint} from "@lodestar/types/phase0";
 
 import {downloadOrLoadFile} from "../../util/index.js";
 import {defaultNetwork, IGlobalArgs} from "../../options/globalOptions.js";
-import {fetchWeakSubjectivityState, getGenesisFileUrl} from "../../networks/index.js";
+import {fetchWeakSubjectivityState, getCheckpointFromArg, getGenesisFileUrl} from "../../networks/index.js";
 import {IBeaconArgs} from "./options.js";
 
 function getCheckpointFromState(state: BeaconStateAllForks): Checkpoint {
@@ -88,8 +88,22 @@ export async function initBeaconState(
   // this will be used in all cases, if it exists, either used during verification of a weak subjectivity state, or used directly as the anchor state
   const lastDbState = await db.stateArchive.lastValue();
 
-  if (args.checkpointSyncUrl) {
-    return await initFromWSState(lastDbState, args, chainForkConfig, db, logger);
+  if (args.checkpointState) {
+    return await readWSState(
+      lastDbState,
+      {checkpointState: args.checkpointState, wssCheckpoint: args.wssCheckpoint},
+      chainForkConfig,
+      db,
+      logger
+    );
+  } else if (args.checkpointSyncUrl) {
+    return await fetchWSStateFromBeaconApi(
+      lastDbState,
+      {checkpointSyncUrl: args.checkpointSyncUrl, wssCheckpoint: args.wssCheckpoint},
+      chainForkConfig,
+      db,
+      logger
+    );
   } else if (lastDbState) {
     // start the chain from the latest stored state in the db
     const config = createIBeaconConfig(chainForkConfig, lastDbState.genesisValidatorsRoot);
@@ -110,7 +124,27 @@ export async function initBeaconState(
   }
 }
 
-async function initFromWSState(
+async function readWSState(
+  lastDbState: BeaconStateAllForks | null,
+  wssOpts: {checkpointState: string; wssCheckpoint?: string},
+  chainForkConfig: IChainForkConfig,
+  db: IBeaconDb,
+  logger: ILogger
+): Promise<{anchorState: BeaconStateAllForks; wsCheckpoint?: Checkpoint}> {
+  // weak subjectivity sync from a provided state file:
+  // if a weak subjectivity checkpoint has been provided, it is used for additional verification
+  // otherwise, the state itself is used for verification (not bad, because the trusted state has been explicitly provided)
+  const {checkpointState, wssCheckpoint} = wssOpts;
+
+  const stateBytes = await downloadOrLoadFile(checkpointState);
+  const wsState = getStateTypeFromBytes(chainForkConfig, stateBytes).deserializeToViewDU(stateBytes);
+  const config = createIBeaconConfig(chainForkConfig, wsState.genesisValidatorsRoot);
+  const store = lastDbState ?? wsState;
+  const checkpoint = wssCheckpoint ? getCheckpointFromArg(wssCheckpoint) : getCheckpointFromState(wsState);
+  return initAndVerifyWeakSubjectivityState(config, db, logger, store, wsState, checkpoint);
+}
+
+async function fetchWSStateFromBeaconApi(
   lastDbState: BeaconStateAllForks | null,
   wssOpts: {checkpointSyncUrl: string; wssCheckpoint?: string},
   chainForkConfig: IChainForkConfig,

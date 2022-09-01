@@ -12,5 +12,3 @@ export {
   ForkChoiceError,
   ForkChoiceErrorCode,
 } from "./forkChoice/errors.js";
-
-export {IForkChoiceMetrics} from "./metrics.js";
