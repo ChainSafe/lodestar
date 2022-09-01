@@ -58,7 +58,7 @@ describe("syncInMemory", function () {
     finalizedBlockHeader.slot = finalizedBlockSlot;
     finalizedBlockHeader.stateRoot = ssz.altair.BeaconState.hashTreeRoot(finalizedState);
 
-    // Create a state that has the finalizedState as finalized checkpoint
+    // Create a state that has the next sync committee and finalizedState as finalized checkpoint
     const syncAttestedState = ssz.altair.BeaconState.defaultValue();
     syncAttestedState.nextSyncCommittee = getSyncCommittee(syncCommitteesKeys, 0).syncCommittee;
     syncAttestedState.finalizedCheckpoint = {

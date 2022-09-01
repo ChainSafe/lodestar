@@ -28,7 +28,7 @@ export async function prepareUpdateNaive(
   //
   // Then the lightclient will verify it signs over `signedHeader`, where
   // ```js
-  // signedHeader = finalityHeaderSpecified ? update.finalityHeader : update.header
+  // signedHeader = update.header
   // ```
   // So if we have a finalized block with `finalityHeader` we need to find a state such that
   // `state.getBlockRootAtSlot(state.slot - 1) == finalityHeader.root`, then find the block at `state.slot`
@@ -88,11 +88,11 @@ export async function prepareUpdateNaive(
   const syncAttestedStateTree = new Tree(syncAttestedState.node);
   const finalityBranch = syncAttestedStateTree.getSingleProof(BigInt(FINALIZED_ROOT_GINDEX));
 
-  // Get `nextSyncCommittee` from a attested state so the lightclient can safely transition to the next committee
+  // Get `nextSyncCommittee` from an attested state so the lightclient can safely transition to the next committee
   // Prove that the `nextSyncCommittee` is included in a finalized state "attested" by the current sync committee
   syncAttestedState.commit();
-  const finalizedCheckpointStateTree = new Tree(syncAttestedState.node);
-  const nextSyncCommitteeBranch = finalizedCheckpointStateTree.getSingleProof(BigInt(NEXT_SYNC_COMMITTEE_GINDEX));
+  const syncAttestedStateStateTree = new Tree(syncAttestedState.node);
+  const nextSyncCommitteeBranch = syncAttestedStateStateTree.getSingleProof(BigInt(NEXT_SYNC_COMMITTEE_GINDEX));
 
   return {
     attestedHeader: syncAttestedBlockHeader,

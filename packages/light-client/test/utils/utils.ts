@@ -16,7 +16,6 @@ import {altair, phase0, Slot, ssz, SyncPeriod} from "@lodestar/types";
 import {SyncCommitteeFast} from "../../src/types.js";
 import {computeSigningRoot} from "../../src/utils/domain.js";
 import {getLcLoggerConsole} from "../../src/utils/logger.js";
-import {assertValidFinalityProof} from "../../src/validation.js";
 
 const CURRENT_SYNC_COMMITTEE_INDEX = 22;
 const CURRENT_SYNC_COMMITTEE_DEPTH = 5;
@@ -120,7 +119,6 @@ export function computeLightclientUpdate(config: IBeaconConfig, period: SyncPeri
 
   const nextSyncCommittee = committeeNext.syncCommittee;
 
-  // finalized header's state root is used to to validate sync committee branch
   const finalizedState = ssz.altair.BeaconState.defaultViewDU();
 
   // finalized header must have stateRoot to finalizedState
@@ -147,7 +145,7 @@ export function computeLightclientUpdate(config: IBeaconConfig, period: SyncPeri
   const forkVersion = ssz.Bytes4.defaultValue();
   const syncAggregate = committee.signHeader(config, attestedHeader);
 
-  const update = {
+  return {
     attestedHeader,
     nextSyncCommittee,
     nextSyncCommitteeBranch,
@@ -156,10 +154,6 @@ export function computeLightclientUpdate(config: IBeaconConfig, period: SyncPeri
     syncAggregate,
     forkVersion,
   };
-
-  assertValidFinalityProof(update);
-
-  return update;
 }
 
 /**

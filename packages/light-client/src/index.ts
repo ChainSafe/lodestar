@@ -526,7 +526,7 @@ export class Lightclient {
    *  period 0         period 1         period 2
    * -|----------------|----------------|----------------|-> time
    *                   | now
-   *                     - active current_sync_committee: period 0
+   *                     - current_sync_committee: period 0
    *                     - known next_sync_committee, signed by current_sync_committee
    */
   private processSyncCommitteeUpdate(update: altair.LightClientUpdate): void {
