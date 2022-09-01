@@ -8,7 +8,7 @@ import {createIBeaconConfig} from "@lodestar/config";
 import {ACTIVE_PRESET, PresetName} from "@lodestar/params";
 import {IGlobalArgs, parseBeaconNodeArgs} from "../../options/index.js";
 import {onGracefulShutdown, getCliLogger, mkdir, writeFile} from "../../util/index.js";
-import {BeaconNodeOptions, createPeerId, FileENR, getBeaconConfigFromArgs, readPeerId} from "../../config/index.js";
+import {BeaconNodeOptions, createPeerId, FileENR, getBeaconConfigFromArgs} from "../../config/index.js";
 import {getNetworkBootnodes, getNetworkData, readBootnodes} from "../../networks/index.js";
 import {getVersionData} from "../../util/version.js";
 import {IBeaconArgs} from "./options.js";
