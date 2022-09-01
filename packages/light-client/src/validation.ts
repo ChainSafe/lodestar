@@ -18,8 +18,9 @@ import {computeSyncPeriodAtSlot} from "./utils/clock.js";
 
 /**
  *
- * @param syncCommittee SyncPeriod that signed this update: `computeSyncPeriodAtSlot(update.header.slot) - 1`
- * @param forkVersion ForkVersion that was used to sign the update
+ * @param config
+ * @param syncCommittee
+ * @param update
  */
 export function assertValidLightClientUpdate(
   config: IBeaconConfig,
