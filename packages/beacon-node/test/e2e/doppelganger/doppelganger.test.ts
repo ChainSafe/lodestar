@@ -173,7 +173,6 @@ describe.skip("doppelganger / doppelganger test", function () {
       useRestApi: false,
       testLoggerOpts,
       doppelgangerProtectionEnabled: false,
-      externalSignerUrl: "http://localhost:9000",
     });
     afterEachCallbacks.push(() => Promise.all(validator0WithoutDoppelganger.map((v) => v.close())));
 

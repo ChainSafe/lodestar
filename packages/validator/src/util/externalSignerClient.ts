@@ -75,10 +75,12 @@ export type Web3SignerAggregateAndProofMsg = {
   type: "AGGREGATE_AND_PROOF";
   data: AggregateAndProof;
 };
+
 export type Web3SignerAttestationMsg = {
   type: "ATTESTATION";
   data: AttestationData;
 };
+
 export type Web3SignerBlockV2Msg = {
   type: "BLOCK_V2";
   data: {
@@ -108,6 +110,7 @@ export type Web3SignerVoluntaryExitMsg = {
   type: "VOLUNTARY_EXIT";
   data: VoluntaryExit;
 };
+
 export type Web3SignerSyncCommitteeMessageMsg = {
   type: "SYNC_COMMITTEE_MESSAGE";
   data: {
@@ -115,6 +118,7 @@ export type Web3SignerSyncCommitteeMessageMsg = {
     slot: Slot;
   };
 };
+
 export type Web3SignerSyncCommitteeSelectionProofMsg = {
   type: "SYNC_COMMITTEE_SELECTION_PROOF";
   data: {

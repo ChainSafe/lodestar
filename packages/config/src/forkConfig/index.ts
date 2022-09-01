@@ -12,7 +12,6 @@ export function createIForkConfig(config: IChainConfig): IForkConfig {
     epoch: GENESIS_EPOCH,
     version: config.GENESIS_FORK_VERSION,
     // Will never be used
-    // TODO DA revisit
     prevVersion: config.GENESIS_FORK_VERSION,
     prevForkName: ForkName.phase0,
   };
