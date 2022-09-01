@@ -11,6 +11,8 @@ import {chainConfig as mainnet} from "../presets/mainnet.js";
 export const sepoliaChainConfig: IChainConfig = {
   ...mainnet,
 
+  CONFIG_NAME: "sepolia",
+
   // Genesis
   // ---------------------------------------------------------------
   MIN_GENESIS_ACTIVE_VALIDATOR_COUNT: 1300,

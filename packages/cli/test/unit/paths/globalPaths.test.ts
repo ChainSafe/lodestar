@@ -3,7 +3,8 @@ import {getGlobalPaths} from "../../../src/paths/global.js";
 
 describe("paths / global", () => {
   process.env.XDG_DATA_HOME = "/my-root-dir";
-  const defaultDataDir = "/my-root-dir/lodestar/mainnet";
+  const network = "mainnet";
+  const defaultDataDir = `/my-root-dir/lodestar/${network}`;
 
   const testCases: {
     id: string;
@@ -15,7 +16,6 @@ describe("paths / global", () => {
       args: {},
       globalPaths: {
         dataDir: defaultDataDir,
-        paramsFile: undefined,
       },
     },
     {
@@ -23,7 +23,6 @@ describe("paths / global", () => {
       args: {network: "goerli"},
       globalPaths: {
         dataDir: "/my-root-dir/lodestar/goerli",
-        paramsFile: undefined,
       },
     },
     {
@@ -31,30 +30,13 @@ describe("paths / global", () => {
       args: {dataDir: "./attack-network"},
       globalPaths: {
         dataDir: "./attack-network",
-        paramsFile: undefined,
-      },
-    },
-    {
-      id: "Custom paramsFile",
-      args: {paramsFile: "/tmp/custom-config.yaml"},
-      globalPaths: {
-        dataDir: defaultDataDir,
-        paramsFile: "/tmp/custom-config.yaml",
-      },
-    },
-    {
-      id: "Custom relative paramsFile",
-      args: {paramsFile: "custom-config.yaml"},
-      globalPaths: {
-        dataDir: defaultDataDir,
-        paramsFile: "custom-config.yaml",
       },
     },
   ];
 
   for (const {id, args, globalPaths} of testCases) {
     it(id, () => {
-      expect(getGlobalPaths(args)).to.deep.equal(globalPaths);
+      expect(getGlobalPaths(args, args.network ?? network)).to.deep.equal(globalPaths);
     });
   }
 });
