@@ -27,23 +27,19 @@ export async function* onBeaconBlocksByRange(
     throw new ResponseError(RespStatus.INVALID_REQUEST, "startSlot < genesis");
   }
 
+  if (step > 1) {
+    // step > 1 is deprecated, see https://github.com/ethereum/consensus-specs/pull/2856
+    count = 1;
+  }
+
   if (count > MAX_REQUEST_BLOCKS) {
     count = MAX_REQUEST_BLOCKS;
   }
 
-  const lt = startSlot + count * step;
-  let archivedBlocksStream: AsyncIterable<ReqRespBlockResponse>;
+  const lt = startSlot + count;
 
-  if (step > 1) {
-    const slots = [];
-    for (let slot = startSlot; slot < lt; slot += step) {
-      slots.push(slot);
-    }
-    archivedBlocksStream = getFinalizedBlocksAtSlots(slots, db);
-  } else {
-    // step < 1 was validated above
-    archivedBlocksStream = getFinalizedBlocksByRange(startSlot, lt, db);
-  }
+  // step < 1 was validated above
+  const archivedBlocksStream = getFinalizedBlocksByRange(startSlot, lt, db);
 
   yield* injectRecentBlocks(archivedBlocksStream, chain, db, requestBody);
 }
@@ -78,13 +74,6 @@ export async function* injectRecentBlocks(
   }
   if (totalBlock === 0) {
     throw new ResponseError(RespStatus.RESOURCE_UNAVAILABLE, "No block found");
-  }
-}
-
-async function* getFinalizedBlocksAtSlots(slots: Slot[], db: IBeaconDb): AsyncIterable<ReqRespBlockResponse> {
-  for (const slot of slots) {
-    const bytes = await db.blockArchive.getBinary(slot);
-    if (bytes !== null) yield {slot, bytes};
   }
 }
 
