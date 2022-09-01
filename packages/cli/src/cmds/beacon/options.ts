@@ -11,6 +11,7 @@ interface IBeaconExtraArgs {
   bootnodesFile?: string;
   peerIdFile?: string;
   checkpointSyncUrl?: string;
+  checkpointState?: string;
   wssCheckpoint?: string;
 }
 
@@ -48,6 +49,12 @@ export const beaconExtraOptions: ICliCommandOptions<IBeaconExtraArgs> = {
   checkpointSyncUrl: {
     description:
       "Server url hosting Beacon Node APIs to fetch weak subjectivity state. Fetch latest finalized by default, else set --wssCheckpoint",
+    type: "string",
+    group: "weak subjectivity",
+  },
+
+  checkpointState: {
+    description: "Set a checkpoint state to start syncing from",
     type: "string",
     group: "weak subjectivity",
   },
