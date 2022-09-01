@@ -197,6 +197,10 @@ export class MockBeaconChain implements IBeaconChain {
     };
   }
 
+  recomputeForkChoiceHead(): ProtoBlock {
+    return this.forkChoice.getHead();
+  }
+
   async waitForBlockOfAttestation(): Promise<boolean> {
     return false;
   }

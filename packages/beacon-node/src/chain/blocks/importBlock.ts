@@ -146,10 +146,10 @@ export async function importBlock(
     // Note: in-lined code from previos handler of ChainEvent.checkpoint
     this.logger.verbose("Checkpoint processed", toCheckpointHex(cp));
 
-    this.metrics?.currentValidators.set(
-      {status: "active"},
-      checkpointState.epochCtx.currentShuffling.activeIndices.length
-    );
+    const activeValidatorsCount = checkpointState.epochCtx.currentShuffling.activeIndices.length;
+    this.metrics?.currentActiveValidators.set(activeValidatorsCount);
+    this.metrics?.currentValidators.set({status: "active"}, activeValidatorsCount);
+
     const parentBlockSummary = this.forkChoice.getBlock(checkpointState.latestBlockHeader.parentRoot);
 
     if (parentBlockSummary) {
@@ -175,18 +175,17 @@ export async function importBlock(
 
   // Emit ChainEvent.forkChoiceHead event
   const oldHead = this.forkChoice.getHead();
-  const newHead = this.forkChoice.updateHead();
+  const newHead = this.recomputeForkChoiceHead();
   const currFinalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
 
   if (newHead.blockRoot !== oldHead.blockRoot) {
     // new head
     pendingEvents.push(ChainEvent.forkChoiceHead, newHead);
-    this.metrics?.forkChoiceChangedHead.inc();
+    this.metrics?.forkChoice.changedHead.inc();
 
     const distance = this.forkChoice.getCommonAncestorDistance(oldHead, newHead);
     if (distance !== null) {
       // chain reorg
-      this.metrics?.forkChoiceReorg.inc();
       this.logger.verbose("Chain reorg", {
         depth: distance,
         previousHead: oldHead.blockRoot,
@@ -196,9 +195,11 @@ export async function importBlock(
         newHeadParent: newHead.parentRoot,
         newSlot: newHead.slot,
       });
+
       pendingEvents.push(ChainEvent.forkChoiceReorg, newHead, oldHead, distance);
-      this.metrics?.forkChoiceReorg.inc();
-      this.metrics?.forkChoiceReorgDistance.observe(distance);
+
+      this.metrics?.forkChoice.reorg.inc();
+      this.metrics?.forkChoice.reorgDistance.observe(distance);
     }
 
     // Lightclient server support (only after altair)
