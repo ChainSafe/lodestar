@@ -57,6 +57,8 @@ export type SyncingStatus = {
   syncDistance: string;
   /** Set to true if the node is syncing, false if the node is synced. */
   isSyncing: boolean;
+  /** Set to true if the node is optimistically tracking head. */
+  isOptimistic: boolean;
 };
 
 export enum NodeHealth {
@@ -120,17 +122,19 @@ export type Api = {
 export const routesData: RoutesData<Api> = {
   getNetworkIdentity: {url: "/eth/v1/node/identity", method: "GET"},
   getPeers: {url: "/eth/v1/node/peers", method: "GET"},
-  getPeer: {url: "/eth/v1/node/peers/:peerId", method: "GET"},
+  getPeer: {url: "/eth/v1/node/peers/{peer_id}", method: "GET"},
   getPeerCount: {url: "/eth/v1/node/peer_count", method: "GET"},
   getNodeVersion: {url: "/eth/v1/node/version", method: "GET"},
   getSyncingStatus: {url: "/eth/v1/node/syncing", method: "GET"},
   getHealth: {url: "/eth/v1/node/health", method: "GET"},
 };
 
+/* eslint-disable @typescript-eslint/naming-convention */
+
 export type ReqTypes = {
   getNetworkIdentity: ReqEmpty;
   getPeers: {query: {state?: PeerState[]; direction?: PeerDirection[]}};
-  getPeer: {params: {peerId: string}};
+  getPeer: {params: {peer_id: string}};
   getPeerCount: ReqEmpty;
   getNodeVersion: ReqEmpty;
   getSyncingStatus: ReqEmpty;
@@ -147,9 +151,9 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
       schema: {query: {state: Schema.StringArray, direction: Schema.StringArray}},
     },
     getPeer: {
-      writeReq: (peerId) => ({params: {peerId}}),
-      parseReq: ({params}) => [params.peerId],
-      schema: {params: {peerId: Schema.StringRequired}},
+      writeReq: (peer_id) => ({params: {peer_id}}),
+      parseReq: ({params}) => [params.peer_id],
+      schema: {params: {peer_id: Schema.StringRequired}},
     },
 
     getPeerCount: reqEmpty,
@@ -159,7 +163,6 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
   };
 }
 
-/* eslint-disable @typescript-eslint/naming-convention */
 export function getReturnTypes(): ReturnTypes<Api> {
   const stringType = new StringType();
   const NetworkIdentity = new ContainerType(
@@ -173,6 +176,16 @@ export function getReturnTypes(): ReturnTypes<Api> {
     {jsonCase: "eth2"}
   );
 
+  const PeerCount = new ContainerType(
+    {
+      disconnected: ssz.UintNum64,
+      connecting: ssz.UintNum64,
+      connected: ssz.UintNum64,
+      disconnecting: ssz.UintNum64,
+    },
+    {jsonCase: "eth2"}
+  );
+
   return {
     //
     // TODO: Consider just converting the JSON case without custom types
@@ -182,7 +195,7 @@ export function getReturnTypes(): ReturnTypes<Api> {
     // Use jsonType() to translate the casing in a generic way.
     getPeers: jsonType("snake"),
     getPeer: jsonType("snake"),
-    getPeerCount: jsonType("snake"),
+    getPeerCount: ContainerData(PeerCount),
     getNodeVersion: jsonType("snake"),
     getSyncingStatus: jsonType("snake"),
     getHealth: sameType(),

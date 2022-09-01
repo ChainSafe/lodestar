@@ -1,14 +1,14 @@
 import {expect} from "chai";
 import {sleep} from "@lodestar/utils";
 import {config} from "@lodestar/config/default";
-import {Api, routesData, EventType, BeaconEvent} from "../../../src/beacon/routes/events.js";
-import {getClient} from "../../../src/beacon/client/events.js";
-import {getRoutes} from "../../../src/beacon/server/events.js";
-import {registerRoute} from "../../../src/utils/server/registerRoute.js";
-import {getMockApi, getTestServer} from "../../utils/utils.js";
+import {Api, routesData, EventType, BeaconEvent} from "../../../../src/beacon/routes/events.js";
+import {getClient} from "../../../../src/beacon/client/events.js";
+import {getRoutes} from "../../../../src/beacon/server/events.js";
+import {registerRoute} from "../../../../src/utils/server/registerRoute.js";
+import {getMockApi, getTestServer} from "../../../utils/utils.js";
+import {eventTestData} from "../testData/events.js";
 
 describe("beacon / events", () => {
-  const rootHex = "0x" + "01".repeat(32);
   const {baseUrl, server} = getTestServer();
   const mockApi = getMockApi<Api>(routesData);
   for (const route of Object.values(getRoutes(config, mockApi))) {
@@ -22,37 +22,15 @@ describe("beacon / events", () => {
   it("Receive events", async () => {
     const eventHead1: BeaconEvent = {
       type: EventType.head,
-      message: {
-        slot: 1,
-        block: rootHex,
-        state: rootHex,
-        epochTransition: false,
-        previousDutyDependentRoot: rootHex,
-        currentDutyDependentRoot: rootHex,
-      },
+      message: eventTestData[EventType.head],
     };
     const eventHead2: BeaconEvent = {
       type: EventType.head,
-      message: {
-        slot: 2,
-        block: rootHex,
-        state: rootHex,
-        epochTransition: true,
-        previousDutyDependentRoot: rootHex,
-        currentDutyDependentRoot: rootHex,
-      },
+      message: {...eventTestData[EventType.head], slot: eventTestData[EventType.head].slot + 1},
     };
     const eventChainReorg: BeaconEvent = {
       type: EventType.chainReorg,
-      message: {
-        slot: 3,
-        depth: 2,
-        oldHeadBlock: rootHex,
-        newHeadBlock: rootHex,
-        oldHeadState: rootHex,
-        newHeadState: rootHex,
-        epoch: 1,
-      },
+      message: eventTestData[EventType.chainReorg],
     };
 
     const topicsToRequest = [EventType.head, EventType.chainReorg];
