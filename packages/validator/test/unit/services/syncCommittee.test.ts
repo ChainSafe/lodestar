@@ -73,8 +73,8 @@ describe("SyncCommitteeService", function () {
     ];
 
     // Return empty replies to duties service
-    api.beacon.getStateValidators.resolves({data: []});
-    api.validator.getSyncCommitteeDuties.resolves({data: []});
+    api.beacon.getStateValidators.resolves({data: [], executionOptimistic: false});
+    api.validator.getSyncCommitteeDuties.resolves({data: [], executionOptimistic: false});
 
     // Mock duties service to return some duties directly
     syncCommitteeService["dutiesService"].getDutiesAtSlot = sinon.stub().returns(duties);

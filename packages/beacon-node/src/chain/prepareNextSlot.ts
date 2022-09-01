@@ -120,6 +120,14 @@ export class PrepareNextSlotScheduler {
         const proposerIndex = prepareState.epochCtx.getBeaconProposer(prepareSlot);
         const feeRecipient = this.chain.beaconProposerCache.get(proposerIndex);
         if (feeRecipient) {
+          // Update the builder status, if enabled shoot an api call to check status
+          this.chain.updateBuilderStatus(clockSlot);
+          if (this.chain.executionBuilder?.status) {
+            this.chain.executionBuilder.checkStatus().catch((e) => {
+              this.logger.error("Builder disabled as the check status api failed", {prepareSlot}, e as Error);
+            });
+          }
+
           const preparationTime =
             computeTimeAtSlot(this.config, prepareSlot, this.chain.genesisTime) - Date.now() / 1000;
           this.metrics?.blockPayload.payloadAdvancePrepTime.observe(preparationTime);

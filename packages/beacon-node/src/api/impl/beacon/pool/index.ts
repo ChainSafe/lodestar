@@ -72,13 +72,13 @@ export function getBeaconPoolApi({
       }
     },
 
-    async submitPoolAttesterSlashing(attesterSlashing) {
+    async submitPoolAttesterSlashings(attesterSlashing) {
       await validateGossipAttesterSlashing(chain, attesterSlashing);
       chain.opPool.insertAttesterSlashing(attesterSlashing);
       await network.gossip.publishAttesterSlashing(attesterSlashing);
     },
 
-    async submitPoolProposerSlashing(proposerSlashing) {
+    async submitPoolProposerSlashings(proposerSlashing) {
       await validateGossipProposerSlashing(chain, proposerSlashing);
       chain.opPool.insertProposerSlashing(proposerSlashing);
       await network.gossip.publishProposerSlashing(proposerSlashing);

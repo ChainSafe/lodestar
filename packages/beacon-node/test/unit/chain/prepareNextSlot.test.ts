@@ -6,6 +6,7 @@ import {WinstonLogger} from "@lodestar/utils";
 import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {IChainForkConfig} from "@lodestar/config";
 import {BeaconChain, ChainEventEmitter} from "../../../src/chain/index.js";
+import {IBeaconChain} from "../../../src/chain/interface.js";
 import {LocalClock} from "../../../src/chain/clock/index.js";
 import {PrepareNextSlotScheduler} from "../../../src/chain/prepareNextSlot.js";
 import {StateRegenerator} from "../../../src/chain/regen/index.js";
@@ -30,11 +31,13 @@ describe("PrepareNextSlot scheduler", () => {
   let loggerStub: SinonStubbedInstance<WinstonLogger> & WinstonLogger;
   let beaconProposerCacheStub: SinonStubbedInstance<BeaconProposerCache> & BeaconProposerCache;
   let getForkSeqStub: SinonStubFn<typeof config["getForkSeq"]>;
+  let updateBuilderStatus: SinonStubFn<IBeaconChain["updateBuilderStatus"]>;
   let executionEngineStub: SinonStubbedInstance<ExecutionEngineHttp> & ExecutionEngineHttp;
 
   beforeEach(() => {
     sandbox.useFakeTimers();
     chainStub = sandbox.createStubInstance(BeaconChain) as StubbedChain;
+    updateBuilderStatus = chainStub.updateBuilderStatus;
     const clockStub = sandbox.createStubInstance(LocalClock) as SinonStubbedInstance<LocalClock> & LocalClock;
     chainStub.clock = clockStub;
     forkChoiceStub = sandbox.createStubInstance(ForkChoice) as SinonStubbedInstance<ForkChoice> & ForkChoice;
@@ -136,6 +139,7 @@ describe("PrepareNextSlot scheduler", () => {
     chainStub.recomputeForkChoiceHead.returns({slot: SLOTS_PER_EPOCH - 3} as ProtoBlock);
     forkChoiceStub.getJustifiedBlock.returns({} as ProtoBlock);
     forkChoiceStub.getFinalizedBlock.returns({} as ProtoBlock);
+    updateBuilderStatus.returns(void 0);
     const state = generateCachedBellatrixState();
     regenStub.getBlockSlotState.resolves(state);
     beaconProposerCacheStub.get.returns("0x fee recipient address");
@@ -148,6 +152,7 @@ describe("PrepareNextSlot scheduler", () => {
 
     expect(chainStub.recomputeForkChoiceHead.called, "expect updateHead to be called").to.equal(true);
     expect(regenStub.getBlockSlotState.called, "expect regen.getBlockSlotState to be called").to.equal(true);
+    expect(updateBuilderStatus.called, "expect updateBuilderStatus to be called").to.be.equal(true);
     expect(forkChoiceStub.getJustifiedBlock.called, "expect forkChoice.getJustifiedBlock to be called").to.equal(true);
     expect(forkChoiceStub.getFinalizedBlock.called, "expect forkChoice.getFinalizedBlock to be called").to.equal(true);
     expect(executionEngineStub.notifyForkchoiceUpdate.calledOnce, "expect CL call notifyForkchoiceUpdate").to.equal(

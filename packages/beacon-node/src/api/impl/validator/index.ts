@@ -23,6 +23,7 @@ import {AttestationError, AttestationErrorCode, GossipAction, SyncCommitteeError
 import {validateGossipAggregateAndProof} from "../../../chain/validation/index.js";
 import {ZERO_HASH} from "../../../constants/index.js";
 import {SyncState} from "../../../sync/index.js";
+import {isOptimsticBlock} from "../../../util/forkChoice.js";
 import {toGraffitiBuffer} from "../../../util/graffiti.js";
 import {ApiError, NodeIsSyncing} from "../errors.js";
 import {validateSyncCommitteeGossipContributionAndProof} from "../../../chain/validation/syncCommitteeContributionAndProof.js";
@@ -202,6 +203,15 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
     try {
       notWhileSyncing();
       await waitForSlot(slot); // Must never request for a future slot > currentSlot
+      // Error early for builder if builder flow not active
+      if (type === BlockType.Blinded) {
+        if (!chain.executionBuilder) {
+          throw Error("Execution builder not set");
+        }
+        if (!chain.executionBuilder.status) {
+          throw Error("Execution builder disabled");
+        }
+      }
 
       // Process the queued attestations in the forkchoice for correct head estimation
       // forkChoice.updateTime() might have already been called by the onSlot clock
@@ -308,6 +318,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
       const startSlot = computeStartSlotAtEpoch(epoch);
       await waitForSlot(startSlot); // Must never request for a future slot > currentSlot
 
+      const head = chain.forkChoice.getHead();
       const state = await chain.getHeadStateAtCurrentEpoch();
 
       const stateEpoch = state.epochCtx.epoch;
@@ -341,6 +352,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
       return {
         data: duties,
         dependentRoot,
+        executionOptimistic: isOptimsticBlock(head),
       };
     },
 
@@ -360,6 +372,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
         throw new ApiError(400, "Cannot get duties for epoch more than one ahead");
       }
 
+      const head = chain.forkChoice.getHead();
       const state = await chain.getHeadStateAtCurrentEpoch();
 
       // TODO: Determine what the current epoch would be if we fast-forward our system clock by
@@ -389,6 +402,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
       return {
         data: duties,
         dependentRoot,
+        executionOptimistic: isOptimsticBlock(head),
       };
     },
 
@@ -418,6 +432,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
       // sync committee duties have a lookahead of 1 day. Assuming the validator only requests duties for upcomming
       // epochs, the head state will very likely have the duties available for the requested epoch.
       // Note: does not support requesting past duties
+      const head = chain.forkChoice.getHead();
       const state = chain.getHeadState();
 
       // Check that all validatorIndex belong to the state before calling getCommitteeAssignments()
@@ -441,6 +456,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
 
       return {
         data: duties,
+        executionOptimistic: isOptimsticBlock(head),
       };
     },
 

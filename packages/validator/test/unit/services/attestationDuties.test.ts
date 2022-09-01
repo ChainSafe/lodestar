@@ -53,7 +53,7 @@ describe("AttestationDutiesService", function () {
       index,
       validator: {...defaultValidator.validator, pubkey: pubkeys[0]},
     };
-    api.beacon.getStateValidators.resolves({data: [validatorResponse]});
+    api.beacon.getStateValidators.resolves({data: [validatorResponse], executionOptimistic: false});
 
     // Reply with some duties
     const slot = 1;
@@ -67,7 +67,7 @@ describe("AttestationDutiesService", function () {
       validatorIndex: index,
       pubkey: pubkeys[0],
     };
-    api.validator.getAttesterDuties.resolves({dependentRoot: ZERO_HASH, data: [duty]});
+    api.validator.getAttesterDuties.resolves({dependentRoot: ZERO_HASH, data: [duty], executionOptimistic: false});
 
     // Accept all subscriptions
     api.validator.prepareBeaconCommitteeSubnet.resolves();
@@ -121,7 +121,7 @@ describe("AttestationDutiesService", function () {
       index,
       validator: {...defaultValidator.validator, pubkey: pubkeys[0]},
     };
-    api.beacon.getStateValidators.resolves({data: [validatorResponse]});
+    api.beacon.getStateValidators.resolves({data: [validatorResponse], executionOptimistic: false});
 
     // Reply with some duties
     const slot = 1;
@@ -134,7 +134,7 @@ describe("AttestationDutiesService", function () {
       validatorIndex: index,
       pubkey: pubkeys[0],
     };
-    api.validator.getAttesterDuties.resolves({dependentRoot: ZERO_HASH, data: [duty]});
+    api.validator.getAttesterDuties.resolves({data: [duty], dependentRoot: ZERO_HASH, executionOptimistic: false});
 
     // Accept all subscriptions
     api.validator.prepareBeaconCommitteeSubnet.resolves();

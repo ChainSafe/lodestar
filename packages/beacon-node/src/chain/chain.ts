@@ -16,6 +16,8 @@ import {allForks, UintNum64, Root, phase0, Slot, RootHex, Epoch, ValidatorIndex}
 import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {ILogger, toHex} from "@lodestar/utils";
 import {CompositeTypeAny, fromHexString, TreeView, Type} from "@chainsafe/ssz";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
+
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
 import {IMetrics} from "../metrics/index.js";
@@ -113,6 +115,9 @@ export class BeaconChain implements IBeaconChain {
   private successfulExchangeTransition = false;
   private readonly exchangeTransitionConfigurationEverySlots: number;
 
+  private readonly faultInspectionWindow: number;
+  private readonly allowedFaults: number;
+
   constructor(
     opts: IChainOptions,
     {
@@ -153,6 +158,24 @@ export class BeaconChain implements IBeaconChain {
     // > Consensus Layer client software SHOULD poll this endpoint every 60 seconds.
     // Align to a multiple of SECONDS_PER_SLOT for nicer logs
     this.exchangeTransitionConfigurationEverySlots = Math.floor(60 / this.config.SECONDS_PER_SLOT);
+
+    /**
+     * Beacon clients select randomized values from the following ranges when initializing
+     * the circuit breaker (so at boot time and once for each unique boot).
+     *
+     * ALLOWED_FAULTS: between 1 and SLOTS_PER_EPOCH // 2
+     * FAULT_INSPECTION_WINDOW: between SLOTS_PER_EPOCH and 2 * SLOTS_PER_EPOCH
+     *
+     */
+    this.faultInspectionWindow = Math.max(
+      opts.faultInspectionWindow ?? SLOTS_PER_EPOCH + Math.floor(Math.random() * SLOTS_PER_EPOCH),
+      SLOTS_PER_EPOCH
+    );
+    // allowedFaults should be < faultInspectionWindow, limiting them to faultInspectionWindow/2
+    this.allowedFaults = Math.min(
+      opts.allowedFaults ?? Math.floor(this.faultInspectionWindow / 2),
+      Math.floor(this.faultInspectionWindow / 2)
+    );
 
     const signal = this.abortController.signal;
     const emitter = new ChainEventEmitter();
@@ -622,5 +645,33 @@ export class BeaconChain implements IBeaconChain {
     proposers.forEach((proposer) => {
       this.beaconProposerCache.add(epoch, proposer);
     });
+  }
+
+  updateBuilderStatus(clockSlot: Slot): void {
+    const executionBuilder = this.executionBuilder;
+    if (executionBuilder) {
+      const slotsPresent = this.forkChoice.getSlotsPresent(clockSlot - this.faultInspectionWindow);
+      const previousStatus = executionBuilder.status;
+      const shouldEnable = slotsPresent >= this.faultInspectionWindow - this.allowedFaults;
+
+      executionBuilder.updateStatus(shouldEnable);
+      // The status changed we should log
+      const status = executionBuilder.status;
+      if (status !== previousStatus) {
+        this.logger.info("Execution builder status updated", {
+          status,
+          slotsPresent,
+          window: this.faultInspectionWindow,
+          allowedFaults: this.allowedFaults,
+        });
+      } else {
+        this.logger.verbose("Execution builder status", {
+          status,
+          slotsPresent,
+          window: this.faultInspectionWindow,
+          allowedFaults: this.allowedFaults,
+        });
+      }
+    }
   }
 }

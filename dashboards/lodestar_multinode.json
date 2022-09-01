@@ -22,7 +22,20 @@
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
   "id": 2,
-  "links": [],
+  "links": [
+    {
+      "asDropdown": true,
+      "icon": "external link",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": ["lodestar"],
+      "targetBlank": false,
+      "title": "Lodestar dashboards",
+      "tooltip": "",
+      "type": "dashboards",
+      "url": ""
+    }
+  ],
   "liveNow": false,
   "panels": [
     {
@@ -752,7 +765,7 @@
   "refresh": "30s",
   "schemaVersion": 33,
   "style": "dark",
-  "tags": [],
+  "tags": ["lodestar"],
   "templating": {
     "list": []
   },

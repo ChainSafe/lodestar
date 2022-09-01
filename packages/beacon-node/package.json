@@ -135,7 +135,7 @@
     "jwt-simple": "0.5.6",
     "libp2p": "^0.36.2",
     "libp2p-bootstrap": "^0.14.0",
-    "libp2p-gossipsub": "^0.14.0",
+    "libp2p-gossipsub": "^0.14.1",
     "libp2p-mdns": "^0.18.0",
     "libp2p-mplex": "^0.10.5",
     "libp2p-tcp": "^0.17.2",
