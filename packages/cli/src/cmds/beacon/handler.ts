@@ -112,7 +112,7 @@ export async function beaconHandlerInit(args: IBeaconArgs & IGlobalArgs) {
   }
 
   // Create new PeerId everytime by default, unless peerIdFile is provided
-  const peerId = args.peerIdFile ? await readPeerId(args.peerIdFile) : await createPeerId();
+  const peerId = await createPeerId();
   const enr = ENR.createV4(createKeypairFromPeerId(peerId).publicKey);
   overwriteEnrWithCliArgs(enr, args);
 

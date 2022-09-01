@@ -53,7 +53,7 @@ describe("cmds / beacon / args handler", () => {
     expect(peerId1.toB58String()).not.equal(peerId2.toB58String(), "peer ids must be different");
   });
 
-  it("Re-use existing peer", async () => {
+  it.skip("Re-use existing peer", async () => {
     const prevPeerId = await createPeerId();
 
     const peerIdFile = path.join(testFilesDir, "prev_peerid.json");

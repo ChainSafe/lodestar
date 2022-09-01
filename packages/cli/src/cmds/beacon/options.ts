@@ -9,7 +9,6 @@ interface IBeaconExtraArgs {
   genesisStateFile?: string;
   configFile?: string;
   bootnodesFile?: string;
-  peerIdFile?: string;
   checkpointSyncUrl?: string;
   checkpointState?: string;
   wssCheckpoint?: string;
@@ -37,12 +36,6 @@ export const beaconExtraOptions: ICliCommandOptions<IBeaconExtraArgs> = {
   bootnodesFile: {
     hidden: true,
     description: "Bootnodes file path",
-    type: "string",
-  },
-
-  peerIdFile: {
-    hidden: true,
-    description: "Use existing PeerId file and prevent generating a new one on each restart",
     type: "string",
   },
 
