@@ -23,6 +23,25 @@ export function chainConfigFromJson(json: Record<string, unknown>): IChainConfig
   return config;
 }
 
+export function specValuesToJson(spec: Record<string, SpecValue>): Record<string, string> {
+  const json: Record<string, string> = {};
+
+  for (const key of Object.keys(spec)) {
+    json[key] = serializeSpecValue(spec[key], toSpecValueTypeName(spec[key]));
+  }
+
+  return json;
+}
+
+/** Automatic inference of typeName. For critical variables define type names, else infer */
+export function toSpecValueTypeName(value: SpecValue): SpecValueTypeName {
+  if (value instanceof Uint8Array) return "bytes";
+  if (typeof value === "number") return "number";
+  if (typeof value === "bigint") return "bigint";
+  if (typeof value === "string") return "string";
+  throw Error(`Unknown value type ${value}`);
+}
+
 export function serializeSpecValue(value: SpecValue, typeName: SpecValueTypeName): string {
   switch (typeName) {
     case "number":

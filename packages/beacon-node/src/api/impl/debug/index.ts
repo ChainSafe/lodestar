@@ -1,20 +1,26 @@
-import {Multiaddr} from "multiaddr";
 import {routes} from "@lodestar/api";
 import {createFromB58String} from "../../../util/peerId.js";
 import {resolveStateId} from "../beacon/state/utils.js";
 import {ApiModules} from "../types.js";
+import {isOptimsticBlock} from "../../../util/forkChoice.js";
 
-export function getDebugApi({
-  chain,
-  config,
-  db,
-  network,
-}: Pick<ApiModules, "chain" | "config" | "db" | "network">): routes.debug.Api {
+export function getDebugApi({chain, config, db}: Pick<ApiModules, "chain" | "config" | "db">): routes.debug.Api {
   return {
-    async getHeads() {
+    async getDebugChainHeads() {
       const heads = chain.forkChoice.getHeads();
       return {
         data: heads.map((blockSummary) => ({slot: blockSummary.slot, root: blockSummary.blockRoot})),
+      };
+    },
+
+    async getDebugChainHeadsV2() {
+      const heads = chain.forkChoice.getHeads();
+      return {
+        data: heads.map((block) => ({
+          slot: block.slot,
+          root: block.blockRoot,
+          executionOptimistic: isOptimsticBlock(block),
+        })),
       };
     },
 
@@ -38,17 +44,6 @@ export function getDebugApi({
       } else {
         return {data: state.toValue(), version: config.getForkName(state.slot)};
       }
-    },
-
-    async connectToPeer(peerIdStr, multiaddrStr) {
-      const peer = createFromB58String(peerIdStr);
-      const multiaddr = multiaddrStr.map((addr) => new Multiaddr(addr));
-      await network.connectToPeer(peer, multiaddr);
-    },
-
-    async disconnectPeer(peerIdStr) {
-      const peer = createFromB58String(peerIdStr);
-      await network.disconnectPeer(peer);
     },
   };
 }
