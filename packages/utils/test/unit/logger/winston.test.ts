@@ -90,7 +90,9 @@ describe("winston logger", () => {
       const {id, message, context, error, output} = typeof testCase === "function" ? testCase() : testCase;
       for (const format of logFormats) {
         it(`${id} ${format} output`, async () => {
-          const logger = new WinstonLogger({format, hideTimestamp: true, level: LogLevel.debug}, [{type: TransportType.console}]);
+          const logger = new WinstonLogger({format, hideTimestamp: true, level: LogLevel.debug}, [
+            {type: TransportType.console},
+          ]);
           logger.warn(message, context, error);
 
           if (isNode) {
