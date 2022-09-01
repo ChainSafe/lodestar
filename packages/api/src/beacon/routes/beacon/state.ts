@@ -1,10 +1,10 @@
 import {ContainerType} from "@chainsafe/ssz";
-import {phase0, CommitteeIndex, Slot, ValidatorIndex, Epoch, Root, ssz, StringType} from "@lodestar/types";
+import {phase0, CommitteeIndex, Slot, ValidatorIndex, Epoch, Root, ssz, StringType, RootHex} from "@lodestar/types";
 import {
   RoutesData,
   ReturnTypes,
   ArrayOf,
-  ContainerData,
+  ContainerDataExecutionOptimistic,
   Schema,
   ReqSerializers,
   ReqSerializer,
@@ -12,8 +12,14 @@ import {
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
-export type StateId = string | "head" | "genesis" | "finalized" | "justified";
+export type StateId = RootHex | Slot | "head" | "genesis" | "finalized" | "justified";
 export type ValidatorId = string | number;
+
+/**
+ * True if the response references an unverified execution payload. Optimistic information may be invalidated at
+ * a later time. If the field is not present, assume the False value.
+ */
+export type ExecutionOptimistic = boolean;
 
 export type ValidatorStatus =
   | "active"
@@ -29,7 +35,7 @@ export type ValidatorStatus =
 
 export type ValidatorFilters = {
   id?: ValidatorId[];
-  statuses?: ValidatorStatus[];
+  status?: ValidatorStatus[];
 };
 export type CommitteesFilters = {
   epoch?: Epoch;
@@ -66,7 +72,7 @@ export type EpochSyncCommitteeResponse = {
   validators: ValidatorIndex[];
   // TODO: This property will likely be deprecated
   /** Subcommittee slices of the current sync committee */
-  validatorAggregates: ValidatorIndex[];
+  validatorAggregates: ValidatorIndex[][];
 };
 
 export type Api = {
@@ -77,7 +83,7 @@ export type Api = {
    * @param stateId State identifier.
    * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", "justified", \<slot\>, \<hex encoded stateRoot with 0x prefix\>.
    */
-  getStateRoot(stateId: StateId): Promise<{data: Root}>;
+  getStateRoot(stateId: StateId): Promise<{executionOptimistic: ExecutionOptimistic; data: {root: Root}}>;
 
   /**
    * Get Fork object for requested state
@@ -85,7 +91,7 @@ export type Api = {
    * @param stateId State identifier.
    * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", "justified", \<slot\>, \<hex encoded stateRoot with 0x prefix\>.
    */
-  getStateFork(stateId: StateId): Promise<{data: phase0.Fork}>;
+  getStateFork(stateId: StateId): Promise<{executionOptimistic: ExecutionOptimistic; data: phase0.Fork}>;
 
   /**
    * Get state finality checkpoints
@@ -94,7 +100,9 @@ export type Api = {
    * @param stateId State identifier.
    * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", "justified", \<slot\>, \<hex encoded stateRoot with 0x prefix\>.
    */
-  getStateFinalityCheckpoints(stateId: StateId): Promise<{data: FinalityCheckpoints}>;
+  getStateFinalityCheckpoints(
+    stateId: StateId
+  ): Promise<{executionOptimistic: ExecutionOptimistic; data: FinalityCheckpoints}>;
 
   /**
    * Get validators from state
@@ -104,7 +112,10 @@ export type Api = {
    * @param id Either hex encoded public key (with 0x prefix) or validator index
    * @param status [Validator status specification](https://hackmd.io/ofFJ5gOmQpu1jjHilHbdQQ)
    */
-  getStateValidators(stateId: StateId, filters?: ValidatorFilters): Promise<{data: ValidatorResponse[]}>;
+  getStateValidators(
+    stateId: StateId,
+    filters?: ValidatorFilters
+  ): Promise<{executionOptimistic: ExecutionOptimistic; data: ValidatorResponse[]}>;
 
   /**
    * Get validator from state by id
@@ -113,7 +124,10 @@ export type Api = {
    * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", "justified", \<slot\>, \<hex encoded stateRoot with 0x prefix\>.
    * @param validatorId Either hex encoded public key (with 0x prefix) or validator index
    */
-  getStateValidator(stateId: StateId, validatorId: ValidatorId): Promise<{data: ValidatorResponse}>;
+  getStateValidator(
+    stateId: StateId,
+    validatorId: ValidatorId
+  ): Promise<{executionOptimistic: ExecutionOptimistic; data: ValidatorResponse}>;
 
   /**
    * Get validator balances from state
@@ -122,7 +136,10 @@ export type Api = {
    * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", "justified", \<slot\>, \<hex encoded stateRoot with 0x prefix\>.
    * @param id Either hex encoded public key (with 0x prefix) or validator index
    */
-  getStateValidatorBalances(stateId: StateId, indices?: ValidatorId[]): Promise<{data: ValidatorBalance[]}>;
+  getStateValidatorBalances(
+    stateId: StateId,
+    indices?: ValidatorId[]
+  ): Promise<{executionOptimistic: ExecutionOptimistic; data: ValidatorBalance[]}>;
 
   /**
    * Get all committees for a state.
@@ -133,60 +150,68 @@ export type Api = {
    * @param index Restrict returned values to those matching the supplied committee index.
    * @param slot Restrict returned values to those matching the supplied slot.
    */
-  getEpochCommittees(stateId: StateId, filters?: CommitteesFilters): Promise<{data: EpochCommitteeResponse[]}>;
+  getEpochCommittees(
+    stateId: StateId,
+    filters?: CommitteesFilters
+  ): Promise<{executionOptimistic: ExecutionOptimistic; data: EpochCommitteeResponse[]}>;
 
-  getEpochSyncCommittees(stateId: StateId, epoch?: Epoch): Promise<{data: EpochSyncCommitteeResponse}>;
+  getEpochSyncCommittees(
+    stateId: StateId,
+    epoch?: Epoch
+  ): Promise<{executionOptimistic: ExecutionOptimistic; data: EpochSyncCommitteeResponse}>;
 };
 
 /**
  * Define javascript values for each route
  */
 export const routesData: RoutesData<Api> = {
-  getEpochCommittees: {url: "/eth/v1/beacon/states/:stateId/committees", method: "GET"},
-  getEpochSyncCommittees: {url: "/eth/v1/beacon/states/:stateId/sync_committees", method: "GET"},
-  getStateFinalityCheckpoints: {url: "/eth/v1/beacon/states/:stateId/finality_checkpoints", method: "GET"},
-  getStateFork: {url: "/eth/v1/beacon/states/:stateId/fork", method: "GET"},
-  getStateRoot: {url: "/eth/v1/beacon/states/:stateId/root", method: "GET"},
-  getStateValidator: {url: "/eth/v1/beacon/states/:stateId/validators/:validatorId", method: "GET"},
-  getStateValidators: {url: "/eth/v1/beacon/states/:stateId/validators", method: "GET"},
-  getStateValidatorBalances: {url: "/eth/v1/beacon/states/:stateId/validator_balances", method: "GET"},
+  getEpochCommittees: {url: "/eth/v1/beacon/states/{state_id}/committees", method: "GET"},
+  getEpochSyncCommittees: {url: "/eth/v1/beacon/states/{state_id}/sync_committees", method: "GET"},
+  getStateFinalityCheckpoints: {url: "/eth/v1/beacon/states/{state_id}/finality_checkpoints", method: "GET"},
+  getStateFork: {url: "/eth/v1/beacon/states/{state_id}/fork", method: "GET"},
+  getStateRoot: {url: "/eth/v1/beacon/states/{state_id}/root", method: "GET"},
+  getStateValidator: {url: "/eth/v1/beacon/states/{state_id}/validators/{validator_id}", method: "GET"},
+  getStateValidators: {url: "/eth/v1/beacon/states/{state_id}/validators", method: "GET"},
+  getStateValidatorBalances: {url: "/eth/v1/beacon/states/{state_id}/validator_balances", method: "GET"},
 };
 
-type StateIdOnlyReq = {params: {stateId: string}};
+/* eslint-disable @typescript-eslint/naming-convention */
+
+type StateIdOnlyReq = {params: {state_id: string}};
 
 export type ReqTypes = {
-  getEpochCommittees: {params: {stateId: StateId}; query: {slot?: number; epoch?: number; index?: number}};
-  getEpochSyncCommittees: {params: {stateId: StateId}; query: {epoch?: number}};
+  getEpochCommittees: {params: {state_id: StateId}; query: {slot?: number; epoch?: number; index?: number}};
+  getEpochSyncCommittees: {params: {state_id: StateId}; query: {epoch?: number}};
   getStateFinalityCheckpoints: StateIdOnlyReq;
   getStateFork: StateIdOnlyReq;
   getStateRoot: StateIdOnlyReq;
-  getStateValidator: {params: {stateId: StateId; validatorId: ValidatorId}};
-  getStateValidators: {params: {stateId: StateId}; query: {id?: ValidatorId[]; statuses?: ValidatorStatus[]}};
-  getStateValidatorBalances: {params: {stateId: StateId}; query: {id?: ValidatorId[]}};
+  getStateValidator: {params: {state_id: StateId; validator_id: ValidatorId}};
+  getStateValidators: {params: {state_id: StateId}; query: {id?: ValidatorId[]; status?: ValidatorStatus[]}};
+  getStateValidatorBalances: {params: {state_id: StateId}; query: {id?: ValidatorId[]}};
 };
 
 export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
   const stateIdOnlyReq: ReqSerializer<Api["getStateFork"], StateIdOnlyReq> = {
-    writeReq: (stateId) => ({params: {stateId}}),
-    parseReq: ({params}) => [params.stateId],
-    schema: {params: {stateId: Schema.StringRequired}},
+    writeReq: (state_id) => ({params: {state_id: String(state_id)}}),
+    parseReq: ({params}) => [params.state_id],
+    schema: {params: {state_id: Schema.StringRequired}},
   };
 
   return {
     getEpochCommittees: {
-      writeReq: (stateId, filters) => ({params: {stateId}, query: filters || {}}),
-      parseReq: ({params, query}) => [params.stateId, query],
+      writeReq: (state_id, filters) => ({params: {state_id}, query: filters || {}}),
+      parseReq: ({params, query}) => [params.state_id, query],
       schema: {
-        params: {stateId: Schema.StringRequired},
+        params: {state_id: Schema.StringRequired},
         query: {slot: Schema.Uint, epoch: Schema.Uint, index: Schema.Uint},
       },
     },
 
     getEpochSyncCommittees: {
-      writeReq: (stateId, epoch) => ({params: {stateId}, query: {epoch}}),
-      parseReq: ({params, query}) => [params.stateId, query.epoch],
+      writeReq: (state_id, epoch) => ({params: {state_id}, query: {epoch}}),
+      parseReq: ({params, query}) => [params.state_id, query.epoch],
       schema: {
-        params: {stateId: Schema.StringRequired},
+        params: {state_id: Schema.StringRequired},
         query: {epoch: Schema.Uint},
       },
     },
@@ -196,35 +221,38 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
     getStateRoot: stateIdOnlyReq,
 
     getStateValidator: {
-      writeReq: (stateId, validatorId) => ({params: {stateId, validatorId}}),
-      parseReq: ({params}) => [params.stateId, params.validatorId],
+      writeReq: (state_id, validator_id) => ({params: {state_id, validator_id}}),
+      parseReq: ({params}) => [params.state_id, params.validator_id],
       schema: {
-        params: {stateId: Schema.StringRequired, validatorId: Schema.StringRequired},
+        params: {state_id: Schema.StringRequired, validator_id: Schema.StringRequired},
       },
     },
 
     getStateValidators: {
-      writeReq: (stateId, filters) => ({params: {stateId}, query: filters || {}}),
-      parseReq: ({params, query}) => [params.stateId, query],
+      writeReq: (state_id, filters) => ({params: {state_id}, query: filters || {}}),
+      parseReq: ({params, query}) => [params.state_id, query],
       schema: {
-        params: {stateId: Schema.StringRequired},
-        query: {id: Schema.UintOrStringArray, statuses: Schema.StringArray},
+        params: {state_id: Schema.StringRequired},
+        query: {id: Schema.UintOrStringArray, status: Schema.StringArray},
       },
     },
 
     getStateValidatorBalances: {
-      writeReq: (stateId, id) => ({params: {stateId}, query: {id}}),
-      parseReq: ({params, query}) => [params.stateId, query.id],
+      writeReq: (state_id, id) => ({params: {state_id}, query: {id}}),
+      parseReq: ({params, query}) => [params.state_id, query.id],
       schema: {
-        params: {stateId: Schema.StringRequired},
+        params: {state_id: Schema.StringRequired},
         query: {id: Schema.UintOrStringArray},
       },
     },
   };
 }
 
-/* eslint-disable @typescript-eslint/naming-convention */
 export function getReturnTypes(): ReturnTypes<Api> {
+  const RootContainer = new ContainerType({
+    root: ssz.Root,
+  });
+
   const FinalityCheckpoints = new ContainerType(
     {
       previousJustified: ssz.phase0.Checkpoint,
@@ -264,19 +292,19 @@ export function getReturnTypes(): ReturnTypes<Api> {
   const EpochSyncCommitteesResponse = new ContainerType(
     {
       validators: ArrayOf(ssz.ValidatorIndex),
-      validatorAggregates: ArrayOf(ssz.ValidatorIndex),
+      validatorAggregates: ArrayOf(ArrayOf(ssz.ValidatorIndex)),
     },
     {jsonCase: "eth2"}
   );
 
   return {
-    getStateRoot: ContainerData(ssz.Root),
-    getStateFork: ContainerData(ssz.phase0.Fork),
-    getStateFinalityCheckpoints: ContainerData(FinalityCheckpoints),
-    getStateValidators: ContainerData(ArrayOf(ValidatorResponse)),
-    getStateValidator: ContainerData(ValidatorResponse),
-    getStateValidatorBalances: ContainerData(ArrayOf(ValidatorBalance)),
-    getEpochCommittees: ContainerData(ArrayOf(EpochCommitteeResponse)),
-    getEpochSyncCommittees: ContainerData(EpochSyncCommitteesResponse),
+    getStateRoot: ContainerDataExecutionOptimistic(RootContainer),
+    getStateFork: ContainerDataExecutionOptimistic(ssz.phase0.Fork),
+    getStateFinalityCheckpoints: ContainerDataExecutionOptimistic(FinalityCheckpoints),
+    getStateValidators: ContainerDataExecutionOptimistic(ArrayOf(ValidatorResponse)),
+    getStateValidator: ContainerDataExecutionOptimistic(ValidatorResponse),
+    getStateValidatorBalances: ContainerDataExecutionOptimistic(ArrayOf(ValidatorBalance)),
+    getEpochCommittees: ContainerDataExecutionOptimistic(ArrayOf(EpochCommitteeResponse)),
+    getEpochSyncCommittees: ContainerDataExecutionOptimistic(EpochSyncCommitteesResponse),
   };
 }

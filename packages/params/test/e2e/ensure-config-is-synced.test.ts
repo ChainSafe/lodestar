@@ -31,15 +31,12 @@ function assertCorrectPreset(localPreset: BeaconPreset, remotePreset: BeaconPres
 }
 
 async function downloadRemoteConfig(preset: "mainnet" | "minimal", commit: string): Promise<BeaconPreset> {
-  const urlByFork: Record<ForkName, string> = {
-    [ForkName.phase0]: `https://raw.githubusercontent.com/ethereum/consensus-specs/${commit}/presets/${preset}/phase0.yaml`,
-    [ForkName.altair]: `https://raw.githubusercontent.com/ethereum/consensus-specs/${commit}/presets/${preset}/altair.yaml`,
-    [ForkName.bellatrix]: `https://raw.githubusercontent.com/ethereum/consensus-specs/${commit}/presets/${preset}/bellatrix.yaml`,
-  };
-
   const downloadedParams = await Promise.all(
-    Object.values(urlByFork).map((url) =>
-      axios({url, timeout: 30 * 1000}).then((response) => loadConfigYaml(response.data))
+    Object.values(ForkName).map((forkName) =>
+      axios({
+        url: `https://raw.githubusercontent.com/ethereum/consensus-specs/${commit}/presets/${preset}/${forkName}.yaml`,
+        timeout: 30 * 1000,
+      }).then((response) => loadConfigYaml(response.data))
     )
   );
 

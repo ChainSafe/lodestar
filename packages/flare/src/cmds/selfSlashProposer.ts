@@ -122,7 +122,7 @@ export async function selfSlashProposerHandler(args: SelfSlashArgs): Promise<voi
             },
           };
 
-          await client.beacon.submitPoolProposerSlashing(proposerSlashing);
+          await client.beacon.submitPoolProposerSlashings(proposerSlashing);
 
           console.log(`Submitted self ProposerSlashing for validator ${index} - ${++successCount}/${totalCount}`);
         } catch (e) {
