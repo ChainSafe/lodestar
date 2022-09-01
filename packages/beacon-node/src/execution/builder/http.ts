@@ -38,7 +38,7 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
 
   async checkStatus(): Promise<void> {
     try {
-      await this.api.checkStatus();
+      await this.api.status();
     } catch (e) {
       // Disable if the status was enabled
       this.status = false;
