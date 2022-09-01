@@ -1,5 +1,4 @@
 import {routes} from "@lodestar/api";
-import {createFromB58String} from "../../../util/peerId.js";
 import {resolveStateId} from "../beacon/state/utils.js";
 import {ApiModules} from "../types.js";
 import {isOptimsticBlock} from "../../../util/forkChoice.js";
