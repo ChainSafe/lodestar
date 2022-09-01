@@ -12,7 +12,7 @@ import {loggerVc} from "../../utils/logger.js";
 import {ClockMock} from "../../utils/clock.js";
 import {initValidatorStore} from "../../utils/validatorStore.js";
 
-type ProposerDutiesRes = {dependentRoot: Root; data: routes.validator.ProposerDuty[]; executionOptimistic: boolean};
+type ProposerDutiesRes = {dependentRoot: Root; data: routes.validator.ProposerDuty[]};
 
 describe("BlockDutiesService", function () {
   const sandbox = sinon.createSandbox();
@@ -37,10 +37,9 @@ describe("BlockDutiesService", function () {
     const slot = 0; // genesisTime is right now, so test with slot = currentSlot
     const duties: ProposerDutiesRes = {
       dependentRoot: ZERO_HASH,
-      executionOptimistic: false,
       data: [{slot: slot, validatorIndex: 0, pubkey: pubkeys[0]}],
     };
-    api.validator.getProposerDuties.resolves(duties);
+    api.validator.getProposerDuties.resolves({...duties, executionOptimistic: false});
 
     const notifyBlockProductionFn = sinon.stub(); // Returns void
 
@@ -69,12 +68,10 @@ describe("BlockDutiesService", function () {
     const DIFF_HASH = Buffer.alloc(32, 1);
     const dutiesBeforeReorg: ProposerDutiesRes = {
       dependentRoot: ZERO_HASH,
-      executionOptimistic: false,
       data: [{slot: 1, validatorIndex: 0, pubkey: pubkeys[0]}],
     };
     const dutiesAfterReorg: ProposerDutiesRes = {
       dependentRoot: DIFF_HASH,
-      executionOptimistic: false,
       data: [{slot: 1, validatorIndex: 1, pubkey: pubkeys[1]}],
     };
 
@@ -85,11 +82,11 @@ describe("BlockDutiesService", function () {
     const dutiesService = new BlockDutiesService(loggerVc, api, clock, validatorStore, null, notifyBlockProductionFn);
 
     // Trigger clock onSlot for slot 0
-    api.validator.getProposerDuties.resolves(dutiesBeforeReorg);
+    api.validator.getProposerDuties.resolves({...dutiesBeforeReorg, executionOptimistic: false});
     await clock.tickSlotFns(0, controller.signal);
 
     // Trigger clock onSlot for slot 1 - Return different duties for slot 1
-    api.validator.getProposerDuties.resolves(dutiesAfterReorg);
+    api.validator.getProposerDuties.resolves({...dutiesAfterReorg, executionOptimistic: false});
     await clock.tickSlotFns(1, controller.signal);
 
     // Should persist the dutiesAfterReorg
@@ -118,7 +115,6 @@ describe("BlockDutiesService", function () {
     const slot = 0; // genesisTime is right now, so test with slot = currentSlot
     const duties: ProposerDutiesRes = {
       dependentRoot: ZERO_HASH,
-      executionOptimistic: false,
       data: [
         {slot: slot, validatorIndex: 0, pubkey: pubkeys[0]},
         {slot: slot, validatorIndex: 1, pubkey: pubkeys[1]},
@@ -128,13 +124,12 @@ describe("BlockDutiesService", function () {
 
     const dutiesRemoved: ProposerDutiesRes = {
       dependentRoot: ZERO_HASH,
-      executionOptimistic: false,
       data: [
         {slot: slot, validatorIndex: 1, pubkey: pubkeys[1]},
         {slot: 33, validatorIndex: 2, pubkey: pubkeys[2]},
       ],
     };
-    api.validator.getProposerDuties.resolves(duties);
+    api.validator.getProposerDuties.resolves({...duties, executionOptimistic: false});
 
     const notifyBlockProductionFn = sinon.stub(); // Returns void
 
