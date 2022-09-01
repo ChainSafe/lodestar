@@ -36,7 +36,7 @@ import {shell} from "./shell.js";
 // Example:
 // ```
 // $ EL_BINARY_DIR=/home/lion/Code/eth2.0/merge-interop/go-ethereum/build/bin \
-//   EL_SCRIPT_DIR=kiln/geth ETH_PORT=8545 ENGINE_PORT=8551 TX_SCENARIOS=simple \
+//   EL_SCRIPT_DIR=geth ETH_PORT=8545 ENGINE_PORT=8551 TX_SCENARIOS=simple \
 //   ../../node_modules/.bin/mocha test/sim/merge.test.ts
 // ```
 
@@ -129,7 +129,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     fs.mkdirSync(dataPath, {recursive: true});
 
     startELProcess({
-      runScriptPath: `../../${process.env.EL_SCRIPT_DIR}/${elScript}`,
+      runScriptPath: `./test/scripts/el-interop/${process.env.EL_SCRIPT_DIR}/${elScript}`,
       TTD: `${ttd}`,
       DATA_DIR: dataPath,
     });

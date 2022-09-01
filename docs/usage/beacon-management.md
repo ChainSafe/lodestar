@@ -29,11 +29,11 @@ Post-Merge Ethereum will require [secure authentication with the Engine API](htt
 
 ### Generate a secret key
 
-You must generate a secret 32-byte (64 characters) hexadecimal string that will be used to authenticate with an execution node. You can use the following command in most terminals to generate a random secret: `openssl rand -hex 32`. Or you can use an [online generator](https://codebeautify.org/generate-random-hexadecimal-numbers).  Save this secret key into a text file and note where you store this file.
+You must generate a secret 32-byte (64 characters) hexadecimal string that will be used to authenticate with an execution node. You can use the following command in most terminals to generate a random secret: `openssl rand -hex 32`. Or you can use an [online generator](https://codebeautify.org/generate-random-hexadecimal-numbers). Save this secret key into a text file and note where you store this file.
 
 ### Configure Lodestar to locate the JWT secret
 
-When starting up a Lodestar beacon node in any configuration, ensure you add the `--jwt-secret /path/to/file` flag to point to the saved secret key file. 
+When starting up a Lodestar beacon node in any configuration, ensure you add the `--jwt-secret /path/to/file` flag to point to the saved secret key file.
 
 ### Ensure JWT is configured with your execution node
 
@@ -75,10 +75,10 @@ In case eth1 clients are available at different locations, use `--eth1.providerU
 ./lodestar beacon --network $NETWORK_NAME --eth1.providerUrls eth1.url1 eth1.url2
 ```
 
-It is also possible to start a Lodestar beacon that does not follow the eth1 chain. For this, use the `eth1.enabled` option in the command:
+It is also possible to start a Lodestar beacon that does not follow the eth1 chain. For this, use the `eth1` option in the command:
 
 ```bash
-./lodestar beacon --eth1.enabled false --network $NETWORK_NAME
+./lodestar beacon --eth1 false --network $NETWORK_NAME
 ```
 
 Immediately you should see confirmation that the node has started
@@ -108,6 +108,11 @@ Jul-09 17:34:54.278 []                 info: Syncing - 3 days left - 3.00 slots/
 
 A young testnet should take a few hours to sync. If you see multiple or consistent errors in the logs, please open a [Github issue](https://github.com/ChainSafe/lodestar/issues/new) or reach out to us in [Discord](https://discord.gg/yjyvFRP). Just by reporting anomalities you are helping accelerate the progress of Ethereum Consensus, thanks for contributing!
 
+<!-- prettier-ignore-start -->
+!!! warning
+    It is dangerous to expose your Beacon APIs publicly as there is no default authentication mechanism provided. Ensure your beacon node host is not exposing ports 8545 or 9596 outside of your internal network. 
+<!-- prettier-ignore-end -->
+
 ### Weak subjectivity
 
 If you are starting your node from a blank db/genesis (or from last saved state in db) in a network which is now far ahead, your node is susceptible to "long range attacks."
@@ -116,9 +121,11 @@ If you are starting your node from a blank db/genesis (or from last saved state 
 If you have a synced beacon node available (e.g. your friend's node or an infrastructure provider) and a trusted checkpoint you can rely on, you can start off your beacon node in under a minute! And at the same time kicking the "long range attack" in its butt!
 
 Just supply these **extra args** to your beacon node command:
+
 ```bash
 --weakSubjectivitySyncLatest --weakSubjectivityServerUrl <synced node url> [--weakSubjectivityCheckpoint <trusted checkpoint in root:epoch format>]
 ```
+
 In case you really trust `weakSubjectivityServerUrl` then you may skip providing `weakSubjectivityCheckpoint`, which will then result into your beacon node syncing and starting off a finalized state from the trusted url.
 
 <!-- prettier-ignore-start -->

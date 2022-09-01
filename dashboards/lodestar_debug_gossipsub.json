@@ -1,4 +1,53 @@
 {
+  "__inputs": [
+    {
+      "name": "DS_PROMETHEUS",
+      "label": "Prometheus",
+      "description": "",
+      "type": "datasource",
+      "pluginId": "prometheus",
+      "pluginName": "Prometheus"
+    }
+  ],
+  "__elements": [],
+  "__requires": [
+    {
+      "type": "grafana",
+      "id": "grafana",
+      "name": "Grafana",
+      "version": "8.4.2"
+    },
+    {
+      "type": "panel",
+      "id": "heatmap",
+      "name": "Heatmap",
+      "version": ""
+    },
+    {
+      "type": "datasource",
+      "id": "prometheus",
+      "name": "Prometheus",
+      "version": "1.0.0"
+    },
+    {
+      "type": "panel",
+      "id": "stat",
+      "name": "Stat",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "text",
+      "name": "Text",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "timeseries",
+      "name": "Time series",
+      "version": ""
+    }
+  ],
   "annotations": {
     "list": [
       {
@@ -23,7 +72,20 @@
   "graphTooltip": 0,
   "id": 5,
   "iteration": 1649607068536,
-  "links": [],
+  "links": [
+    {
+      "asDropdown": true,
+      "icon": "external link",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": ["lodestar"],
+      "targetBlank": false,
+      "title": "Lodestar dashboards",
+      "tooltip": "",
+      "type": "dashboards",
+      "url": ""
+    }
+  ],
   "liveNow": false,
   "panels": [
     {
@@ -994,7 +1056,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "12*rate(lodestar_gossip_validation_queue_job_time_seconds_count[$__rate_interval])",
+          "expr": "12*rate(lodestar_gossip_validation_queue_job_time_seconds_count[$rate_interval])",
           "interval": "",
           "legendFormat": "{{topic}}",
           "refId": "A"
@@ -1087,7 +1149,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "delta(lodestar_gossip_validation_queue_job_wait_time_seconds_sum[$__rate_interval])/delta(lodestar_gossip_validation_queue_job_wait_time_seconds_count[$__rate_interval])",
+              "expr": "delta(lodestar_gossip_validation_queue_job_wait_time_seconds_sum[$rate_interval])/delta(lodestar_gossip_validation_queue_job_wait_time_seconds_count[$rate_interval])",
               "format": "time_series",
               "interval": "",
               "legendFormat": "{{topic}}",
@@ -1198,7 +1260,7 @@
           "pluginVersion": "7.4.5",
           "targets": [
             {
-              "expr": "delta(lodestar_gossip_validation_queue_dropped_jobs_total[$__rate_interval])/(delta(lodestar_gossip_validation_queue_job_time_seconds_count[$__rate_interval])+delta(lodestar_gossip_validation_queue_dropped_jobs_total[$__rate_interval]))",
+              "expr": "delta(lodestar_gossip_validation_queue_dropped_jobs_total[$rate_interval])/(delta(lodestar_gossip_validation_queue_job_time_seconds_count[$rate_interval])+delta(lodestar_gossip_validation_queue_dropped_jobs_total[$rate_interval]))",
               "interval": "",
               "legendFormat": "{{topic}}",
               "refId": "A"
@@ -1285,7 +1347,7 @@
                 "uid": "prometheus_local"
               },
               "exemplar": false,
-              "expr": "delta(lodestar_gossip_block_elappsed_time_till_received_sum[$__rate_interval])\n/\ndelta(lodestar_gossip_block_elappsed_time_till_received_count[$__rate_interval])",
+              "expr": "delta(lodestar_gossip_block_elappsed_time_till_received_sum[$rate_interval])\n/\ndelta(lodestar_gossip_block_elappsed_time_till_received_count[$rate_interval])",
               "interval": "",
               "legendFormat": "till received",
               "refId": "A"
@@ -1296,7 +1358,7 @@
                 "uid": "prometheus_local"
               },
               "exemplar": false,
-              "expr": "delta(lodestar_gossip_block_elappsed_time_till_processed_sum[$__rate_interval])\n/\ndelta(lodestar_gossip_block_elappsed_time_till_processed_count[$__rate_interval])",
+              "expr": "delta(lodestar_gossip_block_elappsed_time_till_processed_sum[$rate_interval])\n/\ndelta(lodestar_gossip_block_elappsed_time_till_processed_count[$rate_interval])",
               "hide": false,
               "interval": "",
               "legendFormat": "till processed",
@@ -1647,7 +1709,7 @@
                 "uid": "prometheus_local"
               },
               "exemplar": false,
-              "expr": "sum(\n  rate(gossipsub_mesh_peer_inclusion_events_total[$__rate_interval])\n) by (topic)",
+              "expr": "sum(\n  rate(gossipsub_mesh_peer_inclusion_events_total[$rate_interval])\n) by (topic)",
               "interval": "",
               "legendFormat": "+ {{topic}}",
               "refId": "A"
@@ -1658,7 +1720,7 @@
                 "uid": "prometheus_local"
               },
               "exemplar": false,
-              "expr": "- sum(\n  rate(gossipsub_peer_churn_events_total [$__rate_interval])\n) by (topic)",
+              "expr": "- sum(\n  rate(gossipsub_peer_churn_events_total [$rate_interval])\n) by (topic)",
               "hide": false,
               "interval": "",
               "legendFormat": "- {{topic}}",
@@ -1744,7 +1806,7 @@
                 "uid": "prometheus_local"
               },
               "exemplar": false,
-              "expr": "sum(\n  rate(gossipsub_mesh_peer_inclusion_events_total[$__rate_interval])\n) by (reason)",
+              "expr": "sum(\n  rate(gossipsub_mesh_peer_inclusion_events_total[$rate_interval])\n) by (reason)",
               "hide": false,
               "interval": "",
               "legendFormat": "+ {{reason}}",
@@ -1756,7 +1818,7 @@
                 "uid": "prometheus_local"
               },
               "exemplar": false,
-              "expr": "- sum(\n  rate(gossipsub_peer_churn_events_total [$__rate_interval])\n) by (reason)",
+              "expr": "- sum(\n  rate(gossipsub_peer_churn_events_total [$rate_interval])\n) by (reason)",
               "interval": "",
               "legendFormat": "- {{reason}}",
               "refId": "A"
@@ -1856,7 +1918,7 @@
                 "uid": "prometheus_local"
               },
               "exemplar": false,
-              "expr": "rate(gossipsub_msg_received_prevalidation_total[$__rate_interval])",
+              "expr": "rate(gossipsub_msg_received_prevalidation_total[$rate_interval])",
               "interval": "",
               "legendFormat": "{{topic}}",
               "refId": "A"
@@ -2026,7 +2088,7 @@
                 "uid": "prometheus_local"
               },
               "exemplar": false,
-              "expr": "rate(gossipsub_msg_received_status_total{status=\"valid\"} [$__rate_interval])",
+              "expr": "rate(gossipsub_msg_received_status_total{status=\"valid\"} [$rate_interval])",
               "interval": "",
               "legendFormat": "{{topic}}",
               "refId": "A"
@@ -2198,7 +2260,7 @@
                 "uid": "prometheus_local"
               },
               "exemplar": false,
-              "expr": "rate(gossipsub_msg_received_invalid_total[$__rate_interval])",
+              "expr": "rate(gossipsub_msg_received_invalid_total[$rate_interval])",
               "interval": "",
               "legendFormat": "{{topic}}",
               "refId": "A"
@@ -2284,7 +2346,7 @@
                 "uid": "prometheus_local"
               },
               "exemplar": false,
-              "expr": "rate(gossipsub_rpc_rcv_not_accepted_total[$__rate_interval])",
+              "expr": "rate(gossipsub_rpc_rcv_not_accepted_total[$rate_interval])",
               "interval": "",
               "legendFormat": "",
               "refId": "A"
@@ -2468,7 +2530,7 @@
                 "uid": "prometheus_local"
               },
               "exemplar": false,
-              "expr": "rate(gossipsub_async_validation_mcache_hit_total [$__rate_interval])",
+              "expr": "rate(gossipsub_async_validation_mcache_hit_total [$rate_interval])",
               "interval": "",
               "legendFormat": "{{hit}}",
               "refId": "A"
@@ -2581,7 +2643,7 @@
                 "uid": "prometheus_local"
               },
               "exemplar": false,
-              "expr": "sum(rate(gossipsub_msg_publish_peers_by_group[$__rate_interval])) by (peerGroup)",
+              "expr": "sum(rate(gossipsub_msg_publish_peers_by_group[$rate_interval])) by (peerGroup)",
               "interval": "",
               "legendFormat": "{{peerGroup}}",
               "refId": "A"
@@ -2666,7 +2728,7 @@
                 "uid": "prometheus_local"
               },
               "exemplar": false,
-              "expr": "rate(gossipsub_msg_publish_bytes_total[$__rate_interval])",
+              "expr": "rate(gossipsub_msg_publish_bytes_total[$rate_interval])",
               "interval": "",
               "legendFormat": "{{topic}}",
               "refId": "A"
@@ -2752,7 +2814,7 @@
                 "uid": "prometheus_local"
               },
               "exemplar": false,
-              "expr": "rate(gossipsub_msg_publish_count_total[$__rate_interval])",
+              "expr": "rate(gossipsub_msg_publish_count_total[$rate_interval])",
               "interval": "",
               "legendFormat": "{{topic}}",
               "refId": "A"
@@ -2837,7 +2899,7 @@
                 "uid": "prometheus_local"
               },
               "exemplar": false,
-              "expr": "rate(gossipsub_msg_publish_peers_total[$__rate_interval])\n/\nrate(gossipsub_msg_publish_count_total[$__rate_interval])",
+              "expr": "rate(gossipsub_msg_publish_peers_total[$rate_interval])\n/\nrate(gossipsub_msg_publish_count_total[$rate_interval])",
               "interval": "",
               "legendFormat": "{{topic}}",
               "refId": "A"
@@ -2922,7 +2984,7 @@
                 "uid": "prometheus_local"
               },
               "exemplar": false,
-              "expr": "rate(gossipsub_msg_forward_count_total[$__rate_interval])",
+              "expr": "rate(gossipsub_msg_forward_count_total[$rate_interval])",
               "interval": "",
               "legendFormat": "{{topic}}",
               "refId": "A"
@@ -3007,7 +3069,7 @@
                 "uid": "prometheus_local"
               },
               "exemplar": false,
-              "expr": "rate(gossipsub_msg_forward_peers_total[$__rate_interval])\n/\nrate(gossipsub_msg_forward_count_total[$__rate_interval])",
+              "expr": "rate(gossipsub_msg_forward_peers_total[$rate_interval])\n/\nrate(gossipsub_msg_forward_count_total[$rate_interval])",
               "interval": "",
               "legendFormat": "{{topic}}",
               "refId": "A"
@@ -4207,7 +4269,7 @@
                 "uid": "prometheus_local"
               },
               "exemplar": false,
-              "expr": "rate(gossisub_duplicate_msg_late_delivery_total[$__rate_interval])",
+              "expr": "rate(gossisub_duplicate_msg_late_delivery_total[$rate_interval])",
               "interval": "",
               "legendFormat": "{{topic}}",
               "refId": "A"
@@ -4292,7 +4354,7 @@
                 "uid": "prometheus_local"
               },
               "exemplar": false,
-              "expr": "sum(rate(gossisub_duplicate_msg_late_delivery_total[$__rate_interval]))\n/\nsum(rate(gossisub_duplicate_msg_delivery_delay_seconds_count[$__rate_interval]))",
+              "expr": "sum(rate(gossisub_duplicate_msg_late_delivery_total[$rate_interval]))\n/\nsum(rate(gossisub_duplicate_msg_delivery_delay_seconds_count[$rate_interval]))",
               "interval": "",
               "legendFormat": "late / duplicate",
               "refId": "A"
@@ -4467,7 +4529,7 @@
                 "uid": "prometheus_local"
               },
               "exemplar": false,
-              "expr": "rate(gossisub_duplicate_msg_delivery_delay_seconds_bucket[$__rate_interval]) - 10000",
+              "expr": "rate(gossisub_duplicate_msg_delivery_delay_seconds_bucket[$rate_interval]) - 10000",
               "format": "heatmap",
               "interval": "",
               "intervalFactor": 10,
@@ -4768,7 +4830,7 @@
                 "uid": "prometheus_local"
               },
               "exemplar": false,
-              "expr": "rate(gossipsub_scoring_penalties_total[$__rate_interval])",
+              "expr": "rate(gossipsub_scoring_penalties_total[$rate_interval])",
               "interval": "",
               "legendFormat": "{{penalty}}",
               "refId": "A"
@@ -5475,7 +5537,7 @@
                 "uid": "prometheus_local"
               },
               "exemplar": false,
-              "expr": "rate(gossipsub_iwant_promise_sent_total[$__rate_interval])",
+              "expr": "rate(gossipsub_iwant_promise_sent_total[$rate_interval])",
               "interval": "",
               "legendFormat": "sent",
               "refId": "A"
@@ -5486,7 +5548,7 @@
                 "uid": "prometheus_local"
               },
               "exemplar": false,
-              "expr": "rate(gossipsub_iwant_promise_resolved_total[$__rate_interval])",
+              "expr": "rate(gossipsub_iwant_promise_resolved_total[$rate_interval])",
               "hide": false,
               "interval": "",
               "legendFormat": "resolved",
@@ -5498,7 +5560,7 @@
                 "uid": "prometheus_local"
               },
               "exemplar": false,
-              "expr": "rate(gossipsub_iwant_promise_broken[$__rate_interval])",
+              "expr": "rate(gossipsub_iwant_promise_broken[$rate_interval])",
               "hide": false,
               "interval": "",
               "legendFormat": "broken",
@@ -5510,7 +5572,7 @@
                 "uid": "prometheus_local"
               },
               "exemplar": false,
-              "expr": "rate(gossipsub_iwant_promise_broken[$__rate_interval])/rate(gossipsub_iwant_promise_sent_total[$__rate_interval])",
+              "expr": "rate(gossipsub_iwant_promise_broken[$rate_interval])/rate(gossipsub_iwant_promise_sent_total[$rate_interval])",
               "hide": false,
               "interval": "",
               "legendFormat": "broken ratio",
@@ -5637,7 +5699,7 @@
                 "uid": "prometheus_local"
               },
               "exemplar": false,
-              "expr": "(\n  sum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=\"+Inf\"}[32m]))\n  -\n  sum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=\"48\"}[32m]))\n)\n/\nsum(rate(gossipsub_iwant_promise_broken[$__rate_interval]))",
+              "expr": "(\n  sum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=\"+Inf\"}[32m]))\n  -\n  sum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=\"48\"}[32m]))\n)\n/\nsum(rate(gossipsub_iwant_promise_broken[$rate_interval]))",
               "hide": false,
               "interval": "",
               "legendFormat": "never / broken ratio",
@@ -5813,7 +5875,7 @@
                 "uid": "prometheus_local"
               },
               "exemplar": false,
-              "expr": "rate(gossipsub_iwant_promise_delivery_seconds_bucket[$__rate_interval]) - 100",
+              "expr": "rate(gossipsub_iwant_promise_delivery_seconds_bucket[$rate_interval]) - 100",
               "format": "heatmap",
               "interval": "",
               "intervalFactor": 10,
@@ -6196,7 +6258,7 @@
                 "uid": "prometheus_local"
               },
               "exemplar": false,
-              "expr": "rate(gossipsub_ihave_rcv_ignored_total[$__rate_interval])",
+              "expr": "rate(gossipsub_ihave_rcv_ignored_total[$rate_interval])",
               "interval": "",
               "legendFormat": "{{reason}}",
               "refId": "A"
@@ -6281,7 +6343,7 @@
                 "uid": "prometheus_local"
               },
               "exemplar": false,
-              "expr": "rate(gossipsub_ihave_rcv_msgids_total[$__rate_interval])",
+              "expr": "rate(gossipsub_ihave_rcv_msgids_total[$rate_interval])",
               "interval": "",
               "legendFormat": "{{topic}}",
               "refId": "A"
@@ -6366,7 +6428,7 @@
                 "uid": "prometheus_local"
               },
               "exemplar": false,
-              "expr": "rate(gossipsub_ihave_rcv_not_seen_msgids_total[$__rate_interval])",
+              "expr": "rate(gossipsub_ihave_rcv_not_seen_msgids_total[$rate_interval])",
               "interval": "",
               "legendFormat": "{{topic}}",
               "refId": "A"
@@ -6451,7 +6513,7 @@
                 "uid": "prometheus_local"
               },
               "exemplar": false,
-              "expr": "rate(gossipsub_ihave_rcv_not_seen_msgids_total[$__rate_interval])\n/\nrate(gossipsub_ihave_rcv_msgids_total[$__rate_interval])",
+              "expr": "rate(gossipsub_ihave_rcv_not_seen_msgids_total[$rate_interval])\n/\nrate(gossipsub_ihave_rcv_msgids_total[$rate_interval])",
               "interval": "",
               "legendFormat": "{{topic}}",
               "refId": "A"
@@ -6536,7 +6598,7 @@
                 "uid": "prometheus_local"
               },
               "exemplar": false,
-              "expr": "rate(gossipsub_iwant_rcv_msgids_total[$__rate_interval])",
+              "expr": "rate(gossipsub_iwant_rcv_msgids_total[$rate_interval])",
               "interval": "",
               "legendFormat": "{{topic}}",
               "refId": "A"
@@ -6668,7 +6730,7 @@
                 "uid": "prometheus_local"
               },
               "exemplar": false,
-              "expr": "rate(gossipsub_iwant_rcv_dont_have_msgids_total[$__rate_interval])",
+              "expr": "rate(gossipsub_iwant_rcv_dont_have_msgids_total[$rate_interval])",
               "hide": false,
               "interval": "",
               "legendFormat": "rate",
@@ -6680,7 +6742,7 @@
                 "uid": "prometheus_local"
               },
               "exemplar": false,
-              "expr": "sum(rate(gossipsub_iwant_rcv_dont_have_msgids_total[$__rate_interval]))\n/\nsum(rate(gossipsub_iwant_rcv_msgids_total[$__rate_interval]))",
+              "expr": "sum(rate(gossipsub_iwant_rcv_dont_have_msgids_total[$rate_interval]))\n/\nsum(rate(gossipsub_iwant_rcv_msgids_total[$rate_interval]))",
               "hide": false,
               "interval": "",
               "legendFormat": "share of received",
@@ -6780,7 +6842,7 @@
                 "uid": "prometheus_local"
               },
               "exemplar": false,
-              "expr": "rate(gossipsub_heartbeat_duration_seconds_sum[$__rate_interval])/rate(gossipsub_heartbeat_duration_seconds_count[$__rate_interval])",
+              "expr": "rate(gossipsub_heartbeat_duration_seconds_sum[$rate_interval])/rate(gossipsub_heartbeat_duration_seconds_count[$rate_interval])",
               "interval": "",
               "legendFormat": "avg",
               "refId": "A"
@@ -6791,7 +6853,7 @@
                 "uid": "prometheus_local"
               },
               "exemplar": false,
-              "expr": "histogram_quantile(0.75, sum(rate(gossipsub_heartbeat_duration_seconds_bucket[$__rate_interval])) by (le))",
+              "expr": "histogram_quantile(0.75, sum(rate(gossipsub_heartbeat_duration_seconds_bucket[$rate_interval])) by (le))",
               "hide": false,
               "interval": "",
               "legendFormat": "75q",
@@ -6803,7 +6865,7 @@
                 "uid": "prometheus_local"
               },
               "exemplar": false,
-              "expr": "histogram_quantile(0.90, sum(rate(gossipsub_heartbeat_duration_seconds_bucket[$__rate_interval])) by (le))",
+              "expr": "histogram_quantile(0.90, sum(rate(gossipsub_heartbeat_duration_seconds_bucket[$rate_interval])) by (le))",
               "hide": false,
               "interval": "",
               "legendFormat": "90q",
@@ -6890,7 +6952,7 @@
                 "uid": "prometheus_local"
               },
               "exemplar": false,
-              "expr": "rate(gossipsub_heartbeat_duration_seconds_count[$__rate_interval])",
+              "expr": "rate(gossipsub_heartbeat_duration_seconds_count[$rate_interval])",
               "interval": "",
               "legendFormat": "runs",
               "refId": "A"
@@ -6901,7 +6963,7 @@
                 "uid": "prometheus_local"
               },
               "exemplar": false,
-              "expr": "rate(gossipsub_heartbeat_skipped[$__rate_interval])",
+              "expr": "rate(gossipsub_heartbeat_skipped[$rate_interval])",
               "hide": false,
               "interval": "",
               "legendFormat": "skips",
@@ -7177,7 +7239,7 @@
                 "uid": "prometheus_local"
               },
               "exemplar": false,
-              "expr": "rate(gossipsub_score_fn_calls_total[$__rate_interval])",
+              "expr": "rate(gossipsub_score_fn_calls_total[$rate_interval])",
               "interval": "",
               "legendFormat": "calls",
               "refId": "A"
@@ -7188,7 +7250,7 @@
                 "uid": "prometheus_local"
               },
               "exemplar": false,
-              "expr": "rate(gossipsub_score_fn_runs_total[$__rate_interval])",
+              "expr": "rate(gossipsub_score_fn_runs_total[$rate_interval])",
               "hide": false,
               "interval": "",
               "legendFormat": "runs",
@@ -7200,7 +7262,7 @@
                 "uid": "prometheus_local"
               },
               "exemplar": false,
-              "expr": "rate(gossipsub_score_fn_runs_total[$__rate_interval])\n/\nrate(gossipsub_score_fn_calls_total[$__rate_interval])",
+              "expr": "rate(gossipsub_score_fn_runs_total[$rate_interval])\n/\nrate(gossipsub_score_fn_calls_total[$rate_interval])",
               "hide": false,
               "interval": "",
               "legendFormat": "runs / calls",
@@ -7287,7 +7349,7 @@
                 "uid": "prometheus_local"
               },
               "exemplar": false,
-              "expr": "rate(gossipsub_score_cache_delta_sum[$__rate_interval])/rate(gossipsub_score_cache_delta_count[$__rate_interval])",
+              "expr": "rate(gossipsub_score_cache_delta_sum[$rate_interval])/rate(gossipsub_score_cache_delta_count[$rate_interval])",
               "interval": "",
               "legendFormat": "avg",
               "refId": "A"
@@ -7298,7 +7360,7 @@
                 "uid": "prometheus_local"
               },
               "exemplar": false,
-              "expr": "histogram_quantile(0.75, sum(rate(gossipsub_score_cache_delta_bucket[$__rate_interval])) by (le))",
+              "expr": "histogram_quantile(0.75, sum(rate(gossipsub_score_cache_delta_bucket[$rate_interval])) by (le))",
               "hide": false,
               "interval": "",
               "legendFormat": "75q",
@@ -7310,7 +7372,7 @@
                 "uid": "prometheus_local"
               },
               "exemplar": false,
-              "expr": "histogram_quantile(0.95, sum(rate(gossipsub_score_cache_delta_bucket[$__rate_interval])) by (le))",
+              "expr": "histogram_quantile(0.95, sum(rate(gossipsub_score_cache_delta_bucket[$rate_interval])) by (le))",
               "hide": false,
               "interval": "",
               "legendFormat": "95q",
@@ -7425,7 +7487,7 @@
                 "uid": "prometheus_local"
               },
               "exemplar": false,
-              "expr": "rate(gossipsub_rpc_recv_bytes_total[$__rate_interval])",
+              "expr": "rate(gossipsub_rpc_recv_bytes_total[$rate_interval])",
               "interval": "",
               "legendFormat": "recv",
               "refId": "A"
@@ -7436,7 +7498,7 @@
                 "uid": "prometheus_local"
               },
               "exemplar": false,
-              "expr": "-rate(gossipsub_rpc_sent_bytes_total[$__rate_interval])",
+              "expr": "-rate(gossipsub_rpc_sent_bytes_total[$rate_interval])",
               "hide": false,
               "interval": "",
               "legendFormat": "sent",
@@ -7522,7 +7584,7 @@
                 "uid": "prometheus_local"
               },
               "exemplar": false,
-              "expr": "rate(gossipsub_rpc_recv_count_total[$__rate_interval])",
+              "expr": "rate(gossipsub_rpc_recv_count_total[$rate_interval])",
               "interval": "",
               "legendFormat": "recv",
               "refId": "A"
@@ -7533,7 +7595,7 @@
                 "uid": "prometheus_local"
               },
               "exemplar": false,
-              "expr": "-rate(gossipsub_rpc_sent_count_total[$__rate_interval])",
+              "expr": "-rate(gossipsub_rpc_sent_count_total[$rate_interval])",
               "hide": false,
               "interval": "",
               "legendFormat": "sent",
@@ -7619,7 +7681,7 @@
                 "uid": "prometheus_local"
               },
               "exemplar": false,
-              "expr": "rate(gossipsub_rpc_recv_subscription_total[$__rate_interval])",
+              "expr": "rate(gossipsub_rpc_recv_subscription_total[$rate_interval])",
               "interval": "",
               "legendFormat": "recv",
               "refId": "A"
@@ -7630,7 +7692,7 @@
                 "uid": "prometheus_local"
               },
               "exemplar": false,
-              "expr": "-rate(gossipsub_rpc_sent_subscription_total[$__rate_interval])",
+              "expr": "-rate(gossipsub_rpc_sent_subscription_total[$rate_interval])",
               "hide": false,
               "interval": "",
               "legendFormat": "sent",
@@ -7716,7 +7778,7 @@
                 "uid": "prometheus_local"
               },
               "exemplar": false,
-              "expr": "rate(gossipsub_rpc_recv_message_total[$__rate_interval])",
+              "expr": "rate(gossipsub_rpc_recv_message_total[$rate_interval])",
               "interval": "",
               "legendFormat": "recv",
               "refId": "A"
@@ -7727,7 +7789,7 @@
                 "uid": "prometheus_local"
               },
               "exemplar": false,
-              "expr": "-rate(gossipsub_rpc_sent_message_total[$__rate_interval])",
+              "expr": "-rate(gossipsub_rpc_sent_message_total[$rate_interval])",
               "hide": false,
               "interval": "",
               "legendFormat": "sent",
@@ -7813,7 +7875,7 @@
                 "uid": "prometheus_local"
               },
               "exemplar": false,
-              "expr": "rate(gossipsub_rpc_recv_control_total[$__rate_interval])",
+              "expr": "rate(gossipsub_rpc_recv_control_total[$rate_interval])",
               "interval": "",
               "legendFormat": "recv",
               "refId": "A"
@@ -7824,7 +7886,7 @@
                 "uid": "prometheus_local"
               },
               "exemplar": false,
-              "expr": "-rate(gossipsub_rpc_sent_control_total[$__rate_interval])",
+              "expr": "-rate(gossipsub_rpc_sent_control_total[$rate_interval])",
               "hide": false,
               "interval": "",
               "legendFormat": "sent",
@@ -7910,7 +7972,7 @@
                 "uid": "prometheus_local"
               },
               "exemplar": false,
-              "expr": "rate(gossipsub_rpc_recv_control_total[$__rate_interval])",
+              "expr": "rate(gossipsub_rpc_recv_control_total[$rate_interval])",
               "interval": "",
               "legendFormat": "recv",
               "refId": "A"
@@ -7921,7 +7983,7 @@
                 "uid": "prometheus_local"
               },
               "exemplar": false,
-              "expr": "-rate(gossipsub_rpc_sent_control_total[$__rate_interval])",
+              "expr": "-rate(gossipsub_rpc_sent_control_total[$rate_interval])",
               "hide": false,
               "interval": "",
               "legendFormat": "sent",
@@ -8007,7 +8069,7 @@
                 "uid": "prometheus_local"
               },
               "exemplar": false,
-              "expr": "rate(gossipsub_rpc_recv_ihave_total[$__rate_interval])",
+              "expr": "rate(gossipsub_rpc_recv_ihave_total[$rate_interval])",
               "interval": "",
               "legendFormat": "recv",
               "refId": "A"
@@ -8018,7 +8080,7 @@
                 "uid": "prometheus_local"
               },
               "exemplar": false,
-              "expr": "-rate(gossipsub_rpc_sent_ihave_total[$__rate_interval])",
+              "expr": "-rate(gossipsub_rpc_sent_ihave_total[$rate_interval])",
               "hide": false,
               "interval": "",
               "legendFormat": "sent",
@@ -8104,7 +8166,7 @@
                 "uid": "prometheus_local"
               },
               "exemplar": false,
-              "expr": "rate(gossipsub_rpc_recv_iwant_total[$__rate_interval])",
+              "expr": "rate(gossipsub_rpc_recv_iwant_total[$rate_interval])",
               "interval": "",
               "legendFormat": "recv",
               "refId": "A"
@@ -8115,7 +8177,7 @@
                 "uid": "prometheus_local"
               },
               "exemplar": false,
-              "expr": "-rate(gossipsub_rpc_sent_iwant_total[$__rate_interval])",
+              "expr": "-rate(gossipsub_rpc_sent_iwant_total[$rate_interval])",
               "hide": false,
               "interval": "",
               "legendFormat": "sent",
@@ -8201,7 +8263,7 @@
                 "uid": "prometheus_local"
               },
               "exemplar": false,
-              "expr": "rate(gossipsub_rpc_recv_graft_total[$__rate_interval])",
+              "expr": "rate(gossipsub_rpc_recv_graft_total[$rate_interval])",
               "interval": "",
               "legendFormat": "recv",
               "refId": "A"
@@ -8212,7 +8274,7 @@
                 "uid": "prometheus_local"
               },
               "exemplar": false,
-              "expr": "-rate(gossipsub_rpc_sent_graft_total[$__rate_interval])",
+              "expr": "-rate(gossipsub_rpc_sent_graft_total[$rate_interval])",
               "hide": false,
               "interval": "",
               "legendFormat": "sent",
@@ -8298,7 +8360,7 @@
                 "uid": "prometheus_local"
               },
               "exemplar": false,
-              "expr": "rate(gossipsub_rpc_recv_prune_total[$__rate_interval])",
+              "expr": "rate(gossipsub_rpc_recv_prune_total[$rate_interval])",
               "interval": "",
               "legendFormat": "recv",
               "refId": "A"
@@ -8309,7 +8371,7 @@
                 "uid": "prometheus_local"
               },
               "exemplar": false,
-              "expr": "-rate(gossipsub_rpc_sent_prune_total[$__rate_interval])",
+              "expr": "-rate(gossipsub_rpc_sent_prune_total[$rate_interval])",
               "hide": false,
               "interval": "",
               "legendFormat": "sent",
@@ -8395,7 +8457,7 @@
                 "uid": "prometheus_local"
               },
               "exemplar": false,
-              "expr": "rate(gossipsub_rpc_recv_message_total[$__rate_interval])\n/\nrate(gossipsub_rpc_recv_count_total[$__rate_interval])",
+              "expr": "rate(gossipsub_rpc_recv_message_total[$rate_interval])\n/\nrate(gossipsub_rpc_recv_count_total[$rate_interval])",
               "interval": "",
               "legendFormat": "recv",
               "refId": "A"
@@ -8406,7 +8468,7 @@
                 "uid": "prometheus_local"
               },
               "exemplar": false,
-              "expr": "- rate(gossipsub_rpc_sent_message_total[$__rate_interval])\n/\nrate(gossipsub_rpc_sent_count_total[$__rate_interval])",
+              "expr": "- rate(gossipsub_rpc_sent_message_total[$rate_interval])\n/\nrate(gossipsub_rpc_sent_count_total[$rate_interval])",
               "hide": false,
               "interval": "",
               "legendFormat": "sent",
@@ -8492,7 +8554,7 @@
                 "uid": "prometheus_local"
               },
               "exemplar": false,
-              "expr": "rate(gossipsub_rpc_recv_control_total[$__rate_interval])\n/\nrate(gossipsub_rpc_recv_count_total[$__rate_interval])",
+              "expr": "rate(gossipsub_rpc_recv_control_total[$rate_interval])\n/\nrate(gossipsub_rpc_recv_count_total[$rate_interval])",
               "interval": "",
               "legendFormat": "recv",
               "refId": "A"
@@ -8503,7 +8565,7 @@
                 "uid": "prometheus_local"
               },
               "exemplar": false,
-              "expr": "- rate(gossipsub_rpc_sent_control_total[$__rate_interval])\n/\nrate(gossipsub_rpc_sent_count_total[$__rate_interval])",
+              "expr": "- rate(gossipsub_rpc_sent_control_total[$rate_interval])\n/\nrate(gossipsub_rpc_sent_count_total[$rate_interval])",
               "hide": false,
               "interval": "",
               "legendFormat": "sent",
@@ -8521,9 +8583,103 @@
   "refresh": "30s",
   "schemaVersion": 35,
   "style": "dark",
-  "tags": [],
+  "tags": ["lodestar", "debug"],
   "templating": {
     "list": [
+      {
+        "current": {
+          "selected": false,
+          "text": "default",
+          "value": "default"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "label": "datasource",
+        "multi": false,
+        "name": "DS_PROMETHEUS",
+        "options": [],
+        "query": "prometheus",
+        "queryValue": "",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
+      },
+      {
+        "auto": true,
+        "auto_count": 30,
+        "auto_min": "10s",
+        "current": {
+          "selected": true,
+          "text": "6h",
+          "value": "6h"
+        },
+        "hide": 0,
+        "label": "rate() interval",
+        "name": "rate_interval",
+        "options": [
+          {
+            "selected": false,
+            "text": "auto",
+            "value": "$__auto_interval_rate_interval"
+          },
+          {
+            "selected": false,
+            "text": "1m",
+            "value": "1m"
+          },
+          {
+            "selected": false,
+            "text": "10m",
+            "value": "10m"
+          },
+          {
+            "selected": false,
+            "text": "30m",
+            "value": "30m"
+          },
+          {
+            "selected": false,
+            "text": "1h",
+            "value": "1h"
+          },
+          {
+            "selected": true,
+            "text": "6h",
+            "value": "6h"
+          },
+          {
+            "selected": false,
+            "text": "12h",
+            "value": "12h"
+          },
+          {
+            "selected": false,
+            "text": "1d",
+            "value": "1d"
+          },
+          {
+            "selected": false,
+            "text": "7d",
+            "value": "7d"
+          },
+          {
+            "selected": false,
+            "text": "14d",
+            "value": "14d"
+          },
+          {
+            "selected": false,
+            "text": "30d",
+            "value": "30d"
+          }
+        ],
+        "query": "1m,10m,30m,1h,6h,12h,1d,7d,14d,30d",
+        "queryValue": "",
+        "refresh": 2,
+        "skipUrlSync": false,
+        "type": "interval"
+      },
       {
         "datasource": {
           "type": "prometheus",
@@ -8534,7 +8690,7 @@
             "condition": "",
             "key": "instance",
             "operator": "=",
-            "value": "contabo-10"
+            "value": "unstable-lg1k-hzax41"
           }
         ],
         "hide": 0,

@@ -252,6 +252,9 @@ export const forkChoiceTest: TestRunnerFn<ForkChoiceTestCase, void> = (fork) => 
       timeout: 10000,
       // eslint-disable-next-line @typescript-eslint/no-empty-function
       expectFunc: () => {},
+      shouldSkip: (_testCase, name, _index) => {
+        return name.includes("discard_equivocations");
+      },
     },
   };
 };

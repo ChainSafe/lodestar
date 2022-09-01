@@ -1,3 +1,4 @@
+import {setMaxListeners} from "node:events";
 import LibP2p from "libp2p";
 import {Registry} from "prom-client";
 
@@ -118,6 +119,9 @@ export class BeaconNode {
     metricsRegistries = [],
   }: IBeaconNodeInitModules): Promise<T> {
     const controller = new AbortController();
+    // We set infinity to prevent MaxListenersExceededWarning which get logged when listeners > 10
+    // Since it is perfectly fine to have listeners > 10
+    setMaxListeners(Infinity, controller.signal);
     const signal = controller.signal;
 
     // start db if not already started

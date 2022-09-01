@@ -39,7 +39,7 @@ describe("BlockDutiesService", function () {
       dependentRoot: ZERO_HASH,
       data: [{slot: slot, validatorIndex: 0, pubkey: pubkeys[0]}],
     };
-    api.validator.getProposerDuties.resolves(duties);
+    api.validator.getProposerDuties.resolves({...duties, executionOptimistic: false});
 
     const notifyBlockProductionFn = sinon.stub(); // Returns void
 
@@ -82,11 +82,11 @@ describe("BlockDutiesService", function () {
     const dutiesService = new BlockDutiesService(loggerVc, api, clock, validatorStore, null, notifyBlockProductionFn);
 
     // Trigger clock onSlot for slot 0
-    api.validator.getProposerDuties.resolves(dutiesBeforeReorg);
+    api.validator.getProposerDuties.resolves({...dutiesBeforeReorg, executionOptimistic: false});
     await clock.tickSlotFns(0, controller.signal);
 
     // Trigger clock onSlot for slot 1 - Return different duties for slot 1
-    api.validator.getProposerDuties.resolves(dutiesAfterReorg);
+    api.validator.getProposerDuties.resolves({...dutiesAfterReorg, executionOptimistic: false});
     await clock.tickSlotFns(1, controller.signal);
 
     // Should persist the dutiesAfterReorg
@@ -129,7 +129,7 @@ describe("BlockDutiesService", function () {
         {slot: 33, validatorIndex: 2, pubkey: pubkeys[2]},
       ],
     };
-    api.validator.getProposerDuties.resolves(duties);
+    api.validator.getProposerDuties.resolves({...duties, executionOptimistic: false});
 
     const notifyBlockProductionFn = sinon.stub(); // Returns void
 

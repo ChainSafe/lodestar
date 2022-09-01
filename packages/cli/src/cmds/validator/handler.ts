@@ -20,18 +20,19 @@ import {KeymanagerRestApiServer} from "./keymanager/server.js";
  * Runs a validator client.
  */
 export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): Promise<void> {
+  const {config, network} = getBeaconConfigFromArgs(args);
+
   const graffiti = args.graffiti || getDefaultGraffiti();
-  const defaultFeeRecipient = parseFeeRecipient(args.defaultFeeRecipient ?? defaultOptions.defaultFeeRecipient);
+  const suggestedFeeRecipient = parseFeeRecipient(args.suggestedFeeRecipient ?? defaultOptions.defaultFeeRecipient);
   const doppelgangerProtectionEnabled = args.doppelgangerProtectionEnabled;
 
-  const validatorPaths = getValidatorPaths(args);
-  const beaconPaths = getBeaconPaths(args);
-  const config = getBeaconConfigFromArgs(args);
+  const beaconPaths = getBeaconPaths(args, network);
+  const validatorPaths = getValidatorPaths(args, network);
 
   const logger = getCliLogger(args, beaconPaths, config);
 
   const {version, commit} = getVersionData();
-  logger.info("Lodestar", {network: args.network, version, commit});
+  logger.info("Lodestar", {network, version, commit});
 
   const dbPath = validatorPaths.validatorsDbDir;
   mkdir(dbPath);
@@ -53,11 +54,11 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
    *
    * Note: local signers are already locked once returned from this function.
    */
-  const signers = await getSignersFromArgs(args);
+  const signers = await getSignersFromArgs(args, network);
 
   // Ensure the validator has at least one key
   if (signers.length === 0) {
-    if (args["keymanager.enabled"]) {
+    if (args["keymanager"]) {
       logger.warn("No signers found with current args, expecting to be added via keymanager");
     } else {
       throw new YargsError("No signers found with current args");
@@ -79,9 +80,8 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
   // Create metrics registry if metrics are enabled
   // Send version and network data for static registries
 
-  const register = args["metrics.enabled"] ? new RegistryMetricCreator() : null;
-  const metrics =
-    register && getMetrics((register as unknown) as MetricsRegister, {version, commit, network: args.network});
+  const register = args["metrics"] ? new RegistryMetricCreator() : null;
+  const metrics = register && getMetrics((register as unknown) as MetricsRegister, {version, commit, network});
 
   // Start metrics server if metrics are enabled.
   // Collect NodeJS metrics defined in the Lodestar repo
@@ -97,7 +97,7 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
     await metricsServer.start();
   }
 
-  const builder = args["builder.enabled"] ? {enabled: true} : {};
+  const builder = args["builder"] ? {enabled: true} : {};
 
   // This promise resolves once genesis is available.
   // It will wait for genesis, so this promise can be potentially very long
@@ -113,7 +113,7 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
       graffiti,
       doppelgangerProtectionEnabled,
       afterBlockDelaySlotFraction: args.afterBlockDelaySlotFraction,
-      defaultFeeRecipient,
+      defaultFeeRecipient: suggestedFeeRecipient,
       builder,
     },
     controller.signal,
@@ -124,8 +124,8 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
 
   // Start keymanager API backend
   // Only if keymanagerEnabled flag is set to true
-  if (args["keymanager.enabled"]) {
-    const accountPaths = getAccountPaths(args);
+  if (args["keymanager"]) {
+    const accountPaths = getAccountPaths(args, network);
     const keymanagerApi = new KeymanagerApi(validator, new PersistedKeysBackend(accountPaths));
 
     const keymanagerServer = new KeymanagerRestApiServer(

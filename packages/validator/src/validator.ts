@@ -121,6 +121,10 @@ export class Validator {
     }
 
     const emitter = new ValidatorEventEmitter();
+    // Validator event emitter can have more than 10 listeners in a normal course of operation
+    // We set infinity to prevent MaxListenersExceededWarning which get logged when listeners > 10
+    emitter.setMaxListeners(Infinity);
+
     const chainHeaderTracker = new ChainHeaderTracker(logger, api, emitter);
 
     this.blockProposingService = new BlockProposingService(config, loggerVc, api, clock, validatorStore, metrics, {
@@ -206,7 +210,6 @@ export class Validator {
   }
 
   removeDutiesForKey(pubkey: PubkeyHex): void {
-    this.validatorStore.removeSigner(pubkey);
     this.blockProposingService.removeDutiesForKey(pubkey);
     this.attestationService.removeDutiesForKey(pubkey);
     this.syncCommitteeService.removeDutiesForKey(pubkey);

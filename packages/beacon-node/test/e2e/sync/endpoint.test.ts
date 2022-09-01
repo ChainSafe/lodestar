@@ -2,7 +2,7 @@ import chaiAsPromised from "chai-as-promised";
 import chai, {expect} from "chai";
 import {createIBeaconConfig, IChainConfig} from "@lodestar/config";
 import {chainConfig as chainConfigDef} from "@lodestar/config/default";
-import {getClient} from "@lodestar/api";
+import {getClient, routes} from "@lodestar/api";
 import {getDevBeaconNode} from "../../utils/node/beacon.js";
 import {LogLevel, testLogger, TestLoggerOpts} from "../../utils/logger.js";
 
@@ -50,10 +50,15 @@ describe("lodestar / sync", function () {
 
       const client = getClient({baseUrl: "http://127.0.0.1:9596"}, {config}).node;
 
+      const expectedSyncStatus: routes.node.SyncingStatus = {
+        headSlot: "0",
+        syncDistance: "0",
+        isSyncing: false,
+        isOptimistic: false,
+      };
+
       // expect headSlot and syncDistance to be string
-      await expect(client.getSyncingStatus()).to.eventually.be.deep.equal({
-        data: {headSlot: "0", syncDistance: "0", isSyncing: false},
-      });
+      await expect(client.getSyncingStatus()).to.eventually.be.deep.equal({data: expectedSyncStatus});
     });
   });
 });

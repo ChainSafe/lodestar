@@ -8,8 +8,8 @@ export const lightclient: ICliCommand<ILightClientArgs, IGlobalArgs> = {
   describe: "Run lightclient",
   examples: [
     {
-      command: "lightclient --network prater",
-      description: "Run lightclient with prater network",
+      command: "lightclient --network goerli",
+      description: "Run lightclient with goerli network",
     },
   ],
   options: lightclientOptions,

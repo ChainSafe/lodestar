@@ -22,16 +22,25 @@ export type ApiPayloadAttributes = {
 type FcuAttributes = {headBlockHash: DATA; finalizedBlockHash: DATA} & ApiPayloadAttributes;
 
 export class PayloadIdCache {
-  private readonly payloadIdByFcuAttributes = new Map<string, PayloadId>();
+  private readonly payloadIdByFcuAttributes = new Map<string, {payloadId: PayloadId; fullKey: string}>();
   constructor(private readonly metrics?: IMetrics | null) {}
 
-  getKey({headBlockHash, finalizedBlockHash, timestamp, prevRandao, suggestedFeeRecipient}: FcuAttributes): string {
+  getFullKey({headBlockHash, finalizedBlockHash, timestamp, prevRandao, suggestedFeeRecipient}: FcuAttributes): string {
     return `${headBlockHash}-${finalizedBlockHash}-${timestamp}-${prevRandao}-${suggestedFeeRecipient}`;
+  }
+  getKey({timestamp}: Pick<FcuAttributes, "timestamp">): string {
+    return timestamp;
+  }
+
+  hasPayload(fcuAttributes: Pick<FcuAttributes, "timestamp">): boolean {
+    const key = this.getKey(fcuAttributes);
+    return this.payloadIdByFcuAttributes.get(key) !== undefined;
   }
 
   add(fcuAttributes: FcuAttributes, payloadId: PayloadId): void {
     const key = this.getKey(fcuAttributes);
-    this.payloadIdByFcuAttributes.set(key, payloadId);
+    const fullKey = this.getFullKey(fcuAttributes);
+    this.payloadIdByFcuAttributes.set(key, {payloadId, fullKey});
   }
 
   prune(): void {
@@ -41,6 +50,8 @@ export class PayloadIdCache {
 
   get(fcuAttributes: FcuAttributes): PayloadId | undefined {
     const key = this.getKey(fcuAttributes);
-    return this.payloadIdByFcuAttributes.get(key);
+    const fullKey = this.getFullKey(fcuAttributes);
+    const payloadInfo = this.payloadIdByFcuAttributes.get(key);
+    return payloadInfo?.fullKey === fullKey ? payloadInfo.payloadId : undefined;
   }
 }

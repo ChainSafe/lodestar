@@ -2,26 +2,24 @@ import fs from "node:fs";
 import got from "got";
 import {SLOTS_PER_EPOCH, ForkName} from "@lodestar/params";
 import {getClient} from "@lodestar/api";
-import {IBeaconNodeOptions, getStateTypeFromBytes} from "@lodestar/beacon-node";
+import {getStateTypeFromBytes} from "@lodestar/beacon-node";
 import {IChainConfig, IChainForkConfig} from "@lodestar/config";
 import {Checkpoint} from "@lodestar/types/phase0";
-import {RecursivePartial, fromHex, callFnWhenAwait, ILogger} from "@lodestar/utils";
+import {fromHex, callFnWhenAwait, ILogger} from "@lodestar/utils";
 import {BeaconStateAllForks} from "@lodestar/state-transition";
+import {parseBootnodesFile} from "../util/format.js";
 import * as mainnet from "./mainnet.js";
 import * as dev from "./dev.js";
 import * as gnosis from "./gnosis.js";
-import * as prater from "./prater.js";
-import * as kiln from "./kiln.js";
+import * as goerli from "./goerli.js";
 import * as ropsten from "./ropsten.js";
 import * as sepolia from "./sepolia.js";
 
-export type NetworkName = "mainnet" | "dev" | "gnosis" | "prater" | "goerli" | "kiln" | "ropsten" | "sepolia";
+export type NetworkName = "mainnet" | "dev" | "gnosis" | "goerli" | "ropsten" | "sepolia";
 export const networkNames: NetworkName[] = [
   "mainnet",
   "gnosis",
-  "prater",
   "goerli",
-  "kiln",
   "ropsten",
   "sepolia",
 
@@ -37,7 +35,7 @@ export type WeakSubjectivityFetchOptions = {
 // log to screen every 30s when downloading state from a lodestar node
 const GET_STATE_LOG_INTERVAL = 30 * 1000;
 
-function getNetworkData(
+export function getNetworkData(
   network: NetworkName
 ): {
   chainConfig: IChainConfig;
@@ -53,11 +51,8 @@ function getNetworkData(
       return dev;
     case "gnosis":
       return gnosis;
-    case "prater":
     case "goerli":
-      return prater;
-    case "kiln":
-      return kiln;
+      return goerli;
     case "ropsten":
       return ropsten;
     case "sepolia":
@@ -69,21 +64,6 @@ function getNetworkData(
 
 export function getNetworkBeaconParams(network: NetworkName): IChainConfig {
   return getNetworkData(network).chainConfig;
-}
-
-export function getNetworkBeaconNodeOptions(network: NetworkName): RecursivePartial<IBeaconNodeOptions> {
-  const {depositContractDeployBlock, bootEnrs} = getNetworkData(network);
-  return {
-    eth1: {
-      depositContractDeployBlock,
-    },
-    network: {
-      discv5: {
-        enabled: true,
-        bootEnrs,
-      },
-    },
-  };
 }
 
 /**
@@ -104,14 +84,24 @@ export async function fetchBootnodes(network: NetworkName): Promise<string[]> {
   }
 
   const bootnodesFile = await got.get(bootnodesFileUrl).text();
+  return parseBootnodesFile(bootnodesFile);
+}
 
-  const enrs: string[] = [];
-  for (const line of bootnodesFile.trim().split(/\r?\n/)) {
-    // File may contain a row with '### Ethereum Node Records'
-    // File may be YAML, with `- enr:-KG4QOWkRj`
-    if (line.includes("enr:")) enrs.push("enr:" + line.split("enr:")[1]);
+export async function getNetworkBootnodes(network: NetworkName): Promise<string[]> {
+  const bootnodes = [...getNetworkData(network).bootEnrs];
+
+  // Hidden option for testing
+  if (!process.env.SKIP_FETCH_NETWORK_BOOTNODES) {
+    try {
+      const bootEnrs = await fetchBootnodes(network);
+      bootnodes.push(...bootEnrs);
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error(`Error fetching latest bootnodes: ${(e as Error).stack}`);
+    }
   }
-  return enrs;
+
+  return bootnodes;
 }
 
 /**
@@ -130,56 +120,18 @@ export function readBootnodes(bootnodesFilePath: string): string[] {
 }
 
 /**
- * Parses a file to get a list of bootnodes for a network.
- * Bootnodes file is expected to contain bootnode ENR's concatenated by newlines, or commas for
- * parsing plaintext, YAML, JSON and/or env files.
- */
-export function parseBootnodesFile(bootnodesFile: string): string[] {
-  const enrs = [];
-  for (const line of bootnodesFile.trim().split(/\r?\n/)) {
-    for (const entry of line.split(",")) {
-      const sanitizedEntry = entry.replace(/['",[\]{}.]+/g, "").trim();
-
-      if (sanitizedEntry.includes("enr:-")) {
-        const parsedEnr = `enr:-${sanitizedEntry.split("enr:-")[1]}`;
-        enrs.push(parsedEnr);
-      }
-    }
-  }
-  return enrs;
-}
-
-/**
- * Parses a file to get a list of bootnodes for a network if given a valid path,
- * and returns the bootnodes in an "injectable" network options format.
- */
-export function getInjectableBootEnrs(bootnodesFilepath: string): RecursivePartial<IBeaconNodeOptions> {
-  const bootEnrs = readBootnodes(bootnodesFilepath);
-  const injectableBootEnrs = enrsToNetworkConfig(bootEnrs);
-
-  return injectableBootEnrs;
-}
-
-/**
- * Given an array of bootnodes, returns them in an injectable format
- */
-export function enrsToNetworkConfig(enrs: string[]): RecursivePartial<IBeaconNodeOptions> {
-  return {network: {discv5: {bootEnrs: enrs}}};
-}
-
-/**
  * Fetch weak subjectivity state from a remote beacon node
  */
 export async function fetchWeakSubjectivityState(
   config: IChainForkConfig,
   logger: ILogger,
-  {weakSubjectivityServerUrl, weakSubjectivityCheckpoint}: WeakSubjectivityFetchOptions
+  {checkpointSyncUrl, wssCheckpoint}: {checkpointSyncUrl: string; wssCheckpoint?: string}
 ): Promise<{wsState: BeaconStateAllForks; wsCheckpoint: Checkpoint}> {
   try {
     let wsCheckpoint;
-    const api = getClient({baseUrl: weakSubjectivityServerUrl}, {config});
-    if (weakSubjectivityCheckpoint) {
-      wsCheckpoint = getCheckpointFromArg(weakSubjectivityCheckpoint);
+    const api = getClient({baseUrl: checkpointSyncUrl}, {config});
+    if (wssCheckpoint) {
+      wsCheckpoint = getCheckpointFromArg(wssCheckpoint);
     } else {
       const {
         data: {finalized},
@@ -202,11 +154,7 @@ export async function fetchWeakSubjectivityState(
 
     return {wsState: getStateTypeFromBytes(config, stateBytes).deserializeToViewDU(stateBytes), wsCheckpoint};
   } catch (e) {
-    throw new Error(
-      "Unable to fetch weak subjectivity state: " +
-        (e as Error).message +
-        ". Consider downloading a state manually and using the --weakSubjectivityStateFile option."
-    );
+    throw new Error("Unable to fetch weak subjectivity state: " + (e as Error).message);
   }
 }
 

@@ -4,7 +4,7 @@ import {IBeaconConfig} from "@lodestar/config";
 import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
 import {ILogger} from "@lodestar/utils";
 
-import {IForkChoice} from "@lodestar/fork-choice";
+import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {IEth1ForBlockProduction} from "../eth1/index.js";
 import {IExecutionEngine, IExecutionBuilder} from "../execution/index.js";
 import {IBeaconClock} from "./clock/interface.js";
@@ -113,6 +113,8 @@ export interface IBeaconChain {
 
   getStatus(): phase0.Status;
 
+  recomputeForkChoiceHead(): ProtoBlock;
+
   waitForBlockOfAttestation(slot: Slot, root: RootHex): Promise<boolean>;
 
   updateBeaconProposerData(epoch: Epoch, proposers: ProposerPreparationData[]): Promise<void>;
@@ -120,6 +122,7 @@ export interface IBeaconChain {
   persistInvalidSszValue<T>(type: Type<T>, sszObject: T | Uint8Array, suffix?: string): void;
   /** Persist bad items to persistInvalidSszObjectsDir dir, for example invalid state, attestations etc. */
   persistInvalidSszView(view: TreeView<CompositeTypeAny>, suffix?: string): void;
+  updateBuilderStatus(clockSlot: Slot): void;
 }
 
 export type SSZObjectType =

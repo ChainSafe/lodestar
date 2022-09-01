@@ -11,5 +11,10 @@ export interface IForkDigestContext {
 }
 
 export interface ICachedGenesis extends IForkDigestContext {
-  getDomain(domainType: DomainType, slot: Slot): Uint8Array;
+  /**
+   * Return the signature domain (fork version concatenated with domain type) of a message.
+   *
+   * Note: The configured fork schedule is always used rather than on-chain fork schedule.
+   */
+  getDomain(stateSlot: Slot, domainType: DomainType, messageSlot?: Slot): Uint8Array;
 }

@@ -93,7 +93,7 @@ export function getAttestationValidData(
   };
 
   const slot = computeStartSlotAtEpoch(attestationData.target.epoch);
-  const domain = state.config.getDomain(DOMAIN_BEACON_ATTESTER, slot);
+  const domain = state.config.getDomain(state.slot, DOMAIN_BEACON_ATTESTER, slot);
   const signingRoot = computeSigningRoot(ssz.phase0.AttestationData, attestationData, domain);
   const sk = getSecretKeyFromIndexCached(validatorIndex);
 

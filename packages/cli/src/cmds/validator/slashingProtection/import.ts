@@ -26,7 +26,7 @@ export const importCmd: ICliCommand<
 
   examples: [
     {
-      command: "validator slashing-protection import --network prater --file interchange.json",
+      command: "validator slashing-protection import --network goerli --file interchange.json",
       description: "Import an interchange file to the slashing protection DB",
     },
   ],
@@ -40,20 +40,27 @@ export const importCmd: ICliCommand<
   },
 
   handler: async (args) => {
-    const beaconPaths = getBeaconPaths(args);
-    const config = getBeaconConfigFromArgs(args);
+    const {config, network} = getBeaconConfigFromArgs(args);
+    const beaconPaths = getBeaconPaths(args, network);
     const logger = getCliLogger(args, beaconPaths, config);
 
-    const {validatorsDbDir: dbPath} = getValidatorPaths(args);
+    const {validatorsDbDir: dbPath} = getValidatorPaths(args, network);
 
     logger.info("Importing the slashing protection logs", {dbPath});
-    const genesisValidatorsRoot = await getGenesisValidatorsRoot(args);
-    const slashingProtection = getSlashingProtection(args);
+
+    const {slashingProtection, metadata} = getSlashingProtection(args, network);
+
+    // Fetch genesisValidatorsRoot from:
+    // - existing cached in validator DB
+    // - known genesis data from existing network
+    // - else fetch from beacon node
+    const genesisValidatorsRoot = (await metadata.getGenesisValidatorsRoot()) ?? (await getGenesisValidatorsRoot(args));
 
     logger.verbose("Reading the slashing protection logs", {file: args.file});
-    const importFile = await fs.promises.readFile(args.file, "utf8");
-    const importFileJson = JSON.parse(importFile) as Interchange;
-    await slashingProtection.importInterchange(importFileJson, genesisValidatorsRoot, logger);
+    const interchangeStr = await fs.promises.readFile(args.file, "utf8");
+    const interchangeJson = JSON.parse(interchangeStr) as Interchange;
+
+    await slashingProtection.importInterchange(interchangeJson, genesisValidatorsRoot, logger);
     logger.info("Import completed successfully");
   },
 };

@@ -3,7 +3,8 @@ import {getGlobalPaths} from "../../../src/paths/global.js";
 
 describe("paths / global", () => {
   process.env.XDG_DATA_HOME = "/my-root-dir";
-  const defaultRootDir = "/my-root-dir/lodestar/mainnet";
+  const network = "mainnet";
+  const defaultDataDir = `/my-root-dir/lodestar/${network}`;
 
   const testCases: {
     id: string;
@@ -14,47 +15,28 @@ describe("paths / global", () => {
       id: "Default paths",
       args: {},
       globalPaths: {
-        rootDir: defaultRootDir,
-        paramsFile: undefined,
+        dataDir: defaultDataDir,
       },
     },
     {
       id: "Network paths",
-      args: {network: "prater"},
+      args: {network: "goerli"},
       globalPaths: {
-        rootDir: "/my-root-dir/lodestar/prater",
-        paramsFile: undefined,
+        dataDir: "/my-root-dir/lodestar/goerli",
       },
     },
     {
-      id: "Custom rootDir",
-      args: {rootDir: "./attack-network"},
+      id: "Custom dataDir",
+      args: {dataDir: "./attack-network"},
       globalPaths: {
-        rootDir: "./attack-network",
-        paramsFile: undefined,
-      },
-    },
-    {
-      id: "Custom paramsFile",
-      args: {paramsFile: "/tmp/custom-config.yaml"},
-      globalPaths: {
-        rootDir: defaultRootDir,
-        paramsFile: "/tmp/custom-config.yaml",
-      },
-    },
-    {
-      id: "Custom relative paramsFile",
-      args: {paramsFile: "custom-config.yaml"},
-      globalPaths: {
-        rootDir: defaultRootDir,
-        paramsFile: "custom-config.yaml",
+        dataDir: "./attack-network",
       },
     },
   ];
 
   for (const {id, args, globalPaths} of testCases) {
     it(id, () => {
-      expect(getGlobalPaths(args)).to.deep.equal(globalPaths);
+      expect(getGlobalPaths(args, args.network ?? network)).to.deep.equal(globalPaths);
     });
   }
 });

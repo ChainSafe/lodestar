@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import {Keystore} from "@chainsafe/bls-keystore";
 import {YargsError, ICliCommand, getPubkeyHexFromKeystore} from "../../util/index.js";
+import {getBeaconConfigFromArgs} from "../../config/beaconParams.js";
 import {IGlobalArgs} from "../../options/index.js";
 import {validatorOptions, IValidatorCliArgs} from "./options.js";
 import {getAccountPaths} from "./paths.js";
@@ -20,38 +21,40 @@ Ethereum Foundation utility.",
 
   examples: [
     {
-      command: "validator import --network prater --keystores $HOME/eth2.0-deposit-cli/validator_keys",
+      command: "validator import --network goerli --keystores $HOME/eth2.0-deposit-cli/validator_keys",
       description: "Import validator keystores generated with the Ethereum Foundation Staking Launchpad",
     },
   ],
 
-  // Note: re-uses `--importKeystoresPath` and `--importKeystoresPassword` from root validator command options
+  // Note: re-uses `--importKeystores` and `--importKeystoresPassword` from root validator command options
 
   options: {
     ...validatorOptions,
 
-    importKeystoresPath: {
-      ...validatorOptions.importKeystoresPath,
+    importKeystores: {
+      ...validatorOptions.importKeystores,
       requiresArg: true,
     },
   },
 
   handler: async (args) => {
-    // This command takes: importKeystoresPath, importKeystoresPassword
+    const {network} = getBeaconConfigFromArgs(args);
+
+    // This command takes: importKeystores, importKeystoresPassword
     //
-    // - recursively finds keystores in importKeystoresPath
+    // - recursively finds keystores in importKeystores
     // - validates keystores can decrypt
     // - writes them in persisted form - do not lock
 
-    if (!args.importKeystoresPath) {
-      throw new YargsError("Must set importKeystoresPath");
+    if (!args.importKeystores) {
+      throw new YargsError("Must set importKeystores");
     }
 
     // Collect same password for all keystores
     // If importKeystoresPassword is not provided, interactive prompt for it
 
     const keystoreDefinitions = importKeystoreDefinitionsFromExternalDir({
-      keystoresPath: args.importKeystoresPath,
+      keystoresPath: args.importKeystores,
       password: await readPassphraseOrPrompt(args),
     });
 
@@ -65,7 +68,7 @@ Ethereum Foundation utility.",
         .join("\n")}`
     );
 
-    const accountPaths = getAccountPaths(args);
+    const accountPaths = getAccountPaths(args, network);
     const persistedKeystoresBackend = new PersistedKeysBackend(accountPaths);
     let importedCount = 0;
 

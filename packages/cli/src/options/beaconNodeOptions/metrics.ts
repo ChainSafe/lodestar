@@ -2,21 +2,21 @@ import {defaultOptions, IBeaconNodeOptions} from "@lodestar/beacon-node";
 import {ICliCommandOptions} from "../../util/index.js";
 
 export interface IMetricsArgs {
-  "metrics.enabled": boolean;
+  metrics: boolean;
   "metrics.port": number;
   "metrics.address": string;
 }
 
 export function parseArgs(args: IMetricsArgs): IBeaconNodeOptions["metrics"] {
   return {
-    enabled: args["metrics.enabled"],
+    enabled: args["metrics"],
     port: args["metrics.port"],
     address: args["metrics.address"],
   };
 }
 
 export const options: ICliCommandOptions<IMetricsArgs> = {
-  "metrics.enabled": {
+  metrics: {
     type: "boolean",
     description: "Enable the Prometheus metrics HTTP server",
     defaultDescription: String(defaultOptions.metrics.enabled),
@@ -25,7 +25,6 @@ export const options: ICliCommandOptions<IMetricsArgs> = {
 
   "metrics.port": {
     type: "number",
-    alias: ["metrics.serverPort"], // For backwards compatibility
     description: "Listen TCP port for the Prometheus metrics HTTP server",
     defaultDescription: String(defaultOptions.metrics.port),
     group: "metrics",
@@ -33,7 +32,6 @@ export const options: ICliCommandOptions<IMetricsArgs> = {
 
   "metrics.address": {
     type: "string",
-    alias: ["metrics.listenAddr"], // For backwards compatibility
     description: "Listen address for the Prometheus metrics HTTP server",
     defaultDescription: String(defaultOptions.metrics.address),
     group: "metrics",

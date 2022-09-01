@@ -15,9 +15,7 @@ Typescript REST client for the [Ethereum Consensus API spec](https://github.com/
 import {getClient} from "@lodestar/api";
 import {config} from "@lodestar/config/default";
 
-const api = getClient({
-  baseUrl: "http://localhost:9596",
-}, {config});
+const api = getClient({baseUrl: "http://localhost:9596"}, {config});
 
 api.beacon
   .getStateValidator(
@@ -40,7 +38,6 @@ You will need to go over the [specification](https://github.com/ethereum/beacon-
 
 - Follow the [installation guide](https://chainsafe.github.io/lodestar/) to install Lodestar.
 - Quickly try out the whole stack by [starting a local testnet](https://chainsafe.github.io/lodestar/usage/local).
-- View the [typedoc code docs](https://chainsafe.github.io/lodestar/packages).
 
 ## Contributors
 

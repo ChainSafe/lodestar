@@ -3,8 +3,8 @@ import {ICliCommandOptions, readFile} from "../util/index.js";
 import {paramsOptions, IParamsArgs} from "./paramsOptions.js";
 
 interface IGlobalSingleArgs {
-  rootDir: string;
-  network: NetworkName;
+  dataDir: string;
+  network?: NetworkName;
   paramsFile: string;
   preset: string;
 }
@@ -12,15 +12,15 @@ interface IGlobalSingleArgs {
 export const defaultNetwork: NetworkName = "mainnet";
 
 const globalSingleOptions: ICliCommandOptions<IGlobalSingleArgs> = {
-  rootDir: {
-    description: "Lodestar root directory",
+  dataDir: {
+    description: "Lodestar root data directory",
     type: "string",
   },
 
   network: {
     description: "Name of the Ethereum Consensus chain network to join",
     type: "string",
-    default: defaultNetwork,
+    defaultDescription: defaultNetwork,
     choices: networkNames,
   },
 

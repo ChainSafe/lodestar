@@ -3,13 +3,13 @@ import {chainConfigToJson, IChainConfig} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
 import {networksChainConfig} from "@lodestar/config/networks";
 import {assertEqualParams, NotEqualParamsError} from "../../../src/util/params.js";
-import {lightHouseKilnConfig, prysmKilnConfig, tekuKilnConfig, nimbusKilnConfig} from "./interopConfigs.js";
+import {lightHouseRopstenConfig, prysmRopstenConfig, tekuRopstenConfig, nimbusRopstenConfig} from "./interopConfigs.js";
 
 const testCases: {name: string; items: [IChainConfig, Record<string, string>]}[] = [
-  {name: "lighthouse", items: [networksChainConfig.kiln, lightHouseKilnConfig]},
-  {name: "prysm", items: [networksChainConfig.kiln, prysmKilnConfig]},
-  {name: "teku", items: [networksChainConfig.kiln, tekuKilnConfig]},
-  {name: "nimbus", items: [networksChainConfig.kiln, nimbusKilnConfig]},
+  {name: "lighthouse", items: [networksChainConfig.ropsten, lightHouseRopstenConfig]},
+  {name: "prysm", items: [networksChainConfig.ropsten, prysmRopstenConfig]},
+  {name: "teku", items: [networksChainConfig.ropsten, tekuRopstenConfig]},
+  {name: "nimbus", items: [networksChainConfig.ropsten, nimbusRopstenConfig]},
 ];
 
 describe("utils / params / assertEqualParams", () => {
@@ -35,7 +35,7 @@ describe("utils / params / assertEqualParams", () => {
   });
 
   for (const {name, items} of testCases) {
-    it(`${name} kiln == lodestar kiln`, () => {
+    it(`${name} ropsten == lodestar ropsten`, () => {
       assertEqualParams(items[0], items[1]);
     });
   }

@@ -35,6 +35,8 @@ export enum EventType {
   finalizedCheckpoint = "finalized_checkpoint",
   /** The node has reorganized its chain */
   chainReorg = "chain_reorg",
+  /** The node has received a valid sync committee SignedContributionAndProof (from P2P or API) */
+  contributionAndProof = "contribution_and_proof",
   /** New or better optimistic header update available */
   lightclientOptimisticUpdate = "light_client_optimistic_update",
   /** New or better finalized update available */
@@ -49,11 +51,21 @@ export type EventData = {
     epochTransition: boolean;
     previousDutyDependentRoot: RootHex;
     currentDutyDependentRoot: RootHex;
+    executionOptimistic: boolean;
   };
-  [EventType.block]: {slot: Slot; block: RootHex};
+  [EventType.block]: {
+    slot: Slot;
+    block: RootHex;
+    executionOptimistic: boolean;
+  };
   [EventType.attestation]: phase0.Attestation;
   [EventType.voluntaryExit]: phase0.SignedVoluntaryExit;
-  [EventType.finalizedCheckpoint]: {block: RootHex; state: RootHex; epoch: Epoch};
+  [EventType.finalizedCheckpoint]: {
+    block: RootHex;
+    state: RootHex;
+    epoch: Epoch;
+    executionOptimistic: boolean;
+  };
   [EventType.chainReorg]: {
     slot: Slot;
     depth: UintNum64;
@@ -62,7 +74,9 @@ export type EventData = {
     oldHeadState: RootHex;
     newHeadState: RootHex;
     epoch: Epoch;
+    executionOptimistic: boolean;
   };
+  [EventType.contributionAndProof]: altair.SignedContributionAndProof;
   [EventType.lightclientOptimisticUpdate]: LightclientOptimisticHeaderUpdate;
   [EventType.lightclientFinalizedUpdate]: LightclientFinalizedUpdate;
 };
@@ -106,6 +120,7 @@ export function getTypeByEvent(): {[K in EventType]: Type<EventData[K]>} {
         epochTransition: ssz.Boolean,
         previousDutyDependentRoot: stringType,
         currentDutyDependentRoot: stringType,
+        executionOptimistic: ssz.Boolean,
       },
       {jsonCase: "eth2"}
     ),
@@ -114,6 +129,7 @@ export function getTypeByEvent(): {[K in EventType]: Type<EventData[K]>} {
       {
         slot: ssz.Slot,
         block: stringType,
+        executionOptimistic: ssz.Boolean,
       },
       {jsonCase: "eth2"}
     ),
@@ -126,6 +142,7 @@ export function getTypeByEvent(): {[K in EventType]: Type<EventData[K]>} {
         block: stringType,
         state: stringType,
         epoch: ssz.Epoch,
+        executionOptimistic: ssz.Boolean,
       },
       {jsonCase: "eth2"}
     ),
@@ -139,9 +156,12 @@ export function getTypeByEvent(): {[K in EventType]: Type<EventData[K]>} {
         oldHeadState: stringType,
         newHeadState: stringType,
         epoch: ssz.Epoch,
+        executionOptimistic: ssz.Boolean,
       },
       {jsonCase: "eth2"}
     ),
+
+    [EventType.contributionAndProof]: ssz.altair.SignedContributionAndProof,
 
     [EventType.lightclientOptimisticUpdate]: new ContainerType(
       {

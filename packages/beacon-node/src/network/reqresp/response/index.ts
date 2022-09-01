@@ -78,7 +78,7 @@ export async function handleRequest(
         );
       } catch (e) {
         const status = e instanceof ResponseError ? e.status : RespStatus.SERVER_ERROR;
-        yield* responseEncodeError(status, (e as Error).message);
+        yield* responseEncodeError(protocol, status, (e as Error).message);
 
         // Should not throw an error here or libp2p-mplex throws with 'AbortError: stream reset'
         // throw e;

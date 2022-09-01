@@ -17,7 +17,7 @@ export function getAggregateAndProofSignatureSet(
   aggregateAndProof: phase0.SignedAggregateAndProof
 ): ISignatureSet {
   const slot = computeStartSlotAtEpoch(epoch);
-  const aggregatorDomain = state.config.getDomain(DOMAIN_AGGREGATE_AND_PROOF, slot);
+  const aggregatorDomain = state.config.getDomain(state.slot, DOMAIN_AGGREGATE_AND_PROOF, slot);
   const signingRoot = computeSigningRoot(ssz.phase0.AggregateAndProof, aggregateAndProof.message, aggregatorDomain);
 
   return {
