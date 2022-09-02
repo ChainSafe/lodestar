@@ -12,7 +12,7 @@ import {
   PubkeyIndexMap,
 } from "@lodestar/state-transition";
 import {IBeaconConfig} from "@lodestar/config";
-import {allForks, UintNum64, Root, phase0, Slot, RootHex, Epoch, ValidatorIndex} from "@lodestar/types";
+import {allForks, bellatrix, UintNum64, Root, phase0, Slot, RootHex, Epoch, ValidatorIndex} from "@lodestar/types";
 import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 
@@ -31,7 +31,7 @@ import {ensureDir, writeIfNotExist} from "../util/file.js";
 import {CheckpointStateCache, StateContextCache} from "./stateCache/index.js";
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
 import {IBeaconClock, LocalClock} from "./clock/index.js";
-import {ChainEventEmitter} from "./emitter.js";
+import {ChainEventEmitter, ChainEvent} from "./emitter.js";
 import {IBeaconChain, ProposerPreparationData} from "./interface.js";
 import {IChainOptions} from "./options.js";
 import {IStateRegenerator, QueuedStateRegenerator, RegenCaller} from "./regen/index.js";
@@ -60,7 +60,9 @@ import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
 import {SeenBlockAttesters} from "./seenCache/seenBlockAttesters.js";
 import {BeaconProposerCache} from "./beaconProposerCache.js";
 import {CheckpointBalancesCache} from "./balancesCache.js";
-import {ChainEvent} from "./index.js";
+import {AssembledBlockType, BlockType} from "./produceBlock/index.js";
+import {BlockAttributes, produceBlockBody} from "./produceBlock/produceBlockBody.js";
+import {computeNewStateRoot} from "./produceBlock/computeNewStateRoot.js";
 
 export class BeaconChain implements IBeaconChain {
   readonly genesisTime: UintNum64;
@@ -335,6 +337,45 @@ export class BeaconChain implements IBeaconChain {
       return null;
     }
     return await this.db.block.get(fromHexString(block.blockRoot));
+  }
+
+  async produceBlock(blockAttributes: BlockAttributes): Promise<allForks.BeaconBlock> {
+    return this.produceBlockWrapper<BlockType.Full>(BlockType.Full, blockAttributes);
+  }
+
+  async produceBlindedBlock(blockAttributes: BlockAttributes): Promise<bellatrix.BlindedBeaconBlock> {
+    return this.produceBlockWrapper<BlockType.Blinded>(BlockType.Blinded, blockAttributes);
+  }
+
+  async produceBlockWrapper<T extends BlockType>(
+    blockType: T,
+    {randaoReveal, graffiti, slot}: BlockAttributes
+  ): Promise<AssembledBlockType<T>> {
+    const head = this.forkChoice.getHead();
+    const state = await this.regen.getBlockSlotState(head.blockRoot, slot, RegenCaller.produceBlock);
+    const parentBlockRoot = fromHexString(head.blockRoot);
+    const proposerIndex = state.epochCtx.getBeaconProposer(slot);
+    const proposerPubKey = state.epochCtx.index2pubkey[proposerIndex].toBytes();
+
+    const block = {
+      slot,
+      proposerIndex,
+      parentRoot: parentBlockRoot,
+      stateRoot: ZERO_HASH,
+      body: await produceBlockBody.call(this, blockType, state, {
+        randaoReveal,
+        graffiti,
+        slot,
+        parentSlot: slot - 1,
+        parentBlockRoot,
+        proposerIndex,
+        proposerPubKey,
+      }),
+    } as AssembledBlockType<T>;
+
+    block.stateRoot = computeNewStateRoot(this.metrics, state, block);
+
+    return block;
   }
 
   async processBlock(block: allForks.SignedBeaconBlock, opts?: ImportBlockOpts): Promise<void> {
