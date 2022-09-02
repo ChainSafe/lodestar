@@ -36,7 +36,7 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
   }, logger.info.bind(logger));
 
   logger.info("Lodestar", {network, version, commit});
-  // Callback for beacon to request forced exit, for e.g. in case of irrecoverable 
+  // Callback for beacon to request forced exit, for e.g. in case of irrecoverable
   // forkchoice errors
   const processShutdownCallback: ProcessShutdownCallback = (err) => {
     logger.error("Process shutdown requested", {}, err);
