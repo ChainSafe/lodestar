@@ -97,7 +97,7 @@ type ValidatorData = ProposerConfig & {
 };
 
 export const defaultOptions = {
-  defaultFeeRecipient: "0x0000000000000000000000000000000000000000",
+  suggestedFeeRecipient: "0x0000000000000000000000000000000000000000",
   defaultGasLimit: 30_000_000,
 };
 
@@ -123,7 +123,7 @@ export class ValidatorStore {
     this.defaultProposerConfig = {
       graffiti: defaultConfig.graffiti ?? "",
       strictFeeRecipientCheck: defaultConfig.strictFeeRecipientCheck ?? false,
-      feeRecipient: defaultConfig.feeRecipient ?? defaultOptions.defaultFeeRecipient,
+      feeRecipient: defaultConfig.feeRecipient ?? defaultOptions.suggestedFeeRecipient,
       builder: {
         enabled: defaultConfig.builder?.enabled ?? false,
         gasLimit: defaultConfig.builder?.gasLimit ?? defaultOptions.defaultGasLimit,
