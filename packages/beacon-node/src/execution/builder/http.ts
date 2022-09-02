@@ -38,7 +38,7 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
 
   async checkStatus(): Promise<void> {
     try {
-      await this.api.checkStatus();
+      await this.api.status();
     } catch (e) {
       // Disable if the status was enabled
       this.status = false;
@@ -50,20 +50,14 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
     return this.api.registerValidator(registrations);
   }
 
-  async getPayloadHeader(
-    slot: Slot,
-    parentHash: Root,
-    proposerPubKey: BLSPubkey
-  ): Promise<bellatrix.ExecutionPayloadHeader> {
-    const {data: signedBid} = await this.api.getPayloadHeader(slot, parentHash, proposerPubKey);
+  async getHeader(slot: Slot, parentHash: Root, proposerPubKey: BLSPubkey): Promise<bellatrix.ExecutionPayloadHeader> {
+    const {data: signedBid} = await this.api.getHeader(slot, parentHash, proposerPubKey);
     const executionPayloadHeader = signedBid.message.header;
     return executionPayloadHeader;
   }
 
-  async submitSignedBlindedBlock(
-    signedBlock: bellatrix.SignedBlindedBeaconBlock
-  ): Promise<bellatrix.SignedBeaconBlock> {
-    const {data: executionPayload} = await this.api.submitSignedBlindedBlock(signedBlock);
+  async submitBlindedBlock(signedBlock: bellatrix.SignedBlindedBeaconBlock): Promise<bellatrix.SignedBeaconBlock> {
+    const {data: executionPayload} = await this.api.submitBlindedBlock(signedBlock);
     const expectedTransactionsRoot = signedBlock.message.body.executionPayloadHeader.transactionsRoot;
     const actualTransactionsRoot = ssz.bellatrix.Transactions.hashTreeRoot(executionPayload.transactions);
     if (!byteArrayEquals(expectedTransactionsRoot, actualTransactionsRoot)) {

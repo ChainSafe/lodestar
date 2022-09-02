@@ -167,7 +167,7 @@ export function getBeaconBlockApi({
     async publishBlindedBlock(signedBlindedBlock) {
       const executionBuilder = chain.executionBuilder;
       if (!executionBuilder) throw Error("exeutionBuilder required to publish SignedBlindedBeaconBlock");
-      const signedBlock = await executionBuilder.submitSignedBlindedBlock(signedBlindedBlock);
+      const signedBlock = await executionBuilder.submitBlindedBlock(signedBlindedBlock);
       return await this.publishBlock(signedBlock);
     },
 
