@@ -10,6 +10,7 @@ import {ValidatorStore} from "../../src/services/validatorStore.js";
 import {getApiClientStub} from "../utils/apiStub.js";
 import {initValidatorStore} from "../utils/validatorStore.js";
 import {ValidatorProposerConfig} from "../../src/services/validatorStore.js";
+import {SinonStubFn} from "..//utils/types.js";
 
 describe("ValidatorStore", function () {
   const sandbox = sinon.createSandbox();
@@ -18,7 +19,7 @@ describe("ValidatorStore", function () {
   let validatorStore: ValidatorStore;
 
   let valProposerConfig: ValidatorProposerConfig;
-  let signValidatorStub: sinon.SinonStub<any>;
+  let signValidatorStub: SinonStubFn<ValidatorStore["signValidatorRegistration"]>;
 
   before(() => {
     valProposerConfig = {
@@ -86,7 +87,7 @@ describe("ValidatorStore", function () {
     );
   });
 
-  it("Should update cache and return from cache next time", async () => {
+  it("Should create/update builder data and return from cache next time", async () => {
     let signCallCount = 0;
     let slot = 0;
     const testCases: [bellatrix.SignedValidatorRegistrationV1, string, number][] = [
