@@ -322,11 +322,12 @@ export class ProtoArray {
     let nodeIndex: number | undefined = validNodeIndex;
     // propagate till we keep encountering syncing status
     while (nodeIndex !== undefined) {
-      const validNode = this.validateNodeByIndex(nodeIndex);
-      if (validNode.executionStatus !== ExecutionStatus.Syncing) {
+      const node = this.getNodeFromIndex(nodeIndex);
+      if (node.executionStatus === ExecutionStatus.PreMerge || node.executionStatus === ExecutionStatus.Valid) {
         break;
       }
-      nodeIndex = validNode.parent;
+      this.validateNodeByIndex(nodeIndex);
+      nodeIndex = node.parent;
     }
   }
 
