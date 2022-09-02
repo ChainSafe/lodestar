@@ -31,7 +31,6 @@ import {
   Slot,
   ssz,
   ValidatorIndex,
-  ExecutionAddress,
 } from "@lodestar/types";
 import {BitArray, fromHexString, toHexString} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
@@ -41,6 +40,9 @@ import {externalSignerPostSignature} from "../util/externalSignerClient.js";
 import {Metrics} from "../metrics.js";
 import {IndicesService} from "./indices.js";
 import {DoppelgangerService} from "./doppelgangerService.js";
+
+type BLSPubkeyMaybeHex = BLSPubkey | PubkeyHex;
+type Eth1Address = string;
 
 export enum SignerType {
   Local,
@@ -58,8 +60,30 @@ export type SignerRemote = {
   pubkey: PubkeyHex;
 };
 
-type BLSPubkeyMaybeHex = BLSPubkey | PubkeyHex;
-type Eth1Address = string;
+type DefaultProposerConfig = {
+  graffiti: string;
+  strictFeeRecipientCheck: boolean;
+  feeRecipient: Eth1Address;
+  builder: {
+    enabled: boolean;
+    gasLimit: number;
+  };
+};
+
+export type ProposerConfig = {
+  graffiti?: string;
+  strictFeeRecipientCheck?: boolean;
+  feeRecipient?: Eth1Address;
+  builder: {
+    enabled?: boolean;
+    gasLimit?: number;
+  };
+};
+
+export type ValidatorProposerConfig = {
+  proposerConfig: {[index: PubkeyHex]: ProposerConfig};
+  defaultConfig: ProposerConfig;
+};
 
 /**
  * Validator entity capable of producing signatures. Either:
@@ -68,10 +92,13 @@ type Eth1Address = string;
  */
 export type Signer = SignerLocal | SignerRemote;
 
-type ValidatorData = {
+type ValidatorData = ProposerConfig & {
   signer: Signer;
-  /** feeRecipient for block production, null if not explicitly configured */
-  feeRecipient: Eth1Address | null;
+};
+
+export const defaultOptions = {
+  suggestedFeeRecipient: "0x0000000000000000000000000000000000000000",
+  defaultGasLimit: 30_000_000,
 };
 
 /**
@@ -81,6 +108,7 @@ export class ValidatorStore {
   private readonly validators = new Map<PubkeyHex, ValidatorData>();
   /** Initially true because there are no validators */
   private pubkeysToDiscover: PubkeyHex[] = [];
+  private readonly defaultProposerConfig: DefaultProposerConfig;
 
   constructor(
     private readonly config: IBeaconConfig,
@@ -89,11 +117,21 @@ export class ValidatorStore {
     private readonly doppelgangerService: DoppelgangerService | null,
     private readonly metrics: Metrics | null,
     initialSigners: Signer[],
-    private readonly suggestedFeeRecipient: string,
-    private readonly gasLimit: number
+    valProposerConfig: ValidatorProposerConfig = {defaultConfig: {builder: {}}, proposerConfig: {}}
   ) {
+    const defaultConfig = valProposerConfig.defaultConfig;
+    this.defaultProposerConfig = {
+      graffiti: defaultConfig.graffiti ?? "",
+      strictFeeRecipientCheck: defaultConfig.strictFeeRecipientCheck ?? false,
+      feeRecipient: defaultConfig.feeRecipient ?? defaultOptions.suggestedFeeRecipient,
+      builder: {
+        enabled: defaultConfig.builder?.enabled ?? false,
+        gasLimit: defaultConfig.builder?.gasLimit ?? defaultOptions.defaultGasLimit,
+      },
+    };
+
     for (const signer of initialSigners) {
-      this.addSigner(signer);
+      this.addSigner(signer, valProposerConfig);
     }
 
     if (metrics) {
@@ -117,13 +155,35 @@ export class ValidatorStore {
       : this.indicesService.pollValidatorIndices(Array.from(this.validators.keys()));
   }
 
-  getFeeRecipient(pubkeyHex: PubkeyHex): string {
-    return this.validators.get(pubkeyHex)?.feeRecipient ?? this.suggestedFeeRecipient;
+  getFeeRecipient(pubkeyHex: PubkeyHex): Eth1Address {
+    return this.validators.get(pubkeyHex)?.feeRecipient ?? this.defaultProposerConfig.feeRecipient;
   }
 
-  getFeeRecipientByIndex(index: ValidatorIndex): string {
+  getFeeRecipientByIndex(index: ValidatorIndex): Eth1Address {
     const pubkey = this.indicesService.index2pubkey.get(index);
-    return (pubkey && this.validators.get(pubkey)?.feeRecipient) ?? this.suggestedFeeRecipient;
+    return pubkey ? this.getFeeRecipient(pubkey) : this.defaultProposerConfig.feeRecipient;
+  }
+
+  getGraffiti(pubkeyHex: PubkeyHex): string {
+    return this.validators.get(pubkeyHex)?.graffiti ?? this.defaultProposerConfig.graffiti;
+  }
+
+  isBuilderEnabled(pubkeyHex: PubkeyHex): boolean {
+    return (this.validators.get(pubkeyHex)?.builder || {}).enabled ?? this.defaultProposerConfig?.builder.enabled;
+  }
+
+  strictFeeRecipientCheck(pubkeyHex: PubkeyHex): boolean {
+    return (
+      this.validators.get(pubkeyHex)?.strictFeeRecipientCheck ?? this.defaultProposerConfig?.strictFeeRecipientCheck
+    );
+  }
+
+  getGasLimit(pubkeyHex: PubkeyHex): number {
+    return (
+      (this.validators.get(pubkeyHex)?.builder || {}).gasLimit ??
+      this.defaultProposerConfig?.builder.gasLimit ??
+      defaultOptions.defaultGasLimit
+    );
   }
 
   /** Return true if `index` is active part of this validator client */
@@ -131,15 +191,15 @@ export class ValidatorStore {
     return this.indicesService.index2pubkey.has(index);
   }
 
-  addSigner(signer: Signer): void {
+  addSigner(signer: Signer, valProposerConfig?: ValidatorProposerConfig): void {
     const pubkey = getSignerPubkeyHex(signer);
+    const proposerConfig = (valProposerConfig?.proposerConfig ?? {})[pubkey] ?? {};
 
     if (!this.validators.has(pubkey)) {
       this.pubkeysToDiscover.push(pubkey);
       this.validators.set(pubkey, {
         signer,
-        // TODO: Allow to customize
-        feeRecipient: null,
+        ...proposerConfig,
       });
 
       this.doppelgangerService?.registerValidator(pubkey);
@@ -350,11 +410,14 @@ export class ValidatorStore {
   }
 
   async signValidatorRegistration(
-    pubkey: BLSPubkey,
-    feeRecipient: ExecutionAddress,
+    pubkeyMaybeHex: BLSPubkeyMaybeHex,
+    regAttributes: {feeRecipient: Eth1Address; gasLimit: number},
     _slot: Slot
   ): Promise<bellatrix.SignedValidatorRegistrationV1> {
-    const gasLimit = this.gasLimit;
+    const pubkey = typeof pubkeyMaybeHex === "string" ? fromHexString(pubkeyMaybeHex) : pubkeyMaybeHex;
+    const feeRecipient = fromHexString(regAttributes.feeRecipient);
+    const {gasLimit} = regAttributes;
+
     const timestamp = Math.floor(Date.now() / 1000);
     const validatorRegistation: bellatrix.ValidatorRegistrationV1 = {
       feeRecipient,
