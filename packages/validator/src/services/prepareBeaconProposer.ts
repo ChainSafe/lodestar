@@ -103,7 +103,7 @@ export function pollBuilderValidatorRegistration(
                 }
                 const feeRecipient = validatorStore.getFeeRecipient(pubkeyHex);
                 const gasLimit = validatorStore.getGasLimit(pubkeyHex);
-                return validatorStore.signValidatorRegistration(pubkeyHex, {feeRecipient, gasLimit}, slot);
+                return validatorStore.getValidatorRegistration(pubkeyHex, {feeRecipient, gasLimit}, slot);
               }
             )
           );

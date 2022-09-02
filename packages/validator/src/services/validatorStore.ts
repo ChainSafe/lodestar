@@ -86,6 +86,17 @@ export type ValidatorProposerConfig = {
 };
 
 /**
+ * This cache stores SignedValidatorRegistrationV1 data for a validator so that
+ * we do not create and send new registration objects to avoid DOSing the builder
+ *
+ * See: https://github.com/ChainSafe/lodestar/issues/4208
+ */
+type BuilderData = {
+  validatorRegistration: bellatrix.SignedValidatorRegistrationV1;
+  regFullKey: string;
+};
+
+/**
  * Validator entity capable of producing signatures. Either:
  * - local: With BLS secret key
  * - remote: With data to contact a remote signer
@@ -94,6 +105,7 @@ export type Signer = SignerLocal | SignerRemote;
 
 type ValidatorData = ProposerConfig & {
   signer: Signer;
+  builderData?: BuilderData;
 };
 
 export const defaultOptions = {
@@ -431,6 +443,29 @@ export class ValidatorStore {
       message: validatorRegistation,
       signature: await this.getSignature(pubkey, signingRoot),
     };
+  }
+
+  async getValidatorRegistration(
+    pubkeyMaybeHex: BLSPubkeyMaybeHex,
+    regAttributes: {feeRecipient: Eth1Address; gasLimit: number},
+    slot: Slot
+  ): Promise<bellatrix.SignedValidatorRegistrationV1> {
+    const pubkeyHex = typeof pubkeyMaybeHex === "string" ? pubkeyMaybeHex : toHexString(pubkeyMaybeHex);
+    const {feeRecipient, gasLimit} = regAttributes;
+    const regFullKey = `${feeRecipient}-${gasLimit}`;
+    const validatorData = this.validators.get(pubkeyHex);
+    const builderData = validatorData?.builderData;
+    if (builderData?.regFullKey === regFullKey) {
+      return builderData.validatorRegistration;
+    } else {
+      const validatorRegistration = await this.signValidatorRegistration(pubkeyMaybeHex, regAttributes, slot);
+      // If pubkeyHex was actually registered, then update the regData
+      if (validatorData !== undefined) {
+        validatorData.builderData = {validatorRegistration, regFullKey};
+        this.validators.set(pubkeyHex, validatorData);
+      }
+      return validatorRegistration;
+    }
   }
 
   private async getSignature(pubkey: BLSPubkeyMaybeHex, signingRoot: Uint8Array): Promise<BLSSignature> {
