@@ -2,6 +2,7 @@ import {defaultOptions, IBeaconNodeOptions} from "@lodestar/beacon-node";
 import {ICliCommandOptions} from "../../util/index.js";
 
 export interface IChainArgs {
+  suggestedFeeRecipient: string;
   "chain.blsVerifyAllMultiThread": boolean;
   "chain.blsVerifyAllMainThread": boolean;
   "chain.disableBlsBatchVerify": boolean;
@@ -12,7 +13,6 @@ export interface IChainArgs {
   "chain.proposerBoostEnabled": boolean;
   "chain.disableImportExecutionFcU": boolean;
   "chain.computeUnrealized": boolean;
-  suggestedFeeRecipient: string;
   "chain.assertCorrectProgressiveBalances": boolean;
   "chain.maxSkipSlots": number;
   "safe-slots-to-import-optimistically": number;
@@ -20,6 +20,7 @@ export interface IChainArgs {
 
 export function parseArgs(args: IChainArgs): IBeaconNodeOptions["chain"] {
   return {
+    suggestedFeeRecipient: args["suggestedFeeRecipient"],
     blsVerifyAllMultiThread: args["chain.blsVerifyAllMultiThread"],
     blsVerifyAllMainThread: args["chain.blsVerifyAllMainThread"],
     disableBlsBatchVerify: args["chain.disableBlsBatchVerify"],
@@ -29,7 +30,6 @@ export function parseArgs(args: IChainArgs): IBeaconNodeOptions["chain"] {
     proposerBoostEnabled: args["chain.proposerBoostEnabled"],
     disableImportExecutionFcU: args["chain.disableImportExecutionFcU"],
     computeUnrealized: args["chain.computeUnrealized"],
-    defaultFeeRecipient: args["suggestedFeeRecipient"],
     assertCorrectProgressiveBalances: args["chain.assertCorrectProgressiveBalances"],
     maxSkipSlots: args["chain.maxSkipSlots"],
     safeSlotsToImportOptimistically: args["safe-slots-to-import-optimistically"],
@@ -37,6 +37,14 @@ export function parseArgs(args: IChainArgs): IBeaconNodeOptions["chain"] {
 }
 
 export const options: ICliCommandOptions<IChainArgs> = {
+  suggestedFeeRecipient: {
+    type: "string",
+    description:
+      "Specify fee recipient default for collecting the EL block fees and rewards (a hex string representing 20 bytes address: ^0x[a-fA-F0-9]{40}$) in case validator fails to update for a validator index before calling produceBlock.",
+    defaultDescription: defaultOptions.chain.suggestedFeeRecipient,
+    group: "chain",
+  },
+
   "chain.blsVerifyAllMultiThread": {
     hidden: true,
     type: "boolean",
@@ -90,14 +98,6 @@ Will double processing times. Use only for debugging purposes.",
     type: "boolean",
     description: "Compute unrealized checkpoints and use it in fork choice or not",
     defaultDescription: String(defaultOptions.chain.computeUnrealized),
-    group: "chain",
-  },
-
-  suggestedFeeRecipient: {
-    type: "string",
-    description:
-      "Specify fee recipient default for collecting the EL block fees and rewards (a hex string representing 20 bytes address: ^0x[a-fA-F0-9]{40}$) in case validator fails to update for a validator index before calling produceBlock.",
-    defaultDescription: defaultOptions.chain.defaultFeeRecipient,
     group: "chain",
   },
 
