@@ -147,7 +147,7 @@ export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
   },
 
   proposerSettingsFile: {
-    description: "proposer setting yaml file",
+    description: "A yaml file to specify detailed default and per validator pubkey customized proposer configs. PS: This feature and its format is in alpha and subject to change",
     type: "string",
   },
 
