@@ -3,7 +3,9 @@ import {expect} from "chai";
 import sinon from "sinon";
 import {chainConfig} from "@lodestar/config/default";
 import bls from "@chainsafe/bls";
-import {toHexString} from "@chainsafe/ssz";
+import {toHexString, fromHexString} from "@chainsafe/ssz";
+import {bellatrix} from "@lodestar/types";
+
 import {ValidatorStore} from "../../src/services/validatorStore.js";
 import {getApiClientStub} from "../utils/apiStub.js";
 import {initValidatorStore} from "../utils/validatorStore.js";
@@ -15,13 +17,10 @@ describe("ValidatorStore", function () {
 
   let validatorStore: ValidatorStore;
 
-  let pubkeys: Uint8Array[]; // Initialize pubkeys in before() so bls is already initialized
   let valProposerConfig: ValidatorProposerConfig;
+  let signValidatorStub: sinon.SinonStub<any>;
 
   before(() => {
-    const secretKeys = Array.from({length: 3}, (_, i) => bls.SecretKey.fromBytes(toBufferBE(BigInt(i + 1), 32)));
-    pubkeys = secretKeys.map((sk) => sk.toPublicKey().toBytes());
-
     valProposerConfig = {
       proposerConfig: {
         [toHexString(pubkeys[0])]: {
@@ -46,6 +45,11 @@ describe("ValidatorStore", function () {
     };
 
     validatorStore = initValidatorStore(secretKeys, api, chainConfig, valProposerConfig);
+    signValidatorStub = sinon.stub(validatorStore, "signValidatorRegistration");
+  });
+
+  after(() => {
+    sandbox.restore();
   });
 
   it("Should validate graffiti,feeRecipient etc. from valProposerConfig and ValidatorStore", async function () {
@@ -81,4 +85,62 @@ describe("ValidatorStore", function () {
       valProposerConfig.defaultConfig.builder.gasLimit
     );
   });
+
+  it("Should update cache and return from cache next time", async () => {
+    let signCallCount = 0;
+    let slot = 0;
+    const testCases: [bellatrix.SignedValidatorRegistrationV1, string, number][] = [
+      [valRegF00G100, "0x00", 100],
+      [valRegF10G100, "0x10", 100],
+      [valRegF10G200, "0x10", 200],
+    ];
+    for (const [valReg, feeRecipient, gasLimit] of testCases) {
+      signValidatorStub.resolves(valReg);
+      const val1 = await validatorStore.getValidatorRegistration(pubkeys[0], {feeRecipient, gasLimit}, slot++);
+      expect(JSON.stringify(val1) === JSON.stringify(valReg));
+      expect(signValidatorStub.callCount).to.equal(
+        ++signCallCount,
+        `signValidatorRegistration() must be updated for new feeRecipient=${feeRecipient} gasLimit=${gasLimit} combo `
+      );
+      const val2 = await validatorStore.getValidatorRegistration(pubkeys[0], {feeRecipient, gasLimit}, slot++);
+      expect(JSON.stringify(val2) === JSON.stringify(valReg));
+      expect(signValidatorStub.callCount).to.equal(
+        signCallCount,
+        `signValidatorRegistration() must be updated for same feeRecipient=${feeRecipient} gasLimit=${gasLimit} combo `
+      );
+    }
+  });
 });
+
+const secretKeys = Array.from({length: 3}, (_, i) => bls.SecretKey.fromBytes(toBufferBE(BigInt(i + 1), 32)));
+const pubkeys = secretKeys.map((sk) => sk.toPublicKey().toBytes());
+
+const valRegF00G100 = {
+  message: {
+    feeRecipient: fromHexString("0x00"),
+    gasLimit: 100,
+    timestamp: Date.now(),
+    pubkey: pubkeys[0],
+  },
+  signature: Buffer.alloc(96, 0),
+};
+
+const valRegF10G100 = {
+  message: {
+    feeRecipient: fromHexString("0x10"),
+    gasLimit: 100,
+    timestamp: Date.now(),
+    pubkey: pubkeys[0],
+  },
+  signature: Buffer.alloc(96, 0),
+};
+
+const valRegF10G200 = {
+  message: {
+    feeRecipient: fromHexString("0x10"),
+    gasLimit: 200,
+    timestamp: Date.now(),
+    pubkey: pubkeys[0],
+  },
+  signature: Buffer.alloc(96, 0),
+};
