@@ -180,6 +180,14 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
       notWhileSyncing();
       await waitForSlot(slot); // Must never request for a future slot > currentSlot
 
+      // Error early for builder if builder flow not active
+      if (!chain.executionBuilder) {
+        throw Error("Execution builder not set");
+      }
+      if (!chain.executionBuilder.status) {
+        throw Error("Execution builder disabled");
+      }
+
       // Process the queued attestations in the forkchoice for correct head estimation
       // forkChoice.updateTime() might have already been called by the onSlot clock
       // handler, in which case this should just return.
@@ -209,15 +217,6 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
     try {
       notWhileSyncing();
       await waitForSlot(slot); // Must never request for a future slot > currentSlot
-      // Error early for builder if builder flow not active
-      if (type === BlockType.Blinded) {
-        if (!chain.executionBuilder) {
-          throw Error("Execution builder not set");
-        }
-        if (!chain.executionBuilder.status) {
-          throw Error("Execution builder disabled");
-        }
-      }
 
       // Process the queued attestations in the forkchoice for correct head estimation
       // forkChoice.updateTime() might have already been called by the onSlot clock
