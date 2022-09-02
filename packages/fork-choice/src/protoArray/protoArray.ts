@@ -323,7 +323,7 @@ export class ProtoArray {
     // propagate till we keep encountering syncing status
     while (nodeIndex !== undefined) {
       const validNode = this.validateNodeByIndex(nodeIndex);
-      if (validNode.executionStatus === ExecutionStatus.PreMerge) {
+      if (validNode.executionStatus !== ExecutionStatus.Syncing) {
         break;
       }
       nodeIndex = validNode.parent;
