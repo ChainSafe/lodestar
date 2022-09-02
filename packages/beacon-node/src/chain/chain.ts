@@ -14,6 +14,8 @@ import {
 import {IBeaconConfig} from "@lodestar/config";
 import {allForks, UintNum64, Root, phase0, Slot, RootHex, Epoch, ValidatorIndex} from "@lodestar/types";
 import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
+import {ProcessShutdownCallback} from "@lodestar/validator";
+
 import {ILogger, toHex} from "@lodestar/utils";
 import {CompositeTypeAny, fromHexString, TreeView, Type} from "@chainsafe/ssz";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
@@ -117,6 +119,7 @@ export class BeaconChain implements IBeaconChain {
 
   private readonly faultInspectionWindow: number;
   private readonly allowedFaults: number;
+  private processShutdownCallback: ProcessShutdownCallback;
 
   constructor(
     opts: IChainOptions,
@@ -124,6 +127,7 @@ export class BeaconChain implements IBeaconChain {
       config,
       db,
       logger,
+      processShutdownCallback,
       clock,
       metrics,
       anchorState,
@@ -134,6 +138,7 @@ export class BeaconChain implements IBeaconChain {
       config: IBeaconConfig;
       db: IBeaconDb;
       logger: ILogger;
+      processShutdownCallback: ProcessShutdownCallback;
       /** Used for testing to supply fake clock */
       clock?: IBeaconClock;
       metrics: IMetrics | null;
@@ -147,6 +152,7 @@ export class BeaconChain implements IBeaconChain {
     this.config = config;
     this.db = db;
     this.logger = logger;
+    this.processShutdownCallback = processShutdownCallback;
     this.metrics = metrics;
     this.genesisTime = anchorState.genesisTime;
     this.anchorStateLatestBlockSlot = anchorState.latestBlockHeader.slot;
@@ -523,6 +529,9 @@ export class BeaconChain implements IBeaconChain {
     this.logger.verbose("Clock slot", {slot});
 
     // CRITICAL UPDATE
+    if (this.forkChoice.irrecoverableError) {
+      this.processShutdownCallback(this.forkChoice.irrecoverableError);
+    }
     this.forkChoice.updateTime(slot);
 
     this.metrics?.clockSlot.set(slot);

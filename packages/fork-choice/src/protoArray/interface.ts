@@ -17,10 +17,24 @@ export enum ExecutionStatus {
   Valid = "Valid",
   Syncing = "Syncing",
   PreMerge = "PreMerge",
+  Invalid = "Invalid",
 }
 
-type BlockExecution =
-  | {executionPayloadBlockHash: RootHex; executionStatus: ExecutionStatus.Valid | ExecutionStatus.Syncing}
+export type LVHValidResponse = {
+  executionStatus: ExecutionStatus.Valid;
+  latestValidExecHash: RootHex;
+};
+export type LVHInvalidResponse = {
+  executionStatus: ExecutionStatus.Invalid;
+  latestValidExecHash: RootHex | null;
+  invalidateFromBlockHash: RootHex;
+};
+export type LVHExecResponse = LVHValidResponse | LVHInvalidResponse;
+
+export type MaybeValidExecutionStatus = Exclude<ExecutionStatus, ExecutionStatus.Invalid>;
+
+export type BlockExecution =
+  | {executionPayloadBlockHash: RootHex; executionStatus: Exclude<ExecutionStatus, ExecutionStatus.PreMerge>}
   | {executionPayloadBlockHash: null; executionStatus: ExecutionStatus.PreMerge};
 /**
  * A block that is to be applied to the fork choice
