@@ -1,6 +1,6 @@
 ## Lodestar Quickstart
 
-In order to make things easy for users to onboard and try the ethereum **Proof of Stake** we have comeup with  [Lodestar quickstart](https://github.com/ChainSafe/lodestar-quickstart) scripts!
+In order to make things easy for users to onboard and try the ethereum **Proof of Stake** we have come up with  [Lodestar quickstart](https://github.com/ChainSafe/lodestar-quickstart) scripts!
 
 ✅ Zero Configuration
 ✅ All testnets supported along with `mainnet`
