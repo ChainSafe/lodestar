@@ -24,7 +24,7 @@ import {MetaDataRepository} from "./repositories/metaDataRepository.js";
 import {DoppelgangerService} from "./services/doppelgangerService.js";
 
 export const defaultOptions = {
-  defaultFeeRecipient: "0x0000000000000000000000000000000000000000",
+  suggestedFeeRecipient: "0x0000000000000000000000000000000000000000",
   defaultGasLimit: 30_000_000,
 };
 
@@ -37,7 +37,7 @@ export type ValidatorOptions = {
   processShutdownCallback: ProcessShutdownCallback;
   afterBlockDelaySlotFraction?: number;
   graffiti?: string;
-  defaultFeeRecipient?: string;
+  suggestedFeeRecipient?: string;
   strictFeeRecipientCheck?: boolean;
   doppelgangerProtectionEnabled?: boolean;
   closed?: boolean;
@@ -78,7 +78,7 @@ export class Validator {
       slashingProtection,
       signers,
       graffiti,
-      defaultFeeRecipient,
+      suggestedFeeRecipient,
       strictFeeRecipientCheck,
       gasLimit,
       builder,
@@ -112,7 +112,7 @@ export class Validator {
       doppelgangerService,
       metrics,
       signers,
-      defaultFeeRecipient ?? defaultOptions.defaultFeeRecipient,
+      suggestedFeeRecipient ?? defaultOptions.suggestedFeeRecipient,
       gasLimit ?? defaultOptions.defaultGasLimit,
       genesis.genesisValidatorsRoot
     );

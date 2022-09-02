@@ -64,7 +64,7 @@ export class MockBeaconChain implements IBeaconChain {
     persistInvalidSszObjectsDir: "",
     proposerBoostEnabled: false,
     safeSlotsToImportOptimistically: 0,
-    defaultFeeRecipient: "0x0000000000000000000000000000000000000000",
+    suggestedFeeRecipient: "0x0000000000000000000000000000000000000000",
   };
   readonly anchorStateLatestBlockSlot: Slot;
 
@@ -97,7 +97,7 @@ export class MockBeaconChain implements IBeaconChain {
   readonly seenBlockAttesters = new SeenBlockAttesters();
 
   readonly beaconProposerCache = new BeaconProposerCache({
-    defaultFeeRecipient: defaultValidatorOptions.defaultFeeRecipient,
+    suggestedFeeRecipient: defaultValidatorOptions.suggestedFeeRecipient,
   });
   readonly checkpointBalancesCache = new CheckpointBalancesCache();
 

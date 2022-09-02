@@ -17,7 +17,7 @@ export function initValidatorStore(
 ): ValidatorStore {
   const logger = testLogger();
   const genesisValidatorsRoot = Buffer.alloc(32, 0xdd);
-  const defaultFeeRecipient = "0x0";
+  const suggestedFeeRecipient = "0x0";
   const defaultGasLimit = 10000;
 
   const signers: Signer[] = secretKeys.map((sk) => ({
@@ -34,7 +34,7 @@ export function initValidatorStore(
     null,
     metrics,
     signers,
-    defaultFeeRecipient,
+    suggestedFeeRecipient,
     defaultGasLimit,
     genesisValidatorsRoot
   );
