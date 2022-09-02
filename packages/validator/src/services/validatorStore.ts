@@ -89,7 +89,7 @@ export class ValidatorStore {
     private readonly doppelgangerService: DoppelgangerService | null,
     private readonly metrics: Metrics | null,
     initialSigners: Signer[],
-    private readonly defaultFeeRecipient: string,
+    private readonly suggestedFeeRecipient: string,
     private readonly gasLimit: number
   ) {
     for (const signer of initialSigners) {
@@ -118,12 +118,12 @@ export class ValidatorStore {
   }
 
   getFeeRecipient(pubkeyHex: PubkeyHex): string {
-    return this.validators.get(pubkeyHex)?.feeRecipient ?? this.defaultFeeRecipient;
+    return this.validators.get(pubkeyHex)?.feeRecipient ?? this.suggestedFeeRecipient;
   }
 
   getFeeRecipientByIndex(index: ValidatorIndex): string {
     const pubkey = this.indicesService.index2pubkey.get(index);
-    return pubkey ? this.validators.get(pubkey)?.feeRecipient ?? this.defaultFeeRecipient : this.defaultFeeRecipient;
+    return (pubkey && this.validators.get(pubkey)?.feeRecipient) ?? this.suggestedFeeRecipient;
   }
 
   /** Return true if `index` is active part of this validator client */

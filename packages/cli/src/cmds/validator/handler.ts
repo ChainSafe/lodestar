@@ -23,7 +23,7 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
   const {config, network} = getBeaconConfigFromArgs(args);
 
   const graffiti = args.graffiti || getDefaultGraffiti();
-  const suggestedFeeRecipient = parseFeeRecipient(args.suggestedFeeRecipient ?? defaultOptions.defaultFeeRecipient);
+  const suggestedFeeRecipient = parseFeeRecipient(args.suggestedFeeRecipient ?? defaultOptions.suggestedFeeRecipient);
   const doppelgangerProtectionEnabled = args.doppelgangerProtectionEnabled;
 
   const beaconPaths = getBeaconPaths(args, network);
@@ -113,7 +113,7 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
       graffiti,
       doppelgangerProtectionEnabled,
       afterBlockDelaySlotFraction: args.afterBlockDelaySlotFraction,
-      defaultFeeRecipient: suggestedFeeRecipient,
+      suggestedFeeRecipient,
       builder,
     },
     controller.signal,

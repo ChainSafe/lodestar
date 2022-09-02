@@ -14,7 +14,7 @@ export type IChainOptions = BlockProcessOpts &
     persistInvalidSszObjects?: boolean;
     persistInvalidSszObjectsDir?: string;
     skipCreateStateCacheIfAvailable?: boolean;
-    defaultFeeRecipient: string;
+    suggestedFeeRecipient: string;
     maxSkipSlots?: number;
     /** Window to inspect missed slots for enabling/disabling builder circuit breaker */
     faultInspectionWindow?: number;
@@ -52,8 +52,8 @@ export const defaultChainOptions: IChainOptions = {
   blsVerifyAllMultiThread: false,
   disableBlsBatchVerify: false,
   proposerBoostEnabled: true,
-  computeUnrealized: false,
+  computeUnrealized: true,
   safeSlotsToImportOptimistically: SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY,
-  defaultFeeRecipient: defaultValidatorOptions.defaultFeeRecipient,
+  suggestedFeeRecipient: defaultValidatorOptions.suggestedFeeRecipient,
   assertCorrectProgressiveBalances: false,
 };
