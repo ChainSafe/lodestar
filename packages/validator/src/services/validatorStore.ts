@@ -91,7 +91,6 @@ export type ValidatorProposerConfig = {
  *
  * See: https://github.com/ChainSafe/lodestar/issues/4208
  */
-
 type BuilderData = {
   validatorRegistration: bellatrix.SignedValidatorRegistrationV1;
   regFullKey: string;
@@ -119,7 +118,6 @@ export const defaultOptions = {
  */
 export class ValidatorStore {
   private readonly validators = new Map<PubkeyHex, ValidatorData>();
-
   /** Initially true because there are no validators */
   private pubkeysToDiscover: PubkeyHex[] = [];
   private readonly defaultProposerConfig: DefaultProposerConfig;
