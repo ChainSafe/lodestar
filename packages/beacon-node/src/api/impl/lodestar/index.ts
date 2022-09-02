@@ -1,4 +1,3 @@
-import PeerId from "peer-id";
 import {Multiaddr} from "multiaddr";
 import {routes} from "@lodestar/api";
 import {Bucket, Repository} from "@lodestar/db";
@@ -9,6 +8,7 @@ import {IChainForkConfig} from "@lodestar/config";
 import {ssz} from "@lodestar/types";
 import {BeaconChain} from "../../../chain/index.js";
 import {QueuedStateRegenerator, RegenRequest} from "../../../chain/regen/index.js";
+import {createFromB58String} from "../../../util/peerId.js";
 import {GossipType} from "../../../network/index.js";
 import {IBeaconDb} from "../../../db/interface.js";
 import {ApiModules} from "../types.js";
@@ -123,13 +123,13 @@ export function getLodestarApi({
     },
 
     async connectPeer(peerIdStr, multiaddrStrs) {
-      const peerId = PeerId.createFromB58String(peerIdStr);
+      const peerId = createFromB58String(peerIdStr);
       const multiaddrs = multiaddrStrs.map((multiaddrStr) => new Multiaddr(multiaddrStr));
       await network.connectToPeer(peerId, multiaddrs);
     },
 
     async disconnectPeer(peerIdStr) {
-      const peerId = PeerId.createFromB58String(peerIdStr);
+      const peerId = createFromB58String(peerIdStr);
       await network.disconnectPeer(peerId);
     },
 

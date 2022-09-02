@@ -25,7 +25,6 @@ import {computeDeltas} from "../protoArray/computeDeltas.js";
 import {HEX_ZERO_HASH, VoteTracker, ProtoBlock, ExecutionStatus} from "../protoArray/interface.js";
 import {ProtoArray} from "../protoArray/protoArray.js";
 
-import {IForkChoiceMetrics} from "../metrics.js";
 import {ForkChoiceError, ForkChoiceErrorCode, InvalidBlockCode, InvalidAttestationCode} from "./errors.js";
 import {IForkChoice, LatestMessage, QueuedAttestation, PowBlockHex} from "./interface.js";
 import {IForkChoiceStore, CheckpointWithHex, toCheckpointWithHex, JustifiedBalances} from "./store.js";
@@ -93,8 +92,7 @@ export class ForkChoice implements IForkChoice {
     private readonly fcStore: IForkChoiceStore,
     /** The underlying representation of the block DAG. */
     private readonly protoArray: ProtoArray,
-    private readonly opts?: ForkChoiceOpts,
-    private readonly metrics?: IForkChoiceMetrics | null
+    private readonly opts?: ForkChoiceOpts
   ) {
     this.head = this.updateHead();
   }
@@ -175,9 +173,6 @@ export class ForkChoice implements IForkChoice {
   updateHead(): ProtoBlock {
     // balances is not changed but votes are changed
 
-    this.metrics?.forkChoiceRequests.inc();
-    const timer = this.metrics?.forkChoiceFindHead.startTimer();
-
     // NOTE: In current Lodestar metrics, 100% of forkChoiceRequests this.synced = false.
     // No need to cache computeDeltas()
     //
@@ -230,8 +225,6 @@ export class ForkChoice implements IForkChoice {
         root: headRoot,
       });
     }
-
-    timer?.();
 
     return (this.head = headNode);
   }

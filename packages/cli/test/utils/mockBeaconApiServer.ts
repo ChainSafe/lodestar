@@ -36,7 +36,7 @@ export function getMockBeaconApiServer(opts: RestApiServerOpts, apiOpts?: MockBe
 
       // Return empty to never discover the validators
       async getStateValidators() {
-        return {data: []};
+        return {data: [], executionOptimistic: false};
       },
     } as Partial<Api["beacon"]>,
 
@@ -55,7 +55,7 @@ export function getMockBeaconApiServer(opts: RestApiServerOpts, apiOpts?: MockBe
 
     validator: {
       async getProposerDuties() {
-        return {data: [], dependentRoot: ZERO_HASH};
+        return {data: [], dependentRoot: ZERO_HASH, executionOptimistic: false};
       },
       async prepareBeaconProposer() {
         // Do nothing

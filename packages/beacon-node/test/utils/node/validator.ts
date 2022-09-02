@@ -14,7 +14,7 @@ export async function getAndInitDevValidators({
   useRestApi,
   testLoggerOpts,
   externalSignerUrl,
-  defaultFeeRecipient,
+  suggestedFeeRecipient,
   doppelgangerProtectionEnabled = false,
   builder = {},
 }: {
@@ -25,7 +25,7 @@ export async function getAndInitDevValidators({
   useRestApi?: boolean;
   testLoggerOpts?: TestLoggerOpts;
   externalSignerUrl?: string;
-  defaultFeeRecipient?: string;
+  suggestedFeeRecipient?: string;
   doppelgangerProtectionEnabled?: boolean;
   builder?: {enabled?: boolean};
 }): Promise<{validators: Validator[]; secretKeys: SecretKey[]}> {
@@ -70,7 +70,7 @@ export async function getAndInitDevValidators({
         // eslint-disable-next-line @typescript-eslint/no-empty-function
         processShutdownCallback: () => {},
         signers,
-        defaultFeeRecipient,
+        suggestedFeeRecipient,
         doppelgangerProtectionEnabled,
         builder,
       })

@@ -11,6 +11,7 @@ export const gnosisChainConfig: IChainConfig = {
 
   // NOTE: Only add diff values
   PRESET_BASE: PresetName.gnosis,
+  CONFIG_NAME: "gnosis",
 
   SECONDS_PER_SLOT: 5,
   SECONDS_PER_ETH1_BLOCK: 6,

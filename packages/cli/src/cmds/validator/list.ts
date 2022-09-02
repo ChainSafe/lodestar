@@ -1,4 +1,5 @@
 import {ICliCommand} from "../../util/index.js";
+import {getBeaconConfigFromArgs} from "../../config/beaconParams.js";
 import {IGlobalArgs} from "../../options/index.js";
 import {IValidatorCliArgs} from "./options.js";
 import {getSignerPubkeyHex, getSignersFromArgs} from "./signers/index.js";
@@ -19,7 +20,9 @@ export const list: ICliCommand<IValidatorCliArgs, IGlobalArgs, ReturnType> = {
   ],
 
   handler: async (args) => {
-    const signers = await getSignersFromArgs(args);
+    const {network} = getBeaconConfigFromArgs(args);
+
+    const signers = await getSignersFromArgs(args, network);
 
     logSigners(console, signers);
 

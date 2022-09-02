@@ -72,7 +72,7 @@ export class PrepareNextSlotScheduler {
       await sleep(slotMs - slotMs / SCHEDULER_LOOKAHEAD_FACTOR, this.signal);
 
       // calling updateHead() here before we produce a block to reduce reorg possibility
-      const {slot: headSlot, blockRoot: headRoot} = this.chain.forkChoice.updateHead();
+      const {slot: headSlot, blockRoot: headRoot} = this.chain.recomputeForkChoiceHead();
 
       // PS: previously this was comparing slots, but that gave no leway on the skipped
       // slots on epoch bounday. Making it more fluid.

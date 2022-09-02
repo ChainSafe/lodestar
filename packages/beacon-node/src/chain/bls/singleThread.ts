@@ -13,19 +13,25 @@ export class BlsSingleThreadVerifier implements IBlsVerifier {
 
   async verifySignatureSets(sets: ISignatureSet[]): Promise<boolean> {
     this.metrics?.bls.aggregatedPubkeys.inc(getAggregatedPubkeysCount(sets));
-    const timer = this.metrics?.blsThreadPool.mainThreadDurationInThreadPool.startTimer();
 
-    try {
-      return verifySignatureSetsMaybeBatch(
-        sets.map((set) => ({
-          publicKey: getAggregatedPubkey(set),
-          message: set.signingRoot,
-          signature: set.signature,
-        }))
-      );
-    } finally {
-      if (timer) timer();
-    }
+    const setsAggregated = sets.map((set) => ({
+      publicKey: getAggregatedPubkey(set),
+      message: set.signingRoot,
+      signature: set.signature,
+    }));
+
+    // Count time after aggregating
+    const startNs = process.hrtime.bigint();
+
+    const isValid = verifySignatureSetsMaybeBatch(setsAggregated);
+
+    // Don't use a try/catch, only count run without exceptions
+    const endNs = process.hrtime.bigint();
+    const totalSec = Number(startNs - endNs) / 1e9;
+    this.metrics?.blsThreadPool.mainThreadDurationInThreadPool.observe(totalSec);
+    this.metrics?.blsThreadPool.mainThreadDurationInThreadPool.observe(totalSec / sets.length);
+
+    return isValid;
   }
 
   async close(): Promise<void> {

@@ -81,6 +81,7 @@
   "devDependencies": {
     "@types/eventsource": "^1.1.5",
     "@types/qs": "^6.9.6",
+    "ajv": "^8.11.0",
     "fastify": "3.15.1"
   },
   "peerDependencies": {

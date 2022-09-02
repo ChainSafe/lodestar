@@ -331,7 +331,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
         // Now eth deposit/merge tracker methods directly available on engine endpoints
         eth1: {enabled: true, providerUrls: [engineApiUrl], jwtSecretHex},
         executionEngine: {urls: [engineApiUrl], jwtSecretHex},
-        chain: {defaultFeeRecipient: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"},
+        chain: {suggestedFeeRecipient: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"},
       },
       validatorCount: validatorClientCount * validatorsPerClient,
       logger: loggerNodeA,
@@ -354,7 +354,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       // At least one sim test must use the REST API for beacon <-> validator comms
       useRestApi: true,
       testLoggerOpts,
-      defaultFeeRecipient: "0xcccccccccccccccccccccccccccccccccccccccc",
+      suggestedFeeRecipient: "0xcccccccccccccccccccccccccccccccccccccccc",
       builder: {},
       // TODO test merge-interop with remote;
     });

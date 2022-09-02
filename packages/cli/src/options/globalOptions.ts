@@ -4,7 +4,7 @@ import {paramsOptions, IParamsArgs} from "./paramsOptions.js";
 
 interface IGlobalSingleArgs {
   dataDir: string;
-  network: NetworkName;
+  network?: NetworkName;
   paramsFile: string;
   preset: string;
 }
@@ -20,7 +20,7 @@ const globalSingleOptions: ICliCommandOptions<IGlobalSingleArgs> = {
   network: {
     description: "Name of the Ethereum Consensus chain network to join",
     type: "string",
-    default: defaultNetwork,
+    defaultDescription: defaultNetwork,
     choices: networkNames,
   },
 
