@@ -63,6 +63,7 @@ import {CheckpointBalancesCache} from "./balancesCache.js";
 import {AssembledBlockType, BlockType} from "./produceBlock/index.js";
 import {BlockAttributes, produceBlockBody} from "./produceBlock/produceBlockBody.js";
 import {computeNewStateRoot} from "./produceBlock/computeNewStateRoot.js";
+import {gcFinalizedStates} from "./archiver/archiveStates.js";
 
 export class BeaconChain implements IBeaconChain {
   readonly genesisTime: UintNum64;
@@ -263,6 +264,11 @@ export class BeaconChain implements IBeaconChain {
     if (!opts?.disablePrepareNextSlot) {
       new PrepareNextSlotScheduler(this, this.config, metrics, this.logger, signal);
     }
+
+    // Run once to garbage collect not-pruned states
+    gcFinalizedStates(db, logger, cachedState.slot).catch((e) => {
+      logger.error("Error pruning finalized states", {}, e);
+    });
 
     metrics?.opPool.aggregatedAttestationPoolSize.addCollect(() => this.onScrapeMetrics());
 
