@@ -1,14 +1,7 @@
 import {IChainForkConfig} from "@lodestar/config";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {
-  ILogger,
-  LogLevel,
-  TransportType,
-  TransportOpts,
-  WinstonLogger,
-  TimestampFormat,
-  TimestampFormatCode,
-} from "@lodestar/utils";
+import {ILogger, LogLevel, WinstonLogger, TimestampFormat, TimestampFormatCode} from "@lodestar/utils";
+import {fromTransportOpts, TransportOpts, TransportType} from "./loggerTransports.js";
 
 export const defaultLogMaxFiles = 5;
 
@@ -28,9 +21,9 @@ export function errorLogger(): ILogger {
  * Setup a CLI logger, common for beacon, validator and dev commands
  */
 export function getCliLogger(args: ILogArgs, paths: {logFile?: string}, config: IChainForkConfig): ILogger {
-  const transports: TransportOpts[] = [{type: TransportType.console}];
+  const transportsOpts: TransportOpts[] = [{type: TransportType.console}];
   if (paths.logFile) {
-    transports.push({
+    transportsOpts.push({
       type: TransportType.file,
       filename: paths.logFile,
       level: args.logFileLevel,
@@ -55,6 +48,8 @@ export function getCliLogger(args: ILogArgs, paths: {logFile?: string}, config: 
       : {
           format: TimestampFormatCode.DateRegular,
         };
+
+  const transports = transportsOpts.map((transportOpts) => fromTransportOpts(transportOpts));
 
   return new WinstonLogger({level: args.logLevel, module: args.logFormatId, timestampFormat}, transports);
 }

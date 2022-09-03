@@ -1,4 +1,3 @@
-import {Writable} from "node:stream";
 import {LogData} from "./json.js";
 
 export enum LogLevel {
@@ -66,8 +65,6 @@ export interface ILogger {
   important: LogHandler;
   verbose: LogHandler;
   debug: LogHandler;
-  silly: LogHandler;
-  stream(): Writable;
   // custom
   child(options: ILoggerOptions): ILogger;
 }

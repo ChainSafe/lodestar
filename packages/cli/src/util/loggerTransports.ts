@@ -1,7 +1,8 @@
+import path from "node:path";
 import winston from "winston";
 import DailyRotateFile from "winston-daily-rotate-file";
 import TransportStream from "winston-transport";
-import {LogLevel} from "./interface.js";
+import {LogLevel} from "@lodestar/utils";
 
 const {transports} = winston;
 
@@ -34,6 +35,7 @@ export function fromTransportOpts(transportOpts: TransportOpts): TransportStream
             datePattern: "YYYY-MM-DD",
             handleExceptions: true,
             maxFiles: transportOpts.maxfiles,
+            auditFile: path.join(path.dirname(transportOpts.filename), ".log_rotate_audit.json"),
           })
         : new transports.File({
             level: transportOpts.level,

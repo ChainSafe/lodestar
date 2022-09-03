@@ -2,8 +2,8 @@ import chai from "chai";
 import sinon from "sinon";
 import sinonChai from "sinon-chai";
 import {expect} from "chai";
+import winston from "winston";
 import {LogData, LodestarError, LogFormat, logFormats, LogLevel, WinstonLogger} from "../../../src/index.js";
-import {TransportType} from "../../../src/logger/transport.js";
 
 chai.use(sinonChai);
 
@@ -90,7 +90,9 @@ describe("winston logger", () => {
       const {id, message, context, error, output} = typeof testCase === "function" ? testCase() : testCase;
       for (const format of logFormats) {
         it(`${id} ${format} output`, async () => {
-          const logger = new WinstonLogger({format, hideTimestamp: true}, [{type: TransportType.console}]);
+          const logger = new WinstonLogger({format, hideTimestamp: true}, [
+            new winston.transports.Console({debugStdout: true}),
+          ]);
           logger.warn(message, context, error);
 
           if (isNode) {
@@ -106,7 +108,9 @@ describe("winston logger", () => {
 
   describe("child logger", () => {
     it("Should parse child module", async () => {
-      const logger = new WinstonLogger({hideTimestamp: true, module: "A"}, [{type: TransportType.console}]);
+      const logger = new WinstonLogger({hideTimestamp: true, module: "A"}, [
+        new winston.transports.Console({debugStdout: true}),
+      ]);
       const childB = logger.child({module: "B"});
       const childC = childB.child({module: "C"});
       childC.warn("test");
@@ -122,8 +126,8 @@ describe("winston logger", () => {
     });
 
     it("Should log to child at a lower logLevel", () => {
-      const logger = new WinstonLogger({hideTimestamp: true, module: "A"}, [
-        {type: TransportType.console, level: LogLevel.info},
+      const logger = new WinstonLogger({hideTimestamp: true, module: "A", level: LogLevel.info}, [
+        new winston.transports.Console({debugStdout: true}),
       ]);
 
       const childB = logger.child({module: "B", level: LogLevel.debug});
