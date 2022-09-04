@@ -18,7 +18,6 @@ import {
 
 import {computeAnchorCheckpoint} from "../initState.js";
 import {ChainEventEmitter} from "../emitter.js";
-import {IMetrics} from "../../metrics/index.js";
 import {ChainEvent} from "../emitter.js";
 import {GENESIS_SLOT} from "../../constants/index.js";
 
@@ -33,8 +32,7 @@ export function initializeForkChoice(
   currentSlot: Slot,
   state: CachedBeaconStateAllForks,
   opts: ForkChoiceOpts,
-  justifiedBalancesGetter: JustifiedBalancesGetter,
-  metrics?: IMetrics | null
+  justifiedBalancesGetter: JustifiedBalancesGetter
 ): ForkChoice {
   const {blockHeader, checkpoint} = computeAnchorCheckpoint(config, state);
   const finalizedCheckpoint = {...checkpoint};
@@ -90,7 +88,6 @@ export function initializeForkChoice(
       currentSlot
     ),
 
-    opts,
-    metrics
+    opts
   );
 }

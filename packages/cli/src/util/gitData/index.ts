@@ -40,8 +40,8 @@ export function readAndGetGitData(): GitData {
 /** Gets git data containing current branch and commit info from CLI. */
 export function getGitData(): GitData {
   return {
-    branch: getBranch(),
-    commit: getCommit(),
+    branch: process.env.GIT_BRANCH ?? getBranch(),
+    commit: process.env.GIT_COMMIT ?? getCommit(),
   };
 }
 

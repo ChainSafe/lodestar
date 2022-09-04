@@ -7,10 +7,10 @@ To quickly test and run Lodestar we recommend starting a local testnet. We recom
 Run a beacon node, with 8 validators with the following command.
 
 ```bash
-./lodestar dev --genesisValidators 8 --genesisTime 1578787200 --startValidators 0:8 --enr.ip 127.0.0.1 --rootDir </path/to/node1> --reset
+./lodestar dev --genesisValidators 8 --genesisTime 1578787200 --startValidators 0:8 --enr.ip 127.0.0.1 --dataDir </path/to/node1> --reset
 ```
 
-`--genesisValidators` and `--genesisTime` define the genesis state of the beacon chain. `--rootDir` defines a path where
+`--genesisValidators` and `--genesisTime` define the genesis state of the beacon chain. `--dataDir` defines a path where
 lodestar should store the beacon state, `--enr.ip` sets the enr ip entry for the node while the `--reset` flag ensures the state is cleared on each restart - which is useful when testing locally.
 
 Once the node has started, make a request to `curl http://localhost:9596/eth/v1/node/identity` and copy the `enr` value.
@@ -26,9 +26,9 @@ Start the second node without starting any validators and connect to the first n
 
 ```bash
 ./lodestar dev --genesisValidators 8 --genesisTime 1578787200 \
-  --rootDir /path/to/node2 \
+  --dataDir /path/to/node2 \
   --port 9001 \
-  --api.rest.port 9597 \
+  --rest.port 9597 \
   --network.connectToDiscv5Bootnodes true \
   --network.discv5.bootEnrs <enr value>
   --reset
@@ -40,7 +40,7 @@ the `--startValidators` option. Passing a value of `0:0` means no validators sho
 Also, take note that the values of `--genesisValidators` and `--genesisTime` must be the same as the ones passed to the first node in other for the two nodes
 to have the same beacon chain.
 
-Also `--port` and `--api.rest.port` are supplied since the default values will already be in use by the first node.
+Also `--port` and `--rest.port` are supplied since the default values will already be in use by the first node.
 
 The `--network.connectToDiscv5Bootnodes` flags needs to be set to true as this is needed to allow connection to boot enrs on local devnet.
 The exact enr of node to connect to is then supplied via the `--network.discv5.bootEnrs` flag.

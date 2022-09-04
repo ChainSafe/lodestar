@@ -13,14 +13,14 @@ import {getKeymanagerTestRunner} from "../utils/keymanagerTestRunners.js";
 chai.use(chaiAsPromised);
 
 describeCliTest("import remoteKeys from api", function ({spawnCli}) {
-  const rootDir = path.join(testFilesDir, "import-remoteKeys-test");
+  const dataDir = path.join(testFilesDir, "import-remoteKeys-test");
 
-  before("Clean rootDir", () => {
-    rimraf.sync(rootDir);
+  before("Clean dataDir", () => {
+    rimraf.sync(dataDir);
   });
 
   const afterEachCallbacks = getAfterEachCallbacks();
-  const itKeymanagerStep = getKeymanagerTestRunner({args: {spawnCli}, afterEachCallbacks, rootDir});
+  const itKeymanagerStep = getKeymanagerTestRunner({args: {spawnCli}, afterEachCallbacks, dataDir});
 
   /** Generated from  const sk = bls.SecretKey.fromKeygen(Buffer.alloc(32, 0xaa)); */
   const url = "https://remote.signer";

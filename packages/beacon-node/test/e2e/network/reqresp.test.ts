@@ -7,7 +7,7 @@ import {sleep as _sleep} from "@lodestar/utils";
 import {altair, phase0, ssz} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
 import {BitArray} from "@chainsafe/ssz";
-import {createPeerId, IReqRespOptions, Network, prettyPrintPeerId} from "../../../src/network/index.js";
+import {createPeerId, IReqRespOptions, Network} from "../../../src/network/index.js";
 import {defaultNetworkOptions, INetworkOptions} from "../../../src/network/options.js";
 import {Method, Encoding} from "../../../src/network/reqresp/types.js";
 import {ReqRespHandlers} from "../../../src/network/reqresp/handlers/index.js";
@@ -213,7 +213,7 @@ describe("network / ReqResp", function () {
     await expectRejectedWithLodestarError(
       netA.reqResp.beaconBlocksByRange(netB.peerId, {startSlot: 0, step: 1, count: 3}),
       new RequestError(
-        {code: RequestErrorCode.SERVER_ERROR, errorMessage: testErrorMessage},
+        {code: RequestErrorCode.SERVER_ERROR, errorMessage: "sNaPpYa" + testErrorMessage},
         formatMetadata(Method.BeaconBlocksByRange, Encoding.SSZ_SNAPPY, netB.peerId)
       )
     );
@@ -232,7 +232,7 @@ describe("network / ReqResp", function () {
     await expectRejectedWithLodestarError(
       netA.reqResp.beaconBlocksByRange(netB.peerId, {startSlot: 0, step: 1, count: 3}),
       new RequestError(
-        {code: RequestErrorCode.SERVER_ERROR, errorMessage: testErrorMessage},
+        {code: RequestErrorCode.SERVER_ERROR, errorMessage: "sNaPpYa" + testErrorMessage},
         formatMetadata(Method.BeaconBlocksByRange, Encoding.SSZ_SNAPPY, netB.peerId)
       )
     );
@@ -327,5 +327,5 @@ describe("network / ReqResp", function () {
 
 /** Helper to reduce code-duplication */
 function formatMetadata(method: Method, encoding: Encoding, peer: PeerId): IRequestErrorMetadata {
-  return {method, encoding, peer: prettyPrintPeerId(peer)};
+  return {method, encoding, peer: peer.toB58String()};
 }

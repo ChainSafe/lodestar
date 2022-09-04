@@ -12,17 +12,17 @@ import {getKeystoresStr} from "../utils/keystores.js";
 /* eslint-disable no-console */
 
 describeCliTest("import from fs then validate", function ({spawnCli}) {
-  const rootDir = path.join(testFilesDir, "import-then-validate-test");
-  const importFromDir = path.join(rootDir, "eth2.0_deposit_out");
+  const dataDir = path.join(testFilesDir, "import-then-validate-test");
+  const importFromDir = path.join(dataDir, "eth2.0_deposit_out");
   const passphraseFilepath = path.join(importFromDir, "password.text");
 
-  before("Clean rootDir", () => {
-    rimraf.sync(rootDir);
+  before("Clean dataDir", () => {
+    rimraf.sync(dataDir);
     rimraf.sync(importFromDir);
   });
 
   const afterEachCallbacks = getAfterEachCallbacks();
-  const itKeymanagerStep = getKeymanagerTestRunner({args: {spawnCli}, afterEachCallbacks, rootDir});
+  const itKeymanagerStep = getKeymanagerTestRunner({args: {spawnCli}, afterEachCallbacks, dataDir});
 
   const passphrase = "AAAAAAAA0000000000";
   const keyCount = 2;
@@ -42,8 +42,8 @@ describeCliTest("import from fs then validate", function ({spawnCli}) {
     const stdout = await execCli([
       // ⏎
       "validator import",
-      `--rootDir ${rootDir}`,
-      `--importKeystoresPath ${importFromDir}`,
+      `--dataDir ${dataDir}`,
+      `--importKeystores ${importFromDir}`,
       `--importKeystoresPassword ${passphraseFilepath}`,
     ]);
 
@@ -53,13 +53,13 @@ describeCliTest("import from fs then validate", function ({spawnCli}) {
   });
 
   it("run 'validator list' and check pubkeys are imported", async function () {
-    fs.mkdirSync(path.join(rootDir, "keystores"), {recursive: true});
-    fs.mkdirSync(path.join(rootDir, "secrets"), {recursive: true});
+    fs.mkdirSync(path.join(dataDir, "keystores"), {recursive: true});
+    fs.mkdirSync(path.join(dataDir, "secrets"), {recursive: true});
 
     const stdout = await execCli([
       // ⏎
       "validator list",
-      `--rootDir ${rootDir}`,
+      `--dataDir ${dataDir}`,
     ]);
 
     for (let i = 0; i < keyCount; i++) {

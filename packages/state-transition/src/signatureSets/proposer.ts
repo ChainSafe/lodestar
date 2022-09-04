@@ -17,7 +17,7 @@ export function getProposerSignatureSet(
   signedBlock: allForks.FullOrBlindedSignedBeaconBlock
 ): ISignatureSet {
   const {config, epochCtx} = state;
-  const domain = state.config.getDomain(DOMAIN_BEACON_PROPOSER, signedBlock.message.slot);
+  const domain = state.config.getDomain(state.slot, DOMAIN_BEACON_PROPOSER, signedBlock.message.slot);
 
   const blockType = isBlindedBeaconBlock(signedBlock.message)
     ? ssz.bellatrix.BlindedBeaconBlock

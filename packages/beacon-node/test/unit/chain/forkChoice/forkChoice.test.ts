@@ -87,7 +87,7 @@ describe("LodestarForkChoice", function () {
       const parentBlockHex = ssz.phase0.BeaconBlock.hashTreeRoot(parentBlock.message);
       const orphanedBlockHex = ssz.phase0.BeaconBlock.hashTreeRoot(orphanedBlock.message);
       // forkchoice tie-break condition is based on root hex
-      expect(orphanedBlockHex > parentBlockHex).to.be.true;
+      expect(orphanedBlockHex > parentBlockHex).to.equal(true);
       const currentSlot = childBlock.message.slot;
       forkChoice.updateTime(currentSlot);
 
@@ -174,8 +174,8 @@ describe("LodestarForkChoice", function () {
       );
       expect(forkChoice.getBlockHex(hashBlock(block08.message))).to.be.not.null;
       expect(forkChoice.getBlockHex(hashBlock(block12.message))).to.be.not.null;
-      expect(forkChoice.hasBlockHex(hashBlock(block08.message))).to.be.true;
-      expect(forkChoice.hasBlockHex(hashBlock(block12.message))).to.be.true;
+      expect(forkChoice.hasBlockHex(hashBlock(block08.message))).to.equal(true);
+      expect(forkChoice.hasBlockHex(hashBlock(block12.message))).to.equal(true);
       forkChoice.onBlock(block32.message, state32, blockDelaySec, currentSlot, executionStatus);
       forkChoice.prune(hashBlock(block16.message));
       expect(forkChoice.getAllAncestorBlocks(hashBlock(block16.message)).length).to.be.equal(
@@ -186,10 +186,10 @@ describe("LodestarForkChoice", function () {
         2,
         "getAllAncestorBlocks should return 2 blocks"
       );
-      expect(forkChoice.getBlockHex(hashBlock(block08.message))).to.be.null;
-      expect(forkChoice.getBlockHex(hashBlock(block12.message))).to.be.null;
-      expect(forkChoice.hasBlockHex(hashBlock(block08.message))).to.be.false;
-      expect(forkChoice.hasBlockHex(hashBlock(block12.message))).to.be.false;
+      expect(forkChoice.getBlockHex(hashBlock(block08.message))).to.equal(null);
+      expect(forkChoice.getBlockHex(hashBlock(block12.message))).to.equal(null);
+      expect(forkChoice.hasBlockHex(hashBlock(block08.message))).to.equal(false);
+      expect(forkChoice.hasBlockHex(hashBlock(block12.message))).to.equal(false);
     });
 
     /**

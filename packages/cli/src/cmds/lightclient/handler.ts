@@ -8,8 +8,9 @@ import {getBeaconPaths} from "../beacon/paths.js";
 import {ILightClientArgs} from "./options.js";
 
 export async function lightclientHandler(args: ILightClientArgs & IGlobalArgs): Promise<void> {
-  const config = getBeaconConfigFromArgs(args);
-  const beaconPaths = getBeaconPaths(args);
+  const {config, network} = getBeaconConfigFromArgs(args);
+
+  const beaconPaths = getBeaconPaths(args, network);
   const logger = getCliLogger(args, beaconPaths, config);
   const {beaconApiUrl, checkpointRoot} = args;
   const api = getClient({baseUrl: beaconApiUrl}, {config});

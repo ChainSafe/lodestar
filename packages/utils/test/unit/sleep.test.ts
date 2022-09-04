@@ -26,7 +26,7 @@ describe("sleep", function () {
     const controller = new AbortController();
 
     controller.abort();
-    expect(controller.signal.aborted, "Signal should already be aborted").to.be.true;
+    expect(controller.signal.aborted, "Signal should already be aborted").to.equal(true);
 
     await expect(sleep(0, controller.signal)).to.rejectedWith(ErrorAborted);
   });

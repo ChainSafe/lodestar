@@ -24,7 +24,7 @@ import {MetaDataRepository} from "./repositories/metaDataRepository.js";
 import {DoppelgangerService} from "./services/doppelgangerService.js";
 
 export const defaultOptions = {
-  defaultFeeRecipient: "0x0000000000000000000000000000000000000000",
+  suggestedFeeRecipient: "0x0000000000000000000000000000000000000000",
   defaultGasLimit: 30_000_000,
 };
 
@@ -37,7 +37,7 @@ export type ValidatorOptions = {
   processShutdownCallback: ProcessShutdownCallback;
   afterBlockDelaySlotFraction?: number;
   graffiti?: string;
-  defaultFeeRecipient?: string;
+  suggestedFeeRecipient?: string;
   strictFeeRecipientCheck?: boolean;
   doppelgangerProtectionEnabled?: boolean;
   closed?: boolean;
@@ -78,7 +78,7 @@ export class Validator {
       slashingProtection,
       signers,
       graffiti,
-      defaultFeeRecipient,
+      suggestedFeeRecipient,
       strictFeeRecipientCheck,
       gasLimit,
       builder,
@@ -112,7 +112,7 @@ export class Validator {
       doppelgangerService,
       metrics,
       signers,
-      defaultFeeRecipient ?? defaultOptions.defaultFeeRecipient,
+      suggestedFeeRecipient ?? defaultOptions.suggestedFeeRecipient,
       gasLimit ?? defaultOptions.defaultGasLimit
     );
     pollPrepareBeaconProposer(config, loggerVc, api, clock, validatorStore, metrics);
@@ -121,6 +121,10 @@ export class Validator {
     }
 
     const emitter = new ValidatorEventEmitter();
+    // Validator event emitter can have more than 10 listeners in a normal course of operation
+    // We set infinity to prevent MaxListenersExceededWarning which get logged when listeners > 10
+    emitter.setMaxListeners(Infinity);
+
     const chainHeaderTracker = new ChainHeaderTracker(logger, api, emitter);
 
     this.blockProposingService = new BlockProposingService(config, loggerVc, api, clock, validatorStore, metrics, {
@@ -206,7 +210,6 @@ export class Validator {
   }
 
   removeDutiesForKey(pubkey: PubkeyHex): void {
-    this.validatorStore.removeSigner(pubkey);
     this.blockProposingService.removeDutiesForKey(pubkey);
     this.attestationService.removeDutiesForKey(pubkey);
     this.syncCommitteeService.removeDutiesForKey(pubkey);

@@ -357,6 +357,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       const latencyToWorkerSec = Number(workerStartNs - jobStartNs) / 1e9;
       const latencyFromWorkerSec = Number(jobEndNs - workerEndNs) / 1e9;
 
+      this.metrics?.blsThreadPool.timePerSigSet.observe(workerJobTimeSec / startedSigSets);
       this.metrics?.blsThreadPool.jobsWorkerTime.inc({workerId}, workerJobTimeSec);
       this.metrics?.blsThreadPool.latencyToWorker.observe(latencyToWorkerSec);
       this.metrics?.blsThreadPool.latencyFromWorker.observe(latencyFromWorkerSec);

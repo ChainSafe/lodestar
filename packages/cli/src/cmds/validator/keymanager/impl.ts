@@ -139,6 +139,10 @@ export class KeymanagerApi implements Api {
       try {
         const pubkeyHex = pubkeysHex[i];
 
+        if (!isValidatePubkeyHex(pubkeyHex)) {
+          throw Error(`Invalid pubkey ${pubkeyHex}`);
+        }
+
         // Skip unknown keys or remote signers
         const signer = this.validator.validatorStore.getSigner(pubkeyHex);
         if (signer && signer?.type === SignerType.Local) {
@@ -261,6 +265,10 @@ export class KeymanagerApi implements Api {
     const results = pubkeys.map(
       (pubkeyHex): ResponseStatus<DeleteRemoteKeyStatus> => {
         try {
+          if (!isValidatePubkeyHex(pubkeyHex)) {
+            throw Error(`Invalid pubkey ${pubkeyHex}`);
+          }
+
           const signer = this.validator.validatorStore.getSigner(pubkeyHex);
 
           // Remove key from live local signer

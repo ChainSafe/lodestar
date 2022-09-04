@@ -5,7 +5,7 @@ import {
   isMergeTransitionBlock as isMergeTransitionBlockFn,
   isExecutionEnabled,
 } from "@lodestar/state-transition";
-import {bellatrix, allForks} from "@lodestar/types";
+import {bellatrix, allForks, Slot} from "@lodestar/types";
 import {toHexString} from "@chainsafe/ssz";
 import {IForkChoice, ExecutionStatus, assertValidTerminalPowBlock, ProtoBlock} from "@lodestar/fork-choice";
 import {IChainForkConfig} from "@lodestar/config";
@@ -17,7 +17,7 @@ import {BlockProcessOpts} from "../options.js";
 import {ExecutePayloadStatus} from "../../execution/engine/interface.js";
 import {IEth1ForBlockProduction} from "../../eth1/index.js";
 
-type VerifyBlockModules = {
+export type VerifyBlockExecutionPayloadModules = {
   eth1: IEth1ForBlockProduction;
   executionEngine: IExecutionEngine;
   clock: IBeaconClock;
@@ -32,7 +32,7 @@ type VerifyBlockModules = {
  * Since the EL client must be aware of each parent, all payloads must be submited in sequence.
  */
 export async function verifyBlocksExecutionPayload(
-  chain: VerifyBlockModules,
+  chain: VerifyBlockExecutionPayloadModules,
   parentBlock: ProtoBlock,
   blocks: allForks.SignedBeaconBlock[],
   preState0: CachedBeaconStateAllForks,
@@ -108,9 +108,11 @@ export async function verifyBlocksExecutionPayload(
   //    - all the blocks are way behind the current slot
   //    - or we have already imported a post-merge parent of first block of this chain in forkchoice
   const lastBlock = blocks[blocks.length - 1];
+
+  const currentSlot = chain.clock.currentSlot;
   let isOptimisticallySafe =
     parentBlock.executionStatus !== ExecutionStatus.PreMerge ||
-    lastBlock.message.slot + opts.safeSlotsToImportOptimistically < chain.clock.currentSlot;
+    lastBlock.message.slot + opts.safeSlotsToImportOptimistically < currentSlot;
 
   for (const block of blocks) {
     // If blocks are invalid in consensus the main promise could resolve before this loop ends.
@@ -119,7 +121,15 @@ export async function verifyBlocksExecutionPayload(
       throw new ErrorAborted("verifyBlockExecutionPayloads");
     }
 
-    const {executionStatus} = await verifyBlockExecutionPayload(chain, block, preState0, opts, isOptimisticallySafe);
+    const {executionStatus} = await verifyBlockExecutionPayload(
+      chain,
+      block,
+      preState0,
+      opts,
+      isOptimisticallySafe,
+      currentSlot
+    );
+
     // It becomes optimistically  safe for following blocks if a post-merge block is deemed fit
     // for import. If it would not have been safe verifyBlockExecutionPayload would throw error
     // and we would not be here.
@@ -129,6 +139,10 @@ export async function verifyBlocksExecutionPayload(
     executionStatuses.push(executionStatus);
 
     const isMergeTransitionBlock =
+      // If the merge block is found, stop the search as the isMergeTransitionBlockFn condition
+      // will still evalute to true for the following blocks leading to errors (while syncing)
+      // as the preState0 still belongs to the pre state of the first block on segment
+      mergeBlockFound === null &&
       isBellatrixStateType(preState0) &&
       isBellatrixBlockBodyType(block.message.body) &&
       isMergeTransitionBlockFn(preState0, block.message.body);
@@ -196,11 +210,12 @@ export async function verifyBlocksExecutionPayload(
  * Verifies a single block execution payload by sending it to the EL client (via HTTP).
  */
 export async function verifyBlockExecutionPayload(
-  chain: VerifyBlockModules,
+  chain: VerifyBlockExecutionPayloadModules,
   block: allForks.SignedBeaconBlock,
   preState0: CachedBeaconStateAllForks,
   opts: BlockProcessOpts,
-  isOptimisticallySafe: boolean
+  isOptimisticallySafe: boolean,
+  currentSlot: Slot
 ): Promise<{executionStatus: ExecutionStatus}> {
   /** Not null if execution is enabled */
   const executionPayloadEnabled =
@@ -249,10 +264,7 @@ export async function verifyBlockExecutionPayload(
       // Check if the entire segment was deemed safe or, this block specifically itself if not in
       // the safeSlotsToImportOptimistically window of current slot, then we can import else
       // we need to throw and not import his block
-      if (
-        !isOptimisticallySafe &&
-        block.message.slot + opts.safeSlotsToImportOptimistically >= chain.clock.currentSlot
-      ) {
+      if (!isOptimisticallySafe && block.message.slot + opts.safeSlotsToImportOptimistically >= currentSlot) {
         throw new BlockError(block, {
           code: BlockErrorCode.EXECUTION_ENGINE_ERROR,
           execStatus: ExecutePayloadStatus.UNSAFE_OPTIMISTIC_STATUS,

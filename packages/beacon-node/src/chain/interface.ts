@@ -2,8 +2,9 @@ import {allForks, UintNum64, Root, phase0, Slot, RootHex, Epoch, ValidatorIndex}
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {IBeaconConfig} from "@lodestar/config";
 import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
+import {ILogger} from "@lodestar/utils";
 
-import {IForkChoice} from "@lodestar/fork-choice";
+import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {IEth1ForBlockProduction} from "../eth1/index.js";
 import {IExecutionEngine, IExecutionBuilder} from "../execution/index.js";
 import {IBeaconClock} from "./clock/interface.js";
@@ -49,17 +50,18 @@ export interface IBeaconChain {
   readonly executionBuilder?: IExecutionBuilder;
   // Expose config for convenience in modularized functions
   readonly config: IBeaconConfig;
+  readonly logger: ILogger;
 
   /** The initial slot that the chain is started with */
   readonly anchorStateLatestBlockSlot: Slot;
 
-  bls: IBlsVerifier;
-  forkChoice: IForkChoice;
-  clock: IBeaconClock;
-  emitter: ChainEventEmitter;
-  stateCache: StateContextCache;
-  checkpointStateCache: CheckpointStateCache;
-  regen: IStateRegenerator;
+  readonly bls: IBlsVerifier;
+  readonly forkChoice: IForkChoice;
+  readonly clock: IBeaconClock;
+  readonly emitter: ChainEventEmitter;
+  readonly stateCache: StateContextCache;
+  readonly checkpointStateCache: CheckpointStateCache;
+  readonly regen: IStateRegenerator;
   readonly lightClientServer: LightClientServer;
   readonly reprocessController: ReprocessController;
 
@@ -111,6 +113,8 @@ export interface IBeaconChain {
 
   getStatus(): phase0.Status;
 
+  recomputeForkChoiceHead(): ProtoBlock;
+
   waitForBlockOfAttestation(slot: Slot, root: RootHex): Promise<boolean>;
 
   updateBeaconProposerData(epoch: Epoch, proposers: ProposerPreparationData[]): Promise<void>;
@@ -118,6 +122,7 @@ export interface IBeaconChain {
   persistInvalidSszValue<T>(type: Type<T>, sszObject: T | Uint8Array, suffix?: string): void;
   /** Persist bad items to persistInvalidSszObjectsDir dir, for example invalid state, attestations etc. */
   persistInvalidSszView(view: TreeView<CompositeTypeAny>, suffix?: string): void;
+  updateBuilderStatus(clockSlot: Slot): void;
 }
 
 export type SSZObjectType =

@@ -10,7 +10,7 @@ services:
     ports:
       - "9000:9000" # P2P port
     #  - "9596:9596" # REST API port
-    command: beacon --rootDir /data --api.rest.enabled --api.rest.host 0.0.0.0 --metrics.enabled --logFile /logs/beacon.log --logLevelFile debug --logRotate --logMaxFiles 5
+    command: beacon --dataDir /data --rest --rest.address 0.0.0.0 --metrics --logFile /logs/beacon.log --logFileLevel debug --logFileDailyRotate 5
     # NodeJS applications have a default memory limit of 2.5GB.
     # This limit is bit tight for a Prater node, it is recommended to raise the limit
     # since memory may spike during certain network conditions.

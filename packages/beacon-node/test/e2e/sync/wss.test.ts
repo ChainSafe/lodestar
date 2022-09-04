@@ -90,9 +90,9 @@ describe("Start from WSS", function () {
       throw e;
     }
 
-    const weakSubjectivityServerUrl = "http://127.0.0.1:19596";
-    loggerNodeB.important("Fetching weak subjectivity state ", {weakSubjectivityServerUrl});
-    const {wsState, wsCheckpoint} = await fetchWeakSubjectivityState(config, loggerNodeB, {weakSubjectivityServerUrl});
+    const checkpointSyncUrl = "http://127.0.0.1:19596";
+    loggerNodeB.important("Fetching weak subjectivity state ", {checkpointSyncUrl});
+    const {wsState, wsCheckpoint} = await fetchWeakSubjectivityState(config, loggerNodeB, {checkpointSyncUrl});
     loggerNodeB.important("Fetched wss state");
 
     const bnStartingFromWSS = await getDevBeaconNode({

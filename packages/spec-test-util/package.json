@@ -1,6 +1,6 @@
 {
   "name": "@lodestar/spec-test-util",
-  "version": "0.41.0",
+  "version": "1.0.0",
   "description": "Spec test suite generator from yaml test files",
   "author": "ChainSafe Systems",
   "license": "Apache-2.0",
@@ -46,7 +46,7 @@
     "blockchain"
   ],
   "dependencies": {
-    "@lodestar/utils": "^0.41.0",
+    "@lodestar/utils": "^1.0.0",
     "async-retry": "^1.3.3",
     "axios": "^0.21.0",
     "chai": "^4.2.0",

@@ -5,21 +5,13 @@ import {fromHexString} from "@chainsafe/ssz";
 /**
  * 0x prefix a string if not prefixed already
  */
-export function add0xPrefix(hex: string): string {
-  if (!hex.startsWith("0x")) {
-    return `0x${hex}`;
-  } else {
-    return hex;
-  }
-}
-
 export function ensure0xPrefix(hex: string): string {
   if (!hex.startsWith("0x")) hex = `0x${hex}`;
   return hex;
 }
 
 export function isValidatePubkeyHex(pubkeyHex: string): boolean {
-  return /0x[0-9a-fA-F]{96}/.test(pubkeyHex);
+  return /^0x[0-9a-fA-F]{96}$/.test(pubkeyHex);
 }
 
 export function getPubkeyHexFromKeystore(keystore: {pubkey?: string}): string {
@@ -73,4 +65,24 @@ export function isValidHttpUrl(urlStr: string): boolean {
   }
 
   return url.protocol === "http:" || url.protocol === "https:";
+}
+
+/**
+ * Parses a file to get a list of bootnodes for a network.
+ * Bootnodes file is expected to contain bootnode ENR's concatenated by newlines, or commas for
+ * parsing plaintext, YAML, JSON and/or env files.
+ */
+export function parseBootnodesFile(bootnodesFile: string): string[] {
+  const enrs = [];
+  for (const line of bootnodesFile.trim().split(/\r?\n/)) {
+    for (const entry of line.split(",")) {
+      const sanitizedEntry = entry.replace(/['",[\]{}.]+/g, "").trim();
+
+      if (sanitizedEntry.includes("enr:-")) {
+        const parsedEnr = `enr:-${sanitizedEntry.split("enr:-")[1]}`;
+        enrs.push(parsedEnr);
+      }
+    }
+  }
+  return enrs;
 }

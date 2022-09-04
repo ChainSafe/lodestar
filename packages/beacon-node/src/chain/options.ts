@@ -14,8 +14,12 @@ export type IChainOptions = BlockProcessOpts &
     persistInvalidSszObjects?: boolean;
     persistInvalidSszObjectsDir?: string;
     skipCreateStateCacheIfAvailable?: boolean;
-    defaultFeeRecipient: string;
+    suggestedFeeRecipient: string;
     maxSkipSlots?: number;
+    /** Window to inspect missed slots for enabling/disabling builder circuit breaker */
+    faultInspectionWindow?: number;
+    /** Number of missed slots allowed in the faultInspectionWindow for builder circuit*/
+    allowedFaults?: number;
   };
 
 export type BlockProcessOpts = {
@@ -36,6 +40,11 @@ export type BlockProcessOpts = {
   disableOnBlockError?: boolean;
   /** Used for fork_choice spec tests */
   disablePrepareNextSlot?: boolean;
+  /**
+   * Used to connect beacon in follow mode to an EL,
+   * will still issue fcU for block proposal
+   */
+  disableImportExecutionFcU?: boolean;
 };
 
 export const defaultChainOptions: IChainOptions = {
@@ -43,8 +52,8 @@ export const defaultChainOptions: IChainOptions = {
   blsVerifyAllMultiThread: false,
   disableBlsBatchVerify: false,
   proposerBoostEnabled: true,
-  computeUnrealized: false,
+  computeUnrealized: true,
   safeSlotsToImportOptimistically: SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY,
-  defaultFeeRecipient: defaultValidatorOptions.defaultFeeRecipient,
+  suggestedFeeRecipient: defaultValidatorOptions.suggestedFeeRecipient,
   assertCorrectProgressiveBalances: false,
 };

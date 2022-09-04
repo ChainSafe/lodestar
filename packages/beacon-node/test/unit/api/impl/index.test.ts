@@ -7,12 +7,14 @@ import {getBeaconBlockApi} from "../../../../src/api/impl/beacon/blocks/index.js
 import {BeaconChain} from "../../../../src/chain/index.js";
 import {Network} from "../../../../src/network/index.js";
 import {BeaconSync} from "../../../../src/sync/index.js";
-import {StubbedBeaconDb} from "../../../utils/stub/index.js";
+import {StubbedBeaconDb, StubbedChainMutable} from "../../../utils/stub/index.js";
+
+type StubbedChain = StubbedChainMutable<"forkChoice" | "clock">;
 
 export type ApiImplTestModules = {
   sandbox: SinonSandbox;
   forkChoiceStub: SinonStubbedInstance<ForkChoice>;
-  chainStub: SinonStubbedInstance<BeaconChain>;
+  chainStub: StubbedChain;
   syncStub: SinonStubbedInstance<BeaconSync>;
   dbStub: StubbedBeaconDb;
   networkStub: SinonStubbedInstance<Network>;
@@ -23,7 +25,7 @@ export type ApiImplTestModules = {
 export function setupApiImplTestServer(): ApiImplTestModules {
   const sandbox = sinon.createSandbox();
   const forkChoiceStub = sinon.createStubInstance(ForkChoice);
-  const chainStub = sinon.createStubInstance(BeaconChain);
+  const chainStub = sinon.createStubInstance(BeaconChain) as StubbedChain;
   const syncStub = sinon.createStubInstance(BeaconSync);
   const dbStub = new StubbedBeaconDb(config);
   const networkStub = sinon.createStubInstance(Network);

@@ -157,10 +157,15 @@ function getExecutionInfo(
   } else {
     const executionStatusStr = headInfo.executionStatus.toLowerCase();
 
-    if (isBellatrixCachedStateType(headState) && isMergeTransitionComplete(headState)) {
-      return [`execution: ${executionStatusStr}(${prettyBytes(headInfo.executionPayloadBlockHash ?? "empty")})`];
+    // Add execution status to notifier only if head is on/post bellatrix
+    if (isBellatrixCachedStateType(headState)) {
+      if (isMergeTransitionComplete(headState)) {
+        return [`execution: ${executionStatusStr}(${prettyBytes(headInfo.executionPayloadBlockHash ?? "empty")})`];
+      } else {
+        return [`execution: ${executionStatusStr}`];
+      }
     } else {
-      return [`execution: ${executionStatusStr}`];
+      return [];
     }
   }
 }

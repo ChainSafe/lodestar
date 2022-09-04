@@ -6,6 +6,7 @@ import {IBeaconConfig} from "@lodestar/config";
 import {BeaconStateAllForks, CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {CheckpointWithHex, IForkChoice, ProtoBlock, ExecutionStatus} from "@lodestar/fork-choice";
 import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
+import {ILogger} from "@lodestar/utils";
 
 import {ChainEventEmitter, IBeaconChain} from "../../../../src/chain/index.js";
 import {IBeaconClock} from "../../../../src/chain/clock/interface.js";
@@ -58,11 +59,12 @@ export class MockBeaconChain implements IBeaconChain {
   readonly eth1 = new Eth1ForBlockProductionDisabled();
   readonly executionEngine = new ExecutionEngineDisabled();
   readonly config: IBeaconConfig;
+  readonly logger: ILogger;
   readonly opts: IChainOptions = {
     persistInvalidSszObjectsDir: "",
     proposerBoostEnabled: false,
     safeSlotsToImportOptimistically: 0,
-    defaultFeeRecipient: "0x0000000000000000000000000000000000000000",
+    suggestedFeeRecipient: "0x0000000000000000000000000000000000000000",
   };
   readonly anchorStateLatestBlockSlot: Slot;
 
@@ -95,7 +97,7 @@ export class MockBeaconChain implements IBeaconChain {
   readonly seenBlockAttesters = new SeenBlockAttesters();
 
   readonly beaconProposerCache = new BeaconProposerCache({
-    defaultFeeRecipient: defaultValidatorOptions.defaultFeeRecipient,
+    suggestedFeeRecipient: defaultValidatorOptions.suggestedFeeRecipient,
   });
   readonly checkpointBalancesCache = new CheckpointBalancesCache();
 
@@ -103,7 +105,7 @@ export class MockBeaconChain implements IBeaconChain {
   private abortController: AbortController;
 
   constructor({genesisTime, chainId, networkId, state, config}: IMockChainParams) {
-    const logger = testLogger();
+    this.logger = testLogger();
     this.genesisTime = genesisTime ?? state.genesisTime;
     this.genesisValidatorsRoot = state.genesisValidatorsRoot;
     this.bls = sinon.createStubInstance(BlsSingleThreadVerifier);
@@ -140,7 +142,7 @@ export class MockBeaconChain implements IBeaconChain {
         db: db,
         metrics: null,
         emitter: this.emitter,
-        logger,
+        logger: this.logger,
       }
     );
     this.reprocessController = new ReprocessController(null);
@@ -195,6 +197,10 @@ export class MockBeaconChain implements IBeaconChain {
     };
   }
 
+  recomputeForkChoiceHead(): ProtoBlock {
+    return this.forkChoice.getHead();
+  }
+
   async waitForBlockOfAttestation(): Promise<boolean> {
     return false;
   }
@@ -208,29 +214,34 @@ export class MockBeaconChain implements IBeaconChain {
   }
 
   async updateBeaconProposerData(): Promise<void> {}
+  updateBuilderStatus(): void {}
 }
+
+const root = ssz.Root.defaultValue() as Uint8Array;
+const rootHex = toHexString(root);
+export const zeroProtoBlock: ProtoBlock = {
+  slot: 0,
+  blockRoot: rootHex,
+  parentRoot: rootHex,
+  stateRoot: rootHex,
+  targetRoot: rootHex,
+
+  justifiedEpoch: 0,
+  justifiedRoot: rootHex,
+  finalizedEpoch: 0,
+  finalizedRoot: rootHex,
+  unrealizedJustifiedEpoch: 0,
+  unrealizedJustifiedRoot: rootHex,
+  unrealizedFinalizedEpoch: 0,
+  unrealizedFinalizedRoot: rootHex,
+
+  ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
+};
 
 function mockForkChoice(): IForkChoice {
   const root = ssz.Root.defaultValue() as Uint8Array;
   const rootHex = toHexString(root);
-  const block: ProtoBlock = {
-    slot: 0,
-    blockRoot: rootHex,
-    parentRoot: rootHex,
-    stateRoot: rootHex,
-    targetRoot: rootHex,
-
-    justifiedEpoch: 0,
-    justifiedRoot: rootHex,
-    finalizedEpoch: 0,
-    finalizedRoot: rootHex,
-    unrealizedJustifiedEpoch: 0,
-    unrealizedJustifiedRoot: rootHex,
-    unrealizedFinalizedEpoch: 0,
-    unrealizedFinalizedRoot: rootHex,
-
-    ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
-  };
+  const block: ProtoBlock = zeroProtoBlock;
   const checkpoint: CheckpointWithHex = {epoch: 0, root, rootHex};
 
   return {
@@ -248,6 +259,7 @@ function mockForkChoice(): IForkChoice {
     getTime: () => 0,
     hasBlock: () => true,
     hasBlockHex: () => true,
+    getSlotsPresent: () => 0,
     getBlock: () => block,
     getBlockHex: () => block,
     getFinalizedBlock: () => block,

@@ -118,13 +118,13 @@ describe("block archive repository", function () {
         encodeKey(Bucket.index_blockArchiveRootIndex, ssz.phase0.BeaconBlock.hashTreeRoot(block.message)),
         intToBytes(block.message.slot, 8, "be")
       ).calledOnce
-    ).to.be.true;
+    ).to.equal(true);
     expect(
       spy.withArgs(
         encodeKey(Bucket.index_blockArchiveParentRootIndex, block.message.parentRoot),
         intToBytes(block.message.slot, 8, "be")
       ).calledOnce
-    ).to.be.true;
+    ).to.equal(true);
   });
 
   it("should store indexes when block batch", async function () {
@@ -136,13 +136,13 @@ describe("block archive repository", function () {
         encodeKey(Bucket.index_blockArchiveRootIndex, ssz.phase0.BeaconBlock.hashTreeRoot(blocks[0].message)),
         intToBytes(blocks[0].message.slot, 8, "be")
       ).calledTwice
-    ).to.be.true;
+    ).to.equal(true);
     expect(
       spy.withArgs(
         encodeKey(Bucket.index_blockArchiveParentRootIndex, blocks[0].message.parentRoot),
         intToBytes(blocks[0].message.slot, 8, "be")
       ).calledTwice
-    ).to.be.true;
+    ).to.equal(true);
   });
 
   it("should get slot by root", async function () {
@@ -157,7 +157,7 @@ describe("block archive repository", function () {
     await blockArchive.add(block);
     const retrieved = await blockArchive.getByRoot(ssz.phase0.BeaconBlock.hashTreeRoot(block.message));
     if (!retrieved) throw Error("getByRoot returned null");
-    expect(ssz.phase0.SignedBeaconBlock.equals(retrieved, block)).to.be.true;
+    expect(ssz.phase0.SignedBeaconBlock.equals(retrieved, block)).to.equal(true);
   });
 
   it("should get slot by parent root", async function () {
@@ -172,6 +172,6 @@ describe("block archive repository", function () {
     await blockArchive.add(block);
     const retrieved = await blockArchive.getByParentRoot(block.message.parentRoot);
     if (!retrieved) throw Error("getByRoot returned null");
-    expect(ssz.phase0.SignedBeaconBlock.equals(retrieved, block)).to.be.true;
+    expect(ssz.phase0.SignedBeaconBlock.equals(retrieved, block)).to.equal(true);
   });
 });

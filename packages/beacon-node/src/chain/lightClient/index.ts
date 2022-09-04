@@ -182,6 +182,23 @@ export class LightClientServer {
       finalizedHeader: ssz.phase0.BeaconBlockHeader.defaultValue(),
       finalityBranch: ssz.altair.LightClientUpdate.fields["finalityBranch"].defaultValue(),
     };
+
+    if (metrics) {
+      metrics.lightclientServer.highestSlot.addCollect(() => {
+        if (this.latestHeadUpdate) {
+          metrics.lightclientServer.highestSlot.set(
+            {item: "latest_head_update"},
+            this.latestHeadUpdate.attestedHeader.slot
+          );
+        }
+        if (this.finalized) {
+          metrics.lightclientServer.highestSlot.set(
+            {item: "latest_finalized_update"},
+            this.finalized.attestedHeader.slot
+          );
+        }
+      });
+    }
   }
 
   /**
@@ -210,6 +227,7 @@ export class LightClientServer {
 
     this.onSyncAggregate(syncPeriod, block.body.syncAggregate, signedBlockRoot).catch((e) => {
       this.logger.error("Error onSyncAggregate", {}, e);
+      this.metrics?.lightclientServer.onSyncAggregate.inc({event: "error"});
     });
 
     this.persistPostBlockImportData(block, postState, parentBlockSlot).catch((e) => {
@@ -403,20 +421,22 @@ export class LightClientServer {
     syncAggregate: altair.SyncAggregate,
     signedBlockRoot: Root
   ): Promise<void> {
+    this.metrics?.lightclientServer.onSyncAggregate.inc({event: "processed"});
+
     const signedBlockRootHex = toHexString(signedBlockRoot);
     const attestedData = this.prevHeadData.get(signedBlockRootHex);
     if (!attestedData) {
-      // Check for .size > 0 to prevent erroring always in the first run
-      if (this.prevHeadData.size === 0) {
-        return;
-      } else {
-        throw Error(`attestedData for ${signedBlockRootHex} not available`);
-      }
+      // Log cacheSize since at start this.prevHeadData will be empty
+      this.logger.debug("attestedData not available", {root: signedBlockRootHex, cacheSize: this.prevHeadData.size});
+      this.metrics?.lightclientServer.onSyncAggregate.inc({event: "ignore_no_attested_data"});
+      return;
     }
 
     const attestedPeriod = computeSyncPeriodAtSlot(attestedData.attestedHeader.slot);
     if (syncPeriod !== attestedPeriod) {
-      throw new Error("attested data period different than signature period");
+      this.logger.debug("attested data period different than signature period", {syncPeriod, attestedPeriod});
+      this.metrics?.lightclientServer.onSyncAggregate.inc({event: "ignore_attested_period_diff"});
+      return;
     }
 
     const headerUpdate: altair.LightClientOptimisticUpdate = {
@@ -434,6 +454,7 @@ export class LightClientServer {
     // TODO: Once SyncAggregate are constructed from P2P too, count bits to decide "best"
     if (!this.latestHeadUpdate || attestedData.attestedHeader.slot > this.latestHeadUpdate.attestedHeader.slot) {
       this.latestHeadUpdate = headerUpdate;
+      this.metrics?.lightclientServer.onSyncAggregate.inc({event: "update_latest_head_update"});
     }
 
     if (attestedData.isFinalized) {
@@ -453,6 +474,7 @@ export class LightClientServer {
           signatureSlot: finalizedHeader.slot,
         };
         this.emitter.emit(ChainEvent.lightclientFinalityUpdate, this.finalized);
+        this.metrics?.lightclientServer.onSyncAggregate.inc({event: "update_latest_finalized_update"});
       }
     }
 
@@ -515,7 +537,7 @@ export class LightClientServer {
   ): Promise<void> {
     const prevBestUpdate = await this.db.bestPartialLightClientUpdate.get(syncPeriod);
     if (prevBestUpdate && !isBetterUpdate(prevBestUpdate, syncAggregate, attestedData)) {
-      // TODO: Do metrics on how often updates are overwritten
+      this.metrics?.lightclientServer.updateNotBetter.inc();
       return;
     }
 
@@ -549,9 +571,13 @@ export class LightClientServer {
 
     // Count total persisted updates per type. DB metrics don't diff between each type.
     // The frequency of finalized vs non-finalized is critical to debug if finalizedHeader is not available
-    this.metrics?.lightclientServer.persistedUpdates.inc({
-      type: newPartialUpdate.isFinalized ? "finalized" : "non-finalized",
+    this.metrics?.lightclientServer.onSyncAggregate.inc({
+      event: newPartialUpdate.isFinalized ? "store_finalized_update" : "store_nonfinalized_update",
     });
+    this.metrics?.lightclientServer.highestSlot.set(
+      {item: newPartialUpdate.isFinalized ? "best_finalized_update" : "best_nonfinalized_update"},
+      newPartialUpdate.attestedHeader.slot
+    );
   }
 
   private async storeSyncCommittee(

@@ -1,10 +1,11 @@
-import {computeEpochAtSlot, isBellatrixStateType} from "@lodestar/state-transition";
+import {computeEpochAtSlot, isBellatrixStateType, computeTimeAtSlot} from "@lodestar/state-transition";
 import {IChainForkConfig} from "@lodestar/config";
 import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Slot} from "@lodestar/types";
 import {ILogger, sleep} from "@lodestar/utils";
 import {GENESIS_SLOT, ZERO_HASH_HEX} from "../constants/constants.js";
 import {IMetrics} from "../metrics/index.js";
+import {TransitionConfigurationV1} from "../execution/engine/interface.js";
 import {ChainEvent} from "./emitter.js";
 import {prepareExecutionPayload} from "./factory/block/body.js";
 import {IBeaconChain} from "./interface.js";
@@ -28,6 +29,7 @@ const PREPARE_EPOCH_LIMIT = 1;
  *
  */
 export class PrepareNextSlotScheduler {
+  private transitionConfig: TransitionConfigurationV1 | null = null;
   constructor(
     private readonly chain: IBeaconChain,
     private readonly config: IChainForkConfig,
@@ -36,7 +38,6 @@ export class PrepareNextSlotScheduler {
     private readonly signal: AbortSignal
   ) {
     this.chain.emitter.on(ChainEvent.clockSlot, this.prepareForNextSlot);
-
     this.signal.addEventListener(
       "abort",
       () => {
@@ -59,7 +60,7 @@ export class PrepareNextSlotScheduler {
     //  or we are pre-bellatrix and this is not an epoch transition
     if (
       prepareSlot <= GENESIS_SLOT ||
-      (this.config.getForkSeq(prepareEpoch) < ForkSeq.bellatrix && !isEpochTransition)
+      (this.config.getForkSeq(prepareSlot) < ForkSeq.bellatrix && !isEpochTransition)
     ) {
       return;
     }
@@ -71,7 +72,7 @@ export class PrepareNextSlotScheduler {
       await sleep(slotMs - slotMs / SCHEDULER_LOOKAHEAD_FACTOR, this.signal);
 
       // calling updateHead() here before we produce a block to reduce reorg possibility
-      const {slot: headSlot, blockRoot: headRoot} = this.chain.forkChoice.updateHead();
+      const {slot: headSlot, blockRoot: headRoot} = this.chain.recomputeForkChoiceHead();
 
       // PS: previously this was comparing slots, but that gave no leway on the skipped
       // slots on epoch bounday. Making it more fluid.
@@ -119,6 +120,18 @@ export class PrepareNextSlotScheduler {
         const proposerIndex = prepareState.epochCtx.getBeaconProposer(prepareSlot);
         const feeRecipient = this.chain.beaconProposerCache.get(proposerIndex);
         if (feeRecipient) {
+          // Update the builder status, if enabled shoot an api call to check status
+          this.chain.updateBuilderStatus(clockSlot);
+          if (this.chain.executionBuilder?.status) {
+            this.chain.executionBuilder.checkStatus().catch((e) => {
+              this.logger.error("Builder disabled as the check status api failed", {prepareSlot}, e as Error);
+            });
+          }
+
+          const preparationTime =
+            computeTimeAtSlot(this.config, prepareSlot, this.chain.genesisTime) - Date.now() / 1000;
+          this.metrics?.blockPayload.payloadAdvancePrepTime.observe(preparationTime);
+
           const safeBlockHash = this.chain.forkChoice.getJustifiedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
           const finalizedBlockHash =
             this.chain.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;

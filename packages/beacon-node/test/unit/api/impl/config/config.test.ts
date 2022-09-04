@@ -1,6 +1,6 @@
 import {expect} from "chai";
 import {config} from "@lodestar/config/default";
-import {getConfigApi} from "../../../../../src/api/impl/config/index.js";
+import {getConfigApi, renderJsonSpec} from "../../../../../src/api/impl/config/index.js";
 
 describe("config api implementation", function () {
   let api: ReturnType<typeof getConfigApi>;
@@ -25,6 +25,10 @@ describe("config api implementation", function () {
   });
 
   describe("getSpec", function () {
+    it("Ensure spec can be rendered", () => {
+      renderJsonSpec(config);
+    });
+
     it("should get the spec", async function () {
       const {data: specJson} = await api.getSpec();
 

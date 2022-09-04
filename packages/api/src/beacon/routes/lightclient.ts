@@ -59,28 +59,28 @@ export type Api = {
  * Define javascript values for each route
  */
 export const routesData: RoutesData<Api> = {
-  getStateProof: {url: "/eth/v1/light_client/proof/:stateId", method: "GET"},
-  getUpdates: {url: "/eth/v1/light_client/updates", method: "GET"},
-  getOptimisticUpdate: {url: "/eth/v1/light_client/optimistic_update/", method: "GET"},
-  getFinalityUpdate: {url: "/eth/v1/light_client/finality_update/", method: "GET"},
-  getBootstrap: {url: "/eth/v1/light_client/bootstrap/:blockRoot", method: "GET"},
+  getStateProof: {url: "/eth/v1/beacon/light_client/proof/{state_id}", method: "GET"},
+  getUpdates: {url: "/eth/v1/beacon/light_client/updates", method: "GET"},
+  getOptimisticUpdate: {url: "/eth/v1/beacon/light_client/optimistic_update/", method: "GET"},
+  getFinalityUpdate: {url: "/eth/v1/beacon/light_client/finality_update/", method: "GET"},
+  getBootstrap: {url: "/eth/v1/beacon/light_client/bootstrap/{block_root}", method: "GET"},
 };
 
 /* eslint-disable @typescript-eslint/naming-convention */
 export type ReqTypes = {
-  getStateProof: {params: {stateId: string}; query: {paths: string[]}};
+  getStateProof: {params: {state_id: string}; query: {paths: string[]}};
   getUpdates: {query: {start_period: number; count: number}};
   getOptimisticUpdate: ReqEmpty;
   getFinalityUpdate: ReqEmpty;
-  getBootstrap: {params: {blockRoot: string}};
+  getBootstrap: {params: {block_root: string}};
 };
 
 export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
   return {
     getStateProof: {
-      writeReq: (stateId, paths) => ({params: {stateId}, query: {paths: querySerializeProofPathsArr(paths)}}),
-      parseReq: ({params, query}) => [params.stateId, queryParseProofPathsArr(query.paths)],
-      schema: {params: {stateId: Schema.StringRequired}, body: Schema.AnyArray},
+      writeReq: (state_id, paths) => ({params: {state_id}, query: {paths: querySerializeProofPathsArr(paths)}}),
+      parseReq: ({params, query}) => [params.state_id, queryParseProofPathsArr(query.paths)],
+      schema: {params: {state_id: Schema.StringRequired}, body: Schema.AnyArray},
     },
 
     getUpdates: {
@@ -93,9 +93,9 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
     getFinalityUpdate: reqEmpty,
 
     getBootstrap: {
-      writeReq: (blockRoot) => ({params: {blockRoot}}),
-      parseReq: ({params}) => [params.blockRoot],
-      schema: {params: {blockRoot: Schema.StringRequired}},
+      writeReq: (block_root) => ({params: {block_root}}),
+      parseReq: ({params}) => [params.block_root],
+      schema: {params: {block_root: Schema.StringRequired}},
     },
   };
 }

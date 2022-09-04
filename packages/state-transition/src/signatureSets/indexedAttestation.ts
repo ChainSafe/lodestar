@@ -10,7 +10,7 @@ export function getAttestationWithIndicesSignatureSet(
 ): ISignatureSet {
   const {epochCtx} = state;
   const slot = computeStartSlotAtEpoch(attestation.data.target.epoch);
-  const domain = state.config.getDomain(DOMAIN_BEACON_ATTESTER, slot);
+  const domain = state.config.getDomain(state.slot, DOMAIN_BEACON_ATTESTER, slot);
 
   return {
     type: SignatureSetType.aggregate,

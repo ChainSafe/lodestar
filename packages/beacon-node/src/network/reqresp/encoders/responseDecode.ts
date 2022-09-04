@@ -30,11 +30,18 @@ enum StreamStatus {
  */
 export function responseDecode(
   forkDigestContext: IForkDigestContext,
-  protocol: Protocol
-): (source: AsyncIterable<Buffer>) => AsyncGenerator<IncomingResponseBody> {
+  protocol: Protocol,
+  cbs: {
+    onFirstHeader: () => void;
+    onFirstResponseChunk: () => void;
+  }
+): (source: AsyncIterable<Buffer>) => AsyncIterable<IncomingResponseBody> {
   return async function* responseDecodeSink(source) {
     const contextBytesType = contextBytesTypeByProtocol(protocol);
     const bufferedSource = new BufferedSource(source as AsyncGenerator<Buffer>);
+
+    let readFirstHeader = false;
+    let readFirstResponseChunk = false;
 
     // Consumers of `responseDecode()` may limit the number of <response_chunk> and break out of the while loop
     while (!bufferedSource.isDone) {
@@ -44,6 +51,11 @@ export function responseDecode(
       // The happens when source ends before readResultHeader() can fetch 1 byte
       if (status === StreamStatus.Ended) {
         break;
+      }
+
+      if (!readFirstHeader) {
+        cbs.onFirstHeader();
+        readFirstHeader = true;
       }
 
       // For multiple chunks, only the last chunk is allowed to have a non-zero error
@@ -57,6 +69,11 @@ export function responseDecode(
       const type = getResponseSzzTypeByMethod(protocol, forkName);
 
       yield await readEncodedPayload(bufferedSource, protocol.encoding, type);
+
+      if (!readFirstResponseChunk) {
+        cbs.onFirstResponseChunk();
+        readFirstResponseChunk = true;
+      }
     }
   };
 }
@@ -90,23 +107,23 @@ export async function readResultHeader(bufferedSource: BufferedSource): Promise<
  * ```
  */
 export async function readErrorMessage(bufferedSource: BufferedSource): Promise<string> {
+  // Read at least 256 or wait for the stream to end
   for await (const buffer of bufferedSource) {
     // Wait for next chunk with bytes or for the stream to end
     // Note: The entire <error_message> is expected to be in the same chunk
-    if (buffer.length === 0) {
-      continue;
-    }
-
-    const bytes = buffer.slice();
-    try {
-      return decodeErrorMessage(bytes);
-    } catch {
-      return bytes.toString("hex");
+    if (buffer.length >= 256) {
+      break;
     }
   }
 
-  // Error message is optional and may not be included in the response stream
-  return "";
+  const bytes = bufferedSource["buffer"].slice(0, 256);
+
+  try {
+    return decodeErrorMessage(bytes);
+  } catch {
+    // Error message is optional and may not be included in the response stream
+    return bytes.toString("hex");
+  }
 }
 
 /**

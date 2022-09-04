@@ -3,7 +3,7 @@ import {SinonStubbedInstance} from "sinon";
 import {Epoch} from "@lodestar/types";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {createIChainForkConfig, defaultChainConfig} from "@lodestar/config";
-import {BeaconChain, IBeaconChain} from "../../../../src/chain/index.js";
+import {BeaconChain} from "../../../../src/chain/index.js";
 import {LocalClock} from "../../../../src/chain/clock/index.js";
 import {SyncCommitteeErrorCode} from "../../../../src/chain/errors/syncCommitteeError.js";
 import {validateGossipSyncCommittee} from "../../../../src/chain/validation/syncCommittee.js";
@@ -12,11 +12,14 @@ import {generateCachedState} from "../../../utils/state.js";
 import {generateSyncCommitteeSignature} from "../../../utils/syncCommittee.js";
 import {SeenSyncCommitteeMessages} from "../../../../src/chain/seenCache/index.js";
 import {BlsVerifierMock} from "../../../utils/mocks/bls.js";
+import {StubbedChainMutable} from "../../../utils/stub/index.js";
+
+type StubbedChain = StubbedChainMutable<"clock" | "bls">;
 
 // https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/altair/p2p-interface.md
 describe("Sync Committee Signature validation", function () {
   const sandbox = sinon.createSandbox();
-  let chain: SinonStubbedInstance<IBeaconChain>;
+  let chain: StubbedChain;
   let clockStub: SinonStubbedInstance<LocalClock>;
   // let computeSubnetsForSyncCommitteeStub: SinonStubFn<typeof syncCommitteeUtils["computeSubnetsForSyncCommittee"]>;
   let altairForkEpochBk: Epoch;

@@ -7,7 +7,7 @@ import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {BlockError, BlockErrorCode} from "../../../../chain/errors/index.js";
 import {OpSource} from "../../../../metrics/validatorMonitor.js";
 import {NetworkEvent} from "../../../../network/index.js";
-import {ApiModules} from "../../types.js";
+import {ApiModules, IS_OPTIMISTIC_TEMP} from "../../types.js";
 import {resolveBlockId, toBeaconHeaderResponse} from "./utils.js";
 
 /**
@@ -47,6 +47,7 @@ export function getBeaconBlockApi({
           })
         );
         return {
+          executionOptimistic: IS_OPTIMISTIC_TEMP,
           data: result.filter(
             (item) =>
               // skip if no slot filter
@@ -63,13 +64,13 @@ export function getBeaconBlockApi({
       if (filters.slot !== undefined) {
         // future slot
         if (filters.slot > headSlot) {
-          return {data: []};
+          return {executionOptimistic: false, data: []};
         }
 
         const canonicalBlock = await chain.getCanonicalBlockAtSlot(filters.slot);
         // skip slot
         if (!canonicalBlock) {
-          return {data: []};
+          return {executionOptimistic: false, data: []};
         }
         const canonicalRoot = config
           .getForkTypes(canonicalBlock.message.slot)
@@ -90,26 +91,41 @@ export function getBeaconBlockApi({
         );
       }
 
-      return {data: result};
+      return {
+        executionOptimistic: IS_OPTIMISTIC_TEMP,
+        data: result,
+      };
     },
 
     async getBlockHeader(blockId) {
       const block = await resolveBlockId(chain.forkChoice, db, blockId);
-      return {data: toBeaconHeaderResponse(config, block, true)};
+      return {
+        executionOptimistic: IS_OPTIMISTIC_TEMP,
+        data: toBeaconHeaderResponse(config, block, true),
+      };
     },
 
     async getBlock(blockId) {
-      return {data: await resolveBlockId(chain.forkChoice, db, blockId)};
+      return {
+        data: await resolveBlockId(chain.forkChoice, db, blockId),
+      };
     },
 
     async getBlockV2(blockId) {
       const block = await resolveBlockId(chain.forkChoice, db, blockId);
-      return {data: block, version: config.getForkName(block.message.slot)};
+      return {
+        executionOptimistic: IS_OPTIMISTIC_TEMP,
+        data: block,
+        version: config.getForkName(block.message.slot),
+      };
     },
 
     async getBlockAttestations(blockId) {
       const block = await resolveBlockId(chain.forkChoice, db, blockId);
-      return {data: Array.from(block.message.body.attestations)};
+      return {
+        executionOptimistic: IS_OPTIMISTIC_TEMP,
+        data: Array.from(block.message.body.attestations),
+      };
     },
 
     async getBlockRoot(blockId) {
@@ -119,27 +135,39 @@ export function getBeaconBlockApi({
         const head = chain.forkChoice.getHead();
 
         if (slot === head.slot) {
-          return {data: fromHexString(head.blockRoot)};
+          return {
+            executionOptimistic: IS_OPTIMISTIC_TEMP,
+            data: {root: fromHexString(head.blockRoot)},
+          };
         }
 
         if (slot < head.slot && head.slot <= slot + SLOTS_PER_HISTORICAL_ROOT) {
           const state = chain.getHeadState();
-          return {data: state.blockRoots.get(slot % SLOTS_PER_HISTORICAL_ROOT)};
+          return {
+            executionOptimistic: IS_OPTIMISTIC_TEMP,
+            data: {root: state.blockRoots.get(slot % SLOTS_PER_HISTORICAL_ROOT)},
+          };
         }
       } else if (blockId === "head") {
         const head = chain.forkChoice.getHead();
-        return {data: fromHexString(head.blockRoot)};
+        return {
+          executionOptimistic: IS_OPTIMISTIC_TEMP,
+          data: {root: fromHexString(head.blockRoot)},
+        };
       }
 
       // Slow path
       const block = await resolveBlockId(chain.forkChoice, db, blockId);
-      return {data: config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message)};
+      return {
+        executionOptimistic: IS_OPTIMISTIC_TEMP,
+        data: {root: config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message)},
+      };
     },
 
     async publishBlindedBlock(signedBlindedBlock) {
       const executionBuilder = chain.executionBuilder;
       if (!executionBuilder) throw Error("exeutionBuilder required to publish SignedBlindedBeaconBlock");
-      const signedBlock = await executionBuilder.submitSignedBlindedBlock(signedBlindedBlock);
+      const signedBlock = await executionBuilder.submitBlindedBlock(signedBlindedBlock);
       return await this.publishBlock(signedBlock);
     },
 

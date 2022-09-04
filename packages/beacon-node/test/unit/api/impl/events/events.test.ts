@@ -2,16 +2,17 @@ import {expect} from "chai";
 import sinon, {SinonStubbedInstance} from "sinon";
 import {routes} from "@lodestar/api";
 import {config} from "@lodestar/config/default";
-import {BeaconChain, ChainEvent, ChainEventEmitter, IBeaconChain} from "../../../../../src/chain/index.js";
+import {BeaconChain, ChainEvent, ChainEventEmitter} from "../../../../../src/chain/index.js";
 import {getEventsApi} from "../../../../../src/api/impl/events/index.js";
 import {generateProtoBlock, generateEmptySignedBlock, generateSignedBlock} from "../../../../utils/block.js";
 import {generateAttestation, generateEmptySignedVoluntaryExit} from "../../../../utils/attestation.js";
 import {generateCachedState} from "../../../../utils/state.js";
 import {StateContextCache} from "../../../../../src/chain/stateCache/index.js";
+import {StubbedChainMutable} from "../../../../utils/stub/index.js";
 
 describe("Events api impl", function () {
   describe("beacon event stream", function () {
-    let chainStub: SinonStubbedInstance<IBeaconChain>;
+    let chainStub: StubbedChainMutable<"stateCache" | "emitter">;
     let stateCacheStub: SinonStubbedInstance<StateContextCache>;
     let chainEventEmmitter: ChainEventEmitter;
     let api: ReturnType<typeof getEventsApi>;
