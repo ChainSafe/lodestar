@@ -3,7 +3,7 @@ import {Registry} from "prom-client";
 import {createKeypairFromPeerId, ENR} from "@chainsafe/discv5";
 import {ErrorAborted} from "@lodestar/utils";
 import {LevelDbController} from "@lodestar/db";
-import {BeaconNode, BeaconDb, createNodeJsLibp2p} from "@lodestar/beacon-node";
+import {BeaconNode, BeaconDb, createNodeJsLibp2p, IBeaconNodeOptions} from "@lodestar/beacon-node";
 import {createIBeaconConfig} from "@lodestar/config";
 import {ACTIVE_PRESET, PresetName} from "@lodestar/params";
 import {ProcessShutdownCallback} from "@lodestar/validator";
@@ -27,6 +27,13 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
   mkdir(beaconPaths.dataDir);
   mkdir(beaconPaths.beaconDir);
   mkdir(beaconPaths.dbDir);
+
+  if (
+    args.dev &&
+    (process.env.NODE_ENV === "dev" || process.env.NODE_ENV === "development" || process.env.NODE_ENV === "test")
+  ) {
+    options = {...options, executionEngine: {mode: "mock"}} as IBeaconNodeOptions;
+  }
 
   const abortController = new AbortController();
   const logger = getCliLogger(args, {defaultLogFile: "beacon.log"}, config);
