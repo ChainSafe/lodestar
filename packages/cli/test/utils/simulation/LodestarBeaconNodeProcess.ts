@@ -1,11 +1,9 @@
+import {ChildProcess} from "node:child_process";
+import {mkdir, writeFile} from "node:fs/promises";
 import type {SecretKey} from "@chainsafe/bls/types";
-import {createKeypairFromPeerId, ENR} from "@chainsafe/discv5";
 import {Api, getClient} from "@lodestar/api";
 import {nodeUtils} from "@lodestar/beacon-node/node";
 import {IChainForkConfig} from "@lodestar/config";
-import {ChildProcess} from "node:child_process";
-import {mkdir, writeFile} from "node:fs/promises";
-import PeerId from "peer-id";
 import {IBeaconArgs} from "../../../src/cmds/beacon/options.js";
 import {getBeaconConfigFromArgs} from "../../../src/config/beaconParams.js";
 import {IGlobalArgs} from "../../../src/options/globalOptions.js";
@@ -23,8 +21,7 @@ export const LodestarBeaconNodeProcess: BeaconNodeConstructor = class LodestarBe
   readonly port: number;
   readonly restPort: number;
   api!: Api;
-  enr!: string;
-  peerId!: PeerId;
+  peerId!: string;
   multiaddrs!: string[];
 
   private rootDir: string;
@@ -60,8 +57,6 @@ export const LodestarBeaconNodeProcess: BeaconNodeConstructor = class LodestarBe
       port: this.port,
       metrics: false,
       dev: true,
-      enrFile: `${this.rootDir}/enr.txt`,
-      peerIdFile: `${this.rootDir}/peer-id.json`,
       bootnodes: [],
       "params.SECONDS_PER_SLOT": String(this.params.secondsPerSlot),
       "params.GENESIS_DELAY": String(this.params.genesisSlotsDelay),
@@ -73,7 +68,7 @@ export const LodestarBeaconNodeProcess: BeaconNodeConstructor = class LodestarBe
       this.validatorProcesses.push(
         new LodestarValidatorProcess(this.params, {
           rootDir: this.rootDir,
-          config: getBeaconConfigFromArgs(this.rcConfig),
+          config: getBeaconConfigFromArgs(this.rcConfig).config,
           server: `http://${this.address}:${this.restPort}/`,
           clientIndex,
         })
@@ -82,14 +77,8 @@ export const LodestarBeaconNodeProcess: BeaconNodeConstructor = class LodestarBe
   }
 
   async start(): Promise<void> {
-    const peerId = await PeerId.create({keyType: "secp256k1"});
-    const keypair = createKeypairFromPeerId(peerId);
-    const enr = ENR.createFromPeerId(peerId);
-
-    this.peerId = peerId;
-    this.enr = enr.encodeTxt(keypair.privateKey);
     this.multiaddrs = [`/ip4/${this.address}/tcp/${this.port}`];
-    this.config = getBeaconConfigFromArgs(this.rcConfig);
+    this.config = getBeaconConfigFromArgs(this.rcConfig).config;
     this.api = getClient({baseUrl: `http://${this.address}:${this.restPort}/`}, {config: this.config});
 
     const {state} = nodeUtils.initDevState(
@@ -101,10 +90,11 @@ export const LodestarBeaconNodeProcess: BeaconNodeConstructor = class LodestarBe
     );
 
     await mkdir(this.rootDir);
-    await writeFile(`${this.rootDir}/peer-id.json`, JSON.stringify(this.peerId.toJSON(), null, 2));
-    await writeFile(`${this.rootDir}/enr.txt`, this.enr);
     await writeFile(`${this.rootDir}/genesis.ssz`, state.serialize());
     await writeFile(`${this.rootDir}/rc_config.json`, JSON.stringify(this.rcConfig, null, 2));
+
+    console.log(`Starting beacon node at: ${this.rootDir}`);
+    console.log(`Beacon node config: ${JSON.stringify(this.rcConfig, null, 2)}`);
 
     this.beaconProcess = await spawnProcessAndWait(
       `${__dirname}/../../../bin/lodestar.js`,
@@ -112,6 +102,8 @@ export const LodestarBeaconNodeProcess: BeaconNodeConstructor = class LodestarBe
       async () => this.ready(),
       "Waiting for beacon node to start..."
     );
+
+    this.peerId = (await this.api.node.getNetworkIdentity()).data.peerId;
 
     for (let clientIndex = 0; clientIndex < this.params.validatorClients; clientIndex++) {
       await this.validatorProcesses[clientIndex].start();
