@@ -144,6 +144,7 @@ export type Web3SignerValidatorRegistrationMsg = {
 export type SignableMessage = {
   singablePayload: SingablePayload;
   forkInfo?: Web3SignerForkInfo;
+  pubkeyHex: string;
 };
 
 export type SingablePayload =
@@ -181,11 +182,10 @@ export async function externalSignerGetKeys(externalSignerUrl: string): Promise<
  */
 export async function externalSignerPostSignature(
   externalSignerUrl: string,
-  pubkeyHex: string,
   signingRootHex: string,
   signableMessage: SignableMessage
 ): Promise<string> {
-  const res = await fetch(`${externalSignerUrl}/api/v1/eth2/sign/${pubkeyHex}`, {
+  const res = await fetch(`${externalSignerUrl}/api/v1/eth2/sign/${signableMessage.pubkeyHex}`, {
     method: "POST",
     headers: {"Content-Type": "application/json"},
     body: JSON.stringify({

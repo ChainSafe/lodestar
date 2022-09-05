@@ -197,20 +197,27 @@ export class ValidatorStore {
       throw e;
     }
 
-    const signableMessage: SignableMessage = {
-      singablePayload: {
-        type: "BLOCK_V2",
-        data: {
-          version: this.config.getForkInfo(blindedOrFull.slot).name,
-          block: blindedOrFull,
+    const [signer, pubkeyHex] = this.getSignerAndPubkeyHex(pubkey);
+    let signableMessage: SignableMessage | undefined;
+
+    if (signer.type === SignerType.Remote) {
+      signableMessage = {
+        singablePayload: {
+          type: "BLOCK_V2",
+          data: {
+            version: this.config.getForkInfo(blindedOrFull.slot).name,
+            block: blindedOrFull,
+          },
         },
-      },
-      forkInfo: this.getForkInfo(currentSlot),
-    };
+        forkInfo: this.getForkInfo(currentSlot),
+        pubkeyHex,
+      };
+    }
 
-    const signature = await this.getSignature(pubkey, signingRoot, signableMessage);
-
-    return {message: blindedOrFull, signature} as allForks.FullOrBlindedSignedBeaconBlock;
+    return {
+      message: blindedOrFull,
+      signature: await this.getSignature(signer, signingRoot, signableMessage),
+    } as allForks.FullOrBlindedSignedBeaconBlock;
   }
 
   async signRandao(pubkey: BLSPubkey, slot: Slot): Promise<BLSSignature> {
@@ -218,17 +225,23 @@ export class ValidatorStore {
     const randaoDomain = this.config.getDomain(slot, DOMAIN_RANDAO);
     const randaoSigningRoot = computeSigningRoot(ssz.Epoch, epoch, randaoDomain);
 
-    const signableMessage: SignableMessage = {
-      singablePayload: {
-        type: "RANDAO_REVEAL",
-        data: {
-          epoch,
-        },
-      },
-      forkInfo: this.getForkInfo(slot),
-    };
+    const [signer, pubkeyHex] = this.getSignerAndPubkeyHex(pubkey);
+    let signableMessage: SignableMessage | undefined;
 
-    return await this.getSignature(pubkey, randaoSigningRoot, signableMessage);
+    if (signer.type === SignerType.Remote) {
+      signableMessage = {
+        singablePayload: {
+          type: "RANDAO_REVEAL",
+          data: {
+            epoch,
+          },
+        },
+        forkInfo: this.getForkInfo(slot),
+        pubkeyHex,
+      };
+    }
+
+    return await this.getSignature(signer, randaoSigningRoot, signableMessage);
   }
 
   async signAttestation(
@@ -262,18 +275,24 @@ export class ValidatorStore {
       throw e;
     }
 
-    const signableMessage: SignableMessage = {
-      singablePayload: {
-        type: "ATTESTATION",
-        data: attestationData,
-      },
-      forkInfo: this.getForkInfo(attestationData.slot),
-    };
+    const [signer, pubkeyHex] = this.getSignerAndPubkeyHex(duty.pubkey);
+    let signableMessage: SignableMessage | undefined;
+
+    if (signer.type === SignerType.Remote) {
+      signableMessage = {
+        singablePayload: {
+          type: "ATTESTATION",
+          data: attestationData,
+        },
+        forkInfo: this.getForkInfo(attestationData.slot),
+        pubkeyHex,
+      };
+    }
 
     return {
       aggregationBits: BitArray.fromSingleBit(duty.committeeLength, duty.validatorCommitteeIndex),
       data: attestationData,
-      signature: await this.getSignature(duty.pubkey, signingRoot, signableMessage),
+      signature: await this.getSignature(signer, signingRoot, signableMessage),
     };
   }
 
@@ -292,18 +311,23 @@ export class ValidatorStore {
 
     const domain = this.config.getDomain(duty.slot, DOMAIN_AGGREGATE_AND_PROOF);
     const signingRoot = computeSigningRoot(ssz.phase0.AggregateAndProof, aggregateAndProof, domain);
+    const [signer, pubkeyHex] = this.getSignerAndPubkeyHex(duty.pubkey);
+    let signableMessage: SignableMessage | undefined;
 
-    const signableMessage: SignableMessage = {
-      singablePayload: {
-        type: "AGGREGATE_AND_PROOF",
-        data: aggregateAndProof,
-      },
-      forkInfo: this.getForkInfo(aggregateAndProof.aggregate.data.slot),
-    };
+    if (signer.type === SignerType.Remote) {
+      signableMessage = {
+        singablePayload: {
+          type: "AGGREGATE_AND_PROOF",
+          data: aggregateAndProof,
+        },
+        forkInfo: this.getForkInfo(aggregateAndProof.aggregate.data.slot),
+        pubkeyHex,
+      };
+    }
 
     return {
       message: aggregateAndProof,
-      signature: await this.getSignature(duty.pubkey, signingRoot, signableMessage),
+      signature: await this.getSignature(signer, signingRoot, signableMessage),
     };
   }
 
@@ -315,23 +339,29 @@ export class ValidatorStore {
   ): Promise<altair.SyncCommitteeMessage> {
     const domain = this.config.getDomain(slot, DOMAIN_SYNC_COMMITTEE);
     const signingRoot = computeSigningRoot(ssz.Root, beaconBlockRoot, domain);
+    const [signer, pubkeyHex] = this.getSignerAndPubkeyHex(pubkey);
 
-    const signableMessage: SignableMessage = {
-      singablePayload: {
-        type: "SYNC_COMMITTEE_MESSAGE",
-        data: {
-          beaconBlockRoot,
-          slot,
+    let signableMessage: SignableMessage | undefined;
+
+    if (signer.type === SignerType.Remote) {
+      signableMessage = {
+        singablePayload: {
+          type: "SYNC_COMMITTEE_MESSAGE",
+          data: {
+            beaconBlockRoot,
+            slot,
+          },
         },
-      },
-      forkInfo: this.getForkInfo(slot),
-    };
+        forkInfo: this.getForkInfo(slot),
+        pubkeyHex,
+      };
+    }
 
     return {
       slot,
       validatorIndex,
       beaconBlockRoot,
-      signature: await this.getSignature(pubkey, signingRoot, signableMessage),
+      signature: await this.getSignature(signer, signingRoot, signableMessage),
     };
   }
 
@@ -348,18 +378,23 @@ export class ValidatorStore {
 
     const domain = this.config.getDomain(contribution.slot, DOMAIN_CONTRIBUTION_AND_PROOF);
     const signingRoot = computeSigningRoot(ssz.altair.ContributionAndProof, contributionAndProof, domain);
+    const [signer, pubkeyHex] = this.getSignerAndPubkeyHex(duty.pubkey);
+    let signableMessage: SignableMessage | undefined;
 
-    const signableMessage: SignableMessage = {
-      singablePayload: {
-        type: "SYNC_COMMITTEE_CONTRIBUTION_AND_PROOF",
-        data: contributionAndProof,
-      },
-      forkInfo: this.getForkInfo(contributionAndProof.contribution.slot),
-    };
+    if (signer.type === SignerType.Remote) {
+      signableMessage = {
+        singablePayload: {
+          type: "SYNC_COMMITTEE_CONTRIBUTION_AND_PROOF",
+          data: contributionAndProof,
+        },
+        forkInfo: this.getForkInfo(contributionAndProof.contribution.slot),
+        pubkeyHex,
+      };
+    }
 
     return {
       message: contributionAndProof,
-      signature: await this.getSignature(duty.pubkey, signingRoot, signableMessage),
+      signature: await this.getSignature(signer, signingRoot, signableMessage),
     };
   }
 
@@ -367,17 +402,23 @@ export class ValidatorStore {
     const domain = this.config.getDomain(slot, DOMAIN_SELECTION_PROOF);
     const signingRoot = computeSigningRoot(ssz.Slot, slot, domain);
 
-    const signableMessage: SignableMessage = {
-      singablePayload: {
-        type: "AGGREGATION_SLOT",
-        data: {
-          slot: String(slot),
-        },
-      },
-      forkInfo: this.getForkInfo(slot),
-    };
+    const [signer, pubkeyHex] = this.getSignerAndPubkeyHex(pubkey);
+    let signableMessage: SignableMessage | undefined;
 
-    return await this.getSignature(pubkey, signingRoot, signableMessage);
+    if (signer.type === SignerType.Remote) {
+      signableMessage = {
+        singablePayload: {
+          type: "AGGREGATION_SLOT",
+          data: {
+            slot: String(slot),
+          },
+        },
+        forkInfo: this.getForkInfo(slot),
+        pubkeyHex,
+      };
+    }
+
+    return await this.getSignature(signer, signingRoot, signableMessage);
   }
 
   async signSyncCommitteeSelectionProof(
@@ -393,18 +434,24 @@ export class ValidatorStore {
 
     const signingRoot = computeSigningRoot(ssz.altair.SyncAggregatorSelectionData, signingData, domain);
 
-    const singableRequest: SignableMessage = {
-      singablePayload: {
-        type: "SYNC_COMMITTEE_SELECTION_PROOF",
-        data: {
-          slot,
-          subcommitteeIndex: String(subcommitteeIndex),
-        },
-      },
-      forkInfo: this.getForkInfo(slot),
-    };
+    const [signer, pubkeyHex] = this.getSignerAndPubkeyHex(pubkey);
+    let signableMessage: SignableMessage | undefined;
 
-    return await this.getSignature(pubkey, signingRoot, singableRequest);
+    if (signer.type === SignerType.Remote) {
+      signableMessage = {
+        singablePayload: {
+          type: "SYNC_COMMITTEE_SELECTION_PROOF",
+          data: {
+            slot,
+            subcommitteeIndex: String(subcommitteeIndex),
+          },
+        },
+        forkInfo: this.getForkInfo(slot),
+        pubkeyHex,
+      };
+    }
+
+    return await this.getSignature(signer, signingRoot, signableMessage);
   }
 
   async signVoluntaryExit(
@@ -416,17 +463,23 @@ export class ValidatorStore {
 
     const voluntaryExit: phase0.VoluntaryExit = {epoch: exitEpoch, validatorIndex};
     const signingRoot = computeSigningRoot(ssz.phase0.VoluntaryExit, voluntaryExit, domain);
+    const [signer, pubkeyHex] = this.getSignerAndPubkeyHex(pubkey);
 
-    const signableMessage: SignableMessage = {
-      singablePayload: {
-        type: "VOLUNTARY_EXIT",
-        data: voluntaryExit,
-      },
-    };
+    let signableMessage: SignableMessage | undefined;
+
+    if (signer.type === SignerType.Remote) {
+      signableMessage = {
+        singablePayload: {
+          type: "VOLUNTARY_EXIT",
+          data: voluntaryExit,
+        },
+        pubkeyHex,
+      };
+    }
 
     return {
       message: voluntaryExit,
-      signature: await this.getSignature(pubkey, signingRoot, signableMessage),
+      signature: await this.getSignature(signer, signingRoot, signableMessage),
     };
   }
 
@@ -450,31 +503,31 @@ export class ValidatorStore {
     };
     const domain = computeDomain(DOMAIN_APPLICATION_BUILDER, this.config.GENESIS_FORK_VERSION, ZERO_HASH);
     const signingRoot = computeSigningRoot(ssz.bellatrix.ValidatorRegistrationV1, validatorRegistation, domain);
-    const signableMessage: SignableMessage = {
-      singablePayload: {
-        type: "VALIDATOR_REGISTRATION",
-        data: validatorRegistation,
-      },
-    };
+    const [signer, pubkeyHex] = this.getSignerAndPubkeyHex(pubkey);
+
+    let signableMessage: SignableMessage | undefined;
+
+    if (signer.type === SignerType.Remote) {
+      signableMessage = {
+        singablePayload: {
+          type: "VALIDATOR_REGISTRATION",
+          data: validatorRegistation,
+        },
+        pubkeyHex,
+      };
+    }
+
     return {
       message: validatorRegistation,
-      signature: await this.getSignature(pubkey, signingRoot, signableMessage),
+      signature: await this.getSignature(signer, signingRoot, signableMessage),
     };
   }
 
   private async getSignature(
-    pubkey: BLSPubkeyMaybeHex,
+    signer: Signer,
     signingRoot: Uint8Array,
-    signableMessage: SignableMessage
+    signableMessage?: SignableMessage
   ): Promise<BLSSignature> {
-    // TODO: Refactor indexing to not have to run toHexString() on the pubkey every time
-    const pubkeyHex = typeof pubkey === "string" ? pubkey : toHexString(pubkey);
-
-    const signer = this.validators.get(pubkeyHex)?.signer;
-    if (!signer) {
-      throw Error(`Validator pubkey ${pubkeyHex} not known`);
-    }
-
     switch (signer.type) {
       case SignerType.Local: {
         const timer = this.metrics?.localSignTime.startTimer();
@@ -482,16 +535,13 @@ export class ValidatorStore {
         timer?.();
         return signature;
       }
-
       case SignerType.Remote: {
+        if (signableMessage === undefined) {
+          throw new Error("Remote signer needs signable message");
+        }
         const timer = this.metrics?.remoteSignTime.startTimer();
         try {
-          const signatureHex = await externalSignerPostSignature(
-            signer.url,
-            pubkeyHex,
-            toHexString(signingRoot),
-            signableMessage
-          );
+          const signatureHex = await externalSignerPostSignature(signer.url, toHexString(signingRoot), signableMessage);
           return fromHexString(signatureHex);
         } catch (e) {
           this.metrics?.remoteSignErrors.inc();
@@ -501,6 +551,16 @@ export class ValidatorStore {
         }
       }
     }
+  }
+
+  private getSignerAndPubkeyHex(pubkey: BLSPubkeyMaybeHex): [Signer, string] {
+    // TODO: Refactor indexing to not have to run toHexString() on the pubkey every time
+    const pubkeyHex = typeof pubkey === "string" ? pubkey : toHexString(pubkey);
+    const signer = this.validators.get(pubkeyHex)?.signer;
+    if (!signer) {
+      throw Error(`Validator pubkey ${pubkeyHex} not known`);
+    }
+    return [signer, pubkeyHex];
   }
 
   /** Prevent signing bad data sent by the Beacon node */
