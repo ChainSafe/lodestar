@@ -1,8 +1,12 @@
 import {dirname} from "node:path";
 import {fileURLToPath} from "node:url";
 import {ChildProcess, spawn} from "node:child_process";
-import {Slot} from "@lodestar/types";
+import {altair} from "@lodestar/types";
+import {TIMELY_HEAD_FLAG_INDEX, TIMELY_TARGET_FLAG_INDEX} from "@lodestar/params";
 import {SimulationOptionalParams, SimulationParams} from "./types.js";
+
+const TIMELY_HEAD = 1 << TIMELY_HEAD_FLAG_INDEX;
+const TIMELY_TARGET = 1 << TIMELY_TARGET_FLAG_INDEX;
 
 // Global variable __dirname no longer available in ES6 modules.
 // Solutions: https://stackoverflow.com/questions/46745014/alternative-for-dirname-in-node-js-when-using-es6-modules
@@ -69,4 +73,21 @@ export const closeChildProcess = async (childProcess: ChildProcess, signal?: "SI
     childProcess.on("close", resolve);
     childProcess.kill(signal);
   });
+};
+
+export const computeAttestationParticipation = (state: altair.BeaconState, type: "HEAD" | "FFG"): number => {
+  // Attestation to be computed at the end of epoch. At that time the "currentEpochParticipation" is all set to zero
+  // and we have to use "previousEpochParticipation" instead.
+  const previousEpochParticipation = state.previousEpochParticipation;
+  let totalAttestingBalance = 0;
+  let totalActiveBalance = 0;
+
+  const participationFlag = type === "HEAD" ? TIMELY_HEAD : TIMELY_TARGET;
+
+  for (let i = 0; i < previousEpochParticipation.length; i++) {
+    totalAttestingBalance += previousEpochParticipation[i] & participationFlag ? state.balances[i] : 0;
+    totalActiveBalance += state.validators[i].effectiveBalance;
+  }
+
+  return totalAttestingBalance / totalActiveBalance;
 };

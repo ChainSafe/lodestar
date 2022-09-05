@@ -1,11 +1,8 @@
 import {expect} from "chai";
 import {altair} from "@lodestar/types";
-import {TIMELY_HEAD_FLAG_INDEX, TIMELY_TARGET_FLAG_INDEX} from "@lodestar/params";
-import {SimulationEnvironment} from "./SimulationEnvironment.js";
 import {HttpError} from "@lodestar/api";
-
-const TIMELY_HEAD = 1 << TIMELY_HEAD_FLAG_INDEX;
-const TIMELY_TARGET = 1 << TIMELY_TARGET_FLAG_INDEX;
+import {SimulationEnvironment} from "./SimulationEnvironment.js";
+import {computeAttestationParticipation} from "./utils.js";
 
 export function feeRecipientsAssertions(env: SimulationEnvironment): void {
   describe("fee recipient", () => {
@@ -125,9 +122,15 @@ export function nodeAssertions(env: SimulationEnvironment): void {
       for (let n = 1; n < env.params.beaconNodes; n++) {
         expect(headRoots[n]).to.equal(
           firstHeadRoot,
-          `node ${n} has different head than node 0. firstNodeHead: ${Buffer.from(firstHeadRoot).toString(
-            "hex"
-          )}, node${n}Head: ${Buffer.from(headRoots[n]).toString("hex")}`
+          [
+            `node ${n} has different head than first node.`,
+            `firstNode => Head: ${Buffer.from(firstHeadRoot).toString("hex")}, Slot: ${
+              heads[0].data.header.message.slot
+            }`,
+            `Node${n} => Head: ${Buffer.from(headRoots[n]).toString("hex")}, Slot: ${
+              heads[n].data.header.message.slot
+            }`,
+          ].join("")
         );
       }
     });
@@ -229,13 +232,7 @@ export function participationAssertions(env: SimulationEnvironment): void {
           `Node ${n} has not set current epoch participation to zero. Probably its not the end of epoch.`
         );
 
-        const previousEpochParticipation = (states[n].data as altair.BeaconState).previousEpochParticipation;
-        const totalAttestingBalance = previousEpochParticipation
-          .map((p, index) => ((p & TIMELY_HEAD) !== 0 ? states[n].data.balances[index] : 0))
-          .reduce((a, b) => a + b, 0);
-        const totalActiveBalance = states[n].data.validators.reduce((a, b) => a + b.effectiveBalance, 0);
-
-        const participationRate = totalAttestingBalance / totalActiveBalance;
+        const participationRate = computeAttestationParticipation(states[n].data as altair.BeaconState, "HEAD");
         console.log(`Current participation rate on head: ${participationRate}`);
         expect(participationRate).to.be.gt(env.acceptableParticipationRate, `node ${n} has too low participation rate`);
       }
@@ -253,13 +250,7 @@ export function participationAssertions(env: SimulationEnvironment): void {
           `Node ${n} has not set current epoch participation to zero. Probably its not the end of epoch.`
         );
 
-        const previousEpochParticipation = (states[n].data as altair.BeaconState).previousEpochParticipation;
-        const totalAttestingBalance = previousEpochParticipation
-          .map((p, index) => ((p & TIMELY_TARGET) !== 0 ? states[n].data.balances[index] : 0))
-          .reduce((a, b) => a + b, 0);
-        const totalActiveBalance = states[n].data.validators.reduce((a, b) => a + b.effectiveBalance, 0);
-
-        const participationRate = totalAttestingBalance / totalActiveBalance;
+        const participationRate = computeAttestationParticipation(states[n].data as altair.BeaconState, "FFG");
         console.log(`Current participation rate on FFG: ${participationRate}`);
         expect(participationRate).to.be.gt(env.acceptableParticipationRate, `node ${n} has too low participation rate`);
       }

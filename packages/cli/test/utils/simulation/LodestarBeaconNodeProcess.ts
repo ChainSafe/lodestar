@@ -53,10 +53,10 @@ export const LodestarBeaconNodeProcess: BeaconNodeConstructor = class LodestarBe
       eth1: false,
       discv5: this.params.beaconNodes > 1,
       "network.connectToDiscv5Bootnodes": this.params.beaconNodes > 1,
+      "execution.engineMock": true,
       listenAddress: this.address,
       port: this.port,
       metrics: false,
-      dev: true,
       bootnodes: [],
       "params.SECONDS_PER_SLOT": String(this.params.secondsPerSlot),
       "params.GENESIS_DELAY": String(this.params.genesisSlotsDelay),
@@ -98,7 +98,7 @@ export const LodestarBeaconNodeProcess: BeaconNodeConstructor = class LodestarBe
 
     this.beaconProcess = await spawnProcessAndWait(
       `${__dirname}/../../../bin/lodestar.js`,
-      ["beacon", "--rcConfig", `${this.rootDir}/rc_config.json`, "--network", "dev", "--dev", "true"],
+      ["beacon", "--rcConfig", `${this.rootDir}/rc_config.json`, "--network", "dev"],
       async () => this.ready(),
       "Waiting for beacon node to start..."
     );
