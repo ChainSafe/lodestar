@@ -123,7 +123,12 @@ export function nodeAssertions(env: SimulationEnvironment): void {
       const firstHeadRoot = headRoots[0];
 
       for (let n = 1; n < env.params.beaconNodes; n++) {
-        expect(headRoots[n]).to.equal(firstHeadRoot, `node ${n} has different head than node 0`);
+        expect(headRoots[n]).to.equal(
+          firstHeadRoot,
+          `node ${n} has different head than node 0. firstNodeHead: ${Buffer.from(firstHeadRoot).toString(
+            "hex"
+          )}, node${n}Head: ${Buffer.from(headRoots[n]).toString("hex")}`
+        );
       }
     });
 
@@ -219,7 +224,10 @@ export function participationAssertions(env: SimulationEnvironment): void {
         // As its end of epoch the "currentEpochParticipation" is all set to zero
         const currentEpochParticipation = (states[n].data as altair.BeaconState).currentEpochParticipation;
         // Make sure the its not end of epoch
-        expect(currentEpochParticipation.every((p) => p === 0)).to.be.true;
+        expect(currentEpochParticipation.every((p) => p === 0)).to.be.eql(
+          true,
+          `Node ${n} has not set current epoch participation to zero. Probably its not the end of epoch.`
+        );
 
         const previousEpochParticipation = (states[n].data as altair.BeaconState).previousEpochParticipation;
         const totalAttestingBalance = previousEpochParticipation
@@ -240,7 +248,10 @@ export function participationAssertions(env: SimulationEnvironment): void {
         // As its end of epoch the "currentEpochParticipation" is all set to zero
         const currentEpochParticipation = (states[n].data as altair.BeaconState).currentEpochParticipation;
         // Make sure the its not end of epoch
-        expect(currentEpochParticipation.every((p) => p === 0)).to.be.true;
+        expect(currentEpochParticipation.every((p) => p === 0)).to.be.eql(
+          true,
+          `Node ${n} has not set current epoch participation to zero. Probably its not the end of epoch.`
+        );
 
         const previousEpochParticipation = (states[n].data as altair.BeaconState).previousEpochParticipation;
         const totalAttestingBalance = previousEpochParticipation
@@ -283,9 +294,11 @@ export function missedBlocksAssertions(env: SimulationEnvironment): void {
         const missedBlocksOnFirstNode = missedBlocks[0];
 
         for (let n = 1; n < env.params.beaconNodes; n++) {
-          expect(missedBlocks[n]).to.equal(
+          expect(missedBlocks[n]).to.deep.equal(
             missedBlocksOnFirstNode,
-            `node ${n} has different missed blocks than node 0, missedBlocksOnFirstNode: ${missedBlocksOnFirstNode}, missedBlocksOnNode${n}: ${missedBlocks[n]}`
+            `node ${n} has different missed blocks than node 0, missedBlocksOnFirstNode: ${missedBlocksOnFirstNode.join()}, missedBlocksOnNode${n}: ${missedBlocks[
+              n
+            ].join()}`
           );
         }
       }
