@@ -45,11 +45,6 @@ export class SimulationEnvironment {
 
   async start(): Promise<void> {
     await mkdir(this.rootDir);
-
-    for (let i = 1; i <= this.params.beaconNodes; i += 1) {
-      await this.nodes[i - 1].init();
-    }
-
     await Promise.all(this.nodes.map((p) => p.start()));
   }
 
@@ -59,11 +54,21 @@ export class SimulationEnvironment {
     await rm(this.rootDir, {recursive: true});
   }
 
-  connectNodesToFirstNode(): void {
+  async connectNodesToFirstNode(): Promise<void> {
     const firstNode = this.nodes[0];
+
     for (let i = 1; i < this.params.beaconNodes; i += 1) {
       const node = this.nodes[i];
-      node.connect(firstNode);
+      await node.api.debug.connectToPeer(firstNode.peerId.toB58String(), firstNode.multiaddrs);
+    }
+  }
+
+  async connectAllNodes(): Promise<void> {
+    for (let i = 0; i < this.params.beaconNodes; i += 1) {
+      for (let j = 0; j < this.params.beaconNodes; j += 1) {
+        if (i === j) continue;
+        await this.nodes[i].api.debug.connectToPeer(this.nodes[j].peerId.toB58String(), this.nodes[j].multiaddrs);
+      }
     }
   }
 }

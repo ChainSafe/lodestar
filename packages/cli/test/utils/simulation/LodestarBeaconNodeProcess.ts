@@ -1,19 +1,17 @@
+import type {SecretKey} from "@chainsafe/bls/types";
+import {createKeypairFromPeerId, ENR} from "@chainsafe/discv5";
+import {Api, getClient} from "@lodestar/api";
+import {nodeUtils} from "@lodestar/beacon-node/node";
+import {IChainForkConfig} from "@lodestar/config";
 import {ChildProcess} from "node:child_process";
 import {mkdir, writeFile} from "node:fs/promises";
 import PeerId from "peer-id";
-import {nodeUtils} from "@lodestar/beacon-node/node";
-import type {SecretKey} from "@chainsafe/bls/types";
-import {Api, getClient} from "@lodestar/api";
-import {createKeypairFromPeerId, ENR} from "@chainsafe/discv5";
-import {createPeerId} from "@lodestar/beacon-node/network";
-import {IChainForkConfig} from "@lodestar/config";
 import {IBeaconArgs} from "../../../src/cmds/beacon/options.js";
 import {getBeaconConfigFromArgs} from "../../../src/config/beaconParams.js";
 import {IGlobalArgs} from "../../../src/options/globalOptions.js";
-import {createEnr} from "../../../src/config/enr.js";
+import {LodestarValidatorProcess} from "./LodestarValidatorProcess.js";
 import {BeaconNodeConstructor, BeaconNodeProcess, SimulationParams, ValidatorProcess} from "./types.js";
 import {closeChildProcess, spawnProcessAndWait, __dirname} from "./utils.js";
-import {LodestarValidatorProcess} from "./LodestarValidatorProcess.js";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
 export const LodestarBeaconNodeProcess: BeaconNodeConstructor = class LodestarBeaconNodeProcess
@@ -26,14 +24,14 @@ export const LodestarBeaconNodeProcess: BeaconNodeConstructor = class LodestarBe
   readonly restPort: number;
   api!: Api;
   enr!: string;
+  peerId!: PeerId;
+  multiaddrs!: string[];
 
   private rootDir: string;
   private beaconProcess!: ChildProcess;
   private validatorProcesses: ValidatorProcess[] = [];
   private rcConfig: IBeaconArgs & IGlobalArgs;
   private config!: IChainForkConfig;
-  private peerId!: PeerId;
-  private connectTo: BeaconNodeProcess[] = [];
 
   constructor(params: SimulationParams, rootDir: string) {
     this.params = params;
@@ -63,6 +61,8 @@ export const LodestarBeaconNodeProcess: BeaconNodeConstructor = class LodestarBe
       metrics: false,
       dev: true,
       enrFile: `${this.rootDir}/enr.txt`,
+      peerIdFile: `${this.rootDir}/peer-id.json`,
+      bootnodes: [],
       "params.SECONDS_PER_SLOT": String(this.params.secondsPerSlot),
       "params.GENESIS_DELAY": String(this.params.genesisSlotsDelay),
       "params.ALTAIR_FORK_EPOCH": String(this.params.altairEpoch),
@@ -81,20 +81,17 @@ export const LodestarBeaconNodeProcess: BeaconNodeConstructor = class LodestarBe
     }
   }
 
-  async init(): Promise<void> {
-    this.peerId = await createPeerId();
-    const keypair = createKeypairFromPeerId(this.peerId);
-    this.enr = createEnr(this.peerId).encodeTxt(keypair.privateKey);
+  async start(): Promise<void> {
+    const peerId = await PeerId.create({keyType: "secp256k1"});
+    const keypair = createKeypairFromPeerId(peerId);
+    const enr = ENR.createFromPeerId(peerId);
+
+    this.peerId = peerId;
+    this.enr = enr.encodeTxt(keypair.privateKey);
+    this.multiaddrs = [`/ip4/${this.address}/tcp/${this.port}`];
     this.config = getBeaconConfigFromArgs(this.rcConfig);
     this.api = getClient({baseUrl: `http://${this.address}:${this.restPort}/`}, {config: this.config});
-  }
 
-  connect(node: BeaconNodeProcess): void {
-    this.connectTo.push(node);
-  }
-
-  async start(): Promise<void> {
-    this.rcConfig.bootnodes = this.connectTo.map((node) => node.enr);
     const {state} = nodeUtils.initDevState(
       this.config,
       this.params.validatorClients * this.params.validatorsPerClient,
@@ -104,6 +101,7 @@ export const LodestarBeaconNodeProcess: BeaconNodeConstructor = class LodestarBe
     );
 
     await mkdir(this.rootDir);
+    await writeFile(`${this.rootDir}/peer-id.json`, JSON.stringify(this.peerId.toJSON(), null, 2));
     await writeFile(`${this.rootDir}/enr.txt`, this.enr);
     await writeFile(`${this.rootDir}/genesis.ssz`, state.serialize());
     await writeFile(`${this.rootDir}/rc_config.json`, JSON.stringify(this.rcConfig, null, 2));
