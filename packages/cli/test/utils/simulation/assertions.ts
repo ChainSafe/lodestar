@@ -1,6 +1,11 @@
 import {expect} from "chai";
+import {altair} from "@lodestar/types";
+import {TIMELY_HEAD_FLAG_INDEX, TIMELY_TARGET_FLAG_INDEX} from "@lodestar/params";
 import {SimulationEnvironment} from "./SimulationEnvironment.js";
-import {waitForSlot} from "./utils.js";
+import {HttpError} from "@lodestar/api";
+
+const TIMELY_HEAD = 1 << TIMELY_HEAD_FLAG_INDEX;
+const TIMELY_TARGET = 1 << TIMELY_TARGET_FLAG_INDEX;
 
 export function feeRecipientsAssertions(env: SimulationEnvironment): void {
   describe("fee recipient", () => {
@@ -20,9 +25,6 @@ export function finalityAssertions(env: SimulationEnvironment): void {
       describe(`beacon node "${n}"`, () => {
         it("should have proper finality", async function () {
           const node = env.nodes[n];
-
-          await env.clock.waitForEndOfEpoch(1);
-
           const checkpoints = await node.api.beacon.getStateFinalityCheckpoints("head");
           const currentSlot = env.clock.currentSlot;
           const previousJustifiedSlot = checkpoints.data.previousJustified.epoch;
@@ -57,7 +59,7 @@ export function forkAssertions(env: SimulationEnvironment): void {
             }
 
             const expectedSlot = env.params.altairEpoch * env.params.slotsPerEpoch + env.params.genesisSlotsDelay;
-            await waitForSlot(env.params, expectedSlot);
+            await env.clock.waitForEndOfSlot(expectedSlot);
 
             // await node.api.getBlock();
             // Match if the block is from the right fork
@@ -73,7 +75,7 @@ export function forkAssertions(env: SimulationEnvironment): void {
             }
 
             const expectedSlot = env.params.bellatrixEpoch * env.params.slotsPerEpoch + env.params.genesisSlotsDelay;
-            await waitForSlot(env.params, expectedSlot);
+            await env.clock.waitForEndOfSlot(expectedSlot);
 
             // await node.api.getBlock();
             // Match ic the block is from the right fork
@@ -116,20 +118,35 @@ export function nodeAssertions(env: SimulationEnvironment): void {
     }
 
     it("all nodes should have same head", async () => {
-      const heads = await Promise.all(env.nodes.map((n) => n.api.beacon.getBlockHeaders({})));
+      const heads = await Promise.all(env.nodes.map((n) => n.api.beacon.getBlockHeader("head")));
+      const headRoots = heads.map((h) => h.data.root);
+      const firstHeadRoot = headRoots[0];
 
-      expect(heads.length).to.equal(env.params.beaconNodes);
-      expect(new Set(heads.map((h) => h.data.length))).to.have.lengthOf(1);
-      expect(new Set(heads.map((h) => h.data[0].root))).to.have.lengthOf(1);
+      for (let n = 1; n < env.params.beaconNodes; n++) {
+        expect(headRoots[n]).to.equal(firstHeadRoot, `node ${n} has different head than node 0`);
+      }
     });
 
     it("all nodes should have same finality checkpoints on the head", async () => {
       const checkpoints = await Promise.all(env.nodes.map((n) => n.api.beacon.getStateFinalityCheckpoints("head")));
+      const checkpointsOnFirstNode = checkpoints[0];
 
-      expect(checkpoints.length).to.equal(env.params.beaconNodes);
-      expect(new Set(checkpoints.map((h) => h.data.currentJustified.root))).to.have.lengthOf(1);
-      expect(new Set(checkpoints.map((h) => h.data.finalized.root))).to.have.lengthOf(1);
-      expect(new Set(checkpoints.map((h) => h.data.previousJustified))).to.have.lengthOf(1);
+      for (let n = 1; n < env.params.beaconNodes; n++) {
+        expect(checkpoints[n].data.currentJustified).to.deep.equal(
+          checkpointsOnFirstNode.data.currentJustified,
+          `node ${n} has different current justified than node 0`
+        );
+
+        expect(checkpoints[n].data.finalized).to.deep.equal(
+          checkpointsOnFirstNode.data.finalized,
+          `node ${n} has different finalized than node 0`
+        );
+
+        expect(checkpoints[n].data.previousJustified).to.deep.equal(
+          checkpointsOnFirstNode.data.previousJustified,
+          `node ${n} has different previous justified than node 0`
+        );
+      }
     });
   });
 }
@@ -195,41 +212,83 @@ export function slashingAssertions(env: SimulationEnvironment): void {
 
 export function participationAssertions(env: SimulationEnvironment): void {
   describe("participation", () => {
-    for (let n = 0; n < env.params.beaconNodes; n++) {
-      describe(`beacon node "${n}"`, () => {
-        it("should have correct participation rate");
-      });
-    }
+    it("should have correct participation on head", async () => {
+      const states = await Promise.all(env.nodes.map((n) => n.api.debug.getStateV2("head")));
+
+      for (let n = 0; n < env.params.beaconNodes; n++) {
+        // As its end of epoch the "currentEpochParticipation" is all set to zero
+        const currentEpochParticipation = (states[n].data as altair.BeaconState).currentEpochParticipation;
+        // Make sure the its not end of epoch
+        expect(currentEpochParticipation.every((p) => p === 0)).to.be.true;
+
+        const previousEpochParticipation = (states[n].data as altair.BeaconState).previousEpochParticipation;
+        const totalAttestingBalance = previousEpochParticipation
+          .map((p, index) => ((p & TIMELY_HEAD) !== 0 ? states[n].data.balances[index] : 0))
+          .reduce((a, b) => a + b, 0);
+        const totalActiveBalance = states[n].data.validators.reduce((a, b) => a + b.effectiveBalance, 0);
+
+        const participationRate = totalAttestingBalance / totalActiveBalance;
+        console.log(`Current participation rate on head: ${participationRate}`);
+        expect(participationRate).to.be.gt(env.acceptableParticipationRate, `node ${n} has too low participation rate`);
+      }
+    });
+
+    it("should have correct participation on FFG", async () => {
+      const states = await Promise.all(env.nodes.map((n) => n.api.debug.getStateV2("head")));
+
+      for (let n = 0; n < env.params.beaconNodes; n++) {
+        // As its end of epoch the "currentEpochParticipation" is all set to zero
+        const currentEpochParticipation = (states[n].data as altair.BeaconState).currentEpochParticipation;
+        // Make sure the its not end of epoch
+        expect(currentEpochParticipation.every((p) => p === 0)).to.be.true;
+
+        const previousEpochParticipation = (states[n].data as altair.BeaconState).previousEpochParticipation;
+        const totalAttestingBalance = previousEpochParticipation
+          .map((p, index) => ((p & TIMELY_TARGET) !== 0 ? states[n].data.balances[index] : 0))
+          .reduce((a, b) => a + b, 0);
+        const totalActiveBalance = states[n].data.validators.reduce((a, b) => a + b.effectiveBalance, 0);
+
+        const participationRate = totalAttestingBalance / totalActiveBalance;
+        console.log(`Current participation rate on FFG: ${participationRate}`);
+        expect(participationRate).to.be.gt(env.acceptableParticipationRate, `node ${n} has too low participation rate`);
+      }
+    });
   });
 }
 
 export function missedBlocksAssertions(env: SimulationEnvironment): void {
   describe("missing blocks", () => {
-    before(async () => {
-      // Wait for end of one epoch
-      console.log(`Waiting for end of epoch ${env.clock.currentEpoch + 1}`);
-      await env.clock.waitForEndOfEpoch(env.clock.currentEpoch + 1);
-    });
+    it("should have no missed blocks", async () => {
+      const missedBlocks: Record<number, number[]> = {};
 
-    for (let n = 0; n < env.params.beaconNodes; n++) {
-      describe(`beacon node "${n}"`, () => {
-        it("should have no missed blocks", async () => {
-          let missedBlocks = 0;
-
-          for (let i = 0; i < env.params.slotsPerEpoch * env.clock.currentEpoch; i++) {
-            try {
-              const block = await env.nodes[n].api.beacon.getBlock(i);
-              if (block.data.message.slot !== i) {
-                missedBlocks += 1;
-              }
-            } catch {
-              missedBlocks += 1;
+      for (let n = 0; n < env.params.beaconNodes; n++) {
+        missedBlocks[n] = [];
+        for (let i = 0; i < env.clock.currentSlot; i++) {
+          try {
+            await env.nodes[n].api.beacon.getBlock(i);
+          } catch (err) {
+            if ((err as HttpError).status === 404) {
+              missedBlocks[n].push(i);
+            } else {
+              throw err;
             }
           }
+        }
+      }
 
-          expect(missedBlocks).to.equal(0);
-        });
-      });
-    }
+      // If there is single node
+      if (env.params.beaconNodes === 1) {
+        expect(missedBlocks[0]).to.be.eql([], `node 0 has following missed blocks: ${missedBlocks[0]}`);
+      } else {
+        const missedBlocksOnFirstNode = missedBlocks[0];
+
+        for (let n = 1; n < env.params.beaconNodes; n++) {
+          expect(missedBlocks[n]).to.equal(
+            missedBlocksOnFirstNode,
+            `node ${n} has different missed blocks than node 0, missedBlocksOnFirstNode: ${missedBlocksOnFirstNode}, missedBlocksOnNode${n}: ${missedBlocks[n]}`
+          );
+        }
+      }
+    });
   });
 }

@@ -44,7 +44,7 @@ export class EpochClock {
     return epoch * this.slotsPerEpoch;
   }
 
-  waitForSlot(slot: number): Promise<void> {
+  waitForStartOfSlot(slot: number): Promise<void> {
     return new Promise((resolve) => {
       const slotTime = this.getSlotTime(slot) * MS_IN_SEC - Date.now();
 
@@ -62,8 +62,12 @@ export class EpochClock {
     });
   }
 
+  waitForEndOfSlot(slot: number): Promise<void> {
+    return this.waitForStartOfSlot(slot + 1);
+  }
+
   waitForEndOfEpoch(epoch: number): Promise<void> {
-    return this.waitForSlot(this.getLastSlotOfEpoch(epoch));
+    return this.waitForEndOfSlot(this.getLastSlotOfEpoch(epoch));
   }
 
   getSlotFor(timeStamp?: number): number {
