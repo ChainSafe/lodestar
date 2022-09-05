@@ -11,7 +11,6 @@ import {testData} from "./testData.js";
 // eslint-disable-next-line @typescript-eslint/naming-convention
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const skip = true;
 const version = "v0.2.0";
 const openApiFile: OpenApiFile = {
   url: `https://github.com/ethereum/builder-specs/releases/download/${version}/builder-oapi.json`,
@@ -21,11 +20,8 @@ const openApiFile: OpenApiFile = {
   version: RegExp(/.*/),
 };
 
-// TODO: un-skip in follow-up PR, this PR only adds basic infra for spec testing
-if (!skip) {
-  const reqSerializers = getReqSerializers();
-  const returnTypes = getReturnTypes();
+const reqSerializers = getReqSerializers();
+const returnTypes = getReturnTypes();
 
-  const openApiJson = await fetchOpenApiSpec(openApiFile);
-  runTestCheckAgainstSpec(openApiJson, routesData, reqSerializers, returnTypes, testData);
-}
+const openApiJson = await fetchOpenApiSpec(openApiFile);
+runTestCheckAgainstSpec(openApiJson, routesData, reqSerializers, returnTypes, testData);

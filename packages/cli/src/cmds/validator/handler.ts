@@ -1,11 +1,11 @@
 import {LevelDbController} from "@lodestar/db";
-import {ProcessShutdownCallback, SlashingProtection, Validator, defaultOptions} from "@lodestar/validator";
+import {ProcessShutdownCallback, SlashingProtection, Validator, ValidatorProposerConfig} from "@lodestar/validator";
 import {getMetrics, MetricsRegister} from "@lodestar/validator";
 import {RegistryMetricCreator, collectNodeJSMetrics, HttpMetricsServer} from "@lodestar/beacon-node";
 import {getBeaconConfigFromArgs} from "../../config/index.js";
 import {IGlobalArgs} from "../../options/index.js";
 import {YargsError, getDefaultGraffiti, mkdir, getCliLogger} from "../../util/index.js";
-import {onGracefulShutdown, parseFeeRecipient} from "../../util/index.js";
+import {onGracefulShutdown, parseFeeRecipient, parseProposerConfig} from "../../util/index.js";
 import {getVersionData} from "../../util/version.js";
 import {getBeaconPaths} from "../beacon/paths.js";
 import {getAccountPaths, getValidatorPaths} from "./paths.js";
@@ -22,9 +22,8 @@ import {KeymanagerRestApiServer} from "./keymanager/server.js";
 export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): Promise<void> {
   const {config, network} = getBeaconConfigFromArgs(args);
 
-  const graffiti = args.graffiti || getDefaultGraffiti();
-  const suggestedFeeRecipient = parseFeeRecipient(args.suggestedFeeRecipient ?? defaultOptions.suggestedFeeRecipient);
   const doppelgangerProtectionEnabled = args.doppelgangerProtectionEnabled;
+  const valProposerConfig = getProposerConfigFromArgs(args);
 
   const beaconPaths = getBeaconPaths(args, network);
   const validatorPaths = getValidatorPaths(args, network);
@@ -97,8 +96,6 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
     await metricsServer.start();
   }
 
-  const builder = args["builder"] ? {enabled: true} : {};
-
   // This promise resolves once genesis is available.
   // It will wait for genesis, so this promise can be potentially very long
 
@@ -110,11 +107,9 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
       logger,
       processShutdownCallback,
       signers,
-      graffiti,
       doppelgangerProtectionEnabled,
       afterBlockDelaySlotFraction: args.afterBlockDelaySlotFraction,
-      suggestedFeeRecipient,
-      builder,
+      valProposerConfig,
     },
     controller.signal,
     metrics
@@ -141,4 +136,21 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
     onGracefulShutdownCbs.push(() => keymanagerServer.close());
     await keymanagerServer.listen();
   }
+}
+
+function getProposerConfigFromArgs(args: IValidatorCliArgs): ValidatorProposerConfig {
+  const defaultConfig = {
+    graffiti: args.graffiti || getDefaultGraffiti(),
+    strictFeeRecipientCheck: args.strictFeeRecipientCheck,
+    feeRecipient: args.suggestedFeeRecipient ? parseFeeRecipient(args.suggestedFeeRecipient) : undefined,
+    builder: {enabled: args.builder, gasLimit: args.defaultGasLimit},
+  };
+  let valProposerConfig;
+  if (args.proposerSettingsFile) {
+    // parseProposerConfig will override the defaults with the arg created defaultConfig
+    valProposerConfig = parseProposerConfig(args.proposerSettingsFile, defaultConfig);
+  } else {
+    valProposerConfig = {defaultConfig} as ValidatorProposerConfig;
+  }
+  return valProposerConfig;
 }

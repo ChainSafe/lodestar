@@ -1,7 +1,7 @@
 import sinon from "sinon";
 
 import {CompositeTypeAny, toHexString, TreeView} from "@chainsafe/ssz";
-import {phase0, allForks, UintNum64, Root, Slot, ssz, Uint16, UintBn64} from "@lodestar/types";
+import {phase0, allForks, bellatrix, UintNum64, Root, Slot, ssz, Uint16, UintBn64} from "@lodestar/types";
 import {IBeaconConfig} from "@lodestar/config";
 import {BeaconStateAllForks, CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {CheckpointWithHex, IForkChoice, ProtoBlock, ExecutionStatus} from "@lodestar/fork-choice";
@@ -42,6 +42,7 @@ import {SeenBlockAttesters} from "../../../../src/chain/seenCache/seenBlockAttes
 import {BeaconProposerCache} from "../../../../src/chain/beaconProposerCache.js";
 import {CheckpointBalancesCache} from "../../../../src/chain/balancesCache.js";
 import {IChainOptions} from "../../../../src/chain/options.js";
+import {BlockAttributes} from "../../../../src/chain/produceBlock/produceBlockBody.js";
 
 /* eslint-disable @typescript-eslint/no-empty-function */
 
@@ -176,7 +177,13 @@ export class MockBeaconChain implements IBeaconChain {
     }));
   }
 
-  async receiveBlock(): Promise<void> {}
+  async produceBlock(_blockAttributes: BlockAttributes): Promise<allForks.BeaconBlock> {
+    throw Error("Not implemented");
+  }
+  async produceBlindedBlock(_blockAttributes: BlockAttributes): Promise<bellatrix.BlindedBeaconBlock> {
+    throw Error("Not implemented");
+  }
+
   async processBlock(): Promise<void> {}
   async processChainSegment(): Promise<void> {}
 
@@ -245,6 +252,7 @@ function mockForkChoice(): IForkChoice {
   const checkpoint: CheckpointWithHex = {epoch: 0, root, rootHex};
 
   return {
+    irrecoverableError: undefined,
     getAncestor: () => rootHex,
     getHeadRoot: () => rootHex,
     getHead: () => block,

@@ -162,6 +162,9 @@ export function WithVersion<T>(getType: (fork: ForkName) => TypeJson<T>): TypeJs
       version,
     }),
     fromJson: ({data, version}: {data: unknown; version: string}) => {
+      // Teku returns fork as UPPERCASE
+      version = version.toLowerCase();
+
       // Un-safe external data, validate version is known ForkName value
       if (!ForkName[version as ForkName]) throw Error(`Invalid version ${version}`);
 

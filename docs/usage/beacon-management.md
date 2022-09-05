@@ -106,7 +106,7 @@ Jul-09 17:34:54.278 []                 info: Syncing - 3 days left - 3.00 slots/
     If your node is stuck with `Searching for peers` review your network configuration to make sure your ports are open.
 <!-- prettier-ignore-end -->
 
-A young testnet should take a few hours to sync. If you see multiple or consistent errors in the logs, please open a [Github issue](https://github.com/ChainSafe/lodestar/issues/new) or reach out to us in [Discord](https://discord.gg/yjyvFRP). Just by reporting anomalities you are helping accelerate the progress of Ethereum Consensus, thanks for contributing!
+A young testnet should take a few hours to sync. If you see multiple or consistent errors in the logs, please open a [Github issue](https://github.com/ChainSafe/lodestar/issues/new) or reach out to us in [Discord](https://discord.gg/yjyvFRP). Just by reporting anomalies you are helping accelerate the progress of Ethereum Consensus, thanks for contributing!
 
 <!-- prettier-ignore-start -->
 !!! warning

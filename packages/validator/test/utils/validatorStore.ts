@@ -4,6 +4,7 @@ import {chainConfig} from "@lodestar/config/default";
 import {createIBeaconConfig, IChainConfig} from "@lodestar/config";
 import {Signer, SignerType, ValidatorStore} from "../../src/index.js";
 import {IndicesService} from "../../src/services/indices.js";
+import {ValidatorProposerConfig} from "../../src/services/validatorStore.js";
 import {testLogger} from "./logger.js";
 import {SlashingProtectionMock} from "./slashingProtectionMock.js";
 
@@ -13,12 +14,11 @@ import {SlashingProtectionMock} from "./slashingProtectionMock.js";
 export function initValidatorStore(
   secretKeys: SecretKey[],
   api: Api,
-  customChainConfig: IChainConfig = chainConfig
+  customChainConfig: IChainConfig = chainConfig,
+  valProposerConfig: ValidatorProposerConfig = {defaultConfig: {builder: {}}, proposerConfig: {}}
 ): ValidatorStore {
   const logger = testLogger();
   const genesisValidatorsRoot = Buffer.alloc(32, 0xdd);
-  const suggestedFeeRecipient = "0x0";
-  const defaultGasLimit = 10000;
 
   const signers: Signer[] = secretKeys.map((sk) => ({
     type: SignerType.Local,
@@ -34,8 +34,7 @@ export function initValidatorStore(
     null,
     metrics,
     signers,
-    suggestedFeeRecipient,
-    defaultGasLimit,
+    valProposerConfig,
     genesisValidatorsRoot
   );
 }

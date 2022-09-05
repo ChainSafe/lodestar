@@ -136,15 +136,9 @@ export class ExecutionEngineHttp implements IExecutionEngine {
         return {status, latestValidHash: latestValidHash ?? "0x0", validationError: null};
 
       case ExecutePayloadStatus.INVALID:
-        if (latestValidHash == null) {
-          return {
-            status: ExecutePayloadStatus.ELERROR,
-            latestValidHash: null,
-            validationError: `Invalid null latestValidHash for status=${status}`,
-          };
-        } else {
-          return {status, latestValidHash, validationError};
-        }
+        // As per latest specs if latestValidHash can be null and it would mean only
+        // invalidate this block
+        return {status, latestValidHash, validationError};
 
       case ExecutePayloadStatus.SYNCING:
       case ExecutePayloadStatus.ACCEPTED:
