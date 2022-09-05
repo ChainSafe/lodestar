@@ -52,10 +52,12 @@ export const LodestarBeaconNodeProcess: BeaconNodeConstructor = class LodestarBe
       rest: true,
       "rest.address": this.address,
       "rest.port": this.restPort,
+      "rest.namespace": "*",
       "sync.isSingleNode": this.params.beaconNodes === 1,
       "network.allowPublishToZeroPeers": true,
       eth1: false,
-      discv5: this.params.beaconNodes !== 1,
+      discv5: this.params.beaconNodes > 1,
+      "network.connectToDiscv5Bootnodes": this.params.beaconNodes > 1,
       listenAddress: this.address,
       port: this.port,
       metrics: false,
@@ -92,16 +94,14 @@ export const LodestarBeaconNodeProcess: BeaconNodeConstructor = class LodestarBe
   }
 
   async start(): Promise<void> {
-    console.log("%%%%%%%%%%%%%%%%%%%%%");
-    console.log(this.enr);
-    console.log("%%%%%%%%%%%%%%%%%%%%%");
     this.rcConfig.bootnodes = this.connectTo.map((node) => node.enr);
-
-    console.log(this.rcConfig);
-
-    const {state} = nodeUtils.initDevState(this.config, this.params.validatorClients, {
-      genesisTime: this.params.genesisTime,
-    });
+    const {state} = nodeUtils.initDevState(
+      this.config,
+      this.params.validatorClients * this.params.validatorsPerClient,
+      {
+        genesisTime: this.params.genesisTime,
+      }
+    );
 
     await mkdir(this.rootDir);
     await writeFile(`${this.rootDir}/enr.txt`, this.enr);
@@ -121,11 +121,11 @@ export const LodestarBeaconNodeProcess: BeaconNodeConstructor = class LodestarBe
   }
 
   async stop(): Promise<void> {
+    await Promise.all(this.validatorProcesses.map((p) => p.stop()));
+
     if (this.beaconProcess !== undefined) {
       await closeChildProcess(this.beaconProcess);
     }
-
-    await Promise.all(this.validatorProcesses.map((p) => p.stop()));
   }
 
   async ready(): Promise<boolean> {

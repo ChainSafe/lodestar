@@ -70,18 +70,3 @@ export const closeChildProcess = async (childProcess: ChildProcess, signal?: "SI
     childProcess.kill(signal);
   });
 };
-
-export const waitForSlot = async (params: SimulationParams, slot: Slot): Promise<void> => {
-  if (slot <= 0) {
-    return;
-  }
-
-  const slotStartSec = params.genesisTime + slot * params.secondsPerSlot;
-  const msToSlot = slotStartSec * 1000 - Date.now();
-
-  if (msToSlot < 0) {
-    throw Error("Requested slot is in past");
-  }
-
-  await new Promise((resolve) => setTimeout(resolve, msToSlot));
-};

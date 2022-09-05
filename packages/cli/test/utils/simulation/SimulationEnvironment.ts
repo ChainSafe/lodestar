@@ -12,6 +12,7 @@ export class SimulationEnvironment {
   readonly nodes: BeaconNodeProcess[] = [];
   readonly clock: EpochClock;
   readonly controller: AbortController;
+  readonly acceptableParticipationRate = 0.8;
 
   constructor(params: SimulationRequiredParams & Partial<SimulationOptionalParams>) {
     const paramsWithDefaults = {...defaultSimulationParams, ...params} as SimulationRequiredParams &
