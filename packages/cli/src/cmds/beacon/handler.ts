@@ -21,18 +21,12 @@ import {initBeaconState} from "./initBeaconState.js";
  * Runs a beacon node.
  */
 export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<void> {
-  const {config, options: nodeOptions, beaconPaths, network, version, commit, peerId} = await beaconHandlerInit(args);
+  const {config, options, beaconPaths, network, version, commit, peerId} = await beaconHandlerInit(args);
 
   // initialize directories
   mkdir(beaconPaths.dataDir);
   mkdir(beaconPaths.beaconDir);
   mkdir(beaconPaths.dbDir);
-
-  const options =
-    args.dev &&
-    (process.env.NODE_ENV === "dev" || process.env.NODE_ENV === "development" || process.env.NODE_ENV === "test")
-      ? ({...nodeOptions, executionEngine: {mode: "mock"}} as IBeaconNodeOptions)
-      : nodeOptions;
 
   const abortController = new AbortController();
   const logger = getCliLogger(args, {defaultLogFile: "beacon.log"}, config);
