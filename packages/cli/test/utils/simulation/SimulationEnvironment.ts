@@ -59,7 +59,7 @@ export class SimulationEnvironment {
 
     for (let i = 1; i < this.params.beaconNodes; i += 1) {
       const node = this.nodes[i];
-      await node.api.debug.connectToPeer(firstNode.peerId.toB58String(), firstNode.multiaddrs);
+      await node.api.lodestar.connectPeer(firstNode.peerId, firstNode.multiaddrs);
     }
   }
 
@@ -67,7 +67,7 @@ export class SimulationEnvironment {
     for (let i = 0; i < this.params.beaconNodes; i += 1) {
       for (let j = 0; j < this.params.beaconNodes; j += 1) {
         if (i === j) continue;
-        await this.nodes[i].api.debug.connectToPeer(this.nodes[j].peerId.toB58String(), this.nodes[j].multiaddrs);
+        await this.nodes[i].api.lodestar.connectPeer(this.nodes[j].peerId, this.nodes[j].multiaddrs);
       }
     }
   }

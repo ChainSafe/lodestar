@@ -29,9 +29,8 @@ export interface BeaconNodeProcess {
   ready(): Promise<boolean>;
   start(): Promise<void>;
   stop(): Promise<void>;
-  enr: string;
+  peerId: string;
   multiaddrs: string[];
-  peerId: PeerId;
   api: Api;
   address: string;
   port: number;
