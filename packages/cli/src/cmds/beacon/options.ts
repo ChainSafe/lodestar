@@ -134,11 +134,16 @@ const enrOptions: Record<string, Options> = {
   },
 };
 
-export type DebugArgs = {attachToGlobalThis: boolean};
+export type DebugArgs = {attachToGlobalThis: boolean; dev: boolean};
 export const debugOptions: ICliCommandOptions<DebugArgs> = {
   attachToGlobalThis: {
     hidden: true,
     description: "Attach the beacon node to `globalThis`. Useful to inspect a running beacon node.",
+    type: "boolean",
+  },
+  dev: {
+    hidden: true,
+    description: "Set some dev/test related configurations. Only works with NODE_ENV=dev or NODE_ENV=test.",
     type: "boolean",
   },
 };
