@@ -69,17 +69,17 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
 
   const abortControllers: ValidatorAbortController = {
     // This AbortController interrupts the sleep() calls when waiting for genesis
-    genesisInit: new AbortController(),
+    genesisReqController: new AbortController(),
     // This AbortController interrupts the validators ops: clients call, clock etc
-    validatorOps: new AbortController(),
+    validatorOpsController: new AbortController(),
   };
 
   // We set infinity for abort controller used for validator operations,
   // to prevent MaxListenersExceededWarning which get logged when listeners > 10
   // Since it is perfectly fine to have listeners > 10
-  setMaxListeners(Infinity, abortControllers.validatorOps.signal);
+  setMaxListeners(Infinity, abortControllers.validatorOpsController.signal);
 
-  onGracefulShutdownCbs.push(async () => abortControllers.genesisInit.abort());
+  onGracefulShutdownCbs.push(async () => abortControllers.genesisReqController.abort());
 
   const dbOps = {
     config,

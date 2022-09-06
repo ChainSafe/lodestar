@@ -31,8 +31,8 @@ export async function getAndInitDevValidators({
   const validators: Promise<Validator>[] = [];
   const secretKeys: SecretKey[] = [];
   const abortControllers: ValidatorAbortController = {
-    genesisInit: new AbortController(),
-    validatorOps: new AbortController(),
+    genesisReqController: new AbortController(),
+    validatorOpsController: new AbortController(),
   };
 
   for (let clientIndex = 0; clientIndex < validatorClientCount; clientIndex++) {
