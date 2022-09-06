@@ -23,7 +23,7 @@ import {Metrics} from "./metrics.js";
 import {MetaDataRepository} from "./repositories/metaDataRepository.js";
 import {DoppelgangerService} from "./services/doppelgangerService.js";
 
-export type ValidatorAbortController = {genesisInit: AbortController; validatorOps: AbortController};
+export type ValidatorAbortController = {genesisReqController: AbortController; validatorOpsController: AbortController};
 
 export type ValidatorOptions = {
   slashingProtection: ISlashingProtection;
@@ -68,7 +68,7 @@ export class Validator {
   constructor(opts: ValidatorOptions, readonly genesis: Genesis, metrics: Metrics | null = null) {
     const {dbOps, logger, slashingProtection, signers, valProposerConfig} = opts;
     const config = createIBeaconConfig(dbOps.config, genesis.genesisValidatorsRoot);
-    this.controller = opts.abortControllers.validatorOps;
+    this.controller = opts.abortControllers.validatorOpsController;
     const clock = new Clock(config, logger, {genesisTime: Number(genesis.genesisTime)});
     const loggerVc = getLoggerVc(logger, clock);
 
@@ -168,12 +168,12 @@ export class Validator {
         ? // This new api instance can make do with default timeout as a faster timeout is
           // not necessary since this instance won't be used for validator duties
           getClient(
-            {baseUrl: opts.api, getAbortSignal: () => opts.abortControllers.genesisInit.signal},
+            {baseUrl: opts.api, getAbortSignal: () => opts.abortControllers.genesisReqController.signal},
             {config, logger}
           )
         : opts.api;
 
-    const genesis = await waitForGenesis(api, opts.logger, opts.abortControllers.genesisInit.signal);
+    const genesis = await waitForGenesis(api, opts.logger, opts.abortControllers.genesisReqController.signal);
     logger.info("Genesis available");
 
     const {data: externalSpecJson} = await api.config.getSpec();
