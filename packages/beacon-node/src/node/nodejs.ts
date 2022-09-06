@@ -63,6 +63,8 @@ enum LoggerModule {
   eth1 = "eth1",
   metrics = "metrics",
   network = "network",
+  /** validator monitor */
+  vmon = "vmon",
   rest = "rest",
   sync = "sync",
 }
@@ -143,7 +145,13 @@ export class BeaconNode {
 
     let metrics = null;
     if (opts.metrics.enabled) {
-      metrics = createMetrics(opts.metrics, config, anchorState, logger.child({module: "VMON"}), metricsRegistries);
+      metrics = createMetrics(
+        opts.metrics,
+        config,
+        anchorState,
+        logger.child({module: LoggerModule.vmon}),
+        metricsRegistries
+      );
       initBeaconMetrics(metrics, anchorState);
       // Since the db is instantiated before this, metrics must be injected manually afterwards
       db.setMetrics(metrics.db);
