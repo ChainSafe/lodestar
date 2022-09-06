@@ -3,7 +3,7 @@ import {Registry} from "prom-client";
 import {createKeypairFromPeerId, ENR} from "@chainsafe/discv5";
 import {ErrorAborted} from "@lodestar/utils";
 import {LevelDbController} from "@lodestar/db";
-import {BeaconNode, BeaconDb, createNodeJsLibp2p, IBeaconNodeOptions} from "@lodestar/beacon-node";
+import {BeaconNode, BeaconDb, createNodeJsLibp2p} from "@lodestar/beacon-node";
 import {createIBeaconConfig} from "@lodestar/config";
 import {ACTIVE_PRESET, PresetName} from "@lodestar/params";
 import {ProcessShutdownCallback} from "@lodestar/validator";
