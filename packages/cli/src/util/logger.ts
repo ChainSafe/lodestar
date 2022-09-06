@@ -1,7 +1,19 @@
+import path from "node:path";
+import DailyRotateFile from "winston-daily-rotate-file";
+import TransportStream from "winston-transport";
+import winston from "winston";
 import {IChainForkConfig} from "@lodestar/config";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {ILogger, LogLevel, createWinstonLogger, TimestampFormat, TimestampFormatCode} from "@lodestar/utils";
-import {fromTransportOpts, TransportOpts, TransportType} from "./loggerTransports.js";
+import {
+  ILogger,
+  LogLevel,
+  createWinstonLogger,
+  TimestampFormat,
+  TimestampFormatCode,
+  LogFormat,
+  logFormats,
+} from "@lodestar/utils";
+import {ConsoleDynamicLevel} from "./loggerConsoleTransport.js";
 
 export const defaultLogMaxFiles = 5;
 
@@ -10,32 +22,67 @@ export interface ILogArgs {
   logFileLevel?: LogLevel;
   logFileDailyRotate?: number;
   logFormatGenesisTime?: number;
-  logFormatId?: string;
+  logPrefix?: string;
+  logFormat?: string;
   logLevelModule?: string[];
-}
-
-export function errorLogger(): ILogger {
-  return createWinstonLogger({level: LogLevel.error});
 }
 
 /**
  * Setup a CLI logger, common for beacon, validator and dev commands
  */
-export function getCliLogger(args: ILogArgs, paths: {logFile?: string}, config: IChainForkConfig): ILogger {
-  const transportsOpts: TransportOpts[] = [{type: TransportType.console}];
+export function getCliLogger(
+  args: ILogArgs,
+  paths: {logFile?: string},
+  config: IChainForkConfig,
+  opts?: {hideTimestamp?: boolean}
+): ILogger {
+  const consoleTransport = new ConsoleDynamicLevel({
+    // Set defaultLevel, not level for dynamic level setting of ConsoleDynamicLevel
+    defaultLevel: args.logLevel ?? LogLevel.info,
+    debugStdout: true,
+    handleExceptions: true,
+  });
+
+  if (args.logLevelModule) {
+    for (const logLevelModule of args.logLevelModule ?? []) {
+      const [module, levelStr] = logLevelModule.split("=");
+      const level = levelStr as LogLevel;
+      if (LogLevel[level as LogLevel] === undefined) {
+        throw Error(`Unknown level in logLevelModule '${logLevelModule}'`);
+      }
+
+      consoleTransport.setModuleLevel(module, level);
+    }
+  }
+
+  const transports: TransportStream[] = [consoleTransport];
+
   if (paths.logFile) {
-    transportsOpts.push({
-      type: TransportType.file,
-      filename: paths.logFile,
-      level: args.logFileLevel,
-      // yargs populates with undefined if just set but with no arg
-      // $ ./bin/lodestar.js beacon --logFileDailyRotate
-      // args = {
-      //   logFileDailyRotate: undefined,
-      // }
-      rotate: "logFileDailyRotate" in args,
-      maxfiles: args.logFileDailyRotate ?? defaultLogMaxFiles,
-    });
+    // yargs populates with undefined if just set but with no arg
+    // $ ./bin/lodestar.js beacon --logFileDailyRotate
+    // args = {
+    //   logFileDailyRotate: undefined,
+    // }
+    const rotate = "logFileDailyRotate" in args;
+    const filename = paths.logFile;
+
+    transports.push(
+      rotate
+        ? new DailyRotateFile({
+            level: args.logFileLevel,
+            //insert the date pattern in filename before the file extension.
+            filename: filename.replace(/\.(?=[^.]*$)|$/, "-%DATE%$&"),
+            datePattern: "YYYY-MM-DD",
+            handleExceptions: true,
+            maxFiles: args.logFileDailyRotate ?? defaultLogMaxFiles,
+            auditFile: path.join(path.dirname(filename), ".log_rotate_audit.json"),
+          })
+        : new winston.transports.File({
+            level: args.logFileLevel,
+            filename: filename,
+            handleExceptions: true,
+          })
+    );
   }
 
   const timestampFormat: TimestampFormat =
@@ -50,18 +97,21 @@ export function getCliLogger(args: ILogArgs, paths: {logFile?: string}, config: 
           format: TimestampFormatCode.DateRegular,
         };
 
-  const transports = transportsOpts.map((transportOpts) => fromTransportOpts(transportOpts));
+  return createWinstonLogger(
+    {
+      module: args.logPrefix,
+      format: args.logFormat ? parseLogFormat(args.logFormat) : "human",
+      timestampFormat,
+      hideTimestamp: opts?.hideTimestamp,
+    },
+    transports
+  );
+}
 
-  const logger = createWinstonLogger({level: args.logLevel, module: args.logFormatId, timestampFormat}, transports);
-
-  if (args.logLevelModule) {
-    for (const logLevelModule of args.logLevelModule ?? []) {
-      const [module, level] = logLevelModule.split("=");
-      if (LogLevel[level as LogLevel] === undefined) {
-        throw Error(`Unknown level in logLevelModule '${logLevelModule}'`);
-      }
-    }
+function parseLogFormat(format: string): LogFormat {
+  if (!logFormats.includes(format as LogFormat)) {
+    throw Error(`Invalid log format '${format}'`);
   }
 
-  return logger;
+  return format as LogFormat;
 }

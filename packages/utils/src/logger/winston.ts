@@ -168,25 +168,3 @@ export class WinstonLogger implements ILogger {
     this.winston.log(level, {message, context, error});
   }
 }
-
-export class ConsoleDynamicLevel extends winston.transports.Console {
-  private readonly levelByModule = new Map<string, LogLevel>();
-  private readonly levels!: Record<LogLevel, number>;
-
-  constructor() {
-    super();
-
-    this.level = undefined;
-  }
-
-  _write(info: LogInfo, enc: BufferEncoding, callback: (error?: Error | null | undefined) => void): void {
-    const moduleLevel = this.levelByModule.get((info as LogInfo).module);
-    const level = moduleLevel ?? LogLevel.info;
-
-    if (this.levels[level] >= this.levels[info[LEVEL]]) {
-      super._write(info, enc, callback);
-    } else {
-      callback(null);
-    }
-  }
-}

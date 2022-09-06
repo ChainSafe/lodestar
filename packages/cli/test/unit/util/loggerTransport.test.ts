@@ -1,140 +1,141 @@
 import fs from "node:fs";
 import path from "node:path";
-import {Writable} from "node:stream";
 import rimraf from "rimraf";
 import {expect} from "chai";
+import {config} from "@lodestar/config/default";
 import {LodestarError, LogData, LogFormat, logFormats, LogLevel, createWinstonLogger} from "@lodestar/utils";
-import {fromTransportOpts, TransportType} from "../../../src/util/loggerTransports.js";
+import {ConsoleDynamicLevel} from "../../../src/util/loggerConsoleTransport.js";
+import {getCliLogger} from "../../../src/util/logger.js";
 
-/**
- * To capture Winston output in memory
- */
-class WritableMemory extends Writable {
-  chunks: Buffer[] = [];
-  _write(chunk: Buffer): void {
-    this.chunks.push(chunk);
+describe("winston logger format and options", () => {
+  interface ITestCase {
+    id: string;
+    message: string;
+    context?: LogData;
+    error?: Error;
+    output: {[P in LogFormat]: string};
   }
+  /* eslint-disable quotes */
+  const testCases: (ITestCase | (() => ITestCase))[] = [
+    {
+      id: "regular log with metadata",
+      message: "foo bar",
+      context: {meta: "data"},
+      output: {
+        human: "[]                 \u001b[33mwarn\u001b[39m: foo bar meta=data",
+        json: `{"message":"foo bar","context":{"meta":"data"},"level":"warn","module":""}`,
+      },
+    },
 
-  getAsString(): string {
-    return Buffer.concat(this.chunks).toString("utf8");
-  }
-}
+    {
+      id: "regular log with big int metadata",
+      message: "big int",
+      context: {data: BigInt(1)},
+      output: {
+        human: "[]                 \u001b[33mwarn\u001b[39m: big int data=1",
+        json: `{"message":"big int","context":{"data":"1"},"level":"warn","module":""}`,
+      },
+    },
 
-describe("winston logger", () => {
-  describe("winston logger format and options", () => {
-    interface ITestCase {
-      id: string;
-      message: string;
-      context?: LogData;
-      error?: Error;
-      output: {[P in LogFormat]: string};
-    }
-    const testCases: (ITestCase | (() => ITestCase))[] = [
-      {
-        id: "regular log with metadata",
+    () => {
+      const error = new LodestarError({code: "SAMPLE_ERROR", data: {foo: "bar"}});
+      error.stack = "$STACK";
+      return {
+        id: "error with metadata",
+        opts: {format: "human", module: "SAMPLE"},
         message: "foo bar",
-        context: {meta: "data"},
+        error: error,
         output: {
-          human: "[]                 \u001b[33mwarn\u001b[39m: foo bar meta=data",
-          // eslint-disable-next-line quotes
-          json: `{"module":"","context":{"meta":"data"},"level":"warn","message":"foo bar"}`,
+          human: `[]                 \u001b[33mwarn\u001b[39m: foo bar code=SAMPLE_ERROR, data=foo=bar\n${error.stack}`,
+          json: `{"message":"foo bar","error":{"code":"SAMPLE_ERROR","data":{"foo":"bar"},"stack":"$STACK"},"level":"warn","module":""}`,
         },
-      },
+      };
+    },
+  ];
 
-      {
-        id: "regular log with big int metadata",
-        message: "big int",
-        context: {data: BigInt(1)},
-        output: {
-          human: "[]                 \u001b[33mwarn\u001b[39m: big int data=1",
-          // eslint-disable-next-line quotes
-          json: `{"module":"","context":{"data":"1"},"level":"warn","message":"big int"}`,
-        },
-      },
+  let stdoutHook: ReturnType<typeof hookProcessStdout> | null = null;
+  afterEach(() => stdoutHook?.restore());
 
-      () => {
-        const error = new LodestarError({code: "SAMPLE_ERROR", data: {foo: "bar"}});
-        error.stack = "$STACK";
-        return {
-          id: "error with metadata",
-          opts: {format: "human", module: "SAMPLE"},
-          message: "foo bar",
-          error: error,
-          output: {
-            human: `[]                 \u001b[33mwarn\u001b[39m: foo bar code=SAMPLE_ERROR, data=foo=bar\n${error.stack}`,
-            // eslint-disable-next-line quotes
-            json: `{"module":"","error":{"code":"SAMPLE_ERROR","data":{"foo":"bar"},"stack":"$STACK"},"level":"warn","message":"foo bar"}`,
-          },
-        };
-      },
-    ];
+  for (const testCase of testCases) {
+    const {id, message, context, error, output} = typeof testCase === "function" ? testCase() : testCase;
+    for (const format of logFormats) {
+      it(`${id} ${format} output`, async () => {
+        stdoutHook = hookProcessStdout();
 
-    for (const testCase of testCases) {
-      const {id, message, context, error, output} = typeof testCase === "function" ? testCase() : testCase;
-      for (const format of logFormats) {
-        it(`${id} ${format} output`, async () => {
-          const stream = new WritableMemory();
-          const logger = createWinstonLogger({format, hideTimestamp: true}, [
-            fromTransportOpts({type: TransportType.stream, stream}),
-          ]);
-          logger.warn(message, context, error);
+        const logger = getCliLogger({logFormat: format}, {}, config, {hideTimestamp: true});
 
-          expect(stream.getAsString().trim()).to.equal(output[format]);
-        });
-      }
+        logger.warn(message, context, error);
+
+        expect(stdoutHook.chunks.join("").trim()).to.equal(output[format]);
+
+        stdoutHook.restore();
+      });
     }
+  }
+});
+
+describe("winston dynamic level by module", () => {
+  // Tested manually that if an error is thrown in the body after hooking to stdout, the error is visible
+  // in the status render of the mocha it() block
+  let stdoutHook: ReturnType<typeof hookProcessStdout> | null = null;
+  afterEach(() => stdoutHook?.restore());
+
+  it("Should log to child at a lower logLevel", async () => {
+    const consoleTransport = new ConsoleDynamicLevel({defaultLevel: LogLevel.info});
+    const loggerA = createWinstonLogger({hideTimestamp: true, module: "a"}, [consoleTransport]);
+
+    consoleTransport.setModuleLevel("a/b", LogLevel.debug);
+
+    stdoutHook = hookProcessStdout();
+
+    const loggerAB = loggerA.child({module: "b"});
+
+    loggerA.info("test a info");
+    loggerA.debug("test a debug");
+    loggerAB.info("test a/b info");
+    loggerAB.debug("test a/b debug");
+
+    await new Promise((r) => setTimeout(r, 1));
+
+    expect(stdoutHook.chunks).deep.equals([
+      "[a]                \u001b[32minfo\u001b[39m: test a info\n",
+      "[a/b]              \u001b[32minfo\u001b[39m: test a/b info\n",
+      "[a/b]             \u001b[34mdebug\u001b[39m: test a/b debug\n",
+    ]);
+
+    // Call at the end on success to print the result
+    stdoutHook.restore();
+  });
+});
+
+describe("winston transport log to file", () => {
+  let tmpDir: string;
+  let stdoutHook: ReturnType<typeof hookProcessStdout> | null = null;
+  afterEach(() => stdoutHook?.restore());
+
+  before(() => {
+    tmpDir = fs.mkdtempSync("test-lodestar-winston-test");
   });
 
-  describe("child logger", () => {
-    it("Should parse child module", async () => {
-      const stream = new WritableMemory();
-      const logger = createWinstonLogger({hideTimestamp: true, module: "A"}, [
-        fromTransportOpts({type: TransportType.stream, stream}),
-      ]);
-      const childB = logger.child({module: "B"});
-      const childC = childB.child({module: "C"});
-      childC.warn("test");
+  it("Should log to file", async () => {
+    const filename = path.join(tmpDir, "child-logger-test.txt");
 
-      expect(stream.getAsString().trim()).to.equal("[A B C]            \u001b[33mwarn\u001b[39m: test");
-    });
+    const logger = getCliLogger({logPrefix: "a"}, {logFile: filename}, config, {hideTimestamp: true});
 
-    it("Should log to child at a lower logLevel", () => {
-      const stream = new WritableMemory();
-      const logger = createWinstonLogger({hideTimestamp: true, module: "A"}, [
-        fromTransportOpts({type: TransportType.stream, stream, level: LogLevel.info}),
-      ]);
+    stdoutHook = hookProcessStdout();
 
-      const childB = logger.child({module: "B", level: LogLevel.debug});
+    logger.warn("test");
 
-      logger.debug("Should not be logged");
-      childB.debug("Should be logged");
+    const expectedOut = "[a]                \u001b[33mwarn\u001b[39m: test";
 
-      expect(stream.getAsString().trim()).to.equal("[A B]             \u001b[34mdebug\u001b[39m: Should be logged");
-    });
+    expect(await readFileWhenExists(filename)).to.equal(expectedOut);
+
+    expect(stdoutHook.chunks).deep.equals([expectedOut + "\n"]);
+    stdoutHook.restore();
   });
 
-  describe("Log to file", () => {
-    let tmpDir: string;
-
-    before(() => {
-      tmpDir = fs.mkdtempSync("test-lodestar-winston-test");
-    });
-
-    it("Should log to file", async () => {
-      const filename = path.join(tmpDir, "child-logger-test.txt");
-
-      const logger = createWinstonLogger({hideTimestamp: true, module: "A"}, [
-        fromTransportOpts({type: TransportType.file, filename}),
-      ]);
-      logger.warn("test");
-
-      const output = await readFileWhenExists(filename);
-      expect(output).to.equal("[A]                \u001b[33mwarn\u001b[39m: test");
-    });
-
-    after(() => {
-      rimraf.sync(tmpDir);
-    });
+  after(() => {
+    rimraf.sync(tmpDir);
   });
 });
 
@@ -154,3 +155,21 @@ async function readFileWhenExists(filepath: string): Promise<string> {
 }
 
 type IoError = {code: string};
+
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+function hookProcessStdout() {
+  const processStdoutWrite = process.stdout.write;
+  const chunks: string[] = [];
+
+  process.stdout.write = (chunk) => {
+    chunks.push(chunk.toString());
+    return true;
+  };
+
+  return {
+    chunks,
+    restore() {
+      process.stdout.write = processStdoutWrite;
+    },
+  };
+}

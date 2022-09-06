@@ -1,5 +1,5 @@
 import {Options} from "yargs";
-import {LogLevel, LogLevels} from "@lodestar/utils";
+import {logFormats, LogLevel, LogLevels} from "@lodestar/utils";
 import {beaconNodeOptions, paramsOptions, IBeaconNodeArgs} from "../../options/index.js";
 import {defaultLogMaxFiles, ICliCommandOptions, ILogArgs} from "../../util/index.js";
 import {defaultBeaconPaths, IBeaconPaths} from "./paths.js";
@@ -82,13 +82,21 @@ export const logOptions: ICliCommandOptions<ILogArgs> = {
 
   logFormatGenesisTime: {
     hidden: true,
-    description: "Logger format - Use EpochSlot TimestampFormat",
+    description:
+      "Use epoch slot timestamp format, instead or regular timestamp. Must provide genesisTime to compute relative time",
     type: "number",
   },
 
-  logFormatId: {
+  logPrefix: {
     hidden: true,
-    description: "Logger format - Prefix module field with a string ID",
+    description: "Logger prefix module field with a string ID",
+    type: "string",
+  },
+
+  logFormat: {
+    hidden: true,
+    description: "Log format used when emitting logs to the terminal and / or file",
+    choices: logFormats,
     type: "string",
   },
 
