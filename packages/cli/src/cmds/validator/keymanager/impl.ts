@@ -11,14 +11,71 @@ import {
   SlashingProtectionData,
   SignerDefinition,
   ImportRemoteKeyStatus,
+  SetFeeRecipientStatus,
+  DeleteFeeRecipientStatus,
+  SetGasLimitStatus,
+  DeleteGasLimitStatus,
 } from "@lodestar/api/keymanager";
 import {fromHexString} from "@chainsafe/ssz";
 import {Interchange, SignerType, Validator} from "@lodestar/validator";
 import {getPubkeyHexFromKeystore, isValidatePubkeyHex, isValidHttpUrl} from "../../../util/format.js";
+import {parseFeeRecipient} from "../../../util/index.js";
 import {IPersistedKeysBackend} from "./interface.js";
 
 export class KeymanagerApi implements Api {
   constructor(private readonly validator: Validator, private readonly persistedKeysBackend: IPersistedKeysBackend) {}
+
+  async getFeeRecipient(pubkeyHex: string): ReturnType<Api["getFeeRecipient"]> {
+    try {
+      return {data: {pubkey: pubkeyHex, ethaddress: this.validator.validatorStore.getFeeRecipient(pubkeyHex)}};
+    } catch (e) {
+      throw Error((e as Error).message);
+    }
+  }
+
+  async setFeeRecipient(pubkeyHex: string, ethaddress: string): ReturnType<Api["setFeeRecipient"]> {
+    try {
+      this.validator.validatorStore.setFeeRecipient(pubkeyHex, parseFeeRecipient(ethaddress));
+      return {data: {status: SetFeeRecipientStatus.set}};
+    } catch (e) {
+      throw Error((e as Error).message);
+    }
+  }
+
+  async deleteFeeRecipient(pubkeyHex: string): ReturnType<Api["deleteFeeRecipient"]> {
+    try {
+      this.validator.validatorStore.deleteFeeRecipient(pubkeyHex);
+      return {data: {status: DeleteFeeRecipientStatus.deleted}};
+    } catch (e) {
+      throw Error((e as Error).message);
+    }
+  }
+
+  async getGasLimit(pubkeyHex: string): ReturnType<Api["getGasLimit"]> {
+    try {
+      return {data: {pubkey: pubkeyHex, gas_limit: String(this.validator.validatorStore.getGasLimit(pubkeyHex))}};
+    } catch (e) {
+      throw Error((e as Error).message);
+    }
+  }
+
+  async setGasLimit(pubkeyHex: string, gas_limit: string): ReturnType<Api["setGasLimit"]> {
+    try {
+      this.validator.validatorStore.setGasLimit(pubkeyHex, gas_limit);
+      return {data: {status: SetGasLimitStatus.set}};
+    } catch (e) {
+      throw Error((e as Error).message);
+    }
+  }
+
+  async deleteGasLimit(pubkeyHex: string): ReturnType<Api["deleteGasLimit"]> {
+    try {
+      this.validator.validatorStore.deleteGasLimit(pubkeyHex);
+      return {data: {status: DeleteGasLimitStatus.deleted}};
+    } catch (e) {
+      throw Error((e as Error).message);
+    }
+  }
 
   /**
    * List all validating pubkeys known to and decrypted by this keymanager binary

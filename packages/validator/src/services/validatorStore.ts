@@ -168,12 +168,44 @@ export class ValidatorStore {
   }
 
   getFeeRecipient(pubkeyHex: PubkeyHex): Eth1Address {
-    return this.validators.get(pubkeyHex)?.feeRecipient ?? this.defaultProposerConfig.feeRecipient;
+    if (this.validators.has(pubkeyHex)) {
+      return this.validators.get(pubkeyHex)?.feeRecipient ?? this.defaultProposerConfig.feeRecipient;
+    } else {
+      throw Error(`Validator pubkey ${pubkeyHex} not known`);
+    }
   }
 
   getFeeRecipientByIndex(index: ValidatorIndex): Eth1Address {
     const pubkey = this.indicesService.index2pubkey.get(index);
     return pubkey ? this.getFeeRecipient(pubkey) : this.defaultProposerConfig.feeRecipient;
+  }
+
+  setFeeRecipient(pubkeyHex: PubkeyHex, feeRecipient: Eth1Address): void {
+    if (this.validators.has(pubkeyHex)) {
+      const validatorData = this.validators.get(pubkeyHex);
+      if (validatorData !== undefined) {
+        //const newValidatorData = {...validatorData, feeRecipient}
+        this.validators.set(pubkeyHex, {...validatorData, feeRecipient});
+      } else {
+        throw Error(`ValidatorData for pubkey ${pubkeyHex} not set `);
+      }
+    } else {
+      throw Error(`Validator pubkey ${pubkeyHex} not known`);
+    }
+  }
+
+  deleteFeeRecipient(pubkeyHex: PubkeyHex): void {
+    if (this.validators.has(pubkeyHex)) {
+      const validatorData = this.validators.get(pubkeyHex);
+      if (validatorData !== undefined) {
+        delete validatorData["feeRecipient"];
+        this.validators.set(pubkeyHex, validatorData);
+      } else {
+        throw Error(`ValidatorData for pubkey ${pubkeyHex} not set `);
+      }
+    } else {
+      throw Error(`Validator pubkey ${pubkeyHex} not known`);
+    }
   }
 
   getGraffiti(pubkeyHex: PubkeyHex): string {
@@ -191,11 +223,48 @@ export class ValidatorStore {
   }
 
   getGasLimit(pubkeyHex: PubkeyHex): number {
-    return (
-      (this.validators.get(pubkeyHex)?.builder || {}).gasLimit ??
-      this.defaultProposerConfig?.builder.gasLimit ??
-      defaultOptions.defaultGasLimit
-    );
+    if (this.validators.has(pubkeyHex)) {
+      return (
+        (this.validators.get(pubkeyHex)?.builder || {}).gasLimit ??
+        this.defaultProposerConfig?.builder.gasLimit ??
+        defaultOptions.defaultGasLimit
+      );
+    } else {
+      throw Error(`Validator pubkey ${pubkeyHex} not known`);
+    }
+  }
+
+  setGasLimit(pubkeyHex: PubkeyHex, gasLimitString: string): void {
+    if (Number.isNaN(Number(gasLimitString))) {
+      throw Error("Gas Limit is Not a number");
+    }
+
+    const gasLimit = Number(gasLimitString);
+
+    if (this.validators.has(pubkeyHex)) {
+      const validatorData = this.validators.get(pubkeyHex);
+      if (validatorData !== undefined) {
+        this.validators.set(pubkeyHex, {...validatorData, builder: {...validatorData.builder, gasLimit}});
+      } else {
+        throw Error(`ValidatorData for pubkey ${pubkeyHex} not set `);
+      }
+    } else {
+      throw Error(`Validator pubkey ${pubkeyHex} not known`);
+    }
+  }
+
+  deleteGasLimit(pubkeyHex: PubkeyHex): void {
+    if (this.validators.has(pubkeyHex)) {
+      const validatorData = this.validators.get(pubkeyHex);
+      if (validatorData !== undefined) {
+        delete validatorData.builder["gasLimit"];
+        this.validators.set(pubkeyHex, validatorData);
+      } else {
+        throw Error(`ValidatorData for pubkey ${pubkeyHex} not set `);
+      }
+    } else {
+      throw Error(`Validator pubkey ${pubkeyHex} not known`);
+    }
   }
 
   /** Return true if `index` is active part of this validator client */
