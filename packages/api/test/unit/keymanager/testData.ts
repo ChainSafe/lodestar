@@ -29,7 +29,7 @@ export const testData: GenericServerTestCases<Api> = {
     args: [[pubkeyRand], ["pass1"], "slash_protection"],
     res: {data: [{status: ImportStatus.imported}]},
   },
-  deleteKeystores: {
+  deleteKeys: {
     args: [[pubkeyRand]],
     res: {data: [{status: DeletionStatus.deleted}], slashingProtection: "slash_protection"},
   },
@@ -55,7 +55,7 @@ export const testData: GenericServerTestCases<Api> = {
     res: {data: [{status: DeleteRemoteKeyStatus.deleted}]},
   },
 
-  getFeeRecipient: {
+  listFeeRecipient: {
     args: [pubkeyRand],
     res: {data: {pubkey: pubkeyRand, ethaddress: ethaddressRand}},
   },

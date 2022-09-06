@@ -149,7 +149,7 @@ export type Api = {
    *
    * https://github.com/ethereum/keymanager-APIs/blob/0c975dae2ac6053c8245ebdb6a9f27c2f114f407/keymanager-oapi.yaml
    */
-  deleteKeystores(
+  deleteKeys(
     pubkeysHex: string[]
   ): Promise<{
     data: ResponseStatus<DeletionStatus>[];
@@ -176,7 +176,7 @@ export type Api = {
     data: ResponseStatus<DeleteRemoteKeyStatus>[];
   }>;
 
-  getFeeRecipient(
+  listFeeRecipient(
     pubkey: string
   ): Promise<{
     data: FeeRecipientData;
@@ -196,13 +196,13 @@ export type Api = {
 export const routesData: RoutesData<Api> = {
   listKeys: {url: "/eth/v1/keystores", method: "GET"},
   importKeystores: {url: "/eth/v1/keystores", method: "POST"},
-  deleteKeystores: {url: "/eth/v1/keystores", method: "DELETE"},
+  deleteKeys: {url: "/eth/v1/keystores", method: "DELETE"},
 
   listRemoteKeys: {url: "/eth/v1/remotekeys", method: "GET"},
   importRemoteKeys: {url: "/eth/v1/remotekeys", method: "POST"},
   deleteRemoteKeys: {url: "/eth/v1/remotekeys", method: "DELETE"},
 
-  getFeeRecipient: {url: "/eth/v1/validator/{pubkey}/feerecipient", method: "GET"},
+  listFeeRecipient: {url: "/eth/v1/validator/{pubkey}/feerecipient", method: "GET"},
   setFeeRecipient: {url: "/eth/v1/validator/{pubkey}/feerecipient", method: "POST"},
   deleteFeeRecipient: {url: "/eth/v1/validator/{pubkey}/feerecipient", method: "DELETE"},
 
@@ -222,7 +222,7 @@ export type ReqTypes = {
       slashing_protection?: SlashingProtectionData;
     };
   };
-  deleteKeystores: {body: {pubkeys: string[]}};
+  deleteKeys: {body: {pubkeys: string[]}};
 
   listRemoteKeys: ReqEmpty;
   importRemoteKeys: {
@@ -232,7 +232,7 @@ export type ReqTypes = {
   };
   deleteRemoteKeys: {body: {pubkeys: string[]}};
 
-  getFeeRecipient: {params: {pubkey: string}};
+  listFeeRecipient: {params: {pubkey: string}};
   setFeeRecipient: {params: {pubkey: string}; body: {ethaddress: string}};
   deleteFeeRecipient: {params: {pubkey: string}};
 
@@ -249,7 +249,7 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
       parseReq: ({body: {keystores, passwords, slashing_protection}}) => [keystores, passwords, slashing_protection],
       schema: {body: Schema.Object},
     },
-    deleteKeystores: {
+    deleteKeys: {
       writeReq: (pubkeys) => ({body: {pubkeys}}),
       parseReq: ({body: {pubkeys}}) => [pubkeys],
       schema: {body: Schema.Object},
@@ -267,7 +267,7 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
       schema: {body: Schema.Object},
     },
 
-    getFeeRecipient: {
+    listFeeRecipient: {
       writeReq: (pubkey) => ({params: {pubkey}}),
       parseReq: ({params: {pubkey}}) => [pubkey],
       schema: {
@@ -320,13 +320,13 @@ export function getReturnTypes(): ReturnTypes<Api> {
   return {
     listKeys: jsonType("snake"),
     importKeystores: jsonType("snake"),
-    deleteKeystores: jsonType("snake"),
+    deleteKeys: jsonType("snake"),
 
     listRemoteKeys: jsonType("snake"),
     importRemoteKeys: jsonType("snake"),
     deleteRemoteKeys: jsonType("snake"),
 
-    getFeeRecipient: jsonType("snake"),
+    listFeeRecipient: jsonType("snake"),
     getGasLimit: jsonType("snake"),
   };
 }

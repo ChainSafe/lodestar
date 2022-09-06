@@ -21,7 +21,7 @@ import {IPersistedKeysBackend} from "./interface.js";
 export class KeymanagerApi implements Api {
   constructor(private readonly validator: Validator, private readonly persistedKeysBackend: IPersistedKeysBackend) {}
 
-  async getFeeRecipient(pubkeyHex: string): ReturnType<Api["getFeeRecipient"]> {
+  async listFeeRecipient(pubkeyHex: string): ReturnType<Api["listFeeRecipient"]> {
     try {
       return {data: {pubkey: pubkeyHex, ethaddress: this.validator.validatorStore.getFeeRecipient(pubkeyHex)}};
     } catch (e) {
@@ -180,7 +180,7 @@ export class KeymanagerApi implements Api {
    *
    * https://github.com/ethereum/keymanager-APIs/blob/0c975dae2ac6053c8245ebdb6a9f27c2f114f407/keymanager-oapi.yaml
    */
-  async deleteKeystores(pubkeysHex: PubkeyHex[]): ReturnType<Api["deleteKeystores"]> {
+  async deleteKeys(pubkeysHex: PubkeyHex[]): ReturnType<Api["deleteKeys"]> {
     const deletedKey: boolean[] = [];
     const statuses = new Array<{status: DeletionStatus; message?: string}>(pubkeysHex.length);
 

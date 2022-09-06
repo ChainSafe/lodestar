@@ -101,11 +101,11 @@ describeCliTest("import keystores from api", function ({spawnCli}) {
     await expectKeys(keymanagerClient, pubkeys, "Wrong listKeys before deleting");
 
     // Delete keys
-    const deleteRes = await keymanagerClient.deleteKeystores(pubkeys);
+    const deleteRes = await keymanagerClient.deleteKeys(pubkeys);
     expectDeepEquals(
       deleteRes.data,
       pubkeys.map(() => ({status: DeletionStatus.deleted})),
-      "Wrong deleteKeystores response"
+      "Wrong deleteKeys response"
     );
 
     // Check keys are deleted
