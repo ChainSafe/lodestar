@@ -84,16 +84,16 @@ describe("Start from WSS", function () {
     try {
       await finalizedEventistener;
       await waitForEvent<phase0.Checkpoint>(bn.chain.emitter, ChainEvent.finalized, timeout);
-      loggerNodeA.important("\n\nNode A finalized\n\n");
+      loggerNodeA.info("\n\nNode A finalized\n\n");
     } catch (e) {
       (e as Error).message = `Node A failed to finalize: ${(e as Error).message}`;
       throw e;
     }
 
     const checkpointSyncUrl = "http://127.0.0.1:19596";
-    loggerNodeB.important("Fetching weak subjectivity state ", {checkpointSyncUrl});
+    loggerNodeB.info("Fetching weak subjectivity state ", {checkpointSyncUrl});
     const {wsState, wsCheckpoint} = await fetchWeakSubjectivityState(config, loggerNodeB, {checkpointSyncUrl});
-    loggerNodeB.important("Fetched wss state");
+    loggerNodeB.info("Fetched wss state");
 
     const bnStartingFromWSS = await getDevBeaconNode({
       params: {...testParams, ALTAIR_FORK_EPOCH: Infinity},

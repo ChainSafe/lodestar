@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
-import {WinstonLogger, LogLevel, TransportType, TransportOpts, TimestampFormat} from "@lodestar/utils";
+import winston from "winston";
+import {createWinstonLogger, ILogger, LogLevel, TimestampFormat} from "@lodestar/utils";
 export {LogLevel};
 
 export type TestLoggerOpts = {
@@ -16,15 +17,20 @@ export type TestLoggerOpts = {
  * VERBOSE=1 mocha .ts
  * ```
  */
-export function testLogger(module?: string, opts?: TestLoggerOpts): WinstonLogger {
-  const transports: TransportOpts[] = [
-    {type: TransportType.console, level: getLogLevelFromEnvs() || opts?.logLevel || LogLevel.error},
+export function testLogger(module?: string, opts?: TestLoggerOpts): ILogger {
+  const transports: winston.transport[] = [
+    new winston.transports.Console({level: getLogLevelFromEnvs() || opts?.logLevel || LogLevel.error}),
   ];
   if (opts?.logFile) {
-    transports.push({type: TransportType.file, filename: opts.logFile, level: LogLevel.debug});
+    transports.push(
+      new winston.transports.File({
+        level: LogLevel.debug,
+        filename: opts.logFile,
+      })
+    );
   }
 
-  return new WinstonLogger({module, ...opts}, transports);
+  return createWinstonLogger({module, ...opts}, transports);
 }
 
 function getLogLevelFromEnvs(): LogLevel | null {

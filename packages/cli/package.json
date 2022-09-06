@@ -83,7 +83,10 @@
     "rimraf": "^3.0.0",
     "source-map-support": "^0.5.19",
     "uuidv4": "^6.1.1",
-    "yargs": "^16.1.0"
+    "yargs": "^16.1.0",
+    "winston": "^3.3.3",
+    "winston-daily-rotate-file": "^4.5.5",
+    "winston-transport": "^4.3.0"
   },
   "devDependencies": {
     "@types/expand-tilde": "^2.0.0",

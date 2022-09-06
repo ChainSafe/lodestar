@@ -60,7 +60,7 @@ describe("cmds / beacon / args handler", () => {
     fs.writeFileSync(peerIdFile, JSON.stringify(prevPeerId.toJSON()));
 
     const {peerId} = await runBeaconHandlerInit({
-      peerIdFile,
+      // peerIdFile,
     });
 
     expect(peerId.toB58String()).equal(prevPeerId.toB58String(), "peer must be equal to persisted");
