@@ -1,4 +1,4 @@
-export {Validator, ValidatorOptions} from "./validator.js";
+export {Validator, ValidatorOptions, ValidatorAbortController} from "./validator.js";
 export {
   ValidatorStore,
   SignerType,

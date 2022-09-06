@@ -3,6 +3,7 @@ import {LevelDbController} from "@lodestar/db";
 import {interopSecretKey} from "@lodestar/state-transition";
 import {SlashingProtection, Validator, Signer, SignerType, ValidatorProposerConfig} from "@lodestar/validator";
 import type {SecretKey} from "@chainsafe/bls/types";
+import {ValidatorAbortController} from "@lodestar/validator";
 import {BeaconNode} from "../../../src/index.js";
 import {testLogger, TestLoggerOpts} from "../logger.js";
 
@@ -29,6 +30,10 @@ export async function getAndInitDevValidators({
 }): Promise<{validators: Validator[]; secretKeys: SecretKey[]}> {
   const validators: Promise<Validator>[] = [];
   const secretKeys: SecretKey[] = [];
+  const abortControllers: ValidatorAbortController = {
+    genesisInit: new AbortController(),
+    validatorOps: new AbortController(),
+  };
 
   for (let clientIndex = 0; clientIndex < validatorClientCount; clientIndex++) {
     const startIndexVc = startIndex + clientIndex * validatorsPerClient;
@@ -67,6 +72,7 @@ export async function getAndInitDevValidators({
         logger,
         // eslint-disable-next-line @typescript-eslint/no-empty-function
         processShutdownCallback: () => {},
+        abortControllers,
         signers,
         doppelgangerProtectionEnabled,
         valProposerConfig,

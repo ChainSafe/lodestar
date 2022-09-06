@@ -1,6 +1,7 @@
+import {setMaxListeners} from "node:events";
 import {LevelDbController} from "@lodestar/db";
 import {ProcessShutdownCallback, SlashingProtection, Validator, ValidatorProposerConfig} from "@lodestar/validator";
-import {getMetrics, MetricsRegister} from "@lodestar/validator";
+import {getMetrics, MetricsRegister, ValidatorAbortController} from "@lodestar/validator";
 import {RegistryMetricCreator, collectNodeJSMetrics, HttpMetricsServer} from "@lodestar/beacon-node";
 import {getBeaconConfigFromArgs} from "../../config/index.js";
 import {IGlobalArgs} from "../../options/index.js";
@@ -66,9 +67,19 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
 
   logSigners(logger, signers);
 
-  // This AbortController interrupts the sleep() calls when waiting for genesis
-  const controller = new AbortController();
-  onGracefulShutdownCbs.push(async () => controller.abort());
+  const abortControllers: ValidatorAbortController = {
+    // This AbortController interrupts the sleep() calls when waiting for genesis
+    genesisInit: new AbortController(),
+    // This AbortController interrupts the validators ops: clients call, clock etc
+    validatorOps: new AbortController(),
+  };
+
+  // We set infinity for abort controller used for validator operations,
+  // to prevent MaxListenersExceededWarning which get logged when listeners > 10
+  // Since it is perfectly fine to have listeners > 10
+  setMaxListeners(Infinity, abortControllers.validatorOps.signal);
+
+  onGracefulShutdownCbs.push(async () => abortControllers.genesisInit.abort());
 
   const dbOps = {
     config,
@@ -107,11 +118,11 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
       logger,
       processShutdownCallback,
       signers,
+      abortControllers,
       doppelgangerProtectionEnabled,
       afterBlockDelaySlotFraction: args.afterBlockDelaySlotFraction,
       valProposerConfig,
     },
-    controller.signal,
     metrics
   );
 
