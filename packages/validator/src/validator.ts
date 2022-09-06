@@ -23,8 +23,6 @@ import {Metrics} from "./metrics.js";
 import {MetaDataRepository} from "./repositories/metaDataRepository.js";
 import {DoppelgangerService} from "./services/doppelgangerService.js";
 
-export type ValidatorAbortController = {genesisReqController: AbortController; validatorOpsController: AbortController};
-
 export type ValidatorOptions = {
   slashingProtection: ISlashingProtection;
   dbOps: IDatabaseApiOptions;
@@ -32,7 +30,7 @@ export type ValidatorOptions = {
   signers: Signer[];
   logger: ILogger;
   processShutdownCallback: ProcessShutdownCallback;
-  abortControllers: ValidatorAbortController;
+  abortController: AbortController;
   afterBlockDelaySlotFraction?: number;
   doppelgangerProtectionEnabled?: boolean;
   closed?: boolean;
@@ -68,7 +66,7 @@ export class Validator {
   constructor(opts: ValidatorOptions, readonly genesis: Genesis, metrics: Metrics | null = null) {
     const {dbOps, logger, slashingProtection, signers, valProposerConfig} = opts;
     const config = createIBeaconConfig(dbOps.config, genesis.genesisValidatorsRoot);
-    this.controller = opts.abortControllers.validatorOpsController;
+    this.controller = opts.abortController;
     const clock = new Clock(config, logger, {genesisTime: Number(genesis.genesisTime)});
     const loggerVc = getLoggerVc(logger, clock);
 
@@ -167,13 +165,10 @@ export class Validator {
       typeof opts.api === "string"
         ? // This new api instance can make do with default timeout as a faster timeout is
           // not necessary since this instance won't be used for validator duties
-          getClient(
-            {baseUrl: opts.api, getAbortSignal: () => opts.abortControllers.genesisReqController.signal},
-            {config, logger}
-          )
+          getClient({baseUrl: opts.api, getAbortSignal: () => opts.abortController.signal}, {config, logger})
         : opts.api;
 
-    const genesis = await waitForGenesis(api, opts.logger, opts.abortControllers.genesisReqController.signal);
+    const genesis = await waitForGenesis(api, opts.logger, opts.abortController.signal);
     logger.info("Genesis available");
 
     const {data: externalSpecJson} = await api.config.getSpec();
