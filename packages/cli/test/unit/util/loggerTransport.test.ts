@@ -3,8 +3,7 @@ import path from "node:path";
 import rimraf from "rimraf";
 import {expect} from "chai";
 import {config} from "@lodestar/config/default";
-import {LodestarError, LogData, LogFormat, logFormats, LogLevel, createWinstonLogger} from "@lodestar/utils";
-import {ConsoleDynamicLevel} from "../../../src/util/loggerConsoleTransport.js";
+import {LodestarError, LogData, LogFormat, logFormats, LogLevel} from "@lodestar/utils";
 import {getCliLogger} from "../../../src/util/logger.js";
 
 describe("winston logger format and options", () => {
@@ -81,19 +80,18 @@ describe("winston dynamic level by module", () => {
   afterEach(() => stdoutHook?.restore());
 
   it("Should log to child at a lower logLevel", async () => {
-    const consoleTransport = new ConsoleDynamicLevel({defaultLevel: LogLevel.info});
-    const loggerA = createWinstonLogger({hideTimestamp: true, module: "a"}, [consoleTransport]);
-
-    consoleTransport.setModuleLevel("a/b", LogLevel.debug);
+    const loggerA = getCliLogger({logPrefix: "a", logLevelModule: [`a/b=${LogLevel.debug}`]}, {}, config, {
+      hideTimestamp: true,
+    });
 
     stdoutHook = hookProcessStdout();
 
     const loggerAB = loggerA.child({module: "b"});
 
-    loggerA.info("test a info");
-    loggerA.debug("test a debug");
-    loggerAB.info("test a/b info");
-    loggerAB.debug("test a/b debug");
+    loggerA.info("test a info"); // show
+    loggerA.debug("test a debug"); // skip
+    loggerAB.info("test a/b info"); // show
+    loggerAB.debug("test a/b debug"); // show
 
     await new Promise((r) => setTimeout(r, 1));
 

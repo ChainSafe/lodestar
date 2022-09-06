@@ -19,18 +19,13 @@ export type TestLoggerOpts = {
  */
 export function testLogger(module?: string, opts?: TestLoggerOpts): ILogger {
   const transports: winston.transport[] = [
-    new winston.transports.Console({
-      debugStdout: true,
-      level: getLogLevelFromEnvs() || opts?.logLevel || LogLevel.error,
-      handleExceptions: true,
-    }),
+    new winston.transports.Console({level: getLogLevelFromEnvs() || opts?.logLevel || LogLevel.error}),
   ];
   if (opts?.logFile) {
     transports.push(
       new winston.transports.File({
         level: LogLevel.debug,
         filename: opts.logFile,
-        handleExceptions: true,
       })
     );
   }

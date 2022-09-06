@@ -49,6 +49,7 @@ export type TimestampFormat =
   | ({format: TimestampFormatCode.EpochSlot} & EpochSlotOpts);
 
 export interface ILoggerOptions {
+  level?: LogLevel;
   module?: string;
   format?: LogFormat;
   hideTimestamp?: boolean;
