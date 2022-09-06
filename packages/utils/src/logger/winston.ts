@@ -41,18 +41,17 @@ export class WinstonLogger implements ILogger {
 
   static fromOpts(options: Partial<ILoggerOptions> = {}, transports?: winston.transport[]): WinstonLogger {
     const defaultMeta: DefaultMeta = {module: options?.module || ""};
-    const logger = winston.createLogger({
-      // Do not set level at the logger level. Always control by Transport, unless for testLogger
-      level: options.level,
-      defaultMeta,
-      format: getFormat(options),
-      transports,
-      exitOnError: false,
-    });
 
-    logger.levelByModule = new Map<string, LogLevel>();
-
-    return new WinstonLogger(logger);
+    return new WinstonLogger(
+      winston.createLogger({
+        // Do not set level at the logger level. Always control by Transport, unless for testLogger
+        level: options.level,
+        defaultMeta,
+        format: getFormat(options),
+        transports,
+        exitOnError: false,
+      })
+    );
   }
 
   error(message: string, context?: LogData, error?: Error): void {
