@@ -7,7 +7,7 @@ export type ExecutionEngineArgs = {
   "execution.timeout": number;
   "execution.retryAttempts": number;
   "execution.retryDelay": number;
-  "execution.engineMock": boolean;
+  "execution.engineMock"?: boolean;
   "jwt-secret"?: string;
 };
 
