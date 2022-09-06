@@ -56,6 +56,17 @@ export enum BeaconNodeStatus {
   closed = "closed",
 }
 
+enum LoggerModule {
+  api = "api",
+  backfill = "backfill",
+  chain = "chain",
+  eth1 = "eth1",
+  metrics = "metrics",
+  network = "network",
+  rest = "rest",
+  sync = "sync",
+}
+
 /**
  * The main Beacon Node class.  Contains various components for getting and processing data from the
  * Ethereum Consensus ecosystem as well as systems for getting beacon node metadata.
@@ -141,7 +152,7 @@ export class BeaconNode {
     const chain = new BeaconChain(opts.chain, {
       config,
       db,
-      logger: logger.child(opts.logger.chain),
+      logger: logger.child({module: LoggerModule.chain}),
       processShutdownCallback,
       metrics,
       anchorState,
@@ -149,7 +160,7 @@ export class BeaconNode {
         config,
         db,
         metrics,
-        logger: logger.child(opts.logger.eth1),
+        logger: logger.child({module: LoggerModule.eth1}),
         signal,
       }),
       executionEngine: initializeExecutionEngine(opts.executionEngine, {metrics, signal}),
@@ -164,7 +175,7 @@ export class BeaconNode {
     const network = new Network(opts.network, {
       config,
       libp2p,
-      logger: logger.child(opts.logger.network),
+      logger: logger.child({module: LoggerModule.network}),
       metrics,
       chain,
       reqRespHandlers: getReqRespHandlers({db, chain}),
@@ -177,7 +188,7 @@ export class BeaconNode {
       metrics,
       network,
       wsCheckpoint,
-      logger: logger.child(opts.logger.sync),
+      logger: logger.child({module: LoggerModule.sync}),
     });
 
     const backfillSync =
@@ -190,14 +201,14 @@ export class BeaconNode {
             network,
             wsCheckpoint,
             anchorState,
-            logger: logger.child(opts.logger.backfill),
+            logger: logger.child({module: LoggerModule.backfill}),
             signal,
           })
         : null;
 
     const api = getApi(opts.api, {
       config,
-      logger: logger.child(opts.logger.api),
+      logger: logger.child({module: LoggerModule.api}),
       db,
       sync,
       network,
@@ -206,7 +217,10 @@ export class BeaconNode {
     });
 
     const metricsServer = metrics
-      ? new HttpMetricsServer(opts.metrics, {register: metrics.register, logger: logger.child(opts.logger.metrics)})
+      ? new HttpMetricsServer(opts.metrics, {
+          register: metrics.register,
+          logger: logger.child({module: LoggerModule.metrics}),
+        })
       : undefined;
     if (metricsServer) {
       await metricsServer.start();
@@ -214,7 +228,7 @@ export class BeaconNode {
 
     const restApi = new BeaconRestApiServer(opts.api.rest, {
       config,
-      logger: logger.child(opts.logger.api),
+      logger: logger.child({module: LoggerModule.rest}),
       api,
       metrics: metrics ? metrics.apiRest : null,
     });

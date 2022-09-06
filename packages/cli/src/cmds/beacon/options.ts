@@ -1,5 +1,5 @@
 import {Options} from "yargs";
-import {defaultLogLevel, LogLevels} from "@lodestar/utils";
+import {LogLevel, LogLevels} from "@lodestar/utils";
 import {beaconNodeOptions, paramsOptions, IBeaconNodeArgs} from "../../options/index.js";
 import {defaultLogMaxFiles, ICliCommandOptions, ILogArgs} from "../../util/index.js";
 import {defaultBeaconPaths, IBeaconPaths} from "./paths.js";
@@ -63,15 +63,15 @@ export const beaconExtraOptions: ICliCommandOptions<IBeaconExtraArgs> = {
 export const logOptions: ICliCommandOptions<ILogArgs> = {
   logLevel: {
     choices: LogLevels,
-    description: "Logging verbosity level",
-    defaultDescription: defaultLogLevel,
+    description: "Logging verbosity level for emittings logs to terminal",
+    defaultDescription: LogLevel.info,
     type: "string",
   },
 
   logFileLevel: {
     choices: LogLevels,
-    description: "Logging verbosity level for file transport",
-    defaultDescription: defaultLogLevel,
+    description: "Logging verbosity level for emittings logs to file",
+    defaultDescription: LogLevel.debug,
     type: "string",
   },
 

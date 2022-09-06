@@ -56,6 +56,10 @@ export interface ILoggerOptions {
   timestampFormat?: TimestampFormat;
 }
 
+export type LoggerChildOpts = {
+  module: string;
+};
+
 export type LogHandler = (message: string, context?: LogData, error?: Error) => void;
 
 export interface ILogger {
@@ -65,5 +69,5 @@ export interface ILogger {
   verbose: LogHandler;
   debug: LogHandler;
   // custom
-  child(options: ILoggerOptions): ILogger;
+  child(options: LoggerChildOpts): ILogger;
 }
