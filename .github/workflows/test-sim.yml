@@ -37,6 +37,9 @@ jobs:
       - name: Simulation single thread multi node test
         run: yarn test:sim:singleThreadMultiNode
         working-directory: packages/beacon-node
+      - name: Simulation tests for CLI
+        run: yarn test:sim
+        working-directory: packages/cli
       # - name: Simulation multi thread multi node test phase0
       #   run: yarn test:sim:multiThread
       #   working-directory: packages/beacon-node

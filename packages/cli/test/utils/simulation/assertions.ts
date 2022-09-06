@@ -57,8 +57,11 @@ export function nodeAssertions(env: SimulationEnvironment): void {
       describe(`beacon node "${n}"`, () => {
         it("should have correct health status", async () => {
           const node = env.nodes[n];
-          expect(await node.api.node.getHealth()).to.equal(
-            env.params.beaconNodes > 0 ? routes.node.NodeHealth.SYNCING : routes.node.NodeHealth.READY
+          const health = await node.api.node.getHealth();
+
+          expect(health === routes.node.NodeHealth.SYNCING || health === routes.node.NodeHealth.READY).to.equal(
+            true,
+            `Node ${n} health is neither READY or SYNCING`
           );
         });
 
@@ -67,7 +70,6 @@ export function nodeAssertions(env: SimulationEnvironment): void {
           const syncStatus = await node.api.node.getSyncingStatus();
 
           expect(syncStatus.data.isSyncing).to.equal(env.params.beaconNodes > 0 ? true : false);
-          expect(syncStatus.data.syncDistance).to.equal("0");
         });
 
         it("should have correct number of validator clients", () => {
