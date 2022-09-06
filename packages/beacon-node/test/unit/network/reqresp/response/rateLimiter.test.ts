@@ -1,13 +1,14 @@
 import {expect} from "chai";
 import PeerId from "peer-id";
 import sinon, {SinonStubbedInstance} from "sinon";
-import {WinstonLogger} from "@lodestar/utils";
 import {IPeerRpcScoreStore, PeerAction, PeerRpcScoreStore} from "../../../../../src/network/index.js";
 import {defaultNetworkOptions} from "../../../../../src/network/options.js";
 import {InboundRateLimiter} from "../../../../../src/network/reqresp/response/rateLimiter.js";
 import {Method, RequestTypedContainer} from "../../../../../src/network/reqresp/types.js";
+import {testLogger} from "../../../../utils/logger.js";
 
 describe("ResponseRateLimiter", () => {
+  const logger = testLogger();
   let inboundRateLimiter: InboundRateLimiter;
   const sandbox = sinon.createSandbox();
   let peerRpcScoresStub: IPeerRpcScoreStore & SinonStubbedInstance<PeerRpcScoreStore>;
@@ -16,7 +17,7 @@ describe("ResponseRateLimiter", () => {
     peerRpcScoresStub = sandbox.createStubInstance(PeerRpcScoreStore) as IPeerRpcScoreStore &
       SinonStubbedInstance<PeerRpcScoreStore>;
     inboundRateLimiter = new InboundRateLimiter(defaultNetworkOptions, {
-      logger: new WinstonLogger(),
+      logger,
       peerRpcScores: peerRpcScoresStub,
       metrics: null,
     });
@@ -140,7 +141,7 @@ describe("ResponseRateLimiter", () => {
     const startMem = process.memoryUsage().heapUsed;
 
     const rateLimiter = new InboundRateLimiter(defaultNetworkOptions, {
-      logger: new WinstonLogger(),
+      logger,
       peerRpcScores: peerRpcScoresStub,
       metrics: null,
     });

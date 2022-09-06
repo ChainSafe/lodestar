@@ -3,7 +3,7 @@ import path from "node:path";
 import {Writable} from "node:stream";
 import rimraf from "rimraf";
 import {expect} from "chai";
-import {LodestarError, LogData, LogFormat, logFormats, LogLevel, WinstonLogger} from "@lodestar/utils";
+import {LodestarError, LogData, LogFormat, logFormats, LogLevel, createWinstonLogger} from "@lodestar/utils";
 import {fromTransportOpts, TransportType} from "../../../src/util/loggerTransports.js";
 
 /**
@@ -74,7 +74,7 @@ describe("winston logger", () => {
       for (const format of logFormats) {
         it(`${id} ${format} output`, async () => {
           const stream = new WritableMemory();
-          const logger = new WinstonLogger({format, hideTimestamp: true}, [
+          const logger = createWinstonLogger({format, hideTimestamp: true}, [
             fromTransportOpts({type: TransportType.stream, stream}),
           ]);
           logger.warn(message, context, error);
@@ -88,7 +88,7 @@ describe("winston logger", () => {
   describe("child logger", () => {
     it("Should parse child module", async () => {
       const stream = new WritableMemory();
-      const logger = new WinstonLogger({hideTimestamp: true, module: "A"}, [
+      const logger = createWinstonLogger({hideTimestamp: true, module: "A"}, [
         fromTransportOpts({type: TransportType.stream, stream}),
       ]);
       const childB = logger.child({module: "B"});
@@ -100,7 +100,7 @@ describe("winston logger", () => {
 
     it("Should log to child at a lower logLevel", () => {
       const stream = new WritableMemory();
-      const logger = new WinstonLogger({hideTimestamp: true, module: "A"}, [
+      const logger = createWinstonLogger({hideTimestamp: true, module: "A"}, [
         fromTransportOpts({type: TransportType.stream, stream, level: LogLevel.info}),
       ]);
 
@@ -123,7 +123,7 @@ describe("winston logger", () => {
     it("Should log to file", async () => {
       const filename = path.join(tmpDir, "child-logger-test.txt");
 
-      const logger = new WinstonLogger({hideTimestamp: true, module: "A"}, [
+      const logger = createWinstonLogger({hideTimestamp: true, module: "A"}, [
         fromTransportOpts({type: TransportType.file, filename}),
       ]);
       logger.warn("test");

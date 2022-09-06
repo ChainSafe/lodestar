@@ -62,7 +62,6 @@ export interface ILogger {
   error: LogHandler;
   warn: LogHandler;
   info: LogHandler;
-  important: LogHandler;
   verbose: LogHandler;
   debug: LogHandler;
   // custom

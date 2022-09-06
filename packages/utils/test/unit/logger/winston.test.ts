@@ -3,7 +3,7 @@ import sinon from "sinon";
 import sinonChai from "sinon-chai";
 import {expect} from "chai";
 import winston from "winston";
-import {LogData, LodestarError, LogFormat, logFormats, LogLevel, WinstonLogger} from "../../../src/index.js";
+import {LogData, LodestarError, LogFormat, logFormats, LogLevel, createWinstonLogger} from "../../../src/index.js";
 
 chai.use(sinonChai);
 
@@ -90,7 +90,7 @@ describe("winston logger", () => {
       const {id, message, context, error, output} = typeof testCase === "function" ? testCase() : testCase;
       for (const format of logFormats) {
         it(`${id} ${format} output`, async () => {
-          const logger = new WinstonLogger({format, hideTimestamp: true}, [
+          const logger = createWinstonLogger({format, hideTimestamp: true}, [
             new winston.transports.Console({debugStdout: true}),
           ]);
           logger.warn(message, context, error);
@@ -108,7 +108,7 @@ describe("winston logger", () => {
 
   describe("child logger", () => {
     it("Should parse child module", async () => {
-      const logger = new WinstonLogger({hideTimestamp: true, module: "A"}, [
+      const logger = createWinstonLogger({hideTimestamp: true, module: "A"}, [
         new winston.transports.Console({debugStdout: true}),
       ]);
       const childB = logger.child({module: "B"});
@@ -126,7 +126,7 @@ describe("winston logger", () => {
     });
 
     it("Should log to child at a lower logLevel", () => {
-      const logger = new WinstonLogger({hideTimestamp: true, module: "A", level: LogLevel.info}, [
+      const logger = createWinstonLogger({hideTimestamp: true, module: "A", level: LogLevel.info}, [
         new winston.transports.Console({debugStdout: true}),
       ]);
 

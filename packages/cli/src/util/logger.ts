@@ -1,6 +1,6 @@
 import {IChainForkConfig} from "@lodestar/config";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {ILogger, LogLevel, WinstonLogger, TimestampFormat, TimestampFormatCode} from "@lodestar/utils";
+import {ILogger, LogLevel, createWinstonLogger, TimestampFormat, TimestampFormatCode} from "@lodestar/utils";
 import {fromTransportOpts, TransportOpts, TransportType} from "./loggerTransports.js";
 
 export const defaultLogMaxFiles = 5;
@@ -14,7 +14,7 @@ export interface ILogArgs {
 }
 
 export function errorLogger(): ILogger {
-  return new WinstonLogger({level: LogLevel.error});
+  return createWinstonLogger({level: LogLevel.error});
 }
 
 /**
@@ -51,5 +51,5 @@ export function getCliLogger(args: ILogArgs, paths: {logFile?: string}, config: 
 
   const transports = transportsOpts.map((transportOpts) => fromTransportOpts(transportOpts));
 
-  return new WinstonLogger({level: args.logLevel, module: args.logFormatId, timestampFormat}, transports);
+  return createWinstonLogger({level: args.logLevel, module: args.logFormatId, timestampFormat}, transports);
 }

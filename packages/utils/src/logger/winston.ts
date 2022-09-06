@@ -1,15 +1,22 @@
 import winston from "winston";
 import type {Logger} from "winston";
-import chalk from "chalk";
 import {defaultLogLevel, ILogger, ILoggerOptions, LogLevel} from "./interface.js";
 import {getFormat} from "./format.js";
 import {LogData} from "./json.js";
 
-const {createLogger} = winston;
-
 type DefaultMeta = {
   module: string;
 };
+
+export function createWinstonLogger(options: Partial<ILoggerOptions> = {}, transports?: winston.transport[]): ILogger {
+  return winston.createLogger({
+    level: options?.level || defaultLogLevel,
+    defaultMeta: {module: options?.module || ""} as DefaultMeta,
+    format: getFormat(options),
+    transports,
+    exitOnError: false,
+  });
+}
 
 export class WinstonLogger implements ILogger {
   private winston: Logger;
@@ -18,7 +25,7 @@ export class WinstonLogger implements ILogger {
     private readonly options: Partial<ILoggerOptions> = {},
     private readonly transports?: winston.transport[]
   ) {
-    this.winston = createLogger({
+    this.winston = winston.createLogger({
       level: options?.level || defaultLogLevel,
       defaultMeta: {module: options?.module || ""} as DefaultMeta,
       format: getFormat(options),
@@ -37,10 +44,6 @@ export class WinstonLogger implements ILogger {
 
   info(message: string, context?: LogData, error?: Error): void {
     this.createLogEntry(LogLevel.info, message, context, error);
-  }
-
-  important(message: string, context?: LogData, error?: Error): void {
-    this.createLogEntry(LogLevel.info, chalk.red(message), context, error);
   }
 
   verbose(message: string, context?: LogData, error?: Error): void {

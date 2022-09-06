@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
 import winston from "winston";
-import {WinstonLogger, LogLevel, TimestampFormat} from "@lodestar/utils";
+import {createWinstonLogger, ILogger, LogLevel, TimestampFormat} from "@lodestar/utils";
 export {LogLevel};
 
 export type TestLoggerOpts = {
@@ -17,7 +17,7 @@ export type TestLoggerOpts = {
  * VERBOSE=1 mocha .ts
  * ```
  */
-export function testLogger(module?: string, opts?: TestLoggerOpts): WinstonLogger {
+export function testLogger(module?: string, opts?: TestLoggerOpts): ILogger {
   const transports: winston.transport[] = [
     new winston.transports.Console({
       debugStdout: true,
@@ -35,7 +35,7 @@ export function testLogger(module?: string, opts?: TestLoggerOpts): WinstonLogge
     );
   }
 
-  return new WinstonLogger({module, ...opts}, transports);
+  return createWinstonLogger({module, ...opts}, transports);
 }
 
 function getLogLevelFromEnvs(): LogLevel | null {
