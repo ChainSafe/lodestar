@@ -9,6 +9,8 @@ import {GenericServerTestCases} from "../../utils/genericServerTest.js";
 
 // randomly pregenerated pubkey
 const pubkeyRand = "0x84105a985058fc8740a48bf1ede9d223ef09e8c6b1735ba0a55cf4a9ff2ff92376b778798365e488dab07a652eb04576";
+const ethaddressRand = "0xabcf8e0d4e9587369b2301d0790347320302cc09";
+const gasLimitRand = "30000000";
 
 export const testData: GenericServerTestCases<Api> = {
   listKeys: {
@@ -24,11 +26,11 @@ export const testData: GenericServerTestCases<Api> = {
     },
   },
   importKeystores: {
-    args: [["key1"], ["pass1"], "slash_protection"],
+    args: [[pubkeyRand], ["pass1"], "slash_protection"],
     res: {data: [{status: ImportStatus.imported}]},
   },
   deleteKeystores: {
-    args: [["key1"]],
+    args: [[pubkeyRand]],
     res: {data: [{status: DeletionStatus.deleted}], slashingProtection: "slash_protection"},
   },
 
@@ -49,33 +51,33 @@ export const testData: GenericServerTestCases<Api> = {
     res: {data: [{status: ImportRemoteKeyStatus.imported}]},
   },
   deleteRemoteKeys: {
-    args: [["key1"]],
+    args: [[pubkeyRand]],
     res: {data: [{status: DeleteRemoteKeyStatus.deleted}]},
   },
 
   getFeeRecipient: {
-    args: ["key1"],
-    res: {data: {pubkey: "key1", ethaddress: "eth1"}},
+    args: [pubkeyRand],
+    res: {data: {pubkey: pubkeyRand, ethaddress: ethaddressRand}},
   },
   setFeeRecipient: {
-    args: ["key1", "eth1"],
+    args: [pubkeyRand, ethaddressRand],
     res: undefined,
   },
   deleteFeeRecipient: {
-    args: ["key1"],
+    args: [pubkeyRand],
     res: undefined,
   },
 
   getGasLimit: {
-    args: ["key1"],
-    res: {data: {pubkey: "key1", gasLimit: "300"}},
+    args: [pubkeyRand],
+    res: {data: {pubkey: pubkeyRand, gasLimit: gasLimitRand}},
   },
   setGasLimit: {
-    args: ["key1", "300"],
+    args: [pubkeyRand, gasLimitRand],
     res: undefined,
   },
   deleteGasLimit: {
-    args: ["key1"],
+    args: [pubkeyRand],
     res: undefined,
   },
 };

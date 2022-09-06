@@ -202,13 +202,13 @@ export const routesData: RoutesData<Api> = {
   importRemoteKeys: {url: "/eth/v1/remotekeys", method: "POST"},
   deleteRemoteKeys: {url: "/eth/v1/remotekeys", method: "DELETE"},
 
-  getFeeRecipient: {url: "/eth/v1/{pubkey}/feerecipient", method: "GET"},
-  setFeeRecipient: {url: "/eth/v1/{pubkey}/feerecipient", method: "POST"},
-  deleteFeeRecipient: {url: "/eth/v1/{pubkey}/feerecipient", method: "DELETE"},
+  getFeeRecipient: {url: "/eth/v1/validator/{pubkey}/feerecipient", method: "GET"},
+  setFeeRecipient: {url: "/eth/v1/validator/{pubkey}/feerecipient", method: "POST"},
+  deleteFeeRecipient: {url: "/eth/v1/validator/{pubkey}/feerecipient", method: "DELETE"},
 
-  getGasLimit: {url: "/eth/v1/{pubkey}/gas_limit", method: "GET"},
-  setGasLimit: {url: "/eth/v1/{pubkey}/gas_limit", method: "POST"},
-  deleteGasLimit: {url: "/eth/v1/{pubkey}/gas_limit", method: "DELETE"},
+  getGasLimit: {url: "/eth/v1/validator/{pubkey}/gas_limit", method: "GET"},
+  setGasLimit: {url: "/eth/v1/validator/{pubkey}/gas_limit", method: "POST"},
+  deleteGasLimit: {url: "/eth/v1/validator/{pubkey}/gas_limit", method: "DELETE"},
 };
 
 /* eslint-disable @typescript-eslint/naming-convention */
