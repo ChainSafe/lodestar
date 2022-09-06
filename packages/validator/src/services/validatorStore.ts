@@ -234,7 +234,7 @@ export class ValidatorStore {
     }
   }
 
-  setGasLimit(pubkeyHex: PubkeyHex, gasLimitString: string): void {
+  setGasLimit(pubkeyHex: PubkeyHex, gasLimitString: string | number): void {
     if (Number.isNaN(Number(gasLimitString))) {
       throw Error("Gas Limit is Not a number");
     }

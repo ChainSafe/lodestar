@@ -42,29 +42,18 @@ export enum DeleteRemoteKeyStatus {
   error = "error",
 }
 
-export enum SetFeeRecipientStatus {
-  set = "successfully updated",
-  error = "error",
-}
-
-export enum DeleteFeeRecipientStatus {
-  deleted = "Successfully deleted",
-  error = "error",
-}
-
-export enum SetGasLimitStatus {
-  set = "successfully updated",
-  error = "error",
-}
-
-export enum DeleteGasLimitStatus {
-  deleted = "Successfully deleted",
-  error = "error",
-}
-
 export type ResponseStatus<Status> = {
   status: Status;
   message?: string;
+};
+
+export type FeeRecipientData = {
+  pubkey: string;
+  ethaddress: string;
+};
+export type GasLimitData = {
+  pubkey: string;
+  gasLimit: string;
 };
 
 export type SignerDefinition = {
@@ -190,24 +179,18 @@ export type Api = {
   getFeeRecipient(
     pubkey: string
   ): Promise<{
-    data: {
-      pubkey: string;
-      ethaddress: string;
-    };
+    data: FeeRecipientData;
   }>;
-  setFeeRecipient(pubkey: string, ethaddress: string): Promise<{data: ResponseStatus<SetFeeRecipientStatus>}>;
-  deleteFeeRecipient(pubkey: string): Promise<{data: ResponseStatus<DeleteFeeRecipientStatus>}>;
+  setFeeRecipient(pubkey: string, ethaddress: string): Promise<void>;
+  deleteFeeRecipient(pubkey: string): Promise<void>;
 
   getGasLimit(
     pubkey: string
   ): Promise<{
-    data: {
-      pubkey: string;
-      gas_limit: string;
-    };
+    data: GasLimitData;
   }>;
-  setGasLimit(pubkey: string, ethaddress: string): Promise<{data: ResponseStatus<SetGasLimitStatus>}>;
-  deleteGasLimit(pubkey: string): Promise<{data: ResponseStatus<DeleteGasLimitStatus>}>;
+  setGasLimit(pubkey: string, ethaddress: string): Promise<void>;
+  deleteGasLimit(pubkey: string): Promise<void>;
 };
 
 export const routesData: RoutesData<Api> = {
@@ -344,11 +327,6 @@ export function getReturnTypes(): ReturnTypes<Api> {
     deleteRemoteKeys: jsonType("snake"),
 
     getFeeRecipient: jsonType("snake"),
-    setFeeRecipient: jsonType("snake"),
-    deleteFeeRecipient: jsonType("snake"),
-
     getGasLimit: jsonType("snake"),
-    setGasLimit: jsonType("snake"),
-    deleteGasLimit: jsonType("snake"),
   };
 }

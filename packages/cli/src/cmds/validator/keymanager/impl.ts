@@ -11,10 +11,6 @@ import {
   SlashingProtectionData,
   SignerDefinition,
   ImportRemoteKeyStatus,
-  SetFeeRecipientStatus,
-  DeleteFeeRecipientStatus,
-  SetGasLimitStatus,
-  DeleteGasLimitStatus,
 } from "@lodestar/api/keymanager";
 import {fromHexString} from "@chainsafe/ssz";
 import {Interchange, SignerType, Validator} from "@lodestar/validator";
@@ -33,19 +29,17 @@ export class KeymanagerApi implements Api {
     }
   }
 
-  async setFeeRecipient(pubkeyHex: string, ethaddress: string): ReturnType<Api["setFeeRecipient"]> {
+  async setFeeRecipient(pubkeyHex: string, ethaddress: string): Promise<void> {
     try {
       this.validator.validatorStore.setFeeRecipient(pubkeyHex, parseFeeRecipient(ethaddress));
-      return {data: {status: SetFeeRecipientStatus.set}};
     } catch (e) {
       throw Error((e as Error).message);
     }
   }
 
-  async deleteFeeRecipient(pubkeyHex: string): ReturnType<Api["deleteFeeRecipient"]> {
+  async deleteFeeRecipient(pubkeyHex: string): Promise<void> {
     try {
       this.validator.validatorStore.deleteFeeRecipient(pubkeyHex);
-      return {data: {status: DeleteFeeRecipientStatus.deleted}};
     } catch (e) {
       throw Error((e as Error).message);
     }
@@ -53,25 +47,23 @@ export class KeymanagerApi implements Api {
 
   async getGasLimit(pubkeyHex: string): ReturnType<Api["getGasLimit"]> {
     try {
-      return {data: {pubkey: pubkeyHex, gas_limit: String(this.validator.validatorStore.getGasLimit(pubkeyHex))}};
+      return {data: {pubkey: pubkeyHex, gasLimit: String(this.validator.validatorStore.getGasLimit(pubkeyHex))}};
     } catch (e) {
       throw Error((e as Error).message);
     }
   }
 
-  async setGasLimit(pubkeyHex: string, gas_limit: string): ReturnType<Api["setGasLimit"]> {
+  async setGasLimit(pubkeyHex: string, gasLimit: string): Promise<void> {
     try {
-      this.validator.validatorStore.setGasLimit(pubkeyHex, gas_limit);
-      return {data: {status: SetGasLimitStatus.set}};
+      this.validator.validatorStore.setGasLimit(pubkeyHex, gasLimit);
     } catch (e) {
       throw Error((e as Error).message);
     }
   }
 
-  async deleteGasLimit(pubkeyHex: string): ReturnType<Api["deleteGasLimit"]> {
+  async deleteGasLimit(pubkeyHex: string): Promise<void> {
     try {
       this.validator.validatorStore.deleteGasLimit(pubkeyHex);
-      return {data: {status: DeleteGasLimitStatus.deleted}};
     } catch (e) {
       throw Error((e as Error).message);
     }
