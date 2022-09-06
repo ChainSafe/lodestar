@@ -75,6 +75,11 @@ export const logOptions: ICliCommandOptions<ILogArgs> = {
     type: "string",
   },
 
+  logFileDailyRotate: {
+    description: `Daily rotate log files, set to an integer to limit the file count, else defaults to ${defaultLogMaxFiles}`,
+    type: "number",
+  },
+
   logFormatGenesisTime: {
     hidden: true,
     description: "Logger format - Use EpochSlot TimestampFormat",
@@ -87,9 +92,12 @@ export const logOptions: ICliCommandOptions<ILogArgs> = {
     type: "string",
   },
 
-  logFileDailyRotate: {
-    description: `Daily rotate log files, set to an integer to limit the file count, else defaults to ${defaultLogMaxFiles}`,
-    type: "number",
+  logLevelModule: {
+    hidden: true,
+    description: "Set log level for a specific module by name: 'chain=debug' or 'network=debug,chain=debug'",
+    type: "array",
+    string: true,
+    coerce: (args: string[]) => args.map((item) => item.split(",")).flat(1),
   },
 };
 

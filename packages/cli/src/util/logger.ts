@@ -8,9 +8,10 @@ export const defaultLogMaxFiles = 5;
 export interface ILogArgs {
   logLevel?: LogLevel;
   logFileLevel?: LogLevel;
+  logFileDailyRotate?: number;
   logFormatGenesisTime?: number;
   logFormatId?: string;
-  logFileDailyRotate?: number;
+  logLevelModule?: string[];
 }
 
 export function errorLogger(): ILogger {
@@ -51,5 +52,16 @@ export function getCliLogger(args: ILogArgs, paths: {logFile?: string}, config: 
 
   const transports = transportsOpts.map((transportOpts) => fromTransportOpts(transportOpts));
 
-  return createWinstonLogger({level: args.logLevel, module: args.logFormatId, timestampFormat}, transports);
+  const logger = createWinstonLogger({level: args.logLevel, module: args.logFormatId, timestampFormat}, transports);
+
+  if (args.logLevelModule) {
+    for (const logLevelModule of args.logLevelModule ?? []) {
+      const [module, level] = logLevelModule.split("=");
+      if (LogLevel[level as LogLevel] === undefined) {
+        throw Error(`Unknown level in logLevelModule '${logLevelModule}'`);
+      }
+    }
+  }
+
+  return logger;
 }
