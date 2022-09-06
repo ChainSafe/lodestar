@@ -1,15 +1,7 @@
 import {expect} from "chai";
 import {MESSAGE} from "triple-beam";
 import Transport from "winston-transport";
-import {
-  LogData,
-  LodestarError,
-  LogFormat,
-  logFormats,
-  LogLevel,
-  createWinstonLogger,
-  WinstonLogger,
-} from "../../../src/index.js";
+import {LogData, LodestarError, LogFormat, logFormats, createWinstonLogger} from "../../../src/index.js";
 
 type WinstonLog = {[MESSAGE]: string};
 
@@ -108,29 +100,6 @@ describe("winston logger", () => {
         "[a]                \u001b[33mwarn\u001b[39m: test a",
         "[a/b]              \u001b[33mwarn\u001b[39m: test a/b",
         "[a/b/c]            \u001b[33mwarn\u001b[39m: test a/b/c",
-      ]);
-    });
-
-    it("Should log to child at a lower logLevel", () => {
-      const memoryTransport = new MemoryTransport();
-      const loggerA = createWinstonLogger({hideTimestamp: true, module: "a", level: LogLevel.info}, [
-        memoryTransport,
-      ]) as WinstonLogger;
-
-      loggerA.setupDynamicLevels();
-      loggerA.setModuleLevel("a/b", LogLevel.debug);
-
-      const loggerAB = loggerA.child({module: "b"});
-
-      loggerA.info("test a info");
-      loggerA.debug("test a debug");
-      loggerAB.info("test a/b info");
-      loggerAB.debug("test a/b debug");
-
-      expect(memoryTransport.getLogs()).deep.equals([
-        "[a]                \u001b[32minfo\u001b[39m: test a info",
-        "[a/b]              \u001b[32minfo\u001b[39m: test a/b info",
-        "[a/b]             \u001b[34mdebug\u001b[39m: test a/b debug",
       ]);
     });
   });
