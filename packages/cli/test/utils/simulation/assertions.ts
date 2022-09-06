@@ -43,46 +43,6 @@ export function finalityAssertions(env: SimulationEnvironment): void {
   });
 }
 
-export function forkAssertions(env: SimulationEnvironment): void {
-  describe("forks", () => {
-    for (let n = 0; n < env.params.beaconNodes; n++) {
-      describe(`beacon node "${n}"`, () => {
-        describe("altair fork", () => {
-          it("should occur on right slot", async () => {
-            const node = env.nodes[n];
-
-            if (env.params.altairEpoch === Infinity) {
-              return;
-            }
-
-            const expectedSlot = env.params.altairEpoch * env.params.slotsPerEpoch;
-            await env.clock.waitForEndOfSlot(expectedSlot);
-
-            const state = await node.api.debug.getStateV2(expectedSlot.toString());
-            expect(state.version).to.equal("altair");
-          });
-        });
-
-        describe("bellatrix fork", () => {
-          it("should occur on right slot", async () => {
-            const node = env.nodes[n];
-
-            if (env.params.bellatrixEpoch === Infinity) {
-              return;
-            }
-
-            const expectedSlot = env.params.bellatrixEpoch * env.params.slotsPerEpoch;
-            await env.clock.waitForEndOfSlot(expectedSlot);
-
-            const state = await node.api.debug.getStateV2(expectedSlot.toString());
-            expect(state.version).to.equal("bellatrix");
-          });
-        });
-      });
-    }
-  });
-}
-
 export function nodeAssertions(env: SimulationEnvironment): void {
   describe("node", () => {
     it(`should have correct "${env.params.beaconNodes}" number of nodes`, () => {
