@@ -128,7 +128,18 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
   // Only if keymanagerEnabled flag is set to true
   if (args["keymanager"]) {
     const accountPaths = getAccountPaths(args, network);
-    const keymanagerApi = new KeymanagerApi(validator, new PersistedKeysBackend(accountPaths));
+    // if proposerSettingsFile provided disable the key proposerConfigWrite in keymanager
+    const proposerConfigWriteDisabled = args.proposerSettingsFile !== undefined;
+    if (proposerConfigWriteDisabled) {
+      logger.warn(
+        "Proposer data updates (feeRecipient/gasLimit etc) will not be available via Keymanager API as proposerSettingsFile has been set"
+      );
+    }
+    const keymanagerApi = new KeymanagerApi(
+      validator,
+      new PersistedKeysBackend(accountPaths),
+      proposerConfigWriteDisabled
+    );
 
     const keymanagerServer = new KeymanagerRestApiServer(
       {

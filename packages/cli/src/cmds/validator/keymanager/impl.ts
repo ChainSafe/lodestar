@@ -19,7 +19,17 @@ import {parseFeeRecipient} from "../../../util/index.js";
 import {IPersistedKeysBackend} from "./interface.js";
 
 export class KeymanagerApi implements Api {
-  constructor(private readonly validator: Validator, private readonly persistedKeysBackend: IPersistedKeysBackend) {}
+  constructor(
+    private readonly validator: Validator,
+    private readonly persistedKeysBackend: IPersistedKeysBackend,
+    private readonly proposerConfigWriteDisabled?: boolean
+  ) {}
+
+  private checkIfProposerWriteAvailable(): void {
+    if (this.proposerConfigWriteDisabled == true) {
+      throw Error("proposerSettingsFile option activated");
+    }
+  }
 
   async listFeeRecipient(pubkeyHex: string): ReturnType<Api["listFeeRecipient"]> {
     try {
@@ -30,6 +40,7 @@ export class KeymanagerApi implements Api {
   }
 
   async setFeeRecipient(pubkeyHex: string, ethaddress: string): Promise<void> {
+    this.checkIfProposerWriteAvailable();
     try {
       this.validator.validatorStore.setFeeRecipient(pubkeyHex, parseFeeRecipient(ethaddress));
     } catch (e) {
@@ -38,6 +49,7 @@ export class KeymanagerApi implements Api {
   }
 
   async deleteFeeRecipient(pubkeyHex: string): Promise<void> {
+    this.checkIfProposerWriteAvailable();
     try {
       this.validator.validatorStore.deleteFeeRecipient(pubkeyHex);
     } catch (e) {
@@ -54,6 +66,7 @@ export class KeymanagerApi implements Api {
   }
 
   async setGasLimit(pubkeyHex: string, gasLimit: string): Promise<void> {
+    this.checkIfProposerWriteAvailable();
     try {
       this.validator.validatorStore.setGasLimit(pubkeyHex, gasLimit);
     } catch (e) {
@@ -62,6 +75,7 @@ export class KeymanagerApi implements Api {
   }
 
   async deleteGasLimit(pubkeyHex: string): Promise<void> {
+    this.checkIfProposerWriteAvailable();
     try {
       this.validator.validatorStore.deleteGasLimit(pubkeyHex);
     } catch (e) {
