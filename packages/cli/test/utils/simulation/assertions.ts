@@ -1,8 +1,12 @@
-import {expect} from "chai";
+import chai, {expect} from "chai";
+import chaiAsPromised from "chai-as-promised";
 import {altair} from "@lodestar/types";
 import {HttpError} from "@lodestar/api";
+import {routes} from "@lodestar/api/beacon";
 import {SimulationEnvironment} from "./SimulationEnvironment.js";
 import {computeAttestationParticipation} from "./utils.js";
+
+chai.use(chaiAsPromised);
 
 export function feeRecipientsAssertions(env: SimulationEnvironment): void {
   describe("fee recipient", () => {
@@ -53,27 +57,49 @@ export function nodeAssertions(env: SimulationEnvironment): void {
       describe(`beacon node "${n}"`, () => {
         it("should have correct health status", async () => {
           const node = env.nodes[n];
-          expect(await node.api.node.getHealth()).to.equal(200);
+          expect(await node.api.node.getHealth()).to.equal(
+            env.params.beaconNodes > 0 ? routes.node.NodeHealth.SYNCING : routes.node.NodeHealth.READY
+          );
         });
 
         it("should be completely synced", async () => {
           const node = env.nodes[n];
           const syncStatus = await node.api.node.getSyncingStatus();
 
-          expect(syncStatus.data.isSyncing).to.equal(false);
+          expect(syncStatus.data.isSyncing).to.equal(env.params.beaconNodes > 0 ? true : false);
           expect(syncStatus.data.syncDistance).to.equal("0");
         });
 
-        // NOT POSSIBLE
-        it.skip("should have correct number of validator clients");
+        it("should have correct number of validator clients", () => {
+          const node = env.nodes[n];
 
-        describe("validator - n", () => {
-          it("should have correct status");
-          it("should have correct number of keys loaded");
+          expect(node.validatorClients).to.have.lengthOf(env.params.validatorClients);
         });
+
+        for (let v = 0; v < env.params.validatorClients; v++) {
+          describe(`validator - ${v}`, () => {
+            it("should have keymanager running", async () => {
+              const validator = env.nodes[n].validatorClients[v];
+
+              await expect(validator.keyManagerApi.listKeys()).to.be.fulfilled;
+            });
+
+            it("should have correct number of keys loaded", async () => {
+              const validator = env.nodes[n].validatorClients[v];
+              const keys = (await validator.keyManagerApi.listKeys()).data.map((k) => k.validatingPubkey).sort();
+              const existingKeys = validator.secretKeys.map((k) => k.toPublicKey().toHex()).sort();
+
+              expect(keys).to.eql(existingKeys);
+            });
+          });
+        }
       });
     }
+  });
+}
 
+export function headAssertions(env: SimulationEnvironment): void {
+  describe("head", () => {
     it("all nodes should have same head", async () => {
       const heads = await Promise.all(env.nodes.map((n) => n.api.beacon.getBlockHeader("head")));
       const headRoots = heads.map((h) => h.data.root);
@@ -184,16 +210,8 @@ export function participationAssertions(env: SimulationEnvironment): void {
       const states = await Promise.all(env.nodes.map((n) => n.api.debug.getStateV2("head")));
 
       for (let n = 0; n < env.params.beaconNodes; n++) {
-        // As its end of epoch the "currentEpochParticipation" is all set to zero
-        const currentEpochParticipation = (states[n].data as altair.BeaconState).currentEpochParticipation;
-        // Make sure the its not end of epoch
-        expect(currentEpochParticipation.every((p) => p === 0)).to.be.eql(
-          true,
-          `Node ${n} has not set current epoch participation to zero. Probably its not the end of epoch.`
-        );
-
         const participationRate = computeAttestationParticipation(states[n].data as altair.BeaconState, "HEAD");
-        console.log(`Current participation rate on head: ${participationRate}`);
+
         expect(participationRate).to.be.gt(env.acceptableParticipationRate, `node ${n} has too low participation rate`);
       }
     });
@@ -202,16 +220,8 @@ export function participationAssertions(env: SimulationEnvironment): void {
       const states = await Promise.all(env.nodes.map((n) => n.api.debug.getStateV2("head")));
 
       for (let n = 0; n < env.params.beaconNodes; n++) {
-        // As its end of epoch the "currentEpochParticipation" is all set to zero
-        const currentEpochParticipation = (states[n].data as altair.BeaconState).currentEpochParticipation;
-        // Make sure the its not end of epoch
-        expect(currentEpochParticipation.every((p) => p === 0)).to.be.eql(
-          true,
-          `Node ${n} has not set current epoch participation to zero. Probably its not the end of epoch.`
-        );
-
         const participationRate = computeAttestationParticipation(states[n].data as altair.BeaconState, "FFG");
-        console.log(`Current participation rate on FFG: ${participationRate}`);
+
         expect(participationRate).to.be.gt(env.acceptableParticipationRate, `node ${n} has too low participation rate`);
       }
     });

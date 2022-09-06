@@ -1,4 +1,3 @@
-import PeerId from "peer-id";
 import type {SecretKey} from "@chainsafe/bls/types";
 import {Api} from "@lodestar/api";
 import {Api as KeyManagerApi} from "@lodestar/api/keymanager";
@@ -35,6 +34,7 @@ export interface BeaconNodeProcess {
   address: string;
   port: number;
   restPort: number;
+  validatorClients: ValidatorProcess[];
 }
 
 export interface BeaconNodeConstructor {

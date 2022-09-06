@@ -74,20 +74,17 @@ export const LodestarValidatorProcess: ValidatorConstructor = class LodestarVali
       interopSecretKey(this.clientIndex * this.params.validatorsPerClient + i)
     );
     this.secretKeys = validatorSecretKeys;
-    await mkdir(`${this.rootDir}/validator_${this.clientIndex}`);
-    await mkdir(`${this.rootDir}/validator_${this.clientIndex}/keystores`);
+    await mkdir(this.rootDir);
+    await mkdir(`${this.rootDir}/keystores`);
 
-    await writeFile(`${this.rootDir}/validator_${this.clientIndex}/password.txt`, "password");
+    await writeFile(`${this.rootDir}/password.txt`, "password");
 
-    await writeFile(
-      `${this.rootDir}/validator_${this.clientIndex}/rc_config.json`,
-      JSON.stringify(this.rcConfig, null, 2)
-    );
+    await writeFile(`${this.rootDir}/rc_config.json`, JSON.stringify(this.rcConfig, null, 2));
 
     for (const key of validatorSecretKeys) {
       const keystore = await Keystore.create("password", key.toBytes(), key.toPublicKey().toBytes(), "");
       await writeFile(
-        `${this.rootDir}/validator_${this.clientIndex}/keystores/${key.toPublicKey().toHex()}.json`,
+        `${this.rootDir}/keystores/${key.toPublicKey().toHex()}.json`,
         JSON.stringify(keystore.toObject(), null, 2)
       );
     }
@@ -102,11 +99,11 @@ export const LodestarValidatorProcess: ValidatorConstructor = class LodestarVali
         "--network",
         "dev",
         "--rcConfig",
-        `${this.rootDir}/validator_${this.clientIndex}/rc_config.json`,
+        `${this.rootDir}/rc_config.json`,
         "--importKeystores",
-        `${this.rootDir}/validator_${this.clientIndex}/keystores`,
+        `${this.rootDir}/keystores`,
         "--importKeystoresPassword",
-        `${this.rootDir}/validator_${this.clientIndex}/password.txt`,
+        `${this.rootDir}/password.txt`,
       ],
       async () => this.ready(),
       "Waiting for validator to start..."

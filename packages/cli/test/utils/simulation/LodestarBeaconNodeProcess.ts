@@ -23,10 +23,11 @@ export const LodestarBeaconNodeProcess: BeaconNodeConstructor = class LodestarBe
   api!: Api;
   peerId!: string;
   multiaddrs!: string[];
+  validatorClients: ValidatorProcess[] = [];
 
   private rootDir: string;
   private beaconProcess!: ChildProcess;
-  private validatorProcesses: ValidatorProcess[] = [];
+
   private rcConfig: IBeaconArgs & IGlobalArgs;
   private config!: IChainForkConfig;
 
@@ -65,9 +66,9 @@ export const LodestarBeaconNodeProcess: BeaconNodeConstructor = class LodestarBe
     } as unknown) as IBeaconArgs & IGlobalArgs;
 
     for (let clientIndex = 0; clientIndex < this.params.validatorClients; clientIndex++) {
-      this.validatorProcesses.push(
+      this.validatorClients.push(
         new LodestarValidatorProcess(this.params, {
-          rootDir: this.rootDir,
+          rootDir: `${this.rootDir}/validator-${clientIndex}`,
           config: getBeaconConfigFromArgs(this.rcConfig).config,
           server: `http://${this.address}:${this.restPort}/`,
           clientIndex,
@@ -106,12 +107,12 @@ export const LodestarBeaconNodeProcess: BeaconNodeConstructor = class LodestarBe
     this.peerId = (await this.api.node.getNetworkIdentity()).data.peerId;
 
     for (let clientIndex = 0; clientIndex < this.params.validatorClients; clientIndex++) {
-      await this.validatorProcesses[clientIndex].start();
+      await this.validatorClients[clientIndex].start();
     }
   }
 
   async stop(): Promise<void> {
-    await Promise.all(this.validatorProcesses.map((p) => p.stop()));
+    await Promise.all(this.validatorClients.map((p) => p.stop()));
 
     if (this.beaconProcess !== undefined) {
       await closeChildProcess(this.beaconProcess);
