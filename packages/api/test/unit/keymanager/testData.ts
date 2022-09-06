@@ -52,4 +52,30 @@ export const testData: GenericServerTestCases<Api> = {
     args: [["key1"]],
     res: {data: [{status: DeleteRemoteKeyStatus.deleted}]},
   },
+
+  getFeeRecipient: {
+    args: ["key1"],
+    res: {data: {pubkey: "key1", ethaddress: "eth1"}},
+  },
+  setFeeRecipient: {
+    args: ["key1", "eth1"],
+    res: undefined,
+  },
+  deleteFeeRecipient: {
+    args: ["key1"],
+    res: undefined,
+  },
+
+  getGasLimit: {
+    args: ["key1"],
+    res: {data: {pubkey: "key1", gasLimit: "300"}},
+  },
+  setGasLimit: {
+    args: ["key1", "300"],
+    res: undefined,
+  },
+  deleteGasLimit: {
+    args: ["key1"],
+    res: undefined,
+  },
 };

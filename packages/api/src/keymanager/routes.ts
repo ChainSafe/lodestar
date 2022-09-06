@@ -189,7 +189,7 @@ export type Api = {
   ): Promise<{
     data: GasLimitData;
   }>;
-  setGasLimit(pubkey: string, ethaddress: string): Promise<void>;
+  setGasLimit(pubkey: string, gasLimit: string): Promise<void>;
   deleteGasLimit(pubkey: string): Promise<void>;
 };
 
