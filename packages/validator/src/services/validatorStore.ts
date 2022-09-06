@@ -234,12 +234,14 @@ export class ValidatorStore {
     }
   }
 
-  setGasLimit(pubkeyHex: PubkeyHex, gasLimitString: string | number): void {
-    if (Number.isNaN(Number(gasLimitString))) {
-      throw Error("Gas Limit is Not a number");
+  setGasLimit(pubkeyHex: PubkeyHex, gasLimitInput: string | number): void {
+    if ((typeof gasLimitInput !== "string" && typeof gasLimitInput !== "number") || `${gasLimitInput}`.trim() === "") {
+      throw Error("Not valid Gas Limit");
     }
-
-    const gasLimit = Number(gasLimitString);
+    const gasLimit = Number(gasLimitInput);
+    if (Number.isNaN(gasLimit) || gasLimit === 0) {
+      throw Error(`Gas Limit is not valid gasLimit=${gasLimit}`);
+    }
 
     if (this.validators.has(pubkeyHex)) {
       const validatorData = this.validators.get(pubkeyHex);
