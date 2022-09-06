@@ -49,33 +49,33 @@ export function forkAssertions(env: SimulationEnvironment): void {
       describe(`beacon node "${n}"`, () => {
         describe("altair fork", () => {
           it("should occur on right slot", async () => {
-            // const node = env.nodes[n];
+            const node = env.nodes[n];
 
             if (env.params.altairEpoch === Infinity) {
               return;
             }
 
-            const expectedSlot = env.params.altairEpoch * env.params.slotsPerEpoch + env.params.genesisSlotsDelay;
+            const expectedSlot = env.params.altairEpoch * env.params.slotsPerEpoch;
             await env.clock.waitForEndOfSlot(expectedSlot);
 
-            // await node.api.getBlock();
-            // Match if the block is from the right fork
+            const state = await node.api.debug.getStateV2(expectedSlot.toString());
+            expect(state.version).to.equal("altair");
           });
         });
 
         describe("bellatrix fork", () => {
           it("should occur on right slot", async () => {
-            // const node = env.nodes[n];
+            const node = env.nodes[n];
 
             if (env.params.bellatrixEpoch === Infinity) {
               return;
             }
 
-            const expectedSlot = env.params.bellatrixEpoch * env.params.slotsPerEpoch + env.params.genesisSlotsDelay;
+            const expectedSlot = env.params.bellatrixEpoch * env.params.slotsPerEpoch;
             await env.clock.waitForEndOfSlot(expectedSlot);
 
-            // await node.api.getBlock();
-            // Match ic the block is from the right fork
+            const state = await node.api.debug.getStateV2(expectedSlot.toString());
+            expect(state.version).to.equal("bellatrix");
           });
         });
       });
