@@ -51,6 +51,7 @@ export const testData: GenericServerTestCases<Api> = {
         attestedHeader: header,
         finalizedHeader: lightClientUpdate.finalizedHeader,
         finalityBranch: lightClientUpdate.finalityBranch,
+        signatureSlot: lightClientUpdate.attestedHeader.slot, // TODO DA Revisit
       },
     },
   },

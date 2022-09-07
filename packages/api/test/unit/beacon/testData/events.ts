@@ -85,7 +85,7 @@ export const eventTestData: EventData = {
     syncAggregate: ssz.altair.SyncAggregate.defaultValue(),
     attestedHeader: ssz.phase0.BeaconBlockHeader.defaultValue(),
   },
-  [EventType.lightclientFinalizedUpdate]: {
+  [EventType.lightclientFinalityUpdate]: {
     attestedHeader: ssz.phase0.BeaconBlockHeader.defaultValue(),
     finalizedHeader: ssz.phase0.BeaconBlockHeader.defaultValue(),
     finalityBranch: [root],
