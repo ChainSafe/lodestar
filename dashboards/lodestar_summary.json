@@ -1355,7 +1355,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "avg(\n  delta(validator_monitor_prev_epoch_on_chain_balance[32m])\n)",
           "hide": false,
           "interval": "",

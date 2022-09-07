@@ -138,7 +138,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "validator_monitor_validators_total",
           "interval": "",
           "legendFormat": "",
@@ -149,7 +149,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "validator_monitor_validators",
           "hide": false,
           "interval": "",
@@ -336,7 +336,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "avg(\n  delta(validator_monitor_prev_epoch_on_chain_balance[32m])\n)",
           "hide": false,
           "interval": "",
@@ -522,7 +522,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "rate(validator_monitor_prev_epoch_on_chain_inclusion_distance_sum[$rate_interval])\n/\nrate(validator_monitor_prev_epoch_on_chain_inclusion_distance_count[$rate_interval])",
           "hide": false,
           "interval": "",
@@ -1209,7 +1209,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "validator_monitor_prev_epoch_attestation_block_inclusions_sum\n/\nvalidator_monitor_prev_epoch_attestation_block_inclusions_count",
           "hide": false,
           "interval": "",
@@ -1221,7 +1221,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "validator_monitor_prev_epoch_attestation_aggregate_inclusions_sum\n/\nvalidator_monitor_prev_epoch_attestation_aggregate_inclusions_count",
           "hide": false,
           "interval": "",
