@@ -282,9 +282,7 @@ export class LightClientServer {
       throw Error(`No partialUpdate available for period ${period}`);
     }
 
-    const syncCommitteeWitnessBlockRoot = partialUpdate.isFinalized
-      ? (partialUpdate.finalizedCheckpoint.root as Uint8Array)
-      : partialUpdate.blockRoot;
+    const syncCommitteeWitnessBlockRoot = partialUpdate.blockRoot;
 
     const syncCommitteeWitness = await this.db.syncCommitteeWitness.get(syncCommitteeWitnessBlockRoot);
     if (!syncCommitteeWitness) {
