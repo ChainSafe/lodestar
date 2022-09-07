@@ -121,6 +121,8 @@ export function parseGossipTopic(forkDigestContext: IForkDigestContext, topicStr
       case GossipType.proposer_slashing:
       case GossipType.attester_slashing:
       case GossipType.sync_committee_contribution_and_proof:
+      case GossipType.light_client_finality_update:
+      case GossipType.light_client_optimistic_update:
         return {type: gossipTypeStr, fork, encoding};
     }
 
