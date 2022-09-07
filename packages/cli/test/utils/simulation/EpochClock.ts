@@ -1,9 +1,8 @@
-const MS_IN_SEC = 1000;
+export const MS_IN_SEC = 1000;
 
 export class EpochClock {
   private readonly genesisTime: number;
   private readonly secondsPerSlot: number;
-  private readonly signal: AbortSignal;
 
   readonly slotsPerEpoch: number;
 
@@ -11,16 +10,13 @@ export class EpochClock {
     genesisTime,
     secondsPerSlot,
     slotsPerEpoch,
-    signal,
   }: {
     genesisTime: number;
     secondsPerSlot: number;
     slotsPerEpoch: number;
-    signal: AbortSignal;
   }) {
     this.genesisTime = genesisTime;
     this.secondsPerSlot = secondsPerSlot;
-    this.signal = signal;
     this.slotsPerEpoch = slotsPerEpoch;
   }
 
@@ -42,32 +38,6 @@ export class EpochClock {
 
   getFirstSlotOfEpoch(epoch: number): number {
     return epoch * this.slotsPerEpoch;
-  }
-
-  waitForStartOfSlot(slot: number): Promise<void> {
-    return new Promise((resolve) => {
-      const slotTime = this.getSlotTime(slot) * MS_IN_SEC - Date.now();
-
-      const timeout = setTimeout(() => {
-        resolve();
-      }, slotTime);
-
-      this.signal.addEventListener(
-        "abort",
-        () => {
-          clearTimeout(timeout);
-        },
-        {once: true}
-      );
-    });
-  }
-
-  waitForEndOfSlot(slot: number): Promise<void> {
-    return this.waitForStartOfSlot(slot + 1);
-  }
-
-  waitForEndOfEpoch(epoch: number): Promise<void> {
-    return this.waitForEndOfSlot(this.getLastSlotOfEpoch(epoch));
   }
 
   getSlotFor(timeStamp?: number): number {

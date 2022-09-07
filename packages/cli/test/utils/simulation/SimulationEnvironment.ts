@@ -1,8 +1,10 @@
 import {mkdir, rm} from "node:fs/promises";
+import {EventEmitter} from "node:events";
 import tmp from "tmp";
 import {activePreset} from "@lodestar/params";
+import {routes} from "@lodestar/api/beacon";
 import {BeaconNodeProcess, SimulationOptionalParams, SimulationParams, SimulationRequiredParams} from "./types.js";
-import {EpochClock} from "./EpochClock.js";
+import {EpochClock, MS_IN_SEC} from "./EpochClock.js";
 import {LodestarBeaconNodeProcess, defaultSimulationParams, getSimulationId} from "./index.js";
 
 export class SimulationEnvironment {
@@ -11,8 +13,29 @@ export class SimulationEnvironment {
   readonly rootDir: string;
   readonly nodes: BeaconNodeProcess[] = [];
   readonly clock: EpochClock;
-  readonly controller: AbortController;
   readonly acceptableParticipationRate = 0.8;
+
+  readonly network = {
+    connectAllNodes: async (): Promise<void> => {
+      for (let i = 0; i < this.params.beaconNodes; i += 1) {
+        for (let j = 0; j < this.params.beaconNodes; j += 1) {
+          if (i === j) continue;
+          await this.nodes[i].api.lodestar.connectPeer(this.nodes[j].peerId, this.nodes[j].multiaddrs);
+        }
+      }
+    },
+    connectNodesToFirstNode: async (): Promise<void> => {
+      const firstNode = this.nodes[0];
+
+      for (let i = 1; i < this.params.beaconNodes; i += 1) {
+        const node = this.nodes[i];
+        await node.api.lodestar.connectPeer(firstNode.peerId, firstNode.multiaddrs);
+      }
+    },
+  };
+
+  private readonly controller: AbortController;
+  private readonly emitter: EventEmitter;
 
   constructor(params: SimulationRequiredParams & Partial<SimulationOptionalParams>) {
     const paramsWithDefaults = {...defaultSimulationParams, ...params} as SimulationRequiredParams &
@@ -34,8 +57,8 @@ export class SimulationEnvironment {
       genesisTime,
       secondsPerSlot: this.params.secondsPerSlot,
       slotsPerEpoch: this.params.slotsPerEpoch,
-      signal: this.controller.signal,
     });
+    this.emitter = new EventEmitter();
 
     for (let i = 1; i <= this.params.beaconNodes; i += 1) {
       const nodeRootDir = `${this.rootDir}/node-${i}`;
@@ -43,9 +66,21 @@ export class SimulationEnvironment {
     }
   }
 
-  async start(): Promise<void> {
+  async start(): Promise<this> {
     await mkdir(this.rootDir);
     await Promise.all(this.nodes.map((p) => p.start()));
+
+    for (let i = 0; i < this.params.beaconNodes; i += 1) {
+      this.nodes[i].api.events.eventstream(
+        [routes.events.EventType.head, routes.events.EventType.finalizedCheckpoint],
+        this.controller.signal,
+        (event) => {
+          this.emitter.emit(event.type, event, this.nodes[i]);
+        }
+      );
+    }
+
+    return this;
   }
 
   async stop(): Promise<void> {
@@ -54,21 +89,51 @@ export class SimulationEnvironment {
     await rm(this.rootDir, {recursive: true});
   }
 
-  async connectNodesToFirstNode(): Promise<void> {
-    const firstNode = this.nodes[0];
+  waitForEvent(event: routes.events.EventType, node?: BeaconNodeProcess): Promise<this> {
+    return new Promise((resolve) => {
+      const handler = (_beaconEvent: routes.events.BeaconEvent, eventNode: BeaconNodeProcess): void => {
+        if (!node) {
+          this.emitter.removeListener(event, handler);
+          resolve(this);
+        }
 
-    for (let i = 1; i < this.params.beaconNodes; i += 1) {
-      const node = this.nodes[i];
-      await node.api.lodestar.connectPeer(firstNode.peerId, firstNode.multiaddrs);
-    }
+        if (node && eventNode === node) {
+          this.emitter.removeListener(event, handler);
+          resolve(this);
+        }
+      };
+
+      this.emitter.on(event, handler);
+    });
   }
 
-  async connectAllNodes(): Promise<void> {
-    for (let i = 0; i < this.params.beaconNodes; i += 1) {
-      for (let j = 0; j < this.params.beaconNodes; j += 1) {
-        if (i === j) continue;
-        await this.nodes[i].api.lodestar.connectPeer(this.nodes[j].peerId, this.nodes[j].multiaddrs);
-      }
-    }
+  waitForStartOfSlot(slot: number): Promise<this> {
+    return new Promise((resolve) => {
+      const slotTime = this.clock.getSlotTime(slot) * MS_IN_SEC - Date.now();
+
+      const timeout = setTimeout(() => {
+        resolve(this);
+      }, slotTime);
+
+      this.controller.signal.addEventListener(
+        "abort",
+        () => {
+          clearTimeout(timeout);
+        },
+        {once: true}
+      );
+    });
+  }
+
+  waitForEndOfSlot(slot: number): Promise<this> {
+    return this.waitForStartOfSlot(slot + 1);
+  }
+
+  waitForStartOfEpoch(epoch: number): Promise<this> {
+    return this.waitForStartOfSlot(this.clock.getFirstSlotOfEpoch(epoch));
+  }
+
+  waitForEndOfEpoch(epoch: number): Promise<this> {
+    return this.waitForEndOfSlot(this.clock.getLastSlotOfEpoch(epoch));
   }
 }

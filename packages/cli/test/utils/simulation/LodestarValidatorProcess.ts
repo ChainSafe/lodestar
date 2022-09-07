@@ -17,6 +17,7 @@ export const LodestarValidatorProcess: ValidatorConstructor = class LodestarVali
   readonly params: SimulationParams;
   readonly address = "127.0.0.1";
   readonly keyManagerPort: number;
+  readonly id: string;
   keyManagerApi!: Api;
   secretKeys: SecretKey[] = [];
 
@@ -46,6 +47,7 @@ export const LodestarValidatorProcess: ValidatorConstructor = class LodestarVali
     LodestarValidatorProcess.totalProcessCount += 1;
 
     this.keyManagerPort = 6000 + LodestarValidatorProcess.totalProcessCount;
+    this.id = `VAL-${LodestarValidatorProcess.totalProcessCount}`;
     this.forkConfig = config;
 
     this.rcConfig = ({
@@ -61,6 +63,8 @@ export const LodestarValidatorProcess: ValidatorConstructor = class LodestarVali
       "params.GENESIS_DELAY": String(this.params.genesisSlotsDelay),
       "params.ALTAIR_FORK_EPOCH": String(this.params.altairEpoch),
       "params.BELLATRIX_FORK_EPOCH": String(this.params.bellatrixEpoch),
+      logFormatId: `VAL-${LodestarValidatorProcess.totalProcessCount}`,
+      logFormatGenesisTime: this.id,
     } as unknown) as IValidatorCliArgs & IGlobalArgs;
   }
 
