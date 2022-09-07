@@ -43,6 +43,10 @@ export class KeymanagerApi implements Api {
     this.checkIfProposerWriteAvailable();
     try {
       this.validator.validatorStore.setFeeRecipient(pubkeyHex, parseFeeRecipient(ethaddress));
+      this.persistedKeysBackend.writeProposerConfig(
+        pubkeyHex,
+        this.validator.validatorStore.getProposerConfig(pubkeyHex)
+      );
     } catch (e) {
       throw Error((e as Error).message);
     }
@@ -52,6 +56,10 @@ export class KeymanagerApi implements Api {
     this.checkIfProposerWriteAvailable();
     try {
       this.validator.validatorStore.deleteFeeRecipient(pubkeyHex);
+      this.persistedKeysBackend.writeProposerConfig(
+        pubkeyHex,
+        this.validator.validatorStore.getProposerConfig(pubkeyHex)
+      );
     } catch (e) {
       throw Error((e as Error).message);
     }
@@ -69,6 +77,10 @@ export class KeymanagerApi implements Api {
     this.checkIfProposerWriteAvailable();
     try {
       this.validator.validatorStore.setGasLimit(pubkeyHex, gasLimit);
+      this.persistedKeysBackend.writeProposerConfig(
+        pubkeyHex,
+        this.validator.validatorStore.getProposerConfig(pubkeyHex)
+      );
     } catch (e) {
       throw Error((e as Error).message);
     }
@@ -78,6 +90,10 @@ export class KeymanagerApi implements Api {
     this.checkIfProposerWriteAvailable();
     try {
       this.validator.validatorStore.deleteGasLimit(pubkeyHex);
+      this.persistedKeysBackend.writeProposerConfig(
+        pubkeyHex,
+        this.validator.validatorStore.getProposerConfig(pubkeyHex)
+      );
     } catch (e) {
       throw Error((e as Error).message);
     }

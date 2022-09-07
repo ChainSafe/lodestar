@@ -15,6 +15,7 @@ import {getSignersFromArgs} from "./signers/index.js";
 import {logSigners} from "./signers/logSigners.js";
 import {KeymanagerApi} from "./keymanager/impl.js";
 import {PersistedKeysBackend} from "./keymanager/persistedKeys.js";
+import {IPersistedKeysBackend} from "./keymanager/interface.js";
 import {KeymanagerRestApiServer} from "./keymanager/server.js";
 
 /**
@@ -24,12 +25,15 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
   const {config, network} = getBeaconConfigFromArgs(args);
 
   const doppelgangerProtectionEnabled = args.doppelgangerProtectionEnabled;
-  const valProposerConfig = getProposerConfigFromArgs(args);
 
   const beaconPaths = getBeaconPaths(args, network);
   const validatorPaths = getValidatorPaths(args, network);
+  const accountPaths = getAccountPaths(args, network);
 
   const logger = getCliLogger(args, {...beaconPaths, logFile: validatorPaths.logFile}, config);
+
+  const persistedKeysBackend = new PersistedKeysBackend(accountPaths);
+  const valProposerConfig = getProposerConfigFromArgs(args, persistedKeysBackend);
 
   const {version, commit} = getVersionData();
   logger.info("Lodestar", {network, version, commit});
@@ -127,7 +131,6 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
   // Start keymanager API backend
   // Only if keymanagerEnabled flag is set to true
   if (args["keymanager"]) {
-    const accountPaths = getAccountPaths(args, network);
     // if proposerSettingsFile provided disable the key proposerConfigWrite in keymanager
     const proposerConfigWriteDisabled = args.proposerSettingsFile !== undefined;
     if (proposerConfigWriteDisabled) {
@@ -135,12 +138,8 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
         "Proposer data updates (feeRecipient/gasLimit etc) will not be available via Keymanager API as proposerSettingsFile has been set"
       );
     }
-    const keymanagerApi = new KeymanagerApi(
-      validator,
-      new PersistedKeysBackend(accountPaths),
-      proposerConfigWriteDisabled
-    );
 
+    const keymanagerApi = new KeymanagerApi(validator, persistedKeysBackend, proposerConfigWriteDisabled);
     const keymanagerServer = new KeymanagerRestApiServer(
       {
         address: args["keymanager.address"],
@@ -156,19 +155,40 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
   }
 }
 
-function getProposerConfigFromArgs(args: IValidatorCliArgs): ValidatorProposerConfig {
+function getProposerConfigFromArgs(
+  args: IValidatorCliArgs,
+  persistedKeysBackend: IPersistedKeysBackend
+): ValidatorProposerConfig {
+  if (args.flushKeymanagerProposerConfigs) {
+    persistedKeysBackend.deleteAllProposerConfigs();
+  }
+
   const defaultConfig = {
     graffiti: args.graffiti || getDefaultGraffiti(),
     strictFeeRecipientCheck: args.strictFeeRecipientCheck,
     feeRecipient: args.suggestedFeeRecipient ? parseFeeRecipient(args.suggestedFeeRecipient) : undefined,
     builder: {enabled: args.builder, gasLimit: args.defaultGasLimit},
   };
-  let valProposerConfig;
-  if (args.proposerSettingsFile) {
-    // parseProposerConfig will override the defaults with the arg created defaultConfig
-    valProposerConfig = parseProposerConfig(args.proposerSettingsFile, defaultConfig);
+
+  let valProposerConfig: ValidatorProposerConfig;
+  const proposerConfigFromKeymanager = persistedKeysBackend.readAllProposerConfigs();
+
+  if (Object.keys(proposerConfigFromKeymanager).length > 0) {
+    // from persistedBackend
+    if (args.proposerSettingsFile) {
+      throw new YargsError(
+        "Cannot accept --proposerSettingsFile since some proposer configs seemed to have been previously persisted via Keymanager api. Use --flushKeymanagerProposerConfigs in conjuction with --proposerSettingsFile if you want to discard them and instead use proposerSettingsFile"
+      );
+    }
+    valProposerConfig = {proposerConfig: proposerConfigFromKeymanager, defaultConfig};
   } else {
-    valProposerConfig = {defaultConfig} as ValidatorProposerConfig;
+    // from Proposer Settings File
+    if (args.proposerSettingsFile) {
+      // parseProposerConfig will override the defaults with the arg created defaultConfig
+      valProposerConfig = parseProposerConfig(args.proposerSettingsFile, defaultConfig);
+    } else {
+      valProposerConfig = {defaultConfig} as ValidatorProposerConfig;
+    }
   }
   return valProposerConfig;
 }

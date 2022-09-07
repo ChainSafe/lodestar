@@ -274,6 +274,28 @@ export class ValidatorStore {
     return this.indicesService.index2pubkey.has(index);
   }
 
+  getProposerConfig(pubkeyHex: PubkeyHex): ProposerConfig | null {
+    let proposerConfig: ProposerConfig | null = null;
+    if (this.validators.has(pubkeyHex)) {
+      const validatorData = this.validators.get(pubkeyHex);
+      if (validatorData !== undefined) {
+        const {graffiti, strictFeeRecipientCheck, feeRecipient, builder} = validatorData;
+
+        // if anything is set , i.e not default then return
+        if (
+          graffiti !== undefined ||
+          strictFeeRecipientCheck !== undefined ||
+          feeRecipient !== undefined ||
+          builder.enabled !== undefined ||
+          builder.gasLimit !== undefined
+        ) {
+          proposerConfig = {graffiti, strictFeeRecipientCheck, feeRecipient, builder};
+        }
+      }
+    }
+    return proposerConfig;
+  }
+
   addSigner(signer: Signer, valProposerConfig?: ValidatorProposerConfig): void {
     const pubkey = getSignerPubkeyHex(signer);
     const proposerConfig = (valProposerConfig?.proposerConfig ?? {})[pubkey] ?? {};

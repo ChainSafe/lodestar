@@ -9,6 +9,7 @@ export type AccountValidatorArgs = {
   keystoresDir?: string;
   secretsDir?: string;
   remoteKeysDir?: string;
+  proposerDir?: string;
 };
 
 export const validatorMetricsDefaultOptions = {
@@ -28,6 +29,7 @@ export type IValidatorCliArgs = AccountValidatorArgs &
     afterBlockDelaySlotFraction?: number;
     suggestedFeeRecipient?: string;
     proposerSettingsFile?: string;
+    flushKeymanagerProposerConfigs?: boolean;
     strictFeeRecipientCheck?: boolean;
     doppelgangerProtectionEnabled?: boolean;
     defaultGasLimit?: number;
@@ -116,6 +118,13 @@ export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
     type: "string",
   },
 
+  proposerDir: {
+    hidden: true,
+    description: "Directory for storing keymanager's proposer configs for validators",
+    defaultDescription: defaultAccountPaths.proposerDir,
+    type: "string",
+  },
+
   validatorsDbDir: {
     hidden: true,
     description: "Data directory for validator databases.",
@@ -150,6 +159,12 @@ export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
     description:
       "A yaml file to specify detailed default and per validator pubkey customized proposer configs. PS: This feature and its format is in alpha and subject to change",
     type: "string",
+  },
+
+  flushKeymanagerProposerConfigs: {
+    description: "If keymanager's persisted proposer configs are found, delete them all!",
+    type: "boolean",
+    default: false,
   },
 
   suggestedFeeRecipient: {
