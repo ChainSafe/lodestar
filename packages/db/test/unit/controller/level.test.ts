@@ -114,7 +114,8 @@ describe("LevelDB controller", () => {
     expect(result.length).to.be.equal(2);
   });
 
-  it("test compactRange + approximateSize", async () => {
+  // TODO DA Revisit
+  it.skip("test compactRange + approximateSize", async () => {
     const indexes = Array.from({length: 100}, (_, i) => i);
     const keys = indexes.map((i) => Buffer.from([i]));
     const values = indexes.map((i) => Buffer.alloc(1000, i));
