@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import {expect} from "chai";
 import {IBeaconNodeOptions} from "@lodestar/beacon-node";
-import {LogLevel, RecursivePartial} from "@lodestar/utils";
+import {RecursivePartial} from "@lodestar/utils";
 import {parseBeaconNodeArgs, IBeaconNodeArgs} from "../../../src/options/beaconNodeOptions/index.js";
 import {getTestdirPath} from "../../utils.js";
 
@@ -45,9 +45,6 @@ describe("options / beaconNodeOptions", () => {
       builder: false,
       "builder.urls": ["http://localhost:8661"],
       "builder.timeout": 12000,
-
-      "logger.eth1.level": "debug",
-      "logger.unknown.level": "debug",
 
       metrics: true,
       "metrics.port": 8765,
@@ -118,11 +115,6 @@ describe("options / beaconNodeOptions", () => {
         enabled: false,
         urls: ["http://localhost:8661"],
         timeout: 12000,
-      },
-      logger: {
-        eth1: {
-          level: LogLevel.debug,
-        },
       },
       metrics: {
         enabled: true,

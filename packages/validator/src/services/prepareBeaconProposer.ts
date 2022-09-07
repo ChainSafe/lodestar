@@ -1,7 +1,6 @@
 import {Epoch, bellatrix} from "@lodestar/types";
 import {Api, routes} from "@lodestar/api";
 import {IBeaconConfig} from "@lodestar/config";
-import {fromHexString} from "@chainsafe/ssz";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 
 import {IClock, ILoggerVc, batchItems} from "../util/index.js";
@@ -84,28 +83,34 @@ export function pollBuilderValidatorRegistration(
     await validatorStore.pollValidatorIndices().catch((e: Error) => {
       logger.error("Error on pollValidatorIndices for prepareBeaconProposer", {epoch}, e);
     });
+    const pubkeyHexes = validatorStore
+      .getAllLocalIndices()
+      .map((index) => validatorStore.getPubkeyOfIndex(index))
+      .filter((pubkeyHex) => pubkeyHex !== undefined && validatorStore.isBuilderEnabled(pubkeyHex));
 
-    const indicesChunks = batchItems(validatorStore.getAllLocalIndices(), {batchSize: REGISTRATION_CHUNK_SIZE});
+    if (pubkeyHexes.length > 0) {
+      const pubkeyHexesChunks = batchItems(pubkeyHexes, {batchSize: REGISTRATION_CHUNK_SIZE});
 
-    for (const indices of indicesChunks) {
-      try {
-        const registrations = await Promise.all(
-          indices.map(
-            (index): Promise<bellatrix.SignedValidatorRegistrationV1> => {
-              const pubkeyHex = validatorStore.getPubkeyOfIndex(index);
-              if (!pubkeyHex) throw Error(`Pubkey lookup failure for index=${index}`);
-              const feeRecipient = validatorStore.getFeeRecipient(pubkeyHex);
-              return validatorStore.signValidatorRegistration(
-                fromHexString(pubkeyHex),
-                fromHexString(feeRecipient),
-                slot
-              );
-            }
-          )
-        );
-        await api.validator.registerValidator(registrations);
-      } catch (e) {
-        logger.error("Failed to register validator registrations with builder", {epoch}, e as Error);
+      for (const pubkeyHexes of pubkeyHexesChunks) {
+        try {
+          const registrations = await Promise.all(
+            pubkeyHexes.map(
+              (pubkeyHex): Promise<bellatrix.SignedValidatorRegistrationV1> => {
+                // Just to make typescript happy as it can't figure out we have filtered
+                // undefined pubkeys above
+                if (pubkeyHex === undefined) {
+                  throw Error("All undefined pubkeys should have been filtered out");
+                }
+                const feeRecipient = validatorStore.getFeeRecipient(pubkeyHex);
+                const gasLimit = validatorStore.getGasLimit(pubkeyHex);
+                return validatorStore.getValidatorRegistration(pubkeyHex, {feeRecipient, gasLimit}, slot);
+              }
+            )
+          );
+          await api.validator.registerValidator(registrations);
+        } catch (e) {
+          logger.error("Failed to register validator registrations with builder", {epoch}, e as Error);
+        }
       }
     }
   }

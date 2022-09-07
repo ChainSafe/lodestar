@@ -7,18 +7,11 @@ import {
   getBlockRootAtSlot,
   computeEpochAtSlot,
 } from "@lodestar/state-transition";
-import {
-  GENESIS_SLOT,
-  SLOTS_PER_EPOCH,
-  SLOTS_PER_HISTORICAL_ROOT,
-  SYNC_COMMITTEE_SUBNET_SIZE,
-  ForkName,
-} from "@lodestar/params";
-import {Root, Slot, ValidatorIndex, ssz, Epoch, BLSSignature} from "@lodestar/types";
+import {GENESIS_SLOT, SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT, SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
+import {Root, Slot, ValidatorIndex, ssz, Epoch} from "@lodestar/types";
 import {ExecutionStatus} from "@lodestar/fork-choice";
 
 import {fromHexString} from "@chainsafe/ssz";
-import {assembleBlock, BlockType, AssembledBlockType} from "../../../chain/factory/block/index.js";
 import {AttestationError, AttestationErrorCode, GossipAction, SyncCommitteeError} from "../../../chain/errors/index.js";
 import {validateGossipAggregateAndProof} from "../../../chain/validation/index.js";
 import {ZERO_HASH} from "../../../constants/index.js";
@@ -181,7 +174,37 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
     randaoReveal,
     graffiti
   ) {
-    return produceBlockWrapper(BlockType.Blinded, slot, randaoReveal, graffiti);
+    let timer;
+    metrics?.blockProductionRequests.inc();
+    try {
+      notWhileSyncing();
+      await waitForSlot(slot); // Must never request for a future slot > currentSlot
+
+      // Error early for builder if builder flow not active
+      if (!chain.executionBuilder) {
+        throw Error("Execution builder not set");
+      }
+      if (!chain.executionBuilder.status) {
+        throw Error("Execution builder disabled");
+      }
+
+      // Process the queued attestations in the forkchoice for correct head estimation
+      // forkChoice.updateTime() might have already been called by the onSlot clock
+      // handler, in which case this should just return.
+      chain.forkChoice.updateTime(slot);
+      chain.forkChoice.updateHead();
+
+      timer = metrics?.blockProductionTime.startTimer();
+      const block = await chain.produceBlindedBlock({
+        slot,
+        randaoReveal,
+        graffiti: toGraffitiBuffer(graffiti || ""),
+      });
+      metrics?.blockProductionSuccess.inc();
+      return {data: block, version: config.getForkName(block.slot)};
+    } finally {
+      if (timer) timer();
+    }
   };
 
   const produceBlock: routes.validator.Api["produceBlockV2"] = async function produceBlock(
@@ -189,29 +212,11 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
     randaoReveal,
     graffiti
   ) {
-    return produceBlockWrapper(BlockType.Full, slot, randaoReveal, graffiti);
-  };
-
-  async function produceBlockWrapper<T extends BlockType>(
-    type: T,
-    slot: Slot,
-    randaoReveal: BLSSignature,
-    graffiti: string
-  ): Promise<{data: AssembledBlockType<T>; version: ForkName}> {
     let timer;
     metrics?.blockProductionRequests.inc();
     try {
       notWhileSyncing();
       await waitForSlot(slot); // Must never request for a future slot > currentSlot
-      // Error early for builder if builder flow not active
-      if (type === BlockType.Blinded) {
-        if (!chain.executionBuilder) {
-          throw Error("Execution builder not set");
-        }
-        if (!chain.executionBuilder.status) {
-          throw Error("Execution builder disabled");
-        }
-      }
 
       // Process the queued attestations in the forkchoice for correct head estimation
       // forkChoice.updateTime() might have already been called by the onSlot clock
@@ -220,20 +225,17 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
       chain.recomputeForkChoiceHead();
 
       timer = metrics?.blockProductionTime.startTimer();
-      const block = await assembleBlock(
-        {type, chain, metrics, logger},
-        {
-          slot,
-          randaoReveal,
-          graffiti: toGraffitiBuffer(graffiti || ""),
-        }
-      );
+      const block = await chain.produceBlock({
+        slot,
+        randaoReveal,
+        graffiti: toGraffitiBuffer(graffiti || ""),
+      });
       metrics?.blockProductionSuccess.inc();
       return {data: block, version: config.getForkName(block.slot)};
     } finally {
       if (timer) timer();
     }
-  }
+  };
 
   return {
     produceBlock: produceBlock,

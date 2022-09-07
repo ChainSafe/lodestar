@@ -1,35 +1,22 @@
 import {CachedBeaconStateAllForks, stateTransition} from "@lodestar/state-transition";
-import {allForks, Bytes32, Bytes96, Root, Slot} from "@lodestar/types";
+import {allForks, Root} from "@lodestar/types";
 import {fromHexString} from "@chainsafe/ssz";
-import {ILogger} from "@lodestar/utils";
 
-import {ZERO_HASH} from "../../../constants/index.js";
-import {IMetrics} from "../../../metrics/index.js";
-import {IBeaconChain} from "../../interface.js";
-import {RegenCaller} from "../../regen/index.js";
-import {assembleBody, BlockType, AssembledBlockType} from "./body.js";
-
-type AssembleBlockModules = {
-  chain: IBeaconChain;
-  metrics: IMetrics | null;
-  logger?: ILogger;
-};
+import {ZERO_HASH} from "../../constants/index.js";
+import {IMetrics} from "../../metrics/index.js";
+import {RegenCaller} from "../regen/index.js";
+import type {BeaconChain} from "../chain.js";
+import {produceBlockBody, BlockType, AssembledBlockType, BlockAttributes} from "./produceBlockBody.js";
 
 export {BlockType, AssembledBlockType};
-export async function assembleBlock<T extends BlockType>(
-  {chain, metrics, logger, type}: AssembleBlockModules & {type: T},
-  {
-    randaoReveal,
-    graffiti,
-    slot,
-  }: {
-    randaoReveal: Bytes96;
-    graffiti: Bytes32;
-    slot: Slot;
-  }
+
+export async function produceBlock<T extends BlockType>(
+  this: BeaconChain,
+  blockType: T,
+  {randaoReveal, graffiti, slot}: BlockAttributes
 ): Promise<AssembledBlockType<T>> {
-  const head = chain.forkChoice.getHead();
-  const state = await chain.regen.getBlockSlotState(head.blockRoot, slot, RegenCaller.produceBlock);
+  const head = this.forkChoice.getHead();
+  const state = await this.regen.getBlockSlotState(head.blockRoot, slot, RegenCaller.produceBlock);
   const parentBlockRoot = fromHexString(head.blockRoot);
   const proposerIndex = state.epochCtx.getBeaconProposer(slot);
   const proposerPubKey = state.epochCtx.index2pubkey[proposerIndex]?.toBytes();
@@ -40,10 +27,10 @@ export async function assembleBlock<T extends BlockType>(
     proposerIndex,
     parentRoot: parentBlockRoot,
     stateRoot: ZERO_HASH,
-    body: await assembleBody<T>({type, chain, logger, metrics}, state, {
+    body: await produceBlockBody.call(this, blockType, state, {
       randaoReveal,
       graffiti,
-      blockSlot: slot,
+      slot,
       parentSlot: slot - 1,
       parentBlockRoot,
       proposerIndex,
@@ -51,7 +38,7 @@ export async function assembleBlock<T extends BlockType>(
     }),
   } as AssembledBlockType<T>;
 
-  block.stateRoot = computeNewStateRoot({metrics}, state, block);
+  block.stateRoot = computeNewStateRoot(this.metrics, state, block);
 
   return block;
 }
@@ -62,7 +49,7 @@ export async function assembleBlock<T extends BlockType>(
  * epoch transition which happen at slot % 32 === 0)
  */
 function computeNewStateRoot(
-  {metrics}: {metrics: IMetrics | null},
+  metrics: IMetrics | null,
   state: CachedBeaconStateAllForks,
   block: allForks.FullOrBlindedBeaconBlock
 ): Root {

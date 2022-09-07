@@ -1,5 +1,5 @@
 import {Options} from "yargs";
-import {defaultLogLevel, LogLevels} from "@lodestar/utils";
+import {logFormats, LogLevel, LogLevels} from "@lodestar/utils";
 import {beaconNodeOptions, paramsOptions, IBeaconNodeArgs} from "../../options/index.js";
 import {defaultLogMaxFiles, ICliCommandOptions, ILogArgs} from "../../util/index.js";
 import {defaultBeaconPaths, IBeaconPaths} from "./paths.js";
@@ -63,33 +63,49 @@ export const beaconExtraOptions: ICliCommandOptions<IBeaconExtraArgs> = {
 export const logOptions: ICliCommandOptions<ILogArgs> = {
   logLevel: {
     choices: LogLevels,
-    description: "Logging verbosity level",
-    defaultDescription: defaultLogLevel,
+    description: "Logging verbosity level for emittings logs to terminal",
+    defaultDescription: LogLevel.info,
     type: "string",
   },
 
   logFileLevel: {
     choices: LogLevels,
-    description: "Logging verbosity level for file transport",
-    defaultDescription: defaultLogLevel,
-    type: "string",
-  },
-
-  logFormatGenesisTime: {
-    hidden: true,
-    description: "Logger format - Use EpochSlot TimestampFormat",
-    type: "number",
-  },
-
-  logFormatId: {
-    hidden: true,
-    description: "Logger format - Prefix module field with a string ID",
+    description: "Logging verbosity level for emittings logs to file",
+    defaultDescription: LogLevel.debug,
     type: "string",
   },
 
   logFileDailyRotate: {
     description: `Daily rotate log files, set to an integer to limit the file count, else defaults to ${defaultLogMaxFiles}`,
     type: "number",
+  },
+
+  logFormatGenesisTime: {
+    hidden: true,
+    description:
+      "Use epoch slot timestamp format, instead or regular timestamp. Must provide genesisTime to compute relative time",
+    type: "number",
+  },
+
+  logPrefix: {
+    hidden: true,
+    description: "Logger prefix module field with a string ID",
+    type: "string",
+  },
+
+  logFormat: {
+    hidden: true,
+    description: "Log format used when emitting logs to the terminal and / or file",
+    choices: logFormats,
+    type: "string",
+  },
+
+  logLevelModule: {
+    hidden: true,
+    description: "Set log level for a specific module by name: 'chain=debug' or 'network=debug,chain=debug'",
+    type: "array",
+    string: true,
+    coerce: (args: string[]) => args.map((item) => item.split(",")).flat(1),
   },
 };
 

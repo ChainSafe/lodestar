@@ -90,6 +90,8 @@ describe.skip("verify+import blocks - range sync perf test", () => {
           config: state.config,
           db,
           logger,
+          // eslint-disable-next-line @typescript-eslint/no-empty-function
+          processShutdownCallback: () => {},
           metrics: null,
           anchorState: state,
           eth1: new Eth1ForBlockProductionDisabled(),

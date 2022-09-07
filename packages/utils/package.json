@@ -44,9 +44,7 @@
     "case": "^1.6.3",
     "chalk": "^4.1.2",
     "js-yaml": "^3.13.1",
-    "winston": "^3.3.3",
-    "winston-daily-rotate-file": "^4.5.5",
-    "winston-transport": "^4.3.0"
+    "winston": "^3.3.3"
   },
   "devDependencies": {
     "@types/js-yaml": "^3.12.1",

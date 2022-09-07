@@ -6,6 +6,8 @@ import {LevelDbController} from "@lodestar/db";
 import {BeaconNode, BeaconDb, createNodeJsLibp2p} from "@lodestar/beacon-node";
 import {createIBeaconConfig} from "@lodestar/config";
 import {ACTIVE_PRESET, PresetName} from "@lodestar/params";
+import {ProcessShutdownCallback} from "@lodestar/validator";
+
 import {IGlobalArgs, parseBeaconNodeArgs} from "../../options/index.js";
 import {onGracefulShutdown, getCliLogger, mkdir, writeFile} from "../../util/index.js";
 import {BeaconNodeOptions, createPeerId, FileENR, getBeaconConfigFromArgs} from "../../config/index.js";
@@ -34,13 +36,20 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
   }, logger.info.bind(logger));
 
   logger.info("Lodestar", {network, version, commit});
+  // Callback for beacon to request forced exit, for e.g. in case of irrecoverable
+  // forkchoice errors
+  const processShutdownCallback: ProcessShutdownCallback = (err) => {
+    logger.error("Process shutdown requested", {}, err);
+    process.kill(process.pid, "SIGINT");
+  };
+
   if (ACTIVE_PRESET === PresetName.minimal) logger.info("ACTIVE_PRESET == minimal preset");
 
   // additional metrics registries
   const metricsRegistries: Registry[] = [];
   const db = new BeaconDb({
     config,
-    controller: new LevelDbController(options.db, {logger: logger.child(options.logger.db)}),
+    controller: new LevelDbController(options.db, {logger: logger.child({module: "db"})}),
   });
 
   await db.start();
@@ -61,6 +70,7 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
       config: beaconConfig,
       db,
       logger,
+      processShutdownCallback,
       libp2p: await createNodeJsLibp2p(peerId, options.network, {peerStoreDir: beaconPaths.peerStoreDir}),
       anchorState,
       wsCheckpoint,

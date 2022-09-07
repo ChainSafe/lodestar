@@ -1,5 +1,5 @@
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
-import {ExecutionStatus} from "@lodestar/fork-choice";
+import {MaybeValidExecutionStatus} from "@lodestar/fork-choice";
 import {allForks, Slot} from "@lodestar/types";
 
 export type ImportBlockOpts = {
@@ -48,9 +48,10 @@ export type FullyVerifiedBlock = {
   parentBlockSlot: Slot;
   proposerBalanceDelta: number;
   /**
-   * If the execution payload couldnt be verified because of EL syncing status, used in optimistic sync or for merge block
+   * If the execution payload couldnt be verified because of EL syncing status,
+   * used in optimistic sync or for merge block
    */
-  executionStatus: ExecutionStatus;
+  executionStatus: MaybeValidExecutionStatus;
   /** Seen timestamp seconds */
   seenTimestampSec: number;
 };

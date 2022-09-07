@@ -113,7 +113,7 @@ describe("chain / lightclient", function () {
       });
     }).then(async (head) => {
       // Initialize lightclient
-      loggerLC.important("Initializing lightclient", {slot: head.slot});
+      loggerLC.info("Initializing lightclient", {slot: head.slot});
 
       const lightclient = await Lightclient.initializeFromCheckpointRoot({
         config: bn.config,
@@ -130,7 +130,7 @@ describe("chain / lightclient", function () {
         lightclient.stop();
       });
 
-      loggerLC.important("Initialized lightclient", {headSlot: lightclient.getHead().slot});
+      loggerLC.info("Initialized lightclient", {headSlot: lightclient.getHead().slot});
       lightclient.start();
 
       return new Promise<void>((resolve, reject) => {
@@ -166,7 +166,7 @@ describe("chain / lightclient", function () {
 
     const promiseTillFinalization = new Promise<void>((resolve) => {
       bn.chain.emitter.on(ChainEvent.finalized, (checkpoint) => {
-        loggerNodeA.important("Node A emitted finalized checkpoint event", {epoch: checkpoint.epoch});
+        loggerNodeA.info("Node A emitted finalized checkpoint event", {epoch: checkpoint.epoch});
         if (checkpoint.epoch >= finalizedEpochToReach) {
           resolve();
         }
