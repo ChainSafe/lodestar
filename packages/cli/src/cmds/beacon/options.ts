@@ -12,6 +12,7 @@ interface IBeaconExtraArgs {
   checkpointSyncUrl?: string;
   checkpointState?: string;
   wssCheckpoint?: string;
+  compactDbOnStartup?: boolean;
 }
 
 export const beaconExtraOptions: ICliCommandOptions<IBeaconExtraArgs> = {
@@ -57,6 +58,12 @@ export const beaconExtraOptions: ICliCommandOptions<IBeaconExtraArgs> = {
       "Start beacon node off a state at the provided weak subjectivity checkpoint, to be supplied in <blockRoot>:<epoch> format. For example, 0x1234:100 will sync and start off from the weakSubjectivity state at checkpoint of epoch 100 with block root 0x1234.",
     type: "string",
     group: "weak subjectivity",
+  },
+
+  compactDbOnStartup: {
+    hidden: true,
+    description: "Compact entire DB on start-up",
+    type: "boolean",
   },
 };
 

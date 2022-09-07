@@ -2,7 +2,7 @@ import path from "node:path";
 import {Registry} from "prom-client";
 import {createKeypairFromPeerId, ENR} from "@chainsafe/discv5";
 import {ErrorAborted} from "@lodestar/utils";
-import {LevelDbController} from "@lodestar/db";
+import {Bucket, LevelDbController} from "@lodestar/db";
 import {BeaconNode, BeaconDb, createNodeJsLibp2p} from "@lodestar/beacon-node";
 import {createIBeaconConfig} from "@lodestar/config";
 import {ACTIVE_PRESET, PresetName} from "@lodestar/params";
@@ -47,12 +47,18 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
 
   // additional metrics registries
   const metricsRegistries: Registry[] = [];
-  const db = new BeaconDb({
-    config,
-    controller: new LevelDbController(options.db, {logger: logger.child({module: "db"})}),
-  });
+  const controller = new LevelDbController(options.db, {logger: logger.child({module: "db"})});
+  const db = new BeaconDb({config, controller});
 
   await db.start();
+
+  if (args.compactDbOnStartup) {
+    for (let i = 0; i < 0xff; i++) {
+      logger.info(`db compactRange on byte ${i}/256 ${Bucket[i] ?? "-"}...`);
+      await controller.compactRange(new Uint8Array([i]), new Uint8Array([i + 1]));
+    }
+    logger.info("db compactRange completed");
+  }
 
   // BeaconNode setup
   try {
