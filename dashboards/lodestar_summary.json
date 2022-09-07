@@ -71,7 +71,7 @@
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
   "id": null,
-  "iteration": 1661342623200,
+  "iteration": 1662553761426,
   "links": [
     {
       "asDropdown": true,
@@ -1273,7 +1273,7 @@
             "mode": "palette-classic"
           },
           "custom": {
-            "axisLabel": "",
+            "axisLabel": "GWei",
             "axisPlacement": "auto",
             "barAlignment": 0,
             "drawStyle": "line",
@@ -1316,30 +1316,7 @@
           },
           "unit": "none"
         },
-        "overrides": [
-          {
-            "__systemRef": "hideSeriesFrom",
-            "matcher": {
-              "id": "byNames",
-              "options": {
-                "mode": "exclude",
-                "names": ["aggregates"],
-                "prefix": "All except:",
-                "readOnly": true
-              }
-            },
-            "properties": [
-              {
-                "id": "custom.hideFrom",
-                "value": {
-                  "legend": false,
-                  "tooltip": false,
-                  "viz": true
-                }
-              }
-            ]
-          }
-        ]
+        "overrides": []
       },
       "gridPos": {
         "h": 5,
@@ -1370,8 +1347,20 @@
           "expr": "avg(\n  delta(validator_monitor_prev_epoch_on_chain_balance_total[32m])\n)",
           "hide": false,
           "interval": "",
-          "legendFormat": "aggregates",
+          "legendFormat": "balance_delta",
           "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "exemplar": false,
+          "expr": "avg(\n  delta(validator_monitor_prev_epoch_on_chain_balance[32m])\n)",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "balance_delta_new",
+          "refId": "B"
         }
       ],
       "title": "balance delta prev epoch",
@@ -2724,7 +2713,7 @@
         "auto_count": 30,
         "auto_min": "10s",
         "current": {
-          "selected": true,
+          "selected": false,
           "text": "6h",
           "value": "6h"
         },
@@ -2824,6 +2813,6 @@
   "timezone": "",
   "title": "Lodestar",
   "uid": "lodestar",
-  "version": 1,
+  "version": 7,
   "weekStart": ""
 }
