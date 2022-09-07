@@ -58,4 +58,7 @@ export interface IDatabaseController<K, V> {
 
   entriesStream(opts?: IFilterOptions<K>): AsyncIterable<IKeyValue<K, V>>;
   entries(opts?: IFilterOptions<K>): Promise<IKeyValue<K, V>[]>;
+
+  approximateSize(start: Uint8Array, end: Uint8Array): Promise<number>;
+  compactRange(start: Uint8Array, end: Uint8Array): Promise<void>;
 }
