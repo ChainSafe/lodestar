@@ -295,7 +295,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
 
     [GossipType.light_client_optimistic_update]: async (lightClientOptimisticUpdate) => {
       // Full node only validates and propagate light_client_optimistic_update - TODO DA Confirm
-      await validateLightClientOptimisticUpdate(chain, lightClientOptimisticUpdate);
+      await validateLightClientOptimisticUpdate(config, chain, lightClientOptimisticUpdate);
       return Promise.resolve();
     },
   };

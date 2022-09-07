@@ -160,6 +160,10 @@ export class LightClientServer {
   private readonly knownSyncCommittee = new MapDef<SyncPeriod, Set<DependantRootHex>>(() => new Set());
   private storedCurrentSyncCommittee = false;
 
+  // TODO DA Revisit
+  latestForwardedFinalitySlot: Slot = 0;
+  latestForwardedOptimisticSlot: Slot = 0;
+
   /**
    * Keep in memory since this data is very transient, not useful after a few slots
    */
