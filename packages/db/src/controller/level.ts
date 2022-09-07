@@ -75,7 +75,7 @@ export class LevelDbController implements IDatabaseController<Uint8Array, Uint8A
       this.metrics?.dbReadItems.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, 1);
       return (await this.db.get(key)) as Uint8Array | null;
     } catch (e) {
-      if ((e as NotFoundError).notFound) {
+      if ((e as LevelDbError).code === "LEVEL_NOT_FOUND") {
         return null;
       }
       throw e;
@@ -184,7 +184,4 @@ export class LevelDbController implements IDatabaseController<Uint8Array, Uint8A
 }
 
 /** From https://www.npmjs.com/package/level */
-type NotFoundError = {
-  notFound: true;
-  type: "NotFoundError";
-};
+type LevelDbError = {code: "LEVEL_NOT_FOUND"};
