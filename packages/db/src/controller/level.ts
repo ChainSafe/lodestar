@@ -100,18 +100,14 @@ export class LevelDbController implements IDatabaseController<Uint8Array, Uint8A
     this.metrics?.dbWriteReq.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, 1);
     this.metrics?.dbWriteItems.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, items.length);
 
-    const batch = this.db.batch();
-    for (const item of items) batch.put(item.key, item.value);
-    return batch.write();
+    return this.db.batch(items.map((item) => ({type: "put", key: item.key, value: item.value})));
   }
 
   batchDelete(keys: Uint8Array[], opts?: DbReqOpts): Promise<void> {
     this.metrics?.dbWriteReq.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, 1);
     this.metrics?.dbWriteItems.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, keys.length);
 
-    const batch = this.db.batch();
-    for (const key of keys) batch.del(key);
-    return batch.write();
+    return this.db.batch(keys.map((key) => ({type: "del", key: key})));
   }
 
   keysStream(opts: IFilterOptions<Uint8Array> = {}): AsyncIterable<Uint8Array> {
