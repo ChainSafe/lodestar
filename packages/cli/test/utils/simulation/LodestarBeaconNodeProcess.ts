@@ -20,6 +20,7 @@ export const LodestarBeaconNodeProcess: BeaconNodeConstructor = class LodestarBe
   readonly address: string;
   readonly port: number;
   readonly restPort: number;
+  readonly id: string;
   api!: Api;
   peerId!: string;
   multiaddrs!: string[];
@@ -39,6 +40,7 @@ export const LodestarBeaconNodeProcess: BeaconNodeConstructor = class LodestarBe
     this.address = "127.0.0.1";
     this.port = 4000 + LodestarBeaconNodeProcess.totalProcessCount;
     this.restPort = 5000 + LodestarBeaconNodeProcess.totalProcessCount;
+    this.id = `NODE-${LodestarBeaconNodeProcess.totalProcessCount}`;
 
     this.rcConfig = ({
       network: "dev",
@@ -63,6 +65,8 @@ export const LodestarBeaconNodeProcess: BeaconNodeConstructor = class LodestarBe
       "params.GENESIS_DELAY": String(this.params.genesisSlotsDelay),
       "params.ALTAIR_FORK_EPOCH": String(this.params.altairEpoch),
       "params.BELLATRIX_FORK_EPOCH": String(this.params.bellatrixEpoch),
+      logFormatId: this.id,
+      logFormatGenesisTime: `${this.params.genesisTime}`,
     } as unknown) as IBeaconArgs & IGlobalArgs;
 
     for (let clientIndex = 0; clientIndex < this.params.validatorClients; clientIndex++) {

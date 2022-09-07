@@ -28,6 +28,7 @@ export interface BeaconNodeProcess {
   ready(): Promise<boolean>;
   start(): Promise<void>;
   stop(): Promise<void>;
+  id: string;
   peerId: string;
   multiaddrs: string[];
   api: Api;
@@ -45,6 +46,7 @@ export interface ValidatorProcess {
   ready(): Promise<boolean>;
   start(): Promise<void>;
   stop(): Promise<void>;
+  id: string;
   secretKeys: SecretKey[];
   keyManagerApi: KeyManagerApi;
 }
