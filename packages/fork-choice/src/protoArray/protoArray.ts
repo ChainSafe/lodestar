@@ -731,22 +731,30 @@ export class ProtoArray {
     if (node.executionStatus === ExecutionStatus.Invalid) {
       return false;
     }
+    const currentEpoch = computeEpochAtSlot(currentSlot);
+    const previousEpoch = currentEpoch - 1;
 
     // If block is from a previous epoch, filter using unrealized justification & finalization information
     // If block is from the current epoch, filter using the head state's justification & finalization information
-    const isFromPrevEpoch = computeEpochAtSlot(node.slot) < computeEpochAtSlot(currentSlot);
+    const isFromPrevEpoch = computeEpochAtSlot(node.slot) < currentEpoch;
     const nodeJustifiedEpoch = isFromPrevEpoch ? node.unrealizedJustifiedEpoch : node.justifiedEpoch;
     const nodeJustifiedRoot = isFromPrevEpoch ? node.unrealizedJustifiedRoot : node.justifiedRoot;
     const nodeFinalizedEpoch = isFromPrevEpoch ? node.unrealizedFinalizedEpoch : node.finalizedEpoch;
     const nodeFinalizedRoot = isFromPrevEpoch ? node.unrealizedFinalizedRoot : node.finalizedRoot;
 
-    const correctJustified =
-      (nodeJustifiedEpoch === this.justifiedEpoch && nodeJustifiedRoot === this.justifiedRoot) ||
-      this.justifiedEpoch === 0;
-    const correctFinalized =
-      (nodeFinalizedEpoch === this.finalizedEpoch && nodeFinalizedRoot === this.finalizedRoot) ||
-      this.finalizedEpoch === 0;
-    return correctJustified && correctFinalized;
+    // If previous epoch is justified, pull up all tips to at least the previous epoch
+    if (this.justifiedEpoch === previousEpoch) {
+      return node.unrealizedJustifiedEpoch >= previousEpoch;
+      // If previous epoch is not justified, pull up only tips from past epochs up to the current epoch
+    } else {
+      const correctJustified =
+        (nodeJustifiedEpoch === this.justifiedEpoch && nodeJustifiedRoot === this.justifiedRoot) ||
+        this.justifiedEpoch === 0;
+      const correctFinalized =
+        (nodeFinalizedEpoch === this.finalizedEpoch && nodeFinalizedRoot === this.finalizedRoot) ||
+        this.finalizedEpoch === 0;
+      return correctJustified && correctFinalized;
+    }
   }
 
   /**
