@@ -25,7 +25,7 @@ const slotCount = endSlot - startSlot;
 const timeoutInfura = 300_000;
 const logger = testLogger();
 
-describe("verify+import blocks - range sync perf test", () => {
+describe.skip("verify+import blocks - range sync perf test", () => {
   setBenchOpts({
     yieldEventLoopAfterEach: true, // So SubTree(s)'s WeakRef can be garbage collected https://github.com/nodejs/node/issues/39902
   });
@@ -83,13 +83,15 @@ describe("verify+import blocks - range sync perf test", () => {
           computeUnrealized: false,
           safeSlotsToImportOptimistically: SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY,
           disableArchiveOnCheckpoint: true,
-          defaultFeeRecipient: defaultValidatorOptions.defaultFeeRecipient,
+          suggestedFeeRecipient: defaultValidatorOptions.suggestedFeeRecipient,
           skipCreateStateCacheIfAvailable: true,
         },
         {
           config: state.config,
           db,
           logger,
+          // eslint-disable-next-line @typescript-eslint/no-empty-function
+          processShutdownCallback: () => {},
           metrics: null,
           anchorState: state,
           eth1: new Eth1ForBlockProductionDisabled(),

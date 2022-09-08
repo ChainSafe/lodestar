@@ -1,3 +1,4 @@
+import {setMaxListeners} from "node:events";
 import {Libp2p} from "libp2p";
 import {PeerId} from "@libp2p/interface-peer-id";
 import {Connection, Stream} from "@libp2p/interface-connection";
@@ -70,6 +71,9 @@ export class ReqResp implements IReqResp {
 
   async start(): Promise<void> {
     this.controller = new AbortController();
+    // We set infinity to prevent MaxListenersExceededWarning which get logged when listeners > 10
+    // Since it is perfectly fine to have listeners > 10
+    setMaxListeners(Infinity, this.controller.signal);
     for (const [method, version, encoding] of protocolsSupported) {
       await this.libp2p.handle(
         formatProtocolId(method, version, encoding),
@@ -146,7 +150,7 @@ export class ReqResp implements IReqResp {
     maxResponses = 1
   ): Promise<T> {
     this.metrics?.reqResp.outgoingRequests.inc({method});
-    const timer = this.metrics?.reqResp.outgoingRequestRoundtripTime.startTimer();
+    const timer = this.metrics?.reqResp.outgoingRequestRoundtripTime.startTimer({method});
 
     try {
       const encoding = this.peersData.getEncodingPreference(peerId.toString()) ?? Encoding.SSZ_SNAPPY;
@@ -167,14 +171,15 @@ export class ReqResp implements IReqResp {
     } catch (e) {
       this.metrics?.reqResp.outgoingErrors.inc({method});
 
-      const peerAction = onOutgoingReqRespError(e as Error, method);
-      if (
-        e instanceof RequestError &&
-        (e.type.code === RequestErrorCode.DIAL_ERROR || e.type.code === RequestErrorCode.DIAL_TIMEOUT)
-      ) {
-        this.metrics?.reqResp.dialErrors.inc();
+      if (e instanceof RequestError) {
+        if (e.type.code === RequestErrorCode.DIAL_ERROR || e.type.code === RequestErrorCode.DIAL_TIMEOUT) {
+          this.metrics?.reqResp.dialErrors.inc();
+        }
+        const peerAction = onOutgoingReqRespError(e, method);
+        if (peerAction !== null) {
+          this.peerRpcScores.applyAction(peerId, peerAction, e.type.code);
+        }
       }
-      if (peerAction !== null) this.peerRpcScores.applyAction(peerId, peerAction);
 
       throw e;
     } finally {
@@ -193,7 +198,7 @@ export class ReqResp implements IReqResp {
       }
 
       this.metrics?.reqResp.incomingRequests.inc({method});
-      const timer = this.metrics?.reqResp.incomingRequestHandlerTime.startTimer();
+      const timer = this.metrics?.reqResp.incomingRequestHandlerTime.startTimer({method});
 
       try {
         await handleRequest(

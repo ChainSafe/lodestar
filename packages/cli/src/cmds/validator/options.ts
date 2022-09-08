@@ -27,6 +27,7 @@ export type IValidatorCliArgs = AccountValidatorArgs &
     graffiti: string;
     afterBlockDelaySlotFraction?: number;
     suggestedFeeRecipient?: string;
+    proposerSettingsFile?: string;
     strictFeeRecipientCheck?: boolean;
     doppelgangerProtectionEnabled?: boolean;
     defaultGasLimit?: number;
@@ -145,10 +146,16 @@ export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
     type: "number",
   },
 
+  proposerSettingsFile: {
+    description:
+      "A yaml file to specify detailed default and per validator pubkey customized proposer configs. PS: This feature and its format is in alpha and subject to change",
+    type: "string",
+  },
+
   suggestedFeeRecipient: {
     description:
       "Specify fee recipient default for collecting the EL block fees and rewards (a hex string representing 20 bytes address: ^0x[a-fA-F0-9]{40}$). It would be possible (WIP) to override this per validator key using config or keymanager API. Only used post merge.",
-    defaultDescription: defaultOptions.defaultFeeRecipient,
+    defaultDescription: defaultOptions.suggestedFeeRecipient,
     type: "string",
   },
 

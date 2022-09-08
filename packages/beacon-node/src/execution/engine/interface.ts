@@ -28,7 +28,7 @@ export enum ExecutePayloadStatus {
 export type ExecutePayloadResponse =
   | {status: ExecutePayloadStatus.SYNCING | ExecutePayloadStatus.ACCEPTED; latestValidHash: null; validationError: null}
   | {status: ExecutePayloadStatus.VALID; latestValidHash: RootHex; validationError: null}
-  | {status: ExecutePayloadStatus.INVALID; latestValidHash: RootHex; validationError: string | null}
+  | {status: ExecutePayloadStatus.INVALID; latestValidHash: RootHex | null; validationError: string | null}
   | {
       status: ExecutePayloadStatus.INVALID_BLOCK_HASH | ExecutePayloadStatus.ELERROR | ExecutePayloadStatus.UNAVAILABLE;
       latestValidHash: null;

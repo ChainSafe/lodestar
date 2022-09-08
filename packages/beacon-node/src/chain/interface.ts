@@ -1,10 +1,10 @@
-import {allForks, UintNum64, Root, phase0, Slot, RootHex, Epoch, ValidatorIndex} from "@lodestar/types";
+import {allForks, bellatrix, UintNum64, Root, phase0, Slot, RootHex, Epoch, ValidatorIndex} from "@lodestar/types";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {IBeaconConfig} from "@lodestar/config";
 import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
 import {ILogger} from "@lodestar/utils";
 
-import {IForkChoice} from "@lodestar/fork-choice";
+import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {IEth1ForBlockProduction} from "../eth1/index.js";
 import {IExecutionEngine, IExecutionBuilder} from "../execution/index.js";
 import {IBeaconClock} from "./clock/interface.js";
@@ -29,6 +29,7 @@ import {BeaconProposerCache, ProposerPreparationData} from "./beaconProposerCach
 import {SeenBlockAttesters} from "./seenCache/seenBlockAttesters.js";
 import {CheckpointBalancesCache} from "./balancesCache.js";
 import {IChainOptions} from "./options.js";
+import {AssembledBlockType, BlockAttributes, BlockType} from "./produceBlock/produceBlockBody.js";
 
 export type Eth2Context = {
   activeValidatorCount: number;
@@ -36,6 +37,7 @@ export type Eth2Context = {
   currentEpoch: number;
 };
 
+export {BlockType, AssembledBlockType};
 export {ProposerPreparationData};
 
 /**
@@ -106,12 +108,17 @@ export interface IBeaconChain {
    */
   getCanonicalBlockAtSlot(slot: Slot): Promise<allForks.SignedBeaconBlock | null>;
 
+  produceBlock(blockAttributes: BlockAttributes): Promise<allForks.BeaconBlock>;
+  produceBlindedBlock(blockAttributes: BlockAttributes): Promise<bellatrix.BlindedBeaconBlock>;
+
   /** Process a block until complete */
   processBlock(block: allForks.SignedBeaconBlock, opts?: ImportBlockOpts): Promise<void>;
   /** Process a chain of blocks until complete */
   processChainSegment(blocks: allForks.SignedBeaconBlock[], opts?: ImportBlockOpts): Promise<void>;
 
   getStatus(): phase0.Status;
+
+  recomputeForkChoiceHead(): ProtoBlock;
 
   waitForBlockOfAttestation(slot: Slot, root: RootHex): Promise<boolean>;
 
@@ -120,6 +127,7 @@ export interface IBeaconChain {
   persistInvalidSszValue<T>(type: Type<T>, sszObject: T | Uint8Array, suffix?: string): void;
   /** Persist bad items to persistInvalidSszObjectsDir dir, for example invalid state, attestations etc. */
   persistInvalidSszView(view: TreeView<CompositeTypeAny>, suffix?: string): void;
+  updateBuilderStatus(clockSlot: Slot): void;
 }
 
 export type SSZObjectType =

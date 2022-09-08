@@ -10,12 +10,6 @@ import {Metrics} from "../metrics.js";
 import {ValidatorStore} from "./validatorStore.js";
 import {BlockDutiesService, GENESIS_SLOT} from "./blockDuties.js";
 
-type BlockProposingServiceOpts = {
-  graffiti?: string;
-  strictFeeRecipientCheck?: boolean;
-  builder: {enabled?: boolean};
-};
-
 /**
  * Service that sets up and handles validator block proposal duties.
  */
@@ -28,8 +22,7 @@ export class BlockProposingService {
     private readonly api: Api,
     private readonly clock: IClock,
     private readonly validatorStore: ValidatorStore,
-    private readonly metrics: Metrics | null,
-    private readonly opts: BlockProposingServiceOpts
+    private readonly metrics: Metrics | null
   ) {
     this.dutiesService = new BlockDutiesService(
       logger,
@@ -72,19 +65,25 @@ export class BlockProposingService {
     // Wrap with try catch here to re-use `logCtx`
     try {
       const randaoReveal = await this.validatorStore.signRandao(pubkey, slot);
-      const graffiti = this.opts.graffiti || "";
+      const graffiti = this.validatorStore.getGraffiti(pubkeyHex);
+
       const debugLogCtx = {...logCtx, validator: pubkeyHex};
 
       this.logger.debug("Producing block", debugLogCtx);
       this.metrics?.proposerStepCallProduceBlock.observe(this.clock.secFromSlot(slot));
 
+      const strictFeeRecipientCheck = this.validatorStore.strictFeeRecipientCheck(pubkeyHex);
+      const isBuilderEnabled = this.validatorStore.isBuilderEnabled(pubkeyHex);
       const expectedFeeRecipient = this.validatorStore.getFeeRecipient(pubkeyHex);
-      const block = await this.produceBlockWrapper(slot, randaoReveal, graffiti, expectedFeeRecipient).catch(
-        (e: Error) => {
-          this.metrics?.blockProposingErrors.inc({error: "produce"});
-          throw extendError(e, "Failed to produce block");
-        }
-      );
+
+      const block = await this.produceBlockWrapper(slot, randaoReveal, graffiti, {
+        expectedFeeRecipient,
+        strictFeeRecipientCheck,
+        isBuilderEnabled,
+      }).catch((e: Error) => {
+        this.metrics?.blockProposingErrors.inc({error: "produce"});
+        throw extendError(e, "Failed to produce block");
+      });
 
       this.logger.debug("Produced block", {...debugLogCtx, ...block.debugLogCtx});
       this.metrics?.blocksProduced.inc();
@@ -114,9 +113,13 @@ export class BlockProposingService {
     slot: Slot,
     randaoReveal: BLSSignature,
     graffiti: string,
-    expectedFeeRecipient: string
+    {
+      expectedFeeRecipient,
+      strictFeeRecipientCheck,
+      isBuilderEnabled,
+    }: {expectedFeeRecipient: string; strictFeeRecipientCheck: boolean; isBuilderEnabled: boolean}
   ): Promise<{data: allForks.FullOrBlindedBeaconBlock} & {debugLogCtx: Record<string, string>}> => {
-    const blindedBlockPromise = this.opts.builder.enabled
+    const blindedBlockPromise = isBuilderEnabled
       ? this.api.validator.produceBlindedBlock(slot, randaoReveal, graffiti).catch((e: Error) => {
           this.logger.error("Failed to produce builder block", {}, e as Error);
           return null;
@@ -157,7 +160,7 @@ export class BlockProposingService {
         // https://discord.com/channels/595666850260713488/892088344438255616/978374892678426695
         //
         // For now providing a strick check flag to enable disable this
-        if (feeRecipient !== expectedFeeRecipient && this.opts.strictFeeRecipientCheck) {
+        if (feeRecipient !== expectedFeeRecipient && strictFeeRecipientCheck) {
           throw Error(`Invalid feeRecipient=${feeRecipient}, expected=${expectedFeeRecipient}`);
         }
         Object.assign(debugLogCtx, {feeRecipient});

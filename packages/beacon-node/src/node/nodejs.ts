@@ -1,3 +1,4 @@
+import {setMaxListeners} from "node:events";
 import {Libp2p} from "libp2p";
 import {Registry} from "prom-client";
 
@@ -6,6 +7,7 @@ import {phase0} from "@lodestar/types";
 import {ILogger} from "@lodestar/utils";
 import {Api} from "@lodestar/api";
 import {BeaconStateAllForks} from "@lodestar/state-transition";
+import {ProcessShutdownCallback} from "@lodestar/validator";
 
 import {IBeaconDb} from "../db/index.js";
 import {INetwork, Network, getReqRespHandlers} from "../network/index.js";
@@ -42,6 +44,7 @@ export interface IBeaconNodeInitModules {
   config: IBeaconConfig;
   db: IBeaconDb;
   logger: ILogger;
+  processShutdownCallback: ProcessShutdownCallback;
   libp2p: Libp2p;
   anchorState: BeaconStateAllForks;
   wsCheckpoint?: phase0.Checkpoint;
@@ -52,6 +55,19 @@ export enum BeaconNodeStatus {
   started = "started",
   closing = "closing",
   closed = "closed",
+}
+
+enum LoggerModule {
+  api = "api",
+  backfill = "backfill",
+  chain = "chain",
+  eth1 = "eth1",
+  metrics = "metrics",
+  network = "network",
+  /** validator monitor */
+  vmon = "vmon",
+  rest = "rest",
+  sync = "sync",
 }
 
 /**
@@ -113,12 +129,16 @@ export class BeaconNode {
     config,
     db,
     logger,
+    processShutdownCallback,
     libp2p,
     anchorState,
     wsCheckpoint,
     metricsRegistries = [],
   }: IBeaconNodeInitModules): Promise<T> {
     const controller = new AbortController();
+    // We set infinity to prevent MaxListenersExceededWarning which get logged when listeners > 10
+    // Since it is perfectly fine to have listeners > 10
+    setMaxListeners(Infinity, controller.signal);
     const signal = controller.signal;
 
     // start db if not already started
@@ -126,7 +146,13 @@ export class BeaconNode {
 
     let metrics = null;
     if (opts.metrics.enabled) {
-      metrics = createMetrics(opts.metrics, config, anchorState, logger.child({module: "VMON"}), metricsRegistries);
+      metrics = createMetrics(
+        opts.metrics,
+        config,
+        anchorState,
+        logger.child({module: LoggerModule.vmon}),
+        metricsRegistries
+      );
       initBeaconMetrics(metrics, anchorState);
       // Since the db is instantiated before this, metrics must be injected manually afterwards
       db.setMetrics(metrics.db);
@@ -136,14 +162,15 @@ export class BeaconNode {
     const chain = new BeaconChain(opts.chain, {
       config,
       db,
-      logger: logger.child(opts.logger.chain),
+      logger: logger.child({module: LoggerModule.chain}),
+      processShutdownCallback,
       metrics,
       anchorState,
       eth1: initializeEth1ForBlockProduction(opts.eth1, {
         config,
         db,
         metrics,
-        logger: logger.child(opts.logger.eth1),
+        logger: logger.child({module: LoggerModule.eth1}),
         signal,
       }),
       executionEngine: initializeExecutionEngine(opts.executionEngine, {metrics, signal}),
@@ -158,7 +185,7 @@ export class BeaconNode {
     const network = new Network(opts.network, {
       config,
       libp2p,
-      logger: logger.child(opts.logger.network),
+      logger: logger.child({module: LoggerModule.network}),
       metrics,
       chain,
       reqRespHandlers: getReqRespHandlers({db, chain}),
@@ -171,7 +198,7 @@ export class BeaconNode {
       metrics,
       network,
       wsCheckpoint,
-      logger: logger.child(opts.logger.sync),
+      logger: logger.child({module: LoggerModule.sync}),
     });
 
     const backfillSync =
@@ -184,14 +211,14 @@ export class BeaconNode {
             network,
             wsCheckpoint,
             anchorState,
-            logger: logger.child(opts.logger.backfill),
+            logger: logger.child({module: LoggerModule.backfill}),
             signal,
           })
         : null;
 
     const api = getApi(opts.api, {
       config,
-      logger: logger.child(opts.logger.api),
+      logger: logger.child({module: LoggerModule.api}),
       db,
       sync,
       network,
@@ -200,7 +227,10 @@ export class BeaconNode {
     });
 
     const metricsServer = metrics
-      ? new HttpMetricsServer(opts.metrics, {register: metrics.register, logger: logger.child(opts.logger.metrics)})
+      ? new HttpMetricsServer(opts.metrics, {
+          register: metrics.register,
+          logger: logger.child({module: LoggerModule.metrics}),
+        })
       : undefined;
     if (metricsServer) {
       await metricsServer.start();
@@ -208,7 +238,7 @@ export class BeaconNode {
 
     const restApi = new BeaconRestApiServer(opts.api.rest, {
       config,
-      logger: logger.child(opts.logger.api),
+      logger: logger.child({module: LoggerModule.rest}),
       api,
       metrics: metrics ? metrics.apiRest : null,
     });

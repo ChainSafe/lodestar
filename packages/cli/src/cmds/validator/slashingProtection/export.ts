@@ -39,18 +39,23 @@ export const exportCmd: ICliCommand<
   },
 
   handler: async (args) => {
-    const beaconPaths = getBeaconPaths(args);
-    const config = getBeaconConfigFromArgs(args);
+    const {config, network} = getBeaconConfigFromArgs(args);
+    const beaconPaths = getBeaconPaths(args, network);
     const logger = getCliLogger(args, beaconPaths, config);
 
-    const {validatorsDbDir: dbPath} = getValidatorPaths(args);
+    const {validatorsDbDir: dbPath} = getValidatorPaths(args, network);
 
     // TODO: Allow format version and pubkeys to be customized with CLI args
     const formatVersion: InterchangeFormatVersion = {version: "4", format: "complete"};
     logger.info("Exporting the slashing protection logs", {...formatVersion, dbPath});
 
-    const genesisValidatorsRoot = await getGenesisValidatorsRoot(args);
-    const slashingProtection = getSlashingProtection(args);
+    const {slashingProtection, metadata} = getSlashingProtection(args, network);
+
+    // When exporting validator DB should already have genesisValidatorsRoot persisted.
+    // For legacy node and general fallback, fetch from:
+    // - known genesis data from existing network
+    // - else fetch from beacon node
+    const genesisValidatorsRoot = (await metadata.getGenesisValidatorsRoot()) ?? (await getGenesisValidatorsRoot(args));
 
     logger.verbose("Fetching the pubkeys from the slashingProtection db");
     const pubkeys = await slashingProtection.listPubkeys();

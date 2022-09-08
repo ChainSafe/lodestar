@@ -1,11 +1,12 @@
+import {setMaxListeners} from "node:events";
 import {LevelDbController} from "@lodestar/db";
-import {ProcessShutdownCallback, SlashingProtection, Validator, defaultOptions} from "@lodestar/validator";
+import {ProcessShutdownCallback, SlashingProtection, Validator, ValidatorProposerConfig} from "@lodestar/validator";
 import {getMetrics, MetricsRegister} from "@lodestar/validator";
 import {RegistryMetricCreator, collectNodeJSMetrics, HttpMetricsServer} from "@lodestar/beacon-node";
 import {getBeaconConfigFromArgs} from "../../config/index.js";
 import {IGlobalArgs} from "../../options/index.js";
 import {YargsError, getDefaultGraffiti, mkdir, getCliLogger} from "../../util/index.js";
-import {onGracefulShutdown, parseFeeRecipient} from "../../util/index.js";
+import {onGracefulShutdown, parseFeeRecipient, parseProposerConfig} from "../../util/index.js";
 import {getVersionData} from "../../util/version.js";
 import {getBeaconPaths} from "../beacon/paths.js";
 import {getAccountPaths, getValidatorPaths} from "./paths.js";
@@ -20,18 +21,18 @@ import {KeymanagerRestApiServer} from "./keymanager/server.js";
  * Runs a validator client.
  */
 export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): Promise<void> {
-  const graffiti = args.graffiti || getDefaultGraffiti();
-  const suggestedFeeRecipient = parseFeeRecipient(args.suggestedFeeRecipient ?? defaultOptions.defaultFeeRecipient);
-  const doppelgangerProtectionEnabled = args.doppelgangerProtectionEnabled;
+  const {config, network} = getBeaconConfigFromArgs(args);
 
-  const validatorPaths = getValidatorPaths(args);
-  const beaconPaths = getBeaconPaths(args);
-  const config = getBeaconConfigFromArgs(args);
+  const doppelgangerProtectionEnabled = args.doppelgangerProtectionEnabled;
+  const valProposerConfig = getProposerConfigFromArgs(args);
+
+  const beaconPaths = getBeaconPaths(args, network);
+  const validatorPaths = getValidatorPaths(args, network);
 
   const logger = getCliLogger(args, beaconPaths, config);
 
   const {version, commit} = getVersionData();
-  logger.info("Lodestar", {network: args.network, version, commit});
+  logger.info("Lodestar", {network, version, commit});
 
   const dbPath = validatorPaths.validatorsDbDir;
   mkdir(dbPath);
@@ -53,7 +54,7 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
    *
    * Note: local signers are already locked once returned from this function.
    */
-  const signers = await getSignersFromArgs(args);
+  const signers = await getSignersFromArgs(args, network);
 
   // Ensure the validator has at least one key
   if (signers.length === 0) {
@@ -66,9 +67,15 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
 
   logSigners(logger, signers);
 
-  // This AbortController interrupts the sleep() calls when waiting for genesis
-  const controller = new AbortController();
-  onGracefulShutdownCbs.push(async () => controller.abort());
+  // This AbortController interrupts various validators ops: genesis req, clients call, clock etc
+  const abortController = new AbortController();
+
+  // We set infinity for abort controller used for validator operations,
+  // to prevent MaxListenersExceededWarning which get logged when listeners > 10
+  // Since it is perfectly fine to have listeners > 10
+  setMaxListeners(Infinity, abortController.signal);
+
+  onGracefulShutdownCbs.push(async () => abortController.abort());
 
   const dbOps = {
     config,
@@ -80,8 +87,7 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
   // Send version and network data for static registries
 
   const register = args["metrics"] ? new RegistryMetricCreator() : null;
-  const metrics =
-    register && getMetrics((register as unknown) as MetricsRegister, {version, commit, network: args.network});
+  const metrics = register && getMetrics((register as unknown) as MetricsRegister, {version, commit, network});
 
   // Start metrics server if metrics are enabled.
   // Collect NodeJS metrics defined in the Lodestar repo
@@ -97,8 +103,6 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
     await metricsServer.start();
   }
 
-  const builder = args["builder"] ? {enabled: true} : {};
-
   // This promise resolves once genesis is available.
   // It will wait for genesis, so this promise can be potentially very long
 
@@ -110,13 +114,11 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
       logger,
       processShutdownCallback,
       signers,
-      graffiti,
+      abortController,
       doppelgangerProtectionEnabled,
       afterBlockDelaySlotFraction: args.afterBlockDelaySlotFraction,
-      defaultFeeRecipient: suggestedFeeRecipient,
-      builder,
+      valProposerConfig,
     },
-    controller.signal,
     metrics
   );
 
@@ -125,7 +127,7 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
   // Start keymanager API backend
   // Only if keymanagerEnabled flag is set to true
   if (args["keymanager"]) {
-    const accountPaths = getAccountPaths(args);
+    const accountPaths = getAccountPaths(args, network);
     const keymanagerApi = new KeymanagerApi(validator, new PersistedKeysBackend(accountPaths));
 
     const keymanagerServer = new KeymanagerRestApiServer(
@@ -141,4 +143,21 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
     onGracefulShutdownCbs.push(() => keymanagerServer.close());
     await keymanagerServer.listen();
   }
+}
+
+function getProposerConfigFromArgs(args: IValidatorCliArgs): ValidatorProposerConfig {
+  const defaultConfig = {
+    graffiti: args.graffiti || getDefaultGraffiti(),
+    strictFeeRecipientCheck: args.strictFeeRecipientCheck,
+    feeRecipient: args.suggestedFeeRecipient ? parseFeeRecipient(args.suggestedFeeRecipient) : undefined,
+    builder: {enabled: args.builder, gasLimit: args.defaultGasLimit},
+  };
+  let valProposerConfig;
+  if (args.proposerSettingsFile) {
+    // parseProposerConfig will override the defaults with the arg created defaultConfig
+    valProposerConfig = parseProposerConfig(args.proposerSettingsFile, defaultConfig);
+  } else {
+    valProposerConfig = {defaultConfig} as ValidatorProposerConfig;
+  }
+  return valProposerConfig;
 }

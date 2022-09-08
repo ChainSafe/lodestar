@@ -7,22 +7,16 @@ import {
   getBlockRootAtSlot,
   computeEpochAtSlot,
 } from "@lodestar/state-transition";
-import {
-  GENESIS_SLOT,
-  SLOTS_PER_EPOCH,
-  SLOTS_PER_HISTORICAL_ROOT,
-  SYNC_COMMITTEE_SUBNET_SIZE,
-  ForkName,
-} from "@lodestar/params";
-import {Root, Slot, ValidatorIndex, ssz, Epoch, BLSSignature} from "@lodestar/types";
+import {GENESIS_SLOT, SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT, SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
+import {Root, Slot, ValidatorIndex, ssz, Epoch} from "@lodestar/types";
 import {ExecutionStatus} from "@lodestar/fork-choice";
 
 import {fromHexString} from "@chainsafe/ssz";
-import {assembleBlock, BlockType, AssembledBlockType} from "../../../chain/factory/block/index.js";
 import {AttestationError, AttestationErrorCode, GossipAction, SyncCommitteeError} from "../../../chain/errors/index.js";
 import {validateGossipAggregateAndProof} from "../../../chain/validation/index.js";
 import {ZERO_HASH} from "../../../constants/index.js";
 import {SyncState} from "../../../sync/index.js";
+import {isOptimsticBlock} from "../../../util/forkChoice.js";
 import {toGraffitiBuffer} from "../../../util/graffiti.js";
 import {ApiError, NodeIsSyncing} from "../errors.js";
 import {validateSyncCommitteeGossipContributionAndProof} from "../../../chain/validation/syncCommitteeContributionAndProof.js";
@@ -180,7 +174,37 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
     randaoReveal,
     graffiti
   ) {
-    return produceBlockWrapper(BlockType.Blinded, slot, randaoReveal, graffiti);
+    let timer;
+    metrics?.blockProductionRequests.inc();
+    try {
+      notWhileSyncing();
+      await waitForSlot(slot); // Must never request for a future slot > currentSlot
+
+      // Error early for builder if builder flow not active
+      if (!chain.executionBuilder) {
+        throw Error("Execution builder not set");
+      }
+      if (!chain.executionBuilder.status) {
+        throw Error("Execution builder disabled");
+      }
+
+      // Process the queued attestations in the forkchoice for correct head estimation
+      // forkChoice.updateTime() might have already been called by the onSlot clock
+      // handler, in which case this should just return.
+      chain.forkChoice.updateTime(slot);
+      chain.forkChoice.updateHead();
+
+      timer = metrics?.blockProductionTime.startTimer();
+      const block = await chain.produceBlindedBlock({
+        slot,
+        randaoReveal,
+        graffiti: toGraffitiBuffer(graffiti || ""),
+      });
+      metrics?.blockProductionSuccess.inc();
+      return {data: block, version: config.getForkName(block.slot)};
+    } finally {
+      if (timer) timer();
+    }
   };
 
   const produceBlock: routes.validator.Api["produceBlockV2"] = async function produceBlock(
@@ -188,15 +212,6 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
     randaoReveal,
     graffiti
   ) {
-    return produceBlockWrapper(BlockType.Full, slot, randaoReveal, graffiti);
-  };
-
-  async function produceBlockWrapper<T extends BlockType>(
-    type: T,
-    slot: Slot,
-    randaoReveal: BLSSignature,
-    graffiti: string
-  ): Promise<{data: AssembledBlockType<T>; version: ForkName}> {
     let timer;
     metrics?.blockProductionRequests.inc();
     try {
@@ -207,23 +222,20 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
       // forkChoice.updateTime() might have already been called by the onSlot clock
       // handler, in which case this should just return.
       chain.forkChoice.updateTime(slot);
-      chain.forkChoice.updateHead();
+      chain.recomputeForkChoiceHead();
 
       timer = metrics?.blockProductionTime.startTimer();
-      const block = await assembleBlock(
-        {type, chain, metrics, logger},
-        {
-          slot,
-          randaoReveal,
-          graffiti: toGraffitiBuffer(graffiti || ""),
-        }
-      );
+      const block = await chain.produceBlock({
+        slot,
+        randaoReveal,
+        graffiti: toGraffitiBuffer(graffiti || ""),
+      });
       metrics?.blockProductionSuccess.inc();
       return {data: block, version: config.getForkName(block.slot)};
     } finally {
       if (timer) timer();
     }
-  }
+  };
 
   return {
     produceBlock: produceBlock,
@@ -308,6 +320,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
       const startSlot = computeStartSlotAtEpoch(epoch);
       await waitForSlot(startSlot); // Must never request for a future slot > currentSlot
 
+      const head = chain.forkChoice.getHead();
       const state = await chain.getHeadStateAtCurrentEpoch();
 
       const stateEpoch = state.epochCtx.epoch;
@@ -341,6 +354,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
       return {
         data: duties,
         dependentRoot,
+        executionOptimistic: isOptimsticBlock(head),
       };
     },
 
@@ -360,6 +374,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
         throw new ApiError(400, "Cannot get duties for epoch more than one ahead");
       }
 
+      const head = chain.forkChoice.getHead();
       const state = await chain.getHeadStateAtCurrentEpoch();
 
       // TODO: Determine what the current epoch would be if we fast-forward our system clock by
@@ -389,6 +404,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
       return {
         data: duties,
         dependentRoot,
+        executionOptimistic: isOptimsticBlock(head),
       };
     },
 
@@ -418,6 +434,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
       // sync committee duties have a lookahead of 1 day. Assuming the validator only requests duties for upcomming
       // epochs, the head state will very likely have the duties available for the requested epoch.
       // Note: does not support requesting past duties
+      const head = chain.forkChoice.getHead();
       const state = chain.getHeadState();
 
       // Check that all validatorIndex belong to the state before calling getCommitteeAssignments()
@@ -441,6 +458,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
 
       return {
         data: duties,
+        executionOptimistic: isOptimsticBlock(head),
       };
     },
 

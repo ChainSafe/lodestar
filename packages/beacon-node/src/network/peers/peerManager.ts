@@ -615,13 +615,11 @@ export class PeerManager {
 
     const peersByDirection = new Map<string, number>();
     const peersByClient = new Map<string, number>();
-    const longLivedAttnets: number[] = [];
-    const scores: number[] = [];
-    const connSecs: number[] = [];
     const now = Date.now();
 
     // peerLongLivedAttnets metric is a count
     metrics.peerLongLivedAttnets.reset();
+    metrics.peerConnectionLength.reset();
 
     for (const connections of getConnectionsMap(this.libp2p.connectionManager).values()) {
       const openCnx = connections.find((cnx) => cnx.stat.status === "OPEN");
@@ -634,10 +632,11 @@ export class PeerManager {
         peersByClient.set(client, 1 + (peersByClient.get(client) ?? 0));
 
         const attnets = peerData?.metadata?.attnets;
-        longLivedAttnets.push(attnets ? attnets.getTrueBitIndexes().length : 0);
 
-        scores.push(this.peerRpcScores.getScore(peerId));
-        connSecs.push(Math.floor((now - openCnx.stat.timeline.open) / 1000));
+        // TODO: Consider optimizing by doing observe in batch
+        metrics.peerLongLivedAttnets.observe(attnets ? attnets.getTrueBitIndexes().length : 0);
+        metrics.peerScore.observe(this.peerRpcScores.getScore(peerId));
+        metrics.peerConnectionLength.observe((now - openCnx.stat.timeline.open) / 1000);
         total++;
       }
     }
@@ -659,9 +658,5 @@ export class PeerManager {
 
     metrics.peers.set(total);
     metrics.peersSync.set(syncPeers);
-    metrics.peerScore.set(scores);
-    metrics.peerConnectionLength.set(connSecs);
-    // TODO: Optimize doing observe in batch
-    for (const count of longLivedAttnets) metrics.peerLongLivedAttnets.observe(count);
   }
 }

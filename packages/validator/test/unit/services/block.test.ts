@@ -4,17 +4,13 @@ import bls from "@chainsafe/bls";
 import {toHexString} from "@chainsafe/ssz";
 import {createIChainForkConfig} from "@lodestar/config";
 import {config as mainnetConfig} from "@lodestar/config/default";
-import {Root} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
-import {routes} from "@lodestar/api";
 import {generateEmptySignedBlock} from "../../../../beacon-node/test/utils/block.js";
 import {BlockProposingService} from "../../../src/services/block.js";
 import {ValidatorStore} from "../../../src/services/validatorStore.js";
 import {getApiClientStub} from "../../utils/apiStub.js";
 import {loggerVc} from "../../utils/logger.js";
 import {ClockMock} from "../../utils/clock.js";
-
-type ProposerDutiesRes = {dependentRoot: Root; data: routes.validator.ProposerDuty[]};
 
 describe("BlockDutiesService", function () {
   const sandbox = sinon.createSandbox();
@@ -40,14 +36,14 @@ describe("BlockDutiesService", function () {
   it("Should produce, sign, and publish a block", async function () {
     // Reply with some duties
     const slot = 0; // genesisTime is right now, so test with slot = currentSlot
-    const duties: ProposerDutiesRes = {
+    api.validator.getProposerDuties.resolves({
       dependentRoot: ZERO_HASH,
+      executionOptimistic: false,
       data: [{slot: slot, validatorIndex: 0, pubkey: pubkeys[0]}],
-    };
-    api.validator.getProposerDuties.resolves(duties);
+    });
 
     const clock = new ClockMock();
-    const blockService = new BlockProposingService(config, loggerVc, api, clock, validatorStore, null, {builder: {}});
+    const blockService = new BlockProposingService(config, loggerVc, api, clock, validatorStore, null);
 
     const signedBlock = generateEmptySignedBlock();
     validatorStore.signRandao.resolves(signedBlock.message.body.randaoReveal);

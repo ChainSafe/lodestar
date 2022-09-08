@@ -1,26 +1,36 @@
 import {Root} from "@lodestar/types";
 import {getClient} from "@lodestar/api";
-import {SlashingProtection} from "@lodestar/validator";
-import {LevelDbController} from "@lodestar/db";
-import {YargsError} from "../../../util/index.js";
+import {fromHex, LogLevel} from "@lodestar/utils";
+import {genesisData, NetworkName} from "@lodestar/config/networks";
+import {SlashingProtection, MetaDataRepository} from "@lodestar/validator";
+import {IDatabaseApiOptions, LevelDbController} from "@lodestar/db";
+import {getCliLogger, YargsError} from "../../../util/index.js";
 import {IGlobalArgs} from "../../../options/index.js";
 import {getValidatorPaths} from "../paths.js";
 import {getBeaconConfigFromArgs} from "../../../config/index.js";
-import {errorLogger} from "../../../util/logger.js";
 import {ISlashingProtectionArgs} from "./options.js";
 
 /**
  * Returns a new SlashingProtection object instance based on global args.
  */
-export function getSlashingProtection(args: IGlobalArgs): SlashingProtection {
-  const validatorPaths = getValidatorPaths(args);
+export function getSlashingProtection(
+  args: IGlobalArgs,
+  network: string
+): {slashingProtection: SlashingProtection; metadata: MetaDataRepository} {
+  const validatorPaths = getValidatorPaths(args, network);
   const dbPath = validatorPaths.validatorsDbDir;
-  const config = getBeaconConfigFromArgs(args);
-  const logger = errorLogger();
-  return new SlashingProtection({
+  const {config} = getBeaconConfigFromArgs(args);
+  const logger = getCliLogger({logLevel: LogLevel.warn}, {}, config);
+
+  const dbOpts: IDatabaseApiOptions = {
     config,
     controller: new LevelDbController({name: dbPath}, {logger}),
-  });
+  };
+
+  return {
+    slashingProtection: new SlashingProtection(dbOpts),
+    metadata: new MetaDataRepository(dbOpts),
+  };
 }
 
 /**
@@ -29,7 +39,12 @@ export function getSlashingProtection(args: IGlobalArgs): SlashingProtection {
 export async function getGenesisValidatorsRoot(args: IGlobalArgs & ISlashingProtectionArgs): Promise<Root> {
   const server = args.server;
 
-  const config = getBeaconConfigFromArgs(args);
+  const networkGenesis = genesisData[args.network as NetworkName];
+  if (networkGenesis !== undefined) {
+    return fromHex(networkGenesis.genesisValidatorsRoot);
+  }
+
+  const {config} = getBeaconConfigFromArgs(args);
   const api = getClient({baseUrl: server}, {config});
   const genesis = await api.beacon.getGenesis();
 

@@ -71,8 +71,8 @@ describe("AttestationService", function () {
     ];
 
     // Return empty replies to duties service
-    api.beacon.getStateValidators.resolves({data: []});
-    api.validator.getAttesterDuties.resolves({dependentRoot: ZERO_HASH, data: []});
+    api.beacon.getStateValidators.resolves({executionOptimistic: false, data: []});
+    api.validator.getAttesterDuties.resolves({dependentRoot: ZERO_HASH, executionOptimistic: false, data: []});
 
     // Mock duties service to return some duties directly
     attestationService["dutiesService"].getDutiesAtSlot = sinon.stub().returns(duties);

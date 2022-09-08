@@ -74,7 +74,7 @@ describe("sync / unknown block sync", function () {
     afterEachCallbacks.push(() => bn.close());
 
     await waitForEvent<phase0.Checkpoint>(bn.chain.emitter, ChainEvent.checkpoint, 240000);
-    loggerNodeA.important("Node A emitted checkpoint event");
+    loggerNodeA.info("Node A emitted checkpoint event");
 
     const bn2 = await getDevBeaconNode({
       params: testParams,

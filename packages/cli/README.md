@@ -13,7 +13,6 @@ Command line tool for Lodestar
 
 - Follow the [installation guide](https://chainsafe.github.io/lodestar/) to install Lodestar.
 - Quickly try out the whole stack by [starting a local testnet](https://chainsafe.github.io/lodestar/usage).
-- View the [typedoc code docs](https://chainsafe.github.io/lodestar/packages).
 
 ### Lodestar
 

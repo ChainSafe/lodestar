@@ -129,6 +129,26 @@ export function ContainerData<T>(dataType: TypeJson<T>): TypeJson<{data: T}> {
 }
 
 /**
+ * SSZ factory helper + typed to return responses of type `{data: T; executionOptimistic: boolean}`
+ */
+export function ContainerDataExecutionOptimistic<T>(
+  dataType: TypeJson<T>
+): TypeJson<{data: T; executionOptimistic: boolean}> {
+  return {
+    toJson: ({data, executionOptimistic}) => ({
+      data: dataType.toJson(data),
+      execution_optimistic: executionOptimistic,
+    }),
+    fromJson: ({data, execution_optimistic}: {data: unknown; execution_optimistic: boolean}) => {
+      return {
+        data: dataType.fromJson(data),
+        executionOptimistic: execution_optimistic,
+      };
+    },
+  };
+}
+
+/**
  * SSZ factory helper + typed to return responses of type
  * ```
  * data: T
@@ -142,6 +162,9 @@ export function WithVersion<T>(getType: (fork: ForkName) => TypeJson<T>): TypeJs
       version,
     }),
     fromJson: ({data, version}: {data: unknown; version: string}) => {
+      // Teku returns fork as UPPERCASE
+      version = version.toLowerCase();
+
       // Un-safe external data, validate version is known ForkName value
       if (!ForkName[version as ForkName]) throw Error(`Invalid version ${version}`);
 
@@ -150,6 +173,24 @@ export function WithVersion<T>(getType: (fork: ForkName) => TypeJson<T>): TypeJs
         version: version as ForkName,
       };
     },
+  };
+}
+
+/**
+ * SSZ factory helper to wrap an existing type with `{executionOptimistic: boolean}`
+ */
+export function WithExecutionOptimistic<T extends {data: unknown}>(
+  type: TypeJson<T>
+): TypeJson<T & {executionOptimistic: boolean}> {
+  return {
+    toJson: ({executionOptimistic, ...data}) => ({
+      ...(type.toJson((data as unknown) as T) as Record<string, unknown>),
+      execution_optimistic: executionOptimistic,
+    }),
+    fromJson: ({execution_optimistic, ...data}: T & {execution_optimistic: boolean}) => ({
+      ...type.fromJson(data),
+      executionOptimistic: execution_optimistic,
+    }),
   };
 }
 

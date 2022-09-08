@@ -1,6 +1,6 @@
 import {PeerId} from "@libp2p/interface-peer-id";
 import {peerIdFromBytes} from "@libp2p/peer-id";
-import {createFromPrivKey, createFromPubKey, createSecp256k1PeerId} from "@libp2p/peer-id-factory";
+import {createFromPrivKey, createFromPubKey} from "@libp2p/peer-id-factory";
 import {unmarshalPrivateKey, unmarshalPublicKey} from "@libp2p/crypto/keys";
 import {fromString as uint8ArrayFromString} from "uint8arrays/from-string";
 import {toString as uint8ArrayToString} from "uint8arrays/to-string";
@@ -50,8 +50,4 @@ export function writePeerId(filepath: string, peerId: PeerId): void {
 
 export async function readPeerId(filepath: string): Promise<PeerId> {
   return await createFromJSON(readFile(filepath));
-}
-
-export async function initPeerId(filepath: string): Promise<void> {
-  writePeerId(filepath, await createSecp256k1PeerId());
 }

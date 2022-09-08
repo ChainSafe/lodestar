@@ -7,7 +7,7 @@ import {GENESIS_SLOT, ZERO_HASH_HEX} from "../constants/constants.js";
 import {IMetrics} from "../metrics/index.js";
 import {TransitionConfigurationV1} from "../execution/engine/interface.js";
 import {ChainEvent} from "./emitter.js";
-import {prepareExecutionPayload} from "./factory/block/body.js";
+import {prepareExecutionPayload} from "./produceBlock/produceBlockBody.js";
 import {IBeaconChain} from "./interface.js";
 import {RegenCaller} from "./regen/index.js";
 
@@ -72,7 +72,7 @@ export class PrepareNextSlotScheduler {
       await sleep(slotMs - slotMs / SCHEDULER_LOOKAHEAD_FACTOR, this.signal);
 
       // calling updateHead() here before we produce a block to reduce reorg possibility
-      const {slot: headSlot, blockRoot: headRoot} = this.chain.forkChoice.updateHead();
+      const {slot: headSlot, blockRoot: headRoot} = this.chain.recomputeForkChoiceHead();
 
       // PS: previously this was comparing slots, but that gave no leway on the skipped
       // slots on epoch bounday. Making it more fluid.
@@ -120,6 +120,14 @@ export class PrepareNextSlotScheduler {
         const proposerIndex = prepareState.epochCtx.getBeaconProposer(prepareSlot);
         const feeRecipient = this.chain.beaconProposerCache.get(proposerIndex);
         if (feeRecipient) {
+          // Update the builder status, if enabled shoot an api call to check status
+          this.chain.updateBuilderStatus(clockSlot);
+          if (this.chain.executionBuilder?.status) {
+            this.chain.executionBuilder.checkStatus().catch((e) => {
+              this.logger.error("Builder disabled as the check status api failed", {prepareSlot}, e as Error);
+            });
+          }
+
           const preparationTime =
             computeTimeAtSlot(this.config, prepareSlot, this.chain.genesisTime) - Date.now() / 1000;
           this.metrics?.blockPayload.payloadAdvancePrepTime.observe(preparationTime);

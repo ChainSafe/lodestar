@@ -2,7 +2,7 @@ import {ACTIVE_PRESET} from "@lodestar/params";
 import {IChainConfig} from "./types.js";
 import {defaultChainConfig} from "./default.js";
 
-export {chainConfigToJson, chainConfigFromJson} from "./json.js";
+export {chainConfigToJson, chainConfigFromJson, specValuesToJson} from "./json.js";
 export * from "./types.js";
 export * from "./default.js";
 

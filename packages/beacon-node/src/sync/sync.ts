@@ -3,6 +3,7 @@ import {ILogger} from "@lodestar/utils";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Slot, phase0} from "@lodestar/types";
 import {INetwork, NetworkEvent} from "../network/index.js";
+import {isOptimsticBlock} from "../util/forkChoice.js";
 import {IMetrics} from "../metrics/index.js";
 import {ChainEvent, IBeaconChain} from "../chain/index.js";
 import {IBeaconSync, ISyncModules, SyncingStatus} from "./interface.js";
@@ -71,21 +72,24 @@ export class BeaconSync implements IBeaconSync {
 
   getSyncStatus(): SyncingStatus {
     const currentSlot = this.chain.clock.currentSlot;
-    const headSlot = this.chain.forkChoice.getHead().slot;
+    const head = this.chain.forkChoice.getHead();
+
     switch (this.state) {
       case SyncState.SyncingFinalized:
       case SyncState.SyncingHead:
       case SyncState.Stalled:
         return {
-          headSlot: String(headSlot),
-          syncDistance: String(currentSlot - headSlot),
+          headSlot: String(head.slot),
+          syncDistance: String(currentSlot - head.slot),
           isSyncing: true,
+          isOptimistic: isOptimsticBlock(head),
         };
       case SyncState.Synced:
         return {
-          headSlot: String(headSlot),
+          headSlot: String(head.slot),
           syncDistance: "0",
           isSyncing: false,
+          isOptimistic: isOptimsticBlock(head),
         };
       default:
         throw new Error("Node is stopped, cannot get sync status");

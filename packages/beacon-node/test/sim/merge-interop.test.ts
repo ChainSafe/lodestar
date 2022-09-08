@@ -8,6 +8,7 @@ import {LogLevel, sleep, TimestampFormatCode} from "@lodestar/utils";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {IChainConfig} from "@lodestar/config";
 import {Epoch} from "@lodestar/types";
+import {ValidatorProposerConfig} from "@lodestar/validator";
 
 import {ExecutePayloadStatus} from "../../src/execution/engine/interface.js";
 import {ExecutionEngineHttp} from "../../src/execution/engine/http.js";
@@ -331,7 +332,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
         // Now eth deposit/merge tracker methods directly available on engine endpoints
         eth1: {enabled: true, providerUrls: [engineApiUrl], jwtSecretHex},
         executionEngine: {urls: [engineApiUrl], jwtSecretHex},
-        chain: {defaultFeeRecipient: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"},
+        chain: {suggestedFeeRecipient: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"},
       },
       validatorCount: validatorClientCount * validatorsPerClient,
       logger: loggerNodeA,
@@ -345,6 +346,35 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     });
 
     const stopInfoTracker = simTestInfoTracker(bn, loggerNodeA);
+    const valProposerConfig = {
+      proposerConfig: {
+        "0xa99a76ed7796f7be22d5b7e85deeb7c5677e88e511e0b337618f8c4eb61349b4bf2d153f649f7b53359fe8b94a38e44c": {
+          graffiti: "graffiti",
+          strictFeeRecipientCheck: true,
+          feeRecipient: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          builder: {
+            enabled: false,
+            gasLimit: 30000000,
+          },
+        },
+        "0xa4855c83d868f772a579133d9f23818008417b743e8447e235d8eb78b1d8f8a9f63f98c551beb7de254400f89592314d": {
+          feeRecipient: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          builder: {
+            enabled: true,
+            gasLimit: 35000000,
+          },
+        },
+      },
+      defaultConfig: {
+        graffiti: "default graffiti",
+        strictFeeRecipientCheck: true,
+        feeRecipient: "0xcccccccccccccccccccccccccccccccccccccccc",
+        builder: {
+          enabled: false,
+          gasLimit: 30000000,
+        },
+      },
+    } as ValidatorProposerConfig;
 
     const {validators} = await getAndInitDevValidators({
       node: bn,
@@ -354,9 +384,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       // At least one sim test must use the REST API for beacon <-> validator comms
       useRestApi: true,
       testLoggerOpts,
-      defaultFeeRecipient: "0xcccccccccccccccccccccccccccccccccccccccc",
-      builder: {},
-      // TODO test merge-interop with remote;
+      valProposerConfig,
     });
 
     afterEachCallbacks.push(async function () {

@@ -22,10 +22,17 @@ import {computeUnrealizedCheckpoints} from "@lodestar/state-transition/epoch";
 import {IChainConfig, IChainForkConfig} from "@lodestar/config";
 
 import {computeDeltas} from "../protoArray/computeDeltas.js";
-import {HEX_ZERO_HASH, VoteTracker, ProtoBlock, ExecutionStatus} from "../protoArray/interface.js";
+import {
+  HEX_ZERO_HASH,
+  VoteTracker,
+  ProtoBlock,
+  ExecutionStatus,
+  MaybeValidExecutionStatus,
+  LVHExecResponse,
+} from "../protoArray/interface.js";
 import {ProtoArray} from "../protoArray/protoArray.js";
+import {ProtoArrayError, ProtoArrayErrorCode} from "../protoArray/errors.js";
 
-import {IForkChoiceMetrics} from "../metrics.js";
 import {ForkChoiceError, ForkChoiceErrorCode, InvalidBlockCode, InvalidAttestationCode} from "./errors.js";
 import {IForkChoice, LatestMessage, QueuedAttestation, PowBlockHex} from "./interface.js";
 import {IForkChoiceStore, CheckpointWithHex, toCheckpointWithHex, JustifiedBalances} from "./store.js";
@@ -35,6 +42,7 @@ import {IForkChoiceStore, CheckpointWithHex, toCheckpointWithHex, JustifiedBalan
 export type ForkChoiceOpts = {
   proposerBoostEnabled?: boolean;
   computeUnrealized?: boolean;
+  countUnrealizedFull?: boolean;
 };
 
 /**
@@ -55,6 +63,7 @@ export type ForkChoiceOpts = {
  * - Time is not updated automatically, updateTime MUST be called every slot
  */
 export class ForkChoice implements IForkChoice {
+  irrecoverableError?: Error;
   /**
    * Votes currently tracked in the protoArray
    * Indexed by validator index
@@ -93,8 +102,7 @@ export class ForkChoice implements IForkChoice {
     private readonly fcStore: IForkChoiceStore,
     /** The underlying representation of the block DAG. */
     private readonly protoArray: ProtoArray,
-    private readonly opts?: ForkChoiceOpts,
-    private readonly metrics?: IForkChoiceMetrics | null
+    private readonly opts?: ForkChoiceOpts
   ) {
     this.head = this.updateHead();
   }
@@ -175,9 +183,6 @@ export class ForkChoice implements IForkChoice {
   updateHead(): ProtoBlock {
     // balances is not changed but votes are changed
 
-    this.metrics?.forkChoiceRequests.inc();
-    const timer = this.metrics?.forkChoiceFindHead.startTimer();
-
     // NOTE: In current Lodestar metrics, 100% of forkChoiceRequests this.synced = false.
     // No need to cache computeDeltas()
     //
@@ -231,9 +236,16 @@ export class ForkChoice implements IForkChoice {
       });
     }
 
-    timer?.();
-
     return (this.head = headNode);
+  }
+
+  /**
+   * An iteration over protoArray to get present slots, to be called pre-emptively
+   * from prepareNextSlot to prevent delay on produceBlindedBlock
+   * @param windowStart is the slot after which (excluding) to provide present slots
+   */
+  getSlotsPresent(windowStart: number): number {
+    return this.protoArray.nodes.filter((node) => node.slot > windowStart).length;
   }
 
   /** Very expensive function, iterates the entire ProtoArray. Called only in debug API */
@@ -277,7 +289,7 @@ export class ForkChoice implements IForkChoice {
     state: CachedBeaconStateAllForks,
     blockDelaySec: number,
     currentSlot: Slot,
-    executionStatus: ExecutionStatus
+    executionStatus: MaybeValidExecutionStatus
   ): void {
     const {parentRoot, slot} = block;
     const parentRootHex = toHexString(parentRoot);
@@ -743,14 +755,21 @@ export class ForkChoice implements IForkChoice {
   }
 
   /**
-   * Optimistic sync validate till validated latest hash, invalidate any decendant branch if invalidate till hash provided
-   * TODO: implementation:
-   * 1. verify is_merge_block if the mergeblock has not yet been validated
-   * 2. Throw critical error and exit if a block in finalized chain gets invalidated
+   * Optimistic sync validate till validated latest hash, invalidate any decendant
+   * branch if invalidate till hash provided
+   *
+   * Proxies to protoArray's validateLatestHash and could run extra validations for the
+   * justified's status as well as validate the terminal conditions if terminal block
+   * becomes valid
    */
-  validateLatestHash(_latestValidHash: RootHex, _invalidateTillHash: RootHex | null): void {
-    // Silently ignore for now if all calls were valid
-    return;
+  validateLatestHash(execResponse: LVHExecResponse): void {
+    try {
+      this.protoArray.validateLatestHash(execResponse, this.fcStore.currentSlot);
+    } catch (e) {
+      if (e instanceof ProtoArrayError && e.type.code === ProtoArrayErrorCode.INVALID_LVH_EXECUTION_RESPONSE) {
+        this.irrecoverableError = e;
+      }
+    }
   }
 
   /**
@@ -790,13 +809,15 @@ export class ForkChoice implements IForkChoice {
     );
   }
 
-  private getPreMergeExecStatus(executionStatus: ExecutionStatus): ExecutionStatus.PreMerge {
+  private getPreMergeExecStatus(executionStatus: MaybeValidExecutionStatus): ExecutionStatus.PreMerge {
     if (executionStatus !== ExecutionStatus.PreMerge)
       throw Error(`Invalid pre-merge execution status: expected: ${ExecutionStatus.PreMerge}, got ${executionStatus}`);
     return executionStatus;
   }
 
-  private getPostMergeExecStatus(executionStatus: ExecutionStatus): ExecutionStatus.Valid | ExecutionStatus.Syncing {
+  private getPostMergeExecStatus(
+    executionStatus: MaybeValidExecutionStatus
+  ): ExecutionStatus.Valid | ExecutionStatus.Syncing {
     if (executionStatus === ExecutionStatus.PreMerge)
       throw Error(
         `Invalid post-merge execution status: expected: ${ExecutionStatus.Syncing} or ${ExecutionStatus.Valid} , got ${executionStatus}`

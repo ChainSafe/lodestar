@@ -11,7 +11,6 @@ import {
   ExecutionBuilderOpts,
   defaultExecutionBuilderOpts,
 } from "../execution/index.js";
-import {defaultLoggerOptions, IBeaconLoggerOptions} from "./loggerOptions.js";
 // Re-export so the CLI doesn't need to depend on lodestar-api
 export {allNamespaces} from "../api/rest/index.js";
 
@@ -22,7 +21,6 @@ export interface IBeaconNodeOptions {
   eth1: Eth1Options;
   executionEngine: ExecutionEngineOpts;
   executionBuilder: ExecutionBuilderOpts;
-  logger: IBeaconLoggerOptions;
   metrics: MetricsOptions;
   network: INetworkOptions;
   sync: SyncOptions;
@@ -35,7 +33,6 @@ export const defaultOptions: IBeaconNodeOptions = {
   eth1: defaultEth1Options,
   executionEngine: defaultExecutionEngineOpts,
   executionBuilder: defaultExecutionBuilderOpts,
-  logger: defaultLoggerOptions,
   metrics: defaultMetricsOptions,
   network: defaultNetworkOptions,
   sync: defaultSyncOptions,

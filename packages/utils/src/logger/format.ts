@@ -85,7 +85,7 @@ function humanReadableTemplateFn(_info: {[key: string]: any; level: string; mess
 
   if (info.timestamp) str += info.timestamp;
 
-  str += `[${infoString.toUpperCase()}] ${info.level.padStart(infoPad)}: ${info.message}`;
+  str += `[${infoString}] ${info.level.padStart(infoPad)}: ${info.message}`;
 
   if (info.context !== undefined) str += " " + logCtxToString(info.context);
   if (info.error !== undefined) str += " " + logCtxToString(info.error);
