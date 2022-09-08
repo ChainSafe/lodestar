@@ -30,6 +30,7 @@ export type ValidatorOptions = {
   signers: Signer[];
   logger: ILogger;
   processShutdownCallback: ProcessShutdownCallback;
+  abortController: AbortController;
   afterBlockDelaySlotFraction?: number;
   doppelgangerProtectionEnabled?: boolean;
   closed?: boolean;
@@ -65,7 +66,7 @@ export class Validator {
   constructor(opts: ValidatorOptions, readonly genesis: Genesis, metrics: Metrics | null = null) {
     const {dbOps, logger, slashingProtection, signers, valProposerConfig} = opts;
     const config = createIBeaconConfig(dbOps.config, genesis.genesisValidatorsRoot);
-    this.controller = new AbortController();
+    this.controller = opts.abortController;
     const clock = new Clock(config, logger, {genesisTime: Number(genesis.genesisTime)});
     const loggerVc = getLoggerVc(logger, clock);
 
@@ -157,21 +158,17 @@ export class Validator {
   }
 
   /** Waits for genesis and genesis time */
-  static async initializeFromBeaconNode(
-    opts: ValidatorOptions,
-    signal?: AbortSignal,
-    metrics?: Metrics | null
-  ): Promise<Validator> {
+  static async initializeFromBeaconNode(opts: ValidatorOptions, metrics?: Metrics | null): Promise<Validator> {
     const {config} = opts.dbOps;
     const {logger} = opts;
     const api =
       typeof opts.api === "string"
         ? // This new api instance can make do with default timeout as a faster timeout is
           // not necessary since this instance won't be used for validator duties
-          getClient({baseUrl: opts.api, getAbortSignal: () => signal}, {config, logger})
+          getClient({baseUrl: opts.api, getAbortSignal: () => opts.abortController.signal}, {config, logger})
         : opts.api;
 
-    const genesis = await waitForGenesis(api, opts.logger, signal);
+    const genesis = await waitForGenesis(api, opts.logger, opts.abortController.signal);
     logger.info("Genesis available");
 
     const {data: externalSpecJson} = await api.config.getSpec();

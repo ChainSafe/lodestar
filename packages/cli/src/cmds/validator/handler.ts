@@ -1,3 +1,4 @@
+import {setMaxListeners} from "node:events";
 import {LevelDbController} from "@lodestar/db";
 import {ProcessShutdownCallback, SlashingProtection, Validator, ValidatorProposerConfig} from "@lodestar/validator";
 import {getMetrics, MetricsRegister} from "@lodestar/validator";
@@ -66,9 +67,15 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
 
   logSigners(logger, signers);
 
-  // This AbortController interrupts the sleep() calls when waiting for genesis
-  const controller = new AbortController();
-  onGracefulShutdownCbs.push(async () => controller.abort());
+  // This AbortController interrupts various validators ops: genesis req, clients call, clock etc
+  const abortController = new AbortController();
+
+  // We set infinity for abort controller used for validator operations,
+  // to prevent MaxListenersExceededWarning which get logged when listeners > 10
+  // Since it is perfectly fine to have listeners > 10
+  setMaxListeners(Infinity, abortController.signal);
+
+  onGracefulShutdownCbs.push(async () => abortController.abort());
 
   const dbOps = {
     config,
@@ -107,11 +114,11 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
       logger,
       processShutdownCallback,
       signers,
+      abortController,
       doppelgangerProtectionEnabled,
       afterBlockDelaySlotFraction: args.afterBlockDelaySlotFraction,
       valProposerConfig,
     },
-    controller.signal,
     metrics
   );
 
