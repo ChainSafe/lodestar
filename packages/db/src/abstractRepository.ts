@@ -25,6 +25,9 @@ export abstract class Repository<I extends Id, T> {
   private readonly bucketId: string;
   private readonly dbReqOpts: DbReqOpts;
 
+  private readonly minKey: Uint8Array;
+  private readonly maxKey: Uint8Array;
+
   protected type: Type<T>;
 
   protected constructor(config: IChainForkConfig, db: Db, bucket: Bucket, type: Type<T>) {
@@ -34,6 +37,8 @@ export abstract class Repository<I extends Id, T> {
     this.bucketId = getBucketNameByValue(bucket);
     this.dbReqOpts = {bucketId: this.bucketId};
     this.type = type;
+    this.minKey = _encodeKey(bucket, Buffer.alloc(0));
+    this.maxKey = _encodeKey(bucket + 1, Buffer.alloc(0));
   }
 
   encodeValue(value: T): Uint8Array {
@@ -242,27 +247,31 @@ export abstract class Repository<I extends Id, T> {
    * Transforms opts from I to Uint8Array
    */
   protected dbFilterOptions(opts?: IFilterOptions<I>): IFilterOptions<Uint8Array> {
-    const _opts: IFilterOptions<Uint8Array> = {
-      gte: _encodeKey(this.bucket, Buffer.alloc(0)),
-      lt: _encodeKey(this.bucket + 1, Buffer.alloc(0)),
+    const optsBuff: IFilterOptions<Uint8Array> = {
       bucketId: this.bucketId,
     };
-    if (opts) {
-      if (opts.lt !== undefined) {
-        _opts.lt = this.encodeKey(opts.lt);
-      } else if (opts.lte !== undefined) {
-        delete _opts.lt;
-        _opts.lte = this.encodeKey(opts.lte);
-      }
-      if (opts.gt !== undefined) {
-        delete _opts.gte;
-        _opts.gt = this.encodeKey(opts.gt);
-      } else if (opts.gte !== undefined) {
-        _opts.gte = this.encodeKey(opts.gte);
-      }
-      _opts.reverse = opts.reverse;
-      _opts.limit = opts.limit;
+
+    // Set at least one min key
+    if (opts?.lt !== undefined) {
+      optsBuff.lt = this.encodeKey(opts.lt);
+    } else if (opts?.lte !== undefined) {
+      optsBuff.lte = this.encodeKey(opts.lte);
+    } else {
+      optsBuff.lt = this.maxKey;
     }
-    return _opts;
+
+    // Set at least on max key
+    if (opts?.gt !== undefined) {
+      optsBuff.gt = this.encodeKey(opts.gt);
+    } else if (opts?.gte !== undefined) {
+      optsBuff.gte = this.encodeKey(opts.gte);
+    } else {
+      optsBuff.gte = this.minKey;
+    }
+
+    if (opts?.reverse !== undefined) optsBuff.reverse = opts.reverse;
+    if (opts?.limit !== undefined) optsBuff.limit = opts.limit;
+
+    return optsBuff;
   }
 }
