@@ -1,7 +1,9 @@
 import {Epoch, RootHex, Slot} from "@lodestar/types";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
+import {GENESIS_EPOCH} from "@lodestar/params";
 import {toHexString} from "@chainsafe/ssz";
 
+import {ForkChoiceOpts} from "../forkChoice/forkChoice.js";
 import {ProtoBlock, ProtoNode, HEX_ZERO_HASH, ExecutionStatus, LVHExecResponse} from "./interface.js";
 import {ProtoArrayError, ProtoArrayErrorCode, LVHExecError, LVHExecErrorCode} from "./errors.js";
 
@@ -23,35 +25,43 @@ export class ProtoArray {
   lvhError?: LVHExecError;
 
   private previousProposerBoost: ProposerBoost | null = null;
+  private countUnrealizedFull = false;
 
-  constructor({
-    pruneThreshold,
-    justifiedEpoch,
-    justifiedRoot,
-    finalizedEpoch,
-    finalizedRoot,
-  }: {
-    pruneThreshold: number;
-    justifiedEpoch: Epoch;
-    justifiedRoot: RootHex;
-    finalizedEpoch: Epoch;
-    finalizedRoot: RootHex;
-  }) {
+  constructor(
+    {
+      pruneThreshold,
+      justifiedEpoch,
+      justifiedRoot,
+      finalizedEpoch,
+      finalizedRoot,
+    }: {
+      pruneThreshold: number;
+      justifiedEpoch: Epoch;
+      justifiedRoot: RootHex;
+      finalizedEpoch: Epoch;
+      finalizedRoot: RootHex;
+    },
+    opts?: ForkChoiceOpts
+  ) {
     this.pruneThreshold = pruneThreshold;
     this.justifiedEpoch = justifiedEpoch;
     this.justifiedRoot = justifiedRoot;
     this.finalizedEpoch = finalizedEpoch;
     this.finalizedRoot = finalizedRoot;
+    this.countUnrealizedFull = opts?.countUnrealizedFull ?? false;
   }
 
-  static initialize(block: Omit<ProtoBlock, "targetRoot">, currentSlot: Slot): ProtoArray {
-    const protoArray = new ProtoArray({
-      pruneThreshold: DEFAULT_PRUNE_THRESHOLD,
-      justifiedEpoch: block.justifiedEpoch,
-      justifiedRoot: block.justifiedRoot,
-      finalizedEpoch: block.finalizedEpoch,
-      finalizedRoot: block.finalizedRoot,
-    });
+  static initialize(block: Omit<ProtoBlock, "targetRoot">, currentSlot: Slot, opts?: ForkChoiceOpts): ProtoArray {
+    const protoArray = new ProtoArray(
+      {
+        pruneThreshold: DEFAULT_PRUNE_THRESHOLD,
+        justifiedEpoch: block.justifiedEpoch,
+        justifiedRoot: block.justifiedRoot,
+        finalizedEpoch: block.finalizedEpoch,
+        finalizedRoot: block.finalizedRoot,
+      },
+      opts
+    );
     protoArray.onBlock(
       {
         ...block,
@@ -743,7 +753,7 @@ export class ProtoArray {
     const nodeFinalizedRoot = isFromPrevEpoch ? node.unrealizedFinalizedRoot : node.finalizedRoot;
 
     // If previous epoch is justified, pull up all tips to at least the previous epoch
-    if (this.justifiedEpoch === previousEpoch) {
+    if (this.countUnrealizedFull && currentEpoch > GENESIS_EPOCH && this.justifiedEpoch === previousEpoch) {
       return node.unrealizedJustifiedEpoch >= previousEpoch;
       // If previous epoch is not justified, pull up only tips from past epochs up to the current epoch
     } else {
