@@ -23,7 +23,20 @@
   "gnetId": null,
   "graphTooltip": 0,
   "id": 5,
-  "links": [],
+  "links": [
+    {
+      "asDropdown": true,
+      "icon": "external link",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": ["lodestar"],
+      "targetBlank": false,
+      "title": "Lodestar dashboards",
+      "tooltip": "",
+      "type": "dashboards",
+      "url": ""
+    }
+  ],
   "liveNow": false,
   "panels": [
     {
@@ -112,7 +125,7 @@
       },
       "targets": [
         {
-          "exemplar": true,
+          "exemplar": false,
           "expr": "libp2p_global_stats",
           "interval": "",
           "legendFormat": "{{direction}}",
@@ -194,7 +207,7 @@
       },
       "targets": [
         {
-          "exemplar": true,
+          "exemplar": false,
           "expr": "libp2p_protocol__meshsub_1_1_0_bytes",
           "interval": "",
           "legendFormat": "{{direction}}",
@@ -276,7 +289,7 @@
       },
       "targets": [
         {
-          "exemplar": true,
+          "exemplar": false,
           "expr": "libp2p_protocol__ipfs_id_push_1_0_0_bytes",
           "interval": "",
           "legendFormat": "{{direction}}",
@@ -358,7 +371,7 @@
       },
       "targets": [
         {
-          "exemplar": true,
+          "exemplar": false,
           "expr": "libp2p_protocol__ipfs_id_1_0_0_bytes",
           "interval": "",
           "legendFormat": "{{direction}}",
@@ -453,7 +466,7 @@
       },
       "targets": [
         {
-          "exemplar": true,
+          "exemplar": false,
           "expr": "libp2p_connection_manager_connections",
           "interval": "",
           "legendFormat": "{{direction}}",
@@ -534,7 +547,7 @@
       },
       "targets": [
         {
-          "exemplar": true,
+          "exemplar": false,
           "expr": "libp2p_connection_manager_protocol_streams_total",
           "interval": "",
           "legendFormat": "{{protocol}}",
@@ -615,7 +628,7 @@
       },
       "targets": [
         {
-          "exemplar": true,
+          "exemplar": false,
           "expr": "libp2p_connection_manager_protocol_streams_per_connection_90th_percentile",
           "interval": "",
           "legendFormat": "{{protocol}}",
@@ -628,7 +641,7 @@
   ],
   "schemaVersion": 32,
   "style": "dark",
-  "tags": [],
+  "tags": ["lodestar"],
   "templating": {
     "list": []
   },
