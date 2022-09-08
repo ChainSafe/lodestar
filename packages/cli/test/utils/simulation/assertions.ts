@@ -207,12 +207,14 @@ export function participationAssertions(env: SimulationEnvironment, type: "HEAD"
   const participation = type === "HEAD" ? env.tracker.participationOnHead : env.tracker.participationOnFFG;
 
   for (let n = 0; n < env.params.beaconNodes; n++) {
-    const participationRate = participation.get(env.nodes[n].id) ?? new Map();
+    const participationRate = participation.get(env.nodes[n].id) ?? new Map<number, number>();
     const participationRateAvg = avg([...participationRate.values()]);
 
-    // TODO: Show table with some utility function
-    console.log(`${env.nodes[n].id} - Participation on ${type}`);
-    console.table(participationRate);
+    console.log(`==== ${env.nodes[n].id} - Participation on ${type} ====`);
+    console.table(
+      [...participationRate.entries()].map(([k, v]) => ({epoch: k, participation: v})),
+      ["epoch", "participation"]
+    );
 
     expect(participationRateAvg).to.be.gt(
       env.acceptableParticipationRate,
@@ -222,22 +224,27 @@ export function participationAssertions(env: SimulationEnvironment, type: "HEAD"
 }
 
 export function missedBlocksAssertions(env: SimulationEnvironment, slotLimit: Slot): void {
-  const missedBlocks: Map<Slot, boolean>[] = [];
+  const missedBlocks: {node: string; missedBlocks: Slot[]}[] = [];
 
   for (let i = 0; i < env.params.beaconNodes; i++) {
-    const missedBlockNodes = new Map<Slot, boolean>();
+    const missedBlocksForNodeNode: Slot[] = [];
 
     for (let s = 0; s < slotLimit; s++) {
-      missedBlockNodes.set(s, !env.tracker.producedBlocks.get(env.nodes[i].id)?.get(s) ?? true);
+      if (!env.tracker.producedBlocks.get(env.nodes[i].id)?.get(s)) {
+        missedBlocksForNodeNode.push(s);
+      }
     }
-    // TODO: Show table with some utility function
-    console.log(`${env.nodes[i].id} - Missed Blocks`);
-    console.table(missedBlockNodes);
 
-    missedBlocks.push(missedBlockNodes);
+    missedBlocks.push({node: env.nodes[i].id, missedBlocks: missedBlocksForNodeNode});
   }
 
+  console.log("==== MISSED BLOCKS ====");
+  console.table(missedBlocks, ["node", "missedBlocks"]);
+
   for (let i = 0; i < env.params.beaconNodes; i++) {
-    expect(missedBlocks[i]).to.equal(missedBlocks[0], `node ${i} has different missed blocks than node 0`);
+    expect(missedBlocks[i].missedBlocks).to.equal(
+      missedBlocks[0].missedBlocks,
+      `node ${i} has different missed blocks than node 0. node${i}MissedBlocks: ${missedBlocks[i].missedBlocks}, node0MissedBlocks: ${missedBlocks[0].missedBlocks}`
+    );
   }
 }
