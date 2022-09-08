@@ -18,7 +18,7 @@ describe("multiNodeConfiguration", function () {
 
   before(async function () {
     await env.start();
-    await env.clock.waitForEndOfSlot(0);
+    await env.waitForEndOfSlot(0);
   });
 
   after(async () => {
