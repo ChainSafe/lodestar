@@ -47,56 +47,54 @@ export function finalityAssertions(env: SimulationEnvironment): void {
 }
 
 export function nodeAssertions(env: SimulationEnvironment): void {
-  describe("node", () => {
-    it(`should have correct "${env.params.beaconNodes}" number of nodes`, () => {
-      expect(env.nodes.length).to.equal(env.params.beaconNodes);
-    });
-
-    for (let n = 0; n < env.params.beaconNodes; n++) {
-      describe(`beacon node "${n}"`, () => {
-        it("should have correct health status", async () => {
-          const node = env.nodes[n];
-          const health = await node.api.node.getHealth();
-
-          expect(health === routes.node.NodeHealth.SYNCING || health === routes.node.NodeHealth.READY).to.equal(
-            true,
-            `Node ${n} health is neither READY or SYNCING`
-          );
-        });
-
-        it("should be completely synced", async () => {
-          const node = env.nodes[n];
-          const syncStatus = await node.api.node.getSyncingStatus();
-
-          expect(syncStatus.data.isSyncing).to.equal(env.params.beaconNodes > 0 ? true : false);
-        });
-
-        it("should have correct number of validator clients", () => {
-          const node = env.nodes[n];
-
-          expect(node.validatorClients).to.have.lengthOf(env.params.validatorClients);
-        });
-
-        for (let v = 0; v < env.params.validatorClients; v++) {
-          describe(`validator - ${v}`, () => {
-            it("should have keymanager running", async () => {
-              const validator = env.nodes[n].validatorClients[v];
-
-              await expect(validator.keyManagerApi.listKeys()).to.be.fulfilled;
-            });
-
-            it("should have correct number of keys loaded", async () => {
-              const validator = env.nodes[n].validatorClients[v];
-              const keys = (await validator.keyManagerApi.listKeys()).data.map((k) => k.validatingPubkey).sort();
-              const existingKeys = validator.secretKeys.map((k) => k.toPublicKey().toHex()).sort();
-
-              expect(keys).to.eql(existingKeys);
-            });
-          });
-        }
-      });
-    }
+  it(`should have correct "${env.params.beaconNodes}" number of nodes`, () => {
+    expect(env.nodes.length).to.equal(env.params.beaconNodes);
   });
+
+  for (let n = 0; n < env.params.beaconNodes; n++) {
+    describe(`beacon node "${n}"`, () => {
+      it("should have correct health status", async () => {
+        const node = env.nodes[n];
+        const health = await node.api.node.getHealth();
+
+        expect(health === routes.node.NodeHealth.SYNCING || health === routes.node.NodeHealth.READY).to.equal(
+          true,
+          `Node ${n} health is neither READY or SYNCING`
+        );
+      });
+
+      it("should be completely synced", async () => {
+        const node = env.nodes[n];
+        const syncStatus = await node.api.node.getSyncingStatus();
+
+        expect(syncStatus.data.isSyncing).to.equal(env.params.beaconNodes > 0 ? true : false);
+      });
+
+      it("should have correct number of validator clients", () => {
+        const node = env.nodes[n];
+
+        expect(node.validatorClients).to.have.lengthOf(env.params.validatorClients);
+      });
+
+      for (let v = 0; v < env.params.validatorClients; v++) {
+        describe(`validator - ${v}`, () => {
+          it("should have keymanager running", async () => {
+            const validator = env.nodes[n].validatorClients[v];
+
+            await expect(validator.keyManagerApi.listKeys()).to.be.fulfilled;
+          });
+
+          it("should have correct number of keys loaded", async () => {
+            const validator = env.nodes[n].validatorClients[v];
+            const keys = (await validator.keyManagerApi.listKeys()).data.map((k) => k.validatingPubkey).sort();
+            const existingKeys = validator.secretKeys.map((k) => k.toPublicKey().toHex()).sort();
+
+            expect(keys).to.eql(existingKeys);
+          });
+        });
+      }
+    });
+  }
 }
 
 export function headAssertions(env: SimulationEnvironment): void {

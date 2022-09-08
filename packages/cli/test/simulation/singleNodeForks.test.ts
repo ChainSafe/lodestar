@@ -3,16 +3,16 @@ import {SimulationEnvironment} from "../utils/simulation/index.js";
 
 describe("singleNodeForks", function () {
   this.timeout("5m");
-
-  const env = new SimulationEnvironment({
-    beaconNodes: 1,
-    validatorClients: 1,
-    validatorsPerClient: 128,
-    altairEpoch: 1,
-    bellatrixEpoch: 2,
-  });
+  let env: SimulationEnvironment;
 
   before(async function () {
+    env = new SimulationEnvironment({
+      beaconNodes: 1,
+      validatorClients: 1,
+      validatorsPerClient: 128,
+      altairEpoch: 1,
+      bellatrixEpoch: 2,
+    });
     await env.start();
   });
 
