@@ -1,7 +1,7 @@
 import {dirname} from "node:path";
 import {fileURLToPath} from "node:url";
 import {ChildProcess, spawn} from "node:child_process";
-import {altair} from "@lodestar/types";
+import {altair, phase0, Slot} from "@lodestar/types";
 import {TIMELY_HEAD_FLAG_INDEX, TIMELY_TARGET_FLAG_INDEX} from "@lodestar/params";
 import {SimulationOptionalParams, SimulationParams} from "./types.js";
 
@@ -90,4 +90,16 @@ export const computeAttestationParticipation = (state: altair.BeaconState, type:
   }
 
   return totalAttestingBalance / totalActiveBalance;
+};
+
+export const computeAttestation = (attestations: phase0.Attestation[]): number => {
+  return Array.from(attestations).reduce((total, att) => total + att.aggregationBits.getTrueBitIndexes().length, 0);
+};
+
+export const computeInclusionDelay = (attestations: phase0.Attestation[], slot: Slot): number => {
+  return avg(Array.from(attestations).map((att) => slot - att.data.slot));
+};
+
+export const avg = (arr: number[]): number => {
+  return arr.length === 0 ? 0 : arr.reduce((p, c) => p + c, 0) / arr.length;
 };

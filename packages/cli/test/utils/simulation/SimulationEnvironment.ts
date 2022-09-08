@@ -5,6 +5,7 @@ import {activePreset} from "@lodestar/params";
 import {routes} from "@lodestar/api/beacon";
 import {BeaconNodeProcess, SimulationOptionalParams, SimulationParams, SimulationRequiredParams} from "./types.js";
 import {EpochClock, MS_IN_SEC} from "./EpochClock.js";
+import {SimulationTracker} from "./SimulationTracker.js";
 import {LodestarBeaconNodeProcess, defaultSimulationParams, getSimulationId} from "./index.js";
 
 export class SimulationEnvironment {
@@ -14,6 +15,9 @@ export class SimulationEnvironment {
   readonly nodes: BeaconNodeProcess[] = [];
   readonly clock: EpochClock;
   readonly acceptableParticipationRate = 0.8;
+  readonly tracker: SimulationTracker;
+  readonly emitter: EventEmitter;
+  readonly controller: AbortController;
 
   readonly network = {
     connectAllNodes: async (): Promise<void> => {
@@ -33,9 +37,6 @@ export class SimulationEnvironment {
       }
     },
   };
-
-  private readonly controller: AbortController;
-  private readonly emitter: EventEmitter;
 
   constructor(params: SimulationRequiredParams & Partial<SimulationOptionalParams>) {
     const paramsWithDefaults = {...defaultSimulationParams, ...params} as SimulationRequiredParams &
@@ -64,27 +65,20 @@ export class SimulationEnvironment {
       const nodeRootDir = `${this.rootDir}/node-${i}`;
       this.nodes.push(new LodestarBeaconNodeProcess(this.params, nodeRootDir));
     }
+
+    this.tracker = new SimulationTracker(this.nodes, this.clock, this.controller.signal);
   }
 
   async start(): Promise<this> {
     await mkdir(this.rootDir);
     await Promise.all(this.nodes.map((p) => p.start()));
-
-    for (let i = 0; i < this.params.beaconNodes; i += 1) {
-      this.nodes[i].api.events.eventstream(
-        [routes.events.EventType.head, routes.events.EventType.finalizedCheckpoint],
-        this.controller.signal,
-        (event) => {
-          this.emitter.emit(event.type, event, this.nodes[i]);
-        }
-      );
-    }
-
+    await this.tracker.start();
     return this;
   }
 
   async stop(): Promise<void> {
     this.controller.abort();
+    await this.tracker.stop();
     await Promise.all(this.nodes.map((p) => p.stop()));
     await rm(this.rootDir, {recursive: true});
   }

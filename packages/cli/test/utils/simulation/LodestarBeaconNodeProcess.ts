@@ -84,7 +84,7 @@ export const LodestarBeaconNodeProcess: BeaconNodeConstructor = class LodestarBe
   async start(): Promise<void> {
     this.multiaddrs = [`/ip4/${this.address}/tcp/${this.port}`];
     this.config = getBeaconConfigFromArgs(this.rcConfig).config;
-    this.api = getClient({baseUrl: `http://${this.address}:${this.restPort}/`}, {config: this.config});
+    this.api = getClient({baseUrl: `http://${this.address}:${this.restPort}`}, {config: this.config});
 
     const {state} = nodeUtils.initDevState(
       this.config,
