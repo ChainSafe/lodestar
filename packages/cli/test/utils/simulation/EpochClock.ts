@@ -40,6 +40,10 @@ export class EpochClock {
     return epoch * this.slotsPerEpoch;
   }
 
+  getEpochForSlot(slot: number): number {
+    return Math.floor(slot / this.slotsPerEpoch);
+  }
+
   getSlotFor(timeStamp?: number): number {
     const time = timeStamp ?? Math.floor(Date.now() / MS_IN_SEC);
     const elapsedTime = time - this.genesisTime;
@@ -51,5 +55,13 @@ export class EpochClock {
     const slotGenesisTimeOffset = slot * this.secondsPerSlot;
 
     return this.genesisTime + slotGenesisTimeOffset;
+  }
+
+  isFirstSlotOfEpoch(slot: number): boolean {
+    return slot % this.slotsPerEpoch === 0;
+  }
+
+  isLastSlotOfEpoch(slot: number): boolean {
+    return slot % this.slotsPerEpoch === this.slotsPerEpoch - 1;
   }
 }

@@ -25,7 +25,7 @@ describe("singleNodeForks", function () {
       const node = env.nodes[0];
 
       const expectedSlot = env.params.altairEpoch * env.params.slotsPerEpoch;
-      await env.clock.waitForEndOfSlot(expectedSlot);
+      await env.waitForEndOfSlot(expectedSlot);
 
       const state = await node.api.debug.getStateV2(expectedSlot.toString());
       expect(state.version).to.equal("altair");
@@ -37,7 +37,7 @@ describe("singleNodeForks", function () {
       const node = env.nodes[0];
 
       const expectedSlot = env.params.bellatrixEpoch * env.params.slotsPerEpoch;
-      await env.clock.waitForEndOfSlot(expectedSlot);
+      await env.waitForEndOfSlot(expectedSlot);
 
       const state = await node.api.debug.getStateV2(expectedSlot.toString());
       expect(state.version).to.equal("bellatrix");

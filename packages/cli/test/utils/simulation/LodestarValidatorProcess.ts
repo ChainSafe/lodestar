@@ -63,14 +63,14 @@ export const LodestarValidatorProcess: ValidatorConstructor = class LodestarVali
       "params.GENESIS_DELAY": String(this.params.genesisSlotsDelay),
       "params.ALTAIR_FORK_EPOCH": String(this.params.altairEpoch),
       "params.BELLATRIX_FORK_EPOCH": String(this.params.bellatrixEpoch),
-      logFormatId: `VAL-${LodestarValidatorProcess.totalProcessCount}`,
-      logFormatGenesisTime: this.id,
+      logFormatId: this.id,
+      logFormatGenesisTime: this.params.genesisTime,
     } as unknown) as IValidatorCliArgs & IGlobalArgs;
   }
 
   async start(): Promise<void> {
     this.keyManagerApi = getClient(
-      {baseUrl: `http://${this.address}:${this.keyManagerPort}/`},
+      {baseUrl: `http://${this.address}:${this.keyManagerPort}`},
       {config: this.forkConfig}
     );
 
