@@ -3,7 +3,6 @@ import {SimulationEnvironment} from "../utils/simulation/index.js";
 
 describe("multiNodeConfiguration", function () {
   this.timeout("5m");
-
   const env = new SimulationEnvironment({
     beaconNodes: 4,
     validatorClients: 2,
@@ -25,5 +24,7 @@ describe("multiNodeConfiguration", function () {
     await env.stop();
   });
 
-  nodeAssertions(env);
+  describe("node assertions", () => {
+    nodeAssertions(env);
+  });
 });

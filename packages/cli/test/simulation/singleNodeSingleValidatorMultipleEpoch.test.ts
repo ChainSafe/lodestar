@@ -5,19 +5,20 @@ const epochLimit = 5;
 
 describe("singleNodeSingleValidatorMultipleEpoch", function () {
   this.timeout("5m");
-
-  const env = new SimulationEnvironment({
-    beaconNodes: 1,
-    validatorClients: 1,
-    validatorsPerClient: 128,
-    // We need to use the attesting participation so have to switch to altair
-    altairEpoch: 0,
-    // Use a larger value instead of Infinity
-    // https://github.com/ChainSafe/lodestar/issues/4505
-    bellatrixEpoch: 10 ** 12,
-  });
+  let env: SimulationEnvironment;
 
   before(async function () {
+    env = new SimulationEnvironment({
+      beaconNodes: 1,
+      validatorClients: 1,
+      validatorsPerClient: 128,
+      // We need to use the attesting participation so have to switch to altair
+      altairEpoch: 0,
+      // Use a larger value instead of Infinity
+      // https://github.com/ChainSafe/lodestar/issues/4505
+      bellatrixEpoch: 10 ** 12,
+    });
+
     await env.start();
   });
 

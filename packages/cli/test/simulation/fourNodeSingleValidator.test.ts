@@ -26,5 +26,7 @@ describe.skip("Run four nodes, single validator per node, 32 interop validators 
     await env.stop();
   });
 
-  nodeAssertions(env);
+  describe("node assertions", () => {
+    nodeAssertions(env);
+  });
 });
