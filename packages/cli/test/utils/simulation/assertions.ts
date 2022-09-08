@@ -1,10 +1,9 @@
 import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
-import {altair} from "@lodestar/types";
-import {HttpError} from "@lodestar/api";
 import {routes} from "@lodestar/api/beacon";
+import {Slot} from "@lodestar/types";
 import {SimulationEnvironment} from "./SimulationEnvironment.js";
-import {computeAttestationParticipation} from "./utils.js";
+import {avg} from "./utils.js";
 
 chai.use(chaiAsPromised);
 
@@ -206,65 +205,41 @@ export function slashingAssertions(env: SimulationEnvironment): void {
   });
 }
 
-export function participationAssertions(env: SimulationEnvironment): void {
-  describe("participation", () => {
-    it("should have correct participation on head", async () => {
-      const states = await Promise.all(env.nodes.map((n) => n.api.debug.getStateV2("head")));
+export function participationAssertions(env: SimulationEnvironment, type: "HEAD" | "FFG"): void {
+  const participation = type === "HEAD" ? env.tracker.participationOnHead : env.tracker.participationOnFFG;
 
-      for (let n = 0; n < env.params.beaconNodes; n++) {
-        const participationRate = computeAttestationParticipation(states[n].data as altair.BeaconState, "HEAD");
+  for (let n = 0; n < env.params.beaconNodes; n++) {
+    const participationRate = participation.get(env.nodes[n].id) ?? new Map();
+    const participationRateAvg = avg([...participationRate.values()]);
 
-        expect(participationRate).to.be.gt(env.acceptableParticipationRate, `node ${n} has too low participation rate`);
-      }
-    });
+    // TODO: Show table with some utility function
+    console.log(`${env.nodes[n].id} - Participation on ${type}`);
+    console.table(participationRate);
 
-    it("should have correct participation on FFG", async () => {
-      const states = await Promise.all(env.nodes.map((n) => n.api.debug.getStateV2("head")));
-
-      for (let n = 0; n < env.params.beaconNodes; n++) {
-        const participationRate = computeAttestationParticipation(states[n].data as altair.BeaconState, "FFG");
-
-        expect(participationRate).to.be.gt(env.acceptableParticipationRate, `node ${n} has too low participation rate`);
-      }
-    });
-  });
+    expect(participationRateAvg).to.be.gt(
+      env.acceptableParticipationRate,
+      `node ${n} has too low participation rate. participationRateAvg: ${participationRateAvg}, acceptableParticipationRate: ${env.acceptableParticipationRate}`
+    );
+  }
 }
 
-export function missedBlocksAssertions(env: SimulationEnvironment): void {
-  describe("missing blocks", () => {
-    it("should have no missed blocks", async () => {
-      const missedBlocks: Record<number, number[]> = {};
+export function missedBlocksAssertions(env: SimulationEnvironment, slotLimit: Slot): void {
+  const missedBlocks: Map<Slot, boolean>[] = [];
 
-      for (let n = 0; n < env.params.beaconNodes; n++) {
-        missedBlocks[n] = [];
-        for (let i = 0; i < env.clock.currentSlot; i++) {
-          try {
-            await env.nodes[n].api.beacon.getBlock(i);
-          } catch (err) {
-            if ((err as HttpError).status === 404) {
-              missedBlocks[n].push(i);
-            } else {
-              throw err;
-            }
-          }
-        }
-      }
+  for (let i = 0; i < env.params.beaconNodes; i++) {
+    const missedBlockNodes = new Map<Slot, boolean>();
 
-      // If there is single node
-      if (env.params.beaconNodes === 1) {
-        expect(missedBlocks[0]).to.be.eql([], `node 0 has following missed blocks: ${missedBlocks[0]}`);
-      } else {
-        const missedBlocksOnFirstNode = missedBlocks[0];
+    for (let s = 0; s < slotLimit; s++) {
+      missedBlockNodes.set(s, !env.tracker.producedBlocks.get(env.nodes[i].id)?.get(s) ?? true);
+    }
+    // TODO: Show table with some utility function
+    console.log(`${env.nodes[i].id} - Missed Blocks`);
+    console.table(missedBlockNodes);
 
-        for (let n = 1; n < env.params.beaconNodes; n++) {
-          expect(missedBlocks[n]).to.deep.equal(
-            missedBlocksOnFirstNode,
-            `node ${n} has different missed blocks than node 0, missedBlocksOnFirstNode: ${missedBlocksOnFirstNode.join()}, missedBlocksOnNode${n}: ${missedBlocks[
-              n
-            ].join()}`
-          );
-        }
-      }
-    });
-  });
+    missedBlocks.push(missedBlockNodes);
+  }
+
+  for (let i = 0; i < env.params.beaconNodes; i++) {
+    expect(missedBlocks[i]).to.equal(missedBlocks[0], `node ${i} has different missed blocks than node 0`);
+  }
 }

@@ -11,7 +11,7 @@ describe("singleNodeSingleValidatorMultipleEpoch", function () {
     validatorClients: 1,
     validatorsPerClient: 128,
     // We need to use the attesting participation so have to switch to altair
-    altairEpoch: 1,
+    altairEpoch: 0,
     // Use a larger value instead of Infinity
     // https://github.com/ChainSafe/lodestar/issues/4505
     bellatrixEpoch: 10 ** 12,
@@ -25,15 +25,24 @@ describe("singleNodeSingleValidatorMultipleEpoch", function () {
     await env.stop();
   });
 
-  for (let i = 2; i <= epochLimit; i++) {
+  for (let i = 0; i < epochLimit; i++) {
     describe(`epoch - ${i}`, () => {
       before(`wait for epoch ${i}`, async () => {
         // Wait for one extra slot to make sure the epoch transition is complete
-        await env.clock.waitForEndOfSlot(env.clock.getLastSlotOfEpoch(i) + 1);
+        await env.waitForEndOfSlot(env.clock.getLastSlotOfEpoch(i) + 1);
       });
 
-      missedBlocksAssertions(env);
-      participationAssertions(env);
+      it("should not have missed blocks", () => {
+        missedBlocksAssertions(env, env.clock.currentSlot);
+      });
+
+      it("should have correct participation on head", () => {
+        participationAssertions(env, "HEAD");
+      });
+
+      it("should have correct participation on FFG", () => {
+        participationAssertions(env, "FFG");
+      });
     });
   }
 });

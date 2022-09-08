@@ -1,4 +1,4 @@
-import {missedBlocksAssertions, nodeAssertions, participationAssertions} from "../utils/simulation/assertions.js";
+import {nodeAssertions} from "../utils/simulation/assertions.js";
 import {SimulationEnvironment} from "../utils/simulation/index.js";
 
 // TODO: Enable these back after fixing the issue with peer connection and `Error: PublishError.Duplicate`
@@ -18,8 +18,8 @@ describe.skip("Run four nodes, single validator per node, 32 interop validators 
 
   before(async function () {
     await env.start();
-    await env.connectAllNodes();
-    await env.clock.waitForEndOfEpoch(2);
+    await env.network.connectAllNodes();
+    await env.waitForEndOfEpoch(2);
   });
 
   after(async () => {
@@ -27,6 +27,4 @@ describe.skip("Run four nodes, single validator per node, 32 interop validators 
   });
 
   nodeAssertions(env);
-  missedBlocksAssertions(env);
-  participationAssertions(env);
 });
