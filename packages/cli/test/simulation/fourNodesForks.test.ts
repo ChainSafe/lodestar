@@ -5,7 +5,7 @@ import {logFilesDir, SimulationEnvironment, FAR_FUTURE_EPOCH} from "../utils/sim
 
 chai.use(chaiAsPromised);
 
-describe("singleNodeForks", function () {
+describe("fourNodesForks", function () {
   this.timeout("5m");
   let env: SimulationEnvironment;
 
@@ -48,22 +48,23 @@ describe("singleNodeForks", function () {
     describe(title, () => {
       before(async function () {
         env = new SimulationEnvironment({
-          beaconNodes: 1,
+          beaconNodes: 4,
           validatorClients: 1,
-          validatorsPerClient: 128,
+          validatorsPerClient: 32,
           altairEpoch,
           bellatrixEpoch,
-          logFilesDir: `${logFilesDir}/singleNodeForks/${testIdStr}`,
+          logFilesDir: `${logFilesDir}/fourNodesForks/${testIdStr}`,
         });
         await env.start();
+        await env.network.connectAllNodes();
       });
 
       after(async () => {
         await env.stop();
       });
 
-      it("should reach to finality", async () => {
-        await expect(env.waitForEvent(event, env.nodes[0])).be.fulfilled;
+      it("all nodes should reach to finality", async () => {
+        await expect(Promise.all(env.nodes.map((node) => env.waitForEvent(event, node)))).be.fulfilled;
       });
     });
   }

@@ -1,3 +1,4 @@
+import EventEmitter from "node:events";
 import {routes} from "@lodestar/api/beacon";
 import {altair, Epoch, Slot} from "@lodestar/types";
 import {EpochClock} from "./EpochClock.js";
@@ -10,6 +11,8 @@ export class SimulationTracker {
   readonly inclusionDelayPerBlock: Map<string, Map<Slot, number>>;
   readonly participationOnHead: Map<string, Map<Epoch, number>>;
   readonly participationOnFFG: Map<string, Map<Epoch, number>>;
+
+  readonly emitter = new EventEmitter();
 
   private signal: AbortSignal;
   private nodes: BeaconNodeProcess[];
@@ -41,6 +44,8 @@ export class SimulationTracker {
         [routes.events.EventType.block, routes.events.EventType.head, routes.events.EventType.finalizedCheckpoint],
         this.signal,
         async (event) => {
+          this.emitter.emit(event.type, event, this.nodes[i]);
+
           switch (event.type) {
             case routes.events.EventType.block:
               await this.onBlock(event.message, this.nodes[i]);
