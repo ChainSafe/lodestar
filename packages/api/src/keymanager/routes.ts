@@ -189,7 +189,7 @@ export type Api = {
   ): Promise<{
     data: GasLimitData;
   }>;
-  setGasLimit(pubkey: string, gasLimit: string): Promise<void>;
+  setGasLimit(pubkey: string, gasLimit: number): Promise<void>;
   deleteGasLimit(pubkey: string): Promise<void>;
 };
 
@@ -237,7 +237,7 @@ export type ReqTypes = {
   deleteFeeRecipient: {params: {pubkey: string}};
 
   getGasLimit: {params: {pubkey: string}};
-  setGasLimit: {params: {pubkey: string}; body: {gas_limit: string}};
+  setGasLimit: {params: {pubkey: string}; body: {gas_limit: string | number}};
   deleteGasLimit: {params: {pubkey: string}};
 };
 
@@ -299,7 +299,7 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
     },
     setGasLimit: {
       writeReq: (pubkey, gas_limit) => ({params: {pubkey}, body: {gas_limit}}),
-      parseReq: ({params: {pubkey}, body: {gas_limit}}) => [pubkey, gas_limit],
+      parseReq: ({params: {pubkey}, body: {gas_limit}}) => [pubkey, parseGasLimit(gas_limit)],
       schema: {
         params: {pubkey: Schema.StringRequired},
         body: Schema.Object,
@@ -329,4 +329,15 @@ export function getReturnTypes(): ReturnTypes<Api> {
     listFeeRecipient: jsonType("snake"),
     getGasLimit: jsonType("snake"),
   };
+}
+
+function parseGasLimit(gasLimitInput: string | number): number {
+  if ((typeof gasLimitInput !== "string" && typeof gasLimitInput !== "number") || `${gasLimitInput}`.trim() === "") {
+    throw Error("Not valid Gas Limit");
+  }
+  const gasLimit = Number(gasLimitInput);
+  if (Number.isNaN(gasLimit) || gasLimit === 0) {
+    throw Error(`Gas Limit is not valid gasLimit=${gasLimit}`);
+  }
+  return gasLimit;
 }

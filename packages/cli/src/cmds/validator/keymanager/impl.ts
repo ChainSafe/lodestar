@@ -61,7 +61,7 @@ export class KeymanagerApi implements Api {
     }
   }
 
-  async setGasLimit(pubkeyHex: string, gasLimit: string): Promise<void> {
+  async setGasLimit(pubkeyHex: string, gasLimit: number): Promise<void> {
     this.checkIfProposerWriteEnabled();
     this.validator.validatorStore.setGasLimit(pubkeyHex, gasLimit);
     this.persistedKeysBackend.writeProposerConfig(
