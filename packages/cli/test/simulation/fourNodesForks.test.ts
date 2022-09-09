@@ -5,7 +5,7 @@ import {logFilesDir, SimulationEnvironment, FAR_FUTURE_EPOCH} from "../utils/sim
 
 chai.use(chaiAsPromised);
 
-describe("fourNodesForks", function () {
+describe.skip("fourNodesForks", function () {
   this.timeout("5m");
   let env: SimulationEnvironment;
 
