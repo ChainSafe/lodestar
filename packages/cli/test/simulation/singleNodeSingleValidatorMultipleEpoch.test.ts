@@ -1,4 +1,4 @@
-import {logFilesDir, SimulationEnvironment} from "../utils/simulation/index.js";
+import {FAR_FUTURE_EPOCH, logFilesDir, SimulationEnvironment} from "../utils/simulation/index.js";
 import {missedBlocksAssertions, participationAssertions} from "../utils/simulation/assertions.js";
 
 const epochLimit = 5;
@@ -14,9 +14,10 @@ describe("singleNodeSingleValidatorMultipleEpoch", function () {
       validatorsPerClient: 128,
       // We need to use the attesting participation so have to switch to altair
       altairEpoch: 0,
-      // Use a larger value instead of Infinity
-      // https://github.com/ChainSafe/lodestar/issues/4505
-      bellatrixEpoch: 10 ** 12,
+      /** Use a larger value instead of Infinity
+       * https://github.com/ChainSafe/lodestar/issues/4505
+       */
+      bellatrixEpoch: FAR_FUTURE_EPOCH,
       logFilesDir: `${logFilesDir}/singleNodeSingleValidatorMultipleEpoch`,
     });
 

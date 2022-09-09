@@ -105,3 +105,5 @@ export const computeInclusionDelay = (attestations: phase0.Attestation[], slot: 
 export const avg = (arr: number[]): number => {
   return arr.length === 0 ? 0 : arr.reduce((p, c) => p + c, 0) / arr.length;
 };
+
+export const FAR_FUTURE_EPOCH = 10 ** 12;
