@@ -52,7 +52,7 @@ export const LodestarBeaconNodeProcess: BeaconNodeConstructor = class LodestarBe
       "rest.port": this.restPort,
       "rest.namespace": "*",
       "sync.isSingleNode": this.params.beaconNodes === 1,
-      "network.allowPublishToZeroPeers": true,
+      "network.allowPublishToZeroPeers": this.params.beaconNodes === 1,
       eth1: false,
       discv5: this.params.beaconNodes > 1,
       "network.connectToDiscv5Bootnodes": this.params.beaconNodes > 1,

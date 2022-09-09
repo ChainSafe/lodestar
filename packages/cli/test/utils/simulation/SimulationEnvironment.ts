@@ -83,26 +83,37 @@ export class SimulationEnvironment {
     await rm(this.rootDir, {recursive: true});
   }
 
-  waitForEvent(event: routes.events.EventType, node?: BeaconNodeProcess): Promise<this> {
+  // TODO: Add timeout support
+  waitForEvent(event: routes.events.EventType, node?: BeaconNodeProcess): Promise<routes.events.BeaconEvent> {
+    console.log(`Waiting for event "${event}" on "${node?.id ?? "any node"}"`);
+
     return new Promise((resolve) => {
-      const handler = (_beaconEvent: routes.events.BeaconEvent, eventNode: BeaconNodeProcess): void => {
+      const handler = (beaconEvent: routes.events.BeaconEvent, eventNode: BeaconNodeProcess): void => {
+        console.log(`Event "${beaconEvent.type}" received`, {
+          node: eventNode.id,
+          slot: this.clock.currentSlot,
+          epoch: this.clock.currentEpoch,
+          event: beaconEvent,
+        });
+
         if (!node) {
           this.emitter.removeListener(event, handler);
-          resolve(this);
+          resolve(beaconEvent);
         }
 
         if (node && eventNode === node) {
           this.emitter.removeListener(event, handler);
-          resolve(this);
+          resolve(beaconEvent);
         }
       };
 
-      this.emitter.on(event, handler);
+      this.tracker.emitter.addListener(event, handler);
     });
   }
 
   waitForStartOfSlot(slot: number): Promise<this> {
     console.log("Waiting for start of slot", {target: slot, current: this.clock.currentSlot});
+
     return new Promise((resolve) => {
       const slotTime = this.clock.getSlotTime(slot) * MS_IN_SEC - Date.now();
 
