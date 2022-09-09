@@ -9,7 +9,7 @@ import {getBeaconConfigFromArgs} from "../../../src/config/beaconParams.js";
 import {IGlobalArgs} from "../../../src/options/globalOptions.js";
 import {LodestarValidatorProcess} from "./LodestarValidatorProcess.js";
 import {BeaconNodeConstructor, BeaconNodeProcess, SimulationParams, ValidatorProcess} from "./types.js";
-import {closeChildProcess, spawnProcessAndWait, __dirname} from "./utils.js";
+import {closeChildProcess, logFilesDir, spawnProcessAndWait, __dirname} from "./utils.js";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
 export const LodestarBeaconNodeProcess: BeaconNodeConstructor = class LodestarBeaconNodeProcess
@@ -67,6 +67,9 @@ export const LodestarBeaconNodeProcess: BeaconNodeConstructor = class LodestarBe
       "params.BELLATRIX_FORK_EPOCH": String(this.params.bellatrixEpoch),
       logPrefix: this.id,
       logFormatGenesisTime: `${this.params.genesisTime}`,
+      logFile: `${this.params.logFilesDir}/${this.id}.log`,
+      logFileLevel: "debug",
+      logLevel: process.env.SHOW_LOGS ? "info" : "error",
     } as unknown) as IBeaconArgs & IGlobalArgs;
 
     for (let clientIndex = 0; clientIndex < this.params.validatorClients; clientIndex++) {
@@ -107,6 +110,8 @@ export const LodestarBeaconNodeProcess: BeaconNodeConstructor = class LodestarBe
       async () => this.ready(),
       "Waiting for beacon node to start..."
     );
+
+    console.log(`Beacon node "${this.id}" started.`);
 
     this.peerId = (await this.api.node.getNetworkIdentity()).data.peerId;
 

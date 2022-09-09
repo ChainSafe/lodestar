@@ -13,6 +13,8 @@ const TIMELY_TARGET = 1 << TIMELY_TARGET_FLAG_INDEX;
 // eslint-disable-next-line @typescript-eslint/naming-convention
 export const __dirname = dirname(fileURLToPath(import.meta.url));
 
+export const logFilesDir = "test-logs";
+
 export const defaultSimulationParams: SimulationOptionalParams = {
   validatorsPerClient: 32,
   withExternalSigner: false,

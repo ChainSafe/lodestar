@@ -1,5 +1,5 @@
 import {nodeAssertions} from "../utils/simulation/assertions.js";
-import {SimulationEnvironment} from "../utils/simulation/index.js";
+import {logFilesDir, SimulationEnvironment} from "../utils/simulation/index.js";
 
 // TODO: Enable these back after fixing the issue with peer connection and `Error: PublishError.Duplicate`
 describe.skip("Run four nodes, single validator per node, 32 interop validators (no eth1)", function () {
@@ -14,6 +14,7 @@ describe.skip("Run four nodes, single validator per node, 32 interop validators 
     // Use a larger value instead of Infinity
     // https://github.com/ChainSafe/lodestar/issues/4505
     bellatrixEpoch: 10 ** 12,
+    logFilesDir: `${logFilesDir}/fourNodeSingleValidator`,
   });
 
   before(async function () {

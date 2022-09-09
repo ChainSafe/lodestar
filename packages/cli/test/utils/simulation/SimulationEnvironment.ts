@@ -102,6 +102,7 @@ export class SimulationEnvironment {
   }
 
   waitForStartOfSlot(slot: number): Promise<this> {
+    console.log("Waiting for start of slot", {target: slot, current: this.clock.currentSlot});
     return new Promise((resolve) => {
       const slotTime = this.clock.getSlotTime(slot) * MS_IN_SEC - Date.now();
 

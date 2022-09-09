@@ -1,4 +1,4 @@
-import {SimulationEnvironment} from "../utils/simulation/index.js";
+import {logFilesDir, SimulationEnvironment} from "../utils/simulation/index.js";
 import {missedBlocksAssertions, participationAssertions} from "../utils/simulation/assertions.js";
 
 const epochLimit = 5;
@@ -17,6 +17,7 @@ describe("singleNodeSingleValidatorMultipleEpoch", function () {
       // Use a larger value instead of Infinity
       // https://github.com/ChainSafe/lodestar/issues/4505
       bellatrixEpoch: 10 ** 12,
+      logFilesDir: `${logFilesDir}/singleNodeSingleValidatorMultipleEpoch`,
     });
 
     await env.start();
