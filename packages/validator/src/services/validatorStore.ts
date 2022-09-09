@@ -265,14 +265,14 @@ export class ValidatorStore {
 
   addSigner(signer: Signer, valProposerConfig?: ValidatorProposerConfig): void {
     const pubkey = getSignerPubkeyHex(signer);
-    const proposerConfig = (valProposerConfig?.proposerConfig ?? {})[pubkey] ?? ({} as ProposerConfig);
+    const proposerConfig = (valProposerConfig?.proposerConfig ?? {})[pubkey];
 
     if (!this.validators.has(pubkey)) {
       this.pubkeysToDiscover.push(pubkey);
       this.validators.set(pubkey, {
         signer,
         ...proposerConfig,
-      } as ValidatorData);
+      });
 
       this.doppelgangerService?.registerValidator(pubkey);
     }
