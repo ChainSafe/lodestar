@@ -29,6 +29,7 @@ export async function getAndInitDevValidators({
 }): Promise<{validators: Validator[]; secretKeys: SecretKey[]}> {
   const validators: Promise<Validator>[] = [];
   const secretKeys: SecretKey[] = [];
+  const abortController = new AbortController();
 
   for (let clientIndex = 0; clientIndex < validatorClientCount; clientIndex++) {
     const startIndexVc = startIndex + clientIndex * validatorsPerClient;
@@ -67,6 +68,7 @@ export async function getAndInitDevValidators({
         logger,
         // eslint-disable-next-line @typescript-eslint/no-empty-function
         processShutdownCallback: () => {},
+        abortController,
         signers,
         doppelgangerProtectionEnabled,
         valProposerConfig,

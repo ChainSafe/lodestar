@@ -1,4 +1,4 @@
-import {WinstonLogger, LogLevel} from "@lodestar/utils";
+import {createWinstonLogger, LogLevel, ILogger} from "@lodestar/utils";
 import {getLoggerVc} from "../../src/util/index.js";
 import {ClockMock} from "./clock.js";
 
@@ -10,8 +10,8 @@ import {ClockMock} from "./clock.js";
  * VERBOSE=1 mocha .ts
  * ```
  */
-export function testLogger(module?: string): WinstonLogger {
-  return new WinstonLogger({level: getLogLevel(), module});
+export function testLogger(module?: string): ILogger {
+  return createWinstonLogger({level: getLogLevel(), module});
 }
 
 function getLogLevel(): LogLevel {

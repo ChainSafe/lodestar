@@ -49,7 +49,7 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
   const metricsRegistries: Registry[] = [];
   const db = new BeaconDb({
     config,
-    controller: new LevelDbController(options.db, {logger: logger.child(options.logger.db)}),
+    controller: new LevelDbController(options.db, {logger: logger.child({module: "db"})}),
   });
 
   await db.start();

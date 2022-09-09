@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import {expect} from "chai";
 import {IBeaconNodeOptions} from "@lodestar/beacon-node";
-import {LogLevel, RecursivePartial} from "@lodestar/utils";
+import {RecursivePartial} from "@lodestar/utils";
 import {parseBeaconNodeArgs, IBeaconNodeArgs} from "../../../src/options/beaconNodeOptions/index.js";
 import {getTestdirPath} from "../../utils.js";
 
@@ -23,6 +23,7 @@ describe("options / beaconNodeOptions", () => {
       "chain.proposerBoostEnabled": false,
       "chain.disableImportExecutionFcU": false,
       "chain.computeUnrealized": true,
+      "chain.countUnrealizedFull": true,
       suggestedFeeRecipient: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       "chain.assertCorrectProgressiveBalances": true,
       "chain.maxSkipSlots": 100,
@@ -45,9 +46,6 @@ describe("options / beaconNodeOptions", () => {
       builder: false,
       "builder.urls": ["http://localhost:8661"],
       "builder.timeout": 12000,
-
-      "logger.eth1.level": "debug",
-      "logger.unknown.level": "debug",
 
       metrics: true,
       "metrics.port": 8765,
@@ -94,6 +92,7 @@ describe("options / beaconNodeOptions", () => {
         proposerBoostEnabled: false,
         disableImportExecutionFcU: false,
         computeUnrealized: true,
+        countUnrealizedFull: true,
         safeSlotsToImportOptimistically: 256,
         suggestedFeeRecipient: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         assertCorrectProgressiveBalances: true,
@@ -118,11 +117,6 @@ describe("options / beaconNodeOptions", () => {
         enabled: false,
         urls: ["http://localhost:8661"],
         timeout: 12000,
-      },
-      logger: {
-        eth1: {
-          level: LogLevel.debug,
-        },
       },
       metrics: {
         enabled: true,
