@@ -102,7 +102,6 @@ export const LodestarBeaconNodeProcess: BeaconNodeConstructor = class LodestarBe
     await writeFile(`${this.rootDir}/rc_config.json`, JSON.stringify(this.rcConfig, null, 2));
 
     console.log(`Starting beacon node at: ${this.rootDir}`);
-    console.log(`Beacon node config: ${JSON.stringify(this.rcConfig, null, 2)}`);
 
     this.beaconProcess = await spawnProcessAndWait(
       `${__dirname}/../../../bin/lodestar.js`,
@@ -121,6 +120,8 @@ export const LodestarBeaconNodeProcess: BeaconNodeConstructor = class LodestarBe
   }
 
   async stop(): Promise<void> {
+    console.log(`Stopping node "${this.id}".`);
+
     await Promise.all(this.validatorClients.map((p) => p.stop()));
 
     if (this.beaconProcess !== undefined) {

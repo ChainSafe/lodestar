@@ -97,7 +97,6 @@ export const LodestarValidatorProcess: ValidatorConstructor = class LodestarVali
     }
 
     console.log(`Starting validator at: ${this.rootDir}`);
-    console.log(`Validator config: ${JSON.stringify(this.rcConfig, null, 2)}`);
 
     this.validatorProcess = await spawnProcessAndWait(
       `${__dirname}/../../../bin/lodestar.js`,
@@ -120,6 +119,8 @@ export const LodestarValidatorProcess: ValidatorConstructor = class LodestarVali
   }
 
   async stop(): Promise<void> {
+    console.log(`Stopping validator "${this.id}".`);
+
     if (this.validatorProcess !== undefined) {
       await closeChildProcess(this.validatorProcess);
     }
