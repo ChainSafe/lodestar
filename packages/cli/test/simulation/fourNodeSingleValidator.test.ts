@@ -1,5 +1,5 @@
 import {nodeAssertions} from "../utils/simulation/assertions.js";
-import {logFilesDir, SimulationEnvironment} from "../utils/simulation/index.js";
+import {FAR_FUTURE_EPOCH, logFilesDir, SimulationEnvironment} from "../utils/simulation/index.js";
 
 // TODO: Enable these back after fixing the issue with peer connection and `Error: PublishError.Duplicate`
 describe.skip("Run four nodes, single validator per node, 32 interop validators (no eth1)", function () {
@@ -11,9 +11,10 @@ describe.skip("Run four nodes, single validator per node, 32 interop validators 
     validatorsPerClient: 32,
     // We need to use the attesting participation so have to switch to altair
     altairEpoch: 1,
-    // Use a larger value instead of Infinity
-    // https://github.com/ChainSafe/lodestar/issues/4505
-    bellatrixEpoch: 10 ** 12,
+    /** Use a larger value instead of Infinity
+     * https://github.com/ChainSafe/lodestar/issues/4505
+     */
+    bellatrixEpoch: FAR_FUTURE_EPOCH,
     logFilesDir: `${logFilesDir}/fourNodeSingleValidator`,
   });
 

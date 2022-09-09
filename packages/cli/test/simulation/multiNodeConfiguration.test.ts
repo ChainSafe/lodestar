@@ -1,5 +1,5 @@
 import {nodeAssertions} from "../utils/simulation/assertions.js";
-import {logFilesDir, SimulationEnvironment} from "../utils/simulation/index.js";
+import {FAR_FUTURE_EPOCH, logFilesDir, SimulationEnvironment} from "../utils/simulation/index.js";
 
 describe("multiNodeConfiguration", function () {
   this.timeout("5m");
@@ -10,9 +10,10 @@ describe("multiNodeConfiguration", function () {
     // Use a larger value instead of Infinity
     // https://github.com/ChainSafe/lodestar/issues/4505
     altairEpoch: 10 ** 12,
-    // Use a larger value instead of Infinity
-    // https://github.com/ChainSafe/lodestar/issues/4505
-    bellatrixEpoch: 10 ** 12,
+    /** Use a larger value instead of Infinity
+     * https://github.com/ChainSafe/lodestar/issues/4505
+     */
+    bellatrixEpoch: FAR_FUTURE_EPOCH,
     logFilesDir: `${logFilesDir}/multiNodeConfiguration`,
   });
 
