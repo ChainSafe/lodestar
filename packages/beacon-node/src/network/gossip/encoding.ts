@@ -19,6 +19,11 @@ export function fastMsgIdFn(rpcMsg: RPC.IMessage): string {
   }
 }
 
+export function msgIdToStrFn(msgId: Uint8Array): string {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+  return Buffer.prototype.toString.call(msgId, "base64");
+}
+
 /**
  * Only valid msgId. Messages that fail to snappy_decompress() are not tracked
  */

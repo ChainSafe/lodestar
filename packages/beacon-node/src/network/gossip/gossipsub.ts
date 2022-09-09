@@ -26,7 +26,7 @@ import {
   GossipHandlers,
 } from "./interface.js";
 import {getGossipSSZType, GossipTopicCache, stringifyGossipTopic} from "./topic.js";
-import {DataTransformSnappy, fastMsgIdFn, msgIdFn} from "./encoding.js";
+import {DataTransformSnappy, fastMsgIdFn, msgIdFn, msgIdToStrFn} from "./encoding.js";
 import {createValidatorFnsByType} from "./validation/index.js";
 
 import {
@@ -109,6 +109,7 @@ export class Eth2Gossipsub extends GossipSub {
       gossipsubIWantFollowupMs: 12 * 1000, // 12s
       fastMsgIdFn: fastMsgIdFn,
       msgIdFn: msgIdFn.bind(msgIdFn, gossipTopicCache),
+      msgIdToStrFn: msgIdToStrFn,
       // Use the bellatrix max size if the merge is configured. pre-merge using this size
       // could only be an issue on outgoing payloads, its highly unlikely we will send out
       // a chunk bigger than GOSSIP_MAX_SIZE pre merge even on mainnet network.
