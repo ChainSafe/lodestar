@@ -88,8 +88,8 @@ function parseProposerConfigSection(
       (strict_fee_recipient_check ? stringtoBool(strict_fee_recipient_check) : undefined),
     feeRecipient: overrideConfig?.feeRecipient ?? (fee_recipient ? parseFeeRecipient(fee_recipient) : undefined),
     builder: {
-      enabled: overrideConfig?.builder.enabled ?? (enabled ? stringtoBool(enabled) : undefined),
-      gasLimit: overrideConfig?.builder.gasLimit ?? (gas_limit !== undefined ? Number(gas_limit) : undefined),
+      enabled: overrideConfig?.builder?.enabled ?? (enabled ? stringtoBool(enabled) : undefined),
+      gasLimit: overrideConfig?.builder?.gasLimit ?? (gas_limit !== undefined ? Number(gas_limit) : undefined),
     },
   };
 }

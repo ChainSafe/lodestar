@@ -74,7 +74,7 @@ export type ProposerConfig = {
   graffiti?: string;
   strictFeeRecipientCheck?: boolean;
   feeRecipient?: Eth1Address;
-  builder: {
+  builder?: {
     enabled?: boolean;
     gasLimit?: number;
   };
@@ -129,7 +129,7 @@ export class ValidatorStore {
     private readonly doppelgangerService: DoppelgangerService | null,
     private readonly metrics: Metrics | null,
     initialSigners: Signer[],
-    valProposerConfig: ValidatorProposerConfig = {defaultConfig: {builder: {}}, proposerConfig: {}}
+    valProposerConfig: ValidatorProposerConfig = {defaultConfig: {}, proposerConfig: {}}
   ) {
     const defaultConfig = valProposerConfig.defaultConfig;
     this.defaultProposerConfig = {
@@ -184,8 +184,8 @@ export class ValidatorStore {
     if (this.validators.has(pubkeyHex)) {
       const validatorData = this.validators.get(pubkeyHex);
       if (validatorData !== undefined) {
-        //const newValidatorData = {...validatorData, feeRecipient}
-        this.validators.set(pubkeyHex, {...validatorData, feeRecipient});
+        const newValidatorData = {...validatorData, feeRecipient};
+        this.validators.set(pubkeyHex, newValidatorData);
       } else {
         throw Error(`ValidatorData for pubkey ${pubkeyHex} not set `);
       }
@@ -259,7 +259,9 @@ export class ValidatorStore {
     if (this.validators.has(pubkeyHex)) {
       const validatorData = this.validators.get(pubkeyHex);
       if (validatorData !== undefined) {
-        delete validatorData.builder["gasLimit"];
+        if (validatorData.builder !== undefined) {
+          delete validatorData.builder["gasLimit"];
+        }
         this.validators.set(pubkeyHex, validatorData);
       } else {
         throw Error(`ValidatorData for pubkey ${pubkeyHex} not set `);
@@ -286,8 +288,8 @@ export class ValidatorStore {
           graffiti !== undefined ||
           strictFeeRecipientCheck !== undefined ||
           feeRecipient !== undefined ||
-          builder.enabled !== undefined ||
-          builder.gasLimit !== undefined
+          builder?.enabled !== undefined ||
+          builder?.gasLimit !== undefined
         ) {
           proposerConfig = {graffiti, strictFeeRecipientCheck, feeRecipient, builder};
         }
@@ -298,14 +300,15 @@ export class ValidatorStore {
 
   addSigner(signer: Signer, valProposerConfig?: ValidatorProposerConfig): void {
     const pubkey = getSignerPubkeyHex(signer);
-    const proposerConfig = (valProposerConfig?.proposerConfig ?? {})[pubkey] ?? {};
+
+    const proposerConfig = (valProposerConfig?.proposerConfig ?? {})[pubkey] ?? ({} as ProposerConfig);
 
     if (!this.validators.has(pubkey)) {
       this.pubkeysToDiscover.push(pubkey);
       this.validators.set(pubkey, {
         signer,
         ...proposerConfig,
-      });
+      } as ValidatorData);
 
       this.doppelgangerService?.registerValidator(pubkey);
     }
