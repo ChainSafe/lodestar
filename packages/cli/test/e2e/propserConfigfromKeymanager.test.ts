@@ -87,7 +87,7 @@ describeCliTest("import keystores from api, test DefaultProposerConfig", functio
       );
 
       // Set GasLimit to updatedOptions
-      await keymanagerClient.setGasLimit(pubkeys[0], String(updatedOptions.gasLimit));
+      await keymanagerClient.setGasLimit(pubkeys[0], updatedOptions.gasLimit);
       gasLimit0 = await keymanagerClient.getGasLimit(pubkeys[0]);
       expectDeepEquals(
         gasLimit0.data,
