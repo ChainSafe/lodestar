@@ -62,13 +62,13 @@ describe("ValidatorStore", function () {
       valProposerConfig.proposerConfig[toHexString(pubkeys[0])].feeRecipient
     );
     expect(validatorStore.isBuilderEnabled(toHexString(pubkeys[0]))).to.be.equal(
-      valProposerConfig.proposerConfig[toHexString(pubkeys[0])].builder.enabled
+      valProposerConfig.proposerConfig[toHexString(pubkeys[0])].builder?.enabled
     );
     expect(validatorStore.strictFeeRecipientCheck(toHexString(pubkeys[0]))).to.be.equal(
       valProposerConfig.proposerConfig[toHexString(pubkeys[0])].strictFeeRecipientCheck
     );
     expect(validatorStore.getGasLimit(toHexString(pubkeys[0]))).to.be.equal(
-      valProposerConfig.proposerConfig[toHexString(pubkeys[0])].builder.gasLimit
+      valProposerConfig.proposerConfig[toHexString(pubkeys[0])].builder?.gasLimit
     );
 
     // default values
@@ -77,13 +77,13 @@ describe("ValidatorStore", function () {
       valProposerConfig.defaultConfig.feeRecipient
     );
     expect(validatorStore.isBuilderEnabled(toHexString(pubkeys[1]))).to.be.equal(
-      valProposerConfig.defaultConfig.builder.enabled
+      valProposerConfig.defaultConfig.builder?.enabled
     );
     expect(validatorStore.strictFeeRecipientCheck(toHexString(pubkeys[1]))).to.be.equal(
       valProposerConfig.defaultConfig.strictFeeRecipientCheck
     );
     expect(validatorStore.getGasLimit(toHexString(pubkeys[1]))).to.be.equal(
-      valProposerConfig.defaultConfig.builder.gasLimit
+      valProposerConfig.defaultConfig.builder?.gasLimit
     );
   });
 

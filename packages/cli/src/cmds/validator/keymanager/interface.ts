@@ -30,6 +30,6 @@ export interface IPersistedKeysBackend {
 
   writeProposerConfig(pubkey: PubkeyHex, proposerConfig: ProposerConfig | null): void;
   deleteProposerConfig(pubkeyHex: PubkeyHex): void;
-  readAllProposerConfigs(): {[index: string]: ProposerConfig};
-  deleteAllProposerConfigs(): void;
+  readProposerConfigs(): {[index: string]: ProposerConfig};
+  deleteProposerConfigs(): void;
 }

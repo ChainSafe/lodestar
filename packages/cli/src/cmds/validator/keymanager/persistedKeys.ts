@@ -72,7 +72,7 @@ export class PersistedKeysBackend implements IPersistedKeysBackend {
     }
   }
 
-  readAllProposerConfigs(): {[index: string]: ProposerConfig} {
+  readProposerConfigs(): {[index: string]: ProposerConfig} {
     if (!fs.existsSync(this.paths.proposerDir)) {
       return {};
     }
@@ -84,7 +84,7 @@ export class PersistedKeysBackend implements IPersistedKeysBackend {
     return proposerConfigs;
   }
 
-  deleteAllProposerConfigs(): void {
+  deleteProposerConfigs(): void {
     for (const pubkey of fs.readdirSync(this.paths.proposerDir)) {
       this.deleteProposerConfig(pubkey);
     }

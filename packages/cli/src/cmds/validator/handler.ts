@@ -160,7 +160,7 @@ function getProposerConfigFromArgs(
   persistedKeysBackend: IPersistedKeysBackend
 ): ValidatorProposerConfig {
   if (args.flushKeymanagerProposerConfigs) {
-    persistedKeysBackend.deleteAllProposerConfigs();
+    persistedKeysBackend.deleteProposerConfigs();
   }
 
   const defaultConfig = {
@@ -171,7 +171,7 @@ function getProposerConfigFromArgs(
   };
 
   let valProposerConfig: ValidatorProposerConfig;
-  const proposerConfigFromKeymanager = persistedKeysBackend.readAllProposerConfigs();
+  const proposerConfigFromKeymanager = persistedKeysBackend.readProposerConfigs();
 
   if (Object.keys(proposerConfigFromKeymanager).length > 0) {
     // from persistedBackend
