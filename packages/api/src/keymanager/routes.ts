@@ -53,7 +53,7 @@ export type FeeRecipientData = {
 };
 export type GasLimitData = {
   pubkey: string;
-  gasLimit: string;
+  gasLimit: number;
 };
 
 export type SignerDefinition = {

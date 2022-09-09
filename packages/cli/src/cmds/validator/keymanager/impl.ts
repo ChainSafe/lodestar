@@ -54,11 +54,8 @@ export class KeymanagerApi implements Api {
   }
 
   async getGasLimit(pubkeyHex: string): ReturnType<Api["getGasLimit"]> {
-    try {
-      return {data: {pubkey: pubkeyHex, gasLimit: String(this.validator.validatorStore.getGasLimit(pubkeyHex))}};
-    } catch (e) {
-      throw Error((e as Error).message);
-    }
+    const gasLimit = this.validator.validatorStore.getGasLimit(pubkeyHex);
+    return {data: {pubkey: pubkeyHex, gasLimit}};
   }
 
   async setGasLimit(pubkeyHex: string, gasLimit: number): Promise<void> {
