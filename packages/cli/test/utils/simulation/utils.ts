@@ -22,6 +22,7 @@ export const defaultSimulationParams: SimulationOptionalParams = {
   // delay a bit so regular sync sees it's up to date and sync is completed from the beginning
   // allow time for bls worker threads to warm up
   genesisSlotsDelay: 20,
+  externalSigner: false,
 };
 
 export const INTEROP_BLOCK_HASH = Buffer.alloc(32, "B");
@@ -107,3 +108,7 @@ export const avg = (arr: number[]): number => {
 };
 
 export const FAR_FUTURE_EPOCH = 10 ** 12;
+export const BN_P2P_BASE_PORT = 4000;
+export const BN_P2P_REST_PORT = 5000;
+export const KEY_MANAGER_BASE_PORT = 6000;
+export const EXTERNAL_SIGNER_BASE_PORT = 7000;

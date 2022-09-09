@@ -15,6 +15,7 @@ describe("singleNodeForks", function () {
       event: routes.events.EventType;
       altairEpoch: number;
       bellatrixEpoch: number;
+      withExternalSigner?: boolean;
     };
   }[] = [
     {
@@ -37,13 +38,26 @@ describe("singleNodeForks", function () {
     //   title: "bellatrix fork at epoch 0",
     //   params: {event: routes.events.EventType.finalizedCheckpoint, altairEpoch: 0, bellatrixEpoch: 0},
     // },
+    {
+      title: "Remote signer with altair",
+      params: {
+        event: routes.events.EventType.finalizedCheckpoint,
+        altairEpoch: 0,
+        bellatrixEpoch: Infinity,
+        withExternalSigner: true,
+      },
+    },
   ];
 
   for (const {
     title,
-    params: {event, altairEpoch, bellatrixEpoch},
+    params: {event, altairEpoch, bellatrixEpoch, withExternalSigner},
   } of testCases) {
-    const testIdStr = [`altair-${altairEpoch}`, `bellatrix-${bellatrixEpoch}`].join("_");
+    const testIdStr = [
+      `altair-${altairEpoch}`,
+      `bellatrix-${bellatrixEpoch}`,
+      `externalSigner-${withExternalSigner ? "yes" : "no"}`,
+    ].join("_");
 
     describe(title, () => {
       before(async function () {
@@ -54,6 +68,7 @@ describe("singleNodeForks", function () {
           altairEpoch,
           bellatrixEpoch,
           logFilesDir: `${logFilesDir}/singleNodeForks/${testIdStr}`,
+          externalSigner: withExternalSigner,
         });
         await env.start();
       });
