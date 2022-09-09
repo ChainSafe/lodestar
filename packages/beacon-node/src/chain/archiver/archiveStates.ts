@@ -5,7 +5,6 @@ import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-trans
 import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {IBeaconDb} from "../../db/index.js";
 import {CheckpointStateCache} from "../stateCache/index.js";
-import {chunkifyMaximizeChunkSize} from "../bls/multithread/utils.js";
 
 /**
  * Minimum number of epochs between archived states
@@ -79,33 +78,6 @@ export class StatesArchiver {
     // don't delete states before the finalized state, auto-prune will take care of it
     this.logger.verbose("Archive states completed", {finalizedEpoch: finalized.epoch});
   }
-}
-
-/**
- * Garbage collection run once at process start to delete any extra states not pruned from previous runs
- */
-export async function gcFinalizedStates(db: IBeaconDb, logger: ILogger, finalizedStateSlot: Slot): Promise<void> {
-  const storedStateSlots = await db.stateArchive.keys({lt: finalizedStateSlot});
-
-  const statesSlotsToDelete = computeStateSlotsToDelete(storedStateSlots, PERSIST_STATE_EVERY_EPOCHS);
-  if (statesSlotsToDelete.length === 0) {
-    logger.verbose("State archive prune gc: Did not prune any existing finalized states");
-    return;
-  }
-
-  logger.info(`State archive prune gc: found ${statesSlotsToDelete.length} to prune`);
-
-  // Delete in smaller chunks of 5 (arbitrary number) in case the application crashes during GC and progress is lost
-  for (const slots of chunkifyMaximizeChunkSize(statesSlotsToDelete, 5)) {
-    await db.stateArchive.batchDelete(slots);
-    logger.info(`State archive prune gc: deleted ${slots.length}/${statesSlotsToDelete.length} finalized states`, {
-      slots: slots.join(","),
-    });
-  }
-
-  logger.info("State archive prune gc: starting compactRange(stateArchive)");
-  await db.stateArchive.compactRange();
-  logger.info("State archive prune gc: completed compactRange(stateArchive)");
 }
 
 /**

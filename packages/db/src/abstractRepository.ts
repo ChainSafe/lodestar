@@ -8,11 +8,6 @@ import {getBucketNameByValue} from "./util.js";
 
 export type Id = Uint8Array | string | number | bigint;
 
-export type RangeOpts<I> = {
-  from?: I;
-  to?: I;
-};
-
 /**
  * Repository is a high level kv storage
  * managing a Uint8Array to Uint8Array kv database
@@ -30,9 +25,6 @@ export abstract class Repository<I extends Id, T> {
   private readonly bucketId: string;
   private readonly dbReqOpts: DbReqOpts;
 
-  private readonly minKey: Uint8Array;
-  private readonly maxKey: Uint8Array;
-
   protected type: Type<T>;
 
   protected constructor(config: IChainForkConfig, db: Db, bucket: Bucket, type: Type<T>) {
@@ -42,8 +34,6 @@ export abstract class Repository<I extends Id, T> {
     this.bucketId = getBucketNameByValue(bucket);
     this.dbReqOpts = {bucketId: this.bucketId};
     this.type = type;
-    this.minKey = _encodeKey(bucket, Buffer.alloc(0));
-    this.maxKey = _encodeKey(bucket + 1, Buffer.alloc(0));
   }
 
   encodeValue(value: T): Uint8Array {
@@ -246,23 +236,6 @@ export abstract class Repository<I extends Id, T> {
       return null;
     }
     return entries[0];
-  }
-
-  compactRange(range?: RangeOpts<I>): Promise<void> {
-    const {from, to} = this.serializeRange(range);
-    return this.db.compactRange(from, to);
-  }
-
-  approximateSize(range?: RangeOpts<I>): Promise<number> {
-    const {from, to} = this.serializeRange(range);
-    return this.db.approximateSize(from, to);
-  }
-
-  protected serializeRange(range: RangeOpts<I> | undefined): {from: Uint8Array; to: Uint8Array} {
-    return {
-      from: range?.from !== undefined ? this.encodeKey(range.from) : this.minKey,
-      to: range?.to !== undefined ? this.encodeKey(range.to) : this.maxKey,
-    };
   }
 
   /**
