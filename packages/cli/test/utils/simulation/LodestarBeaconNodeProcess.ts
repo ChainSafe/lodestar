@@ -9,7 +9,7 @@ import {getBeaconConfigFromArgs} from "../../../src/config/beaconParams.js";
 import {IGlobalArgs} from "../../../src/options/globalOptions.js";
 import {LodestarValidatorProcess} from "./LodestarValidatorProcess.js";
 import {BeaconNodeConstructor, BeaconNodeProcess, SimulationParams, ValidatorProcess} from "./types.js";
-import {closeChildProcess, logFilesDir, spawnProcessAndWait, __dirname} from "./utils.js";
+import {BN_P2P_BASE_PORT, BN_P2P_REST_PORT, closeChildProcess, spawnProcessAndWait, __dirname} from "./utils.js";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
 export const LodestarBeaconNodeProcess: BeaconNodeConstructor = class LodestarBeaconNodeProcess
@@ -38,8 +38,8 @@ export const LodestarBeaconNodeProcess: BeaconNodeConstructor = class LodestarBe
     LodestarBeaconNodeProcess.totalProcessCount += 1;
 
     this.address = "127.0.0.1";
-    this.port = 4000 + LodestarBeaconNodeProcess.totalProcessCount;
-    this.restPort = 5000 + LodestarBeaconNodeProcess.totalProcessCount;
+    this.port = BN_P2P_BASE_PORT + LodestarBeaconNodeProcess.totalProcessCount;
+    this.restPort = BN_P2P_REST_PORT + LodestarBeaconNodeProcess.totalProcessCount;
     this.id = `NODE-${LodestarBeaconNodeProcess.totalProcessCount}`;
 
     this.rcConfig = ({
@@ -101,7 +101,7 @@ export const LodestarBeaconNodeProcess: BeaconNodeConstructor = class LodestarBe
     await writeFile(`${this.rootDir}/genesis.ssz`, state.serialize());
     await writeFile(`${this.rootDir}/rc_config.json`, JSON.stringify(this.rcConfig, null, 2));
 
-    console.log(`Starting beacon node at: ${this.rootDir}`);
+    console.log(`Starting beacon node "${this.id}" at: ${this.rootDir}`);
 
     this.beaconProcess = await spawnProcessAndWait(
       `${__dirname}/../../../bin/lodestar.js`,

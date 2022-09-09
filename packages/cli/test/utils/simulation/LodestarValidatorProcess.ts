@@ -8,7 +8,8 @@ import {interopSecretKey} from "@lodestar/state-transition";
 import {IGlobalArgs} from "../../../src/options/globalOptions.js";
 import {IValidatorCliArgs} from "../../../lib/cmds/validator/options.js";
 import {SimulationParams, ValidatorConstructor, ValidatorProcess} from "./types.js";
-import {closeChildProcess, spawnProcessAndWait, __dirname} from "./utils.js";
+import {closeChildProcess, KEY_MANAGER_BASE_PORT, spawnProcessAndWait, __dirname} from "./utils.js";
+import {ExternalSignerServer} from "./ExternalSignerServer.js";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
 export const LodestarValidatorProcess: ValidatorConstructor = class LodestarValidatorProcess
@@ -20,6 +21,7 @@ export const LodestarValidatorProcess: ValidatorConstructor = class LodestarVali
   readonly id: string;
   keyManagerApi!: Api;
   secretKeys: SecretKey[] = [];
+  externalSigner?: ExternalSignerServer;
 
   private rootDir: string;
   private clientIndex: number;
@@ -46,9 +48,14 @@ export const LodestarValidatorProcess: ValidatorConstructor = class LodestarVali
     this.clientIndex = clientIndex;
     LodestarValidatorProcess.totalProcessCount += 1;
 
-    this.keyManagerPort = 6000 + LodestarValidatorProcess.totalProcessCount;
+    this.keyManagerPort = KEY_MANAGER_BASE_PORT + LodestarValidatorProcess.totalProcessCount;
     this.id = `VAL-${LodestarValidatorProcess.totalProcessCount}`;
     this.forkConfig = config;
+
+    const validatorSecretKeys = Array.from({length: this.params.validatorsPerClient}, (_, i) =>
+      interopSecretKey(this.clientIndex * this.params.validatorsPerClient + i)
+    );
+    this.secretKeys = validatorSecretKeys;
 
     this.rcConfig = ({
       network: "dev",
@@ -69,6 +76,11 @@ export const LodestarValidatorProcess: ValidatorConstructor = class LodestarVali
       logFileLevel: "debug",
       logLevel: process.env.SHOW_LOGS ? "info" : "error",
     } as unknown) as IValidatorCliArgs & IGlobalArgs;
+
+    if (this.params.externalSigner) {
+      this.externalSigner = new ExternalSignerServer(this.secretKeys);
+      this.rcConfig["externalSigner.url"] = this.externalSigner.url;
+    }
   }
 
   async start(): Promise<void> {
@@ -77,10 +89,6 @@ export const LodestarValidatorProcess: ValidatorConstructor = class LodestarVali
       {config: this.forkConfig}
     );
 
-    const validatorSecretKeys = Array.from({length: this.params.validatorsPerClient}, (_, i) =>
-      interopSecretKey(this.clientIndex * this.params.validatorsPerClient + i)
-    );
-    this.secretKeys = validatorSecretKeys;
     await mkdir(this.rootDir);
     await mkdir(`${this.rootDir}/keystores`);
 
@@ -88,12 +96,16 @@ export const LodestarValidatorProcess: ValidatorConstructor = class LodestarVali
 
     await writeFile(`${this.rootDir}/rc_config.json`, JSON.stringify(this.rcConfig, null, 2));
 
-    for (const key of validatorSecretKeys) {
+    for (const key of this.secretKeys) {
       const keystore = await Keystore.create("password", key.toBytes(), key.toPublicKey().toBytes(), "");
       await writeFile(
         `${this.rootDir}/keystores/${key.toPublicKey().toHex()}.json`,
         JSON.stringify(keystore.toObject(), null, 2)
       );
+    }
+
+    if (this.externalSigner) {
+      await this.externalSigner.start();
     }
 
     console.log(`Starting validator at: ${this.rootDir}`);
@@ -120,6 +132,10 @@ export const LodestarValidatorProcess: ValidatorConstructor = class LodestarVali
 
   async stop(): Promise<void> {
     console.log(`Stopping validator "${this.id}".`);
+
+    if (this.externalSigner) {
+      await this.externalSigner.stop();
+    }
 
     if (this.validatorProcess !== undefined) {
       await closeChildProcess(this.validatorProcess);

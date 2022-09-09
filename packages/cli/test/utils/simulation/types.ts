@@ -18,6 +18,7 @@ export type SimulationOptionalParams = {
   secondsPerSlot: number;
   genesisSlotsDelay: number;
   anchorState?: BeaconStateAllForks;
+  externalSigner: boolean;
 };
 
 export type RunTimeSimulationParams = {
