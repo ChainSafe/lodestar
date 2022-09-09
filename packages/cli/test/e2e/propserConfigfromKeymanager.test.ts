@@ -82,7 +82,7 @@ describeCliTest("import keystores from api, test DefaultProposerConfig", functio
 
       expectDeepEquals(
         gasLimit0.data,
-        {pubkey: pubkeys[0], gasLimit: String(defaultOptions.gasLimit)},
+        {pubkey: pubkeys[0], gasLimit: defaultOptions.gasLimit},
         "gasLimit Check default"
       );
 
@@ -91,7 +91,7 @@ describeCliTest("import keystores from api, test DefaultProposerConfig", functio
       gasLimit0 = await keymanagerClient.getGasLimit(pubkeys[0]);
       expectDeepEquals(
         gasLimit0.data,
-        {pubkey: pubkeys[0], gasLimit: String(updatedOptions.gasLimit)},
+        {pubkey: pubkeys[0], gasLimit: updatedOptions.gasLimit},
         "gasLimit Check updated"
       );
     }
@@ -121,7 +121,7 @@ describeCliTest("import keystores from api, test DefaultProposerConfig", functio
       let gasLimit0 = await keymanagerClient.getGasLimit(pubkeys[0]);
       expectDeepEquals(
         gasLimit0.data,
-        {pubkey: pubkeys[0], gasLimit: String(updatedOptions.gasLimit)},
+        {pubkey: pubkeys[0], gasLimit: updatedOptions.gasLimit},
         "gasLimit Check updated persists"
       );
 
@@ -129,7 +129,7 @@ describeCliTest("import keystores from api, test DefaultProposerConfig", functio
       gasLimit0 = await keymanagerClient.getGasLimit(pubkeys[0]);
       expectDeepEquals(
         gasLimit0.data,
-        {pubkey: pubkeys[0], gasLimit: String(defaultOptions.gasLimit)},
+        {pubkey: pubkeys[0], gasLimit: defaultOptions.gasLimit},
         "gasLimit Check default after  delete"
       );
     }
@@ -152,7 +152,7 @@ describeCliTest("import keystores from api, test DefaultProposerConfig", functio
 
       expectDeepEquals(
         gasLimit0.data,
-        {pubkey: pubkeys[0], gasLimit: String(defaultOptions.gasLimit)},
+        {pubkey: pubkeys[0], gasLimit: defaultOptions.gasLimit},
         "gasLimit Check default after  delete"
       );
     }
