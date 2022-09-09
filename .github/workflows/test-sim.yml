@@ -52,9 +52,15 @@ jobs:
       #   run: yarn test:sim:multiThread
       #   working-directory: packages/beacon-node
       #   env: {RUN_ONLY_SIM_TEST: altair-epoch2}
-      - name: Upload debug log test files
+      - name: Upload debug log test files for "packages/beacon-node"
         if: ${{ always() }}
         uses: actions/upload-artifact@v2
         with:
-          name: debug-test-logs
+          name: debug-test-logs-beacon-node
           path: packages/beacon-node/test-logs
+      - name: Upload debug log test files for "packages/cli"
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: debug-test-logs-cli
+          path: packages/cli/test-logs

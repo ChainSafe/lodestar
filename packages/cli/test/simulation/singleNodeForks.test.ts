@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {SimulationEnvironment} from "../utils/simulation/index.js";
+import {logFilesDir, SimulationEnvironment} from "../utils/simulation/index.js";
 
 describe("singleNodeForks", function () {
   this.timeout("5m");
@@ -12,6 +12,7 @@ describe("singleNodeForks", function () {
       validatorsPerClient: 128,
       altairEpoch: 1,
       bellatrixEpoch: 2,
+      logFilesDir: `${logFilesDir}/singleNodeForks`,
     });
     await env.start();
   });

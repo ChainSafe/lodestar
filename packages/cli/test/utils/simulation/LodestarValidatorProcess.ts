@@ -65,6 +65,9 @@ export const LodestarValidatorProcess: ValidatorConstructor = class LodestarVali
       "params.BELLATRIX_FORK_EPOCH": String(this.params.bellatrixEpoch),
       logPrefix: this.id,
       logFormatGenesisTime: this.params.genesisTime,
+      logFile: `${this.params.logFilesDir}/${this.id}.log`,
+      logFileLevel: "debug",
+      logLevel: process.env.SHOW_LOGS ? "info" : "error",
     } as unknown) as IValidatorCliArgs & IGlobalArgs;
   }
 
@@ -112,6 +115,8 @@ export const LodestarValidatorProcess: ValidatorConstructor = class LodestarVali
       async () => this.ready(),
       "Waiting for validator to start..."
     );
+
+    console.log(`Validator "${this.id}" started.`);
   }
 
   async stop(): Promise<void> {

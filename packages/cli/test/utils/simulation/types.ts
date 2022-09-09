@@ -9,6 +9,7 @@ export type SimulationRequiredParams = {
   validatorClients: number;
   altairEpoch: number;
   bellatrixEpoch: number;
+  logFilesDir: string;
 };
 
 export type SimulationOptionalParams = {
