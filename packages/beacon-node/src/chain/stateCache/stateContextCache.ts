@@ -6,7 +6,7 @@ import {IMetrics} from "../../metrics/index.js";
 import {MapTracker} from "./mapMetrics.js";
 import {stateInternalCachePopulated} from "./stateContextCheckpointsCache.js";
 
-const MAX_STATES = 3 * 32;
+const MAX_STATES = 6 * 32;
 
 /**
  * In memory cache of CachedBeaconState
