@@ -255,6 +255,11 @@ function convertToRequest(signableMessage: SignableMessage): Record<string, unkn
       ...requestObj,
       contribution_and_proof: serializerMap[signableType](data),
     };
+  } else if (signableType === "BLOCK_V2") {
+    return {
+      ...requestObj,
+      beacon_block: serializerMap[signableType](data),
+    };
   } else {
     return {
       ...requestObj,
