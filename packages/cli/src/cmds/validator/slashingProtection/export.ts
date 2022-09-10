@@ -8,6 +8,7 @@ import {getBeaconPaths} from "../../beacon/paths.js";
 import {getValidatorPaths} from "../paths.js";
 import {getGenesisValidatorsRoot, getSlashingProtection} from "./utils.js";
 import {ISlashingProtectionArgs} from "./options.js";
+import {getSlashingProtectionPaths} from "./paths.js";
 
 /* eslint-disable no-console */
 
@@ -40,8 +41,10 @@ export const exportCmd: ICliCommand<
 
   handler: async (args) => {
     const {config, network} = getBeaconConfigFromArgs(args);
+
     const beaconPaths = getBeaconPaths(args, network);
-    const logger = getCliLogger(args, beaconPaths, config);
+    const {logFile} = getSlashingProtectionPaths(args, network, "export-");
+    const logger = getCliLogger(args, {...beaconPaths, logFile}, config);
 
     const {validatorsDbDir: dbPath} = getValidatorPaths(args, network);
 
