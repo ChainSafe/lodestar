@@ -63,18 +63,18 @@ export function getCliLogger(
     // args = {
     //   logFileDailyRotate: undefined,
     // }
-    const rotate = "logFileDailyRotate" in args;
+    const rotateMaxFiles = args.logFileDailyRotate ?? 0;
     const filename = paths.logFile;
 
     transports.push(
-      rotate
+      rotateMaxFiles > 0
         ? new DailyRotateFile({
             level: args.logFileLevel,
             //insert the date pattern in filename before the file extension.
             filename: filename.replace(/\.(?=[^.]*$)|$/, "-%DATE%$&"),
             datePattern: "YYYY-MM-DD",
             handleExceptions: true,
-            maxFiles: args.logFileDailyRotate ?? defaultLogMaxFiles,
+            maxFiles: rotateMaxFiles,
             auditFile: path.join(path.dirname(filename), ".log_rotate_audit.json"),
           })
         : new winston.transports.File({

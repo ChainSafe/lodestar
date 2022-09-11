@@ -76,7 +76,10 @@ export const logOptions: ICliCommandOptions<ILogArgs> = {
   },
 
   logFileDailyRotate: {
-    description: `Daily rotate log files, set to an integer to limit the file count, else defaults to ${defaultLogMaxFiles}`,
+    description:
+      "Daily rotate log files, set to an integer to limit the file count, set to 0(zero) to disable rotation",
+    defaultDescription: defaultLogMaxFiles.toString(),
+    default: defaultLogMaxFiles,
     type: "number",
   },
 
@@ -139,7 +142,8 @@ export const beaconPathsOptions: ICliCommandOptions<IBeaconPaths> = {
   },
 
   logFile: {
-    description: "Path to output all logs to a persistent log file",
+    description: "Path to output all logs to a persistent log file, use 'none' to disable",
+    defaultDescription: defaultBeaconPaths.logFile,
     type: "string",
   },
 };

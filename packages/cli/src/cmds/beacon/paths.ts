@@ -19,7 +19,8 @@ export interface IBeaconPaths {
  *     ├── beacon.config.json
  *     ├── peer-id.json
  *     ├── enr
- *     └── chain-db
+ *     ├── chain-db
+ *     └── beacon.log
  * ```
  */
 // Using Pick<IGlobalArgs, "dataDir"> make changes in IGlobalArgs throw a type error here
@@ -32,10 +33,10 @@ export function getBeaconPaths(
 
   const dataDir = globalPaths.dataDir;
   const beaconDir = dataDir;
-  const dbDir = args.dbDir || path.join(beaconDir, "chain-db");
-  const persistInvalidSszObjectsDir = args.persistInvalidSszObjectsDir || path.join(beaconDir, "invalidSszObjects");
-  const peerStoreDir = args.peerStoreDir || path.join(beaconDir, "peerstore");
-  const logFile = args.logFile;
+  const dbDir = args.dbDir ?? path.join(beaconDir, "chain-db");
+  const persistInvalidSszObjectsDir = args.persistInvalidSszObjectsDir ?? path.join(beaconDir, "invalidSszObjects");
+  const peerStoreDir = args.peerStoreDir ?? path.join(beaconDir, "peerstore");
+  const logFile = args.logFile?.trim() !== "none" ? args.logFile ?? path.join(dataDir, "beacon.log") : undefined;
 
   return {
     ...globalPaths,

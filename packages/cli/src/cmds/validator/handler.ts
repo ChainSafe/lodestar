@@ -29,7 +29,7 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
   const beaconPaths = getBeaconPaths(args, network);
   const validatorPaths = getValidatorPaths(args, network);
 
-  const logger = getCliLogger(args, beaconPaths, config);
+  const logger = getCliLogger(args, {...beaconPaths, logFile: validatorPaths.logFile}, config);
 
   const {version, commit} = getVersionData();
   logger.info("Lodestar", {network, version, commit});
