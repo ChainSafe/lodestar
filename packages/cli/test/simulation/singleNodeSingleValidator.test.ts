@@ -2,17 +2,21 @@ import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import {routes} from "@lodestar/api/beacon";
 import {logFilesDir, SimulationEnvironment, FAR_FUTURE_EPOCH} from "../utils/simulation/index.js";
+import {
+  missedBlocksAssertions,
+  attestationParticipationAssertions,
+  nodeAssertions,
+} from "../utils/simulation/assertions.js";
 
 chai.use(chaiAsPromised);
 
-describe("singleNodeForks", function () {
+describe("singleNodeSingleValidator", function () {
   this.timeout("5m");
   let env: SimulationEnvironment;
 
-  const testCases: {
+  const forksCases: {
     title: string;
     params: {
-      event: routes.events.EventType;
       altairEpoch: number;
       bellatrixEpoch: number;
       withExternalSigner?: boolean;
@@ -21,18 +25,17 @@ describe("singleNodeForks", function () {
     {
       title: "phase0 fork only",
       params: {
-        event: routes.events.EventType.finalizedCheckpoint,
         altairEpoch: FAR_FUTURE_EPOCH,
-        bellatrixEpoch: FAR_FUTURE_EPOCH + 10,
+        bellatrixEpoch: FAR_FUTURE_EPOCH,
       },
     },
     {
       title: "altair fork only",
-      params: {event: routes.events.EventType.finalizedCheckpoint, altairEpoch: 0, bellatrixEpoch: FAR_FUTURE_EPOCH},
+      params: {altairEpoch: 0, bellatrixEpoch: FAR_FUTURE_EPOCH},
     },
     {
       title: "altair fork at epoch 2",
-      params: {event: routes.events.EventType.finalizedCheckpoint, altairEpoch: 2, bellatrixEpoch: FAR_FUTURE_EPOCH},
+      params: {altairEpoch: 2, bellatrixEpoch: FAR_FUTURE_EPOCH},
     },
     // {
     //   title: "bellatrix fork at epoch 0",
@@ -41,9 +44,8 @@ describe("singleNodeForks", function () {
     {
       title: "Remote signer with altair",
       params: {
-        event: routes.events.EventType.finalizedCheckpoint,
         altairEpoch: 0,
-        bellatrixEpoch: Infinity,
+        bellatrixEpoch: FAR_FUTURE_EPOCH,
         withExternalSigner: true,
       },
     },
@@ -51,16 +53,16 @@ describe("singleNodeForks", function () {
 
   for (const {
     title,
-    params: {event, altairEpoch, bellatrixEpoch, withExternalSigner},
-  } of testCases) {
+    params: {altairEpoch, bellatrixEpoch, withExternalSigner},
+  } of forksCases) {
     const testIdStr = [
       `altair-${altairEpoch}`,
       `bellatrix-${bellatrixEpoch}`,
       `externalSigner-${withExternalSigner ? "yes" : "no"}`,
     ].join("_");
 
-    describe(title, () => {
-      before(async function () {
+    describe(title, async () => {
+      before("setup env", () => {
         env = new SimulationEnvironment({
           beaconNodes: 1,
           validatorClients: 1,
@@ -70,15 +72,34 @@ describe("singleNodeForks", function () {
           logFilesDir: `${logFilesDir}/singleNodeForks/${testIdStr}`,
           externalSigner: withExternalSigner,
         });
+      });
+
+      before("start env", async () => {
         await env.start();
       });
 
-      after(async () => {
+      after("stop env", async () => {
         await env.stop();
       });
 
-      it("should reach to finality", async () => {
-        await expect(env.waitForEvent(event, env.nodes[0])).be.fulfilled;
+      before("node has proper status and keys", async () => {
+        await expect(nodeAssertions(env)).be.fulfilled;
+      });
+
+      before("should reach to finality", async () => {
+        await expect(env.waitForEvent(routes.events.EventType.finalizedCheckpoint, env.nodes[0])).be.fulfilled;
+      });
+
+      it("should not have missed blocks", () => {
+        env.tracker.printMissedBlocks();
+
+        missedBlocksAssertions(env);
+      });
+
+      it("should have correct attestation participation", () => {
+        env.tracker.printAttestationsParticipation();
+
+        attestationParticipationAssertions(env);
       });
     });
   }

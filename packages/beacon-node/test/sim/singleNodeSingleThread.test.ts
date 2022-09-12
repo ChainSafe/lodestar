@@ -31,16 +31,16 @@ describe("Run single node single thread interop validators (no eth1) until check
     withExternalSigner?: boolean;
   }[] = [
     // phase0 fork only
-    {event: ChainEvent.finalized, altairEpoch: Infinity, bellatrixEpoch: Infinity},
+    // {event: ChainEvent.finalized, altairEpoch: Infinity, bellatrixEpoch: Infinity},
     // altair fork only
-    {event: ChainEvent.finalized, altairEpoch: 0, bellatrixEpoch: Infinity},
+    // {event: ChainEvent.finalized, altairEpoch: 0, bellatrixEpoch: Infinity},
     // altair fork at epoch 2
-    {event: ChainEvent.finalized, altairEpoch: 2, bellatrixEpoch: Infinity},
+    // {event: ChainEvent.finalized, altairEpoch: 2, bellatrixEpoch: Infinity},
     // bellatrix fork at epoch 0
     {event: ChainEvent.finalized, altairEpoch: 0, bellatrixEpoch: 0},
 
     // Remote signer with altair
-    {event: ChainEvent.justified, altairEpoch: 0, bellatrixEpoch: Infinity, withExternalSigner: true},
+    // {event: ChainEvent.justified, altairEpoch: 0, bellatrixEpoch: Infinity, withExternalSigner: true},
   ];
 
   const afterEachCallbacks: (() => Promise<unknown> | unknown)[] = [];

@@ -9,14 +9,14 @@ export class SimulationTracker {
   readonly producedBlocks: Map<string, Map<Slot, boolean>>;
   readonly attestationsPerBlock: Map<string, Map<Slot, number>>;
   readonly inclusionDelayPerBlock: Map<string, Map<Slot, number>>;
-  readonly participationOnHead: Map<string, Map<Epoch, number>>;
-  readonly participationOnFFG: Map<string, Map<Epoch, number>>;
+  readonly attestationParticipation: Map<string, Map<Epoch, {head: number; source: number; target: number}>>;
 
   readonly emitter = new EventEmitter();
 
   private signal: AbortSignal;
   private nodes: BeaconNodeProcess[];
   private clock: EpochClock;
+  private lastSeenSlot: Slot = 0;
 
   constructor(nodes: BeaconNodeProcess[], clock: EpochClock, signal: AbortSignal) {
     this.signal = signal;
@@ -26,16 +26,32 @@ export class SimulationTracker {
     this.producedBlocks = new Map();
     this.attestationsPerBlock = new Map();
     this.inclusionDelayPerBlock = new Map();
-    this.participationOnHead = new Map();
-    this.participationOnFFG = new Map();
+    this.attestationParticipation = new Map();
 
     for (let i = 0; i < nodes.length; i += 1) {
       this.producedBlocks.set(nodes[i].id, new Map());
       this.attestationsPerBlock.set(nodes[i].id, new Map());
       this.inclusionDelayPerBlock.set(nodes[i].id, new Map());
-      this.participationOnHead.set(nodes[i].id, new Map());
-      this.participationOnFFG.set(nodes[i].id, new Map());
+      this.attestationParticipation.set(nodes[i].id, new Map());
     }
+  }
+
+  get missedBlocks(): Map<string, Slot[]> {
+    const missedBlocks: Map<string, Slot[]> = new Map();
+
+    for (let i = 0; i < this.nodes.length; i++) {
+      const missedBlocksForNode: Slot[] = [];
+
+      for (let s = 0; s < this.lastSeenSlot; s++) {
+        if (!this.producedBlocks.get(this.nodes[i].id)?.get(s)) {
+          missedBlocksForNode.push(s);
+        }
+      }
+
+      missedBlocks.set(this.nodes[i].id, missedBlocksForNode);
+    }
+
+    return missedBlocks;
   }
 
   async start(): Promise<void> {
@@ -70,21 +86,26 @@ export class SimulationTracker {
     const slot = event.slot;
     const blockAttestations = await node.api.beacon.getBlockAttestations(slot);
 
+    if (slot > this.lastSeenSlot) {
+      this.lastSeenSlot = slot;
+    }
+
     this.producedBlocks.get(node.id)?.set(slot, true);
     this.attestationsPerBlock.get(node.id)?.set(slot, computeAttestation(blockAttestations.data));
     this.inclusionDelayPerBlock.get(node.id)?.set(slot, computeInclusionDelay(blockAttestations.data, slot));
 
     if (this.clock.isFirstSlotOfEpoch(slot)) {
-      const epoch = this.clock.getEpochForSlot(slot - 1);
       const state = await node.api.debug.getStateV2("head");
+      const participation = computeAttestationParticipation(state.data as altair.BeaconState);
 
-      this.participationOnHead
+      this.attestationParticipation
         .get(node.id)
-        ?.set(epoch, computeAttestationParticipation(state.data as altair.BeaconState, "HEAD"));
-
-      this.participationOnFFG
-        .get(node.id)
-        ?.set(epoch, computeAttestationParticipation(state.data as altair.BeaconState, "FFG"));
+        // As the `computeAttestationParticipation` using previousEpochParticipation for calculations
+        ?.set(participation.epoch, {
+          head: participation.head,
+          source: participation.source,
+          target: participation.target,
+        });
     }
   }
 
@@ -97,5 +118,24 @@ export class SimulationTracker {
     _node: BeaconNodeProcess
   ): void {
     // TODO: Add checkpoint tracking
+  }
+
+  printMissedBlocks(): void {
+    console.log("==== MISSED BLOCKS ====");
+    console.table([...this.missedBlocks.entries()].map(([node, missedBlocks]) => ({node, missedBlocks})));
+  }
+
+  printAttestationsParticipation(): void {
+    for (let i = 0; i < this.nodes.length; i++) {
+      console.log(`==== ATTESTATION PARTICIPATION - ${this.nodes[i].id} ====`);
+      console.table(
+        [...(this.attestationParticipation.get(this.nodes[i].id)?.entries() || [])].map(([epoch, participation]) => ({
+          epoch,
+          head: participation.head,
+          source: participation.source,
+          target: participation.target,
+        }))
+      );
+    }
   }
 }

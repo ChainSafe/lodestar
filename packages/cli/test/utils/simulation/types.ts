@@ -31,7 +31,7 @@ export interface BeaconNodeProcess {
   start(): Promise<void>;
   stop(): Promise<void>;
   id: string;
-  peerId: string;
+  peerId?: string;
   multiaddrs: string[];
   api: Api;
   address: string;
