@@ -17,17 +17,20 @@ const serializerMap = {
   ["ATTESTATION"]: (data: Record<string, unknown>) => {
     return ssz.phase0.AttestationData.toJson(data as AttestationData);
   },
-  ["BLOCK"]: (data: Record<string, unknown>) => {
-    return {
-      version: data.version,
-      block: ssz.phase0.BeaconBlock.toJson(data.block as phase0.BeaconBlock), // TODO DA confirm version
-    };
-  },
-  ["BLOCK_V2"]: (data: Record<string, unknown>) => {
-    return {
-      version: data.version,
-      block: ssz.altair.BeaconBlock.toJson(data.block as altair.BeaconBlock), // TODO DA confirm version
-    };
+  ["BLOCK_V2"]: (data: {version: string; block: BeaconBlock}) => {
+    if (data.version === "PHASE0") {
+      return {
+        version: data.version,
+        block: ssz.phase0.BeaconBlock.toJson(data.block as phase0.BeaconBlock),
+      };
+    } else if (data.version === "ALTAIR") {
+      return {
+        version: data.version,
+        block: ssz.altair.BeaconBlock.toJson(data.block as altair.BeaconBlock),
+      };
+    } else {
+      throw new Error(`version ${data.version} not supported by remote signer`);
+    }
   },
   ["DEPOSIT"]: (data: Record<string, unknown>) => {
     return data;
@@ -258,7 +261,7 @@ function convertToRequest(signableMessage: SignableMessage): Record<string, unkn
   } else if (signableType === "BLOCK_V2") {
     return {
       ...requestObj,
-      beacon_block: serializerMap[signableType](data),
+      beacon_block: serializerMap[signableType](data as {version: string; block: BeaconBlock}),
     };
   } else {
     return {

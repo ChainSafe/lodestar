@@ -277,7 +277,7 @@ export class ValidatorStore {
         singablePayload: {
           type: "BLOCK_V2",
           data: {
-            version: this.config.getForkInfo(blindedOrFull.slot).name,
+            version: this.config.getForkInfo(blindedOrFull.slot).name.toUpperCase(),
             block: blindedOrFull,
           },
         },
