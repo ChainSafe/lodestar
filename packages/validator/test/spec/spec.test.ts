@@ -15,7 +15,6 @@ import {
   SlashingProtectionBlock,
   SlashingProtectionAttestation,
 } from "../../src/slashingProtection/index.js";
-import {testLogger} from "../utils/logger.js";
 import {SPEC_TEST_LOCATION} from "./params.js";
 
 chai.use(chaiAsPromised);
@@ -51,7 +50,7 @@ type SlashingProtectionInterchangeTest = {
 describe("slashing-protection-interchange-tests", () => {
   const testCases = loadTestCases(path.join(SPEC_TEST_LOCATION, "/tests/generated"));
   const dbLocation = "./.__testdb";
-  const controller = new LevelDbController({name: dbLocation}, {logger: testLogger()});
+  const controller = new LevelDbController({name: dbLocation}, {});
 
   after(() => {
     rimraf.sync(dbLocation);

@@ -1,18 +1,17 @@
 import child_process from "node:child_process";
 import {IFilterOptions, LevelDbController} from "@lodestar/db";
 import {IChainForkConfig} from "@lodestar/config";
-import {ILogger} from "@lodestar/utils";
 import {BeaconDb} from "../../src/index.js";
 
 export const TEMP_DB_LOCATION = ".tmpdb";
 
-export async function startTmpBeaconDb(config: IChainForkConfig, logger: ILogger): Promise<BeaconDb> {
+export async function startTmpBeaconDb(config: IChainForkConfig): Promise<BeaconDb> {
   // Clean-up db first
   child_process.execSync(`rm -rf ${TEMP_DB_LOCATION}`);
 
   const db = new BeaconDb({
     config,
-    controller: new LevelDbController({name: TEMP_DB_LOCATION}, {logger}),
+    controller: new LevelDbController({name: TEMP_DB_LOCATION}, {}),
   });
   await db.start();
 

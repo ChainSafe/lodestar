@@ -29,7 +29,7 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
   mkdir(beaconPaths.dbDir);
 
   const abortController = new AbortController();
-  const logger = getCliLogger(args, beaconPaths, config);
+  const logger = getCliLogger(args, {defaultLogFile: "beacon.log"}, config);
 
   onGracefulShutdown(async () => {
     abortController.abort();
@@ -49,10 +49,11 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
   const metricsRegistries: Registry[] = [];
   const db = new BeaconDb({
     config,
-    controller: new LevelDbController(options.db, {logger: logger.child({module: "db"})}),
+    controller: new LevelDbController(options.db, {metrics: null}),
   });
 
   await db.start();
+  logger.info("Connected to LevelDB database", {path: options.db.name});
 
   // BeaconNode setup
   try {

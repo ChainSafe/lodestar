@@ -38,7 +38,7 @@ export async function getAndInitDevValidators({
     const tmpDir = tmp.dirSync({unsafeCleanup: true});
     const dbOps = {
       config: node.config,
-      controller: new LevelDbController({name: tmpDir.name}, {logger}),
+      controller: new LevelDbController({name: tmpDir.name}, {}),
     };
     const slashingProtection = new SlashingProtection(dbOps);
 

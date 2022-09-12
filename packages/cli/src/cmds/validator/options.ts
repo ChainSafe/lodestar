@@ -1,7 +1,6 @@
 import {defaultOptions} from "@lodestar/validator";
+import {logOptions} from "../../options/logOptions.js";
 import {ensure0xPrefix, ICliCommandOptions, ILogArgs} from "../../util/index.js";
-import {logOptions, beaconPathsOptions} from "../beacon/options.js";
-import {IBeaconPaths} from "../beacon/paths.js";
 import {keymanagerRestApiServerOptsDefault} from "./keymanager/server.js";
 import {defaultAccountPaths, defaultValidatorPaths} from "./paths.js";
 
@@ -20,7 +19,6 @@ export const validatorMetricsDefaultOptions = {
 export type IValidatorCliArgs = AccountValidatorArgs &
   KeymanagerArgs &
   ILogArgs & {
-    logFile: IBeaconPaths["logFile"];
     validatorsDbDir?: string;
     server: string;
     force: boolean;
@@ -93,7 +91,6 @@ export const keymanagerOptions: ICliCommandOptions<KeymanagerArgs> = {
 export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
   ...logOptions,
   ...keymanagerOptions,
-  logFile: beaconPathsOptions.logFile,
 
   keystoresDir: {
     hidden: true,

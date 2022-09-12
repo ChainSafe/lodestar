@@ -13,12 +13,17 @@ import {
   LogFormat,
   logFormats,
 } from "@lodestar/utils";
+import {IGlobalArgs} from "../options/globalOptions.js";
 import {ConsoleDynamicLevel} from "./loggerConsoleTransport.js";
 
-export const defaultLogMaxFiles = 5;
+export const LOG_FILE_DISABLE_KEYWORD = "none";
+export const LOG_LEVEL_DEFAULT = LogLevel.info;
+export const LOG_FILE_LEVEL_DEFAULT = LogLevel.debug;
+export const LOG_DAILY_ROTATE_DEFAULT = 5;
 
 export interface ILogArgs {
   logLevel?: LogLevel;
+  logFile?: string;
   logFileLevel?: LogLevel;
   logFileDailyRotate?: number;
   logFormatGenesisTime?: number;
@@ -31,14 +36,14 @@ export interface ILogArgs {
  * Setup a CLI logger, common for beacon, validator and dev commands
  */
 export function getCliLogger(
-  args: ILogArgs,
-  paths: {logFile?: string},
+  args: ILogArgs & Pick<IGlobalArgs, "dataDir">,
+  paths: {defaultLogFile: string},
   config: IChainForkConfig,
   opts?: {hideTimestamp?: boolean}
 ): ILogger {
   const consoleTransport = new ConsoleDynamicLevel({
     // Set defaultLevel, not level for dynamic level setting of ConsoleDynamicLevel
-    defaultLevel: args.logLevel ?? LogLevel.info,
+    defaultLevel: args.logLevel ?? LOG_LEVEL_DEFAULT,
     debugStdout: true,
     handleExceptions: true,
   });
@@ -57,19 +62,23 @@ export function getCliLogger(
 
   const transports: TransportStream[] = [consoleTransport];
 
-  if (paths.logFile) {
+  if (args.logFile !== LOG_FILE_DISABLE_KEYWORD) {
     // yargs populates with undefined if just set but with no arg
     // $ ./bin/lodestar.js beacon --logFileDailyRotate
     // args = {
     //   logFileDailyRotate: undefined,
     // }
-    const rotateMaxFiles = args.logFileDailyRotate ?? 0;
-    const filename = paths.logFile;
+    // `lodestar --logFileDailyRotate` -> enabled daily rotate with default value
+    // `lodestar --logFileDailyRotate 10` -> set daily rotate to custom value 10
+    // `lodestar --logFileDailyRotate 0` -> disable daily rotate and accumulate in same file
+    const rotateMaxFiles = args.logFileDailyRotate ?? LOG_DAILY_ROTATE_DEFAULT;
+    const filename = args.logFile ?? path.join(args.dataDir, paths.defaultLogFile);
+    const logFileLevel = args.logFileLevel ?? LOG_FILE_LEVEL_DEFAULT;
 
     transports.push(
       rotateMaxFiles > 0
         ? new DailyRotateFile({
-            level: args.logFileLevel,
+            level: logFileLevel,
             //insert the date pattern in filename before the file extension.
             filename: filename.replace(/\.(?=[^.]*$)|$/, "-%DATE%$&"),
             datePattern: "YYYY-MM-DD",
@@ -78,7 +87,7 @@ export function getCliLogger(
             auditFile: path.join(path.dirname(filename), ".log_rotate_audit.json"),
           })
         : new winston.transports.File({
-            level: args.logFileLevel,
+            level: logFileLevel,
             filename: filename,
             handleExceptions: true,
           })

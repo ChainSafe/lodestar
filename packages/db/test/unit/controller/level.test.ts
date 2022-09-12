@@ -2,12 +2,11 @@ import {execSync} from "node:child_process";
 import {expect} from "chai";
 import leveldown from "leveldown";
 import all from "it-all";
-import {createWinstonLogger} from "@lodestar/utils";
 import {LevelDbController} from "../../../src/controller/index.js";
 
 describe("LevelDB controller", () => {
   const dbLocation = "./.__testdb";
-  const db = new LevelDbController({name: dbLocation}, {logger: createWinstonLogger()});
+  const db = new LevelDbController({name: dbLocation}, {metrics: null});
 
   before(async () => {
     await db.start();

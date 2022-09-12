@@ -4,7 +4,7 @@ import rimraf from "rimraf";
 import {expect} from "chai";
 import {config} from "@lodestar/config/default";
 import {LodestarError, LogData, LogFormat, logFormats, LogLevel} from "@lodestar/utils";
-import {getCliLogger} from "../../../src/util/logger.js";
+import {getCliLogger, ILogArgs} from "../../../src/util/logger.js";
 
 describe("winston logger format and options", () => {
   interface ITestCase {
@@ -61,7 +61,7 @@ describe("winston logger format and options", () => {
       it(`${id} ${format} output`, async () => {
         stdoutHook = hookProcessStdout();
 
-        const logger = getCliLogger({logFormat: format}, {}, config, {hideTimestamp: true});
+        const logger = getCliLoggerTest({logFormat: format});
 
         logger.warn(message, context, error);
 
@@ -80,9 +80,7 @@ describe("winston dynamic level by module", () => {
   afterEach(() => stdoutHook?.restore());
 
   it("Should log to child at a lower logLevel", async () => {
-    const loggerA = getCliLogger({logPrefix: "a", logLevelModule: [`a/b=${LogLevel.debug}`]}, {}, config, {
-      hideTimestamp: true,
-    });
+    const loggerA = getCliLoggerTest({logPrefix: "a", logLevelModule: [`a/b=${LogLevel.debug}`]});
 
     stdoutHook = hookProcessStdout();
 
@@ -118,7 +116,7 @@ describe("winston transport log to file", () => {
   it("Should log to file", async () => {
     const filename = path.join(tmpDir, "child-logger-test.txt");
 
-    const logger = getCliLogger({logPrefix: "a"}, {logFile: filename}, config, {hideTimestamp: true});
+    const logger = getCliLoggerTest({logPrefix: "a", logFile: filename});
 
     stdoutHook = hookProcessStdout();
 
@@ -136,6 +134,10 @@ describe("winston transport log to file", () => {
     rimraf.sync(tmpDir);
   });
 });
+
+function getCliLoggerTest(logArgs: Partial<ILogArgs>): ReturnType<typeof getCliLogger> {
+  return getCliLogger({dataDir: "", ...logArgs}, {defaultLogFile: ""}, config, {hideTimestamp: true});
+}
 
 /** Wait for file to exist have some content, then return its contents */
 async function readFileWhenExists(filepath: string): Promise<string> {
