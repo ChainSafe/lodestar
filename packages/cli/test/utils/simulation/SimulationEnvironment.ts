@@ -20,7 +20,7 @@ export class SimulationEnvironment {
   readonly rootDir: string;
   readonly nodes: BeaconNodeProcess[] = [];
   readonly clock: EpochClock;
-  readonly acceptableParticipationRate = 0.8;
+  readonly acceptableParticipationRate = 0.7;
   readonly tracker: SimulationTracker;
   readonly emitter: EventEmitter;
   readonly controller: AbortController;
