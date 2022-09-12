@@ -107,9 +107,9 @@ export function missedBlocksAssertions(env: SimulationEnvironment): void {
   const missedBlocksOnFirstNode = missedBlocks.get(env.nodes[0].id);
 
   for (let i = 0; i < env.params.beaconNodes; i++) {
-    expect(missedBlocks.get(env.nodes[i].id)).to.equal(
+    expect(missedBlocks.get(env.nodes[i].id)).to.eql(
       missedBlocksOnFirstNode,
-      `node ${i} has different missed blocks than node 0. node${i}MissedBlocks: ${missedBlocks.get(
+      `node "${env.nodes[i].id}" has different missed blocks than node 0. node${i}MissedBlocks: ${missedBlocks.get(
         env.nodes[i].id
       )}, node0MissedBlocks: ${missedBlocksOnFirstNode}`
     );

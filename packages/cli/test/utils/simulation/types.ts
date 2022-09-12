@@ -42,6 +42,7 @@ export interface BeaconNodeProcess {
 
 export interface BeaconNodeConstructor {
   new (params: SimulationParams, rootDir: string): BeaconNodeProcess;
+  totalProcessCount: number;
 }
 
 export interface ValidatorProcess {
@@ -63,6 +64,7 @@ export interface ValidatorConstructor {
       config: IChainForkConfig;
     }
   ): ValidatorProcess;
+  totalProcessCount: number;
 }
 
 export type SimulationParams = SimulationRequiredParams & Required<SimulationOptionalParams> & RunTimeSimulationParams;

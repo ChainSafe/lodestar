@@ -61,7 +61,7 @@ export const LodestarValidatorProcess: ValidatorConstructor = class LodestarVali
     this.rcConfig = ({
       network: "dev",
       preset: "minimal",
-      dataDir: this.rootDir,
+      dataDir: join(this.rootDir, this.id),
       server,
       keymanager: true,
       "keymanager.authEnabled": false,

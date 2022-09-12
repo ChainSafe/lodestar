@@ -91,6 +91,7 @@ describe("simulation", function () {
           });
 
           after("stop env", async () => {
+            env.resetCounter();
             await env.stop();
           });
 
