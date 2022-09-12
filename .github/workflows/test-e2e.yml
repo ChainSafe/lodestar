@@ -1,6 +1,9 @@
 name: E2E tests
 
-on: [pull_request, push]
+on: 
+  pull_request:
+    types: [opened, reopened]
+  push:
 
 env:
   GOERLI_RPC_DEFAULT_URL: https://goerli.infura.io/v3/84842078b09946638c03157f83405213

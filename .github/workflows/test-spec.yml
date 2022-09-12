@@ -1,6 +1,9 @@
 name: Spec tests
 
-on: [pull_request, push]
+on: 
+  pull_request:
+    types: [opened, reopened]
+  push:
 
 jobs:
   tests-spec:
