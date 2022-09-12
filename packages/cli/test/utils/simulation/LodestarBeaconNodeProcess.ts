@@ -70,7 +70,7 @@ export const LodestarBeaconNodeProcess: BeaconNodeConstructor = class LodestarBe
       logFormatGenesisTime: `${this.params.genesisTime}`,
       logFile: `${this.params.logFilesDir}/${this.id}.log`,
       logFileLevel: "debug",
-      logLevel: process.env.SHOW_LOGS ? "info" : "error",
+      logLevel: "info",
     } as unknown) as IBeaconArgs & IGlobalArgs;
 
     this.multiaddrs = [`/ip4/${this.address}/tcp/${this.port}`];

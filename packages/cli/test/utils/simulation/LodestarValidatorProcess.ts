@@ -75,7 +75,7 @@ export const LodestarValidatorProcess: ValidatorConstructor = class LodestarVali
       logFormatGenesisTime: this.params.genesisTime,
       logFile: join(this.params.logFilesDir, `${this.id}.log`),
       logFileLevel: "debug",
-      logLevel: process.env.SHOW_LOGS ? "info" : "error",
+      logLevel: "info",
     } as unknown) as IValidatorCliArgs & IGlobalArgs;
 
     if (this.params.externalSigner) {
