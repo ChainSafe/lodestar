@@ -2,10 +2,16 @@ import {dirname} from "node:path";
 import {fileURLToPath} from "node:url";
 import {ChildProcess, spawn} from "node:child_process";
 import {altair, phase0, Slot} from "@lodestar/types";
-import {TIMELY_HEAD_FLAG_INDEX, TIMELY_TARGET_FLAG_INDEX} from "@lodestar/params";
+import {
+  TIMELY_HEAD_FLAG_INDEX,
+  TIMELY_TARGET_FLAG_INDEX,
+  TIMELY_SOURCE_FLAG_INDEX,
+  SLOTS_PER_EPOCH,
+} from "@lodestar/params";
 import {SimulationOptionalParams, SimulationParams} from "./types.js";
 
 const TIMELY_HEAD = 1 << TIMELY_HEAD_FLAG_INDEX;
+const TIMELY_SOURCE = 1 << TIMELY_SOURCE_FLAG_INDEX;
 const TIMELY_TARGET = 1 << TIMELY_TARGET_FLAG_INDEX;
 
 // Global variable __dirname no longer available in ES6 modules.
@@ -78,21 +84,30 @@ export const closeChildProcess = async (childProcess: ChildProcess, signal?: "SI
   });
 };
 
-export const computeAttestationParticipation = (state: altair.BeaconState, type: "HEAD" | "FFG"): number => {
+export const computeAttestationParticipation = (
+  state: altair.BeaconState
+): {epoch: number; head: number; source: number; target: number} => {
   // Attestation to be computed at the end of epoch. At that time the "currentEpochParticipation" is all set to zero
   // and we have to use "previousEpochParticipation" instead.
   const previousEpochParticipation = state.previousEpochParticipation;
-  let totalAttestingBalance = 0;
-  let totalActiveBalance = 0;
-
-  const participationFlag = type === "HEAD" ? TIMELY_HEAD : TIMELY_TARGET;
+  // As we calculated the participation from the previous epoch
+  const epoch = Math.floor(state.slot / SLOTS_PER_EPOCH) - 1;
+  const totalAttestingBalance = {head: 0, source: 0, target: 0};
+  let totalEffectiveBalance = 0;
 
   for (let i = 0; i < previousEpochParticipation.length; i++) {
-    totalAttestingBalance += previousEpochParticipation[i] & participationFlag ? state.balances[i] : 0;
-    totalActiveBalance += state.validators[i].effectiveBalance;
+    totalAttestingBalance.head += previousEpochParticipation[i] & TIMELY_HEAD ? state.balances[i] : 0;
+    totalAttestingBalance.source += previousEpochParticipation[i] & TIMELY_SOURCE ? state.balances[i] : 0;
+    totalAttestingBalance.target += previousEpochParticipation[i] & TIMELY_TARGET ? state.balances[i] : 0;
+
+    totalEffectiveBalance += state.validators[i].effectiveBalance;
   }
 
-  return totalAttestingBalance / totalActiveBalance;
+  totalAttestingBalance.head = totalAttestingBalance.head / totalEffectiveBalance;
+  totalAttestingBalance.source = totalAttestingBalance.source / totalEffectiveBalance;
+  totalAttestingBalance.target = totalAttestingBalance.target / totalEffectiveBalance;
+
+  return {...totalAttestingBalance, epoch};
 };
 
 export const computeAttestation = (attestations: phase0.Attestation[]): number => {

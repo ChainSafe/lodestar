@@ -21,10 +21,10 @@ export const LodestarBeaconNodeProcess: BeaconNodeConstructor = class LodestarBe
   readonly port: number;
   readonly restPort: number;
   readonly id: string;
-  api!: Api;
-  peerId!: string;
-  multiaddrs!: string[];
-  validatorClients: ValidatorProcess[] = [];
+  readonly api: Api;
+  peerId?: string;
+  readonly multiaddrs: string[];
+  readonly validatorClients: ValidatorProcess[] = [];
 
   private rootDir: string;
   private beaconProcess!: ChildProcess;
@@ -72,6 +72,11 @@ export const LodestarBeaconNodeProcess: BeaconNodeConstructor = class LodestarBe
       logLevel: process.env.SHOW_LOGS ? "info" : "error",
     } as unknown) as IBeaconArgs & IGlobalArgs;
 
+    this.multiaddrs = [`/ip4/${this.address}/tcp/${this.port}`];
+    this.config = getBeaconConfigFromArgs(this.rcConfig).config;
+    this.config = getBeaconConfigFromArgs(this.rcConfig).config;
+    this.api = getClient({baseUrl: `http://${this.address}:${this.restPort}`}, {config: this.config});
+
     for (let clientIndex = 0; clientIndex < this.params.validatorClients; clientIndex++) {
       this.validatorClients.push(
         new LodestarValidatorProcess(this.params, {
@@ -85,10 +90,6 @@ export const LodestarBeaconNodeProcess: BeaconNodeConstructor = class LodestarBe
   }
 
   async start(): Promise<void> {
-    this.multiaddrs = [`/ip4/${this.address}/tcp/${this.port}`];
-    this.config = getBeaconConfigFromArgs(this.rcConfig).config;
-    this.api = getClient({baseUrl: `http://${this.address}:${this.restPort}`}, {config: this.config});
-
     const {state} = nodeUtils.initDevState(
       this.config,
       this.params.validatorClients * this.params.validatorsPerClient,
@@ -101,7 +102,7 @@ export const LodestarBeaconNodeProcess: BeaconNodeConstructor = class LodestarBe
     await writeFile(`${this.rootDir}/genesis.ssz`, state.serialize());
     await writeFile(`${this.rootDir}/rc_config.json`, JSON.stringify(this.rcConfig, null, 2));
 
-    console.log(`Starting beacon node "${this.id}" at: ${this.rootDir}`);
+    console.log(`Starting lodestar beacon node "${this.id}".`, {dataDir: this.rootDir});
 
     this.beaconProcess = await spawnProcessAndWait(
       `${__dirname}/../../../bin/lodestar.js`,

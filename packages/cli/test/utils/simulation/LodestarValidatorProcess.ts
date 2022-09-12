@@ -19,9 +19,9 @@ export const LodestarValidatorProcess: ValidatorConstructor = class LodestarVali
   readonly address = "127.0.0.1";
   readonly keyManagerPort: number;
   readonly id: string;
-  keyManagerApi!: Api;
-  secretKeys: SecretKey[] = [];
-  externalSigner?: ExternalSignerServer;
+  readonly keyManagerApi: Api;
+  readonly secretKeys: SecretKey[] = [];
+  readonly externalSigner?: ExternalSignerServer;
 
   private rootDir: string;
   private clientIndex: number;
@@ -81,14 +81,14 @@ export const LodestarValidatorProcess: ValidatorConstructor = class LodestarVali
       this.externalSigner = new ExternalSignerServer(this.secretKeys);
       this.rcConfig["externalSigner.url"] = this.externalSigner.url;
     }
-  }
 
-  async start(): Promise<void> {
     this.keyManagerApi = getClient(
       {baseUrl: `http://${this.address}:${this.keyManagerPort}`},
       {config: this.forkConfig}
     );
+  }
 
+  async start(): Promise<void> {
     await mkdir(this.rootDir);
     await mkdir(`${this.rootDir}/keystores`);
 
@@ -108,7 +108,7 @@ export const LodestarValidatorProcess: ValidatorConstructor = class LodestarVali
       await this.externalSigner.start();
     }
 
-    console.log(`Starting validator at: ${this.rootDir}`);
+    console.log(`Starting lodestar validator "${this.id}".`, {dataDir: this.rootDir});
 
     this.validatorProcess = await spawnProcessAndWait(
       `${__dirname}/../../../bin/lodestar.js`,

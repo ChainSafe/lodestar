@@ -23,13 +23,18 @@ export class SimulationEnvironment {
     connectAllNodes: async (): Promise<void> => {
       for (let i = 0; i < this.params.beaconNodes; i += 1) {
         for (let j = 0; j < this.params.beaconNodes; j += 1) {
-          if (i === j) continue;
-          await this.nodes[i].api.lodestar.connectPeer(this.nodes[j].peerId, this.nodes[j].multiaddrs);
+          const peerId = this.nodes[j].peerId;
+
+          if (i === j || !peerId) continue;
+
+          await this.nodes[i].api.lodestar.connectPeer(peerId, this.nodes[j].multiaddrs);
         }
       }
     },
     connectNodesToFirstNode: async (): Promise<void> => {
       const firstNode = this.nodes[0];
+
+      if (!firstNode.peerId) throw Error("First node must be started");
 
       for (let i = 1; i < this.params.beaconNodes; i += 1) {
         const node = this.nodes[i];
