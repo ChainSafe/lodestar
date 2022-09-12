@@ -1,3 +1,4 @@
+import {join} from "node:path";
 import {ChildProcess} from "node:child_process";
 import {mkdir, writeFile} from "node:fs/promises";
 import type {SecretKey} from "@chainsafe/bls/types";
@@ -72,7 +73,7 @@ export const LodestarValidatorProcess: ValidatorConstructor = class LodestarVali
       "params.BELLATRIX_FORK_EPOCH": String(this.params.bellatrixEpoch),
       logPrefix: this.id,
       logFormatGenesisTime: this.params.genesisTime,
-      logFile: `${this.params.logFilesDir}/${this.id}.log`,
+      logFile: join(this.params.logFilesDir, `${this.id}.log`),
       logFileLevel: "debug",
       logLevel: process.env.SHOW_LOGS ? "info" : "error",
     } as unknown) as IValidatorCliArgs & IGlobalArgs;
@@ -92,14 +93,14 @@ export const LodestarValidatorProcess: ValidatorConstructor = class LodestarVali
     await mkdir(this.rootDir);
     await mkdir(`${this.rootDir}/keystores`);
 
-    await writeFile(`${this.rootDir}/password.txt`, "password");
+    await writeFile(join(this.rootDir, "password.txt"), "password");
 
-    await writeFile(`${this.rootDir}/rc_config.json`, JSON.stringify(this.rcConfig, null, 2));
+    await writeFile(join(this.rootDir, "rc_config.json"), JSON.stringify(this.rcConfig, null, 2));
 
     for (const key of this.secretKeys) {
       const keystore = await Keystore.create("password", key.toBytes(), key.toPublicKey().toBytes(), "");
       await writeFile(
-        `${this.rootDir}/keystores/${key.toPublicKey().toHex()}.json`,
+        join(this.rootDir, "keystores", `${key.toPublicKey().toHex()}.json`),
         JSON.stringify(keystore.toObject(), null, 2)
       );
     }

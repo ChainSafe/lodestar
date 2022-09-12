@@ -1,3 +1,4 @@
+import {join} from "node:path";
 import {ChildProcess} from "node:child_process";
 import {mkdir, writeFile} from "node:fs/promises";
 import type {SecretKey} from "@chainsafe/bls/types";
@@ -80,7 +81,7 @@ export const LodestarBeaconNodeProcess: BeaconNodeConstructor = class LodestarBe
     for (let clientIndex = 0; clientIndex < this.params.validatorClients; clientIndex++) {
       this.validatorClients.push(
         new LodestarValidatorProcess(this.params, {
-          rootDir: `${this.rootDir}/validator-${clientIndex}`,
+          rootDir: join(this.rootDir, `validator-${clientIndex}`),
           config: getBeaconConfigFromArgs(this.rcConfig).config,
           server: `http://${this.address}:${this.restPort}/`,
           clientIndex,
@@ -99,8 +100,8 @@ export const LodestarBeaconNodeProcess: BeaconNodeConstructor = class LodestarBe
     );
 
     await mkdir(this.rootDir);
-    await writeFile(`${this.rootDir}/genesis.ssz`, state.serialize());
-    await writeFile(`${this.rootDir}/rc_config.json`, JSON.stringify(this.rcConfig, null, 2));
+    await writeFile(join(this.rootDir, "genesis.ssz"), state.serialize());
+    await writeFile(join(this.rootDir, "rc_config.json"), JSON.stringify(this.rcConfig, null, 2));
 
     console.log(`Starting lodestar beacon node "${this.id}".`, {dataDir: this.rootDir});
 
