@@ -27,7 +27,7 @@ export const defaultSimulationParams: SimulationOptionalParams = {
   secondsPerSlot: 2,
   // delay a bit so regular sync sees it's up to date and sync is completed from the beginning
   // allow time for bls worker threads to warm up
-  genesisSlotsDelay: 20,
+  genesisSlotsDelay: 24,
   externalSigner: false,
 };
 
