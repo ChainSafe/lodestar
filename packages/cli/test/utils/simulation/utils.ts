@@ -104,9 +104,12 @@ export const computeAttestationParticipation = (
   let totalEffectiveBalance = 0;
 
   for (let i = 0; i < previousEpochParticipation.length; i++) {
-    totalAttestingBalance.head += previousEpochParticipation[i] & TIMELY_HEAD ? state.balances[i] : 0;
-    totalAttestingBalance.source += previousEpochParticipation[i] & TIMELY_SOURCE ? state.balances[i] : 0;
-    totalAttestingBalance.target += previousEpochParticipation[i] & TIMELY_TARGET ? state.balances[i] : 0;
+    totalAttestingBalance.head +=
+      previousEpochParticipation[i] & TIMELY_HEAD ? state.validators[i].effectiveBalance : 0;
+    totalAttestingBalance.source +=
+      previousEpochParticipation[i] & TIMELY_SOURCE ? state.validators[i].effectiveBalance : 0;
+    totalAttestingBalance.target +=
+      previousEpochParticipation[i] & TIMELY_TARGET ? state.validators[i].effectiveBalance : 0;
 
     totalEffectiveBalance += state.validators[i].effectiveBalance;
   }
