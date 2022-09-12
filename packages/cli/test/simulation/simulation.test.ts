@@ -74,6 +74,15 @@ describe("simulation", function () {
       describe(testIdStr, () => {
         describe(title, async () => {
           before("setup env", () => {
+            console.log("%%%%%%%%% Starting test env %%%%%%%%%");
+            console.log({
+              beaconNodes,
+              validatorClients,
+              validatorsPerClient,
+              altairEpoch,
+              bellatrixEpoch,
+              withExternalSigner,
+            });
             env = new SimulationEnvironment({
               beaconNodes,
               validatorClients,
@@ -93,6 +102,7 @@ describe("simulation", function () {
           after("stop env", async () => {
             env.resetCounter();
             await env.stop();
+            console.log("%%%%%%%%%% Test env stopped %%%%%%%%%\n\n\n");
           });
 
           before("node has proper status and keys", async () => {
