@@ -65,12 +65,16 @@ export const spawnProcessAndWait = async (
       });
 
       // TODO: Add support for timeout
+      let retryCount = 0;
       const intervalId = setInterval(async () => {
         if (await ready(childProcess)) {
+          console.log("");
           clearInterval(intervalId);
           resolve(childProcess);
         } else {
-          console.info(message);
+          retryCount++;
+          // To avoid multiple log messages
+          process.stdout.write(`${message}${".".repeat(retryCount)}\r`);
         }
       }, 1000);
     })();
