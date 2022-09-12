@@ -100,13 +100,6 @@ export class SimulationEnvironment {
 
     return new Promise((resolve) => {
       const handler = (beaconEvent: routes.events.BeaconEvent, eventNode: BeaconNodeProcess): void => {
-        console.log(`Event "${beaconEvent.type}" received`, {
-          node: eventNode.id,
-          slot: this.clock.currentSlot,
-          epoch: this.clock.currentEpoch,
-          event: beaconEvent,
-        });
-
         if (!node) {
           this.emitter.removeListener(event, handler);
           resolve(beaconEvent);
