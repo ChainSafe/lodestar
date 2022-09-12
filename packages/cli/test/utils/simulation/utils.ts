@@ -31,18 +31,22 @@ export const defaultSimulationParams: SimulationOptionalParams = {
   externalSigner: false,
 };
 
-export const INTEROP_BLOCK_HASH = Buffer.alloc(32, "B");
-
 export const getSimulationId = ({
-  validatorClients: validatorClientCount,
+  beaconNodes,
+  validatorClients,
   validatorsPerClient,
   withExternalSigner,
   altairEpoch,
   bellatrixEpoch,
 }: SimulationParams): string =>
-  `vc-${validatorClientCount}_vpc-${validatorsPerClient}_${
-    withExternalSigner ? "external_signer" : "local_signer"
-  }_altair-${altairEpoch}_bellatrix-${bellatrixEpoch}`;
+  [
+    `beaconNodes-${beaconNodes}`,
+    `validatorClients-${validatorClients}`,
+    `validatorsPerClient-${validatorsPerClient}`,
+    `altair-${altairEpoch}`,
+    `bellatrix-${bellatrixEpoch}`,
+    `externalSigner-${withExternalSigner ? "yes" : "no"}`,
+  ].join("_");
 
 export const spawnProcessAndWait = async (
   module: string,
