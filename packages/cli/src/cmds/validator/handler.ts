@@ -33,7 +33,7 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
   const logger = getCliLogger(args, {...beaconPaths, logFile: validatorPaths.logFile}, config);
 
   const persistedKeysBackend = new PersistedKeysBackend(accountPaths);
-  const valProposerConfig = getProposerConfigFromArgs(args, persistedKeysBackend);
+  const valProposerConfig = getProposerConfigFromArgs(args, {persistedKeysBackend, accountPaths});
 
   const {version, commit} = getVersionData();
   logger.info("Lodestar", {network, version, commit});
@@ -157,12 +157,11 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
 
 function getProposerConfigFromArgs(
   args: IValidatorCliArgs,
-  persistedKeysBackend: IPersistedKeysBackend
+  {
+    persistedKeysBackend,
+    accountPaths,
+  }: {persistedKeysBackend: IPersistedKeysBackend; accountPaths: {proposerDir: string}}
 ): ValidatorProposerConfig {
-  if (args.flushKeymanagerProposerConfigs) {
-    persistedKeysBackend.deleteProposerConfigs();
-  }
-
   const defaultConfig = {
     graffiti: args.graffiti || getDefaultGraffiti(),
     strictFeeRecipientCheck: args.strictFeeRecipientCheck,
@@ -177,7 +176,7 @@ function getProposerConfigFromArgs(
     // from persistedBackend
     if (args.proposerSettingsFile) {
       throw new YargsError(
-        "Cannot accept --proposerSettingsFile since some proposer configs seemed to have been previously persisted via Keymanager api. Use --flushKeymanagerProposerConfigs in conjuction with --proposerSettingsFile if you want to discard them and instead use proposerSettingsFile"
+        `Cannot accept --proposerSettingsFile since it conflicts with proposer configs previously persisted via the keymanager api. Delete directory ${accountPaths.proposerDir} to discard them`
       );
     }
     valProposerConfig = {proposerConfig: proposerConfigFromKeymanager, defaultConfig};
