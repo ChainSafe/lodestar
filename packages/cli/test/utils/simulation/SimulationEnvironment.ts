@@ -1,4 +1,5 @@
 import {mkdir, rm} from "node:fs/promises";
+import {join} from "node:path";
 import {EventEmitter} from "node:events";
 import tmp from "tmp";
 import {activePreset} from "@lodestar/params";
@@ -58,7 +59,7 @@ export class SimulationEnvironment {
 
     this.controller = new AbortController();
     this.id = getSimulationId(this.params);
-    this.rootDir = `${tmp.dirSync({unsafeCleanup: true}).name}/${this.id}`;
+    this.rootDir = join(tmp.dirSync({unsafeCleanup: true}).name, this.id);
     this.clock = new EpochClock({
       genesisTime,
       secondsPerSlot: this.params.secondsPerSlot,
