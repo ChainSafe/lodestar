@@ -110,7 +110,9 @@ describe("simulation", function () {
           });
 
           before("should reach to finality", async () => {
-            await expect(env.waitForEvent(routes.events.EventType.finalizedCheckpoint, env.nodes[0])).be.fulfilled;
+            await expect(
+              Promise.all(env.nodes.map((n) => env.waitForEvent(routes.events.EventType.finalizedCheckpoint, n)))
+            ).be.fulfilled;
           });
 
           it("should not have missed blocks", () => {
