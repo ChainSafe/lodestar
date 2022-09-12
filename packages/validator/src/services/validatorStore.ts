@@ -74,7 +74,7 @@ export type ProposerConfig = {
   graffiti?: string;
   strictFeeRecipientCheck?: boolean;
   feeRecipient?: Eth1Address;
-  builder: {
+  builder?: {
     enabled?: boolean;
     gasLimit?: number;
   };
@@ -129,7 +129,7 @@ export class ValidatorStore {
     private readonly doppelgangerService: DoppelgangerService | null,
     private readonly metrics: Metrics | null,
     initialSigners: Signer[],
-    valProposerConfig: ValidatorProposerConfig = {defaultConfig: {builder: {}}, proposerConfig: {}}
+    valProposerConfig: ValidatorProposerConfig = {defaultConfig: {}, proposerConfig: {}}
   ) {
     const defaultConfig = valProposerConfig.defaultConfig;
     this.defaultProposerConfig = {
@@ -168,12 +168,34 @@ export class ValidatorStore {
   }
 
   getFeeRecipient(pubkeyHex: PubkeyHex): Eth1Address {
-    return this.validators.get(pubkeyHex)?.feeRecipient ?? this.defaultProposerConfig.feeRecipient;
+    const validatorData = this.validators.get(pubkeyHex);
+    if (validatorData === undefined) {
+      throw Error(`Validator pubkey ${pubkeyHex} not known`);
+    }
+    return validatorData.feeRecipient ?? this.defaultProposerConfig.feeRecipient;
   }
 
   getFeeRecipientByIndex(index: ValidatorIndex): Eth1Address {
     const pubkey = this.indicesService.index2pubkey.get(index);
     return pubkey ? this.getFeeRecipient(pubkey) : this.defaultProposerConfig.feeRecipient;
+  }
+
+  setFeeRecipient(pubkeyHex: PubkeyHex, feeRecipient: Eth1Address): void {
+    const validatorData = this.validators.get(pubkeyHex);
+    if (validatorData === undefined) {
+      throw Error(`Validator pubkey ${pubkeyHex} not known`);
+    }
+    // This should directly modify data in the map
+    validatorData.feeRecipient = feeRecipient;
+  }
+
+  deleteFeeRecipient(pubkeyHex: PubkeyHex): void {
+    const validatorData = this.validators.get(pubkeyHex);
+    if (validatorData === undefined) {
+      throw Error(`Validator pubkey ${pubkeyHex} not known`);
+    }
+    // This should directly modify data in the map
+    delete validatorData["feeRecipient"];
   }
 
   getGraffiti(pubkeyHex: PubkeyHex): string {
@@ -191,11 +213,27 @@ export class ValidatorStore {
   }
 
   getGasLimit(pubkeyHex: PubkeyHex): number {
-    return (
-      (this.validators.get(pubkeyHex)?.builder || {}).gasLimit ??
-      this.defaultProposerConfig?.builder.gasLimit ??
-      defaultOptions.defaultGasLimit
-    );
+    const validatorData = this.validators.get(pubkeyHex);
+    if (validatorData === undefined) {
+      throw Error(`Validator pubkey ${pubkeyHex} not known`);
+    }
+    return validatorData?.builder?.gasLimit ?? this.defaultProposerConfig.builder.gasLimit;
+  }
+
+  setGasLimit(pubkeyHex: PubkeyHex, gasLimit: number): void {
+    const validatorData = this.validators.get(pubkeyHex);
+    if (validatorData === undefined) {
+      throw Error(`Validator pubkey ${pubkeyHex} not known`);
+    }
+    validatorData.builder = {...validatorData.builder, gasLimit};
+  }
+
+  deleteGasLimit(pubkeyHex: PubkeyHex): void {
+    const validatorData = this.validators.get(pubkeyHex);
+    if (validatorData === undefined) {
+      throw Error(`Validator pubkey ${pubkeyHex} not known`);
+    }
+    delete validatorData.builder?.gasLimit;
   }
 
   /** Return true if `index` is active part of this validator client */
@@ -203,9 +241,31 @@ export class ValidatorStore {
     return this.indicesService.index2pubkey.has(index);
   }
 
+  getProposerConfig(pubkeyHex: PubkeyHex): ProposerConfig | null {
+    let proposerConfig: ProposerConfig | null = null;
+    const validatorData = this.validators.get(pubkeyHex);
+    if (validatorData === undefined) {
+      throw Error(`Validator pubkey ${pubkeyHex} not known`);
+    }
+
+    const {graffiti, strictFeeRecipientCheck, feeRecipient, builder} = validatorData;
+
+    // if anything is set , i.e not default then return
+    if (
+      graffiti !== undefined ||
+      strictFeeRecipientCheck !== undefined ||
+      feeRecipient !== undefined ||
+      builder?.enabled !== undefined ||
+      builder?.gasLimit !== undefined
+    ) {
+      proposerConfig = {graffiti, strictFeeRecipientCheck, feeRecipient, builder};
+    }
+    return proposerConfig;
+  }
+
   addSigner(signer: Signer, valProposerConfig?: ValidatorProposerConfig): void {
     const pubkey = getSignerPubkeyHex(signer);
-    const proposerConfig = (valProposerConfig?.proposerConfig ?? {})[pubkey] ?? {};
+    const proposerConfig = (valProposerConfig?.proposerConfig ?? {})[pubkey];
 
     if (!this.validators.has(pubkey)) {
       this.pubkeysToDiscover.push(pubkey);

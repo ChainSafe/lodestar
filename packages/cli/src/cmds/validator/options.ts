@@ -9,6 +9,7 @@ export type AccountValidatorArgs = {
   keystoresDir?: string;
   secretsDir?: string;
   remoteKeysDir?: string;
+  proposerDir?: string;
 };
 
 export const validatorMetricsDefaultOptions = {
@@ -113,6 +114,13 @@ export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
     hidden: true,
     description: "Directory for storing validator remote key definitions.",
     defaultDescription: defaultAccountPaths.keystoresDir,
+    type: "string",
+  },
+
+  proposerDir: {
+    hidden: true,
+    description: "Directory for storing keymanager's proposer configs for validators",
+    defaultDescription: defaultAccountPaths.proposerDir,
     type: "string",
   },
 
