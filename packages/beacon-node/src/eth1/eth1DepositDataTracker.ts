@@ -100,11 +100,13 @@ export class Eth1DepositDataTracker {
       });
     }
 
-    this.runAutoUpdate().catch((e: Error) => {
-      if (!(e instanceof ErrorAborted)) {
-        this.logger.error("Error on eth1 loop", {}, e);
-      }
-    });
+    if (opts.enabled) {
+      this.runAutoUpdate().catch((e: Error) => {
+        if (!(e instanceof ErrorAborted)) {
+          this.logger.error("Error on eth1 loop", {}, e);
+        }
+      });
+    }
   }
 
   /**
