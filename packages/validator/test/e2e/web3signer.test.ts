@@ -152,9 +152,10 @@ describe("web3signer signature test", function () {
   //   await assertSameSignature("signAggregateAndProof", pubkeyBytes);
   // });
   //
-  // it("signSyncCommitteeSignature", async () => {
-  //   await assertSameSignature("signSyncCommitteeSignature", pubkeyBytes);
-  // });
+  it("signSyncCommitteeSignature", async () => {
+    const beaconBlockRoot = ssz.phase0.BeaconBlockHeader.defaultValue().bodyRoot;
+    await assertSameSignature("signSyncCommitteeSignature", pubkeyBytes, validatorIndex, altairSlot, beaconBlockRoot);
+  });
   //
   // it("signContributionAndProof", async () => {
   //   await assertSameSignature("signContributionAndProof", pubkeyBytes);

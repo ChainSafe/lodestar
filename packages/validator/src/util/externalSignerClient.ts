@@ -50,7 +50,7 @@ const serializerMap = {
   },
   ["SYNC_COMMITTEE_MESSAGE"]: (data: Record<string, unknown>) => {
     return {
-      beaconBlockRoot: data.beaconBlockRoot,
+      beacon_block_root: toHexString(data.beaconBlockRoot as Root),
       slot: String(data.slot),
     };
   },
