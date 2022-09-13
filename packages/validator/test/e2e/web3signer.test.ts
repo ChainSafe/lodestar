@@ -8,8 +8,9 @@ import {fromHex, toHex} from "@lodestar/utils";
 import {config} from "@lodestar/config/default";
 import {createIBeaconConfig} from "@lodestar/config";
 import {genesisData} from "@lodestar/config/networks";
-import {getClient} from "@lodestar/api";
+import {getClient, routes} from "@lodestar/api";
 import bls from "@chainsafe/bls";
+import {ssz} from "@lodestar/types";
 import {Interchange, ISlashingProtection, Signer, SignerType, ValidatorStore} from "../../src/index.js";
 import {IndicesService} from "../../src/services/indices.js";
 import {testLogger} from "../utils/logger.js";
@@ -25,6 +26,20 @@ describe("web3signer signature test", function () {
 
   const pubkey = "0x8837af2a7452aff5a8b6906c3e5adefce5690e1bba6d73d870b9e679fece096b97a255bae0978e3a344aa832f68c6b47";
   const pubkeyBytes = fromHex(pubkey);
+  const slot = 1;
+  const epoch = 0;
+  // Sample validator
+  const index = 4;
+
+  const duty: routes.validator.AttesterDuty = {
+    slot: slot,
+    committeeIndex: 1,
+    committeeLength: 120,
+    committeesAtSlot: 120,
+    validatorCommitteeIndex: 1,
+    validatorIndex: index,
+    pubkey: pubkeyBytes,
+  };
 
   after("stop container", async function () {
     await startedContainer.stop();
@@ -107,12 +122,19 @@ describe("web3signer signature test", function () {
 
   it("signRandao", async function () {
     this.timeout(30_000);
-    await assertSameSignature("signRandao", pubkeyBytes, 0);
+    await assertSameSignature("signRandao", pubkeyBytes, epoch);
   });
 
-  // it("signAttestation", async () => {
-  //   await assertSameSignature("signAttestation", pubkeyBytes);
-  // });
+  it("signAttestation", async () => {
+    this.timeout(30_000);
+    const attestationData = ssz.phase0.AttestationData.defaultValue();
+    attestationData.slot = duty.slot;
+    attestationData.index = duty.committeeIndex;
+    const signatureLocal = (await validatorStoreLocal.signAttestation(duty, attestationData, epoch)).signature;
+    const signatureRemote = (await validatorStoreRemote.signAttestation(duty, attestationData, epoch)).signature;
+    expect(toHex(signatureRemote)).equals(toHex(signatureLocal), "Wrong signature for signAttestation");
+  });
+
   //
   // it("signAggregateAndProof", async () => {
   //   await assertSameSignature("signAggregateAndProof", pubkeyBytes);
