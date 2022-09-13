@@ -1,9 +1,8 @@
 import {toHexString} from "@chainsafe/ssz";
 import {phase0} from "@lodestar/types";
 import {IChainConfig} from "@lodestar/config";
-import {fromHex, retry} from "@lodestar/utils";
+import {fromHex} from "@lodestar/utils";
 
-import {chunkifyInclusiveRange} from "../../util/chunkify.js";
 import {linspace} from "../../util/numpy.js";
 import {depositEventTopics, parseDepositLog} from "../utils/depositContract.js";
 import {Eth1Block, IEth1Provider} from "../interface.js";
@@ -13,11 +12,6 @@ import {EthJsonRpcBlockRaw} from "../interface.js";
 import {JsonRpcHttpClient, JsonRpcHttpClientMetrics, ReqOpts} from "./jsonRpcHttpClient.js";
 import {isJsonRpcTruncatedError, quantityToNum, numToQuantity, dataToBytes} from "./utils.js";
 
-/**
- * Number of parallel eth1 calls should be allowed to be made at any given time Range
- * fetch requests can result into 100s of calls initiated to EL
- */
-const ETH1_CONCURRENCY = 10;
 /* eslint-disable @typescript-eslint/naming-convention */
 
 /**
@@ -82,32 +76,12 @@ export class Eth1Provider implements IEth1Provider {
   }
 
   async getDepositEvents(fromBlock: number, toBlock: number): Promise<phase0.DepositEvent[]> {
-    const logsRawArr = await retry(
-      (attempt) => {
-        // Large log requests can return with code 200 but truncated, with broken JSON
-        // This retry will split a given block range into smaller ranges exponentially
-        // The underlying http client should handle network errors and retry
-        const chunkCount = 2 ** (attempt - 1);
-        const blockRanges = chunkifyInclusiveRange(fromBlock, toBlock, chunkCount);
-        return Promise.all(
-          blockRanges.map(([from, to]) => {
-            const options = {
-              fromBlock: from,
-              toBlock: to,
-              address: this.depositContractAddress,
-              topics: depositEventTopics,
-            };
-            return this.getLogs(options);
-          })
-        );
-      },
-      {
-        retries: 3,
-        retryDelay: 3000,
-        shouldRetry: isJsonRpcTruncatedError,
-      }
-    );
-
+    const logsRawArr = await this.getLogs({
+      fromBlock,
+      toBlock,
+      address: this.depositContractAddress,
+      topics: depositEventTopics,
+    });
     return logsRawArr.flat(1).map((log) => parseDepositLog(log));
   }
 
@@ -116,32 +90,10 @@ export class Eth1Provider implements IEth1Provider {
    */
   async getBlocksByNumber(fromBlock: number, toBlock: number): Promise<EthJsonRpcBlockRaw[]> {
     const method = "eth_getBlockByNumber";
-    const blocksArr = await retry(
-      async (attempt) => {
-        // Large batch requests can return with code 200 but truncated, with broken JSON
-        // This retry will split a given block range into smaller ranges exponentially
-        // The underlying http client should handle network errors and retry
-        const chunkCount = Math.max(2 ** (attempt - 1), Math.floor((toBlock - fromBlock) / ETH1_CONCURRENCY));
-        const blockRanges = chunkifyInclusiveRange(fromBlock, toBlock, chunkCount);
-        const blockChunks = [];
-        // Throwing all these in Promise.All will result into massive outgoing call of the same cardinality
-        // as the original range being fetched here.
-        for (const [from, to] of blockRanges) {
-          const chunk = await this.rpc.fetchBatch<IEthJsonRpcReturnTypes[typeof method]>(
-            linspace(from, to).map((blockNumber) => ({method, params: [numToQuantity(blockNumber), false]})),
-            getBlocksByNumberOpts
-          );
-          blockChunks.push(chunk);
-        }
-        return blockChunks;
-      },
-      {
-        retries: 3,
-        retryDelay: 3000,
-        shouldRetry: isJsonRpcTruncatedError,
-      }
+    const blocksArr = await this.rpc.fetchBatch<IEthJsonRpcReturnTypes[typeof method]>(
+      linspace(fromBlock, toBlock).map((blockNumber) => ({method, params: [numToQuantity(blockNumber), false]})),
+      getBlocksByNumberOpts
     );
-
     const blocks: EthJsonRpcBlockRaw[] = [];
     for (const block of blocksArr.flat(1)) {
       if (block) blocks.push(block);
