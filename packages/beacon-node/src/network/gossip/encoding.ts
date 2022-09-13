@@ -56,6 +56,11 @@ export function msgIdFn(gossipTopicCache: GossipTopicCache, msg: GossipsubMessag
   return Buffer.from(digest(Buffer.concat(vec))).subarray(0, 20);
 }
 
+export function simpleMsgIdFn(msg: GossipsubMessage): Uint8Array {
+  const vec = [MESSAGE_DOMAIN_VALID_SNAPPY, intToBytes(msg.topic.length, 8), Buffer.from(msg.topic), msg.data];
+  return Buffer.from(digest(Buffer.concat(vec))).subarray(0, 20);
+}
+
 export class DataTransformSnappy {
   constructor(private readonly maxSizePerMessage: number) {}
 
