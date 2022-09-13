@@ -57,7 +57,7 @@ const serializerMap = {
   ["SYNC_COMMITTEE_SELECTION_PROOF"]: (data: Record<string, unknown>) => {
     return {
       slot: String(data.slot),
-      subcommitteeIndex: data.subcommitteeIndex,
+      subcommittee_index: data.subcommitteeIndex,
     };
   },
   ["SYNC_COMMITTEE_CONTRIBUTION_AND_PROOF"]: (data: Record<string, unknown>) => {

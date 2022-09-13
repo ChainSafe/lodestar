@@ -27,9 +27,11 @@ describe("web3signer signature test", function () {
   const pubkey = "0x8837af2a7452aff5a8b6906c3e5adefce5690e1bba6d73d870b9e679fece096b97a255bae0978e3a344aa832f68c6b47";
   const pubkeyBytes = fromHex(pubkey);
   const slot = 1;
+  const postAltairSlot = 2375711;
   const epoch = 0;
   // Sample validator
   const validatorIndex = 4;
+  const subcommitteeIndex = 1;
 
   const duty: routes.validator.AttesterDuty = {
     slot: slot,
@@ -152,9 +154,9 @@ describe("web3signer signature test", function () {
   //   await assertSameSignature("signAttestationSelectionProof", pubkeyBytes);
   // });
   //
-  // it("signSyncCommitteeSelectionProof", async () => {
-  //   await assertSameSignature("signSyncCommitteeSelectionProof", pubkeyBytes);
-  // });
+  it("signSyncCommitteeSelectionProof", async () => {
+    await assertSameSignature("signSyncCommitteeSelectionProof", pubkeyBytes, postAltairSlot, subcommitteeIndex);
+  });
   //
   it("signVoluntaryExit", async () => {
     const signatureLocal = (await validatorStoreLocal.signVoluntaryExit(pubkeyBytes, validatorIndex, epoch)).signature;
