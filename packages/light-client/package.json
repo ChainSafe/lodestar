@@ -20,6 +20,9 @@
     "./utils": {
       "import": "./lib/utils/index.js"
     },
+    "./validation": {
+      "import": "./lib/validation.js"
+    },
     "./networks": {
       "import": "./lib/networks.js"
     }
