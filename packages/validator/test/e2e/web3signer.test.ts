@@ -26,15 +26,16 @@ describe("web3signer signature test", function () {
 
   const pubkey = "0x8837af2a7452aff5a8b6906c3e5adefce5690e1bba6d73d870b9e679fece096b97a255bae0978e3a344aa832f68c6b47";
   const pubkeyBytes = fromHex(pubkey);
-  const slot = 1;
-  const postAltairSlot = 2375711;
+  const phase0Slot = 2;
+  const altairSlot = 2375711;
+  const bellatrixSlot = 4636702;
   const epoch = 0;
   // Sample validator
   const validatorIndex = 4;
   const subcommitteeIndex = 1;
 
   const duty: routes.validator.AttesterDuty = {
-    slot: slot,
+    slot: altairSlot,
     committeeIndex: 1,
     committeeLength: 120,
     committeesAtSlot: 120,
@@ -127,9 +128,11 @@ describe("web3signer signature test", function () {
     }
   }
 
-  // it("signBlock", async () => {
-  //   await assertSameSignature("signBlock", pubkeyBytes);
-  // });
+  it("signBlock", async () => {
+    await assertSameSignature("signBlock", pubkeyBytes, ssz.phase0.BeaconBlock.defaultValue(), phase0Slot);
+    await assertSameSignature("signBlock", pubkeyBytes, ssz.altair.BeaconBlock.defaultValue(), altairSlot);
+    await assertSameSignature("signBlock", pubkeyBytes, ssz.bellatrix.BeaconBlock.defaultValue(), bellatrixSlot);
+  });
 
   it("signRandao", async function () {
     this.timeout(30_000);
@@ -158,11 +161,11 @@ describe("web3signer signature test", function () {
   // });
 
   it("signAttestationSelectionProof", async () => {
-    await assertSameSignature("signAttestationSelectionProof", pubkeyBytes, postAltairSlot);
+    await assertSameSignature("signAttestationSelectionProof", pubkeyBytes, altairSlot);
   });
 
   it("signSyncCommitteeSelectionProof", async () => {
-    await assertSameSignature("signSyncCommitteeSelectionProof", pubkeyBytes, postAltairSlot, subcommitteeIndex);
+    await assertSameSignature("signSyncCommitteeSelectionProof", pubkeyBytes, altairSlot, subcommitteeIndex);
   });
 
   it("signVoluntaryExit", async () => {
