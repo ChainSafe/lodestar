@@ -2,7 +2,7 @@ import fetch from "cross-fetch";
 import {BeaconBlock, AggregateAndProof, AttestationData, VoluntaryExit, Fork} from "@lodestar/types/phase0";
 import {SyncCommitteeContribution} from "@lodestar/types/altair";
 import {ValidatorRegistrationV1} from "@lodestar/types/bellatrix";
-import {altair, Epoch, phase0, Root, Slot, ssz} from "@lodestar/types";
+import {altair, bellatrix, Epoch, phase0, Root, Slot, ssz} from "@lodestar/types";
 import {toHexString} from "@chainsafe/ssz";
 
 /* eslint-disable @typescript-eslint/naming-convention */
@@ -27,6 +27,11 @@ const serializerMap = {
       return {
         version: data.version,
         block: ssz.altair.BeaconBlock.toJson(data.block as altair.BeaconBlock),
+      };
+    } else if (data.version == "BELLATRIX") {
+      return {
+        version: data.version,
+        block: ssz.phase0.BeaconBlock.toJson(data.block as bellatrix.BeaconBlock),
       };
     } else {
       throw new Error(`version ${data.version} not supported by remote signer`);
