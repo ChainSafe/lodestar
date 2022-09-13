@@ -546,6 +546,7 @@ export class ValidatorStore {
           type: "VOLUNTARY_EXIT",
           data: voluntaryExit,
         },
+        forkInfo: this.getForkInfo(computeStartSlotAtEpoch(exitEpoch)),
         pubkeyHex,
       };
     }

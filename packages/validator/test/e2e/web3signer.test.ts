@@ -29,7 +29,7 @@ describe("web3signer signature test", function () {
   const slot = 1;
   const epoch = 0;
   // Sample validator
-  const index = 4;
+  const validatorIndex = 4;
 
   const duty: routes.validator.AttesterDuty = {
     slot: slot,
@@ -37,7 +37,7 @@ describe("web3signer signature test", function () {
     committeeLength: 120,
     committeesAtSlot: 120,
     validatorCommitteeIndex: 1,
-    validatorIndex: index,
+    validatorIndex,
     pubkey: pubkeyBytes,
   };
 
@@ -156,9 +156,12 @@ describe("web3signer signature test", function () {
   //   await assertSameSignature("signSyncCommitteeSelectionProof", pubkeyBytes);
   // });
   //
-  // it("signVoluntaryExit", async () => {
-  //   await assertSameSignature("signVoluntaryExit", pubkeyBytes);
-  // });
+  it("signVoluntaryExit", async () => {
+    const signatureLocal = (await validatorStoreLocal.signVoluntaryExit(pubkeyBytes, validatorIndex, epoch)).signature;
+    const signatureRemote = (await validatorStoreRemote.signVoluntaryExit(pubkeyBytes, validatorIndex, epoch))
+      .signature;
+    expect(toHex(signatureRemote)).equals(toHex(signatureLocal), "Wrong signature for signVoluntaryExit");
+  });
   //
   // it("signValidatorRegistration", async () => {
   //   await assertSameSignature("signValidatorRegistration", pubkeyBytes);
