@@ -114,9 +114,12 @@ describe("winston transport log to file", () => {
   });
 
   it("Should log to file", async () => {
-    const filename = path.join(tmpDir, "child-logger-test.txt");
+    const filename = "child-logger-test.log";
+    // filename is mutated to include the data before the extension
+    const filenameRx = /^child-logger-test/;
+    const filepath = path.join(tmpDir, filename);
 
-    const logger = getCliLoggerTest({logPrefix: "a", logFile: filename});
+    const logger = getCliLoggerTest({logPrefix: "a", logFile: filepath});
 
     stdoutHook = hookProcessStdout();
 
@@ -124,7 +127,7 @@ describe("winston transport log to file", () => {
 
     const expectedOut = "[a]                \u001b[33mwarn\u001b[39m: test";
 
-    expect(await readFileWhenExists(filename)).to.equal(expectedOut);
+    expect(await readFileWhenExists(tmpDir, filenameRx)).to.equal(expectedOut);
 
     expect(stdoutHook.chunks).deep.equals([expectedOut + "\n"]);
     stdoutHook.restore();
@@ -140,12 +143,16 @@ function getCliLoggerTest(logArgs: Partial<ILogArgs>): ReturnType<typeof getCliL
 }
 
 /** Wait for file to exist have some content, then return its contents */
-async function readFileWhenExists(filepath: string): Promise<string> {
+async function readFileWhenExists(dirpath: string, filenameRx: RegExp): Promise<string> {
   for (let i = 0; i < 200; i++) {
     try {
-      const data = fs.readFileSync(filepath, "utf8").trim();
-      // Winston will first create the file then write to it
-      if (data) return data;
+      const files = fs.readdirSync(dirpath);
+      const filename = files.find((file) => filenameRx.test(file));
+      if (filename !== undefined) {
+        const data = fs.readFileSync(path.join(dirpath, filename), "utf8").trim();
+        // Winston will first create the file then write to it
+        if (data) return data;
+      }
     } catch (e) {
       if ((e as IoError).code !== "ENOENT") throw e;
     }
