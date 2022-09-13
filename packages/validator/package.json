@@ -61,6 +61,7 @@
     "strict-event-emitter-types": "^2.0.0"
   },
   "devDependencies": {
-    "bigint-buffer": "^1.1.5"
+    "bigint-buffer": "^1.1.5",
+    "testcontainers": "^8.13.2"
   }
 }
