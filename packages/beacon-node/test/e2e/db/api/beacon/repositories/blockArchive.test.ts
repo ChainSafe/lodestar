@@ -4,12 +4,10 @@ import {fromHexString} from "@chainsafe/ssz";
 import {ssz} from "@lodestar/types";
 import {BeaconDb} from "../../../../../../src/db/index.js";
 import {generateSignedBlock} from "../../../../../utils/block.js";
-import {testLogger} from "../../../../../utils/logger.js";
 import {startTmpBeaconDb} from "../../../../../utils/db.js";
 
 describe("BlockArchiveRepository", function () {
   let db: BeaconDb;
-  const logger = testLogger();
   const sampleBlock = generateSignedBlock({
     message: {
       slot: 0,
@@ -34,7 +32,7 @@ describe("BlockArchiveRepository", function () {
   });
 
   before(async () => {
-    db = await startTmpBeaconDb(config, logger);
+    db = await startTmpBeaconDb(config);
   });
 
   after(async () => {

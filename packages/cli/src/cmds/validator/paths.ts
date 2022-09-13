@@ -4,7 +4,6 @@ import {IGlobalPaths, getGlobalPaths} from "../../paths/global.js";
 
 export type IValidatorPaths = {
   validatorsDbDir: string;
-  logFile?: string;
 };
 
 export type AccountPaths = {
@@ -32,12 +31,10 @@ export function getValidatorPaths(
 
   const dataDir = globalPaths.dataDir;
   const validatorsDbDir = args.validatorsDbDir ?? path.join(dataDir, "validator-db");
-  const logFile = args.logFile?.trim() !== "none" ? args.logFile ?? path.join(dataDir, "validator.log") : undefined;
 
   return {
     ...globalPaths,
     validatorsDbDir,
-    logFile,
   };
 }
 

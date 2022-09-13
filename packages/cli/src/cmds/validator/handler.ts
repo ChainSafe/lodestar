@@ -8,7 +8,6 @@ import {IGlobalArgs} from "../../options/index.js";
 import {YargsError, getDefaultGraffiti, mkdir, getCliLogger} from "../../util/index.js";
 import {onGracefulShutdown, parseFeeRecipient, parseProposerConfig} from "../../util/index.js";
 import {getVersionData} from "../../util/version.js";
-import {getBeaconPaths} from "../beacon/paths.js";
 import {getAccountPaths, getValidatorPaths} from "./paths.js";
 import {IValidatorCliArgs, validatorMetricsDefaultOptions} from "./options.js";
 import {getSignersFromArgs} from "./signers/index.js";
@@ -26,17 +25,17 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
 
   const doppelgangerProtectionEnabled = args.doppelgangerProtectionEnabled;
 
-  const beaconPaths = getBeaconPaths(args, network);
   const validatorPaths = getValidatorPaths(args, network);
   const accountPaths = getAccountPaths(args, network);
 
-  const logger = getCliLogger(args, {...beaconPaths, logFile: validatorPaths.logFile}, config);
+  const logger = getCliLogger(args, {defaultLogFile: "validator.log"}, config);
 
   const persistedKeysBackend = new PersistedKeysBackend(accountPaths);
   const valProposerConfig = getProposerConfigFromArgs(args, {persistedKeysBackend, accountPaths});
 
   const {version, commit} = getVersionData();
   logger.info("Lodestar", {network, version, commit});
+  logger.info("Connecting to LevelDB database", {path: validatorPaths.validatorsDbDir});
 
   const dbPath = validatorPaths.validatorsDbDir;
   mkdir(dbPath);
@@ -83,7 +82,7 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
 
   const dbOps = {
     config,
-    controller: new LevelDbController({name: dbPath}, {logger}),
+    controller: new LevelDbController({name: dbPath}, {metrics: null}),
   };
   const slashingProtection = new SlashingProtection(dbOps);
 

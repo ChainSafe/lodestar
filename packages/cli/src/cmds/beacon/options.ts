@@ -1,7 +1,7 @@
 import {Options} from "yargs";
-import {logFormats, LogLevel, LogLevels} from "@lodestar/utils";
 import {beaconNodeOptions, paramsOptions, IBeaconNodeArgs} from "../../options/index.js";
-import {defaultLogMaxFiles, ICliCommandOptions, ILogArgs} from "../../util/index.js";
+import {logOptions} from "../../options/logOptions.js";
+import {ICliCommandOptions, ILogArgs} from "../../util/index.js";
 import {defaultBeaconPaths, IBeaconPaths} from "./paths.js";
 
 interface IBeaconExtraArgs {
@@ -12,6 +12,10 @@ interface IBeaconExtraArgs {
   checkpointSyncUrl?: string;
   checkpointState?: string;
   wssCheckpoint?: string;
+  beaconDir?: string;
+  dbDir?: string;
+  persistInvalidSszObjectsDir?: string;
+  peerStoreDir?: string;
 }
 
 export const beaconExtraOptions: ICliCommandOptions<IBeaconExtraArgs> = {
@@ -58,61 +62,7 @@ export const beaconExtraOptions: ICliCommandOptions<IBeaconExtraArgs> = {
     type: "string",
     group: "weak subjectivity",
   },
-};
 
-export const logOptions: ICliCommandOptions<ILogArgs> = {
-  logLevel: {
-    choices: LogLevels,
-    description: "Logging verbosity level for emittings logs to terminal",
-    defaultDescription: LogLevel.info,
-    type: "string",
-  },
-
-  logFileLevel: {
-    choices: LogLevels,
-    description: "Logging verbosity level for emittings logs to file",
-    defaultDescription: LogLevel.debug,
-    type: "string",
-  },
-
-  logFileDailyRotate: {
-    description:
-      "Daily rotate log files, set to an integer to limit the file count, set to 0(zero) to disable rotation",
-    defaultDescription: defaultLogMaxFiles.toString(),
-    default: defaultLogMaxFiles,
-    type: "number",
-  },
-
-  logFormatGenesisTime: {
-    hidden: true,
-    description:
-      "Use epoch slot timestamp format, instead or regular timestamp. Must provide genesisTime to compute relative time",
-    type: "number",
-  },
-
-  logPrefix: {
-    hidden: true,
-    description: "Logger prefix module field with a string ID",
-    type: "string",
-  },
-
-  logFormat: {
-    hidden: true,
-    description: "Log format used when emitting logs to the terminal and / or file",
-    choices: logFormats,
-    type: "string",
-  },
-
-  logLevelModule: {
-    hidden: true,
-    description: "Set log level for a specific module by name: 'chain=debug' or 'network=debug,chain=debug'",
-    type: "array",
-    string: true,
-    coerce: (args: string[]) => args.map((item) => item.split(",")).flat(1),
-  },
-};
-
-export const beaconPathsOptions: ICliCommandOptions<IBeaconPaths> = {
   beaconDir: {
     description: "Beacon root directory",
     defaultDescription: defaultBeaconPaths.beaconDir,
@@ -138,12 +88,6 @@ export const beaconPathsOptions: ICliCommandOptions<IBeaconPaths> = {
     hidden: true,
     description: "Peer store directory",
     defaultDescription: defaultBeaconPaths.peerStoreDir,
-    type: "string",
-  },
-
-  logFile: {
-    description: "Path to output all logs to a persistent log file, use 'none' to disable",
-    defaultDescription: defaultBeaconPaths.logFile,
     type: "string",
   },
 };
@@ -204,7 +148,6 @@ export type IBeaconArgs = IBeaconExtraArgs & ILogArgs & IBeaconPaths & IBeaconNo
 export const beaconOptions: {[k: string]: Options} = {
   ...beaconExtraOptions,
   ...logOptions,
-  ...beaconPathsOptions,
   ...beaconNodeOptions,
   ...paramsOptions,
   ...enrOptions,

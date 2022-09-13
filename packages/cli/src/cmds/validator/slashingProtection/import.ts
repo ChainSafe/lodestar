@@ -5,11 +5,9 @@ import {IGlobalArgs} from "../../../options/index.js";
 import {AccountValidatorArgs} from "../options.js";
 import {getCliLogger, ILogArgs} from "../../../util/index.js";
 import {getBeaconConfigFromArgs} from "../../../config/index.js";
-import {getBeaconPaths} from "../../beacon/paths.js";
 import {getValidatorPaths} from "../paths.js";
 import {getGenesisValidatorsRoot, getSlashingProtection} from "./utils.js";
 import {ISlashingProtectionArgs} from "./options.js";
-import {getSlashingProtectionPaths} from "./paths.js";
 
 /* eslint-disable no-console */
 
@@ -42,9 +40,8 @@ export const importCmd: ICliCommand<
 
   handler: async (args) => {
     const {config, network} = getBeaconConfigFromArgs(args);
-    const beaconPaths = getBeaconPaths(args, network);
-    const {logFile} = getSlashingProtectionPaths(args, network, "export-");
-    const logger = getCliLogger(args, {...beaconPaths, logFile}, config);
+    // slashingProtection commands are fast so do not require logFile feature
+    const logger = getCliLogger(args, {defaultLogFile: "validator.log"}, config);
 
     const {validatorsDbDir: dbPath} = getValidatorPaths(args, network);
 
