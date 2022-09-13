@@ -3,14 +3,17 @@ import path from "node:path";
 import tmp from "tmp";
 import {expect} from "chai";
 import {GenericContainer, Wait, StartedTestContainer} from "testcontainers";
+import deepmerge from "deepmerge";
 import {Keystore} from "@chainsafe/bls-keystore";
-import {fromHex, toHex} from "@lodestar/utils";
+import {fromHex, isPlainObject, RecursivePartial, toHex} from "@lodestar/utils";
 import {config} from "@lodestar/config/default";
 import {createIBeaconConfig} from "@lodestar/config";
 import {genesisData} from "@lodestar/config/networks";
 import {getClient, routes} from "@lodestar/api";
 import bls from "@chainsafe/bls";
-import {ssz} from "@lodestar/types";
+import {altair, phase0, ssz} from "@lodestar/types";
+import {BitArray, fromHexString} from "@chainsafe/ssz";
+import {SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
 import {Interchange, ISlashingProtection, Signer, SignerType, ValidatorStore} from "../../src/index.js";
 import {IndicesService} from "../../src/services/indices.js";
 import {testLogger} from "../utils/logger.js";
@@ -43,6 +46,66 @@ describe("web3signer signature test", function () {
     validatorIndex,
     pubkey: pubkeyBytes,
   };
+
+  function generateAttestation(override: RecursivePartial<phase0.Attestation> = {}): phase0.Attestation {
+    return deepmerge<phase0.Attestation, RecursivePartial<phase0.Attestation>>(
+      {
+        aggregationBits: BitArray.fromBitLen(64),
+        data: {
+          slot: altairSlot,
+          index: subcommitteeIndex,
+          beaconBlockRoot: Buffer.alloc(32),
+          source: {
+            epoch: 0,
+            root: Buffer.alloc(32),
+          },
+          target: {
+            epoch: 0,
+            root: Buffer.alloc(32),
+          },
+        },
+        signature: Buffer.alloc(96),
+      },
+      override,
+      {isMergeableObject: isPlainObject}
+    );
+  }
+  function generateEmptyAttestation(): phase0.Attestation {
+    return generateAttestation();
+  }
+  function generateEmptyAggregateAndProof(): phase0.AggregateAndProof {
+    const attestation = generateEmptyAttestation();
+    return {
+      aggregatorIndex: 0,
+      selectionProof: Buffer.alloc(96),
+      aggregate: attestation,
+    };
+  }
+
+  function generateEmptyContribution(): altair.SyncCommitteeContribution {
+    return {
+      aggregationBits: BitArray.fromBitLen(SYNC_COMMITTEE_SUBNET_SIZE),
+      beaconBlockRoot: Buffer.alloc(32),
+      signature: fromHexString(
+        "99cb82bc69b4111d1a828963f0316ec9aa38c4e9e041a8afec86cd20dfe9a590999845bf01d4689f3bbe3df54e48695e081f1216027b577c7fccf6ab0a4fcc75faf8009c6b55e518478139f604f542d138ae3bc34bad01ee6002006d64c4ff82"
+      ),
+      slot: altairSlot,
+      subcommitteeIndex,
+    };
+  }
+  function generateContributionAndProof(
+    override: RecursivePartial<altair.ContributionAndProof> = {}
+  ): altair.ContributionAndProof {
+    return deepmerge<altair.ContributionAndProof, RecursivePartial<altair.ContributionAndProof>>(
+      {
+        aggregatorIndex: 0,
+        contribution: generateEmptyContribution(),
+        selectionProof: Buffer.alloc(96),
+      },
+      override,
+      {isMergeableObject: isPlainObject}
+    );
+  }
 
   after("stop container", async function () {
     await startedContainer.stop();
@@ -147,19 +210,33 @@ describe("web3signer signature test", function () {
     await assertSameSignature("signAttestation", duty, attestationData, epoch);
   });
 
-  //
-  // it("signAggregateAndProof", async () => {
-  //   await assertSameSignature("signAggregateAndProof", pubkeyBytes);
-  // });
-  //
+  it("signAggregateAndProof", async () => {
+    const aggregateAndProof = generateEmptyAggregateAndProof();
+    await assertSameSignature(
+      "signAggregateAndProof",
+      duty,
+      aggregateAndProof.selectionProof,
+      aggregateAndProof.aggregate
+    );
+  });
+
   it("signSyncCommitteeSignature", async () => {
     const beaconBlockRoot = ssz.phase0.BeaconBlockHeader.defaultValue().bodyRoot;
     await assertSameSignature("signSyncCommitteeSignature", pubkeyBytes, validatorIndex, altairSlot, beaconBlockRoot);
   });
-  //
-  // it("signContributionAndProof", async () => {
-  //   await assertSameSignature("signContributionAndProof", pubkeyBytes);
-  // });
+
+  it("signContributionAndProof", async () => {
+    const contributionAndProof = generateContributionAndProof({
+      selectionProof: Buffer.alloc(96),
+    });
+
+    await assertSameSignature(
+      "signContributionAndProof",
+      duty,
+      contributionAndProof.selectionProof,
+      contributionAndProof.contribution
+    );
+  });
 
   it("signAttestationSelectionProof", async () => {
     await assertSameSignature("signAttestationSelectionProof", pubkeyBytes, altairSlot);

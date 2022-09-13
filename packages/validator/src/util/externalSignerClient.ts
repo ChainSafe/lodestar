@@ -62,8 +62,8 @@ const serializerMap = {
   },
   ["SYNC_COMMITTEE_CONTRIBUTION_AND_PROOF"]: (data: Record<string, unknown>) => {
     return {
-      aggregatorIndex: data.aggregatorIndex,
-      selectionProof: data.selectionProof,
+      aggregator_index: String(data.aggregatorIndex),
+      selection_proof: toHexString(data.selectionProof as Uint8Array),
       contribution: ssz.altair.SyncCommitteeContribution.toJson(data.contribution as SyncCommitteeContribution),
     };
   },
@@ -193,13 +193,6 @@ export async function externalSignerPostSignature(
   signingRootHex: string,
   signableMessage: SignableMessage
 ): Promise<string> {
-  console.log(
-    signableMessage.singablePayload.type,
-    JSON.stringify({
-      ...convertToRequest(signableMessage),
-      ...{signingRoot: signingRootHex},
-    })
-  );
   const res = await fetch(`${externalSignerUrl}/api/v1/eth2/sign/${signableMessage.pubkeyHex}`, {
     method: "POST",
     headers: {"Content-Type": "application/json"},
