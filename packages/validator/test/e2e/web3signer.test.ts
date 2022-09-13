@@ -156,15 +156,15 @@ describe("web3signer signature test", function () {
   // it("signContributionAndProof", async () => {
   //   await assertSameSignature("signContributionAndProof", pubkeyBytes);
   // });
-  //
-  // it("signAttestationSelectionProof", async () => {
-  //   await assertSameSignature("signAttestationSelectionProof", pubkeyBytes);
-  // });
-  //
+
+  it("signAttestationSelectionProof", async () => {
+    await assertSameSignature("signAttestationSelectionProof", pubkeyBytes, postAltairSlot);
+  });
+
   it("signSyncCommitteeSelectionProof", async () => {
     await assertSameSignature("signSyncCommitteeSelectionProof", pubkeyBytes, postAltairSlot, subcommitteeIndex);
   });
-  //
+
   it("signVoluntaryExit", async () => {
     await assertSameSignature("signVoluntaryExit", pubkeyBytes, validatorIndex, epoch);
   });
