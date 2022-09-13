@@ -12,17 +12,10 @@ import {BeaconDb} from "../../../src/db/beacon.js";
 describe("Eth1DepositDataTracker", function () {
   const sandbox = sinon.createSandbox();
   const controller = new AbortController();
-  const logger = testLogger();
-  // const config =({
-  //     // Set time units to 0 to make the test as fast as possible
-  //     SECONDS_PER_ETH1_BLOCK: 0,
-  //     SECONDS_PER_SLOT: 0,
-  //   } as Partial<IChainConfig>) as IChainForkConfig;
 
+  const logger = testLogger();
   const opts = {...defaultEth1Options, enabled: false};
   const signal = controller.signal;
-
-  // const eth1Provider = sinon.createStubInstance(Eth1Provider) as SinonStubbedInstance<Eth1Provider> & Eth1Provider
   const eth1Provider = new Eth1Provider(config, opts, signal, null);
   const db = sinon.createStubInstance(BeaconDb);
 
@@ -31,7 +24,6 @@ describe("Eth1DepositDataTracker", function () {
     {config, db, logger, signal, metrics: null},
     eth1Provider
   );
-
   sinon
     .stub(
       (eth1DepositDataTracker as never) as {
