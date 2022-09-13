@@ -193,6 +193,13 @@ export async function externalSignerPostSignature(
   signingRootHex: string,
   signableMessage: SignableMessage
 ): Promise<string> {
+  console.log(
+    signableMessage.singablePayload.type,
+    JSON.stringify({
+      ...convertToRequest(signableMessage),
+      ...{signingRoot: signingRootHex},
+    })
+  );
   const res = await fetch(`${externalSignerUrl}/api/v1/eth2/sign/${signableMessage.pubkeyHex}`, {
     method: "POST",
     headers: {"Content-Type": "application/json"},

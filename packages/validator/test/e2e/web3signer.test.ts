@@ -113,9 +113,18 @@ describe("web3signer signature test", function () {
     method: T,
     ...args: Parameters<ValidatorStore[T]>
   ): Promise<void> {
-    const signatureRemote = await (validatorStoreRemote[method] as () => Promise<Buffer>)(...(args as []));
-    const signatureLocal = await (validatorStoreLocal[method] as () => Promise<Buffer>)(...(args as []));
-    expect(toHex(signatureRemote)).equals(toHex(signatureLocal), `Wrong signature for ${method}`);
+    type HasSignature = {signature: Buffer};
+    type ReturnType = Buffer | HasSignature;
+    const signatureRemote = await (validatorStoreRemote[method] as () => Promise<ReturnType>)(...(args as []));
+    const signatureLocal = await (validatorStoreLocal[method] as () => Promise<ReturnType>)(...(args as []));
+    if ("fill" in signatureRemote && "fill" in signatureLocal) {
+      expect(toHex(signatureRemote)).equals(toHex(signatureLocal), `Wrong signature for ${method}`);
+    } else {
+      expect(toHex((signatureRemote as HasSignature).signature)).equals(
+        toHex((signatureLocal as HasSignature).signature),
+        `Wrong signature for ${method}`
+      );
+    }
   }
 
   // it("signBlock", async () => {
@@ -132,9 +141,7 @@ describe("web3signer signature test", function () {
     const attestationData = ssz.phase0.AttestationData.defaultValue();
     attestationData.slot = duty.slot;
     attestationData.index = duty.committeeIndex;
-    const signatureLocal = (await validatorStoreLocal.signAttestation(duty, attestationData, epoch)).signature;
-    const signatureRemote = (await validatorStoreRemote.signAttestation(duty, attestationData, epoch)).signature;
-    expect(toHex(signatureRemote)).equals(toHex(signatureLocal), "Wrong signature for signAttestation");
+    await assertSameSignature("signAttestation", duty, attestationData, epoch);
   });
 
   //
@@ -159,15 +166,16 @@ describe("web3signer signature test", function () {
   });
   //
   it("signVoluntaryExit", async () => {
-    const signatureLocal = (await validatorStoreLocal.signVoluntaryExit(pubkeyBytes, validatorIndex, epoch)).signature;
-    const signatureRemote = (await validatorStoreRemote.signVoluntaryExit(pubkeyBytes, validatorIndex, epoch))
-      .signature;
-    expect(toHex(signatureRemote)).equals(toHex(signatureLocal), "Wrong signature for signVoluntaryExit");
+    await assertSameSignature("signVoluntaryExit", pubkeyBytes, validatorIndex, epoch);
   });
-  //
-  // it("signValidatorRegistration", async () => {
-  //   await assertSameSignature("signValidatorRegistration", pubkeyBytes);
-  // });
+
+  it("signValidatorRegistration", async () => {
+    const regAttributes = {
+      feeRecipient: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      gasLimit: 1,
+    };
+    await assertSameSignature("signValidatorRegistration", pubkeyBytes, regAttributes, epoch);
+  });
 });
 
 function getValidatorStore(signer: Signer): ValidatorStore {
