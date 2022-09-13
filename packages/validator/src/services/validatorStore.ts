@@ -38,6 +38,7 @@ import {ISlashingProtection} from "../slashingProtection/index.js";
 import {PubkeyHex} from "../types.js";
 import {externalSignerPostSignature, Web3SignerForkInfo, SignableMessage} from "../util/externalSignerClient.js";
 import {Metrics} from "../metrics.js";
+import {isValidatePubkeyHex} from "../util/format.js";
 import {IndicesService} from "./indices.js";
 import {DoppelgangerService} from "./doppelgangerService.js";
 
@@ -699,6 +700,9 @@ function getSignerPubkeyHex(signer: Signer): PubkeyHex {
       return toHexString(signer.secretKey.toPublicKey().toBytes());
 
     case SignerType.Remote:
+      if (!isValidatePubkeyHex(signer.pubkey)) {
+        throw Error(`Bad format in RemoteSigner.pubkey ${signer.pubkey}`);
+      }
       return signer.pubkey;
   }
 }
