@@ -56,6 +56,7 @@ export type KeymanagerArgs = {
   "keymanager.port"?: number;
   "keymanager.address"?: string;
   "keymanager.cors"?: string;
+  "keymanager.bodyLimit"?: number;
 };
 
 export const keymanagerOptions: ICliCommandOptions<KeymanagerArgs> = {
@@ -88,6 +89,11 @@ export const keymanagerOptions: ICliCommandOptions<KeymanagerArgs> = {
     description: "Configures the Access-Control-Allow-Origin CORS header for keymanager API",
     defaultDescription: keymanagerRestApiServerOptsDefault.cors,
     group: "keymanager",
+  },
+  "keymanager.bodyLimit": {
+    hidden: true,
+    type: "number",
+    description: "Defines the maximum payload, in bytes, the server is allowed to accept",
   },
 };
 

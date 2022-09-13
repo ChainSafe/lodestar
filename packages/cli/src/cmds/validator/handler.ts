@@ -146,6 +146,7 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
         port: args["keymanager.port"],
         cors: args["keymanager.cors"],
         isAuthEnabled: args["keymanager.authEnabled"],
+        bodyLimit: args["keymanager.bodyLimit"],
         tokenDir: dbPath,
       },
       {config, logger, api: keymanagerApi, metrics: metrics ? metrics.keymanagerApiRest : null}

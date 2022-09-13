@@ -3,15 +3,12 @@ import {registerRoutes} from "@lodestar/api/beacon/server";
 import {ErrorAborted, ILogger} from "@lodestar/utils";
 import {IChainForkConfig} from "@lodestar/config";
 import {NodeIsSyncing} from "../impl/errors.js";
-import {RestApiServer, RestApiServerModules, RestApiServerMetrics} from "./base.js";
+import {RestApiServer, RestApiServerModules, RestApiServerMetrics, RestApiServerOpts} from "./base.js";
 export {allNamespaces} from "@lodestar/api";
 
-export type BeaconRestApiServerOpts = {
+export type BeaconRestApiServerOpts = Omit<RestApiServerOpts, "bearerToken"> & {
   enabled: boolean;
   api: (keyof Api)[];
-  port: number;
-  cors?: string;
-  address?: string;
 };
 
 export const beaconRestApiServerOpts: BeaconRestApiServerOpts = {
@@ -21,6 +18,8 @@ export const beaconRestApiServerOpts: BeaconRestApiServerOpts = {
   address: "127.0.0.1",
   port: 9596,
   cors: "*",
+  // beacon -> validator API is trusted, and for large amounts of keys the payload is multi-MB
+  bodyLimit: 10 * 1024 * 1024, // 10MB
 };
 
 export type BeaconRestApiServerModules = RestApiServerModules & {
