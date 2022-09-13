@@ -20,14 +20,33 @@ import {testLogger} from "../utils/logger.js";
 describe("web3signer signature test", function () {
   this.timeout("60s");
 
+  const web3signerImage = "consensys/web3signer:22.8.1";
   let validatorStoreRemote: ValidatorStore;
   let validatorStoreLocal: ValidatorStore;
+  let proc: child_process.ChildProcessWithoutNullStreams | null;
   let web3signerStdoutErr = "";
 
   const pubkey = "0x8837af2a7452aff5a8b6906c3e5adefce5690e1bba6d73d870b9e679fece096b97a255bae0978e3a344aa832f68c6b47";
   const pubkeyBytes = fromHex(pubkey);
 
-  beforeDone("start web3signer", async (done) => {
+  after(() => {
+    if (proc) {
+      proc.kill("SIGKILL");
+      try {
+        child_process.execSync(`pkill -P ${proc.pid}`);
+      } catch (e) {
+        //
+      }
+    }
+  });
+
+  before("pull image", function () {
+    // allow enough time to pull image
+    this.timeout("300s");
+    child_process.execSync(`docker pull ${web3signerImage}`);
+  });
+
+  beforeDone("start web3signer", async function (done) {
     // docker run -p <listenPort>:9000 consensys/web3signer:develop [options] [subcommand] [options]
 
     const logPrefix = "web3signer";
@@ -43,12 +62,12 @@ describe("web3signer signature test", function () {
     fs.writeFileSync(path.join(configDirPath, "keystore.json"), keystoreStr);
     fs.writeFileSync(path.join(configDirPath, passwordFilename), password);
 
-    const proc = child_process.spawn("docker", [
+    proc = child_process.spawn("docker", [
       "run",
       "--rm",
       "--network=host",
       `-v=${configDirPath}:/config`,
-      "consensys/web3signer:develop",
+      web3signerImage,
       "--http-listen-host=127.0.0.1",
       `--http-listen-port=${port}`,
       "eth2",
