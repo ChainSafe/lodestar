@@ -15,10 +15,66 @@ import {
 import {fromHexString} from "@chainsafe/ssz";
 import {Interchange, SignerType, Validator} from "@lodestar/validator";
 import {getPubkeyHexFromKeystore, isValidatePubkeyHex, isValidHttpUrl} from "../../../util/format.js";
+import {parseFeeRecipient} from "../../../util/index.js";
 import {IPersistedKeysBackend} from "./interface.js";
 
 export class KeymanagerApi implements Api {
-  constructor(private readonly validator: Validator, private readonly persistedKeysBackend: IPersistedKeysBackend) {}
+  constructor(
+    private readonly validator: Validator,
+    private readonly persistedKeysBackend: IPersistedKeysBackend,
+    private readonly proposerConfigWriteDisabled?: boolean
+  ) {}
+
+  private checkIfProposerWriteEnabled(): void {
+    if (this.proposerConfigWriteDisabled === true) {
+      throw Error("proposerSettingsFile option activated");
+    }
+  }
+
+  async listFeeRecipient(pubkeyHex: string): ReturnType<Api["listFeeRecipient"]> {
+    return {data: {pubkey: pubkeyHex, ethaddress: this.validator.validatorStore.getFeeRecipient(pubkeyHex)}};
+  }
+
+  async setFeeRecipient(pubkeyHex: string, ethaddress: string): Promise<void> {
+    this.checkIfProposerWriteEnabled();
+    this.validator.validatorStore.setFeeRecipient(pubkeyHex, parseFeeRecipient(ethaddress));
+    this.persistedKeysBackend.writeProposerConfig(
+      pubkeyHex,
+      this.validator.validatorStore.getProposerConfig(pubkeyHex)
+    );
+  }
+
+  async deleteFeeRecipient(pubkeyHex: string): Promise<void> {
+    this.checkIfProposerWriteEnabled();
+    this.validator.validatorStore.deleteFeeRecipient(pubkeyHex);
+    this.persistedKeysBackend.writeProposerConfig(
+      pubkeyHex,
+      this.validator.validatorStore.getProposerConfig(pubkeyHex)
+    );
+  }
+
+  async getGasLimit(pubkeyHex: string): ReturnType<Api["getGasLimit"]> {
+    const gasLimit = this.validator.validatorStore.getGasLimit(pubkeyHex);
+    return {data: {pubkey: pubkeyHex, gasLimit}};
+  }
+
+  async setGasLimit(pubkeyHex: string, gasLimit: number): Promise<void> {
+    this.checkIfProposerWriteEnabled();
+    this.validator.validatorStore.setGasLimit(pubkeyHex, gasLimit);
+    this.persistedKeysBackend.writeProposerConfig(
+      pubkeyHex,
+      this.validator.validatorStore.getProposerConfig(pubkeyHex)
+    );
+  }
+
+  async deleteGasLimit(pubkeyHex: string): Promise<void> {
+    this.checkIfProposerWriteEnabled();
+    this.validator.validatorStore.deleteGasLimit(pubkeyHex);
+    this.persistedKeysBackend.writeProposerConfig(
+      pubkeyHex,
+      this.validator.validatorStore.getProposerConfig(pubkeyHex)
+    );
+  }
 
   /**
    * List all validating pubkeys known to and decrypted by this keymanager binary
@@ -131,7 +187,7 @@ export class KeymanagerApi implements Api {
    *
    * https://github.com/ethereum/keymanager-APIs/blob/0c975dae2ac6053c8245ebdb6a9f27c2f114f407/keymanager-oapi.yaml
    */
-  async deleteKeystores(pubkeysHex: PubkeyHex[]): ReturnType<Api["deleteKeystores"]> {
+  async deleteKeys(pubkeysHex: PubkeyHex[]): ReturnType<Api["deleteKeys"]> {
     const deletedKey: boolean[] = [];
     const statuses = new Array<{status: DeletionStatus; message?: string}>(pubkeysHex.length);
 

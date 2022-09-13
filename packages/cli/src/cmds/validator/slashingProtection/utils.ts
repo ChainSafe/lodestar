@@ -1,10 +1,10 @@
 import {Root} from "@lodestar/types";
 import {getClient} from "@lodestar/api";
-import {fromHex, LogLevel} from "@lodestar/utils";
+import {fromHex} from "@lodestar/utils";
 import {genesisData, NetworkName} from "@lodestar/config/networks";
 import {SlashingProtection, MetaDataRepository} from "@lodestar/validator";
 import {IDatabaseApiOptions, LevelDbController} from "@lodestar/db";
-import {getCliLogger, YargsError} from "../../../util/index.js";
+import {YargsError} from "../../../util/index.js";
 import {IGlobalArgs} from "../../../options/index.js";
 import {getValidatorPaths} from "../paths.js";
 import {getBeaconConfigFromArgs} from "../../../config/index.js";
@@ -20,11 +20,10 @@ export function getSlashingProtection(
   const validatorPaths = getValidatorPaths(args, network);
   const dbPath = validatorPaths.validatorsDbDir;
   const {config} = getBeaconConfigFromArgs(args);
-  const logger = getCliLogger({logLevel: LogLevel.warn}, {}, config);
 
   const dbOpts: IDatabaseApiOptions = {
     config,
-    controller: new LevelDbController({name: dbPath}, {logger}),
+    controller: new LevelDbController({name: dbPath}, {}),
   };
 
   return {

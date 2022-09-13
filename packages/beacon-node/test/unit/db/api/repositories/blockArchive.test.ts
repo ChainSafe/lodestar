@@ -8,16 +8,14 @@ import {LevelDbController, Bucket, encodeKey} from "@lodestar/db";
 
 import {generateEmptySignedBlock} from "../../../../utils/block.js";
 import {BlockArchiveRepository} from "../../../../../src/db/repositories/index.js";
-import {testLogger} from "../../../../utils/logger.js";
 
 describe("block archive repository", function () {
   const testDir = "./.tmp";
-  const logger = testLogger();
   let blockArchive: BlockArchiveRepository;
   let controller: LevelDbController;
 
   beforeEach(async function () {
-    controller = new LevelDbController({name: testDir}, {logger});
+    controller = new LevelDbController({name: testDir}, {});
     blockArchive = new BlockArchiveRepository(config, controller);
     await controller.start();
   });

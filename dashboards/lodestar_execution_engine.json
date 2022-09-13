@@ -1001,9 +1001,25 @@
           "interval": "",
           "legendFormat": "eth1_follow_distance_dynamic",
           "refId": "A"
+        },
+        {
+          "exemplar": false,
+          "expr": "lodestar_eth1_blocks_batch_size_dynamic",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "eth1_blocks_batch_size_dynamic",
+          "refId": "B"
+        },
+        {
+          "exemplar": false,
+          "expr": "lodestar_eth1_logs_batch_size_dynamic",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "eth1_logs_batch_size_dynamic",
+          "refId": "C"
         }
       ],
-      "title": "Eth1 Follow Distance Dynamic",
+      "title": "Eth1 Dynamic Stats",
       "type": "timeseries"
     },
     {

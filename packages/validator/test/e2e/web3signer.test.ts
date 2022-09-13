@@ -154,7 +154,7 @@ describe("web3signer signature test", function () {
   //   await assertSameSignature("signAttestationSelectionProof", pubkeyBytes);
   // });
   //
-  it("signSyncCommitteeSelectionProof", async () => {
+  it(":", async () => {
     await assertSameSignature("signSyncCommitteeSelectionProof", pubkeyBytes, postAltairSlot, subcommitteeIndex);
   });
   //
