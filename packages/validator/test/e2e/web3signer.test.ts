@@ -47,7 +47,7 @@ describe("web3signer signature test", function () {
     await startedContainer.stop();
   });
 
-  before("pull image", async function () {
+  before("start container", async function () {
     this.timeout("300s");
     // path to store configuration
     const tmpDir = tmp.dirSync({unsafeCleanup: true});
@@ -72,8 +72,7 @@ describe("web3signer signature test", function () {
     const port = 9000;
     let web3signerUrl = `http://localhost:${port}`;
 
-    // http://localhost:9000/api/v1/eth2/sign/0x8837af2a7452aff5a8b6906c3e5adefce5690e1bba6d73d870b9e679fece096b97a255bae0978e3a344aa832f68c6b47
-    // using the latest image to be alerted incase there is breaking changes
+    // using the latest image to be alerted in case there is a breaking change
     const containerConfigPath = "/var/web3signer/config";
     startedContainer = await new GenericContainer("consensys/web3signer:latest")
       .withHealthCheck({
@@ -99,6 +98,7 @@ describe("web3signer signature test", function () {
 
     web3signerUrl = `http://localhost:${startedContainer.getMappedPort(port)}`;
 
+    // http://localhost:9000/api/v1/eth2/sign/0x8837af2a7452aff5a8b6906c3e5adefce5690e1bba6d73d870b9e679fece096b97a255bae0978e3a344aa832f68c6b47
     validatorStoreRemote = getValidatorStore({type: SignerType.Remote, url: web3signerUrl, pubkey});
     validatorStoreLocal = getValidatorStore({type: SignerType.Local, secretKey});
 
@@ -154,7 +154,7 @@ describe("web3signer signature test", function () {
   //   await assertSameSignature("signAttestationSelectionProof", pubkeyBytes);
   // });
   //
-  it(":", async () => {
+  it("signSyncCommitteeSelectionProof", async () => {
     await assertSameSignature("signSyncCommitteeSelectionProof", pubkeyBytes, postAltairSlot, subcommitteeIndex);
   });
   //
