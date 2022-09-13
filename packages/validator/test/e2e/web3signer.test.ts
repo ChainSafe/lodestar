@@ -1,13 +1,10 @@
-import child_process from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import {fetch} from "cross-fetch";
 import tmp from "tmp";
 import {expect} from "chai";
-import {TestContainer, GenericContainer, Wait, StartedTestContainer} from "testcontainers";
-import {StartedGenericContainer} from "testcontainers/dist/generic-container/started-generic-container";
+import {GenericContainer, Wait, StartedTestContainer} from "testcontainers";
 import {Keystore} from "@chainsafe/bls-keystore";
-import {fromHex, sleep, toHex, withTimeout} from "@lodestar/utils";
+import {fromHex, toHex} from "@lodestar/utils";
 import {config} from "@lodestar/config/default";
 import {createIBeaconConfig} from "@lodestar/config";
 import {genesisData} from "@lodestar/config/networks";
