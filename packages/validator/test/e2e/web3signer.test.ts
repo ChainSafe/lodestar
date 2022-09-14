@@ -115,7 +115,11 @@ describe("web3signer signature test", function () {
   before("start container", async function () {
     this.timeout("300s");
     // path to store configuration
-    const tmpDir = tmp.dirSync({unsafeCleanup: true});
+    const tmpDir = tmp.dirSync({
+      unsafeCleanup: true,
+      // In Github runner NodeJS process probably runs as root, so web3signer doesn't have permissions to read config dir
+      mode: 777,
+    });
     const configDirPathHost = tmpDir.name;
     const configDirPathContainer = "/var/web3signer/config";
 
