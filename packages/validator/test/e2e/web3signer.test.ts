@@ -118,8 +118,11 @@ describe("web3signer signature test", function () {
     const tmpDir = tmp.dirSync({
       unsafeCleanup: true,
       // In Github runner NodeJS process probably runs as root, so web3signer doesn't have permissions to read config dir
-      mode: 777,
+      mode: 755,
     });
+    // Apply permissions again to hopefully make Github runner happy >.<
+    fs.chmodSync(tmpDir.name, 0o755);
+
     const configDirPathHost = tmpDir.name;
     const configDirPathContainer = "/var/web3signer/config";
 
@@ -127,14 +130,12 @@ describe("web3signer signature test", function () {
     // const keystoreStr = getKeystore();
     // const password = "password";
     const passwordFilename = "password.txt";
-    const keystoreFile = path.join(configDirPathHost, "keystore.json");
-    const passwordFile = path.join(configDirPathHost, passwordFilename);
 
     const keystoreStr = getKeystore();
     const password = "password";
 
-    fs.writeFileSync(keystoreFile, keystoreStr);
-    fs.writeFileSync(passwordFile, password);
+    fs.writeFileSync(path.join(configDirPathHost, "keystore.json"), keystoreStr);
+    fs.writeFileSync(path.join(configDirPathHost, passwordFilename), password);
 
     const secretKey = bls.SecretKey.fromBytes(await Keystore.parse(keystoreStr).decrypt(password));
 
