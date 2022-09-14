@@ -78,13 +78,13 @@ export const LodestarBeaconNodeProcess: BeaconNodeConstructor = class LodestarBe
     this.config = getBeaconConfigFromArgs(this.rcConfig).config;
     this.api = getClient({baseUrl: `http://${this.address}:${this.restPort}`}, {config: this.config});
 
-    for (let clientIndex = 0; clientIndex < this.params.validatorClients; clientIndex++) {
+    for (let clientIndex = 0; clientIndex < this.params.validatorClients; clientIndex += 1) {
       this.validatorClients.push(
         new LodestarValidatorProcess(this.params, {
           rootDir: join(this.rootDir, `validator-${clientIndex}`),
           config: getBeaconConfigFromArgs(this.rcConfig).config,
           server: `http://${this.address}:${this.restPort}/`,
-          clientIndex,
+          clientIndex: clientIndex + LodestarBeaconNodeProcess.totalProcessCount - 1,
         })
       );
     }
