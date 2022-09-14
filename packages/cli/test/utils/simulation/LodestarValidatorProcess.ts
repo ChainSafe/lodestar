@@ -53,9 +53,9 @@ export const LodestarValidatorProcess: ValidatorConstructor = class LodestarVali
     this.id = `VAL-${LodestarValidatorProcess.totalProcessCount}`;
     this.forkConfig = config;
 
-    const validatorSecretKeys = Array.from({length: this.params.validatorsPerClient}, (_, i) =>
-      interopSecretKey(this.clientIndex * this.params.validatorsPerClient + i)
-    );
+    const validatorSecretKeys = Array.from({length: this.params.validatorsPerClient}, (_, i) => {
+      return interopSecretKey(this.clientIndex * this.params.validatorsPerClient + i);
+    });
     this.secretKeys = validatorSecretKeys;
 
     this.rcConfig = ({

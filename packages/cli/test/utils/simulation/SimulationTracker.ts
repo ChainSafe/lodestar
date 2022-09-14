@@ -110,8 +110,6 @@ export class SimulationTracker {
           source: participation.source,
           target: participation.target,
         });
-
-      this.printAttestationsParticipation();
     }
   }
 
