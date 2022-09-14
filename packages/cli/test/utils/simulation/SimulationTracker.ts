@@ -10,13 +10,13 @@ export class SimulationTracker {
   readonly attestationsPerBlock: Map<string, Map<Slot, number>>;
   readonly inclusionDelayPerBlock: Map<string, Map<Slot, number>>;
   readonly attestationParticipation: Map<string, Map<Epoch, {head: number; source: number; target: number}>>;
+  private lastSeenSlot: Map<string, Slot>;
 
   readonly emitter = new EventEmitter();
 
   private signal: AbortSignal;
   private nodes: BeaconNodeProcess[];
   private clock: EpochClock;
-  private lastSeenSlot: Slot = 0;
 
   constructor(nodes: BeaconNodeProcess[], clock: EpochClock, signal: AbortSignal) {
     this.signal = signal;
@@ -27,22 +27,25 @@ export class SimulationTracker {
     this.attestationsPerBlock = new Map();
     this.inclusionDelayPerBlock = new Map();
     this.attestationParticipation = new Map();
+    this.lastSeenSlot = new Map();
 
     for (let i = 0; i < nodes.length; i += 1) {
       this.producedBlocks.set(nodes[i].id, new Map());
       this.attestationsPerBlock.set(nodes[i].id, new Map());
       this.inclusionDelayPerBlock.set(nodes[i].id, new Map());
       this.attestationParticipation.set(nodes[i].id, new Map());
+      this.lastSeenSlot.set(nodes[i].id, 0);
     }
   }
 
   get missedBlocks(): Map<string, Slot[]> {
     const missedBlocks: Map<string, Slot[]> = new Map();
+    const minSlot = Math.min(...this.lastSeenSlot.values());
 
     for (let i = 0; i < this.nodes.length; i++) {
       const missedBlocksForNode: Slot[] = [];
 
-      for (let s = 0; s < this.lastSeenSlot; s++) {
+      for (let s = 0; s < minSlot; s++) {
         if (!this.producedBlocks.get(this.nodes[i].id)?.get(s)) {
           missedBlocksForNode.push(s);
         }
@@ -84,10 +87,11 @@ export class SimulationTracker {
     node: BeaconNodeProcess
   ): Promise<void> {
     const slot = event.slot;
+    const lastSeenSlot = this.lastSeenSlot.get(node.id);
     const blockAttestations = await node.api.beacon.getBlockAttestations(slot);
 
-    if (slot > this.lastSeenSlot) {
-      this.lastSeenSlot = slot;
+    if (lastSeenSlot !== undefined && slot > lastSeenSlot) {
+      this.lastSeenSlot.set(node.id, slot);
     }
 
     this.producedBlocks.get(node.id)?.set(slot, true);
@@ -106,6 +110,8 @@ export class SimulationTracker {
           source: participation.source,
           target: participation.target,
         });
+
+      this.printAttestationsParticipation();
     }
   }
 
@@ -118,6 +124,13 @@ export class SimulationTracker {
     _node: BeaconNodeProcess
   ): void {
     // TODO: Add checkpoint tracking
+  }
+
+  printLastSeenSlots(): void {
+    console.log("==== LAST SEEN SLOTS ====");
+    console.table(
+      [...this.lastSeenSlot.entries()].map(([node, slot]) => ({node, slot, epoch: this.clock.getEpochForSlot(slot)}))
+    );
   }
 
   printMissedBlocks(): void {

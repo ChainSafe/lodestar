@@ -13,7 +13,7 @@ chai.use(chaiAsPromised);
 
 const nodeCases: {beaconNodes: number; validatorClients: number; validatorsPerClient: number}[] = [
   {beaconNodes: 1, validatorClients: 1, validatorsPerClient: 128},
-  {beaconNodes: 4, validatorClients: 1, validatorsPerClient: 32},
+  // {beaconNodes: 4, validatorClients: 1, validatorsPerClient: 32},
 ];
 
 const forksCases: {
@@ -24,33 +24,33 @@ const forksCases: {
     withExternalSigner?: boolean;
   };
 }[] = [
-  {
-    title: "phase0 fork only",
-    params: {
-      altairEpoch: FAR_FUTURE_EPOCH,
-      bellatrixEpoch: FAR_FUTURE_EPOCH,
-    },
-  },
+  // {
+  //   title: "phase0 fork only",
+  //   params: {
+  //     altairEpoch: FAR_FUTURE_EPOCH,
+  //     bellatrixEpoch: FAR_FUTURE_EPOCH,
+  //   },
+  // },
   {
     title: "altair fork only",
     params: {altairEpoch: 0, bellatrixEpoch: FAR_FUTURE_EPOCH},
   },
-  {
-    title: "altair fork at epoch 2",
-    params: {altairEpoch: 2, bellatrixEpoch: FAR_FUTURE_EPOCH},
-  },
+  // {
+  //   title: "altair fork at epoch 2",
+  //   params: {altairEpoch: 2, bellatrixEpoch: FAR_FUTURE_EPOCH},
+  // },
   // {
   //   title: "bellatrix fork at epoch 0",
   //   params: {event: routes.events.EventType.finalizedCheckpoint, altairEpoch: 0, bellatrixEpoch: 0},
   // },
-  {
-    title: "Remote signer with altair",
-    params: {
-      altairEpoch: 0,
-      bellatrixEpoch: FAR_FUTURE_EPOCH,
-      withExternalSigner: true,
-    },
-  },
+  // {
+  //   title: "Remote signer with altair",
+  //   params: {
+  //     altairEpoch: 0,
+  //     bellatrixEpoch: FAR_FUTURE_EPOCH,
+  //     withExternalSigner: true,
+  //   },
+  // },
 ];
 
 describe("simulation", function () {
@@ -75,14 +75,16 @@ describe("simulation", function () {
         describe(title, async () => {
           before("setup env", () => {
             console.log("%%%%%%%%% Starting test env %%%%%%%%%");
-            console.log({
-              beaconNodes,
-              validatorClients,
-              validatorsPerClient,
-              altairEpoch,
-              bellatrixEpoch,
-              withExternalSigner,
-            });
+            console.log(
+              JSON.stringify({
+                beaconNodes,
+                validatorClients,
+                validatorsPerClient,
+                altairEpoch,
+                bellatrixEpoch,
+                withExternalSigner,
+              })
+            );
             env = new SimulationEnvironment({
               beaconNodes,
               validatorClients,
@@ -116,6 +118,7 @@ describe("simulation", function () {
           });
 
           it("should not have missed blocks", () => {
+            env.tracker.printLastSeenSlots();
             env.tracker.printMissedBlocks();
 
             missedBlocksAssertions(env);
