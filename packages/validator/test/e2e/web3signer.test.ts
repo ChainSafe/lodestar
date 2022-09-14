@@ -19,6 +19,8 @@ import {Interchange, ISlashingProtection, Signer, SignerType, ValidatorStore} fr
 import {IndicesService} from "../../src/services/indices.js";
 import {testLogger} from "../utils/logger.js";
 
+const web3signerVersion = "22.8.1";
+
 /* eslint-disable no-console, @typescript-eslint/naming-convention */
 
 describe("web3signer signature test", function () {
@@ -114,34 +116,28 @@ describe("web3signer signature test", function () {
     this.timeout("300s");
     // path to store configuration
     const tmpDir = tmp.dirSync({unsafeCleanup: true});
-    const configDirPath = tmpDir.name;
+    const configDirPathHost = tmpDir.name;
+    const configDirPathContainer = "/var/web3signer/config";
 
     // keystore content and file paths
     // const keystoreStr = getKeystore();
     // const password = "password";
-    const keystoreFile = path.join(configDirPath, "keystore.json");
-    const passwordFile = path.join(configDirPath, "password.txt");
-    const keyconfigFile = path.join(configDirPath, "keyconfig.yaml");
+    const passwordFilename = "password.txt";
+    const keystoreFile = path.join(configDirPathHost, "keystore.json");
+    const passwordFile = path.join(configDirPathHost, passwordFilename);
 
     const keystoreStr = getKeystore();
     const password = "password";
-    const keyconfig = `
-type: "file-keystore"
-keyType: "bls"
-keystoreFile: ${keystoreFile}
-keystorePasswordFile: ${passwordFile}`;
 
     fs.writeFileSync(keystoreFile, keystoreStr);
     fs.writeFileSync(passwordFile, password);
-    fs.writeFileSync(keyconfigFile, keyconfig);
 
     const secretKey = bls.SecretKey.fromBytes(await Keystore.parse(keystoreStr).decrypt(password));
 
     const port = 9000;
 
     // using the latest image to be alerted in case there is a breaking change
-    const containerConfigPath = "/var/web3signer/config";
-    startedContainer = await new GenericContainer("consensys/web3signer:latest")
+    startedContainer = await new GenericContainer(`consensys/web3signer:${web3signerVersion}`)
       .withHealthCheck({
         test: `curl -f http://localhost:${port}/healthcheck || exit 1`,
         interval: 1000,
@@ -150,13 +146,13 @@ keystorePasswordFile: ${passwordFile}`;
         startPeriod: 1000,
       })
       .withWaitStrategy(Wait.forHealthCheck())
-      .withExposedPorts(9000)
-      .withBindMount(`${configDirPath}`, containerConfigPath, "ro")
-      .withBindMount(`${configDirPath}`, `${configDirPath}`, "ro")
+      .withExposedPorts(port)
+      .withBindMount(configDirPathHost, configDirPathContainer, "ro")
       .withCmd([
-        `--key-store-path=${containerConfigPath}`,
         "eth2",
-        `--keystores-passwords-path=${containerConfigPath}`,
+        `--keystores-path=${configDirPathContainer}`,
+        // Don't use path.join here, the container is running on unix filesystem
+        `--keystores-password-file=${configDirPathContainer}/${passwordFilename}`,
         "--slashing-protection-enabled=false",
       ])
       .start();
