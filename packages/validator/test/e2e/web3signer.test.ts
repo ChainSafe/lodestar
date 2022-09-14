@@ -7,18 +7,19 @@ import deepmerge from "deepmerge";
 import {Keystore} from "@chainsafe/bls-keystore";
 import {fromHex, isPlainObject, RecursivePartial, toHex} from "@lodestar/utils";
 import {config} from "@lodestar/config/default";
+import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {createIBeaconConfig} from "@lodestar/config";
 import {genesisData} from "@lodestar/config/networks";
 import {getClient, routes} from "@lodestar/api";
 import bls from "@chainsafe/bls";
 import {altair, phase0, ssz} from "@lodestar/types";
-import {BitArray, fromHexString} from "@chainsafe/ssz";
-import {SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
+import {BitArray} from "@chainsafe/ssz";
+import {FAR_FUTURE_EPOCH, SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
 import {Interchange, ISlashingProtection, Signer, SignerType, ValidatorStore} from "../../src/index.js";
 import {IndicesService} from "../../src/services/indices.js";
 import {testLogger} from "../utils/logger.js";
 
-/* eslint-disable no-console */
+/* eslint-disable no-console, @typescript-eslint/naming-convention */
 
 describe("web3signer signature test", function () {
   this.timeout("60s");
@@ -29,9 +30,7 @@ describe("web3signer signature test", function () {
 
   const pubkey = "0x8837af2a7452aff5a8b6906c3e5adefce5690e1bba6d73d870b9e679fece096b97a255bae0978e3a344aa832f68c6b47";
   const pubkeyBytes = fromHex(pubkey);
-  const phase0Slot = 2;
   const altairSlot = 2375711;
-  const bellatrixSlot = 4636702;
   const epoch = 0;
   // Sample validator
   const validatorIndex = 4;
@@ -86,7 +85,7 @@ describe("web3signer signature test", function () {
     return {
       aggregationBits: BitArray.fromBitLen(SYNC_COMMITTEE_SUBNET_SIZE),
       beaconBlockRoot: Buffer.alloc(32),
-      signature: fromHexString(
+      signature: fromHex(
         "99cb82bc69b4111d1a828963f0316ec9aa38c4e9e041a8afec86cd20dfe9a590999845bf01d4689f3bbe3df54e48695e081f1216027b577c7fccf6ab0a4fcc75faf8009c6b55e518478139f604f542d138ae3bc34bad01ee6002006d64c4ff82"
       ),
       slot: altairSlot,
@@ -126,21 +125,25 @@ describe("web3signer signature test", function () {
 
     const keystoreStr = getKeystore();
     const password = "password";
+    const keyconfig = `
+type: "file-keystore"
+keyType: "bls"
+keystoreFile: ${keystoreFile}
+keystorePasswordFile: ${passwordFile}`;
 
     fs.writeFileSync(keystoreFile, keystoreStr);
     fs.writeFileSync(passwordFile, password);
-    fs.writeFileSync(keyconfigFile, getConfig(keystoreFile, passwordFile));
+    fs.writeFileSync(keyconfigFile, keyconfig);
 
     const secretKey = bls.SecretKey.fromBytes(await Keystore.parse(keystoreStr).decrypt(password));
 
     const port = 9000;
-    let web3signerUrl = `http://localhost:${port}`;
 
     // using the latest image to be alerted in case there is a breaking change
     const containerConfigPath = "/var/web3signer/config";
     startedContainer = await new GenericContainer("consensys/web3signer:latest")
       .withHealthCheck({
-        test: `curl -f ${web3signerUrl}/healthcheck || exit 1`,
+        test: `curl -f http://localhost:${port}/healthcheck || exit 1`,
         interval: 1000,
         timeout: 3000,
         retries: 5,
@@ -151,16 +154,14 @@ describe("web3signer signature test", function () {
       .withBindMount(`${configDirPath}`, containerConfigPath, "ro")
       .withBindMount(`${configDirPath}`, `${configDirPath}`, "ro")
       .withCmd([
-        "--swagger-ui-enabled",
         `--key-store-path=${containerConfigPath}`,
         "eth2",
         `--keystores-passwords-path=${containerConfigPath}`,
         "--slashing-protection-enabled=false",
-        "--key-manager-api-enabled=true",
       ])
       .start();
 
-    web3signerUrl = `http://localhost:${startedContainer.getMappedPort(port)}`;
+    const web3signerUrl = `http://localhost:${startedContainer.getMappedPort(port)}`;
 
     // http://localhost:9000/api/v1/eth2/sign/0x8837af2a7452aff5a8b6906c3e5adefce5690e1bba6d73d870b9e679fece096b97a255bae0978e3a344aa832f68c6b47
     validatorStoreRemote = getValidatorStore({type: SignerType.Remote, url: web3signerUrl, pubkey});
@@ -168,34 +169,29 @@ describe("web3signer signature test", function () {
 
     const stream = await startedContainer.logs();
     stream
-      .on("data", (line) => console.log(line))
-      .on("err", (line) => console.error(line))
+      .on("data", (line) => process.stdout.write(line))
+      .on("err", (line) => process.stderr.write(line))
       .on("end", () => console.log("Stream closed"));
   });
 
-  async function assertSameSignature<T extends keyof ValidatorStore>(
-    method: T,
-    ...args: Parameters<ValidatorStore[T]>
-  ): Promise<void> {
-    type HasSignature = {signature: Buffer};
-    type ReturnType = Buffer | HasSignature;
-    const signatureRemote = await (validatorStoreRemote[method] as () => Promise<ReturnType>)(...(args as []));
-    const signatureLocal = await (validatorStoreLocal[method] as () => Promise<ReturnType>)(...(args as []));
-    if ("fill" in signatureRemote && "fill" in signatureLocal) {
-      expect(toHex(signatureRemote)).equals(toHex(signatureLocal), `Wrong signature for ${method}`);
-    } else {
-      expect(toHex((signatureRemote as HasSignature).signature)).equals(
-        toHex((signatureLocal as HasSignature).signature),
-        `Wrong signature for ${method}`
-      );
-    }
-  }
+  for (const fork of config.forksAscendingEpochOrder) {
+    it(`signBlock ${fork.name}`, async function () {
+      if (fork.epoch === FAR_FUTURE_EPOCH) {
+        this.skip();
+      }
 
-  it("signBlock", async () => {
-    await assertSameSignature("signBlock", pubkeyBytes, ssz.phase0.BeaconBlock.defaultValue(), phase0Slot);
-    await assertSameSignature("signBlock", pubkeyBytes, ssz.altair.BeaconBlock.defaultValue(), altairSlot);
-    await assertSameSignature("signBlock", pubkeyBytes, ssz.bellatrix.BeaconBlock.defaultValue(), bellatrixSlot);
-  });
+      const block = ssz[fork.name].BeaconBlock.defaultValue();
+      block.slot = computeStartSlotAtEpoch(fork.epoch);
+
+      // Sanity check, in case two forks have the same epoch
+      const blockSlotFork = config.getForkName(block.slot);
+      if (blockSlotFork !== fork.name) {
+        throw Error(`block fork is ${blockSlotFork}`);
+      }
+
+      await assertSameSignature("signBlock", pubkeyBytes, block, block.slot);
+    });
+  }
 
   it("signRandao", async function () {
     this.timeout(30_000);
@@ -226,9 +222,7 @@ describe("web3signer signature test", function () {
   });
 
   it("signContributionAndProof", async () => {
-    const contributionAndProof = generateContributionAndProof({
-      selectionProof: Buffer.alloc(96),
-    });
+    const contributionAndProof = generateContributionAndProof({selectionProof: Buffer.alloc(96)});
 
     await assertSameSignature(
       "signContributionAndProof",
@@ -257,28 +251,46 @@ describe("web3signer signature test", function () {
     };
     await assertSameSignature("signValidatorRegistration", pubkeyBytes, regAttributes, epoch);
   });
-});
 
-function getValidatorStore(signer: Signer): ValidatorStore {
-  const logger = testLogger();
-  const api = getClient({baseUrl: "http://localhost:9596"}, {config});
-  const genesisValidatorsRoot = fromHex(genesisData.mainnet.genesisValidatorsRoot);
-  const metrics = null;
-  const doppelgangerService = null;
-  const valProposerConfig = undefined;
-  const indicesService = new IndicesService(logger, api, metrics);
-  const slashingProtection = new SlashingProtectionDisabled();
-  return new ValidatorStore(
-    createIBeaconConfig(config, genesisValidatorsRoot),
-    slashingProtection,
-    indicesService,
-    doppelgangerService,
-    metrics,
-    [signer],
-    valProposerConfig,
-    genesisValidatorsRoot
-  );
-}
+  async function assertSameSignature<T extends keyof ValidatorStore>(
+    method: T,
+    ...args: Parameters<ValidatorStore[T]>
+  ): Promise<void> {
+    type HasSignature = {signature: Buffer};
+    type ReturnType = Buffer | HasSignature;
+    const signatureRemote = await (validatorStoreRemote[method] as () => Promise<ReturnType>)(...(args as []));
+    const signatureLocal = await (validatorStoreLocal[method] as () => Promise<ReturnType>)(...(args as []));
+    if ("fill" in signatureRemote && "fill" in signatureLocal) {
+      expect(toHex(signatureRemote)).equals(toHex(signatureLocal), `Wrong signature for ${method}`);
+    } else {
+      expect(toHex((signatureRemote as HasSignature).signature)).equals(
+        toHex((signatureLocal as HasSignature).signature),
+        `Wrong signature for ${method}`
+      );
+    }
+  }
+
+  function getValidatorStore(signer: Signer): ValidatorStore {
+    const logger = testLogger();
+    const api = getClient({baseUrl: "http://localhost:9596"}, {config});
+    const genesisValidatorsRoot = fromHex(genesisData.mainnet.genesisValidatorsRoot);
+    const metrics = null;
+    const doppelgangerService = null;
+    const valProposerConfig = undefined;
+    const indicesService = new IndicesService(logger, api, metrics);
+    const slashingProtection = new SlashingProtectionDisabled();
+    return new ValidatorStore(
+      createIBeaconConfig(config, genesisValidatorsRoot),
+      slashingProtection,
+      indicesService,
+      doppelgangerService,
+      metrics,
+      [signer],
+      valProposerConfig,
+      genesisValidatorsRoot
+    );
+  }
+});
 
 class SlashingProtectionDisabled implements ISlashingProtection {
   async checkAndInsertBlockProposal(): Promise<void> {
@@ -329,12 +341,4 @@ function getKeystore(): string {
       }
     }
   }`;
-}
-
-function getConfig(keystoreFile: string, passwordFile: string): string {
-  return `
-type: "file-keystore"
-keyType: "bls"
-keystoreFile: ${keystoreFile}
-keystorePasswordFile: ${passwordFile}`;
 }

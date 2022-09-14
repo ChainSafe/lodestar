@@ -31,7 +31,9 @@
     "pretest": "yarn run check-types",
     "test:unit": "nyc --cache-dir .nyc_output/.cache -e .ts mocha 'test/unit/**/*.test.ts'",
     "test": "yarn test:unit",
-    "test:e2e": "yarn run download-spec-tests && mocha 'test/spec/**/*.test.ts'",
+    "test:e2e:only": "mocha 'test/e2e/**/*.test.ts'",
+    "test:spec": "mocha 'test/spec/**/*.test.ts'",
+    "test:e2e": "yarn run download-spec-tests && yarn test:spec && yarn test:e2e:only",
     "download-spec-tests": "node --loader=ts-node/esm test/spec/downloadTests.ts",
     "coverage": "codecov -F lodestar-validator",
     "check-readme": "typescript-docs-verifier"
