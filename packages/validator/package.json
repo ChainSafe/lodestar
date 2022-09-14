@@ -31,7 +31,9 @@
     "pretest": "yarn run check-types",
     "test:unit": "nyc --cache-dir .nyc_output/.cache -e .ts mocha 'test/unit/**/*.test.ts'",
     "test": "yarn test:unit",
-    "test:e2e": "yarn run download-spec-tests && mocha 'test/spec/**/*.test.ts'",
+    "test:e2e:only": "mocha 'test/e2e/**/*.test.ts'",
+    "test:spec": "mocha 'test/spec/**/*.test.ts'",
+    "test:e2e": "yarn run download-spec-tests && yarn test:spec && yarn test:e2e:only",
     "download-spec-tests": "node --loader=ts-node/esm test/spec/downloadTests.ts",
     "coverage": "codecov -F lodestar-validator",
     "check-readme": "typescript-docs-verifier"
@@ -61,6 +63,7 @@
     "strict-event-emitter-types": "^2.0.0"
   },
   "devDependencies": {
-    "bigint-buffer": "^1.1.5"
+    "bigint-buffer": "^1.1.5",
+    "testcontainers": "^8.13.2"
   }
 }

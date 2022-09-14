@@ -7,6 +7,7 @@ export interface IForkInfo {
   seq: ForkSeq;
   epoch: Epoch;
   version: Version;
+  prevVersion: Version;
   prevForkName: ForkName;
 }
 

@@ -95,7 +95,8 @@ export class Validator {
       doppelgangerService,
       metrics,
       signers,
-      valProposerConfig
+      valProposerConfig,
+      genesis.genesisValidatorsRoot
     );
     pollPrepareBeaconProposer(config, loggerVc, api, clock, validatorStore, metrics);
     pollBuilderValidatorRegistration(config, loggerVc, api, clock, validatorStore, metrics);
