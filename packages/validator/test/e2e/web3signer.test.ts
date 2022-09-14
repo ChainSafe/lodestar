@@ -2,24 +2,24 @@ import fs from "node:fs";
 import path from "node:path";
 import tmp from "tmp";
 import {expect} from "chai";
-import {GenericContainer, Wait, StartedTestContainer} from "testcontainers";
-import deepmerge from "deepmerge";
-import {Keystore} from "@chainsafe/bls-keystore";
-import {fromHex, isPlainObject, RecursivePartial, toHex} from "@lodestar/utils";
+import {fetch} from "cross-fetch";
+import bls from "@chainsafe/bls";
+import {fromHex, retry, toHex, withTimeout} from "@lodestar/utils";
 import {config} from "@lodestar/config/default";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {createIBeaconConfig} from "@lodestar/config";
 import {genesisData} from "@lodestar/config/networks";
 import {getClient, routes} from "@lodestar/api";
-import bls from "@chainsafe/bls";
-import {altair, phase0, ssz} from "@lodestar/types";
-import {BitArray} from "@chainsafe/ssz";
-import {FAR_FUTURE_EPOCH, SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
+import {ssz} from "@lodestar/types";
+import {FAR_FUTURE_EPOCH} from "@lodestar/params";
 import {Interchange, ISlashingProtection, Signer, SignerType, ValidatorStore} from "../../src/index.js";
 import {IndicesService} from "../../src/services/indices.js";
 import {testLogger} from "../utils/logger.js";
+import {runDockerContainer} from "../utils/dockercontainer.js";
+import {generateContributionAndProof, generateEmptyAggregateAndProof} from "../utils/eth2Objects.js";
 
 const web3signerVersion = "22.8.1";
+const web3signerImage = `consensys/web3signer:${web3signerVersion}`;
 
 /* eslint-disable no-console, @typescript-eslint/naming-convention */
 
@@ -28,151 +28,63 @@ describe("web3signer signature test", function () {
 
   let validatorStoreRemote: ValidatorStore;
   let validatorStoreLocal: ValidatorStore;
-  let startedContainer: StartedTestContainer;
 
   const pubkey = "0x8837af2a7452aff5a8b6906c3e5adefce5690e1bba6d73d870b9e679fece096b97a255bae0978e3a344aa832f68c6b47";
+  const secKey = "0x0319ef578236a024b6184760f44c6bbaa7d6f15c50c5e0e9f705a056ce8c954a";
   const pubkeyBytes = fromHex(pubkey);
-  const altairSlot = 2375711;
-  const epoch = 0;
   // Sample validator
   const validatorIndex = 4;
   const subcommitteeIndex = 1;
 
-  const duty: routes.validator.AttesterDuty = {
-    slot: altairSlot,
-    committeeIndex: 1,
-    committeeLength: 120,
-    committeesAtSlot: 120,
-    validatorCommitteeIndex: 1,
-    validatorIndex,
-    pubkey: pubkeyBytes,
-  };
+  // web3signer requires epochs and slots to match
+  const altairSlot = computeStartSlotAtEpoch(config.ALTAIR_FORK_EPOCH);
 
-  function generateAttestation(override: RecursivePartial<phase0.Attestation> = {}): phase0.Attestation {
-    return deepmerge<phase0.Attestation, RecursivePartial<phase0.Attestation>>(
-      {
-        aggregationBits: BitArray.fromBitLen(64),
-        data: {
-          slot: altairSlot,
-          index: subcommitteeIndex,
-          beaconBlockRoot: Buffer.alloc(32),
-          source: {
-            epoch: 0,
-            root: Buffer.alloc(32),
-          },
-          target: {
-            epoch: 0,
-            root: Buffer.alloc(32),
-          },
-        },
-        signature: Buffer.alloc(96),
-      },
-      override,
-      {isMergeableObject: isPlainObject}
-    );
-  }
-  function generateEmptyAttestation(): phase0.Attestation {
-    return generateAttestation();
-  }
-  function generateEmptyAggregateAndProof(): phase0.AggregateAndProof {
-    const attestation = generateEmptyAttestation();
-    return {
-      aggregatorIndex: 0,
-      selectionProof: Buffer.alloc(96),
-      aggregate: attestation,
-    };
-  }
+  // path to store configuration
+  const tmpDir = tmp.dirSync({unsafeCleanup: true});
+  const configDirPathHost = tmpDir.name;
+  const configDirPathContainer = "/var/web3signer/config";
+  const passwordFilename = "password.txt";
+  const port = 9000;
 
-  function generateEmptyContribution(): altair.SyncCommitteeContribution {
-    return {
-      aggregationBits: BitArray.fromBitLen(SYNC_COMMITTEE_SUBNET_SIZE),
-      beaconBlockRoot: Buffer.alloc(32),
-      signature: fromHex(
-        "99cb82bc69b4111d1a828963f0316ec9aa38c4e9e041a8afec86cd20dfe9a590999845bf01d4689f3bbe3df54e48695e081f1216027b577c7fccf6ab0a4fcc75faf8009c6b55e518478139f604f542d138ae3bc34bad01ee6002006d64c4ff82"
-      ),
-      slot: altairSlot,
-      subcommitteeIndex,
-    };
-  }
-  function generateContributionAndProof(
-    override: RecursivePartial<altair.ContributionAndProof> = {}
-  ): altair.ContributionAndProof {
-    return deepmerge<altair.ContributionAndProof, RecursivePartial<altair.ContributionAndProof>>(
-      {
-        aggregatorIndex: 0,
-        contribution: generateEmptyContribution(),
-        selectionProof: Buffer.alloc(96),
-      },
-      override,
-      {isMergeableObject: isPlainObject}
-    );
-  }
-
-  after("stop container", async function () {
-    await startedContainer.stop();
-  });
-
-  before("start container", async function () {
-    this.timeout("300s");
-    // path to store configuration
-    const tmpDir = tmp.dirSync({
-      unsafeCleanup: true,
-      // In Github runner NodeJS process probably runs as root, so web3signer doesn't have permissions to read config dir
-      mode: 755,
-    });
-    // Apply permissions again to hopefully make Github runner happy >.<
-    fs.chmodSync(tmpDir.name, 0o755);
-
-    const configDirPathHost = tmpDir.name;
-    const configDirPathContainer = "/var/web3signer/config";
-
-    // keystore content and file paths
-    // const keystoreStr = getKeystore();
-    // const password = "password";
-    const passwordFilename = "password.txt";
-
+  before("write keystores", () => {
     const keystoreStr = getKeystore();
     const password = "password";
-
     fs.writeFileSync(path.join(configDirPathHost, "keystore.json"), keystoreStr);
     fs.writeFileSync(path.join(configDirPathHost, passwordFilename), password);
+  });
 
-    const secretKey = bls.SecretKey.fromBytes(await Keystore.parse(keystoreStr).decrypt(password));
+  // Note: for MacOS compatibility do not use `--network=host`
+  runDockerContainer(
+    web3signerImage,
+    ["run", "--rm", `--publish=${port}:9000`, `--volume=${configDirPathHost}:${configDirPathContainer}`],
+    [
+      "--http-listen-host=0.0.0.0",
+      `--http-listen-port=${port}`,
+      "eth2",
+      `--keystores-path=${configDirPathContainer}`,
+      // Don't use path.join here, the container is running on unix filesystem
+      `--keystores-password-file=${configDirPathContainer}/${passwordFilename}`,
+      "--slashing-protection-enabled=false",
+    ],
+    {pipeToProcess: true}
+  );
 
-    const port = 9000;
-
-    // using the latest image to be alerted in case there is a breaking change
-    startedContainer = await new GenericContainer(`consensys/web3signer:${web3signerVersion}`)
-      .withHealthCheck({
-        test: `curl -f http://localhost:${port}/healthcheck || exit 1`,
-        interval: 1000,
-        timeout: 3000,
-        retries: 5,
-        startPeriod: 1000,
-      })
-      .withWaitStrategy(Wait.forHealthCheck())
-      .withExposedPorts(port)
-      .withBindMount(configDirPathHost, configDirPathContainer, "ro")
-      .withCmd([
-        "eth2",
-        `--keystores-path=${configDirPathContainer}`,
-        // Don't use path.join here, the container is running on unix filesystem
-        `--keystores-password-file=${configDirPathContainer}/${passwordFilename}`,
-        "--slashing-protection-enabled=false",
-      ])
-      .start();
-
-    const web3signerUrl = `http://localhost:${startedContainer.getMappedPort(port)}`;
+  before("start container", async function () {
+    const web3signerUrl = `http://127.0.0.1:${port}`;
+    const secretKey = bls.SecretKey.fromBytes(fromHex(secKey));
 
     // http://localhost:9000/api/v1/eth2/sign/0x8837af2a7452aff5a8b6906c3e5adefce5690e1bba6d73d870b9e679fece096b97a255bae0978e3a344aa832f68c6b47
     validatorStoreRemote = getValidatorStore({type: SignerType.Remote, url: web3signerUrl, pubkey});
     validatorStoreLocal = getValidatorStore({type: SignerType.Local, secretKey});
 
-    const stream = await startedContainer.logs();
-    stream
-      .on("data", (line) => process.stdout.write(line))
-      .on("err", (line) => process.stderr.write(line))
-      .on("end", () => console.log("Stream closed"));
+    await retry(
+      () =>
+        withTimeout(async (signal) => {
+          const res = await fetch(`${web3signerUrl}/healthcheck`, {signal});
+          if (res.status !== 200) throw Error(`status ${res.status}`);
+        }, 1000),
+      {retries: 60, retryDelay: 1000}
+    );
   });
 
   for (const fork of config.forksAscendingEpochOrder) {
@@ -195,18 +107,33 @@ describe("web3signer signature test", function () {
   }
 
   it("signRandao", async function () {
-    await assertSameSignature("signRandao", pubkeyBytes, epoch);
+    await assertSameSignature("signRandao", pubkeyBytes, 0);
   });
+
+  const committeeIndex = 1;
+  const duty: routes.validator.AttesterDuty = {
+    slot: 0,
+    committeeIndex,
+    committeeLength: 120,
+    committeesAtSlot: 120,
+    validatorCommitteeIndex: 1,
+    validatorIndex,
+    pubkey: pubkeyBytes,
+  };
 
   it("signAttestation", async () => {
     const attestationData = ssz.phase0.AttestationData.defaultValue();
     attestationData.slot = duty.slot;
     attestationData.index = duty.committeeIndex;
-    await assertSameSignature("signAttestation", duty, attestationData, epoch);
+    const currentEpoch = 0;
+    await assertSameSignature("signAttestation", duty, attestationData, currentEpoch);
   });
 
   it("signAggregateAndProof", async () => {
+    // committeeIndex must be equal to duty
     const aggregateAndProof = generateEmptyAggregateAndProof();
+    aggregateAndProof.aggregate.data.index = committeeIndex;
+
     await assertSameSignature(
       "signAggregateAndProof",
       duty,
@@ -221,7 +148,8 @@ describe("web3signer signature test", function () {
   });
 
   it("signContributionAndProof", async () => {
-    const contributionAndProof = generateContributionAndProof({selectionProof: Buffer.alloc(96)});
+    const contributionAndProof = generateContributionAndProof();
+    contributionAndProof.contribution.slot = altairSlot;
 
     await assertSameSignature(
       "signContributionAndProof",
@@ -240,6 +168,7 @@ describe("web3signer signature test", function () {
   });
 
   it("signVoluntaryExit", async () => {
+    const epoch = 0;
     await assertSameSignature("signVoluntaryExit", pubkeyBytes, validatorIndex, epoch);
   });
 
@@ -248,6 +177,7 @@ describe("web3signer signature test", function () {
       feeRecipient: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       gasLimit: 1,
     };
+    const epoch = 0;
     await assertSameSignature("signValidatorRegistration", pubkeyBytes, regAttributes, epoch);
   });
 
