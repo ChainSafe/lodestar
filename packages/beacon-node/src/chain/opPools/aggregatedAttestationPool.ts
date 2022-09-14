@@ -3,6 +3,7 @@ import {
   ForkName,
   MAX_ATTESTATIONS,
   MIN_ATTESTATION_INCLUSION_DELAY,
+  MIN_SEED_LOOKAHEAD,
   SLOTS_PER_EPOCH,
   TIMELY_SOURCE_FLAG_INDEX,
 } from "@lodestar/params";
@@ -12,7 +13,7 @@ import {
   CachedBeaconStatePhase0,
   CachedBeaconStateAltair,
   computeEpochAtSlot,
-  computeStartSlotAtEpoch,
+  computeEndSlotAtEpoch,
   getBlockRootAtSlot,
 } from "@lodestar/state-transition";
 import {toHexString} from "@chainsafe/ssz";
@@ -426,15 +427,15 @@ export function isValidAttestationData(
 
   if (!ssz.phase0.Checkpoint.equals(data.source, justifiedCheckpoint)) return false;
 
-  // Shuffling can't have changed if we're in the first few epochs
-  if (stateEpoch < 2) {
-    return true;
-  }
   // Otherwise the shuffling is determined by the block at the end of the target epoch
   // minus the shuffling lookahead (usually 2). We call this the "pivot".
-  const pivotSlot = computeStartSlotAtEpoch(targetEpoch - 1) - 1;
-  const statePivotBlockRoot = toHexString(getBlockRootAtSlot(state, pivotSlot));
+  const pivotSlot = computeEndSlotAtEpoch(targetEpoch - MIN_SEED_LOOKAHEAD);
 
+  if (pivotSlot < 0) {
+    return true;
+  }
+
+  const statePivotBlockRoot = toHexString(getBlockRootAtSlot(state, pivotSlot));
   // Use fork choice's view of the block DAG to quickly evaluate whether the attestation's
   // pivot block is the same as the current state's pivot block. If it is, then the
   // attestation's shuffling is the same as the current state's.

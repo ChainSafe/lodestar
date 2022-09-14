@@ -5,11 +5,13 @@ import {
   SLOTS_PER_HISTORICAL_ROOT,
   SLOTS_PER_EPOCH,
   INTERVALS_PER_SLOT,
+  MIN_SEED_LOOKAHEAD,
 } from "@lodestar/params";
 import {bellatrix, Slot, ValidatorIndex, phase0, allForks, ssz, RootHex, Epoch, Root} from "@lodestar/types";
 import {
   computeSlotsSinceEpochStart,
   computeStartSlotAtEpoch,
+  computeEndSlotAtEpoch,
   computeEpochAtSlot,
   ZERO_HASH,
   EffectiveBalanceIncrements,
@@ -781,9 +783,11 @@ export class ForkChoice implements IForkChoice {
     let block = this.getBlock(headBlockHash);
     if (!block) return null;
     const {slot} = block;
+    const blockEpoch = computeEpochAtSlot(slot);
+
     // The shuffling is determined by the block at the end of the target epoch
     // minus the shuffling lookahead (usually 2). We call this the "pivot".
-    const pivotSlot = computeStartSlotAtEpoch(computeEpochAtSlot(slot) - 1) - 1;
+    const pivotSlot = computeEndSlotAtEpoch(blockEpoch - MIN_SEED_LOOKAHEAD);
 
     // 1st hop: target block
     block = this.getBlockHex(block.targetRoot);
