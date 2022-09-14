@@ -20,6 +20,9 @@
     "./beacon": {
       "import": "./lib/beacon/index.js"
     },
+    "./beacon/client": {
+      "import": "./lib/beacon/client/index.js"
+    },
     "./beacon/server": {
       "import": "./lib/beacon/server/index.js"
     },
