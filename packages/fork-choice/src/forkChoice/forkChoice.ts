@@ -5,11 +5,13 @@ import {
   SLOTS_PER_HISTORICAL_ROOT,
   SLOTS_PER_EPOCH,
   INTERVALS_PER_SLOT,
+  MIN_SEED_LOOKAHEAD,
 } from "@lodestar/params";
 import {bellatrix, Slot, ValidatorIndex, phase0, allForks, ssz, RootHex, Epoch, Root} from "@lodestar/types";
 import {
   computeSlotsSinceEpochStart,
   computeStartSlotAtEpoch,
+  computeEndSlotAtEpoch,
   computeEpochAtSlot,
   ZERO_HASH,
   EffectiveBalanceIncrements,
