@@ -194,12 +194,10 @@ keystorePasswordFile: ${passwordFile}`;
   }
 
   it("signRandao", async function () {
-    this.timeout(30_000);
     await assertSameSignature("signRandao", pubkeyBytes, epoch);
   });
 
   it("signAttestation", async () => {
-    this.timeout(30_000);
     const attestationData = ssz.phase0.AttestationData.defaultValue();
     attestationData.slot = duty.slot;
     attestationData.index = duty.committeeIndex;
