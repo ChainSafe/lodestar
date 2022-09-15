@@ -1,6 +1,11 @@
 name: Tests
 
-on: [pull_request, push]
+on: 
+  push:
+    # We intentionally don't run push on feature branches. See PR for rational. 
+    branches: [unstable, stable]
+  pull_request:
+  workflow_dispatch:
 
 jobs:
   tests-main:
