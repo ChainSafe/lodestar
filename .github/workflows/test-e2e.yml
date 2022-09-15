@@ -1,9 +1,11 @@
 name: E2E tests
 
 on: 
-  pull_request:
-    types: [opened, reopened]
   push:
+    # We intentionally don't run push on feature branches. See PR for rational. 
+    branches: [unstable, stable]
+  pull_request:
+  workflow_dispatch:
 
 env:
   GOERLI_RPC_DEFAULT_URL: https://goerli.infura.io/v3/84842078b09946638c03157f83405213

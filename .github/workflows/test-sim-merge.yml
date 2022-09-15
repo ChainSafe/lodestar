@@ -1,9 +1,11 @@
 name: Sim merge tests
 
 on: 
-  pull_request:
-    types: [opened, reopened]
   push:
+    # We intentionally don't run push on feature branches. See PR for rational. 
+    branches: [unstable, stable]
+  pull_request:
+  workflow_dispatch:
 
 env:
   GETH_COMMIT: be9742721f56eb8bb7ebf4f6a03fb01b13a05408
