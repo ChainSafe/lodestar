@@ -15,6 +15,7 @@ describe("options / beaconNodeOptions", () => {
       rest: true,
       "rest.address": "127.0.0.1",
       "rest.port": 7654,
+      "rest.bodyLimit": 30e6,
 
       "chain.blsVerifyAllMultiThread": true,
       "chain.blsVerifyAllMainThread": true,
@@ -23,6 +24,7 @@ describe("options / beaconNodeOptions", () => {
       "chain.proposerBoostEnabled": false,
       "chain.disableImportExecutionFcU": false,
       "chain.computeUnrealized": true,
+      "chain.countUnrealizedFull": true,
       suggestedFeeRecipient: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       "chain.assertCorrectProgressiveBalances": true,
       "chain.maxSkipSlots": 100,
@@ -81,6 +83,7 @@ describe("options / beaconNodeOptions", () => {
           enabled: true,
           address: "127.0.0.1",
           port: 7654,
+          bodyLimit: 30e6,
         },
       },
       chain: {
@@ -91,6 +94,7 @@ describe("options / beaconNodeOptions", () => {
         proposerBoostEnabled: false,
         disableImportExecutionFcU: false,
         computeUnrealized: true,
+        countUnrealizedFull: true,
         safeSlotsToImportOptimistically: 256,
         suggestedFeeRecipient: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         assertCorrectProgressiveBalances: true,

@@ -18,6 +18,7 @@ function getForkConfig({
       seq: ForkSeq.phase0,
       epoch: phase0,
       version: Buffer.from([0, 0, 0, 0]),
+      prevVersion: Buffer.from([0, 0, 0, 0]),
       prevForkName: ForkName.phase0,
     },
     altair: {
@@ -25,6 +26,7 @@ function getForkConfig({
       seq: ForkSeq.altair,
       epoch: altair,
       version: Buffer.from([0, 0, 0, 1]),
+      prevVersion: Buffer.from([0, 0, 0, 0]),
       prevForkName: ForkName.phase0,
     },
     bellatrix: {
@@ -32,6 +34,7 @@ function getForkConfig({
       seq: ForkSeq.bellatrix,
       epoch: bellatrix,
       version: Buffer.from([0, 0, 0, 2]),
+      prevVersion: Buffer.from([0, 0, 0, 1]),
       prevForkName: ForkName.altair,
     },
   };

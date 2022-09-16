@@ -34,6 +34,7 @@ export function initValidatorStore(
     null,
     metrics,
     signers,
-    valProposerConfig
+    valProposerConfig,
+    genesisValidatorsRoot
   );
 }

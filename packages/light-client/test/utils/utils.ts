@@ -1,16 +1,14 @@
 import bls from "@chainsafe/bls/switchable";
 import {PointFormat, PublicKey, SecretKey} from "@chainsafe/bls/types";
-import {hash} from "@chainsafe/persistent-merkle-tree";
+import {hash, Tree} from "@chainsafe/persistent-merkle-tree";
 import {BitArray, fromHexString} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {IBeaconConfig} from "@lodestar/config";
 import {
   DOMAIN_SYNC_COMMITTEE,
   EPOCHS_PER_SYNC_COMMITTEE_PERIOD,
-  FINALIZED_ROOT_DEPTH,
-  FINALIZED_ROOT_INDEX,
-  NEXT_SYNC_COMMITTEE_DEPTH,
-  NEXT_SYNC_COMMITTEE_INDEX,
+  FINALIZED_ROOT_GINDEX,
+  NEXT_SYNC_COMMITTEE_GINDEX,
   SLOTS_PER_EPOCH,
   SYNC_COMMITTEE_SIZE,
 } from "@lodestar/params";
@@ -121,37 +119,30 @@ export function computeLightclientUpdate(config: IBeaconConfig, period: SyncPeri
 
   const nextSyncCommittee = committeeNext.syncCommittee;
 
-  const {root: headerStateRoot, proof: nextSyncCommitteeBranch} = computeMerkleBranch(
-    ssz.altair.SyncCommittee.hashTreeRoot(nextSyncCommittee),
-    NEXT_SYNC_COMMITTEE_DEPTH,
-    NEXT_SYNC_COMMITTEE_INDEX
-  );
+  const finalizedState = ssz.altair.BeaconState.defaultViewDU();
 
-  // finalized header's state root is used to to validate sync committee branch
-  const finalizedHeader: phase0.BeaconBlockHeader = {
-    slot: updateSlot,
-    proposerIndex: 0,
-    parentRoot: SOME_HASH,
-    stateRoot: headerStateRoot,
-    bodyRoot: SOME_HASH,
-  };
+  // finalized header must have stateRoot to finalizedState
+  const finalizedHeader = defaultBeaconBlockHeader(updateSlot);
+  finalizedHeader.stateRoot = finalizedState.hashTreeRoot();
 
-  const {root: stateRoot, proof: finalityBranch} = computeMerkleBranch(
-    ssz.phase0.BeaconBlockHeader.hashTreeRoot(finalizedHeader),
-    FINALIZED_ROOT_DEPTH,
-    FINALIZED_ROOT_INDEX
-  );
+  const attestedState = ssz.altair.BeaconState.defaultViewDU();
+  attestedState.finalizedCheckpoint = ssz.phase0.Checkpoint.toViewDU({
+    epoch: 0,
+    root: ssz.phase0.BeaconBlockHeader.hashTreeRoot(finalizedHeader),
+  });
 
-  // attested header's state root is used to validate finality branch
-  const attestedHeader: phase0.BeaconBlockHeader = {
-    slot: updateSlot,
-    proposerIndex: 0,
-    parentRoot: SOME_HASH,
-    stateRoot: stateRoot,
-    bodyRoot: SOME_HASH,
-  };
+  // attested state must contain next sync committees
+  attestedState.nextSyncCommittee = ssz.altair.SyncCommittee.toViewDU(nextSyncCommittee);
 
-  const forkVersion = config.getForkVersion(updateSlot);
+  // attestedHeader must have stateRoot to attestedState
+  const attestedHeader = defaultBeaconBlockHeader(updateSlot);
+  attestedHeader.stateRoot = attestedState.hashTreeRoot();
+
+  // Creates proofs for nextSyncCommitteeBranch and finalityBranch rooted in attested state
+  const nextSyncCommitteeBranch = new Tree(attestedState.node).getSingleProof(BigInt(NEXT_SYNC_COMMITTEE_GINDEX));
+  const finalityBranch = new Tree(attestedState.node).getSingleProof(BigInt(FINALIZED_ROOT_GINDEX));
+
+  const forkVersion = ssz.Bytes4.defaultValue();
   const syncAggregate = committee.signHeader(config, attestedHeader);
 
   return {

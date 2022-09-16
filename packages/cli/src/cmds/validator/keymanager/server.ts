@@ -17,6 +17,8 @@ export const keymanagerRestApiServerOptsDefault: KeymanagerRestApiServerOpts = {
   port: 5062,
   cors: "*",
   isAuthEnabled: true,
+  // Slashing protection DB has been reported to be 3MB https://github.com/ChainSafe/lodestar/issues/4530
+  bodyLimit: 20 * 1024 * 1024, // 20MB
 };
 
 export type KeymanagerRestApiServerModules = RestApiServerModules & {

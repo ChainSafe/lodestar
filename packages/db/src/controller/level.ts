@@ -1,7 +1,6 @@
 import {Level} from "level";
 // eslint-disable-next-line import/no-extraneous-dependencies
 import type {ClassicLevel} from "classic-level";
-import {ILogger} from "@lodestar/utils";
 import {DbReqOpts, IDatabaseController, IDatabaseOptions, IFilterOptions, IKeyValue} from "./interface.js";
 import {ILevelDbControllerMetrics} from "./metrics.js";
 
@@ -17,7 +16,6 @@ export interface ILevelDBOptions extends IDatabaseOptions {
 }
 
 export type LevelDbControllerModules = {
-  logger: ILogger;
   metrics?: ILevelDbControllerMetrics | null;
 };
 
@@ -31,12 +29,10 @@ export class LevelDbController implements IDatabaseController<Uint8Array, Uint8A
   private db: Level<Uint8Array, Uint8Array>;
 
   private readonly opts: ILevelDBOptions;
-  private readonly logger: ILogger;
   private metrics: ILevelDbControllerMetrics | null;
 
-  constructor(opts: ILevelDBOptions, {logger, metrics}: LevelDbControllerModules) {
+  constructor(opts: ILevelDBOptions, {metrics}: LevelDbControllerModules) {
     this.opts = opts;
-    this.logger = logger;
     this.metrics = metrics ?? null;
     this.db = opts.db || new Level(opts.name || "beaconchain", {keyEncoding: "binary", valueEncoding: "binary"});
   }
@@ -46,7 +42,6 @@ export class LevelDbController implements IDatabaseController<Uint8Array, Uint8A
     this.status = Status.started;
 
     await this.db.open();
-    this.logger.info("Connected to LevelDB database", {name: this.opts.name});
   }
 
   async stop(): Promise<void> {

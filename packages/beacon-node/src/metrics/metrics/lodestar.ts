@@ -1078,6 +1078,14 @@ export function createLodestarMetrics(
         name: "lodestar_eth1_follow_distance_dynamic",
         help: "Eth1 dynamic follow distance changed by the deposit tracker if blocks are slow",
       }),
+      eth1GetBlocksBatchSizeDynamic: register.gauge({
+        name: "lodestar_eth1_blocks_batch_size_dynamic",
+        help: "Dynamic batch size to fetch blocks",
+      }),
+      eth1GetLogsBatchSizeDynamic: register.gauge({
+        name: "lodestar_eth1_logs_batch_size_dynamic",
+        help: "Dynamic batch size to fetch deposit logs",
+      }),
 
       // Merge Search info
       eth1MergeStatus: register.gauge({

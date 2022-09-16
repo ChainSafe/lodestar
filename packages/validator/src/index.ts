@@ -7,6 +7,7 @@ export {
   SignerRemote,
   ValidatorProposerConfig,
   defaultOptions,
+  ProposerConfig,
 } from "./services/validatorStore.js";
 export {waitForGenesis} from "./genesis.js";
 export {getMetrics, Metrics, MetricsRegister} from "./metrics.js";

@@ -20,8 +20,8 @@ export function createExternalSignerServer(secretKeys: SecretKey[]): ReturnType<
     return {status: "OK"};
   });
 
-  server.get("/keys", async () => {
-    return {keys: Array.from(secretKeyMap.keys())};
+  server.get("/api/v1/eth2/publicKeys", async () => {
+    return Array.from(secretKeyMap.keys());
   });
 
   /* eslint-disable @typescript-eslint/naming-convention */
@@ -34,7 +34,7 @@ export function createExternalSignerServer(secretKeys: SecretKey[]): ReturnType<
       /** Data to sign as a hex string */
       signingRoot: string;
     };
-  }>("/sign/:identifier", async (req) => {
+  }>("/api/v1/eth2/sign/:identifier", async (req) => {
     const pubkeyHex: string = req.params.identifier;
     const signingRootHex: string = req.body.signingRoot;
 
