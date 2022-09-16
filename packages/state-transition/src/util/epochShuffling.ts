@@ -1,5 +1,5 @@
-import {Epoch, ValidatorIndex} from "@lodestar/types";
-import {intDiv} from "@lodestar/utils";
+import {Epoch, RootHex, ValidatorIndex} from "@lodestar/types";
+import {intDiv, toHex} from "@lodestar/utils";
 import {
   DOMAIN_BEACON_ATTESTER,
   MAX_COMMITTEES_PER_SLOT,
@@ -9,6 +9,7 @@ import {
 import {BeaconStateAllForks} from "../types.js";
 import {getSeed} from "./seed.js";
 import {unshuffleList} from "./shuffle.js";
+import {attesterShufflingDependentRoot} from "./dependentRoot.js";
 
 /**
  * Readonly interface for IEpochShuffling.
@@ -48,6 +49,14 @@ export interface IEpochShuffling {
    * Committees per slot, for fast attestation verification
    */
   committeesPerSlot: number;
+
+  /**
+   * Block root that decides the shuffling.
+   *
+   * An epoch shuffling is computed at the epoch transition going into epoch `EpochShuffling.epoch - 1`.
+   * An epoch transition outcome is deterministic on the last block before performing such epoch transition.
+   */
+  dependantRoot: RootHex;
 }
 
 export function computeCommitteeCount(activeValidatorCount: number): number {
@@ -93,5 +102,6 @@ export function computeEpochShuffling(
     shuffling,
     committees,
     committeesPerSlot,
+    dependantRoot: toHex(attesterShufflingDependentRoot(state, epoch)),
   };
 }

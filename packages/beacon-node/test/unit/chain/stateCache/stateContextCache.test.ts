@@ -5,7 +5,7 @@ import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Root} from "@lodestar/types";
 import {StateContextCache} from "../../../../src/chain/stateCache/index.js";
 import {generateCachedState} from "../../../utils/state.js";
-import {ZERO_HASH} from "../../../../src/constants/index.js";
+import {ZERO_HASH_HEX} from "../../../../src/constants/index.js";
 
 describe("StateContextCache", function () {
   let cache: StateContextCache;
@@ -16,6 +16,7 @@ describe("StateContextCache", function () {
     shuffling: [],
     committees: [],
     committeesPerSlot: 1,
+    dependantRoot: ZERO_HASH_HEX,
   };
 
   beforeEach(function () {
@@ -38,7 +39,7 @@ describe("StateContextCache", function () {
 
     cache.add(state3);
     expect(cache.size).to.be.equal(3, "Size must be 2+1 after .add()");
-    cache.prune(toHexString(ZERO_HASH));
+    cache.prune(ZERO_HASH_HEX);
     expect(cache.size).to.be.equal(2, "Size should reduce to initial 2 after prunning");
     expect(cache.get(toHexString(key1)), "must have key1").to.be.not.undefined;
     expect(cache.get(toHexString(key2)), "must have key2").to.be.not.undefined;
