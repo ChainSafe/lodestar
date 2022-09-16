@@ -4,7 +4,14 @@ import {fromHexString} from "@chainsafe/ssz";
 import {RootHex} from "@lodestar/types";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {ForkChoice, IForkChoiceStore, ProtoBlock, ProtoArray, ExecutionStatus} from "../../../src/index.js";
+import {
+  ForkChoice,
+  IForkChoiceStore,
+  ProtoBlock,
+  ProtoArray,
+  ExecutionStatus,
+  EpochDifference,
+} from "../../../src/index.js";
 
 describe("Forkchoice", function () {
   const genesisSlot = 0;
@@ -139,13 +146,20 @@ describe("Forkchoice", function () {
   ];
 
   for (const {name, skippedSlots, pivotSlot} of dependentRootTestCases) {
-    it(`findAttesterDependentRoot - ${name}`, () => {
+    it(`getDependantRoot (EpochDifference.previous) - ${name}`, () => {
       const slot = 2 * 32 + 5;
       populateProtoArray(slot, skippedSlots);
       const forkchoice = new ForkChoice(config, fcStore, protoArr);
+
+      // Initial point
       const blockRoot = getBlockRoot(slot);
+      const block = forkchoice.getBlockHex(blockRoot);
+      if (!block) throw Error(`No block for blockRoot ${blockRoot}`);
+
+      // Expected
       const pivotRoot = getBlockRoot(pivotSlot);
-      expect(forkchoice.findAttesterDependentRoot(fromHexString(blockRoot))).to.be.equal(
+
+      expect(forkchoice.getDependantRoot(block, EpochDifference.previous)).to.be.equal(
         pivotRoot,
         "incorrect attester dependent root"
       );
