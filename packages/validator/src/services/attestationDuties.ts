@@ -212,17 +212,13 @@ export class AttestationDutiesService {
       throw extendError(e, "Failed to obtain attester duty");
     });
 
-    const dependentRoot = toHexString(attesterDuties.dependentRoot);
+    const {dependentRoot} = attesterDuties;
     const relevantDuties = attesterDuties.data.filter((duty) => {
       const pubkeyHex = toHexString(duty.pubkey);
       return this.validatorStore.hasVotingPubkey(pubkeyHex) && this.validatorStore.isDoppelgangerSafe(pubkeyHex);
     });
 
-    this.logger.debug("Downloaded attester duties", {
-      epoch,
-      dependentRoot,
-      count: relevantDuties.length,
-    });
+    this.logger.debug("Downloaded attester duties", {epoch, dependentRoot, count: relevantDuties.length});
 
     const priorDependentRoot = this.dutiesByIndexByEpoch.get(epoch)?.dependentRoot;
     const dependentRootChanged = priorDependentRoot !== undefined && priorDependentRoot !== dependentRoot;

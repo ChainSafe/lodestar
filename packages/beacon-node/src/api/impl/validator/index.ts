@@ -10,7 +10,7 @@ import {
 import {GENESIS_SLOT, SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT, SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
 import {Root, Slot, ValidatorIndex, ssz, Epoch} from "@lodestar/types";
 import {ExecutionStatus} from "@lodestar/fork-choice";
-
+import {toHex} from "@lodestar/utils";
 import {fromHexString} from "@chainsafe/ssz";
 import {AttestationError, AttestationErrorCode, GossipAction, SyncCommitteeError} from "../../../chain/errors/index.js";
 import {validateGossipAggregateAndProof} from "../../../chain/validation/index.js";
@@ -353,7 +353,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
 
       return {
         data: duties,
-        dependentRoot,
+        dependentRoot: toHex(dependentRoot),
         executionOptimistic: isOptimsticBlock(head),
       };
     },
@@ -403,7 +403,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
 
       return {
         data: duties,
-        dependentRoot,
+        dependentRoot: toHex(dependentRoot),
         executionOptimistic: isOptimsticBlock(head),
       };
     },
