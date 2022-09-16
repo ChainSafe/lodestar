@@ -21,6 +21,7 @@ import {generateAttestation, generateEmptyAttestation} from "../../../utils/atte
 import {generateCachedState} from "../../../utils/state.js";
 import {renderBitArray} from "../../../utils/render.js";
 import {ZERO_HASH_HEX} from "../../../../src/constants/constants.js";
+import {generateEmptyProtoBlock} from "../../../utils/block.js";
 
 /** Valid signature of random data to prevent BLS errors */
 const validSignature = fromHexString(
@@ -71,6 +72,7 @@ describe("AggregatedAttestationPool", function () {
     it(name, function () {
       const aggregationBits = new BitArray(new Uint8Array(attestingBits), 8);
       pool.add({...attestation, aggregationBits}, aggregationBits.getTrueBitIndexes().length, committee);
+      forkchoiceStub.getBlockHex.returns(generateEmptyProtoBlock());
       forkchoiceStub.getDependantRoot.returns(ZERO_HASH_HEX);
       expect(pool.getAttestationsForBlock(forkchoiceStub, altairState).length > 0).to.equal(
         isReturned,
@@ -98,6 +100,7 @@ describe("AggregatedAttestationPool", function () {
     // all attesters are not seen
     const attestingIndices = [2, 3];
     pool.add(attestation, attestingIndices.length, committee);
+    forkchoiceStub.getBlockHex.returns(generateEmptyProtoBlock());
     forkchoiceStub.getDependantRoot.returns("0xWeird");
     expect(pool.getAttestationsForBlock(forkchoiceStub, altairState)).to.be.deep.equal(
       [],
