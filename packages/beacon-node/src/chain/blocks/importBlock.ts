@@ -1,10 +1,17 @@
 import {altair, ssz} from "@lodestar/types";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {toHexString} from "@chainsafe/ssz";
-import {CachedBeaconStateAltair, computeEpochAtSlot, RootCache} from "@lodestar/state-transition";
+import {
+  CachedBeaconStateAltair,
+  computeEpochAtSlot,
+  computeStartSlotAtEpoch,
+  getBlockRootAtSlot,
+  RootCache,
+} from "@lodestar/state-transition";
 import {ForkChoiceError, ForkChoiceErrorCode} from "@lodestar/fork-choice";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {toCheckpointHex} from "../stateCache/index.js";
+import {isOptimsticBlock} from "../../util/forkChoice.js";
 import {ChainEvent} from "../emitter.js";
 import {REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC} from "../reprocess.js";
 import type {BeaconChain} from "../chain.js";
@@ -180,7 +187,28 @@ export async function importBlock(
 
   if (newHead.blockRoot !== oldHead.blockRoot) {
     // new head
-    pendingEvents.push(ChainEvent.forkChoiceHead, newHead);
+
+    const state = this.stateCache.get(newHead.stateRoot);
+    if (!state) {
+      this.logger.error("cannot get state for new head", {stateRoot: newHead.stateRoot});
+    } else {
+      // TODO: Use fork-choice to compute dependant roots instead of dependending on state
+      const currentEpoch = state.epochCtx.epoch;
+      const [previousDutyDependentRoot, currentDutyDependentRoot] = [currentEpoch - 1, currentEpoch].map((epoch) =>
+        toHexString(getBlockRootAtSlot(state, Math.max(computeStartSlotAtEpoch(epoch) - 1, 0)))
+      );
+
+      pendingEvents.push(ChainEvent.head, {
+        block: newHead.blockRoot,
+        epochTransition: computeStartSlotAtEpoch(computeEpochAtSlot(newHead.slot)) === newHead.slot,
+        slot: newHead.slot,
+        state: newHead.stateRoot,
+        previousDutyDependentRoot,
+        currentDutyDependentRoot,
+        executionOptimistic: isOptimsticBlock(newHead),
+      });
+    }
+
     this.metrics?.forkChoice.changedHead.inc();
 
     const distance = this.forkChoice.getCommonAncestorDistance(oldHead, newHead);
