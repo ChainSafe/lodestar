@@ -15,23 +15,28 @@ import {logFilesDir} from "./params.js";
 
 /* eslint-disable no-console, @typescript-eslint/naming-convention */
 
+const p2pPortDefault = 9000;
+const metricsBeaconPortDefault = 8008;
+
 describe("Run multi node single thread interop validators (no eth1) until checkpoint", function () {
   const testParams: Pick<IChainConfig, "SECONDS_PER_SLOT"> = {
     SECONDS_PER_SLOT: 3,
   };
 
+  const nodeCount = process.env.TEST_NODE_COUNT ? parseInt(process.env.TEST_NODE_COUNT) : 4;
+  if (isNaN(nodeCount)) throw Error("Invalid TEST_NODE_COUNT");
+
   const testCases: {
-    nodeCount: number;
     validatorsPerNode: number;
     event: ChainEvent.justified | ChainEvent.finalized;
     altairForkEpoch: number;
   }[] = [
     // Test phase0 to justification
-    {nodeCount: 4, validatorsPerNode: 32, event: ChainEvent.justified, altairForkEpoch: Infinity},
+    {validatorsPerNode: 32, event: ChainEvent.justified, altairForkEpoch: Infinity},
     // Test altair only
-    {nodeCount: 4, validatorsPerNode: 32, event: ChainEvent.justified, altairForkEpoch: 0},
+    {validatorsPerNode: 32, event: ChainEvent.justified, altairForkEpoch: 0},
     // Test phase -> altair fork transition
-    {nodeCount: 4, validatorsPerNode: 32, event: ChainEvent.justified, altairForkEpoch: 2},
+    {validatorsPerNode: 32, event: ChainEvent.justified, altairForkEpoch: 2},
   ];
 
   const afterEachCallbacks: (() => Promise<unknown> | void)[] = [];
@@ -45,7 +50,7 @@ describe("Run multi node single thread interop validators (no eth1) until checkp
 
   // TODO test multiNode with remote;
 
-  for (const {nodeCount, validatorsPerNode, event, altairForkEpoch} of testCases) {
+  for (const {validatorsPerNode, event, altairForkEpoch} of testCases) {
     it(`singleThread ${nodeCount} nodes / ${validatorsPerNode} vc / 1 validator > until ${event}, altairForkEpoch ${altairForkEpoch}`, async function () {
       this.timeout("10 min");
 
@@ -69,9 +74,15 @@ describe("Run multi node single thread interop validators (no eth1) until checkp
         };
         const logger = testLogger(`Node ${i}`, testLoggerOpts);
 
+        const p2pPort = p2pPortDefault + i;
+        const metricsPort = metricsBeaconPortDefault + i;
+
         const bn = await getDevBeaconNode({
           params: {...testParams, ALTAIR_FORK_EPOCH: altairForkEpoch},
-          options: {api: {rest: {port: 10000 + i}}},
+          options: {
+            api: {rest: {port: p2pPort}},
+            metrics: process.env.TEST_METRICS_ENABLED ? {enabled: true, port: metricsPort} : undefined,
+          },
           validatorCount: nodeCount * validatorsPerNode,
           genesisTime,
           logger,
@@ -126,6 +137,10 @@ describe("Run multi node single thread interop validators (no eth1) until checkp
       // Wait for justified checkpoint on all nodes
       await Promise.all(nodes.map((node) => waitForEvent<phase0.Checkpoint>(node.chain.emitter, event, 240000)));
       console.log("--- All nodes reached justified checkpoint ---");
+
+      if (process.env.TEST_RUN_FOREVER) {
+        await new Promise((r) => setTimeout(r, 1e6));
+      }
     });
   }
 });
