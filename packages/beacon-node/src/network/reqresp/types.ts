@@ -61,10 +61,10 @@ export const isSingleResponseChunkByMethod: {[K in Method]: boolean} = {
   [Method.Metadata]: true,
   [Method.BeaconBlocksByRange]: false, // A stream, 0 or more response chunks
   [Method.BeaconBlocksByRoot]: false,
-  [Method.LightClientBootstrap]: true, // TODO DA: confirm
-  [Method.LightClientUpdate]: false, // TODO DA: confirm
-  [Method.LightClientFinalityUpdate]: true, // TODO DA: confirm
-  [Method.LightClientOptimisticUpdate]: true, // TODO DA: confirm
+  [Method.LightClientBootstrap]: true,
+  [Method.LightClientUpdate]: false,
+  [Method.LightClientFinalityUpdate]: true,
+  [Method.LightClientOptimisticUpdate]: true,
 };
 
 export const CONTEXT_BYTES_FORK_DIGEST_LENGTH = 4;
