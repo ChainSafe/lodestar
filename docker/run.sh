@@ -9,4 +9,4 @@
 node docker/build_prometheus_yml.mjs docker/prometheus/prometheus.yml
 
 # Run docker
-# docker-compose -f docker/docker-compose.local.yml up -d --build
+docker-compose -f docker/docker-compose.local.yml up -d --build
