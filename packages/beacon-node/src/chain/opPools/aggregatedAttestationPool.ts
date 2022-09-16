@@ -434,7 +434,7 @@ export function isValidAttestationData(
   // Otherwise the shuffling is determined by the block at the end of the target epoch
   // minus the shuffling lookahead (usually 2). We call this the "pivot".
   const pivotSlot = computeStartSlotAtEpoch(targetEpoch - 1) - 1;
-  const stateDependantRoot = toHexString(getBlockRootAtSlot(state, pivotSlot));
+  const stateDependentRoot = toHexString(getBlockRootAtSlot(state, pivotSlot));
 
   // Use fork choice's view of the block DAG to quickly evaluate whether the attestation's
   // pivot block is the same as the current state's pivot block. If it is, then the
@@ -446,8 +446,8 @@ export function isValidAttestationData(
     throw Error(`Attestation data.beaconBlockRoot ${beaconBlockRootHex} not found in forkchoice`);
   }
 
-  const attestationDependantRoot = forkChoice.getDependantRoot(beaconBlock, EpochDifference.previous);
-  return attestationDependantRoot === stateDependantRoot;
+  const attestationDependantRoot = forkChoice.getDependentRoot(beaconBlock, EpochDifference.previous);
+  return attestationDependantRoot === stateDependentRoot;
 }
 
 function flagIsTimelySource(flag: number): boolean {

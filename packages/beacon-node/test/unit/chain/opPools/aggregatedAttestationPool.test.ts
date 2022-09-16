@@ -73,12 +73,12 @@ describe("AggregatedAttestationPool", function () {
       const aggregationBits = new BitArray(new Uint8Array(attestingBits), 8);
       pool.add({...attestation, aggregationBits}, aggregationBits.getTrueBitIndexes().length, committee);
       forkchoiceStub.getBlockHex.returns(generateEmptyProtoBlock());
-      forkchoiceStub.getDependantRoot.returns(ZERO_HASH_HEX);
+      forkchoiceStub.getDependentRoot.returns(ZERO_HASH_HEX);
       expect(pool.getAttestationsForBlock(forkchoiceStub, altairState).length > 0).to.equal(
         isReturned,
         "Wrong attestation isReturned"
       );
-      expect(forkchoiceStub.getDependantRoot.calledOnce, "forkchoice should be called to check pivot block").to.equal(
+      expect(forkchoiceStub.getDependentRoot.calledOnce, "forkchoice should be called to check pivot block").to.equal(
         true
       );
     });
@@ -101,12 +101,12 @@ describe("AggregatedAttestationPool", function () {
     const attestingIndices = [2, 3];
     pool.add(attestation, attestingIndices.length, committee);
     forkchoiceStub.getBlockHex.returns(generateEmptyProtoBlock());
-    forkchoiceStub.getDependantRoot.returns("0xWeird");
+    forkchoiceStub.getDependentRoot.returns("0xWeird");
     expect(pool.getAttestationsForBlock(forkchoiceStub, altairState)).to.be.deep.equal(
       [],
       "no attestation since incorrect pivot block root"
     );
-    expect(forkchoiceStub.getDependantRoot.calledOnce, "forkchoice should be called to check pivot block").to.be.true;
+    expect(forkchoiceStub.getDependentRoot.calledOnce, "forkchoice should be called to check pivot block").to.be.true;
   });
 });
 

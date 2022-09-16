@@ -146,7 +146,7 @@ describe("Forkchoice", function () {
   ];
 
   for (const {name, skippedSlots, pivotSlot} of dependentRootTestCases) {
-    it(`getDependantRoot (EpochDifference.previous) - ${name}`, () => {
+    it(`getDependentRoot (EpochDifference.previous) - ${name}`, () => {
       const slot = 2 * 32 + 5;
       populateProtoArray(slot, skippedSlots);
       const forkchoice = new ForkChoice(config, fcStore, protoArr);
@@ -159,7 +159,7 @@ describe("Forkchoice", function () {
       // Expected
       const pivotRoot = getBlockRoot(pivotSlot);
 
-      expect(forkchoice.getDependantRoot(block, EpochDifference.previous)).to.be.equal(
+      expect(forkchoice.getDependentRoot(block, EpochDifference.previous)).to.be.equal(
         pivotRoot,
         "incorrect attester dependent root"
       );

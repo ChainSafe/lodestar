@@ -773,7 +773,7 @@ export class ForkChoice implements IForkChoice {
   }
 
   /**
-   * A dependant root is the block root of the last block before the state transition that decided a specific shuffling
+   * A dependent root is the block root of the last block before the state transition that decided a specific shuffling
    *
    * For proposer shuffling with 0 epochs of lookahead = previous immediate epoch transition
    * For attester shuffling with 1 epochs of lookahead = last epoch's epoch transition
@@ -781,13 +781,13 @@ export class ForkChoice implements IForkChoice {
    * ```
    *         epoch: 0       1       2       3       4
    *                |-------|-------|=======|-------|
-   * dependant root A -------------^
-   * dependant root B -----^
+   * dependent root A -------------^
+   * dependent root B -----^
    * ```
-   * - proposer shuffling for a block in epoch 2: dependant root A (EpochDifference = 0)
-   * - attester shuffling for a block in epoch 2: dependant root B (EpochDifference = 1)
+   * - proposer shuffling for a block in epoch 2: dependent root A (EpochDifference = 0)
+   * - attester shuffling for a block in epoch 2: dependent root B (EpochDifference = 1)
    */
-  getDependantRoot(block: ProtoBlock, epochDifference: EpochDifference): RootHex {
+  getDependentRoot(block: ProtoBlock, epochDifference: EpochDifference): RootHex {
     // The navigation at the end of the while loop will always progress backwards,
     // jumping to a block with a strictly less slot number. So the condition `blockEpoch < atEpoch`
     // is guaranteed to happen. Given the use of target blocks for faster navigation, it will take

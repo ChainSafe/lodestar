@@ -164,21 +164,9 @@ export interface IForkChoice {
   validateLatestHash(execResponse: LVHExecResponse): void;
 
   /**
-   * A dependant root is the block root of the last block before the state transition that decided a specific shuffling
-   *
-   * For proposer shuffling with 0 epochs of lookahead = previous immediate epoch transition
-   * For attester shuffling with 1 epochs of lookahead = last epoch's epoch transition
-   *
-   * ```
-   *         epoch: 0       1       2       3       4
-   *                |-------|-------|=======|-------|
-   * dependant root A -------------^
-   * dependant root B -----^
-   * ```
-   * - proposer shuffling for a block in epoch 2: dependant root A (EpochDifference = 0)
-   * - attester shuffling for a block in epoch 2: dependant root B (EpochDifference = 1)
+   * A dependent root is the block root of the last block before the state transition that decided a specific shuffling
    */
-  getDependantRoot(block: ProtoBlock, atEpochDiff: EpochDifference): RootHex;
+  getDependentRoot(block: ProtoBlock, atEpochDiff: EpochDifference): RootHex;
 }
 
 /** Same to the PowBlock but we want RootHex to work with forkchoice conveniently */
