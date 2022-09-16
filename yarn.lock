@@ -8455,9 +8455,9 @@ libp2p-crypto@^0.21.2:
     protobufjs "^6.11.2"
     uint8arrays "^3.0.0"
 
-"libp2p-gossipsub@https://github.com/chainsafe/js-libp2p-gossipsub.git#dandelion++":
+"libp2p-gossipsub@https://github.com/chainsafe/js-libp2p-gossipsub.git#dandelion/publish":
   version "0.14.1"
-  resolved "https://github.com/chainsafe/js-libp2p-gossipsub.git#9d83c530745325384b34254e789f7a9d81964869"
+  resolved "https://github.com/chainsafe/js-libp2p-gossipsub.git#63faeb8c4a8990f0d18f7beaf12330545804724f"
   dependencies:
     "@types/debug" "^4.1.7"
     debug "^4.3.1"
