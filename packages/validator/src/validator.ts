@@ -170,14 +170,14 @@ export class Validator {
         : opts.api;
 
     const genesis = await waitForGenesis(api, opts.logger, opts.abortController.signal);
-    logger.info("Genesis available");
+    logger.info("Genesis fetched from the beacon node");
 
     const {data: externalSpecJson} = await api.config.getSpec();
     assertEqualParams(config, externalSpecJson);
-    logger.info("Verified node and validator have same config");
+    logger.info("Verified connected beacon node and validator have same the config");
 
     await assertEqualGenesis(opts, genesis);
-    logger.info("Verified node and validator have same genesisValidatorRoot");
+    logger.info("Verified connected beacon node and validator have the same genesisValidatorRoot");
 
     return new Validator(opts, genesis, metrics);
   }

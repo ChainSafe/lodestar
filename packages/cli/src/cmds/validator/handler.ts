@@ -62,9 +62,11 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
   // Ensure the validator has at least one key
   if (signers.length === 0) {
     if (args["keymanager"]) {
-      logger.warn("No signers found with current args, expecting to be added via keymanager");
+      logger.warn("No local keystores or remote signers found with current args, expecting to be added via keymanager");
     } else {
-      throw new YargsError("No signers found with current args");
+      throw new YargsError(
+        "No local keystores and remote signers found with current args, start with --keymanager if intending to add them later (via keymanager)"
+      );
     }
   }
 
