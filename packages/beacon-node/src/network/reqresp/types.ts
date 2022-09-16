@@ -111,6 +111,7 @@ export function getRequestSzzTypeByMethod(method: Method) {
       return ssz.phase0.Ping;
     case Method.Metadata:
     case Method.LightClientFinalityUpdate:
+    case Method.LightClientOptimisticUpdate:
       return null;
     case Method.BeaconBlocksByRange:
       return ssz.phase0.BeaconBlocksByRangeRequest;
@@ -120,8 +121,6 @@ export function getRequestSzzTypeByMethod(method: Method) {
       return ssz.altair.BlockRoot;
     case Method.LightClientUpdate:
       return ssz.altair.LightClientUpdate;
-    case Method.LightClientOptimisticUpdate:
-      return ssz.altair.LightClientOptimisticUpdate;
   }
 }
 
