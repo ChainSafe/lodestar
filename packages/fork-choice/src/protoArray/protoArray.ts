@@ -867,6 +867,7 @@ export class ProtoArray {
     return this.getNodeByIndex(blockIndex);
   }
 
+  /** Return MUTABLE ProtoBlock for blockRoot (spreads properties) */
   getBlock(blockRoot: RootHex): ProtoBlock | undefined {
     const node = this.getNode(blockRoot);
     if (!node) {
@@ -875,6 +876,15 @@ export class ProtoArray {
     return {
       ...node,
     };
+  }
+
+  /** Return NON-MUTABLE ProtoBlock for blockRoot (does not spread properties) */
+  getBlockReadonly(blockRoot: RootHex): ProtoBlock {
+    const node = this.getNode(blockRoot);
+    if (!node) {
+      throw Error(`No block for root ${blockRoot}`);
+    }
+    return node;
   }
 
   /**

@@ -19,6 +19,11 @@ export type CheckpointHexWithBalance = {
   balances: EffectiveBalanceIncrements;
 };
 
+export enum EpochDifference {
+  current = 0,
+  previous = 1,
+}
+
 export interface IForkChoice {
   irrecoverableError?: Error;
   /**
@@ -157,9 +162,11 @@ export interface IForkChoice {
    * Optimistic sync validate till validated latest hash, invalidate any decendant branch if invalidated branch decendant provided
    */
   validateLatestHash(execResponse: LVHExecResponse): void;
-  /** Find attester dependent root of a block */
-  findAttesterDependentRoot(headBlockHash: Root): RootHex | null;
-  /** Get critical error from forkChoice */
+
+  /**
+   * A dependent root is the block root of the last block before the state transition that decided a specific shuffling
+   */
+  getDependentRoot(block: ProtoBlock, atEpochDiff: EpochDifference): RootHex;
 }
 
 /** Same to the PowBlock but we want RootHex to work with forkchoice conveniently */
