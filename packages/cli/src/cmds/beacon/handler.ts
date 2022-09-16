@@ -10,7 +10,7 @@ import {ProcessShutdownCallback} from "@lodestar/validator";
 
 import {IGlobalArgs, parseBeaconNodeArgs} from "../../options/index.js";
 import {onGracefulShutdown, getCliLogger, mkdir, writeFile} from "../../util/index.js";
-import {BeaconNodeOptions, createPeerId, FileENR, getBeaconConfigFromArgs} from "../../config/index.js";
+import {BeaconNodeOptions, createUint8ArrayPeerId, FileENR, getBeaconConfigFromArgs} from "../../config/index.js";
 import {getNetworkBootnodes, getNetworkData, readBootnodes} from "../../networks/index.js";
 import {getVersionData} from "../../util/version.js";
 import {IBeaconArgs} from "./options.js";
@@ -122,7 +122,7 @@ export async function beaconHandlerInit(args: IBeaconArgs & IGlobalArgs) {
   }
 
   // Create new PeerId everytime by default, unless peerIdFile is provided
-  const peerId = await createPeerId();
+  const peerId = await createUint8ArrayPeerId();
   const enr = ENR.createV4(createKeypairFromPeerId(peerId).publicKey);
   overwriteEnrWithCliArgs(enr, args);
 
