@@ -1,7 +1,7 @@
-import EventSource from "eventsource";
 import {IChainForkConfig} from "@lodestar/config";
 import {Api, BeaconEvent, routesData, getEventSerdes} from "../routes/events.js";
 import {stringifyQuery} from "../../utils/client/format.js";
+import {getEventSource} from "../../utils/client/eventSource.js";
 
 /**
  * REST HTTP client for events routes
@@ -14,6 +14,8 @@ export function getClient(_config: IChainForkConfig, baseUrl: string): Api {
       const query = stringifyQuery({topics});
       // TODO: Use a proper URL formatter
       const url = `${baseUrl}${routesData.eventstream.url}?${query}`;
+      // eslint-disable-next-line @typescript-eslint/naming-convention
+      const EventSource = await getEventSource();
       const eventSource = new EventSource(url);
 
       try {
