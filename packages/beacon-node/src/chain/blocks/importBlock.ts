@@ -226,6 +226,9 @@ export async function importBlock(
     } else {
       // Trigger regen on head change if necessary
       this.logger.warn("Head state not available, triggering regen", {stateRoot: newHead.stateRoot});
+      // head has changed, so the existing cached head state is no longer useful. Set strong reference to null to free
+      // up memory for regen step below. During regen, node won't be functional but eventually head will be available
+      this.stateCache.setHeadState(null);
       this.regen.getState(newHead.stateRoot, RegenCaller.processBlock).then(
         (headStateRegen) => this.stateCache.setHeadState(headStateRegen),
         (e) => this.logger.error("Error on head state regen", {}, e)

@@ -23,8 +23,11 @@ export class StateContextCache {
   /** Epoch -> Set<blockRoot> */
   private readonly epochIndex = new Map<Epoch, Set<string>>();
   private readonly metrics: IMetrics["stateCache"] | null | undefined;
-  /** Strong reference to prevent head state from being pruned */
-  private head: {state: CachedBeaconStateAllForks; stateRoot: RootHex};
+  /**
+   * Strong reference to prevent head state from being pruned.
+   * null if head state is being regen and not available at the moment.
+   */
+  private head: {state: CachedBeaconStateAllForks; stateRoot: RootHex} | null = null;
 
   constructor(
     {maxStates = MAX_STATES, metrics}: {maxStates?: number; metrics?: IMetrics | null},
@@ -76,9 +79,13 @@ export class StateContextCache {
     }
   }
 
-  setHeadState(item: CachedBeaconStateAllForks): void {
-    const key = toHexString(item.hashTreeRoot());
-    this.head = {state: item, stateRoot: key};
+  setHeadState(item: CachedBeaconStateAllForks | null): void {
+    if (item) {
+      const key = toHexString(item.hashTreeRoot());
+      this.head = {state: item, stateRoot: key};
+    } else {
+      this.head = null;
+    }
   }
 
   clear(): void {
