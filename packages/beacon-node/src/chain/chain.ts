@@ -15,7 +15,6 @@ import {IBeaconConfig} from "@lodestar/config";
 import {allForks, bellatrix, UintNum64, Root, phase0, Slot, RootHex, Epoch, ValidatorIndex} from "@lodestar/types";
 import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {ProcessShutdownCallback} from "@lodestar/validator";
-
 import {ILogger, toHex} from "@lodestar/utils";
 import {CompositeTypeAny, fromHexString, TreeView, Type} from "@chainsafe/ssz";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
@@ -31,7 +30,7 @@ import {ensureDir, writeIfNotExist} from "../util/file.js";
 import {CheckpointStateCache, StateContextCache} from "./stateCache/index.js";
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
 import {IBeaconClock, LocalClock} from "./clock/index.js";
-import {ChainEventEmitter, ChainEvent} from "./emitter.js";
+import {ChainEventEmitter, ChainEvent, HeadEventData} from "./emitter.js";
 import {IBeaconChain, ProposerPreparationData} from "./interface.js";
 import {IChainOptions} from "./options.js";
 import {IStateRegenerator, QueuedStateRegenerator, RegenCaller} from "./regen/index.js";
@@ -271,7 +270,7 @@ export class BeaconChain implements IBeaconChain {
     this.emitter.addListener(ChainEvent.clockEpoch, this.onClockEpoch.bind(this));
     this.emitter.addListener(ChainEvent.forkChoiceFinalized, this.onForkChoiceFinalized.bind(this));
     this.emitter.addListener(ChainEvent.forkChoiceJustified, this.onForkChoiceJustified.bind(this));
-    this.emitter.addListener(ChainEvent.forkChoiceHead, this.onForkChoiceHead.bind(this));
+    this.emitter.addListener(ChainEvent.head, this.onNewHead.bind(this));
   }
 
   async close(): Promise<void> {
@@ -610,11 +609,11 @@ export class BeaconChain implements IBeaconChain {
     }
   }
 
-  private onForkChoiceHead(head: ProtoBlock): void {
+  private onNewHead(head: HeadEventData): void {
     const delaySec = this.clock.secFromSlot(head.slot);
     this.logger.verbose("New chain head", {
       headSlot: head.slot,
-      headRoot: head.blockRoot,
+      headRoot: head.block,
       delaySec,
     });
     this.syncContributionAndProofPool.prune(head.slot);

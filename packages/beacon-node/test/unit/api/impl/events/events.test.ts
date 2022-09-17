@@ -2,13 +2,14 @@ import {expect} from "chai";
 import sinon, {SinonStubbedInstance} from "sinon";
 import {routes} from "@lodestar/api";
 import {config} from "@lodestar/config/default";
-import {BeaconChain, ChainEvent, ChainEventEmitter} from "../../../../../src/chain/index.js";
+import {BeaconChain, ChainEvent, ChainEventEmitter, HeadEventData} from "../../../../../src/chain/index.js";
 import {getEventsApi} from "../../../../../src/api/impl/events/index.js";
 import {generateProtoBlock, generateEmptySignedBlock, generateSignedBlock} from "../../../../utils/block.js";
 import {generateAttestation, generateEmptySignedVoluntaryExit} from "../../../../utils/attestation.js";
 import {generateCachedState} from "../../../../utils/state.js";
 import {StateContextCache} from "../../../../../src/chain/stateCache/index.js";
 import {StubbedChainMutable} from "../../../../utils/stub/index.js";
+import {ZERO_HASH_HEX} from "../../../../../src/constants/constants.js";
 
 describe("Events api impl", function () {
   describe("beacon event stream", function () {
@@ -38,13 +39,23 @@ describe("Events api impl", function () {
       return events;
     }
 
+    const headEventData: HeadEventData = {
+      slot: 0,
+      block: ZERO_HASH_HEX,
+      state: ZERO_HASH_HEX,
+      epochTransition: false,
+      previousDutyDependentRoot: ZERO_HASH_HEX,
+      currentDutyDependentRoot: ZERO_HASH_HEX,
+      executionOptimistic: false,
+    };
+
     it("should ignore not sent topics", async function () {
       const events = getEvents([routes.events.EventType.head]);
 
       const headBlock = generateProtoBlock();
       stateCacheStub.get.withArgs(headBlock.stateRoot).returns(generateCachedState({slot: 1000}));
       chainEventEmmitter.emit(ChainEvent.forkChoiceReorg, headBlock, headBlock, 2);
-      chainEventEmmitter.emit(ChainEvent.forkChoiceHead, headBlock);
+      chainEventEmmitter.emit(ChainEvent.head, headEventData);
 
       expect(events).to.have.length(1, "Wrong num of received events");
       expect(events[0].type).to.equal(routes.events.EventType.head);
@@ -56,7 +67,7 @@ describe("Events api impl", function () {
 
       const headBlock = generateProtoBlock();
       stateCacheStub.get.withArgs(headBlock.stateRoot).returns(generateCachedState({slot: 1000}));
-      chainEventEmmitter.emit(ChainEvent.forkChoiceHead, headBlock);
+      chainEventEmmitter.emit(ChainEvent.head, headEventData);
 
       expect(events).to.have.length(1, "Wrong num of received events");
       expect(events[0].type).to.equal(routes.events.EventType.head);
