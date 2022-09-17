@@ -193,8 +193,6 @@ export class BeaconChain implements IBeaconChain {
       : new BlsMultiThreadWorkerPool(opts, {logger, metrics});
 
     if (!clock) clock = new LocalClock({config, emitter, genesisTime: this.genesisTime, signal});
-    const stateCache = new StateContextCache({metrics});
-    const checkpointStateCache = new CheckpointStateCache({metrics});
 
     this.seenAggregatedAttestations = new SeenAggregatedAttestations(metrics);
     this.seenContributionAndProof = new SeenContributionAndProof(metrics);
@@ -219,6 +217,9 @@ export class BeaconChain implements IBeaconChain {
     // Persist single global instance of state caches
     this.pubkey2index = cachedState.epochCtx.pubkey2index;
     this.index2pubkey = cachedState.epochCtx.index2pubkey;
+
+    const stateCache = new StateContextCache({metrics}, cachedState);
+    const checkpointStateCache = new CheckpointStateCache({metrics});
 
     const {checkpoint} = computeAnchorCheckpoint(config, anchorState);
     stateCache.add(cachedState);

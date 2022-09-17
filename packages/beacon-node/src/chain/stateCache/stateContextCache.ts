@@ -1,5 +1,5 @@
 import {toHexString} from "@chainsafe/ssz";
-import {Epoch, Root, RootHex} from "@lodestar/types";
+import {Epoch, RootHex} from "@lodestar/types";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {routes} from "@lodestar/api";
 import {IMetrics} from "../../metrics/index.js";
@@ -23,14 +23,21 @@ export class StateContextCache {
   /** Epoch -> Set<blockRoot> */
   private readonly epochIndex = new Map<Epoch, Set<string>>();
   private readonly metrics: IMetrics["stateCache"] | null | undefined;
+  /** Strong reference to prevent head state from being pruned */
+  private head: {state: CachedBeaconStateAllForks; stateRoot: RootHex};
 
-  constructor({maxStates = MAX_STATES, metrics}: {maxStates?: number; metrics?: IMetrics | null}) {
+  constructor(
+    {maxStates = MAX_STATES, metrics}: {maxStates?: number; metrics?: IMetrics | null},
+    initialHeadState: CachedBeaconStateAllForks
+  ) {
     this.maxStates = maxStates;
     this.cache = new MapTracker(metrics?.stateCache);
     if (metrics) {
       this.metrics = metrics.stateCache;
       metrics.stateCache.size.addCollect(() => metrics.stateCache.size.set(this.cache.size));
     }
+
+    this.head = {state: initialHeadState, stateRoot: toHexString(initialHeadState.hashTreeRoot())};
   }
 
   get(rootHex: RootHex): CachedBeaconStateAllForks | null {
@@ -38,6 +45,10 @@ export class StateContextCache {
     const item = this.cache.get(rootHex);
     if (!item) {
       return null;
+    }
+
+    if (this.head?.stateRoot === rootHex) {
+      return this.head.state;
     }
 
     this.metrics?.hits.inc();
@@ -65,16 +76,9 @@ export class StateContextCache {
     }
   }
 
-  delete(root: Root): void {
-    const key = toHexString(root);
-    const item = this.cache.get(key);
-    if (!item) return;
-    this.epochIndex.get(item.epochCtx.epoch)?.delete(key);
-    this.cache.delete(key);
-  }
-
-  batchDelete(roots: Root[]): void {
-    roots.map((root) => this.delete(root));
+  setHeadState(item: CachedBeaconStateAllForks): void {
+    const key = toHexString(item.hashTreeRoot());
+    this.head = {state: item, stateRoot: key};
   }
 
   clear(): void {

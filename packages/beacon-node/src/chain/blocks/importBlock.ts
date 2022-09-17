@@ -7,6 +7,7 @@ import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {toCheckpointHex} from "../stateCache/index.js";
 import {ChainEvent} from "../emitter.js";
 import {REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC} from "../reprocess.js";
+import {RegenCaller} from "../regen/interface.js";
 import type {BeaconChain} from "../chain.js";
 import {FullyVerifiedBlock, ImportBlockOpts} from "./types.js";
 import {PendingEvents} from "./utils/pendingEvents.js";
@@ -215,6 +216,20 @@ export async function importBlock(
       } catch (e) {
         this.logger.error("Error lightClientServer.onImportBlock", {slot: block.message.slot}, e as Error);
       }
+    }
+
+    // Set head state as strong reference
+    const headState =
+      newHead.stateRoot === toHexString(postState.hashTreeRoot()) ? postState : this.stateCache.get(newHead.stateRoot);
+    if (headState) {
+      this.stateCache.setHeadState(headState);
+    } else {
+      // Trigger regen on head change if necessary
+      this.logger.warn("Head state not available, triggering regen", {stateRoot: newHead.stateRoot});
+      this.regen.getState(newHead.stateRoot, RegenCaller.processBlock).then(
+        (headStateRegen) => this.stateCache.setHeadState(headStateRegen),
+        (e) => this.logger.error("Error on head state regen", {}, e)
+      );
     }
   }
 
