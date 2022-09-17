@@ -589,6 +589,22 @@ export class BeaconChain implements IBeaconChain {
         this.logger.error("Error on exchangeTransitionConfiguration", {}, e as Error);
       });
     }
+
+    if (this.opts.produceAllBlocks) {
+      this.produceBlock({
+        randaoReveal: new Uint8Array(32),
+        graffiti: new Uint8Array(32),
+        slot: slot
+      })
+      .then((block: allForks.BeaconBlock) => 
+        this.processBlock(block, {
+          verifySignatures: false,
+          skipImport: true
+        })
+      )
+      .then(() => this.logger.info("Mock mode produced a valid block"))
+      .catch((e) => this.logger.error("Mock mode produced an invalid block", {}, e))
+    }
   }
 
   private onClockEpoch(epoch: Epoch): void {
