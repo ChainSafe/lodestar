@@ -37,6 +37,16 @@ export type ImportBlockOpts = {
   validSignatures?: boolean;
   /** Seen timestamp seconds */
   seenTimestampSec?: number;
+
+  /**
+   * Metadata: `true` if only the randao signature has been verified
+   */
+  validRandaoSignature?: boolean;
+
+  /**
+   * If true, do not import this block into the db
+   */
+  skipImport?: boolean;
 };
 
 /**

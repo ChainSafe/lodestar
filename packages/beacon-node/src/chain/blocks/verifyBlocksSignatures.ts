@@ -32,7 +32,10 @@ export async function verifyBlocksSignatures(
       : //
         // Verify signatures per block to track which block is invalid
         bls.verifySignatureSets(
-          getBlockSignatureSets(preState0, block, {skipProposerSignature: opts.validProposerSignature})
+          getBlockSignatureSets(preState0, block, {
+            skipProposerSignature: opts.validProposerSignature,
+            skipRandaoSignature: opts.validRandaoSignature,
+          })
         );
 
     // getBlockSignatureSets() takes 45ms in benchmarks for 2022Q2 mainnet blocks (100 sigs). When syncing a 32 blocks

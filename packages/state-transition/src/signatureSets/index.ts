@@ -26,10 +26,11 @@ export function getBlockSignatureSets(
   opts?: {
     /** Useful since block proposer signature is verified beforehand on gossip validation */
     skipProposerSignature?: boolean;
+    /** Useful to mock block production */
+    skipRandaoSignature?: boolean;
   }
 ): ISignatureSet[] {
   const signatureSets = [
-    getRandaoRevealSignatureSet(state, signedBlock.message),
     ...getProposerSlashingsSignatureSets(state, signedBlock),
     ...getAttesterSlashingsSignatureSets(state, signedBlock),
     ...getAttestationsSignatureSets(state, signedBlock),
@@ -38,6 +39,10 @@ export function getBlockSignatureSets(
 
   if (!opts?.skipProposerSignature) {
     signatureSets.push(getProposerSignatureSet(state, signedBlock));
+  }
+
+  if (!opts?.skipRandaoSignature) {
+    signatureSets.push(getRandaoRevealSignatureSet(state, signedBlock.message));
   }
 
   // Only after altair fork, validate tSyncCommitteeSignature

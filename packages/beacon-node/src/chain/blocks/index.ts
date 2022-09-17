@@ -97,10 +97,12 @@ export async function processBlocks(
       })
     );
 
-    for (const fullyVerifiedBlock of fullyVerifiedBlocks) {
-      // No need to sleep(0) here since `importBlock` includes a disk write
-      // TODO: Consider batching importBlock too if it takes significant time
-      await importBlock.call(this, fullyVerifiedBlock, opts);
+    if (!opts.skipImport) {
+      for (const fullyVerifiedBlock of fullyVerifiedBlocks) {
+        // No need to sleep(0) here since `importBlock` includes a disk write
+        // TODO: Consider batching importBlock too if it takes significant time
+        await importBlock.call(this, fullyVerifiedBlock, opts);
+      }
     }
   } catch (e) {
     // above functions should only throw BlockError

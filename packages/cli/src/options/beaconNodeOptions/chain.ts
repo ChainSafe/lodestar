@@ -17,6 +17,7 @@ export interface IChainArgs {
   "chain.assertCorrectProgressiveBalances": boolean;
   "chain.maxSkipSlots": number;
   "safe-slots-to-import-optimistically": number;
+  "chain.produceAllBlocks": boolean;
 }
 
 export function parseArgs(args: IChainArgs): IBeaconNodeOptions["chain"] {
@@ -35,6 +36,7 @@ export function parseArgs(args: IChainArgs): IBeaconNodeOptions["chain"] {
     assertCorrectProgressiveBalances: args["chain.assertCorrectProgressiveBalances"],
     maxSkipSlots: args["chain.maxSkipSlots"],
     safeSlotsToImportOptimistically: args["safe-slots-to-import-optimistically"],
+    produceAllBlocks: args["chain.produceAllBlocks"],
   };
 }
 
@@ -131,6 +133,14 @@ Will double processing times. Use only for debugging purposes.",
     description:
       "Slots from current (clock) slot till which its safe to import a block optimistically if the merge is not justified yet.",
     defaultDescription: String(defaultOptions.chain.safeSlotsToImportOptimistically),
+    group: "chain",
+  },
+
+  "chain.produceAllBlocks": {
+    hidden: true,
+    type: "boolean",
+    description: "Mocking feature to produce all blocks with mock validator credentials",
+    defaultDescription: String(defaultOptions.chain.produceAllBlocks),
     group: "chain",
   },
 };

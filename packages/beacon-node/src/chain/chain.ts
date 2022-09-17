@@ -592,18 +592,22 @@ export class BeaconChain implements IBeaconChain {
 
     if (this.opts.produceAllBlocks) {
       this.produceBlock({
-        randaoReveal: new Uint8Array(32),
+        randaoReveal: new Uint8Array(96),
         graffiti: new Uint8Array(32),
-        slot: slot
+        slot: slot,
       })
-      .then((block: allForks.BeaconBlock) => 
-        this.processBlock(block, {
-          verifySignatures: false,
-          skipImport: true
-        })
-      )
-      .then(() => this.logger.info("Mock mode produced a valid block"))
-      .catch((e) => this.logger.error("Mock mode produced an invalid block", {}, e))
+        .then((block: allForks.BeaconBlock) =>
+          this.processBlock(
+            {message: block, signature: new Uint8Array(96)},
+            {
+              validProposerSignature: true,
+              validRandaoSignature: true,
+              skipImport: true,
+            }
+          )
+        )
+        .then(() => this.logger.info("Mock mode produced a valid block"))
+        .catch((e) => this.logger.error("Mock mode produced an invalid block", {}, e));
     }
   }
 
