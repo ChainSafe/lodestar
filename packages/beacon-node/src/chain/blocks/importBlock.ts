@@ -1,10 +1,16 @@
 import {altair, ssz} from "@lodestar/types";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {toHexString} from "@chainsafe/ssz";
-import {CachedBeaconStateAltair, computeEpochAtSlot, RootCache} from "@lodestar/state-transition";
-import {ForkChoiceError, ForkChoiceErrorCode} from "@lodestar/fork-choice";
+import {
+  CachedBeaconStateAltair,
+  computeEpochAtSlot,
+  computeStartSlotAtEpoch,
+  RootCache,
+} from "@lodestar/state-transition";
+import {ForkChoiceError, ForkChoiceErrorCode, EpochDifference} from "@lodestar/fork-choice";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {toCheckpointHex} from "../stateCache/index.js";
+import {isOptimsticBlock} from "../../util/forkChoice.js";
 import {ChainEvent} from "../emitter.js";
 import {REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC} from "../reprocess.js";
 import type {BeaconChain} from "../chain.js";
@@ -180,7 +186,17 @@ export async function importBlock(
 
   if (newHead.blockRoot !== oldHead.blockRoot) {
     // new head
-    pendingEvents.push(ChainEvent.forkChoiceHead, newHead);
+
+    pendingEvents.push(ChainEvent.head, {
+      block: newHead.blockRoot,
+      epochTransition: computeStartSlotAtEpoch(computeEpochAtSlot(newHead.slot)) === newHead.slot,
+      slot: newHead.slot,
+      state: newHead.stateRoot,
+      previousDutyDependentRoot: this.forkChoice.getDependentRoot(newHead, EpochDifference.previous),
+      currentDutyDependentRoot: this.forkChoice.getDependentRoot(newHead, EpochDifference.current),
+      executionOptimistic: isOptimsticBlock(newHead),
+    });
+
     this.metrics?.forkChoice.changedHead.inc();
 
     const distance = this.forkChoice.getCommonAncestorDistance(oldHead, newHead);

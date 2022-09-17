@@ -11,10 +11,10 @@ import {ValidatorStore} from "../../../src/services/validatorStore.js";
 import {getApiClientStub} from "../../utils/apiStub.js";
 import {loggerVc} from "../../utils/logger.js";
 import {ClockMock} from "../../utils/clock.js";
+import {ZERO_HASH_HEX} from "../../utils/types.js";
 
 describe("BlockDutiesService", function () {
   const sandbox = sinon.createSandbox();
-  const ZERO_HASH = Buffer.alloc(32, 0);
 
   const api = getApiClientStub(sandbox);
   const validatorStore = sinon.createStubInstance(ValidatorStore) as ValidatorStore &
@@ -37,7 +37,7 @@ describe("BlockDutiesService", function () {
     // Reply with some duties
     const slot = 0; // genesisTime is right now, so test with slot = currentSlot
     api.validator.getProposerDuties.resolves({
-      dependentRoot: ZERO_HASH,
+      dependentRoot: ZERO_HASH_HEX,
       executionOptimistic: false,
       data: [{slot: slot, validatorIndex: 0, pubkey: pubkeys[0]}],
     });

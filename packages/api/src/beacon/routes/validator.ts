@@ -14,6 +14,8 @@ import {
   ssz,
   UintNum64,
   ValidatorIndex,
+  RootHex,
+  StringType,
 } from "@lodestar/types";
 import {
   RoutesData,
@@ -114,7 +116,7 @@ export type Api = {
   getAttesterDuties(
     epoch: Epoch,
     validatorIndices: ValidatorIndex[]
-  ): Promise<{executionOptimistic: ExecutionOptimistic; data: AttesterDuty[]; dependentRoot: Root}>;
+  ): Promise<{executionOptimistic: ExecutionOptimistic; data: AttesterDuty[]; dependentRoot: RootHex}>;
 
   /**
    * Get block proposers duties
@@ -129,7 +131,7 @@ export type Api = {
    */
   getProposerDuties(
     epoch: Epoch
-  ): Promise<{executionOptimistic: ExecutionOptimistic; data: ProposerDuty[]; dependentRoot: Root}>;
+  ): Promise<{executionOptimistic: ExecutionOptimistic; data: ProposerDuty[]; dependentRoot: RootHex}>;
 
   getSyncCommitteeDuties(
     epoch: number,
@@ -391,13 +393,15 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
 }
 
 export function getReturnTypes(): ReturnTypes<Api> {
+  const rootHexType = new StringType();
+
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   const WithDependentRootExecutionOptimistic = <T>(dataType: Type<T>) =>
     new ContainerType(
       {
         executionOptimistic: ssz.Boolean,
         data: dataType,
-        dependentRoot: ssz.Root,
+        dependentRoot: rootHexType,
       },
       {jsonCase: "eth2"}
     );

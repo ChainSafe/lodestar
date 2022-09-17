@@ -286,7 +286,7 @@ function mockForkChoice(): IForkChoice {
     getBlockSummariesAtSlot: () => [block],
     getCommonAncestorDistance: () => null,
     validateLatestHash: () => {},
-    findAttesterDependentRoot: () => block.blockRoot,
+    getDependentRoot: () => rootHex,
   };
 }
 
