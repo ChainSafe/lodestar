@@ -29,18 +29,13 @@ export class StateContextCache {
    */
   private head: {state: CachedBeaconStateAllForks; stateRoot: RootHex} | null = null;
 
-  constructor(
-    {maxStates = MAX_STATES, metrics}: {maxStates?: number; metrics?: IMetrics | null},
-    initialHeadState: CachedBeaconStateAllForks
-  ) {
+  constructor({maxStates = MAX_STATES, metrics}: {maxStates?: number; metrics?: IMetrics | null}) {
     this.maxStates = maxStates;
     this.cache = new MapTracker(metrics?.stateCache);
     if (metrics) {
       this.metrics = metrics.stateCache;
       metrics.stateCache.size.addCollect(() => metrics.stateCache.size.set(this.cache.size));
     }
-
-    this.head = {state: initialHeadState, stateRoot: toHexString(initialHeadState.hashTreeRoot())};
   }
 
   get(rootHex: RootHex): CachedBeaconStateAllForks | null {
