@@ -1,5 +1,5 @@
 import {computeEpochAtSlot} from "@lodestar/state-transition";
-import {BLSPubkey, Epoch, Root, Slot, ssz} from "@lodestar/types";
+import {BLSPubkey, Epoch, RootHex, Slot} from "@lodestar/types";
 import {toHexString} from "@chainsafe/ssz";
 import {Api, routes} from "@lodestar/api";
 import {extendError} from "@lodestar/utils";
@@ -14,7 +14,7 @@ const HISTORICAL_DUTIES_EPOCHS = 2;
 const GENESIS_EPOCH = 0;
 export const GENESIS_SLOT = 0;
 
-type BlockDutyAtEpoch = {dependentRoot: Root; data: routes.validator.ProposerDuty[]};
+type BlockDutyAtEpoch = {dependentRoot: RootHex; data: routes.validator.ProposerDuty[]};
 type NotifyBlockProductionFn = (slot: Slot, proposers: BLSPubkey[]) => void;
 
 export class BlockDutiesService {
@@ -155,26 +155,22 @@ export class BlockDutiesService {
     const proposerDuties = await this.api.validator.getProposerDuties(epoch).catch((e: Error) => {
       throw extendError(e, "Error on getProposerDuties");
     });
-    const dependentRoot = proposerDuties.dependentRoot;
+    const {dependentRoot} = proposerDuties;
     const relevantDuties = proposerDuties.data.filter((duty) => {
       const pubkeyHex = toHexString(duty.pubkey);
       return this.validatorStore.hasVotingPubkey(pubkeyHex) && this.validatorStore.isDoppelgangerSafe(pubkeyHex);
     });
 
-    this.logger.debug("Downloaded proposer duties", {
-      epoch,
-      dependentRoot: toHexString(dependentRoot),
-      count: relevantDuties.length,
-    });
+    this.logger.debug("Downloaded proposer duties", {epoch, dependentRoot, count: relevantDuties.length});
 
     const prior = this.proposers.get(epoch);
     this.proposers.set(epoch, {dependentRoot, data: relevantDuties});
 
-    if (prior && !ssz.Root.equals(prior.dependentRoot, dependentRoot)) {
+    if (prior && prior.dependentRoot !== dependentRoot) {
       this.metrics?.proposerDutiesReorg.inc();
       this.logger.warn("Proposer duties re-org. This may happen from time to time", {
-        priorDependentRoot: toHexString(prior.dependentRoot),
-        dependentRoot: toHexString(dependentRoot),
+        priorDependentRoot: prior.dependentRoot,
+        dependentRoot,
       });
     }
   }

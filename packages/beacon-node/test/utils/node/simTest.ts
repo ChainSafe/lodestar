@@ -5,14 +5,13 @@ import {
   beforeProcessEpoch,
 } from "@lodestar/state-transition";
 import {IBeaconConfig} from "@lodestar/config";
-import {ProtoBlock} from "@lodestar/fork-choice";
 import {SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {allForks, Epoch, Slot} from "@lodestar/types";
 import {Checkpoint} from "@lodestar/types/phase0";
 import {ILogger, mapValues} from "@lodestar/utils";
 import {toHexString} from "@chainsafe/ssz";
 import {BeaconNode} from "../../../src/index.js";
-import {ChainEvent} from "../../../src/chain/index.js";
+import {ChainEvent, HeadEventData} from "../../../src/chain/index.js";
 import {linspace} from "../../../src/util/numpy.js";
 import {RegenCaller} from "../../../src/chain/regen/index.js";
 
@@ -26,7 +25,7 @@ export function simTestInfoTracker(bn: BeaconNode, logger: ILogger): () => void 
   const prevParticipationPerEpoch = new Map<Epoch, number>();
   const currParticipationPerEpoch = new Map<Epoch, number>();
 
-  async function onHead(head: ProtoBlock): Promise<void> {
+  async function onHead(head: HeadEventData): Promise<void> {
     const slot = head.slot;
 
     // For each block
@@ -73,11 +72,11 @@ export function simTestInfoTracker(bn: BeaconNode, logger: ILogger): () => void 
     logParticipation(lastState);
   }
 
-  bn.chain.emitter.on(ChainEvent.forkChoiceHead, onHead);
+  bn.chain.emitter.on(ChainEvent.head, onHead);
   bn.chain.emitter.on(ChainEvent.checkpoint, onCheckpoint);
 
   return function stop() {
-    bn.chain.emitter.off(ChainEvent.forkChoiceHead, onHead);
+    bn.chain.emitter.off(ChainEvent.head, onHead);
     bn.chain.emitter.off(ChainEvent.checkpoint, onCheckpoint);
 
     // Write report

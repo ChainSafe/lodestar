@@ -86,8 +86,6 @@
     "test:unit": "yarn test:unit:minimal && yarn test:unit:mainnet",
     "test:e2e": "mocha 'test/e2e/**/*.test.ts'",
     "test:sim": "mocha 'test/sim/**/*.test.ts'",
-    "test:sim:singleThread": "mocha 'test/sim/singleNodeSingleThread.test.ts'",
-    "test:sim:singleThreadMultiNode": "mocha 'test/sim/multiNodeSingleThread.test.ts'",
     "test:sim:multiThread": "mocha 'test/sim/multiNodeMultiThread.test.ts'",
     "test:sim:merge-interop": "mocha 'test/sim/merge-interop.test.ts'",
     "download-spec-tests": "node --loader=ts-node/esm test/spec/downloadTests.ts",

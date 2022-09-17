@@ -3,6 +3,7 @@ import {
   ForkName,
   MAX_ATTESTATIONS,
   MIN_ATTESTATION_INCLUSION_DELAY,
+  MIN_SEED_LOOKAHEAD,
   SLOTS_PER_EPOCH,
   TIMELY_SOURCE_FLAG_INDEX,
 } from "@lodestar/params";
@@ -12,8 +13,8 @@ import {
   CachedBeaconStatePhase0,
   CachedBeaconStateAltair,
   computeEpochAtSlot,
-  computeStartSlotAtEpoch,
   getBlockRootAtSlot,
+  computeStartSlotAtEpoch,
 } from "@lodestar/state-transition";
 import {toHexString} from "@chainsafe/ssz";
 import {IForkChoice, EpochDifference} from "@lodestar/fork-choice";

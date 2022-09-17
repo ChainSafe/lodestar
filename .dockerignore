@@ -35,6 +35,7 @@ packages/**/lib
 packages/*/spec-tests
 packages/*/benchmark_data
 packages/beacon-node/test-logs/
+packages/cli/test-logs/
 packages/state-transition/test-cache
 benchmark_data
 invalidSszObjects/
