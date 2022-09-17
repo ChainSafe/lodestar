@@ -1,5 +1,5 @@
 import {toHexString, byteArrayEquals} from "@chainsafe/ssz";
-import {allForks, ssz, bellatrix} from "@lodestar/types";
+import {allForks, ssz, isBlindedBeaconBlock} from "@lodestar/types";
 import {CachedBeaconStateAllForks} from "../types.js";
 import {ZERO_HASH} from "../constants/index.js";
 
@@ -37,10 +37,9 @@ export function processBlockHeader(state: CachedBeaconStateAllForks, block: allF
     );
   }
 
-  const bodyRoot =
-    (block.body as bellatrix.BlindedBeaconBlockBody).executionPayloadHeader !== undefined
-      ? ssz.bellatrix.BlindedBeaconBlockBody.hashTreeRoot(block.body as bellatrix.BlindedBeaconBlockBody)
-      : types.BeaconBlockBody.hashTreeRoot(block.body as bellatrix.BeaconBlockBody);
+  const bodyRoot = isBlindedBeaconBlock(block)
+    ? ssz.bellatrix.BlindedBeaconBlockBody.hashTreeRoot(block.body)
+    : types.BeaconBlockBody.hashTreeRoot(block.body);
 
   // cache current block as the new latest block
   state.latestBlockHeader = ssz.phase0.BeaconBlockHeader.toViewDU({

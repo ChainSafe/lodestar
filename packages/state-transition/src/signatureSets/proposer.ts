@@ -1,6 +1,6 @@
 import {DOMAIN_BEACON_PROPOSER} from "@lodestar/params";
-import {allForks, ssz} from "@lodestar/types";
-import {computeSigningRoot, isBlindedBeaconBlock} from "../util/index.js";
+import {allForks, ssz, isBlindedBeaconBlock} from "@lodestar/types";
+import {computeSigningRoot} from "../util/index.js";
 import {ISignatureSet, SignatureSetType, verifySignatureSet} from "../util/signatureSets.js";
 import {CachedBeaconStateAllForks} from "../types.js";
 
