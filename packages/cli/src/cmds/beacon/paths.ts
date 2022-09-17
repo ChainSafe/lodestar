@@ -7,6 +7,7 @@ export interface IBeaconPaths {
   peerStoreDir: string;
   dbDir: string;
   persistInvalidSszObjectsDir: string;
+  peerIdFile: string;
   logFile?: string;
 }
 
@@ -36,6 +37,7 @@ export function getBeaconPaths(
   const persistInvalidSszObjectsDir = args.persistInvalidSszObjectsDir || path.join(beaconDir, "invalidSszObjects");
   const peerStoreDir = args.peerStoreDir || path.join(beaconDir, "peerstore");
   const logFile = args.logFile;
+  const peerIdFile = args.peerIdFile || path.join(beaconDir, "lodestar-peer-id.json");
 
   return {
     ...globalPaths,
@@ -43,6 +45,7 @@ export function getBeaconPaths(
     dbDir,
     persistInvalidSszObjectsDir,
     peerStoreDir,
+    peerIdFile,
     logFile,
   };
 }

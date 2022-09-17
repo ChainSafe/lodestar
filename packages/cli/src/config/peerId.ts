@@ -5,6 +5,10 @@ export async function createPeerId(): Promise<PeerId> {
   return await PeerId.create({keyType: "secp256k1"});
 }
 
+export async function initPeerId(filepath: string): Promise<void> {
+  writePeerId(filepath, await createPeerId());
+}
+
 export function writePeerId(filepath: string, peerId: PeerId): void {
   writeFile(filepath, peerId.toJSON());
 }

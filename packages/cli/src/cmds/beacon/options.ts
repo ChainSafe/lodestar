@@ -122,6 +122,12 @@ export const beaconPathsOptions: ICliCommandOptions<IBeaconPaths> = {
     type: "string",
   },
 
+  peerIdFile: {
+    hidden: true,
+    description: "Peer ID file path",
+    defaultDescription: defaultBeaconPaths.peerIdFile,
+  },
+
   logFile: {
     description: "Path to output all logs to a persistent log file",
     type: "string",

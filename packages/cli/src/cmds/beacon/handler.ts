@@ -1,4 +1,5 @@
 import path from "node:path";
+import fs from "node:fs";
 import {Registry} from "prom-client";
 import {createKeypairFromPeerId, ENR} from "@chainsafe/discv5";
 import {ErrorAborted} from "@lodestar/utils";
@@ -10,7 +11,7 @@ import {ProcessShutdownCallback} from "@lodestar/validator";
 
 import {IGlobalArgs, parseBeaconNodeArgs} from "../../options/index.js";
 import {onGracefulShutdown, getCliLogger, mkdir, writeFile} from "../../util/index.js";
-import {BeaconNodeOptions, createPeerId, FileENR, getBeaconConfigFromArgs} from "../../config/index.js";
+import {BeaconNodeOptions, FileENR, getBeaconConfigFromArgs, initPeerId, readPeerId} from "../../config/index.js";
 import {getNetworkBootnodes, getNetworkData, readBootnodes} from "../../networks/index.js";
 import {getVersionData} from "../../util/version.js";
 import {IBeaconArgs} from "./options.js";
@@ -121,8 +122,13 @@ export async function beaconHandlerInit(args: IBeaconArgs & IGlobalArgs) {
     beaconNodeOptions.set({eth1: {depositContractDeployBlock}});
   }
 
-  // Create new PeerId everytime by default, unless peerIdFile is provided
-  const peerId = await createPeerId();
+  // Initialize peerId if does not exist
+  if (!fs.existsSync(beaconPaths.peerIdFile)) {
+    await initPeerId(beaconPaths.peerIdFile);
+  }
+
+  const peerId = await readPeerId(beaconPaths.peerIdFile);
+
   const enr = ENR.createV4(createKeypairFromPeerId(peerId).publicKey);
   overwriteEnrWithCliArgs(enr, args);
 
