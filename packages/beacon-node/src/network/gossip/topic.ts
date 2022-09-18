@@ -85,6 +85,10 @@ export function getGossipSSZType(topic: GossipTopic) {
       return ssz.altair.SignedContributionAndProof;
     case GossipType.sync_committee:
       return ssz.altair.SyncCommitteeMessage;
+    case GossipType.light_client_optimistic_update:
+      return ssz.altair.LightClientOptimisticUpdate;
+    case GossipType.light_client_finality_update:
+      return ssz.altair.LightClientFinalityUpdate;
     default:
       throw new Error(`No ssz gossip type for ${(topic as GossipTopic).type}`);
   }
