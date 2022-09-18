@@ -63,7 +63,9 @@ export const LodestarBeaconNodeProcess: BeaconNodeConstructor = class LodestarBe
       "execution.engineMock": true,
       listenAddress: this.address,
       port: this.port,
-      metrics: process.env.TEST_METRICS_ENABLED ? {enabled: true, port: metricsPort} : undefined,
+      metrics: Boolean(process.env.TEST_METRICS_ENABLED),
+      // eslint-disable-next-line no-extra-boolean-cast
+      "metrics.port": Boolean(process.env.TEST_METRICS_ENABLED) ? metricsPort : undefined,
       bootnodes: [],
       "params.SECONDS_PER_SLOT": String(this.params.secondsPerSlot),
       "params.GENESIS_DELAY": String(this.params.genesisSlotsDelay),
