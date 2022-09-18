@@ -65,7 +65,7 @@ const forksCases: {
 ];
 
 describe("simulation", function () {
-  this.timeout("5m");
+  this.timeout(process.env.TEST_RUN_FOREVER ? Infinity : "5m");
   let env: SimulationEnvironment;
 
   for (const {beaconNodes, validatorClients, validatorsPerClient} of nodeCases) {
