@@ -61,7 +61,7 @@ export class Network implements INetwork {
     this.chain = chain;
     this.peersData = new PeersData();
     const networkEventBus = new NetworkEventBus();
-    const metadata = new MetadataController({}, {config, chain, logger});
+    const metadata = new MetadataController({}, {config, logger});
     const peerRpcScores = new PeerRpcScoreStore(metrics);
     this.events = networkEventBus;
     this.metadata = metadata;
@@ -132,7 +132,7 @@ export class Network implements INetwork {
     this.libp2p.connectionManager._latencyMonitor.stop();
 
     this.reqResp.start();
-    this.metadata.start(this.getEnr(), this.config.getForkName(this.clock.currentSlot));
+    this.metadata.start(this.getEnr(), this.clock.currentSlot);
     await this.peerManager.start();
     await this.gossip.start();
     this.attnetsService.start();

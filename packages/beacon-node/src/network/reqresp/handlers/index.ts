@@ -6,7 +6,7 @@ import {onBeaconBlocksByRange} from "./beaconBlocksByRange.js";
 import {onBeaconBlocksByRoot} from "./beaconBlocksByRoot.js";
 
 export type ReqRespHandlers = {
-  onStatus(): AsyncIterable<phase0.Status>;
+  onStatus(req: phase0.Status): AsyncIterable<phase0.Status>;
   onBeaconBlocksByRange(req: phase0.BeaconBlocksByRangeRequest): AsyncIterable<ReqRespBlockResponse>;
   onBeaconBlocksByRoot(req: phase0.BeaconBlocksByRootRequest): AsyncIterable<ReqRespBlockResponse>;
 };

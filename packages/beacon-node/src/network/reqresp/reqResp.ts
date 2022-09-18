@@ -250,7 +250,7 @@ export class ReqResp implements IReqResp {
       // Don't bubble Ping, Metadata, and, Goodbye requests to the app layer
 
       case Method.Status:
-        yield* this.reqRespHandlers.onStatus();
+        yield* this.reqRespHandlers.onStatus(requestTyped.body);
         break;
       case Method.BeaconBlocksByRange:
         yield* this.reqRespHandlers.onBeaconBlocksByRange(requestTyped.body);

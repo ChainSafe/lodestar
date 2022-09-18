@@ -1,10 +1,10 @@
 import {ENR} from "@chainsafe/discv5";
 import {BitArray, toHexString} from "@chainsafe/ssz";
 import {ForkName} from "@lodestar/params";
-import {altair, Epoch, phase0, ssz} from "@lodestar/types";
+import {altair, Epoch, phase0, Slot, ssz} from "@lodestar/types";
 import {IBeaconConfig} from "@lodestar/config";
+import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {ILogger} from "@lodestar/utils";
-import {IBeaconChain} from "../chain/index.js";
 import {FAR_FUTURE_EPOCH} from "../constants/index.js";
 import {getCurrentAndNextFork} from "./forks.js";
 
@@ -25,7 +25,6 @@ export interface IMetadataOpts {
 
 export interface IMetadataModules {
   config: IBeaconConfig;
-  chain: IBeaconChain;
   logger: ILogger;
 }
 
@@ -37,27 +36,25 @@ export interface IMetadataModules {
 export class MetadataController {
   private enr?: ENR;
   private config: IBeaconConfig;
-  private chain: IBeaconChain;
   private _metadata: altair.Metadata;
   private logger: ILogger;
 
   constructor(opts: IMetadataOpts, modules: IMetadataModules) {
     this.config = modules.config;
-    this.chain = modules.chain;
     this.logger = modules.logger;
     this._metadata = opts.metadata || ssz.altair.Metadata.defaultValue();
   }
 
-  start(enr: ENR | undefined, currentFork: ForkName): void {
+  start(enr: ENR | undefined, currentSlot: Slot): void {
     this.enr = enr;
     if (this.enr) {
       // updateEth2Field() MUST be called with clock epoch
-      this.updateEth2Field(this.chain.clock.currentEpoch);
+      this.updateEth2Field(computeEpochAtSlot(currentSlot));
 
       this.enr.set(ENRKey.attnets, ssz.phase0.AttestationSubnets.serialize(this._metadata.attnets));
       // Any fork after altair included
 
-      if (currentFork !== ForkName.phase0) {
+      if (this.config.getForkName(currentSlot) !== ForkName.phase0) {
         // Only persist syncnets if altair fork is already activated. If currentFork is altair but head is phase0
         // adding syncnets to the ENR is not a problem, we will just have a useless field for a few hours.
         this.enr.set(ENRKey.syncnets, ssz.phase0.AttestationSubnets.serialize(this._metadata.syncnets));

@@ -48,7 +48,7 @@ export class WinstonLogger implements ILogger {
         level: options.level,
         defaultMeta,
         format: getFormat(options),
-        transports,
+        transports: transports ?? [new winston.transports.Console({level: options.level})],
         exitOnError: false,
         levels: logLevelNum,
       })
