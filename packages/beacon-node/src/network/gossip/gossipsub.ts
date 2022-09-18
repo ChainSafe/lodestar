@@ -131,6 +131,8 @@ export class Eth2Gossipsub extends Gossipsub {
       metricsRegister: modules.metrics ? ((modules.metrics.register as unknown) as MetricsRegister) : null,
       metricsTopicStrToLabel: modules.metrics ? getMetricsTopicStrToLabel(modules.config) : undefined,
       asyncValidation: true,
+
+      dandelionD: 1,
     });
     this.scoreParams = scoreParams;
     this.config = config;
