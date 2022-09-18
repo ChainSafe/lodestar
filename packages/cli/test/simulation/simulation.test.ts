@@ -128,6 +128,9 @@ describe("simulation", function () {
               await expect(
                 Promise.all(env.nodes.map((n) => env.waitForEvent(routes.events.EventType.finalizedCheckpoint, n)))
               ).be.fulfilled;
+            } else {
+              // eslint-disable-next-line @typescript-eslint/no-empty-function
+              await new Promise(() => {});
             }
           });
 
