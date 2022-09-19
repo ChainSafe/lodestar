@@ -3,11 +3,10 @@ import {phase0, altair} from "@lodestar/types";
 import {ForkSeq} from "@lodestar/params";
 import {ValidatorRegistrationV1} from "@lodestar/types/bellatrix";
 import {IBeaconConfig} from "@lodestar/config";
-import {computeEpochAtSlot} from "@lodestar/state-transition";
+import {computeEpochAtSlot, blindedOrFullBlockToHeader} from "@lodestar/state-transition";
 import {allForks, Epoch, Root, RootHex, Slot, ssz} from "@lodestar/types";
 import {ContainerType, toHexString, ValueOf} from "@chainsafe/ssz";
 import {PubkeyHex} from "../types.js";
-import {blindedOrFullBlockToHeader} from "./blindedBlock.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 

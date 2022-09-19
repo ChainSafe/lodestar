@@ -1,8 +1,8 @@
 import {toHexString, byteArrayEquals} from "@chainsafe/ssz";
-import {allForks, ssz, isBlindedBeaconBlock} from "@lodestar/types";
+import {allForks, ssz} from "@lodestar/types";
 import {CachedBeaconStateAllForks} from "../types.js";
 import {ZERO_HASH} from "../constants/index.js";
-
+import {blindedOrFullBlockToHeader} from "../util/index.js";
 /**
  * Converts a Deposit record (created by the eth-execution deposit contract) into a Validator object that goes into the eth-consensus state.
  *
@@ -29,7 +29,6 @@ export function processBlockHeader(state: CachedBeaconStateAllForks, block: allF
     );
   }
 
-  const types = state.config.getForkTypes(slot);
   // verify that the parent matches
   if (!byteArrayEquals(block.parentRoot, ssz.phase0.BeaconBlockHeader.hashTreeRoot(state.latestBlockHeader))) {
     throw new Error(
@@ -37,17 +36,12 @@ export function processBlockHeader(state: CachedBeaconStateAllForks, block: allF
     );
   }
 
-  const bodyRoot = isBlindedBeaconBlock(block)
-    ? ssz.bellatrix.BlindedBeaconBlockBody.hashTreeRoot(block.body)
-    : types.BeaconBlockBody.hashTreeRoot(block.body);
-
+  const blockHeader = blindedOrFullBlockToHeader(state.config, block as allForks.FullOrBlindedBeaconBlock);
   // cache current block as the new latest block
+  // TODO: do we need to ZERO_HASH the stateRoot here??
   state.latestBlockHeader = ssz.phase0.BeaconBlockHeader.toViewDU({
-    slot: slot,
-    proposerIndex: block.proposerIndex,
-    parentRoot: block.parentRoot,
+    ...blockHeader,
     stateRoot: ZERO_HASH,
-    bodyRoot,
   });
 
   // verify proposer is not slashed. Only once per block, may use the slower read from tree

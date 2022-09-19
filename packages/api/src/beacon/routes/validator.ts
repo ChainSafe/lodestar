@@ -169,7 +169,7 @@ export type Api = {
     slot: Slot,
     randaoReveal: BLSSignature,
     graffiti: string
-  ): Promise<{data: bellatrix.BlindedBeaconBlock; version: ForkName}>;
+  ): Promise<{data: allForks.BlindedBeaconBlock; version: ForkName}>;
 
   /**
    * Produce an attestation data
@@ -443,7 +443,12 @@ export function getReturnTypes(): ReturnTypes<Api> {
     getSyncCommitteeDuties: ContainerDataExecutionOptimistic(ArrayOf(SyncDuty)),
     produceBlock: ContainerData(ssz.phase0.BeaconBlock),
     produceBlockV2: WithVersion((fork: ForkName) => ssz[fork].BeaconBlock),
-    produceBlindedBlock: WithVersion((_fork: ForkName) => ssz.bellatrix.BlindedBeaconBlock),
+    produceBlindedBlock: WithVersion((fork: ForkName) => {
+      if (fork === ForkName.phase0 || fork === ForkName.altair) {
+        throw Error(`Invalid fork=${fork} for produceBlindedBlock`);
+      }
+      return ssz[fork].BlindedBeaconBlock;
+    }),
     produceAttestationData: ContainerData(ssz.phase0.AttestationData),
     produceSyncCommitteeContribution: ContainerData(ssz.altair.SyncCommitteeContribution),
     getAggregatedAttestation: ContainerData(ssz.phase0.Attestation),

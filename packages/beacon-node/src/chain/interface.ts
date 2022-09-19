@@ -1,4 +1,4 @@
-import {allForks, bellatrix, UintNum64, Root, phase0, Slot, RootHex, Epoch, ValidatorIndex} from "@lodestar/types";
+import {allForks, UintNum64, Root, phase0, Slot, RootHex, Epoch, ValidatorIndex} from "@lodestar/types";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {IBeaconConfig} from "@lodestar/config";
 import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
@@ -109,7 +109,7 @@ export interface IBeaconChain {
   getCanonicalBlockAtSlot(slot: Slot): Promise<allForks.SignedBeaconBlock | null>;
 
   produceBlock(blockAttributes: BlockAttributes): Promise<allForks.BeaconBlock>;
-  produceBlindedBlock(blockAttributes: BlockAttributes): Promise<bellatrix.BlindedBeaconBlock>;
+  produceBlindedBlock(blockAttributes: BlockAttributes): Promise<allForks.BlindedBeaconBlock>;
 
   /** Process a block until complete */
   processBlock(block: allForks.SignedBeaconBlock, opts?: ImportBlockOpts): Promise<void>;

@@ -5,3 +5,4 @@ export {ssz as bellatrix} from "./bellatrix/index.js";
 
 import {ssz as allForksSsz} from "./allForks/index.js";
 export const allForks = allForksSsz.allForks;
+export const allForksBlinded = allForksSsz.allForksBlinded;

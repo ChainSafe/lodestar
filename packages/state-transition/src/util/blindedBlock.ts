@@ -1,5 +1,5 @@
 import {IChainForkConfig} from "@lodestar/config";
-import {allForks, phase0, Root, ssz, isBlindedBeaconBlock} from "@lodestar/types";
+import {allForks, phase0, Root, isBlindedBeaconBlock} from "@lodestar/types";
 
 export function blindedOrFullBlockHashTreeRoot(
   config: IChainForkConfig,
@@ -7,7 +7,7 @@ export function blindedOrFullBlockHashTreeRoot(
 ): Root {
   return isBlindedBeaconBlock(blindedOrFull)
     ? // Blinded
-      ssz.bellatrix.BlindedBeaconBlock.hashTreeRoot(blindedOrFull)
+      config.getBlindedForkTypes(blindedOrFull.slot).BeaconBlock.hashTreeRoot(blindedOrFull)
     : // Full
       config.getForkTypes(blindedOrFull.slot).BeaconBlock.hashTreeRoot(blindedOrFull);
 }
@@ -18,7 +18,7 @@ export function blindedOrFullBlockToHeader(
 ): phase0.BeaconBlockHeader {
   const bodyRoot = isBlindedBeaconBlock(blindedOrFull)
     ? // Blinded
-      ssz.bellatrix.BlindedBeaconBlockBody.hashTreeRoot(blindedOrFull.body)
+      config.getBlindedForkTypes(blindedOrFull.slot).BeaconBlockBody.hashTreeRoot(blindedOrFull.body)
     : // Full
       config.getForkTypes(blindedOrFull.slot).BeaconBlockBody.hashTreeRoot(blindedOrFull.body);
 
