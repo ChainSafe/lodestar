@@ -8,8 +8,8 @@ export const phase0: Phase0Preset = {
   MAX_COMMITTEES_PER_SLOT: 4,
   // [customized] unsecure, but fast
   TARGET_COMMITTEE_SIZE: 4,
-  // [customized] MAX_COMMITTEES_PER_SLOT * SLOTS_PER_EPOCH
-  MAX_VALIDATORS_PER_COMMITTEE: 32,
+  // 2**11 (= 2,048)
+  MAX_VALIDATORS_PER_COMMITTEE: 2048,
   // [customized] Faster, but unsecure.
   SHUFFLE_ROUND_COUNT: 10,
   // 4
