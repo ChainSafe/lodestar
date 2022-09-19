@@ -1,6 +1,7 @@
 import {EventEmitter} from "events";
 import StrictEventEmitter from "strict-event-emitter-types";
 
+import {routes} from "@lodestar/api";
 import {phase0, Epoch, Slot, allForks, altair} from "@lodestar/types";
 import {CheckpointWithHex, ProtoBlock} from "@lodestar/fork-choice";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
