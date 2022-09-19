@@ -13,7 +13,7 @@ import {
   CachedBeaconStatePhase0,
   CachedBeaconStateAltair,
   computeEpochAtSlot,
-  computeEndSlotAtEpoch,
+  computeStartSlotAtEpoch,
   getBlockRootAtSlot,
 } from "@lodestar/state-transition";
 import {toHexString} from "@chainsafe/ssz";
