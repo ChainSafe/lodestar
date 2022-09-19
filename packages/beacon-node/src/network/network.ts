@@ -334,7 +334,7 @@ export class Network implements INetwork {
     // Any fork after altair included
     if (fork !== ForkName.phase0) {
       this.gossip.unsubscribeTopic({type: GossipType.sync_committee_contribution_and_proof, fork});
-      //TODO DA: Revisit
+      this.gossip.unsubscribeTopic({type: GossipType.light_client_optimistic_update, fork});
       this.gossip.unsubscribeTopic({type: GossipType.light_client_finality_update, fork});
     }
 
