@@ -1,5 +1,7 @@
 import path from "node:path";
 import {fileURLToPath} from "node:url";
+import {config} from "@lodestar/config/default";
+
 import {OpenApiFile} from "../../utils/parseOpenApiSpec.js";
 import {routesData, getReqSerializers, getReturnTypes} from "../../../src/builder/routes.js";
 import {runTestCheckAgainstSpec} from "../../utils/checkAgainstSpec.js";
@@ -20,7 +22,7 @@ const openApiFile: OpenApiFile = {
   version: RegExp(/.*/),
 };
 
-const reqSerializers = getReqSerializers();
+const reqSerializers = getReqSerializers(config);
 const returnTypes = getReturnTypes();
 
 const openApiJson = await fetchOpenApiSpec(openApiFile);
