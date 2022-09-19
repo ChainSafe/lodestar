@@ -68,8 +68,10 @@ describe("gossipsub", function () {
     });
 
     chain.forkChoice.getHead = () => {
-      zeroProtoBlock.slot = ALTAIR_START_SLOT;
-      return zeroProtoBlock;
+      return {
+        ...zeroProtoBlock,
+        slot: ALTAIR_START_SLOT,
+      };
     };
 
     const db = new StubbedBeaconDb(config);
