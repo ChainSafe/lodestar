@@ -10,12 +10,13 @@ import {config} from "@lodestar/config/default";
 import {phase0, ssz} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 
+import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Network, NetworkEvent, ReqRespMethod, getReqRespHandlers} from "../../../src/network/index.js";
 import {defaultNetworkOptions, INetworkOptions} from "../../../src/network/options.js";
 import {GoodByeReasonCode} from "../../../src/constants/index.js";
 
 import {generateEmptySignedBlock} from "../../utils/block.js";
-import {MockBeaconChain} from "../../utils/mocks/chain/chain.js";
+import {MockBeaconChain, zeroProtoBlock} from "../../utils/mocks/chain/chain.js";
 import {createNode} from "../../utils/network.js";
 import {generateState} from "../../utils/state.js";
 import {StubbedBeaconDb} from "../../utils/stub/index.js";
@@ -82,6 +83,14 @@ describe("network", function () {
   async function createTestNode(nodeName: string) {
     const {state, config} = getStaticData();
     const chain = new MockBeaconChain({genesisTime: 0, chainId: 0, networkId: BigInt(0), state, config});
+
+    chain.forkChoice.getHead = () => {
+      return {
+        ...zeroProtoBlock,
+        slot: computeStartSlotAtEpoch(config.ALTAIR_FORK_EPOCH),
+      };
+    };
+
     const db = new StubbedBeaconDb(config);
     const reqRespHandlers = getReqRespHandlers({db, chain});
     const gossipHandlers = {} as GossipHandlers;
@@ -247,7 +256,26 @@ describe("network", function () {
 
     expect(netA.gossip.getTopics().length).to.equal(0);
     netA.subscribeGossipCoreTopics();
-    expect(netA.gossip.getTopics().length).to.equal(5);
+    /**
+     * TODO DA confirm
+     * Topics from previous fork are still subscribed together
+     * with same topic of the new fork. Is this expected behaviour?
+     *
+     *   '/eth2/f5a5fd42/beacon_block/ssz_snappy',
+     *   '/eth2/f5a5fd42/beacon_aggregate_and_proof/ssz_snappy',
+     *   '/eth2/f5a5fd42/voluntary_exit/ssz_snappy',
+     *   '/eth2/f5a5fd42/proposer_slashing/ssz_snappy',
+     *   '/eth2/f5a5fd42/attester_slashing/ssz_snappy',
+     *   '/eth2/16abab34/beacon_block/ssz_snappy',
+     *   '/eth2/16abab34/beacon_aggregate_and_proof/ssz_snappy',
+     *   '/eth2/16abab34/voluntary_exit/ssz_snappy',
+     *   '/eth2/16abab34/proposer_slashing/ssz_snappy',
+     *   '/eth2/16abab34/attester_slashing/ssz_snappy',
+     *   '/eth2/16abab34/sync_committee_contribution_and_proof/ssz_snappy',
+     *   '/eth2/16abab34/light_client_optimistic_update/ssz_snappy',
+     *   '/eth2/16abab34/light_client_finality_update/ssz_snappy'
+     */
+    expect(netA.gossip.getTopics().length).to.equal(13);
     netA.unsubscribeGossipCoreTopics();
     expect(netA.gossip.getTopics().length).to.equal(0);
     netA.close();
