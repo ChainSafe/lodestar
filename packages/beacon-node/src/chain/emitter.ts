@@ -65,7 +65,7 @@ export enum ChainEvent {
    *
    * This event is guaranteed to be emitted after every sucessfully processed block, if that block updates the head.
    */
-  forkChoiceHead = "forkChoice:head",
+  head = "forkChoice:head",
   /**
    * This event signals that the fork choice has been updated to a new head that is not a descendant of the previous head.
    *
@@ -94,6 +94,8 @@ export enum ChainEvent {
   lightclientFinalityUpdate = "lightclient:finality_update",
 }
 
+export type HeadEventData = routes.events.EventData[routes.events.EventType.head];
+
 export interface IChainEvents {
   [ChainEvent.attestation]: (attestation: phase0.Attestation) => void;
   [ChainEvent.contributionAndProof]: (contributionAndProof: altair.SignedContributionAndProof) => void;
@@ -106,7 +108,7 @@ export interface IChainEvents {
   [ChainEvent.clockSlot]: (slot: Slot) => void;
   [ChainEvent.clockEpoch]: (epoch: Epoch) => void;
 
-  [ChainEvent.forkChoiceHead]: (head: ProtoBlock) => void;
+  [ChainEvent.head]: (data: HeadEventData) => void;
   [ChainEvent.forkChoiceReorg]: (head: ProtoBlock, oldHead: ProtoBlock, depth: number) => void;
   [ChainEvent.forkChoiceJustified]: (checkpoint: CheckpointWithHex) => void;
   [ChainEvent.forkChoiceFinalized]: (checkpoint: CheckpointWithHex) => void;

@@ -37,7 +37,7 @@ Start the second node without starting any validators and connect to the first n
 By default, lodestar starts as many validators as the number supplied by `--genesisValidators`. In other to not start any validator, this is overridden by
 the `--startValidators` option. Passing a value of `0:0` means no validators should be started.
 
-Also, take note that the values of `--genesisValidators` and `--genesisTime` must be the same as the ones passed to the first node in other for the two nodes
+Also, take note that the values of `--genesisValidators` and `--genesisTime` must be the same as the ones passed to the first node in order for the two nodes
 to have the same beacon chain.
 
 Also `--port` and `--rest.port` are supplied since the default values will already be in use by the first node.
