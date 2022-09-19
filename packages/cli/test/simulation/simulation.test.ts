@@ -1,5 +1,5 @@
 import {join} from "node:path";
-import chai, {expect} from "chai";
+import chai from "chai";
 import chaiAsPromised from "chai-as-promised";
 import {Epoch} from "@lodestar/types";
 import {logFilesDir, SimulationEnvironment} from "../utils/simulation/index.js";
