@@ -44,6 +44,10 @@ export class EpochClock {
     return Math.floor(slot / this.slotsPerEpoch);
   }
 
+  getSlotIndexInEpoch(slot: number): number {
+    return slot % this.slotsPerEpoch;
+  }
+
   getSlotFor(timeStamp?: number): number {
     const time = timeStamp ?? Math.floor(Date.now() / MS_IN_SEC);
     const elapsedTime = time - this.genesisTime;

@@ -109,7 +109,7 @@ export const LodestarBeaconNodeProcess: BeaconNodeConstructor = class LodestarBe
       `${__dirname}/../../../bin/lodestar.js`,
       ["beacon", "--rcConfig", `${this.rootDir}/rc_config.json`, "--network", "dev"],
       async () => this.ready(),
-      "Waiting for beacon node to start."
+      `Waiting for "${this.id}" to start.`
     );
 
     console.log(`Beacon node "${this.id}" started.`);

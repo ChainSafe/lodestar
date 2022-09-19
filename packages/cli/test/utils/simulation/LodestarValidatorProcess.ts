@@ -125,7 +125,7 @@ export const LodestarValidatorProcess: ValidatorConstructor = class LodestarVali
         `${this.rootDir}/password.txt`,
       ],
       async () => this.ready(),
-      "Waiting for validator to start."
+      `Waiting for "${this.id}" to start.`
     );
 
     console.log(`Validator "${this.id}" started.`);

@@ -20,7 +20,7 @@ export class SimulationEnvironment {
   readonly rootDir: string;
   readonly nodes: BeaconNodeProcess[] = [];
   readonly clock: EpochClock;
-  readonly acceptableParticipationRate = 0.95;
+  readonly acceptableParticipationRate = 1;
   readonly tracker: SimulationTracker;
   readonly emitter: EventEmitter;
   readonly controller: AbortController;
@@ -77,7 +77,7 @@ export class SimulationEnvironment {
       this.nodes.push(new LodestarBeaconNodeProcess(this.params, nodeRootDir));
     }
 
-    this.tracker = new SimulationTracker(this.nodes, this.clock, this.controller.signal);
+    this.tracker = new SimulationTracker(this.nodes, this.clock, this.params, this.controller.signal);
   }
 
   async start(): Promise<this> {

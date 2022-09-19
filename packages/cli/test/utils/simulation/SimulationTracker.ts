@@ -2,8 +2,11 @@ import EventEmitter from "node:events";
 import {routes} from "@lodestar/api/beacon";
 import {altair, Epoch, Slot} from "@lodestar/types";
 import {EpochClock} from "./EpochClock.js";
-import {BeaconNodeProcess} from "./types.js";
-import {computeAttestation, computeAttestationParticipation, computeInclusionDelay} from "./utils.js";
+import {BeaconNodeProcess, SimulationParams} from "./types.js";
+import {computeAttestation, computeAttestationParticipation, computeInclusionDelay, getForkName} from "./utils.js";
+
+const participationHeading = (id: string): string => `${id}-P-H/S/T`;
+const missedBlocksHeading = (id: string): string => `${id}-M`;
 
 export class SimulationTracker {
   readonly producedBlocks: Map<string, Map<Slot, boolean>>;
@@ -17,11 +20,13 @@ export class SimulationTracker {
   private signal: AbortSignal;
   private nodes: BeaconNodeProcess[];
   private clock: EpochClock;
+  private params: SimulationParams;
 
-  constructor(nodes: BeaconNodeProcess[], clock: EpochClock, signal: AbortSignal) {
+  constructor(nodes: BeaconNodeProcess[], clock: EpochClock, params: SimulationParams, signal: AbortSignal) {
     this.signal = signal;
     this.nodes = nodes;
     this.clock = clock;
+    this.params = params;
 
     this.producedBlocks = new Map();
     this.attestationsPerBlock = new Map();
@@ -124,29 +129,60 @@ export class SimulationTracker {
     // TODO: Add checkpoint tracking
   }
 
-  printLastSeenSlots(): void {
-    console.log("==== LAST SEEN SLOTS ====");
-    console.table(
-      [...this.lastSeenSlot.entries()].map(([node, slot]) => ({node, slot, epoch: this.clock.getEpochForSlot(slot)}))
-    );
-  }
+  printNoesInfo(): void {
+    /* eslint-disable @typescript-eslint/naming-convention */
+    const maxSlot = Math.max(...this.lastSeenSlot.values());
+    const records: Record<string, unknown>[] = [];
 
-  printMissedBlocks(): void {
-    console.log("==== MISSED BLOCKS ====");
-    console.table([...this.missedBlocks.entries()].map(([node, missedBlocks]) => ({node, missedBlocks})));
-  }
+    for (let slot = 0; slot <= maxSlot; slot++) {
+      const epoch = this.clock.getEpochForSlot(slot);
 
-  printAttestationsParticipation(): void {
-    for (let i = 0; i < this.nodes.length; i++) {
-      console.log(`==== ATTESTATION PARTICIPATION - ${this.nodes[i].id} ====`);
-      console.table(
-        [...(this.attestationParticipation.get(this.nodes[i].id)?.entries() || [])].map(([epoch, participation]) => ({
-          epoch,
-          head: participation.head,
-          source: participation.source,
-          target: participation.target,
-        }))
-      );
+      const record: Record<string, unknown> = {
+        F: getForkName(epoch, this.params),
+        Eph: `${this.clock.getEpochForSlot(slot)}/${this.clock.getSlotIndexInEpoch(slot)}`,
+        slot,
+      };
+
+      for (const node of this.nodes) {
+        record[missedBlocksHeading(node.id)] = this.producedBlocks.get(node.id)?.get(slot) ? "" : "x";
+      }
+
+      for (const node of this.nodes) {
+        record[participationHeading(node.id)] = "";
+      }
+
+      records.push(record);
+
+      if (this.clock.isLastSlotOfEpoch(slot)) {
+        const epoch = this.clock.getEpochForSlot(slot);
+        const record: Record<string, unknown> = {
+          F: getForkName(epoch, this.params),
+          Eph: epoch,
+          slot: "---",
+        };
+
+        for (const node of this.nodes) {
+          record[missedBlocksHeading(node.id)] = this.missedBlocks.get(node.id)?.filter((s) => s <= slot).length;
+        }
+
+        for (const node of this.nodes) {
+          const participation = this.attestationParticipation.get(node.id)?.get(epoch);
+          const participationStr =
+            participation?.head != null
+              ? `${participation?.head.toFixed(2)}/${participation?.source.toFixed(2)}/${participation?.target.toFixed(
+                  2
+                )}`
+              : "";
+          record[participationHeading(node.id)] = participationStr;
+        }
+        records.push(record);
+      }
     }
+
+    console.table(records);
+    console.log(
+      ["M - Missed Blocks", "P - Attestation Participation", "H - Head", "S - Source", "T - Target"].join(" | ")
+    );
+    /* eslint-enable @typescript-eslint/naming-convention */
   }
 }

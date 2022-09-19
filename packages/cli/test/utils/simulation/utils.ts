@@ -1,12 +1,13 @@
 import {dirname} from "node:path";
 import {fileURLToPath} from "node:url";
 import {ChildProcess, spawn} from "node:child_process";
-import {altair, phase0, Slot} from "@lodestar/types";
+import {altair, Epoch, phase0, Slot} from "@lodestar/types";
 import {
   TIMELY_HEAD_FLAG_INDEX,
   TIMELY_TARGET_FLAG_INDEX,
   TIMELY_SOURCE_FLAG_INDEX,
   SLOTS_PER_EPOCH,
+  ForkName,
 } from "@lodestar/params";
 import {SimulationOptionalParams, SimulationParams} from "./types.js";
 
@@ -69,16 +70,12 @@ export const spawnProcessAndWait = async (
       });
 
       // TODO: Add support for timeout
-      let retryCount = 0;
+      // To safe the space in logs log only for once.
+      console.log(message);
       const intervalId = setInterval(async () => {
         if (await ready(childProcess)) {
-          console.log("");
           clearInterval(intervalId);
           resolve(childProcess);
-        } else {
-          retryCount++;
-          // To avoid multiple log messages
-          process.stdout.write(`${message}${".".repeat(retryCount)}\r`);
         }
       }, 1000);
     })();
@@ -131,6 +128,16 @@ export const computeInclusionDelay = (attestations: phase0.Attestation[], slot: 
 
 export const avg = (arr: number[]): number => {
   return arr.length === 0 ? 0 : arr.reduce((p, c) => p + c, 0) / arr.length;
+};
+
+export const getForkName = (epoch: Epoch, params: SimulationParams): ForkName => {
+  if (epoch < params.altairEpoch) {
+    return ForkName.phase0;
+  } else if (epoch < params.bellatrixEpoch) {
+    return ForkName.altair;
+  } else {
+    return ForkName.bellatrix;
+  }
 };
 
 export const FAR_FUTURE_EPOCH = 10 ** 12;
