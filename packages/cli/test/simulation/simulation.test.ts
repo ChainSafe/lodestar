@@ -85,7 +85,7 @@ for (const {beaconNodes, validatorClients, validatorsPerClient} of nodeCases) {
           nodeAssertions(env);
         });
 
-        for (let epoch = 0; epoch <= runTill; epoch++) {
+        for (let epoch = 0; epoch <= runTill; epoch += 1) {
           describe(`epoch - ${epoch}`, () => {
             before("wait for epoch", async () => {
               // Wait for one extra slot to make sure epoch transition is complete on the state
@@ -93,6 +93,7 @@ for (const {beaconNodes, validatorClients, validatorsPerClient} of nodeCases) {
 
               env.tracker.printNoesInfo();
             });
+
             describe("missed blocks", () => {
               missedBlocksAssertions(env);
             });

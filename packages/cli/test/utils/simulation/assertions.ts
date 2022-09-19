@@ -25,7 +25,7 @@ export function nodeAssertions(env: SimulationEnvironment): void {
         );
       });
 
-      it("should have correct number validator clients", async () => {
+      it("should have correct number of validator clients", async () => {
         expect(node.validatorClients).to.have.lengthOf(
           env.params.validatorClients,
           `Node "${node.id}" have correct "${env.params.validatorClients}" of validator clients. Found: ${node.validatorClients.length}`
