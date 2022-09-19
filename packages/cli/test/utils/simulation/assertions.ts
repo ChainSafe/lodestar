@@ -68,7 +68,7 @@ export function attestationParticipationAssertions(env: SimulationEnvironment, e
 
         expect(participation?.target).to.be.gte(
           env.acceptableParticipationRate,
-          `node "${node.id}" has low participation rate on target for epoch ${epoch}. participationRate: ${participation?.head}, acceptableParticipationRate: ${env.acceptableParticipationRate}`
+          `node "${node.id}" has low participation rate on target for epoch ${epoch}. participationRate: ${participation?.target}, acceptableParticipationRate: ${env.acceptableParticipationRate}`
         );
       });
 
@@ -77,7 +77,7 @@ export function attestationParticipationAssertions(env: SimulationEnvironment, e
 
         expect(participation?.source).to.be.gte(
           env.acceptableParticipationRate,
-          `node "${node.id}" has low participation rate on source for epoch ${epoch}. participationRate: ${participation?.head}, acceptableParticipationRate: ${env.acceptableParticipationRate}`
+          `node "${node.id}" has low participation rate on source for epoch ${epoch}. participationRate: ${participation?.source}, acceptableParticipationRate: ${env.acceptableParticipationRate}`
         );
       });
     });
