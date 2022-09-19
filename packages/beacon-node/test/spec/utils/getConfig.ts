@@ -15,5 +15,11 @@ export function getConfig(fork: ForkName, forkEpoch = 0): IChainForkConfig {
         ALTAIR_FORK_EPOCH: 0,
         BELLATRIX_FORK_EPOCH: forkEpoch,
       });
+    case ForkName.capella:
+      return createIChainForkConfig({
+        ALTAIR_FORK_EPOCH: 0,
+        BELLATRIX_FORK_EPOCH: 0,
+        CAPELLA_FORK_EPOCH: forkEpoch,
+      });
   }
 }

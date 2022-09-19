@@ -31,10 +31,18 @@ export function createIForkConfig(config: IChainConfig): IForkConfig {
     prevVersion: config.ALTAIR_FORK_VERSION,
     prevForkName: ForkName.altair,
   };
+  const capella: IForkInfo = {
+    name: ForkName.capella,
+    seq: ForkSeq.capella,
+    epoch: config.CAPELLA_FORK_EPOCH,
+    version: config.CAPELLA_FORK_VERSION,
+    prevVersion: config.BELLATRIX_FORK_VERSION,
+    prevForkName: ForkName.bellatrix,
+  };
 
   /** Forks in order order of occurence, `phase0` first */
   // Note: Downstream code relies on proper ordering.
-  const forks = {phase0, altair, bellatrix};
+  const forks = {phase0, altair, bellatrix, capella};
 
   // Prevents allocating an array on every getForkInfo() call
   const forksAscendingEpochOrder = Object.values(forks);

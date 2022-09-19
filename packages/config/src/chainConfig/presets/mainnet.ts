@@ -37,6 +37,10 @@ export const chainConfig: IChainConfig = {
   BELLATRIX_FORK_VERSION: b("0x02000000"),
   BELLATRIX_FORK_EPOCH: 144896, // Sept 6, 2022, 11:34:47am UTC
 
+  // Capella
+  CAPELLA_FORK_VERSION: b("0x03000000"),
+  CAPELLA_FORK_EPOCH: Infinity,
+
   // Time parameters
   // ---------------------------------------------------------------
   // 12 seconds

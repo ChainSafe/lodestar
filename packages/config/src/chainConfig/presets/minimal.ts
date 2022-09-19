@@ -36,6 +36,9 @@ export const chainConfig: IChainConfig = {
   // Bellatrix
   BELLATRIX_FORK_VERSION: b("0x02000001"),
   BELLATRIX_FORK_EPOCH: Infinity,
+  // Capella
+  CAPELLA_FORK_VERSION: b("0x03000001"),
+  CAPELLA_FORK_EPOCH: Infinity,
 
   // Time parameters
   // ---------------------------------------------------------------
