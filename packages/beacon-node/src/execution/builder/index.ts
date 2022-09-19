@@ -3,10 +3,13 @@ import {IExecutionBuilder} from "./interface.js";
 
 import {ExecutionBuilderHttp, ExecutionBuilderHttpOpts, defaultExecutionBuilderHttpOpts} from "./http.js";
 
-export {IExecutionBuilder, ExecutionBuilderHttp, defaultExecutionBuilderHttpOpts};
+export {IExecutionBuilder, ExecutionBuilderHttp};
 
 export type ExecutionBuilderOpts = {mode?: "http"} & ExecutionBuilderHttpOpts;
-export const defaultExecutionBuilderOpts: ExecutionBuilderOpts = defaultExecutionBuilderHttpOpts;
+export const defaultExecutionBuilderOpts = {
+  mode: "http" as const,
+  ...defaultExecutionBuilderHttpOpts,
+};
 
 export function initializeExecutionBuilder(opts: ExecutionBuilderOpts, config: IChainForkConfig): IExecutionBuilder {
   switch (opts.mode) {

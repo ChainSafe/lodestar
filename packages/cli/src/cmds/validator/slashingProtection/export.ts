@@ -1,5 +1,6 @@
+import path from "node:path";
 import {InterchangeFormatVersion} from "@lodestar/validator";
-import {ICliCommand, writeFile600Perm} from "../../../util/index.js";
+import {ICliCommand, writeFile600Perm, YargsError} from "../../../util/index.js";
 import {IGlobalArgs} from "../../../options/index.js";
 import {AccountValidatorArgs} from "../options.js";
 import {getCliLogger, ILogArgs} from "../../../util/index.js";
@@ -11,7 +12,7 @@ import {ISlashingProtectionArgs} from "./options.js";
 /* eslint-disable no-console */
 
 interface IExportArgs {
-  file: string;
+  file?: string;
 }
 
 export const exportCmd: ICliCommand<
@@ -32,22 +33,24 @@ export const exportCmd: ICliCommand<
   options: {
     file: {
       description: "The slashing protection interchange file to export to (.json).",
-      demandOption: true,
       type: "string",
     },
   },
 
   handler: async (args) => {
+    if (!args.file) {
+      throw new YargsError("Must provide --file option");
+    }
+
     const {config, network} = getBeaconConfigFromArgs(args);
 
+    const validatorPaths = getValidatorPaths(args, network);
     // slashingProtection commands are fast so do not require logFile feature
-    const logger = getCliLogger(args, {defaultLogFile: "validator.log"}, config);
-
-    const {validatorsDbDir: dbPath} = getValidatorPaths(args, network);
+    const logger = getCliLogger(args, {defaultLogFilepath: path.join(validatorPaths.dataDir, "validator.log")}, config);
 
     // TODO: Allow format version and pubkeys to be customized with CLI args
     const formatVersion: InterchangeFormatVersion = {version: "4", format: "complete"};
-    logger.info("Exporting the slashing protection logs", {...formatVersion, dbPath});
+    logger.info("Exporting the slashing protection logs", {...formatVersion, dbPath: validatorPaths.dataDir});
 
     const {slashingProtection, metadata} = getSlashingProtection(args, network);
 

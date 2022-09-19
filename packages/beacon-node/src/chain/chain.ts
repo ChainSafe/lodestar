@@ -13,8 +13,7 @@ import {
 } from "@lodestar/state-transition";
 import {IBeaconConfig} from "@lodestar/config";
 import {allForks, UintNum64, Root, phase0, Slot, RootHex, Epoch, ValidatorIndex} from "@lodestar/types";
-import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
-import {ProcessShutdownCallback} from "@lodestar/validator";
+import {CheckpointWithHex, ExecutionStatus, ForkChoiceOpts, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {ILogger, toHex} from "@lodestar/utils";
 import {CompositeTypeAny, fromHexString, TreeView, Type} from "@chainsafe/ssz";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
@@ -31,8 +30,8 @@ import {CheckpointStateCache, StateContextCache} from "./stateCache/index.js";
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
 import {IBeaconClock, LocalClock} from "./clock/index.js";
 import {ChainEventEmitter, ChainEvent, HeadEventData} from "./emitter.js";
-import {IBeaconChain, ProposerPreparationData} from "./interface.js";
-import {IChainOptions} from "./options.js";
+import {IBeaconChain, ProcessShutdownCallback, ProposerPreparationData} from "./interface.js";
+import {IChainOptions, defaultChainOptions} from "./options.js";
 import {IStateRegenerator, QueuedStateRegenerator, RegenCaller} from "./regen/index.js";
 import {initializeForkChoice} from "./forkChoice/index.js";
 import {computeAnchorCheckpoint} from "./initState.js";
@@ -225,12 +224,19 @@ export class BeaconChain implements IBeaconChain {
     stateCache.setHeadState(cachedState);
     checkpointStateCache.add(checkpoint, cachedState);
 
+    // Merge in defaults. Note: spread syntax also overrides properties if the value is undefined
+    const forkChoiceOpts: ForkChoiceOpts = {
+      proposerBoostEnabled: opts.proposerBoostEnabled ?? defaultChainOptions.proposerBoostEnabled,
+      computeUnrealized: opts.computeUnrealized ?? defaultChainOptions.computeUnrealized,
+      countUnrealizedFull: opts.countUnrealizedFull ?? defaultChainOptions.countUnrealizedFull,
+    };
+
     const forkChoice = initializeForkChoice(
       config,
       emitter,
       clock.currentSlot,
       cachedState,
-      opts,
+      forkChoiceOpts,
       this.justifiedBalancesGetter.bind(this)
     );
     const regen = new QueuedStateRegenerator({

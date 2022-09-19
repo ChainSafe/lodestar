@@ -8,19 +8,17 @@ import {
 } from "./http.js";
 import {ExecutionEngineMock, ExecutionEngineMockOpts} from "./mock.js";
 
-export {
-  IExecutionEngine,
-  ExecutionEngineHttp,
-  ExecutionEngineDisabled,
-  ExecutionEngineMock,
-  defaultExecutionEngineHttpOpts,
-};
+export {IExecutionEngine, ExecutionEngineHttp, ExecutionEngineDisabled, ExecutionEngineMock};
 
 export type ExecutionEngineOpts =
   | ({mode?: "http"} & ExecutionEngineHttpOpts)
   | ({mode: "mock"} & ExecutionEngineMockOpts)
   | {mode: "disabled"};
-export const defaultExecutionEngineOpts: ExecutionEngineOpts = defaultExecutionEngineHttpOpts;
+
+export const defaultExecutionEngineOpts = {
+  mode: "http" as const,
+  ...defaultExecutionEngineHttpOpts,
+};
 
 export function initializeExecutionEngine(
   opts: ExecutionEngineOpts,

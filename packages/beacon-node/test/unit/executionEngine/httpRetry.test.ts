@@ -3,8 +3,7 @@ import {fastify} from "fastify";
 
 import {fromHexString} from "@chainsafe/ssz";
 
-import {ExecutionEngineHttp, defaultExecutionEngineHttpOpts} from "../../../src/execution/engine/http.js";
-
+import {ExecutionEngineHttp} from "../../../src/execution/engine/http.js";
 import {bytesToData, numToQuantity} from "../../../src/eth1/provider/utils.js";
 
 describe("ExecutionEngine / http ", () => {
@@ -22,6 +21,9 @@ describe("ExecutionEngine / http ", () => {
   let baseUrl: string;
   let errorResponsesBeforeSuccess = 0;
   let controller: AbortController;
+
+  const retryAttempts = 3;
+  const retryDelay = 2000;
 
   before("Prepare server", async () => {
     controller = new AbortController();
@@ -46,11 +48,7 @@ describe("ExecutionEngine / http ", () => {
     baseUrl = await server.listen(0);
 
     executionEngine = new ExecutionEngineHttp(
-      {
-        urls: [baseUrl],
-        retryAttempts: defaultExecutionEngineHttpOpts.retryAttempts,
-        retryDelay: defaultExecutionEngineHttpOpts.retryDelay,
-      },
+      {urls: [baseUrl], retryAttempts, retryDelay},
       {signal: controller.signal}
     );
   });
@@ -89,7 +87,7 @@ describe("ExecutionEngine / http ", () => {
     it("notifyForkchoiceUpdate with retry when pay load attributes", async function () {
       this.timeout("10 min");
 
-      errorResponsesBeforeSuccess = defaultExecutionEngineHttpOpts.retryAttempts - 1;
+      errorResponsesBeforeSuccess = retryAttempts - 1;
       const forkChoiceHeadData = {
         headBlockHash: "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
         safeBlockHash: "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",

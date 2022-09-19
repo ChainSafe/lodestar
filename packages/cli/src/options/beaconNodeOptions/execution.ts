@@ -3,10 +3,10 @@ import {defaultOptions, IBeaconNodeOptions} from "@lodestar/beacon-node";
 import {ICliCommandOptions, extractJwtHexSecret} from "../../util/index.js";
 
 export type ExecutionEngineArgs = {
-  "execution.urls": string[];
-  "execution.timeout": number;
-  "execution.retryAttempts": number;
-  "execution.retryDelay": number;
+  "execution.urls"?: string[];
+  "execution.timeout"?: number;
+  "execution.retryAttempts"?: number;
+  "execution.retryDelay"?: number;
   "execution.engineMock"?: boolean;
   "jwt-secret"?: string;
 };
@@ -38,32 +38,28 @@ export const options: ICliCommandOptions<ExecutionEngineArgs> = {
   "execution.urls": {
     description: "Urls to execution client engine API",
     type: "array",
-    defaultDescription:
-      defaultOptions.executionEngine.mode === "http" ? defaultOptions.executionEngine.urls.join(" ") : "",
+    defaultDescription: defaultOptions.executionEngine.urls.join(","),
     group: "execution",
   },
 
   "execution.timeout": {
     description: "Timeout in miliseconds for execution engine API HTTP client",
     type: "number",
-    defaultDescription:
-      defaultOptions.executionEngine.mode === "http" ? String(defaultOptions.executionEngine.timeout) : "",
+    defaultDescription: String(defaultOptions.executionEngine.timeout),
     group: "execution",
   },
 
   "execution.retryAttempts": {
     description: "Number of retry attempts when calling execution engine API",
     type: "number",
-    defaultDescription:
-      defaultOptions.executionEngine.mode === "http" ? String(defaultOptions.executionEngine.retryAttempts) : "1",
+    defaultDescription: String(defaultOptions.executionEngine.retryAttempts),
     group: "execution",
   },
 
   "execution.retryDelay": {
     description: "Delay time in milliseconds between retries when retrying calls to the execution engine API",
     type: "number",
-    defaultDescription:
-      defaultOptions.executionEngine.mode === "http" ? String(defaultOptions.executionEngine.retryDelay) : "0",
+    defaultDescription: String(defaultOptions.executionEngine.retryDelay),
     group: "execution",
   },
 

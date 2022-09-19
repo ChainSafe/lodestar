@@ -3,10 +3,10 @@ import {ICliCommandOptions, readFile} from "../util/index.js";
 import {paramsOptions, IParamsArgs} from "./paramsOptions.js";
 
 interface IGlobalSingleArgs {
-  dataDir: string;
+  dataDir?: string;
   network?: NetworkName;
-  paramsFile: string;
-  preset: string;
+  paramsFile?: string;
+  preset?: string;
 }
 
 export const defaultNetwork: NetworkName = "mainnet";

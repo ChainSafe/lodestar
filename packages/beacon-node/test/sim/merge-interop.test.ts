@@ -328,7 +328,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       options: {
         api: {rest: {enabled: true} as BeaconRestApiServerOpts},
         sync: {isSingleNode: true},
-        network: {allowPublishToZeroPeers: true, discv5: null},
+        network: {allowPublishToZeroPeers: true, discv5: false},
         // Now eth deposit/merge tracker methods directly available on engine endpoints
         eth1: {enabled: true, providerUrls: [engineApiUrl], jwtSecretHex},
         executionEngine: {urls: [engineApiUrl], jwtSecretHex},

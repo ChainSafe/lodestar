@@ -27,7 +27,7 @@ describe("cmds / beacon / args handler", () => {
       bootnodesFile,
     });
 
-    expect(options.network.discv5?.bootEnrs?.sort()).to.deep.equal([enr1, enr2]);
+    expect(options.network?.bootnodes?.sort()).to.deep.equal([enr1, enr2]);
   });
 
   it("Over-write ENR fields", async () => {
@@ -73,7 +73,7 @@ describe("cmds / beacon / args handler", () => {
     });
 
     // Okay to hardcode, since this value will never change
-    expect(options.eth1.depositContractDeployBlock).equal(11052984, "Wrong mainnet eth1.depositContractDeployBlock");
+    expect(options.eth1?.depositContractDeployBlock).equal(11052984, "Wrong mainnet eth1.depositContractDeployBlock");
   });
 
   it("Apply custom network name from config file", async () => {

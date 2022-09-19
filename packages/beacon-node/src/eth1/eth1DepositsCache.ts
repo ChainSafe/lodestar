@@ -10,15 +10,17 @@ import {getDepositsWithProofs} from "./utils/deposits.js";
 import {Eth1Error, Eth1ErrorCode} from "./errors.js";
 import {Eth1Block} from "./interface.js";
 
+export type Eth1DepositsCacheOpts = {
+  unsafeAllowDepositDataOverwrite?: boolean;
+};
+
 export class Eth1DepositsCache {
-  unsafeAllowDepositDataOverwrite: boolean;
   db: IBeaconDb;
   config: IChainForkConfig;
 
-  constructor(opts: {unsafeAllowDepositDataOverwrite: boolean}, config: IChainForkConfig, db: IBeaconDb) {
+  constructor(private readonly opts: Eth1DepositsCacheOpts, config: IChainForkConfig, db: IBeaconDb) {
     this.config = config;
     this.db = db;
-    this.unsafeAllowDepositDataOverwrite = opts.unsafeAllowDepositDataOverwrite;
   }
 
   /**
@@ -68,7 +70,7 @@ export class Eth1DepositsCache {
       const newIndex = firstEvent.index;
       const lastLogIndex = lastLog.index;
 
-      if (!this.unsafeAllowDepositDataOverwrite && firstEvent.index <= lastLog.index) {
+      if (!this.opts.unsafeAllowDepositDataOverwrite && firstEvent.index <= lastLog.index) {
         // lastLogIndex - newIndex + 1 events are duplicate since this is a consecutive log
         // as asserted by assertConsecutiveDeposits. Splice those events out from depositEvents.
         const skipEvents = depositEvents.splice(0, lastLogIndex - newIndex + 1);

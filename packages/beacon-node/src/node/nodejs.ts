@@ -7,7 +7,6 @@ import {phase0} from "@lodestar/types";
 import {ILogger} from "@lodestar/utils";
 import {Api} from "@lodestar/api";
 import {BeaconStateAllForks} from "@lodestar/state-transition";
-import {ProcessShutdownCallback} from "@lodestar/validator";
 
 import {IBeaconDb} from "../db/index.js";
 import {INetwork, Network, getReqRespHandlers} from "../network/index.js";
@@ -19,7 +18,7 @@ import {getApi, BeaconRestApiServer} from "../api/index.js";
 import {initializeExecutionEngine, initializeExecutionBuilder} from "../execution/index.js";
 import {initializeEth1ForBlockProduction} from "../eth1/index.js";
 import {createLibp2pMetrics} from "../metrics/metrics/libp2p.js";
-import {IBeaconNodeOptions} from "./options.js";
+import {defaultOptions, IBeaconNodeOptions} from "./options.js";
 import {runNodeNotifier} from "./notifier.js";
 
 export * from "./options.js";
@@ -44,7 +43,11 @@ export interface IBeaconNodeInitModules {
   config: IBeaconConfig;
   db: IBeaconDb;
   logger: ILogger;
-  processShutdownCallback: ProcessShutdownCallback;
+  /**
+   * Callback to request a parent process to shudown.
+   * This could be an AbortController, but sending a message upwards is very useful to log a reason for shudown
+   */
+  processShutdownCallback: (err: Error) => void;
   libp2p: Libp2p;
   anchorState: BeaconStateAllForks;
   wsCheckpoint?: phase0.Checkpoint;
@@ -141,13 +144,19 @@ export class BeaconNode {
     setMaxListeners(Infinity, controller.signal);
     const signal = controller.signal;
 
+    // Use nullish coalescing to apply default enabled boolean only if not set, both if false and true
+    const metricsEnabled = opts.metrics?.enabled ?? defaultOptions.metrics.enabled;
+    const builderEnabled = opts.executionBuilder?.enabled ?? defaultOptions.executionBuilder.enabled;
+    const backfillSyncEnabled = opts.sync?.backfillEnabled ?? defaultOptions.sync.backfillEnabled;
+    const apiRestEnabled = opts.api?.rest?.enabled ?? defaultOptions.api.rest.enabled;
+
     // start db if not already started
     await db.start();
 
     let metrics = null;
-    if (opts.metrics.enabled) {
+    if (metricsEnabled) {
       metrics = createMetrics(
-        opts.metrics,
+        opts.metrics ?? {},
         config,
         anchorState,
         logger.child({module: LoggerModule.vmon}),
@@ -159,30 +168,28 @@ export class BeaconNode {
       createLibp2pMetrics(libp2p, metrics.register);
     }
 
-    const chain = new BeaconChain(opts.chain, {
+    const chain = new BeaconChain(opts.chain ?? {}, {
       config,
       db,
       logger: logger.child({module: LoggerModule.chain}),
       processShutdownCallback,
       metrics,
       anchorState,
-      eth1: initializeEth1ForBlockProduction(opts.eth1, {
+      eth1: initializeEth1ForBlockProduction(opts.eth1 ?? {}, {
         config,
         db,
         metrics,
         logger: logger.child({module: LoggerModule.eth1}),
         signal,
       }),
-      executionEngine: initializeExecutionEngine(opts.executionEngine, {metrics, signal}),
-      executionBuilder: opts.executionBuilder.enabled
-        ? initializeExecutionBuilder(opts.executionBuilder, config)
-        : undefined,
+      executionEngine: initializeExecutionEngine(opts.executionEngine ?? {}, {metrics, signal}),
+      executionBuilder: builderEnabled ? initializeExecutionBuilder(opts.executionBuilder ?? {}, config) : undefined,
     });
 
     // Load persisted data from disk to in-memory caches
     await chain.loadFromDisk();
 
-    const network = new Network(opts.network, {
+    const network = new Network(opts.network ?? {}, {
       config,
       libp2p,
       logger: logger.child({module: LoggerModule.network}),
@@ -196,7 +203,7 @@ export class BeaconNode {
     // See https://github.com/ChainSafe/lodestar/issues/4543
     await network.start();
 
-    const sync = new BeaconSync(opts.sync, {
+    const sync = new BeaconSync(opts.sync ?? {}, {
       config,
       db,
       chain,
@@ -206,22 +213,21 @@ export class BeaconNode {
       logger: logger.child({module: LoggerModule.sync}),
     });
 
-    const backfillSync =
-      opts.sync.backfillBatchSize > 0
-        ? await BackfillSync.init(opts.sync, {
-            config,
-            db,
-            chain,
-            metrics,
-            network,
-            wsCheckpoint,
-            anchorState,
-            logger: logger.child({module: LoggerModule.backfill}),
-            signal,
-          })
-        : null;
+    const backfillSync = backfillSyncEnabled
+      ? await BackfillSync.init(opts.sync ?? {}, {
+          config,
+          db,
+          chain,
+          metrics,
+          network,
+          wsCheckpoint,
+          anchorState,
+          logger: logger.child({module: LoggerModule.backfill}),
+          signal,
+        })
+      : null;
 
-    const api = getApi(opts.api, {
+    const api = getApi(opts.api ?? {}, {
       config,
       logger: logger.child({module: LoggerModule.api}),
       db,
@@ -232,7 +238,7 @@ export class BeaconNode {
     });
 
     const metricsServer = metrics
-      ? new HttpMetricsServer(opts.metrics, {
+      ? new HttpMetricsServer(opts.metrics ?? {}, {
           register: metrics.register,
           logger: logger.child({module: LoggerModule.metrics}),
         })
@@ -241,13 +247,13 @@ export class BeaconNode {
       await metricsServer.start();
     }
 
-    const restApi = new BeaconRestApiServer(opts.api.rest, {
+    const restApi = new BeaconRestApiServer(opts.api?.rest ?? {}, {
       config,
       logger: logger.child({module: LoggerModule.rest}),
       api,
       metrics: metrics ? metrics.apiRest : null,
     });
-    if (opts.api.rest.enabled) {
+    if (apiRestEnabled) {
       await restApi.listen();
     }
 

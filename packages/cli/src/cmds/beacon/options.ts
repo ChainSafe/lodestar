@@ -12,6 +12,7 @@ interface IBeaconExtraArgs {
   checkpointSyncUrl?: string;
   checkpointState?: string;
   wssCheckpoint?: string;
+  attachToGlobalThis?: boolean;
   beaconDir?: string;
   dbDir?: string;
   persistInvalidSszObjectsDir?: string;
@@ -61,6 +62,12 @@ export const beaconExtraOptions: ICliCommandOptions<IBeaconExtraArgs> = {
       "Start beacon node off a state at the provided weak subjectivity checkpoint, to be supplied in <blockRoot>:<epoch> format. For example, 0x1234:100 will sync and start off from the weakSubjectivity state at checkpoint of epoch 100 with block root 0x1234.",
     type: "string",
     group: "weak subjectivity",
+  },
+
+  attachToGlobalThis: {
+    hidden: true,
+    description: "Attach the beacon node to `globalThis`. Useful to inspect a running beacon node.",
+    type: "boolean",
   },
 
   beaconDir: {
@@ -134,16 +141,7 @@ const enrOptions: Record<string, Options> = {
   },
 };
 
-export type DebugArgs = {attachToGlobalThis: boolean};
-export const debugOptions: ICliCommandOptions<DebugArgs> = {
-  attachToGlobalThis: {
-    hidden: true,
-    description: "Attach the beacon node to `globalThis`. Useful to inspect a running beacon node.",
-    type: "boolean",
-  },
-};
-
-export type IBeaconArgs = IBeaconExtraArgs & ILogArgs & IBeaconPaths & IBeaconNodeArgs & IENRArgs & DebugArgs;
+export type IBeaconArgs = IBeaconExtraArgs & ILogArgs & IBeaconPaths & IBeaconNodeArgs & IENRArgs;
 
 export const beaconOptions: {[k: string]: Options} = {
   ...beaconExtraOptions,
@@ -151,5 +149,4 @@ export const beaconOptions: {[k: string]: Options} = {
   ...beaconNodeOptions,
   ...paramsOptions,
   ...enrOptions,
-  ...debugOptions,
 };

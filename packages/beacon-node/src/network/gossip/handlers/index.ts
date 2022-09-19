@@ -34,7 +34,7 @@ import {PeerAction} from "../../peers/index.js";
  * Gossip handler options as part of network options
  */
 export type GossipHandlerOpts = {
-  dontSendGossipAttestationsToForkchoice: boolean;
+  dontSendGossipAttestationsToForkchoice?: boolean;
 };
 
 /**

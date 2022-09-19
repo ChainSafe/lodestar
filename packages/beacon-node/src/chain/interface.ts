@@ -41,6 +41,12 @@ export {BlockType, AssembledBlockType};
 export {ProposerPreparationData};
 
 /**
+ * Callback to request a parent process to shudown.
+ * This could be an AbortController, but sending a message upwards is very useful to log a reason for shudown
+ */
+export type ProcessShutdownCallback = (err: Error) => void;
+
+/**
  * The IBeaconChain service deals with processing incoming blocks, advancing a state transition
  * and applying the fork choice rule to update the chain head
  */

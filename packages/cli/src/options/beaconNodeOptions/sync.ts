@@ -1,10 +1,10 @@
-import {defaultOptions, IBeaconNodeOptions} from "@lodestar/beacon-node";
+import {IBeaconNodeOptions} from "@lodestar/beacon-node";
 import {ICliCommandOptions} from "../../util/index.js";
 
 export interface ISyncArgs {
-  "sync.isSingleNode": boolean;
-  "sync.disableProcessAsChainSegment": boolean;
-  "sync.backfillBatchSize": number;
+  "sync.isSingleNode"?: boolean;
+  "sync.disableProcessAsChainSegment"?: boolean;
+  "sync.backfillBatchSize"?: number;
 }
 
 export function parseArgs(args: ISyncArgs): IBeaconNodeOptions["sync"] {
@@ -22,7 +22,6 @@ export const options: ICliCommandOptions<ISyncArgs> = {
     description:
       "Allow node to consider itself synced without being connected to a peer. \
 Use only for local networks with a single node, can be dangerous in regular networks.",
-    defaultDescription: String(defaultOptions.sync.isSingleNode),
     group: "sync",
   },
 
@@ -31,7 +30,6 @@ Use only for local networks with a single node, can be dangerous in regular netw
     type: "boolean",
     description:
       "For RangeSync disable processing batches of blocks at once. Should only be used for debugging or testing.",
-    defaultDescription: String(defaultOptions.sync.disableProcessAsChainSegment),
     group: "sync",
   },
 
@@ -39,7 +37,6 @@ Use only for local networks with a single node, can be dangerous in regular netw
     hidden: true,
     type: "number",
     description: "Batch size for backfill sync to sync/process blocks, set non zero to enable backfill sync",
-    defaultDescription: String(defaultOptions.sync.backfillBatchSize),
     group: "sync",
   },
 };

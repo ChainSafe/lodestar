@@ -1,6 +1,5 @@
 import {itBench} from "@dapplion/benchmark";
 import {MapDef} from "@lodestar/utils";
-import {defaultNetworkOptions} from "../../../../src/network/options.js";
 import {RateTracker} from "../../../../src/network/reqresp/rateTracker.js";
 
 /**
@@ -8,7 +7,7 @@ import {RateTracker} from "../../../../src/network/reqresp/rateTracker.js";
  * But adding sinon mock timer here make it impossible to benchmark.
  */
 describe("RateTracker", () => {
-  const {rateTrackerTimeoutMs} = defaultNetworkOptions;
+  const rateTrackerTimeoutMs = 60 * 1000;
   const iteration = 1_000_000;
 
   // from object count per request make it fit the quota

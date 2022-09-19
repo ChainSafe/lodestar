@@ -50,6 +50,11 @@ export enum ExcessPeerDisconnectReason {
   TOO_GROUPED_SUBNET = "too_grouped_subnet",
 }
 
+export type PrioritizePeersOpts = {
+  targetPeers: number;
+  maxPeers: number;
+};
+
 /**
  * Prioritize which peers to disconect and which to connect. Conditions:
  * - Reach `targetPeers`
@@ -66,7 +71,7 @@ export function prioritizePeers(
   }[],
   activeAttnets: RequestedSubnet[],
   activeSyncnets: RequestedSubnet[],
-  {targetPeers, maxPeers}: {targetPeers: number; maxPeers: number},
+  {targetPeers, maxPeers}: PrioritizePeersOpts,
   targetSubnetPeers = TARGET_SUBNET_PEERS
 ): {
   peersToConnect: number;

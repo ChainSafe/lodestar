@@ -6,14 +6,16 @@ import {byteArrayEquals, toHexString} from "@chainsafe/ssz";
 import {IExecutionBuilder} from "./interface.js";
 
 export type ExecutionBuilderHttpOpts = {
-  enabled: boolean;
-  urls: string[];
+  enabled?: boolean;
+  urls?: string[];
   timeout?: number;
   // Only required for merge-mock runs, no need to expose it to cli
   issueLocalFcUForBlockProduction?: boolean;
 };
 
-export const defaultExecutionBuilderHttpOpts: ExecutionBuilderHttpOpts = {
+export const defaultExecutionBuilderHttpOpts: Required<
+  Pick<ExecutionBuilderHttpOpts, "enabled" | "urls" | "timeout">
+> = {
   enabled: false,
   urls: ["http://localhost:8661"],
   timeout: 12000,
@@ -26,7 +28,7 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
   status = false;
 
   constructor(opts: ExecutionBuilderHttpOpts, config: IChainForkConfig) {
-    const baseUrl = opts.urls[0];
+    const baseUrl = (opts.urls ?? defaultExecutionBuilderHttpOpts.urls)[0];
     if (!baseUrl) throw Error("No Url provided for executionBuilder");
     this.api = getClient({baseUrl, timeoutMs: opts.timeout}, {config});
     this.issueLocalFcUForBlockProduction = opts.issueLocalFcUForBlockProduction;

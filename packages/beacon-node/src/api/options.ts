@@ -2,12 +2,11 @@ import {beaconRestApiServerOpts, BeaconRestApiServerOpts} from "./rest/index.js"
 
 export interface IApiOptions {
   maxGindicesInProof?: number;
-  rest: BeaconRestApiServerOpts;
+  rest?: BeaconRestApiServerOpts;
   version?: string;
 }
 
-export const defaultApiOptions: IApiOptions = {
+export const defaultApiOptions = {
   maxGindicesInProof: 512,
   rest: beaconRestApiServerOpts,
-  version: "dev",
 };

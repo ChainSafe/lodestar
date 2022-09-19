@@ -10,7 +10,7 @@ import {phase0, ssz} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 
 import {Network, NetworkEvent, ReqRespMethod, getReqRespHandlers} from "../../../src/network/index.js";
-import {defaultNetworkOptions, INetworkOptions} from "../../../src/network/options.js";
+import {INetworkOptions} from "../../../src/network/options.js";
 import {GoodByeReasonCode} from "../../../src/constants/index.js";
 
 import {generateEmptySignedBlock} from "../../utils/block.js";
@@ -50,18 +50,10 @@ describe("network", function () {
     enr.setLocationMultiaddr(multiaddr(bindAddrUdp));
 
     return {
-      ...defaultNetworkOptions,
       maxPeers: 1,
       targetPeers: 1,
-      bootMultiaddrs: [],
-      localMultiaddrs: [],
-      discv5FirstQueryDelayMs: 0,
-      discv5: {
-        enr,
-        bindAddr: bindAddrUdp,
-        bootEnrs: [],
-        enabled: true,
-      },
+      discv5: false,
+      enr,
     };
   }
 

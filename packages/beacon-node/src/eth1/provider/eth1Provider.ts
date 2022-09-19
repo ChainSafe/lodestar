@@ -6,9 +6,9 @@ import {fromHex} from "@lodestar/utils";
 import {linspace} from "../../util/numpy.js";
 import {depositEventTopics, parseDepositLog} from "../utils/depositContract.js";
 import {Eth1Block, IEth1Provider} from "../interface.js";
-import {Eth1Options} from "../options.js";
 import {isValidAddress} from "../../util/address.js";
 import {EthJsonRpcBlockRaw} from "../interface.js";
+import {defaultEth1Options, Eth1ProviderOpts} from "../options.js";
 import {JsonRpcHttpClient, JsonRpcHttpClientMetrics, ReqOpts} from "./jsonRpcHttpClient.js";
 import {isJsonRpcTruncatedError, quantityToNum, numToQuantity, dataToBytes} from "./utils.js";
 
@@ -49,13 +49,13 @@ export class Eth1Provider implements IEth1Provider {
 
   constructor(
     config: Pick<IChainConfig, "DEPOSIT_CONTRACT_ADDRESS">,
-    opts: Pick<Eth1Options, "depositContractDeployBlock" | "providerUrls" | "jwtSecretHex">,
+    opts: Eth1ProviderOpts,
     signal?: AbortSignal,
     metrics?: JsonRpcHttpClientMetrics | null
   ) {
     this.deployBlock = opts.depositContractDeployBlock ?? 0;
     this.depositContractAddress = toHexString(config.DEPOSIT_CONTRACT_ADDRESS);
-    this.rpc = new JsonRpcHttpClient(opts.providerUrls, {
+    this.rpc = new JsonRpcHttpClient(opts.providerUrls ?? defaultEth1Options.providerUrls, {
       signal,
       // Don't fallback with is truncated error. Throw early and let the retry on this class handle it
       shouldNotFallback: isJsonRpcTruncatedError,

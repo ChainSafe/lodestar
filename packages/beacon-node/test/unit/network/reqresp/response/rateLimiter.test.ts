@@ -3,12 +3,12 @@ import {PeerId} from "@libp2p/interface-peer-id";
 import sinon, {SinonStubbedInstance} from "sinon";
 import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
 import {IPeerRpcScoreStore, PeerAction, PeerRpcScoreStore} from "../../../../../src/network/index.js";
-import {defaultNetworkOptions} from "../../../../../src/network/options.js";
-import {InboundRateLimiter} from "../../../../../src/network/reqresp/response/rateLimiter.js";
+import {defaultRateLimiterOpts, InboundRateLimiter} from "../../../../../src/network/reqresp/response/rateLimiter.js";
 import {Method, RequestTypedContainer} from "../../../../../src/network/reqresp/types.js";
 import {testLogger} from "../../../../utils/logger.js";
 
 describe("ResponseRateLimiter", () => {
+  const opts = defaultRateLimiterOpts;
   const logger = testLogger();
   let inboundRateLimiter: InboundRateLimiter;
   const sandbox = sinon.createSandbox();
@@ -17,7 +17,7 @@ describe("ResponseRateLimiter", () => {
   beforeEach(() => {
     peerRpcScoresStub = sandbox.createStubInstance(PeerRpcScoreStore) as IPeerRpcScoreStore &
       SinonStubbedInstance<PeerRpcScoreStore>;
-    inboundRateLimiter = new InboundRateLimiter(defaultNetworkOptions, {
+    inboundRateLimiter = new InboundRateLimiter(opts, {
       logger,
       peerRpcScores: peerRpcScoresStub,
       metrics: null,
@@ -40,7 +40,7 @@ describe("ResponseRateLimiter", () => {
   it("requestCountPeerLimit", async () => {
     const peerId = await createSecp256k1PeerId();
     const requestTyped = {method: Method.Ping, body: BigInt(1)} as RequestTypedContainer;
-    for (let i = 0; i < defaultNetworkOptions.requestCountPeerLimit; i++) {
+    for (let i = 0; i < opts.requestCountPeerLimit; i++) {
       expect(inboundRateLimiter.allowRequest(peerId, requestTyped)).to.equal(true);
     }
     const peerId2 = await createSecp256k1PeerId();
@@ -70,7 +70,7 @@ describe("ResponseRateLimiter", () => {
    * - Another peer requests 1 block => ok
    */
   it("blockCountTotalTracker", async () => {
-    const blockCount = Math.floor(defaultNetworkOptions.blockCountTotalLimit / 2);
+    const blockCount = Math.floor(opts.blockCountTotalLimit / 2);
     const requestTyped = {method: Method.BeaconBlocksByRange, body: {count: blockCount}} as RequestTypedContainer;
     for (let i = 0; i < 2; i++) {
       expect(inboundRateLimiter.allowRequest(await createSecp256k1PeerId(), requestTyped)).to.equal(true);
@@ -96,7 +96,7 @@ describe("ResponseRateLimiter", () => {
    * - Peer1 request 1 block => ok
    */
   it("blockCountPeerLimit", async () => {
-    const blockCount = Math.floor(defaultNetworkOptions.blockCountPeerLimit / 2);
+    const blockCount = Math.floor(opts.blockCountPeerLimit / 2);
     const requestTyped = {method: Method.BeaconBlocksByRange, body: {count: blockCount}} as RequestTypedContainer;
     const peerId = await createSecp256k1PeerId();
     for (let i = 0; i < 2; i++) {
@@ -143,7 +143,7 @@ describe("ResponseRateLimiter", () => {
 
     const startMem = process.memoryUsage().heapUsed;
 
-    const rateLimiter = new InboundRateLimiter(defaultNetworkOptions, {
+    const rateLimiter = new InboundRateLimiter(opts, {
       logger,
       peerRpcScores: peerRpcScoresStub,
       metrics: null,

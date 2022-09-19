@@ -3,12 +3,18 @@ import {Registry} from "prom-client";
 import {ILogger} from "@lodestar/utils";
 import {wrapError} from "../../util/wrapError.js";
 import {HistogramExtra} from "../utils/histogram.js";
+import {mergeOpts} from "../../util/object.js";
 import {HttpActiveSocketsTracker} from "../../api/rest/activeSockets.js";
 import {RegistryMetricCreator} from "../utils/registryMetricCreator.js";
 
 export type HttpMetricsServerOpts = {
-  port: number;
+  port?: number;
   address?: string;
+};
+
+export const defaultHttpMetricsServerOpts: Required<Pick<HttpMetricsServerOpts, "port" | "address">> = {
+  port: 8008,
+  address: "127.0.0.1",
 };
 
 export class HttpMetricsServer {
@@ -54,7 +60,7 @@ export class HttpMetricsServer {
   }
 
   async start(): Promise<void> {
-    const {port, address} = this.opts;
+    const {port, address} = mergeOpts(defaultHttpMetricsServerOpts, this.opts);
     this.logger.info("Starting metrics HTTP server", {port, address: address ?? "127.0.0.1"});
     const listen = this.server.listen.bind(this.server);
     return new Promise((resolve, reject) => {

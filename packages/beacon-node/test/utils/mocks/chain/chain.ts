@@ -5,7 +5,6 @@ import {phase0, allForks, UintNum64, Root, Slot, ssz, Uint16, UintBn64} from "@l
 import {IBeaconConfig} from "@lodestar/config";
 import {BeaconStateAllForks, CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {CheckpointWithHex, IForkChoice, ProtoBlock, ExecutionStatus} from "@lodestar/fork-choice";
-import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
 import {ILogger} from "@lodestar/utils";
 
 import {ChainEventEmitter, IBeaconChain} from "../../../../src/chain/index.js";
@@ -54,6 +53,8 @@ export interface IMockChainParams {
   config: IBeaconConfig;
 }
 
+const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
+
 export class MockBeaconChain implements IBeaconChain {
   readonly genesisTime: UintNum64;
   readonly genesisValidatorsRoot: Root;
@@ -65,7 +66,7 @@ export class MockBeaconChain implements IBeaconChain {
     persistInvalidSszObjectsDir: "",
     proposerBoostEnabled: false,
     safeSlotsToImportOptimistically: 0,
-    suggestedFeeRecipient: "0x0000000000000000000000000000000000000000",
+    suggestedFeeRecipient: ZERO_ADDRESS,
   };
   readonly anchorStateLatestBlockSlot: Slot;
 
@@ -97,9 +98,7 @@ export class MockBeaconChain implements IBeaconChain {
   readonly seenContributionAndProof = new SeenContributionAndProof(null);
   readonly seenBlockAttesters = new SeenBlockAttesters();
 
-  readonly beaconProposerCache = new BeaconProposerCache({
-    suggestedFeeRecipient: defaultValidatorOptions.suggestedFeeRecipient,
-  });
+  readonly beaconProposerCache = new BeaconProposerCache({suggestedFeeRecipient: ZERO_ADDRESS});
   readonly checkpointBalancesCache = new CheckpointBalancesCache();
 
   private state: BeaconStateAllForks;

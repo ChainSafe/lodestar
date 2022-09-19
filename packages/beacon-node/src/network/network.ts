@@ -11,7 +11,7 @@ import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {Epoch} from "@lodestar/types";
 import {IMetrics} from "../metrics/index.js";
 import {ChainEvent, IBeaconChain, IBeaconClock} from "../chain/index.js";
-import {INetworkOptions} from "./options.js";
+import {INetworkOptions, defaultNetworkOptions} from "./options.js";
 import {INetwork} from "./interface.js";
 import {ReqResp, IReqResp, IReqRespOptions, ReqRespHandlers} from "./reqresp/index.js";
 import {Eth2Gossipsub, GossipType, GossipHandlers, getGossipHandlers} from "./gossip/index.js";
@@ -23,6 +23,7 @@ import {INetworkEventBus, NetworkEventBus} from "./events.js";
 import {AttnetsService, SyncnetsService, CommitteeSubscription} from "./subnets/index.js";
 import {PeersData} from "./peers/peersData.js";
 import {getConnectionsMap} from "./util.js";
+import {getIp4MultiaddStr} from "./nodejs/util.js";
 
 interface INetworkModules {
   config: IBeaconConfig;
@@ -104,6 +105,10 @@ export class Network implements INetwork {
     this.attnetsService = new AttnetsService(config, chain, this.gossip, metadata, logger, opts);
     this.syncnetsService = new SyncnetsService(config, chain, this.gossip, metadata, logger, opts);
 
+    const discv5Enabled = opts.discv5 ?? defaultNetworkOptions.discv5;
+    const discv5Port = opts.discoveryPort ?? opts.port ?? defaultNetworkOptions.discoveryPort;
+    const discv5ListenAddress = opts.listenAddress ?? defaultNetworkOptions.listenAddress;
+
     this.peerManager = new PeerManager(
       {
         libp2p,
@@ -119,7 +124,18 @@ export class Network implements INetwork {
         networkEventBus,
         peersData: this.peersData,
       },
-      opts
+      {
+        ...opts,
+        discv5: discv5Enabled
+          ? {
+              enr: opts.enr ?? new ENR(),
+              bootnodeEnrs: opts.bootnodes ?? [],
+              bindMultiaddr: getIp4MultiaddStr(discv5ListenAddress, "udp", discv5Port),
+              discv5FirstQueryDelayMs: opts.discv5FirstQueryDelayMs,
+              connectToBootnodes: opts.connectToBootnodes,
+            }
+          : undefined,
+      }
     );
 
     this.chain.emitter.on(ChainEvent.clockEpoch, this.onEpoch);

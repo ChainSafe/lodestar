@@ -1,8 +1,12 @@
 import {SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY} from "@lodestar/params";
-import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
 import {ArchiverOpts} from "./archiver/index.js";
 import {ForkChoiceOpts} from "./forkChoice/index.js";
 import {LightClientServerOpts} from "./lightClient/index.js";
+
+export const DEFAULT_FEE_RECIPIENT = "0x0000000000000000000000000000000000000000";
+const DEFAULT_PROPOSER_BOOST_ENABLED = true;
+const DEFAULT_COMPUTE_UNREALIZED = true;
+const DEFAULT_COUNT_UNREALIZED_FULL = true;
 
 // eslint-disable-next-line @typescript-eslint/ban-types
 export type IChainOptions = BlockProcessOpts &
@@ -14,7 +18,7 @@ export type IChainOptions = BlockProcessOpts &
     persistInvalidSszObjects?: boolean;
     persistInvalidSszObjectsDir?: string;
     skipCreateStateCacheIfAvailable?: boolean;
-    suggestedFeeRecipient: string;
+    suggestedFeeRecipient?: string;
     maxSkipSlots?: number;
     /** Window to inspect missed slots for enabling/disabling builder circuit breaker */
     faultInspectionWindow?: number;
@@ -31,7 +35,7 @@ export type BlockProcessOpts = {
   /**
    * Override SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY
    */
-  safeSlotsToImportOptimistically: number;
+  safeSlotsToImportOptimistically?: number;
   /**
    * Assert progressive balances the same to EpochProcess
    */
@@ -47,14 +51,19 @@ export type BlockProcessOpts = {
   disableImportExecutionFcU?: boolean;
 };
 
-export const defaultChainOptions: IChainOptions = {
-  blsVerifyAllMainThread: false,
-  blsVerifyAllMultiThread: false,
-  disableBlsBatchVerify: false,
-  proposerBoostEnabled: true,
-  computeUnrealized: true,
-  countUnrealizedFull: false,
+export const defaultChainOptions: Required<
+  Pick<
+    IChainOptions,
+    | "safeSlotsToImportOptimistically"
+    | "suggestedFeeRecipient"
+    | "proposerBoostEnabled"
+    | "computeUnrealized"
+    | "countUnrealizedFull"
+  >
+> = {
   safeSlotsToImportOptimistically: SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY,
-  suggestedFeeRecipient: defaultValidatorOptions.suggestedFeeRecipient,
-  assertCorrectProgressiveBalances: false,
+  suggestedFeeRecipient: DEFAULT_FEE_RECIPIENT,
+  proposerBoostEnabled: DEFAULT_PROPOSER_BOOST_ENABLED,
+  computeUnrealized: DEFAULT_COMPUTE_UNREALIZED,
+  countUnrealizedFull: DEFAULT_COUNT_UNREALIZED_FULL,
 };

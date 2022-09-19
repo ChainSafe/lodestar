@@ -1,7 +1,6 @@
 import {Libp2p} from "libp2p";
 import {Connection} from "@libp2p/interface-connection";
 import {PeerId} from "@libp2p/interface-peer-id";
-import {IDiscv5DiscoveryInputOptions} from "@chainsafe/discv5";
 import {BitArray} from "@chainsafe/ssz";
 import {SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {IBeaconConfig} from "@lodestar/config";
@@ -17,7 +16,7 @@ import {ISubnetsService} from "../subnets/index.js";
 import {SubnetType} from "../metadata.js";
 import {Eth2Gossipsub} from "../gossip/gossipsub.js";
 import {PeersData, PeerData} from "./peersData.js";
-import {PeerDiscovery, SubnetDiscvQueryMs} from "./discover.js";
+import {PeerDiscovery, PeerDiscoveryOpts, SubnetDiscvQueryMs} from "./discover.js";
 import {IPeerRpcScoreStore, ScoreState, updateGossipsubScores} from "./score.js";
 import {clientFromAgentVersion, ClientKind} from "./client.js";
 import {
@@ -26,7 +25,14 @@ import {
   assertPeerRelevance,
   prioritizePeers,
   renderIrrelevantPeerType,
+  PrioritizePeersOpts,
 } from "./utils/index.js";
+
+export const DEFAULT_P2P_PORT = 9000;
+export const DEFAULT_TARGET_PEERS = 50;
+/** Allow some room above targetPeers for new inbound peers */
+export const DEFAULT_MAX_PEERS_FACTOR = 1.1;
+export const DEFAULT_MAX_PEERS = Math.round(DEFAULT_TARGET_PEERS * DEFAULT_MAX_PEERS_FACTOR);
 
 /** heartbeat performs regular updates such as updating reputations and performing discovery requests */
 const HEARTBEAT_INTERVAL_MS = 30 * 1000;
@@ -52,25 +58,17 @@ const ALLOWED_NEGATIVE_GOSSIPSUB_FACTOR = 0.1;
 // The Node should compute a recomended value every interval and log a warning
 // to terminal if it deviates significantly from the user's settings
 
-export type PeerManagerOpts = {
+export interface PeerManagerOpts {
   /** The target number of peers we would like to connect to. */
-  targetPeers: number;
+  targetPeers?: number;
   /** The maximum number of peers we allow (exceptions for subnet peers) */
-  maxPeers: number;
-  /**
-   * Delay the 1st query after starting discv5
-   * See https://github.com/ChainSafe/lodestar/issues/3423
-   */
-  discv5FirstQueryDelayMs: number;
-  /**
-   * If null, Don't run discv5 queries, nor connect to cached peers in the peerStore
-   */
-  discv5: IDiscv5DiscoveryInputOptions | null;
-  /**
-   * If set to true, connect to Discv5 bootnodes. If not set or false, do not connect
-   */
-  connectToDiscv5Bootnodes?: boolean;
-};
+  maxPeers?: number;
+  /** Enable discv5 discovery, defaults to true */
+  discv5?: Pick<
+    PeerDiscoveryOpts,
+    "enr" | "bootnodeEnrs" | "bindMultiaddr" | "discv5FirstQueryDelayMs" | "discv5Opts" | "connectToBootnodes"
+  >;
+}
 
 export type PeerManagerModules = {
   libp2p: Libp2p;
@@ -121,7 +119,7 @@ export class PeerManager {
   // A single map of connected peers with all necessary data to handle PINGs, STATUS, and metrics
   private connectedPeers: Map<PeerIdStr, PeerData>;
 
-  private opts: PeerManagerOpts;
+  private opts: PrioritizePeersOpts;
   private intervals: NodeJS.Timeout[] = [];
 
   constructor(modules: PeerManagerModules, opts: PeerManagerOpts) {
@@ -137,17 +135,13 @@ export class PeerManager {
     this.peerRpcScores = modules.peerRpcScores;
     this.networkEventBus = modules.networkEventBus;
     this.connectedPeers = modules.peersData.connectedPeers;
-    this.opts = opts;
 
-    // opts.discv5 === null, discovery is disabled
-    this.discovery =
-      opts.discv5 &&
-      new PeerDiscovery(modules, {
-        maxPeers: opts.maxPeers,
-        discv5FirstQueryDelayMs: opts.discv5FirstQueryDelayMs,
-        discv5: opts.discv5,
-        connectToDiscv5Bootnodes: opts.connectToDiscv5Bootnodes,
-      });
+    const targetPeers = opts.targetPeers ?? DEFAULT_TARGET_PEERS;
+    const maxPeers = opts.maxPeers ?? Math.round(targetPeers * DEFAULT_MAX_PEERS_FACTOR);
+    this.opts = {targetPeers, maxPeers};
+
+    // opts.discv5 === undefined | false -> disabled
+    this.discovery = opts.discv5 ? new PeerDiscovery(modules, {maxPeers, ...opts.discv5}) : null;
 
     const {metrics} = modules;
     if (metrics) {

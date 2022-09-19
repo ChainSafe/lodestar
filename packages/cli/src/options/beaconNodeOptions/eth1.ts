@@ -4,12 +4,12 @@ import {ICliCommandOptions, extractJwtHexSecret} from "../../util/index.js";
 import {ExecutionEngineArgs} from "./execution.js";
 
 export interface IEth1Args {
-  eth1: boolean;
-  "eth1.providerUrls": string[];
-  "eth1.depositContractDeployBlock": number;
-  "eth1.disableEth1DepositDataTracker": boolean;
-  "eth1.unsafeAllowDepositDataOverwrite": boolean;
-  "eth1.forcedEth1DataVote": string;
+  eth1?: boolean;
+  "eth1.providerUrls"?: string[];
+  "eth1.depositContractDeployBlock"?: number;
+  "eth1.disableEth1DepositDataTracker"?: boolean;
+  "eth1.unsafeAllowDepositDataOverwrite"?: boolean;
+  "eth1.forcedEth1DataVote"?: string;
 }
 
 export function parseArgs(args: IEth1Args & Partial<ExecutionEngineArgs>): IBeaconNodeOptions["eth1"] {
@@ -50,7 +50,7 @@ export const options: ICliCommandOptions<IEth1Args> = {
     description:
       "Urls to Eth1 node with enabled rpc. If not explicity provided and execution endpoint provided via execution.urls, it will use execution.urls. Otherwise will try connecting on the specified default(s)",
     type: "array",
-    defaultDescription: defaultOptions.eth1.providerUrls.join(" "),
+    defaultDescription: defaultOptions.eth1.providerUrls.join(","),
     group: "eth1",
   },
 
@@ -58,7 +58,6 @@ export const options: ICliCommandOptions<IEth1Args> = {
     hidden: true,
     description: "Block number at which the deposit contract contract was deployed",
     type: "number",
-    defaultDescription: String(defaultOptions.eth1.depositContractDeployBlock),
     group: "eth1",
   },
 
@@ -66,7 +65,6 @@ export const options: ICliCommandOptions<IEth1Args> = {
     hidden: true,
     description: "Disable Eth1DepositDataTracker modules",
     type: "boolean",
-    defaultDescription: String(defaultOptions.eth1.disableEth1DepositDataTracker),
     group: "eth1",
   },
 
@@ -75,7 +73,6 @@ export const options: ICliCommandOptions<IEth1Args> = {
     description:
       "Allow the deposit tracker to overwrite previously fetched and saved deposit event data. Warning!!! This is an unsafe operation, so enable this flag only if you know what you are doing.",
     type: "boolean",
-    defaultDescription: String(defaultOptions.eth1.unsafeAllowDepositDataOverwrite),
     group: "eth1",
   },
 

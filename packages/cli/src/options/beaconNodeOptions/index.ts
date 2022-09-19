@@ -1,5 +1,4 @@
 import {IBeaconNodeOptions} from "@lodestar/beacon-node";
-import {RecursivePartial} from "@lodestar/utils";
 import {removeUndefinedRecursive} from "../../util/index.js";
 import * as api from "./api.js";
 import * as builder from "./builder.js";
@@ -19,7 +18,7 @@ export type IBeaconNodeArgs = api.IApiArgs &
   network.INetworkArgs &
   sync.ISyncArgs;
 
-export function parseBeaconNodeArgs(args: IBeaconNodeArgs): RecursivePartial<IBeaconNodeOptions> {
+export function parseBeaconNodeArgs(args: IBeaconNodeArgs): IBeaconNodeOptions {
   // Remove undefined values to allow deepmerge to inject default values downstream
   return removeUndefinedRecursive({
     api: api.parseArgs(args),

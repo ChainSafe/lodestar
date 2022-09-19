@@ -3,7 +3,7 @@ import {fromHexString} from "@chainsafe/ssz";
 import {ProofType, Tree} from "@chainsafe/persistent-merkle-tree";
 import {ApiModules} from "../types.js";
 import {resolveStateId} from "../beacon/state/utils.js";
-import {IApiOptions} from "../../options.js";
+import {IApiOptions, defaultApiOptions} from "../../options.js";
 
 // TODO: Import from lightclient/server package
 
@@ -13,7 +13,7 @@ export function getLightclientApi(
 ): routes.lightclient.Api {
   // It's currently possible to request gigantic proofs (eg: a proof of the entire beacon state)
   // We want some some sort of resistance against this DoS vector.
-  const maxGindicesInProof = opts.maxGindicesInProof ?? 512;
+  const maxGindicesInProof = opts.maxGindicesInProof ?? defaultApiOptions.maxGindicesInProof;
 
   return {
     async getStateProof(stateId, jsonPaths) {

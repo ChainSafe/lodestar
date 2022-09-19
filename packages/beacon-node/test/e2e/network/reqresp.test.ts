@@ -8,7 +8,7 @@ import {altair, phase0, ssz} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
 import {BitArray} from "@chainsafe/ssz";
 import {IReqRespOptions, Network} from "../../../src/network/index.js";
-import {defaultNetworkOptions, INetworkOptions} from "../../../src/network/options.js";
+import {INetworkOptions} from "../../../src/network/options.js";
 import {Method, Encoding} from "../../../src/network/reqresp/types.js";
 import {ReqRespHandlers} from "../../../src/network/reqresp/handlers/index.js";
 import {RequestError, RequestErrorCode} from "../../../src/network/reqresp/request/index.js";
@@ -36,13 +36,9 @@ describe("network / ReqResp", function () {
 
   const multiaddr = "/ip4/127.0.0.1/tcp/0";
   const networkOptsDefault: INetworkOptions = {
-    ...defaultNetworkOptions,
     maxPeers: 1,
     targetPeers: 1,
-    bootMultiaddrs: [],
-    localMultiaddrs: [],
-    discv5FirstQueryDelayMs: 0,
-    discv5: null,
+    discv5: false,
   };
   const state = generateState();
   const beaconConfig = createIBeaconConfig(config, state.genesisValidatorsRoot);

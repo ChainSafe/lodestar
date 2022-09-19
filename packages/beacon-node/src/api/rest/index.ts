@@ -2,16 +2,19 @@ import {Api} from "@lodestar/api";
 import {registerRoutes} from "@lodestar/api/beacon/server";
 import {ErrorAborted, ILogger} from "@lodestar/utils";
 import {IChainForkConfig} from "@lodestar/config";
+import {mergeOpts} from "../../util/object.js";
 import {NodeIsSyncing} from "../impl/errors.js";
 import {RestApiServer, RestApiServerModules, RestApiServerMetrics, RestApiServerOpts} from "./base.js";
 export {allNamespaces} from "@lodestar/api";
 
-export type BeaconRestApiServerOpts = Omit<RestApiServerOpts, "bearerToken"> & {
-  enabled: boolean;
-  api: (keyof Api)[];
+export type BeaconRestApiServerOpts = Partial<Omit<RestApiServerOpts, "bearerToken">> & {
+  enabled?: boolean;
+  api?: (keyof Api)[];
 };
 
-export const beaconRestApiServerOpts: BeaconRestApiServerOpts = {
+export const beaconRestApiServerOpts: Required<
+  Pick<BeaconRestApiServerOpts, "enabled" | "api" | "address" | "port" | "cors" | "bodyLimit">
+> = {
   enabled: true,
   // ApiNamespace "debug" is not turned on by default
   api: ["beacon", "config", "events", "node", "validator"],
@@ -34,7 +37,7 @@ export type BeaconRestApiServerModules = RestApiServerModules & {
  */
 export class BeaconRestApiServer extends RestApiServer {
   constructor(optsArg: Partial<BeaconRestApiServerOpts>, modules: BeaconRestApiServerModules) {
-    const opts = {...beaconRestApiServerOpts, ...optsArg};
+    const opts = mergeOpts(beaconRestApiServerOpts, optsArg);
 
     super(opts, modules);
 

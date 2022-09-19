@@ -1,6 +1,7 @@
 import {PeerId} from "@libp2p/interface-peer-id";
 import {ILogger, MapDef} from "@lodestar/utils";
 import {IMetrics} from "../../../metrics/index.js";
+import {mergeOpts} from "../../../util/object.js";
 import {IPeerRpcScoreStore, PeerAction} from "../../peers/score.js";
 import {IRateLimiter} from "../interface.js";
 import {RateTracker} from "../rateTracker.js";
@@ -20,10 +21,10 @@ interface IRateLimiterModules {
  * - rateTrackerTimeoutMs: the time period we want to track total requests or objects, normally 1 min
  */
 export type RateLimiterOpts = {
-  requestCountPeerLimit: number;
-  blockCountPeerLimit: number;
-  blockCountTotalLimit: number;
-  rateTrackerTimeoutMs: number;
+  requestCountPeerLimit?: number;
+  blockCountPeerLimit?: number;
+  blockCountTotalLimit?: number;
+  rateTrackerTimeoutMs?: number;
 };
 
 /** Sometimes a peer request comes AFTER libp2p disconnect event, check for such peers every 10 minutes */
@@ -39,7 +40,7 @@ const DISCONNECTED_TIMEOUT_MS = 5 * 60 * 1000;
  * - blockCountTotalLimit: allow to serve 2000 (blocks) for all peer within 1 minute (4 x blockCountPeerLimit)
  * - rateTrackerTimeoutMs: 1 minute
  */
-export const defaultRateLimiterOpts = {
+export const defaultRateLimiterOpts: Required<RateLimiterOpts> = {
   requestCountPeerLimit: 50,
   blockCountPeerLimit: 500,
   blockCountTotalLimit: 2000,
@@ -67,15 +68,17 @@ export class InboundRateLimiter implements IRateLimiter {
   private cleanupInterval: NodeJS.Timeout | undefined = undefined;
 
   constructor(opts: RateLimiterOpts, modules: IRateLimiterModules) {
-    this.requestCountTrackersByPeer = new MapDef(
-      () => new RateTracker({limit: opts.requestCountPeerLimit, timeoutMs: opts.rateTrackerTimeoutMs})
+    const {requestCountPeerLimit, blockCountPeerLimit, blockCountTotalLimit, rateTrackerTimeoutMs} = mergeOpts(
+      defaultRateLimiterOpts,
+      opts
     );
-    this.blockCountTotalTracker = new RateTracker({
-      limit: opts.blockCountTotalLimit,
-      timeoutMs: opts.rateTrackerTimeoutMs,
-    });
+
+    this.requestCountTrackersByPeer = new MapDef(
+      () => new RateTracker({limit: requestCountPeerLimit, timeoutMs: rateTrackerTimeoutMs})
+    );
+    this.blockCountTotalTracker = new RateTracker({limit: blockCountTotalLimit, timeoutMs: rateTrackerTimeoutMs});
     this.blockCountTrackersByPeer = new MapDef(
-      () => new RateTracker({limit: opts.blockCountPeerLimit, timeoutMs: opts.rateTrackerTimeoutMs})
+      () => new RateTracker({limit: blockCountPeerLimit, timeoutMs: rateTrackerTimeoutMs})
     );
     this.logger = modules.logger;
     this.peerRpcScores = modules.peerRpcScores;

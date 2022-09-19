@@ -32,9 +32,9 @@ export type ExecutionEngineModules = {
 };
 
 export type ExecutionEngineHttpOpts = {
-  urls: string[];
-  retryAttempts: number;
-  retryDelay: number;
+  urls?: string[];
+  retryAttempts?: number;
+  retryDelay?: number;
   timeout?: number;
   /**
    * 256 bit jwt secret in hex format without the leading 0x. If provided, the execution engine
@@ -45,7 +45,9 @@ export type ExecutionEngineHttpOpts = {
   jwtSecretHex?: string;
 };
 
-export const defaultExecutionEngineHttpOpts: ExecutionEngineHttpOpts = {
+export const defaultExecutionEngineHttpOpts: Required<
+  Pick<ExecutionEngineHttpOpts, "urls" | "retryAttempts" | "retryDelay" | "timeout">
+> = {
   /**
    * By default ELs host engine api on an auth protected 8551 port, would need a jwt secret to be
    * specified to bundle jwt tokens if that is the case. In case one has access to an open
@@ -77,11 +79,12 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   private readonly rpc: IJsonRpcHttpClient;
 
   constructor(opts: ExecutionEngineHttpOpts, {metrics, signal}: ExecutionEngineModules) {
-    this.rpc = new JsonRpcHttpClient(opts.urls, {
-      ...opts,
+    this.rpc = new JsonRpcHttpClient(opts.urls ?? defaultExecutionEngineHttpOpts.urls, {
+      ...defaultExecutionEngineHttpOpts,
       signal,
       metrics: metrics?.executionEnginerHttpClient,
       jwtSecret: opts.jwtSecretHex ? fromHex(opts.jwtSecretHex) : undefined,
+      ...opts,
     });
   }
 

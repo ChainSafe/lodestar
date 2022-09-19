@@ -1,6 +1,7 @@
 import fs from "node:fs";
+import path from "node:path";
 import {Interchange} from "@lodestar/validator";
-import {ICliCommand} from "../../../util/index.js";
+import {ICliCommand, YargsError} from "../../../util/index.js";
 import {IGlobalArgs} from "../../../options/index.js";
 import {AccountValidatorArgs} from "../options.js";
 import {getCliLogger, ILogArgs} from "../../../util/index.js";
@@ -12,7 +13,7 @@ import {ISlashingProtectionArgs} from "./options.js";
 /* eslint-disable no-console */
 
 interface IImportArgs {
-  file: string;
+  file?: string;
 }
 
 export const importCmd: ICliCommand<
@@ -33,19 +34,22 @@ export const importCmd: ICliCommand<
   options: {
     file: {
       description: "The slashing protection interchange file to import (.json).",
-      demandOption: true,
       type: "string",
     },
   },
 
   handler: async (args) => {
+    if (!args.file) {
+      throw new YargsError("Must provide --file option");
+    }
+
     const {config, network} = getBeaconConfigFromArgs(args);
+
+    const validatorPaths = getValidatorPaths(args, network);
     // slashingProtection commands are fast so do not require logFile feature
-    const logger = getCliLogger(args, {defaultLogFile: "validator.log"}, config);
+    const logger = getCliLogger(args, {defaultLogFilepath: path.join(validatorPaths.dataDir, "validator.log")}, config);
 
-    const {validatorsDbDir: dbPath} = getValidatorPaths(args, network);
-
-    logger.info("Importing the slashing protection logs", {dbPath});
+    logger.info("Importing the slashing protection logs", {dbPath: validatorPaths.validatorsDbDir});
 
     const {slashingProtection, metadata} = getSlashingProtection(args, network);
 

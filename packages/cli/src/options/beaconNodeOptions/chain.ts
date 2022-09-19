@@ -2,21 +2,21 @@ import {defaultOptions, IBeaconNodeOptions} from "@lodestar/beacon-node";
 import {ICliCommandOptions} from "../../util/index.js";
 
 export interface IChainArgs {
-  suggestedFeeRecipient: string;
-  "chain.blsVerifyAllMultiThread": boolean;
-  "chain.blsVerifyAllMainThread": boolean;
-  "chain.disableBlsBatchVerify": boolean;
-  "chain.persistInvalidSszObjects": boolean;
+  suggestedFeeRecipient?: string;
+  "chain.blsVerifyAllMultiThread"?: boolean;
+  "chain.blsVerifyAllMainThread"?: boolean;
+  "chain.disableBlsBatchVerify"?: boolean;
+  "chain.persistInvalidSszObjects"?: boolean;
   // No need to define chain.persistInvalidSszObjects as part of IChainArgs
   // as this is defined as part of IBeaconPaths
-  // "chain.persistInvalidSszObjectsDir": string;
-  "chain.proposerBoostEnabled": boolean;
-  "chain.disableImportExecutionFcU": boolean;
-  "chain.computeUnrealized": boolean;
-  "chain.countUnrealizedFull": boolean;
-  "chain.assertCorrectProgressiveBalances": boolean;
-  "chain.maxSkipSlots": number;
-  "safe-slots-to-import-optimistically": number;
+  // "chain.persistInvalidSszObjectsDir"?: string;
+  "chain.proposerBoostEnabled"?: boolean;
+  "chain.disableImportExecutionFcU"?: boolean;
+  "chain.computeUnrealized"?: boolean;
+  "chain.countUnrealizedFull"?: boolean;
+  "chain.assertCorrectProgressiveBalances"?: boolean;
+  "chain.maxSkipSlots"?: number;
+  "safe-slots-to-import-optimistically"?: number;
 }
 
 export function parseArgs(args: IChainArgs): IBeaconNodeOptions["chain"] {
@@ -51,7 +51,6 @@ export const options: ICliCommandOptions<IChainArgs> = {
     hidden: true,
     type: "boolean",
     description: "Always use worker threads for BLS verification",
-    defaultDescription: String(defaultOptions.chain.blsVerifyAllMultiThread),
     group: "chain",
   },
 
@@ -59,7 +58,6 @@ export const options: ICliCommandOptions<IChainArgs> = {
     hidden: true,
     type: "boolean",
     description: "Always use main threads for BLS verification",
-    defaultDescription: String(defaultOptions.chain.blsVerifyAllMainThread),
     group: "chain",
   },
 
@@ -69,7 +67,6 @@ export const options: ICliCommandOptions<IChainArgs> = {
     description:
       "Do not use BLS batch verify to validate all block signatures at once. \
 Will double processing times. Use only for debugging purposes.",
-    defaultDescription: String(defaultOptions.chain.blsVerifyAllMultiThread),
     group: "chain",
   },
 
@@ -84,7 +81,6 @@ Will double processing times. Use only for debugging purposes.",
     hidden: true,
     type: "boolean",
     description: "Enable proposer boost to reward a timely block",
-    defaultDescription: String(defaultOptions.chain.proposerBoostEnabled),
     group: "chain",
   },
 
@@ -99,7 +95,6 @@ Will double processing times. Use only for debugging purposes.",
     hidden: true,
     type: "boolean",
     description: "Compute unrealized checkpoints and use it in fork choice or not",
-    defaultDescription: String(defaultOptions.chain.computeUnrealized),
     group: "chain",
   },
 
@@ -107,7 +102,6 @@ Will double processing times. Use only for debugging purposes.",
     hidden: true,
     type: "boolean",
     description: "Compute unrealized checkpoints and fully use it",
-    defaultDescription: String(defaultOptions.chain.computeUnrealized),
     group: "chain",
   },
 
@@ -130,7 +124,6 @@ Will double processing times. Use only for debugging purposes.",
     type: "number",
     description:
       "Slots from current (clock) slot till which its safe to import a block optimistically if the merge is not justified yet.",
-    defaultDescription: String(defaultOptions.chain.safeSlotsToImportOptimistically),
     group: "chain",
   },
 };

@@ -1,4 +1,4 @@
-import {HttpMetricsServerOpts} from "./server/index.js";
+import {HttpMetricsServerOpts, defaultHttpMetricsServerOpts} from "./server/index.js";
 
 export type LodestarMetadata = {
   /** "v0.16.0/developer/feature-1/ac99f2b5" */
@@ -9,13 +9,13 @@ export type LodestarMetadata = {
   network: string;
 };
 
-export type MetricsOptions = HttpMetricsServerOpts & {
-  enabled: boolean;
+export interface MetricsOptions extends HttpMetricsServerOpts {
+  enabled?: boolean;
   /** Optional metadata to send to Prometheus */
   metadata?: LodestarMetadata;
-};
+}
 
-export const defaultMetricsOptions: MetricsOptions = {
+export const defaultMetricsOptions = {
   enabled: false,
-  port: 8008,
+  ...defaultHttpMetricsServerOpts,
 };

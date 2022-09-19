@@ -25,6 +25,7 @@ import {BackfillSyncError, BackfillSyncErrorCode} from "./errors.js";
  * to sync loop gives hardly any.
  */
 const DB_READ_BREATHER_TIMEOUT = 1000;
+const DEFAULT_BACKFILL_BATCH_SIZE = 32;
 
 export type BackfillSyncModules = {
   chain: IBeaconChain;
@@ -47,7 +48,8 @@ type BackfillModules = BackfillSyncModules & {
 };
 
 export type BackfillSyncOpts = {
-  backfillBatchSize: number;
+  /** Process in blocks of at max batchSize */
+  backfillBatchSize?: number;
 };
 
 export enum BackfillSyncEvent {
@@ -115,10 +117,6 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
   private readonly metrics: IMetrics | null;
 
   /**
-   * Process in blocks of at max batchSize
-   */
-  private opts: BackfillSyncOpts;
-  /**
    * If wsCheckpoint provided was in past then the (db) state from which beacon node started,
    * needs to be validated as per spec.
    *
@@ -154,6 +152,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
   private peers = new PeerSet();
   private status: BackfillSyncStatus = BackfillSyncStatus.pending;
   private signal: AbortSignal;
+  private readonly backfillBatchSize: number;
 
   constructor(opts: BackfillSyncOpts, modules: BackfillModules) {
     super();
@@ -171,7 +170,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
     this.logger = modules.logger;
     this.metrics = modules.metrics;
 
-    this.opts = opts;
+    this.backfillBatchSize = opts.backfillBatchSize ?? DEFAULT_BACKFILL_BATCH_SIZE;
     this.network.events.on(NetworkEvent.peerConnected, this.addPeer);
     this.network.events.on(NetworkEvent.peerDisconnected, this.removePeer);
     this.signal = modules.signal;
@@ -678,7 +677,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
 
     let isPrevFinWsConfirmedAnchorParent = false;
     while (
-      backCount !== this.opts.backfillBatchSize &&
+      backCount !== this.backfillBatchSize &&
       (parentBlock = await this.db.blockArchive.getByRoot(anchorBlock.message.parentRoot))
     ) {
       // Before moving anchorBlock back, we need check for prevFinalizedCheckpointBlock
@@ -734,7 +733,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
     this.logger.verbose(`Read ${backCount} blocks from DB till `, {
       slot: anchorBlock.message.slot,
     });
-    if (backCount >= this.opts.backfillBatchSize) {
+    if (backCount >= this.backfillBatchSize) {
       // We should sleep as there seems to be more that can be read from db but yielding to
       // the sync loop hardly gives any breather to the beacon node
       await sleep(DB_READ_BREATHER_TIMEOUT, this.signal);
@@ -779,11 +778,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
     }
 
     const toSlot = this.syncAnchor.anchorBlock.message.slot;
-    const fromSlot = Math.max(
-      toSlot - this.opts.backfillBatchSize,
-      this.prevFinalizedCheckpointBlock.slot,
-      GENESIS_SLOT
-    );
+    const fromSlot = Math.max(toSlot - this.backfillBatchSize, this.prevFinalizedCheckpointBlock.slot, GENESIS_SLOT);
     const blocks = await this.network.reqResp.beaconBlocksByRange(peer, {
       startSlot: fromSlot,
       count: toSlot - fromSlot,

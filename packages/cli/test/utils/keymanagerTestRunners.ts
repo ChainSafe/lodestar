@@ -37,7 +37,7 @@ export function getKeymanagerTestRunner({args: {spawnCli}, afterEachCallbacks, d
       afterEachCallbacks.push(() => beaconServer.close());
       await beaconServer.listen();
 
-      const validatorProc = spawnCli([
+      const validatorProc = spawnCli({pipeStdToParent: true, logPrefix: "vc"}, [
         // ⏎
         "validator",
         `--dataDir=${dataDir}`,

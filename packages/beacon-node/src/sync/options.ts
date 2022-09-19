@@ -19,12 +19,10 @@ export type SyncOptions = {
    * to sync loop. This number can be increased or decreased to make a suitable resource
    * allocation to backfill sync. The default of 0 would mean backfill sync will be skipped
    */
-  backfillBatchSize: number;
+  backfillBatchSize?: number;
+  backfillEnabled?: boolean;
 };
 
-export const defaultSyncOptions: SyncOptions = {
-  isSingleNode: false,
-  disableProcessAsChainSegment: false,
-  /** By default skip the backfill sync */
-  backfillBatchSize: 0,
+export const defaultSyncOptions: Required<Pick<SyncOptions, "backfillEnabled">> = {
+  backfillEnabled: false,
 };

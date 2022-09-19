@@ -10,7 +10,7 @@ import {ACTIVE_PRESET, PresetName} from "@lodestar/params";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 
 import {IGlobalArgs, parseBeaconNodeArgs} from "../../options/index.js";
-import {BeaconNodeOptions, exportToJSON, FileENR, getBeaconConfigFromArgs} from "../../config/index.js";
+import {exportToJSON, FileENR, getBeaconConfigFromArgs} from "../../config/index.js";
 import {onGracefulShutdown, getCliLogger, mkdir, writeFile600Perm} from "../../util/index.js";
 import {getNetworkBootnodes, getNetworkData, readBootnodes} from "../../networks/index.js";
 import {getVersionData} from "../../util/version.js";
@@ -30,7 +30,7 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
   mkdir(beaconPaths.dbDir);
 
   const abortController = new AbortController();
-  const logger = getCliLogger(args, {defaultLogFile: "beacon.log"}, config);
+  const logger = getCliLogger(args, {defaultLogFilepath: path.join(beaconPaths.dataDir, "beacon.log")}, config);
 
   onGracefulShutdown(async () => {
     abortController.abort();
@@ -50,11 +50,11 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
   const metricsRegistries: Registry[] = [];
   const db = new BeaconDb({
     config,
-    controller: new LevelDbController(options.db, {metrics: null}),
+    controller: new LevelDbController({name: beaconPaths.dbDir}, {metrics: null}),
   });
 
   await db.start();
-  logger.info("Connected to LevelDB database", {path: options.db.name});
+  logger.info("Connected to LevelDB database", {path: beaconPaths.dbDir});
 
   // BeaconNode setup
   try {
@@ -101,29 +101,33 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
 export async function beaconHandlerInit(args: IBeaconArgs & IGlobalArgs) {
   const {config, network} = getBeaconConfigFromArgs(args);
 
-  const beaconNodeOptions = new BeaconNodeOptions(parseBeaconNodeArgs(args));
+  const options = parseBeaconNodeArgs(args);
 
   const {version, commit} = getVersionData();
   const beaconPaths = getBeaconPaths(args, network);
-  // TODO: Rename db.name to db.path or db.location
-  beaconNodeOptions.set({db: {name: beaconPaths.dbDir}});
-  beaconNodeOptions.set({chain: {persistInvalidSszObjectsDir: beaconPaths.persistInvalidSszObjectsDir}});
+
+  if (!options.chain) options.chain = {};
+  options.chain.persistInvalidSszObjectsDir = beaconPaths.persistInvalidSszObjectsDir;
   // Add metrics metadata to show versioning + network info in Prometheus + Grafana
-  beaconNodeOptions.set({metrics: {metadata: {version, commit, network}}});
+  if (!options.metrics) options.metrics = {};
+  options.metrics.metadata = {version, commit, network};
   // Add detailed version string for API node/version endpoint
-  beaconNodeOptions.set({api: {version}});
+  if (!options.api) options.api = {};
+  options.api.version = version;
 
   // Fetch extra bootnodes
-  const extraBootnodes = (beaconNodeOptions.get().network?.discv5?.bootEnrs ?? []).concat(
+  const extraBootnodes = (options.network?.bootnodes ?? []).concat(
     args.bootnodesFile ? readBootnodes(args.bootnodesFile) : [],
     args.network ? await getNetworkBootnodes(args.network) : []
   );
-  beaconNodeOptions.set({network: {discv5: {bootEnrs: extraBootnodes}}});
+  if (!options.network) options.network = {};
+  options.network.bootnodes = extraBootnodes;
 
   // Set known depositContractDeployBlock
   if (args.network) {
     const {depositContractDeployBlock} = getNetworkData(args.network);
-    beaconNodeOptions.set({eth1: {depositContractDeployBlock}});
+    if (!options.eth1) options.eth1 = {};
+    options.eth1.depositContractDeployBlock = depositContractDeployBlock;
   }
 
   // Create new PeerId everytime by default, unless peerIdFile is provided
@@ -139,10 +143,7 @@ export async function beaconHandlerInit(args: IBeaconArgs & IGlobalArgs) {
   fileENR.saveToFile();
 
   // Inject ENR to beacon options
-  beaconNodeOptions.set({network: {discv5: {enr: fileENR, enrUpdate: !enr.ip && !enr.ip6}}});
-
-  // Render final options
-  const options = beaconNodeOptions.getWithDefaults();
+  options.network.enr = fileENR;
 
   return {config, options, beaconPaths, network, version, commit, peerId};
 }

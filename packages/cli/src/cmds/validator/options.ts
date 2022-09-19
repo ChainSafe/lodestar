@@ -22,8 +22,8 @@ export type IValidatorCliArgs = AccountValidatorArgs &
   ILogArgs & {
     validatorsDbDir?: string;
     server: string;
-    force: boolean;
-    graffiti: string;
+    force?: boolean;
+    graffiti?: string;
     afterBlockDelaySlotFraction?: number;
     suggestedFeeRecipient?: string;
     proposerSettingsFile?: string;

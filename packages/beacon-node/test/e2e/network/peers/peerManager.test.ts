@@ -91,8 +91,6 @@ describe("network / peers / PeerManager", function () {
       {
         targetPeers: 30,
         maxPeers: 50,
-        discv5: null,
-        discv5FirstQueryDelayMs: 0,
       }
     );
     await peerManager.start();

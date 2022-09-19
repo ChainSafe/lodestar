@@ -17,6 +17,7 @@ import {
   LVHInvalidResponse,
 } from "@lodestar/fork-choice";
 import {IChainForkConfig} from "@lodestar/config";
+import {SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY} from "@lodestar/params";
 import {ErrorAborted, ILogger} from "@lodestar/utils";
 import {IExecutionEngine} from "../../execution/engine/index.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
@@ -66,6 +67,8 @@ export async function verifyBlocksExecutionPayload(
   signal: AbortSignal,
   opts: BlockProcessOpts
 ): Promise<SegmentExecStatus> {
+  const safeSlotsToImportOptimistically = opts.safeSlotsToImportOptimistically ?? SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY;
+
   const executionStatuses: MaybeValidExecutionStatus[] = [];
   let mergeBlockFound: bellatrix.BeaconBlock | null = null;
 
@@ -139,7 +142,7 @@ export async function verifyBlocksExecutionPayload(
   const currentSlot = chain.clock.currentSlot;
   let isOptimisticallySafe =
     parentBlock.executionStatus !== ExecutionStatus.PreMerge ||
-    lastBlock.message.slot + opts.safeSlotsToImportOptimistically < currentSlot;
+    lastBlock.message.slot + safeSlotsToImportOptimistically < currentSlot;
 
   for (let blockIndex = 0; blockIndex < blocks.length; blockIndex++) {
     const block = blocks[blockIndex];
@@ -254,6 +257,8 @@ export async function verifyBlockExecutionPayload(
   isOptimisticallySafe: boolean,
   currentSlot: Slot
 ): Promise<VerifyBlockExecutionResponse> {
+  const safeSlotsToImportOptimistically = opts.safeSlotsToImportOptimistically ?? SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY;
+
   /** Not null if execution is enabled */
   const executionPayloadEnabled =
     isExecutionStateType(preState0) &&
@@ -303,7 +308,7 @@ export async function verifyBlockExecutionPayload(
       // Check if the entire segment was deemed safe or, this block specifically itself if not in
       // the safeSlotsToImportOptimistically window of current slot, then we can import else
       // we need to throw and not import his block
-      if (!isOptimisticallySafe && block.message.slot + opts.safeSlotsToImportOptimistically >= currentSlot) {
+      if (!isOptimisticallySafe && block.message.slot + safeSlotsToImportOptimistically >= currentSlot) {
         const execError = new BlockError(block, {
           code: BlockErrorCode.EXECUTION_ENGINE_ERROR,
           execStatus: ExecutePayloadStatus.UNSAFE_OPTIMISTIC_STATUS,

@@ -71,7 +71,6 @@
     "@lodestar/validator": "^1.1.0",
     "@types/lockfile": "^1.0.1",
     "bip39": "^3.0.2",
-    "deepmerge": "^4.2.2",
     "ethers": "^5.0.2",
     "expand-tilde": "^2.0.2",
     "find-up": "^5.0.0",

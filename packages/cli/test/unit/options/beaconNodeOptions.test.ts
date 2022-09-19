@@ -7,8 +7,12 @@ import {getTestdirPath} from "../../utils.js";
 
 describe("options / beaconNodeOptions", () => {
   it("Should parse BeaconNodeArgs", () => {
+    const feeRecipient = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+    const eth1DataVote =
+      "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa0000000000000000bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+
     // Cast to match the expected fully defined type
-    const beaconNodeArgsPartial = {
+    const beaconNodeArgsPartial: Required<IBeaconNodeArgs> = {
       "api.maxGindicesInProof": 1000,
       "rest.namespace": [],
       "rest.cors": "*",
@@ -25,24 +29,24 @@ describe("options / beaconNodeOptions", () => {
       "chain.disableImportExecutionFcU": false,
       "chain.computeUnrealized": true,
       "chain.countUnrealizedFull": true,
-      suggestedFeeRecipient: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      suggestedFeeRecipient: feeRecipient,
       "chain.assertCorrectProgressiveBalances": true,
       "chain.maxSkipSlots": 100,
       "safe-slots-to-import-optimistically": 256,
 
       eth1: true,
-      "eth1.providerUrl": "http://my.node:8545",
       "eth1.providerUrls": ["http://my.node:8545"],
       "eth1.depositContractDeployBlock": 1625314,
       "eth1.disableEth1DepositDataTracker": true,
       "eth1.unsafeAllowDepositDataOverwrite": false,
-      "eth1.forcedEth1DataVote":
-        "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa0000000000000000bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "eth1.forcedEth1DataVote": eth1DataVote,
 
       "execution.urls": ["http://localhost:8551"],
       "execution.timeout": 12000,
       "execution.retryDelay": 2000,
       "execution.retryAttempts": 1,
+      "execution.engineMock": false,
+      "jwt-secret": "",
 
       builder: false,
       "builder.urls": ["http://localhost:8661"],
@@ -60,7 +64,7 @@ describe("options / beaconNodeOptions", () => {
       targetPeers: 25,
       subscribeAllSubnets: true,
       "network.maxPeers": 30,
-      "network.connectToDiscv5Bootnodes": true,
+      "network.connectToBootnodes": true,
       "network.discv5FirstQueryDelayMs": 1000,
       "network.requestCountPeerLimit": 5,
       "network.blockCountTotalLimit": 1000,
@@ -72,15 +76,15 @@ describe("options / beaconNodeOptions", () => {
       "sync.isSingleNode": true,
       "sync.disableProcessAsChainSegment": true,
       "sync.backfillBatchSize": 64,
-    } as IBeaconNodeArgs;
+    };
 
     const expectedOptions: RecursivePartial<IBeaconNodeOptions> = {
       api: {
         maxGindicesInProof: 1000,
         rest: {
+          enabled: true,
           api: [],
           cors: "*",
-          enabled: true,
           address: "127.0.0.1",
           port: 7654,
           bodyLimit: 30e6,
@@ -96,7 +100,7 @@ describe("options / beaconNodeOptions", () => {
         computeUnrealized: true,
         countUnrealizedFull: true,
         safeSlotsToImportOptimistically: 256,
-        suggestedFeeRecipient: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        suggestedFeeRecipient: feeRecipient,
         assertCorrectProgressiveBalances: true,
         maxSkipSlots: 100,
       },
@@ -106,8 +110,7 @@ describe("options / beaconNodeOptions", () => {
         depositContractDeployBlock: 1625314,
         disableEth1DepositDataTracker: true,
         unsafeAllowDepositDataOverwrite: false,
-        forcedEth1DataVote:
-          "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa0000000000000000bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        forcedEth1DataVote: eth1DataVote,
       },
       executionEngine: {
         urls: ["http://localhost:8551"],
@@ -126,16 +129,15 @@ describe("options / beaconNodeOptions", () => {
         address: "0.0.0.0",
       },
       network: {
-        discv5: {
-          enabled: true,
-          bindAddr: "/ip4/127.0.0.1/udp/9002",
-          bootEnrs: ["enr:-somedata"],
-        },
-        maxPeers: 30,
+        discv5: true,
+        listenAddress: "127.0.0.1",
+        port: 9001,
+        discoveryPort: 9002,
+        bootnodes: ["enr:-somedata"],
         targetPeers: 25,
-        localMultiaddrs: ["/ip4/127.0.0.1/tcp/9001"],
         subscribeAllSubnets: true,
-        connectToDiscv5Bootnodes: true,
+        maxPeers: 30,
+        connectToBootnodes: true,
         discv5FirstQueryDelayMs: 1000,
         requestCountPeerLimit: 5,
         blockCountTotalLimit: 1000,

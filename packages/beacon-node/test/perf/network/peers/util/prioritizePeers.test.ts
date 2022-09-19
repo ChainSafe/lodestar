@@ -3,15 +3,15 @@ import {PeerId} from "@libp2p/interface-peer-id";
 import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
 import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {altair, phase0} from "@lodestar/types";
-import {defaultNetworkOptions} from "../../../../../src/network/options.js";
-import {prioritizePeers, RequestedSubnet} from "../../../../../src/network/peers/utils/index.js";
+import {prioritizePeers, PrioritizePeersOpts, RequestedSubnet} from "../../../../../src/network/peers/utils/index.js";
 import {getAttnets, getSyncnets} from "../../../../utils/network.js";
 
 describe("prioritizePeers", () => {
+  const opts: PrioritizePeersOpts = {maxPeers: 55, targetPeers: 50};
   const seedPeers: {id: PeerId; attnets: phase0.AttestationSubnets; syncnets: altair.SyncSubnets; score: number}[] = [];
 
   before(async function () {
-    for (let i = 0; i < defaultNetworkOptions.maxPeers; i++) {
+    for (let i = 0; i < opts.maxPeers; i++) {
       const peer = await createSecp256k1PeerId();
       peer.toString = () => `peer-${i}`;
       seedPeers.push({
@@ -99,7 +99,7 @@ describe("prioritizePeers", () => {
           syncnets: getSyncnets(
             Array.from({length: Math.floor(syncnetPercentage * SYNC_COMMITTEE_SUBNET_COUNT)}, (_, i) => i)
           ),
-          score: lowestScore + ((highestScore - lowestScore) * i) / defaultNetworkOptions.maxPeers,
+          score: lowestScore + ((highestScore - lowestScore) * i) / opts.maxPeers,
         }));
 
         const attnets: RequestedSubnet[] = [];
@@ -114,7 +114,7 @@ describe("prioritizePeers", () => {
         return {connectedPeers, attnets, syncnets};
       },
       fn: ({connectedPeers, attnets, syncnets}) => {
-        prioritizePeers(connectedPeers, attnets, syncnets, defaultNetworkOptions);
+        prioritizePeers(connectedPeers, attnets, syncnets, opts);
       },
     });
   }

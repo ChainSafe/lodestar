@@ -2,9 +2,9 @@ import {defaultOptions, IBeaconNodeOptions} from "@lodestar/beacon-node";
 import {ICliCommandOptions} from "../../util/index.js";
 
 export interface IMetricsArgs {
-  metrics: boolean;
-  "metrics.port": number;
-  "metrics.address": string;
+  metrics?: boolean;
+  "metrics.port"?: number;
+  "metrics.address"?: string;
 }
 
 export function parseArgs(args: IMetricsArgs): IBeaconNodeOptions["metrics"] {
