@@ -445,7 +445,7 @@ export function getReturnTypes(): ReturnTypes<Api> {
     produceBlockV2: WithVersion((fork: ForkName) => ssz[fork].BeaconBlock),
     produceBlindedBlock: WithVersion((fork: ForkName) => {
       if (fork === ForkName.phase0 || fork === ForkName.altair) {
-        throw Error(`Invalid fork=${fork} for produceBlindedBlock`);
+        throw Error(`No BlindedBlock for fork ${fork} previous to bellatrix`);
       }
       return ssz[fork].BlindedBeaconBlock;
     }),

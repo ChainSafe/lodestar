@@ -38,10 +38,12 @@ export function processBlockHeader(state: CachedBeaconStateAllForks, block: allF
 
   const blockHeader = blindedOrFullBlockToHeader(state.config, block as allForks.FullOrBlindedBeaconBlock);
   // cache current block as the new latest block
-  // TODO: do we need to ZERO_HASH the stateRoot here??
   state.latestBlockHeader = ssz.phase0.BeaconBlockHeader.toViewDU({
-    ...blockHeader,
+    slot,
+    proposerIndex,
+    parentRoot: block.parentRoot,
     stateRoot: ZERO_HASH,
+    bodyRoot: blockHeader.bodyRoot,
   });
 
   // verify proposer is not slashed. Only once per block, may use the slower read from tree
