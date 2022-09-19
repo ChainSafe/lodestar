@@ -21,7 +21,7 @@ import {defaultNetwork, IGlobalArgs} from "../../options/globalOptions.js";
 import {fetchWeakSubjectivityState, getCheckpointFromArg, getGenesisFileUrl} from "../../networks/index.js";
 import {IBeaconArgs} from "./options.js";
 
-function getCheckpointFromState(state: BeaconStateAllForks): Checkpoint {
+export function getCheckpointFromState(state: BeaconStateAllForks): Checkpoint {
   return {
     epoch: computeEpochAtSlot(state.latestBlockHeader.slot),
     root: getLatestBlockRoot(state),
@@ -49,19 +49,26 @@ async function initAndVerifyWeakSubjectivityState(
   // Pick the state which is ahead as an anchor to initialize the beacon chain
   let anchorState = wsState;
   let anchorCheckpoint = wsCheckpoint;
+  let isCheckpointState = true;
   if (store.slot > wsState.slot) {
     anchorState = store;
     anchorCheckpoint = getCheckpointFromState(store);
+    isCheckpointState = false;
     logger.verbose(
       "Db state is ahead of the provided checkpoint state, using the db state to initialize the beacon chain"
     );
   }
 
+  // Instead of warning user of wss check failure, we throw because user explicity wants to use
+  // the checkpoint sync
   if (!isWithinWeakSubjectivityPeriod(config, anchorState, anchorCheckpoint)) {
     throw new Error("Fetched weak subjectivity checkpoint not within weak subjectivity period.");
   }
 
-  anchorState = await initStateFromAnchorState(config, db, logger, anchorState);
+  anchorState = await initStateFromAnchorState(config, db, logger, anchorState, {
+    isWithinWeakSubjectivityPeriod: true,
+    isCheckpointState,
+  });
 
   // Return the latest anchorState but still return original wsCheckpoint to validate in backfill
   return {anchorState, wsCheckpoint};
@@ -84,10 +91,26 @@ export async function initBeaconState(
   logger: ILogger,
   signal: AbortSignal
 ): Promise<{anchorState: BeaconStateAllForks; wsCheckpoint?: Checkpoint}> {
-  // fetch the latest state stored in the db
-  // this will be used in all cases, if it exists, either used during verification of a weak subjectivity state, or used directly as the anchor state
+  // fetch the latest state stored in the db which will be used in all cases, if it exists, either
+  //   i)  used directly as the anchor state
+  //   ii) used during verification of a weak subjectivity state,
   const lastDbState = await db.stateArchive.lastValue();
+  if (lastDbState) {
+    const config = createIBeaconConfig(chainForkConfig, lastDbState.genesisValidatorsRoot);
+    const wssCheck = isWithinWeakSubjectivityPeriod(config, lastDbState, getCheckpointFromState(lastDbState));
+    // All cases when we want to directly use lastDbState as the anchor state:
+    //  - if no checkpoint sync args provided, or
+    //  - the lastDbState is within weak subjectivity period:
+    if ((!args.checkpointState && !args.checkpointSyncUrl) || wssCheck) {
+      const anchorState = await initStateFromAnchorState(config, db, logger, lastDbState, {
+        isWithinWeakSubjectivityPeriod: wssCheck,
+        isCheckpointState: false,
+      });
+      return {anchorState};
+    }
+  }
 
+  // See if we can sync state using checkpoint sync args or else start from genesis
   if (args.checkpointState) {
     return await readWSState(
       lastDbState,
@@ -104,20 +127,20 @@ export async function initBeaconState(
       db,
       logger
     );
-  } else if (lastDbState) {
-    // start the chain from the latest stored state in the db
-    const config = createIBeaconConfig(chainForkConfig, lastDbState.genesisValidatorsRoot);
-    const anchorState = await initStateFromAnchorState(config, db, logger, lastDbState);
-    return {anchorState};
   } else {
     const genesisStateFile = args.genesisStateFile || getGenesisFileUrl(args.network || defaultNetwork);
     if (genesisStateFile && !args.forceGenesis) {
       const stateBytes = await downloadOrLoadFile(genesisStateFile);
       let anchorState = getStateTypeFromBytes(chainForkConfig, stateBytes).deserializeToViewDU(stateBytes);
       const config = createIBeaconConfig(chainForkConfig, anchorState.genesisValidatorsRoot);
-      anchorState = await initStateFromAnchorState(config, db, logger, anchorState);
+      const wssCheck = isWithinWeakSubjectivityPeriod(config, anchorState, getCheckpointFromState(anchorState));
+      anchorState = await initStateFromAnchorState(config, db, logger, anchorState, {
+        isWithinWeakSubjectivityPeriod: wssCheck,
+        isCheckpointState: true,
+      });
       return {anchorState};
     } else {
+      // Only place we will not bother checking isWithinWeakSubjectivityPeriod as forceGenesis passed by user
       const anchorState = await initStateFromEth1({config: chainForkConfig, db, logger, opts: options.eth1, signal});
       return {anchorState};
     }
@@ -157,9 +180,9 @@ async function fetchWSStateFromBeaconApi(
   try {
     // Validate the weakSubjectivityServerUrl and only log the origin to mask the
     // username password credentials
-    const wssUrl = new URL(wssOpts.checkpointSyncUrl);
-    logger.info("Fetching weak subjectivity state", {
-      weakSubjectivityServerUrl: wssUrl.origin,
+    const checkpointSyncUrl = new URL(wssOpts.checkpointSyncUrl);
+    logger.info("Fetching checkpoint state", {
+      checkpointSyncUrl: checkpointSyncUrl.origin,
     });
   } catch (e) {
     logger.error("Invalid", {checkpointSyncUrl: wssOpts.checkpointSyncUrl}, e as Error);
