@@ -247,6 +247,8 @@ describe("network", function () {
 
     expect(netA.gossip.getTopics().length).to.equal(0);
     netA.subscribeGossipCoreTopics();
+    // eslint-disable-next-line no-console
+    console.log("xyz", netA.gossip.getTopics());
     expect(netA.gossip.getTopics().length).to.equal(5);
     netA.unsubscribeGossipCoreTopics();
     expect(netA.gossip.getTopics().length).to.equal(0);
