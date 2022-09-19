@@ -29,10 +29,8 @@ import {INetwork} from "../../interface.js";
 import {NetworkEvent} from "../../events.js";
 import {PeerAction} from "../../peers/index.js";
 import {createFromB58String} from "../../../util/peerId.js";
-import {
-  validateLightClientFinalityUpdate,
-  validateLightClientOptimisticUpdate,
-} from "../../../chain/validation/lightClient.js";
+import {validateLightClientFinalityUpdate} from "../../../chain/validation/lightClientFinalityUpdate.js";
+import {validateLightClientOptimisticUpdate} from "../../../chain/validation/lightClientOptimisticUpdate.js";
 
 /**
  * Gossip handler options as part of network options
@@ -289,12 +287,10 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
     },
 
     [GossipType.light_client_finality_update]: async (lightClientFinalityUpdate) => {
-      // Full node only validates and propagate light_client_finality_update - TODO DA Confirm
       await validateLightClientFinalityUpdate(config, chain, lightClientFinalityUpdate);
     },
 
     [GossipType.light_client_optimistic_update]: async (lightClientOptimisticUpdate) => {
-      // Full node only validates and propagate light_client_optimistic_update - TODO DA Confirm
       await validateLightClientOptimisticUpdate(config, chain, lightClientOptimisticUpdate);
       return Promise.resolve();
     },
