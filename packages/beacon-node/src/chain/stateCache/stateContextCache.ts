@@ -1,5 +1,5 @@
 import {toHexString} from "@chainsafe/ssz";
-import {Epoch, Root, RootHex} from "@lodestar/types";
+import {Epoch, RootHex} from "@lodestar/types";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {routes} from "@lodestar/api";
 import {IMetrics} from "../../metrics/index.js";
@@ -23,6 +23,11 @@ export class StateContextCache {
   /** Epoch -> Set<blockRoot> */
   private readonly epochIndex = new Map<Epoch, Set<string>>();
   private readonly metrics: IMetrics["stateCache"] | null | undefined;
+  /**
+   * Strong reference to prevent head state from being pruned.
+   * null if head state is being regen and not available at the moment.
+   */
+  private head: {state: CachedBeaconStateAllForks; stateRoot: RootHex} | null = null;
 
   constructor({maxStates = MAX_STATES, metrics}: {maxStates?: number; metrics?: IMetrics | null}) {
     this.maxStates = maxStates;
@@ -38,6 +43,10 @@ export class StateContextCache {
     const item = this.cache.get(rootHex);
     if (!item) {
       return null;
+    }
+
+    if (this.head?.stateRoot === rootHex) {
+      return this.head.state;
     }
 
     this.metrics?.hits.inc();
@@ -65,16 +74,13 @@ export class StateContextCache {
     }
   }
 
-  delete(root: Root): void {
-    const key = toHexString(root);
-    const item = this.cache.get(key);
-    if (!item) return;
-    this.epochIndex.get(item.epochCtx.epoch)?.delete(key);
-    this.cache.delete(key);
-  }
-
-  batchDelete(roots: Root[]): void {
-    roots.map((root) => this.delete(root));
+  setHeadState(item: CachedBeaconStateAllForks | null): void {
+    if (item) {
+      const key = toHexString(item.hashTreeRoot());
+      this.head = {state: item, stateRoot: key};
+    } else {
+      this.head = null;
+    }
   }
 
   clear(): void {
