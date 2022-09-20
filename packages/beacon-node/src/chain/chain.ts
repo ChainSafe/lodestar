@@ -12,7 +12,7 @@ import {
   PubkeyIndexMap,
 } from "@lodestar/state-transition";
 import {IBeaconConfig} from "@lodestar/config";
-import {allForks, bellatrix, UintNum64, Root, phase0, Slot, RootHex, Epoch, ValidatorIndex} from "@lodestar/types";
+import {allForks, UintNum64, Root, phase0, Slot, RootHex, Epoch, ValidatorIndex} from "@lodestar/types";
 import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 import {ILogger, toHex} from "@lodestar/utils";
@@ -342,7 +342,7 @@ export class BeaconChain implements IBeaconChain {
     return this.produceBlockWrapper<BlockType.Full>(BlockType.Full, blockAttributes);
   }
 
-  async produceBlindedBlock(blockAttributes: BlockAttributes): Promise<bellatrix.BlindedBeaconBlock> {
+  async produceBlindedBlock(blockAttributes: BlockAttributes): Promise<allForks.BlindedBeaconBlock> {
     return this.produceBlockWrapper<BlockType.Blinded>(BlockType.Blinded, blockAttributes);
   }
 

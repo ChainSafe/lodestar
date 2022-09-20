@@ -29,3 +29,15 @@ export const allForks = {
     Metadata: altair.Metadata,
   },
 };
+
+/**
+ * Index the ssz types that differ by fork
+ * A record of AllForksSSZTypes indexed by fork
+ */
+export const allForksBlinded = {
+  bellatrix: {
+    BeaconBlockBody: bellatrix.BlindedBeaconBlockBody,
+    BeaconBlock: bellatrix.BlindedBeaconBlock,
+    SignedBeaconBlock: bellatrix.SignedBlindedBeaconBlock,
+  },
+};

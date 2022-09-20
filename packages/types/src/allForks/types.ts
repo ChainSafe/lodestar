@@ -14,6 +14,21 @@ export type SignedBeaconBlock = phase0.SignedBeaconBlock | altair.SignedBeaconBl
 export type BeaconState = phase0.BeaconState | altair.BeaconState | bellatrix.BeaconState;
 export type Metadata = phase0.Metadata | altair.Metadata;
 
+// These two additional types will also change bellatrix forward
+export type ExecutionPayload = bellatrix.ExecutionPayload;
+export type ExecutionPayloadHeader = bellatrix.ExecutionPayloadHeader;
+
+// Blinded types that will change across forks
+export type BlindedBeaconBlockBody = bellatrix.BlindedBeaconBlockBody;
+export type BlindedBeaconBlock = bellatrix.BlindedBeaconBlock;
+export type SignedBlindedBeaconBlock = bellatrix.SignedBlindedBeaconBlock;
+
+// Full or blinded types
+export type FullOrBlindedExecutionPayload = ExecutionPayload | ExecutionPayloadHeader;
+export type FullOrBlindedBeaconBlockBody = BeaconBlockBody | BlindedBeaconBlockBody;
+export type FullOrBlindedBeaconBlock = BeaconBlock | BlindedBeaconBlock;
+export type FullOrBlindedSignedBeaconBlock = SignedBeaconBlock | SignedBlindedBeaconBlock;
+
 /**
  * Types known to change between forks
  */
@@ -23,6 +38,12 @@ export type AllForksTypes = {
   SignedBeaconBlock: SignedBeaconBlock;
   BeaconState: BeaconState;
   Metadata: Metadata;
+};
+
+export type AllForksBlindedTypes = {
+  BeaconBlockBody: BlindedBeaconBlockBody;
+  BeaconBlock: BlindedBeaconBlock;
+  SignedBeaconBlock: SignedBlindedBeaconBlock;
 };
 
 /**
@@ -70,6 +91,8 @@ export type AllForksSSZTypes = {
   Metadata: AllForksTypeOf<typeof phase0Ssz.Metadata | typeof altairSsz.Metadata>;
 };
 
-export type FullOrBlindedExecutionPayload = bellatrix.ExecutionPayload | bellatrix.ExecutionPayloadHeader;
-export type FullOrBlindedBeaconBlock = BeaconBlock | bellatrix.BlindedBeaconBlock;
-export type FullOrBlindedSignedBeaconBlock = SignedBeaconBlock | bellatrix.SignedBlindedBeaconBlock;
+export type AllForksBlindedSSZTypes = {
+  BeaconBlockBody: AllForksTypeOf<typeof bellatrixSsz.BlindedBeaconBlockBody>;
+  BeaconBlock: AllForksTypeOf<typeof bellatrixSsz.BlindedBeaconBlock>;
+  SignedBeaconBlock: AllForksTypeOf<typeof bellatrixSsz.SignedBlindedBeaconBlock>;
+};

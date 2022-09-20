@@ -1,7 +1,7 @@
 import sinon from "sinon";
 
 import {CompositeTypeAny, toHexString, TreeView} from "@chainsafe/ssz";
-import {phase0, allForks, bellatrix, UintNum64, Root, Slot, ssz, Uint16, UintBn64} from "@lodestar/types";
+import {phase0, allForks, UintNum64, Root, Slot, ssz, Uint16, UintBn64} from "@lodestar/types";
 import {IBeaconConfig} from "@lodestar/config";
 import {BeaconStateAllForks, CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {CheckpointWithHex, IForkChoice, ProtoBlock, ExecutionStatus} from "@lodestar/fork-choice";
@@ -180,7 +180,7 @@ export class MockBeaconChain implements IBeaconChain {
   async produceBlock(_blockAttributes: BlockAttributes): Promise<allForks.BeaconBlock> {
     throw Error("Not implemented");
   }
-  async produceBlindedBlock(_blockAttributes: BlockAttributes): Promise<bellatrix.BlindedBeaconBlock> {
+  async produceBlindedBlock(_blockAttributes: BlockAttributes): Promise<allForks.BlindedBeaconBlock> {
     throw Error("Not implemented");
   }
 
