@@ -229,7 +229,7 @@ export class LightClientServer {
     const signedBlockRoot = block.parentRoot;
     const syncPeriod = computeSyncPeriodAtSlot(block.slot);
 
-    this.onSyncAggregate(syncPeriod, block.body.syncAggregate, signedBlockRoot).catch((e) => {
+    this.onSyncAggregate(syncPeriod, block, signedBlockRoot).catch((e) => {
       this.logger.error("Error onSyncAggregate", {}, e);
       this.metrics?.lightclientServer.onSyncAggregate.inc({event: "error"});
     });
@@ -422,11 +422,13 @@ export class LightClientServer {
    */
   private async onSyncAggregate(
     syncPeriod: SyncPeriod,
-    syncAggregate: altair.SyncAggregate,
+    syncAggregateBlock: altair.BeaconBlock,
     signedBlockRoot: Root
   ): Promise<void> {
     this.metrics?.lightclientServer.onSyncAggregate.inc({event: "processed"});
 
+    const syncAggregate = syncAggregateBlock.body.syncAggregate;
+    const signatureSlot = syncAggregateBlock.slot;
     const signedBlockRootHex = toHexString(signedBlockRoot);
     const attestedData = this.prevHeadData.get(signedBlockRootHex);
     if (!attestedData) {
@@ -446,7 +448,7 @@ export class LightClientServer {
     const headerUpdate: altair.LightClientOptimisticUpdate = {
       attestedHeader: attestedData.attestedHeader,
       syncAggregate,
-      signatureSlot: attestedData.attestedHeader.slot, //TODO DA confirm
+      signatureSlot,
     };
 
     // Emit update
@@ -475,7 +477,7 @@ export class LightClientServer {
           finalizedHeader,
           syncAggregate,
           finalityBranch: attestedData.finalityBranch,
-          signatureSlot: finalizedHeader.slot,
+          signatureSlot,
         };
         this.emitter.emit(ChainEvent.lightclientFinalityUpdate, this.finalized);
         this.metrics?.lightclientServer.onSyncAggregate.inc({event: "update_latest_finalized_update"});
@@ -483,7 +485,7 @@ export class LightClientServer {
     }
 
     // Check if this update is better, otherwise ignore
-    await this.maybeStoreNewBestPartialUpdate(syncPeriod, syncAggregate, attestedData);
+    await this.maybeStoreNewBestPartialUpdate(syncPeriod, syncAggregateBlock, attestedData);
   }
 
   private async doGetUpdate(period: number): Promise<altair.LightClientUpdate> {
@@ -514,7 +516,7 @@ export class LightClientServer {
         finalityBranch: partialUpdate.finalityBranch,
         syncAggregate: partialUpdate.syncAggregate,
         forkVersion: this.config.getForkVersion(partialUpdate.attestedHeader.slot),
-        signatureSlot: partialUpdate.attestedHeader.slot, // TODO DA revisit
+        signatureSlot: partialUpdate.signatureSlot,
       };
     } else {
       return {
@@ -525,7 +527,7 @@ export class LightClientServer {
         finalityBranch: this.zero.finalityBranch,
         syncAggregate: partialUpdate.syncAggregate,
         forkVersion: this.config.getForkVersion(partialUpdate.attestedHeader.slot),
-        signatureSlot: partialUpdate.attestedHeader.slot, // TODO DA revisit
+        signatureSlot: partialUpdate.signatureSlot,
       };
     }
   }
@@ -536,9 +538,11 @@ export class LightClientServer {
    */
   private async maybeStoreNewBestPartialUpdate(
     syncPeriod: SyncPeriod,
-    syncAggregate: altair.SyncAggregate,
+    syncAggregateBlock: altair.BeaconBlock,
     attestedData: SyncAttestedData
   ): Promise<void> {
+    const syncAggregate = syncAggregateBlock.body.syncAggregate;
+    const signatureSlot = syncAggregateBlock.slot;
     const prevBestUpdate = await this.db.bestPartialLightClientUpdate.get(syncPeriod);
     if (prevBestUpdate && !isBetterUpdate(prevBestUpdate, syncAggregate, attestedData)) {
       this.metrics?.lightclientServer.updateNotBetter.inc();
@@ -554,13 +558,13 @@ export class LightClientServer {
       const finalizedHeader = await this.getFinalizedHeader(finalizedCheckpointRoot);
       if (finalizedHeader && computeSyncPeriodAtSlot(finalizedHeader.slot) == syncPeriod) {
         // If finalizedHeader is available (should be most times) create a finalized update
-        newPartialUpdate = {...attestedData, finalizedHeader, syncAggregate};
+        newPartialUpdate = {...attestedData, finalizedHeader, syncAggregate, signatureSlot};
       } else {
         // If finalizedHeader is not available (happens on startup) create a non-finalized update
-        newPartialUpdate = {...attestedData, isFinalized: false, syncAggregate};
+        newPartialUpdate = {...attestedData, isFinalized: false, syncAggregate, signatureSlot};
       }
     } else {
-      newPartialUpdate = {...attestedData, syncAggregate};
+      newPartialUpdate = {...attestedData, syncAggregate, signatureSlot};
     }
 
     // attestedData and the block of syncAggregate may not be in same sync period
