@@ -122,13 +122,13 @@ export function missedBlocksAssertions(env: SimulationEnvironment, epoch: Epoch)
 export function inclusionDelayAssertions(env: SimulationEnvironment, epoch: Epoch): void {
   for (const node of env.nodes) {
     describe(node.id, () => {
-      const startSlot = env.clock.getFirstSlotOfEpoch(epoch);
+      const startSlot = epoch === 0 ? 1 : env.clock.getFirstSlotOfEpoch(epoch);
       const endSlot = env.clock.getLastSlotOfEpoch(epoch);
 
       for (let slot = startSlot; slot <= endSlot; slot++) {
         it(`should not have higher inclusion delay for attestations in slot "${slot}"`, () => {
           const inclusionDelay = env.tracker.inclusionDelayPerBlock.get(node.id)?.get(slot);
-          const acceptableMaxInclusionDelay = slot > 0 ? env.acceptableMaxInclusionDelay : 0;
+          const acceptableMaxInclusionDelay = env.acceptableMaxInclusionDelay;
 
           expect(inclusionDelay).to.lte(
             acceptableMaxInclusionDelay,
@@ -143,8 +143,9 @@ export function inclusionDelayAssertions(env: SimulationEnvironment, epoch: Epoc
 export function attestationPerSlotAssertions(env: SimulationEnvironment, epoch: Epoch): void {
   for (const node of env.nodes) {
     describe(node.id, () => {
-      const startSlot = env.clock.getFirstSlotOfEpoch(epoch);
+      const startSlot = epoch === 0 ? 1 : env.clock.getFirstSlotOfEpoch(epoch);
       const endSlot = env.clock.getLastSlotOfEpoch(epoch);
+
       for (let slot = startSlot; slot <= endSlot; slot++) {
         it(`should have attestations count equals to MAX_COMMITTEES_PER_SLOT for slot "${slot}"`, () => {
           const attestationsCount = env.tracker.attestationsPerSlot.get(node.id)?.get(slot);
@@ -188,11 +189,11 @@ export function finalityAssertions(env: SimulationEnvironment, epoch: Epoch): vo
 export function headsAssertions(env: SimulationEnvironment, epoch: Epoch): void {
   for (let i = 1; i < env.nodes.length; i++) {
     const node = env.nodes[i];
-    const startSlot = env.clock.getFirstSlotOfEpoch(epoch);
-    const endSlot = env.clock.getLastSlotOfEpoch(epoch);
+    describe(node.id, () => {
+      const startSlot = env.clock.getFirstSlotOfEpoch(epoch);
+      const endSlot = env.clock.getLastSlotOfEpoch(epoch);
 
-    for (let slot = startSlot; slot <= endSlot; slot++) {
-      describe(node.id, () => {
+      for (let slot = startSlot; slot <= endSlot; slot++) {
         it(`should have same head as first node for slot "${slot}"`, () => {
           const headOnFirstNode = env.tracker.headPerSlot.get(env.nodes[0].id)?.get(slot);
           const headOnNNode = env.tracker.headPerSlot.get(node.id)?.get(slot);
@@ -202,7 +203,7 @@ export function headsAssertions(env: SimulationEnvironment, epoch: Epoch): void 
             `node "${node.id}" have different heads for slot: ${slot}, headOnFirstNode: ${headOnFirstNode}, headOnNNode: ${headOnNNode}`
           );
         });
-      });
-    }
+      }
+    });
   }
 }

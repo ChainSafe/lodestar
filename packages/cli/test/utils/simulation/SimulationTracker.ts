@@ -76,19 +76,20 @@ export class SimulationTracker {
   }
 
   async start(): Promise<void> {
-    for (let i = 0; i < this.nodes.length; i += 1) {
-      this.nodes[i].api.events.eventstream(
+    for (const node of this.nodes) {
+      console.log("%%%%% tracker start", node.id);
+      node.api.events.eventstream(
         [routes.events.EventType.block, routes.events.EventType.head, routes.events.EventType.finalizedCheckpoint],
         this.signal,
         async (event) => {
-          this.emitter.emit(event.type, event, this.nodes[i]);
+          this.emitter.emit(event.type, event, node);
 
           switch (event.type) {
             case routes.events.EventType.block:
-              await this.onBlock(event.message, this.nodes[i]);
+              await this.onBlock(event.message, node);
               return;
             case routes.events.EventType.finalizedCheckpoint:
-              this.onFinalizedCheckpoint(event.message, this.nodes[i]);
+              this.onFinalizedCheckpoint(event.message, node);
               return;
           }
         }
@@ -107,6 +108,8 @@ export class SimulationTracker {
     const slot = event.slot;
     const lastSeenSlot = this.lastSeenSlot.get(node.id);
     const blockAttestations = await node.api.beacon.getBlockAttestations(slot);
+
+    console.log("%%%%% onBlock", node.id);
 
     if (lastSeenSlot !== undefined && slot > lastSeenSlot) {
       this.lastSeenSlot.set(node.id, slot);

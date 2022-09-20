@@ -12,6 +12,7 @@ import {
   finalityAssertions,
   headsAssertions,
 } from "../utils/simulation/assertions.js";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
 
 chai.use(chaiAsPromised);
 
@@ -30,13 +31,16 @@ const forksCases: {
 }[] = [
   {
     title: "mixed forks",
-    params: {altairEpoch: 1, bellatrixEpoch: 2, runTill: 6},
+    params: {altairEpoch: 2, bellatrixEpoch: 4, runTill: 6},
   },
-  {
-    title: "mixed forks with remote signer",
-    params: {altairEpoch: 2, bellatrixEpoch: 4, withExternalSigner: true, runTill: 6},
-  },
+  // {
+  //   title: "mixed forks with remote signer",
+  //   params: {altairEpoch: 1, bellatrixEpoch: 2, withExternalSigner: true, runTill: 3},
+  // },
 ];
+
+let testCases = 0;
+
 for (const {beaconNodes, validatorClients, validatorsPerClient} of nodeCases) {
   for (const {
     title,
@@ -66,10 +70,13 @@ for (const {beaconNodes, validatorClients, validatorsPerClient} of nodeCases) {
       validatorClients,
       validatorsPerClient,
       altairEpoch,
+      // TODO: Use extra delay until env.clock is based on absolute time
+      genesisSlotsDelay: (SLOTS_PER_EPOCH * runTill + 50) * testCases + 30,
       bellatrixEpoch,
       logFilesDir: join(logFilesDir, testIdStr),
       externalSigner: withExternalSigner,
     });
+    testCases += 1;
 
     describe(`simulation test - ${testIdStr}`, function () {
       this.timeout("5m");
@@ -81,9 +88,8 @@ for (const {beaconNodes, validatorClients, validatorsPerClient} of nodeCases) {
         });
 
         after("stop env", async () => {
-          env.tracker.printNoesInfo();
-          env.resetCounter();
           await env.stop();
+          env.tracker.printNoesInfo();
         });
 
         describe("nodes env", () => {
