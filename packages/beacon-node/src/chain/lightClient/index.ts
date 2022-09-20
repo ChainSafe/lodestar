@@ -514,6 +514,7 @@ export class LightClientServer {
         finalityBranch: partialUpdate.finalityBranch,
         syncAggregate: partialUpdate.syncAggregate,
         forkVersion: this.config.getForkVersion(partialUpdate.attestedHeader.slot),
+        signatureSlot: partialUpdate.attestedHeader.slot, // TODO DA revisit
       };
     } else {
       return {
@@ -524,6 +525,7 @@ export class LightClientServer {
         finalityBranch: this.zero.finalityBranch,
         syncAggregate: partialUpdate.syncAggregate,
         forkVersion: this.config.getForkVersion(partialUpdate.attestedHeader.slot),
+        signatureSlot: partialUpdate.attestedHeader.slot, // TODO DA revisit
       };
     }
   }

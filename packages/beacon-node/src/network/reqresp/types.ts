@@ -120,7 +120,7 @@ export function getRequestSzzTypeByMethod(method: Method) {
     case Method.LightClientBootstrap:
       return ssz.altair.BlockRoot;
     case Method.LightClientUpdate:
-      return ssz.altair.LightClientUpdate;
+      return ssz.altair.LightClientUpdatesByRange;
   }
 }
 
@@ -201,7 +201,7 @@ type CommonResponseBodyByMethod = {
   [Method.Ping]: phase0.Ping;
   [Method.Metadata]: phase0.Metadata;
   [Method.LightClientBootstrap]: altair.LightClientBootstrap;
-  [Method.LightClientUpdate]: altair.LightClientUpdate;
+  [Method.LightClientUpdate]: altair.LightClientUpdate[];
   [Method.LightClientFinalityUpdate]: altair.LightClientFinalityUpdate;
   [Method.LightClientOptimisticUpdate]: altair.LightClientOptimisticUpdate;
 };

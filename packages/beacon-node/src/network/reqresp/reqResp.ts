@@ -261,6 +261,15 @@ export class ReqResp implements IReqResp {
       case Method.LightClientBootstrap:
         yield* this.reqRespHandlers.onLightClientBootstrap(requestTyped.body);
         break;
+      case Method.LightClientOptimisticUpdate:
+        yield* this.reqRespHandlers.onLightClientOptimisitcUpdate();
+        break;
+      case Method.LightClientFinalityUpdate:
+        yield* this.reqRespHandlers.onLightClientFinalityUpdate();
+        break;
+      case Method.LightClientUpdate:
+        yield* this.reqRespHandlers.onLightClientUpdate(requestTyped.body);
+        break;
       default:
         throw Error(`Unsupported method ${protocol.method}`);
     }
