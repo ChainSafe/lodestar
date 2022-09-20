@@ -8,6 +8,7 @@ export type SignedBLSToExecutionChange = ValueOf<typeof ssz.SignedBLSToExecution
 export type ExecutionPayload = ValueOf<typeof ssz.ExecutionPayload>;
 export type ExecutionPayloadHeader = ValueOf<typeof ssz.ExecutionPayloadHeader>;
 export type Validator = ValueOf<typeof ssz.Validator>;
+export type Validators = ValueOf<typeof ssz.Validators>;
 
 export type BeaconBlockBody = ValueOf<typeof ssz.BeaconBlockBody>;
 export type BeaconBlock = ValueOf<typeof ssz.BeaconBlock>;

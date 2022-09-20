@@ -27,7 +27,7 @@ export type Api = {
   ): Promise<{version: ForkName; data: bellatrix.SignedBuilderBid}>;
   submitBlindedBlock(
     signedBlock: allForks.SignedBlindedBeaconBlock
-  ): Promise<{version: ForkName; data: bellatrix.ExecutionPayload}>;
+  ): Promise<{version: ForkName; data: allForks.ExecutionPayload}>;
 };
 
 /**

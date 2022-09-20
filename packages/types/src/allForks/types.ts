@@ -24,6 +24,10 @@ export type SignedBeaconBlock =
   | capella.SignedBeaconBlock;
 export type BeaconState = phase0.BeaconState | altair.BeaconState | bellatrix.BeaconState | capella.BeaconState;
 export type Metadata = phase0.Metadata | altair.Metadata;
+export type Validator = phase0.Validator | capella.Validator;
+
+// For easy reference in the assemble block for building payloads
+export type ExecutionBlockBody = bellatrix.BeaconBlockBody | capella.BeaconBlockBody;
 
 // These two additional types will also change bellatrix forward
 export type ExecutionPayload = bellatrix.ExecutionPayload | capella.ExecutionPayload;
@@ -90,16 +94,28 @@ type AllForksTypeOf<UnionOfForkTypes extends ContainerType<any>> = CompositeType
  */
 export type AllForksSSZTypes = {
   BeaconBlockBody: AllForksTypeOf<
-    typeof phase0Ssz.BeaconBlockBody | typeof altairSsz.BeaconBlockBody | typeof bellatrixSsz.BeaconBlockBody
+    | typeof phase0Ssz.BeaconBlockBody
+    | typeof altairSsz.BeaconBlockBody
+    | typeof bellatrixSsz.BeaconBlockBody
+    | typeof capellaSsz.BeaconBlockBody
   >;
   BeaconBlock: AllForksTypeOf<
-    typeof phase0Ssz.BeaconBlock | typeof altairSsz.BeaconBlock | typeof bellatrixSsz.BeaconBlock
+    | typeof phase0Ssz.BeaconBlock
+    | typeof altairSsz.BeaconBlock
+    | typeof bellatrixSsz.BeaconBlock
+    | typeof capellaSsz.BeaconBlock
   >;
   SignedBeaconBlock: AllForksTypeOf<
-    typeof phase0Ssz.SignedBeaconBlock | typeof altairSsz.SignedBeaconBlock | typeof bellatrixSsz.SignedBeaconBlock
+    | typeof phase0Ssz.SignedBeaconBlock
+    | typeof altairSsz.SignedBeaconBlock
+    | typeof bellatrixSsz.SignedBeaconBlock
+    | typeof capellaSsz.SignedBeaconBlock
   >;
   BeaconState: AllForksTypeOf<
-    typeof phase0Ssz.BeaconState | typeof altairSsz.BeaconState | typeof bellatrixSsz.BeaconState
+    | typeof phase0Ssz.BeaconState
+    | typeof altairSsz.BeaconState
+    | typeof bellatrixSsz.BeaconState
+    | typeof capellaSsz.BeaconState
   >;
   Metadata: AllForksTypeOf<typeof phase0Ssz.Metadata | typeof altairSsz.Metadata>;
   ExecutionPayload: AllForksTypeOf<typeof bellatrixSsz.ExecutionPayload | typeof capellaSsz.ExecutionPayload>;
@@ -109,7 +125,9 @@ export type AllForksSSZTypes = {
 };
 
 export type AllForksBlindedSSZTypes = {
-  BeaconBlockBody: AllForksTypeOf<typeof bellatrixSsz.BlindedBeaconBlockBody>;
-  BeaconBlock: AllForksTypeOf<typeof bellatrixSsz.BlindedBeaconBlock>;
-  SignedBeaconBlock: AllForksTypeOf<typeof bellatrixSsz.SignedBlindedBeaconBlock>;
+  BeaconBlockBody: AllForksTypeOf<typeof bellatrixSsz.BlindedBeaconBlockBody | typeof capellaSsz.BlindedBeaconBlock>;
+  BeaconBlock: AllForksTypeOf<typeof bellatrixSsz.BlindedBeaconBlock | typeof capellaSsz.BlindedBeaconBlock>;
+  SignedBeaconBlock: AllForksTypeOf<
+    typeof bellatrixSsz.SignedBlindedBeaconBlock | typeof capellaSsz.SignedBlindedBeaconBlock
+  >;
 };

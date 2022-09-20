@@ -4,7 +4,7 @@ import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {ProtoBlock} from "@lodestar/fork-choice";
 import {ErrorAborted, ILogger, sleep, prettyBytes} from "@lodestar/utils";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {computeEpochAtSlot, isBellatrixCachedStateType, isMergeTransitionComplete} from "@lodestar/state-transition";
+import {computeEpochAtSlot, isExecutionCachedStateType, isMergeTransitionComplete} from "@lodestar/state-transition";
 import {IBeaconChain} from "../chain/index.js";
 import {INetwork} from "../network/index.js";
 import {IBeaconSync, SyncState} from "../sync/index.js";
@@ -158,7 +158,7 @@ function getExecutionInfo(
     const executionStatusStr = headInfo.executionStatus.toLowerCase();
 
     // Add execution status to notifier only if head is on/post bellatrix
-    if (isBellatrixCachedStateType(headState)) {
+    if (isExecutionCachedStateType(headState)) {
       if (isMergeTransitionComplete(headState)) {
         return [`execution: ${executionStatusStr}(${prettyBytes(headInfo.executionPayloadBlockHash ?? "empty")})`];
       } else {

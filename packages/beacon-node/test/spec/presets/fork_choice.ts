@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {BeaconStateAllForks, isBellatrixStateType} from "@lodestar/state-transition";
+import {BeaconStateAllForks, isExecutionStateType} from "@lodestar/state-transition";
 import {InputType} from "@lodestar/spec-test-util";
 import {toHexString} from "@chainsafe/ssz";
 import {CheckpointWithHex, ForkChoice} from "@lodestar/fork-choice";
@@ -46,7 +46,7 @@ export const forkChoiceTest: TestRunnerFn<ForkChoiceTestCase, void> = (fork) => 
       const clock = new ClockStopped(currentSlot);
       const eth1 = new Eth1ForBlockProductionMock();
       const executionEngine = new ExecutionEngineMock({
-        genesisBlockHash: isBellatrixStateType(anchorState)
+        genesisBlockHash: isExecutionStateType(anchorState)
           ? toHexString(anchorState.latestExecutionPayloadHeader.blockHash)
           : ZERO_HASH_HEX,
       });

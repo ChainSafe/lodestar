@@ -1,5 +1,4 @@
 import {
-  bellatrix,
   Bytes32,
   phase0,
   allForks,
@@ -15,6 +14,7 @@ import {
 import {
   CachedBeaconStateAllForks,
   CachedBeaconStateBellatrix,
+  CachedBeaconStateExecutions,
   computeEpochAtSlot,
   computeTimeAtSlot,
   getRandaoMix,
@@ -22,7 +22,9 @@ import {
   isMergeTransitionComplete,
 } from "@lodestar/state-transition";
 import {IChainForkConfig} from "@lodestar/config";
+import {ForkSeq} from "@lodestar/params";
 import {toHex, sleep} from "@lodestar/utils";
+
 import type {BeaconChain} from "../chain.js";
 import {PayloadId, IExecutionEngine, IExecutionBuilder} from "../../execution/index.js";
 import {ZERO_HASH, ZERO_HASH_HEX} from "../../constants/index.js";
@@ -109,7 +111,8 @@ export async function produceBlockBody<T extends BlockType>(
     );
   }
 
-  if (blockEpoch >= this.config.BELLATRIX_FORK_EPOCH) {
+  const fork = currentState.config.getForkInfo(blockSlot);
+  if (fork.seq >= ForkSeq.bellatrix) {
     const safeBlockHash = this.forkChoice.getJustifiedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
     const finalizedBlockHash = this.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
     const feeRecipient = this.beaconProposerCache.getOrDefault(proposerIndex);
@@ -151,7 +154,9 @@ export async function produceBlockBody<T extends BlockType>(
           feeRecipient
         );
         if (prepareRes.isPremerge) {
-          (blockBody as bellatrix.BeaconBlockBody).executionPayload = ssz.bellatrix.ExecutionPayload.defaultValue();
+          (blockBody as allForks.ExecutionBlockBody).executionPayload = ssz.allForks[
+            fork.name
+          ].ExecutionPayload.defaultValue();
         } else {
           const {prepType, payloadId} = prepareRes;
           if (prepType !== PayloadPreparationType.Cached) {
@@ -163,7 +168,7 @@ export async function produceBlockBody<T extends BlockType>(
             await sleep(PAYLOAD_GENERATION_TIME_MS);
           }
           const payload = await this.executionEngine.getPayload(payloadId);
-          (blockBody as bellatrix.BeaconBlockBody).executionPayload = payload;
+          (blockBody as allForks.ExecutionBlockBody).executionPayload = payload;
 
           const fetchedTime = Date.now() / 1000 - computeTimeAtSlot(this.config, blockSlot, this.genesisTime);
           this.metrics?.blockPayload.payloadFetchedTime.observe({prepType}, fetchedTime);
@@ -182,7 +187,9 @@ export async function produceBlockBody<T extends BlockType>(
             {},
             e as Error
           );
-          (blockBody as bellatrix.BeaconBlockBody).executionPayload = ssz.bellatrix.ExecutionPayload.defaultValue();
+          (blockBody as allForks.ExecutionBlockBody).executionPayload = ssz.allForks[
+            fork.name
+          ].ExecutionPayload.defaultValue();
         } else {
           // since merge transition is complete, we need a valid payload even if with an
           // empty (transactions) one. defaultValue isn't gonna cut it!
@@ -210,7 +217,7 @@ export async function prepareExecutionPayload(
   },
   safeBlockHash: RootHex,
   finalizedBlockHash: RootHex,
-  state: CachedBeaconStateBellatrix,
+  state: CachedBeaconStateExecutions,
   suggestedFeeRecipient: string
 ): Promise<{isPremerge: true} | {isPremerge: false; prepType: PayloadPreparationType; payloadId: PayloadId}> {
   const parentHashRes = await getExecutionPayloadParentHash(chain, state);
@@ -281,7 +288,7 @@ async function prepareExecutionPayloadHeader(
   },
   state: CachedBeaconStateBellatrix,
   proposerPubKey: BLSPubkey
-): Promise<bellatrix.ExecutionPayloadHeader> {
+): Promise<allForks.ExecutionPayloadHeader> {
   if (!chain.executionBuilder) {
     throw Error("executionBuilder required");
   }
@@ -302,7 +309,7 @@ async function getExecutionPayloadParentHash(
     eth1: IEth1ForBlockProduction;
     config: IChainForkConfig;
   },
-  state: CachedBeaconStateBellatrix
+  state: CachedBeaconStateExecutions
 ): Promise<{isPremerge: true} | {isPremerge: false; parentHash: Root}> {
   // Use different POW block hash parent for block production based on merge status.
   // Returned value of null == using an empty ExecutionPayload value

@@ -63,7 +63,7 @@ export const ExecutionPayload = new ContainerType(
 export const ExecutionPayloadHeader = new ContainerType(
   {
     ...bellatrixSsz.ExecutionPayloadHeader.fields,
-    withdrawalsRoot: Withdrawals, // New in capella
+    withdrawalsRoot: Root, // New in capella
   },
   {typeName: "ExecutionPayloadHeader", jsonCase: "eth2"}
 );

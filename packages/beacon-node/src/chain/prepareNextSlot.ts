@@ -1,4 +1,4 @@
-import {computeEpochAtSlot, isBellatrixStateType, computeTimeAtSlot} from "@lodestar/state-transition";
+import {computeEpochAtSlot, isExecutionStateType, computeTimeAtSlot} from "@lodestar/state-transition";
 import {IChainForkConfig} from "@lodestar/config";
 import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Slot} from "@lodestar/types";
@@ -116,7 +116,7 @@ export class PrepareNextSlotScheduler {
         });
       }
 
-      if (isBellatrixStateType(prepareState)) {
+      if (isExecutionStateType(prepareState)) {
         const proposerIndex = prepareState.epochCtx.getBeaconProposer(prepareSlot);
         const feeRecipient = this.chain.beaconProposerCache.get(proposerIndex);
         if (feeRecipient) {

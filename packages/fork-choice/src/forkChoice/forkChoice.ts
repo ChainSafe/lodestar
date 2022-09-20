@@ -14,8 +14,8 @@ import {
   ZERO_HASH,
   EffectiveBalanceIncrements,
   CachedBeaconStateAllForks,
-  isBellatrixBlockBodyType,
-  isBellatrixStateType,
+  isExecutionBlockBodyType,
+  isExecutionStateType,
   isExecutionEnabled,
 } from "@lodestar/state-transition";
 import {computeUnrealizedCheckpoints} from "@lodestar/state-transition/epoch";
@@ -466,7 +466,7 @@ export class ForkChoice implements IForkChoice {
         unrealizedFinalizedEpoch: unrealizedFinalizedCheckpoint.epoch,
         unrealizedFinalizedRoot: unrealizedFinalizedCheckpoint.rootHex,
 
-        ...(isBellatrixBlockBodyType(block.body) && isBellatrixStateType(state) && isExecutionEnabled(state, block)
+        ...(isExecutionBlockBodyType(block.body) && isExecutionStateType(state) && isExecutionEnabled(state, block)
           ? {
               executionPayloadBlockHash: toHexString(block.body.executionPayload.blockHash),
               executionStatus: this.getPostMergeExecStatus(executionStatus),

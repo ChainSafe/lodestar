@@ -1,4 +1,4 @@
-import {bellatrix, RootHex} from "@lodestar/types";
+import {RootHex, allForks, capella} from "@lodestar/types";
 import {BYTES_PER_LOGS_BLOOM} from "@lodestar/params";
 import {fromHex} from "@lodestar/utils";
 
@@ -110,7 +110,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
    *
    * If any of the above fails due to errors unrelated to the normal processing flow of the method, client software MUST respond with an error object.
    */
-  async notifyNewPayload(executionPayload: bellatrix.ExecutionPayload): Promise<ExecutePayloadResponse> {
+  async notifyNewPayload(executionPayload: allForks.ExecutionPayload): Promise<ExecutePayloadResponse> {
     const method = "engine_newPayloadV1";
     const serializedExecutionPayload = serializeExecutionPayload(executionPayload);
     const {status, latestValidHash, validationError} = await this.rpc
@@ -264,7 +264,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
    * 2. The call MUST be responded with 5: Unavailable payload error if the building process identified by the payloadId doesn't exist.
    * 3. Client software MAY stop the corresponding building process after serving this call.
    */
-  async getPayload(payloadId: PayloadId): Promise<bellatrix.ExecutionPayload> {
+  async getPayload(payloadId: PayloadId): Promise<allForks.ExecutionPayload> {
     const method = "engine_getPayloadV1";
     const executionPayloadRpc = await this.rpc.fetchWithRetries<
       EngineApiRpcReturnTypes[typeof method],
@@ -371,9 +371,13 @@ type ExecutionPayloadRpc = {
   baseFeePerGas: QUANTITY;
   blockHash: DATA; // 32 bytes
   transactions: DATA[];
+  withdrawals?: DATA[]; // Capella hardfork
 };
 
-export function serializeExecutionPayload(data: bellatrix.ExecutionPayload): ExecutionPayloadRpc {
+export function serializeExecutionPayload(data: allForks.ExecutionPayload): ExecutionPayloadRpc {
+  if ((data as capella.ExecutionPayload).withdrawals !== undefined) {
+    throw Error("Capella Not implemented");
+  }
   return {
     parentHash: bytesToData(data.parentHash),
     feeRecipient: bytesToData(data.feeRecipient),
@@ -392,7 +396,10 @@ export function serializeExecutionPayload(data: bellatrix.ExecutionPayload): Exe
   };
 }
 
-export function parseExecutionPayload(data: ExecutionPayloadRpc): bellatrix.ExecutionPayload {
+export function parseExecutionPayload(data: ExecutionPayloadRpc): allForks.ExecutionPayload {
+  if (data.withdrawals !== undefined) {
+    throw Error("Capella Not implemented");
+  }
   return {
     parentHash: dataToBytes(data.parentHash, 32),
     feeRecipient: dataToBytes(data.feeRecipient, 20),
