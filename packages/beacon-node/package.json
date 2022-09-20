@@ -101,7 +101,7 @@
   "dependencies": {
     "@chainsafe/as-sha256": "^0.3.1",
     "@chainsafe/bls": "7.1.1",
-    "@chainsafe/discv5": "^0.7.1",
+    "@chainsafe/discv5": "https://github.com/tuyennhv/discv5.git#tuyen/add-async-await",
     "@chainsafe/libp2p-noise": "5.0.3",
     "@chainsafe/persistent-merkle-tree": "^0.4.2",
     "@chainsafe/snappy-stream": "5.1.1",

@@ -450,10 +450,9 @@
     node-fetch "^2.6.1"
     node-gyp "^8.4.0"
 
-"@chainsafe/discv5@^0.7.1":
+"@chainsafe/discv5@https://github.com/tuyennhv/discv5.git#tuyen/add-async-await":
   version "0.7.1"
-  resolved "https://registry.npmjs.org/@chainsafe/discv5/-/discv5-0.7.1.tgz"
-  integrity sha512-tH8iNm2StTm2VaC7HvammGTr3F7oWFsBJXUMlhOq9rbVaC6gJKKuIjfGMCyxaLH3GslEggq5SASHASIne3H13g==
+  resolved "https://github.com/tuyennhv/discv5.git#62932f826863fb193eeb548b8b76cb37d9664307"
   dependencies:
     "@chainsafe/abort-controller" "^3.0.1"
     base64url "^3.0.1"

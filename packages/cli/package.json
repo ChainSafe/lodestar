@@ -54,7 +54,7 @@
     "@chainsafe/bls-keygen": "^0.3.0",
     "@chainsafe/bls-keystore": "^2.0.0",
     "@chainsafe/blst": "^0.2.4",
-    "@chainsafe/discv5": "^0.7.1",
+    "@chainsafe/discv5": "https://github.com/tuyennhv/discv5.git#tuyen/add-async-await",
     "@chainsafe/ssz": "^0.9.2",
     "@lodestar/api": "^1.0.0",
     "@lodestar/beacon-node": "^1.0.0",
