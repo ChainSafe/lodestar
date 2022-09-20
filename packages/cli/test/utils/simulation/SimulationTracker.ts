@@ -108,8 +108,6 @@ export class SimulationTracker {
     const lastSeenSlot = this.lastSeenSlot.get(node.id);
     const blockAttestations = await node.api.beacon.getBlockAttestations(slot);
 
-    console.log("%%%%% onBlock", node.id);
-
     if (lastSeenSlot !== undefined && slot > lastSeenSlot) {
       this.lastSeenSlot.set(node.id, slot);
     }
