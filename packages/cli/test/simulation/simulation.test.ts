@@ -31,12 +31,12 @@ const forksCases: {
 }[] = [
   {
     title: "mixed forks",
-    params: {altairEpoch: 1, bellatrixEpoch: 2, runTill: 6},
+    params: {altairEpoch: 2, bellatrixEpoch: 4, runTill: 6},
   },
-  {
-    title: "mixed forks with remote signer",
-    params: {altairEpoch: 2, bellatrixEpoch: 4, withExternalSigner: true, runTill: 6},
-  }
+  // {
+  //   title: "mixed forks with remote signer",
+  //   params: {altairEpoch: 1, bellatrixEpoch: 2, withExternalSigner: true, runTill: 3},
+  // },
 ];
 
 let testCases = 0;
