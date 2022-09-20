@@ -153,6 +153,7 @@ export function computeLightclientUpdate(config: IBeaconConfig, period: SyncPeri
     finalityBranch,
     syncAggregate,
     forkVersion,
+    signatureSlot: attestedHeader.slot - 1,
   };
 }
 

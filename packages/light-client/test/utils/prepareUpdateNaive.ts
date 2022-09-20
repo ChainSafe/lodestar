@@ -102,5 +102,6 @@ export async function prepareUpdateNaive(
     finalityBranch: finalityBranch,
     syncAggregate,
     forkVersion: syncAttestedForkVersion,
+    signatureSlot: syncAttestedSlot,
   };
 }
