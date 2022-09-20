@@ -1,7 +1,7 @@
 import {IExecutionEngine, PayloadIdCache} from "./interface.js";
 
 export class ExecutionEngineDisabled implements IExecutionEngine {
-  readonly payloadIdCache = new PayloadIdCache();
+  readonly payloadIdCache = new PayloadIdCache(null);
 
   async notifyNewPayload(): Promise<never> {
     throw Error("Execution engine disabled");
