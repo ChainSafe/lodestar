@@ -31,7 +31,7 @@ const forksCases: {
 }[] = [
   {
     title: "mixed forks",
-    params: {altairEpoch: 2, bellatrixEpoch: 4, runTill: 6},
+    params: {altairEpoch: 2, bellatrixEpoch: 3, runTill: 4},
   },
   // {
   //   title: "mixed forks with remote signer",
