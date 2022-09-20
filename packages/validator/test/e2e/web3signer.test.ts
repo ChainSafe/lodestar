@@ -1,5 +1,3 @@
-import fs from "node:fs";
-import path from "node:path";
 import tmp from "tmp";
 import {expect} from "chai";
 import {fetch} from "cross-fetch";
@@ -10,6 +8,7 @@ import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {createIBeaconConfig} from "@lodestar/config";
 import {genesisData} from "@lodestar/config/networks";
 import {getClient, routes} from "@lodestar/api";
+import {getClient as getKeymanagerClient, ImportStatus} from "@lodestar/api/keymanager";
 import {ssz} from "@lodestar/types";
 import {FAR_FUTURE_EPOCH} from "@lodestar/params";
 import {Interchange, ISlashingProtection, Signer, SignerType, ValidatorStore} from "../../src/index.js";
@@ -43,15 +42,12 @@ describe("web3signer signature test", function () {
   const tmpDir = tmp.dirSync({unsafeCleanup: true});
   const configDirPathHost = tmpDir.name;
   const configDirPathContainer = "/var/web3signer/config";
-  const passwordFilename = "password.txt";
   const port = 9000;
+  const web3signerUrl = `http://127.0.0.1:${port}`;
 
-  before("write keystores", () => {
-    const keystoreStr = getKeystore();
-    const password = "password";
-    fs.writeFileSync(path.join(configDirPathHost, "keystore.json"), keystoreStr);
-    fs.writeFileSync(path.join(configDirPathHost, passwordFilename), password);
-  });
+  // Key data
+  const keystoreStr = getKeystore();
+  const password = "password"; // Hardcoded from pre-generated keystore, do not change
 
   // Note: for MacOS compatibility do not use `--network=host`
   runDockerContainer(
@@ -66,16 +62,13 @@ describe("web3signer signature test", function () {
       "--http-listen-host=0.0.0.0",
       `--http-listen-port=${port}`,
       "eth2",
-      `--keystores-path=${configDirPathContainer}`,
-      // Don't use path.join here, the container is running on unix filesystem
-      `--keystores-password-file=${configDirPathContainer}/${passwordFilename}`,
       "--slashing-protection-enabled=false",
+      "--key-manager-api-enabled=true",
     ],
     {pipeToProcess: true}
   );
 
   before("start container", async function () {
-    const web3signerUrl = `http://127.0.0.1:${port}`;
     const secretKey = bls.SecretKey.fromBytes(fromHex(secKey));
 
     // http://localhost:9000/api/v1/eth2/sign/0x8837af2a7452aff5a8b6906c3e5adefce5690e1bba6d73d870b9e679fece096b97a255bae0978e3a344aa832f68c6b47
@@ -90,6 +83,15 @@ describe("web3signer signature test", function () {
         }, 1000),
       {retries: 60, retryDelay: 1000}
     );
+  });
+
+  before("import keystores via API", async function () {
+    const keymanagerApi = getKeymanagerClient({baseUrl: web3signerUrl}, {config});
+
+    const {data} = await keymanagerApi.importKeystores([keystoreStr], [password]);
+    if (data[0].status !== ImportStatus.imported) {
+      throw Error(`Error importing keystore ${data[0].status}: ${data[0].message}`);
+    }
   });
 
   for (const fork of config.forksAscendingEpochOrder) {
