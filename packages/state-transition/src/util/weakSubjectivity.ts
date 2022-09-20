@@ -111,7 +111,7 @@ export function isWithinWeakSubjectivityPeriod(
   wsState: BeaconStateAllForks,
   wsCheckpoint: Checkpoint
 ): boolean {
-  const wsStateEpoch = computeEpochAtSlot(wsState.slot);
+  const wsStateEpoch = Math.ceil(wsState.slot / SLOTS_PER_EPOCH);
   const blockRoot = getLatestBlockRoot(wsState);
   if (!ssz.Root.equals(blockRoot, wsCheckpoint.root)) {
     throw new Error(
