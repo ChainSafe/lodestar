@@ -22,7 +22,7 @@ import {
   isMergeTransitionComplete,
 } from "@lodestar/state-transition";
 import {IChainForkConfig} from "@lodestar/config";
-import {ForkSeq} from "@lodestar/params";
+import {ForkName} from "@lodestar/params";
 import {toHex, sleep} from "@lodestar/utils";
 
 import type {BeaconChain} from "../chain.js";
@@ -111,8 +111,8 @@ export async function produceBlockBody<T extends BlockType>(
     );
   }
 
-  const fork = currentState.config.getForkInfo(blockSlot);
-  if (fork.seq >= ForkSeq.bellatrix) {
+  const forkName = currentState.config.getForkName(blockSlot);
+  if (forkName !== ForkName.phase0 && forkName !== ForkName.altair) {
     const safeBlockHash = this.forkChoice.getJustifiedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
     const finalizedBlockHash = this.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
     const feeRecipient = this.beaconProposerCache.getOrDefault(proposerIndex);
@@ -154,8 +154,8 @@ export async function produceBlockBody<T extends BlockType>(
           feeRecipient
         );
         if (prepareRes.isPremerge) {
-          (blockBody as allForks.ExecutionBlockBody).executionPayload = ssz.allForks[
-            fork.name
+          (blockBody as allForks.ExecutionBlockBody).executionPayload = ssz.allForksExecution[
+            forkName
           ].ExecutionPayload.defaultValue();
         } else {
           const {prepType, payloadId} = prepareRes;
@@ -187,8 +187,8 @@ export async function produceBlockBody<T extends BlockType>(
             {},
             e as Error
           );
-          (blockBody as allForks.ExecutionBlockBody).executionPayload = ssz.allForks[
-            fork.name
+          (blockBody as allForks.ExecutionBlockBody).executionPayload = ssz.allForksExecution[
+            forkName
           ].ExecutionPayload.defaultValue();
         } else {
           // since merge transition is complete, we need a valid payload even if with an

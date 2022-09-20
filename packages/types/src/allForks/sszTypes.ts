@@ -14,9 +14,6 @@ export const allForks = {
     SignedBeaconBlock: phase0.SignedBeaconBlock,
     BeaconState: phase0.BeaconState,
     Metadata: phase0.Metadata,
-    // Not used in phase0 but added for type consitency
-    ExecutionPayload: bellatrix.ExecutionPayload,
-    ExecutionPayloadHeader: bellatrix.ExecutionPayloadHeader,
   },
   altair: {
     BeaconBlockBody: altair.BeaconBlockBody,
@@ -24,9 +21,6 @@ export const allForks = {
     SignedBeaconBlock: altair.SignedBeaconBlock,
     BeaconState: altair.BeaconState,
     Metadata: altair.Metadata,
-    // Not used in altair but added for type consitency
-    ExecutionPayload: bellatrix.ExecutionPayload,
-    ExecutionPayloadHeader: bellatrix.ExecutionPayloadHeader,
   },
   bellatrix: {
     BeaconBlockBody: bellatrix.BeaconBlockBody,
@@ -34,6 +28,26 @@ export const allForks = {
     SignedBeaconBlock: bellatrix.SignedBeaconBlock,
     BeaconState: bellatrix.BeaconState,
     Metadata: altair.Metadata,
+  },
+  capella: {
+    BeaconBlockBody: capella.BeaconBlockBody,
+    BeaconBlock: capella.BeaconBlock,
+    SignedBeaconBlock: capella.SignedBeaconBlock,
+    BeaconState: capella.BeaconState,
+    Metadata: altair.Metadata,
+  },
+};
+
+/**
+ * Index the execution ssz types that differ by fork
+ * A record of AllForksExecutionSSZTypes indexed by fork
+ */
+export const allForksExecution = {
+  bellatrix: {
+    BeaconBlockBody: bellatrix.BeaconBlockBody,
+    BeaconBlock: bellatrix.BeaconBlock,
+    SignedBeaconBlock: bellatrix.SignedBeaconBlock,
+    BeaconState: bellatrix.BeaconState,
     ExecutionPayload: bellatrix.ExecutionPayload,
     ExecutionPayloadHeader: bellatrix.ExecutionPayloadHeader,
   },
@@ -42,7 +56,6 @@ export const allForks = {
     BeaconBlock: capella.BeaconBlock,
     SignedBeaconBlock: capella.SignedBeaconBlock,
     BeaconState: capella.BeaconState,
-    Metadata: altair.Metadata,
     // Not used in phase0 but added for type consitency
     ExecutionPayload: capella.ExecutionPayload,
     ExecutionPayloadHeader: capella.ExecutionPayloadHeader,
@@ -50,8 +63,8 @@ export const allForks = {
 };
 
 /**
- * Index the ssz types that differ by fork
- * A record of AllForksSSZTypes indexed by fork
+ * Index the blinded ssz types that differ by fork
+ * A record of AllForksBlindedSSZTypes indexed by fork
  */
 export const allForksBlinded = {
   bellatrix: {

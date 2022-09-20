@@ -118,6 +118,13 @@ export type AllForksSSZTypes = {
     | typeof capellaSsz.BeaconState
   >;
   Metadata: AllForksTypeOf<typeof phase0Ssz.Metadata | typeof altairSsz.Metadata>;
+};
+
+export type AllForksExecutionSSZTypes = {
+  BeaconBlockBody: AllForksTypeOf<typeof bellatrixSsz.BeaconBlockBody | typeof capellaSsz.BeaconBlockBody>;
+  BeaconBlock: AllForksTypeOf<typeof bellatrixSsz.BeaconBlock | typeof capellaSsz.BeaconBlock>;
+  SignedBeaconBlock: AllForksTypeOf<typeof bellatrixSsz.SignedBeaconBlock | typeof capellaSsz.SignedBeaconBlock>;
+  BeaconState: AllForksTypeOf<typeof bellatrixSsz.BeaconState | typeof capellaSsz.BeaconState>;
   ExecutionPayload: AllForksTypeOf<typeof bellatrixSsz.ExecutionPayload | typeof capellaSsz.ExecutionPayload>;
   ExecutionPayloadHeader: AllForksTypeOf<
     typeof bellatrixSsz.ExecutionPayloadHeader | typeof capellaSsz.ExecutionPayloadHeader
