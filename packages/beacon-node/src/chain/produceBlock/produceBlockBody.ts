@@ -49,10 +49,10 @@ export enum BlockType {
 }
 export type AssembledBodyType<T extends BlockType> = T extends BlockType.Full
   ? allForks.BeaconBlockBody
-  : bellatrix.BlindedBeaconBlockBody;
+  : allForks.BlindedBeaconBlockBody;
 export type AssembledBlockType<T extends BlockType> = T extends BlockType.Full
   ? allForks.BeaconBlock
-  : bellatrix.BlindedBeaconBlock;
+  : allForks.BlindedBeaconBlock;
 
 export async function produceBlockBody<T extends BlockType>(
   this: BeaconChain,
@@ -133,7 +133,7 @@ export async function produceBlockBody<T extends BlockType>(
       // For MeV boost integration, this is where the execution header will be
       // fetched from the payload id and a blinded block will be produced instead of
       // fullblock for the validator to sign
-      (blockBody as bellatrix.BlindedBeaconBlockBody).executionPayloadHeader = await prepareExecutionPayloadHeader(
+      (blockBody as allForks.BlindedBeaconBlockBody).executionPayloadHeader = await prepareExecutionPayloadHeader(
         this,
         currentState as CachedBeaconStateBellatrix,
         proposerPubKey

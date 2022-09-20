@@ -161,13 +161,29 @@ export async function initStateFromAnchorState(
   config: IChainForkConfig,
   db: IBeaconDb,
   logger: ILogger,
-  anchorState: BeaconStateAllForks
+  anchorState: BeaconStateAllForks,
+  {
+    isWithinWeakSubjectivityPeriod,
+    isCheckpointState,
+  }: {isWithinWeakSubjectivityPeriod: boolean; isCheckpointState: boolean}
 ): Promise<BeaconStateAllForks> {
-  logger.info("Initializing beacon state from anchor state", {
-    slot: anchorState.slot,
-    epoch: computeEpochAtSlot(anchorState.slot),
-    stateRoot: toHexString(anchorState.hashTreeRoot()),
-  });
+  const stateInfo = isCheckpointState ? "checkpoint" : "db";
+  if (isWithinWeakSubjectivityPeriod) {
+    logger.info(`Initializing beacon from a valid ${stateInfo} state`, {
+      slot: anchorState.slot,
+      epoch: computeEpochAtSlot(anchorState.slot),
+      stateRoot: toHexString(anchorState.hashTreeRoot()),
+      isWithinWeakSubjectivityPeriod,
+    });
+  } else {
+    logger.warn(`Initializing from a stale ${stateInfo} state vulnerable to long range attacks`, {
+      slot: anchorState.slot,
+      epoch: computeEpochAtSlot(anchorState.slot),
+      stateRoot: toHexString(anchorState.hashTreeRoot()),
+      isWithinWeakSubjectivityPeriod,
+    });
+    logger.warn("Checkpoint sync recommended, please use --help to see checkpoint sync options");
+  }
 
   await persistAnchorState(config, db, anchorState);
 

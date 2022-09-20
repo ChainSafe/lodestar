@@ -4,6 +4,7 @@ import {
   computeStartSlotAtEpoch,
   computeDomain,
   ZERO_HASH,
+  blindedOrFullBlockHashTreeRoot,
 } from "@lodestar/state-transition";
 import {IBeaconConfig} from "@lodestar/config";
 import {
@@ -38,7 +39,6 @@ import {ISlashingProtection} from "../slashingProtection/index.js";
 import {PubkeyHex} from "../types.js";
 import {externalSignerPostSignature, SignableMessageType, SignableMessage} from "../util/externalSignerClient.js";
 import {Metrics} from "../metrics.js";
-import {blindedOrFullBlockHashTreeRoot} from "../util/blindedBlock.js";
 import {isValidatePubkeyHex} from "../util/format.js";
 import {IndicesService} from "./indices.js";
 import {DoppelgangerService} from "./doppelgangerService.js";
