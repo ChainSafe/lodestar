@@ -228,12 +228,12 @@ export const LightClientOptimisticUpdate = new ContainerType(
   {typeName: "LightClientOptimisticUpdate", jsonCase: "eth2"}
 );
 
-export const LightClientByRangeRequest = new ContainerType(
+export const LightClientUpdatesByRange = new ContainerType(
   {
     startPeriod: UintNum64,
     count: UintNum64,
   },
-  {typeName: "LightClientByRangeRequest", jsonCase: "eth2"}
+  {typeName: "LightClientUpdatesByRange", jsonCase: "eth2"}
 );
 
 export const LightClientStore = new ContainerType(

@@ -19,5 +19,5 @@ export type BlockRoot = ValueOf<typeof ssz.BlockRoot>;
 export type LightClientUpdate = ValueOf<typeof ssz.LightClientUpdate>;
 export type LightClientFinalityUpdate = ValueOf<typeof ssz.LightClientFinalityUpdate>;
 export type LightClientOptimisticUpdate = ValueOf<typeof ssz.LightClientOptimisticUpdate>;
-export type LightClientUpdateByRangeRequest = ValueOf<typeof ssz.LightClientByRangeRequest>;
+export type LightClientUpdateByRange = ValueOf<typeof ssz.LightClientUpdatesByRange>;
 export type LightClientStore = ValueOf<typeof ssz.LightClientStore>;

@@ -132,7 +132,7 @@ export type RequestBodyByMethod = {
   [Method.BeaconBlocksByRange]: phase0.BeaconBlocksByRangeRequest;
   [Method.BeaconBlocksByRoot]: phase0.BeaconBlocksByRootRequest;
   [Method.LightClientBootstrap]: altair.BlockRoot;
-  [Method.LightClientUpdate]: altair.LightClientUpdateByRangeRequest;
+  [Method.LightClientUpdate]: altair.LightClientUpdateByRange;
   [Method.LightClientFinalityUpdate]: null;
   [Method.LightClientOptimisticUpdate]: null;
 };
