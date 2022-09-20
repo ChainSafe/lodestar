@@ -7,7 +7,7 @@ import {Keystore} from "@chainsafe/bls-keystore";
 import {IChainForkConfig} from "@lodestar/config";
 import {interopSecretKey} from "@lodestar/state-transition";
 import {IGlobalArgs} from "../../../src/options/globalOptions.js";
-import {IValidatorCliArgs} from "../../../lib/cmds/validator/options.js";
+import {IValidatorCliArgs} from "../../../src/cmds/validator/options.js";
 import {SimulationParams, ValidatorConstructor, ValidatorProcess} from "./types.js";
 import {closeChildProcess, KEY_MANAGER_BASE_PORT, spawnProcessAndWait, __dirname} from "./utils.js";
 import {ExternalSignerServer} from "./ExternalSignerServer.js";
