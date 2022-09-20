@@ -29,9 +29,6 @@ export const ropstenChainConfig: IChainConfig = {
   BELLATRIX_FORK_VERSION: b("0x80000071"),
   BELLATRIX_FORK_EPOCH: 750,
   TERMINAL_TOTAL_DIFFICULTY: BigInt("50000000000000000"),
-  // # Sharding
-  SHARDING_FORK_VERSION: b("0x03001020"),
-  SHARDING_FORK_EPOCH: Infinity,
 
   // Deposit contract
   // ---------------------------------------------------------------
