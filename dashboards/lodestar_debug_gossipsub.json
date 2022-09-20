@@ -8580,7 +8580,7 @@
       "type": "row"
     }
   ],
-  "refresh": "30s",
+  "refresh": "10s",
   "schemaVersion": 35,
   "style": "dark",
   "tags": ["lodestar", "debug"],
