@@ -35,7 +35,7 @@ export async function validateLightClientFinalityUpdate(
   // [IGNORE] The received finality_update matches the locally computed one exactly
   if (lightClientFinalityUpdate != (await chain.lightClientServer.getFinalityUpdate())) {
     throw new LightClientError(GossipAction.IGNORE, {
-      code: LightClientErrorCode.NOT_MATCHING_LOCAL,
+      code: LightClientErrorCode.FINALITY_UPDATE_NOT_MATCHING_LOCAL,
     });
   }
 

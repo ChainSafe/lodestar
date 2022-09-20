@@ -45,7 +45,6 @@ describe("Light Client Optimistic Update validation", function () {
   }
 
   it("should return invalid - optimistic update already forwarded", async () => {
-    //No other optimistic_update with a lower or equal attested_header.slot was already forwarded on the network
     const lightclientOptimisticUpdate: altair.LightClientOptimisticUpdate = ssz.altair.LightClientOptimisticUpdate.defaultValue();
 
     await expectRejectedWithLodestarError(
@@ -55,7 +54,6 @@ describe("Light Client Optimistic Update validation", function () {
   });
 
   it("should return invalid - optimistic update received too early", async () => {
-    //No other optimistic_update with a lower or equal attested_header.slot was already forwarded on the network
     const lightclientOptimisticUpdate: altair.LightClientOptimisticUpdate = ssz.altair.LightClientOptimisticUpdate.defaultValue();
     lightclientOptimisticUpdate.attestedHeader.slot = 2;
     lightclientOptimisticUpdate.signatureSlot = 4;
@@ -70,7 +68,6 @@ describe("Light Client Optimistic Update validation", function () {
   });
 
   it("should return invalid - optimistic update not matching local", async () => {
-    //No other optimistic_update with a lower or equal attested_header.slot was already forwarded on the network
     const lightclientOptimisticUpdate: altair.LightClientOptimisticUpdate = ssz.altair.LightClientOptimisticUpdate.defaultValue();
     lightclientOptimisticUpdate.attestedHeader.slot = 2;
 
@@ -84,7 +81,7 @@ describe("Light Client Optimistic Update validation", function () {
 
     await expectRejectedWithLodestarError(
       validateLightClientOptimisticUpdate(config, chain, lightclientOptimisticUpdate),
-      LightClientErrorCode.NOT_MATCHING_LOCAL
+      LightClientErrorCode.OPTIMISTIC_UPDATE_NOT_MATCHING_LOCAL
     );
   });
 });
