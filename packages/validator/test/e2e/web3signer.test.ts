@@ -56,7 +56,12 @@ describe("web3signer signature test", function () {
   // Note: for MacOS compatibility do not use `--network=host`
   runDockerContainer(
     web3signerImage,
-    ["run", "--rm", `--publish=${port}:9000`, `--volume=${configDirPathHost}:${configDirPathContainer}`],
+    [
+      // |
+      "--rm",
+      `--publish=${port}:9000`,
+      `--volume=${configDirPathHost}:${configDirPathContainer}`,
+    ],
     [
       "--http-listen-host=0.0.0.0",
       `--http-listen-port=${port}`,
