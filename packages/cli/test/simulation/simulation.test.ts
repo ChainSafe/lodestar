@@ -7,6 +7,10 @@ import {
   missedBlocksAssertions,
   attestationParticipationAssertions,
   nodeAssertions,
+  inclusionDelayAssertions,
+  attestationPerSlotAssertions,
+  finalityAssertions,
+  headsAssertions,
 } from "../utils/simulation/assertions.js";
 
 chai.use(chaiAsPromised);
@@ -26,12 +30,12 @@ const forksCases: {
 }[] = [
   {
     title: "mixed forks",
-    params: {altairEpoch: 2, bellatrixEpoch: 4, runTill: 6},
+    params: {altairEpoch: 1, bellatrixEpoch: 2, runTill: 6},
   },
-  // {
-  //   title: "mixed forks with remote signer",
-  //   params: {altairEpoch: 2, bellatrixEpoch: 4, withExternalSigner: true, runTill: 6},
-  // },
+  {
+    title: "mixed forks with remote signer",
+    params: {altairEpoch: 2, bellatrixEpoch: 4, withExternalSigner: true, runTill: 6},
+  },
 ];
 for (const {beaconNodes, validatorClients, validatorsPerClient} of nodeCases) {
   for (const {
@@ -77,6 +81,7 @@ for (const {beaconNodes, validatorClients, validatorsPerClient} of nodeCases) {
         });
 
         after("stop env", async () => {
+          env.tracker.printNoesInfo();
           env.resetCounter();
           await env.stop();
         });
@@ -95,7 +100,23 @@ for (const {beaconNodes, validatorClients, validatorsPerClient} of nodeCases) {
             });
 
             describe("missed blocks", () => {
-              missedBlocksAssertions(env);
+              missedBlocksAssertions(env, epoch);
+            });
+
+            describe("finality", () => {
+              finalityAssertions(env, epoch);
+            });
+
+            describe("heads", () => {
+              headsAssertions(env, epoch);
+            });
+
+            describe("inclusion delay", () => {
+              inclusionDelayAssertions(env, epoch);
+            });
+
+            describe("attestation count per slot", () => {
+              attestationPerSlotAssertions(env, epoch);
             });
 
             describe("attestation participation", () => {

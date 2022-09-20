@@ -1,19 +1,24 @@
 import EventEmitter from "node:events";
 import {routes} from "@lodestar/api/beacon";
 import {altair, Epoch, Slot} from "@lodestar/types";
+import {toHexString} from "@lodestar/utils";
 import {EpochClock} from "./EpochClock.js";
 import {BeaconNodeProcess, SimulationParams} from "./types.js";
 import {computeAttestation, computeAttestationParticipation, computeInclusionDelay, getForkName} from "./utils.js";
 
 const participationHeading = (id: string): string => `${id}-P-H/S/T`;
 const missedBlocksHeading = (id: string): string => `${id}-M`;
+// const nodeHeadHeading = (id: string): string => `${id}-H`;
+const finalizedHeading = (id: string): string => `${id}-F`;
 
 export class SimulationTracker {
   readonly producedBlocks: Map<string, Map<Slot, boolean>>;
-  readonly attestationsPerBlock: Map<string, Map<Slot, number>>;
+  readonly attestationsPerSlot: Map<string, Map<Slot, number>>;
   readonly inclusionDelayPerBlock: Map<string, Map<Slot, number>>;
   readonly attestationParticipation: Map<string, Map<Epoch, {head: number; source: number; target: number}>>;
   private lastSeenSlot: Map<string, Slot>;
+  readonly headPerSlot: Map<string, Map<Slot, string>>;
+  readonly finalizedPerSlot: Map<string, Map<Slot, Slot>>;
 
   readonly emitter = new EventEmitter();
 
@@ -29,17 +34,24 @@ export class SimulationTracker {
     this.params = params;
 
     this.producedBlocks = new Map();
-    this.attestationsPerBlock = new Map();
+    this.attestationsPerSlot = new Map();
     this.inclusionDelayPerBlock = new Map();
     this.attestationParticipation = new Map();
     this.lastSeenSlot = new Map();
+    this.headPerSlot = new Map();
+    this.finalizedPerSlot = new Map();
 
     for (let i = 0; i < nodes.length; i += 1) {
       this.producedBlocks.set(nodes[i].id, new Map());
-      this.attestationsPerBlock.set(nodes[i].id, new Map());
+      this.attestationsPerSlot.set(nodes[i].id, new Map());
       this.inclusionDelayPerBlock.set(nodes[i].id, new Map());
       this.attestationParticipation.set(nodes[i].id, new Map());
       this.lastSeenSlot.set(nodes[i].id, 0);
+      this.headPerSlot.set(nodes[i].id, new Map());
+      this.finalizedPerSlot.set(nodes[i].id, new Map());
+
+      // Set finalized slot to genesis
+      this.finalizedPerSlot.get(nodes[i].id)?.set(0, 0);
     }
   }
 
@@ -47,16 +59,17 @@ export class SimulationTracker {
     const missedBlocks: Map<string, Slot[]> = new Map();
     const minSlot = Math.min(...this.lastSeenSlot.values());
 
-    for (let i = 0; i < this.nodes.length; i++) {
+    for (const node of this.nodes) {
       const missedBlocksForNode: Slot[] = [];
 
-      for (let s = 0; s < minSlot; s++) {
-        if (!this.producedBlocks.get(this.nodes[i].id)?.get(s)) {
+      // We don't consider genesis slot as missed slot
+      for (let s = 1; s < minSlot; s++) {
+        if (!this.producedBlocks.get(node.id)?.get(s)) {
           missedBlocksForNode.push(s);
         }
       }
 
-      missedBlocks.set(this.nodes[i].id, missedBlocksForNode);
+      missedBlocks.set(node.id, missedBlocksForNode);
     }
 
     return missedBlocks;
@@ -100,8 +113,14 @@ export class SimulationTracker {
     }
 
     this.producedBlocks.get(node.id)?.set(slot, true);
-    this.attestationsPerBlock.get(node.id)?.set(slot, computeAttestation(blockAttestations.data));
+    this.attestationsPerSlot.get(node.id)?.set(slot, computeAttestation(blockAttestations.data));
     this.inclusionDelayPerBlock.get(node.id)?.set(slot, computeInclusionDelay(blockAttestations.data, slot));
+
+    const head = await node.api.beacon.getBlockHeader("head");
+    this.headPerSlot.get(node.id)?.set(slot, toHexString(head.data.root));
+
+    const finalized = await node.api.beacon.getBlockHeader("finalized");
+    this.finalizedPerSlot.get(node.id)?.set(slot, finalized.data.header.message.slot);
 
     if (this.clock.isFirstSlotOfEpoch(slot)) {
       const state = await node.api.debug.getStateV2("head");
@@ -147,8 +166,19 @@ export class SimulationTracker {
         record[missedBlocksHeading(node.id)] = this.producedBlocks.get(node.id)?.get(slot) ? "" : "x";
       }
 
+      // TODO: Find a better way to show the heads on each slot
+      // for (const node of this.nodes) {
+      //   record[nodeHeadHeading(node.id)] = this.headPerSlot.get(node.id)?.get(slot) ?? "";
+      // }
+
       for (const node of this.nodes) {
-        record[participationHeading(node.id)] = "";
+        record[finalizedHeading(node.id)] = this.finalizedPerSlot.get(node.id)?.get(slot) ?? "";
+      }
+
+      for (const node of this.nodes) {
+        record[participationHeading(node.id)] = `${this.attestationsPerSlot.get(node.id)?.get(slot) ?? ""} - ${
+          this.inclusionDelayPerBlock.get(node.id)?.get(slot) ?? ""
+        }`;
       }
 
       records.push(record);
