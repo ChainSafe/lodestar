@@ -448,6 +448,16 @@ export function isValidAttestationData(
   }
 
   const attestationDependantRoot = forkChoice.getDependentRoot(beaconBlock, EpochDifference.previous);
+
+  console.log({
+    stateEpoch,
+    targetEpoch,
+    pivotSlot,
+    stateDependentRoot,
+    attestationDependantRoot,
+    valid: attestationDependantRoot === stateDependentRoot,
+  });
+
   return attestationDependantRoot === stateDependentRoot;
 }
 
