@@ -2,6 +2,7 @@ import {join} from "node:path";
 import chai from "chai";
 import chaiAsPromised from "chai-as-promised";
 import {Epoch} from "@lodestar/types";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {logFilesDir, SimulationEnvironment} from "../utils/simulation/index.js";
 import {
   missedBlocksAssertions,
@@ -12,7 +13,6 @@ import {
   finalityAssertions,
   headsAssertions,
 } from "../utils/simulation/assertions.js";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
 
 chai.use(chaiAsPromised);
 
@@ -31,7 +31,7 @@ const forksCases: {
 }[] = [
   {
     title: "mixed forks",
-    params: {altairEpoch: 2, bellatrixEpoch: 4, runTill: 6},
+    params: {altairEpoch: 2, bellatrixEpoch: 3, runTill: 4},
   },
   // {
   //   title: "mixed forks with remote signer",

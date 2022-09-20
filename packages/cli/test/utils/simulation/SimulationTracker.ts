@@ -77,7 +77,6 @@ export class SimulationTracker {
 
   async start(): Promise<void> {
     for (const node of this.nodes) {
-      console.log("%%%%% tracker start", node.id);
       node.api.events.eventstream(
         [routes.events.EventType.block, routes.events.EventType.head, routes.events.EventType.finalizedCheckpoint],
         this.signal,
