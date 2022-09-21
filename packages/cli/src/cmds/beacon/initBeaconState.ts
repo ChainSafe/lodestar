@@ -15,7 +15,6 @@ import {
   getStateTypeFromBytes,
 } from "@lodestar/beacon-node";
 import {Checkpoint} from "@lodestar/types/phase0";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
 
 import {downloadOrLoadFile} from "../../util/index.js";
 import {defaultNetwork, IGlobalArgs} from "../../options/globalOptions.js";
