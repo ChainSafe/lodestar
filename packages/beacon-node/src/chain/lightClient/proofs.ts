@@ -35,7 +35,6 @@ export function getNextSyncCommitteeBranch(syncCommitteesWitness: SyncCommitteeW
 
 export function getCurrentSyncCommitteeBranch(syncCommitteesWitness: SyncCommitteeWitness): Uint8Array[] {
   // Witness branch is sorted by descending gindex
-  // TODO DA should this not be syncCommitteesWitness.currentSyncCommitteeRoot?
   return [syncCommitteesWitness.nextSyncCommitteeRoot, ...syncCommitteesWitness.witness];
 }
 
