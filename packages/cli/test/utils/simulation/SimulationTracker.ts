@@ -4,7 +4,7 @@ import {altair, Epoch, Slot} from "@lodestar/types";
 import {EpochClock} from "./EpochClock.js";
 import {BeaconNodeProcess, SimulationParams} from "./types.js";
 import {computeAttestation, computeAttestationParticipation, computeInclusionDelay, getForkName} from "./utils.js";
-
+/* eslint-disable no-console */
 const participationHeading = (id: string): string => `${id}-P-H/S/T`;
 const missedBlocksHeading = (id: string): string => `${id}-M`;
 

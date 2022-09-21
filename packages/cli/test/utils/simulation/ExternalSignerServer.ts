@@ -3,6 +3,8 @@ import {fromHexString, toHexString} from "@chainsafe/ssz";
 import type {SecretKey} from "@chainsafe/bls/types";
 import {EXTERNAL_SIGNER_BASE_PORT} from "./utils.js";
 
+/* eslint-disable no-console */
+
 export class ExternalSignerServer {
   static totalProcessCount = 0;
 

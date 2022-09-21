@@ -10,7 +10,7 @@ import {
   ForkName,
 } from "@lodestar/params";
 import {SimulationOptionalParams, SimulationParams} from "./types.js";
-
+/* eslint-disable no-console */
 const TIMELY_HEAD = 1 << TIMELY_HEAD_FLAG_INDEX;
 const TIMELY_SOURCE = 1 << TIMELY_SOURCE_FLAG_INDEX;
 const TIMELY_TARGET = 1 << TIMELY_TARGET_FLAG_INDEX;

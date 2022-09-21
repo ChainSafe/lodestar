@@ -14,6 +14,8 @@ import {
   getSimulationId,
 } from "./index.js";
 
+/* eslint-disable no-console */
+
 export class SimulationEnvironment {
   readonly params: SimulationParams;
   readonly id: string;

@@ -47,6 +47,7 @@ for (const {beaconNodes, validatorClients, validatorsPerClient} of nodeCases) {
       `externalSigner-${withExternalSigner ? "yes" : "no"}`,
     ].join("_");
 
+    // eslint-disable-next-line no-console
     console.log(
       JSON.stringify({
         beaconNodes,
