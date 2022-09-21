@@ -12,6 +12,7 @@ import {
   attestationPerSlotAssertions,
   finalityAssertions,
   headsAssertions,
+  syncCommitteeAssertions,
 } from "../utils/simulation/assertions.js";
 
 chai.use(chaiAsPromised);
@@ -127,6 +128,10 @@ for (const {beaconNodes, validatorClients, validatorsPerClient} of nodeCases) {
 
             describe("attestation participation", () => {
               attestationParticipationAssertions(env, epoch);
+            });
+
+            describe("sync committee participation", () => {
+              syncCommitteeAssertions(env, epoch);
             });
           });
         }
