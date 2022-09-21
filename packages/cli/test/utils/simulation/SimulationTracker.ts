@@ -5,6 +5,7 @@ import {toHexString} from "@lodestar/utils";
 import {EpochClock} from "./EpochClock.js";
 import {BeaconNodeProcess, SimulationParams} from "./types.js";
 import {
+  avg,
   computeAttestation,
   computeAttestationParticipation,
   computeInclusionDelay,
@@ -227,11 +228,11 @@ export class SimulationTracker {
               : "";
           record[participationHeading(node.id)] = participationStr;
 
-          let syncParticipation = 0;
+          const syncParticipation: number[] = [];
           for (let i = firstSlot; i <= lastSlot; i++) {
-            syncParticipation += this.syncCommitteeParticipation.get(node.id)?.get(i) ?? 0;
+            syncParticipation.push(this.syncCommitteeParticipation.get(node.id)?.get(i) ?? 0);
           }
-          record[syncCommitteeHeading(node.id)] = syncParticipation / (lastSlot - firstSlot + 1);
+          record[syncCommitteeHeading(node.id)] = avg(syncParticipation).toFixed(2);
         }
         records.push(record);
       }
