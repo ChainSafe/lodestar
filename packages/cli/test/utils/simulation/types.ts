@@ -14,11 +14,9 @@ export type SimulationRequiredParams = {
 
 export type SimulationOptionalParams = {
   validatorsPerClient: number;
-  withExternalSigner: boolean;
   secondsPerSlot: number;
   genesisSlotsDelay: number;
   anchorState?: BeaconStateAllForks;
-  externalSigner: boolean;
 };
 
 export type RunTimeSimulationParams = {
