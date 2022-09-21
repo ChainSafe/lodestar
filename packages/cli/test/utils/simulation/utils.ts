@@ -1,7 +1,7 @@
 import {dirname} from "node:path";
 import {fileURLToPath} from "node:url";
 import {ChildProcess, spawn} from "node:child_process";
-import {altair, Epoch, phase0, Slot, ValidatorIndex} from "@lodestar/types";
+import {altair, Epoch, phase0, Slot} from "@lodestar/types";
 import {
   TIMELY_HEAD_FLAG_INDEX,
   TIMELY_TARGET_FLAG_INDEX,
