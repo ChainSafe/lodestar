@@ -81,14 +81,16 @@ export const eventTestData: EventData = {
     signature:
       "0xac118511474a94f857300b315c50585c32a713e4452e26a6bb98cdb619936370f126ed3b6bb64469259ee92e69791d9e12d324ce6fd90081680ce72f39d85d50b0ff977260a8667465e613362c6d6e6e745e1f9323ec1d6f16041c4e358839ac",
   }),
-  [EventType.lightclientOptimisticUpdate]: {
+  [EventType.lightClientOptimisticUpdate]: {
     syncAggregate: ssz.altair.SyncAggregate.defaultValue(),
     attestedHeader: ssz.phase0.BeaconBlockHeader.defaultValue(),
+    signatureSlot: ssz.Slot.defaultValue(),
   },
-  [EventType.lightclientFinalityUpdate]: {
+  [EventType.lightClientFinalityUpdate]: {
     attestedHeader: ssz.phase0.BeaconBlockHeader.defaultValue(),
     finalizedHeader: ssz.phase0.BeaconBlockHeader.defaultValue(),
     finalityBranch: [root],
     syncAggregate: ssz.altair.SyncAggregate.defaultValue(),
+    signatureSlot: ssz.Slot.defaultValue(),
   },
 };

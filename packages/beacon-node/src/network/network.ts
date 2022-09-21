@@ -118,8 +118,8 @@ export class Network implements INetwork {
     );
 
     this.chain.emitter.on(ChainEvent.clockEpoch, this.onEpoch);
-    this.chain.emitter.on(ChainEvent.lightclientFinalityUpdate, this.onLightclientFinalityUpdate.bind(this));
-    this.chain.emitter.on(ChainEvent.lightclientOptimisticUpdate, this.onLightclientOptimisticUpdate.bind(this));
+    this.chain.emitter.on(ChainEvent.lightClientFinalityUpdate, this.onLightclientFinalityUpdate.bind(this));
+    this.chain.emitter.on(ChainEvent.lightClientOptimisticUpdate, this.onLightclientOptimisticUpdate.bind(this));
     modules.signal.addEventListener("abort", this.close.bind(this), {once: true});
   }
 

@@ -327,11 +327,11 @@ export class Lightclient {
         // Subscribe to head updates over SSE
         // TODO: Use polling for getLatestHeadUpdate() is SSE is unavailable
         this.api.events.eventstream(
-          [routes.events.EventType.lightclientOptimisticUpdate],
+          [routes.events.EventType.lightClientOptimisticUpdate],
           controller.signal,
           this.onSSE
         );
-        this.api.events.eventstream([routes.events.EventType.lightclientFinalityUpdate], controller.signal, this.onSSE);
+        this.api.events.eventstream([routes.events.EventType.lightClientFinalityUpdate], controller.signal, this.onSSE);
       }
 
       // When close to the end of a sync period poll for sync committee updates
@@ -368,11 +368,11 @@ export class Lightclient {
   private onSSE = (event: routes.events.BeaconEvent): void => {
     try {
       switch (event.type) {
-        case routes.events.EventType.lightclientOptimisticUpdate:
+        case routes.events.EventType.lightClientOptimisticUpdate:
           this.processOptimisticUpdate(event.message);
           break;
 
-        case routes.events.EventType.lightclientFinalityUpdate:
+        case routes.events.EventType.lightClientFinalityUpdate:
           this.processFinalizedUpdate(event.message);
           break;
 
@@ -388,7 +388,7 @@ export class Lightclient {
    * Processes new optimistic header updates in only known synced sync periods.
    * This headerUpdate may update the head if there's enough participation.
    */
-  private processOptimisticUpdate(headerUpdate: routes.events.LightclientOptimisticHeaderUpdate): void {
+  private processOptimisticUpdate(headerUpdate: routes.events.LightClientOptimisticUpdate): void {
     const {attestedHeader, syncAggregate} = headerUpdate;
 
     // Prevent registering updates for slots to far ahead
@@ -466,7 +466,7 @@ export class Lightclient {
    * Processes new header updates in only known synced sync periods.
    * This headerUpdate may update the head if there's enough participation.
    */
-  private processFinalizedUpdate(finalizedUpdate: routes.events.LightclientFinalityUpdate): void {
+  private processFinalizedUpdate(finalizedUpdate: routes.events.LightClientFinalityUpdate): void {
     // Validate sync aggregate of the attested header and other conditions like future update, period etc
     // and may be move head
     this.processOptimisticUpdate(finalizedUpdate);

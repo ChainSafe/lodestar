@@ -1,4 +1,4 @@
-import {ContainerType, JsonPath, VectorCompositeType} from "@chainsafe/ssz";
+import {JsonPath} from "@chainsafe/ssz";
 import {Proof} from "@chainsafe/persistent-merkle-tree";
 import {altair, phase0, ssz, SyncPeriod} from "@lodestar/types";
 import {
@@ -13,10 +13,10 @@ import {
   ReqEmpty,
 } from "../../utils/index.js";
 import {queryParseProofPathsArr, querySerializeProofPathsArr} from "../../utils/serdes.js";
-import {LightclientOptimisticHeaderUpdate, LightclientFinalityUpdate} from "./events.js";
+import {LightClientOptimisticUpdate, LightClientFinalityUpdate} from "./events.js";
 
-// Re-export for convenience when importing routes.lightclient.LightclientOptimisticHeaderUpdate
-export {LightclientOptimisticHeaderUpdate, LightclientFinalityUpdate};
+// Re-export for convenience when importing routes.lightclient.LightclientOptimisticUpdate
+export {LightClientOptimisticUpdate, LightClientFinalityUpdate};
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
@@ -45,7 +45,7 @@ export type Api = {
    * Returns the latest optimistic head update available. Clients should use the SSE type `light_client_optimistic_update`
    * unless to get the very first head update after syncing, or if SSE are not supported by the server.
    */
-  getOptimisticUpdate(): Promise<{data: LightclientOptimisticHeaderUpdate}>;
+  getOptimisticUpdate(): Promise<{data: LightClientOptimisticUpdate}>;
   getFinalityUpdate(): Promise<{data: altair.LightClientFinalityUpdate}>;
   /**
    * Fetch a bootstrapping state with a proof to a trusted block root.
@@ -101,30 +101,12 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
 }
 
 export function getReturnTypes(): ReturnTypes<Api> {
-  const lightclientBootstrap = new ContainerType(
-    {
-      header: ssz.phase0.BeaconBlockHeader,
-      currentSyncCommittee: ssz.altair.SyncCommittee,
-      currentSyncCommitteeBranch: new VectorCompositeType(ssz.Root, 5),
-    },
-    {jsonCase: "eth2"}
-  );
-
-  const lightclientHeaderUpdate = new ContainerType(
-    {
-      syncAggregate: ssz.altair.SyncAggregate,
-      attestedHeader: ssz.phase0.BeaconBlockHeader,
-    },
-    {jsonCase: "eth2"}
-  );
-
-  // TODO DA why redefine types here when types in ssz.<fork> can be used?
   return {
     // Just sent the proof JSON as-is
     getStateProof: sameType(),
     getUpdates: ContainerData(ArrayOf(ssz.altair.LightClientUpdate)),
-    getOptimisticUpdate: ContainerData(lightclientHeaderUpdate),
+    getOptimisticUpdate: ContainerData(ssz.altair.LightClientOptimisticUpdate),
     getFinalityUpdate: ContainerData(ssz.altair.LightClientFinalityUpdate),
-    getBootstrap: ContainerData(lightclientBootstrap),
+    getBootstrap: ContainerData(ssz.altair.LightClientBootstrap),
   };
 }

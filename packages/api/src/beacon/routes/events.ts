@@ -5,16 +5,18 @@ import {RouteDef, TypeJson} from "../../utils/index.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
-export type LightclientOptimisticHeaderUpdate = {
+export type LightClientOptimisticUpdate = {
   syncAggregate: altair.SyncAggregate;
   attestedHeader: phase0.BeaconBlockHeader;
+  signatureSlot: Slot;
 };
 
-export type LightclientFinalityUpdate = {
+export type LightClientFinalityUpdate = {
   attestedHeader: phase0.BeaconBlockHeader;
   finalizedHeader: phase0.BeaconBlockHeader;
   finalityBranch: Uint8Array[];
   syncAggregate: altair.SyncAggregate;
+  signatureSlot: Slot;
 };
 
 export enum EventType {
@@ -38,9 +40,9 @@ export enum EventType {
   /** The node has received a valid sync committee SignedContributionAndProof (from P2P or API) */
   contributionAndProof = "contribution_and_proof",
   /** New or better optimistic header update available */
-  lightclientOptimisticUpdate = "light_client_optimistic_update",
+  lightClientOptimisticUpdate = "light_client_optimistic_update",
   /** New or better finality update available */
-  lightclientFinalityUpdate = "light_client_finality_update",
+  lightClientFinalityUpdate = "light_client_finality_update",
 }
 
 export type EventData = {
@@ -77,8 +79,8 @@ export type EventData = {
     executionOptimistic: boolean;
   };
   [EventType.contributionAndProof]: altair.SignedContributionAndProof;
-  [EventType.lightclientOptimisticUpdate]: LightclientOptimisticHeaderUpdate;
-  [EventType.lightclientFinalityUpdate]: LightclientFinalityUpdate;
+  [EventType.lightClientOptimisticUpdate]: LightClientOptimisticUpdate;
+  [EventType.lightClientFinalityUpdate]: LightClientFinalityUpdate;
 };
 
 export type BeaconEvent = {[K in EventType]: {type: K; message: EventData[K]}}[EventType];
@@ -163,19 +165,21 @@ export function getTypeByEvent(): {[K in EventType]: Type<EventData[K]>} {
 
     [EventType.contributionAndProof]: ssz.altair.SignedContributionAndProof,
 
-    [EventType.lightclientOptimisticUpdate]: new ContainerType(
+    [EventType.lightClientOptimisticUpdate]: new ContainerType(
       {
         syncAggregate: ssz.altair.SyncAggregate,
         attestedHeader: ssz.phase0.BeaconBlockHeader,
+        signatureSlot: ssz.Slot,
       },
       {jsonCase: "eth2"}
     ),
-    [EventType.lightclientFinalityUpdate]: new ContainerType(
+    [EventType.lightClientFinalityUpdate]: new ContainerType(
       {
         attestedHeader: ssz.phase0.BeaconBlockHeader,
         finalizedHeader: ssz.phase0.BeaconBlockHeader,
         finalityBranch: new VectorCompositeType(ssz.Bytes32, FINALIZED_ROOT_DEPTH),
         syncAggregate: ssz.altair.SyncAggregate,
+        signatureSlot: ssz.Slot,
       },
       {jsonCase: "eth2"}
     ),

@@ -88,11 +88,11 @@ export enum ChainEvent {
   /**
    * A new lightclient optimistic header update is available to be broadcasted to connected light-clients
    */
-  lightclientOptimisticUpdate = "lightclient:header_update",
+  lightClientOptimisticUpdate = "lightclient:header_update",
   /**
    * A new lightclient finalized header update is available to be broadcasted to connected light-clients
    */
-  lightclientFinalityUpdate = "lightclient:finality_update",
+  lightClientFinalityUpdate = "lightclient:finality_update",
 }
 
 export type HeadEventData = routes.events.EventData[routes.events.EventType.head];
@@ -114,8 +114,8 @@ export interface IChainEvents {
   [ChainEvent.forkChoiceJustified]: (checkpoint: CheckpointWithHex) => void;
   [ChainEvent.forkChoiceFinalized]: (checkpoint: CheckpointWithHex) => void;
 
-  [ChainEvent.lightclientOptimisticUpdate]: (optimisticUpdate: altair.LightClientOptimisticUpdate) => void;
-  [ChainEvent.lightclientFinalityUpdate]: (finalizedUpdate: altair.LightClientFinalityUpdate) => void;
+  [ChainEvent.lightClientOptimisticUpdate]: (optimisticUpdate: altair.LightClientOptimisticUpdate) => void;
+  [ChainEvent.lightClientFinalityUpdate]: (finalizedUpdate: altair.LightClientFinalityUpdate) => void;
 }
 
 /**

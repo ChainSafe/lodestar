@@ -4,10 +4,10 @@ import {IBeaconDb} from "../../../db/index.js";
 import {ReqRespBlockResponse} from "../types.js";
 import {onBeaconBlocksByRange} from "./beaconBlocksByRange.js";
 import {onBeaconBlocksByRoot} from "./beaconBlocksByRoot.js";
-import {onLightclientBootstrap} from "./lightclientBootstrap.js";
-import {onLightclientUpdate} from "./lightclientUpdate.js";
-import {onLightClientFinalityUpdate} from "./lightclientFinalityUpdate.js";
-import {onLightClientOptimisticUpdate} from "./lightclientOptimisticUpdate.js";
+import {onLightclientBootstrap} from "./lightClientBootstrap.js";
+import {onLightclientUpdate} from "./lightClientUpdate.js";
+import {onLightClientFinalityUpdate} from "./lightClientFinalityUpdate.js";
+import {onLightClientOptimisticUpdate} from "./lightClientOptimisticUpdate.js";
 
 export type ReqRespHandlers = {
   onStatus(): AsyncIterable<phase0.Status>;

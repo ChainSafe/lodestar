@@ -454,7 +454,7 @@ export class LightClientServer {
     // Emit update
     // - At the earliest: 6 second after the slot start
     // - After a new update has INCREMENT_THRESHOLD == 32 bits more than the previous emitted threshold
-    this.emitter.emit(ChainEvent.lightclientOptimisticUpdate, headerUpdate);
+    this.emitter.emit(ChainEvent.lightClientOptimisticUpdate, headerUpdate);
 
     // Persist latest best update for getLatestHeadUpdate()
     // TODO: Once SyncAggregate are constructed from P2P too, count bits to decide "best"
@@ -479,7 +479,7 @@ export class LightClientServer {
           finalityBranch: attestedData.finalityBranch,
           signatureSlot,
         };
-        this.emitter.emit(ChainEvent.lightclientFinalityUpdate, this.finalized);
+        this.emitter.emit(ChainEvent.lightClientFinalityUpdate, this.finalized);
         this.metrics?.lightclientServer.onSyncAggregate.inc({event: "update_latest_finalized_update"});
       }
     }

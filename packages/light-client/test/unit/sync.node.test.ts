@@ -142,13 +142,14 @@ describe("sync", () => {
           bodyRoot: SOME_HASH,
         };
 
-        const headUpdate: routes.lightclient.LightclientOptimisticHeaderUpdate = {
+        const headUpdate: routes.lightclient.LightClientOptimisticUpdate = {
           attestedHeader: header,
           syncAggregate: syncCommittee.signHeader(config, header),
+          signatureSlot: header.slot + 1,
         };
 
         lightclientServerApi.latestHeadUpdate = headUpdate;
-        eventsServerApi.emit({type: routes.events.EventType.lightclientOptimisticUpdate, message: headUpdate});
+        eventsServerApi.emit({type: routes.events.EventType.lightClientOptimisticUpdate, message: headUpdate});
       }
     });
 

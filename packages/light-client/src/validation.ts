@@ -65,7 +65,7 @@ export function assertValidLightClientUpdate(
  *
  * Where `hashTreeRoot(state) == update.finalityHeader.stateRoot`
  */
-export function assertValidFinalityProof(update: routes.lightclient.LightclientFinalityUpdate): void {
+export function assertValidFinalityProof(update: routes.lightclient.LightClientFinalityUpdate): void {
   if (
     !isValidMerkleBranch(
       ssz.phase0.BeaconBlockHeader.hashTreeRoot(update.finalizedHeader),
