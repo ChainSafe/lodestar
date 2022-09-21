@@ -38,8 +38,6 @@ export function getReqRespHandlers({db, chain}: {db: IBeaconDb; chain: IBeaconCh
       yield* onLightclientBootstrap(req, chain);
     },
     async *onLightClientUpdate(req) {
-      // TODO DA confirm MAX_REQUEST_LIGHT_CLIENT_UPDATES is adhered to.
-      // TODO DA Harmonize the capitalization of lightClient vs lightclient
       yield* onLightclientUpdate(req, chain);
     },
     async *onLightClientFinalityUpdate() {

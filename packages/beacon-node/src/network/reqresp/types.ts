@@ -1,5 +1,6 @@
 import {ForkName} from "@lodestar/params";
 import {allForks, phase0, ssz, Slot, altair} from "@lodestar/types";
+import {LightClientUpdate} from "@lodestar/types/altair";
 
 export const protocolPrefix = "/eth2/beacon_chain/req";
 
@@ -87,7 +88,7 @@ export function contextBytesTypeByProtocol(protocol: Protocol): ContextBytesType
     case Method.LightClientUpdate:
     case Method.LightClientFinalityUpdate:
     case Method.LightClientOptimisticUpdate:
-      return ContextBytesType.ForkDigest; // TODO DA confirm
+      return ContextBytesType.ForkDigest;
     case Method.BeaconBlocksByRange:
     case Method.BeaconBlocksByRoot:
       switch (protocol.version) {
@@ -187,7 +188,7 @@ export function getOutgoingSerializerByMethod(protocol: Protocol): OutgoingSeria
     case Method.LightClientBootstrap:
       return ssz.altair.LightClientBootstrap;
     case Method.LightClientUpdate:
-      return ssz.altair.LightClientUpdate;
+      return reqRespLightClientUpdateSerializer;
     case Method.LightClientFinalityUpdate:
       return ssz.altair.LightClientFinalityUpdate;
     case Method.LightClientOptimisticUpdate:
@@ -246,6 +247,12 @@ export type ResponseTypedContainer = {
 export const reqRespBlockResponseSerializer = {
   serialize: (chunk: ReqRespBlockResponse): Uint8Array => {
     return chunk.bytes;
+  },
+};
+
+export const reqRespLightClientUpdateSerializer = {
+  serialize: (chunk: LightClientUpdate): Uint8Array => {
+    return ssz.altair.LightClientUpdate.serialize(chunk);
   },
 };
 

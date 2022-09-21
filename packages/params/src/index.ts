@@ -191,6 +191,7 @@ export const NEXT_SYNC_COMMITTEE_GINDEX = 55;
  */
 export const NEXT_SYNC_COMMITTEE_DEPTH = 5;
 export const NEXT_SYNC_COMMITTEE_INDEX = 23;
+export const MAX_REQUEST_LIGHT_CLIENT_UPDATES = 128;
 
 /**
  * Optimistic sync

@@ -256,25 +256,6 @@ describe("network", function () {
 
     expect(netA.gossip.getTopics().length).to.equal(0);
     netA.subscribeGossipCoreTopics();
-    /**
-     * TODO DA confirm
-     * Topics from previous fork are still subscribed together
-     * with same topic of the new fork. Is this expected behaviour?
-     *
-     *   '/eth2/f5a5fd42/beacon_block/ssz_snappy',
-     *   '/eth2/f5a5fd42/beacon_aggregate_and_proof/ssz_snappy',
-     *   '/eth2/f5a5fd42/voluntary_exit/ssz_snappy',
-     *   '/eth2/f5a5fd42/proposer_slashing/ssz_snappy',
-     *   '/eth2/f5a5fd42/attester_slashing/ssz_snappy',
-     *   '/eth2/16abab34/beacon_block/ssz_snappy',
-     *   '/eth2/16abab34/beacon_aggregate_and_proof/ssz_snappy',
-     *   '/eth2/16abab34/voluntary_exit/ssz_snappy',
-     *   '/eth2/16abab34/proposer_slashing/ssz_snappy',
-     *   '/eth2/16abab34/attester_slashing/ssz_snappy',
-     *   '/eth2/16abab34/sync_committee_contribution_and_proof/ssz_snappy',
-     *   '/eth2/16abab34/light_client_optimistic_update/ssz_snappy',
-     *   '/eth2/16abab34/light_client_finality_update/ssz_snappy'
-     */
     expect(netA.gossip.getTopics().length).to.equal(13);
     netA.unsubscribeGossipCoreTopics();
     expect(netA.gossip.getTopics().length).to.equal(0);

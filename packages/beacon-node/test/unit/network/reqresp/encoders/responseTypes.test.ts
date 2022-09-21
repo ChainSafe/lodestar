@@ -14,7 +14,14 @@ import {
 } from "../../../../../src/network/reqresp/types.js";
 import {responseDecode} from "../../../../../src/network/reqresp/encoders/responseDecode.js";
 import {responseEncodeSuccess} from "../../../../../src/network/reqresp/encoders/responseEncode.js";
-import {arrToSource, createStatus, generateEmptySignedBlocks} from "../utils.js";
+import {
+  arrToSource,
+  createStatus,
+  generateDefaultLightClientBootstrap,
+  generateDefaultLightClientFinalityUpdate,
+  generateDefaultLightClientOptimisticUpdate,
+  generateEmptySignedBlocks,
+} from "../utils.js";
 import {expectIsEqualSszTypeArr} from "../../../../utils/ssz.js";
 import {config} from "../../../../utils/config.js";
 import {blocksToReqRespBlockResponses} from "../../../../utils/block.js";
@@ -30,11 +37,10 @@ describe("network / reqresp / encoders / responseTypes", () => {
     [Method.Metadata]: [],
     [Method.BeaconBlocksByRange]: [generateEmptySignedBlocks(2)],
     [Method.BeaconBlocksByRoot]: [generateEmptySignedBlocks(2)],
-    // TODO DA update tests
-    [Method.LightClientBootstrap]: [],
-    [Method.LightClientUpdate]: [],
-    [Method.LightClientFinalityUpdate]: [],
-    [Method.LightClientOptimisticUpdate]: [],
+    [Method.LightClientBootstrap]: [[generateDefaultLightClientBootstrap()]],
+    [Method.LightClientUpdate]: [], // TODO DA update test
+    [Method.LightClientFinalityUpdate]: [[generateDefaultLightClientFinalityUpdate()]],
+    [Method.LightClientOptimisticUpdate]: [[generateDefaultLightClientOptimisticUpdate()]],
   };
 
   const encodings: Encoding[] = [Encoding.SSZ_SNAPPY];
