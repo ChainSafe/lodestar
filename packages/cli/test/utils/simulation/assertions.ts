@@ -207,3 +207,34 @@ export function headsAssertions(env: SimulationEnvironment, epoch: Epoch): void 
     });
   }
 }
+
+export function syncCommitteeAssertions(env: SimulationEnvironment, epoch: Epoch): void {
+  if (epoch < env.params.altairEpoch) {
+    return;
+  }
+
+  for (const node of env.nodes) {
+    describe(node.id, () => {
+      const startSlot = env.clock.getFirstSlotOfEpoch(epoch);
+      const endSlot = env.clock.getLastSlotOfEpoch(epoch);
+      const altairStartSlot = env.clock.getFirstSlotOfEpoch(env.params.altairEpoch);
+
+      for (let slot = startSlot; slot <= endSlot; slot++) {
+        // Sync committee is not available before until 2 slots for altair epoch
+        if (slot === altairStartSlot || slot === altairStartSlot + 1) {
+          continue;
+        }
+
+        it(`should have have higher participation for slot "${slot}"`, () => {
+          const participation = env.tracker.syncCommitteeParticipation.get(env.nodes[0].id)?.get(slot);
+          const acceptableMinSyncParticipation = env.acceptableMinSyncParticipation;
+
+          expect(participation).to.gte(
+            acceptableMinSyncParticipation,
+            `node "${node.id}" low sync committee participation slot: ${slot}, participation: ${participation}, acceptableMinSyncParticipation: ${acceptableMinSyncParticipation}`
+          );
+        });
+      }
+    });
+  }
+}

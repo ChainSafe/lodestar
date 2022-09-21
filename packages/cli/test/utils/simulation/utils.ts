@@ -1,7 +1,7 @@
 import {dirname} from "node:path";
 import {fileURLToPath} from "node:url";
 import {ChildProcess, spawn} from "node:child_process";
-import {altair, Epoch, phase0, Slot} from "@lodestar/types";
+import {altair, Epoch, phase0, Slot, ValidatorIndex} from "@lodestar/types";
 import {
   TIMELY_HEAD_FLAG_INDEX,
   TIMELY_TARGET_FLAG_INDEX,
@@ -124,6 +124,15 @@ export const computeAttestation = (attestations: phase0.Attestation[]): number =
 
 export const computeInclusionDelay = (attestations: phase0.Attestation[], slot: Slot): number => {
   return avg(Array.from(attestations).map((att) => slot - att.data.slot));
+};
+
+export const computeSyncCommitteeParticipation = (version: ForkName, block: altair.SignedBeaconBlock): number => {
+  if (version === ForkName.phase0) {
+    return 0;
+  }
+
+  const {syncCommitteeBits} = block.message.body.syncAggregate;
+  return syncCommitteeBits.getTrueBitIndexes().length / syncCommitteeBits.bitLen;
 };
 
 export const avg = (arr: number[]): number => {

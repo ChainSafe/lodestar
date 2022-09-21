@@ -4,12 +4,19 @@ import {altair, Epoch, Slot} from "@lodestar/types";
 import {toHexString} from "@lodestar/utils";
 import {EpochClock} from "./EpochClock.js";
 import {BeaconNodeProcess, SimulationParams} from "./types.js";
-import {computeAttestation, computeAttestationParticipation, computeInclusionDelay, getForkName} from "./utils.js";
+import {
+  computeAttestation,
+  computeAttestationParticipation,
+  computeInclusionDelay,
+  computeSyncCommitteeParticipation,
+  getForkName,
+} from "./utils.js";
 
 const participationHeading = (id: string): string => `${id}-P-H/S/T`;
 const missedBlocksHeading = (id: string): string => `${id}-M`;
 // const nodeHeadHeading = (id: string): string => `${id}-H`;
 const finalizedHeading = (id: string): string => `${id}-F`;
+const syncCommitteeHeading = (id: string): string => `${id}-SC`;
 
 export class SimulationTracker {
   readonly producedBlocks: Map<string, Map<Slot, boolean>>;
@@ -19,6 +26,7 @@ export class SimulationTracker {
   private lastSeenSlot: Map<string, Slot>;
   readonly headPerSlot: Map<string, Map<Slot, string>>;
   readonly finalizedPerSlot: Map<string, Map<Slot, Slot>>;
+  readonly syncCommitteeParticipation: Map<string, Map<Slot, number>>;
 
   readonly emitter = new EventEmitter();
 
@@ -40,6 +48,7 @@ export class SimulationTracker {
     this.lastSeenSlot = new Map();
     this.headPerSlot = new Map();
     this.finalizedPerSlot = new Map();
+    this.syncCommitteeParticipation = new Map();
 
     for (let i = 0; i < nodes.length; i += 1) {
       this.producedBlocks.set(nodes[i].id, new Map());
@@ -49,9 +58,11 @@ export class SimulationTracker {
       this.lastSeenSlot.set(nodes[i].id, 0);
       this.headPerSlot.set(nodes[i].id, new Map());
       this.finalizedPerSlot.set(nodes[i].id, new Map());
+      this.syncCommitteeParticipation.set(nodes[i].id, new Map());
 
       // Set finalized slot to genesis
       this.finalizedPerSlot.get(nodes[i].id)?.set(0, 0);
+      this.syncCommitteeParticipation.get(nodes[i].id)?.set(0, params.altairEpoch === 0 ? 1 : 0);
     }
   }
 
@@ -107,6 +118,7 @@ export class SimulationTracker {
     const slot = event.slot;
     const lastSeenSlot = this.lastSeenSlot.get(node.id);
     const blockAttestations = await node.api.beacon.getBlockAttestations(slot);
+    const block = await node.api.beacon.getBlockV2(slot);
 
     if (lastSeenSlot !== undefined && slot > lastSeenSlot) {
       this.lastSeenSlot.set(node.id, slot);
@@ -115,6 +127,9 @@ export class SimulationTracker {
     this.producedBlocks.get(node.id)?.set(slot, true);
     this.attestationsPerSlot.get(node.id)?.set(slot, computeAttestation(blockAttestations.data));
     this.inclusionDelayPerBlock.get(node.id)?.set(slot, computeInclusionDelay(blockAttestations.data, slot));
+    this.syncCommitteeParticipation
+      .get(node.id)
+      ?.set(slot, computeSyncCommitteeParticipation(block.version, block.data as altair.SignedBeaconBlock));
 
     const head = await node.api.beacon.getBlockHeader("head");
     this.headPerSlot.get(node.id)?.set(slot, toHexString(head.data.root));
@@ -181,10 +196,17 @@ export class SimulationTracker {
         }`;
       }
 
+      for (const node of this.nodes) {
+        record[syncCommitteeHeading(node.id)] = this.syncCommitteeParticipation.get(node.id)?.get(slot)?.toFixed(2);
+      }
+
       records.push(record);
 
       if (this.clock.isLastSlotOfEpoch(slot)) {
         const epoch = this.clock.getEpochForSlot(slot);
+        const firstSlot = this.clock.getFirstSlotOfEpoch(epoch);
+        const lastSlot = this.clock.getLastSlotOfEpoch(epoch);
+
         const record: Record<string, unknown> = {
           F: getForkName(epoch, this.params),
           Eph: epoch,
@@ -204,6 +226,12 @@ export class SimulationTracker {
                 )}`
               : "";
           record[participationHeading(node.id)] = participationStr;
+
+          let syncParticipation = 0;
+          for (let i = firstSlot; i <= lastSlot; i++) {
+            syncParticipation += this.syncCommitteeParticipation.get(node.id)?.get(i) ?? 0;
+          }
+          record[syncCommitteeHeading(node.id)] = syncParticipation / (lastSlot - firstSlot + 1);
         }
         records.push(record);
       }
