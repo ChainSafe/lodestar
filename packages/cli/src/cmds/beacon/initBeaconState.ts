@@ -26,7 +26,7 @@ export function getCheckpointFromState(state: BeaconStateAllForks): Checkpoint {
   return {
     // the correct checkpoint is based on state's slot, its latestBlockHeader's slot's epoch can be
     // behind the state
-    epoch: computeCheckpointEpochAtStateSlot(state.slot / SLOTS_PER_EPOCH),
+    epoch: computeCheckpointEpochAtStateSlot(state.slot),
     root: getLatestBlockRoot(state),
   };
 }
