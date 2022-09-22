@@ -1,5 +1,5 @@
 import {altair, ssz} from "@lodestar/types";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {MAX_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {toHexString} from "@chainsafe/ssz";
 import {
   CachedBeaconStateAltair,
@@ -141,12 +141,20 @@ export async function importBlock(
     }
   }
 
-  for (const slashing of block.message.body.attesterSlashings) {
-    try {
-      // all AttesterSlashings are valid before reaching this
-      this.forkChoice.onAttesterSlashing(slashing);
-    } catch (e) {
-      this.logger.warn("Error processing AttesterSlashing from block", {slot: block.message.slot}, e as Error);
+  // FORK_CHOICE_ATT_EPOCH_LIMIT is for attestation to become valid
+  // but AttesterSlashing could be found before that time and still able to submit valid attestations
+  // until slashed validator become inactive, see computeActivationExitEpoch() function
+  if (
+    !opts.skipImportingAttestations &&
+    blockEpoch >= currentEpoch - FORK_CHOICE_ATT_EPOCH_LIMIT - 1 - MAX_SEED_LOOKAHEAD
+  ) {
+    for (const slashing of block.message.body.attesterSlashings) {
+      try {
+        // all AttesterSlashings are valid before reaching this
+        this.forkChoice.onAttesterSlashing(slashing);
+      } catch (e) {
+        this.logger.warn("Error processing AttesterSlashing from block", {slot: block.message.slot}, e as Error);
+      }
     }
   }
 
