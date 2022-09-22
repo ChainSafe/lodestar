@@ -133,7 +133,7 @@ export type RequestBodyByMethod = {
   [Method.BeaconBlocksByRange]: phase0.BeaconBlocksByRangeRequest;
   [Method.BeaconBlocksByRoot]: phase0.BeaconBlocksByRootRequest;
   [Method.LightClientBootstrap]: altair.BlockRoot;
-  [Method.LightClientUpdate]: altair.LightClientUpdateByRange;
+  [Method.LightClientUpdate]: altair.LightClientUpdatesByRange;
   [Method.LightClientFinalityUpdate]: null;
   [Method.LightClientOptimisticUpdate]: null;
 };
@@ -251,8 +251,21 @@ export const reqRespBlockResponseSerializer = {
 };
 
 export const reqRespLightClientUpdateSerializer = {
-  serialize: (chunk: LightClientUpdate): Uint8Array => {
-    return ssz.altair.LightClientUpdate.serialize(chunk);
+  serialize: (chunks: LightClientUpdate[]): Uint8Array => {
+    const serializedChunks = chunks.map((chunk) => ssz.altair.LightClientUpdate.serialize(chunk));
+    let length = 0;
+    serializedChunks.forEach((item) => {
+      length += item.length;
+    });
+
+    const mergedArray = new Uint8Array(length);
+    let offset = 0;
+    serializedChunks.forEach((item) => {
+      mergedArray.set(item, offset);
+      offset += item.length;
+    });
+
+    return mergedArray;
   },
 };
 

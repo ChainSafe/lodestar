@@ -28,6 +28,7 @@ export interface IReqResp {
   lightClientBootstrap(peerId: PeerId, request: Uint8Array): Promise<altair.LightClientBootstrap>;
   lightClientOptimisticUpdate(peerId: PeerId): Promise<altair.LightClientOptimisticUpdate>;
   lightClientFinalityUpdate(peerId: PeerId): Promise<altair.LightClientFinalityUpdate>;
+  lightClientUpdate(peerId: PeerId, request: altair.LightClientUpdatesByRange): Promise<altair.LightClientUpdate[]>;
 }
 
 export interface IReqRespModules {

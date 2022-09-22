@@ -113,6 +113,7 @@ describe("network / peers / PeerManager", function () {
     lightClientBootstrap = sinon.stub();
     lightClientOptimisticUpdate = sinon.stub();
     lightClientFinalityUpdate = sinon.stub();
+    lightClientUpdate = sinon.stub();
   }
 
   it("Should request metadata on receivedPing of unknown peer", async () => {

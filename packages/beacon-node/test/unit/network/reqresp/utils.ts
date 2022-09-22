@@ -48,7 +48,7 @@ export function generateDefaultLightClientOptimisticUpdate(): altair.LightClient
   return ssz.altair.LightClientOptimisticUpdate.defaultValue();
 }
 
-export function generateDefaultLightClientUpdate(): [altair.LightClientUpdate] {
+export function generateDefaultLightClientUpdate(): altair.LightClientUpdate[] {
   return [ssz.altair.LightClientUpdate.defaultValue()];
 }
 

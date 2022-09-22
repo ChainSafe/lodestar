@@ -242,6 +242,23 @@ describe("network / ReqResp", function () {
     expect(returnedValue).to.deep.equal(expectedValue, "Wrong response body");
   });
 
+  it("should send/receive a light client update message", async function () {
+    const expectedValue = [ssz.altair.LightClientUpdate.defaultValue()];
+    const request: altair.LightClientUpdatesByRange = {
+      startPeriod: 2,
+      count: 5,
+    };
+
+    const [netA, netB] = await createAndConnectPeers({
+      onLightClientUpdate: async function* onRequest() {
+        yield expectedValue;
+      },
+    });
+
+    const returnedValue = await netA.reqResp.lightClientUpdate(netB.peerId, request);
+    expect(returnedValue).to.deep.equal(expectedValue, "Wrong response body");
+  });
+
   it("should handle a server error", async function () {
     const testErrorMessage = "TEST_EXAMPLE_ERROR_1234";
     const [netA, netB] = await createAndConnectPeers({

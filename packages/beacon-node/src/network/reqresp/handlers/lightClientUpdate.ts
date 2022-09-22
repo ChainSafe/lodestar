@@ -5,7 +5,7 @@ import {ResponseError} from "../response/index.js";
 import {RespStatus} from "../../../constants/index.js";
 
 export async function* onLightclientUpdate(
-  requestBody: altair.LightClientUpdateByRange,
+  requestBody: altair.LightClientUpdatesByRange,
   chain: IBeaconChain
 ): AsyncIterable<altair.LightClientUpdate[]> {
   try {
