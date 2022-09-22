@@ -107,6 +107,17 @@ export const forkChoiceTest: TestRunnerFn<ForkChoiceTestCase, void> = (fork) => 
             chain.forkChoice.onAttestation(headState.epochCtx.getIndexedAttestation(attestation));
           }
 
+          // attester slashing step
+          else if (isAttesterSlashing(step)) {
+            logger.debug(`Step ${i}/${stepsLen} attester slashing`, {
+              root: step.attester_slashing,
+              valid: Boolean(step.valid),
+            });
+            const attesterSlashing = testcase.attesterSlashings.get(step.attester_slashing);
+            if (!attesterSlashing) throw Error(`No attester slashing ${step.attester_slashing}`);
+            chain.forkChoice.onAttesterSlashing(attesterSlashing);
+          }
+
           // block step
           else if (isBlock(step)) {
             const isValid = Boolean(step.valid ?? true);
@@ -227,6 +238,7 @@ export const forkChoiceTest: TestRunnerFn<ForkChoiceTestCase, void> = (fork) => 
         const blocks = new Map<string, allForks.SignedBeaconBlock>();
         const powBlocks = new Map<string, bellatrix.PowBlock>();
         const attestations = new Map<string, phase0.Attestation>();
+        const attesterSlashings = new Map<string, phase0.AttesterSlashing>();
         for (const key in t) {
           const blockMatch = key.match(BLOCK_FILE_NAME);
           if (blockMatch) {
@@ -240,6 +252,10 @@ export const forkChoiceTest: TestRunnerFn<ForkChoiceTestCase, void> = (fork) => 
           if (attMatch) {
             attestations.set(key, t[key]);
           }
+          const attesterSlashingMatch = key.match(ATTESTER_SLASHING_FILE_NAME);
+          if (attesterSlashingMatch) {
+            attesterSlashings.set(key, t[key]);
+          }
         }
         return {
           meta: t["meta"] as ForkChoiceTestCase["meta"],
@@ -249,14 +265,12 @@ export const forkChoiceTest: TestRunnerFn<ForkChoiceTestCase, void> = (fork) => 
           blocks,
           powBlocks,
           attestations,
+          attesterSlashings,
         };
       },
       timeout: 10000,
       // eslint-disable-next-line @typescript-eslint/no-empty-function
       expectFunc: () => {},
-      shouldSkip: (_testCase, name, _index) => {
-        return name.includes("discard_equivocations");
-      },
     },
   };
 };
@@ -268,7 +282,7 @@ function toSpecTestCheckpoint(checkpoint: CheckpointWithHex): SpecTestCheckpoint
   };
 }
 
-type Step = OnTick | OnAttestation | OnBlock | OnPowBlock | Checks;
+type Step = OnTick | OnAttestation | OnAttesterSlashing | OnBlock | OnPowBlock | Checks;
 
 type SpecTestCheckpoint = {epoch: bigint; root: string};
 
@@ -286,6 +300,16 @@ type OnAttestation = {
   /** the name of the `attestation_<32-byte-root>.ssz_snappy` file. To execute `on_attestation(store, attestation)` */
   attestation: string;
   /** optional, default to `true`. */
+  valid?: number;
+};
+
+type OnAttesterSlashing = {
+  /**
+   * the name of the `attester_slashing_<32-byte-root>.ssz_snappy` file.
+   * To execute `on_attester_slashing(store, attester_slashing)` with the given attester slashing.
+   */
+  attester_slashing: string;
+  /** optional, default to `true` */
   valid?: number;
 };
 
@@ -330,6 +354,7 @@ type ForkChoiceTestCase = {
   blocks: Map<string, allForks.SignedBeaconBlock>;
   powBlocks: Map<string, bellatrix.PowBlock>;
   attestations: Map<string, phase0.Attestation>;
+  attesterSlashings: Map<string, phase0.AttesterSlashing>;
 };
 
 function isTick(step: Step): step is OnTick {
@@ -338,6 +363,10 @@ function isTick(step: Step): step is OnTick {
 
 function isAttestation(step: Step): step is OnAttestation {
   return typeof (step as OnAttestation).attestation === "string";
+}
+
+function isAttesterSlashing(step: Step): step is OnAttesterSlashing {
+  return typeof (step as OnAttesterSlashing).attester_slashing === "string";
 }
 
 function isBlock(step: Step): step is OnBlock {

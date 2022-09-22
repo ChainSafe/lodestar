@@ -141,6 +141,15 @@ export async function importBlock(
     }
   }
 
+  for (const slashing of block.message.body.attesterSlashings) {
+    try {
+      // all AttesterSlashings are valid before reaching this
+      this.forkChoice.onAttesterSlashing(slashing);
+    } catch (e) {
+      this.logger.warn("Error processing AttesterSlashing from block", {slot: block.message.slot}, e as Error);
+    }
+  }
+
   // - Write block and state to hot db
   // - Write block and state to snapshot_cache
   if (block.message.slot % SLOTS_PER_EPOCH === 0) {

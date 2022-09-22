@@ -17,6 +17,7 @@ import {
   isBellatrixBlockBodyType,
   isBellatrixStateType,
   isExecutionEnabled,
+  getAttesterSlashableIndices,
 } from "@lodestar/state-transition";
 import {computeUnrealizedCheckpoints} from "@lodestar/state-transition/epoch";
 import {IChainConfig, IChainForkConfig} from "@lodestar/config";
@@ -192,7 +193,13 @@ export class ForkChoice implements IForkChoice {
     // Check if scores need to be calculated/updated
     // eslint-disable-next-line prefer-const
     const justifiedBalances = this.fcStore.justified.balances;
-    const deltas = computeDeltas(this.protoArray.indices, this.votes, justifiedBalances, justifiedBalances);
+    const deltas = computeDeltas(
+      this.protoArray.indices,
+      this.votes,
+      justifiedBalances,
+      justifiedBalances,
+      this.fcStore.equivocatingIndices
+    );
     /**
      * The structure in line with deltas to propogate boost up the branch
      * starting from the proposerIndex
@@ -521,7 +528,9 @@ export class ForkChoice implements IForkChoice {
 
     if (slot < this.fcStore.currentSlot) {
       for (const validatorIndex of attestation.attestingIndices) {
-        this.addLatestMessage(validatorIndex, targetEpoch, blockRootHex);
+        if (!this.fcStore.equivocatingIndices.has(validatorIndex)) {
+          this.addLatestMessage(validatorIndex, targetEpoch, blockRootHex);
+        }
       }
     } else {
       // The spec declares:
@@ -537,6 +546,18 @@ export class ForkChoice implements IForkChoice {
         targetEpoch,
       });
     }
+  }
+
+  /**
+   * Small different from the spec:
+   * We already call is_slashable_attestation_data() and is_valid_indexed_attestation
+   * in state transition so no need to do it again
+   */
+  onAttesterSlashing(attesterSlashing: phase0.AttesterSlashing): void {
+    // TODO: we already call in in state-transition, find a way not to recompute it again
+    const intersectingIndices = getAttesterSlashableIndices(attesterSlashing);
+    // TODO: restore equivocatingIndices upon restart
+    intersectingIndices.forEach((validatorIndex) => this.fcStore.equivocatingIndices.add(validatorIndex));
   }
 
   getLatestMessage(validatorIndex: ValidatorIndex): LatestMessage | undefined {

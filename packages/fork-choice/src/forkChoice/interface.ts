@@ -97,6 +97,14 @@ export interface IForkChoice {
    * will not be run here.
    */
   onAttestation(attestation: phase0.IndexedAttestation, attDataRoot?: string): void;
+  /**
+   * Register attester slashing in order not to consider their votes in `getHead`
+   *
+   * ## Specification
+   *
+   * https://github.com/ethereum/consensus-specs/blob/v1.2.0-rc.3/specs/phase0/fork-choice.md#on_attester_slashing
+   */
+  onAttesterSlashing(slashing: phase0.AttesterSlashing): void;
   getLatestMessage(validatorIndex: ValidatorIndex): LatestMessage | undefined;
   /**
    * Call `onTick` for all slots between `fcStore.getCurrentSlot()` and the provided `currentSlot`.

@@ -156,12 +156,6 @@ export class ProtoArray {
           ? -node.weight
           : deltas[nodeIndex] + currentBoost - previousBoost;
 
-      if (nodeDelta === undefined) {
-        throw new ProtoArrayError({
-          code: ProtoArrayErrorCode.INVALID_NODE_DELTA,
-          index: nodeIndex,
-        });
-      }
       // Apply the delta to the node
       node.weight += nodeDelta;
 

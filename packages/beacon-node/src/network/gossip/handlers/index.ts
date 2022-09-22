@@ -215,6 +215,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
 
       try {
         chain.opPool.insertAttesterSlashing(attesterSlashing);
+        chain.forkChoice.onAttesterSlashing(attesterSlashing);
       } catch (e) {
         logger.error("Error adding attesterSlashing to pool", {}, e as Error);
       }
