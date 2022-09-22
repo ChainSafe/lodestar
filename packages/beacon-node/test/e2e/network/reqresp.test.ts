@@ -85,7 +85,7 @@ describe("network / ReqResp", function () {
       onBeaconBlocksByRoot: notImplemented,
       onLightClientBootstrap: notImplemented,
       onLightClientUpdate: notImplemented,
-      onLightClientOptimisitcUpdate: notImplemented,
+      onLightClientOptimisticUpdate: notImplemented,
       onLightClientFinalityUpdate: notImplemented,
       ...reqRespHandlersPartial,
     };
@@ -213,6 +213,32 @@ describe("network / ReqResp", function () {
     });
 
     const returnedValue = await netA.reqResp.lightClientBootstrap(netB.peerId, root);
+    expect(returnedValue).to.deep.equal(expectedValue, "Wrong response body");
+  });
+
+  it("should send/receive a light client optimistic update message", async function () {
+    const expectedValue = ssz.altair.LightClientOptimisticUpdate.defaultValue();
+
+    const [netA, netB] = await createAndConnectPeers({
+      onLightClientOptimisticUpdate: async function* onRequest() {
+        yield expectedValue;
+      },
+    });
+
+    const returnedValue = await netA.reqResp.lightClientOptimisticUpdate(netB.peerId);
+    expect(returnedValue).to.deep.equal(expectedValue, "Wrong response body");
+  });
+
+  it("should send/receive a light client finality update message", async function () {
+    const expectedValue = ssz.altair.LightClientFinalityUpdate.defaultValue();
+
+    const [netA, netB] = await createAndConnectPeers({
+      onLightClientFinalityUpdate: async function* onRequest() {
+        yield expectedValue;
+      },
+    });
+
+    const returnedValue = await netA.reqResp.lightClientFinalityUpdate(netB.peerId);
     expect(returnedValue).to.deep.equal(expectedValue, "Wrong response body");
   });
 

@@ -26,6 +26,8 @@ export interface IReqResp {
   beaconBlocksByRoot(peerId: PeerId, request: phase0.BeaconBlocksByRootRequest): Promise<allForks.SignedBeaconBlock[]>;
   pruneOnPeerDisconnect(peerId: PeerId): void;
   lightClientBootstrap(peerId: PeerId, request: Uint8Array): Promise<altair.LightClientBootstrap>;
+  lightClientOptimisticUpdate(peerId: PeerId): Promise<altair.LightClientOptimisticUpdate>;
+  lightClientFinalityUpdate(peerId: PeerId): Promise<altair.LightClientFinalityUpdate>;
 }
 
 export interface IReqRespModules {

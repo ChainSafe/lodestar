@@ -16,7 +16,7 @@ export type ReqRespHandlers = {
   onLightClientBootstrap(req: altair.BlockRoot): AsyncIterable<altair.LightClientBootstrap>;
   onLightClientUpdate(req: altair.LightClientUpdateByRange): AsyncIterable<altair.LightClientUpdate[]>;
   onLightClientFinalityUpdate(): AsyncIterable<altair.LightClientFinalityUpdate>;
-  onLightClientOptimisitcUpdate(): AsyncIterable<altair.LightClientOptimisticUpdate>;
+  onLightClientOptimisticUpdate(): AsyncIterable<altair.LightClientOptimisticUpdate>;
 };
 
 /**
@@ -43,7 +43,7 @@ export function getReqRespHandlers({db, chain}: {db: IBeaconDb; chain: IBeaconCh
     async *onLightClientFinalityUpdate() {
       yield* onLightClientFinalityUpdate(chain);
     },
-    async *onLightClientOptimisitcUpdate() {
+    async *onLightClientOptimisticUpdate() {
       yield* onLightClientOptimisticUpdate(chain);
     },
   };
