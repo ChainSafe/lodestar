@@ -4,7 +4,7 @@ import PeerId from "peer-id";
 import {createIBeaconConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
 import {sleep as _sleep} from "@lodestar/utils";
-import {altair, phase0, ssz} from "@lodestar/types";
+import {altair, phase0, Root, ssz} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
 import {BitArray} from "@chainsafe/ssz";
 import {createPeerId, IReqRespOptions, Network} from "../../../src/network/index.js";
@@ -200,6 +200,20 @@ describe("network / ReqResp", function () {
     for (const [i, returnedBlock] of returnedBlocks.entries()) {
       expect(ssz.phase0.SignedBeaconBlock.equals(returnedBlock, blocks[i])).to.equal(true, `Wrong returnedBlock[${i}]`);
     }
+  });
+
+  it("should send/receive a light client bootstrap message", async function () {
+    const root: Root = ssz.phase0.BeaconBlockHeader.defaultValue().bodyRoot;
+    const expectedValue = ssz.altair.LightClientBootstrap.defaultValue();
+
+    const [netA, netB] = await createAndConnectPeers({
+      onLightClientBootstrap: async function* onRequest() {
+        yield expectedValue;
+      },
+    });
+
+    const returnedValue = await netA.reqResp.lightClientBootstrap(netB.peerId, root);
+    expect(returnedValue).to.deep.equal(expectedValue, "Wrong response body");
   });
 
   it("should handle a server error", async function () {

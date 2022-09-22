@@ -5,7 +5,7 @@ import LibP2p from "libp2p";
 import PeerId from "peer-id";
 import {ForkName} from "@lodestar/params";
 import {IBeaconConfig} from "@lodestar/config";
-import {allForks, phase0} from "@lodestar/types";
+import {allForks, altair, phase0} from "@lodestar/types";
 import {ILogger} from "@lodestar/utils";
 import {RespStatus, timeoutOptions} from "../../constants/index.js";
 import {IPeerRpcScoreStore} from "../peers/index.js";
@@ -39,6 +39,7 @@ export type IReqRespOptions = Partial<typeof timeoutOptions>;
  * Implementation of Ethereum Consensus p2p Req/Resp domain.
  * For the spec that this code is based on, see:
  * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#the-reqresp-domain
+ * https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/light-client/p2p-interface.md#the-reqresp-domain
  */
 export class ReqResp implements IReqResp {
   private config: IBeaconConfig;
@@ -142,6 +143,14 @@ export class ReqResp implements IReqResp {
     this.inboundRateLimiter.prune(peerId);
   }
 
+  async lightClientBootstrap(peerId: PeerId, request: Uint8Array): Promise<altair.LightClientBootstrap> {
+    return await this.sendRequest<altair.LightClientBootstrap>(
+      peerId,
+      Method.LightClientBootstrap,
+      [Version.V2],
+      request
+    );
+  }
   // Helper to reduce code duplication
   private async sendRequest<T extends IncomingResponseBody | IncomingResponseBody[]>(
     peerId: PeerId,
