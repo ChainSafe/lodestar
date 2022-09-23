@@ -71,7 +71,6 @@ export function assertEqualParams(localConfig: IChainConfig, externalSpecJson: R
 function getSpecCriticalParams(localConfig: IChainConfig): Record<keyof ConfigWithPreset, boolean> {
   const altairForkRelevant = localConfig.ALTAIR_FORK_EPOCH < Infinity;
   const bellatrixForkRelevant = localConfig.BELLATRIX_FORK_EPOCH < Infinity;
-  const shardingForkRelevant = localConfig.SHARDING_FORK_EPOCH < Infinity;
 
   return {
     // # Config
@@ -98,9 +97,6 @@ function getSpecCriticalParams(localConfig: IChainConfig): Record<keyof ConfigWi
     // Bellatrix
     BELLATRIX_FORK_VERSION: bellatrixForkRelevant,
     BELLATRIX_FORK_EPOCH: bellatrixForkRelevant,
-    // Sharding
-    SHARDING_FORK_VERSION: shardingForkRelevant,
-    SHARDING_FORK_EPOCH: shardingForkRelevant,
 
     // Time parameters
     SECONDS_PER_SLOT: true,

@@ -429,7 +429,7 @@ export function isValidAttestationData(
 
   // Shuffling can't have changed if we're in the first few epochs
   // Also we can't look back 2 epochs if target epoch is 1 or less
-  if (stateEpoch < 2 || targetEpoch <= 1) {
+  if (stateEpoch < 2 || targetEpoch < 2) {
     return true;
   }
   // Otherwise the shuffling is determined by the block at the end of the target epoch

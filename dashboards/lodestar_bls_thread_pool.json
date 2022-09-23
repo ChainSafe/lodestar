@@ -1111,7 +1111,7 @@
       "type": "timeseries"
     }
   ],
-  "refresh": false,
+  "refresh": "10s",
   "schemaVersion": 35,
   "style": "dark",
   "tags": ["lodestar"],

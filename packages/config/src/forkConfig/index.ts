@@ -66,5 +66,12 @@ export function createIForkConfig(config: IChainConfig): IForkConfig {
     getForkTypes(slot: Slot): allForks.AllForksSSZTypes {
       return ssz.allForks[this.getForkName(slot)] as allForks.AllForksSSZTypes;
     },
+    getBlindedForkTypes(slot: Slot): allForks.AllForksBlindedSSZTypes {
+      const forkName = this.getForkName(slot);
+      if (forkName === ForkName.phase0 || forkName === ForkName.altair) {
+        throw Error(`Invalid slot=${slot} fork=${forkName} for blinded fork types`);
+      }
+      return ssz.allForksBlinded[forkName] as allForks.AllForksBlindedSSZTypes;
+    },
   };
 }
