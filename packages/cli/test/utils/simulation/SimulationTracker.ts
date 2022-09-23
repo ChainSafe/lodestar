@@ -12,7 +12,7 @@ const TIMELY_SOURCE = 1 << TIMELY_SOURCE_FLAG_INDEX;
 const TIMELY_TARGET = 1 << TIMELY_TARGET_FLAG_INDEX;
 
 type SlotMeasureInput = {
-  version: ForkName;
+  fork: ForkName;
   slot: Slot;
   block: allForks.SignedBeaconBlock;
   clock: EpochClock;
@@ -75,7 +75,7 @@ export const processFinalized = async (node: BeaconNodeProcess, _: SlotMeasureIn
 
 export const processSyncCommitteeParticipation = async (
   _node: BeaconNodeProcess,
-  {version, block}: SlotMeasureInput
+  {fork: version, block}: SlotMeasureInput
 ): Promise<number> => {
   if (version === ForkName.phase0) {
     return 0;
@@ -97,7 +97,7 @@ export const processSlotMeasure = async (node: BeaconNodeProcess, input: SlotMea
   const epoch = input.clock.getEpochForSlot(input.slot);
 
   return {
-    fork: input.version,
+    fork: input.fork,
     slot: input.slot,
     epoch,
     epochStr: `${epoch}/${input.clock.getSlotIndexInEpoch(input.slot)}`,
@@ -125,7 +125,7 @@ export const processEpochMissedSlots = async (
 
 export const processAttestationEpochParticipationAvg = async (
   _node: BeaconNodeProcess,
-  {version, state}: EpochMeasureInput
+  {fork: version, state}: EpochMeasureInput
 ): Promise<{head: number; source: number; target: number}> => {
   if (version === ForkName.phase0) {
     return {head: 0, source: 0, target: 0};
@@ -157,7 +157,7 @@ export const processAttestationEpochParticipationAvg = async (
 
 export const processSyncCommitteeParticipationAvg = async (
   _node: BeaconNodeProcess,
-  {startSlot, endSlot, version, slotsMeasures: slotsMetrics}: EpochMeasureInput
+  {startSlot, endSlot, fork: version, slotsMeasures: slotsMetrics}: EpochMeasureInput
 ): Promise<number> => {
   if (version === ForkName.phase0) {
     return 0;
@@ -180,7 +180,7 @@ export const processEpochMeasure = async (node: BeaconNodeProcess, input: EpochM
   ]);
 
   return {
-    fork: input.version,
+    fork: input.fork,
     epoch: input.epoch,
     slot: input.slot,
     epochStr: `${input.epoch}/${input.clock.getSlotIndexInEpoch(input.slot)}`,
@@ -267,7 +267,7 @@ export class SimulationTracker {
 
     this.slotMeasures
       .get(node.id)
-      ?.set(slot, await processSlotMeasure(node, {version: block.version, slot, block: block.data, clock: this.clock}));
+      ?.set(slot, await processSlotMeasure(node, {fork: block.version, slot, block: block.data, clock: this.clock}));
 
     if (this.clock.isFirstSlotOfEpoch(slot)) {
       // Compute measures for the last epoch
@@ -284,7 +284,7 @@ export class SimulationTracker {
           endSlot,
           epoch,
           block: block.data,
-          version: block.version,
+          fork: block.version,
           slotsMeasures: this.slotMeasures.get(node.id) ?? new Map<Slot, SlotMeasure>(),
           state: state.data,
           clock: this.clock,
