@@ -59,7 +59,7 @@ export class PersistedKeysBackend implements IPersistedKeysBackend {
     if (proposerConfig !== null) {
       // if proposerConfig is not empty write or update the json to file
       const {proposerDirPath} = this.getValidatorPaths(pubkeyHex);
-      fs.writeFileSync(proposerDirPath, JSON.stringify(proposerConfig));
+      writeFile600Perm(proposerDirPath, JSON.stringify(proposerConfig));
     } else {
       this.deleteProposerConfig(pubkeyHex);
     }
@@ -146,7 +146,7 @@ export class PersistedKeysBackend implements IPersistedKeysBackend {
       lockFilepath(keystoreFilepath);
     }
 
-    fs.writeFileSync(keystoreFilepath, keystoreStr);
+    writeFile600Perm(keystoreFilepath, keystoreStr);
     writeFile600Perm(passphraseFilepath, password);
 
     return true;
@@ -316,5 +316,5 @@ export function writeRemoteSignerDefinition(filepath: string, remoteSigner: Sign
     url: remoteSigner.url,
     readonly: false,
   };
-  fs.writeFileSync(filepath, JSON.stringify(remoteSignerJson));
+  writeFile600Perm(filepath, remoteSignerJson);
 }

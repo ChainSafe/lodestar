@@ -1,5 +1,5 @@
 import {InterchangeFormatVersion} from "@lodestar/validator";
-import {ICliCommand, writeFile} from "../../../util/index.js";
+import {ICliCommand, writeFile600Perm} from "../../../util/index.js";
 import {IGlobalArgs} from "../../../options/index.js";
 import {AccountValidatorArgs} from "../options.js";
 import {getCliLogger, ILogArgs} from "../../../util/index.js";
@@ -69,7 +69,7 @@ export const exportCmd: ICliCommand<
     );
 
     logger.info("Writing the slashing protection logs", {file: args.file});
-    writeFile(args.file, interchange);
+    writeFile600Perm(args.file, interchange);
     logger.verbose("Export completed successfully");
   },
 };
