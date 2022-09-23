@@ -59,7 +59,9 @@ export const LodestarValidatorProcess: ValidatorConstructor = class LodestarVali
     this.secretKeys = validatorSecretKeys;
 
     // Split half of the keys to external signer
-    this.externalSigner = new ExternalSignerServer(this.secretKeys.slice(0, this.secretKeys.length / 2));
+    this.externalSigner = new ExternalSignerServer(
+      this.secretKeys.slice(0, this.secretKeys.length * this.params.externalKeysPercentage)
+    );
 
     this.rcConfig = ({
       network: "dev",
@@ -95,7 +97,7 @@ export const LodestarValidatorProcess: ValidatorConstructor = class LodestarVali
     await writeFile(join(this.rootDir, "rc_config.json"), JSON.stringify(this.rcConfig, null, 2));
 
     // Split half of the keys to the keymanager
-    for (const key of this.secretKeys.slice(this.secretKeys.length / 2)) {
+    for (const key of this.secretKeys.slice(this.secretKeys.length * this.params.externalKeysPercentage)) {
       const keystore = await Keystore.create("password", key.toBytes(), key.toPublicKey().toBytes(), "");
       await writeFile(
         join(this.rootDir, "keystores", `${key.toPublicKey().toHex()}.json`),

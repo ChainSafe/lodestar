@@ -28,6 +28,7 @@ export const defaultSimulationParams: SimulationOptionalParams = {
   // delay a bit so regular sync sees it's up to date and sync is completed from the beginning
   // allow time for bls worker threads to warm up
   genesisSlotsDelay: 30,
+  externalKeysPercentage: 0.5,
 };
 
 export const getSimulationId = ({

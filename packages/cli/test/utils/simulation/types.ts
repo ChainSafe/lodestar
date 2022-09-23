@@ -17,6 +17,8 @@ export type SimulationOptionalParams = {
   secondsPerSlot: number;
   genesisSlotsDelay: number;
   anchorState?: BeaconStateAllForks;
+  // Use this percentage for external signer and rest will be used for local key manager
+  externalKeysPercentage: number;
 };
 
 export type RunTimeSimulationParams = {
