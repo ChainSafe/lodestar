@@ -126,6 +126,15 @@ export const computeInclusionDelay = (attestations: phase0.Attestation[], slot: 
   return avg(Array.from(attestations).map((att) => slot - att.data.slot));
 };
 
+export const computeSyncCommitteeParticipation = (version: ForkName, block: altair.SignedBeaconBlock): number => {
+  if (version === ForkName.phase0) {
+    return 0;
+  }
+
+  const {syncCommitteeBits} = block.message.body.syncAggregate;
+  return syncCommitteeBits.getTrueBitIndexes().length / syncCommitteeBits.bitLen;
+};
+
 export const avg = (arr: number[]): number => {
   return arr.length === 0 ? 0 : arr.reduce((p, c) => p + c, 0) / arr.length;
 };

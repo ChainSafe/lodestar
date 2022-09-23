@@ -17,6 +17,7 @@ export class SimulationEnvironment {
   readonly clock: EpochClock;
   readonly acceptableParticipationRate = 1;
   readonly acceptableMaxInclusionDelay = 1;
+  readonly acceptableMinSyncParticipation = 1;
   readonly tracker: SimulationTracker;
   readonly emitter: EventEmitter;
   readonly controller: AbortController;
