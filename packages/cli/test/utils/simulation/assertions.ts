@@ -2,6 +2,7 @@ import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import {routes} from "@lodestar/api/beacon";
 import {Epoch} from "@lodestar/types";
+import {MAX_COMMITTEES_PER_SLOT} from "@lodestar/params";
 import {SimulationEnvironment} from "./SimulationEnvironment.js";
 
 chai.use(chaiAsPromised);
@@ -84,7 +85,7 @@ export function attestationParticipationAssertions(env: SimulationEnvironment, e
   }
 }
 
-export function missedBlocksAssertions(env: SimulationEnvironment): void {
+export function missedBlocksAssertions(env: SimulationEnvironment, epoch: Epoch): void {
   if (env.params.beaconNodes === 1) {
     it("should not have any missed blocks than genesis", () => {
       expect(env.tracker.missedBlocks.get(env.nodes[0].id)).to.be.eql(
@@ -98,14 +99,111 @@ export function missedBlocksAssertions(env: SimulationEnvironment): void {
   for (const node of env.nodes) {
     describe(node.id, () => {
       it("should have same missed blocks as first node", () => {
-        const missedBlocksOnFirstNode = env.tracker.missedBlocks.get(env.nodes[0].id);
-        const missedBlocksOnNodeN = env.tracker.missedBlocks.get(node.id);
+        const startSlot = env.clock.getFirstSlotOfEpoch(epoch);
+        const endSlot = env.clock.getLastSlotOfEpoch(epoch);
+
+        const missedBlocksOnFirstNode = env.tracker.missedBlocks
+          .get(env.nodes[0].id)
+          ?.filter((s) => s >= startSlot && s <= endSlot);
+
+        const missedBlocksOnNodeN = env.tracker.missedBlocks
+          .get(node.id)
+          ?.filter((s) => s >= startSlot && s <= endSlot);
 
         expect(missedBlocksOnNodeN).to.eql(
           missedBlocksOnFirstNode,
           `node "${node.id}" has different missed blocks than node 0. missedBlocksOnNodeN: ${missedBlocksOnNodeN}, missedBlocksOnFirstNode: ${missedBlocksOnFirstNode}`
         );
       });
+    });
+  }
+}
+
+export function inclusionDelayAssertions(env: SimulationEnvironment, epoch: Epoch): void {
+  for (const node of env.nodes) {
+    describe(node.id, () => {
+      const startSlot = epoch === 0 ? 1 : env.clock.getFirstSlotOfEpoch(epoch);
+      const endSlot = env.clock.getLastSlotOfEpoch(epoch);
+
+      for (let slot = startSlot; slot <= endSlot; slot++) {
+        it(`should not have higher inclusion delay for attestations in slot "${slot}"`, () => {
+          const inclusionDelay = env.tracker.inclusionDelayPerBlock.get(node.id)?.get(slot);
+          const acceptableMaxInclusionDelay = env.acceptableMaxInclusionDelay;
+
+          expect(inclusionDelay).to.lte(
+            acceptableMaxInclusionDelay,
+            `node "${node.id}" has has higher inclusion delay. slot: ${slot}, inclusionDelay: ${inclusionDelay}, acceptableMaxInclusionDelay: ${acceptableMaxInclusionDelay}`
+          );
+        });
+      }
+    });
+  }
+}
+
+export function attestationPerSlotAssertions(env: SimulationEnvironment, epoch: Epoch): void {
+  for (const node of env.nodes) {
+    describe(node.id, () => {
+      const startSlot = epoch === 0 ? 1 : env.clock.getFirstSlotOfEpoch(epoch);
+      const endSlot = env.clock.getLastSlotOfEpoch(epoch);
+
+      for (let slot = startSlot; slot <= endSlot; slot++) {
+        it(`should have attestations count equals to MAX_COMMITTEES_PER_SLOT for slot "${slot}"`, () => {
+          const attestationsCount = env.tracker.attestationsPerSlot.get(node.id)?.get(slot);
+
+          expect(attestationsCount).to.eql(
+            MAX_COMMITTEES_PER_SLOT,
+            `node "${node.id}" has lower number of attestations for slot "${slot}".`
+          );
+        });
+      }
+    });
+  }
+}
+
+export function finalityAssertions(env: SimulationEnvironment, epoch: Epoch): void {
+  for (const node of env.nodes) {
+    describe(node.id, () => {
+      const startSlot = env.clock.getFirstSlotOfEpoch(epoch);
+      const endSlot = env.clock.getLastSlotOfEpoch(epoch);
+
+      for (let slot = startSlot; slot <= endSlot; slot++) {
+        it(`should have correct finalized slot for slot "${slot}"`, () => {
+          // The slots start finalizing from 4th epoch
+          const expectedFinalizedSlot =
+            slot < env.clock.getLastSlotOfEpoch(4)
+              ? 0
+              : env.clock.getFirstSlotOfEpoch(env.clock.getEpochForSlot(slot) - 2);
+
+          const finalizedSlot = env.tracker.finalizedPerSlot.get(node.id)?.get(slot);
+
+          expect(finalizedSlot).to.gte(
+            expectedFinalizedSlot,
+            `node "${node.id}" has not finalized expected slot. slot: ${slot}, finalizedSlot: ${finalizedSlot}, expectedFinalizedSlot: ${expectedFinalizedSlot}`
+          );
+        });
+      }
+    });
+  }
+}
+
+export function headsAssertions(env: SimulationEnvironment, epoch: Epoch): void {
+  for (let i = 1; i < env.nodes.length; i++) {
+    const node = env.nodes[i];
+    describe(node.id, () => {
+      const startSlot = env.clock.getFirstSlotOfEpoch(epoch);
+      const endSlot = env.clock.getLastSlotOfEpoch(epoch);
+
+      for (let slot = startSlot; slot <= endSlot; slot++) {
+        it(`should have same head as first node for slot "${slot}"`, () => {
+          const headOnFirstNode = env.tracker.headPerSlot.get(env.nodes[0].id)?.get(slot);
+          const headOnNNode = env.tracker.headPerSlot.get(node.id)?.get(slot);
+
+          expect(headOnNNode).to.eql(
+            headOnFirstNode,
+            `node "${node.id}" have different heads for slot: ${slot}, headOnFirstNode: ${headOnFirstNode}, headOnNNode: ${headOnNNode}`
+          );
+        });
+      }
     });
   }
 }
