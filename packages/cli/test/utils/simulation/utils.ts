@@ -79,7 +79,6 @@ export const closeChildProcess = async (childProcess: ChildProcess, signal?: "SI
   });
 };
 
-
 export const avg = (arr: number[]): number => {
   return arr.length === 0 ? 0 : arr.reduce((p, c) => p + c, 0) / arr.length;
 };
