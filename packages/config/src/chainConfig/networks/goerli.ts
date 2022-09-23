@@ -8,6 +8,8 @@ import {chainConfig as mainnet} from "../presets/mainnet.js";
 export const goerliChainConfig: IChainConfig = {
   ...mainnet,
 
+  CONFIG_NAME: "goerli",
+
   // Ethereum Goerli testnet
   DEPOSIT_CHAIN_ID: 5,
   DEPOSIT_NETWORK_ID: 5,

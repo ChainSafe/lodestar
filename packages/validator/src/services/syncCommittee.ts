@@ -104,7 +104,7 @@ export class SyncCommitteeService {
         await this.api.beacon.getBlockRoot("head").catch((e: Error) => {
           throw extendError(e, "Error producing SyncCommitteeMessage");
         })
-      ).data;
+      ).data.root;
 
     const signatures: altair.SyncCommitteeMessage[] = [];
 

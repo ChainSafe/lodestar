@@ -95,7 +95,7 @@ describe("options / beaconNodeOptions", () => {
         disableImportExecutionFcU: false,
         computeUnrealized: true,
         safeSlotsToImportOptimistically: 256,
-        defaultFeeRecipient: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        suggestedFeeRecipient: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         assertCorrectProgressiveBalances: true,
         maxSkipSlots: 100,
       },

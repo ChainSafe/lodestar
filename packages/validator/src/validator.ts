@@ -17,16 +17,11 @@ import {Interchange, InterchangeFormatVersion, ISlashingProtection} from "./slas
 import {assertEqualParams, getLoggerVc, NotEqualParamsError} from "./util/index.js";
 import {ChainHeaderTracker} from "./services/chainHeaderTracker.js";
 import {ValidatorEventEmitter} from "./services/emitter.js";
-import {ValidatorStore, Signer} from "./services/validatorStore.js";
+import {ValidatorStore, Signer, ValidatorProposerConfig} from "./services/validatorStore.js";
 import {ProcessShutdownCallback, PubkeyHex} from "./types.js";
 import {Metrics} from "./metrics.js";
 import {MetaDataRepository} from "./repositories/metaDataRepository.js";
 import {DoppelgangerService} from "./services/doppelgangerService.js";
-
-export const defaultOptions = {
-  defaultFeeRecipient: "0x0000000000000000000000000000000000000000",
-  defaultGasLimit: 30_000_000,
-};
 
 export type ValidatorOptions = {
   slashingProtection: ISlashingProtection;
@@ -36,13 +31,9 @@ export type ValidatorOptions = {
   logger: ILogger;
   processShutdownCallback: ProcessShutdownCallback;
   afterBlockDelaySlotFraction?: number;
-  graffiti?: string;
-  defaultFeeRecipient?: string;
-  strictFeeRecipientCheck?: boolean;
   doppelgangerProtectionEnabled?: boolean;
   closed?: boolean;
-  gasLimit?: number;
-  builder: {enabled?: boolean};
+  valProposerConfig?: ValidatorProposerConfig;
 };
 
 // TODO: Extend the timeout, and let it be customizable
@@ -72,17 +63,7 @@ export class Validator {
   private readonly controller: AbortController;
 
   constructor(opts: ValidatorOptions, readonly genesis: Genesis, metrics: Metrics | null = null) {
-    const {
-      dbOps,
-      logger,
-      slashingProtection,
-      signers,
-      graffiti,
-      defaultFeeRecipient,
-      strictFeeRecipientCheck,
-      gasLimit,
-      builder,
-    } = opts;
+    const {dbOps, logger, slashingProtection, signers, valProposerConfig} = opts;
     const config = createIBeaconConfig(dbOps.config, genesis.genesisValidatorsRoot);
     this.controller = new AbortController();
     const clock = new Clock(config, logger, {genesisTime: Number(genesis.genesisTime)});
@@ -105,6 +86,7 @@ export class Validator {
     const doppelgangerService = opts.doppelgangerProtectionEnabled
       ? new DoppelgangerService(logger, clock, api, indicesService, opts.processShutdownCallback, metrics)
       : null;
+
     const validatorStore = new ValidatorStore(
       config,
       slashingProtection,
@@ -112,22 +94,19 @@ export class Validator {
       doppelgangerService,
       metrics,
       signers,
-      defaultFeeRecipient ?? defaultOptions.defaultFeeRecipient,
-      gasLimit ?? defaultOptions.defaultGasLimit
+      valProposerConfig
     );
     pollPrepareBeaconProposer(config, loggerVc, api, clock, validatorStore, metrics);
-    if (builder.enabled) {
-      pollBuilderValidatorRegistration(config, loggerVc, api, clock, validatorStore, metrics);
-    }
+    pollBuilderValidatorRegistration(config, loggerVc, api, clock, validatorStore, metrics);
 
     const emitter = new ValidatorEventEmitter();
+    // Validator event emitter can have more than 10 listeners in a normal course of operation
+    // We set infinity to prevent MaxListenersExceededWarning which get logged when listeners > 10
+    emitter.setMaxListeners(Infinity);
+
     const chainHeaderTracker = new ChainHeaderTracker(logger, api, emitter);
 
-    this.blockProposingService = new BlockProposingService(config, loggerVc, api, clock, validatorStore, metrics, {
-      graffiti,
-      strictFeeRecipientCheck,
-      builder,
-    });
+    this.blockProposingService = new BlockProposingService(config, loggerVc, api, clock, validatorStore, metrics);
 
     this.attestationService = new AttestationService(
       loggerVc,

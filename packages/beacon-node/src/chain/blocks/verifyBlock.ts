@@ -1,7 +1,7 @@
 import {CachedBeaconStateAllForks, computeEpochAtSlot} from "@lodestar/state-transition";
 import {allForks, bellatrix} from "@lodestar/types";
 import {toHexString} from "@chainsafe/ssz";
-import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
+import {ProtoBlock} from "@lodestar/fork-choice";
 import {IChainForkConfig} from "@lodestar/config";
 import {ILogger} from "@lodestar/utils";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
@@ -12,7 +12,7 @@ import {ImportBlockOpts} from "./types.js";
 import {POS_PANDA_MERGE_TRANSITION_BANNER} from "./utils/pandaMergeTransitionBanner.js";
 import {verifyBlocksStateTransitionOnly} from "./verifyBlocksStateTransitionOnly.js";
 import {verifyBlocksSignatures} from "./verifyBlocksSignatures.js";
-import {verifyBlocksExecutionPayload} from "./verifyBlocksExecutionPayloads.js";
+import {verifyBlocksExecutionPayload, SegmentExecStatus} from "./verifyBlocksExecutionPayloads.js";
 
 /**
  * Verifies 1 or more blocks are fully valid; from a linear sequence of blocks.
@@ -32,8 +32,8 @@ export async function verifyBlocksInEpoch(
   opts: BlockProcessOpts & ImportBlockOpts
 ): Promise<{
   postStates: CachedBeaconStateAllForks[];
-  executionStatuses: ExecutionStatus[];
   proposerBalanceDeltas: number[];
+  segmentExecStatus: SegmentExecStatus;
 }> {
   if (blocks.length === 0) {
     throw Error("Empty partiallyVerifiedBlocks");
@@ -64,7 +64,7 @@ export async function verifyBlocksInEpoch(
   const abortController = new AbortController();
 
   try {
-    const [{postStates, proposerBalanceDeltas}, , {executionStatuses, mergeBlockFound}] = await Promise.all([
+    const [{postStates, proposerBalanceDeltas}, , segmentExecStatus] = await Promise.all([
       // Run state transition only
       // TODO: Ensure it yields to allow flushing to workers and engine API
       verifyBlocksStateTransitionOnly(preState0, blocks, this.metrics, abortController.signal, opts),
@@ -76,13 +76,13 @@ export async function verifyBlocksInEpoch(
       verifyBlocksExecutionPayload(this, parentBlock, blocks, preState0, abortController.signal, opts),
     ]);
 
-    if (mergeBlockFound !== null) {
+    if (segmentExecStatus.execAborted === null && segmentExecStatus.mergeBlockFound !== null) {
       // merge block found and is fully valid = state transition + signatures + execution payload.
       // TODO: Will this banner be logged during syncing?
-      logOnPowBlock(this.logger, this.config, mergeBlockFound);
+      logOnPowBlock(this.logger, this.config, segmentExecStatus.mergeBlockFound);
     }
 
-    return {postStates, executionStatuses, proposerBalanceDeltas};
+    return {postStates, proposerBalanceDeltas, segmentExecStatus};
   } finally {
     abortController.abort();
   }

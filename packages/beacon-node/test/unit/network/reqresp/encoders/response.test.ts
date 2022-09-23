@@ -290,7 +290,12 @@ describe("network / reqresp / encoders / response - Success and error cases", ()
 
     if (chunks) {
       it(`${id} - responseDecode`, async () => {
-        const responseDecodePromise = pipe(arrToSource(chunks), responseDecode(config, protocol), all);
+        const responseDecodePromise = pipe(
+          arrToSource(chunks),
+          // eslint-disable-next-line @typescript-eslint/no-empty-function
+          responseDecode(config, protocol, {onFirstHeader: () => {}, onFirstResponseChunk: () => {}}),
+          all
+        );
 
         if (decodeError) {
           await expectRejectedWithLodestarError(responseDecodePromise, decodeError);

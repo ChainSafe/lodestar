@@ -51,7 +51,7 @@ async function resolveStateIdOrNull(
   stateId: routes.beacon.StateId,
   opts?: ResolveStateIdOpts
 ): Promise<BeaconStateAllForks | null> {
-  stateId = stateId.toLowerCase();
+  stateId = String(stateId).toLowerCase();
   if (stateId === "head" || stateId === "genesis" || stateId === "finalized" || stateId === "justified") {
     return await stateByName(db, chain.stateCache, chain.forkChoice, stateId);
   }
@@ -139,7 +139,7 @@ async function stateByRoot(
   stateCache: StateContextCache,
   stateId: routes.beacon.StateId
 ): Promise<BeaconStateAllForks | null> {
-  if (stateId.startsWith("0x")) {
+  if (typeof stateId === "string" && stateId.startsWith("0x")) {
     const stateRoot = stateId;
     const cachedStateCtx = stateCache.get(stateRoot);
     if (cachedStateCtx) return cachedStateCtx;
@@ -172,7 +172,7 @@ async function stateBySlot(
   return await db.stateArchive.get(slot);
 }
 
-export function filterStateValidatorsByStatuses(
+export function filterStateValidatorsByStatus(
   statuses: string[],
   state: BeaconStateAllForks,
   pubkey2index: PubkeyIndexMap,

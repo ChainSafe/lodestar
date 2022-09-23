@@ -1,7 +1,17 @@
-export {Validator, ValidatorOptions, defaultOptions} from "./validator.js";
-export {ValidatorStore, SignerType, Signer, SignerLocal, SignerRemote} from "./services/validatorStore.js";
+export {Validator, ValidatorOptions} from "./validator.js";
+export {
+  ValidatorStore,
+  SignerType,
+  Signer,
+  SignerLocal,
+  SignerRemote,
+  ValidatorProposerConfig,
+  defaultOptions,
+} from "./services/validatorStore.js";
 export {waitForGenesis} from "./genesis.js";
 export {getMetrics, Metrics, MetricsRegister} from "./metrics.js";
+// For CLI to read genesisValidatorsRoot
+export {MetaDataRepository} from "./repositories/index.js";
 
 // Remote signer client
 export {

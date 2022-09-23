@@ -120,7 +120,12 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Build and push
-        run: docker buildx build --push --tag chainsafe/lodestar:next --platform linux/amd64,linux/arm64 --build-arg VERSION=${{ needs.npm.outputs.version }} .
+        run: >
+          docker buildx build . --push
+          --tag chainsafe/lodestar:next
+          --platform linux/amd64,linux/arm64
+          --build-arg COMMIT=$(git rev-parse HEAD)
+
       - run: docker run chainsafe/lodestar:next --help
       # Display history to know byte size of each layer
       # Image is available only because of the previous `docker run` command

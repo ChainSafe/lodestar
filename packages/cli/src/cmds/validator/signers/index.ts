@@ -35,7 +35,7 @@ import {importKeystoreDefinitionsFromExternalDir, readPassphraseOrPrompt} from "
  * - Fetched directly from remote signer API
  * - Remote signer definition imported from keymanager api
  */
-export async function getSignersFromArgs(args: IValidatorCliArgs & IGlobalArgs): Promise<Signer[]> {
+export async function getSignersFromArgs(args: IValidatorCliArgs & IGlobalArgs, network: string): Promise<Signer[]> {
   // ONLY USE FOR TESTNETS - Derive interop keys
   if (args.interopIndexes) {
     const indexes = parseRange(args.interopIndexes);
@@ -44,7 +44,7 @@ export async function getSignersFromArgs(args: IValidatorCliArgs & IGlobalArgs):
 
   // UNSAFE, ONLY USE FOR TESTNETS - Derive keys directly from a mnemonic
   else if (args.fromMnemonic) {
-    if (args.network === defaultNetwork) {
+    if (network === defaultNetwork) {
       throw new YargsError("fromMnemonic must only be used in testnets");
     }
     if (!args.mnemonicIndexes) {
@@ -90,7 +90,7 @@ export async function getSignersFromArgs(args: IValidatorCliArgs & IGlobalArgs):
 
   // Read keys from local account manager
   else {
-    const accountPaths = getAccountPaths(args);
+    const accountPaths = getAccountPaths(args, network);
     const persistedKeysBackend = new PersistedKeysBackend(accountPaths);
 
     // Read and decrypt local keystores, imported via keymanager api or import cmd

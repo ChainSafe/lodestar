@@ -25,7 +25,7 @@ export function createMetrics(
   const genesisTime = anchorState.genesisTime;
   const validatorMonitor = createValidatorMonitor(lodestar, config, genesisTime, logger);
   // Register a single collect() function to run all validatorMonitor metrics
-  lodestar.validatorMonitor.validatorsTotal.addCollect(() => {
+  lodestar.validatorMonitor.validatorsConnected.addCollect(() => {
     const clockSlot = getCurrentSlot(config, genesisTime);
     validatorMonitor.scrapeMetrics(clockSlot);
   });

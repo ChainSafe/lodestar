@@ -1,7 +1,7 @@
 import {ContainerType} from "@chainsafe/ssz";
 import {ForkName} from "@lodestar/params";
 import {IChainForkConfig} from "@lodestar/config";
-import {phase0, allForks, Slot, Root, ssz, bellatrix} from "@lodestar/types";
+import {phase0, allForks, Slot, Root, ssz, bellatrix, RootHex} from "@lodestar/types";
 
 import {
   RoutesData,
@@ -14,11 +14,19 @@ import {
   TypeJson,
   ReqSerializers,
   ReqSerializer,
+  ContainerDataExecutionOptimistic,
+  WithExecutionOptimistic,
 } from "../../../utils/index.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
-export type BlockId = "head" | "genesis" | "finalized" | string | number;
+export type BlockId = RootHex | Slot | "head" | "genesis" | "finalized";
+
+/**
+ * True if the response references an unverified execution payload. Optimistic information may be invalidated at
+ * a later time. If the field is not present, assume the False value.
+ */
+export type ExecutionOptimistic = boolean;
 
 export type BlockHeaderResponse = {
   root: Root;
@@ -43,7 +51,9 @@ export type Api = {
    * @param blockId Block identifier.
    * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", \<slot\>, \<hex encoded blockRoot with 0x prefix\>.
    */
-  getBlockV2(blockId: BlockId): Promise<{data: allForks.SignedBeaconBlock; version: ForkName}>;
+  getBlockV2(
+    blockId: BlockId
+  ): Promise<{executionOptimistic: ExecutionOptimistic; data: allForks.SignedBeaconBlock; version: ForkName}>;
 
   /**
    * Get block attestations
@@ -51,7 +61,9 @@ export type Api = {
    * @param blockId Block identifier.
    * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", \<slot\>, \<hex encoded blockRoot with 0x prefix\>.
    */
-  getBlockAttestations(blockId: BlockId): Promise<{data: phase0.Attestation[]}>;
+  getBlockAttestations(
+    blockId: BlockId
+  ): Promise<{executionOptimistic: ExecutionOptimistic; data: phase0.Attestation[]}>;
 
   /**
    * Get block header
@@ -59,7 +71,7 @@ export type Api = {
    * @param blockId Block identifier.
    * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", \<slot\>, \<hex encoded blockRoot with 0x prefix\>.
    */
-  getBlockHeader(blockId: BlockId): Promise<{data: BlockHeaderResponse}>;
+  getBlockHeader(blockId: BlockId): Promise<{executionOptimistic: ExecutionOptimistic; data: BlockHeaderResponse}>;
 
   /**
    * Get block headers
@@ -67,7 +79,9 @@ export type Api = {
    * @param slot
    * @param parentRoot
    */
-  getBlockHeaders(filters: Partial<{slot: Slot; parentRoot: string}>): Promise<{data: BlockHeaderResponse[]}>;
+  getBlockHeaders(
+    filters: Partial<{slot: Slot; parentRoot: string}>
+  ): Promise<{executionOptimistic: ExecutionOptimistic; data: BlockHeaderResponse[]}>;
 
   /**
    * Get block root
@@ -75,7 +89,7 @@ export type Api = {
    * @param blockId Block identifier.
    * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", \<slot\>, \<hex encoded blockRoot with 0x prefix\>.
    */
-  getBlockRoot(blockId: BlockId): Promise<{data: Root}>;
+  getBlockRoot(blockId: BlockId): Promise<{executionOptimistic: ExecutionOptimistic; data: {root: Root}}>;
 
   /**
    * Publish a signed block.
@@ -101,19 +115,20 @@ export type Api = {
  * Define javascript values for each route
  */
 export const routesData: RoutesData<Api> = {
-  getBlock: {url: "/eth/v1/beacon/blocks/:blockId", method: "GET"},
-  getBlockV2: {url: "/eth/v2/beacon/blocks/:blockId", method: "GET"},
-  getBlockAttestations: {url: "/eth/v1/beacon/blocks/:blockId/attestations", method: "GET"},
-  getBlockHeader: {url: "/eth/v1/beacon/headers/:blockId", method: "GET"},
+  getBlock: {url: "/eth/v1/beacon/blocks/{block_id}", method: "GET"},
+  getBlockV2: {url: "/eth/v2/beacon/blocks/{block_id}", method: "GET"},
+  getBlockAttestations: {url: "/eth/v1/beacon/blocks/{block_id}/attestations", method: "GET"},
+  getBlockHeader: {url: "/eth/v1/beacon/headers/{block_id}", method: "GET"},
   getBlockHeaders: {url: "/eth/v1/beacon/headers", method: "GET"},
-  getBlockRoot: {url: "/eth/v1/beacon/blocks/:blockId/root", method: "GET"},
+  getBlockRoot: {url: "/eth/v1/beacon/blocks/{block_id}/root", method: "GET"},
   publishBlock: {url: "/eth/v1/beacon/blocks", method: "POST"},
   publishBlindedBlock: {url: "/eth/v1/beacon/blinded_blocks", method: "POST"},
 };
 
-type BlockIdOnlyReq = {params: {blockId: string | number}};
-
 /* eslint-disable @typescript-eslint/naming-convention */
+
+type BlockIdOnlyReq = {params: {block_id: string}};
+
 export type ReqTypes = {
   getBlock: BlockIdOnlyReq;
   getBlockV2: BlockIdOnlyReq;
@@ -127,9 +142,9 @@ export type ReqTypes = {
 
 export function getReqSerializers(config: IChainForkConfig): ReqSerializers<Api, ReqTypes> {
   const blockIdOnlyReq: ReqSerializer<Api["getBlock"], BlockIdOnlyReq> = {
-    writeReq: (blockId) => ({params: {blockId}}),
-    parseReq: ({params}) => [params.blockId],
-    schema: {params: {blockId: Schema.StringRequired}},
+    writeReq: (block_id) => ({params: {block_id: String(block_id)}}),
+    parseReq: ({params}) => [params.block_id],
+    schema: {params: {block_id: Schema.StringRequired}},
   };
 
   // Compute block type from JSON payload. See https://github.com/ethereum/eth2.0-APIs/pull/142
@@ -164,13 +179,16 @@ export function getReturnTypes(): ReturnTypes<Api> {
     header: ssz.phase0.SignedBeaconBlockHeader,
   });
 
+  const RootContainer = new ContainerType({
+    root: ssz.Root,
+  });
+
   return {
     getBlock: ContainerData(ssz.phase0.SignedBeaconBlock),
-    // Teku returns fork as UPPERCASE
-    getBlockV2: WithVersion((fork: ForkName) => ssz[fork.toLowerCase() as ForkName].SignedBeaconBlock),
-    getBlockAttestations: ContainerData(ArrayOf(ssz.phase0.Attestation)),
-    getBlockHeader: ContainerData(BeaconHeaderResType),
-    getBlockHeaders: ContainerData(ArrayOf(BeaconHeaderResType)),
-    getBlockRoot: ContainerData(ssz.Root),
+    getBlockV2: WithExecutionOptimistic(WithVersion((fork) => ssz[fork].SignedBeaconBlock)),
+    getBlockAttestations: ContainerDataExecutionOptimistic(ArrayOf(ssz.phase0.Attestation)),
+    getBlockHeader: ContainerDataExecutionOptimistic(BeaconHeaderResType),
+    getBlockHeaders: ContainerDataExecutionOptimistic(ArrayOf(BeaconHeaderResType)),
+    getBlockRoot: ContainerDataExecutionOptimistic(RootContainer),
   };
 }

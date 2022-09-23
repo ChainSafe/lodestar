@@ -1,7 +1,7 @@
 import tmp from "tmp";
 import {LevelDbController} from "@lodestar/db";
 import {interopSecretKey} from "@lodestar/state-transition";
-import {SlashingProtection, Validator, Signer, SignerType} from "@lodestar/validator";
+import {SlashingProtection, Validator, Signer, SignerType, ValidatorProposerConfig} from "@lodestar/validator";
 import type {SecretKey} from "@chainsafe/bls/types";
 import {BeaconNode} from "../../../src/index.js";
 import {testLogger, TestLoggerOpts} from "../logger.js";
@@ -14,9 +14,8 @@ export async function getAndInitDevValidators({
   useRestApi,
   testLoggerOpts,
   externalSignerUrl,
-  defaultFeeRecipient,
   doppelgangerProtectionEnabled = false,
-  builder = {},
+  valProposerConfig,
 }: {
   node: BeaconNode;
   validatorsPerClient: number;
@@ -25,9 +24,8 @@ export async function getAndInitDevValidators({
   useRestApi?: boolean;
   testLoggerOpts?: TestLoggerOpts;
   externalSignerUrl?: string;
-  defaultFeeRecipient?: string;
   doppelgangerProtectionEnabled?: boolean;
-  builder?: {enabled?: boolean};
+  valProposerConfig?: ValidatorProposerConfig;
 }): Promise<{validators: Validator[]; secretKeys: SecretKey[]}> {
   const validators: Promise<Validator>[] = [];
   const secretKeys: SecretKey[] = [];
@@ -70,9 +68,8 @@ export async function getAndInitDevValidators({
         // eslint-disable-next-line @typescript-eslint/no-empty-function
         processShutdownCallback: () => {},
         signers,
-        defaultFeeRecipient,
         doppelgangerProtectionEnabled,
-        builder,
+        valProposerConfig,
       })
     );
   }

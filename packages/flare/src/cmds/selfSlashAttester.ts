@@ -131,7 +131,7 @@ export async function selfSlashAttesterHandler(args: SelfSlashArgs): Promise<voi
       },
     };
 
-    await client.beacon.submitPoolAttesterSlashing(attesterSlashing);
+    await client.beacon.submitPoolAttesterSlashings(attesterSlashing);
 
     successCount += attestingIndices.length;
     const indexesStr = attestingIndices.join(",");

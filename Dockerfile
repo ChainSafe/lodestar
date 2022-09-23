@@ -2,6 +2,7 @@
 # --platform=$BUILDPLATFORM is used build javascript source with host arch
 # Otherwise TS builds on emulated archs and can be extremely slow (+1h)
 FROM --platform=${BUILDPLATFORM:-amd64} node:16-alpine as build_src
+ARG COMMIT
 WORKDIR /usr/app
 RUN apk update && apk add --no-cache g++ make python3 && rm -rf /var/cache/apk/*
 
@@ -15,7 +16,7 @@ RUN yarn install --non-interactive --frozen-lockfile && \
 # a git-data.json file is created by persisting git data at build time. Then,
 # a version string like `v0.35.0-beta.0/HEAD/82219149 (git)` can be shown in
 # the terminal and in the logs; which is very useful to track tests better.
-RUN cd packages/cli && yarn write-git-data
+RUN cd packages/cli && GIT_COMMIT=${COMMIT} yarn write-git-data
 
 
 # Copy built src + node_modules to build native packages for archs different than host.

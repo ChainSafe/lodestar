@@ -78,6 +78,7 @@ function getSpecCriticalParams(localConfig: IChainConfig): Record<keyof ConfigWi
     ///////////
 
     PRESET_BASE: false, // Not relevant, each preset value is checked below
+    CONFIG_NAME: false, // Arbitrary string, not relevant
     // validator client behaviour does not change with this parameters, so it's not concerned about them.
     // However, with the override ttd flag, the validator and beacon could be out of sync and prevent it from running.
     TERMINAL_TOTAL_DIFFICULTY: false,

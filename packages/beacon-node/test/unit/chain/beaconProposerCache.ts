@@ -1,13 +1,13 @@
 import {expect} from "chai";
 import {BeaconProposerCache} from "../../../src/chain/beaconProposerCache.js";
 
-const defaultFeeRecipient = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+const suggestedFeeRecipient = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 describe("BeaconProposerCache", function () {
   let cache: BeaconProposerCache;
 
   beforeEach(function () {
     // max 2 items
-    cache = new BeaconProposerCache({defaultFeeRecipient});
+    cache = new BeaconProposerCache({suggestedFeeRecipient});
     cache.add(1, {validatorIndex: "23", feeRecipient: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"});
     cache.add(3, {validatorIndex: "43", feeRecipient: "0xcccccccccccccccccccccccccccccccccccccccc"});
   });

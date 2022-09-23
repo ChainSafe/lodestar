@@ -12,10 +12,14 @@ import {
   PubkeyIndexMap,
 } from "@lodestar/state-transition";
 import {IBeaconConfig} from "@lodestar/config";
-import {allForks, UintNum64, Root, phase0, Slot, RootHex, Epoch, ValidatorIndex} from "@lodestar/types";
+import {allForks, bellatrix, UintNum64, Root, phase0, Slot, RootHex, Epoch, ValidatorIndex} from "@lodestar/types";
 import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
+import {ProcessShutdownCallback} from "@lodestar/validator";
+
 import {ILogger, toHex} from "@lodestar/utils";
 import {CompositeTypeAny, fromHexString, TreeView, Type} from "@chainsafe/ssz";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
+
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
 import {IMetrics} from "../metrics/index.js";
@@ -27,7 +31,7 @@ import {ensureDir, writeIfNotExist} from "../util/file.js";
 import {CheckpointStateCache, StateContextCache} from "./stateCache/index.js";
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
 import {IBeaconClock, LocalClock} from "./clock/index.js";
-import {ChainEventEmitter} from "./emitter.js";
+import {ChainEventEmitter, ChainEvent} from "./emitter.js";
 import {IBeaconChain, ProposerPreparationData} from "./interface.js";
 import {IChainOptions} from "./options.js";
 import {IStateRegenerator, QueuedStateRegenerator, RegenCaller} from "./regen/index.js";
@@ -56,7 +60,9 @@ import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
 import {SeenBlockAttesters} from "./seenCache/seenBlockAttesters.js";
 import {BeaconProposerCache} from "./beaconProposerCache.js";
 import {CheckpointBalancesCache} from "./balancesCache.js";
-import {ChainEvent} from "./index.js";
+import {AssembledBlockType, BlockType} from "./produceBlock/index.js";
+import {BlockAttributes, produceBlockBody} from "./produceBlock/produceBlockBody.js";
+import {computeNewStateRoot} from "./produceBlock/computeNewStateRoot.js";
 
 export class BeaconChain implements IBeaconChain {
   readonly genesisTime: UintNum64;
@@ -113,12 +119,17 @@ export class BeaconChain implements IBeaconChain {
   private successfulExchangeTransition = false;
   private readonly exchangeTransitionConfigurationEverySlots: number;
 
+  private readonly faultInspectionWindow: number;
+  private readonly allowedFaults: number;
+  private processShutdownCallback: ProcessShutdownCallback;
+
   constructor(
     opts: IChainOptions,
     {
       config,
       db,
       logger,
+      processShutdownCallback,
       clock,
       metrics,
       anchorState,
@@ -129,6 +140,7 @@ export class BeaconChain implements IBeaconChain {
       config: IBeaconConfig;
       db: IBeaconDb;
       logger: ILogger;
+      processShutdownCallback: ProcessShutdownCallback;
       /** Used for testing to supply fake clock */
       clock?: IBeaconClock;
       metrics: IMetrics | null;
@@ -142,6 +154,7 @@ export class BeaconChain implements IBeaconChain {
     this.config = config;
     this.db = db;
     this.logger = logger;
+    this.processShutdownCallback = processShutdownCallback;
     this.metrics = metrics;
     this.genesisTime = anchorState.genesisTime;
     this.anchorStateLatestBlockSlot = anchorState.latestBlockHeader.slot;
@@ -153,6 +166,24 @@ export class BeaconChain implements IBeaconChain {
     // > Consensus Layer client software SHOULD poll this endpoint every 60 seconds.
     // Align to a multiple of SECONDS_PER_SLOT for nicer logs
     this.exchangeTransitionConfigurationEverySlots = Math.floor(60 / this.config.SECONDS_PER_SLOT);
+
+    /**
+     * Beacon clients select randomized values from the following ranges when initializing
+     * the circuit breaker (so at boot time and once for each unique boot).
+     *
+     * ALLOWED_FAULTS: between 1 and SLOTS_PER_EPOCH // 2
+     * FAULT_INSPECTION_WINDOW: between SLOTS_PER_EPOCH and 2 * SLOTS_PER_EPOCH
+     *
+     */
+    this.faultInspectionWindow = Math.max(
+      opts.faultInspectionWindow ?? SLOTS_PER_EPOCH + Math.floor(Math.random() * SLOTS_PER_EPOCH),
+      SLOTS_PER_EPOCH
+    );
+    // allowedFaults should be < faultInspectionWindow, limiting them to faultInspectionWindow/2
+    this.allowedFaults = Math.min(
+      opts.allowedFaults ?? Math.floor(this.faultInspectionWindow / 2),
+      Math.floor(this.faultInspectionWindow / 2)
+    );
 
     const signal = this.abortController.signal;
     const emitter = new ChainEventEmitter();
@@ -199,8 +230,7 @@ export class BeaconChain implements IBeaconChain {
       clock.currentSlot,
       cachedState,
       opts,
-      this.justifiedBalancesGetter.bind(this),
-      metrics
+      this.justifiedBalancesGetter.bind(this)
     );
     const regen = new QueuedStateRegenerator({
       config,
@@ -309,6 +339,45 @@ export class BeaconChain implements IBeaconChain {
     return await this.db.block.get(fromHexString(block.blockRoot));
   }
 
+  async produceBlock(blockAttributes: BlockAttributes): Promise<allForks.BeaconBlock> {
+    return this.produceBlockWrapper<BlockType.Full>(BlockType.Full, blockAttributes);
+  }
+
+  async produceBlindedBlock(blockAttributes: BlockAttributes): Promise<bellatrix.BlindedBeaconBlock> {
+    return this.produceBlockWrapper<BlockType.Blinded>(BlockType.Blinded, blockAttributes);
+  }
+
+  async produceBlockWrapper<T extends BlockType>(
+    blockType: T,
+    {randaoReveal, graffiti, slot}: BlockAttributes
+  ): Promise<AssembledBlockType<T>> {
+    const head = this.forkChoice.getHead();
+    const state = await this.regen.getBlockSlotState(head.blockRoot, slot, RegenCaller.produceBlock);
+    const parentBlockRoot = fromHexString(head.blockRoot);
+    const proposerIndex = state.epochCtx.getBeaconProposer(slot);
+    const proposerPubKey = state.epochCtx.index2pubkey[proposerIndex].toBytes();
+
+    const block = {
+      slot,
+      proposerIndex,
+      parentRoot: parentBlockRoot,
+      stateRoot: ZERO_HASH,
+      body: await produceBlockBody.call(this, blockType, state, {
+        randaoReveal,
+        graffiti,
+        slot,
+        parentSlot: slot - 1,
+        parentBlockRoot,
+        proposerIndex,
+        proposerPubKey,
+      }),
+    } as AssembledBlockType<T>;
+
+    block.stateRoot = computeNewStateRoot(this.metrics, state, block);
+
+    return block;
+  }
+
   async processBlock(block: allForks.SignedBeaconBlock, opts?: ImportBlockOpts): Promise<void> {
     return await this.blockProcessor.processBlocksJob([block], opts);
   }
@@ -332,6 +401,20 @@ export class BeaconChain implements IBeaconChain {
       headRoot: fromHexString(head.blockRoot),
       headSlot: head.slot,
     };
+  }
+
+  recomputeForkChoiceHead(): ProtoBlock {
+    this.metrics?.forkChoice.requests.inc();
+    const timer = this.metrics?.forkChoice.findHead.startTimer();
+
+    try {
+      return this.forkChoice.updateHead();
+    } catch (e) {
+      this.metrics?.forkChoice.errors.inc();
+      throw e;
+    } finally {
+      timer?.();
+    }
   }
 
   /**
@@ -487,6 +570,9 @@ export class BeaconChain implements IBeaconChain {
     this.logger.verbose("Clock slot", {slot});
 
     // CRITICAL UPDATE
+    if (this.forkChoice.irrecoverableError) {
+      this.processShutdownCallback(this.forkChoice.irrecoverableError);
+    }
     this.forkChoice.updateTime(slot);
 
     this.metrics?.clockSlot.set(slot);
@@ -609,5 +695,33 @@ export class BeaconChain implements IBeaconChain {
     proposers.forEach((proposer) => {
       this.beaconProposerCache.add(epoch, proposer);
     });
+  }
+
+  updateBuilderStatus(clockSlot: Slot): void {
+    const executionBuilder = this.executionBuilder;
+    if (executionBuilder) {
+      const slotsPresent = this.forkChoice.getSlotsPresent(clockSlot - this.faultInspectionWindow);
+      const previousStatus = executionBuilder.status;
+      const shouldEnable = slotsPresent >= this.faultInspectionWindow - this.allowedFaults;
+
+      executionBuilder.updateStatus(shouldEnable);
+      // The status changed we should log
+      const status = executionBuilder.status;
+      if (status !== previousStatus) {
+        this.logger.info("Execution builder status updated", {
+          status,
+          slotsPresent,
+          window: this.faultInspectionWindow,
+          allowedFaults: this.allowedFaults,
+        });
+      } else {
+        this.logger.verbose("Execution builder status", {
+          status,
+          slotsPresent,
+          window: this.faultInspectionWindow,
+          allowedFaults: this.allowedFaults,
+        });
+      }
+    }
   }
 }

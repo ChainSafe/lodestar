@@ -1,7 +1,7 @@
 import {EffectiveBalanceIncrements} from "@lodestar/state-transition";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {Epoch, Slot, ValidatorIndex, phase0, allForks, Root, RootHex} from "@lodestar/types";
-import {ProtoBlock, ExecutionStatus} from "../protoArray/interface.js";
+import {ProtoBlock, MaybeValidExecutionStatus, LVHExecResponse} from "../protoArray/interface.js";
 import {CheckpointWithHex} from "./store.js";
 
 export type CheckpointHex = {
@@ -20,6 +20,7 @@ export type CheckpointHexWithBalance = {
 };
 
 export interface IForkChoice {
+  irrecoverableError?: Error;
   /**
    * Returns the block root of an ancestor of `block_root` at the given `slot`. (Note: `slot` refers
    * to the block that is *returned*, not the one that is supplied.)
@@ -70,7 +71,7 @@ export interface IForkChoice {
     state: CachedBeaconStateAllForks,
     blockDelaySec: number,
     currentSlot: Slot,
-    executionStatus: ExecutionStatus
+    executionStatus: MaybeValidExecutionStatus
   ): void;
   /**
    * Register `attestation` with the fork choice DAG so that it may influence future calls to `getHead`.
@@ -106,6 +107,7 @@ export interface IForkChoice {
    */
   hasBlock(blockRoot: Root): boolean;
   hasBlockHex(blockRoot: RootHex): boolean;
+  getSlotsPresent(windowStart: number): number;
   /**
    * Returns a `ProtoBlock` if the block is known **and** a descendant of the finalized root.
    */
@@ -154,9 +156,10 @@ export interface IForkChoice {
   /**
    * Optimistic sync validate till validated latest hash, invalidate any decendant branch if invalidated branch decendant provided
    */
-  validateLatestHash(latestValidHash: RootHex, invalidateTillHash: RootHex | null): void;
+  validateLatestHash(execResponse: LVHExecResponse): void;
   /** Find attester dependent root of a block */
   findAttesterDependentRoot(headBlockHash: Root): RootHex | null;
+  /** Get critical error from forkChoice */
 }
 
 /** Same to the PowBlock but we want RootHex to work with forkchoice conveniently */

@@ -74,6 +74,8 @@ export const forkChoiceTest: TestRunnerFn<ForkChoiceTestCase, void> = (fork) => 
           config: createIBeaconConfig(config, state.genesisValidatorsRoot),
           db: getStubbedBeaconDb(),
           logger,
+          // eslint-disable-next-line @typescript-eslint/no-empty-function
+          processShutdownCallback: () => {},
           clock,
           metrics: null,
           anchorState,

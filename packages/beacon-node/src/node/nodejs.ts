@@ -1,3 +1,4 @@
+import {setMaxListeners} from "node:events";
 import LibP2p from "libp2p";
 import {Registry} from "prom-client";
 
@@ -6,6 +7,7 @@ import {phase0} from "@lodestar/types";
 import {ILogger} from "@lodestar/utils";
 import {Api} from "@lodestar/api";
 import {BeaconStateAllForks} from "@lodestar/state-transition";
+import {ProcessShutdownCallback} from "@lodestar/validator";
 
 import {IBeaconDb} from "../db/index.js";
 import {INetwork, Network, getReqRespHandlers} from "../network/index.js";
@@ -41,6 +43,7 @@ export interface IBeaconNodeInitModules {
   config: IBeaconConfig;
   db: IBeaconDb;
   logger: ILogger;
+  processShutdownCallback: ProcessShutdownCallback;
   libp2p: LibP2p;
   anchorState: BeaconStateAllForks;
   wsCheckpoint?: phase0.Checkpoint;
@@ -112,12 +115,16 @@ export class BeaconNode {
     config,
     db,
     logger,
+    processShutdownCallback,
     libp2p,
     anchorState,
     wsCheckpoint,
     metricsRegistries = [],
   }: IBeaconNodeInitModules): Promise<T> {
     const controller = new AbortController();
+    // We set infinity to prevent MaxListenersExceededWarning which get logged when listeners > 10
+    // Since it is perfectly fine to have listeners > 10
+    setMaxListeners(Infinity, controller.signal);
     const signal = controller.signal;
 
     // start db if not already started
@@ -135,6 +142,7 @@ export class BeaconNode {
       config,
       db,
       logger: logger.child(opts.logger.chain),
+      processShutdownCallback,
       metrics,
       anchorState,
       eth1: initializeEth1ForBlockProduction(opts.eth1, {

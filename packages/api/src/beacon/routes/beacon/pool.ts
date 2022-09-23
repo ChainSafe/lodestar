@@ -74,7 +74,7 @@ export type Api = {
    * @returns any Success
    * @throws ApiError
    */
-  submitPoolAttesterSlashing(slashing: phase0.AttesterSlashing): Promise<void>;
+  submitPoolAttesterSlashings(slashing: phase0.AttesterSlashing): Promise<void>;
 
   /**
    * Submit ProposerSlashing object to node's pool
@@ -83,7 +83,7 @@ export type Api = {
    * @returns any Success
    * @throws ApiError
    */
-  submitPoolProposerSlashing(slashing: phase0.ProposerSlashing): Promise<void>;
+  submitPoolProposerSlashings(slashing: phase0.ProposerSlashing): Promise<void>;
 
   /**
    * Submit SignedVoluntaryExit object to node's pool
@@ -109,8 +109,8 @@ export const routesData: RoutesData<Api> = {
   getPoolProposerSlashings: {url: "/eth/v1/beacon/pool/proposer_slashings", method: "GET"},
   getPoolVoluntaryExits: {url: "/eth/v1/beacon/pool/voluntary_exits", method: "GET"},
   submitPoolAttestations: {url: "/eth/v1/beacon/pool/attestations", method: "POST"},
-  submitPoolAttesterSlashing: {url: "/eth/v1/beacon/pool/attester_slashings", method: "POST"},
-  submitPoolProposerSlashing: {url: "/eth/v1/beacon/pool/proposer_slashings", method: "POST"},
+  submitPoolAttesterSlashings: {url: "/eth/v1/beacon/pool/attester_slashings", method: "POST"},
+  submitPoolProposerSlashings: {url: "/eth/v1/beacon/pool/proposer_slashings", method: "POST"},
   submitPoolVoluntaryExit: {url: "/eth/v1/beacon/pool/voluntary_exits", method: "POST"},
   submitPoolSyncCommitteeSignatures: {url: "/eth/v1/beacon/pool/sync_committees", method: "POST"},
 };
@@ -122,8 +122,8 @@ export type ReqTypes = {
   getPoolProposerSlashings: ReqEmpty;
   getPoolVoluntaryExits: ReqEmpty;
   submitPoolAttestations: {body: unknown};
-  submitPoolAttesterSlashing: {body: unknown};
-  submitPoolProposerSlashing: {body: unknown};
+  submitPoolAttesterSlashings: {body: unknown};
+  submitPoolProposerSlashings: {body: unknown};
   submitPoolVoluntaryExit: {body: unknown};
   submitPoolSyncCommitteeSignatures: {body: unknown};
 };
@@ -139,8 +139,8 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
     getPoolProposerSlashings: reqEmpty,
     getPoolVoluntaryExits: reqEmpty,
     submitPoolAttestations: reqOnlyBody(ArrayOf(ssz.phase0.Attestation), Schema.ObjectArray),
-    submitPoolAttesterSlashing: reqOnlyBody(ssz.phase0.AttesterSlashing, Schema.Object),
-    submitPoolProposerSlashing: reqOnlyBody(ssz.phase0.ProposerSlashing, Schema.Object),
+    submitPoolAttesterSlashings: reqOnlyBody(ssz.phase0.AttesterSlashing, Schema.Object),
+    submitPoolProposerSlashings: reqOnlyBody(ssz.phase0.ProposerSlashing, Schema.Object),
     submitPoolVoluntaryExit: reqOnlyBody(ssz.phase0.SignedVoluntaryExit, Schema.Object),
     submitPoolSyncCommitteeSignatures: reqOnlyBody(ArrayOf(ssz.altair.SyncCommitteeMessage), Schema.ObjectArray),
   };

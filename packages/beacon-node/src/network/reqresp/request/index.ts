@@ -5,6 +5,7 @@ import {IForkDigestContext} from "@lodestar/config";
 import {ErrorAborted, ILogger, withTimeout, TimeoutError} from "@lodestar/utils";
 import {timeoutOptions} from "../../../constants/index.js";
 import {prettyPrintPeerId} from "../../util.js";
+import {abortableSource} from "../../../util/abortableSource.js";
 import {PeersData} from "../../peers/peersData.js";
 import {Method, Encoding, Protocol, Version, IncomingResponseBody, RequestBody} from "../types.js";
 import {formatProtocolId, renderRequestBody} from "../utils/index.js";
@@ -13,7 +14,6 @@ import {requestEncode} from "../encoders/requestEncode.js";
 import {responseDecode} from "../encoders/responseDecode.js";
 import {Libp2pConnection} from "../interface.js";
 import {collectResponses} from "./collectResponses.js";
-import {maxTotalResponseTimeout, responseTimeoutsHandler} from "./responseTimeoutsHandler.js";
 import {
   RequestError,
   RequestErrorCode,
@@ -55,9 +55,10 @@ export async function sendRequest<T extends IncomingResponseBody | IncomingRespo
   requestId = 0
 ): Promise<T> {
   const {REQUEST_TIMEOUT, DIAL_TIMEOUT} = {...timeoutOptions, ...options};
-  const peer = prettyPrintPeerId(peerId);
-  const client = peersData.getPeerKind(peerId.toB58String());
-  const logCtx = {method, encoding, client, peer, requestId};
+  const peerIdStr = peerId.toB58String();
+  const peerIdStrShort = prettyPrintPeerId(peerId);
+  const client = peersData.getPeerKind(peerIdStr);
+  const logCtx = {method, encoding, client, peer: peerIdStrShort, requestId};
 
   if (signal?.aborted) {
     throw new ErrorAborted("sendRequest");
@@ -131,24 +132,58 @@ export async function sendRequest<T extends IncomingResponseBody | IncomingRespo
 
     logger.debug("Req  request sent", logCtx);
 
+    const {TTFB_TIMEOUT, RESP_TIMEOUT} = {...timeoutOptions, ...options};
+
+    // - TTFB_TIMEOUT: The requester MUST wait a maximum of TTFB_TIMEOUT for the first response byte to arrive
+    // - RESP_TIMEOUT: Requester allows a further RESP_TIMEOUT for each subsequent response_chunk
+    // - Max total timeout: This timeout is not required by the spec. It may not be necessary, but it's kept as
+    //   safe-guard to close. streams in case of bugs on other timeout mechanisms.
+    const ttfbTimeoutController = new AbortController();
+    const respTimeoutController = new AbortController();
+    const maxRTimeoutController = new AbortController();
+
+    const timeoutTTFB = setTimeout(() => ttfbTimeoutController.abort(), TTFB_TIMEOUT);
+    let timeoutRESP: NodeJS.Timeout | null = null;
+    const timeoutMaxR = setTimeout(() => maxRTimeoutController.abort(), TTFB_TIMEOUT + maxResponses * RESP_TIMEOUT);
+
+    const restartRespTimeout = (): void => {
+      if (timeoutRESP) clearTimeout(timeoutRESP);
+      timeoutRESP = setTimeout(() => respTimeoutController.abort(), RESP_TIMEOUT);
+    };
+
     try {
       // Note: libp2p.stop() will close all connections, so not necessary to abort this pipe on parent stop
-      const responses = await withTimeout(
-        () =>
-          pipe(
-            stream.source,
-            responseTimeoutsHandler(responseDecode(forkDigestContext, protocol), options),
-            collectResponses(method, maxResponses)
-          ),
-        maxTotalResponseTimeout(maxResponses, options)
-      ).catch((e: Error) => {
-        // No need to close the stream here, the outter finally {} block will
-        if (e instanceof TimeoutError) {
-          throw new RequestInternalError({code: RequestErrorCode.RESPONSE_TIMEOUT});
-        } else {
-          throw e; // The error will be typed in the outter catch {} block
-        }
-      });
+      const responses = await pipe(
+        abortableSource(stream.source, [
+          {
+            signal: ttfbTimeoutController.signal,
+            getError: () => new RequestInternalError({code: RequestErrorCode.TTFB_TIMEOUT}),
+          },
+          {
+            signal: respTimeoutController.signal,
+            getError: () => new RequestInternalError({code: RequestErrorCode.RESP_TIMEOUT}),
+          },
+          {
+            signal: maxRTimeoutController.signal,
+            getError: () => new RequestInternalError({code: RequestErrorCode.RESPONSE_TIMEOUT}),
+          },
+        ]),
+
+        // Transforms `Buffer` chunks to yield `ResponseBody` chunks
+        responseDecode(forkDigestContext, protocol, {
+          onFirstHeader() {
+            // On first byte, cancel the single use TTFB_TIMEOUT, and start RESP_TIMEOUT
+            clearTimeout(timeoutTTFB);
+            restartRespTimeout();
+          },
+          onFirstResponseChunk() {
+            // On <response_chunk>, cancel this chunk's RESP_TIMEOUT and start next's
+            restartRespTimeout();
+          },
+        }),
+
+        collectResponses(method, maxResponses)
+      );
 
       // NOTE: Only log once per request to verbose, intermediate steps to debug
       // NOTE: Do not log the response, logs get extremely cluttered
@@ -158,6 +193,10 @@ export async function sendRequest<T extends IncomingResponseBody | IncomingRespo
 
       return responses as T;
     } finally {
+      clearTimeout(timeoutTTFB);
+      if (timeoutRESP !== null) clearTimeout(timeoutRESP);
+      clearTimeout(timeoutMaxR);
+
       // Necessary to call `stream.close()` since collectResponses() may break out of the source before exhausting it
       // `stream.close()` libp2p-mplex will .end() the source (it-pushable instance)
       // If collectResponses() exhausts the source, it-pushable.end() can be safely called multiple times
@@ -166,7 +205,7 @@ export async function sendRequest<T extends IncomingResponseBody | IncomingRespo
   } catch (e) {
     logger.verbose("Req  error", logCtx, e as Error);
 
-    const metadata: IRequestErrorMetadata = {method, encoding, peer};
+    const metadata: IRequestErrorMetadata = {method, encoding, peer: peerIdStr};
 
     if (e instanceof ResponseError) {
       throw new RequestError(responseStatusErrorToRequestError(e), metadata);
