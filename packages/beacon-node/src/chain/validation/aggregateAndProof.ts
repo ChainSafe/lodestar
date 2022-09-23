@@ -29,6 +29,7 @@ export async function validateGossipAggregateAndProof(
   const attData = aggregate.data;
   const attDataRoot = toHexString(ssz.phase0.AttestationData.hashTreeRoot(attData));
   const attSlot = attData.slot;
+  const attIndex = attData.index;
   const attEpoch = computeEpochAtSlot(attSlot);
   const attTarget = attData.target;
   const targetEpoch = attTarget.epoch;
@@ -84,7 +85,17 @@ export async function validateGossipAggregateAndProof(
       });
     });
 
-  const committeeIndices = getCommitteeIndices(attHeadState, attSlot, attData.index);
+  let committeeIndices: number[];
+  try {
+    committeeIndices = getCommitteeIndices(attHeadState, attSlot, attIndex);
+  } catch (e) {
+    throw new AttestationError(GossipAction.REJECT, {
+      code: AttestationErrorCode.NO_COMMITTEE_FOR_SLOT_AND_INDEX,
+      index: attIndex,
+      slot: attSlot,
+    });
+  }
+
   const attestingIndices = aggregate.aggregationBits.intersectValues(committeeIndices);
   const indexedAttestation: phase0.IndexedAttestation = {
     attestingIndices,

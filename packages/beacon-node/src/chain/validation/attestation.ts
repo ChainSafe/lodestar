@@ -88,7 +88,17 @@ export async function validateGossipAttestation(
   // [REJECT] The committee index is within the expected range
   // -- i.e. data.index < get_committee_count_per_slot(state, data.target.epoch)
   const attIndex = attData.index;
-  const committeeIndices = getCommitteeIndices(attHeadState, attSlot, attIndex);
+  let committeeIndices: number[];
+  try {
+    committeeIndices = getCommitteeIndices(attHeadState, attSlot, attIndex);
+  } catch (e) {
+    throw new AttestationError(GossipAction.REJECT, {
+      code: AttestationErrorCode.NO_COMMITTEE_FOR_SLOT_AND_INDEX,
+      index: attIndex,
+      slot: attSlot,
+    });
+  }
+
   const validatorIndex = committeeIndices[bitIndex];
 
   // [REJECT] The number of aggregation bits matches the committee size
