@@ -24,19 +24,17 @@ export const logFilesDir = "test-logs";
 
 export const defaultSimulationParams: SimulationOptionalParams = {
   validatorsPerClient: 32,
-  withExternalSigner: false,
   secondsPerSlot: 2,
   // delay a bit so regular sync sees it's up to date and sync is completed from the beginning
   // allow time for bls worker threads to warm up
   genesisSlotsDelay: 30,
-  externalSigner: false,
+  externalKeysPercentage: 0.5,
 };
 
 export const getSimulationId = ({
   beaconNodes,
   validatorClients,
   validatorsPerClient,
-  withExternalSigner,
   altairEpoch,
   bellatrixEpoch,
 }: SimulationParams): string =>
@@ -46,7 +44,6 @@ export const getSimulationId = ({
     `validatorsPerClient-${validatorsPerClient}`,
     `altair-${altairEpoch}`,
     `bellatrix-${bellatrixEpoch}`,
-    `externalSigner-${withExternalSigner ? "yes" : "no"}`,
   ].join("_");
 
 export const spawnProcessAndWait = async (

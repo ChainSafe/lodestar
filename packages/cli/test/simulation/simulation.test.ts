@@ -26,7 +26,6 @@ const forksCases: {
   params: {
     altairEpoch: number;
     bellatrixEpoch: number;
-    withExternalSigner?: boolean;
     runTill: Epoch;
   };
 }[] = [
@@ -34,10 +33,6 @@ const forksCases: {
     title: "mixed forks",
     params: {altairEpoch: 2, bellatrixEpoch: 4, runTill: 6},
   },
-  // {
-  //   title: "mixed forks with remote signer",
-  //   params: {altairEpoch: 1, bellatrixEpoch: 2, withExternalSigner: true, runTill: 3},
-  // },
 ];
 
 let testCases = 0;
@@ -45,7 +40,7 @@ let testCases = 0;
 for (const {beaconNodes, validatorClients, validatorsPerClient} of nodeCases) {
   for (const {
     title,
-    params: {altairEpoch, bellatrixEpoch, withExternalSigner, runTill},
+    params: {altairEpoch, bellatrixEpoch, runTill},
   } of forksCases) {
     const testIdStr = [
       `beaconNodes-${beaconNodes}`,
@@ -53,7 +48,6 @@ for (const {beaconNodes, validatorClients, validatorsPerClient} of nodeCases) {
       `validatorsPerClient-${validatorsPerClient}`,
       `altair-${altairEpoch}`,
       `bellatrix-${bellatrixEpoch}`,
-      `externalSigner-${withExternalSigner ? "yes" : "no"}`,
     ].join("_");
 
     console.log(
@@ -63,7 +57,6 @@ for (const {beaconNodes, validatorClients, validatorsPerClient} of nodeCases) {
         validatorsPerClient,
         altairEpoch,
         bellatrixEpoch,
-        withExternalSigner,
       })
     );
     const env = new SimulationEnvironment({
@@ -75,7 +68,6 @@ for (const {beaconNodes, validatorClients, validatorsPerClient} of nodeCases) {
       genesisSlotsDelay: (SLOTS_PER_EPOCH * runTill + 50) * testCases + 30,
       bellatrixEpoch,
       logFilesDir: join(logFilesDir, testIdStr),
-      externalSigner: withExternalSigner,
     });
     testCases += 1;
 
