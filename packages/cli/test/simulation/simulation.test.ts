@@ -2,11 +2,17 @@ import {join} from "node:path";
 import chai from "chai";
 import chaiAsPromised from "chai-as-promised";
 import {Epoch} from "@lodestar/types";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {logFilesDir, SimulationEnvironment} from "../utils/simulation/index.js";
 import {
   missedBlocksAssertions,
   attestationParticipationAssertions,
   nodeAssertions,
+  inclusionDelayAssertions,
+  attestationPerSlotAssertions,
+  finalityAssertions,
+  headsAssertions,
+  syncCommitteeAssertions,
 } from "../utils/simulation/assertions.js";
 
 chai.use(chaiAsPromised);
@@ -20,7 +26,6 @@ const forksCases: {
   params: {
     altairEpoch: number;
     bellatrixEpoch: number;
-    withExternalSigner?: boolean;
     runTill: Epoch;
   };
 }[] = [
@@ -28,15 +33,14 @@ const forksCases: {
     title: "mixed forks",
     params: {altairEpoch: 2, bellatrixEpoch: 4, runTill: 6},
   },
-  // {
-  //   title: "mixed forks with remote signer",
-  //   params: {altairEpoch: 2, bellatrixEpoch: 4, withExternalSigner: true, runTill: 6},
-  // },
 ];
+
+let testCases = 0;
+
 for (const {beaconNodes, validatorClients, validatorsPerClient} of nodeCases) {
   for (const {
     title,
-    params: {altairEpoch, bellatrixEpoch, withExternalSigner, runTill},
+    params: {altairEpoch, bellatrixEpoch, runTill},
   } of forksCases) {
     const testIdStr = [
       `beaconNodes-${beaconNodes}`,
@@ -44,7 +48,6 @@ for (const {beaconNodes, validatorClients, validatorsPerClient} of nodeCases) {
       `validatorsPerClient-${validatorsPerClient}`,
       `altair-${altairEpoch}`,
       `bellatrix-${bellatrixEpoch}`,
-      `externalSigner-${withExternalSigner ? "yes" : "no"}`,
     ].join("_");
 
     // eslint-disable-next-line no-console
@@ -55,7 +58,6 @@ for (const {beaconNodes, validatorClients, validatorsPerClient} of nodeCases) {
         validatorsPerClient,
         altairEpoch,
         bellatrixEpoch,
-        withExternalSigner,
       })
     );
     const env = new SimulationEnvironment({
@@ -63,10 +65,12 @@ for (const {beaconNodes, validatorClients, validatorsPerClient} of nodeCases) {
       validatorClients,
       validatorsPerClient,
       altairEpoch,
+      // TODO: Use extra delay until env.clock is based on absolute time
+      genesisSlotsDelay: (SLOTS_PER_EPOCH * runTill + 50) * testCases + 30,
       bellatrixEpoch,
       logFilesDir: join(logFilesDir, testIdStr),
-      externalSigner: withExternalSigner,
     });
+    testCases += 1;
 
     describe(`simulation test - ${testIdStr}`, function () {
       this.timeout("5m");
@@ -78,8 +82,8 @@ for (const {beaconNodes, validatorClients, validatorsPerClient} of nodeCases) {
         });
 
         after("stop env", async () => {
-          env.resetCounter();
           await env.stop();
+          env.tracker.printNoesInfo();
         });
 
         describe("nodes env", () => {
@@ -96,11 +100,31 @@ for (const {beaconNodes, validatorClients, validatorsPerClient} of nodeCases) {
             });
 
             describe("missed blocks", () => {
-              missedBlocksAssertions(env);
+              missedBlocksAssertions(env, epoch);
+            });
+
+            describe("finality", () => {
+              finalityAssertions(env, epoch);
+            });
+
+            describe("heads", () => {
+              headsAssertions(env, epoch);
+            });
+
+            describe("inclusion delay", () => {
+              inclusionDelayAssertions(env, epoch);
+            });
+
+            describe("attestation count per slot", () => {
+              attestationPerSlotAssertions(env, epoch);
             });
 
             describe("attestation participation", () => {
               attestationParticipationAssertions(env, epoch);
+            });
+
+            describe("sync committee participation", () => {
+              syncCommitteeAssertions(env, epoch);
             });
           });
         }
