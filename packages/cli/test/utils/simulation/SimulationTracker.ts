@@ -14,7 +14,6 @@ const TIMELY_TARGET = 1 << TIMELY_TARGET_FLAG_INDEX;
 type SlotMeasureInput = {
   version: ForkName;
   slot: Slot;
-  node: BeaconNodeProcess;
   block: allForks.SignedBeaconBlock;
   clock: EpochClock;
 };
@@ -27,14 +26,14 @@ type EpochMeasureInput = SlotMeasureInput & {
   state: allForks.BeaconState;
 };
 
-export type CommonMeasure = {
+export type CommonSlotMeasure = {
   readonly fork: ForkName;
   readonly epochStr: string;
   readonly epoch: Epoch;
   readonly slot: Slot;
 };
 
-export type SlotMeasure = CommonMeasure & {
+export type SlotMeasure = CommonSlotMeasure & {
   readonly attestationsCount: number;
   readonly inclusionDelay: number;
   readonly head: string;
@@ -42,13 +41,13 @@ export type SlotMeasure = CommonMeasure & {
   readonly syncCommitteeParticipation: number;
 };
 
-export type EpochMeasure = CommonMeasure & {
+export type EpochMeasure = CommonSlotMeasure & {
   readonly missedSlots: number[];
   readonly attestationParticipationAvg: {head: number; source: number; target: number};
   readonly syncCommitteeParticipationAvg: number;
 };
 
-export const processAttestationsCount = async ({slot, node}: SlotMeasureInput): Promise<number> => {
+export const processAttestationsCount = async (node: BeaconNodeProcess, {slot}: SlotMeasureInput): Promise<number> => {
   const attestations = await node.api.beacon.getBlockAttestations(slot);
 
   return Array.from(attestations.data).reduce(
@@ -57,24 +56,27 @@ export const processAttestationsCount = async ({slot, node}: SlotMeasureInput): 
   );
 };
 
-export const processInclusionDelay = async ({slot, node}: SlotMeasureInput): Promise<number> => {
+export const processInclusionDelay = async (node: BeaconNodeProcess, {slot}: SlotMeasureInput): Promise<number> => {
   const attestations = await node.api.beacon.getBlockAttestations(slot);
 
   return avg(Array.from(attestations.data).map((att) => slot - att.data.slot));
 };
 
-export const processHead = async ({node}: SlotMeasureInput): Promise<string> => {
+export const processHead = async (node: BeaconNodeProcess, _: SlotMeasureInput): Promise<string> => {
   const head = await node.api.beacon.getBlockHeader("head");
 
   return toHexString(head.data.root);
 };
 
-export const processFinalized = async ({node}: SlotMeasureInput): Promise<number> => {
+export const processFinalized = async (node: BeaconNodeProcess, _: SlotMeasureInput): Promise<number> => {
   const finalized = await node.api.beacon.getBlockHeader("finalized");
   return finalized.data.header.message.slot;
 };
 
-export const processSyncCommitteeParticipation = async ({version, block}: SlotMeasureInput): Promise<number> => {
+export const processSyncCommitteeParticipation = async (
+  _node: BeaconNodeProcess,
+  {version, block}: SlotMeasureInput
+): Promise<number> => {
   if (version === ForkName.phase0) {
     return 0;
   }
@@ -83,13 +85,13 @@ export const processSyncCommitteeParticipation = async ({version, block}: SlotMe
   return syncCommitteeBits.getTrueBitIndexes().length / syncCommitteeBits.bitLen;
 };
 
-export const processSlotMeasure = async (input: SlotMeasureInput): Promise<SlotMeasure> => {
+export const processSlotMeasure = async (node: BeaconNodeProcess, input: SlotMeasureInput): Promise<SlotMeasure> => {
   const [attestationsCount, inclusionDelay, head, finalized, syncCommitteeParticipation] = await Promise.all([
-    processAttestationsCount(input),
-    processInclusionDelay(input),
-    processHead(input),
-    processFinalized(input),
-    processSyncCommitteeParticipation(input),
+    processAttestationsCount(node, input),
+    processInclusionDelay(node, input),
+    processHead(node, input),
+    processFinalized(node, input),
+    processSyncCommitteeParticipation(node, input),
   ]);
 
   const epoch = input.clock.getEpochForSlot(input.slot);
@@ -107,11 +109,10 @@ export const processSlotMeasure = async (input: SlotMeasureInput): Promise<SlotM
   };
 };
 
-export const processEpochMissedSlots = async ({
-  startSlot,
-  endSlot,
-  slotsMeasures,
-}: EpochMeasureInput): Promise<number[]> => {
+export const processEpochMissedSlots = async (
+  _node: BeaconNodeProcess,
+  {startSlot, endSlot, slotsMeasures}: EpochMeasureInput
+): Promise<number[]> => {
   const missedSlots: number[] = [];
 
   for (let slot = startSlot; slot < endSlot; slot++) {
@@ -122,10 +123,10 @@ export const processEpochMissedSlots = async ({
   return missedSlots;
 };
 
-export const processAttestationEpochParticipationAvg = async ({
-  version,
-  state,
-}: EpochMeasureInput): Promise<{head: number; source: number; target: number}> => {
+export const processAttestationEpochParticipationAvg = async (
+  _node: BeaconNodeProcess,
+  {version, state}: EpochMeasureInput
+): Promise<{head: number; source: number; target: number}> => {
   if (version === ForkName.phase0) {
     return {head: 0, source: 0, target: 0};
   }
@@ -154,12 +155,10 @@ export const processAttestationEpochParticipationAvg = async ({
   return totalAttestingBalance;
 };
 
-export const processSyncCommitteeParticipationAvg = async ({
-  startSlot,
-  endSlot,
-  version,
-  slotsMeasures: slotsMetrics,
-}: EpochMeasureInput): Promise<number> => {
+export const processSyncCommitteeParticipationAvg = async (
+  _node: BeaconNodeProcess,
+  {startSlot, endSlot, version, slotsMeasures: slotsMetrics}: EpochMeasureInput
+): Promise<number> => {
   if (version === ForkName.phase0) {
     return 0;
   }
@@ -173,11 +172,11 @@ export const processSyncCommitteeParticipationAvg = async ({
   return avg(participation);
 };
 
-export const processEpochMeasure = async (input: EpochMeasureInput): Promise<EpochMeasure> => {
+export const processEpochMeasure = async (node: BeaconNodeProcess, input: EpochMeasureInput): Promise<EpochMeasure> => {
   const [missedSlots, attestationParticipationAvg, syncCommitteeParticipationAvg] = await Promise.all([
-    processEpochMissedSlots(input),
-    processAttestationEpochParticipationAvg(input),
-    processSyncCommitteeParticipationAvg(input),
+    processEpochMissedSlots(node, input),
+    processAttestationEpochParticipationAvg(node, input),
+    processSyncCommitteeParticipationAvg(node, input),
   ]);
 
   return {
@@ -268,7 +267,7 @@ export class SimulationTracker {
 
     this.slotMeasures
       .get(node.id)
-      ?.set(slot, await processSlotMeasure({version: block.version, slot, node, block: block.data, clock: this.clock}));
+      ?.set(slot, await processSlotMeasure(node, {version: block.version, slot, block: block.data, clock: this.clock}));
 
     if (this.clock.isFirstSlotOfEpoch(slot)) {
       // Compute measures for the last epoch
@@ -279,12 +278,11 @@ export class SimulationTracker {
 
       this.epochMeasures.get(node.id)?.set(
         epoch,
-        await processEpochMeasure({
+        await processEpochMeasure(node, {
           slot,
           startSlot,
           endSlot,
           epoch,
-          node,
           block: block.data,
           version: block.version,
           slotsMeasures: this.slotMeasures.get(node.id) ?? new Map<Slot, SlotMeasure>(),
