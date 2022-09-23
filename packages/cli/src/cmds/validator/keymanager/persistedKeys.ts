@@ -316,5 +316,5 @@ export function writeRemoteSignerDefinition(filepath: string, remoteSigner: Sign
     url: remoteSigner.url,
     readonly: false,
   };
-  writeFile600Perm(filepath, remoteSignerJson);
+  writeFile600Perm(filepath, JSON.stringify(remoteSignerJson));
 }
