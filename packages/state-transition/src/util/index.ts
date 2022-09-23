@@ -21,3 +21,4 @@ export * from "./slot.js";
 export * from "./syncCommittee.js";
 export * from "./validator.js";
 export * from "./weakSubjectivity.js";
+export * from "./blindedBlock.js";

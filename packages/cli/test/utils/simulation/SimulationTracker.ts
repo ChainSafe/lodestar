@@ -259,6 +259,7 @@ export class SimulationTracker {
   ): Promise<void> {
     const slot = event.slot;
     const lastSeenSlot = this.lastSeenSlot.get(node.id);
+
     if (lastSeenSlot !== undefined && slot > lastSeenSlot) {
       this.lastSeenSlot.set(node.id, slot);
     }

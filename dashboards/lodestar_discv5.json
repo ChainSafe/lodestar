@@ -54,7 +54,7 @@
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
   "id": null,
-  "iteration": 1661330019389,
+  "iteration": 1663667032051,
   "links": [
     {
       "asDropdown": true,
@@ -1380,6 +1380,7 @@
       "type": "timeseries"
     }
   ],
+  "refresh": "10s",
   "schemaVersion": 35,
   "style": "dark",
   "tags": ["lodestar"],

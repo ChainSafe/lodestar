@@ -3,12 +3,12 @@ import {
   computeEpochAtSlot,
   BeaconStateAllForks,
   CachedBeaconStateAllForks,
+  computeCheckpointEpochAtStateSlot,
 } from "@lodestar/state-transition";
 import {phase0, allForks, ssz} from "@lodestar/types";
 import {IChainForkConfig} from "@lodestar/config";
 import {ILogger} from "@lodestar/utils";
 import {toHexString} from "@chainsafe/ssz";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {GENESIS_SLOT, ZERO_HASH} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
 import {Eth1Provider} from "../eth1/index.js";
@@ -223,7 +223,7 @@ export function computeAnchorCheckpoint(
       root,
       // the checkpoint epoch = computeEpochAtSlot(anchorState.slot) + 1 if slot is not at epoch boundary
       // this is similar to a process_slots() call
-      epoch: Math.ceil(anchorState.slot / SLOTS_PER_EPOCH),
+      epoch: computeCheckpointEpochAtStateSlot(anchorState.slot),
     },
     blockHeader,
   };

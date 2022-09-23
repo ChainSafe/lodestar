@@ -1,5 +1,5 @@
 import {ForkName} from "@lodestar/params";
-import {ssz} from "@lodestar/types";
+import {ssz, Slot, allForks} from "@lodestar/types";
 import {toHexString} from "@chainsafe/ssz";
 import {Api, BlockHeaderResponse, ValidatorResponse} from "../../../../src/beacon/routes/beacon/index.js";
 import {GenericServerTestCases} from "../../../utils/genericServerTest.js";
@@ -53,7 +53,7 @@ export const testData: GenericServerTestCases<Api> = {
     res: undefined,
   },
   publishBlindedBlock: {
-    args: [ssz.bellatrix.SignedBlindedBeaconBlock.defaultValue()],
+    args: [getDefaultBlindedBlock(64)],
     res: undefined,
   },
 
@@ -145,3 +145,9 @@ export const testData: GenericServerTestCases<Api> = {
     res: {data: ssz.phase0.Genesis.defaultValue()},
   },
 };
+
+function getDefaultBlindedBlock(slot: Slot): allForks.SignedBlindedBeaconBlock {
+  const block = ssz.bellatrix.SignedBlindedBeaconBlock.defaultValue();
+  block.message.slot = slot;
+  return block;
+}

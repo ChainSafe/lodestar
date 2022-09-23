@@ -2,10 +2,10 @@ import {ssz} from "@lodestar/types";
 import {createIBeaconConfig, IBeaconConfig, IChainForkConfig} from "@lodestar/config";
 import {ILogger} from "@lodestar/utils";
 import {
-  computeEpochAtSlot,
   getLatestBlockRoot,
   isWithinWeakSubjectivityPeriod,
   BeaconStateAllForks,
+  computeCheckpointEpochAtStateSlot,
 } from "@lodestar/state-transition";
 import {
   IBeaconDb,
@@ -23,7 +23,9 @@ import {IBeaconArgs} from "./options.js";
 
 export function getCheckpointFromState(state: BeaconStateAllForks): Checkpoint {
   return {
-    epoch: computeEpochAtSlot(state.latestBlockHeader.slot),
+    // the correct checkpoint is based on state's slot, its latestBlockHeader's slot's epoch can be
+    // behind the state
+    epoch: computeCheckpointEpochAtStateSlot(state.slot),
     root: getLatestBlockRoot(state),
   };
 }

@@ -3,6 +3,7 @@ import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 
 export enum RegenCaller {
   getDuties = "getDuties",
+  processBlock = "processBlock",
   produceBlock = "produceBlock",
   validateGossipBlock = "validateGossipBlock",
   precomputeEpoch = "precomputeEpoch",

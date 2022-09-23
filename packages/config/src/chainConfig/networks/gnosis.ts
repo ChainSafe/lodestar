@@ -35,7 +35,4 @@ export const gnosisChainConfig: IChainConfig = {
   // Bellatrix
   BELLATRIX_FORK_VERSION: b("0x02000064"),
   BELLATRIX_FORK_EPOCH: Infinity,
-  // Sharding
-  SHARDING_FORK_VERSION: b("0x03000064"),
-  SHARDING_FORK_EPOCH: Infinity,
 };
