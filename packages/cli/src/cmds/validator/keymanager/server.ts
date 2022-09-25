@@ -7,6 +7,8 @@ import {Api} from "@lodestar/api/keymanager";
 import {registerRoutes} from "@lodestar/api/keymanager/server";
 import {IChainForkConfig} from "@lodestar/config";
 
+import {writeFile600Perm} from "../../../util/index.js";
+
 export type KeymanagerRestApiServerOpts = RestApiServerOpts & {
   isAuthEnabled: boolean;
   tokenDir?: string;
@@ -47,7 +49,7 @@ export class KeymanagerRestApiServer extends RestApiServer {
     if (opts.isAuthEnabled) {
       // Generate a new token if token file does not exist or file do exist, but is empty
       bearerToken = readFileIfExists(apiTokenPath) ?? `api-token-${toHexString(crypto.randomBytes(32))}`;
-      fs.writeFileSync(apiTokenPath, bearerToken, {encoding: "utf8"});
+      writeFile600Perm(apiTokenPath, bearerToken, {encoding: "utf8"});
     }
 
     super({address: opts.address, port: opts.port, cors: opts.cors, bearerToken}, modules);
