@@ -18,6 +18,7 @@ const chainEventMap = {
   [routes.events.EventType.contributionAndProof]: ChainEvent.contributionAndProof as const,
   [routes.events.EventType.lightClientOptimisticUpdate]: ChainEvent.lightClientOptimisticUpdate as const,
   [routes.events.EventType.lightClientFinalityUpdate]: ChainEvent.lightClientFinalityUpdate as const,
+  [routes.events.EventType.lightClientUpdate]: ChainEvent.lightClientUpdate as const,
 };
 
 export function getEventsApi({chain, config}: Pick<ApiModules, "chain" | "config">): routes.events.Api {
@@ -62,6 +63,7 @@ export function getEventsApi({chain, config}: Pick<ApiModules, "chain" | "config
     [routes.events.EventType.contributionAndProof]: (contributionAndProof) => [contributionAndProof],
     [routes.events.EventType.lightClientOptimisticUpdate]: (headerUpdate) => [headerUpdate],
     [routes.events.EventType.lightClientFinalityUpdate]: (headerUpdate) => [headerUpdate],
+    [routes.events.EventType.lightClientUpdate]: (headerUpdate) => [headerUpdate],
   };
 
   return {

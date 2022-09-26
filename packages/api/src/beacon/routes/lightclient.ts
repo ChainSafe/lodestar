@@ -13,10 +13,6 @@ import {
   ReqEmpty,
 } from "../../utils/index.js";
 import {queryParseProofPathsArr, querySerializeProofPathsArr} from "../../utils/serdes.js";
-import {LightClientOptimisticUpdate, LightClientFinalityUpdate} from "./events.js";
-
-// Re-export for convenience when importing routes.lightclient.LightclientOptimisticUpdate
-export {LightClientOptimisticUpdate, LightClientFinalityUpdate};
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
@@ -45,7 +41,7 @@ export type Api = {
    * Returns the latest optimistic head update available. Clients should use the SSE type `light_client_optimistic_update`
    * unless to get the very first head update after syncing, or if SSE are not supported by the server.
    */
-  getOptimisticUpdate(): Promise<{data: LightClientOptimisticUpdate}>;
+  getOptimisticUpdate(): Promise<{data: altair.LightClientOptimisticUpdate}>;
   getFinalityUpdate(): Promise<{data: altair.LightClientFinalityUpdate}>;
   /**
    * Fetch a bootstrapping state with a proof to a trusted block root.

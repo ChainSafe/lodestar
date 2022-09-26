@@ -93,4 +93,5 @@ export const eventTestData: EventData = {
     syncAggregate: ssz.altair.SyncAggregate.defaultValue(),
     signatureSlot: ssz.Slot.defaultValue(),
   },
+  [EventType.lightClientUpdate]: ssz.altair.LightClientUpdate.defaultValue(),
 };

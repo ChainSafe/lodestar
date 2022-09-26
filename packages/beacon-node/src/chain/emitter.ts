@@ -93,6 +93,10 @@ export enum ChainEvent {
    * A new lightclient finalized header update is available to be broadcasted to connected light-clients
    */
   lightClientFinalityUpdate = "lightclient:finality_update",
+  /**
+   * A new lightclient update is available to be broadcasted to connected light-clients
+   */
+  lightClientUpdate = "lightclient:update",
 }
 
 export type HeadEventData = routes.events.EventData[routes.events.EventType.head];
@@ -116,6 +120,7 @@ export interface IChainEvents {
 
   [ChainEvent.lightClientOptimisticUpdate]: (optimisticUpdate: altair.LightClientOptimisticUpdate) => void;
   [ChainEvent.lightClientFinalityUpdate]: (finalizedUpdate: altair.LightClientFinalityUpdate) => void;
+  [ChainEvent.lightClientUpdate]: (update: altair.LightClientUpdate) => void;
 }
 
 /**

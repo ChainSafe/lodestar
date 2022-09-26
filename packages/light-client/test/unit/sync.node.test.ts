@@ -2,7 +2,7 @@ import {expect} from "chai";
 import {init} from "@chainsafe/bls/switchable";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {BeaconStateAllForks, BeaconStateAltair} from "@lodestar/state-transition";
-import {phase0, ssz} from "@lodestar/types";
+import {altair, phase0, ssz} from "@lodestar/types";
 import {routes, Api} from "@lodestar/api";
 import {chainConfig as chainConfigDef} from "@lodestar/config/default";
 import {createIBeaconConfig, IChainConfig} from "@lodestar/config";
@@ -142,7 +142,7 @@ describe("sync", () => {
           bodyRoot: SOME_HASH,
         };
 
-        const headUpdate: routes.lightclient.LightClientOptimisticUpdate = {
+        const headUpdate: altair.LightClientOptimisticUpdate = {
           attestedHeader: header,
           syncAggregate: syncCommittee.signHeader(config, header),
           signatureSlot: header.slot + 1,

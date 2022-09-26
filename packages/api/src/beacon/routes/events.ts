@@ -5,20 +5,6 @@ import {RouteDef, TypeJson} from "../../utils/index.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
-export type LightClientOptimisticUpdate = {
-  syncAggregate: altair.SyncAggregate;
-  attestedHeader: phase0.BeaconBlockHeader;
-  signatureSlot: Slot;
-};
-
-export type LightClientFinalityUpdate = {
-  attestedHeader: phase0.BeaconBlockHeader;
-  finalizedHeader: phase0.BeaconBlockHeader;
-  finalityBranch: Uint8Array[];
-  syncAggregate: altair.SyncAggregate;
-  signatureSlot: Slot;
-};
-
 export enum EventType {
   /**
    * The node has finished processing, resulting in a new head. previous_duty_dependent_root is
@@ -43,6 +29,8 @@ export enum EventType {
   lightClientOptimisticUpdate = "light_client_optimistic_update",
   /** New or better finality update available */
   lightClientFinalityUpdate = "light_client_finality_update",
+  /** New or better light client update available */
+  lightClientUpdate = "light_client_update",
 }
 
 export type EventData = {
@@ -79,8 +67,9 @@ export type EventData = {
     executionOptimistic: boolean;
   };
   [EventType.contributionAndProof]: altair.SignedContributionAndProof;
-  [EventType.lightClientOptimisticUpdate]: LightClientOptimisticUpdate;
-  [EventType.lightClientFinalityUpdate]: LightClientFinalityUpdate;
+  [EventType.lightClientOptimisticUpdate]: altair.LightClientOptimisticUpdate;
+  [EventType.lightClientFinalityUpdate]: altair.LightClientFinalityUpdate;
+  [EventType.lightClientUpdate]: altair.LightClientUpdate;
 };
 
 export type BeaconEvent = {[K in EventType]: {type: K; message: EventData[K]}}[EventType];
@@ -183,6 +172,7 @@ export function getTypeByEvent(): {[K in EventType]: Type<EventData[K]>} {
       },
       {jsonCase: "eth2"}
     ),
+    [EventType.lightClientUpdate]: ssz.altair.LightClientUpdate,
   };
 }
 

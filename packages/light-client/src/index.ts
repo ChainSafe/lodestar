@@ -376,6 +376,10 @@ export class Lightclient {
           this.processFinalizedUpdate(event.message);
           break;
 
+        case routes.events.EventType.lightClientUpdate:
+          this.processSyncCommitteeUpdate(event.message);
+          break;
+
         default:
           throw Error(`Unknown event ${event.type}`);
       }
@@ -388,7 +392,7 @@ export class Lightclient {
    * Processes new optimistic header updates in only known synced sync periods.
    * This headerUpdate may update the head if there's enough participation.
    */
-  private processOptimisticUpdate(headerUpdate: routes.events.LightClientOptimisticUpdate): void {
+  private processOptimisticUpdate(headerUpdate: altair.LightClientOptimisticUpdate): void {
     const {attestedHeader, syncAggregate} = headerUpdate;
 
     // Prevent registering updates for slots to far ahead
@@ -466,7 +470,7 @@ export class Lightclient {
    * Processes new header updates in only known synced sync periods.
    * This headerUpdate may update the head if there's enough participation.
    */
-  private processFinalizedUpdate(finalizedUpdate: routes.events.LightClientFinalityUpdate): void {
+  private processFinalizedUpdate(finalizedUpdate: altair.LightClientFinalityUpdate): void {
     // Validate sync aggregate of the attested header and other conditions like future update, period etc
     // and may be move head
     this.processOptimisticUpdate(finalizedUpdate);
