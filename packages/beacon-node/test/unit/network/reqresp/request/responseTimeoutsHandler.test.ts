@@ -108,11 +108,11 @@ describe("network / reqresp / request / responseTimeoutsHandler", () => {
           return ({
             async sink(): Promise<void> {},
             source: source(),
-            protocol,
             close() {},
             closeRead() {},
             closeWrite() {},
             abort() {},
+            stat: {direction: "outbound", timeline: {open: Date.now()}, protocol},
           } as Partial<Stream>) as Stream;
         },
       } as Partial<Libp2p>) as Libp2p;
