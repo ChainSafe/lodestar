@@ -76,19 +76,13 @@ export class Eth1Provider implements IEth1Provider {
   }
 
   async getDepositEvents(fromBlock: number, toBlock: number): Promise<phase0.DepositEvent[]> {
-    console.log("from", fromBlock);
-    console.log("toBlock", toBlock);
-    console.log("this.depositContractAddress", this.depositContractAddress);
-    console.log("depositEventTopics", depositEventTopics);
     const logsRawArr = await this.getLogs({
       fromBlock,
       toBlock,
       address: this.depositContractAddress,
       topics: depositEventTopics,
     });
-    const depositEvents = logsRawArr.flat(1).map((log) => parseDepositLog(log));
-    console.log(depositEvents);
-    return depositEvents;
+    return logsRawArr.flat(1).map((log) => parseDepositLog(log));
   }
 
   /**
