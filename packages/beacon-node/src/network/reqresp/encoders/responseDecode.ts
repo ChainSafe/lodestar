@@ -109,15 +109,18 @@ export async function readResultHeader(bufferedSource: BufferedSource): Promise<
  */
 export async function readErrorMessage(bufferedSource: BufferedSource): Promise<string> {
   // Read at least 256 or wait for the stream to end
+  let length;
   for await (const buffer of bufferedSource) {
     // Wait for next chunk with bytes or for the stream to end
     // Note: The entire <error_message> is expected to be in the same chunk
     if (buffer.length >= 256) {
+      length = 256;
       break;
     }
+    length = buffer.length;
   }
 
-  const bytes = bufferedSource["buffer"].slice(0, 256);
+  const bytes = bufferedSource["buffer"].slice(0, length);
 
   try {
     return decodeErrorMessage(bytes);

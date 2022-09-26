@@ -21,7 +21,7 @@ export type NodeJsLibp2pOpts = {
 export async function createNodeJsLibp2p(
   peerIdOrPromise: PeerId | Promise<PeerId>,
   networkOpts: Partial<INetworkOptions> = {},
-  nodeJsLibp2pOpts: NodeJsLibp2pOpts = {},
+  nodeJsLibp2pOpts: NodeJsLibp2pOpts = {}
 ): Promise<Libp2p> {
   const peerId = await Promise.resolve(peerIdOrPromise);
   const localMultiaddrs = networkOpts.localMultiaddrs || defaultNetworkOptions.localMultiaddrs;
