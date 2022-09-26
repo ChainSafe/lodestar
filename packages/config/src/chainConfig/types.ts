@@ -34,9 +34,6 @@ export type IChainConfig = {
   // Bellatrix
   BELLATRIX_FORK_VERSION: Uint8Array;
   BELLATRIX_FORK_EPOCH: number;
-  // Sharding
-  SHARDING_FORK_VERSION: Uint8Array;
-  SHARDING_FORK_EPOCH: number;
 
   // Time parameters
   SECONDS_PER_SLOT: number;
@@ -83,9 +80,6 @@ export const chainConfigTypes: SpecTypes<IChainConfig> = {
   // Bellatrix
   BELLATRIX_FORK_VERSION: "bytes",
   BELLATRIX_FORK_EPOCH: "number",
-  // Sharding
-  SHARDING_FORK_VERSION: "bytes",
-  SHARDING_FORK_EPOCH: "number",
 
   // Time parameters
   SECONDS_PER_SLOT: "number",

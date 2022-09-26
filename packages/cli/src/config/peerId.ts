@@ -4,7 +4,7 @@ import {createFromPrivKey, createFromPubKey} from "@libp2p/peer-id-factory";
 import {unmarshalPrivateKey, unmarshalPublicKey} from "@libp2p/crypto/keys";
 import {fromString as uint8ArrayFromString} from "uint8arrays/from-string";
 import {toString as uint8ArrayToString} from "uint8arrays/to-string";
-import {writeFile, readFile} from "../util/index.js";
+import {writeFile600Perm, readFile} from "../util/index.js";
 
 // Peer id to / from JSON taken from peer-id-factory
 // See https://github.com/libp2p/js-libp2p-peer-id/pull/9 for more details
@@ -45,7 +45,7 @@ export async function createFromJSON(obj: PeerIdJSON): Promise<PeerId> {
 }
 
 export function writePeerId(filepath: string, peerId: PeerId): void {
-  writeFile(filepath, exportToJSON(peerId));
+  writeFile600Perm(filepath, exportToJSON(peerId));
 }
 
 export async function readPeerId(filepath: string): Promise<PeerId> {

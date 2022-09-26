@@ -4,6 +4,7 @@ import {Api} from "../../../../src/beacon/routes/validator.js";
 import {GenericServerTestCases} from "../../../utils/genericServerTest.js";
 
 const ZERO_HASH = Buffer.alloc(32, 0);
+const ZERO_HASH_HEX = "0x" + ZERO_HASH.toString("hex");
 const randaoReveal = Buffer.alloc(96, 1);
 const graffiti = "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2";
 
@@ -23,7 +24,7 @@ export const testData: GenericServerTestCases<Api> = {
           slot: 7,
         },
       ],
-      dependentRoot: ZERO_HASH,
+      dependentRoot: ZERO_HASH_HEX,
     },
   },
   getProposerDuties: {
@@ -31,7 +32,7 @@ export const testData: GenericServerTestCases<Api> = {
     res: {
       executionOptimistic: true,
       data: [{slot: 1, validatorIndex: 2, pubkey: Buffer.alloc(48, 3)}],
-      dependentRoot: ZERO_HASH,
+      dependentRoot: ZERO_HASH_HEX,
     },
   },
   getSyncCommitteeDuties: {

@@ -191,6 +191,11 @@ export class BeaconNode {
       reqRespHandlers: getReqRespHandlers({db, chain}),
       signal,
     });
+
+    // Network needs to start before the sync
+    // See https://github.com/ChainSafe/lodestar/issues/4543
+    await network.start();
+
     const sync = new BeaconSync(opts.sync, {
       config,
       db,
@@ -245,8 +250,6 @@ export class BeaconNode {
     if (opts.api.rest.enabled) {
       await restApi.listen();
     }
-
-    await network.start();
 
     void runNodeNotifier({network, chain, sync, config, logger, signal});
 

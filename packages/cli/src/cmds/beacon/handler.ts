@@ -10,8 +10,8 @@ import {ACTIVE_PRESET, PresetName} from "@lodestar/params";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 
 import {IGlobalArgs, parseBeaconNodeArgs} from "../../options/index.js";
-import {onGracefulShutdown, getCliLogger, mkdir, writeFile} from "../../util/index.js";
 import {BeaconNodeOptions, exportToJSON, FileENR, getBeaconConfigFromArgs} from "../../config/index.js";
+import {onGracefulShutdown, getCliLogger, mkdir, writeFile600Perm} from "../../util/index.js";
 import {getNetworkBootnodes, getNetworkData, readBootnodes} from "../../networks/index.js";
 import {getVersionData} from "../../util/version.js";
 import {IBeaconArgs} from "./options.js";
@@ -30,7 +30,7 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
   mkdir(beaconPaths.dbDir);
 
   const abortController = new AbortController();
-  const logger = getCliLogger(args, beaconPaths, config);
+  const logger = getCliLogger(args, {defaultLogFile: "beacon.log"}, config);
 
   onGracefulShutdown(async () => {
     abortController.abort();
@@ -50,10 +50,11 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
   const metricsRegistries: Registry[] = [];
   const db = new BeaconDb({
     config,
-    controller: new LevelDbController(options.db, {logger: logger.child({module: "db"})}),
+    controller: new LevelDbController(options.db, {metrics: null}),
   });
 
   await db.start();
+  logger.info("Connected to LevelDB database", {path: options.db.name});
 
   // BeaconNode setup
   try {
@@ -133,7 +134,7 @@ export async function beaconHandlerInit(args: IBeaconArgs & IGlobalArgs) {
   // Persist ENR and PeerId in beaconDir fixed paths for debugging
   const pIdPath = path.join(beaconPaths.beaconDir, "peer_id.json");
   const enrPath = path.join(beaconPaths.beaconDir, "enr");
-  writeFile(pIdPath, exportToJSON(peerId));
+  writeFile600Perm(pIdPath, exportToJSON(peerId));
   const fileENR = FileENR.initFromENR(enrPath, peerId, enr);
   fileENR.saveToFile();
 
@@ -149,7 +150,8 @@ export async function beaconHandlerInit(args: IBeaconArgs & IGlobalArgs) {
 export function overwriteEnrWithCliArgs(enr: ENR, args: IBeaconArgs): void {
   // TODO: Not sure if we should propagate this options to the ENR
   if (args.port != null) enr.tcp = args.port;
-  // test discv5 without handling FIND_NODES request
+  // TODO: reenable this once we fix the below discv5 issue
+  // See https://github.com/ChainSafe/discv5/issues/201
   // if (args.port != null) enr.udp = args.port;
   if (args.discoveryPort != null) enr.udp = args.discoveryPort;
 

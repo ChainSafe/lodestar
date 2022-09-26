@@ -1,6 +1,6 @@
 import winston from "winston";
 import type {Logger} from "winston";
-import {ILogger, ILoggerOptions, LoggerChildOpts, LogLevel} from "./interface.js";
+import {ILogger, ILoggerOptions, LoggerChildOpts, LogLevel, logLevelNum} from "./interface.js";
 import {getFormat} from "./format.js";
 import {LogData} from "./json.js";
 
@@ -50,6 +50,7 @@ export class WinstonLogger implements ILogger {
         format: getFormat(options),
         transports,
         exitOnError: false,
+        levels: logLevelNum,
       })
     );
   }
@@ -74,8 +75,8 @@ export class WinstonLogger implements ILogger {
     this.createLogEntry(LogLevel.debug, message, context, error);
   }
 
-  silly(message: string, context?: LogData, error?: Error): void {
-    this.createLogEntry(LogLevel.silly, message, context, error);
+  trace(message: string, context?: LogData, error?: Error): void {
+    this.createLogEntry(LogLevel.trace, message, context, error);
   }
 
   child(options: LoggerChildOpts): WinstonLogger {

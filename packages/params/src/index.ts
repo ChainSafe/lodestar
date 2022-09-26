@@ -118,7 +118,17 @@ export const DOMAIN_SYNC_COMMITTEE = Uint8Array.from([7, 0, 0, 0]);
 export const DOMAIN_SYNC_COMMITTEE_SELECTION_PROOF = Uint8Array.from([8, 0, 0, 0]);
 export const DOMAIN_CONTRIBUTION_AND_PROOF = Uint8Array.from([9, 0, 0, 0]);
 
+// Application specfic domains
+
+/**
+ * `DOMAIN_APPLICATION_MASK` reserves the rest of the bitspace in `DomainType` for application
+ * usage. This means for some `DomainType` `DOMAIN_SOME_APPLICATION`, `DOMAIN_SOME_APPLICATION
+ * & DOMAIN_APPLICATION_MASK` **MUST** be non-zero. This expression for any other `DomainType`
+ * in the consensus specs **MUST** be zero.
+ */
+export const DOMAIN_APPLICATION_MASK = Uint8Array.from([0, 0, 0, 1]);
 export const DOMAIN_APPLICATION_BUILDER = Uint8Array.from([0, 0, 0, 1]);
+
 // Participation flag indices
 
 export const TIMELY_SOURCE_FLAG_INDEX = 0;

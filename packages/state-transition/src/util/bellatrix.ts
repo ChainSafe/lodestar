@@ -1,4 +1,4 @@
-import {allForks, bellatrix, ssz} from "@lodestar/types";
+import {allForks, bellatrix, isBlindedBeaconBlock, ssz} from "@lodestar/types";
 import {
   BeaconStateBellatrix,
   BeaconStateAllForks,
@@ -73,8 +73,8 @@ export function isBellatrixBlockBodyType(blockBody: allForks.BeaconBlockBody): b
 export function getFullOrBlindedPayload(
   block: allForks.FullOrBlindedBeaconBlock
 ): allForks.FullOrBlindedExecutionPayload {
-  if ((block as bellatrix.BlindedBeaconBlock).body.executionPayloadHeader !== undefined) {
-    return (block as bellatrix.BlindedBeaconBlock).body.executionPayloadHeader;
+  if (isBlindedBeaconBlock(block)) {
+    return block.body.executionPayloadHeader;
   } else if ((block as bellatrix.BeaconBlock).body.executionPayload !== undefined) {
     return (block as bellatrix.BeaconBlock).body.executionPayload;
   } else {
@@ -86,8 +86,4 @@ export function isExecutionPayload(
   payload: allForks.FullOrBlindedExecutionPayload
 ): payload is bellatrix.ExecutionPayload {
   return (payload as bellatrix.ExecutionPayload).transactions !== undefined;
-}
-
-export function isBlindedBeaconBlock(block: allForks.FullOrBlindedBeaconBlock): block is bellatrix.BlindedBeaconBlock {
-  return (block as bellatrix.BlindedBeaconBlock).body.executionPayloadHeader !== undefined;
 }

@@ -41,7 +41,7 @@ export async function getDevBeaconNode(
   const config = createIChainForkConfig({...minimalConfig, ...params});
   logger = logger ?? testLogger();
 
-  const db = new BeaconDb({config, controller: new LevelDbController({name: tmpDir.name}, {logger})});
+  const db = new BeaconDb({config, controller: new LevelDbController({name: tmpDir.name}, {})});
   await db.start();
 
   const libp2p = await createNodeJsLibp2p(

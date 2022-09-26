@@ -2,12 +2,18 @@ import path from "node:path";
 import {IGlobalArgs} from "../../options/index.js";
 import {getGlobalPaths, IGlobalPaths} from "../../paths/global.js";
 
+export type BeaconPaths = Partial<{
+  beaconDir: string;
+  peerStoreDir: string;
+  dbDir: string;
+  persistInvalidSszObjectsDir: string;
+}>;
+
 export interface IBeaconPaths {
   beaconDir: string;
   peerStoreDir: string;
   dbDir: string;
   persistInvalidSszObjectsDir: string;
-  logFile?: string;
 }
 
 /**
@@ -19,23 +25,23 @@ export interface IBeaconPaths {
  *     ├── beacon.config.json
  *     ├── peer-id.json
  *     ├── enr
- *     └── chain-db
+ *     ├── chain-db
+ *     └── beacon.log
  * ```
  */
-// Using Pick<IGlobalArgs, "dataDir"> make changes in IGlobalArgs throw a type error here
 export function getBeaconPaths(
-  args: Partial<IBeaconPaths> & Pick<IGlobalArgs, "dataDir">,
+  // Using Pick<IGlobalArgs, "dataDir"> make changes in IGlobalArgs throw a type error here
+  args: BeaconPaths & Pick<IGlobalArgs, "dataDir">,
   network: string
-): IBeaconPaths & IGlobalPaths {
+): IGlobalPaths & Required<BeaconPaths> {
   // Compute global paths first
   const globalPaths = getGlobalPaths(args, network);
 
   const dataDir = globalPaths.dataDir;
   const beaconDir = dataDir;
-  const dbDir = args.dbDir || path.join(beaconDir, "chain-db");
-  const persistInvalidSszObjectsDir = args.persistInvalidSszObjectsDir || path.join(beaconDir, "invalidSszObjects");
-  const peerStoreDir = args.peerStoreDir || path.join(beaconDir, "peerstore");
-  const logFile = args.logFile;
+  const dbDir = args.dbDir ?? path.join(beaconDir, "chain-db");
+  const persistInvalidSszObjectsDir = args.persistInvalidSszObjectsDir ?? path.join(beaconDir, "invalidSszObjects");
+  const peerStoreDir = args.peerStoreDir ?? path.join(beaconDir, "peerstore");
 
   return {
     ...globalPaths,
@@ -43,7 +49,6 @@ export function getBeaconPaths(
     dbDir,
     persistInvalidSszObjectsDir,
     peerStoreDir,
-    logFile,
   };
 }
 

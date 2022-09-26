@@ -1,5 +1,7 @@
 import {ILogger} from "@lodestar/utils";
-import {computeEpochAtSlot} from "@lodestar/state-transition";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {Slot, Epoch} from "@lodestar/types";
+import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {IBeaconDb} from "../../db/index.js";
 import {CheckpointStateCache} from "../stateCache/index.js";
@@ -45,14 +47,20 @@ export class StatesArchiver {
     if (finalized.epoch - lastStoredEpoch > PERSIST_TEMP_STATE_EVERY_EPOCHS) {
       await this.archiveState(finalized);
 
-      const storedEpochs = await this.db.stateArchive.keys({
-        lt: finalized.epoch,
-        // Only check the current and previous intervals
-        gte: Math.max(0, (Math.floor(finalized.epoch / PERSIST_STATE_EVERY_EPOCHS) - 1) * PERSIST_STATE_EVERY_EPOCHS),
+      // Only check the current and previous intervals
+      const minEpoch = Math.max(
+        0,
+        (Math.floor(finalized.epoch / PERSIST_STATE_EVERY_EPOCHS) - 1) * PERSIST_STATE_EVERY_EPOCHS
+      );
+
+      const storedStateSlots = await this.db.stateArchive.keys({
+        lt: computeStartSlotAtEpoch(finalized.epoch),
+        gte: computeStartSlotAtEpoch(minEpoch),
       });
-      const statesToDelete = computeEpochsToDelete(storedEpochs, PERSIST_STATE_EVERY_EPOCHS);
-      if (statesToDelete.length > 0) {
-        await this.db.stateArchive.batchDelete(statesToDelete);
+
+      const statesSlotsToDelete = computeStateSlotsToDelete(storedStateSlots, PERSIST_STATE_EVERY_EPOCHS);
+      if (statesSlotsToDelete.length > 0) {
+        await this.db.stateArchive.batchDelete(statesSlotsToDelete);
       }
     }
   }
@@ -75,17 +83,19 @@ export class StatesArchiver {
 /**
  * Keeps first epoch per interval of persistEveryEpochs, deletes the rest
  */
-export function computeEpochsToDelete(storedEpochs: number[], persistEveryEpochs: number): number[] {
-  const epochBuckets = new Set<number>();
-  const toDelete = new Set<number>();
-  for (const epoch of storedEpochs) {
-    const epochBucket = epoch - (epoch % persistEveryEpochs);
-    if (epochBuckets.has(epochBucket)) {
-      toDelete.add(epoch);
+export function computeStateSlotsToDelete(storedStateSlots: Slot[], persistEveryEpochs: Epoch): Slot[] {
+  const persistEverySlots = persistEveryEpochs * SLOTS_PER_EPOCH;
+  const intervalsWithStates = new Set<number>();
+  const stateSlotsToDelete = new Set<number>();
+
+  for (const slot of storedStateSlots) {
+    const interval = Math.floor(slot / persistEverySlots);
+    if (intervalsWithStates.has(interval)) {
+      stateSlotsToDelete.add(slot);
     } else {
-      epochBuckets.add(epochBucket);
+      intervalsWithStates.add(interval);
     }
   }
 
-  return Array.from(toDelete.values());
+  return Array.from(stateSlotsToDelete.values());
 }

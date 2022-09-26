@@ -1,7 +1,8 @@
 import {phase0, ssz} from "@lodestar/types";
 import {IChainForkConfig} from "@lodestar/config";
 import {BeaconStateAllForks, becomesNewEth1Data} from "@lodestar/state-transition";
-import {ErrorAborted, fromHex, ILogger, isErrorAborted, sleep} from "@lodestar/utils";
+import {ErrorAborted, TimeoutError, fromHex, ILogger, isErrorAborted, sleep} from "@lodestar/utils";
+
 import {IBeaconDb} from "../db/index.js";
 import {IMetrics} from "../metrics/index.js";
 import {Eth1DepositsCache} from "./eth1DepositsCache.js";
@@ -12,9 +13,14 @@ import {Eth1DataAndDeposits, IEth1Provider} from "./interface.js";
 import {Eth1Options} from "./options.js";
 import {HttpRpcError} from "./provider/jsonRpcHttpClient.js";
 import {parseEth1Block} from "./provider/eth1Provider.js";
+import {isJsonRpcTruncatedError} from "./provider/utils.js";
 
 const MAX_BLOCKS_PER_BLOCK_QUERY = 1000;
+const MIN_BLOCKS_PER_BLOCK_QUERY = 10;
+
 const MAX_BLOCKS_PER_LOG_QUERY = 1000;
+const MIN_BLOCKS_PER_LOG_QUERY = 10;
+
 /** Eth1 blocks happen every 14s approx, not need to update too often once synced */
 const AUTO_UPDATE_PERIOD_MS = 60 * 1000;
 /** Prevent infinite loops */
@@ -53,7 +59,13 @@ export class Eth1DepositDataTracker {
   private depositsCache: Eth1DepositsCache;
   private eth1DataCache: Eth1DataCache;
   private lastProcessedDepositBlockNumber: number | null = null;
+
+  /** Dynamically adjusted follow distance */
   private eth1FollowDistance: number;
+  /** Dynamically adusted batch size to fetch deposit logs */
+  private eth1GetBlocksBatchSizeDynamic = MAX_BLOCKS_PER_BLOCK_QUERY;
+  /** Dynamically adusted batch size to fetch deposit logs */
+  private eth1GetLogsBatchSizeDynamic = MAX_BLOCKS_PER_LOG_QUERY;
   private readonly forcedEth1DataVote: phase0.Eth1Data | null;
 
   constructor(
@@ -81,16 +93,20 @@ export class Eth1DepositDataTracker {
     if (metrics) {
       // Set constant value once
       metrics?.eth1.eth1FollowDistanceSecondsConfig.set(config.SECONDS_PER_ETH1_BLOCK * config.ETH1_FOLLOW_DISTANCE);
-      metrics.eth1.eth1FollowDistanceDynamic.addCollect(() =>
-        metrics.eth1.eth1FollowDistanceDynamic.set(this.eth1FollowDistance)
-      );
+      metrics.eth1.eth1FollowDistanceDynamic.addCollect(() => {
+        metrics.eth1.eth1FollowDistanceDynamic.set(this.eth1FollowDistance);
+        metrics.eth1.eth1GetBlocksBatchSizeDynamic.set(this.eth1GetBlocksBatchSizeDynamic);
+        metrics.eth1.eth1GetLogsBatchSizeDynamic.set(this.eth1GetLogsBatchSizeDynamic);
+      });
     }
 
-    this.runAutoUpdate().catch((e: Error) => {
-      if (!(e instanceof ErrorAborted)) {
-        this.logger.error("Error on eth1 loop", {}, e);
-      }
-    });
+    if (opts.enabled) {
+      this.runAutoUpdate().catch((e: Error) => {
+        if (!(e instanceof ErrorAborted)) {
+          this.logger.error("Error on eth1 loop", {}, e);
+        }
+      });
+    }
   }
 
   /**
@@ -202,9 +218,26 @@ export class Eth1DepositDataTracker {
     // The DB may contain deposits from a different chain making lastProcessedDepositBlockNumber > current chain tip
     // The Math.min() fixes those rare scenarios where fromBlock > toBlock
     const fromBlock = Math.min(remoteFollowBlock, this.getFromBlockToFetch(lastProcessedDepositBlockNumber));
-    const toBlock = Math.min(remoteFollowBlock, fromBlock + MAX_BLOCKS_PER_LOG_QUERY - 1);
+    const toBlock = Math.min(remoteFollowBlock, fromBlock + this.eth1GetLogsBatchSizeDynamic - 1);
 
-    const depositEvents = await this.eth1Provider.getDepositEvents(fromBlock, toBlock);
+    let depositEvents;
+    try {
+      depositEvents = await this.eth1Provider.getDepositEvents(fromBlock, toBlock);
+      // Increase the batch size linearly even if we scale down exponentioanlly (half each time)
+      this.eth1GetLogsBatchSizeDynamic = Math.min(
+        MAX_BLOCKS_PER_LOG_QUERY,
+        this.eth1GetLogsBatchSizeDynamic + MIN_BLOCKS_PER_LOG_QUERY
+      );
+    } catch (e) {
+      if (isJsonRpcTruncatedError(e as Error) || e instanceof TimeoutError) {
+        this.eth1GetLogsBatchSizeDynamic = Math.max(
+          MIN_BLOCKS_PER_LOG_QUERY,
+          Math.floor(this.eth1GetLogsBatchSizeDynamic / 2)
+        );
+      }
+      throw e;
+    }
+
     this.logger.verbose("Fetched deposits", {depositCount: depositEvents.length, fromBlock, toBlock});
     this.metrics?.eth1.depositEventsFetched.inc(depositEvents.length);
 
@@ -253,11 +286,27 @@ export class Eth1DepositDataTracker {
     );
     const toBlock = Math.min(
       remoteFollowBlock,
-      fromBlock + MAX_BLOCKS_PER_BLOCK_QUERY - 1, // Block range is inclusive
+      fromBlock + this.eth1GetBlocksBatchSizeDynamic - 1, // Block range is inclusive
       lastProcessedDepositBlockNumber
     );
 
-    const blocksRaw = await this.eth1Provider.getBlocksByNumber(fromBlock, toBlock);
+    let blocksRaw;
+    try {
+      blocksRaw = await this.eth1Provider.getBlocksByNumber(fromBlock, toBlock);
+      // Increase the batch size linearly even if we scale down exponentioanlly (half each time)
+      this.eth1GetBlocksBatchSizeDynamic = Math.min(
+        MAX_BLOCKS_PER_BLOCK_QUERY,
+        this.eth1GetBlocksBatchSizeDynamic + MIN_BLOCKS_PER_BLOCK_QUERY
+      );
+    } catch (e) {
+      if (isJsonRpcTruncatedError(e as Error) || e instanceof TimeoutError) {
+        this.eth1GetBlocksBatchSizeDynamic = Math.max(
+          MIN_BLOCKS_PER_BLOCK_QUERY,
+          Math.floor(this.eth1GetBlocksBatchSizeDynamic / 2)
+        );
+      }
+      throw e;
+    }
     const blocks = blocksRaw.map(parseEth1Block);
 
     this.logger.verbose("Fetched eth1 blocks", {blockCount: blocks.length, fromBlock, toBlock});

@@ -1,4 +1,4 @@
-import {config} from "@lodestar/config/default";
+import {createIChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {Api, ReqTypes} from "../../../../src/beacon/routes/beacon/index.js";
 import {getClient} from "../../../../src/beacon/client/beacon.js";
 import {getRoutes} from "../../../../src/beacon/server/beacon.js";
@@ -6,7 +6,13 @@ import {runGenericServerTest} from "../../../utils/genericServerTest.js";
 import {testData} from "../testData/beacon.js";
 
 describe("beacon / beacon", () => {
-  runGenericServerTest<Api, ReqTypes>(config, getClient, getRoutes, testData);
+  runGenericServerTest<Api, ReqTypes>(
+    // eslint-disable-next-line @typescript-eslint/naming-convention
+    createIChainForkConfig({...defaultChainConfig, ALTAIR_FORK_EPOCH: 1, BELLATRIX_FORK_EPOCH: 2}),
+    getClient,
+    getRoutes,
+    testData
+  );
 
   // TODO: Extra tests to implement maybe
 

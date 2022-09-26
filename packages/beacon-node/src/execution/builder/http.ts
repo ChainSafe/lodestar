@@ -1,4 +1,4 @@
-import {bellatrix, Slot, Root, BLSPubkey, ssz} from "@lodestar/types";
+import {allForks, bellatrix, Slot, Root, BLSPubkey, ssz} from "@lodestar/types";
 import {IChainForkConfig} from "@lodestar/config";
 import {getClient, Api as BuilderApi} from "@lodestar/api/builder";
 import {byteArrayEquals, toHexString} from "@chainsafe/ssz";
@@ -56,7 +56,7 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
     return executionPayloadHeader;
   }
 
-  async submitBlindedBlock(signedBlock: bellatrix.SignedBlindedBeaconBlock): Promise<bellatrix.SignedBeaconBlock> {
+  async submitBlindedBlock(signedBlock: allForks.SignedBlindedBeaconBlock): Promise<allForks.SignedBeaconBlock> {
     const {data: executionPayload} = await this.api.submitBlindedBlock(signedBlock);
     const expectedTransactionsRoot = signedBlock.message.body.executionPayloadHeader.transactionsRoot;
     const actualTransactionsRoot = ssz.bellatrix.Transactions.hashTreeRoot(executionPayload.transactions);

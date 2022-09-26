@@ -13,6 +13,7 @@ export type RestApiServerOpts = {
   cors?: string;
   address?: string;
   bearerToken?: string;
+  bodyLimit?: number;
 };
 
 export type RestApiServerModules = {
@@ -42,6 +43,7 @@ export class RestApiServer {
       logger: false,
       ajv: {customOptions: {coerceTypes: "array"}},
       querystringParser: querystring.parse,
+      bodyLimit: opts.bodyLimit,
     });
 
     this.activeSockets = new HttpActiveSocketsTracker(server.server, metrics);

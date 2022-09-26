@@ -7,10 +7,18 @@ export type ExecutionEngineArgs = {
   "execution.timeout": number;
   "execution.retryAttempts": number;
   "execution.retryDelay": number;
+  "execution.engineMock"?: boolean;
   "jwt-secret"?: string;
 };
 
 export function parseArgs(args: ExecutionEngineArgs): IBeaconNodeOptions["executionEngine"] {
+  if (args["execution.engineMock"]) {
+    return {
+      mode: "mock",
+      genesisBlockHash: "",
+    };
+  }
+
   return {
     urls: args["execution.urls"],
     timeout: args["execution.timeout"],
@@ -56,6 +64,13 @@ export const options: ICliCommandOptions<ExecutionEngineArgs> = {
     type: "number",
     defaultDescription:
       defaultOptions.executionEngine.mode === "http" ? String(defaultOptions.executionEngine.retryDelay) : "0",
+    group: "execution",
+  },
+
+  "execution.engineMock": {
+    description: "Set the execution engine to mock mode",
+    type: "boolean",
+    hidden: true,
     group: "execution",
   },
 

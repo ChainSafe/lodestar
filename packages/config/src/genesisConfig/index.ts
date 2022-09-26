@@ -22,6 +22,8 @@ export function createICachedGenesis(chainForkConfig: IChainForkConfig, genesisV
   }
 
   return {
+    genesisValidatorsRoot,
+
     getDomain(stateSlot: Slot, domainType: DomainType, messageSlot?: Slot): Uint8Array {
       // ```py
       // def get_domain(state: BeaconState, domain_type: DomainType, epoch: Epoch=None) -> Domain:

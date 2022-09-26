@@ -4,10 +4,10 @@ import {Api, allNamespaces} from "@lodestar/api";
 import {IChainForkConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
 import {ssz} from "@lodestar/types";
-import {fromHex} from "@lodestar/utils";
+import {fromHex, toHex} from "@lodestar/utils";
 import {testLogger} from "../../../beacon-node/test/utils/logger.js";
 
-const ZERO_HASH = Buffer.alloc(32, 0);
+const ZERO_HASH_HEX = toHex(Buffer.alloc(32, 0));
 
 export type MockBeaconApiOpts = {
   genesisValidatorsRoot?: string;
@@ -55,7 +55,7 @@ export function getMockBeaconApiServer(opts: RestApiServerOpts, apiOpts?: MockBe
 
     validator: {
       async getProposerDuties() {
-        return {data: [], dependentRoot: ZERO_HASH, executionOptimistic: false};
+        return {data: [], dependentRoot: ZERO_HASH_HEX, executionOptimistic: false};
       },
       async prepareBeaconProposer() {
         // Do nothing
