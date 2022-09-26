@@ -41,5 +41,4 @@ export async function validateLightClientOptimisticUpdate(
   }
 
   chain.lightClientServer.latestForwardedOptimisticSlot = lightClientOptimisticUpdate.attestedHeader.slot;
-  return Promise.resolve();
 }
