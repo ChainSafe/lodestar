@@ -292,6 +292,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
 
     [GossipType.light_client_optimistic_update]: async (lightClientOptimisticUpdate) => {
       await validateLightClientOptimisticUpdate(config, chain, lightClientOptimisticUpdate);
+      return Promise.resolve();
     },
   };
 }
