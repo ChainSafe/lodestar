@@ -24,19 +24,17 @@ export const logFilesDir = "test-logs";
 
 export const defaultSimulationParams: SimulationOptionalParams = {
   validatorsPerClient: 32,
-  withExternalSigner: false,
   secondsPerSlot: 2,
   // delay a bit so regular sync sees it's up to date and sync is completed from the beginning
   // allow time for bls worker threads to warm up
   genesisSlotsDelay: 30,
-  externalSigner: false,
+  externalKeysPercentage: 0.5,
 };
 
 export const getSimulationId = ({
   beaconNodes,
   validatorClients,
   validatorsPerClient,
-  withExternalSigner,
   altairEpoch,
   bellatrixEpoch,
 }: SimulationParams): string =>
@@ -46,7 +44,6 @@ export const getSimulationId = ({
     `validatorsPerClient-${validatorsPerClient}`,
     `altair-${altairEpoch}`,
     `bellatrix-${bellatrixEpoch}`,
-    `externalSigner-${withExternalSigner ? "yes" : "no"}`,
   ].join("_");
 
 export const spawnProcessAndWait = async (
@@ -124,6 +121,15 @@ export const computeAttestation = (attestations: phase0.Attestation[]): number =
 
 export const computeInclusionDelay = (attestations: phase0.Attestation[], slot: Slot): number => {
   return avg(Array.from(attestations).map((att) => slot - att.data.slot));
+};
+
+export const computeSyncCommitteeParticipation = (version: ForkName, block: altair.SignedBeaconBlock): number => {
+  if (version === ForkName.phase0) {
+    return 0;
+  }
+
+  const {syncCommitteeBits} = block.message.body.syncAggregate;
+  return syncCommitteeBits.getTrueBitIndexes().length / syncCommitteeBits.bitLen;
 };
 
 export const avg = (arr: number[]): number => {

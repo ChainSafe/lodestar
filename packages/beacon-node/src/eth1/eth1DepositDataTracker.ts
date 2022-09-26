@@ -223,7 +223,11 @@ export class Eth1DepositDataTracker {
     let depositEvents;
     try {
       depositEvents = await this.eth1Provider.getDepositEvents(fromBlock, toBlock);
-      this.eth1GetLogsBatchSizeDynamic = Math.min(MAX_BLOCKS_PER_LOG_QUERY, this.eth1GetLogsBatchSizeDynamic * 2);
+      // Increase the batch size linearly even if we scale down exponentioanlly (half each time)
+      this.eth1GetLogsBatchSizeDynamic = Math.min(
+        MAX_BLOCKS_PER_LOG_QUERY,
+        this.eth1GetLogsBatchSizeDynamic + MIN_BLOCKS_PER_LOG_QUERY
+      );
     } catch (e) {
       if (isJsonRpcTruncatedError(e as Error) || e instanceof TimeoutError) {
         this.eth1GetLogsBatchSizeDynamic = Math.max(
@@ -289,7 +293,11 @@ export class Eth1DepositDataTracker {
     let blocksRaw;
     try {
       blocksRaw = await this.eth1Provider.getBlocksByNumber(fromBlock, toBlock);
-      this.eth1GetBlocksBatchSizeDynamic = Math.min(MAX_BLOCKS_PER_BLOCK_QUERY, this.eth1GetBlocksBatchSizeDynamic * 2);
+      // Increase the batch size linearly even if we scale down exponentioanlly (half each time)
+      this.eth1GetBlocksBatchSizeDynamic = Math.min(
+        MAX_BLOCKS_PER_BLOCK_QUERY,
+        this.eth1GetBlocksBatchSizeDynamic + MIN_BLOCKS_PER_BLOCK_QUERY
+      );
     } catch (e) {
       if (isJsonRpcTruncatedError(e as Error) || e instanceof TimeoutError) {
         this.eth1GetBlocksBatchSizeDynamic = Math.max(

@@ -6,7 +6,7 @@ import {Checkpoint} from "@lodestar/types/phase0";
 import {toHexString} from "@chainsafe/ssz";
 import {ZERO_HASH} from "../constants/constants.js";
 import {CachedBeaconStateAllForks, BeaconStateAllForks} from "../types.js";
-import {computeEpochAtSlot, getCurrentEpoch} from "./epoch.js";
+import {computeEpochAtSlot, getCurrentEpoch, computeCheckpointEpochAtStateSlot} from "./epoch.js";
 import {getCurrentSlot} from "./slot.js";
 import {getActiveValidatorIndices, getChurnLimit} from "./validator.js";
 
@@ -111,7 +111,7 @@ export function isWithinWeakSubjectivityPeriod(
   wsState: BeaconStateAllForks,
   wsCheckpoint: Checkpoint
 ): boolean {
-  const wsStateEpoch = computeEpochAtSlot(wsState.slot);
+  const wsStateEpoch = computeCheckpointEpochAtStateSlot(wsState.slot);
   const blockRoot = getLatestBlockRoot(wsState);
   if (!ssz.Root.equals(blockRoot, wsCheckpoint.root)) {
     throw new Error(

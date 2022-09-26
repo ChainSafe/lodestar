@@ -14,11 +14,11 @@ export type SimulationRequiredParams = {
 
 export type SimulationOptionalParams = {
   validatorsPerClient: number;
-  withExternalSigner: boolean;
   secondsPerSlot: number;
   genesisSlotsDelay: number;
   anchorState?: BeaconStateAllForks;
-  externalSigner: boolean;
+  // Use this percentage for external signer and rest will be used for local key manager
+  externalKeysPercentage: number;
 };
 
 export type RunTimeSimulationParams = {

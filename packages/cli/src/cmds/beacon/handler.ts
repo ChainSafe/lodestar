@@ -9,7 +9,7 @@ import {ACTIVE_PRESET, PresetName} from "@lodestar/params";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 
 import {IGlobalArgs, parseBeaconNodeArgs} from "../../options/index.js";
-import {onGracefulShutdown, getCliLogger, mkdir, writeFile} from "../../util/index.js";
+import {onGracefulShutdown, getCliLogger, mkdir, writeFile600Perm} from "../../util/index.js";
 import {BeaconNodeOptions, createPeerId, FileENR, getBeaconConfigFromArgs} from "../../config/index.js";
 import {getNetworkBootnodes, getNetworkData, readBootnodes} from "../../networks/index.js";
 import {getVersionData} from "../../util/version.js";
@@ -130,7 +130,7 @@ export async function beaconHandlerInit(args: IBeaconArgs & IGlobalArgs) {
   // Persist ENR and PeerId in beaconDir fixed paths for debugging
   const pIdPath = path.join(beaconPaths.beaconDir, "peer_id.json");
   const enrPath = path.join(beaconPaths.beaconDir, "enr");
-  writeFile(pIdPath, peerId.toJSON());
+  writeFile600Perm(pIdPath, peerId.toJSON());
   const fileENR = FileENR.initFromENR(enrPath, peerId, enr);
   fileENR.saveToFile();
 
@@ -146,7 +146,9 @@ export async function beaconHandlerInit(args: IBeaconArgs & IGlobalArgs) {
 export function overwriteEnrWithCliArgs(enr: ENR, args: IBeaconArgs): void {
   // TODO: Not sure if we should propagate this options to the ENR
   if (args.port != null) enr.tcp = args.port;
-  if (args.port != null) enr.udp = args.port;
+  // TODO: reenable this once we fix the below discv5 issue
+  // See https://github.com/ChainSafe/discv5/issues/201
+  // if (args.port != null) enr.udp = args.port;
   if (args.discoveryPort != null) enr.udp = args.discoveryPort;
 
   if (args["enr.ip"] != null) enr.ip = args["enr.ip"];

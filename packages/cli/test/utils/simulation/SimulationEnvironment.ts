@@ -7,12 +7,7 @@ import {routes} from "@lodestar/api/beacon";
 import {BeaconNodeProcess, SimulationOptionalParams, SimulationParams, SimulationRequiredParams} from "./types.js";
 import {EpochClock, MS_IN_SEC} from "./EpochClock.js";
 import {SimulationTracker} from "./SimulationTracker.js";
-import {
-  LodestarBeaconNodeProcess,
-  defaultSimulationParams,
-  LodestarValidatorProcess,
-  getSimulationId,
-} from "./index.js";
+import {LodestarBeaconNodeProcess, defaultSimulationParams, getSimulationId} from "./index.js";
 
 export class SimulationEnvironment {
   readonly params: SimulationParams;
@@ -21,6 +16,8 @@ export class SimulationEnvironment {
   readonly nodes: BeaconNodeProcess[] = [];
   readonly clock: EpochClock;
   readonly acceptableParticipationRate = 1;
+  readonly acceptableMaxInclusionDelay = 1;
+  readonly acceptableMinSyncParticipation = 1;
   readonly tracker: SimulationTracker;
   readonly emitter: EventEmitter;
   readonly controller: AbortController;
@@ -145,10 +142,5 @@ export class SimulationEnvironment {
 
   waitForEndOfEpoch(epoch: number): Promise<this> {
     return this.waitForEndOfSlot(this.clock.getLastSlotOfEpoch(epoch));
-  }
-
-  resetCounter(): void {
-    LodestarBeaconNodeProcess.totalProcessCount = 0;
-    LodestarValidatorProcess.totalProcessCount = 0;
   }
 }

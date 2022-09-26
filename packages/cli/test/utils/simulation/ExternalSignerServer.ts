@@ -1,5 +1,5 @@
 import fastify from "fastify";
-import {fromHexString, toHexString} from "@chainsafe/ssz";
+import {fromHexString} from "@chainsafe/ssz";
 import type {SecretKey} from "@chainsafe/bls/types";
 import {EXTERNAL_SIGNER_BASE_PORT} from "./utils.js";
 
@@ -14,7 +14,7 @@ export class ExternalSignerServer {
   constructor(secretKeys: SecretKey[]) {
     const secretKeyMap = new Map<string, SecretKey>();
     for (const secretKey of secretKeys) {
-      const pubkeyHex = toHexString(secretKey.toPublicKey().toBytes());
+      const pubkeyHex = secretKey.toPublicKey().toHex();
       secretKeyMap.set(pubkeyHex, secretKey);
     }
     ExternalSignerServer.totalProcessCount++;
@@ -26,8 +26,8 @@ export class ExternalSignerServer {
       return {status: "OK"};
     });
 
-    this.server.get("/keys", async () => {
-      return {keys: Array.from(secretKeyMap.keys())};
+    this.server.get("/api/v1/eth2/publicKeys", async () => {
+      return [...secretKeyMap.keys()];
     });
 
     /* eslint-disable @typescript-eslint/naming-convention */
@@ -40,7 +40,7 @@ export class ExternalSignerServer {
         /** Data to sign as a hex string */
         signingRoot: string;
       };
-    }>("/sign/:identifier", async (req) => {
+    }>("/api/v1/eth2/sign/:identifier", async (req) => {
       const pubkeyHex: string = req.params.identifier;
       const signingRootHex: string = req.body.signingRoot;
 

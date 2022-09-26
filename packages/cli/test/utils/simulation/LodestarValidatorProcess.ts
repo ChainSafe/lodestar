@@ -7,7 +7,7 @@ import {Keystore} from "@chainsafe/bls-keystore";
 import {IChainForkConfig} from "@lodestar/config";
 import {interopSecretKey} from "@lodestar/state-transition";
 import {IGlobalArgs} from "../../../src/options/globalOptions.js";
-import {IValidatorCliArgs} from "../../../lib/cmds/validator/options.js";
+import {IValidatorCliArgs} from "../../../src/cmds/validator/options.js";
 import {SimulationParams, ValidatorConstructor, ValidatorProcess} from "./types.js";
 import {closeChildProcess, KEY_MANAGER_BASE_PORT, spawnProcessAndWait, __dirname} from "./utils.js";
 import {ExternalSignerServer} from "./ExternalSignerServer.js";
@@ -22,7 +22,7 @@ export const LodestarValidatorProcess: ValidatorConstructor = class LodestarVali
   readonly id: string;
   readonly keyManagerApi: Api;
   readonly secretKeys: SecretKey[] = [];
-  readonly externalSigner?: ExternalSignerServer;
+  readonly externalSigner: ExternalSignerServer;
 
   private rootDir: string;
   private clientIndex: number;
@@ -58,6 +58,11 @@ export const LodestarValidatorProcess: ValidatorConstructor = class LodestarVali
     });
     this.secretKeys = validatorSecretKeys;
 
+    // Split half of the keys to external signer
+    this.externalSigner = new ExternalSignerServer(
+      this.secretKeys.slice(0, this.secretKeys.length * this.params.externalKeysPercentage)
+    );
+
     this.rcConfig = ({
       network: "dev",
       preset: "minimal",
@@ -78,11 +83,6 @@ export const LodestarValidatorProcess: ValidatorConstructor = class LodestarVali
       logLevel: "info",
     } as unknown) as IValidatorCliArgs & IGlobalArgs;
 
-    if (this.params.externalSigner) {
-      this.externalSigner = new ExternalSignerServer(this.secretKeys);
-      this.rcConfig["externalSigner.url"] = this.externalSigner.url;
-    }
-
     this.keyManagerApi = getClient(
       {baseUrl: `http://${this.address}:${this.keyManagerPort}`},
       {config: this.forkConfig}
@@ -94,10 +94,10 @@ export const LodestarValidatorProcess: ValidatorConstructor = class LodestarVali
     await mkdir(`${this.rootDir}/keystores`);
 
     await writeFile(join(this.rootDir, "password.txt"), "password");
-
     await writeFile(join(this.rootDir, "rc_config.json"), JSON.stringify(this.rcConfig, null, 2));
 
-    for (const key of this.secretKeys) {
+    // Split half of the keys to the keymanager
+    for (const key of this.secretKeys.slice(this.secretKeys.length * this.params.externalKeysPercentage)) {
       const keystore = await Keystore.create("password", key.toBytes(), key.toPublicKey().toBytes(), "");
       await writeFile(
         join(this.rootDir, "keystores", `${key.toPublicKey().toHex()}.json`),
@@ -105,9 +105,7 @@ export const LodestarValidatorProcess: ValidatorConstructor = class LodestarVali
       );
     }
 
-    if (this.externalSigner) {
-      await this.externalSigner.start();
-    }
+    await this.externalSigner.start();
 
     console.log(`Starting lodestar validator "${this.id}".`, {dataDir: this.rootDir});
 
@@ -128,19 +126,24 @@ export const LodestarValidatorProcess: ValidatorConstructor = class LodestarVali
       `Waiting for "${this.id}" to start.`
     );
 
+    // Import half of the keys to the keymanager from external signer
+    await this.keyManagerApi.importRemoteKeys(
+      this.secretKeys
+        .slice(0, this.secretKeys.length / 2)
+        .map((sk) => ({pubkey: sk.toPublicKey().toHex(), url: this.externalSigner.url}))
+    );
+
     console.log(`Validator "${this.id}" started.`);
   }
 
   async stop(): Promise<void> {
     console.log(`Stopping validator "${this.id}".`);
 
-    if (this.externalSigner) {
-      await this.externalSigner.stop();
-    }
-
     if (this.validatorProcess !== undefined) {
       await closeChildProcess(this.validatorProcess);
     }
+
+    await this.externalSigner.stop();
   }
 
   async ready(): Promise<boolean> {
