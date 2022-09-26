@@ -85,7 +85,5 @@
     "webpack": "^5.74.0"
   },
   "dependencies": {},
-  "resolutions": {
-    "libnpmpublish": "4.0.0"
-  }
+  "resolutions": {}
 }
