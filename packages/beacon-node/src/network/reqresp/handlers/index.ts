@@ -14,7 +14,7 @@ export type ReqRespHandlers = {
   onBeaconBlocksByRange(req: phase0.BeaconBlocksByRangeRequest): AsyncIterable<ReqRespBlockResponse>;
   onBeaconBlocksByRoot(req: phase0.BeaconBlocksByRootRequest): AsyncIterable<ReqRespBlockResponse>;
   onLightClientBootstrap(req: altair.BlockRoot): AsyncIterable<altair.LightClientBootstrap>;
-  onLightClientUpdate(req: altair.LightClientUpdatesByRange): AsyncIterable<altair.LightClientUpdate[]>;
+  onLightClientUpdate(req: altair.LightClientUpdatesByRange): AsyncIterable<altair.LightClientUpdate>;
   onLightClientFinalityUpdate(): AsyncIterable<altair.LightClientFinalityUpdate>;
   onLightClientOptimisticUpdate(): AsyncIterable<altair.LightClientOptimisticUpdate>;
 };

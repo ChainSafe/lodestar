@@ -1,6 +1,5 @@
 import {ForkName} from "@lodestar/params";
 import {allForks, phase0, ssz, Slot, altair} from "@lodestar/types";
-import {LightClientUpdate} from "@lodestar/types/altair";
 
 export const protocolPrefix = "/eth2/beacon_chain/req";
 
@@ -188,7 +187,7 @@ export function getOutgoingSerializerByMethod(protocol: Protocol): OutgoingSeria
     case Method.LightClientBootstrap:
       return ssz.altair.LightClientBootstrap;
     case Method.LightClientUpdate:
-      return reqRespLightClientUpdateSerializer;
+      return ssz.altair.LightClientUpdate;
     case Method.LightClientFinalityUpdate:
       return ssz.altair.LightClientFinalityUpdate;
     case Method.LightClientOptimisticUpdate:
@@ -202,7 +201,7 @@ type CommonResponseBodyByMethod = {
   [Method.Ping]: phase0.Ping;
   [Method.Metadata]: phase0.Metadata;
   [Method.LightClientBootstrap]: altair.LightClientBootstrap;
-  [Method.LightClientUpdate]: altair.LightClientUpdate[];
+  [Method.LightClientUpdate]: altair.LightClientUpdate;
   [Method.LightClientFinalityUpdate]: altair.LightClientFinalityUpdate;
   [Method.LightClientOptimisticUpdate]: altair.LightClientOptimisticUpdate;
 };
@@ -247,25 +246,6 @@ export type ResponseTypedContainer = {
 export const reqRespBlockResponseSerializer = {
   serialize: (chunk: ReqRespBlockResponse): Uint8Array => {
     return chunk.bytes;
-  },
-};
-
-export const reqRespLightClientUpdateSerializer = {
-  serialize: (chunks: LightClientUpdate[]): Uint8Array => {
-    const serializedChunks = chunks.map((chunk) => ssz.altair.LightClientUpdate.serialize(chunk));
-    let length = 0;
-    serializedChunks.forEach((item) => {
-      length += item.length;
-    });
-
-    const mergedArray = new Uint8Array(length);
-    let offset = 0;
-    serializedChunks.forEach((item) => {
-      mergedArray.set(item, offset);
-      offset += item.length;
-    });
-
-    return mergedArray;
   },
 };
 

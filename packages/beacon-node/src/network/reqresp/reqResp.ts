@@ -165,7 +165,13 @@ export class ReqResp implements IReqResp {
     peerId: PeerId,
     request: altair.LightClientUpdatesByRange
   ): Promise<altair.LightClientUpdate[]> {
-    return await this.sendRequest<altair.LightClientUpdate[]>(peerId, Method.LightClientUpdate, [Version.V2], request);
+    return await this.sendRequest<altair.LightClientUpdate[]>(
+      peerId,
+      Method.LightClientUpdate,
+      [Version.V2],
+      request,
+      request.count
+    );
   }
 
   async lightClientOptimisticUpdate(peerId: PeerId): Promise<altair.LightClientOptimisticUpdate> {

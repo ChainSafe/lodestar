@@ -195,7 +195,7 @@ describe("network / ReqResp", function () {
     const returnedBlocks = await netA.reqResp.beaconBlocksByRange(netB.peerId, req);
 
     if (returnedBlocks === null) throw Error("Returned null");
-    expect(returnedBlocks).to.have.length(req.count, "Wrong returnedBlocks lenght");
+    expect(returnedBlocks).to.have.length(req.count, "Wrong returnedBlocks length");
 
     for (const [i, returnedBlock] of returnedBlocks.entries()) {
       expect(ssz.phase0.SignedBeaconBlock.equals(returnedBlock, blocks[i])).to.equal(true, `Wrong returnedBlock[${i}]`);
@@ -243,20 +243,31 @@ describe("network / ReqResp", function () {
   });
 
   it("should send/receive a light client update message", async function () {
-    const expectedValue = [ssz.altair.LightClientUpdate.defaultValue()];
-    const request: altair.LightClientUpdatesByRange = {
-      startPeriod: 2,
-      count: 5,
-    };
+    const req: altair.LightClientUpdatesByRange = {startPeriod: 0, count: 2};
+    const lightClientUpdates: altair.LightClientUpdate[] = [];
+    for (let slot = req.startPeriod; slot < req.count; slot++) {
+      const update = ssz.altair.LightClientUpdate.defaultValue();
+      update.signatureSlot = slot;
+      lightClientUpdates.push(update);
+    }
 
     const [netA, netB] = await createAndConnectPeers({
-      onLightClientUpdate: async function* onRequest() {
-        yield expectedValue;
+      onLightClientUpdate: async function* () {
+        yield* arrToSource(lightClientUpdates);
       },
     });
 
-    const returnedValue = await netA.reqResp.lightClientUpdate(netB.peerId, request);
-    expect(returnedValue).to.deep.equal(expectedValue, "Wrong response body");
+    const returnedUpdates = await netA.reqResp.lightClientUpdate(netB.peerId, req);
+
+    if (returnedUpdates === null) throw Error("Returned null");
+    expect(returnedUpdates).to.have.length(2, "Wrong returnedUpdates length");
+
+    for (const [i, returnedUpdate] of returnedUpdates.entries()) {
+      expect(ssz.altair.LightClientUpdate.equals(returnedUpdate, lightClientUpdates[i])).to.equal(
+        true,
+        `Wrong returnedUpdate[${i}]`
+      );
+    }
   });
 
   it("should handle a server error", async function () {

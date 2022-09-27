@@ -7,10 +7,10 @@ import {RespStatus} from "../../../constants/index.js";
 export async function* onLightclientUpdate(
   requestBody: altair.LightClientUpdatesByRange,
   chain: IBeaconChain
-): AsyncIterable<altair.LightClientUpdate[]> {
+): AsyncIterable<altair.LightClientUpdate> {
   try {
     const count = Math.min(MAX_REQUEST_LIGHT_CLIENT_UPDATES, requestBody.count);
-    yield await chain.lightClientServer.getUpdates(requestBody.startPeriod, count);
+    yield* await chain.lightClientServer.getUpdates(requestBody.startPeriod, count);
   } catch (e) {
     throw new ResponseError(RespStatus.RESOURCE_UNAVAILABLE, (e as Error).message);
   }

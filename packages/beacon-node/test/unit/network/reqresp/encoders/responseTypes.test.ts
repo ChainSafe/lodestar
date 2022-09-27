@@ -39,7 +39,7 @@ describe("network / reqresp / encoders / responseTypes", () => {
     [Method.BeaconBlocksByRange]: [generateEmptySignedBlocks(2)],
     [Method.BeaconBlocksByRoot]: [generateEmptySignedBlocks(2)],
     [Method.LightClientBootstrap]: [[generateDefaultLightClientBootstrap()]],
-    [Method.LightClientUpdate]: [[generateDefaultLightClientUpdate()]],
+    [Method.LightClientUpdate]: [generateDefaultLightClientUpdate()],
     [Method.LightClientFinalityUpdate]: [[generateDefaultLightClientFinalityUpdate()]],
     [Method.LightClientOptimisticUpdate]: [[generateDefaultLightClientOptimisticUpdate()]],
   };
@@ -79,7 +79,7 @@ describe("network / reqresp / encoders / responseTypes", () => {
             const type = getResponseSzzTypeByMethod(protocol, forkName);
             if (type === undefined) throw Error("no type");
 
-            expectIsEqualSszTypeArr(type, returnedResponses, responseChunks.flat(), "Response chunks");
+            expectIsEqualSszTypeArr(type, returnedResponses, responseChunks, "Response chunks");
           });
         }
       }
