@@ -1,9 +1,9 @@
-import {PeerScoreThresholds} from "libp2p-gossipsub/src/score/index.js";
 import {
   defaultTopicScoreParams,
   PeerScoreParams,
   TopicScoreParams,
-} from "libp2p-gossipsub/src/score/peer-score-params.js";
+  PeerScoreThresholds,
+} from "@chainsafe/libp2p-gossipsub/score";
 import {computeCommitteeCount} from "@lodestar/state-transition";
 import {IBeaconConfig} from "@lodestar/config";
 import {ATTESTATION_SUBNET_COUNT, SLOTS_PER_EPOCH, TARGET_AGGREGATORS_PER_COMMITTEE} from "@lodestar/params";
@@ -282,7 +282,10 @@ function scoreParameterDecayWithBase(decayTimeMs: number, decayIntervalMs: numbe
 
 function expectedAggregatorCountPerSlot(
   activeValidatorCount: number
-): {aggregatorsPerslot: number; committeesPerSlot: number} {
+): {
+  aggregatorsPerslot: number;
+  committeesPerSlot: number;
+} {
   const committeesPerSlot = computeCommitteeCount(activeValidatorCount);
   const committeesPerEpoch = committeesPerSlot * SLOTS_PER_EPOCH;
   const smallerCommitteeSize = Math.floor(activeValidatorCount / committeesPerEpoch);

@@ -1,4 +1,5 @@
-import {Multiaddr} from "multiaddr";
+import {peerIdFromString} from "@libp2p/peer-id";
+import {multiaddr} from "@multiformats/multiaddr";
 import {routes} from "@lodestar/api";
 import {Bucket, Repository} from "@lodestar/db";
 import {toHex} from "@lodestar/utils";
@@ -8,7 +9,6 @@ import {IChainForkConfig} from "@lodestar/config";
 import {ssz} from "@lodestar/types";
 import {BeaconChain} from "../../../chain/index.js";
 import {QueuedStateRegenerator, RegenRequest} from "../../../chain/regen/index.js";
-import {createFromB58String} from "../../../util/peerId.js";
 import {GossipType} from "../../../network/index.js";
 import {IBeaconDb} from "../../../db/interface.js";
 import {ApiModules} from "../types.js";
@@ -25,9 +25,6 @@ export function getLodestarApi({
 
   return {
     async writeHeapdump(dirpath = ".") {
-      // Browser interop
-      if (typeof require !== "function") throw Error("NodeJS only");
-
       if (writingHeapdump) {
         throw Error("Already writing heapdump");
       }
@@ -123,13 +120,13 @@ export function getLodestarApi({
     },
 
     async connectPeer(peerIdStr, multiaddrStrs) {
-      const peerId = createFromB58String(peerIdStr);
-      const multiaddrs = multiaddrStrs.map((multiaddrStr) => new Multiaddr(multiaddrStr));
+      const peerId = peerIdFromString(peerIdStr);
+      const multiaddrs = multiaddrStrs.map((multiaddrStr) => multiaddr(multiaddrStr));
       await network.connectToPeer(peerId, multiaddrs);
     },
 
     async disconnectPeer(peerIdStr) {
-      const peerId = createFromB58String(peerIdStr);
+      const peerId = peerIdFromString(peerIdStr);
       await network.disconnectPeer(peerId);
     },
 

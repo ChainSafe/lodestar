@@ -3,7 +3,8 @@ import path from "node:path";
 import {expect} from "chai";
 import {before, after} from "mocha";
 import rimraf from "rimraf";
-import PeerId from "peer-id";
+import {PeerId} from "@libp2p/interface-peer-id";
+import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
 import {toHexString} from "@chainsafe/ssz";
 import {createKeypairFromPeerId, ENR} from "@chainsafe/discv5";
 import {FileENR} from "../../../src/config/index.js";
@@ -21,7 +22,7 @@ describe("fileENR", function () {
   });
 
   it("create ENR from file", async function () {
-    const peerId = await PeerId.create({keyType: "secp256k1"});
+    const peerId = await createSecp256k1PeerId();
     const enrFilePath = path.join(testFilesDir, "enr_file.txt");
 
     initEnr(enrFilePath, peerId);

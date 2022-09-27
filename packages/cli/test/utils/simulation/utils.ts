@@ -1,19 +1,9 @@
+import {ChildProcess, spawn} from "node:child_process";
 import {dirname} from "node:path";
 import {fileURLToPath} from "node:url";
-import {ChildProcess, spawn} from "node:child_process";
-import {altair, Epoch, phase0, Slot} from "@lodestar/types";
-import {
-  TIMELY_HEAD_FLAG_INDEX,
-  TIMELY_TARGET_FLAG_INDEX,
-  TIMELY_SOURCE_FLAG_INDEX,
-  SLOTS_PER_EPOCH,
-  ForkName,
-} from "@lodestar/params";
+import {Epoch} from "@lodestar/types";
+import {ForkName} from "@lodestar/params";
 import {SimulationOptionalParams, SimulationParams} from "./types.js";
-/* eslint-disable no-console */
-const TIMELY_HEAD = 1 << TIMELY_HEAD_FLAG_INDEX;
-const TIMELY_SOURCE = 1 << TIMELY_SOURCE_FLAG_INDEX;
-const TIMELY_TARGET = 1 << TIMELY_TARGET_FLAG_INDEX;
 
 // Global variable __dirname no longer available in ES6 modules.
 // Solutions: https://stackoverflow.com/questions/46745014/alternative-for-dirname-in-node-js-when-using-es6-modules
@@ -84,52 +74,6 @@ export const closeChildProcess = async (childProcess: ChildProcess, signal?: "SI
     childProcess.on("close", resolve);
     childProcess.kill(signal);
   });
-};
-
-export const computeAttestationParticipation = (
-  state: altair.BeaconState
-): {epoch: number; head: number; source: number; target: number} => {
-  // Attestation to be computed at the end of epoch. At that time the "currentEpochParticipation" is all set to zero
-  // and we have to use "previousEpochParticipation" instead.
-  const previousEpochParticipation = state.previousEpochParticipation;
-  // As we calculated the participation from the previous epoch
-  const epoch = Math.floor(state.slot / SLOTS_PER_EPOCH) - 1;
-  const totalAttestingBalance = {head: 0, source: 0, target: 0};
-  let totalEffectiveBalance = 0;
-
-  for (let i = 0; i < previousEpochParticipation.length; i++) {
-    totalAttestingBalance.head +=
-      previousEpochParticipation[i] & TIMELY_HEAD ? state.validators[i].effectiveBalance : 0;
-    totalAttestingBalance.source +=
-      previousEpochParticipation[i] & TIMELY_SOURCE ? state.validators[i].effectiveBalance : 0;
-    totalAttestingBalance.target +=
-      previousEpochParticipation[i] & TIMELY_TARGET ? state.validators[i].effectiveBalance : 0;
-
-    totalEffectiveBalance += state.validators[i].effectiveBalance;
-  }
-
-  totalAttestingBalance.head = totalAttestingBalance.head / totalEffectiveBalance;
-  totalAttestingBalance.source = totalAttestingBalance.source / totalEffectiveBalance;
-  totalAttestingBalance.target = totalAttestingBalance.target / totalEffectiveBalance;
-
-  return {...totalAttestingBalance, epoch};
-};
-
-export const computeAttestation = (attestations: phase0.Attestation[]): number => {
-  return Array.from(attestations).reduce((total, att) => total + att.aggregationBits.getTrueBitIndexes().length, 0);
-};
-
-export const computeInclusionDelay = (attestations: phase0.Attestation[], slot: Slot): number => {
-  return avg(Array.from(attestations).map((att) => slot - att.data.slot));
-};
-
-export const computeSyncCommitteeParticipation = (version: ForkName, block: altair.SignedBeaconBlock): number => {
-  if (version === ForkName.phase0) {
-    return 0;
-  }
-
-  const {syncCommitteeBits} = block.message.body.syncAggregate;
-  return syncCommitteeBits.getTrueBitIndexes().length / syncCommitteeBits.bitLen;
 };
 
 export const avg = (arr: number[]): number => {

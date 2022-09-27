@@ -1,10 +1,10 @@
-import BufferList from "bl";
 import {uncompress} from "snappyjs";
+import {Uint8ArrayList} from "uint8arraylist";
 
 const IDENTIFIER = Buffer.from([0x73, 0x4e, 0x61, 0x50, 0x70, 0x59]);
 
 export class SnappyFramesUncompress {
-  private buffer = new BufferList();
+  private buffer = new Uint8ArrayList();
 
   private state: IUncompressState = {
     foundIdentifier: false,
@@ -15,20 +15,20 @@ export class SnappyFramesUncompress {
    * @param chunk
    * @return Buffer if there is one or more whole frames, null if it's partial
    */
-  uncompress(chunk: Buffer): Buffer | null {
+  uncompress(chunk: Uint8ArrayList): Uint8ArrayList | null {
     this.buffer.append(chunk);
-    const result = new BufferList();
+    const result = new Uint8ArrayList();
     while (this.buffer.length > 0) {
       if (this.buffer.length < 4) break;
 
       const type = getChunkType(this.buffer.get(0));
       const frameSize = getFrameSize(this.buffer, 1);
-      const data = this.buffer.slice(4, 4 + frameSize);
 
       if (this.buffer.length - 4 < frameSize) {
         break;
       }
 
+      const data = this.buffer.subarray(4, 4 + frameSize);
       this.buffer.consume(4 + frameSize);
 
       if (!this.state.foundIdentifier && type !== ChunkType.IDENTIFIER) {
@@ -36,7 +36,8 @@ export class SnappyFramesUncompress {
       }
 
       if (type === ChunkType.IDENTIFIER) {
-        if (!data.equals(IDENTIFIER)) {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+        if (!Buffer.prototype.equals.call(data, IDENTIFIER)) {
           throw "malformed input: bad identifier";
         }
         this.state.foundIdentifier = true;
@@ -44,21 +45,21 @@ export class SnappyFramesUncompress {
       }
 
       if (type === ChunkType.COMPRESSED) {
-        result.append(uncompress(data.slice(4)));
+        result.append(uncompress(data.subarray(4)));
       }
       if (type === ChunkType.UNCOMPRESSED) {
-        result.append(data.slice(4));
+        result.append(data.subarray(4));
       }
     }
     if (result.length === 0) {
       return null;
     } else {
-      return result.slice();
+      return result;
     }
   }
 
   reset(): void {
-    this.buffer = new BufferList();
+    this.buffer = new Uint8ArrayList();
     this.state = {
       foundIdentifier: false,
     };
@@ -76,7 +77,7 @@ enum ChunkType {
   PADDING = 0xfe,
 }
 
-function getFrameSize(buffer: BufferList, offset: number): number {
+function getFrameSize(buffer: Uint8ArrayList, offset: number): number {
   return buffer.get(offset) + (buffer.get(offset + 1) << 8) + (buffer.get(offset + 2) << 16);
 }
 

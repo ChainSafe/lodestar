@@ -1,5 +1,5 @@
 import {EventEmitter} from "events";
-import PeerId from "peer-id";
+import {PeerId} from "@libp2p/interface-peer-id";
 import StrictEventEmitter from "strict-event-emitter-types";
 import {allForks, phase0} from "@lodestar/types";
 import {RequestTypedContainer} from "./reqresp/index.js";
