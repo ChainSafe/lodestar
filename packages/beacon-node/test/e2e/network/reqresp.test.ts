@@ -1,13 +1,14 @@
 import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
-import PeerId from "peer-id";
+import {PeerId} from "@libp2p/interface-peer-id";
+import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
 import {createIBeaconConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
 import {sleep as _sleep} from "@lodestar/utils";
 import {altair, phase0, ssz} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
 import {BitArray} from "@chainsafe/ssz";
-import {createPeerId, IReqRespOptions, Network} from "../../../src/network/index.js";
+import {IReqRespOptions, Network} from "../../../src/network/index.js";
 import {defaultNetworkOptions, INetworkOptions} from "../../../src/network/options.js";
 import {Method, Encoding} from "../../../src/network/reqresp/types.js";
 import {ReqRespHandlers} from "../../../src/network/reqresp/handlers/index.js";
@@ -71,7 +72,7 @@ describe("network / ReqResp", function () {
     reqRespOpts?: IReqRespOptions
   ): Promise<[Network, Network]> {
     const controller = new AbortController();
-    const peerIdB = await createPeerId();
+    const peerIdB = await createSecp256k1PeerId();
     const [libp2pA, libp2pB] = await Promise.all([createNode(multiaddr), createNode(multiaddr, peerIdB)]);
 
     // eslint-disable-next-line
@@ -323,5 +324,5 @@ describe("network / ReqResp", function () {
 
 /** Helper to reduce code-duplication */
 function formatMetadata(method: Method, encoding: Encoding, peer: PeerId): IRequestErrorMetadata {
-  return {method, encoding, peer: peer.toB58String()};
+  return {method, encoding, peer: peer.toString()};
 }

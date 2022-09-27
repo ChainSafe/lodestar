@@ -1,4 +1,4 @@
-import BufferList from "bl";
+import {Uint8ArrayList} from "uint8arraylist";
 
 /**
  * Wraps a buffer chunk stream source with another async iterable
@@ -9,15 +9,15 @@ import BufferList from "bl";
  */
 export class BufferedSource {
   isDone = false;
-  private buffer: BufferList;
-  private source: AsyncGenerator<Buffer>;
+  private buffer: Uint8ArrayList;
+  private source: AsyncGenerator<Uint8ArrayList>;
 
-  constructor(source: AsyncGenerator<Buffer>) {
-    this.buffer = new BufferList();
+  constructor(source: AsyncGenerator<Uint8ArrayList>) {
+    this.buffer = new Uint8ArrayList();
     this.source = source;
   }
 
-  [Symbol.asyncIterator](): AsyncIterator<BufferList> {
+  [Symbol.asyncIterator](): AsyncIterator<Uint8ArrayList> {
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const that = this;
 

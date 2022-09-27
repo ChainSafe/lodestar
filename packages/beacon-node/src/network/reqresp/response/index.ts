@@ -1,5 +1,7 @@
-import PeerId from "peer-id";
-import pipe from "it-pipe";
+import {pipe} from "it-pipe";
+import {PeerId} from "@libp2p/interface-peer-id";
+import {Stream} from "@libp2p/interface-connection";
+import {Uint8ArrayList} from "uint8arraylist";
 import {ILogger, TimeoutError, withTimeout} from "@lodestar/utils";
 import {IBeaconConfig} from "@lodestar/config";
 import {REQUEST_TIMEOUT, RespStatus} from "../../../constants/index.js";
@@ -7,7 +9,6 @@ import {prettyPrintPeerId} from "../../util.js";
 import {PeersData} from "../../peers/peersData.js";
 import {Protocol, RequestBody, OutgoingResponseBody} from "../types.js";
 import {renderRequestBody} from "../utils/index.js";
-import {Libp2pStream} from "../interface.js";
 import {requestDecode} from "../encoders/requestDecode.js";
 import {responseEncodeError, responseEncodeSuccess} from "../encoders/responseEncode.js";
 import {ResponseError} from "./errors.js";
@@ -39,13 +40,13 @@ type HandleRequestModules = {
 export async function handleRequest(
   {config, logger, peersData: peersData}: HandleRequestModules,
   performRequestHandler: PerformRequestHandler,
-  stream: Libp2pStream,
+  stream: Stream,
   peerId: PeerId,
   protocol: Protocol,
   signal?: AbortSignal,
   requestId = 0
 ): Promise<void> {
-  const client = peersData.getPeerKind(peerId.toB58String());
+  const client = peersData.getPeerKind(peerId.toString());
   const logCtx = {method: protocol.method, client, peer: prettyPrintPeerId(peerId), requestId};
 
   let responseError: Error | null = null;
@@ -56,7 +57,7 @@ export async function handleRequest(
     (async function* requestHandlerSource() {
       try {
         const requestBody = await withTimeout(
-          () => pipe(stream.source, requestDecode(protocol)),
+          () => pipe(stream.source as AsyncIterable<Uint8ArrayList>, requestDecode(protocol)),
           REQUEST_TIMEOUT,
           signal
         ).catch((e: unknown) => {

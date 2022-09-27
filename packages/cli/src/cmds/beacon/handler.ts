@@ -1,5 +1,6 @@
 import path from "node:path";
 import {Registry} from "prom-client";
+import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
 import {createKeypairFromPeerId, ENR} from "@chainsafe/discv5";
 import {ErrorAborted} from "@lodestar/utils";
 import {LevelDbController} from "@lodestar/db";
@@ -9,8 +10,8 @@ import {ACTIVE_PRESET, PresetName} from "@lodestar/params";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 
 import {IGlobalArgs, parseBeaconNodeArgs} from "../../options/index.js";
+import {BeaconNodeOptions, exportToJSON, FileENR, getBeaconConfigFromArgs} from "../../config/index.js";
 import {onGracefulShutdown, getCliLogger, mkdir, writeFile600Perm} from "../../util/index.js";
-import {BeaconNodeOptions, createPeerId, FileENR, getBeaconConfigFromArgs} from "../../config/index.js";
 import {getNetworkBootnodes, getNetworkData, readBootnodes} from "../../networks/index.js";
 import {getVersionData} from "../../util/version.js";
 import {IBeaconArgs} from "./options.js";
@@ -72,7 +73,10 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
       db,
       logger,
       processShutdownCallback,
-      libp2p: await createNodeJsLibp2p(peerId, options.network, {peerStoreDir: beaconPaths.peerStoreDir}),
+      libp2p: await createNodeJsLibp2p(peerId, options.network, {
+        peerStoreDir: beaconPaths.peerStoreDir,
+        metrics: options.metrics.enabled,
+      }),
       anchorState,
       wsCheckpoint,
       metricsRegistries,
@@ -123,14 +127,14 @@ export async function beaconHandlerInit(args: IBeaconArgs & IGlobalArgs) {
   }
 
   // Create new PeerId everytime by default, unless peerIdFile is provided
-  const peerId = await createPeerId();
+  const peerId = await createSecp256k1PeerId();
   const enr = ENR.createV4(createKeypairFromPeerId(peerId).publicKey);
   overwriteEnrWithCliArgs(enr, args);
 
   // Persist ENR and PeerId in beaconDir fixed paths for debugging
   const pIdPath = path.join(beaconPaths.beaconDir, "peer_id.json");
   const enrPath = path.join(beaconPaths.beaconDir, "enr");
-  writeFile600Perm(pIdPath, peerId.toJSON());
+  writeFile600Perm(pIdPath, exportToJSON(peerId));
   const fileENR = FileENR.initFromENR(enrPath, peerId, enr);
   fileENR.saveToFile();
 

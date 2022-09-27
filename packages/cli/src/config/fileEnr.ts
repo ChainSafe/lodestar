@@ -1,4 +1,4 @@
-import PeerId from "peer-id";
+import {PeerId} from "@libp2p/interface-peer-id";
 import {createKeypairFromPeerId, ENR, ENRKey, ENRValue} from "@chainsafe/discv5";
 import {writeFile600Perm, readFile} from "../util/index.js";
 

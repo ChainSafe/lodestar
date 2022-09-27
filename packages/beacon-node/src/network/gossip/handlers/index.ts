@@ -1,3 +1,4 @@
+import {peerIdFromString} from "@libp2p/peer-id";
 import {toHexString} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@lodestar/config";
 import {phase0, ssz} from "@lodestar/types";
@@ -28,7 +29,6 @@ import {
 import {INetwork} from "../../interface.js";
 import {NetworkEvent} from "../../events.js";
 import {PeerAction} from "../../peers/index.js";
-import {createFromB58String} from "../../../util/peerId.js";
 
 /**
  * Gossip handler options as part of network options
@@ -130,7 +130,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
               case BlockErrorCode.EXECUTION_ENGINE_ERROR:
                 break;
               default:
-                network.reportPeer(createFromB58String(peerIdStr), PeerAction.LowToleranceError, "BadGossipBlock");
+                network.reportPeer(peerIdFromString(peerIdStr), PeerAction.LowToleranceError, "BadGossipBlock");
             }
           }
           logger.error("Error receiving block", {slot, peer: peerIdStr}, e as Error);

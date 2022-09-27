@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {TopicScoreParams} from "libp2p-gossipsub/src/score/index.js";
+import {TopicScoreParams} from "@chainsafe/libp2p-gossipsub/score";
 import {ATTESTATION_SUBNET_COUNT, ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {createIBeaconConfig} from "@lodestar/config";
 import {mainnetChainConfig} from "@lodestar/config/presets";
