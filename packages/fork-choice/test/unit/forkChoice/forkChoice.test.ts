@@ -63,6 +63,7 @@ describe("Forkchoice", function () {
     finalizedCheckpoint: {epoch: genesisEpoch, root: fromHexString(finalizedRoot), rootHex: finalizedRoot},
     unrealizedFinalizedCheckpoint: {epoch: genesisEpoch, root: fromHexString(finalizedRoot), rootHex: finalizedRoot},
     justifiedBalancesGetter: () => new Uint8Array([32]),
+    equivocatingIndices: new Set(),
   };
 
   const getParentBlockRoot = (slot: number, skippedSlots: number[] = []): RootHex => {
