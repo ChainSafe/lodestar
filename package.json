@@ -85,5 +85,7 @@
     "webpack": "^5.74.0"
   },
   "dependencies": {},
-  "resolutions": {}
+  "resolutions": {
+    "uint8arrays": "3.0.0"
+  }
 }
