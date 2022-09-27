@@ -200,14 +200,13 @@ This section is to guide the Release Manager tasked with the next version releas
 - If there are `rc.x` hot fixes, push to branch and increment the `rc.x` version.
 - Team members conduct Release Candidate Metrics Review
 - A Lodestar team member must mark the release candidate as safe, after personally reviewing and / or testing it
+- Backup `stable` and `unstable` branches locally for restoration incase of accidental use of the incorrect merge method
 - Temporarily enable "Allow merge commits" under the Lodestar repository settings
 - Release Manager can now complete Step 4: Merge release candidate.
 - Disable "Allow merge commits" under the Lodestar repository settings
 - Complete Step 5: Tag stable release
 - Double check that Github release is correct and inform the Project Manager of completion
-- Update lodestar_dockerhub_tag in production repository
-- Deploy new stable release to `stable` group of servers
-- Confirm attestations and monitor for any issues
+- Project Manager to follow up with Devops updating both `bn` and `vc` stable servers
 
 ## Alternatives considered
 
