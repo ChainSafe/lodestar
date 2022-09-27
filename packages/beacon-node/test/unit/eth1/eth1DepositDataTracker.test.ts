@@ -61,8 +61,9 @@ describe("Eth1DepositDataTracker", function () {
     expect(expectedSize).to.be.equal(10);
 
     getBlocksByNumberStub.resolves([]);
-    for (let i = 0; i < 10; i++) {
-      expectedSize = Math.min(expectedSize * 2, 1000);
+    // Should take a whole longer to get back to the orignal batch size
+    for (let i = 0; i < 100; i++) {
+      expectedSize = Math.min(expectedSize + 10, 1000);
       await eth1DepositDataTracker["updateBlockCache"](3000);
       expect(eth1DepositDataTracker["eth1GetBlocksBatchSizeDynamic"]).to.be.equal(expectedSize);
     }
@@ -83,8 +84,9 @@ describe("Eth1DepositDataTracker", function () {
     expect(expectedSize).to.be.equal(10);
 
     getDepositEventsStub.resolves([]);
-    for (let i = 0; i < 10; i++) {
-      expectedSize = Math.min(expectedSize * 2, 1000);
+    // Should take a whole longer to get back to the orignal batch size
+    for (let i = 0; i < 100; i++) {
+      expectedSize = Math.min(expectedSize + 10, 1000);
       await eth1DepositDataTracker["updateDepositCache"](3000);
       expect(eth1DepositDataTracker["eth1GetLogsBatchSizeDynamic"]).to.be.equal(expectedSize);
     }

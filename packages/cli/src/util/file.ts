@@ -1,10 +1,12 @@
-import fs from "node:fs";
+import fs, {WriteFileOptions} from "node:fs";
 import path from "node:path";
 import stream from "node:stream";
 import {promisify} from "node:util";
 import got from "got";
 import yaml from "js-yaml";
 const {load, dump, FAILSAFE_SCHEMA, Schema, Type} = yaml;
+
+import {mkdir} from "./fs.js";
 
 export const yamlSchema = new Schema({
   include: [FAILSAFE_SCHEMA],
@@ -18,13 +20,6 @@ export const yamlSchema = new Schema({
     }),
   ],
 });
-
-/**
- * Maybe create a directory
- */
-export function mkdir(dirname: string): void {
-  fs.mkdirSync(dirname, {recursive: true});
-}
 
 export enum FileFormat {
   json = "json",
@@ -72,10 +67,20 @@ export function stringify(obj: unknown, fileFormat: FileFormat): string {
  *
  * Serialize either to json, yaml, or toml
  */
-export function writeFile(filepath: string, obj: unknown): void {
+export function writeFile(filepath: string, obj: unknown, options: WriteFileOptions = "utf-8"): void {
   mkdir(path.dirname(filepath));
   const fileFormat = path.extname(filepath).substr(1);
-  fs.writeFileSync(filepath, stringify(obj, fileFormat as FileFormat), "utf-8");
+  fs.writeFileSync(filepath, typeof obj === "string" ? obj : stringify(obj, fileFormat as FileFormat), options);
+}
+
+/**
+ * Create a file with `600 (-rw-------)` permissions
+ * *Note*: 600: Owner has full read and write access to the file,
+ * while no other user can access the file
+ */
+export function writeFile600Perm(filepath: string, obj: unknown, options?: WriteFileOptions): void {
+  writeFile(filepath, obj, options);
+  fs.chmodSync(filepath, "0600");
 }
 
 /**
