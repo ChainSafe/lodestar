@@ -26,7 +26,7 @@ describe("Eth2PeerDataStore", () => {
     expect(dbDatastoreStub.batch.calledOnce).to.equal(true);
   });
 
-  it.only("should persist to db the oldest item after max", async () => {
+  it("should persist to db the oldest item after max", async () => {
     // oldest item
     await eth2Datastore.put(new Key("k1"), Buffer.from("1"));
     expect(await eth2Datastore.get(new Key("k1"))).to.be.deep.equal(Buffer.from("1"));
