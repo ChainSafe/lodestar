@@ -364,7 +364,7 @@ export class Eth2Gossipsub extends Gossipsub {
     const seenTimestampSec = Date.now() / 1000;
 
     // Puts object in queue, validates, then processes
-    this.validatorFnsByType[topic.type](topic, msg, propagationSource.toString(), seenTimestampSec)
+    this.validatorFnsByType[topic.type](topic, msg, propagationSource.toB58String(), seenTimestampSec)
       .then((acceptance) => {
         this.reportMessageValidationResult(msgId, propagationSource, acceptance);
       })
