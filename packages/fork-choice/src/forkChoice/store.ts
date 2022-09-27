@@ -1,5 +1,5 @@
 import {EffectiveBalanceIncrements, CachedBeaconStateAllForks} from "@lodestar/state-transition";
-import {phase0, Slot, RootHex} from "@lodestar/types";
+import {phase0, Slot, RootHex, ValidatorIndex} from "@lodestar/types";
 import {toHexString} from "@chainsafe/ssz";
 import {CheckpointHexWithBalance} from "./interface.js";
 
@@ -43,6 +43,7 @@ export interface IForkChoiceStore {
   finalizedCheckpoint: CheckpointWithHex;
   unrealizedFinalizedCheckpoint: CheckpointWithHex;
   justifiedBalancesGetter: JustifiedBalancesGetter;
+  equivocatingIndices: Set<ValidatorIndex>;
 }
 
 /* eslint-disable @typescript-eslint/naming-convention, @typescript-eslint/member-ordering */
@@ -56,6 +57,7 @@ export class ForkChoiceStore implements IForkChoiceStore {
   unrealizedJustified: CheckpointHexWithBalance;
   private _finalizedCheckpoint: CheckpointWithHex;
   unrealizedFinalizedCheckpoint: CheckpointWithHex;
+  equivocatingIndices = new Set<ValidatorIndex>();
 
   constructor(
     public currentSlot: Slot,

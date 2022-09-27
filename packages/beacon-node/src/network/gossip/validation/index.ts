@@ -1,4 +1,4 @@
-import {MessageAcceptance} from "libp2p-gossipsub/src/types.js";
+import {MessageAcceptance} from "@chainsafe/libp2p-gossipsub/types";
 import {IChainForkConfig} from "@lodestar/config";
 import {ILogger, mapValues} from "@lodestar/utils";
 import {IMetrics} from "../../../metrics/index.js";

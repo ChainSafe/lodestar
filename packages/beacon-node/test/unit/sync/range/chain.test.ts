@@ -172,7 +172,7 @@ function logSyncChainFns(logger: ILogger, fns: SyncChainFns): SyncChainFns {
       return fns.downloadBeaconBlocksByRange(peer, request);
     },
     reportPeer(peer, action, actionName) {
-      logger.debug("mock reportPeer", {peer: peer.toB58String(), action, actionName});
+      logger.debug("mock reportPeer", {peer: peer.toString(), action, actionName});
       return fns.reportPeer(peer, action, actionName);
     },
     onEnd(err, target) {

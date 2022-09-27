@@ -8,8 +8,8 @@ on:
   workflow_dispatch:
 
 env:
-  GETH_COMMIT: be9742721f56eb8bb7ebf4f6a03fb01b13a05408
-  NETHERMIND_COMMIT: 82f331a3e7ff21712a5f839e0a62ba7c16110e44
+  GETH_COMMIT: 511bf8f18801520bf4e0c7e4d098a17d0665bc89
+  NETHERMIND_COMMIT: 5b73a2771ed00c6be792fc46f8d5c56333a28b11
 
 jobs:
   sim-merge-tests:
@@ -64,7 +64,7 @@ jobs:
         with:
           dotnet-version: "6.0.x"
       - name: Clone Nethermind merge interop branch
-        run: git clone -b kiln-rebased https://github.com/g11tech/nethermind --recursive && cd nethermind && git reset --hard $NETHERMIND_COMMIT && git submodule update --init --recursive
+        run: git clone -b master-20-sep-22 https://github.com/g11tech/nethermind --recursive && cd nethermind && git reset --hard $NETHERMIND_COMMIT && git submodule update --init --recursive
       - name: Build Nethermind
         run: cd nethermind/src/Nethermind && dotnet build Nethermind.sln -c Release
 

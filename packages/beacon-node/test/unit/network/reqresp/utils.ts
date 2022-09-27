@@ -1,7 +1,8 @@
 import {expect} from "chai";
+import {Stream, StreamStat} from "@libp2p/interface-connection";
+import {Uint8ArrayList} from "uint8arraylist";
 import {Root, phase0} from "@lodestar/types";
 import {toHexString} from "@chainsafe/ssz";
-import {Libp2pStream} from "../../../../src/network/index.js";
 import {generateEmptySignedBlock} from "../../../utils/block.js";
 
 export function createStatus(): phase0.Status {
@@ -39,7 +40,7 @@ export function generateEmptySignedBlocks(n = 3): phase0.SignedBeaconBlock[] {
 /**
  * Wrapper for type-safety to ensure and array of Buffers is equal with a diff in hex
  */
-export function expectEqualByteChunks(chunks: Buffer[], expectedChunks: Buffer[], message?: string): void {
+export function expectEqualByteChunks(chunks: Uint8Array[], expectedChunks: Uint8Array[], message?: string): void {
   expect(chunks.map(toHexString)).to.deep.equal(expectedChunks.map(toHexString), message);
 }
 
@@ -47,21 +48,32 @@ export function expectEqualByteChunks(chunks: Buffer[], expectedChunks: Buffer[]
  * Useful to simulate a LibP2P stream source emitting prepared bytes
  * and capture the response with a sink accessible via `this.resultChunks`
  */
-export class MockLibP2pStream implements Libp2pStream {
-  source: Libp2pStream["source"];
-  resultChunks: Buffer[] = [];
+export class MockLibP2pStream implements Stream {
+  id = "mock";
+  stat = {
+    direction: "inbound",
+    timeline: {
+      open: Date.now(),
+    },
+  } as StreamStat;
+  metadata = {};
+  source: Stream["source"];
+  resultChunks: Uint8Array[] = [];
 
-  constructor(requestChunks: Buffer[]) {
+  constructor(requestChunks: Uint8ArrayList[]) {
     this.source = arrToSource(requestChunks);
   }
-
-  sink: Libp2pStream["sink"] = async (source) => {
+  sink: Stream["sink"] = async (source) => {
     for await (const chunk of source) {
-      this.resultChunks.push(chunk);
+      this.resultChunks.push(chunk.subarray());
     }
   };
   // eslint-disable-next-line @typescript-eslint/no-empty-function
-  close: Libp2pStream["close"] = () => {};
-  reset: Libp2pStream["reset"] = () => this.close();
-  abort: Libp2pStream["abort"] = () => this.close();
+  close: Stream["close"] = () => {};
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
+  closeRead = (): void => {};
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
+  closeWrite = (): void => {};
+  reset: Stream["reset"] = () => this.close();
+  abort: Stream["abort"] = () => this.close();
 }

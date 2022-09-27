@@ -58,6 +58,7 @@ describe("ForkChoice", () => {
       finalizedCheckpoint: {epoch: genesisEpoch, root: fromHexString(finalizedRoot), rootHex: finalizedRoot},
       unrealizedFinalizedCheckpoint: {epoch: genesisEpoch, root: fromHexString(finalizedRoot), rootHex: finalizedRoot},
       justifiedBalancesGetter: () => balances,
+      equivocatingIndices: new Set(),
     };
 
     forkchoice = new ForkChoice(config, fcStore, protoArr);

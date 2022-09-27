@@ -84,7 +84,7 @@ describe("computeDeltas", () => {
       return votes;
     },
     fn: (votes) => {
-      computeDeltas(indices, votes, oldBalances, newBalances);
+      computeDeltas(indices, votes, oldBalances, newBalances, new Set());
     },
   });
 
