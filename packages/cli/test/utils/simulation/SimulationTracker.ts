@@ -1,36 +1,201 @@
 import EventEmitter from "node:events";
 import {routes} from "@lodestar/api/beacon";
-import {altair, Epoch, Slot} from "@lodestar/types";
+import {TIMELY_HEAD_FLAG_INDEX, TIMELY_TARGET_FLAG_INDEX, TIMELY_SOURCE_FLAG_INDEX, ForkName} from "@lodestar/params";
+import {allForks, altair, Epoch, Slot} from "@lodestar/types";
 import {toHexString} from "@lodestar/utils";
 import {EpochClock} from "./EpochClock.js";
 import {BeaconNodeProcess, SimulationParams} from "./types.js";
-import {
-  avg,
-  computeAttestation,
-  computeAttestationParticipation,
-  computeInclusionDelay,
-  computeSyncCommitteeParticipation,
-  getForkName,
-} from "./utils.js";
+import {avg, getForkName} from "./utils.js";
 
-const participationHeading = (id: string): string => `${id}-P-H/S/T`;
-const missedBlocksHeading = (id: string): string => `${id}-M`;
-// const nodeHeadHeading = (id: string): string => `${id}-H`;
-const finalizedHeading = (id: string): string => `${id}-F`;
-const syncCommitteeHeading = (id: string): string => `${id}-SC`;
+const TIMELY_HEAD = 1 << TIMELY_HEAD_FLAG_INDEX;
+const TIMELY_SOURCE = 1 << TIMELY_SOURCE_FLAG_INDEX;
+const TIMELY_TARGET = 1 << TIMELY_TARGET_FLAG_INDEX;
+
+type SlotMeasureInput = {
+  fork: ForkName;
+  slot: Slot;
+  block: allForks.SignedBeaconBlock;
+  clock: EpochClock;
+};
+
+type EpochMeasureInput = SlotMeasureInput & {
+  epoch: Epoch;
+  startSlot: Slot;
+  endSlot: Slot;
+  slotsMeasures: Map<Slot, SlotMeasure>;
+  state: allForks.BeaconState;
+};
+
+export type CommonSlotMeasure = {
+  readonly fork: ForkName;
+  readonly epochStr: string;
+  readonly epoch: Epoch;
+  readonly slot: Slot;
+};
+
+export type SlotMeasure = CommonSlotMeasure & {
+  readonly attestationsCount: number;
+  readonly inclusionDelay: number;
+  readonly head: string;
+  readonly finalizedSlot: Slot;
+  readonly syncCommitteeParticipation: number;
+};
+
+export type EpochMeasure = CommonSlotMeasure & {
+  readonly missedSlots: number[];
+  readonly attestationParticipationAvg: {head: number; source: number; target: number};
+  readonly syncCommitteeParticipationAvg: number;
+};
+
+export const processAttestationsCount = async (node: BeaconNodeProcess, {slot}: SlotMeasureInput): Promise<number> => {
+  const attestations = await node.api.beacon.getBlockAttestations(slot);
+
+  return Array.from(attestations.data).reduce(
+    (total, att) => total + att.aggregationBits.getTrueBitIndexes().length,
+    0
+  );
+};
+
+export const processInclusionDelay = async (node: BeaconNodeProcess, {slot}: SlotMeasureInput): Promise<number> => {
+  const attestations = await node.api.beacon.getBlockAttestations(slot);
+
+  return avg(Array.from(attestations.data).map((att) => slot - att.data.slot));
+};
+
+export const processHead = async (node: BeaconNodeProcess, _: SlotMeasureInput): Promise<string> => {
+  const head = await node.api.beacon.getBlockHeader("head");
+
+  return toHexString(head.data.root);
+};
+
+export const processFinalized = async (node: BeaconNodeProcess, _: SlotMeasureInput): Promise<number> => {
+  const finalized = await node.api.beacon.getBlockHeader("finalized");
+  return finalized.data.header.message.slot;
+};
+
+export const processSyncCommitteeParticipation = async (
+  _node: BeaconNodeProcess,
+  {fork: version, block}: SlotMeasureInput
+): Promise<number> => {
+  if (version === ForkName.phase0) {
+    return 0;
+  }
+
+  const {syncCommitteeBits} = (block as altair.SignedBeaconBlock).message.body.syncAggregate;
+  return syncCommitteeBits.getTrueBitIndexes().length / syncCommitteeBits.bitLen;
+};
+
+export const processSlotMeasure = async (node: BeaconNodeProcess, input: SlotMeasureInput): Promise<SlotMeasure> => {
+  const [attestationsCount, inclusionDelay, head, finalized, syncCommitteeParticipation] = await Promise.all([
+    processAttestationsCount(node, input),
+    processInclusionDelay(node, input),
+    processHead(node, input),
+    processFinalized(node, input),
+    processSyncCommitteeParticipation(node, input),
+  ]);
+
+  const epoch = input.clock.getEpochForSlot(input.slot);
+
+  return {
+    fork: input.fork,
+    slot: input.slot,
+    epoch,
+    epochStr: `${epoch}/${input.clock.getSlotIndexInEpoch(input.slot)}`,
+    attestationsCount,
+    inclusionDelay,
+    head,
+    finalizedSlot: finalized,
+    syncCommitteeParticipation,
+  };
+};
+
+export const processEpochMissedSlots = async (
+  _node: BeaconNodeProcess,
+  {startSlot, endSlot, slotsMeasures}: EpochMeasureInput
+): Promise<number[]> => {
+  const missedSlots: number[] = [];
+
+  for (let slot = startSlot; slot < endSlot; slot++) {
+    if (!slotsMeasures.has(slot)) {
+      missedSlots.push(slot);
+    }
+  }
+  return missedSlots;
+};
+
+export const processAttestationEpochParticipationAvg = async (
+  _node: BeaconNodeProcess,
+  {fork: version, state}: EpochMeasureInput
+): Promise<{head: number; source: number; target: number}> => {
+  if (version === ForkName.phase0) {
+    return {head: 0, source: 0, target: 0};
+  }
+
+  // Attestation to be computed at the end of epoch. At that time the "currentEpochParticipation" is all set to zero
+  // and we have to use "previousEpochParticipation" instead.
+  const previousEpochParticipation = (state as altair.BeaconState).previousEpochParticipation;
+  const totalAttestingBalance = {head: 0, source: 0, target: 0};
+  let totalEffectiveBalance = 0;
+
+  for (let i = 0; i < previousEpochParticipation.length; i++) {
+    totalAttestingBalance.head +=
+      previousEpochParticipation[i] & TIMELY_HEAD ? state.validators[i].effectiveBalance : 0;
+    totalAttestingBalance.source +=
+      previousEpochParticipation[i] & TIMELY_SOURCE ? state.validators[i].effectiveBalance : 0;
+    totalAttestingBalance.target +=
+      previousEpochParticipation[i] & TIMELY_TARGET ? state.validators[i].effectiveBalance : 0;
+
+    totalEffectiveBalance += state.validators[i].effectiveBalance;
+  }
+
+  totalAttestingBalance.head = totalAttestingBalance.head / totalEffectiveBalance;
+  totalAttestingBalance.source = totalAttestingBalance.source / totalEffectiveBalance;
+  totalAttestingBalance.target = totalAttestingBalance.target / totalEffectiveBalance;
+
+  return totalAttestingBalance;
+};
+
+export const processSyncCommitteeParticipationAvg = async (
+  _node: BeaconNodeProcess,
+  {startSlot, endSlot, fork: version, slotsMeasures: slotsMetrics}: EpochMeasureInput
+): Promise<number> => {
+  if (version === ForkName.phase0) {
+    return 0;
+  }
+
+  const participation: number[] = [];
+
+  for (let slot = startSlot; slot <= endSlot; slot++) {
+    participation.push(slotsMetrics.get(slot)?.syncCommitteeParticipation ?? 0);
+  }
+
+  return avg(participation);
+};
+
+export const processEpochMeasure = async (node: BeaconNodeProcess, input: EpochMeasureInput): Promise<EpochMeasure> => {
+  const [missedSlots, attestationParticipationAvg, syncCommitteeParticipationAvg] = await Promise.all([
+    processEpochMissedSlots(node, input),
+    processAttestationEpochParticipationAvg(node, input),
+    processSyncCommitteeParticipationAvg(node, input),
+  ]);
+
+  return {
+    fork: input.fork,
+    epoch: input.epoch,
+    slot: input.slot,
+    epochStr: `${input.epoch}/${input.clock.getSlotIndexInEpoch(input.slot)}`,
+    missedSlots,
+    attestationParticipationAvg,
+    syncCommitteeParticipationAvg,
+  };
+};
 
 export class SimulationTracker {
-  readonly producedBlocks: Map<string, Map<Slot, boolean>>;
-  readonly attestationsPerSlot: Map<string, Map<Slot, number>>;
-  readonly inclusionDelayPerBlock: Map<string, Map<Slot, number>>;
-  readonly attestationParticipation: Map<string, Map<Epoch, {head: number; source: number; target: number}>>;
-  private lastSeenSlot: Map<string, Slot>;
-  readonly headPerSlot: Map<string, Map<Slot, string>>;
-  readonly finalizedPerSlot: Map<string, Map<Slot, Slot>>;
-  readonly syncCommitteeParticipation: Map<string, Map<Slot, number>>;
-
+  readonly slotMeasures: Map<string, Map<Slot, SlotMeasure>> = new Map();
+  readonly epochMeasures: Map<string, Map<Epoch, EpochMeasure>> = new Map();
   readonly emitter = new EventEmitter();
 
+  private lastSeenSlot: Map<string, Slot> = new Map();
   private signal: AbortSignal;
   private nodes: BeaconNodeProcess[];
   private clock: EpochClock;
@@ -42,49 +207,24 @@ export class SimulationTracker {
     this.clock = clock;
     this.params = params;
 
-    this.producedBlocks = new Map();
-    this.attestationsPerSlot = new Map();
-    this.inclusionDelayPerBlock = new Map();
-    this.attestationParticipation = new Map();
-    this.lastSeenSlot = new Map();
-    this.headPerSlot = new Map();
-    this.finalizedPerSlot = new Map();
-    this.syncCommitteeParticipation = new Map();
+    for (const node of nodes) {
+      this.slotMeasures.set(node.id, new Map());
+      this.epochMeasures.set(node.id, new Map());
+      this.lastSeenSlot.set(node.id, 0);
 
-    for (let i = 0; i < nodes.length; i += 1) {
-      this.producedBlocks.set(nodes[i].id, new Map());
-      this.attestationsPerSlot.set(nodes[i].id, new Map());
-      this.inclusionDelayPerBlock.set(nodes[i].id, new Map());
-      this.attestationParticipation.set(nodes[i].id, new Map());
-      this.lastSeenSlot.set(nodes[i].id, 0);
-      this.headPerSlot.set(nodes[i].id, new Map());
-      this.finalizedPerSlot.set(nodes[i].id, new Map());
-      this.syncCommitteeParticipation.set(nodes[i].id, new Map());
-
-      // Set finalized slot to genesis
-      this.finalizedPerSlot.get(nodes[i].id)?.set(0, 0);
-      this.syncCommitteeParticipation.get(nodes[i].id)?.set(0, params.altairEpoch === 0 ? 1 : 0);
+      // We don't receive genesis block on event stream
+      this.slotMeasures.get(node.id)?.set(0, {
+        slot: 0,
+        epoch: 0,
+        epochStr: "0/0",
+        fork: getForkName(0, this.params),
+        attestationsCount: 0,
+        inclusionDelay: 0,
+        finalizedSlot: 0,
+        syncCommitteeParticipation: 0,
+        head: "",
+      });
     }
-  }
-
-  get missedBlocks(): Map<string, Slot[]> {
-    const missedBlocks: Map<string, Slot[]> = new Map();
-    const minSlot = Math.min(...this.lastSeenSlot.values());
-
-    for (const node of this.nodes) {
-      const missedBlocksForNode: Slot[] = [];
-
-      // We don't consider genesis slot as missed slot
-      for (let s = 1; s < minSlot; s++) {
-        if (!this.producedBlocks.get(node.id)?.get(s)) {
-          missedBlocksForNode.push(s);
-        }
-      }
-
-      missedBlocks.set(node.id, missedBlocksForNode);
-    }
-
-    return missedBlocks;
   }
 
   async start(): Promise<void> {
@@ -118,38 +258,38 @@ export class SimulationTracker {
   ): Promise<void> {
     const slot = event.slot;
     const lastSeenSlot = this.lastSeenSlot.get(node.id);
-    const blockAttestations = await node.api.beacon.getBlockAttestations(slot);
-    const block = await node.api.beacon.getBlockV2(slot);
 
     if (lastSeenSlot !== undefined && slot > lastSeenSlot) {
       this.lastSeenSlot.set(node.id, slot);
     }
 
-    this.producedBlocks.get(node.id)?.set(slot, true);
-    this.attestationsPerSlot.get(node.id)?.set(slot, computeAttestation(blockAttestations.data));
-    this.inclusionDelayPerBlock.get(node.id)?.set(slot, computeInclusionDelay(blockAttestations.data, slot));
-    this.syncCommitteeParticipation
+    const block = await node.api.beacon.getBlockV2(slot);
+
+    this.slotMeasures
       .get(node.id)
-      ?.set(slot, computeSyncCommitteeParticipation(block.version, block.data as altair.SignedBeaconBlock));
-
-    const head = await node.api.beacon.getBlockHeader("head");
-    this.headPerSlot.get(node.id)?.set(slot, toHexString(head.data.root));
-
-    const finalized = await node.api.beacon.getBlockHeader("finalized");
-    this.finalizedPerSlot.get(node.id)?.set(slot, finalized.data.header.message.slot);
+      ?.set(slot, await processSlotMeasure(node, {fork: block.version, slot, block: block.data, clock: this.clock}));
 
     if (this.clock.isFirstSlotOfEpoch(slot)) {
+      // Compute measures for the last epoch
+      const epoch = this.clock.getEpochForSlot(slot) - 1;
+      const startSlot = this.clock.getFirstSlotOfEpoch(epoch);
+      const endSlot = this.clock.getLastSlotOfEpoch(epoch);
       const state = await node.api.debug.getStateV2("head");
-      const participation = computeAttestationParticipation(state.data as altair.BeaconState);
 
-      this.attestationParticipation
-        .get(node.id)
-        // As the `computeAttestationParticipation` using previousEpochParticipation for calculations
-        ?.set(participation.epoch, {
-          head: participation.head,
-          source: participation.source,
-          target: participation.target,
-        });
+      this.epochMeasures.get(node.id)?.set(
+        epoch,
+        await processEpochMeasure(node, {
+          slot,
+          startSlot,
+          endSlot,
+          epoch,
+          block: block.data,
+          fork: block.version,
+          slotsMeasures: this.slotMeasures.get(node.id) ?? new Map<Slot, SlotMeasure>(),
+          state: state.data,
+          clock: this.clock,
+        })
+      );
     }
   }
 
@@ -171,77 +311,64 @@ export class SimulationTracker {
 
     for (let slot = 0; slot <= maxSlot; slot++) {
       const epoch = this.clock.getEpochForSlot(slot);
+      const forkName = getForkName(epoch, this.params);
+      const epochStr = `${this.clock.getEpochForSlot(slot)}/${this.clock.getSlotIndexInEpoch(slot)}`;
 
       const record: Record<string, unknown> = {
-        F: getForkName(epoch, this.params),
-        Eph: `${this.clock.getEpochForSlot(slot)}/${this.clock.getSlotIndexInEpoch(slot)}`,
+        F: forkName,
+        Eph: epochStr,
         slot,
+        "Missed Slots": this.nodes.map((node) => (this.slotMeasures.get(node.id)?.has(slot) ? "-" : "x")).join(""),
+        "Finalized Slots": this.nodes
+          .map((node) => this.slotMeasures.get(node.id)?.get(slot)?.finalizedSlot ?? "-")
+          .join(" | "),
+        "Attestations Count": this.nodes
+          .map((node) => this.slotMeasures.get(node.id)?.get(slot)?.attestationsCount ?? "-")
+          .join(" | "),
+        "Inclusion Delay": this.nodes
+          .map((node) => this.slotMeasures.get(node.id)?.get(slot)?.inclusionDelay ?? "-")
+          .join(" | "),
+        "SC Participation": this.nodes
+          .map((node) => this.slotMeasures.get(node.id)?.get(slot)?.syncCommitteeParticipation ?? "-")
+          .join(" | "),
       };
-
-      for (const node of this.nodes) {
-        record[missedBlocksHeading(node.id)] = this.producedBlocks.get(node.id)?.get(slot) ? "" : "x";
-      }
 
       // TODO: Find a better way to show the heads on each slot
       // for (const node of this.nodes) {
       //   record[nodeHeadHeading(node.id)] = this.headPerSlot.get(node.id)?.get(slot) ?? "";
       // }
 
-      for (const node of this.nodes) {
-        record[finalizedHeading(node.id)] = this.finalizedPerSlot.get(node.id)?.get(slot) ?? "";
-      }
-
-      for (const node of this.nodes) {
-        record[participationHeading(node.id)] = `${this.attestationsPerSlot.get(node.id)?.get(slot) ?? ""} - ${
-          this.inclusionDelayPerBlock.get(node.id)?.get(slot) ?? ""
-        }`;
-      }
-
-      for (const node of this.nodes) {
-        record[syncCommitteeHeading(node.id)] = this.syncCommitteeParticipation.get(node.id)?.get(slot)?.toFixed(2);
-      }
-
       records.push(record);
 
       if (this.clock.isLastSlotOfEpoch(slot)) {
-        const epoch = this.clock.getEpochForSlot(slot);
-        const firstSlot = this.clock.getFirstSlotOfEpoch(epoch);
-        const lastSlot = this.clock.getLastSlotOfEpoch(epoch);
-
-        const record: Record<string, unknown> = {
-          F: getForkName(epoch, this.params),
+        const summary: Record<string, unknown> = {
+          F: forkName,
           Eph: epoch,
           slot: "---",
+          "Missed Slots": this.nodes
+            .map((node) => this.epochMeasures.get(node.id)?.get(epoch)?.missedSlots.length)
+            .join(" | "),
+          "Finalized Slots": Array(this.nodes.length).fill("-").join(" | "),
+          "Attestations Count": this.nodes
+            .map((node) => {
+              const participation = this.epochMeasures.get(node.id)?.get(epoch)?.attestationParticipationAvg;
+              if (!participation) return "-";
+
+              return `${participation.head.toFixed(2)},${participation.source.toFixed(
+                2
+              )},${participation.target.toFixed(2)}`;
+            })
+            .join(" | "),
+          "Inclusion Delay": Array(this.nodes.length).fill("-").join(" | "),
+          "SC Participation": this.nodes
+            .map((node) => this.epochMeasures.get(node.id)?.get(epoch)?.syncCommitteeParticipationAvg ?? "-")
+            .join(" | "),
         };
-
-        for (const node of this.nodes) {
-          record[missedBlocksHeading(node.id)] = this.missedBlocks.get(node.id)?.filter((s) => s <= slot).length;
-        }
-
-        for (const node of this.nodes) {
-          const participation = this.attestationParticipation.get(node.id)?.get(epoch);
-          const participationStr =
-            participation?.head != null
-              ? `${participation?.head.toFixed(2)}/${participation?.source.toFixed(2)}/${participation?.target.toFixed(
-                  2
-                )}`
-              : "";
-          record[participationHeading(node.id)] = participationStr;
-
-          const syncParticipation: number[] = [];
-          for (let i = firstSlot; i <= lastSlot; i++) {
-            syncParticipation.push(this.syncCommitteeParticipation.get(node.id)?.get(i) ?? 0);
-          }
-          record[syncCommitteeHeading(node.id)] = avg(syncParticipation).toFixed(2);
-        }
-        records.push(record);
+        records.push(summary);
       }
     }
 
     console.table(records);
-    console.log(
-      ["M - Missed Blocks", "P - Attestation Participation", "H - Head", "S - Source", "T - Target"].join(" | ")
-    );
     /* eslint-enable @typescript-eslint/naming-convention */
   }
 }

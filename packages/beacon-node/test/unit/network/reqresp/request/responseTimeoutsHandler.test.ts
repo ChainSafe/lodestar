@@ -1,5 +1,5 @@
-import {Libp2p} from "libp2p/src/connection-manager";
-import {MuxedStream} from "libp2p";
+import {Libp2p} from "libp2p";
+import {Stream} from "@libp2p/interface-connection";
 import {LodestarError, sleep as _sleep} from "@lodestar/utils";
 import {phase0} from "@lodestar/types";
 import {config} from "@lodestar/config/default";
@@ -37,16 +37,19 @@ describe("network / reqresp / request / responseTimeoutsHandler", () => {
   const version = Version.V1;
   const requestBody: phase0.BeaconBlocksByRangeRequest = {startSlot: 0, count: 9, step: 1};
   const maxResponses = requestBody.count; // Random high number
-  const responseChunk = Buffer.concat([Buffer.from([RespStatus.SUCCESS]), ...sszSnappySignedBeaconBlockPhase0.chunks]);
+  const responseChunk = Buffer.concat([
+    Buffer.from([RespStatus.SUCCESS]),
+    ...sszSnappySignedBeaconBlockPhase0.chunks.map((chunk) => chunk.subarray()),
+  ]);
   const protocol = formatProtocolId(method, version, encoding);
   const peerId = getValidPeerId();
-  const metadata: IRequestErrorMetadata = {method, encoding, peer: peerId.toB58String()};
+  const metadata: IRequestErrorMetadata = {method, encoding, peer: peerId.toString()};
 
   /* eslint-disable @typescript-eslint/naming-convention */
   const testCases: {
     id: string;
     opts?: Partial<typeof timeoutOptions>;
-    source: () => AsyncGenerator<Buffer>;
+    source: () => AsyncGenerator<Uint8Array>;
     error?: LodestarError<any>;
   }[] = [
     {
@@ -102,15 +105,15 @@ describe("network / reqresp / request / responseTimeoutsHandler", () => {
     it(id, async () => {
       const libp2p = ({
         async dialProtocol() {
-          return {
-            stream: ({
-              async sink(): Promise<void> {},
-              source: source(),
-              close() {},
-              abort() {},
-            } as Partial<MuxedStream>) as MuxedStream,
-            protocol,
-          };
+          return ({
+            async sink(): Promise<void> {},
+            source: source(),
+            close() {},
+            closeRead() {},
+            closeWrite() {},
+            abort() {},
+            stat: {direction: "outbound", timeline: {open: Date.now()}, protocol},
+          } as Partial<Stream>) as Stream;
         },
       } as Partial<Libp2p>) as Libp2p;
 

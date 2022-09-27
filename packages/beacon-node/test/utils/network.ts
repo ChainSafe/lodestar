@@ -1,15 +1,16 @@
-import PeerId from "peer-id";
-import {Multiaddr} from "multiaddr";
+import {PeerId} from "@libp2p/interface-peer-id";
+import {Multiaddr} from "@multiformats/multiaddr";
+import {Libp2p} from "libp2p";
+import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
 import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {BitArray} from "@chainsafe/ssz";
 import {INetwork, Network} from "../../src/network/index.js";
-import {NodejsNode} from "../../src/network/nodejs/index.js";
-import {createPeerId} from "../../src/network/index.js";
+import {createNodejsLibp2p} from "../../src/network/nodejs/index.js";
 import {Libp2pEvent} from "../../src/constants/index.js";
 
-export async function createNode(multiaddr: string, inPeerId?: PeerId): Promise<NodejsNode> {
-  const peerId = inPeerId || (await createPeerId());
-  return new NodejsNode({
+export async function createNode(multiaddr: string, inPeerId?: PeerId): Promise<Libp2p> {
+  const peerId = inPeerId || (await createSecp256k1PeerId());
+  return createNodejsLibp2p({
     peerId,
     addresses: {listen: [multiaddr]},
   });
@@ -33,14 +34,14 @@ export async function disconnect(network: INetworkDebug, peer: PeerId): Promise<
 export function onPeerConnect(network: Network): Promise<void> {
   return new Promise<void>((resolve) =>
     // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-    network["libp2p"].connectionManager.on(Libp2pEvent.peerConnect, resolve)
+    network["libp2p"].connectionManager.addEventListener(Libp2pEvent.peerConnect, () => resolve())
   );
 }
 
 export function onPeerDisconnect(network: Network): Promise<void> {
   return new Promise<void>((resolve) =>
     // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-    network["libp2p"].connectionManager.on(Libp2pEvent.peerDisconnect, resolve)
+    network["libp2p"].connectionManager.addEventListener(Libp2pEvent.peerDisconnect, () => resolve())
   );
 }
 

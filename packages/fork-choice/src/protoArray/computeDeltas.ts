@@ -1,3 +1,4 @@
+import {ValidatorIndex} from "@lodestar/types";
 import {EffectiveBalanceIncrements} from "@lodestar/state-transition";
 import {VoteTracker, HEX_ZERO_HASH} from "./interface.js";
 import {ProtoArrayError, ProtoArrayErrorCode} from "./errors.js";
@@ -15,7 +16,8 @@ export function computeDeltas(
   indices: Map<string, number>,
   votes: VoteTracker[],
   oldBalances: EffectiveBalanceIncrements,
-  newBalances: EffectiveBalanceIncrements
+  newBalances: EffectiveBalanceIncrements,
+  equivocatingIndices: Set<ValidatorIndex>
 ): number[] {
   const deltas = Array.from({length: indices.size}, () => 0);
   const zeroHash = HEX_ZERO_HASH;
@@ -41,6 +43,24 @@ export function computeDeltas(
     // state to a new state with a higher epoch that is on a different fork because that fork may have
     // on-boarded fewer validators than the prior fork.
     const newBalance = newBalances[vIndex] || 0;
+
+    if (equivocatingIndices.has(vIndex)) {
+      // this function could be called multiple times but we only want to process slashing validator for 1 time
+      if (currentRoot !== zeroHash) {
+        const currentDeltaIndex = indices.get(currentRoot);
+        if (currentDeltaIndex !== undefined) {
+          if (currentDeltaIndex >= deltas.length) {
+            throw new ProtoArrayError({
+              code: ProtoArrayErrorCode.INVALID_NODE_DELTA,
+              index: currentDeltaIndex,
+            });
+          }
+          deltas[currentDeltaIndex] -= oldBalance;
+        }
+      }
+      vote.currentRoot = zeroHash;
+      continue;
+    }
 
     if (currentRoot !== nextRoot || oldBalance !== newBalance) {
       // We ignore the vote if it is not known in `indices .

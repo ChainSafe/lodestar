@@ -1,4 +1,4 @@
-import PeerId from "peer-id";
+import {PeerId} from "@libp2p/interface-peer-id";
 import {ILogger} from "@lodestar/utils";
 import {IMetrics} from "../../../metrics/index.js";
 import {MapDef} from "../../../util/map.js";
@@ -98,7 +98,7 @@ export class InboundRateLimiter implements IRateLimiter {
    * Tracks a request from a peer and returns whether to allow the request based on the configured rate limit params.
    */
   allowRequest(peerId: PeerId, requestTyped: RequestTypedContainer): boolean {
-    const peerIdStr = peerId.toB58String();
+    const peerIdStr = peerId.toString();
     this.lastSeenRequestsByPeer.set(peerIdStr, Date.now());
 
     // rate limit check for request
@@ -154,7 +154,7 @@ export class InboundRateLimiter implements IRateLimiter {
   }
 
   prune(peerId: PeerId): void {
-    const peerIdStr = peerId.toB58String();
+    const peerIdStr = peerId.toString();
     this.pruneByPeerIdStr(peerIdStr);
   }
 

@@ -1,4 +1,4 @@
-import PeerId from "peer-id";
+import {PeerId} from "@libp2p/interface-peer-id";
 
 export class PeerSet {
   private peerMap = new PeerMap<PeerId>();
@@ -23,7 +23,7 @@ export class PeerSet {
 
 /**
  * Special ES6 Map that allows using PeerId objects as indexers
- * Also, uses a WeakMap to reduce unnecessary calls to `PeerId.toB58String()`
+ * Also, uses a WeakMap to reduce unnecessary calls to `PeerId.toString()`
  */
 export class PeerMap<T> {
   private map: Map<string, T> = new Map<string, T>();
@@ -69,9 +69,9 @@ export class PeerMap<T> {
   }
 
   /**
-   * Caches peerId.toB58String result in a WeakMap
+   * Caches peerId.toString result in a WeakMap
    */
   private getPeerIdString(peerId: PeerId): string {
-    return peerId.toB58String();
+    return peerId.toString();
   }
 }

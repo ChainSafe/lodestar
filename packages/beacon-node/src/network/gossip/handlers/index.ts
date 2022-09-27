@@ -1,3 +1,4 @@
+import {peerIdFromString} from "@libp2p/peer-id";
 import {toHexString} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@lodestar/config";
 import {phase0, ssz} from "@lodestar/types";
@@ -28,7 +29,6 @@ import {
 import {INetwork} from "../../interface.js";
 import {NetworkEvent} from "../../events.js";
 import {PeerAction} from "../../peers/index.js";
-import {createFromB58String} from "../../../util/peerId.js";
 import {validateLightClientFinalityUpdate} from "../../../chain/validation/lightClientFinalityUpdate.js";
 import {validateLightClientOptimisticUpdate} from "../../../chain/validation/lightClientOptimisticUpdate.js";
 
@@ -132,7 +132,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
               case BlockErrorCode.EXECUTION_ENGINE_ERROR:
                 break;
               default:
-                network.reportPeer(createFromB58String(peerIdStr), PeerAction.LowToleranceError, "BadGossipBlock");
+                network.reportPeer(peerIdFromString(peerIdStr), PeerAction.LowToleranceError, "BadGossipBlock");
             }
           }
           logger.error("Error receiving block", {slot, peer: peerIdStr}, e as Error);
@@ -217,6 +217,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
 
       try {
         chain.opPool.insertAttesterSlashing(attesterSlashing);
+        chain.forkChoice.onAttesterSlashing(attesterSlashing);
       } catch (e) {
         logger.error("Error adding attesterSlashing to pool", {}, e as Error);
       }

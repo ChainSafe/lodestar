@@ -1,5 +1,5 @@
 import {setMaxListeners} from "node:events";
-import LibP2p from "libp2p";
+import {Libp2p} from "libp2p";
 import {Registry} from "prom-client";
 
 import {IBeaconConfig} from "@lodestar/config";
@@ -18,6 +18,7 @@ import {createMetrics, IMetrics, HttpMetricsServer} from "../metrics/index.js";
 import {getApi, BeaconRestApiServer} from "../api/index.js";
 import {initializeExecutionEngine, initializeExecutionBuilder} from "../execution/index.js";
 import {initializeEth1ForBlockProduction} from "../eth1/index.js";
+import {createLibp2pMetrics} from "../metrics/metrics/libp2p.js";
 import {IBeaconNodeOptions} from "./options.js";
 import {runNodeNotifier} from "./notifier.js";
 
@@ -44,7 +45,7 @@ export interface IBeaconNodeInitModules {
   db: IBeaconDb;
   logger: ILogger;
   processShutdownCallback: ProcessShutdownCallback;
-  libp2p: LibP2p;
+  libp2p: Libp2p;
   anchorState: BeaconStateAllForks;
   wsCheckpoint?: phase0.Checkpoint;
   metricsRegistries?: Registry[];
@@ -155,6 +156,7 @@ export class BeaconNode {
       initBeaconMetrics(metrics, anchorState);
       // Since the db is instantiated before this, metrics must be injected manually afterwards
       db.setMetrics(metrics.db);
+      createLibp2pMetrics(libp2p, metrics.register);
     }
 
     const chain = new BeaconChain(opts.chain, {
