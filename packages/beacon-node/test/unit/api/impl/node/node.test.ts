@@ -5,7 +5,7 @@ import sinon, {SinonStubbedInstance} from "sinon";
 import {PeerId} from "@libp2p/interface-peer-id";
 import {expect, use} from "chai";
 import chaiAsPromised from "chai-as-promised";
-import {Multiaddr} from "@multiformats/multiaddr";
+import {multiaddr} from "@multiformats/multiaddr";
 import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
 import {createKeypairFromPeerId, ENR} from "@chainsafe/discv5";
 import {BitArray} from "@chainsafe/ssz";
@@ -48,14 +48,14 @@ describe("node api implementation", function () {
     api = getNodeApi(defaultApiOptions, {network: networkStub, sync: syncStub});
     peerId = await createSecp256k1PeerId();
     sinon.stub(networkStub, "peerId").get(() => peerId);
-    sinon.stub(networkStub, "localMultiaddrs").get(() => [new Multiaddr("/ip4/127.0.0.1/tcp/36000")]);
+    sinon.stub(networkStub, "localMultiaddrs").get(() => [multiaddr("/ip4/127.0.0.1/tcp/36000")]);
   });
 
   describe("getNetworkIdentity", function () {
     it("should get node identity", async function () {
       const keypair = createKeypairFromPeerId(peerId);
       const enr = ENR.createV4(keypair.publicKey);
-      enr.setLocationMultiaddr(new Multiaddr("/ip4/127.0.0.1/tcp/36001"));
+      enr.setLocationMultiaddr(multiaddr("/ip4/127.0.0.1/tcp/36001"));
       networkStub.getEnr.returns(enr);
       networkStub.metadata = {
         get json(): altair.Metadata {
@@ -200,7 +200,7 @@ describe("node api implementation", function () {
 
 export function libp2pConnection(peer: PeerId, status: PeerStatus, direction: PeerDirection): Connection {
   return {
-    remoteAddr: new Multiaddr(),
+    remoteAddr: multiaddr(),
     stat: {
       status,
       direction,

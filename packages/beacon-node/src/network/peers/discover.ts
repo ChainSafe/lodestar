@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import {promisify} from "node:util";
 import {Libp2p} from "libp2p";
 import {PeerId} from "@libp2p/interface-peer-id";
-import {Multiaddr} from "@multiformats/multiaddr";
+import {multiaddr, Multiaddr} from "@multiformats/multiaddr";
 import {IBeaconConfig} from "@lodestar/config";
 import {ILogger} from "@lodestar/utils";
 import {Discv5, ENR, IDiscv5Metrics, IDiscv5DiscoveryInputOptions} from "@chainsafe/discv5";
@@ -112,7 +112,7 @@ export class PeerDiscovery {
     this.discv5 = Discv5.create({
       enr: opts.discv5.enr,
       peerId: modules.libp2p.peerId,
-      multiaddr: new Multiaddr(opts.discv5.bindAddr),
+      multiaddr: multiaddr(opts.discv5.bindAddr),
       config: opts.discv5,
       // TODO: IDiscv5Metrics is not properly defined, should remove the collect() function
       metrics: (modules.metrics?.discv5 as unknown) as {

@@ -2,7 +2,7 @@ import sinon from "sinon";
 import {expect} from "chai";
 
 import {PeerId} from "@libp2p/interface-peer-id";
-import {Multiaddr} from "@multiformats/multiaddr";
+import {multiaddr} from "@multiformats/multiaddr";
 import {ENR} from "@chainsafe/discv5";
 import {createIBeaconConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
@@ -26,7 +26,7 @@ import {ENRKey} from "../../../src/network/metadata.js";
 import {memoOnce} from "../../utils/cache.js";
 
 let port = 9000;
-const multiaddr = "/ip4/127.0.0.1/tcp/0";
+const mu = "/ip4/127.0.0.1/tcp/0";
 
 describe("network", function () {
   if (this.timeout() < 5000) this.timeout(5000);
@@ -47,7 +47,7 @@ describe("network", function () {
   async function getOpts(peerId: PeerId): Promise<INetworkOptions> {
     const bindAddrUdp = `/ip4/0.0.0.0/udp/${port++}`;
     const enr = ENR.createFromPeerId(peerId);
-    enr.setLocationMultiaddr(new Multiaddr(bindAddrUdp));
+    enr.setLocationMultiaddr(multiaddr(bindAddrUdp));
 
     return {
       ...defaultNetworkOptions,
@@ -85,7 +85,7 @@ describe("network", function () {
     const reqRespHandlers = getReqRespHandlers({db, chain});
     const gossipHandlers = {} as GossipHandlers;
 
-    const libp2p = await createNode(multiaddr);
+    const libp2p = await createNode(mu);
     const logger = testLogger(nodeName);
 
     const opts = await getOpts(libp2p.peerId);
