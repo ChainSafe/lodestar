@@ -8,8 +8,6 @@ import {ReturnType as ValidatorListReturnType} from "../../src/cmds/validator/li
 import {testFilesDir} from "../utils.js";
 import {getCliInMemoryRunner} from "../utils/inMemoryRunner.js";
 
-/* eslint-disable no-console */
-
 type ConsoleKeys = "log" | "warn" | "error";
 const consoleKeys: ConsoleKeys[] = ["log", "warn", "error"];
 

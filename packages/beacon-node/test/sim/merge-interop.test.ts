@@ -41,7 +41,7 @@ import {shell} from "./shell.js";
 //   ../../node_modules/.bin/mocha test/sim/merge.test.ts
 // ```
 
-/* eslint-disable no-console, @typescript-eslint/naming-convention, quotes */
+/* @typescript-eslint/naming-convention, quotes */
 
 // BELLATRIX_EPOCH will happen at 2 sec * 8 slots = 16 sec
 // 10 ttd / 2 difficulty per block = 5 blocks * 5 sec = 25 sec
