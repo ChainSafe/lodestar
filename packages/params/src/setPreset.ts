@@ -1,5 +1,6 @@
 import {PresetName} from "./presetName.js";
 import {presetStatus} from "./presetStatus.js";
+import {BeaconPreset} from "./interface/index.js";
 
 export {PresetName};
 
@@ -37,4 +38,15 @@ console.log({SLOTS_PER_EPOCH})
   }
 
   userSelectedPreset = presetName;
+}
+
+export let userOverrides: Partial<BeaconPreset> | null = null;
+
+/**
+ * @param presetName - the preset to use as a base
+ * @param overrides - customized fields
+ */
+export function setCustomPreset(presetName: PresetName, overrides: Partial<BeaconPreset>): void {
+  setActivePreset(presetName);
+  userOverrides = overrides;
 }

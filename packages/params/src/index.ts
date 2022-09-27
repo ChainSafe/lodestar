@@ -3,7 +3,7 @@ import {preset as mainnet} from "./presets/mainnet/index.js";
 import {preset as minimal} from "./presets/minimal/index.js";
 import {preset as gnosis} from "./presets/gnosis/index.js";
 import {presetStatus} from "./presetStatus.js";
-import {userSelectedPreset} from "./setPreset.js";
+import {userSelectedPreset, userOverrides} from "./setPreset.js";
 
 export * from "./interface/index.js";
 export {ForkName, ForkSeq} from "./forkName.js";
@@ -83,7 +83,7 @@ export const {
   MAX_TRANSACTIONS_PER_PAYLOAD,
   BYTES_PER_LOGS_BLOOM,
   MAX_EXTRA_DATA_BYTES,
-} = presets[ACTIVE_PRESET];
+} = {...presets[ACTIVE_PRESET], ...userOverrides};
 
 ////////////
 // Constants
