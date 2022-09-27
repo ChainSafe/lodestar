@@ -56,7 +56,7 @@ export function attestationParticipationAssertions(env: SimulationEnvironment, e
   for (const node of env.nodes) {
     describe(`${node.id}`, () => {
       it("should have correct attestation on head", () => {
-        const participation = env.tracker.attestationParticipation.get(node.id)?.get(epoch);
+        const participation = env.tracker.epochMeasures.get(node.id)?.get(epoch)?.attestationParticipationAvg;
 
         expect(participation?.head).to.be.gte(
           env.acceptableParticipationRate,
@@ -65,7 +65,7 @@ export function attestationParticipationAssertions(env: SimulationEnvironment, e
       });
 
       it("should have correct attestation on target", () => {
-        const participation = env.tracker.attestationParticipation.get(node.id)?.get(epoch);
+        const participation = env.tracker.epochMeasures.get(node.id)?.get(epoch)?.attestationParticipationAvg;
 
         expect(participation?.target).to.be.gte(
           env.acceptableParticipationRate,
@@ -74,7 +74,7 @@ export function attestationParticipationAssertions(env: SimulationEnvironment, e
       });
 
       it("should have correct attestation on source", () => {
-        const participation = env.tracker.attestationParticipation.get(node.id)?.get(epoch);
+        const participation = env.tracker.epochMeasures.get(node.id)?.get(epoch)?.attestationParticipationAvg;
 
         expect(participation?.source).to.be.gte(
           env.acceptableParticipationRate,
@@ -88,8 +88,8 @@ export function attestationParticipationAssertions(env: SimulationEnvironment, e
 export function missedBlocksAssertions(env: SimulationEnvironment, epoch: Epoch): void {
   if (env.params.beaconNodes === 1) {
     it("should not have any missed blocks than genesis", () => {
-      expect(env.tracker.missedBlocks.get(env.nodes[0].id)).to.be.eql(
-        [0],
+      expect(env.tracker.epochMeasures.get(env.nodes[0].id)?.get(epoch)?.missedSlots).to.be.eql(
+        [],
         "single node should not miss any blocks other than genesis"
       );
     });
@@ -99,16 +99,8 @@ export function missedBlocksAssertions(env: SimulationEnvironment, epoch: Epoch)
   for (const node of env.nodes) {
     describe(node.id, () => {
       it("should have same missed blocks as first node", () => {
-        const startSlot = env.clock.getFirstSlotOfEpoch(epoch);
-        const endSlot = env.clock.getLastSlotOfEpoch(epoch);
-
-        const missedBlocksOnFirstNode = env.tracker.missedBlocks
-          .get(env.nodes[0].id)
-          ?.filter((s) => s >= startSlot && s <= endSlot);
-
-        const missedBlocksOnNodeN = env.tracker.missedBlocks
-          .get(node.id)
-          ?.filter((s) => s >= startSlot && s <= endSlot);
+        const missedBlocksOnFirstNode = env.tracker.epochMeasures.get(env.nodes[0].id)?.get(epoch)?.missedSlots;
+        const missedBlocksOnNodeN = env.tracker.epochMeasures.get(node.id)?.get(epoch)?.missedSlots;
 
         expect(missedBlocksOnNodeN).to.eql(
           missedBlocksOnFirstNode,
@@ -127,7 +119,7 @@ export function inclusionDelayAssertions(env: SimulationEnvironment, epoch: Epoc
 
       for (let slot = startSlot; slot <= endSlot; slot++) {
         it(`should not have higher inclusion delay for attestations in slot "${slot}"`, () => {
-          const inclusionDelay = env.tracker.inclusionDelayPerBlock.get(node.id)?.get(slot);
+          const inclusionDelay = env.tracker.slotMeasures.get(node.id)?.get(slot)?.inclusionDelay;
           const acceptableMaxInclusionDelay = env.acceptableMaxInclusionDelay;
 
           expect(inclusionDelay).to.lte(
@@ -148,7 +140,7 @@ export function attestationPerSlotAssertions(env: SimulationEnvironment, epoch: 
 
       for (let slot = startSlot; slot <= endSlot; slot++) {
         it(`should have attestations count equals to MAX_COMMITTEES_PER_SLOT for slot "${slot}"`, () => {
-          const attestationsCount = env.tracker.attestationsPerSlot.get(node.id)?.get(slot);
+          const attestationsCount = env.tracker.slotMeasures.get(node.id)?.get(slot)?.attestationsCount;
 
           expect(attestationsCount).to.eql(
             MAX_COMMITTEES_PER_SLOT,
@@ -174,7 +166,7 @@ export function finalityAssertions(env: SimulationEnvironment, epoch: Epoch): vo
               ? 0
               : env.clock.getFirstSlotOfEpoch(env.clock.getEpochForSlot(slot) - 2);
 
-          const finalizedSlot = env.tracker.finalizedPerSlot.get(node.id)?.get(slot);
+          const finalizedSlot = env.tracker.slotMeasures.get(node.id)?.get(slot)?.finalizedSlot;
 
           expect(finalizedSlot).to.gte(
             expectedFinalizedSlot,
@@ -195,8 +187,8 @@ export function headsAssertions(env: SimulationEnvironment, epoch: Epoch): void 
 
       for (let slot = startSlot; slot <= endSlot; slot++) {
         it(`should have same head as first node for slot "${slot}"`, () => {
-          const headOnFirstNode = env.tracker.headPerSlot.get(env.nodes[0].id)?.get(slot);
-          const headOnNNode = env.tracker.headPerSlot.get(node.id)?.get(slot);
+          const headOnFirstNode = env.tracker.slotMeasures.get(env.nodes[0].id)?.get(slot)?.head;
+          const headOnNNode = env.tracker.slotMeasures.get(node.id)?.get(slot)?.head;
 
           expect(headOnNNode).to.eql(
             headOnFirstNode,
@@ -226,7 +218,7 @@ export function syncCommitteeAssertions(env: SimulationEnvironment, epoch: Epoch
         }
 
         it(`should have have higher participation for slot "${slot}"`, () => {
-          const participation = env.tracker.syncCommitteeParticipation.get(env.nodes[0].id)?.get(slot);
+          const participation = env.tracker.slotMeasures.get(env.nodes[0].id)?.get(slot)?.syncCommitteeParticipation;
           const acceptableMinSyncParticipation = env.acceptableMinSyncParticipation;
 
           expect(participation).to.gte(
