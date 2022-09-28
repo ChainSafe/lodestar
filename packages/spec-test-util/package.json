@@ -53,11 +53,11 @@
     "mocha": "^8.1.1",
     "rimraf": "^3.0.2",
     "snappyjs": "^0.7.0",
-    "tar": "^6.0.5"
+    "tar": "^6.1.11"
   },
   "devDependencies": {
     "@types/async-retry": "^1.4.3",
-    "@types/tar": "^4.0.4"
+    "@types/tar": "^6.1.2"
   },
   "peerDependencies": {
     "chai": "^4.2.0",
