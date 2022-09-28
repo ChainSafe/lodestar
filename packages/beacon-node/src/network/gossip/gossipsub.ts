@@ -160,7 +160,8 @@ export class Eth2Gossipsub extends GossipSub {
     const topicStr = this.getGossipTopicString(topic);
     const sszType = getGossipSSZType(topic);
     const messageData = (sszType.serialize as (object: GossipTypeMap[GossipType]) => Uint8Array)(object);
-    const result = await this.publish(topicStr, messageData);
+    // it's faster to publish in batch mode
+    const result = await this.publish(topicStr, messageData, true);
     const sentPeers = result.recipients.length;
     this.logger.verbose("Publish to topic", {topic: topicStr, sentPeers});
     return sentPeers;
