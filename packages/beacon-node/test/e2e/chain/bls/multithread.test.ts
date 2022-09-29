@@ -3,7 +3,7 @@ import bls from "@chainsafe/bls";
 import {ISignatureSet, SignatureSetType} from "@lodestar/state-transition";
 import {BlsMultiThreadWorkerPool} from "../../../../src/chain/bls/multithread/index.js";
 import {testLogger} from "../../../utils/logger.js";
-import {VerifySignatureOpts} from "../../../../src/chain/bls/interface.js"
+import {VerifySignatureOpts} from "../../../../src/chain/bls/interface.js";
 
 describe("chain / bls / multithread queue", function () {
   this.timeout(30 * 1000);
