@@ -75,10 +75,6 @@ export async function prepareUpdateNaive(
   const syncAttestedBlockRoot = stateWithSyncAggregate.blockRoots.get(syncAttestedSlot % SLOTS_PER_HISTORICAL_ROOT);
   const syncAttestedBlockHeader = await chain.getBlockHeaderByRoot(syncAttestedBlockRoot);
 
-  // Get the ForkVersion used in the syncAggregate, as verified in the state transition fn
-  const syncAttestedEpoch = computeEpochAtSlot(syncAttestedSlot);
-  const syncAttestedForkVersion = getForkVersion(stateWithSyncAggregate.fork, syncAttestedEpoch);
-
   // Get the finalized state defined in the block "attested" by the current sync committee
   const syncAttestedState = await chain.getStateByRoot(syncAttestedBlockHeader.stateRoot);
   const finalizedCheckpointBlockHeader = await chain.getBlockHeaderByRoot(syncAttestedState.finalizedCheckpoint.root);
@@ -101,6 +97,5 @@ export async function prepareUpdateNaive(
     finalizedHeader: finalizedCheckpointBlockHeader,
     finalityBranch: finalityBranch,
     syncAggregate,
-    forkVersion: syncAttestedForkVersion,
   };
 }

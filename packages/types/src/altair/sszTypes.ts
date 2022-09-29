@@ -200,7 +200,6 @@ export const LightClientUpdate = new ContainerType(
     finalizedHeader: phase0Ssz.BeaconBlockHeader,
     finalityBranch: new VectorCompositeType(Bytes32, FINALIZED_ROOT_DEPTH),
     syncAggregate: SyncAggregate,
-    forkVersion: Version,
   },
   {typeName: "LightClientUpdate", jsonCase: "eth2"}
 );
