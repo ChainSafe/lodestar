@@ -1,5 +1,6 @@
 import {expect} from "chai";
 import varint from "varint";
+import {Uint8ArrayList} from "uint8arraylist";
 import {BufferedSource} from "../../../../../../src/network/reqresp/utils/index.js";
 import {readSszSnappyPayload} from "../../../../../../src/network/reqresp/encodingStrategies/sszSnappy/index.js";
 import {isEqualSszType} from "../../../../../utils/ssz.js";
@@ -12,7 +13,7 @@ describe("network / reqresp / sszSnappy / decode", () => {
 
     for (const {id, type, bytes, streamedBody, body} of testCases) {
       const deserializedBody = body ?? type.deserialize(Buffer.from(bytes));
-      const streamedBytes = Buffer.concat([Buffer.from(varint.encode(bytes.length)), streamedBody]);
+      const streamedBytes = new Uint8ArrayList(Buffer.concat([Buffer.from(varint.encode(bytes.length)), streamedBody]));
 
       it(id, async () => {
         const bufferedSource = new BufferedSource(arrToSource([streamedBytes]));

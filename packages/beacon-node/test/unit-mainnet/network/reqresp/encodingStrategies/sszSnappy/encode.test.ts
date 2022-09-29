@@ -1,5 +1,5 @@
 import all from "it-all";
-import pipe from "it-pipe";
+import {pipe} from "it-pipe";
 import {expect} from "chai";
 import varint from "varint";
 

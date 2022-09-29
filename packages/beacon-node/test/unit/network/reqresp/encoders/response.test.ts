@@ -1,5 +1,6 @@
-import pipe from "it-pipe";
+import {pipe} from "it-pipe";
 import all from "it-all";
+import {Uint8ArrayList} from "uint8arraylist";
 import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {chainConfig} from "@lodestar/config/default";
 import {createIBeaconConfig} from "@lodestar/config";
@@ -59,7 +60,7 @@ describe("network / reqresp / encoders / response - Success and error cases", ()
     method?: Method;
     version?: Version;
     encoding?: Encoding;
-    chunks?: Buffer[];
+    chunks?: Uint8ArrayList[];
     responseChunks?: ResponseChunk[];
     // decode only
     decodeError?: LodestarError<any>;
@@ -79,7 +80,7 @@ describe("network / reqresp / encoders / response - Success and error cases", ()
       method: Method.Ping,
       encoding: Encoding.SSZ_SNAPPY,
       decodeError: new SszSnappyError({code: SszSnappyErrorCode.SOURCE_ABORTED}),
-      chunks: [Buffer.from([RespStatus.SUCCESS])],
+      chunks: [new Uint8ArrayList(Buffer.from([RespStatus.SUCCESS]))],
       // Not possible to encode this invalid case
     },
     {
@@ -88,7 +89,7 @@ describe("network / reqresp / encoders / response - Success and error cases", ()
       version: Version.V1,
       encoding: Encoding.SSZ_SNAPPY,
       responseChunks: [{status: RespStatus.SUCCESS, body: BigInt(1)}],
-      chunks: [Buffer.from([RespStatus.SUCCESS]), ...sszSnappyPing.chunks],
+      chunks: [new Uint8ArrayList(Buffer.from([RespStatus.SUCCESS])), ...sszSnappyPing.chunks],
       // decode will throw since Ping's Uint64 is smaller than Status min size
       decodeError: new SszSnappyError({code: SszSnappyErrorCode.UNDER_SSZ_MIN_SIZE, minSize: 84, sszDataLength: 8}),
       // encode will throw when trying to serialize a Uint64
@@ -105,7 +106,7 @@ describe("network / reqresp / encoders / response - Success and error cases", ()
       responseChunks: [{status: RespStatus.SUCCESS, body: sszSnappySignedBeaconBlockPhase0.body}],
       chunks: [
         // <result>
-        Buffer.from([RespStatus.SUCCESS]),
+        new Uint8ArrayList(Buffer.from([RespStatus.SUCCESS])),
         // <encoding-dependent-header> | <encoded-payload>
         ...sszSnappySignedBeaconBlockPhase0.chunks,
       ],
@@ -118,9 +119,9 @@ describe("network / reqresp / encoders / response - Success and error cases", ()
       responseChunks: [{status: RespStatus.SUCCESS, body: sszSnappySignedBeaconBlockPhase0.body}],
       chunks: [
         // <result>
-        Buffer.from([RespStatus.SUCCESS]),
+        new Uint8ArrayList(Buffer.from([RespStatus.SUCCESS])),
         // <context-bytes>
-        config.forkName2ForkDigest(ForkName.phase0) as Buffer,
+        new Uint8ArrayList(config.forkName2ForkDigest(ForkName.phase0)),
         // <encoding-dependent-header> | <encoded-payload>
         ...sszSnappySignedBeaconBlockPhase0.chunks,
       ],
@@ -133,9 +134,9 @@ describe("network / reqresp / encoders / response - Success and error cases", ()
       responseChunks: [{status: RespStatus.SUCCESS, body: sszSnappySignedBeaconBlockAltair.body}],
       chunks: [
         // <result>
-        Buffer.from([RespStatus.SUCCESS]),
+        new Uint8ArrayList(Buffer.from([RespStatus.SUCCESS])),
         // <context-bytes>
-        config.forkName2ForkDigest(ForkName.altair) as Buffer,
+        new Uint8ArrayList(config.forkName2ForkDigest(ForkName.altair)),
         // <encoding-dependent-header> | <encoded-payload>
         ...sszSnappySignedBeaconBlockAltair.chunks,
       ],
@@ -151,10 +152,10 @@ describe("network / reqresp / encoders / response - Success and error cases", ()
       ],
       chunks: [
         // Chunk 0 - success
-        Buffer.from([RespStatus.SUCCESS]),
+        new Uint8ArrayList(Buffer.from([RespStatus.SUCCESS])),
         ...sszSnappyPing.chunks,
         // Chunk 1 - success
-        Buffer.from([RespStatus.SUCCESS]),
+        new Uint8ArrayList(Buffer.from([RespStatus.SUCCESS])),
         ...sszSnappyPing.chunks,
       ],
     },
@@ -170,15 +171,32 @@ describe("network / reqresp / encoders / response - Success and error cases", ()
       ],
       chunks: [
         // Chunk 0 - success
-        Buffer.from([RespStatus.SUCCESS]),
+        new Uint8ArrayList(Buffer.from([RespStatus.SUCCESS])),
         ...sszSnappyPing.chunks,
         // Chunk 1 - success
-        Buffer.from([RespStatus.SUCCESS]),
+        new Uint8ArrayList(Buffer.from([RespStatus.SUCCESS])),
         ...sszSnappyPing.chunks,
         // Chunk 2 - error
-        Buffer.from([RespStatus.SERVER_ERROR]),
+        new Uint8ArrayList(Buffer.from([RespStatus.SERVER_ERROR])),
       ],
     },
+    {
+      id: "Decode successfully response_chunk as a single Uint8ArrayList",
+      method: Method.Ping,
+      encoding: Encoding.SSZ_SNAPPY,
+      responseChunks: [
+        {status: RespStatus.SUCCESS, body: BigInt(1)},
+        {status: RespStatus.SUCCESS, body: BigInt(1)},
+      ],
+      chunks: [
+        // success, Ping payload = BigInt(1)
+        new Uint8ArrayList(Buffer.from([RespStatus.SUCCESS]), ...sszSnappyPing.chunks),
+        new Uint8ArrayList(Buffer.from([RespStatus.SUCCESS]), ...sszSnappyPing.chunks),
+      ],
+      // It's not able to produce a single concatenated chunk with our encoder
+      skipEncoding: true,
+    },
+
     {
       id: "Decode successfully response_chunk as a single concated chunk",
       method: Method.Ping,
@@ -189,8 +207,12 @@ describe("network / reqresp / encoders / response - Success and error cases", ()
       ],
       chunks: [
         // success, Ping payload = BigInt(1)
-        Buffer.concat([Buffer.from([RespStatus.SUCCESS]), ...sszSnappyPing.chunks]),
-        Buffer.concat([Buffer.from([RespStatus.SUCCESS]), ...sszSnappyPing.chunks]),
+        new Uint8ArrayList(
+          Buffer.concat([Buffer.from([RespStatus.SUCCESS]), ...sszSnappyPing.chunks.map((c) => c.subarray())])
+        ),
+        new Uint8ArrayList(
+          Buffer.concat([Buffer.from([RespStatus.SUCCESS]), ...sszSnappyPing.chunks.map((c) => c.subarray())])
+        ),
       ],
       // It's not able to produce a single concatenated chunk with our encoder
       skipEncoding: true,
@@ -207,12 +229,12 @@ describe("network / reqresp / encoders / response - Success and error cases", ()
       ],
       chunks: [
         // Chunk 0 - success block in phase0 with context bytes
-        Buffer.from([RespStatus.SUCCESS]),
-        config.forkName2ForkDigest(ForkName.phase0) as Buffer,
+        new Uint8ArrayList(Buffer.from([RespStatus.SUCCESS])),
+        new Uint8ArrayList(config.forkName2ForkDigest(ForkName.phase0)),
         ...sszSnappySignedBeaconBlockPhase0.chunks,
         // Chunk 1 - success block in altair with context bytes
-        Buffer.from([RespStatus.SUCCESS]),
-        config.forkName2ForkDigest(ForkName.altair) as Buffer,
+        new Uint8ArrayList(Buffer.from([RespStatus.SUCCESS])),
+        new Uint8ArrayList(config.forkName2ForkDigest(ForkName.altair)),
         ...sszSnappySignedBeaconBlockAltair.chunks,
       ],
     },
@@ -221,22 +243,22 @@ describe("network / reqresp / encoders / response - Success and error cases", ()
     {
       id: "INVALID_REQUEST - no error message",
       decodeError: new ResponseError(RespStatus.INVALID_REQUEST, ""),
-      chunks: [Buffer.from([RespStatus.INVALID_REQUEST])],
+      chunks: [new Uint8ArrayList(Buffer.from([RespStatus.INVALID_REQUEST]))],
       responseChunks: [{status: RespStatus.INVALID_REQUEST, errorMessage: ""}],
     },
     {
       id: "SERVER_ERROR -  no error message",
       decodeError: new ResponseError(RespStatus.SERVER_ERROR, ""),
-      chunks: [Buffer.from([RespStatus.SERVER_ERROR])],
+      chunks: [new Uint8ArrayList(Buffer.from([RespStatus.SERVER_ERROR]))],
       responseChunks: [{status: RespStatus.SERVER_ERROR, errorMessage: ""}],
     },
     {
       id: "SERVER_ERROR - with error message",
       decodeError: new ResponseError(RespStatus.SERVER_ERROR, "sNaPpYIzTEST_ERROR"),
       chunks: [
-        Buffer.from([RespStatus.SERVER_ERROR]),
-        fromHexBuf("0x0a"),
-        fromHexBuf("0xff060000734e61507059010e000049b97aaf544553545f4552524f52"),
+        new Uint8ArrayList(Buffer.from([RespStatus.SERVER_ERROR])),
+        new Uint8ArrayList(fromHexBuf("0x0a")),
+        new Uint8ArrayList(fromHexBuf("0xff060000734e61507059010e000049b97aaf544553545f4552524f52")),
       ],
       responseChunks: [{status: RespStatus.SERVER_ERROR, errorMessage: "TEST_ERROR"}],
     },
@@ -244,12 +266,18 @@ describe("network / reqresp / encoders / response - Success and error cases", ()
     {
       id: "SERVER_ERROR - Slice long error message",
       decodeError: new ResponseError(RespStatus.SERVER_ERROR, "TEST_ERROR".padEnd(512, "0").slice(0, 256)),
-      chunks: [Buffer.from([RespStatus.SERVER_ERROR]), Buffer.from("TEST_ERROR".padEnd(512, "0"))],
+      chunks: [
+        new Uint8ArrayList(Buffer.from([RespStatus.SERVER_ERROR])),
+        new Uint8ArrayList(Buffer.from("TEST_ERROR".padEnd(512, "0"))),
+      ],
     },
     {
       id: "SERVER_ERROR - Remove non-ascii characters from error message",
       decodeError: new ResponseError(RespStatus.SERVER_ERROR, "TEST_ERROR"),
-      chunks: [Buffer.from([RespStatus.SERVER_ERROR]), Buffer.from("TEST_ERROR\u03A9")],
+      chunks: [
+        new Uint8ArrayList(Buffer.from([RespStatus.SERVER_ERROR])),
+        new Uint8ArrayList(Buffer.from("TEST_ERROR\u03A9")),
+      ],
     },
   ];
 
@@ -316,7 +344,10 @@ describe("network / reqresp / encoders / response - Success and error cases", ()
           await expectRejectedWithLodestarError(resultPromise, encodeError);
         } else if (chunks) {
           const encodedChunks = await resultPromise;
-          expectEqualByteChunks(encodedChunks, chunks);
+          expectEqualByteChunks(
+            encodedChunks,
+            chunks.map((c) => c.subarray())
+          );
         } else {
           throw Error("Bad testCase");
         }

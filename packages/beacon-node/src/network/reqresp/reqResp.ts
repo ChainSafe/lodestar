@@ -1,19 +1,18 @@
 import {setMaxListeners} from "node:events";
-import {Connection} from "libp2p";
-import {HandlerProps} from "libp2p/src/registrar";
-import LibP2p from "libp2p";
-import PeerId from "peer-id";
+import {Libp2p} from "libp2p";
+import {PeerId} from "@libp2p/interface-peer-id";
+import {Connection, Stream} from "@libp2p/interface-connection";
 import {ForkName} from "@lodestar/params";
 import {IBeaconConfig} from "@lodestar/config";
 import {allForks, phase0} from "@lodestar/types";
 import {ILogger} from "@lodestar/utils";
 import {RespStatus, timeoutOptions} from "../../constants/index.js";
-import {IPeerRpcScoreStore} from "../peers/index.js";
-import {MetadataController} from "../metadata.js";
-import {INetworkEventBus, NetworkEvent} from "../events.js";
 import {PeersData} from "../peers/peersData.js";
-import {IMetrics} from "../../metrics/index.js";
-import {IReqResp, IReqRespModules, IRateLimiter, Libp2pStream} from "./interface.js";
+import {MetadataController} from "../metadata.js";
+import {IPeerRpcScoreStore} from "../peers/score.js";
+import {INetworkEventBus, NetworkEvent} from "../events.js";
+import {IMetrics} from "../../metrics/metrics.js";
+import {IReqResp, IReqRespModules, IRateLimiter} from "./interface.js";
 import {sendRequest} from "./request/index.js";
 import {handleRequest, ResponseError} from "./response/index.js";
 import {onOutgoingReqRespError} from "./score.js";
@@ -42,7 +41,7 @@ export type IReqRespOptions = Partial<typeof timeoutOptions>;
  */
 export class ReqResp implements IReqResp {
   private config: IBeaconConfig;
-  private libp2p: LibP2p;
+  private libp2p: Libp2p;
   private readonly peersData: PeersData;
   private logger: ILogger;
   private reqRespHandlers: ReqRespHandlers;
@@ -78,7 +77,7 @@ export class ReqResp implements IReqResp {
     for (const [method, version, encoding] of protocolsSupported) {
       await this.libp2p.handle(
         formatProtocolId(method, version, encoding),
-        (this.getRequestHandler({method, version, encoding}) as unknown) as (props: HandlerProps) => void
+        this.getRequestHandler({method, version, encoding})
       );
     }
     this.inboundRateLimiter.start();
@@ -154,7 +153,7 @@ export class ReqResp implements IReqResp {
     const timer = this.metrics?.reqResp.outgoingRequestRoundtripTime.startTimer({method});
 
     try {
-      const encoding = this.peersData.getEncodingPreference(peerId.toB58String()) ?? Encoding.SSZ_SNAPPY;
+      const encoding = this.peersData.getEncodingPreference(peerId.toString()) ?? Encoding.SSZ_SNAPPY;
       const result = await sendRequest<T>(
         {forkDigestContext: this.config, logger: this.logger, libp2p: this.libp2p, peersData: this.peersData},
         peerId,
@@ -189,13 +188,13 @@ export class ReqResp implements IReqResp {
   }
 
   private getRequestHandler({method, version, encoding}: Protocol) {
-    return async ({connection, stream}: {connection: Connection; stream: Libp2pStream}) => {
+    return async ({connection, stream}: {connection: Connection; stream: Stream}) => {
       const peerId = connection.remotePeer;
 
       // TODO: Do we really need this now that there is only one encoding?
       // Remember the prefered encoding of this peer
       if (method === Method.Status) {
-        this.peersData.setEncodingPreference(peerId.toB58String(), encoding);
+        this.peersData.setEncodingPreference(peerId.toString(), encoding);
       }
 
       this.metrics?.reqResp.incomingRequests.inc({method});

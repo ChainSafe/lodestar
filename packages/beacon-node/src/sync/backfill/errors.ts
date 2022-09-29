@@ -1,4 +1,4 @@
-import PeerId from "peer-id";
+import {PeerId} from "@libp2p/interface-peer-id";
 import {LodestarError} from "@lodestar/utils";
 import {Root} from "@lodestar/types";
 

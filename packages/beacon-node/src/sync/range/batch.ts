@@ -1,4 +1,4 @@
-import PeerId from "peer-id";
+import {PeerId} from "@libp2p/interface-peer-id";
 import {allForks, Epoch, phase0, RootHex} from "@lodestar/types";
 import {IChainForkConfig} from "@lodestar/config";
 import {LodestarError} from "@lodestar/utils";

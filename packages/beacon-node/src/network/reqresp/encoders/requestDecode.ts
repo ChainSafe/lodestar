@@ -1,8 +1,8 @@
-import BufferList from "bl";
+import {Sink} from "it-stream-types";
+import {Uint8ArrayList} from "uint8arraylist";
 import {getRequestSzzTypeByMethod, Protocol, RequestBody} from "../types.js";
 import {BufferedSource} from "../utils/index.js";
 import {readEncodedPayload} from "../encodingStrategies/index.js";
-
 /**
  * Consumes a stream source to read a `<request>`
  * ```bnf
@@ -11,7 +11,7 @@ import {readEncodedPayload} from "../encodingStrategies/index.js";
  */
 export function requestDecode(
   protocol: Pick<Protocol, "method" | "encoding">
-): (source: AsyncIterable<Buffer | BufferList>) => Promise<RequestBody> {
+): Sink<Uint8Array | Uint8ArrayList, Promise<RequestBody>> {
   return async function requestDecodeSink(source) {
     const type = getRequestSzzTypeByMethod(protocol.method);
     if (!type) {
@@ -20,7 +20,7 @@ export function requestDecode(
     }
 
     // Request has a single payload, so return immediately
-    const bufferedSource = new BufferedSource(source as AsyncGenerator<Buffer>);
+    const bufferedSource = new BufferedSource(source as AsyncGenerator<Uint8ArrayList>);
     return await readEncodedPayload(bufferedSource, protocol.encoding, type);
   };
 }

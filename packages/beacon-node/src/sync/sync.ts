@@ -1,4 +1,4 @@
-import PeerId from "peer-id";
+import {PeerId} from "@libp2p/interface-peer-id";
 import {ILogger} from "@lodestar/utils";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Slot, phase0} from "@lodestar/types";
@@ -155,7 +155,7 @@ export class BeaconSync implements IBeaconSync {
     const syncType = getPeerSyncType(localStatus, peerStatus, this.chain.forkChoice, this.slotImportTolerance);
 
     // For metrics only
-    this.peerSyncType.set(peerId.toB58String(), syncType);
+    this.peerSyncType.set(peerId.toString(), syncType);
 
     if (syncType === PeerSyncType.Advanced) {
       this.rangeSync.addPeer(peerId, localStatus, peerStatus);
@@ -170,7 +170,7 @@ export class BeaconSync implements IBeaconSync {
   private removePeer = (peerId: PeerId): void => {
     this.rangeSync.removePeer(peerId);
 
-    this.peerSyncType.delete(peerId.toB58String());
+    this.peerSyncType.delete(peerId.toString());
   };
 
   /**

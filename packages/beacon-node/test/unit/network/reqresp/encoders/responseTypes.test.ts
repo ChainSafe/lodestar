@@ -1,4 +1,4 @@
-import pipe from "it-pipe";
+import {pipe} from "it-pipe";
 import all from "it-all";
 import {allForks} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";

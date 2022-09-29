@@ -1,6 +1,6 @@
-import {Connection} from "libp2p";
-import {Multiaddr} from "multiaddr";
-import PeerId from "peer-id";
+import {Connection} from "@libp2p/interface-connection";
+import {Multiaddr} from "@multiformats/multiaddr";
+import {PeerId} from "@libp2p/interface-peer-id";
 import {Discv5, ENR} from "@chainsafe/discv5";
 import {INetworkEventBus} from "./events.js";
 import {Eth2Gossipsub} from "./gossip/index.js";

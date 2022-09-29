@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import pipe from "it-pipe";
+import {pipe} from "it-pipe";
 import {phase0} from "@lodestar/types";
 import {Method, Encoding, getRequestSzzTypeByMethod, RequestBody} from "../../../../../src/network/reqresp/types.js";
 import {requestEncode} from "../../../../../src/network/reqresp/encoders/requestEncode.js";

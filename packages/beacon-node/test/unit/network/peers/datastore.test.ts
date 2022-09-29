@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import LevelDatastore from "datastore-level";
+import {LevelDatastore} from "datastore-level";
 import {Key} from "interface-datastore";
 import sinon from "sinon";
 import {Eth2PeerDataStore} from "../../../../src/network/peers/datastore.js";
@@ -44,7 +44,7 @@ describe("Eth2PeerDataStore", () => {
     // 4th item, should evict 1st item since it's oldest
     await eth2Datastore.put(new Key("k4"), Buffer.from("4"));
     expect(await eth2Datastore.get(new Key("k4"))).to.be.deep.equal(Buffer.from("4"));
-    expect(dbDatastoreStub.put).to.be.calledOnceWith(new Key("k1"), Buffer.from("1"));
+    expect(dbDatastoreStub.put).to.be.calledOnceWith(new Key("/k1"), Buffer.from("1"));
 
     // still able to get k1 from datastore
     expect(dbDatastoreStub.get).not.to.be.calledOnce;
