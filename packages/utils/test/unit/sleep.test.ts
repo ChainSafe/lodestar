@@ -1,3 +1,4 @@
+import "../setup.js";
 import {expect} from "chai";
 import {sleep} from "../../src/sleep.js";
 import {ErrorAborted} from "../../src/errors.js";

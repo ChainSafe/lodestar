@@ -3,8 +3,7 @@
 import {Connection} from "@libp2p/interface-connection";
 import sinon, {SinonStubbedInstance} from "sinon";
 import {PeerId} from "@libp2p/interface-peer-id";
-import {expect, use} from "chai";
-import chaiAsPromised from "chai-as-promised";
+import {expect} from "chai";
 import {multiaddr} from "@multiformats/multiaddr";
 import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
 import {createKeypairFromPeerId, ENR} from "@chainsafe/discv5";
@@ -17,8 +16,6 @@ import {MetadataController} from "../../../../../src/network/metadata.js";
 import {defaultApiOptions} from "../../../../../src/api/options.js";
 import {getNodeApi} from "../../../../../src/api/impl/node/index.js";
 import {libp2pConnection} from "../../../../utils/node/p2p.js";
-
-use(chaiAsPromised);
 
 interface IPeerSummary {
   direction: string | null;

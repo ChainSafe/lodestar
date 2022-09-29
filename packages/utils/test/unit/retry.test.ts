@@ -1,3 +1,4 @@
+import "../setup.js";
 import {expect} from "chai";
 import {retry, RetryOptions} from "../../src/retry.js";
 

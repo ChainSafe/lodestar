@@ -1,3 +1,4 @@
+import "../setup.js";
 import {expect} from "chai";
 import sinon from "sinon";
 import {callFnWhenAwait} from "../../src/promise.js";

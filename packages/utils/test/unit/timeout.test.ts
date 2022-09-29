@@ -1,3 +1,4 @@
+import "../setup.js";
 import {expect} from "chai";
 import {withTimeout} from "../../src/timeout.js";
 import {ErrorAborted, TimeoutError} from "../../src/errors.js";
