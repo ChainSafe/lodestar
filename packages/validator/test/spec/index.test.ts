@@ -13,6 +13,8 @@ import {
 
 chai.use(chaiAsPromised);
 
+/* eslint-disable no-console */
+
 describe("slashing-protection custom tests", () => {
   const dbLocation = "./.__testdb_2";
   const controller = new LevelDbController({name: dbLocation}, {});

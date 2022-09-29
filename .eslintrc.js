@@ -206,8 +206,6 @@ module.exports = {
         // Turned off as it floods log with warnings. Underlying issue is not critical so switching off is acceptable
         "import/no-named-as-default-member": "off",
         "@typescript-eslint/no-explicit-any": "off",
-        //Allow console in tests
-        "no-console": "off",
         "func-names": "off",
       },
     },

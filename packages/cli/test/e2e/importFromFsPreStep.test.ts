@@ -9,6 +9,8 @@ import {cachedPubkeysHex, cachedSeckeysHex} from "../utils/cachedKeys.js";
 import {expectKeys, getKeymanagerTestRunner} from "../utils/keymanagerTestRunners.js";
 import {getKeystoresStr} from "../utils/keystores.js";
 
+/* eslint-disable no-console */
+
 describeCliTest("import from fs then validate", function ({spawnCli}) {
   const dataDir = path.join(testFilesDir, "import-then-validate-test");
   const importFromDir = path.join(dataDir, "eth2.0_deposit_out");

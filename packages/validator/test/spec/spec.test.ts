@@ -45,6 +45,8 @@ type SlashingProtectionInterchangeTest = {
   ];
 };
 
+/* eslint-disable no-console */
+
 describe("slashing-protection-interchange-tests", () => {
   const testCases = loadTestCases(path.join(SPEC_TEST_LOCATION, "/tests/generated"));
   const dbLocation = "./.__testdb";
