@@ -1,5 +1,6 @@
 import {SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY} from "@lodestar/params";
 import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
+import {phase0} from "@lodestar/types";
 import {ArchiverOpts} from "./archiver/index.js";
 import {ForkChoiceOpts} from "./forkChoice/index.js";
 import {LightClientServerOpts} from "./lightClient/index.js";
@@ -20,6 +21,8 @@ export type IChainOptions = BlockProcessOpts &
     faultInspectionWindow?: number;
     /** Number of missed slots allowed in the faultInspectionWindow for builder circuit*/
     allowedFaults?: number;
+    // forwardWSCheckpoint for fwd verification checkpoint
+    forwardWSCheckpoint?: phase0.Checkpoint;
   };
 
 export type BlockProcessOpts = {

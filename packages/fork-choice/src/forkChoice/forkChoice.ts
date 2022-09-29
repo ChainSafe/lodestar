@@ -44,6 +44,7 @@ export type ForkChoiceOpts = {
   proposerBoostEnabled?: boolean;
   computeUnrealized?: boolean;
   countUnrealizedFull?: boolean;
+  forwardWSCheckpoint?: phase0.Checkpoint;
 };
 
 /**
@@ -85,6 +86,8 @@ export class ForkChoice implements IForkChoice {
 
   /** Cached head */
   private head: ProtoBlock;
+  private forwardWSCheckpointVerified = false;
+
   /**
    * Only cache attestation data root hex if it's tree backed since it's available.
    **/
@@ -389,6 +392,8 @@ export class ForkChoice implements IForkChoice {
     this.updateCheckpoints(state.slot, justifiedCheckpoint, finalizedCheckpoint, () =>
       this.fcStore.justifiedBalancesGetter(justifiedCheckpoint, state)
     );
+
+    this.updateForwardWSCheckpointVerified();
 
     const blockEpoch = computeEpochAtSlot(slot);
 
@@ -845,6 +850,14 @@ export class ForkChoice implements IForkChoice {
     }
   }
 
+  getForwardWSCheckpointVerified(): boolean {
+    return this.forwardWSCheckpointVerified;
+  }
+
+  setForwardWSCheckpointVerified(checkpointVerified: boolean): void {
+    this.forwardWSCheckpointVerified = checkpointVerified;
+  }
+
   private getPreMergeExecStatus(executionStatus: MaybeValidExecutionStatus): ExecutionStatus.PreMerge {
     if (executionStatus !== ExecutionStatus.PreMerge)
       throw Error(`Invalid pre-merge execution status: expected: ${ExecutionStatus.PreMerge}, got ${executionStatus}`);
@@ -955,6 +968,38 @@ export class ForkChoice implements IForkChoice {
       this.fcStore.finalizedCheckpoint = finalizedCheckpoint;
       this.fcStore.justified = {checkpoint: justifiedCheckpoint, balances: getJustifiedBalances()};
       this.justifiedProposerBoostScore = null;
+    }
+  }
+
+  private updateForwardWSCheckpointVerified(): void {
+    if (this.opts?.forwardWSCheckpoint !== undefined) {
+      if (
+        this.fcStore.finalizedCheckpoint.epoch >= this.opts?.forwardWSCheckpoint.epoch &&
+        !this.forwardWSCheckpointVerified
+      ) {
+        const protoCP = this.getBlock(this.opts?.forwardWSCheckpoint.root);
+
+        if (protoCP !== null) {
+          if (
+            byteArrayEquals(this.fcStore.finalizedCheckpoint.root, this.opts?.forwardWSCheckpoint.root) ||
+            this.getAllAncestorBlocks(toHexString(this.fcStore.finalizedCheckpoint.root)).includes(protoCP)
+          ) {
+            this.setForwardWSCheckpointVerified(true);
+          } else {
+            this.irrecoverableError = new ForkChoiceError({
+              code: ForkChoiceErrorCode.FAILED_FORWARD_CHECKPOINT_VERIFICATION,
+              root: toHexString(this.opts?.forwardWSCheckpoint.root),
+              epoch: this.opts?.forwardWSCheckpoint.epoch,
+            });
+          }
+        } else {
+          this.irrecoverableError = new ForkChoiceError({
+            code: ForkChoiceErrorCode.FAILED_FORWARD_CHECKPOINT_VERIFICATION,
+            root: toHexString(this.opts?.forwardWSCheckpoint.root),
+            epoch: this.opts?.forwardWSCheckpoint.epoch,
+          });
+        }
+      }
     }
   }
 
@@ -1276,4 +1321,14 @@ export function computeProposerBoostScoreFromBalances(
     }
   }
   return computeProposerBoostScore({justifiedTotalActiveBalanceByIncrement, justifiedActiveValidators}, config);
+}
+
+function byteArrayEquals(a: Uint8Array | Root, b: Uint8Array | Root): boolean {
+  if (a.length !== b.length) {
+    return false;
+  }
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
 }

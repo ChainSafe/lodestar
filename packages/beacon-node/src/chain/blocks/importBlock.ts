@@ -63,11 +63,17 @@ export async function importBlock(
   // - Register block with fork-hoice
 
   const prevFinalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
+  const prevFinalizedWsValidated = this.forkChoice.getForwardWSCheckpointVerified();
+
   const blockDelaySec = (fullyVerifiedBlock.seenTimestampSec - postState.genesisTime) % this.config.SECONDS_PER_SLOT;
   const blockRoot = toHexString(this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message));
   // Should compute checkpoint balances before forkchoice.onBlock
   this.checkpointBalancesCache.processState(blockRoot, postState);
   this.forkChoice.onBlock(block.message, postState, blockDelaySec, this.clock.currentSlot, executionStatus);
+
+  if (!prevFinalizedWsValidated && this.forkChoice.getForwardWSCheckpointVerified()) {
+    this.logger.info("forwardWSCheckpoint found and validated as finalized");
+  }
 
   // - Register state and block to the validator monitor
   // TODO

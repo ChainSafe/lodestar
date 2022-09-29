@@ -1,5 +1,6 @@
 import {defaultOptions, IBeaconNodeOptions} from "@lodestar/beacon-node";
 import {ICliCommandOptions} from "../../util/index.js";
+import {getCheckpointFromArg} from "../../networks/index.js";
 
 export interface IChainArgs {
   suggestedFeeRecipient: string;
@@ -17,6 +18,7 @@ export interface IChainArgs {
   "chain.assertCorrectProgressiveBalances": boolean;
   "chain.maxSkipSlots": number;
   "safe-slots-to-import-optimistically": number;
+  forwardWSCheckpoint: string;
 }
 
 export function parseArgs(args: IChainArgs): IBeaconNodeOptions["chain"] {
@@ -35,6 +37,8 @@ export function parseArgs(args: IChainArgs): IBeaconNodeOptions["chain"] {
     assertCorrectProgressiveBalances: args["chain.assertCorrectProgressiveBalances"],
     maxSkipSlots: args["chain.maxSkipSlots"],
     safeSlotsToImportOptimistically: args["safe-slots-to-import-optimistically"],
+    forwardWSCheckpoint:
+      args["forwardWSCheckpoint"] !== undefined ? getCheckpointFromArg(args["forwardWSCheckpoint"]) : undefined,
   };
 }
 
@@ -131,6 +135,13 @@ Will double processing times. Use only for debugging purposes.",
     description:
       "Slots from current (clock) slot till which its safe to import a block optimistically if the merge is not justified yet.",
     defaultDescription: String(defaultOptions.chain.safeSlotsToImportOptimistically),
+    group: "chain",
+  },
+
+  forwardWSCheckpoint: {
+    hidden: true,
+    description: "Verification Checkpoint for forward sync to be provided in <blockRoot>:<epoch> format.",
+    type: "string",
     group: "chain",
   },
 };
