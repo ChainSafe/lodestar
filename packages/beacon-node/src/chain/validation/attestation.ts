@@ -92,7 +92,9 @@ export async function validateGossipAttestation(
   try {
     committeeIndices = getCommitteeIndices(attHeadState, attSlot, attIndex);
   } catch (e) {
-    throw new AttestationError(GossipAction.REJECT, {
+    // this may come from an out-of-synced node, the spec did not define it so should not REJECT
+    // see https://github.com/ChainSafe/lodestar/issues/4396
+    throw new AttestationError(GossipAction.IGNORE, {
       code: AttestationErrorCode.NO_COMMITTEE_FOR_SLOT_AND_INDEX,
       index: attIndex,
       slot: attSlot,
