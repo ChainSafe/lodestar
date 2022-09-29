@@ -1,4 +1,6 @@
 import {expect} from "chai";
+import {Stream, StreamStat} from "@libp2p/interface-connection";
+import {Uint8ArrayList} from "uint8arraylist";
 import {Root, phase0, altair, ssz} from "@lodestar/types";
 import {toHexString} from "@chainsafe/ssz";
 import {generateEmptySignedBlock} from "../../../utils/block.js";
