@@ -21,7 +21,6 @@ const {
   SubcommitteeIndex,
   ValidatorIndex,
   Root,
-  Version,
   BLSPubkey,
   BLSSignature,
   ParticipationFlags,
