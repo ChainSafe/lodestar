@@ -32,10 +32,9 @@ describe("Perf test sanity check", function () {
     const phase0State = generatePerfTestCachedStatePhase0();
     const epochProcess = beforeProcessEpoch(phase0State);
     expect(
-      BigInt(epochProcess.prevEpochUnslashedStake.targetStakeByIncrement) * BigInt(EFFECTIVE_BALANCE_INCREMENT) >
-        targetStake
-    ).to.equal(
-      true,
+      BigInt(epochProcess.prevEpochUnslashedStake.targetStakeByIncrement) * BigInt(EFFECTIVE_BALANCE_INCREMENT)
+    ).to.be.above(
+      targetStake,
       `targetStake too low: ${
         BigInt(epochProcess.prevEpochUnslashedStake.targetStakeByIncrement) * BigInt(EFFECTIVE_BALANCE_INCREMENT)
       } > ${targetStake}`

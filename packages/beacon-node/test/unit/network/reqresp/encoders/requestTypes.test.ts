@@ -1,5 +1,4 @@
-import chai, {expect} from "chai";
-import chaiAsPromised from "chai-as-promised";
+import {expect} from "chai";
 import pipe from "it-pipe";
 import {phase0} from "@lodestar/types";
 import {Method, Encoding, getRequestSzzTypeByMethod, RequestBody} from "../../../../../src/network/reqresp/types.js";
@@ -7,8 +6,6 @@ import {requestEncode} from "../../../../../src/network/reqresp/encoders/request
 import {requestDecode} from "../../../../../src/network/reqresp/encoders/requestDecode.js";
 import {isEqualSszType} from "../../../../utils/ssz.js";
 import {createStatus, generateRoots} from "../utils.js";
-
-chai.use(chaiAsPromised);
 
 // Ensure the types from all methods are supported properly
 describe("network / reqresp / encoders / request - types", () => {

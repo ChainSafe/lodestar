@@ -1,8 +1,5 @@
-import chai, {expect} from "chai";
-import chaiAsPromised from "chai-as-promised";
+import {expect} from "chai";
 import {retry, RetryOptions} from "../../src/retry.js";
-
-chai.use(chaiAsPromised);
 
 describe("retry", () => {
   interface ITestCase {

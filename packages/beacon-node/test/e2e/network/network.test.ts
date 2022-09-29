@@ -218,30 +218,6 @@ describe("network", function () {
     expect(goodbye).to.equal(BigInt(GoodByeReasonCode.CLIENT_SHUTDOWN), "goodbye reason must be CLIENT_SHUTDOWN");
   });
 
-  it("Should goodbye peers on stop", async function () {
-    const [{network: netA}, {network: netB}] = await createTestNodesAB();
-
-    const connected = Promise.all([onPeerConnect(netA), onPeerConnect(netB)]);
-    await connect(netA, netB.peerId, netB.localMultiaddrs);
-    await connected;
-
-    // Wait some time and stop netA expecting to goodbye netB
-    await sleep(500, controller.signal);
-
-    const onGoodbyeNetB = sinon.stub<[phase0.Goodbye, PeerId]>();
-    netB.events.on(NetworkEvent.reqRespRequest, (request, peer) => {
-      if (request.method === ReqRespMethod.Goodbye) onGoodbyeNetB(request.body, peer);
-    });
-
-    await netA.stop();
-    await sleep(500, controller.signal);
-
-    expect(onGoodbyeNetB.callCount).to.equal(1, "netB must receive 1 goodbye");
-    const [goodbye, peer] = onGoodbyeNetB.getCall(0).args;
-    expect(peer.toB58String()).to.equal(netA.peerId.toB58String(), "netA must be the goodbye requester");
-    expect(goodbye).to.equal(BigInt(GoodByeReasonCode.CLIENT_SHUTDOWN), "goodbye reason must be CLIENT_SHUTDOWN");
-  });
-
   it("Should subscribe to gossip core topics on demand", async () => {
     const {network: netA} = await createTestNode("A");
 

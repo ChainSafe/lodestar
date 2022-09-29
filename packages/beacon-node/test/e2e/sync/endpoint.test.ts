@@ -1,12 +1,9 @@
-import chaiAsPromised from "chai-as-promised";
-import chai, {expect} from "chai";
+import {expect} from "chai";
 import {createIBeaconConfig, IChainConfig} from "@lodestar/config";
 import {chainConfig as chainConfigDef} from "@lodestar/config/default";
 import {getClient, routes} from "@lodestar/api";
 import {getDevBeaconNode} from "../../utils/node/beacon.js";
 import {LogLevel, testLogger, TestLoggerOpts} from "../../utils/logger.js";
-
-chai.use(chaiAsPromised);
 
 /* eslint-disable @typescript-eslint/naming-convention */
 describe("lodestar / sync", function () {

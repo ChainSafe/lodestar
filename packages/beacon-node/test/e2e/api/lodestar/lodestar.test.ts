@@ -1,5 +1,4 @@
-import chaiAsPromised from "chai-as-promised";
-import chai, {expect} from "chai";
+import {expect} from "chai";
 import {createIBeaconConfig, IChainConfig} from "@lodestar/config";
 import {chainConfig as chainConfigDef} from "@lodestar/config/default";
 import {phase0} from "@lodestar/types";
@@ -9,8 +8,6 @@ import {LogLevel, testLogger, TestLoggerOpts} from "../../../utils/logger.js";
 import {getDevBeaconNode} from "../../../utils/node/beacon.js";
 import {waitForEvent} from "../../../utils/events/resolver.js";
 import {ChainEvent} from "../../../../src/chain/index.js";
-
-chai.use(chaiAsPromised);
 
 describe("api / impl / validator", function () {
   describe("getLiveness endpoint", function () {

@@ -29,8 +29,8 @@ describe("beacon state api utils", function () {
 
       const state = await resolveStateId(config, chainStub, dbStub, "head");
       expect(state).to.not.be.null;
-      expect(getHead.calledOnce).to.equal(true);
-      expect(get.calledOnce).to.equal(true);
+      expect(getHead).to.be.calledOnce;
+      expect(get).to.be.calledOnce;
     });
 
     it("resolve finalized state id - success", async function () {
@@ -43,8 +43,8 @@ describe("beacon state api utils", function () {
 
       const state = await resolveStateId(config, chainStub, dbStub, "finalized");
       expect(state).to.not.be.null;
-      expect(getFinalizedBlock.calledOnce).to.equal(true);
-      expect(get.calledOnce).to.equal(true);
+      expect(getFinalizedBlock).to.be.calledOnce;
+      expect(get).to.be.calledOnce;
     });
 
     it("resolve justified state id - success", async function () {
@@ -57,8 +57,8 @@ describe("beacon state api utils", function () {
 
       const state = await resolveStateId(config, chainStub, dbStub, "justified");
       expect(state).to.not.be.null;
-      expect(getJustifiedBlock.calledOnce).to.equal(true);
-      expect(get.calledOnce).to.equal(true);
+      expect(getJustifiedBlock).to.be.calledOnce;
+      expect(get).to.be.calledOnce;
     });
 
     it("resolve state by root", async function () {
@@ -67,7 +67,7 @@ describe("beacon state api utils", function () {
 
       const state = await resolveStateId(config, chainStub, dbStub, otherRoot);
       expect(state).to.not.be.null;
-      expect(get.calledOnce).to.equal(true);
+      expect(get).to.be.calledOnce;
     });
 
     it("resolve state by slot", async function () {
@@ -83,7 +83,7 @@ describe("beacon state api utils", function () {
 
       const state = await resolveStateId(config, chainStub, dbStub, "123");
       expect(state).to.not.be.null;
-      expect(getCanonicalBlockAtSlot.withArgs(123).calledOnce).to.equal(true);
+      expect(getCanonicalBlockAtSlot).to.be.calledOnceWithExactly(123);
     });
 
     it("resolve state on unarchived finalized slot", async function () {

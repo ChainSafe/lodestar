@@ -5,30 +5,32 @@ import {computeStartSlotAtEpoch, getBlockRootAtSlot, RootCache} from "../../../s
 
 const slot = computeStartSlotAtEpoch(perfStateEpoch) - 1;
 
-describe("RootCache.getBlockRootAtSlot", () => {
-  itBench<RootCache, RootCache>({
-    id: `RootCache.getBlockRootAtSlot - ${perfStateId}`,
-    before: () => new RootCache(generatePerfTestCachedStatePhase0()),
-    beforeEach: (rootCache) => rootCache,
-    fn: (rootCache) => {
-      for (let i = 0; i <= 100; i++) {
-        rootCache.getBlockRootAtSlot(slot);
-      }
-    },
-    runsFactor: 100,
+describe("rootCache", () => {
+  describe("RootCache.getBlockRootAtSlot from rootCache", () => {
+    itBench<RootCache, RootCache>({
+      id: `RootCache.getBlockRootAtSlot - ${perfStateId}`,
+      before: () => new RootCache(generatePerfTestCachedStatePhase0()),
+      beforeEach: (rootCache) => rootCache,
+      fn: (rootCache) => {
+        for (let i = 0; i <= 100; i++) {
+          rootCache.getBlockRootAtSlot(slot);
+        }
+      },
+      runsFactor: 100,
+    });
   });
-});
 
-describe("RootCache.getBlockRootAtSlot", () => {
-  itBench<State, State>({
-    id: `state getBlockRootAtSlot - ${perfStateId}`,
-    before: () => generatePerfTestCachedStatePhase0() as State,
-    beforeEach: (state) => state,
-    fn: (state) => {
-      for (let i = 0; i <= 100; i++) {
-        getBlockRootAtSlot(state, slot);
-      }
-    },
-    runsFactor: 100,
+  describe("RootCache.getBlockRootAtSlot", () => {
+    itBench<State, State>({
+      id: `state getBlockRootAtSlot - ${perfStateId}`,
+      before: () => generatePerfTestCachedStatePhase0() as State,
+      beforeEach: (state) => state,
+      fn: (state) => {
+        for (let i = 0; i <= 100; i++) {
+          getBlockRootAtSlot(state, slot);
+        }
+      },
+      runsFactor: 100,
+    });
   });
 });

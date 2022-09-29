@@ -1,11 +1,8 @@
-import chai, {expect} from "chai";
-import chaiAsPromised from "chai-as-promised";
+import {expect} from "chai";
 import {routes} from "@lodestar/api/beacon";
 import {Epoch} from "@lodestar/types";
 import {MAX_COMMITTEES_PER_SLOT} from "@lodestar/params";
 import {SimulationEnvironment} from "./SimulationEnvironment.js";
-
-chai.use(chaiAsPromised);
 
 export function nodeAssertions(env: SimulationEnvironment): void {
   it("test env should have correct number of nodes", () => {

@@ -1,5 +1,4 @@
-import chai, {expect} from "chai";
-import chaiAsPromised from "chai-as-promised";
+import {expect} from "chai";
 import PeerId from "peer-id";
 import {createIBeaconConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
@@ -27,8 +26,6 @@ import {expectRejectedWithLodestarError} from "../../utils/errors.js";
 import {connect, onPeerConnect} from "../../utils/network.js";
 import {StubbedBeaconDb} from "../../utils/stub/index.js";
 import {GossipHandlers} from "../../../src/network/gossip/index.js";
-
-chai.use(chaiAsPromised);
 
 /* eslint-disable require-yield, @typescript-eslint/naming-convention */
 

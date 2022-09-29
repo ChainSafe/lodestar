@@ -1,5 +1,3 @@
-import chai from "chai";
-import chaiAsPromised from "chai-as-promised";
 import pipe from "it-pipe";
 import all from "it-all";
 import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
@@ -37,8 +35,6 @@ import {
   sszSnappySignedBeaconBlockAltair,
 } from "../encodingStrategies/sszSnappy/testData.js";
 import {blocksToReqRespBlockResponses} from "../../../../utils/block.js";
-
-chai.use(chaiAsPromised);
 
 type ResponseChunk =
   | {status: RespStatus.SUCCESS; body: IncomingResponseBody}

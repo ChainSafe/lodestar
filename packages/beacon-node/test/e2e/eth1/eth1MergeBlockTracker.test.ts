@@ -112,8 +112,8 @@ describe.skip("eth1 / Eth1MergeBlockTracker", function () {
     // Given the total difficulty offset the block that has TTD is the `difficultyOffset`nth block
     const mergeBlock = await eth1MergeBlockTracker.getTerminalPowBlock();
     if (!mergeBlock) throw Error("mergeBlock not found");
-    expect(mergeBlock.totalDifficulty >= terminalTotalDifficulty).to.equal(
-      true,
+    expect(mergeBlock.totalDifficulty).to.be.at.least(
+      terminalTotalDifficulty,
       "mergeBlock.totalDifficulty is not >= TTD"
     );
   });
@@ -148,8 +148,8 @@ describe.skip("eth1 / Eth1MergeBlockTracker", function () {
     // Given the total difficulty offset the block that has TTD is the `difficultyOffset`nth block
     const mergeBlock = await eth1MergeBlockTracker.getTerminalPowBlock();
     if (!mergeBlock) throw Error("mergeBlock not found");
-    expect(mergeBlock.totalDifficulty >= terminalTotalDifficulty).to.equal(
-      true,
+    expect(mergeBlock.totalDifficulty).to.be.at.least(
+      terminalTotalDifficulty,
       "mergeBlock.totalDifficulty is not >= TTD"
     );
   });

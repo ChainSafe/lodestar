@@ -14,8 +14,8 @@ import {createPeerId, INetwork, Network} from "../../../../../src/network/index.
 import {BeaconSync, IBeaconSync} from "../../../../../src/sync/index.js";
 import {MetadataController} from "../../../../../src/network/metadata.js";
 import {defaultApiOptions} from "../../../../../src/api/options.js";
-import {PeerStatus, PeerDirection} from "../../../../../src/network/index.js";
 import {getNodeApi} from "../../../../../src/api/impl/node/index.js";
+import {libp2pConnection} from "../../../../utils/node/p2p.js";
 
 use(chaiAsPromised);
 
@@ -196,14 +196,3 @@ describe("node api implementation", function () {
     });
   });
 });
-
-export function libp2pConnection(peer: PeerId, status: PeerStatus, direction: PeerDirection): Connection {
-  return {
-    remoteAddr: new Multiaddr(),
-    stat: {
-      status,
-      direction,
-    },
-    remotePeer: peer,
-  } as Connection;
-}

@@ -1,7 +1,6 @@
 import path from "node:path";
 import rimraf from "rimraf";
-import chai, {expect} from "chai";
-import chaiAsPromised from "chai-as-promised";
+import {expect} from "chai";
 import {Api, DeleteRemoteKeyStatus, getClient, ImportRemoteKeyStatus} from "@lodestar/api/keymanager";
 import {config} from "@lodestar/config/default";
 import {testFilesDir} from "../utils.js";
@@ -9,8 +8,6 @@ import {describeCliTest} from "../utils/childprocRunner.js";
 import {cachedPubkeysHex} from "../utils/cachedKeys.js";
 import {expectDeepEquals, getAfterEachCallbacks} from "../utils/runUtils.js";
 import {getKeymanagerTestRunner} from "../utils/keymanagerTestRunners.js";
-
-chai.use(chaiAsPromised);
 
 describeCliTest("import remoteKeys from api", function ({spawnCli}) {
   const dataDir = path.join(testFilesDir, "import-remoteKeys-test");

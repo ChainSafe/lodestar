@@ -38,14 +38,16 @@ const testValue = {
   },
 };
 
-describe("validator / valid Proposer", () => {
-  it("parse Valid proposer", () => {
-    expect(parseProposerConfig(path.join(__dirname, "./proposerConfigs/validData.yaml"))).to.be.deep.equal(testValue);
+describe("parseProposerConfig", () => {
+  describe("validator / valid Proposer", () => {
+    it("parse Valid proposer", () => {
+      expect(parseProposerConfig(path.join(__dirname, "./proposerConfigs/validData.yaml"))).to.be.deep.equal(testValue);
+    });
   });
-});
 
-describe("validator / invalid Proposer", () => {
-  it("should throw error", () => {
-    expect(() => parseProposerConfig(path.join(__dirname, "./proposerConfigs/invalidData.yaml"))).to.throw();
+  describe("validator / invalid Proposer", () => {
+    it("should throw error", () => {
+      expect(() => parseProposerConfig(path.join(__dirname, "./proposerConfigs/invalidData.yaml"))).to.throw();
+    });
   });
 });

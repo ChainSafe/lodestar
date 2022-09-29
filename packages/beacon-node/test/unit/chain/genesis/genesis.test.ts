@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import chai, {expect} from "chai";
-import chaiAsPromised from "chai-as-promised";
+import {expect} from "chai";
 import type {SecretKey, PublicKey} from "@chainsafe/bls/types";
 import {DOMAIN_DEPOSIT, MAX_EFFECTIVE_BALANCE} from "@lodestar/params";
 import {config} from "@lodestar/config/default";
@@ -12,8 +11,6 @@ import {GenesisBuilder} from "../../../../src/chain/genesis/genesis.js";
 import {testLogger} from "../../../utils/logger.js";
 import {ZERO_HASH_HEX} from "../../../../src/constants/index.js";
 import {EthJsonRpcBlockRaw, IEth1Provider} from "../../../../src/eth1/interface.js";
-
-chai.use(chaiAsPromised);
 
 describe("genesis builder", function () {
   const logger = testLogger();
