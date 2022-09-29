@@ -140,6 +140,8 @@ export async function beaconHandlerInit(args: IBeaconArgs & IGlobalArgs) {
 
   // Inject ENR to beacon options
   beaconNodeOptions.set({network: {discv5: {enr: fileENR, enrUpdate: !enr.ip && !enr.ip6}}});
+  // Add simple version string for libp2p agent version
+  beaconNodeOptions.set({network: {version: version.split("/")[0]}});
 
   // Render final options
   const options = beaconNodeOptions.getWithDefaults();
