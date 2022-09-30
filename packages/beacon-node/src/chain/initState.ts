@@ -165,24 +165,29 @@ export async function initStateFromAnchorState(
   {
     isWithinWeakSubjectivityPeriod,
     isCheckpointState,
-  }: {isWithinWeakSubjectivityPeriod: boolean; isCheckpointState: boolean}
+    forwardCheckpoint,
+  }: {isWithinWeakSubjectivityPeriod: boolean; isCheckpointState: boolean; forwardCheckpoint?: phase0.Checkpoint}
 ): Promise<BeaconStateAllForks> {
   const stateInfo = isCheckpointState ? "checkpoint" : "db";
+  const checkpointInfo = forwardCheckpoint !== undefined ? "forward checkpoint" : "checkpoint";
   if (isWithinWeakSubjectivityPeriod) {
-    logger.info(`Initializing beacon from a valid ${stateInfo} state`, {
+    logger.info(`Initializing beacon from ${stateInfo} with a valid ${checkpointInfo}`, {
       slot: anchorState.slot,
       epoch: computeEpochAtSlot(anchorState.slot),
       stateRoot: toHexString(anchorState.hashTreeRoot()),
       isWithinWeakSubjectivityPeriod,
     });
   } else {
-    logger.warn(`Initializing from a stale ${stateInfo} state vulnerable to long range attacks`, {
-      slot: anchorState.slot,
-      epoch: computeEpochAtSlot(anchorState.slot),
-      stateRoot: toHexString(anchorState.hashTreeRoot()),
-      isWithinWeakSubjectivityPeriod,
-    });
-    logger.warn("Checkpoint sync recommended, please use --help to see checkpoint sync options");
+    logger.warn(
+      `Initializing from ${stateInfo} state with a stale ${checkpointInfo} vulnerable to long range attacks`,
+      {
+        slot: anchorState.slot,
+        epoch: computeEpochAtSlot(anchorState.slot),
+        stateRoot: toHexString(anchorState.hashTreeRoot()),
+        isWithinWeakSubjectivityPeriod,
+      }
+    );
+    logger.warn("Either use checkpoint sync or provide a fresh forward checkpoint");
   }
 
   await persistAnchorState(config, db, anchorState);

@@ -95,7 +95,13 @@ export type ForkChoiceErrorType =
   | {code: ForkChoiceErrorCode.FORK_CHOICE_STORE_ERROR; error: Error}
   | {code: ForkChoiceErrorCode.UNABLE_TO_SET_JUSTIFIED_CHECKPOINT; error: Error}
   | {code: ForkChoiceErrorCode.AFTER_BLOCK_FAILED; error: Error}
-  | {code: ForkChoiceErrorCode.FAILED_FORWARD_CHECKPOINT_VERIFICATION; root: RootHex; epoch: Epoch; msg: string};
+  | {
+      code: ForkChoiceErrorCode.FAILED_FORWARD_CHECKPOINT_VERIFICATION;
+      root: RootHex;
+      epoch: Epoch;
+      finalizedEpoch: Epoch;
+      msg: string;
+    };
 
 export class ForkChoiceError extends LodestarError<ForkChoiceErrorType> {
   constructor(type: ForkChoiceErrorType) {

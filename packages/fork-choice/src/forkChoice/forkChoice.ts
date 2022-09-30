@@ -1215,7 +1215,8 @@ export class ForkChoice implements IForkChoice {
             code: ForkChoiceErrorCode.FAILED_FORWARD_CHECKPOINT_VERIFICATION,
             root: toHexString(root),
             epoch: epoch,
-            msg: `finalised checkpoint : ${this.fcStore.finalizedCheckpoint.root} ,  `,
+            finalizedEpoch: this.fcStore.finalizedCheckpoint.epoch,
+            msg: "Checkpoint not found",
           });
         }
       } else {
@@ -1223,7 +1224,8 @@ export class ForkChoice implements IForkChoice {
           code: ForkChoiceErrorCode.FAILED_FORWARD_CHECKPOINT_VERIFICATION,
           root: toHexString(root),
           epoch,
-          msg: "protoBlock is null for the checkpoint",
+          finalizedEpoch: this.fcStore.finalizedCheckpoint.epoch,
+          msg: "Checkpoint not found",
         });
       }
     } else {

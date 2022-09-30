@@ -109,18 +109,23 @@ export function getLatestBlockRoot(state: BeaconStateAllForks): Root {
 export function isWithinWeakSubjectivityPeriod(
   config: IBeaconConfig,
   wsState: BeaconStateAllForks,
-  wsCheckpoint: Checkpoint
+  wsCheckpoint: Checkpoint,
+  exactMatch = true
 ): boolean {
   const wsStateEpoch = computeCheckpointEpochAtStateSlot(wsState.slot);
-  const blockRoot = getLatestBlockRoot(wsState);
-  if (!ssz.Root.equals(blockRoot, wsCheckpoint.root)) {
-    throw new Error(
-      `Roots do not match.  expected=${toHexString(wsCheckpoint.root)}, actual=${toHexString(blockRoot)}`
-    );
+
+  if (exactMatch) {
+    const blockRoot = getLatestBlockRoot(wsState);
+    if (!ssz.Root.equals(blockRoot, wsCheckpoint.root)) {
+      throw new Error(
+        `Roots do not match.  expected=${toHexString(wsCheckpoint.root)}, actual=${toHexString(blockRoot)}`
+      );
+    }
+    if (!ssz.Epoch.equals(wsStateEpoch, wsCheckpoint.epoch)) {
+      throw new Error(`Epochs do not match.  expected=${wsCheckpoint.epoch}, actual=${wsStateEpoch}`);
+    }
   }
-  if (!ssz.Epoch.equals(wsStateEpoch, wsCheckpoint.epoch)) {
-    throw new Error(`Epochs do not match.  expected=${wsCheckpoint.epoch}, actual=${wsStateEpoch}`);
-  }
+
   const wsPeriod = computeWeakSubjectivityPeriod(config, wsState);
   const clockEpoch = computeEpochAtSlot(getCurrentSlot(config, wsState.genesisTime));
   return clockEpoch <= wsStateEpoch + wsPeriod;
