@@ -13,7 +13,8 @@ import {GossipTopicCache} from "./topic.js";
  */
 export function fastMsgIdFn(rpcMsg: RPC.IMessage): string {
   if (rpcMsg.data) {
-    return Buffer.from(digest(rpcMsg.data)).subarray(0, 8).toString("hex");
+    const hash = digest(rpcMsg.data);
+    return String.fromCharCode(hash[0], hash[1], hash[2], hash[3], hash[4], hash[5], hash[6], hash[7]);
   } else {
     return "0000000000000000";
   }
@@ -30,7 +31,7 @@ export function msgIdToStrFn(msgId: Uint8Array): string {
 export function msgIdFn(gossipTopicCache: GossipTopicCache, msg: Message): Uint8Array {
   const topic = gossipTopicCache.getTopic(msg.topic);
 
-  let vec: Uint8Array[];
+  let toHash: Uint8Array;
 
   switch (topic.fork) {
     // message id for phase0.
@@ -38,7 +39,9 @@ export function msgIdFn(gossipTopicCache: GossipTopicCache, msg: Message): Uint8
     // SHA256(MESSAGE_DOMAIN_VALID_SNAPPY + snappy_decompress(message.data))[:20]
     // ```
     case ForkName.phase0:
-      vec = [MESSAGE_DOMAIN_VALID_SNAPPY, msg.data];
+      toHash = Buffer.allocUnsafe(MESSAGE_DOMAIN_VALID_SNAPPY.length + msg.data.length);
+      toHash.set(MESSAGE_DOMAIN_VALID_SNAPPY);
+      toHash.set(msg.data, MESSAGE_DOMAIN_VALID_SNAPPY.length);
       break;
 
     // message id for altair.
@@ -53,12 +56,19 @@ export function msgIdFn(gossipTopicCache: GossipTopicCache, msg: Message): Uint8
     // https://github.com/ethereum/eth2.0-specs/blob/v1.1.0-alpha.7/specs/altair/p2p-interface.md#topics-and-messages
     case ForkName.altair:
     case ForkName.bellatrix: {
-      vec = [MESSAGE_DOMAIN_VALID_SNAPPY, intToBytes(msg.topic.length, 8), Buffer.from(msg.topic), msg.data];
+      const topicBytes = getTopicBytes(msg.topic);
+      let offset = 0;
+      toHash = Buffer.allocUnsafe(MESSAGE_DOMAIN_VALID_SNAPPY.length + topicBytes.length + msg.data.length);
+      toHash.set(MESSAGE_DOMAIN_VALID_SNAPPY);
+      offset += MESSAGE_DOMAIN_VALID_SNAPPY.length;
+      toHash.set(topicBytes, offset);
+      offset += topicBytes.length;
+      toHash.set(msg.data, offset);
       break;
     }
   }
 
-  return Buffer.from(digest(Buffer.concat(vec))).subarray(0, 20);
+  return digest(toHash).subarray(0, 20);
 }
 
 export class DataTransformSnappy {
@@ -85,4 +95,20 @@ export class DataTransformSnappy {
     // No need to parse topic, everything is snappy compressed
     return compress(data);
   }
+}
+
+const cachedTopicBytes = new Map<string, Buffer>();
+
+/**
+ * Only compute topic bytes for the 1st time.
+ * See https://github.com/ethereum/consensus-specs/blob/v1.2.0/specs/altair/p2p-interface.md#the-gossip-domain-gossipsub
+ */
+function getTopicBytes(topic: string): Buffer {
+  const cached = cachedTopicBytes.get(topic);
+  if (cached) return cached;
+
+  const bytes = Buffer.concat([intToBytes(topic.length, 8), Buffer.from(topic)]);
+  cachedTopicBytes.set(topic, bytes);
+
+  return bytes;
 }
