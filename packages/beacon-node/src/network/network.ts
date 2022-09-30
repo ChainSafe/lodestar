@@ -361,7 +361,7 @@ export class Network implements INetwork {
     try {
       return await this.gossip.publishLightClientFinalityUpdate(finalityUpdate);
     } catch (e) {
-      this.logger.error("Error on BeaconGossipHandler.onLightclientFinalityUpdate", {}, e as Error);
+      this.logger.debug("Error on BeaconGossipHandler.onLightclientFinalityUpdate", {}, e as Error);
     }
   }
 
@@ -369,7 +369,7 @@ export class Network implements INetwork {
     try {
       return await this.gossip.publishLightClientOptimisticUpdate(optimisticUpdate);
     } catch (e) {
-      this.logger.error("Error on BeaconGossipHandler.onLightclientOptimisticUpdate", {}, e as Error);
+      this.logger.debug("Error on BeaconGossipHandler.onLightclientOptimisticUpdate", {}, e as Error);
     }
   }
 }
