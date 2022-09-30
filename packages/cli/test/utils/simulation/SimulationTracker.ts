@@ -252,6 +252,10 @@ export class SimulationTracker {
     // Do nothing;
   }
 
+  onSlot(slot: Slot, node: BeaconNodeProcess, cb: (slot: Slot) => void): void {
+    this.emitter.once(`${node.id}:slot:${slot}`, cb);
+  }
+
   private async onBlock(
     event: routes.events.EventData[routes.events.EventType.block],
     node: BeaconNodeProcess
@@ -291,6 +295,7 @@ export class SimulationTracker {
         })
       );
     }
+    this.emitter.emit(`${node.id}:slot:${slot}`, slot);
   }
 
   private onHead(_event: routes.events.EventData[routes.events.EventType.head], _node: BeaconNodeProcess): void {

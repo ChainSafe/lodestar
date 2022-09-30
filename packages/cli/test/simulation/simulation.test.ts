@@ -93,7 +93,7 @@ for (const {beaconNodes, validatorClients, validatorsPerClient} of nodeCases) {
           describe(`epoch - ${epoch}`, () => {
             before("wait for epoch", async () => {
               // Wait for one extra slot to make sure epoch transition is complete on the state
-              await env.waitForEndOfSlot(env.clock.getLastSlotOfEpoch(epoch) + 1);
+              await env.waitForSlot(env.clock.getLastSlotOfEpoch(epoch) + 1);
 
               env.tracker.printNoesInfo();
             });

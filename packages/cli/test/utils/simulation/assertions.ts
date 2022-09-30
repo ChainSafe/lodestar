@@ -2,7 +2,6 @@ import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import {routes} from "@lodestar/api/beacon";
 import {Epoch} from "@lodestar/types";
-import {MAX_COMMITTEES_PER_SLOT} from "@lodestar/params";
 import {SimulationEnvironment} from "./SimulationEnvironment.js";
 
 chai.use(chaiAsPromised);
@@ -59,8 +58,8 @@ export function attestationParticipationAssertions(env: SimulationEnvironment, e
         const participation = env.tracker.epochMeasures.get(node.id)?.get(epoch)?.attestationParticipationAvg;
 
         expect(participation?.head).to.be.gte(
-          env.acceptableParticipationRate,
-          `node "${node.id}" has low participation rate on head for epoch ${epoch}. participationRate: ${participation?.head}, acceptableParticipationRate: ${env.acceptableParticipationRate}`
+          env.expectedMinParticipationRate,
+          `node "${node.id}" has low participation rate on head for epoch ${epoch}. participationRate: ${participation?.head}, expectedMinParticipationRate: ${env.expectedMinParticipationRate}`
         );
       });
 
@@ -68,8 +67,8 @@ export function attestationParticipationAssertions(env: SimulationEnvironment, e
         const participation = env.tracker.epochMeasures.get(node.id)?.get(epoch)?.attestationParticipationAvg;
 
         expect(participation?.target).to.be.gte(
-          env.acceptableParticipationRate,
-          `node "${node.id}" has low participation rate on target for epoch ${epoch}. participationRate: ${participation?.target}, acceptableParticipationRate: ${env.acceptableParticipationRate}`
+          env.expectedMinParticipationRate,
+          `node "${node.id}" has low participation rate on target for epoch ${epoch}. participationRate: ${participation?.target}, expectedMinParticipationRate: ${env.expectedMinParticipationRate}`
         );
       });
 
@@ -77,8 +76,8 @@ export function attestationParticipationAssertions(env: SimulationEnvironment, e
         const participation = env.tracker.epochMeasures.get(node.id)?.get(epoch)?.attestationParticipationAvg;
 
         expect(participation?.source).to.be.gte(
-          env.acceptableParticipationRate,
-          `node "${node.id}" has low participation rate on source for epoch ${epoch}. participationRate: ${participation?.source}, acceptableParticipationRate: ${env.acceptableParticipationRate}`
+          env.expectedMinParticipationRate,
+          `node "${node.id}" has low participation rate on source for epoch ${epoch}. participationRate: ${participation?.source}, expectedMinParticipationRate: ${env.expectedMinParticipationRate}`
         );
       });
     });
@@ -118,13 +117,12 @@ export function inclusionDelayAssertions(env: SimulationEnvironment, epoch: Epoc
       const endSlot = env.clock.getLastSlotOfEpoch(epoch);
 
       for (let slot = startSlot; slot <= endSlot; slot++) {
-        it(`should not have higher inclusion delay for attestations in slot "${slot}"`, () => {
+        it(`should have lower attestations inclusion delay for slot "${slot}"`, () => {
           const inclusionDelay = env.tracker.slotMeasures.get(node.id)?.get(slot)?.inclusionDelay;
-          const acceptableMaxInclusionDelay = env.acceptableMaxInclusionDelay;
 
           expect(inclusionDelay).to.lte(
-            acceptableMaxInclusionDelay,
-            `node "${node.id}" has has higher inclusion delay. slot: ${slot}, inclusionDelay: ${inclusionDelay}, acceptableMaxInclusionDelay: ${acceptableMaxInclusionDelay}`
+            env.expectedMaxInclusionDelay,
+            `node "${node.id}" has has higher inclusion delay. slot: ${slot}, inclusionDelay: ${inclusionDelay}, expectedMaxInclusionDelay: ${env.expectedMaxInclusionDelay}`
           );
         });
       }
@@ -139,12 +137,12 @@ export function attestationPerSlotAssertions(env: SimulationEnvironment, epoch: 
       const endSlot = env.clock.getLastSlotOfEpoch(epoch);
 
       for (let slot = startSlot; slot <= endSlot; slot++) {
-        it(`should have attestations count equals to MAX_COMMITTEES_PER_SLOT for slot "${slot}"`, () => {
+        it(`should have higher attestation count for slot "${slot}"`, () => {
           const attestationsCount = env.tracker.slotMeasures.get(node.id)?.get(slot)?.attestationsCount;
 
-          expect(attestationsCount).to.eql(
-            MAX_COMMITTEES_PER_SLOT,
-            `node "${node.id}" has lower number of attestations for slot "${slot}".`
+          expect(attestationsCount).to.gte(
+            env.expectedMinAttestationCount,
+            `node "${node.id}" has lower attestations count for slot "${slot}". attestationsCount: ${attestationsCount} expectedMinAttestationCount: ${env.expectedMinAttestationCount}`
           );
         });
       }
@@ -219,11 +217,10 @@ export function syncCommitteeAssertions(env: SimulationEnvironment, epoch: Epoch
 
         it(`should have have higher participation for slot "${slot}"`, () => {
           const participation = env.tracker.slotMeasures.get(env.nodes[0].id)?.get(slot)?.syncCommitteeParticipation;
-          const acceptableMinSyncParticipation = env.acceptableMinSyncParticipation;
 
           expect(participation).to.gte(
-            acceptableMinSyncParticipation,
-            `node "${node.id}" low sync committee participation slot: ${slot}, participation: ${participation}, acceptableMinSyncParticipation: ${acceptableMinSyncParticipation}`
+            env.expectedMinSyncParticipationRate,
+            `node "${node.id}" low sync committee participation slot: ${slot}, participation: ${participation}, expectedMinSyncParticipationRate: ${env.expectedMinSyncParticipationRate}`
           );
         });
       }

@@ -3,6 +3,7 @@ export const MS_IN_SEC = 1000;
 export class EpochClock {
   private readonly genesisTime: number;
   private readonly secondsPerSlot: number;
+  private readonly signal: AbortSignal;
 
   readonly slotsPerEpoch: number;
 
@@ -10,14 +11,17 @@ export class EpochClock {
     genesisTime,
     secondsPerSlot,
     slotsPerEpoch,
+    signal,
   }: {
     genesisTime: number;
     secondsPerSlot: number;
     slotsPerEpoch: number;
+    signal: AbortSignal;
   }) {
     this.genesisTime = genesisTime;
     this.secondsPerSlot = secondsPerSlot;
     this.slotsPerEpoch = slotsPerEpoch;
+    this.signal = signal;
   }
 
   timeSinceGenesis(): number {
@@ -67,5 +71,37 @@ export class EpochClock {
 
   isLastSlotOfEpoch(slot: number): boolean {
     return slot % this.slotsPerEpoch === this.slotsPerEpoch - 1;
+  }
+
+  waitForStartOfSlot(slot: number): Promise<this> {
+    console.log("Waiting for start of slot", {target: slot, current: this.currentSlot});
+
+    return new Promise((resolve) => {
+      const slotTime = this.getSlotTime(slot) * MS_IN_SEC - Date.now();
+
+      const timeout = setTimeout(() => {
+        resolve(this);
+      }, slotTime);
+
+      this.signal.addEventListener(
+        "abort",
+        () => {
+          clearTimeout(timeout);
+        },
+        {once: true}
+      );
+    });
+  }
+
+  waitForEndOfSlot(slot: number): Promise<this> {
+    return this.waitForStartOfSlot(slot + 1);
+  }
+
+  waitForStartOfEpoch(epoch: number): Promise<this> {
+    return this.waitForStartOfSlot(this.getFirstSlotOfEpoch(epoch));
+  }
+
+  waitForEndOfEpoch(epoch: number): Promise<this> {
+    return this.waitForEndOfSlot(this.getLastSlotOfEpoch(epoch));
   }
 }
