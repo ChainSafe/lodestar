@@ -48,8 +48,13 @@ export function getLightclientApi(
       return {data: updates};
     },
 
-    async getOptimisticUpdate() {
-      return {data: await chain.lightClientServer.getOptimisticUpdate()};
+    getOptimisticUpdate() {
+      const optimisticUpdate = chain.lightClientServer.getOptimisticUpdate();
+      if (optimisticUpdate == null) {
+        throw new Error("No latest header update available");
+      } else {
+        return {data: optimisticUpdate};
+      }
     },
 
     async getFinalityUpdate() {

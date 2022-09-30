@@ -75,7 +75,7 @@ describe("Light Client Optimistic Update validation", function () {
     chain.lightClientServer.latestForwardedOptimisticSlot = 1;
 
     // make lightclientserver return another update
-    chain.lightClientServer.getOptimisticUpdate = async () => {
+    chain.lightClientServer.getOptimisticUpdate = () => {
       return ssz.altair.LightClientOptimisticUpdate.defaultValue();
     };
 

@@ -6,9 +6,10 @@ import {RespStatus} from "../../../constants/index.js";
 export async function* onLightClientOptimisticUpdate(
   chain: IBeaconChain
 ): AsyncIterable<altair.LightClientOptimisticUpdate> {
-  try {
-    yield await chain.lightClientServer.getOptimisticUpdate();
-  } catch (e) {
-    throw new ResponseError(RespStatus.RESOURCE_UNAVAILABLE, (e as Error).message);
+  const optimisticUpdate = chain.lightClientServer.getOptimisticUpdate();
+  if (optimisticUpdate == null) {
+    throw new ResponseError(RespStatus.RESOURCE_UNAVAILABLE, "No latest header update available");
+  } else {
+    yield optimisticUpdate;
   }
 }

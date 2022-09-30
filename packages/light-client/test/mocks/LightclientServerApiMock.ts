@@ -28,7 +28,7 @@ export class LightclientServerApiMock implements routes.lightclient.Api {
     return {data: updates};
   }
 
-  async getOptimisticUpdate(): Promise<{data: altair.LightClientOptimisticUpdate}> {
+  getOptimisticUpdate(): {data: altair.LightClientOptimisticUpdate} {
     if (!this.latestHeadUpdate) throw Error("No latest head update");
     return {data: this.latestHeadUpdate};
   }

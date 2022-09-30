@@ -286,10 +286,7 @@ export class LightClientServer {
    * API ROUTE to poll LightclientHeaderUpdate.
    * Clients should use the SSE type `light_client_optimistic_update` if available
    */
-  async getOptimisticUpdate(): Promise<altair.LightClientOptimisticUpdate> {
-    if (this.latestHeadUpdate === null) {
-      throw Error("No latest header update available");
-    }
+  getOptimisticUpdate(): altair.LightClientOptimisticUpdate | null {
     return this.latestHeadUpdate;
   }
 
