@@ -44,135 +44,133 @@ const n = 250_000;
 const ih = Math.round(n / 2);
 const runsFactor = 1000;
 
-describe("arrayish", () => {
-  describe("Tree (persistent-merkle-tree)", () => {
-    // Don't track regressions in CI
-    setBenchOpts({noThreshold: true});
+describe("Tree (persistent-merkle-tree)", () => {
+  // Don't track regressions in CI
+  setBenchOpts({noThreshold: true});
 
-    const d = 40;
-    const gih = toGindex(d, BigInt(ih));
-    const n2 = LeafNode.fromRoot(Buffer.alloc(32, 2));
-    let tree: Tree;
+  const d = 40;
+  const gih = toGindex(d, BigInt(ih));
+  const n2 = LeafNode.fromRoot(Buffer.alloc(32, 2));
+  let tree: Tree;
 
-    before(function () {
-      this.timeout(120_000);
-      tree = getTree(d, n);
-    });
+  before(function () {
+    this.timeout(120_000);
+    tree = getTree(d, n);
+  });
 
-    itBench({id: `Tree ${d} ${n} create`, timeoutBench: 120_000}, () => {
-      getTree(d, n);
-    });
+  itBench({id: `Tree ${d} ${n} create`, timeoutBench: 120_000}, () => {
+    getTree(d, n);
+  });
 
-    itBench({id: `Tree ${d} ${n} get(${ih})`, runsFactor}, () => {
-      for (let i = 0; i < runsFactor; i++) tree.getNode(gih);
-    });
+  itBench({id: `Tree ${d} ${n} get(${ih})`, runsFactor}, () => {
+    for (let i = 0; i < runsFactor; i++) tree.getNode(gih);
+  });
 
-    itBench({id: `Tree ${d} ${n} set(${ih})`, runsFactor}, () => {
-      for (let i = 0; i < runsFactor; i++) tree.setNode(gih, n2);
-    });
+  itBench({id: `Tree ${d} ${n} set(${ih})`, runsFactor}, () => {
+    for (let i = 0; i < runsFactor; i++) tree.setNode(gih, n2);
+  });
 
-    itBench(`Tree ${d} ${n} toArray()`, () => {
-      Array.from(tree.iterateNodesAtDepth(d, 0, n));
-    });
+  itBench(`Tree ${d} ${n} toArray()`, () => {
+    Array.from(tree.iterateNodesAtDepth(d, 0, n));
+  });
 
-    itBench(`Tree ${d} ${n} iterate all - toArray() + loop`, () => {
-      const treeArr = Array.from(tree.iterateNodesAtDepth(d, 0, n));
-      for (let i = 0; i < n; i++) {
-        treeArr[i];
-      }
-    });
-
-    itBench(`Tree ${d} ${n} iterate all - get(i)`, () => {
-      const startIndex = BigInt(2 ** d);
-      for (let i = BigInt(0), nB = BigInt(n); i < nB; i++) {
-        tree.getNode(startIndex + i);
-      }
-    });
-
-    function getTree(d: number, n: number): Tree {
-      const leaf = LeafNode.fromRoot(Buffer.alloc(32, 1));
-      const startIndex = BigInt(2 ** d);
-      const tree = new Tree(zeroNode(d));
-      for (let i = BigInt(0), nB = BigInt(n); i < nB; i++) {
-        tree.setNode(startIndex + i, leaf);
-      }
-      return tree;
+  itBench(`Tree ${d} ${n} iterate all - toArray() + loop`, () => {
+    const treeArr = Array.from(tree.iterateNodesAtDepth(d, 0, n));
+    for (let i = 0; i < n; i++) {
+      treeArr[i];
     }
   });
 
-  describe("MutableVector", () => {
-    // Don't track regressions in CI
-    setBenchOpts({noThreshold: true});
-
-    let items: number[];
-    let mutableVector: MutableVector<number>;
-
-    before(function () {
-      items = createArray(n);
-      mutableVector = MutableVector.from(items);
-    });
-
-    itBench(`MutableVector ${n} create`, () => {
-      MutableVector.from(items);
-    });
-
-    itBench({id: `MutableVector ${n} get(${ih})`, runsFactor}, () => {
-      for (let i = 0; i < runsFactor; i++) mutableVector.get(ih - i);
-    });
-
-    itBench({id: `MutableVector ${n} set(${ih})`, runsFactor}, () => {
-      for (let i = 0; i < runsFactor; i++) mutableVector.set(ih - i, 10000000);
-    });
-
-    itBench(`MutableVector ${n} toArray()`, () => {
-      mutableVector.toArray();
-    });
-
-    itBench(`MutableVector ${n} iterate all - toArray() + loop`, () => {
-      const mvArr = mutableVector.toArray();
-      for (let i = 0; i < n; i++) {
-        mvArr[i];
-      }
-    });
-
-    itBench(`MutableVector ${n} iterate all - get(i)`, () => {
-      for (let i = 0; i < n; i++) {
-        mutableVector.get(i);
-      }
-    });
+  itBench(`Tree ${d} ${n} iterate all - get(i)`, () => {
+    const startIndex = BigInt(2 ** d);
+    for (let i = BigInt(0), nB = BigInt(n); i < nB; i++) {
+      tree.getNode(startIndex + i);
+    }
   });
 
-  describe("Array", () => {
-    // Don't track regressions in CI
-    setBenchOpts({noThreshold: true});
+  function getTree(d: number, n: number): Tree {
+    const leaf = LeafNode.fromRoot(Buffer.alloc(32, 1));
+    const startIndex = BigInt(2 ** d);
+    const tree = new Tree(zeroNode(d));
+    for (let i = BigInt(0), nB = BigInt(n); i < nB; i++) {
+      tree.setNode(startIndex + i, leaf);
+    }
+    return tree;
+  }
+});
 
-    let arr: number[];
+describe("MutableVector", () => {
+  // Don't track regressions in CI
+  setBenchOpts({noThreshold: true});
 
-    before(function () {
-      arr = createArray(n);
-    });
+  let items: number[];
+  let mutableVector: MutableVector<number>;
 
-    itBench(`Array ${n} create`, () => {
-      createArray(n);
-    });
+  before(function () {
+    items = createArray(n);
+    mutableVector = MutableVector.from(items);
+  });
 
-    itBench(`Array ${n} clone - spread`, () => {
-      [...arr];
-    });
+  itBench(`MutableVector ${n} create`, () => {
+    MutableVector.from(items);
+  });
 
-    itBench({id: `Array ${n} get(${ih})`, runsFactor}, () => {
-      for (let i = 0; i < runsFactor; i++) arr[ih - 1];
-    });
+  itBench({id: `MutableVector ${n} get(${ih})`, runsFactor}, () => {
+    for (let i = 0; i < runsFactor; i++) mutableVector.get(ih - i);
+  });
 
-    itBench({id: `Array ${n} set(${ih})`, runsFactor}, () => {
-      for (let i = 0; i < runsFactor; i++) arr[ih - 1] = 10000000;
-    });
+  itBench({id: `MutableVector ${n} set(${ih})`, runsFactor}, () => {
+    for (let i = 0; i < runsFactor; i++) mutableVector.set(ih - i, 10000000);
+  });
 
-    itBench(`Array ${n} iterate all - loop`, () => {
-      for (let i = 0; i < n; i++) {
-        arr[i];
-      }
-    });
+  itBench(`MutableVector ${n} toArray()`, () => {
+    mutableVector.toArray();
+  });
+
+  itBench(`MutableVector ${n} iterate all - toArray() + loop`, () => {
+    const mvArr = mutableVector.toArray();
+    for (let i = 0; i < n; i++) {
+      mvArr[i];
+    }
+  });
+
+  itBench(`MutableVector ${n} iterate all - get(i)`, () => {
+    for (let i = 0; i < n; i++) {
+      mutableVector.get(i);
+    }
+  });
+});
+
+describe("Array", () => {
+  // Don't track regressions in CI
+  setBenchOpts({noThreshold: true});
+
+  let arr: number[];
+
+  before(function () {
+    arr = createArray(n);
+  });
+
+  itBench(`Array ${n} create`, () => {
+    createArray(n);
+  });
+
+  itBench(`Array ${n} clone - spread`, () => {
+    [...arr];
+  });
+
+  itBench({id: `Array ${n} get(${ih})`, runsFactor}, () => {
+    for (let i = 0; i < runsFactor; i++) arr[ih - 1];
+  });
+
+  itBench({id: `Array ${n} set(${ih})`, runsFactor}, () => {
+    for (let i = 0; i < runsFactor; i++) arr[ih - 1] = 10000000;
+  });
+
+  itBench(`Array ${n} iterate all - loop`, () => {
+    for (let i = 0; i < n; i++) {
+      arr[i];
+    }
   });
 });
 

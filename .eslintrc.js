@@ -223,6 +223,9 @@ module.exports = {
         // TODO: Move all setup code to before/beforeEach and then disable async describe
         // https://github.com/lo1tuma/eslint-plugin-mocha/blob/master/docs/rules/no-async-describe.md
         "mocha/no-async-describe": "off",
+        // We observed that having multiple top level "describe" save valuable indentation
+        // https://github.com/lo1tuma/eslint-plugin-mocha/blob/master/docs/rules/max-top-level-suites.md
+        "mocha/max-top-level-suites": "off",
       },
     },
     {

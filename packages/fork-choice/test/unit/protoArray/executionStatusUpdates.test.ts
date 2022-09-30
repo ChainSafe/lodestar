@@ -119,289 +119,287 @@ function setupForkChoice(): ProtoArray {
   return fc;
 }
 
-describe("executionStatusUpdates", () => {
-  describe("executionStatus / normal updates", () => {
-    const fc = setupForkChoice();
+describe("executionStatus / normal updates", () => {
+  const fc = setupForkChoice();
 
-    /**
-     *  0 (PreMerge) <- 1A (Syncing) <- 2A (Syncing) <- 3A (Syncing)
-     *                               ^- 2B (Syncing) <- 3B (Syncing)
-     *                               ~~ 2C (Syncing) <- 3C (Syncing)
-     */
-    const preValidation = collectProtoarrayValidationStatus(fc);
-    it("preValidation forkchoice setup should be correct", () => {
-      expect(preValidation).to.be.deep.equal(expectedPreValidationFC);
-    });
-
-    /**
-     * Invalidate 3C with LVH on 2C which stays in Syncing
-     *
-     *  0 (PreMerge) <- 1A (Syncing) <- 2A (Syncing) <- 3A (Syncing)
-     *                               ^- 2B (Syncing) <- 3B (Syncing)
-     *                               ~~ 2C (Syncing) <- 3C (Invalid)
-     */
-    fc.validateLatestHash(
-      {
-        executionStatus: ExecutionStatus.Invalid,
-        latestValidExecHash: "2C",
-        invalidateFromBlockHash: "3C",
-      },
-      3
-    );
-
-    const invalidate3CValidate2CForkChoice = collectProtoarrayValidationStatus(fc);
-    it("correcly invalidate 3C and validate 2C only", () => {
-      expect(invalidate3CValidate2CForkChoice).to.be.deep.equal(
-        toFcTestCase([
-          ["0", "1A", "3B", ExecutionStatus.PreMerge],
-          ["1A", "2B", "3B", ExecutionStatus.Syncing],
-          ["2A", "3A", "3A", ExecutionStatus.Syncing],
-          ["3A", undefined, undefined, ExecutionStatus.Syncing],
-          ["2B", "3B", "3B", ExecutionStatus.Syncing],
-          ["3B", undefined, undefined, ExecutionStatus.Syncing],
-          ["2C", undefined, undefined, ExecutionStatus.Syncing],
-          ["3C", undefined, undefined, ExecutionStatus.Invalid],
-        ])
-      );
-    });
-
-    /**
-     * Validate 3B, 2B, 1A (premerge)
-     *
-     *  0 (PreMerge) <- 1A (Valid)   <- 2A (Syncing) <- 3A (Syncing)
-     *                               ^- 2B (Valid)   <- 3B (Valid)
-     *                               ~~ 2C (Syncing) <- 3C (Invalid)
-     */
-    fc.validateLatestHash(
-      {
-        executionStatus: ExecutionStatus.Valid,
-        latestValidExecHash: "3B",
-      },
-      3
-    );
-    const validate3B2B1A = collectProtoarrayValidationStatus(fc);
-    it("Validate 3B, 2B, 1A", () => {
-      expect(validate3B2B1A).to.be.deep.equal(
-        toFcTestCase([
-          ["0", "1A", "3B", ExecutionStatus.PreMerge],
-          ["1A", "2B", "3B", ExecutionStatus.Valid],
-          ["2A", "3A", "3A", ExecutionStatus.Syncing],
-          ["3A", undefined, undefined, ExecutionStatus.Syncing],
-          ["2B", "3B", "3B", ExecutionStatus.Valid],
-          ["3B", undefined, undefined, ExecutionStatus.Valid],
-          ["2C", undefined, undefined, ExecutionStatus.Syncing],
-          ["3C", undefined, undefined, ExecutionStatus.Invalid],
-        ])
-      );
-    });
-
-    /**
-     * Invalidate 3A, 2A with 2A loosing its bestChild, bestDescendant
-     *
-     *  0 (PreMerge) <- 1A (Valid)   <- 2A (Invalid) <- 3A (Invalid)
-     *                               ^- 2B (Valid)   <- 3B (Valid)
-     *                               ~~ 2C (Syncing) <- 3C (Invalid)
-     */
-
-    fc.validateLatestHash(
-      {
-        executionStatus: ExecutionStatus.Invalid,
-        latestValidExecHash: "1A",
-        invalidateFromBlockHash: "3A",
-      },
-      3
-    );
-    const invalidate3A2A = collectProtoarrayValidationStatus(fc);
-    it("Invalidate 3A, 2A with 2A loosing its bestChild, bestDescendant", () => {
-      expect(invalidate3A2A).to.be.deep.equal(
-        toFcTestCase([
-          ["0", "1A", "3B", ExecutionStatus.PreMerge],
-          ["1A", "2B", "3B", ExecutionStatus.Valid],
-          ["2A", undefined, undefined, ExecutionStatus.Invalid],
-          ["3A", undefined, undefined, ExecutionStatus.Invalid],
-          ["2B", "3B", "3B", ExecutionStatus.Valid],
-          ["3B", undefined, undefined, ExecutionStatus.Valid],
-          ["2C", undefined, undefined, ExecutionStatus.Syncing],
-          ["3C", undefined, undefined, ExecutionStatus.Invalid],
-        ])
-      );
-    });
+  /**
+   *  0 (PreMerge) <- 1A (Syncing) <- 2A (Syncing) <- 3A (Syncing)
+   *                               ^- 2B (Syncing) <- 3B (Syncing)
+   *                               ~~ 2C (Syncing) <- 3C (Syncing)
+   */
+  const preValidation = collectProtoarrayValidationStatus(fc);
+  it("preValidation forkchoice setup should be correct", () => {
+    expect(preValidation).to.be.deep.equal(expectedPreValidationFC);
   });
 
-  describe("executionStatus / invalidate all postmerge chain", () => {
-    const fc = setupForkChoice();
+  /**
+   * Invalidate 3C with LVH on 2C which stays in Syncing
+   *
+   *  0 (PreMerge) <- 1A (Syncing) <- 2A (Syncing) <- 3A (Syncing)
+   *                               ^- 2B (Syncing) <- 3B (Syncing)
+   *                               ~~ 2C (Syncing) <- 3C (Invalid)
+   */
+  fc.validateLatestHash(
+    {
+      executionStatus: ExecutionStatus.Invalid,
+      latestValidExecHash: "2C",
+      invalidateFromBlockHash: "3C",
+    },
+    3
+  );
 
-    /**
-     * Set up the following forkchoice  (~~ parent not in forkchoice, possibly bogus/NA)
-     *
-     *  0 (PreMerge) <- 1A (Syncing) <- 2A (Syncing) <- 3A (Syncing)
-     *                               ^- 2B (Syncing) <- 3B (Syncing)
-     *                               ~~ 2C (Syncing) <- 3C (Syncing)
-     */
-    const preValidation = collectProtoarrayValidationStatus(fc);
-    it("preValidation forkchoice setup should be correct", () => {
-      expect(preValidation).to.be.deep.equal(expectedPreValidationFC);
-    });
-
-    /**
-     * All post merge blocks should be invalidated except Cs
-     *
-     *  0 (PreMerge) <- 1A (Invalid) <- 2A (Invalid) <- 3A (Invalid)
-     *                               ^- 2B (Invalid) <- 3B (Invalid)
-     *                               ~~ 2C (Syncing) <- 3C (Syncing)
-     */
-    fc.validateLatestHash(
-      {
-        executionStatus: ExecutionStatus.Invalid,
-        latestValidExecHash: "0x0000000000000000000000000000000000000000000000000000000000000000",
-        invalidateFromBlockHash: "3B",
-      },
-      3
+  const invalidate3CValidate2CForkChoice = collectProtoarrayValidationStatus(fc);
+  it("correcly invalidate 3C and validate 2C only", () => {
+    expect(invalidate3CValidate2CForkChoice).to.be.deep.equal(
+      toFcTestCase([
+        ["0", "1A", "3B", ExecutionStatus.PreMerge],
+        ["1A", "2B", "3B", ExecutionStatus.Syncing],
+        ["2A", "3A", "3A", ExecutionStatus.Syncing],
+        ["3A", undefined, undefined, ExecutionStatus.Syncing],
+        ["2B", "3B", "3B", ExecutionStatus.Syncing],
+        ["3B", undefined, undefined, ExecutionStatus.Syncing],
+        ["2C", undefined, undefined, ExecutionStatus.Syncing],
+        ["3C", undefined, undefined, ExecutionStatus.Invalid],
+      ])
     );
-    const postMergeInvalidated = collectProtoarrayValidationStatus(fc);
-    it("all post merge blocks should be invalidated except Cs", () => {
-      expect(postMergeInvalidated).to.be.deep.equal(
-        toFcTestCase([
-          ["0", undefined, undefined, ExecutionStatus.PreMerge],
-          ["1A", undefined, undefined, ExecutionStatus.Invalid],
-          ["2A", undefined, undefined, ExecutionStatus.Invalid],
-          ["3A", undefined, undefined, ExecutionStatus.Invalid],
-          ["2B", undefined, undefined, ExecutionStatus.Invalid],
-          ["3B", undefined, undefined, ExecutionStatus.Invalid],
-          ["2C", "3C", "3C", ExecutionStatus.Syncing],
-          ["3C", undefined, undefined, ExecutionStatus.Syncing],
-        ])
-      );
-    });
-
-    const fcHead = fc.findHead("0", 3);
-    it("pre merge block should be the FC head", () => {
-      expect(fcHead).to.be.equal("0");
-    });
   });
 
-  describe("executionStatus / poision forkchoice if we invalidate previous valid", () => {
-    const fc = setupForkChoice();
-
-    /**
-     * Set up the following forkchoice  (~~ parent not in forkchoice, possibly bogus/NA)
-     *
-     *  0 (PreMerge) <- 1A (Syncing) <- 2A (Syncing) <- 3A (Syncing)
-     *                               ^- 2B (Syncing) <- 3B (Syncing)
-     *                               ~~ 2C (Syncing) <- 3C (Syncing)
-     */
-    const preValidation = collectProtoarrayValidationStatus(fc);
-    it("preValidation forkchoice setup should be correct", () => {
-      expect(preValidation).to.be.deep.equal(expectedPreValidationFC);
-    });
-
-    /**
-     * Validate 3B, 2B, 1A (premerge)
-     *
-     *  0 (PreMerge) <- 1A (Valid)   <- 2A (Syncing) <- 3A (Syncing)
-     *                               ^- 2B (Valid)   <- 3B (Valid)
-     *                               ~~ 2C (Syncing) <- 3C (Syncing)
-     */
-    fc.validateLatestHash(
-      {
-        executionStatus: ExecutionStatus.Valid,
-        latestValidExecHash: "3B",
-      },
-      3
+  /**
+   * Validate 3B, 2B, 1A (premerge)
+   *
+   *  0 (PreMerge) <- 1A (Valid)   <- 2A (Syncing) <- 3A (Syncing)
+   *                               ^- 2B (Valid)   <- 3B (Valid)
+   *                               ~~ 2C (Syncing) <- 3C (Invalid)
+   */
+  fc.validateLatestHash(
+    {
+      executionStatus: ExecutionStatus.Valid,
+      latestValidExecHash: "3B",
+    },
+    3
+  );
+  const validate3B2B1A = collectProtoarrayValidationStatus(fc);
+  it("Validate 3B, 2B, 1A", () => {
+    expect(validate3B2B1A).to.be.deep.equal(
+      toFcTestCase([
+        ["0", "1A", "3B", ExecutionStatus.PreMerge],
+        ["1A", "2B", "3B", ExecutionStatus.Valid],
+        ["2A", "3A", "3A", ExecutionStatus.Syncing],
+        ["3A", undefined, undefined, ExecutionStatus.Syncing],
+        ["2B", "3B", "3B", ExecutionStatus.Valid],
+        ["3B", undefined, undefined, ExecutionStatus.Valid],
+        ["2C", undefined, undefined, ExecutionStatus.Syncing],
+        ["3C", undefined, undefined, ExecutionStatus.Invalid],
+      ])
     );
-    const validate3B2B1A = collectProtoarrayValidationStatus(fc);
-    it("Validate 3B, 2B, 1A", () => {
-      expect(validate3B2B1A).to.be.deep.equal(
-        toFcTestCase([
-          ["0", "1A", "3B", ExecutionStatus.PreMerge],
-          ["1A", "2B", "3B", ExecutionStatus.Valid],
-          ["2A", "3A", "3A", ExecutionStatus.Syncing],
-          ["3A", undefined, undefined, ExecutionStatus.Syncing],
-          ["2B", "3B", "3B", ExecutionStatus.Valid],
-          ["3B", undefined, undefined, ExecutionStatus.Valid],
-          ["2C", "3C", "3C", ExecutionStatus.Syncing],
-          ["3C", undefined, undefined, ExecutionStatus.Syncing],
-        ])
-      );
-    });
-
-    it("protoarray should be poisioned with a buggy LVH response", () => {
-      expect(() =>
-        fc.validateLatestHash(
-          {
-            executionStatus: ExecutionStatus.Invalid,
-            latestValidExecHash: "0x0000000000000000000000000000000000000000000000000000000000000000",
-            invalidateFromBlockHash: "3A",
-          },
-          3
-        )
-      ).to.throw(Error);
-
-      expect(fc.lvhError).to.be.deep.equal({lvhCode: LVHExecErrorCode.ValidToInvalid, blockRoot: "1A", execHash: "1A"});
-      expect(() => fc.findHead("0", 3)).to.throw(Error);
-    });
   });
 
-  describe("executionStatus / poision forkchoice if we validate previous invalid", () => {
-    const fc = setupForkChoice();
+  /**
+   * Invalidate 3A, 2A with 2A loosing its bestChild, bestDescendant
+   *
+   *  0 (PreMerge) <- 1A (Valid)   <- 2A (Invalid) <- 3A (Invalid)
+   *                               ^- 2B (Valid)   <- 3B (Valid)
+   *                               ~~ 2C (Syncing) <- 3C (Invalid)
+   */
 
-    /**
-     * Set up the following forkchoice  (~~ parent not in forkchoice, possibly bogus/NA)
-     *
-     *  0 (PreMerge) <- 1A (Syncing) <- 2A (Syncing) <- 3A (Syncing)
-     *                               ^- 2B (Syncing) <- 3B (Syncing)
-     *                               ~~ 2C (Syncing) <- 3C (Syncing)
-     */
-    const preValidation = collectProtoarrayValidationStatus(fc);
-    it("preValidation forkchoice setup should be correct", () => {
-      expect(preValidation).to.be.deep.equal(expectedPreValidationFC);
-    });
-
-    /**
-     * Invalidate 3B, 2B, 1A
-     *
-     *  0 (PreMerge) <- 1A (Invalid) <- 2A (Invalid) <- 3A (Invalid)
-     *                               ^- 2B (Invalid)   <- 3B (Invalid)
-     *                               ~~ 2C (Syncing) <- 3C (Syncing)
-     */
-    fc.validateLatestHash(
-      {
-        executionStatus: ExecutionStatus.Invalid,
-        latestValidExecHash: "0x0000000000000000000000000000000000000000000000000000000000000000",
-        invalidateFromBlockHash: "3B",
-      },
-      3
+  fc.validateLatestHash(
+    {
+      executionStatus: ExecutionStatus.Invalid,
+      latestValidExecHash: "1A",
+      invalidateFromBlockHash: "3A",
+    },
+    3
+  );
+  const invalidate3A2A = collectProtoarrayValidationStatus(fc);
+  it("Invalidate 3A, 2A with 2A loosing its bestChild, bestDescendant", () => {
+    expect(invalidate3A2A).to.be.deep.equal(
+      toFcTestCase([
+        ["0", "1A", "3B", ExecutionStatus.PreMerge],
+        ["1A", "2B", "3B", ExecutionStatus.Valid],
+        ["2A", undefined, undefined, ExecutionStatus.Invalid],
+        ["3A", undefined, undefined, ExecutionStatus.Invalid],
+        ["2B", "3B", "3B", ExecutionStatus.Valid],
+        ["3B", undefined, undefined, ExecutionStatus.Valid],
+        ["2C", undefined, undefined, ExecutionStatus.Syncing],
+        ["3C", undefined, undefined, ExecutionStatus.Invalid],
+      ])
     );
-    const validate3B2B1A = collectProtoarrayValidationStatus(fc);
-    it("Inalidate 3B, 2B, 1A", () => {
-      expect(validate3B2B1A).to.be.deep.equal(
-        toFcTestCase([
-          ["0", undefined, undefined, ExecutionStatus.PreMerge],
-          ["1A", undefined, undefined, ExecutionStatus.Invalid],
-          ["2A", undefined, undefined, ExecutionStatus.Invalid],
-          ["3A", undefined, undefined, ExecutionStatus.Invalid],
-          ["2B", undefined, undefined, ExecutionStatus.Invalid],
-          ["3B", undefined, undefined, ExecutionStatus.Invalid],
-          ["2C", "3C", "3C", ExecutionStatus.Syncing],
-          ["3C", undefined, undefined, ExecutionStatus.Syncing],
-        ])
-      );
-    });
+  });
+});
 
-    it("protoarray should be poisioned with a buggy LVH response", () => {
-      expect(() =>
-        fc.validateLatestHash(
-          {
-            executionStatus: ExecutionStatus.Valid,
-            latestValidExecHash: "2A",
-          },
-          3
-        )
-      ).to.throw(Error);
+describe("executionStatus / invalidate all postmerge chain", () => {
+  const fc = setupForkChoice();
 
-      expect(fc.lvhError).to.be.deep.equal({lvhCode: LVHExecErrorCode.InvalidToValid, blockRoot: "2A", execHash: "2A"});
-      expect(() => fc.findHead("0", 3)).to.throw(Error);
-    });
+  /**
+   * Set up the following forkchoice  (~~ parent not in forkchoice, possibly bogus/NA)
+   *
+   *  0 (PreMerge) <- 1A (Syncing) <- 2A (Syncing) <- 3A (Syncing)
+   *                               ^- 2B (Syncing) <- 3B (Syncing)
+   *                               ~~ 2C (Syncing) <- 3C (Syncing)
+   */
+  const preValidation = collectProtoarrayValidationStatus(fc);
+  it("preValidation forkchoice setup should be correct", () => {
+    expect(preValidation).to.be.deep.equal(expectedPreValidationFC);
+  });
+
+  /**
+   * All post merge blocks should be invalidated except Cs
+   *
+   *  0 (PreMerge) <- 1A (Invalid) <- 2A (Invalid) <- 3A (Invalid)
+   *                               ^- 2B (Invalid) <- 3B (Invalid)
+   *                               ~~ 2C (Syncing) <- 3C (Syncing)
+   */
+  fc.validateLatestHash(
+    {
+      executionStatus: ExecutionStatus.Invalid,
+      latestValidExecHash: "0x0000000000000000000000000000000000000000000000000000000000000000",
+      invalidateFromBlockHash: "3B",
+    },
+    3
+  );
+  const postMergeInvalidated = collectProtoarrayValidationStatus(fc);
+  it("all post merge blocks should be invalidated except Cs", () => {
+    expect(postMergeInvalidated).to.be.deep.equal(
+      toFcTestCase([
+        ["0", undefined, undefined, ExecutionStatus.PreMerge],
+        ["1A", undefined, undefined, ExecutionStatus.Invalid],
+        ["2A", undefined, undefined, ExecutionStatus.Invalid],
+        ["3A", undefined, undefined, ExecutionStatus.Invalid],
+        ["2B", undefined, undefined, ExecutionStatus.Invalid],
+        ["3B", undefined, undefined, ExecutionStatus.Invalid],
+        ["2C", "3C", "3C", ExecutionStatus.Syncing],
+        ["3C", undefined, undefined, ExecutionStatus.Syncing],
+      ])
+    );
+  });
+
+  const fcHead = fc.findHead("0", 3);
+  it("pre merge block should be the FC head", () => {
+    expect(fcHead).to.be.equal("0");
+  });
+});
+
+describe("executionStatus / poision forkchoice if we invalidate previous valid", () => {
+  const fc = setupForkChoice();
+
+  /**
+   * Set up the following forkchoice  (~~ parent not in forkchoice, possibly bogus/NA)
+   *
+   *  0 (PreMerge) <- 1A (Syncing) <- 2A (Syncing) <- 3A (Syncing)
+   *                               ^- 2B (Syncing) <- 3B (Syncing)
+   *                               ~~ 2C (Syncing) <- 3C (Syncing)
+   */
+  const preValidation = collectProtoarrayValidationStatus(fc);
+  it("preValidation forkchoice setup should be correct", () => {
+    expect(preValidation).to.be.deep.equal(expectedPreValidationFC);
+  });
+
+  /**
+   * Validate 3B, 2B, 1A (premerge)
+   *
+   *  0 (PreMerge) <- 1A (Valid)   <- 2A (Syncing) <- 3A (Syncing)
+   *                               ^- 2B (Valid)   <- 3B (Valid)
+   *                               ~~ 2C (Syncing) <- 3C (Syncing)
+   */
+  fc.validateLatestHash(
+    {
+      executionStatus: ExecutionStatus.Valid,
+      latestValidExecHash: "3B",
+    },
+    3
+  );
+  const validate3B2B1A = collectProtoarrayValidationStatus(fc);
+  it("Validate 3B, 2B, 1A", () => {
+    expect(validate3B2B1A).to.be.deep.equal(
+      toFcTestCase([
+        ["0", "1A", "3B", ExecutionStatus.PreMerge],
+        ["1A", "2B", "3B", ExecutionStatus.Valid],
+        ["2A", "3A", "3A", ExecutionStatus.Syncing],
+        ["3A", undefined, undefined, ExecutionStatus.Syncing],
+        ["2B", "3B", "3B", ExecutionStatus.Valid],
+        ["3B", undefined, undefined, ExecutionStatus.Valid],
+        ["2C", "3C", "3C", ExecutionStatus.Syncing],
+        ["3C", undefined, undefined, ExecutionStatus.Syncing],
+      ])
+    );
+  });
+
+  it("protoarray should be poisioned with a buggy LVH response", () => {
+    expect(() =>
+      fc.validateLatestHash(
+        {
+          executionStatus: ExecutionStatus.Invalid,
+          latestValidExecHash: "0x0000000000000000000000000000000000000000000000000000000000000000",
+          invalidateFromBlockHash: "3A",
+        },
+        3
+      )
+    ).to.throw(Error);
+
+    expect(fc.lvhError).to.be.deep.equal({lvhCode: LVHExecErrorCode.ValidToInvalid, blockRoot: "1A", execHash: "1A"});
+    expect(() => fc.findHead("0", 3)).to.throw(Error);
+  });
+});
+
+describe("executionStatus / poision forkchoice if we validate previous invalid", () => {
+  const fc = setupForkChoice();
+
+  /**
+   * Set up the following forkchoice  (~~ parent not in forkchoice, possibly bogus/NA)
+   *
+   *  0 (PreMerge) <- 1A (Syncing) <- 2A (Syncing) <- 3A (Syncing)
+   *                               ^- 2B (Syncing) <- 3B (Syncing)
+   *                               ~~ 2C (Syncing) <- 3C (Syncing)
+   */
+  const preValidation = collectProtoarrayValidationStatus(fc);
+  it("preValidation forkchoice setup should be correct", () => {
+    expect(preValidation).to.be.deep.equal(expectedPreValidationFC);
+  });
+
+  /**
+   * Invalidate 3B, 2B, 1A
+   *
+   *  0 (PreMerge) <- 1A (Invalid) <- 2A (Invalid) <- 3A (Invalid)
+   *                               ^- 2B (Invalid)   <- 3B (Invalid)
+   *                               ~~ 2C (Syncing) <- 3C (Syncing)
+   */
+  fc.validateLatestHash(
+    {
+      executionStatus: ExecutionStatus.Invalid,
+      latestValidExecHash: "0x0000000000000000000000000000000000000000000000000000000000000000",
+      invalidateFromBlockHash: "3B",
+    },
+    3
+  );
+  const validate3B2B1A = collectProtoarrayValidationStatus(fc);
+  it("Inalidate 3B, 2B, 1A", () => {
+    expect(validate3B2B1A).to.be.deep.equal(
+      toFcTestCase([
+        ["0", undefined, undefined, ExecutionStatus.PreMerge],
+        ["1A", undefined, undefined, ExecutionStatus.Invalid],
+        ["2A", undefined, undefined, ExecutionStatus.Invalid],
+        ["3A", undefined, undefined, ExecutionStatus.Invalid],
+        ["2B", undefined, undefined, ExecutionStatus.Invalid],
+        ["3B", undefined, undefined, ExecutionStatus.Invalid],
+        ["2C", "3C", "3C", ExecutionStatus.Syncing],
+        ["3C", undefined, undefined, ExecutionStatus.Syncing],
+      ])
+    );
+  });
+
+  it("protoarray should be poisioned with a buggy LVH response", () => {
+    expect(() =>
+      fc.validateLatestHash(
+        {
+          executionStatus: ExecutionStatus.Valid,
+          latestValidExecHash: "2A",
+        },
+        3
+      )
+    ).to.throw(Error);
+
+    expect(fc.lvhError).to.be.deep.equal({lvhCode: LVHExecErrorCode.InvalidToValid, blockRoot: "2A", execHash: "2A"});
+    expect(() => fc.findHead("0", 3)).to.throw(Error);
   });
 });
 
