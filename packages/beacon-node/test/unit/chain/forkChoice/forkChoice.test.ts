@@ -1,3 +1,4 @@
+import {expect} from "chai";
 import {toHexString} from "@chainsafe/ssz";
 import {config} from "@lodestar/config/default";
 import {CheckpointWithHex, ExecutionStatus, ForkChoice} from "@lodestar/fork-choice";
@@ -8,14 +9,13 @@ import {
   getEffectiveBalanceIncrementsZeroed,
 } from "@lodestar/state-transition";
 import {phase0, Slot, ssz} from "@lodestar/types";
-import {expect} from "chai";
+import {getTemporaryBlockHeader, processSlots} from "@lodestar/state-transition";
 import {ChainEventEmitter, computeAnchorCheckpoint, initializeForkChoice} from "../../../../src/chain/index.js";
 import {generateSignedBlock} from "../../../utils/block.js";
 import {createCachedBeaconStateTest} from "../../../utils/cachedBeaconState.js";
 import {createIndexedAttestation} from "../../../utils/forkChoice.js";
 import {generateState} from "../../../utils/state.js";
 import {generateValidators} from "../../../utils/validator.js";
-import {getTemporaryBlockHeader, processSlots} from "@lodestar/state-transition";
 
 describe("LodestarForkChoice", function () {
   let forkChoice: ForkChoice;
