@@ -132,7 +132,7 @@ module.exports = {
     "no-bitwise": "off",
     "no-cond-assign": "error",
     "no-consecutive-blank-lines": 0,
-    "no-console": "warn",
+    "no-console": "error",
     "no-var": "error",
     "object-curly-spacing": ["error", "never"],
     "object-literal-sort-keys": 0,
