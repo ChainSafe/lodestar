@@ -1,40 +1,5 @@
-import {config} from "@lodestar/config/default";
-import {phase0, Slot, ssz, ValidatorIndex} from "@lodestar/types";
-import {
-  computeEpochAtSlot,
-  getTemporaryBlockHeader,
-  CachedBeaconStateAllForks,
-  processSlots,
-} from "@lodestar/state-transition";
-import {generateSignedBlock} from "./block.js";
-
-// lightweight state transtion function for this test
-export function runStateTransition(
-  preState: CachedBeaconStateAllForks,
-  signedBlock: phase0.SignedBeaconBlock
-): CachedBeaconStateAllForks {
-  // Clone state because process slots and block are not pure
-  const postState = preState.clone();
-  // Process slots (including those with no blocks) since block
-  processSlots(postState, signedBlock.message.slot);
-  // processBlock
-  postState.latestBlockHeader = ssz.phase0.BeaconBlockHeader.toViewDU(
-    getTemporaryBlockHeader(config, signedBlock.message)
-  );
-  return postState;
-}
-
-// create a child block/state from a parent block/state and a provided slot
-export function makeChild(
-  parent: {block: phase0.SignedBeaconBlock; state: CachedBeaconStateAllForks},
-  slot: Slot
-): {block: phase0.SignedBeaconBlock; state: CachedBeaconStateAllForks} {
-  const childBlock = generateSignedBlock({message: {slot}});
-  const parentRoot = ssz.phase0.BeaconBlock.hashTreeRoot(parent.block.message);
-  childBlock.message.parentRoot = parentRoot;
-  const childState = runStateTransition(parent.state, childBlock);
-  return {block: childBlock, state: childState};
-}
+import {computeEpochAtSlot} from "@lodestar/state-transition";
+import {phase0, ssz, ValidatorIndex} from "@lodestar/types";
 
 export function createIndexedAttestation(
   source: phase0.Checkpoint,

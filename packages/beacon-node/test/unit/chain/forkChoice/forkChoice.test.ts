@@ -1,20 +1,21 @@
-import {expect} from "chai";
-import {FAR_FUTURE_EPOCH, MAX_EFFECTIVE_BALANCE} from "@lodestar/params";
+import {toHexString} from "@chainsafe/ssz";
 import {config} from "@lodestar/config/default";
-import {phase0, ssz} from "@lodestar/types";
 import {CheckpointWithHex, ExecutionStatus, ForkChoice} from "@lodestar/fork-choice";
+import {FAR_FUTURE_EPOCH, MAX_EFFECTIVE_BALANCE} from "@lodestar/params";
 import {
-  computeEpochAtSlot,
   CachedBeaconStateAllForks,
+  computeEpochAtSlot,
   getEffectiveBalanceIncrementsZeroed,
 } from "@lodestar/state-transition";
-import {toHexString} from "@chainsafe/ssz";
-import {generateSignedBlock} from "../../../utils/block.js";
-import {generateState} from "../../../utils/state.js";
+import {phase0, Slot, ssz} from "@lodestar/types";
+import {expect} from "chai";
 import {ChainEventEmitter, computeAnchorCheckpoint, initializeForkChoice} from "../../../../src/chain/index.js";
+import {generateSignedBlock} from "../../../utils/block.js";
 import {createCachedBeaconStateTest} from "../../../utils/cachedBeaconState.js";
+import {createIndexedAttestation} from "../../../utils/forkChoice.js";
+import {generateState} from "../../../utils/state.js";
 import {generateValidators} from "../../../utils/validator.js";
-import {createIndexedAttestation, makeChild, runStateTransition} from "../../../utils/forkChoice.js";
+import {getTemporaryBlockHeader, processSlots} from "@lodestar/state-transition";
 
 describe("LodestarForkChoice", function () {
   let forkChoice: ForkChoice;
@@ -305,3 +306,31 @@ describe("LodestarForkChoice", function () {
     });
   });
 });
+
+// lightweight state transtion function for this test
+function runStateTransition(
+  preState: CachedBeaconStateAllForks,
+  signedBlock: phase0.SignedBeaconBlock
+): CachedBeaconStateAllForks {
+  // Clone state because process slots and block are not pure
+  const postState = preState.clone();
+  // Process slots (including those with no blocks) since block
+  processSlots(postState, signedBlock.message.slot);
+  // processBlock
+  postState.latestBlockHeader = ssz.phase0.BeaconBlockHeader.toViewDU(
+    getTemporaryBlockHeader(config, signedBlock.message)
+  );
+  return postState;
+}
+
+// create a child block/state from a parent block/state and a provided slot
+function makeChild(
+  parent: {block: phase0.SignedBeaconBlock; state: CachedBeaconStateAllForks},
+  slot: Slot
+): {block: phase0.SignedBeaconBlock; state: CachedBeaconStateAllForks} {
+  const childBlock = generateSignedBlock({message: {slot}});
+  const parentRoot = ssz.phase0.BeaconBlock.hashTreeRoot(parent.block.message);
+  childBlock.message.parentRoot = parentRoot;
+  const childState = runStateTransition(parent.state, childBlock);
+  return {block: childBlock, state: childState};
+}
