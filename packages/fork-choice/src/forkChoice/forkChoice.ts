@@ -44,7 +44,6 @@ export type ForkChoiceOpts = {
   proposerBoostEnabled?: boolean;
   computeUnrealized?: boolean;
   countUnrealizedFull?: boolean;
-  forwardWSCheckpoint?: phase0.Checkpoint;
 };
 
 /**
