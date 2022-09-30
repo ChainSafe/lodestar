@@ -357,11 +357,19 @@ export class Network implements INetwork {
     }
   };
 
-  private onLightclientFinalityUpdate(finalityUpdate: altair.LightClientFinalityUpdate): void {
-    void this.gossip.publishLightClientFinalityUpdate(finalityUpdate);
+  private async onLightclientFinalityUpdate(finalityUpdate: altair.LightClientFinalityUpdate): Promise<void> {
+    try {
+      return await this.gossip.publishLightClientFinalityUpdate(finalityUpdate);
+    } catch (e) {
+      this.logger.error("Error on BeaconGossipHandler.onLightclientFinalityUpdate", {}, e as Error);
+    }
   }
 
-  private onLightclientOptimisticUpdate(optimisticUpdate: altair.LightClientOptimisticUpdate): void {
-    void this.gossip.publishLightClientOptimisticUpdate(optimisticUpdate);
+  private async onLightclientOptimisticUpdate(optimisticUpdate: altair.LightClientOptimisticUpdate): Promise<void> {
+    try {
+      return await this.gossip.publishLightClientOptimisticUpdate(optimisticUpdate);
+    } catch (e) {
+      this.logger.error("Error on BeaconGossipHandler.onLightclientOptimisticUpdate", {}, e as Error);
+    }
   }
 }

@@ -34,7 +34,7 @@ export async function validateLightClientOptimisticUpdate(
   }
 
   // [IGNORE] The received optimistic_update matches the locally computed one exactly
-  if (lightClientOptimisticUpdate != (await chain.lightClientServer.getOptimisticUpdate())) {
+  if (lightClientOptimisticUpdate != chain.lightClientServer.getOptimisticUpdate()) {
     throw new LightClientError(GossipAction.IGNORE, {
       code: LightClientErrorCode.OPTIMISTIC_UPDATE_NOT_MATCHING_LOCAL,
     });
