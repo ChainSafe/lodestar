@@ -87,6 +87,7 @@ export interface IBeaconChain {
   readonly beaconProposerCache: BeaconProposerCache;
   readonly checkpointBalancesCache: CheckpointBalancesCache;
   readonly opts: IChainOptions;
+  isWSCheckpointValidationPending: boolean;
 
   /** Stop beacon chain processing */
   close(): Promise<void>;

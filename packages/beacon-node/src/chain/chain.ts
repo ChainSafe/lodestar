@@ -122,6 +122,8 @@ export class BeaconChain implements IBeaconChain {
   private readonly allowedFaults: number;
   private processShutdownCallback: ProcessShutdownCallback;
 
+  isWSCheckpointValidationPending: boolean;
+
   constructor(
     opts: IChainOptions,
     {
@@ -165,6 +167,7 @@ export class BeaconChain implements IBeaconChain {
     // > Consensus Layer client software SHOULD poll this endpoint every 60 seconds.
     // Align to a multiple of SECONDS_PER_SLOT for nicer logs
     this.exchangeTransitionConfigurationEverySlots = Math.floor(60 / this.config.SECONDS_PER_SLOT);
+    this.isWSCheckpointValidationPending = this.opts.forwardWSCheckpoint !== undefined;
 
     /**
      * Beacon clients select randomized values from the following ranges when initializing
@@ -637,6 +640,14 @@ export class BeaconChain implements IBeaconChain {
 
   private onForkChoiceFinalized(this: BeaconChain, cp: CheckpointWithHex): void {
     this.logger.verbose("Fork choice finalized", {epoch: cp.epoch, root: cp.rootHex});
+    if (this.isWSCheckpointValidationPending && this.opts.forwardWSCheckpoint) {
+      try {
+        this.isWSCheckpointValidationPending = !this.forkChoice.verifyForwardCheckpoint(this.opts.forwardWSCheckpoint);
+      } catch (error) {
+        // Critical error, exit the chain
+        this.processShutdownCallback(error as Error);
+      }
+    }
     this.seenBlockProposers.prune(computeStartSlotAtEpoch(cp.epoch));
 
     // TODO: Improve using regen here

@@ -4,10 +4,11 @@ import {Registry} from "prom-client";
 
 import {IBeaconConfig} from "@lodestar/config";
 import {phase0} from "@lodestar/types";
-import {ILogger} from "@lodestar/utils";
+import {ILogger, toHexString} from "@lodestar/utils";
 import {Api} from "@lodestar/api";
 import {BeaconStateAllForks} from "@lodestar/state-transition";
 import {ProcessShutdownCallback} from "@lodestar/validator";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
 
 import {IBeaconDb} from "../db/index.js";
 import {INetwork, Network, getReqRespHandlers} from "../network/index.js";
@@ -157,6 +158,25 @@ export class BeaconNode {
       // Since the db is instantiated before this, metrics must be injected manually afterwards
       db.setMetrics(metrics.db);
       createLibp2pMetrics(libp2p, metrics.register);
+    }
+
+    if (opts.chain.forwardWSCheckpoint !== undefined) {
+      const {epoch, root} = opts.chain.forwardWSCheckpoint;
+      // lets just check if we have the root in the finalized block archive, if not found then we should be syncing it
+      const block = (await db.blockArchive.getByRoot(root))?.message;
+      if (block !== undefined) {
+        if (block.slot <= epoch * SLOTS_PER_EPOCH) {
+          logger.info("Validated the forward checkpoint", {root: toHexString(root), epoch, blockSlot: block.slot});
+          // unset it since its been validated and doesn't need to be tracked in chain
+          opts.chain.forwardWSCheckpoint = undefined;
+        } else {
+          processShutdownCallback(
+            Error(
+              `Forward checkpoint epoch invalidated root=${toHexString(root)}, epoch=${epoch}, blockSlot=${block.slot}`
+            )
+          );
+        }
+      }
     }
 
     const chain = new BeaconChain(opts.chain, {

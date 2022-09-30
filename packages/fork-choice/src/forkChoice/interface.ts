@@ -177,8 +177,7 @@ export interface IForkChoice {
   getDependentRoot(block: ProtoBlock, atEpochDiff: EpochDifference): RootHex;
 
   /** Get critical error from forkChoice */
-  getForwardWSCheckpointVerified(): boolean;
-  setForwardWSCheckpointVerified(checkpointVerified: boolean): void;
+  verifyForwardCheckpoint(checkpoint: phase0.Checkpoint): boolean;
 }
 
 /** Same to the PowBlock but we want RootHex to work with forkchoice conveniently */
