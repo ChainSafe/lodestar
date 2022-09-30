@@ -8,7 +8,7 @@ export async function* onLightClientOptimisticUpdate(
 ): AsyncIterable<altair.LightClientOptimisticUpdate> {
   const optimisticUpdate = chain.lightClientServer.getOptimisticUpdate();
   if (optimisticUpdate == null) {
-    throw new ResponseError(RespStatus.RESOURCE_UNAVAILABLE, "No latest header update available");
+    throw new ResponseError(RespStatus.RESOURCE_UNAVAILABLE, "No latest optimistic update available");
   } else {
     yield optimisticUpdate;
   }

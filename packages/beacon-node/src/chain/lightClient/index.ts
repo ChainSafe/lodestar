@@ -290,11 +290,7 @@ export class LightClientServer {
     return this.latestHeadUpdate;
   }
 
-  async getFinalityUpdate(): Promise<altair.LightClientFinalityUpdate> {
-    // Signature data
-    if (this.finalized === null) {
-      throw Error("No latest header update available");
-    }
+  getFinalityUpdate(): altair.LightClientFinalityUpdate | null {
     return this.finalized;
   }
 

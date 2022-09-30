@@ -42,7 +42,7 @@ export type Api = {
    * unless to get the very first head update after syncing, or if SSE are not supported by the server.
    */
   getOptimisticUpdate(): {data: altair.LightClientOptimisticUpdate};
-  getFinalityUpdate(): Promise<{data: altair.LightClientFinalityUpdate}>;
+  getFinalityUpdate(): {data: altair.LightClientFinalityUpdate};
   /**
    * Fetch a bootstrapping state with a proof to a trusted block root.
    * The trusted block root should be fetched with similar means to a weak subjectivity checkpoint.

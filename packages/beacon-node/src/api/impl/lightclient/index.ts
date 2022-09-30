@@ -57,8 +57,12 @@ export function getLightclientApi(
       }
     },
 
-    async getFinalityUpdate() {
-      return {data: await chain.lightClientServer.getFinalityUpdate()};
+    getFinalityUpdate() {
+      const finalityUpdate = chain.lightClientServer.getFinalityUpdate();
+      if (finalityUpdate == null) {
+        throw new Error("No latest finality update available");
+      }
+      return {data: finalityUpdate};
     },
 
     async getBootstrap(blockRoot) {

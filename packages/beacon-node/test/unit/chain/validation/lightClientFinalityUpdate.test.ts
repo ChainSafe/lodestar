@@ -76,7 +76,7 @@ describe("Light Client Finality Update validation", function () {
     chain.lightClientServer.latestForwardedFinalitySlot = 1;
 
     // make lightclientserver return another update
-    chain.lightClientServer.getFinalityUpdate = async () => {
+    chain.lightClientServer.getFinalityUpdate = () => {
       return ssz.altair.LightClientFinalityUpdate.defaultValue();
     };
 
