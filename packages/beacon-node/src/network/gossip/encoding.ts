@@ -13,7 +13,10 @@ import {GossipTopicCache} from "./topic.js";
  */
 export function fastMsgIdFn(rpcMsg: RPC.IMessage): string {
   if (rpcMsg.data) {
-    return Buffer.from(digest(rpcMsg.data)).subarray(0, 8).toString("hex");
+    const hash = digest(rpcMsg.data);
+    const hashBuffer = Buffer.from(hash);
+    const hashBuffer8B = hashBuffer.subarray(0, 8);
+    return hashBuffer8B.toString("hex");
   } else {
     return "0000000000000000";
   }
