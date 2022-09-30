@@ -39,24 +39,6 @@ jobs:
       - name: Simulation tests for CLI
         run: yarn test:sim
         working-directory: packages/cli
-      # - name: Simulation multi thread multi node test phase0
-      #   run: yarn test:sim:multiThread
-      #   working-directory: packages/beacon-node
-      #   env: {RUN_ONLY_SIM_TEST: phase0}
-      # - name: Simulation multi thread multi node test altair epoch genesis
-      #   run: yarn test:sim:multiThread
-      #   working-directory: packages/beacon-node
-      #   env: {RUN_ONLY_SIM_TEST: altair-genesis}
-      # - name: Simulation multi thread multi node test altair epoch 2
-      #   run: yarn test:sim:multiThread
-      #   working-directory: packages/beacon-node
-      #   env: {RUN_ONLY_SIM_TEST: altair-epoch2}
-      - name: Upload debug log test files for "packages/beacon-node"
-        if: ${{ always() }}
-        uses: actions/upload-artifact@v2
-        with:
-          name: debug-test-logs-beacon-node
-          path: packages/beacon-node/test-logs
       - name: Upload debug log test files for "packages/cli"
         if: ${{ always() }}
         uses: actions/upload-artifact@v2
