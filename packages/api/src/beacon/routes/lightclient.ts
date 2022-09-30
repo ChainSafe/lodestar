@@ -41,8 +41,8 @@ export type Api = {
    * Returns the latest optimistic head update available. Clients should use the SSE type `light_client_optimistic_update`
    * unless to get the very first head update after syncing, or if SSE are not supported by the server.
    */
-  getOptimisticUpdate(): {data: altair.LightClientOptimisticUpdate};
-  getFinalityUpdate(): {data: altair.LightClientFinalityUpdate};
+  getOptimisticUpdate(): Promise<{data: altair.LightClientOptimisticUpdate}>;
+  getFinalityUpdate(): Promise<{data: altair.LightClientFinalityUpdate}>;
   /**
    * Fetch a bootstrapping state with a proof to a trusted block root.
    * The trusted block root should be fetched with similar means to a weak subjectivity checkpoint.

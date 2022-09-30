@@ -311,7 +311,7 @@ export class Lightclient {
         // Fetch latest optimistic head to prevent a potential 12 seconds lag between syncing and getting the first head,
         // Don't retry, this is a non-critical UX improvement
         try {
-          const {data: latestOptimisticUpdate} = this.api.lightclient.getOptimisticUpdate();
+          const {data: latestOptimisticUpdate} = await this.api.lightclient.getOptimisticUpdate();
           this.processOptimisticUpdate(latestOptimisticUpdate);
         } catch (e) {
           this.logger.error("Error fetching getLatestHeadUpdate", {currentPeriod}, e as Error);

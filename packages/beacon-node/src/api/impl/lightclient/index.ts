@@ -48,7 +48,7 @@ export function getLightclientApi(
       return {data: updates};
     },
 
-    getOptimisticUpdate() {
+    async getOptimisticUpdate() {
       const optimisticUpdate = chain.lightClientServer.getOptimisticUpdate();
       if (optimisticUpdate == null) {
         throw new Error("No latest header update available");
@@ -57,7 +57,7 @@ export function getLightclientApi(
       }
     },
 
-    getFinalityUpdate() {
+    async getFinalityUpdate() {
       const finalityUpdate = chain.lightClientServer.getFinalityUpdate();
       if (finalityUpdate == null) {
         throw new Error("No latest finality update available");

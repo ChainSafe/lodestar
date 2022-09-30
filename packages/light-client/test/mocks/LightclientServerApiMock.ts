@@ -28,12 +28,12 @@ export class LightclientServerApiMock implements routes.lightclient.Api {
     return {data: updates};
   }
 
-  getOptimisticUpdate(): {data: altair.LightClientOptimisticUpdate} {
+  async getOptimisticUpdate(): Promise<{data: altair.LightClientOptimisticUpdate}> {
     if (!this.latestHeadUpdate) throw Error("No latest head update");
     return {data: this.latestHeadUpdate};
   }
 
-  getFinalityUpdate(): {data: altair.LightClientFinalityUpdate} {
+  async getFinalityUpdate(): Promise<{data: altair.LightClientFinalityUpdate}> {
     if (!this.finalized) throw Error("No finalized head update");
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     return {data: this.finalized};
