@@ -639,10 +639,16 @@ export class BeaconChain implements IBeaconChain {
   }
 
   private onForkChoiceFinalized(this: BeaconChain, cp: CheckpointWithHex): void {
-    this.logger.info("Fork choice finalized", {epoch: cp.epoch, root: cp.rootHex});
+    this.logger.verbose("Fork choice finalized", {epoch: cp.epoch, root: cp.rootHex});
     if (this.isWSCheckpointValidationPending && this.opts.forwardWSCheckpoint) {
       try {
         this.isWSCheckpointValidationPending = !this.forkChoice.verifyForwardCheckpoint(this.opts.forwardWSCheckpoint);
+        if (!this.isWSCheckpointValidationPending) {
+          this.logger.info("forwardWSCheckpoint found and validated on the chain", {
+            epoch: this.opts.forwardWSCheckpoint.epoch,
+            root: toHex(this.opts.forwardWSCheckpoint.root),
+          });
+        }
       } catch (error) {
         // Critical error, exit the chain
         this.processShutdownCallback(error as Error);

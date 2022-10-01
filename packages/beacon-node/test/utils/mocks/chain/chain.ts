@@ -105,6 +105,8 @@ export class MockBeaconChain implements IBeaconChain {
   private state: BeaconStateAllForks;
   private abortController: AbortController;
 
+  isWSCheckpointValidationPending = false;
+
   constructor({genesisTime, chainId, networkId, state, config}: IMockChainParams) {
     this.logger = testLogger();
     this.genesisTime = genesisTime ?? state.genesisTime;
@@ -288,6 +290,7 @@ function mockForkChoice(): IForkChoice {
     getCommonAncestorDistance: () => null,
     validateLatestHash: () => {},
     getDependentRoot: () => rootHex,
+    verifyForwardCheckpoint: () => true,
   };
 }
 
