@@ -1201,13 +1201,16 @@ export class ForkChoice implements IForkChoice {
   }
 
   verifyForwardCheckpoint({epoch, root}: phase0.Checkpoint): boolean {
+    const rootHex = toHexString(root);
     if (this.fcStore.finalizedCheckpoint.epoch >= epoch) {
-      const protoCP = this.getBlock(root);
-
+      const protoCP = this.protoArray.getBlock(rootHex);
       if (protoCP !== null) {
         if (
-          byteArrayEquals(this.fcStore.finalizedCheckpoint.root, root) ||
-          this.getAllAncestorBlocks(toHexString(this.fcStore.finalizedCheckpoint.root)).includes(protoCP)
+          this.fcStore.finalizedCheckpoint.rootHex === rootHex ||
+          this.protoArray
+            .getAllAncestorNodes(this.fcStore.finalizedCheckpoint.rootHex)
+            .map((node) => node.blockRoot)
+            .includes(rootHex)
         ) {
           return true;
         } else {
@@ -1216,7 +1219,7 @@ export class ForkChoice implements IForkChoice {
             root: toHexString(root),
             epoch: epoch,
             finalizedEpoch: this.fcStore.finalizedCheckpoint.epoch,
-            msg: "Checkpoint not found",
+            msg: "Checkpoint root not in finalized",
           });
         }
       } else {
@@ -1225,7 +1228,7 @@ export class ForkChoice implements IForkChoice {
           root: toHexString(root),
           epoch,
           finalizedEpoch: this.fcStore.finalizedCheckpoint.epoch,
-          msg: "Checkpoint not found",
+          msg: "Checkpoint root not found",
         });
       }
     } else {
@@ -1310,14 +1313,4 @@ export function computeProposerBoostScoreFromBalances(
     }
   }
   return computeProposerBoostScore({justifiedTotalActiveBalanceByIncrement, justifiedActiveValidators}, config);
-}
-
-function byteArrayEquals(a: Uint8Array | Root, b: Uint8Array | Root): boolean {
-  if (a.length !== b.length) {
-    return false;
-  }
-  for (let i = 0; i < a.length; i++) {
-    if (a[i] !== b[i]) return false;
-  }
-  return true;
 }

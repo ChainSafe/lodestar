@@ -6,7 +6,7 @@ import {IBeaconConfig} from "@lodestar/config";
 import {phase0} from "@lodestar/types";
 import {ILogger, toHexString} from "@lodestar/utils";
 import {Api} from "@lodestar/api";
-import {BeaconStateAllForks} from "@lodestar/state-transition";
+import {BeaconStateAllForks, isWithinWeakSubjectivityPeriod} from "@lodestar/state-transition";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 
@@ -166,15 +166,37 @@ export class BeaconNode {
       const block = (await db.blockArchive.getByRoot(root))?.message;
       if (block !== undefined) {
         if (block.slot <= epoch * SLOTS_PER_EPOCH) {
-          logger.info("Validated the forward checkpoint", {root: toHexString(root), epoch, blockSlot: block.slot});
-          // unset it since its been validated and doesn't need to be tracked in chain
+          const wssCheck = isWithinWeakSubjectivityPeriod(config, anchorState, opts.chain.forwardWSCheckpoint, false);
+          if (wssCheck) {
+            logger.info("Valid forwardWSCheckpoint already finalized in db", {
+              root: toHexString(root),
+              epoch,
+              blockSlot: block.slot,
+            });
+          } else {
+            logger.warn("forwardWSCheckpoint found finalized in db but is stale, recommend using a fresh one");
+          }
+          // unset it since its been found and doesn't need to be tracked in chain
           opts.chain.forwardWSCheckpoint = undefined;
         } else {
           processShutdownCallback(
             Error(
-              `Forward checkpoint epoch invalidated root=${toHexString(root)}, epoch=${epoch}, blockSlot=${block.slot}`
+              `forwardWSCheckpoint found at an invalid blockSlot root=${toHexString(root)}, epoch=${epoch}, blockSlot=${
+                block.slot
+              }`
             )
           );
+        }
+      } else {
+        if (anchorState.latestBlockHeader.slot > opts.chain.forwardWSCheckpoint.epoch * SLOTS_PER_EPOCH) {
+          // This means we should have had the the block by now
+          throw Error(
+            `forwardWSCheckpoint's root should have been found before anchorState's latestBlockHeader root=${toHexString(
+              root
+            )}, epoch=${epoch}, anchorSlot=${anchorState.latestBlockHeader.slot}`
+          );
+        } else {
+          // We can only determine the validity of the checkpoint when we sync more blocks from wire later
         }
       }
     }

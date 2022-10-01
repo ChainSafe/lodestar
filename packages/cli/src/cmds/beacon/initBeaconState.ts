@@ -106,42 +106,16 @@ export async function initBeaconState(
   const lastDbState = await db.stateArchive.lastValue();
   if (lastDbState) {
     const config = createIBeaconConfig(chainForkConfig, lastDbState.genesisValidatorsRoot);
-    const dbCheckpoint = getCheckpointFromState(lastDbState);
-    const forwardCheckpoint =
-      args.forwardWSCheckpoint !== undefined ? getCheckpointFromArg(args.forwardWSCheckpoint) : undefined;
-    const isCheckpointState = false;
-    let checkpointMeta: {
-      isWithinWeakSubjectivityPeriod: boolean;
-      isCheckpointState: boolean;
-      forwardCheckpoint?: Checkpoint;
-    };
-
-    if (forwardCheckpoint !== undefined && forwardCheckpoint.epoch > dbCheckpoint.epoch) {
-      const wssCheck = isWithinWeakSubjectivityPeriod(config, lastDbState, forwardCheckpoint, false);
-      checkpointMeta = {
-        // only need the period check, skip the exact root epoch check will will be validated in
-        // forward sync
-        isWithinWeakSubjectivityPeriod: wssCheck,
-        isCheckpointState,
-        forwardCheckpoint,
-      };
-    } else {
-      if (forwardCheckpoint !== undefined) {
-        logger.info("Disregarding the forwardCheckpoint as db state is ahead of the checkpoint");
-      }
-      const wssCheck = isWithinWeakSubjectivityPeriod(config, lastDbState, dbCheckpoint);
-
-      checkpointMeta = {
-        isWithinWeakSubjectivityPeriod: wssCheck,
-        isCheckpointState,
-      };
-    }
-
+    const wssCheck = isWithinWeakSubjectivityPeriod(config, lastDbState, getCheckpointFromState(lastDbState));
     // All cases when we want to directly use lastDbState as the anchor state:
     //  - if no checkpoint sync args provided, or
     //  - the lastDbState is within weak subjectivity period:
-    if ((!args.checkpointState && !args.checkpointSyncUrl) || checkpointMeta.isWithinWeakSubjectivityPeriod) {
-      const anchorState = await initStateFromAnchorState(config, db, logger, lastDbState, checkpointMeta);
+    if ((!args.checkpointState && !args.checkpointSyncUrl) || wssCheck) {
+      const anchorState = await initStateFromAnchorState(config, db, logger, lastDbState, {
+        isWithinWeakSubjectivityPeriod: wssCheck,
+        isCheckpointState: false,
+        forwardWSCheckpoint: args.forwardWSCheckpoint,
+      });
       return {anchorState};
     }
   }

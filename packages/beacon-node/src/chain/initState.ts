@@ -165,29 +165,38 @@ export async function initStateFromAnchorState(
   {
     isWithinWeakSubjectivityPeriod,
     isCheckpointState,
-    forwardCheckpoint,
-  }: {isWithinWeakSubjectivityPeriod: boolean; isCheckpointState: boolean; forwardCheckpoint?: phase0.Checkpoint}
+    forwardWSCheckpoint,
+  }: {isWithinWeakSubjectivityPeriod: boolean; isCheckpointState: boolean; forwardWSCheckpoint?: string}
 ): Promise<BeaconStateAllForks> {
+  const slot = anchorState.slot;
+  const epoch = computeEpochAtSlot(anchorState.slot);
+  const stateRoot = toHexString(anchorState.hashTreeRoot());
+
   const stateInfo = isCheckpointState ? "checkpoint" : "db";
-  const checkpointInfo = forwardCheckpoint !== undefined ? "forward checkpoint" : "checkpoint";
   if (isWithinWeakSubjectivityPeriod) {
-    logger.info(`Initializing beacon from ${stateInfo} with a valid ${checkpointInfo}`, {
-      slot: anchorState.slot,
-      epoch: computeEpochAtSlot(anchorState.slot),
-      stateRoot: toHexString(anchorState.hashTreeRoot()),
+    const checkpointInfo = forwardWSCheckpoint ? " with forwardWSCheckpoint validation pending" : "";
+    logger.info(`Initializing beacon from a valid ${stateInfo} state${checkpointInfo}`, {
+      slot,
+      epoch,
+      stateRoot,
       isWithinWeakSubjectivityPeriod,
     });
   } else {
-    logger.warn(
-      `Initializing from ${stateInfo} state with a stale ${checkpointInfo} vulnerable to long range attacks`,
-      {
-        slot: anchorState.slot,
-        epoch: computeEpochAtSlot(anchorState.slot),
-        stateRoot: toHexString(anchorState.hashTreeRoot()),
+    if (forwardWSCheckpoint === undefined) {
+      logger.warn(`Initializing from a stale ${stateInfo} state vulnerable to long range attacks`, {
+        slot,
+        epoch,
+        stateRoot,
         isWithinWeakSubjectivityPeriod,
-      }
-    );
-    logger.warn("Either use checkpoint sync or provide a fresh forward checkpoint");
+      });
+      logger.warn("Checkpoint sync recommended or provide a forwardWSCheckpoint for sync validation");
+    } else {
+      logger.warn(`Initializing from a stale ${stateInfo} state pending the forwardWSCheckpoint validation`, {
+        slot,
+        epoch,
+        forwardWSCheckpoint,
+      });
+    }
   }
 
   await persistAnchorState(config, db, anchorState);

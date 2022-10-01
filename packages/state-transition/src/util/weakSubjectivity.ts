@@ -113,16 +113,15 @@ export function isWithinWeakSubjectivityPeriod(
   exactMatch = true
 ): boolean {
   const wsStateEpoch = computeCheckpointEpochAtStateSlot(wsState.slot);
-
+  const blockRoot = getLatestBlockRoot(wsState);
   if (exactMatch) {
-    const blockRoot = getLatestBlockRoot(wsState);
     if (!ssz.Root.equals(blockRoot, wsCheckpoint.root)) {
       throw new Error(
-        `Roots do not match.  expected=${toHexString(wsCheckpoint.root)}, actual=${toHexString(blockRoot)}`
+        `Roots do not match: expected=${toHexString(wsCheckpoint.root)}, actual=${toHexString(blockRoot)}`
       );
     }
     if (!ssz.Epoch.equals(wsStateEpoch, wsCheckpoint.epoch)) {
-      throw new Error(`Epochs do not match.  expected=${wsCheckpoint.epoch}, actual=${wsStateEpoch}`);
+      throw new Error(`Epochs do not match: expected=${wsCheckpoint.epoch}, actual=${wsStateEpoch}`);
     }
   }
 

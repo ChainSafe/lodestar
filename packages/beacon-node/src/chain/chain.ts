@@ -10,6 +10,7 @@ import {
   isCachedBeaconState,
   Index2PubkeyCache,
   PubkeyIndexMap,
+  isWithinWeakSubjectivityPeriod,
 } from "@lodestar/state-transition";
 import {IBeaconConfig} from "@lodestar/config";
 import {allForks, UintNum64, Root, phase0, Slot, RootHex, Epoch, ValidatorIndex} from "@lodestar/types";
@@ -644,16 +645,33 @@ export class BeaconChain implements IBeaconChain {
       try {
         this.isWSCheckpointValidationPending = !this.forkChoice.verifyForwardCheckpoint(this.opts.forwardWSCheckpoint);
         if (!this.isWSCheckpointValidationPending) {
-          this.logger.info("forwardWSCheckpoint found and validated on the chain", {
+          const finalizedState = this.checkpointStateCache.get(cp);
+          if (finalizedState === null) {
+            throw new Error("finalizedState not found!");
+          }
+          const wssCheck = isWithinWeakSubjectivityPeriod(
+            this.config,
+            finalizedState,
+            this.opts.forwardWSCheckpoint,
+            false
+          );
+          const wsData = {
             epoch: this.opts.forwardWSCheckpoint.epoch,
             root: toHex(this.opts.forwardWSCheckpoint.root),
-          });
+            isWithinWeakSubjectivityPeriod: wssCheck,
+          };
+          if (wssCheck) {
+            this.logger.info("forwardWSCheckpoint found and valid", wsData);
+          } else {
+            this.logger.warn("forwardWSCheckpoint found on chain but is stale, recommend using a fresh one", wsData);
+          }
         }
       } catch (error) {
         // Critical error, exit the chain
         this.processShutdownCallback(error as Error);
       }
     }
+
     this.seenBlockProposers.prune(computeStartSlotAtEpoch(cp.epoch));
 
     // TODO: Improve using regen here
