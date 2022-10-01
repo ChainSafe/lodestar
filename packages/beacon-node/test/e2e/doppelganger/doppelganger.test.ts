@@ -1,5 +1,4 @@
-import chai, {expect} from "chai";
-import chaiAsPromised from "chai-as-promised";
+import {expect} from "chai";
 import {routes} from "@lodestar/api/beacon";
 import {BLSPubkey, phase0, Slot, ssz} from "@lodestar/types";
 import {IChainConfig} from "@lodestar/config";
@@ -16,8 +15,6 @@ import {getDevBeaconNode} from "../../utils/node/beacon.js";
 import {waitForEvent} from "../../utils/events/resolver.js";
 import {generateAttestationData} from "../../utils/attestation.js";
 import {BeaconNode} from "../../../src/node/index.js";
-
-chai.use(chaiAsPromised);
 
 /* eslint-disable @typescript-eslint/no-unsafe-call,@typescript-eslint/no-unsafe-member-access,@typescript-eslint/no-unsafe-assignment */
 // TODO: Reconsider this tests latter.

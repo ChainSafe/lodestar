@@ -1,5 +1,4 @@
-import chai, {expect} from "chai";
-import chaiAsPromised from "chai-as-promised";
+import {expect} from "chai";
 import varint from "varint";
 import {Uint8ArrayList} from "uint8arraylist";
 import {ssz} from "@lodestar/types";
@@ -12,8 +11,6 @@ import {
 import {isEqualSszType} from "../../../../../utils/ssz.js";
 import {arrToSource} from "../../utils.js";
 import {sszSnappyPing, sszSnappyStatus, sszSnappySignedBeaconBlockPhase0} from "./testData.js";
-
-chai.use(chaiAsPromised);
 
 describe("network / reqresp / sszSnappy / decode", () => {
   describe("Test data vectors (generated in a previous version)", () => {

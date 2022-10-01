@@ -74,13 +74,15 @@ describe("AggregatedAttestationPool", function () {
       pool.add({...attestation, aggregationBits}, aggregationBits.getTrueBitIndexes().length, committee);
       forkchoiceStub.getBlockHex.returns(generateEmptyProtoBlock());
       forkchoiceStub.getDependentRoot.returns(ZERO_HASH_HEX);
-      expect(pool.getAttestationsForBlock(forkchoiceStub, altairState).length > 0).to.equal(
-        isReturned,
-        "Wrong attestation isReturned"
-      );
-      expect(forkchoiceStub.getDependentRoot.calledOnce, "forkchoice should be called to check pivot block").to.equal(
-        true
-      );
+      if (isReturned) {
+        expect(pool.getAttestationsForBlock(forkchoiceStub, altairState).length).to.be.above(
+          0,
+          "Wrong attestation isReturned"
+        );
+      } else {
+        expect(pool.getAttestationsForBlock(forkchoiceStub, altairState).length).to.eql(0);
+      }
+      expect(forkchoiceStub.getDependentRoot, "forkchoice should be called to check pivot block").to.be.calledOnce;
     });
   }
 
@@ -93,7 +95,7 @@ describe("AggregatedAttestationPool", function () {
       [],
       "no attestation since incorrect source"
     );
-    expect(forkchoiceStub.iterateAncestorBlocks.calledOnce, "forkchoice should not be called").to.equal(false);
+    expect(forkchoiceStub.iterateAncestorBlocks, "forkchoice should not be called").to.not.be.calledOnce;
   });
 
   it("incompatible shuffling - incorrect pivot block root", function () {
@@ -106,7 +108,7 @@ describe("AggregatedAttestationPool", function () {
       [],
       "no attestation since incorrect pivot block root"
     );
-    expect(forkchoiceStub.getDependentRoot.calledOnce, "forkchoice should be called to check pivot block").to.be.true;
+    expect(forkchoiceStub.getDependentRoot, "forkchoice should be called to check pivot block").to.be.calledOnce;
   });
 });
 
@@ -171,7 +173,11 @@ describe("MatchingDataAttestationGroup.add()", () => {
       const attestationsAfterAdding = attestationGroup.getAttestations();
 
       for (const [i, {isKept}] of attestationsToAdd.entries()) {
-        expect(attestationsAfterAdding.indexOf(attestations[i]) >= 0).to.equal(isKept, `Wrong attestation ${i} isKept`);
+        if (isKept) {
+          expect(attestationsAfterAdding.indexOf(attestations[i])).to.be.gte(0, `Right attestation ${i} missed.`);
+        } else {
+          expect(attestationsAfterAdding.indexOf(attestations[i])).to.be.eql(-1, `Wrong attestation ${i} is kept.`);
+        }
       }
     });
   }

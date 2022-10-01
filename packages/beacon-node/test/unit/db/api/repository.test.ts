@@ -1,14 +1,11 @@
 import sinon, {SinonStubbedInstance} from "sinon";
-import chai, {expect} from "chai";
-import chaiAsPromised from "chai-as-promised";
+import {expect} from "chai";
 import all from "it-all";
 
 import {ContainerType} from "@chainsafe/ssz";
 import {Bytes32, ssz} from "@lodestar/types";
 import {config} from "@lodestar/config/default";
 import {Db, LevelDbController, Repository, Bucket} from "@lodestar/db";
-
-chai.use(chaiAsPromised);
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
 interface TestType {
@@ -43,14 +40,14 @@ describe("database repository", function () {
     controller.get.resolves(TestSSZType.serialize(item) as Buffer);
     const result = await repository.get("id");
     expect(result).to.be.deep.equal(item);
-    expect(controller.get.calledOnce).to.equal(true);
+    expect(controller.get).to.be.calledOnce;
   });
 
   it("should return null if item not found", async function () {
     controller.get.resolves(null);
     const result = await repository.get("id");
     expect(result).to.be.deep.equal(null);
-    expect(controller.get.calledOnce).to.equal(true);
+    expect(controller.get).to.be.calledOnce;
   });
 
   it("should return true if item exists", async function () {
@@ -58,31 +55,31 @@ describe("database repository", function () {
     controller.get.resolves(TestSSZType.serialize(item) as Buffer);
     const result = await repository.has("id");
     expect(result).to.equal(true);
-    expect(controller.get.calledOnce).to.equal(true);
+    expect(controller.get).to.be.calledOnce;
   });
 
   it("should return false if item doesnt exists", async function () {
     controller.get.resolves(null);
     const result = await repository.has("id");
     expect(result).to.equal(false);
-    expect(controller.get.calledOnce).to.equal(true);
+    expect(controller.get).to.be.calledOnce;
   });
 
   it("should store with hashTreeRoot as id", async function () {
     const item = {bool: true, bytes: Buffer.alloc(32)};
     await expect(repository.add(item)).to.not.be.rejected;
-    expect(controller.put.calledOnce).to.equal(true);
+    expect(controller.put).to.be.calledOnce;
   });
 
   it("should store with given id", async function () {
     const item = {bool: true, bytes: Buffer.alloc(32)};
     await expect(repository.put("1", item)).to.not.be.rejected;
-    expect(controller.put.calledOnce).to.equal(true);
+    expect(controller.put).to.be.calledOnce;
   });
 
   it("should delete", async function () {
     await expect(repository.delete("1")).to.not.be.rejected;
-    expect(controller.delete.calledOnce).to.equal(true);
+    expect(controller.delete).to.be.calledOnce;
   });
 
   it("should return all items", async function () {
@@ -92,25 +89,23 @@ describe("database repository", function () {
     controller.values.resolves(items as Buffer[]);
     const result = await repository.values();
     expect(result).to.be.deep.equal([item, item, item]);
-    expect(controller.values.calledOnce).to.equal(true);
+    expect(controller.values).to.be.calledOnce;
   });
 
   it("should return range of items", async function () {
     await repository.values({gt: "a", lt: "b"});
-    expect(controller.values.calledOnce).to.equal(true);
+    expect(controller.values).to.be.calledOnce;
   });
 
   it("should delete given items", async function () {
     await repository.batchDelete(["1", "2", "3"]);
-    expect(controller.batchDelete.withArgs(sinon.match((criteria: unknown[]) => criteria.length === 3)).calledOnce).to
-      .be.true;
+    expect(controller.batchDelete).to.be.calledOnceWith(sinon.match((criteria: unknown[]) => criteria.length === 3));
   });
 
   it("should delete given items by value", async function () {
     const item = {bool: true, bytes: Buffer.alloc(32)};
     await repository.batchRemove([item, item]);
-    expect(controller.batchDelete.withArgs(sinon.match((criteria: unknown[]) => criteria.length === 2)).calledOnce).to
-      .be.true;
+    expect(controller.batchDelete).to.be.calledOnceWith(sinon.match((criteria: unknown[]) => criteria.length === 2));
   });
 
   it("should add multiple values", async function () {
@@ -118,8 +113,7 @@ describe("database repository", function () {
       {bool: true, bytes: Buffer.alloc(32)},
       {bool: false, bytes: Buffer.alloc(32)},
     ]);
-    expect(controller.batchPut.withArgs(sinon.match((criteria: unknown[]) => criteria.length === 2)).calledOnce).to.be
-      .true;
+    expect(controller.batchPut).to.be.calledOnceWith(sinon.match((criteria: unknown[]) => criteria.length === 2));
   });
 
   it("should fetch values stream", async function () {

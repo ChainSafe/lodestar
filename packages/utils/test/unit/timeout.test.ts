@@ -1,9 +1,7 @@
-import chai, {expect} from "chai";
-import chaiAsPromised from "chai-as-promised";
+import "../setup.js";
+import {expect} from "chai";
 import {withTimeout} from "../../src/timeout.js";
 import {ErrorAborted, TimeoutError} from "../../src/errors.js";
-
-chai.use(chaiAsPromised);
 
 describe("withTimeout", function () {
   const data = "DATA";

@@ -1,5 +1,4 @@
-import chai, {expect} from "chai";
-import chaiAsPromised from "chai-as-promised";
+import {expect} from "chai";
 import pick from "lodash/pick.js";
 import {Root, phase0, ssz} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
@@ -13,8 +12,6 @@ import {Eth1Block} from "../../../../src/eth1/interface.js";
 import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
 import {Eth1ErrorCode} from "../../../../src/eth1/errors.js";
 import {DepositTree} from "../../../../src/db/repositories/depositDataRoot.js";
-
-chai.use(chaiAsPromised);
 
 describe("eth1 / util / getEth1DataForBlocks", function () {
   interface ITestCase {

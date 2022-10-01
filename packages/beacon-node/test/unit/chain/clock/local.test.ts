@@ -34,7 +34,7 @@ describe("LocalClock", function () {
     const spy = sinon.spy();
     emitter.on(ChainEvent.clockSlot, spy);
     sandbox.clock.tick(config.SECONDS_PER_SLOT * 1000);
-    expect(spy.calledOnce).to.equal(true);
+    expect(spy).to.be.calledOnce;
     expect(spy.calledWith(clock.currentSlot)).to.equal(true);
   });
 
@@ -42,7 +42,7 @@ describe("LocalClock", function () {
     const spy = sinon.spy();
     emitter.on(ChainEvent.clockEpoch, spy);
     sandbox.clock.tick(SLOTS_PER_EPOCH * config.SECONDS_PER_SLOT * 1000);
-    expect(spy.calledOnce).to.equal(true);
+    expect(spy).to.be.calledOnce;
     expect(spy.calledWith(clock.currentEpoch)).to.equal(true);
   });
 

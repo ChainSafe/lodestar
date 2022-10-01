@@ -1,3 +1,4 @@
+import "../setup.js";
 import {assert, expect} from "chai";
 import {intToBytes, bytesToInt} from "../../src/index.js";
 

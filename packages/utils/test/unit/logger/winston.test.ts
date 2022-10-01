@@ -1,3 +1,4 @@
+import "../../setup.js";
 import {expect} from "chai";
 import {MESSAGE} from "triple-beam";
 import Transport from "winston-transport";

@@ -1,12 +1,9 @@
-import chai, {expect} from "chai";
-import chaiAsPromised from "chai-as-promised";
+import {expect} from "chai";
 import bls from "@chainsafe/bls";
 import {ISignatureSet, SignatureSetType} from "@lodestar/state-transition";
 import {BlsMultiThreadWorkerPool} from "../../../../src/chain/bls/multithread/index.js";
 import {testLogger} from "../../../utils/logger.js";
 import {VerifySignatureOpts} from "../../../../src/chain/bls/interface.js";
-
-chai.use(chaiAsPromised);
 
 describe("chain / bls / multithread queue", function () {
   this.timeout(30 * 1000);

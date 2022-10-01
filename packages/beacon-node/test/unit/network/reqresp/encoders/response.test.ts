@@ -1,5 +1,3 @@
-import chai from "chai";
-import chaiAsPromised from "chai-as-promised";
 import {pipe} from "it-pipe";
 import all from "it-all";
 import {Uint8ArrayList} from "uint8arraylist";
@@ -38,8 +36,6 @@ import {
   sszSnappySignedBeaconBlockAltair,
 } from "../encodingStrategies/sszSnappy/testData.js";
 import {blocksToReqRespBlockResponses} from "../../../../utils/block.js";
-
-chai.use(chaiAsPromised);
 
 type ResponseChunk =
   | {status: RespStatus.SUCCESS; body: IncomingResponseBody}

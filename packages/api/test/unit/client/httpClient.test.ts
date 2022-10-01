@@ -1,11 +1,8 @@
 import {IncomingMessage} from "node:http";
-import chai, {expect} from "chai";
-import chaiAsPromised from "chai-as-promised";
+import {expect} from "chai";
 import fastify, {RouteOptions} from "fastify";
 import {ErrorAborted, TimeoutError} from "@lodestar/utils";
 import {HttpClient, HttpError} from "../../../src/utils/client/index.js";
-
-chai.use(chaiAsPromised);
 
 interface IUser {
   id?: number;

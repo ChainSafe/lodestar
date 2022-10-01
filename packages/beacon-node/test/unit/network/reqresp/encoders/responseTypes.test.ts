@@ -1,5 +1,3 @@
-import chai from "chai";
-import chaiAsPromised from "chai-as-promised";
 import {pipe} from "it-pipe";
 import all from "it-all";
 import {allForks} from "@lodestar/types";
@@ -18,8 +16,6 @@ import {arrToSource, createStatus, generateEmptySignedBlocks} from "../utils.js"
 import {expectIsEqualSszTypeArr} from "../../../../utils/ssz.js";
 import {config} from "../../../../utils/config.js";
 import {blocksToReqRespBlockResponses} from "../../../../utils/block.js";
-
-chai.use(chaiAsPromised);
 
 // Ensure the types from all methods are supported properly
 describe("network / reqresp / encoders / responseTypes", () => {
