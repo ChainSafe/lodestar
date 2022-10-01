@@ -20,16 +20,16 @@ export {
 } from "./routes.js";
 
 type ClientModules = HttpClientModules & {
-  config: IChainForkConfig;
+  config?: IChainForkConfig;
   httpClient?: IHttpClient;
 };
 
 /**
  * REST HTTP client for all keymanager routes
  */
-export function getClient(opts: HttpClientOptions, modules: ClientModules): Api {
-  const {config} = modules;
-  const httpClient = modules.httpClient ?? new HttpClient(opts, modules);
+export function getClient(opts: HttpClientOptions, modules?: ClientModules): Api {
+  const config = modules?.config;
+  const httpClient = modules?.httpClient ?? new HttpClient(opts, modules);
 
   return keymanager.getClient(config, httpClient);
 }

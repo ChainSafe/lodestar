@@ -14,11 +14,11 @@ export type ITerminalPowArgs = {
 };
 export type IParamsArgs = Record<never, never> & ITerminalPowArgs;
 
-const getArgKey = (key: keyof IBeaconParamsUnparsed): string => `params.${key}`;
+export const getParamsArgKey = (key: keyof IBeaconParamsUnparsed): string => `params.${key}`;
 
 export function parseBeaconParamsArgs(args: Record<string, string | number>): IBeaconParamsUnparsed {
   return ObjectKeys(chainConfigTypes).reduce((beaconParams: Partial<IBeaconParamsUnparsed>, key) => {
-    const value = args[getArgKey(key)];
+    const value = args[getParamsArgKey(key)];
     if (value != null) beaconParams[key] = value;
     return beaconParams;
   }, {});
@@ -27,7 +27,7 @@ export function parseBeaconParamsArgs(args: Record<string, string | number>): IB
 const paramsOptionsByName = ObjectKeys(chainConfigTypes).reduce(
   (options: Record<string, Options>, key): Record<string, Options> => ({
     ...options,
-    [getArgKey(key)]: {
+    [getParamsArgKey(key)]: {
       hidden: true,
       type: "string",
       group: "params",
