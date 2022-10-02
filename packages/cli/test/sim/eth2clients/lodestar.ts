@@ -3,16 +3,16 @@ import fs from "node:fs";
 import {fileURLToPath} from "node:url";
 import {allNamespaces} from "@lodestar/api";
 import {LogLevel} from "@lodestar/utils";
-import {IGlobalArgs} from "../../../../src/options/globalOptions.js";
-import {IBeaconArgs} from "../../../../src/cmds/beacon/options.js";
-import {IValidatorCliArgs} from "../../../../src/cmds/validator/options.js";
+import {IGlobalArgs} from "../../../src/options/globalOptions.js";
+import {IBeaconArgs} from "../../../src/cmds/beacon/options.js";
+import {IValidatorCliArgs} from "../../../src/cmds/validator/options.js";
 import {BeaconProcessOpts, SpwanOpts, ValidatorProcessOpts} from "./interface.js";
 
 // Global variable __dirname no longer available in ES6 modules.
 // Solutions: https://stackoverflow.com/questions/46745014/alternative-for-dirname-in-node-js-when-using-es6-modules
 // eslint-disable-next-line @typescript-eslint/naming-convention
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const LODESTAR_BINARY_PATH = path.join(__dirname, "/../../../../bin/lodestar.js");
+const LODESTAR_BINARY_PATH = path.join(__dirname, "../../../bin/lodestar.js");
 
 /* eslint-disable @typescript-eslint/naming-convention */
 

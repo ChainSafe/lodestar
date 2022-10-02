@@ -2,10 +2,10 @@ import {join} from "node:path";
 import {Epoch} from "@lodestar/types";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {getAfterEachCallbacks, itDone} from "../utils/runUtils.js";
-import {Eth2Client} from "../utils/simulation/eth2clients/interface.js";
-import {SimulationEnvironment} from "../utils/simulation/SimulationEnvironment.js";
-import {SimulationTracker} from "../utils/simulation/SimulationTracker.js";
 import {testLogsDirPath} from "../specs.js";
+import {Eth2Client} from "./eth2clients/interface.js";
+import {SimulationEnvironment} from "./SimulationEnvironment.js";
+import {SimulationTracker} from "./SimulationTracker.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 

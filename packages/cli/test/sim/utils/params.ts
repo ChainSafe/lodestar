@@ -1,5 +1,5 @@
 import {chainConfigToJson, IChainConfig} from "@lodestar/config";
-import {getParamsArgKey} from "../../../../src/options/paramsOptions.js";
+import {getParamsArgKey} from "../../../src/options/paramsOptions.js";
 
 /**
  * Serialize partial IChainConfig into object type CLI args
