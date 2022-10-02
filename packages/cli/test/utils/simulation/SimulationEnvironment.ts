@@ -276,6 +276,14 @@ export class SimulationEnvironment {
     }
   }
 
+  async reconnectAllBeaconNodes(): Promise<void> {
+    await connectBeaconNodes(
+      this.beaconNodes.map((beaconNode) =>
+        getClient({baseUrl: getLocalAddress(beaconNode.restPort)}, {config: createIChainForkConfig(chainConfig)})
+      )
+    );
+  }
+
   waitForEpoch(epoch: Epoch): Promise<void> {
     const secAtEpoch = epoch * SLOTS_PER_EPOCH * this.config.SECONDS_PER_SLOT + this.genesisTime;
     return promisify(setTimeout)(secAtEpoch * 1000 - Date.now());

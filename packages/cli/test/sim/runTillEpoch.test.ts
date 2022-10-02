@@ -84,6 +84,11 @@ for (const {beaconNodes, validatorClients, keysPerValidatorClient} of nodeCases)
         afterEachCallbacks.push(() => tracker.stop());
 
         await env.waitForEpoch(0);
+        // TODO: In current runs all nodes disconnect from each other due to an unknown reason
+        // CI example https://github.com/ChainSafe/lodestar/actions/runs/3169594171
+        await env.reconnectAllBeaconNodes();
+
+        // Ensure nodes are connected before going through the full run
         await tracker.assertHealthyGenesis();
 
         // Wait for 2 slots into the epoch to count participation of the previous epoch
