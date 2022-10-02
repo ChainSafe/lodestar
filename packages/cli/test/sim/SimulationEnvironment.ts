@@ -23,10 +23,10 @@ import {prepareBeaconNodeArgs, prepareValidatorArgs} from "./eth2clients/index.j
 import {prepareInMemoryWeb3signer} from "./externalSigners/inMemory.js";
 import {NetworkData} from "./SimulationTracker.js";
 
-const BN_P2P_BASE_PORT = 19000;
-const BN_REST_BASE_PORT = 14000;
-const VC_KEYMANAGER_BASE_PORT = 16000;
-const EXTERNAL_SIGNER_BASE_PORT = 17000;
+const BN_P2P_BASE_PORT = 9000;
+const BN_REST_BASE_PORT = 4000;
+const VC_KEYMANAGER_BASE_PORT = 6000;
+const EXTERNAL_SIGNER_BASE_PORT = 7000;
 const MAX_STD_BUFFERED = 10_000;
 
 /** Time it takes for Lodestar pre-built CLI to start-up and decrypt keys */
