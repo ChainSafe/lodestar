@@ -11,7 +11,7 @@ import {IGlobalArgs} from "../../../src/options/globalOptions.js";
 import {LodestarValidatorProcess} from "./LodestarValidatorProcess.js";
 import {BeaconNodeConstructor, BeaconNodeProcess, SimulationParams, ValidatorProcess} from "./types.js";
 import {BN_P2P_BASE_PORT, BN_P2P_REST_PORT, closeChildProcess, spawnProcessAndWait, __dirname} from "./utils.js";
-
+/* eslint-disable no-console */
 // eslint-disable-next-line @typescript-eslint/naming-convention
 export const LodestarBeaconNodeProcess: BeaconNodeConstructor = class LodestarBeaconNodeProcess
   implements BeaconNodeProcess {

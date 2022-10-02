@@ -190,6 +190,7 @@ export const processEpochMeasure = async (node: BeaconNodeProcess, input: EpochM
   };
 };
 
+/* eslint-disable no-console */
 export class SimulationTracker {
   readonly slotMeasures: Map<string, Map<Slot, SlotMeasure>> = new Map();
   readonly epochMeasures: Map<string, Map<Epoch, EpochMeasure>> = new Map();

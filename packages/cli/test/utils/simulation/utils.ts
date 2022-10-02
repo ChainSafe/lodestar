@@ -58,6 +58,7 @@ export const spawnProcessAndWait = async (
 
       // TODO: Add support for timeout
       // To safe the space in logs log only for once.
+      // eslint-disable-next-line no-console
       console.log(message);
       const intervalId = setInterval(async () => {
         if (await ready(childProcess)) {
