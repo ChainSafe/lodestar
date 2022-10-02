@@ -32,13 +32,13 @@ describe("Perf test sanity check", function () {
     const phase0State = generatePerfTestCachedStatePhase0();
     const epochProcess = beforeProcessEpoch(phase0State);
     expect(
+      // Chai does not support bigint comparisons
+      // eslint-disable-next-line chai-expect/no-inner-compare
       BigInt(epochProcess.prevEpochUnslashedStake.targetStakeByIncrement) * BigInt(EFFECTIVE_BALANCE_INCREMENT) >
-        targetStake
-    ).to.equal(
-      true,
+        targetStake,
       `targetStake too low: ${
         BigInt(epochProcess.prevEpochUnslashedStake.targetStakeByIncrement) * BigInt(EFFECTIVE_BALANCE_INCREMENT)
       } > ${targetStake}`
-    );
+    ).to.be.true;
   });
 });

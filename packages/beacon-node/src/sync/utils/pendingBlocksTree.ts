@@ -1,5 +1,5 @@
 import {RootHex} from "@lodestar/types";
-import {MapDef} from "../../util/map.js";
+import {MapDef} from "@lodestar/utils";
 import {PendingBlock, PendingBlockStatus} from "../interface.js";
 
 export function getAllDescendantBlocks(blockRootHex: RootHex, blocks: Map<RootHex, PendingBlock>): PendingBlock[] {

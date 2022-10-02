@@ -2,8 +2,6 @@ import {altair, phase0, Root, ssz} from "@lodestar/types";
 import {CompositeViewDU} from "@chainsafe/ssz";
 import {FINALIZED_ROOT_GINDEX, NEXT_SYNC_COMMITTEE_GINDEX, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
-import {computeEpochAtSlot} from "../../src/utils/clock.js";
-import {getForkVersion} from "../../src/utils/domain.js";
 
 export interface IBeaconChainLc {
   getBlockHeaderByRoot(blockRoot: Root): Promise<phase0.BeaconBlockHeader>;
@@ -75,10 +73,6 @@ export async function prepareUpdateNaive(
   const syncAttestedBlockRoot = stateWithSyncAggregate.blockRoots.get(syncAttestedSlot % SLOTS_PER_HISTORICAL_ROOT);
   const syncAttestedBlockHeader = await chain.getBlockHeaderByRoot(syncAttestedBlockRoot);
 
-  // Get the ForkVersion used in the syncAggregate, as verified in the state transition fn
-  const syncAttestedEpoch = computeEpochAtSlot(syncAttestedSlot);
-  const syncAttestedForkVersion = getForkVersion(stateWithSyncAggregate.fork, syncAttestedEpoch);
-
   // Get the finalized state defined in the block "attested" by the current sync committee
   const syncAttestedState = await chain.getStateByRoot(syncAttestedBlockHeader.stateRoot);
   const finalizedCheckpointBlockHeader = await chain.getBlockHeaderByRoot(syncAttestedState.finalizedCheckpoint.root);
@@ -101,6 +95,5 @@ export async function prepareUpdateNaive(
     finalizedHeader: finalizedCheckpointBlockHeader,
     finalityBranch: finalityBranch,
     syncAggregate,
-    forkVersion: syncAttestedForkVersion,
   };
 }

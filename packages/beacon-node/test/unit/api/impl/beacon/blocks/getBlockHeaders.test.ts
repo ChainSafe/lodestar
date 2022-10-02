@@ -40,10 +40,10 @@ describe("api - beacon - getBlockHeaders", function () {
     expect(blockHeaders).to.not.be.null;
     expect(blockHeaders.length).to.be.equal(2);
     expect(blockHeaders.filter((header) => header.canonical).length).to.be.equal(1);
-    expect(server.forkChoiceStub.getHead.calledOnce).to.equal(true);
-    expect(server.chainStub.getCanonicalBlockAtSlot.calledOnce).to.equal(true);
-    expect(server.forkChoiceStub.getBlockSummariesAtSlot.calledOnce).to.equal(true);
-    expect(server.dbStub.block.get.calledOnce).to.equal(true);
+    expect(server.forkChoiceStub.getHead).to.be.calledOnce;
+    expect(server.chainStub.getCanonicalBlockAtSlot).to.be.calledOnce;
+    expect(server.forkChoiceStub.getBlockSummariesAtSlot).to.be.calledOnce;
+    expect(server.dbStub.block.get).to.be.calledOnce;
   });
 
   it("future slot", async function () {

@@ -17,8 +17,7 @@ import {
 } from "@lodestar/state-transition";
 import {toHexString} from "@chainsafe/ssz";
 import {IForkChoice, EpochDifference} from "@lodestar/fork-choice";
-import {toHex} from "@lodestar/utils";
-import {MapDef} from "../../util/map.js";
+import {toHex, MapDef} from "@lodestar/utils";
 import {intersectUint8Arrays, IntersectResult} from "../../util/bitArray.js";
 import {pruneBySlot} from "./utils.js";
 import {InsertOutcome} from "./types.js";

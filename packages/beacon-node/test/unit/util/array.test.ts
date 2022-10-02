@@ -23,7 +23,7 @@ describe("LinkedList", () => {
   });
 
   it("pop", () => {
-    expect(list.pop() === null);
+    expect(list.pop()).to.be.null;
     expect(list.length).to.be.equal(0);
     let count = 100;
     for (let i = 0; i < count; i++) list.push(i + 1);
@@ -34,12 +34,12 @@ describe("LinkedList", () => {
       count--;
     }
 
-    expect(list.pop() === null);
+    expect(list.pop()).to.be.null;
     expect(list.length).to.be.equal(0);
   });
 
   it("shift", () => {
-    expect(list.shift() === null);
+    expect(list.shift()).to.be.null;
     expect(list.length).to.be.equal(0);
     const count = 100;
     for (let i = 0; i < count; i++) list.push(i);
@@ -49,7 +49,7 @@ describe("LinkedList", () => {
       expect(list.shift()).to.be.equal(i);
     }
 
-    expect(list.shift() === null);
+    expect(list.shift()).to.be.null;
     expect(list.length).to.be.equal(0);
   });
 

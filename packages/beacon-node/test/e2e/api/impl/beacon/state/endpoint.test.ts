@@ -1,5 +1,4 @@
-import chaiAsPromised from "chai-as-promised";
-import chai, {expect} from "chai";
+import {expect} from "chai";
 import {createIBeaconConfig, IChainConfig} from "@lodestar/config";
 import {chainConfig as chainConfigDef} from "@lodestar/config/default";
 import {getClient} from "@lodestar/api";
@@ -7,8 +6,6 @@ import {toHexString} from "@chainsafe/ssz";
 import {LogLevel, testLogger, TestLoggerOpts} from "../../../../../utils/logger.js";
 import {getDevBeaconNode} from "../../../../../utils/node/beacon.js";
 import {getAndInitDevValidators} from "../../../../../utils/node/validator.js";
-
-chai.use(chaiAsPromised);
 
 /* eslint-disable @typescript-eslint/naming-convention */
 describe("lodestar / api / impl / state", function () {

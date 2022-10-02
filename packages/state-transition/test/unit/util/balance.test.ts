@@ -11,7 +11,7 @@ import {generateValidators} from "../../utils/validator.js";
 import {generateCachedState, generateState} from "../../utils/state.js";
 
 describe("getTotalBalance", () => {
-  it("should return correct balances", () => {
+  it("should return correct balances - 500 validators", () => {
     const num = 500;
     const validatorBalance = 1e12;
     const validators = generateValidators(num);
@@ -26,7 +26,7 @@ describe("getTotalBalance", () => {
     assert(result === expected, `Expected: ${expected} :: Result: ${result}`);
   });
 
-  it("should return correct balances", () => {
+  it("should return correct balances - 5 validators", () => {
     const num = 5;
     const validators = generateValidators(num);
     const balances = Array.from({length: num}, () => 0);
