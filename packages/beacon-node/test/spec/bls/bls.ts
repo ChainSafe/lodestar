@@ -12,6 +12,8 @@ export const testFnByType: Record<string, "skip" | ((data: any) => any)> = {
   batch_verify,
   sign,
   verify,
+  // @chainsafe/bls does not expose functionality to run show low level function.
+  // Ok to skip since this is indirectly tested on the other functions.
   hash_to_G2: "skip",
   deserialization_G1,
   deserialization_G2,
