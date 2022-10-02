@@ -1,18 +1,18 @@
 #!/usr/bin/env ts-node
 
-import {downloadTests, TestToDownload} from "./downloadTests.js";
+import {downloadTests} from "./downloadTests.js";
 
 /* eslint-disable no-console */
 
 async function downloadTestsCli(): Promise<void> {
-  const [specVersion, outputDir, testsToDownloadCsv] = process.argv.slice(2);
+  const [specVersion, outputDir, testsToDownloadCsv, specTestsRepoUrl] = process.argv.slice(2);
 
   // Print help
-  if (specVersion === "--help" || !specVersion || !outputDir) {
+  if (specVersion === "--help" || !specVersion || !outputDir || !testsToDownloadCsv || !specTestsRepoUrl) {
     return console.log(`
   USAGE: 
   
-  ./downloadTestsCli.ts [specVersion] [outputDir] [testToDownload]
+  ./downloadTestsCli.ts [specVersion] [outputDir] [testToDownload] [specTestsRepoUrl]
 
   Downloads tests to $outputDir/$specVersion 
 
@@ -28,8 +28,8 @@ async function downloadTestsCli(): Promise<void> {
   `);
   }
 
-  const testsToDownload = testsToDownloadCsv ? (testsToDownloadCsv.split(",") as TestToDownload[]) : undefined;
-  await downloadTests({specVersion, outputDir, testsToDownload}, console.log);
+  const testsToDownload = testsToDownloadCsv.split(",");
+  await downloadTests({specVersion, outputDir, testsToDownload, specTestsRepoUrl}, console.log);
 }
 
 downloadTestsCli().catch((e: Error) => {
