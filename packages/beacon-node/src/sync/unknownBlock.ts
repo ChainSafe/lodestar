@@ -1,7 +1,7 @@
 import {PeerId} from "@libp2p/interface-peer-id";
 import {peerIdFromString} from "@libp2p/peer-id";
 import {IChainForkConfig} from "@lodestar/config";
-import {ILogger} from "@lodestar/utils";
+import {ILogger, pruneSetToMax} from "@lodestar/utils";
 import {allForks, Root, RootHex} from "@lodestar/types";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {INetwork, NetworkEvent, PeerAction} from "../network/index.js";
@@ -11,7 +11,6 @@ import {shuffle} from "../util/shuffle.js";
 import {byteArrayEquals} from "../util/bytes.js";
 import {BlockError, BlockErrorCode} from "../chain/errors/index.js";
 import {wrapError} from "../util/wrapError.js";
-import {pruneSetToMax} from "../util/map.js";
 import {PendingBlock, PendingBlockStatus} from "./interface.js";
 import {
   getDescendantBlocks,

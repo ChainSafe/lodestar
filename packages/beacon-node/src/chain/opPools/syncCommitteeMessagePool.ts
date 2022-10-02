@@ -3,7 +3,7 @@ import bls from "@chainsafe/bls";
 import {SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {altair, Root, Slot, SubcommitteeIndex} from "@lodestar/types";
 import {BitArray, toHexString} from "@chainsafe/ssz";
-import {MapDef} from "../../util/map.js";
+import {MapDef} from "@lodestar/utils";
 import {InsertOutcome, OpPoolError, OpPoolErrorCode} from "./types.js";
 import {pruneBySlot} from "./utils.js";
 
