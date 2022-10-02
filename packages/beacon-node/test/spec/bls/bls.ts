@@ -130,8 +130,12 @@ function verify(input: {pubkey: string; message: string; signature: string}): bo
  * https://github.com/ethereum/bls12-381-tests/blob/master/formats/deserialization_G1.md
  */
 function deserialization_G1(input: {pubkey: string}): boolean {
-  bls.PublicKey.fromBytes(fromHexString(input.pubkey), CoordType.jacobian, true);
-  return true;
+  try {
+    bls.PublicKey.fromBytes(fromHexString(input.pubkey), CoordType.jacobian, true);
+    return true;
+  } catch (e) {
+    return false;
+  }
 }
 
 /**
