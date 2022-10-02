@@ -1,6 +1,8 @@
+import path from "node:path";
 import {ACTIVE_PRESET} from "@lodestar/params";
 import {RunnerType} from "../utils/types.js";
 import {specTestIterator} from "../utils/specTestIterator.js";
+import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {epochProcessing} from "./epoch_processing.js";
 import {finality} from "./finality.js";
 import {fork} from "./fork.js";
@@ -16,7 +18,7 @@ import {transition} from "./transition.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
-specTestIterator(ACTIVE_PRESET, {
+specTestIterator(path.join(ethereumConsensusSpecsTests.outputDir, "tests", ACTIVE_PRESET), {
   epoch_processing: {type: RunnerType.default, fn: epochProcessing},
   finality: {type: RunnerType.default, fn: finality},
   fork: {type: RunnerType.default, fn: fork},

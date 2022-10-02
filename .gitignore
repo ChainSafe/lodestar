@@ -26,7 +26,7 @@ validators
 .npmrc
 
 # Tests artifacts
-packages/*/spec-tests
+packages/*/spec-tests*
 packages/*/benchmark_data
 packages/beacon-node/test-logs/
 packages/cli/test-logs/
