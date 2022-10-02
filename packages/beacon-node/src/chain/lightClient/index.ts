@@ -302,7 +302,6 @@ export class LightClientServer {
         finalizedHeader: partialUpdate.finalizedHeader,
         finalityBranch: partialUpdate.finalityBranch,
         syncAggregate: partialUpdate.syncAggregate,
-        forkVersion: this.config.getForkVersion(partialUpdate.attestedHeader.slot),
       };
     } else {
       return {
@@ -312,7 +311,6 @@ export class LightClientServer {
         finalizedHeader: this.zero.finalizedHeader,
         finalityBranch: this.zero.finalityBranch,
         syncAggregate: partialUpdate.syncAggregate,
-        forkVersion: this.config.getForkVersion(partialUpdate.attestedHeader.slot),
       };
     }
   }
