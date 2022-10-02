@@ -28,6 +28,7 @@ export type SyncPeriod = UintNum64;
 export type CommitteeIndex = UintNum64;
 export type SubcommitteeIndex = UintNum64;
 export type ValidatorIndex = UintNum64;
+export type WithdrawalIndex = UintNum64;
 export type Gwei = UintBn64;
 export type Root = Bytes32;
 export type Version = Bytes4;

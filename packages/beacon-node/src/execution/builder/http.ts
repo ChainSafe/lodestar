@@ -50,7 +50,7 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
     return this.api.registerValidator(registrations);
   }
 
-  async getHeader(slot: Slot, parentHash: Root, proposerPubKey: BLSPubkey): Promise<bellatrix.ExecutionPayloadHeader> {
+  async getHeader(slot: Slot, parentHash: Root, proposerPubKey: BLSPubkey): Promise<allForks.ExecutionPayloadHeader> {
     const {data: signedBid} = await this.api.getHeader(slot, parentHash, proposerPubKey);
     const executionPayloadHeader = signedBid.message.header;
     return executionPayloadHeader;

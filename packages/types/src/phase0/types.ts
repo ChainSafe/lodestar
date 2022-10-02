@@ -18,6 +18,7 @@ export type ForkData = ValueOf<typeof ssz.ForkData>;
 export type ENRForkID = ValueOf<typeof ssz.ENRForkID>;
 export type HistoricalBatch = ValueOf<typeof ssz.HistoricalBatch>;
 export type Validator = ValueOf<typeof ssz.Validator>;
+export type Validators = ValueOf<typeof ssz.Validators>;
 export type AttestationData = ValueOf<typeof ssz.AttestationData>;
 export type AttestationDataBigint = ValueOf<typeof ssz.AttestationDataBigint>;
 export type IndexedAttestation = ValueOf<typeof ssz.IndexedAttestation>;

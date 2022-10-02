@@ -25,7 +25,7 @@ import {CachedBeaconStateAllForks} from "../types.js";
  */
 export function initiateValidatorExit(
   state: CachedBeaconStateAllForks,
-  validator: CompositeViewDU<typeof ssz.phase0.Validator>
+  validator: CompositeViewDU<typeof ssz.phase0.Validator> | CompositeViewDU<typeof ssz.capella.Validator>
 ): void {
   const {config, epochCtx} = state;
 

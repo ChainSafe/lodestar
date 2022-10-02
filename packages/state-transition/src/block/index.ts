@@ -1,7 +1,7 @@
 import {ForkSeq} from "@lodestar/params";
 import {allForks, altair} from "@lodestar/types";
 import {ExecutionEngine} from "../util/executionEngine.js";
-import {getFullOrBlindedPayload, isExecutionEnabled} from "../util/bellatrix.js";
+import {getFullOrBlindedPayload, isExecutionEnabled} from "../util/execution.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateBellatrix} from "../types.js";
 import {processExecutionPayload} from "./processExecutionPayload.js";
 import {processSyncAggregate} from "./processSyncCommittee.js";

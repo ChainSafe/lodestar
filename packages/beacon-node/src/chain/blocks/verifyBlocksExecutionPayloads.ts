@@ -1,7 +1,7 @@
 import {
   CachedBeaconStateAllForks,
-  isBellatrixStateType,
-  isBellatrixBlockBodyType,
+  isExecutionStateType,
+  isExecutionBlockBodyType,
   isMergeTransitionBlock as isMergeTransitionBlockFn,
   isExecutionEnabled,
 } from "@lodestar/state-transition";
@@ -177,8 +177,8 @@ export async function verifyBlocksExecutionPayload(
       // will still evalute to true for the following blocks leading to errors (while syncing)
       // as the preState0 still belongs to the pre state of the first block on segment
       mergeBlockFound === null &&
-      isBellatrixStateType(preState0) &&
-      isBellatrixBlockBodyType(block.message.body) &&
+      isExecutionStateType(preState0) &&
+      isExecutionBlockBodyType(block.message.body) &&
       isMergeTransitionBlockFn(preState0, block.message.body);
 
     // If this is a merge transition block, check to ensure if it references
@@ -256,8 +256,8 @@ export async function verifyBlockExecutionPayload(
 ): Promise<VerifyBlockExecutionResponse> {
   /** Not null if execution is enabled */
   const executionPayloadEnabled =
-    isBellatrixStateType(preState0) &&
-    isBellatrixBlockBodyType(block.message.body) &&
+    isExecutionStateType(preState0) &&
+    isExecutionBlockBodyType(block.message.body) &&
     // Safe to use with a state previous to block's preState. isMergeComplete can only transition from false to true.
     // - If preState0 is after merge block: condition is true, and will always be true
     // - If preState0 is before merge block: the block could lie but then state transition function will throw above

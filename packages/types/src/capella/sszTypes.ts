@@ -1,80 +1,91 @@
-import {ByteListType, ByteVectorType, ContainerType, ListCompositeType, VectorCompositeType} from "@chainsafe/ssz";
+import {ContainerType, ListCompositeType, VectorCompositeType, ContainerNodeStructType} from "@chainsafe/ssz";
 import {
-  BYTES_PER_LOGS_BLOOM,
   HISTORICAL_ROOTS_LIMIT,
-  MAX_TRANSACTIONS_PER_PAYLOAD,
-  MAX_BYTES_PER_TRANSACTION,
-  MAX_EXTRA_DATA_BYTES,
   SLOTS_PER_HISTORICAL_ROOT,
+  MAX_WITHDRAWALS_PER_PAYLOAD,
+  MAX_BLS_TO_EXECUTION_CHANGES,
+  WITHDRAWAL_QUEUE_LIMIT,
+  VALIDATOR_REGISTRY_LIMIT,
 } from "@lodestar/params";
 import {ssz as primitiveSsz} from "../primitive/index.js";
 import {ssz as phase0Ssz} from "../phase0/index.js";
 import {ssz as altairSsz} from "../altair/index.js";
+import {ssz as bellatrixSsz} from "../bellatrix/index.js";
 
 const {
-  Bytes32,
   UintNum64,
   Slot,
+  EpochInf,
   ValidatorIndex,
+  WithdrawalIndex,
   Root,
   BLSSignature,
-  UintBn256: Uint256,
   BLSPubkey,
   ExecutionAddress,
+  Gwei,
 } = primitiveSsz;
 
-/**
- * ByteList[MAX_BYTES_PER_TRANSACTION]
- *
- * Spec v1.0.1
- */
-export const Transaction = new ByteListType(MAX_BYTES_PER_TRANSACTION);
+export const Withdrawal = new ContainerType(
+  {
+    index: WithdrawalIndex,
+    address: ExecutionAddress,
+    amount: Gwei,
+  },
+  {typeName: "Withdrawal", jsonCase: "eth2"}
+);
 
-/**
- * Union[OpaqueTransaction]
- *
- * Spec v1.0.1
- */
-export const Transactions = new ListCompositeType(Transaction, MAX_TRANSACTIONS_PER_PAYLOAD);
+export const BLSToExecutionChange = new ContainerType(
+  {
+    validatorIndex: ValidatorIndex,
+    fromBlsPubkey: BLSPubkey,
+    toExecutionAddress: ExecutionAddress,
+  },
+  {typeName: "BLSToExecutionChange", jsonCase: "eth2"}
+);
 
-const executionPayloadFields = {
-  parentHash: Root,
-  feeRecipient: ExecutionAddress,
-  stateRoot: Bytes32,
-  receiptsRoot: Bytes32,
-  logsBloom: new ByteVectorType(BYTES_PER_LOGS_BLOOM),
-  prevRandao: Bytes32,
-  blockNumber: UintNum64,
-  gasLimit: UintNum64,
-  gasUsed: UintNum64,
-  timestamp: UintNum64,
-  // TODO: if there is perf issue, consider making ByteListType
-  extraData: new ByteListType(MAX_EXTRA_DATA_BYTES),
-  baseFeePerGas: Uint256,
-  // Extra payload fields
-  blockHash: Root,
-};
+export const SignedBLSToExecutionChange = new ContainerType(
+  {
+    message: BLSToExecutionChange,
+    signature: BLSSignature,
+  },
+  {typeName: "SignedBLSToExecutionChange", jsonCase: "eth2"}
+);
 
+export const Withdrawals = new ListCompositeType(Withdrawal, MAX_WITHDRAWALS_PER_PAYLOAD);
 export const ExecutionPayload = new ContainerType(
   {
-    ...executionPayloadFields,
-    transactions: Transactions,
+    ...bellatrixSsz.ExecutionPayload.fields,
+    withdrawals: Withdrawals, // New in capella
   },
   {typeName: "ExecutionPayload", jsonCase: "eth2"}
 );
 
 export const ExecutionPayloadHeader = new ContainerType(
   {
-    ...executionPayloadFields,
-    transactionsRoot: Root,
+    ...bellatrixSsz.ExecutionPayloadHeader.fields,
+    withdrawalsRoot: Root, // New in capella
   },
   {typeName: "ExecutionPayloadHeader", jsonCase: "eth2"}
 );
 
+export const ValidatorContainer = new ContainerType(
+  {
+    ...phase0Ssz.ValidatorContainer.fields,
+    fullyWithdrawnEpoch: EpochInf,
+  },
+  {typeName: "Validator", jsonCase: "eth2"}
+);
+export const ValidatorNodeStruct = new ContainerNodeStructType(ValidatorContainer.fields, ValidatorContainer.opts);
+// The main Validator type is the 'ContainerNodeStructType' version
+export const Validator = ValidatorNodeStruct;
+export const Validators = new ListCompositeType(ValidatorNodeStruct, VALIDATOR_REGISTRY_LIMIT);
+
+export const BLSToExecutionChanges = new ListCompositeType(BLSToExecutionChange, MAX_BLS_TO_EXECUTION_CHANGES);
 export const BeaconBlockBody = new ContainerType(
   {
     ...altairSsz.BeaconBlockBody.fields,
-    executionPayload: ExecutionPayload,
+    executionPayload: ExecutionPayload, // Modified in capella
+    blsToExecutionChanges: BLSToExecutionChanges,
   },
   {typeName: "BeaconBlockBody", jsonCase: "eth2", cachePermanentRootStruct: true}
 );
@@ -86,26 +97,17 @@ export const BeaconBlock = new ContainerType(
     // Reclare expandedType() with altair block and altair state
     parentRoot: Root,
     stateRoot: Root,
-    body: BeaconBlockBody,
+    body: BeaconBlockBody, // Modified in Capella
   },
   {typeName: "BeaconBlock", jsonCase: "eth2", cachePermanentRootStruct: true}
 );
 
 export const SignedBeaconBlock = new ContainerType(
   {
-    message: BeaconBlock,
+    message: BeaconBlock, // Modified in capella
     signature: BLSSignature,
   },
   {typeName: "SignedBeaconBlock", jsonCase: "eth2"}
-);
-
-export const PowBlock = new ContainerType(
-  {
-    blockHash: Root,
-    parentHash: Root,
-    totalDifficulty: Uint256,
-  },
-  {typeName: "PowBlock", jsonCase: "eth2"}
 );
 
 // Re-declare with the new expanded type
@@ -120,7 +122,9 @@ export const HistoricalBatch = new ContainerType(
   {typeName: "HistoricalBatch", jsonCase: "eth2"}
 );
 
-// we don't reuse phase0.BeaconState fields since we need to replace some keys
+export const WithdrawalQueue = new ListCompositeType(Withdrawal, WITHDRAWAL_QUEUE_LIMIT);
+
+// we don't reuse bellatrix.BeaconState fields since we need to replace some keys
 // and we cannot keep order doing that
 export const BeaconState = new ContainerType(
   {
@@ -138,7 +142,7 @@ export const BeaconState = new ContainerType(
     eth1DataVotes: phase0Ssz.Eth1DataVotes,
     eth1DepositIndex: UintNum64,
     // Registry
-    validators: phase0Ssz.Validators,
+    validators: Validators, // [Modified in Capella]
     balances: phase0Ssz.Balances,
     randaoMixes: phase0Ssz.RandaoMixes,
     // Slashings
@@ -157,7 +161,11 @@ export const BeaconState = new ContainerType(
     currentSyncCommittee: altairSsz.SyncCommittee,
     nextSyncCommittee: altairSsz.SyncCommittee,
     // Execution
-    latestExecutionPayloadHeader: ExecutionPayloadHeader, // [New in Merge]
+    latestExecutionPayloadHeader: ExecutionPayloadHeader, // [Modified in Capella]
+    // Withdrawals
+    withdrawalQueue: WithdrawalQueue, // [New in Capella]
+    nextWithdrawalIndex: WithdrawalIndex, // [New in Capella]
+    nextPartialWithdrawalValidatorIndex: ValidatorIndex, //[New in Capella]
   },
   {typeName: "BeaconState", jsonCase: "eth2"}
 );
@@ -165,7 +173,8 @@ export const BeaconState = new ContainerType(
 export const BlindedBeaconBlockBody = new ContainerType(
   {
     ...altairSsz.BeaconBlockBody.fields,
-    executionPayloadHeader: ExecutionPayloadHeader,
+    executionPayloadHeader: ExecutionPayloadHeader, // Modified in capella
+    blsToExecutionChanges: BLSToExecutionChanges, // New in capella
   },
   {typeName: "BlindedBeaconBlockBody", jsonCase: "eth2", cachePermanentRootStruct: true}
 );
@@ -177,50 +186,15 @@ export const BlindedBeaconBlock = new ContainerType(
     // Reclare expandedType() with altair block and altair state
     parentRoot: Root,
     stateRoot: Root,
-    body: BlindedBeaconBlockBody,
+    body: BlindedBeaconBlockBody, // Modified in capella
   },
   {typeName: "BlindedBeaconBlock", jsonCase: "eth2", cachePermanentRootStruct: true}
 );
 
 export const SignedBlindedBeaconBlock = new ContainerType(
   {
-    message: BlindedBeaconBlock,
+    message: BlindedBeaconBlock, // Modified in capella
     signature: BLSSignature,
   },
   {typeName: "SignedBlindedBeaconBlock", jsonCase: "eth2"}
-);
-
-export const ValidatorRegistrationV1 = new ContainerType(
-  {
-    feeRecipient: ExecutionAddress,
-    gasLimit: UintNum64,
-    timestamp: UintNum64,
-    pubkey: BLSPubkey,
-  },
-  {typeName: "ValidatorRegistrationV1", jsonCase: "eth2"}
-);
-
-export const SignedValidatorRegistrationV1 = new ContainerType(
-  {
-    message: ValidatorRegistrationV1,
-    signature: BLSSignature,
-  },
-  {typeName: "SignedValidatorRegistrationV1", jsonCase: "eth2"}
-);
-
-export const BuilderBid = new ContainerType(
-  {
-    header: ExecutionPayloadHeader,
-    value: Uint256,
-    pubkey: BLSPubkey,
-  },
-  {typeName: "BuilderBid", jsonCase: "eth2"}
-);
-
-export const SignedBuilderBid = new ContainerType(
-  {
-    message: BuilderBid,
-    signature: BLSSignature,
-  },
-  {typeName: "SignedBuilderBid", jsonCase: "eth2"}
 );

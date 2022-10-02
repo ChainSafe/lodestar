@@ -132,13 +132,15 @@ export function generateState(
     return ssz.altair.BeaconState.toViewDU(defaultAltairState);
   }
 
-  const payloadHeader = ssz.bellatrix.ExecutionPayloadHeader.defaultValue();
-
-  // Bellatrix
-  return ssz.bellatrix.BeaconState.toViewDU({
-    ...defaultAltairState,
-    latestExecutionPayloadHeader: {...payloadHeader, blockNumber: 2022},
-  });
+  // Bellatrix upwards
+  if (forkSeq === ForkSeq.bellatrix) {
+    const payloadHeader = ssz.bellatrix.ExecutionPayloadHeader.defaultValue();
+    return ssz.bellatrix.BeaconState.toViewDU({
+      ...defaultAltairState,
+      latestExecutionPayloadHeader: {...payloadHeader, blockNumber: 2022},
+    });
+  }
+  throw Error("Capella not implemented");
 }
 
 /**
