@@ -1,3 +1,4 @@
+import "../../setup.js";
 import {expect} from "chai";
 import {formatEpochSlotTime} from "../../../src/logger/util.js";
 

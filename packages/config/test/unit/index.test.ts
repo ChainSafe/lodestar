@@ -11,8 +11,8 @@ describe("forks", () => {
       const fork2 = forks[i + 1];
 
       // Use less equal to be okay with both forks being at Infinity
-      expect(fork1.epoch <= fork2.epoch).to.be.equal(
-        true,
+      expect(fork1.epoch).to.be.at.most(
+        fork2.epoch,
         `Forks are not sorted ${fork1.name} ${fork1.epoch} -> ${fork2.name} ${fork2.epoch}`
       );
     }

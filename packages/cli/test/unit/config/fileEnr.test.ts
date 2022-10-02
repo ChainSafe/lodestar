@@ -32,7 +32,7 @@ describe("fileENR", function () {
     expect(existsSync(enrFilePath), `ENR does not exist at ${enrFilePath}`).to.equal(true);
     const updatedEnr = FileENR.initFromFile(enrFilePath, peerId);
     expect(updatedEnr.get("tcp")).to.not.be.undefined;
-    expect(toHexString(updatedEnr.get("tcp") as Uint8Array) === toHexString(newValue)).to.equal(true);
+    expect(toHexString(updatedEnr.get("tcp") as Uint8Array)).to.equal(toHexString(newValue));
   });
 });
 

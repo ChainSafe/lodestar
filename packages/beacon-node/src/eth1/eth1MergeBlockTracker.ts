@@ -1,11 +1,10 @@
 import {IChainConfig} from "@lodestar/config";
 import {RootHex} from "@lodestar/types";
-import {ILogger} from "@lodestar/utils";
+import {ILogger, pruneSetToMax} from "@lodestar/utils";
 import {toHexString} from "@chainsafe/ssz";
 import {IMetrics} from "../metrics/index.js";
 import {ZERO_HASH_HEX} from "../constants/index.js";
 import {enumToIndexMap} from "../util/enum.js";
-import {pruneSetToMax} from "../util/map.js";
 import {IEth1Provider, EthJsonRpcBlockRaw, PowMergeBlock, PowMergeBlockTimestamp, TDProgress} from "./interface.js";
 import {quantityToNum, quantityToBigint, dataToRootHex} from "./provider/utils.js";
 

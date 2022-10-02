@@ -80,7 +80,6 @@ describe("validation", function () {
     const nextSyncCommitteeBranch = new Tree(attestedState.node).getSingleProof(BigInt(NEXT_SYNC_COMMITTEE_GINDEX));
     const finalityBranch = new Tree(attestedState.node).getSingleProof(BigInt(FINALIZED_ROOT_GINDEX));
 
-    const forkVersion = ssz.Bytes4.defaultValue();
     const signingRoot = getSyncAggregateSigningRoot(config, attestedHeader);
     const syncAggregate = signAndAggregate(signingRoot, sks);
 
@@ -96,7 +95,6 @@ describe("validation", function () {
       finalizedHeader,
       finalityBranch,
       syncAggregate,
-      forkVersion,
       signatureSlot: updateHeaderSlot,
     };
 

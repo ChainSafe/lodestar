@@ -4,6 +4,7 @@ export * from "./assert.js";
 export * from "./bytes.js";
 export * from "./errors.js";
 export * from "./format.js";
+export * from "./map.js";
 export * from "./math.js";
 export * from "./objects.js";
 export {retry, RetryOptions} from "./retry.js";

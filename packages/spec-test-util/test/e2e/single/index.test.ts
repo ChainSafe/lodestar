@@ -12,6 +12,7 @@ import {describeDirectorySpecTest, InputType, loadYamlFile} from "../../../src/s
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /* eslint-disable @typescript-eslint/naming-convention */
+/* eslint-disable mocha/no-exports, mocha/no-top-level-hooks */
 
 export interface ISimpleStruct {
   test: boolean;

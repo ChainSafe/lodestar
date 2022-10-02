@@ -59,14 +59,14 @@ describe("block api utils", function () {
 
     it("should resolve genesis", async function () {
       await resolveBlockId(forkChoiceStub, dbStub, "genesis").catch(() => {});
-      expect(dbStub.blockArchive.get.withArgs(GENESIS_SLOT).calledOnce).to.equal(true);
+      expect(dbStub.blockArchive.get).to.be.calledOnceWithExactly(GENESIS_SLOT);
     });
 
     it("should resolve finalized", async function () {
       const expected = 0;
       forkChoiceStub.getFinalizedBlock.returns(expectedSummary);
       await resolveBlockId(forkChoiceStub, dbStub, "finalized").catch(() => {});
-      expect(dbStub.blockArchive.get.withArgs(expected).calledOnce).to.equal(true);
+      expect(dbStub.blockArchive.get).to.be.calledOnceWithExactly(expected);
     });
 
     it("should resolve finalized block root", async function () {
@@ -74,14 +74,14 @@ describe("block api utils", function () {
       forkChoiceStub.getFinalizedBlock.returns(expectedSummary);
       dbStub.blockArchive.getByRoot.withArgs(bufferEqualsMatcher(expectedBuffer)).resolves(null);
       await resolveBlockId(forkChoiceStub, dbStub, toHexString(expectedBuffer)).catch(() => {});
-      expect(dbStub.blockArchive.get.withArgs(expectedSummary.slot).calledOnce).to.equal(true);
+      expect(dbStub.blockArchive.get).to.be.calledOnceWithExactly(expectedSummary.slot);
     });
 
     it("should resolve non finalized block root", async function () {
       forkChoiceStub.getBlock.returns(null);
       dbStub.block.get.withArgs(bufferEqualsMatcher(expectedBuffer)).resolves(generateEmptySignedBlock());
       await resolveBlockId(forkChoiceStub, dbStub, toHexString(expectedBuffer)).catch(() => {});
-      expect(dbStub.blockArchive.getByRoot.withArgs(bufferEqualsMatcher(expectedBuffer)).calledOnce).to.equal(true);
+      expect(dbStub.blockArchive.getByRoot).to.be.calledOnceWithExactly(bufferEqualsMatcher(expectedBuffer));
     });
 
     it("should resolve non finalized slot", async function () {
@@ -90,14 +90,14 @@ describe("block api utils", function () {
         blockRoot: expectedRootHex,
       });
       await resolveBlockId(forkChoiceStub, dbStub, "2").catch(() => {});
-      expect(forkChoiceStub.getCanonicalBlockAtSlot.withArgs(2).calledOnce).to.equal(true);
+      expect(forkChoiceStub.getCanonicalBlockAtSlot).to.be.calledOnceWithExactly(2);
     });
 
     it("should resolve finalized slot", async function () {
       forkChoiceStub.getCanonicalBlockAtSlot.withArgs(2).returns(null);
       await resolveBlockId(forkChoiceStub, dbStub, "2").catch(() => {});
-      expect(forkChoiceStub.getCanonicalBlockAtSlot.withArgs(2).calledOnce).to.equal(true);
-      expect(dbStub.blockArchive.get.withArgs(2).calledOnce).to.equal(true);
+      expect(forkChoiceStub.getCanonicalBlockAtSlot).to.be.calledOnceWithExactly(2);
+      expect(dbStub.blockArchive.get).to.be.calledOnceWithExactly(2);
     });
 
     it("should trow on invalid", async function () {

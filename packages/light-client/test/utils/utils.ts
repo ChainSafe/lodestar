@@ -142,7 +142,6 @@ export function computeLightclientUpdate(config: IBeaconConfig, period: SyncPeri
   const nextSyncCommitteeBranch = new Tree(attestedState.node).getSingleProof(BigInt(NEXT_SYNC_COMMITTEE_GINDEX));
   const finalityBranch = new Tree(attestedState.node).getSingleProof(BigInt(FINALIZED_ROOT_GINDEX));
 
-  const forkVersion = ssz.Bytes4.defaultValue();
   const syncAggregate = committee.signHeader(config, attestedHeader);
 
   return {
@@ -152,7 +151,6 @@ export function computeLightclientUpdate(config: IBeaconConfig, period: SyncPeri
     finalizedHeader,
     finalityBranch,
     syncAggregate,
-    forkVersion,
     signatureSlot: attestedHeader.slot + 1,
   };
 }

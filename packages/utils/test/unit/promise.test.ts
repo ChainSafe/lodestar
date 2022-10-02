@@ -1,3 +1,4 @@
+import "../setup.js";
 import {expect} from "chai";
 import sinon from "sinon";
 import {callFnWhenAwait} from "../../src/promise.js";
@@ -17,9 +18,9 @@ describe("callFnWhenAwait util", function () {
     const stub = sandbox.stub();
     const result = await Promise.all([callFnWhenAwait(p, stub, 2 * 1000), sandbox.clock.tickAsync(5000)]);
     expect(result[0]).to.be.equal("done");
-    expect(stub.calledTwice).to.equal(true);
+    expect(stub).to.be.calledTwice;
     await sandbox.clock.tickAsync(5000);
-    expect(stub.calledTwice).to.equal(true);
+    expect(stub).to.be.calledTwice;
   });
 
   it("should throw error", async () => {
@@ -30,7 +31,7 @@ describe("callFnWhenAwait util", function () {
       expect.fail("should throw error here");
     } catch (e) {
       expect((e as Error).message).to.be.equal("done");
-      expect(stub.calledTwice).to.equal(true);
+      expect(stub).to.be.calledTwice;
     }
   });
 });

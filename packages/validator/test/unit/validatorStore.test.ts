@@ -98,13 +98,13 @@ describe("ValidatorStore", function () {
     for (const [valReg, feeRecipient, gasLimit] of testCases) {
       signValidatorStub.resolves(valReg);
       const val1 = await validatorStore.getValidatorRegistration(pubkeys[0], {feeRecipient, gasLimit}, slot++);
-      expect(JSON.stringify(val1) === JSON.stringify(valReg));
+      expect(JSON.stringify(val1)).to.be.eql(JSON.stringify(valReg));
       expect(signValidatorStub.callCount).to.equal(
         ++signCallCount,
         `signValidatorRegistration() must be updated for new feeRecipient=${feeRecipient} gasLimit=${gasLimit} combo `
       );
       const val2 = await validatorStore.getValidatorRegistration(pubkeys[0], {feeRecipient, gasLimit}, slot++);
-      expect(JSON.stringify(val2) === JSON.stringify(valReg));
+      expect(JSON.stringify(val2)).to.be.eql(JSON.stringify(valReg));
       expect(signValidatorStub.callCount).to.equal(
         signCallCount,
         `signValidatorRegistration() must be updated for same feeRecipient=${feeRecipient} gasLimit=${gasLimit} combo `

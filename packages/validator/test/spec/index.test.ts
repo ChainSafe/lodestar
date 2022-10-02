@@ -1,5 +1,4 @@
-import chai, {expect} from "chai";
-import chaiAsPromised from "chai-as-promised";
+import {expect} from "chai";
 import rimraf from "rimraf";
 import {LevelDbController} from "@lodestar/db";
 import {config} from "@lodestar/config/default";
@@ -10,8 +9,6 @@ import {
   InvalidBlockError,
   InvalidAttestationError,
 } from "../../src/slashingProtection/index.js";
-
-chai.use(chaiAsPromised);
 
 /* eslint-disable no-console */
 

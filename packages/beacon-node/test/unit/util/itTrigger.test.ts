@@ -1,9 +1,6 @@
-import chai, {expect} from "chai";
-import chaiAsPromised from "chai-as-promised";
+import {expect} from "chai";
 import all from "it-all";
 import {ItTrigger} from "../../../src/util/itTrigger.js";
-
-chai.use(chaiAsPromised);
 
 describe("util / itTrigger", () => {
   it("Should not buffer values and return immediately", async () => {
