@@ -4,7 +4,13 @@ import {ForkName} from "@lodestar/params";
 import {describeDirectorySpecTest} from "@lodestar/spec-test-util";
 import {RunnerType, TestRunner} from "./types.js";
 
-const ARTIFACT_FILENAMES = new Set(["._.DS_Store", ".DS_Store"]);
+const ARTIFACT_FILENAMES = new Set([
+  // MacOS artifacts
+  "._.DS_Store",
+  ".DS_Store",
+  // File included by spec tests downloader
+  "version.txt",
+]);
 
 /**
  * This helper ensures that strictly all tests are run. There's no hardcoded value beyond "config".

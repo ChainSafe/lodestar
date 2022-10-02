@@ -23,16 +23,20 @@ import {testFnByType} from "./bls.js";
  * ```
  */
 for (const fnName of readdirSyncSpec(blsSpecTests.outputDir)) {
-  const fn = testFnByType[fnName];
-  if (fn === undefined) {
-    // throw Error(`No test runner for ${fnName}`);
-    continue;
-  }
-
   describe(fnName, () => {
+    const fn = testFnByType[fnName];
+    if (fn === undefined) {
+      throw Error(`No test runner for ${fnName}`);
+    }
+
     const fnTestDirpath = path.join(blsSpecTests.outputDir, fnName);
     for (const testName of readdirSyncSpec(fnTestDirpath)) {
-      it(`${fnName}/${testName}`, () => {
+      it(`${fnName}/${testName}`, function () {
+        if (fn === "skip") {
+          this.skip();
+          return;
+        }
+
         const testData = jsyaml.load(fs.readFileSync(path.join(fnTestDirpath, testName), "utf8")) as BlsTestData;
 
         // Test format: https://github.com/ethereum/bls12-381-tests
