@@ -8,8 +8,6 @@ import axios from "axios";
 import tar from "tar";
 import retry from "async-retry";
 
-export type TestToDownload = "general" | "mainnet" | "minimal";
-export const defaultTestsToDownload: TestToDownload[] = ["general", "mainnet", "minimal"];
 export const defaultSpecTestsRepoUrl = "https://github.com/ethereum/consensus-spec-tests";
 
 // eslint-disable-next-line @typescript-eslint/no-empty-function
@@ -18,8 +16,10 @@ const logEmpty = (): void => {};
 export interface IDownloadTestsOptions {
   specVersion: string;
   outputDir: string;
-  specTestsRepoUrl?: string;
-  testsToDownload?: TestToDownload[];
+  /** Root Github URL `https://github.com/ethereum/consensus-spec-tests` */
+  specTestsRepoUrl: string;
+  /** Release files names to download without prefix `["general", "mainnet", "minimal"]` */
+  testsToDownload: string[];
 }
 
 export interface IDownloadGenericTestsOptions<TestNames extends string> {
@@ -32,19 +32,8 @@ export interface IDownloadGenericTestsOptions<TestNames extends string> {
 /**
  * Download spec tests
  */
-export async function downloadTests(
-  {specVersion, specTestsRepoUrl, outputDir, testsToDownload}: IDownloadTestsOptions,
-  log: (msg: string) => void = logEmpty
-): Promise<void> {
-  await downloadGenericSpecTests(
-    {
-      specVersion,
-      outputDir,
-      specTestsRepoUrl: specTestsRepoUrl ?? defaultSpecTestsRepoUrl,
-      testsToDownload: testsToDownload ?? defaultTestsToDownload,
-    },
-    log
-  );
+export async function downloadTests(opts: IDownloadTestsOptions, log: (msg: string) => void = logEmpty): Promise<void> {
+  await downloadGenericSpecTests(opts, log);
 }
 
 /**
