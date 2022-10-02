@@ -1,5 +1,5 @@
 import {PeerId} from "@libp2p/interface-peer-id";
-import {MapDef, pruneSetToMax} from "../../util/map.js";
+import {MapDef, pruneSetToMax} from "@lodestar/utils";
 import {gossipScoreThresholds} from "../gossip/scoringParameters.js";
 import {IMetrics} from "../../metrics/index.js";
 

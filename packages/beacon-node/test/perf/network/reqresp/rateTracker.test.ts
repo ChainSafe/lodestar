@@ -1,7 +1,7 @@
 import {itBench} from "@dapplion/benchmark";
+import {MapDef} from "@lodestar/utils";
 import {defaultNetworkOptions} from "../../../../src/network/options.js";
 import {RateTracker} from "../../../../src/network/reqresp/rateTracker.js";
-import {MapDef} from "../../../../src/util/map.js";
 
 /**
  * Ideally we want to sleep between requests to test the prune.

@@ -1,7 +1,6 @@
 import {PeerId} from "@libp2p/interface-peer-id";
-import {ILogger} from "@lodestar/utils";
+import {ILogger, MapDef} from "@lodestar/utils";
 import {IMetrics} from "../../../metrics/index.js";
-import {MapDef} from "../../../util/map.js";
 import {IPeerRpcScoreStore, PeerAction} from "../../peers/score.js";
 import {IRateLimiter} from "../interface.js";
 import {RateTracker} from "../rateTracker.js";
