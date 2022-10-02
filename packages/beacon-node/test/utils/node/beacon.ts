@@ -51,8 +51,10 @@ export async function getDevBeaconNode(
     {disablePeerDiscovery: true, peerStoreDir}
   );
 
-  // Disable eth1 for less logging noise
-  options.eth1 = {enabled: false};
+  // Disable eth1 for less logging noise if not explicitly set
+  if (options.eth1 === undefined) {
+    options.eth1 = {enabled: false};
+  }
 
   let anchorState = opts.anchorState;
   if (!anchorState) {
