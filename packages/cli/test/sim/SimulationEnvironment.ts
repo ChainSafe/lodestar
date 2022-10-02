@@ -7,9 +7,9 @@ import yaml from "js-yaml";
 import fetch from "cross-fetch";
 import type {SecretKey} from "@chainsafe/bls/types";
 import {Keystore} from "@chainsafe/bls-keystore";
-import {retry} from "@lodestar/utils";
+import {retry, toHex} from "@lodestar/utils";
 import {Epoch} from "@lodestar/types";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {PresetName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {nodeUtils} from "@lodestar/beacon-node/node";
 import {chainConfigToJson, createIChainForkConfig, IChainConfig, IChainForkConfig} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
@@ -18,8 +18,8 @@ import {getClient as getClientKeymanager} from "@lodestar/api/keymanager";
 import {BeaconStateAllForks, interopSecretKey} from "@lodestar/state-transition";
 import {getLocalAddress} from "./utils/address.js";
 import {formatEpochSlotTime} from "./utils/timeLogGenesis.js";
-import {Eth2Client, LocalKeystores, RemoteKeys, SpwanOpts} from "./eth2clients/interface.js";
-import {prepareBeaconNodeArgs, prepareValidatorArgs} from "./eth2clients/index.js";
+import {Eth2Client, LocalKeystores, RemoteKeys, SpwanOpts, SubprocessForever} from "./eth2clients/interface.js";
+import {prepareBeaconNodeArgs, prepareClient, prepareValidatorArgs} from "./eth2clients/index.js";
 import {prepareInMemoryWeb3signer} from "./externalSigners/inMemory.js";
 import {NetworkData} from "./SimulationTracker.js";
 
@@ -37,6 +37,7 @@ export type SimulationEnvironmentOpts = {
   beaconNodes: BeaconNodeOpts[];
   chainConfig: Partial<IChainConfig>;
   logFilesDir: string;
+  preset: PresetName;
 };
 
 export type BeaconNodeOpts = {
@@ -87,7 +88,7 @@ export class SimulationEnvironment {
 
   // Sim data
   private readonly simDir: string;
-  private readonly pipeLogsToStd = Boolean(process.env.DEBUG_PIPE_LOGS);
+  private readonly pipeLogsToStd = Boolean(process.env.SIMTEST_PIPE_LOGS_TO_STD);
 
   constructor(
     private readonly params: SimulationEnvironmentOpts,
@@ -108,12 +109,14 @@ export class SimulationEnvironment {
     const beaconNodes: BeaconNodeData[] = [];
     const validators: ValidatorClientData[] = [];
     const externalSigners: ExternalSignerData[] = [];
+    const clients = new Set<Eth2Client>();
 
     let startKeyIndex = 0;
     let vcIndexOffset = 0;
 
     // Start the beacon node processes
     for (const [nodeIndex, beaconNode] of params.beaconNodes.entries()) {
+      clients.add(beaconNode.client);
       const p2pPort = BN_P2P_BASE_PORT + nodeIndex;
       const restPort = BN_REST_BASE_PORT + nodeIndex;
       const beaconUrl = getLocalAddress(restPort);
@@ -162,6 +165,12 @@ export class SimulationEnvironment {
       }
     }
 
+    // Run any requisites before setting a genesis date; i.e. pulling docker image
+    for (const client of clients) {
+      console.log(params.runId, `Preparing client ${client}`);
+      await prepareClient({client});
+    }
+
     return new SimulationEnvironment(params, beaconNodes, validators, externalSigners);
   }
 
@@ -178,9 +187,7 @@ export class SimulationEnvironment {
     const configFilepath = path.join(this.simDir, "config.yml");
     fs.mkdirSync(this.simDir, {recursive: true});
     fs.writeFileSync(genesisStateFilepath, this.genesisState.serialize());
-    // Do not dump the full `config` object since it has extra methods. Else it will print
-    // getForkInfo: !<tag:yaml.org,2002:js/undefined> ''
-    fs.writeFileSync(configFilepath, yaml.dump(chainConfigToJson(this.params.chainConfig as IChainConfig)));
+    fs.writeFileSync(configFilepath, yaml.dump(chainConfigToJson(this.config)));
 
     // Start the beacon node processes
     for (const beaconNode of this.beaconNodes) {
@@ -197,8 +204,10 @@ export class SimulationEnvironment {
           dataDir: path.join(this.simDir, beaconNode.processId),
           genesisStateFilepath,
           configFilepath,
+          preset: this.params.preset,
           logFilepath: path.join(logDir, `${beaconNode.processId}.log`),
           logToStd: this.pipeLogsToStd,
+          processName: `${this.params.runId}_${beaconNode.processId}`,
         }),
       });
     }
@@ -244,9 +253,12 @@ export class SimulationEnvironment {
           keymanagerPort: validator.keymanagerPort,
           genesisTime: this.genesisTime,
           dataDir: path.join(this.simDir, validator.processId),
+          genesisStateFilepath,
           configFilepath,
+          preset: this.params.preset,
           logFilepath: path.join(logDir, `${validator.processId}.log`),
           logToStd: this.pipeLogsToStd,
+          processName: `${this.params.runId}_${validator.processId}`,
           signer: validator.signer,
         }),
       });
@@ -270,9 +282,14 @@ export class SimulationEnvironment {
   async kill(): Promise<void> {
     // Kill by dependency order: first beacon, then external signer, then validator client
     for (const subproc of [...this.beaconNodes, ...this.externalSigners, ...this.validators]) {
-      subproc.process?.killGracefully().catch((e) => {
-        console.error(`Error killing ${subproc.processId}`, e);
-      });
+      if (subproc.process) {
+        await subproc.process.killGracefully().catch((e) => {
+          console.error(`Error killing ${subproc.processId}`, e);
+        });
+        this.log(`Killed subproc ${subproc.processId} pid ${subproc.process.pid}`);
+      } else {
+        this.log(`Process ${subproc.processId} does not have a subprocess`);
+      }
     }
   }
 
@@ -360,6 +377,9 @@ export class SimulationEnvironment {
     });
 
     return {
+      get pid() {
+        return proc.pid ?? 0;
+      },
       killGracefully(): Promise<void> {
         proc.kill("SIGKILL");
         proc.removeAllListeners("exit");
@@ -380,10 +400,6 @@ export class SimulationEnvironment {
   private log: typeof console.log = (...args) => {
     console.log(formatEpochSlotTime(this.genesisTime, this.config), ...args);
   };
-}
-
-interface SubprocessForever {
-  killGracefully(): Promise<void>;
 }
 
 type OnError = (error: Error) => void;
@@ -488,12 +504,15 @@ function deriveSecretKeys(startKeyIndex: number, keyCount: number): SecretKey[] 
 async function generateKeystores(secretKeys: SecretKey[]): Promise<LocalKeystores> {
   const password = "test_password";
   const keystores: string[] = [];
+  const publicKeys: string[] = [];
 
   // TODO: Use insecure algorithm to speedup generation
   for (const secretKey of secretKeys) {
-    const keystore = await Keystore.create(password, secretKey.toBytes(), secretKey.toPublicKey().toBytes(), "");
+    const pubkey = secretKey.toPublicKey().toBytes();
+    const keystore = await Keystore.create(password, secretKey.toBytes(), pubkey, "");
     keystores.push(keystore.stringify());
+    publicKeys.push(toHex(pubkey));
   }
 
-  return {useExternalSigner: false, keystores, password, secretKeys};
+  return {useExternalSigner: false, keystores, password, secretKeys, publicKeys};
 }

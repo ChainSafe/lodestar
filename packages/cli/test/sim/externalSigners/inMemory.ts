@@ -9,11 +9,13 @@ export function prepareInMemoryWeb3signer(
   onError: OnError,
   opts: ExternalSignerServerOpts
 ): {
+  pid: number;
   killGracefully(): Promise<void>;
 } {
   const externalSignerServer = new ExternalSignerServer(onError, opts);
 
   return {
+    pid: 0,
     killGracefully() {
       return externalSignerServer.stop();
     },

@@ -8,6 +8,8 @@ import {IBeaconArgs} from "../../../src/cmds/beacon/options.js";
 import {IValidatorCliArgs} from "../../../src/cmds/validator/options.js";
 import {BeaconProcessOpts, SpwanOpts, ValidatorProcessOpts} from "./interface.js";
 
+const {SIMTEST_ENABLE_LIBP2P_DEBUG} = process.env;
+
 // Global variable __dirname no longer available in ES6 modules.
 // Solutions: https://stackoverflow.com/questions/46745014/alternative-for-dirname-in-node-js-when-using-es6-modules
 // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -19,8 +21,7 @@ const LODESTAR_BINARY_PATH = path.join(__dirname, "../../../bin/lodestar.js");
 export function prepareBeaconNodeLodestarArgs(opts: BeaconProcessOpts): SpwanOpts {
   // Typesafe CLI args, Typescript won't compile here if we change them
   const rcconfig: Partial<IGlobalArgs & IBeaconArgs> = {
-    network: "dev",
-    preset: "minimal",
+    preset: opts.preset,
     dataDir: opts.dataDir,
     genesisStateFile: opts.genesisStateFilepath,
     paramsFile: opts.configFilepath,
@@ -57,15 +58,14 @@ export function prepareBeaconNodeLodestarArgs(opts: BeaconProcessOpts): SpwanOpt
     env: {
       // Enables debug logs for all libp2p stack
       // Suppress winston debug logs since it double logs what already goes to the file
-      DEBUG: "*,-winston:*",
+      DEBUG: SIMTEST_ENABLE_LIBP2P_DEBUG ? "*,-winston:*" : "",
     },
   };
 }
 
 export function prepareValidatorLodestarArgs(opts: ValidatorProcessOpts): SpwanOpts {
   const rcconfig: Partial<IGlobalArgs & IValidatorCliArgs> = {
-    network: "dev",
-    preset: "minimal",
+    preset: opts.preset,
     dataDir: opts.dataDir,
     paramsFile: opts.configFilepath,
     server: opts.beaconUrl,

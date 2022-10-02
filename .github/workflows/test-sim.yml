@@ -41,6 +41,7 @@ jobs:
         working-directory: packages/cli
         env:
           SIMTEST_LODESTAR_STARTUP_TIME: 60
+          SIMTEST_ENABLE_LIBP2P_DEBUG: true
 
       - name: Upload debug log test files for "packages/cli"
         if: ${{ always() }}

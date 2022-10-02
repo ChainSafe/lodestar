@@ -1,6 +1,6 @@
 import {join} from "node:path";
 import {Epoch} from "@lodestar/types";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ACTIVE_PRESET, PresetName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {getAfterEachCallbacks, itDone} from "../utils/runUtils.js";
 import {testLogsDirPath} from "../specs.js";
 import {Eth2Client} from "./eth2clients/interface.js";
@@ -9,14 +9,30 @@ import {SimulationTracker} from "./SimulationTracker.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
-const nodeCases: {beaconNodes: number; validatorClients: number; keysPerValidatorClient: number}[] = [
-  {beaconNodes: 4, validatorClients: 1, keysPerValidatorClient: 32},
+interface Participant {
+  client: Eth2Client;
+  keys: number;
+  externalSigner?: boolean;
+}
+
+const nodeCases: {nodeCaseId: string; preset: PresetName; participants: Participant[]}[] = [
+  {
+    nodeCaseId: "bn-4_ks-128_lighthouse-2",
+    preset: PresetName.mainnet,
+    participants: [
+      {client: Eth2Client.lodestar, keys: 4},
+      {client: Eth2Client.lodestar, keys: 4, externalSigner: true},
+      {client: Eth2Client.lighthouse, keys: 4},
+      {client: Eth2Client.lighthouse, keys: 4},
+    ],
+  },
 ];
 
 const SECONDS_PER_SLOT = process.env.DEBUG_FAST_SLOT ? 2 : 6;
-const minSyncParticipation = 1;
-const maxBlocksWithLowMinSyncParticipation = 1;
-const minEpochParticipation = {source: 1, target: 1, head: 1};
+const validatorClients = 1;
+const minSyncParticipation = 1.0;
+const maxBlocksWithLowMinSyncParticipation = 1.0;
+const minEpochParticipation = {source: 1.0, target: 1.0, head: 1.0};
 const maxAttestationInclusionScore = 0;
 
 const forksCases: {
@@ -25,53 +41,55 @@ const forksCases: {
   runTillEpoch: Epoch;
 }[] = [{ALTAIR_FORK_EPOCH: 3, BELLATRIX_FORK_EPOCH: 6, runTillEpoch: 10}];
 
-for (const {beaconNodes, validatorClients, keysPerValidatorClient} of nodeCases) {
+for (const {nodeCaseId, preset, participants} of nodeCases) {
   for (const {ALTAIR_FORK_EPOCH, BELLATRIX_FORK_EPOCH, runTillEpoch} of forksCases) {
-    const testIdStr = [
-      `bn-${beaconNodes}`,
-      `vc-${validatorClients}`,
-      `ks-${keysPerValidatorClient}`,
-      `altair-${ALTAIR_FORK_EPOCH}`,
-      `bellatrix-${BELLATRIX_FORK_EPOCH}`,
-    ]
+    const testIdStr = [nodeCaseId, preset, `a-${ALTAIR_FORK_EPOCH}`, `b-${BELLATRIX_FORK_EPOCH}`]
       .filter(Boolean)
       .join("_");
 
     describe(testIdStr, function () {
-      const minRunTime = runTillEpoch * SLOTS_PER_EPOCH * SECONDS_PER_SLOT * 1000;
-      const marginFactor = 1.25;
-      const startUpTime = 90 * 1000;
-      this.timeout(minRunTime * marginFactor + startUpTime);
-
       const afterEachCallbacks = getAfterEachCallbacks();
 
       // Create SimulationEnvironment in before step, since it may error
       let env: SimulationEnvironment;
 
-      before("create SimulationEnvironment", async () => {
+      before("create SimulationEnvironment", async function () {
+        // Allow enough time to pull images and create keystores
+        this.timeout(5 * 60 * 1000);
+
+        if (ACTIVE_PRESET !== preset) {
+          throw Error(`ACTIVE_PRESET ${ACTIVE_PRESET} !== preset ${preset}`);
+        }
+
         env = await SimulationEnvironment.fromParams({
           runId: testIdStr,
-          beaconNodes: Array.from({length: beaconNodes}, (_, i) => ({
-            client: Eth2Client.lodestar,
+          preset: preset,
+          beaconNodes: participants.map((participant) => ({
+            client: participant.client,
             validatorClients,
-            keysPerValidatorClient,
-            // Half with external signer, odd indexes
-            useExternalSigner: i % 2 != 0,
+            keysPerValidatorClient: participant.keys,
+            useExternalSigner: participant.externalSigner === true,
           })),
           chainConfig: {
             SECONDS_PER_SLOT,
             ALTAIR_FORK_EPOCH,
             BELLATRIX_FORK_EPOCH,
+            CONFIG_NAME: testIdStr,
           },
           logFilesDir: join(testLogsDirPath, testIdStr),
         });
       });
 
       after("kill env", async () => {
-        await env.kill();
+        await env?.kill();
       });
 
       itDone(`Run ${testIdStr}`, async function (onError) {
+        const minRunTime = runTillEpoch * SLOTS_PER_EPOCH * SECONDS_PER_SLOT * 1000;
+        const marginFactor = 1.25;
+        const startUpTime = 90 * 1000;
+        this.timeout(minRunTime * marginFactor + startUpTime);
+
         // Ensures that genesis has not happened yet
         await env.start(onError);
 
