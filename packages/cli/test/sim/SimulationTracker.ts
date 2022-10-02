@@ -16,7 +16,6 @@ import {
 import {TableRender} from "./utils/tableRender.js";
 import {ErrorCode, ErrorType, HeadSummary, NodeId, renderError} from "./errors.js";
 import {formatEpochSlotTime} from "./utils/timeLogGenesis.js";
-import {avg} from "./utils/math.js";
 
 const sleep = promisify(setTimeout);
 
@@ -79,7 +78,7 @@ export class SimulationTracker {
     attnPCount: {width: 5, header: "attnP"},
     attnIncScore: {width: 4, header: "incS"},
     syncP: {width: 5, header: "syncP"},
-    peerCountAvg: {width: 5, header: "peerA"},
+    peerCounts: {width: 4 * 2, header: "peers", widthFlexible: true},
   });
 
   constructor(networkData: NetworkData, private readonly successOpts: SuccessOpts) {
@@ -258,7 +257,7 @@ export class SimulationTracker {
         attnPCount,
         attnIncScore: {value: attnIncScore, bad: attnIncScoreBad},
         syncP: syncP === null ? "-" : {value: toPercent(syncP), bad: syncPBad},
-        peerCountAvg: this.getPeerCountAvgRow(),
+        peerCounts: this.getPeerCountAvgRow(),
       });
 
       // If this is the first seen block in an epoch, count participation on the epoch before
@@ -361,7 +360,7 @@ export class SimulationTracker {
           attnPCount: "-",
           attnIncScore: "-",
           syncP: "-",
-          peerCountAvg: this.getPeerCountAvgRow(),
+          peerCounts: this.getPeerCountAvgRow(),
         });
         // Prevent this missed slot from being logged again
         this.loggedMissedSlots.add(prevSlot);
@@ -369,8 +368,8 @@ export class SimulationTracker {
     }
   }
 
-  private getPeerCountAvgRow(): number {
-    return avg(Array.from(this.peerCountByNode.values()));
+  private getPeerCountAvgRow(): string {
+    return Array.from(this.peerCountByNode.values()).join(",");
   }
 
   private fetchNodesPeerCount(): Promise<number[]> {

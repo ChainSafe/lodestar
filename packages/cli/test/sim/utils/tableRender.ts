@@ -2,6 +2,7 @@
 
 interface ColumnOpts {
   width: number;
+  widthFlexible?: boolean;
   header?: string;
 }
 
@@ -39,9 +40,9 @@ export class TableRender<K extends string> {
 
   private formatRow(values: RowValues<K>): string {
     const items = this.keys.map((key) => {
-      const width = this.columnSpecs[key].width;
+      const {width, widthFlexible} = this.columnSpecs[key];
       const value = this.formatValue(values[key]);
-      return value.padEnd(width).slice(0, width);
+      return value.padEnd(width).slice(0, widthFlexible ? Infinity : width);
     });
     return items.join(" | ");
   }
