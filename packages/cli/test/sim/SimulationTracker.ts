@@ -59,6 +59,7 @@ export class SimulationTracker {
   private readonly seenHeadBlockEpochs = new Set<Epoch>();
   private readonly loggedMissedSlots = new Set<Slot>();
   private readonly peerCountByNode = new Map<NodeId, number>();
+  private highestFinalizedEpoch = 0;
 
   // Assertions data
   private readonly lowSyncParticipation: {slot: Slot; syncP: number}[] = [];
@@ -78,6 +79,7 @@ export class SimulationTracker {
     attnPCount: {width: 5, header: "attnP"},
     attnIncScore: {width: 4, header: "incS"},
     syncP: {width: 5, header: "syncP"},
+    finalizedEpoch: {width: 3, header: "fiE"},
     peerCounts: {width: 4 * 2, header: "peers", widthFlexible: true},
   });
 
@@ -257,6 +259,7 @@ export class SimulationTracker {
         attnPCount,
         attnIncScore: {value: attnIncScore, bad: attnIncScoreBad},
         syncP: syncP === null ? "-" : {value: toPercent(syncP), bad: syncPBad},
+        finalizedEpoch: this.highestFinalizedEpoch,
         peerCounts: this.getPeerCountAvgRow(),
       });
 
@@ -360,6 +363,7 @@ export class SimulationTracker {
           attnPCount: "-",
           attnIncScore: "-",
           syncP: "-",
+          finalizedEpoch: this.highestFinalizedEpoch,
           peerCounts: this.getPeerCountAvgRow(),
         });
         // Prevent this missed slot from being logged again
@@ -383,9 +387,13 @@ export class SimulationTracker {
   }
 
   private onFinalizedCheckpoint(
-    _event: routes.events.EventData[routes.events.EventType.finalizedCheckpoint],
+    event: routes.events.EventData[routes.events.EventType.finalizedCheckpoint],
     _node: BeaconParticipant
   ): void {
+    if (event.epoch > this.highestFinalizedEpoch) {
+      this.highestFinalizedEpoch = event.epoch;
+    }
+
     // TODO: Add checkpoint tracking
   }
 
