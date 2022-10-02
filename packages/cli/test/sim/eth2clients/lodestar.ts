@@ -56,7 +56,8 @@ export function prepareBeaconNodeLodestarArgs(opts: BeaconProcessOpts): SpwanOpt
     args: ["beacon", "--rcConfig", rcconfigFilepath],
     env: {
       // Enables debug logs for all libp2p stack
-      DEBUG: "*",
+      // Suppress winston debug logs since it double logs what already goes to the file
+      DEBUG: "*,-winston:*",
     },
   };
 }
