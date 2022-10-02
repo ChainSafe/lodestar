@@ -12,7 +12,7 @@ import {
 import {
   CachedBeaconStateAllForks,
   getEffectiveBalanceIncrementsZeroInactive,
-  isBellatrixStateType,
+  isExecutionStateType,
   isMergeTransitionComplete,
 } from "@lodestar/state-transition";
 
@@ -78,7 +78,7 @@ export function initializeForkChoice(
         unrealizedFinalizedEpoch: finalizedCheckpoint.epoch,
         unrealizedFinalizedRoot: toHexString(finalizedCheckpoint.root),
 
-        ...(isBellatrixStateType(state) && isMergeTransitionComplete(state)
+        ...(isExecutionStateType(state) && isMergeTransitionComplete(state)
           ? {
               executionPayloadBlockHash: toHexString(state.latestExecutionPayloadHeader.blockHash),
               executionStatus: blockHeader.slot === GENESIS_SLOT ? ExecutionStatus.Valid : ExecutionStatus.Syncing,

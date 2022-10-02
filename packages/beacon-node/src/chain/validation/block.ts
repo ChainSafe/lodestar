@@ -3,8 +3,8 @@ import {allForks} from "@lodestar/types";
 import {
   computeStartSlotAtEpoch,
   computeTimeAtSlot,
-  isBellatrixBlockBodyType,
-  isBellatrixStateType,
+  isExecutionBlockBodyType,
+  isExecutionStateType,
   isExecutionEnabled,
   getProposerSignatureSet,
 } from "@lodestar/state-transition";
@@ -126,9 +126,9 @@ export async function validateGossipBlock(
   // [REJECT] The block's execution payload timestamp is correct with respect to the slot
   // -- i.e. execution_payload.timestamp == compute_timestamp_at_slot(state, block.slot).
   if (fork === ForkName.bellatrix) {
-    if (!isBellatrixBlockBodyType(block.body)) throw Error("Not merge block type");
+    if (!isExecutionBlockBodyType(block.body)) throw Error("Not merge block type");
     const executionPayload = block.body.executionPayload;
-    if (isBellatrixStateType(blockState) && isExecutionEnabled(blockState, block)) {
+    if (isExecutionStateType(blockState) && isExecutionEnabled(blockState, block)) {
       const expectedTimestamp = computeTimeAtSlot(config, blockSlot, chain.genesisTime);
       if (executionPayload.timestamp !== computeTimeAtSlot(config, blockSlot, chain.genesisTime)) {
         throw new BlockGossipError(GossipAction.REJECT, {

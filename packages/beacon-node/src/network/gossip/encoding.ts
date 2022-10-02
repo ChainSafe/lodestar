@@ -51,8 +51,11 @@ export function msgIdFn(gossipTopicCache: GossipTopicCache, msg: Message): Uint8
     // )[:20]
     // ```
     // https://github.com/ethereum/eth2.0-specs/blob/v1.1.0-alpha.7/specs/altair/p2p-interface.md#topics-and-messages
+    //
+    // TODO: check if the capella handling is same as the other forks
     case ForkName.altair:
-    case ForkName.bellatrix: {
+    case ForkName.bellatrix:
+    case ForkName.capella: {
       vec = [MESSAGE_DOMAIN_VALID_SNAPPY, intToBytes(msg.topic.length, 8), Buffer.from(msg.topic), msg.data];
       break;
     }

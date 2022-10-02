@@ -22,6 +22,8 @@ export const fork: TestRunnerFn<ForkStateCase, BeaconStateAllForks> = (forkNext)
           return slotFns.upgradeStateToAltair(preState as CachedBeaconStatePhase0);
         case ForkName.bellatrix:
           return slotFns.upgradeStateToBellatrix(preState as CachedBeaconStateAltair);
+        case ForkName.capella:
+          throw Error("capella upgrade not implemented yet");
       }
     },
     options: {

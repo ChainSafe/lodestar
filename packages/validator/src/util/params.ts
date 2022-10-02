@@ -71,6 +71,7 @@ export function assertEqualParams(localConfig: IChainConfig, externalSpecJson: R
 function getSpecCriticalParams(localConfig: IChainConfig): Record<keyof ConfigWithPreset, boolean> {
   const altairForkRelevant = localConfig.ALTAIR_FORK_EPOCH < Infinity;
   const bellatrixForkRelevant = localConfig.BELLATRIX_FORK_EPOCH < Infinity;
+  const capellaForkRelevant = localConfig.CAPELLA_FORK_EPOCH < Infinity;
 
   return {
     // # Config
@@ -97,6 +98,9 @@ function getSpecCriticalParams(localConfig: IChainConfig): Record<keyof ConfigWi
     // Bellatrix
     BELLATRIX_FORK_VERSION: bellatrixForkRelevant,
     BELLATRIX_FORK_EPOCH: bellatrixForkRelevant,
+    // Capella
+    CAPELLA_FORK_VERSION: capellaForkRelevant,
+    CAPELLA_FORK_EPOCH: capellaForkRelevant,
 
     // Time parameters
     SECONDS_PER_SLOT: true,
@@ -192,5 +196,12 @@ function getSpecCriticalParams(localConfig: IChainConfig): Record<keyof ConfigWi
     MAX_TRANSACTIONS_PER_PAYLOAD: bellatrixForkRelevant,
     BYTES_PER_LOGS_BLOOM: bellatrixForkRelevant,
     MAX_EXTRA_DATA_BYTES: bellatrixForkRelevant,
+
+    // # CapellaPreset
+    /////////////////
+    MAX_PARTIAL_WITHDRAWALS_PER_EPOCH: capellaForkRelevant,
+    WITHDRAWAL_QUEUE_LIMIT: capellaForkRelevant,
+    MAX_BLS_TO_EXECUTION_CHANGES: capellaForkRelevant,
+    MAX_WITHDRAWALS_PER_PAYLOAD: capellaForkRelevant,
   };
 }

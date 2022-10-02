@@ -3,7 +3,7 @@ export * from "./array.js";
 export * from "./attestation.js";
 export * from "./attesterStatus.js";
 export * from "./balance.js";
-export * from "./bellatrix.js";
+export * from "./execution.js";
 export * from "./blockRoot.js";
 export * from "./domain.js";
 export * from "./epoch.js";

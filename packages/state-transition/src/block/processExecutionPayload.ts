@@ -1,12 +1,12 @@
 import {ssz, allForks} from "@lodestar/types";
 import {toHexString, byteArrayEquals} from "@chainsafe/ssz";
-import {CachedBeaconStateBellatrix} from "../types.js";
+import {CachedBeaconStateBellatrix, CachedBeaconStateCapella} from "../types.js";
 import {getRandaoMix} from "../util/index.js";
 import {ExecutionEngine} from "../util/executionEngine.js";
-import {isExecutionPayload, isMergeTransitionComplete} from "../util/bellatrix.js";
+import {isExecutionPayload, isMergeTransitionComplete, isCapellaPayload} from "../util/execution.js";
 
 export function processExecutionPayload(
-  state: CachedBeaconStateBellatrix,
+  state: CachedBeaconStateBellatrix | CachedBeaconStateCapella,
   payload: allForks.FullOrBlindedExecutionPayload,
   executionEngine: ExecutionEngine | null
 ): void {
@@ -53,9 +53,7 @@ export function processExecutionPayload(
   const transactionsRoot = isExecutionPayload(payload)
     ? ssz.bellatrix.Transactions.hashTreeRoot(payload.transactions)
     : payload.transactionsRoot;
-
-  // Cache execution payload header
-  state.latestExecutionPayloadHeader = ssz.bellatrix.ExecutionPayloadHeader.toViewDU({
+  const bellatrixPayloadFields = {
     parentHash: payload.parentHash,
     feeRecipient: payload.feeRecipient,
     stateRoot: payload.stateRoot,
@@ -70,5 +68,23 @@ export function processExecutionPayload(
     baseFeePerGas: payload.baseFeePerGas,
     blockHash: payload.blockHash,
     transactionsRoot,
-  });
+  };
+
+  const withdrawalsRoot = isCapellaPayload(payload)
+    ? isExecutionPayload(payload)
+      ? ssz.capella.Withdrawals.hashTreeRoot(payload.withdrawals)
+      : payload.withdrawalsRoot
+    : undefined;
+
+  // Cache execution payload header
+  if (withdrawalsRoot !== undefined) {
+    (state as CachedBeaconStateCapella).latestExecutionPayloadHeader = ssz.capella.ExecutionPayloadHeader.toViewDU({
+      ...bellatrixPayloadFields,
+      withdrawalsRoot,
+    });
+  } else {
+    (state as CachedBeaconStateBellatrix).latestExecutionPayloadHeader = ssz.bellatrix.ExecutionPayloadHeader.toViewDU(
+      bellatrixPayloadFields
+    );
+  }
 }
