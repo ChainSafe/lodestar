@@ -75,7 +75,7 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
       processShutdownCallback,
       libp2p: await createNodeJsLibp2p(peerId, options.network, {
         peerStoreDir: beaconPaths.peerStoreDir,
-        metrics: options.metrics.enabled,
+        metrics: options.metrics?.enabled,
       }),
       anchorState,
       wsCheckpoint,
