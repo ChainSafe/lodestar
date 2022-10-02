@@ -50,7 +50,9 @@ export class TableRender<K extends string> {
   private formatValue(value: string | number | RowValueObj): string {
     if (typeof value === "object") {
       if (value.bad) {
-        return "❌" + String(value.value);
+        // Add control character 31 (Information Separator One) so the emoji takes 2 String.length spots.
+        // Otherwise, emojis render as 2 characters but won't be cropped by String.slice
+        return String.fromCharCode(31) + "❌" + String(value.value);
       } else {
         return String(value.value);
       }
