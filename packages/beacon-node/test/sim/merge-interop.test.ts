@@ -295,7 +295,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     const timeoutSetupMargin = 30 * 1000; // Give extra 30 seconds of margin
 
     // delay a bit so regular sync sees it's up to date and sync is completed from the beginning
-    const genesisSlotsDelay = 30;
+    const genesisSlotsDelay = 5;
 
     const timeout =
       ((epochsOfMargin + expectedEpochsToFinish) * SLOTS_PER_EPOCH + genesisSlotsDelay) *
