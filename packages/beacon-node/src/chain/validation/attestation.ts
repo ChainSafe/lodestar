@@ -89,6 +89,7 @@ export async function validateGossipAttestation(
   // -- i.e. data.index < get_committee_count_per_slot(state, data.target.epoch)
   const attIndex = attData.index;
   const committeeIndices = getCommitteeIndices(attHeadState, attSlot, attIndex);
+
   const validatorIndex = committeeIndices[bitIndex];
 
   // [REJECT] The number of aggregation bits matches the committee size
@@ -284,7 +285,18 @@ export function getCommitteeIndices(
   attestationSlot: Slot,
   attestationIndex: number
 ): number[] {
-  const {committees} = attestationTargetState.epochCtx.getShufflingAtSlot(attestationSlot);
+  const shuffling = attestationTargetState.epochCtx.getShufflingAtSlotOrNull(attestationSlot);
+  if (shuffling === null) {
+    // this may come from an out-of-synced node, the spec did not define it so should not REJECT
+    // see https://github.com/ChainSafe/lodestar/issues/4396
+    throw new AttestationError(GossipAction.IGNORE, {
+      code: AttestationErrorCode.NO_COMMITTEE_FOR_SLOT_AND_INDEX,
+      index: attestationIndex,
+      slot: attestationSlot,
+    });
+  }
+
+  const {committees} = shuffling;
   const slotCommittees = committees[attestationSlot % SLOTS_PER_EPOCH];
 
   if (attestationIndex >= slotCommittees.length) {
