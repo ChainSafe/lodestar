@@ -136,8 +136,9 @@ export class SyncCommitteeService {
     // SyncCommitteeSignature gossip validation.
     const msToOneThirdSlot = this.clock.msToSlot(slot + 1 / 3);
     const afterBlockDelayMs = 1000 * this.clock.secondsPerSlot * (this.opts?.scAfterBlockDelaySlotFraction ?? 0);
-    if (afterBlockDelayMs > 0) {
-      await sleep(Math.min(msToOneThirdSlot, afterBlockDelayMs));
+    const toDelayMs = Math.min(msToOneThirdSlot, afterBlockDelayMs);
+    if (toDelayMs > 0) {
+      await sleep(toDelayMs);
     }
 
     this.metrics?.syncCommitteeStepCallPublishMessage.observe(this.clock.secFromSlot(slot + 1 / 3));
