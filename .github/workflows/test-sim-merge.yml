@@ -41,7 +41,7 @@ jobs:
       # </common-build>
 
       - name: Pull Geth
-        run: docker run $GETH_IMAGE --help
+        run: docker pull $GETH_IMAGE
 
       - name: Test Lodestar <> Geth interop
         run: yarn test:sim:merge-interop
