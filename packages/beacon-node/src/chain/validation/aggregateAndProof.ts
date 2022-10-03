@@ -85,18 +85,7 @@ export async function validateGossipAggregateAndProof(
       });
     });
 
-  let committeeIndices: number[];
-  try {
-    committeeIndices = getCommitteeIndices(attHeadState, attSlot, attIndex);
-  } catch (e) {
-    // this may come from an out-of-synced node, the spec did not define it so should not REJECT
-    // see https://github.com/ChainSafe/lodestar/issues/4396
-    throw new AttestationError(GossipAction.IGNORE, {
-      code: AttestationErrorCode.NO_COMMITTEE_FOR_SLOT_AND_INDEX,
-      index: attIndex,
-      slot: attSlot,
-    });
-  }
+  const committeeIndices: number[] = getCommitteeIndices(attHeadState, attSlot, attIndex);
 
   const attestingIndices = aggregate.aggregationBits.intersectValues(committeeIndices);
   const indexedAttestation: phase0.IndexedAttestation = {
