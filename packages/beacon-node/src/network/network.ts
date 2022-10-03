@@ -128,7 +128,7 @@ export class Network implements INetwork {
         ...opts,
         discv5: discv5Enabled
           ? {
-              enr: opts.enr ?? new ENR(),
+              enr: opts.enr ?? ENR.createFromPeerId(libp2p.peerId),
               bootnodeEnrs: opts.bootnodes ?? [],
               bindMultiaddr: getIp4MultiaddStr(discv5ListenAddress, "udp", discv5Port),
               discv5FirstQueryDelayMs: opts.discv5FirstQueryDelayMs,
