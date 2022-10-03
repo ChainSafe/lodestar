@@ -14,7 +14,56 @@ import {GossipTopicCache} from "./topic.js";
 export function fastMsgIdFn(rpcMsg: RPC.IMessage): string {
   if (rpcMsg.data) {
     const hash = digest(rpcMsg.data);
-    return String.fromCharCode(hash[0], hash[1], hash[2], hash[3], hash[4], hash[5], hash[6], hash[7]);
+
+    const hash0 = hash[0];
+    const hash1 = hash[1];
+    const hash2 = hash[2];
+    const hash3 = hash[3];
+    const hash4 = hash[4];
+    const hash5 = hash[5];
+    const hash6 = hash[6];
+    const hash7 = hash[7];
+    const h0 = hash0 && 0x0f;
+    const h1 = (hash0 & 0xf0) >> 4;
+    const h2 = hash1 && 0x0f;
+    const h3 = (hash0 & 0xf0) >> 4;
+    const h4 = hash2 && 0x0f;
+    const h5 = (hash2 & 0xf0) >> 4;
+    const h6 = hash3 && 0x0f;
+    const h7 = (hash3 & 0xf0) >> 4;
+    const h8 = hash4 && 0x0f;
+    const h9 = (hash4 & 0xf0) >> 4;
+    const h10 = hash5 && 0x0f;
+    const h11 = (hash5 & 0xf0) >> 4;
+    const h12 = hash6 && 0x0f;
+    const h13 = (hash6 & 0xf0) >> 4;
+    const h14 = hash7 && 0x0f;
+    const h15 = (hash7 & 0xf0) >> 4;
+
+    const toBase64 = (h: number): number => {
+      // "0".charCodeAt(0) = 48
+      // "a".charCodeAt(0) = 97 => delta = 87
+      return h < 10 ? h + 48 : h + 87;
+    };
+
+    return String.fromCharCode(
+      toBase64(h0),
+      toBase64(h1),
+      toBase64(h2),
+      toBase64(h3),
+      toBase64(h4),
+      toBase64(h5),
+      toBase64(h6),
+      toBase64(h7),
+      toBase64(h8),
+      toBase64(h9),
+      toBase64(h10),
+      toBase64(h11),
+      toBase64(h12),
+      toBase64(h13),
+      toBase64(h14),
+      toBase64(h15)
+    );
   } else {
     return "0000000000000000";
   }
