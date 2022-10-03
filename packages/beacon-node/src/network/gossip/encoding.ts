@@ -17,23 +17,24 @@ export function fastMsgIdFn(rpcMsg: RPC.IMessage): string {
     // create intermediate could lead to heap memory issue
     // use 8 bits as number could lead to base64Slice() strange error,
     // this narrows down to 16 charactors: 0 to 9 and : ; < = > ?
+    // (0 map to char code 48)
     return String.fromCharCode(
-      ((h[0] & 0xf0) >> 4) + 16,
-      (h[0] & 0x0f) + 16,
-      ((h[1] & 0xf0) >> 4) + 16,
-      (h[1] & 0x0f) + 16,
-      ((h[2] & 0xf0) >> 4) + 16,
-      (h[2] & 0x0f) + 16,
-      ((h[3] & 0xf0) >> 4) + 16,
-      (h[3] & 0x0f) + 16,
-      ((h[4] & 0xf0) >> 4) + 16,
-      (h[4] & 0x0f) + 16,
-      ((h[5] & 0xf0) >> 4) + 16,
-      (h[5] & 0x0f) + 16,
-      ((h[6] & 0xf0) >> 4) + 16,
-      (h[6] & 0x0f) + 16,
-      ((h[7] & 0xf0) >> 4) + 16,
-      (h[7] & 0x0f) + 16
+      ((h[0] & 0xf0) >> 4) + 48,
+      (h[0] & 0x0f) + 48,
+      ((h[1] & 0xf0) >> 4) + 48,
+      (h[1] & 0x0f) + 48,
+      ((h[2] & 0xf0) >> 4) + 48,
+      (h[2] & 0x0f) + 48,
+      ((h[3] & 0xf0) >> 4) + 48,
+      (h[3] & 0x0f) + 48,
+      ((h[4] & 0xf0) >> 4) + 48,
+      (h[4] & 0x0f) + 48,
+      ((h[5] & 0xf0) >> 4) + 48,
+      (h[5] & 0x0f) + 48,
+      ((h[6] & 0xf0) >> 4) + 48,
+      (h[6] & 0x0f) + 48,
+      ((h[7] & 0xf0) >> 4) + 48,
+      (h[7] & 0x0f) + 48
     );
   } else {
     return "0000000000000000";
