@@ -13,6 +13,7 @@ import {loggerVc} from "../../utils/logger.js";
 import {ClockMock} from "../../utils/clock.js";
 import {ChainHeaderTracker} from "../../../src/services/chainHeaderTracker.js";
 import {ZERO_HASH} from "../../utils/types.js";
+import {ValidatorEventEmitter} from "../../../src/services/emitter.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
@@ -22,6 +23,8 @@ describe("SyncCommitteeService", function () {
   const api = getApiClientStub(sandbox);
   const validatorStore = sinon.createStubInstance(ValidatorStore) as ValidatorStore &
     sinon.SinonStubbedInstance<ValidatorStore>;
+  const emitter = sinon.createStubInstance(ValidatorEventEmitter) as ValidatorEventEmitter &
+    sinon.SinonStubbedInstance<ValidatorEventEmitter>;
   const chainHeaderTracker = sinon.createStubInstance(ChainHeaderTracker) as ChainHeaderTracker &
     sinon.SinonStubbedInstance<ChainHeaderTracker>;
   let pubkeys: Uint8Array[]; // Initialize pubkeys in before() so bls is already initialized
@@ -53,6 +56,7 @@ describe("SyncCommitteeService", function () {
       api,
       clock,
       validatorStore,
+      emitter,
       chainHeaderTracker,
       null
     );
