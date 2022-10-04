@@ -81,6 +81,7 @@ export const LodestarValidatorProcess: ValidatorConstructor = class LodestarVali
       logFile: join(this.params.logFilesDir, `${this.id}.log`),
       logFileLevel: "debug",
       logLevel: "info",
+      logFileDailyRotate: 0,
     } as unknown) as IValidatorCliArgs & IGlobalArgs;
 
     this.keyManagerApi = getClient(

@@ -7,7 +7,7 @@ import {
   attestationParticipationAssertions,
   nodeAssertions,
   inclusionDelayAssertions,
-  attestationPerSlotAssertions,
+  // attestationPerSlotAssertions,
   finalityAssertions,
   headsAssertions,
   syncCommitteeAssertions,
@@ -79,7 +79,6 @@ for (const {beaconNodes, validatorClients, validatorsPerClient} of nodeCases) {
 
         after("stop env", async () => {
           await env.stop();
-          env.tracker.printNoesInfo();
         });
 
         describe("nodes env", () => {
@@ -90,9 +89,9 @@ for (const {beaconNodes, validatorClients, validatorsPerClient} of nodeCases) {
           describe(`epoch - ${epoch}`, () => {
             before("wait for epoch", async () => {
               // Wait for one extra slot to make sure epoch transition is complete on the state
-              await env.waitForEndOfSlot(env.clock.getLastSlotOfEpoch(epoch) + 1);
+              await env.waitForSlot(env.clock.getLastSlotOfEpoch(epoch) + 1);
 
-              env.tracker.printNoesInfo();
+              env.tracker.printNoesInfo(epoch);
             });
 
             describe("missed blocks", () => {
@@ -111,9 +110,9 @@ for (const {beaconNodes, validatorClients, validatorsPerClient} of nodeCases) {
               inclusionDelayAssertions(env, epoch);
             });
 
-            describe("attestation count per slot", () => {
-              attestationPerSlotAssertions(env, epoch);
-            });
+            // describe("attestation count per slot", () => {
+            //   attestationPerSlotAssertions(env, epoch);
+            // });
 
             describe("attestation participation", () => {
               attestationParticipationAssertions(env, epoch);

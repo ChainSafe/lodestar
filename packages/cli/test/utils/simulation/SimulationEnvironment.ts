@@ -2,10 +2,11 @@ import {mkdir, rm} from "node:fs/promises";
 import {join} from "node:path";
 import {EventEmitter} from "node:events";
 import tmp from "tmp";
-import {activePreset} from "@lodestar/params";
+import {activePreset, MAX_COMMITTEES_PER_SLOT} from "@lodestar/params";
 import {routes} from "@lodestar/api/beacon";
+import {Slot} from "@lodestar/types";
 import {BeaconNodeProcess, SimulationOptionalParams, SimulationParams, SimulationRequiredParams} from "./types.js";
-import {EpochClock, MS_IN_SEC} from "./EpochClock.js";
+import {EpochClock} from "./EpochClock.js";
 import {SimulationTracker} from "./SimulationTracker.js";
 import {LodestarBeaconNodeProcess, defaultSimulationParams, getSimulationId} from "./index.js";
 
@@ -17,9 +18,10 @@ export class SimulationEnvironment {
   readonly rootDir: string;
   readonly nodes: BeaconNodeProcess[] = [];
   readonly clock: EpochClock;
-  readonly acceptableParticipationRate = 1;
-  readonly acceptableMaxInclusionDelay = 1;
-  readonly acceptableMinSyncParticipation = 1;
+  readonly expectedMinParticipationRate = 0.95;
+  readonly expectedMaxInclusionDelay = 2;
+  readonly expectedMinAttestationCount = MAX_COMMITTEES_PER_SLOT - 1;
+  readonly expectedMinSyncParticipationRate = 0.95;
   readonly tracker: SimulationTracker;
   readonly emitter: EventEmitter;
   readonly controller: AbortController;
@@ -68,6 +70,7 @@ export class SimulationEnvironment {
       genesisTime,
       secondsPerSlot: this.params.secondsPerSlot,
       slotsPerEpoch: this.params.slotsPerEpoch,
+      signal: this.controller.signal,
     });
     this.emitter = new EventEmitter();
 
@@ -114,35 +117,19 @@ export class SimulationEnvironment {
     });
   }
 
-  waitForStartOfSlot(slot: number): Promise<this> {
-    console.log("Waiting for start of slot", {target: slot, current: this.clock.currentSlot});
-
-    return new Promise((resolve) => {
-      const slotTime = this.clock.getSlotTime(slot) * MS_IN_SEC - Date.now();
-
-      const timeout = setTimeout(() => {
-        resolve(this);
-      }, slotTime);
-
-      this.controller.signal.addEventListener(
-        "abort",
-        () => {
-          clearTimeout(timeout);
-        },
-        {once: true}
-      );
+  async waitForSlot(slot: Slot, nodes?: BeaconNodeProcess[]): Promise<void> {
+    console.log(`\nWaiting for slot on "${nodes ? nodes.map((n) => n.id).join(",") : "all nodes"}"`, {
+      target: slot,
+      current: this.clock.currentSlot,
     });
-  }
 
-  waitForEndOfSlot(slot: number): Promise<this> {
-    return this.waitForStartOfSlot(slot + 1);
-  }
-
-  waitForStartOfEpoch(epoch: number): Promise<this> {
-    return this.waitForStartOfSlot(this.clock.getFirstSlotOfEpoch(epoch));
-  }
-
-  waitForEndOfEpoch(epoch: number): Promise<this> {
-    return this.waitForEndOfSlot(this.clock.getLastSlotOfEpoch(epoch));
+    await Promise.all(
+      (nodes ?? this.nodes).map(
+        (node) =>
+          new Promise((resolve) => {
+            this.tracker.onSlot(slot, node, resolve);
+          })
+      )
+    );
   }
 }
