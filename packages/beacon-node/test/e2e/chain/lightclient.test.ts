@@ -3,6 +3,7 @@ import {IChainConfig} from "@lodestar/config";
 import {ssz} from "@lodestar/types";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {TimestampFormatCode} from "@lodestar/utils";
+import {allNamespaces} from "@lodestar/api";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Lightclient} from "@lodestar/light-client";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
@@ -71,7 +72,7 @@ describe("chain / lightclient", function () {
       options: {
         sync: {isSingleNode: true},
         network: {allowPublishToZeroPeers: true},
-        api: {rest: {enabled: true, api: ["lightclient"], port: restPort, address: "localhost"}},
+        api: {rest: {enabled: true, api: allNamespaces, port: restPort, address: "localhost"}},
         chain: {blsVerifyAllMainThread: true},
       },
       validatorCount: validatorCount * validatorClientCount,

@@ -3,7 +3,7 @@ import {createIBeaconConfig, IChainConfig} from "@lodestar/config";
 import {chainConfig as chainConfigDef} from "@lodestar/config/default";
 import {phase0} from "@lodestar/types";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {getClient} from "@lodestar/api";
+import {getClient, allNamespaces} from "@lodestar/api";
 import {LogLevel, testLogger, TestLoggerOpts} from "../../../utils/logger.js";
 import {getDevBeaconNode} from "../../../utils/node/beacon.js";
 import {waitForEvent} from "../../../utils/events/resolver.js";
@@ -45,7 +45,7 @@ describe("api / impl / validator", function () {
         params: testParams,
         options: {
           sync: {isSingleNode: true},
-          api: {rest: {enabled: true, api: ["lodestar"], port: restPort}},
+          api: {rest: {enabled: true, api: allNamespaces, port: restPort}},
           chain: {blsVerifyAllMainThread: true},
         },
         validatorCount,
@@ -93,7 +93,7 @@ describe("api / impl / validator", function () {
         params: testParams,
         options: {
           sync: {isSingleNode: true},
-          api: {rest: {enabled: true, api: ["lodestar"], port: restPort}},
+          api: {rest: {enabled: true, api: allNamespaces, port: restPort}},
           chain: {blsVerifyAllMainThread: true},
         },
         validatorCount,
