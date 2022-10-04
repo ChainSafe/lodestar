@@ -19,12 +19,11 @@ const salt = crypto.randomBytes(8);
  * The function used to generate a gossipsub message id
  * We use the first 8 bytes of SHA256(data) for content addressing
  */
-export function fastMsgIdFn(rpcMsg: RPC.IMessage): string {
+export function fastMsgIdFn(rpcMsg: RPC.IMessage): number {
   if (rpcMsg.data) {
-    // TODO: fastMsgIdFn should accept both string or number
-    return String(xxhash.h32Raw(Buffer.concat([salt, rpcMsg.data])));
+    return xxhash.h32Raw(Buffer.concat([salt, rpcMsg.data]));
   } else {
-    return "0000000000000000";
+    return 0;
   }
 }
 
