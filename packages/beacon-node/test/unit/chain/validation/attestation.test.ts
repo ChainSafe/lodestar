@@ -1,6 +1,7 @@
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {phase0} from "@lodestar/types";
 import {BitArray} from "@chainsafe/ssz";
+import {processSlots} from "@lodestar/state-transition";
 import {IBeaconChain} from "../../../../src/chain/index.js";
 import {AttestationErrorCode} from "../../../../src/chain/errors/index.js";
 import {validateGossipAttestation} from "../../../../src/chain/validation/index.js";
@@ -9,6 +10,7 @@ import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
 import {generateTestCachedBeaconStateOnlyValidators} from "../../../../../state-transition/test/perf/util.js";
 import {memoOnce} from "../../../utils/cache.js";
 import {getAttestationValidData, AttestationValidDataOpts} from "../../../utils/validationData/attestation.js";
+import {IStateRegenerator} from "../../../../src/chain/regen/interface.js";
 
 describe("chain / validation / attestation", () => {
   const vc = 64;
@@ -95,6 +97,19 @@ describe("chain / validation / attestation", () => {
     attestation.data.target.root = UNKNOWN_ROOT;
 
     await expectError(chain, attestation, subnet, AttestationErrorCode.INVALID_TARGET_ROOT);
+  });
+
+  it("NO_COMMITTEE_FOR_SLOT_AND_INDEX", async () => {
+    const {chain, attestation, subnet} = getValidData();
+    // slot is out of the commitee range
+    // simulate https://github.com/ChainSafe/lodestar/issues/4396
+    // this way we cannot get committeeIndices
+    const committeeState = processSlots(getState(), attestation.data.slot + 2 * SLOTS_PER_EPOCH);
+    (chain as {regen: IStateRegenerator}).regen = ({
+      getState: async () => committeeState,
+    } as Partial<IStateRegenerator>) as IStateRegenerator;
+
+    await expectError(chain, attestation, subnet, AttestationErrorCode.NO_COMMITTEE_FOR_SLOT_AND_INDEX);
   });
 
   it("WRONG_NUMBER_OF_AGGREGATION_BITS", async () => {

@@ -11,7 +11,7 @@ import {IValidatorCliArgs} from "../../../src/cmds/validator/options.js";
 import {SimulationParams, ValidatorConstructor, ValidatorProcess} from "./types.js";
 import {closeChildProcess, KEY_MANAGER_BASE_PORT, spawnProcessAndWait, __dirname} from "./utils.js";
 import {ExternalSignerServer} from "./ExternalSignerServer.js";
-
+/* eslint-disable no-console */
 // eslint-disable-next-line @typescript-eslint/naming-convention
 export const LodestarValidatorProcess: ValidatorConstructor = class LodestarValidatorProcess
   implements ValidatorProcess {

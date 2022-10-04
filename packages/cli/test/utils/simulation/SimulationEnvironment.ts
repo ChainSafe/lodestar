@@ -9,6 +9,8 @@ import {EpochClock, MS_IN_SEC} from "./EpochClock.js";
 import {SimulationTracker} from "./SimulationTracker.js";
 import {LodestarBeaconNodeProcess, defaultSimulationParams, getSimulationId} from "./index.js";
 
+/* eslint-disable no-console */
+
 export class SimulationEnvironment {
   readonly params: SimulationParams;
   readonly id: string;

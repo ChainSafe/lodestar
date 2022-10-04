@@ -46,6 +46,7 @@ for (const {beaconNodes, validatorClients, validatorsPerClient} of nodeCases) {
       `bellatrix-${bellatrixEpoch}`,
     ].join("_");
 
+    // eslint-disable-next-line no-console
     console.log(
       JSON.stringify({
         beaconNodes,

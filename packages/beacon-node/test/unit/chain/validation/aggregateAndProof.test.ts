@@ -1,6 +1,7 @@
 import {toHexString} from "@chainsafe/ssz";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {phase0, ssz} from "@lodestar/types";
+import {processSlots} from "@lodestar/state-transition";
 import {IBeaconChain} from "../../../../src/chain/index.js";
 import {AttestationErrorCode} from "../../../../src/chain/errors/index.js";
 import {validateGossipAggregateAndProof} from "../../../../src/chain/validation/index.js";
@@ -12,6 +13,7 @@ import {
   getAggregateAndProofValidData,
   AggregateAndProofValidDataOpts,
 } from "../../../utils/validationData/aggregateAndProof.js";
+import {IStateRegenerator} from "../../../../src/chain/regen/interface.js";
 
 describe("chain / validation / aggregateAndProof", () => {
   const vc = 64;
@@ -106,6 +108,22 @@ describe("chain / validation / aggregateAndProof", () => {
     signedAggregateAndProof.message.aggregate.data.target.root = UNKNOWN_ROOT;
 
     await expectError(chain, signedAggregateAndProof, AttestationErrorCode.INVALID_TARGET_ROOT);
+  });
+
+  it("NO_COMMITTEE_FOR_SLOT_AND_INDEX", async () => {
+    const {chain, signedAggregateAndProof} = getValidData();
+    // slot is out of the commitee range
+    // simulate https://github.com/ChainSafe/lodestar/issues/4396
+    // this way we cannot get committeeIndices
+    const committeeState = processSlots(
+      getState(),
+      signedAggregateAndProof.message.aggregate.data.slot + 2 * SLOTS_PER_EPOCH
+    );
+    (chain as {regen: IStateRegenerator}).regen = ({
+      getState: async () => committeeState,
+    } as Partial<IStateRegenerator>) as IStateRegenerator;
+
+    await expectError(chain, signedAggregateAndProof, AttestationErrorCode.NO_COMMITTEE_FOR_SLOT_AND_INDEX);
   });
 
   it("EMPTY_AGGREGATION_BITFIELD", async () => {

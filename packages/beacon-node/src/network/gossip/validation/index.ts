@@ -88,7 +88,8 @@ function getGossipValidatorFn<K extends GossipType>(
       return MessageAcceptance.Accept;
     } catch (e) {
       if (!(e instanceof GossipActionError)) {
-        logger.error(`Gossip validation ${type} threw a non-GossipActionError`, {}, e as Error);
+        // not deserve to log error here, it looks too dangerous to users
+        logger.debug(`Gossip validation ${type} threw a non-GossipActionError`, {}, e as Error);
         return MessageAcceptance.Ignore;
       }
 

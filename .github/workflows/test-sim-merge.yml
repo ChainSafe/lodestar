@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 env:
-  GETH_COMMIT: 511bf8f18801520bf4e0c7e4d098a17d0665bc89
+  GETH_IMAGE: ethereum/client-go:v1.10.25
   NETHERMIND_COMMIT: 5b73a2771ed00c6be792fc46f8d5c56333a28b11
 
 jobs:
@@ -40,21 +40,15 @@ jobs:
         if: steps.cache-deps.outputs.cache-hit == 'true'
       # </common-build>
 
-      # Install Geth merge interop
-      - uses: actions/setup-go@v2
-        with:
-          go-version: '1.17'
-      - name: Clone Geth merge interop branch
-        run: git clone -b master https://github.com/g11tech/go-ethereum.git && cd go-ethereum && git reset --hard $GETH_COMMIT && git submodule update --init --recursive
-      - name: Build Geth
-        run: cd go-ethereum && make
+      - name: Pull Geth
+        run: docker pull $GETH_IMAGE
 
       - name: Test Lodestar <> Geth interop
         run: yarn test:sim:merge-interop
         working-directory: packages/beacon-node
         env:
-          EL_BINARY_DIR: ../../go-ethereum/build/bin
-          EL_SCRIPT_DIR: geth
+          EL_BINARY_DIR: ${{ env.GETH_IMAGE }}
+          EL_SCRIPT_DIR: gethdocker
           ENGINE_PORT: 8551
           ETH_PORT: 8545
           TX_SCENARIOS: simple
