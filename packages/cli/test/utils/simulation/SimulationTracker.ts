@@ -399,13 +399,13 @@ export class SimulationTracker {
           "Missed Slots": this.nodes
             .map((node) => this.epochMeasures.get(node.id)?.get(epoch)?.missedSlots.length)
             .join(","),
-          "Finalized Slots": Array(this.nodes.length).fill("-"),
+          "Finalized Slots": Array(this.nodes.length).fill("-").join(""),
           "Attestations Count": participationUnique.size === 1 ? participation[0] : participation.join(","),
-          "Inclusion Delay": Array(this.nodes.length).fill("-"),
+          "Inclusion Delay": Array(this.nodes.length).fill("-").join(""),
           "SC Participation": this.nodes
             .map((node) => this.epochMeasures.get(node.id)?.get(epoch)?.syncCommitteeParticipationAvg ?? "-")
             .join(","),
-          Peer: Array(this.nodes.length).fill("-"),
+          Peer: Array(this.nodes.length).fill("-").join(""),
         };
         records.push(summary);
       }
