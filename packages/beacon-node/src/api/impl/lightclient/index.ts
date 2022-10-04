@@ -1,6 +1,7 @@
 import {routes} from "@lodestar/api";
 import {fromHexString} from "@chainsafe/ssz";
 import {ProofType, Tree} from "@chainsafe/persistent-merkle-tree";
+import {SyncPeriod} from "@lodestar/types";
 import {ApiModules} from "../types.js";
 import {resolveStateId} from "../beacon/state/utils.js";
 import {IApiOptions} from "../../options.js";
@@ -42,9 +43,8 @@ export function getLightclientApi(
     },
 
     // eslint-disable-next-line @typescript-eslint/naming-convention
-    async getUpdates(start_period, count) {
-      const periods = Array.from({length: count}, (_ignored, i) => i + start_period);
-      const updates = await Promise.all(periods.map((period) => chain.lightClientServer.getUpdates(period)));
+    async getUpdates(startPeriod: SyncPeriod, count: number) {
+      const updates = await chain.lightClientServer.getUpdates(startPeriod, count);
       return {data: updates};
     },
 

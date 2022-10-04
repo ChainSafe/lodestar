@@ -4,7 +4,7 @@ import {CachedBeaconStateAltair, computeSyncPeriodAtEpoch, computeSyncPeriodAtSl
 import {ILogger, MapDef, pruneSetToMax} from "@lodestar/utils";
 import {routes} from "@lodestar/api";
 import {BitArray, CompositeViewDU, toHexString} from "@chainsafe/ssz";
-import {SYNC_COMMITTEE_SIZE} from "@lodestar/params";
+import {MAX_REQUEST_LIGHT_CLIENT_UPDATES, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 import {IBeaconDb} from "../../db/index.js";
 import {IMetrics} from "../../metrics/index.js";
 import {ChainEvent, ChainEventEmitter} from "../emitter.js";
@@ -274,44 +274,10 @@ export class LightClientServer {
    * - Has the most bits
    * - Signed header at the oldest slot
    */
-  async getUpdates(period: SyncPeriod): Promise<altair.LightClientUpdate> {
-    // Signature data
-    const partialUpdate = await this.db.bestPartialLightClientUpdate.get(period);
-    if (!partialUpdate) {
-      throw Error(`No partialUpdate available for period ${period}`);
-    }
-
-    const syncCommitteeWitnessBlockRoot = partialUpdate.blockRoot;
-
-    const syncCommitteeWitness = await this.db.syncCommitteeWitness.get(syncCommitteeWitnessBlockRoot);
-    if (!syncCommitteeWitness) {
-      throw Error(`finalizedBlockRoot not available ${toHexString(syncCommitteeWitnessBlockRoot)}`);
-    }
-
-    const nextSyncCommittee = await this.db.syncCommittee.get(syncCommitteeWitness.nextSyncCommitteeRoot);
-    if (!nextSyncCommittee) {
-      throw Error("nextSyncCommittee not available");
-    }
-
-    if (partialUpdate.isFinalized) {
-      return {
-        attestedHeader: partialUpdate.attestedHeader,
-        nextSyncCommittee: nextSyncCommittee,
-        nextSyncCommitteeBranch: getNextSyncCommitteeBranch(syncCommitteeWitness),
-        finalizedHeader: partialUpdate.finalizedHeader,
-        finalityBranch: partialUpdate.finalityBranch,
-        syncAggregate: partialUpdate.syncAggregate,
-      };
-    } else {
-      return {
-        attestedHeader: partialUpdate.attestedHeader,
-        nextSyncCommittee: nextSyncCommittee,
-        nextSyncCommitteeBranch: getNextSyncCommitteeBranch(syncCommitteeWitness),
-        finalizedHeader: this.zero.finalizedHeader,
-        finalityBranch: this.zero.finalityBranch,
-        syncAggregate: partialUpdate.syncAggregate,
-      };
-    }
+  async getUpdates(startPeriod: SyncPeriod, count: number): Promise<altair.LightClientUpdate[]> {
+    const allowedCount = Math.min(MAX_REQUEST_LIGHT_CLIENT_UPDATES, count);
+    const periods: number[] = Array.from({length: allowedCount}, (_ignored, i) => i + startPeriod);
+    return await Promise.all(periods.map((period) => this.doGetUpdate(period)));
   }
 
   /**
@@ -509,6 +475,46 @@ export class LightClientServer {
 
     // Check if this update is better, otherwise ignore
     await this.maybeStoreNewBestPartialUpdate(syncPeriod, syncAggregate, attestedData);
+  }
+
+  private async doGetUpdate(period: number): Promise<altair.LightClientUpdate> {
+    // Signature data
+    const partialUpdate = await this.db.bestPartialLightClientUpdate.get(period);
+    if (!partialUpdate) {
+      throw Error(`No partialUpdate available for period ${period}`);
+    }
+
+    const syncCommitteeWitnessBlockRoot = partialUpdate.blockRoot;
+
+    const syncCommitteeWitness = await this.db.syncCommitteeWitness.get(syncCommitteeWitnessBlockRoot);
+    if (!syncCommitteeWitness) {
+      throw Error(`finalizedBlockRoot not available ${toHexString(syncCommitteeWitnessBlockRoot)}`);
+    }
+
+    const nextSyncCommittee = await this.db.syncCommittee.get(syncCommitteeWitness.nextSyncCommitteeRoot);
+    if (!nextSyncCommittee) {
+      throw Error("nextSyncCommittee not available");
+    }
+
+    if (partialUpdate.isFinalized) {
+      return {
+        attestedHeader: partialUpdate.attestedHeader,
+        nextSyncCommittee: nextSyncCommittee,
+        nextSyncCommitteeBranch: getNextSyncCommitteeBranch(syncCommitteeWitness),
+        finalizedHeader: partialUpdate.finalizedHeader,
+        finalityBranch: partialUpdate.finalityBranch,
+        syncAggregate: partialUpdate.syncAggregate,
+      };
+    } else {
+      return {
+        attestedHeader: partialUpdate.attestedHeader,
+        nextSyncCommittee: nextSyncCommittee,
+        nextSyncCommitteeBranch: getNextSyncCommitteeBranch(syncCommitteeWitness),
+        finalizedHeader: this.zero.finalizedHeader,
+        finalityBranch: this.zero.finalityBranch,
+        syncAggregate: partialUpdate.syncAggregate,
+      };
+    }
   }
 
   /**
