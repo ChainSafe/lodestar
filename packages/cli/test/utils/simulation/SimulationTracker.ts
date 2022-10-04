@@ -399,6 +399,7 @@ export class SimulationTracker {
           "SC Participation": this.nodes
             .map((node) => this.epochMeasures.get(node.id)?.get(epoch)?.syncCommitteeParticipationAvg ?? "-")
             .join(","),
+          Peer: Array(this.nodes.length).fill("-").join(","),
         };
         records.push(summary);
       }
