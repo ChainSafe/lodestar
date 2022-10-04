@@ -349,23 +349,29 @@ export class SimulationTracker {
       const forkName = getForkName(epoch, this.params);
       const epochStr = `${this.clock.getEpochForSlot(slot)}/${this.clock.getSlotIndexInEpoch(slot)}`;
 
+      const finalizedSLots = this.nodes.map((node) => this.slotMeasures.get(node.id)?.get(slot)?.finalizedSlot ?? "-");
+      const finalizedSlotsUnique = new Set(finalizedSLots);
+      const attestationCount = this.nodes.map(
+        (node) => this.slotMeasures.get(node.id)?.get(slot)?.attestationsCount ?? "-"
+      );
+      const attestationCountUnique = new Set(attestationCount);
+      const inclusionDelay = this.nodes.map((node) => this.slotMeasures.get(node.id)?.get(slot)?.inclusionDelay ?? "-");
+      const inclusionDelayUnique = new Set(inclusionDelay);
+      const attestationParticipation = this.nodes.map(
+        (node) => this.slotMeasures.get(node.id)?.get(slot)?.syncCommitteeParticipation ?? "-"
+      );
+      const attestationParticipationUnique = new Set(attestationParticipation);
+
       const record: Record<string, unknown> = {
         F: forkName,
         Eph: epochStr,
         slot,
         "Missed Slots": this.nodes.map((node) => (this.slotMeasures.get(node.id)?.has(slot) ? "-" : "x")).join(""),
-        "Finalized Slots": this.nodes
-          .map((node) => this.slotMeasures.get(node.id)?.get(slot)?.finalizedSlot ?? "-")
-          .join(","),
-        "Attestations Count": this.nodes
-          .map((node) => this.slotMeasures.get(node.id)?.get(slot)?.attestationsCount ?? "-")
-          .join(","),
-        "Inclusion Delay": this.nodes
-          .map((node) => this.slotMeasures.get(node.id)?.get(slot)?.inclusionDelay ?? "-")
-          .join(","),
-        "SC Participation": this.nodes
-          .map((node) => this.slotMeasures.get(node.id)?.get(slot)?.syncCommitteeParticipation ?? "-")
-          .join(","),
+        "Finalized Slots": finalizedSlotsUnique.size === 1 ? finalizedSLots[0] : finalizedSLots.join(","),
+        "Attestations Count": attestationCountUnique.size === 1 ? attestationCount[0] : attestationCount.join(","),
+        "Inclusion Delay": inclusionDelayUnique.size === 1 ? inclusionDelay[0] : inclusionDelay.join(","),
+        "SC Participation":
+          attestationParticipationUnique.size === 1 ? attestationParticipation[0] : attestationParticipation.join(","),
         Peer: this.nodes.map((node) => this.slotMeasures.get(node.id)?.get(slot)?.connectedPeerCount ?? "-").join(","),
       };
 
@@ -377,6 +383,15 @@ export class SimulationTracker {
       records.push(record);
 
       if (this.clock.isLastSlotOfEpoch(slot)) {
+        const participation = this.nodes.map((node) => {
+          const participation = this.epochMeasures.get(node.id)?.get(epoch)?.attestationParticipationAvg;
+          if (!participation) return "-";
+          return `${participation.head.toFixed(2)},${participation.source.toFixed(2)},${participation.target.toFixed(
+            2
+          )}`;
+        });
+        const participationUnique = new Set(participation);
+
         const summary: Record<string, unknown> = {
           F: forkName,
           Eph: epoch,
@@ -384,22 +399,13 @@ export class SimulationTracker {
           "Missed Slots": this.nodes
             .map((node) => this.epochMeasures.get(node.id)?.get(epoch)?.missedSlots.length)
             .join(","),
-          "Finalized Slots": Array(this.nodes.length).fill("-").join(","),
-          "Attestations Count": this.nodes
-            .map((node) => {
-              const participation = this.epochMeasures.get(node.id)?.get(epoch)?.attestationParticipationAvg;
-              if (!participation) return "-";
-
-              return `${participation.head.toFixed(2)},${participation.source.toFixed(
-                2
-              )},${participation.target.toFixed(2)}`;
-            })
-            .join(","),
-          "Inclusion Delay": Array(this.nodes.length).fill("-").join(","),
+          "Finalized Slots": Array(this.nodes.length).fill("-"),
+          "Attestations Count": participationUnique.size === 1 ? participation[0] : participation.join(","),
+          "Inclusion Delay": Array(this.nodes.length).fill("-"),
           "SC Participation": this.nodes
             .map((node) => this.epochMeasures.get(node.id)?.get(epoch)?.syncCommitteeParticipationAvg ?? "-")
             .join(","),
-          Peer: Array(this.nodes.length).fill("-").join(","),
+          Peer: Array(this.nodes.length).fill("-"),
         };
         records.push(summary);
       }
