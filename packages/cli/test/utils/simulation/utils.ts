@@ -45,10 +45,9 @@ export const spawnProcessAndWait = async (
   return new Promise((resolve, reject) => {
     void (async () => {
       const childProcess = spawn(module, args, {
-        detached: false,
         stdio: process.env.SHOW_LOGS ? "inherit" : "ignore",
         // eslint-disable-next-line @typescript-eslint/naming-convention
-        env: {...process.env, NODE_ENV: "test"},
+        env: {...process.env},
       });
 
       childProcess.on("error", reject);

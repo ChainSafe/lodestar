@@ -9,7 +9,7 @@ import {
   attestationParticipationAssertions,
   nodeAssertions,
   inclusionDelayAssertions,
-  attestationPerSlotAssertions,
+  // attestationPerSlotAssertions,
   finalityAssertions,
   headsAssertions,
   syncCommitteeAssertions,
@@ -113,9 +113,9 @@ for (const {beaconNodes, validatorClients, validatorsPerClient} of nodeCases) {
               inclusionDelayAssertions(env, epoch);
             });
 
-            describe("attestation count per slot", () => {
-              attestationPerSlotAssertions(env, epoch);
-            });
+            // describe("attestation count per slot", () => {
+            //   attestationPerSlotAssertions(env, epoch);
+            // });
 
             describe("attestation participation", () => {
               attestationParticipationAssertions(env, epoch);

@@ -74,6 +74,7 @@ export class EpochClock {
   }
 
   waitForStartOfSlot(slot: number): Promise<this> {
+    // eslint-disable-next-line no-console
     console.log("Waiting for start of slot", {target: slot, current: this.currentSlot});
 
     return new Promise((resolve) => {
