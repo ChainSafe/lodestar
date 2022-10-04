@@ -3,6 +3,7 @@ import {routes} from "@lodestar/api/beacon";
 import {TIMELY_HEAD_FLAG_INDEX, TIMELY_TARGET_FLAG_INDEX, TIMELY_SOURCE_FLAG_INDEX, ForkName} from "@lodestar/params";
 import {allForks, altair, Epoch, Slot} from "@lodestar/types";
 import {toHexString} from "@lodestar/utils";
+import {isActiveValidator} from "@lodestar/state-transition";
 import {EpochClock} from "./EpochClock.js";
 import {BeaconNodeProcess, SimulationParams} from "./types.js";
 import {avg, getForkName} from "./utils.js";
@@ -134,9 +135,9 @@ export const processEpochMissedSlots = async (
 
 export const processAttestationEpochParticipationAvg = async (
   _node: BeaconNodeProcess,
-  {fork: version, state}: EpochMeasureInput
+  {fork, state, epoch}: EpochMeasureInput
 ): Promise<{head: number; source: number; target: number}> => {
-  if (version === ForkName.phase0) {
+  if (fork === ForkName.phase0) {
     return {head: 0, source: 0, target: 0};
   }
 
@@ -147,14 +148,15 @@ export const processAttestationEpochParticipationAvg = async (
   let totalEffectiveBalance = 0;
 
   for (let i = 0; i < previousEpochParticipation.length; i++) {
-    totalAttestingBalance.head +=
-      previousEpochParticipation[i] & TIMELY_HEAD ? state.validators[i].effectiveBalance : 0;
-    totalAttestingBalance.source +=
-      previousEpochParticipation[i] & TIMELY_SOURCE ? state.validators[i].effectiveBalance : 0;
-    totalAttestingBalance.target +=
-      previousEpochParticipation[i] & TIMELY_TARGET ? state.validators[i].effectiveBalance : 0;
+    const {effectiveBalance} = state.validators[i];
 
-    totalEffectiveBalance += state.validators[i].effectiveBalance;
+    totalAttestingBalance.head += previousEpochParticipation[i] & TIMELY_HEAD ? effectiveBalance : 0;
+    totalAttestingBalance.source += previousEpochParticipation[i] & TIMELY_SOURCE ? effectiveBalance : 0;
+    totalAttestingBalance.target += previousEpochParticipation[i] & TIMELY_TARGET ? effectiveBalance : 0;
+
+    if (isActiveValidator(state.validators[i], epoch)) {
+      totalEffectiveBalance += effectiveBalance;
+    }
   }
 
   totalAttestingBalance.head = totalAttestingBalance.head / totalEffectiveBalance;
