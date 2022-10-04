@@ -18,14 +18,14 @@ export function nodeAssertions(env: SimulationEnvironment): void {
 
         expect(health === routes.node.NodeHealth.SYNCING || health === routes.node.NodeHealth.READY).to.equal(
           true,
-          `node health is neither READY or SYNCING. ${{id: node.id}}`
+          `node health is neither READY or SYNCING. ${JSON.stringify({id: node.id})}`
         );
       });
 
       it("should have correct number of validator clients", async () => {
         expect(node.validatorClients).to.have.lengthOf(
           env.params.validatorClients,
-          `node should have correct number of validator clients. ${{id: node.id}}`
+          `node should have correct number of validator clients. ${JSON.stringify({id: node.id})}`
         );
       });
 
@@ -39,11 +39,11 @@ export function nodeAssertions(env: SimulationEnvironment): void {
 
             expect(keyManagerKeys).to.eql(
               existingKeys,
-              `Validator should have correct number of keys loaded. ${{
+              `Validator should have correct number of keys loaded. ${JSON.stringify({
                 id: validator.id,
                 existingKeys,
                 keyManagerKeys,
-              }}`
+              })}`
             );
           });
         });
@@ -62,12 +62,12 @@ export function attestationParticipationAssertions(env: SimulationEnvironment, e
 
         expect(participation?.head).to.be.gte(
           env.expectedMinParticipationRate,
-          `node has low participation rate on head. ${{
+          `node has low participation rate on head. ${JSON.stringify({
             id: node.id,
             epoch,
             participation: participation?.head,
             expectedMinParticipationRate: env.expectedMinParticipationRate,
-          }}`
+          })}`
         );
       });
 
@@ -76,12 +76,12 @@ export function attestationParticipationAssertions(env: SimulationEnvironment, e
 
         expect(participation?.target).to.be.gte(
           env.expectedMinParticipationRate,
-          `node has low participation rate on target. ${{
+          `node has low participation rate on target. ${JSON.stringify({
             id: node.id,
             epoch,
             participation: participation?.head,
             expectedMinParticipationRate: env.expectedMinParticipationRate,
-          }}`
+          })}`
         );
       });
 
@@ -90,12 +90,12 @@ export function attestationParticipationAssertions(env: SimulationEnvironment, e
 
         expect(participation?.source).to.be.gte(
           env.expectedMinParticipationRate,
-          `node has low participation rate on source. ${{
+          `node has low participation rate on source. ${JSON.stringify({
             id: node.id,
             epoch,
             participation: participation?.head,
             expectedMinParticipationRate: env.expectedMinParticipationRate,
-          }}`
+          })}`
         );
       });
     });
@@ -106,7 +106,10 @@ export function missedBlocksAssertions(env: SimulationEnvironment, epoch: Epoch)
   if (env.params.beaconNodes === 1) {
     it("should not have any missed blocks than genesis", () => {
       const missedSlots = env.tracker.epochMeasures.get(env.nodes[0].id)?.get(epoch)?.missedSlots;
-      expect(missedSlots).to.be.eql([], `node has missed blocks than genesis. ${{id: env.nodes[0].id, missedSlots}}`);
+      expect(missedSlots).to.be.eql(
+        [],
+        `node has missed blocks than genesis. ${JSON.stringify({id: env.nodes[0].id, missedSlots})}`
+      );
     });
     return;
   }
@@ -119,11 +122,11 @@ export function missedBlocksAssertions(env: SimulationEnvironment, epoch: Epoch)
 
         expect(missedBlocksOnNode).to.eql(
           missedBlocksOnFirstNode,
-          `node has different missed blocks than node 0. ${{
+          `node has different missed blocks than node 0. ${JSON.stringify({
             id: node.id,
             missedBlocksOnNode,
             missedBlocksOnFirstNode,
-          }}`
+          })}`
         );
       });
     });
@@ -142,13 +145,13 @@ export function inclusionDelayAssertions(env: SimulationEnvironment, epoch: Epoc
 
           expect(inclusionDelay).to.lte(
             env.expectedMaxInclusionDelay,
-            `node  has has higher inclusion delay. ${{
+            `node  has has higher inclusion delay. ${JSON.stringify({
               id: node.id,
               slot,
               epoch,
               inclusionDelay,
               expectedMaxInclusionDelay: env.expectedMaxInclusionDelay,
-            }}`
+            })}`
           );
         });
       }
@@ -168,13 +171,13 @@ export function attestationPerSlotAssertions(env: SimulationEnvironment, epoch: 
 
           expect(attestationsCount).to.gte(
             env.expectedMinAttestationCount,
-            `node has lower attestations count. ${{
+            `node has lower attestations count. ${JSON.stringify({
               id: node.id,
               slot,
               epoch,
               attestationsCount,
               expectedMinAttestationCount: env.expectedMinAttestationCount,
-            }}`
+            })}`
           );
         });
       }
@@ -200,7 +203,13 @@ export function finalityAssertions(env: SimulationEnvironment, epoch: Epoch): vo
 
           expect(finalizedSlot).to.gte(
             expectedFinalizedSlot,
-            `node has not finalized expected slot. ${{id: node.id, slot, epoch, finalizedSlot, expectedFinalizedSlot}}`
+            `node has not finalized expected slot. ${JSON.stringify({
+              id: node.id,
+              slot,
+              epoch,
+              finalizedSlot,
+              expectedFinalizedSlot,
+            })}`
           );
         });
       }
@@ -222,7 +231,7 @@ export function headsAssertions(env: SimulationEnvironment, epoch: Epoch): void 
 
           expect(headOnNode).to.eql(
             headOnFirstNode,
-            `node have different heads. ${{slot, epoch, headOnFirstNode, headOnNode}}`
+            `node have different heads. ${JSON.stringify({slot, epoch, headOnFirstNode, headOnNode})}`
           );
         });
       }
@@ -252,13 +261,13 @@ export function syncCommitteeAssertions(env: SimulationEnvironment, epoch: Epoch
 
           expect(participation).to.gte(
             env.expectedMinSyncParticipationRate,
-            `node has low sync committee participation. ${{
+            `node has low sync committee participation. ${JSON.stringify({
               id: node.id,
               slot,
               epoch,
               participation,
               expectedMinSyncParticipationRate: env.expectedMinSyncParticipationRate,
-            }}`
+            })}`
           );
         });
       }
