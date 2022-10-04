@@ -40,6 +40,7 @@ export type SlotMeasure = CommonSlotMeasure & {
   readonly head: string;
   readonly finalizedSlot: Slot;
   readonly syncCommitteeParticipation: number;
+  readonly connectedPeerCount: number;
 };
 
 export type EpochMeasure = CommonSlotMeasure & {
@@ -95,13 +96,25 @@ export const processSyncCommitteeParticipation = async (
   return syncCommitteeBits.getTrueBitIndexes().length / syncCommitteeBits.bitLen;
 };
 
+export const processConnectedPeerCount = async (node: BeaconNodeProcess): Promise<number> => {
+  return (await node.api.node.getPeerCount()).data.connected;
+};
+
 export const processSlotMeasure = async (node: BeaconNodeProcess, input: SlotMeasureInput): Promise<SlotMeasure> => {
-  const [attestationsCount, inclusionDelay, head, finalized, syncCommitteeParticipation] = await Promise.all([
+  const [
+    attestationsCount,
+    inclusionDelay,
+    head,
+    finalized,
+    syncCommitteeParticipation,
+    connectedPeerCount,
+  ] = await Promise.all([
     processAttestationsCount(node, input),
     processInclusionDelay(node, input),
     processHead(node, input),
     processFinalized(node, input),
     processSyncCommitteeParticipation(node, input),
+    processConnectedPeerCount(node),
   ]);
 
   const epoch = input.clock.getEpochForSlot(input.slot);
@@ -116,6 +129,7 @@ export const processSlotMeasure = async (node: BeaconNodeProcess, input: SlotMea
     head,
     finalizedSlot: finalized,
     syncCommitteeParticipation,
+    connectedPeerCount,
   };
 };
 
@@ -234,6 +248,7 @@ export class SimulationTracker {
         finalizedSlot: 0,
         syncCommitteeParticipation: 0,
         head: "",
+        connectedPeerCount: 0,
       });
     }
   }
@@ -341,16 +356,17 @@ export class SimulationTracker {
         "Missed Slots": this.nodes.map((node) => (this.slotMeasures.get(node.id)?.has(slot) ? "-" : "x")).join(""),
         "Finalized Slots": this.nodes
           .map((node) => this.slotMeasures.get(node.id)?.get(slot)?.finalizedSlot ?? "-")
-          .join(" | "),
+          .join(","),
         "Attestations Count": this.nodes
           .map((node) => this.slotMeasures.get(node.id)?.get(slot)?.attestationsCount ?? "-")
-          .join(" | "),
+          .join(","),
         "Inclusion Delay": this.nodes
           .map((node) => this.slotMeasures.get(node.id)?.get(slot)?.inclusionDelay ?? "-")
-          .join(" | "),
+          .join(","),
         "SC Participation": this.nodes
           .map((node) => this.slotMeasures.get(node.id)?.get(slot)?.syncCommitteeParticipation ?? "-")
-          .join(" | "),
+          .join(","),
+        Peer: this.nodes.map((node) => this.slotMeasures.get(node.id)?.get(slot)?.connectedPeerCount ?? "-").join(","),
       };
 
       // TODO: Find a better way to show the heads on each slot
@@ -367,8 +383,8 @@ export class SimulationTracker {
           slot: "---",
           "Missed Slots": this.nodes
             .map((node) => this.epochMeasures.get(node.id)?.get(epoch)?.missedSlots.length)
-            .join(" | "),
-          "Finalized Slots": Array(this.nodes.length).fill("-").join(" | "),
+            .join(","),
+          "Finalized Slots": Array(this.nodes.length).fill("-").join(","),
           "Attestations Count": this.nodes
             .map((node) => {
               const participation = this.epochMeasures.get(node.id)?.get(epoch)?.attestationParticipationAvg;
@@ -378,11 +394,11 @@ export class SimulationTracker {
                 2
               )},${participation.target.toFixed(2)}`;
             })
-            .join(" | "),
-          "Inclusion Delay": Array(this.nodes.length).fill("-").join(" | "),
+            .join(","),
+          "Inclusion Delay": Array(this.nodes.length).fill("-").join(","),
           "SC Participation": this.nodes
             .map((node) => this.epochMeasures.get(node.id)?.get(epoch)?.syncCommitteeParticipationAvg ?? "-")
-            .join(" | "),
+            .join(","),
         };
         records.push(summary);
       }
