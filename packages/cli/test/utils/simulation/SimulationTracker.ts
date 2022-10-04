@@ -47,13 +47,24 @@ export type EpochMeasure = CommonSlotMeasure & {
   readonly syncCommitteeParticipationAvg: number;
 };
 
-export const processAttestationsCount = async (node: BeaconNodeProcess, {slot}: SlotMeasureInput): Promise<number> => {
-  const attestations = await node.api.beacon.getBlockAttestations(slot);
+export const processAttestationsCount = async (
+  _node: BeaconNodeProcess,
+  {block}: SlotMeasureInput
+): Promise<number> => {
+  // Use a Set since the same validator can be included in multiple attestations
+  const shuffledParticipants = new Set<number>();
 
-  return Array.from(attestations.data).reduce(
-    (total, att) => total + att.aggregationBits.getTrueBitIndexes().length,
-    0
-  );
+  for (const attestation of block.message.body.attestations) {
+    // Assume constant committee size on all committees
+    const committeeSize = attestation.aggregationBits.bitLen;
+    const indexesInCommittee = attestation.aggregationBits.getTrueBitIndexes();
+    for (const indexInCommittee of indexesInCommittee) {
+      const shuffledIndex = indexInCommittee + attestation.data.index * committeeSize;
+      shuffledParticipants.add(shuffledIndex);
+    }
+  }
+
+  return shuffledParticipants.size;
 };
 
 export const processInclusionDelay = async (node: BeaconNodeProcess, {slot}: SlotMeasureInput): Promise<number> => {
