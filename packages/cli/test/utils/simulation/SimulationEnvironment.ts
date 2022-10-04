@@ -116,7 +116,7 @@ export class SimulationEnvironment {
   }
 
   async waitForSlot(slot: Slot, nodes?: BeaconNodeProcess[]): Promise<void> {
-    console.log(`Waiting for slot on "${nodes ? nodes.map((n) => n.id).join(",") : "all nodes"}"`, {
+    console.log(`\nWaiting for slot on "${nodes ? nodes.map((n) => n.id).join(",") : "all nodes"}"`, {
       target: slot,
       current: this.clock.currentSlot,
     });

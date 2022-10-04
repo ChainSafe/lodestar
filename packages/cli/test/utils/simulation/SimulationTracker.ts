@@ -67,10 +67,8 @@ export const processAttestationsCount = async (
   return shuffledParticipants.size;
 };
 
-export const processInclusionDelay = async (node: BeaconNodeProcess, {slot}: SlotMeasureInput): Promise<number> => {
-  const attestations = await node.api.beacon.getBlockAttestations(slot);
-
-  return avg(Array.from(attestations.data).map((att) => slot - att.data.slot));
+export const processInclusionDelay = async (_node: BeaconNodeProcess, {block}: SlotMeasureInput): Promise<number> => {
+  return avg(Array.from(block.message.body.attestations).map((att) => block.message.slot - att.data.slot));
 };
 
 export const processHead = async (node: BeaconNodeProcess, _: SlotMeasureInput): Promise<string> => {
@@ -320,12 +318,13 @@ export class SimulationTracker {
     // TODO: Add checkpoint tracking
   }
 
-  printNoesInfo(): void {
+  printNoesInfo(epoch?: Epoch): void {
     /* eslint-disable @typescript-eslint/naming-convention */
-    const maxSlot = Math.max(...this.lastSeenSlot.values());
+    const minSlot = epoch != null ? this.clock.getFirstSlotOfEpoch(epoch) : 0;
+    const maxSlot = epoch != null ? this.clock.getLastSlotOfEpoch(epoch) : Math.max(...this.lastSeenSlot.values());
     const records: Record<string, unknown>[] = [];
 
-    for (let slot = 0; slot <= maxSlot; slot++) {
+    for (let slot = minSlot; slot <= maxSlot; slot++) {
       const epoch = this.clock.getEpochForSlot(slot);
       const forkName = getForkName(epoch, this.params);
       const epochStr = `${this.clock.getEpochForSlot(slot)}/${this.clock.getSlotIndexInEpoch(slot)}`;

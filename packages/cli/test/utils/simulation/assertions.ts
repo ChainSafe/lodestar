@@ -8,10 +8,7 @@ chai.use(chaiAsPromised);
 
 export function nodeAssertions(env: SimulationEnvironment): void {
   it("test env should have correct number of nodes", () => {
-    expect(env.nodes.length).to.equal(
-      env.params.beaconNodes,
-      `should have "${env.params.beaconNodes}" number of nodes. Found: ${env.nodes.length}`
-    );
+    expect(env.nodes.length).to.equal(env.params.beaconNodes);
   });
 
   for (const node of env.nodes) {
@@ -21,26 +18,32 @@ export function nodeAssertions(env: SimulationEnvironment): void {
 
         expect(health === routes.node.NodeHealth.SYNCING || health === routes.node.NodeHealth.READY).to.equal(
           true,
-          `Node "${node.id}" health is neither READY or SYNCING`
+          `node health is neither READY or SYNCING. ${{id: node.id}}`
         );
       });
 
       it("should have correct number of validator clients", async () => {
         expect(node.validatorClients).to.have.lengthOf(
           env.params.validatorClients,
-          `Node "${node.id}" have correct "${env.params.validatorClients}" of validator clients. Found: ${node.validatorClients.length}`
+          `node should have correct number of validator clients. ${{id: node.id}}`
         );
       });
 
       for (const validator of node.validatorClients) {
         describe(validator.id, () => {
           it("should have correct keys loaded", async () => {
-            const keys = (await validator.keyManagerApi.listKeys()).data.map((k) => k.validatingPubkey).sort();
+            const keyManagerKeys = (await validator.keyManagerApi.listKeys()).data
+              .map((k) => k.validatingPubkey)
+              .sort();
             const existingKeys = validator.secretKeys.map((k) => k.toPublicKey().toHex()).sort();
 
-            expect(keys).to.eql(
+            expect(keyManagerKeys).to.eql(
               existingKeys,
-              `Validator "${validator.id}" should have correct number of keys loaded. Generated Keys: ${existingKeys}, Loaded Keys: ${keys}`
+              `Validator should have correct number of keys loaded. ${{
+                id: validator.id,
+                existingKeys,
+                keyManagerKeys,
+              }}`
             );
           });
         });
@@ -59,7 +62,12 @@ export function attestationParticipationAssertions(env: SimulationEnvironment, e
 
         expect(participation?.head).to.be.gte(
           env.expectedMinParticipationRate,
-          `node "${node.id}" has low participation rate on head for epoch ${epoch}. participationRate: ${participation?.head}, expectedMinParticipationRate: ${env.expectedMinParticipationRate}`
+          `node has low participation rate on head. ${{
+            id: node.id,
+            epoch,
+            participation: participation?.head,
+            expectedMinParticipationRate: env.expectedMinParticipationRate,
+          }}`
         );
       });
 
@@ -68,7 +76,12 @@ export function attestationParticipationAssertions(env: SimulationEnvironment, e
 
         expect(participation?.target).to.be.gte(
           env.expectedMinParticipationRate,
-          `node "${node.id}" has low participation rate on target for epoch ${epoch}. participationRate: ${participation?.target}, expectedMinParticipationRate: ${env.expectedMinParticipationRate}`
+          `node has low participation rate on target. ${{
+            id: node.id,
+            epoch,
+            participation: participation?.head,
+            expectedMinParticipationRate: env.expectedMinParticipationRate,
+          }}`
         );
       });
 
@@ -77,7 +90,12 @@ export function attestationParticipationAssertions(env: SimulationEnvironment, e
 
         expect(participation?.source).to.be.gte(
           env.expectedMinParticipationRate,
-          `node "${node.id}" has low participation rate on source for epoch ${epoch}. participationRate: ${participation?.source}, expectedMinParticipationRate: ${env.expectedMinParticipationRate}`
+          `node has low participation rate on source. ${{
+            id: node.id,
+            epoch,
+            participation: participation?.head,
+            expectedMinParticipationRate: env.expectedMinParticipationRate,
+          }}`
         );
       });
     });
@@ -87,10 +105,8 @@ export function attestationParticipationAssertions(env: SimulationEnvironment, e
 export function missedBlocksAssertions(env: SimulationEnvironment, epoch: Epoch): void {
   if (env.params.beaconNodes === 1) {
     it("should not have any missed blocks than genesis", () => {
-      expect(env.tracker.epochMeasures.get(env.nodes[0].id)?.get(epoch)?.missedSlots).to.be.eql(
-        [],
-        "single node should not miss any blocks other than genesis"
-      );
+      const missedSlots = env.tracker.epochMeasures.get(env.nodes[0].id)?.get(epoch)?.missedSlots;
+      expect(missedSlots).to.be.eql([], `node has missed blocks than genesis. ${{id: env.nodes[0].id, missedSlots}}`);
     });
     return;
   }
@@ -99,11 +115,15 @@ export function missedBlocksAssertions(env: SimulationEnvironment, epoch: Epoch)
     describe(node.id, () => {
       it("should have same missed blocks as first node", () => {
         const missedBlocksOnFirstNode = env.tracker.epochMeasures.get(env.nodes[0].id)?.get(epoch)?.missedSlots;
-        const missedBlocksOnNodeN = env.tracker.epochMeasures.get(node.id)?.get(epoch)?.missedSlots;
+        const missedBlocksOnNode = env.tracker.epochMeasures.get(node.id)?.get(epoch)?.missedSlots;
 
-        expect(missedBlocksOnNodeN).to.eql(
+        expect(missedBlocksOnNode).to.eql(
           missedBlocksOnFirstNode,
-          `node "${node.id}" has different missed blocks than node 0. missedBlocksOnNodeN: ${missedBlocksOnNodeN}, missedBlocksOnFirstNode: ${missedBlocksOnFirstNode}`
+          `node has different missed blocks than node 0. ${{
+            id: node.id,
+            missedBlocksOnNode,
+            missedBlocksOnFirstNode,
+          }}`
         );
       });
     });
@@ -122,7 +142,13 @@ export function inclusionDelayAssertions(env: SimulationEnvironment, epoch: Epoc
 
           expect(inclusionDelay).to.lte(
             env.expectedMaxInclusionDelay,
-            `node "${node.id}" has has higher inclusion delay. slot: ${slot}, inclusionDelay: ${inclusionDelay}, expectedMaxInclusionDelay: ${env.expectedMaxInclusionDelay}`
+            `node  has has higher inclusion delay. ${{
+              id: node.id,
+              slot,
+              epoch,
+              inclusionDelay,
+              expectedMaxInclusionDelay: env.expectedMaxInclusionDelay,
+            }}`
           );
         });
       }
@@ -142,7 +168,13 @@ export function attestationPerSlotAssertions(env: SimulationEnvironment, epoch: 
 
           expect(attestationsCount).to.gte(
             env.expectedMinAttestationCount,
-            `node "${node.id}" has lower attestations count for slot "${slot}". attestationsCount: ${attestationsCount} expectedMinAttestationCount: ${env.expectedMinAttestationCount}`
+            `node has lower attestations count. ${{
+              id: node.id,
+              slot,
+              epoch,
+              attestationsCount,
+              expectedMinAttestationCount: env.expectedMinAttestationCount,
+            }}`
           );
         });
       }
@@ -168,7 +200,7 @@ export function finalityAssertions(env: SimulationEnvironment, epoch: Epoch): vo
 
           expect(finalizedSlot).to.gte(
             expectedFinalizedSlot,
-            `node "${node.id}" has not finalized expected slot. slot: ${slot}, finalizedSlot: ${finalizedSlot}, expectedFinalizedSlot: ${expectedFinalizedSlot}`
+            `node has not finalized expected slot. ${{id: node.id, slot, epoch, finalizedSlot, expectedFinalizedSlot}}`
           );
         });
       }
@@ -186,11 +218,11 @@ export function headsAssertions(env: SimulationEnvironment, epoch: Epoch): void 
       for (let slot = startSlot; slot <= endSlot; slot++) {
         it(`should have same head as first node for slot "${slot}"`, () => {
           const headOnFirstNode = env.tracker.slotMeasures.get(env.nodes[0].id)?.get(slot)?.head;
-          const headOnNNode = env.tracker.slotMeasures.get(node.id)?.get(slot)?.head;
+          const headOnNode = env.tracker.slotMeasures.get(node.id)?.get(slot)?.head;
 
-          expect(headOnNNode).to.eql(
+          expect(headOnNode).to.eql(
             headOnFirstNode,
-            `node "${node.id}" have different heads for slot: ${slot}, headOnFirstNode: ${headOnFirstNode}, headOnNNode: ${headOnNNode}`
+            `node have different heads. ${{slot, epoch, headOnFirstNode, headOnNode}}`
           );
         });
       }
@@ -220,7 +252,13 @@ export function syncCommitteeAssertions(env: SimulationEnvironment, epoch: Epoch
 
           expect(participation).to.gte(
             env.expectedMinSyncParticipationRate,
-            `node "${node.id}" low sync committee participation slot: ${slot}, participation: ${participation}, expectedMinSyncParticipationRate: ${env.expectedMinSyncParticipationRate}`
+            `node has low sync committee participation. ${{
+              id: node.id,
+              slot,
+              epoch,
+              participation,
+              expectedMinSyncParticipationRate: env.expectedMinSyncParticipationRate,
+            }}`
           );
         });
       }
