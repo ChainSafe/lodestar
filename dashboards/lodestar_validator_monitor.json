@@ -139,17 +139,6 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "validator_monitor_validators_total",
-          "interval": "",
-          "legendFormat": "",
-          "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "exemplar": false,
           "expr": "validator_monitor_validators",
           "hide": false,
           "interval": "",
@@ -1086,7 +1075,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "sum(validator_monitor_prev_epoch_attestations_total)/sum(validator_monitor_validators_total)",
+          "expr": "sum(validator_monitor_prev_epoch_attestations_total)/sum(validator_monitor_validators)",
           "interval": "",
           "legendFormat": "attestations_sent",
           "refId": "A"
@@ -1097,7 +1086,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "sum(validator_monitor_prev_epoch_aggregates_total)/sum(validator_monitor_validators_total)",
+          "expr": "sum(validator_monitor_prev_epoch_aggregates_total)/sum(validator_monitor_validators)",
           "hide": false,
           "interval": "",
           "legendFormat": "aggregates_sent",
