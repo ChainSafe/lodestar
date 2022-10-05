@@ -1,6 +1,5 @@
-import crypto from "node:crypto";
 import {compress, uncompress} from "snappyjs";
-import xxhashFactory from "xxhash-wasm";
+import xxhashjs from "xxhashjs";
 import {Message} from "@libp2p/interface-pubsub";
 import {digest} from "@chainsafe/as-sha256";
 import {intToBytes} from "@lodestar/utils";
@@ -9,22 +8,20 @@ import {RPC} from "@chainsafe/libp2p-gossipsub/message";
 import {MESSAGE_DOMAIN_VALID_SNAPPY} from "./constants.js";
 import {GossipTopicCache} from "./topic.js";
 
-// Load WASM
-const xxhash = await xxhashFactory();
-
 // Use salt to prevent msgId from being mined for collisions
-const salt = crypto.randomBytes(8);
+const salt = Math.floor(Math.random() * 1000);
+const hashjs = xxhashjs.h32(salt);
 
 /**
- * The function used to generate a gossipsub message id
- * We use the first 8 bytes of SHA256(data) for content addressing
+ * The function used to generate a gossipsub message id.
  */
-export function fastMsgIdFn(rpcMsg: RPC.IMessage): string {
+export function fastMsgIdFn(rpcMsg: RPC.IMessage): number {
   if (rpcMsg.data) {
-    // TODO: fastMsgIdFn should accept both string or number
-    return String(xxhash.h32Raw(Buffer.concat([salt, rpcMsg.data])));
+    // double the speed compared to as-sha256
+    // TODO: wrap a native implementation and use async/await to see if it's better
+    return hashjs.update(rpcMsg.data).digest().toNumber();
   } else {
-    return "0000000000000000";
+    return 0;
   }
 }
 
