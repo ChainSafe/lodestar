@@ -1,5 +1,5 @@
 import {IChainForkConfig} from "@lodestar/config";
-import {altair} from "@lodestar/types";
+import {altair, ssz} from "@lodestar/types";
 import {computeTimeAtSlot} from "@lodestar/state-transition";
 import {IBeaconChain} from "../interface.js";
 import {LightClientError, LightClientErrorCode} from "../errors/lightClientError.js";
@@ -9,10 +9,10 @@ import {GossipAction} from "../errors/index.js";
 export async function validateLightClientFinalityUpdate(
   config: IChainForkConfig,
   chain: IBeaconChain,
-  lightClientFinalityUpdate: altair.LightClientFinalityUpdate
+  gossipedFinalityUpdate: altair.LightClientFinalityUpdate
 ): Promise<void> {
   // [IGNORE] No other finality_update with a lower or equal finalized_header.slot was already forwarded on the network
-  const gossipedFinalitySlot = lightClientFinalityUpdate.finalizedHeader.slot;
+  const gossipedFinalitySlot = gossipedFinalityUpdate.finalizedHeader.slot;
   const latestForwardedFinalitySlot = chain.lightClientServer.latestForwardedFinalitySlot;
   if (latestForwardedFinalitySlot != null && gossipedFinalitySlot <= latestForwardedFinalitySlot) {
     throw new LightClientError(GossipAction.IGNORE, {
@@ -23,7 +23,7 @@ export async function validateLightClientFinalityUpdate(
   // [IGNORE] The finality_update is received after the block at signature_slot was given enough time to propagate
   // through the network -- i.e. validate that one-third of finality_update.signature_slot has transpired
   // (SECONDS_PER_SLOT / INTERVALS_PER_SLOT seconds after the start of the slot, with a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance)
-  const signatureSlot = lightClientFinalityUpdate.signatureSlot;
+  const signatureSlot = gossipedFinalityUpdate.signatureSlot;
   const timeAtSignatureSlot = computeTimeAtSlot(config, signatureSlot, chain.genesisTime);
   const currentSlotWithGossipDisparity = chain.clock.currentSlotWithGossipDisparity;
   if (currentSlotWithGossipDisparity < timeAtSignatureSlot) {
@@ -33,7 +33,8 @@ export async function validateLightClientFinalityUpdate(
   }
 
   // [IGNORE] The received finality_update matches the locally computed one exactly
-  if (lightClientFinalityUpdate != chain.lightClientServer.getFinalityUpdate()) {
+  const localFinalityUpdate = chain.lightClientServer.getFinalityUpdate() as altair.LightClientFinalityUpdate;
+  if (!ssz.altair.LightClientFinalityUpdate.equals(gossipedFinalityUpdate, localFinalityUpdate)) {
     throw new LightClientError(GossipAction.IGNORE, {
       code: LightClientErrorCode.FINALITY_UPDATE_NOT_MATCHING_LOCAL,
     });
