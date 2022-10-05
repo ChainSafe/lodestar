@@ -2,6 +2,8 @@ import {routes} from "@lodestar/api";
 import {fromHexString} from "@chainsafe/ssz";
 import {ProofType, Tree} from "@chainsafe/persistent-merkle-tree";
 import {SyncPeriod} from "@lodestar/types";
+import {LightClientUpdate} from "@lodestar/types/altair";
+import {ssz} from "@lodestar/types";
 import {ApiModules} from "../types.js";
 import {resolveStateId} from "../beacon/state/utils.js";
 import {IApiOptions} from "../../options.js";
@@ -15,6 +17,23 @@ export function getLightclientApi(
   // It's currently possible to request gigantic proofs (eg: a proof of the entire beacon state)
   // We want some some sort of resistance against this DoS vector.
   const maxGindicesInProof = opts.maxGindicesInProof ?? 512;
+
+  const serializeSSZArray = (chunks: LightClientUpdate[]): Uint8Array => {
+    const serializedChunks = chunks.map((chunk) => ssz.altair.LightClientUpdate.serialize(chunk));
+    let length = 0;
+    serializedChunks.forEach((item) => {
+      length += item.length;
+    });
+
+    const mergedArray = new Uint8Array(length);
+    let offset = 0;
+    serializedChunks.forEach((item) => {
+      mergedArray.set(item, offset);
+      offset += item.length;
+    });
+
+    return mergedArray;
+  };
 
   return {
     async getStateProof(stateId, jsonPaths) {
@@ -43,31 +62,54 @@ export function getLightclientApi(
     },
 
     // eslint-disable-next-line @typescript-eslint/naming-convention
-    async getUpdates(startPeriod: SyncPeriod, count: number) {
+    async getUpdates(startPeriod: SyncPeriod, count: number, format?: routes.debug.StateFormat) {
       const updates = await chain.lightClientServer.getUpdates(startPeriod, count);
-      return {data: updates};
+      if (format === "ssz") {
+        // Casting to any otherwise Typescript doesn't like the multi-type return
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-explicit-any
+        return serializeSSZArray(updates) as any;
+      } else {
+        return {data: updates};
+      }
     },
 
-    async getOptimisticUpdate() {
+    async getOptimisticUpdate(format?: routes.debug.StateFormat) {
       const optimisticUpdate = chain.lightClientServer.getOptimisticUpdate();
       if (optimisticUpdate == null) {
         throw new Error("No latest header update available");
       } else {
+        if (format === "ssz") {
+          // Casting to any otherwise Typescript doesn't like the multi-type return
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-explicit-any
+          return ssz.altair.LightClientOptimisticUpdate.serialize(optimisticUpdate) as any;
+        }
         return {data: optimisticUpdate};
       }
     },
 
-    async getFinalityUpdate() {
+    async getFinalityUpdate(format?: routes.debug.StateFormat) {
       const finalityUpdate = chain.lightClientServer.getFinalityUpdate();
       if (finalityUpdate == null) {
         throw new Error("No latest finality update available");
       }
-      return {data: finalityUpdate};
+      if (format === "ssz") {
+        // Casting to any otherwise Typescript doesn't like the multi-type return
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-explicit-any
+        return ssz.altair.LightClientFinalityUpdate.serialize(finalityUpdate) as any;
+      } else {
+        return {data: finalityUpdate};
+      }
     },
 
-    async getBootstrap(blockRoot) {
+    async getBootstrap(blockRoot, format?: routes.debug.StateFormat) {
       const bootstrapProof = await chain.lightClientServer.getBootstrap(fromHexString(blockRoot));
-      return {data: bootstrapProof};
+      if (format === "ssz") {
+        // Casting to any otherwise Typescript doesn't like the multi-type return
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-explicit-any
+        return ssz.altair.LightClientBootstrap.serialize(bootstrapProof) as any;
+      } else {
+        return {data: bootstrapProof};
+      }
     },
   };
 }

@@ -37,15 +37,15 @@ export const testData: GenericServerTestCases<Api> = {
     /* eslint-enable quotes */
   },
   getUpdates: {
-    args: [1, 2],
+    args: [1, 2, "json"],
     res: {data: [lightClientUpdate]},
   },
   getOptimisticUpdate: {
-    args: [],
+    args: ["json"],
     res: {data: {syncAggregate, attestedHeader: header, signatureSlot}},
   },
   getFinalityUpdate: {
-    args: [],
+    args: ["json"],
     res: {
       data: {
         syncAggregate,
@@ -57,7 +57,7 @@ export const testData: GenericServerTestCases<Api> = {
     },
   },
   getBootstrap: {
-    args: [toHexString(root)],
+    args: [toHexString(root), "json"],
     res: {
       data: {
         header,

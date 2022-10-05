@@ -17,7 +17,9 @@ export class LightclientServerApiMock implements routes.lightclient.Api {
     return {data: state.createProof(paths)};
   }
 
-  async getUpdates(from: SyncPeriod, to: SyncPeriod): Promise<{data: altair.LightClientUpdate[]}> {
+  getUpdates(startPeriod: SyncPeriod, count: number, format?: "json"): Promise<{data: altair.LightClientUpdate[]}>;
+  getUpdates(startPeriod: SyncPeriod, count: number, format?: "ssz"): Promise<Uint8Array>;
+  async getUpdates(from: SyncPeriod, to: SyncPeriod): Promise<Uint8Array | {data: altair.LightClientUpdate[]}> {
     const updates: altair.LightClientUpdate[] = [];
     for (let period = parseInt(String(from)); period <= parseInt(String(to)); period++) {
       const update = this.updates.get(period);
@@ -28,18 +30,24 @@ export class LightclientServerApiMock implements routes.lightclient.Api {
     return {data: updates};
   }
 
-  async getOptimisticUpdate(): Promise<{data: altair.LightClientOptimisticUpdate}> {
+  getOptimisticUpdate(format?: "json"): Promise<{data: altair.LightClientOptimisticUpdate}>;
+  getOptimisticUpdate(format?: "ssz"): Promise<Uint8Array>;
+  async getOptimisticUpdate(): Promise<Uint8Array | {data: altair.LightClientOptimisticUpdate}> {
     if (!this.latestHeadUpdate) throw Error("No latest head update");
     return {data: this.latestHeadUpdate};
   }
 
-  async getFinalityUpdate(): Promise<{data: altair.LightClientFinalityUpdate}> {
+  getFinalityUpdate(format?: "json"): Promise<{data: altair.LightClientFinalityUpdate}>;
+  getFinalityUpdate(format?: "ssz"): Promise<Uint8Array>;
+  async getFinalityUpdate(): Promise<Uint8Array | {data: altair.LightClientFinalityUpdate}> {
     if (!this.finalized) throw Error("No finalized head update");
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     return {data: this.finalized};
   }
 
-  async getBootstrap(blockRoot: string): Promise<{data: routes.lightclient.LightClientBootstrap}> {
+  getBootstrap(blockRoot: string, format?: "json"): Promise<{data: altair.LightClientBootstrap}>;
+  getBootstrap(blockRoot: string, format?: "ssz"): Promise<Uint8Array>;
+  async getBootstrap(blockRoot: string): Promise<Uint8Array | {data: routes.lightclient.LightClientBootstrap}> {
     const snapshot = this.snapshots.get(blockRoot);
     if (!snapshot) throw Error(`snapshot for blockRoot ${blockRoot} not available`);
     return {data: snapshot};

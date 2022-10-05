@@ -1,18 +1,11 @@
 import {JsonPath} from "@chainsafe/ssz";
 import {Proof} from "@chainsafe/persistent-merkle-tree";
 import {altair, phase0, ssz, SyncPeriod} from "@lodestar/types";
-import {
-  ArrayOf,
-  ReturnTypes,
-  RoutesData,
-  Schema,
-  sameType,
-  ContainerData,
-  ReqSerializers,
-  reqEmpty,
-  ReqEmpty,
-} from "../../utils/index.js";
+import {ArrayOf, ReturnTypes, RoutesData, Schema, sameType, ContainerData, ReqSerializers} from "../../utils/index.js";
 import {queryParseProofPathsArr, querySerializeProofPathsArr} from "../../utils/serdes.js";
+
+export type StateFormat = "json" | "ssz";
+export const mimeTypeSSZ = "application/octet-stream";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
@@ -36,19 +29,31 @@ export type Api = {
    * - Has most bits
    * - Oldest update
    */
-  getUpdates(startPeriod: SyncPeriod, count: number): Promise<{data: altair.LightClientUpdate[]}>;
+  getUpdates(startPeriod: SyncPeriod, count: number, format?: "json"): Promise<{data: altair.LightClientUpdate[]}>;
+  getUpdates(startPeriod: SyncPeriod, count: number, format?: "ssz"): Promise<Uint8Array>;
+  getUpdates(
+    startPeriod: SyncPeriod,
+    count: number,
+    format?: StateFormat
+  ): Promise<Uint8Array | {data: altair.LightClientUpdate[]}>;
   /**
    * Returns the latest optimistic head update available. Clients should use the SSE type `light_client_optimistic_update`
    * unless to get the very first head update after syncing, or if SSE are not supported by the server.
    */
-  getOptimisticUpdate(): Promise<{data: altair.LightClientOptimisticUpdate}>;
-  getFinalityUpdate(): Promise<{data: altair.LightClientFinalityUpdate}>;
+  getOptimisticUpdate(format?: "json"): Promise<{data: altair.LightClientOptimisticUpdate}>;
+  getOptimisticUpdate(format?: "ssz"): Promise<Uint8Array>;
+  getOptimisticUpdate(format?: StateFormat): Promise<Uint8Array | {data: altair.LightClientOptimisticUpdate}>;
+  getFinalityUpdate(format?: "json"): Promise<{data: altair.LightClientFinalityUpdate}>;
+  getFinalityUpdate(format?: "ssz"): Promise<Uint8Array>;
+  getFinalityUpdate(format?: StateFormat): Promise<Uint8Array | {data: altair.LightClientFinalityUpdate}>;
   /**
    * Fetch a bootstrapping state with a proof to a trusted block root.
    * The trusted block root should be fetched with similar means to a weak subjectivity checkpoint.
    * Only block roots for checkpoints are guaranteed to be available.
    */
-  getBootstrap(blockRoot: string): Promise<{data: LightClientBootstrap}>;
+  getBootstrap(blockRoot: string, format?: "json"): Promise<{data: LightClientBootstrap}>;
+  getBootstrap(blockRoot: string, format?: "ssz"): Promise<Uint8Array>;
+  getBootstrap(blockRoot: string, format?: StateFormat): Promise<Uint8Array | {data: LightClientBootstrap}>;
 };
 
 /**
@@ -65,10 +70,10 @@ export const routesData: RoutesData<Api> = {
 /* eslint-disable @typescript-eslint/naming-convention */
 export type ReqTypes = {
   getStateProof: {params: {state_id: string}; query: {paths: string[]}};
-  getUpdates: {query: {start_period: number; count: number}};
-  getOptimisticUpdate: ReqEmpty;
-  getFinalityUpdate: ReqEmpty;
-  getBootstrap: {params: {block_root: string}};
+  getUpdates: {query: {start_period: number; count: number}; headers: {accept?: string}};
+  getOptimisticUpdate: {headers: {accept?: string}};
+  getFinalityUpdate: {headers: {accept?: string}};
+  getBootstrap: {params: {block_root: string}; headers: {accept?: string}};
 };
 
 export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
@@ -80,17 +85,40 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
     },
 
     getUpdates: {
-      writeReq: (start_period, count) => ({query: {start_period, count}}),
-      parseReq: ({query}) => [query.start_period, query.count],
+      writeReq: (start_period, count, format) => ({
+        query: {start_period, count},
+        headers: {accept: format === "ssz" ? mimeTypeSSZ : ""},
+      }),
+      parseReq: ({query, headers}) => [
+        query.start_period,
+        query.count,
+        headers.accept === mimeTypeSSZ ? "ssz" : "json",
+      ],
       schema: {query: {start_period: Schema.UintRequired, count: Schema.UintRequired}},
     },
 
-    getOptimisticUpdate: reqEmpty,
-    getFinalityUpdate: reqEmpty,
+    getOptimisticUpdate: {
+      writeReq: (format) => ({
+        headers: {accept: format === "ssz" ? mimeTypeSSZ : ""},
+      }),
+      parseReq: ({headers}) => [headers.accept === mimeTypeSSZ ? "ssz" : "json"],
+      schema: {},
+    },
+
+    getFinalityUpdate: {
+      writeReq: (format) => ({
+        headers: {accept: format === "ssz" ? mimeTypeSSZ : ""},
+      }),
+      parseReq: ({headers}) => [headers.accept === mimeTypeSSZ ? "ssz" : "json"],
+      schema: {},
+    },
 
     getBootstrap: {
-      writeReq: (block_root) => ({params: {block_root}}),
-      parseReq: ({params}) => [params.block_root],
+      writeReq: (block_root, format) => ({
+        params: {block_root},
+        headers: {accept: format === "ssz" ? mimeTypeSSZ : ""},
+      }),
+      parseReq: ({params, headers}) => [params.block_root, headers.accept === mimeTypeSSZ ? "ssz" : "json"],
       schema: {params: {block_root: Schema.StringRequired}},
     },
   };
