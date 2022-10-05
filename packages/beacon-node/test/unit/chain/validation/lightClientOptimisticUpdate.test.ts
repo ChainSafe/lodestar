@@ -48,7 +48,7 @@ describe("Light Client Optimistic Update validation", function () {
     const lightclientOptimisticUpdate: altair.LightClientOptimisticUpdate = ssz.altair.LightClientOptimisticUpdate.defaultValue();
 
     await expectRejectedWithLodestarError(
-      validateLightClientOptimisticUpdate(config, mockChain(), lightclientOptimisticUpdate),
+      Promise.resolve(validateLightClientOptimisticUpdate(config, mockChain(), lightclientOptimisticUpdate)),
       LightClientErrorCode.OPTIMISTIC_UPDATE_ALREADY_FORWARDED
     );
   });
@@ -62,7 +62,7 @@ describe("Light Client Optimistic Update validation", function () {
     chain.lightClientServer.latestForwardedOptimisticSlot = 1;
 
     await expectRejectedWithLodestarError(
-      validateLightClientOptimisticUpdate(config, chain, lightclientOptimisticUpdate),
+      Promise.resolve(validateLightClientOptimisticUpdate(config, chain, lightclientOptimisticUpdate)),
       LightClientErrorCode.OPTIMISTIC_UPDATE_RECEIVED_TOO_EARLY
     );
   });
@@ -80,7 +80,7 @@ describe("Light Client Optimistic Update validation", function () {
     };
 
     await expectRejectedWithLodestarError(
-      validateLightClientOptimisticUpdate(config, chain, lightclientOptimisticUpdate),
+      Promise.resolve(validateLightClientOptimisticUpdate(config, chain, lightclientOptimisticUpdate)),
       LightClientErrorCode.OPTIMISTIC_UPDATE_NOT_MATCHING_LOCAL
     );
   });
