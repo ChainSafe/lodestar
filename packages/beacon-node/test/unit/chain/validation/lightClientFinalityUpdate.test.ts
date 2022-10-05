@@ -1,3 +1,4 @@
+import {expect} from "chai";
 import {createIBeaconConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
 import {altair, ssz} from "@lodestar/types";
@@ -5,7 +6,6 @@ import {altair, ssz} from "@lodestar/types";
 import {generateEmptySignedBlock} from "../../../utils/block.js";
 import {MockBeaconChain} from "../../../utils/mocks/chain/chain.js";
 import {generateState} from "../../../utils/state.js";
-import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
 import {validateLightClientFinalityUpdate} from "../../../../src/chain/validation/lightClientFinalityUpdate.js";
 import {LightClientErrorCode} from "../../../../src/chain/errors/lightClientError.js";
 import {IBeaconChain} from "../../../../src/chain/index.js";
@@ -47,9 +47,11 @@ describe("Light Client Finality Update validation", function () {
   it("should return invalid - finality update already forwarded", async () => {
     const lightclientFinalityUpdate: altair.LightClientFinalityUpdate = ssz.altair.LightClientFinalityUpdate.defaultValue();
 
-    await expectRejectedWithLodestarError(
-      Promise.resolve(validateLightClientFinalityUpdate(config, mockChain(), lightclientFinalityUpdate)),
-      LightClientErrorCode.FINALITY_UPDATE_ALREADY_FORWARDED
+    expect(() => {
+      validateLightClientFinalityUpdate(config, mockChain(), lightclientFinalityUpdate);
+    }).to.throw(
+      LightClientErrorCode.FINALITY_UPDATE_ALREADY_FORWARDED,
+      "Expected LightClientErrorCode.FINALITY_UPDATE_ALREADY_FORWARDED to be thrown"
     );
   });
 
@@ -62,9 +64,11 @@ describe("Light Client Finality Update validation", function () {
     const chain = mockChain();
     chain.lightClientServer.latestForwardedFinalitySlot = 1;
 
-    await expectRejectedWithLodestarError(
-      Promise.resolve(validateLightClientFinalityUpdate(config, chain, lightClientFinalityUpdate)),
-      LightClientErrorCode.FINALITY_UPDATE_RECEIVED_TOO_EARLY
+    expect(() => {
+      validateLightClientFinalityUpdate(config, chain, lightClientFinalityUpdate);
+    }).to.throw(
+      LightClientErrorCode.FINALITY_UPDATE_RECEIVED_TOO_EARLY,
+      "Expected LightClientErrorCode.FINALITY_UPDATE_RECEIVED_TOO_EARLY to be thrown"
     );
   });
 
@@ -80,9 +84,11 @@ describe("Light Client Finality Update validation", function () {
       return ssz.altair.LightClientFinalityUpdate.defaultValue();
     };
 
-    await expectRejectedWithLodestarError(
-      Promise.resolve(validateLightClientFinalityUpdate(config, chain, lightClientFinalityUpdate)),
-      LightClientErrorCode.FINALITY_UPDATE_NOT_MATCHING_LOCAL
+    expect(() => {
+      validateLightClientFinalityUpdate(config, chain, lightClientFinalityUpdate);
+    }).to.throw(
+      LightClientErrorCode.FINALITY_UPDATE_NOT_MATCHING_LOCAL,
+      "Expected LightClientErrorCode.FINALITY_UPDATE_NOT_MATCHING_LOCAL to be thrown"
     );
   });
 });
