@@ -37,7 +37,7 @@ export function parseArgs(args: INetworkArgs): IBeaconNodeOptions["network"] {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
       enr: undefined as any,
     },
-    maxPeers: args["network.maxPeers"],
+    maxPeers: args["network.maxPeers"] ?? (args["targetPeers"] !== undefined ? args["targetPeers"] * 1.1 : undefined),
     targetPeers: args["targetPeers"],
     localMultiaddrs: [`/ip4/${listenAddress}/tcp/${tcpPort}`],
     subscribeAllSubnets: args["subscribeAllSubnets"],
