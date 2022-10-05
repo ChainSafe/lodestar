@@ -48,10 +48,10 @@ export const protocolsSupported: [Method, Version, Encoding][] = [
   [Method.BeaconBlocksByRange, Version.V2, Encoding.SSZ_SNAPPY],
   [Method.BeaconBlocksByRoot, Version.V1, Encoding.SSZ_SNAPPY],
   [Method.BeaconBlocksByRoot, Version.V2, Encoding.SSZ_SNAPPY],
-  [Method.LightClientBootstrap, Version.V2, Encoding.SSZ_SNAPPY],
-  [Method.LightClientUpdate, Version.V2, Encoding.SSZ_SNAPPY],
-  [Method.LightClientFinalityUpdate, Version.V2, Encoding.SSZ_SNAPPY],
-  [Method.LightClientOptimisticUpdate, Version.V2, Encoding.SSZ_SNAPPY],
+  [Method.LightClientBootstrap, Version.V1, Encoding.SSZ_SNAPPY],
+  [Method.LightClientUpdate, Version.V1, Encoding.SSZ_SNAPPY],
+  [Method.LightClientFinalityUpdate, Version.V1, Encoding.SSZ_SNAPPY],
+  [Method.LightClientOptimisticUpdate, Version.V1, Encoding.SSZ_SNAPPY],
 ];
 
 export const isSingleResponseChunkByMethod: {[K in Method]: boolean} = {
