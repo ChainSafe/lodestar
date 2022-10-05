@@ -6,11 +6,11 @@ import {LightClientError, LightClientErrorCode} from "../errors/lightClientError
 import {GossipAction} from "../errors/index.js";
 
 // https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/light-client/p2p-interface.md#light_client_finality_update
-export async function validateLightClientFinalityUpdate(
+export function validateLightClientFinalityUpdate(
   config: IChainForkConfig,
   chain: IBeaconChain,
   gossipedFinalityUpdate: altair.LightClientFinalityUpdate
-): Promise<void> {
+): void {
   // [IGNORE] No other finality_update with a lower or equal finalized_header.slot was already forwarded on the network
   const gossipedFinalitySlot = gossipedFinalityUpdate.finalizedHeader.slot;
   const latestForwardedFinalitySlot = chain.lightClientServer.latestForwardedFinalitySlot;

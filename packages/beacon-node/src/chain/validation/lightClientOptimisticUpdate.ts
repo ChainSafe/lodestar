@@ -6,11 +6,11 @@ import {LightClientError, LightClientErrorCode} from "../errors/lightClientError
 import {GossipAction} from "../errors/index.js";
 
 // https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/light-client/p2p-interface.md#light_client_optimistic_update
-export async function validateLightClientOptimisticUpdate(
+export function validateLightClientOptimisticUpdate(
   config: IChainForkConfig,
   chain: IBeaconChain,
   gossipedOptimisticUpdate: altair.LightClientOptimisticUpdate
-): Promise<void> {
+): void {
   // [IGNORE] No other optimistic_update with a lower or equal attested_header.slot was already forwarded on the network
   const gossipedAttestedSlot = gossipedOptimisticUpdate.attestedHeader.slot;
   const latestForwardedOptimisticSlot = chain.lightClientServer.latestForwardedOptimisticSlot;
