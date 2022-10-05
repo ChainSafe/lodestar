@@ -146,7 +146,7 @@ export class ReqResp implements IReqResp {
     return await this.sendRequest<altair.LightClientBootstrap>(
       peerId,
       Method.LightClientBootstrap,
-      [Version.V2],
+      [Version.V1],
       request
     );
   }
@@ -155,7 +155,7 @@ export class ReqResp implements IReqResp {
     return await this.sendRequest<altair.LightClientFinalityUpdate>(
       peerId,
       Method.LightClientFinalityUpdate,
-      [Version.V2],
+      [Version.V1],
       null
     );
   }
@@ -167,7 +167,7 @@ export class ReqResp implements IReqResp {
     return await this.sendRequest<altair.LightClientUpdate[]>(
       peerId,
       Method.LightClientUpdate,
-      [Version.V2],
+      [Version.V1],
       request,
       request.count
     );
@@ -177,7 +177,7 @@ export class ReqResp implements IReqResp {
     return await this.sendRequest<altair.LightClientOptimisticUpdate>(
       peerId,
       Method.LightClientOptimisticUpdate,
-      [Version.V2],
+      [Version.V1],
       null
     );
   }
