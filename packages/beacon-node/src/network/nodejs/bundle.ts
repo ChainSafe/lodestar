@@ -19,6 +19,7 @@ export interface ILibp2pOptions {
   maxConnections?: number;
   minConnections?: number;
   metrics?: boolean;
+  lodestarVersion?: string;
 }
 
 export async function createNodejsLibp2p(options: ILibp2pOptions): Promise<Libp2p> {
@@ -82,6 +83,12 @@ export async function createNodejsLibp2p(options: ILibp2pOptions): Promise<Libp2
       autoRelay: {
         enabled: false,
         maxListeners: 0,
+      },
+    },
+
+    identify: {
+      host: {
+        agentVersion: options.lodestarVersion ? `lodestar/${options.lodestarVersion}` : "lodestar",
       },
     },
   });

@@ -73,5 +73,6 @@ export async function createNodeJsLibp2p(
     // If peer discovery is enabled let the default in NodejsNode
     peerDiscovery: disablePeerDiscovery ? [] : undefined,
     metrics: nodeJsLibp2pOpts.metrics,
+    lodestarVersion: networkOpts.version,
   });
 }
