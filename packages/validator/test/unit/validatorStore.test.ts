@@ -53,7 +53,7 @@ describe("ValidatorStore", function () {
     sandbox.restore();
   });
 
-  it("Should validate graffiti,feeRecipient etc. from valProposerConfig and ValidatorStore", async function () {
+  it("Should validate graffiti,feeRecipient etc. from valProposerConfig and ValidatorStore", function () {
     //pubkeys[0] values
     expect(validatorStore.getGraffiti(toHexString(pubkeys[0]))).to.be.equal(
       valProposerConfig.proposerConfig[toHexString(pubkeys[0])].graffiti

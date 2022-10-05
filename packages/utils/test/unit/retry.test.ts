@@ -27,9 +27,9 @@ describe("retry", () => {
     },
     {
       id: "Succeed at the last attempt",
-      fn: async (attempt) => {
+      fn: (attempt) => {
         if (attempt < retries) throw sampleError;
-        else return sampleResult;
+        else return Promise.resolve(sampleResult);
       },
       opts: {retries},
       result: sampleResult,

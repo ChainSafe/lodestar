@@ -146,7 +146,7 @@ function getMockBeaconApiServer(livenessMap: LivenessMap): Api {
   return ({
     validator: {
       async getLiveness(indices, epoch) {
-        return {
+        return Promise.resolve({
           data: indices.map((index) => {
             const livenessEpoch = livenessMap.get(epoch);
             if (!livenessEpoch) throw Error(`Unknown epoch ${epoch}`);
@@ -154,7 +154,7 @@ function getMockBeaconApiServer(livenessMap: LivenessMap): Api {
             if (isLive === undefined) throw Error(`No liveness for epoch ${epoch} index ${index}`);
             return {index, epoch, isLive};
           }),
-        };
+        });
       },
     } as Partial<Api["validator"]>,
   } as Partial<Api>) as Api;

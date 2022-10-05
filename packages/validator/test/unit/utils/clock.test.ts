@@ -91,7 +91,7 @@ describe("util / Clock", function () {
       {name: "should return next slot after 12.5s", delta: 12.5},
     ];
     for (const {name, delta} of testCase) {
-      it(name, async function () {
+      it(name, function () {
         const currentSlot = getCurrentSlotAround(testConfig, genesisTime);
         fakeClock.tick(delta * 1000);
         expect(getCurrentSlotAround(testConfig, genesisTime)).to.be.equal(currentSlot + 1, name);

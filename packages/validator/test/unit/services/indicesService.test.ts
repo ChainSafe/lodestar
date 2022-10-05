@@ -22,7 +22,7 @@ describe("IndicesService", function () {
     pubkeys = secretKeys.map((sk) => sk.toPublicKey().toBytes());
   });
 
-  it("Should remove pubkey", async function () {
+  it("Should remove pubkey", function () {
     const indicesService = new IndicesService(logger, api, null);
     const firstValidatorIndex = 0;
     const secondValidatorIndex = 1;

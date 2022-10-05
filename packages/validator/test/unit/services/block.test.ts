@@ -47,7 +47,9 @@ describe("BlockDutiesService", function () {
 
     const signedBlock = generateEmptySignedBlock();
     validatorStore.signRandao.resolves(signedBlock.message.body.randaoReveal);
-    validatorStore.signBlock.callsFake(async (_, block) => ({message: block, signature: signedBlock.signature}));
+    validatorStore.signBlock.callsFake(async (_, block) =>
+      Promise.resolve({message: block, signature: signedBlock.signature})
+    );
     api.validator.produceBlock.resolves({data: signedBlock.message});
     api.beacon.publishBlock.resolves();
 

@@ -38,7 +38,7 @@ describe("Update spans test", () => {
       await minMaxSurround.assertNoSurround(emptyPubkey, att);
       await minMaxSurround.insertAttestation(emptyPubkey, att);
 
-      const spansByEpochResult = await storeToSpansPerEpoch(store);
+      const spansByEpochResult = storeToSpansPerEpoch(store);
       expect(spansByEpochResult).to.deep.equal(spansByEpoch);
     });
   }

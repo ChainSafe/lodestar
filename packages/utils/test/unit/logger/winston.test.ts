@@ -75,7 +75,7 @@ describe("winston logger", () => {
     for (const testCase of testCases) {
       const {id, message, context, error, output} = typeof testCase === "function" ? testCase() : testCase;
       for (const format of logFormats) {
-        it(`${id} ${format} output`, async () => {
+        it(`${id} ${format} output`, () => {
           const memoryTransport = new MemoryTransport();
           const logger = createWinstonLogger({format, hideTimestamp: true}, [memoryTransport]);
           logger.warn(message, context, error);
@@ -87,7 +87,7 @@ describe("winston logger", () => {
   });
 
   describe("child logger", () => {
-    it("Should parse child module", async () => {
+    it("Should parse child module", () => {
       const memoryTransport = new MemoryTransport();
       const loggerA = createWinstonLogger({hideTimestamp: true, module: "a"}, [memoryTransport]);
       const loggerAB = loggerA.child({module: "b"});

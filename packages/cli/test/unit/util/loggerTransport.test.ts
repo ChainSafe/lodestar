@@ -58,7 +58,7 @@ describe("winston logger format and options", () => {
   for (const testCase of testCases) {
     const {id, message, context, error, output} = typeof testCase === "function" ? testCase() : testCase;
     for (const format of logFormats) {
-      it(`${id} ${format} output`, async () => {
+      it(`${id} ${format} output`, () => {
         stdoutHook = hookProcessStdout();
 
         const logger = getCliLoggerTest({logFormat: format});

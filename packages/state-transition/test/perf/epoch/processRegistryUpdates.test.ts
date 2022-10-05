@@ -61,7 +61,7 @@ describe("phase0 processRegistryUpdates", () => {
       minRuns: 5, // Worst case is very slow
       noThreshold: notTrack,
       before: () => getRegistryUpdatesTestData(vc, lengths),
-      beforeEach: async ({state, epochProcess}) => ({state: state.clone(), epochProcess}),
+      beforeEach: ({state, epochProcess}) => ({state: state.clone(), epochProcess}),
       fn: ({state, epochProcess}) => processRegistryUpdates(state, epochProcess),
     });
   }

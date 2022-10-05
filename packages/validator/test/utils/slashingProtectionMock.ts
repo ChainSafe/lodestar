@@ -14,6 +14,6 @@ export class SlashingProtectionMock implements ISlashingProtection {
     //
   }
   async exportInterchange(): Promise<never> {
-    throw Error("disabled");
+    return Promise.reject("disabled");
   }
 }

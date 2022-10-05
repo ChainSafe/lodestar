@@ -41,6 +41,7 @@ module.exports = {
       },
     ],
     "@typescript-eslint/await-thenable": "error",
+    "@typescript-eslint/require-await": "error",
     "@typescript-eslint/naming-convention": [
       "error",
       {selector: "default", format: ["camelCase"]},
