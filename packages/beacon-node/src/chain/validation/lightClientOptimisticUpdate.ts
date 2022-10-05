@@ -39,6 +39,4 @@ export async function validateLightClientOptimisticUpdate(
       code: LightClientErrorCode.OPTIMISTIC_UPDATE_NOT_MATCHING_LOCAL,
     });
   }
-
-  chain.lightClientServer.latestForwardedOptimisticSlot = lightClientOptimisticUpdate.attestedHeader.slot;
 }

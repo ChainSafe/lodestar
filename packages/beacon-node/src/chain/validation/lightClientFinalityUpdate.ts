@@ -38,6 +38,4 @@ export async function validateLightClientFinalityUpdate(
       code: LightClientErrorCode.FINALITY_UPDATE_NOT_MATCHING_LOCAL,
     });
   }
-
-  chain.lightClientServer.latestForwardedFinalitySlot = lightClientFinalityUpdate.finalizedHeader.slot;
 }
