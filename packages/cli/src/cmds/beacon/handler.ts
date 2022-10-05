@@ -30,7 +30,7 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
   mkdir(beaconPaths.dbDir);
 
   const abortController = new AbortController();
-  const logger = getCliLogger(args, {defaultLogFile: "beacon.log"}, config);
+  const logger = getCliLogger(args, {defaultLogFilepath: path.join(beaconPaths.dataDir, "beacon.log")}, config);
 
   onGracefulShutdown(async () => {
     abortController.abort();

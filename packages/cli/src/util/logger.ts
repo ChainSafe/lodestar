@@ -37,12 +37,12 @@ export interface ILogArgs {
  */
 export function getCliLogger(
   args: ILogArgs & Pick<IGlobalArgs, "dataDir">,
-  paths: {defaultLogFile: string},
+  paths: {defaultLogFilepath: string},
   config: IChainForkConfig,
   opts?: {hideTimestamp?: boolean}
 ): ILogger {
   const consoleTransport = new ConsoleDynamicLevel({
-    // Set defaultLevel, not level for dynamic level setting of ConsoleDynamicLevel
+    // Set defaultLevel, not level for dynamic level setting of ConsoleDynamicLvevel
     defaultLevel: args.logLevel ?? LOG_LEVEL_DEFAULT,
     debugStdout: true,
     handleExceptions: true,
@@ -72,7 +72,7 @@ export function getCliLogger(
     // `lodestar --logFileDailyRotate 10` -> set daily rotate to custom value 10
     // `lodestar --logFileDailyRotate 0` -> disable daily rotate and accumulate in same file
     const rotateMaxFiles = args.logFileDailyRotate ?? LOG_DAILY_ROTATE_DEFAULT;
-    const filename = args.logFile ?? path.join(args.dataDir, paths.defaultLogFile);
+    const filename = args.logFile ?? paths.defaultLogFilepath;
     const logFileLevel = args.logFileLevel ?? LOG_FILE_LEVEL_DEFAULT;
 
     transports.push(

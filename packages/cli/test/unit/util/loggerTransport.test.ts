@@ -139,7 +139,7 @@ describe("winston transport log to file", () => {
 });
 
 function getCliLoggerTest(logArgs: Partial<ILogArgs>): ReturnType<typeof getCliLogger> {
-  return getCliLogger({dataDir: "", ...logArgs}, {defaultLogFile: ""}, config, {hideTimestamp: true});
+  return getCliLogger(logArgs, {defaultLogFilepath: ""}, config, {hideTimestamp: true});
 }
 
 /** Wait for file to exist have some content, then return its contents */
