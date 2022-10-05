@@ -130,8 +130,8 @@ export class AttestationService {
     // never beyond the 1/3 cutoff time.
     // https://github.com/status-im/nimbus-eth2/blob/7b64c1dce4392731a4a59ee3a36caef2e0a8357a/beacon_chain/validators/validator_duties.nim#L1123
     const msToOneThirdSlot = this.clock.msToSlot(slot + 1 / 3);
-    // Default = 6, which is half of attestation offset
-    const afterBlockDelayMs = (1000 * this.clock.secondsPerSlot) / (this.opts?.afterBlockDelaySlotFraction ?? 6);
+    // Default = 1/6, which is half of attestation offset
+    const afterBlockDelayMs = 1000 * this.clock.secondsPerSlot * (this.opts?.afterBlockDelaySlotFraction ?? 1 / 6);
     await sleep(Math.min(msToOneThirdSlot, afterBlockDelayMs));
 
     this.metrics?.attesterStepCallPublishAttestation.observe(this.clock.secFromSlot(slot + 1 / 3));

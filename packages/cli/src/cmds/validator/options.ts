@@ -26,6 +26,7 @@ export type IValidatorCliArgs = AccountValidatorArgs &
     force: boolean;
     graffiti: string;
     afterBlockDelaySlotFraction?: number;
+    scAfterBlockDelaySlotFraction?: number;
     suggestedFeeRecipient?: string;
     proposerSettingsFile?: string;
     strictFeeRecipientCheck?: boolean;
@@ -142,7 +143,15 @@ export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
 
   afterBlockDelaySlotFraction: {
     hidden: true,
-    description: "Delay before publishing attestations if block comes early, as a fraction of SECONDS_PER_SLOT",
+    description:
+      "Delay before publishing attestations if block comes early, as a fraction of SECONDS_PER_SLOT (value is from 0 inclusive to 1 exclusive)",
+    type: "number",
+  },
+
+  scAfterBlockDelaySlotFraction: {
+    hidden: true,
+    description:
+      "Delay before publishing SyncCommitteeSignature if block comes early, as a fraction of SECONDS_PER_SLOT (value is from 0 inclusive to 1 exclusive)",
     type: "number",
   },
 
