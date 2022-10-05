@@ -12,6 +12,10 @@ import {groupSyncDutiesBySubcommitteeIndex, SubcommitteeDuty} from "./utils.js";
 import {ChainHeaderTracker} from "./chainHeaderTracker.js";
 import {ValidatorEventEmitter} from "./emitter.js";
 
+type SyncCommitteeServiceOpts = {
+  scAfterBlockDelaySlotFraction?: number;
+};
+
 /**
  * Service that sets up and handles validator sync duties.
  */
@@ -26,7 +30,8 @@ export class SyncCommitteeService {
     private readonly validatorStore: ValidatorStore,
     private readonly emitter: ValidatorEventEmitter,
     private readonly chainHeaderTracker: ChainHeaderTracker,
-    private readonly metrics: Metrics | null
+    private readonly metrics: Metrics | null,
+    private readonly opts?: SyncCommitteeServiceOpts
   ) {
     this.dutiesService = new SyncCommitteeDutiesService(config, logger, api, clock, validatorStore, metrics);
 
@@ -125,6 +130,16 @@ export class SyncCommitteeService {
         }
       })
     );
+
+    // by default we want to submit SyncCommitteeSignature asap after we receive block
+    // provide a delay option just in case any client implementation validate the existence of block in
+    // SyncCommitteeSignature gossip validation.
+    const msToOneThirdSlot = this.clock.msToSlot(slot + 1 / 3);
+    const afterBlockDelayMs = 1000 * this.clock.secondsPerSlot * (this.opts?.scAfterBlockDelaySlotFraction ?? 0);
+    const toDelayMs = Math.min(msToOneThirdSlot, afterBlockDelayMs);
+    if (toDelayMs > 0) {
+      await sleep(toDelayMs);
+    }
 
     this.metrics?.syncCommitteeStepCallPublishMessage.observe(this.clock.secFromSlot(slot + 1 / 3));
 
