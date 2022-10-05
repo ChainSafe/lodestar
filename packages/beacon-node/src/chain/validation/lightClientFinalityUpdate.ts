@@ -34,7 +34,10 @@ export function validateLightClientFinalityUpdate(
 
   // [IGNORE] The received finality_update matches the locally computed one exactly
   const localFinalityUpdate = chain.lightClientServer.getFinalityUpdate() as altair.LightClientFinalityUpdate;
-  if (!ssz.altair.LightClientFinalityUpdate.equals(gossipedFinalityUpdate, localFinalityUpdate)) {
+  if (
+    localFinalityUpdate === null ||
+    !ssz.altair.LightClientFinalityUpdate.equals(gossipedFinalityUpdate, localFinalityUpdate)
+  ) {
     throw new LightClientError(GossipAction.IGNORE, {
       code: LightClientErrorCode.FINALITY_UPDATE_NOT_MATCHING_LOCAL,
     });
