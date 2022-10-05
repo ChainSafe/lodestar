@@ -32,6 +32,7 @@ export type ValidatorOptions = {
   processShutdownCallback: ProcessShutdownCallback;
   abortController: AbortController;
   afterBlockDelaySlotFraction?: number;
+  scAfterBlockDelaySlotFraction?: number;
   doppelgangerProtectionEnabled?: boolean;
   closed?: boolean;
   valProposerConfig?: ValidatorProposerConfig;
@@ -129,7 +130,8 @@ export class Validator {
       validatorStore,
       emitter,
       chainHeaderTracker,
-      metrics
+      metrics,
+      {scAfterBlockDelaySlotFraction: opts.scAfterBlockDelaySlotFraction}
     );
 
     this.config = config;

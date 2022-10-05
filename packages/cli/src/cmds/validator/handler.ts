@@ -122,6 +122,7 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
       abortController,
       doppelgangerProtectionEnabled,
       afterBlockDelaySlotFraction: args.afterBlockDelaySlotFraction,
+      scAfterBlockDelaySlotFraction: args.scAfterBlockDelaySlotFraction,
       valProposerConfig,
     },
     metrics
