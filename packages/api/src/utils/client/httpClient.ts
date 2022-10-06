@@ -117,6 +117,11 @@ export class HttpClient implements IHttpClient {
   }
 
   private async requestWithBodyWithRetries<T>(opts: FetchOpts, getBody: (res: Response) => Promise<T>): Promise<T> {
+    // Early return when no fallback URLs are setup
+    if (this.urlOpts.length === 1) {
+      return this.requestWithBody(this.urlOpts[0], opts, getBody);
+    }
+
     return new Promise<T>((resolve, reject) => {
       let requestCount = 0;
       let errorCount = 0;
