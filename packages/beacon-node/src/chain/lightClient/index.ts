@@ -227,7 +227,7 @@ export class LightClientServer {
     const signedBlockRoot = block.parentRoot;
     const syncPeriod = computeSyncPeriodAtSlot(block.slot);
 
-    this.onSyncAggregate(syncPeriod, block, signedBlockRoot).catch((e) => {
+    this.onSyncAggregate(syncPeriod, block.body.syncAggregate, block.slot, signedBlockRoot).catch((e) => {
       this.logger.error("Error onSyncAggregate", {}, e);
       this.metrics?.lightclientServer.onSyncAggregate.inc({event: "error"});
     });
@@ -413,13 +413,12 @@ export class LightClientServer {
    */
   private async onSyncAggregate(
     syncPeriod: SyncPeriod,
-    syncAggregateBlock: altair.BeaconBlock,
+    syncAggregate: altair.SyncAggregate,
+    signatureSlot: Slot,
     signedBlockRoot: Root
   ): Promise<void> {
     this.metrics?.lightclientServer.onSyncAggregate.inc({event: "processed"});
 
-    const syncAggregate = syncAggregateBlock.body.syncAggregate;
-    const signatureSlot = syncAggregateBlock.slot;
     const signedBlockRootHex = toHexString(signedBlockRoot);
     const attestedData = this.prevHeadData.get(signedBlockRootHex);
     if (!attestedData) {
@@ -478,7 +477,7 @@ export class LightClientServer {
     }
 
     // Check if this update is better, otherwise ignore
-    await this.maybeStoreNewBestPartialUpdate(syncPeriod, syncAggregateBlock, attestedData);
+    await this.maybeStoreNewBestPartialUpdate(syncPeriod, syncAggregate, signatureSlot, attestedData);
   }
 
   private async doGetUpdate(period: number): Promise<altair.LightClientUpdate> {
@@ -529,11 +528,10 @@ export class LightClientServer {
    */
   private async maybeStoreNewBestPartialUpdate(
     syncPeriod: SyncPeriod,
-    syncAggregateBlock: altair.BeaconBlock,
+    syncAggregate: altair.SyncAggregate,
+    signatureSlot: Slot,
     attestedData: SyncAttestedData
   ): Promise<void> {
-    const syncAggregate = syncAggregateBlock.body.syncAggregate;
-    const signatureSlot = syncAggregateBlock.slot;
     const prevBestUpdate = await this.db.bestPartialLightClientUpdate.get(syncPeriod);
     if (prevBestUpdate && !isBetterUpdate(prevBestUpdate, syncAggregate, attestedData)) {
       this.metrics?.lightclientServer.updateNotBetter.inc();
