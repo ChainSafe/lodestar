@@ -312,7 +312,7 @@ async function getExecutionPayloadParentHash(
   state: CachedBeaconStateExecutions
 ): Promise<{isPremerge: true} | {isPremerge: false; parentHash: Root}> {
   // Use different POW block hash parent for block production based on merge status.
-  // Returned value of null === using an empty ExecutionPayload value
+  // Returned value of null == using an empty ExecutionPayload value
   if (isMergeTransitionComplete(state)) {
     // Post-merge, normal payload
     return {isPremerge: false, parentHash: state.latestExecutionPayloadHeader.blockHash};

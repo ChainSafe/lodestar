@@ -93,7 +93,7 @@ export async function validateGossipAttestation(
   const validatorIndex = committeeIndices[bitIndex];
 
   // [REJECT] The number of aggregation bits matches the committee size
-  // -- i.e. len(attestation.aggregation_bits) === len(get_beacon_committee(state, data.slot, data.index)).
+  // -- i.e. len(attestation.aggregation_bits) == len(get_beacon_committee(state, data.slot, data.index)).
   // > TODO: Is this necessary? Lighthouse does not do this check
   if (aggregationBits.bitLen !== committeeIndices.length) {
     throw new AttestationError(GossipAction.REJECT, {
@@ -107,7 +107,7 @@ export async function validateGossipAttestation(
   //   The attestation is the first valid attestation received for the participating validator for the slot, attestation.data.slot.
 
   // [REJECT] The attestation is for the correct subnet
-  // -- i.e. compute_subnet_for_attestation(committees_per_slot, attestation.data.slot, attestation.data.index) === subnet_id,
+  // -- i.e. compute_subnet_for_attestation(committees_per_slot, attestation.data.slot, attestation.data.index) == subnet_id,
   // where committees_per_slot = get_committee_count_per_slot(state, attestation.data.target.epoch),
   // which may be pre-computed along with the committee information for the signature check.
   const expectedSubnet = attHeadState.epochCtx.computeSubnetForSlot(attSlot, attIndex);

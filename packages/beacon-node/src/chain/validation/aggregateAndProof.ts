@@ -73,7 +73,7 @@ export async function validateGossipAggregateAndProof(
   const attHeadBlock = verifyHeadBlockAndTargetRoot(chain, attData.beaconBlockRoot, attTarget.root, attEpoch);
 
   // [IGNORE] The current finalized_checkpoint is an ancestor of the block defined by aggregate.data.beacon_block_root
-  // -- i.e. get_ancestor(store, aggregate.data.beacon_block_root, compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)) === store.finalized_checkpoint.root
+  // -- i.e. get_ancestor(store, aggregate.data.beacon_block_root, compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)) == store.finalized_checkpoint.root
   // > Altready check in `chain.forkChoice.hasBlock(attestation.data.beaconBlockRoot)`
 
   const attHeadState = await chain.regen
