@@ -96,6 +96,10 @@ export class HttpClient implements IHttpClient {
       }
     }
 
+    if (this.urlOpts.length === 0) {
+      throw Error("Must set at least 1 URL in HttpClient opts");
+    }
+
     this.globalTimeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
     this.getAbortSignal = opts.getAbortSignal;
     this.fetch = opts.fetch ?? fetch;
