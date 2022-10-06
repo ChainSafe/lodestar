@@ -1,23 +1,21 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-return */
-import {Connection} from "libp2p";
+import {Connection} from "@libp2p/interface-connection";
 import sinon, {SinonStubbedInstance} from "sinon";
-import PeerId from "peer-id";
-import {expect, use} from "chai";
-import chaiAsPromised from "chai-as-promised";
-import {Multiaddr} from "multiaddr";
-import {BitArray} from "@chainsafe/ssz";
+import {PeerId} from "@libp2p/interface-peer-id";
+import {expect} from "chai";
+import {multiaddr} from "@multiformats/multiaddr";
+import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
 import {createKeypairFromPeerId, ENR} from "@chainsafe/discv5";
+import {BitArray} from "@chainsafe/ssz";
 import {altair} from "@lodestar/types";
 import {routes} from "@lodestar/api";
-import {createPeerId, INetwork, Network} from "../../../../../src/network/index.js";
 import {BeaconSync, IBeaconSync} from "../../../../../src/sync/index.js";
+import {INetwork, Network} from "../../../../../src/network/index.js";
 import {MetadataController} from "../../../../../src/network/metadata.js";
 import {defaultApiOptions} from "../../../../../src/api/options.js";
-import {PeerStatus, PeerDirection} from "../../../../../src/network/index.js";
 import {getNodeApi} from "../../../../../src/api/impl/node/index.js";
-
-use(chaiAsPromised);
+import {libp2pConnection} from "../../../../utils/node/p2p.js";
 
 interface IPeerSummary {
   direction: string | null;
@@ -45,16 +43,16 @@ describe("node api implementation", function () {
     networkStub = sinon.createStubInstance(Network);
     syncStub = sinon.createStubInstance(BeaconSync);
     api = getNodeApi(defaultApiOptions, {network: networkStub, sync: syncStub});
-    peerId = await PeerId.create({keyType: "secp256k1"});
+    peerId = await createSecp256k1PeerId();
     sinon.stub(networkStub, "peerId").get(() => peerId);
-    sinon.stub(networkStub, "localMultiaddrs").get(() => [new Multiaddr("/ip4/127.0.0.1/tcp/36000")]);
+    sinon.stub(networkStub, "localMultiaddrs").get(() => [multiaddr("/ip4/127.0.0.1/tcp/36000")]);
   });
 
   describe("getNetworkIdentity", function () {
     it("should get node identity", async function () {
       const keypair = createKeypairFromPeerId(peerId);
       const enr = ENR.createV4(keypair.publicKey);
-      enr.setLocationMultiaddr(new Multiaddr("/ip4/127.0.0.1/tcp/36001"));
+      enr.setLocationMultiaddr(multiaddr("/ip4/127.0.0.1/tcp/36001"));
       networkStub.getEnr.returns(enr);
       networkStub.metadata = {
         get json(): altair.Metadata {
@@ -86,24 +84,24 @@ describe("node api implementation", function () {
     let peer1: PeerId, peer2: PeerId, peer3: PeerId;
 
     before(async function () {
-      peer1 = await createPeerId();
-      peer2 = await createPeerId();
-      peer3 = await createPeerId();
+      peer1 = await createSecp256k1PeerId();
+      peer2 = await createSecp256k1PeerId();
+      peer3 = await createSecp256k1PeerId();
     });
 
     it("it should return peer count", async function () {
       const connectionsByPeer = new Map<string, Connection[]>([
-        [peer1.toB58String(), [libp2pConnection(peer1, "open", "outbound")]],
+        [peer1.toString(), [libp2pConnection(peer1, "OPEN", "outbound")]],
         [
-          peer2.toB58String(),
-          [libp2pConnection(peer2, "closing", "inbound"), libp2pConnection(peer2, "closing", "inbound")],
+          peer2.toString(),
+          [libp2pConnection(peer2, "CLOSING", "inbound"), libp2pConnection(peer2, "CLOSING", "inbound")],
         ],
         [
-          peer3.toB58String(),
+          peer3.toString(),
           [
-            libp2pConnection(peer3, "closed", "inbound"),
-            libp2pConnection(peer3, "closed", "inbound"),
-            libp2pConnection(peer3, "closed", "inbound"),
+            libp2pConnection(peer3, "CLOSED", "inbound"),
+            libp2pConnection(peer3, "CLOSED", "inbound"),
+            libp2pConnection(peer3, "CLOSED", "inbound"),
           ],
         ],
       ]);
@@ -127,14 +125,14 @@ describe("node api implementation", function () {
     let peer1: PeerId, peer2: PeerId;
 
     before(async function () {
-      peer1 = await createPeerId();
-      peer2 = await createPeerId();
+      peer1 = await createSecp256k1PeerId();
+      peer2 = await createSecp256k1PeerId();
     });
 
     it("should return connected and disconnecting peers", async function () {
       const connectionsByPeer = new Map<string, Connection[]>([
-        [peer1.toB58String(), [libp2pConnection(peer1, "open", "outbound")]],
-        [peer2.toB58String(), [libp2pConnection(peer2, "closing", "inbound")]],
+        [peer1.toString(), [libp2pConnection(peer1, "OPEN", "outbound")]],
+        [peer2.toString(), [libp2pConnection(peer2, "CLOSING", "inbound")]],
       ]);
       networkStub.getConnectionsByPeer.returns(connectionsByPeer);
 
@@ -148,8 +146,8 @@ describe("node api implementation", function () {
 
     it("should return disconnected peers", async function () {
       const connectionsByPeer = new Map<string, Connection[]>([
-        [peer1.toB58String(), [libp2pConnection(peer1, "closed", "outbound")]],
-        [peer2.toB58String(), []], // peer2 has no connections in the connection manager
+        [peer1.toString(), [libp2pConnection(peer1, "CLOSED", "outbound")]],
+        [peer2.toString(), []], // peer2 has no connections in the connection manager
       ]);
       networkStub.getConnectionsByPeer.returns(connectionsByPeer);
 
@@ -164,17 +162,17 @@ describe("node api implementation", function () {
 
   describe("getPeer", function () {
     it("success", async function () {
-      const peer1 = await createPeerId();
-      const peer2 = await createPeerId();
+      const peer1 = await createSecp256k1PeerId();
+      const peer2 = await createSecp256k1PeerId();
       const connectionsByPeer = new Map<string, Connection[]>([
-        [peer1.toB58String(), [libp2pConnection(peer1, "open", "outbound")]],
-        [peer2.toB58String(), [libp2pConnection(peer2, "closing", "inbound")]],
+        [peer1.toString(), [libp2pConnection(peer1, "OPEN", "outbound")]],
+        [peer2.toString(), [libp2pConnection(peer2, "CLOSING", "inbound")]],
       ]);
       networkStub.getConnectionsByPeer.returns(connectionsByPeer);
 
-      const {data: peer} = await api.getPeer(peer1.toB58String());
+      const {data: peer} = await api.getPeer(peer1.toString());
       if (peer === undefined) throw Error("getPeer returned no peer");
-      expect(peer.peerId).to.equal(peer1.toB58String());
+      expect(peer.peerId).to.equal(peer1.toString());
       expect(peer.lastSeenP2pAddress).not.empty;
       expect(peer.peerId).not.empty;
       // expect(peers[0].enr).not.empty;
@@ -196,14 +194,3 @@ describe("node api implementation", function () {
     });
   });
 });
-
-export function libp2pConnection(peer: PeerId, status: PeerStatus, direction: PeerDirection): Connection {
-  return {
-    remoteAddr: new Multiaddr(),
-    stat: {
-      status,
-      direction,
-    },
-    remotePeer: peer,
-  } as Connection;
-}

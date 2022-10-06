@@ -1,9 +1,9 @@
 import {compress, uncompress} from "snappyjs";
-import {RPC} from "libp2p-gossipsub/src/message/rpc";
-import {GossipsubMessage} from "libp2p-gossipsub/src/types";
+import {Message} from "@libp2p/interface-pubsub";
 import {digest} from "@chainsafe/as-sha256";
 import {intToBytes} from "@lodestar/utils";
 import {ForkName} from "@lodestar/params";
+import {RPC} from "@chainsafe/libp2p-gossipsub/message";
 import {MESSAGE_DOMAIN_VALID_SNAPPY} from "./constants.js";
 import {GossipTopicCache} from "./topic.js";
 
@@ -19,10 +19,15 @@ export function fastMsgIdFn(rpcMsg: RPC.IMessage): string {
   }
 }
 
+export function msgIdToStrFn(msgId: Uint8Array): string {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+  return Buffer.prototype.toString.call(msgId, "base64");
+}
+
 /**
  * Only valid msgId. Messages that fail to snappy_decompress() are not tracked
  */
-export function msgIdFn(gossipTopicCache: GossipTopicCache, msg: GossipsubMessage): Uint8Array {
+export function msgIdFn(gossipTopicCache: GossipTopicCache, msg: Message): Uint8Array {
   const topic = gossipTopicCache.getTopic(msg.topic);
 
   let vec: Uint8Array[];
@@ -46,8 +51,11 @@ export function msgIdFn(gossipTopicCache: GossipTopicCache, msg: GossipsubMessag
     // )[:20]
     // ```
     // https://github.com/ethereum/eth2.0-specs/blob/v1.1.0-alpha.7/specs/altair/p2p-interface.md#topics-and-messages
+    //
+    // TODO: check if the capella handling is same as the other forks
     case ForkName.altair:
-    case ForkName.bellatrix: {
+    case ForkName.bellatrix:
+    case ForkName.capella: {
       vec = [MESSAGE_DOMAIN_VALID_SNAPPY, intToBytes(msg.topic.length, 8), Buffer.from(msg.topic), msg.data];
       break;
     }

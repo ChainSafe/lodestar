@@ -29,6 +29,7 @@ export async function validateGossipAggregateAndProof(
   const attData = aggregate.data;
   const attDataRoot = toHexString(ssz.phase0.AttestationData.hashTreeRoot(attData));
   const attSlot = attData.slot;
+  const attIndex = attData.index;
   const attEpoch = computeEpochAtSlot(attSlot);
   const attTarget = attData.target;
   const targetEpoch = attTarget.epoch;
@@ -84,7 +85,8 @@ export async function validateGossipAggregateAndProof(
       });
     });
 
-  const committeeIndices = getCommitteeIndices(attHeadState, attSlot, attData.index);
+  const committeeIndices: number[] = getCommitteeIndices(attHeadState, attSlot, attIndex);
+
   const attestingIndices = aggregate.aggregationBits.intersectValues(committeeIndices);
   const indexedAttestation: phase0.IndexedAttestation = {
     attestingIndices,

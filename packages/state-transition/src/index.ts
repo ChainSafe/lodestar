@@ -9,11 +9,13 @@ export {
   CachedBeaconStateAltair,
   CachedBeaconStateBellatrix,
   CachedBeaconStateAllForks,
+  CachedBeaconStateExecutions,
   // Non-cached states
   BeaconStatePhase0,
   BeaconStateAltair,
   BeaconStateBellatrix,
   BeaconStateAllForks,
+  BeaconStateExecutions,
 } from "./types.js";
 
 // Main state caches

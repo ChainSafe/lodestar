@@ -1,13 +1,12 @@
 import {altair, phase0, Root, RootHex, Slot, ssz, SyncPeriod} from "@lodestar/types";
 import {IChainForkConfig} from "@lodestar/config";
 import {CachedBeaconStateAltair, computeSyncPeriodAtEpoch, computeSyncPeriodAtSlot} from "@lodestar/state-transition";
-import {ILogger} from "@lodestar/utils";
+import {ILogger, MapDef, pruneSetToMax} from "@lodestar/utils";
 import {routes} from "@lodestar/api";
 import {BitArray, CompositeViewDU, toHexString} from "@chainsafe/ssz";
 import {SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 import {IBeaconDb} from "../../db/index.js";
 import {IMetrics} from "../../metrics/index.js";
-import {MapDef, pruneSetToMax} from "../../util/map.js";
 import {ChainEvent, ChainEventEmitter} from "../emitter.js";
 import {byteArrayEquals} from "../../util/bytes.js";
 import {ZERO_HASH} from "../../constants/index.js";
@@ -302,7 +301,6 @@ export class LightClientServer {
         finalizedHeader: partialUpdate.finalizedHeader,
         finalityBranch: partialUpdate.finalityBranch,
         syncAggregate: partialUpdate.syncAggregate,
-        forkVersion: this.config.getForkVersion(partialUpdate.attestedHeader.slot),
       };
     } else {
       return {
@@ -312,7 +310,6 @@ export class LightClientServer {
         finalizedHeader: this.zero.finalizedHeader,
         finalityBranch: this.zero.finalityBranch,
         syncAggregate: partialUpdate.syncAggregate,
-        forkVersion: this.config.getForkVersion(partialUpdate.attestedHeader.slot),
       };
     }
   }

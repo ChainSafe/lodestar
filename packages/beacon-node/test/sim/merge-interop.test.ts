@@ -3,7 +3,7 @@ import net from "node:net";
 import {spawn} from "node:child_process";
 import {Context} from "mocha";
 import {fromHexString} from "@chainsafe/ssz";
-import {isBellatrixStateType, isMergeTransitionComplete} from "@lodestar/state-transition";
+import {isExecutionStateType, isMergeTransitionComplete} from "@lodestar/state-transition";
 import {LogLevel, sleep, TimestampFormatCode} from "@lodestar/utils";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {IChainConfig} from "@lodestar/config";
@@ -295,7 +295,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     const timeoutSetupMargin = 30 * 1000; // Give extra 30 seconds of margin
 
     // delay a bit so regular sync sees it's up to date and sync is completed from the beginning
-    const genesisSlotsDelay = 30;
+    const genesisSlotsDelay = 8;
 
     const timeout =
       ((epochsOfMargin + expectedEpochsToFinish) * SLOTS_PER_EPOCH + genesisSlotsDelay) *
@@ -418,7 +418,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
           // By this slot, ttd should be reached and merge complete
           case Number(ttd) + 3: {
             const headState = bn.chain.getHeadState();
-            if (!(isBellatrixStateType(headState) && isMergeTransitionComplete(headState))) {
+            if (!(isExecutionStateType(headState) && isMergeTransitionComplete(headState))) {
               reject("Merge not completed");
             }
 

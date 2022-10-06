@@ -1,5 +1,5 @@
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {pruneSetToMax} from "../../util/map.js";
+import {pruneSetToMax} from "@lodestar/utils";
 import {IMetrics} from "../../metrics/index.js";
 import {DATA, QUANTITY} from "../../eth1/provider/utils.js";
 

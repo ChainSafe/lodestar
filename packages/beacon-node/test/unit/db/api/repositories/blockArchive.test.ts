@@ -115,14 +115,14 @@ describe("block archive repository", function () {
       spy.withArgs(
         encodeKey(Bucket.index_blockArchiveRootIndex, ssz.phase0.BeaconBlock.hashTreeRoot(block.message)),
         intToBytes(block.message.slot, 8, "be")
-      ).calledOnce
-    ).to.equal(true);
+      )
+    ).to.be.calledOnce;
     expect(
       spy.withArgs(
         encodeKey(Bucket.index_blockArchiveParentRootIndex, block.message.parentRoot),
         intToBytes(block.message.slot, 8, "be")
-      ).calledOnce
-    ).to.equal(true);
+      )
+    ).to.be.calledOnce;
   });
 
   it("should store indexes when block batch", async function () {

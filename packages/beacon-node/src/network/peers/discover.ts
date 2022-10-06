@@ -1,16 +1,15 @@
 import crypto from "node:crypto";
 import {promisify} from "node:util";
-import LibP2p from "libp2p";
-import PeerId from "peer-id";
-import {Multiaddr} from "multiaddr";
+import {Libp2p} from "libp2p";
+import {PeerId} from "@libp2p/interface-peer-id";
+import {multiaddr, Multiaddr} from "@multiformats/multiaddr";
 import {IBeaconConfig} from "@lodestar/config";
-import {ILogger} from "@lodestar/utils";
+import {ILogger, pruneSetToMax} from "@lodestar/utils";
 import {Discv5, ENR, IDiscv5Metrics, IDiscv5DiscoveryInputOptions} from "@chainsafe/discv5";
 import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {IMetrics} from "../../metrics/index.js";
 import {ENRKey, SubnetType} from "../metadata.js";
-import {prettyPrintPeerId} from "../util.js";
-import {pruneSetToMax} from "../../util/map.js";
+import {getConnectionsMap, prettyPrintPeerId} from "../util.js";
 import {IPeerRpcScoreStore, ScoreState} from "./score.js";
 import {deserializeEnrSubnets, zeroAttnets, zeroSyncnets} from "./utils/enrSubnetsDeserialize.js";
 
@@ -29,7 +28,7 @@ export type PeerDiscoveryOpts = {
 };
 
 export type PeerDiscoveryModules = {
-  libp2p: LibP2p;
+  libp2p: Libp2p;
   peerRpcScores: IPeerRpcScoreStore;
   metrics: IMetrics | null;
   logger: ILogger;
@@ -77,7 +76,7 @@ type CachedENR = {
  */
 export class PeerDiscovery {
   readonly discv5: Discv5;
-  private libp2p: LibP2p;
+  private libp2p: Libp2p;
   private peerRpcScores: IPeerRpcScoreStore;
   private metrics: IMetrics | null;
   private logger: ILogger;
@@ -112,7 +111,7 @@ export class PeerDiscovery {
     this.discv5 = Discv5.create({
       enr: opts.discv5.enr,
       peerId: modules.libp2p.peerId,
-      multiaddr: new Multiaddr(opts.discv5.bindAddr),
+      multiaddr: multiaddr(opts.discv5.bindAddr),
       config: opts.discv5,
       // TODO: IDiscv5Metrics is not properly defined, should remove the collect() function
       metrics: (modules.metrics?.discv5 as unknown) as {
@@ -295,7 +294,7 @@ export class PeerDiscovery {
       }
 
       // Ignore connected peers. TODO: Is this check necessary?
-      if (this.isPeerConnected(peerId.toB58String())) {
+      if (this.isPeerConnected(peerId.toString())) {
         return DiscoveredPeerStatus.already_connected;
       }
 
@@ -397,8 +396,8 @@ export class PeerDiscovery {
 
   /** Check if there is 1+ open connection with this peer */
   private isPeerConnected(peerIdStr: PeerIdStr): boolean {
-    const connections = this.libp2p.connectionManager.connections.get(peerIdStr);
-    return Boolean(connections && connections.some((connection) => connection.stat.status === "open"));
+    const connections = getConnectionsMap(this.libp2p.connectionManager).get(peerIdStr);
+    return Boolean(connections && connections.some((connection) => connection.stat.status === "OPEN"));
   }
 }
 

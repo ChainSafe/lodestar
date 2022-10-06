@@ -1,4 +1,4 @@
-import {bellatrix, RootHex} from "@lodestar/types";
+import {RootHex, allForks} from "@lodestar/types";
 import {DATA, QUANTITY} from "../../eth1/provider/utils.js";
 import {PayloadIdCache, PayloadId, ApiPayloadAttributes} from "./payloadIdCache.js";
 
@@ -71,7 +71,7 @@ export interface IExecutionEngine {
    *
    * Should be called in advance before, after or in parallel to block processing
    */
-  notifyNewPayload(executionPayload: bellatrix.ExecutionPayload): Promise<ExecutePayloadResponse>;
+  notifyNewPayload(executionPayload: allForks.ExecutionPayload): Promise<ExecutePayloadResponse>;
 
   /**
    * Signal fork choice updates
@@ -99,7 +99,7 @@ export interface IExecutionEngine {
    * Required for block producing
    * https://github.com/ethereum/consensus-specs/blob/dev/specs/merge/validator.md#get_payload
    */
-  getPayload(payloadId: PayloadId): Promise<bellatrix.ExecutionPayload>;
+  getPayload(payloadId: PayloadId): Promise<allForks.ExecutionPayload>;
 
   exchangeTransitionConfigurationV1(
     transitionConfiguration: TransitionConfigurationV1

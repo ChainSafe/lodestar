@@ -1,6 +1,6 @@
 import {EventEmitter} from "events";
 import StrictEventEmitter from "strict-event-emitter-types";
-import PeerId from "peer-id";
+import {PeerId} from "@libp2p/interface-peer-id";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {IBeaconConfig} from "@lodestar/config";
 import {Epoch, phase0} from "@lodestar/types";
@@ -114,7 +114,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
     // Compute if we should do a Finalized or Head sync with this peer
     const {syncType, startEpoch, target} = getRangeSyncTarget(localStatus, peerStatus, this.chain.forkChoice);
     this.logger.debug("Sync peer joined", {
-      peer: peerId.toB58String(),
+      peer: peerId.toString(),
       syncType,
       startEpoch,
       targetSlot: target.slot,

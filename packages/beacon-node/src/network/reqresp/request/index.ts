@@ -1,6 +1,7 @@
-import pipe from "it-pipe";
-import PeerId from "peer-id";
-import {Libp2p} from "libp2p/src/connection-manager";
+import {pipe} from "it-pipe";
+import {PeerId} from "@libp2p/interface-peer-id";
+import {Libp2p} from "libp2p";
+import {Uint8ArrayList} from "uint8arraylist";
 import {IForkDigestContext} from "@lodestar/config";
 import {ErrorAborted, ILogger, withTimeout, TimeoutError} from "@lodestar/utils";
 import {timeoutOptions} from "../../../constants/index.js";
@@ -12,7 +13,6 @@ import {formatProtocolId, renderRequestBody} from "../utils/index.js";
 import {ResponseError} from "../response/index.js";
 import {requestEncode} from "../encoders/requestEncode.js";
 import {responseDecode} from "../encoders/responseDecode.js";
-import {Libp2pConnection} from "../interface.js";
 import {collectResponses} from "./collectResponses.js";
 import {
   RequestError,
@@ -55,7 +55,7 @@ export async function sendRequest<T extends IncomingResponseBody | IncomingRespo
   requestId = 0
 ): Promise<T> {
   const {REQUEST_TIMEOUT, DIAL_TIMEOUT} = {...timeoutOptions, ...options};
-  const peerIdStr = peerId.toB58String();
+  const peerIdStr = peerId.toString();
   const peerIdStrShort = prettyPrintPeerId(peerId);
   const client = peersData.getPeerKind(peerIdStr);
   const logCtx = {method, encoding, client, peer: peerIdStrShort, requestId};
@@ -85,16 +85,13 @@ export async function sendRequest<T extends IncomingResponseBody | IncomingRespo
     // https://github.com/ChainSafe/lodestar/issues/1597#issuecomment-703394386
 
     // DIAL_TIMEOUT: Non-spec timeout from dialing protocol until stream opened
-    const {stream, protocol: protocolId} = await withTimeout(
+    const stream = await withTimeout(
       async (timeoutAndParentSignal) => {
         const protocolIds = Array.from(protocols.keys());
         const conn = await libp2p.dialProtocol(peerId, protocolIds, {signal: timeoutAndParentSignal});
         // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
         if (!conn) throw Error("dialProtocol timeout");
-        // TODO: libp2p-ts type Stream does not declare .abort() and requires casting to unknown here
-        // Remove when https://github.com/ChainSafe/lodestar/issues/2167
-        // After #2167 upstream types are still not good enough, and require casting
-        return (conn as unknown) as Libp2pConnection;
+        return conn;
       },
       DIAL_TIMEOUT,
       signal
@@ -107,6 +104,7 @@ export async function sendRequest<T extends IncomingResponseBody | IncomingRespo
     });
 
     // Parse protocol selected by the responder
+    const protocolId = stream.stat.protocol ?? "unknown";
     const protocol = protocols.get(protocolId);
     if (!protocol) throw Error(`dialProtocol selected unknown protocolId ${protocolId}`);
 
@@ -154,7 +152,7 @@ export async function sendRequest<T extends IncomingResponseBody | IncomingRespo
     try {
       // Note: libp2p.stop() will close all connections, so not necessary to abort this pipe on parent stop
       const responses = await pipe(
-        abortableSource(stream.source, [
+        abortableSource(stream.source as AsyncIterable<Uint8ArrayList>, [
           {
             signal: ttfbTimeoutController.signal,
             getError: () => new RequestInternalError({code: RequestErrorCode.TTFB_TIMEOUT}),

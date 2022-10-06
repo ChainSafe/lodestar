@@ -1,5 +1,4 @@
-import chai, {expect} from "chai";
-import chaiAsPromised from "chai-as-promised";
+import {expect} from "chai";
 import {fastify} from "fastify";
 
 import {fromHexString} from "@chainsafe/ssz";
@@ -7,8 +6,6 @@ import {fromHexString} from "@chainsafe/ssz";
 import {ExecutionEngineHttp, defaultExecutionEngineHttpOpts} from "../../../src/execution/engine/http.js";
 
 import {bytesToData, numToQuantity} from "../../../src/eth1/provider/utils.js";
-
-chai.use(chaiAsPromised);
 
 describe("ExecutionEngine / http ", () => {
   const afterCallbacks: (() => Promise<void> | void)[] = [];
@@ -58,7 +55,7 @@ describe("ExecutionEngine / http ", () => {
     );
   });
 
-  describe("notifyForkchoiceUpdate", async function () {
+  describe("notifyForkchoiceUpdate", function () {
     it("notifyForkchoiceUpdate no retry when no pay load attributes", async function () {
       errorResponsesBeforeSuccess = 2;
       const forkChoiceHeadData = {

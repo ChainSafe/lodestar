@@ -1,5 +1,5 @@
-import chai, {expect} from "chai";
-import chaiAsPromised from "chai-as-promised";
+import {expect} from "chai";
+import {Uint8ArrayList} from "uint8arraylist";
 import {LodestarError, fromHex} from "@lodestar/utils";
 import {RespStatus} from "../../../../../src/constants/index.js";
 import {Method, Encoding, Version} from "../../../../../src/network/reqresp/types.js";
@@ -12,9 +12,7 @@ import {testLogger} from "../../../../utils/logger.js";
 import {getValidPeerId} from "../../../../utils/peer.js";
 import {config} from "../../../../utils/config.js";
 
-chai.use(chaiAsPromised);
-
-describe("network / reqresp / response / handleRequest", async () => {
+describe("network / reqresp / response / handleRequest", () => {
   const logger = testLogger();
   const peerId = getValidPeerId();
   const peersData = new PeersData();
@@ -27,9 +25,9 @@ describe("network / reqresp / response / handleRequest", async () => {
     id: string;
     method: Method;
     encoding: Encoding;
-    requestChunks: Buffer[];
+    requestChunks: Uint8ArrayList[];
     performRequestHandler: PerformRequestHandler;
-    expectedResponseChunks: Buffer[];
+    expectedResponseChunks: Uint8Array[];
     expectedError?: LodestarError<any>;
   }[] = [
     {
@@ -46,10 +44,10 @@ describe("network / reqresp / response / handleRequest", async () => {
       expectedResponseChunks: [
         // Chunk 0 - success, Ping, BigInt(1)
         Buffer.from([RespStatus.SUCCESS]),
-        ...sszSnappyPing.chunks,
+        ...sszSnappyPing.chunks.map((c) => c.subarray()),
         // Chunk 1 - success, Ping, BigInt(1)
         Buffer.from([RespStatus.SUCCESS]),
-        ...sszSnappyPing.chunks,
+        ...sszSnappyPing.chunks.map((c) => c.subarray()),
         // Chunk 2 - error, with errorMessage
         Buffer.from([RespStatus.SERVER_ERROR]),
         Buffer.from(fromHex("0x0a")),

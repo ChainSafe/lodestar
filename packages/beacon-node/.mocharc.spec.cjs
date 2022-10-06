@@ -1,7 +1,7 @@
 
 module.exports = {
   colors: true,
-  require: ["./test/setupPreset.ts"],
+  require: ["./test/setupPreset.ts", "./test/setup.ts"],
   "node-option": [
     "loader=ts-node/esm"
   ],

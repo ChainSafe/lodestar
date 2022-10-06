@@ -1,5 +1,5 @@
 import all from "it-all";
-import pipe from "it-pipe";
+import {pipe} from "it-pipe";
 import {allForks, ssz} from "@lodestar/types";
 import {LodestarError} from "@lodestar/utils";
 import {
@@ -36,7 +36,10 @@ describe("network / reqresp / sszSnappy / encode", () => {
           ),
           all
         );
-        expectEqualByteChunks(encodedChunks, chunks);
+        expectEqualByteChunks(
+          encodedChunks,
+          chunks.map((c) => c.subarray())
+        );
       });
     }
   });

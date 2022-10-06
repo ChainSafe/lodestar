@@ -1,7 +1,7 @@
-import chai, {expect} from "chai";
-import chaiAsPromised from "chai-as-promised";
+import {expect} from "chai";
 import all from "it-all";
-import pipe from "it-pipe";
+import {pipe} from "it-pipe";
+import {Uint8ArrayList} from "uint8arraylist";
 import {Method, Encoding, RequestBody} from "../../../../../src/network/reqresp/types.js";
 import {SszSnappyErrorCode} from "../../../../../src/network/reqresp/encodingStrategies/sszSnappy/index.js";
 import {requestEncode} from "../../../../../src/network/reqresp/encoders/requestEncode.js";
@@ -9,14 +9,12 @@ import {requestDecode} from "../../../../../src/network/reqresp/encoders/request
 import {sszSnappyPing} from "../encodingStrategies/sszSnappy/testData.js";
 import {arrToSource, expectEqualByteChunks} from "../utils.js";
 
-chai.use(chaiAsPromised);
-
 describe("network / reqresp / encoders / request - Success and error cases", () => {
   const testCases: {
     id: string;
     method: Method;
     encoding: Encoding;
-    chunks: Buffer[];
+    chunks: Uint8ArrayList[];
     // decode
     errorDecode?: string;
     // encode
@@ -27,7 +25,7 @@ describe("network / reqresp / encoders / request - Success and error cases", () 
       method: Method.Status,
       encoding: Encoding.SSZ_SNAPPY,
       errorDecode: SszSnappyErrorCode.UNDER_SSZ_MIN_SIZE,
-      chunks: [Buffer.from("4")],
+      chunks: [new Uint8ArrayList(Buffer.from("4"))],
     },
     {
       id: "No body on Metadata - Ok",
@@ -65,7 +63,10 @@ describe("network / reqresp / encoders / request - Success and error cases", () 
     if (requestBody !== undefined) {
       it(`${id} - requestEncode`, async () => {
         const encodedChunks = await pipe(requestEncode({method, encoding}, requestBody), all);
-        expectEqualByteChunks(encodedChunks, chunks);
+        expectEqualByteChunks(
+          encodedChunks,
+          chunks.map((c) => c.subarray())
+        );
       });
     }
   }

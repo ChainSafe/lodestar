@@ -1,7 +1,5 @@
 import path from "node:path";
 import rimraf from "rimraf";
-import chai from "chai";
-import chaiAsPromised from "chai-as-promised";
 import {Interchange} from "@lodestar/validator";
 import {testFilesDir} from "../utils.js";
 import {describeCliTest} from "../utils/childprocRunner.js";
@@ -9,8 +7,6 @@ import {cachedPubkeysHex, cachedSeckeysHex} from "../utils/cachedKeys.js";
 import {expectDeepEquals, getAfterEachCallbacks} from "../utils/runUtils.js";
 import {getKeymanagerTestRunner} from "../utils/keymanagerTestRunners.js";
 import {getKeystoresStr} from "../utils/keystores.js";
-
-chai.use(chaiAsPromised);
 
 describeCliTest("import keystores from api, test DefaultProposerConfig", function ({spawnCli}) {
   const dataDir = path.join(testFilesDir, "import-keystores-test");

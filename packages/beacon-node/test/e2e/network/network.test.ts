@@ -1,9 +1,8 @@
 import sinon from "sinon";
 import {expect} from "chai";
 
-import PeerId from "peer-id";
-import {Multiaddr} from "multiaddr";
-
+import {PeerId} from "@libp2p/interface-peer-id";
+import {multiaddr} from "@multiformats/multiaddr";
 import {ENR} from "@chainsafe/discv5";
 import {createIBeaconConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
@@ -27,7 +26,7 @@ import {ENRKey} from "../../../src/network/metadata.js";
 import {memoOnce} from "../../utils/cache.js";
 
 let port = 9000;
-const multiaddr = "/ip4/127.0.0.1/tcp/0";
+const mu = "/ip4/127.0.0.1/tcp/0";
 
 describe("network", function () {
   if (this.timeout() < 5000) this.timeout(5000);
@@ -48,7 +47,7 @@ describe("network", function () {
   async function getOpts(peerId: PeerId): Promise<INetworkOptions> {
     const bindAddrUdp = `/ip4/0.0.0.0/udp/${port++}`;
     const enr = ENR.createFromPeerId(peerId);
-    enr.setLocationMultiaddr(new Multiaddr(bindAddrUdp));
+    enr.setLocationMultiaddr(multiaddr(bindAddrUdp));
 
     return {
       ...defaultNetworkOptions,
@@ -86,7 +85,7 @@ describe("network", function () {
     const reqRespHandlers = getReqRespHandlers({db, chain});
     const gossipHandlers = {} as GossipHandlers;
 
-    const libp2p = await createNode(multiaddr);
+    const libp2p = await createNode(mu);
     const logger = testLogger(nodeName);
 
     const opts = await getOpts(libp2p.peerId);
@@ -188,7 +187,7 @@ describe("network", function () {
     netA.prepareBeaconCommitteeSubnet([subscription]);
     await connected;
 
-    expect(netA.getConnectionsByPeer().has(netB.peerId.toB58String())).to.be.equal(
+    expect(netA.getConnectionsByPeer().has(netB.peerId.toString())).to.be.equal(
       true,
       "netA has not connected to peerB"
     );
@@ -214,31 +213,7 @@ describe("network", function () {
 
     expect(onGoodbyeNetB.callCount).to.equal(1, "netB must receive 1 goodbye");
     const [goodbye, peer] = onGoodbyeNetB.getCall(0).args;
-    expect(peer.toB58String()).to.equal(netA.peerId.toB58String(), "netA must be the goodbye requester");
-    expect(goodbye).to.equal(BigInt(GoodByeReasonCode.CLIENT_SHUTDOWN), "goodbye reason must be CLIENT_SHUTDOWN");
-  });
-
-  it("Should goodbye peers on stop", async function () {
-    const [{network: netA}, {network: netB}] = await createTestNodesAB();
-
-    const connected = Promise.all([onPeerConnect(netA), onPeerConnect(netB)]);
-    await connect(netA, netB.peerId, netB.localMultiaddrs);
-    await connected;
-
-    // Wait some time and stop netA expecting to goodbye netB
-    await sleep(500, controller.signal);
-
-    const onGoodbyeNetB = sinon.stub<[phase0.Goodbye, PeerId]>();
-    netB.events.on(NetworkEvent.reqRespRequest, (request, peer) => {
-      if (request.method === ReqRespMethod.Goodbye) onGoodbyeNetB(request.body, peer);
-    });
-
-    await netA.stop();
-    await sleep(500, controller.signal);
-
-    expect(onGoodbyeNetB.callCount).to.equal(1, "netB must receive 1 goodbye");
-    const [goodbye, peer] = onGoodbyeNetB.getCall(0).args;
-    expect(peer.toB58String()).to.equal(netA.peerId.toB58String(), "netA must be the goodbye requester");
+    expect(peer.toString()).to.equal(netA.peerId.toString(), "netA must be the goodbye requester");
     expect(goodbye).to.equal(BigInt(GoodByeReasonCode.CLIENT_SHUTDOWN), "goodbye reason must be CLIENT_SHUTDOWN");
   });
 

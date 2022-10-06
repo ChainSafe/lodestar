@@ -6,6 +6,15 @@ export {
   CachedBeaconStateAltair,
   CachedBeaconStateBellatrix,
   CachedBeaconStateAllForks,
+  CachedBeaconStateCapella,
+  CachedBeaconStateExecutions,
 } from "./cache/stateCache.js";
 
-export {BeaconStatePhase0, BeaconStateAltair, BeaconStateBellatrix, BeaconStateAllForks} from "./cache/types.js";
+export {
+  BeaconStatePhase0,
+  BeaconStateAltair,
+  BeaconStateBellatrix,
+  BeaconStateCapella,
+  BeaconStateAllForks,
+  BeaconStateExecutions,
+} from "./cache/types.js";

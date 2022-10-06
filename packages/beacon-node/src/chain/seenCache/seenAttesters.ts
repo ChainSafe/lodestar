@@ -1,5 +1,5 @@
 import {Epoch, ValidatorIndex} from "@lodestar/types";
-import {MapDef} from "../../util/map.js";
+import {MapDef} from "@lodestar/utils";
 
 // The next, current and previous epochs. We require the next epoch due to the
 // `MAXIMUM_GOSSIP_CLOCK_DISPARITY`. We require the previous epoch since the

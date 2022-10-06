@@ -1,5 +1,5 @@
 import {EventEmitter} from "events";
-import PeerId from "peer-id";
+import {PeerId} from "@libp2p/interface-peer-id";
 import {StrictEventEmitter} from "strict-event-emitter-types";
 import {BeaconStateAllForks, blockToHeader} from "@lodestar/state-transition";
 import {IBeaconConfig, IChainForkConfig} from "@lodestar/config";

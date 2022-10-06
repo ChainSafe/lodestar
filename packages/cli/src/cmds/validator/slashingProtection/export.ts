@@ -1,3 +1,4 @@
+import path from "node:path";
 import {InterchangeFormatVersion} from "@lodestar/validator";
 import {ICliCommand, writeFile600Perm} from "../../../util/index.js";
 import {IGlobalArgs} from "../../../options/index.js";
@@ -39,9 +40,9 @@ export const exportCmd: ICliCommand<
 
   handler: async (args) => {
     const {config, network} = getBeaconConfigFromArgs(args);
-
+    const validatorPaths = getValidatorPaths(args, network);
     // slashingProtection commands are fast so do not require logFile feature
-    const logger = getCliLogger(args, {defaultLogFile: "validator.log"}, config);
+    const logger = getCliLogger(args, {defaultLogFilepath: path.join(validatorPaths.dataDir, "validator.log")}, config);
 
     const {validatorsDbDir: dbPath} = getValidatorPaths(args, network);
 

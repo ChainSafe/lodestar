@@ -112,10 +112,10 @@ describe.skip("eth1 / Eth1MergeBlockTracker", function () {
     // Given the total difficulty offset the block that has TTD is the `difficultyOffset`nth block
     const mergeBlock = await eth1MergeBlockTracker.getTerminalPowBlock();
     if (!mergeBlock) throw Error("mergeBlock not found");
-    expect(mergeBlock.totalDifficulty >= terminalTotalDifficulty).to.equal(
-      true,
-      "mergeBlock.totalDifficulty is not >= TTD"
-    );
+    // Chai does not support bigint comparison
+    // eslint-disable-next-line chai-expect/no-inner-compare
+    expect(mergeBlock.totalDifficulty >= terminalTotalDifficulty, "mergeBlock.totalDifficulty is not >= TTD").to.be
+      .true;
   });
 
   it("Should find merge block fetching past blocks", async () => {
@@ -148,9 +148,9 @@ describe.skip("eth1 / Eth1MergeBlockTracker", function () {
     // Given the total difficulty offset the block that has TTD is the `difficultyOffset`nth block
     const mergeBlock = await eth1MergeBlockTracker.getTerminalPowBlock();
     if (!mergeBlock) throw Error("mergeBlock not found");
-    expect(mergeBlock.totalDifficulty >= terminalTotalDifficulty).to.equal(
-      true,
-      "mergeBlock.totalDifficulty is not >= TTD"
-    );
+    // Chai does not support bigint comparison
+    // eslint-disable-next-line chai-expect/no-inner-compare
+    expect(mergeBlock.totalDifficulty >= terminalTotalDifficulty, "mergeBlock.totalDifficulty is not >= TTD").to.be
+      .true;
   });
 });

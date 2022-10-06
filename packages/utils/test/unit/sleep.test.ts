@@ -1,9 +1,7 @@
-import chai, {expect} from "chai";
-import chaiAsPromised from "chai-as-promised";
+import "../setup.js";
+import {expect} from "chai";
 import {sleep} from "../../src/sleep.js";
 import {ErrorAborted} from "../../src/errors.js";
-
-chai.use(chaiAsPromised);
 
 describe("sleep", function () {
   it("Should resolve timeout", async function () {

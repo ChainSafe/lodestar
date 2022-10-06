@@ -48,6 +48,7 @@ export const SubcommitteeIndex = UintNum64;
  * ValidatorIndex is bounded by `VALIDATOR_REGISTRY_LIMIT`
  */
 export const ValidatorIndex = UintNum64;
+export const WithdrawalIndex = UintNum64;
 export const Gwei = UintBn64;
 export const Root = new ByteVectorType(32);
 

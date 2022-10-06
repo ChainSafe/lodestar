@@ -1,13 +1,10 @@
 import "mocha";
 import crypto from "node:crypto";
 import http from "node:http";
-import chai, {expect} from "chai";
-import chaiAsPromised from "chai-as-promised";
+import {expect} from "chai";
 import {JsonRpcHttpClient} from "../../../src/eth1/provider/jsonRpcHttpClient.js";
 import {getGoerliRpcUrl} from "../../testParams.js";
 import {IRpcPayload} from "../../../src/eth1/interface.js";
-
-chai.use(chaiAsPromised);
 
 describe("eth1 / jsonRpcHttpClient", function () {
   this.timeout("10 seconds");
@@ -156,7 +153,7 @@ describe("eth1 / jsonRpcHttpClient", function () {
   }
 });
 
-describe("eth1 / jsonRpcHttpClient - with retries", async function () {
+describe("eth1 / jsonRpcHttpClient - with retries", function () {
   this.timeout("10 seconds");
   const port = 36421;
   const noMethodError = {code: -32601, message: "Method not found"};

@@ -11,7 +11,7 @@ import {IValidatorCliArgs} from "../../../src/cmds/validator/options.js";
 import {SimulationParams, ValidatorConstructor, ValidatorProcess} from "./types.js";
 import {closeChildProcess, KEY_MANAGER_BASE_PORT, spawnProcessAndWait, __dirname} from "./utils.js";
 import {ExternalSignerServer} from "./ExternalSignerServer.js";
-
+/* eslint-disable no-console */
 // eslint-disable-next-line @typescript-eslint/naming-convention
 export const LodestarValidatorProcess: ValidatorConstructor = class LodestarValidatorProcess
   implements ValidatorProcess {
@@ -81,6 +81,7 @@ export const LodestarValidatorProcess: ValidatorConstructor = class LodestarVali
       logFile: join(this.params.logFilesDir, `${this.id}.log`),
       logFileLevel: "debug",
       logLevel: "info",
+      logFileDailyRotate: 0,
     } as unknown) as IValidatorCliArgs & IGlobalArgs;
 
     this.keyManagerApi = getClient(

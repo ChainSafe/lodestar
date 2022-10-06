@@ -519,7 +519,7 @@
       "targets": [
         {
           "exemplar": false,
-          "expr": "validator_monitor_validators_total",
+          "expr": "validator_monitor_validators",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
@@ -2797,7 +2797,7 @@
           }
         ],
         "hide": 0,
-        "name": "ByJob",
+        "name": "Filters",
         "skipUrlSync": false,
         "type": "adhoc"
       }

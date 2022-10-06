@@ -1,3 +1,4 @@
+import {Uint8ArrayList} from "uint8arraylist";
 import {ForkName} from "@lodestar/params";
 import {IForkDigestContext} from "@lodestar/config";
 import {RespStatus} from "../../../constants/index.js";
@@ -35,10 +36,10 @@ export function responseDecode(
     onFirstHeader: () => void;
     onFirstResponseChunk: () => void;
   }
-): (source: AsyncIterable<Buffer>) => AsyncIterable<IncomingResponseBody> {
+): (source: AsyncIterable<Uint8Array | Uint8ArrayList>) => AsyncIterable<IncomingResponseBody> {
   return async function* responseDecodeSink(source) {
     const contextBytesType = contextBytesTypeByProtocol(protocol);
-    const bufferedSource = new BufferedSource(source as AsyncGenerator<Buffer>);
+    const bufferedSource = new BufferedSource(source as AsyncGenerator<Uint8ArrayList>);
 
     let readFirstHeader = false;
     let readFirstResponseChunk = false;
@@ -108,21 +109,25 @@ export async function readResultHeader(bufferedSource: BufferedSource): Promise<
  */
 export async function readErrorMessage(bufferedSource: BufferedSource): Promise<string> {
   // Read at least 256 or wait for the stream to end
+  let length;
   for await (const buffer of bufferedSource) {
     // Wait for next chunk with bytes or for the stream to end
     // Note: The entire <error_message> is expected to be in the same chunk
     if (buffer.length >= 256) {
+      length = 256;
       break;
     }
+    length = buffer.length;
   }
 
-  const bytes = bufferedSource["buffer"].slice(0, 256);
+  const bytes = bufferedSource["buffer"].slice(0, length);
 
   try {
     return decodeErrorMessage(bytes);
   } catch {
     // Error message is optional and may not be included in the response stream
-    return bytes.toString("hex");
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+    return Buffer.prototype.toString.call(bytes, "hex");
   }
 }
 
@@ -150,7 +155,7 @@ export async function readForkName(
 /**
  * Consumes a stream source to read `<context-bytes>`, where it's a fixed-width 4 byte
  */
-export async function readContextBytesForkDigest(bufferedSource: BufferedSource): Promise<Buffer> {
+export async function readContextBytesForkDigest(bufferedSource: BufferedSource): Promise<Uint8Array> {
   for await (const buffer of bufferedSource) {
     if (buffer.length >= CONTEXT_BYTES_FORK_DIGEST_LENGTH) {
       const bytes = buffer.slice(0, CONTEXT_BYTES_FORK_DIGEST_LENGTH);

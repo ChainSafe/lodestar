@@ -1,13 +1,10 @@
-import chai, {expect} from "chai";
-import chaiAsPromised from "chai-as-promised";
+import {expect} from "chai";
 import {
   MinMaxSurround,
   MinMaxSurroundAttestation,
   SurroundAttestationError,
 } from "../../../../src/slashingProtection/minMaxSurround/index.js";
 import {DistanceStoreMemory, emptyPubkey} from "./utils.js";
-
-chai.use(chaiAsPromised);
 
 // Test values from prysmaticlabs/prysm
 // https://github.com/prysmaticlabs/prysm/blob/9e712e4598dce20b7b0786d46f64371bbd8cd3ca/slasher/detection/attestations/spanner_test.go#L270
