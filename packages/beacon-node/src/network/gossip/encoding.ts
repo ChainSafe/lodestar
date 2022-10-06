@@ -10,7 +10,7 @@ import {GossipTopicCache} from "./topic.js";
 
 // Use salt to prevent msgId from being mined for collisions
 const salt = Math.floor(Math.random() * 1000);
-const hashjs = xxhashjs.h32(salt);
+const hashjs = xxhashjs.h64(salt);
 
 /**
  * The function used to generate a gossipsub message id.
