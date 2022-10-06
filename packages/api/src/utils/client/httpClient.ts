@@ -7,10 +7,13 @@ import {Metrics} from "./metrics.js";
 /** A higher default timeout, validator will sets its own shorter timeoutMs */
 const DEFAULT_TIMEOUT_MS = 60_000;
 const DEFAULT_ROUTE_ID = "unknown";
-const URL_SCORE_MAX = 10;
-const URL_SCORE_MIN = 0;
-const URL_SCORE_DELTA_ERROR = 1;
+
 const URL_SCORE_DELTA_SUCCESS = 1;
+/** Require 2 success to recover from 1 failed request */
+const URL_SCORE_DELTA_ERROR = 2 * URL_SCORE_DELTA_SUCCESS;
+/** In case of continued errors, require 10 success to mark the URL as healthy */
+const URL_SCORE_MAX = 10 * URL_SCORE_DELTA_SUCCESS;
+const URL_SCORE_MIN = 0;
 
 export class HttpError extends Error {
   status: number;
@@ -100,12 +103,14 @@ export class HttpClient implements IHttpClient {
       throw Error("Must set at least 1 URL in HttpClient opts");
     }
 
+    // Initialize scores to max value to only query first URL on start
+    this.urlScore = this.urlOpts.map(() => URL_SCORE_MAX);
+
     this.globalTimeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
     this.getAbortSignal = opts.getAbortSignal;
     this.fetch = opts.fetch ?? fetch;
     this.metrics = metrics ?? null;
     this.logger = logger ?? null;
-    this.urlScore = [opts.baseUrl].map(() => 0);
   }
 
   async json<T>(opts: FetchOpts): Promise<T> {
@@ -126,46 +131,74 @@ export class HttpClient implements IHttpClient {
       return this.requestWithBody(this.urlOpts[0], opts, getBody);
     }
 
-    return new Promise<T>((resolve, reject) => {
-      let requestCount = 0;
-      let errorCount = 0;
+    let i = 0;
 
-      // Score each URL available
-      // If url[0] is good, only send to 0
-      // If url[0] has errors, send to both 0, 1, etc until finding a healthy URL
-      for (let i = 0; i < this.urlOpts.length; i++) {
-        const urlOpts = this.urlOpts[i];
-        requestCount++;
+    // Goals:
+    // - if first server is stable and responding do not query fallbacks
+    // - if first server errors, retry that same request on fallbacks
+    // - until first server is shown to be reliable again, contact all servers
 
-        if (requestCount > 0) {
-          const routeId = opts.routeId ?? DEFAULT_ROUTE_ID;
-          this.metrics?.requestToFallbacks.inc({routeId});
-          this.logger?.debug("Requesting fallback URL", {routeId, baseUrl: urlOpts.baseUrl, score: this.urlScore[i]});
-        }
+    // First loop: retry in sequence, query next URL only after previous errors
+    for (; i < this.urlOpts.length; i++) {
+      try {
+        return await new Promise<T>((resolve, reject) => {
+          let requestCount = 0;
+          let errorCount = 0;
 
-        this.requestWithBody(urlOpts, opts, getBody).then(
-          (res) => {
-            this.urlScore[i] = Math.min(URL_SCORE_MAX, this.urlScore[i] + URL_SCORE_DELTA_SUCCESS);
-            // Resolve immediately on success
-            resolve(res);
-          },
-          (err) => {
-            this.urlScore[i] = Math.max(URL_SCORE_MIN, this.urlScore[i] - URL_SCORE_DELTA_ERROR);
+          // Second loop: query all URLs up to the next healthy at once, racing them.
+          // Score each URL available:
+          // - If url[0] is good, only send to 0
+          // - If url[0] has recently errored, send to both 0, 1, etc until url[0] does not error for some time
+          for (; i < this.urlOpts.length; i++) {
+            const urlOpts = this.urlOpts[i];
+            const {baseUrl} = urlOpts;
+            const routeId = opts.routeId ?? DEFAULT_ROUTE_ID;
 
-            // Reject only when all queried URLs have errored
-            // TODO: Currently rejects with last error only, should join errors?
-            if (++errorCount >= requestCount) {
-              reject(err);
+            if (i > 0) {
+              this.metrics?.requestToFallbacks.inc({routeId});
+              this.logger?.debug("Requesting fallback URL", {routeId, baseUrl, score: this.urlScore[i]});
+            }
+
+            // eslint-disable-next-line @typescript-eslint/naming-convention
+            const i_ = i; // Keep local copy of i variable to index urlScore after requestWithBody() resolves
+
+            this.requestWithBody(urlOpts, opts, getBody).then(
+              (res) => {
+                this.urlScore[i_] = Math.min(URL_SCORE_MAX, this.urlScore[i_] + URL_SCORE_DELTA_SUCCESS);
+                // Resolve immediately on success
+                resolve(res);
+              },
+              (err) => {
+                this.urlScore[i_] = Math.max(URL_SCORE_MIN, this.urlScore[i_] - URL_SCORE_DELTA_ERROR);
+
+                // Reject only when all queried URLs have errored
+                // TODO: Currently rejects with last error only, should join errors?
+                if (++errorCount >= requestCount) {
+                  reject(err);
+                } else {
+                  this.logger?.debug("Request error, retrying", {routeId, baseUrl}, err);
+                }
+              }
+            );
+
+            requestCount++;
+
+            // Do not query URLs after a healthy URL
+            if (this.urlScore[i] >= URL_SCORE_MAX) {
+              break;
             }
           }
-        );
-
-        // Do not query URLs after a healthy URL
-        if (this.urlScore[i] > URL_SCORE_MAX) {
-          break;
+        });
+      } catch (e) {
+        if (i >= this.urlOpts.length - 1) {
+          throw e;
+        } else {
+          this.logger?.debug("Request error, retrying", {}, e as Error);
         }
       }
-    });
+    }
+
+    throw Error("loop ended without return or rejection");
   }
 
   private async requestWithBody<T>(
