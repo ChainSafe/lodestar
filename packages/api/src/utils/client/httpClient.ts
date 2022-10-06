@@ -6,6 +6,7 @@ import {Metrics} from "./metrics.js";
 
 /** A higher default timeout, validator will sets its own shorter timeoutMs */
 const DEFAULT_TIMEOUT_MS = 60_000;
+const DEFAULT_ROUTE_ID = "unknown";
 const URL_SCORE_MAX = 10;
 const URL_SCORE_MIN = 0;
 const URL_SCORE_DELTA_ERROR = 1;
@@ -70,11 +71,11 @@ export class HttpClient implements IHttpClient {
   private readonly metrics: null | Metrics;
   private readonly logger: null | ILogger;
 
-  private readonly urls: URLOpts[] = [];
+  private readonly urlOpts: URLOpts[] = [];
   private readonly urlScore: number[];
 
   get baseUrl(): string {
-    return this.urls[0].baseUrl;
+    return this.urlOpts[0].baseUrl;
   }
 
   /**
@@ -82,7 +83,7 @@ export class HttpClient implements IHttpClient {
    */
   constructor(opts: HttpClientOptions, {logger, metrics}: HttpClientModules = {}) {
     if (opts.baseUrl) {
-      this.urls.push({
+      this.urlOpts.push({
         baseUrl: opts.baseUrl,
         bearerToken: opts.bearerToken,
         timeoutMs: opts.timeoutMs,
@@ -91,7 +92,7 @@ export class HttpClient implements IHttpClient {
 
     if (opts.urls) {
       for (const urlOpts of opts.urls) {
-        this.urls.push(urlOpts);
+        this.urlOpts.push(urlOpts);
       }
     }
 
@@ -123,10 +124,17 @@ export class HttpClient implements IHttpClient {
       // Score each URL available
       // If url[0] is good, only send to 0
       // If url[0] has errors, send to both 0, 1, etc until finding a healthy URL
-      for (let i = 0; i < this.urls.length; i++) {
+      for (let i = 0; i < this.urlOpts.length; i++) {
+        const urlOpts = this.urlOpts[i];
         requestCount++;
 
-        this.requestWithBody(this.urls[i], opts, getBody).then(
+        if (requestCount > 0) {
+          const routeId = opts.routeId ?? DEFAULT_ROUTE_ID;
+          this.metrics?.requestToFallbacks.inc({routeId});
+          this.logger?.debug("Requesting fallback URL", {routeId, baseUrl: urlOpts.baseUrl, score: this.urlScore[i]});
+        }
+
+        this.requestWithBody(urlOpts, opts, getBody).then(
           (res) => {
             this.urlScore[i] = Math.min(URL_SCORE_MAX, this.urlScore[i] + URL_SCORE_DELTA_SUCCESS);
             // Resolve immediately on success
@@ -167,7 +175,7 @@ export class HttpClient implements IHttpClient {
     const signalGlobal = this.getAbortSignal?.();
     signalGlobal?.addEventListener("abort", onGlobalSignalAbort);
 
-    const routeId = opts.routeId ?? "unknown";
+    const routeId = opts.routeId ?? DEFAULT_ROUTE_ID;
     const timer = this.metrics?.requestTime.startTimer({routeId});
 
     try {
