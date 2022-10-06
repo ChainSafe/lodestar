@@ -4,6 +4,13 @@ import {ReqGeneric, RouteDef} from "../index.js";
 import {stringifyQuery, urlJoin} from "./format.js";
 import {Metrics} from "./metrics.js";
 
+/** A higher default timeout, validator will sets its own shorter timeoutMs */
+const DEFAULT_TIMEOUT_MS = 60_000;
+const URL_SCORE_MAX = 10;
+const URL_SCORE_MIN = 0;
+const URL_SCORE_DELTA_ERROR = 1;
+const URL_SCORE_DELTA_SUCCESS = 1;
+
 export class HttpError extends Error {
   status: number;
   url: string;
@@ -13,6 +20,12 @@ export class HttpError extends Error {
     this.status = status;
     this.url = url;
   }
+}
+
+export interface URLOpts {
+  baseUrl: string;
+  timeoutMs?: number;
+  bearerToken?: string;
 }
 
 export type FetchOpts = {
@@ -37,6 +50,8 @@ export type HttpClientOptions = {
   baseUrl: string;
   timeoutMs?: number;
   bearerToken?: string;
+  /** For fallback support, overrides baseUrl */
+  urls?: URLOpts[];
   /** Return an AbortSignal to be attached to all requests */
   getAbortSignal?: () => AbortSignal | undefined;
   /** Override fetch function */
@@ -49,62 +64,121 @@ export type HttpClientModules = {
 };
 
 export class HttpClient implements IHttpClient {
-  readonly baseUrl: string;
-  private readonly timeoutMs: number;
-  private readonly bearerToken?: string;
+  private readonly globalTimeoutMs: number;
   private readonly getAbortSignal?: () => AbortSignal | undefined;
   private readonly fetch: typeof fetch;
   private readonly metrics: null | Metrics;
   private readonly logger: null | ILogger;
 
+  private readonly urls: URLOpts[] = [];
+  private readonly urlScore: number[];
+
+  get baseUrl(): string {
+    return this.urls[0].baseUrl;
+  }
+
   /**
    * timeoutMs = config.params.SECONDS_PER_SLOT * 1000
    */
   constructor(opts: HttpClientOptions, {logger, metrics}: HttpClientModules = {}) {
-    this.baseUrl = opts.baseUrl;
-    // A higher default timeout, validator will sets its own shorter timeoutMs
-    this.timeoutMs = opts.timeoutMs ?? 60_000;
-    this.bearerToken = opts.bearerToken;
+    if (opts.baseUrl) {
+      this.urls.push({
+        baseUrl: opts.baseUrl,
+        bearerToken: opts.bearerToken,
+        timeoutMs: opts.timeoutMs,
+      });
+    }
+
+    if (opts.urls) {
+      for (const urlOpts of opts.urls) {
+        this.urls.push(urlOpts);
+      }
+    }
+
+    this.globalTimeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
     this.getAbortSignal = opts.getAbortSignal;
     this.fetch = opts.fetch ?? fetch;
     this.metrics = metrics ?? null;
     this.logger = logger ?? null;
+    this.urlScore = [opts.baseUrl].map(() => 0);
   }
 
   async json<T>(opts: FetchOpts): Promise<T> {
-    return await this.requestWithBody<T>(opts, (res) => res.json() as Promise<T>);
+    return await this.requestWithBodyWithRetries<T>(opts, (res) => res.json() as Promise<T>);
   }
 
   async request(opts: FetchOpts): Promise<void> {
-    return await this.requestWithBody<void>(opts, async (_res) => void 0);
+    return await this.requestWithBodyWithRetries<void>(opts, async (_res) => void 0);
   }
 
   async arrayBuffer(opts: FetchOpts): Promise<ArrayBuffer> {
-    return await this.requestWithBody<ArrayBuffer>(opts, (res) => res.arrayBuffer());
+    return await this.requestWithBodyWithRetries<ArrayBuffer>(opts, (res) => res.arrayBuffer());
   }
 
-  private async requestWithBody<T>(opts: FetchOpts, getBody: (res: Response) => Promise<T>): Promise<T> {
+  private async requestWithBodyWithRetries<T>(opts: FetchOpts, getBody: (res: Response) => Promise<T>): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+      let requestCount = 0;
+      let errorCount = 0;
+
+      // Score each URL available
+      // If url[0] is good, only send to 0
+      // If url[0] has errors, send to both 0, 1, etc until finding a healthy URL
+      for (let i = 0; i < this.urls.length; i++) {
+        requestCount++;
+
+        this.requestWithBody(this.urls[i], opts, getBody).then(
+          (res) => {
+            this.urlScore[i] = Math.min(URL_SCORE_MAX, this.urlScore[i] + URL_SCORE_DELTA_SUCCESS);
+            // Resolve immediately on success
+            resolve(res);
+          },
+          (err) => {
+            this.urlScore[i] = Math.max(URL_SCORE_MIN, this.urlScore[i] - URL_SCORE_DELTA_ERROR);
+
+            // Reject only when all queried URLs have errored
+            // TODO: Currently rejects with last error only, should join errors?
+            if (++errorCount >= requestCount) {
+              reject(err);
+            }
+          }
+        );
+
+        // Do not query URLs after a healthy URL
+        if (this.urlScore[i] > URL_SCORE_MAX) {
+          break;
+        }
+      }
+    });
+  }
+
+  private async requestWithBody<T>(
+    urlOpts: URLOpts,
+    opts: FetchOpts,
+    getBody: (res: Response) => Promise<T>
+  ): Promise<T> {
+    const {baseUrl, bearerToken, timeoutMs = DEFAULT_TIMEOUT_MS} = urlOpts;
+
     // Implement fetch timeout
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), opts.timeoutMs ?? this.timeoutMs);
+    const timeout = setTimeout(() => controller.abort(), opts.timeoutMs ?? timeoutMs ?? this.globalTimeoutMs);
 
     // Attach global signal to this request's controller
     const onGlobalSignalAbort = controller.abort.bind(controller);
     const signalGlobal = this.getAbortSignal?.();
     signalGlobal?.addEventListener("abort", onGlobalSignalAbort);
 
-    const routeId = opts.routeId; // TODO: Should default to "unknown"?
+    const routeId = opts.routeId ?? "unknown";
     const timer = this.metrics?.requestTime.startTimer({routeId});
 
     try {
-      const url = urlJoin(this.baseUrl, opts.url) + (opts.query ? "?" + stringifyQuery(opts.query) : "");
+      const url = urlJoin(baseUrl, opts.url) + (opts.query ? "?" + stringifyQuery(opts.query) : "");
 
       const headers = opts.headers || {};
       if (opts.body && headers["Content-Type"] === undefined) {
         headers["Content-Type"] = "application/json";
       }
-      if (this.bearerToken && headers["Authorization"] === undefined) {
-        headers["Authorization"] = `Bearer ${this.bearerToken}`;
+      if (bearerToken && headers["Authorization"] === undefined) {
+        headers["Authorization"] = `Bearer ${bearerToken}`;
       }
 
       this.logger?.debug("HttpClient request", {routeId});
