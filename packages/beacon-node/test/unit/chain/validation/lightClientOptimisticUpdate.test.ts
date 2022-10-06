@@ -1,8 +1,10 @@
 import {expect} from "chai";
+import sinon from "sinon";
 import {createIBeaconConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
 import {altair, ssz} from "@lodestar/types";
 
+import {computeTimeAtSlot} from "@lodestar/state-transition";
 import {generateEmptySignedBlock} from "../../../utils/block.js";
 import {MockBeaconChain} from "../../../utils/mocks/chain/chain.js";
 import {generateState} from "../../../utils/state.js";
@@ -11,8 +13,13 @@ import {LightClientErrorCode} from "../../../../src/chain/errors/lightClientErro
 import {IBeaconChain} from "../../../../src/chain/index.js";
 
 describe("Light Client Optimistic Update validation", function () {
+  let fakeClock: sinon.SinonFakeTimers;
   const afterEachCallbacks: (() => Promise<void> | void)[] = [];
+  beforeEach(() => {
+    fakeClock = sinon.useFakeTimers();
+  });
   afterEach(async () => {
+    fakeClock.restore();
     while (afterEachCallbacks.length > 0) {
       const callback = afterEachCallbacks.pop();
       if (callback) await callback();
@@ -89,5 +96,33 @@ describe("Light Client Optimistic Update validation", function () {
       LightClientErrorCode.OPTIMISTIC_UPDATE_NOT_MATCHING_LOCAL,
       "Expected LightClientErrorCode.OPTIMISTIC_UPDATE_NOT_MATCHING_LOCAL to be thrown"
     );
+  });
+
+  it("should not throw for valid update", async () => {
+    const lightclientOptimisticUpdate: altair.LightClientOptimisticUpdate = ssz.altair.LightClientOptimisticUpdate.defaultValue();
+    const chain = mockChain();
+
+    // satisfy:
+    // No other optimistic_update with a lower or equal attested_header.slot was already forwarded on the network
+    lightclientOptimisticUpdate.attestedHeader.slot = 2;
+    chain.lightClientServer.latestForwardedOptimisticSlot = 1;
+
+    // satisfy:
+    // [IGNORE] The optimistic_update is received after the block at signature_slot was given enough time to propagate
+    // through the network -- i.e. validate that one-third of optimistic_update.signature_slot has transpired
+    // (SECONDS_PER_SLOT / INTERVALS_PER_SLOT seconds after the start of the slot, with a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance)
+    const timeAtSignatureSlot =
+      computeTimeAtSlot(config, lightclientOptimisticUpdate.signatureSlot, chain.genesisTime) * 1000;
+    fakeClock.tick(timeAtSignatureSlot + (1 / 3) * (config.SECONDS_PER_SLOT + 1) * 1000);
+
+    // satisfy:
+    // [IGNORE] The received optimistic_update matches the locally computed one exactly
+    chain.lightClientServer.getOptimisticUpdate = () => {
+      return lightclientOptimisticUpdate;
+    };
+
+    expect(() => {
+      validateLightClientOptimisticUpdate(config, chain, lightclientOptimisticUpdate);
+    }).to.not.throw("Expected validateLightclientOptimisticUpdate not to throw");
   });
 });
