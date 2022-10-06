@@ -866,7 +866,7 @@ async function extractPreviousFinOrWsCheckpoint(
   )[0];
 
   let prevFinalizedCheckpointBlock: BackfillBlockHeader;
-  if (nextPrevFinOrWsBlock !== null) {
+  if (nextPrevFinOrWsBlock !== undefined) {
     const header = blockToHeader(config, nextPrevFinOrWsBlock.message);
     const root = ssz.phase0.BeaconBlockHeader.hashTreeRoot(header);
     prevFinalizedCheckpointBlock = {root, slot: nextPrevFinOrWsBlock.message.slot};
