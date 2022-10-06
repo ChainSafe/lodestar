@@ -318,7 +318,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
       //       parent of
       //       the anchorBlock via strategy a) as it could be multiple skipped/orphaned slots
       //       behind
-      if (this.syncAnchor.lastBackSyncedBlock != null) {
+      if (this.syncAnchor.lastBackSyncedBlock !== null) {
         // If after a previous sync round:
         //   lastBackSyncedBlock.slot < prevFinalizedCheckpointBlock.slot
         // then it means the prevFinalizedCheckpoint block has been missed because in each
@@ -503,10 +503,10 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
    * the initialization point is the same block tree as the DB once backfill
    */
   private async checkIfCheckpointSyncedAndValidate(): Promise<void> {
-    if (this.syncAnchor.lastBackSyncedBlock == null) {
+    if (this.syncAnchor.lastBackSyncedBlock === null) {
       throw Error("Invalid lastBackSyncedBlock for checkpoint validation");
     }
-    if (this.wsCheckpointHeader == null) {
+    if (this.wsCheckpointHeader === null) {
       throw Error("Invalid null checkpoint for validation");
     }
     if (this.wsValidated) return;
@@ -581,7 +581,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
             // we only need to check if prevFinalizedCheckpointBlock is in db
             const prevBackfillCpBlock = await this.db.blockArchive.getByRoot(this.prevFinalizedCheckpointBlock.root);
             if (
-              prevBackfillCpBlock != null &&
+              prevBackfillCpBlock !== null &&
               this.prevFinalizedCheckpointBlock.slot === prevBackfillCpBlock.message.slot
             ) {
               this.logger.verbose("Validated current prevFinalizedCheckpointBlock", {
@@ -744,7 +744,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
 
   private async syncBlockByRoot(peer: PeerId, anchorBlockRoot: Root): Promise<void> {
     const [anchorBlock] = await this.network.reqResp.beaconBlocksByRoot(peer, [anchorBlockRoot]);
-    if (anchorBlock == null) throw new Error("InvalidBlockSyncedFromPeer");
+    if (anchorBlock === null) throw new Error("InvalidBlockSyncedFromPeer");
 
     // GENESIS_SLOT doesn't has valid signature
     if (anchorBlock.message.slot === GENESIS_SLOT) return;
@@ -866,7 +866,7 @@ async function extractPreviousFinOrWsCheckpoint(
   )[0];
 
   let prevFinalizedCheckpointBlock: BackfillBlockHeader;
-  if (nextPrevFinOrWsBlock != null) {
+  if (nextPrevFinOrWsBlock !== null) {
     const header = blockToHeader(config, nextPrevFinOrWsBlock.message);
     const root = ssz.phase0.BeaconBlockHeader.hashTreeRoot(header);
     prevFinalizedCheckpointBlock = {root, slot: nextPrevFinOrWsBlock.message.slot};

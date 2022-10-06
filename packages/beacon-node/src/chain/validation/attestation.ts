@@ -33,7 +33,7 @@ export async function validateGossipAttestation(
   const attTarget = attData.target;
   const targetEpoch = attTarget.epoch;
 
-  // [REJECT] The attestation's epoch matches its target -- i.e. attestation.data.target.epoch == compute_epoch_at_slot(attestation.data.slot)
+  // [REJECT] The attestation's epoch matches its target -- i.e. attestation.data.target.epoch === compute_epoch_at_slot(attestation.data.slot)
   if (targetEpoch !== attEpoch) {
     throw new AttestationError(GossipAction.REJECT, {
       code: AttestationErrorCode.BAD_TARGET_EPOCH,
@@ -46,7 +46,7 @@ export async function validateGossipAttestation(
   verifyPropagationSlotRange(chain, attSlot);
 
   // [REJECT] The attestation is unaggregated -- that is, it has exactly one participating validator
-  // (len([bit for bit in attestation.aggregation_bits if bit]) == 1, i.e. exactly 1 bit is set).
+  // (len([bit for bit in attestation.aggregation_bits if bit]) === 1, i.e. exactly 1 bit is set).
   // > TODO: Do this check **before** getting the target state but don't recompute zipIndexes
   const aggregationBits = attestation.aggregationBits;
   const bitIndex = aggregationBits.getSingleTrueBit();
@@ -69,11 +69,11 @@ export async function validateGossipAttestation(
   // > Altready check in `verifyHeadBlockAndTargetRoot()`
 
   // [IGNORE] The current finalized_checkpoint is an ancestor of the block defined by attestation.data.beacon_block_root
-  // -- i.e. get_ancestor(store, attestation.data.beacon_block_root, compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)) == store.finalized_checkpoint.root
+  // -- i.e. get_ancestor(store, attestation.data.beacon_block_root, compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)) === store.finalized_checkpoint.root
   // > Altready check in `verifyHeadBlockAndTargetRoot()`
 
   // [REJECT] The attestation's target block is an ancestor of the block named in the LMD vote
-  //  --i.e. get_ancestor(store, attestation.data.beacon_block_root, compute_start_slot_at_epoch(attestation.data.target.epoch)) == attestation.data.target.root
+  //  --i.e. get_ancestor(store, attestation.data.beacon_block_root, compute_start_slot_at_epoch(attestation.data.target.epoch)) === attestation.data.target.root
   // > Altready check in `verifyHeadBlockAndTargetRoot()`
 
   const attHeadState = await chain.regen
@@ -93,7 +93,7 @@ export async function validateGossipAttestation(
   const validatorIndex = committeeIndices[bitIndex];
 
   // [REJECT] The number of aggregation bits matches the committee size
-  // -- i.e. len(attestation.aggregation_bits) == len(get_beacon_committee(state, data.slot, data.index)).
+  // -- i.e. len(attestation.aggregation_bits) === len(get_beacon_committee(state, data.slot, data.index)).
   // > TODO: Is this necessary? Lighthouse does not do this check
   if (aggregationBits.bitLen !== committeeIndices.length) {
     throw new AttestationError(GossipAction.REJECT, {
@@ -107,7 +107,7 @@ export async function validateGossipAttestation(
   //   The attestation is the first valid attestation received for the participating validator for the slot, attestation.data.slot.
 
   // [REJECT] The attestation is for the correct subnet
-  // -- i.e. compute_subnet_for_attestation(committees_per_slot, attestation.data.slot, attestation.data.index) == subnet_id,
+  // -- i.e. compute_subnet_for_attestation(committees_per_slot, attestation.data.slot, attestation.data.index) === subnet_id,
   // where committees_per_slot = get_committee_count_per_slot(state, attestation.data.target.epoch),
   // which may be pre-computed along with the committee information for the signature check.
   const expectedSubnet = attHeadState.epochCtx.computeSubnetForSlot(attSlot, attIndex);

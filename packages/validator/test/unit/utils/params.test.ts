@@ -13,7 +13,7 @@ const testCases: {name: string; items: [IChainConfig, Record<string, string>]}[]
 ];
 
 describe("utils / params / assertEqualParams", () => {
-  it("default == default", () => {
+  it("default === default", () => {
     const chainConfigJson = chainConfigToJson(chainConfig);
     assertEqualParams(chainConfig, chainConfigJson);
   });
@@ -35,7 +35,7 @@ describe("utils / params / assertEqualParams", () => {
   });
 
   for (const {name, items} of testCases) {
-    it(`${name} ropsten == lodestar ropsten`, () => {
+    it(`${name} ropsten === lodestar ropsten`, () => {
       assertEqualParams(items[0], items[1]);
     });
   }

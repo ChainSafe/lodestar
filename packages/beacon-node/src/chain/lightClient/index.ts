@@ -477,7 +477,7 @@ export class LightClientServer {
 
     // Emit update
     // - At the earliest: 6 second after the slot start
-    // - After a new update has INCREMENT_THRESHOLD == 32 bits more than the previous emitted threshold
+    // - After a new update has INCREMENT_THRESHOLD === 32 bits more than the previous emitted threshold
     this.emitter.emit(ChainEvent.lightclientOptimisticUpdate, headerUpdate);
 
     // Persist latest best update for getLatestHeadUpdate()
@@ -533,7 +533,7 @@ export class LightClientServer {
       // Only checkpoint candidates are stored, and not all headers are guaranteed to be available
       const finalizedCheckpointRoot = attestedData.finalizedCheckpoint.root as Uint8Array;
       const finalizedHeader = await this.getFinalizedHeader(finalizedCheckpointRoot);
-      if (finalizedHeader && computeSyncPeriodAtSlot(finalizedHeader.slot) == syncPeriod) {
+      if (finalizedHeader && computeSyncPeriodAtSlot(finalizedHeader.slot) === syncPeriod) {
         // If finalizedHeader is available (should be most times) create a finalized update
         newPartialUpdate = {...attestedData, finalizedHeader, syncAggregate};
       } else {

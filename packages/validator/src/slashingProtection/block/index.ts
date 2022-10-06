@@ -24,7 +24,7 @@ export class SlashingProtectionBlockService {
   async checkAndInsertBlockProposal(pubkey: BLSPubkey, block: SlashingProtectionBlock): Promise<void> {
     const safeStatus = await this.checkBlockProposal(pubkey, block);
 
-    if (safeStatus != SafeStatus.SAME_DATA) {
+    if (safeStatus !== SafeStatus.SAME_DATA) {
       await this.insertBlockProposal(pubkey, block);
     }
 
@@ -50,7 +50,7 @@ export class SlashingProtectionBlockService {
       }
     }
 
-    // Refuse to sign any block with slot <= min(b.slot for b in data.signed_blocks if b.pubkey == proposer_pubkey),
+    // Refuse to sign any block with slot <= min(b.slot for b in data.signed_blocks if b.pubkey === proposer_pubkey),
     // except if it is a repeat signing as determined by the signing_root.
     // (spec v4, Slashing Protection Database Interchange Format)
     const minBlock = await this.blockBySlot.getFirst(pubkey);

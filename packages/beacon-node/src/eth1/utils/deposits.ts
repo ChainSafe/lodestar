@@ -23,7 +23,7 @@ export async function getDeposits<T>(
   }
 
   // Spec v0.12.2
-  // assert len(body.deposits) == min(MAX_DEPOSITS, state.eth1_data.deposit_count - state.eth1_deposit_index)
+  // assert len(body.deposits) === min(MAX_DEPOSITS, state.eth1_data.deposit_count - state.eth1_deposit_index)
   const depositsLen = Math.min(MAX_DEPOSITS, depositCount - depositIndex);
 
   const indexRange = {gte: depositIndex, lt: depositIndex + depositsLen};

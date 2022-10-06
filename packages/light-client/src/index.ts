@@ -562,7 +562,7 @@ export class Lightclient {
     };
 
     if (!existingNextSyncCommittee || isBetterUpdate(existingNextSyncCommittee, newNextSyncCommitteeStats)) {
-      this.logger.info("Stored SyncCommittee", {nextPeriod, replacedPrevious: existingNextSyncCommittee != null});
+      this.logger.info("Stored SyncCommittee", {nextPeriod, replacedPrevious: existingNextSyncCommittee !== null});
       this.emitter.emit(LightclientEvent.committee, updatePeriod);
       this.syncCommitteeByPeriod.set(nextPeriod, {
         ...newNextSyncCommitteeStats,

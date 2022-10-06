@@ -90,7 +90,7 @@ export async function initStateFromEth1({
     logger,
     signal,
     pendingStatus:
-      statePreGenesis && depositTree !== undefined && lastProcessedBlockNumber != null
+      statePreGenesis && depositTree !== undefined && lastProcessedBlockNumber !== null
         ? {state: statePreGenesis, depositTree, lastProcessedBlockNumber}
         : undefined,
   });
@@ -118,7 +118,7 @@ export async function initStateFromEth1({
 
     return genesisResult.state;
   } catch (e) {
-    if (builder.lastProcessedBlockNumber != null) {
+    if (builder.lastProcessedBlockNumber !== null) {
       logger.info("Persisting genesis state", {block: builder.lastProcessedBlockNumber});
 
       // Commit changed before serializing

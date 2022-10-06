@@ -40,7 +40,7 @@ export class KeymanagerRestApiServer extends RestApiServer {
       ...keymanagerRestApiServerOptsDefault,
       // optsArg is a Partial type, any of its properties can be undefined. If port is set to undefined,
       // it overrides the default port value in restApiOptionsDefault to be undefined.
-      ...Object.fromEntries(Object.entries(optsArg).filter(([_, v]) => v != null)),
+      ...Object.fromEntries(Object.entries(optsArg).filter(([_, v]) => v !== null)),
     };
 
     const apiTokenPath = path.join(opts.tokenDir ?? ".", apiTokenFileName);

@@ -76,7 +76,7 @@ export function computeWeakSubjectivityPeriodFromConstituents(
   const N = activeValidatorCount;
   // originally const t = Number(totalBalance / BigInt(N) / BigInt(ETH_TO_GWEI));
   // totalBalanceByIncrement = totalBalance / MAX_EFFECTIVE_BALANCE and MAX_EFFECTIVE_BALANCE = ETH_TO_GWEI atm
-  // we need to change this calculation just in case MAX_EFFECTIVE_BALANCE != ETH_TO_GWEI
+  // we need to change this calculation just in case MAX_EFFECTIVE_BALANCE !== ETH_TO_GWEI
   const t = Math.floor(totalBalanceByIncrement / N);
   const T = MAX_EFFECTIVE_BALANCE / ETH_TO_GWEI;
   const delta = churnLimit;

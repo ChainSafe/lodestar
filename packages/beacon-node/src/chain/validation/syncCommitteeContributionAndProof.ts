@@ -28,7 +28,7 @@ export async function validateSyncCommitteeGossipContributionAndProof(
     validatorIndex: contributionAndProof.aggregatorIndex,
   });
 
-  // [IGNORE] The contribution's slot is for the current slot, i.e. contribution.slot == current_slot.
+  // [IGNORE] The contribution's slot is for the current slot, i.e. contribution.slot === current_slot.
   // > Checked in validateGossipSyncCommitteeExceptSig()
 
   // [REJECT] The aggregator's validator index is in the declared subcommittee of the current sync committee

@@ -647,11 +647,11 @@ export class ValidatorStore {
   /** Prevent signing bad data sent by the Beacon node */
   private validateAttestationDuty(duty: routes.validator.AttesterDuty, data: phase0.AttestationData): void {
     if (duty.slot !== data.slot) {
-      throw Error(`Inconsistent duties during signing: duty.slot ${duty.slot} != att.slot ${data.slot}`);
+      throw Error(`Inconsistent duties during signing: duty.slot ${duty.slot} !== att.slot ${data.slot}`);
     }
-    if (duty.committeeIndex != data.index) {
+    if (duty.committeeIndex !== data.index) {
       throw Error(
-        `Inconsistent duties during signing: duty.committeeIndex ${duty.committeeIndex} != att.committeeIndex ${data.index}`
+        `Inconsistent duties during signing: duty.committeeIndex ${duty.committeeIndex} !== att.committeeIndex ${data.index}`
       );
     }
   }

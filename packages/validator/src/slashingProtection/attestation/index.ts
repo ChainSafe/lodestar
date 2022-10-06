@@ -39,7 +39,7 @@ export class SlashingProtectionAttestationService {
   async checkAndInsertAttestation(pubKey: BLSPubkey, attestation: SlashingProtectionAttestation): Promise<void> {
     const safeStatus = await this.checkAttestation(pubKey, attestation);
 
-    if (safeStatus != SafeStatus.SAME_DATA) {
+    if (safeStatus !== SafeStatus.SAME_DATA) {
       await this.insertAttestation(pubKey, attestation);
     }
 
@@ -97,8 +97,8 @@ export class SlashingProtectionAttestationService {
     }
 
     // Refuse to sign any attestation with:
-    // - source.epoch < min(att.source_epoch for att in data.signed_attestations if att.pubkey == attester_pubkey), OR
-    // - target_epoch <= min(att.target_epoch for att in data.signed_attestations if att.pubkey == attester_pubkey)
+    // - source.epoch < min(att.source_epoch for att in data.signed_attestations if att.pubkey === attester_pubkey), OR
+    // - target_epoch <= min(att.target_epoch for att in data.signed_attestations if att.pubkey === attester_pubkey)
     // (spec v4, Slashing Protection Database Interchange Format)
     const attestationLowerBound = await this.attestationLowerBound.get(pubKey);
     if (attestationLowerBound) {
@@ -147,7 +147,7 @@ export class SlashingProtectionAttestationService {
     // Pre-compute and store lower-bound
     const minSourceEpoch = minEpoch(attestations.map((attestation) => attestation.sourceEpoch));
     const minTargetEpoch = minEpoch(attestations.map((attestation) => attestation.targetEpoch));
-    if (minSourceEpoch != null && minTargetEpoch != null) {
+    if (minSourceEpoch !== null && minTargetEpoch !== null) {
       await this.attestationLowerBound.set(pubkey, {minSourceEpoch, minTargetEpoch});
     }
   }

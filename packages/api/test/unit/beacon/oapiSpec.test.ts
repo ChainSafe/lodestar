@@ -122,7 +122,7 @@ describe("eventstream event data", () => {
       const exampleDataJson = JSON.parse(exampleDataStr.slice(5).trim()) as unknown;
 
       const testEvent = eventTestData[topic as keyof typeof eventTestData];
-      if (testEvent == null) {
+      if (testEvent === null) {
         throw Error(`No eventTestData for ${topic}`);
       }
 

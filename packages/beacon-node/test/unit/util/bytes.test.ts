@@ -33,7 +33,7 @@ describe("util / bytes", () => {
     ];
 
     for (const {hex1, hex2, isEqual} of testCases) {
-      it(`${hex1} == ${hex2} -> ${isEqual}`, () => {
+      it(`${hex1} === ${hex2} -> ${isEqual}`, () => {
         expect(byteArrayEquals(fromHexString(hex1), fromHexString(hex2))).to.equal(isEqual);
       });
     }

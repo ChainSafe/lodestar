@@ -341,8 +341,9 @@ export class SimulationTracker {
 
   printNoesInfo(epoch?: Epoch): void {
     /* eslint-disable @typescript-eslint/naming-convention */
-    const minSlot = epoch != null ? this.clock.getFirstSlotOfEpoch(epoch) : 0;
-    const maxSlot = epoch != null ? this.clock.getLastSlotOfEpoch(epoch) : Math.max(...this.lastSeenSlot.values());
+    const minSlot = epoch !== undefined ? this.clock.getFirstSlotOfEpoch(epoch) : 0;
+    const maxSlot =
+      epoch !== undefined ? this.clock.getLastSlotOfEpoch(epoch) : Math.max(...this.lastSeenSlot.values());
     const records: Record<string, unknown>[] = [];
 
     for (let slot = minSlot; slot <= maxSlot; slot++) {

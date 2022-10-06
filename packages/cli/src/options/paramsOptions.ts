@@ -19,7 +19,9 @@ const getArgKey = (key: keyof IBeaconParamsUnparsed): string => `params.${key}`;
 export function parseBeaconParamsArgs(args: Record<string, string | number>): IBeaconParamsUnparsed {
   return ObjectKeys(chainConfigTypes).reduce((beaconParams: Partial<IBeaconParamsUnparsed>, key) => {
     const value = args[getArgKey(key)];
-    if (value != null) beaconParams[key] = value;
+    if (value !== undefined) {
+      beaconParams[key] = value;
+    }
     return beaconParams;
   }, {});
 }
@@ -46,7 +48,9 @@ export function parseTerminalPowArgs(args: ITerminalPowArgs): IBeaconParamsUnpar
   const parsedArgs = ObjectKeys(terminalArgsToParamsMap).reduce((beaconParams: Partial<IBeaconParamsUnparsed>, key) => {
     const paramOption = terminalArgsToParamsMap[key];
     const value = args[key];
-    if (paramOption != null && value != null) beaconParams[paramOption] = value;
+    if (paramOption !== undefined && value !== undefined) {
+      beaconParams[paramOption] = value;
+    }
     return beaconParams;
   }, {});
   return parsedArgs;

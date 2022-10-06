@@ -3,7 +3,7 @@ import {Bucket} from "./schema.js";
 export function getBucketNameByValue<T extends Bucket>(enumValue: T): keyof typeof Bucket {
   const keys = Object.keys(Bucket).filter((x) => {
     if (isNaN(parseInt(x))) {
-      return Bucket[x as keyof typeof Bucket] == enumValue;
+      return Bucket[x as keyof typeof Bucket] === enumValue;
     } else {
       return false;
     }

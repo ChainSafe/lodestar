@@ -104,8 +104,8 @@ export type Api = {
    * Get attester duties
    * Requests the beacon node to provide a set of attestation duties, which should be performed by validators, for a particular epoch.
    * Duties should only need to be checked once per epoch, however a chain reorganization (of > MIN_SEED_LOOKAHEAD epochs) could occur, resulting in a change of duties. For full safety, you should monitor head events and confirm the dependent root in this response matches:
-   * - event.previous_duty_dependent_root when `compute_epoch_at_slot(event.slot) == epoch`
-   * - event.current_duty_dependent_root when `compute_epoch_at_slot(event.slot) + 1 == epoch`
+   * - event.previous_duty_dependent_root when `compute_epoch_at_slot(event.slot) === epoch`
+   * - event.current_duty_dependent_root when `compute_epoch_at_slot(event.slot) + 1 === epoch`
    * - event.block otherwise
    * The dependent_root value is `get_block_root_at_slot(state, compute_start_slot_at_epoch(epoch - 1) - 1)` or the genesis block root in the case of underflow.
    * @param epoch Should only be allowed 1 epoch ahead
@@ -122,7 +122,7 @@ export type Api = {
    * Get block proposers duties
    * Request beacon node to provide all validators that are scheduled to propose a block in the given epoch.
    * Duties should only need to be checked once per epoch, however a chain reorganization could occur that results in a change of duties. For full safety, you should monitor head events and confirm the dependent root in this response matches:
-   * - event.current_duty_dependent_root when `compute_epoch_at_slot(event.slot) == epoch`
+   * - event.current_duty_dependent_root when `compute_epoch_at_slot(event.slot) === epoch`
    * - event.block otherwise
    * The dependent_root value is `get_block_root_at_slot(state, compute_start_slot_at_epoch(epoch) - 1)` or the genesis block root in the case of underflow.
    * @param epoch

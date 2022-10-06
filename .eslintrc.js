@@ -25,6 +25,7 @@ module.exports = {
   ],
   rules: {
     "prettier/prettier": "error",
+    "eqeqeq": ["error", "smart"],
     //doesnt work, it reports false errors
     "constructor-super": "off",
     "import/order": [

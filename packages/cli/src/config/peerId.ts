@@ -10,11 +10,11 @@ import {writeFile600Perm, readFile} from "../util/index.js";
 // See https://github.com/libp2p/js-libp2p-peer-id/pull/9 for more details
 
 async function createFromParts(multihash: Uint8Array, privKey?: Uint8Array, pubKey?: Uint8Array): Promise<PeerId> {
-  if (privKey != null) {
+  if (privKey !== undefined) {
     const key = await unmarshalPrivateKey(privKey);
 
     return await createFromPrivKey(key);
-  } else if (pubKey != null) {
+  } else if (pubKey !== undefined) {
     const key = unmarshalPublicKey(pubKey);
 
     return await createFromPubKey(key);
@@ -28,9 +28,9 @@ export type PeerIdJSON = {id: string; pubKey?: string; privKey?: string};
 export function exportToJSON(peerId: PeerId, excludePrivateKey?: boolean): PeerIdJSON {
   return {
     id: uint8ArrayToString(peerId.toBytes(), "base58btc"),
-    pubKey: peerId.publicKey != null ? uint8ArrayToString(peerId.publicKey, "base64pad") : undefined,
+    pubKey: peerId.publicKey !== undefined ? uint8ArrayToString(peerId.publicKey, "base64pad") : undefined,
     privKey:
-      excludePrivateKey === true || peerId.privateKey == null
+      excludePrivateKey === true || peerId.privateKey === undefined
         ? undefined
         : uint8ArrayToString(peerId.privateKey, "base64pad"),
   };
@@ -39,8 +39,8 @@ export function exportToJSON(peerId: PeerId, excludePrivateKey?: boolean): PeerI
 export async function createFromJSON(obj: PeerIdJSON): Promise<PeerId> {
   return await createFromParts(
     uint8ArrayFromString(obj.id, "base58btc"),
-    obj.privKey != null ? uint8ArrayFromString(obj.privKey, "base64pad") : undefined,
-    obj.pubKey != null ? uint8ArrayFromString(obj.pubKey, "base64pad") : undefined
+    obj.privKey !== undefined ? uint8ArrayFromString(obj.privKey, "base64pad") : undefined,
+    obj.pubKey !== undefined ? uint8ArrayFromString(obj.pubKey, "base64pad") : undefined
   );
 }
 

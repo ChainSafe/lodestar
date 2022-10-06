@@ -63,7 +63,7 @@ export function getBeaconStateApi({
       if (filters?.id) {
         for (const id of filters.id) {
           const validatorIndex = getStateValidatorIndex(id, state, pubkey2index);
-          if (validatorIndex != null) {
+          if (validatorIndex !== undefined) {
             const validator = validators.getReadonly(validatorIndex);
             if (filters.status && !filters.status.includes(getValidatorStatus(validator, currentEpoch))) {
               continue;
@@ -108,7 +108,7 @@ export function getBeaconStateApi({
       const {pubkey2index} = chain.getHeadState().epochCtx;
 
       const validatorIndex = getStateValidatorIndex(validatorId, state, pubkey2index);
-      if (validatorIndex == null) {
+      if (validatorIndex === undefined) {
         throw new ApiError(404, "Validator not found");
       }
 
@@ -137,7 +137,7 @@ export function getBeaconStateApi({
             balances.push({index: id, balance: state.balances.get(id)});
           } else {
             const index = headState.epochCtx.pubkey2index.get(id);
-            if (index != null && index <= state.validators.length) {
+            if (index !== undefined && index <= state.validators.length) {
               balances.push({index, balance: state.balances.get(index)});
             }
           }

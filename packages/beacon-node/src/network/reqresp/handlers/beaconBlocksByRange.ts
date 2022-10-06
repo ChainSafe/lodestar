@@ -113,5 +113,5 @@ async function getUnfinalizedBlocksAtSlots(
   const unfinalizedBlocks = await Promise.all(slots.map((slot) => blockRootsPerSlot.get(slot)));
   return unfinalizedBlocks
     .map((block, i) => ({bytes: block, slot: slots[i]}))
-    .filter((p2pBlock): p2pBlock is ReqRespBlockResponse => p2pBlock.bytes != null);
+    .filter((p2pBlock): p2pBlock is ReqRespBlockResponse => p2pBlock.bytes !== null);
 }

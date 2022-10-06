@@ -157,7 +157,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       });
 
       const balance = await getBalance(jsonRpcUrl, "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
-      if (balance != "0x0") throw new Error("Invalid Balance: " + balance);
+      if (balance !== "0x0") throw new Error("Invalid Balance: " + balance);
     }
 
     const controller = new AbortController();
@@ -201,7 +201,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       if (payload.transactions.length !== 1)
         throw new Error("Expected a simple transaction to be in the fetched payload");
       const balance = await getBalance(jsonRpcUrl, "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
-      if (balance != "0x0") throw new Error("Invalid Balance: " + balance);
+      if (balance !== "0x0") throw new Error("Invalid Balance: " + balance);
     }
 
     // 3. Execute the payload

@@ -89,7 +89,7 @@ export async function selfSlashProposerHandler(args: SelfSlashArgs): Promise<voi
         try {
           const validatorPkHex = toHexString(validator.pubkey);
           if (validatorPkHex !== pkHex) {
-            throw Error(`getStateValidators did not return same validator pubkey: ${validatorPkHex} != ${pkHex}`);
+            throw Error(`getStateValidators did not return same validator pubkey: ${validatorPkHex} !== ${pkHex}`);
           }
 
           if (status === "active_slashed" || status === "exited_slashed") {

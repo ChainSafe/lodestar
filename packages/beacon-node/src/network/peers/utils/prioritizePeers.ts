@@ -311,7 +311,7 @@ function pruneExcessPeers({
       // If we have successfully found a candidate peer to prune, prune it,
       // otherwise all peers on this subnet should not be removed.
       // In this case, we remove all peers from the pruning logic and try another subnet.
-      if (removedPeer != null) {
+      if (removedPeer !== null) {
         // recalculate variables
         removePeerFromSubnetToPeers(subnetToPeers, removedPeer);
         decreaseSynccommitteePeerCount(syncCommitteePeerCount, removedPeer.syncnetsTrueBitIndices);

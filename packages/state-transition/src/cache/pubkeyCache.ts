@@ -59,7 +59,7 @@ export function syncPubkeys(
   index2pubkey: Index2PubkeyCache
 ): void {
   if (pubkey2index.size !== index2pubkey.length) {
-    throw new Error(`Pubkey indices have fallen out of sync: ${pubkey2index.size} != ${index2pubkey.length}`);
+    throw new Error(`Pubkey indices have fallen out of sync: ${pubkey2index.size} !== ${index2pubkey.length}`);
   }
 
   // Get the validators sub tree once for all the loop

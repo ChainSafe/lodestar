@@ -70,7 +70,7 @@ export async function validateGossipBlock(
   }
 
   // [REJECT] The current finalized_checkpoint is an ancestor of block -- i.e.
-  // get_ancestor(store, block.parent_root, compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)) == store.finalized_checkpoint.root
+  // get_ancestor(store, block.parent_root, compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)) === store.finalized_checkpoint.root
   const parentRoot = toHexString(block.parentRoot);
   const parentBlock = chain.forkChoice.getBlockHex(parentRoot);
   if (parentBlock === null) {
@@ -94,7 +94,7 @@ export async function validateGossipBlock(
   // single bad block can trigger
   // Note: Ensure this check is done before calling chain.regen.getBlockSlotStat as this is the function that does various epoch transitions.
   // Note: This validation check is not part of the spec.
-  if (chain.opts.maxSkipSlots != null && parentBlock.slot + chain.opts.maxSkipSlots < blockSlot) {
+  if (chain.opts.maxSkipSlots !== undefined && parentBlock.slot + chain.opts.maxSkipSlots < blockSlot) {
     throw new BlockGossipError(GossipAction.IGNORE, {
       code: BlockErrorCode.TOO_MANY_SKIPPED_SLOTS,
       parentSlot: parentBlock.slot,
@@ -124,7 +124,7 @@ export async function validateGossipBlock(
 
   // Extra conditions for merge fork blocks
   // [REJECT] The block's execution payload timestamp is correct with respect to the slot
-  // -- i.e. execution_payload.timestamp == compute_timestamp_at_slot(state, block.slot).
+  // -- i.e. execution_payload.timestamp === compute_timestamp_at_slot(state, block.slot).
   if (fork === ForkName.bellatrix) {
     if (!isExecutionBlockBodyType(block.body)) throw Error("Not merge block type");
     const executionPayload = block.body.executionPayload;

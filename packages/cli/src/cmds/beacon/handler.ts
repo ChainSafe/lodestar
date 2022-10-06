@@ -44,7 +44,7 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
     process.kill(process.pid, "SIGINT");
   };
 
-  if (ACTIVE_PRESET === PresetName.minimal) logger.info("ACTIVE_PRESET == minimal preset");
+  if (ACTIVE_PRESET === PresetName.minimal) logger.info("ACTIVE_PRESET === minimal preset");
 
   // additional metrics registries
   const metricsRegistries: Registry[] = [];
@@ -151,16 +151,16 @@ export async function beaconHandlerInit(args: IBeaconArgs & IGlobalArgs) {
 
 export function overwriteEnrWithCliArgs(enr: ENR, args: IBeaconArgs): void {
   // TODO: Not sure if we should propagate this options to the ENR
-  if (args.port != null) enr.tcp = args.port;
+  if (args.port !== null) enr.tcp = args.port;
   // TODO: reenable this once we fix the below discv5 issue
   // See https://github.com/ChainSafe/discv5/issues/201
-  // if (args.port != null) enr.udp = args.port;
-  if (args.discoveryPort != null) enr.udp = args.discoveryPort;
+  // if (args.port !== null) enr.udp = args.port;
+  if (args.discoveryPort !== null) enr.udp = args.discoveryPort;
 
-  if (args["enr.ip"] != null) enr.ip = args["enr.ip"];
-  if (args["enr.tcp"] != null) enr.tcp = args["enr.tcp"];
-  if (args["enr.udp"] != null) enr.udp = args["enr.udp"];
-  if (args["enr.ip6"] != null) enr.ip6 = args["enr.ip6"];
-  if (args["enr.tcp6"] != null) enr.tcp6 = args["enr.tcp6"];
-  if (args["enr.udp6"] != null) enr.udp6 = args["enr.udp6"];
+  if (args["enr.ip"] !== null) enr.ip = args["enr.ip"];
+  if (args["enr.tcp"] !== null) enr.tcp = args["enr.tcp"];
+  if (args["enr.udp"] !== null) enr.udp = args["enr.udp"];
+  if (args["enr.ip6"] !== null) enr.ip6 = args["enr.ip6"];
+  if (args["enr.tcp6"] !== null) enr.tcp6 = args["enr.tcp6"];
+  if (args["enr.udp6"] !== null) enr.udp6 = args["enr.udp6"];
 }

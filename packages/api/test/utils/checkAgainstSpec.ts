@@ -37,10 +37,10 @@ export function runTestCheckAgainstSpec(
       const routeData = routesData[routeId];
 
       before("route is defined", () => {
-        if (routeData == null) {
+        if (routeData === null) {
           throw Error(`No routeData for ${routeId}`);
         }
-        if (testData == null) {
+        if (testData === null) {
           throw Error(`No testData for ${routeId}`);
         }
       });
@@ -50,7 +50,7 @@ export function runTestCheckAgainstSpec(
         expect(routeData.url).to.equal(routeSpec.url, "Wrong url");
       });
 
-      if (requestSchema != null) {
+      if (requestSchema !== null) {
         it(`${operationId}_request`, function () {
           const reqJson = reqSerializers[routeId].writeReq(...(testData.args as [never])) as unknown;
 

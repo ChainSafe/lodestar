@@ -9,7 +9,7 @@ import {pruneBySlot} from "./utils.js";
 /**
  * The number of slots that will be stored in the pool.
  *
- * For example, if `SLOTS_RETAINED == 3` and the pool is pruned at slot `6`, then all attestations
+ * For example, if `SLOTS_RETAINED === 3` and the pool is pruned at slot `6`, then all attestations
  * at slots less than `4` will be dropped and any future attestation with a slot less than `4`
  * will be refused.
  */

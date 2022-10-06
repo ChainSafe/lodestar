@@ -118,7 +118,7 @@ describe("Start from WSS", function () {
       bnStartingFromWSS.backfillSync,
       BackfillSyncEvent.completed,
       100000,
-      (slot) => slot == GENESIS_SLOT
+      (slot) => slot === GENESIS_SLOT
     );
 
     await connect(bnStartingFromWSS.network, bn.network.peerId, bn.network.localMultiaddrs);

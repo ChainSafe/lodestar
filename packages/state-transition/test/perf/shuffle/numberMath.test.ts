@@ -12,7 +12,7 @@ describe.skip("shuffle number math ops", () => {
     inputUint32Array[i] = i;
   }
 
-  itBench("if(i == 1)", () => {
+  itBench("if(i === 1)", () => {
     for (let i = 0; i < forRuns; i++) {
       if (i === 1) {
         //
@@ -28,9 +28,9 @@ describe.skip("shuffle number math ops", () => {
     }
   });
 
-  itBench("i == j", () => {
+  itBench("i === j", () => {
     for (let i = 0; i < forRuns; i++) {
-      i == j;
+      i === j;
     }
   });
 
@@ -42,13 +42,13 @@ describe.skip("shuffle number math ops", () => {
 
   itBench("bit opts", () => {
     for (let i = 0; i < forRuns; i++) {
-      (j & 0x7) == 0x7;
+      (j & 0x7) === 0x7;
     }
   });
 
   itBench("modulo", () => {
     for (let i = 0; i < forRuns; i++) {
-      j % 8 == 0;
+      j % 8 === 0;
     }
   });
 

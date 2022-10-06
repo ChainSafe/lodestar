@@ -230,7 +230,9 @@ export function createValidatorMonitor(
 
         const attestationMinBlockInclusionDistance = prevEpochSummary?.attestationMinBlockInclusionDistance;
         const inclusionDistance =
-          attestationMinBlockInclusionDistance != null && attestationMinBlockInclusionDistance > 0
+          attestationMinBlockInclusionDistance !== undefined &&
+          attestationMinBlockInclusionDistance !== null &&
+          attestationMinBlockInclusionDistance > 0
             ? // altair, attestation is not missed
               attestationMinBlockInclusionDistance
             : summary.inclusionDistance

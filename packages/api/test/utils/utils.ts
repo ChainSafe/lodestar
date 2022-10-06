@@ -21,7 +21,7 @@ export function getTestServer(): {baseUrl: string; server: FastifyInstance} {
   before("start server", async () => {
     await new Promise((resolve, reject) => {
       server.listen(port, function (err, address) {
-        if (err !== null && err != undefined) {
+        if (err !== null && err !== undefined) {
           reject(err);
         } else {
           resolve(address);

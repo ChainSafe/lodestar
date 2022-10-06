@@ -53,7 +53,7 @@ export function getPeerSyncType(
   else if (remote.finalizedEpoch > local.finalizedEpoch) {
     if (
       // Peer is in next epoch, and head is within range => SYNCED
-      (local.finalizedEpoch + 1 == remote.finalizedEpoch &&
+      (local.finalizedEpoch + 1 === remote.finalizedEpoch &&
         withinRangeOf(remote.headSlot, local.headSlot, slotImportTolerance)) ||
       // Peer's head is known => SYNCED
       forkChoice.hasBlock(remote.headRoot)
@@ -64,7 +64,7 @@ export function getPeerSyncType(
     }
   }
 
-  // remote.finalizedEpoch == local.finalizedEpoch
+  // remote.finalizedEpoch === local.finalizedEpoch
   else {
     // NOTE: if a peer has our same `finalizedEpoch` with a different `finalized_root`
     // they are not considered relevant and won't be propagated to sync.

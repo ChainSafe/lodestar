@@ -20,7 +20,7 @@ export async function validateGossipSyncCommittee(
   const headState = chain.getHeadState();
   const indexInSubcommittee = validateGossipSyncCommitteeExceptSig(chain, headState, subnet, syncCommittee);
 
-  // [IGNORE] The signature's slot is for the current slot, i.e. sync_committee_signature.slot == current_slot.
+  // [IGNORE] The signature's slot is for the current slot, i.e. sync_committee_signature.slot === current_slot.
   // > Checked in validateGossipSyncCommitteeExceptSig()
 
   // [REJECT] The subnet_id is valid for the given validator, i.e. subnet_id in compute_subnets_for_sync_committee(state,
@@ -75,7 +75,7 @@ export function validateGossipSyncCommitteeExceptSig(
   data: Pick<altair.SyncCommitteeMessage, "slot" | "validatorIndex">
 ): IndexInSubcommittee {
   const {slot, validatorIndex} = data;
-  // [IGNORE] The signature's slot is for the current slot, i.e. sync_committee_signature.slot == current_slot.
+  // [IGNORE] The signature's slot is for the current slot, i.e. sync_committee_signature.slot === current_slot.
   // (with a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance)
   if (!chain.clock.isCurrentSlotGivenGossipDisparity(slot)) {
     throw new SyncCommitteeError(GossipAction.IGNORE, {

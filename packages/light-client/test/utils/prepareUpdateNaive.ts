@@ -29,7 +29,7 @@ export async function prepareUpdateNaive(
   // signedHeader = update.header
   // ```
   // So if we have a finalized block with `finalityHeader` we need to find a state such that
-  // `state.getBlockRootAtSlot(state.slot - 1) == finalityHeader.root`, then find the block at `state.slot`
+  // `state.getBlockRootAtSlot(state.slot - 1) === finalityHeader.root`, then find the block at `state.slot`
 
   // ┌────────────────────────┐  block.syncAggregate   ┌───────────────────────────────────────────┐
   // │ syncCommitteeSignature │ ◀───────────────────── │          blockWithSyncAggregate           │

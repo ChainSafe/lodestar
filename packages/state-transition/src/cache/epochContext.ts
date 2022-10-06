@@ -365,7 +365,7 @@ export class EpochContext {
     }
 
     // TODO: describe issue. Compute progressive target balances
-    // Compute balances from zero, note this state could be mid-epoch so target balances != 0
+    // Compute balances from zero, note this state could be mid-epoch so target balances !== 0
     let previousTargetUnslashedBalanceIncrements = 0;
     let currentTargetUnslashedBalanceIncrements = 0;
 
@@ -553,7 +553,7 @@ export class EpochContext {
     const epoch = computeEpochAtSlot(slot);
     if (epoch !== this.currentShuffling.epoch) {
       throw new Error(
-        `Requesting beacon proposer for different epoch current shuffling: ${epoch} != ${this.currentShuffling.epoch}`
+        `Requesting beacon proposer for different epoch current shuffling: ${epoch} !== ${this.currentShuffling.epoch}`
       );
     }
     return this.proposers[slot % SLOTS_PER_EPOCH];

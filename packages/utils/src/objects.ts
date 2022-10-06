@@ -30,7 +30,7 @@ export function toExpectedCase(
 }
 
 function isObjectObject(val: unknown): boolean {
-  return val != null && typeof val === "object" && Array.isArray(val) === false;
+  return val !== null && typeof val === "object" && Array.isArray(val) === false;
 }
 
 export function isPlainObject(o: unknown): boolean {

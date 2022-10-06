@@ -1,5 +1,5 @@
 export function binarySearchLte<T>(items: T[], value: number, getter: (item: T) => number): T {
-  if (items.length == 0) {
+  if (items.length === 0) {
     throw new ErrorNoValues();
   }
 
