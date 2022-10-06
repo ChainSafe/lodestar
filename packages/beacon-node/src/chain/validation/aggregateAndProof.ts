@@ -34,7 +34,7 @@ export async function validateGossipAggregateAndProof(
   const attTarget = attData.target;
   const targetEpoch = attTarget.epoch;
 
-  // [REJECT] The attestation's epoch matches its target -- i.e. attestation.data.target.epoch === compute_epoch_at_slot(attestation.data.slot)
+  // [REJECT] The attestation's epoch matches its target -- i.e. attestation.data.target.epoch == compute_epoch_at_slot(attestation.data.slot)
   if (targetEpoch !== attEpoch) {
     throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.BAD_TARGET_EPOCH});
   }

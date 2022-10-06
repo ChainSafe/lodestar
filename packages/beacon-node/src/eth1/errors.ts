@@ -19,7 +19,7 @@ export enum Eth1ErrorCode {
 
   /** Attempted to insert a duplicate log for same index into the Eth1DepositsCache */
   DUPLICATE_DISTINCT_LOG = "ETH1_ERROR_DUPLICATE_DISTINCT_LOG",
-  /** Attempted to insert a log with index !== prev + 1 into the Eth1DepositsCache */
+  /** Attempted to insert a log with index != prev + 1 into the Eth1DepositsCache */
   NON_CONSECUTIVE_LOGS = "ETH1_ERROR_NON_CONSECUTIVE_LOGS",
   /** Expected a deposit log in the db for the index, missing log implies a corrupted db */
   MISSING_DEPOSIT_LOG = "ETH1_ERROR_MISSING_DEPOSIT_LOG",

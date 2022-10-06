@@ -53,7 +53,7 @@ export enum BlockErrorCode {
   INCORRECT_TIMESTAMP = "BLOCK_ERROR_INCORRECT_TIMESTAMP",
   /** executionPayload.gasUsed > executionPayload.gasLimit */
   TOO_MUCH_GAS_USED = "BLOCK_ERROR_TOO_MUCH_GAS_USED",
-  /** executionPayload.blockHash === executionPayload.parentHash */
+  /** executionPayload.blockHash == executionPayload.parentHash */
   SAME_PARENT_HASH = "BLOCK_ERROR_SAME_PARENT_HASH",
   /** Total size of executionPayload.transactions exceed a sane limit to prevent DOS attacks */
   TRANSACTIONS_TOO_BIG = "BLOCK_ERROR_TRANSACTIONS_TOO_BIG",

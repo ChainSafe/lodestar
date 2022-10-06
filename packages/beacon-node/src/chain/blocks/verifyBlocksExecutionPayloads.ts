@@ -224,7 +224,7 @@ export async function verifyBlocksExecutionPayload(
           return null;
         }));
 
-      // executionStatus will never === ExecutionStatus.PreMerge if it's the mergeBlock. But gotta make TS happy =D
+      // executionStatus will never == ExecutionStatus.PreMerge if it's the mergeBlock. But gotta make TS happy =D
       if (executionStatus === ExecutionStatus.PreMerge) {
         throw Error("Merge block must not have executionStatus === PreMerge");
       }
