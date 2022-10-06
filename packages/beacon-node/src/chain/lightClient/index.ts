@@ -276,7 +276,7 @@ export class LightClientServer {
    * - Has the most bits
    * - Signed header at the oldest slot
    */
-  async getUpdates(startPeriod: SyncPeriod, count: number): Promise<altair.LightClientUpdate[]> {
+  async getUpdates(startPeriod: SyncPeriod, count = 1): Promise<altair.LightClientUpdate[]> {
     const periods: number[] = Array.from({length: count}, (_ignored, i) => i + startPeriod);
     return await Promise.all(periods.map((period) => this.doGetUpdate(period)));
   }
