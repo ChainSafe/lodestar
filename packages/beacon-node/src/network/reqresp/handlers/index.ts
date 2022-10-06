@@ -1,4 +1,4 @@
-import {altair, phase0} from "@lodestar/types";
+import {altair, phase0, Root} from "@lodestar/types";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
 import {ReqRespBlockResponse} from "../types.js";
@@ -13,7 +13,7 @@ export type ReqRespHandlers = {
   onStatus(): AsyncIterable<phase0.Status>;
   onBeaconBlocksByRange(req: phase0.BeaconBlocksByRangeRequest): AsyncIterable<ReqRespBlockResponse>;
   onBeaconBlocksByRoot(req: phase0.BeaconBlocksByRootRequest): AsyncIterable<ReqRespBlockResponse>;
-  onLightClientBootstrap(req: altair.BlockRoot): AsyncIterable<altair.LightClientBootstrap>;
+  onLightClientBootstrap(req: Root): AsyncIterable<altair.LightClientBootstrap>;
   onLightClientUpdate(req: altair.LightClientUpdatesByRange): AsyncIterable<altair.LightClientUpdate>;
   onLightClientFinalityUpdate(): AsyncIterable<altair.LightClientFinalityUpdate>;
   onLightClientOptimisticUpdate(): AsyncIterable<altair.LightClientOptimisticUpdate>;

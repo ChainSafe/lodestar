@@ -1,6 +1,6 @@
 import {pipe} from "it-pipe";
 import all from "it-all";
-import {allForks} from "@lodestar/types";
+import {allForks, ssz} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
 import {
   Method,
@@ -12,15 +12,7 @@ import {
 } from "../../../../../src/network/reqresp/types.js";
 import {responseDecode} from "../../../../../src/network/reqresp/encoders/responseDecode.js";
 import {responseEncodeSuccess} from "../../../../../src/network/reqresp/encoders/responseEncode.js";
-import {
-  arrToSource,
-  createStatus,
-  generateDefaultLightClientBootstrap,
-  generateDefaultLightClientFinalityUpdate,
-  generateDefaultLightClientOptimisticUpdate,
-  generateDefaultLightClientUpdate,
-  generateEmptySignedBlocks,
-} from "../utils.js";
+import {arrToSource, createStatus, generateEmptySignedBlocks} from "../utils.js";
 import {expectIsEqualSszTypeArr} from "../../../../utils/ssz.js";
 import {config} from "../../../../utils/config.js";
 import {blocksToReqRespBlockResponses} from "../../../../utils/block.js";
@@ -34,10 +26,10 @@ describe("network / reqresp / encoders / responseTypes", () => {
     [Method.Metadata]: [],
     [Method.BeaconBlocksByRange]: [generateEmptySignedBlocks(2)],
     [Method.BeaconBlocksByRoot]: [generateEmptySignedBlocks(2)],
-    [Method.LightClientBootstrap]: [[generateDefaultLightClientBootstrap()]],
-    [Method.LightClientUpdate]: [generateDefaultLightClientUpdate()],
-    [Method.LightClientFinalityUpdate]: [[generateDefaultLightClientFinalityUpdate()]],
-    [Method.LightClientOptimisticUpdate]: [[generateDefaultLightClientOptimisticUpdate()]],
+    [Method.LightClientBootstrap]: [[ssz.altair.LightClientBootstrap.defaultValue()]],
+    [Method.LightClientUpdate]: [[ssz.altair.LightClientUpdate.defaultValue()]],
+    [Method.LightClientFinalityUpdate]: [[ssz.altair.LightClientFinalityUpdate.defaultValue()]],
+    [Method.LightClientOptimisticUpdate]: [[ssz.altair.LightClientOptimisticUpdate.defaultValue()]],
   };
 
   const encodings: Encoding[] = [Encoding.SSZ_SNAPPY];

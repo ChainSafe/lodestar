@@ -1,7 +1,7 @@
 import {expect} from "chai";
 import {Stream, StreamStat} from "@libp2p/interface-connection";
 import {Uint8ArrayList} from "uint8arraylist";
-import {Root, phase0, altair, ssz} from "@lodestar/types";
+import {Root, phase0} from "@lodestar/types";
 import {toHexString} from "@chainsafe/ssz";
 import {generateEmptySignedBlock} from "../../../utils/block.js";
 
@@ -35,22 +35,6 @@ export async function* arrToSource<T>(arr: T[]): AsyncGenerator<T> {
 
 export function generateEmptySignedBlocks(n = 3): phase0.SignedBeaconBlock[] {
   return Array.from({length: n}).map(() => generateEmptySignedBlock());
-}
-
-export function generateDefaultLightClientBootstrap(): altair.LightClientBootstrap {
-  return ssz.altair.LightClientBootstrap.defaultValue();
-}
-
-export function generateDefaultLightClientFinalityUpdate(): altair.LightClientFinalityUpdate {
-  return ssz.altair.LightClientFinalityUpdate.defaultValue();
-}
-
-export function generateDefaultLightClientOptimisticUpdate(): altair.LightClientOptimisticUpdate {
-  return ssz.altair.LightClientOptimisticUpdate.defaultValue();
-}
-
-export function generateDefaultLightClientUpdate(): altair.LightClientUpdate[] {
-  return [ssz.altair.LightClientUpdate.defaultValue()];
 }
 
 /**

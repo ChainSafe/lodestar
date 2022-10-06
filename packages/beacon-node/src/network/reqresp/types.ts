@@ -1,5 +1,5 @@
 import {ForkName} from "@lodestar/params";
-import {allForks, phase0, ssz, Slot, altair} from "@lodestar/types";
+import {allForks, phase0, ssz, Slot, altair, Root} from "@lodestar/types";
 
 export const protocolPrefix = "/eth2/beacon_chain/req";
 
@@ -118,7 +118,7 @@ export function getRequestSzzTypeByMethod(method: Method) {
     case Method.BeaconBlocksByRoot:
       return ssz.phase0.BeaconBlocksByRootRequest;
     case Method.LightClientBootstrap:
-      return ssz.altair.BlockRoot;
+      return ssz.Root;
     case Method.LightClientUpdate:
       return ssz.altair.LightClientUpdatesByRange;
   }
@@ -131,7 +131,7 @@ export type RequestBodyByMethod = {
   [Method.Metadata]: null;
   [Method.BeaconBlocksByRange]: phase0.BeaconBlocksByRangeRequest;
   [Method.BeaconBlocksByRoot]: phase0.BeaconBlocksByRootRequest;
-  [Method.LightClientBootstrap]: altair.BlockRoot;
+  [Method.LightClientBootstrap]: Root;
   [Method.LightClientUpdate]: altair.LightClientUpdatesByRange;
   [Method.LightClientFinalityUpdate]: null;
   [Method.LightClientOptimisticUpdate]: null;
