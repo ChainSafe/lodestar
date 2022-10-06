@@ -64,7 +64,7 @@ export function getPeerSyncType(
     }
   }
 
-  // remote.finalizedEpoch === local.finalizedEpoch
+  // remote.finalizedEpoch == local.finalizedEpoch
   else {
     // NOTE: if a peer has our same `finalizedEpoch` with a different `finalized_root`
     // they are not considered relevant and won't be propagated to sync.

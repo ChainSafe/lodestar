@@ -365,7 +365,7 @@ export class EpochContext {
     }
 
     // TODO: describe issue. Compute progressive target balances
-    // Compute balances from zero, note this state could be mid-epoch so target balances !== 0
+    // Compute balances from zero, note this state could be mid-epoch so target balances != 0
     let previousTargetUnslashedBalanceIncrements = 0;
     let currentTargetUnslashedBalanceIncrements = 0;
 

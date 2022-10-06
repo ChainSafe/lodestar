@@ -931,7 +931,7 @@ export class ProtoArray {
         nodeB = this.getNodeFromIndex(nodeB.parent);
       }
 
-      // If both node trees are at the same height, if same root === common ancestor.
+      // If both node trees are at the same height, if same root == common ancestor.
       // Otherwise, keep walking up until there's a match or no parent.
       else {
         if (nodeA.blockRoot === nodeB.blockRoot) {

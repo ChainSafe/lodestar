@@ -41,7 +41,7 @@ const surroundTests: {
     name: "Should NOT slash if max span === distance",
     attestation: {sourceEpoch: 3, targetEpoch: 6},
     // Given a distance of (6 - 3) = 3, we want the validator at epoch 3 to NOT
-    // have committed slashable offense by having a max span of 3 === distance.
+    // have committed slashable offense by having a max span of 3 == distance.
     shouldSlash: false,
     spansByEpoch: {
       3: [0, 3],
@@ -51,7 +51,7 @@ const surroundTests: {
     name: "Should NOT slash if min span === 0",
     attestation: {sourceEpoch: 3, targetEpoch: 6},
     // Given a min span of 0 and no max span slashing, we want validator to NOT
-    // have committed a slashable offense if min span === 0.
+    // have committed a slashable offense if min span == 0.
     shouldSlash: false,
     spansByEpoch: {
       3: [0, 1],

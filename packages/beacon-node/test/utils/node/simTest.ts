@@ -42,7 +42,7 @@ export function simTestInfoTracker(bn: BeaconNode, logger: ILogger): () => void 
 
   function logParticipation(state: CachedBeaconStateAllForks): void {
     // Compute participation (takes 5ms with 64 validators)
-    // Need a CachedBeaconStateAllForks where (state.slot + 1) % SLOTS_EPOCH === 0
+    // Need a CachedBeaconStateAllForks where (state.slot + 1) % SLOTS_EPOCH == 0
     const epochProcess = beforeProcessEpoch(state);
     const epoch = computeEpochAtSlot(state.slot);
 

@@ -60,7 +60,7 @@ export class DoppelgangerService {
     // There's no activity before genesis, so doppelganger is pointless.
     const remainingEpochs = currentEpoch <= 0 ? 0 : DEFAULT_REMAINING_DETECTION_EPOCHS;
 
-    // Log here to alert that validation won't be active until remainingEpochs === 0
+    // Log here to alert that validation won't be active until remainingEpochs == 0
     if (remainingEpochs > 0) {
       this.logger.info("Registered validator for doppelganger", {remainingEpochs, pubkeyHex});
     }

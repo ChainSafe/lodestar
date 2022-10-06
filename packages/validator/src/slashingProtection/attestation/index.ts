@@ -97,8 +97,8 @@ export class SlashingProtectionAttestationService {
     }
 
     // Refuse to sign any attestation with:
-    // - source.epoch < min(att.source_epoch for att in data.signed_attestations if att.pubkey === attester_pubkey), OR
-    // - target_epoch <= min(att.target_epoch for att in data.signed_attestations if att.pubkey === attester_pubkey)
+    // - source.epoch < min(att.source_epoch for att in data.signed_attestations if att.pubkey == attester_pubkey), OR
+    // - target_epoch <= min(att.target_epoch for att in data.signed_attestations if att.pubkey == attester_pubkey)
     // (spec v4, Slashing Protection Database Interchange Format)
     const attestationLowerBound = await this.attestationLowerBound.get(pubKey);
     if (attestationLowerBound) {

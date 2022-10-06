@@ -35,7 +35,7 @@ describe("validation", function () {
 
   before("prepare data", function () {
     // Update slot must > snapshot slot
-    // updatePeriod must === snapshotPeriod + 1
+    // updatePeriod must == snapshotPeriod + 1
     const snapshotHeaderSlot = 1;
     const updateHeaderSlot = EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH + 1;
     const attestedHeaderSlot = updateHeaderSlot + 1;

@@ -63,7 +63,7 @@ export function assertValidLightClientUpdate(
  * }
  * ```
  *
- * Where `hashTreeRoot(state) === update.finalityHeader.stateRoot`
+ * Where `hashTreeRoot(state) == update.finalityHeader.stateRoot`
  */
 export function assertValidFinalityProof(update: routes.lightclient.LightclientFinalizedUpdate): void {
   if (
@@ -93,7 +93,7 @@ export function assertValidFinalityProof(update: routes.lightclient.LightclientF
  * }
  * ```
  *
- * Where `hashTreeRoot(state) === update.header.stateRoot`
+ * Where `hashTreeRoot(state) == update.header.stateRoot`
  */
 export function assertValidSyncCommitteeProof(update: altair.LightClientUpdate): void {
   if (

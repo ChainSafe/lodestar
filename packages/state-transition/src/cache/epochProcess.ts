@@ -241,8 +241,8 @@ export function beforeProcessEpoch(state: CachedBeaconStateAllForks, opts?: Epoc
     // ```python
     // def is_eligible_for_activation_queue(validator: Validator) -> bool:
     //   return (
-    //     validator.activation_eligibility_epoch === FAR_FUTURE_EPOCH
-    //     and validator.effective_balance === MAX_EFFECTIVE_BALANCE
+    //     validator.activation_eligibility_epoch == FAR_FUTURE_EPOCH
+    //     and validator.effective_balance == MAX_EFFECTIVE_BALANCE
     //   )
     // ```
     if (
@@ -257,7 +257,7 @@ export function beforeProcessEpoch(state: CachedBeaconStateAllForks, opts?: Epoc
     // def is_eligible_for_activation(state: BeaconState, validator: Validator) -> bool:
     //   return (
     //     validator.activation_eligibility_epoch <= state.finalized_checkpoint.epoch  # Placement in queue is finalized
-    //     and validator.activation_epoch === FAR_FUTURE_EPOCH                          # Has not yet been activated
+    //     and validator.activation_epoch == FAR_FUTURE_EPOCH                          # Has not yet been activated
     //   )
     // ```
     // Here we have to check if `activationEligibilityEpoch <= currentEpoch` instead of finalized checkpoint, because the finalized
