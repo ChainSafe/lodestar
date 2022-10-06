@@ -1,3 +1,4 @@
+import {expect} from "chai";
 import {createIBeaconConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
 import {altair, ssz} from "@lodestar/types";
@@ -5,7 +6,6 @@ import {altair, ssz} from "@lodestar/types";
 import {generateEmptySignedBlock} from "../../../utils/block.js";
 import {MockBeaconChain} from "../../../utils/mocks/chain/chain.js";
 import {generateState} from "../../../utils/state.js";
-import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
 import {validateLightClientOptimisticUpdate} from "../../../../src/chain/validation/lightClientOptimisticUpdate.js";
 import {LightClientErrorCode} from "../../../../src/chain/errors/lightClientError.js";
 import {IBeaconChain} from "../../../../src/chain/index.js";
@@ -47,9 +47,11 @@ describe("Light Client Optimistic Update validation", function () {
   it("should return invalid - optimistic update already forwarded", async () => {
     const lightclientOptimisticUpdate: altair.LightClientOptimisticUpdate = ssz.altair.LightClientOptimisticUpdate.defaultValue();
 
-    await expectRejectedWithLodestarError(
-      Promise.resolve(validateLightClientOptimisticUpdate(config, mockChain(), lightclientOptimisticUpdate)),
-      LightClientErrorCode.OPTIMISTIC_UPDATE_ALREADY_FORWARDED
+    expect(() => {
+      validateLightClientOptimisticUpdate(config, mockChain(), lightclientOptimisticUpdate);
+    }).to.throw(
+      LightClientErrorCode.OPTIMISTIC_UPDATE_ALREADY_FORWARDED,
+      "Expected LightClientErrorCode.OPTIMISTIC_UPDATE_ALREADY_FORWARDED to be thrown"
     );
   });
 
@@ -61,9 +63,11 @@ describe("Light Client Optimistic Update validation", function () {
     const chain = mockChain();
     chain.lightClientServer.latestForwardedOptimisticSlot = 1;
 
-    await expectRejectedWithLodestarError(
-      Promise.resolve(validateLightClientOptimisticUpdate(config, chain, lightclientOptimisticUpdate)),
-      LightClientErrorCode.OPTIMISTIC_UPDATE_RECEIVED_TOO_EARLY
+    expect(() => {
+      validateLightClientOptimisticUpdate(config, chain, lightclientOptimisticUpdate);
+    }).to.throw(
+      LightClientErrorCode.OPTIMISTIC_UPDATE_RECEIVED_TOO_EARLY,
+      "Expected LightClientErrorCode.OPTIMISTIC_UPDATE_RECEIVED_TOO_EARLY to be thrown"
     );
   });
 
@@ -79,9 +83,11 @@ describe("Light Client Optimistic Update validation", function () {
       return ssz.altair.LightClientOptimisticUpdate.defaultValue();
     };
 
-    await expectRejectedWithLodestarError(
-      Promise.resolve(validateLightClientOptimisticUpdate(config, chain, lightclientOptimisticUpdate)),
-      LightClientErrorCode.OPTIMISTIC_UPDATE_NOT_MATCHING_LOCAL
+    expect(() => {
+      validateLightClientOptimisticUpdate(config, chain, lightclientOptimisticUpdate);
+    }).to.throw(
+      LightClientErrorCode.OPTIMISTIC_UPDATE_NOT_MATCHING_LOCAL,
+      "Expected LightClientErrorCode.OPTIMISTIC_UPDATE_NOT_MATCHING_LOCAL to be thrown"
     );
   });
 });

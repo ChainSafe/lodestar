@@ -359,6 +359,8 @@ export class Network implements INetwork {
 
   private async onLightclientFinalityUpdate(finalityUpdate: altair.LightClientFinalityUpdate): Promise<void> {
     try {
+      // messages SHOULD be broadcasted after one-third of slot has transpired
+      await this.clock.waitForSlot(finalityUpdate.signatureSlot + 1 / 3);
       return await this.gossip.publishLightClientFinalityUpdate(finalityUpdate);
     } catch (e) {
       this.logger.debug("Error on BeaconGossipHandler.onLightclientFinalityUpdate", {}, e as Error);
@@ -367,6 +369,8 @@ export class Network implements INetwork {
 
   private async onLightclientOptimisticUpdate(optimisticUpdate: altair.LightClientOptimisticUpdate): Promise<void> {
     try {
+      // messages SHOULD be broadcasted after one-third of slot has transpired
+      await this.clock.waitForSlot(optimisticUpdate.signatureSlot + 1 / 3);
       return await this.gossip.publishLightClientOptimisticUpdate(optimisticUpdate);
     } catch (e) {
       this.logger.debug("Error on BeaconGossipHandler.onLightclientOptimisticUpdate", {}, e as Error);
