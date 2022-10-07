@@ -328,6 +328,27 @@ export function createLodestarMetrics(
       }),
     },
 
+    engineHttpProcessorQueue: {
+      length: register.gauge({
+        name: "lodestar_engine_http_processor_queue_length",
+        help: "Count of total engine http processor queue length",
+      }),
+      droppedJobs: register.gauge({
+        name: "lodestar_engine_http_processor_queue_dropped_jobs_total",
+        help: "Count of total engine http processor queue dropped jobs",
+      }),
+      jobTime: register.histogram({
+        name: "lodestar_engine_http_processor_queue_job_time_seconds",
+        help: "Time to process engine http processor queue job in seconds",
+        buckets: [0.1, 1, 10, 100],
+      }),
+      jobWaitTime: register.histogram({
+        name: "lodestar_engine_http_processor_queue_job_wait_time_seconds",
+        help: "Time from job added to the engine http processor queue to starting in seconds",
+        buckets: [0.1, 1, 10, 100],
+      }),
+    },
+
     apiRest: {
       responseTime: register.histogram<"operationId">({
         name: "lodestar_api_rest_response_time_seconds",

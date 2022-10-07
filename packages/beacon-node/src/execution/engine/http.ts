@@ -14,6 +14,7 @@ import {
 } from "../../eth1/provider/utils.js";
 import {IJsonRpcHttpClient, ReqOpts} from "../../eth1/provider/jsonRpcHttpClient.js";
 import {IMetrics} from "../../metrics/index.js";
+import {JobItemQueue} from "../../util/queue/index.js";
 import {
   ExecutePayloadStatus,
   ExecutePayloadResponse,
@@ -57,6 +58,8 @@ export const defaultExecutionEngineHttpOpts: ExecutionEngineHttpOpts = {
   timeout: 12000,
 };
 
+const QUEUE_MAX_LENGHT = 256;
+
 // Define static options once to prevent extra allocations
 const notifyNewPayloadOpts: ReqOpts = {routeId: "notifyNewPayload"};
 const forkchoiceUpdatedV1Opts: ReqOpts = {routeId: "forkchoiceUpdated"};
@@ -75,6 +78,14 @@ const exchageTransitionConfigOpts: ReqOpts = {routeId: "exchangeTransitionConfig
 export class ExecutionEngineHttp implements IExecutionEngine {
   readonly payloadIdCache = new PayloadIdCache();
   private readonly rpc: IJsonRpcHttpClient;
+  private readonly jobQueue: JobItemQueue<[EngineRequest], EngineResponse>;
+
+  private jobQueueProcessor = async (engineRequest: EngineRequest): Promise<EngineResponse> => {
+    return this.rpc.fetchWithRetries<
+      EngineApiRpcReturnTypes[typeof engineRequest.method],
+      EngineApiRpcParamTypes[typeof engineRequest.method]
+    >(engineRequest, engineRequest.methodOpts);
+  };
 
   constructor(opts: ExecutionEngineHttpOpts, {metrics, signal}: ExecutionEngineModules) {
     this.rpc = new JsonRpcHttpClient(opts.urls, {
@@ -83,6 +94,11 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       metrics: metrics?.executionEnginerHttpClient,
       jwtSecret: opts.jwtSecretHex ? fromHex(opts.jwtSecretHex) : undefined,
     });
+    this.jobQueue = new JobItemQueue<[EngineRequest], EngineResponse>(
+      this.jobQueueProcessor,
+      {maxLength: QUEUE_MAX_LENGHT, maxConcurrency: 1, signal},
+      metrics?.engineHttpProcessorQueue
+    );
   }
 
   /**
@@ -113,14 +129,11 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   async notifyNewPayload(executionPayload: allForks.ExecutionPayload): Promise<ExecutePayloadResponse> {
     const method = "engine_newPayloadV1";
     const serializedExecutionPayload = serializeExecutionPayload(executionPayload);
-    const {status, latestValidHash, validationError} = await this.rpc
-      .fetchWithRetries<EngineApiRpcReturnTypes[typeof method], EngineApiRpcParamTypes[typeof method]>(
-        {
-          method,
-          params: [serializedExecutionPayload],
-        },
-        notifyNewPayloadOpts
-      )
+    const {status, latestValidHash, validationError} = await (this.jobQueue.push({
+      method,
+      params: [serializedExecutionPayload],
+      methodOpts: notifyNewPayloadOpts,
+    }) as Promise<EngineApiRpcReturnTypes[typeof method]>)
       // If there are errors by EL like connection refused, internal error, they need to be
       // treated separate from being INVALID. For now, just pass the error upstream.
       .catch((e: Error): EngineApiRpcReturnTypes[typeof method] => {
@@ -216,13 +229,11 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     const {
       payloadStatus: {status, latestValidHash: _latestValidHash, validationError},
       payloadId,
-    } = await this.rpc.fetchWithRetries<EngineApiRpcReturnTypes[typeof method], EngineApiRpcParamTypes[typeof method]>(
-      {
-        method,
-        params: [{headBlockHash, safeBlockHash, finalizedBlockHash}, apiPayloadAttributes],
-      },
-      fcUReqOpts
-    );
+    } = await (this.jobQueue.push({
+      method,
+      params: [{headBlockHash, safeBlockHash, finalizedBlockHash}, apiPayloadAttributes],
+      methodOpts: fcUReqOpts,
+    }) as Promise<EngineApiRpcReturnTypes[typeof method]>);
 
     switch (status) {
       case ExecutePayloadStatus.VALID:
@@ -266,16 +277,11 @@ export class ExecutionEngineHttp implements IExecutionEngine {
    */
   async getPayload(payloadId: PayloadId): Promise<allForks.ExecutionPayload> {
     const method = "engine_getPayloadV1";
-    const executionPayloadRpc = await this.rpc.fetchWithRetries<
-      EngineApiRpcReturnTypes[typeof method],
-      EngineApiRpcParamTypes[typeof method]
-    >(
-      {
-        method,
-        params: [payloadId],
-      },
-      getPayloadOpts
-    );
+    const executionPayloadRpc = await (this.jobQueue.push({
+      method,
+      params: [payloadId],
+      methodOpts: getPayloadOpts,
+    }) as Promise<EngineApiRpcReturnTypes[typeof method]>);
     return parseExecutionPayload(executionPayloadRpc);
   }
 
@@ -417,3 +423,11 @@ export function parseExecutionPayload(data: ExecutionPayloadRpc): allForks.Execu
     transactions: data.transactions.map((tran) => dataToBytes(tran)),
   };
 }
+
+type EngineRequestKey = keyof EngineApiRpcParamTypes;
+type EngineRequestByKey = {
+  [K in EngineRequestKey]: {method: K; params: EngineApiRpcParamTypes[K]; methodOpts: ReqOpts};
+};
+type EngineRequest = EngineRequestByKey[EngineRequestKey];
+type EngineResponseByKey = {[K in EngineRequestKey]: EngineApiRpcReturnTypes[K]};
+type EngineResponse = EngineResponseByKey[EngineRequestKey];
