@@ -73,14 +73,11 @@ export class Validator {
 
     let api: Api;
     if (typeof opts.api === "string" || Array.isArray(opts.api)) {
-      const urls = typeof opts.api === "string" ? [opts.api] : opts.api;
-      const urlOpts = urls.map((url) => ({baseUrl: url}));
       // This new api instance can make do with default timeout as a faster timeout is
       // not necessary since this instance won't be used for validator duties
       api = getClient(
         {
-          baseUrl: urls[0],
-          urls: urlOpts,
+          urls: typeof opts.api === "string" ? [opts.api] : opts.api,
           // Validator would need the beacon to respond within the slot
           timeoutMs: config.SECONDS_PER_SLOT * 1000,
           getAbortSignal: () => this.controller.signal,
@@ -176,13 +173,9 @@ export class Validator {
     let api: Api;
     if (typeof opts.api === "string" || Array.isArray(opts.api)) {
       const urls = typeof opts.api === "string" ? [opts.api] : opts.api;
-      const urlOpts = urls.map((url) => ({baseUrl: url}));
       // This new api instance can make do with default timeout as a faster timeout is
       // not necessary since this instance won't be used for validator duties
-      api = getClient(
-        {baseUrl: urls[0], urls: urlOpts, getAbortSignal: () => opts.abortController.signal},
-        {config, logger}
-      );
+      api = getClient({urls, getAbortSignal: () => opts.abortController.signal}, {config, logger});
     } else {
       api = opts.api;
     }
