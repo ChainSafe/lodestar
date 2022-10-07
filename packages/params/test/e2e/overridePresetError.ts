@@ -5,6 +5,6 @@
 import {SLOTS_PER_EPOCH} from "../../lib/index.js";
 import {setActivePreset, PresetName} from "../../lib/setPreset.js";
 // This line should throw
-setActivePreset(PresetName.minimal);
+setActivePreset(PresetName.minimal, {SLOTS_PER_EPOCH: 2});
 
 SLOTS_PER_EPOCH;
