@@ -5,6 +5,7 @@
 import {SLOTS_PER_EPOCH} from "../../lib/index.js";
 import {setActivePreset, PresetName} from "../../lib/setPreset.js";
 // This line should throw
+// eslint-disable-next-line @typescript-eslint/naming-convention
 setActivePreset(PresetName.minimal, {SLOTS_PER_EPOCH: 2});
 
 SLOTS_PER_EPOCH;
