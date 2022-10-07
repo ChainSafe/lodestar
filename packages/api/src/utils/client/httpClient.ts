@@ -74,11 +74,11 @@ export class HttpClient implements IHttpClient {
   private readonly metrics: null | Metrics;
   private readonly logger: null | ILogger;
 
-  private readonly urlOpts: URLOpts[] = [];
-  private readonly urlScore: number[];
+  private readonly urlsOpts: URLOpts[] = [];
+  private readonly urlsScore: number[];
 
   get baseUrl(): string {
-    return this.urlOpts[0].baseUrl;
+    return this.urlsOpts[0].baseUrl;
   }
 
   /**
@@ -86,7 +86,7 @@ export class HttpClient implements IHttpClient {
    */
   constructor(opts: HttpClientOptions, {logger, metrics}: HttpClientModules = {}) {
     if (opts.baseUrl) {
-      this.urlOpts.push({
+      this.urlsOpts.push({
         baseUrl: opts.baseUrl,
         bearerToken: opts.bearerToken,
         timeoutMs: opts.timeoutMs,
@@ -95,16 +95,18 @@ export class HttpClient implements IHttpClient {
 
     if (opts.urls) {
       for (const urlOpts of opts.urls) {
-        this.urlOpts.push(urlOpts);
+        if (!this.urlsOpts.find((urlOpts) => urlOpts.baseUrl === urlOpts.baseUrl)) {
+          this.urlsOpts.push(urlOpts);
+        }
       }
     }
 
-    if (this.urlOpts.length === 0) {
+    if (this.urlsOpts.length === 0) {
       throw Error("Must set at least 1 URL in HttpClient opts");
     }
 
     // Initialize scores to max value to only query first URL on start
-    this.urlScore = this.urlOpts.map(() => URL_SCORE_MAX);
+    this.urlsScore = this.urlsOpts.map(() => URL_SCORE_MAX);
 
     this.globalTimeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
     this.getAbortSignal = opts.getAbortSignal;
@@ -127,8 +129,8 @@ export class HttpClient implements IHttpClient {
 
   private async requestWithBodyWithRetries<T>(opts: FetchOpts, getBody: (res: Response) => Promise<T>): Promise<T> {
     // Early return when no fallback URLs are setup
-    if (this.urlOpts.length === 1) {
-      return this.requestWithBody(this.urlOpts[0], opts, getBody);
+    if (this.urlsOpts.length === 1) {
+      return this.requestWithBody(this.urlsOpts[0], opts, getBody);
     }
 
     let i = 0;
@@ -139,7 +141,7 @@ export class HttpClient implements IHttpClient {
     // - until first server is shown to be reliable again, contact all servers
 
     // First loop: retry in sequence, query next URL only after previous errors
-    for (; i < this.urlOpts.length; i++) {
+    for (; i < this.urlsOpts.length; i++) {
       try {
         return await new Promise<T>((resolve, reject) => {
           let requestCount = 0;
@@ -149,14 +151,14 @@ export class HttpClient implements IHttpClient {
           // Score each URL available:
           // - If url[0] is good, only send to 0
           // - If url[0] has recently errored, send to both 0, 1, etc until url[0] does not error for some time
-          for (; i < this.urlOpts.length; i++) {
-            const urlOpts = this.urlOpts[i];
+          for (; i < this.urlsOpts.length; i++) {
+            const urlOpts = this.urlsOpts[i];
             const {baseUrl} = urlOpts;
             const routeId = opts.routeId ?? DEFAULT_ROUTE_ID;
 
             if (i > 0) {
               this.metrics?.requestToFallbacks.inc({routeId});
-              this.logger?.debug("Requesting fallback URL", {routeId, baseUrl, score: this.urlScore[i]});
+              this.logger?.debug("Requesting fallback URL", {routeId, baseUrl, score: this.urlsScore[i]});
             }
 
             // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -164,12 +166,12 @@ export class HttpClient implements IHttpClient {
 
             this.requestWithBody(urlOpts, opts, getBody).then(
               (res) => {
-                this.urlScore[i_] = Math.min(URL_SCORE_MAX, this.urlScore[i_] + URL_SCORE_DELTA_SUCCESS);
+                this.urlsScore[i_] = Math.min(URL_SCORE_MAX, this.urlsScore[i_] + URL_SCORE_DELTA_SUCCESS);
                 // Resolve immediately on success
                 resolve(res);
               },
               (err) => {
-                this.urlScore[i_] = Math.max(URL_SCORE_MIN, this.urlScore[i_] - URL_SCORE_DELTA_ERROR);
+                this.urlsScore[i_] = Math.max(URL_SCORE_MIN, this.urlsScore[i_] - URL_SCORE_DELTA_ERROR);
 
                 // Reject only when all queried URLs have errored
                 // TODO: Currently rejects with last error only, should join errors?
@@ -184,13 +186,13 @@ export class HttpClient implements IHttpClient {
             requestCount++;
 
             // Do not query URLs after a healthy URL
-            if (this.urlScore[i] >= URL_SCORE_MAX) {
+            if (this.urlsScore[i] >= URL_SCORE_MAX) {
               break;
             }
           }
         });
       } catch (e) {
-        if (i >= this.urlOpts.length - 1) {
+        if (i >= this.urlsOpts.length - 1) {
           throw e;
         } else {
           this.logger?.debug("Request error, retrying", {}, e as Error);
