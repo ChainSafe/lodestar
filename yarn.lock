@@ -13584,6 +13584,11 @@ xtend@^4.0.0, xtend@^4.0.2, xtend@~4.0.1:
   resolved "https://registry.yarnpkg.com/xtend/-/xtend-4.0.2.tgz#bb72779f5fa465186b1f438f674fa347fdb5db54"
   integrity sha512-LKYU1iAXJXUgAXn9URjiu+MWhyUXHsvfp7mcuYm9dSUKK0/CjtrUwFAxD82/mCWbtLsGjFIad0wIsod4zrTAEQ==
 
+xxhash-wasm@1.0.1:
+  version "1.0.1"
+  resolved "https://registry.yarnpkg.com/xxhash-wasm/-/xxhash-wasm-1.0.1.tgz#8a0f0eeb3ab76c16bbb889f5acca286b62d98626"
+  integrity sha512-Lc9CTvDrH2vRoiaUzz25q7lRaviMhz90pkx6YxR9EPYtF99yOJnv2cB+CQ0hp/TLoqrUsk8z/W2EN31T568Azw==
+
 y18n@^4.0.0:
   version "4.0.3"
   resolved "https://registry.npmjs.org/y18n/-/y18n-4.0.3.tgz"
