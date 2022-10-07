@@ -13,17 +13,17 @@ import {GossipTopicCache} from "./topic.js";
 const xxhash = await xxhashFactory();
 
 // Use salt to prevent msgId from being mined for collisions
-const salt = crypto.randomBytes(8);
+const h64Seed = BigInt(Math.floor(Math.random() * 1e9));
 
 /**
  * The function used to generate a gossipsub message id
  * We use the first 8 bytes of SHA256(data) for content addressing
  */
-export function fastMsgIdFn(rpcMsg: RPC.IMessage): number {
+export function fastMsgIdFn(rpcMsg: RPC.IMessage): string {
   if (rpcMsg.data) {
-    return xxhash.h32Raw(Buffer.concat([salt, rpcMsg.data]));
+    return xxhash.h64Raw(rpcMsg.data, h64Seed).toString(16);
   } else {
-    return 0;
+    return "0000000000000000";
   }
 }
 

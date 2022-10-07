@@ -8,8 +8,8 @@ const hasher = await xxhashFactory();
 // Ethereum mainnet case processes 500_000 attestations / epoch (384 sec) = 1302 msg per sec
 
 describe("network / gossip / fastMsgIdFn", () => {
-  const salt = randomBytes(8);
-
+  const h32Seed = Math.floor(Math.random() * 1e9);
+  const h64Seed = BigInt(Math.floor(Math.random() * 1e9));
   for (const msgLen of [200, 1000, 10000]) {
     const msgData = randomBytes(msgLen);
 
@@ -21,23 +21,16 @@ describe("network / gossip / fastMsgIdFn", () => {
     });
 
     itBench({
-      id: `fastMsgIdFn xxhash / ${msgLen} bytes`,
+      id: `fastMsgIdFn h32 xxhash / ${msgLen} bytes`,
       fn: () => {
-        hasher.h32Raw(msgData);
+        hasher.h32Raw(msgData, h32Seed);
       },
     });
 
     itBench({
-      id: `fastMsgIdFn xxhash+String / ${msgLen} bytes`,
+      id: `fastMsgIdFn h64 xxhash / ${msgLen} bytes`,
       fn: () => {
-        String(hasher.h32Raw(msgData));
-      },
-    });
-
-    itBench({
-      id: `fastMsgIdFn xxhash+concat / ${msgLen} bytes`,
-      fn: () => {
-        hasher.h32Raw(Buffer.concat([salt, msgData]));
+        hasher.h64Raw(msgData, h64Seed).toString(16);
       },
     });
   }
