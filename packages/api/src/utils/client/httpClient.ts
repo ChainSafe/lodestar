@@ -50,7 +50,7 @@ export interface IHttpClient {
   arrayBuffer(opts: FetchOpts): Promise<ArrayBuffer>;
 }
 
-export type HttpClientOptions = ({baseUrl: string} | {urls: URLOpts[]}) & {
+export type HttpClientOptions = ({baseUrl: string} | {urls: (string | URLOpts)[]}) & {
   timeoutMs?: number;
   bearerToken?: string;
   /** Return an AbortSignal to be attached to all requests */
@@ -66,6 +66,7 @@ export type HttpClientModules = {
 
 export class HttpClient implements IHttpClient {
   private readonly globalTimeoutMs: number;
+  private readonly globalBearerToken: string | null;
   private readonly getAbortSignal?: () => AbortSignal | undefined;
   private readonly fetch: typeof fetch;
   private readonly metrics: null | Metrics;
@@ -82,17 +83,21 @@ export class HttpClient implements IHttpClient {
    * timeoutMs = config.params.SECONDS_PER_SLOT * 1000
    */
   constructor(opts: HttpClientOptions, {logger, metrics}: HttpClientModules = {}) {
-    const {baseUrl, urls} = opts as {baseUrl?: string; urls?: URLOpts[]};
+    // Cast to all types optional since they are defined with syntax `HttpClientOptions = A | B`
+    const {baseUrl, urls = []} = opts as {baseUrl?: string; urls?: (string | URLOpts)[]};
 
-    if (baseUrl) {
-      this.urlsOpts.push({baseUrl, bearerToken: opts.bearerToken, timeoutMs: opts.timeoutMs});
-    }
+    // Append to Partial object to not fill urlOpts with properties with value undefined
+    const allUrlOpts: Partial<URLOpts> = {};
+    if (opts.bearerToken) allUrlOpts.bearerToken = opts.bearerToken;
+    if (opts.timeoutMs !== undefined) allUrlOpts.timeoutMs = opts.timeoutMs;
 
-    if (urls) {
-      for (const urlOpts of urls) {
-        if (!this.urlsOpts.some((opt) => opt.baseUrl === urlOpts.baseUrl)) {
-          this.urlsOpts.push(urlOpts);
-        }
+    // opts.baseUrl is equivalent to `urls: [{baseUrl}]`
+    // unshift opts.baseUrl to urls, without mutating opts.urls
+    for (const urlOrOpts of [...(baseUrl ? [baseUrl] : []), ...urls]) {
+      const urlOpts: URLOpts = typeof urlOrOpts === "string" ? {baseUrl: urlOrOpts, ...allUrlOpts} : urlOrOpts;
+      // De-duplicate by baseUrl, having two baseUrls with different token or timeouts does not make sense
+      if (!this.urlsOpts.some((opt) => opt.baseUrl === urlOpts.baseUrl)) {
+        this.urlsOpts.push(urlOpts);
       }
     }
 
@@ -104,6 +109,7 @@ export class HttpClient implements IHttpClient {
     this.urlsScore = this.urlsOpts.map(() => URL_SCORE_MAX);
 
     this.globalTimeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+    this.globalBearerToken = opts.bearerToken ?? null;
     this.getAbortSignal = opts.getAbortSignal;
     this.fetch = opts.fetch ?? fetch;
     this.metrics = metrics ?? null;
@@ -211,7 +217,9 @@ export class HttpClient implements IHttpClient {
     opts: FetchOpts,
     getBody: (res: Response) => Promise<T>
   ): Promise<T> {
-    const {baseUrl, bearerToken, timeoutMs = DEFAULT_TIMEOUT_MS} = urlOpts;
+    const baseUrl = urlOpts.baseUrl;
+    const bearerToken = urlOpts.bearerToken ?? this.globalBearerToken;
+    const timeoutMs = opts.timeoutMs ?? urlOpts.timeoutMs ?? this.globalTimeoutMs;
 
     // Implement fetch timeout
     const controller = new AbortController();

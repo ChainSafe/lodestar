@@ -10,10 +10,22 @@ describe("HTTPClient options", () => {
   it("Single root baseUrl option", () => {
     const httpClient = new HttpClient({baseUrl: baseUrl1, bearerToken: bearerToken1});
 
-    expect(httpClient["urlsOpts"]).deep.equals([{baseUrl: baseUrl1, bearerToken: bearerToken1, timeoutMs: undefined}]);
+    expect(httpClient["urlsOpts"]).deep.equals([{baseUrl: baseUrl1, bearerToken: bearerToken1}]);
   });
 
-  it("Multiple urls option", () => {
+  it("Multiple urls option with common bearerToken", () => {
+    const httpClient = new HttpClient({
+      urls: [baseUrl1, baseUrl2],
+      bearerToken: bearerToken1,
+    });
+
+    expect(httpClient["urlsOpts"]).deep.equals([
+      {baseUrl: baseUrl1, bearerToken: bearerToken1},
+      {baseUrl: baseUrl2, bearerToken: bearerToken1},
+    ]);
+  });
+
+  it("Multiple urls as object option", () => {
     const httpClient = new HttpClient({
       urls: [
         {baseUrl: baseUrl1, bearerToken: bearerToken1},
@@ -35,7 +47,7 @@ describe("HTTPClient options", () => {
     });
 
     expect(httpClient["urlsOpts"]).deep.equals([
-      {baseUrl: baseUrl1, bearerToken: bearerToken1, timeoutMs: undefined},
+      {baseUrl: baseUrl1, bearerToken: bearerToken1},
       {baseUrl: baseUrl2, bearerToken: bearerToken2},
     ]);
   });
@@ -51,7 +63,7 @@ describe("HTTPClient options", () => {
       ],
     });
     expect(httpClient["urlsOpts"]).deep.equals([
-      {baseUrl: baseUrl1, bearerToken: bearerToken1, timeoutMs: undefined},
+      {baseUrl: baseUrl1, bearerToken: bearerToken1},
       {baseUrl: baseUrl2, bearerToken: bearerToken2},
     ]);
   });
