@@ -50,12 +50,9 @@ export interface IHttpClient {
   arrayBuffer(opts: FetchOpts): Promise<ArrayBuffer>;
 }
 
-export type HttpClientOptions = {
-  baseUrl: string;
+export type HttpClientOptions = ({baseUrl: string} | {urls: URLOpts[]}) & {
   timeoutMs?: number;
   bearerToken?: string;
-  /** For fallback support, overrides baseUrl */
-  urls?: URLOpts[];
   /** Return an AbortSignal to be attached to all requests */
   getAbortSignal?: () => AbortSignal | undefined;
   /** Override fetch function */
@@ -85,17 +82,15 @@ export class HttpClient implements IHttpClient {
    * timeoutMs = config.params.SECONDS_PER_SLOT * 1000
    */
   constructor(opts: HttpClientOptions, {logger, metrics}: HttpClientModules = {}) {
-    if (opts.baseUrl) {
-      this.urlsOpts.push({
-        baseUrl: opts.baseUrl,
-        bearerToken: opts.bearerToken,
-        timeoutMs: opts.timeoutMs,
-      });
+    const {baseUrl, urls} = opts as {baseUrl?: string; urls?: URLOpts[]};
+
+    if (baseUrl) {
+      this.urlsOpts.push({baseUrl, bearerToken: opts.bearerToken, timeoutMs: opts.timeoutMs});
     }
 
-    if (opts.urls) {
-      for (const urlOpts of opts.urls) {
-        if (!this.urlsOpts.find((urlOpts) => urlOpts.baseUrl === urlOpts.baseUrl)) {
+    if (urls) {
+      for (const urlOpts of urls) {
+        if (!this.urlsOpts.some((opt) => opt.baseUrl === urlOpts.baseUrl)) {
           this.urlsOpts.push(urlOpts);
         }
       }
