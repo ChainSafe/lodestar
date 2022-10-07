@@ -80,11 +80,11 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   private readonly rpc: IJsonRpcHttpClient;
   private readonly jobQueue: JobItemQueue<[EngineRequest], EngineResponse>;
 
-  private jobQueueProcessor = async (engineRequest: EngineRequest): Promise<EngineResponse> => {
-    return this.rpc.fetchWithRetries<
-      EngineApiRpcReturnTypes[typeof engineRequest.method],
-      EngineApiRpcParamTypes[typeof engineRequest.method]
-    >(engineRequest, engineRequest.methodOpts);
+  private jobQueueProcessor = async ({method, params, methodOpts}: EngineRequest): Promise<EngineResponse> => {
+    return this.rpc.fetchWithRetries<EngineApiRpcReturnTypes[typeof method], EngineApiRpcParamTypes[typeof method]>(
+      {method, params},
+      methodOpts
+    );
   };
 
   constructor(opts: ExecutionEngineHttpOpts, {metrics, signal}: ExecutionEngineModules) {
