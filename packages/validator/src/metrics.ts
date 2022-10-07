@@ -326,6 +326,12 @@ export function getMetrics(register: MetricsRegister, gitData: LodestarGitData) 
         help: "Total count of requests to fallback URLs on REST API by routeId",
         labelNames: ["routeId"],
       }),
+
+      urlsScore: register.gauge<{urlIndex: string}>({
+        name: "vc_rest_api_client_urls_score",
+        help: "Current score of REST API URLs by url index",
+        labelNames: ["urlIndex"],
+      }),
     },
 
     keymanagerApiRest: {

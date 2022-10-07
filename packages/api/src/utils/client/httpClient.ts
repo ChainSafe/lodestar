@@ -113,6 +113,14 @@ export class HttpClient implements IHttpClient {
     this.fetch = opts.fetch ?? fetch;
     this.metrics = metrics ?? null;
     this.logger = logger ?? null;
+
+    if (metrics) {
+      metrics.urlsScore.addCollect(() => {
+        for (let i = 0; i < this.urlsScore.length; i++) {
+          metrics.urlsScore.set({urlIndex: i}, this.urlsScore[i]);
+        }
+      });
+    }
   }
 
   async json<T>(opts: FetchOpts): Promise<T> {
