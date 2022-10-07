@@ -320,6 +320,12 @@ export function getMetrics(register: MetricsRegister, gitData: LodestarGitData) 
         help: "Total count of errors on REST API client requests by routeId",
         labelNames: ["routeId"],
       }),
+
+      requestToFallbacks: register.gauge<{routeId: string}>({
+        name: "vc_rest_api_client_request_to_fallbacks_total",
+        help: "Total count of requests to fallback URLs on REST API by routeId",
+        labelNames: ["routeId"],
+      }),
     },
 
     keymanagerApiRest: {
