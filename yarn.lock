@@ -525,9 +525,9 @@
   optionalDependencies:
     "@node-rs/crc32" "1.1.0"
 
-"@chainsafe/libp2p-gossipsub@github:tuyennhv/js-libp2p-gossipsub.git#tuyen/fastMsgIdFn_number":
+"@chainsafe/libp2p-gossipsub@github:tuyennhv/js-libp2p-gossipsub.git#tuyen/putUnsafe2":
   version "4.1.1"
-  resolved "https://codeload.github.com/tuyennhv/js-libp2p-gossipsub/tar.gz/8caeb63cf22ee3c9ade99219c54fb6aa2e39e6a3"
+  resolved "https://codeload.github.com/tuyennhv/js-libp2p-gossipsub/tar.gz/a41b08cd94db354146d80d16cf2121f5b8f10675"
   dependencies:
     "@libp2p/components" "^2.0.3"
     "@libp2p/crypto" "^1.0.3"

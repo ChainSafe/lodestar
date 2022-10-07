@@ -100,7 +100,7 @@
     "@chainsafe/as-sha256": "^0.3.1",
     "@chainsafe/bls": "7.1.1",
     "@chainsafe/discv5": "^1.1.2",
-    "@chainsafe/libp2p-gossipsub": "github:tuyennhv/js-libp2p-gossipsub.git#tuyen/fastMsgIdFn_number",
+    "@chainsafe/libp2p-gossipsub": "github:tuyennhv/js-libp2p-gossipsub.git#tuyen/putUnsafe2",
     "@chainsafe/libp2p-noise": "^8.0.0",
     "@chainsafe/persistent-merkle-tree": "^0.4.2",
     "@chainsafe/snappy-stream": "5.1.1",
