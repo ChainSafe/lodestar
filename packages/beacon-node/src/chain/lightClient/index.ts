@@ -3,7 +3,7 @@ import {IChainForkConfig} from "@lodestar/config";
 import {CachedBeaconStateAltair, computeSyncPeriodAtEpoch, computeSyncPeriodAtSlot} from "@lodestar/state-transition";
 import {ILogger, MapDef, pruneSetToMax} from "@lodestar/utils";
 import {BitArray, CompositeViewDU, toHexString} from "@chainsafe/ssz";
-import {SYNC_COMMITTEE_SIZE} from "@lodestar/params";
+import {MIN_SYNC_COMMITTEE_PARTICIPANTS, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 import {IBeaconDb} from "../../db/index.js";
 import {IMetrics} from "../../metrics/index.js";
 import {ChainEvent, ChainEventEmitter} from "../emitter.js";
@@ -227,7 +227,7 @@ export class LightClientServer {
     const signedBlockRoot = block.parentRoot;
     const syncPeriod = computeSyncPeriodAtSlot(block.slot);
 
-    this.onSyncAggregate(syncPeriod, block.body.syncAggregate, block.slot, signedBlockRoot).catch((e) => {
+    this.onSyncAggregate(syncPeriod, postState, block.body.syncAggregate, block.slot, signedBlockRoot).catch((e) => {
       this.logger.error("Error onSyncAggregate", {}, e);
       this.metrics?.lightclientServer.onSyncAggregate.inc({event: "error"});
     });
@@ -413,6 +413,7 @@ export class LightClientServer {
    */
   private async onSyncAggregate(
     syncPeriod: SyncPeriod,
+    postState: CachedBeaconStateAltair,
     syncAggregate: altair.SyncAggregate,
     signatureSlot: Slot,
     signedBlockRoot: Root
@@ -440,6 +441,20 @@ export class LightClientServer {
       syncAggregate,
       signatureSlot,
     };
+
+    const participantPubKeys = this.getParticipantPubkeys(
+      postState.currentSyncCommittee.pubkeys.getAllReadonly(),
+      syncAggregate.syncCommitteeBits
+    );
+
+    if (participantPubKeys.length < MIN_SYNC_COMMITTEE_PARTICIPANTS) {
+      this.logger.debug("sync committee below required MIN_SYNC_COMMITTEE_PARTICIPANTS", {
+        syncPeriod,
+        attestedPeriod,
+      });
+      this.metrics?.lightclientServer.onSyncAggregate.inc({event: "ignore_sync_committee_low"});
+      return;
+    }
 
     // Emit update
     // - At the earliest: 6 second after the slot start
@@ -611,6 +626,10 @@ export class LightClientServer {
     pruneSetToMax(this.checkpointHeaders, MAX_CACHED_FINALIZED_HEADERS);
 
     return finalizedHeader;
+  }
+
+  private getParticipantPubkeys<T>(pubkeys: T[], bits: BitArray): T[] {
+    return bits.intersectValues(pubkeys);
   }
 }
 
