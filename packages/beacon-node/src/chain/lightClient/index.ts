@@ -278,7 +278,7 @@ export class LightClientServer {
    */
   async getUpdates(startPeriod: SyncPeriod, count = 1): Promise<altair.LightClientUpdate[]> {
     const periods: number[] = Array.from({length: count}, (_ignored, i) => i + startPeriod);
-    return await Promise.all(periods.map((period) => this.doGetUpdate(period)));
+    return await Promise.all(periods.map((period) => this.getUpdate(period)));
   }
 
   /**
@@ -495,7 +495,7 @@ export class LightClientServer {
     await this.maybeStoreNewBestPartialUpdate(syncPeriod, syncAggregate, signatureSlot, attestedData);
   }
 
-  private async doGetUpdate(period: number): Promise<altair.LightClientUpdate> {
+  async getUpdate(period: number): Promise<altair.LightClientUpdate> {
     // Signature data
     const partialUpdate = await this.db.bestPartialLightClientUpdate.get(period);
     if (!partialUpdate) {
