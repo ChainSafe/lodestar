@@ -63,7 +63,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
   const engineApiUrl = `http://localhost:${enginePort}`;
 
   after(async () => {
-    await shell(`rm -rf ${dataPath}`);
+    await shell(`sudo rm -rf ${dataPath}`);
   });
 
   const afterEachCallbacks: (() => Promise<void> | void)[] = [];
