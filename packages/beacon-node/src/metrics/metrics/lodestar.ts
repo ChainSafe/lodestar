@@ -340,11 +340,13 @@ export function createLodestarMetrics(
       jobTime: register.histogram({
         name: "lodestar_engine_http_processor_queue_job_time_seconds",
         help: "Time to process engine http processor queue job in seconds",
-        buckets: [0.1, 1, 10, 100],
+        // newPayload can vary from 100 of ms to 3-4 seconds and typically 300-400ms
+        buckets: [0.1, 0.5, 2, 5],
       }),
       jobWaitTime: register.histogram({
         name: "lodestar_engine_http_processor_queue_job_wait_time_seconds",
         help: "Time from job added to the engine http processor queue to starting in seconds",
+        // Ideally it should be picked up < 100 of ms and could run upto 100 of secs
         buckets: [0.1, 1, 10, 100],
       }),
     },

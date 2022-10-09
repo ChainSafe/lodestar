@@ -15,6 +15,7 @@ import {
 import {IJsonRpcHttpClient, ReqOpts} from "../../eth1/provider/jsonRpcHttpClient.js";
 import {IMetrics} from "../../metrics/index.js";
 import {JobItemQueue} from "../../util/queue/index.js";
+import {EPOCHS_PER_BATCH} from "../../sync/constants.js";
 import {
   ExecutePayloadStatus,
   ExecutePayloadResponse,
@@ -58,7 +59,11 @@ export const defaultExecutionEngineHttpOpts: ExecutionEngineHttpOpts = {
   timeout: 12000,
 };
 
-const QUEUE_MAX_LENGHT = 256;
+/**
+ * Size for the serializing queue for fcUs and new payloads, the max length could be equal to
+ * EPOCHS_PER_BATCH * 2 in case new payloads are also not awaited serially
+ */
+const QUEUE_MAX_LENGHT = EPOCHS_PER_BATCH * 2;
 
 // Define static options once to prevent extra allocations
 const notifyNewPayloadOpts: ReqOpts = {routeId: "notifyNewPayload"};
@@ -78,7 +83,16 @@ const exchageTransitionConfigOpts: ReqOpts = {routeId: "exchangeTransitionConfig
 export class ExecutionEngineHttp implements IExecutionEngine {
   readonly payloadIdCache = new PayloadIdCache();
   private readonly rpc: IJsonRpcHttpClient;
-  private readonly jobQueue: JobItemQueue<[EngineRequest], EngineResponse>;
+  /**
+   * A queue to serialize the fcUs and newPayloads calls:
+   *
+   * While syncing, lodestar has a batch processing module which calls new payloads in batch followed by fcUs.
+   * Even though we await for responses to new payloads serially, we just trigger fcUs consecutively. This
+   * may lead to the EL receiving the fcUs out of the order and may break the EL's backfill/beacon sync. Since
+   * the order of new payloads and fcUs is pretty important to EL, this queue will serialize the calls in the
+   * order with which we make them.
+   */
+  private readonly rpcFetchQueue: JobItemQueue<[EngineRequest], EngineResponse>;
 
   private jobQueueProcessor = async ({method, params, methodOpts}: EngineRequest): Promise<EngineResponse> => {
     return this.rpc.fetchWithRetries<EngineApiRpcReturnTypes[typeof method], EngineApiRpcParamTypes[typeof method]>(
@@ -94,7 +108,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       metrics: metrics?.executionEnginerHttpClient,
       jwtSecret: opts.jwtSecretHex ? fromHex(opts.jwtSecretHex) : undefined,
     });
-    this.jobQueue = new JobItemQueue<[EngineRequest], EngineResponse>(
+    this.rpcFetchQueue = new JobItemQueue<[EngineRequest], EngineResponse>(
       this.jobQueueProcessor,
       {maxLength: QUEUE_MAX_LENGHT, maxConcurrency: 1, signal},
       metrics?.engineHttpProcessorQueue
@@ -129,7 +143,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   async notifyNewPayload(executionPayload: allForks.ExecutionPayload): Promise<ExecutePayloadResponse> {
     const method = "engine_newPayloadV1";
     const serializedExecutionPayload = serializeExecutionPayload(executionPayload);
-    const {status, latestValidHash, validationError} = await (this.jobQueue.push({
+    const {status, latestValidHash, validationError} = await (this.rpcFetchQueue.push({
       method,
       params: [serializedExecutionPayload],
       methodOpts: notifyNewPayloadOpts,
@@ -229,7 +243,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     const {
       payloadStatus: {status, latestValidHash: _latestValidHash, validationError},
       payloadId,
-    } = await (this.jobQueue.push({
+    } = await (this.rpcFetchQueue.push({
       method,
       params: [{headBlockHash, safeBlockHash, finalizedBlockHash}, apiPayloadAttributes],
       methodOpts: fcUReqOpts,
@@ -277,11 +291,16 @@ export class ExecutionEngineHttp implements IExecutionEngine {
    */
   async getPayload(payloadId: PayloadId): Promise<allForks.ExecutionPayload> {
     const method = "engine_getPayloadV1";
-    const executionPayloadRpc = await (this.jobQueue.push({
-      method,
-      params: [payloadId],
-      methodOpts: getPayloadOpts,
-    }) as Promise<EngineApiRpcReturnTypes[typeof method]>);
+    const executionPayloadRpc = await this.rpc.fetchWithRetries<
+      EngineApiRpcReturnTypes[typeof method],
+      EngineApiRpcParamTypes[typeof method]
+    >(
+      {
+        method,
+        params: [payloadId],
+      },
+      getPayloadOpts
+    );
     return parseExecutionPayload(executionPayloadRpc);
   }
 
