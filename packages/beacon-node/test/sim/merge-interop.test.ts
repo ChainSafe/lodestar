@@ -126,7 +126,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       );
     }
 
-    await shell(`rm -rf ${dataPath}`);
+    await shell(`sudo rm -rf ${dataPath}`);
     fs.mkdirSync(dataPath, {recursive: true});
 
     startELProcess({
