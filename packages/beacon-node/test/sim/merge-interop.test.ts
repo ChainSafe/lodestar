@@ -555,12 +555,22 @@ async function getGenesisBlockHash(
     signal
   );
 
-  const genesisBlock = await eth1Provider.getBlockByNumber(0);
-  if (!genesisBlock) {
-    throw Error("No genesis block available");
+  // Need to run multiple tries because nethermind sometimes is not yet ready and throws error
+  // of connection refused while fetching genesis block
+  for (let i = 1; i <= 60; i++) {
+    console.log(`fetching genesisBlock hash, try: ${i}`);
+    try {
+      const genesisBlock = await eth1Provider.getBlockByNumber(0);
+      if (!genesisBlock) {
+        throw Error("No genesis block available");
+      }
+      return genesisBlock.hash;
+    } catch (e) {
+      console.log(`genesisBlockHash fetch error: ${(e as Error).message}`);
+    }
+    await sleep(1000, signal);
   }
-
-  return genesisBlock.hash;
+  throw Error("EL not ready with genesis even after 60 seconds");
 }
 
 async function sendTransaction(url: string, transaction: Record<string, unknown>): Promise<void> {
