@@ -2,7 +2,6 @@ import bls from "@chainsafe/bls/switchable";
 import {PointFormat, PublicKey, SecretKey} from "@chainsafe/bls/types";
 import {hash, Tree} from "@chainsafe/persistent-merkle-tree";
 import {BitArray, fromHexString} from "@chainsafe/ssz";
-import {routes} from "@lodestar/api";
 import {IBeaconConfig} from "@lodestar/config";
 import {
   DOMAIN_SYNC_COMMITTEE,
@@ -161,7 +160,7 @@ export function computeLightclientUpdate(config: IBeaconConfig, period: SyncPeri
 export function computeLightClientSnapshot(
   period: SyncPeriod
 ): {
-  snapshot: routes.lightclient.LightClientBootstrap;
+  snapshot: altair.LightClientBootstrap;
   checkpointRoot: Uint8Array;
 } {
   const currentSyncCommittee = getInteropSyncCommittee(period).syncCommittee;

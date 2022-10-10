@@ -7,7 +7,7 @@ import {BeaconStateAltair} from "../utils/types.js";
 export class LightclientServerApiMock implements routes.lightclient.Api {
   readonly states = new Map<RootHex, BeaconStateAltair>();
   readonly updates = new Map<SyncPeriod, altair.LightClientUpdate>();
-  readonly snapshots = new Map<RootHex, routes.lightclient.LightClientBootstrap>();
+  readonly snapshots = new Map<RootHex, altair.LightClientBootstrap>();
   latestHeadUpdate: altair.LightClientOptimisticUpdate | null = null;
   finalized: altair.LightClientFinalityUpdate | null = null;
 
@@ -47,7 +47,7 @@ export class LightclientServerApiMock implements routes.lightclient.Api {
 
   getBootstrap(blockRoot: string, format?: "json"): Promise<{data: altair.LightClientBootstrap}>;
   getBootstrap(blockRoot: string, format?: "ssz"): Promise<Uint8Array>;
-  async getBootstrap(blockRoot: string): Promise<Uint8Array | {data: routes.lightclient.LightClientBootstrap}> {
+  async getBootstrap(blockRoot: string): Promise<Uint8Array | {data: altair.LightClientBootstrap}> {
     const snapshot = this.snapshots.get(blockRoot);
     if (!snapshot) throw Error(`snapshot for blockRoot ${blockRoot} not available`);
     return {data: snapshot};

@@ -1,6 +1,6 @@
 import {JsonPath} from "@chainsafe/ssz";
 import {Proof} from "@chainsafe/persistent-merkle-tree";
-import {altair, phase0, ssz, SyncPeriod} from "@lodestar/types";
+import {altair, ssz, SyncPeriod} from "@lodestar/types";
 import {ArrayOf, ReturnTypes, RoutesData, Schema, sameType, ContainerData, ReqSerializers} from "../../utils/index.js";
 import {queryParseProofPathsArr, querySerializeProofPathsArr} from "../../utils/serdes.js";
 
@@ -8,14 +8,6 @@ export type StateFormat = "json" | "ssz";
 export const mimeTypeSSZ = "application/octet-stream";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
-
-export type LightClientBootstrap = {
-  header: phase0.BeaconBlockHeader;
-  currentSyncCommittee: altair.SyncCommittee;
-  /** Single branch proof from state root to currentSyncCommittee */
-  currentSyncCommitteeBranch: Uint8Array[];
-};
-
 export type Api = {
   /**
    * Returns a multiproof of `jsonPaths` at the requested `stateId`.
@@ -51,9 +43,9 @@ export type Api = {
    * The trusted block root should be fetched with similar means to a weak subjectivity checkpoint.
    * Only block roots for checkpoints are guaranteed to be available.
    */
-  getBootstrap(blockRoot: string, format?: "json"): Promise<{data: LightClientBootstrap}>;
+  getBootstrap(blockRoot: string, format?: "json"): Promise<{data: altair.LightClientBootstrap}>;
   getBootstrap(blockRoot: string, format?: "ssz"): Promise<Uint8Array>;
-  getBootstrap(blockRoot: string, format?: StateFormat): Promise<Uint8Array | {data: LightClientBootstrap}>;
+  getBootstrap(blockRoot: string, format?: StateFormat): Promise<Uint8Array | {data: altair.LightClientBootstrap}>;
 };
 
 /**
