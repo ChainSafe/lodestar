@@ -116,7 +116,7 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
     {
       dbOps,
       slashingProtection,
-      api: args.server,
+      api: args.beaconNodes,
       logger,
       processShutdownCallback,
       signers,
