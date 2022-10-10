@@ -174,7 +174,7 @@ export async function initStateFromAnchorState(
 
   const stateInfo = isCheckpointState ? "checkpoint" : "db";
   if (isWithinWeakSubjectivityPeriod) {
-    const checkpointInfo = forwardWSCheckpoint ? " with forwardWSCheckpoint validation pending" : "";
+    const checkpointInfo = forwardWSCheckpoint ? ", forwardWSCheckpoint validation pending" : "";
     logger.info(`Initializing beacon from a valid ${stateInfo} state${checkpointInfo}`, {
       slot,
       epoch,

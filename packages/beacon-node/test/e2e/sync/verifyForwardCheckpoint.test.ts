@@ -1,0 +1,171 @@
+import {expect} from "chai";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {phase0, ssz} from "@lodestar/types";
+import {IChainConfig} from "@lodestar/config";
+// import {config} from "@lodestar/config/default";
+import {TimestampFormatCode, toHex} from "@lodestar/utils";
+// import {fetchWeakSubjectivityState} from "../../../../cli/src/networks/index.js";
+import {getDevBeaconNode} from "../../utils/node/beacon.js";
+import {waitForEvent} from "../../utils/events/resolver.js";
+import {getAndInitDevValidators} from "../../utils/node/validator.js";
+import {ChainEvent} from "../../../src/chain/index.js";
+import {BeaconRestApiServerOpts} from "../../../src/api/rest/index.js";
+import {testLogger, TestLoggerOpts} from "../../utils/logger.js";
+import {connect} from "../../utils/network.js";
+//import {CheckpointWithHex} from "@lodestar/fork-choice";
+//import {BackfillSyncEvent} from "../../../src/sync/backfill/index.js";
+
+/* eslint-disable @typescript-eslint/naming-convention */
+describe("Start from WSS", function () {
+  const testParams: Pick<IChainConfig, "SECONDS_PER_SLOT"> = {
+    SECONDS_PER_SLOT: 2,
+  };
+
+  const afterEachCallbacks: (() => Promise<unknown> | unknown)[] = [];
+  afterEach(async () => Promise.all(afterEachCallbacks.splice(0, afterEachCallbacks.length)));
+
+  it("using another node", async function () {
+    // Should reach justification in 3 epochs max, and finalization in 4 epochs max
+    const expectedEpochsToFinish = 4;
+    // 1 epoch of margin of error
+    const epochsOfMargin = 1;
+    const timeoutSetupMargin = 5 * 1000; // Give extra 5 seconds of margin
+
+    // delay a bit so regular sync sees it's up to date and sync is completed from the beginning
+    const genesisSlotsDelay = 16;
+
+    const timeout =
+      ((epochsOfMargin + expectedEpochsToFinish) * SLOTS_PER_EPOCH + genesisSlotsDelay) *
+      testParams.SECONDS_PER_SLOT *
+      3 *
+      1000;
+
+    this.timeout(timeout + 2 * timeoutSetupMargin);
+
+    const genesisTime = Math.floor(Date.now() / 1000) + genesisSlotsDelay * testParams.SECONDS_PER_SLOT;
+
+    const testLoggerOpts: TestLoggerOpts = {
+      timestampFormat: {
+        format: TimestampFormatCode.EpochSlot,
+        genesisTime: genesisTime,
+        slotsPerEpoch: SLOTS_PER_EPOCH,
+        secondsPerSlot: testParams.SECONDS_PER_SLOT,
+      },
+    };
+    const loggerNodeA = testLogger("Node-A", testLoggerOpts);
+    const loggerNodeB = testLogger("Node-B", testLoggerOpts);
+
+    const bn = await getDevBeaconNode({
+      params: {...testParams, ALTAIR_FORK_EPOCH: Infinity},
+      options: {
+        api: {
+          rest: {enabled: true, api: ["debug"]} as BeaconRestApiServerOpts,
+        },
+        sync: {isSingleNode: true},
+        network: {allowPublishToZeroPeers: true},
+        chain: {blsVerifyAllMainThread: true},
+      },
+      validatorCount: 32,
+      logger: loggerNodeA,
+      genesisTime,
+    });
+    afterEachCallbacks.push(() => bn.close());
+
+    const finalizedEventistener = waitForEvent<phase0.Checkpoint>(bn.chain.emitter, ChainEvent.finalized, timeout);
+    const {validators} = await getAndInitDevValidators({
+      node: bn,
+      validatorsPerClient: 32,
+      validatorClientCount: 1,
+      startIndex: 0,
+      // At least one sim test must use the REST API for beacon <-> validator comms
+      useRestApi: true,
+      testLoggerOpts,
+    });
+
+    afterEachCallbacks.push(() => Promise.all(validators.map((v) => v.close())));
+
+    let firstCP: phase0.Checkpoint;
+    let forwardWSCheckpoint: phase0.Checkpoint;
+    // let checkpointSyncUrl;
+    // let wsState;
+    // let wsCheckpoint;
+
+    try {
+      await finalizedEventistener;
+      firstCP = await waitForEvent<phase0.Checkpoint>(bn.chain.emitter, ChainEvent.finalized, timeout);
+
+      loggerNodeA.info(`\n\nfirst ChkPt ${toHex(firstCP.root)}:${firstCP.epoch}`);
+
+      // checkpointSyncUrl = "http://127.0.0.1:19596";
+      // ({wsState, wsCheckpoint} = await fetchWeakSubjectivityState(config, loggerNodeB, {checkpointSyncUrl}));
+
+      //await finalizedEventistener;
+      await waitForEvent<phase0.Checkpoint>(bn.chain.emitter, ChainEvent.finalized, timeout);
+
+      //await finalizedEventistener;
+      forwardWSCheckpoint = await waitForEvent<phase0.Checkpoint>(bn.chain.emitter, ChainEvent.finalized, timeout);
+
+      //loggerNodeA.info("\n\nNode A finalized\n\n");
+      loggerNodeA.info(`\n\nthird ChkPt ${toHex(forwardWSCheckpoint.root)}:${forwardWSCheckpoint.epoch}`);
+    } catch (e) {
+      (e as Error).message = `Node A failed to finalize: ${(e as Error).message}`;
+      throw e;
+    }
+
+    const bnStartingFromWSS = await getDevBeaconNode({
+      params: {...testParams, ALTAIR_FORK_EPOCH: Infinity},
+      options: {
+        api: {rest: {enabled: true, port: 9587} as BeaconRestApiServerOpts},
+        sync: {isSingleNode: true},
+        chain: {
+          blsVerifyAllMainThread: true,
+          forwardWSCheckpoint: {root: forwardWSCheckpoint.root, epoch: forwardWSCheckpoint.epoch},
+        },
+      },
+      validatorCount: 32,
+      logger: loggerNodeB,
+      genesisTime,
+      // anchorState:wsState,
+      // wsCheckpoint,
+    });
+
+    afterEachCallbacks.push(() => bnStartingFromWSS.close());
+
+    const head = bn.chain.forkChoice.getHead();
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+    if (!head) throw Error("First beacon node has no head block");
+
+    await connect(bnStartingFromWSS.network, bn.network.peerId, bn.network.localMultiaddrs);
+
+    let chekpointReturned = await waitForEvent<phase0.Checkpoint>(
+      bnStartingFromWSS.chain.emitter,
+      ChainEvent.finalized,
+      timeout
+    );
+
+    let forwardWSCheckpointFound = false;
+    while (chekpointReturned.epoch < forwardWSCheckpoint.epoch) {
+      chekpointReturned = await waitForEvent<phase0.Checkpoint>(
+        bnStartingFromWSS.chain.emitter,
+        ChainEvent.finalized,
+        timeout
+      );
+
+      const returnValue = bnStartingFromWSS.chain.forkChoice.verifyForwardCheckpoint(forwardWSCheckpoint);
+      if (returnValue) {
+        expect(ssz.Root.equals(forwardWSCheckpoint.root, chekpointReturned.root)).to.be.true;
+        expect(chekpointReturned.epoch).to.be.equal(forwardWSCheckpoint.epoch);
+        forwardWSCheckpointFound = true;
+      } else {
+        //node has still not reached the checkpoint epoch
+        expect(ssz.Root.equals(forwardWSCheckpoint.root, chekpointReturned.root)).to.be.false;
+        expect(chekpointReturned.epoch).to.be.not.equal(forwardWSCheckpoint.epoch);
+      }
+      loggerNodeB.info("\n\nNode B finalized - ", {
+        epoch: chekpointReturned.epoch,
+        root: toHex(chekpointReturned.root),
+      });
+    }
+    expect(forwardWSCheckpointFound).to.be.true;
+  });
+});

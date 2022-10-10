@@ -2,6 +2,7 @@ import fs from "node:fs";
 import {expect} from "chai";
 import {IBeaconNodeOptions} from "@lodestar/beacon-node";
 import {RecursivePartial} from "@lodestar/utils";
+import {fromHexString} from "@chainsafe/ssz";
 import {parseBeaconNodeArgs, IBeaconNodeArgs} from "../../../src/options/beaconNodeOptions/index.js";
 import {getTestdirPath} from "../../utils.js";
 
@@ -29,6 +30,7 @@ describe("options / beaconNodeOptions", () => {
       "chain.assertCorrectProgressiveBalances": true,
       "chain.maxSkipSlots": 100,
       "safe-slots-to-import-optimistically": 256,
+      forwardWSCheckpoint: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:12345",
 
       eth1: true,
       "eth1.providerUrl": "http://my.node:8545",
@@ -99,6 +101,10 @@ describe("options / beaconNodeOptions", () => {
         suggestedFeeRecipient: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         assertCorrectProgressiveBalances: true,
         maxSkipSlots: 100,
+        forwardWSCheckpoint: {
+          epoch: 12345,
+          root: fromHexString("0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),
+        },
       },
       eth1: {
         enabled: true,

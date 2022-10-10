@@ -60,6 +60,8 @@ export async function getDevBeaconNode(
     {disablePeerDiscovery: true, peerStoreDir}
   );
 
+  const forwardWSCheckpoint = options.chain?.forwardWSCheckpoint;
+
   options = deepmerge(
     // This deepmerge should NOT merge the array with the defaults but overwrite them
     defaultOptions,
@@ -80,6 +82,12 @@ export async function getDevBeaconNode(
       isMergeableObject: isPlainObject,
     }
   );
+
+  // If default or passed options set forwardWSCheckpoint, set it properly beacause
+  // <Buffer ab cd> becomes an object { '0': 171, '1': 205 } post above deepmerge op
+  if (options.chain?.forwardWSCheckpoint !== undefined) {
+    options.chain.forwardWSCheckpoint = forwardWSCheckpoint ?? defaultOptions.chain.forwardWSCheckpoint;
+  }
 
   let anchorState = opts.anchorState;
   if (!anchorState) {
