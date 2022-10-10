@@ -1,5 +1,5 @@
 import {RootHex, allForks, capella} from "@lodestar/types";
-import {BYTES_PER_LOGS_BLOOM} from "@lodestar/params";
+import {BYTES_PER_LOGS_BLOOM, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {fromHex} from "@lodestar/utils";
 
 import {ErrorJsonRpcResponse, HttpRpcError, JsonRpcHttpClient} from "../../eth1/provider/jsonRpcHttpClient.js";
@@ -63,7 +63,7 @@ export const defaultExecutionEngineHttpOpts: ExecutionEngineHttpOpts = {
  * Size for the serializing queue for fcUs and new payloads, the max length could be equal to
  * EPOCHS_PER_BATCH * 2 in case new payloads are also not awaited serially
  */
-const QUEUE_MAX_LENGHT = EPOCHS_PER_BATCH * 2;
+const QUEUE_MAX_LENGHT = EPOCHS_PER_BATCH * SLOTS_PER_EPOCH * 2;
 
 // Define static options once to prevent extra allocations
 const notifyNewPayloadOpts: ReqOpts = {routeId: "notifyNewPayload"};
