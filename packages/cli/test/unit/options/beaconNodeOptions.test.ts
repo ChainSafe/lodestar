@@ -56,7 +56,7 @@ describe("options / beaconNodeOptions", () => {
       listenAddress: "127.0.0.1",
       port: 9001,
       discoveryPort: 9002,
-      bootnodes: ["enr:-somedata", "enr:-somedata1,enr:-somedata2"],
+      bootnodes: ["enr:-somedata"],
       targetPeers: 25,
       subscribeAllSubnets: true,
       "network.maxPeers": 30,
@@ -129,7 +129,7 @@ describe("options / beaconNodeOptions", () => {
         discv5: {
           enabled: true,
           bindAddr: "/ip4/127.0.0.1/udp/9002",
-          bootEnrs: ["enr:-somedata", "enr:-somedata1", "enr:-somedata2"],
+          bootEnrs: ["enr:-somedata"],
         },
         maxPeers: 30,
         targetPeers: 25,

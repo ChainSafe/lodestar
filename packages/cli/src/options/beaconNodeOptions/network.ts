@@ -27,17 +27,13 @@ export function parseArgs(args: INetworkArgs): IBeaconNodeOptions["network"] {
   const listenAddress = args.listenAddress || defaultListenAddress;
   const udpPort = args.discoveryPort ?? args.port ?? defaultP2pPort;
   const tcpPort = args.port ?? defaultP2pPort;
-  // Each bootnode entry could be comma separated, just deserialize it into a single array
-  // as comma separated entries are generally most friendly in ansible kind of setups, i.e.
-  // [ "en1", "en2,en3" ] => [ 'en1', 'en2', 'en3' ]
-  const bootnodes = (args["bootnodes"] ?? []).reduce((acc: string[], elem: string) => acc.concat(elem.split(",")), []);
 
   return {
     discv5: {
       enabled: args["discv5"] ?? true,
       bindAddr: `/ip4/${listenAddress}/udp/${udpPort}`,
       // TODO: Okay to set to empty array?
-      bootEnrs: bootnodes,
+      bootEnrs: args["bootnodes"] ?? [],
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
       enr: undefined as any,
     },
@@ -92,6 +88,10 @@ export const options: ICliCommandOptions<INetworkArgs> = {
     description: "Bootnodes for discv5 discovery",
     defaultDescription: JSON.stringify((defaultOptions.network.discv5 || {}).bootEnrs || []),
     group: "network",
+    // Each bootnode entry could be comma separated, just deserialize it into a single array
+    // as comma separated entries are generally most friendly in ansible kind of setups, i.e.
+    // [ "en1", "en2,en3" ] => [ 'en1', 'en2', 'en3' ]
+    coerce: (args: string[]) => args.map((item) => item.split(",")).flat(1),
   },
 
   targetPeers: {
