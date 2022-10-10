@@ -63,7 +63,7 @@ export const defaultExecutionEngineHttpOpts: ExecutionEngineHttpOpts = {
  * Size for the serializing queue for fcUs and new payloads, the max length could be equal to
  * EPOCHS_PER_BATCH * 2 in case new payloads are also not awaited serially
  */
-const QUEUE_MAX_LENGHT = EPOCHS_PER_BATCH * SLOTS_PER_EPOCH * 2;
+const QUEUE_MAX_LENGTH = EPOCHS_PER_BATCH * SLOTS_PER_EPOCH * 2;
 
 // Define static options once to prevent extra allocations
 const notifyNewPayloadOpts: ReqOpts = {routeId: "notifyNewPayload"};
@@ -110,7 +110,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     });
     this.rpcFetchQueue = new JobItemQueue<[EngineRequest], EngineResponse>(
       this.jobQueueProcessor,
-      {maxLength: QUEUE_MAX_LENGHT, maxConcurrency: 1, signal},
+      {maxLength: QUEUE_MAX_LENGTH, maxConcurrency: 1, signal},
       metrics?.engineHttpProcessorQueue
     );
   }
