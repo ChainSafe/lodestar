@@ -157,10 +157,17 @@ describe("lodestar / api / impl / light_client", function () {
       };
 
       const responseSSZ = await client.lightclient.getUpdates(1, 2, "ssz");
-      const resultDeserialzed = lightClientUpdateCodec.deserialize(responseSSZ);
+      const resultDeserialized = lightClientUpdateCodec.deserialize(responseSSZ);
 
-      expect(ssz.altair.LightClientUpdate.equals(expectedResponse[0], resultDeserialzed[0])).to.be.true;
-      expect(ssz.altair.LightClientUpdate.equals(expectedResponse[1], resultDeserialzed[1])).to.be.true;
+      expect(resultDeserialized.length).to.be.equals(expectedResponse.length, "Length of response invalid");
+      expect(
+        ssz.altair.LightClientUpdate.equals(expectedResponse[0], resultDeserialized[0]),
+        "First LightClientUpdate is invalid"
+      ).to.be.true;
+      expect(
+        ssz.altair.LightClientUpdate.equals(expectedResponse[1], resultDeserialized[1]),
+        "Second LightClientUpdate is invalid"
+      ).to.be.true;
 
       const responseJSON = await client.lightclient.getUpdates(1, 2, "json");
       expect(responseJSON.data).to.be.deep.equal([firstLcUpdate, secondLcUpdate], "Returned Updates in JSON invalid");
