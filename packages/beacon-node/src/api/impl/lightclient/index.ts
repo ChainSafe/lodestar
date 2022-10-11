@@ -1,5 +1,5 @@
 import {routes} from "@lodestar/api";
-import {fromHexString} from "@chainsafe/ssz";
+import {fromHexString, ListCompositeType} from "@chainsafe/ssz";
 import {ProofType, Tree} from "@chainsafe/persistent-merkle-tree";
 import {SyncPeriod} from "@lodestar/types";
 import {LightClientUpdate} from "@lodestar/types/altair";
@@ -15,24 +15,12 @@ export function getLightclientApi(
   {chain, config, db}: Pick<ApiModules, "chain" | "config" | "db">
 ): routes.lightclient.Api {
   // It's currently possible to request gigantic proofs (eg: a proof of the entire beacon state)
-  // We want some some sort of resistance against this DoS vector.
+  // We want some sort of resistance against this DoS vector.
   const maxGindicesInProof = opts.maxGindicesInProof ?? 512;
 
   const serializeSSZArray = (chunks: LightClientUpdate[]): Uint8Array => {
-    const serializedChunks = chunks.map((chunk) => ssz.altair.LightClientUpdate.serialize(chunk));
-    let length = 0;
-    serializedChunks.forEach((item) => {
-      length += item.length;
-    });
-
-    const mergedArray = new Uint8Array(length);
-    let offset = 0;
-    serializedChunks.forEach((item) => {
-      mergedArray.set(item, offset);
-      offset += item.length;
-    });
-
-    return mergedArray;
+    const lightClientUpdateCodec = new ListCompositeType(ssz.altair.LightClientUpdate, chunks.length);
+    return lightClientUpdateCodec.serialize(chunks);
   };
 
   return {

@@ -2,7 +2,7 @@ import {expect} from "chai";
 import {createIBeaconConfig, IChainConfig} from "@lodestar/config";
 import {chainConfig as chainConfigDef} from "@lodestar/config/default";
 import {getClient} from "@lodestar/api";
-import {toHexString} from "@chainsafe/ssz";
+import {ListCompositeType, toHexString} from "@chainsafe/ssz";
 import {ssz} from "@lodestar/types";
 import {LogLevel, testLogger, TestLoggerOpts} from "../../../../../utils/logger.js";
 import {getDevBeaconNode} from "../../../../../utils/node/beacon.js";
@@ -95,6 +95,7 @@ describe("lodestar / api / impl / light_client", function () {
       const responseJSON = await client.lightclient.getFinalityUpdate("json");
       expect(responseJSON.data).to.be.deep.equal(expectedValue, "Returned FinalityUpdate in JSON invalid");
     });
+
     it("should return Optimistic Update as ssz and json", async function () {
       const validatorCount = 2;
       const bn = await getDevBeaconNode({
@@ -126,6 +127,7 @@ describe("lodestar / api / impl / light_client", function () {
       const responseJSON = await client.lightclient.getOptimisticUpdate("json");
       expect(responseJSON.data).to.be.deep.equal(expectedValue, "Returned OptimisticUpdate in JSON invalid");
     });
+
     it("should return Update as ssz and json", async function () {
       const validatorCount = 2;
       const bn = await getDevBeaconNode({
@@ -141,28 +143,27 @@ describe("lodestar / api / impl / light_client", function () {
       afterEachCallbacks.push(() => bn.close());
 
       const client = getClient({baseUrl: `http://127.0.0.1:${restPort}`}, {config});
-      const firstExpectedValue = ssz.altair.LightClientUpdate.defaultValue();
-      firstExpectedValue.signatureSlot = 0;
-      const secondExpectedValue = ssz.altair.LightClientUpdate.defaultValue();
-      secondExpectedValue.signatureSlot = 1;
+      const firstLcUpdate = ssz.altair.LightClientUpdate.defaultValue();
+      firstLcUpdate.signatureSlot = 0;
+      const secondLcUpdate = ssz.altair.LightClientUpdate.defaultValue();
+      secondLcUpdate.signatureSlot = 1;
+      const expectedResponse = [firstLcUpdate, secondLcUpdate];
+
+      const lightClientUpdateCodec = new ListCompositeType(ssz.altair.LightClientUpdate, expectedResponse.length);
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       bn.chain.lightClientServer.getUpdates = (syncPeriod, count) => {
-        return Promise.resolve([firstExpectedValue, secondExpectedValue]);
+        return Promise.resolve(expectedResponse);
       };
 
-      // TODO
-      // const responseSSZ = await client.lightclient.getUpdates(1, 2, "ssz");
-      // expect(responseSSZ).to.be.deep.equal(
-      //   ssz.altair.LightClientOptimisticUpdate.serialize(firstExpectedValue),
-      //   "Returned OptimisticUpdate in SSZ invalid"
-      // );
+      const responseSSZ = await client.lightclient.getUpdates(1, 2, "ssz");
+      const resultDeserialzed = lightClientUpdateCodec.deserialize(responseSSZ);
+
+      expect(ssz.altair.LightClientUpdate.equals(expectedResponse[0], resultDeserialzed[0])).to.be.true;
+      expect(ssz.altair.LightClientUpdate.equals(expectedResponse[1], resultDeserialzed[1])).to.be.true;
 
       const responseJSON = await client.lightclient.getUpdates(1, 2, "json");
-      expect(responseJSON.data).to.be.deep.equal(
-        [firstExpectedValue, secondExpectedValue],
-        "Returned Updates in JSON invalid"
-      );
+      expect(responseJSON.data).to.be.deep.equal([firstLcUpdate, secondLcUpdate], "Returned Updates in JSON invalid");
     });
   });
 });
