@@ -19,9 +19,13 @@ describe("Start from WSS", function () {
     SECONDS_PER_SLOT: 2,
   };
 
-  const afterEachCallbacks: (() => Promise<unknown> | unknown)[] = [];
-  afterEach(async () => Promise.all(afterEachCallbacks.splice(0, afterEachCallbacks.length)));
-
+  const afterEachCallbacks: (() => Promise<unknown> | void)[] = [];
+  afterEach(async () => {
+    while (afterEachCallbacks.length > 0) {
+      const callback = afterEachCallbacks.pop();
+      if (callback) await callback();
+    }
+  });
   it("using another node", async function () {
     // Should reach justification in 3 epochs max, and finalization in 4 epochs max
     const expectedEpochsToFinish = 4;

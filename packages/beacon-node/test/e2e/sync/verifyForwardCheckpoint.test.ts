@@ -2,9 +2,7 @@ import {expect} from "chai";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {phase0, ssz} from "@lodestar/types";
 import {IChainConfig} from "@lodestar/config";
-// import {config} from "@lodestar/config/default";
 import {TimestampFormatCode, toHex} from "@lodestar/utils";
-// import {fetchWeakSubjectivityState} from "../../../../cli/src/networks/index.js";
 import {getDevBeaconNode} from "../../utils/node/beacon.js";
 import {waitForEvent} from "../../utils/events/resolver.js";
 import {getAndInitDevValidators} from "../../utils/node/validator.js";
@@ -12,19 +10,22 @@ import {ChainEvent} from "../../../src/chain/index.js";
 import {BeaconRestApiServerOpts} from "../../../src/api/rest/index.js";
 import {testLogger, TestLoggerOpts} from "../../utils/logger.js";
 import {connect} from "../../utils/network.js";
-//import {CheckpointWithHex} from "@lodestar/fork-choice";
-//import {BackfillSyncEvent} from "../../../src/sync/backfill/index.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
-describe("Start from WSS", function () {
+describe("VerifyForwardCheckpoint", function () {
   const testParams: Pick<IChainConfig, "SECONDS_PER_SLOT"> = {
     SECONDS_PER_SLOT: 2,
   };
 
-  const afterEachCallbacks: (() => Promise<unknown> | unknown)[] = [];
-  afterEach(async () => Promise.all(afterEachCallbacks.splice(0, afterEachCallbacks.length)));
+  const afterEachCallbacks: (() => Promise<unknown> | void)[] = [];
+  afterEach(async () => {
+    while (afterEachCallbacks.length > 0) {
+      const callback = afterEachCallbacks.pop();
+      if (callback) await callback();
+    }
+  });
 
-  it("using another node", async function () {
+  it("checks the return from VerifyForwardCheckpoint", async function () {
     // Should reach justification in 3 epochs max, and finalization in 4 epochs max
     const expectedEpochsToFinish = 4;
     // 1 epoch of margin of error
@@ -69,6 +70,7 @@ describe("Start from WSS", function () {
       logger: loggerNodeA,
       genesisTime,
     });
+
     afterEachCallbacks.push(() => bn.close());
 
     const finalizedEventistener = waitForEvent<phase0.Checkpoint>(bn.chain.emitter, ChainEvent.finalized, timeout);
@@ -84,11 +86,11 @@ describe("Start from WSS", function () {
 
     afterEachCallbacks.push(() => Promise.all(validators.map((v) => v.close())));
 
+    // stop bn after validators
+    afterEachCallbacks.push(() => bn.close());
+
     let firstCP: phase0.Checkpoint;
     let forwardWSCheckpoint: phase0.Checkpoint;
-    // let checkpointSyncUrl;
-    // let wsState;
-    // let wsCheckpoint;
 
     try {
       await finalizedEventistener;
@@ -96,26 +98,20 @@ describe("Start from WSS", function () {
 
       loggerNodeA.info(`\n\nfirst ChkPt ${toHex(firstCP.root)}:${firstCP.epoch}`);
 
-      // checkpointSyncUrl = "http://127.0.0.1:19596";
-      // ({wsState, wsCheckpoint} = await fetchWeakSubjectivityState(config, loggerNodeB, {checkpointSyncUrl}));
-
-      //await finalizedEventistener;
       await waitForEvent<phase0.Checkpoint>(bn.chain.emitter, ChainEvent.finalized, timeout);
 
-      //await finalizedEventistener;
       forwardWSCheckpoint = await waitForEvent<phase0.Checkpoint>(bn.chain.emitter, ChainEvent.finalized, timeout);
 
-      //loggerNodeA.info("\n\nNode A finalized\n\n");
       loggerNodeA.info(`\n\nthird ChkPt ${toHex(forwardWSCheckpoint.root)}:${forwardWSCheckpoint.epoch}`);
     } catch (e) {
       (e as Error).message = `Node A failed to finalize: ${(e as Error).message}`;
       throw e;
     }
 
-    const bnStartingFromWSS = await getDevBeaconNode({
+    const bn2 = await getDevBeaconNode({
       params: {...testParams, ALTAIR_FORK_EPOCH: Infinity},
       options: {
-        api: {rest: {enabled: true, port: 9587} as BeaconRestApiServerOpts},
+        api: {rest: {enabled: false} as BeaconRestApiServerOpts},
         sync: {isSingleNode: true},
         chain: {
           blsVerifyAllMainThread: true,
@@ -125,33 +121,25 @@ describe("Start from WSS", function () {
       validatorCount: 32,
       logger: loggerNodeB,
       genesisTime,
-      // anchorState:wsState,
-      // wsCheckpoint,
     });
 
-    afterEachCallbacks.push(() => bnStartingFromWSS.close());
+    afterEachCallbacks.push(() => bn2.close());
+
+    afterEachCallbacks.push(() => bn2.close());
 
     const head = bn.chain.forkChoice.getHead();
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (!head) throw Error("First beacon node has no head block");
 
-    await connect(bnStartingFromWSS.network, bn.network.peerId, bn.network.localMultiaddrs);
+    await connect(bn2.network, bn.network.peerId, bn.network.localMultiaddrs);
 
-    let chekpointReturned = await waitForEvent<phase0.Checkpoint>(
-      bnStartingFromWSS.chain.emitter,
-      ChainEvent.finalized,
-      timeout
-    );
+    let chekpointReturned = await waitForEvent<phase0.Checkpoint>(bn2.chain.emitter, ChainEvent.finalized, timeout);
 
     let forwardWSCheckpointFound = false;
     while (chekpointReturned.epoch < forwardWSCheckpoint.epoch) {
-      chekpointReturned = await waitForEvent<phase0.Checkpoint>(
-        bnStartingFromWSS.chain.emitter,
-        ChainEvent.finalized,
-        timeout
-      );
+      chekpointReturned = await waitForEvent<phase0.Checkpoint>(bn2.chain.emitter, ChainEvent.finalized, timeout);
 
-      const returnValue = bnStartingFromWSS.chain.forkChoice.verifyForwardCheckpoint(forwardWSCheckpoint);
+      const returnValue = bn2.chain.forkChoice.verifyForwardCheckpoint(forwardWSCheckpoint);
       if (returnValue) {
         expect(ssz.Root.equals(forwardWSCheckpoint.root, chekpointReturned.root)).to.be.true;
         expect(chekpointReturned.epoch).to.be.equal(forwardWSCheckpoint.epoch);
