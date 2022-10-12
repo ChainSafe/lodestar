@@ -226,7 +226,7 @@ export async function verifyBlocksExecutionPayload(
 
       // executionStatus will never == ExecutionStatus.PreMerge if it's the mergeBlock. But gotta make TS happy =D
       if (executionStatus === ExecutionStatus.PreMerge) {
-        throw Error("Merge block must not have executionStatus === PreMerge");
+        throw Error("Merge block must not have executionStatus == PreMerge");
       }
 
       assertValidTerminalPowBlock(chain.config, mergeBlock, {executionStatus, powBlock, powBlockParent});

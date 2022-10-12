@@ -209,7 +209,7 @@ export class DoppelgangerService {
       for (const response of previousEpochLiveness) {
         if (response.epoch !== previousEpoch) {
           // Server sending bad data
-          throw Error(`Inconsistent livenessResponseData epoch ${response.epoch} !== ${previousEpoch}`);
+          throw Error(`Inconsistent livenessResponseData epoch ${response.epoch} != ${previousEpoch}`);
         }
 
         const state = this.doppelgangerStateByPubkey.get(indicesToCheckMap.get(response.index) ?? "");

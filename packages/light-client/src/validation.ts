@@ -81,7 +81,7 @@ export function assertValidFinalityProof(update: routes.lightclient.LightclientF
   const updatePeriod = computeSyncPeriodAtSlot(update.attestedHeader.slot);
   const updateFinalityPeriod = computeSyncPeriodAtSlot(update.finalizedHeader.slot);
   if (updateFinalityPeriod !== updatePeriod) {
-    throw Error(`finalityHeader period ${updateFinalityPeriod} !== header period ${updatePeriod}`);
+    throw Error(`finalityHeader period ${updateFinalityPeriod} != header period ${updatePeriod}`);
   }
 }
 
