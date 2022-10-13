@@ -60,6 +60,7 @@ export class StateContextCache {
 
   add(item: CachedBeaconStateAllForks): void {
     const key = toHexString(item.hashTreeRoot());
+
     if (this.cache.get(key)) {
       return;
     }
@@ -97,6 +98,8 @@ export class StateContextCache {
    * Without more thought, this currently breaks our assumptions about recent state availablity
    */
   prune(headStateRootHex: RootHex): void {
+    return;
+
     const keys = Array.from(this.cache.keys());
     if (keys.length > this.maxStates) {
       // object keys are stored in insertion order, delete keys starting from the front
@@ -104,7 +107,7 @@ export class StateContextCache {
         if (key !== headStateRootHex) {
           const item = this.cache.get(key);
           if (item) {
-            this.epochIndex.get(item.epochCtx.epoch)?.delete(key);
+            this.epochIndex.get(item!.epochCtx.epoch)?.delete(key);
             this.cache.delete(key);
           }
         }
@@ -116,6 +119,8 @@ export class StateContextCache {
    * Prune per finalized epoch.
    */
   deleteAllBeforeEpoch(finalizedEpoch: Epoch): void {
+    return;
+
     for (const epoch of this.epochIndex.keys()) {
       if (epoch < finalizedEpoch) {
         this.deleteAllEpochItems(epoch);
