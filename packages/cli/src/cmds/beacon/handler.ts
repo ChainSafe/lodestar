@@ -14,6 +14,7 @@ import {BeaconNodeOptions, exportToJSON, FileENR, getBeaconConfigFromArgs} from 
 import {onGracefulShutdown, getCliLogger, mkdir, writeFile600Perm} from "../../util/index.js";
 import {getNetworkBootnodes, getNetworkData, readBootnodes} from "../../networks/index.js";
 import {getVersionData} from "../../util/version.js";
+import {defaultP2pPort} from "../../options/beaconNodeOptions/network.js";
 import {IBeaconArgs} from "./options.js";
 import {getBeaconPaths} from "./paths.js";
 import {initBeaconState} from "./initBeaconState.js";
@@ -150,16 +151,15 @@ export async function beaconHandlerInit(args: IBeaconArgs & IGlobalArgs) {
 }
 
 export function overwriteEnrWithCliArgs(enr: ENR, args: IBeaconArgs): void {
-  // TODO: Not sure if we should propagate this options to the ENR
-  if (args.port != null) enr.tcp = args.port;
-  // TODO: reenable this once we fix the below discv5 issue
+  // TODO: Not sure if we should propagate port/defaultP2pPort options to the ENR
+  enr.tcp = args["enr.tcp"] ?? args.port ?? defaultP2pPort;
+  // TODO: add `port`/`defaultP2pPort` port as backup as well once we
+  // fix the below discv5 issue
+  //
   // See https://github.com/ChainSafe/discv5/issues/201
-  // if (args.port != null) enr.udp = args.port;
-  if (args.discoveryPort != null) enr.udp = args.discoveryPort;
-
+  const udpPort = args["enr.udp"] ?? args.discoveryPort;
+  if (udpPort != null) enr.udp = udpPort;
   if (args["enr.ip"] != null) enr.ip = args["enr.ip"];
-  if (args["enr.tcp"] != null) enr.tcp = args["enr.tcp"];
-  if (args["enr.udp"] != null) enr.udp = args["enr.udp"];
   if (args["enr.ip6"] != null) enr.ip6 = args["enr.ip6"];
   if (args["enr.tcp6"] != null) enr.tcp6 = args["enr.tcp6"];
   if (args["enr.udp6"] != null) enr.udp6 = args["enr.udp6"];
