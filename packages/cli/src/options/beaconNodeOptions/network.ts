@@ -2,7 +2,7 @@ import {defaultOptions, IBeaconNodeOptions} from "@lodestar/beacon-node";
 import {ICliCommandOptions} from "../../util/index.js";
 
 const defaultListenAddress = "0.0.0.0";
-const defaultP2pPort = 9000;
+export const defaultP2pPort = 9000;
 
 export interface INetworkArgs {
   discv5?: boolean;
