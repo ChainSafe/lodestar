@@ -506,7 +506,6 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
     if (this.syncAnchor.lastBackSyncedBlock === null) {
       throw Error("Invalid lastBackSyncedBlock for checkpoint validation");
     }
-    let x: string = this.wsCheckpointHeader;
     if (this.wsCheckpointHeader === null) {
       throw Error("Invalid null checkpoint for validation");
     }
