@@ -154,7 +154,7 @@ export function overwriteEnrWithCliArgs(enr: ENR, args: IBeaconArgs): void {
   if (args.port != null) enr.tcp = args.port;
   // TODO: reenable this once we fix the below discv5 issue
   // See https://github.com/ChainSafe/discv5/issues/201
-  // if (args.port !== null) enr.udp = args.port;
+  // if (args.port != null) enr.udp = args.port;
   if (args.discoveryPort != null) enr.udp = args.discoveryPort;
 
   if (args["enr.ip"] != null) enr.ip = args["enr.ip"];
