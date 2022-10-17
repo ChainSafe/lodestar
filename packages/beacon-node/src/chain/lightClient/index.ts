@@ -278,7 +278,18 @@ export class LightClientServer {
    */
   async getUpdates(startPeriod: SyncPeriod, count = 1): Promise<altair.LightClientUpdate[]> {
     const periods: number[] = Array.from({length: count}, (_ignored, i) => i + startPeriod);
-    return await Promise.all(periods.map((period) => this.getUpdate(period)));
+    const updates = [];
+    for (const period of periods) {
+      try {
+        updates.push(this.getUpdate(period));
+      } catch (e) {
+        this.logger.debug("Error requesting LightClientUpdate", {
+          period,
+          error: (e as Error).message,
+        });
+      }
+    }
+    return Promise.all(updates);
   }
 
   /**
