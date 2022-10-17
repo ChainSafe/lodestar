@@ -136,7 +136,7 @@ describe("LevelDB controller", () => {
 
   function getDbSize(): number {
     // 116	./.__testdb
-    const res = execSync(`du -bs ${dbLocation}`, {encoding: "utf8"});
+    const res = execSync(`du -s ${dbLocation}`, {encoding: "utf8"});
     const match = res.match(/^(\d+)/);
     if (!match) throw Error(`Unknown du response \n${res}`);
     return parseInt(match[1]);

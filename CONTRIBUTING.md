@@ -16,10 +16,13 @@ Thanks for your contribution to Lodestar. It's people like you that push the Eth
 
 ## Tests
 
+- :computer: Run `lerna run download-spec-tests` to download the files necessary to run spec tests.
 - :test_tube: Run `lerna run test:spec-min` for minimal spec tests.
 - :test_tube: Run `lerna run test:spec-main` for mainnet spec tests.
 - :test_tube: Run `lerna run test:unit` for unit tests.
 - :test_tube: Run `lerna run test:e2e` for end-to-end tests.
+- :test_tube: Run `yarn check-types` to check TypeScript types.
+- :test_tube: Run `yarn lint` to run the linter (ESLint).
 - :test_tube: Run `lerna run test` to run all tests.
 
 ### Debugging Spec Tests
@@ -101,7 +104,7 @@ For example:
 
 > Add Edit on Github button to all the pages
 
-**Pull Request Etiquette** 
+**Pull Request Etiquette**
 
 - Pull requests should remain as drafts when they are not ready for review by maintainers. Open pull requests signal to the maintainers that it's ready for review.
 - If your pull request is no longer applicable or validated to fix an issue, close your pull request.
