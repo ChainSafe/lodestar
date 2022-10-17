@@ -77,7 +77,7 @@ export class MinMaxSurround implements IMinMaxSurround {
   private async assertNotSurrounded(pubKey: BLSPubkey, attestation: MinMaxSurroundAttestation): Promise<void> {
     const maxSpan = await this.store.maxSpan.get(pubKey, attestation.sourceEpoch);
     const distance = attestation.targetEpoch - attestation.sourceEpoch;
-    if (maxSpan !== null && maxSpan > 0 && maxSpan > distance) {
+    if (maxSpan !== null && maxSpan !== undefined && maxSpan > 0 && maxSpan > distance) {
       throw new SurroundAttestationError({
         code: SurroundAttestationErrorCode.IS_SURROUNDED,
         attestation: attestation,
