@@ -3,7 +3,7 @@ import {preset as mainnet} from "./presets/mainnet/index.js";
 import {preset as minimal} from "./presets/minimal/index.js";
 import {preset as gnosis} from "./presets/gnosis/index.js";
 import {presetStatus} from "./presetStatus.js";
-import {userSelectedPreset} from "./setPreset.js";
+import {userSelectedPreset, userOverrides} from "./setPreset.js";
 
 export * from "./interface/index.js";
 export {ForkName, ForkSeq} from "./forkName.js";
@@ -88,7 +88,7 @@ export const {
   WITHDRAWAL_QUEUE_LIMIT,
   MAX_BLS_TO_EXECUTION_CHANGES,
   MAX_WITHDRAWALS_PER_PAYLOAD,
-} = presets[ACTIVE_PRESET];
+} = {...presets[ACTIVE_PRESET], ...userOverrides};
 
 ////////////
 // Constants

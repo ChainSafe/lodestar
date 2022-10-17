@@ -2,7 +2,7 @@ import {defaultOptions, IBeaconNodeOptions} from "@lodestar/beacon-node";
 import {ICliCommandOptions} from "../../util/index.js";
 
 const defaultListenAddress = "0.0.0.0";
-const defaultP2pPort = 9000;
+export const defaultP2pPort = 9000;
 
 export interface INetworkArgs {
   discv5?: boolean;
@@ -88,6 +88,10 @@ export const options: ICliCommandOptions<INetworkArgs> = {
     description: "Bootnodes for discv5 discovery",
     defaultDescription: JSON.stringify((defaultOptions.network.discv5 || {}).bootEnrs || []),
     group: "network",
+    // Each bootnode entry could be comma separated, just deserialize it into a single array
+    // as comma separated entries are generally most friendly in ansible kind of setups, i.e.
+    // [ "en1", "en2,en3" ] => [ 'en1', 'en2', 'en3' ]
+    coerce: (args: string[]) => args.map((item) => item.split(",")).flat(1),
   },
 
   targetPeers: {

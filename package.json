@@ -27,7 +27,7 @@
     "test:spec-fast": "lerna run test:spec-fast --no-bail",
     "test:spec-main": "lerna run test:spec-main --no-bail",
     "benchmark": "yarn benchmark:files 'packages/*/test/perf/**/*.test.ts'",
-    "benchmark:files": "LODESTAR_PRESET=mainnet NODE_OPTIONS='--max-old-space-size=4096 --loader=ts-node/esm' benchmark --config .benchrc.yaml",
+    "benchmark:files": "LODESTAR_PRESET=mainnet NODE_OPTIONS='--max-old-space-size=4096 --loader=ts-node/esm' benchmark --config .benchrc.yaml --defaultBranch unstable",
     "release:create-rc": "node scripts/release/create_rc.mjs",
     "release:tag-rc": "node scripts/release/tag_rc.mjs",
     "release:tag-stable": "node scripts/release/tag_stable.mjs",

@@ -36,7 +36,7 @@ export function getSlashingProtection(
  * Returns genesisValidatorsRoot from validator API client.
  */
 export async function getGenesisValidatorsRoot(args: IGlobalArgs & ISlashingProtectionArgs): Promise<Root> {
-  const server = args.server;
+  const server = args.beaconNodes[0];
 
   const networkGenesis = genesisData[args.network as NetworkName];
   if (networkGenesis !== undefined) {
