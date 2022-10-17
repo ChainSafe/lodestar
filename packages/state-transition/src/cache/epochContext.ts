@@ -553,7 +553,7 @@ export class EpochContext {
     const epoch = computeEpochAtSlot(slot);
     if (epoch !== this.currentShuffling.epoch) {
       throw new Error(
-        `Requesting beacon proposer for different epoch current shuffling: ${epoch} !== ${this.currentShuffling.epoch}`
+        `Requesting beacon proposer for different epoch current shuffling: ${epoch} != ${this.currentShuffling.epoch}`
       );
     }
     return this.proposers[slot % SLOTS_PER_EPOCH];
