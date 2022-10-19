@@ -1,6 +1,6 @@
 import {EIP4844Preset} from "../../interface/eip4844.js";
 
-// https://github.com/ethereum/consensus-specs/blob/dev/presets/minimal/eip4844.yaml
+// https://github.com/ethereum/consensus-specs/blob/dev/presets/mainnet/eip4844.yaml
 
 /* eslint-disable @typescript-eslint/naming-convention */
 export const eip4844: EIP4844Preset = {
