@@ -156,6 +156,7 @@ export class Lightclient {
     this.syncCommitteeByPeriod.set(periodCurr, {
       isFinalized: false,
       participation: 0,
+      // TODO DA any reason not to use snapshot.header.slot
       slot: periodCurr * EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH,
       ...deserializeSyncCommittee(snapshot.currentSyncCommittee),
     });
@@ -266,7 +267,7 @@ export class Lightclient {
       const count = toPeriodRng + 1 - fromPeriodRng;
       const {data: updates} = await this.api.lightclient.getUpdates(fromPeriodRng, count);
       for (const update of updates) {
-        this.processSyncCommitteeUpdate(update);
+        this.processLightClientUpdate(update);
         const headPeriod = computeSyncPeriodAtSlot(update.attestedHeader.slot);
         this.logger.debug(`processed sync update for period ${headPeriod}`);
         // Yield to the macro queue, verifying updates is somewhat expensive and we want responsiveness
@@ -376,7 +377,7 @@ export class Lightclient {
           break;
 
         case routes.events.EventType.lightClientUpdate:
-          this.processSyncCommitteeUpdate(event.message);
+          this.processLightClientUpdate(event.message);
           break;
 
         default:
@@ -528,7 +529,7 @@ export class Lightclient {
    *                     - current_sync_committee: period 0
    *                     - known next_sync_committee, signed by current_sync_committee
    */
-  private processSyncCommitteeUpdate(update: altair.LightClientUpdate): void {
+  private processLightClientUpdate(update: altair.LightClientUpdate): void {
     // Prevent registering updates for slots too far in the future
     const updateSlot = update.attestedHeader.slot;
     if (updateSlot > slotWithFutureTolerance(this.config, this.genesisTime, MAX_CLOCK_DISPARITY_SEC)) {

@@ -47,9 +47,9 @@ export function assertValidLightClientUpdate(
   // An update may not increase the period but still be stored in validUpdates and be used latter
   assertValidSyncCommitteeProof(update);
 
-  const {attestedHeader} = update;
+  const {attestedHeader, signatureSlot} = update;
   const headerBlockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(attestedHeader);
-  assertValidSignedHeader(config, syncCommittee, update.syncAggregate, headerBlockRoot, attestedHeader.slot);
+  assertValidSignedHeader(config, syncCommittee, update.syncAggregate, headerBlockRoot, signatureSlot);
 }
 
 /**
