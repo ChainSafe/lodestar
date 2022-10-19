@@ -88,6 +88,9 @@ export const {
   WITHDRAWAL_QUEUE_LIMIT,
   MAX_BLS_TO_EXECUTION_CHANGES,
   MAX_WITHDRAWALS_PER_PAYLOAD,
+
+  FIELD_ELEMENTS_PER_BLOB,
+  MAX_BLOBS_PER_BLOCK,
 } = {...presets[ACTIVE_PRESET], ...userOverrides};
 
 ////////////
@@ -169,6 +172,10 @@ export const SYNC_COMMITTEE_SUBNET_COUNT = 4;
 export const SYNC_COMMITTEE_SUBNET_SIZE = Math.floor(SYNC_COMMITTEE_SIZE / SYNC_COMMITTEE_SUBNET_COUNT);
 
 export const MAX_REQUEST_BLOCKS = 2 ** 10; // 1024
+
+// // EIP-4844
+// export const FIELD_ELEMENTS_PER_BLOB = 4096;
+// export const MAX_BLOBS_PER_BLOCK = 16;
 
 // Lightclient pre-computed
 /**
