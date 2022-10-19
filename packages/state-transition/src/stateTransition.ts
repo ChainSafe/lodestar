@@ -9,10 +9,17 @@ import {
   CachedBeaconStatePhase0,
   CachedBeaconStateAltair,
   CachedBeaconStateBellatrix,
+  CachedBeaconStateCapella,
 } from "./types.js";
 import {computeEpochAtSlot} from "./util/index.js";
 import {verifyProposerSignature} from "./signatureSets/index.js";
-import {processSlot, upgradeStateToAltair, upgradeStateToBellatrix, upgradeStateToCapella} from "./slot/index.js";
+import {
+  processSlot,
+  upgradeStateToAltair,
+  upgradeStateToBellatrix,
+  upgradeStateToCapella,
+  upgradeStateTo4844,
+} from "./slot/index.js";
 import {processBlock} from "./block/index.js";
 import {processEpoch} from "./epoch/index.js";
 
@@ -152,6 +159,9 @@ function processSlotsWithTransientCache(
       }
       if (stateSlot === config.CAPELLA_FORK_EPOCH) {
         postState = upgradeStateToCapella(postState as CachedBeaconStateBellatrix) as CachedBeaconStateAllForks;
+      }
+      if (stateSlot === config.EIP4844_FORK_EPOCH) {
+        postState = upgradeStateTo4844(postState as CachedBeaconStateCapella) as CachedBeaconStateAllForks;
       }
     } else {
       postState.slot++;

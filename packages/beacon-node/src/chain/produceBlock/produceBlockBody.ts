@@ -111,7 +111,6 @@ export async function produceBlockBody<T extends BlockType>(
   console.log(`It is epoch ${blockEpoch}`);
 
   if (blockEpoch >= this.config.ALTAIR_FORK_EPOCH) {
-    console.log("Altair is active");
     (blockBody as altair.BeaconBlockBody).syncAggregate = this.syncContributionAndProofPool.getAggregate(
       parentSlot,
       parentBlockRoot

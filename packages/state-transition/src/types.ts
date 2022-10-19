@@ -8,6 +8,7 @@ export {
   CachedBeaconStateAllForks,
   CachedBeaconStateCapella,
   CachedBeaconStateExecutions,
+  CachedBeaconState4844,
 } from "./cache/stateCache.js";
 
 export {
