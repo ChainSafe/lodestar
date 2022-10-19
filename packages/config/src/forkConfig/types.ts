@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import {ForkName, ForkSeq} from "@lodestar/params";
+import {AllFork, ForkGroup, ForkName, ForkSeq} from "@lodestar/params";
 import {allForks, Epoch, Slot, Version} from "@lodestar/types";
 
 export interface IForkInfo {
@@ -30,9 +30,7 @@ export interface IForkConfig {
   /** Get the hard-fork version at a given slot */
   getForkVersion(slot: Slot): Version;
   /** Get SSZ types by hard-fork */
-  getForkTypes(slot: Slot): allForks.AllForksSSZTypes;
-  /** Get execution SSZ tyoes by hard-fork*/
-  getExecutionForkTypes(slot: Slot): allForks.AllForksExecutionSSZTypes;
-  /** Get blinded SSZ types by hard-fork */
-  getBlindedForkTypes(slot: Slot): allForks.AllForksBlindedSSZTypes;
+  getForkTypes<F extends ForkName = AllFork>(slot: Slot): allForks.SSZTypes<F>;
+  /** Get SSZ types filtered to a specific a fork group. Attempting to access a fork outside this group results in a thrown error. */
+  getForkTypesForGroup<F extends ForkGroup>(slot: Slot, forkGroup: F): allForks.SSZTypes<F[number]>;
 }

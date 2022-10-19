@@ -1,12 +1,14 @@
-import {FullOrBlindedBeaconBlock, FullOrBlindedSignedBeaconBlock} from "../allForks/types.js";
-import {ts as bellatrix} from "../bellatrix/index.js";
+import {ExecutionFork} from "@lodestar/params";
+import {BeaconBlock, SignedBeaconBlock, BlindedOrFull} from "../allForks/types.js";
 
-export function isBlindedBeaconBlock(block: FullOrBlindedBeaconBlock): block is bellatrix.BlindedBeaconBlock {
-  return (block as bellatrix.BlindedBeaconBlock).body.executionPayloadHeader !== undefined;
+export function isBlindedBeaconBlock<F extends ExecutionFork = ExecutionFork>(
+  block: BeaconBlock<F, BlindedOrFull>
+): block is BeaconBlock<F, "blinded"> {
+  return (block as BeaconBlock<F, "blinded">).body.executionPayloadHeader !== undefined;
 }
 
-export function isBlindedSignedBeaconBlock(
-  signedBlock: FullOrBlindedSignedBeaconBlock
-): signedBlock is bellatrix.SignedBlindedBeaconBlock {
-  return (signedBlock as bellatrix.SignedBlindedBeaconBlock).message.body.executionPayloadHeader !== undefined;
+export function isBlindedSignedBeaconBlock<F extends ExecutionFork = ExecutionFork>(
+  signedBlock: SignedBeaconBlock<F, BlindedOrFull>
+): signedBlock is SignedBeaconBlock<F, "blinded"> {
+  return (signedBlock as SignedBeaconBlock<F, "blinded">).message.body.executionPayloadHeader !== undefined;
 }
