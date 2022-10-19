@@ -1,7 +1,8 @@
 import {join} from "node:path";
 import {Epoch} from "@lodestar/types";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {logFilesDir, SimulationEnvironment} from "../utils/simulation/index.js";
+import {SimulationEnvironment} from "../utils/simulation/SimulationEnvironment.js";
+import {logFilesDir} from "../utils/simulation/utils.js";
 import {
   missedBlocksAssertions,
   attestationParticipationAssertions,

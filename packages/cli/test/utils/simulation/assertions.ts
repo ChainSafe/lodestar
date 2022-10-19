@@ -19,32 +19,19 @@ export function nodeAssertions(env: SimulationEnvironment): void {
         );
       });
 
-      it("should have correct number of validator clients", async () => {
-        expect(node.validatorClients).to.have.lengthOf(
-          env.params.validatorClients,
-          `node should have correct number of validator clients. ${JSON.stringify({id: node.id})}`
+      it("should have correct keys loaded", async () => {
+        const keyManagerKeys = (await node.keyManager.listKeys()).data.map((k) => k.validatingPubkey).sort();
+        const existingKeys = node.secretKeys.map((k) => k.toPublicKey().toHex()).sort();
+
+        expect(keyManagerKeys).to.eql(
+          existingKeys,
+          `Validator should have correct number of keys loaded. ${JSON.stringify({
+            id: node.id,
+            existingKeys,
+            keyManagerKeys,
+          })}`
         );
       });
-
-      for (const validator of node.validatorClients) {
-        describe(validator.id, () => {
-          it("should have correct keys loaded", async () => {
-            const keyManagerKeys = (await validator.keyManagerApi.listKeys()).data
-              .map((k) => k.validatingPubkey)
-              .sort();
-            const existingKeys = validator.secretKeys.map((k) => k.toPublicKey().toHex()).sort();
-
-            expect(keyManagerKeys).to.eql(
-              existingKeys,
-              `Validator should have correct number of keys loaded. ${JSON.stringify({
-                id: validator.id,
-                existingKeys,
-                keyManagerKeys,
-              })}`
-            );
-          });
-        });
-      }
     });
   }
 }

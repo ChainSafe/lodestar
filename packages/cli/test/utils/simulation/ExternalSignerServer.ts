@@ -12,13 +12,10 @@ export class ExternalSignerServer {
   readonly port: number;
 
   private server: ReturnType<typeof fastify>;
+  private secretKeyMap = new Map<string, SecretKey>();
 
   constructor(secretKeys: SecretKey[]) {
-    const secretKeyMap = new Map<string, SecretKey>();
-    for (const secretKey of secretKeys) {
-      const pubkeyHex = secretKey.toPublicKey().toHex();
-      secretKeyMap.set(pubkeyHex, secretKey);
-    }
+    this.addKeys(secretKeys);
     ExternalSignerServer.totalProcessCount++;
     this.port = EXTERNAL_SIGNER_BASE_PORT + ExternalSignerServer.totalProcessCount;
 
@@ -29,7 +26,7 @@ export class ExternalSignerServer {
     });
 
     this.server.get("/api/v1/eth2/publicKeys", async () => {
-      return [...secretKeyMap.keys()];
+      return [...this.secretKeyMap.keys()];
     });
 
     /* eslint-disable @typescript-eslint/naming-convention */
@@ -46,13 +43,21 @@ export class ExternalSignerServer {
       const pubkeyHex: string = req.params.identifier;
       const signingRootHex: string = req.body.signingRoot;
 
-      const secretKey = secretKeyMap.get(pubkeyHex);
+      const secretKey = this.secretKeyMap.get(pubkeyHex);
       if (!secretKey) {
+        console.log([...this.secretKeyMap.keys()].join("\n"));
         throw Error(`pubkey not known ${pubkeyHex}`);
       }
 
       return {signature: secretKey.sign(fromHexString(signingRootHex)).toHex()};
     });
+  }
+
+  addKeys(secretKeys: SecretKey[]): void {
+    for (const secretKey of secretKeys) {
+      const pubkeyHex = secretKey.toPublicKey().toHex();
+      this.secretKeyMap.set(pubkeyHex, secretKey);
+    }
   }
 
   get url(): string {
@@ -62,12 +67,10 @@ export class ExternalSignerServer {
   async start(): Promise<void> {
     console.log(`Starting external signer server at ${this.url}.`);
     await this.server.listen(this.port, this.address);
-    console.log(`Started external signer server at ${this.url}.`);
   }
 
   async stop(): Promise<void> {
     console.log(`Stopping external signer server at ${this.url}.`);
     await this.server.close();
-    console.log(`Stopped external signer server at ${this.url}.`);
   }
 }

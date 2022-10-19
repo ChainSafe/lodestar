@@ -19,6 +19,7 @@ export type SimulationOptionalParams = {
   anchorState?: BeaconStateAllForks;
   // Use this percentage for external signer and rest will be used for local key manager
   externalKeysPercentage: number;
+  runnerType: RunnerType;
 };
 
 export type RunTimeSimulationParams = {
@@ -26,45 +27,60 @@ export type RunTimeSimulationParams = {
   slotsPerEpoch: number;
 };
 
-export interface BeaconNodeProcess {
-  ready(): Promise<boolean>;
-  start(): Promise<void>;
-  stop(): Promise<void>;
-  id: string;
-  peerId?: string;
-  multiaddrs: string[];
-  api: Api;
-  address: string;
-  port: number;
-  restPort: number;
-  validatorClients: ValidatorProcess[];
-}
-
-export interface BeaconNodeConstructor {
-  new (params: SimulationParams, rootDir: string): BeaconNodeProcess;
-  totalProcessCount: number;
-}
-
-export interface ValidatorProcess {
-  ready(): Promise<boolean>;
-  start(): Promise<void>;
-  stop(): Promise<void>;
-  id: string;
-  secretKeys: SecretKey[];
-  keyManagerApi: KeyManagerApi;
-}
-
-export interface ValidatorConstructor {
-  new (
-    params: SimulationParams,
-    options: {
-      rootDir: string;
-      clientIndex: number;
-      server: string;
-      config: IChainForkConfig;
-    }
-  ): ValidatorProcess;
-  totalProcessCount: number;
-}
-
 export type SimulationParams = SimulationRequiredParams & Required<SimulationOptionalParams> & RunTimeSimulationParams;
+
+export interface CLClientOptions {
+  params: SimulationParams;
+  id: string;
+  rootDir: string;
+  logFilePath: string;
+  genesisStateFilePath: string;
+  address: string;
+  restPort: number;
+  port: number;
+  keyManagerPort: number;
+  config: IChainForkConfig;
+  secretKeys: SecretKey[];
+}
+
+export type CLClientGenerator = (opts: CLClientOptions, runner: Runner) => Promise<Job>;
+
+export interface JobOptions {
+  cli: {
+    command: string;
+    args: string[];
+    env: Record<string, string>;
+  };
+  logs: {
+    stdoutFilePath: string;
+  };
+  // Nested jobs
+  children?: JobOptions[];
+  health(): Promise<boolean>;
+}
+
+export interface Job {
+  type: RunnerType;
+  id: string;
+  start(): Promise<void>;
+  stop(): Promise<void>;
+}
+
+export enum RunnerType {
+  ChildProcess = "child_process",
+}
+
+export interface Runner {
+  type: RunnerType;
+  create: (id: string, options: JobOptions[]) => Promise<Job>;
+  on(event: RunnerEvent, cb: () => void | Promise<void>): void;
+}
+
+export type RunnerEvent = "starting" | "started" | "stopping" | "stop";
+
+export interface CLParticipant {
+  readonly id: string;
+  readonly api: Api;
+  readonly keyManager: KeyManagerApi;
+  readonly secretKeys: SecretKey[];
+}

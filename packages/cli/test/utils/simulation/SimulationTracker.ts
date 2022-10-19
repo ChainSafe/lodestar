@@ -5,7 +5,7 @@ import {allForks, altair, Epoch, Slot} from "@lodestar/types";
 import {toHexString} from "@lodestar/utils";
 import {isActiveValidator} from "@lodestar/state-transition";
 import {EpochClock} from "./EpochClock.js";
-import {BeaconNodeProcess, SimulationParams} from "./types.js";
+import {CLParticipant, SimulationParams} from "./types.js";
 import {avg, getForkName} from "./utils.js";
 
 const TIMELY_HEAD = 1 << TIMELY_HEAD_FLAG_INDEX;
@@ -49,10 +49,7 @@ export type EpochMeasure = CommonSlotMeasure & {
   readonly syncCommitteeParticipationAvg: number;
 };
 
-export const processAttestationsCount = async (
-  _node: BeaconNodeProcess,
-  {block}: SlotMeasureInput
-): Promise<number> => {
+export const processAttestationsCount = async (_node: CLParticipant, {block}: SlotMeasureInput): Promise<number> => {
   // Use a Set since the same validator can be included in multiple attestations
   const shuffledParticipants = new Set<number>();
 
@@ -69,23 +66,23 @@ export const processAttestationsCount = async (
   return shuffledParticipants.size;
 };
 
-export const processInclusionDelay = async (_node: BeaconNodeProcess, {block}: SlotMeasureInput): Promise<number> => {
+export const processInclusionDelay = async (_node: CLParticipant, {block}: SlotMeasureInput): Promise<number> => {
   return avg(Array.from(block.message.body.attestations).map((att) => block.message.slot - att.data.slot));
 };
 
-export const processHead = async (node: BeaconNodeProcess, _: SlotMeasureInput): Promise<string> => {
+export const processHead = async (node: CLParticipant, _: SlotMeasureInput): Promise<string> => {
   const head = await node.api.beacon.getBlockHeader("head");
 
   return toHexString(head.data.root);
 };
 
-export const processFinalized = async (node: BeaconNodeProcess, _: SlotMeasureInput): Promise<number> => {
+export const processFinalized = async (node: CLParticipant, _: SlotMeasureInput): Promise<number> => {
   const finalized = await node.api.beacon.getBlockHeader("finalized");
   return finalized.data.header.message.slot;
 };
 
 export const processSyncCommitteeParticipation = async (
-  _node: BeaconNodeProcess,
+  _node: CLParticipant,
   {fork: version, block}: SlotMeasureInput
 ): Promise<number> => {
   if (version === ForkName.phase0) {
@@ -96,11 +93,11 @@ export const processSyncCommitteeParticipation = async (
   return syncCommitteeBits.getTrueBitIndexes().length / syncCommitteeBits.bitLen;
 };
 
-export const processConnectedPeerCount = async (node: BeaconNodeProcess): Promise<number> => {
+export const processConnectedPeerCount = async (node: CLParticipant): Promise<number> => {
   return (await node.api.node.getPeerCount()).data.connected;
 };
 
-export const processSlotMeasure = async (node: BeaconNodeProcess, input: SlotMeasureInput): Promise<SlotMeasure> => {
+export const processSlotMeasure = async (node: CLParticipant, input: SlotMeasureInput): Promise<SlotMeasure> => {
   const [
     attestationsCount,
     inclusionDelay,
@@ -134,7 +131,7 @@ export const processSlotMeasure = async (node: BeaconNodeProcess, input: SlotMea
 };
 
 export const processEpochMissedSlots = async (
-  _node: BeaconNodeProcess,
+  _node: CLParticipant,
   {startSlot, endSlot, slotsMeasures}: EpochMeasureInput
 ): Promise<number[]> => {
   const missedSlots: number[] = [];
@@ -148,7 +145,7 @@ export const processEpochMissedSlots = async (
 };
 
 export const processAttestationEpochParticipationAvg = async (
-  _node: BeaconNodeProcess,
+  _node: CLParticipant,
   {fork, state, epoch}: EpochMeasureInput
 ): Promise<{head: number; source: number; target: number}> => {
   if (fork === ForkName.phase0) {
@@ -181,7 +178,7 @@ export const processAttestationEpochParticipationAvg = async (
 };
 
 export const processSyncCommitteeParticipationAvg = async (
-  _node: BeaconNodeProcess,
+  _node: CLParticipant,
   {startSlot, endSlot, fork: version, slotsMeasures: slotsMetrics}: EpochMeasureInput
 ): Promise<number> => {
   if (version === ForkName.phase0) {
@@ -197,7 +194,7 @@ export const processSyncCommitteeParticipationAvg = async (
   return avg(participation);
 };
 
-export const processEpochMeasure = async (node: BeaconNodeProcess, input: EpochMeasureInput): Promise<EpochMeasure> => {
+export const processEpochMeasure = async (node: CLParticipant, input: EpochMeasureInput): Promise<EpochMeasure> => {
   const [missedSlots, attestationParticipationAvg, syncCommitteeParticipationAvg] = await Promise.all([
     processEpochMissedSlots(node, input),
     processAttestationEpochParticipationAvg(node, input),
@@ -223,11 +220,11 @@ export class SimulationTracker {
 
   private lastSeenSlot: Map<string, Slot> = new Map();
   private signal: AbortSignal;
-  private nodes: BeaconNodeProcess[];
+  private nodes: CLParticipant[];
   private clock: EpochClock;
   private params: SimulationParams;
 
-  constructor(nodes: BeaconNodeProcess[], clock: EpochClock, params: SimulationParams, signal: AbortSignal) {
+  constructor(nodes: CLParticipant[], clock: EpochClock, params: SimulationParams, signal: AbortSignal) {
     this.signal = signal;
     this.nodes = nodes;
     this.clock = clock;
@@ -279,13 +276,13 @@ export class SimulationTracker {
     // Do nothing;
   }
 
-  onSlot(slot: Slot, node: BeaconNodeProcess, cb: (slot: Slot) => void): void {
+  onSlot(slot: Slot, node: CLParticipant, cb: (slot: Slot) => void): void {
     this.emitter.once(`${node.id}:slot:${slot}`, cb);
   }
 
   private async onBlock(
     event: routes.events.EventData[routes.events.EventType.block],
-    node: BeaconNodeProcess
+    node: CLParticipant
   ): Promise<void> {
     const slot = event.slot;
     const lastSeenSlot = this.lastSeenSlot.get(node.id);
@@ -328,13 +325,13 @@ export class SimulationTracker {
     this.emitter.emit(`${node.id}:slot:${slot}`, slot);
   }
 
-  private onHead(_event: routes.events.EventData[routes.events.EventType.head], _node: BeaconNodeProcess): void {
+  private onHead(_event: routes.events.EventData[routes.events.EventType.head], _node: CLParticipant): void {
     // TODO: Add head tracking
   }
 
   private onFinalizedCheckpoint(
     _event: routes.events.EventData[routes.events.EventType.finalizedCheckpoint],
-    _node: BeaconNodeProcess
+    _node: CLParticipant
   ): void {
     // TODO: Add checkpoint tracking
   }
