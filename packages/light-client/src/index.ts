@@ -532,18 +532,32 @@ export class Lightclient {
   private processLightClientUpdate(update: altair.LightClientUpdate): void {
     // Prevent registering updates for slots too far in the future
     const updateSlot = update.attestedHeader.slot;
+    const signatureSlot = update.signatureSlot;
+
+    if (signatureSlot < updateSlot) {
+      throw Error(
+        `signatureSlot: ${signatureSlot} where update is signed should not be before updateSlot: ${updateSlot}`
+      );
+    }
+
     if (updateSlot > slotWithFutureTolerance(this.config, this.genesisTime, MAX_CLOCK_DISPARITY_SEC)) {
       throw Error(`updateSlot ${updateSlot} is too far in the future, currentSlot ${this.currentSlot}`);
     }
 
     // Must not rollback periods, since the cache is bounded an older committee could evict the current committee
     const updatePeriod = computeSyncPeriodAtSlot(updateSlot);
+    const signaturePeriod = computeSyncPeriodAtSlot(signatureSlot);
     const minPeriod = Math.min(-Infinity, ...this.syncCommitteeByPeriod.keys());
     if (updatePeriod < minPeriod) {
       throw Error(`update must not rollback existing committee at period ${minPeriod}`);
     }
 
-    const syncCommittee = this.syncCommitteeByPeriod.get(updatePeriod);
+    // at sync period boundary, the signature is constructed by sync committee in the next period
+    const syncCommittee =
+      updateSlot == signatureSlot
+        ? this.syncCommitteeByPeriod.get(updatePeriod)
+        : this.syncCommitteeByPeriod.get(signaturePeriod);
+
     if (!syncCommittee) {
       throw Error(`No SyncCommittee for period ${updatePeriod}`);
     }
