@@ -22,7 +22,8 @@ import {
   SimulationParams,
   SimulationRequiredParams,
   Job,
-} from "./types.js";
+  CLClient,
+} from "./interfaces.js";
 import {
   BN_P2P_BASE_PORT,
   BN_REST_BASE_PORT,
@@ -53,7 +54,7 @@ export class SimulationEnvironment {
   readonly externalSigner: ExternalSignerServer;
 
   private readonly genesisState: BeaconStateAllForks;
-  private readonly clJobs: {opts: CLClientOptions; job?: Job}[] = [];
+  private readonly jobs: Job[] = [];
 
   readonly network = {
     connectAllNodes: async (): Promise<void> => {
@@ -65,6 +66,13 @@ export class SimulationEnvironment {
 
           await this.nodes[i].api.lodestar.connectPeer(networkIdentity.peerId, networkIdentity.p2pAddresses);
         }
+      }
+    },
+
+    connectNewNode: async (newNode: CLParticipant): Promise<void> => {
+      for (const node of this.nodes) {
+        const networkIdentity = (await node.api.node.getNetworkIdentity()).data;
+        await newNode.api.lodestar.connectPeer(networkIdentity.peerId, networkIdentity.p2pAddresses);
       }
     },
   };
@@ -110,46 +118,16 @@ export class SimulationEnvironment {
       signal: this.controller.signal,
     });
     this.emitter = new EventEmitter();
+    this.runner = new ChildProcessRunner();
+    this.externalSigner = new ExternalSignerServer([]);
 
-    const genesisStateFilePath = join(this.rootDir, "genesis.ssz");
     for (let nodeIndex = 0; nodeIndex < this.params.beaconNodes; nodeIndex++) {
-      const id = `lodestar-bn-${nodeIndex}`;
-
-      const clClientOptions: CLClientOptions = {
-        params: this.params,
-        id,
-        rootDir: `${this.rootDir}/${id}`,
-        logFilePath: `${logFilesDir}/${this.id}/${id}.log`,
-        genesisStateFilePath,
-        restPort: BN_REST_BASE_PORT + nodeIndex + 1,
-        port: BN_P2P_BASE_PORT + nodeIndex + 1,
-        keyManagerPort: KEY_MANAGER_BASE_PORT + nodeIndex + 1,
-        config: this.config,
-        address: "127.0.0.1",
-        secretKeys: Array.from({length: this.params.validatorsPerClient}, (_, vi) => {
-          return interopSecretKey(nodeIndex * this.params.validatorsPerClient + vi);
-        }),
-      };
-      this.clJobs.push({opts: clClientOptions});
-
-      this.nodes.push({
-        id,
-        secretKeys: clClientOptions.secretKeys,
-        // TODO: Switch the CL client here
-        api: getClient(
-          {baseUrl: `http://${clClientOptions.address}:${clClientOptions.restPort}`},
-          {config: this.config}
-        ),
-        keyManager: keyManagerGetClient(
-          {baseUrl: `http://${clClientOptions.address}:${clClientOptions.keyManagerPort}`},
-          {config: this.config}
-        ),
-      });
+      const {participant, job} = this.createCLClient(CLClient.Lodestar, nodeIndex);
+      this.jobs.push(job);
+      this.nodes.push(participant);
     }
 
-    this.runner = new ChildProcessRunner();
     this.tracker = new SimulationTracker(this.nodes, this.clock, this.params, this.controller.signal);
-    this.externalSigner = new ExternalSignerServer([]);
   }
 
   async start(): Promise<this> {
@@ -158,11 +136,7 @@ export class SimulationEnvironment {
     await writeFile(genesisStateFilePath, this.genesisState.serialize());
     await this.externalSigner.start();
 
-    for (const [nodeIndex, clJob] of this.clJobs.entries()) {
-      // Switch the CL client here
-      this.clJobs[nodeIndex].job = await generateLodeStarBeaconNode(clJob.opts, this.runner);
-    }
-    await Promise.all(this.clJobs.map((cl) => cl.job?.start()));
+    await Promise.all(this.jobs.map((j) => j.start()));
 
     // Load half of the validators into the external signer
     for (const node of this.nodes) {
@@ -181,7 +155,7 @@ export class SimulationEnvironment {
     this.controller.abort();
     await this.tracker.stop();
     await this.externalSigner.stop();
-    await Promise.all(this.clJobs.map((cl) => cl.job?.stop()));
+    await Promise.all(this.jobs.map((j) => j.stop()));
     await rm(this.rootDir, {recursive: true});
   }
 
@@ -220,5 +194,56 @@ export class SimulationEnvironment {
           })
       )
     );
+  }
+
+  createCLClient(
+    client: CLClient,
+    index?: number,
+    opts?: Partial<CLClientOptions>
+  ): {job: Job; participant: CLParticipant; options: CLClientOptions} {
+    const nodeIndex = index ?? this.nodes.length;
+    const genesisStateFilePath = join(this.rootDir, "genesis.ssz");
+    let options!: CLClientOptions;
+    let job!: Job;
+
+    if (client !== CLClient.Lodestar) {
+      throw new Error(`Client ${client} not supported`);
+    }
+
+    if (client === CLClient.Lodestar) {
+      const id = opts?.id ?? `lodestar-bn-${nodeIndex}`;
+
+      options = {
+        params: this.params,
+        id,
+        rootDir: `${this.rootDir}/${id}`,
+        logFilePath: `${logFilesDir}/${this.id}/${id}.log`,
+        genesisStateFilePath,
+        restPort: BN_REST_BASE_PORT + nodeIndex + 1,
+        port: BN_P2P_BASE_PORT + nodeIndex + 1,
+        keyManagerPort: KEY_MANAGER_BASE_PORT + nodeIndex + 1,
+        config: this.config,
+        address: "127.0.0.1",
+        secretKeys:
+          opts?.secretKeys ??
+          Array.from({length: this.params.validatorsPerClient}, (_, vi) => {
+            return interopSecretKey(nodeIndex * this.params.validatorsPerClient + vi);
+          }),
+      };
+      job = generateLodeStarBeaconNode(options, this.runner);
+    }
+
+    const participant: CLParticipant = {
+      id: options.id,
+      secretKeys: options.secretKeys,
+      // TODO: Switch the CL client here
+      api: getClient({baseUrl: `http://${options.address}:${options.restPort}`}, {config: this.config}),
+      keyManager: keyManagerGetClient(
+        {baseUrl: `http://${options.address}:${options.keyManagerPort}`},
+        {config: this.config}
+      ),
+    };
+
+    return {participant, options, job};
   }
 }

@@ -13,6 +13,7 @@ import {
   headsAssertions,
   syncCommitteeAssertions,
 } from "../utils/simulation/assertions.js";
+import {CLClient, CLParticipant, Job} from "../utils/simulation/interfaces.js";
 
 const nodeCases: {beaconNodes: number; validatorClients: number; validatorsPerClient: number}[] = [
   {beaconNodes: 4, validatorClients: 1, validatorsPerClient: 32},
@@ -124,6 +125,45 @@ for (const {beaconNodes, validatorClients, validatorsPerClient} of nodeCases) {
             });
           });
         }
+
+        describe("sync from genesis", () => {
+          let clParticipant: CLParticipant;
+          let clJob: Job;
+
+          before(async () => {
+            const {job, participant} = env.createCLClient(CLClient.Lodestar, env.nodes.length, {
+              id: "sync-node",
+              secretKeys: [],
+            });
+            clJob = job;
+            clParticipant = participant;
+
+            await clJob.start();
+            await env.network.connectNewNode(clParticipant);
+
+            env.tracker.track(clParticipant);
+            // Wait for existing tests to finish
+            await env.waitForSlot(env.clock.getLastSlotOfEpoch(runTill + 1) + 1);
+
+            env.tracker.printNoesInfo(runTill + 1);
+          });
+
+          after(async () => {
+            await clJob.stop();
+          });
+
+          describe("missed blocks", () => {
+            missedBlocksAssertions(env, runTill + 1);
+          });
+
+          describe("finality", () => {
+            finalityAssertions(env, runTill + 1);
+          });
+
+          describe("heads", () => {
+            headsAssertions(env, runTill + 1);
+          });
+        });
       });
     });
   }

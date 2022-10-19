@@ -6,13 +6,10 @@ import {LogLevel} from "@lodestar/utils";
 import {IBeaconArgs} from "../../../../src/cmds/beacon/options.js";
 import {IValidatorCliArgs} from "../../../../src/cmds/validator/options.js";
 import {IGlobalArgs} from "../../../../src/options/globalOptions.js";
-import {JobOptions, CLClientGenerator, CLClientOptions, Runner, RunnerType, Job} from "../types.js";
+import {JobOptions, CLClientGenerator, CLClientOptions, Runner, RunnerType, Job} from "../interfaces.js";
 import {callHttp, LODESTAR_BINARY_PATH} from "../utils.js";
 
-export const generateLodeStarBeaconNode: CLClientGenerator = async (
-  opts: CLClientOptions,
-  runner: Runner
-): Promise<Job> => {
+export const generateLodeStarBeaconNode: CLClientGenerator = (opts: CLClientOptions, runner: Runner): Job => {
   if (runner.type !== RunnerType.ChildProcess) {
     throw new Error(`Runner "${runner.type}" not yet supported.`);
   }
@@ -51,27 +48,30 @@ export const generateLodeStarBeaconNode: CLClientGenerator = async (
     logFileDailyRotate: 0,
   } as unknown) as IBeaconArgs & IGlobalArgs;
 
-  await mkdir(rootDir);
-  await writeFile(join(rootDir, "genesis.ssz"), state.serialize());
-  await writeFile(join(rootDir, "rc_config.json"), JSON.stringify(rcConfig, null, 2));
-
   const validatorClientsJobs: JobOptions[] = [];
-  for (let clientIndex = 0; clientIndex < params.validatorClients; clientIndex += 1) {
-    validatorClientsJobs.push(
-      ...(await generateLodeStarValidatorJobs(
-        {
-          ...opts,
-          rootDir: join(rootDir, `validator-${clientIndex}`),
-          id: `${id}-validator-${clientIndex}`,
-          logFilePath: join(dirname(opts.logFilePath), `${id}-validator-${clientIndex}.log`),
-        },
-        runner
-      ))
-    );
+  if (opts.secretKeys.length > 0) {
+    for (let clientIndex = 0; clientIndex < params.validatorClients; clientIndex += 1) {
+      validatorClientsJobs.push(
+        generateLodeStarValidatorJobs(
+          {
+            ...opts,
+            rootDir: join(rootDir, `validator-${clientIndex}`),
+            id: `${id}-validator-${clientIndex}`,
+            logFilePath: join(dirname(opts.logFilePath), `${id}-validator-${clientIndex}.log`),
+          },
+          runner
+        )
+      );
+    }
   }
 
   return runner.create(id, [
     {
+      bootstrap: async () => {
+        await mkdir(rootDir);
+        await writeFile(join(rootDir, "genesis.ssz"), state.serialize());
+        await writeFile(join(rootDir, "rc_config.json"), JSON.stringify(rcConfig, null, 2));
+      },
       cli: {
         command: LODESTAR_BINARY_PATH,
         args: ["beacon", "--rcConfig", join(rootDir, "rc_config.json")],
@@ -96,7 +96,7 @@ export const generateLodeStarBeaconNode: CLClientGenerator = async (
   ]);
 };
 
-export const generateLodeStarValidatorJobs = async (opts: CLClientOptions, runner: Runner): Promise<JobOptions[]> => {
+export const generateLodeStarValidatorJobs = (opts: CLClientOptions, runner: Runner): JobOptions => {
   if (runner.type !== RunnerType.ChildProcess) {
     throw new Error(`Runner "${runner.type}" not yet supported.`);
   }
@@ -123,41 +123,40 @@ export const generateLodeStarValidatorJobs = async (opts: CLClientOptions, runne
     importKeystoresPassword: `${rootDir}/password.txt`,
   } as unknown) as IValidatorCliArgs & IGlobalArgs;
 
-  await mkdir(rootDir);
-  await mkdir(`${rootDir}/keystores`);
-  await writeFile(join(rootDir, "password.txt"), "password");
-  await writeFile(join(rootDir, "rc_config.json"), JSON.stringify(rcConfig, null, 2));
+  return {
+    bootstrap: async () => {
+      await mkdir(rootDir);
+      await mkdir(`${rootDir}/keystores`);
+      await writeFile(join(rootDir, "password.txt"), "password");
+      await writeFile(join(rootDir, "rc_config.json"), JSON.stringify(rcConfig, null, 2));
 
-  // Split half of the keys to the keymanager
-  for (const key of secretKeys.slice(secretKeys.length * params.externalKeysPercentage)) {
-    const keystore = await Keystore.create("password", key.toBytes(), key.toPublicKey().toBytes(), "");
-    await writeFile(
-      join(rootDir, "keystores", `${key.toPublicKey().toHex()}.json`),
-      JSON.stringify(keystore.toObject(), null, 2)
-    );
-  }
-
-  return [
-    {
-      cli: {
-        command: LODESTAR_BINARY_PATH,
-        args: ["validator", "--rcConfig", join(rootDir, "rc_config.json")],
-        env: {
-          // eslint-disable-next-line @typescript-eslint/naming-convention
-          DEBUG: "*,-winston:*",
-        },
-      },
-      logs: {
-        stdoutFilePath: opts.logFilePath,
-      },
-      health: async () => {
-        try {
-          await callHttp(`http://${address}:${keyManagerPort}/eth/v1/keystores`);
-          return true;
-        } catch (err) {
-          return false;
-        }
+      // Split half of the keys to the keymanager
+      for (const key of secretKeys.slice(secretKeys.length * params.externalKeysPercentage)) {
+        const keystore = await Keystore.create("password", key.toBytes(), key.toPublicKey().toBytes(), "");
+        await writeFile(
+          join(rootDir, "keystores", `${key.toPublicKey().toHex()}.json`),
+          JSON.stringify(keystore.toObject(), null, 2)
+        );
+      }
+    },
+    cli: {
+      command: LODESTAR_BINARY_PATH,
+      args: ["validator", "--rcConfig", join(rootDir, "rc_config.json")],
+      env: {
+        // eslint-disable-next-line @typescript-eslint/naming-convention
+        DEBUG: "*,-winston:*",
       },
     },
-  ];
+    logs: {
+      stdoutFilePath: opts.logFilePath,
+    },
+    health: async () => {
+      try {
+        await callHttp(`http://${address}:${keyManagerPort}/eth/v1/keystores`);
+        return true;
+      } catch (err) {
+        return false;
+      }
+    },
+  };
 };

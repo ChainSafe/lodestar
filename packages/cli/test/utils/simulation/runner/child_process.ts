@@ -2,7 +2,9 @@ import {ChildProcess, spawn} from "node:child_process";
 import {createWriteStream, mkdirSync} from "node:fs";
 import {dirname} from "node:path";
 import {EventEmitter} from "node:events";
-import {JobOptions, Job, Runner, RunnerEvent, RunnerType} from "../types.js";
+import {JobOptions, Job, Runner, RunnerEvent, RunnerType} from "../interfaces.js";
+
+type ChildProcessWithJobOptions = {jobOptions: JobOptions; childProcess: ChildProcess};
 
 const stopChildProcess = async (childProcess: ChildProcess, signal?: "SIGTERM"): Promise<void> => {
   return new Promise((resolve) => {
@@ -11,15 +13,15 @@ const stopChildProcess = async (childProcess: ChildProcess, signal?: "SIGTERM"):
   });
 };
 
-const startChildProcess = async (job: JobOptions): Promise<ChildProcess> => {
+const startChildProcess = async (jobOptions: JobOptions): Promise<ChildProcess> => {
   return new Promise<ChildProcess>((resolve, reject) => {
     void (async () => {
-      const childProcess = spawn(job.cli.command, job.cli.args, {
-        env: {...process.env, ...job.cli.env},
+      const childProcess = spawn(jobOptions.cli.command, jobOptions.cli.args, {
+        env: {...process.env, ...jobOptions.cli.env},
       });
 
-      mkdirSync(dirname(job.logs.stdoutFilePath), {recursive: true});
-      const stdoutFileStream = createWriteStream(job.logs.stdoutFilePath);
+      mkdirSync(dirname(jobOptions.logs.stdoutFilePath), {recursive: true});
+      const stdoutFileStream = createWriteStream(jobOptions.logs.stdoutFilePath);
 
       childProcess.stdout?.pipe(stdoutFileStream);
       childProcess.stderr?.pipe(stdoutFileStream);
@@ -32,7 +34,7 @@ const startChildProcess = async (job: JobOptions): Promise<ChildProcess> => {
       });
 
       const intervalId = setInterval(async () => {
-        if (await job.health()) {
+        if (await jobOptions.health()) {
           clearInterval(intervalId);
           resolve(childProcess);
         }
@@ -41,10 +43,13 @@ const startChildProcess = async (job: JobOptions): Promise<ChildProcess> => {
   });
 };
 
-const startJobs = async (jobs: JobOptions[]): Promise<ChildProcess[]> => {
-  const childProcesses: ChildProcess[] = [];
+const startJobs = async (jobs: JobOptions[]): Promise<ChildProcessWithJobOptions[]> => {
+  const childProcesses: ChildProcessWithJobOptions[] = [];
   for (const job of jobs) {
-    childProcesses.push(await startChildProcess(job));
+    if (job.bootstrap) {
+      await job.bootstrap();
+    }
+    childProcesses.push({childProcess: await startChildProcess(job), jobOptions: job});
 
     if (job.children) {
       childProcesses.push(...(await startJobs(job.children)));
@@ -63,14 +68,20 @@ export class ChildProcessRunner implements Runner {
     this.emitter.on(event, cb);
   }
 
-  async create(id: string, jobs: JobOptions[]): Promise<Job> {
-    const childProcesses: ChildProcess[] = [];
+  create(id: string, jobs: JobOptions[]): Job {
+    const childProcesses: ChildProcessWithJobOptions[] = [];
 
     const stop = async (): Promise<void> => {
       // eslint-disable-next-line no-console
       console.log(`Stopping "${id}"...`);
       this.emitter.emit("stopping");
-      await Promise.all(childProcesses.map((childProcess) => stopChildProcess(childProcess)));
+      for (const {jobOptions, childProcess} of childProcesses) {
+        if (jobOptions.cleanup) {
+          await jobOptions.cleanup();
+        }
+        await stopChildProcess(childProcess);
+      }
+
       // eslint-disable-next-line no-console
       console.log(`Stopped "${id}"...`);
       this.emitter.emit("stopped");

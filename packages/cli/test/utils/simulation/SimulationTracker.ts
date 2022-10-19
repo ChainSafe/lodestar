@@ -5,7 +5,7 @@ import {allForks, altair, Epoch, Slot} from "@lodestar/types";
 import {toHexString} from "@lodestar/utils";
 import {isActiveValidator} from "@lodestar/state-transition";
 import {EpochClock} from "./EpochClock.js";
-import {CLParticipant, SimulationParams} from "./types.js";
+import {CLParticipant, SimulationParams} from "./interfaces.js";
 import {avg, getForkName} from "./utils.js";
 
 const TIMELY_HEAD = 1 << TIMELY_HEAD_FLAG_INDEX;
@@ -231,44 +231,18 @@ export class SimulationTracker {
     this.params = params;
 
     for (const node of nodes) {
-      this.slotMeasures.set(node.id, new Map());
-      this.epochMeasures.set(node.id, new Map());
-      this.lastSeenSlot.set(node.id, 0);
-
-      // We don't receive genesis block on event stream
-      this.slotMeasures.get(node.id)?.set(0, {
-        slot: 0,
-        epoch: 0,
-        epochStr: "0/0",
-        fork: getForkName(0, this.params),
-        attestationsCount: 0,
-        inclusionDelay: 0,
-        finalizedSlot: 0,
-        syncCommitteeParticipation: 0,
-        head: "",
-        connectedPeerCount: 0,
-      });
+      this.initDataForNode(node);
     }
+  }
+
+  track(node: CLParticipant): void {
+    this.initDataForNode(node);
+    this.initEventStreamForNode(node);
   }
 
   async start(): Promise<void> {
     for (const node of this.nodes) {
-      node.api.events.eventstream(
-        [routes.events.EventType.block, routes.events.EventType.head, routes.events.EventType.finalizedCheckpoint],
-        this.signal,
-        async (event) => {
-          this.emitter.emit(event.type, event, node);
-
-          switch (event.type) {
-            case routes.events.EventType.block:
-              await this.onBlock(event.message, node);
-              return;
-            case routes.events.EventType.finalizedCheckpoint:
-              this.onFinalizedCheckpoint(event.message, node);
-              return;
-          }
-        }
-      );
+      this.initEventStreamForNode(node);
     }
   }
 
@@ -411,5 +385,43 @@ export class SimulationTracker {
 
     console.table(records);
     /* eslint-enable @typescript-eslint/naming-convention */
+  }
+
+  private initDataForNode(node: CLParticipant): void {
+    this.slotMeasures.set(node.id, new Map());
+    this.epochMeasures.set(node.id, new Map());
+    this.lastSeenSlot.set(node.id, 0);
+
+    this.slotMeasures.get(node.id)?.set(0, {
+      slot: 0,
+      epoch: 0,
+      epochStr: "0/0",
+      fork: getForkName(0, this.params),
+      attestationsCount: 0,
+      inclusionDelay: 0,
+      finalizedSlot: 0,
+      syncCommitteeParticipation: 0,
+      head: "",
+      connectedPeerCount: 0,
+    });
+  }
+
+  private initEventStreamForNode(node: CLParticipant): void {
+    node.api.events.eventstream(
+      [routes.events.EventType.block, routes.events.EventType.head, routes.events.EventType.finalizedCheckpoint],
+      this.signal,
+      async (event) => {
+        this.emitter.emit(event.type, event, node);
+
+        switch (event.type) {
+          case routes.events.EventType.block:
+            await this.onBlock(event.message, node);
+            return;
+          case routes.events.EventType.finalizedCheckpoint:
+            this.onFinalizedCheckpoint(event.message, node);
+            return;
+        }
+      }
+    );
   }
 }

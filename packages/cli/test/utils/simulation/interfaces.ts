@@ -29,6 +29,10 @@ export type RunTimeSimulationParams = {
 
 export type SimulationParams = SimulationRequiredParams & Required<SimulationOptionalParams> & RunTimeSimulationParams;
 
+export enum CLClient {
+  Lodestar = "lodestar",
+}
+
 export interface CLClientOptions {
   params: SimulationParams;
   id: string;
@@ -43,20 +47,22 @@ export interface CLClientOptions {
   secretKeys: SecretKey[];
 }
 
-export type CLClientGenerator = (opts: CLClientOptions, runner: Runner) => Promise<Job>;
+export type CLClientGenerator = (opts: CLClientOptions, runner: Runner) => Job;
 
 export interface JobOptions {
-  cli: {
-    command: string;
-    args: string[];
-    env: Record<string, string>;
+  readonly cli: {
+    readonly command: string;
+    readonly args: string[];
+    readonly env: Record<string, string>;
   };
-  logs: {
-    stdoutFilePath: string;
+  readonly logs: {
+    readonly stdoutFilePath: string;
   };
   // Nested jobs
-  children?: JobOptions[];
+  readonly children?: JobOptions[];
   health(): Promise<boolean>;
+  bootstrap?(): Promise<void>;
+  cleanup?(): Promise<void>;
 }
 
 export interface Job {
@@ -72,7 +78,7 @@ export enum RunnerType {
 
 export interface Runner {
   type: RunnerType;
-  create: (id: string, options: JobOptions[]) => Promise<Job>;
+  create: (id: string, options: JobOptions[]) => Job;
   on(event: RunnerEvent, cb: () => void | Promise<void>): void;
 }
 
