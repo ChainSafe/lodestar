@@ -227,7 +227,7 @@ export class LightClientServer {
     const signedBlockRoot = block.parentRoot;
     const syncPeriod = computeSyncPeriodAtSlot(block.slot);
 
-    this.onSyncAggregate(syncPeriod, postState, block.body.syncAggregate, block.slot, signedBlockRoot).catch((e) => {
+    this.onSyncAggregate(syncPeriod, block.body.syncAggregate, block.slot, signedBlockRoot).catch((e) => {
       this.logger.error("Error onSyncAggregate", {}, e);
       this.metrics?.lightclientServer.onSyncAggregate.inc({event: "error"});
     });
@@ -276,36 +276,64 @@ export class LightClientServer {
    * - Has the most bits
    * - Signed header at the oldest slot
    */
-  async getUpdates(startPeriod: SyncPeriod, count = 1): Promise<altair.LightClientUpdate[]> {
-    const periods: number[] = Array.from({length: count}, (_ignored, i) => i + startPeriod);
-    const updates = [];
-    for (const period of periods) {
-      try {
-        updates.push(this.getUpdate(period));
-      } catch (e) {
-        this.logger.debug("Error requesting LightClientUpdate", {
-          period,
-          error: (e as Error).message,
-        });
-      }
+  async getUpdate(period: number): Promise<altair.LightClientUpdate> {
+    // Signature data
+    const partialUpdate = await this.db.bestPartialLightClientUpdate.get(period);
+    if (!partialUpdate) {
+      throw Error(`No partialUpdate available for period ${period}`);
     }
-    return Promise.all(updates);
+
+    const syncCommitteeWitnessBlockRoot = partialUpdate.blockRoot;
+
+    const syncCommitteeWitness = await this.db.syncCommitteeWitness.get(syncCommitteeWitnessBlockRoot);
+    if (!syncCommitteeWitness) {
+      throw Error(`finalizedBlockRoot not available ${toHexString(syncCommitteeWitnessBlockRoot)}`);
+    }
+
+    const nextSyncCommittee = await this.db.syncCommittee.get(syncCommitteeWitness.nextSyncCommitteeRoot);
+    if (!nextSyncCommittee) {
+      throw Error("nextSyncCommittee not available");
+    }
+
+    if (partialUpdate.isFinalized) {
+      return {
+        attestedHeader: partialUpdate.attestedHeader,
+        nextSyncCommittee: nextSyncCommittee,
+        nextSyncCommitteeBranch: getNextSyncCommitteeBranch(syncCommitteeWitness),
+        finalizedHeader: partialUpdate.finalizedHeader,
+        finalityBranch: partialUpdate.finalityBranch,
+        syncAggregate: partialUpdate.syncAggregate,
+        signatureSlot: partialUpdate.signatureSlot,
+      };
+    } else {
+      return {
+        attestedHeader: partialUpdate.attestedHeader,
+        nextSyncCommittee: nextSyncCommittee,
+        nextSyncCommitteeBranch: getNextSyncCommitteeBranch(syncCommitteeWitness),
+        finalizedHeader: this.zero.finalizedHeader,
+        finalityBranch: this.zero.finalityBranch,
+        syncAggregate: partialUpdate.syncAggregate,
+        signatureSlot: partialUpdate.signatureSlot,
+      };
+    }
   }
 
   /**
    * API ROUTE to poll LightclientHeaderUpdate.
    * Clients should use the SSE type `light_client_optimistic_update` if available
    */
-  getOptimisticUpdate(): altair.LightClientOptimisticUpdate | null {
+  getOptimisticUpdate(): altair.LightClientOptimisticUpdate {
+    if (this.latestHeadUpdate === null) {
+      throw Error("No optimistic update available");
+    }
     return this.latestHeadUpdate;
   }
 
-  getFinalityUpdate(): altair.LightClientFinalityUpdate | null {
+  getFinalityUpdate(): altair.LightClientFinalityUpdate {
+    if (this.finalized === null) {
+      throw Error("No finality update available");
+    }
     return this.finalized;
-  }
-
-  getLatestFinalitySlot(): Slot | undefined {
-    return this.finalized?.finalizedHeader.slot;
   }
 
   /**
@@ -424,7 +452,6 @@ export class LightClientServer {
    */
   private async onSyncAggregate(
     syncPeriod: SyncPeriod,
-    postState: CachedBeaconStateAltair,
     syncAggregate: altair.SyncAggregate,
     signatureSlot: Slot,
     signedBlockRoot: Root
@@ -453,12 +480,9 @@ export class LightClientServer {
       signatureSlot,
     };
 
-    const participantPubKeys = this.getParticipantPubkeys(
-      postState.currentSyncCommittee.pubkeys.getAllReadonly(),
-      syncAggregate.syncCommitteeBits
-    );
+    const syncAggregateParticipation = sumBits(syncAggregate.syncCommitteeBits);
 
-    if (participantPubKeys.length < MIN_SYNC_COMMITTEE_PARTICIPANTS) {
+    if (syncAggregateParticipation < MIN_SYNC_COMMITTEE_PARTICIPANTS) {
       this.logger.debug("sync committee below required MIN_SYNC_COMMITTEE_PARTICIPANTS", {
         syncPeriod,
         attestedPeriod,
@@ -487,7 +511,7 @@ export class LightClientServer {
         finalizedHeader &&
         (!this.finalized ||
           finalizedHeader.slot > this.finalized.finalizedHeader.slot ||
-          sumBits(syncAggregate.syncCommitteeBits) > sumBits(this.finalized.syncAggregate.syncCommitteeBits))
+          syncAggregateParticipation > sumBits(this.finalized.syncAggregate.syncCommitteeBits))
       ) {
         this.finalized = {
           attestedHeader: attestedData.attestedHeader,
@@ -504,48 +528,6 @@ export class LightClientServer {
 
     // Check if this update is better, otherwise ignore
     await this.maybeStoreNewBestPartialUpdate(syncPeriod, syncAggregate, signatureSlot, attestedData);
-  }
-
-  async getUpdate(period: number): Promise<altair.LightClientUpdate> {
-    // Signature data
-    const partialUpdate = await this.db.bestPartialLightClientUpdate.get(period);
-    if (!partialUpdate) {
-      throw Error(`No partialUpdate available for period ${period}`);
-    }
-
-    const syncCommitteeWitnessBlockRoot = partialUpdate.blockRoot;
-
-    const syncCommitteeWitness = await this.db.syncCommitteeWitness.get(syncCommitteeWitnessBlockRoot);
-    if (!syncCommitteeWitness) {
-      throw Error(`finalizedBlockRoot not available ${toHexString(syncCommitteeWitnessBlockRoot)}`);
-    }
-
-    const nextSyncCommittee = await this.db.syncCommittee.get(syncCommitteeWitness.nextSyncCommitteeRoot);
-    if (!nextSyncCommittee) {
-      throw Error("nextSyncCommittee not available");
-    }
-
-    if (partialUpdate.isFinalized) {
-      return {
-        attestedHeader: partialUpdate.attestedHeader,
-        nextSyncCommittee: nextSyncCommittee,
-        nextSyncCommitteeBranch: getNextSyncCommitteeBranch(syncCommitteeWitness),
-        finalizedHeader: partialUpdate.finalizedHeader,
-        finalityBranch: partialUpdate.finalityBranch,
-        syncAggregate: partialUpdate.syncAggregate,
-        signatureSlot: partialUpdate.signatureSlot,
-      };
-    } else {
-      return {
-        attestedHeader: partialUpdate.attestedHeader,
-        nextSyncCommittee: nextSyncCommittee,
-        nextSyncCommitteeBranch: getNextSyncCommitteeBranch(syncCommitteeWitness),
-        finalizedHeader: this.zero.finalizedHeader,
-        finalityBranch: this.zero.finalityBranch,
-        syncAggregate: partialUpdate.syncAggregate,
-        signatureSlot: partialUpdate.signatureSlot,
-      };
-    }
   }
 
   /**
@@ -637,10 +619,6 @@ export class LightClientServer {
     pruneSetToMax(this.checkpointHeaders, MAX_CACHED_FINALIZED_HEADERS);
 
     return finalizedHeader;
-  }
-
-  private getParticipantPubkeys<T>(pubkeys: T[], bits: BitArray): T[] {
-    return bits.intersectValues(pubkeys);
   }
 }
 

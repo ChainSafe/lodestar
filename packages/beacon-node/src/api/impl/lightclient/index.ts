@@ -42,27 +42,18 @@ export function getLightclientApi(
       };
     },
 
-    // eslint-disable-next-line @typescript-eslint/naming-convention
     async getUpdates(startPeriod: SyncPeriod, count: number) {
-      const updates = await chain.lightClientServer.getUpdates(startPeriod, count);
+      const periods = Array.from({length: count}, (_ignored, i) => i + startPeriod);
+      const updates = await Promise.all(periods.map((period) => chain.lightClientServer.getUpdate(period)));
       return {data: updates};
     },
 
     async getOptimisticUpdate() {
-      const optimisticUpdate = chain.lightClientServer.getOptimisticUpdate();
-      if (optimisticUpdate === null) {
-        throw new Error("No latest header update available");
-      } else {
-        return {data: optimisticUpdate};
-      }
+      return {data: chain.lightClientServer.getOptimisticUpdate()};
     },
 
     async getFinalityUpdate() {
-      const finalityUpdate = chain.lightClientServer.getFinalityUpdate();
-      if (finalityUpdate === null) {
-        throw new Error("No latest finality update available");
-      }
-      return {data: finalityUpdate};
+      return {data: chain.lightClientServer.getFinalityUpdate()};
     },
 
     async getBootstrap(blockRoot) {
