@@ -68,6 +68,9 @@ describe("options / beaconNodeOptions", () => {
       "network.rateTrackerTimeoutMs": 60000,
       "network.dontSendGossipAttestationsToForkchoice": true,
       "network.allowPublishToZeroPeers": true,
+      "network.gossipsubDParam": 4,
+      "network.gossipsubDParamLow": 2,
+      "network.gossipsubDParamHigh": 6,
 
       "sync.isSingleNode": true,
       "sync.disableProcessAsChainSegment": true,
@@ -143,6 +146,9 @@ describe("options / beaconNodeOptions", () => {
         rateTrackerTimeoutMs: 60000,
         dontSendGossipAttestationsToForkchoice: true,
         allowPublishToZeroPeers: true,
+        gossipsubDParam: 4,
+        gossipsubDParamLow: 2,
+        gossipsubDParamHigh: 6,
       },
       sync: {
         isSingleNode: true,

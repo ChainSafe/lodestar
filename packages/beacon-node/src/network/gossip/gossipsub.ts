@@ -55,6 +55,9 @@ export type Eth2GossipsubModules = {
 
 export type Eth2GossipsubOpts = {
   allowPublishToZeroPeers?: boolean;
+  gossipsubDParam?: number;
+  gossipsubDParamLow?: number;
+  gossipsubDParamHigh?: number;
 };
 
 /**
@@ -83,6 +86,7 @@ export class Eth2Gossipsub extends GossipSub {
   private readonly validatorFnsByType: ValidatorFnsByType;
 
   constructor(opts: Eth2GossipsubOpts, modules: Eth2GossipsubModules) {
+    const {allowPublishToZeroPeers, gossipsubDParam, gossipsubDParamLow, gossipsubDParamHigh} = opts;
     const gossipTopicCache = new GossipTopicCache(modules.config);
 
     const scoreParams = computeGossipPeerScoreParams(modules);
@@ -92,10 +96,10 @@ export class Eth2Gossipsub extends GossipSub {
     // https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#the-gossip-domain-gossipsub
     super({
       globalSignaturePolicy: SignaturePolicy.StrictNoSign,
-      allowPublishToZeroPeers: opts.allowPublishToZeroPeers,
-      D: GOSSIP_D,
-      Dlo: GOSSIP_D_LOW,
-      Dhi: GOSSIP_D_HIGH,
+      allowPublishToZeroPeers: allowPublishToZeroPeers,
+      D: gossipsubDParam ?? GOSSIP_D,
+      Dlo: gossipsubDParamLow ?? GOSSIP_D_LOW,
+      Dhi: gossipsubDParamHigh ?? GOSSIP_D_HIGH,
       Dlazy: 6,
       heartbeatInterval: GOSSIPSUB_HEARTBEAT_INTERVAL,
       fanoutTTL: 60 * 1000,
