@@ -126,6 +126,9 @@ export const DOMAIN_SYNC_COMMITTEE = Uint8Array.from([7, 0, 0, 0]);
 export const DOMAIN_SYNC_COMMITTEE_SELECTION_PROOF = Uint8Array.from([8, 0, 0, 0]);
 export const DOMAIN_CONTRIBUTION_AND_PROOF = Uint8Array.from([9, 0, 0, 0]);
 export const DOMAIN_BLS_TO_EXECUTION_CHANGE = Uint8Array.from([10, 0, 0, 0]);
+// https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/beacon-chain.md#domain-types
+// TODO EIP-4844: Is this still used when coupling blobs and blocks?
+export const DOMAIN_BLOBS_SIDECAR = Uint8Array.from([11, 0, 0, 0]);
 
 // Application specific domains
 
@@ -172,10 +175,6 @@ export const SYNC_COMMITTEE_SUBNET_COUNT = 4;
 export const SYNC_COMMITTEE_SUBNET_SIZE = Math.floor(SYNC_COMMITTEE_SIZE / SYNC_COMMITTEE_SUBNET_COUNT);
 
 export const MAX_REQUEST_BLOCKS = 2 ** 10; // 1024
-
-// // EIP-4844
-// export const FIELD_ELEMENTS_PER_BLOB = 4096;
-// export const MAX_BLOBS_PER_BLOCK = 16;
 
 // Lightclient pre-computed
 /**
