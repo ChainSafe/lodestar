@@ -240,14 +240,21 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     // and we can move on, as the next fcU will be issued soon on the new slot
     const fcUReqOpts =
       payloadAttributes !== undefined ? forkchoiceUpdatedV1Opts : {...forkchoiceUpdatedV1Opts, retryAttempts: 1};
-    const {
-      payloadStatus: {status, latestValidHash: _latestValidHash, validationError},
-      payloadId,
-    } = await (this.rpcFetchQueue.push({
+
+    const request = this.rpcFetchQueue.push({
       method,
       params: [{headBlockHash, safeBlockHash, finalizedBlockHash}, apiPayloadAttributes],
       methodOpts: fcUReqOpts,
-    }) as Promise<EngineApiRpcReturnTypes[typeof method]>);
+    }) as Promise<EngineApiRpcReturnTypes[typeof method]>;
+
+    const response = await request;
+
+    console.log("!!! engine_forkchoiceUpdatedV1 response", response);
+
+    const {
+      payloadStatus: {status, latestValidHash: _latestValidHash, validationError},
+      payloadId,
+    } = response;
 
     switch (status) {
       case ExecutePayloadStatus.VALID:

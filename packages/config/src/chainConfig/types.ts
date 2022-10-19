@@ -37,6 +37,9 @@ export type IChainConfig = {
   // Capella
   CAPELLA_FORK_VERSION: Uint8Array;
   CAPELLA_FORK_EPOCH: number;
+  // EIP-4844
+  EIP4844_FORK_VERSION: Uint8Array;
+  EIP4844_FORK_EPOCH: number;
 
   // Time parameters
   SECONDS_PER_SLOT: number;
@@ -86,6 +89,9 @@ export const chainConfigTypes: SpecTypes<IChainConfig> = {
   // Capella
   CAPELLA_FORK_VERSION: "bytes",
   CAPELLA_FORK_EPOCH: "number",
+  // EIP-4844
+  EIP4844_FORK_VERSION: "bytes",
+  EIP4844_FORK_EPOCH: "number",
 
   // Time parameters
   SECONDS_PER_SLOT: "number",

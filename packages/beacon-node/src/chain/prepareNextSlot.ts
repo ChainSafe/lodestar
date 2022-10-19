@@ -62,6 +62,7 @@ export class PrepareNextSlotScheduler {
       prepareSlot <= GENESIS_SLOT ||
       (this.config.getForkSeq(prepareSlot) < ForkSeq.bellatrix && !isEpochTransition)
     ) {
+      console.log('prepareForNextSlot returning early')
       return;
     }
 

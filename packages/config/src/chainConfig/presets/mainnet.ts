@@ -41,6 +41,10 @@ export const chainConfig: IChainConfig = {
   CAPELLA_FORK_VERSION: b("0x03000000"),
   CAPELLA_FORK_EPOCH: Infinity,
 
+  // EIP4844
+  EIP4844_FORK_VERSION: b("0x04000001"),
+  EIP4844_FORK_EPOCH: Infinity,
+
   // Time parameters
   // ---------------------------------------------------------------
   // 12 seconds

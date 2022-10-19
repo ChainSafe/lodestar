@@ -93,6 +93,8 @@ export async function initBeaconState(
   logger: ILogger,
   signal: AbortSignal
 ): Promise<{anchorState: BeaconStateAllForks; wsCheckpoint?: Checkpoint}> {
+  console.log("Starting beacon node with options: ", options, args);
+
   // fetch the latest state stored in the db which will be used in all cases, if it exists, either
   //   i)  used directly as the anchor state
   //   ii) used during verification of a weak subjectivity state,

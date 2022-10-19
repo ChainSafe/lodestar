@@ -27,6 +27,7 @@ export let userOverrides: Partial<BeaconPreset> | undefined = undefined;
  * @param overrides - customized fields
  */
 export function setActivePreset(presetName: PresetName, overrides?: Partial<BeaconPreset>): void {
+  console.log("setActivePreset called with:", {presetName, overrides});
   if (presetStatus.frozen) {
     throw Error(`Lodestar preset is already frozen. You must call setActivePreset() at the top of your
 application entry point, before importing @lodestar/params, or any library that may import it.

@@ -92,9 +92,9 @@
     "download-spec-tests": "node --loader=ts-node/esm test/spec/downloadTests.ts",
     "check-spec-tests": "mocha test/spec/checkCoverage.ts",
     "test:spec-bls-general": "mocha --config .mocharc.spec.cjs 'test/spec/bls/**/*.test.ts' 'test/spec/general/**/*.test.ts'",
-    "test:spec-min": "LODESTAR_PRESET=minimal mocha --config .mocharc.spec.cjs 'test/spec/presets/**/*.test.ts'",
-    "test:spec-main": "LODESTAR_PRESET=mainnet mocha --config .mocharc.spec.cjs 'test/spec/presets/**/*.test.ts'",
-    "test:spec": "yarn test:spec-bls-general && yarn test:spec-min && yarn test:spec-main",
+    "test:spec-minimal": "LODESTAR_PRESET=minimal mocha --config .mocharc.spec.cjs 'test/spec/presets/**/*.test.ts'",
+    "test:spec-mainnet": "LODESTAR_PRESET=mainnet mocha --config .mocharc.spec.cjs 'test/spec/presets/**/*.test.ts'",
+    "test:spec": "yarn test:spec-bls-general && yarn test:spec-minimal && yarn test:spec-mainnet",
     "check-readme": "typescript-docs-verifier"
   },
   "dependencies": {

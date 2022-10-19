@@ -57,6 +57,8 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
   await db.start();
   logger.info("Connected to LevelDB database", {path: options.db.name});
 
+  console.log("Starting beacon node with options", options, args);
+
   // BeaconNode setup
   try {
     const {anchorState, wsCheckpoint} = await initBeaconState(

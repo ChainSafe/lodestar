@@ -36,6 +36,13 @@ export const allForks = {
     BeaconState: capella.BeaconState,
     Metadata: altair.Metadata,
   },
+  eip4844: {
+    BeaconBlockBody: capella.BeaconBlockBody,
+    BeaconBlock: capella.BeaconBlock,
+    SignedBeaconBlock: capella.SignedBeaconBlock,
+    BeaconState: capella.BeaconState,
+    Metadata: altair.Metadata,
+  },
 };
 
 /**
@@ -60,6 +67,15 @@ export const allForksExecution = {
     ExecutionPayload: capella.ExecutionPayload,
     ExecutionPayloadHeader: capella.ExecutionPayloadHeader,
   },
+  eip4844: {
+    BeaconBlockBody: capella.BeaconBlockBody,
+    BeaconBlock: capella.BeaconBlock,
+    SignedBeaconBlock: capella.SignedBeaconBlock,
+    BeaconState: capella.BeaconState,
+    // Not used in phase0 but added for type consitency
+    ExecutionPayload: capella.ExecutionPayload,
+    ExecutionPayloadHeader: capella.ExecutionPayloadHeader,
+  },
 };
 
 /**
@@ -73,6 +89,11 @@ export const allForksBlinded = {
     SignedBeaconBlock: bellatrix.SignedBlindedBeaconBlock,
   },
   capella: {
+    BeaconBlockBody: capella.BlindedBeaconBlockBody,
+    BeaconBlock: capella.BlindedBeaconBlock,
+    SignedBeaconBlock: capella.SignedBlindedBeaconBlock,
+  },
+  eip4844: {
     BeaconBlockBody: capella.BlindedBeaconBlockBody,
     BeaconBlock: capella.BlindedBeaconBlock,
     SignedBeaconBlock: capella.SignedBlindedBeaconBlock,

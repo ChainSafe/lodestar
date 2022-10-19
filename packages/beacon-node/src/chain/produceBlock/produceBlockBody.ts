@@ -87,6 +87,10 @@ export async function produceBlockBody<T extends BlockType>(
   //   }
   // }
 
+  console.log("produceBlockBody running", {
+    blockSlot,
+  });
+
   const [attesterSlashings, proposerSlashings, voluntaryExits] = this.opPool.getSlashingsAndExits(currentState);
   const attestations = this.aggregatedAttestationPool.getAttestationsForBlock(this.forkChoice, currentState);
   const {eth1Data, deposits} = await this.eth1.getEth1DataAndDeposits(currentState);
@@ -104,7 +108,10 @@ export async function produceBlockBody<T extends BlockType>(
 
   const blockEpoch = computeEpochAtSlot(blockSlot);
 
+  console.log(`It is epoch ${blockEpoch}`);
+
   if (blockEpoch >= this.config.ALTAIR_FORK_EPOCH) {
+    console.log("Altair is active");
     (blockBody as altair.BeaconBlockBody).syncAggregate = this.syncContributionAndProofPool.getAggregate(
       parentSlot,
       parentBlockRoot
@@ -112,6 +119,9 @@ export async function produceBlockBody<T extends BlockType>(
   }
 
   const forkName = currentState.config.getForkName(blockSlot);
+
+  console.log(`The current fork is ${forkName}`);
+
   if (forkName !== ForkName.phase0 && forkName !== ForkName.altair) {
     const safeBlockHash = this.forkChoice.getJustifiedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
     const finalizedBlockHash = this.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
@@ -145,6 +155,8 @@ export async function produceBlockBody<T extends BlockType>(
       // try catch payload fetch here, because there is still a recovery path possible if we
       // are pre-merge. We don't care the same for builder segment as the execution block
       // will takeover if the builder flow was activated and errors
+      console.log("Preparing execution payload...");
+
       try {
         const prepareRes = await prepareExecutionPayload(
           this,
@@ -153,6 +165,9 @@ export async function produceBlockBody<T extends BlockType>(
           currentState as CachedBeaconStateBellatrix,
           feeRecipient
         );
+
+        console.log("Prepared execution payload", prepareRes);
+
         if (prepareRes.isPremerge) {
           (blockBody as allForks.ExecutionBlockBody).executionPayload = ssz.allForksExecution[
             forkName
@@ -168,6 +183,9 @@ export async function produceBlockBody<T extends BlockType>(
             await sleep(PAYLOAD_GENERATION_TIME_MS);
           }
           const payload = await this.executionEngine.getPayload(payloadId);
+
+          console.log(`getPayload returned for payloadId: ${payloadId}`);
+
           (blockBody as allForks.ExecutionBlockBody).executionPayload = payload;
 
           const fetchedTime = Date.now() / 1000 - computeTimeAtSlot(this.config, blockSlot, this.genesisTime);

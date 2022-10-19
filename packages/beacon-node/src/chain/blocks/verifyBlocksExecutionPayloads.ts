@@ -335,6 +335,7 @@ export async function verifyBlockExecutionPayload(
     case ExecutePayloadStatus.INVALID_BLOCK_HASH:
     case ExecutePayloadStatus.ELERROR:
     case ExecutePayloadStatus.UNAVAILABLE: {
+      console.log("Invalid execution result", execResult);
       const execError = new BlockError(block, {
         code: BlockErrorCode.EXECUTION_ENGINE_ERROR,
         execStatus: execResult.status,
