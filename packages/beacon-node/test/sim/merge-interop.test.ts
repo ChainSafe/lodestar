@@ -1,6 +1,4 @@
 import fs from "node:fs";
-import net from "node:net";
-import {spawn} from "node:child_process";
 import {Context} from "mocha";
 import {fromHexString} from "@chainsafe/ssz";
 import {isExecutionStateType, isMergeTransitionComplete} from "@lodestar/state-transition";
@@ -22,6 +20,7 @@ import {Eth1Provider} from "../../src/index.js";
 import {ZERO_HASH} from "../../src/constants/index.js";
 import {bytesToData, dataToBytes, quantityToNum} from "../../src/eth1/provider/utils.js";
 import {defaultExecutionEngineHttpOpts} from "../../src/execution/engine/http.js";
+import {runEL, ELStartMode, ELClient, sendTransaction, getBalance} from "../utils/runEl.js";
 import {logFilesDir} from "./params.js";
 import {shell} from "./shell.js";
 
@@ -52,17 +51,28 @@ const retryAttempts = defaultExecutionEngineHttpOpts.retryAttempts;
 const retryDelay = defaultExecutionEngineHttpOpts.retryDelay;
 
 describe("executionEngine / ExecutionEngineHttp", function () {
+  if (!process.env.EL_BINARY_DIR || !process.env.EL_SCRIPT_DIR) {
+    throw Error(
+      `EL ENV must be provided, EL_BINARY_DIR: ${process.env.EL_BINARY_DIR}, EL_SCRIPT_DIR: ${process.env.EL_SCRIPT_DIR}`
+    );
+  }
   this.timeout("10min");
 
   const dataPath = fs.mkdtempSync("lodestar-test-merge-interop");
-  const jsonRpcPort = process.env.ETH_PORT;
-  const enginePort = process.env.ENGINE_PORT;
+  const elSetupConfig = {
+    elScriptDir: process.env.EL_SCRIPT_DIR,
+    elBinaryDir: process.env.EL_BINARY_DIR,
+  };
+  const elRunOptions = {
+    dataPath,
+    jwtSecretHex,
+    enginePort: parseInt(process.env.ENGINE_PORT ?? "8551"),
+    ethPort: parseInt(process.env.ETH_PORT ?? "8545"),
+  };
 
-  /** jsonRpcUrl is used only for eth transactions or to check if EL online/offline */
-  const jsonRpcUrl = `http://localhost:${jsonRpcPort}`;
-  const engineApiUrl = `http://localhost:${enginePort}`;
-
+  const controller = new AbortController();
   after(async () => {
+    controller?.abort();
     await shell(`sudo rm -rf ${dataPath}`);
   });
 
@@ -74,81 +84,17 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     }
   });
 
-  /**
-   * Start Geth process, accumulate stdout stderr and kill the process on afterEach() hook
-   */
-  function startELProcess(args: {runScriptPath: string; TTD: string; DATA_DIR: string}): void {
-    const {runScriptPath, TTD, DATA_DIR} = args;
-    const gethProc = spawn(runScriptPath, [], {
-      env: {
-        ...process.env,
-        TTD,
-        DATA_DIR,
-        JWT_SECRET_HEX: `${jwtSecretHex}`,
-      },
-    });
-
-    gethProc.stdout.on("data", (chunk) => {
-      const str = Buffer.from(chunk).toString("utf8");
-      process.stdout.write(`EL ${gethProc.pid}: ${str}`); // str already contains a new line. console.log adds a new line
-    });
-    gethProc.stderr.on("data", (chunk) => {
-      const str = Buffer.from(chunk).toString("utf8");
-      process.stderr.write(`EL ${gethProc.pid}: ${str}`); // str already contains a new line. console.log adds a new line
-    });
-
-    gethProc.on("exit", (code) => {
-      console.log("EL exited", {code});
-    });
-
-    afterEachCallbacks.push(async function () {
-      if (gethProc.killed) {
-        throw Error("EL is killed before end of test");
-      }
-
-      console.log("Killing EL process", gethProc.pid);
-      await shell(`pkill -15 -P ${gethProc.pid}`);
-
-      // Wait for the P2P to be offline
-      await waitForELOffline();
-      console.log("EL successfully killed!");
-    });
-  }
-
-  // Ref: https://notes.ethereum.org/@9AeMAlpyQYaAAyuj47BzRw/rkwW3ceVY
-  // Build geth from source at branch https://github.com/ethereum/go-ethereum/pull/23607
-  // $ ./go-ethereum/build/bin/geth --catalyst --datadir "~/ethereum/taunus" init genesis.json
-  // $ ./build/bin/geth --catalyst --http --ws -http.api "engine" --datadir "~/ethereum/taunus" console
-  async function runEL(elScript: string, ttd: number): Promise<{genesisBlockHash: string}> {
-    if (!process.env.EL_BINARY_DIR || !process.env.EL_SCRIPT_DIR || !process.env.ENGINE_PORT || !process.env.ETH_PORT) {
-      throw Error(
-        `EL ENV must be provided, EL_BINARY_DIR: ${process.env.EL_BINARY_DIR}, EL_SCRIPT_DIR: ${process.env.EL_SCRIPT_DIR}, ENGINE_PORT: ${process.env.ENGINE_PORT}, ETH_PORT: ${process.env.ETH_PORT}`
-      );
-    }
-
-    await shell(`sudo rm -rf ${dataPath}`);
-    fs.mkdirSync(dataPath, {recursive: true});
-
-    startELProcess({
-      runScriptPath: `./test/scripts/el-interop/${process.env.EL_SCRIPT_DIR}/${elScript}`,
-      TTD: `${ttd}`,
-      DATA_DIR: dataPath,
-    });
-
-    // Wait for Geth to be online
-    const controller = new AbortController();
-    afterEachCallbacks.push(() => controller?.abort());
-    await waitForELOnline(jsonRpcUrl, controller.signal);
-
-    // Fetch genesis block hash
-    const genesisBlockHash = await getGenesisBlockHash({providerUrl: engineApiUrl, jwtSecretHex}, controller.signal);
-    return {genesisBlockHash};
-  }
-
   it("Send stub payloads to EL", async () => {
-    const {genesisBlockHash} = await runEL("post-merge.sh", 0);
+    const {elClient, tearDownCallBack} = await runEL(
+      {...elSetupConfig, mode: ELStartMode.PostMerge},
+      {...elRunOptions, ttd: BigInt(0)},
+      controller.signal
+    );
+    afterEachCallbacks.push(() => tearDownCallBack());
+    const {genesisBlockHash, engineRpcUrl, ethRpcUrl} = elClient;
+
     if (TX_SCENARIOS.includes("simple")) {
-      await sendTransaction(jsonRpcUrl, {
+      await sendTransaction(ethRpcUrl, {
         from: "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b",
         to: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         gas: "0x76c0",
@@ -156,13 +102,13 @@ describe("executionEngine / ExecutionEngineHttp", function () {
         value: "0x9184e72a",
       });
 
-      const balance = await getBalance(jsonRpcUrl, "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+      const balance = await getBalance(ethRpcUrl, "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
       if (balance != "0x0") throw new Error("Invalid Balance: " + balance);
     }
 
-    const controller = new AbortController();
+    //const controller = new AbortController();
     const executionEngine = new ExecutionEngineHttp(
-      {urls: [engineApiUrl], jwtSecretHex, retryAttempts, retryDelay},
+      {urls: [engineRpcUrl], jwtSecretHex, retryAttempts, retryDelay},
       {signal: controller.signal}
     );
 
@@ -200,7 +146,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     if (TX_SCENARIOS.includes("simple")) {
       if (payload.transactions.length !== 1)
         throw new Error("Expected a simple transaction to be in the fetched payload");
-      const balance = await getBalance(jsonRpcUrl, "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+      const balance = await getBalance(ethRpcUrl, "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
       if (balance != "0x0") throw new Error("Invalid Balance: " + balance);
     }
 
@@ -223,7 +169,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     await executionEngine.notifyForkchoiceUpdate(bytesToData(payload.blockHash), genesisBlockHash, genesisBlockHash);
 
     if (TX_SCENARIOS.includes("simple")) {
-      const balance = await getBalance(jsonRpcUrl, "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+      const balance = await getBalance(ethRpcUrl, "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
       if (balance !== "0x9184e72a") throw new Error("Invalid Balance");
     }
 
@@ -250,35 +196,41 @@ describe("executionEngine / ExecutionEngineHttp", function () {
 
   it("Post-merge, run for a few blocks", async function () {
     console.log("\n\nPost-merge, run for a few blocks\n\n");
-    const {genesisBlockHash} = await runEL("post-merge.sh", 0);
+    const {elClient, tearDownCallBack} = await runEL(
+      {...elSetupConfig, mode: ELStartMode.PostMerge},
+      {...elRunOptions, ttd: BigInt(0)},
+      controller.signal
+    );
+    afterEachCallbacks.push(() => tearDownCallBack());
+
     await runNodeWithEL.bind(this)({
-      genesisBlockHash,
+      elClient,
       bellatrixEpoch: 0,
-      ttd: BigInt(0),
       testName: "post-merge",
     });
   });
 
   it("Pre-merge, run for a few blocks", async function () {
     console.log("\n\nPre-merge, run for a few blocks\n\n");
-    const {genesisBlockHash} = await runEL("pre-merge.sh", terminalTotalDifficultyPreMerge);
+    const {elClient, tearDownCallBack} = await runEL(
+      {...elSetupConfig, mode: ELStartMode.PreMerge},
+      {...elRunOptions, ttd: BigInt(terminalTotalDifficultyPreMerge)},
+      controller.signal
+    );
+    afterEachCallbacks.push(() => tearDownCallBack());
+
     await runNodeWithEL.bind(this)({
-      genesisBlockHash,
+      elClient,
       bellatrixEpoch: 1,
-      ttd: BigInt(terminalTotalDifficultyPreMerge),
       testName: "pre-merge",
     });
   });
 
   async function runNodeWithEL(
     this: Context,
-    {
-      genesisBlockHash,
-      bellatrixEpoch,
-      ttd,
-      testName,
-    }: {genesisBlockHash: string; bellatrixEpoch: Epoch; ttd: bigint; testName: string}
+    {elClient, bellatrixEpoch, testName}: {elClient: ELClient; bellatrixEpoch: Epoch; testName: string}
   ): Promise<void> {
+    const {genesisBlockHash, ttd, engineRpcUrl, ethRpcUrl} = elClient;
     const validatorClientCount = 1;
     const validatorsPerClient = 32;
     const event = ChainEvent.finalized;
@@ -330,8 +282,8 @@ describe("executionEngine / ExecutionEngineHttp", function () {
         sync: {isSingleNode: true},
         network: {allowPublishToZeroPeers: true, discv5: null},
         // Now eth deposit/merge tracker methods directly available on engine endpoints
-        eth1: {enabled: true, providerUrls: [engineApiUrl], jwtSecretHex},
-        executionEngine: {urls: [engineApiUrl], jwtSecretHex},
+        eth1: {enabled: true, providerUrls: [engineRpcUrl], jwtSecretHex},
+        executionEngine: {urls: [engineRpcUrl], jwtSecretHex},
         chain: {suggestedFeeRecipient: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"},
       },
       validatorCount: validatorClientCount * validatorsPerClient,
@@ -393,7 +345,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
 
     if (TX_SCENARIOS.includes("simple")) {
       // If bellatrixEpoch > 0, this is the case of pre-merge transaction submission on EL pow
-      await sendTransaction(jsonRpcUrl, {
+      await sendTransaction(ethRpcUrl, {
         from: "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b",
         to: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         gas: "0x76c0",
@@ -410,7 +362,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
           // If bellatrixEpoch > 0, this is the case of pre-merge transaction confirmation on EL pow
           case 2:
             if (TX_SCENARIOS.includes("simple")) {
-              const balance = await getBalance(jsonRpcUrl, "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+              const balance = await getBalance(ethRpcUrl, "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
               if (balance !== "0x9184e72a") reject("Invalid Balance");
             }
             break;
@@ -424,7 +376,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
 
             // Send another tx post-merge, total amount in destination account should be double after this is included in chain
             if (TX_SCENARIOS.includes("simple")) {
-              await sendTransaction(jsonRpcUrl, {
+              await sendTransaction(ethRpcUrl, {
                 from: "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b",
                 to: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
                 gas: "0x76c0",
@@ -461,7 +413,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
 
     // Assertions to make sure the end state is good
     // 1. The proper head is set
-    const rpc = new Eth1Provider({DEPOSIT_CONTRACT_ADDRESS: ZERO_HASH}, {providerUrls: [engineApiUrl], jwtSecretHex});
+    const rpc = new Eth1Provider({DEPOSIT_CONTRACT_ADDRESS: ZERO_HASH}, {providerUrls: [engineRpcUrl], jwtSecretHex});
     const consensusHead = bn.chain.forkChoice.getHead();
     const executionHeadBlockNumber = await rpc.getBlockNumber();
     const executionHeadBlock = await rpc.getBlockByNumber(executionHeadBlockNumber);
@@ -479,7 +431,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     }
 
     if (TX_SCENARIOS.includes("simple")) {
-      const balance = await getBalance(jsonRpcUrl, "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+      const balance = await getBalance(ethRpcUrl, "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
       // 0x12309ce54 = 2 * 0x9184e72a
       if (balance !== "0x12309ce54") throw Error("Invalid Balance");
     }
@@ -490,101 +442,3 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     console.log("\n\nDone\n\n");
   }
 });
-
-async function waitForELOnline(url: string, signal: AbortSignal): Promise<void> {
-  for (let i = 0; i < 60; i++) {
-    try {
-      console.log("Waiting for EL online...");
-      await shell(
-        `curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"net_version","params":[],"id":67}' ${url}`
-      );
-
-      console.log("Waiting for few seconds for EL to fully setup, for e.g. unlock the account...");
-      await sleep(5000, signal);
-      return; // Done
-    } catch (e) {
-      await sleep(1000, signal);
-    }
-  }
-  throw Error("EL not online in 60 seconds");
-}
-
-async function waitForELOffline(): Promise<void> {
-  const port = 30303;
-
-  for (let i = 0; i < 60; i++) {
-    console.log("Waiting for EL offline...");
-    const isInUse = await isPortInUse(port);
-    if (!isInUse) {
-      return;
-    }
-    await sleep(1000);
-  }
-  throw Error("EL not offline in 60 seconds");
-}
-
-async function isPortInUse(port: number): Promise<boolean> {
-  return await new Promise<boolean>((resolve, reject) => {
-    const server = net.createServer();
-    server.once("error", function (err) {
-      if (((err as unknown) as {code: string}).code === "EADDRINUSE") {
-        resolve(true);
-      } else {
-        reject(err);
-      }
-    });
-
-    server.once("listening", function () {
-      // close the server if listening doesn't fail
-      server.close(() => {
-        resolve(false);
-      });
-    });
-
-    server.listen(port);
-  });
-}
-
-async function getGenesisBlockHash(
-  {providerUrl, jwtSecretHex}: {providerUrl: string; jwtSecretHex?: string},
-  signal: AbortSignal
-): Promise<string> {
-  const eth1Provider = new Eth1Provider(
-    ({DEPOSIT_CONTRACT_ADDRESS: ZERO_HASH} as Partial<IChainConfig>) as IChainConfig,
-    {providerUrls: [providerUrl], jwtSecretHex},
-    signal
-  );
-
-  // Need to run multiple tries because nethermind sometimes is not yet ready and throws error
-  // of connection refused while fetching genesis block
-  for (let i = 1; i <= 60; i++) {
-    console.log(`fetching genesisBlock hash, try: ${i}`);
-    try {
-      const genesisBlock = await eth1Provider.getBlockByNumber(0);
-      if (!genesisBlock) {
-        throw Error("No genesis block available");
-      }
-      return genesisBlock.hash;
-    } catch (e) {
-      console.log(`genesisBlockHash fetch error: ${(e as Error).message}`);
-    }
-    await sleep(1000, signal);
-  }
-  throw Error("EL not ready with genesis even after 60 seconds");
-}
-
-async function sendTransaction(url: string, transaction: Record<string, unknown>): Promise<void> {
-  await shell(
-    `curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"eth_sendTransaction","params":[${JSON.stringify(
-      transaction
-    )}],"id":67}' ${url}`
-  );
-}
-
-async function getBalance(url: string, account: string): Promise<string> {
-  const response: string = await shell(
-    `curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"eth_getBalance","params":["${account}","latest"],"id":67}' ${url}`
-  );
-  const {result} = (JSON.parse(response) as unknown) as Record<string, string>;
-  return result;
-}
