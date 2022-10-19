@@ -119,6 +119,7 @@ export class BlockProposingService {
       isBuilderEnabled,
     }: {expectedFeeRecipient: string; strictFeeRecipientCheck: boolean; isBuilderEnabled: boolean}
   ): Promise<{data: allForks.FullOrBlindedBeaconBlock} & {debugLogCtx: Record<string, string>}> => {
+    // TODO EIP-4844: How does 4844 interact with the Builder API?
     const blindedBlockPromise = isBuilderEnabled
       ? this.api.validator.produceBlindedBlock(slot, randaoReveal, graffiti).catch((e: Error) => {
           this.logger.error("Failed to produce builder block", {}, e as Error);

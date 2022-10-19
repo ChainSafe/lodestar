@@ -25,6 +25,7 @@ import {
   PayloadAttributes,
   ApiPayloadAttributes,
   TransitionConfigurationV1,
+  BlobsBundle,
 } from "./interface.js";
 import {PayloadIdCache} from "./payloadIdCache.js";
 
@@ -311,6 +312,22 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     return parseExecutionPayload(executionPayloadRpc);
   }
 
+  async getBlobsBundle(payloadId: PayloadId): Promise<BlobsBundle> {
+    const method = "engine_getBlobsBundleV1";
+    const executionPayloadRpc = await this.rpc.fetchWithRetries<
+      EngineApiRpcReturnTypes[typeof method],
+      EngineApiRpcParamTypes[typeof method]
+    >(
+      {
+        method,
+        params: [payloadId],
+      },
+      getPayloadOpts
+    );
+
+    return executionPayloadRpc;
+  }
+
   /**
    * `engine_exchangeTransitionConfigurationV1`
    *
@@ -362,6 +379,10 @@ type EngineApiRpcParamTypes = {
    * 1. Object - Instance of TransitionConfigurationV1
    */
   engine_exchangeTransitionConfigurationV1: [TransitionConfigurationV1];
+  /**
+   * 1. payloadId: QUANTITY, 64 Bits - Identifier of the payload building process
+   */
+  engine_getBlobsBundleV1: [QUANTITY];
 };
 
 type EngineApiRpcReturnTypes = {
@@ -386,6 +407,8 @@ type EngineApiRpcReturnTypes = {
    * Object - Instance of TransitionConfigurationV1
    */
   engine_exchangeTransitionConfigurationV1: TransitionConfigurationV1;
+
+  engine_getBlobsBundleV1: BlobsBundle;
 };
 
 type ExecutionPayloadRpc = {

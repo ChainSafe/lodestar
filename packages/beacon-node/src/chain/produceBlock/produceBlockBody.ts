@@ -122,6 +122,8 @@ export async function produceBlockBody<T extends BlockType>(
   console.log(`The current fork is ${forkName}`);
 
   if (forkName !== ForkName.phase0 && forkName !== ForkName.altair) {
+    // Bellatrix, Capella, or 4844
+
     const safeBlockHash = this.forkChoice.getJustifiedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
     const finalizedBlockHash = this.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
     const feeRecipient = this.beaconProposerCache.getOrDefault(proposerIndex);
@@ -157,11 +159,13 @@ export async function produceBlockBody<T extends BlockType>(
       console.log("Preparing execution payload...");
 
       try {
+        // https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/validator.md#constructing-the-beaconblockbody
+
         const prepareRes = await prepareExecutionPayload(
           this,
           safeBlockHash,
           finalizedBlockHash ?? ZERO_HASH_HEX,
-          currentState as CachedBeaconStateBellatrix,
+          currentState as CachedBeaconStateExecutions,
           feeRecipient
         );
 
@@ -184,6 +188,11 @@ export async function produceBlockBody<T extends BlockType>(
           const payload = await this.executionEngine.getPayload(payloadId);
 
           console.log(`getPayload returned for payloadId: ${payloadId}`);
+
+          // TODO EIP-4844 -- only make this call for EIP-4844 (based on state? Or block version?)
+          const blobsBundle = await this.executionEngine.getBlobsBundle(payloadId);
+
+          console.log("Also got blobs bundle!", blobsBundle);
 
           (blockBody as allForks.ExecutionBlockBody).executionPayload = payload;
 

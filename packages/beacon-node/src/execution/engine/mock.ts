@@ -11,6 +11,7 @@ import {
   PayloadAttributes,
   PayloadIdCache,
   TransitionConfigurationV1,
+  BlobsBundle,
 } from "./interface.js";
 const INTEROP_GAS_LIMIT = 30e6;
 
@@ -227,6 +228,22 @@ export class ExecutionEngineMock implements IExecutionEngine {
     this.preparingPayloads.delete(payloadIdNbr);
 
     return payload;
+  }
+
+  async getBlobsBundle(payloadId: PayloadId): Promise<BlobsBundle> {
+    const payloadIdNbr = Number(payloadId);
+    const payload = this.preparingPayloads.get(payloadIdNbr);
+
+    if (!payload) {
+      throw Error(`Unknown payloadId ${payloadId}`);
+    }
+
+    return {
+      blockHash: "",
+      kzgs: [],
+      blobs: [],
+      aggregatedProof: "",
+    };
   }
 
   async exchangeTransitionConfigurationV1(

@@ -14,6 +14,11 @@ export class ExecutionEngineDisabled implements IExecutionEngine {
   async getPayload(): Promise<never> {
     throw Error("Execution engine disabled");
   }
+
+  async getBlobsBundle(): Promise<never> {
+    throw Error("Execution engine disabled");
+  }
+
   async exchangeTransitionConfigurationV1(): Promise<never> {
     throw Error("Execution engine disabled");
   }

@@ -1,6 +1,9 @@
 import {ValueOf} from "@chainsafe/ssz";
 import * as ssz from "./sszTypes.js";
 
+export type KZGCommitment = ValueOf<typeof ssz.KZGCommitment>;
+export type Blob = ValueOf<typeof ssz.Blob>;
+
 export type ExecutionPayload = ValueOf<typeof ssz.ExecutionPayload>;
 export type ExecutionPayloadHeader = ValueOf<typeof ssz.ExecutionPayloadHeader>;
 
