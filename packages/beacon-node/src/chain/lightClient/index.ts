@@ -159,9 +159,6 @@ export class LightClientServer {
   private readonly knownSyncCommittee = new MapDef<SyncPeriod, Set<DependantRootHex>>(() => new Set());
   private storedCurrentSyncCommittee = false;
 
-  latestForwardedFinalitySlot: Slot = 0;
-  latestForwardedOptimisticSlot: Slot = 0;
-
   /**
    * Keep in memory since this data is very transient, not useful after a few slots
    */
@@ -500,7 +497,6 @@ export class LightClientServer {
     // TODO: Once SyncAggregate are constructed from P2P too, count bits to decide "best"
     if (!this.latestHeadUpdate || attestedData.attestedHeader.slot > this.latestHeadUpdate.attestedHeader.slot) {
       this.latestHeadUpdate = headerUpdate;
-      this.latestForwardedOptimisticSlot = this.latestHeadUpdate.attestedHeader.slot;
       this.metrics?.lightclientServer.onSyncAggregate.inc({event: "update_latest_head_update"});
     }
 
@@ -520,7 +516,6 @@ export class LightClientServer {
           finalityBranch: attestedData.finalityBranch,
           signatureSlot,
         };
-        this.latestForwardedFinalitySlot = this.finalized.attestedHeader.slot;
         this.emitter.emit(ChainEvent.lightClientFinalityUpdate, this.finalized);
         this.metrics?.lightclientServer.onSyncAggregate.inc({event: "update_latest_finalized_update"});
       }
