@@ -9,8 +9,8 @@ import {Metrics} from "../metrics.js";
 import {ValidatorStore} from "./validatorStore.js";
 import {AttestationDutiesService, AttDutyAndProof} from "./attestationDuties.js";
 import {groupAttDutiesByCommitteeIndex} from "./utils.js";
-import {ChainHeaderTracker, HeadEventData} from "./chainHeaderTracker.js";
-import {ValidatorEvent, ValidatorEventEmitter} from "./emitter.js";
+import {ChainHeaderTracker} from "./chainHeaderTracker.js";
+import {ValidatorEventEmitter} from "./emitter.js";
 
 type AttestationServiceOpts = {
   afterBlockDelaySlotFraction?: number;
@@ -52,7 +52,7 @@ export class AttestationService {
     // A validator should create and broadcast the attestation to the associated attestation subnet when either
     // (a) the validator has received a valid block from the expected block proposer for the assigned slot or
     // (b) one-third of the slot has transpired (SECONDS_PER_SLOT / 3 seconds after the start of slot) -- whichever comes first.
-    await Promise.race([sleep(this.clock.msToSlot(slot + 1 / 3), signal), this.waitForBlockSlot(slot)]);
+    await Promise.race([sleep(this.clock.msToSlot(slot + 1 / 3), signal), this.emitter.waitForBlockSlot(slot)]);
     this.metrics?.attesterStepCallProduceAttestation.observe(this.clock.secFromSlot(slot + 1 / 3));
 
     // Beacon node's endpoint produceAttestationData return data is not dependant on committeeIndex.
@@ -79,24 +79,6 @@ export class AttestationService {
       })
     );
   };
-
-  private waitForBlockSlot(slot: Slot): Promise<void> {
-    let headListener: (head: HeadEventData) => void;
-
-    const onDone = (): void => {
-      this.emitter.off(ValidatorEvent.chainHead, headListener);
-    };
-
-    return new Promise((resolve) => {
-      headListener = (head: HeadEventData): void => {
-        if (head.slot >= slot) {
-          onDone();
-          resolve();
-        }
-      };
-      this.emitter.on(ValidatorEvent.chainHead, headListener);
-    });
-  }
 
   /**
    * Performs the first step of the attesting process: downloading one `Attestation` object.
@@ -148,8 +130,8 @@ export class AttestationService {
     // never beyond the 1/3 cutoff time.
     // https://github.com/status-im/nimbus-eth2/blob/7b64c1dce4392731a4a59ee3a36caef2e0a8357a/beacon_chain/validators/validator_duties.nim#L1123
     const msToOneThirdSlot = this.clock.msToSlot(slot + 1 / 3);
-    // Default = 6, which is half of attestation offset
-    const afterBlockDelayMs = (1000 * this.clock.secondsPerSlot) / (this.opts?.afterBlockDelaySlotFraction ?? 6);
+    // Default = 1/6, which is half of attestation offset
+    const afterBlockDelayMs = 1000 * this.clock.secondsPerSlot * (this.opts?.afterBlockDelaySlotFraction ?? 1 / 6);
     await sleep(Math.min(msToOneThirdSlot, afterBlockDelayMs));
 
     this.metrics?.attesterStepCallPublishAttestation.observe(this.clock.secFromSlot(slot + 1 / 3));

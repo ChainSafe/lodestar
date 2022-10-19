@@ -10,6 +10,11 @@ import {ValidatorStore} from "./validatorStore.js";
 import {SyncCommitteeDutiesService, SyncDutyAndProofs} from "./syncCommitteeDuties.js";
 import {groupSyncDutiesBySubcommitteeIndex, SubcommitteeDuty} from "./utils.js";
 import {ChainHeaderTracker} from "./chainHeaderTracker.js";
+import {ValidatorEventEmitter} from "./emitter.js";
+
+type SyncCommitteeServiceOpts = {
+  scAfterBlockDelaySlotFraction?: number;
+};
 
 /**
  * Service that sets up and handles validator sync duties.
@@ -23,8 +28,10 @@ export class SyncCommitteeService {
     private readonly api: Api,
     private readonly clock: IClock,
     private readonly validatorStore: ValidatorStore,
+    private readonly emitter: ValidatorEventEmitter,
     private readonly chainHeaderTracker: ChainHeaderTracker,
-    private readonly metrics: Metrics | null
+    private readonly metrics: Metrics | null,
+    private readonly opts?: SyncCommitteeServiceOpts
   ) {
     this.dutiesService = new SyncCommitteeDutiesService(config, logger, api, clock, validatorStore, metrics);
 
@@ -49,8 +56,10 @@ export class SyncCommitteeService {
         return;
       }
 
-      // Lighthouse recommends to always wait to 1/3 of the slot, even if the block comes early
-      await sleep(this.clock.msToSlot(slot + 1 / 3), signal);
+      // unlike Attestation, SyncCommitteeSignature could be published asap
+      // especially with lodestar, it's very busy at 1/3 of slot
+      // see https://github.com/ChainSafe/lodestar/issues/4608
+      await Promise.race([sleep(this.clock.msToSlot(slot + 1 / 3), signal), this.emitter.waitForBlockSlot(slot)]);
       this.metrics?.syncCommitteeStepCallProduceMessage.observe(this.clock.secFromSlot(slot + 1 / 3));
 
       // Step 1. Download, sign and publish an `SyncCommitteeMessage` for each validator.
@@ -121,6 +130,16 @@ export class SyncCommitteeService {
         }
       })
     );
+
+    // by default we want to submit SyncCommitteeSignature asap after we receive block
+    // provide a delay option just in case any client implementation validate the existence of block in
+    // SyncCommitteeSignature gossip validation.
+    const msToOneThirdSlot = this.clock.msToSlot(slot + 1 / 3);
+    const afterBlockDelayMs = 1000 * this.clock.secondsPerSlot * (this.opts?.scAfterBlockDelaySlotFraction ?? 0);
+    const toDelayMs = Math.min(msToOneThirdSlot, afterBlockDelayMs);
+    if (toDelayMs > 0) {
+      await sleep(toDelayMs);
+    }
 
     this.metrics?.syncCommitteeStepCallPublishMessage.observe(this.clock.secFromSlot(slot + 1 / 3));
 
