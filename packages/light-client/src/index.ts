@@ -1,6 +1,6 @@
 import mitt from "mitt";
 import {init as initBls} from "@chainsafe/bls/switchable";
-import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD} from "@lodestar/params";
 import {getClient, Api, routes} from "@lodestar/api";
 import {altair, phase0, RootHex, ssz, SyncPeriod} from "@lodestar/types";
 import {createIBeaconConfig, IBeaconConfig, IChainForkConfig} from "@lodestar/config";
@@ -406,7 +406,7 @@ export class Lightclient {
 
     if (!syncCommittee) {
       // TODO: Attempt to fetch committee update for period if it's before the current clock period
-      throw Error(`No syncCommittee for period ${attestedPeriod}`);
+      throw Error(`No syncCommittee for attested period ${attestedPeriod} and signaturePeriod ${signaturePeriod}`);
     }
 
     const headerBlockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(attestedHeader);
@@ -558,7 +558,7 @@ export class Lightclient {
     const syncCommittee = this.getSigningSyncCommitteeAtBoundary(attestedPeriod, signaturePeriod);
 
     if (!syncCommittee) {
-      throw Error(`No SyncCommittee for period ${attestedPeriod}`);
+      throw Error(`No syncCommittee for attested period ${attestedPeriod} and signaturePeriod ${signaturePeriod}`);
     }
 
     assertValidLightClientUpdate(this.config, syncCommittee, update);
@@ -590,7 +590,7 @@ export class Lightclient {
     firstPeriod: SyncPeriod,
     secondPeriod: SyncPeriod
   ): (LightclientUpdateStats & SyncCommitteeFast) | undefined {
-    return firstPeriod == secondPeriod
+    return firstPeriod === secondPeriod
       ? this.syncCommitteeByPeriod.get(firstPeriod)
       : this.syncCommitteeByPeriod.get(Math.max(firstPeriod, secondPeriod));
   }
