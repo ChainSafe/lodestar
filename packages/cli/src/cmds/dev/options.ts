@@ -74,16 +74,6 @@ const externalOptionsOverrides: Partial<Record<"network" | keyof typeof beaconNo
     defaultDescription: undefined,
     default: true,
   },
-  "network.maxPeers": {
-    ...beaconNodeOptions["network.maxPeers"],
-    defaultDescription: undefined,
-    default: 1,
-  },
-  targetPeers: {
-    ...beaconNodeOptions["targetPeers"],
-    defaultDescription: undefined,
-    default: 1,
-  },
   eth1: {
     ...beaconNodeOptions["eth1"],
     defaultDescription: undefined,
