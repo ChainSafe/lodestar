@@ -7,7 +7,7 @@ export async function* onLightclientUpdate(
   chain: IBeaconChain
 ): AsyncIterable<altair.LightClientUpdate> {
   const count = Math.min(MAX_REQUEST_LIGHT_CLIENT_UPDATES, requestBody.count);
-  for (const period of Array.from({length: count}, (_ignored, i) => i + requestBody.startPeriod)) {
+  for (let period = requestBody.startPeriod; period < requestBody.startPeriod + count; period++) {
     yield await chain.lightClientServer.getUpdate(period);
   }
 }
