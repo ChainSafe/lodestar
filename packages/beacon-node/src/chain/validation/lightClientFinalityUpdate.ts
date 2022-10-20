@@ -14,8 +14,10 @@ export function validateLightClientFinalityUpdate(
 ): void {
   // [IGNORE] No other finality_update with a lower or equal finalized_header.slot was already forwarded on the network
   const gossipedFinalitySlot = gossipedFinalityUpdate.finalizedHeader.slot;
-  const latestForwardedFinalitySlot = chain.lightClientServer.latestForwardedFinalitySlot;
-  if (latestForwardedFinalitySlot != null && gossipedFinalitySlot <= latestForwardedFinalitySlot) {
+  const localFinalityUpdate = chain.lightClientServer.getFinalityUpdate();
+  const latestForwardedFinalitySlot = localFinalityUpdate?.finalizedHeader.slot ?? -1;
+
+  if (gossipedFinalitySlot <= latestForwardedFinalitySlot) {
     throw new LightClientError(GossipAction.IGNORE, {
       code: LightClientErrorCode.FINALITY_UPDATE_ALREADY_FORWARDED,
     });
@@ -34,7 +36,6 @@ export function validateLightClientFinalityUpdate(
   }
 
   // [IGNORE] The received finality_update matches the locally computed one exactly
-  const localFinalityUpdate = chain.lightClientServer.getFinalityUpdate() as altair.LightClientFinalityUpdate;
   if (
     localFinalityUpdate === null ||
     !ssz.altair.LightClientFinalityUpdate.equals(gossipedFinalityUpdate, localFinalityUpdate)

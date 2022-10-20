@@ -49,11 +49,20 @@ export function getLightclientApi(
     },
 
     async getOptimisticUpdate() {
-      return {data: chain.lightClientServer.getOptimisticUpdate()};
+      const data = chain.lightClientServer.getOptimisticUpdate();
+      if (data === null) {
+        throw Error("No optimistic update available");
+      }
+
+      return {data};
     },
 
     async getFinalityUpdate() {
-      return {data: chain.lightClientServer.getFinalityUpdate()};
+      const data = chain.lightClientServer.getFinalityUpdate();
+      if (data === null) {
+        throw Error("No finality update available");
+      }
+      return {data};
     },
 
     async getBootstrap(blockRoot) {

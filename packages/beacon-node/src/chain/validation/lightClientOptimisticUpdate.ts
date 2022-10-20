@@ -14,7 +14,8 @@ export function validateLightClientOptimisticUpdate(
 ): void {
   // [IGNORE] No other optimistic_update with a lower or equal attested_header.slot was already forwarded on the network
   const gossipedAttestedSlot = gossipedOptimisticUpdate.attestedHeader.slot;
-  const latestForwardedOptimisticSlot = chain.lightClientServer.latestForwardedOptimisticSlot;
+  const localOptimisticUpdate = chain.lightClientServer.getOptimisticUpdate();
+  const latestForwardedOptimisticSlot = localOptimisticUpdate?.attestedHeader.slot ?? -1;
 
   if (latestForwardedOptimisticSlot != null && gossipedAttestedSlot <= latestForwardedOptimisticSlot) {
     throw new LightClientError(GossipAction.IGNORE, {
@@ -35,7 +36,6 @@ export function validateLightClientOptimisticUpdate(
   }
 
   // [IGNORE] The received optimistic_update matches the locally computed one exactly
-  const localOptimisticUpdate = chain.lightClientServer.getOptimisticUpdate() as altair.LightClientOptimisticUpdate;
   if (
     localOptimisticUpdate === null ||
     !ssz.altair.LightClientOptimisticUpdate.equals(gossipedOptimisticUpdate, localOptimisticUpdate)
