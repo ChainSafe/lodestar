@@ -21,9 +21,9 @@ export interface INetworkArgs {
   "network.rateTrackerTimeoutMs": number;
   "network.dontSendGossipAttestationsToForkchoice": boolean;
   "network.allowPublishToZeroPeers": boolean;
-  "network.gossipsubDParam": number;
-  "network.gossipsubDParamLow": number;
-  "network.gossipsubDParamHigh": number;
+  "network.gossipsubD": number;
+  "network.gossipsubDLow": number;
+  "network.gossipsubDHigh": number;
 }
 
 export function parseArgs(args: INetworkArgs): IBeaconNodeOptions["network"] {
@@ -52,9 +52,9 @@ export function parseArgs(args: INetworkArgs): IBeaconNodeOptions["network"] {
     rateTrackerTimeoutMs: args["network.rateTrackerTimeoutMs"],
     dontSendGossipAttestationsToForkchoice: args["network.dontSendGossipAttestationsToForkchoice"],
     allowPublishToZeroPeers: args["network.allowPublishToZeroPeers"],
-    gossipsubDParam: args["network.gossipsubDParam"],
-    gossipsubDParamLow: args["network.gossipsubDParamLow"],
-    gossipsubDParamHigh: args["network.gossipsubDParamHigh"],
+    gossipsubD: args["network.gossipsubD"],
+    gossipsubDLow: args["network.gossipsubDLow"],
+    gossipsubDHigh: args["network.gossipsubDHigh"],
   };
 }
 
@@ -184,21 +184,21 @@ export const options: ICliCommandOptions<INetworkArgs> = {
     group: "network",
   },
 
-  "network.gossipsubDParam": {
+  "network.gossipsubD": {
     hidden: true,
     type: "number",
     description: "Gossipsub D param",
     group: "network",
   },
 
-  "network.gossipsubDParamLow": {
+  "network.gossipsubDLow": {
     hidden: true,
     type: "number",
     description: "Gossipsub D param low",
     group: "network",
   },
 
-  "network.gossipsubDParamHigh": {
+  "network.gossipsubDHigh": {
     hidden: true,
     type: "number",
     description: "Gossipsub D param high",

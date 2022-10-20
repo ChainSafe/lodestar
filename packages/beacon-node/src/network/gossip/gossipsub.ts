@@ -55,9 +55,9 @@ export type Eth2GossipsubModules = {
 
 export type Eth2GossipsubOpts = {
   allowPublishToZeroPeers?: boolean;
-  gossipsubDParam?: number;
-  gossipsubDParamLow?: number;
-  gossipsubDParamHigh?: number;
+  gossipsubD?: number;
+  gossipsubDLow?: number;
+  gossipsubDHigh?: number;
 };
 
 /**
@@ -86,7 +86,7 @@ export class Eth2Gossipsub extends GossipSub {
   private readonly validatorFnsByType: ValidatorFnsByType;
 
   constructor(opts: Eth2GossipsubOpts, modules: Eth2GossipsubModules) {
-    const {allowPublishToZeroPeers, gossipsubDParam, gossipsubDParamLow, gossipsubDParamHigh} = opts;
+    const {allowPublishToZeroPeers, gossipsubD, gossipsubDLow, gossipsubDHigh} = opts;
     const gossipTopicCache = new GossipTopicCache(modules.config);
 
     const scoreParams = computeGossipPeerScoreParams(modules);
@@ -97,9 +97,9 @@ export class Eth2Gossipsub extends GossipSub {
     super({
       globalSignaturePolicy: SignaturePolicy.StrictNoSign,
       allowPublishToZeroPeers: allowPublishToZeroPeers,
-      D: gossipsubDParam ?? GOSSIP_D,
-      Dlo: gossipsubDParamLow ?? GOSSIP_D_LOW,
-      Dhi: gossipsubDParamHigh ?? GOSSIP_D_HIGH,
+      D: gossipsubD ?? GOSSIP_D,
+      Dlo: gossipsubDLow ?? GOSSIP_D_LOW,
+      Dhi: gossipsubDHigh ?? GOSSIP_D_HIGH,
       Dlazy: 6,
       heartbeatInterval: GOSSIPSUB_HEARTBEAT_INTERVAL,
       fanoutTTL: 60 * 1000,
