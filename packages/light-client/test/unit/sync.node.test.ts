@@ -11,15 +11,15 @@ import {Lightclient, LightclientEvent} from "../../src/index.js";
 import {LightclientServerApiMock} from "../mocks/LightclientServerApiMock.js";
 import {EventsServerApiMock} from "../mocks/EventsServerApiMock.js";
 import {
-  computeLightclientUpdate,
-  computeLightClientSnapshot,
-  getInteropSyncCommittee,
-  testLogger,
-  committeeUpdateToLatestHeadUpdate,
   committeeUpdateToLatestFinalizedHeadUpdate,
+  committeeUpdateToLatestHeadUpdate,
+  computeLightClientSnapshot,
+  computeLightclientUpdate,
+  getInteropSyncCommittee,
   lastInMap,
+  testLogger,
 } from "../utils/utils.js";
-import {startServer, ServerOpts} from "../utils/server.js";
+import {ServerOpts, startServer} from "../utils/server.js";
 import {isNode} from "../../src/utils/utils.js";
 
 const SOME_HASH = Buffer.alloc(32, 0xff);
@@ -43,9 +43,10 @@ describe("sync", () => {
     const ALTAIR_FORK_EPOCH = 0;
 
     const initialPeriod = 0;
-    const targetPeriod = 5;
+    const lastSignatureUpdatePeriod = 5;
+    const lastUpdatePeriod = lastSignatureUpdatePeriod - 1;
     const slotsIntoPeriod = 8;
-    const firstHeadSlot = targetPeriod * EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH;
+    const firstHeadSlot = lastSignatureUpdatePeriod * EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH;
     const targetSlot = firstHeadSlot + slotsIntoPeriod;
 
     // Genesis data such that targetSlot is at the current clock slot
@@ -70,8 +71,16 @@ describe("sync", () => {
     lightclientServerApi.snapshots.set(toHexString(checkpointRoot), snapshot);
 
     // Populate sync committee updates
-    for (let period = initialPeriod; period <= targetPeriod; period++) {
-      const committeeUpdate = computeLightclientUpdate(config, period);
+    for (let period = initialPeriod; period <= lastSignatureUpdatePeriod; period++) {
+      let committeeUpdate;
+      if (period === lastSignatureUpdatePeriod) {
+        // at last period, have the update at the last slot of the epoch so that
+        // it is signed by in the next sync committee period
+        const slotAtBoundary = true;
+        committeeUpdate = computeLightclientUpdate(config, period, slotAtBoundary);
+      } else {
+        committeeUpdate = computeLightclientUpdate(config, period);
+      }
       lightclientServerApi.updates.set(period, committeeUpdate);
     }
 
@@ -96,7 +105,7 @@ describe("sync", () => {
     // Sync periods to current
     await new Promise<void>((resolve) => {
       lightclient.emitter.on(LightclientEvent.committee, (updatePeriod) => {
-        if (updatePeriod === targetPeriod) {
+        if (updatePeriod === lastUpdatePeriod) {
           resolve();
         }
       });
@@ -115,7 +124,7 @@ describe("sync", () => {
     state.latestExecutionPayloadHeader.stateRoot = executionStateRoot;
 
     // Track head + reference states with some known data
-    const syncCommittee = getInteropSyncCommittee(targetPeriod);
+    const syncCommittee = getInteropSyncCommittee(lastSignatureUpdatePeriod);
     await new Promise<void>((resolve) => {
       lightclient.emitter.on(LightclientEvent.head, (header) => {
         if (header.slot === targetSlot) {

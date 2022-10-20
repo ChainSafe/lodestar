@@ -393,31 +393,34 @@ export class Lightclient {
    * This headerUpdate may update the head if there's enough participation.
    */
   private processOptimisticUpdate(headerUpdate: altair.LightClientOptimisticUpdate): void {
-    const {attestedHeader, syncAggregate} = headerUpdate;
+    const {attestedHeader, syncAggregate, signatureSlot} = headerUpdate;
 
     // Prevent registering updates for slots to far ahead
     if (attestedHeader.slot > slotWithFutureTolerance(this.config, this.genesisTime, MAX_CLOCK_DISPARITY_SEC)) {
       throw Error(`header.slot ${attestedHeader.slot} is too far in the future, currentSlot: ${this.currentSlot}`);
     }
 
-    const period = computeSyncPeriodAtSlot(attestedHeader.slot);
-    const syncCommittee = this.syncCommitteeByPeriod.get(period);
+    const attestedPeriod = computeSyncPeriodAtSlot(attestedHeader.slot);
+    const signaturePeriod = computeSyncPeriodAtSlot(signatureSlot);
+    // if at sync period boundary, the signature is constructed by sync committee in the next period
+    const syncCommittee = this.getSigningSyncCommitteeAtBoundary(attestedPeriod, signaturePeriod);
+
     if (!syncCommittee) {
       // TODO: Attempt to fetch committee update for period if it's before the current clock period
-      throw Error(`No syncCommittee for period ${period}`);
+      throw Error(`No syncCommittee for period ${attestedPeriod}`);
     }
 
     const headerBlockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(attestedHeader);
     const headerBlockRootHex = toHexString(headerBlockRoot);
 
-    assertValidSignedHeader(this.config, syncCommittee, syncAggregate, headerBlockRoot, attestedHeader.slot);
+    assertValidSignedHeader(this.config, syncCommittee, syncAggregate, headerBlockRoot, signatureSlot);
 
     // Valid header, check if has enough bits.
     // Only accept headers that have at least half of the max participation seen in this period
     // From spec https://github.com/ethereum/consensus-specs/pull/2746/files#diff-5e27a813772fdd4ded9b04dec7d7467747c469552cd422d57c1c91ea69453b7dR122
     // Take the max of current period and previous period
-    const currMaxParticipation = this.maxParticipationByPeriod.get(period) ?? 0;
-    const prevMaxParticipation = this.maxParticipationByPeriod.get(period - 1) ?? 0;
+    const currMaxParticipation = this.maxParticipationByPeriod.get(attestedPeriod) ?? 0;
+    const prevMaxParticipation = this.maxParticipationByPeriod.get(attestedPeriod - 1) ?? 0;
     const maxParticipation = Math.max(currMaxParticipation, prevMaxParticipation);
     const minSafeParticipation = Math.floor(maxParticipation / SAFETY_THRESHOLD_FACTOR);
 
@@ -429,7 +432,7 @@ export class Lightclient {
 
     // Maybe register new max participation
     if (participation > maxParticipation) {
-      this.maxParticipationByPeriod.set(period, participation);
+      this.maxParticipationByPeriod.set(attestedPeriod, participation);
       pruneSetToMax(this.maxParticipationByPeriod, MAX_STORED_PARTICIPATION);
     }
 
@@ -545,21 +548,18 @@ export class Lightclient {
     }
 
     // Must not rollback periods, since the cache is bounded an older committee could evict the current committee
-    const updatePeriod = computeSyncPeriodAtSlot(updateSlot);
+    const attestedPeriod = computeSyncPeriodAtSlot(updateSlot);
     const signaturePeriod = computeSyncPeriodAtSlot(signatureSlot);
     const minPeriod = Math.min(-Infinity, ...this.syncCommitteeByPeriod.keys());
-    if (updatePeriod < minPeriod) {
+    if (attestedPeriod < minPeriod) {
       throw Error(`update must not rollback existing committee at period ${minPeriod}`);
     }
 
-    // at sync period boundary, the signature is constructed by sync committee in the next period
-    const syncCommittee =
-      updateSlot == signatureSlot
-        ? this.syncCommitteeByPeriod.get(updatePeriod)
-        : this.syncCommitteeByPeriod.get(signaturePeriod);
+    // if at sync period boundary, the signature is constructed by sync committee in the next period
+    const syncCommittee = this.getSigningSyncCommitteeAtBoundary(attestedPeriod, signaturePeriod);
 
     if (!syncCommittee) {
-      throw Error(`No SyncCommittee for period ${updatePeriod}`);
+      throw Error(`No SyncCommittee for period ${attestedPeriod}`);
     }
 
     assertValidLightClientUpdate(this.config, syncCommittee, update);
@@ -567,7 +567,7 @@ export class Lightclient {
     // Store next_sync_committee keyed by next period.
     // Multiple updates could be requested for the same period, only keep the SyncCommittee associated with the best
     // update available, where best is decided by `isBetterUpdate()`
-    const nextPeriod = updatePeriod + 1;
+    const nextPeriod = attestedPeriod + 1;
     const existingNextSyncCommittee = this.syncCommitteeByPeriod.get(nextPeriod);
     const newNextSyncCommitteeStats: LightclientUpdateStats = {
       isFinalized: !isEmptyHeader(update.finalizedHeader),
@@ -577,7 +577,7 @@ export class Lightclient {
 
     if (!existingNextSyncCommittee || isBetterUpdate(existingNextSyncCommittee, newNextSyncCommitteeStats)) {
       this.logger.info("Stored SyncCommittee", {nextPeriod, replacedPrevious: existingNextSyncCommittee != null});
-      this.emitter.emit(LightclientEvent.committee, updatePeriod);
+      this.emitter.emit(LightclientEvent.committee, attestedPeriod);
       this.syncCommitteeByPeriod.set(nextPeriod, {
         ...newNextSyncCommitteeStats,
         ...deserializeSyncCommittee(update.nextSyncCommittee),
@@ -585,5 +585,14 @@ export class Lightclient {
       pruneSetToMax(this.syncCommitteeByPeriod, MAX_STORED_SYNC_COMMITTEES);
       // TODO: Metrics, updated syncCommittee
     }
+  }
+
+  private getSigningSyncCommitteeAtBoundary(
+    firstPeriod: SyncPeriod,
+    secondPeriod: SyncPeriod
+  ): (LightclientUpdateStats & SyncCommitteeFast) | undefined {
+    return firstPeriod == secondPeriod
+      ? this.syncCommitteeByPeriod.get(firstPeriod)
+      : this.syncCommitteeByPeriod.get(Math.max(firstPeriod, secondPeriod));
   }
 }

@@ -111,8 +111,14 @@ export function getInteropSyncCommittee(period: SyncPeriod): SyncCommitteeKeys {
 /**
  * Creates LightClientUpdate that passes `assertValidLightClientUpdate` function, from mock data
  */
-export function computeLightclientUpdate(config: IBeaconConfig, period: SyncPeriod): altair.LightClientUpdate {
-  const updateSlot = period * EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH + 1;
+export function computeLightclientUpdate(
+  config: IBeaconConfig,
+  period: SyncPeriod,
+  atBoundary = false
+): altair.LightClientUpdate {
+  const updateSlot = atBoundary
+    ? period * EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH - 1
+    : period * EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH + 1;
 
   const committee = getInteropSyncCommittee(period);
   const committeeNext = getInteropSyncCommittee(period + 1);

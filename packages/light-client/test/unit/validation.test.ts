@@ -35,10 +35,10 @@ describe("validation", function () {
 
   before("prepare data", function () {
     // Update slot must > snapshot slot
-    // attestedHeaderSlot must == updateHeaderSlot + 1
+    // signatureSlot must == attestedHeaderSlot + 1
     const snapshotHeaderSlot = 1;
-    const updateHeaderSlot = EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH + 1;
-    const attestedHeaderSlot = updateHeaderSlot + 1;
+    const attestedHeaderSlot = EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH + 1;
+    const signatureSlot = attestedHeaderSlot + 1;
 
     const skBytes: Buffer[] = [];
     for (let i = 0; i < SYNC_COMMITTEE_SIZE; i++) {
@@ -59,7 +59,7 @@ describe("validation", function () {
     const finalizedState = ssz.altair.BeaconState.defaultViewDU();
 
     // finalized header must have stateRoot to finalizedState
-    const finalizedHeader = defaultBeaconBlockHeader(updateHeaderSlot);
+    const finalizedHeader = defaultBeaconBlockHeader(attestedHeaderSlot);
     finalizedHeader.stateRoot = finalizedState.hashTreeRoot();
 
     // attestedState must have `finalizedHeader` as finalizedCheckpoint
@@ -73,7 +73,7 @@ describe("validation", function () {
     attestedState.nextSyncCommittee = ssz.altair.SyncCommittee.toViewDU(nextSyncCommittee);
 
     // attestedHeader must have stateRoot to attestedState
-    const attestedHeader = defaultBeaconBlockHeader(attestedHeaderSlot);
+    const attestedHeader = defaultBeaconBlockHeader(signatureSlot);
     attestedHeader.stateRoot = attestedState.hashTreeRoot();
 
     // Creates proofs for nextSyncCommitteeBranch and finalityBranch rooted in attested state
@@ -95,7 +95,7 @@ describe("validation", function () {
       finalizedHeader,
       finalityBranch,
       syncAggregate,
-      signatureSlot: updateHeaderSlot,
+      signatureSlot,
     };
 
     snapshot = {
