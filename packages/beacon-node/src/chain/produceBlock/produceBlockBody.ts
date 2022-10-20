@@ -3,6 +3,7 @@ import {
   phase0,
   allForks,
   altair,
+  eip4844,
   Root,
   RootHex,
   Slot,
@@ -185,16 +186,20 @@ export async function produceBlockBody<T extends BlockType>(
             // See: https://discord.com/channels/595666850260713488/892088344438255616/1009882079632314469
             await sleep(PAYLOAD_GENERATION_TIME_MS);
           }
+
           const payload = await this.executionEngine.getPayload(payloadId);
-
           console.log(`getPayload returned for payloadId: ${payloadId}`);
-
-          // TODO EIP-4844 -- only make this call for EIP-4844 (based on state? Or block version?)
-          const blobsBundle = await this.executionEngine.getBlobsBundle(payloadId);
-
-          console.log("Also got blobs bundle!", blobsBundle);
-
           (blockBody as allForks.ExecutionBlockBody).executionPayload = payload;
+
+          // TODO EIP-4844: Actually all forks after EIP-4844
+          if (forkName === ForkName.eip4844) {
+            console.log("Dispatching request to Engine API to get blobs");
+            const blobsBundle = await this.executionEngine.getBlobsBundle(payloadId);
+            console.log("Got blobs bundle", blobsBundle);
+
+            // TODO EIP-4844:  Optional (do it in a follow-up): sanity-check that the KZG commitments match blob contents as described by the spec
+            (blockBody as eip4844.BeaconBlockBody).blobKzgCommitments = blobsBundle.kzgs;
+          }
 
           const fetchedTime = Date.now() / 1000 - computeTimeAtSlot(this.config, blockSlot, this.genesisTime);
           this.metrics?.blockPayload.payloadFetchedTime.observe({prepType}, fetchedTime);
