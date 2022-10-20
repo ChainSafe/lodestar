@@ -20,8 +20,40 @@ export function upgradeStateTo4844(stateCapella: CachedBeaconStateCapella): Cach
     epoch: stateCapella.epochCtx.epoch,
   });
 
+  const {
+    parentHash,
+    feeRecipient,
+    stateRoot,
+    receiptsRoot,
+    logsBloom,
+    prevRandao,
+    blockNumber,
+    gasLimit,
+    gasUsed,
+    timestamp,
+    extraData,
+    baseFeePerGas,
+    blockHash,
+    transactionsRoot,
+    withdrawalsRoot,
+  } = stateCapella.latestExecutionPayloadHeader;
+
   state4844.latestExecutionPayloadHeader = ssz.eip4844.ExecutionPayloadHeader.toViewDU({
-    ...stateCapella.latestExecutionPayloadHeader,
+    parentHash,
+    feeRecipient,
+    stateRoot,
+    receiptsRoot,
+    logsBloom,
+    prevRandao,
+    blockNumber,
+    gasLimit,
+    gasUsed,
+    timestamp,
+    extraData,
+    baseFeePerGas,
+    blockHash,
+    transactionsRoot,
+    withdrawalsRoot,
     excessDataGas: ssz.UintBn256.defaultValue(),
   });
 

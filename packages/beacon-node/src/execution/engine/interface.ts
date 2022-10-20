@@ -55,19 +55,10 @@ export type TransitionConfigurationV1 = {
   terminalBlockNumber: QUANTITY;
 };
 
-/**
- * Prysm's protobuf defines this as:
-  type BlobsBundle struct {
-    BlockHash       []byte   `protobuf:"bytes,1,opt,name=block_hash,json=blockHash,proto3" json:"block_hash,omitempty" ssz-size:"32"`
-    Kzgs            [][]byte `protobuf:"bytes,2,rep,name=kzgs,proto3" json:"kzgs,omitempty" ssz-max:"16" ssz-size:"?,48"`
-    Blobs           []*Blob  `protobuf:"bytes,3,rep,name=blobs,proto3" json:"blobs,omitempty" ssz-max:"16"`
-    AggregatedProof []byte   `protobuf:"bytes,4,opt,name=aggregated_proof,json=aggregatedProof,proto3" json:"aggregated_proof,omitempty" ssz-size:"48"`
-  }
-*/
 export type BlobsBundle = {
   blockHash: DATA;
-  kzgs: KZGCommitment[];
-  blobs: Blob[];
+  kzgs: KZGCommitment[] | null;
+  blobs: Blob[] | null;
   aggregatedProof: DATA;
 };
 

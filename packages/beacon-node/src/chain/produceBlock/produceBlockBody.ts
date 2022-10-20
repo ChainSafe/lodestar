@@ -11,6 +11,7 @@ import {
   ValidatorIndex,
   BLSPubkey,
   BLSSignature,
+  capella,
 } from "@lodestar/types";
 import {
   CachedBeaconStateAllForks,
@@ -88,10 +89,6 @@ export async function produceBlockBody<T extends BlockType>(
   //   }
   // }
 
-  console.log("produceBlockBody running", {
-    blockSlot,
-  });
-
   const [attesterSlashings, proposerSlashings, voluntaryExits] = this.opPool.getSlashingsAndExits(currentState);
   const attestations = this.aggregatedAttestationPool.getAttestationsForBlock(this.forkChoice, currentState);
   const {eth1Data, deposits} = await this.eth1.getEth1DataAndDeposits(currentState);
@@ -109,8 +106,6 @@ export async function produceBlockBody<T extends BlockType>(
 
   const blockEpoch = computeEpochAtSlot(blockSlot);
 
-  console.log(`It is epoch ${blockEpoch}`);
-
   if (blockEpoch >= this.config.ALTAIR_FORK_EPOCH) {
     (blockBody as altair.BeaconBlockBody).syncAggregate = this.syncContributionAndProofPool.getAggregate(
       parentSlot,
@@ -120,14 +115,18 @@ export async function produceBlockBody<T extends BlockType>(
 
   const forkName = currentState.config.getForkName(blockSlot);
 
-  console.log(`The current fork is ${forkName}`);
-
-  if (forkName !== ForkName.phase0 && forkName !== ForkName.altair) {
+  if (forkName === ForkName.bellatrix || forkName === ForkName.capella || forkName === ForkName.eip4844) {
     // Bellatrix, Capella, or 4844
 
     const safeBlockHash = this.forkChoice.getJustifiedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
     const finalizedBlockHash = this.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
     const feeRecipient = this.beaconProposerCache.getOrDefault(proposerIndex);
+
+    // Capella and later forks have blsToExecutionChanges on BeaconBlockBody
+    // It would be nicer to use ForkSeq, but that doesn't narrow the type appropriately
+    if (forkName === ForkName.capella || forkName === ForkName.eip4844) {
+      (blockBody as capella.BeaconBlockBody).blsToExecutionChanges = [];
+    }
 
     if (blockType === BlockType.Blinded) {
       if (!this.executionBuilder) throw Error("Execution Builder not available");
@@ -153,12 +152,18 @@ export async function produceBlockBody<T extends BlockType>(
         currentState as CachedBeaconStateBellatrix,
         proposerPubKey
       );
+
+      // Capella and later forks have withdrawalRoot on their ExecutionPayloadHeader
+      // TODO Capella: Remove this. It will come from the execution client.
+      if (forkName === ForkName.capella || forkName === ForkName.eip4844) {
+        (blockBody as capella.BlindedBeaconBlockBody).executionPayloadHeader.withdrawalsRoot = Uint8Array.from(
+          Buffer.alloc(32, 0)
+        );
+      }
     } else {
       // try catch payload fetch here, because there is still a recovery path possible if we
       // are pre-merge. We don't care the same for builder segment as the execution block
       // will takeover if the builder flow was activated and errors
-      console.log("Preparing execution payload...");
-
       try {
         // https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/validator.md#constructing-the-beaconblockbody
 
@@ -169,8 +174,6 @@ export async function produceBlockBody<T extends BlockType>(
           currentState as CachedBeaconStateExecutions,
           feeRecipient
         );
-
-        console.log("Prepared execution payload", prepareRes);
 
         if (prepareRes.isPremerge) {
           (blockBody as allForks.ExecutionBlockBody).executionPayload = ssz.allForksExecution[
@@ -188,8 +191,20 @@ export async function produceBlockBody<T extends BlockType>(
           }
 
           const payload = await this.executionEngine.getPayload(payloadId);
-          console.log(`getPayload returned for payloadId: ${payloadId}`);
-          (blockBody as allForks.ExecutionBlockBody).executionPayload = payload;
+
+          // Capella and later forks have withdrawals on their ExecutionPayload
+          // TODO Capella: Remove this. It will come from the execution client.
+          if (forkName === ForkName.capella || forkName === ForkName.eip4844) {
+            (blockBody as capella.BeaconBlockBody).executionPayload.withdrawals = [];
+          }
+
+          if (forkName === ForkName.eip4844) {
+            // Our Geth fork omits 0s? Because it expects protobuf to fill with default?
+            if (!((blockBody as eip4844.BeaconBlockBody).executionPayload as eip4844.ExecutionPayload).excessDataGas) {
+              ((blockBody as eip4844.BeaconBlockBody)
+                .executionPayload as eip4844.ExecutionPayload).excessDataGas = BigInt(0);
+            }
+          }
 
           // TODO EIP-4844: Actually all forks after EIP-4844
           if (forkName === ForkName.eip4844) {
@@ -198,7 +213,7 @@ export async function produceBlockBody<T extends BlockType>(
             console.log("Got blobs bundle", blobsBundle);
 
             // TODO EIP-4844:  Optional (do it in a follow-up): sanity-check that the KZG commitments match blob contents as described by the spec
-            (blockBody as eip4844.BeaconBlockBody).blobKzgCommitments = blobsBundle.kzgs;
+            (blockBody as eip4844.BeaconBlockBody).blobKzgCommitments = blobsBundle.kzgs ?? [];
           }
 
           const fetchedTime = Date.now() / 1000 - computeTimeAtSlot(this.config, blockSlot, this.genesisTime);

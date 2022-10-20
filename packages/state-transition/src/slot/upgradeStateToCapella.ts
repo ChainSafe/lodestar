@@ -21,8 +21,38 @@ export function upgradeStateToCapella(stateBellatrix: CachedBeaconStateBellatrix
     epoch: stateBellatrix.epochCtx.epoch,
   });
 
+  const {
+    parentHash,
+    feeRecipient,
+    stateRoot,
+    receiptsRoot,
+    logsBloom,
+    prevRandao,
+    blockNumber,
+    gasLimit,
+    gasUsed,
+    timestamp,
+    extraData,
+    baseFeePerGas,
+    blockHash,
+    transactionsRoot,
+  } = stateBellatrix.latestExecutionPayloadHeader;
+
   stateCapella.latestExecutionPayloadHeader = ssz.capella.ExecutionPayloadHeader.toViewDU({
-    ...stateBellatrix.latestExecutionPayloadHeader,
+    parentHash,
+    feeRecipient,
+    stateRoot,
+    receiptsRoot,
+    logsBloom,
+    prevRandao,
+    blockNumber,
+    gasLimit,
+    gasUsed,
+    timestamp,
+    extraData,
+    baseFeePerGas,
+    blockHash,
+    transactionsRoot,
     withdrawalsRoot: ssz.Root.defaultValue(),
   });
 

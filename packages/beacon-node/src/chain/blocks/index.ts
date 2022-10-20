@@ -13,7 +13,7 @@ import {FullyVerifiedBlock, ImportBlockOpts} from "./types.js";
 import {verifyBlocksSanityChecks} from "./verifyBlocksSanityChecks.js";
 export {ImportBlockOpts} from "./types.js";
 
-const QUEUE_MAX_LENGHT = 256;
+const QUEUE_MAX_LENGTH = 256;
 
 /**
  * BlockProcessor processes block jobs in a queued fashion, one after the other.
@@ -26,7 +26,7 @@ export class BlockProcessor {
       (job, importOpts) => {
         return processBlocks.call(chain, job, {...opts, ...importOpts});
       },
-      {maxLength: QUEUE_MAX_LENGHT, signal},
+      {maxLength: QUEUE_MAX_LENGTH, signal},
       metrics?.blockProcessorQueue ?? undefined
     );
   }

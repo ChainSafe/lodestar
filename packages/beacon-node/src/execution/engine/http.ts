@@ -1,4 +1,4 @@
-import {RootHex, allForks, capella} from "@lodestar/types";
+import {RootHex, allForks} from "@lodestar/types";
 import {BYTES_PER_LOGS_BLOOM, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {fromHex} from "@lodestar/utils";
 
@@ -249,9 +249,6 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     }) as Promise<EngineApiRpcReturnTypes[typeof method]>;
 
     const response = await request;
-
-    console.log("!!! engine_forkchoiceUpdatedV1 response", response);
-
     const {
       payloadStatus: {status, latestValidHash: _latestValidHash, validationError},
       payloadId,
@@ -314,7 +311,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
 
   async getBlobsBundle(payloadId: PayloadId): Promise<BlobsBundle> {
     const method = "engine_getBlobsBundleV1";
-    const executionPayloadRpc = await this.rpc.fetchWithRetries<
+    const blobsBundle = await this.rpc.fetchWithRetries<
       EngineApiRpcReturnTypes[typeof method],
       EngineApiRpcParamTypes[typeof method]
     >(
@@ -325,7 +322,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       getPayloadOpts
     );
 
-    return executionPayloadRpc;
+    return blobsBundle;
   }
 
   /**
@@ -430,9 +427,10 @@ type ExecutionPayloadRpc = {
 };
 
 export function serializeExecutionPayload(data: allForks.ExecutionPayload): ExecutionPayloadRpc {
-  if ((data as capella.ExecutionPayload).withdrawals !== undefined) {
-    throw Error("Capella Not implemented");
-  }
+  // TODO: Implement Capella before 4844
+  // if ((data as capella.ExecutionPayload).withdrawals !== undefined) {
+  //   throw Error("Capella Not implemented");
+  // }
   return {
     parentHash: bytesToData(data.parentHash),
     feeRecipient: bytesToData(data.feeRecipient),
@@ -452,9 +450,10 @@ export function serializeExecutionPayload(data: allForks.ExecutionPayload): Exec
 }
 
 export function parseExecutionPayload(data: ExecutionPayloadRpc): allForks.ExecutionPayload {
-  if (data.withdrawals !== undefined) {
-    throw Error("Capella Not implemented");
-  }
+  // TODO: Implement Capella before 4844
+  // if (data.withdrawals !== undefined) {
+  //   throw Error("Capella Not implemented");
+  // }
   return {
     parentHash: dataToBytes(data.parentHash, 32),
     feeRecipient: dataToBytes(data.feeRecipient, 20),
