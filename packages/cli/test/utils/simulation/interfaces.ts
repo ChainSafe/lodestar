@@ -45,6 +45,8 @@ export interface CLClientOptions {
   keyManagerPort: number;
   config: IChainForkConfig;
   secretKeys: SecretKey[];
+  checkpointSyncUrl?: string;
+  wssCheckpoint?: string;
 }
 
 export type CLClientGenerator = (opts: CLClientOptions, runner: Runner) => Job;
@@ -86,6 +88,7 @@ export type RunnerEvent = "starting" | "started" | "stopping" | "stop";
 
 export interface CLParticipant {
   readonly id: string;
+  readonly url: string;
   readonly api: Api;
   readonly keyManager: KeyManagerApi;
   readonly secretKeys: SecretKey[];

@@ -235,6 +235,7 @@ export class SimulationEnvironment {
 
     const participant: CLParticipant = {
       id: options.id,
+      url: `http://${options.address}:${options.restPort}`,
       secretKeys: options.secretKeys,
       // TODO: Switch the CL client here
       api: getClient({baseUrl: `http://${options.address}:${options.restPort}`}, {config: this.config}),

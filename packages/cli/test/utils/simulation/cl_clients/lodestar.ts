@@ -13,7 +13,18 @@ export const generateLodeStarBeaconNode: CLClientGenerator = (opts: CLClientOpti
   if (runner.type !== RunnerType.ChildProcess) {
     throw new Error(`Runner "${runner.type}" not yet supported.`);
   }
-  const {rootDir, params, address, restPort, port, id, config, genesisStateFilePath} = opts;
+  const {
+    rootDir,
+    params,
+    address,
+    restPort,
+    port,
+    id,
+    config,
+    genesisStateFilePath,
+    checkpointSyncUrl,
+    wssCheckpoint,
+  } = opts;
 
   const {state} = nodeUtils.initDevState(config, params.validatorClients * params.validatorsPerClient, {
     genesisTime: params.genesisTime,
@@ -47,6 +58,14 @@ export const generateLodeStarBeaconNode: CLClientGenerator = (opts: CLClientOpti
     logLevel: LogLevel.debug,
     logFileDailyRotate: 0,
   } as unknown) as IBeaconArgs & IGlobalArgs;
+
+  if (checkpointSyncUrl) {
+    rcConfig["checkpointSyncUrl"] = checkpointSyncUrl;
+  }
+
+  if (wssCheckpoint) {
+    rcConfig["wssCheckpoint"] = wssCheckpoint;
+  }
 
   const validatorClientsJobs: JobOptions[] = [];
   if (opts.secretKeys.length > 0) {

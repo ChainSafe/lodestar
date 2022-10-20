@@ -126,13 +126,14 @@ for (const {beaconNodes, validatorClients, validatorsPerClient} of nodeCases) {
           });
         }
 
-        describe("sync from genesis", () => {
+        describe("range sync from genesis", () => {
           let clParticipant: CLParticipant;
           let clJob: Job;
+          const rangeSyncEpoch = runTill + 1;
 
           before(async () => {
             const {job, participant} = env.createCLClient(CLClient.Lodestar, env.nodes.length, {
-              id: "sync-node",
+              id: "range-sync-node",
               secretKeys: [],
             });
             clJob = job;
@@ -143,9 +144,9 @@ for (const {beaconNodes, validatorClients, validatorsPerClient} of nodeCases) {
 
             env.tracker.track(clParticipant);
             // Wait for existing tests to finish
-            await env.waitForSlot(env.clock.getLastSlotOfEpoch(runTill + 1) + 1);
+            await env.waitForSlot(env.clock.getLastSlotOfEpoch(rangeSyncEpoch) + 1);
 
-            env.tracker.printNoesInfo(runTill + 1);
+            env.tracker.printNoesInfo(rangeSyncEpoch);
           });
 
           after(async () => {
@@ -153,15 +154,62 @@ for (const {beaconNodes, validatorClients, validatorsPerClient} of nodeCases) {
           });
 
           describe("missed blocks", () => {
-            missedBlocksAssertions(env, runTill + 1);
+            missedBlocksAssertions(env, rangeSyncEpoch);
           });
 
           describe("finality", () => {
-            finalityAssertions(env, runTill + 1);
+            finalityAssertions(env, rangeSyncEpoch);
           });
 
           describe("heads", () => {
-            headsAssertions(env, runTill + 1);
+            headsAssertions(env, rangeSyncEpoch);
+          });
+        });
+
+        describe("checkpoint sync", () => {
+          let clParticipant: CLParticipant;
+          let clJob: Job;
+          const checkpointSyncEpoch = runTill + 2;
+
+          before(async () => {
+            // Get checkpoint for epoch 2
+            const {
+              data: {currentJustified},
+            } = await env.nodes[0].api.beacon.getStateFinalityCheckpoints(env.clock.getLastSlotOfEpoch(2));
+
+            const {job, participant} = env.createCLClient(CLClient.Lodestar, env.nodes.length, {
+              id: "checkpoint-sync-node",
+              secretKeys: [],
+              wssCheckpoint: `${currentJustified.root}:${currentJustified.epoch}`,
+              checkpointSyncUrl: env.nodes[0].url,
+            });
+            clJob = job;
+            clParticipant = participant;
+
+            await clJob.start();
+            await env.network.connectNewNode(clParticipant);
+
+            env.tracker.track(clParticipant);
+            // Wait for existing tests to finish
+            await env.waitForSlot(env.clock.getLastSlotOfEpoch(checkpointSyncEpoch) + 1);
+
+            env.tracker.printNoesInfo(checkpointSyncEpoch);
+          });
+
+          after(async () => {
+            await clJob.stop();
+          });
+
+          describe("missed blocks", () => {
+            missedBlocksAssertions(env, checkpointSyncEpoch);
+          });
+
+          describe("finality", () => {
+            finalityAssertions(env, checkpointSyncEpoch);
+          });
+
+          describe("heads", () => {
+            headsAssertions(env, checkpointSyncEpoch);
           });
         });
       });
