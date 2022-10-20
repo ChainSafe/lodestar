@@ -156,8 +156,7 @@ export class Lightclient {
     this.syncCommitteeByPeriod.set(periodCurr, {
       isFinalized: false,
       participation: 0,
-      // TODO DA any reason not to use snapshot.header.slot
-      slot: periodCurr * EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH,
+      slot: snapshot.header.slot,
       ...deserializeSyncCommittee(snapshot.currentSyncCommittee),
     });
 
