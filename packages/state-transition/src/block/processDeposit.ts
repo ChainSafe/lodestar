@@ -96,7 +96,8 @@ export function processDeposit(fork: ForkSeq, state: CachedBeaconStateAllForks, 
           withdrawableEpoch: FAR_FUTURE_EPOCH,
           effectiveBalance,
           slashed: false,
-          fullyWithdrawnEpoch: FAR_FUTURE_EPOCH,
+          // This field is removed in the latest spec, but is present in 1.2.0 set to 0
+          fullyWithdrawnEpoch: 0,
         })
       );
     }
