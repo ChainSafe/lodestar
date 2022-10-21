@@ -103,6 +103,9 @@ export class RestApiServer {
     try {
       const address = await this.server.listen(this.opts.port, this.opts.address);
       this.logger.info("Started REST api server", {address});
+      if (this.opts.address === "0.0.0.0") {
+        this.logger.warn("REST api server started on public ip. This is a DoS vector if configured accidentally.");
+      }
     } catch (e) {
       this.logger.error("Error starting REST api server", this.opts, e as Error);
       throw e;

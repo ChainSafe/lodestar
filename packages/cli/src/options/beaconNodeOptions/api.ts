@@ -66,7 +66,7 @@ export const options: ICliCommandOptions<IApiArgs> = {
 
   "rest.address": {
     type: "string",
-    description: "Set host for HTTP API",
+    description: "Set host for HTTP API. WARNING: Publicly making this available is a DoS vector.",
     defaultDescription: defaultOptions.api.rest.address,
     group: "api",
   },
