@@ -88,8 +88,9 @@ export function processDeposit(fork: ForkSeq, state: CachedBeaconStateAllForks, 
       (validators as CachedBeaconStateCapella["validators"]).push(
         ssz.capella.Validator.toViewDU({
           ...newValidatorFields,
-          // Very strange that this needs to be set at 0 else statroot mismatches with spec tests blocks,
-          // may be this will get updated later on to a proper epoch or field likely will be junked
+          // Very strange that this needs to be set at 0 rather than FAR_FUTURE_EPOCH else stateRoot mismatches
+          // with spec tests blocks.
+          // May be this will get updated later on to a proper epoch or field likely will be junked
           fullyWithdrawnEpoch: 0,
         })
       );
