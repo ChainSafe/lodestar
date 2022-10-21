@@ -2,6 +2,7 @@ import {routes} from "@lodestar/api";
 import {fromHexString} from "@chainsafe/ssz";
 import {ProofType, Tree} from "@chainsafe/persistent-merkle-tree";
 import {SyncPeriod} from "@lodestar/types";
+import {MAX_REQUEST_LIGHT_CLIENT_UPDATES} from "@lodestar/params";
 import {ApiModules} from "../types.js";
 import {resolveStateId} from "../beacon/state/utils.js";
 import {IApiOptions} from "../../options.js";
@@ -43,7 +44,8 @@ export function getLightclientApi(
     },
 
     async getUpdates(startPeriod: SyncPeriod, count: number) {
-      const periods = Array.from({length: count}, (_ignored, i) => i + startPeriod);
+      const maxAllowedCount = Math.min(MAX_REQUEST_LIGHT_CLIENT_UPDATES, count);
+      const periods = Array.from({length: maxAllowedCount}, (_ignored, i) => i + startPeriod);
       const updates = await Promise.all(periods.map((period) => chain.lightClientServer.getUpdate(period)));
       return {data: updates};
     },
