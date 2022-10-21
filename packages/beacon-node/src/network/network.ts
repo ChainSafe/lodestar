@@ -131,6 +131,8 @@ export class Network implements INetwork {
   /** Destroy this instance. Can only be called once. */
   close(): void {
     this.chain.emitter.off(ChainEvent.clockEpoch, this.onEpoch);
+    this.chain.emitter.off(ChainEvent.lightClientFinalityUpdate, this.onLightclientFinalityUpdate);
+    this.chain.emitter.off(ChainEvent.lightClientOptimisticUpdate, this.onLightclientOptimisticUpdate);
   }
 
   async start(): Promise<void> {
