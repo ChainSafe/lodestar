@@ -172,16 +172,14 @@ for (const {beaconNodes, validatorClients, validatorsPerClient} of nodeCases) {
           const checkpointSyncEpoch = runTill + 2;
 
           before(async () => {
-            // Get checkpoint for epoch 2
             const {
-              data: {currentJustified},
-            } = await env.nodes[0].api.beacon.getStateFinalityCheckpoints(env.clock.getLastSlotOfEpoch(2));
+              data: {finalized},
+            } = await env.nodes[0].api.beacon.getStateFinalityCheckpoints("head");
 
             const {job, participant} = env.createCLClient(CLClient.Lodestar, env.nodes.length, {
               id: "checkpoint-sync-node",
               secretKeys: [],
-              wssCheckpoint: `${currentJustified.root}:${currentJustified.epoch}`,
-              checkpointSyncUrl: env.nodes[0].url,
+              wssCheckpoint: `${finalized.root}:${finalized.epoch}`,
             });
             clJob = job;
             clParticipant = participant;
