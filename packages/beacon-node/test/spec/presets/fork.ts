@@ -1,4 +1,9 @@
-import {BeaconStateAllForks, CachedBeaconStateAltair, CachedBeaconStatePhase0} from "@lodestar/state-transition";
+import {
+  BeaconStateAllForks,
+  CachedBeaconStateBellatrix,
+  CachedBeaconStateAltair,
+  CachedBeaconStatePhase0,
+} from "@lodestar/state-transition";
 import * as slotFns from "@lodestar/state-transition/slot";
 import {phase0, ssz} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
@@ -23,7 +28,7 @@ export const fork: TestRunnerFn<ForkStateCase, BeaconStateAllForks> = (forkNext)
         case ForkName.bellatrix:
           return slotFns.upgradeStateToBellatrix(preState as CachedBeaconStateAltair);
         case ForkName.capella:
-          throw Error("capella upgrade not implemented yet");
+          return slotFns.upgradeStateToCapella(preState as CachedBeaconStateBellatrix);
       }
     },
     options: {

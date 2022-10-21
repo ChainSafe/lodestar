@@ -72,31 +72,25 @@ export function processDeposit(fork: ForkSeq, state: CachedBeaconStateAllForks, 
 
     // add validator and balance entries
     const effectiveBalance = Math.min(amount - (amount % EFFECTIVE_BALANCE_INCREMENT), MAX_EFFECTIVE_BALANCE);
+    const newValidatorFields = {
+      pubkey,
+      withdrawalCredentials: deposit.data.withdrawalCredentials,
+      activationEligibilityEpoch: FAR_FUTURE_EPOCH,
+      activationEpoch: FAR_FUTURE_EPOCH,
+      exitEpoch: FAR_FUTURE_EPOCH,
+      withdrawableEpoch: FAR_FUTURE_EPOCH,
+      effectiveBalance,
+      slashed: false,
+    };
     if (fork < ForkSeq.capella) {
-      (validators as CachedBeaconStatePhase0["validators"]).push(
-        ssz.phase0.Validator.toViewDU({
-          pubkey,
-          withdrawalCredentials: deposit.data.withdrawalCredentials,
-          activationEligibilityEpoch: FAR_FUTURE_EPOCH,
-          activationEpoch: FAR_FUTURE_EPOCH,
-          exitEpoch: FAR_FUTURE_EPOCH,
-          withdrawableEpoch: FAR_FUTURE_EPOCH,
-          effectiveBalance,
-          slashed: false,
-        })
-      );
+      (validators as CachedBeaconStatePhase0["validators"]).push(ssz.phase0.Validator.toViewDU(newValidatorFields));
     } else {
       (validators as CachedBeaconStateCapella["validators"]).push(
         ssz.capella.Validator.toViewDU({
-          pubkey,
-          withdrawalCredentials: deposit.data.withdrawalCredentials,
-          activationEligibilityEpoch: FAR_FUTURE_EPOCH,
-          activationEpoch: FAR_FUTURE_EPOCH,
-          exitEpoch: FAR_FUTURE_EPOCH,
-          withdrawableEpoch: FAR_FUTURE_EPOCH,
-          effectiveBalance,
-          slashed: false,
-          fullyWithdrawnEpoch: FAR_FUTURE_EPOCH,
+          ...newValidatorFields,
+          // Very strange that this needs to be set at 0 else statroot mismatches with spec tests blocks,
+          // may be this will get updated later on to a proper epoch or field likely will be junked
+          fullyWithdrawnEpoch: 0,
         })
       );
     }
