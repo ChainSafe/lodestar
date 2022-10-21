@@ -17,8 +17,10 @@ export function blindedOrFullBlockToHeader(
   blindedOrFull: allForks.FullOrBlindedBeaconBlock
 ): phase0.BeaconBlockHeader {
   const bodyRoot = isBlindedBeaconBlock(blindedOrFull)
-    ? config.getBlindedForkTypes(blindedOrFull.slot).BeaconBlockBody.hashTreeRoot(blindedOrFull.body)
-    : config.getForkTypes(blindedOrFull.slot).BeaconBlockBody.hashTreeRoot(blindedOrFull.body);
+    ? // Blinded
+      config.getBlindedForkTypes(blindedOrFull.slot).BeaconBlockBody.hashTreeRoot(blindedOrFull.body)
+    : // Full
+      config.getForkTypes(blindedOrFull.slot).BeaconBlockBody.hashTreeRoot(blindedOrFull.body);
 
   return {
     slot: blindedOrFull.slot,

@@ -191,6 +191,7 @@ export async function produceBlockBody<T extends BlockType>(
           }
 
           const payload = await this.executionEngine.getPayload(payloadId);
+          (blockBody as allForks.ExecutionBlockBody).executionPayload = payload;
 
           // Capella and later forks have withdrawals on their ExecutionPayload
           // TODO Capella: Remove this. It will come from the execution client.
