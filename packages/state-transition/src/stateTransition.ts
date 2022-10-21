@@ -67,6 +67,7 @@ export function stateTransition(
 
   // Apply changes to state, must do before hashing. Note: .hashTreeRoot() automatically commits() too
   postState.commit();
+
   // Verify state root
   if (verifyStateRoot) {
     const stateRoot = postState.hashTreeRoot();
