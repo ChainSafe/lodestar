@@ -8,13 +8,13 @@ import {getCachedBeaconState} from "../cache/stateCache.js";
 export function upgradeStateToCapella(stateBellatrix: CachedBeaconStateBellatrix): CachedBeaconStateCapella {
   const {config} = stateBellatrix;
 
-  // Get underlying node and cast altair tree to bellatrix tree
+  // Get underlying node and cast bellatrix tree to capella tree
   //
   // An bellatrix BeaconState tree can be safely casted to a capella BeaconState tree because:
   // - Deprecated fields are replaced by new fields at the exact same indexes
   // - All new fields are appended at the end
   //
-  // altair                           | op   | altair
+  // bellatrix                        | op   | capella
   // -------------------------------- | ---- | ------------
   // genesis_time                     | -    | genesis_time
   // genesis_validators_root          | -    | genesis_validators_root
@@ -56,7 +56,8 @@ export function upgradeStateToCapella(stateBellatrix: CachedBeaconStateBellatrix
     epoch: stateBellatrix.epochCtx.epoch,
   });
 
-  // Upgrade the validators
+  // Upgrade the validators, this validator change is not present in latest specs but in 1.2.0
+  // so just set it to 0 and cleanup later
   for (let i = 0; i < stateCapella.validators.length; i++) {
     const validator = stateCapella.validators.get(i);
     validator.fullyWithdrawnEpoch = Infinity;
