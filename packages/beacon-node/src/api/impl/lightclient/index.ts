@@ -53,7 +53,6 @@ export function getLightclientApi(
       if (data === null) {
         throw Error("No optimistic update available");
       }
-
       return {data};
     },
 

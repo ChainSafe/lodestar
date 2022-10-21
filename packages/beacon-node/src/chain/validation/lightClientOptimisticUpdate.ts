@@ -17,7 +17,7 @@ export function validateLightClientOptimisticUpdate(
   const localOptimisticUpdate = chain.lightClientServer.getOptimisticUpdate();
   const latestForwardedOptimisticSlot = localOptimisticUpdate?.attestedHeader.slot ?? -1;
 
-  if (latestForwardedOptimisticSlot != null && gossipedAttestedSlot <= latestForwardedOptimisticSlot) {
+  if (latestForwardedOptimisticSlot !== -1 && gossipedAttestedSlot <= latestForwardedOptimisticSlot) {
     throw new LightClientError(GossipAction.IGNORE, {
       code: LightClientErrorCode.OPTIMISTIC_UPDATE_ALREADY_FORWARDED,
     });

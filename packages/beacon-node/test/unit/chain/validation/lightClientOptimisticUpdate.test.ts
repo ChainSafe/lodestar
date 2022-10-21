@@ -54,8 +54,18 @@ describe("Light Client Optimistic Update validation", function () {
   it("should return invalid - optimistic update already forwarded", async () => {
     const lightclientOptimisticUpdate: altair.LightClientOptimisticUpdate = ssz.altair.LightClientOptimisticUpdate.defaultValue();
 
+    lightclientOptimisticUpdate.attestedHeader.slot = 2;
+
+    const chain = mockChain();
+    chain.lightClientServer.getOptimisticUpdate = () => {
+      const defaultValue = ssz.altair.LightClientOptimisticUpdate.defaultValue();
+      // make the local slot higher than gossiped
+      defaultValue.attestedHeader.slot = lightclientOptimisticUpdate.attestedHeader.slot + 1;
+      return defaultValue;
+    };
+
     expect(() => {
-      validateLightClientOptimisticUpdate(config, mockChain(), lightclientOptimisticUpdate);
+      validateLightClientOptimisticUpdate(config, chain, lightclientOptimisticUpdate);
     }).to.throw(
       LightClientErrorCode.OPTIMISTIC_UPDATE_ALREADY_FORWARDED,
       "Expected LightClientErrorCode.OPTIMISTIC_UPDATE_ALREADY_FORWARDED to be thrown"
@@ -68,7 +78,11 @@ describe("Light Client Optimistic Update validation", function () {
     lightclientOptimisticUpdate.signatureSlot = 4;
 
     const chain = mockChain();
-    chain.lightClientServer.latestForwardedOptimisticSlot = 1;
+    chain.lightClientServer.getOptimisticUpdate = () => {
+      const defaultValue = ssz.altair.LightClientOptimisticUpdate.defaultValue();
+      defaultValue.attestedHeader.slot = 1;
+      return defaultValue;
+    };
 
     expect(() => {
       validateLightClientOptimisticUpdate(config, chain, lightclientOptimisticUpdate);
@@ -83,7 +97,11 @@ describe("Light Client Optimistic Update validation", function () {
     lightclientOptimisticUpdate.attestedHeader.slot = 2;
 
     const chain = mockChain();
-    chain.lightClientServer.latestForwardedOptimisticSlot = 1;
+    chain.lightClientServer.getOptimisticUpdate = () => {
+      const defaultValue = ssz.altair.LightClientOptimisticUpdate.defaultValue();
+      defaultValue.attestedHeader.slot = 1;
+      return defaultValue;
+    };
 
     // make lightclientserver return another update
     chain.lightClientServer.getOptimisticUpdate = () => {
@@ -105,7 +123,12 @@ describe("Light Client Optimistic Update validation", function () {
     // satisfy:
     // No other optimistic_update with a lower or equal attested_header.slot was already forwarded on the network
     lightclientOptimisticUpdate.attestedHeader.slot = 2;
-    chain.lightClientServer.latestForwardedOptimisticSlot = 1;
+
+    chain.lightClientServer.getOptimisticUpdate = () => {
+      const defaultValue = ssz.altair.LightClientOptimisticUpdate.defaultValue();
+      defaultValue.attestedHeader.slot = 1;
+      return defaultValue;
+    };
 
     // satisfy:
     // [IGNORE] The optimistic_update is received after the block at signature_slot was given enough time to propagate
