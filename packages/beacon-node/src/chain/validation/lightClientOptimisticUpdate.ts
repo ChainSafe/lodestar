@@ -17,7 +17,7 @@ export function validateLightClientOptimisticUpdate(
   const localOptimisticUpdate = chain.lightClientServer.getOptimisticUpdate();
   const latestForwardedOptimisticSlot = localOptimisticUpdate?.attestedHeader.slot ?? -1;
 
-  if (latestForwardedOptimisticSlot !== -1 && gossipedAttestedSlot <= latestForwardedOptimisticSlot) {
+  if (gossipedAttestedSlot <= latestForwardedOptimisticSlot) {
     throw new LightClientError(GossipAction.IGNORE, {
       code: LightClientErrorCode.OPTIMISTIC_UPDATE_ALREADY_FORWARDED,
     });
@@ -29,7 +29,7 @@ export function validateLightClientOptimisticUpdate(
   const currentWallTime = Date.now() + MAXIMUM_GOSSIP_CLOCK_DISPARITY;
   const timeAtSignatureSlot =
     computeTimeAtSlot(config, gossipedOptimisticUpdate.signatureSlot, chain.genesisTime) * 1000;
-  if (currentWallTime < timeAtSignatureSlot) {
+  if (currentWallTime < timeAtSignatureSlot + (1 / 3) * (config.SECONDS_PER_SLOT * 1000)) {
     throw new LightClientError(GossipAction.IGNORE, {
       code: LightClientErrorCode.OPTIMISTIC_UPDATE_RECEIVED_TOO_EARLY,
     });

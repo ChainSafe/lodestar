@@ -97,17 +97,39 @@ describe("Light Client Optimistic Update validation", function () {
     lightclientOptimisticUpdate.attestedHeader.slot = 2;
 
     const chain = mockChain();
+
+    const timeAtSignatureSlot =
+      computeTimeAtSlot(config, lightclientOptimisticUpdate.signatureSlot, chain.genesisTime) * 1000;
+    fakeClock.tick(timeAtSignatureSlot + (1 / 3) * (config.SECONDS_PER_SLOT + 1) * 1000);
+
+    // make lightclientserver return another update with different value from gossiped
     chain.lightClientServer.getOptimisticUpdate = () => {
       const defaultValue = ssz.altair.LightClientOptimisticUpdate.defaultValue();
       defaultValue.attestedHeader.slot = 1;
       return defaultValue;
     };
 
-    // make lightclientserver return another update
-    chain.lightClientServer.getOptimisticUpdate = () => {
-      return ssz.altair.LightClientOptimisticUpdate.defaultValue();
-    };
+    expect(() => {
+      validateLightClientOptimisticUpdate(config, chain, lightclientOptimisticUpdate);
+    }).to.throw(
+      LightClientErrorCode.OPTIMISTIC_UPDATE_NOT_MATCHING_LOCAL,
+      "Expected LightClientErrorCode.OPTIMISTIC_UPDATE_NOT_MATCHING_LOCAL to be thrown"
+    );
+  });
 
+  it("should return invalid - not matching local when no local optimistic update yet", async () => {
+    const lightclientOptimisticUpdate: altair.LightClientOptimisticUpdate = ssz.altair.LightClientOptimisticUpdate.defaultValue();
+    lightclientOptimisticUpdate.attestedHeader.slot = 2;
+
+    const chain = mockChain();
+
+    const timeAtSignatureSlot =
+      computeTimeAtSlot(config, lightclientOptimisticUpdate.signatureSlot, chain.genesisTime) * 1000;
+    fakeClock.tick(timeAtSignatureSlot + (1 / 3) * (config.SECONDS_PER_SLOT + 1) * 1000);
+
+    // chain getOptimisticUpdate not mocked.
+    // localOptimisticUpdate will be null
+    // latestForwardedOptimisticSlot will be -1
     expect(() => {
       validateLightClientOptimisticUpdate(config, chain, lightclientOptimisticUpdate);
     }).to.throw(

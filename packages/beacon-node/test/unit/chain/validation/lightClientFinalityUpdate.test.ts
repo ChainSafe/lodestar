@@ -98,6 +98,8 @@ describe("Light Client Finality Update validation", function () {
     lightClientFinalityUpdate.signatureSlot = lightClientFinalityUpdate.finalizedHeader.slot + 1;
 
     const chain = mockChain();
+
+    // make lightclientserver return another update with different value from gossiped
     chain.lightClientServer.getFinalityUpdate = () => {
       const defaultValue = ssz.altair.LightClientFinalityUpdate.defaultValue();
       defaultValue.finalizedHeader.slot = 1;
@@ -109,10 +111,29 @@ describe("Light Client Finality Update validation", function () {
       computeTimeAtSlot(config, lightClientFinalityUpdate.signatureSlot, chain.genesisTime) * 1000;
     fakeClock.tick(timeAtSignatureSlot + (1 / 3) * (config.SECONDS_PER_SLOT + 1) * 1000);
 
-    // make lightclientserver return another update
-    chain.lightClientServer.getFinalityUpdate = () => {
-      return ssz.altair.LightClientFinalityUpdate.defaultValue();
-    };
+    expect(() => {
+      validateLightClientFinalityUpdate(config, chain, lightClientFinalityUpdate);
+    }).to.throw(
+      LightClientErrorCode.FINALITY_UPDATE_NOT_MATCHING_LOCAL,
+      "Expected LightClientErrorCode.FINALITY_UPDATE_NOT_MATCHING_LOCAL to be thrown"
+    );
+  });
+
+  it("should return invalid - not matching local when no local finality update yet", async () => {
+    const lightClientFinalityUpdate: altair.LightClientFinalityUpdate = ssz.altair.LightClientFinalityUpdate.defaultValue();
+    lightClientFinalityUpdate.finalizedHeader.slot = 2;
+    lightClientFinalityUpdate.signatureSlot = lightClientFinalityUpdate.finalizedHeader.slot + 1;
+
+    const chain = mockChain();
+
+    // make update not too early
+    const timeAtSignatureSlot =
+      computeTimeAtSlot(config, lightClientFinalityUpdate.signatureSlot, chain.genesisTime) * 1000;
+    fakeClock.tick(timeAtSignatureSlot + (1 / 3) * (config.SECONDS_PER_SLOT + 1) * 1000);
+
+    // chain's getFinalityUpdate not mocked.
+    // localFinalityUpdate will be null
+    // latestForwardedFinalitySlot will be -1
 
     expect(() => {
       validateLightClientFinalityUpdate(config, chain, lightClientFinalityUpdate);
