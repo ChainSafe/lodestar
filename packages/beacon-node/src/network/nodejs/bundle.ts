@@ -90,6 +90,7 @@ export async function createNodejsLibp2p(options: ILibp2pOptions): Promise<Libp2
       host: {
         agentVersion: options.lodestarVersion ? `lodestar/${options.lodestarVersion}` : "lodestar",
       },
+      maxPushIncomingStreams: 0,
     },
   });
 }
