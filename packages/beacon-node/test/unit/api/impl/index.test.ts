@@ -2,7 +2,7 @@ import {SinonSandbox, SinonStubbedInstance} from "sinon";
 import sinon from "sinon";
 import {config} from "@lodestar/config/default";
 import {ForkChoice} from "@lodestar/fork-choice";
-import {IChainForkConfig} from "@lodestar/config";
+import {IBeaconConfig} from "@lodestar/config";
 import {getBeaconBlockApi} from "../../../../src/api/impl/beacon/blocks/index.js";
 import {BeaconChain} from "../../../../src/chain/index.js";
 import {Network} from "../../../../src/network/index.js";
@@ -19,7 +19,7 @@ export type ApiImplTestModules = {
   dbStub: StubbedBeaconDb;
   networkStub: SinonStubbedInstance<Network>;
   blockApi: ReturnType<typeof getBeaconBlockApi>;
-  config: IChainForkConfig;
+  config: IBeaconConfig;
 };
 
 export function setupApiImplTestServer(): ApiImplTestModules {

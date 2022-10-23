@@ -1,6 +1,6 @@
 import sinon from "sinon";
 import {SinonStubbedInstance} from "sinon";
-import {defaultChainConfig} from "@lodestar/config";
+import {createIBeaconConfig, defaultChainConfig} from "@lodestar/config";
 import {BitArray} from "@chainsafe/ssz";
 import {SLOTS_PER_EPOCH, SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
 import {createIChainForkConfig} from "@lodestar/config";
@@ -30,8 +30,11 @@ describe.skip("Sync Committee Contribution And Proof validation", function () {
 
   const altairForkEpoch = 2020;
   const currentSlot = SLOTS_PER_EPOCH * (altairForkEpoch + 1);
-  // eslint-disable-next-line @typescript-eslint/naming-convention
-  const config = createIChainForkConfig(Object.assign({}, defaultChainConfig, {ALTAIR_FORK_EPOCH: altairForkEpoch}));
+  const config = createIBeaconConfig(
+    // eslint-disable-next-line @typescript-eslint/naming-convention
+    createIChainForkConfig(Object.assign({}, defaultChainConfig, {ALTAIR_FORK_EPOCH: altairForkEpoch})),
+    Buffer.alloc(32, 0xaa)
+  );
   // all validators have same pubkey
   const aggregatorIndex = 15;
 

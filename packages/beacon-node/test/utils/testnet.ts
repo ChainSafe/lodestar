@@ -1,5 +1,5 @@
 import {phase0} from "@lodestar/types";
-import {createIChainForkConfig, IChainForkConfig} from "@lodestar/config";
+import {createIBeaconConfig, createIChainForkConfig, IBeaconConfig} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
 import {fromHexString} from "@chainsafe/ssz";
 
@@ -11,14 +11,14 @@ export const medallaTestnetConfig = {
 };
 
 /** Testnet specs for the Medalla testnet */
-export function getTestnetConfig(): IChainForkConfig {
+export function getTestnetConfig(): IBeaconConfig {
   const config = createIChainForkConfig(chainConfig);
   config.DEPOSIT_NETWORK_ID = 5;
   config.DEPOSIT_CONTRACT_ADDRESS = Buffer.from("07b39F4fDE4A38bACe212b546dAc87C58DfE3fDC", "hex");
   config.MIN_GENESIS_TIME = 1596546000;
   config.GENESIS_DELAY = 172800;
   config.GENESIS_FORK_VERSION = Buffer.from("00000001", "hex");
-  return config;
+  return createIBeaconConfig(config, Buffer.alloc(32, 0xaa));
 }
 
 /** Goerli deposit log for the Medalla testnet */

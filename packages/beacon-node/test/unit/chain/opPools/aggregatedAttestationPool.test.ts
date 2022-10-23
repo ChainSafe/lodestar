@@ -4,7 +4,7 @@ import sinon from "sinon";
 import type {SecretKey} from "@chainsafe/bls/types";
 import bls from "@chainsafe/bls";
 import {BitArray, fromHexString} from "@chainsafe/ssz";
-import {createIChainForkConfig, defaultChainConfig} from "@lodestar/config";
+import {createIBeaconConfig, createIChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ssz, phase0} from "@lodestar/types";
@@ -33,8 +33,11 @@ describe("AggregatedAttestationPool", function () {
   const altairForkEpoch = 2020;
   const currentEpoch = altairForkEpoch + 10;
   const currentSlot = SLOTS_PER_EPOCH * currentEpoch;
-  // eslint-disable-next-line @typescript-eslint/naming-convention
-  const config = createIChainForkConfig(Object.assign({}, defaultChainConfig, {ALTAIR_FORK_EPOCH: altairForkEpoch}));
+  const config = createIBeaconConfig(
+    // eslint-disable-next-line @typescript-eslint/naming-convention
+    createIChainForkConfig(Object.assign({}, defaultChainConfig, {ALTAIR_FORK_EPOCH: altairForkEpoch})),
+    Buffer.alloc(32, 0xaa)
+  );
   const originalState = generateCachedState({slot: currentSlot + 1}, config, true);
   let altairState: CachedBeaconStateAllForks;
   const attestation = generateAttestation({data: {slot: currentSlot, target: {epoch: currentEpoch}}});
