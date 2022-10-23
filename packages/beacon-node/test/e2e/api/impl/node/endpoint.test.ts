@@ -77,11 +77,13 @@ describe("lodestar / sync", function () {
       afterEachCallbacks.push(() => bn.close());
 
       const client = getClient({baseUrl: "http://127.0.0.1:9596"}, {config}).node;
-
-      const syncingStatus = await client.getSyncingStatus();
-
-      expect(parseInt(syncingStatus.data.syncDistance)).to.be.lessThan(0);
-      expect(syncingStatus.data.isSyncing).to.be.equal(true);
+      const expectedSyncStatus: routes.node.SyncingStatus = {
+        headSlot: "0",
+        syncDistance: "0",
+        isSyncing: false,
+        isOptimistic: false,
+      };
+      await expect(client.getSyncingStatus()).to.eventually.be.deep.equal({data: expectedSyncStatus});
       await expect(client.getHealth()).to.eventually.be.equal(routes.node.NodeHealth.READY);
     });
   });
