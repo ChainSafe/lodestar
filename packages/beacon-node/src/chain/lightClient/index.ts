@@ -1,7 +1,12 @@
 import {altair, phase0, Root, RootHex, Slot, ssz, SyncPeriod} from "@lodestar/types";
 import {IChainForkConfig} from "@lodestar/config";
-import {CachedBeaconStateAltair, computeSyncPeriodAtEpoch, computeSyncPeriodAtSlot} from "@lodestar/state-transition";
-import {ILogger, MapDef, pruneSetToMax} from "@lodestar/utils";
+import {
+  CachedBeaconStateAltair,
+  computeSyncPeriodAtEpoch,
+  computeSyncPeriodAtSlot,
+  computeTimeAtSlot,
+} from "@lodestar/state-transition";
+import {ILogger, MapDef, pruneSetToMax, sleep} from "@lodestar/utils";
 import {BitArray, CompositeViewDU, toHexString} from "@chainsafe/ssz";
 import {MIN_SYNC_COMMITTEE_PARTICIPANTS, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 import {IBeaconDb} from "../../db/index.js";
@@ -224,7 +229,13 @@ export class LightClientServer {
     const signedBlockRoot = block.parentRoot;
     const syncPeriod = computeSyncPeriodAtSlot(block.slot);
 
-    this.onSyncAggregate(syncPeriod, block.body.syncAggregate, block.slot, signedBlockRoot).catch((e) => {
+    this.onSyncAggregate(
+      syncPeriod,
+      block.body.syncAggregate,
+      block.slot,
+      signedBlockRoot,
+      postState.genesisTime
+    ).catch((e) => {
       this.logger.error("Error onSyncAggregate", {}, e);
       this.metrics?.lightclientServer.onSyncAggregate.inc({event: "error"});
     });
@@ -445,7 +456,8 @@ export class LightClientServer {
     syncPeriod: SyncPeriod,
     syncAggregate: altair.SyncAggregate,
     signatureSlot: Slot,
-    signedBlockRoot: Root
+    signedBlockRoot: Root,
+    genesisTime: number
   ): Promise<void> {
     this.metrics?.lightclientServer.onSyncAggregate.inc({event: "processed"});
 
@@ -482,11 +494,6 @@ export class LightClientServer {
       return;
     }
 
-    // Emit update
-    // - At the earliest: 6 second after the slot start
-    // - After a new update has INCREMENT_THRESHOLD == 32 bits more than the previous emitted threshold
-    this.emitter.emit(ChainEvent.lightClientOptimisticUpdate, headerUpdate);
-
     // Persist latest best update for getLatestHeadUpdate()
     // TODO: Once SyncAggregate are constructed from P2P too, count bits to decide "best"
     if (!this.latestHeadUpdate || attestedData.attestedHeader.slot > this.latestHeadUpdate.attestedHeader.slot) {
@@ -510,11 +517,21 @@ export class LightClientServer {
           finalityBranch: attestedData.finalityBranch,
           signatureSlot,
         };
-        this.emitter.emit(ChainEvent.lightClientFinalityUpdate, this.finalized);
         this.metrics?.lightclientServer.onSyncAggregate.inc({event: "update_latest_finalized_update"});
       }
     }
 
+    // Emit update
+    // messages SHOULD be broadcast after one-third of slot has transpired
+    // https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/light-client/p2p-interface.md#sync-committee
+    const minPubTime = computeTimeAtSlot(this.config, signatureSlot, genesisTime) + this.config.SECONDS_PER_SLOT / 3;
+    const waitTime = minPubTime - Date.now() / 1000;
+    await sleep(waitTime);
+
+    this.emitter.emit(ChainEvent.lightClientOptimisticUpdate, headerUpdate);
+    if (this.finalized) {
+      this.emitter.emit(ChainEvent.lightClientFinalityUpdate, this.finalized);
+    }
     // Check if this update is better, otherwise ignore
     await this.maybeStoreNewBestPartialUpdate(syncPeriod, syncAggregate, signatureSlot, attestedData);
   }
