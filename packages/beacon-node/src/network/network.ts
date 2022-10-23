@@ -379,5 +379,5 @@ export class Network implements INetwork {
     } catch (e) {
       this.logger.debug("Error on BeaconGossipHandler.onLightclientOptimisticUpdate", {}, e as Error);
     }
-  }
+  };
 }
