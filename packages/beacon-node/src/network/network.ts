@@ -123,16 +123,16 @@ export class Network implements INetwork {
     );
 
     this.chain.emitter.on(ChainEvent.clockEpoch, this.onEpoch);
-    this.chain.emitter.on(ChainEvent.lightClientFinalityUpdate, this.onLightclientFinalityUpdate.bind(this));
-    this.chain.emitter.on(ChainEvent.lightClientOptimisticUpdate, this.onLightclientOptimisticUpdate.bind(this));
+    this.chain.emitter.on(ChainEvent.lightClientFinalityUpdate, this.onLightClientFinalityUpdate);
+    this.chain.emitter.on(ChainEvent.lightClientOptimisticUpdate, this.onLightClientOptimisticUpdate);
     modules.signal.addEventListener("abort", this.close.bind(this), {once: true});
   }
 
   /** Destroy this instance. Can only be called once. */
   close(): void {
     this.chain.emitter.off(ChainEvent.clockEpoch, this.onEpoch);
-    this.chain.emitter.off(ChainEvent.lightClientFinalityUpdate, this.onLightclientFinalityUpdate);
-    this.chain.emitter.off(ChainEvent.lightClientOptimisticUpdate, this.onLightclientOptimisticUpdate);
+    this.chain.emitter.off(ChainEvent.lightClientFinalityUpdate, this.onLightClientFinalityUpdate);
+    this.chain.emitter.off(ChainEvent.lightClientOptimisticUpdate, this.onLightClientOptimisticUpdate);
   }
 
   async start(): Promise<void> {
@@ -359,7 +359,7 @@ export class Network implements INetwork {
     }
   };
 
-  private async onLightclientFinalityUpdate(finalityUpdate: altair.LightClientFinalityUpdate): Promise<void> {
+  private onLightClientFinalityUpdate = async (finalityUpdate: altair.LightClientFinalityUpdate): Promise<void> => {
     try {
       // messages SHOULD be broadcasted after one-third of slot has transpired
       await this.clock.waitForSlot(finalityUpdate.signatureSlot + 1 / 3);
@@ -367,9 +367,11 @@ export class Network implements INetwork {
     } catch (e) {
       this.logger.debug("Error on BeaconGossipHandler.onLightclientFinalityUpdate", {}, e as Error);
     }
-  }
+  };
 
-  private async onLightclientOptimisticUpdate(optimisticUpdate: altair.LightClientOptimisticUpdate): Promise<void> {
+  private onLightClientOptimisticUpdate = async (
+    optimisticUpdate: altair.LightClientOptimisticUpdate
+  ): Promise<void> => {
     try {
       // messages SHOULD be broadcasted after one-third of slot has transpired
       await this.clock.waitForSlot(optimisticUpdate.signatureSlot + 1 / 3);
