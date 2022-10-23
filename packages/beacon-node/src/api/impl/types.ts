@@ -1,4 +1,4 @@
-import {IChainForkConfig} from "@lodestar/config";
+import {IBeaconConfig} from "@lodestar/config";
 import {ILogger} from "@lodestar/utils";
 
 import {IBeaconChain} from "../../chain/index.js";
@@ -15,7 +15,7 @@ import {IMetrics} from "../../metrics/index.js";
 export const IS_OPTIMISTIC_TEMP = false;
 
 export type ApiModules = {
-  config: IChainForkConfig;
+  config: IBeaconConfig;
   chain: IBeaconChain;
   db: IBeaconDb;
   logger: ILogger;

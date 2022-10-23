@@ -1,9 +1,11 @@
 import {expect} from "chai";
+import varint from "varint";
 import {createIBeaconConfig, IChainConfig} from "@lodestar/config";
 import {chainConfig as chainConfigDef} from "@lodestar/config/default";
 import {getClient} from "@lodestar/api";
-import {ListCompositeType, toHexString} from "@chainsafe/ssz";
+import {toHexString} from "@chainsafe/ssz";
 import {ssz} from "@lodestar/types";
+import {LightClientUpdate} from "@lodestar/types/altair";
 import {LogLevel, testLogger, TestLoggerOpts} from "../../../../../utils/logger.js";
 import {getDevBeaconNode} from "../../../../../utils/node/beacon.js";
 
@@ -17,6 +19,22 @@ describe("lodestar / api / impl / light_client", function () {
   const config = createIBeaconConfig(chainConfig, genesisValidatorsRoot);
   const testLoggerOpts: TestLoggerOpts = {logLevel: LogLevel.info};
   const loggerNodeA = testLogger("Node-A", testLoggerOpts);
+
+  const deserializeLightClientUpdates = (serialized: Uint8Array): LightClientUpdate[] => {
+    const forkDigestLen = 4;
+    const lengthOffset = 8;
+    let start = 0;
+    let end = start + lengthOffset;
+    const lightClientUpdates = [];
+    while (end <= serialized.length) {
+      const length = varint.decode(serialized.slice(start, end));
+      const paylod = serialized.slice(end + forkDigestLen, end + length);
+      lightClientUpdates.push(ssz.altair.LightClientUpdate.deserialize(paylod));
+      start = start + lengthOffset + length;
+      end = start + lengthOffset;
+    }
+    return lightClientUpdates;
+  };
 
   describe("eth/v1/beacon/light_client/bootstrap/{block_root}", function () {
     this.timeout("10 min");
@@ -144,12 +162,12 @@ describe("lodestar / api / impl / light_client", function () {
 
       const client = getClient({baseUrl: `http://127.0.0.1:${restPort}`}, {config});
       const firstLcUpdate = ssz.altair.LightClientUpdate.defaultValue();
-      firstLcUpdate.signatureSlot = 0;
+      firstLcUpdate.signatureSlot = 1;
+      firstLcUpdate.attestedHeader.slot = 0;
       const secondLcUpdate = ssz.altair.LightClientUpdate.defaultValue();
-      secondLcUpdate.signatureSlot = 1;
+      secondLcUpdate.signatureSlot = 2;
+      secondLcUpdate.attestedHeader.slot = 3;
       const expectedResponse = [firstLcUpdate, secondLcUpdate];
-
-      const lightClientUpdateCodec = new ListCompositeType(ssz.altair.LightClientUpdate, expectedResponse.length);
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       bn.chain.lightClientServer.getUpdates = (syncPeriod, count) => {
@@ -157,7 +175,7 @@ describe("lodestar / api / impl / light_client", function () {
       };
 
       const responseSSZ = await client.lightclient.getUpdates(1, 2, "ssz");
-      const resultDeserialized = lightClientUpdateCodec.deserialize(responseSSZ);
+      const resultDeserialized = deserializeLightClientUpdates(responseSSZ);
 
       expect(resultDeserialized.length).to.be.equals(expectedResponse.length, "Length of response invalid");
       expect(

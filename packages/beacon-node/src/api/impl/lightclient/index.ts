@@ -1,5 +1,6 @@
+import varint from "varint";
 import {routes} from "@lodestar/api";
-import {fromHexString, ListCompositeType} from "@chainsafe/ssz";
+import {fromHexString} from "@chainsafe/ssz";
 import {ProofType, Tree} from "@chainsafe/persistent-merkle-tree";
 import {SyncPeriod} from "@lodestar/types";
 import {LightClientUpdate} from "@lodestar/types/altair";
@@ -18,9 +19,30 @@ export function getLightclientApi(
   // We want some sort of resistance against this DoS vector.
   const maxGindicesInProof = opts.maxGindicesInProof ?? 512;
 
-  const serializeSSZArray = (chunks: LightClientUpdate[]): Uint8Array => {
-    const lightClientUpdateCodec = new ListCompositeType(ssz.altair.LightClientUpdate, chunks.length);
-    return lightClientUpdateCodec.serialize(chunks);
+  const serializeLightClientUpdates = (chunks: LightClientUpdate[]): Uint8Array => {
+    // https://github.com/ethereum/beacon-APIs/blob/master/apis/beacon/light_client/updates.yaml#L39
+    /**
+     * Sequence of zero or more `response_chunk`. Each _successful_ `response_chunk` MUST contain a single `LightClientUpdate` payload:
+     * ```
+     * (
+     *   response_chunk_len: Little-endian Uint64 byte length of `response_chunk`
+     *   response_chunk: (
+     *     context: 4 byte `ForkDigest`
+     *     payload: SSZ serialized payload bytes
+     *   )
+     * )
+     */
+    const result: Uint8Array[] = [];
+    for (const lightClientUpdate of chunks) {
+      const payload = ssz.altair.LightClientUpdate.serialize(lightClientUpdate);
+      const forkDigest = config.forkName2ForkDigest(config.getForkName(lightClientUpdate.attestedHeader.slot));
+      const responseChunk = new Uint8Array([...forkDigest, ...payload]);
+      // length portion should be u64bit long according to specification
+      const length = new Uint8Array(8);
+      length.set(Uint8Array.from(varint.encode(responseChunk.length)), 0);
+      result.push(new Uint8Array([...length, ...responseChunk]));
+    }
+    return result.reduce((acc, curr) => new Uint8Array([...acc, ...curr]));
   };
 
   return {
@@ -55,7 +77,7 @@ export function getLightclientApi(
       if (format === "ssz") {
         // Casting to any otherwise Typescript doesn't like the multi-type return
         // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-explicit-any
-        return serializeSSZArray(updates) as any;
+        return serializeLightClientUpdates(updates) as any;
       } else {
         return {data: updates};
       }
