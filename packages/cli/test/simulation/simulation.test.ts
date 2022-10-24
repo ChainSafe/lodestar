@@ -62,7 +62,7 @@ for (const {beaconNodes, validatorClients, validatorsPerClient} of nodeCases) {
       validatorsPerClient,
       altairEpoch,
       // TODO: Use extra delay until env.clock is based on absolute time
-      genesisSlotsDelay: SLOTS_PER_EPOCH * 3,
+      genesisSlotsDelay: SLOTS_PER_EPOCH * 4,
       bellatrixEpoch,
       logFilesDir: join(logFilesDir, testIdStr),
     });
