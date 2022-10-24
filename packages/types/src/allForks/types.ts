@@ -1,5 +1,5 @@
 import {CompositeType, ContainerType, ValueOf, CompositeView, CompositeViewDU} from "@chainsafe/ssz";
-import {ForkName, ExecutionFork} from "@lodestar/params";
+import {ForkName, ExecutionFork, AllFork} from "@lodestar/params";
 
 import {allForks} from "./sszTypes.js";
 
@@ -76,11 +76,9 @@ export type AllForksTypes = {
  * ```
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-type AllForksTypeOf<UnionOfForkTypes extends ContainerType<any>> = CompositeType<
-  ValueOf<UnionOfForkTypes>,
-  CompositeView<UnionOfForkTypes>,
-  CompositeViewDU<UnionOfForkTypes>
->;
+type AllForksTypeOf<UnionOfForkTypes> = UnionOfForkTypes extends ContainerType<any>
+  ? CompositeType<ValueOf<UnionOfForkTypes>, CompositeView<UnionOfForkTypes>, CompositeViewDU<UnionOfForkTypes>>
+  : never;
 
 /**
  * SSZ Types known to change between forks.

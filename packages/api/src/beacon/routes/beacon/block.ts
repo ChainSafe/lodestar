@@ -1,8 +1,8 @@
 import {ContainerType} from "@chainsafe/ssz";
-import {ForkName} from "@lodestar/params";
+import {ExecutionFork, ExecutionForks, ForkName} from "@lodestar/params";
 import {IChainForkConfig} from "@lodestar/config";
 import {phase0, Slot, Root, ssz, RootHex} from "@lodestar/types";
-import {AllForksSSZTypes, ExecutionFork, SignedBeaconBlock, SSZTypes} from "@lodestar/types/allForks";
+import {SignedBeaconBlock, SSZTypes} from "@lodestar/types/allForks";
 
 import {
   RoutesData,
@@ -149,7 +149,7 @@ export function getReqSerializers(config: IChainForkConfig): ReqSerializers<Api,
   };
 
   // Compute block type from JSON payload. See https://github.com/ethereum/eth2.0-APIs/pull/142
-  const getSignedBeaconBlockType = (data: SignedBeaconBlock): AllForksSSZTypes["SignedBeaconBlock"] =>
+  const getSignedBeaconBlockType = (data: SignedBeaconBlock): SSZTypes<ForkName>["SignedBeaconBlock"] =>
     config.getForkTypes(data.message.slot).SignedBeaconBlock;
 
   const AllForksSignedBeaconBlock: TypeJson<SignedBeaconBlock> = {
@@ -160,12 +160,12 @@ export function getReqSerializers(config: IChainForkConfig): ReqSerializers<Api,
   const getSignedBlindedBeaconBlockType = (
     data: SignedBeaconBlock<ExecutionFork, "blinded">
   ): SSZTypes<ExecutionFork>["SignedBlindedBeaconBlock"] =>
-    config.getBlindedForkTypes(data.message.slot).SignedBeaconBlock;
+    config.getForkTypesForGroup(data.message.slot, ExecutionForks).SignedBlindedBeaconBlock;
 
-  const AllForksSignedBlindedBeaconBlock: TypeJson<SignedBlindedBeaconBlock> = {
+  const AllForksSignedBlindedBeaconBlock: TypeJson<SignedBeaconBlock<ExecutionFork, "blinded">> = {
     toJson: (data) => getSignedBlindedBeaconBlockType(data).toJson(data),
     fromJson: (data) =>
-      getSignedBlindedBeaconBlockType((data as unknown) as SignedBlindedBeaconBlock).fromJson(data),
+      getSignedBlindedBeaconBlockType((data as unknown) as SignedBeaconBlock<ExecutionFork, "blinded">).fromJson(data),
   };
 
   return {

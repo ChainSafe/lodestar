@@ -1,7 +1,6 @@
 import {ContainerType, fromHexString, toHexString, Type} from "@chainsafe/ssz";
 import {ForkName} from "@lodestar/params";
 import {
-  allForks,
   altair,
   BLSPubkey,
   BLSSignature,
@@ -17,6 +16,7 @@ import {
   RootHex,
   StringType,
 } from "@lodestar/types";
+import {BeaconBlock} from "@lodestar/types/allForks";
 import {
   RoutesData,
   ReturnTypes,
@@ -147,7 +147,7 @@ export type Api = {
    * @returns any Success response
    * @throws ApiError
    */
-  produceBlock(slot: Slot, randaoReveal: BLSSignature, graffiti: string): Promise<{data: allForks.BeaconBlock}>;
+  produceBlock(slot: Slot, randaoReveal: BLSSignature, graffiti: string): Promise<{data: BeaconBlock}>;
 
   /**
    * Requests a beacon node to produce a valid block, which can then be signed by a validator.
@@ -163,13 +163,13 @@ export type Api = {
     slot: Slot,
     randaoReveal: BLSSignature,
     graffiti: string
-  ): Promise<{data: allForks.BeaconBlock; version: ForkName}>;
+  ): Promise<{data: BeaconBlock; version: ForkName}>;
 
   produceBlindedBlock(
     slot: Slot,
     randaoReveal: BLSSignature,
     graffiti: string
-  ): Promise<{data: allForks.BlindedBeaconBlock; version: ForkName}>;
+  ): Promise<{data: BeaconBlock<ForkName, "blinded">; version: ForkName}>;
 
   /**
    * Produce an attestation data
