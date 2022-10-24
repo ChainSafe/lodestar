@@ -33,8 +33,6 @@ const forksCases: {
   },
 ];
 
-let testCases = 0;
-
 for (const {beaconNodes, validatorClients, validatorsPerClient} of nodeCases) {
   for (const {
     title,
@@ -64,11 +62,10 @@ for (const {beaconNodes, validatorClients, validatorsPerClient} of nodeCases) {
       validatorsPerClient,
       altairEpoch,
       // TODO: Use extra delay until env.clock is based on absolute time
-      genesisSlotsDelay: (SLOTS_PER_EPOCH * runTill + 50) * testCases + 30,
+      genesisSlotsDelay: SLOTS_PER_EPOCH * 2,
       bellatrixEpoch,
       logFilesDir: join(logFilesDir, testIdStr),
     });
-    testCases += 1;
 
     describe(`simulation test - ${testIdStr}`, function () {
       this.timeout("5m");
