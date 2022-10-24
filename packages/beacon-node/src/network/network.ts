@@ -4,10 +4,10 @@ import {Connection} from "@libp2p/interface-connection";
 import {PeerId} from "@libp2p/interface-peer-id";
 import {Multiaddr} from "@multiformats/multiaddr";
 import {IBeaconConfig} from "@lodestar/config";
-import {ILogger} from "@lodestar/utils";
+import {ILogger, sleep} from "@lodestar/utils";
 import {ATTESTATION_SUBNET_COUNT, ForkName, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {Discv5, ENR} from "@chainsafe/discv5";
-import {computeEpochAtSlot} from "@lodestar/state-transition";
+import {computeEpochAtSlot, computeTimeAtSlot} from "@lodestar/state-transition";
 import {altair, Epoch} from "@lodestar/types";
 import {IMetrics} from "../metrics/index.js";
 import {ChainEvent, IBeaconChain, IBeaconClock} from "../chain/index.js";
@@ -361,8 +361,9 @@ export class Network implements INetwork {
 
   private onLightClientFinalityUpdate = async (finalityUpdate: altair.LightClientFinalityUpdate): Promise<void> => {
     try {
-      // messages SHOULD be broadcasted after one-third of slot has transpired
-      await this.clock.waitForSlot(finalityUpdate.signatureSlot + 1 / 3);
+      // messages SHOULD be broadcast after one-third of slot has transpired
+      // https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/light-client/p2p-interface.md#sync-committee
+      await this.waitOneThirdOfSlot(finalityUpdate.signatureSlot);
       return await this.gossip.publishLightClientFinalityUpdate(finalityUpdate);
     } catch (e) {
       this.logger.debug("Error on BeaconGossipHandler.onLightclientFinalityUpdate", {}, e as Error);
@@ -373,11 +374,18 @@ export class Network implements INetwork {
     optimisticUpdate: altair.LightClientOptimisticUpdate
   ): Promise<void> => {
     try {
-      // messages SHOULD be broadcasted after one-third of slot has transpired
-      await this.clock.waitForSlot(optimisticUpdate.signatureSlot + 1 / 3);
+      // messages SHOULD be broadcast after one-third of slot has transpired
+      // https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/light-client/p2p-interface.md#sync-committee
+      await this.waitOneThirdOfSlot(optimisticUpdate.signatureSlot);
       return await this.gossip.publishLightClientOptimisticUpdate(optimisticUpdate);
     } catch (e) {
       this.logger.debug("Error on BeaconGossipHandler.onLightclientOptimisticUpdate", {}, e as Error);
     }
+  };
+
+  private waitOneThirdOfSlot = async (slot: number): Promise<void> => {
+    const minPubTime = computeTimeAtSlot(this.config, slot, this.chain.genesisTime) + this.config.SECONDS_PER_SLOT / 3;
+    const waitTime = minPubTime - Date.now() / 1000;
+    await sleep(waitTime);
   };
 }
