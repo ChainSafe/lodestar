@@ -63,7 +63,17 @@
     "strict-event-emitter-types": "^2.0.0"
   },
   "devDependencies": {
+    "@lavamoat/allow-scripts": "^2.0.3",
     "bigint-buffer": "^1.1.5",
     "testcontainers": "^8.13.2"
+  },
+  "lavamoat": {
+    "allowScripts": {
+      "@chainsafe/bls>@chainsafe/blst": false,
+      "@lodestar/db>level>classic-level": false,
+      "bigint-buffer": false,
+      "testcontainers>ssh-remote-port-forward>ssh2": false,
+      "testcontainers>ssh-remote-port-forward>ssh2>cpu-features": false
+    }
   }
 }

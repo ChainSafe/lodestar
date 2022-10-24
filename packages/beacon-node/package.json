@@ -152,6 +152,7 @@
     "xxhash-wasm": "1.0.1"
   },
   "devDependencies": {
+    "@lavamoat/allow-scripts": "^2.0.3",
     "@types/bl": "^5.0.1",
     "@types/eventsource": "^1.1.5",
     "@types/it-all": "^1.0.0",
@@ -172,5 +173,19 @@
     "eth-consensus",
     "beacon",
     "blockchain"
-  ]
+  ],
+  "lavamoat": {
+    "allowScripts": {
+      "@chainsafe/bls>@chainsafe/blst": false,
+      "@chainsafe/discv5>bcrypto": false,
+      "@chainsafe/libp2p-gossipsub>protobufjs": false,
+      "@chainsafe/snappy-stream>snappy": false,
+      "@lodestar/db>level>classic-level": false,
+      "@lodestar/utils>bigint-buffer": false,
+      "gc-stats": false,
+      "leveldown": false,
+      "libp2p>protons-runtime>protobufjs": false,
+      "rewiremock>babel-runtime>core-js": false
+    }
+  }
 }
