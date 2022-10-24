@@ -362,26 +362,30 @@ export class Network implements INetwork {
   };
 
   private onLightClientFinalityUpdate = async (finalityUpdate: altair.LightClientFinalityUpdate): Promise<void> => {
-    try {
-      // messages SHOULD be broadcast after one-third of slot has transpired
-      // https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/light-client/p2p-interface.md#sync-committee
-      await this.waitOneThirdOfSlot(finalityUpdate.signatureSlot);
-      return await this.gossip.publishLightClientFinalityUpdate(finalityUpdate);
-    } catch (e) {
-      this.logger.debug("Error on BeaconGossipHandler.onLightclientFinalityUpdate", {}, e as Error);
+    if (this.hasAttachedSyncCommitteeMember()) {
+      try {
+        // messages SHOULD be broadcast after one-third of slot has transpired
+        // https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/light-client/p2p-interface.md#sync-committee
+        await this.waitOneThirdOfSlot(finalityUpdate.signatureSlot);
+        return await this.gossip.publishLightClientFinalityUpdate(finalityUpdate);
+      } catch (e) {
+        this.logger.debug("Error on BeaconGossipHandler.onLightclientFinalityUpdate", {}, e as Error);
+      }
     }
   };
 
   private onLightClientOptimisticUpdate = async (
     optimisticUpdate: altair.LightClientOptimisticUpdate
   ): Promise<void> => {
-    try {
-      // messages SHOULD be broadcast after one-third of slot has transpired
-      // https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/light-client/p2p-interface.md#sync-committee
-      await this.waitOneThirdOfSlot(optimisticUpdate.signatureSlot);
-      return await this.gossip.publishLightClientOptimisticUpdate(optimisticUpdate);
-    } catch (e) {
-      this.logger.debug("Error on BeaconGossipHandler.onLightclientOptimisticUpdate", {}, e as Error);
+    if (this.hasAttachedSyncCommitteeMember()) {
+      try {
+        // messages SHOULD be broadcast after one-third of slot has transpired
+        // https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/light-client/p2p-interface.md#sync-committee
+        await this.waitOneThirdOfSlot(optimisticUpdate.signatureSlot);
+        return await this.gossip.publishLightClientOptimisticUpdate(optimisticUpdate);
+      } catch (e) {
+        this.logger.debug("Error on BeaconGossipHandler.onLightclientOptimisticUpdate", {}, e as Error);
+      }
     }
   };
 
@@ -389,5 +393,13 @@ export class Network implements INetwork {
     const minPubTime = computeTimeAtSlot(this.config, slot, this.chain.genesisTime) + this.config.SECONDS_PER_SLOT / 3;
     const waitTime = minPubTime - Date.now() / 1000;
     await sleep(waitTime, this.signal);
+  };
+
+  // full nodes with at least one validator assigned to the current sync committee at the block's slot SHOULD broadcast
+  // This prevents flooding the network by restricting full nodes that initially
+  // publish to at most 512 (max size of active sync committee).
+  // https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/light-client/p2p-interface.md#sync-committee
+  private hasAttachedSyncCommitteeMember = (): boolean => {
+    return this.syncnetsService.getActiveSubnets().length > 0;
   };
 }
