@@ -2,6 +2,7 @@ import {expect} from "chai";
 import {routes} from "@lodestar/api/beacon";
 import {Epoch} from "@lodestar/types";
 import {SimulationEnvironment} from "./SimulationEnvironment.js";
+import {MAX_COMMITTEES_PER_SLOT} from "@lodestar/params";
 
 export function nodeAssertions(env: SimulationEnvironment): void {
   it("test env should have correct number of nodes", () => {
@@ -151,18 +152,24 @@ export function attestationPerSlotAssertions(env: SimulationEnvironment, epoch: 
 
       for (let slot = startSlot; slot <= endSlot; slot++) {
         it(`should have higher attestation count for slot "${slot}"`, () => {
-          const attestationsCount = env.tracker.slotMeasures.get(node.id)?.get(slot)?.attestationsCount;
+          const attestationsCount = env.tracker.slotMeasures.get(node.id)?.get(slot)?.attestationsCount ?? 0;
+          // Inclusion delay for future slot
+          const nextSlotInclusionDelay = env.tracker.slotMeasures.get(node.id)?.get(slot + 1)?.inclusionDelay ?? 0;
 
-          expect(attestationsCount).to.gte(
-            env.expectedMinAttestationCount,
-            `node has lower attestations count. ${JSON.stringify({
-              id: node.id,
-              slot,
-              epoch,
-              attestationsCount,
-              expectedMinAttestationCount: env.expectedMinAttestationCount,
-            })}`
-          );
+          // If some attestations are not included, probably will be included in next slot.
+          // In that case next slot inclusion delay will be higher than expected.
+          if (attestationsCount < MAX_COMMITTEES_PER_SLOT && nextSlotInclusionDelay <= env.expectedMaxInclusionDelay) {
+            expect(attestationsCount).to.gte(
+              env.expectedMinAttestationCount,
+              `node has lower attestations count. ${JSON.stringify({
+                id: node.id,
+                slot,
+                epoch,
+                attestationsCount,
+                expectedMinAttestationCount: env.expectedMinAttestationCount,
+              })}`
+            );
+          }
         });
       }
     });
