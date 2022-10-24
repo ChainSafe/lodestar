@@ -52,6 +52,7 @@ export class Network implements INetwork {
   private readonly config: IBeaconConfig;
   private readonly clock: IBeaconClock;
   private readonly chain: IBeaconChain;
+  private readonly signal: AbortSignal;
 
   private subscribedForks = new Set<ForkName>();
 
@@ -60,6 +61,7 @@ export class Network implements INetwork {
     this.libp2p = libp2p;
     this.logger = logger;
     this.config = config;
+    this.signal = signal;
     this.clock = chain.clock;
     this.chain = chain;
     this.peersData = new PeersData();
@@ -386,6 +388,6 @@ export class Network implements INetwork {
   private waitOneThirdOfSlot = async (slot: number): Promise<void> => {
     const minPubTime = computeTimeAtSlot(this.config, slot, this.chain.genesisTime) + this.config.SECONDS_PER_SLOT / 3;
     const waitTime = minPubTime - Date.now() / 1000;
-    await sleep(waitTime);
+    await sleep(waitTime, this.signal);
   };
 }
