@@ -42,10 +42,10 @@ export class SimulationEnvironment {
   readonly rootDir: string;
   readonly nodes: CLParticipant[] = [];
   readonly clock: EpochClock;
-  readonly expectedMinParticipationRate = 0.95;
+  readonly expectedMinParticipationRate = 0.9;
   readonly expectedMaxInclusionDelay = 2;
   readonly expectedMinAttestationCount = MAX_COMMITTEES_PER_SLOT - 1;
-  readonly expectedMinSyncParticipationRate = 0.95;
+  readonly expectedMinSyncParticipationRate = 0.9;
   readonly tracker: SimulationTracker;
   readonly emitter: EventEmitter;
   readonly controller: AbortController;
