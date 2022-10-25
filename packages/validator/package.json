@@ -20,6 +20,7 @@
   ],
   "scripts": {
     "clean": "rm -rf lib && rm -f *.tsbuildinfo",
+    "setup": "yarn install && yarn allow-scripts",
     "build": "tsc -p tsconfig.build.json",
     "build:release": "yarn clean && yarn run build",
     "build:lib:watch": "yarn run build:lib --watch",
@@ -29,11 +30,11 @@
     "lint": "eslint --color --ext .ts src/ test/",
     "lint:fix": "yarn run lint --fix",
     "pretest": "yarn run check-types",
-    "test:unit": "nyc --cache-dir .nyc_output/.cache -e .ts mocha 'test/unit/**/*.test.ts'",
-    "test": "yarn test:unit",
-    "test:e2e:only": "mocha 'test/e2e/**/*.test.ts'",
-    "test:spec": "mocha 'test/spec/**/*.test.ts'",
-    "test:e2e": "yarn run download-spec-tests && yarn test:spec && yarn test:e2e:only",
+    "test:unit": "yarn setup && nyc --cache-dir .nyc_output/.cache -e .ts mocha 'test/unit/**/*.test.ts'",
+    "test": "yarn setup && yarn test:unit",
+    "test:e2e:only": "yarn setup && mocha 'test/e2e/**/*.test.ts'",
+    "test:spec": "yarn setup && mocha 'test/spec/**/*.test.ts'",
+    "test:e2e": "yarn setup && yarn run download-spec-tests && yarn test:spec && yarn test:e2e:only",
     "download-spec-tests": "node --loader=ts-node/esm test/spec/downloadTests.ts",
     "coverage": "codecov -F lodestar-validator",
     "check-readme": "typescript-docs-verifier"
@@ -64,16 +65,18 @@
   },
   "devDependencies": {
     "@lavamoat/allow-scripts": "^2.0.3",
+    "@lavamoat/preinstall-always-fail": "^1.0.0",
     "bigint-buffer": "^1.1.5",
     "testcontainers": "^8.13.2"
   },
   "lavamoat": {
     "allowScripts": {
-      "@chainsafe/bls>@chainsafe/blst": false,
-      "@lodestar/db>level>classic-level": false,
-      "bigint-buffer": false,
-      "testcontainers>ssh-remote-port-forward>ssh2": false,
-      "testcontainers>ssh-remote-port-forward>ssh2>cpu-features": false
+      "@chainsafe/bls>@chainsafe/blst": true,
+      "@lodestar/db>level>classic-level": true,
+      "bigint-buffer": true,
+      "@lavamoat/preinstall-always-fail": false,
+      "testcontainers>ssh-remote-port-forward>ssh2": true,
+      "testcontainers>ssh-remote-port-forward>ssh2>cpu-features": true
     }
   }
 }

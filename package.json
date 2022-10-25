@@ -84,5 +84,13 @@
     "typescript": "4.7.4",
     "typescript-docs-verifier": "^2.3.0",
     "webpack": "^5.74.0"
+  },
+  "lavamoat": {
+    "allowScripts": {
+      "electron": true,
+      "lerna>nx": true,
+      "lerna>nx>@parcel/watcher": true,
+      "@dapplion/benchmark>aws-sdk": true
+    }
   }
 }
