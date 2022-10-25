@@ -46,9 +46,9 @@
   "scripts": {
     "clean": "rm -rf lib && rm -f *.tsbuildinfo",
     "setup": "yarn install && yarn allow-scripts",
-    "build": "yarn setup && tsc -p tsconfig.build.json",
-    "build:lib:watch": "yarn run build:lib --watch",
-    "build:release": "yarn setup && yarn clean && yarn build",
+    "build": "yarn setup && yarn setup && tsc -p tsconfig.build.json",
+    "build:lib:watch": "yarn setup && yarn run build:lib --watch",
+    "build:release": "yarn setup && yarn setup && yarn clean && yarn build",
     "build:types:watch": "yarn run build:types --watch",
     "check-build": "node -e \"(async function() { await import('./lib/index.js') })()\"",
     "check-types": "tsc",
