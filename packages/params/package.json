@@ -33,6 +33,7 @@
   ],
   "scripts": {
     "clean": "rm -rf lib && rm -f *.tsbuildinfo",
+    "setup": "yarn install && yarn allow-scripts",
     "build": "tsc -p tsconfig.build.json",
     "build:release": "yarn clean && yarn build",
     "build:lib:watch": "yarn run build:lib --watch",
@@ -43,7 +44,7 @@
     "lint:fix": "yarn run lint --fix",
     "test": "yarn run check-types",
     "test:unit": "mocha 'test/unit/**/*.test.ts'",
-    "test:browsers": "yarn karma start karma.config.cjs",
+    "test:browsers": "yarn setup && yarn karma start karma.config.cjs",
     "test:e2e": "mocha 'test/e2e/**/*.test.ts'",
     "check-readme": "typescript-docs-verifier"
   },
@@ -58,8 +59,17 @@
     "blockchain"
   ],
   "devDependencies": {
+    "@lavamoat/preinstall-always-fail": "^1.0.0",
+    "electron": "^21.0.1",
+    "karma-electron": "^7.3.0",
     "@types/js-yaml": "^4.0.3",
     "axios": "^0.21.0",
     "js-yaml": "^4.1.0"
+  },
+  "lavamoat": {
+    "allowScripts": {
+      "@lavamoat/preinstall-always-fail": false,
+      "electron": true
+    }
   }
 }
