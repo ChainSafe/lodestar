@@ -62,13 +62,13 @@ for (const {beaconNodes, validatorClients, validatorsPerClient} of nodeCases) {
       validatorsPerClient,
       altairEpoch,
       // TODO: Use extra delay until env.clock is based on absolute time
-      genesisSlotsDelay: SLOTS_PER_EPOCH * 4,
+      genesisSlotsDelay: SLOTS_PER_EPOCH * 2,
       bellatrixEpoch,
       logFilesDir: join(logFilesDir, testIdStr),
     });
 
     describe(`simulation test - ${testIdStr}`, function () {
-      this.timeout("5m");
+      this.timeout("10m");
 
       describe(title, () => {
         before("start env", async () => {
