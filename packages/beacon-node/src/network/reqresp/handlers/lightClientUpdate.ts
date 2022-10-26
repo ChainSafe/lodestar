@@ -2,7 +2,7 @@ import {altair} from "@lodestar/types";
 import {MAX_REQUEST_LIGHT_CLIENT_UPDATES} from "@lodestar/params";
 import {IBeaconChain} from "../../../chain/index.js";
 
-export async function* onLightclientUpdate(
+export async function* onLightClientUpdate(
   requestBody: altair.LightClientUpdatesByRange,
   chain: IBeaconChain
 ): AsyncIterable<altair.LightClientUpdate> {

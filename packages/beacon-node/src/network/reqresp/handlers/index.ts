@@ -4,8 +4,8 @@ import {IBeaconDb} from "../../../db/index.js";
 import {ReqRespBlockResponse} from "../types.js";
 import {onBeaconBlocksByRange} from "./beaconBlocksByRange.js";
 import {onBeaconBlocksByRoot} from "./beaconBlocksByRoot.js";
-import {onLightclientBootstrap} from "./lightClientBootstrap.js";
-import {onLightclientUpdate} from "./lightClientUpdate.js";
+import {onLightClientBootstrap} from "./lightClientBootstrap.js";
+import {onLightClientUpdate} from "./lightClientUpdate.js";
 import {onLightClientFinalityUpdate} from "./lightClientFinalityUpdate.js";
 import {onLightClientOptimisticUpdate} from "./lightClientOptimisticUpdate.js";
 
@@ -35,10 +35,10 @@ export function getReqRespHandlers({db, chain}: {db: IBeaconDb; chain: IBeaconCh
       yield* onBeaconBlocksByRoot(req, chain, db);
     },
     async *onLightClientBootstrap(req) {
-      yield* onLightclientBootstrap(req, chain);
+      yield* onLightClientBootstrap(req, chain);
     },
     async *onLightClientUpdate(req) {
-      yield* onLightclientUpdate(req, chain);
+      yield* onLightClientUpdate(req, chain);
     },
     async *onLightClientFinalityUpdate() {
       yield* onLightClientFinalityUpdate(chain);

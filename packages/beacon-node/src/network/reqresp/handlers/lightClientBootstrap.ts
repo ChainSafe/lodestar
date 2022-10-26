@@ -3,7 +3,7 @@ import {IBeaconChain} from "../../../chain/index.js";
 import {ResponseError} from "../response/index.js";
 import {RespStatus} from "../../../constants/index.js";
 
-export async function* onLightclientBootstrap(
+export async function* onLightClientBootstrap(
   requestBody: Root,
   chain: IBeaconChain
 ): AsyncIterable<altair.LightClientBootstrap> {
