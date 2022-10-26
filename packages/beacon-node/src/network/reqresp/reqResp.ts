@@ -151,6 +151,15 @@ export class ReqResp implements IReqResp {
     );
   }
 
+  async lightClientOptimisticUpdate(peerId: PeerId): Promise<altair.LightClientOptimisticUpdate> {
+    return await this.sendRequest<altair.LightClientOptimisticUpdate>(
+      peerId,
+      Method.LightClientOptimisticUpdate,
+      [Version.V1],
+      null
+    );
+  }
+
   async lightClientFinalityUpdate(peerId: PeerId): Promise<altair.LightClientFinalityUpdate> {
     return await this.sendRequest<altair.LightClientFinalityUpdate>(
       peerId,
@@ -170,15 +179,6 @@ export class ReqResp implements IReqResp {
       [Version.V1],
       request,
       request.count
-    );
-  }
-
-  async lightClientOptimisticUpdate(peerId: PeerId): Promise<altair.LightClientOptimisticUpdate> {
-    return await this.sendRequest<altair.LightClientOptimisticUpdate>(
-      peerId,
-      Method.LightClientOptimisticUpdate,
-      [Version.V1],
-      null
     );
   }
 
