@@ -57,7 +57,9 @@ export class AttestationService {
 
     // Beacon node's endpoint produceAttestationData return data is not dependant on committeeIndex.
     // Produce a single attestation for all committees, and clone mutate before signing
-    const attestationNoCommittee = await this.produceAttestation(slot);
+    // Downstream tooling may require that produceAttestation is called with a 'real' committee index
+    // So we pick the first duty's committee index - see https://github.com/ChainSafe/lodestar/issues/4687
+    const attestationNoCommittee = await this.produceAttestation(duties[0].duty.committeeIndex, slot);
 
     // Step 1. Mutate, and sign `Attestation` for each validator. Then publish all `Attestations` in one go
     await this.signAndPublishAttestations(slot, attestationNoCommittee, duties);
@@ -85,10 +87,13 @@ export class AttestationService {
    * Beacon node's endpoint produceAttestationData return data is not dependant on committeeIndex.
    * For a validator client with many validators this allows to do a single call for all committees
    * in a slot, saving resources in both the vc and beacon node
+   *
+   * A committee index is still passed in for the benefit of downstream tooling -
+   * see https://github.com/ChainSafe/lodestar/issues/4687
    */
-  private async produceAttestation(slot: Slot): Promise<phase0.AttestationData> {
+  private async produceAttestation(committeeIndex: number, slot: Slot): Promise<phase0.AttestationData> {
     // Produce one attestation data per slot and committeeIndex
-    const attestationRes = await this.api.validator.produceAttestationData(0, slot).catch((e: Error) => {
+    const attestationRes = await this.api.validator.produceAttestationData(committeeIndex, slot).catch((e: Error) => {
       this.metrics?.attestaterError.inc({error: "produce"});
       throw extendError(e, "Error producing attestation");
     });
