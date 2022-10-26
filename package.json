@@ -9,6 +9,7 @@
   ],
   "scripts": {
     "clean": "rm -rf ./packages/*/lib ./packages/*/*.tsbuildinfo",
+    "setup": "lerna run setup",
     "build": "lerna run build",
     "build:docs": "lerna run build:refdocs && ./scripts/prepare-docs.sh",
     "build:lib:watch": "lerna run build:lib:watch --parallel",
