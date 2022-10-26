@@ -1,5 +1,5 @@
 import {phase0, Slot, Root, ssz} from "@lodestar/types";
-import {PointFormat, Signature} from "@chainsafe/bls/types";
+import {CoordType, PointFormat} from "@chainsafe/bls/types";
 import bls from "@chainsafe/bls";
 import {BitArray, toHexString} from "@chainsafe/ssz";
 import {MapDef} from "@lodestar/utils";
@@ -25,7 +25,17 @@ const MAX_ATTESTATIONS_PER_SLOT = 16_384;
 type AggregateFast = {
   data: phase0.Attestation["data"];
   aggregationBits: BitArray;
-  signature: Signature;
+  /**
+   * Two potential strategies to pre-aggregate attestation signatures:
+   * - Aggregate new signature into existing aggregate on .add(). More memory efficient as only 1 signature
+   *   is kept per aggregate. However, the eager aggregation may be useless if the connected validator ends up
+   *   not being an aggregator. bls.Signature.fromBytes() is not free, thus the aggregation may be done around
+   *   the 1/3 of the slot which is a very busy period.
+   * - Defer aggregation until getAggregate(). Consumes more memory but prevents extra work by only doing the
+   *   aggregation if the connected validator is an aggregator. The aggregation is done during 2/3 of the slot
+   *   which is a less busy time than 1/3 of the slot.
+   */
+  signatures: Uint8Array[];
 };
 
 /** Hex string of DataRoot `TODO` */
@@ -181,10 +191,7 @@ function aggregateAttestationInto(aggregate: AggregateFast, attestation: phase0.
   }
 
   aggregate.aggregationBits.set(bitIndex, true);
-  aggregate.signature = bls.Signature.aggregate([
-    aggregate.signature,
-    bls.Signature.fromBytes(attestation.signature, undefined, true),
-  ]);
+  aggregate.signatures.push(attestation.signature);
   return InsertOutcome.Aggregated;
 }
 
@@ -196,7 +203,7 @@ function attestationToAggregate(attestation: phase0.Attestation): AggregateFast 
     data: attestation.data,
     // clone because it will be mutated
     aggregationBits: attestation.aggregationBits.clone(),
-    signature: bls.Signature.fromBytes(attestation.signature, undefined, true),
+    signatures: [attestation.signature],
   };
 }
 
@@ -207,6 +214,9 @@ function fastToAttestation(aggFast: AggregateFast): phase0.Attestation {
   return {
     data: aggFast.data,
     aggregationBits: aggFast.aggregationBits,
-    signature: aggFast.signature.toBytes(PointFormat.compressed),
+    signature: bls.Signature.aggregate(
+      // No need to validate Signature again since it has already been validated --------------- false
+      aggFast.signatures.map((signature) => bls.Signature.fromBytes(signature, CoordType.affine, false))
+    ).toBytes(PointFormat.compressed),
   };
 }

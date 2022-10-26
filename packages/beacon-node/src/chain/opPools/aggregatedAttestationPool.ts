@@ -1,4 +1,5 @@
 import bls from "@chainsafe/bls";
+import {CoordType, PointFormat} from "@chainsafe/bls/types";
 import {
   ForkName,
   MAX_ATTESTATIONS,
@@ -15,7 +16,7 @@ import {
   computeStartSlotAtEpoch,
   getBlockRootAtSlot,
 } from "@lodestar/state-transition";
-import {toHexString} from "@chainsafe/ssz";
+import {BitArray, toHexString} from "@chainsafe/ssz";
 import {IForkChoice, EpochDifference} from "@lodestar/fork-choice";
 import {toHex, MapDef} from "@lodestar/utils";
 import {intersectUint8Arrays, IntersectResult} from "../../util/bitArray.js";
@@ -24,7 +25,14 @@ import {InsertOutcome} from "./types.js";
 
 type DataRootHex = string;
 
-type AttestationWithScore = {attestation: phase0.Attestation; score: number};
+interface AttestationUnaggregated {
+  data: phase0.AttestationData;
+  aggregationBits: phase0.Attestation["aggregationBits"];
+  /** @see {AggregateFast} for rationale */
+  signatures: Uint8Array[];
+}
+
+type AttestationWithScore = {attestation: AttestationUnaggregated; score: number};
 
 type GetParticipationFn = (epoch: Epoch, committee: number[]) => Set<number> | null;
 
@@ -90,8 +98,9 @@ export class AggregatedAttestationPool {
     }
 
     return attestationGroup.add({
-      attestation,
+      aggregationBits: attestation.aggregationBits,
       trueBitsCount: attestingIndicesCount,
+      signatures: [attestation.signature],
     });
   }
 
@@ -151,10 +160,16 @@ export class AggregatedAttestationPool {
         // The committeeCountPerSlot can be precomputed once per slot
 
         attestationsByScore.push(
-          ...attestationGroup.getAttestationsForBlock(participation).map((attestation) => ({
-            attestation: attestation.attestation,
-            score: attestation.notSeenAttesterCount / (stateSlot - slot),
-          }))
+          ...attestationGroup.getAttestationsForBlock(participation).map(
+            (attestation): AttestationWithScore => ({
+              attestation: {
+                data: attestationGroup.data,
+                aggregationBits: attestation.attestation.aggregationBits,
+                signatures: attestation.attestation.signatures,
+              },
+              score: attestation.notSeenAttesterCount / (stateSlot - slot),
+            })
+          )
         );
 
         // Stop accumulating attestations there are enough that may have good scoring
@@ -167,7 +182,7 @@ export class AggregatedAttestationPool {
     return attestationsByScore
       .sort((a, b) => b.score - a.score)
       .slice(0, MAX_ATTESTATIONS)
-      .map((attestation) => attestation.attestation);
+      .map((attestation): phase0.Attestation => toAggregatedAttestation(attestation.attestation));
   }
 
   /**
@@ -196,12 +211,13 @@ export class AggregatedAttestationPool {
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
 interface AttestationWithIndex {
-  attestation: phase0.Attestation;
+  aggregationBits: BitArray;
+  signatures: Uint8Array[];
   trueBitsCount: number;
 }
 
 type AttestationNonParticipant = {
-  attestation: phase0.Attestation;
+  attestation: AttestationWithIndex;
   // this is <= attestingIndices.count since some attesters may be seen by the chain
   // this is only updated and used in removeBySeenValidators function
   notSeenAttesterCount: number;
@@ -229,12 +245,12 @@ export class MatchingDataAttestationGroup {
    * If it's a superset of an existing attestation, remove the existing attestation and add new.
    */
   add(attestation: AttestationWithIndex): InsertOutcome {
-    const newBits = attestation.attestation.aggregationBits;
+    const newBits = attestation.aggregationBits;
 
     const indicesToRemove = [];
 
     for (const [i, prevAttestation] of this.attestations.entries()) {
-      const prevBits = prevAttestation.attestation.aggregationBits;
+      const prevBits = prevAttestation.aggregationBits;
 
       switch (intersectUint8Arrays(newBits.uint8Array, prevBits.uint8Array)) {
         case IntersectResult.Subset:
@@ -285,7 +301,7 @@ export class MatchingDataAttestationGroup {
       committeeSeenAttesting[i] = seenAttestingIndices.has(this.committee[i]);
     }
 
-    for (const {attestation} of this.attestations) {
+    for (const attestation of this.attestations) {
       const {aggregationBits} = attestation;
       let notSeenAttesterCount = 0;
 
@@ -308,17 +324,31 @@ export class MatchingDataAttestationGroup {
 
   /** Get attestations for API. */
   getAttestations(): phase0.Attestation[] {
-    return this.attestations.map((attestation) => attestation.attestation);
+    return this.attestations.map(
+      ({aggregationBits, signatures}): phase0.Attestation =>
+        toAggregatedAttestation({data: this.data, aggregationBits, signatures})
+    );
   }
+}
+
+export function toAggregatedAttestation(attestation: AttestationUnaggregated): phase0.Attestation {
+  return {
+    data: attestation.data,
+    aggregationBits: attestation.aggregationBits,
+    signature: bls.Signature.aggregate(
+      // No need to validate Signature again since it has already been validated ------- false
+      attestation.signatures.map((signature) => bls.Signature.fromBytes(signature, CoordType.affine, false))
+    ).toBytes(PointFormat.compressed),
+  };
 }
 
 export function aggregateInto(attestation1: AttestationWithIndex, attestation2: AttestationWithIndex): void {
   // Merge bits of attestation2 into attestation1
-  attestation1.attestation.aggregationBits.mergeOrWith(attestation2.attestation.aggregationBits);
+  attestation1.aggregationBits.mergeOrWith(attestation2.aggregationBits);
 
-  const signature1 = bls.Signature.fromBytes(attestation1.attestation.signature, undefined, true);
-  const signature2 = bls.Signature.fromBytes(attestation2.attestation.signature, undefined, true);
-  attestation1.attestation.signature = bls.Signature.aggregate([signature1, signature2]).toBytes();
+  for (const signature of attestation2.signatures) {
+    attestation1.signatures.push(signature);
+  }
 }
 
 /**
