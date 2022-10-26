@@ -505,6 +505,29 @@
     strict-event-emitter-types "^2.0.0"
     varint "^6.0.0"
 
+"@chainsafe/discv5@https://github.com/tuyennhv/discv5.git#tuyen/v1.1.2-dist":
+  version "1.1.2"
+  resolved "https://github.com/tuyennhv/discv5.git#a7c3a7d5f6a17b315c37bb367bd4677a3d0ee7af"
+  dependencies:
+    "@libp2p/crypto" "1.0.0"
+    "@libp2p/interface-peer-discovery" "^1.0.1"
+    "@libp2p/interface-peer-id" "^1.0.2"
+    "@libp2p/interface-peer-info" "^1.0.1"
+    "@libp2p/interfaces" "^3.0.2"
+    "@libp2p/peer-id" "^1.1.13"
+    "@multiformats/multiaddr" "^11.0.0"
+    base64url "^3.0.1"
+    bcrypto "^5.4.0"
+    bigint-buffer "^1.1.5"
+    debug "^4.3.1"
+    dgram "^1.0.1"
+    err-code "^3.0.1"
+    ip6addr "^0.2.3"
+    is-ip "4.0.0"
+    rlp "^2.2.6"
+    strict-event-emitter-types "^2.0.0"
+    varint "^6.0.0"
+
 "@chainsafe/eslint-plugin-node@^11.2.3":
   version "11.2.3"
   resolved "https://registry.npmjs.org/@chainsafe/eslint-plugin-node/-/eslint-plugin-node-11.2.3.tgz"
@@ -1861,6 +1884,21 @@
     "@libp2p/logger" "^2.0.1"
     "@multiformats/multiaddr" "^11.0.0"
     err-code "^3.0.1"
+
+"@libp2p/crypto@1.0.0":
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/@libp2p/crypto/-/crypto-1.0.0.tgz#15512cabdd862b636a4bd81c623f7083fc781280"
+  integrity sha512-oV/KaHE8XaJQDH+iDq4Kn4GaVWRsEXJnLXTpN+8hz00tuxxsE3+4g0OYaFCauAYeX1IcGPwMvUhdgujnKzpAbg==
+  dependencies:
+    "@libp2p/interface-keys" "^1.0.2"
+    "@noble/ed25519" "^1.6.0"
+    "@noble/secp256k1" "^1.5.4"
+    err-code "^3.0.1"
+    iso-random-stream "^2.0.0"
+    multiformats "^9.4.5"
+    node-forge "^1.1.0"
+    protons-runtime "^1.0.4"
+    uint8arrays "^3.0.0"
 
 "@libp2p/crypto@^1.0.0", "@libp2p/crypto@^1.0.3", "@libp2p/crypto@^1.0.4":
   version "1.0.4"
@@ -11110,6 +11148,14 @@ protocols@^2.0.0, protocols@^2.0.1:
   resolved "https://registry.yarnpkg.com/protocols/-/protocols-2.0.1.tgz#8f155da3fc0f32644e83c5782c8e8212ccf70a86"
   integrity sha512-/XJ368cyBJ7fzLMwLKv1e4vLxOju2MNAIokcr7meSaNcVbWz/CPcW22cP04mwxOErdA5mwjA8Q6w/cdAQxVn7Q==
 
+protons-runtime@^1.0.4:
+  version "1.0.4"
+  resolved "https://registry.yarnpkg.com/protons-runtime/-/protons-runtime-1.0.4.tgz#85db97f82fb03a1205eafb591904736ba34e2972"
+  integrity sha512-DSKWjAgwaXhtYO5Jo/MrU8n/75I/P2IhxU0Fk/lSrXx6Gxl5DH+I6cHcbGAYFmAlOBmU4QRa0mvVme8VXlDeUg==
+  dependencies:
+    uint8arraylist "^1.4.0"
+    uint8arrays "^3.0.0"
+
 protons-runtime@^3.0.1, protons-runtime@^3.1.0:
   version "3.1.0"
   resolved "https://registry.yarnpkg.com/protons-runtime/-/protons-runtime-3.1.0.tgz#500918da4a2d97aa28007f30c3f2f7021e05c0b2"
@@ -12945,6 +12991,13 @@ uint8-varint@^1.0.1, uint8-varint@^1.0.2:
     byte-access "^1.0.0"
     longbits "^1.1.0"
     uint8arraylist "^2.0.0"
+
+uint8arraylist@^1.4.0:
+  version "1.6.0"
+  resolved "https://registry.yarnpkg.com/uint8arraylist/-/uint8arraylist-1.6.0.tgz#1a600e7b9bfb982631ee5ac130b7998becaaa998"
+  integrity sha512-QOh6SQJQj/eEqQ6NJ8SI9LH875uI2ShcOtWE3Yupci0RaHsZm4oP+mUCJzBzKkp+8gCK7M4l+6Ubvlaimt7CSw==
+  dependencies:
+    uint8arrays "^3.0.0"
 
 uint8arraylist@^2.0.0, uint8arraylist@^2.1.0, uint8arraylist@^2.1.1, uint8arraylist@^2.3.1, uint8arraylist@^2.3.2:
   version "2.3.2"
