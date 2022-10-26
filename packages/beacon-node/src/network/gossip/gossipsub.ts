@@ -91,10 +91,11 @@ export class Eth2Gossipsub extends GossipSub {
 
     const scoreParams = computeGossipPeerScoreParams(modules);
     const {config, logger, metrics, signal, gossipHandlers, peersData} = modules;
+    const allowedTopics = new Set(getMetricsTopicStrToLabel(modules.config).keys());
 
     // Gossipsub parameters defined here:
     // https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#the-gossip-domain-gossipsub
-    super({
+    super(modules.libp2p, {
       globalSignaturePolicy: SignaturePolicy.StrictNoSign,
       allowPublishToZeroPeers: allowPublishToZeroPeers,
       D: gossipsubD ?? GOSSIP_D,
@@ -126,6 +127,21 @@ export class Eth2Gossipsub extends GossipSub {
       asyncValidation: true,
 
       maxOutboundBufferSize: MAX_OUTBOUND_BUFFER_SIZE,
+
+      // Drop subscriptions for unknown topics to bound cache
+      allowedTopics,
+
+      decodeRpcLimits: {
+        maxSubscriptions: allowedTopics.size,
+        // Arbitrary number of messages, IWANT list can be quite large
+        maxMessages: 500,
+        maxIhaveMessageIDs: 500,
+        maxIwantMessageIDs: 500,
+        // Arbitrary number, review after observing metrics
+        maxControlMessages: 50,
+        // PeerInfo feature is not used currently, so drop all PeerInfo objects
+        maxPeerInfos: 0,
+      },
     });
     this.scoreParams = scoreParams;
     this.config = config;
