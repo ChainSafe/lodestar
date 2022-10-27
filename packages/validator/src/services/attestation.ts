@@ -175,6 +175,7 @@ export class AttestationService {
       .catch((e: Error) => {
         throw extendError(e, "Error producing aggregateAndProofs");
       });
+    this.metrics?.numParticipantsInAggregate.observe(aggregate.data.aggregationBits.getTrueBitIndexes().length);
 
     const signedAggregateAndProofs: phase0.SignedAggregateAndProof[] = [];
 
