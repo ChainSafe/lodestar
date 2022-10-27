@@ -194,7 +194,8 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       }
 
       try {
-        chain.attestationPool.add(attestation);
+        const insertOutcome = chain.attestationPool.add(attestation);
+        metrics?.opPool.attestationPoolInsertOutcome.inc({insertOutcome});
       } catch (e) {
         logger.error("Error adding unaggregated attestation to pool", {subnet}, e as Error);
       }
