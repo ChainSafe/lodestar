@@ -43,6 +43,8 @@ export async function createNodejsLibp2p(options: ILibp2pOptions): Promise<Libp2
     streamMuxers: [new Mplex({maxInboundStreams: 256})],
     peerDiscovery,
     metrics: {
+      // temporarily disable since there is a performance issue with it
+      // see https://github.com/ChainSafe/lodestar/issues/4698
       enabled: false,
     },
     connectionManager: {
