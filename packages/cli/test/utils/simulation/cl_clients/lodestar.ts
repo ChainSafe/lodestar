@@ -1,21 +1,21 @@
 import {mkdir, writeFile} from "node:fs/promises";
 import {dirname, join} from "node:path";
 import {Keystore} from "@chainsafe/bls-keystore";
-import {nodeUtils} from "@lodestar/beacon-node/node";
+import {getClient} from "@lodestar/api/beacon";
+import {getClient as keyManagerGetClient} from "@lodestar/api/keymanager";
 import {LogLevel} from "@lodestar/utils";
 import {IBeaconArgs} from "../../../../src/cmds/beacon/options.js";
 import {IValidatorCliArgs} from "../../../../src/cmds/validator/options.js";
 import {IGlobalArgs} from "../../../../src/options/globalOptions.js";
-import {JobOptions, CLClientGenerator, CLClientOptions, Runner, RunnerType, Job} from "../interfaces.js";
+import {CLClient, CLClientGenerator, CLClientOptions, JobOptions, Runner, RunnerType} from "../interfaces.js";
 import {callHttp, LODESTAR_BINARY_PATH} from "../utils.js";
 
-export const generateLodeStarBeaconNode: CLClientGenerator = (opts: CLClientOptions, runner: Runner): Job => {
+export const generateLodeStarBeaconNode: CLClientGenerator = (opts: CLClientOptions, runner: Runner) => {
   if (runner.type !== RunnerType.ChildProcess) {
     throw new Error(`Runner "${runner.type}" not yet supported.`);
   }
   const {
     rootDir,
-    params,
     address,
     restPort,
     port,
@@ -23,12 +23,11 @@ export const generateLodeStarBeaconNode: CLClientGenerator = (opts: CLClientOpti
     config,
     genesisStateFilePath,
     checkpointSyncUrl,
+    secretKeys,
     wssCheckpoint,
+    keyManagerPort,
+    genesisTime,
   } = opts;
-
-  const {state} = nodeUtils.initDevState(config, params.validatorClients * params.validatorsPerClient, {
-    genesisTime: params.genesisTime,
-  });
 
   const rcConfig = ({
     network: "dev",
@@ -39,22 +38,22 @@ export const generateLodeStarBeaconNode: CLClientGenerator = (opts: CLClientOpti
     "rest.address": address,
     "rest.port": restPort,
     "rest.namespace": "*",
-    "sync.isSingleNode": params.beaconNodes === 1,
-    "network.allowPublishToZeroPeers": params.beaconNodes === 1,
+    "sync.isSingleNode": false,
+    "network.allowPublishToZeroPeers": false,
     eth1: false,
-    discv5: params.beaconNodes > 1,
-    "network.connectToDiscv5Bootnodes": params.beaconNodes > 1,
+    discv5: true,
+    "network.connectToDiscv5Bootnodes": true,
     "execution.engineMock": true,
     listenAddress: address,
     port: port,
     metrics: false,
     bootnodes: [],
-    "params.SECONDS_PER_SLOT": String(params.secondsPerSlot),
-    "params.GENESIS_DELAY": String(params.genesisSlotsDelay),
-    "params.ALTAIR_FORK_EPOCH": String(params.altairEpoch),
-    "params.BELLATRIX_FORK_EPOCH": String(params.bellatrixEpoch),
+    "params.SECONDS_PER_SLOT": String(config.SECONDS_PER_SLOT),
+    "params.GENESIS_DELAY": String(config.GENESIS_DELAY),
+    "params.ALTAIR_FORK_EPOCH": String(config.ALTAIR_FORK_EPOCH),
+    "params.BELLATRIX_FORK_EPOCH": String(config.BELLATRIX_FORK_EPOCH),
     logPrefix: id,
-    logFormatGenesisTime: `${params.genesisTime}`,
+    logFormatGenesisTime: `${genesisTime}`,
     logLevel: LogLevel.debug,
     logFileDailyRotate: 0,
   } as unknown) as IBeaconArgs & IGlobalArgs;
@@ -69,26 +68,23 @@ export const generateLodeStarBeaconNode: CLClientGenerator = (opts: CLClientOpti
 
   const validatorClientsJobs: JobOptions[] = [];
   if (opts.secretKeys.length > 0) {
-    for (let clientIndex = 0; clientIndex < params.validatorClients; clientIndex += 1) {
-      validatorClientsJobs.push(
-        generateLodeStarValidatorJobs(
-          {
-            ...opts,
-            rootDir: join(rootDir, `validator-${clientIndex}`),
-            id: `${id}-validator-${clientIndex}`,
-            logFilePath: join(dirname(opts.logFilePath), `${id}-validator-${clientIndex}.log`),
-          },
-          runner
-        )
-      );
-    }
+    validatorClientsJobs.push(
+      generateLodeStarValidatorJobs(
+        {
+          ...opts,
+          rootDir: join(rootDir, "validator"),
+          id: `${id}-validator`,
+          logFilePath: join(dirname(opts.logFilePath), `${id}-validator.log`),
+        },
+        runner
+      )
+    );
   }
 
-  return runner.create(id, [
+  const job = runner.create(id, [
     {
       bootstrap: async () => {
         await mkdir(rootDir);
-        await writeFile(join(rootDir, "genesis.ssz"), state.serialize());
         await writeFile(join(rootDir, "rc_config.json"), JSON.stringify(rcConfig, null, 2));
       },
       cli: {
@@ -104,7 +100,7 @@ export const generateLodeStarBeaconNode: CLClientGenerator = (opts: CLClientOpti
       },
       health: async () => {
         try {
-          await callHttp(`http://${address}:${restPort}/eth/v1/node/health`);
+          await callHttp(`http://${address}:${restPort}/eth/v1/node/health`, "GET");
           return true;
         } catch {
           return false;
@@ -113,6 +109,17 @@ export const generateLodeStarBeaconNode: CLClientGenerator = (opts: CLClientOpti
       children: validatorClientsJobs,
     },
   ]);
+
+  const node = {
+    id,
+    client: CLClient.Lodestar,
+    url: `http://${address}:${restPort}`,
+    secretKeys,
+    api: getClient({baseUrl: `http://${address}:${restPort}`}, {config}),
+    keyManager: keyManagerGetClient({baseUrl: `http://${address}:${keyManagerPort}`}, {config}),
+  };
+
+  return {job, node};
 };
 
 export const generateLodeStarValidatorJobs = (opts: CLClientOptions, runner: Runner): JobOptions => {
@@ -120,7 +127,17 @@ export const generateLodeStarValidatorJobs = (opts: CLClientOptions, runner: Run
     throw new Error(`Runner "${runner.type}" not yet supported.`);
   }
 
-  const {rootDir, id, address, params, keyManagerPort, secretKeys, restPort} = opts;
+  const {
+    rootDir,
+    id,
+    address,
+    keyManagerPort,
+    secretKeys,
+    restPort,
+    config,
+    genesisTime,
+    externalKeysPercentage,
+  } = opts;
 
   const rcConfig = ({
     network: "dev",
@@ -131,12 +148,12 @@ export const generateLodeStarValidatorJobs = (opts: CLClientOptions, runner: Run
     "keymanager.authEnabled": false,
     "keymanager.address": address,
     "keymanager.port": keyManagerPort,
-    "params.SECONDS_PER_SLOT": String(params.secondsPerSlot),
-    "params.GENESIS_DELAY": String(params.genesisSlotsDelay),
-    "params.ALTAIR_FORK_EPOCH": String(params.altairEpoch),
-    "params.BELLATRIX_FORK_EPOCH": String(params.bellatrixEpoch),
+    "params.SECONDS_PER_SLOT": String(config.SECONDS_PER_SLOT),
+    "params.GENESIS_DELAY": String(config.GENESIS_DELAY),
+    "params.ALTAIR_FORK_EPOCH": String(config.ALTAIR_FORK_EPOCH),
+    "params.BELLATRIX_FORK_EPOCH": String(config.BELLATRIX_FORK_EPOCH),
     logPrefix: id,
-    logFormatGenesisTime: params.genesisTime,
+    logFormatGenesisTime: genesisTime,
     logLevel: LogLevel.debug,
     importKeystores: `${rootDir}/keystores`,
     importKeystoresPassword: `${rootDir}/password.txt`,
@@ -150,7 +167,7 @@ export const generateLodeStarValidatorJobs = (opts: CLClientOptions, runner: Run
       await writeFile(join(rootDir, "rc_config.json"), JSON.stringify(rcConfig, null, 2));
 
       // Split half of the keys to the keymanager
-      for (const key of secretKeys.slice(secretKeys.length * params.externalKeysPercentage)) {
+      for (const key of secretKeys.slice(secretKeys.length * externalKeysPercentage)) {
         const keystore = await Keystore.create("password", key.toBytes(), key.toPublicKey().toBytes(), "");
         await writeFile(
           join(rootDir, "keystores", `${key.toPublicKey().toHex()}.json`),
@@ -171,7 +188,7 @@ export const generateLodeStarValidatorJobs = (opts: CLClientOptions, runner: Run
     },
     health: async () => {
       try {
-        await callHttp(`http://${address}:${keyManagerPort}/eth/v1/keystores`);
+        await callHttp(`http://${address}:${keyManagerPort}/eth/v1/keystores`, "GET");
         return true;
       } catch (err) {
         return false;

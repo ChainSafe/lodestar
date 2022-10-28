@@ -5,14 +5,10 @@ import {MAX_COMMITTEES_PER_SLOT} from "@lodestar/params";
 import {SimulationEnvironment} from "./SimulationEnvironment.js";
 
 export function nodeAssertions(env: SimulationEnvironment): void {
-  it("test env should have correct number of nodes", () => {
-    expect(env.nodes.length).to.equal(env.params.beaconNodes);
-  });
-
   for (const node of env.nodes) {
     describe(node.id, () => {
-      it("should have correct sync status", async () => {
-        const health = await node.api.node.getHealth();
+      it("should have correct sync status for cl", async () => {
+        const health = await node.cl.api.node.getHealth();
 
         expect(health === routes.node.NodeHealth.SYNCING || health === routes.node.NodeHealth.READY).to.equal(
           true,
@@ -21,8 +17,8 @@ export function nodeAssertions(env: SimulationEnvironment): void {
       });
 
       it("should have correct keys loaded", async () => {
-        const keyManagerKeys = (await node.keyManager.listKeys()).data.map((k) => k.validatingPubkey).sort();
-        const existingKeys = node.secretKeys.map((k) => k.toPublicKey().toHex()).sort();
+        const keyManagerKeys = (await node.cl.keyManager.listKeys()).data.map((k) => k.validatingPubkey).sort();
+        const existingKeys = node.cl.secretKeys.map((k) => k.toPublicKey().toHex()).sort();
 
         expect(keyManagerKeys).to.eql(
           existingKeys,
@@ -38,7 +34,7 @@ export function nodeAssertions(env: SimulationEnvironment): void {
 }
 
 export function attestationParticipationAssertions(env: SimulationEnvironment, epoch: Epoch): void {
-  if (epoch < env.params.altairEpoch) return;
+  if (epoch < env.forkConfig.ALTAIR_FORK_EPOCH) return;
 
   for (const node of env.nodes) {
     describe(`${node.id}`, () => {
@@ -88,17 +84,6 @@ export function attestationParticipationAssertions(env: SimulationEnvironment, e
 }
 
 export function missedBlocksAssertions(env: SimulationEnvironment, epoch: Epoch): void {
-  if (env.params.beaconNodes === 1) {
-    it("should not have any missed blocks than genesis", () => {
-      const missedSlots = env.tracker.epochMeasures.get(env.nodes[0].id)?.get(epoch)?.missedSlots;
-      expect(missedSlots).to.be.eql(
-        [],
-        `node has missed blocks than genesis. ${JSON.stringify({id: env.nodes[0].id, missedSlots})}`
-      );
-    });
-    return;
-  }
-
   for (const node of env.nodes) {
     describe(node.id, () => {
       it("should have same missed blocks as first node", () => {
@@ -231,7 +216,7 @@ export function headsAssertions(env: SimulationEnvironment, epoch: Epoch): void 
 }
 
 export function syncCommitteeAssertions(env: SimulationEnvironment, epoch: Epoch): void {
-  if (epoch < env.params.altairEpoch) {
+  if (epoch < env.forkConfig.ALTAIR_FORK_EPOCH) {
     return;
   }
 
@@ -239,7 +224,7 @@ export function syncCommitteeAssertions(env: SimulationEnvironment, epoch: Epoch
     describe(node.id, () => {
       const startSlot = env.clock.getFirstSlotOfEpoch(epoch);
       const endSlot = env.clock.getLastSlotOfEpoch(epoch);
-      const altairStartSlot = env.clock.getFirstSlotOfEpoch(env.params.altairEpoch);
+      const altairStartSlot = env.clock.getFirstSlotOfEpoch(env.forkConfig.ALTAIR_FORK_EPOCH);
 
       for (let slot = startSlot; slot <= endSlot; slot++) {
         // Sync committee is not available before until 2 slots for altair epoch

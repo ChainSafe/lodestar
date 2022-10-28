@@ -16,6 +16,7 @@ const stopChildProcess = async (childProcess: ChildProcess, signal?: "SIGTERM"):
 const startChildProcess = async (jobOptions: JobOptions): Promise<ChildProcess> => {
   return new Promise<ChildProcess>((resolve, reject) => {
     void (async () => {
+      // console.log(`Child process starting: ${jobOptions.cli.command} ${jobOptions.cli.args.join(" ")}`);
       const childProcess = spawn(jobOptions.cli.command, jobOptions.cli.args, {
         env: {...process.env, ...jobOptions.cli.env},
       });
@@ -27,18 +28,29 @@ const startChildProcess = async (jobOptions: JobOptions): Promise<ChildProcess> 
       childProcess.stderr?.pipe(stdoutFileStream);
 
       childProcess.on("error", reject);
-      childProcess.on("exit", (code: number) => {
-        clearInterval(intervalId);
-        stdoutFileStream.close();
-        reject(new Error(`process exited with code ${code}`));
-      });
 
-      const intervalId = setInterval(async () => {
-        if (await jobOptions.health()) {
+      if (jobOptions.health !== undefined) {
+        const intervalId = setInterval(async () => {
+          if (jobOptions.health && (await jobOptions.health())) {
+            clearInterval(intervalId);
+            resolve(childProcess);
+          }
+        }, 1000);
+        childProcess.on("exit", (code: number) => {
           clearInterval(intervalId);
-          resolve(childProcess);
-        }
-      }, 1000);
+          stdoutFileStream.close();
+          reject(new Error(`process exited with code ${code}`));
+        });
+      } else {
+        childProcess.on("exit", (code: number) => {
+          stdoutFileStream.close();
+          if (code > 0) {
+            reject(new Error(`process exited with code ${code}`));
+          } else {
+            resolve(childProcess);
+          }
+        });
+      }
     })();
   });
 };
@@ -76,8 +88,8 @@ export class ChildProcessRunner implements Runner {
       console.log(`Stopping "${id}"...`);
       this.emitter.emit("stopping");
       for (const {jobOptions, childProcess} of childProcesses) {
-        if (jobOptions.cleanup) {
-          await jobOptions.cleanup();
+        if (jobOptions.teardown) {
+          await jobOptions.teardown();
         }
         await stopChildProcess(childProcess);
       }
