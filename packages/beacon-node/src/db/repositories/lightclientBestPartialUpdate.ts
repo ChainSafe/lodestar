@@ -20,6 +20,7 @@ export class BestPartialLightClientUpdateRepository extends Repository<SyncPerio
     finalizedCheckpoint: ssz.phase0.Checkpoint,
     finalizedHeader: ssz.phase0.BeaconBlockHeader,
     syncAggregate: ssz.altair.SyncAggregate,
+    signatureSlot: ssz.Slot,
   });
 
   typeNonFinalized = new ContainerType({

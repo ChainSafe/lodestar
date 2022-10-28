@@ -1,4 +1,4 @@
-import {altair, phase0} from "@lodestar/types";
+import {altair, phase0, Slot} from "@lodestar/types";
 
 /**
  * We aren't creating the sync committee proofs separately because our ssz library automatically adds leaves to composite types,
@@ -44,6 +44,7 @@ export type PartialLightClientUpdateFinalized = {
   finalizedCheckpoint: phase0.Checkpoint;
   finalizedHeader: phase0.BeaconBlockHeader;
   syncAggregate: altair.SyncAggregate;
+  signatureSlot: Slot;
 };
 
 export type PartialLightClientUpdateNonFinalized = {
@@ -53,6 +54,7 @@ export type PartialLightClientUpdateNonFinalized = {
   blockRoot: Uint8Array;
   // Finalized data
   syncAggregate: altair.SyncAggregate;
+  signatureSlot: Slot;
 };
 
 export type PartialLightClientUpdate = PartialLightClientUpdateFinalized | PartialLightClientUpdateNonFinalized;

@@ -4,7 +4,7 @@ GENESIS_TIME=$(date +%s)
 
 packages/cli/bin/lodestar dev \
   --genesisValidators 8 \
-  --startValidators 0:7 \
+  --startValidators 0..7 \
   --genesisTime $GENESIS_TIME \
   --enr.ip 127.0.0.1 \
   --dataDir .lodestar/node1 \

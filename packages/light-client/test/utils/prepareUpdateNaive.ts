@@ -95,5 +95,6 @@ export async function prepareUpdateNaive(
     finalizedHeader: finalizedCheckpointBlockHeader,
     finalityBranch: finalityBranch,
     syncAggregate,
+    signatureSlot: syncAttestedBlockHeader.slot + 1,
   };
 }

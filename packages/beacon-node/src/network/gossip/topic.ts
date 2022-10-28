@@ -1,6 +1,6 @@
 import {ssz} from "@lodestar/types";
 import {IForkDigestContext} from "@lodestar/config";
-import {GossipType, GossipTopic, GossipEncoding} from "./interface.js";
+import {GossipEncoding, GossipTopic, GossipType} from "./interface.js";
 import {DEFAULT_ENCODING} from "./constants.js";
 
 export interface IGossipTopicCache {
@@ -56,6 +56,8 @@ function stringifyGossipTopicType(topic: GossipTopic): string {
     case GossipType.proposer_slashing:
     case GossipType.attester_slashing:
     case GossipType.sync_committee_contribution_and_proof:
+    case GossipType.light_client_finality_update:
+    case GossipType.light_client_optimistic_update:
       return topic.type;
     case GossipType.beacon_attestation:
     case GossipType.sync_committee:
@@ -83,8 +85,10 @@ export function getGossipSSZType(topic: GossipTopic) {
       return ssz.altair.SignedContributionAndProof;
     case GossipType.sync_committee:
       return ssz.altair.SyncCommitteeMessage;
-    default:
-      throw new Error(`No ssz gossip type for ${(topic as GossipTopic).type}`);
+    case GossipType.light_client_optimistic_update:
+      return ssz.altair.LightClientOptimisticUpdate;
+    case GossipType.light_client_finality_update:
+      return ssz.altair.LightClientFinalityUpdate;
   }
 }
 
@@ -119,6 +123,8 @@ export function parseGossipTopic(forkDigestContext: IForkDigestContext, topicStr
       case GossipType.proposer_slashing:
       case GossipType.attester_slashing:
       case GossipType.sync_committee_contribution_and_proof:
+      case GossipType.light_client_finality_update:
+      case GossipType.light_client_optimistic_update:
         return {type: gossipTypeStr, fork, encoding};
     }
 

@@ -7,9 +7,9 @@ import {BeaconStateAltair} from "../utils/types.js";
 export class LightclientServerApiMock implements routes.lightclient.Api {
   readonly states = new Map<RootHex, BeaconStateAltair>();
   readonly updates = new Map<SyncPeriod, altair.LightClientUpdate>();
-  readonly snapshots = new Map<RootHex, routes.lightclient.LightclientSnapshotWithProof>();
-  latestHeadUpdate: routes.lightclient.LightclientOptimisticHeaderUpdate | null = null;
-  finalized: routes.lightclient.LightclientFinalizedUpdate | null = null;
+  readonly snapshots = new Map<RootHex, routes.lightclient.LightClientBootstrap>();
+  latestHeadUpdate: altair.LightClientOptimisticUpdate | null = null;
+  finalized: altair.LightClientFinalityUpdate | null = null;
 
   async getStateProof(stateId: string, paths: JsonPath[]): Promise<{data: Proof}> {
     const state = this.states.get(stateId);
@@ -28,17 +28,18 @@ export class LightclientServerApiMock implements routes.lightclient.Api {
     return {data: updates};
   }
 
-  async getOptimisticUpdate(): Promise<{data: routes.lightclient.LightclientOptimisticHeaderUpdate}> {
+  async getOptimisticUpdate(): Promise<{data: altair.LightClientOptimisticUpdate}> {
     if (!this.latestHeadUpdate) throw Error("No latest head update");
     return {data: this.latestHeadUpdate};
   }
 
-  async getFinalityUpdate(): Promise<{data: routes.lightclient.LightclientFinalizedUpdate}> {
+  async getFinalityUpdate(): Promise<{data: altair.LightClientFinalityUpdate}> {
     if (!this.finalized) throw Error("No finalized head update");
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     return {data: this.finalized};
   }
 
-  async getBootstrap(blockRoot: string): Promise<{data: routes.lightclient.LightclientSnapshotWithProof}> {
+  async getBootstrap(blockRoot: string): Promise<{data: routes.lightclient.LightClientBootstrap}> {
     const snapshot = this.snapshots.get(blockRoot);
     if (!snapshot) throw Error(`snapshot for blockRoot ${blockRoot} not available`);
     return {data: snapshot};

@@ -250,6 +250,24 @@ export class Eth2Gossipsub extends GossipSub {
     );
   }
 
+  async publishLightClientFinalityUpdate(lightClientFinalityUpdate: altair.LightClientFinalityUpdate): Promise<void> {
+    const fork = this.config.getForkName(lightClientFinalityUpdate.signatureSlot);
+    await this.publishObject<GossipType.light_client_finality_update>(
+      {type: GossipType.light_client_finality_update, fork},
+      lightClientFinalityUpdate
+    );
+  }
+
+  async publishLightClientOptimisticUpdate(
+    lightClientOptimisitcUpdate: altair.LightClientOptimisticUpdate
+  ): Promise<void> {
+    const fork = this.config.getForkName(lightClientOptimisitcUpdate.signatureSlot);
+    await this.publishObject<GossipType.light_client_optimistic_update>(
+      {type: GossipType.light_client_optimistic_update, fork},
+      lightClientOptimisitcUpdate
+    );
+  }
+
   private getGossipTopicString(topic: GossipTopic): string {
     return stringifyGossipTopic(this.config, topic);
   }

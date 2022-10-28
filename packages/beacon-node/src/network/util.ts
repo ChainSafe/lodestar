@@ -76,3 +76,8 @@ export function getConnectionsMap(connectionManager: ConnectionManager): Map<str
 export function getConnection(connectionManager: ConnectionManager, peerIdStr: string): Connection | undefined {
   return getConnectionsMap(connectionManager).get(peerIdStr)?.[0] ?? undefined;
 }
+
+// https://github.com/ChainSafe/js-libp2p-gossipsub/blob/3475242ed254f7647798ab7f36b21909f6cb61da/src/index.ts#L2009
+export function isPublishToZeroPeersError(e: Error): boolean {
+  return e.message.includes("PublishError.InsufficientPeers");
+}

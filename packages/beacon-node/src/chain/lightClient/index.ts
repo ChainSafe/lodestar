@@ -2,14 +2,14 @@ import {altair, phase0, Root, RootHex, Slot, ssz, SyncPeriod} from "@lodestar/ty
 import {IChainForkConfig} from "@lodestar/config";
 import {CachedBeaconStateAltair, computeSyncPeriodAtEpoch, computeSyncPeriodAtSlot} from "@lodestar/state-transition";
 import {ILogger, MapDef, pruneSetToMax} from "@lodestar/utils";
-import {routes} from "@lodestar/api";
 import {BitArray, CompositeViewDU, toHexString} from "@chainsafe/ssz";
-import {SYNC_COMMITTEE_SIZE} from "@lodestar/params";
+import {MIN_SYNC_COMMITTEE_PARTICIPANTS, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 import {IBeaconDb} from "../../db/index.js";
 import {IMetrics} from "../../metrics/index.js";
 import {ChainEvent, ChainEventEmitter} from "../emitter.js";
 import {byteArrayEquals} from "../../util/bytes.js";
 import {ZERO_HASH} from "../../constants/index.js";
+import {LightClientServerError, LightClientServerErrorCode} from "../errors/lightClientError.js";
 import {
   getNextSyncCommitteeBranch,
   getSyncCommitteesWitness,
@@ -165,10 +165,10 @@ export class LightClientServer {
    */
   private readonly prevHeadData = new Map<BlockRooHex, SyncAttestedData>();
   private checkpointHeaders = new Map<BlockRooHex, phase0.BeaconBlockHeader>();
-  private latestHeadUpdate: routes.lightclient.LightclientOptimisticHeaderUpdate | null = null;
+  private latestHeadUpdate: altair.LightClientOptimisticUpdate | null = null;
 
   private readonly zero: Pick<altair.LightClientUpdate, "finalityBranch" | "finalizedHeader">;
-  private finalized: routes.lightclient.LightclientFinalizedUpdate | null = null;
+  private finalized: altair.LightClientFinalityUpdate | null = null;
 
   constructor(private readonly opts: LightClientServerOpts, modules: LightClientServerModules) {
     const {config, db, metrics, emitter, logger} = modules;
@@ -225,7 +225,7 @@ export class LightClientServer {
     const signedBlockRoot = block.parentRoot;
     const syncPeriod = computeSyncPeriodAtSlot(block.slot);
 
-    this.onSyncAggregate(syncPeriod, block.body.syncAggregate, signedBlockRoot).catch((e) => {
+    this.onSyncAggregate(syncPeriod, block.body.syncAggregate, block.slot, signedBlockRoot).catch((e) => {
       this.logger.error("Error onSyncAggregate", {}, e);
       this.metrics?.lightclientServer.onSyncAggregate.inc({event: "error"});
     });
@@ -238,10 +238,13 @@ export class LightClientServer {
   /**
    * API ROUTE to get `currentSyncCommittee` and `nextSyncCommittee` from a trusted state root
    */
-  async getBootstrap(blockRoot: Uint8Array): Promise<routes.lightclient.LightclientSnapshotWithProof> {
+  async getBootstrap(blockRoot: Uint8Array): Promise<altair.LightClientBootstrap> {
     const syncCommitteeWitness = await this.db.syncCommitteeWitness.get(blockRoot);
     if (!syncCommitteeWitness) {
-      throw Error(`syncCommitteeWitness not available ${toHexString(blockRoot)}`);
+      throw new LightClientServerError(
+        {code: LightClientServerErrorCode.RESOURCE_UNAVAILABLE},
+        `syncCommitteeWitness not available ${toHexString(blockRoot)}`
+      );
     }
 
     const [currentSyncCommittee, nextSyncCommittee] = await Promise.all([
@@ -249,15 +252,21 @@ export class LightClientServer {
       this.db.syncCommittee.get(syncCommitteeWitness.nextSyncCommitteeRoot),
     ]);
     if (!currentSyncCommittee) {
-      throw Error("currentSyncCommittee not available");
+      throw new LightClientServerError(
+        {code: LightClientServerErrorCode.RESOURCE_UNAVAILABLE},
+        "currentSyncCommittee not available"
+      );
     }
     if (!nextSyncCommittee) {
-      throw Error("nextSyncCommittee not available");
+      throw new LightClientServerError(
+        {code: LightClientServerErrorCode.RESOURCE_UNAVAILABLE},
+        "nextSyncCommittee not available"
+      );
     }
 
     const header = await this.db.checkpointHeader.get(blockRoot);
     if (!header) {
-      throw Error("header not available");
+      throw new LightClientServerError({code: LightClientServerErrorCode.RESOURCE_UNAVAILABLE}, "header not available");
     }
 
     return {
@@ -274,23 +283,32 @@ export class LightClientServer {
    * - Has the most bits
    * - Signed header at the oldest slot
    */
-  async getUpdates(period: SyncPeriod): Promise<altair.LightClientUpdate> {
+  async getUpdate(period: number): Promise<altair.LightClientUpdate> {
     // Signature data
     const partialUpdate = await this.db.bestPartialLightClientUpdate.get(period);
     if (!partialUpdate) {
-      throw Error(`No partialUpdate available for period ${period}`);
+      throw new LightClientServerError(
+        {code: LightClientServerErrorCode.RESOURCE_UNAVAILABLE},
+        `No partialUpdate available for period ${period}`
+      );
     }
 
     const syncCommitteeWitnessBlockRoot = partialUpdate.blockRoot;
 
     const syncCommitteeWitness = await this.db.syncCommitteeWitness.get(syncCommitteeWitnessBlockRoot);
     if (!syncCommitteeWitness) {
-      throw Error(`finalizedBlockRoot not available ${toHexString(syncCommitteeWitnessBlockRoot)}`);
+      throw new LightClientServerError(
+        {code: LightClientServerErrorCode.RESOURCE_UNAVAILABLE},
+        `finalizedBlockRoot not available ${toHexString(syncCommitteeWitnessBlockRoot)}`
+      );
     }
 
     const nextSyncCommittee = await this.db.syncCommittee.get(syncCommitteeWitness.nextSyncCommitteeRoot);
     if (!nextSyncCommittee) {
-      throw Error("nextSyncCommittee not available");
+      throw new LightClientServerError(
+        {code: LightClientServerErrorCode.RESOURCE_UNAVAILABLE},
+        "nextSyncCommittee not available"
+      );
     }
 
     if (partialUpdate.isFinalized) {
@@ -301,6 +319,7 @@ export class LightClientServer {
         finalizedHeader: partialUpdate.finalizedHeader,
         finalityBranch: partialUpdate.finalityBranch,
         syncAggregate: partialUpdate.syncAggregate,
+        signatureSlot: partialUpdate.signatureSlot,
       };
     } else {
       return {
@@ -310,6 +329,7 @@ export class LightClientServer {
         finalizedHeader: this.zero.finalizedHeader,
         finalityBranch: this.zero.finalityBranch,
         syncAggregate: partialUpdate.syncAggregate,
+        signatureSlot: partialUpdate.signatureSlot,
       };
     }
   }
@@ -318,18 +338,11 @@ export class LightClientServer {
    * API ROUTE to poll LightclientHeaderUpdate.
    * Clients should use the SSE type `light_client_optimistic_update` if available
    */
-  async getOptimisticUpdate(): Promise<routes.lightclient.LightclientOptimisticHeaderUpdate> {
-    if (this.latestHeadUpdate === null) {
-      throw Error("No latest header update available");
-    }
+  getOptimisticUpdate(): altair.LightClientOptimisticUpdate | null {
     return this.latestHeadUpdate;
   }
 
-  async getFinalityUpdate(): Promise<routes.lightclient.LightclientFinalizedUpdate> {
-    // Signature data
-    if (this.finalized === null) {
-      throw Error("No latest header update available");
-    }
+  getFinalityUpdate(): altair.LightClientFinalityUpdate | null {
     return this.finalized;
   }
 
@@ -450,6 +463,7 @@ export class LightClientServer {
   private async onSyncAggregate(
     syncPeriod: SyncPeriod,
     syncAggregate: altair.SyncAggregate,
+    signatureSlot: Slot,
     signedBlockRoot: Root
   ): Promise<void> {
     this.metrics?.lightclientServer.onSyncAggregate.inc({event: "processed"});
@@ -470,15 +484,26 @@ export class LightClientServer {
       return;
     }
 
-    const headerUpdate: routes.lightclient.LightclientOptimisticHeaderUpdate = {
+    const headerUpdate: altair.LightClientOptimisticUpdate = {
       attestedHeader: attestedData.attestedHeader,
       syncAggregate,
+      signatureSlot,
     };
 
+    const syncAggregateParticipation = sumBits(syncAggregate.syncCommitteeBits);
+
+    if (syncAggregateParticipation < MIN_SYNC_COMMITTEE_PARTICIPANTS) {
+      this.logger.debug("sync committee below required MIN_SYNC_COMMITTEE_PARTICIPANTS", {
+        syncPeriod,
+        attestedPeriod,
+      });
+      this.metrics?.lightclientServer.onSyncAggregate.inc({event: "ignore_sync_committee_low"});
+      return;
+    }
+
     // Emit update
-    // - At the earliest: 6 second after the slot start
-    // - After a new update has INCREMENT_THRESHOLD == 32 bits more than the previous emitted threshold
-    this.emitter.emit(ChainEvent.lightclientOptimisticUpdate, headerUpdate);
+    // Note: Always emit optimistic update even if we have emitted one with higher or equal attested_header.slot
+    this.emitter.emit(ChainEvent.lightClientOptimisticUpdate, headerUpdate);
 
     // Persist latest best update for getLatestHeadUpdate()
     // TODO: Once SyncAggregate are constructed from P2P too, count bits to decide "best"
@@ -490,25 +515,29 @@ export class LightClientServer {
     if (attestedData.isFinalized) {
       const finalizedCheckpointRoot = attestedData.finalizedCheckpoint.root as Uint8Array;
       const finalizedHeader = await this.getFinalizedHeader(finalizedCheckpointRoot);
+
       if (
         finalizedHeader &&
         (!this.finalized ||
           finalizedHeader.slot > this.finalized.finalizedHeader.slot ||
-          sumBits(syncAggregate.syncCommitteeBits) > sumBits(this.finalized.syncAggregate.syncCommitteeBits))
+          syncAggregateParticipation > sumBits(this.finalized.syncAggregate.syncCommitteeBits))
       ) {
         this.finalized = {
           attestedHeader: attestedData.attestedHeader,
           finalizedHeader,
           syncAggregate,
           finalityBranch: attestedData.finalityBranch,
+          signatureSlot,
         };
-        this.emitter.emit(ChainEvent.lightclientFinalizedUpdate, this.finalized);
         this.metrics?.lightclientServer.onSyncAggregate.inc({event: "update_latest_finalized_update"});
+
+        // Note: Ignores gossip rule to always emit finaly_update with higher finalized_header.slot, for simplicity
+        this.emitter.emit(ChainEvent.lightClientFinalityUpdate, this.finalized);
       }
     }
 
     // Check if this update is better, otherwise ignore
-    await this.maybeStoreNewBestPartialUpdate(syncPeriod, syncAggregate, attestedData);
+    await this.maybeStoreNewBestPartialUpdate(syncPeriod, syncAggregate, signatureSlot, attestedData);
   }
 
   /**
@@ -518,6 +547,7 @@ export class LightClientServer {
   private async maybeStoreNewBestPartialUpdate(
     syncPeriod: SyncPeriod,
     syncAggregate: altair.SyncAggregate,
+    signatureSlot: Slot,
     attestedData: SyncAttestedData
   ): Promise<void> {
     const prevBestUpdate = await this.db.bestPartialLightClientUpdate.get(syncPeriod);
@@ -535,13 +565,13 @@ export class LightClientServer {
       const finalizedHeader = await this.getFinalizedHeader(finalizedCheckpointRoot);
       if (finalizedHeader && computeSyncPeriodAtSlot(finalizedHeader.slot) == syncPeriod) {
         // If finalizedHeader is available (should be most times) create a finalized update
-        newPartialUpdate = {...attestedData, finalizedHeader, syncAggregate};
+        newPartialUpdate = {...attestedData, finalizedHeader, syncAggregate, signatureSlot};
       } else {
         // If finalizedHeader is not available (happens on startup) create a non-finalized update
-        newPartialUpdate = {...attestedData, isFinalized: false, syncAggregate};
+        newPartialUpdate = {...attestedData, isFinalized: false, syncAggregate, signatureSlot};
       }
     } else {
-      newPartialUpdate = {...attestedData, syncAggregate};
+      newPartialUpdate = {...attestedData, syncAggregate, signatureSlot};
     }
 
     // attestedData and the block of syncAggregate may not be in same sync period

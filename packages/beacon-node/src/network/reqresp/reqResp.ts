@@ -4,7 +4,7 @@ import {PeerId} from "@libp2p/interface-peer-id";
 import {Connection, Stream} from "@libp2p/interface-connection";
 import {ForkName} from "@lodestar/params";
 import {IBeaconConfig} from "@lodestar/config";
-import {allForks, phase0} from "@lodestar/types";
+import {allForks, altair, phase0} from "@lodestar/types";
 import {ILogger} from "@lodestar/utils";
 import {RespStatus, timeoutOptions} from "../../constants/index.js";
 import {PeersData} from "../peers/peersData.js";
@@ -38,6 +38,7 @@ export type IReqRespOptions = Partial<typeof timeoutOptions>;
  * Implementation of Ethereum Consensus p2p Req/Resp domain.
  * For the spec that this code is based on, see:
  * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#the-reqresp-domain
+ * https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/light-client/p2p-interface.md#the-reqresp-domain
  */
 export class ReqResp implements IReqResp {
   private config: IBeaconConfig;
@@ -139,6 +140,46 @@ export class ReqResp implements IReqResp {
 
   pruneOnPeerDisconnect(peerId: PeerId): void {
     this.inboundRateLimiter.prune(peerId);
+  }
+
+  async lightClientBootstrap(peerId: PeerId, request: Uint8Array): Promise<altair.LightClientBootstrap> {
+    return await this.sendRequest<altair.LightClientBootstrap>(
+      peerId,
+      Method.LightClientBootstrap,
+      [Version.V1],
+      request
+    );
+  }
+
+  async lightClientOptimisticUpdate(peerId: PeerId): Promise<altair.LightClientOptimisticUpdate> {
+    return await this.sendRequest<altair.LightClientOptimisticUpdate>(
+      peerId,
+      Method.LightClientOptimisticUpdate,
+      [Version.V1],
+      null
+    );
+  }
+
+  async lightClientFinalityUpdate(peerId: PeerId): Promise<altair.LightClientFinalityUpdate> {
+    return await this.sendRequest<altair.LightClientFinalityUpdate>(
+      peerId,
+      Method.LightClientFinalityUpdate,
+      [Version.V1],
+      null
+    );
+  }
+
+  async lightClientUpdate(
+    peerId: PeerId,
+    request: altair.LightClientUpdatesByRange
+  ): Promise<altair.LightClientUpdate[]> {
+    return await this.sendRequest<altair.LightClientUpdate[]>(
+      peerId,
+      Method.LightClientUpdate,
+      [Version.V1],
+      request,
+      request.count
+    );
   }
 
   // Helper to reduce code duplication
@@ -257,7 +298,18 @@ export class ReqResp implements IReqResp {
       case Method.BeaconBlocksByRoot:
         yield* this.reqRespHandlers.onBeaconBlocksByRoot(requestTyped.body);
         break;
-
+      case Method.LightClientBootstrap:
+        yield* this.reqRespHandlers.onLightClientBootstrap(requestTyped.body);
+        break;
+      case Method.LightClientOptimisticUpdate:
+        yield* this.reqRespHandlers.onLightClientOptimisticUpdate();
+        break;
+      case Method.LightClientFinalityUpdate:
+        yield* this.reqRespHandlers.onLightClientFinalityUpdate();
+        break;
+      case Method.LightClientUpdate:
+        yield* this.reqRespHandlers.onLightClientUpdatesByRange(requestTyped.body);
+        break;
       default:
         throw Error(`Unsupported method ${protocol.method}`);
     }
