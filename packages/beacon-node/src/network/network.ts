@@ -399,7 +399,7 @@ export class Network implements INetwork {
   // This prevents flooding the network by restricting full nodes that initially
   // publish to at most 512 (max size of active sync committee).
   // https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/light-client/p2p-interface.md#sync-committee
-  private hasAttachedSyncCommitteeMember = (): boolean => {
+  private hasAttachedSyncCommitteeMember(): boolean {
     return this.syncnetsService.getActiveSubnets().length > 0;
-  };
+  }
 }
