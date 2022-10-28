@@ -1,5 +1,6 @@
 import {mkdir, writeFile} from "node:fs/promises";
 import {dirname, join} from "node:path";
+import got from "got";
 import {Keystore} from "@chainsafe/bls-keystore";
 import {nodeUtils} from "@lodestar/beacon-node/node";
 import {LogLevel} from "@lodestar/utils";
@@ -7,9 +8,9 @@ import {IBeaconArgs} from "../../../../src/cmds/beacon/options.js";
 import {IValidatorCliArgs} from "../../../../src/cmds/validator/options.js";
 import {IGlobalArgs} from "../../../../src/options/globalOptions.js";
 import {JobOptions, CLClientGenerator, CLClientOptions, Runner, RunnerType, Job} from "../interfaces.js";
-import {callHttp, LODESTAR_BINARY_PATH} from "../utils.js";
+import {LODESTAR_BINARY_PATH} from "../utils.js";
 
-export const generateLodeStarBeaconNode: CLClientGenerator = (opts: CLClientOptions, runner: Runner): Job => {
+export const generateLodestarBeaconNode: CLClientGenerator = (opts: CLClientOptions, runner: Runner): Job => {
   if (runner.type !== RunnerType.ChildProcess) {
     throw new Error(`Runner "${runner.type}" not yet supported.`);
   }
@@ -71,7 +72,7 @@ export const generateLodeStarBeaconNode: CLClientGenerator = (opts: CLClientOpti
   if (opts.secretKeys.length > 0) {
     for (let clientIndex = 0; clientIndex < params.validatorClients; clientIndex += 1) {
       validatorClientsJobs.push(
-        generateLodeStarValidatorJobs(
+        generateLodestarValidatorJobs(
           {
             ...opts,
             rootDir: join(rootDir, `validator-${clientIndex}`),
@@ -104,7 +105,7 @@ export const generateLodeStarBeaconNode: CLClientGenerator = (opts: CLClientOpti
       },
       health: async () => {
         try {
-          await callHttp(`http://${address}:${restPort}/eth/v1/node/health`);
+          await got.get(`http://${address}:${restPort}/eth/v1/node/health`);
           return true;
         } catch {
           return false;
@@ -115,7 +116,7 @@ export const generateLodeStarBeaconNode: CLClientGenerator = (opts: CLClientOpti
   ]);
 };
 
-export const generateLodeStarValidatorJobs = (opts: CLClientOptions, runner: Runner): JobOptions => {
+export const generateLodestarValidatorJobs = (opts: CLClientOptions, runner: Runner): JobOptions => {
   if (runner.type !== RunnerType.ChildProcess) {
     throw new Error(`Runner "${runner.type}" not yet supported.`);
   }
@@ -171,7 +172,7 @@ export const generateLodeStarValidatorJobs = (opts: CLClientOptions, runner: Run
     },
     health: async () => {
       try {
-        await callHttp(`http://${address}:${keyManagerPort}/eth/v1/keystores`);
+        await got.get(`http://${address}:${keyManagerPort}/eth/v1/keystores`);
         return true;
       } catch (err) {
         return false;

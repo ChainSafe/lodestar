@@ -45,7 +45,6 @@ export class ExternalSignerServer {
 
       const secretKey = this.secretKeyMap.get(pubkeyHex);
       if (!secretKey) {
-        console.log([...this.secretKeyMap.keys()].join("\n"));
         throw Error(`pubkey not known ${pubkeyHex}`);
       }
 

@@ -11,7 +11,7 @@ import {Slot} from "@lodestar/types";
 import {BeaconStateAllForks, interopSecretKey} from "@lodestar/state-transition";
 import {nodeUtils} from "@lodestar/beacon-node";
 import {EpochClock} from "./EpochClock.js";
-import {generateLodeStarBeaconNode} from "./cl_clients/lodestar.js";
+import {generateLodestarBeaconNode} from "./cl_clients/lodestar.js";
 import {ChildProcessRunner} from "./runner/child_process.js";
 import {SimulationTracker} from "./SimulationTracker.js";
 import {
@@ -230,7 +230,7 @@ export class SimulationEnvironment {
             return interopSecretKey(nodeIndex * this.params.validatorsPerClient + vi);
           }),
       };
-      job = generateLodeStarBeaconNode(options, this.runner);
+      job = generateLodestarBeaconNode(options, this.runner);
     }
 
     const participant: CLParticipant = {
