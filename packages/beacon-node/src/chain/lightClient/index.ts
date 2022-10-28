@@ -9,6 +9,7 @@ import {IMetrics} from "../../metrics/index.js";
 import {ChainEvent, ChainEventEmitter} from "../emitter.js";
 import {byteArrayEquals} from "../../util/bytes.js";
 import {ZERO_HASH} from "../../constants/index.js";
+import {LightClientServerError, LightClientServerErrorCode} from "../errors/lightClientError.js";
 import {
   getNextSyncCommitteeBranch,
   getSyncCommitteesWitness,
@@ -240,7 +241,10 @@ export class LightClientServer {
   async getBootstrap(blockRoot: Uint8Array): Promise<altair.LightClientBootstrap> {
     const syncCommitteeWitness = await this.db.syncCommitteeWitness.get(blockRoot);
     if (!syncCommitteeWitness) {
-      throw Error(`syncCommitteeWitness not available ${toHexString(blockRoot)}`);
+      throw new LightClientServerError(
+        {code: LightClientServerErrorCode.RESOURCE_UNAVAILABLE},
+        `syncCommitteeWitness not available ${toHexString(blockRoot)}`
+      );
     }
 
     const [currentSyncCommittee, nextSyncCommittee] = await Promise.all([
@@ -248,15 +252,21 @@ export class LightClientServer {
       this.db.syncCommittee.get(syncCommitteeWitness.nextSyncCommitteeRoot),
     ]);
     if (!currentSyncCommittee) {
-      throw Error("currentSyncCommittee not available");
+      throw new LightClientServerError(
+        {code: LightClientServerErrorCode.RESOURCE_UNAVAILABLE},
+        "currentSyncCommittee not available"
+      );
     }
     if (!nextSyncCommittee) {
-      throw Error("nextSyncCommittee not available");
+      throw new LightClientServerError(
+        {code: LightClientServerErrorCode.RESOURCE_UNAVAILABLE},
+        "nextSyncCommittee not available"
+      );
     }
 
     const header = await this.db.checkpointHeader.get(blockRoot);
     if (!header) {
-      throw Error("header not available");
+      throw new LightClientServerError({code: LightClientServerErrorCode.RESOURCE_UNAVAILABLE}, "header not available");
     }
 
     return {
@@ -277,19 +287,28 @@ export class LightClientServer {
     // Signature data
     const partialUpdate = await this.db.bestPartialLightClientUpdate.get(period);
     if (!partialUpdate) {
-      throw Error(`No partialUpdate available for period ${period}`);
+      throw new LightClientServerError(
+        {code: LightClientServerErrorCode.RESOURCE_UNAVAILABLE},
+        `No partialUpdate available for period ${period}`
+      );
     }
 
     const syncCommitteeWitnessBlockRoot = partialUpdate.blockRoot;
 
     const syncCommitteeWitness = await this.db.syncCommitteeWitness.get(syncCommitteeWitnessBlockRoot);
     if (!syncCommitteeWitness) {
-      throw Error(`finalizedBlockRoot not available ${toHexString(syncCommitteeWitnessBlockRoot)}`);
+      throw new LightClientServerError(
+        {code: LightClientServerErrorCode.RESOURCE_UNAVAILABLE},
+        `finalizedBlockRoot not available ${toHexString(syncCommitteeWitnessBlockRoot)}`
+      );
     }
 
     const nextSyncCommittee = await this.db.syncCommittee.get(syncCommitteeWitness.nextSyncCommitteeRoot);
     if (!nextSyncCommittee) {
-      throw Error("nextSyncCommittee not available");
+      throw new LightClientServerError(
+        {code: LightClientServerErrorCode.RESOURCE_UNAVAILABLE},
+        "nextSyncCommittee not available"
+      );
     }
 
     if (partialUpdate.isFinalized) {
