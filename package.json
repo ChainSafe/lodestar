@@ -9,7 +9,8 @@
   ],
   "scripts": {
     "clean": "rm -rf ./packages/*/lib ./packages/*/*.tsbuildinfo",
-    "build": "lerna run build",
+    "setup": "yarn --ignore-scripts install && yarn --ignore-scripts allow-scripts",
+    "build": "lerna run setup && lerna run build",
     "build:docs": "lerna run build:refdocs && ./scripts/prepare-docs.sh",
     "build:lib:watch": "lerna run build:lib:watch --parallel",
     "build:types:watch": "lerna run build:types:watch --parallel",
