@@ -124,7 +124,7 @@ export const HistoricalBatch = new ContainerType(
 
 export const WithdrawalQueue = new ListCompositeType(Withdrawal, WITHDRAWAL_QUEUE_LIMIT);
 
-// we don't re-use bellatrix.BeaconState fields since we need to replace some keys
+// we don't reuse bellatrix.BeaconState fields since we need to replace some keys
 // and we cannot keep order doing that
 export const BeaconState = new ContainerType(
   {
