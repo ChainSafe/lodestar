@@ -205,13 +205,8 @@ export async function produceBlockBody<T extends BlockType>(
               ((blockBody as eip4844.BeaconBlockBody)
                 .executionPayload as eip4844.ExecutionPayload).excessDataGas = BigInt(0);
             }
-          }
 
-          // TODO EIP-4844: Actually all forks after EIP-4844
-          if (forkName === ForkName.eip4844) {
-            console.log("Dispatching request to Engine API to get blobs");
             const blobsBundle = await this.executionEngine.getBlobsBundle(payloadId);
-            console.log("Got blobs bundle", blobsBundle);
 
             // TODO EIP-4844:  Optional (do it in a follow-up): sanity-check that the KZG commitments match blob contents as described by the spec
             (blockBody as eip4844.BeaconBlockBody).blobKzgCommitments = blobsBundle.kzgs ?? [];

@@ -186,8 +186,6 @@ export function getBeaconBlockApi({
 
       metrics?.registerBeaconBlock(OpSource.api, seenTimestampSec, signedBlock.message);
 
-      console.log("Publishing block to P2P (gossip) network", signedBlock);
-
       await Promise.all([
         // Send the block, regardless of whether or not it is valid. The API
         // specification is very clear that this is the desired behaviour.

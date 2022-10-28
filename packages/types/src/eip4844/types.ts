@@ -3,6 +3,7 @@ import * as ssz from "./sszTypes.js";
 
 export type KZGCommitment = ValueOf<typeof ssz.KZGCommitment>;
 export type Blob = ValueOf<typeof ssz.Blob>;
+export type BlobKzgCommitments = ValueOf<typeof ssz.BlobKzgCommitments>;
 
 export type ExecutionPayload = ValueOf<typeof ssz.ExecutionPayload>;
 export type ExecutionPayloadHeader = ValueOf<typeof ssz.ExecutionPayloadHeader>;

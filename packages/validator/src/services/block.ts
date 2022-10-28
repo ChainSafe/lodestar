@@ -104,6 +104,7 @@ export class BlockProposingService {
   }
 
   private publishBlockWrapper = async (signedBlock: allForks.FullOrBlindedSignedBeaconBlock): Promise<void> => {
+    console.log("Validator is calling beacon node API to publish signed block", signedBlock.message);
     return isBlindedBeaconBlock(signedBlock.message)
       ? this.api.beacon.publishBlindedBlock(signedBlock as bellatrix.SignedBlindedBeaconBlock)
       : this.api.beacon.publishBlock(signedBlock as allForks.SignedBeaconBlock);
