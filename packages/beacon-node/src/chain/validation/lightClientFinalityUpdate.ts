@@ -1,10 +1,9 @@
 import {IChainForkConfig} from "@lodestar/config";
 import {altair, ssz} from "@lodestar/types";
-import {computeTimeAtSlot} from "@lodestar/state-transition";
 import {IBeaconChain} from "../interface.js";
 import {LightClientError, LightClientErrorCode} from "../errors/lightClientError.js";
 import {GossipAction} from "../errors/index.js";
-import {MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../constants/index.js";
+import {updateReceivedToEarly} from "./lightClientOptimisticUpdate.js";
 
 // https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/light-client/p2p-interface.md#light_client_finality_update
 export function validateLightClientFinalityUpdate(
@@ -25,10 +24,7 @@ export function validateLightClientFinalityUpdate(
   // [IGNORE] The finality_update is received after the block at signature_slot was given enough time to propagate
   // through the network -- i.e. validate that one-third of finality_update.signature_slot has transpired
   // (SECONDS_PER_SLOT / INTERVALS_PER_SLOT seconds after the start of the slot, with a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance)
-  const signatureSlot13TimestampMs =
-    computeTimeAtSlot(config, gossipedFinalityUpdate.signatureSlot + 1 / 3, chain.genesisTime) * 1000;
-  const earliestAllowedTimestampMs = signatureSlot13TimestampMs + MAXIMUM_GOSSIP_CLOCK_DISPARITY;
-  if (Date.now() < earliestAllowedTimestampMs) {
+  if (updateReceivedToEarly(config, chain.genesisTime, gossipedFinalityUpdate)) {
     throw new LightClientError(GossipAction.IGNORE, {
       code: LightClientErrorCode.FINALITY_UPDATE_RECEIVED_TOO_EARLY,
     });

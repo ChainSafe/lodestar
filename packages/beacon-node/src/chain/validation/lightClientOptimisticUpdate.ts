@@ -25,10 +25,7 @@ export function validateLightClientOptimisticUpdate(
   // [IGNORE] The optimistic_update is received after the block at signature_slot was given enough time to propagate
   // through the network -- i.e. validate that one-third of optimistic_update.signature_slot has transpired
   // (SECONDS_PER_SLOT / INTERVALS_PER_SLOT seconds after the start of the slot, with a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance)
-  const currentWallTime = Date.now() + MAXIMUM_GOSSIP_CLOCK_DISPARITY;
-  const timeAtSignatureSlot =
-    computeTimeAtSlot(config, gossipedOptimisticUpdate.signatureSlot, chain.genesisTime) * 1000;
-  if (currentWallTime < timeAtSignatureSlot + (1 / 3) * (config.SECONDS_PER_SLOT * 1000)) {
+  if (updateReceivedToEarly(config, chain.genesisTime, gossipedOptimisticUpdate)) {
     throw new LightClientError(GossipAction.IGNORE, {
       code: LightClientErrorCode.OPTIMISTIC_UPDATE_RECEIVED_TOO_EARLY,
     });
@@ -43,4 +40,19 @@ export function validateLightClientOptimisticUpdate(
       code: LightClientErrorCode.OPTIMISTIC_UPDATE_NOT_MATCHING_LOCAL,
     });
   }
+}
+
+/**
+ * [IGNORE] The *update is received after the block at signature_slot was given enough time to propagate
+ * through the network -- i.e. validate that one-third of *update.signature_slot has transpired
+ * (SECONDS_PER_SLOT / INTERVALS_PER_SLOT seconds after the start of the slot, with a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance)
+ */
+export function updateReceivedToEarly(
+  config: IChainForkConfig,
+  genesisTime: number,
+  update: Pick<altair.LightClientOptimisticUpdate, "signatureSlot">
+): boolean {
+  const signatureSlot13TimestampMs = computeTimeAtSlot(config, update.signatureSlot + 1 / 3, genesisTime) * 1000;
+  const earliestAllowedTimestampMs = signatureSlot13TimestampMs + MAXIMUM_GOSSIP_CLOCK_DISPARITY;
+  return Date.now() < earliestAllowedTimestampMs;
 }
