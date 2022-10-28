@@ -22,7 +22,7 @@ import {IPeerRpcScoreStore, PeerAction, PeerRpcScoreStore} from "./peers/index.j
 import {INetworkEventBus, NetworkEventBus} from "./events.js";
 import {AttnetsService, CommitteeSubscription, SyncnetsService} from "./subnets/index.js";
 import {PeersData} from "./peers/peersData.js";
-import {getConnectionsMap} from "./util.js";
+import {getConnectionsMap, isPublishToZeroPeersError} from "./util.js";
 
 interface INetworkModules {
   config: IBeaconConfig;
@@ -369,7 +369,11 @@ export class Network implements INetwork {
         await this.waitOneThirdOfSlot(finalityUpdate.signatureSlot);
         return await this.gossip.publishLightClientFinalityUpdate(finalityUpdate);
       } catch (e) {
-        this.logger.debug("Error on BeaconGossipHandler.onLightclientFinalityUpdate", {}, e as Error);
+        // Non-mandatory route on most of network as of Oct 2022. May not have found any peers on topic yet
+        // Remove once https://github.com/ChainSafe/js-libp2p-gossipsub/issues/367
+        if (!isPublishToZeroPeersError(e as Error)) {
+          this.logger.debug("Error on BeaconGossipHandler.onLightclientFinalityUpdate", {}, e as Error);
+        }
       }
     }
   };
@@ -384,7 +388,11 @@ export class Network implements INetwork {
         await this.waitOneThirdOfSlot(optimisticUpdate.signatureSlot);
         return await this.gossip.publishLightClientOptimisticUpdate(optimisticUpdate);
       } catch (e) {
-        this.logger.debug("Error on BeaconGossipHandler.onLightclientOptimisticUpdate", {}, e as Error);
+        // Non-mandatory route on most of network as of Oct 2022. May not have found any peers on topic yet
+        // Remove once https://github.com/ChainSafe/js-libp2p-gossipsub/issues/367
+        if (!isPublishToZeroPeersError(e as Error)) {
+          this.logger.debug("Error on BeaconGossipHandler.onLightclientOptimisticUpdate", {}, e as Error);
+        }
       }
     }
   };
