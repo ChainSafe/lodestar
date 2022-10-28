@@ -128,6 +128,10 @@ function getSpecCriticalParams(localConfig: IChainConfig): Record<keyof ConfigWi
     DEPOSIT_NETWORK_ID: false, // Non-critical
     DEPOSIT_CONTRACT_ADDRESS: true,
 
+    // Blobs
+    MAX_REQUEST_BLOBS_SIDECARS: eip4844ForkRelevant,
+    MIN_EPOCHS_FOR_BLOBS_SIDECARS_REQUESTS: eip4844ForkRelevant,
+
     // # Phase0Preset
     /////////////////
 

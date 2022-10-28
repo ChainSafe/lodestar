@@ -15,11 +15,40 @@ export const KZGCommitment = Bytes48;
 export const KZGProof = Bytes48;
 export const BLSFieldElement = Bytes32;
 export const Blob = new ListCompositeType(BLSFieldElement, FIELD_ELEMENTS_PER_BLOB);
+export const Blobs = new ListCompositeType(Blob, MAX_BLOBS_PER_BLOCK);
 export const BlobKzgCommitments = new ListCompositeType(KZGCommitment, MAX_BLOBS_PER_BLOCK);
 
 const excessDataGas = UintBn256;
 
-// Containers
+// Validator types
+// https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/validator.md
+
+// A polynomial in evaluation form
+export const Polynomial = new ListCompositeType(BLSFieldElement, FIELD_ELEMENTS_PER_BLOB);
+
+// class BlobsAndCommitments(Container):
+//     blobs: List[Blob, MAX_BLOBS_PER_BLOCK]
+//     kzg_commitments: List[KZGCommitment, MAX_BLOBS_PER_BLOCK]
+export const BlobsAndCommitments = new ContainerType(
+  {
+    blobs: Blobs,
+    kzgCommitments: BlobKzgCommitments,
+  },
+  {typeName: "BlobsAndCommitments", jsonCase: "eth2"}
+);
+
+// class PolynomialAndCommitment(Container):
+//     polynomial: Polynomial
+//     kzg_commitment: KZGCommitment
+export const PolynomialAndCommitment = new ContainerType(
+  {
+    polynomial: Polynomial,
+    kzgCommitment: KZGCommitment,
+  },
+  {typeName: "PolynomialAndCommitment", jsonCase: "eth2"}
+);
+
+// Beacon Chain types
 // https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/beacon-chain.md#containers
 
 export const ExecutionPayload = new ContainerType(
@@ -69,7 +98,7 @@ export const BlobsSidecar = new ContainerType(
   {
     beaconBlockRoot: Root,
     beaconBlockSlot: Slot,
-    blobs: new ListCompositeType(Blob, MAX_BLOBS_PER_BLOCK),
+    blobs: Blobs,
     kzgAggregatedProof: KZGProof,
   },
   {typeName: "BlobsSidecar", jsonCase: "eth2"}
