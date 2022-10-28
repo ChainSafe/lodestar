@@ -15,9 +15,8 @@ export function validateLightClientOptimisticUpdate(
   // [IGNORE] No other optimistic_update with a lower or equal attested_header.slot was already forwarded on the network
   const gossipedAttestedSlot = gossipedOptimisticUpdate.attestedHeader.slot;
   const localOptimisticUpdate = chain.lightClientServer.getOptimisticUpdate();
-  const latestForwardedOptimisticSlot = localOptimisticUpdate?.attestedHeader.slot ?? -1;
 
-  if (gossipedAttestedSlot <= latestForwardedOptimisticSlot) {
+  if (localOptimisticUpdate && gossipedAttestedSlot <= localOptimisticUpdate.attestedHeader.slot) {
     throw new LightClientError(GossipAction.IGNORE, {
       code: LightClientErrorCode.OPTIMISTIC_UPDATE_ALREADY_FORWARDED,
     });

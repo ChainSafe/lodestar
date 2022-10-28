@@ -15,9 +15,8 @@ export function validateLightClientFinalityUpdate(
   // [IGNORE] No other finality_update with a lower or equal finalized_header.slot was already forwarded on the network
   const gossipedFinalitySlot = gossipedFinalityUpdate.finalizedHeader.slot;
   const localFinalityUpdate = chain.lightClientServer.getFinalityUpdate();
-  const latestForwardedFinalitySlot = localFinalityUpdate?.finalizedHeader.slot ?? -1;
 
-  if (gossipedFinalitySlot <= latestForwardedFinalitySlot) {
+  if (localFinalityUpdate && gossipedFinalitySlot <= localFinalityUpdate.finalizedHeader.slot) {
     throw new LightClientError(GossipAction.IGNORE, {
       code: LightClientErrorCode.FINALITY_UPDATE_ALREADY_FORWARDED,
     });
