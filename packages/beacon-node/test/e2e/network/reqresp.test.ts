@@ -82,7 +82,7 @@ describe("network / ReqResp", function () {
       onBeaconBlocksByRange: notImplemented,
       onBeaconBlocksByRoot: notImplemented,
       onLightClientBootstrap: notImplemented,
-      onLightClientUpdate: notImplemented,
+      onLightClientUpdatesByRange: notImplemented,
       onLightClientOptimisticUpdate: notImplemented,
       onLightClientFinalityUpdate: notImplemented,
       ...reqRespHandlersPartial,
@@ -250,7 +250,7 @@ describe("network / ReqResp", function () {
     }
 
     const [netA, netB] = await createAndConnectPeers({
-      onLightClientUpdate: async function* () {
+      onLightClientUpdatesByRange: async function* () {
         yield* arrToSource(lightClientUpdates);
       },
     });

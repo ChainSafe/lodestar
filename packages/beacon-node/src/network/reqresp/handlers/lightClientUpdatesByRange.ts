@@ -5,7 +5,7 @@ import {LightClientServerError, LightClientServerErrorCode} from "../../../chain
 import {ResponseError} from "../response/errors.js";
 import {RespStatus} from "../../../constants/network.js";
 
-export async function* onLightClientUpdate(
+export async function* onLightClientUpdatesByRange(
   requestBody: altair.LightClientUpdatesByRange,
   chain: IBeaconChain
 ): AsyncIterable<altair.LightClientUpdate> {
