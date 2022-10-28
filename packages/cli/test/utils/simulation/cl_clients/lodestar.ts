@@ -58,6 +58,7 @@ export const generateLodestarBeaconNode: CLClientGenerator = (opts: CLClientOpti
     logFormatGenesisTime: `${params.genesisTime}`,
     logLevel: LogLevel.debug,
     logFileDailyRotate: 0,
+    logFile: "none",
   } as unknown) as IBeaconArgs & IGlobalArgs;
 
   if (checkpointSyncUrl) {
@@ -139,6 +140,7 @@ export const generateLodestarValidatorJobs = (opts: CLClientOptions, runner: Run
     logPrefix: id,
     logFormatGenesisTime: params.genesisTime,
     logLevel: LogLevel.debug,
+    logFile: "none",
     importKeystores: `${rootDir}/keystores`,
     importKeystoresPassword: `${rootDir}/password.txt`,
   } as unknown) as IValidatorCliArgs & IGlobalArgs;
