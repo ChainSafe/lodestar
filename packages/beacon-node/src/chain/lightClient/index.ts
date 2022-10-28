@@ -502,8 +502,7 @@ export class LightClientServer {
     }
 
     // Emit update
-    // - At the earliest: 6 second after the slot start
-    // - After a new update has INCREMENT_THRESHOLD == 32 bits more than the previous emitted threshold
+    // Note: Always emit optimistic update even if we have emitted one with higher or equal attested_header.slot
     this.emitter.emit(ChainEvent.lightClientOptimisticUpdate, headerUpdate);
 
     // Persist latest best update for getLatestHeadUpdate()
@@ -516,6 +515,7 @@ export class LightClientServer {
     if (attestedData.isFinalized) {
       const finalizedCheckpointRoot = attestedData.finalizedCheckpoint.root as Uint8Array;
       const finalizedHeader = await this.getFinalizedHeader(finalizedCheckpointRoot);
+
       if (
         finalizedHeader &&
         (!this.finalized ||
@@ -529,8 +529,10 @@ export class LightClientServer {
           finalityBranch: attestedData.finalityBranch,
           signatureSlot,
         };
-        this.emitter.emit(ChainEvent.lightClientFinalityUpdate, this.finalized);
         this.metrics?.lightclientServer.onSyncAggregate.inc({event: "update_latest_finalized_update"});
+
+        // Note: Ignores gossip rule to always emit finaly_update with higher finalized_header.slot, for simplicity
+        this.emitter.emit(ChainEvent.lightClientFinalityUpdate, this.finalized);
       }
     }
 
