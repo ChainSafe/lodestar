@@ -194,18 +194,12 @@ export async function produceBlockBody<T extends BlockType>(
           (blockBody as allForks.ExecutionBlockBody).executionPayload = payload;
 
           // Capella and later forks have withdrawals on their ExecutionPayload
-          // TODO Capella: Remove this. It will come from the execution client.
           if (forkName === ForkName.capella || forkName === ForkName.eip4844) {
+            // TODO EIP-4844 Remove this when the EC includes `withdrawals`
             (blockBody as capella.BeaconBlockBody).executionPayload.withdrawals = [];
           }
 
           if (forkName === ForkName.eip4844) {
-            // Our Geth fork omits 0s? Because it expects protobuf to fill with default?
-            if (!((blockBody as eip4844.BeaconBlockBody).executionPayload as eip4844.ExecutionPayload).excessDataGas) {
-              ((blockBody as eip4844.BeaconBlockBody)
-                .executionPayload as eip4844.ExecutionPayload).excessDataGas = BigInt(0);
-            }
-
             const blobsBundle = await this.executionEngine.getBlobsBundle(payloadId);
 
             // TODO EIP-4844:  Optional (do it in a follow-up): sanity-check that the KZG commitments match blob contents as described by the spec

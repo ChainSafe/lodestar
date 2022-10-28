@@ -1,4 +1,4 @@
-import {RootHex, allForks} from "@lodestar/types";
+import {RootHex, allForks, capella, eip4844} from "@lodestar/types";
 import {BYTES_PER_LOGS_BLOOM, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {fromHex} from "@lodestar/utils";
 
@@ -424,14 +424,11 @@ type ExecutionPayloadRpc = {
   blockHash: DATA; // 32 bytes
   transactions: DATA[];
   withdrawals?: DATA[]; // Capella hardfork
+  excessDataGas?: QUANTITY; // EIP-4844
 };
 
 export function serializeExecutionPayload(data: allForks.ExecutionPayload): ExecutionPayloadRpc {
-  // TODO: Implement Capella before 4844
-  // if ((data as capella.ExecutionPayload).withdrawals !== undefined) {
-  //   throw Error("Capella Not implemented");
-  // }
-  return {
+  const payload: ExecutionPayloadRpc = {
     parentHash: bytesToData(data.parentHash),
     feeRecipient: bytesToData(data.feeRecipient),
     stateRoot: bytesToData(data.stateRoot),
@@ -447,14 +444,23 @@ export function serializeExecutionPayload(data: allForks.ExecutionPayload): Exec
     blockHash: bytesToData(data.blockHash),
     transactions: data.transactions.map((tran) => bytesToData(tran)),
   };
+
+  // Capella adds withdrawals to the ExecutionPayload
+  if ((data as capella.ExecutionPayload).withdrawals !== undefined) {
+    // TODO Capella
+    payload.withdrawals = [];
+  }
+
+  // EIP-4844 adds excessDataGas to the ExecutionPayload
+  if ((data as eip4844.ExecutionPayload).excessDataGas !== undefined) {
+    payload.excessDataGas = numToQuantity((data as eip4844.ExecutionPayload).excessDataGas);
+  }
+
+  return payload;
 }
 
 export function parseExecutionPayload(data: ExecutionPayloadRpc): allForks.ExecutionPayload {
-  // TODO: Implement Capella before 4844
-  // if (data.withdrawals !== undefined) {
-  //   throw Error("Capella Not implemented");
-  // }
-  return {
+  const payload = {
     parentHash: dataToBytes(data.parentHash, 32),
     feeRecipient: dataToBytes(data.feeRecipient, 20),
     stateRoot: dataToBytes(data.stateRoot, 32),
@@ -470,6 +476,19 @@ export function parseExecutionPayload(data: ExecutionPayloadRpc): allForks.Execu
     blockHash: dataToBytes(data.blockHash, 32),
     transactions: data.transactions.map((tran) => dataToBytes(tran)),
   };
+
+  // Capella adds withdrawals to the ExecutionPayload
+  if (data.withdrawals) {
+    // TODO Capella
+    (payload as capella.ExecutionPayload).withdrawals = [];
+  }
+
+  // EIP-4844 adds excessDataGas to the ExecutionPayload
+  if (data.excessDataGas) {
+    (payload as eip4844.ExecutionPayload).excessDataGas = BigInt(data.excessDataGas);
+  }
+
+  return payload;
 }
 
 type EngineRequestKey = keyof EngineApiRpcParamTypes;
