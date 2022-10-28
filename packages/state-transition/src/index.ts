@@ -8,6 +8,8 @@ export {
   CachedBeaconStatePhase0,
   CachedBeaconStateAltair,
   CachedBeaconStateBellatrix,
+  CachedBeaconStateCapella,
+  CachedBeaconState4844,
   CachedBeaconStateAllForks,
   CachedBeaconStateExecutions,
   // Non-cached states

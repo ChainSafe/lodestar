@@ -10,6 +10,8 @@ export type ExecutionPayloadHeader = ValueOf<typeof ssz.ExecutionPayloadHeader>;
 export type BeaconBlockBody = ValueOf<typeof ssz.BeaconBlockBody>;
 export type BeaconBlock = ValueOf<typeof ssz.BeaconBlock>;
 export type SignedBeaconBlock = ValueOf<typeof ssz.SignedBeaconBlock>;
+export type SignedBeaconBlockAndBlobsSidecar = ValueOf<typeof ssz.SignedBeaconBlockAndBlobsSidecar>;
+
 export type BeaconState = ValueOf<typeof ssz.BeaconState>;
 
 export type BlindedBeaconBlockBody = ValueOf<typeof ssz.BlindedBeaconBlockBody>;

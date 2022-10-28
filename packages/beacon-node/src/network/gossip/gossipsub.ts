@@ -197,6 +197,9 @@ export class Eth2Gossipsub extends GossipSub {
 
   async publishBeaconBlock(signedBlock: allForks.SignedBeaconBlock): Promise<void> {
     const fork = this.config.getForkName(signedBlock.message.slot);
+    console.log(`Publishing beacon block for fork: ${fork}`);
+
+    // TODO: For EIP-4844, switch this to GossipType.beacon_block_and_blobs_sidecar
     await this.publishObject<GossipType.beacon_block>({type: GossipType.beacon_block, fork}, signedBlock);
   }
 

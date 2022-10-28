@@ -58,6 +58,7 @@ function stringifyGossipTopicType(topic: GossipTopic): string {
     case GossipType.sync_committee_contribution_and_proof:
     case GossipType.light_client_finality_update:
     case GossipType.light_client_optimistic_update:
+    case GossipType.beacon_block_and_blobs_sidecar:
       return topic.type;
     case GossipType.beacon_attestation:
     case GossipType.sync_committee:
