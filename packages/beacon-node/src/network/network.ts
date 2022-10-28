@@ -390,9 +390,9 @@ export class Network implements INetwork {
   };
 
   private waitOneThirdOfSlot = async (slot: number): Promise<void> => {
-    const minPubTime = computeTimeAtSlot(this.config, slot, this.chain.genesisTime) + this.config.SECONDS_PER_SLOT / 3;
-    const waitTime = minPubTime - Date.now() / 1000;
-    await sleep(waitTime, this.signal);
+    const secAtSlot = computeTimeAtSlot(this.config, slot + 1 / 3, this.chain.genesisTime);
+    const msToSlot = secAtSlot * 1000 - Date.now();
+    await sleep(msToSlot, this.signal);
   };
 
   // full nodes with at least one validator assigned to the current sync committee at the block's slot SHOULD broadcast
