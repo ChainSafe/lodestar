@@ -1,6 +1,7 @@
 import {expect} from "chai";
 import {routes} from "@lodestar/api/beacon";
 import {Epoch} from "@lodestar/types";
+import {MAX_COMMITTEES_PER_SLOT} from "@lodestar/params";
 import {SimulationEnvironment} from "./SimulationEnvironment.js";
 
 export function nodeAssertions(env: SimulationEnvironment): void {
@@ -19,32 +20,19 @@ export function nodeAssertions(env: SimulationEnvironment): void {
         );
       });
 
-      it("should have correct number of validator clients", async () => {
-        expect(node.validatorClients).to.have.lengthOf(
-          env.params.validatorClients,
-          `node should have correct number of validator clients. ${JSON.stringify({id: node.id})}`
+      it("should have correct keys loaded", async () => {
+        const keyManagerKeys = (await node.keyManager.listKeys()).data.map((k) => k.validatingPubkey).sort();
+        const existingKeys = node.secretKeys.map((k) => k.toPublicKey().toHex()).sort();
+
+        expect(keyManagerKeys).to.eql(
+          existingKeys,
+          `Validator should have correct number of keys loaded. ${JSON.stringify({
+            id: node.id,
+            existingKeys,
+            keyManagerKeys,
+          })}`
         );
       });
-
-      for (const validator of node.validatorClients) {
-        describe(validator.id, () => {
-          it("should have correct keys loaded", async () => {
-            const keyManagerKeys = (await validator.keyManagerApi.listKeys()).data
-              .map((k) => k.validatingPubkey)
-              .sort();
-            const existingKeys = validator.secretKeys.map((k) => k.toPublicKey().toHex()).sort();
-
-            expect(keyManagerKeys).to.eql(
-              existingKeys,
-              `Validator should have correct number of keys loaded. ${JSON.stringify({
-                id: validator.id,
-                existingKeys,
-                keyManagerKeys,
-              })}`
-            );
-          });
-        });
-      }
     });
   }
 }
@@ -164,18 +152,24 @@ export function attestationPerSlotAssertions(env: SimulationEnvironment, epoch: 
 
       for (let slot = startSlot; slot <= endSlot; slot++) {
         it(`should have higher attestation count for slot "${slot}"`, () => {
-          const attestationsCount = env.tracker.slotMeasures.get(node.id)?.get(slot)?.attestationsCount;
+          const attestationsCount = env.tracker.slotMeasures.get(node.id)?.get(slot)?.attestationsCount ?? 0;
+          // Inclusion delay for future slot
+          const nextSlotInclusionDelay = env.tracker.slotMeasures.get(node.id)?.get(slot + 1)?.inclusionDelay ?? 0;
 
-          expect(attestationsCount).to.gte(
-            env.expectedMinAttestationCount,
-            `node has lower attestations count. ${JSON.stringify({
-              id: node.id,
-              slot,
-              epoch,
-              attestationsCount,
-              expectedMinAttestationCount: env.expectedMinAttestationCount,
-            })}`
-          );
+          // If some attestations are not included, probably will be included in next slot.
+          // In that case next slot inclusion delay will be higher than expected.
+          if (attestationsCount < MAX_COMMITTEES_PER_SLOT && nextSlotInclusionDelay <= env.expectedMaxInclusionDelay) {
+            expect(attestationsCount).to.gte(
+              env.expectedMinAttestationCount,
+              `node has lower attestations count. ${JSON.stringify({
+                id: node.id,
+                slot,
+                epoch,
+                attestationsCount,
+                expectedMinAttestationCount: env.expectedMinAttestationCount,
+              })}`
+            );
+          }
         });
       }
     });
