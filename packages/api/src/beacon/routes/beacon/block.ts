@@ -2,6 +2,8 @@ import {ContainerType} from "@chainsafe/ssz";
 import {ForkName} from "@lodestar/params";
 import {IChainForkConfig} from "@lodestar/config";
 import {phase0, allForks, Slot, Root, ssz, RootHex} from "@lodestar/types";
+import {SignedBeaconBlockAndBlobsSidecar} from "@lodestar/types/eip4844";
+import {SignedBeaconBlockAndBlobsSidecar as BlockWithBlobsSsz} from "@lodestar/types/eip4844/sszTypes";
 
 import {
   RoutesData,
@@ -104,11 +106,14 @@ export type Api = {
    * @returns any The block was validated successfully and has been broadcast. It has also been integrated into the beacon node's database.
    */
   publishBlock(block: allForks.SignedBeaconBlock): Promise<void>;
+
   /**
    * Publish a signed blinded block by submitting it to the mev relay and patching in the block
    * transactions beacon node gets in response.
    */
   publishBlindedBlock(block: allForks.SignedBlindedBeaconBlock): Promise<void>;
+
+  publishBlockWithBlobs(blockWithBlobs: SignedBeaconBlockAndBlobsSidecar): Promise<void>;
 };
 
 /**
@@ -122,6 +127,7 @@ export const routesData: RoutesData<Api> = {
   getBlockHeaders: {url: "/eth/v1/beacon/headers", method: "GET"},
   getBlockRoot: {url: "/eth/v1/beacon/blocks/{block_id}/root", method: "GET"},
   publishBlock: {url: "/eth/v1/beacon/blocks", method: "POST"},
+  publishBlockWithBlobs: {url: "/eth/v1/beacon/blocksWithBlobs", method: "POST"},
   publishBlindedBlock: {url: "/eth/v1/beacon/blinded_blocks", method: "POST"},
 };
 
@@ -137,6 +143,7 @@ export type ReqTypes = {
   getBlockHeaders: {query: {slot?: number; parent_root?: string}};
   getBlockRoot: BlockIdOnlyReq;
   publishBlock: {body: unknown};
+  publishBlockWithBlobs: {body: unknown};
   publishBlindedBlock: {body: unknown};
 };
 
@@ -154,6 +161,11 @@ export function getReqSerializers(config: IChainForkConfig): ReqSerializers<Api,
   const AllForksSignedBeaconBlock: TypeJson<allForks.SignedBeaconBlock> = {
     toJson: (data) => getSignedBeaconBlockType(data).toJson(data),
     fromJson: (data) => getSignedBeaconBlockType((data as unknown) as allForks.SignedBeaconBlock).fromJson(data),
+  };
+
+  const SignedBeaconBlockWithBlobs: TypeJson<SignedBeaconBlockAndBlobsSidecar> = {
+    toJson: (data) => BlockWithBlobsSsz.toJson(data),
+    fromJson: (data) => BlockWithBlobsSsz.fromJson(data),
   };
 
   const getSignedBlindedBeaconBlockType = (
@@ -179,6 +191,7 @@ export function getReqSerializers(config: IChainForkConfig): ReqSerializers<Api,
     },
     getBlockRoot: blockIdOnlyReq,
     publishBlock: reqOnlyBody(AllForksSignedBeaconBlock, Schema.Object),
+    publishBlockWithBlobs: reqOnlyBody(SignedBeaconBlockWithBlobs, Schema.Object),
     publishBlindedBlock: reqOnlyBody(AllForksSignedBlindedBeaconBlock, Schema.Object),
   };
 }

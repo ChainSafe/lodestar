@@ -1,9 +1,15 @@
 import {ValueOf} from "@chainsafe/ssz";
 import * as ssz from "./sszTypes.js";
 
+export type KZGProof = ValueOf<typeof ssz.KZGProof>;
 export type KZGCommitment = ValueOf<typeof ssz.KZGCommitment>;
 export type Blob = ValueOf<typeof ssz.Blob>;
+export type Blobs = ValueOf<typeof ssz.Blobs>;
+export type BlobsSidecar = ValueOf<typeof ssz.BlobsSidecar>;
 export type BlobKzgCommitments = ValueOf<typeof ssz.BlobKzgCommitments>;
+export type Polynomial = ValueOf<typeof ssz.Polynomial>;
+export type PolynomialAndCommitment = ValueOf<typeof ssz.PolynomialAndCommitment>;
+export type BLSFieldElement = ValueOf<typeof ssz.BLSFieldElement>;
 
 export type ExecutionPayload = ValueOf<typeof ssz.ExecutionPayload>;
 export type ExecutionPayloadHeader = ValueOf<typeof ssz.ExecutionPayloadHeader>;

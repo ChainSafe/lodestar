@@ -1,12 +1,14 @@
-import {BLSPubkey, Slot, BLSSignature, allForks, bellatrix, isBlindedBeaconBlock} from "@lodestar/types";
+import {BLSPubkey, Slot, BLSSignature, allForks, bellatrix, isBlindedBeaconBlock, eip4844} from "@lodestar/types";
 import {IChainForkConfig} from "@lodestar/config";
-import {ForkName} from "@lodestar/params";
+import {ForkName, ForkSeq} from "@lodestar/params";
 import {extendError, prettyBytes} from "@lodestar/utils";
 import {toHexString} from "@chainsafe/ssz";
 import {Api} from "@lodestar/api";
+import {SignedBeaconBlockAndBlobsSidecar} from "@lodestar/types/eip4844/sszTypes";
 import {IClock, ILoggerVc} from "../util/index.js";
 import {PubkeyHex} from "../types.js";
 import {Metrics} from "../metrics.js";
+import {getBlobsSidecar} from "../util/polynomialCommitments.js";
 import {ValidatorStore} from "./validatorStore.js";
 import {BlockDutiesService, GENESIS_SLOT} from "./blockDuties.js";
 
@@ -76,7 +78,7 @@ export class BlockProposingService {
       const isBuilderEnabled = this.validatorStore.isBuilderEnabled(pubkeyHex);
       const expectedFeeRecipient = this.validatorStore.getFeeRecipient(pubkeyHex);
 
-      const block = await this.produceBlockWrapper(slot, randaoReveal, graffiti, {
+      const {block, blockDebugLogCtx, blobs} = await this.produceBlockWrapper(slot, randaoReveal, graffiti, {
         expectedFeeRecipient,
         strictFeeRecipientCheck,
         isBuilderEnabled,
@@ -85,18 +87,29 @@ export class BlockProposingService {
         throw extendError(e, "Failed to produce block");
       });
 
-      this.logger.debug("Produced block", {...debugLogCtx, ...block.debugLogCtx});
+      this.logger.debug("Produced block", {...debugLogCtx, ...blockDebugLogCtx});
       this.metrics?.blocksProduced.inc();
 
-      const signedBlock = await this.validatorStore.signBlock(pubkey, block.data, slot);
+      const signedBlock = await this.validatorStore.signBlock(pubkey, block, slot);
 
       this.metrics?.proposerStepCallPublishBlock.observe(this.clock.secFromSlot(slot));
 
-      await this.publishBlockWrapper(signedBlock).catch((e: Error) => {
+      const onPublishError = (e: Error): void => {
         this.metrics?.blockProposingErrors.inc({error: "publish"});
         throw extendError(e, "Failed to publish block");
-      });
-      this.logger.info("Published block", {...logCtx, graffiti, ...block.debugLogCtx});
+      };
+
+      if (this.config.getForkSeq(block.slot) >= ForkSeq.eip4844) {
+        const signedBlockWithBlobs = SignedBeaconBlockAndBlobsSidecar.defaultValue();
+        signedBlockWithBlobs.beaconBlock = signedBlock;
+        signedBlockWithBlobs.blobsSidecar = getBlobsSidecar(this.config, block, blobs);
+        // TODO EIP-4844: Blinded blocks??? No clue!
+        await this.api.beacon.publishBlockWithBlobs(signedBlockWithBlobs).catch(onPublishError);
+      } else {
+        await this.publishBlockWrapper(signedBlock).catch(onPublishError);
+      }
+
+      this.logger.info("Published block", {...logCtx, graffiti, ...blockDebugLogCtx});
       this.metrics?.blocksPublished.inc();
     } catch (e) {
       this.logger.error("Error proposing block", logCtx, e as Error);
@@ -104,7 +117,6 @@ export class BlockProposingService {
   }
 
   private publishBlockWrapper = async (signedBlock: allForks.FullOrBlindedSignedBeaconBlock): Promise<void> => {
-    console.log("Validator is calling beacon node API to publish signed block", signedBlock.message);
     return isBlindedBeaconBlock(signedBlock.message)
       ? this.api.beacon.publishBlindedBlock(signedBlock as bellatrix.SignedBlindedBeaconBlock)
       : this.api.beacon.publishBlock(signedBlock as allForks.SignedBeaconBlock);
@@ -119,7 +131,11 @@ export class BlockProposingService {
       strictFeeRecipientCheck,
       isBuilderEnabled,
     }: {expectedFeeRecipient: string; strictFeeRecipientCheck: boolean; isBuilderEnabled: boolean}
-  ): Promise<{data: allForks.FullOrBlindedBeaconBlock} & {debugLogCtx: Record<string, string>}> => {
+  ): Promise<{
+    block: allForks.FullOrBlindedBeaconBlock;
+    blockDebugLogCtx: Record<string, string>;
+    blobs: eip4844.Blobs;
+  }> => {
     // TODO EIP-4844: How does 4844 interact with the Builder API?
     const blindedBlockPromise = isBuilderEnabled
       ? this.api.validator.produceBlindedBlock(slot, randaoReveal, graffiti).catch((e: Error) => {
@@ -137,13 +153,14 @@ export class BlockProposingService {
 
     const blindedBlock = await blindedBlockPromise;
     const fullBlock = await fullBlockPromise;
+    const blobs: eip4844.Blobs = [];
 
     // A metric on the choice between blindedBlock and normal block can be applied
     if (blindedBlock) {
-      const debugLogCtx = {source: "builder"};
-      return {...blindedBlock, debugLogCtx};
+      const blockDebugLogCtx = {source: "builder"};
+      return {block: blindedBlock.data, blockDebugLogCtx, blobs};
     } else {
-      const debugLogCtx = {source: "engine"};
+      const blockDebugLogCtx = {source: "engine"};
       if (!fullBlock) {
         throw Error("Failed to produce engine or builder block");
       }
@@ -165,10 +182,9 @@ export class BlockProposingService {
         if (feeRecipient !== expectedFeeRecipient && strictFeeRecipientCheck) {
           throw Error(`Invalid feeRecipient=${feeRecipient}, expected=${expectedFeeRecipient}`);
         }
-        Object.assign(debugLogCtx, {feeRecipient});
+        Object.assign(blockDebugLogCtx, {feeRecipient});
       }
-      return {...fullBlock, debugLogCtx};
-      // throw Error("random")
+      return {block: fullBlock.data, blockDebugLogCtx, blobs};
     }
   };
 
