@@ -84,5 +84,8 @@
     "typescript": "4.7.4",
     "typescript-docs-verifier": "^2.3.0",
     "webpack": "^5.74.0"
+  },
+  "resolutions": {
+    "**/@multiformats/multiaddr/is-ip": "4.0.0"
   }
 }
