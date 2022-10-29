@@ -5,20 +5,45 @@ import {ssz as phase0Ssz} from "../phase0/index.js";
 import {ssz as altairSsz} from "../altair/index.js";
 import {ssz as capellaSsz} from "../capella/index.js";
 
-const {UintNum64, Slot, Root, BLSSignature, UintBn256, Bytes32, Bytes48} = primitiveSsz;
+const {UintNum64, Slot, Root, BLSSignature, UintBn256, Bytes32, Bytes48, Bytes96} = primitiveSsz;
 
-// Custom Types
-// https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/beacon-chain.md#custom-types
+// Polynomial commitments
+// https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/polynomial-commitments.md
 
-export const VersionedHash = Bytes32;
+// Custom types
+// https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/polynomial-commitments.md#custom-types
+export const G1Point = Bytes48;
+export const G2Point = Bytes96;
+export const BLSFieldElement = Bytes32;
 export const KZGCommitment = Bytes48;
 export const KZGProof = Bytes48;
-export const BLSFieldElement = Bytes32;
+
+// Constants
+// https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/polynomial-commitments.md#constants
+
+// Scalar field modulus of BLS12-381
+export const BLS_MODULUS = BigInt("52435875175126190479447740508185965837690552500527637822603658699938581184513");
+
+// Roots of unity of order FIELD_ELEMENTS_PER_BLOB over the BLS12-381 field
+export const ROOTS_OF_UNITY = new ListCompositeType(BLSFieldElement, FIELD_ELEMENTS_PER_BLOB);
+
+// Beacon chain
+
+// Custom types
+// https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/beacon-chain.md#custom-types
+
 export const Blob = new ListCompositeType(BLSFieldElement, FIELD_ELEMENTS_PER_BLOB);
 export const Blobs = new ListCompositeType(Blob, MAX_BLOBS_PER_BLOCK);
+export const VersionedHash = Bytes32;
 export const BlobKzgCommitments = new ListCompositeType(KZGCommitment, MAX_BLOBS_PER_BLOCK);
 
 const excessDataGas = UintBn256;
+
+// Constants
+
+// TODO EIP-4844: Not sure where these should go
+// export const BLOB_TX_TYPE	uint8(0x05)
+// VERSIONED_HASH_VERSION_KZG	Bytes1(0x01)
 
 // Validator types
 // https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/validator.md
