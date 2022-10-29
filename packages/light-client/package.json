@@ -71,11 +71,20 @@
     "cross-fetch": "^3.1.4",
     "mitt": "^3.0.0"
   },
+  "devDependencies": {
+    "@types/yauzl": "^2.10.0"
+  },
   "keywords": [
     "ethereum",
     "eth-consensus",
     "beacon",
     "light-client",
     "blockchain"
-  ]
+  ],
+  "lavamoat": {
+    "allowScripts": {
+      "@chainsafe/bls>@chainsafe/blst": true,
+      "@lodestar/utils>bigint-buffer": true
+    }
+  }
 }
