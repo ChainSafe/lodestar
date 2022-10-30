@@ -16,7 +16,6 @@ import {
   getFinalizedRootProof,
   getCurrentSyncCommitteeBranch,
 } from "./proofs.js";
-import {PartialLightClientUpdate} from "./types.js";
 
 export type LightClientServerOpts = {
   disableLightClientServerOnImportBlockHead?: boolean;
@@ -285,53 +284,11 @@ export class LightClientServer {
    */
   async getUpdate(period: number): Promise<altair.LightClientUpdate> {
     // Signature data
-    const partialUpdate = await this.db.bestPartialLightClientUpdate.get(period);
-    if (!partialUpdate) {
-      throw new LightClientServerError(
-        {code: LightClientServerErrorCode.RESOURCE_UNAVAILABLE},
-        `No partialUpdate available for period ${period}`
-      );
+    const update = await this.db.bestLightClientUpdate.get(period);
+    if (!update) {
+      throw Error(`No partialUpdate available for period ${period}`);
     }
-
-    const syncCommitteeWitnessBlockRoot = partialUpdate.blockRoot;
-
-    const syncCommitteeWitness = await this.db.syncCommitteeWitness.get(syncCommitteeWitnessBlockRoot);
-    if (!syncCommitteeWitness) {
-      throw new LightClientServerError(
-        {code: LightClientServerErrorCode.RESOURCE_UNAVAILABLE},
-        `finalizedBlockRoot not available ${toHexString(syncCommitteeWitnessBlockRoot)}`
-      );
-    }
-
-    const nextSyncCommittee = await this.db.syncCommittee.get(syncCommitteeWitness.nextSyncCommitteeRoot);
-    if (!nextSyncCommittee) {
-      throw new LightClientServerError(
-        {code: LightClientServerErrorCode.RESOURCE_UNAVAILABLE},
-        "nextSyncCommittee not available"
-      );
-    }
-
-    if (partialUpdate.isFinalized) {
-      return {
-        attestedHeader: partialUpdate.attestedHeader,
-        nextSyncCommittee: nextSyncCommittee,
-        nextSyncCommitteeBranch: getNextSyncCommitteeBranch(syncCommitteeWitness),
-        finalizedHeader: partialUpdate.finalizedHeader,
-        finalityBranch: partialUpdate.finalityBranch,
-        syncAggregate: partialUpdate.syncAggregate,
-        signatureSlot: partialUpdate.signatureSlot,
-      };
-    } else {
-      return {
-        attestedHeader: partialUpdate.attestedHeader,
-        nextSyncCommittee: nextSyncCommittee,
-        nextSyncCommitteeBranch: getNextSyncCommitteeBranch(syncCommitteeWitness),
-        finalizedHeader: this.zero.finalizedHeader,
-        finalityBranch: this.zero.finalityBranch,
-        syncAggregate: partialUpdate.syncAggregate,
-        signatureSlot: partialUpdate.signatureSlot,
-      };
-    }
+    return update;
   }
 
   /**
@@ -537,61 +494,90 @@ export class LightClientServer {
     }
 
     // Check if this update is better, otherwise ignore
-    await this.maybeStoreNewBestPartialUpdate(syncPeriod, syncAggregate, signatureSlot, attestedData);
+    try {
+      await this.maybeStoreNewBestUpdate(syncPeriod, syncAggregate, signatureSlot, attestedData);
+    } catch (e) {
+      this.logger.error(
+        "Error updating best LightClientUpdate",
+        {syncPeriod, slot: attestedData.attestedHeader.slot, blockRoot: toHexString(attestedData.blockRoot)},
+        e as Error
+      );
+    }
   }
 
   /**
    * Given a new `syncAggregate` maybe persist a new best partial update if its better than the current stored for
    * that sync period.
    */
-  private async maybeStoreNewBestPartialUpdate(
+  private async maybeStoreNewBestUpdate(
     syncPeriod: SyncPeriod,
     syncAggregate: altair.SyncAggregate,
     signatureSlot: Slot,
     attestedData: SyncAttestedData
   ): Promise<void> {
-    const prevBestUpdate = await this.db.bestPartialLightClientUpdate.get(syncPeriod);
+    const prevBestUpdate = await this.db.bestLightClientUpdate.get(syncPeriod);
     if (prevBestUpdate && !isBetterUpdate(prevBestUpdate, syncAggregate, attestedData)) {
       this.metrics?.lightclientServer.updateNotBetter.inc();
       return;
     }
 
-    let newPartialUpdate: PartialLightClientUpdate;
+    const syncCommitteeWitness = await this.db.syncCommitteeWitness.get(attestedData.blockRoot);
+    if (!syncCommitteeWitness) {
+      throw Error(`syncCommitteeWitness not available at ${toHexString(attestedData.blockRoot)}`);
+    }
+    const nextSyncCommittee = await this.db.syncCommittee.get(syncCommitteeWitness.nextSyncCommitteeRoot);
+    if (!nextSyncCommittee) {
+      throw Error("nextSyncCommittee not available");
+    }
+    const nextSyncCommitteeBranch = getNextSyncCommitteeBranch(syncCommitteeWitness);
+    const finalizedHeader = attestedData.isFinalized
+      ? await this.getFinalizedHeader(attestedData.finalizedCheckpoint.root as Uint8Array)
+      : null;
 
-    if (attestedData.isFinalized) {
-      // If update if finalized retrieve the previously stored header from DB.
-      // Only checkpoint candidates are stored, and not all headers are guaranteed to be available
-      const finalizedCheckpointRoot = attestedData.finalizedCheckpoint.root as Uint8Array;
-      const finalizedHeader = await this.getFinalizedHeader(finalizedCheckpointRoot);
-      if (finalizedHeader && computeSyncPeriodAtSlot(finalizedHeader.slot) == syncPeriod) {
-        // If finalizedHeader is available (should be most times) create a finalized update
-        newPartialUpdate = {...attestedData, finalizedHeader, syncAggregate, signatureSlot};
-      } else {
-        // If finalizedHeader is not available (happens on startup) create a non-finalized update
-        newPartialUpdate = {...attestedData, isFinalized: false, syncAggregate, signatureSlot};
-      }
+    let newUpdate;
+    let isFinalized;
+    if (attestedData.isFinalized && finalizedHeader && computeSyncPeriodAtSlot(finalizedHeader.slot) == syncPeriod) {
+      isFinalized = true;
+      newUpdate = {
+        attestedHeader: attestedData.attestedHeader,
+        nextSyncCommittee: nextSyncCommittee,
+        nextSyncCommitteeBranch,
+        finalizedHeader,
+        finalityBranch: attestedData.finalityBranch,
+        syncAggregate,
+        signatureSlot,
+      };
     } else {
-      newPartialUpdate = {...attestedData, syncAggregate, signatureSlot};
+      isFinalized = false;
+      newUpdate = {
+        attestedHeader: attestedData.attestedHeader,
+        nextSyncCommittee: nextSyncCommittee,
+        nextSyncCommitteeBranch,
+        finalizedHeader: this.zero.finalizedHeader,
+        finalityBranch: this.zero.finalityBranch,
+        syncAggregate,
+        signatureSlot,
+      };
     }
 
     // attestedData and the block of syncAggregate may not be in same sync period
     // should not use attested data slot as sync period
     // see https://github.com/ChainSafe/lodestar/issues/3933
-    await this.db.bestPartialLightClientUpdate.put(syncPeriod, newPartialUpdate);
+    await this.db.bestLightClientUpdate.put(syncPeriod, newUpdate);
     this.logger.debug("Stored new PartialLightClientUpdate", {
       syncPeriod,
-      isFinalized: attestedData.isFinalized,
+      isFinalized,
       participation: sumBits(syncAggregate.syncCommitteeBits) / SYNC_COMMITTEE_SIZE,
     });
 
     // Count total persisted updates per type. DB metrics don't diff between each type.
     // The frequency of finalized vs non-finalized is critical to debug if finalizedHeader is not available
     this.metrics?.lightclientServer.onSyncAggregate.inc({
-      event: newPartialUpdate.isFinalized ? "store_finalized_update" : "store_nonfinalized_update",
+      event: isFinalized ? "store_finalized_update" : "store_nonfinalized_update",
     });
     this.metrics?.lightclientServer.highestSlot.set(
-      {item: newPartialUpdate.isFinalized ? "best_finalized_update" : "best_nonfinalized_update"},
-      newPartialUpdate.attestedHeader.slot
+      {item: isFinalized ? "best_finalized_update" : "best_nonfinalized_update"},
+      newUpdate.attestedHeader.slot
     );
   }
 
@@ -641,14 +627,21 @@ export class LightClientServer {
  * ```
  */
 export function isBetterUpdate(
-  prevUpdate: PartialLightClientUpdate,
+  prevUpdate: altair.LightClientUpdate,
   nextSyncAggregate: altair.SyncAggregate,
   nextSyncAttestedData: SyncAttestedData
 ): boolean {
   const nextBitCount = sumBits(nextSyncAggregate.syncCommitteeBits);
 
   // Finalized if participation is over 66%
-  if (!prevUpdate.isFinalized && nextSyncAttestedData.isFinalized && nextBitCount * 3 > SYNC_COMMITTEE_SIZE * 2) {
+  if (
+    ssz.altair.LightClientUpdate.fields["finalityBranch"].equals(
+      ssz.altair.LightClientUpdate.fields["finalityBranch"].defaultValue(),
+      prevUpdate.finalityBranch
+    ) &&
+    nextSyncAttestedData.isFinalized &&
+    nextBitCount * 3 > SYNC_COMMITTEE_SIZE * 2
+  ) {
     return true;
   }
 
