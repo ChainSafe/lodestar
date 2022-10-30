@@ -88,6 +88,7 @@
     "test:sim": "mocha 'test/sim/**/*.test.ts'",
     "test:sim:multiThread": "mocha 'test/sim/multiNodeMultiThread.test.ts'",
     "test:sim:merge-interop": "mocha 'test/sim/merge-interop.test.ts'",
+    "test:sim:mergemock": "mocha 'test/sim/mergemock.test.ts'",
     "download-spec-tests": "node --loader=ts-node/esm test/spec/downloadTests.ts",
     "check-spec-tests": "mocha test/spec/checkCoverage.ts",
     "test:spec-bls-general": "mocha --config .mocharc.spec.cjs 'test/spec/bls/**/*.test.ts' 'test/spec/general/**/*.test.ts'",
