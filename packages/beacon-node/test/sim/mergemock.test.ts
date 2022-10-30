@@ -1,15 +1,12 @@
 import fs from "node:fs";
 import {Context} from "mocha";
 import {fromHexString} from "@chainsafe/ssz";
-import {isExecutionStateType, isMergeTransitionComplete} from "@lodestar/state-transition";
 import {LogLevel, sleep, TimestampFormatCode} from "@lodestar/utils";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {IChainConfig} from "@lodestar/config";
 import {Epoch} from "@lodestar/types";
 import {ValidatorProposerConfig} from "@lodestar/validator";
 
-import {ExecutePayloadStatus} from "../../src/execution/engine/interface.js";
-import {ExecutionEngineHttp} from "../../src/execution/engine/http.js";
 import {ChainEvent} from "../../src/chain/index.js";
 import {testLogger, TestLoggerOpts} from "../utils/logger.js";
 import {getDevBeaconNode} from "../utils/node/beacon.js";
@@ -18,9 +15,7 @@ import {simTestInfoTracker} from "../utils/node/simTest.js";
 import {getAndInitDevValidators} from "../utils/node/validator.js";
 import {Eth1Provider} from "../../src/index.js";
 import {ZERO_HASH} from "../../src/constants/index.js";
-import {bytesToData, dataToBytes, quantityToNum} from "../../src/eth1/provider/utils.js";
-import {defaultExecutionEngineHttpOpts} from "../../src/execution/engine/http.js";
-import {runEL, ELStartMode, ELClient, sendTransaction, getBalance} from "../utils/runEl.js";
+import {runEL, ELStartMode, ELClient, sendTransaction} from "../utils/runEl.js";
 import {logFilesDir} from "./params.js";
 import {shell} from "./shell.js";
 
@@ -44,11 +39,8 @@ import {shell} from "./shell.js";
 
 // BELLATRIX_EPOCH will happen at 2 sec * 8 slots = 16 sec
 // 10 ttd / 2 difficulty per block = 5 blocks * 5 sec = 25 sec
-const terminalTotalDifficultyPreMerge = 10;
 const TX_SCENARIOS = process.env.TX_SCENARIOS?.split(",") || [];
 const jwtSecretHex = "0xdc6457099f127cf0bac78de8b297df04951281909db4f58b43def7c7151e765d";
-const retryAttempts = defaultExecutionEngineHttpOpts.retryAttempts;
-const retryDelay = defaultExecutionEngineHttpOpts.retryDelay;
 
 describe("executionEngine / ExecutionEngineHttp", function () {
   if (!process.env.EL_BINARY_DIR || !process.env.EL_SCRIPT_DIR) {
@@ -100,7 +92,6 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     });
   });
 
-
   async function runNodeWithEL(
     this: Context,
     {elClient, bellatrixEpoch, testName}: {elClient: ELClient; bellatrixEpoch: Epoch; testName: string}
@@ -108,7 +99,6 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     const {genesisBlockHash, ttd, engineRpcUrl, ethRpcUrl} = elClient;
     const validatorClientCount = 1;
     const validatorsPerClient = 32;
-    const event = ChainEvent.finalized;
 
     const testParams: Pick<IChainConfig, "SECONDS_PER_SLOT"> = {
       SECONDS_PER_SLOT: 2,
@@ -159,7 +149,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
         // Now eth deposit/merge tracker methods directly available on engine endpoints
         eth1: {enabled: false, providerUrls: [engineRpcUrl], jwtSecretHex},
         executionEngine: {urls: [engineRpcUrl], jwtSecretHex},
-        executionBuilder:{enabled: true,issueLocalFcUForBlockProduction: true},
+        executionBuilder: {enabled: true, issueLocalFcUForBlockProduction: true},
         chain: {suggestedFeeRecipient: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"},
       },
       validatorCount: validatorClientCount * validatorsPerClient,
@@ -167,7 +157,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       genesisTime,
       eth1BlockHash: fromHexString(genesisBlockHash),
     });
-    if(!bn.chain.executionBuilder){
+    if (!bn.chain.executionBuilder) {
       throw Error("executionBuilder should have been initialized");
     }
     // Enable builder by default, else because of circuit breaker we always start it with disabled
@@ -217,11 +207,10 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       });
     }
 
-    await new Promise<void>((resolve, reject) => {
+    await new Promise<void>((resolve, _reject) => {
       bn.chain.emitter.on(ChainEvent.clockEpoch, (epoch) => {
-
         // Resolve only if the finalized checkpoint includes execution payload
-        if (epoch>0) {
+        if (epoch > 0) {
           console.log(`\nGot event ${ChainEvent.clockEpoch}, stopping validators and nodes\n`);
           resolve();
         }
