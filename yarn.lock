@@ -516,6 +516,11 @@
   optionalDependencies:
     "@node-rs/crc32" "1.1.0"
 
+"@chainsafe/is-ip@^1.0.0":
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/@chainsafe/is-ip/-/is-ip-1.0.0.tgz#70ff63a042db4d3576514194f20adf478128ca02"
+  integrity sha512-aqilXiQWxvvbG8VamukkoDEZVX+mWDZSBgzcbkCnQ1cfhT1JqNUDdzUH145WPMqves/gawOmlWi3Bt0WC8pOJA==
+
 "@chainsafe/libp2p-gossipsub@^4.1.1":
   version "4.1.1"
   resolved "https://registry.yarnpkg.com/@chainsafe/libp2p-gossipsub/-/libp2p-gossipsub-4.1.1.tgz#804dbbd262900fd730339c40c46013ff854240af"
@@ -2346,15 +2351,15 @@
     varint "^6.0.0"
 
 "@multiformats/multiaddr@^11.0.0":
-  version "11.0.0"
-  resolved "https://registry.yarnpkg.com/@multiformats/multiaddr/-/multiaddr-11.0.0.tgz#a00166476548ab375533c93b997d2912ee14e343"
-  integrity sha512-NfOx/RF7TmGeCiQ5rmpvU7Ny7VKfmIG2jP2XSebTCv78vGuSRQ1YF+5UEKWft2Kjhtj1Xaq7dvgB9SeLp+BYSw==
+  version "11.0.6"
+  resolved "https://registry.yarnpkg.com/@multiformats/multiaddr/-/multiaddr-11.0.6.tgz#b342c5e4d8381d18b641b3239b8f2dcea27496a5"
+  integrity sha512-5TvEdCc5uFqcwGA+IwSw49swyHtUbwjhjwF3WQcV9vkzTv1C8oEWhoD2QcsiomDRk8rdqqRyDH6wlZExvLnxjw==
   dependencies:
+    "@chainsafe/is-ip" "^1.0.0"
     dns-over-http-resolver "^2.1.0"
     err-code "^3.0.1"
-    is-ip "^5.0.0"
-    multiformats "^9.4.5"
-    uint8arrays "^3.0.0"
+    multiformats "^10.0.0"
+    uint8arrays "^4.0.2"
     varint "^6.0.0"
 
 "@napi-rs/triples@^1.0.2":
@@ -5134,13 +5139,6 @@ clone-deep@^4.0.1:
     kind-of "^6.0.2"
     shallow-clone "^3.0.0"
 
-clone-regexp@^3.0.0:
-  version "3.0.0"
-  resolved "https://registry.yarnpkg.com/clone-regexp/-/clone-regexp-3.0.0.tgz#c6dd5c6b85482306778f3dc4ac2bb967079069c2"
-  integrity sha512-ujdnoq2Kxb8s3ItNBtnYeXdm07FcU0u8ARAT1lQ2YdMwQC+cdiXX8KoqMVuglztILivceTtp4ivqGSmEmhBUJw==
-  dependencies:
-    is-regexp "^3.0.0"
-
 clone-response@^1.0.2:
   version "1.0.2"
   resolved "https://registry.npmjs.org/clone-response/-/clone-response-1.0.2.tgz"
@@ -5450,11 +5448,6 @@ conventional-recommended-bump@^6.1.0:
     git-semver-tags "^4.1.1"
     meow "^8.0.0"
     q "^1.5.1"
-
-convert-hrtime@^5.0.0:
-  version "5.0.0"
-  resolved "https://registry.yarnpkg.com/convert-hrtime/-/convert-hrtime-5.0.0.tgz#f2131236d4598b95de856926a67100a0a97e9fa3"
-  integrity sha512-lOETlkIeYSJWcbbcvjRKGxVMXJR+8+OQb/mTPbA4ObPMytYIsUbuOE0Jzy60hjARYszq1id0j8KgVhC+WGZVTg==
 
 convert-source-map@^1.7.0:
   version "1.7.0"
@@ -7087,11 +7080,6 @@ function-bind@^1.1.1:
   resolved "https://registry.yarnpkg.com/function-bind/-/function-bind-1.1.1.tgz#a56899d3ea3c9bab874bb9773b7c5ede92f4895d"
   integrity sha512-yIovAzMX49sF8Yl58fSCWJ5svSLuaibPxXQJFLmBObTuCr0Mf1KiPopGM9NiFjiYBCbfaa2Fh6breQ6ANVTI0A==
 
-function-timeout@^0.1.0:
-  version "0.1.1"
-  resolved "https://registry.yarnpkg.com/function-timeout/-/function-timeout-0.1.1.tgz#6bf71d3d24c894d43b2bec312cabb8c5add2e9da"
-  integrity sha512-0NVVC0TaP7dSTvn1yMiy6d6Q8gifzbvQafO46RtLG/kHJUBNd+pVRGOBoK44wNBvtSPUJRfdVvkFdD3p0xvyZg==
-
 function.prototype.name@^1.1.5:
   version "1.1.5"
   resolved "https://registry.yarnpkg.com/function.prototype.name/-/function.prototype.name-1.1.5.tgz#cce0505fe1ffb80503e6f9e46cc64e46a12a9621"
@@ -8108,14 +8096,6 @@ is-ip@^4.0.0:
   dependencies:
     ip-regex "^5.0.0"
 
-is-ip@^5.0.0:
-  version "5.0.0"
-  resolved "https://registry.yarnpkg.com/is-ip/-/is-ip-5.0.0.tgz#1516ba75f1226550ff9b1ab50a0d47da27bd92a6"
-  integrity sha512-uhmKwcdWJ1nTmBdoBxdHilfJs4qdLBIvVHKRels2+UCZmfcfefuQWziadaYLpN7t/bUrJOjJHv+R1di1q7Q1HQ==
-  dependencies:
-    ip-regex "^5.0.0"
-    super-regex "^0.2.0"
-
 is-lambda@^1.0.1:
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/is-lambda/-/is-lambda-1.0.1.tgz#3d9877899e6a53efc0160504cde15f82e6f061d5"
@@ -8190,11 +8170,6 @@ is-regex@^1.1.2, is-regex@^1.1.4:
   dependencies:
     call-bind "^1.0.2"
     has-tostringtag "^1.0.0"
-
-is-regexp@^3.0.0:
-  version "3.1.0"
-  resolved "https://registry.yarnpkg.com/is-regexp/-/is-regexp-3.1.0.tgz#0235eab9cda5b83f96ac4a263d8c32c9d5ad7422"
-  integrity sha512-rbku49cWloU5bSMI+zaRaXdQHXnthP6DZ/vLnfdSKyL4zUzuWnomtOEiZZOd+ioQ+avFo/qau3KPTc7Fjy1uPA==
 
 is-shared-array-buffer@^1.0.2:
   version "1.0.2"
@@ -9762,6 +9737,11 @@ multicast-dns@^7.2.0:
   dependencies:
     dns-packet "^4.0.0"
     thunky "^1.0.2"
+
+multiformats@^10.0.0:
+  version "10.0.2"
+  resolved "https://registry.yarnpkg.com/multiformats/-/multiformats-10.0.2.tgz#e549ae833dac77edb534bece4adf1d1a214879f0"
+  integrity sha512-nJEHLFOYhO4L+aNApHhCnWqa31FyqAHv9Q77AhmwU3KsM2f1j7tuJpCk5ByZ33smzycNCpSG5klNIejIyfFx2A==
 
 multiformats@^9.4.2, multiformats@^9.4.5:
   version "9.9.0"
@@ -12399,15 +12379,6 @@ sumchecker@^3.0.1:
   dependencies:
     debug "^4.1.0"
 
-super-regex@^0.2.0:
-  version "0.2.0"
-  resolved "https://registry.yarnpkg.com/super-regex/-/super-regex-0.2.0.tgz#dc1e071e55cdcf56930eb6271f73653a655b2642"
-  integrity sha512-WZzIx3rC1CvbMDloLsVw0lkZVKJWbrkJ0k1ghKFmcnPrW1+jWbgTkTEWVtD9lMdmI4jZEz40+naBxl1dCUhXXw==
-  dependencies:
-    clone-regexp "^3.0.0"
-    function-timeout "^0.1.0"
-    time-span "^5.1.0"
-
 superagent@^8.0.0:
   version "8.0.0"
   resolved "https://registry.yarnpkg.com/superagent/-/superagent-8.0.0.tgz#2ea4587df4b81ef023ec01ebc6e1bcb9e2344cb6"
@@ -12653,13 +12624,6 @@ thunky@^1.0.2:
   version "1.1.0"
   resolved "https://registry.npmjs.org/thunky/-/thunky-1.1.0.tgz"
   integrity sha512-eHY7nBftgThBqOyHGVN+l8gF0BucP09fMo0oO/Lb0w1OF80dJv+lDVpXG60WMQvkcxAkNybKsrEIE3ZtKGmPrA==
-
-time-span@^5.1.0:
-  version "5.1.0"
-  resolved "https://registry.yarnpkg.com/time-span/-/time-span-5.1.0.tgz#80c76cf5a0ca28e0842d3f10a4e99034ce94b90d"
-  integrity sha512-75voc/9G4rDIJleOo4jPvN4/YC4GRZrY8yy1uU4lwrB3XEQbWve8zXoO5No4eFrGcTAMYyoY67p8jRQdtA1HbA==
-  dependencies:
-    convert-hrtime "^5.0.0"
 
 timeout-abort-controller@^3.0.0:
   version "3.0.0"
@@ -13003,6 +12967,13 @@ uint8arrays@^3.0.0, uint8arrays@^3.1.0:
   integrity sha512-ei5rfKtoRO8OyOIor2Rz5fhzjThwIHJZ3uyDPnDHTXbP0aMQ1RN/6AI5B5d9dBxJOU+BvOAk7ZQ1xphsX8Lrog==
   dependencies:
     multiformats "^9.4.2"
+
+uint8arrays@^4.0.2:
+  version "4.0.2"
+  resolved "https://registry.yarnpkg.com/uint8arrays/-/uint8arrays-4.0.2.tgz#163bdbcf3f7403b0781754e0436c268548b237c2"
+  integrity sha512-8CWXXZdOvVrIL4SeY/Gnp+idxxiGK4XFkP4FY26Sx/fpTz/b6vv4BVWELMDzQweSyyhdcuAcU14H6izzB6k1Cw==
+  dependencies:
+    multiformats "^10.0.0"
 
 unbox-primitive@^1.0.0, unbox-primitive@^1.0.2:
   version "1.0.2"
