@@ -27,7 +27,7 @@ export function upgradeStateToCapella(stateBellatrix: CachedBeaconStateBellatrix
   // eth1_data                        | -    | eth1_data
   // eth1_data_votes                  | -    | eth1_data_votes
   // eth1_deposit_index               | -    | eth1_deposit_index
-  // validators                       | diff | validators
+  // validators                       | -    | validators
   // balances                         | -    | balances
   // randao_mixes                     | -    | randao_mixes
   // slashings                        | -    | slashings
@@ -56,12 +56,6 @@ export function upgradeStateToCapella(stateBellatrix: CachedBeaconStateBellatrix
     epoch: stateBellatrix.epochCtx.epoch,
   });
 
-  // Upgrade the validators, this validator change is not present in latest specs but in 1.2.0
-  // so just set it to 0 and cleanup later
-  for (let i = 0; i < stateCapella.validators.length; i++) {
-    const validator = stateCapella.validators.get(i);
-    validator.fullyWithdrawnEpoch = Infinity;
-  }
   // Nothing to do for latestExecutionPayloadHeader as the root is set to 0 by default
   stateCapella.withdrawalQueue = ssz.capella.WithdrawalQueue.defaultViewDU();
   // nextWithdrawalIndex and nextPartialWithdrawalValidatorIndex are also set to 0 by default
