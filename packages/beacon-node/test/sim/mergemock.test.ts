@@ -19,27 +19,13 @@ import {runEL, ELStartMode, ELClient, sendTransaction} from "../utils/runEl.js";
 import {logFilesDir} from "./params.js";
 import {shell} from "./shell.js";
 
-// NOTE: Must specify
-// EL_BINARY_DIR: File path to locate the EL executable
-// EL_SCRIPT_DIR: Directory in packages/beacon-node for the EL client, from where to
-// execute post-merge/pre-merge EL scenario scripts
-// ETH_PORT: EL port on localhost hosting non auth protected eth_ methods
-// ENGINE_PORT: Specify the port on which an jwt auth protected engine api is being hosted,
-//   typically by default at 8551 for geth. Some ELs could host it as same port as eth_ apis,
-//   but just with the engine_ methods protected. In that case this param can be skipped
-// TX_SCENARIOS: comma seprated transaction scenarios this EL client build supports
-// Example:
-// ```
-// $ EL_BINARY_DIR=/home/lion/Code/eth2.0/merge-interop/go-ethereum/build/bin \
-//   EL_SCRIPT_DIR=geth ETH_PORT=8545 ENGINE_PORT=8551 TX_SCENARIOS=simple \
-//   ../../node_modules/.bin/mocha test/sim/merge.test.ts
+// NOTE: How to run
+// EL_BINARY_DIR=g11tech/mergemock:latest EL_SCRIPT_DIR=mergemock LODESTAR_PRESET=mainnet \
+// ETH_PORT=8661 ENGINE_PORT=8551 yarn mocha test/sim/mergemock.test.ts
 // ```
 
 /* eslint-disable no-console, @typescript-eslint/naming-convention, quotes */
 
-// BELLATRIX_EPOCH will happen at 2 sec * 8 slots = 16 sec
-// 10 ttd / 2 difficulty per block = 5 blocks * 5 sec = 25 sec
-const TX_SCENARIOS = process.env.TX_SCENARIOS?.split(",") || [];
 const jwtSecretHex = "0xdc6457099f127cf0bac78de8b297df04951281909db4f58b43def7c7151e765d";
 
 describe("executionEngine / ExecutionEngineHttp", function () {
@@ -50,7 +36,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
   }
   this.timeout("10min");
 
-  const dataPath = fs.mkdtempSync("lodestar-test-mergemock");
+  const dataPath = fs.mkdtempSync("mergetests/lodestar-test-mergemock");
   const elSetupConfig = {
     elScriptDir: process.env.EL_SCRIPT_DIR,
     elBinaryDir: process.env.EL_BINARY_DIR,
@@ -106,7 +92,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
 
     // Should reach justification in 6 epochs max.
     // Merge block happens at epoch 2 slot 4. Then 4 epochs to finalize
-    const expectedEpochsToFinish = 6;
+    const expectedEpochsToFinish = 1;
     // 1 epoch of margin of error
     const epochsOfMargin = 1;
     const timeoutSetupMargin = 30 * 1000; // Give extra 30 seconds of margin
@@ -196,21 +182,10 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       await Promise.all(validators.map((v) => v.close()));
     });
 
-    if (TX_SCENARIOS.includes("simple")) {
-      // If bellatrixEpoch > 0, this is the case of pre-merge transaction submission on EL pow
-      await sendTransaction(ethRpcUrl, {
-        from: "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b",
-        to: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-        gas: "0x76c0",
-        gasPrice: "0x9184e72a000",
-        value: "0x9184e72a",
-      });
-    }
-
     await new Promise<void>((resolve, _reject) => {
       bn.chain.emitter.on(ChainEvent.clockEpoch, (epoch) => {
         // Resolve only if the finalized checkpoint includes execution payload
-        if (epoch > 0) {
+        if (epoch >= expectedEpochsToFinish) {
           console.log(`\nGot event ${ChainEvent.clockEpoch}, stopping validators and nodes\n`);
           resolve();
         }

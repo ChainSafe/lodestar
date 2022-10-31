@@ -1,4 +1,4 @@
-name: Sim merge tests
+name: Sim merge execution/builder tests
 
 on: 
   push:
@@ -69,7 +69,7 @@ jobs:
       - name: Pull mergemock
         run: docker pull $MERGEMOCK_IMAGE
 
-      - name: Test Lodestar <> mergemock
+      - name: Test Lodestar <> mergemock relay
         run: yarn test:sim:mergemock
         working-directory: packages/beacon-node
         env:
