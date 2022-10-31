@@ -14,12 +14,7 @@ import {
 
 import {ZERO_HASH} from "../constants/index.js";
 import {computeDomain, computeSigningRoot, increaseBalance} from "../util/index.js";
-import {
-  CachedBeaconStateAllForks,
-  CachedBeaconStatePhase0,
-  CachedBeaconStateCapella,
-  CachedBeaconStateAltair,
-} from "../types.js";
+import {CachedBeaconStateAllForks, CachedBeaconStateAltair} from "../types.js";
 
 /**
  * Process a Deposit operation. Potentially adds a new validator to the registry. Mutates the validators and balances
@@ -73,17 +68,17 @@ export function processDeposit(fork: ForkSeq, state: CachedBeaconStateAllForks, 
     // add validator and balance entries
     const effectiveBalance = Math.min(amount - (amount % EFFECTIVE_BALANCE_INCREMENT), MAX_EFFECTIVE_BALANCE);
     validators.push(
-        ssz.phase0.Validator.toViewDU({
-          pubkey,
-          withdrawalCredentials: deposit.data.withdrawalCredentials,
-          activationEligibilityEpoch: FAR_FUTURE_EPOCH,
-          activationEpoch: FAR_FUTURE_EPOCH,
-          exitEpoch: FAR_FUTURE_EPOCH,
-          withdrawableEpoch: FAR_FUTURE_EPOCH,
-          effectiveBalance,
-          slashed: false,
-        })
-      );
+      ssz.phase0.Validator.toViewDU({
+        pubkey,
+        withdrawalCredentials: deposit.data.withdrawalCredentials,
+        activationEligibilityEpoch: FAR_FUTURE_EPOCH,
+        activationEpoch: FAR_FUTURE_EPOCH,
+        exitEpoch: FAR_FUTURE_EPOCH,
+        withdrawableEpoch: FAR_FUTURE_EPOCH,
+        effectiveBalance,
+        slashed: false,
+      })
+    );
     state.balances.push(amount);
 
     const validatorIndex = validators.length - 1;
