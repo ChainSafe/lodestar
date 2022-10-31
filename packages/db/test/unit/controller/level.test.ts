@@ -113,8 +113,6 @@ describe("LevelDB controller", () => {
     expect(result.length).to.be.equal(2);
   });
 
-  // TODO Fails on any other platform part from Linux
-  // Issue here https://github.com/ChainSafe/lodestar/issues/4525
   it("test compactRange + approximateSize", async () => {
     const indexes = Array.from({length: 100}, (_, i) => i);
     const keys = indexes.map((i) => Buffer.from([i]));
