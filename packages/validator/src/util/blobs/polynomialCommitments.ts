@@ -1,15 +1,16 @@
 import {IChainForkConfig} from "@lodestar/config";
 import {blindedOrFullBlockHashTreeRoot} from "@lodestar/state-transition";
-import {allForks} from "@lodestar/types";
-import * as types from "@lodestar/types/eip4844";
+import {allForks, ssz} from "@lodestar/types";
 import {
+  Blob,
+  Blobs,
   BlobsSidecar,
   KZGCommitment,
   KZGProof,
   PolynomialAndCommitment,
   Polynomial,
   BLSFieldElement,
-} from "@lodestar/types/lib/eip4844/sszTypes";
+} from "@lodestar/types/eip4844";
 import {digest} from "@chainsafe/as-sha256";
 import {KZG_SETUP_LAGRANGE} from "./constants.js";
 import {bytesToBLSField, g1Lincomb} from "./bls.js";
@@ -21,14 +22,14 @@ import {bytesToBLSField, g1Lincomb} from "./bls.js";
 //     The output is not uniform over the BLS field.
 //     """
 //     return bytes_to_bls_field(hash(ssz_serialize(x)))
-export function hashToBlsField(x: types.PolynomialAndCommitment): types.BLSFieldElement {
-  return bytesToBLSField(digest(PolynomialAndCommitment.serialize(x)));
+export function hashToBlsField(x: PolynomialAndCommitment): BLSFieldElement {
+  return bytesToBLSField(digest(ssz.eip4844.PolynomialAndCommitment.serialize(x)));
 }
 
 // https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/polynomial-commitments.md#blob_to_kzg_commitment
 // def blob_to_kzg_commitment(blob: Blob) -> KZGCommitment:
 //     return g1_lincomb(bit_reversal_permutation(KZG_SETUP_LAGRANGE), blob)
-export function blobToKzgCommitment(blob: types.Blob): types.KZGCommitment {
+export function blobToKzgCommitment(blob: Blob): KZGCommitment {
   return g1Lincomb(KZG_SETUP_LAGRANGE, blob);
 }
 
@@ -54,13 +55,10 @@ export function blobToKzgCommitment(blob: types.Blob): types.KZGCommitment {
 //         result += div(int(polynomial[i]) * int(roots_of_unity_brp[i]), (z - roots_of_unity_brp[i]))
 //     result = result * (pow(z, width, BLS_MODULUS) - 1) * inverse_width % BLS_MODULUS
 //     return result
-export function evaluatePolynomialInEvaluationForm(
-  _polynomial: types.Polynomial,
-  _z: types.BLSFieldElement
-): types.BLSFieldElement {
+export function evaluatePolynomialInEvaluationForm(_polynomial: Polynomial, _z: BLSFieldElement): BLSFieldElement {
   // This is now in https://pkg.go.dev/github.com/protolambda/go-kzg@v0.0.0-20221025081131-f3a74d3b1d0c/bls?utm_source=gopls#EvaluatePolyInEvaluationForm
   // We will use a KZG library for this!
-  return BLSFieldElement.defaultValue();
+  return ssz.eip4844.BLSFieldElement.defaultValue();
 }
 
 // https://github.com/ethereum/consensus-specs/blob/3552e2f6e8cb62f6342733d135c9fe8eecd26ecf/specs/eip4844/polynomial-commitments.md#compute_kzg_proof
@@ -84,7 +82,7 @@ export function evaluatePolynomialInEvaluationForm(
 //     # Calculate quotient polynomial by doing point-by-point division
 //     quotient_polynomial = [div(a, b) for a, b in zip(polynomial_shifted, denominator_poly)]
 //     return KZGProof(g1_lincomb(bit_reversal_permutation(KZG_SETUP_LAGRANGE), quotient_polynomial))
-export function computeKzgProof(polynomial: types.Polynomial, z: types.BLSFieldElement): types.KZGProof {
+export function computeKzgProof(polynomial: Polynomial, z: BLSFieldElement): KZGProof {
   // const polynomialNumeric = polynomial.map(bytesToNumber);
   // const zed = bytesToNumber(z);
 
@@ -92,17 +90,17 @@ export function computeKzgProof(polynomial: types.Polynomial, z: types.BLSFieldE
   const _y = evaluatePolynomialInEvaluationForm(polynomial, z);
   // const polynomialShifted = polynomialNumeric.map((p) => (((p) - y) % BLS_MODULUS);
 
-  return KZGProof.defaultValue();
+  return ssz.eip4844.KZGProof.defaultValue();
 }
 
 // https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/validator.md#compute_aggregated_poly_and_commitment
 export function computeAggregatedPolynomialAndCommitment(
-  _blobs: types.Blobs,
-  _commitments: types.KZGCommitment[]
-): types.PolynomialAndCommitment {
-  const polynomialAndCommitment = PolynomialAndCommitment.defaultValue();
-  polynomialAndCommitment.polynomial = Polynomial.defaultValue();
-  polynomialAndCommitment.kzgCommitment = KZGCommitment.defaultValue();
+  _blobs: Blobs,
+  _commitments: KZGCommitment[]
+): PolynomialAndCommitment {
+  const polynomialAndCommitment = ssz.eip4844.PolynomialAndCommitment.defaultValue();
+  polynomialAndCommitment.polynomial = ssz.eip4844.Polynomial.defaultValue();
+  polynomialAndCommitment.kzgCommitment = ssz.eip4844.KZGCommitment.defaultValue();
 
   return polynomialAndCommitment;
 }
@@ -116,7 +114,7 @@ export function computeAggregatedPolynomialAndCommitment(
 //         kzg_commitment=aggregated_poly_commitment,
 //     ))
 //     return compute_kzg_proof(aggregated_poly, x)
-export function computeProofFromBlobs(blobs: types.Blobs): types.KZGProof {
+export function computeProofFromBlobs(blobs: Blobs): KZGProof {
   const commitments = blobs.map(blobToKzgCommitment);
   const aggregatedPolyAndCommitment = computeAggregatedPolynomialAndCommitment(blobs, commitments);
   const x = hashToBlsField(aggregatedPolyAndCommitment);
@@ -134,9 +132,9 @@ export function computeProofFromBlobs(blobs: types.Blobs): types.KZGProof {
 export function getBlobsSidecar(
   config: IChainForkConfig,
   block: allForks.FullOrBlindedBeaconBlock,
-  blobs: types.Blobs
-): types.BlobsSidecar {
-  const blobsSidecar = BlobsSidecar.defaultValue();
+  blobs: Blobs
+): BlobsSidecar {
+  const blobsSidecar = ssz.eip4844.BlobsSidecar.defaultValue();
 
   blobsSidecar.beaconBlockRoot = blindedOrFullBlockHashTreeRoot(config, block);
   blobsSidecar.beaconBlockSlot = block.slot;

@@ -124,6 +124,7 @@ export function parseGossipTopic(forkDigestContext: IForkDigestContext, topicStr
     switch (gossipTypeStr) {
       case GossipType.beacon_block:
       case GossipType.beacon_aggregate_and_proof:
+      case GossipType.beacon_block_and_blobs_sidecar:
       case GossipType.voluntary_exit:
       case GossipType.proposer_slashing:
       case GossipType.attester_slashing:

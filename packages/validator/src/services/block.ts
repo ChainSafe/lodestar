@@ -1,10 +1,9 @@
-import {BLSPubkey, Slot, BLSSignature, allForks, bellatrix, isBlindedBeaconBlock, eip4844} from "@lodestar/types";
+import {BLSPubkey, Slot, BLSSignature, allForks, bellatrix, isBlindedBeaconBlock, eip4844, ssz} from "@lodestar/types";
 import {IChainForkConfig} from "@lodestar/config";
 import {ForkName, ForkSeq} from "@lodestar/params";
 import {extendError, prettyBytes} from "@lodestar/utils";
 import {toHexString} from "@chainsafe/ssz";
 import {Api} from "@lodestar/api";
-import {SignedBeaconBlockAndBlobsSidecar} from "@lodestar/types/eip4844/sszTypes";
 import {IClock, ILoggerVc} from "../util/index.js";
 import {PubkeyHex} from "../types.js";
 import {Metrics} from "../metrics.js";
@@ -100,7 +99,7 @@ export class BlockProposingService {
       };
 
       if (this.config.getForkSeq(block.slot) >= ForkSeq.eip4844) {
-        const signedBlockWithBlobs = SignedBeaconBlockAndBlobsSidecar.defaultValue();
+        const signedBlockWithBlobs = ssz.eip4844.SignedBeaconBlockAndBlobsSidecar.defaultValue();
         signedBlockWithBlobs.beaconBlock = signedBlock as eip4844.SignedBeaconBlock;
         signedBlockWithBlobs.blobsSidecar = getBlobsSidecar(this.config, block, blobs);
 

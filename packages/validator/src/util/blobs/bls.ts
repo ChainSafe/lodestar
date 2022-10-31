@@ -1,8 +1,7 @@
 // https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/polynomial-commitments.md#bls12-381-helpers
 
 import {KZGCommitment, BLSFieldElement} from "@lodestar/types/eip4844";
-import * as ssz from "@lodestar/types/eip4844/sszTypes";
-import {Bytes32} from "@lodestar/types";
+import {Bytes32, ssz} from "@lodestar/types";
 import {bytesToBigInt, intToBytes, bigIntToBytes} from "@lodestar/utils";
 import {BLS_MODULUS} from "./constants.js";
 
@@ -52,7 +51,7 @@ export function g1Lincomb(points: KZGCommitment[], scalars: BLSFieldElement[]): 
     throw new Error("BLS multiscalar multiplication requires points length to match scalars length.");
   }
 
-  return ssz.KZGCommitment.defaultValue();
+  return ssz.eip4844.KZGCommitment.defaultValue();
 }
 
 // def vector_lincomb(vectors: Sequence[Sequence[BLSFieldElement]],

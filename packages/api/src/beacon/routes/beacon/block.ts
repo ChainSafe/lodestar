@@ -3,7 +3,6 @@ import {ForkName} from "@lodestar/params";
 import {IChainForkConfig} from "@lodestar/config";
 import {phase0, allForks, Slot, Root, ssz, RootHex} from "@lodestar/types";
 import {SignedBeaconBlockAndBlobsSidecar} from "@lodestar/types/eip4844";
-import {SignedBeaconBlockAndBlobsSidecar as BlockWithBlobsSsz} from "@lodestar/types/eip4844/sszTypes";
 
 import {
   RoutesData,
@@ -163,6 +162,7 @@ export function getReqSerializers(config: IChainForkConfig): ReqSerializers<Api,
     fromJson: (data) => getSignedBeaconBlockType((data as unknown) as allForks.SignedBeaconBlock).fromJson(data),
   };
 
+  const BlockWithBlobsSsz = ssz.eip4844.SignedBeaconBlockAndBlobsSidecar;
   const SignedBeaconBlockWithBlobs: TypeJson<SignedBeaconBlockAndBlobsSidecar> = {
     toJson: (data) => BlockWithBlobsSsz.toJson(data),
     fromJson: (data) => BlockWithBlobsSsz.fromJson(data),
