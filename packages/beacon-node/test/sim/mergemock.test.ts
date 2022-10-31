@@ -15,7 +15,7 @@ import {simTestInfoTracker} from "../utils/node/simTest.js";
 import {getAndInitDevValidators} from "../utils/node/validator.js";
 import {Eth1Provider} from "../../src/index.js";
 import {ZERO_HASH} from "../../src/constants/index.js";
-import {runEL, ELStartMode, ELClient, sendTransaction} from "../utils/runEl.js";
+import {runEL, ELStartMode, ELClient} from "../utils/runEl.js";
 import {logFilesDir} from "./params.js";
 import {shell} from "./shell.js";
 
@@ -36,7 +36,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
   }
   this.timeout("10min");
 
-  const dataPath = fs.mkdtempSync("mergetests/lodestar-test-mergemock");
+  const dataPath = fs.mkdtempSync("lodestar-test-mergemock");
   const elSetupConfig = {
     elScriptDir: process.env.EL_SCRIPT_DIR,
     elBinaryDir: process.env.EL_BINARY_DIR,
@@ -82,7 +82,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     this: Context,
     {elClient, bellatrixEpoch, testName}: {elClient: ELClient; bellatrixEpoch: Epoch; testName: string}
   ): Promise<void> {
-    const {genesisBlockHash, ttd, engineRpcUrl, ethRpcUrl} = elClient;
+    const {genesisBlockHash, ttd, engineRpcUrl} = elClient;
     const validatorClientCount = 1;
     const validatorsPerClient = 32;
 
