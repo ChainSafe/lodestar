@@ -61,6 +61,7 @@
     "@multiformats/multiaddr": "^11.0.0",
     "@lodestar/api": "^1.1.1",
     "@lodestar/beacon-node": "^1.1.1",
+    "@lodestar/light-client-p2p": "^1.1.1",
     "@lodestar/config": "^1.1.1",
     "@lodestar/db": "^1.1.1",
     "@lodestar/light-client": "^1.1.1",

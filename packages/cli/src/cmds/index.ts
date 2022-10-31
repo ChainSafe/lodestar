@@ -4,9 +4,11 @@ import {beacon} from "./beacon/index.js";
 import {dev} from "./dev/index.js";
 import {validator} from "./validator/index.js";
 import {lightclient} from "./lightclient/index.js";
+import {beaconLight} from "./lightclient-p2p/index.js";
 
 export const cmds: Required<ICliCommand<IGlobalArgs, Record<never, never>>>["subcommands"] = [
   beacon,
+  beaconLight,
   validator,
   lightclient,
   dev,
