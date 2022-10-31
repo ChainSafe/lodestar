@@ -293,9 +293,16 @@ export async function importBlock(
     const safeBlockHash = this.forkChoice.getJustifiedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
     const finalizedBlockHash = this.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
     if (headBlockHash !== ZERO_HASH_HEX) {
-      this.executionEngine.notifyForkchoiceUpdate(headBlockHash, safeBlockHash, finalizedBlockHash).catch((e) => {
-        this.logger.error("Error pushing notifyForkchoiceUpdate()", {headBlockHash, finalizedBlockHash}, e);
-      });
+      this.executionEngine
+        .notifyForkchoiceUpdate(
+          this.config.getForkSeq(this.forkChoice.getHead().slot),
+          headBlockHash,
+          safeBlockHash,
+          finalizedBlockHash
+        )
+        .catch((e) => {
+          this.logger.error("Error pushing notifyForkchoiceUpdate()", {headBlockHash, finalizedBlockHash}, e);
+        });
     }
   }
 

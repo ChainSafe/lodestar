@@ -19,7 +19,4 @@ pubKey="0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b"
 echo $JWT_SECRET_HEX> $DATA_DIR/jwtsecret
 # clear any previous docker dangling docker run
 docker rm -f custom-execution
-rm -rf $DATA_DIR/geth
-
-docker run --rm -u $(id -u ${USER}):$(id -g ${USER}) --name custom-execution -v $currentDir/$DATA_DIR:/data $EL_BINARY_DIR --datadir /data/geth init /data/genesis.json
-docker run --rm -u $(id -u ${USER}):$(id -g ${USER}) --name custom-execution -v $currentDir/$DATA_DIR:/data $EL_BINARY_DIR  --datadir /data/geth account import --password /data/password.txt /data/sk.json
+rm -rf $DATA_DIR/ethereumjs
