@@ -4,10 +4,15 @@ import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {toHexString} from "@chainsafe/ssz";
 import {IBeaconStateTransitionMetrics} from "./metrics.js";
 import {beforeProcessEpoch, EpochProcessOpts} from "./cache/epochProcess.js";
-import {CachedBeaconStateAllForks, CachedBeaconStatePhase0, CachedBeaconStateAltair} from "./types.js";
+import {
+  CachedBeaconStateAllForks,
+  CachedBeaconStatePhase0,
+  CachedBeaconStateAltair,
+  CachedBeaconStateBellatrix,
+} from "./types.js";
 import {computeEpochAtSlot} from "./util/index.js";
 import {verifyProposerSignature} from "./signatureSets/index.js";
-import {processSlot, upgradeStateToAltair, upgradeStateToBellatrix} from "./slot/index.js";
+import {processSlot, upgradeStateToAltair, upgradeStateToBellatrix, upgradeStateToCapella} from "./slot/index.js";
 import {processBlock} from "./block/index.js";
 import {processEpoch} from "./epoch/index.js";
 
@@ -144,6 +149,9 @@ function processSlotsWithTransientCache(
       }
       if (stateSlot === config.BELLATRIX_FORK_EPOCH) {
         postState = upgradeStateToBellatrix(postState as CachedBeaconStateAltair) as CachedBeaconStateAllForks;
+      }
+      if (stateSlot === config.CAPELLA_FORK_EPOCH) {
+        postState = upgradeStateToCapella(postState as CachedBeaconStateBellatrix) as CachedBeaconStateAllForks;
       }
     } else {
       postState.slot++;

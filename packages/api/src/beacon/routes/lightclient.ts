@@ -1,6 +1,6 @@
 import {JsonPath} from "@chainsafe/ssz";
 import {Proof} from "@chainsafe/persistent-merkle-tree";
-import {altair, ssz, SyncPeriod} from "@lodestar/types";
+import {altair, phase0, ssz, SyncPeriod} from "@lodestar/types";
 import {ArrayOf, ReturnTypes, RoutesData, Schema, sameType, ContainerData, ReqSerializers} from "../../utils/index.js";
 import {queryParseProofPathsArr, querySerializeProofPathsArr} from "../../utils/serdes.js";
 
@@ -8,6 +8,14 @@ export type StateFormat = "json" | "ssz";
 export const mimeTypeSSZ = "application/octet-stream";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
+
+export type LightClientBootstrap = {
+  header: phase0.BeaconBlockHeader;
+  currentSyncCommittee: altair.SyncCommittee;
+  /** Single branch proof from state root to currentSyncCommittee */
+  currentSyncCommitteeBranch: Uint8Array[];
+};
+
 export type Api = {
   /**
    * Returns a multiproof of `jsonPaths` at the requested `stateId`.
@@ -54,8 +62,8 @@ export type Api = {
 export const routesData: RoutesData<Api> = {
   getStateProof: {url: "/eth/v1/beacon/light_client/proof/{state_id}", method: "GET"},
   getUpdates: {url: "/eth/v1/beacon/light_client/updates", method: "GET"},
-  getOptimisticUpdate: {url: "/eth/v1/beacon/light_client/optimistic_update/", method: "GET"},
-  getFinalityUpdate: {url: "/eth/v1/beacon/light_client/finality_update/", method: "GET"},
+  getOptimisticUpdate: {url: "/eth/v1/beacon/light_client/optimistic_update", method: "GET"},
+  getFinalityUpdate: {url: "/eth/v1/beacon/light_client/finality_update", method: "GET"},
   getBootstrap: {url: "/eth/v1/beacon/light_client/bootstrap/{block_root}", method: "GET"},
 };
 

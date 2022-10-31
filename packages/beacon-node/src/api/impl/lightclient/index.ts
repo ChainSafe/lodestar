@@ -3,6 +3,7 @@ import {routes} from "@lodestar/api";
 import {fromHexString} from "@chainsafe/ssz";
 import {ProofType, Tree} from "@chainsafe/persistent-merkle-tree";
 import {SyncPeriod} from "@lodestar/types";
+import {MAX_REQUEST_LIGHT_CLIENT_UPDATES} from "@lodestar/params";
 import {LightClientUpdate} from "@lodestar/types/altair";
 import {ssz} from "@lodestar/types";
 import {ApiModules} from "../types.js";
@@ -71,9 +72,10 @@ export function getLightclientApi(
       };
     },
 
-    // eslint-disable-next-line @typescript-eslint/naming-convention
     async getUpdates(startPeriod: SyncPeriod, count: number, format?: routes.debug.StateFormat) {
-      const updates = await chain.lightClientServer.getUpdates(startPeriod, count);
+      const maxAllowedCount = Math.min(MAX_REQUEST_LIGHT_CLIENT_UPDATES, count);
+      const periods = Array.from({length: maxAllowedCount}, (_ignored, i) => i + startPeriod);
+      const updates = await Promise.all(periods.map((period) => chain.lightClientServer.getUpdate(period)));
       if (format === "ssz") {
         // Casting to any otherwise Typescript doesn't like the multi-type return
         // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-explicit-any
@@ -84,30 +86,28 @@ export function getLightclientApi(
     },
 
     async getOptimisticUpdate(format?: routes.debug.StateFormat) {
-      const optimisticUpdate = chain.lightClientServer.getOptimisticUpdate();
-      if (optimisticUpdate == null) {
-        throw new Error("No latest header update available");
+      const data = chain.lightClientServer.getOptimisticUpdate();
+      if (data === null) {
+        throw Error("No optimistic update available");
+      } else if (format === "ssz") {
+        // Casting to any otherwise Typescript doesn't like the multi-type return
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-explicit-any
+        return ssz.altair.LightClientOptimisticUpdate.serialize(data) as any;
       } else {
-        if (format === "ssz") {
-          // Casting to any otherwise Typescript doesn't like the multi-type return
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-explicit-any
-          return ssz.altair.LightClientOptimisticUpdate.serialize(optimisticUpdate) as any;
-        }
-        return {data: optimisticUpdate};
+        return {data};
       }
     },
 
     async getFinalityUpdate(format?: routes.debug.StateFormat) {
-      const finalityUpdate = chain.lightClientServer.getFinalityUpdate();
-      if (finalityUpdate == null) {
-        throw new Error("No latest finality update available");
-      }
-      if (format === "ssz") {
+      const data = chain.lightClientServer.getFinalityUpdate();
+      if (data === null) {
+        throw Error("No finality update available");
+      } else if (format === "ssz") {
         // Casting to any otherwise Typescript doesn't like the multi-type return
         // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-explicit-any
-        return ssz.altair.LightClientFinalityUpdate.serialize(finalityUpdate) as any;
+        return ssz.altair.LightClientFinalityUpdate.serialize(data) as any;
       } else {
-        return {data: finalityUpdate};
+        return {data};
       }
     },
 

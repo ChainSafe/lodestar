@@ -9,6 +9,7 @@ export interface INetworkOptions extends PeerManagerOpts, RateLimiterOpts, Gossi
   bootMultiaddrs?: string[];
   subscribeAllSubnets?: boolean;
   connectToDiscv5Bootnodes?: boolean;
+  version?: string;
 }
 
 export const defaultDiscv5Options: IDiscv5DiscoveryInputOptions = {

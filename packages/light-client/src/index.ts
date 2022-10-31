@@ -327,7 +327,7 @@ export class Lightclient {
         // Subscribe to head updates over SSE
         // TODO: Use polling for getLatestHeadUpdate() is SSE is unavailable
         this.api.events.eventstream(
-          [routes.events.EventType.lightClientOptimisticUpdate],
+          [routes.events.EventType.lightClientOptimisticUpdate, routes.events.EventType.lightClientFinalityUpdate],
           controller.signal,
           this.onSSE
         );

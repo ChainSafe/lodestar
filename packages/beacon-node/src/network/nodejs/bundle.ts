@@ -19,6 +19,7 @@ export interface ILibp2pOptions {
   maxConnections?: number;
   minConnections?: number;
   metrics?: boolean;
+  lodestarVersion?: string;
 }
 
 export async function createNodejsLibp2p(options: ILibp2pOptions): Promise<Libp2p> {
@@ -39,10 +40,12 @@ export async function createNodejsLibp2p(options: ILibp2pOptions): Promise<Libp2
     },
     connectionEncryption: [new Noise()],
     transports: [new TCP()],
-    streamMuxers: [new Mplex()],
+    streamMuxers: [new Mplex({maxInboundStreams: 256})],
     peerDiscovery,
     metrics: {
-      enabled: Boolean(options.metrics),
+      // temporarily disable since there is a performance issue with it
+      // see https://github.com/ChainSafe/lodestar/issues/4698
+      enabled: false,
     },
     connectionManager: {
       // dialer config
@@ -82,6 +85,12 @@ export async function createNodejsLibp2p(options: ILibp2pOptions): Promise<Libp2
       autoRelay: {
         enabled: false,
         maxListeners: 0,
+      },
+    },
+
+    identify: {
+      host: {
+        agentVersion: options.lodestarVersion ? `lodestar/${options.lodestarVersion}` : "lodestar",
       },
     },
   });

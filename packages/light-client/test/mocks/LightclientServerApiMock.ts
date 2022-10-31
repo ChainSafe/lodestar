@@ -7,7 +7,7 @@ import {BeaconStateAltair} from "../utils/types.js";
 export class LightclientServerApiMock implements routes.lightclient.Api {
   readonly states = new Map<RootHex, BeaconStateAltair>();
   readonly updates = new Map<SyncPeriod, altair.LightClientUpdate>();
-  readonly snapshots = new Map<RootHex, altair.LightClientBootstrap>();
+  readonly snapshots = new Map<RootHex, routes.lightclient.LightClientBootstrap>();
   latestHeadUpdate: altair.LightClientOptimisticUpdate | null = null;
   finalized: altair.LightClientFinalityUpdate | null = null;
 

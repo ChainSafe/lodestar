@@ -169,6 +169,12 @@ export function getMetrics(register: MetricsRegister, gitData: LodestarGitData) 
       help: "Total published aggregates",
     }),
 
+    numParticipantsInAggregate: register.histogram({
+      name: "vc_attestation_service_participants_in_aggregate_total",
+      help: "Number of attestations in the published AggregatedAttestation",
+      buckets: [0, 50, 200, 500],
+    }),
+
     attestaterError: register.gauge<{error: "produce" | "sign" | "publish"}>({
       name: "vc_attestation_service_errors",
       help: "Total errors in AttestationService",
@@ -319,6 +325,18 @@ export function getMetrics(register: MetricsRegister, gitData: LodestarGitData) 
         name: "vc_rest_api_client_request_errors_total",
         help: "Total count of errors on REST API client requests by routeId",
         labelNames: ["routeId"],
+      }),
+
+      requestToFallbacks: register.gauge<{routeId: string}>({
+        name: "vc_rest_api_client_request_to_fallbacks_total",
+        help: "Total count of requests to fallback URLs on REST API by routeId",
+        labelNames: ["routeId"],
+      }),
+
+      urlsScore: register.gauge<{urlIndex: string}>({
+        name: "vc_rest_api_client_urls_score",
+        help: "Current score of REST API URLs by url index",
+        labelNames: ["urlIndex"],
       }),
     },
 

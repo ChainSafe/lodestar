@@ -4,10 +4,10 @@ import {Connection} from "@libp2p/interface-connection";
 import {PeerId} from "@libp2p/interface-peer-id";
 import {Multiaddr} from "@multiformats/multiaddr";
 import {IBeaconConfig} from "@lodestar/config";
-import {ILogger} from "@lodestar/utils";
+import {ILogger, sleep} from "@lodestar/utils";
 import {ATTESTATION_SUBNET_COUNT, ForkName, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {Discv5, ENR} from "@chainsafe/discv5";
-import {computeEpochAtSlot} from "@lodestar/state-transition";
+import {computeEpochAtSlot, computeTimeAtSlot} from "@lodestar/state-transition";
 import {altair, Epoch} from "@lodestar/types";
 import {IMetrics} from "../metrics/index.js";
 import {ChainEvent, IBeaconChain, IBeaconClock} from "../chain/index.js";
@@ -22,7 +22,7 @@ import {IPeerRpcScoreStore, PeerAction, PeerRpcScoreStore} from "./peers/index.j
 import {INetworkEventBus, NetworkEventBus} from "./events.js";
 import {AttnetsService, CommitteeSubscription, SyncnetsService} from "./subnets/index.js";
 import {PeersData} from "./peers/peersData.js";
-import {getConnectionsMap} from "./util.js";
+import {getConnectionsMap, isPublishToZeroPeersError} from "./util.js";
 
 interface INetworkModules {
   config: IBeaconConfig;
@@ -52,6 +52,7 @@ export class Network implements INetwork {
   private readonly config: IBeaconConfig;
   private readonly clock: IBeaconClock;
   private readonly chain: IBeaconChain;
+  private readonly signal: AbortSignal;
 
   private subscribedForks = new Set<ForkName>();
 
@@ -60,6 +61,7 @@ export class Network implements INetwork {
     this.libp2p = libp2p;
     this.logger = logger;
     this.config = config;
+    this.signal = signal;
     this.clock = chain.clock;
     this.chain = chain;
     this.peersData = new PeersData();
@@ -123,14 +125,16 @@ export class Network implements INetwork {
     );
 
     this.chain.emitter.on(ChainEvent.clockEpoch, this.onEpoch);
-    this.chain.emitter.on(ChainEvent.lightClientFinalityUpdate, this.onLightclientFinalityUpdate.bind(this));
-    this.chain.emitter.on(ChainEvent.lightClientOptimisticUpdate, this.onLightclientOptimisticUpdate.bind(this));
+    this.chain.emitter.on(ChainEvent.lightClientFinalityUpdate, this.onLightClientFinalityUpdate);
+    this.chain.emitter.on(ChainEvent.lightClientOptimisticUpdate, this.onLightClientOptimisticUpdate);
     modules.signal.addEventListener("abort", this.close.bind(this), {once: true});
   }
 
   /** Destroy this instance. Can only be called once. */
   close(): void {
     this.chain.emitter.off(ChainEvent.clockEpoch, this.onEpoch);
+    this.chain.emitter.off(ChainEvent.lightClientFinalityUpdate, this.onLightClientFinalityUpdate);
+    this.chain.emitter.off(ChainEvent.lightClientOptimisticUpdate, this.onLightClientOptimisticUpdate);
   }
 
   async start(): Promise<void> {
@@ -357,19 +361,53 @@ export class Network implements INetwork {
     }
   };
 
-  private async onLightclientFinalityUpdate(finalityUpdate: altair.LightClientFinalityUpdate): Promise<void> {
-    try {
-      return await this.gossip.publishLightClientFinalityUpdate(finalityUpdate);
-    } catch (e) {
-      this.logger.debug("Error on BeaconGossipHandler.onLightclientFinalityUpdate", {}, e as Error);
+  private onLightClientFinalityUpdate = async (finalityUpdate: altair.LightClientFinalityUpdate): Promise<void> => {
+    if (this.hasAttachedSyncCommitteeMember()) {
+      try {
+        // messages SHOULD be broadcast after one-third of slot has transpired
+        // https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/light-client/p2p-interface.md#sync-committee
+        await this.waitOneThirdOfSlot(finalityUpdate.signatureSlot);
+        return await this.gossip.publishLightClientFinalityUpdate(finalityUpdate);
+      } catch (e) {
+        // Non-mandatory route on most of network as of Oct 2022. May not have found any peers on topic yet
+        // Remove once https://github.com/ChainSafe/js-libp2p-gossipsub/issues/367
+        if (!isPublishToZeroPeersError(e as Error)) {
+          this.logger.debug("Error on BeaconGossipHandler.onLightclientFinalityUpdate", {}, e as Error);
+        }
+      }
     }
-  }
+  };
 
-  private async onLightclientOptimisticUpdate(optimisticUpdate: altair.LightClientOptimisticUpdate): Promise<void> {
-    try {
-      return await this.gossip.publishLightClientOptimisticUpdate(optimisticUpdate);
-    } catch (e) {
-      this.logger.debug("Error on BeaconGossipHandler.onLightclientOptimisticUpdate", {}, e as Error);
+  private onLightClientOptimisticUpdate = async (
+    optimisticUpdate: altair.LightClientOptimisticUpdate
+  ): Promise<void> => {
+    if (this.hasAttachedSyncCommitteeMember()) {
+      try {
+        // messages SHOULD be broadcast after one-third of slot has transpired
+        // https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/light-client/p2p-interface.md#sync-committee
+        await this.waitOneThirdOfSlot(optimisticUpdate.signatureSlot);
+        return await this.gossip.publishLightClientOptimisticUpdate(optimisticUpdate);
+      } catch (e) {
+        // Non-mandatory route on most of network as of Oct 2022. May not have found any peers on topic yet
+        // Remove once https://github.com/ChainSafe/js-libp2p-gossipsub/issues/367
+        if (!isPublishToZeroPeersError(e as Error)) {
+          this.logger.debug("Error on BeaconGossipHandler.onLightclientOptimisticUpdate", {}, e as Error);
+        }
+      }
     }
+  };
+
+  private waitOneThirdOfSlot = async (slot: number): Promise<void> => {
+    const secAtSlot = computeTimeAtSlot(this.config, slot + 1 / 3, this.chain.genesisTime);
+    const msToSlot = secAtSlot * 1000 - Date.now();
+    await sleep(msToSlot, this.signal);
+  };
+
+  // full nodes with at least one validator assigned to the current sync committee at the block's slot SHOULD broadcast
+  // This prevents flooding the network by restricting full nodes that initially
+  // publish to at most 512 (max size of active sync committee).
+  // https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/light-client/p2p-interface.md#sync-committee
+  private hasAttachedSyncCommitteeMember(): boolean {
+    return this.syncnetsService.getActiveSubnets().length > 0;
   }
 }

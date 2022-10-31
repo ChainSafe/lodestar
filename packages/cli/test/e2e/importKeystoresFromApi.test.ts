@@ -66,7 +66,7 @@ describeCliTest("import keystores from api", function ({spawnCli}) {
     );
 
     // Attempt to run a second process and expect the keystore lock to throw
-    const vcProc2 = spawnCli([
+    const vcProc2 = spawnCli({pipeStdToParent: true, logPrefix: "vc-2"}, [
       // ⏎
       "validator",
       `--dataDir=${dataDir}`,

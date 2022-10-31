@@ -10,7 +10,7 @@ import {
   ProposerSlashingRepository,
   StateArchiveRepository,
   VoluntaryExitRepository,
-  BestPartialLightClientUpdateRepository,
+  BestLightClientUpdateRepository,
   CheckpointHeaderRepository,
   SyncCommitteeRepository,
   SyncCommitteeWitnessRepository,
@@ -34,7 +34,7 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
   preGenesisStateLastProcessedBlock: PreGenesisStateLastProcessedBlock;
 
   // lightclient
-  bestPartialLightClientUpdate: BestPartialLightClientUpdateRepository;
+  bestLightClientUpdate: BestLightClientUpdateRepository;
   checkpointHeader: CheckpointHeaderRepository;
   syncCommittee: SyncCommitteeRepository;
   syncCommitteeWitness: SyncCommitteeWitnessRepository;
@@ -58,7 +58,7 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
     this.preGenesisStateLastProcessedBlock = new PreGenesisStateLastProcessedBlock(this.config, this.db);
 
     // lightclient
-    this.bestPartialLightClientUpdate = new BestPartialLightClientUpdateRepository(this.config, this.db);
+    this.bestLightClientUpdate = new BestLightClientUpdateRepository(this.config, this.db);
     this.checkpointHeader = new CheckpointHeaderRepository(this.config, this.db);
     this.syncCommittee = new SyncCommitteeRepository(this.config, this.db);
     this.syncCommitteeWitness = new SyncCommitteeWitnessRepository(this.config, this.db);

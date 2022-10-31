@@ -1,3 +1,4 @@
+import path from "node:path";
 import {setMaxListeners} from "node:events";
 import {LevelDbController} from "@lodestar/db";
 import {ProcessShutdownCallback, SlashingProtection, Validator, ValidatorProposerConfig} from "@lodestar/validator";
@@ -28,7 +29,7 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
   const validatorPaths = getValidatorPaths(args, network);
   const accountPaths = getAccountPaths(args, network);
 
-  const logger = getCliLogger(args, {defaultLogFile: "validator.log"}, config);
+  const logger = getCliLogger(args, {defaultLogFilepath: path.join(validatorPaths.dataDir, "validator.log")}, config);
 
   const persistedKeysBackend = new PersistedKeysBackend(accountPaths);
   const valProposerConfig = getProposerConfigFromArgs(args, {persistedKeysBackend, accountPaths});
@@ -115,13 +116,14 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
     {
       dbOps,
       slashingProtection,
-      api: args.server,
+      api: args.beaconNodes,
       logger,
       processShutdownCallback,
       signers,
       abortController,
       doppelgangerProtectionEnabled,
       afterBlockDelaySlotFraction: args.afterBlockDelaySlotFraction,
+      scAfterBlockDelaySlotFraction: args.scAfterBlockDelaySlotFraction,
       valProposerConfig,
     },
     metrics

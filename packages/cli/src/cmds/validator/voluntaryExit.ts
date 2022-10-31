@@ -69,7 +69,7 @@ like to choose for the voluntary exit.",
     // Fetch genesisValidatorsRoot always from beacon node
     // Do not use known networks cache, it defaults to mainnet for devnets
     const {config: chainForkConfig, network} = getBeaconConfigFromArgs(args);
-    const client = getClient({baseUrl: args.server}, {config: chainForkConfig});
+    const client = getClient({urls: args.beaconNodes}, {config: chainForkConfig});
     const {genesisValidatorsRoot, genesisTime} = (await client.beacon.getGenesis()).data;
     const config = createIBeaconConfig(chainForkConfig, genesisValidatorsRoot);
 

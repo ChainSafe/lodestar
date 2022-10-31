@@ -5,7 +5,7 @@ import {config} from "@lodestar/config/default";
 export function getApiClientStub(
   sandbox: SinonSandbox = sinon
 ): Api & {[K in keyof Api]: sinon.SinonStubbedInstance<Api[K]>} {
-  const api = getClient({baseUrl: ""}, {config});
+  const api = getClient({baseUrl: "http://localhost:9596"}, {config});
 
   return {
     beacon: sandbox.stub(api.beacon),
