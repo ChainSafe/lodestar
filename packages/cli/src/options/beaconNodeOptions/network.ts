@@ -24,6 +24,7 @@ export interface INetworkArgs {
   "network.gossipsubD": number;
   "network.gossipsubDLow": number;
   "network.gossipsubDHigh": number;
+  "network.gossipsubAwaitHandler": boolean;
 }
 
 export function parseArgs(args: INetworkArgs): IBeaconNodeOptions["network"] {
@@ -55,6 +56,7 @@ export function parseArgs(args: INetworkArgs): IBeaconNodeOptions["network"] {
     gossipsubD: args["network.gossipsubD"],
     gossipsubDLow: args["network.gossipsubDLow"],
     gossipsubDHigh: args["network.gossipsubDHigh"],
+    gossipsubAwaitHandler: args["network.gossipsubAwaitHandler"],
   };
 }
 
@@ -202,6 +204,12 @@ export const options: ICliCommandOptions<INetworkArgs> = {
     hidden: true,
     type: "number",
     description: "Gossipsub D param high",
+    group: "network",
+  },
+
+  "network.gossipsubAwaitHandler": {
+    hidden: true,
+    type: "boolean",
     group: "network",
   },
 };

@@ -4,6 +4,7 @@ import fastifyCors from "fastify-cors";
 import bearerAuthPlugin from "fastify-bearer-auth";
 import {RouteConfig} from "@lodestar/api/beacon/server";
 import {ErrorAborted, ILogger} from "@lodestar/utils";
+import {isLocalhostIP} from "../../util/ip.js";
 import {IGauge, IHistogram} from "../../metrics/index.js";
 import {ApiError, NodeIsSyncing} from "../impl/errors.js";
 import {HttpActiveSocketsTracker, SocketMetrics} from "./activeSockets.js";
@@ -101,8 +102,12 @@ export class RestApiServer {
    */
   async listen(): Promise<void> {
     try {
-      const address = await this.server.listen(this.opts.port, this.opts.address);
-      this.logger.info("Started REST api server", {address});
+      const host = this.opts.address;
+      const address = await this.server.listen(this.opts.port, host);
+      this.logger.info("Started REST API server", {address});
+      if (!host || !isLocalhostIP(host)) {
+        this.logger.warn("REST API server is exposed, ensure untrusted traffic cannot reach this API");
+      }
     } catch (e) {
       this.logger.error("Error starting REST api server", this.opts, e as Error);
       throw e;

@@ -93,7 +93,7 @@ export class SyncCommitteeService {
    * Performs the first step of the attesting process: downloading `SyncCommittee` objects,
    * signing them and returning them to the validator.
    *
-   * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/validator.md#attesting
+   * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/altair/validator.md#sync-committee-messages
    *
    * Only one `SyncCommittee` is downloaded from the BN. It is then signed by each
    * validator and the list of individually-signed `SyncCommittee` objects is returned to the BN.
@@ -160,7 +160,7 @@ export class SyncCommitteeService {
    * Performs the second step of the attesting process: downloading an aggregated `SyncCommittee`,
    * converting it into a `SignedAggregateAndProof` and returning it to the BN.
    *
-   * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/validator.md#broadcast-aggregate
+   * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/altair/validator.md#sync-committee-contributions
    *
    * Only one aggregated `SyncCommittee` is downloaded from the BN. It is then signed
    * by each validator and the list of individually-signed `SignedAggregateAndProof` objects is

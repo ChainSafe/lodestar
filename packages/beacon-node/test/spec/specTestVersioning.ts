@@ -15,7 +15,7 @@ import {IDownloadTestsOptions} from "@lodestar/spec-test-util";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export const ethereumConsensusSpecsTests: IDownloadTestsOptions = {
-  specVersion: "v1.2.0-rc.3",
+  specVersion: "v1.2.0",
   // Target directory is the host package root: 'packages/*/spec-tests'
   outputDir: path.join(__dirname, "../../spec-tests"),
   specTestsRepoUrl: "https://github.com/ethereum/consensus-spec-tests",

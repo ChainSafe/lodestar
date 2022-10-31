@@ -267,12 +267,12 @@ export class BeaconChain implements IBeaconChain {
 
     metrics?.opPool.aggregatedAttestationPoolSize.addCollect(() => this.onScrapeMetrics());
 
-    // Event handlers
-    this.emitter.addListener(ChainEvent.clockSlot, this.onClockSlot.bind(this));
-    this.emitter.addListener(ChainEvent.clockEpoch, this.onClockEpoch.bind(this));
-    this.emitter.addListener(ChainEvent.forkChoiceFinalized, this.onForkChoiceFinalized.bind(this));
-    this.emitter.addListener(ChainEvent.forkChoiceJustified, this.onForkChoiceJustified.bind(this));
-    this.emitter.addListener(ChainEvent.head, this.onNewHead.bind(this));
+    // Event handlers. emitter is created internally and dropped on close(). Not need to .removeListener()
+    emitter.addListener(ChainEvent.clockSlot, this.onClockSlot.bind(this));
+    emitter.addListener(ChainEvent.clockEpoch, this.onClockEpoch.bind(this));
+    emitter.addListener(ChainEvent.forkChoiceFinalized, this.onForkChoiceFinalized.bind(this));
+    emitter.addListener(ChainEvent.forkChoiceJustified, this.onForkChoiceJustified.bind(this));
+    emitter.addListener(ChainEvent.head, this.onNewHead.bind(this));
   }
 
   async close(): Promise<void> {

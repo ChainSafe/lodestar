@@ -58,6 +58,7 @@ export type Eth2GossipsubOpts = {
   gossipsubD?: number;
   gossipsubDLow?: number;
   gossipsubDHigh?: number;
+  gossipsubAwaitHandler?: boolean;
 };
 
 /**
@@ -108,6 +109,10 @@ export class Eth2Gossipsub extends GossipSub {
       seenTTL: 550 * GOSSIPSUB_HEARTBEAT_INTERVAL,
       scoreParams,
       scoreThresholds: gossipScoreThresholds,
+      // For a single stream, await processing each RPC before processing the next
+      awaitRpcHandler: opts.gossipsubAwaitHandler,
+      // For a single RPC, await processing each message before processing the next
+      awaitRpcMessageHandler: opts.gossipsubAwaitHandler,
       // the default in gossipsub is 3s is not enough since lodestar suffers from I/O lag
       gossipsubIWantFollowupMs: 12 * 1000, // 12s
       fastMsgIdFn: fastMsgIdFn,
@@ -242,6 +247,24 @@ export class Eth2Gossipsub extends GossipSub {
     await this.publishObject<GossipType.sync_committee_contribution_and_proof>(
       {type: GossipType.sync_committee_contribution_and_proof, fork},
       contributionAndProof
+    );
+  }
+
+  async publishLightClientFinalityUpdate(lightClientFinalityUpdate: altair.LightClientFinalityUpdate): Promise<void> {
+    const fork = this.config.getForkName(lightClientFinalityUpdate.signatureSlot);
+    await this.publishObject<GossipType.light_client_finality_update>(
+      {type: GossipType.light_client_finality_update, fork},
+      lightClientFinalityUpdate
+    );
+  }
+
+  async publishLightClientOptimisticUpdate(
+    lightClientOptimisitcUpdate: altair.LightClientOptimisticUpdate
+  ): Promise<void> {
+    const fork = this.config.getForkName(lightClientOptimisitcUpdate.signatureSlot);
+    await this.publishObject<GossipType.light_client_optimistic_update>(
+      {type: GossipType.light_client_optimistic_update, fork},
+      lightClientOptimisitcUpdate
     );
   }
 

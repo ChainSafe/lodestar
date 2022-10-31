@@ -79,6 +79,7 @@ export const processHead = async (node: NodePair, _: SlotMeasureInput): Promise<
 
 export const processFinalized = async (node: NodePair, _: SlotMeasureInput): Promise<number> => {
   const finalized = await node.cl.api.beacon.getBlockHeader("finalized");
+
   return finalized.data.header.message.slot;
 };
 

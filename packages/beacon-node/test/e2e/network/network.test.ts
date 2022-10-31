@@ -9,12 +9,13 @@ import {config} from "@lodestar/config/default";
 import {phase0, ssz} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 
+import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Network, NetworkEvent, ReqRespMethod, getReqRespHandlers} from "../../../src/network/index.js";
 import {defaultNetworkOptions, INetworkOptions} from "../../../src/network/options.js";
 import {GoodByeReasonCode} from "../../../src/constants/index.js";
 
 import {generateEmptySignedBlock} from "../../utils/block.js";
-import {MockBeaconChain} from "../../utils/mocks/chain/chain.js";
+import {MockBeaconChain, zeroProtoBlock} from "../../utils/mocks/chain/chain.js";
 import {createNode} from "../../utils/network.js";
 import {generateState} from "../../utils/state.js";
 import {StubbedBeaconDb} from "../../utils/stub/index.js";
@@ -81,6 +82,14 @@ describe("network", function () {
   async function createTestNode(nodeName: string) {
     const {state, config} = getStaticData();
     const chain = new MockBeaconChain({genesisTime: 0, chainId: 0, networkId: BigInt(0), state, config});
+
+    chain.forkChoice.getHead = () => {
+      return {
+        ...zeroProtoBlock,
+        slot: computeStartSlotAtEpoch(config.ALTAIR_FORK_EPOCH),
+      };
+    };
+
     const db = new StubbedBeaconDb(config);
     const reqRespHandlers = getReqRespHandlers({db, chain});
     const gossipHandlers = {} as GossipHandlers;
@@ -222,7 +231,7 @@ describe("network", function () {
 
     expect(netA.gossip.getTopics().length).to.equal(0);
     netA.subscribeGossipCoreTopics();
-    expect(netA.gossip.getTopics().length).to.equal(5);
+    expect(netA.gossip.getTopics().length).to.equal(13);
     netA.unsubscribeGossipCoreTopics();
     expect(netA.gossip.getTopics().length).to.equal(0);
     netA.close();

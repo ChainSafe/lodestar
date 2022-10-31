@@ -10,7 +10,6 @@ import {
   DOMAIN_SYNC_COMMITTEE,
 } from "@lodestar/params";
 import {IBeaconConfig} from "@lodestar/config";
-import {routes} from "@lodestar/api";
 import {isValidMerkleBranch} from "./utils/verifyMerkleBranch.js";
 import {assertZeroHashes, getParticipantPubkeys, isEmptyHeader} from "./utils/utils.js";
 import {SyncCommitteeFast} from "./types.js";
@@ -65,7 +64,7 @@ export function assertValidLightClientUpdate(
  *
  * Where `hashTreeRoot(state) == update.finalityHeader.stateRoot`
  */
-export function assertValidFinalityProof(update: routes.lightclient.LightclientFinalizedUpdate): void {
+export function assertValidFinalityProof(update: altair.LightClientFinalityUpdate): void {
   if (
     !isValidMerkleBranch(
       ssz.phase0.BeaconBlockHeader.hashTreeRoot(update.finalizedHeader),

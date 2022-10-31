@@ -1,6 +1,8 @@
 import {routes} from "@lodestar/api";
 import {fromHexString} from "@chainsafe/ssz";
 import {ProofType, Tree} from "@chainsafe/persistent-merkle-tree";
+import {SyncPeriod} from "@lodestar/types";
+import {MAX_REQUEST_LIGHT_CLIENT_UPDATES} from "@lodestar/params";
 import {ApiModules} from "../types.js";
 import {resolveStateId} from "../beacon/state/utils.js";
 import {IApiOptions} from "../../options.js";
@@ -41,19 +43,27 @@ export function getLightclientApi(
       };
     },
 
-    // eslint-disable-next-line @typescript-eslint/naming-convention
-    async getUpdates(start_period, count) {
-      const periods = Array.from({length: count}, (_ignored, i) => i + start_period);
-      const updates = await Promise.all(periods.map((period) => chain.lightClientServer.getUpdates(period)));
+    async getUpdates(startPeriod: SyncPeriod, count: number) {
+      const maxAllowedCount = Math.min(MAX_REQUEST_LIGHT_CLIENT_UPDATES, count);
+      const periods = Array.from({length: maxAllowedCount}, (_ignored, i) => i + startPeriod);
+      const updates = await Promise.all(periods.map((period) => chain.lightClientServer.getUpdate(period)));
       return {data: updates};
     },
 
     async getOptimisticUpdate() {
-      return {data: await chain.lightClientServer.getOptimisticUpdate()};
+      const data = chain.lightClientServer.getOptimisticUpdate();
+      if (data === null) {
+        throw Error("No optimistic update available");
+      }
+      return {data};
     },
 
     async getFinalityUpdate() {
-      return {data: await chain.lightClientServer.getFinalityUpdate()};
+      const data = chain.lightClientServer.getFinalityUpdate();
+      if (data === null) {
+        throw Error("No finality update available");
+      }
+      return {data};
     },
 
     async getBootstrap(blockRoot) {

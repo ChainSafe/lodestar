@@ -142,7 +142,7 @@
     "it-pipe": "^2.0.4",
     "jwt-simple": "0.5.6",
     "libp2p": "0.39.2",
-    "prom-client": "^13.2.0",
+    "prom-client": "^14.1.0",
     "prometheus-gc-stats": "^0.6.3",
     "snappyjs": "^0.7.0",
     "stream-to-it": "^0.2.0",

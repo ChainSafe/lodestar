@@ -97,9 +97,7 @@ export function getNodeApi(opts: IApiOptions, {network, sync}: Pick<ApiModules, 
     },
 
     async getHealth() {
-      const syncStatus = sync.getSyncStatus();
-      // Pre-genesis when syncDistance is -ve node can not be marked SYNCING
-      if (syncStatus.isSyncing && parseInt(syncStatus.syncDistance) >= 0) {
+      if (sync.getSyncStatus().isSyncing) {
         // 206: Node is syncing but can serve incomplete data
         return routes.node.NodeHealth.SYNCING;
       } else {

@@ -29,6 +29,8 @@ import {
 import {INetwork} from "../../interface.js";
 import {NetworkEvent} from "../../events.js";
 import {PeerAction} from "../../peers/index.js";
+import {validateLightClientFinalityUpdate} from "../../../chain/validation/lightClientFinalityUpdate.js";
+import {validateLightClientOptimisticUpdate} from "../../../chain/validation/lightClientOptimisticUpdate.js";
 
 /**
  * Gossip handler options as part of network options
@@ -194,7 +196,8 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       }
 
       try {
-        chain.attestationPool.add(attestation);
+        const insertOutcome = chain.attestationPool.add(attestation);
+        metrics?.opPool.attestationPoolInsertOutcome.inc({insertOutcome});
       } catch (e) {
         logger.error("Error adding unaggregated attestation to pool", {subnet}, e as Error);
       }
@@ -283,6 +286,14 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       } catch (e) {
         logger.error("Error adding to syncCommittee pool", {subnet}, e as Error);
       }
+    },
+
+    [GossipType.light_client_finality_update]: async (lightClientFinalityUpdate) => {
+      validateLightClientFinalityUpdate(config, chain, lightClientFinalityUpdate);
+    },
+
+    [GossipType.light_client_optimistic_update]: async (lightClientOptimisticUpdate) => {
+      validateLightClientOptimisticUpdate(config, chain, lightClientOptimisticUpdate);
     },
   };
 }

@@ -5,6 +5,7 @@ import {ZERO_HASH} from "../constants/index.js";
 
 export {upgradeStateToAltair} from "./upgradeStateToAltair.js";
 export {upgradeStateToBellatrix} from "./upgradeStateToBellatrix.js";
+export {upgradeStateToCapella} from "./upgradeStateToCapella.js";
 
 /**
  * Dial state to next slot. Common for all forks

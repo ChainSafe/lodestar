@@ -8,7 +8,7 @@ import {createIChainForkConfig, IChainForkConfig} from "@lodestar/config";
 import {activePreset, MAX_COMMITTEES_PER_SLOT} from "@lodestar/params";
 import {BeaconStateAllForks, interopSecretKey} from "@lodestar/state-transition";
 import {Slot} from "@lodestar/types";
-import {generateLodeStarBeaconNode} from "./cl_clients/lodestar.js";
+import {generateLodestarBeaconNode} from "./cl_clients/lodestar.js";
 import {EpochClock} from "./EpochClock.js";
 import {ExternalSignerServer} from "./ExternalSignerServer.js";
 import {
@@ -56,7 +56,12 @@ export class SimulationEnvironment {
   readonly externalSigner: ExternalSignerServer;
   readonly externalKeysPercentage = 0.5;
 
+  genesisState?: BeaconStateAllForks;
+  readonly forkConfig: IChainForkConfig;
+  readonly options: SimulationOptions;
+
   private readonly jobs: Job[] = [];
+  private keysCount = 0;
 
   readonly network = {
     connectAllNodes: async (): Promise<void> => {
@@ -78,12 +83,6 @@ export class SimulationEnvironment {
       }
     },
   };
-
-  genesisState?: BeaconStateAllForks;
-  readonly forkConfig: IChainForkConfig;
-  readonly options: SimulationOptions;
-
-  private keysCount = 0;
 
   private constructor(forkConfig: IChainForkConfig, options: SimulationOptions) {
     this.forkConfig = forkConfig;
@@ -170,7 +169,7 @@ export class SimulationEnvironment {
     await this.tracker.stop();
     await this.externalSigner.stop();
     await Promise.all(this.jobs.map((j) => j.stop()));
-    // await rm(this.options.rootDir, {recursive: true});
+    await rm(this.options.rootDir, {recursive: true});
   }
 
   // TODO: Add timeout support
@@ -252,7 +251,7 @@ export class SimulationEnvironment {
           genesisTime: this.options.genesisTime,
           externalKeysPercentage: this.externalKeysPercentage,
         };
-        return generateLodeStarBeaconNode(opts, this.runner);
+        return generateLodestarBeaconNode(opts, this.runner);
       }
       default:
         throw new Error(`CL Client "${client}" not supported`);

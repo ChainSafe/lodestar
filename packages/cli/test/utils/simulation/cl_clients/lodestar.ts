@@ -1,5 +1,6 @@
 import {mkdir, writeFile} from "node:fs/promises";
 import {dirname, join} from "node:path";
+import got from "got";
 import {Keystore} from "@chainsafe/bls-keystore";
 import {getClient} from "@lodestar/api/beacon";
 import {getClient as keyManagerGetClient} from "@lodestar/api/keymanager";
@@ -8,9 +9,9 @@ import {IBeaconArgs} from "../../../../src/cmds/beacon/options.js";
 import {IValidatorCliArgs} from "../../../../src/cmds/validator/options.js";
 import {IGlobalArgs} from "../../../../src/options/globalOptions.js";
 import {CLClient, CLClientGenerator, CLClientOptions, JobOptions, Runner, RunnerType} from "../interfaces.js";
-import {callHttp, LODESTAR_BINARY_PATH} from "../utils.js";
+import {LODESTAR_BINARY_PATH} from "../utils.js";
 
-export const generateLodeStarBeaconNode: CLClientGenerator = (opts: CLClientOptions, runner: Runner) => {
+export const generateLodestarBeaconNode: CLClientGenerator = (opts: CLClientOptions, runner: Runner) => {
   if (runner.type !== RunnerType.ChildProcess) {
     throw new Error(`Runner "${runner.type}" not yet supported.`);
   }
@@ -56,6 +57,7 @@ export const generateLodeStarBeaconNode: CLClientGenerator = (opts: CLClientOpti
     logFormatGenesisTime: `${genesisTime}`,
     logLevel: LogLevel.debug,
     logFileDailyRotate: 0,
+    logFile: "none",
   } as unknown) as IBeaconArgs & IGlobalArgs;
 
   if (checkpointSyncUrl) {
@@ -69,7 +71,7 @@ export const generateLodeStarBeaconNode: CLClientGenerator = (opts: CLClientOpti
   const validatorClientsJobs: JobOptions[] = [];
   if (opts.secretKeys.length > 0) {
     validatorClientsJobs.push(
-      generateLodeStarValidatorJobs(
+      generateLodestarValidatorJobs(
         {
           ...opts,
           rootDir: join(rootDir, "validator"),
@@ -100,7 +102,7 @@ export const generateLodeStarBeaconNode: CLClientGenerator = (opts: CLClientOpti
       },
       health: async () => {
         try {
-          await callHttp(`http://${address}:${restPort}/eth/v1/node/health`, "GET");
+          await got.get(`http://${address}:${restPort}/eth/v1/node/health`);
           return true;
         } catch {
           return false;
@@ -122,7 +124,7 @@ export const generateLodeStarBeaconNode: CLClientGenerator = (opts: CLClientOpti
   return {job, node};
 };
 
-export const generateLodeStarValidatorJobs = (opts: CLClientOptions, runner: Runner): JobOptions => {
+export const generateLodestarValidatorJobs = (opts: CLClientOptions, runner: Runner): JobOptions => {
   if (runner.type !== RunnerType.ChildProcess) {
     throw new Error(`Runner "${runner.type}" not yet supported.`);
   }
@@ -155,6 +157,7 @@ export const generateLodeStarValidatorJobs = (opts: CLClientOptions, runner: Run
     logPrefix: id,
     logFormatGenesisTime: genesisTime,
     logLevel: LogLevel.debug,
+    logFile: "none",
     importKeystores: `${rootDir}/keystores`,
     importKeystoresPassword: `${rootDir}/password.txt`,
   } as unknown) as IValidatorCliArgs & IGlobalArgs;
@@ -188,7 +191,7 @@ export const generateLodeStarValidatorJobs = (opts: CLClientOptions, runner: Run
     },
     health: async () => {
       try {
-        await callHttp(`http://${address}:${keyManagerPort}/eth/v1/keystores`, "GET");
+        await got.get(`http://${address}:${keyManagerPort}/eth/v1/keystores`);
         return true;
       } catch (err) {
         return false;

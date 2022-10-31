@@ -16,7 +16,6 @@ const stopChildProcess = async (childProcess: ChildProcess, signal?: "SIGTERM"):
 const startChildProcess = async (jobOptions: JobOptions): Promise<ChildProcess> => {
   return new Promise<ChildProcess>((resolve, reject) => {
     void (async () => {
-      // console.log(`Child process starting: ${jobOptions.cli.command} ${jobOptions.cli.args.join(" ")}`);
       const childProcess = spawn(jobOptions.cli.command, jobOptions.cli.args, {
         env: {...process.env, ...jobOptions.cli.env},
       });

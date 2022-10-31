@@ -1,7 +1,5 @@
-import {request} from "node:http";
 import {dirname} from "node:path";
 import {fileURLToPath} from "node:url";
-import {parse} from "node:url";
 import {Epoch} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
 import {IChainForkConfig} from "@lodestar/config";
@@ -25,38 +23,6 @@ export const getForkName = (epoch: Epoch, config: IChainForkConfig): ForkName =>
   } else {
     return ForkName.bellatrix;
   }
-};
-
-export const callHttp = async (
-  url: string,
-  method: string,
-  data?: unknown
-): Promise<{status: number; data: Record<string, unknown>}> => {
-  const opts = parse(url);
-
-  return new Promise((resolve, reject) => {
-    const req = request({...opts, method, headers: {"Content-Type": "application/json"}}, function (res) {
-      let data = "";
-
-      res.setEncoding("utf8");
-      res.on("data", (chunk) => {
-        data = data + chunk;
-      });
-      res.on("end", () => {
-        if (res.statusCode != null && res.statusCode >= 200 && res.statusCode < 300) {
-          resolve({status: res.statusCode ?? 500, data: JSON.parse(data) as Record<string, unknown>});
-        } else {
-          reject(new Error(`HTTP ${res.statusCode} ${res.statusMessage}`));
-        }
-      });
-      res.on("error", reject);
-    });
-    req.on("error", reject);
-    if (data) {
-      req.write(data);
-    }
-    req.end();
-  });
 };
 
 export const FAR_FUTURE_EPOCH = 10 ** 12;
