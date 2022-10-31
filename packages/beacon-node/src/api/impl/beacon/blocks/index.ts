@@ -23,6 +23,16 @@ export function getBeaconBlockApi({
   network,
   db,
 }: Pick<ApiModules, "chain" | "config" | "metrics" | "network" | "db">): routes.beacon.block.Api {
+  const waitForSlot = async (slot: number): Promise<void> => {
+    // Simple implementation of a pending block queue. Keeping the block here recycles the API logic, and keeps the
+    // REST request promise without any extra infrastructure.
+    const msToBlockSlot = computeTimeAtSlot(config, slot, chain.genesisTime) * 1000 - Date.now();
+    if (msToBlockSlot <= MAX_API_CLOCK_DISPARITY_MS && msToBlockSlot > 0) {
+      // If block is a bit early, hold it in a promise. Equivalent to a pending queue.
+      await sleep(msToBlockSlot);
+    }
+  };
+
   return {
     async getBlockHeaders(filters) {
       // TODO - SLOW CODE: This code seems like it could be improved
@@ -173,14 +183,7 @@ export function getBeaconBlockApi({
 
     async publishBlock(signedBlock) {
       const seenTimestampSec = Date.now() / 1000;
-
-      // Simple implementation of a pending block queue. Keeping the block here recycles the API logic, and keeps the
-      // REST request promise without any extra infrastructure.
-      const msToBlockSlot = computeTimeAtSlot(config, signedBlock.message.slot, chain.genesisTime) * 1000 - Date.now();
-      if (msToBlockSlot <= MAX_API_CLOCK_DISPARITY_MS && msToBlockSlot > 0) {
-        // If block is a bit early, hold it in a promise. Equivalent to a pending queue.
-        await sleep(msToBlockSlot);
-      }
+      await waitForSlot(signedBlock.message.slot);
 
       // TODO: Validate block
 
@@ -198,6 +201,16 @@ export function getBeaconBlockApi({
           throw e;
         }),
       ]);
+    },
+
+    async publishBlockWithBlobs(signedBeaconBlockAndBlobsSidecar) {
+      const {message} = signedBeaconBlockAndBlobsSidecar.beaconBlock;
+      const seenTimestampSec = Date.now() / 1000;
+      await waitForSlot(message.slot);
+
+      metrics?.registerBeaconBlock(OpSource.api, seenTimestampSec, message);
+
+      await Promise.all([network.gossip.publishSignedBeaconBlockAndBlobsSidecar(signedBeaconBlockAndBlobsSidecar)]);
     },
   };
 }

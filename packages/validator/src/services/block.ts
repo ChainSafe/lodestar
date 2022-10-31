@@ -8,7 +8,7 @@ import {SignedBeaconBlockAndBlobsSidecar} from "@lodestar/types/eip4844/sszTypes
 import {IClock, ILoggerVc} from "../util/index.js";
 import {PubkeyHex} from "../types.js";
 import {Metrics} from "../metrics.js";
-import {getBlobsSidecar} from "../util/polynomialCommitments.js";
+import {getBlobsSidecar} from "../util/blobs/polynomialCommitments.js";
 import {ValidatorStore} from "./validatorStore.js";
 import {BlockDutiesService, GENESIS_SLOT} from "./blockDuties.js";
 
@@ -101,8 +101,9 @@ export class BlockProposingService {
 
       if (this.config.getForkSeq(block.slot) >= ForkSeq.eip4844) {
         const signedBlockWithBlobs = SignedBeaconBlockAndBlobsSidecar.defaultValue();
-        signedBlockWithBlobs.beaconBlock = signedBlock;
+        signedBlockWithBlobs.beaconBlock = signedBlock as eip4844.SignedBeaconBlock;
         signedBlockWithBlobs.blobsSidecar = getBlobsSidecar(this.config, block, blobs);
+
         // TODO EIP-4844: Blinded blocks??? No clue!
         await this.api.beacon.publishBlockWithBlobs(signedBlockWithBlobs).catch(onPublishError);
       } else {
@@ -153,6 +154,8 @@ export class BlockProposingService {
 
     const blindedBlock = await blindedBlockPromise;
     const fullBlock = await fullBlockPromise;
+
+    // TODO EIP-4844 How do I get blobs here???
     const blobs: eip4844.Blobs = [];
 
     // A metric on the choice between blindedBlock and normal block can be applied

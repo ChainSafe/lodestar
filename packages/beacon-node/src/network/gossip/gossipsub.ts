@@ -10,6 +10,7 @@ import {allForks, altair, phase0} from "@lodestar/types";
 import {ILogger, Map2d, Map2dArr} from "@lodestar/utils";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 
+import {SignedBeaconBlockAndBlobsSidecar} from "@lodestar/types/eip4844";
 import {IMetrics} from "../../metrics/index.js";
 import {Eth2Context} from "../../chain/index.js";
 import {PeersData} from "../peers/peersData.js";
@@ -198,8 +199,16 @@ export class Eth2Gossipsub extends GossipSub {
   async publishBeaconBlock(signedBlock: allForks.SignedBeaconBlock): Promise<void> {
     const fork = this.config.getForkName(signedBlock.message.slot);
 
-    // TODO: For EIP-4844, switch this to GossipType.beacon_block_and_blobs_sidecar
     await this.publishObject<GossipType.beacon_block>({type: GossipType.beacon_block, fork}, signedBlock);
+  }
+
+  async publishSignedBeaconBlockAndBlobsSidecar(blockWithBlobs: SignedBeaconBlockAndBlobsSidecar): Promise<void> {
+    const fork = this.config.getForkName(blockWithBlobs.beaconBlock.message.slot);
+
+    await this.publishObject<GossipType.beacon_block_and_blobs_sidecar>(
+      {type: GossipType.beacon_block_and_blobs_sidecar, fork},
+      blockWithBlobs
+    );
   }
 
   async publishBeaconAggregateAndProof(aggregateAndProof: phase0.SignedAggregateAndProof): Promise<number> {

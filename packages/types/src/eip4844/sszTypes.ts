@@ -18,15 +18,6 @@ export const BLSFieldElement = Bytes32;
 export const KZGCommitment = Bytes48;
 export const KZGProof = Bytes48;
 
-// Constants
-// https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/polynomial-commitments.md#constants
-
-// Scalar field modulus of BLS12-381
-export const BLS_MODULUS = BigInt("52435875175126190479447740508185965837690552500527637822603658699938581184513");
-
-// Roots of unity of order FIELD_ELEMENTS_PER_BLOB over the BLS12-381 field
-export const ROOTS_OF_UNITY = new ListCompositeType(BLSFieldElement, FIELD_ELEMENTS_PER_BLOB);
-
 // Beacon chain
 
 // Custom types
