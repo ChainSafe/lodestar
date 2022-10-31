@@ -71,7 +71,7 @@ describe("chain / lightclient", function () {
       options: {
         sync: {isSingleNode: true},
         network: {allowPublishToZeroPeers: true},
-        api: {rest: {enabled: true, port: restPort, address: "localhost"}},
+        api: {rest: {enabled: true, api: ["lightclient"], port: restPort, address: "localhost"}},
         chain: {blsVerifyAllMainThread: true},
       },
       validatorCount: validatorCount * validatorClientCount,

@@ -159,9 +159,6 @@ export class LightClientServer {
   private readonly knownSyncCommittee = new MapDef<SyncPeriod, Set<DependantRootHex>>(() => new Set());
   private storedCurrentSyncCommittee = false;
 
-  latestForwardedFinalitySlot: Slot = 0;
-  latestForwardedOptimisticSlot: Slot = 0;
-
   /**
    * Keep in memory since this data is very transient, not useful after a few slots
    */
@@ -304,10 +301,6 @@ export class LightClientServer {
 
   getFinalityUpdate(): altair.LightClientFinalityUpdate | null {
     return this.finalized;
-  }
-
-  getLatestFinalitySlot(): Slot | undefined {
-    return this.finalized?.finalizedHeader.slot;
   }
 
   /**

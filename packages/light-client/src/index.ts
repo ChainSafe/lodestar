@@ -331,7 +331,6 @@ export class Lightclient {
           controller.signal,
           this.onSSE
         );
-        this.api.events.eventstream([routes.events.EventType.lightClientFinalityUpdate], controller.signal, this.onSSE);
       }
 
       // When close to the end of a sync period poll for sync committee updates
