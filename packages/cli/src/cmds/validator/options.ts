@@ -17,14 +17,18 @@ export const validatorMetricsDefaultOptions = {
   address: "127.0.0.1",
 };
 
+// Defined as variable to not set yargs.default to an array
+export const DEFAULT_BEACON_NODE_URL = "";
+
 export type IValidatorCliArgs = AccountValidatorArgs &
   KeymanagerArgs &
   ILogArgs & {
     validatorsDbDir?: string;
-    server: string;
+    beaconNodes: string[];
     force: boolean;
     graffiti: string;
     afterBlockDelaySlotFraction?: number;
+    scAfterBlockDelaySlotFraction?: number;
     suggestedFeeRecipient?: string;
     proposerSettingsFile?: string;
     strictFeeRecipientCheck?: boolean;
@@ -134,10 +138,15 @@ export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
     type: "string",
   },
 
-  server: {
-    description: "Address to connect to BeaconNode",
-    default: "http://127.0.0.1:9596",
-    type: "string",
+  beaconNodes: {
+    description: "Addresses to connect to BeaconNode",
+    default: ["http://127.0.0.1:9596"],
+    type: "array",
+    string: true,
+    coerce: (urls: string[]): string[] =>
+      // Parse ["url1,url2"] to ["url1", "url2"]
+      urls.map((item) => item.split(",")).flat(1),
+    alias: ["server"], // for backwards compatibility
   },
 
   force: {
@@ -153,7 +162,15 @@ export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
 
   afterBlockDelaySlotFraction: {
     hidden: true,
-    description: "Delay before publishing attestations if block comes early, as a fraction of SECONDS_PER_SLOT",
+    description:
+      "Delay before publishing attestations if block comes early, as a fraction of SECONDS_PER_SLOT (value is from 0 inclusive to 1 exclusive)",
+    type: "number",
+  },
+
+  scAfterBlockDelaySlotFraction: {
+    hidden: true,
+    description:
+      "Delay before publishing SyncCommitteeSignature if block comes early, as a fraction of SECONDS_PER_SLOT (value is from 0 inclusive to 1 exclusive)",
     type: "number",
   },
 

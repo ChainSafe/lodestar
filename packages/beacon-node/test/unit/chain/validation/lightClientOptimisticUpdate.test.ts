@@ -54,8 +54,18 @@ describe("Light Client Optimistic Update validation", function () {
   it("should return invalid - optimistic update already forwarded", async () => {
     const lightclientOptimisticUpdate: altair.LightClientOptimisticUpdate = ssz.altair.LightClientOptimisticUpdate.defaultValue();
 
+    lightclientOptimisticUpdate.attestedHeader.slot = 2;
+
+    const chain = mockChain();
+    chain.lightClientServer.getOptimisticUpdate = () => {
+      const defaultValue = ssz.altair.LightClientOptimisticUpdate.defaultValue();
+      // make the local slot higher than gossiped
+      defaultValue.attestedHeader.slot = lightclientOptimisticUpdate.attestedHeader.slot + 1;
+      return defaultValue;
+    };
+
     expect(() => {
-      validateLightClientOptimisticUpdate(config, mockChain(), lightclientOptimisticUpdate);
+      validateLightClientOptimisticUpdate(config, chain, lightclientOptimisticUpdate);
     }).to.throw(
       LightClientErrorCode.OPTIMISTIC_UPDATE_ALREADY_FORWARDED,
       "Expected LightClientErrorCode.OPTIMISTIC_UPDATE_ALREADY_FORWARDED to be thrown"
@@ -68,7 +78,11 @@ describe("Light Client Optimistic Update validation", function () {
     lightclientOptimisticUpdate.signatureSlot = 4;
 
     const chain = mockChain();
-    chain.lightClientServer.latestForwardedOptimisticSlot = 1;
+    chain.lightClientServer.getOptimisticUpdate = () => {
+      const defaultValue = ssz.altair.LightClientOptimisticUpdate.defaultValue();
+      defaultValue.attestedHeader.slot = 1;
+      return defaultValue;
+    };
 
     expect(() => {
       validateLightClientOptimisticUpdate(config, chain, lightclientOptimisticUpdate);
@@ -83,13 +97,39 @@ describe("Light Client Optimistic Update validation", function () {
     lightclientOptimisticUpdate.attestedHeader.slot = 2;
 
     const chain = mockChain();
-    chain.lightClientServer.latestForwardedOptimisticSlot = 1;
 
-    // make lightclientserver return another update
+    const timeAtSignatureSlot =
+      computeTimeAtSlot(config, lightclientOptimisticUpdate.signatureSlot, chain.genesisTime) * 1000;
+    fakeClock.tick(timeAtSignatureSlot + (1 / 3) * (config.SECONDS_PER_SLOT + 1) * 1000);
+
+    // make lightclientserver return another update with different value from gossiped
     chain.lightClientServer.getOptimisticUpdate = () => {
-      return ssz.altair.LightClientOptimisticUpdate.defaultValue();
+      const defaultValue = ssz.altair.LightClientOptimisticUpdate.defaultValue();
+      defaultValue.attestedHeader.slot = 1;
+      return defaultValue;
     };
 
+    expect(() => {
+      validateLightClientOptimisticUpdate(config, chain, lightclientOptimisticUpdate);
+    }).to.throw(
+      LightClientErrorCode.OPTIMISTIC_UPDATE_NOT_MATCHING_LOCAL,
+      "Expected LightClientErrorCode.OPTIMISTIC_UPDATE_NOT_MATCHING_LOCAL to be thrown"
+    );
+  });
+
+  it("should return invalid - not matching local when no local optimistic update yet", async () => {
+    const lightclientOptimisticUpdate: altair.LightClientOptimisticUpdate = ssz.altair.LightClientOptimisticUpdate.defaultValue();
+    lightclientOptimisticUpdate.attestedHeader.slot = 2;
+
+    const chain = mockChain();
+
+    const timeAtSignatureSlot =
+      computeTimeAtSlot(config, lightclientOptimisticUpdate.signatureSlot, chain.genesisTime) * 1000;
+    fakeClock.tick(timeAtSignatureSlot + (1 / 3) * (config.SECONDS_PER_SLOT + 1) * 1000);
+
+    // chain getOptimisticUpdate not mocked.
+    // localOptimisticUpdate will be null
+    // latestForwardedOptimisticSlot will be -1
     expect(() => {
       validateLightClientOptimisticUpdate(config, chain, lightclientOptimisticUpdate);
     }).to.throw(
@@ -105,7 +145,12 @@ describe("Light Client Optimistic Update validation", function () {
     // satisfy:
     // No other optimistic_update with a lower or equal attested_header.slot was already forwarded on the network
     lightclientOptimisticUpdate.attestedHeader.slot = 2;
-    chain.lightClientServer.latestForwardedOptimisticSlot = 1;
+
+    chain.lightClientServer.getOptimisticUpdate = () => {
+      const defaultValue = ssz.altair.LightClientOptimisticUpdate.defaultValue();
+      defaultValue.attestedHeader.slot = 1;
+      return defaultValue;
+    };
 
     // satisfy:
     // [IGNORE] The optimistic_update is received after the block at signature_slot was given enough time to propagate

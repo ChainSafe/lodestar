@@ -98,10 +98,10 @@ export function getNodeApi(opts: IApiOptions, {network, sync}: Pick<ApiModules, 
 
     async getHealth() {
       if (sync.getSyncStatus().isSyncing) {
-        // 200: Node is ready
+        // 206: Node is syncing but can serve incomplete data
         return routes.node.NodeHealth.SYNCING;
       } else {
-        // 206: Node is syncing but can serve incomplete data
+        // 200: Node is ready
         return routes.node.NodeHealth.READY;
       }
       // else {

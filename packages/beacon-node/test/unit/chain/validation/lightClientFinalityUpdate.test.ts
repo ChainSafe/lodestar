@@ -53,9 +53,18 @@ describe("Light Client Finality Update validation", function () {
 
   it("should return invalid - finality update already forwarded", async () => {
     const lightclientFinalityUpdate: altair.LightClientFinalityUpdate = ssz.altair.LightClientFinalityUpdate.defaultValue();
+    lightclientFinalityUpdate.finalizedHeader.slot = 2;
+
+    const chain = mockChain();
+    chain.lightClientServer.getFinalityUpdate = () => {
+      const defaultValue = ssz.altair.LightClientFinalityUpdate.defaultValue();
+      // make the local slot higher than gossiped
+      defaultValue.finalizedHeader.slot = lightclientFinalityUpdate.finalizedHeader.slot + 1;
+      return defaultValue;
+    };
 
     expect(() => {
-      validateLightClientFinalityUpdate(config, mockChain(), lightclientFinalityUpdate);
+      validateLightClientFinalityUpdate(config, chain, lightclientFinalityUpdate);
     }).to.throw(
       LightClientErrorCode.FINALITY_UPDATE_ALREADY_FORWARDED,
       "Expected LightClientErrorCode.FINALITY_UPDATE_ALREADY_FORWARDED to be thrown"
@@ -69,7 +78,11 @@ describe("Light Client Finality Update validation", function () {
     lightClientFinalityUpdate.signatureSlot = 4;
 
     const chain = mockChain();
-    chain.lightClientServer.latestForwardedFinalitySlot = 1;
+    chain.lightClientServer.getFinalityUpdate = () => {
+      const defaultValue = ssz.altair.LightClientFinalityUpdate.defaultValue();
+      defaultValue.finalizedHeader.slot = 1;
+      return defaultValue;
+    };
 
     expect(() => {
       validateLightClientFinalityUpdate(config, chain, lightClientFinalityUpdate);
@@ -85,17 +98,42 @@ describe("Light Client Finality Update validation", function () {
     lightClientFinalityUpdate.signatureSlot = lightClientFinalityUpdate.finalizedHeader.slot + 1;
 
     const chain = mockChain();
-    chain.lightClientServer.latestForwardedFinalitySlot = 1;
+
+    // make lightclientserver return another update with different value from gossiped
+    chain.lightClientServer.getFinalityUpdate = () => {
+      const defaultValue = ssz.altair.LightClientFinalityUpdate.defaultValue();
+      defaultValue.finalizedHeader.slot = 1;
+      return defaultValue;
+    };
 
     // make update not too early
     const timeAtSignatureSlot =
       computeTimeAtSlot(config, lightClientFinalityUpdate.signatureSlot, chain.genesisTime) * 1000;
     fakeClock.tick(timeAtSignatureSlot + (1 / 3) * (config.SECONDS_PER_SLOT + 1) * 1000);
 
-    // make lightclientserver return another update
-    chain.lightClientServer.getFinalityUpdate = () => {
-      return ssz.altair.LightClientFinalityUpdate.defaultValue();
-    };
+    expect(() => {
+      validateLightClientFinalityUpdate(config, chain, lightClientFinalityUpdate);
+    }).to.throw(
+      LightClientErrorCode.FINALITY_UPDATE_NOT_MATCHING_LOCAL,
+      "Expected LightClientErrorCode.FINALITY_UPDATE_NOT_MATCHING_LOCAL to be thrown"
+    );
+  });
+
+  it("should return invalid - not matching local when no local finality update yet", async () => {
+    const lightClientFinalityUpdate: altair.LightClientFinalityUpdate = ssz.altair.LightClientFinalityUpdate.defaultValue();
+    lightClientFinalityUpdate.finalizedHeader.slot = 2;
+    lightClientFinalityUpdate.signatureSlot = lightClientFinalityUpdate.finalizedHeader.slot + 1;
+
+    const chain = mockChain();
+
+    // make update not too early
+    const timeAtSignatureSlot =
+      computeTimeAtSlot(config, lightClientFinalityUpdate.signatureSlot, chain.genesisTime) * 1000;
+    fakeClock.tick(timeAtSignatureSlot + (1 / 3) * (config.SECONDS_PER_SLOT + 1) * 1000);
+
+    // chain's getFinalityUpdate not mocked.
+    // localFinalityUpdate will be null
+    // latestForwardedFinalitySlot will be -1
 
     expect(() => {
       validateLightClientFinalityUpdate(config, chain, lightClientFinalityUpdate);
@@ -112,7 +150,12 @@ describe("Light Client Finality Update validation", function () {
     // satisfy:
     // No other finality_update with a lower or equal finalized_header.slot was already forwarded on the network
     lightClientFinalityUpdate.finalizedHeader.slot = 2;
-    chain.lightClientServer.latestForwardedFinalitySlot = 1;
+
+    chain.lightClientServer.getFinalityUpdate = () => {
+      const defaultValue = ssz.altair.LightClientFinalityUpdate.defaultValue();
+      defaultValue.finalizedHeader.slot = 1;
+      return defaultValue;
+    };
 
     // satisfy:
     // [IGNORE] The finality_update is received after the block at signature_slot was given enough time to propagate

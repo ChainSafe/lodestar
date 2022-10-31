@@ -4,8 +4,8 @@ import {IBeaconDb} from "../../../db/index.js";
 import {ReqRespBlockResponse} from "../types.js";
 import {onBeaconBlocksByRange} from "./beaconBlocksByRange.js";
 import {onBeaconBlocksByRoot} from "./beaconBlocksByRoot.js";
-import {onLightclientBootstrap} from "./lightClientBootstrap.js";
-import {onLightclientUpdate} from "./lightClientUpdate.js";
+import {onLightClientBootstrap} from "./lightClientBootstrap.js";
+import {onLightClientUpdatesByRange} from "./lightClientUpdatesByRange.js";
 import {onLightClientFinalityUpdate} from "./lightClientFinalityUpdate.js";
 import {onLightClientOptimisticUpdate} from "./lightClientOptimisticUpdate.js";
 
@@ -14,7 +14,7 @@ export type ReqRespHandlers = {
   onBeaconBlocksByRange(req: phase0.BeaconBlocksByRangeRequest): AsyncIterable<ReqRespBlockResponse>;
   onBeaconBlocksByRoot(req: phase0.BeaconBlocksByRootRequest): AsyncIterable<ReqRespBlockResponse>;
   onLightClientBootstrap(req: Root): AsyncIterable<altair.LightClientBootstrap>;
-  onLightClientUpdate(req: altair.LightClientUpdatesByRange): AsyncIterable<altair.LightClientUpdate>;
+  onLightClientUpdatesByRange(req: altair.LightClientUpdatesByRange): AsyncIterable<altair.LightClientUpdate>;
   onLightClientFinalityUpdate(): AsyncIterable<altair.LightClientFinalityUpdate>;
   onLightClientOptimisticUpdate(): AsyncIterable<altair.LightClientOptimisticUpdate>;
 };
@@ -35,10 +35,10 @@ export function getReqRespHandlers({db, chain}: {db: IBeaconDb; chain: IBeaconCh
       yield* onBeaconBlocksByRoot(req, chain, db);
     },
     async *onLightClientBootstrap(req) {
-      yield* onLightclientBootstrap(req, chain);
+      yield* onLightClientBootstrap(req, chain);
     },
-    async *onLightClientUpdate(req) {
-      yield* onLightclientUpdate(req, chain);
+    async *onLightClientUpdatesByRange(req) {
+      yield* onLightClientUpdatesByRange(req, chain);
     },
     async *onLightClientFinalityUpdate() {
       yield* onLightClientFinalityUpdate(chain);

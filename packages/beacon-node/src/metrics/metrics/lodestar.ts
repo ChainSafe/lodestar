@@ -328,6 +328,29 @@ export function createLodestarMetrics(
       }),
     },
 
+    engineHttpProcessorQueue: {
+      length: register.gauge({
+        name: "lodestar_engine_http_processor_queue_length",
+        help: "Count of total engine http processor queue length",
+      }),
+      droppedJobs: register.gauge({
+        name: "lodestar_engine_http_processor_queue_dropped_jobs_total",
+        help: "Count of total engine http processor queue dropped jobs",
+      }),
+      jobTime: register.histogram({
+        name: "lodestar_engine_http_processor_queue_job_time_seconds",
+        help: "Time to process engine http processor queue job in seconds",
+        // newPayload can vary from 100 of ms to 3-4 seconds and typically 300-400ms
+        buckets: [0.05, 0.1, 0.2, 0.3, 0.5, 0.75, 1, 2, 5, 10, 25],
+      }),
+      jobWaitTime: register.histogram({
+        name: "lodestar_engine_http_processor_queue_job_wait_time_seconds",
+        help: "Time from job added to the engine http processor queue to starting in seconds",
+        // Ideally it should be picked up < 100 of ms and could run upto 100 of secs
+        buckets: [0.05, 0.1, 0.2, 0.3, 0.5, 0.75, 1, 2, 5, 10, 25, 50, 100],
+      }),
+    },
+
     apiRest: {
       responseTime: register.histogram<"operationId">({
         name: "lodestar_api_rest_response_time_seconds",
@@ -604,6 +627,11 @@ export function createLodestarMetrics(
       attestationPoolSize: register.gauge({
         name: "lodestar_oppool_attestation_pool_size",
         help: "Current size of the AttestationPool = total attestations unique by data and slot",
+      }),
+      attestationPoolInsertOutcome: register.counter<"insertOutcome">({
+        name: "lodestar_attestation_pool_insert_outcome_total",
+        help: "Total number of InsertOutcome as a result of adding an attestation in a pool",
+        labelNames: ["insertOutcome"],
       }),
       attesterSlashingPoolSize: register.gauge({
         name: "lodestar_oppool_attester_slashing_pool_size",

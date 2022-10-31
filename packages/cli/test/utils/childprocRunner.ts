@@ -11,11 +11,14 @@ const cliLibScriptPath = esmRelativePathJoin("../../lib/index.js");
 /* eslint-disable no-console */
 
 export type DescribeArgs = {
-  spawnCli(args: string[]): child_process.ChildProcessWithoutNullStreams;
+  spawnCli(opts: SpawnCliOpts, args: string[]): child_process.ChildProcessWithoutNullStreams;
 };
 
 type SpawnCliOpts = {
   ensureProcRunning?: boolean;
+  logPrefix?: string;
+  pipeStdToParent?: boolean;
+  printOnlyOnError?: boolean;
 };
 
 // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
@@ -35,8 +38,8 @@ export function describeCliTest(testName: string, callback: (this: Mocha.Suite, 
   });
 
   const args: DescribeArgs = {
-    spawnCli(args: string[], opts?: SpawnCliOpts) {
-      const proc = spawnCli(args);
+    spawnCli(opts: SpawnCliOpts, args: string[]) {
+      const proc = spawnCli(opts, args);
       console.log(`Created process ${proc.pid}`);
 
       afterEachCallbacks.push(async function () {
@@ -70,9 +73,9 @@ export function describeCliTest(testName: string, callback: (this: Mocha.Suite, 
   });
 }
 
-export function spawnCli(lodestarArgs: string[]): child_process.ChildProcessWithoutNullStreams {
-  // TODO: Customize
-  const logPrefix = "vc";
+export function spawnCli(opts: SpawnCliOpts, lodestarArgs: string[]): child_process.ChildProcessWithoutNullStreams {
+  let stdstr = "";
+  const logPrefix = opts?.logPrefix ?? "";
 
   const command = RUN_FROM_SRC
     ? // ts-node --esm cli.ts
@@ -87,17 +90,31 @@ export function spawnCli(lodestarArgs: string[]): child_process.ChildProcessWith
 
   const proc = child_process.spawn(command, prefixArgs);
 
-  proc.stdout.on("data", (chunk) => {
-    const str = Buffer.from(chunk).toString("utf8");
-    process.stdout.write(`${logPrefix} ${proc.pid}: ${str}`); // str already contains a new line. console.log adds a new line
-  });
-  proc.stderr.on("data", (chunk) => {
-    const str = Buffer.from(chunk).toString("utf8");
-    process.stderr.write(`${logPrefix} ${proc.pid}: ${str}`); // str already contains a new line. console.log adds a new line
-  });
+  if (opts?.pipeStdToParent) {
+    proc.stdout.on("data", (chunk) => {
+      const str = Buffer.from(chunk).toString("utf8");
+      process.stdout.write(`${logPrefix} ${proc.pid}: ${str}`); // str already contains a new line. console.log adds a new line
+    });
+    proc.stderr.on("data", (chunk) => {
+      const str = Buffer.from(chunk).toString("utf8");
+      process.stderr.write(`${logPrefix} ${proc.pid}: ${str}`); // str already contains a new line. console.log adds a new line
+    });
+  } else {
+    proc.stdout.on("data", (chunk) => {
+      stdstr += Buffer.from(chunk).toString("utf8");
+    });
+    proc.stderr.on("data", (chunk) => {
+      stdstr += Buffer.from(chunk).toString("utf8");
+    });
+  }
 
   proc.on("exit", (code) => {
     console.log("process exited", {code});
+    if (!opts?.pipeStdToParent) {
+      if (!opts?.printOnlyOnError || (code !== null && code > 0)) {
+        console.log(stdstr);
+      }
+    }
   });
 
   return proc;

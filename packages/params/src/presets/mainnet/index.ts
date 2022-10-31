@@ -4,7 +4,7 @@ import {altair} from "./altair.js";
 import {bellatrix} from "./bellatrix.js";
 import {capella} from "./capella.js";
 
-export const commit = "v1.2.0-rc.3";
+export const commit = "v1.2.0";
 
 export const preset: BeaconPreset = {
   ...phase0,

@@ -35,7 +35,7 @@ describe("validation", function () {
 
   before("prepare data", function () {
     // Update slot must > snapshot slot
-    // signatureSlot must == attestedHeaderSlot + 1
+    // attestedHeaderSlot must == updateHeaderSlot + 1
     const snapshotHeaderSlot = 1;
     const attestedHeaderSlot = EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH + 1;
     const signatureSlot = attestedHeaderSlot + 1;

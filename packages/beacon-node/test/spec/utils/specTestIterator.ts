@@ -40,10 +40,6 @@ const ARTIFACT_FILENAMES = new Set([
  */
 export function specTestIterator(configDirpath: string, testRunners: Record<string, TestRunner>): void {
   for (const forkStr of readdirSyncSpec(configDirpath)) {
-    // TODO enable capella
-    if (forkStr === "capella") {
-      continue;
-    }
     const fork = ForkName[forkStr as ForkName];
     if (fork === undefined) {
       throw Error(`Unknown fork ${forkStr}`);
@@ -52,7 +48,7 @@ export function specTestIterator(configDirpath: string, testRunners: Record<stri
     const forkDirpath = path.join(configDirpath, fork);
     for (const testRunnerName of readdirSyncSpec(forkDirpath)) {
       // We don't have runner for light client yet
-      if (testRunnerName === "light_client") {
+      if (["light_client", "sync"].includes(testRunnerName)) {
         continue;
       }
       const testRunnerDirpath = path.join(forkDirpath, testRunnerName);

@@ -13,7 +13,7 @@ describeCliTest("voluntaryExit cmd", function ({spawnCli}) {
   itDone("Perform a voluntary exit", async function (done) {
     const restPort = 9596;
 
-    const devBnProc = spawnCli([
+    const devBnProc = spawnCli({pipeStdToParent: false, logPrefix: "dev"}, [
       // ⏎
       "dev",
       `--dataDir=${path.join(testFilesDir, "dev-voluntary-exit")}`,

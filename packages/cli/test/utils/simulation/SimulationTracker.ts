@@ -3,8 +3,9 @@ import {routes} from "@lodestar/api/beacon";
 import {TIMELY_HEAD_FLAG_INDEX, TIMELY_TARGET_FLAG_INDEX, TIMELY_SOURCE_FLAG_INDEX, ForkName} from "@lodestar/params";
 import {allForks, altair, Epoch, Slot} from "@lodestar/types";
 import {toHexString} from "@lodestar/utils";
+import {isActiveValidator} from "@lodestar/state-transition";
 import {EpochClock} from "./EpochClock.js";
-import {BeaconNodeProcess, SimulationParams} from "./types.js";
+import {CLParticipant, SimulationParams} from "./interfaces.js";
 import {avg, getForkName} from "./utils.js";
 
 const TIMELY_HEAD = 1 << TIMELY_HEAD_FLAG_INDEX;
@@ -39,6 +40,7 @@ export type SlotMeasure = CommonSlotMeasure & {
   readonly head: string;
   readonly finalizedSlot: Slot;
   readonly syncCommitteeParticipation: number;
+  readonly connectedPeerCount: number;
 };
 
 export type EpochMeasure = CommonSlotMeasure & {
@@ -47,34 +49,40 @@ export type EpochMeasure = CommonSlotMeasure & {
   readonly syncCommitteeParticipationAvg: number;
 };
 
-export const processAttestationsCount = async (node: BeaconNodeProcess, {slot}: SlotMeasureInput): Promise<number> => {
-  const attestations = await node.api.beacon.getBlockAttestations(slot);
+export const processAttestationsCount = async (_node: CLParticipant, {block}: SlotMeasureInput): Promise<number> => {
+  // Use a Set since the same validator can be included in multiple attestations
+  const shuffledParticipants = new Set<number>();
 
-  return Array.from(attestations.data).reduce(
-    (total, att) => total + att.aggregationBits.getTrueBitIndexes().length,
-    0
-  );
+  for (const attestation of block.message.body.attestations) {
+    // Assume constant committee size on all committees
+    const committeeSize = attestation.aggregationBits.bitLen;
+    const indexesInCommittee = attestation.aggregationBits.getTrueBitIndexes();
+    for (const indexInCommittee of indexesInCommittee) {
+      const shuffledIndex = indexInCommittee + attestation.data.index * committeeSize;
+      shuffledParticipants.add(shuffledIndex);
+    }
+  }
+
+  return shuffledParticipants.size;
 };
 
-export const processInclusionDelay = async (node: BeaconNodeProcess, {slot}: SlotMeasureInput): Promise<number> => {
-  const attestations = await node.api.beacon.getBlockAttestations(slot);
-
-  return avg(Array.from(attestations.data).map((att) => slot - att.data.slot));
+export const processInclusionDelay = async (_node: CLParticipant, {block}: SlotMeasureInput): Promise<number> => {
+  return avg(Array.from(block.message.body.attestations).map((att) => block.message.slot - att.data.slot));
 };
 
-export const processHead = async (node: BeaconNodeProcess, _: SlotMeasureInput): Promise<string> => {
+export const processHead = async (node: CLParticipant, _: SlotMeasureInput): Promise<string> => {
   const head = await node.api.beacon.getBlockHeader("head");
 
   return toHexString(head.data.root);
 };
 
-export const processFinalized = async (node: BeaconNodeProcess, _: SlotMeasureInput): Promise<number> => {
+export const processFinalized = async (node: CLParticipant, _: SlotMeasureInput): Promise<number> => {
   const finalized = await node.api.beacon.getBlockHeader("finalized");
   return finalized.data.header.message.slot;
 };
 
 export const processSyncCommitteeParticipation = async (
-  _node: BeaconNodeProcess,
+  _node: CLParticipant,
   {fork: version, block}: SlotMeasureInput
 ): Promise<number> => {
   if (version === ForkName.phase0) {
@@ -85,13 +93,25 @@ export const processSyncCommitteeParticipation = async (
   return syncCommitteeBits.getTrueBitIndexes().length / syncCommitteeBits.bitLen;
 };
 
-export const processSlotMeasure = async (node: BeaconNodeProcess, input: SlotMeasureInput): Promise<SlotMeasure> => {
-  const [attestationsCount, inclusionDelay, head, finalized, syncCommitteeParticipation] = await Promise.all([
+export const processConnectedPeerCount = async (node: CLParticipant): Promise<number> => {
+  return (await node.api.node.getPeerCount()).data.connected;
+};
+
+export const processSlotMeasure = async (node: CLParticipant, input: SlotMeasureInput): Promise<SlotMeasure> => {
+  const [
+    attestationsCount,
+    inclusionDelay,
+    head,
+    finalized,
+    syncCommitteeParticipation,
+    connectedPeerCount,
+  ] = await Promise.all([
     processAttestationsCount(node, input),
     processInclusionDelay(node, input),
     processHead(node, input),
     processFinalized(node, input),
     processSyncCommitteeParticipation(node, input),
+    processConnectedPeerCount(node),
   ]);
 
   const epoch = input.clock.getEpochForSlot(input.slot);
@@ -106,11 +126,12 @@ export const processSlotMeasure = async (node: BeaconNodeProcess, input: SlotMea
     head,
     finalizedSlot: finalized,
     syncCommitteeParticipation,
+    connectedPeerCount,
   };
 };
 
 export const processEpochMissedSlots = async (
-  _node: BeaconNodeProcess,
+  _node: CLParticipant,
   {startSlot, endSlot, slotsMeasures}: EpochMeasureInput
 ): Promise<number[]> => {
   const missedSlots: number[] = [];
@@ -124,10 +145,10 @@ export const processEpochMissedSlots = async (
 };
 
 export const processAttestationEpochParticipationAvg = async (
-  _node: BeaconNodeProcess,
-  {fork: version, state}: EpochMeasureInput
+  _node: CLParticipant,
+  {fork, state, epoch}: EpochMeasureInput
 ): Promise<{head: number; source: number; target: number}> => {
-  if (version === ForkName.phase0) {
+  if (fork === ForkName.phase0) {
     return {head: 0, source: 0, target: 0};
   }
 
@@ -138,14 +159,15 @@ export const processAttestationEpochParticipationAvg = async (
   let totalEffectiveBalance = 0;
 
   for (let i = 0; i < previousEpochParticipation.length; i++) {
-    totalAttestingBalance.head +=
-      previousEpochParticipation[i] & TIMELY_HEAD ? state.validators[i].effectiveBalance : 0;
-    totalAttestingBalance.source +=
-      previousEpochParticipation[i] & TIMELY_SOURCE ? state.validators[i].effectiveBalance : 0;
-    totalAttestingBalance.target +=
-      previousEpochParticipation[i] & TIMELY_TARGET ? state.validators[i].effectiveBalance : 0;
+    const {effectiveBalance} = state.validators[i];
 
-    totalEffectiveBalance += state.validators[i].effectiveBalance;
+    totalAttestingBalance.head += previousEpochParticipation[i] & TIMELY_HEAD ? effectiveBalance : 0;
+    totalAttestingBalance.source += previousEpochParticipation[i] & TIMELY_SOURCE ? effectiveBalance : 0;
+    totalAttestingBalance.target += previousEpochParticipation[i] & TIMELY_TARGET ? effectiveBalance : 0;
+
+    if (isActiveValidator(state.validators[i], epoch)) {
+      totalEffectiveBalance += effectiveBalance;
+    }
   }
 
   totalAttestingBalance.head = totalAttestingBalance.head / totalEffectiveBalance;
@@ -156,7 +178,7 @@ export const processAttestationEpochParticipationAvg = async (
 };
 
 export const processSyncCommitteeParticipationAvg = async (
-  _node: BeaconNodeProcess,
+  _node: CLParticipant,
   {startSlot, endSlot, fork: version, slotsMeasures: slotsMetrics}: EpochMeasureInput
 ): Promise<number> => {
   if (version === ForkName.phase0) {
@@ -172,7 +194,7 @@ export const processSyncCommitteeParticipationAvg = async (
   return avg(participation);
 };
 
-export const processEpochMeasure = async (node: BeaconNodeProcess, input: EpochMeasureInput): Promise<EpochMeasure> => {
+export const processEpochMeasure = async (node: CLParticipant, input: EpochMeasureInput): Promise<EpochMeasure> => {
   const [missedSlots, attestationParticipationAvg, syncCommitteeParticipationAvg] = await Promise.all([
     processEpochMissedSlots(node, input),
     processAttestationEpochParticipationAvg(node, input),
@@ -198,54 +220,29 @@ export class SimulationTracker {
 
   private lastSeenSlot: Map<string, Slot> = new Map();
   private signal: AbortSignal;
-  private nodes: BeaconNodeProcess[];
+  private nodes: CLParticipant[];
   private clock: EpochClock;
   private params: SimulationParams;
 
-  constructor(nodes: BeaconNodeProcess[], clock: EpochClock, params: SimulationParams, signal: AbortSignal) {
+  constructor(nodes: CLParticipant[], clock: EpochClock, params: SimulationParams, signal: AbortSignal) {
     this.signal = signal;
     this.nodes = nodes;
     this.clock = clock;
     this.params = params;
 
     for (const node of nodes) {
-      this.slotMeasures.set(node.id, new Map());
-      this.epochMeasures.set(node.id, new Map());
-      this.lastSeenSlot.set(node.id, 0);
-
-      // We don't receive genesis block on event stream
-      this.slotMeasures.get(node.id)?.set(0, {
-        slot: 0,
-        epoch: 0,
-        epochStr: "0/0",
-        fork: getForkName(0, this.params),
-        attestationsCount: 0,
-        inclusionDelay: 0,
-        finalizedSlot: 0,
-        syncCommitteeParticipation: 0,
-        head: "",
-      });
+      this.initDataForNode(node);
     }
+  }
+
+  track(node: CLParticipant): void {
+    this.initDataForNode(node);
+    this.initEventStreamForNode(node);
   }
 
   async start(): Promise<void> {
     for (const node of this.nodes) {
-      node.api.events.eventstream(
-        [routes.events.EventType.block, routes.events.EventType.head, routes.events.EventType.finalizedCheckpoint],
-        this.signal,
-        async (event) => {
-          this.emitter.emit(event.type, event, node);
-
-          switch (event.type) {
-            case routes.events.EventType.block:
-              await this.onBlock(event.message, node);
-              return;
-            case routes.events.EventType.finalizedCheckpoint:
-              this.onFinalizedCheckpoint(event.message, node);
-              return;
-          }
-        }
-      );
+      this.initEventStreamForNode(node);
     }
   }
 
@@ -253,15 +250,22 @@ export class SimulationTracker {
     // Do nothing;
   }
 
+  onSlot(slot: Slot, node: CLParticipant, cb: (slot: Slot) => void): void {
+    this.emitter.once(`${node.id}:slot:${slot}`, cb);
+  }
+
   private async onBlock(
     event: routes.events.EventData[routes.events.EventType.block],
-    node: BeaconNodeProcess
+    node: CLParticipant
   ): Promise<void> {
     const slot = event.slot;
     const lastSeenSlot = this.lastSeenSlot.get(node.id);
 
     if (lastSeenSlot !== undefined && slot > lastSeenSlot) {
       this.lastSeenSlot.set(node.id, slot);
+    } else {
+      // We don't need to process old blocks
+      return;
     }
 
     const block = await node.api.beacon.getBlockV2(slot);
@@ -292,46 +296,55 @@ export class SimulationTracker {
         })
       );
     }
+    this.emitter.emit(`${node.id}:slot:${slot}`, slot);
   }
 
-  private onHead(_event: routes.events.EventData[routes.events.EventType.head], _node: BeaconNodeProcess): void {
+  private onHead(_event: routes.events.EventData[routes.events.EventType.head], _node: CLParticipant): void {
     // TODO: Add head tracking
   }
 
   private onFinalizedCheckpoint(
     _event: routes.events.EventData[routes.events.EventType.finalizedCheckpoint],
-    _node: BeaconNodeProcess
+    _node: CLParticipant
   ): void {
     // TODO: Add checkpoint tracking
   }
 
-  printNoesInfo(): void {
+  printNoesInfo(epoch?: Epoch): void {
     /* eslint-disable @typescript-eslint/naming-convention */
-    const maxSlot = Math.max(...this.lastSeenSlot.values());
+    const minSlot = epoch != null ? this.clock.getFirstSlotOfEpoch(epoch) : 0;
+    const maxSlot = epoch != null ? this.clock.getLastSlotOfEpoch(epoch) : Math.max(...this.lastSeenSlot.values());
     const records: Record<string, unknown>[] = [];
 
-    for (let slot = 0; slot <= maxSlot; slot++) {
+    for (let slot = minSlot; slot <= maxSlot; slot++) {
       const epoch = this.clock.getEpochForSlot(slot);
       const forkName = getForkName(epoch, this.params);
       const epochStr = `${this.clock.getEpochForSlot(slot)}/${this.clock.getSlotIndexInEpoch(slot)}`;
+
+      const finalizedSLots = this.nodes.map((node) => this.slotMeasures.get(node.id)?.get(slot)?.finalizedSlot ?? "-");
+      const finalizedSlotsUnique = new Set(finalizedSLots);
+      const attestationCount = this.nodes.map(
+        (node) => this.slotMeasures.get(node.id)?.get(slot)?.attestationsCount ?? "-"
+      );
+      const attestationCountUnique = new Set(attestationCount);
+      const inclusionDelay = this.nodes.map((node) => this.slotMeasures.get(node.id)?.get(slot)?.inclusionDelay ?? "-");
+      const inclusionDelayUnique = new Set(inclusionDelay);
+      const attestationParticipation = this.nodes.map(
+        (node) => this.slotMeasures.get(node.id)?.get(slot)?.syncCommitteeParticipation ?? "-"
+      );
+      const attestationParticipationUnique = new Set(attestationParticipation);
 
       const record: Record<string, unknown> = {
         F: forkName,
         Eph: epochStr,
         slot,
         "Missed Slots": this.nodes.map((node) => (this.slotMeasures.get(node.id)?.has(slot) ? "-" : "x")).join(""),
-        "Finalized Slots": this.nodes
-          .map((node) => this.slotMeasures.get(node.id)?.get(slot)?.finalizedSlot ?? "-")
-          .join(" | "),
-        "Attestations Count": this.nodes
-          .map((node) => this.slotMeasures.get(node.id)?.get(slot)?.attestationsCount ?? "-")
-          .join(" | "),
-        "Inclusion Delay": this.nodes
-          .map((node) => this.slotMeasures.get(node.id)?.get(slot)?.inclusionDelay ?? "-")
-          .join(" | "),
-        "SC Participation": this.nodes
-          .map((node) => this.slotMeasures.get(node.id)?.get(slot)?.syncCommitteeParticipation ?? "-")
-          .join(" | "),
+        "Finalized Slots": finalizedSlotsUnique.size === 1 ? finalizedSLots[0] : finalizedSLots.join(","),
+        "Attestations Count": attestationCountUnique.size === 1 ? attestationCount[0] : attestationCount.join(","),
+        "Inclusion Delay": inclusionDelayUnique.size === 1 ? inclusionDelay[0] : inclusionDelay.join(","),
+        "SC Participation":
+          attestationParticipationUnique.size === 1 ? attestationParticipation[0] : attestationParticipation.join(","),
+        Peer: this.nodes.map((node) => this.slotMeasures.get(node.id)?.get(slot)?.connectedPeerCount ?? "-").join(","),
       };
 
       // TODO: Find a better way to show the heads on each slot
@@ -342,28 +355,29 @@ export class SimulationTracker {
       records.push(record);
 
       if (this.clock.isLastSlotOfEpoch(slot)) {
+        const participation = this.nodes.map((node) => {
+          const participation = this.epochMeasures.get(node.id)?.get(epoch)?.attestationParticipationAvg;
+          if (!participation) return "-";
+          return `${participation.head.toFixed(2)},${participation.source.toFixed(2)},${participation.target.toFixed(
+            2
+          )}`;
+        });
+        const participationUnique = new Set(participation);
+
         const summary: Record<string, unknown> = {
           F: forkName,
           Eph: epoch,
           slot: "---",
           "Missed Slots": this.nodes
             .map((node) => this.epochMeasures.get(node.id)?.get(epoch)?.missedSlots.length)
-            .join(" | "),
-          "Finalized Slots": Array(this.nodes.length).fill("-").join(" | "),
-          "Attestations Count": this.nodes
-            .map((node) => {
-              const participation = this.epochMeasures.get(node.id)?.get(epoch)?.attestationParticipationAvg;
-              if (!participation) return "-";
-
-              return `${participation.head.toFixed(2)},${participation.source.toFixed(
-                2
-              )},${participation.target.toFixed(2)}`;
-            })
-            .join(" | "),
-          "Inclusion Delay": Array(this.nodes.length).fill("-").join(" | "),
+            .join(","),
+          "Finalized Slots": Array(this.nodes.length).fill("-").join(""),
+          "Attestations Count": participationUnique.size === 1 ? participation[0] : participation.join(","),
+          "Inclusion Delay": Array(this.nodes.length).fill("-").join(""),
           "SC Participation": this.nodes
             .map((node) => this.epochMeasures.get(node.id)?.get(epoch)?.syncCommitteeParticipationAvg ?? "-")
-            .join(" | "),
+            .join(","),
+          Peer: Array(this.nodes.length).fill("-").join(""),
         };
         records.push(summary);
       }
@@ -371,5 +385,43 @@ export class SimulationTracker {
 
     console.table(records);
     /* eslint-enable @typescript-eslint/naming-convention */
+  }
+
+  private initDataForNode(node: CLParticipant): void {
+    this.slotMeasures.set(node.id, new Map());
+    this.epochMeasures.set(node.id, new Map());
+    this.lastSeenSlot.set(node.id, 0);
+
+    this.slotMeasures.get(node.id)?.set(0, {
+      slot: 0,
+      epoch: 0,
+      epochStr: "0/0",
+      fork: getForkName(0, this.params),
+      attestationsCount: 0,
+      inclusionDelay: 0,
+      finalizedSlot: 0,
+      syncCommitteeParticipation: 0,
+      head: "",
+      connectedPeerCount: 0,
+    });
+  }
+
+  private initEventStreamForNode(node: CLParticipant): void {
+    node.api.events.eventstream(
+      [routes.events.EventType.block, routes.events.EventType.head, routes.events.EventType.finalizedCheckpoint],
+      this.signal,
+      async (event) => {
+        this.emitter.emit(event.type, event, node);
+
+        switch (event.type) {
+          case routes.events.EventType.block:
+            await this.onBlock(event.message, node);
+            return;
+          case routes.events.EventType.finalizedCheckpoint:
+            this.onFinalizedCheckpoint(event.message, node);
+            return;
+        }
+      }
+    );
   }
 }

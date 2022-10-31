@@ -151,6 +151,15 @@ export class ReqResp implements IReqResp {
     );
   }
 
+  async lightClientOptimisticUpdate(peerId: PeerId): Promise<altair.LightClientOptimisticUpdate> {
+    return await this.sendRequest<altair.LightClientOptimisticUpdate>(
+      peerId,
+      Method.LightClientOptimisticUpdate,
+      [Version.V1],
+      null
+    );
+  }
+
   async lightClientFinalityUpdate(peerId: PeerId): Promise<altair.LightClientFinalityUpdate> {
     return await this.sendRequest<altair.LightClientFinalityUpdate>(
       peerId,
@@ -170,15 +179,6 @@ export class ReqResp implements IReqResp {
       [Version.V1],
       request,
       request.count
-    );
-  }
-
-  async lightClientOptimisticUpdate(peerId: PeerId): Promise<altair.LightClientOptimisticUpdate> {
-    return await this.sendRequest<altair.LightClientOptimisticUpdate>(
-      peerId,
-      Method.LightClientOptimisticUpdate,
-      [Version.V1],
-      null
     );
   }
 
@@ -308,7 +308,7 @@ export class ReqResp implements IReqResp {
         yield* this.reqRespHandlers.onLightClientFinalityUpdate();
         break;
       case Method.LightClientUpdate:
-        yield* this.reqRespHandlers.onLightClientUpdate(requestTyped.body);
+        yield* this.reqRespHandlers.onLightClientUpdatesByRange(requestTyped.body);
         break;
       default:
         throw Error(`Unsupported method ${protocol.method}`);

@@ -55,6 +55,10 @@ export type Eth2GossipsubModules = {
 
 export type Eth2GossipsubOpts = {
   allowPublishToZeroPeers?: boolean;
+  gossipsubD?: number;
+  gossipsubDLow?: number;
+  gossipsubDHigh?: number;
+  gossipsubAwaitHandler?: boolean;
 };
 
 /**
@@ -83,6 +87,7 @@ export class Eth2Gossipsub extends GossipSub {
   private readonly validatorFnsByType: ValidatorFnsByType;
 
   constructor(opts: Eth2GossipsubOpts, modules: Eth2GossipsubModules) {
+    const {allowPublishToZeroPeers, gossipsubD, gossipsubDLow, gossipsubDHigh} = opts;
     const gossipTopicCache = new GossipTopicCache(modules.config);
 
     const scoreParams = computeGossipPeerScoreParams(modules);
@@ -92,10 +97,10 @@ export class Eth2Gossipsub extends GossipSub {
     // https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#the-gossip-domain-gossipsub
     super({
       globalSignaturePolicy: SignaturePolicy.StrictNoSign,
-      allowPublishToZeroPeers: opts.allowPublishToZeroPeers,
-      D: GOSSIP_D,
-      Dlo: GOSSIP_D_LOW,
-      Dhi: GOSSIP_D_HIGH,
+      allowPublishToZeroPeers: allowPublishToZeroPeers,
+      D: gossipsubD ?? GOSSIP_D,
+      Dlo: gossipsubDLow ?? GOSSIP_D_LOW,
+      Dhi: gossipsubDHigh ?? GOSSIP_D_HIGH,
       Dlazy: 6,
       heartbeatInterval: GOSSIPSUB_HEARTBEAT_INTERVAL,
       fanoutTTL: 60 * 1000,
@@ -104,6 +109,10 @@ export class Eth2Gossipsub extends GossipSub {
       seenTTL: 550 * GOSSIPSUB_HEARTBEAT_INTERVAL,
       scoreParams,
       scoreThresholds: gossipScoreThresholds,
+      // For a single stream, await processing each RPC before processing the next
+      awaitRpcHandler: opts.gossipsubAwaitHandler,
+      // For a single RPC, await processing each message before processing the next
+      awaitRpcMessageHandler: opts.gossipsubAwaitHandler,
       // the default in gossipsub is 3s is not enough since lodestar suffers from I/O lag
       gossipsubIWantFollowupMs: 12 * 1000, // 12s
       fastMsgIdFn: fastMsgIdFn,
