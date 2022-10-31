@@ -72,8 +72,7 @@ export function processDeposit(fork: ForkSeq, state: CachedBeaconStateAllForks, 
 
     // add validator and balance entries
     const effectiveBalance = Math.min(amount - (amount % EFFECTIVE_BALANCE_INCREMENT), MAX_EFFECTIVE_BALANCE);
-    if (fork < ForkSeq.capella) {
-      (validators as CachedBeaconStatePhase0["validators"]).push(
+    validators.push(
         ssz.phase0.Validator.toViewDU({
           pubkey,
           withdrawalCredentials: deposit.data.withdrawalCredentials,
@@ -85,22 +84,6 @@ export function processDeposit(fork: ForkSeq, state: CachedBeaconStateAllForks, 
           slashed: false,
         })
       );
-    } else {
-      (validators as CachedBeaconStateCapella["validators"]).push(
-        ssz.capella.Validator.toViewDU({
-          pubkey,
-          withdrawalCredentials: deposit.data.withdrawalCredentials,
-          activationEligibilityEpoch: FAR_FUTURE_EPOCH,
-          activationEpoch: FAR_FUTURE_EPOCH,
-          exitEpoch: FAR_FUTURE_EPOCH,
-          withdrawableEpoch: FAR_FUTURE_EPOCH,
-          effectiveBalance,
-          slashed: false,
-          // This field is removed in the latest spec, but is present in 1.2.0 set to 0
-          fullyWithdrawnEpoch: 0,
-        })
-      );
-    }
     state.balances.push(amount);
 
     const validatorIndex = validators.length - 1;

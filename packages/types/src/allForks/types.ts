@@ -24,7 +24,6 @@ export type SignedBeaconBlock =
   | capella.SignedBeaconBlock;
 export type BeaconState = phase0.BeaconState | altair.BeaconState | bellatrix.BeaconState | capella.BeaconState;
 export type Metadata = phase0.Metadata | altair.Metadata;
-export type Validator = phase0.Validator | capella.Validator;
 
 // For easy reference in the assemble block for building payloads
 export type ExecutionBlockBody = bellatrix.BeaconBlockBody | capella.BeaconBlockBody;

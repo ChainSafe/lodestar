@@ -68,18 +68,6 @@ export const ExecutionPayloadHeader = new ContainerType(
   {typeName: "ExecutionPayloadHeader", jsonCase: "eth2"}
 );
 
-export const ValidatorContainer = new ContainerType(
-  {
-    ...phase0Ssz.ValidatorContainer.fields,
-    fullyWithdrawnEpoch: EpochInf,
-  },
-  {typeName: "Validator", jsonCase: "eth2"}
-);
-export const ValidatorNodeStruct = new ContainerNodeStructType(ValidatorContainer.fields, ValidatorContainer.opts);
-// The main Validator type is the 'ContainerNodeStructType' version
-export const Validator = ValidatorNodeStruct;
-export const Validators = new ListCompositeType(ValidatorNodeStruct, VALIDATOR_REGISTRY_LIMIT);
-
 export const BLSToExecutionChanges = new ListCompositeType(BLSToExecutionChange, MAX_BLS_TO_EXECUTION_CHANGES);
 export const BeaconBlockBody = new ContainerType(
   {
@@ -142,7 +130,7 @@ export const BeaconState = new ContainerType(
     eth1DataVotes: phase0Ssz.Eth1DataVotes,
     eth1DepositIndex: UintNum64,
     // Registry
-    validators: Validators, // [Modified in Capella]
+    validators: phase0Ssz.Validators,
     balances: phase0Ssz.Balances,
     randaoMixes: phase0Ssz.RandaoMixes,
     // Slashings
