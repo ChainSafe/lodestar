@@ -1,11 +1,10 @@
-import {ContainerType, ListCompositeType, VectorCompositeType, ContainerNodeStructType} from "@chainsafe/ssz";
+import {ContainerType, ListCompositeType, VectorCompositeType} from "@chainsafe/ssz";
 import {
   HISTORICAL_ROOTS_LIMIT,
   SLOTS_PER_HISTORICAL_ROOT,
   MAX_WITHDRAWALS_PER_PAYLOAD,
   MAX_BLS_TO_EXECUTION_CHANGES,
   WITHDRAWAL_QUEUE_LIMIT,
-  VALIDATOR_REGISTRY_LIMIT,
 } from "@lodestar/params";
 import {ssz as primitiveSsz} from "../primitive/index.js";
 import {ssz as phase0Ssz} from "../phase0/index.js";
@@ -15,7 +14,6 @@ import {ssz as bellatrixSsz} from "../bellatrix/index.js";
 const {
   UintNum64,
   Slot,
-  EpochInf,
   ValidatorIndex,
   WithdrawalIndex,
   Root,
@@ -28,6 +26,7 @@ const {
 export const Withdrawal = new ContainerType(
   {
     index: WithdrawalIndex,
+    validatorIndex: ValidatorIndex,
     address: ExecutionAddress,
     amount: Gwei,
   },
