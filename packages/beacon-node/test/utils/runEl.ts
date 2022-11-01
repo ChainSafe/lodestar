@@ -15,7 +15,7 @@ export enum ELStartMode {
   PostMerge = "post-merge",
 }
 
-export type ELSetupConfig = {mode: ELStartMode; elScriptDir: string; elBinaryDir: string};
+export type ELSetupConfig = {mode: ELStartMode; elScriptDir: string; elBinaryDir: string; template?: string};
 export type ELRunOptions = {ttd: bigint; dataPath: string; jwtSecretHex: string; enginePort: number; ethPort: number};
 export type ELClient = {
   genesisBlockHash: string;
@@ -35,13 +35,14 @@ export type ELClient = {
  */
 
 export async function runEL(
-  {mode, elScriptDir, elBinaryDir}: ELSetupConfig,
+  {mode, elScriptDir, elBinaryDir, template}: ELSetupConfig,
   {ttd, dataPath, jwtSecretHex, enginePort, ethPort}: ELRunOptions,
   signal: AbortSignal
 ): Promise<{elClient: ELClient; tearDownCallBack: () => Promise<void>}> {
   const network = `${elScriptDir}/${mode}`;
   const ethRpcUrl = `http://127.0.0.1:${ethPort}`;
   const engineRpcUrl = `http://127.0.0.1:${enginePort}`;
+  const genesisTemplate = template ?? "genesisPre.tpl";
 
   await shell(`sudo rm -rf ${dataPath}`);
   fs.mkdirSync(dataPath, {recursive: true});
@@ -54,6 +55,7 @@ export async function runEL(
     ENGINE_PORT: `${enginePort}`,
     ETH_PORT: `${ethPort}`,
     JWT_SECRET_HEX: jwtSecretHex,
+    TEMPLATE_FILE: genesisTemplate,
   });
 
   // Wait for Geth to be online
@@ -124,8 +126,9 @@ async function startELProcess(args: {
   ENGINE_PORT: string;
   ETH_PORT: string;
   JWT_SECRET_HEX: string;
+  TEMPLATE_FILE: string;
 }): Promise<() => Promise<void>> {
-  const {runScriptPath, TTD, DATA_DIR, EL_BINARY_DIR, ENGINE_PORT, ETH_PORT, JWT_SECRET_HEX} = args;
+  const {runScriptPath, TTD, DATA_DIR, EL_BINARY_DIR, ENGINE_PORT, ETH_PORT, JWT_SECRET_HEX, TEMPLATE_FILE} = args;
 
   //Passing process.env as it might have important PATH/docker socket info set
   const gethProc = spawn(runScriptPath, [], {
@@ -137,6 +140,7 @@ async function startELProcess(args: {
       TTD,
       DATA_DIR,
       JWT_SECRET_HEX,
+      TEMPLATE_FILE,
     },
   });
 

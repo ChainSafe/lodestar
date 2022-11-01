@@ -1,11 +1,14 @@
 import {ssz, allForks} from "@lodestar/types";
 import {toHexString, byteArrayEquals} from "@chainsafe/ssz";
+import {ForkSeq} from "@lodestar/params";
+
 import {CachedBeaconStateBellatrix, CachedBeaconStateCapella} from "../types.js";
 import {getRandaoMix} from "../util/index.js";
 import {ExecutionEngine} from "../util/executionEngine.js";
 import {isExecutionPayload, isMergeTransitionComplete, isCapellaPayload} from "../util/execution.js";
 
 export function processExecutionPayload(
+  fork: ForkSeq,
   state: CachedBeaconStateBellatrix | CachedBeaconStateCapella,
   payload: allForks.FullOrBlindedExecutionPayload,
   executionEngine: ExecutionEngine | null
@@ -46,7 +49,7 @@ export function processExecutionPayload(
   // if executionEngine is null, executionEngine.onPayload MUST be called after running processBlock to get the
   // correct randao mix. Since executionEngine will be an async call in most cases it is called afterwards to keep
   // the state transition sync
-  if (isExecutionPayload(payload) && executionEngine && !executionEngine.notifyNewPayload(payload)) {
+  if (isExecutionPayload(payload) && executionEngine && !executionEngine.notifyNewPayload(fork, payload)) {
     throw Error("Invalid execution payload");
   }
 

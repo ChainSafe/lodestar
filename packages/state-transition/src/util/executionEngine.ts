@@ -1,4 +1,5 @@
 import {bellatrix} from "@lodestar/types";
+import {ForkSeq} from "@lodestar/params";
 
 export type ExecutionEngine = {
   /**
@@ -8,5 +9,5 @@ export type ExecutionEngine = {
    * mix from the state. Implementations that are considering parallel processing of execution payload with respect to
    * beacon chain state transition function should work around this dependency.
    */
-  notifyNewPayload(executionPayload: bellatrix.ExecutionPayload): boolean;
+  notifyNewPayload(seq: ForkSeq, executionPayload: bellatrix.ExecutionPayload): boolean;
 };
