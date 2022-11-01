@@ -172,7 +172,7 @@ export async function produceBlockBody<T extends BlockType>(
             // See: https://discord.com/channels/595666850260713488/892088344438255616/1009882079632314469
             await sleep(PAYLOAD_GENERATION_TIME_MS);
           }
-          const payload = await this.executionEngine.getPayload(payloadId);
+          const payload = await this.executionEngine.getPayload(forkInfo.seq, payloadId);
           (blockBody as allForks.ExecutionBlockBody).executionPayload = payload;
 
           const fetchedTime = Date.now() / 1000 - computeTimeAtSlot(this.config, blockSlot, this.genesisTime);
@@ -265,6 +265,7 @@ export async function prepareExecutionPayload(
     const withdrawalAttrs =
       seq >= ForkSeq.capella ? {withdrawals: getExpectedWithdrawals(state as CachedBeaconStateCapella)} : {};
     payloadId = await chain.executionEngine.notifyForkchoiceUpdate(
+      seq,
       toHex(parentHash),
       safeBlockHash,
       finalizedBlockHash,

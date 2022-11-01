@@ -10,6 +10,15 @@ const MAX_PAYLOAD_IDS = SLOTS_PER_EPOCH;
 // Since we do no processing with this id, we have no need to deserialize it
 export type PayloadId = string;
 
+export type WithdrawalV1 = {
+  index: QUANTITY;
+  validatorIndex: QUANTITY;
+  address: DATA;
+  //geth incorrectly resposes as recipient so remove this when they fix name
+  recipient?: DATA;
+  amount: QUANTITY;
+};
+
 export type ApiPayloadAttributes = {
   /** QUANTITY, 64 Bits - value for the timestamp field of the new payload */
   timestamp: QUANTITY;
@@ -17,9 +26,10 @@ export type ApiPayloadAttributes = {
   prevRandao: DATA;
   /** DATA, 20 Bytes - suggested value for the coinbase field of the new payload */
   suggestedFeeRecipient: DATA;
+  withdrawals?: WithdrawalV1[];
 };
 
-type FcuAttributes = {headBlockHash: DATA; finalizedBlockHash: DATA} & ApiPayloadAttributes;
+type FcuAttributes = {headBlockHash: DATA; finalizedBlockHash: DATA} & Omit<ApiPayloadAttributes, "withdrawals">;
 
 export class PayloadIdCache {
   private readonly payloadIdByFcuAttributes = new Map<string, {payloadId: PayloadId; fullKey: string}>();

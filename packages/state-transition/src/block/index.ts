@@ -37,7 +37,7 @@ export function processBlock(
         fullOrBlindedPayload as capella.FullOrBlindedExecutionPayload
       );
     }
-    processExecutionPayload(state as CachedBeaconStateBellatrix, fullOrBlindedPayload, executionEngine);
+    processExecutionPayload(fork, state as CachedBeaconStateBellatrix, fullOrBlindedPayload, executionEngine);
   }
 
   processRandao(state, block, verifySignatures);

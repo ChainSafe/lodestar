@@ -1,8 +1,10 @@
-import {RootHex, allForks} from "@lodestar/types";
-import {DATA, QUANTITY} from "../../eth1/provider/utils.js";
-import {PayloadIdCache, PayloadId, ApiPayloadAttributes} from "./payloadIdCache.js";
+import {RootHex, allForks, capella} from "@lodestar/types";
+import {ForkSeq} from "@lodestar/params";
 
-export {PayloadIdCache, PayloadId, ApiPayloadAttributes};
+import {DATA, QUANTITY} from "../../eth1/provider/utils.js";
+import {PayloadIdCache, PayloadId, ApiPayloadAttributes, WithdrawalV1} from "./payloadIdCache.js";
+
+export {PayloadIdCache, PayloadId, ApiPayloadAttributes, WithdrawalV1};
 export enum ExecutePayloadStatus {
   /** given payload is valid */
   VALID = "VALID",
@@ -46,6 +48,7 @@ export type PayloadAttributes = {
   // DATA is anyway a hex string, so we can just track it as a hex string to
   // avoid any conversions
   suggestedFeeRecipient: string;
+  withdrawals?: capella.Withdrawal[];
 };
 
 export type TransitionConfigurationV1 = {
@@ -71,7 +74,7 @@ export interface IExecutionEngine {
    *
    * Should be called in advance before, after or in parallel to block processing
    */
-  notifyNewPayload(executionPayload: allForks.ExecutionPayload): Promise<ExecutePayloadResponse>;
+  notifyNewPayload(seq: ForkSeq, executionPayload: allForks.ExecutionPayload): Promise<ExecutePayloadResponse>;
 
   /**
    * Signal fork choice updates
@@ -86,6 +89,7 @@ export interface IExecutionEngine {
    * Should be called in response to fork-choice head and finalized events
    */
   notifyForkchoiceUpdate(
+    seq: ForkSeq,
     headBlockHash: RootHex,
     safeBlockHash: RootHex,
     finalizedBlockHash: RootHex,
@@ -99,7 +103,7 @@ export interface IExecutionEngine {
    * Required for block producing
    * https://github.com/ethereum/consensus-specs/blob/dev/specs/merge/validator.md#get_payload
    */
-  getPayload(payloadId: PayloadId): Promise<allForks.ExecutionPayload>;
+  getPayload(seq: ForkSeq, payloadId: PayloadId): Promise<allForks.ExecutionPayload>;
 
   exchangeTransitionConfigurationV1(
     transitionConfiguration: TransitionConfigurationV1
