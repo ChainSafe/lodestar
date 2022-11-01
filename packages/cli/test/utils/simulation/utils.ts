@@ -32,4 +32,5 @@ export const KEY_MANAGER_BASE_PORT = 6000;
 export const EXTERNAL_SIGNER_BASE_PORT = 7000;
 export const EL_ETH_BASE_PORT = 8000;
 export const EL_ENGINE_BASE_PORT = 9000;
+export const EL_P2P_BASE_PORT = 9050;
 export const LODESTAR_BINARY_PATH = `${__dirname}/../../../bin/lodestar.js`;

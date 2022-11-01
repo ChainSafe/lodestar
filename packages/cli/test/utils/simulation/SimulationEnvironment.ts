@@ -8,6 +8,7 @@ import {createIChainForkConfig, IChainForkConfig} from "@lodestar/config";
 import {activePreset, MAX_COMMITTEES_PER_SLOT} from "@lodestar/params";
 import {BeaconStateAllForks, interopSecretKey} from "@lodestar/state-transition";
 import {Slot} from "@lodestar/types";
+import {fromHexString} from "@chainsafe/ssz";
 import {generateLodestarBeaconNode} from "./cl_clients/lodestar.js";
 import {EpochClock} from "./EpochClock.js";
 import {ExternalSignerServer} from "./ExternalSignerServer.js";
@@ -35,9 +36,12 @@ import {
   BN_REST_BASE_PORT,
   EL_ENGINE_BASE_PORT,
   EL_ETH_BASE_PORT,
+  EL_P2P_BASE_PORT,
   KEY_MANAGER_BASE_PORT,
 } from "./utils.js";
 import {generateGethNode} from "./el_clients/geth.js";
+
+export const SHARED_JWT_SECRET = "0xdc6457099f127cf0bac78de8b297df04951281909db4f58b43def7c7151e765d";
 
 /* eslint-disable no-console */
 
@@ -56,12 +60,13 @@ export class SimulationEnvironment {
   readonly externalSigner: ExternalSignerServer;
   readonly externalKeysPercentage = 0.5;
 
-  genesisState?: BeaconStateAllForks;
   readonly forkConfig: IChainForkConfig;
   readonly options: SimulationOptions;
 
-  private readonly jobs: Job[] = [];
+  private readonly jobs: {cl: Job; el: Job}[] = [];
   private keysCount = 0;
+  private genesisState?: BeaconStateAllForks;
+  private genesisStatePath: string;
 
   readonly network = {
     connectAllNodes: async (): Promise<void> => {
@@ -87,6 +92,7 @@ export class SimulationEnvironment {
   private constructor(forkConfig: IChainForkConfig, options: SimulationOptions) {
     this.forkConfig = forkConfig;
     this.options = options;
+    this.genesisStatePath = join(this.options.rootDir, "genesis.ssz");
 
     this.clock = new EpochClock({
       genesisTime: this.options.genesisTime,
@@ -104,7 +110,7 @@ export class SimulationEnvironment {
       throw new Error("Invalid runner type");
     }
 
-    this.tracker = new SimulationTracker(this.nodes, this.forkConfig, this.clock, this.options.controller.signal);
+    this.tracker = new SimulationTracker([], this.forkConfig, this.clock, this.options.controller.signal);
   }
 
   static initWithDefaults(
@@ -115,6 +121,8 @@ export class SimulationEnvironment {
       ...chainConfig,
       // eslint-disable-next-line @typescript-eslint/naming-convention
       SECONDS_PER_SLOT: chainConfig.SECONDS_PER_SLOT ?? 4,
+      // eslint-disable-next-line @typescript-eslint/naming-convention
+      TERMINAL_TOTAL_DIFFICULTY: chainConfig.TERMINAL_TOTAL_DIFFICULTY ?? BigInt(0),
     });
 
     const genesisTime = Math.floor(Date.now() / 1000) + forkConfig.GENESIS_DELAY * forkConfig.SECONDS_PER_SLOT;
@@ -131,8 +139,7 @@ export class SimulationEnvironment {
     for (const client of clients) {
       const result = env.createClientPair(client);
 
-      env.jobs.push(result.el.job);
-      env.jobs.push(result.cl.job);
+      env.jobs.push({cl: result.cl.job, el: result.el.job});
 
       env.nodes.push({id: client.id, cl: result.cl.node, el: result.el.node});
     }
@@ -142,34 +149,52 @@ export class SimulationEnvironment {
 
   async start(): Promise<void> {
     await mkdir(this.options.rootDir);
-    this.genesisState = nodeUtils.initDevState(this.forkConfig, this.keysCount, {
-      genesisTime: this.options.genesisTime,
-    }).state;
 
-    const genesisStateFilePath = join(this.options.rootDir, "genesis.ssz");
-    await writeFile(genesisStateFilePath, this.genesisState.serialize());
+    await Promise.all(this.jobs.map((j) => j.el.start()));
+
+    for (let i = 0; i < this.nodes.length; i++) {
+      // Get genesis block hash
+      const eth1Genesis = await this.nodes[i].el.provider.getBlockByNumber(0);
+      if (!eth1Genesis) {
+        throw new Error(`Eth1 genesis not found for node "${this.nodes[i].id}"`);
+      }
+
+      const genesisState = nodeUtils.initDevState(this.forkConfig, this.keysCount, {
+        genesisTime: this.options.genesisTime,
+        eth1BlockHash: fromHexString(eth1Genesis.hash),
+      }).state;
+
+      this.genesisState = genesisState;
+    }
+
+    if (!this.genesisState) {
+      throw new Error("The genesis state for CL clients is not defined.");
+    }
+
+    await writeFile(this.genesisStatePath, this.genesisState.serialize());
+
+    await Promise.all(this.jobs.map((j) => j.cl.start()));
+
     await this.externalSigner.start();
-
-    await Promise.all(this.jobs.map((j) => j.start()));
-
-    // Load half of the validators into the external signer
     for (const node of this.nodes) {
-      const halfKeys = node.cl.secretKeys.slice(0, node.cl.secretKeys.length * this.externalKeysPercentage);
-      this.externalSigner.addKeys(halfKeys);
+      const remoteKeys = node.cl.remoteKeys;
+      this.externalSigner.addKeys(remoteKeys);
       await node.cl.keyManager.importRemoteKeys(
-        halfKeys.map((sk) => ({pubkey: sk.toPublicKey().toHex(), url: this.externalSigner.url}))
+        remoteKeys.map((sk) => ({pubkey: sk.toPublicKey().toHex(), url: this.externalSigner.url}))
       );
     }
 
     await this.tracker.start();
+    await Promise.all(this.nodes.map((node) => this.tracker.track(node)));
   }
 
   async stop(): Promise<void> {
     this.options.controller.abort();
     await this.tracker.stop();
+    await Promise.all(this.jobs.map((j) => j.el.stop()));
+    await Promise.all(this.jobs.map((j) => j.cl.stop()));
     await this.externalSigner.stop();
-    await Promise.all(this.jobs.map((j) => j.stop()));
-    await rm(this.options.rootDir, {recursive: true});
+    // await rm(this.options.rootDir, {recursive: true});
   }
 
   // TODO: Add timeout support
@@ -224,32 +249,40 @@ export class SimulationEnvironment {
     });
     this.keysCount += keysCount;
 
-    return {cl: this.createCLClient(cl, {id, secretKeys: keys}), el: this.createELClient(el, {id})};
+    return {
+      cl: this.createCLClient(cl, {
+        id,
+        remoteKeys: keys.slice(0, keys.length * this.externalKeysPercentage),
+        localKeys: keys.slice(keys.length * this.externalKeysPercentage),
+      }),
+      el: this.createELClient(el, {id}),
+    };
   }
 
   private createCLClient(
     client: CLClient,
-    options?: AtLeast<CLClientOptions, "secretKeys" | "id">
+    options?: AtLeast<CLClientOptions, "remoteKeys" | "localKeys" | "id">
   ): {job: Job; node: CLNode} {
     const nodeIndex = this.nodes.length;
     const clId = `${options?.id}-cl-${client}`;
 
     switch (client) {
       case CLClient.Lodestar: {
-        const genesisStateFilePath = join(this.options.rootDir, "genesis.ssz");
         const opts: CLClientOptions = {
           id: clId,
-          rootDir: join(this.options.rootDir, clId),
+          dataDir: join(this.options.rootDir, clId),
           logFilePath: join(this.options.logsDir, `${clId}.log`),
-          genesisStateFilePath,
+          genesisStateFilePath: this.genesisStatePath,
           restPort: BN_REST_BASE_PORT + nodeIndex + 1,
           port: BN_P2P_BASE_PORT + nodeIndex + 1,
           keyManagerPort: KEY_MANAGER_BASE_PORT + nodeIndex + 1,
           config: this.forkConfig,
           address: "127.0.0.1",
-          secretKeys: options?.secretKeys ?? [],
+          remoteKeys: options?.remoteKeys ?? [],
+          localKeys: options?.localKeys ?? [],
           genesisTime: this.options.genesisTime,
-          externalKeysPercentage: this.externalKeysPercentage,
+          engineUrl: options?.engineUrl ?? `http://127.0.0.1:${EL_ENGINE_BASE_PORT + nodeIndex + 1}`,
+          jwtSecretHex: options?.jwtSecretHex ?? SHARED_JWT_SECRET,
         };
         return generateLodestarBeaconNode(opts, this.runner);
       }
@@ -267,12 +300,13 @@ export class SimulationEnvironment {
         const opts: ELClientOptions = {
           id: elId,
           mode: options?.mode ?? ELStartMode.PostMerge,
-          ttd: options?.ttd ?? BigInt(0),
+          ttd: options?.ttd ?? this.forkConfig.TERMINAL_TOTAL_DIFFICULTY,
           logFilePath: options?.logFilePath ?? join(this.options.logsDir, `${elId}.log`),
           dataDir: options?.dataDir ?? join(this.options.rootDir, elId),
-          jwtSecretHex: options?.jwtSecretHex ?? "0xdc6457099f127cf0bac78de8b297df04951281909db4f58b43def7c7151e765d",
+          jwtSecretHex: options?.jwtSecretHex ?? SHARED_JWT_SECRET,
           enginePort: options?.enginePort ?? EL_ENGINE_BASE_PORT + nodeIndex + 1,
           ethPort: options?.ethPort ?? EL_ETH_BASE_PORT + nodeIndex + 1,
+          port: options?.port ?? EL_P2P_BASE_PORT + nodeIndex + 1,
         };
         return generateGethNode(opts, this.runner);
       }

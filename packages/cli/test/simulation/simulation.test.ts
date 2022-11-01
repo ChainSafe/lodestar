@@ -34,10 +34,10 @@ describe("simulation test - multi-fork", function () {
       },
     },
     [
-      {id: "node1", cl: CLClient.Lodestar, el: ELClient.Geth, keysCount: 32},
-      {id: "node2", cl: CLClient.Lodestar, el: ELClient.Geth, keysCount: 32},
-      {id: "node3", cl: CLClient.Lodestar, el: ELClient.Geth, keysCount: 32},
-      {id: "node4", cl: CLClient.Lodestar, el: ELClient.Geth, keysCount: 32},
+      {id: "node-1", cl: CLClient.Lodestar, el: ELClient.Geth, keysCount: 32},
+      {id: "node-2", cl: CLClient.Lodestar, el: ELClient.Geth, keysCount: 32},
+      {id: "node-3", cl: CLClient.Lodestar, el: ELClient.Geth, keysCount: 32},
+      {id: "node-4", cl: CLClient.Lodestar, el: ELClient.Geth, keysCount: 32},
     ]
   );
 
@@ -54,13 +54,13 @@ describe("simulation test - multi-fork", function () {
     nodeAssertions(env);
   });
 
-  for (let epoch = 0; epoch <= runTill; epoch += 1) {
+  for (let epoch = 0; epoch < 1; epoch += 1) {
     describe(`epoch - ${epoch}`, () => {
       before("wait for epoch", async () => {
         // Wait for one extra slot to make sure epoch transition is complete on the state
         await env.waitForSlot(env.clock.getLastSlotOfEpoch(epoch) + 1);
 
-        env.tracker.printNoesInfo(epoch);
+        env.tracker.printNodesInfo(epoch);
       });
 
       describe("missed blocks", () => {

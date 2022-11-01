@@ -1,6 +1,7 @@
 import type {SecretKey} from "@chainsafe/bls/types";
 import {Api} from "@lodestar/api";
 import {Api as KeyManagerApi} from "@lodestar/api/keymanager";
+import {Eth1Provider} from "@lodestar/beacon-node";
 import {IChainConfig, IChainForkConfig} from "@lodestar/config";
 
 export type SimulationInitOptions = {
@@ -40,7 +41,7 @@ export interface NodePairOptions {
 
 export interface CLClientOptions {
   id: string;
-  rootDir: string;
+  dataDir: string;
   logFilePath: string;
   genesisStateFilePath: string;
   address: string;
@@ -48,11 +49,13 @@ export interface CLClientOptions {
   port: number;
   keyManagerPort: number;
   config: IChainForkConfig;
-  secretKeys: SecretKey[];
+  localKeys: SecretKey[];
+  remoteKeys: SecretKey[];
   checkpointSyncUrl?: string;
   wssCheckpoint?: string;
   genesisTime: number;
-  externalKeysPercentage: number;
+  engineUrl: string;
+  jwtSecretHex: string;
 }
 
 export interface ELClientOptions {
@@ -64,6 +67,7 @@ export interface ELClientOptions {
   jwtSecretHex: string;
   enginePort: number;
   ethPort: number;
+  port: number;
 }
 
 export interface CLNode {
@@ -72,17 +76,18 @@ export interface CLNode {
   readonly url: string;
   readonly api: Api;
   readonly keyManager: KeyManagerApi;
-  readonly secretKeys: SecretKey[];
+  readonly localKeys: SecretKey[];
+  readonly remoteKeys: SecretKey[];
 }
 
 export interface ELNode {
   readonly client: ELClient;
   readonly id: string;
-  readonly genesisBlockHash: string;
   readonly ttd: bigint;
   readonly engineRpcUrl: string;
   readonly ethRpcUrl: string;
   readonly jwtSecretHex: string;
+  readonly provider: Eth1Provider;
 }
 
 export interface NodePair {

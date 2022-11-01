@@ -1,5 +1,8 @@
-import {mkdir, rmdir, writeFile} from "node:fs/promises";
+import {mkdir, writeFile} from "node:fs/promises";
 import {join} from "node:path";
+import got from "got";
+import {Eth1Provider} from "@lodestar/beacon-node";
+import {ZERO_HASH} from "@lodestar/state-transition";
 import {
   ELClient,
   ELClientGenerator,
@@ -9,7 +12,6 @@ import {
   Runner,
   RunnerType,
 } from "../interfaces.js";
-import {callHttp} from "../utils.js";
 
 const getGenesisBlock = (ttd: number, mode: ELStartMode): Record<string, unknown> => {
   if (mode === ELStartMode.PreMerge) {
@@ -105,7 +107,7 @@ export const generateGethNode: ELClientGenerator = (opts: ELClientOptions, runne
     throw Error(`EL ENV must be provided, EL_BINARY_DIR: ${process.env.EL_BINARY_DIR}`);
   }
 
-  const {id, mode, dataDir, ethPort, enginePort, ttd, logFilePath, jwtSecretHex} = opts;
+  const {id, mode, dataDir, ethPort, port, enginePort, ttd, logFilePath, jwtSecretHex} = opts;
 
   const ethRpcUrl = `http://127.0.0.1:${ethPort}`;
   const engineRpcUrl = `http://127.0.0.1:${enginePort}`;
@@ -157,6 +159,8 @@ export const generateGethNode: ELClientGenerator = (opts: ELClientOptions, runne
         String(ethPort as number),
         "--authrpc.port",
         String(enginePort as number),
+        "--port",
+        String(port as number),
         "--authrpc.jwtsecret",
         jwtSecretPath,
         "--datadir",
@@ -166,8 +170,9 @@ export const generateGethNode: ELClientGenerator = (opts: ELClientOptions, runne
         GENESIS_ACCOUNT,
         "--password",
         passwordPath,
-        "--syncmode full",
-        ...(mode == ELStartMode.PreMerge ? ["--nodiscover", "--mine"] : []),
+        "--syncmode",
+        "full",
+        // ...(mode == ELStartMode.PreMerge ? ["--nodiscover", "--mine"] : []),
       ],
       env: {},
     },
@@ -176,9 +181,7 @@ export const generateGethNode: ELClientGenerator = (opts: ELClientOptions, runne
     },
     health: async (): Promise<boolean> => {
       try {
-        console.log("Waiting for EL online...");
-        await callHttp(ethRpcUrl, "POST", {jsonrpc: "2.0", method: "net_version", params: [], id: 67});
-        console.log("Waiting for few seconds for EL to fully setup, for e.g. unlock the account...");
+        await got.post(ethRpcUrl, {json: {jsonrpc: "2.0", method: "net_version", params: [], id: 67}});
         return true;
       } catch (e) {
         return false;
@@ -188,7 +191,11 @@ export const generateGethNode: ELClientGenerator = (opts: ELClientOptions, runne
 
   const job = runner.create(id, [{...initJobOptions, children: [{...importJobOptions, children: [startJobOptions]}]}]);
 
-  const genesisBlockHash = "";
+  const provider = new Eth1Provider(
+    // eslint-disable-next-line @typescript-eslint/naming-convention
+    {DEPOSIT_CONTRACT_ADDRESS: ZERO_HASH},
+    {providerUrls: [engineRpcUrl], jwtSecretHex}
+  );
 
   const node = {
     client: ELClient.Geth,
@@ -197,7 +204,7 @@ export const generateGethNode: ELClientGenerator = (opts: ELClientOptions, runne
     ethRpcUrl,
     ttd,
     jwtSecretHex,
-    genesisBlockHash,
+    provider,
   };
 
   return {job, node};

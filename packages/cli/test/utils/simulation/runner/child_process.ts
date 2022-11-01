@@ -3,10 +3,18 @@ import {createWriteStream, mkdirSync} from "node:fs";
 import {dirname} from "node:path";
 import {EventEmitter} from "node:events";
 import {JobOptions, Job, Runner, RunnerEvent, RunnerType} from "../interfaces.js";
+import {child} from "winston";
 
 type ChildProcessWithJobOptions = {jobOptions: JobOptions; childProcess: ChildProcess};
 
-const stopChildProcess = async (childProcess: ChildProcess, signal?: "SIGTERM"): Promise<void> => {
+const stopChildProcess = async (
+  childProcess: ChildProcess,
+  signal: NodeJS.Signals | number = "SIGTERM"
+): Promise<void> => {
+  if (childProcess.killed || childProcess.exitCode !== null) {
+    return;
+  }
+
   return new Promise((resolve) => {
     childProcess.on("close", resolve);
     childProcess.kill(signal);
@@ -60,7 +68,10 @@ const startJobs = async (jobs: JobOptions[]): Promise<ChildProcessWithJobOptions
     if (job.bootstrap) {
       await job.bootstrap();
     }
-    childProcesses.push({childProcess: await startChildProcess(job), jobOptions: job});
+    const cp = await startChildProcess(job);
+    if (cp) {
+      childProcesses.push({childProcess: cp, jobOptions: job});
+    }
 
     if (job.children) {
       childProcesses.push(...(await startJobs(job.children)));

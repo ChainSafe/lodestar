@@ -240,6 +240,7 @@ export class SimulationTracker {
   track(node: NodePair): void {
     this.initDataForNode(node);
     this.initEventStreamForNode(node);
+    this.nodes.push(node);
   }
 
   async start(): Promise<void> {
@@ -309,7 +310,7 @@ export class SimulationTracker {
     // TODO: Add checkpoint tracking
   }
 
-  printNoesInfo(epoch?: Epoch): void {
+  printNodesInfo(epoch?: Epoch): void {
     /* eslint-disable @typescript-eslint/naming-convention */
     const minSlot = epoch != null ? this.clock.getFirstSlotOfEpoch(epoch) : 0;
     const maxSlot = epoch != null ? this.clock.getLastSlotOfEpoch(epoch) : Math.max(...this.lastSeenSlot.values());
@@ -320,10 +321,10 @@ export class SimulationTracker {
       const forkName = getForkName(epoch, this.config);
       const epochStr = `${this.clock.getEpochForSlot(slot)}/${this.clock.getSlotIndexInEpoch(slot)}`;
 
-      const finalizedSLots = this.nodes.map(
+      const finalizedSlots = this.nodes.map(
         (node) => this.slotMeasures.get(node.cl.id)?.get(slot)?.finalizedSlot ?? "-"
       );
-      const finalizedSlotsUnique = new Set(finalizedSLots);
+      const finalizedSlotsUnique = new Set(finalizedSlots);
       const attestationCount = this.nodes.map(
         (node) => this.slotMeasures.get(node.cl.id)?.get(slot)?.attestationsCount ?? "-"
       );
@@ -342,7 +343,7 @@ export class SimulationTracker {
         Eph: epochStr,
         slot,
         "Missed Slots": this.nodes.map((node) => (this.slotMeasures.get(node.cl.id)?.has(slot) ? "-" : "x")).join(""),
-        "Finalized Slots": finalizedSlotsUnique.size === 1 ? finalizedSLots[0] : finalizedSLots.join(","),
+        "Finalized Slots": finalizedSlotsUnique.size === 1 ? finalizedSlots[0] : finalizedSlots.join(","),
         "Attestations Count": attestationCountUnique.size === 1 ? attestationCount[0] : attestationCount.join(","),
         "Inclusion Delay": inclusionDelayUnique.size === 1 ? inclusionDelay[0] : inclusionDelay.join(","),
         "SC Participation":

@@ -67,10 +67,12 @@ export class ExternalSignerServer {
   async start(): Promise<void> {
     console.log(`Starting external signer server at ${this.url}.`);
     await this.server.listen(this.port, this.address);
+    console.log(`Started external signer server at ${this.url}.`);
   }
 
   async stop(): Promise<void> {
     console.log(`Stopping external signer server at ${this.url}.`);
     await this.server.close();
+    console.log(`Stopped external signer server at ${this.url}.`);
   }
 }
