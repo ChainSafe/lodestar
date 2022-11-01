@@ -1,11 +1,15 @@
 name: Sim tests
 
-on: 
+on:
   push:
-    # We intentionally don't run push on feature branches. See PR for rational. 
+    # We intentionally don't run push on feature branches. See PR for rational.
     branches: [unstable, stable]
   pull_request:
   workflow_dispatch:
+
+env:
+  GETH_IMAGE: ethereum/client-go:v1.10.25
+  NETHERMIND_IMAGE: nethermind/nethermind:1.14.3
 
 jobs:
   tests-sim:
@@ -36,9 +40,18 @@ jobs:
         if: steps.cache-deps.outputs.cache-hit == 'true'
       # </common-build>
 
+      - name: Pull Geth
+        run: docker pull $GETH_IMAGE
+
+      - name: Pull Nethermind
+        run: docker pull $NETHERMIND_IMAGE
+
       - name: Simulation tests for CLI
         run: yarn test:sim
         working-directory: packages/cli
+        env:
+          GETH_BINARY_DIR: ${{ env.GETH_IMAGE }}
+
       - name: Upload debug log test files for "packages/cli"
         if: ${{ always() }}
         uses: actions/upload-artifact@v2
