@@ -4,7 +4,6 @@ import {Epoch, Slot} from "@lodestar/types";
 import {MAX_COMMITTEES_PER_SLOT} from "@lodestar/params";
 import {SimulationEnvironment} from "./SimulationEnvironment.js";
 import {NodePair} from "./interfaces.js";
-import {NodeHealth} from "@lodestar/api/lib/beacon/routes/node.js";
 
 export function nodeAssertions(env: SimulationEnvironment): void {
   for (const node of env.nodes) {

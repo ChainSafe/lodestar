@@ -3,7 +3,6 @@ import {createWriteStream, mkdirSync} from "node:fs";
 import {dirname} from "node:path";
 import {EventEmitter} from "node:events";
 import {JobOptions, Job, Runner, RunnerEvent, RunnerType} from "../interfaces.js";
-import {child} from "winston";
 
 type ChildProcessWithJobOptions = {jobOptions: JobOptions; childProcess: ChildProcess};
 
@@ -68,10 +67,7 @@ const startJobs = async (jobs: JobOptions[]): Promise<ChildProcessWithJobOptions
     if (job.bootstrap) {
       await job.bootstrap();
     }
-    const cp = await startChildProcess(job);
-    if (cp) {
-      childProcesses.push({childProcess: cp, jobOptions: job});
-    }
+    childProcesses.push({childProcess: await startChildProcess(job), jobOptions: job});
 
     if (job.children) {
       childProcesses.push(...(await startJobs(job.children)));
