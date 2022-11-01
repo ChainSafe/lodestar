@@ -1,7 +1,7 @@
 import {dirname} from "node:path";
 import {fileURLToPath} from "node:url";
-import {Epoch} from "@lodestar/types";
-import {ForkName} from "@lodestar/params";
+import {Epoch, Slot} from "@lodestar/types";
+import {ForkName, activePreset} from "@lodestar/params";
 import {IChainForkConfig} from "@lodestar/config";
 
 // Global variable __dirname no longer available in ES6 modules.
@@ -25,6 +25,22 @@ export const getForkName = (epoch: Epoch, config: IChainForkConfig): ForkName =>
   }
 };
 
+export const getEstimatedTimeInSecForRun = ({
+  genesisSlotDelay,
+  runTill,
+  secondsPerSlot,
+  grace,
+}: {
+  genesisSlotDelay: Slot;
+  runTill: Epoch;
+  secondsPerSlot: number;
+  grace: number;
+}): number => {
+  const durationSec = secondsPerSlot * activePreset.SLOTS_PER_EPOCH * runTill + secondsPerSlot * genesisSlotDelay;
+
+  return Math.round(durationSec + durationSec * grace);
+};
+
 export const FAR_FUTURE_EPOCH = 10 ** 12;
 export const BN_P2P_BASE_PORT = 4000;
 export const BN_REST_BASE_PORT = 5000;
@@ -33,4 +49,5 @@ export const EXTERNAL_SIGNER_BASE_PORT = 7000;
 export const EL_ETH_BASE_PORT = 8000;
 export const EL_ENGINE_BASE_PORT = 9000;
 export const EL_P2P_BASE_PORT = 9050;
+export const SIM_TESTS_SECONDS_PER_SLOT = 4;
 export const LODESTAR_BINARY_PATH = `${__dirname}/../../../bin/lodestar.js`;

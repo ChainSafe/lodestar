@@ -39,6 +39,7 @@ import {
   EL_ETH_BASE_PORT,
   EL_P2P_BASE_PORT,
   KEY_MANAGER_BASE_PORT,
+  SIM_TESTS_SECONDS_PER_SLOT,
 } from "./utils.js";
 import {generateGethNode} from "./el_clients/geth.js";
 
@@ -121,7 +122,7 @@ export class SimulationEnvironment {
     const forkConfig = createIChainForkConfig({
       ...chainConfig,
       // eslint-disable-next-line @typescript-eslint/naming-convention
-      SECONDS_PER_SLOT: chainConfig.SECONDS_PER_SLOT ?? 4,
+      SECONDS_PER_SLOT: chainConfig.SECONDS_PER_SLOT ?? SIM_TESTS_SECONDS_PER_SLOT,
       // eslint-disable-next-line @typescript-eslint/naming-convention
       TERMINAL_TOTAL_DIFFICULTY: chainConfig.TERMINAL_TOTAL_DIFFICULTY ?? BigInt(0),
     });

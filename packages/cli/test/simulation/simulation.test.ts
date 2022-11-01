@@ -11,14 +11,21 @@ import {
   nodeSyncedAssertions,
   syncCommitteeAssertions,
 } from "../utils/simulation/assertions.js";
-import {CLClient, CreateNodePairResult, ELClient, Job, NodePair} from "../utils/simulation/interfaces.js";
+import {CLClient, CreateNodePairResult, ELClient} from "../utils/simulation/interfaces.js";
 import {SimulationEnvironment} from "../utils/simulation/SimulationEnvironment.js";
-import {logFilesDir} from "../utils/simulation/utils.js";
+import {getEstimatedTimeInSecForRun, logFilesDir, SIM_TESTS_SECONDS_PER_SLOT} from "../utils/simulation/utils.js";
 
 const runTill = 6;
 
 describe("simulation test - multi-fork", function () {
-  this.timeout("10m");
+  this.timeout(
+    `${getEstimatedTimeInSecForRun({
+      genesisSlotDelay: SLOTS_PER_EPOCH * 2,
+      secondsPerSlot: SIM_TESTS_SECONDS_PER_SLOT,
+      runTill: runTill + 1,
+      grace: 0.1, // 10% extra time
+    })}s`
+  );
 
   const env = SimulationEnvironment.initWithDefaults(
     {
