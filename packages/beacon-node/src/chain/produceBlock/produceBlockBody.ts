@@ -10,9 +10,11 @@ import {
   ValidatorIndex,
   BLSPubkey,
   BLSSignature,
+  capella,
 } from "@lodestar/types";
 import {
   CachedBeaconStateAllForks,
+  CachedBeaconStateCapella,
   CachedBeaconStateBellatrix,
   CachedBeaconStateExecutions,
   computeEpochAtSlot,
@@ -22,7 +24,7 @@ import {
   isMergeTransitionComplete,
 } from "@lodestar/state-transition";
 import {IChainForkConfig} from "@lodestar/config";
-import {ForkName} from "@lodestar/params";
+import {ForkName, ForkSeq, MAX_WITHDRAWALS_PER_PAYLOAD} from "@lodestar/params";
 import {toHex, sleep} from "@lodestar/utils";
 
 import type {BeaconChain} from "../chain.js";
@@ -111,8 +113,8 @@ export async function produceBlockBody<T extends BlockType>(
     );
   }
 
-  const forkName = currentState.config.getForkName(blockSlot);
-  if (forkName !== ForkName.phase0 && forkName !== ForkName.altair) {
+  const forkInfo = currentState.config.getForkInfo(blockSlot);
+  if (forkInfo.name !== ForkName.phase0 && forkInfo.name !== ForkName.altair) {
     const safeBlockHash = this.forkChoice.getJustifiedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
     const finalizedBlockHash = this.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
     const feeRecipient = this.beaconProposerCache.getOrDefault(proposerIndex);
@@ -125,6 +127,7 @@ export async function produceBlockBody<T extends BlockType>(
       // header.
       if (this.executionBuilder.issueLocalFcUForBlockProduction) {
         await prepareExecutionPayload(
+          forkInfo.seq,
           this,
           safeBlockHash,
           finalizedBlockHash ?? ZERO_HASH_HEX,
@@ -137,6 +140,7 @@ export async function produceBlockBody<T extends BlockType>(
       // fetched from the payload id and a blinded block will be produced instead of
       // fullblock for the validator to sign
       (blockBody as allForks.BlindedBeaconBlockBody).executionPayloadHeader = await prepareExecutionPayloadHeader(
+        forkInfo.seq,
         this,
         currentState as CachedBeaconStateBellatrix,
         proposerPubKey
@@ -147,6 +151,7 @@ export async function produceBlockBody<T extends BlockType>(
       // will takeover if the builder flow was activated and errors
       try {
         const prepareRes = await prepareExecutionPayload(
+          forkInfo.seq,
           this,
           safeBlockHash,
           finalizedBlockHash ?? ZERO_HASH_HEX,
@@ -155,7 +160,7 @@ export async function produceBlockBody<T extends BlockType>(
         );
         if (prepareRes.isPremerge) {
           (blockBody as allForks.ExecutionBlockBody).executionPayload = ssz.allForksExecution[
-            forkName
+            forkInfo.name
           ].ExecutionPayload.defaultValue();
         } else {
           const {prepType, payloadId} = prepareRes;
@@ -188,7 +193,7 @@ export async function produceBlockBody<T extends BlockType>(
             e as Error
           );
           (blockBody as allForks.ExecutionBlockBody).executionPayload = ssz.allForksExecution[
-            forkName
+            forkInfo.name
           ].ExecutionPayload.defaultValue();
         } else {
           // since merge transition is complete, we need a valid payload even if with an
@@ -210,6 +215,7 @@ export async function produceBlockBody<T extends BlockType>(
  * @returns PayloadId = pow block found, null = pow NOT found
  */
 export async function prepareExecutionPayload(
+  seq: ForkSeq,
   chain: {
     eth1: IEth1ForBlockProduction;
     executionEngine: IExecutionEngine;
@@ -256,6 +262,8 @@ export async function prepareExecutionPayload(
       prepType = PayloadPreparationType.Fresh;
     }
 
+    const withdrawalAttrs =
+      seq >= ForkSeq.capella ? {withdrawals: getExpectedWithdrawals(state as CachedBeaconStateCapella)} : {};
     payloadId = await chain.executionEngine.notifyForkchoiceUpdate(
       toHex(parentHash),
       safeBlockHash,
@@ -264,6 +272,7 @@ export async function prepareExecutionPayload(
         timestamp,
         prevRandao,
         suggestedFeeRecipient,
+        ...withdrawalAttrs,
       }
     );
   }
@@ -281,6 +290,7 @@ export async function prepareExecutionPayload(
 }
 
 async function prepareExecutionPayloadHeader(
+  seq: ForkSeq,
   chain: {
     eth1: IEth1ForBlockProduction;
     executionBuilder?: IExecutionBuilder;
@@ -291,6 +301,9 @@ async function prepareExecutionPayloadHeader(
 ): Promise<allForks.ExecutionPayloadHeader> {
   if (!chain.executionBuilder) {
     throw Error("executionBuilder required");
+  }
+  if (seq >= ForkSeq.capella) {
+    throw Error("executionBuilder capella api not implemented");
   }
 
   const parentHashRes = await getExecutionPayloadParentHash(chain, state);
@@ -336,6 +349,12 @@ async function getExecutionPayloadParentHash(
       return {isPremerge: false, parentHash: terminalPowBlockHash};
     }
   }
+}
+
+function getExpectedWithdrawals(state: CachedBeaconStateCapella): capella.Withdrawal[] {
+  const numWithdrawals = Math.min(MAX_WITHDRAWALS_PER_PAYLOAD, state.withdrawalQueue.length);
+  const withdrawals = state.withdrawalQueue.toValue();
+  return withdrawals.slice(0, numWithdrawals);
 }
 
 /** process_sync_committee_contributions is implemented in syncCommitteeContribution.getSyncAggregate */

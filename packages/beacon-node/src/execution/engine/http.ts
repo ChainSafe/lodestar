@@ -1,3 +1,5 @@
+import {encode as RLPEncode, decode as RLPDecode} from "@ethereumjs/rlp";
+import {bufferToBigInt} from "@ethereumjs/util";
 import {RootHex, allForks, capella} from "@lodestar/types";
 import {BYTES_PER_LOGS_BLOOM, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {fromHex} from "@lodestar/utils";
@@ -400,9 +402,13 @@ type ExecutionPayloadRpc = {
 };
 
 export function serializeExecutionPayload(data: allForks.ExecutionPayload): ExecutionPayloadRpc {
-  if ((data as capella.ExecutionPayload).withdrawals !== undefined) {
-    throw Error("Capella Not implemented");
-  }
+  const withdrawals = (data as capella.ExecutionPayload).withdrawals;
+  const withdrawalsAttr =
+    withdrawals !== undefined
+      ? withdrawals.map((withdrawal) =>
+          bytesToData(RLPEncode([withdrawal.index, withdrawal.validatorIndex, withdrawal.address, withdrawal.amount]))
+        )
+      : {};
   return {
     parentHash: bytesToData(data.parentHash),
     feeRecipient: bytesToData(data.feeRecipient),
@@ -418,13 +424,24 @@ export function serializeExecutionPayload(data: allForks.ExecutionPayload): Exec
     baseFeePerGas: numToQuantity(data.baseFeePerGas),
     blockHash: bytesToData(data.blockHash),
     transactions: data.transactions.map((tran) => bytesToData(tran)),
+    ...withdrawalsAttr,
   };
 }
 
 export function parseExecutionPayload(data: ExecutionPayloadRpc): allForks.ExecutionPayload {
-  if (data.withdrawals !== undefined) {
-    throw Error("Capella Not implemented");
-  }
+  const withdrawals = data.withdrawals;
+  const withdrawalsAttr =
+    withdrawals !== undefined
+      ? withdrawals.map((serializedWithdrawal) => {
+          const [indexData, validatorIndexData, address, amountData] = RLPDecode(dataToBytes(serializedWithdrawal));
+          const index = Number(bufferToBigInt(Buffer.from(indexData as Uint8Array)));
+          const validatorIndex = Number(bufferToBigInt(Buffer.from(validatorIndexData as Uint8Array)));
+          const amount = bufferToBigInt(Buffer.from(amountData as Uint8Array));
+          const withdrawal = {index, validatorIndex, address, amount} as capella.Withdrawal;
+          return withdrawal;
+        })
+      : {};
+
   return {
     parentHash: dataToBytes(data.parentHash, 32),
     feeRecipient: dataToBytes(data.feeRecipient, 20),
@@ -440,6 +457,7 @@ export function parseExecutionPayload(data: ExecutionPayloadRpc): allForks.Execu
     baseFeePerGas: quantityToBigint(data.baseFeePerGas),
     blockHash: dataToBytes(data.blockHash, 32),
     transactions: data.transactions.map((tran) => dataToBytes(tran)),
+    ...withdrawalsAttr,
   };
 }
 
