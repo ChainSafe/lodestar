@@ -104,7 +104,7 @@ export const generateGethNode: ELClientGenerator = (opts: ELClientOptions, runne
   const elBinaryDir = process.env.GETH_BINARY_DIR;
 
   if (!elBinaryDir) {
-    throw Error(`EL ENV must be provided, EL_BINARY_DIR: ${process.env.GETH_BINARY_DIR}`);
+    throw Error(`EL ENV must be provided, GETH_BINARY_DIR: ${process.env.GETH_BINARY_DIR}`);
   }
 
   const {id, mode, dataDir, ethPort, port, enginePort, ttd, logFilePath, jwtSecretHex} = opts;

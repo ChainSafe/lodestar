@@ -238,7 +238,7 @@ export function syncCommitteeAssertions(env: SimulationEnvironment, epoch: Epoch
         }
 
         it(`should have have higher participation for slot "${slot}"`, () => {
-          const participation = env.tracker.slotMeasures.get(env.nodes[0].id)?.get(slot)?.syncCommitteeParticipation;
+          const participation = env.tracker.slotMeasures.get(env.nodes[0].cl.id)?.get(slot)?.syncCommitteeParticipation;
 
           expect(participation).to.gte(
             env.expectedMinSyncParticipationRate,

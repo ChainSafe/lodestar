@@ -11,18 +11,20 @@ import {
   nodeSyncedAssertions,
   syncCommitteeAssertions,
 } from "../utils/simulation/assertions.js";
-import {CLClient, CreateNodePairResult, ELClient} from "../utils/simulation/interfaces.js";
+import {CLClient, NodePairResult, ELClient} from "../utils/simulation/interfaces.js";
 import {SimulationEnvironment} from "../utils/simulation/SimulationEnvironment.js";
 import {getEstimatedTimeInSecForRun, logFilesDir, SIM_TESTS_SECONDS_PER_SLOT} from "../utils/simulation/utils.js";
 
-const runTill = 6;
+const genesisSlotsDelay = SLOTS_PER_EPOCH * 2;
+const runTillEpoch = 6;
+const syncWaitEpoch = 2;
 
 describe("simulation test - multi-fork", function () {
   this.timeout(
     `${getEstimatedTimeInSecForRun({
-      genesisSlotDelay: SLOTS_PER_EPOCH * 2,
+      genesisSlotDelay: genesisSlotsDelay,
       secondsPerSlot: SIM_TESTS_SECONDS_PER_SLOT,
-      runTill: runTill + 1,
+      runTill: runTillEpoch + syncWaitEpoch,
       grace: 0.1, // 10% extra time
     })}s`
   );
@@ -37,7 +39,9 @@ describe("simulation test - multi-fork", function () {
         // eslint-disable-next-line @typescript-eslint/naming-convention
         BELLATRIX_FORK_EPOCH: 4,
         // eslint-disable-next-line @typescript-eslint/naming-convention
-        GENESIS_DELAY: SLOTS_PER_EPOCH * 2,
+        GENESIS_DELAY: genesisSlotsDelay,
+        // eslint-disable-next-line @typescript-eslint/naming-convention
+        TERMINAL_TOTAL_DIFFICULTY: BigInt(10),
       },
     },
     [
@@ -61,7 +65,7 @@ describe("simulation test - multi-fork", function () {
     nodeAssertions(env);
   });
 
-  for (let epoch = 0; epoch <= runTill; epoch += 1) {
+  for (let epoch = 0; epoch <= runTillEpoch; epoch += 1) {
     describe(`epoch - ${epoch}`, () => {
       before("wait for epoch", async () => {
         // Wait for one extra slot to make sure epoch transition is complete on the state
@@ -101,57 +105,49 @@ describe("simulation test - multi-fork", function () {
   }
 
   describe("sync from genesis", () => {
-    let rangeSync: CreateNodePairResult;
-    let checkpointSync: CreateNodePairResult;
+    let rangeSync: NodePairResult;
+    let checkpointSync: NodePairResult;
 
     before(async () => {
       const {
         data: {finalized},
       } = await env.nodes[0].cl.api.beacon.getStateFinalityCheckpoints("head");
 
-      const rangeSync = env.createClientPair({
+      rangeSync = env.createNodePair({
         id: "range-sync-node",
         cl: CLClient.Lodestar,
         el: ELClient.Geth,
         keysCount: 0,
       });
 
-      const checkpointSync = env.createClientPair({
-        id: "range-sync-node",
+      checkpointSync = env.createNodePair({
+        id: "checkpoint-sync-node",
         cl: CLClient.Lodestar,
         el: ELClient.Geth,
         keysCount: 0,
         wssCheckpoint: `${finalized.root}:${finalized.epoch}`,
       });
 
-      await rangeSync.el.job.start();
-      await rangeSync.cl.job.start();
-      await env.network.connectNewNode({id: rangeSync.id, cl: rangeSync.cl.node, el: rangeSync.el.node});
+      await rangeSync.jobs.el.start();
+      await rangeSync.jobs.cl.start();
+      await env.network.connectNewNode(rangeSync.nodePair);
 
-      await checkpointSync.el.job.start();
-      await checkpointSync.cl.job.start();
-      await env.network.connectNewNode({id: checkpointSync.id, cl: checkpointSync.cl.node, el: checkpointSync.el.node});
+      await checkpointSync.jobs.el.start();
+      await checkpointSync.jobs.cl.start();
+      await env.network.connectNewNode(checkpointSync.nodePair);
     });
 
     after(async () => {
-      await rangeSync.el.job.stop();
-      await rangeSync.cl.job.stop();
-      await checkpointSync.el.job.stop();
-      await checkpointSync.cl.job.stop();
+      await rangeSync.jobs.el.stop();
+      await rangeSync.jobs.cl.stop();
+      await checkpointSync.jobs.cl.stop();
+      await checkpointSync.jobs.cl.stop();
     });
 
     it("should sync the nodes", async () => {
       await Promise.all([
-        nodeSyncedAssertions(
-          env,
-          {id: rangeSync.id, cl: rangeSync.cl.node, el: rangeSync.el.node},
-          env.clock.getLastSlotOfEpoch(runTill + 1)
-        ),
-        nodeSyncedAssertions(
-          env,
-          {id: checkpointSync.id, cl: checkpointSync.cl.node, el: checkpointSync.el.node},
-          env.clock.getLastSlotOfEpoch(runTill + 1)
-        ),
+        nodeSyncedAssertions(env, rangeSync.nodePair, env.clock.getLastSlotOfEpoch(runTillEpoch + 1)),
+        nodeSyncedAssertions(env, checkpointSync.nodePair, env.clock.getLastSlotOfEpoch(runTillEpoch + 1)),
       ]);
     });
   });

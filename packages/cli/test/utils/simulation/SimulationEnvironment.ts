@@ -17,7 +17,7 @@ import {
   CLClient,
   CLClientOptions,
   CLNode,
-  CreateNodePairResult,
+  NodePairResult,
   ELClient,
   ELClientOptions,
   ELNode,
@@ -67,6 +67,7 @@ export class SimulationEnvironment {
 
   private readonly jobs: {cl: Job; el: Job}[] = [];
   private keysCount = 0;
+  private nodePairCount = 0;
   private genesisState?: BeaconStateAllForks;
   private genesisStatePath: string;
 
@@ -139,11 +140,9 @@ export class SimulationEnvironment {
     });
 
     for (const client of clients) {
-      const result = env.createClientPair(client);
-
-      env.jobs.push({cl: result.cl.job, el: result.el.job});
-
-      env.nodes.push({id: client.id, cl: result.cl.node, el: result.el.node});
+      const result = env.createNodePair(client);
+      env.jobs.push(result.jobs);
+      env.nodes.push(result.nodePair);
     }
 
     return env;
@@ -236,33 +235,37 @@ export class SimulationEnvironment {
     );
   }
 
-  createClientPair({el, cl, keysCount, id, wssCheckpoint}: NodePairOptions): CreateNodePairResult {
+  createNodePair({el, cl, keysCount, id, wssCheckpoint}: NodePairOptions): NodePairResult {
     if (this.genesisState && keysCount > 0) {
       throw new Error("Genesis state already initialized. Can not add more keys to it.");
     }
+
+    this.nodePairCount += 1;
 
     const keys = Array.from({length: keysCount}, (_, vi) => {
       return interopSecretKey(this.keysCount + vi);
     });
     this.keysCount += keysCount;
 
-    return {
+    const clClient = this.createCLNode(cl, {
       id,
-      cl: this.createCLClient(cl, {
-        id,
-        remoteKeys: keys.slice(0, keys.length * this.externalKeysPercentage),
-        localKeys: keys.slice(keys.length * this.externalKeysPercentage),
-        wssCheckpoint,
-      }),
-      el: this.createELClient(el, {id}),
+      remoteKeys: keys.slice(0, keys.length * this.externalKeysPercentage),
+      localKeys: keys.slice(keys.length * this.externalKeysPercentage),
+      wssCheckpoint,
+    });
+
+    const elClient = this.createELNode(el, {id});
+
+    return {
+      nodePair: {id, el: elClient.node, cl: clClient.node},
+      jobs: {el: elClient.job, cl: clClient.job},
     };
   }
 
-  private createCLClient(
+  private createCLNode(
     client: CLClient,
     options?: AtLeast<CLClientOptions, "remoteKeys" | "localKeys" | "id">
   ): {job: Job; node: CLNode} {
-    const nodeIndex = this.nodes.length;
     const clId = `${options?.id}-cl-${client}`;
 
     switch (client) {
@@ -272,15 +275,15 @@ export class SimulationEnvironment {
           dataDir: join(this.options.rootDir, clId),
           logFilePath: join(this.options.logsDir, `${clId}.log`),
           genesisStateFilePath: this.genesisStatePath,
-          restPort: BN_REST_BASE_PORT + nodeIndex + 1,
-          port: BN_P2P_BASE_PORT + nodeIndex + 1,
-          keyManagerPort: KEY_MANAGER_BASE_PORT + nodeIndex + 1,
+          restPort: BN_REST_BASE_PORT + this.nodePairCount + 1,
+          port: BN_P2P_BASE_PORT + this.nodePairCount + 1,
+          keyManagerPort: KEY_MANAGER_BASE_PORT + this.nodePairCount + 1,
           config: this.forkConfig,
           address: "127.0.0.1",
           remoteKeys: options?.remoteKeys ?? [],
           localKeys: options?.localKeys ?? [],
           genesisTime: this.options.genesisTime,
-          engineUrl: options?.engineUrl ?? `http://127.0.0.1:${EL_ENGINE_BASE_PORT + nodeIndex + 1}`,
+          engineUrl: options?.engineUrl ?? `http://127.0.0.1:${EL_ENGINE_BASE_PORT + this.nodePairCount + 1}`,
           jwtSecretHex: options?.jwtSecretHex ?? SHARED_JWT_SECRET,
         };
         return generateLodestarBeaconNode(opts, this.runner);
@@ -290,22 +293,23 @@ export class SimulationEnvironment {
     }
   }
 
-  private createELClient(client: ELClient, options: AtLeast<ELClientOptions, "id">): {job: Job; node: ELNode} {
-    const nodeIndex = this.nodes.length;
+  private createELNode(client: ELClient, options: AtLeast<ELClientOptions, "id">): {job: Job; node: ELNode} {
     const elId = `${options.id}-el-${client}`;
 
     switch (client) {
       case ELClient.Geth: {
         const opts: ELClientOptions = {
           id: elId,
-          mode: options?.mode ?? ELStartMode.PostMerge,
+          mode:
+            options?.mode ??
+            (this.forkConfig.TERMINAL_TOTAL_DIFFICULTY === BigInt(0) ? ELStartMode.PostMerge : ELStartMode.PreMerge),
           ttd: options?.ttd ?? this.forkConfig.TERMINAL_TOTAL_DIFFICULTY,
           logFilePath: options?.logFilePath ?? join(this.options.logsDir, `${elId}.log`),
           dataDir: options?.dataDir ?? join(this.options.rootDir, elId),
           jwtSecretHex: options?.jwtSecretHex ?? SHARED_JWT_SECRET,
-          enginePort: options?.enginePort ?? EL_ENGINE_BASE_PORT + nodeIndex + 1,
-          ethPort: options?.ethPort ?? EL_ETH_BASE_PORT + nodeIndex + 1,
-          port: options?.port ?? EL_P2P_BASE_PORT + nodeIndex + 1,
+          enginePort: options?.enginePort ?? EL_ENGINE_BASE_PORT + this.nodePairCount + 1,
+          ethPort: options?.ethPort ?? EL_ETH_BASE_PORT + this.nodePairCount + 1,
+          port: options?.port ?? EL_P2P_BASE_PORT + this.nodePairCount + 1,
         };
         return generateGethNode(opts, this.runner);
       }

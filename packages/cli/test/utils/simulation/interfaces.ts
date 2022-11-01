@@ -97,10 +97,9 @@ export interface NodePair {
   readonly el: ELNode;
 }
 
-export interface CreateNodePairResult {
-  id: string;
-  cl: {node: CLNode; job: Job};
-  el: {node: ELNode; job: Job};
+export interface NodePairResult {
+  nodePair: NodePair;
+  jobs: {el: Job; cl: Job};
 }
 
 export type CLClientGenerator = (opts: CLClientOptions, runner: Runner) => {job: Job; node: CLNode};
