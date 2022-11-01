@@ -8,8 +8,7 @@ on:
   workflow_dispatch:
 
 env:
-  GETH_IMAGE: ethereum/client-go:v1.10.25
-  NETHERMIND_IMAGE: nethermind/nethermind:1.14.3
+  GETH_IMAGE: https://gethstore.blob.core.windows.net/builds/geth-linux-amd64-1.10.25-69568c55.tar.gz
 
 jobs:
   tests-sim:
@@ -41,16 +40,18 @@ jobs:
       # </common-build>
 
       - name: Pull Geth
-        run: docker pull $GETH_IMAGE
-
-      - name: Pull Nethermind
-        run: docker pull $NETHERMIND_IMAGE
+        run: | 
+          TAR_NAME=$(basename $GETH_IMAGE)
+          BINARY_FOLDER="${TAR_NAME%.*.*}"
+          curl -sS $GETH_IMAGE > $TAR_NAME
+          tar -xvzf $TAR_NAME
+          echo "GETH_BINARY_DIR=$(cwd)/$BINARY_FOLDER" >> $GITHUB_ENV
 
       - name: Simulation tests for CLI
         run: yarn test:sim
         working-directory: packages/cli
         env:
-          GETH_BINARY_DIR: ${{ env.GETH_IMAGE }}
+          GETH_BINARY_DIR: ${{ env.GETH_BINARY_DIR }}
 
       - name: Upload debug log test files for "packages/cli"
         if: ${{ always() }}
