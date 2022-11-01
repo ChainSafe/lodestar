@@ -20,7 +20,12 @@ export interface ILibp2pOptions {
   minConnections?: number;
   metrics?: boolean;
   lodestarVersion?: string;
+  inboundSocketInactivityTimeout?: number;
+  outboundSocketInactivityTimeout?: number;
 }
+
+export const DEFAULT_INBOUND_INACTIVITY_TIMEOUT = 30 * 1000;
+export const DEFAULT_OUTBOUND_INACTIVITY_TIMEOUT = 30 * 1000;
 
 export async function createNodejsLibp2p(options: ILibp2pOptions): Promise<Libp2p> {
   const peerDiscovery = [];
@@ -39,7 +44,18 @@ export async function createNodejsLibp2p(options: ILibp2pOptions): Promise<Libp2
       announce: options.addresses.announce || [],
     },
     connectionEncryption: [new Noise()],
-    transports: [new TCP()],
+    transports: [
+      new TCP({
+        inboundSocketInactivityTimeout:
+          options.inboundSocketInactivityTimeout ??
+          Number(process.env.INBOUND_INACTIVITY_TIMEOUT) ??
+          DEFAULT_INBOUND_INACTIVITY_TIMEOUT,
+        outboundSocketInactivityTimeout:
+          options.outboundSocketInactivityTimeout ??
+          Number(process.env.OUTBOUND_INACTIVITY_TIMEOUT) ??
+          DEFAULT_OUTBOUND_INACTIVITY_TIMEOUT,
+      }),
+    ],
     streamMuxers: [new Mplex({maxInboundStreams: 256})],
     peerDiscovery,
     metrics: {

@@ -103,7 +103,11 @@ export const generateLodestarBeaconNode: CLClientGenerator = (opts: CLClientOpti
         args: ["beacon", "--rcConfig", rcConfigPath],
         env: {
           // eslint-disable-next-line @typescript-eslint/naming-convention
-          // DEBUG: "*,-winston:*",
+          DEBUG: "*,-winston:*",
+          // eslint-disable-next-line @typescript-eslint/naming-convention
+          INBOUND_INACTIVITY_TIMEOUT: (60 * 1000).toString(),
+          // eslint-disable-next-line @typescript-eslint/naming-convention
+          OUTBOUND_INACTIVITY_TIMEOUT: (60 * 1000).toString(),
         },
       },
       logs: {
@@ -183,7 +187,11 @@ export const generateLodestarValidatorJobs = (opts: CLClientOptions, runner: Run
       args: ["validator", "--rcConfig", join(rootDir, "rc_config.json")],
       env: {
         // eslint-disable-next-line @typescript-eslint/naming-convention
-        // DEBUG: "*,-winston:*",
+        DEBUG: "*,-winston:*",
+        // eslint-disable-next-line @typescript-eslint/naming-convention
+        INBOUND_INACTIVITY_TIMEOUT: (60 * 1000).toString(),
+        // eslint-disable-next-line @typescript-eslint/naming-convention
+        OUTBOUND_INACTIVITY_TIMEOUT: (60 * 1000).toString(),
       },
     },
     logs: {
