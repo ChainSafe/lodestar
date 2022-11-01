@@ -45,7 +45,7 @@ jobs:
           BINARY_FOLDER="${TAR_NAME%.*.*}"
           curl -sS $GETH_IMAGE > $TAR_NAME
           tar -xvzf $TAR_NAME
-          echo "GETH_BINARY_DIR=$(cwd)/$BINARY_FOLDER" >> $GITHUB_ENV
+          echo "GETH_BINARY_DIR=$GITHUB_WORKSPACE/$BINARY_FOLDER" >> $GITHUB_ENV
 
       - name: Simulation tests for CLI
         run: yarn test:sim
