@@ -146,50 +146,53 @@ describe("lodestar / api / impl / light_client", function () {
       expect(responseJSON.data).to.be.deep.equal(expectedValue, "Returned OptimisticUpdate in JSON invalid");
     });
 
-    // TODO DA needs updating after merging in master
-    // it("should return Update as ssz and json", async function () {
-    //   const validatorCount = 2;
-    //   const bn = await getDevBeaconNode({
-    //     params: testParams,
-    //     options: {
-    //       sync: {isSingleNode: true},
-    //       api: {rest: {enabled: true, port: restPort}},
-    //       chain: {blsVerifyAllMainThread: true},
-    //     },
-    //     validatorCount,
-    //     logger: loggerNodeA,
-    //   });
-    //   afterEachCallbacks.push(() => bn.close());
-    //
-    //   const client = getClient({baseUrl: `http://127.0.0.1:${restPort}`}, {config});
-    //   const firstLcUpdate = ssz.altair.LightClientUpdate.defaultValue();
-    //   firstLcUpdate.signatureSlot = 1;
-    //   firstLcUpdate.attestedHeader.slot = 0;
-    //   const secondLcUpdate = ssz.altair.LightClientUpdate.defaultValue();
-    //   secondLcUpdate.signatureSlot = 2;
-    //   secondLcUpdate.attestedHeader.slot = 3;
-    //   const expectedResponse = [firstLcUpdate];
-    //
-    //   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    //   bn.chain.lightClientServer.getUpdate = (count) => {
-    //     return Promise.resolve(expectedResponse);
-    //   };
-    //
-    //   const responseSSZ = await client.lightclient.getUpdates(1, 2, "ssz");
-    //   const resultDeserialized = deserializeLightClientUpdates(responseSSZ);
-    //
-    //   expect(resultDeserialized.length).to.be.equals(expectedResponse.length, "Length of response invalid");
-    //   expect(
-    //     ssz.altair.LightClientUpdate.equals(expectedResponse[0], resultDeserialized[0]),
-    //     "First LightClientUpdate is invalid"
-    //   ).to.be.true;
-    //   expect(
-    //     ssz.altair.LightClientUpdate.equals(expectedResponse[1], resultDeserialized[1]),
-    //     "Second LightClientUpdate is invalid"
-    //   ).to.be.true;
-    //
-    //   const responseJSON = await client.lightclient.getUpdates(1, 2, "json");
-    //   expect(responseJSON.data).to.be.deep.equal([firstLcUpdate, secondLcUpdate], "Returned Updates in JSON invalid");
-    // });
+    it("should return Update as ssz and json", async function () {
+      const validatorCount = 2;
+      const bn = await getDevBeaconNode({
+        params: testParams,
+        options: {
+          sync: {isSingleNode: true},
+          api: {rest: {enabled: true, port: restPort}},
+          chain: {blsVerifyAllMainThread: true},
+        },
+        validatorCount,
+        logger: loggerNodeA,
+      });
+      afterEachCallbacks.push(() => bn.close());
+
+      const client = getClient({baseUrl: `http://127.0.0.1:${restPort}`}, {config});
+      const firstLcUpdate = ssz.altair.LightClientUpdate.defaultValue();
+      firstLcUpdate.signatureSlot = 1;
+      firstLcUpdate.attestedHeader.slot = 0;
+      const secondLcUpdate = ssz.altair.LightClientUpdate.defaultValue();
+      secondLcUpdate.signatureSlot = 2;
+      secondLcUpdate.attestedHeader.slot = 3;
+      const expectedResponse = [firstLcUpdate, secondLcUpdate];
+
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      bn.chain.lightClientServer.getUpdate = (period) => {
+        if (period === 1) {
+          return Promise.resolve(firstLcUpdate);
+        } else {
+          return Promise.resolve(secondLcUpdate);
+        }
+      };
+
+      const responseSSZ = await client.lightclient.getUpdates(1, 2, "ssz");
+      const resultDeserialized = deserializeLightClientUpdates(responseSSZ);
+
+      expect(resultDeserialized.length).to.be.equals(expectedResponse.length, "Length of response invalid");
+      expect(
+        ssz.altair.LightClientUpdate.equals(expectedResponse[0], resultDeserialized[0]),
+        "First LightClientUpdate is invalid"
+      ).to.be.true;
+      expect(
+        ssz.altair.LightClientUpdate.equals(expectedResponse[1], resultDeserialized[1]),
+        "Second LightClientUpdate is invalid"
+      ).to.be.true;
+
+      const responseJSON = await client.lightclient.getUpdates(1, 2, "json");
+      expect(responseJSON.data).to.be.deep.equal([firstLcUpdate, secondLcUpdate], "Returned Updates in JSON invalid");
+    });
   });
 });

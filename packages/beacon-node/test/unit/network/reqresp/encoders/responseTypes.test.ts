@@ -12,15 +12,7 @@ import {
 } from "../../../../../src/network/reqresp/types.js";
 import {responseDecode} from "../../../../../src/network/reqresp/encoders/responseDecode.js";
 import {responseEncodeSuccess} from "../../../../../src/network/reqresp/encoders/responseEncode.js";
-import {
-  arrToSource,
-  createStatus,
-  generateDefaultLightClientBootstrap,
-  generateDefaultLightClientFinalityUpdate,
-  generateDefaultLightClientOptimisticUpdate,
-  generateDefaultLightClientUpdate,
-  generateEmptySignedBlocks,
-} from "../utils.js";
+import {arrToSource, createStatus, generateEmptySignedBlocks} from "../utils.js";
 import {expectIsEqualSszTypeArr} from "../../../../utils/ssz.js";
 import {config} from "../../../../utils/config.js";
 import {blocksToReqRespBlockResponses} from "../../../../utils/block.js";
