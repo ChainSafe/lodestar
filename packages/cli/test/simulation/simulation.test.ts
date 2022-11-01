@@ -1,19 +1,19 @@
 import {join} from "node:path";
-import {Epoch} from "@lodestar/types";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {SimulationEnvironment} from "../utils/simulation/SimulationEnvironment.js";
-import {logFilesDir} from "../utils/simulation/utils.js";
 import {
-  missedBlocksAssertions,
   attestationParticipationAssertions,
-  nodeAssertions,
-  inclusionDelayAssertions,
   // attestationPerSlotAssertions,
   finalityAssertions,
   headsAssertions,
+  inclusionDelayAssertions,
+  missedBlocksAssertions,
+  nodeAssertions,
+  nodeSyncedAssertions,
   syncCommitteeAssertions,
 } from "../utils/simulation/assertions.js";
-import {CLClient, ELClient} from "../utils/simulation/interfaces.js";
+import {CLClient, CreateNodePairResult, ELClient, Job, NodePair} from "../utils/simulation/interfaces.js";
+import {SimulationEnvironment} from "../utils/simulation/SimulationEnvironment.js";
+import {logFilesDir} from "../utils/simulation/utils.js";
 
 const runTill = 6;
 
@@ -54,7 +54,7 @@ describe("simulation test - multi-fork", function () {
     nodeAssertions(env);
   });
 
-  for (let epoch = 0; epoch < 1; epoch += 1) {
+  for (let epoch = 0; epoch <= runTill; epoch += 1) {
     describe(`epoch - ${epoch}`, () => {
       before("wait for epoch", async () => {
         // Wait for one extra slot to make sure epoch transition is complete on the state
@@ -93,88 +93,59 @@ describe("simulation test - multi-fork", function () {
     });
   }
 
-  // describe("range sync from genesis", () => {
-  //   let clParticipant: CLNode;
-  //   let clJob: Job;
-  //   const rangeSyncEpoch = runTill + 1;
+  describe("sync from genesis", () => {
+    let rangeSync: CreateNodePairResult;
+    let checkpointSync: CreateNodePairResult;
 
-  //   before(async () => {
-  //     const {job, participant} = env.createCLClient(CLClient.Lodestar, env.nodes.length, {
-  //       id: "range-sync-node",
-  //       secretKeys: [],
-  //     });
-  //     clJob = job;
-  //     clParticipant = participant;
+    before(async () => {
+      const {
+        data: {finalized},
+      } = await env.nodes[0].cl.api.beacon.getStateFinalityCheckpoints("head");
 
-  //     await clJob.start();
-  //     await env.network.connectNewNode(clParticipant);
+      const rangeSync = env.createClientPair({
+        id: "range-sync-node",
+        cl: CLClient.Lodestar,
+        el: ELClient.Geth,
+        keysCount: 0,
+      });
 
-  //     env.tracker.track(clParticipant);
-  //     // Wait for existing tests to finish
-  //     await env.waitForSlot(env.clock.getLastSlotOfEpoch(rangeSyncEpoch) + 1);
+      const checkpointSync = env.createClientPair({
+        id: "range-sync-node",
+        cl: CLClient.Lodestar,
+        el: ELClient.Geth,
+        keysCount: 0,
+        wssCheckpoint: `${finalized.root}:${finalized.epoch}`,
+      });
 
-  //     env.tracker.printNoesInfo(rangeSyncEpoch);
-  //   });
+      await rangeSync.el.job.start();
+      await rangeSync.cl.job.start();
+      await env.network.connectNewNode({id: rangeSync.id, cl: rangeSync.cl.node, el: rangeSync.el.node});
 
-  //   after(async () => {
-  //     await clJob.stop();
-  //   });
+      await checkpointSync.el.job.start();
+      await checkpointSync.cl.job.start();
+      await env.network.connectNewNode({id: checkpointSync.id, cl: checkpointSync.cl.node, el: checkpointSync.el.node});
+    });
 
-  //   describe("missed blocks", () => {
-  //     missedBlocksAssertions(env, rangeSyncEpoch);
-  //   });
+    after(async () => {
+      await rangeSync.el.job.stop();
+      await rangeSync.cl.job.stop();
+      await checkpointSync.el.job.stop();
+      await checkpointSync.cl.job.stop();
+    });
 
-  //   describe("finality", () => {
-  //     finalityAssertions(env, rangeSyncEpoch);
-  //   });
-
-  //   describe("heads", () => {
-  //     headsAssertions(env, rangeSyncEpoch);
-  //   });
-  // });
-
-  // describe("checkpoint sync", () => {
-  //   let clParticipant: CLNode;
-  //   let clJob: Job;
-  //   const checkpointSyncEpoch = runTill + 2;
-
-  //   before(async () => {
-  //     const {
-  //       data: {finalized},
-  //     } = await env.nodes[0].api.beacon.getStateFinalityCheckpoints("head");
-
-  //     const {job, participant} = env.createCLClient(CLClient.Lodestar, env.nodes.length, {
-  //       id: "checkpoint-sync-node",
-  //       secretKeys: [],
-  //       wssCheckpoint: `${finalized.root}:${finalized.epoch}`,
-  //     });
-  //     clJob = job;
-  //     clParticipant = participant;
-
-  //     await clJob.start();
-  //     await env.network.connectNewNode(clParticipant);
-
-  //     env.tracker.track(clParticipant);
-  //     // Wait for existing tests to finish
-  //     await env.waitForSlot(env.clock.getLastSlotOfEpoch(checkpointSyncEpoch) + 1);
-
-  //     env.tracker.printNoesInfo(checkpointSyncEpoch);
-  //   });
-
-  //   after(async () => {
-  //     await clJob.stop();
-  //   });
-
-  //   describe("missed blocks", () => {
-  //     missedBlocksAssertions(env, checkpointSyncEpoch);
-  //   });
-
-  //   describe("finality", () => {
-  //     finalityAssertions(env, checkpointSyncEpoch);
-  //   });
-
-  //   describe("heads", () => {
-  //     headsAssertions(env, checkpointSyncEpoch);
-  //   });
-  // });
+    it("should sync the nodes", async () => {
+      await Promise.all([
+        nodeSyncedAssertions(
+          env,
+          {id: rangeSync.id, cl: rangeSync.cl.node, el: rangeSync.el.node},
+          env.clock.getLastSlotOfEpoch(runTill + 1)
+        ),
+        nodeSyncedAssertions(
+          env,
+          {id: checkpointSync.id, cl: checkpointSync.cl.node, el: checkpointSync.el.node},
+          env.clock.getLastSlotOfEpoch(runTill + 1)
+        ),
+      ]);
+    });
+  });
 });

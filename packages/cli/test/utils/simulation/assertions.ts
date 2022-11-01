@@ -1,8 +1,10 @@
 import {expect} from "chai";
 import {routes} from "@lodestar/api/beacon";
-import {Epoch} from "@lodestar/types";
+import {Epoch, Slot} from "@lodestar/types";
 import {MAX_COMMITTEES_PER_SLOT} from "@lodestar/params";
 import {SimulationEnvironment} from "./SimulationEnvironment.js";
+import {NodePair} from "./interfaces.js";
+import {NodeHealth} from "@lodestar/api/lib/beacon/routes/node.js";
 
 export function nodeAssertions(env: SimulationEnvironment): void {
   for (const node of env.nodes) {
@@ -252,4 +254,20 @@ export function syncCommitteeAssertions(env: SimulationEnvironment, epoch: Epoch
       }
     });
   }
+}
+
+export function nodeSyncedAssertions(env: SimulationEnvironment, node: NodePair, maxSlot: Slot): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const intervalId = setInterval(async () => {
+      const res = await node.cl.api.node.getSyncingStatus();
+
+      if (!res.data.isSyncing) {
+        clearInterval(intervalId);
+        resolve();
+      } else if (env.clock.currentSlot > maxSlot) {
+        clearInterval(intervalId);
+        reject(new Error(`Node ${node.cl.id} is still syncing`));
+      }
+    }, 500);
+  });
 }

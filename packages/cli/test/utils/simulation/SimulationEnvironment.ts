@@ -17,6 +17,7 @@ import {
   CLClient,
   CLClientOptions,
   CLNode,
+  CreateNodePairResult,
   ELClient,
   ELClientOptions,
   ELNode,
@@ -194,7 +195,7 @@ export class SimulationEnvironment {
     await Promise.all(this.jobs.map((j) => j.el.stop()));
     await Promise.all(this.jobs.map((j) => j.cl.stop()));
     await this.externalSigner.stop();
-    // await rm(this.options.rootDir, {recursive: true});
+    await rm(this.options.rootDir, {recursive: true});
   }
 
   // TODO: Add timeout support
@@ -234,12 +235,7 @@ export class SimulationEnvironment {
     );
   }
 
-  createClientPair({
-    el,
-    cl,
-    keysCount,
-    id,
-  }: NodePairOptions): {cl: {node: CLNode; job: Job}; el: {node: ELNode; job: Job}} {
+  createClientPair({el, cl, keysCount, id, wssCheckpoint}: NodePairOptions): CreateNodePairResult {
     if (this.genesisState && keysCount > 0) {
       throw new Error("Genesis state already initialized. Can not add more keys to it.");
     }
@@ -250,10 +246,12 @@ export class SimulationEnvironment {
     this.keysCount += keysCount;
 
     return {
+      id,
       cl: this.createCLClient(cl, {
         id,
         remoteKeys: keys.slice(0, keys.length * this.externalKeysPercentage),
         localKeys: keys.slice(keys.length * this.externalKeysPercentage),
+        wssCheckpoint,
       }),
       el: this.createELClient(el, {id}),
     };

@@ -36,6 +36,7 @@ export interface NodePairOptions {
   el: ELClient;
   cl: CLClient;
   keysCount: number;
+  wssCheckpoint?: string;
   id: string;
 }
 
@@ -94,6 +95,12 @@ export interface NodePair {
   readonly id: string;
   readonly cl: CLNode;
   readonly el: ELNode;
+}
+
+export interface CreateNodePairResult {
+  id: string;
+  cl: {node: CLNode; job: Job};
+  el: {node: ELNode; job: Job};
 }
 
 export type CLClientGenerator = (opts: CLClientOptions, runner: Runner) => {job: Job; node: CLNode};
