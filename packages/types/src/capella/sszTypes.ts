@@ -59,6 +59,14 @@ export const ExecutionPayload = new ContainerType(
   {typeName: "ExecutionPayload", jsonCase: "eth2"}
 );
 
+export const BlindedExecutionPayload = new ContainerType(
+  {
+    ...bellatrixSsz.ExecutionPayloadHeader.fields,
+    withdrawals: Withdrawals, // New in capella
+  },
+  {typeName: "BlindedExecutionPayload", jsonCase: "eth2"}
+);
+
 export const ExecutionPayloadHeader = new ContainerType(
   {
     ...bellatrixSsz.ExecutionPayloadHeader.fields,
@@ -67,7 +75,7 @@ export const ExecutionPayloadHeader = new ContainerType(
   {typeName: "ExecutionPayloadHeader", jsonCase: "eth2"}
 );
 
-export const BLSToExecutionChanges = new ListCompositeType(BLSToExecutionChange, MAX_BLS_TO_EXECUTION_CHANGES);
+export const BLSToExecutionChanges = new ListCompositeType(SignedBLSToExecutionChange, MAX_BLS_TO_EXECUTION_CHANGES);
 export const BeaconBlockBody = new ContainerType(
   {
     ...altairSsz.BeaconBlockBody.fields,
@@ -160,7 +168,7 @@ export const BeaconState = new ContainerType(
 export const BlindedBeaconBlockBody = new ContainerType(
   {
     ...altairSsz.BeaconBlockBody.fields,
-    executionPayloadHeader: ExecutionPayloadHeader, // Modified in capella
+    executionPayloadHeader: BlindedExecutionPayload, // Modified in capella
     blsToExecutionChanges: BLSToExecutionChanges, // New in capella
   },
   {typeName: "BlindedBeaconBlockBody", jsonCase: "eth2", cachePermanentRootStruct: true}

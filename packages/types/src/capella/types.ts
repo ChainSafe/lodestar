@@ -6,6 +6,7 @@ export type BLSToExecutionChange = ValueOf<typeof ssz.BLSToExecutionChange>;
 export type SignedBLSToExecutionChange = ValueOf<typeof ssz.SignedBLSToExecutionChange>;
 
 export type ExecutionPayload = ValueOf<typeof ssz.ExecutionPayload>;
+export type BlindedExecutionPayload = ValueOf<typeof ssz.BlindedExecutionPayload>;
 export type ExecutionPayloadHeader = ValueOf<typeof ssz.ExecutionPayloadHeader>;
 
 export type BeaconBlockBody = ValueOf<typeof ssz.BeaconBlockBody>;
@@ -16,3 +17,5 @@ export type BeaconState = ValueOf<typeof ssz.BeaconState>;
 export type BlindedBeaconBlockBody = ValueOf<typeof ssz.BlindedBeaconBlockBody>;
 export type BlindedBeaconBlock = ValueOf<typeof ssz.BlindedBeaconBlock>;
 export type SignedBlindedBeaconBlock = ValueOf<typeof ssz.SignedBlindedBeaconBlock>;
+
+export type FullOrBlindedExecutionPayload = ExecutionPayload | BlindedExecutionPayload;
