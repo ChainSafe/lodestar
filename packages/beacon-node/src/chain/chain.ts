@@ -12,7 +12,7 @@ import {
   PubkeyIndexMap,
 } from "@lodestar/state-transition";
 import {IBeaconConfig} from "@lodestar/config";
-import {allForks, UintNum64, Root, phase0, Slot, RootHex, Epoch, ValidatorIndex} from "@lodestar/types";
+import {allForks, UintNum64, Root, phase0, eip4844, Slot, RootHex, Epoch, ValidatorIndex} from "@lodestar/types";
 import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 import {ILogger, toHex} from "@lodestar/utils";
@@ -341,42 +341,52 @@ export class BeaconChain implements IBeaconChain {
   }
 
   async produceBlock(blockAttributes: BlockAttributes): Promise<allForks.BeaconBlock> {
+    const {block} = await this.produceBlockWrapper<BlockType.Full>(BlockType.Full, blockAttributes);
+    return block;
+  }
+
+  async produceBlockWithBlobs(
+    blockAttributes: BlockAttributes
+  ): Promise<{block: allForks.BeaconBlock; blobs: eip4844.Blobs}> {
     return this.produceBlockWrapper<BlockType.Full>(BlockType.Full, blockAttributes);
   }
 
   async produceBlindedBlock(blockAttributes: BlockAttributes): Promise<allForks.BlindedBeaconBlock> {
-    return this.produceBlockWrapper<BlockType.Blinded>(BlockType.Blinded, blockAttributes);
+    const {block} = await this.produceBlockWrapper<BlockType.Blinded>(BlockType.Blinded, blockAttributes);
+    return block;
   }
 
   async produceBlockWrapper<T extends BlockType>(
     blockType: T,
     {randaoReveal, graffiti, slot}: BlockAttributes
-  ): Promise<AssembledBlockType<T>> {
+  ): Promise<{block: AssembledBlockType<T>; blobs: eip4844.Blobs}> {
     const head = this.forkChoice.getHead();
     const state = await this.regen.getBlockSlotState(head.blockRoot, slot, RegenCaller.produceBlock);
     const parentBlockRoot = fromHexString(head.blockRoot);
     const proposerIndex = state.epochCtx.getBeaconProposer(slot);
     const proposerPubKey = state.epochCtx.index2pubkey[proposerIndex].toBytes();
 
+    const {body, blobs} = await produceBlockBody.call(this, blockType, state, {
+      randaoReveal,
+      graffiti,
+      slot,
+      parentSlot: slot - 1,
+      parentBlockRoot,
+      proposerIndex,
+      proposerPubKey,
+    });
+
     const block = {
       slot,
       proposerIndex,
       parentRoot: parentBlockRoot,
       stateRoot: ZERO_HASH,
-      body: await produceBlockBody.call(this, blockType, state, {
-        randaoReveal,
-        graffiti,
-        slot,
-        parentSlot: slot - 1,
-        parentBlockRoot,
-        proposerIndex,
-        proposerPubKey,
-      }),
+      body,
     } as AssembledBlockType<T>;
 
     block.stateRoot = computeNewStateRoot(this.metrics, state, block);
 
-    return block;
+    return {block, blobs: blobs ?? []};
   }
 
   async processBlock(block: allForks.SignedBeaconBlock, opts?: ImportBlockOpts): Promise<void> {

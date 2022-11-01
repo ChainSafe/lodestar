@@ -9,6 +9,7 @@ import {
   Epoch,
   phase0,
   bellatrix,
+  eip4844,
   Root,
   Slot,
   ssz,
@@ -23,6 +24,7 @@ import {
   ArrayOf,
   ContainerData,
   Schema,
+  WithBlobs,
   WithVersion,
   reqOnlyBody,
   ReqSerializers,
@@ -165,6 +167,12 @@ export type Api = {
     graffiti: string
   ): Promise<{data: allForks.BeaconBlock; version: ForkName}>;
 
+  produceBlockWithBlobs(
+    slot: Slot,
+    randaoReveal: BLSSignature,
+    graffiti: string
+  ): Promise<{data: allForks.BeaconBlock; version: ForkName; blobs: eip4844.Blobs}>;
+
   produceBlindedBlock(
     slot: Slot,
     randaoReveal: BLSSignature,
@@ -245,6 +253,7 @@ export const routesData: RoutesData<Api> = {
   getSyncCommitteeDuties: {url: "/eth/v1/validator/duties/sync/{epoch}", method: "POST"},
   produceBlock: {url: "/eth/v1/validator/blocks/{slot}", method: "GET"},
   produceBlockV2: {url: "/eth/v2/validator/blocks/{slot}", method: "GET"},
+  produceBlockWithBlobs: {url: "/eth/v3/validator/blocks/{slot}", method: "GET"},
   produceBlindedBlock: {url: "/eth/v1/validator/blinded_blocks/{slot}", method: "GET"},
   produceAttestationData: {url: "/eth/v1/validator/attestation_data", method: "GET"},
   produceSyncCommitteeContribution: {url: "/eth/v1/validator/sync_committee_contribution", method: "GET"},
@@ -265,6 +274,7 @@ export type ReqTypes = {
   getSyncCommitteeDuties: {params: {epoch: Epoch}; body: U64Str[]};
   produceBlock: {params: {slot: number}; query: {randao_reveal: string; graffiti: string}};
   produceBlockV2: {params: {slot: number}; query: {randao_reveal: string; graffiti: string}};
+  produceBlockWithBlobs: {params: {slot: number}; query: {randao_reveal: string; graffiti: string}};
   produceBlindedBlock: {params: {slot: number}; query: {randao_reveal: string; graffiti: string}};
   produceAttestationData: {query: {slot: number; committee_index: number}};
   produceSyncCommitteeContribution: {query: {slot: number; subcommittee_index: number; beacon_block_root: string}};
@@ -340,6 +350,7 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
 
     produceBlock: produceBlock,
     produceBlockV2: produceBlock,
+    produceBlockWithBlobs: produceBlock,
     produceBlindedBlock: produceBlock,
 
     produceAttestationData: {
@@ -443,6 +454,7 @@ export function getReturnTypes(): ReturnTypes<Api> {
     getSyncCommitteeDuties: ContainerDataExecutionOptimistic(ArrayOf(SyncDuty)),
     produceBlock: ContainerData(ssz.phase0.BeaconBlock),
     produceBlockV2: WithVersion((fork: ForkName) => ssz[fork].BeaconBlock),
+    produceBlockWithBlobs: WithBlobs(WithVersion((fork: ForkName) => ssz[fork].BeaconBlock)),
     produceBlindedBlock: WithVersion((fork: ForkName) => {
       if (fork === ForkName.phase0 || fork === ForkName.altair) {
         throw Error(`No BlindedBlock for fork ${fork} previous to bellatrix`);

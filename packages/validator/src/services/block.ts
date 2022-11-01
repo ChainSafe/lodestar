@@ -4,6 +4,7 @@ import {ForkName, ForkSeq} from "@lodestar/params";
 import {extendError, prettyBytes} from "@lodestar/utils";
 import {toHexString} from "@chainsafe/ssz";
 import {Api} from "@lodestar/api";
+import {Blobs} from "@lodestar/types/eip4844";
 import {IClock, ILoggerVc} from "../util/index.js";
 import {PubkeyHex} from "../types.js";
 import {Metrics} from "../metrics.js";
@@ -77,7 +78,7 @@ export class BlockProposingService {
       const isBuilderEnabled = this.validatorStore.isBuilderEnabled(pubkeyHex);
       const expectedFeeRecipient = this.validatorStore.getFeeRecipient(pubkeyHex);
 
-      const {block, blockDebugLogCtx, blobs} = await this.produceBlockWrapper(slot, randaoReveal, graffiti, {
+      const {block, blobs, blockDebugLogCtx} = await this.produceBlockWrapper(slot, randaoReveal, graffiti, {
         expectedFeeRecipient,
         strictFeeRecipientCheck,
         isBuilderEnabled,
@@ -99,6 +100,10 @@ export class BlockProposingService {
       };
 
       if (this.config.getForkSeq(block.slot) >= ForkSeq.eip4844) {
+        if (!blobs) {
+          return onPublishError(new Error("Produced an EIP-4844 block but it was missing blobs!"));
+        }
+
         const signedBlockWithBlobs = ssz.eip4844.SignedBeaconBlockAndBlobsSidecar.defaultValue();
         signedBlockWithBlobs.beaconBlock = signedBlock as eip4844.SignedBeaconBlock;
         signedBlockWithBlobs.blobsSidecar = getBlobsSidecar(this.config, block, blobs);
@@ -134,7 +139,7 @@ export class BlockProposingService {
   ): Promise<{
     block: allForks.FullOrBlindedBeaconBlock;
     blockDebugLogCtx: Record<string, string>;
-    blobs: eip4844.Blobs;
+    blobs: eip4844.Blobs | undefined;
   }> => {
     // TODO EIP-4844: How does 4844 interact with the Builder API?
     const blindedBlockPromise = isBuilderEnabled
@@ -154,13 +159,11 @@ export class BlockProposingService {
     const blindedBlock = await blindedBlockPromise;
     const fullBlock = await fullBlockPromise;
 
-    // TODO EIP-4844 How do I get blobs here???
-    const blobs: eip4844.Blobs = [];
-
     // A metric on the choice between blindedBlock and normal block can be applied
     if (blindedBlock) {
       const blockDebugLogCtx = {source: "builder"};
-      return {block: blindedBlock.data, blockDebugLogCtx, blobs};
+      // TODO EIP-4844: What are we doing with blobs for blinded blocks?
+      return {block: blindedBlock.data, blockDebugLogCtx, blobs: []};
     } else {
       const blockDebugLogCtx = {source: "engine"};
       if (!fullBlock) {
@@ -186,23 +189,26 @@ export class BlockProposingService {
         }
         Object.assign(blockDebugLogCtx, {feeRecipient});
       }
-      return {block: fullBlock.data, blockDebugLogCtx, blobs};
+      return {block: fullBlock.data, blockDebugLogCtx, blobs: fullBlock.blobs};
     }
   };
 
   /** Wrapper around the API's different methods for producing blocks across forks */
-  private produceBlock: Api["validator"]["produceBlock"] = async (
-    slot,
-    randaoReveal,
-    graffiti
-  ): Promise<{data: allForks.BeaconBlock}> => {
+  private produceBlock = async (
+    slot: Slot,
+    randaoReveal: BLSSignature,
+    graffiti: string
+  ): Promise<{data: allForks.BeaconBlock; blobs?: Blobs}> => {
     switch (this.config.getForkName(slot)) {
       case ForkName.phase0:
         return this.api.validator.produceBlock(slot, randaoReveal, graffiti);
-      // All subsequent forks are expected to use v2 too
       case ForkName.altair:
-      default:
+      case ForkName.bellatrix:
+      case ForkName.capella:
         return this.api.validator.produceBlockV2(slot, randaoReveal, graffiti);
+      default:
+        // EIP-4844 and later
+        return this.api.validator.produceBlockWithBlobs(slot, randaoReveal, graffiti);
     }
   };
 }

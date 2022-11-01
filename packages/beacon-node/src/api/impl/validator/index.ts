@@ -237,9 +237,40 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
     }
   };
 
+  const produceBlockWithBlobs: routes.validator.Api["produceBlockWithBlobs"] = async function produceBlock(
+    slot,
+    randaoReveal,
+    graffiti
+  ) {
+    let timer;
+    metrics?.blockProductionRequests.inc();
+    try {
+      notWhileSyncing();
+      await waitForSlot(slot); // Must never request for a future slot > currentSlot
+
+      // Process the queued attestations in the forkchoice for correct head estimation
+      // forkChoice.updateTime() might have already been called by the onSlot clock
+      // handler, in which case this should just return.
+      chain.forkChoice.updateTime(slot);
+      chain.recomputeForkChoiceHead();
+
+      timer = metrics?.blockProductionTime.startTimer();
+      const {block, blobs} = await chain.produceBlockWithBlobs({
+        slot,
+        randaoReveal,
+        graffiti: toGraffitiBuffer(graffiti || ""),
+      });
+      metrics?.blockProductionSuccess.inc();
+      return {data: block, version: config.getForkName(block.slot), blobs};
+    } finally {
+      if (timer) timer();
+    }
+  };
+
   return {
     produceBlock: produceBlock,
     produceBlockV2: produceBlock,
+    produceBlockWithBlobs,
     produceBlindedBlock,
 
     async produceAttestationData(committeeIndex, slot) {

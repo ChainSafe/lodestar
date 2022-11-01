@@ -2,6 +2,8 @@ import {isBasicType, ListBasicType, Type, isCompositeType, ListCompositeType, Ar
 import {ForkName} from "@lodestar/params";
 import {IChainForkConfig} from "@lodestar/config";
 import {objectToExpectedCase} from "@lodestar/utils";
+import {ssz} from "@lodestar/types";
+import {Blobs} from "@lodestar/types/eip4844";
 import {Schema, SchemaDefinition} from "./schema.js";
 
 // See /packages/api/src/routes/index.ts for reasoning
@@ -190,6 +192,19 @@ export function WithExecutionOptimistic<T extends {data: unknown}>(
     fromJson: ({execution_optimistic, ...data}: T & {execution_optimistic: boolean}) => ({
       ...type.fromJson(data),
       executionOptimistic: execution_optimistic,
+    }),
+  };
+}
+
+export function WithBlobs<T extends {data: unknown}>(type: TypeJson<T>): TypeJson<T & {blobs: Blobs}> {
+  return {
+    toJson: ({blobs, ...data}) => ({
+      ...(type.toJson((data as unknown) as T) as Record<string, unknown>),
+      blobs: ssz.eip4844.Blobs.toJson(blobs),
+    }),
+    fromJson: ({blobs, ...data}: T & {blobs: Blobs}) => ({
+      ...type.fromJson(data),
+      blobs: ssz.eip4844.Blobs.fromJson(blobs),
     }),
   };
 }

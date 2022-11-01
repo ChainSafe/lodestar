@@ -76,7 +76,7 @@ export async function produceBlockBody<T extends BlockType>(
     proposerIndex: ValidatorIndex;
     proposerPubKey: BLSPubkey;
   }
-): Promise<AssembledBodyType<T>> {
+): Promise<{body: AssembledBodyType<T>; blobs: eip4844.Blobs | null}> {
   // TODO:
   // Iterate through the naive aggregation pool and ensure all the attestations from there
   // are included in the operation pool.
@@ -92,6 +92,9 @@ export async function produceBlockBody<T extends BlockType>(
   const [attesterSlashings, proposerSlashings, voluntaryExits] = this.opPool.getSlashingsAndExits(currentState);
   const attestations = this.aggregatedAttestationPool.getAttestationsForBlock(this.forkChoice, currentState);
   const {eth1Data, deposits} = await this.eth1.getEth1DataAndDeposits(currentState);
+
+  // We assign this in an EIP-4844 branch below and return it
+  let blobs: eip4844.Blobs | null = null;
 
   const blockBody: phase0.BeaconBlockBody = {
     randaoReveal,
@@ -115,9 +118,8 @@ export async function produceBlockBody<T extends BlockType>(
 
   const forkName = currentState.config.getForkName(blockSlot);
 
-  if (forkName === ForkName.bellatrix || forkName === ForkName.capella || forkName === ForkName.eip4844) {
+  if (forkName !== ForkName.phase0 && forkName !== ForkName.altair) {
     // Bellatrix, Capella, or 4844
-
     const safeBlockHash = this.forkChoice.getJustifiedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
     const finalizedBlockHash = this.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
     const feeRecipient = this.beaconProposerCache.getOrDefault(proposerIndex);
@@ -204,6 +206,7 @@ export async function produceBlockBody<T extends BlockType>(
 
             // TODO EIP-4844:  Optional (do it in a follow-up): sanity-check that the KZG commitments match blob contents as described by the spec
             (blockBody as eip4844.BeaconBlockBody).blobKzgCommitments = blobsBundle.kzgs ?? [];
+            blobs = blobsBundle.blobs;
           }
 
           const fetchedTime = Date.now() / 1000 - computeTimeAtSlot(this.config, blockSlot, this.genesisTime);
@@ -235,7 +238,7 @@ export async function produceBlockBody<T extends BlockType>(
     }
   }
 
-  return blockBody as AssembledBodyType<T>;
+  return {body: blockBody as AssembledBodyType<T>, blobs};
 }
 
 /**
