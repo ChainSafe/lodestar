@@ -71,9 +71,7 @@ export function processExecutionPayload(
   };
 
   const withdrawalsRoot = isCapellaPayload(payload)
-    ? isExecutionPayload(payload)
-      ? ssz.capella.Withdrawals.hashTreeRoot(payload.withdrawals)
-      : payload.withdrawalsRoot
+    ? ssz.capella.Withdrawals.hashTreeRoot(payload.withdrawals)
     : undefined;
 
   // Cache execution payload header

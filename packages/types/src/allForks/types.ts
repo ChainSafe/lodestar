@@ -31,6 +31,7 @@ export type ExecutionBlockBody = bellatrix.BeaconBlockBody | capella.BeaconBlock
 // These two additional types will also change bellatrix forward
 export type ExecutionPayload = bellatrix.ExecutionPayload | capella.ExecutionPayload;
 export type ExecutionPayloadHeader = bellatrix.ExecutionPayloadHeader | capella.ExecutionPayloadHeader;
+export type BlindedExecutionPayload = bellatrix.ExecutionPayloadHeader | capella.BlindedExecutionPayload;
 
 // Blinded types that will change across forks
 export type BlindedBeaconBlockBody = bellatrix.BlindedBeaconBlockBody | capella.BlindedBeaconBlockBody;
@@ -38,7 +39,9 @@ export type BlindedBeaconBlock = bellatrix.BlindedBeaconBlock | capella.BlindedB
 export type SignedBlindedBeaconBlock = bellatrix.SignedBlindedBeaconBlock | capella.SignedBlindedBeaconBlock;
 
 // Full or blinded types
-export type FullOrBlindedExecutionPayload = ExecutionPayload | ExecutionPayloadHeader;
+export type FullOrBlindedExecutionPayload =
+  | bellatrix.FullOrBlindedExecutionPayload
+  | capella.FullOrBlindedExecutionPayload;
 export type FullOrBlindedBeaconBlockBody = BeaconBlockBody | BlindedBeaconBlockBody;
 export type FullOrBlindedBeaconBlock = BeaconBlock | BlindedBeaconBlock;
 export type FullOrBlindedSignedBeaconBlock = SignedBeaconBlock | SignedBlindedBeaconBlock;

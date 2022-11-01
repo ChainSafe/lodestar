@@ -107,6 +107,7 @@ export const JUSTIFICATION_BITS_LENGTH = 4;
 
 // Withdrawal prefixes
 
+export const WITHDRAWAL_PREFIX_BYTES = 1;
 export const BLS_WITHDRAWAL_PREFIX = Uint8Array.from([0]);
 export const ETH1_ADDRESS_WITHDRAWAL_PREFIX = Uint8Array.from([1]);
 
