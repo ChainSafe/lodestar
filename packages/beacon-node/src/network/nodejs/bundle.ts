@@ -20,6 +20,7 @@ export interface ILibp2pOptions {
   minConnections?: number;
   metrics?: boolean;
   lodestarVersion?: string;
+  mdns?: boolean;
 }
 
 export async function createNodejsLibp2p(options: ILibp2pOptions): Promise<Libp2p> {
@@ -30,7 +31,9 @@ export async function createNodejsLibp2p(options: ILibp2pOptions): Promise<Libp2
     if ((options.bootMultiaddrs?.length ?? 0) > 0) {
       peerDiscovery.push(new Bootstrap({interval: 2000, list: options.bootMultiaddrs ?? []}));
     }
-    peerDiscovery.push(new MulticastDNS());
+    if (options.mdns) {
+      peerDiscovery.push(new MulticastDNS());
+    }
   }
   return await createLibp2p({
     peerId: options.peerId,

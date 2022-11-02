@@ -8,6 +8,7 @@ export interface INetworkOptions extends PeerManagerOpts, RateLimiterOpts, Gossi
   localMultiaddrs: string[];
   bootMultiaddrs?: string[];
   subscribeAllSubnets?: boolean;
+  mdns: boolean;
   connectToDiscv5Bootnodes?: boolean;
   version?: string;
 }
@@ -26,6 +27,7 @@ export const defaultNetworkOptions: INetworkOptions = {
   discv5FirstQueryDelayMs: 1000,
   localMultiaddrs: ["/ip4/0.0.0.0/tcp/9000"],
   bootMultiaddrs: [],
+  mdns: false,
   discv5: defaultDiscv5Options,
   ...defaultRateLimiterOpts,
   ...defaultGossipHandlerOpts,
