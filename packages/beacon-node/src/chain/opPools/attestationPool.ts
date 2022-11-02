@@ -220,7 +220,7 @@ function attestationToAggregate(attestation: phase0.Attestation): AggregateFast 
 function fastToAttestation(aggFast: AggregateFast): phase0.Attestation {
   if (aggFast.aggregatedAttestation) return aggFast.aggregatedAttestation;
 
-  return {
+  aggFast.aggregatedAttestation = {
     data: aggFast.data,
     aggregationBits: aggFast.aggregationBits,
     signature: bls.Signature.aggregate(
@@ -228,4 +228,6 @@ function fastToAttestation(aggFast: AggregateFast): phase0.Attestation {
       aggFast.signatures.map((signature) => signatureFromBytesNoCheck(signature))
     ).toBytes(PointFormat.compressed),
   };
+
+  return aggFast.aggregatedAttestation;
 }
