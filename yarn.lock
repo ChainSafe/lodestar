@@ -3325,11 +3325,6 @@
   resolved "https://registry.npmjs.org/@types/json5/-/json5-0.0.29.tgz"
   integrity sha1-7ihweulOEdK4J7y+UnC86n8+ce4=
 
-"@types/jwt-simple@0.5.33":
-  version "0.5.33"
-  resolved "https://registry.npmjs.org/@types/jwt-simple/-/jwt-simple-0.5.33.tgz"
-  integrity sha1-+4Ocq+gUN5VPfQzQF2CtgJbsUm4=
-
 "@types/keyv@*":
   version "3.1.1"
   resolved "https://registry.npmjs.org/@types/keyv/-/keyv-3.1.1.tgz"
