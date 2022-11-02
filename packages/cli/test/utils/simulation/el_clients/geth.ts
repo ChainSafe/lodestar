@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/naming-convention */
 import {mkdir, writeFile} from "node:fs/promises";
 import {join} from "node:path";
 import got from "got";
@@ -12,85 +13,7 @@ import {
   Runner,
   RunnerType,
 } from "../interfaces.js";
-
-const getGenesisBlock = (ttd: number, mode: ELStartMode): Record<string, unknown> => {
-  if (mode === ELStartMode.PreMerge) {
-    return {
-      config: {
-        chainId: 1,
-        homesteadBlock: 0,
-        eip150Block: 0,
-        eip150Hash: "0x0000000000000000000000000000000000000000000000000000000000000000",
-        eip155Block: 0,
-        eip158Block: 0,
-        byzantiumBlock: 0,
-        constantinopleBlock: 0,
-        petersburgBlock: 0,
-        istanbulBlock: 0,
-        muirGlacierBlock: 0,
-        berlinBlock: 0,
-        londonBlock: 0,
-        clique: {
-          period: 5,
-          epoch: 30000,
-        },
-        terminalTotalDifficulty: ttd,
-      },
-      nonce: "0x42",
-      timestamp: "0x0",
-      extraData:
-        "0x0000000000000000000000000000000000000000000000000000000000000000a94f5374fce5edbc8e2a8697c15331677e6ebf0b0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-      gasLimit: "0x1c9c380",
-      difficulty: "0x0",
-      mixHash: "0x0000000000000000000000000000000000000000000000000000000000000000",
-      coinbase: "0x0000000000000000000000000000000000000000",
-      alloc: {
-        "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b": {balance: "0x6d6172697573766477000000"},
-      },
-      number: "0x0",
-      gasUsed: "0x0",
-      parentHash: "0x0000000000000000000000000000000000000000000000000000000000000000",
-      baseFeePerGas: "0x7",
-    };
-  }
-
-  return {
-    config: {
-      chainId: 1,
-      homesteadBlock: 0,
-      eip150Block: 0,
-      eip155Block: 0,
-      eip158Block: 0,
-      byzantiumBlock: 0,
-      constantinopleBlock: 0,
-      petersburgBlock: 0,
-      istanbulBlock: 0,
-      muirGlacierBlock: 0,
-      berlinBlock: 0,
-      londonBlock: 0,
-      clique: {
-        period: 5,
-        epoch: 30000,
-      },
-      terminalTotalDifficulty: ttd,
-    },
-    nonce: "0x42",
-    timestamp: "0x0",
-    extraData:
-      "0x0000000000000000000000000000000000000000000000000000000000000000a94f5374fce5edbc8e2a8697c15331677e6ebf0b0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-    gasLimit: "0x1C9C380",
-    difficulty: "0x400000000",
-    mixHash: "0x0000000000000000000000000000000000000000000000000000000000000000",
-    coinbase: "0x0000000000000000000000000000000000000000",
-    alloc: {
-      "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b": {balance: "0x6d6172697573766477000000"},
-    },
-    number: "0x0",
-    gasUsed: "0x0",
-    parentHash: "0x0000000000000000000000000000000000000000000000000000000000000000",
-    baseFeePerGas: "0x7",
-  };
-};
+import {getGenesisBlock} from "./genesis.js";
 
 const SECRET_KEY = "45a915e4d060149eb4365960e6a7a45f334393093061116b197e3240065ff2d8";
 const PASSWORD = "12345678";
@@ -107,7 +30,7 @@ export const generateGethNode: ELClientGenerator = (opts: ELClientOptions, runne
     throw Error(`EL ENV must be provided, GETH_BINARY_DIR: ${process.env.GETH_BINARY_DIR}`);
   }
 
-  const {id, mode, dataDir, ethPort, port, enginePort, ttd, logFilePath, jwtSecretHex} = opts;
+  const {id, mode, dataDir, ethPort, port, enginePort, ttd, logFilePath, jwtSecretHex, cliqueSealingPeriod} = opts;
 
   const ethRpcUrl = `http://127.0.0.1:${ethPort}`;
   const engineRpcUrl = `http://127.0.0.1:${enginePort}`;
@@ -120,7 +43,7 @@ export const generateGethNode: ELClientGenerator = (opts: ELClientOptions, runne
   const initJobOptions: JobOptions = {
     bootstrap: async () => {
       await mkdir(dataDir, {recursive: true});
-      await writeFile(genesisPath, JSON.stringify(getGenesisBlock(Number(ttd), mode)));
+      await writeFile(genesisPath, JSON.stringify(getGenesisBlock(mode, {ttd, cliqueSealingPeriod})));
     },
     cli: {
       command: binaryPath,
@@ -172,7 +95,7 @@ export const generateGethNode: ELClientGenerator = (opts: ELClientOptions, runne
         passwordPath,
         "--syncmode",
         "full",
-        // ...(mode == ELStartMode.PreMerge ? ["--nodiscover", "--mine"] : []),
+        ...(mode == ELStartMode.PreMerge ? ["--mine", "--nodiscover"] : []),
       ],
       env: {},
     },
@@ -192,7 +115,6 @@ export const generateGethNode: ELClientGenerator = (opts: ELClientOptions, runne
   const job = runner.create(id, [{...initJobOptions, children: [{...importJobOptions, children: [startJobOptions]}]}]);
 
   const provider = new Eth1Provider(
-    // eslint-disable-next-line @typescript-eslint/naming-convention
     {DEPOSIT_CONTRACT_ADDRESS: ZERO_HASH},
     {providerUrls: [engineRpcUrl], jwtSecretHex}
   );

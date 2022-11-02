@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/naming-convention */
 import {mkdir, writeFile} from "node:fs/promises";
 import {dirname, join} from "node:path";
 import got from "got";
@@ -9,7 +10,7 @@ import {IBeaconArgs} from "../../../../src/cmds/beacon/options.js";
 import {IValidatorCliArgs} from "../../../../src/cmds/validator/options.js";
 import {IGlobalArgs} from "../../../../src/options/globalOptions.js";
 import {CLClient, CLClientGenerator, CLClientOptions, JobOptions, Runner, RunnerType} from "../interfaces.js";
-import {LODESTAR_BINARY_PATH} from "../utils.js";
+import {LODESTAR_BINARY_PATH} from "../constants.js";
 
 export const generateLodestarBeaconNode: CLClientGenerator = (opts: CLClientOptions, runner: Runner) => {
   if (runner.type !== RunnerType.ChildProcess) {
@@ -102,8 +103,7 @@ export const generateLodestarBeaconNode: CLClientGenerator = (opts: CLClientOpti
         command: LODESTAR_BINARY_PATH,
         args: ["beacon", "--rcConfig", rcConfigPath],
         env: {
-          // eslint-disable-next-line @typescript-eslint/naming-convention
-          // DEBUG: "*,-winston:*",
+          DEBUG: "*,-winston:*",
         },
       },
       logs: {
@@ -182,8 +182,7 @@ export const generateLodestarValidatorJobs = (opts: CLClientOptions, runner: Run
       command: LODESTAR_BINARY_PATH,
       args: ["validator", "--rcConfig", join(rootDir, "rc_config.json")],
       env: {
-        // eslint-disable-next-line @typescript-eslint/naming-convention
-        // DEBUG: "*,-winston:*",
+        DEBUG: "*,-winston:*",
       },
     },
     logs: {

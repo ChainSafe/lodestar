@@ -59,10 +59,14 @@ export interface CLClientOptions {
   jwtSecretHex: string;
 }
 
-export interface ELClientOptions {
+export interface ELGenesisOptions {
+  ttd: bigint;
+  cliqueSealingPeriod: number;
+}
+
+export interface ELClientOptions extends ELGenesisOptions {
   mode: ELStartMode;
   id: string;
-  ttd: bigint;
   logFilePath: string;
   dataDir: string;
   jwtSecretHex: string;

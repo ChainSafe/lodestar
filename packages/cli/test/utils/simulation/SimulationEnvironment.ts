@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/naming-convention */
 import {mkdir, rm, writeFile} from "node:fs/promises";
 import {EventEmitter} from "node:events";
 import {join} from "node:path";
@@ -35,13 +36,15 @@ import {SimulationTracker} from "./SimulationTracker.js";
 import {
   BN_P2P_BASE_PORT,
   BN_REST_BASE_PORT,
+  CLIQUE_SEALING_PERIOD,
   EL_ENGINE_BASE_PORT,
   EL_ETH_BASE_PORT,
   EL_P2P_BASE_PORT,
   KEY_MANAGER_BASE_PORT,
   SIM_TESTS_SECONDS_PER_SLOT,
-} from "./utils.js";
+} from "./constants.js";
 import {generateGethNode} from "./el_clients/geth.js";
+import {getEstimatedTTD} from "./utils.js";
 
 export const SHARED_JWT_SECRET = "0xdc6457099f127cf0bac78de8b297df04951281909db4f58b43def7c7151e765d";
 
@@ -120,15 +123,24 @@ export class SimulationEnvironment {
     {chainConfig, logsDir, id}: SimulationInitOptions,
     clients: NodePairOptions[]
   ): SimulationEnvironment {
+    const secondsPerSlot = chainConfig.SECONDS_PER_SLOT ?? SIM_TESTS_SECONDS_PER_SLOT;
+    const ttd =
+      chainConfig.TERMINAL_TOTAL_DIFFICULTY ??
+      getEstimatedTTD({
+        genesisDelay: chainConfig.GENESIS_DELAY,
+        bellatrixForkEpoch: chainConfig.BELLATRIX_FORK_EPOCH,
+        secondsPerSlot: secondsPerSlot,
+        cliqueSealingPeriod: CLIQUE_SEALING_PERIOD,
+        additionalSlots: 4, // Make sure bellatrix started before TTD reach
+      });
+
+    const genesisTime = Math.floor(Date.now() / 1000) + chainConfig.GENESIS_DELAY * secondsPerSlot;
+
     const forkConfig = createIChainForkConfig({
       ...chainConfig,
-      // eslint-disable-next-line @typescript-eslint/naming-convention
-      SECONDS_PER_SLOT: chainConfig.SECONDS_PER_SLOT ?? SIM_TESTS_SECONDS_PER_SLOT,
-      // eslint-disable-next-line @typescript-eslint/naming-convention
-      TERMINAL_TOTAL_DIFFICULTY: chainConfig.TERMINAL_TOTAL_DIFFICULTY ?? BigInt(0),
+      SECONDS_PER_SLOT: secondsPerSlot,
+      TERMINAL_TOTAL_DIFFICULTY: ttd,
     });
-
-    const genesisTime = Math.floor(Date.now() / 1000) + forkConfig.GENESIS_DELAY * forkConfig.SECONDS_PER_SLOT;
 
     const env = new SimulationEnvironment(forkConfig, {
       logsDir,
@@ -301,9 +313,9 @@ export class SimulationEnvironment {
         const opts: ELClientOptions = {
           id: elId,
           mode:
-            options?.mode ??
-            (this.forkConfig.TERMINAL_TOTAL_DIFFICULTY === BigInt(0) ? ELStartMode.PostMerge : ELStartMode.PreMerge),
+            options?.mode ?? (this.forkConfig.BELLATRIX_FORK_EPOCH > 0 ? ELStartMode.PreMerge : ELStartMode.PostMerge),
           ttd: options?.ttd ?? this.forkConfig.TERMINAL_TOTAL_DIFFICULTY,
+          cliqueSealingPeriod: options?.cliqueSealingPeriod ?? CLIQUE_SEALING_PERIOD,
           logFilePath: options?.logFilePath ?? join(this.options.logsDir, `${elId}.log`),
           dataDir: options?.dataDir ?? join(this.options.rootDir, elId),
           jwtSecretHex: options?.jwtSecretHex ?? SHARED_JWT_SECRET,

@@ -1,13 +1,7 @@
-import {dirname} from "node:path";
-import {fileURLToPath} from "node:url";
 import {Epoch, Slot} from "@lodestar/types";
 import {ForkName, activePreset} from "@lodestar/params";
 import {IChainForkConfig} from "@lodestar/config";
-
-// Global variable __dirname no longer available in ES6 modules.
-// Solutions: https://stackoverflow.com/questions/46745014/alternative-for-dirname-in-node-js-when-using-es6-modules
-// eslint-disable-next-line @typescript-eslint/naming-convention
-export const __dirname = dirname(fileURLToPath(import.meta.url));
+import {ETH_TTD_INCREMENT} from "./constants.js";
 
 export const logFilesDir = "test-logs";
 
@@ -41,13 +35,23 @@ export const getEstimatedTimeInSecForRun = ({
   return Math.round(durationSec + durationSec * grace);
 };
 
-export const FAR_FUTURE_EPOCH = 10 ** 12;
-export const BN_P2P_BASE_PORT = 4000;
-export const BN_REST_BASE_PORT = 5000;
-export const KEY_MANAGER_BASE_PORT = 6000;
-export const EXTERNAL_SIGNER_BASE_PORT = 7000;
-export const EL_ETH_BASE_PORT = 8000;
-export const EL_ENGINE_BASE_PORT = 9000;
-export const EL_P2P_BASE_PORT = 9050;
-export const SIM_TESTS_SECONDS_PER_SLOT = 4;
-export const LODESTAR_BINARY_PATH = `${__dirname}/../../../bin/lodestar.js`;
+export const getEstimatedTTD = ({
+  genesisDelay,
+  cliqueSealingPeriod,
+  secondsPerSlot,
+  additionalSlots,
+  bellatrixForkEpoch,
+}: {
+  genesisDelay: number;
+  cliqueSealingPeriod: number;
+  additionalSlots: number;
+  secondsPerSlot: number;
+  bellatrixForkEpoch: number;
+}): bigint => {
+  const secondsTillBellatrix =
+    genesisDelay * secondsPerSlot +
+    bellatrixForkEpoch * activePreset.SLOTS_PER_EPOCH * secondsPerSlot +
+    additionalSlots * secondsPerSlot;
+
+  return BigInt(Math.ceil(secondsTillBellatrix / cliqueSealingPeriod) * ETH_TTD_INCREMENT);
+};

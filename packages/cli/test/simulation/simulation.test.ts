@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/naming-convention */
 import {join} from "node:path";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
@@ -13,7 +14,8 @@ import {
 } from "../utils/simulation/assertions.js";
 import {CLClient, NodePairResult, ELClient} from "../utils/simulation/interfaces.js";
 import {SimulationEnvironment} from "../utils/simulation/SimulationEnvironment.js";
-import {getEstimatedTimeInSecForRun, logFilesDir, SIM_TESTS_SECONDS_PER_SLOT} from "../utils/simulation/utils.js";
+import {SIM_TESTS_SECONDS_PER_SLOT} from "../utils/simulation/constants.js";
+import {getEstimatedTimeInSecForRun, logFilesDir} from "../utils/simulation/utils.js";
 
 const genesisSlotsDelay = SLOTS_PER_EPOCH * 2;
 const runTillEpoch = 6;
@@ -34,14 +36,9 @@ describe("simulation test - multi-fork", function () {
       id: "multi-fork",
       logsDir: join(logFilesDir, "multi-fork"),
       chainConfig: {
-        // eslint-disable-next-line @typescript-eslint/naming-convention
         ALTAIR_FORK_EPOCH: 2,
-        // eslint-disable-next-line @typescript-eslint/naming-convention
         BELLATRIX_FORK_EPOCH: 4,
-        // eslint-disable-next-line @typescript-eslint/naming-convention
         GENESIS_DELAY: genesisSlotsDelay,
-        // eslint-disable-next-line @typescript-eslint/naming-convention
-        TERMINAL_TOTAL_DIFFICULTY: BigInt(10),
       },
     },
     [
