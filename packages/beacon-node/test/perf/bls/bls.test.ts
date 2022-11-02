@@ -1,4 +1,3 @@
-import crypto from "crypto";
 import {itBench} from "@dapplion/benchmark";
 import bls from "@chainsafe/bls";
 import {CoordType, PointFormat, PublicKey, SecretKey, Signature} from "@chainsafe/bls/types";
