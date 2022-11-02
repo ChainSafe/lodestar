@@ -11,6 +11,8 @@ type IDevOwnArgs = {
   startValidators?: string;
   genesisTime?: number;
   reset?: boolean;
+  light?: boolean;
+  lcCheckpointRoot: string;
 };
 
 const devOwnOptions: ICliCommandOptions<IDevOwnArgs> = {
@@ -46,6 +48,20 @@ const devOwnOptions: ICliCommandOptions<IDevOwnArgs> = {
     alias: ["r"],
     type: "boolean",
     group: "dev",
+  },
+
+  light: {
+    description: "Run the node as a light client",
+    alias: ["l"],
+    type: "boolean",
+    group: "dev",
+  },
+
+  lcCheckpointRoot: {
+    hidden: true,
+    description: "Checkpoint for bootstrapping light client",
+    defaultDescription: "Checkpoint for bootstrapping light client",
+    type: "string",
   },
 };
 

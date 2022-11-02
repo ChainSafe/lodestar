@@ -68,6 +68,7 @@ export async function beaconLightHandler(args: IBeaconArgs & IGlobalArgs): Promi
       abortController.signal
     );
     const beaconConfig = createIBeaconConfig(config, anchorState.genesisValidatorsRoot);
+    const lcCheckpointRoot = args.lcCheckpointRoot;
     const node = await BeaconNodeLight.init({
       opts: options,
       config: beaconConfig,
@@ -81,6 +82,7 @@ export async function beaconLightHandler(args: IBeaconArgs & IGlobalArgs): Promi
       anchorState,
       wsCheckpoint,
       metricsRegistries,
+      lcCheckpointRoot,
     });
 
     if (args.attachToGlobalThis) ((globalThis as unknown) as {bn: BeaconNodeLight}).bn = node;

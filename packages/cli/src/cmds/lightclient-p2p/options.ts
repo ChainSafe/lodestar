@@ -16,6 +16,7 @@ interface IBeaconExtraArgs {
   dbDir?: string;
   persistInvalidSszObjectsDir?: string;
   peerStoreDir?: string;
+  lcCheckpointRoot: string;
 }
 
 export const beaconExtraOptions: ICliCommandOptions<IBeaconExtraArgs> = {
@@ -88,6 +89,13 @@ export const beaconExtraOptions: ICliCommandOptions<IBeaconExtraArgs> = {
     hidden: true,
     description: "Peer store directory",
     defaultDescription: defaultBeaconPaths.peerStoreDir,
+    type: "string",
+  },
+
+  lcCheckpointRoot: {
+    hidden: true,
+    description: "Checkpoint for bootstrapping light client",
+    defaultDescription: "Checkpoint for bootstrapping light client",
     type: "string",
   },
 };

@@ -7,10 +7,14 @@ import {ErrorAborted, ILogger, isErrorAborted, pruneSetToMax, sleep} from "@lode
 
 import {init as initBls} from "@chainsafe/bls/switchable";
 import {LightClientBootstrap, LightClientUpdate} from "@lodestar/types/altair";
-import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, ForkName, MAX_REQUEST_LIGHT_CLIENT_UPDATES} from "@lodestar/params";
+import {
+  EPOCHS_PER_SYNC_COMMITTEE_PERIOD,
+  ForkName,
+  MAX_REQUEST_LIGHT_CLIENT_UPDATES,
+  SLOTS_PER_EPOCH,
+} from "@lodestar/params";
 import {toHexString} from "@chainsafe/ssz";
 import {GossipsubEvents} from "@chainsafe/libp2p-gossipsub";
-import {stringifyGossipTopic} from "@lodestar/beacon-node/src/network/gossip/topic";
 import {IBeaconChain} from "../../chain/index.js";
 import {IBeaconDb} from "../../db/index.js";
 import {GossipType, INetwork, NetworkEvent} from "../../network/index.js";
@@ -470,7 +474,8 @@ export class LightSync extends (EventEmitter as {new (): BackfillSyncEmitter}) {
   private onGossipsubMessage(event: GossipsubEvents["gossipsub:message"]): void {
     const {msg} = event.detail;
 
-    const forkDigestHex = this.config.forkName2ForkDigestHex(ForkName.altair);
+    // TODO DA A better way to resolve forkDigestHex
+    const forkDigestHex = this.config.forkName2ForkDigestHex(ForkName.bellatrix);
     const optimisticUpdateTopic = `/eth2/${forkDigestHex}/${GossipType.light_client_optimistic_update}/${DEFAULT_ENCODING}`;
     const finalityUpdateTopic = `/eth2/${forkDigestHex}/${GossipType.light_client_finality_update}/${DEFAULT_ENCODING}`;
 
@@ -479,7 +484,7 @@ export class LightSync extends (EventEmitter as {new (): BackfillSyncEmitter}) {
     } else if (msg.topic === finalityUpdateTopic) {
       this.processFinalizedUpdate(ssz.altair.LightClientFinalityUpdate.deserialize(msg.data));
     } else {
-      console.log("not processing", msg.topic);
+      this.logger.info("not processing", msg.topic);
     }
   }
 
@@ -532,6 +537,14 @@ export class LightSync extends (EventEmitter as {new (): BackfillSyncEmitter}) {
           header: this.lightClientBootstrap.header,
           blockRoot: toHexString(ssz.phase0.BeaconBlockHeader.hashTreeRoot(this.lightClientBootstrap.header)),
         };
+        // set syncommittee for current period
+        const currentPeriod = computeSyncPeriodAtSlot(this.lightClientBootstrap.header.slot);
+        this.syncCommitteeByPeriod.set(currentPeriod, {
+          isFinalized: false,
+          participation: 0,
+          slot: currentPeriod * EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH,
+          ...deserializeSyncCommittee(this.lightClientBootstrap.currentSyncCommittee),
+        });
 
         return BootstrapStatus.successful;
       } catch (e) {

@@ -3,6 +3,7 @@ import {promisify} from "node:util";
 import rimraf from "rimraf";
 import {toHex, fromHex} from "@lodestar/utils";
 import {nodeUtils} from "@lodestar/beacon-node";
+import {beaconLightHandler} from "../lightclient-p2p/handler.js";
 import {IGlobalArgs} from "../../options/index.js";
 import {mkdir, onGracefulShutdown} from "../../util/index.js";
 import {getBeaconConfigFromArgs} from "../../config/beaconParams.js";
@@ -65,7 +66,11 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
   }
 
   // Note: recycle entire beacon handler
-  await beaconHandler(args);
+  if (args.light) {
+    await beaconLightHandler(args);
+  } else {
+    await beaconHandler(args);
+  }
 
   if (args.startValidators) {
     // TODO: Map dev option to validator's option

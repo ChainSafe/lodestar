@@ -50,6 +50,7 @@ export interface IBeaconNodeInitModules {
   anchorState: BeaconStateAllForks;
   wsCheckpoint?: phase0.Checkpoint;
   metricsRegistries?: Registry[];
+  lcCheckpointRoot: string;
 }
 
 export enum BeaconNodeStatus {
@@ -135,6 +136,7 @@ export class BeaconNodeLight {
     anchorState,
     wsCheckpoint,
     metricsRegistries = [],
+    lcCheckpointRoot, // TODO DA propertly add this to cli options.
   }: IBeaconNodeInitModules): Promise<T> {
     const controller = new AbortController();
     // We set infinity to prevent MaxListenersExceededWarning which get logged when listeners > 10
@@ -221,8 +223,7 @@ export class BeaconNodeLight {
 
     const backfillSync = await LightSync.init(
       {
-        // TODO DA pass from cli
-        checkpointRoot: fromHexString("0x42c5864c88787fbec784fa82bb37b3386e1ac52f53ed95b65f49b4299638109b"),
+        checkpointRoot: fromHexString(lcCheckpointRoot),
         genesisData: {
           genesisTime: Number(genesisData.genesisTime),
           genesisValidatorsRoot: genesisData.genesisValidatorsRoot,
