@@ -41,7 +41,11 @@ export const sszStatic = (fork: ForkName, typeName: string, testSuite: string, t
     return;
   }
   /* eslint-disable @typescript-eslint/strict-boolean-expressions */
-  const sszType = (ssz[fork] as Types)[typeName] || (ssz.altair as Types)[typeName] || (ssz.phase0 as Types)[typeName];
+  const sszType =
+    (ssz[fork] as Types)[typeName] ||
+    (ssz.bellatrix as Types)[typeName] ||
+    (ssz.altair as Types)[typeName] ||
+    (ssz.phase0 as Types)[typeName];
   if (!sszType) {
     throw Error(`No type for ${typeName}`);
   }

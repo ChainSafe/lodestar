@@ -65,7 +65,9 @@ const operationFns: Record<string, BlockProcessFn<CachedBeaconStateAllForks>> = 
     state,
     testCase: {execution_payload: bellatrix.ExecutionPayload; execution: {execution_valid: boolean}}
   ) => {
+    const fork = state.config.getForkSeq(state.slot);
     blockFns.processExecutionPayload(
+      fork,
       (state as CachedBeaconStateAllForks) as CachedBeaconStateBellatrix,
       testCase.execution_payload,
       {notifyNewPayload: () => testCase.execution.execution_valid}
