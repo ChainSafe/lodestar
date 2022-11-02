@@ -3,11 +3,10 @@ import {Context} from "mocha";
 import {fromHexString} from "@chainsafe/ssz";
 import {isExecutionStateType, isMergeTransitionComplete} from "@lodestar/state-transition";
 import {LogLevel, sleep, TimestampFormatCode} from "@lodestar/utils";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {SLOTS_PER_EPOCH, ForkSeq} from "@lodestar/params";
 import {IChainConfig} from "@lodestar/config";
 import {Epoch} from "@lodestar/types";
 import {ValidatorProposerConfig} from "@lodestar/validator";
-import {ForkSeq} from "@lodestar/params";
 
 import {ExecutePayloadStatus} from "../../src/execution/engine/interface.js";
 import {ExecutionEngineHttp} from "../../src/execution/engine/http.js";
