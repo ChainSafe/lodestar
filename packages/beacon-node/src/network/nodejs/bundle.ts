@@ -1,11 +1,13 @@
 import {createLibp2p, Libp2p} from "libp2p";
-import {TCP} from "@libp2p/tcp";
-import {Mplex} from "@libp2p/mplex";
-import {Bootstrap} from "@libp2p/bootstrap";
-import {MulticastDNS} from "@libp2p/mdns";
+import {tcp} from "@libp2p/tcp";
+import {mplex} from "@libp2p/mplex";
+import {bootstrap} from "@libp2p/bootstrap";
+import {mdns} from "@libp2p/mdns";
 import {PeerId} from "@libp2p/interface-peer-id";
 import {Datastore} from "interface-datastore";
-import {Noise} from "@chainsafe/libp2p-noise";
+import type {PeerDiscovery} from "@libp2p/interface-peer-discovery";
+import type {Components} from "libp2p/components";
+import {noise} from "@chainsafe/libp2p-noise";
 
 export interface ILibp2pOptions {
   peerId: PeerId;
@@ -14,7 +16,7 @@ export interface ILibp2pOptions {
     announce?: string[];
   };
   datastore?: Datastore;
-  peerDiscovery?: (Bootstrap | MulticastDNS)[];
+  peerDiscovery?: ((components: Components) => PeerDiscovery)[];
   bootMultiaddrs?: string[];
   maxConnections?: number;
   minConnections?: number;
@@ -28,9 +30,9 @@ export async function createNodejsLibp2p(options: ILibp2pOptions): Promise<Libp2
     peerDiscovery.push(...options.peerDiscovery);
   } else {
     if ((options.bootMultiaddrs?.length ?? 0) > 0) {
-      peerDiscovery.push(new Bootstrap({interval: 2000, list: options.bootMultiaddrs ?? []}));
+      peerDiscovery.push(bootstrap({list: options.bootMultiaddrs ?? []}));
     }
-    peerDiscovery.push(new MulticastDNS());
+    peerDiscovery.push(mdns());
   }
   return await createLibp2p({
     peerId: options.peerId,
@@ -38,9 +40,9 @@ export async function createNodejsLibp2p(options: ILibp2pOptions): Promise<Libp2
       listen: options.addresses.listen,
       announce: options.addresses.announce || [],
     },
-    connectionEncryption: [new Noise()],
-    transports: [new TCP()],
-    streamMuxers: [new Mplex({maxInboundStreams: 256})],
+    connectionEncryption: [noise()],
+    transports: [tcp()],
+    streamMuxers: [mplex({maxInboundStreams: 256})],
     peerDiscovery,
     metrics: {
       // temporarily disable since there is a performance issue with it

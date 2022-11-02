@@ -190,6 +190,14 @@ export function createLodestarMetrics(
         help: "Count of the discv5 messages received by message type",
         labelNames: ["type"],
       }),
+      rateLimitHitIP: register.gauge({
+        name: "lodestar_discv5_rate_limit_hit_ip_count",
+        help: "Count of the discv5 rate limit hits by IP",
+      }),
+      rateLimitHitTotal: register.gauge({
+        name: "lodestar_discv5_rate_limit_hit_total_count",
+        help: "Count of the discv5 total rate limit hits",
+      }),
     },
 
     gossipPeer: {

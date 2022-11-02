@@ -100,8 +100,6 @@ export class Network implements INetwork {
       },
       peersData: this.peersData,
     });
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
-    void this.gossip.init((libp2p as any).components).catch((e) => this.logger.error(e));
 
     this.attnetsService = new AttnetsService(config, chain, this.gossip, metadata, logger, opts);
     this.syncnetsService = new SyncnetsService(config, chain, this.gossip, metadata, logger, opts);

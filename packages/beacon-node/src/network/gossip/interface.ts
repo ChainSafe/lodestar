@@ -1,8 +1,8 @@
 import {EventEmitter} from "events";
 import {Libp2p} from "libp2p";
-import {Message} from "@libp2p/interface-pubsub";
+import {Message, TopicValidatorResult} from "@libp2p/interface-pubsub";
 import StrictEventEmitter from "strict-event-emitter-types";
-import {MessageAcceptance, PeerIdStr} from "@chainsafe/libp2p-gossipsub/types";
+import {PeerIdStr} from "@chainsafe/libp2p-gossipsub/types";
 import {ForkName} from "@lodestar/params";
 import {allForks, altair, phase0} from "@lodestar/types";
 import {IBeaconConfig} from "@lodestar/config";
@@ -128,7 +128,7 @@ export type GossipValidatorFn = (
   msg: Message,
   propagationSource: PeerIdStr,
   seenTimestampSec: number
-) => Promise<MessageAcceptance>;
+) => Promise<TopicValidatorResult>;
 
 export type ValidatorFnsByType = {[K in GossipType]: GossipValidatorFn};
 
