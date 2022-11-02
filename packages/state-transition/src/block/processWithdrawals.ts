@@ -11,6 +11,8 @@ export function processWithdrawals(
   if (numWithdrawals !== payload.withdrawals.length) {
     throw Error(`Invalid withdrawals length expected=${numWithdrawals} actual=${payload.withdrawals.length}`);
   }
+  // need to commit else toValue returns nothing, which we need to slice the withdrawal queue
+  state.commit();
   const withdrawalQueue = state.withdrawalQueue.toValue();
   const dequedWithdrawals = withdrawalQueue.splice(0, numWithdrawals);
   for (let i = 0; i < numWithdrawals; i++) {
