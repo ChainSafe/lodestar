@@ -40,6 +40,9 @@ const ARTIFACT_FILENAMES = new Set([
  */
 export function specTestIterator(configDirpath: string, testRunners: Record<string, TestRunner>): void {
   for (const forkStr of readdirSyncSpec(configDirpath)) {
+    if (forkStr === "eip4844") {
+      continue;
+    }
     const fork = ForkName[forkStr as ForkName];
     if (fork === undefined) {
       throw Error(`Unknown fork ${forkStr}`);
@@ -59,6 +62,11 @@ export function specTestIterator(configDirpath: string, testRunners: Record<stri
       }
 
       for (const testHandler of readdirSyncSpec(testRunnerDirpath)) {
+        if (
+          ["full_withdrawals", "partial_withdrawals", "bls_to_execution_change", "withdrawals"].includes(testHandler)
+        ) {
+          continue;
+        }
         const testHandlerDirpath = path.join(testRunnerDirpath, testHandler);
         for (const testSuite of readdirSyncSpec(testHandlerDirpath)) {
           const testId = `${fork}/${testRunnerName}/${testHandler}/${testSuite}`;
