@@ -43,6 +43,7 @@ export const sszStatic = (fork: ForkName, typeName: string, testSuite: string, t
   /* eslint-disable @typescript-eslint/strict-boolean-expressions */
   const sszType =
     (ssz[fork] as Types)[typeName] ||
+    (ssz.capella as Types)[typeName] ||
     (ssz.bellatrix as Types)[typeName] ||
     (ssz.altair as Types)[typeName] ||
     (ssz.phase0 as Types)[typeName];

@@ -1,6 +1,7 @@
 import {capella, ssz} from "@lodestar/types";
 import {BLS_WITHDRAWAL_PREFIX, ETH1_ADDRESS_WITHDRAWAL_PREFIX, WITHDRAWAL_PREFIX_BYTES} from "@lodestar/params";
-import {byteArrayEquals, toHexString} from "@chainsafe/ssz";
+import {toHexString, byteArrayEquals} from "@chainsafe/ssz";
+import {digest} from "@chainsafe/as-sha256";
 
 import {CachedBeaconStateCapella} from "../types.js";
 
@@ -13,18 +14,14 @@ export function processBlsToExecutionChange(
     throw Error(`Invalid validatorIndex expected<${state.validators.length} actual=${addressChange.validatorIndex}`);
   }
   const validator = state.validators.get(addressChange.validatorIndex);
-  if (byteArrayEquals(validator.withdrawalCredentials.slice(0, WITHDRAWAL_PREFIX_BYTES), BLS_WITHDRAWAL_PREFIX)) {
-    throw Error(
-      `Invalid withdrawalCredentials prefix expected=${BLS_WITHDRAWAL_PREFIX} actual=${validator.withdrawalCredentials.slice(
-        0,
-        WITHDRAWAL_PREFIX_BYTES
-      )}`
-    );
+  const credentialPrefix = validator.withdrawalCredentials.slice(0, WITHDRAWAL_PREFIX_BYTES);
+  if (!byteArrayEquals(credentialPrefix, BLS_WITHDRAWAL_PREFIX)) {
+    throw Error(`Invalid withdrawalCredentials prefix expected=${BLS_WITHDRAWAL_PREFIX} actual=${credentialPrefix}`);
   }
   if (
     !byteArrayEquals(
       validator.withdrawalCredentials.slice(WITHDRAWAL_PREFIX_BYTES, 32),
-      ssz.BLSPubkey.hashTreeRoot(addressChange.fromBlsPubkey).slice(WITHDRAWAL_PREFIX_BYTES, 32)
+      digest(addressChange.fromBlsPubkey).slice(WITHDRAWAL_PREFIX_BYTES, 32)
     )
   ) {
     throw Error(
