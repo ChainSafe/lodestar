@@ -27,7 +27,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
   }
   this.timeout("10min");
 
-  const dataPath = fs.mkdtempSync("mergetests/lodestar-test-withdrawal");
+  const dataPath = fs.mkdtempSync("lodestar-test-withdrawal");
   const elSetupConfig = {
     elScriptDir: process.env.EL_SCRIPT_DIR,
     elBinaryDir: process.env.EL_BINARY_DIR,
