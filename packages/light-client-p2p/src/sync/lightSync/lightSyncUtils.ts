@@ -248,7 +248,7 @@ export function isBetterUpdate(prev: LightclientUpdateStats, next: LightclientUp
   return prev.slot > next.slot;
 }
 
-function deserializePubkeys(pubkeys: altair.LightClientUpdate["nextSyncCommittee"]["pubkeys"]): PublicKey[] {
+function deserializePubkeys(pubkeys: altair.LightClientBootstrap["currentSyncCommittee"]["pubkeys"]): PublicKey[] {
   return Array.from(pubkeys).map((pk) => bls.PublicKey.fromBytes(pk));
 }
 

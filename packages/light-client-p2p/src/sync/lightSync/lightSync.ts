@@ -15,7 +15,6 @@ import {
 } from "@lodestar/params";
 import {toHexString} from "@chainsafe/ssz";
 import {GossipsubEvents} from "@chainsafe/libp2p-gossipsub";
-import {IBeaconChain} from "../../chain/index.js";
 import {IBeaconDb} from "../../db/index.js";
 import {GossipType, INetwork, NetworkEvent} from "../../network/index.js";
 import {ItTrigger} from "../../util/itTrigger.js";
@@ -71,7 +70,6 @@ type RunStatus =
   | {code: RunStatusCode.stopped};
 
 export type LightSyncModules = {
-  chain: IBeaconChain;
   db: IBeaconDb;
   network: INetwork;
   config: IBeaconConfig;
@@ -108,7 +106,6 @@ type BackfillSyncEmitter = StrictEventEmitter<EventEmitter, LightSyncEvents>;
 export class LightSync extends (EventEmitter as {new (): BackfillSyncEmitter}) {
   private readonly checkpointRoot: Root;
   private lightClientBootstrap: LightClientBootstrap | undefined;
-  private readonly chain: IBeaconChain;
   private readonly network: INetwork;
   // Probably don't need db as a light client
   private readonly db: IBeaconDb;
@@ -146,7 +143,6 @@ export class LightSync extends (EventEmitter as {new (): BackfillSyncEmitter}) {
 
     this.checkpointRoot = opts.checkpointRoot;
     this.genesisTime = opts.genesisData.genesisTime;
-    this.chain = modules.chain;
     this.network = modules.network;
     this.db = modules.db;
     this.config = modules.config;
@@ -163,12 +159,6 @@ export class LightSync extends (EventEmitter as {new (): BackfillSyncEmitter}) {
   }
 
   static async init<T extends LightSync = LightSync>(opts: LightClientArgs, modules: LightSyncModules): Promise<T> {
-    // Initialize the BLS implementation. This may requires intializing the WebAssembly instance
-    // so why it's a an async process. This should be initialized once before any bls operations.
-    // This process has to be done manually because of an issue in Karma runner
-    // https://github.com/karma-runner/karma/issues/3804
-    await initBls(isNode ? "blst-native" : "herumi");
-
     return new this(opts, modules) as T;
   }
 
@@ -204,6 +194,9 @@ export class LightSync extends (EventEmitter as {new (): BackfillSyncEmitter}) {
           // TODO DA chukify
           // have a cap on the attempt
           updates = await this.network.reqResp.lightClientUpdate(peer, {startPeriod: fromPeriod, count});
+          this.logger.info(
+            `Retrieved ${updates.length} LightClientUpdate for fromPeriod: ${fromPeriod} and count: ${count}`
+          );
         } catch (e) {
           // TODO DA improve. Now just try another random peer
           // keep a track of the peer and ranges not fetched to be retried later
@@ -218,7 +211,7 @@ export class LightSync extends (EventEmitter as {new (): BackfillSyncEmitter}) {
       for (const update of updates) {
         this.processSyncCommitteeUpdate(update);
         const headPeriod = computeSyncPeriodAtSlot(update.attestedHeader.slot);
-        this.logger.debug(`processed sync update for period ${headPeriod}`);
+        this.logger.info(`processed sync update for period ${headPeriod}`);
         // Yield to the macro queue, verifying updates is somewhat expensive and we want responsiveness
         await new Promise((r) => setTimeout(r, 0));
       }
@@ -307,7 +300,7 @@ export class LightSync extends (EventEmitter as {new (): BackfillSyncEmitter}) {
         root: finalizedBlockRootHex,
       });
     } else {
-      this.logger.debug("Received valid finalized update did not update finalized", {
+      this.logger.info("Received valid finalized update did not update finalized", {
         currentHead: `${this.finalized.header.slot} ${this.finalized.blockRoot}`,
         eventHead: `${finalizedHeader.slot} ${finalizedBlockRoot}`,
       });
@@ -367,7 +360,7 @@ export class LightSync extends (EventEmitter as {new (): BackfillSyncEmitter}) {
 
       // This is not an error, but a problematic network condition worth knowing about
       if (attestedHeader.slot === prevHead.header.slot && prevHead.blockRoot !== headerBlockRootHex) {
-        this.logger.warn("Head update on same slot", {
+        this.logger.info("Head update on same slot", {
           prevHeadSlot: prevHead.header.slot,
           prevHeadRoot: prevHead.blockRoot,
         });
@@ -377,7 +370,7 @@ export class LightSync extends (EventEmitter as {new (): BackfillSyncEmitter}) {
         root: headerBlockRootHex,
       });
     } else {
-      this.logger.debug("Received valid head update did not update head", {
+      this.logger.info("Received valid head update did not update head", {
         currentHead: `${this.head.header.slot} ${this.head.blockRoot}`,
         eventHead: `${attestedHeader.slot} ${headerBlockRootHex}`,
       });
@@ -404,11 +397,11 @@ export class LightSync extends (EventEmitter as {new (): BackfillSyncEmitter}) {
         // Go into sync mode
         this.status = {code: RunStatusCode.syncing};
         const headPeriod = computeSyncPeriodAtSlot(this.head.header.slot);
-        this.logger.debug("Syncing", {lastPeriod: headPeriod, currentPeriod});
+        this.logger.info("Syncing", {lastPeriod: headPeriod, currentPeriod});
 
         try {
           await this.sync(headPeriod, currentPeriod);
-          this.logger.debug("Synced", {currentPeriod});
+          this.logger.info("Synced", {currentPeriod});
         } catch (e) {
           this.logger.error("Error sync", {}, e as Error);
 
@@ -434,9 +427,8 @@ export class LightSync extends (EventEmitter as {new (): BackfillSyncEmitter}) {
       if (this.status.code !== RunStatusCode.started) {
         const controller = new AbortController();
         this.status = {code: RunStatusCode.started, controller};
-        this.logger.debug("Started tracking the head");
+        this.logger.info("Started tracking the head");
 
-        // TODO DA Subscribe to head updates over gossip
         this.network.gossip.addEventListener("gossipsub:message", this.onGossipsubMessage.bind(this));
       }
 
@@ -480,9 +472,21 @@ export class LightSync extends (EventEmitter as {new (): BackfillSyncEmitter}) {
     const finalityUpdateTopic = `/eth2/${forkDigestHex}/${GossipType.light_client_finality_update}/${DEFAULT_ENCODING}`;
 
     if (msg.topic === optimisticUpdateTopic) {
-      this.processOptimisticUpdate(ssz.altair.LightClientOptimisticUpdate.deserialize(msg.data));
+      const data = ssz.altair.LightClientOptimisticUpdate.deserialize(msg.data);
+      this.logger.info("Retrieved LightClientOptimisticUpdate via gossip", {
+        stateRoot: toHexString(data.attestedHeader.stateRoot),
+        bodyRoot: toHexString(data.attestedHeader.bodyRoot),
+        signatureSlot: data.signatureSlot,
+      });
+      this.processOptimisticUpdate(data);
     } else if (msg.topic === finalityUpdateTopic) {
-      this.processFinalizedUpdate(ssz.altair.LightClientFinalityUpdate.deserialize(msg.data));
+      const data = ssz.altair.LightClientFinalityUpdate.deserialize(msg.data);
+      this.logger.info("Retrieved LightClientOptimisticUpdate via gossip", {
+        stateRoot: toHexString(data.attestedHeader.stateRoot),
+        bodyRoot: toHexString(data.attestedHeader.bodyRoot),
+        signatureSlot: data.signatureSlot,
+      });
+      this.processFinalizedUpdate(data);
     } else {
       this.logger.info("not processing", msg.topic);
     }
@@ -503,17 +507,21 @@ export class LightSync extends (EventEmitter as {new (): BackfillSyncEmitter}) {
     return peers[Math.floor(Math.random() * peers.length)];
   };
 
-  private attemptBootstrap = async (peerId: PeerId): Promise<BootstrapStatus> => {
+  private attemptBootstrap = async (peerId: PeerId): Promise<void> => {
+    // Initialize the BLS implementation. This may requires intializing the WebAssembly instance
+    // so why it's a an async process. This should be initialized once before any bls operations.
+    // This process has to be done manually because of an issue in Karma runner
+    // https://github.com/karma-runner/karma/issues/3804
+    await initBls(isNode ? "blst-native" : "herumi");
     if (this.lightClientBootstrap === undefined) {
       try {
-        this.lightClientBootstrap = await this.network.reqResp.lightClientBootstrap(peerId, this.checkpointRoot);
-        const {header, currentSyncCommittee, currentSyncCommitteeBranch} = this.lightClientBootstrap;
+        const lightClientBootstrap = await this.network.reqResp.lightClientBootstrap(peerId, this.checkpointRoot);
+        const {header, currentSyncCommittee, currentSyncCommitteeBranch} = lightClientBootstrap;
 
         // verify the response matches the requested root
         const headerRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(header);
         if (!ssz.Root.equals(this.checkpointRoot, headerRoot)) {
           this.logger.error("Bootstrap header does not match trusted checkpoint");
-          return BootstrapStatus.failed;
         }
 
         // Verify the sync committees
@@ -527,40 +535,40 @@ export class LightSync extends (EventEmitter as {new (): BackfillSyncEmitter}) {
           )
         ) {
           this.logger.error("Snapshot sync committees proof does not match trusted checkpoint");
-          return BootstrapStatus.failed;
         }
 
+        this.logger.info("Retrieved and validated LightClientBoostrap", {headerRoot: toHexString(headerRoot)});
         // we have a validated lightclientbootstap,
-        // set head
-        this.head = {
-          participation: 0,
-          header: this.lightClientBootstrap.header,
-          blockRoot: toHexString(ssz.phase0.BeaconBlockHeader.hashTreeRoot(this.lightClientBootstrap.header)),
-        };
         // set syncommittee for current period
-        const currentPeriod = computeSyncPeriodAtSlot(this.lightClientBootstrap.header.slot);
+        const currentPeriod = computeSyncPeriodAtSlot(lightClientBootstrap.header.slot);
         this.syncCommitteeByPeriod.set(currentPeriod, {
           isFinalized: false,
           participation: 0,
           slot: currentPeriod * EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH,
-          ...deserializeSyncCommittee(this.lightClientBootstrap.currentSyncCommittee),
+          // TODA DA Investigate: in a particular run this failed with error: Error getting lightClientBootstrap  Cannot read properties of undefined (reading 'fromBytes')
+          // TypeError: Cannot read properties of undefined (reading 'fromBytes') lightSyncUtils.ts:252:56
+          ...deserializeSyncCommittee(lightClientBootstrap.currentSyncCommittee),
         });
 
-        return BootstrapStatus.successful;
+        // set head
+        this.head = {
+          participation: 0,
+          header: lightClientBootstrap.header,
+          blockRoot: toHexString(ssz.phase0.BeaconBlockHeader.hashTreeRoot(lightClientBootstrap.header)),
+        };
+
+        // set bootstrap
+        this.lightClientBootstrap = lightClientBootstrap;
       } catch (e) {
         this.logger.error("Error getting lightClientBootstrap", {}, e as Error);
-        return BootstrapStatus.failed;
       }
-    } else {
-      return BootstrapStatus.done;
     }
   };
 
   private onNewPeer = async (peerId: PeerId, peerStatus: phase0.Status): Promise<void> => {
     this.addPeer(peerId, peerStatus);
-    const bootstrapStatus = await this.attemptBootstrap(peerId);
-    if (BootstrapStatus.successful === bootstrapStatus) {
-      // start syncing
+    await this.attemptBootstrap(peerId);
+    if (this.lightClientBootstrap !== undefined && this.status.code === RunStatusCode.stopped) {
       this.start();
     }
   };

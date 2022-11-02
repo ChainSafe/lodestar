@@ -62,6 +62,7 @@ export enum BeaconNodeStatus {
 enum LoggerModule {
   api = "api",
   backfill = "backfill",
+  lightClient = "lightClient",
   chain = "chain",
   eth1 = "eth1",
   metrics = "metrics",
@@ -221,7 +222,7 @@ export class BeaconNodeLight {
 
     const {data: genesisData} = await api.beacon.getGenesis();
 
-    const backfillSync = await LightSync.init(
+    const lightClientSync = await LightSync.init(
       {
         checkpointRoot: fromHexString(lcCheckpointRoot),
         genesisData: {
@@ -232,10 +233,9 @@ export class BeaconNodeLight {
       {
         config,
         db,
-        chain,
         metrics,
         network,
-        logger: logger.child({module: LoggerModule.backfill}),
+        logger: logger.child({module: LoggerModule.lightClient}),
         signal,
       }
     );
@@ -273,7 +273,7 @@ export class BeaconNodeLight {
       api,
       restApi,
       sync,
-      backfillSync,
+      backfillSync: lightClientSync,
       controller,
     }) as T;
   }
