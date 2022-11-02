@@ -36,6 +36,11 @@ type AggregateFast = {
    *   which is a less busy time than 1/3 of the slot.
    */
   signatures: Uint8Array[];
+  /**
+   * There could be up to TARGET_AGGREGATORS_PER_COMMITTEE aggregator per attestation data and all getAggregate() call
+   * tends to be at the same time so we want to cache the aggregated attestation, invalidate cache per new unaggregated attestation.
+   */
+  aggregatedAttestation: phase0.Attestation | null;
 };
 
 /** Hex string of DataRoot `TODO` */
@@ -192,6 +197,7 @@ function aggregateAttestationInto(aggregate: AggregateFast, attestation: phase0.
 
   aggregate.aggregationBits.set(bitIndex, true);
   aggregate.signatures.push(attestation.signature);
+  aggregate.aggregatedAttestation = null;
   return InsertOutcome.Aggregated;
 }
 
@@ -204,6 +210,7 @@ function attestationToAggregate(attestation: phase0.Attestation): AggregateFast 
     // clone because it will be mutated
     aggregationBits: attestation.aggregationBits.clone(),
     signatures: [attestation.signature],
+    aggregatedAttestation: null,
   };
 }
 
@@ -211,6 +218,8 @@ function attestationToAggregate(attestation: phase0.Attestation): AggregateFast 
  * Unwrap AggregateFast to phase0.Attestation
  */
 function fastToAttestation(aggFast: AggregateFast): phase0.Attestation {
+  if (aggFast.aggregatedAttestation) return aggFast.aggregatedAttestation;
+
   return {
     data: aggFast.data,
     aggregationBits: aggFast.aggregationBits,
