@@ -42,7 +42,7 @@ export async function runEL(
   const network = `${elScriptDir}/${mode}`;
   const ethRpcUrl = `http://127.0.0.1:${ethPort}`;
   const engineRpcUrl = `http://127.0.0.1:${enginePort}`;
-  const genesisTemplate = template ?? "genesisPre.tpl";
+  const genesisTemplate = template ?? "genesisPre.tmpl";
 
   await shell(`sudo rm -rf ${dataPath}`);
   fs.mkdirSync(dataPath, {recursive: true});
