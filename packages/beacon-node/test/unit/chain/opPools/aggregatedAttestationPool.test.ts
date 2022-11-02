@@ -1,17 +1,13 @@
 import {expect} from "chai";
 import {SinonStubbedInstance} from "sinon";
 import sinon from "sinon";
-import type {SecretKey} from "@chainsafe/bls/types";
-import bls from "@chainsafe/bls";
 import {BitArray, fromHexString} from "@chainsafe/ssz";
 import {createIChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {ssz, phase0} from "@lodestar/types";
 import {ForkChoice, IForkChoice} from "@lodestar/fork-choice";
 import {
   AggregatedAttestationPool,
-  aggregateInto,
   getParticipationFn,
   MatchingDataAttestationGroup,
 } from "../../../../src/chain/opPools/aggregatedAttestationPool.js";
@@ -19,7 +15,6 @@ import {InsertOutcome} from "../../../../src/chain/opPools/types.js";
 import {linspace} from "../../../../src/util/numpy.js";
 import {generateAttestation, generateEmptyAttestation} from "../../../utils/attestation.js";
 import {generateCachedState} from "../../../utils/state.js";
-import {renderBitArray} from "../../../utils/render.js";
 import {ZERO_HASH_HEX} from "../../../../src/constants/constants.js";
 import {generateEmptyProtoBlock} from "../../../utils/block.js";
 
@@ -37,7 +32,10 @@ describe("AggregatedAttestationPool", function () {
   const config = createIChainForkConfig(Object.assign({}, defaultChainConfig, {ALTAIR_FORK_EPOCH: altairForkEpoch}));
   const originalState = generateCachedState({slot: currentSlot + 1}, config, true);
   let altairState: CachedBeaconStateAllForks;
-  const attestation = generateAttestation({data: {slot: currentSlot, target: {epoch: currentEpoch}}});
+  const attestation = generateAttestation({
+    data: {slot: currentSlot, target: {epoch: currentEpoch}},
+    signature: validSignature,
+  });
   const committee = [0, 1, 2, 3];
   let forkchoiceStub: SinonStubbedInstance<IForkChoice>;
   const sandbox = sinon.createSandbox();
@@ -153,16 +151,13 @@ describe("MatchingDataAttestationGroup.add()", () => {
     it(id, () => {
       const attestationGroup = new MatchingDataAttestationGroup(committee, attestationData);
 
-      const attestations = attestationsToAdd.map(
-        ({bits}): phase0.Attestation => ({
-          data: attestationData,
-          aggregationBits: new BitArray(new Uint8Array(bits), 8),
-          signature: validSignature,
-        })
-      );
+      const attestations = attestationsToAdd.map(({bits}) => ({
+        aggregationBits: new BitArray(new Uint8Array(bits), 8),
+        signatures: [validSignature],
+      }));
 
       const results = attestations.map((attestation) =>
-        attestationGroup.add({attestation, trueBitsCount: attestation.aggregationBits.getTrueBitIndexes().length})
+        attestationGroup.add({...attestation, trueBitsCount: attestation.aggregationBits.getTrueBitIndexes().length})
       );
 
       expect(results).to.deep.equal(
@@ -174,9 +169,17 @@ describe("MatchingDataAttestationGroup.add()", () => {
 
       for (const [i, {isKept}] of attestationsToAdd.entries()) {
         if (isKept) {
-          expect(attestationsAfterAdding.indexOf(attestations[i])).to.be.gte(0, `Right attestation ${i} missed.`);
+          expect(
+            attestationsAfterAdding.findIndex(
+              (afterAdding) => afterAdding.aggregationBits === attestations[i].aggregationBits
+            )
+          ).to.be.gte(0, `Right attestation ${i} missed.`);
         } else {
-          expect(attestationsAfterAdding.indexOf(attestations[i])).to.be.eql(-1, `Wrong attestation ${i} is kept.`);
+          expect(
+            attestationsAfterAdding.findIndex(
+              (afterAdding) => afterAdding.aggregationBits === attestations[i].aggregationBits
+            )
+          ).to.be.eql(-1, `Wrong attestation ${i} is kept.`);
         }
       }
     });
@@ -223,23 +226,23 @@ describe("MatchingDataAttestationGroup.getAttestationsForBlock", () => {
     it(id, () => {
       const attestationGroup = new MatchingDataAttestationGroup(committee, attestationData);
 
-      const attestations = attestationsToAdd.map(
-        ({bits}): phase0.Attestation => ({
-          data: attestationData,
-          aggregationBits: new BitArray(new Uint8Array(bits), 8),
-          signature: validSignature,
-        })
-      );
+      const attestations = attestationsToAdd.map(({bits}) => ({
+        data: attestationData,
+        aggregationBits: new BitArray(new Uint8Array(bits), 8),
+        signatures: [validSignature],
+      }));
 
       for (const attestation of attestations) {
-        attestationGroup.add({attestation, trueBitsCount: attestation.aggregationBits.getTrueBitIndexes().length});
+        attestationGroup.add({...attestation, trueBitsCount: attestation.aggregationBits.getTrueBitIndexes().length});
       }
 
       const indices = new BitArray(new Uint8Array(seenAttestingBits), 8).intersectValues(committee);
       const attestationsForBlock = attestationGroup.getAttestationsForBlock(new Set(indices));
 
       for (const [i, {notSeenAttesterCount}] of attestationsToAdd.entries()) {
-        const attestation = attestationsForBlock.find((a) => a.attestation === attestations[i]);
+        const attestation = attestationsForBlock.find(
+          (a) => a.attestation.aggregationBits === attestations[i].aggregationBits
+        );
         // If notSeenAttesterCount === 0 the attestation is not returned
         expect(attestation ? attestation.notSeenAttesterCount : 0).to.equal(
           notSeenAttesterCount,
@@ -248,36 +251,4 @@ describe("MatchingDataAttestationGroup.getAttestationsForBlock", () => {
       }
     });
   }
-});
-
-describe("MatchingDataAttestationGroup aggregateInto", function () {
-  const attestationSeed = generateEmptyAttestation();
-  const attestation1 = {...attestationSeed, ...{aggregationBits: BitArray.fromBoolArray([false, true])}};
-  const attestation2 = {...attestationSeed, ...{aggregationBits: BitArray.fromBoolArray([true, false])}};
-  const mergedBitArray = BitArray.fromBoolArray([true, true]); // = [false, true] + [true, false]
-  const attestationDataRoot = ssz.phase0.AttestationData.serialize(attestationSeed.data);
-  let sk1: SecretKey;
-  let sk2: SecretKey;
-
-  before("Init BLS", async () => {
-    sk1 = bls.SecretKey.fromBytes(Buffer.alloc(32, 1));
-    sk2 = bls.SecretKey.fromBytes(Buffer.alloc(32, 2));
-    attestation1.signature = sk1.sign(attestationDataRoot).toBytes();
-    attestation2.signature = sk2.sign(attestationDataRoot).toBytes();
-  });
-
-  it("should aggregate 2 attestations", () => {
-    const attWithIndex1 = {attestation: attestation1, trueBitsCount: 1};
-    const attWithIndex2 = {attestation: attestation2, trueBitsCount: 1};
-    aggregateInto(attWithIndex1, attWithIndex2);
-
-    expect(renderBitArray(attWithIndex1.attestation.aggregationBits)).to.be.deep.equal(
-      renderBitArray(mergedBitArray),
-      "invalid aggregationBits"
-    );
-    const aggregatedSignature = bls.Signature.fromBytes(attWithIndex1.attestation.signature, undefined, true);
-    expect(
-      aggregatedSignature.verifyAggregate([sk1.toPublicKey(), sk2.toPublicKey()], attestationDataRoot)
-    ).to.be.equal(true, "invalid aggregated signature");
-  });
 });
