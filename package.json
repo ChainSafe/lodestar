@@ -84,5 +84,8 @@
     "typescript": "4.7.4",
     "typescript-docs-verifier": "^2.3.0",
     "webpack": "^5.74.0"
+  },
+  "resolutions": {
+    "@chainsafe/is-ip": "2.0.1"
   }
 }
