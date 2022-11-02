@@ -1,6 +1,7 @@
+import crypto from "crypto";
 import {itBench} from "@dapplion/benchmark";
 import bls from "@chainsafe/bls";
-import type {PublicKey, SecretKey, Signature} from "@chainsafe/bls/types";
+import {CoordType, PointFormat, PublicKey, SecretKey, Signature} from "@chainsafe/bls/types";
 import {linspace} from "../../../src/util/numpy.js";
 
 describe("BLS ops", function () {
@@ -14,7 +15,7 @@ describe("BLS ops", function () {
   function getKeypair(i: number): Keypair {
     let keypair = keypairs.get(i);
     if (!keypair) {
-      const secretKey = bls.SecretKey.fromBytes(Buffer.alloc(32, i + 1));
+      const secretKey = bls.SecretKey.fromBytes(Buffer.alloc(32, Math.max((i + 1) % 256, 1)));
       const publicKey = secretKey.toPublicKey();
       keypair = {secretKey, publicKey};
       keypairs.set(i, keypair);
@@ -59,6 +60,22 @@ describe("BLS ops", function () {
       beforeEach: () => linspace(0, count - 1).map((i) => getKeypair(i).publicKey),
       fn: (pubkeys) => {
         bls.PublicKey.aggregate(pubkeys);
+      },
+    });
+  }
+
+  // As of Nov 2022, an AggregatedAttestation have 224 participants
+  for (const count of [32, 128, 256, 512]) {
+    itBench({
+      id: `BLS aggregateSignatures ${count} - ${bls.implementation}`,
+      beforeEach: () =>
+        linspace(0, count - 1)
+          .map((i) => getSet(i))
+          .map((set) => set.signature.toBytes()),
+      fn: (signatures) => {
+        bls.Signature.aggregate(
+          signatures.map((signature) => bls.Signature.fromBytes(signature, CoordType.affine, false))
+        ).toBytes(PointFormat.compressed);
       },
     });
   }
