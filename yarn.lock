@@ -516,10 +516,10 @@
   optionalDependencies:
     "@node-rs/crc32" "1.1.0"
 
-"@chainsafe/is-ip@^1.0.0":
-  version "1.0.0"
-  resolved "https://registry.yarnpkg.com/@chainsafe/is-ip/-/is-ip-1.0.0.tgz#70ff63a042db4d3576514194f20adf478128ca02"
-  integrity sha512-aqilXiQWxvvbG8VamukkoDEZVX+mWDZSBgzcbkCnQ1cfhT1JqNUDdzUH145WPMqves/gawOmlWi3Bt0WC8pOJA==
+"@chainsafe/is-ip@^2.0.1":
+  version "2.0.1"
+  resolved "https://registry.yarnpkg.com/@chainsafe/is-ip/-/is-ip-2.0.1.tgz#62cb285669d91f88fd9fa285048dde3882f0993b"
+  integrity sha512-nqSJ8u2a1Rv9FYbyI8qpDhTYujaKEyLknNrTejLYoSWmdeg+2WB7R6BZqPZYfrJzDxVi3rl6ZQuoaEvpKRZWgQ==
 
 "@chainsafe/libp2p-gossipsub@^4.1.1":
   version "4.1.1"
@@ -2351,11 +2351,11 @@
     varint "^6.0.0"
 
 "@multiformats/multiaddr@^11.0.0":
-  version "11.0.6"
-  resolved "https://registry.yarnpkg.com/@multiformats/multiaddr/-/multiaddr-11.0.6.tgz#b342c5e4d8381d18b641b3239b8f2dcea27496a5"
-  integrity sha512-5TvEdCc5uFqcwGA+IwSw49swyHtUbwjhjwF3WQcV9vkzTv1C8oEWhoD2QcsiomDRk8rdqqRyDH6wlZExvLnxjw==
+  version "11.0.7"
+  resolved "https://registry.yarnpkg.com/@multiformats/multiaddr/-/multiaddr-11.0.7.tgz#1151e474e4a097657e4f18fd01a64a273d178a46"
+  integrity sha512-rCqYS3Qz/dm4H/1Lvda11OBZf1tH8rst69GWK9jDy8AY+3n+NBBdErA/SRtdcRx6hPtQ8lAB5UhHlzIVbViv1Q==
   dependencies:
-    "@chainsafe/is-ip" "^1.0.0"
+    "@chainsafe/is-ip" "^2.0.1"
     dns-over-http-resolver "^2.1.0"
     err-code "^3.0.1"
     multiformats "^10.0.0"
