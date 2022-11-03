@@ -2,17 +2,18 @@
 import {mkdir, writeFile} from "node:fs/promises";
 import {join} from "node:path";
 import got from "got";
-import {Eth1Provider} from "@lodestar/beacon-node";
 import {ZERO_HASH} from "@lodestar/state-transition";
 import {
   ELClient,
   ELClientGenerator,
   ELClientOptions,
+  ELNode,
   ELStartMode,
   JobOptions,
   Runner,
   RunnerType,
 } from "../interfaces.js";
+import {Eth1ProviderWithAdmin} from "../Eth1ProviderWithAdmin.js";
 import {getGenesisBlock} from "./genesis.js";
 
 const SECRET_KEY = "45a915e4d060149eb4365960e6a7a45f334393093061116b197e3240065ff2d8";
@@ -77,7 +78,7 @@ export const generateGethNode: ELClientGenerator = (opts: ELClientOptions, runne
       args: [
         "--http",
         "--http.api",
-        "engine,net,eth,miner",
+        "engine,net,eth,miner,admin",
         "--http.port",
         String(ethPort as number),
         "--authrpc.port",
@@ -95,6 +96,9 @@ export const generateGethNode: ELClientGenerator = (opts: ELClientOptions, runne
         passwordPath,
         "--syncmode",
         "full",
+        // Logging verbosity: 0=silent, 1=error, 2=warn, 3=info, 4=debug, 5=detail
+        "--verbosity",
+        "4",
         ...(mode == ELStartMode.PreMerge ? ["--mine", "--nodiscover"] : []),
       ],
       env: {},
@@ -114,12 +118,13 @@ export const generateGethNode: ELClientGenerator = (opts: ELClientOptions, runne
 
   const job = runner.create(id, [{...initJobOptions, children: [{...importJobOptions, children: [startJobOptions]}]}]);
 
-  const provider = new Eth1Provider(
+  const provider = new Eth1ProviderWithAdmin(
     {DEPOSIT_CONTRACT_ADDRESS: ZERO_HASH},
-    {providerUrls: [engineRpcUrl], jwtSecretHex}
+    // To allow admin_* RPC methods had to add "ethRpcUrl"
+    {providerUrls: [ethRpcUrl, engineRpcUrl], jwtSecretHex}
   );
 
-  const node = {
+  const node: ELNode = {
     client: ELClient.Geth,
     id,
     engineRpcUrl,
