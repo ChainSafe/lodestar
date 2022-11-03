@@ -37,7 +37,7 @@ export function processFullWithdrawals(state: CachedBeaconStateCapella): void {
       validator.withdrawableEpoch <= currentEpoch &&
       balance > 0
     ) {
-      //withdraw_balance
+      // withdraw_balance
       withdrawBalance(state, index, balance);
     }
   }
