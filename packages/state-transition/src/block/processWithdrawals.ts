@@ -20,6 +20,6 @@ export function processWithdrawals(
       throw Error(`Withdrawal mismatch at index=${i}`);
     }
   }
-  //Withdrawal queue has leftover
+  // Withdrawal queue has leftover
   state.withdrawalQueue = ssz.capella.WithdrawalQueue.toViewDU(withdrawalQueue);
 }
