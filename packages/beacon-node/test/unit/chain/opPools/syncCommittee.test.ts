@@ -28,9 +28,21 @@ describe("chain / opPools / SyncCommitteeMessagePool", function () {
     cache.add(subcommitteeIndex, syncCommittee, indexInSubcommittee);
   });
 
-  it("should preaggregate SyncCommitteeContribution", () => {
-    let contribution = cache.getContribution(subcommitteeIndex, syncCommittee.slot, syncCommittee.beaconBlockRoot);
+  it("should return the cached contribution", () => {
+    const contribution = cache.getContribution(subcommitteeIndex, syncCommittee.slot, syncCommittee.beaconBlockRoot);
     expect(contribution).to.be.not.null;
+    expect(cache.getContribution(subcommitteeIndex, syncCommittee.slot, syncCommittee.beaconBlockRoot)).to.be.equal(
+      contribution
+    );
+  });
+
+  it("should aggregate new SyncCommitteeContribution", () => {
+    const firstContribution = cache.getContribution(
+      subcommitteeIndex,
+      syncCommittee.slot,
+      syncCommittee.beaconBlockRoot
+    );
+    expect(firstContribution).to.be.not.null;
     const newSecretKey = bls.SecretKey.fromBytes(Buffer.alloc(32, 2));
     const newSyncCommittee = generateSyncCommitteeSignature({
       slot: syncCommittee.slot,
@@ -41,8 +53,9 @@ describe("chain / opPools / SyncCommitteeMessagePool", function () {
     });
     const newIndicesInSubSyncCommittee = [1];
     cache.add(subcommitteeIndex, newSyncCommittee, newIndicesInSubSyncCommittee[0]);
-    contribution = cache.getContribution(subcommitteeIndex, syncCommittee.slot, syncCommittee.beaconBlockRoot);
+    const contribution = cache.getContribution(subcommitteeIndex, syncCommittee.slot, syncCommittee.beaconBlockRoot);
     expect(contribution).to.be.not.null;
+    expect(contribution).to.be.not.equal(firstContribution);
     if (contribution) {
       expect(contribution.slot).to.be.equal(syncCommittee.slot);
       expect(toHexString(contribution.beaconBlockRoot)).to.be.equal(toHexString(syncCommittee.beaconBlockRoot));

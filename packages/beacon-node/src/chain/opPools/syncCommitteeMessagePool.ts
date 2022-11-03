@@ -1,4 +1,4 @@
-import {PointFormat, Signature} from "@chainsafe/bls/types";
+import {PointFormat} from "@chainsafe/bls/types";
 import bls from "@chainsafe/bls";
 import {SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {altair, Root, Slot, SubcommitteeIndex} from "@lodestar/types";
@@ -21,7 +21,22 @@ const MAX_ITEMS_PER_SLOT = 512;
 
 type ContributionFast = Omit<altair.SyncCommitteeContribution, "aggregationBits" | "signature"> & {
   aggregationBits: BitArray;
-  signature: Signature;
+  /**
+   * Two potential strategies to pre-aggregate sync committee signatures:
+   * - Aggregate new signature into existing contribution on .add(). More memory efficient as only 1 signature
+   *   is kept per contribution. However, the eager aggregation may be useless if the connected validator ends up
+   *   not being an aggregator. bls.Signature.fromBytes() is not free, thus the aggregation may be done around
+   *   the 1/3 of the slot which is a very busy period.
+   * - Defer aggregation until getContribution(). Consumes more memory but prevents extra work by only doing the
+   *   aggregation if the connected validator is an aggregator. The aggregation is done during 2/3 of the slot
+   *   which is a less busy time than 1/3 of the slot.
+   */
+  signatures: Uint8Array[];
+  /**
+   * There could be up to TARGET_AGGREGATORS_PER_COMMITTEE aggregator per committee and all getContribution() call
+   * tends to be at the same time so we want to cache the aggregated contribution, invalidate cache per new sync committee signature.
+   */
+  contribution: altair.SyncCommitteeContribution | null;
 };
 
 /** Hex string of `contribution.beaconBlockRoot` */
@@ -88,16 +103,28 @@ export class SyncCommitteeMessagePool {
    * This is for the aggregator to produce ContributionAndProof.
    */
   getContribution(subnet: SubcommitteeIndex, slot: Slot, prevBlockRoot: Root): altair.SyncCommitteeContribution | null {
-    const contribution = this.contributionsByRootBySubnetBySlot.get(slot)?.get(subnet)?.get(toHexString(prevBlockRoot));
-    if (!contribution) {
+    const fastContribution = this.contributionsByRootBySubnetBySlot
+      .get(slot)
+      ?.get(subnet)
+      ?.get(toHexString(prevBlockRoot));
+    if (!fastContribution) {
       return null;
     }
 
-    return {
-      ...contribution,
-      aggregationBits: contribution.aggregationBits,
-      signature: contribution.signature.toBytes(PointFormat.compressed),
+    let contribution = fastContribution.contribution;
+    if (contribution) return contribution;
+
+    contribution = {
+      ...fastContribution,
+      aggregationBits: fastContribution.aggregationBits,
+      signature: bls.Signature.aggregate(
+        // No need to validate Signature again since it has already been validated --------------- false
+        fastContribution.signatures.map((signature) => signatureFromBytesNoCheck(signature))
+      ).toBytes(PointFormat.compressed),
     };
+    fastContribution.contribution = contribution;
+
+    return contribution;
   }
 
   /**
@@ -114,19 +141,18 @@ export class SyncCommitteeMessagePool {
  * Aggregate a new signature into `contribution` mutating it
  */
 function aggregateSignatureInto(
-  contribution: ContributionFast,
+  fastContribution: ContributionFast,
   signature: altair.SyncCommitteeMessage,
   indexInSubcommittee: number
 ): InsertOutcome {
-  if (contribution.aggregationBits.get(indexInSubcommittee) === true) {
+  if (fastContribution.aggregationBits.get(indexInSubcommittee) === true) {
     return InsertOutcome.AlreadyKnown;
   }
 
-  contribution.aggregationBits.set(indexInSubcommittee, true);
-  contribution.signature = bls.Signature.aggregate([
-    contribution.signature,
-    signatureFromBytesNoCheck(signature.signature),
-  ]);
+  fastContribution.aggregationBits.set(indexInSubcommittee, true);
+  fastContribution.signatures.push(signature.signature);
+  fastContribution.contribution = null;
+
   return InsertOutcome.Aggregated;
 }
 
@@ -146,6 +172,7 @@ function signatureToAggregate(
     beaconBlockRoot: signature.beaconBlockRoot,
     subcommitteeIndex: subnet,
     aggregationBits,
-    signature: signatureFromBytesNoCheck(signature.signature),
+    signatures: [signature.signature],
+    contribution: null,
   };
 }
