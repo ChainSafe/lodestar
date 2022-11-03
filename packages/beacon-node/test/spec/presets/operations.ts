@@ -7,6 +7,8 @@ import {
 import * as blockFns from "@lodestar/state-transition/block";
 import {ssz, phase0, altair, bellatrix} from "@lodestar/types";
 import {InputType} from "@lodestar/spec-test-util";
+import {ForkName} from "@lodestar/params";
+
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
 import {getConfig} from "../utils/getConfig.js";
@@ -114,7 +116,10 @@ export const operations: TestRunnerFn<OperationsTestCase, BeaconStateAllForks> =
         // Altair
         sync_aggregate: ssz.altair.SyncAggregate,
         // Bellatrix
-        execution_payload: ssz.bellatrix.ExecutionPayload,
+        execution_payload:
+          fork !== ForkName.phase0 && fork !== ForkName.altair
+            ? ssz.allForksExecution[fork as ExecutionFork].ExecutionPayload
+            : ssz.bellatrix.ExecutionPayload,
       },
       shouldError: (testCase) => testCase.post === undefined,
       getExpected: (testCase) => testCase.post,
@@ -124,3 +129,5 @@ export const operations: TestRunnerFn<OperationsTestCase, BeaconStateAllForks> =
     },
   };
 };
+
+type ExecutionFork = Exclude<ForkName, ForkName.phase0 | ForkName.altair>;
