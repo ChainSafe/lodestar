@@ -4,15 +4,15 @@ import {RespStatus, RpcResponseStatusError} from "../../../constants/index.js";
 import {writeEncodedPayload} from "../encodingStrategies/index.js";
 import {encodeErrorMessage} from "../utils/index.js";
 import {
-  Method,
-  Protocol,
-  OutgoingResponseBody,
-  ResponseTypedContainer,
-  OutgoingResponseBodyByMethod,
   ContextBytesType,
   contextBytesTypeByProtocol,
-  IncomingResponseBodyByMethod,
   getOutgoingSerializerByMethod,
+  IncomingResponseBodyByMethod,
+  Method,
+  OutgoingResponseBody,
+  OutgoingResponseBodyByMethod,
+  Protocol,
+  ResponseTypedContainer,
 } from "../types.js";
 
 /**
@@ -107,5 +107,10 @@ export function getForkNameFromResponseBody<K extends Method>(
     case Method.BeaconBlocksByRange:
     case Method.BeaconBlocksByRoot:
       return config.getForkName(requestTyped.body.slot);
+    case Method.LightClientBootstrap:
+    case Method.LightClientUpdate:
+    case Method.LightClientFinalityUpdate:
+    case Method.LightClientOptimisticUpdate:
+      return ForkName.altair;
   }
 }

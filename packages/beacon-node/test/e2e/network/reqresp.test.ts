@@ -4,7 +4,7 @@ import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
 import {createIBeaconConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
 import {sleep as _sleep} from "@lodestar/utils";
-import {altair, phase0, ssz} from "@lodestar/types";
+import {altair, phase0, Root, ssz} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
 import {BitArray} from "@chainsafe/ssz";
 import {IReqRespOptions, Network} from "../../../src/network/index.js";
@@ -81,6 +81,10 @@ describe("network / ReqResp", function () {
       onStatus: notImplemented,
       onBeaconBlocksByRange: notImplemented,
       onBeaconBlocksByRoot: notImplemented,
+      onLightClientBootstrap: notImplemented,
+      onLightClientUpdatesByRange: notImplemented,
+      onLightClientOptimisticUpdate: notImplemented,
+      onLightClientFinalityUpdate: notImplemented,
       ...reqRespHandlersPartial,
     };
 
@@ -189,10 +193,78 @@ describe("network / ReqResp", function () {
     const returnedBlocks = await netA.reqResp.beaconBlocksByRange(netB.peerId, req);
 
     if (returnedBlocks === null) throw Error("Returned null");
-    expect(returnedBlocks).to.have.length(req.count, "Wrong returnedBlocks lenght");
+    expect(returnedBlocks).to.have.length(req.count, "Wrong returnedBlocks length");
 
     for (const [i, returnedBlock] of returnedBlocks.entries()) {
       expect(ssz.phase0.SignedBeaconBlock.equals(returnedBlock, blocks[i])).to.equal(true, `Wrong returnedBlock[${i}]`);
+    }
+  });
+
+  it("should send/receive a light client bootstrap message", async function () {
+    const root: Root = ssz.phase0.BeaconBlockHeader.defaultValue().bodyRoot;
+    const expectedValue = ssz.altair.LightClientBootstrap.defaultValue();
+
+    const [netA, netB] = await createAndConnectPeers({
+      onLightClientBootstrap: async function* onRequest() {
+        yield expectedValue;
+      },
+    });
+
+    const returnedValue = await netA.reqResp.lightClientBootstrap(netB.peerId, root);
+    expect(returnedValue).to.deep.equal(expectedValue, "Wrong response body");
+  });
+
+  it("should send/receive a light client optimistic update message", async function () {
+    const expectedValue = ssz.altair.LightClientOptimisticUpdate.defaultValue();
+
+    const [netA, netB] = await createAndConnectPeers({
+      onLightClientOptimisticUpdate: async function* onRequest() {
+        yield expectedValue;
+      },
+    });
+
+    const returnedValue = await netA.reqResp.lightClientOptimisticUpdate(netB.peerId);
+    expect(returnedValue).to.deep.equal(expectedValue, "Wrong response body");
+  });
+
+  it("should send/receive a light client finality update message", async function () {
+    const expectedValue = ssz.altair.LightClientFinalityUpdate.defaultValue();
+
+    const [netA, netB] = await createAndConnectPeers({
+      onLightClientFinalityUpdate: async function* onRequest() {
+        yield expectedValue;
+      },
+    });
+
+    const returnedValue = await netA.reqResp.lightClientFinalityUpdate(netB.peerId);
+    expect(returnedValue).to.deep.equal(expectedValue, "Wrong response body");
+  });
+
+  it("should send/receive a light client update message", async function () {
+    const req: altair.LightClientUpdatesByRange = {startPeriod: 0, count: 2};
+    const lightClientUpdates: altair.LightClientUpdate[] = [];
+    for (let slot = req.startPeriod; slot < req.count; slot++) {
+      const update = ssz.altair.LightClientUpdate.defaultValue();
+      update.signatureSlot = slot;
+      lightClientUpdates.push(update);
+    }
+
+    const [netA, netB] = await createAndConnectPeers({
+      onLightClientUpdatesByRange: async function* () {
+        yield* arrToSource(lightClientUpdates);
+      },
+    });
+
+    const returnedUpdates = await netA.reqResp.lightClientUpdate(netB.peerId, req);
+
+    if (returnedUpdates === null) throw Error("Returned null");
+    expect(returnedUpdates).to.have.length(2, "Wrong returnedUpdates length");
+
+    for (const [i, returnedUpdate] of returnedUpdates.entries()) {
+      expect(ssz.altair.LightClientUpdate.equals(returnedUpdate, lightClientUpdates[i])).to.equal(
+        true,
+        `Wrong returnedUpdate[${i}]`
+      );
     }
   });
 

@@ -1,5 +1,5 @@
 import {toHexString} from "@lodestar/utils";
-import {Method, RequestBodyByMethod, RequestBody} from "../types.js";
+import {Method, RequestBody, RequestBodyByMethod} from "../types.js";
 
 /**
  * Render requestBody as a succint string for debug purposes
@@ -17,6 +17,8 @@ export function renderRequestBody(method: Method, requestBody: RequestBody): str
       return (requestBody as RequestBodyByMethod[Method.Ping]).toString(10);
 
     case Method.Metadata:
+    case Method.LightClientFinalityUpdate:
+    case Method.LightClientOptimisticUpdate:
       return "null";
 
     case Method.BeaconBlocksByRange: {
@@ -28,5 +30,13 @@ export function renderRequestBody(method: Method, requestBody: RequestBody): str
       return ((requestBody as RequestBodyByMethod[Method.BeaconBlocksByRoot]) as Uint8Array[])
         .map((root) => toHexString(root))
         .join(",");
+
+    case Method.LightClientBootstrap:
+      return toHexString((requestBody as RequestBodyByMethod[Method.LightClientBootstrap]) as Uint8Array);
+
+    case Method.LightClientUpdate: {
+      const updateRequest = requestBody as RequestBodyByMethod[Method.LightClientUpdate];
+      return `${updateRequest.startPeriod},${updateRequest.count}`;
+    }
   }
 }

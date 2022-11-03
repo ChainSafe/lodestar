@@ -151,16 +151,17 @@ export function computeLightclientUpdate(config: IBeaconConfig, period: SyncPeri
     finalizedHeader,
     finalityBranch,
     syncAggregate,
+    signatureSlot: attestedHeader.slot + 1,
   };
 }
 
 /**
- * Creates a LightclientSnapshotWithProof that passes validation
+ * Creates a LightClientBootstrap that passes validation
  */
 export function computeLightClientSnapshot(
   period: SyncPeriod
 ): {
-  snapshot: routes.lightclient.LightclientSnapshotWithProof;
+  snapshot: routes.lightclient.LightClientBootstrap;
   checkpointRoot: Uint8Array;
 } {
   const currentSyncCommittee = getInteropSyncCommittee(period).syncCommittee;
@@ -247,19 +248,21 @@ export function computeMerkleBranch(
 
 export function committeeUpdateToLatestHeadUpdate(
   committeeUpdate: altair.LightClientUpdate
-): routes.lightclient.LightclientOptimisticHeaderUpdate {
+): altair.LightClientOptimisticUpdate {
   return {
     attestedHeader: committeeUpdate.attestedHeader,
     syncAggregate: {
       syncCommitteeBits: committeeUpdate.syncAggregate.syncCommitteeBits,
       syncCommitteeSignature: committeeUpdate.syncAggregate.syncCommitteeSignature,
     },
+    signatureSlot: committeeUpdate.attestedHeader.slot + 1,
   };
 }
 
 export function committeeUpdateToLatestFinalizedHeadUpdate(
-  committeeUpdate: altair.LightClientUpdate
-): routes.lightclient.LightclientFinalizedUpdate {
+  committeeUpdate: altair.LightClientUpdate,
+  signatureSlot: Slot
+): altair.LightClientFinalityUpdate {
   return {
     attestedHeader: committeeUpdate.attestedHeader,
     finalizedHeader: committeeUpdate.finalizedHeader,
@@ -268,6 +271,7 @@ export function committeeUpdateToLatestFinalizedHeadUpdate(
       syncCommitteeBits: committeeUpdate.syncAggregate.syncCommitteeBits,
       syncCommitteeSignature: committeeUpdate.syncAggregate.syncCommitteeSignature,
     },
+    signatureSlot,
   };
 }
 

@@ -2,7 +2,7 @@ import {Libp2p} from "libp2p";
 import {PeerId} from "@libp2p/interface-peer-id";
 import {ForkName} from "@lodestar/params";
 import {IBeaconConfig} from "@lodestar/config";
-import {allForks, phase0} from "@lodestar/types";
+import {allForks, altair, phase0} from "@lodestar/types";
 import {ILogger} from "@lodestar/utils";
 import {IPeerRpcScoreStore} from "../peers/index.js";
 import {MetadataController} from "../metadata.js";
@@ -25,6 +25,10 @@ export interface IReqResp {
   ): Promise<allForks.SignedBeaconBlock[]>;
   beaconBlocksByRoot(peerId: PeerId, request: phase0.BeaconBlocksByRootRequest): Promise<allForks.SignedBeaconBlock[]>;
   pruneOnPeerDisconnect(peerId: PeerId): void;
+  lightClientBootstrap(peerId: PeerId, request: Uint8Array): Promise<altair.LightClientBootstrap>;
+  lightClientOptimisticUpdate(peerId: PeerId): Promise<altair.LightClientOptimisticUpdate>;
+  lightClientFinalityUpdate(peerId: PeerId): Promise<altair.LightClientFinalityUpdate>;
+  lightClientUpdate(peerId: PeerId, request: altair.LightClientUpdatesByRange): Promise<altair.LightClientUpdate[]>;
 }
 
 export interface IReqRespModules {

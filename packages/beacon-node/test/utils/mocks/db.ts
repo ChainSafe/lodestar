@@ -9,7 +9,7 @@ import {
   ProposerSlashingRepository,
   StateArchiveRepository,
   VoluntaryExitRepository,
-  BestPartialLightClientUpdateRepository,
+  BestLightClientUpdateRepository,
   CheckpointHeaderRepository,
   SyncCommitteeRepository,
   SyncCommitteeWitnessRepository,
@@ -49,7 +49,7 @@ export function getStubbedBeaconDb(): IBeaconDb {
     eth1Data: createStubInstance(Eth1DataRepository),
 
     // lightclient
-    bestPartialLightClientUpdate: createStubInstance(BestPartialLightClientUpdateRepository),
+    bestLightClientUpdate: createStubInstance(BestLightClientUpdateRepository),
     checkpointHeader: createStubInstance(CheckpointHeaderRepository),
     syncCommittee: createStubInstance(SyncCommitteeRepository),
     syncCommitteeWitness: createStubInstance(SyncCommitteeWitnessRepository),

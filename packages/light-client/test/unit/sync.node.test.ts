@@ -2,7 +2,7 @@ import {expect} from "chai";
 import {init} from "@chainsafe/bls/switchable";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {BeaconStateAllForks, BeaconStateAltair} from "@lodestar/state-transition";
-import {phase0, ssz} from "@lodestar/types";
+import {altair, phase0, ssz} from "@lodestar/types";
 import {routes, Api} from "@lodestar/api";
 import {chainConfig as chainConfigDef} from "@lodestar/config/default";
 import {createIBeaconConfig, IChainConfig} from "@lodestar/config";
@@ -79,7 +79,8 @@ describe("sync", () => {
     lightclientServerApi.latestHeadUpdate = committeeUpdateToLatestHeadUpdate(lastInMap(lightclientServerApi.updates));
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     lightclientServerApi.finalized = committeeUpdateToLatestFinalizedHeadUpdate(
-      lastInMap(lightclientServerApi.updates)
+      lastInMap(lightclientServerApi.updates),
+      targetSlot
     );
 
     // Initialize from snapshot
@@ -141,13 +142,14 @@ describe("sync", () => {
           bodyRoot: SOME_HASH,
         };
 
-        const headUpdate: routes.lightclient.LightclientOptimisticHeaderUpdate = {
+        const headUpdate: altair.LightClientOptimisticUpdate = {
           attestedHeader: header,
           syncAggregate: syncCommittee.signHeader(config, header),
+          signatureSlot: header.slot + 1,
         };
 
         lightclientServerApi.latestHeadUpdate = headUpdate;
-        eventsServerApi.emit({type: routes.events.EventType.lightclientOptimisticUpdate, message: headUpdate});
+        eventsServerApi.emit({type: routes.events.EventType.lightClientOptimisticUpdate, message: headUpdate});
       }
     });
 

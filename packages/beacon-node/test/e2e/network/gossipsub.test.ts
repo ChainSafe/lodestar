@@ -2,15 +2,16 @@ import sinon from "sinon";
 import {expect} from "chai";
 import {createIBeaconConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
-import {phase0, ssz} from "@lodestar/types";
+import {altair, phase0, ssz} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 
+import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {getReqRespHandlers, Network} from "../../../src/network/index.js";
 import {defaultNetworkOptions, INetworkOptions} from "../../../src/network/options.js";
 import {GossipType, GossipHandlers} from "../../../src/network/gossip/index.js";
 
 import {generateEmptySignedBlock} from "../../utils/block.js";
-import {MockBeaconChain} from "../../utils/mocks/chain/chain.js";
+import {MockBeaconChain, zeroProtoBlock} from "../../utils/mocks/chain/chain.js";
 import {createNode} from "../../utils/network.js";
 import {generateState} from "../../utils/state.js";
 import {StubbedBeaconDb} from "../../utils/stub/index.js";
@@ -28,6 +29,8 @@ const opts: INetworkOptions = {
   discv5FirstQueryDelayMs: 0,
   discv5: null,
 };
+
+const ALTAIR_START_SLOT = computeStartSlotAtEpoch(config.ALTAIR_FORK_EPOCH);
 
 describe("gossipsub", function () {
   if (this.timeout() < 15 * 1000) this.timeout(15 * 1000);
@@ -56,7 +59,21 @@ describe("gossipsub", function () {
     });
 
     const beaconConfig = createIBeaconConfig(config, state.genesisValidatorsRoot);
-    const chain = new MockBeaconChain({genesisTime: 0, chainId: 0, networkId: BigInt(0), state, config: beaconConfig});
+    const chain = new MockBeaconChain({
+      genesisTime: 0,
+      chainId: 0,
+      networkId: BigInt(0),
+      state,
+      config: beaconConfig,
+    });
+
+    chain.forkChoice.getHead = () => {
+      return {
+        ...zeroProtoBlock,
+        slot: ALTAIR_START_SLOT,
+      };
+    };
+
     const db = new StubbedBeaconDb(config);
     const reqRespHandlers = getReqRespHandlers({db, chain});
     const gossipHandlers = gossipHandlersPartial as GossipHandlers;
@@ -164,5 +181,77 @@ describe("gossipsub", function () {
         break;
       }
     }
+  });
+
+  it("Publish and receive a LightClientOptimisticUpdate", async function () {
+    let onLightClientOptimisticUpdate: (ou: altair.LightClientOptimisticUpdate) => void;
+    const onLightClientOptimisticUpdatePromise = new Promise<altair.LightClientOptimisticUpdate>(
+      (resolve) => (onLightClientOptimisticUpdate = resolve)
+    );
+
+    const {netA, netB, controller} = await mockModules({
+      [GossipType.light_client_optimistic_update]: async (lightClientOptimisticUpdate) => {
+        onLightClientOptimisticUpdate(lightClientOptimisticUpdate);
+      },
+    });
+
+    await Promise.all([onPeerConnect(netA), onPeerConnect(netB), connect(netA, netB.peerId, netB.localMultiaddrs)]);
+    expect(Array.from(netA.getConnectionsByPeer().values()).length).to.equal(1);
+    expect(Array.from(netB.getConnectionsByPeer().values()).length).to.equal(1);
+
+    netA.subscribeGossipCoreTopics();
+    netB.subscribeGossipCoreTopics();
+
+    // Wait to have a peer connected to a topic
+    while (!controller.signal.aborted) {
+      await sleep(500);
+      const topicStr = netA.gossip.getTopics()[0];
+      if (topicStr && netA.gossip.getMeshPeers(topicStr).length > 0) {
+        break;
+      }
+    }
+
+    const lightClientOptimisticUpdate = ssz.altair.LightClientOptimisticUpdate.defaultValue();
+    lightClientOptimisticUpdate.signatureSlot = ALTAIR_START_SLOT;
+    await netA.gossip.publishLightClientOptimisticUpdate(lightClientOptimisticUpdate);
+
+    const optimisticUpdate = await onLightClientOptimisticUpdatePromise;
+    expect(optimisticUpdate).to.deep.equal(lightClientOptimisticUpdate);
+  });
+
+  it("Publish and receive a LightClientFinalityUpdate", async function () {
+    let onLightClientFinalityUpdate: (fu: altair.LightClientFinalityUpdate) => void;
+    const onLightClientFinalityUpdatePromise = new Promise<altair.LightClientFinalityUpdate>(
+      (resolve) => (onLightClientFinalityUpdate = resolve)
+    );
+
+    const {netA, netB, controller} = await mockModules({
+      [GossipType.light_client_finality_update]: async (lightClientFinalityUpdate) => {
+        onLightClientFinalityUpdate(lightClientFinalityUpdate);
+      },
+    });
+
+    await Promise.all([onPeerConnect(netA), onPeerConnect(netB), connect(netA, netB.peerId, netB.localMultiaddrs)]);
+    expect(Array.from(netA.getConnectionsByPeer().values()).length).to.equal(1);
+    expect(Array.from(netB.getConnectionsByPeer().values()).length).to.equal(1);
+
+    netA.subscribeGossipCoreTopics();
+    netB.subscribeGossipCoreTopics();
+
+    // Wait to have a peer connected to a topic
+    while (!controller.signal.aborted) {
+      await sleep(500);
+      const topicStr = netA.gossip.getTopics()[0];
+      if (topicStr && netA.gossip.getMeshPeers(topicStr).length > 0) {
+        break;
+      }
+    }
+
+    const lightClientFinalityUpdate = ssz.altair.LightClientFinalityUpdate.defaultValue();
+    lightClientFinalityUpdate.signatureSlot = ALTAIR_START_SLOT;
+    await netA.gossip.publishLightClientFinalityUpdate(lightClientFinalityUpdate);
+
+    const optimisticUpdate = await onLightClientFinalityUpdatePromise;
+    expect(optimisticUpdate).to.deep.equal(lightClientFinalityUpdate);
   });
 });

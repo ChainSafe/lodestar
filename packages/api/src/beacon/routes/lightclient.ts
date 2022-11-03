@@ -1,6 +1,5 @@
-import {ContainerType, JsonPath, VectorCompositeType} from "@chainsafe/ssz";
+import {JsonPath} from "@chainsafe/ssz";
 import {Proof} from "@chainsafe/persistent-merkle-tree";
-import {FINALIZED_ROOT_DEPTH} from "@lodestar/params";
 import {altair, phase0, ssz, SyncPeriod} from "@lodestar/types";
 import {
   ArrayOf,
@@ -14,14 +13,10 @@ import {
   ReqEmpty,
 } from "../../utils/index.js";
 import {queryParseProofPathsArr, querySerializeProofPathsArr} from "../../utils/serdes.js";
-import {LightclientOptimisticHeaderUpdate, LightclientFinalizedUpdate} from "./events.js";
-
-// Re-export for convenience when importing routes.lightclient.LightclientOptimisticHeaderUpdate
-export {LightclientOptimisticHeaderUpdate, LightclientFinalizedUpdate};
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
-export type LightclientSnapshotWithProof = {
+export type LightClientBootstrap = {
   header: phase0.BeaconBlockHeader;
   currentSyncCommittee: altair.SyncCommittee;
   /** Single branch proof from state root to currentSyncCommittee */
@@ -46,14 +41,14 @@ export type Api = {
    * Returns the latest optimistic head update available. Clients should use the SSE type `light_client_optimistic_update`
    * unless to get the very first head update after syncing, or if SSE are not supported by the server.
    */
-  getOptimisticUpdate(): Promise<{data: LightclientOptimisticHeaderUpdate}>;
-  getFinalityUpdate(): Promise<{data: LightclientFinalizedUpdate}>;
+  getOptimisticUpdate(): Promise<{data: altair.LightClientOptimisticUpdate}>;
+  getFinalityUpdate(): Promise<{data: altair.LightClientFinalityUpdate}>;
   /**
    * Fetch a bootstrapping state with a proof to a trusted block root.
    * The trusted block root should be fetched with similar means to a weak subjectivity checkpoint.
    * Only block roots for checkpoints are guaranteed to be available.
    */
-  getBootstrap(blockRoot: string): Promise<{data: LightclientSnapshotWithProof}>;
+  getBootstrap(blockRoot: string): Promise<{data: LightClientBootstrap}>;
 };
 
 /**
@@ -62,8 +57,8 @@ export type Api = {
 export const routesData: RoutesData<Api> = {
   getStateProof: {url: "/eth/v1/beacon/light_client/proof/{state_id}", method: "GET"},
   getUpdates: {url: "/eth/v1/beacon/light_client/updates", method: "GET"},
-  getOptimisticUpdate: {url: "/eth/v1/beacon/light_client/optimistic_update/", method: "GET"},
-  getFinalityUpdate: {url: "/eth/v1/beacon/light_client/finality_update/", method: "GET"},
+  getOptimisticUpdate: {url: "/eth/v1/beacon/light_client/optimistic_update", method: "GET"},
+  getFinalityUpdate: {url: "/eth/v1/beacon/light_client/finality_update", method: "GET"},
   getBootstrap: {url: "/eth/v1/beacon/light_client/bootstrap/{block_root}", method: "GET"},
 };
 
@@ -102,39 +97,12 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
 }
 
 export function getReturnTypes(): ReturnTypes<Api> {
-  const lightclientSnapshotWithProofType = new ContainerType(
-    {
-      header: ssz.phase0.BeaconBlockHeader,
-      currentSyncCommittee: ssz.altair.SyncCommittee,
-      currentSyncCommitteeBranch: new VectorCompositeType(ssz.Root, 5),
-    },
-    {jsonCase: "eth2"}
-  );
-
-  const lightclientHeaderUpdate = new ContainerType(
-    {
-      syncAggregate: ssz.altair.SyncAggregate,
-      attestedHeader: ssz.phase0.BeaconBlockHeader,
-    },
-    {jsonCase: "eth2"}
-  );
-
-  const lightclientFinalizedUpdate = new ContainerType(
-    {
-      attestedHeader: ssz.phase0.BeaconBlockHeader,
-      finalizedHeader: ssz.phase0.BeaconBlockHeader,
-      finalityBranch: new VectorCompositeType(ssz.Bytes32, FINALIZED_ROOT_DEPTH),
-      syncAggregate: ssz.altair.SyncAggregate,
-    },
-    {jsonCase: "eth2"}
-  );
-
   return {
     // Just sent the proof JSON as-is
     getStateProof: sameType(),
     getUpdates: ContainerData(ArrayOf(ssz.altair.LightClientUpdate)),
-    getOptimisticUpdate: ContainerData(lightclientHeaderUpdate),
-    getFinalityUpdate: ContainerData(lightclientFinalizedUpdate),
-    getBootstrap: ContainerData(lightclientSnapshotWithProofType),
+    getOptimisticUpdate: ContainerData(ssz.altair.LightClientOptimisticUpdate),
+    getFinalityUpdate: ContainerData(ssz.altair.LightClientFinalityUpdate),
+    getBootstrap: ContainerData(ssz.altair.LightClientBootstrap),
   };
 }

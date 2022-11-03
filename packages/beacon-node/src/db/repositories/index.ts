@@ -10,7 +10,7 @@ export {DepositEventRepository} from "./depositEvent.js";
 export {DepositDataRootRepository} from "./depositDataRoot.js";
 export {Eth1DataRepository} from "./eth1Data.js";
 
-export {BestPartialLightClientUpdateRepository} from "./lightclientBestPartialUpdate.js";
+export {BestLightClientUpdateRepository} from "./lightclientBestUpdate.js";
 export {CheckpointHeaderRepository} from "./lightclientCheckpointHeader.js";
 export {SyncCommitteeRepository} from "./lightclientSyncCommittee.js";
 export {SyncCommitteeWitnessRepository} from "./lightclientSyncCommitteeWitness.js";

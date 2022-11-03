@@ -51,7 +51,7 @@
   ],
   "dependencies": {
     "@chainsafe/as-sha256": "^0.3.1",
-    "@chainsafe/bls": "7.1.0",
+    "@chainsafe/bls": "7.1.1",
     "@chainsafe/bls-keygen": "^0.3.0",
     "@chainsafe/bls-keystore": "^2.0.0",
     "@chainsafe/blst": "^0.2.4",
@@ -80,7 +80,6 @@
     "js-yaml": "^3.14.0",
     "lockfile": "^1.0.4",
     "lodash": "^4.17.15",
-    "peer-id": "^0.15.3",
     "prom-client": "^14.1.0",
     "rimraf": "^3.0.0",
     "source-map-support": "^0.5.19",
