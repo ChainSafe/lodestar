@@ -2,7 +2,9 @@ import crypto from "node:crypto";
 import {promisify} from "node:util";
 import {Libp2p} from "libp2p";
 import {PeerId} from "@libp2p/interface-peer-id";
+import {isPeerDiscovery} from "@libp2p/interface-peer-discovery";
 import {multiaddr, Multiaddr} from "@multiformats/multiaddr";
+import {PeerInfo} from "@libp2p/interface-peer-info";
 import {IBeaconConfig} from "@lodestar/config";
 import {ILogger, pruneSetToMax} from "@lodestar/utils";
 import {Discv5, ENR, IDiscv5Metrics, IDiscv5DiscoveryInputOptions} from "@chainsafe/discv5";
@@ -131,17 +133,32 @@ export class PeerDiscovery {
   async start(): Promise<void> {
     await this.discv5.start();
     this.discv5StartMs = Date.now();
-    this.discv5.on("discovered", this.onDiscovered);
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
+    for (const service of (this.libp2p as any).services) {
+      if (isPeerDiscovery(service)) {
+        service.addEventListener("peer", this.onDiscoveredPeer);
+      }
+    }
+
+    this.discv5.on("discovered", this.onDiscoveredENR);
     if (this.connectToDiscv5BootnodesOnStart) {
       // In devnet scenarios, especially, we want more control over which peers we connect to.
       // Only dial the discv5.bootEnrs if the option
       // network.connectToDiscv5Bootnodes has been set to true.
-      this.discv5.kadValues().forEach((enr) => this.onDiscovered(enr));
+      this.discv5.kadValues().forEach((enr) => this.onDiscoveredENR(enr));
     }
   }
 
   async stop(): Promise<void> {
-    this.discv5.off("discovered", this.onDiscovered);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
+    for (const service of (this.libp2p as any).services) {
+      if (isPeerDiscovery(service)) {
+        service.removeEventListener("peer", this.onDiscoveredPeer);
+      }
+    }
+
+    this.discv5.off("discovered", this.onDiscoveredENR);
     await this.discv5.stop();
   }
 
@@ -246,17 +263,68 @@ export class PeerDiscovery {
   }
 
   /**
+   * Progressively called by libp2p peer discovery as a result of any query.
+   */
+  private onDiscoveredPeer = async (evt: CustomEvent<PeerInfo>): Promise<void> => {
+    const {id, multiaddrs} = evt.detail;
+    const status = await this.handleDiscoveredPeer(id, multiaddrs[0]);
+    this.metrics?.discovery.discoveredStatus.inc({status});
+  };
+  /**
+   * Progressively called by libp2p peer discovery as a result of any query.
+   */
+  private async handleDiscoveredPeer(peerId: PeerId, multiaddrTCP: Multiaddr): Promise<DiscoveredPeerStatus> {
+    try {
+      // Check if peer is not banned or disconnected
+      if (this.peerRpcScores.getScoreState(peerId) !== ScoreState.Healthy) {
+        return DiscoveredPeerStatus.bad_score;
+      }
+
+      // Ignore connected peers. TODO: Is this check necessary?
+      if (this.isPeerConnected(peerId.toString())) {
+        return DiscoveredPeerStatus.already_connected;
+      }
+
+      const attnets = zeroAttnets;
+      const syncnets = zeroSyncnets;
+
+      // Should dial peer?
+      const cachedPeer: CachedENR = {
+        peerId,
+        multiaddrTCP,
+        subnets: {attnets, syncnets},
+        addedUnixMs: Date.now(),
+      };
+
+      // Only dial peer if necessary
+      if (this.shouldDialPeer(cachedPeer)) {
+        void this.dialPeer(cachedPeer);
+        return DiscoveredPeerStatus.attempt_dial;
+      } else {
+        // Add to pending good peers with a last seen time
+        this.cachedENRs.add(cachedPeer);
+        const dropped = pruneSetToMax(this.cachedENRs, MAX_CACHED_ENRS);
+        // If the cache was already full, count the peer as dropped
+        return dropped > 0 ? DiscoveredPeerStatus.dropped : DiscoveredPeerStatus.cached;
+      }
+    } catch (e) {
+      this.logger.error("Error onDiscovered", {}, e as Error);
+      return DiscoveredPeerStatus.error;
+    }
+  }
+
+  /**
    * Progressively called by discv5 as a result of any query.
    */
-  private onDiscovered = async (enr: ENR): Promise<void> => {
-    const status = await this.handleDiscoveredPeer(enr);
+  private onDiscoveredENR = async (enr: ENR): Promise<void> => {
+    const status = await this.handleDiscoveredENR(enr);
     this.metrics?.discovery.discoveredStatus.inc({status});
   };
 
   /**
    * Progressively called by discv5 as a result of any query.
    */
-  private async handleDiscoveredPeer(enr: ENR): Promise<DiscoveredPeerStatus> {
+  private async handleDiscoveredENR(enr: ENR): Promise<DiscoveredPeerStatus> {
     try {
       if (this.randomNodeQuery.code === QueryStatusCode.Active) {
         this.randomNodeQuery.count++;

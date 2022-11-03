@@ -112,6 +112,7 @@
     "@libp2p/interface-connection": "^3.0.2",
     "@libp2p/interface-connection-manager": "^1.1.1",
     "@libp2p/interface-peer-id": "^1.0.4",
+    "@libp2p/interface-peer-info": "^1.0.3",
     "@libp2p/interface-pubsub": "^2.1.0",
     "@libp2p/mdns": "^3.0.1",
     "@libp2p/mplex": "^5.2.4",
