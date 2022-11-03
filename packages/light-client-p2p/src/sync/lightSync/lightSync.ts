@@ -261,10 +261,10 @@ export class LightSync extends (EventEmitter as {new (): BackfillSyncEmitter}) {
     }
   }
 
-  private processFinalizedUpdate(finalizedUpdate: altair.LightClientFinalityUpdate): void {
+  private async processFinalizedUpdate(finalizedUpdate: altair.LightClientFinalityUpdate): Promise<void> {
     // Validate sync aggregate of the attested header and other conditions like future update, period etc
     // and may be move head
-    this.processOptimisticUpdate(finalizedUpdate);
+    await this.processOptimisticUpdate(finalizedUpdate);
     assertValidFinalityProof(finalizedUpdate);
 
     const {finalizedHeader, syncAggregate} = finalizedUpdate;
@@ -299,6 +299,12 @@ export class LightSync extends (EventEmitter as {new (): BackfillSyncEmitter}) {
         slot: finalizedHeader.slot,
         root: finalizedBlockRootHex,
       });
+
+      // TODO DA check this validation holds at this point of the code to prevent gossiping if not
+      // [REJECT] The finality_update is valid -- i.e. validate that process_light_client_finality_update does not indicate errors
+      // [IGNORE] The finality_update advances the finalized_header of the local LightClientStore
+      // -- i.e. validate that processing finality_update increases store.finalized_header.slot
+      await this.network.gossip.publishLightClientFinalityUpdate(finalizedUpdate);
     } else {
       this.logger.info("Received valid finalized update did not update finalized", {
         currentHead: `${this.finalized.header.slot} ${this.finalized.blockRoot}`,
@@ -306,7 +312,7 @@ export class LightSync extends (EventEmitter as {new (): BackfillSyncEmitter}) {
       });
     }
   }
-  private processOptimisticUpdate(headerUpdate: altair.LightClientOptimisticUpdate): void {
+  private async processOptimisticUpdate(headerUpdate: altair.LightClientOptimisticUpdate): Promise<void> {
     const {attestedHeader, syncAggregate} = headerUpdate;
 
     // Prevent registering updates for slots to far ahead
@@ -369,6 +375,12 @@ export class LightSync extends (EventEmitter as {new (): BackfillSyncEmitter}) {
         slot: attestedHeader.slot,
         root: headerBlockRootHex,
       });
+
+      // TODO DA check this validation holds at this point of the code to prevent gossiping if not
+      // [REJECT] The optimistic_update is valid -- i.e. validate that process_light_client_optimistic_update does not indicate errors
+      // [IGNORE] The optimistic_update either matches corresponding fields of the most recently forwarded
+      // LightClientFinalityUpdate (if any), or it advances the optimistic_header of the local LightClientStore -- i.e. validate that processing optimistic_update increases store.optimistic_header.slot
+      await this.network.gossip.publishLightClientOptimisticUpdate(headerUpdate);
     } else {
       this.logger.info("Received valid head update did not update head", {
         currentHead: `${this.head.header.slot} ${this.head.blockRoot}`,
