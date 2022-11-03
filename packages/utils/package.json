@@ -23,7 +23,7 @@
   ],
   "scripts": {
     "clean": "rm -rf lib && rm -f *.tsbuildinfo",
-    "setup": "yarn install && yarn allow-scripts",
+    "setup": "yarn --ignore-scripts install && yarn allow-scripts",
     "build": "tsc -p tsconfig.build.json",
     "build:lib:watch": "yarn run build:lib --watch",
     "build:release": "yarn clean && yarn build",
