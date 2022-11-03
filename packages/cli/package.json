@@ -80,7 +80,6 @@
     "js-yaml": "^3.14.0",
     "lockfile": "^1.0.4",
     "lodash": "^4.17.15",
-    "peer-id": "^0.15.3",
     "prom-client": "^14.1.0",
     "rimraf": "^3.0.0",
     "source-map-support": "^0.5.19",
