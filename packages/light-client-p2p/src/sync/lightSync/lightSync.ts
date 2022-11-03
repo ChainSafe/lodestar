@@ -492,10 +492,12 @@ export class LightSync extends (EventEmitter as {new (): BackfillSyncEmitter}) {
     }
   }
 
-  private addPeer = (peerId: PeerId, _peerStatus: phase0.Status): void => {
-    // TODO DA suggested checks before adding peers
-    // 1. is after altiar
-    this.peers.add(peerId);
+  private addPeer = (peerId: PeerId, peerStatus: phase0.Status): void => {
+    // TODO DA Any other suggested checks before adding a peer?
+    // check peer is after altiar
+    if (peerStatus.finalizedEpoch >= this.config.ALTAIR_FORK_EPOCH) {
+      this.peers.add(peerId);
+    }
   };
 
   private getPeer = (): PeerId | undefined => {
