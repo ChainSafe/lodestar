@@ -547,8 +547,6 @@ export class LightSync extends (EventEmitter as {new (): BackfillSyncEmitter}) {
           isFinalized: false,
           participation: 0,
           slot: currentPeriod * EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH,
-          // TODA DA Investigate: in a particular run this failed with error: Error getting lightClientBootstrap  Cannot read properties of undefined (reading 'fromBytes')
-          // TypeError: Cannot read properties of undefined (reading 'fromBytes') lightSyncUtils.ts:252:56
           ...deserializeSyncCommittee(lightClientBootstrap.currentSyncCommittee),
         });
 
