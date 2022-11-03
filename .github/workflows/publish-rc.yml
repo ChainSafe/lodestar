@@ -68,7 +68,7 @@ jobs:
           key: ${{ runner.os }}-${{ steps.node.outputs.v8CppApiVersion }}-${{ hashFiles('**/yarn.lock', '**/package.json') }}
       - name: Install & build
         if: steps.cache-deps.outputs.cache-hit != 'true'
-        run: yarn install --frozen-lockfile --ignore-optional --ignore-scripts && yarn --ignore-scripts allow-scripts && yarn build
+        run: yarn install --frozen-lockfile --ignore-optional --ignore-scripts && yarn allow-scripts && yarn build
       - name: Build
         run: yarn build
         if: steps.cache-deps.outputs.cache-hit == 'true'
