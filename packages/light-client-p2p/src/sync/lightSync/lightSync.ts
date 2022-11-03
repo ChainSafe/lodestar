@@ -209,7 +209,7 @@ export class LightSync extends (EventEmitter as {new (): BackfillSyncEmitter}) {
       // TODO DA distinguish between when there is no valid response and when the peer requested from
       // do not have the data requested
       for (const update of updates) {
-        this.processSyncCommitteeUpdate(update);
+        await this.processSyncCommitteeUpdate(update);
         const headPeriod = computeSyncPeriodAtSlot(update.attestedHeader.slot);
         this.logger.info(`processed sync update for period ${headPeriod}`);
         // Yield to the macro queue, verifying updates is somewhat expensive and we want responsiveness
@@ -218,7 +218,7 @@ export class LightSync extends (EventEmitter as {new (): BackfillSyncEmitter}) {
     }
   }
 
-  private processSyncCommitteeUpdate(update: altair.LightClientUpdate): void {
+  private async processSyncCommitteeUpdate(update: altair.LightClientUpdate): Promise<void> {
     // Prevent registering updates for slots too far in the future
     const updateSlot = update.attestedHeader.slot;
     if (updateSlot > slotWithFutureTolerance(this.config, this.genesisTime, MAX_REQUEST_LIGHT_CLIENT_UPDATES)) {
@@ -249,6 +249,9 @@ export class LightSync extends (EventEmitter as {new (): BackfillSyncEmitter}) {
       participation: sumBits(update.syncAggregate.syncCommitteeBits),
       slot: updateSlot,
     };
+
+    // persist update for period
+    await this.db.lightClientUpdate.put(updatePeriod, update);
 
     if (!existingNextSyncCommittee || isBetterUpdate(existingNextSyncCommittee, newNextSyncCommitteeStats)) {
       this.logger.info("Stored SyncCommittee", {nextPeriod, replacedPrevious: existingNextSyncCommittee != null});
@@ -300,6 +303,9 @@ export class LightSync extends (EventEmitter as {new (): BackfillSyncEmitter}) {
         root: finalizedBlockRootHex,
       });
 
+      // persist optimistic header for slot
+      // TODO DA keyed by attested header slot or finalized slot
+      await this.db.lightClientFinalityUpdate.put(finalizedUpdate.attestedHeader.slot, finalizedUpdate);
       // TODO DA check this validation holds at this point of the code to prevent gossiping if not
       // [REJECT] The finality_update is valid -- i.e. validate that process_light_client_finality_update does not indicate errors
       // [IGNORE] The finality_update advances the finalized_header of the local LightClientStore
@@ -376,6 +382,9 @@ export class LightSync extends (EventEmitter as {new (): BackfillSyncEmitter}) {
         root: headerBlockRootHex,
       });
 
+      // persist optimistic header for slot
+      await this.db.lightClientOptimisticUpdate.put(attestedHeader.slot, headerUpdate);
+
       // TODO DA check this validation holds at this point of the code to prevent gossiping if not
       // [REJECT] The optimistic_update is valid -- i.e. validate that process_light_client_optimistic_update does not indicate errors
       // [IGNORE] The optimistic_update either matches corresponding fields of the most recently forwarded
@@ -428,7 +437,7 @@ export class LightSync extends (EventEmitter as {new (): BackfillSyncEmitter}) {
           const peer = this.getPeer();
           if (peer) {
             const latestOptimisticUpdate = await this.network.reqResp.lightClientOptimisticUpdate(peer);
-            this.processOptimisticUpdate(latestOptimisticUpdate);
+            await this.processOptimisticUpdate(latestOptimisticUpdate);
           }
         } catch (e) {
           this.logger.error("Error fetching getLatestHeadUpdate", {currentPeriod}, e as Error);
@@ -475,7 +484,7 @@ export class LightSync extends (EventEmitter as {new (): BackfillSyncEmitter}) {
     }
   }
 
-  private onGossipsubMessage(event: GossipsubEvents["gossipsub:message"]): void {
+  private async onGossipsubMessage(event: GossipsubEvents["gossipsub:message"]): Promise<void> {
     const {msg} = event.detail;
 
     // TODO DA A better way to resolve forkDigestHex
@@ -490,7 +499,7 @@ export class LightSync extends (EventEmitter as {new (): BackfillSyncEmitter}) {
         bodyRoot: toHexString(data.attestedHeader.bodyRoot),
         signatureSlot: data.signatureSlot,
       });
-      this.processOptimisticUpdate(data);
+      await this.processOptimisticUpdate(data);
     } else if (msg.topic === finalityUpdateTopic) {
       const data = ssz.altair.LightClientFinalityUpdate.deserialize(msg.data);
       this.logger.info("Retrieved LightClientOptimisticUpdate via gossip", {
@@ -498,7 +507,7 @@ export class LightSync extends (EventEmitter as {new (): BackfillSyncEmitter}) {
         bodyRoot: toHexString(data.attestedHeader.bodyRoot),
         signatureSlot: data.signatureSlot,
       });
-      this.processFinalizedUpdate(data);
+      await this.processFinalizedUpdate(data);
     } else {
       this.logger.info("not processing", msg.topic);
     }
@@ -571,6 +580,7 @@ export class LightSync extends (EventEmitter as {new (): BackfillSyncEmitter}) {
 
         // set bootstrap
         this.lightClientBootstrap = lightClientBootstrap;
+        await this.db.lightClientBootstrap.put(headerRoot, lightClientBootstrap);
       } catch (e) {
         this.logger.error("Error getting lightClientBootstrap", {}, e as Error);
       }

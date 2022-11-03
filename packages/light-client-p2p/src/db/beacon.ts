@@ -15,6 +15,10 @@ import {
   SyncCommitteeRepository,
   SyncCommitteeWitnessRepository,
   BackfilledRanges,
+  LightClientOptimisticUpdateRepository,
+  LightClientFinalityUpdateRepository,
+  LightClientBootstrapRepository,
+  LightClientUpdateRepository,
 } from "./repositories/index.js";
 import {PreGenesisState, PreGenesisStateLastProcessedBlock} from "./single/index.js";
 
@@ -38,6 +42,10 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
   checkpointHeader: CheckpointHeaderRepository;
   syncCommittee: SyncCommitteeRepository;
   syncCommitteeWitness: SyncCommitteeWitnessRepository;
+  lightClientOptimisticUpdate: LightClientOptimisticUpdateRepository;
+  lightClientFinalityUpdate: LightClientFinalityUpdateRepository;
+  lightClientBootstrap: LightClientBootstrapRepository;
+  lightClientUpdate: LightClientUpdateRepository;
 
   backfilledRanges: BackfilledRanges;
 
@@ -62,6 +70,12 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
     this.checkpointHeader = new CheckpointHeaderRepository(this.config, this.db);
     this.syncCommittee = new SyncCommitteeRepository(this.config, this.db);
     this.syncCommitteeWitness = new SyncCommitteeWitnessRepository(this.config, this.db);
+
+    // light client node
+    this.lightClientOptimisticUpdate = new LightClientOptimisticUpdateRepository(this.config, this.db);
+    this.lightClientFinalityUpdate = new LightClientFinalityUpdateRepository(this.config, this.db);
+    this.lightClientBootstrap = new LightClientBootstrapRepository(this.config, this.db);
+    this.lightClientUpdate = new LightClientUpdateRepository(this.config, this.db);
 
     this.backfilledRanges = new BackfilledRanges(this.config, this.db);
   }

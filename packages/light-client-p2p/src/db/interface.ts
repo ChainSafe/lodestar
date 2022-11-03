@@ -14,6 +14,10 @@ import {
   SyncCommitteeRepository,
   SyncCommitteeWitnessRepository,
   BackfilledRanges,
+  LightClientOptimisticUpdateRepository,
+  LightClientFinalityUpdateRepository,
+  LightClientBootstrapRepository,
+  LightClientUpdateRepository
 } from "./repositories/index.js";
 import {PreGenesisState, PreGenesisStateLastProcessedBlock} from "./single/index.js";
 
@@ -51,6 +55,10 @@ export interface IBeaconDb {
   checkpointHeader: CheckpointHeaderRepository;
   syncCommittee: SyncCommitteeRepository;
   syncCommitteeWitness: SyncCommitteeWitnessRepository;
+  lightClientOptimisticUpdate: LightClientOptimisticUpdateRepository;
+  lightClientFinalityUpdate: LightClientFinalityUpdateRepository;
+  lightClientBootstrap: LightClientBootstrapRepository;
+  lightClientUpdate: LightClientUpdateRepository;
 
   backfilledRanges: BackfilledRanges;
 

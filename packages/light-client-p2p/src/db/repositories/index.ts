@@ -15,3 +15,9 @@ export {CheckpointHeaderRepository} from "./lightclientCheckpointHeader.js";
 export {SyncCommitteeRepository} from "./lightclientSyncCommittee.js";
 export {SyncCommitteeWitnessRepository} from "./lightclientSyncCommitteeWitness.js";
 export {BackfilledRanges} from "./backfilledRanges.js";
+
+// TODO DA move to light node specific location
+export {LightClientOptimisticUpdateRepository} from "./lightClientOptimisticUpdateRepository.js";
+export {LightClientFinalityUpdateRepository} from "./lightClientFinalityUpdateRepository.js";
+export {LightClientBootstrapRepository} from "./lightClientBoostrapUpdate.js";
+export {LightClientUpdateRepository} from "./lightClientUpdate.js";
