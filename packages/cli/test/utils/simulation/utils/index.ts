@@ -1,7 +1,7 @@
 import {Epoch, Slot} from "@lodestar/types";
 import {ForkName, activePreset} from "@lodestar/params";
 import {IChainForkConfig} from "@lodestar/config";
-import {ETH_TTD_INCREMENT} from "./constants.js";
+import {ETH_TTD_INCREMENT} from "../constants.js";
 
 export const logFilesDir = "test-logs";
 
@@ -54,4 +54,5 @@ export const getEstimatedTTD = ({
     additionalSlots * secondsPerSlot;
 
   return BigInt(Math.ceil(secondsTillBellatrix / cliqueSealingPeriod) * ETH_TTD_INCREMENT);
+
 };

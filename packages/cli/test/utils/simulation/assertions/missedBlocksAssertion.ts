@@ -1,0 +1,44 @@
+import {SimulationAssertion} from "../interfaces.js";
+import {headAssertion} from "./headAssertion.js";
+import {everyEpochMatcher} from "./matchers.js";
+
+export const missedBlocksAssertion: SimulationAssertion<"missedBlocks", number[], [typeof headAssertion]> = {
+  key: "missedBlocks",
+  match: everyEpochMatcher,
+  dependencies: [headAssertion],
+
+  async capture({node, slot, epoch, clock, dependantStores}) {
+    if (!clock.isLastSlotOfEpoch(slot)) return null;
+
+    const startSlot = clock.getFirstSlotOfEpoch(epoch);
+    const endSlot = slot;
+
+    const missedSlots: number[] = [];
+
+    for (let slot = startSlot; slot < endSlot; slot++) {
+      if (!dependantStores["head"][node.id][slot]) {
+        missedSlots.push(slot);
+      }
+    }
+    return missedSlots;
+  },
+
+  async assert({nodes, store, slot}) {
+    const errors: string[] = [];
+    const missedBlocksOnFirstNode = store[nodes[0].cl.id][slot];
+
+    for (let i = 1; i < nodes.length; i++) {
+      const missedBlocksOnNode = store[nodes[i].cl.id][slot];
+
+      if (missedBlocksOnNode !== missedBlocksOnFirstNode) {
+        `node has different missed blocks than node 0. ${JSON.stringify({
+          id: nodes[i].cl.id,
+          missedBlocksOnNode,
+          missedBlocksOnFirstNode,
+        })}`;
+      }
+    }
+
+    return errors;
+  },
+};

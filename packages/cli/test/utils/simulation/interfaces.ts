@@ -1,8 +1,13 @@
 import type {SecretKey} from "@chainsafe/bls/types";
 import {Api} from "@lodestar/api";
 import {Api as KeyManagerApi} from "@lodestar/api/keymanager";
-import {Eth1Provider} from "@lodestar/beacon-node";
 import {IChainConfig, IChainForkConfig} from "@lodestar/config";
+import {ForkName} from "@lodestar/params";
+import {Slot, allForks, Epoch} from "@lodestar/types";
+import {EpochClock} from "./EpochClock.js";
+import {Eth1ProviderWithAdmin} from "./Eth1ProviderWithAdmin.js";
+
+export type NodeId = string;
 
 export type SimulationInitOptions = {
   id: string;
@@ -92,7 +97,7 @@ export interface ELNode {
   readonly engineRpcUrl: string;
   readonly ethRpcUrl: string;
   readonly jwtSecretHex: string;
-  readonly provider: Eth1Provider;
+  readonly provider: Eth1ProviderWithAdmin;
 }
 
 export interface NodePair {
@@ -154,3 +159,56 @@ export interface Runner {
 export type RunnerEvent = "starting" | "started" | "stopping" | "stop";
 
 export type AtLeast<T, K extends keyof T> = Partial<T> & Pick<T, K>;
+
+export type SimulationCaptureInput<T, D extends Record<string, unknown> = Record<string, never>> = {
+  fork: ForkName;
+  slot: Slot;
+  epoch: Epoch;
+  block: allForks.SignedBeaconBlock;
+  clock: EpochClock;
+  node: NodePair;
+  store: Record<Slot, T>;
+  forkConfig: IChainForkConfig;
+  dependantStores: D;
+};
+
+export type SimulationAssertionInput<T, D extends Record<string, unknown> = Record<string, never>> = {
+  slot: Slot;
+  epoch: Epoch;
+  clock: EpochClock;
+  nodes: NodePair[];
+  store: Record<NodeId, Record<Slot, T>>;
+  dependantStores: D;
+  forkConfig: IChainForkConfig;
+};
+
+export type SimulationMatcherInput = {
+  slot: Slot;
+  epoch: Epoch;
+  clock: EpochClock;
+  forkConfig: IChainForkConfig;
+};
+
+export type AssertionMatcher = (input: SimulationMatcherInput) => boolean;
+export type ExtractAssertionType<T> = T extends SimulationAssertion<any, infer A> ? A : never;
+export type ExtractAssertionKey<T> = T extends SimulationAssertion<infer A, any> ? A : never;
+export type StoreTypes<T extends SimulationAssertion<any, any>[] | undefined> = T extends SimulationAssertion<
+  any,
+  any,
+  any
+>[]
+  ? Record<ExtractAssertionKey<T[number]>, Record<NodeId, Record<Slot, ExtractAssertionType<T[number]>>>>
+  : never;
+
+export interface SimulationAssertion<
+  KeyType extends string,
+  ValueType,
+  Dependencies extends SimulationAssertion<any, unknown>[] = SimulationAssertion<string, unknown, []>[]
+> {
+  readonly key: KeyType;
+  capture?(input: SimulationCaptureInput<ValueType, StoreTypes<Dependencies>>): Promise<ValueType | null>;
+
+  match: AssertionMatcher;
+  assert(input: SimulationAssertionInput<ValueType, StoreTypes<Dependencies>>): Promise<string[] | null | never>;
+  dependencies?: Dependencies;
+}

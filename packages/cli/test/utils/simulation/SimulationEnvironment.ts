@@ -30,6 +30,7 @@ import {
   RunnerType,
   SimulationInitOptions,
   SimulationOptions,
+  SimulationAssertion,
 } from "./interfaces.js";
 import {ChildProcessRunner} from "./runner/child_process.js";
 import {SimulationTracker} from "./SimulationTracker.js";
@@ -44,19 +45,13 @@ import {
   SIM_TESTS_SECONDS_PER_SLOT,
 } from "./constants.js";
 import {generateGethNode} from "./el_clients/geth.js";
-import {getEstimatedTTD} from "./utils.js";
+import {getEstimatedTTD} from "./utils/index.js";
 
 export const SHARED_JWT_SECRET = "0xdc6457099f127cf0bac78de8b297df04951281909db4f58b43def7c7151e765d";
 
 /* eslint-disable no-console */
 
 export class SimulationEnvironment {
-  // Tests related properties
-  readonly expectedMinParticipationRate = 0.9;
-  readonly expectedMaxInclusionDelay = 2;
-  readonly expectedMinAttestationCount = MAX_COMMITTEES_PER_SLOT - 1;
-  readonly expectedMinSyncParticipationRate = 0.9;
-
   readonly nodes: NodePair[] = [];
   readonly clock: EpochClock;
   readonly tracker: SimulationTracker;
@@ -73,27 +68,6 @@ export class SimulationEnvironment {
   private nodePairCount = 0;
   private genesisState?: BeaconStateAllForks;
   private genesisStatePath: string;
-
-  readonly network = {
-    connectAllNodes: async (): Promise<void> => {
-      for (const node1 of this.nodes) {
-        for (const node2 of this.nodes) {
-          const networkIdentity = (await node1.cl.api.node.getNetworkIdentity()).data;
-
-          if (node1 === node2 || !networkIdentity.peerId) continue;
-
-          await node2.cl.api.lodestar.connectPeer(networkIdentity.peerId, networkIdentity.p2pAddresses);
-        }
-      }
-    },
-
-    connectNewNode: async (newNode: NodePair): Promise<void> => {
-      for (const node of this.nodes) {
-        const networkIdentity = (await node.cl.api.node.getNetworkIdentity()).data;
-        await newNode.cl.api.lodestar.connectPeer(networkIdentity.peerId, networkIdentity.p2pAddresses);
-      }
-    },
-  };
 
   private constructor(forkConfig: IChainForkConfig, options: SimulationOptions) {
     this.forkConfig = forkConfig;
@@ -327,6 +301,12 @@ export class SimulationEnvironment {
       }
       default:
         throw new Error(`EL Client "${client}" not supported`);
+    }
+  }
+
+  assert(...assertions: SimulationAssertion<string, any, any>[]): void {
+    for (const assertion of assertions) {
+      this.tracker.register(assertion);
     }
   }
 }

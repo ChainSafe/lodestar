@@ -3,7 +3,6 @@ import {join} from "node:path";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
   attestationParticipationAssertions,
-  // attestationPerSlotAssertions,
   finalityAssertions,
   headsAssertions,
   inclusionDelayAssertions,
@@ -12,12 +11,16 @@ import {
   nodeSyncedAssertions,
   syncCommitteeAssertions,
 } from "../utils/simulation/assertions.js";
+import {inclusionDelayAssertion} from "../utils/simulation/assertions/inclusionDelayAssertion.js";
 import {CLClient, NodePairResult, ELClient} from "../utils/simulation/interfaces.js";
 import {SimulationEnvironment} from "../utils/simulation/SimulationEnvironment.js";
 import {SIM_TESTS_SECONDS_PER_SLOT} from "../utils/simulation/constants.js";
-import {getEstimatedTimeInSecForRun, logFilesDir} from "../utils/simulation/utils.js";
+import {getEstimatedTimeInSecForRun, logFilesDir} from "../utils/simulation/utils/index.js";
+import {connectAllNodes, connectNewNode} from "../utils/simulation/utils/network.js";
 
 const genesisSlotsDelay = SLOTS_PER_EPOCH * 2;
+const altairForkEpoch = 2;
+const bellatrixForkEpoch = 4;
 const runTillEpoch = 6;
 const syncWaitEpoch = 2;
 
@@ -49,9 +52,11 @@ describe("simulation test - multi-fork", function () {
     ]
   );
 
+  env.assert(inclusionDelayAssertion);
+
   before("start env", async () => {
     await env.start();
-    await env.network.connectAllNodes();
+    await connectAllNodes(env.nodes);
   });
 
   after("stop env", async () => {
@@ -62,44 +67,77 @@ describe("simulation test - multi-fork", function () {
     nodeAssertions(env);
   });
 
-  for (let epoch = 0; epoch <= runTillEpoch; epoch += 1) {
-    describe(`epoch - ${epoch}`, () => {
-      before("wait for epoch", async () => {
-        // Wait for one extra slot to make sure epoch transition is complete on the state
-        await env.waitForSlot(env.clock.getLastSlotOfEpoch(epoch) + 1);
+  describe("altair-fork", () => {
+    for (let epoch = 0; epoch < altairForkEpoch; epoch += 1) {
+      describe(`epoch - ${epoch}`, () => {
+        before("wait for epoch", async () => {
+          // Wait for one extra slot to make sure epoch transition is complete on the state
+          await env.waitForSlot(env.clock.getLastSlotOfEpoch(epoch) + 1);
+          env.tracker.printNodesInfo(epoch);
+        });
 
-        env.tracker.printNodesInfo(epoch);
+        describe("missed blocks", () => {
+          missedBlocksAssertions(env, epoch);
+        });
+
+        describe("finality", () => {
+          finalityAssertions(env, epoch);
+        });
+
+        describe("heads", () => {
+          headsAssertions(env, epoch);
+        });
+
+        describe("inclusion delay", () => {
+          inclusionDelayAssertions(env, epoch);
+        });
+
+        describe("attestation participation", () => {
+          attestationParticipationAssertions(env, epoch);
+        });
+
+        describe("sync committee participation", () => {
+          syncCommitteeAssertions(env, epoch);
+        });
       });
+    }
+  });
 
-      describe("missed blocks", () => {
-        missedBlocksAssertions(env, epoch);
+  describe("bellatrix-fork", () => {
+    for (let epoch = altairForkEpoch; epoch < bellatrixForkEpoch; epoch += 1) {
+      describe(`epoch - ${epoch}`, () => {
+        before("wait for epoch", async () => {
+          // Wait for one extra slot to make sure epoch transition is complete on the state
+          await env.waitForSlot(env.clock.getLastSlotOfEpoch(epoch) + 1);
+          env.tracker.printNodesInfo(epoch);
+        });
+
+        describe("missed blocks", () => {
+          missedBlocksAssertions(env, epoch);
+        });
+
+        describe("finality", () => {
+          finalityAssertions(env, epoch);
+        });
+
+        describe("heads", () => {
+          headsAssertions(env, epoch);
+        });
+
+        describe("inclusion delay", () => {
+          inclusionDelayAssertions(env, epoch);
+        });
+
+        describe("attestation participation", () => {
+          attestationParticipationAssertions(env, epoch);
+        });
+
+        describe("sync committee participation", () => {
+          syncCommitteeAssertions(env, epoch);
+        });
       });
-
-      describe("finality", () => {
-        finalityAssertions(env, epoch);
-      });
-
-      describe("heads", () => {
-        headsAssertions(env, epoch);
-      });
-
-      describe("inclusion delay", () => {
-        inclusionDelayAssertions(env, epoch);
-      });
-
-      // describe("attestation count per slot", () => {
-      //   attestationPerSlotAssertions(env, epoch);
-      // });
-
-      describe("attestation participation", () => {
-        attestationParticipationAssertions(env, epoch);
-      });
-
-      describe("sync committee participation", () => {
-        syncCommitteeAssertions(env, epoch);
-      });
-    });
-  }
+    }
+  });
 
   describe("sync from genesis", () => {
     let rangeSync: NodePairResult;
@@ -127,11 +165,11 @@ describe("simulation test - multi-fork", function () {
 
       await rangeSync.jobs.el.start();
       await rangeSync.jobs.cl.start();
-      await env.network.connectNewNode(rangeSync.nodePair);
+      await connectNewNode(rangeSync.nodePair, env.nodes);
 
       await checkpointSync.jobs.el.start();
       await checkpointSync.jobs.cl.start();
-      await env.network.connectNewNode(checkpointSync.nodePair);
+      await connectNewNode(checkpointSync.nodePair, env.nodes);
     });
 
     after(async () => {
