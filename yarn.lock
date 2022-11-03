@@ -8385,18 +8385,7 @@ it-foreach@^0.1.1:
   resolved "https://registry.npmjs.org/it-foreach/-/it-foreach-0.1.1.tgz"
   integrity sha512-ZLxL651N5w5SL/EIIcrXELgYrrkuEKj/TErG93C4lr6lNZziKsf338ljSG85PjQfu7Frg/1wESl5pLrPSFXI9g==
 
-it-handshake@^4.0.1:
-  version "4.0.1"
-  resolved "https://registry.yarnpkg.com/it-handshake/-/it-handshake-4.0.1.tgz#c133f1e6284c8827c0ab8d44469618a81cabf154"
-  integrity sha512-80dJPkxA77iTy172OnTWg5pjiOQ7KO0+o2FGCyJn3Vb/NJQKQiWL7LJY50uT5n8EYzv8SV5dDNF234PwMsQAXw==
-  dependencies:
-    it-map "^1.0.6"
-    it-pushable "^3.0.0"
-    it-reader "^6.0.1"
-    it-stream-types "^1.0.4"
-    p-defer "^4.0.0"
-
-it-handshake@^4.1.2:
+it-handshake@4.1.2, it-handshake@^4.0.1, it-handshake@^4.1.2:
   version "4.1.2"
   resolved "https://registry.yarnpkg.com/it-handshake/-/it-handshake-4.1.2.tgz#9261f1869ce0162810a530e88bd40d5e7ce8e0a3"
   integrity sha512-Q/EvrB4KWIX5+/wO7edBK3l79Vh28+iWPGZvZSSqwAtOJnHZIvywC+JUbiXPRJVXfICBJRqFETtIJcvrqWL2Zw==
