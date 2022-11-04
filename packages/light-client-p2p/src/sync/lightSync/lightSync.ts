@@ -202,6 +202,13 @@ export class LightSync extends (EventEmitter as {new (): BackfillSyncEmitter}) {
           // keep a track of the peer and ranges not fetched to be retried later
           randomIndex = Math.floor(Math.random() * knownPeers.length);
           peer = knownPeers[randomIndex];
+
+          // TODO DA running sometimes fail with this error.
+          // this means the peer does not support the protocol
+          // find a way to know the protocol peers support and only dial those
+          // and/or keep a track of peers who fail with this error so as not to retry with them
+          // Nov-04 09:10:11.380[lightClient]     error: error fetching lightclientupdate  method=light_client_updates_by_range, encoding=ssz_snappy,
+          // peer=16Uiu2HAmAANq3dkEuKBHifxn8yuar2qy9HDDwwzykRfLRApU3fPW, code=REQUEST_ERROR_DIAL_ERROR, error=protocol selection failed
           this.logger.error("error fetching lightclientupdate", {}, e as Error);
         }
       }
