@@ -1,11 +1,11 @@
-import {SimulationAssertion} from "../interfaces.js";
-import {avg} from "../utils/index.js";
-import {everySlotMatcher} from "./matchers.js";
+import {SimulationAssertion} from "../../interfaces.js";
+import {avg} from "../../utils/index.js";
+import {everySlotMatcher} from "../matchers.js";
 
 export const expectedMaxInclusionDelay = 2;
 
 export const inclusionDelayAssertion: SimulationAssertion<"inclusionDelay", number> = {
-  key: "inclusionDelay",
+  id: "inclusionDelay",
   match: everySlotMatcher,
   async capture(input) {
     return avg(

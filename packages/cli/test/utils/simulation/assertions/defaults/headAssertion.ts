@@ -1,9 +1,9 @@
 import {toHexString} from "@lodestar/utils";
-import {SimulationAssertion} from "../interfaces.js";
-import {everySlotMatcher} from "./matchers.js";
+import {SimulationAssertion} from "../../interfaces.js";
+import {everySlotMatcher} from "../matchers.js";
 
 export const headAssertion: SimulationAssertion<"head", string> = {
-  key: "head",
+  id: "head",
   async capture({node}) {
     const head = await node.cl.api.beacon.getBlockHeader("head");
     return toHexString(head.data.root);

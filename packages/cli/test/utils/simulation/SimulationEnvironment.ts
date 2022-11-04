@@ -6,7 +6,7 @@ import tmp from "tmp";
 import {routes} from "@lodestar/api/beacon";
 import {nodeUtils} from "@lodestar/beacon-node";
 import {createIChainForkConfig, IChainForkConfig} from "@lodestar/config";
-import {activePreset, MAX_COMMITTEES_PER_SLOT} from "@lodestar/params";
+import {activePreset} from "@lodestar/params";
 import {BeaconStateAllForks, interopSecretKey} from "@lodestar/state-transition";
 import {Slot} from "@lodestar/types";
 import {fromHexString} from "@chainsafe/ssz";
@@ -30,7 +30,6 @@ import {
   RunnerType,
   SimulationInitOptions,
   SimulationOptions,
-  SimulationAssertion,
 } from "./interfaces.js";
 import {ChildProcessRunner} from "./runner/child_process.js";
 import {SimulationTracker} from "./SimulationTracker.js";
@@ -90,7 +89,12 @@ export class SimulationEnvironment {
       throw new Error("Invalid runner type");
     }
 
-    this.tracker = new SimulationTracker([], this.forkConfig, this.clock, this.options.controller.signal);
+    this.tracker = SimulationTracker.initWithDefaultAssertions({
+      nodes: [],
+      config: this.forkConfig,
+      clock: this.clock,
+      signal: this.options.controller.signal,
+    });
   }
 
   static initWithDefaults(
@@ -98,6 +102,7 @@ export class SimulationEnvironment {
     clients: NodePairOptions[]
   ): SimulationEnvironment {
     const secondsPerSlot = chainConfig.SECONDS_PER_SLOT ?? SIM_TESTS_SECONDS_PER_SLOT;
+    const genesisTime = Math.floor(Date.now() / 1000) + chainConfig.GENESIS_DELAY * secondsPerSlot;
     const ttd =
       chainConfig.TERMINAL_TOTAL_DIFFICULTY ??
       getEstimatedTTD({
@@ -105,10 +110,8 @@ export class SimulationEnvironment {
         bellatrixForkEpoch: chainConfig.BELLATRIX_FORK_EPOCH,
         secondsPerSlot: secondsPerSlot,
         cliqueSealingPeriod: CLIQUE_SEALING_PERIOD,
-        additionalSlots: 4, // Make sure bellatrix started before TTD reach
+        additionalSlots: 6, // Make sure bellatrix started before TTD reach
       });
-
-    const genesisTime = Math.floor(Date.now() / 1000) + chainConfig.GENESIS_DELAY * secondsPerSlot;
 
     const forkConfig = createIChainForkConfig({
       ...chainConfig,
@@ -134,45 +137,54 @@ export class SimulationEnvironment {
     return env;
   }
 
-  async start(): Promise<void> {
-    await mkdir(this.options.rootDir);
+  async start(timeout: number): Promise<void> {
+    try {
+      setTimeout(() => {
+        throw new Error(`Simulation ${this.options.id} timed out after ${timeout}ms`);
+      }, timeout);
 
-    await Promise.all(this.jobs.map((j) => j.el.start()));
+      await mkdir(this.options.rootDir);
 
-    for (let i = 0; i < this.nodes.length; i++) {
-      // Get genesis block hash
-      const eth1Genesis = await this.nodes[i].el.provider.getBlockByNumber(0);
-      if (!eth1Genesis) {
-        throw new Error(`Eth1 genesis not found for node "${this.nodes[i].id}"`);
+      await Promise.all(this.jobs.map((j) => j.el.start()));
+
+      for (let i = 0; i < this.nodes.length; i++) {
+        // Get genesis block hash
+        const eth1Genesis = await this.nodes[i].el.provider.getBlockByNumber(0);
+        if (!eth1Genesis) {
+          throw new Error(`Eth1 genesis not found for node "${this.nodes[i].id}"`);
+        }
+
+        const genesisState = nodeUtils.initDevState(this.forkConfig, this.keysCount, {
+          genesisTime: this.options.genesisTime,
+          eth1BlockHash: fromHexString(eth1Genesis.hash),
+        }).state;
+
+        this.genesisState = genesisState;
       }
 
-      const genesisState = nodeUtils.initDevState(this.forkConfig, this.keysCount, {
-        genesisTime: this.options.genesisTime,
-        eth1BlockHash: fromHexString(eth1Genesis.hash),
-      }).state;
+      if (!this.genesisState) {
+        throw new Error("The genesis state for CL clients is not defined.");
+      }
 
-      this.genesisState = genesisState;
+      await writeFile(this.genesisStatePath, this.genesisState.serialize());
+
+      await Promise.all(this.jobs.map((j) => j.cl.start()));
+
+      await this.externalSigner.start();
+      for (const node of this.nodes) {
+        const remoteKeys = node.cl.remoteKeys;
+        this.externalSigner.addKeys(remoteKeys);
+        await node.cl.keyManager.importRemoteKeys(
+          remoteKeys.map((sk) => ({pubkey: sk.toPublicKey().toHex(), url: this.externalSigner.url}))
+        );
+      }
+
+      await this.tracker.start();
+      await Promise.all(this.nodes.map((node) => this.tracker.track(node)));
+    } catch (error) {
+      console.error(error);
+      await this.stop();
     }
-
-    if (!this.genesisState) {
-      throw new Error("The genesis state for CL clients is not defined.");
-    }
-
-    await writeFile(this.genesisStatePath, this.genesisState.serialize());
-
-    await Promise.all(this.jobs.map((j) => j.cl.start()));
-
-    await this.externalSigner.start();
-    for (const node of this.nodes) {
-      const remoteKeys = node.cl.remoteKeys;
-      this.externalSigner.addKeys(remoteKeys);
-      await node.cl.keyManager.importRemoteKeys(
-        remoteKeys.map((sk) => ({pubkey: sk.toPublicKey().toHex(), url: this.externalSigner.url}))
-      );
-    }
-
-    await this.tracker.start();
-    await Promise.all(this.nodes.map((node) => this.tracker.track(node)));
   }
 
   async stop(): Promise<void> {
@@ -182,6 +194,13 @@ export class SimulationEnvironment {
     await Promise.all(this.jobs.map((j) => j.cl.stop()));
     await this.externalSigner.stop();
     await rm(this.options.rootDir, {recursive: true});
+
+    if (this.tracker.getErrorCount() > 0) {
+      this.tracker.printErrors();
+      process.exit(1);
+    } else {
+      process.exit(0);
+    }
   }
 
   // TODO: Add timeout support
@@ -205,11 +224,13 @@ export class SimulationEnvironment {
     });
   }
 
-  async waitForSlot(slot: Slot, nodes?: NodePair[]): Promise<void> {
-    console.log(`\nWaiting for slot on "${nodes ? nodes.map((n) => n.cl.id).join(",") : "all nodes"}"`, {
-      target: slot,
-      current: this.clock.currentSlot,
-    });
+  async waitForSlot(slot: Slot, nodes?: NodePair[], silent = true): Promise<void> {
+    if (!silent) {
+      console.log(`\nWaiting for slot on "${nodes ? nodes.map((n) => n.cl.id).join(",") : "all nodes"}"`, {
+        target: slot,
+        current: this.clock.currentSlot,
+      });
+    }
 
     await Promise.all(
       (nodes ?? this.nodes).map(
@@ -301,12 +322,6 @@ export class SimulationEnvironment {
       }
       default:
         throw new Error(`EL Client "${client}" not supported`);
-    }
-  }
-
-  assert(...assertions: SimulationAssertion<string, any, any>[]): void {
-    for (const assertion of assertions) {
-      this.tracker.register(assertion);
     }
   }
 }

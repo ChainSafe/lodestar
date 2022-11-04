@@ -2,7 +2,7 @@ import {SimulationAssertion} from "../interfaces.js";
 import {neverMatcher} from "./matchers.js";
 
 export const nodeSyncAssertion: SimulationAssertion<"nodeSync", boolean> = {
-  key: "nodeSync",
+  id: "nodeSync",
   // Include into particular test with custom condition
   match: neverMatcher,
   async assert({nodes}) {

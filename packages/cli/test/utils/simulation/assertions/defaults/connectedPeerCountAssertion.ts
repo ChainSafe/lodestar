@@ -1,8 +1,8 @@
-import {SimulationAssertion} from "../interfaces.js";
-import {everySlotMatcher} from "./matchers.js";
+import {SimulationAssertion} from "../../interfaces.js";
+import {everySlotMatcher} from "../matchers.js";
 
 export const connectedPeerCountAssertion: SimulationAssertion<"connectedPeerCount", number> = {
-  key: "connectedPeerCount",
+  id: "connectedPeerCount",
   match: everySlotMatcher,
   async capture({node}) {
     return (await node.cl.api.node.getPeerCount()).data.connected;

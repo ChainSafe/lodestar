@@ -3,29 +3,83 @@ import {routes} from "@lodestar/api/beacon";
 import {IChainForkConfig} from "@lodestar/config";
 import {Epoch, Slot} from "@lodestar/types";
 import {EpochClock} from "./EpochClock.js";
-import {NodeId, NodePair, SimulationAssertion} from "./interfaces.js";
-import {getForkName} from "./utils/index.js";
+import {NodeId, NodePair, SimulationAssertion, StoreType, StoreTypes} from "./interfaces.js";
+import {avg, getForkName, squeezeString} from "./utils/index.js";
+import {attestationsCountAssertion} from "./assertions/defaults/attestationCountAssertion.js";
+import {attestationParticipationAssertion} from "./assertions/defaults/attestationParticipationAssertion.js";
+import {connectedPeerCountAssertion} from "./assertions/defaults/connectedPeerCountAssertion.js";
+import {finalizedAssertion} from "./assertions/defaults/finalizedAssertion.js";
+import {headAssertion} from "./assertions/defaults/headAssertion.js";
+import {inclusionDelayAssertion} from "./assertions/defaults/inclusionDelayAssertion.js";
+import {missedBlocksAssertion} from "./assertions/defaults/missedBlocksAssertion.js";
+import {syncCommitteeAssertion} from "./assertions/defaults/syncCommitteeAssertion.js";
+import {TableRenderer} from "./TableRenderer.js";
+
+const defaultAssertions = [
+  inclusionDelayAssertion,
+  attestationsCountAssertion,
+  attestationParticipationAssertion,
+  connectedPeerCountAssertion,
+  finalizedAssertion,
+  headAssertion,
+  missedBlocksAssertion,
+  syncCommitteeAssertion,
+];
+
+interface SimulationTrackerInitOptions {
+  nodes: NodePair[];
+  config: IChainForkConfig;
+  clock: EpochClock;
+  signal: AbortSignal;
+}
 
 /* eslint-disable no-console */
 export class SimulationTracker {
   readonly emitter = new EventEmitter();
+  table = new TableRenderer({
+    fork: 10,
+    eph: 6,
+    slot: 8,
+    head: 15,
+    finalized: 12,
+    peers: 6,
+    attCount: 10,
+    incDelay: 10,
+    errors: 10,
+  });
 
-  private lastSeenSlot: Map<string, Slot> = new Map();
+  private lastSeenSlot: Map<NodeId, Slot> = new Map();
+  private slotCapture: Map<Slot, NodeId[]> = new Map();
+  private removeAssertionQueue: string[] = [];
   private signal: AbortSignal;
   private nodes: NodePair[];
   private clock: EpochClock;
   private config: IChainForkConfig;
 
-  private errors: Record<Slot, string[]> = {};
-  private stores: Record<string, Record<NodeId, Record<Slot, unknown>>> = {};
-  private assertions: SimulationAssertion<string, unknown>[] = [];
-  private assertionsMap: Record<string, number> = {};
+  private errorCount = 0;
+  private errors: Record<Slot, Record<string, string[]>> = {};
+  private stores: StoreTypes<typeof defaultAssertions> & StoreType<string, unknown>;
+  private assertions: SimulationAssertion[];
+  private assertionsMap: Record<string, boolean> = {};
 
-  constructor(nodes: NodePair[], config: IChainForkConfig, clock: EpochClock, signal: AbortSignal) {
+  private constructor({signal, nodes, clock, config}: SimulationTrackerInitOptions) {
     this.signal = signal;
     this.nodes = nodes;
     this.clock = clock;
     this.config = config;
+
+    this.stores = {} as StoreTypes<typeof defaultAssertions> & StoreType<string, unknown>;
+    this.assertions = [] as SimulationAssertion[];
+  }
+
+  static initWithDefaultAssertions(opts: SimulationTrackerInitOptions): SimulationTracker {
+    const tracker = new SimulationTracker(opts);
+
+    for (const assertion of defaultAssertions) {
+      tracker.register(assertion);
+    }
+
+    return tracker;
   }
 
   track(node: NodePair): void {
@@ -38,14 +92,118 @@ export class SimulationTracker {
     for (const node of this.nodes) {
       this.initEventStreamForNode(node);
     }
+    this.table.printHeader();
   }
 
   async stop(): Promise<void> {
     // Do nothing;
   }
 
+  getErrorCount(): number {
+    return this.errorCount;
+  }
+
   onSlot(slot: Slot, node: NodePair, cb: (slot: Slot) => void): void {
     this.emitter.once(`${node.cl.id}:slot:${slot}`, cb);
+  }
+
+  register(assertion: SimulationAssertion): void {
+    if (assertion.id in this.assertionsMap) {
+      throw new Error(`The assertion "${assertion.id}" is already registered`);
+    }
+
+    for (const dep of assertion.dependencies ?? []) {
+      if (dep.id in this.assertionsMap) continue;
+
+      throw new Error(`The assertion "${assertion.id}" depends on "${dep.id}" which is not registered`);
+    }
+
+    this.assertions.push(assertion);
+    this.assertionsMap[assertion.id] = true;
+
+    this.stores[assertion.id] = {};
+    for (const node of this.nodes) {
+      this.stores[assertion.id][node.cl.id] = {};
+    }
+  }
+
+  printTrackerInfo(slot: Slot): void {
+    const epoch = this.clock.getEpochForSlot(slot);
+    const forkName = getForkName(epoch, this.config);
+    const epochStr = `${epoch}/${this.clock.getSlotIndexInEpoch(slot)}`;
+
+    if (this.clock.isFirstSlotOfEpoch(slot)) {
+      // We are printing this info for last epoch
+      if (epoch - 1 < this.config.ALTAIR_FORK_EPOCH) {
+        this.table.addEmptyRow("Att Participation: N/A - SC Participation: N/A");
+      } else {
+        // attestationParticipation is calculated at first slot of an epoch
+        const participation = this.nodes.map((node) => this.stores["attestationParticipation"][node.cl.id][slot] ?? 0);
+        const head = avg(participation.map((p) => p.head)).toFixed(2);
+        const source = avg(participation.map((p) => p.source)).toFixed(2);
+        const target = avg(participation.map((p) => p.target)).toFixed(2);
+
+        // syncParticipation is calculated at last slot of an epoch so we subtract "slot -1"
+        const syncParticipation = avg(
+          this.nodes.map((node) => this.stores["syncCommitteeParticipation"][node.cl.id][slot - 1] ?? "-")
+        ).toFixed(2);
+
+        this.table.addEmptyRow(
+          `Att Participation: H: ${head}, S: ${source}, T: ${target} - SC Participation: ${syncParticipation}`
+        );
+      }
+    }
+
+    const finalizedSlots = this.nodes.map((node) => this.stores["finalized"][node.cl.id][slot] ?? "-");
+    const finalizedSlotsUnique = new Set(finalizedSlots);
+
+    const inclusionDelay = this.nodes.map((node) => this.stores["inclusionDelay"][node.cl.id][slot] ?? "-");
+    const inclusionDelayUnique = new Set(inclusionDelay);
+
+    const attestationCount = this.nodes.map((node) => this.stores["attestationsCount"][node.cl.id][slot] ?? "-");
+    const attestationCountUnique = new Set(attestationCount);
+
+    const head = this.nodes.map((node) => this.stores["head"][node.cl.id][slot] ?? "-");
+    const headUnique = new Set(head);
+
+    const peerCount = this.nodes.map((node) => this.stores["connectedPeerCount"][node.cl.id][slot] ?? "-");
+    const peerCountUnique = new Set(head);
+
+    const errorCount = Object.values(this.errors[slot]).flat().length;
+
+    this.table.addRow({
+      fork: forkName,
+      eph: epochStr,
+      slot: slot,
+      head: headUnique.size === 1 ? squeezeString(head[0], 12) : "different heads",
+      finalized: finalizedSlotsUnique.size === 1 ? finalizedSlots[0] : finalizedSlots.join(","),
+      peers: peerCountUnique.size === 1 ? peerCount[0] : peerCount.join(","),
+      attCount: attestationCountUnique.size === 1 ? attestationCount[0] : "--",
+      incDelay: inclusionDelayUnique.size === 1 ? inclusionDelay[0].toFixed(2) : inclusionDelay.join(","),
+      errors: errorCount,
+    });
+  }
+
+  printErrors(): void {
+    console.log(`├${"─".repeat(10)} Errors (${this.errorCount}) ${"─".repeat(10)}┤`);
+    for (const [slot, errors] of Object.entries(this.errors)) {
+      for (const [assertionKey, assertionErrors] of Object.entries(errors)) {
+        for (let errorIndex = 0; errorIndex < assertionErrors.length; errorIndex++) {
+          if (errorIndex === 0) {
+            console.log(`├─ Slot: ${slot}`);
+            console.log(`├── Assertion: ${assertionKey}`);
+          }
+          console.error(`├──── ${assertionErrors[errorIndex]}`);
+        }
+      }
+    }
+  }
+
+  private initDataForNode(node: NodePair): void {
+    this.lastSeenSlot.set(node.cl.id, 0);
+    for (const assertion of this.assertions) {
+      this.stores[assertion.id][node.cl.id] = {};
+    }
   }
 
   private async onBlock(event: routes.events.EventData[routes.events.EventType.block], node: NodePair): Promise<void> {
@@ -72,39 +230,26 @@ export class SimulationTracker {
           node,
           forkConfig: this.config,
           epoch,
-          store: this.stores[assertion.key][node.cl.id],
+          store: this.stores[assertion.id][node.cl.id],
           // TODO: Make the store safe, to filter just the dependant stores not all
           dependantStores: this.stores,
         });
-        if (value) {
-          this.stores[assertion.key][node.cl.id][slot] = value;
+        if (value !== undefined || value !== null) {
+          this.stores[assertion.id][node.cl.id][slot] = value;
         }
       }
     }
 
-    for (const assertion of this.assertions) {
-      this.errors[slot] = this.errors[slot] ?? [];
-
-      if (assertion.match({slot, epoch, clock: this.clock, forkConfig: this.config})) {
-        try {
-          const errors = await assertion.assert({
-            slot,
-            epoch,
-            nodes: this.nodes,
-            clock: this.clock,
-            forkConfig: this.config,
-            store: this.stores[assertion.key],
-            // TODO: Make the store safe, to filter just the dependant stores not all
-            dependantStores: this.stores,
-          });
-          if (errors) {
-            this.errors[slot].push(...errors);
-          }
-        } catch (err: unknown) {
-          this.errors[slot].push((err as Error).message);
-        }
-      }
+    const capturedSlot = this.slotCapture.get(slot);
+    if (capturedSlot) {
+      capturedSlot.push(node.cl.id);
+      this.slotCapture.set(slot, capturedSlot);
+    } else {
+      this.slotCapture.set(slot, [node.cl.id]);
     }
+
+    await this.applyAssertions({slot, epoch});
+
     this.emitter.emit(`${node.cl.id}:slot:${slot}`, slot);
   }
 
@@ -119,114 +264,55 @@ export class SimulationTracker {
     // TODO: Add checkpoint tracking
   }
 
-  register(assertion: SimulationAssertion<string, any>): void {
-    if (assertion.key in this.assertionsMap) {
-      throw new Error(`The assertion "${assertion.key}" is already registered`);
+  private async applyAssertions({slot, epoch}: {slot: Slot; epoch: Epoch}): Promise<void> {
+    const capturedForNodes = this.slotCapture.get(slot);
+    if (!capturedForNodes || capturedForNodes.length < this.nodes.length) {
+      // We need to wait for all nodes to capture data for that slot
+      return;
     }
+    this.errors[slot] = this.errors[slot] ?? {};
 
-    for (const dep of assertion.dependencies ?? []) {
-      if (dep.key in this.assertionsMap) continue;
-
-      throw new Error(`The assertion "${assertion.key}" depends on "${dep.key}" which is not registered`);
-    }
-
-    const index = this.assertions.push(assertion) - 1;
-    this.assertionsMap[assertion.key] = index;
-
-    this.stores[assertion.key] = {};
-    for (const node of this.nodes) {
-      this.stores[assertion.key][node.cl.id] = {};
-    }
-  }
-
-  initDataForNode(node: NodePair): void {
-    this.lastSeenSlot.set(node.cl.id, 0);
     for (const assertion of this.assertions) {
-      this.stores[assertion.key][node.cl.id] = {};
-    }
-  }
+      this.errors[slot][assertion.id] = this.errors[slot][assertion.id] ?? [];
 
-  printNodesInfo(epoch?: Epoch): void {
-    /* eslint-disable @typescript-eslint/naming-convention */
-    const minSlot = epoch != null ? this.clock.getFirstSlotOfEpoch(epoch) : 0;
-    const maxSlot = epoch != null ? this.clock.getLastSlotOfEpoch(epoch) : Math.max(...this.lastSeenSlot.values());
-    const records: Record<string, unknown>[] = [];
+      const match = assertion.match({slot, epoch, clock: this.clock, forkConfig: this.config});
+      if ((typeof match === "boolean" && match) || (typeof match === "object" && match.match)) {
+        try {
+          const errors = await assertion.assert({
+            slot,
+            epoch,
+            nodes: this.nodes,
+            clock: this.clock,
+            forkConfig: this.config,
+            store: this.stores[assertion.id],
+            // TODO: Make the store safe, to filter just the dependant stores not all
+            dependantStores: this.stores,
+          });
+          if (errors) {
+            this.errorCount += errors.length;
+            this.errors[slot][assertion.id].push(...errors);
+          }
+        } catch (err: unknown) {
+          this.errorCount++;
+          this.errors[slot][assertion.id].push((err as Error).message);
+        }
+      }
 
-    for (let slot = minSlot; slot <= maxSlot; slot++) {
-      const epoch = this.clock.getEpochForSlot(slot);
-      const forkName = getForkName(epoch, this.config);
-      const epochStr = `${this.clock.getEpochForSlot(slot)}/${this.clock.getSlotIndexInEpoch(slot)}`;
-
-      const finalizedSlots = this.nodes.map(
-        (node) => this.slotMeasures.get(node.cl.id)?.get(slot)?.finalizedSlot ?? "-"
-      );
-      const finalizedSlotsUnique = new Set(finalizedSlots);
-      const attestationCount = this.nodes.map(
-        (node) => this.slotMeasures.get(node.cl.id)?.get(slot)?.attestationsCount ?? "-"
-      );
-      const attestationCountUnique = new Set(attestationCount);
-      const inclusionDelay = this.nodes.map(
-        (node) => this.slotMeasures.get(node.cl.id)?.get(slot)?.inclusionDelay ?? "-"
-      );
-      const inclusionDelayUnique = new Set(inclusionDelay);
-      const attestationParticipation = this.nodes.map(
-        (node) => this.slotMeasures.get(node.cl.id)?.get(slot)?.syncCommitteeParticipation ?? "-"
-      );
-      const attestationParticipationUnique = new Set(attestationParticipation);
-
-      const record: Record<string, unknown> = {
-        F: forkName,
-        Eph: epochStr,
-        slot,
-        "Missed Slots": this.nodes.map((node) => (this.slotMeasures.get(node.cl.id)?.has(slot) ? "-" : "x")).join(""),
-        "Finalized Slots": finalizedSlotsUnique.size === 1 ? finalizedSlots[0] : finalizedSlots.join(","),
-        "Attestations Count": attestationCountUnique.size === 1 ? attestationCount[0] : attestationCount.join(","),
-        "Inclusion Delay": inclusionDelayUnique.size === 1 ? inclusionDelay[0] : inclusionDelay.join(","),
-        "SC Participation":
-          attestationParticipationUnique.size === 1 ? attestationParticipation[0] : attestationParticipation.join(","),
-        Peer: this.nodes
-          .map((node) => this.slotMeasures.get(node.cl.id)?.get(slot)?.connectedPeerCount ?? "-")
-          .join(","),
-      };
-
-      // TODO: Find a better way to show the heads on each slot
-      // for (const node of this.nodes) {
-      //   record[nodeHeadHeading(node.cl.id)] = this.headPerSlot.get(node.cl.id)?.get(slot) ?? "";
-      // }
-
-      records.push(record);
-
-      if (this.clock.isLastSlotOfEpoch(slot)) {
-        const participation = this.nodes.map((node) => {
-          const participation = this.epochMeasures.get(node.cl.id)?.get(epoch)?.attestationParticipationAvg;
-          if (!participation) return "-";
-          return `${participation.head.toFixed(2)},${participation.source.toFixed(2)},${participation.target.toFixed(
-            2
-          )}`;
-        });
-        const participationUnique = new Set(participation);
-
-        const summary: Record<string, unknown> = {
-          F: forkName,
-          Eph: epoch,
-          slot: "---",
-          "Missed Slots": this.nodes
-            .map((node) => this.epochMeasures.get(node.cl.id)?.get(epoch)?.missedSlots.length)
-            .join(","),
-          "Finalized Slots": Array(this.nodes.length).fill("-").join(""),
-          "Attestations Count": participationUnique.size === 1 ? participation[0] : participation.join(","),
-          "Inclusion Delay": Array(this.nodes.length).fill("-").join(""),
-          "SC Participation": this.nodes
-            .map((node) => this.epochMeasures.get(node.cl.id)?.get(epoch)?.syncCommitteeParticipationAvg ?? "-")
-            .join(","),
-          Peer: Array(this.nodes.length).fill("-").join(""),
-        };
-        records.push(summary);
+      if (typeof match === "object" && match.remove) {
+        this.removeAssertionQueue.push(assertion.id);
       }
     }
 
-    console.table(records);
-    /* eslint-enable @typescript-eslint/naming-convention */
+    this.printTrackerInfo(slot);
+    this.processRemoveAssertionQueue();
+  }
+
+  private processRemoveAssertionQueue(): void {
+    for (const id of this.removeAssertionQueue) {
+      delete this.assertionsMap[id];
+      this.assertions = this.assertions.filter((a) => a.id !== id);
+    }
+    this.removeAssertionQueue = [];
   }
 
   private initEventStreamForNode(node: NodePair): void {

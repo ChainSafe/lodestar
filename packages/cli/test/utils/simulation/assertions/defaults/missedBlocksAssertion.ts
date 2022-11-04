@@ -1,9 +1,9 @@
-import {SimulationAssertion} from "../interfaces.js";
+import {SimulationAssertion} from "../../interfaces.js";
 import {headAssertion} from "./headAssertion.js";
-import {everyEpochMatcher} from "./matchers.js";
+import {everyEpochMatcher} from "../matchers.js";
 
 export const missedBlocksAssertion: SimulationAssertion<"missedBlocks", number[], [typeof headAssertion]> = {
-  key: "missedBlocks",
+  id: "missedBlocks",
   match: everyEpochMatcher,
   dependencies: [headAssertion],
 
@@ -16,7 +16,7 @@ export const missedBlocksAssertion: SimulationAssertion<"missedBlocks", number[]
     const missedSlots: number[] = [];
 
     for (let slot = startSlot; slot < endSlot; slot++) {
-      if (!dependantStores["head"][node.id][slot]) {
+      if (!dependantStores["head"][node.cl.id][slot]) {
         missedSlots.push(slot);
       }
     }

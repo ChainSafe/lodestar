@@ -189,25 +189,27 @@ export type SimulationMatcherInput = {
   forkConfig: IChainForkConfig;
 };
 
-export type AssertionMatcher = (input: SimulationMatcherInput) => boolean;
-export type ExtractAssertionType<T> = T extends SimulationAssertion<any, infer A> ? A : never;
-export type ExtractAssertionKey<T> = T extends SimulationAssertion<infer A, any> ? A : never;
-export type StoreTypes<T extends SimulationAssertion<any, any>[] | undefined> = T extends SimulationAssertion<
-  any,
-  any,
-  any
->[]
-  ? Record<ExtractAssertionKey<T[number]>, Record<NodeId, Record<Slot, ExtractAssertionType<T[number]>>>>
+export type AssertionMatcher = (input: SimulationMatcherInput) => boolean | {match: boolean; remove: boolean};
+export type ExtractAssertionType<T, I> = T extends SimulationAssertion<infer A, infer B>
+  ? A extends I
+    ? B
+    : never
   : never;
-
+export type ExtractAssertionId<T> = T extends SimulationAssertion<infer A, any> ? A : never;
+export type StoreType<AssertionId extends string, Value = unknown> = Record<
+  AssertionId,
+  Record<NodeId, Record<Slot, Value>>
+>;
+export type StoreTypes<T extends SimulationAssertion[], IDs extends string = ExtractAssertionId<T[number]>> = {
+  [Id in IDs]: Record<NodeId, Record<Slot, ExtractAssertionType<T[number], Id>>>;
+};
 export interface SimulationAssertion<
-  KeyType extends string,
-  ValueType,
-  Dependencies extends SimulationAssertion<any, unknown>[] = SimulationAssertion<string, unknown, []>[]
+  IdType extends string = string,
+  ValueType = unknown,
+  Dependencies extends SimulationAssertion[] = SimulationAssertion<string, unknown, any[]>[]
 > {
-  readonly key: KeyType;
+  readonly id: IdType;
   capture?(input: SimulationCaptureInput<ValueType, StoreTypes<Dependencies>>): Promise<ValueType | null>;
-
   match: AssertionMatcher;
   assert(input: SimulationAssertionInput<ValueType, StoreTypes<Dependencies>>): Promise<string[] | null | never>;
   dependencies?: Dependencies;

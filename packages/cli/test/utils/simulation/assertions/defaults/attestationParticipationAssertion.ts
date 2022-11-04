@@ -1,7 +1,7 @@
 import {TIMELY_HEAD_FLAG_INDEX, TIMELY_SOURCE_FLAG_INDEX, TIMELY_TARGET_FLAG_INDEX} from "@lodestar/params";
 import {isActiveValidator} from "@lodestar/state-transition";
 import {altair} from "@lodestar/types";
-import {SimulationAssertion} from "../interfaces.js";
+import {SimulationAssertion} from "../../interfaces.js";
 
 const TIMELY_HEAD = 1 << TIMELY_HEAD_FLAG_INDEX;
 const TIMELY_SOURCE = 1 << TIMELY_SOURCE_FLAG_INDEX;
@@ -13,17 +13,18 @@ export const attestationParticipationAssertion: SimulationAssertion<
   "attestationParticipation",
   {head: number; source: number; target: number}
 > = {
-  key: "attestationParticipation",
+  id: "attestationParticipation",
   match: ({epoch, slot, clock, forkConfig}) => {
     if (epoch < forkConfig.ALTAIR_FORK_EPOCH) return false;
     // Only assert after first slot of an epoch
-    if (clock.getLastSlotOfEpoch(epoch) + 1 !== slot) return false;
+    if (!clock.isFirstSlotOfEpoch(slot)) return false;
+
     return true;
   },
 
   async capture({node, clock, slot, epoch, forkConfig}) {
     // Capture data only when epoch and one extra slot passed
-    if (epoch < forkConfig.ALTAIR_FORK_EPOCH || clock.getLastSlotOfEpoch(epoch) + 1 !== slot) {
+    if (epoch < forkConfig.ALTAIR_FORK_EPOCH || !clock.isFirstSlotOfEpoch(slot)) {
       return null;
     }
 

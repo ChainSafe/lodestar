@@ -1,12 +1,12 @@
 import {ForkName} from "@lodestar/params";
 import {altair} from "@lodestar/types";
-import {SimulationAssertion} from "../interfaces.js";
-import {everyEpochMatcher} from "./matchers.js";
+import {SimulationAssertion} from "../../interfaces.js";
+import {everyEpochMatcher} from "../matchers.js";
 
 export const expectedMinSyncParticipationRate = 0.9;
 
 export const syncCommitteeAssertion: SimulationAssertion<"syncCommitteeParticipation", number> = {
-  key: "syncCommitteeParticipation",
+  id: "syncCommitteeParticipation",
   match: everyEpochMatcher,
   async capture({fork, block}) {
     if (fork === ForkName.phase0) {

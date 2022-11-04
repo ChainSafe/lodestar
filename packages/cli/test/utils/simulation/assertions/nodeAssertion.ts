@@ -1,9 +1,10 @@
 import {routes} from "@lodestar/api/beacon";
 import {SimulationAssertion} from "../interfaces.js";
+import {arrayEquals} from "../utils/index.js";
 import {neverMatcher} from "./matchers.js";
 
 export const nodeAssertion: SimulationAssertion<"node", string> = {
-  key: "node",
+  id: "node",
   // Include into particular test with custom condition
   match: neverMatcher,
   async assert({nodes}) {
@@ -22,7 +23,7 @@ export const nodeAssertion: SimulationAssertion<"node", string> = {
         ...node.cl.localKeys.map((k) => k.toPublicKey().toHex()),
       ].sort();
 
-      if (keyManagerKeys !== existingKeys) {
+      if (!arrayEquals(keyManagerKeys, existingKeys)) {
         errors.push(
           `Validator should have correct number of keys loaded. ${JSON.stringify({
             id: node.cl.id,

@@ -50,9 +50,18 @@ export const getEstimatedTTD = ({
 }): bigint => {
   const secondsTillBellatrix =
     genesisDelay * secondsPerSlot +
-    bellatrixForkEpoch * activePreset.SLOTS_PER_EPOCH * secondsPerSlot +
+    (bellatrixForkEpoch - 1) * activePreset.SLOTS_PER_EPOCH * secondsPerSlot +
     additionalSlots * secondsPerSlot;
 
   return BigInt(Math.ceil(secondsTillBellatrix / cliqueSealingPeriod) * ETH_TTD_INCREMENT);
-
 };
+
+export const squeezeString = (val: string, length: number, sep = "..."): string => {
+  const anchor = Math.floor((length - sep.length) / 2);
+
+  return `${val.slice(0, anchor)}${sep}${val.slice(-anchor)}`;
+};
+
+export function arrayEquals(a: unknown[], b: unknown[]): boolean {
+  return Array.isArray(a) && Array.isArray(b) && a.length === b.length && a.every((val, index) => val === b[index]);
+}
