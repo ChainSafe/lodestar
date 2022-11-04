@@ -85,6 +85,7 @@ type WorkerStatus =
 type WorkerDescriptor = {
   worker: Worker;
   status: WorkerStatus;
+  latency: number;
 };
 
 /**
@@ -206,6 +207,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       const workerDescriptor: WorkerDescriptor = {
         worker,
         status: {code: WorkerStatusCode.notInitialized},
+        latency: 0,
       };
       workers.push(workerDescriptor);
 
@@ -292,8 +294,14 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       return;
     }
 
-    // Find iddle worker
-    const worker = this.workers.find((worker) => worker.status.code === WorkerStatusCode.idle);
+    // Find idle worker with lowest latency
+    // See https://github.com/ChainSafe/lodestar/issues/4653
+    let worker: WorkerDescriptor | undefined = undefined;
+    for (const w of this.workers) {
+      if (w.status.code === WorkerStatusCode.idle && (!worker || w.latency < worker.latency)) {
+        worker = w;
+      }
+    }
     if (!worker || worker.status.code !== WorkerStatusCode.idle) {
       return;
     }
@@ -356,6 +364,8 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       const workerJobTimeSec = Number(workerEndNs - workerStartNs) / 1e9;
       const latencyToWorkerSec = Number(workerStartNs - jobStartNs) / 1e9;
       const latencyFromWorkerSec = Number(jobEndNs - workerEndNs) / 1e9;
+
+      worker.latency = latencyToWorkerSec;
 
       this.metrics?.blsThreadPool.timePerSigSet.observe(workerJobTimeSec / startedSigSets);
       this.metrics?.blsThreadPool.jobsWorkerTime.inc({workerId}, workerJobTimeSec);
