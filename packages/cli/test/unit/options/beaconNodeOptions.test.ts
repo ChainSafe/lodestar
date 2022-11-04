@@ -152,6 +152,7 @@ describe("options / beaconNodeOptions", () => {
         gossipsubDLow: 2,
         gossipsubDHigh: 6,
         gossipsubAwaitHandler: true,
+        mdns: false,
       },
       sync: {
         isSingleNode: true,
