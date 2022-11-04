@@ -65,3 +65,12 @@ export const squeezeString = (val: string, length: number, sep = "..."): string 
 export function arrayEquals(a: unknown[], b: unknown[]): boolean {
   return Array.isArray(a) && Array.isArray(b) && a.length === b.length && a.every((val, index) => val === b[index]);
 }
+
+export const arrayGroupBy = <T>(
+  array: T[],
+  predicate: (value: T, index: number, array: T[]) => string
+): Record<string, T[]> =>
+  array.reduce((acc, value, index, array) => {
+    (acc[predicate(value, index, array)] ||= []).push(value);
+    return acc;
+  }, {} as {[key: string]: T[]});

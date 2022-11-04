@@ -214,3 +214,9 @@ export interface SimulationAssertion<
   assert(input: SimulationAssertionInput<ValueType, StoreTypes<Dependencies>>): Promise<string[] | null | never>;
   dependencies?: Dependencies;
 }
+export interface SimulationAssertionError {
+  slot: Slot;
+  epoch: Epoch;
+  assertionId: string;
+  message: string;
+}

@@ -3,8 +3,8 @@ import {routes} from "@lodestar/api/beacon";
 import {IChainForkConfig} from "@lodestar/config";
 import {Epoch, Slot} from "@lodestar/types";
 import {EpochClock} from "./EpochClock.js";
-import {NodeId, NodePair, SimulationAssertion, StoreType, StoreTypes} from "./interfaces.js";
-import {avg, getForkName, squeezeString} from "./utils/index.js";
+import {NodeId, NodePair, SimulationAssertion, SimulationAssertionError, StoreType, StoreTypes} from "./interfaces.js";
+import {arrayGroupBy, avg, getForkName, squeezeString} from "./utils/index.js";
 import {attestationsCountAssertion} from "./assertions/defaults/attestationCountAssertion.js";
 import {attestationParticipationAssertion} from "./assertions/defaults/attestationParticipationAssertion.js";
 import {connectedPeerCountAssertion} from "./assertions/defaults/connectedPeerCountAssertion.js";
@@ -38,13 +38,13 @@ export class SimulationTracker {
   readonly emitter = new EventEmitter();
   table = new TableRenderer({
     fork: 10,
-    eph: 6,
-    slot: 8,
+    eph: 5,
+    slot: 4,
     head: 15,
-    finalized: 12,
+    finalized: 10,
     peers: 6,
-    attCount: 10,
-    incDelay: 10,
+    attCount: 8,
+    incDelay: 8,
     errors: 10,
   });
 
@@ -56,8 +56,7 @@ export class SimulationTracker {
   private clock: EpochClock;
   private config: IChainForkConfig;
 
-  private errorCount = 0;
-  private errors: Record<Slot, Record<string, string[]>> = {};
+  private errors: SimulationAssertionError[] = [];
   private stores: StoreTypes<typeof defaultAssertions> & StoreType<string, unknown>;
   private assertions: SimulationAssertion[];
   private assertionsMap: Record<string, boolean> = {};
@@ -100,7 +99,7 @@ export class SimulationTracker {
   }
 
   getErrorCount(): number {
-    return this.errorCount;
+    return this.errors.length;
   }
 
   onSlot(slot: Slot, node: NodePair, cb: (slot: Slot) => void): void {
@@ -169,13 +168,13 @@ export class SimulationTracker {
     const peerCount = this.nodes.map((node) => this.stores["connectedPeerCount"][node.cl.id][slot] ?? "-");
     const peerCountUnique = new Set(head);
 
-    const errorCount = Object.values(this.errors[slot]).flat().length;
+    const errorCount = this.errors.filter((e) => e.slot === slot).length;
 
     this.table.addRow({
       fork: forkName,
       eph: epochStr,
       slot: slot,
-      head: headUnique.size === 1 ? squeezeString(head[0], 12) : "different heads",
+      head: headUnique.size === 1 ? squeezeString(head[0], 12) : "different",
       finalized: finalizedSlotsUnique.size === 1 ? finalizedSlots[0] : finalizedSlots.join(","),
       peers: peerCountUnique.size === 1 ? peerCount[0] : peerCount.join(","),
       attCount: attestationCountUnique.size === 1 ? attestationCount[0] : "--",
@@ -185,15 +184,19 @@ export class SimulationTracker {
   }
 
   printErrors(): void {
-    console.log(`├${"─".repeat(10)} Errors (${this.errorCount}) ${"─".repeat(10)}┤`);
-    for (const [slot, errors] of Object.entries(this.errors)) {
-      for (const [assertionKey, assertionErrors] of Object.entries(errors)) {
-        for (let errorIndex = 0; errorIndex < assertionErrors.length; errorIndex++) {
-          if (errorIndex === 0) {
-            console.log(`├─ Slot: ${slot}`);
-            console.log(`├── Assertion: ${assertionKey}`);
-          }
-          console.error(`├──── ${assertionErrors[errorIndex]}`);
+    console.log(`├${"─".repeat(10)} Errors (${this.errors.length}) ${"─".repeat(10)}┤`);
+
+    const groupBySlot = arrayGroupBy(this.errors, (e) => String(e.slot as number));
+
+    for (const [slot, slotErrors] of Object.entries(groupBySlot)) {
+      if (slotErrors.length > 0) console.log(`├─ Slot: ${slot}`);
+      const groupByAssertion = arrayGroupBy(slotErrors, (e) => e.assertionId);
+
+      for (const [assertionId, assertionErrors] of Object.entries(groupByAssertion)) {
+        if (assertionErrors.length > 0) console.log(`├── Assertion: ${assertionId}`);
+
+        for (const error of assertionErrors) {
+          console.error(`├──── ${error}`);
         }
       }
     }
@@ -270,11 +273,8 @@ export class SimulationTracker {
       // We need to wait for all nodes to capture data for that slot
       return;
     }
-    this.errors[slot] = this.errors[slot] ?? {};
 
     for (const assertion of this.assertions) {
-      this.errors[slot][assertion.id] = this.errors[slot][assertion.id] ?? [];
-
       const match = assertion.match({slot, epoch, clock: this.clock, forkConfig: this.config});
       if ((typeof match === "boolean" && match) || (typeof match === "object" && match.match)) {
         try {
@@ -289,12 +289,12 @@ export class SimulationTracker {
             dependantStores: this.stores,
           });
           if (errors) {
-            this.errorCount += errors.length;
-            this.errors[slot][assertion.id].push(...errors);
+            for (const err of errors) {
+              this.errors.push({slot, epoch, assertionId: assertion.id, message: err});
+            }
           }
         } catch (err: unknown) {
-          this.errorCount++;
-          this.errors[slot][assertion.id].push((err as Error).message);
+          this.errors.push({slot, epoch, assertionId: assertion.id, message: (err as Error).message});
         }
       }
 
