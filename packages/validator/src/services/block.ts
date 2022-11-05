@@ -1,14 +1,15 @@
+import {computeAggregateKzgProof} from "c-kzg";
 import {BLSPubkey, Slot, BLSSignature, allForks, bellatrix, isBlindedBeaconBlock, eip4844, ssz} from "@lodestar/types";
 import {IChainForkConfig} from "@lodestar/config";
 import {ForkName, ForkSeq} from "@lodestar/params";
 import {extendError, prettyBytes} from "@lodestar/utils";
 import {toHexString} from "@chainsafe/ssz";
 import {Api} from "@lodestar/api";
-import {Blobs} from "@lodestar/types/eip4844";
+import {Blobs, BlobsSidecar} from "@lodestar/types/eip4844";
+import {blindedOrFullBlockHashTreeRoot} from "@lodestar/state-transition";
 import {IClock, ILoggerVc} from "../util/index.js";
 import {PubkeyHex} from "../types.js";
 import {Metrics} from "../metrics.js";
-import {getBlobsSidecar} from "../util/blobs/polynomialCommitments.js";
 import {ValidatorStore} from "./validatorStore.js";
 import {BlockDutiesService, GENESIS_SLOT} from "./blockDuties.js";
 
@@ -106,7 +107,7 @@ export class BlockProposingService {
 
         const signedBlockWithBlobs = ssz.eip4844.SignedBeaconBlockAndBlobsSidecar.defaultValue();
         signedBlockWithBlobs.beaconBlock = signedBlock as eip4844.SignedBeaconBlock;
-        signedBlockWithBlobs.blobsSidecar = getBlobsSidecar(this.config, block, blobs);
+        signedBlockWithBlobs.blobsSidecar = this.getBlobsSidecar(block, blobs);
 
         // TODO EIP-4844: Blinded blocks??? No clue!
         await this.api.beacon.publishBlockWithBlobs(signedBlockWithBlobs).catch(onPublishError);
@@ -119,6 +120,27 @@ export class BlockProposingService {
     } catch (e) {
       this.logger.error("Error proposing block", logCtx, e as Error);
     }
+  }
+
+  /**
+   * https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/validator.md#sidecar
+   * def get_blobs_sidecar(block: BeaconBlock, blobs: Sequence[Blob]) -> BlobsSidecar:
+   *   return BlobsSidecar(
+   *       beacon_block_root=hash_tree_root(block),
+   *       beacon_block_slot=block.slot,
+   *       blobs=blobs,
+   *       kzg_aggregated_proof=compute_proof_from_blobs(blobs),
+   *   )
+   */
+  private getBlobsSidecar(block: allForks.FullOrBlindedBeaconBlock, blobs: Blobs): BlobsSidecar {
+    const blobsSidecar = ssz.eip4844.BlobsSidecar.defaultValue();
+
+    blobsSidecar.beaconBlockRoot = blindedOrFullBlockHashTreeRoot(this.config, block);
+    blobsSidecar.beaconBlockSlot = block.slot;
+    blobsSidecar.blobs = blobs;
+    blobsSidecar.kzgAggregatedProof = computeAggregateKzgProof(blobs);
+
+    return blobsSidecar;
   }
 
   private publishBlockWrapper = async (signedBlock: allForks.FullOrBlindedSignedBeaconBlock): Promise<void> => {

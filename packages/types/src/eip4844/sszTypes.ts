@@ -1,4 +1,4 @@
-import {ContainerType, ListCompositeType} from "@chainsafe/ssz";
+import {ContainerType, ListCompositeType, ByteVectorType} from "@chainsafe/ssz";
 import {HISTORICAL_ROOTS_LIMIT, FIELD_ELEMENTS_PER_BLOB, MAX_BLOBS_PER_BLOCK} from "@lodestar/params";
 import {ssz as primitiveSsz} from "../primitive/index.js";
 import {ssz as phase0Ssz} from "../phase0/index.js";
@@ -18,12 +18,14 @@ export const BLSFieldElement = Bytes32;
 export const KZGCommitment = Bytes48;
 export const KZGProof = Bytes48;
 
+const BYTES_PER_FIELD_ELEMENT = 32;
+
 // Beacon chain
 
 // Custom types
 // https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/beacon-chain.md#custom-types
 
-export const Blob = new ListCompositeType(BLSFieldElement, FIELD_ELEMENTS_PER_BLOB);
+export const Blob = new ByteVectorType(BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_PER_BLOB);
 export const Blobs = new ListCompositeType(Blob, MAX_BLOBS_PER_BLOCK);
 export const VersionedHash = Bytes32;
 export const BlobKzgCommitments = new ListCompositeType(KZGCommitment, MAX_BLOBS_PER_BLOCK);

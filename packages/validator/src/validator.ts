@@ -1,3 +1,5 @@
+// TODO EIP-4844 Do this (use the trusted setup from Geth)
+// import {loadTrustedSetup} from "c-kzg";
 import {IDatabaseApiOptions} from "@lodestar/db";
 import {BLSPubkey, ssz} from "@lodestar/types";
 import {createIBeaconConfig, IBeaconConfig} from "@lodestar/config";
