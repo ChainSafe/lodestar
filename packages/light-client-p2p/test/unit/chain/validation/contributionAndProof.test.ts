@@ -4,7 +4,7 @@ import {defaultChainConfig} from "@lodestar/config";
 import {BitArray} from "@chainsafe/ssz";
 import {SLOTS_PER_EPOCH, SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
 import {createIChainForkConfig} from "@lodestar/config";
-import {BeaconChain} from "../../../../src/chain/index.js";
+import {LightChain} from "../../../../src/chain/index.js";
 import {LocalClock} from "../../../../src/chain/clock/index.js";
 import {SyncCommitteeErrorCode} from "../../../../src/chain/errors/syncCommitteeError.js";
 import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
@@ -36,7 +36,7 @@ describe.skip("Sync Committee Contribution And Proof validation", function () {
   const aggregatorIndex = 15;
 
   beforeEach(function () {
-    chain = sandbox.createStubInstance(BeaconChain);
+    chain = sandbox.createStubInstance(LightChain);
     (chain as {
       seenContributionAndProof: SeenContributionAndProof;
     }).seenContributionAndProof = new SeenContributionAndProof(null);

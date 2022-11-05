@@ -6,7 +6,7 @@ import {CheckpointWithHex, ForkChoice} from "@lodestar/fork-choice";
 import {phase0, allForks, bellatrix, ssz, RootHex} from "@lodestar/types";
 import {bnToNum} from "@lodestar/utils";
 import {createIBeaconConfig} from "@lodestar/config";
-import {BeaconChain, ChainEvent} from "../../../src/chain/index.js";
+import {LightChain, ChainEvent} from "../../../src/chain/index.js";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {testLogger} from "../../utils/logger.js";
 import {getConfig} from "../utils/getConfig.js";
@@ -51,7 +51,7 @@ export const forkChoiceTest: TestRunnerFn<ForkChoiceTestCase, void> = (fork) => 
           : ZERO_HASH_HEX,
       });
 
-      const chain = new BeaconChain(
+      const chain = new LightChain(
         {
           ...defaultChainOptions,
           // Do not start workers

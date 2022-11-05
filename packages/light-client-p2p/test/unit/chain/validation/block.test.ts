@@ -3,7 +3,7 @@ import {config} from "@lodestar/config/default";
 import {ForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {allForks, ssz} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
-import {BeaconChain} from "../../../../src/chain/index.js";
+import {LightChain} from "../../../../src/chain/index.js";
 import {LocalClock} from "../../../../src/chain/clock/index.js";
 import {StateRegenerator} from "../../../../src/chain/regen/index.js";
 import {validateGossipBlock} from "../../../../src/chain/validation/index.js";
@@ -31,7 +31,7 @@ describe("gossip block validation", function () {
   const maxSkipSlots = 10;
 
   beforeEach(function () {
-    chain = sinon.createStubInstance(BeaconChain);
+    chain = sinon.createStubInstance(LightChain);
     chain.clock = sinon.createStubInstance(LocalClock);
     sinon.stub(chain.clock, "currentSlotWithGossipDisparity").get(() => clockSlot);
     forkChoice = sinon.createStubInstance(ForkChoice);

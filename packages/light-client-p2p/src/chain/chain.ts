@@ -63,7 +63,8 @@ import {AssembledBlockType, BlockType} from "./produceBlock/index.js";
 import {BlockAttributes, produceBlockBody} from "./produceBlock/produceBlockBody.js";
 import {computeNewStateRoot} from "./produceBlock/computeNewStateRoot.js";
 
-export class BeaconChain implements IBeaconChain {
+// TODO DA remove code not needed by light chain and define a proper ILightChain interface
+export class LightChain implements IBeaconChain {
   readonly genesisTime: UintNum64;
   readonly genesisValidatorsRoot: Root;
   readonly eth1: IEth1ForBlockProduction;
@@ -631,11 +632,11 @@ export class BeaconChain implements IBeaconChain {
     }
   }
 
-  private onForkChoiceJustified(this: BeaconChain, cp: CheckpointWithHex): void {
+  private onForkChoiceJustified(this: LightChain, cp: CheckpointWithHex): void {
     this.logger.verbose("Fork choice justified", {epoch: cp.epoch, root: cp.rootHex});
   }
 
-  private onForkChoiceFinalized(this: BeaconChain, cp: CheckpointWithHex): void {
+  private onForkChoiceFinalized(this: LightChain, cp: CheckpointWithHex): void {
     this.logger.verbose("Fork choice finalized", {epoch: cp.epoch, root: cp.rootHex});
     this.seenBlockProposers.prune(computeStartSlotAtEpoch(cp.epoch));
 

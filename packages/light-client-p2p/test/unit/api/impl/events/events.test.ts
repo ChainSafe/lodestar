@@ -2,7 +2,7 @@ import {expect} from "chai";
 import sinon, {SinonStubbedInstance} from "sinon";
 import {routes} from "@lodestar/api";
 import {config} from "@lodestar/config/default";
-import {BeaconChain, ChainEvent, ChainEventEmitter, HeadEventData} from "../../../../../src/chain/index.js";
+import {LightChain, ChainEvent, ChainEventEmitter, HeadEventData} from "../../../../../src/chain/index.js";
 import {getEventsApi} from "../../../../../src/api/impl/events/index.js";
 import {generateProtoBlock, generateEmptySignedBlock, generateSignedBlock} from "../../../../utils/block.js";
 import {generateAttestation, generateEmptySignedVoluntaryExit} from "../../../../utils/attestation.js";
@@ -19,7 +19,7 @@ describe("Events api impl", function () {
     let api: ReturnType<typeof getEventsApi>;
 
     beforeEach(function () {
-      chainStub = sinon.createStubInstance(BeaconChain);
+      chainStub = sinon.createStubInstance(LightChain);
       stateCacheStub = sinon.createStubInstance(StateContextCache);
       chainStub.stateCache = (stateCacheStub as unknown) as StateContextCache;
       chainEventEmmitter = new ChainEventEmitter();

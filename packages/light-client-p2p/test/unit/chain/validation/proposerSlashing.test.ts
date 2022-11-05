@@ -3,7 +3,7 @@ import sinon, {SinonStubbedInstance} from "sinon";
 import {ForkChoice} from "@lodestar/fork-choice";
 import {phase0, ssz} from "@lodestar/types";
 
-import {BeaconChain} from "../../../../src/chain/index.js";
+import {LightChain} from "../../../../src/chain/index.js";
 import {StubbedChainMutable} from "../../../utils/stub/index.js";
 import {generateCachedState} from "../../../utils/state.js";
 import {ProposerSlashingErrorCode} from "../../../../src/chain/errors/proposerSlashingError.js";
@@ -20,7 +20,7 @@ describe("validate proposer slashing", () => {
   let opPool: OpPool & SinonStubbedInstance<OpPool>;
 
   beforeEach(() => {
-    chainStub = sandbox.createStubInstance(BeaconChain) as StubbedChain;
+    chainStub = sandbox.createStubInstance(LightChain) as StubbedChain;
     chainStub.forkChoice = sandbox.createStubInstance(ForkChoice);
     chainStub.bls = new BlsVerifierMock(true);
     opPool = sandbox.createStubInstance(OpPool) as OpPool & SinonStubbedInstance<OpPool>;

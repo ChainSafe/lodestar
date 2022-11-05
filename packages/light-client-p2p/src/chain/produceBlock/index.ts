@@ -5,13 +5,13 @@ import {fromHexString} from "@chainsafe/ssz";
 import {ZERO_HASH} from "../../constants/index.js";
 import {IMetrics} from "../../metrics/index.js";
 import {RegenCaller} from "../regen/index.js";
-import type {BeaconChain} from "../chain.js";
+import type {LightChain} from "../chain.js";
 import {produceBlockBody, BlockType, AssembledBlockType, BlockAttributes} from "./produceBlockBody.js";
 
 export {BlockType, AssembledBlockType};
 
 export async function produceBlock<T extends BlockType>(
-  this: BeaconChain,
+  this: LightChain,
   blockType: T,
   {randaoReveal, graffiti, slot}: BlockAttributes
 ): Promise<AssembledBlockType<T>> {

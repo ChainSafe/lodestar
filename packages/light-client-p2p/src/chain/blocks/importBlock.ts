@@ -14,7 +14,7 @@ import {isOptimsticBlock} from "../../util/forkChoice.js";
 import {ChainEvent} from "../emitter.js";
 import {REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC} from "../reprocess.js";
 import {RegenCaller} from "../regen/interface.js";
-import type {BeaconChain} from "../chain.js";
+import type {LightChain} from "../chain.js";
 import {FullyVerifiedBlock, ImportBlockOpts} from "./types.js";
 import {PendingEvents} from "./utils/pendingEvents.js";
 import {getCheckpointFromState} from "./utils/checkpoint.js";
@@ -44,7 +44,7 @@ const FORK_CHOICE_ATT_EPOCH_LIMIT = 1;
  * - Send events after everything is done
  */
 export async function importBlock(
-  this: BeaconChain,
+  this: LightChain,
   fullyVerifiedBlock: FullyVerifiedBlock,
   opts: ImportBlockOpts
 ): Promise<void> {

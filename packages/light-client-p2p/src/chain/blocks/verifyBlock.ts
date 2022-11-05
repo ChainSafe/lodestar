@@ -7,7 +7,7 @@ import {ILogger} from "@lodestar/utils";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
 import {RegenCaller} from "../regen/index.js";
-import type {BeaconChain} from "../chain.js";
+import type {LightChain} from "../chain.js";
 import {ImportBlockOpts} from "./types.js";
 import {POS_PANDA_MERGE_TRANSITION_BANNER} from "./utils/pandaMergeTransitionBanner.js";
 import {verifyBlocksStateTransitionOnly} from "./verifyBlocksStateTransitionOnly.js";
@@ -26,7 +26,7 @@ import {verifyBlocksExecutionPayload, SegmentExecStatus} from "./verifyBlocksExe
  * If there's an error during one of the steps, the rest are aborted with an AbortController.
  */
 export async function verifyBlocksInEpoch(
-  this: BeaconChain,
+  this: LightChain,
   parentBlock: ProtoBlock,
   blocks: allForks.SignedBeaconBlock[],
   opts: BlockProcessOpts & ImportBlockOpts

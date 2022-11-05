@@ -7,7 +7,7 @@ import {getLatestWeakSubjectivityCheckpointEpoch} from "@lodestar/state-transiti
 import {toHexString} from "@chainsafe/ssz";
 import {IChainForkConfig} from "@lodestar/config";
 import {ssz} from "@lodestar/types";
-import {BeaconChain} from "../../../chain/index.js";
+import {LightChain} from "../../../chain/index.js";
 import {QueuedStateRegenerator, RegenRequest} from "../../../chain/regen/index.js";
 import {GossipType} from "../../../network/index.js";
 import {IBeaconDb} from "../../../db/interface.js";
@@ -86,7 +86,7 @@ export function getLodestarApi({
     },
 
     async getBlockProcessorQueueItems() {
-      return (chain as BeaconChain)["blockProcessor"].jobQueue.getItems().map((item) => {
+      return (chain as LightChain)["blockProcessor"].jobQueue.getItems().map((item) => {
         const [blocks, opts] = item.args;
         return {
           blockSlots: blocks.map((block) => block.message.slot),
@@ -97,11 +97,11 @@ export function getLodestarApi({
     },
 
     async getStateCacheItems() {
-      return (chain as BeaconChain)["stateCache"].dumpSummary();
+      return (chain as LightChain)["stateCache"].dumpSummary();
     },
 
     async getCheckpointStateCacheItems() {
-      return (chain as BeaconChain)["checkpointStateCache"].dumpSummary();
+      return (chain as LightChain)["checkpointStateCache"].dumpSummary();
     },
 
     async getGossipPeerScoreStats() {

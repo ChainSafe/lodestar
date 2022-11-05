@@ -5,7 +5,7 @@ import {JobItemQueue} from "../../util/queue/index.js";
 import {IMetrics} from "../../metrics/metrics.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
-import type {BeaconChain} from "../chain.js";
+import type {LightChain} from "../chain.js";
 import {verifyBlocksInEpoch} from "./verifyBlock.js";
 import {importBlock} from "./importBlock.js";
 import {assertLinearChainSegment} from "./utils/chainSegment.js";
@@ -21,7 +21,7 @@ const QUEUE_MAX_LENGHT = 256;
 export class BlockProcessor {
   readonly jobQueue: JobItemQueue<[allForks.SignedBeaconBlock[], ImportBlockOpts], void>;
 
-  constructor(chain: BeaconChain, metrics: IMetrics | null, opts: BlockProcessOpts, signal: AbortSignal) {
+  constructor(chain: LightChain, metrics: IMetrics | null, opts: BlockProcessOpts, signal: AbortSignal) {
     this.jobQueue = new JobItemQueue<[allForks.SignedBeaconBlock[], ImportBlockOpts], void>(
       (job, importOpts) => {
         return processBlocks.call(chain, job, {...opts, ...importOpts});
@@ -47,7 +47,7 @@ export class BlockProcessor {
  * All other effects are provided by downstream event handlers
  */
 export async function processBlocks(
-  this: BeaconChain,
+  this: LightChain,
   blocks: allForks.SignedBeaconBlock[],
   opts: BlockProcessOpts & ImportBlockOpts
 ): Promise<void> {

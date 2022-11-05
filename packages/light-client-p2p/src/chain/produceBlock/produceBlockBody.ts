@@ -25,7 +25,7 @@ import {IChainForkConfig} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
 import {toHex, sleep} from "@lodestar/utils";
 
-import type {BeaconChain} from "../chain.js";
+import type {LightChain} from "../chain.js";
 import {PayloadId, IExecutionEngine, IExecutionBuilder} from "../../execution/index.js";
 import {ZERO_HASH, ZERO_HASH_HEX} from "../../constants/index.js";
 import {IEth1ForBlockProduction} from "../../eth1/index.js";
@@ -57,7 +57,7 @@ export type AssembledBlockType<T extends BlockType> = T extends BlockType.Full
   : allForks.BlindedBeaconBlock;
 
 export async function produceBlockBody<T extends BlockType>(
-  this: BeaconChain,
+  this: LightChain,
   blockType: T,
   currentState: CachedBeaconStateAllForks,
   {

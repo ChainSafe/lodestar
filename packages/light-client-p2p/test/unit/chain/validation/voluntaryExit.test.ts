@@ -14,7 +14,7 @@ import {DOMAIN_VOLUNTARY_EXIT, FAR_FUTURE_EPOCH, SLOTS_PER_EPOCH} from "@lodesta
 import bls from "@chainsafe/bls";
 import {PointFormat} from "@chainsafe/bls/types";
 import {createIBeaconConfig} from "@lodestar/config";
-import {BeaconChain} from "../../../../src/chain/index.js";
+import {LightChain} from "../../../../src/chain/index.js";
 import {StubbedChainMutable} from "../../../utils/stub/index.js";
 import {generateState} from "../../../utils/state.js";
 import {validateGossipVoluntaryExit} from "../../../../src/chain/validation/voluntaryExit.js";
@@ -71,7 +71,7 @@ describe("validate voluntary exit", () => {
   });
 
   beforeEach(() => {
-    chainStub = sandbox.createStubInstance(BeaconChain) as StubbedChain;
+    chainStub = sandbox.createStubInstance(LightChain) as StubbedChain;
     chainStub.forkChoice = sandbox.createStubInstance(ForkChoice);
     opPool = sandbox.createStubInstance(OpPool) as OpPool & SinonStubbedInstance<OpPool>;
     (chainStub as {opPool: OpPool}).opPool = opPool;

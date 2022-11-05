@@ -14,7 +14,7 @@ import {IBeaconDb} from "../db/index.js";
 import {INetwork, Network, getReqRespHandlers} from "../network/index.js";
 import {BeaconSync, IBeaconSync} from "../sync/index.js";
 import {LightSync} from "../sync/lightSync/index.js";
-import {BeaconChain, IBeaconChain, initBeaconMetrics} from "../chain/index.js";
+import {LightChain, IBeaconChain, initBeaconMetrics} from "../chain/index.js";
 import {createMetrics, IMetrics, HttpMetricsServer} from "../metrics/index.js";
 import {getApi, BeaconRestApiServer} from "../api/index.js";
 import {initializeExecutionEngine, initializeExecutionBuilder} from "../execution/index.js";
@@ -163,7 +163,7 @@ export class BeaconNodeLight {
       createLibp2pMetrics(libp2p, metrics.register);
     }
 
-    const chain = new BeaconChain(opts.chain, {
+    const chain = new LightChain(opts.chain, {
       config,
       db,
       logger: logger.child({module: LoggerModule.chain}),
@@ -231,6 +231,7 @@ export class BeaconNodeLight {
         },
       },
       {
+        chain,
         config,
         db,
         metrics,

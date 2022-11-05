@@ -10,7 +10,7 @@ import {
   getNetworkCachedBlock,
 } from "../../../../state-transition/test/utils/index.js";
 import {rangeSyncTest} from "../../../../state-transition/test/perf/params.js";
-import {BeaconChain} from "../../../src/chain/index.js";
+import {LightChain} from "../../../src/chain/index.js";
 import {ExecutionEngineDisabled} from "../../../src/execution/engine/index.js";
 import {Eth1ForBlockProductionDisabled} from "../../../src/eth1/index.js";
 import {testLogger} from "../../utils/logger.js";
@@ -77,7 +77,7 @@ describe.skip("verify+import blocks - range sync perf test", () => {
     timeoutBench: 10 * 60 * 1000 + 16_000 * 5,
     beforeEach: async () => {
       const state = stateOg.value.clone();
-      const chain = new BeaconChain(
+      const chain = new LightChain(
         {
           proposerBoostEnabled: true,
           computeUnrealized: false,

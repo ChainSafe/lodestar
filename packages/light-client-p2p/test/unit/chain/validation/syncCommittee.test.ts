@@ -3,7 +3,7 @@ import {SinonStubbedInstance} from "sinon";
 import {Epoch} from "@lodestar/types";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {createIChainForkConfig, defaultChainConfig} from "@lodestar/config";
-import {BeaconChain} from "../../../../src/chain/index.js";
+import {LightChain} from "../../../../src/chain/index.js";
 import {LocalClock} from "../../../../src/chain/clock/index.js";
 import {SyncCommitteeErrorCode} from "../../../../src/chain/errors/syncCommitteeError.js";
 import {validateGossipSyncCommittee} from "../../../../src/chain/validation/syncCommittee.js";
@@ -40,7 +40,7 @@ describe("Sync Committee Signature validation", function () {
   });
 
   beforeEach(function () {
-    chain = sandbox.createStubInstance(BeaconChain);
+    chain = sandbox.createStubInstance(LightChain);
     (chain as {
       seenSyncCommitteeMessages: SeenSyncCommitteeMessages;
     }).seenSyncCommitteeMessages = new SeenSyncCommitteeMessages();
