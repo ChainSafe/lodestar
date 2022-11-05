@@ -476,12 +476,18 @@ export class LightSync extends (EventEmitter as {new (): BackfillSyncEmitter}) {
     ) {
       // TODO: Do metrics for each case (advance vs replace same slot)
       const prevHead = this.head;
+
       this.head = {
         header: attestedHeader,
         participation,
         blockRoot: headerBlockRootHex,
-        block: await this.fetchBlock(headerBlockRoot),
       };
+
+      // fetch block
+      const block = await this.fetchBlock(headerBlockRoot);
+      if (block !== undefined) {
+        this.head.block = block;
+      }
 
       // This is not an error, but a problematic network condition worth knowing about
       if (this.head.header.slot === prevHead.header.slot && prevHead.blockRoot !== headerBlockRootHex) {
@@ -539,8 +545,13 @@ export class LightSync extends (EventEmitter as {new (): BackfillSyncEmitter}) {
         header: finalizedHeader,
         participation,
         blockRoot: finalizedBlockRootHex,
-        block: await this.fetchBlock(finalizedBlockRoot),
       };
+
+      // fetch block
+      let block = await this.fetchBlock(finalizedBlockRoot);
+      if (block !== undefined) {
+        this.finalized.block = block;
+      }
 
       // This is not an error, but a problematic network condition worth knowing about
       if (
