@@ -501,6 +501,9 @@ export class LightSync extends (EventEmitter as {new (): BackfillSyncEmitter}) {
         root: headerBlockRootHex,
       });
 
+      // notify execution layer
+      await this.notifyUpdatePayload();
+
       // persist optimistic header for slot
       await this.db.lightClientOptimisticUpdate.put(attestedHeader.slot, headerUpdate);
 
@@ -509,9 +512,6 @@ export class LightSync extends (EventEmitter as {new (): BackfillSyncEmitter}) {
       // [IGNORE] The optimistic_update either matches corresponding fields of the most recently forwarded
       // LightClientFinalityUpdate (if any), or it advances the optimistic_header of the local LightClientStore -- i.e. validate that processing optimistic_update increases store.optimistic_header.slot
       await this.network.gossip.publishLightClientOptimisticUpdate(headerUpdate);
-
-      // notify execution layer
-      await this.notifyUpdatePayload();
     } else {
       this.logger.info("Received valid head update did not update head", {
         currentHead: `${this.head.header.slot} ${this.head.blockRoot}`,
@@ -569,6 +569,9 @@ export class LightSync extends (EventEmitter as {new (): BackfillSyncEmitter}) {
         root: finalizedBlockRootHex,
       });
 
+      // notify execution layer
+      await this.notifyUpdatePayload();
+
       // persist optimistic header for slot
       // TODO DA keyed by attested header slot or finalized slot
       await this.db.lightClientFinalityUpdate.put(finalizedUpdate.attestedHeader.slot, finalizedUpdate);
@@ -577,9 +580,6 @@ export class LightSync extends (EventEmitter as {new (): BackfillSyncEmitter}) {
       // [IGNORE] The finality_update advances the finalized_header of the local LightClientStore
       // -- i.e. validate that processing finality_update increases store.finalized_header.slot
       await this.network.gossip.publishLightClientFinalityUpdate(finalizedUpdate);
-
-      // update EL
-      await this.notifyUpdatePayload();
     } else {
       this.logger.info("Received valid finalized update did not update finalized", {
         currentHead: `${this.finalized.header.slot} ${this.finalized.blockRoot}`,
