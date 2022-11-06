@@ -501,9 +501,6 @@ export class LightSync extends (EventEmitter as {new (): BackfillSyncEmitter}) {
         root: headerBlockRootHex,
       });
 
-      // notify execution layer
-      await this.notifyUpdatePayload();
-
       // persist optimistic header for slot
       await this.db.lightClientOptimisticUpdate.put(attestedHeader.slot, headerUpdate);
 
@@ -573,9 +570,6 @@ export class LightSync extends (EventEmitter as {new (): BackfillSyncEmitter}) {
         root: finalizedBlockRootHex,
       });
 
-      // notify execution layer
-      await this.notifyUpdatePayload();
-
       // persist optimistic header for slot
       // TODO DA keyed by attested header slot or finalized slot
       await this.db.lightClientFinalityUpdate.put(finalizedUpdate.attestedHeader.slot, finalizedUpdate);
@@ -612,7 +606,12 @@ export class LightSync extends (EventEmitter as {new (): BackfillSyncEmitter}) {
         bodyRoot: toHexString(data.attestedHeader.bodyRoot),
         signatureSlot: data.signatureSlot,
       });
+
+      // update states and try broadcasting via gossip
       await this.processOptimisticUpdate(data);
+
+      // notify execution layer
+      await this.notifyUpdatePayload();
     } else if (msg.topic === finalityUpdateTopic) {
       const data = ssz.altair.LightClientFinalityUpdate.deserialize(msg.data);
       this.logger.info("Retrieved LightClientFinalityUpdate via gossip", {
@@ -620,7 +619,12 @@ export class LightSync extends (EventEmitter as {new (): BackfillSyncEmitter}) {
         bodyRoot: toHexString(data.attestedHeader.bodyRoot),
         signatureSlot: data.signatureSlot,
       });
+
+      // update states and try broadcasting via gossip
       await this.processFinalizedUpdate(data);
+
+      // notify execution layer
+      await this.notifyUpdatePayload();
     } else {
       this.logger.info("not processing", msg.topic);
     }
