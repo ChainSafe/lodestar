@@ -204,6 +204,11 @@ export async function produceBlockBody<T extends BlockType>(
     }
   }
 
+  if (forkInfo.seq >= ForkSeq.capella) {
+    // TODO: blsToExecutionChanges should be passed in the produceBlock call
+    (blockBody as capella.BeaconBlockBody).blsToExecutionChanges = [];
+  }
+
   return blockBody as AssembledBodyType<T>;
 }
 
