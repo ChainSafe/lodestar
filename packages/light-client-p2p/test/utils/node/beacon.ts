@@ -104,6 +104,7 @@ export async function getDevBeaconNode(
     libp2p,
     anchorState,
     wsCheckpoint: opts.wsCheckpoint,
+    lcCheckpointRoot: "",
   });
 }
 

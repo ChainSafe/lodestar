@@ -17,6 +17,11 @@ import {
 } from "../../../src/db/repositories/index.js";
 import {PreGenesisState, PreGenesisStateLastProcessedBlock} from "../../../src/db/single/index.js";
 import {createStubInstance} from "../types.js";
+import {
+  LightClientBootstrapRepository,
+  LightClientFinalityUpdateRepository,
+  LightClientOptimisticUpdateRepository, LightClientUpdateRepository
+} from "../../../lib/db/repositories";
 
 /* eslint-disable @typescript-eslint/no-empty-function */
 
@@ -25,6 +30,10 @@ import {createStubInstance} from "../types.js";
  */
 export function getStubbedBeaconDb(): IBeaconDb {
   return {
+    lightClientBootstrap: createStubInstance(LightClientBootstrapRepository),
+    lightClientFinalityUpdate: createStubInstance(LightClientFinalityUpdateRepository),
+    lightClientOptimisticUpdate: createStubInstance(LightClientOptimisticUpdateRepository),
+    lightClientUpdate: createStubInstance(LightClientUpdateRepository),
     // unfinalized blocks
     block: createStubInstance(BlockRepository),
 
@@ -61,6 +70,6 @@ export function getStubbedBeaconDb(): IBeaconDb {
     /**  Stop the connection to the db instance and close the db store. */
     async stop(): Promise<void> {},
     /** To inject metrics after CLI initialization */
-    setMetrics(): void {},
+    setMetrics(): void {}
   };
 }
