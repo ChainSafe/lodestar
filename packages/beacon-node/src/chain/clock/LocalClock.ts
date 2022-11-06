@@ -152,8 +152,8 @@ export class LocalClock implements IBeaconClock {
   };
 
   private msUntilNextSlot(): number {
-    const miliSecondsPerSlot = this.config.SECONDS_PER_SLOT * 1000;
-    const diffInMiliSeconds = Date.now() - this.genesisTime * 1000;
-    return miliSecondsPerSlot - (diffInMiliSeconds % miliSecondsPerSlot);
+    const milliSecondsPerSlot = this.config.SECONDS_PER_SLOT * 1000;
+    const diffInMilliSeconds = Date.now() - this.genesisTime * 1000;
+    return milliSecondsPerSlot - (diffInMilliSeconds % milliSecondsPerSlot);
   }
 }

@@ -30,7 +30,7 @@ export function createMetrics(
     validatorMonitor.scrapeMetrics(clockSlot);
   });
   process.on("unhandledRejection", (_error) => {
-    lodestar.unhandeledPromiseRejections.inc();
+    lodestar.unhandledPromiseRejections.inc();
   });
 
   collectNodeJSMetrics(register);

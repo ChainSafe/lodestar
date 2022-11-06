@@ -928,7 +928,7 @@
       "targets": [
         {
           "exemplar": false,
-          "expr": "rate(lodestar_unhandeled_promise_rejections_total[$rate_interval])",
+          "expr": "rate(lodestar_unhandled_promise_rejections_total[$rate_interval])",
           "interval": "",
           "legendFormat": "Errors",
           "refId": "A"
@@ -1942,7 +1942,7 @@
               {
                 "matcher": {
                   "id": "byName",
-                  "options": "Avaliable"
+                  "options": "Available"
                 },
                 "properties": [
                   {

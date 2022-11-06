@@ -80,7 +80,7 @@ export class ForkChoice implements IForkChoice {
 
   // Note: as of Jun 2022 Lodestar metrics show that 100% of the times updateHead() is called, synced = false.
   // Because we are processing attestations from gossip, recomputing scores is always necessary
-  // /** Avoid having to compute detas all the times. */
+  // /** Avoid having to compute deltas all the times. */
   // private synced = false;
 
   /** Cached head */
@@ -201,7 +201,7 @@ export class ForkChoice implements IForkChoice {
       this.fcStore.equivocatingIndices
     );
     /**
-     * The structure in line with deltas to propogate boost up the branch
+     * The structure in line with deltas to propagate boost up the branch
      * starting from the proposerIndex
      */
     let proposerBoost: {root: RootHex; score: number} | null = null;
@@ -247,7 +247,7 @@ export class ForkChoice implements IForkChoice {
   }
 
   /**
-   * An iteration over protoArray to get present slots, to be called pre-emptively
+   * An iteration over protoArray to get present slots, to be called preemptively
    * from prepareNextSlot to prevent delay on produceBlindedBlock
    * @param windowStart is the slot after which (excluding) to provide present slots
    */
@@ -775,7 +775,7 @@ export class ForkChoice implements IForkChoice {
   }
 
   /**
-   * Optimistic sync validate till validated latest hash, invalidate any decendant
+   * Optimistic sync validate till validated latest hash, invalidate any descendant
    * branch if invalidate till hash provided
    *
    * Proxies to protoArray's validateLatestHash and could run extra validations for the
@@ -930,7 +930,7 @@ export class ForkChoice implements IForkChoice {
    * May need the justified balances of:
    * - bestJustified: Already available in `CheckpointHexWithBalance`
    * - unrealizedJustified: Already available in `CheckpointHexWithBalance`
-   * Since this balances are already available the getter is just `() => balances`, without cache iteraction
+   * Since this balances are already available the getter is just `() => balances`, without cache interaction
    */
   private updateCheckpoints(
     stateSlot: Slot,

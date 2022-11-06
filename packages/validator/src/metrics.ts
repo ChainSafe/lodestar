@@ -343,7 +343,7 @@ export function getMetrics(register: MetricsRegister, gitData: LodestarGitData) 
     keymanagerApiRest: {
       responseTime: register.histogram<{operationId: string}>({
         name: "vc_keymanager_api_rest_response_time_seconds",
-        help: "REST API time to fullfill a request by operationId",
+        help: "REST API time to fulfill a request by operationId",
         labelNames: ["operationId"],
         // Request times range between 1ms to 100ms in normal conditions. Can get to 1-5 seconds if overloaded
         buckets: [0.01, 0.1, 1],

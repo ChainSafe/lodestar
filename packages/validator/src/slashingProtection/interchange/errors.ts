@@ -10,7 +10,7 @@ export enum InterchangeErrorErrorCode {
 type InterchangeErrorErrorType =
   | {code: InterchangeErrorErrorCode.UNSUPPORTED_FORMAT; format: string}
   | {code: InterchangeErrorErrorCode.UNSUPPORTED_VERSION; version: string}
-  | {code: InterchangeErrorErrorCode.GENESIS_VALIDATOR_MISMATCH; root: Root; extectedRoot: Root};
+  | {code: InterchangeErrorErrorCode.GENESIS_VALIDATOR_MISMATCH; root: Root; expectedRoot: Root};
 
 export class InterchangeError extends LodestarError<InterchangeErrorErrorType> {
   constructor(type: InterchangeErrorErrorType) {

@@ -18,10 +18,10 @@ const MAX_SCORE = 100;
 const MIN_SCORE = -100;
 /** Drop score if absolute value is below this threshold */
 const SCORE_THRESHOLD = 1;
-/** The halflife of a peer's score. I.e the number of miliseconds it takes for the score to decay to half its value */
+/** The halflife of a peer's score. I.e the number of milliseconds it takes for the score to decay to half its value */
 const SCORE_HALFLIFE_MS = 10 * 60 * 1000;
 const HALFLIFE_DECAY_MS = -Math.log(2) / SCORE_HALFLIFE_MS;
-/** The number of miliseconds we ban a peer for before their score begins to decay */
+/** The number of milliseconds we ban a peer for before their score begins to decay */
 const BANNED_BEFORE_DECAY_MS = 30 * 60 * 1000;
 /** Limit of entries in the scores map */
 const MAX_ENTRIES = 1000;

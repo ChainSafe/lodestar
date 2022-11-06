@@ -70,7 +70,7 @@ export class Clock implements IClock {
     this.fns.push({timeItem: TimeItem.Epoch, fn});
   }
 
-  /** Miliseconds from now to a specific slot */
+  /** Milliseconds from now to a specific slot */
   msToSlot(slot: Slot): number {
     const timeAt = this.genesisTime + this.config.SECONDS_PER_SLOT * slot;
     return timeAt * 1000 - Date.now();
@@ -88,7 +88,7 @@ export class Clock implements IClock {
    * on an overloaded/latent system rather than overload it even more.
    */
   private async runAtMostEvery(timeItem: TimeItem, signal: AbortSignal, fn: RunEveryFn): Promise<void> {
-    // Run immediatelly first
+    // Run immediately first
     let slot = getCurrentSlot(this.config, this.genesisTime);
     let slotOrEpoch = timeItem === TimeItem.Slot ? slot : computeEpochAtSlot(slot);
     while (!signal.aborted) {
@@ -113,21 +113,21 @@ export class Clock implements IClock {
   }
 
   private timeUntilNext(timeItem: TimeItem): number {
-    const miliSecondsPerSlot = this.config.SECONDS_PER_SLOT * 1000;
+    const milliSecondsPerSlot = this.config.SECONDS_PER_SLOT * 1000;
     const msFromGenesis = Date.now() - this.genesisTime * 1000;
 
     if (timeItem === TimeItem.Slot) {
       if (msFromGenesis >= 0) {
-        return miliSecondsPerSlot - (msFromGenesis % miliSecondsPerSlot);
+        return milliSecondsPerSlot - (msFromGenesis % milliSecondsPerSlot);
       } else {
-        return Math.abs(msFromGenesis % miliSecondsPerSlot);
+        return Math.abs(msFromGenesis % milliSecondsPerSlot);
       }
     } else {
-      const miliSecondsPerEpoch = SLOTS_PER_EPOCH * miliSecondsPerSlot;
+      const milliSecondsPerEpoch = SLOTS_PER_EPOCH * milliSecondsPerSlot;
       if (msFromGenesis >= 0) {
-        return miliSecondsPerEpoch - (msFromGenesis % miliSecondsPerEpoch);
+        return milliSecondsPerEpoch - (msFromGenesis % milliSecondsPerEpoch);
       } else {
-        return Math.abs(msFromGenesis % miliSecondsPerEpoch);
+        return Math.abs(msFromGenesis % milliSecondsPerEpoch);
       }
     }
   }

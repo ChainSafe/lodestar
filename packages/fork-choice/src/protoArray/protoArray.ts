@@ -246,7 +246,7 @@ export class ProtoArray {
   }
 
   /**
-   * Optimistic sync validate till validated latest hash, invalidate any decendant branch
+   * Optimistic sync validate till validated latest hash, invalidate any descendant branch
    * if invalidate till hash provided. If consensus fails, this will invalidate entire
    * forkChoice which will throw on any call to findHead
    */
@@ -362,7 +362,7 @@ export class ProtoArray {
       const node = this.getNodeFromIndex(nodeIndex);
       const parent = node.parent !== undefined ? this.getNodeByIndex(node.parent) : undefined;
       // Only invalidate if this is post merge, and either parent is invalid or the
-      // concensus has failed
+      // consensus has failed
       if (parent?.executionStatus === ExecutionStatus.Invalid) {
         // check and flip node status to invalid
         this.invalidateNodeByIndex(nodeIndex);

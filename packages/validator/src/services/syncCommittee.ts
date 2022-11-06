@@ -50,7 +50,7 @@ export class SyncCommitteeService {
         return;
       }
 
-      // Fetch info first so a potential delay is absorved by the sleep() below
+      // Fetch info first so a potential delay is absorbed by the sleep() below
       const dutiesAtSlot = await this.dutiesService.getDutiesAtSlot(slot);
       if (dutiesAtSlot.length === 0) {
         return;
@@ -72,7 +72,7 @@ export class SyncCommitteeService {
       this.metrics?.syncCommitteeStepCallProduceAggregate.observe(this.clock.secFromSlot(slot + 2 / 3));
 
       // await for all so if the Beacon node is overloaded it auto-throttles
-      // TODO: This approach is convervative to reduce the node's load, review
+      // TODO: This approach is conservative to reduce the node's load, review
       const dutiesBySubcommitteeIndex = groupSyncDutiesBySubcommitteeIndex(dutiesAtSlot);
       await Promise.all(
         Array.from(dutiesBySubcommitteeIndex.entries()).map(async ([subcommitteeIndex, duties]) => {

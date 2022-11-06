@@ -78,7 +78,7 @@ describe("BlockDutiesService", function () {
 
     const notifyBlockProductionFn = sinon.stub(); // Returns void
 
-    // Clock will call runAttesterDutiesTasks() immediatelly
+    // Clock will call runAttesterDutiesTasks() immediately
     const clock = new ClockMock();
     const dutiesService = new BlockDutiesService(loggerVc, api, clock, validatorStore, null, notifyBlockProductionFn);
 

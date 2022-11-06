@@ -35,11 +35,11 @@ export function computeSyncPeriodAtEpoch(epoch: Epoch): SyncPeriod {
 }
 
 export function timeUntilNextEpoch(config: Pick<IChainConfig, "SECONDS_PER_SLOT">, genesisTime: number): number {
-  const miliSecondsPerEpoch = SLOTS_PER_EPOCH * config.SECONDS_PER_SLOT * 1000;
+  const milliSecondsPerEpoch = SLOTS_PER_EPOCH * config.SECONDS_PER_SLOT * 1000;
   const msFromGenesis = Date.now() - genesisTime * 1000;
   if (msFromGenesis >= 0) {
-    return miliSecondsPerEpoch - (msFromGenesis % miliSecondsPerEpoch);
+    return milliSecondsPerEpoch - (msFromGenesis % milliSecondsPerEpoch);
   } else {
-    return Math.abs(msFromGenesis % miliSecondsPerEpoch);
+    return Math.abs(msFromGenesis % milliSecondsPerEpoch);
   }
 }
