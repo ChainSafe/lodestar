@@ -511,7 +511,11 @@ export class LightSync extends (EventEmitter as {new (): BackfillSyncEmitter}) {
       // [REJECT] The optimistic_update is valid -- i.e. validate that process_light_client_optimistic_update does not indicate errors
       // [IGNORE] The optimistic_update either matches corresponding fields of the most recently forwarded
       // LightClientFinalityUpdate (if any), or it advances the optimistic_header of the local LightClientStore -- i.e. validate that processing optimistic_update increases store.optimistic_header.slot
-      await this.network.gossip.publishLightClientOptimisticUpdate(headerUpdate);
+      try {
+        await this.network.gossip.publishLightClientOptimisticUpdate(headerUpdate);
+      } catch (e) {
+        this.logger.error("Error gossiping lightClientOptimistic Update", {}, e as Error);
+      }
     } else {
       this.logger.info("Received valid head update did not update head", {
         currentHead: `${this.head.header.slot} ${this.head.blockRoot}`,
@@ -579,7 +583,11 @@ export class LightSync extends (EventEmitter as {new (): BackfillSyncEmitter}) {
       // [REJECT] The finality_update is valid -- i.e. validate that process_light_client_finality_update does not indicate errors
       // [IGNORE] The finality_update advances the finalized_header of the local LightClientStore
       // -- i.e. validate that processing finality_update increases store.finalized_header.slot
-      await this.network.gossip.publishLightClientFinalityUpdate(finalizedUpdate);
+      try {
+        await this.network.gossip.publishLightClientFinalityUpdate(finalizedUpdate);
+      } catch (e) {
+        this.logger.error("Error gossiping lightClientFinality Update", {}, e as Error);
+      }
     } else {
       this.logger.info("Received valid finalized update did not update finalized", {
         currentHead: `${this.finalized.header.slot} ${this.finalized.blockRoot}`,
@@ -607,7 +615,7 @@ export class LightSync extends (EventEmitter as {new (): BackfillSyncEmitter}) {
       await this.processOptimisticUpdate(data);
     } else if (msg.topic === finalityUpdateTopic) {
       const data = ssz.altair.LightClientFinalityUpdate.deserialize(msg.data);
-      this.logger.info("Retrieved LightClientOptimisticUpdate via gossip", {
+      this.logger.info("Retrieved LightClientFinalityUpdate via gossip", {
         stateRoot: toHexString(data.attestedHeader.stateRoot),
         bodyRoot: toHexString(data.attestedHeader.bodyRoot),
         signatureSlot: data.signatureSlot,
