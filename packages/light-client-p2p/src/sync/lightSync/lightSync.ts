@@ -215,14 +215,9 @@ export class LightSync extends (EventEmitter as {new (): BackfillSyncEmitter}) {
 
         // Fetch latest optimistic head to prevent a potential 12 seconds lag between syncing and getting the first head,
         // Don't retry, this is a non-critical UX improvement
-        try {
-          const peer = this.getPeer();
-          if (peer) {
-            const latestOptimisticUpdate = await this.network.reqResp.lightClientOptimisticUpdate(peer);
-            await this.processOptimisticUpdate(latestOptimisticUpdate);
-          }
-        } catch (e) {
-          this.logger.error("Error fetching getLatestHeadUpdate", {currentPeriod}, e as Error);
+        const latestOptimisticUpdate = await this.fetchLightClientOptimisticUpdate();
+        if (latestOptimisticUpdate !== undefined) {
+          await this.processOptimisticUpdate(latestOptimisticUpdate);
         }
       }
 
@@ -275,12 +270,18 @@ export class LightSync extends (EventEmitter as {new (): BackfillSyncEmitter}) {
     // https://github.com/karma-runner/karma/issues/3804
     await initBls(isNode ? "blst-native" : "herumi");
     if (this.lightClientBootstrap === undefined) {
+      const lightClientBootstrap = await this.fetchLightClientBootstrap(this.checkpointRoot, peerId);
+
+      if (lightClientBootstrap === undefined) {
+        return;
+      }
+
       try {
-        const lightClientBootstrap = await this.network.reqResp.lightClientBootstrap(peerId, this.checkpointRoot);
         const {header, currentSyncCommittee, currentSyncCommitteeBranch} = lightClientBootstrap;
 
         // verify the response matches the requested root
         const headerRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(header);
+
         if (!ssz.Root.equals(this.checkpointRoot, headerRoot)) {
           this.logger.error("Bootstrap header does not match trusted checkpoint");
         }
@@ -302,6 +303,7 @@ export class LightSync extends (EventEmitter as {new (): BackfillSyncEmitter}) {
         // we have a validated lightclientbootstap,
         // set syncommittee for current period
         const currentPeriod = computeSyncPeriodAtSlot(lightClientBootstrap.header.slot);
+
         this.syncCommitteeByPeriod.set(currentPeriod, {
           isFinalized: false,
           participation: 0,
@@ -310,14 +312,23 @@ export class LightSync extends (EventEmitter as {new (): BackfillSyncEmitter}) {
         });
 
         // set head
+        const headerBlockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(lightClientBootstrap.header);
+
         this.head = {
           participation: 0,
           header: lightClientBootstrap.header,
-          blockRoot: toHexString(ssz.phase0.BeaconBlockHeader.hashTreeRoot(lightClientBootstrap.header)),
+          blockRoot: toHexString(headerBlockRoot),
         };
+
+        // fetch block
+        const block = await this.fetchBlock(headerBlockRoot);
+        if (block !== undefined) {
+          this.head.block = block;
+        }
 
         // set bootstrap
         this.lightClientBootstrap = lightClientBootstrap;
+        // persist in database
         await this.db.lightClientBootstrap.put(headerRoot, lightClientBootstrap);
       } catch (e) {
         this.logger.error("Error getting lightClientBootstrap", {}, e as Error);
@@ -332,46 +343,14 @@ export class LightSync extends (EventEmitter as {new (): BackfillSyncEmitter}) {
     // https://github.com/karma-runner/karma/issues/3804
     await initBls(isNode ? "blst-native" : "herumi");
 
-    const knownPeers = this.peers.values();
-    if (knownPeers.length > 0) {
-      let randomIndex = Math.floor(Math.random() * knownPeers.length);
-      let peer = knownPeers[randomIndex];
-      const count = toPeriod + 1 - fromPeriod;
-      let updates: LightClientUpdate[] = [];
+    const updates: LightClientUpdate[] = await this.fetchLightClientUpdate(fromPeriod, toPeriod);
 
-      while (updates.length === 0) {
-        try {
-          // TODO DA chukify
-          // have a cap on the attempt
-          updates = await this.network.reqResp.lightClientUpdate(peer, {startPeriod: fromPeriod, count});
-          this.logger.info(
-            `Retrieved ${updates.length} LightClientUpdate for fromPeriod: ${fromPeriod} and count: ${count}`
-          );
-        } catch (e) {
-          // TODO DA improve. Now just try another random peer
-          // keep a track of the peer and ranges not fetched to be retried later
-          randomIndex = Math.floor(Math.random() * knownPeers.length);
-          peer = knownPeers[randomIndex];
-
-          // TODO DA running sometimes fail with this error.
-          // this means the peer does not support the protocol
-          // find a way to know the protocol peers support and only dial those
-          // and/or keep a track of peers who fail with this error so as not to retry with them
-          // Nov-04 09:10:11.380[lightClient]     error: error fetching lightclientupdate  method=light_client_updates_by_range, encoding=ssz_snappy,
-          // peer=16Uiu2HAmAANq3dkEuKBHifxn8yuar2qy9HDDwwzykRfLRApU3fPW, code=REQUEST_ERROR_DIAL_ERROR, error=protocol selection failed
-          this.logger.error("error fetching lightclientupdate", {}, e as Error);
-        }
-      }
-
-      // TODO DA distinguish between when there is no valid response and when the peer requested from
-      // do not have the data requested
-      for (const update of updates) {
-        await this.processLightClientUpdate(update);
-        const headPeriod = computeSyncPeriodAtSlot(update.attestedHeader.slot);
-        this.logger.info(`processed sync update for period ${headPeriod}`);
-        // Yield to the macro queue, verifying updates is somewhat expensive and we want responsiveness
-        await new Promise((r) => setTimeout(r, 0));
-      }
+    for (const update of updates) {
+      await this.processLightClientUpdate(update);
+      const headPeriod = computeSyncPeriodAtSlot(update.attestedHeader.slot);
+      this.logger.info(`processed sync update for period ${headPeriod}`);
+      // Yield to the macro queue, verifying updates is somewhat expensive and we want responsiveness
+      await new Promise((r) => setTimeout(r, 0));
     }
   }
 
@@ -549,7 +528,7 @@ export class LightSync extends (EventEmitter as {new (): BackfillSyncEmitter}) {
       };
 
       // fetch block
-      let block = await this.fetchBlock(finalizedBlockRoot);
+      const block = await this.fetchBlock(finalizedBlockRoot);
       if (block !== undefined) {
         this.finalized.block = block;
       }
@@ -688,20 +667,85 @@ export class LightSync extends (EventEmitter as {new (): BackfillSyncEmitter}) {
   }
 
   // resp/req
-  private async fetchBlock(blockRoot: Root): Promise<allForks.SignedBeaconBlock | undefined> {
-    let signedBlock: allForks.SignedBeaconBlock | undefined;
+
+  private async fetchLightClientBootstrap(
+    checkPointRoot: Root,
+    peerId?: PeerId
+  ): Promise<altair.LightClientBootstrap | undefined> {
+    let data: altair.LightClientBootstrap | undefined;
+    const peersToRequest = peerId !== undefined ? [peerId] : this.peers.values();
+    for (const peer of peersToRequest) {
+      try {
+        data = await this.network.reqResp.lightClientBootstrap(peer, checkPointRoot);
+      } catch (e) {
+        this.logger.error("Error fetching LightClientBootstrap", {}, e as Error);
+      }
+      // we have the requested data, stop attempting to fetch
+      if (data !== undefined) {
+        break;
+      }
+    }
+    return data;
+  }
+
+  private async fetchLightClientOptimisticUpdate(): Promise<altair.LightClientOptimisticUpdate | undefined> {
+    let data: altair.LightClientOptimisticUpdate | undefined;
     for (const peer of this.peers.values()) {
       try {
-        [signedBlock] = await this.network.reqResp.beaconBlocksByRoot(peer, [blockRoot]);
+        data = await this.network.reqResp.lightClientOptimisticUpdate(peer);
+      } catch (e) {
+        this.logger.error("Error fetching getLatestHeadUpdate", {}, e as Error);
+      }
+      // we have the data, stop attempting to fetch
+      if (data !== undefined) {
+        break;
+      }
+    }
+    return data;
+  }
+
+  private async fetchLightClientUpdate(
+    fromPeriod: SyncPeriod,
+    toPeriod: SyncPeriod
+  ): Promise<altair.LightClientUpdate[]> {
+    // TODO DA corner cases to address
+    // Return updates is less than count. This means there will be gap in sync committee
+    // Chunkify to prevent request being more than is more than max allowed count
+    // Keep track of peers that fail with protocol selection error to prevent retrying
+    let data: altair.LightClientUpdate[] = [];
+    const count = toPeriod + 1 - fromPeriod;
+
+    for (const peer of this.peers.values()) {
+      try {
+        data = await this.network.reqResp.lightClientUpdate(peer, {startPeriod: fromPeriod, count});
+        this.logger.info(
+          `Retrieved ${data.length} LightClientUpdates for fromPeriod: ${fromPeriod} and count: ${count}`
+        );
+      } catch (e) {
+        this.logger.error("error fetching lightclientupdate", {}, e as Error);
+      }
+      // we have the data, stop attempting to fetch
+      if (data.length !== 0) {
+        break;
+      }
+    }
+    return data;
+  }
+
+  private async fetchBlock(blockRoot: Root): Promise<allForks.SignedBeaconBlock | undefined> {
+    let data: allForks.SignedBeaconBlock | undefined;
+    for (const peer of this.peers.values()) {
+      try {
+        [data] = await this.network.reqResp.beaconBlocksByRoot(peer, [blockRoot]);
       } catch (e) {
         // TODO DA keep a track of peers who do not have data to use for ranking peers?
         this.logger.error(`Error requesting block from peer ${peer.toCID()}`, {}, e as Error);
       }
-      // we have the block, stop attempting to fetch
-      if (signedBlock !== undefined) {
+      // we have the data, stop attempting to fetch
+      if (data !== undefined) {
         break;
       }
     }
-    return signedBlock;
+    return data;
   }
 }
