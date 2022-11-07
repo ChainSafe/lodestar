@@ -240,12 +240,14 @@ export function getStateValidatorIndex(
   pubkey2index: PubkeyIndexMap
 ): number | undefined {
   let validatorIndex: ValidatorIndex | undefined;
-  if (typeof id === "number") {
-    if (state.validators.length > id) {
-      validatorIndex = id;
+  if (!(id as string).startsWith("0x")) {
+    // validator index (0, 1, 2, ...) is used as id
+    const idInt = parseInt(id as string);
+    if (state.validators.length > idInt) {
+      validatorIndex = idInt;
     }
   } else {
-    validatorIndex = pubkey2index.get(id) ?? undefined;
+    validatorIndex = pubkey2index.get(id as string) ?? undefined;
     // validator added later than given stateId
     if (validatorIndex !== undefined && validatorIndex >= state.validators.length) {
       validatorIndex = undefined;
