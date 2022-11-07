@@ -23,16 +23,16 @@ export const getEstimatedTimeInSecForRun = ({
   genesisSlotDelay,
   runTill,
   secondsPerSlot,
-  grace,
+  graceExtraTimeFraction,
 }: {
   genesisSlotDelay: Slot;
   runTill: Epoch;
   secondsPerSlot: number;
-  grace: number;
+  graceExtraTimeFraction: number;
 }): number => {
   const durationSec = secondsPerSlot * activePreset.SLOTS_PER_EPOCH * runTill + secondsPerSlot * genesisSlotDelay;
 
-  return Math.round(durationSec + durationSec * grace);
+  return Math.round(durationSec + durationSec * graceExtraTimeFraction);
 };
 
 export const getEstimatedTTD = ({
