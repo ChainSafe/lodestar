@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {phase0, Root, ssz, bellatrix, TimeSeconds, allForks, capella} from "@lodestar/types";
+import {phase0, Root, ssz, TimeSeconds, allForks, capella} from "@lodestar/types";
 import {InputType} from "@lodestar/spec-test-util";
 import {
   BeaconStateAllForks,
