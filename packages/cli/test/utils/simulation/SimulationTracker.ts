@@ -221,26 +221,31 @@ export class SimulationTracker {
       return;
     }
 
-    const block = await node.cl.api.beacon.getBlockV2(slot);
+    try {
+      const block = await node.cl.api.beacon.getBlockV2(slot);
 
-    for (const assertion of this.assertions) {
-      if (assertion.capture) {
-        const value = await assertion.capture({
-          fork: getForkName(epoch, this.config),
-          slot,
-          block: block.data,
-          clock: this.clock,
-          node,
-          forkConfig: this.config,
-          epoch,
-          store: this.stores[assertion.id][node.cl.id],
-          // TODO: Make the store safe, to filter just the dependant stores not all
-          dependantStores: this.stores,
-        });
-        if (value !== undefined || value !== null) {
-          this.stores[assertion.id][node.cl.id][slot] = value;
+      for (const assertion of this.assertions) {
+        if (assertion.capture) {
+          const value = await assertion.capture({
+            fork: getForkName(epoch, this.config),
+            slot,
+            block: block.data,
+            clock: this.clock,
+            node,
+            forkConfig: this.config,
+            epoch,
+            store: this.stores[assertion.id][node.cl.id],
+            // TODO: Make the store safe, to filter just the dependant stores not all
+            dependantStores: this.stores,
+          });
+          if (value !== undefined || value !== null) {
+            this.stores[assertion.id][node.cl.id][slot] = value;
+          }
         }
       }
+    } catch {
+      // Incase of reorg the block may not be available
+      return;
     }
 
     const capturedSlot = this.slotCapture.get(slot);
