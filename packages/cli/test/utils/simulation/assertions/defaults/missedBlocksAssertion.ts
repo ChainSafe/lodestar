@@ -1,6 +1,6 @@
 import {SimulationAssertion} from "../../interfaces.js";
-import {headAssertion} from "./headAssertion.js";
 import {everyEpochMatcher} from "../matchers.js";
+import {headAssertion} from "./headAssertion.js";
 
 export const missedBlocksAssertion: SimulationAssertion<"missedBlocks", number[], [typeof headAssertion]> = {
   id: "missedBlocks",
