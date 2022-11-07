@@ -62,8 +62,9 @@ export function getBeaconStateApi({
       const validatorResponses: routes.beacon.ValidatorResponse[] = [];
       if (filters?.id) {
         for (const id of filters.id) {
-          const validatorIndex = getStateValidatorIndex(id, state, pubkey2index);
-          if (validatorIndex != null) {
+          const resp = getStateValidatorIndex(id, state, pubkey2index);
+          if (resp.valid) {
+            const validatorIndex = resp.validatorIndex;
             const validator = validators.getReadonly(validatorIndex);
             if (filters.status && !filters.status.includes(getValidatorStatus(validator, currentEpoch))) {
               continue;
@@ -107,11 +108,12 @@ export function getBeaconStateApi({
       const state = await resolveStateId(config, chain, db, stateId);
       const {pubkey2index} = chain.getHeadState().epochCtx;
 
-      const validatorIndex = getStateValidatorIndex(validatorId, state, pubkey2index);
-      if (validatorIndex == null) {
-        throw new ApiError(404, "Validator not found");
+      const resp = getStateValidatorIndex(validatorId, state, pubkey2index);
+      if (!resp.valid) {
+        throw new ApiError(resp.code, resp.reason);
       }
 
+      const validatorIndex = resp.validatorIndex;
       return {
         executionOptimistic: IS_OPTIMISTIC_TEMP,
         data: toValidatorResponse(
