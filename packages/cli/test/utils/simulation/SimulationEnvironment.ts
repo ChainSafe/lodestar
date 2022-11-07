@@ -140,7 +140,8 @@ export class SimulationEnvironment {
 
   async start(timeout: number): Promise<void> {
     try {
-      setTimeout(() => {
+      setTimeout(async () => {
+        await this.stop();
         throw new Error(`Simulation ${this.options.id} timed out after ${timeout}ms`);
       }, timeout);
 

@@ -12,14 +12,6 @@ export const mergeAssertion: SimulationAssertion<"merge", string> = {
     for (const node of nodes) {
       const state = ((await node.cl.api.debug.getStateV2("head")).data as unknown) as BeaconStateAllForks;
 
-      console.log({
-        node: node.cl.id,
-        slot,
-        epoch,
-        isExecutionStateType: isExecutionStateType(state),
-        isMergeTransitionComplete: isMergeTransitionComplete(state as any),
-      });
-
       if (!(isExecutionStateType(state) && isMergeTransitionComplete(state))) {
         errors.push(
           `Node has not yet completed the merged transition. ${JSON.stringify({

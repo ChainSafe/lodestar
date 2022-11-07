@@ -196,7 +196,7 @@ export class SimulationTracker {
         if (assertionErrors.length > 0) console.log(`├── Assertion: ${assertionId}`);
 
         for (const error of assertionErrors) {
-          console.error(`├──── ${error}`);
+          console.error(`├──── ${error.message}`);
         }
       }
     }
