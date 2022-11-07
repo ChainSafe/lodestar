@@ -10,6 +10,7 @@ import {activePreset} from "@lodestar/params";
 import {BeaconStateAllForks, interopSecretKey} from "@lodestar/state-transition";
 import {Slot} from "@lodestar/types";
 import {fromHexString} from "@chainsafe/ssz";
+import {sleep} from "@lodestar/utils";
 import {generateLodestarBeaconNode} from "./cl_clients/lodestar.js";
 import {EpochClock} from "./EpochClock.js";
 import {ExternalSignerServer} from "./ExternalSignerServer.js";
@@ -240,6 +241,18 @@ export class SimulationEnvironment {
           })
       )
     );
+  }
+
+  async waitForNodeSync(node: NodePair): Promise<void> {
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      const result = await node.cl.api.node.getSyncingStatus();
+      if (result.data.isSyncing) {
+        await sleep(1000, this.options.controller.signal);
+      } else {
+        break;
+      }
+    }
   }
 
   createNodePair({el, cl, keysCount, id, wssCheckpoint}: NodePairOptions): NodePairResult {

@@ -59,7 +59,7 @@ export class SimulationTracker {
   private errors: SimulationAssertionError[] = [];
   private stores: StoreTypes<typeof defaultAssertions> & StoreType<string, unknown>;
   private assertions: SimulationAssertion[];
-  private assertionsMap: Record<string, boolean> = {};
+  private assertionIdsMap: Record<string, boolean> = {};
 
   private constructor({signal, nodes, clock, config}: SimulationTrackerInitOptions) {
     this.signal = signal;
@@ -107,18 +107,18 @@ export class SimulationTracker {
   }
 
   register(assertion: SimulationAssertion): void {
-    if (assertion.id in this.assertionsMap) {
+    if (assertion.id in this.assertionIdsMap) {
       throw new Error(`The assertion "${assertion.id}" is already registered`);
     }
 
     for (const dep of assertion.dependencies ?? []) {
-      if (dep.id in this.assertionsMap) continue;
+      if (dep.id in this.assertionIdsMap) continue;
 
       throw new Error(`The assertion "${assertion.id}" depends on "${dep.id}" which is not registered`);
     }
 
     this.assertions.push(assertion);
-    this.assertionsMap[assertion.id] = true;
+    this.assertionIdsMap[assertion.id] = true;
 
     this.stores[assertion.id] = {};
     for (const node of this.nodes) {
@@ -309,7 +309,7 @@ export class SimulationTracker {
 
   private processRemoveAssertionQueue(): void {
     for (const id of this.removeAssertionQueue) {
-      delete this.assertionsMap[id];
+      delete this.assertionIdsMap[id];
       this.assertions = this.assertions.filter((a) => a.id !== id);
     }
     this.removeAssertionQueue = [];
