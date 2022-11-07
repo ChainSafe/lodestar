@@ -1,3 +1,4 @@
+import {ChildProcess} from "node:child_process";
 import type {SecretKey} from "@chainsafe/bls/types";
 import {Api} from "@lodestar/api";
 import {Api as KeyManagerApi} from "@lodestar/api/keymanager";
@@ -19,7 +20,6 @@ export type SimulationOptions = {
   id: string;
   logsDir: string;
   rootDir: string;
-  runnerType: RunnerType;
   controller: AbortController;
   genesisTime: number;
 };
@@ -111,8 +111,14 @@ export interface NodePairResult {
   jobs: {el: Job; cl: Job};
 }
 
-export type CLClientGenerator = (opts: CLClientOptions, runner: Runner) => {job: Job; node: CLNode};
-export type ELClientGenerator = (opts: ELClientOptions, runner: Runner) => {job: Job; node: ELNode};
+export type CLClientGenerator = (
+  opts: CLClientOptions,
+  runner: Runner<RunnerType.ChildProcess> | Runner<RunnerType.Docker>
+) => {job: Job; node: CLNode};
+export type ELClientGenerator = (
+  opts: ELClientOptions,
+  runner: Runner<RunnerType.ChildProcess> | Runner<RunnerType.Docker>
+) => {job: Job; node: ELNode};
 
 export interface JobOptions {
   readonly cli: {
@@ -148,11 +154,25 @@ export interface Job {
 
 export enum RunnerType {
   ChildProcess = "child_process",
+  Docker = "docker",
 }
 
-export interface Runner {
-  type: RunnerType;
-  create: (id: string, options: JobOptions[]) => Job;
+export type RunnerOptions = {
+  [RunnerType.ChildProcess]: never;
+  [RunnerType.Docker]: {
+    image: string;
+    dataVolumePath: string;
+    exposePorts: number[];
+  };
+};
+
+export interface Runner<T extends RunnerType> {
+  type: T;
+  create: (
+    id: string,
+    jobOptions: JobOptions[],
+    ...options: RunnerOptions[T] extends never ? [undefined?] : [RunnerOptions[T]]
+  ) => Job;
   on(event: RunnerEvent, cb: () => void | Promise<void>): void;
 }
 
@@ -220,3 +240,4 @@ export interface SimulationAssertionError {
   assertionId: string;
   message: string;
 }
+export type ChildProcessWithJobOptions = {jobOptions: JobOptions; childProcess: ChildProcess};

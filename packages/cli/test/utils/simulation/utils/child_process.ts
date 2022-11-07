@@ -1,12 +1,9 @@
 import {ChildProcess, spawn} from "node:child_process";
 import {createWriteStream, mkdirSync} from "node:fs";
 import {dirname} from "node:path";
-import {EventEmitter} from "node:events";
-import {JobOptions, Job, Runner, RunnerEvent, RunnerType} from "../interfaces.js";
+import {ChildProcessWithJobOptions, JobOptions} from "../interfaces.js";
 
-type ChildProcessWithJobOptions = {jobOptions: JobOptions; childProcess: ChildProcess};
-
-const stopChildProcess = async (
+export const stopChildProcess = async (
   childProcess: ChildProcess,
   signal: NodeJS.Signals | number = "SIGTERM"
 ): Promise<void> => {
@@ -20,9 +17,10 @@ const stopChildProcess = async (
   });
 };
 
-const startChildProcess = async (jobOptions: JobOptions): Promise<ChildProcess> => {
+export const startChildProcess = async (jobOptions: JobOptions): Promise<ChildProcess> => {
   return new Promise<ChildProcess>((resolve, reject) => {
     void (async () => {
+      console.log(`${jobOptions.cli.command} ${jobOptions.cli.args.join(" ")}`);
       const childProcess = spawn(jobOptions.cli.command, jobOptions.cli.args, {
         env: {...process.env, ...jobOptions.cli.env},
       });
@@ -61,7 +59,7 @@ const startChildProcess = async (jobOptions: JobOptions): Promise<ChildProcess> 
   });
 };
 
-const startJobs = async (jobs: JobOptions[]): Promise<ChildProcessWithJobOptions[]> => {
+export const startJobs = async (jobs: JobOptions[]): Promise<ChildProcessWithJobOptions[]> => {
   const childProcesses: ChildProcessWithJobOptions[] = [];
   for (const job of jobs) {
     if (job.bootstrap) {
@@ -76,53 +74,3 @@ const startJobs = async (jobs: JobOptions[]): Promise<ChildProcessWithJobOptions
 
   return childProcesses;
 };
-
-export class ChildProcessRunner implements Runner {
-  type = RunnerType.ChildProcess;
-
-  private emitter = new EventEmitter({captureRejections: true});
-
-  on(event: RunnerEvent, cb: () => void | Promise<void>): void {
-    this.emitter.on(event, cb);
-  }
-
-  create(id: string, jobs: JobOptions[]): Job {
-    const childProcesses: ChildProcessWithJobOptions[] = [];
-
-    const stop = async (): Promise<void> => {
-      // eslint-disable-next-line no-console
-      console.log(`Stopping "${id}"...`);
-      this.emitter.emit("stopping");
-      for (const {jobOptions, childProcess} of childProcesses) {
-        if (jobOptions.teardown) {
-          await jobOptions.teardown();
-        }
-        await stopChildProcess(childProcess);
-      }
-
-      // eslint-disable-next-line no-console
-      console.log(`Stopped "${id}"...`);
-      this.emitter.emit("stopped");
-    };
-
-    const start = (): Promise<void> =>
-      new Promise<void>((resolve, reject) => {
-        void (async () => {
-          try {
-            // eslint-disable-next-line no-console
-            console.log(`Starting "${id}"...`);
-            this.emitter.emit("starting");
-            childProcesses.push(...(await startJobs(jobs)));
-            // eslint-disable-next-line no-console
-            console.log(`Started "${id}"...`);
-            this.emitter.emit("started");
-            resolve();
-          } catch (err) {
-            reject(err);
-          }
-        })();
-      });
-
-    return {id, start, stop, type: this.type};
-  }
-}

@@ -32,7 +32,7 @@ import {
   SimulationInitOptions,
   SimulationOptions,
 } from "./interfaces.js";
-import {ChildProcessRunner} from "./runner/child_process.js";
+import {ChildProcessRunner} from "./runner/ChildProcessRunner.js";
 import {SimulationTracker} from "./SimulationTracker.js";
 import {
   BN_P2P_BASE_PORT,
@@ -46,6 +46,7 @@ import {
 } from "./constants.js";
 import {generateGethNode} from "./el_clients/geth.js";
 import {getEstimatedTTD} from "./utils/index.js";
+import {DockerRunner} from "./runner/DockerRunner.js";
 
 export const SHARED_JWT_SECRET = "0xdc6457099f127cf0bac78de8b297df04951281909db4f58b43def7c7151e765d";
 
@@ -56,7 +57,8 @@ export class SimulationEnvironment {
   readonly clock: EpochClock;
   readonly tracker: SimulationTracker;
   readonly emitter: EventEmitter;
-  readonly runner: Runner;
+  readonly childProcessRunner: Runner<RunnerType.ChildProcess>;
+  readonly dockerRunner: Runner<RunnerType.Docker>;
   readonly externalSigner: ExternalSignerServer;
   readonly externalKeysPercentage = 0.5;
 
@@ -84,11 +86,8 @@ export class SimulationEnvironment {
     this.emitter = new EventEmitter();
     this.externalSigner = new ExternalSignerServer([]);
 
-    if (this.options.runnerType === RunnerType.ChildProcess) {
-      this.runner = new ChildProcessRunner();
-    } else {
-      throw new Error("Invalid runner type");
-    }
+    this.childProcessRunner = new ChildProcessRunner();
+    this.dockerRunner = new DockerRunner();
 
     this.tracker = SimulationTracker.initWithDefaultAssertions({
       nodes: [],
@@ -122,7 +121,6 @@ export class SimulationEnvironment {
 
     const env = new SimulationEnvironment(forkConfig, {
       logsDir,
-      runnerType: RunnerType.ChildProcess,
       id,
       genesisTime,
       controller: new AbortController(),
@@ -307,7 +305,7 @@ export class SimulationEnvironment {
           engineUrl: options?.engineUrl ?? `http://127.0.0.1:${EL_ENGINE_BASE_PORT + this.nodePairCount + 1}`,
           jwtSecretHex: options?.jwtSecretHex ?? SHARED_JWT_SECRET,
         };
-        return generateLodestarBeaconNode(opts, this.runner);
+        return generateLodestarBeaconNode(opts, this.childProcessRunner);
       }
       default:
         throw new Error(`CL Client "${client}" not supported`);
@@ -332,7 +330,7 @@ export class SimulationEnvironment {
           ethPort: options?.ethPort ?? EL_ETH_BASE_PORT + this.nodePairCount + 1,
           port: options?.port ?? EL_P2P_BASE_PORT + this.nodePairCount + 1,
         };
-        return generateGethNode(opts, this.runner);
+        return generateGethNode(opts, this.dockerRunner);
       }
       default:
         throw new Error(`EL Client "${client}" not supported`);

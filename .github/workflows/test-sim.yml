@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 env:
-  GETH_IMAGE: https://gethstore.blob.core.windows.net/builds/geth-linux-amd64-1.10.25-69568c55.tar.gz
+  GETH_DOCKER_IMAGE: ethereum/client-go:v1.10.25
 
 jobs:
   tests-sim:
@@ -40,18 +40,13 @@ jobs:
       # </common-build>
 
       - name: Pull Geth
-        run: | 
-          TAR_NAME=$(basename $GETH_IMAGE)
-          BINARY_FOLDER="${TAR_NAME%.*.*}"
-          curl -sS $GETH_IMAGE > $TAR_NAME
-          tar -xvzf $TAR_NAME
-          echo "GETH_BINARY_DIR=$GITHUB_WORKSPACE/$BINARY_FOLDER" >> $GITHUB_ENV
+        run: docker pull ${{ env.GETH_DOCKER_IMAGE }}
 
       - name: Simulation tests for CLI
         run: yarn test:sim
         working-directory: packages/cli
         env:
-          GETH_BINARY_DIR: ${{ env.GETH_BINARY_DIR }}
+          GETH_DOCKER_IMAGE: ${{ env.GETH_DOCKER_IMAGE }}
 
       - name: Upload debug log test files for "packages/cli"
         if: ${{ always() }}

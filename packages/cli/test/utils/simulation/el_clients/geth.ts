@@ -14,32 +14,42 @@ import {
   RunnerType,
 } from "../interfaces.js";
 import {Eth1ProviderWithAdmin} from "../Eth1ProviderWithAdmin.js";
+import {isChildProcessRunner, isDockerRunner} from "../runner/index.js";
 import {getGenesisBlock} from "./genesis.js";
 
 const SECRET_KEY = "45a915e4d060149eb4365960e6a7a45f334393093061116b197e3240065ff2d8";
 const PASSWORD = "12345678";
 const GENESIS_ACCOUNT = "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b";
 
-export const generateGethNode: ELClientGenerator = (opts: ELClientOptions, runner: Runner) => {
-  if (runner.type !== RunnerType.ChildProcess) {
-    throw new Error(`Runner "${runner.type}" not yet supported.`);
+export const generateGethNode: ELClientGenerator = (
+  {id, mode, dataDir, ethPort, port, enginePort, ttd, logFilePath, jwtSecretHex, cliqueSealingPeriod}: ELClientOptions,
+  runner: Runner<RunnerType.ChildProcess> | Runner<RunnerType.Docker>
+) => {
+  if (isChildProcessRunner(runner)) {
+    if (!process.env.GETH_BINARY_DIR) {
+      throw Error(`EL ENV must be provided, GETH_BINARY_DIR: ${process.env.GETH_BINARY_DIR}`);
+    }
   }
 
-  const elBinaryDir = process.env.GETH_BINARY_DIR;
-
-  if (!elBinaryDir) {
-    throw Error(`EL ENV must be provided, GETH_BINARY_DIR: ${process.env.GETH_BINARY_DIR}`);
+  if (isDockerRunner(runner)) {
+    if (!process.env.GETH_DOCKER_IMAGE) {
+      throw Error(`EL ENV must be provided, GETH_DOCKER_IMAGE: ${process.env.GETH_DOCKER_IMAGE}`);
+    }
   }
 
-  const {id, mode, dataDir, ethPort, port, enginePort, ttd, logFilePath, jwtSecretHex, cliqueSealingPeriod} = opts;
-
+  const binaryPath = isChildProcessRunner(runner) ? `${process.env.GETH_BINARY_DIR}/geth` : "";
+  const gethDataDir = isChildProcessRunner(runner) ? dataDir : "/data";
   const ethRpcUrl = `http://127.0.0.1:${ethPort}`;
   const engineRpcUrl = `http://127.0.0.1:${enginePort}`;
-  const binaryPath = `${elBinaryDir}/geth`;
+
   const skPath = join(dataDir, "sk.json");
+  const skGethPath = join(gethDataDir, "sk.json");
   const genesisPath = join(dataDir, "genesis.json");
+  const genesisGethPath = join(gethDataDir, "genesis.json");
   const passwordPath = join(dataDir, "password.txt");
+  const passwordGethPath = join(gethDataDir, "password.txt");
   const jwtSecretPath = join(dataDir, "jwtsecret");
+  const jwtSecretGethPath = join(gethDataDir, "jwtsecret");
 
   const initJobOptions: JobOptions = {
     bootstrap: async () => {
@@ -48,7 +58,7 @@ export const generateGethNode: ELClientGenerator = (opts: ELClientOptions, runne
     },
     cli: {
       command: binaryPath,
-      args: ["--datadir", dataDir, "init", genesisPath],
+      args: ["--datadir", gethDataDir, "init", genesisGethPath],
       env: {},
     },
     logs: {
@@ -64,7 +74,7 @@ export const generateGethNode: ELClientGenerator = (opts: ELClientOptions, runne
     },
     cli: {
       command: binaryPath,
-      args: ["--datadir", dataDir, "account", "import", "--password", passwordPath, skPath],
+      args: ["--datadir", gethDataDir, "account", "import", "--password", passwordGethPath, skGethPath],
       env: {},
     },
     logs: {
@@ -81,19 +91,23 @@ export const generateGethNode: ELClientGenerator = (opts: ELClientOptions, runne
         "engine,net,eth,miner,admin",
         "--http.port",
         String(ethPort as number),
+        "--http.addr",
+        "0.0.0.0",
         "--authrpc.port",
         String(enginePort as number),
+        "--authrpc.addr",
+        "0.0.0.0",
         "--port",
         String(port as number),
         "--authrpc.jwtsecret",
-        jwtSecretPath,
+        jwtSecretGethPath,
         "--datadir",
-        dataDir,
+        gethDataDir,
         "--allow-insecure-unlock",
         "--unlock",
         GENESIS_ACCOUNT,
         "--password",
-        passwordPath,
+        passwordGethPath,
         "--syncmode",
         "full",
         // Logging verbosity: 0=silent, 1=error, 2=warn, 3=info, 4=debug, 5=detail
@@ -116,7 +130,13 @@ export const generateGethNode: ELClientGenerator = (opts: ELClientOptions, runne
     },
   };
 
-  const job = runner.create(id, [{...initJobOptions, children: [{...importJobOptions, children: [startJobOptions]}]}]);
+  const job = isChildProcessRunner(runner)
+    ? runner.create(id, [{...initJobOptions, children: [{...importJobOptions, children: [startJobOptions]}]}])
+    : runner.create(id, [{...initJobOptions, children: [{...importJobOptions, children: [startJobOptions]}]}], {
+        image: process.env.GETH_DOCKER_IMAGE as string,
+        dataVolumePath: dataDir,
+        exposePorts: [enginePort, ethPort, port],
+      });
 
   const provider = new Eth1ProviderWithAdmin(
     {DEPOSIT_CONTRACT_ADDRESS: ZERO_HASH},
