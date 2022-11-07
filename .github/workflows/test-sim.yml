@@ -1,11 +1,14 @@
 name: Sim tests
 
-on: 
+on:
   push:
-    # We intentionally don't run push on feature branches. See PR for rational. 
+    # We intentionally don't run push on feature branches. See PR for rational.
     branches: [unstable, stable]
   pull_request:
   workflow_dispatch:
+
+env:
+  GETH_IMAGE: https://gethstore.blob.core.windows.net/builds/geth-linux-amd64-1.10.25-69568c55.tar.gz
 
 jobs:
   tests-sim:
@@ -36,9 +39,20 @@ jobs:
         if: steps.cache-deps.outputs.cache-hit == 'true'
       # </common-build>
 
+      - name: Pull Geth
+        run: | 
+          TAR_NAME=$(basename $GETH_IMAGE)
+          BINARY_FOLDER="${TAR_NAME%.*.*}"
+          curl -sS $GETH_IMAGE > $TAR_NAME
+          tar -xvzf $TAR_NAME
+          echo "GETH_BINARY_DIR=$GITHUB_WORKSPACE/$BINARY_FOLDER" >> $GITHUB_ENV
+
       - name: Simulation tests for CLI
         run: yarn test:sim
         working-directory: packages/cli
+        env:
+          GETH_BINARY_DIR: ${{ env.GETH_BINARY_DIR }}
+
       - name: Upload debug log test files for "packages/cli"
         if: ${{ always() }}
         uses: actions/upload-artifact@v2

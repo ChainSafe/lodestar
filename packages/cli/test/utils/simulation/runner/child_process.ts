@@ -6,7 +6,14 @@ import {JobOptions, Job, Runner, RunnerEvent, RunnerType} from "../interfaces.js
 
 type ChildProcessWithJobOptions = {jobOptions: JobOptions; childProcess: ChildProcess};
 
-const stopChildProcess = async (childProcess: ChildProcess, signal?: "SIGTERM"): Promise<void> => {
+const stopChildProcess = async (
+  childProcess: ChildProcess,
+  signal: NodeJS.Signals | number = "SIGTERM"
+): Promise<void> => {
+  if (childProcess.killed || childProcess.exitCode !== null) {
+    return;
+  }
+
   return new Promise((resolve) => {
     childProcess.on("close", resolve);
     childProcess.kill(signal);
@@ -27,18 +34,29 @@ const startChildProcess = async (jobOptions: JobOptions): Promise<ChildProcess> 
       childProcess.stderr?.pipe(stdoutFileStream);
 
       childProcess.on("error", reject);
-      childProcess.on("exit", (code: number) => {
-        clearInterval(intervalId);
-        stdoutFileStream.close();
-        reject(new Error(`process exited with code ${code}`));
-      });
 
-      const intervalId = setInterval(async () => {
-        if (await jobOptions.health()) {
+      if (jobOptions.health !== undefined) {
+        const intervalId = setInterval(async () => {
+          if (jobOptions.health && (await jobOptions.health())) {
+            clearInterval(intervalId);
+            resolve(childProcess);
+          }
+        }, 1000);
+        childProcess.on("exit", (code: number) => {
           clearInterval(intervalId);
-          resolve(childProcess);
-        }
-      }, 1000);
+          stdoutFileStream.close();
+          reject(new Error(`process exited with code ${code}`));
+        });
+      } else {
+        childProcess.on("exit", (code: number) => {
+          stdoutFileStream.close();
+          if (code > 0) {
+            reject(new Error(`process exited with code ${code}`));
+          } else {
+            resolve(childProcess);
+          }
+        });
+      }
     })();
   });
 };
@@ -76,8 +94,8 @@ export class ChildProcessRunner implements Runner {
       console.log(`Stopping "${id}"...`);
       this.emitter.emit("stopping");
       for (const {jobOptions, childProcess} of childProcesses) {
-        if (jobOptions.cleanup) {
-          await jobOptions.cleanup();
+        if (jobOptions.teardown) {
+          await jobOptions.teardown();
         }
         await stopChildProcess(childProcess);
       }

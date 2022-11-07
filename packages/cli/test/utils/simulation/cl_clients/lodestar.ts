@@ -1,22 +1,23 @@
+/* eslint-disable @typescript-eslint/naming-convention */
 import {mkdir, writeFile} from "node:fs/promises";
 import {dirname, join} from "node:path";
 import got from "got";
 import {Keystore} from "@chainsafe/bls-keystore";
-import {nodeUtils} from "@lodestar/beacon-node/node";
+import {getClient} from "@lodestar/api/beacon";
+import {getClient as keyManagerGetClient} from "@lodestar/api/keymanager";
 import {LogLevel} from "@lodestar/utils";
 import {IBeaconArgs} from "../../../../src/cmds/beacon/options.js";
 import {IValidatorCliArgs} from "../../../../src/cmds/validator/options.js";
 import {IGlobalArgs} from "../../../../src/options/globalOptions.js";
-import {JobOptions, CLClientGenerator, CLClientOptions, Runner, RunnerType, Job} from "../interfaces.js";
-import {LODESTAR_BINARY_PATH} from "../utils.js";
+import {CLClient, CLClientGenerator, CLClientOptions, JobOptions, Runner, RunnerType} from "../interfaces.js";
+import {LODESTAR_BINARY_PATH} from "../constants.js";
 
-export const generateLodestarBeaconNode: CLClientGenerator = (opts: CLClientOptions, runner: Runner): Job => {
+export const generateLodestarBeaconNode: CLClientGenerator = (opts: CLClientOptions, runner: Runner) => {
   if (runner.type !== RunnerType.ChildProcess) {
     throw new Error(`Runner "${runner.type}" not yet supported.`);
   }
   const {
-    rootDir,
-    params,
+    dataDir,
     address,
     restPort,
     port,
@@ -24,41 +25,48 @@ export const generateLodestarBeaconNode: CLClientGenerator = (opts: CLClientOpti
     config,
     genesisStateFilePath,
     checkpointSyncUrl,
+    remoteKeys,
+    localKeys,
     wssCheckpoint,
+    keyManagerPort,
+    genesisTime,
+    engineUrl,
+    jwtSecretHex,
   } = opts;
 
-  const {state} = nodeUtils.initDevState(config, params.validatorClients * params.validatorsPerClient, {
-    genesisTime: params.genesisTime,
-  });
+  const jwtSecretPath = join(dataDir, "jwtsecret");
+  const rcConfigPath = join(dataDir, "rc_config.json");
 
   const rcConfig = ({
     network: "dev",
     preset: "minimal",
-    dataDir: rootDir,
+    dataDir,
     genesisStateFile: genesisStateFilePath,
     rest: true,
     "rest.address": address,
     "rest.port": restPort,
     "rest.namespace": "*",
-    "sync.isSingleNode": params.beaconNodes === 1,
-    "network.allowPublishToZeroPeers": params.beaconNodes === 1,
-    eth1: false,
-    discv5: params.beaconNodes > 1,
-    "network.connectToDiscv5Bootnodes": params.beaconNodes > 1,
-    "execution.engineMock": true,
+    "sync.isSingleNode": false,
+    "network.allowPublishToZeroPeers": false,
+    discv5: true,
+    "network.connectToDiscv5Bootnodes": true,
     listenAddress: address,
     port: port,
     metrics: false,
     bootnodes: [],
-    "params.SECONDS_PER_SLOT": String(params.secondsPerSlot),
-    "params.GENESIS_DELAY": String(params.genesisSlotsDelay),
-    "params.ALTAIR_FORK_EPOCH": String(params.altairEpoch),
-    "params.BELLATRIX_FORK_EPOCH": String(params.bellatrixEpoch),
+    "params.SECONDS_PER_SLOT": String(config.SECONDS_PER_SLOT),
+    "params.GENESIS_DELAY": String(config.GENESIS_DELAY),
+    "params.ALTAIR_FORK_EPOCH": String(config.ALTAIR_FORK_EPOCH),
+    "params.BELLATRIX_FORK_EPOCH": String(config.BELLATRIX_FORK_EPOCH),
+    "params.TERMINAL_TOTAL_DIFFICULTY": String(config.TERMINAL_TOTAL_DIFFICULTY),
     logPrefix: id,
-    logFormatGenesisTime: `${params.genesisTime}`,
+    logFormatGenesisTime: `${genesisTime}`,
     logLevel: LogLevel.debug,
     logFileDailyRotate: 0,
     logFile: "none",
+    eth1: true,
+    "execution.urls": [engineUrl],
+    "jwt-secret": jwtSecretPath,
   } as unknown) as IBeaconArgs & IGlobalArgs;
 
   if (checkpointSyncUrl) {
@@ -70,34 +78,31 @@ export const generateLodestarBeaconNode: CLClientGenerator = (opts: CLClientOpti
   }
 
   const validatorClientsJobs: JobOptions[] = [];
-  if (opts.secretKeys.length > 0) {
-    for (let clientIndex = 0; clientIndex < params.validatorClients; clientIndex += 1) {
-      validatorClientsJobs.push(
-        generateLodestarValidatorJobs(
-          {
-            ...opts,
-            rootDir: join(rootDir, `validator-${clientIndex}`),
-            id: `${id}-validator-${clientIndex}`,
-            logFilePath: join(dirname(opts.logFilePath), `${id}-validator-${clientIndex}.log`),
-          },
-          runner
-        )
-      );
-    }
+  if (opts.localKeys.length > 0 || opts.remoteKeys.length > 0) {
+    validatorClientsJobs.push(
+      generateLodestarValidatorJobs(
+        {
+          ...opts,
+          dataDir: join(dataDir, "validator"),
+          id: `${id}-validator`,
+          logFilePath: join(dirname(opts.logFilePath), `${id}-validator.log`),
+        },
+        runner
+      )
+    );
   }
 
-  return runner.create(id, [
+  const job = runner.create(id, [
     {
       bootstrap: async () => {
-        await mkdir(rootDir);
-        await writeFile(join(rootDir, "genesis.ssz"), state.serialize());
-        await writeFile(join(rootDir, "rc_config.json"), JSON.stringify(rcConfig, null, 2));
+        await mkdir(dataDir, {recursive: true});
+        await writeFile(rcConfigPath, JSON.stringify(rcConfig, null, 2));
+        await writeFile(jwtSecretPath, jwtSecretHex);
       },
       cli: {
         command: LODESTAR_BINARY_PATH,
-        args: ["beacon", "--rcConfig", join(rootDir, "rc_config.json")],
+        args: ["beacon", "--rcConfig", rcConfigPath],
         env: {
-          // eslint-disable-next-line @typescript-eslint/naming-convention
           DEBUG: "*,-winston:*",
         },
       },
@@ -115,6 +120,18 @@ export const generateLodestarBeaconNode: CLClientGenerator = (opts: CLClientOpti
       children: validatorClientsJobs,
     },
   ]);
+
+  const node = {
+    id,
+    client: CLClient.Lodestar,
+    url: `http://${address}:${restPort}`,
+    localKeys,
+    remoteKeys,
+    api: getClient({baseUrl: `http://${address}:${restPort}`}, {config}),
+    keyManager: keyManagerGetClient({baseUrl: `http://${address}:${keyManagerPort}`}, {config}),
+  };
+
+  return {job, node};
 };
 
 export const generateLodestarValidatorJobs = (opts: CLClientOptions, runner: Runner): JobOptions => {
@@ -122,7 +139,7 @@ export const generateLodestarValidatorJobs = (opts: CLClientOptions, runner: Run
     throw new Error(`Runner "${runner.type}" not yet supported.`);
   }
 
-  const {rootDir, id, address, params, keyManagerPort, secretKeys, restPort} = opts;
+  const {dataDir: rootDir, id, address, keyManagerPort, localKeys, restPort, config, genesisTime} = opts;
 
   const rcConfig = ({
     network: "dev",
@@ -133,12 +150,12 @@ export const generateLodestarValidatorJobs = (opts: CLClientOptions, runner: Run
     "keymanager.authEnabled": false,
     "keymanager.address": address,
     "keymanager.port": keyManagerPort,
-    "params.SECONDS_PER_SLOT": String(params.secondsPerSlot),
-    "params.GENESIS_DELAY": String(params.genesisSlotsDelay),
-    "params.ALTAIR_FORK_EPOCH": String(params.altairEpoch),
-    "params.BELLATRIX_FORK_EPOCH": String(params.bellatrixEpoch),
+    "params.SECONDS_PER_SLOT": String(config.SECONDS_PER_SLOT),
+    "params.GENESIS_DELAY": String(config.GENESIS_DELAY),
+    "params.ALTAIR_FORK_EPOCH": String(config.ALTAIR_FORK_EPOCH),
+    "params.BELLATRIX_FORK_EPOCH": String(config.BELLATRIX_FORK_EPOCH),
     logPrefix: id,
-    logFormatGenesisTime: params.genesisTime,
+    logFormatGenesisTime: genesisTime,
     logLevel: LogLevel.debug,
     logFile: "none",
     importKeystores: `${rootDir}/keystores`,
@@ -153,7 +170,7 @@ export const generateLodestarValidatorJobs = (opts: CLClientOptions, runner: Run
       await writeFile(join(rootDir, "rc_config.json"), JSON.stringify(rcConfig, null, 2));
 
       // Split half of the keys to the keymanager
-      for (const key of secretKeys.slice(secretKeys.length * params.externalKeysPercentage)) {
+      for (const key of localKeys) {
         const keystore = await Keystore.create("password", key.toBytes(), key.toPublicKey().toBytes(), "");
         await writeFile(
           join(rootDir, "keystores", `${key.toPublicKey().toHex()}.json`),
@@ -165,7 +182,6 @@ export const generateLodestarValidatorJobs = (opts: CLClientOptions, runner: Run
       command: LODESTAR_BINARY_PATH,
       args: ["validator", "--rcConfig", join(rootDir, "rc_config.json")],
       env: {
-        // eslint-disable-next-line @typescript-eslint/naming-convention
         DEBUG: "*,-winston:*",
       },
     },
