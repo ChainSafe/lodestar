@@ -4798,10 +4798,10 @@ bytes@3.1.2:
   resolved "https://registry.yarnpkg.com/bytes/-/bytes-3.1.2.tgz#8b0beeb98605adf1b128fa4386403c009e0221a5"
   integrity sha512-/Nf7TyzTx6S3yRJObOAV7956r8cr2+Oj8AC5dt8wSP3BQAoeX58NoHyCU8P8zGkNXStjTSi6fzO6F0pBdcYbEg==
 
-c-kzg@^0.0.6:
-  version "0.0.6"
-  resolved "https://registry.yarnpkg.com/c-kzg/-/c-kzg-0.0.6.tgz#10ef9deb5ee142f0ba4d8e2813384dbbbb8c7730"
-  integrity sha512-usV8tEv5vEwWR84h6k16DXdKVSol/ewa3KUd3oQaGLrBEVXZvOKxXTKakkXPn4suyHapfZOXwFbiIBv6zHVkZA==
+c-kzg@^0.0.7:
+  version "0.0.7"
+  resolved "https://registry.yarnpkg.com/c-kzg/-/c-kzg-0.0.7.tgz#f8f5d3780cde2925f2b1d3eada2d2b3f3249828e"
+  integrity sha512-ghDt0Gj4Fnzd7eLQgVWhK30OtpMTqm0s673mKlhROnKqiJB9bTrZ8DyKtH36V99vyWTmkZUNgyg34cdOx6530w==
 
 cacache@^15.2.0:
   version "15.3.0"
