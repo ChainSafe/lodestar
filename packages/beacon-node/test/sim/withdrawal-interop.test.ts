@@ -18,6 +18,7 @@ import {shell} from "./shell.js";
 const jwtSecretHex = "0xdc6457099f127cf0bac78de8b297df04951281909db4f58b43def7c7151e765d";
 const retryAttempts = defaultExecutionEngineHttpOpts.retryAttempts;
 const retryDelay = defaultExecutionEngineHttpOpts.retryDelay;
+const GWEI_TO_WEI = BigInt(1000000000);
 
 describe("executionEngine / ExecutionEngineHttp", function () {
   if (!process.env.EL_BINARY_DIR || !process.env.EL_SCRIPT_DIR) {
@@ -119,7 +120,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       index: testVec.Index,
       validatorIndex: testVec.Validator,
       address: dataToBytes(testVec.Recipient),
-      amount: BigInt(testVec.Amount),
+      amount: BigInt(testVec.Amount) / GWEI_TO_WEI,
     }));
 
     const preparePayloadParams = {
