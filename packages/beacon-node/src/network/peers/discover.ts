@@ -134,8 +134,7 @@ export class PeerDiscovery {
     await this.discv5.start();
     this.discv5StartMs = Date.now();
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
-    for (const service of (this.libp2p as any).services) {
+    for (const service of ((this.libp2p as unknown) as {services: unknown[]}).services) {
       if (isPeerDiscovery(service)) {
         service.addEventListener("peer", this.onDiscoveredPeer);
       }
