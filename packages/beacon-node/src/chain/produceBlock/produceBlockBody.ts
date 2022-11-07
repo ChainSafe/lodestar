@@ -22,10 +22,10 @@ import {
   getRandaoMix,
   getCurrentEpoch,
   isMergeTransitionComplete,
-  getExpectedWithdrawals
+  getExpectedWithdrawals,
 } from "@lodestar/state-transition";
 import {IChainForkConfig} from "@lodestar/config";
-import {ForkName, ForkSeq, MAX_WITHDRAWALS_PER_PAYLOAD} from "@lodestar/params";
+import {ForkName, ForkSeq} from "@lodestar/params";
 import {toHex, sleep} from "@lodestar/utils";
 
 import type {BeaconChain} from "../chain.js";
