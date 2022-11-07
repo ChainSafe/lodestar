@@ -20,7 +20,6 @@ export const stopChildProcess = async (
 export const startChildProcess = async (jobOptions: JobOptions): Promise<ChildProcess> => {
   return new Promise<ChildProcess>((resolve, reject) => {
     void (async () => {
-      console.log(`${jobOptions.cli.command} ${jobOptions.cli.args.join(" ")}`);
       const childProcess = spawn(jobOptions.cli.command, jobOptions.cli.args, {
         env: {...process.env, ...jobOptions.cli.env},
       });

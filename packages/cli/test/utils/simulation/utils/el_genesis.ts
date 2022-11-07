@@ -1,6 +1,6 @@
 import {ELGenesisOptions, ELStartMode} from "../interfaces.js";
 
-export const getGenesisBlock = (mode: ELStartMode, options: ELGenesisOptions): Record<string, unknown> => {
+export const getELGenesisBlock = (mode: ELStartMode, options: ELGenesisOptions): Record<string, unknown> => {
   const {ttd, cliqueSealingPeriod} = options;
 
   if (mode === ELStartMode.PreMerge) {

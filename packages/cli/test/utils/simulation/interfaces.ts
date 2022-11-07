@@ -30,6 +30,7 @@ export enum CLClient {
 
 export enum ELClient {
   Geth = "geth",
+  Nethermind = "nethermind",
 }
 
 export enum ELStartMode {

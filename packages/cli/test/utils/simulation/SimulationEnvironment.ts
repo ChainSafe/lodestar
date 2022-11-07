@@ -47,6 +47,7 @@ import {
 import {generateGethNode} from "./el_clients/geth.js";
 import {getEstimatedTTD} from "./utils/index.js";
 import {DockerRunner} from "./runner/DockerRunner.js";
+import {generateNethermindNode} from "./el_clients/nethermind.js";
 
 export const SHARED_JWT_SECRET = "0xdc6457099f127cf0bac78de8b297df04951281909db4f58b43def7c7151e765d";
 
@@ -315,22 +316,25 @@ export class SimulationEnvironment {
   private createELNode(client: ELClient, options: AtLeast<ELClientOptions, "id">): {job: Job; node: ELNode} {
     const elId = `${options.id}-el-${client}`;
 
+    const opts: ELClientOptions = {
+      id: elId,
+      mode: options?.mode ?? (this.forkConfig.BELLATRIX_FORK_EPOCH > 0 ? ELStartMode.PreMerge : ELStartMode.PostMerge),
+      ttd: options?.ttd ?? this.forkConfig.TERMINAL_TOTAL_DIFFICULTY,
+      cliqueSealingPeriod: options?.cliqueSealingPeriod ?? CLIQUE_SEALING_PERIOD,
+      logFilePath: options?.logFilePath ?? join(this.options.logsDir, `${elId}.log`),
+      dataDir: options?.dataDir ?? join(this.options.rootDir, elId),
+      jwtSecretHex: options?.jwtSecretHex ?? SHARED_JWT_SECRET,
+      enginePort: options?.enginePort ?? EL_ENGINE_BASE_PORT + this.nodePairCount + 1,
+      ethPort: options?.ethPort ?? EL_ETH_BASE_PORT + this.nodePairCount + 1,
+      port: options?.port ?? EL_P2P_BASE_PORT + this.nodePairCount + 1,
+    };
+
     switch (client) {
       case ELClient.Geth: {
-        const opts: ELClientOptions = {
-          id: elId,
-          mode:
-            options?.mode ?? (this.forkConfig.BELLATRIX_FORK_EPOCH > 0 ? ELStartMode.PreMerge : ELStartMode.PostMerge),
-          ttd: options?.ttd ?? this.forkConfig.TERMINAL_TOTAL_DIFFICULTY,
-          cliqueSealingPeriod: options?.cliqueSealingPeriod ?? CLIQUE_SEALING_PERIOD,
-          logFilePath: options?.logFilePath ?? join(this.options.logsDir, `${elId}.log`),
-          dataDir: options?.dataDir ?? join(this.options.rootDir, elId),
-          jwtSecretHex: options?.jwtSecretHex ?? SHARED_JWT_SECRET,
-          enginePort: options?.enginePort ?? EL_ENGINE_BASE_PORT + this.nodePairCount + 1,
-          ethPort: options?.ethPort ?? EL_ETH_BASE_PORT + this.nodePairCount + 1,
-          port: options?.port ?? EL_P2P_BASE_PORT + this.nodePairCount + 1,
-        };
         return generateGethNode(opts, this.dockerRunner);
+      }
+      case ELClient.Nethermind: {
+        return generateNethermindNode(opts, this.dockerRunner);
       }
       default:
         throw new Error(`EL Client "${client}" not supported`);

@@ -15,7 +15,7 @@ import {
 } from "../interfaces.js";
 import {Eth1ProviderWithAdmin} from "../Eth1ProviderWithAdmin.js";
 import {isChildProcessRunner, isDockerRunner} from "../runner/index.js";
-import {getGenesisBlock} from "./genesis.js";
+import {getELGenesisBlock} from "../utils/el_genesis.js";
 
 const SECRET_KEY = "45a915e4d060149eb4365960e6a7a45f334393093061116b197e3240065ff2d8";
 const PASSWORD = "12345678";
@@ -54,7 +54,7 @@ export const generateGethNode: ELClientGenerator = (
   const initJobOptions: JobOptions = {
     bootstrap: async () => {
       await mkdir(dataDir, {recursive: true});
-      await writeFile(genesisPath, JSON.stringify(getGenesisBlock(mode, {ttd, cliqueSealingPeriod})));
+      await writeFile(genesisPath, JSON.stringify(getELGenesisBlock(mode, {ttd, cliqueSealingPeriod})));
     },
     cli: {
       command: binaryPath,
