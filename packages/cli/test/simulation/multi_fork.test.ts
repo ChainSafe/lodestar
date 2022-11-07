@@ -19,7 +19,7 @@ const timeout =
     genesisSlotDelay: genesisSlotsDelay,
     secondsPerSlot: SIM_TESTS_SECONDS_PER_SLOT,
     runTill: runTillEpoch + syncWaitEpoch,
-    grace: 0.1, // 10% extra time
+    graceExtraTimeFraction: 0.1, // 10% extra time
   }) * 1000;
 
 const env = SimulationEnvironment.initWithDefaults(
