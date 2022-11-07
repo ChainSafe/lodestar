@@ -587,10 +587,13 @@ export class LightSync extends (EventEmitter as {new (): BackfillSyncEmitter}) {
       });
 
       // update states and try broadcasting via gossip
+      const prevHead = this.head;
       await this.processOptimisticUpdate(data);
-
-      // notify execution layer
-      await this.notifyUpdatePayload();
+      // This is not an error, but a problematic network condition. should not update EL twice
+      if (prevHead.blockRoot !== this.head.blockRoot) {
+        // notify execution layer
+        await this.notifyUpdatePayload();
+      }
     } else if (msg.topic === finalityUpdateTopic) {
       const data = ssz.altair.LightClientFinalityUpdate.deserialize(msg.data);
       this.logger.info("Retrieved LightClientFinalityUpdate via gossip", {
@@ -600,10 +603,13 @@ export class LightSync extends (EventEmitter as {new (): BackfillSyncEmitter}) {
       });
 
       // update states and try broadcasting via gossip
+      const prevHead = this.head;
       await this.processFinalizedUpdate(data);
-
-      // notify execution layer
-      await this.notifyUpdatePayload();
+      // This is not an error, but a problematic network condition. should not update EL twice
+      if (prevHead.blockRoot !== this.head.blockRoot) {
+        // notify execution layer
+        await this.notifyUpdatePayload();
+      }
     } else {
       this.logger.info("not processing", msg.topic);
     }
