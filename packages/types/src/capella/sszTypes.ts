@@ -4,7 +4,6 @@ import {
   SLOTS_PER_HISTORICAL_ROOT,
   MAX_WITHDRAWALS_PER_PAYLOAD,
   MAX_BLS_TO_EXECUTION_CHANGES,
-  WITHDRAWAL_QUEUE_LIMIT,
 } from "@lodestar/params";
 import {ssz as primitiveSsz} from "../primitive/index.js";
 import {ssz as phase0Ssz} from "../phase0/index.js";
@@ -116,8 +115,6 @@ export const HistoricalBatch = new ContainerType(
   },
   {typeName: "HistoricalBatch", jsonCase: "eth2"}
 );
-
-export const WithdrawalQueue = new ListCompositeType(Withdrawal, WITHDRAWAL_QUEUE_LIMIT);
 
 // we don't reuse bellatrix.BeaconState fields since we need to replace some keys
 // and we cannot keep order doing that
