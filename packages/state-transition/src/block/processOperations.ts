@@ -40,6 +40,7 @@ export function processOperations(
   for (const voluntaryExit of body.voluntaryExits) {
     processVoluntaryExit(state, voluntaryExit, verifySignatures);
   }
+
   if (fork >= ForkSeq.capella) {
     for (const blsToExecutionChange of (body as capella.BeaconBlockBody).blsToExecutionChanges) {
       processBlsToExecutionChange(state as CachedBeaconStateCapella, blsToExecutionChange);
