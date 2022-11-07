@@ -42,6 +42,7 @@ export interface NodePairOptions {
   el: ELClient;
   cl: CLClient;
   keysCount: number;
+  remote?: boolean;
   wssCheckpoint?: string;
   id: string;
 }

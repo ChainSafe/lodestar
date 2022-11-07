@@ -33,8 +33,8 @@ const env = SimulationEnvironment.initWithDefaults(
     },
   },
   [
-    {id: "node-1", cl: CLClient.Lodestar, el: ELClient.Geth, keysCount: 32},
-    {id: "node-2", cl: CLClient.Lodestar, el: ELClient.Nethermind, keysCount: 32},
+    {id: "node-1", cl: CLClient.Lodestar, el: ELClient.Geth, keysCount: 32, remote: true},
+    {id: "node-2", cl: CLClient.Lodestar, el: ELClient.Nethermind, keysCount: 32, remote: true},
     {id: "node-3", cl: CLClient.Lodestar, el: ELClient.Geth, keysCount: 32},
     {id: "node-4", cl: CLClient.Lodestar, el: ELClient.Nethermind, keysCount: 32},
   ]

@@ -61,7 +61,6 @@ export class SimulationEnvironment {
   readonly childProcessRunner: Runner<RunnerType.ChildProcess>;
   readonly dockerRunner: Runner<RunnerType.Docker>;
   readonly externalSigner: ExternalSignerServer;
-  readonly externalKeysPercentage = 0.5;
 
   readonly forkConfig: IChainForkConfig;
   readonly options: SimulationOptions;
@@ -255,7 +254,7 @@ export class SimulationEnvironment {
     }
   }
 
-  createNodePair({el, cl, keysCount, id, wssCheckpoint}: NodePairOptions): NodePairResult {
+  createNodePair({el, cl, keysCount, id, wssCheckpoint, remote}: NodePairOptions): NodePairResult {
     if (this.genesisState && keysCount > 0) {
       throw new Error("Genesis state already initialized. Can not add more keys to it.");
     }
@@ -269,8 +268,8 @@ export class SimulationEnvironment {
 
     const clClient = this.createCLNode(cl, {
       id,
-      remoteKeys: keys.slice(0, keys.length * this.externalKeysPercentage),
-      localKeys: keys.slice(keys.length * this.externalKeysPercentage),
+      remoteKeys: remote ? keys : [],
+      localKeys: remote ? [] : keys,
       wssCheckpoint,
     });
 
