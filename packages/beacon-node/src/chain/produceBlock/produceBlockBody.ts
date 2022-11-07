@@ -220,7 +220,7 @@ export async function produceBlockBody<T extends BlockType>(
  * @returns PayloadId = pow block found, null = pow NOT found
  */
 export async function prepareExecutionPayload(
-  seq: ForkSeq,
+  fork: ForkSeq,
   chain: {
     eth1: IEth1ForBlockProduction;
     executionEngine: IExecutionEngine;
@@ -268,9 +268,9 @@ export async function prepareExecutionPayload(
     }
 
     const withdrawalAttrs =
-      seq >= ForkSeq.capella ? {withdrawals: getExpectedWithdrawals(state as CachedBeaconStateCapella)} : {};
+      fork >= ForkSeq.capella ? {withdrawals: getExpectedWithdrawals(state as CachedBeaconStateCapella)} : {};
     payloadId = await chain.executionEngine.notifyForkchoiceUpdate(
-      seq,
+      fork,
       toHex(parentHash),
       safeBlockHash,
       finalizedBlockHash,
@@ -296,7 +296,7 @@ export async function prepareExecutionPayload(
 }
 
 async function prepareExecutionPayloadHeader(
-  seq: ForkSeq,
+  fork: ForkSeq,
   chain: {
     eth1: IEth1ForBlockProduction;
     executionBuilder?: IExecutionBuilder;
@@ -308,7 +308,7 @@ async function prepareExecutionPayloadHeader(
   if (!chain.executionBuilder) {
     throw Error("executionBuilder required");
   }
-  if (seq >= ForkSeq.capella) {
+  if (fork >= ForkSeq.capella) {
     throw Error("executionBuilder capella api not implemented");
   }
 

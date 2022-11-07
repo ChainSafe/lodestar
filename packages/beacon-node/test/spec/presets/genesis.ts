@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {phase0, Root, ssz, bellatrix, TimeSeconds} from "@lodestar/types";
+import {phase0, Root, ssz, bellatrix, TimeSeconds, allForks, capella} from "@lodestar/types";
 import {InputType} from "@lodestar/spec-test-util";
 import {
   BeaconStateAllForks,
@@ -8,10 +8,11 @@ import {
   isValidGenesisState,
 } from "@lodestar/state-transition";
 import {bnToNum} from "@lodestar/utils";
+import {ForkName} from "@lodestar/params";
+
 import {expectEqualBeaconState} from "../utils/expectEqualBeaconState.js";
 import {TestRunnerFn} from "../utils/types.js";
 import {getConfig} from "../utils/getConfig.js";
-
 // The aim of the genesis tests is to provide a baseline to test genesis-state initialization and test if the
 // proposed genesis-validity conditions are working.
 
@@ -40,6 +41,11 @@ const genesisInitialization: TestRunnerFn<GenesisInitSpecTest, BeaconStateAllFor
         genesisValidatorsRoot: Buffer.alloc(32, 0),
       });
 
+      const executionPayloadHeaderType =
+        fork !== ForkName.phase0 && fork !== ForkName.altair
+          ? ssz.allForksExecution[fork as ExecutionFork].ExecutionPayloadHeader
+          : ssz.bellatrix.ExecutionPayloadHeader;
+
       return initializeBeaconStateFromEth1(
         getConfig(fork),
         immutableData,
@@ -48,7 +54,7 @@ const genesisInitialization: TestRunnerFn<GenesisInitSpecTest, BeaconStateAllFor
         deposits,
         undefined,
         testcase["execution_payload_header"] &&
-          ssz.bellatrix.ExecutionPayloadHeader.toViewDU(testcase["execution_payload_header"])
+          executionPayloadHeaderType.toViewDU(testcase["execution_payload_header"] as capella.ExecutionPayloadHeader)
       );
     },
     // eth1.yaml
@@ -65,8 +71,11 @@ const genesisInitialization: TestRunnerFn<GenesisInitSpecTest, BeaconStateAllFor
       sszTypes: {
         eth1_block_hash: ssz.Root,
         state: ssz[fork].BeaconState,
-        // for merge genesis, no affect on other phases
-        execution_payload_header: ssz["bellatrix"].ExecutionPayloadHeader,
+        // for merge/post merge genesis, no affect on other phases
+        execution_payload_header:
+          fork !== ForkName.phase0 && fork !== ForkName.altair
+            ? ssz.allForksExecution[fork as ExecutionFork].ExecutionPayloadHeader
+            : ssz.bellatrix.ExecutionPayloadHeader,
         ...generateDepositSSZTypeMapping(192),
       },
       timeout: 60000,
@@ -124,7 +133,7 @@ type GenesisInitSpecTest = {
   meta: {
     deposits_count: number;
   };
-  execution_payload_header?: bellatrix.ExecutionPayloadHeader;
+  execution_payload_header?: allForks.ExecutionPayloadHeader;
   state: BeaconStateAllForks;
 };
 
@@ -132,3 +141,5 @@ type GenesisInitCase = {
   eth1_block_hash: string;
   eth1_timestamp: bigint;
 };
+
+type ExecutionFork = Exclude<ForkName, ForkName.phase0 | ForkName.altair>;

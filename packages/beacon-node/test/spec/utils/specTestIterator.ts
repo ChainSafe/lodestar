@@ -51,12 +51,7 @@ export function specTestIterator(configDirpath: string, testRunners: Record<stri
     const forkDirpath = path.join(configDirpath, fork);
     for (const testRunnerName of readdirSyncSpec(forkDirpath)) {
       // We don't have runner for light client yet
-      if (
-        ["light_client", "sync"].includes(testRunnerName) ||
-        // Genesis state generation for capella needs to be implemented, there is some
-        // initialization required there
-        (["genesis"].includes(testRunnerName) && fork === ForkName.capella)
-      ) {
+      if (["light_client", "sync"].includes(testRunnerName)) {
         continue;
       }
       const testRunnerDirpath = path.join(forkDirpath, testRunnerName);
