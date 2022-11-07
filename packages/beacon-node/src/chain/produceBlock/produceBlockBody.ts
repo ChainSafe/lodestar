@@ -22,6 +22,7 @@ import {
   getRandaoMix,
   getCurrentEpoch,
   isMergeTransitionComplete,
+  getExpectedWithdrawals
 } from "@lodestar/state-transition";
 import {IChainForkConfig} from "@lodestar/config";
 import {ForkName, ForkSeq, MAX_WITHDRAWALS_PER_PAYLOAD} from "@lodestar/params";
@@ -355,12 +356,6 @@ async function getExecutionPayloadParentHash(
       return {isPremerge: false, parentHash: terminalPowBlockHash};
     }
   }
-}
-
-function getExpectedWithdrawals(state: CachedBeaconStateCapella): capella.Withdrawal[] {
-  const numWithdrawals = Math.min(MAX_WITHDRAWALS_PER_PAYLOAD, state.withdrawalQueue.length);
-  const withdrawals = state.withdrawalQueue.toValue();
-  return withdrawals.slice(0, numWithdrawals);
 }
 
 /** process_sync_committee_contributions is implemented in syncCommitteeContribution.getSyncAggregate */

@@ -158,9 +158,8 @@ export const BeaconState = new ContainerType(
     // Execution
     latestExecutionPayloadHeader: ExecutionPayloadHeader, // [Modified in Capella]
     // Withdrawals
-    withdrawalQueue: WithdrawalQueue, // [New in Capella]
     nextWithdrawalIndex: WithdrawalIndex, // [New in Capella]
-    nextPartialWithdrawalValidatorIndex: ValidatorIndex, //[New in Capella]
+    latestWithdrawalValidatorIndex: ValidatorIndex, //[New in Capella]
   },
   {typeName: "BeaconState", jsonCase: "eth2"}
 );

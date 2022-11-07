@@ -12,7 +12,14 @@ import {processRandao} from "./processRandao.js";
 import {processWithdrawals} from "./processWithdrawals.js";
 
 // Spec tests
-export {processBlockHeader, processExecutionPayload, processRandao, processEth1Data, processSyncAggregate};
+export {
+  processBlockHeader,
+  processExecutionPayload,
+  processRandao,
+  processEth1Data,
+  processSyncAggregate,
+  processWithdrawals,
+};
 export * from "./processOperations.js";
 
 export * from "./initiateValidatorExit.js";

@@ -199,8 +199,6 @@ function getSpecCriticalParams(localConfig: IChainConfig): Record<keyof ConfigWi
 
     // # CapellaPreset
     /////////////////
-    MAX_PARTIAL_WITHDRAWALS_PER_EPOCH: capellaForkRelevant,
-    WITHDRAWAL_QUEUE_LIMIT: capellaForkRelevant,
     MAX_BLS_TO_EXECUTION_CHANGES: capellaForkRelevant,
     MAX_WITHDRAWALS_PER_PAYLOAD: capellaForkRelevant,
   };

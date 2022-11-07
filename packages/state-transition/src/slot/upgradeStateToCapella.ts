@@ -55,10 +55,7 @@ export function upgradeStateToCapella(stateBellatrix: CachedBeaconStateBellatrix
     currentVersion: config.CAPELLA_FORK_VERSION,
     epoch: stateBellatrix.epochCtx.epoch,
   });
-
-  // Nothing to do for latestExecutionPayloadHeader as the root is set to 0 by default
-  stateCapella.withdrawalQueue = ssz.capella.WithdrawalQueue.defaultViewDU();
-  // nextWithdrawalIndex and nextPartialWithdrawalValidatorIndex are also set to 0 by default
+  // nextWithdrawalIndex and latestWithdrawalValidatorIndex are already set to 0 by default
 
   // Commit new added fields ViewDU to the root node
   stateCapella.commit();

@@ -1,11 +1,5 @@
 import {ForkSeq} from "@lodestar/params";
-import {
-  CachedBeaconStateAllForks,
-  CachedBeaconStateCapella,
-  CachedBeaconStateAltair,
-  CachedBeaconStatePhase0,
-  EpochProcess,
-} from "../types.js";
+import {CachedBeaconStateAllForks, CachedBeaconStateAltair, CachedBeaconStatePhase0, EpochProcess} from "../types.js";
 import {processEffectiveBalanceUpdates} from "./processEffectiveBalanceUpdates.js";
 import {processEth1DataReset} from "./processEth1DataReset.js";
 import {processHistoricalRootsUpdate} from "./processHistoricalRootsUpdate.js";
@@ -19,7 +13,6 @@ import {processRewardsAndPenalties} from "./processRewardsAndPenalties.js";
 import {processSlashings} from "./processSlashings.js";
 import {processSlashingsReset} from "./processSlashingsReset.js";
 import {processSyncCommitteeUpdates} from "./processSyncCommitteeUpdates.js";
-import {processFullWithdrawals, processPartialWithdrawals} from "./processWithdrawals.js";
 
 // For spec tests
 export {getRewardsAndPenalties} from "./processRewardsAndPenalties.js";
@@ -37,8 +30,6 @@ export {
   processParticipationRecordUpdates,
   processParticipationFlagUpdates,
   processSyncCommitteeUpdates,
-  processFullWithdrawals,
-  processPartialWithdrawals,
 };
 
 export {computeUnrealizedCheckpoints} from "./computeUnrealizedCheckpoints.js";
@@ -61,9 +52,5 @@ export function processEpoch(fork: ForkSeq, state: CachedBeaconStateAllForks, ep
   } else {
     processParticipationFlagUpdates(state as CachedBeaconStateAltair);
     processSyncCommitteeUpdates(state as CachedBeaconStateAltair);
-  }
-  if (fork >= ForkSeq.capella) {
-    processFullWithdrawals(state as CachedBeaconStateCapella);
-    processPartialWithdrawals(state as CachedBeaconStateCapella);
   }
 }
