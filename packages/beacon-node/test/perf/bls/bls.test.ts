@@ -7,7 +7,7 @@ describe("BLS ops", function () {
   type Keypair = {publicKey: PublicKey; secretKey: SecretKey};
   type BlsSet = {publicKey: PublicKey; message: Uint8Array; signature: Signature};
 
-  // Create and cache (on demand) crypto data to bencharmk
+  // Create and cache (on demand) crypto data to benchmark
   const sets = new Map<number, BlsSet>();
   const keypairs = new Map<number, Keypair>();
 

@@ -1,5 +1,5 @@
 /**
- * Fork code name in order of occurance
+ * Fork code name in order of occurrence
  */
 export enum ForkName {
   phase0 = "phase0",
@@ -9,7 +9,7 @@ export enum ForkName {
 }
 
 /**
- * Fork sequence number inorder of occurance
+ * Fork sequence number in order of occurrence
  */
 export enum ForkSeq {
   phase0 = 0,

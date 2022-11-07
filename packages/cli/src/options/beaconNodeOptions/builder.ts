@@ -34,7 +34,7 @@ export const options: ICliCommandOptions<ExecutionBuilderArgs> = {
   },
 
   "builder.timeout": {
-    description: "Timeout in miliseconds for builder API HTTP client",
+    description: "Timeout in milliseconds for builder API HTTP client",
     type: "number",
     defaultDescription:
       defaultOptions.executionBuilder.mode === "http" ? String(defaultOptions.executionBuilder.timeout) : "",

@@ -403,14 +403,14 @@ export class PeerDiscovery {
 
 /**
  * libp2p errors with extremely noisy errors here, which are deeply nested taking 30-50 lines.
- * Some known erors:
+ * Some known errors:
  * ```
  * Error: The operation was aborted
  * Error: stream ended before 1 bytes became available
  * Error: Error occurred during XX handshake: Error occurred while verifying signed payload: Peer ID doesn't match libp2p public key
  * ```
  *
- * Also the error's message is not properly formated, where the error message in indentated and includes the full stack
+ * Also the error's message is not properly formatted, where the error message is indented and includes the full stack
  * ```
  * {
  *  emessage: '\n' +

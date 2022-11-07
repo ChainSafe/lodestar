@@ -8,7 +8,7 @@ import {INetwork} from "../../network/index.js";
 import {IMetrics} from "../../metrics/index.js";
 
 /**
- * PR ensure API follows spec required to include the isOptimstic boolean in many routes.
+ * PR ensure API follows spec required to include the isOptimistic boolean in many routes.
  * To keep the scope of the PR manageable, the PR will only add the flag with proper logic on
  * critical routes. Else it is left as a temporary always false to be implemented next.
  */

@@ -72,7 +72,7 @@ describe("AttestationDutiesService", function () {
     // Accept all subscriptions
     api.validator.prepareBeaconCommitteeSubnet.resolves();
 
-    // Clock will call runAttesterDutiesTasks() immediatelly
+    // Clock will call runAttesterDutiesTasks() immediately
     const clock = new ClockMock();
     const dutiesService = new AttestationDutiesService(loggerVc, api, clock, validatorStore, chainHeadTracker, null);
 
@@ -139,7 +139,7 @@ describe("AttestationDutiesService", function () {
     // Accept all subscriptions
     api.validator.prepareBeaconCommitteeSubnet.resolves();
 
-    // Clock will call runAttesterDutiesTasks() immediatelly
+    // Clock will call runAttesterDutiesTasks() immediately
     const clock = new ClockMock();
     const dutiesService = new AttestationDutiesService(loggerVc, api, clock, validatorStore, chainHeadTracker, null);
 

@@ -112,7 +112,7 @@ export function testRunnerMemory<T>(opts: TestRunnerMemoryOpts<T>): number {
       usedMemoryArr.push(usedMemory);
 
       if (usedMemoryArr.length > 1) {
-        // When is a good time to stop a benchmark? A naive answer is after N miliseconds or M runs.
+        // When is a good time to stop a benchmark? A naive answer is after N milliseconds or M runs.
         // This code aims to stop the benchmark when the average fn run time has converged at a value
         // within a given convergence factor. To prevent doing expensive math to often for fast fn,
         // it only takes samples every `sampleEveryMs`. It stores two past values to be able to compute
@@ -124,11 +124,11 @@ export function testRunnerMemory<T>(opts: TestRunnerMemoryOpts<T>): number {
         const b = prevM1;
         const c = m;
 
-        // Aprox linear convergence
+        // Approx linear convergence
         const convergence1 = Math.abs(c - a);
-        // Aprox quadratic convergence
+        // Approx quadratic convergence
         const convergence2 = Math.abs(b - (a + c) / 2);
-        // Take the greater of both to enfore linear and quadratic are below convergeFactor
+        // Take the greater of both to enforce linear and quadratic are below convergeFactor
         const convergence = Math.max(convergence1, convergence2) / a;
 
         // Okay to stop + has converged, stop now
