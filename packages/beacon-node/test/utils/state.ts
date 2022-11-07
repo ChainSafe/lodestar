@@ -132,15 +132,28 @@ export function generateState(
     return ssz.altair.BeaconState.toViewDU(defaultAltairState);
   }
 
+  const defaultBellatrixState = {
+    ...defaultAltairState,
+    latestExecutionPayloadHeader: {...ssz.bellatrix.ExecutionPayloadHeader.defaultValue(), blockNumber: 2022},
+  };
+
   // Bellatrix upwards
   if (forkSeq === ForkSeq.bellatrix) {
-    const payloadHeader = ssz.bellatrix.ExecutionPayloadHeader.defaultValue();
-    return ssz.bellatrix.BeaconState.toViewDU({
-      ...defaultAltairState,
-      latestExecutionPayloadHeader: {...payloadHeader, blockNumber: 2022},
-    });
+    return ssz.bellatrix.BeaconState.toViewDU(defaultBellatrixState);
   }
-  throw Error("Capella not implemented");
+
+  const defaultCapellaState = {
+    ...defaultAltairState,
+    latestExecutionPayloadHeader: {...ssz.capella.ExecutionPayloadHeader.defaultValue(), blockNumber: 2022},
+    nextWithdrawalIndex: 0,
+    latestWithdrawalValidatorIndex: 0,
+  };
+
+  if (forkSeq === ForkSeq.capella) {
+    return ssz.capella.BeaconState.toViewDU(defaultCapellaState);
+  }
+
+  throw Error(`fork with seq=${forkSeq} not implemented`);
 }
 
 /**
