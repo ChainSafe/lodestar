@@ -11,7 +11,7 @@ export const finalizedAssertion: SimulationAssertion<"finalized", Slot> = {
   },
   async assert({nodes, store, slot, clock, epoch}) {
     const errors: string[] = [];
-    const expectedFinalizedSlot = slot < clock.getLastSlotOfEpoch(3) ? 0 : clock.getFirstSlotOfEpoch(epoch - 2);
+    const expectedFinalizedSlot = slot <= clock.getLastSlotOfEpoch(3) ? 0 : clock.getFirstSlotOfEpoch(epoch - 2);
 
     for (const node of nodes) {
       const finalizedSlot = store[node.cl.id][slot];
