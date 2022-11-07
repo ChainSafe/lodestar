@@ -18,7 +18,7 @@ describe("lodestar / api / impl / state", function () {
   const testLoggerOpts: TestLoggerOpts = {logLevel: LogLevel.info};
   const loggerNodeA = testLogger("Node-A", testLoggerOpts);
 
-  describe("eth/v1/beacon/states/{status_id}/validators", function () {
+  describe("eth/v1/beacon/states/{state_id}/validators", function () {
     this.timeout("10 min");
     const testParams: Pick<IChainConfig, "SECONDS_PER_SLOT"> = {
       SECONDS_PER_SLOT: 2,
@@ -99,6 +99,85 @@ describe("lodestar / api / impl / state", function () {
 
       expect(response.data.length).to.be.equal(1);
       expect(toHexString(response.data[0].validator.pubkey)).to.be.equal(filterPubKey);
+    });
+  });
+
+  describe("/eth/v1/beacon/states/{state_id}/validators/{validator_id}", function () {
+    this.timeout("10 min");
+    const testParams: Pick<IChainConfig, "SECONDS_PER_SLOT"> = {
+      SECONDS_PER_SLOT: 2,
+    };
+
+    const afterEachCallbacks: (() => Promise<unknown> | void)[] = [];
+    afterEach(async () => {
+      while (afterEachCallbacks.length > 0) {
+        const callback = afterEachCallbacks.pop();
+        if (callback) await callback();
+      }
+    });
+
+    it("should return the validator when getStateValidator is called with the validator index", async function () {
+      const validatorIndex = "0";
+      const validatorCount = 2;
+      const bn = await getDevBeaconNode({
+        params: testParams,
+        options: {
+          sync: {isSingleNode: true},
+          api: {rest: {enabled: true, port: restPort}},
+          chain: {blsVerifyAllMainThread: true},
+        },
+        validatorCount,
+        logger: loggerNodeA,
+      });
+      afterEachCallbacks.push(() => bn.close());
+
+      const {validators} = await getAndInitDevValidators({
+        node: bn,
+        validatorsPerClient: validatorCount,
+        validatorClientCount: 1,
+        startIndex: 0,
+        useRestApi: false,
+        testLoggerOpts,
+      });
+      afterEachCallbacks.push(() => Promise.all(validators.map((validator) => validator.close())));
+
+      const client = getClient({baseUrl: `http://127.0.0.1:${restPort}`}, {config}).beacon;
+
+      const response = await client.getStateValidator("head", validatorIndex);
+      // TODO: the index in data should be a string instead of an integer
+      expect(response.data.index).to.be.equal(parseInt(validatorIndex));
+    });
+
+    it("should return the validator when getStateValidator is called with the hex encoded public key", async function () {
+      const hexPubKey =
+        "0xa99a76ed7796f7be22d5b7e85deeb7c5677e88e511e0b337618f8c4eb61349b4bf2d153f649f7b53359fe8b94a38e44c";
+      const validatorCount = 2;
+      const bn = await getDevBeaconNode({
+        params: testParams,
+        options: {
+          sync: {isSingleNode: true},
+          api: {rest: {enabled: true, port: restPort}},
+          chain: {blsVerifyAllMainThread: true},
+        },
+        validatorCount,
+        logger: loggerNodeA,
+      });
+      afterEachCallbacks.push(() => bn.close());
+
+      const {validators} = await getAndInitDevValidators({
+        node: bn,
+        validatorsPerClient: validatorCount,
+        validatorClientCount: 1,
+        startIndex: 0,
+        useRestApi: false,
+        testLoggerOpts,
+      });
+      afterEachCallbacks.push(() => Promise.all(validators.map((validator) => validator.close())));
+
+      const client = getClient({baseUrl: `http://127.0.0.1:${restPort}`}, {config}).beacon;
+
+      const response = await client.getStateValidator("head", hexPubKey);
+      expect(toHexString(response.data.validator.pubkey)).to.be.equal(hexPubKey);
     });
   });
 });
