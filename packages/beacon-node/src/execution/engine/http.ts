@@ -29,6 +29,8 @@ import {
 } from "./interface.js";
 import {PayloadIdCache} from "./payloadIdCache.js";
 
+const GWEI_TO_WEI = BigInt(1000000000);
+
 export type ExecutionEngineModules = {
   signal: AbortSignal;
   metrics?: IMetrics | null;
@@ -240,7 +242,6 @@ export class ExecutionEngineHttp implements IExecutionEngine {
           withdrawals: payloadAttributes.withdrawals?.map(serializeWithdrawal),
         }
       : undefined;
-
     // If we are just fcUing and not asking execution for payload, retry is not required
     // and we can move on, as the next fcU will be issued soon on the new slot
     const fcUReqOpts =
@@ -471,7 +472,12 @@ function serializeWithdrawal(withdrawal: capella.Withdrawal): WithdrawalV1 {
     validatorIndex: numToQuantity(withdrawal.validatorIndex),
     address: bytesToData(withdrawal.address),
     recipient: bytesToData(withdrawal.address),
-    amount: numToQuantity(withdrawal.amount),
+    // Note: the amount value is represented on the beacon chain as a little-endian value in
+    // units of Gwei, whereas the amount in this structure MUST be converted to a big-endian value
+    // in units of Wei
+    //
+    // see: https://github.com/ethereum/execution-apis/blob/main/src/engine/specification.md
+    amount: numToQuantity(withdrawal.amount * GWEI_TO_WEI),
   };
 }
 
@@ -480,7 +486,8 @@ function deserializeWithdrawal(serialized: WithdrawalV1): capella.Withdrawal {
     index: quantityToNum(serialized.index),
     validatorIndex: quantityToNum(serialized.validatorIndex),
     address: dataToBytes(serialized.recipient ?? serialized.address),
-    amount: quantityToBigint(serialized.amount),
+    // see: https://github.com/ethereum/execution-apis/blob/main/src/engine/specification.md
+    amount: quantityToBigint(serialized.amount) / GWEI_TO_WEI,
   } as capella.Withdrawal;
 }
 
