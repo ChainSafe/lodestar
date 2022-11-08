@@ -130,7 +130,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       suggestedFeeRecipient: "0xaa00000000000000000000000000000000000000",
       withdrawals,
     };
-    const finalizedBlockHash = "0x3b8fb240d288781d4aac94d3fd16809ee413bc99294a085798a589dae51ddd4a";
+    const finalizedBlockHash = "0xfe950635b1bd2a416ff6283b0bbd30176e1b1125ad06fa729da9f3f4c1c61710";
 
     // 1. Prepare a payload
     const payloadId = await executionEngine.notifyForkchoiceUpdate(
@@ -145,8 +145,10 @@ describe("executionEngine / ExecutionEngineHttp", function () {
 
     // 2. Get the payload
     const payload = await executionEngine.getPayload(ForkSeq.capella, payloadId);
-    if (toHexString(payload.blockHash) !== "0x48349ed336bf7e262299b16263f2a12f797fe62970580d7858672aa700e886fa") {
-      throw Error(`Invalid blockHash`);
+    const blockHash=toHexString(payload.blockHash)
+    const expectedBlockHash="0x64707e5574d14103a7f583e702f09e68ca1eb334e8eb0632a4272efe54f2fc7c"
+    if (blockHash !== expectedBlockHash) {
+      throw Error(`Invalid blockHash expected=${expectedBlockHash} actual=${blockHash}`);
     }
 
     // 3. Execute the payload

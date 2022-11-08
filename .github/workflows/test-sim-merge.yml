@@ -11,7 +11,7 @@ env:
   GETH_IMAGE: ethereum/client-go:v1.10.25
   NETHERMIND_IMAGE: nethermind/nethermind:1.14.3
   MERGEMOCK_IMAGE: g11tech/mergemock:latest
-  GETH_WITHDRAWALS_IMAGE: g11tech/geth:withdrawals
+  GETH_WITHDRAWALS_IMAGE: g11tech/geth:withdrawals-fix
 
 jobs:
   sim-merge-tests:
