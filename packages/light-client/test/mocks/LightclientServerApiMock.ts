@@ -1,7 +1,8 @@
 import {Proof} from "@chainsafe/persistent-merkle-tree";
 import {JsonPath} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
-import {altair, RootHex, SyncPeriod} from "@lodestar/types";
+import {altair, BLSPubkey, RootHex, SyncPeriod} from "@lodestar/types";
+import {notNullish} from "@lodestar/utils";
 import {BeaconStateAltair} from "../utils/types.js";
 
 export class LightclientServerApiMock implements routes.lightclient.Api {
@@ -43,6 +44,14 @@ export class LightclientServerApiMock implements routes.lightclient.Api {
     const snapshot = this.snapshots.get(blockRoot);
     if (!snapshot) throw Error(`snapshot for blockRoot ${blockRoot} not available`);
     return {data: snapshot};
+  }
+
+  async getCommitteeHash(startPeriod: SyncPeriod, count: number): Promise<{data: BLSPubkey[][]}> {
+    const periods = Array.from({length: count}, (_ignored, i) => i + startPeriod);
+    const committeeHashes = periods
+      .map((period) => this.updates.get(period)?.nextSyncCommittee.pubkeys)
+      .filter(notNullish);
+    return {data: committeeHashes};
   }
 }
 
