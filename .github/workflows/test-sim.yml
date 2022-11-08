@@ -40,14 +40,9 @@ jobs:
         if: steps.cache-deps.outputs.cache-hit == 'true'
       # </common-build>
 
-      - name: Pull Geth
-        run: docker pull ${{ env.GETH_DOCKER_IMAGE }}
-
       - name: Simulation tests for CLI
         run: yarn test:sim
         working-directory: packages/cli
-        env:
-          GETH_DOCKER_IMAGE: ${{ env.GETH_DOCKER_IMAGE }}
 
       - name: Upload debug log test files for "packages/cli"
         if: ${{ always() }}
