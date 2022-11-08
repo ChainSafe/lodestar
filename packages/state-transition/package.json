@@ -73,7 +73,6 @@
   },
   "devDependencies": {
     "@chainsafe/blst": "^0.2.4",
-    "@lavamoat/preinstall-always-fail": "^1.0.0",
     "@types/buffer-xor": "^2.0.0",
     "@types/mockery": "^1.4.29",
     "mockery": "^2.1.0"
@@ -87,8 +86,7 @@
   "lavamoat": {
     "allowScripts": {
       "@chainsafe/blst": true,
-      "@lavamoat/preinstall-always-fail": false,
-      "bigint-buffer": false
+      "bigint-buffer": true
     }
   }
 }
