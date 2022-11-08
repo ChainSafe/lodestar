@@ -138,10 +138,6 @@ export class BlockProposingService {
     blobsSidecar.beaconBlockRoot = blindedOrFullBlockHashTreeRoot(this.config, block);
     blobsSidecar.beaconBlockSlot = block.slot;
     blobsSidecar.blobs = blobs;
-
-    // c-kzg throws an error:
-    //   free(): invalid next size (fast)
-    // when computeAggregateKzgProof is called with [] blobs
     blobsSidecar.kzgAggregatedProof = blobs.length
       ? computeAggregateKzgProof(blobs)
       : ssz.eip4844.KZGProof.defaultValue();
