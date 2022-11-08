@@ -164,8 +164,8 @@ export class BlockProposingService {
           throw Error(`Invalid feeRecipient=${feeRecipient}, expected=${expectedFeeRecipient}`);
         }
         const transactions = (fullBlock.data as bellatrix.BeaconBlock).body.executionPayload?.transactions.length;
-        const withdrawals = (fullBlock.data as capella.BeaconBlock).body.executionPayload?.withdrawals.length;
-        Object.assign(debugLogCtx, {feeRecipient, transactions}, withdrawals ? {withdrawals} : {});
+        const withdrawals = (fullBlock.data as capella.BeaconBlock).body.executionPayload?.withdrawals?.length;
+        Object.assign(debugLogCtx, {feeRecipient, transactions}, withdrawals !== undefined ? {withdrawals} : {});
       }
       return {...fullBlock, debugLogCtx};
       // throw Error("random")
