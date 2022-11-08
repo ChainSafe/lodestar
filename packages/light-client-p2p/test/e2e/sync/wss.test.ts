@@ -8,7 +8,6 @@ import {getDevBeaconNode} from "../../utils/node/beacon.js";
 import {waitForEvent} from "../../utils/events/resolver.js";
 import {getAndInitDevValidators} from "../../utils/node/validator.js";
 import {ChainEvent} from "../../../src/chain/index.js";
-import {BeaconRestApiServerOpts} from "../../../src/api/rest/index.js";
 import {testLogger, TestLoggerOpts} from "../../utils/logger.js";
 import {connect} from "../../utils/network.js";
 import {LightSyncEvent} from "../../../src/sync/lightSync/index.js";
@@ -55,9 +54,7 @@ describe("Start from WSS", function () {
     const bn = await getDevBeaconNode({
       params: {...testParams, ALTAIR_FORK_EPOCH: Infinity},
       options: {
-        api: {
-          rest: {enabled: true, api: ["debug"]} as BeaconRestApiServerOpts,
-        },
+        api: {},
         sync: {isSingleNode: true},
         network: {allowPublishToZeroPeers: true},
         chain: {blsVerifyAllMainThread: true},
@@ -98,7 +95,7 @@ describe("Start from WSS", function () {
     const bnStartingFromWSS = await getDevBeaconNode({
       params: {...testParams, ALTAIR_FORK_EPOCH: Infinity},
       options: {
-        api: {rest: {enabled: true, port: 9587} as BeaconRestApiServerOpts},
+        api: {},
         sync: {isSingleNode: true, backfillBatchSize: 64},
         chain: {blsVerifyAllMainThread: true},
       },

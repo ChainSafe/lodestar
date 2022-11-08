@@ -3,7 +3,7 @@ import {LevelDbController} from "@lodestar/db";
 import {interopSecretKey} from "@lodestar/state-transition";
 import {SlashingProtection, Validator, Signer, SignerType, ValidatorProposerConfig} from "@lodestar/validator";
 import type {SecretKey} from "@chainsafe/bls/types";
-import {BeaconNodeLight} from "../../../src/index.js";
+import {LightNode} from "../../../src/index.js";
 import {testLogger, TestLoggerOpts} from "../logger.js";
 
 export async function getAndInitDevValidators({
@@ -17,7 +17,7 @@ export async function getAndInitDevValidators({
   doppelgangerProtectionEnabled = false,
   valProposerConfig,
 }: {
-  node: BeaconNodeLight;
+  node: LightNode;
   validatorsPerClient: number;
   validatorClientCount: number;
   startIndex: number;
@@ -83,8 +83,9 @@ export async function getAndInitDevValidators({
   };
 }
 
-export function getNodeApiUrl(node: BeaconNodeLight): string {
-  const address = node.opts.api.rest.address || "localhost";
-  const port = node.opts.api.rest.port || 19596;
+// TODO DA remove? LC currently don't support rest server
+export function getNodeApiUrl(_node: LightNode): string {
+  const address = "localhost";
+  const port = 19596;
   return `http://${address}:${port}`;
 }

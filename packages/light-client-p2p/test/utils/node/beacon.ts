@@ -11,11 +11,11 @@ import {GENESIS_SLOT} from "@lodestar/params";
 import {BeaconStateAllForks} from "@lodestar/state-transition";
 import {isPlainObject} from "@lodestar/utils";
 import {createKeypairFromPeerId, ENR} from "@chainsafe/discv5";
-import {BeaconNodeLight} from "../../../src/index.js";
+import {LightNode} from "../../../src/index.js";
 import {createNodeJsLibp2p} from "../../../src/network/nodejs/index.js";
 import {defaultNetworkOptions} from "../../../src/network/options.js";
 import {initDevState, writeDeposits} from "../../../src/node/utils/state.js";
-import {IBeaconNodeOptions} from "../../../src/node/options.js";
+import {ILightNodeOptions} from "../../../src/node/options.js";
 import {defaultOptions} from "../../../src/node/options.js";
 import {BeaconDb} from "../../../src/db/index.js";
 import {testLogger} from "../logger.js";
@@ -24,7 +24,7 @@ import {InteropStateOpts} from "../../../src/node/utils/interop/state.js";
 export async function getDevBeaconNode(
   opts: {
     params: Partial<IChainConfig>;
-    options?: RecursivePartial<IBeaconNodeOptions>;
+    options?: RecursivePartial<ILightNodeOptions>;
     validatorCount?: number;
     logger?: ILogger;
     peerId?: PeerId;
@@ -32,7 +32,7 @@ export async function getDevBeaconNode(
     anchorState?: BeaconStateAllForks;
     wsCheckpoint?: phase0.Checkpoint;
   } & InteropStateOpts
-): Promise<BeaconNodeLight> {
+): Promise<LightNode> {
   const {params, validatorCount = 8, peerStoreDir} = opts;
   let {options = {}, logger, peerId} = opts;
 
@@ -69,10 +69,10 @@ export async function getDevBeaconNode(
       {
         db: {name: tmpDir.name},
         eth1: {enabled: false},
-        api: {rest: {api: ["beacon", "config", "events", "node", "validator"], port: 19596}},
+        api: {},
         metrics: {enabled: false},
         network: {discv5: null},
-      } as Partial<IBeaconNodeOptions>,
+      } as Partial<ILightNodeOptions>,
       options
     ),
     {
@@ -94,8 +94,8 @@ export async function getDevBeaconNode(
   }
 
   const beaconConfig = createIBeaconConfig(config, anchorState.genesisValidatorsRoot);
-  return await BeaconNodeLight.init({
-    opts: options as IBeaconNodeOptions,
+  return await LightNode.init({
+    opts: options as ILightNodeOptions,
     config: beaconConfig,
     db,
     logger,

@@ -10,7 +10,7 @@ import {
 import {Checkpoint} from "@lodestar/types/phase0";
 import {
   IBeaconDb,
-  IBeaconNodeOptions,
+  ILightNodeOptions,
   initStateFromAnchorState,
   initStateFromEth1,
   getStateTypeFromBytes,
@@ -86,7 +86,7 @@ async function initAndVerifyWeakSubjectivityState(
  * 4. create genesis state from eth1
  */
 export async function initBeaconState(
-  options: IBeaconNodeOptions,
+  options: ILightNodeOptions,
   args: IBeaconArgs & IGlobalArgs,
   chainForkConfig: IChainForkConfig,
   db: IBeaconDb,

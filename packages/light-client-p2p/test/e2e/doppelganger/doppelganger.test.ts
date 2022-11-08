@@ -14,7 +14,7 @@ import {testLogger, LogLevel, TestLoggerOpts} from "../../utils/logger.js";
 import {getDevBeaconNode} from "../../utils/node/beacon.js";
 import {waitForEvent} from "../../utils/events/resolver.js";
 import {generateAttestationData} from "../../utils/attestation.js";
-import {BeaconNodeLight} from "../../../src/node/index.js";
+import {LightNode} from "../../../src/node/index.js";
 
 /* eslint-disable @typescript-eslint/no-unsafe-call,@typescript-eslint/no-unsafe-member-access,@typescript-eslint/no-unsafe-assignment */
 // TODO: Reconsider this tests latter.
@@ -47,7 +47,7 @@ describe.skip("doppelganger / doppelganger test", function () {
     doppelgangerProtectionEnabled?: boolean;
   };
 
-  async function createBNAndVC(config?: TestConfig): Promise<{beaconNode: BeaconNodeLight; validators: Validator[]}> {
+  async function createBNAndVC(config?: TestConfig): Promise<{beaconNode: LightNode; validators: Validator[]}> {
     const testLoggerOpts: TestLoggerOpts = {logLevel: LogLevel.info};
     const loggerNodeA = testLogger("Node-A", testLoggerOpts);
 
@@ -55,7 +55,7 @@ describe.skip("doppelganger / doppelganger test", function () {
       params: beaconParams,
       options: {
         sync: {isSingleNode: true},
-        api: {rest: {enabled: false}},
+        api: {},
         chain: {blsVerifyAllMainThread: true},
       },
       validatorCount,

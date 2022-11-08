@@ -69,7 +69,7 @@ describe("sync / finalized sync", function () {
 
     const bn2 = await getDevBeaconNode({
       params: beaconParams,
-      options: {api: {rest: {enabled: false}}},
+      options: {},
       validatorCount,
       genesisTime: bn.chain.getHeadState().genesisTime,
       logger: loggerNodeB,

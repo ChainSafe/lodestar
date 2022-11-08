@@ -12,9 +12,7 @@ import {
   defaultExecutionBuilderOpts,
 } from "../execution/index.js";
 // Re-export so the CLI doesn't need to depend on lodestar-api
-export {allNamespaces} from "../api/rest/index.js";
-
-export interface IBeaconNodeOptions {
+export interface ILightNodeOptions {
   api: IApiOptions;
   chain: IChainOptions;
   db: IDatabaseOptions;
@@ -26,7 +24,7 @@ export interface IBeaconNodeOptions {
   sync: SyncOptions;
 }
 
-export const defaultOptions: IBeaconNodeOptions = {
+export const defaultOptions: ILightNodeOptions = {
   api: defaultApiOptions,
   chain: defaultChainOptions,
   db: defaultDbOptions,

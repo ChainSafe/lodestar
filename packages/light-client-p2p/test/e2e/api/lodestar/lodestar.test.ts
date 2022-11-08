@@ -45,7 +45,7 @@ describe("api / impl / validator", function () {
         params: testParams,
         options: {
           sync: {isSingleNode: true},
-          api: {rest: {enabled: true, api: ["lodestar"], port: restPort}},
+          api: {},
           chain: {blsVerifyAllMainThread: true},
         },
         validatorCount,
@@ -93,7 +93,7 @@ describe("api / impl / validator", function () {
         params: testParams,
         options: {
           sync: {isSingleNode: true},
-          api: {rest: {enabled: true, api: ["lodestar"], port: restPort}},
+          api: {},
           chain: {blsVerifyAllMainThread: true},
         },
         validatorCount,
