@@ -196,6 +196,8 @@ export class SimulationEnvironment {
   }
 
   async stop(code = 0, message = "On completion."): Promise<void> {
+    process.removeAllListeners("unhandledRejection");
+    process.removeAllListeners("uncaughtException");
     console.log(`Simulation environment "${this.options.id}" is stopping: ${message}`);
     this.options.controller.abort();
     await this.tracker.stop();
