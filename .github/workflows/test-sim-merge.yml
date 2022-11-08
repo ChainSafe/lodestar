@@ -102,7 +102,7 @@ jobs:
       - name: Pull ethereumjs withdrawals 
         run: docker pull $ETHEREUMJS_WITHDRAWALS_IMAGE
 
-      - name: Test Lodestar <> geth withdrawals
+      - name: Test Lodestar <> ethereumjs withdrawals
         run: yarn test:sim:withdrawals
         working-directory: packages/beacon-node
         env:
@@ -112,7 +112,7 @@ jobs:
       - name: Pull nethermind withdrawals
         run: docker pull $NETHERMIND_WITHDRAWALS_IMAGE
 
-      - name: Test Lodestar <> geth withdrawals
+      - name: Test Lodestar <> nethermind withdrawals
         run: yarn test:sim:withdrawals
         working-directory: packages/beacon-node
         env:

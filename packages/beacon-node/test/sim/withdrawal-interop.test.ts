@@ -145,8 +145,8 @@ describe("executionEngine / ExecutionEngineHttp", function () {
 
     // 2. Get the payload
     const payload = await executionEngine.getPayload(ForkSeq.capella, payloadId);
-    const blockHash=toHexString(payload.blockHash)
-    const expectedBlockHash="0x64707e5574d14103a7f583e702f09e68ca1eb334e8eb0632a4272efe54f2fc7c"
+    const blockHash = toHexString(payload.blockHash);
+    const expectedBlockHash = "0x64707e5574d14103a7f583e702f09e68ca1eb334e8eb0632a4272efe54f2fc7c";
     if (blockHash !== expectedBlockHash) {
       throw Error(`Invalid blockHash expected=${expectedBlockHash} actual=${blockHash}`);
     }
