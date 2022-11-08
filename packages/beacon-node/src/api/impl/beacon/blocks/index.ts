@@ -204,13 +204,25 @@ export function getBeaconBlockApi({
     },
 
     async publishBlockWithBlobs(signedBeaconBlockAndBlobsSidecar) {
-      const {message} = signedBeaconBlockAndBlobsSidecar.beaconBlock;
+      const {beaconBlock} = signedBeaconBlockAndBlobsSidecar;
+      const {message} = beaconBlock;
+
       const seenTimestampSec = Date.now() / 1000;
       await waitForSlot(message.slot);
 
       metrics?.registerBeaconBlock(OpSource.api, seenTimestampSec, message);
 
-      await Promise.all([network.gossip.publishSignedBeaconBlockAndBlobsSidecar(signedBeaconBlockAndBlobsSidecar)]);
+      await Promise.all([
+        network.gossip.publishSignedBeaconBlockAndBlobsSidecar(signedBeaconBlockAndBlobsSidecar),
+        // TODO EIP-4844 processBlock for signedBeaconBlockAndBlobsSidecar
+        // We need to save the blob?
+        chain.processBlock(beaconBlock).catch((e) => {
+          if (e instanceof BlockError && e.type.code === BlockErrorCode.PARENT_UNKNOWN) {
+            network.events.emit(NetworkEvent.unknownBlockParent, beaconBlock, network.peerId.toString());
+          }
+          throw e;
+        }),
+      ]);
     },
   };
 }
