@@ -66,4 +66,8 @@ export const testData: GenericServerTestCases<Api> = {
       },
     },
   },
+  getCommitteeHash: {
+    args: [1, 2],
+    res: {data: [lightClientUpdate.nextSyncCommittee.pubkeys]},
+  },
 };

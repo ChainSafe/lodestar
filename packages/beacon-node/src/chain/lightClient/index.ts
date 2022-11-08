@@ -1,4 +1,4 @@
-import {altair, phase0, Root, RootHex, Slot, ssz, SyncPeriod} from "@lodestar/types";
+import {altair, BLSPubkey, phase0, Root, RootHex, Slot, ssz, SyncPeriod} from "@lodestar/types";
 import {IChainForkConfig} from "@lodestar/config";
 import {CachedBeaconStateAltair, computeSyncPeriodAtEpoch, computeSyncPeriodAtSlot} from "@lodestar/state-transition";
 import {ILogger, MapDef, pruneSetToMax} from "@lodestar/utils";
@@ -289,6 +289,31 @@ export class LightClientServer {
       throw Error(`No partialUpdate available for period ${period}`);
     }
     return update;
+  }
+
+  /**
+   * API ROUTE to get the current sync committee from the best available update for `period`.
+   */
+  async getCommitteeHash(period: number): Promise<BLSPubkey[]> {
+    const {attestedHeader} = await this.getUpdate(period);
+    const blockRoot = ssz.phase0.BeaconBlockHeader.serialize(attestedHeader);
+
+    const syncCommitteeWitness = await this.db.syncCommitteeWitness.get(blockRoot);
+    if (!syncCommitteeWitness) {
+      throw new LightClientServerError(
+        {code: LightClientServerErrorCode.RESOURCE_UNAVAILABLE},
+        `syncCommitteeWitness not available ${toHexString(blockRoot)} period ${period}`
+      );
+    }
+
+    const currentSyncCommittee = await this.db.syncCommittee.get(syncCommitteeWitness.currentSyncCommitteeRoot);
+    if (!currentSyncCommittee) {
+      throw new LightClientServerError(
+        {code: LightClientServerErrorCode.RESOURCE_UNAVAILABLE},
+        `currentSyncCommittee not available ${toHexString(blockRoot)} for period ${period}`
+      );
+    }
+    return currentSyncCommittee.pubkeys;
   }
 
   /**
