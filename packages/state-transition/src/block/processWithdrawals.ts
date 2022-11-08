@@ -1,11 +1,5 @@
 import {ssz, capella} from "@lodestar/types";
-import {
-  MAX_EFFECTIVE_BALANCE,
-  WITHDRAWAL_PREFIX_BYTES,
-  ETH1_ADDRESS_WITHDRAWAL_PREFIX,
-  MAX_WITHDRAWALS_PER_PAYLOAD,
-} from "@lodestar/params";
-import {byteArrayEquals} from "@chainsafe/ssz";
+import {MAX_EFFECTIVE_BALANCE, ETH1_ADDRESS_WITHDRAWAL_PREFIX, MAX_WITHDRAWALS_PER_PAYLOAD} from "@lodestar/params";
 
 import {CachedBeaconStateCapella} from "../types.js";
 import {decreaseBalance} from "../util/index.js";
@@ -27,7 +21,8 @@ export function getExpectedWithdrawals(state: CachedBeaconStateCapella): capella
     if (
       ((balance > 0 && withdrawableEpoch <= currentEpoch) ||
         (effectiveBalance === MAX_EFFECTIVE_BALANCE && balance > MAX_EFFECTIVE_BALANCE)) &&
-      byteArrayEquals(withdrawalCredentials.slice(0, WITHDRAWAL_PREFIX_BYTES), ETH1_ADDRESS_WITHDRAWAL_PREFIX)
+      // WITHDRAWAL_PREFIX_BYTES is just 1
+      withdrawalCredentials[0] === ETH1_ADDRESS_WITHDRAWAL_PREFIX[0]
     ) {
       const amount = withdrawableEpoch <= currentEpoch ? balance : balance - MAX_EFFECTIVE_BALANCE;
       const address = withdrawalCredentials.slice(12);
