@@ -164,8 +164,12 @@ async function startELProcess(args: {
     }
 
     console.log("Killing EL process", gethProc.pid);
-    await shell(`pkill -15 -P ${gethProc.pid}`);
-    await shell(`docker rm -f custom-execution`)
+    try {
+      await shell(`pkill -15 -P ${gethProc.pid}`);
+      await shell("docker rm -f custom-execution");
+    } catch (e) {
+      console.log("Killing EL error", (e as Error).message);
+    }
 
     // Wait for the P2P to be offline
     await waitForELOffline(ENGINE_PORT);
