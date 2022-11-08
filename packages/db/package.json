@@ -46,11 +46,14 @@
     "it-all": "^1.0.2",
     "level": "^8.0.0"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "@lavamoat/preinstall-always-fail": "^1.0.0"
+  },
   "lavamoat": {
     "allowScripts": {
       "@lodestar/utils>bigint-buffer": true,
-      "level>classic-level": true
+      "level>classic-level": true,
+      "@lavamoat/preinstall-always-fail": false
     }
   }
 }

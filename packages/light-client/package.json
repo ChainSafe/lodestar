@@ -73,6 +73,7 @@
     "mitt": "^3.0.0"
   },
   "devDependencies": {
+    "@lavamoat/preinstall-always-fail": "^1.0.0",
     "@types/yauzl": "^2.10.0"
   },
   "keywords": [
@@ -85,7 +86,8 @@
   "lavamoat": {
     "allowScripts": {
       "@chainsafe/bls>@chainsafe/blst": true,
-      "@lodestar/utils>bigint-buffer": true
+      "@lodestar/utils>bigint-buffer": true,
+      "@lavamoat/preinstall-always-fail": false
     }
   }
 }

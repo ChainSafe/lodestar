@@ -80,6 +80,7 @@
     "qs": "^6.10.1"
   },
   "devDependencies": {
+    "@lavamoat/preinstall-always-fail": "^1.0.0",
     "@types/eventsource": "^1.1.5",
     "@types/qs": "^6.9.6",
     "ajv": "^8.11.0",
@@ -97,7 +98,8 @@
   ],
   "lavamoat": {
     "allowScripts": {
-      "@lodestar/utils>bigint-buffer": true
+      "@lodestar/utils>bigint-buffer": true,
+      "@lavamoat/preinstall-always-fail": false
     }
   }
 }

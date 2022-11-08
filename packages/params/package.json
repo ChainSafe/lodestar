@@ -60,11 +60,11 @@
   ],
   "devDependencies": {
     "@lavamoat/preinstall-always-fail": "^1.0.0",
-    "electron": "^21.0.1",
-    "karma-electron": "^7.3.0",
     "@types/js-yaml": "^4.0.3",
     "axios": "^0.21.0",
-    "js-yaml": "^4.1.0"
+    "electron": "^21.0.1",
+    "js-yaml": "^4.1.0",
+    "karma-electron": "^7.3.0"
   },
   "lavamoat": {
     "allowScripts": {

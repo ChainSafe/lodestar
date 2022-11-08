@@ -68,12 +68,14 @@
     "yargs": "^16.1.0"
   },
   "devDependencies": {
+    "@lavamoat/preinstall-always-fail": "^1.0.0",
     "@types/yargs": "^15.0.9"
   },
   "lavamoat": {
     "allowScripts": {
       "@lodestar/state-transition>@chainsafe/bls>@chainsafe/blst": true,
-      "@lodestar/state-transition>bigint-buffer": true
+      "@lodestar/state-transition>bigint-buffer": true,
+      "@lavamoat/preinstall-always-fail": false
     }
   }
 }

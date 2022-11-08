@@ -64,6 +64,7 @@
     "@chainsafe/persistent-merkle-tree": "^0.4.2",
     "@chainsafe/persistent-ts": "^0.19.1",
     "@chainsafe/ssz": "^0.9.2",
+    "@lavamoat/preinstall-always-fail": "^1.0.0",
     "@lodestar/config": "^1.1.1",
     "@lodestar/params": "^1.1.1",
     "@lodestar/types": "^1.1.1",
@@ -86,7 +87,8 @@
   "lavamoat": {
     "allowScripts": {
       "@chainsafe/blst": true,
-      "bigint-buffer": true
+      "bigint-buffer": true,
+      "@lavamoat/preinstall-always-fail": false
     }
   }
 }
