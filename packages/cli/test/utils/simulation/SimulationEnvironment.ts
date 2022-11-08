@@ -139,9 +139,18 @@ export class SimulationEnvironment {
   async start(timeout: number): Promise<void> {
     try {
       setTimeout(async () => {
-        await this.stop();
-        throw new Error(`Simulation ${this.options.id} timed out after ${timeout}ms`);
+        await this.stop(1, "On timeout");
       }, timeout);
+
+      process.on("unhandledRejection", async (reason, promise) => {
+        console.error("Unhandled Rejection at:", promise, "reason:", reason);
+        await this.stop(1, "Unhandled promise rejection");
+      });
+
+      process.on("uncaughtException", async (err) => {
+        console.error("Uncaught exception:", err);
+        await this.stop(1, "Uncaught exception");
+      });
 
       await mkdir(this.options.rootDir);
 
@@ -182,12 +191,12 @@ export class SimulationEnvironment {
       await this.tracker.start();
       await Promise.all(this.nodes.map((node) => this.tracker.track(node)));
     } catch (error) {
-      console.error(error);
-      await this.stop();
+      await this.stop(1, `Caused error in startup. ${(error as Error).message}`);
     }
   }
 
-  async stop(): Promise<void> {
+  async stop(code = 0, message = "On completion."): Promise<void> {
+    console.log(`Simulation environment "${this.options.id}" is stopping: ${message}`);
     this.options.controller.abort();
     await this.tracker.stop();
     await Promise.all(this.jobs.map((j) => j.el.stop()));
@@ -197,9 +206,9 @@ export class SimulationEnvironment {
 
     if (this.tracker.getErrorCount() > 0) {
       this.tracker.printErrors();
-      process.exit(1);
+      process.exit(code);
     } else {
-      process.exit(0);
+      process.exit(code);
     }
   }
 
