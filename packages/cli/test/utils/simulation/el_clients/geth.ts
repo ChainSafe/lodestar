@@ -15,14 +15,26 @@ import {
 } from "../interfaces.js";
 import {Eth1ProviderWithAdmin} from "../Eth1ProviderWithAdmin.js";
 import {isChildProcessRunner, isDockerRunner} from "../runner/index.js";
-import {getELGenesisBlock} from "../utils/el_genesis.js";
+import {getGethGenesisBlock} from "../utils/el_genesis.js";
 
 const SECRET_KEY = "45a915e4d060149eb4365960e6a7a45f334393093061116b197e3240065ff2d8";
 const PASSWORD = "12345678";
 const GENESIS_ACCOUNT = "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b";
 
 export const generateGethNode: ELClientGenerator = (
-  {id, mode, dataDir, ethPort, port, enginePort, ttd, logFilePath, jwtSecretHex, cliqueSealingPeriod}: ELClientOptions,
+  {
+    id,
+    mode,
+    dataDir,
+    ethPort,
+    port,
+    enginePort,
+    ttd,
+    logFilePath,
+    jwtSecretHex,
+    cliqueSealingPeriod,
+    address,
+  }: ELClientOptions,
   runner: Runner<RunnerType.ChildProcess> | Runner<RunnerType.Docker>
 ) => {
   if (isChildProcessRunner(runner)) {
@@ -54,11 +66,11 @@ export const generateGethNode: ELClientGenerator = (
   const initJobOptions: JobOptions = {
     bootstrap: async () => {
       await mkdir(dataDir, {recursive: true});
-      await writeFile(genesisPath, JSON.stringify(getELGenesisBlock(mode, {ttd, cliqueSealingPeriod})));
+      await writeFile(genesisPath, JSON.stringify(getGethGenesisBlock(mode, {ttd, cliqueSealingPeriod})));
     },
     cli: {
       command: binaryPath,
-      args: ["--datadir", gethDataDir, "init", genesisGethPath],
+      args: ["--datadir", gethDataDir, "--networkid", "1234", "init", genesisGethPath],
       env: {},
     },
     logs: {
@@ -74,7 +86,17 @@ export const generateGethNode: ELClientGenerator = (
     },
     cli: {
       command: binaryPath,
-      args: ["--datadir", gethDataDir, "account", "import", "--password", passwordGethPath, skGethPath],
+      args: [
+        "--datadir",
+        gethDataDir,
+        "--networkid",
+        "1234",
+        "account",
+        "import",
+        "--password",
+        passwordGethPath,
+        skGethPath,
+      ],
       env: {},
     },
     logs: {
@@ -99,6 +121,8 @@ export const generateGethNode: ELClientGenerator = (
         "0.0.0.0",
         "--port",
         String(port as number),
+        "--nat",
+        `extip:${address}`,
         "--authrpc.jwtsecret",
         jwtSecretGethPath,
         "--datadir",
@@ -110,9 +134,11 @@ export const generateGethNode: ELClientGenerator = (
         passwordGethPath,
         "--syncmode",
         "full",
+        "--networkid",
+        "1234",
         // Logging verbosity: 0=silent, 1=error, 2=warn, 3=info, 4=debug, 5=detail
         "--verbosity",
-        "4",
+        "5",
         ...(mode == ELStartMode.PreMerge ? ["--mine", "--nodiscover"] : []),
       ],
       env: {},
@@ -136,6 +162,7 @@ export const generateGethNode: ELClientGenerator = (
         image: process.env.GETH_DOCKER_IMAGE as string,
         dataVolumePath: dataDir,
         exposePorts: [enginePort, ethPort, port],
+        dockerNetworkIp: address,
       });
 
   const provider = new Eth1ProviderWithAdmin(

@@ -14,11 +14,25 @@ import {
   RunnerType,
 } from "../interfaces.js";
 import {Eth1ProviderWithAdmin} from "../Eth1ProviderWithAdmin.js";
-import {isChildProcessRunner, isDockerRunner} from "../runner/index.js";
-import {getELGenesisBlock} from "../utils/el_genesis.js";
+import {isDockerRunner} from "../runner/index.js";
+import {getNethermindChainSpec} from "../utils/el_genesis.js";
+
+const GENESIS_ACCOUNT = "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b";
 
 export const generateNethermindNode: ELClientGenerator = (
-  {id, mode, dataDir, ethPort, port, enginePort, ttd, logFilePath, jwtSecretHex, cliqueSealingPeriod}: ELClientOptions,
+  {
+    id,
+    mode,
+    dataDir,
+    ethPort,
+    port,
+    enginePort,
+    ttd,
+    logFilePath,
+    jwtSecretHex,
+    cliqueSealingPeriod,
+    address,
+  }: ELClientOptions,
   runner: Runner<RunnerType.ChildProcess> | Runner<RunnerType.Docker>
 ) => {
   if (!isDockerRunner(runner)) {
@@ -31,19 +45,19 @@ export const generateNethermindNode: ELClientGenerator = (
 
   // Docker will be executed on entrypoint automatically
   const binaryPath = "";
-  const containerDataDir = isChildProcessRunner(runner) ? dataDir : "/data";
+  const containerDataDir = "/data";
   const ethRpcUrl = `http://127.0.0.1:${ethPort}`;
   const engineRpcUrl = `http://127.0.0.1:${enginePort}`;
 
-  const genesisPath = join(dataDir, "genesis.json");
-  const genesisContainerPath = join(containerDataDir, "genesis.json");
+  const chainSpecPath = join(dataDir, "chain.json");
+  const chainSpecContainerPath = join(containerDataDir, "chain.json");
   const jwtSecretPath = join(dataDir, "jwtsecret");
   const jwtSecretContainerPath = join(containerDataDir, "jwtsecret");
 
   const startJobOptions: JobOptions = {
     bootstrap: async () => {
       await mkdir(dataDir, {recursive: true});
-      await writeFile(genesisPath, JSON.stringify(getELGenesisBlock(mode, {ttd, cliqueSealingPeriod})));
+      await writeFile(chainSpecPath, JSON.stringify(getNethermindChainSpec(mode, {ttd, cliqueSealingPeriod})));
       await writeFile(jwtSecretPath, jwtSecretHex);
     },
     cli: {
@@ -66,19 +80,29 @@ export const generateNethermindNode: ELClientGenerator = (
         "--JsonRpc.EnabledModules",
         "Admin,Net,Eth,Subscribe,Web3",
         "--Init.BaseDbPath",
-        containerDataDir,
+        join(containerDataDir, "db"),
         "--Init.DiscoveryEnabled",
         "false",
-        "--Hive.GenesisFilePath",
-        genesisContainerPath,
-        "--Sync.FastSync",
-        "false",
-        "--Sync.SnapSync",
-        "false",
+        "--Init.PeerManagerEnabled",
+        "true",
+        "--Init.ChainSpecPath",
+        chainSpecContainerPath,
+        "--Sync.NetworkingEnabled",
+        "true",
+        "--Network.ExternalIp",
+        address,
+        "--Network.LocalIp",
+        "0.0.0.0",
+        "--Network.P2PPort",
+        String(port as number),
+        // "--Merge.TerminalTotalDifficulty",
+        // String(ttd as bigint),
         // OFF|TRACE|DEBUG|INFO|WARN|ERROR
         "--log",
-        "DEBUG",
-        ...(mode == ELStartMode.PreMerge ? ["--Init.IsMining", "true", "--Init.PeerManagerEnabled", "false"] : []),
+        "INFO",
+        "--config",
+        "none",
+        ...(mode == ELStartMode.PreMerge ? ["--Init.IsMining", "true", "--Mining.Enabled", "true"] : []),
       ],
       env: {},
     },
@@ -99,6 +123,7 @@ export const generateNethermindNode: ELClientGenerator = (
     image: process.env.NETHERMIND_DOCKER_IMAGE as string,
     dataVolumePath: dataDir,
     exposePorts: [enginePort, ethPort, port],
+    dockerNetworkIp: address,
   });
 
   const provider = new Eth1ProviderWithAdmin(
@@ -108,7 +133,7 @@ export const generateNethermindNode: ELClientGenerator = (
   );
 
   const node: ELNode = {
-    client: ELClient.Geth,
+    client: ELClient.Nethermind,
     id,
     engineRpcUrl,
     ethRpcUrl,

@@ -9,17 +9,20 @@ import {
   RunnerOptions,
   RunnerType,
 } from "../interfaces.js";
-import {startJobs, stopChildProcess} from "../utils/child_process.js";
+import {startChildProcess, startJobs, stopChildProcess} from "../utils/child_process.js";
+
+const dockerNetworkIpRange = "192.168.0";
+const dockerNetworkName = "sim-env-net";
 
 const convertJobOptionsToDocker = (
   jobOptions: JobOptions[],
   name: string,
-  {image, dataVolumePath, exposePorts}: RunnerOptions[RunnerType.Docker]
+  {image, dataVolumePath, exposePorts, dockerNetworkIp}: RunnerOptions[RunnerType.Docker]
 ): JobOptions[] => {
   const dockerJobOptions: JobOptions[] = [];
 
   for (const jobOption of jobOptions) {
-    const jobArgs = ["run", "--rm", "--name", name, "-v", `${dataVolumePath}:/data`, "--network", "bridge"];
+    const jobArgs = ["run", "--rm", "--name", name, "-v", `${dataVolumePath}:/data`];
 
     if (jobOption.cli.env && Object.keys(jobOption.cli.env).length > 0) {
       jobArgs.push("-e");
@@ -45,7 +48,7 @@ const convertJobOptionsToDocker = (
         args: jobArgs,
       },
       children: jobOption.children
-        ? convertJobOptionsToDocker(jobOption.children, name, {image, dataVolumePath, exposePorts})
+        ? convertJobOptionsToDocker(jobOption.children, name, {image, dataVolumePath, exposePorts, dockerNetworkIp})
         : [],
     });
   }
@@ -53,19 +56,69 @@ const convertJobOptionsToDocker = (
   return dockerJobOptions;
 };
 
+const connectContainerToNetwork = async (container: string, ip: string, logFilePath: string): Promise<void> => {
+  await startChildProcess({
+    cli: {
+      command: "docker",
+      args: ["network", "connect", dockerNetworkName, container, "--ip", ip],
+    },
+    logs: {
+      stdoutFilePath: logFilePath,
+    },
+  });
+};
+
 export class DockerRunner implements Runner<RunnerType.Docker> {
   type = RunnerType.Docker as const;
 
   private emitter = new EventEmitter({captureRejections: true});
+  private ipIndex = 2;
+  private logFilePath: string;
+
+  constructor(logFilePath: string) {
+    this.logFilePath = logFilePath;
+  }
+
+  async start(): Promise<void> {
+    await startChildProcess({
+      cli: {
+        command: "docker",
+        args: ["network", "create", "--subnet", `${dockerNetworkIpRange}.0/24`, dockerNetworkName],
+      },
+      logs: {
+        stdoutFilePath: this.logFilePath,
+      },
+    });
+  }
+
+  async stop(): Promise<void> {
+    await startChildProcess({
+      cli: {
+        command: "docker",
+        args: ["network", "rm", dockerNetworkName],
+      },
+      logs: {
+        stdoutFilePath: this.logFilePath,
+      },
+    });
+  }
+
+  getNextIp(): string {
+    return `${dockerNetworkIpRange}.${this.ipIndex++}`;
+  }
 
   on(event: RunnerEvent, cb: () => void | Promise<void>): void {
     this.emitter.on(event, cb);
   }
 
-  create(id: string, jobs: JobOptions[], {image, dataVolumePath, exposePorts}: RunnerOptions[RunnerType.Docker]): Job {
+  create(
+    id: string,
+    jobs: JobOptions[],
+    {image, dataVolumePath, exposePorts, dockerNetworkIp}: RunnerOptions[RunnerType.Docker]
+  ): Job {
     const childProcesses: ChildProcessWithJobOptions[] = [];
 
-    const dockerJobOptions = convertJobOptionsToDocker(jobs, id, {image, dataVolumePath, exposePorts});
+    const dockerJobOptions = convertJobOptionsToDocker(jobs, id, {image, dataVolumePath, exposePorts, dockerNetworkIp});
 
     const stop = async (): Promise<void> => {
       // eslint-disable-next-line no-console
@@ -94,6 +147,8 @@ export class DockerRunner implements Runner<RunnerType.Docker> {
             // eslint-disable-next-line no-console
             console.log(`Started "${id}"...`);
             this.emitter.emit("started");
+
+            await connectContainerToNetwork(id, dockerNetworkIp, this.logFilePath);
             resolve();
           } catch (err) {
             reject(err);

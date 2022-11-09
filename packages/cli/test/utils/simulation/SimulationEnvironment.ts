@@ -27,8 +27,6 @@ import {
   Job,
   NodePair,
   NodePairOptions,
-  Runner,
-  RunnerType,
   SimulationInitOptions,
   SimulationOptions,
 } from "./interfaces.js";
@@ -58,8 +56,8 @@ export class SimulationEnvironment {
   readonly clock: EpochClock;
   readonly tracker: SimulationTracker;
   readonly emitter: EventEmitter;
-  readonly childProcessRunner: Runner<RunnerType.ChildProcess>;
-  readonly dockerRunner: Runner<RunnerType.Docker>;
+  readonly childProcessRunner: ChildProcessRunner;
+  readonly dockerRunner: DockerRunner;
   readonly externalSigner: ExternalSignerServer;
 
   readonly forkConfig: IChainForkConfig;
@@ -87,7 +85,7 @@ export class SimulationEnvironment {
     this.externalSigner = new ExternalSignerServer([]);
 
     this.childProcessRunner = new ChildProcessRunner();
-    this.dockerRunner = new DockerRunner();
+    this.dockerRunner = new DockerRunner(join(this.options.logsDir, "docker_runner.log"));
 
     this.tracker = SimulationTracker.initWithDefaultAssertions({
       nodes: [],
@@ -152,8 +150,16 @@ export class SimulationEnvironment {
         await this.stop(1, "Uncaught exception");
       });
 
+      process.on("SIGTERM", async () => {
+        await this.stop(0, "Terminating");
+      });
+      process.on("SIGINT", async () => {
+        await this.stop(0, "Terminating");
+      });
+
       await mkdir(this.options.rootDir);
 
+      await this.dockerRunner.start();
       await Promise.all(this.jobs.map((j) => j.el.start()));
 
       for (let i = 0; i < this.nodes.length; i++) {
@@ -198,17 +204,20 @@ export class SimulationEnvironment {
   async stop(code = 0, message = "On completion."): Promise<void> {
     process.removeAllListeners("unhandledRejection");
     process.removeAllListeners("uncaughtException");
+    process.removeAllListeners("SIGTERM");
+    process.removeAllListeners("SIGINT");
     console.log(`Simulation environment "${this.options.id}" is stopping: ${message}`);
     this.options.controller.abort();
     await this.tracker.stop();
     await Promise.all(this.jobs.map((j) => j.el.stop()));
     await Promise.all(this.jobs.map((j) => j.cl.stop()));
     await this.externalSigner.stop();
-    await rm(this.options.rootDir, {recursive: true});
+    await this.dockerRunner.stop();
+    // await rm(this.options.rootDir, {recursive: true});
 
     if (this.tracker.getErrorCount() > 0) {
       this.tracker.printErrors();
-      process.exit(code);
+      process.exit(this.tracker.getErrorCount() > 0 ? 1 : code);
     } else {
       process.exit(code);
     }
@@ -337,6 +346,7 @@ export class SimulationEnvironment {
       enginePort: options?.enginePort ?? EL_ENGINE_BASE_PORT + this.nodePairCount + 1,
       ethPort: options?.ethPort ?? EL_ETH_BASE_PORT + this.nodePairCount + 1,
       port: options?.port ?? EL_P2P_BASE_PORT + this.nodePairCount + 1,
+      address: this.dockerRunner.getNextIp(),
     };
 
     switch (client) {

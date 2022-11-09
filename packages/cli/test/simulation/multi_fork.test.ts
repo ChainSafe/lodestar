@@ -9,9 +9,9 @@ import {nodeAssertion} from "../utils/simulation/assertions/nodeAssertion.js";
 import {mergeAssertion} from "../utils/simulation/assertions/mergeAssertion.js";
 
 const genesisSlotsDelay = 20;
-const altairForkEpoch = 2;
-const bellatrixForkEpoch = 4;
-const runTillEpoch = 6;
+const altairForkEpoch = 1;
+const bellatrixForkEpoch = 2;
+const runTillEpoch = 3;
 const syncWaitEpoch = 2;
 
 const timeout =
@@ -57,7 +57,8 @@ env.tracker.register({
 
 await env.start(timeout);
 await connectAllNodes(env.nodes);
-await env.waitForSlot(env.clock.getLastSlotOfEpoch(bellatrixForkEpoch), env.nodes, true);
+await env.waitForSlot(env.clock.getLastSlotOfEpoch(bellatrixForkEpoch) + 4, env.nodes, true);
+await env.stop();
 
 const {
   data: {finalized},

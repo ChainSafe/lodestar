@@ -80,6 +80,7 @@ export interface ELClientOptions extends ELGenesisOptions {
   enginePort: number;
   ethPort: number;
   port: number;
+  address: string;
 }
 
 export interface CLNode {
@@ -165,6 +166,7 @@ export type RunnerOptions = {
     image: string;
     dataVolumePath: string;
     exposePorts: number[];
+    dockerNetworkIp: string;
   };
 };
 
@@ -243,3 +245,12 @@ export interface SimulationAssertionError {
   message: string;
 }
 export type ChildProcessWithJobOptions = {jobOptions: JobOptions; childProcess: ChildProcess};
+
+export type Eth1GenesisBlock = {
+  config: {
+    chainId: number;
+    clique: Record<string, unknown>;
+    terminalTotalDifficulty: string;
+  };
+  alloc: Record<string, {balance: string}>;
+};

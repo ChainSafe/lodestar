@@ -40,7 +40,7 @@ export class SimulationTracker {
     fork: 10,
     eph: 5,
     slot: 4,
-    head: 15,
+    head: 16,
     finzed: 6,
     peers: 6,
     attCount: 8,
