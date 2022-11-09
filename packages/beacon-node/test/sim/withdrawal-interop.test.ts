@@ -260,6 +260,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       logger: loggerNodeA,
       genesisTime,
       eth1BlockHash: fromHexString(genesisBlockHash),
+      withEth1Credentials: true
     });
 
     afterEachCallbacks.push(async function () {

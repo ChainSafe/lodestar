@@ -3,7 +3,12 @@ import {phase0, ssz} from "@lodestar/types";
 import {toGindex, Tree} from "@chainsafe/persistent-merkle-tree";
 import {IChainConfig} from "@lodestar/config";
 import {computeDomain, computeSigningRoot, interopSecretKeys, ZERO_HASH} from "@lodestar/state-transition";
-import {BLS_WITHDRAWAL_PREFIX, DOMAIN_DEPOSIT, MAX_EFFECTIVE_BALANCE} from "@lodestar/params";
+import {
+  BLS_WITHDRAWAL_PREFIX,
+  ETH1_ADDRESS_WITHDRAWAL_PREFIX,
+  DOMAIN_DEPOSIT,
+  MAX_EFFECTIVE_BALANCE,
+} from "@lodestar/params";
 import {DepositTree} from "../../../db/repositories/depositDataRoot.js";
 
 /**
@@ -12,7 +17,8 @@ import {DepositTree} from "../../../db/repositories/depositDataRoot.js";
 export function interopDeposits(
   config: IChainConfig,
   depositDataRootList: DepositTree,
-  validatorCount: number
+  validatorCount: number,
+  {withEth1Credentials}: {withEth1Credentials?: boolean} = {}
 ): phase0.Deposit[] {
   depositDataRootList.commit();
   const depositTreeDepth = depositDataRootList.type.depth;
@@ -22,7 +28,10 @@ export function interopDeposits(
     // create DepositData
     const data: phase0.DepositData = {
       pubkey,
-      withdrawalCredentials: Buffer.concat([BLS_WITHDRAWAL_PREFIX, digest(pubkey).slice(1)]),
+      withdrawalCredentials: Buffer.concat([
+        withEth1Credentials ? ETH1_ADDRESS_WITHDRAWAL_PREFIX : BLS_WITHDRAWAL_PREFIX,
+        digest(pubkey).slice(1),
+      ]),
       amount: MAX_EFFECTIVE_BALANCE,
       signature: Buffer.alloc(0),
     };

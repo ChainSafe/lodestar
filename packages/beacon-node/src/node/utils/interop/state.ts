@@ -18,6 +18,7 @@ export type InteropStateOpts = {
   genesisTime?: number;
   eth1BlockHash?: Bytes32;
   eth1Timestamp?: TimeSeconds;
+  withEth1Credentials?: boolean;
 };
 
 export function getInteropState(

@@ -10,7 +10,12 @@ export function initDevState(
   validatorCount: number,
   interopStateOpts: InteropStateOpts
 ): {deposits: phase0.Deposit[]; state: BeaconStateAllForks} {
-  const deposits = interopDeposits(config, ssz.phase0.DepositDataRootList.defaultViewDU(), validatorCount);
+  const deposits = interopDeposits(
+    config,
+    ssz.phase0.DepositDataRootList.defaultViewDU(),
+    validatorCount,
+    interopStateOpts
+  );
   const state = getInteropState(config, interopStateOpts, deposits);
   return {deposits, state};
 }
