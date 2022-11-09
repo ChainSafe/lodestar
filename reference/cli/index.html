@@ -13,7 +13,7 @@
         <link rel="canonical" href="https://chainsafe.github.io/lodestar/reference/cli/">
       
       <link rel="icon" href="../../assets/round-icon.ico">
-      <meta name="generator" content="mkdocs-1.4.1, mkdocs-material-8.5.6">
+      <meta name="generator" content="mkdocs-1.4.2, mkdocs-material-8.5.9">
     
     
       
@@ -24,7 +24,7 @@
       <link rel="stylesheet" href="../../assets/stylesheets/main.20d9efc8.min.css">
       
         
-        <link rel="stylesheet" href="../../assets/stylesheets/palette.cbb835fc.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.08040f6c.min.css">
         
       
       
@@ -115,6 +115,7 @@
         
           
           
+          
           <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="preference" data-md-color-primary="black" data-md-color-accent="deep-purple"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
           
             <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_2" hidden>
@@ -122,6 +123,7 @@
             </label>
           
         
+          
           
           
           <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="black" data-md-color-accent="deep-purple"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_2">
@@ -897,26 +899,26 @@
 <tr>
 <td><code>--logLevel</code></td>
 <td>string</td>
-<td>Logging verbosity level</td>
+<td>Logging verbosity level for emittings logs to terminal</td>
 <td>info</td>
-</tr>
-<tr>
-<td><code>--logFileLevel</code></td>
-<td>string</td>
-<td>Logging verbosity level for file transport</td>
-<td>info</td>
-</tr>
-<tr>
-<td><code>--logFileDailyRotate</code></td>
-<td>number</td>
-<td>Daily rotate log files, set to an integer to limit the file count, else defaults to 5</td>
-<td></td>
 </tr>
 <tr>
 <td><code>--logFile</code></td>
 <td>string</td>
-<td>Path to output all logs to a persistent log file</td>
+<td>Path to output all logs to a persistent log file, use 'none' to disable</td>
 <td></td>
+</tr>
+<tr>
+<td><code>--logFileLevel</code></td>
+<td>string</td>
+<td>Logging verbosity level for emittings logs to file</td>
+<td>debug</td>
+</tr>
+<tr>
+<td><code>--logFileDailyRotate</code></td>
+<td>number</td>
+<td>Daily rotate log files, set to an integer to limit the file count, set to 0(zero) to disable rotation</td>
+<td>5</td>
 </tr>
 <tr>
 <td><code>--rest</code></td>
@@ -1151,20 +1153,26 @@
 <tr>
 <td><code>--logLevel</code></td>
 <td>string</td>
-<td>Logging verbosity level</td>
+<td>Logging verbosity level for emittings logs to terminal</td>
 <td>info</td>
+</tr>
+<tr>
+<td><code>--logFile</code></td>
+<td>string</td>
+<td>Path to output all logs to a persistent log file, use 'none' to disable</td>
+<td></td>
 </tr>
 <tr>
 <td><code>--logFileLevel</code></td>
 <td>string</td>
-<td>Logging verbosity level for file transport</td>
-<td>info</td>
+<td>Logging verbosity level for emittings logs to file</td>
+<td>debug</td>
 </tr>
 <tr>
 <td><code>--logFileDailyRotate</code></td>
 <td>number</td>
-<td>Daily rotate log files, set to an integer to limit the file count, else defaults to 5</td>
-<td></td>
+<td>Daily rotate log files, set to an integer to limit the file count, set to 0(zero) to disable rotation</td>
+<td>5</td>
 </tr>
 <tr>
 <td><code>--keymanager</code></td>
@@ -1197,15 +1205,9 @@
 <td>*</td>
 </tr>
 <tr>
-<td><code>--logFile</code></td>
-<td>string</td>
-<td>Path to output all logs to a persistent log file</td>
-<td></td>
-</tr>
-<tr>
-<td><code>--server</code></td>
-<td>string</td>
-<td>Address to connect to BeaconNode</td>
+<td><code>--beaconNodes</code></td>
+<td>array</td>
+<td>Addresses to connect to BeaconNode</td>
 <td>http://127.0.0.1:9596</td>
 </tr>
 <tr>
@@ -1321,9 +1323,9 @@
 </thead>
 <tbody>
 <tr>
-<td><code>--server</code></td>
-<td>string</td>
-<td>Address to connect to BeaconNode</td>
+<td><code>--beaconNodes</code></td>
+<td>array</td>
+<td>Addresses to connect to BeaconNode</td>
 <td>http://127.0.0.1:9596</td>
 </tr>
 <tr>
@@ -1404,20 +1406,26 @@
 <tr>
 <td><code>--logLevel</code></td>
 <td>string</td>
-<td>Logging verbosity level</td>
+<td>Logging verbosity level for emittings logs to terminal</td>
 <td>info</td>
+</tr>
+<tr>
+<td><code>--logFile</code></td>
+<td>string</td>
+<td>Path to output all logs to a persistent log file, use 'none' to disable</td>
+<td></td>
 </tr>
 <tr>
 <td><code>--logFileLevel</code></td>
 <td>string</td>
-<td>Logging verbosity level for file transport</td>
-<td>info</td>
+<td>Logging verbosity level for emittings logs to file</td>
+<td>debug</td>
 </tr>
 <tr>
 <td><code>--logFileDailyRotate</code></td>
 <td>number</td>
-<td>Daily rotate log files, set to an integer to limit the file count, else defaults to 5</td>
-<td></td>
+<td>Daily rotate log files, set to an integer to limit the file count, set to 0(zero) to disable rotation</td>
+<td>5</td>
 </tr>
 <tr>
 <td><code>--keymanager</code></td>
@@ -1450,15 +1458,9 @@
 <td>*</td>
 </tr>
 <tr>
-<td><code>--logFile</code></td>
-<td>string</td>
-<td>Path to output all logs to a persistent log file</td>
-<td></td>
-</tr>
-<tr>
-<td><code>--server</code></td>
-<td>string</td>
-<td>Address to connect to BeaconNode</td>
+<td><code>--beaconNodes</code></td>
+<td>array</td>
+<td>Addresses to connect to BeaconNode</td>
 <td>http://127.0.0.1:9596</td>
 </tr>
 <tr>
@@ -1622,26 +1624,26 @@
 <tr>
 <td><code>--logLevel</code></td>
 <td>string</td>
-<td>Logging verbosity level</td>
+<td>Logging verbosity level for emittings logs to terminal</td>
 <td>info</td>
-</tr>
-<tr>
-<td><code>--logFileLevel</code></td>
-<td>string</td>
-<td>Logging verbosity level for file transport</td>
-<td>info</td>
-</tr>
-<tr>
-<td><code>--logFileDailyRotate</code></td>
-<td>number</td>
-<td>Daily rotate log files, set to an integer to limit the file count, else defaults to 5</td>
-<td></td>
 </tr>
 <tr>
 <td><code>--logFile</code></td>
 <td>string</td>
-<td>Path to output all logs to a persistent log file</td>
+<td>Path to output all logs to a persistent log file, use 'none' to disable</td>
 <td></td>
+</tr>
+<tr>
+<td><code>--logFileLevel</code></td>
+<td>string</td>
+<td>Logging verbosity level for emittings logs to file</td>
+<td>debug</td>
+</tr>
+<tr>
+<td><code>--logFileDailyRotate</code></td>
+<td>number</td>
+<td>Daily rotate log files, set to an integer to limit the file count, set to 0(zero) to disable rotation</td>
+<td>5</td>
 </tr>
 <tr>
 <td><code>--beaconApiUrl</code></td>
@@ -1706,9 +1708,9 @@
 <td>*</td>
 </tr>
 <tr>
-<td><code>--server</code></td>
-<td>string</td>
-<td>Address to connect to BeaconNode</td>
+<td><code>--beaconNodes</code></td>
+<td>array</td>
+<td>Addresses to connect to BeaconNode</td>
 <td>http://127.0.0.1:9596</td>
 </tr>
 <tr>
@@ -1928,10 +1930,10 @@
       <div class="md-dialog__inner md-typeset"></div>
     </div>
     
-    <script id="__config" type="application/json">{"base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.5bf1dace.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}}</script>
+    <script id="__config" type="application/json">{"base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.16e2a7d4.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.078830c0.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d6c3db9e.min.js"></script>
       
     
   </body>
