@@ -10,14 +10,14 @@ import {allForks, Epoch, Slot} from "@lodestar/types";
 import {Checkpoint} from "@lodestar/types/phase0";
 import {ILogger, mapValues} from "@lodestar/utils";
 import {toHexString} from "@chainsafe/ssz";
-import {LightNode} from "../../../src/index.js";
+import {BeaconNodeLight} from "../../../src/index.js";
 import {ChainEvent, HeadEventData} from "../../../src/chain/index.js";
 import {linspace} from "../../../src/util/numpy.js";
 import {RegenCaller} from "../../../src/chain/regen/index.js";
 
 /* eslint-disable no-console */
 
-export function simTestInfoTracker(bn: LightNode, logger: ILogger): () => void {
+export function simTestInfoTracker(bn: BeaconNodeLight, logger: ILogger): () => void {
   let lastSeenEpoch = 0;
 
   const attestationsPerBlock = new Map<Slot, number>();

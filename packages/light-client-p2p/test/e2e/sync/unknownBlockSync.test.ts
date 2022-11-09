@@ -79,7 +79,7 @@ describe("sync / unknown block sync", function () {
     const bn2 = await getDevBeaconNode({
       params: testParams,
       options: {
-        api: {},
+        api: {rest: {enabled: false}},
         sync: {disableRangeSync: true},
         chain: {blsVerifyAllMainThread: true},
       },

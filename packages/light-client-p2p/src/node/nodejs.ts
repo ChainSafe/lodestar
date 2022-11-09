@@ -16,17 +16,17 @@ import {BeaconSync, IBeaconSync} from "../sync/index.js";
 import {LightSync} from "../sync/lightSync/index.js";
 import {LightChain, IBeaconChain, initBeaconMetrics} from "../chain/index.js";
 import {createMetrics, IMetrics, HttpMetricsServer} from "../metrics/index.js";
-import {getApi} from "../api/index.js";
+import {getApi, BeaconRestApiServer} from "../api/index.js";
 import {initializeExecutionEngine, initializeExecutionBuilder} from "../execution/index.js";
 import {initializeEth1ForBlockProduction} from "../eth1/index.js";
 import {createLibp2pMetrics} from "../metrics/metrics/libp2p.js";
-import {ILightNodeOptions} from "./options.js";
+import {IBeaconNodeOptions} from "./options.js";
 import {runNodeNotifier} from "./notifier.js";
 
 export * from "./options.js";
 
-export interface ILightNodeModules {
-  opts: ILightNodeOptions;
+export interface IBeaconNodeModules {
+  opts: IBeaconNodeOptions;
   config: IBeaconConfig;
   db: IBeaconDb;
   metrics: IMetrics | null;
@@ -36,11 +36,12 @@ export interface ILightNodeModules {
   sync: IBeaconSync;
   backfillSync: LightSync | null;
   metricsServer?: HttpMetricsServer;
+  restApi?: BeaconRestApiServer;
   controller?: AbortController;
 }
 
 export interface IBeaconNodeInitModules {
-  opts: ILightNodeOptions;
+  opts: IBeaconNodeOptions;
   config: IBeaconConfig;
   db: IBeaconDb;
   logger: ILogger;
@@ -76,8 +77,8 @@ enum LoggerModule {
  * The main Beacon Node class.  Contains various components for getting and processing data from the
  * Ethereum Consensus ecosystem as well as systems for getting beacon node metadata.
  */
-export class LightNode {
-  opts: ILightNodeOptions;
+export class BeaconNodeLight {
+  opts: IBeaconNodeOptions;
   config: IBeaconConfig;
   db: IBeaconDb;
   metrics: IMetrics | null;
@@ -85,6 +86,7 @@ export class LightNode {
   network: INetwork;
   chain: IBeaconChain;
   api: Api;
+  restApi?: BeaconRestApiServer;
   sync: IBeaconSync;
   backfillSync: LightSync | null;
 
@@ -100,10 +102,11 @@ export class LightNode {
     network,
     chain,
     api,
+    restApi,
     sync,
     backfillSync,
     controller,
-  }: ILightNodeModules) {
+  }: IBeaconNodeModules) {
     this.opts = opts;
     this.config = config;
     this.metrics = metrics;
@@ -111,6 +114,7 @@ export class LightNode {
     this.db = db;
     this.chain = chain;
     this.api = api;
+    this.restApi = restApi;
     this.network = network;
     this.sync = sync;
     this.backfillSync = backfillSync;
@@ -123,7 +127,7 @@ export class LightNode {
    * Initialize a beacon node.  Initializes and `start`s the varied sub-component services of the
    * beacon node
    */
-  static async init<T extends LightNode = LightNode>({
+  static async init<T extends BeaconNodeLight = BeaconNodeLight>({
     opts,
     config,
     db,
@@ -247,6 +251,16 @@ export class LightNode {
       await metricsServer.start();
     }
 
+    const restApi = new BeaconRestApiServer(opts.api.rest, {
+      config,
+      logger: logger.child({module: LoggerModule.rest}),
+      api,
+      metrics: metrics ? metrics.apiRest : null,
+    });
+    if (opts.api.rest.enabled) {
+      await restApi.listen();
+    }
+
     void runNodeNotifier({network, chain, sync, config, logger, signal});
 
     return new this({
@@ -258,6 +272,7 @@ export class LightNode {
       network,
       chain,
       api,
+      restApi,
       sync,
       backfillSync: lightClientSync,
       controller,
@@ -274,6 +289,7 @@ export class LightNode {
       this.backfillSync?.close();
       await this.network.stop();
       if (this.metricsServer) await this.metricsServer.stop();
+      if (this.restApi) await this.restApi.close();
 
       await this.chain.persistToDisk();
       await this.chain.close();

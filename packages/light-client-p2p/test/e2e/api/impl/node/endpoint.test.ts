@@ -38,7 +38,7 @@ describe("lodestar / sync", function () {
         params: testParams,
         options: {
           sync: {isSingleNode: true},
-          api: {},
+          api: {rest: {enabled: true, port: restPort}},
           chain: {blsVerifyAllMainThread: true},
         },
         validatorCount,
@@ -66,7 +66,7 @@ describe("lodestar / sync", function () {
         params: testParams,
         options: {
           sync: {isSingleNode: false},
-          api: {},
+          api: {rest: {enabled: true, port: restPort}},
           chain: {blsVerifyAllMainThread: true},
         },
         validatorCount,

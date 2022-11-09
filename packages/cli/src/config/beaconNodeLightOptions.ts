@@ -1,40 +1,40 @@
 import deepmerge from "deepmerge";
-import {defaultOptions, ILightNodeOptions} from "@lodestar/light-client-p2p";
+import {defaultOptions, IBeaconNodeOptions} from "@lodestar/light-client-p2p";
 import {isPlainObject, RecursivePartial} from "@lodestar/utils";
 
-export class LightNodeOptions {
+export class BeaconNodeLightOptions {
   /**
    * Convenience class to deep merge nested options
    */
-  constructor(private beaconNodeOptions: RecursivePartial<ILightNodeOptions>) {}
+  constructor(private beaconNodeOptions: RecursivePartial<IBeaconNodeOptions>) {}
 
   /**
    * Returns current options
    */
-  get(): RecursivePartial<ILightNodeOptions> {
+  get(): RecursivePartial<IBeaconNodeOptions> {
     return this.beaconNodeOptions;
   }
 
   /**
    * Returns merged current options with defaultOptions
    */
-  getWithDefaults(): ILightNodeOptions {
+  getWithDefaults(): IBeaconNodeOptions {
     return mergeBeaconNodeLightOptionsWithDefaults(defaultOptions, this.beaconNodeOptions);
   }
 
-  set(beaconNodeOptionsPartial: RecursivePartial<ILightNodeOptions>): void {
+  set(beaconNodeOptionsPartial: RecursivePartial<IBeaconNodeOptions>): void {
     this.beaconNodeOptions = mergeBeaconNodeLightOptions(this.beaconNodeOptions, beaconNodeOptionsPartial);
   }
 }
 
 /**
- * Typesafe wrapper to merge partial ILightNodeOptions objects
+ * Typesafe wrapper to merge partial IBeaconNodeOptions objects
  */
 export function mergeBeaconNodeLightOptions(
-  ...partialOptionsArr: RecursivePartial<ILightNodeOptions>[]
-): RecursivePartial<ILightNodeOptions> {
+  ...partialOptionsArr: RecursivePartial<IBeaconNodeOptions>[]
+): RecursivePartial<IBeaconNodeOptions> {
   return partialOptionsArr.reduce((mergedBeaconOptions, options) => {
-    // ILightNodeOptions contains instances so a deepmerge can only be done safely with `isMergeableObject: isPlainObject`
+    // IBeaconNodeOptions contains instances so a deepmerge can only be done safely with `isMergeableObject: isPlainObject`
     return deepmerge(mergedBeaconOptions, options, {
       arrayMerge: overwriteTargetArrayIfItems,
       isMergeableObject: isPlainObject,
@@ -43,13 +43,13 @@ export function mergeBeaconNodeLightOptions(
 }
 
 /**
- * Typesafe wrapper to merge ILightNodeOptions objects
+ * Typesafe wrapper to merge IBeaconNodeOptions objects
  */
 export function mergeBeaconNodeLightOptionsWithDefaults(
-  defaultOptions: ILightNodeOptions,
-  ...partialOptionsArr: RecursivePartial<ILightNodeOptions>[]
-): ILightNodeOptions {
-  return mergeBeaconNodeLightOptions(defaultOptions, ...partialOptionsArr) as ILightNodeOptions;
+  defaultOptions: IBeaconNodeOptions,
+  ...partialOptionsArr: RecursivePartial<IBeaconNodeOptions>[]
+): IBeaconNodeOptions {
+  return mergeBeaconNodeLightOptions(defaultOptions, ...partialOptionsArr) as IBeaconNodeOptions;
 }
 
 /**

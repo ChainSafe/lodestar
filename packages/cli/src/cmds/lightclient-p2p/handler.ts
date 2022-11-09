@@ -7,10 +7,10 @@ import {LevelDbController} from "@lodestar/db";
 import {createIBeaconConfig} from "@lodestar/config";
 import {ACTIVE_PRESET, PresetName} from "@lodestar/params";
 import {ProcessShutdownCallback} from "@lodestar/validator";
-import {LightNode, BeaconDb, createNodeJsLibp2p} from "@lodestar/light-client-p2p";
+import {BeaconNodeLight, BeaconDb, createNodeJsLibp2p} from "@lodestar/light-client-p2p";
 
 import {IGlobalArgs, parseBeaconNodeArgs} from "../../options/index.js";
-import {LightNodeOptions, exportToJSON, FileENR, getBeaconConfigFromArgs} from "../../config/index.js";
+import {BeaconNodeLightOptions, exportToJSON, FileENR, getBeaconConfigFromArgs} from "../../config/index.js";
 import {onGracefulShutdown, getCliLogger, mkdir, writeFile600Perm} from "../../util/index.js";
 import {getNetworkBootnodes, getNetworkData, readBootnodes} from "../../networks/index.js";
 import {getVersionData} from "../../util/version.js";
@@ -69,7 +69,7 @@ export async function beaconLightHandler(args: IBeaconArgs & IGlobalArgs): Promi
     );
     const beaconConfig = createIBeaconConfig(config, anchorState.genesisValidatorsRoot);
     const lcCheckpointRoot = args.lcCheckpointRoot;
-    const node = await LightNode.init({
+    const node = await BeaconNodeLight.init({
       opts: options,
       config: beaconConfig,
       db,
@@ -85,7 +85,7 @@ export async function beaconLightHandler(args: IBeaconArgs & IGlobalArgs): Promi
       lcCheckpointRoot,
     });
 
-    if (args.attachToGlobalThis) ((globalThis as unknown) as {bn: LightNode}).bn = node;
+    if (args.attachToGlobalThis) ((globalThis as unknown) as {bn: BeaconNodeLight}).bn = node;
 
     abortController.signal.addEventListener("abort", () => node.close(), {once: true});
   } catch (e) {
@@ -104,7 +104,7 @@ export async function beaconLightHandler(args: IBeaconArgs & IGlobalArgs): Promi
 export async function beaconHandlerInit(args: IBeaconArgs & IGlobalArgs) {
   const {config, network} = getBeaconConfigFromArgs(args);
 
-  const beaconNodeOptions = new LightNodeOptions(parseBeaconNodeArgs(args));
+  const beaconNodeOptions = new BeaconNodeLightOptions(parseBeaconNodeArgs(args));
 
   const {version, commit} = getVersionData();
   const beaconPaths = getBeaconPaths(args, network);
