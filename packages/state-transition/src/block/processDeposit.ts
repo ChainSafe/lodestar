@@ -2,6 +2,7 @@ import bls from "@chainsafe/bls";
 import {CoordType} from "@chainsafe/bls/types";
 import {phase0, ssz} from "@lodestar/types";
 import {verifyMerkleBranch} from "@lodestar/utils";
+
 import {
   DEPOSIT_CONTRACT_TREE_DEPTH,
   DOMAIN_DEPOSIT,
@@ -13,7 +14,12 @@ import {
 
 import {ZERO_HASH} from "../constants/index.js";
 import {computeDomain, computeSigningRoot, increaseBalance} from "../util/index.js";
-import {CachedBeaconStateAllForks, CachedBeaconStateAltair} from "../types.js";
+import {
+  CachedBeaconStateAllForks,
+  CachedBeaconStatePhase0,
+  CachedBeaconStateCapella,
+  CachedBeaconStateAltair,
+} from "../types.js";
 
 /**
  * Process a Deposit operation. Potentially adds a new validator to the registry. Mutates the validators and balances
@@ -66,18 +72,35 @@ export function processDeposit(fork: ForkSeq, state: CachedBeaconStateAllForks, 
 
     // add validator and balance entries
     const effectiveBalance = Math.min(amount - (amount % EFFECTIVE_BALANCE_INCREMENT), MAX_EFFECTIVE_BALANCE);
-    validators.push(
-      ssz.phase0.Validator.toViewDU({
-        pubkey,
-        withdrawalCredentials: deposit.data.withdrawalCredentials,
-        activationEligibilityEpoch: FAR_FUTURE_EPOCH,
-        activationEpoch: FAR_FUTURE_EPOCH,
-        exitEpoch: FAR_FUTURE_EPOCH,
-        withdrawableEpoch: FAR_FUTURE_EPOCH,
-        effectiveBalance,
-        slashed: false,
-      })
-    );
+    if (fork < ForkSeq.capella) {
+      (validators as CachedBeaconStatePhase0["validators"]).push(
+        ssz.phase0.Validator.toViewDU({
+          pubkey,
+          withdrawalCredentials: deposit.data.withdrawalCredentials,
+          activationEligibilityEpoch: FAR_FUTURE_EPOCH,
+          activationEpoch: FAR_FUTURE_EPOCH,
+          exitEpoch: FAR_FUTURE_EPOCH,
+          withdrawableEpoch: FAR_FUTURE_EPOCH,
+          effectiveBalance,
+          slashed: false,
+        })
+      );
+    } else {
+      (validators as CachedBeaconStateCapella["validators"]).push(
+        ssz.capella.Validator.toViewDU({
+          pubkey,
+          withdrawalCredentials: deposit.data.withdrawalCredentials,
+          activationEligibilityEpoch: FAR_FUTURE_EPOCH,
+          activationEpoch: FAR_FUTURE_EPOCH,
+          exitEpoch: FAR_FUTURE_EPOCH,
+          withdrawableEpoch: FAR_FUTURE_EPOCH,
+          effectiveBalance,
+          slashed: false,
+          // This field is removed in the latest spec, but is present in 1.2.0 set to 0
+          fullyWithdrawnEpoch: 0,
+        })
+      );
+    }
     state.balances.push(amount);
 
     const validatorIndex = validators.length - 1;

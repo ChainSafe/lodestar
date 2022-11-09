@@ -1,4 +1,4 @@
-import {MessageAcceptance} from "libp2p-gossipsub/src/types.js";
+import {MessageAcceptance} from "@chainsafe/libp2p-gossipsub/types";
 import {IChainForkConfig} from "@lodestar/config";
 import {ILogger, mapValues} from "@lodestar/utils";
 import {IMetrics} from "../../../metrics/index.js";
@@ -88,7 +88,8 @@ function getGossipValidatorFn<K extends GossipType>(
       return MessageAcceptance.Accept;
     } catch (e) {
       if (!(e instanceof GossipActionError)) {
-        logger.error(`Gossip validation ${type} threw a non-GossipActionError`, {}, e as Error);
+        // not deserve to log error here, it looks too dangerous to users
+        logger.debug(`Gossip validation ${type} threw a non-GossipActionError`, {}, e as Error);
         return MessageAcceptance.Ignore;
       }
 

@@ -1,3 +1,4 @@
+import {peerIdFromString} from "@libp2p/peer-id";
 import {toHexString} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@lodestar/config";
 import {phase0, ssz} from "@lodestar/types";
@@ -28,7 +29,8 @@ import {
 import {INetwork} from "../../interface.js";
 import {NetworkEvent} from "../../events.js";
 import {PeerAction} from "../../peers/index.js";
-import {createFromB58String} from "../../../util/peerId.js";
+import {validateLightClientFinalityUpdate} from "../../../chain/validation/lightClientFinalityUpdate.js";
+import {validateLightClientOptimisticUpdate} from "../../../chain/validation/lightClientOptimisticUpdate.js";
 
 /**
  * Gossip handler options as part of network options
@@ -130,7 +132,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
               case BlockErrorCode.EXECUTION_ENGINE_ERROR:
                 break;
               default:
-                network.reportPeer(createFromB58String(peerIdStr), PeerAction.LowToleranceError, "BadGossipBlock");
+                network.reportPeer(peerIdFromString(peerIdStr), PeerAction.LowToleranceError, "BadGossipBlock");
             }
           }
           logger.error("Error receiving block", {slot, peer: peerIdStr}, e as Error);
@@ -194,7 +196,8 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       }
 
       try {
-        chain.attestationPool.add(attestation);
+        const insertOutcome = chain.attestationPool.add(attestation);
+        metrics?.opPool.attestationPoolInsertOutcome.inc({insertOutcome});
       } catch (e) {
         logger.error("Error adding unaggregated attestation to pool", {subnet}, e as Error);
       }
@@ -215,6 +218,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
 
       try {
         chain.opPool.insertAttesterSlashing(attesterSlashing);
+        chain.forkChoice.onAttesterSlashing(attesterSlashing);
       } catch (e) {
         logger.error("Error adding attesterSlashing to pool", {}, e as Error);
       }
@@ -282,6 +286,14 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       } catch (e) {
         logger.error("Error adding to syncCommittee pool", {subnet}, e as Error);
       }
+    },
+
+    [GossipType.light_client_finality_update]: async (lightClientFinalityUpdate) => {
+      validateLightClientFinalityUpdate(config, chain, lightClientFinalityUpdate);
+    },
+
+    [GossipType.light_client_optimistic_update]: async (lightClientOptimisticUpdate) => {
+      validateLightClientOptimisticUpdate(config, chain, lightClientOptimisticUpdate);
     },
   };
 }

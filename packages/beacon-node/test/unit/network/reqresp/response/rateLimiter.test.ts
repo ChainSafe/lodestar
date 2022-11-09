@@ -1,13 +1,15 @@
 import {expect} from "chai";
-import PeerId from "peer-id";
+import {PeerId} from "@libp2p/interface-peer-id";
 import sinon, {SinonStubbedInstance} from "sinon";
-import {WinstonLogger} from "@lodestar/utils";
+import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
 import {IPeerRpcScoreStore, PeerAction, PeerRpcScoreStore} from "../../../../../src/network/index.js";
 import {defaultNetworkOptions} from "../../../../../src/network/options.js";
 import {InboundRateLimiter} from "../../../../../src/network/reqresp/response/rateLimiter.js";
 import {Method, RequestTypedContainer} from "../../../../../src/network/reqresp/types.js";
+import {testLogger} from "../../../../utils/logger.js";
 
 describe("ResponseRateLimiter", () => {
+  const logger = testLogger();
   let inboundRateLimiter: InboundRateLimiter;
   const sandbox = sinon.createSandbox();
   let peerRpcScoresStub: IPeerRpcScoreStore & SinonStubbedInstance<PeerRpcScoreStore>;
@@ -16,7 +18,7 @@ describe("ResponseRateLimiter", () => {
     peerRpcScoresStub = sandbox.createStubInstance(PeerRpcScoreStore) as IPeerRpcScoreStore &
       SinonStubbedInstance<PeerRpcScoreStore>;
     inboundRateLimiter = new InboundRateLimiter(defaultNetworkOptions, {
-      logger: new WinstonLogger(),
+      logger,
       peerRpcScores: peerRpcScoresStub,
       metrics: null,
     });
@@ -36,22 +38,23 @@ describe("ResponseRateLimiter", () => {
    * - Peer1 requests again => ok
    */
   it("requestCountPeerLimit", async () => {
-    const peerId = await PeerId.create();
+    const peerId = await createSecp256k1PeerId();
     const requestTyped = {method: Method.Ping, body: BigInt(1)} as RequestTypedContainer;
     for (let i = 0; i < defaultNetworkOptions.requestCountPeerLimit; i++) {
       expect(inboundRateLimiter.allowRequest(peerId, requestTyped)).to.equal(true);
     }
-    const peerId2 = await PeerId.create();
+    const peerId2 = await createSecp256k1PeerId();
     // it's ok to request blocks for another peer
     expect(inboundRateLimiter.allowRequest(peerId2, requestTyped)).to.equal(true);
-    expect(peerRpcScoresStub.applyAction.calledOnce).to.equal(false);
+    expect(peerRpcScoresStub.applyAction).not.to.be.calledOnce;
     // not ok for the same peer id as it reached the limit
     expect(inboundRateLimiter.allowRequest(peerId, requestTyped)).to.equal(false);
     // this peer id abuses us
-    expect(
-      peerRpcScoresStub.applyAction.calledOnceWith(peerId, PeerAction.Fatal, sinon.match.any),
-      "peer1 is banned due to requestCountPeerLimit"
-    ).to.equal(true);
+    expect(peerRpcScoresStub.applyAction, "peer1 is banned due to requestCountPeerLimit").to.be.calledOnceWith(
+      peerId,
+      PeerAction.Fatal,
+      sinon.match.any
+    );
 
     sandbox.clock.tick(60 * 1000);
     // try again after timeout
@@ -70,16 +73,17 @@ describe("ResponseRateLimiter", () => {
     const blockCount = Math.floor(defaultNetworkOptions.blockCountTotalLimit / 2);
     const requestTyped = {method: Method.BeaconBlocksByRange, body: {count: blockCount}} as RequestTypedContainer;
     for (let i = 0; i < 2; i++) {
-      expect(inboundRateLimiter.allowRequest(await PeerId.create(), requestTyped)).to.equal(true);
+      expect(inboundRateLimiter.allowRequest(await createSecp256k1PeerId(), requestTyped)).to.equal(true);
     }
 
     const oneBlockRequestTyped = {method: Method.BeaconBlocksByRoot, body: [Buffer.alloc(32)]} as RequestTypedContainer;
-    expect(inboundRateLimiter.allowRequest(await PeerId.create(), oneBlockRequestTyped)).to.equal(false);
-    expect(peerRpcScoresStub.applyAction.calledOnce).to.equal(false);
+
+    expect(inboundRateLimiter.allowRequest(await createSecp256k1PeerId(), oneBlockRequestTyped)).to.equal(false);
+    expect(peerRpcScoresStub.applyAction).not.to.be.calledOnce;
 
     sandbox.clock.tick(60 * 1000);
     // try again after timeout
-    expect(inboundRateLimiter.allowRequest(await PeerId.create(), oneBlockRequestTyped)).to.equal(true);
+    expect(inboundRateLimiter.allowRequest(await createSecp256k1PeerId(), oneBlockRequestTyped)).to.equal(true);
   });
 
   /**
@@ -94,11 +98,11 @@ describe("ResponseRateLimiter", () => {
   it("blockCountPeerLimit", async () => {
     const blockCount = Math.floor(defaultNetworkOptions.blockCountPeerLimit / 2);
     const requestTyped = {method: Method.BeaconBlocksByRange, body: {count: blockCount}} as RequestTypedContainer;
-    const peerId = await PeerId.create();
+    const peerId = await createSecp256k1PeerId();
     for (let i = 0; i < 2; i++) {
       expect(inboundRateLimiter.allowRequest(peerId, requestTyped)).to.equal(true);
     }
-    const peerId2 = await PeerId.create();
+    const peerId2 = await createSecp256k1PeerId();
     const oneBlockRequestTyped = {method: Method.BeaconBlocksByRoot, body: [Buffer.alloc(32)]} as RequestTypedContainer;
     // it's ok to request blocks for another peer
     expect(inboundRateLimiter.allowRequest(peerId2, oneBlockRequestTyped)).to.equal(true);
@@ -116,7 +120,7 @@ describe("ResponseRateLimiter", () => {
   });
 
   it("should remove rate tracker for disconnected peers", async () => {
-    const peerId = await PeerId.create();
+    const peerId = await createSecp256k1PeerId();
     const pruneStub = sandbox.stub(inboundRateLimiter, "pruneByPeerIdStr" as keyof InboundRateLimiter);
     inboundRateLimiter.start();
     const requestTyped = {method: Method.Ping, body: BigInt(1)} as RequestTypedContainer;
@@ -124,23 +128,23 @@ describe("ResponseRateLimiter", () => {
 
     // no request is made in 5 minutes
     sandbox.clock.tick(5 * 60 * 1000);
-    expect(pruneStub.calledOnce).to.equal(false);
+    expect(pruneStub).not.to.be.calledOnce;
     // wait for 5 more minutes for the timer to run
     sandbox.clock.tick(5 * 60 * 1000);
-    expect(pruneStub.calledOnce, "prune is not called").to.equal(true);
+    expect(pruneStub, "prune is not called").to.be.calledOnce;
   });
 
   it.skip("rateLimiter memory usage", async function () {
     this.timeout(5000);
     const peerIds: PeerId[] = [];
     for (let i = 0; i < 25; i++) {
-      peerIds.push(await PeerId.create());
+      peerIds.push(await createSecp256k1PeerId());
     }
 
     const startMem = process.memoryUsage().heapUsed;
 
     const rateLimiter = new InboundRateLimiter(defaultNetworkOptions, {
-      logger: new WinstonLogger(),
+      logger,
       peerRpcScores: peerRpcScoresStub,
       metrics: null,
     });

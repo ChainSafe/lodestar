@@ -62,13 +62,13 @@ describe("ValidatorStore", function () {
       valProposerConfig.proposerConfig[toHexString(pubkeys[0])].feeRecipient
     );
     expect(validatorStore.isBuilderEnabled(toHexString(pubkeys[0]))).to.be.equal(
-      valProposerConfig.proposerConfig[toHexString(pubkeys[0])].builder.enabled
+      valProposerConfig.proposerConfig[toHexString(pubkeys[0])].builder?.enabled
     );
     expect(validatorStore.strictFeeRecipientCheck(toHexString(pubkeys[0]))).to.be.equal(
       valProposerConfig.proposerConfig[toHexString(pubkeys[0])].strictFeeRecipientCheck
     );
     expect(validatorStore.getGasLimit(toHexString(pubkeys[0]))).to.be.equal(
-      valProposerConfig.proposerConfig[toHexString(pubkeys[0])].builder.gasLimit
+      valProposerConfig.proposerConfig[toHexString(pubkeys[0])].builder?.gasLimit
     );
 
     // default values
@@ -77,13 +77,13 @@ describe("ValidatorStore", function () {
       valProposerConfig.defaultConfig.feeRecipient
     );
     expect(validatorStore.isBuilderEnabled(toHexString(pubkeys[1]))).to.be.equal(
-      valProposerConfig.defaultConfig.builder.enabled
+      valProposerConfig.defaultConfig.builder?.enabled
     );
     expect(validatorStore.strictFeeRecipientCheck(toHexString(pubkeys[1]))).to.be.equal(
       valProposerConfig.defaultConfig.strictFeeRecipientCheck
     );
     expect(validatorStore.getGasLimit(toHexString(pubkeys[1]))).to.be.equal(
-      valProposerConfig.defaultConfig.builder.gasLimit
+      valProposerConfig.defaultConfig.builder?.gasLimit
     );
   });
 
@@ -98,13 +98,13 @@ describe("ValidatorStore", function () {
     for (const [valReg, feeRecipient, gasLimit] of testCases) {
       signValidatorStub.resolves(valReg);
       const val1 = await validatorStore.getValidatorRegistration(pubkeys[0], {feeRecipient, gasLimit}, slot++);
-      expect(JSON.stringify(val1) === JSON.stringify(valReg));
+      expect(JSON.stringify(val1)).to.be.eql(JSON.stringify(valReg));
       expect(signValidatorStub.callCount).to.equal(
         ++signCallCount,
         `signValidatorRegistration() must be updated for new feeRecipient=${feeRecipient} gasLimit=${gasLimit} combo `
       );
       const val2 = await validatorStore.getValidatorRegistration(pubkeys[0], {feeRecipient, gasLimit}, slot++);
-      expect(JSON.stringify(val2) === JSON.stringify(valReg));
+      expect(JSON.stringify(val2)).to.be.eql(JSON.stringify(valReg));
       expect(signValidatorStub.callCount).to.equal(
         signCallCount,
         `signValidatorRegistration() must be updated for same feeRecipient=${feeRecipient} gasLimit=${gasLimit} combo `

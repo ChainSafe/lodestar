@@ -1,4 +1,4 @@
-import {MapDef} from "../../util/map.js";
+import {MapDef} from "@lodestar/utils";
 
 type RateTrackerOpts = {
   limit: number;

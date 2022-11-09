@@ -21,6 +21,7 @@ import {generateAttestation, generateEmptyAttestation} from "../../../utils/atte
 import {generateCachedState} from "../../../utils/state.js";
 import {renderBitArray} from "../../../utils/render.js";
 import {ZERO_HASH_HEX} from "../../../../src/constants/constants.js";
+import {generateEmptyProtoBlock} from "../../../utils/block.js";
 
 /** Valid signature of random data to prevent BLS errors */
 const validSignature = fromHexString(
@@ -71,15 +72,17 @@ describe("AggregatedAttestationPool", function () {
     it(name, function () {
       const aggregationBits = new BitArray(new Uint8Array(attestingBits), 8);
       pool.add({...attestation, aggregationBits}, aggregationBits.getTrueBitIndexes().length, committee);
-      forkchoiceStub.findAttesterDependentRoot.returns(ZERO_HASH_HEX);
-      expect(pool.getAttestationsForBlock(forkchoiceStub, altairState).length > 0).to.equal(
-        isReturned,
-        "Wrong attestation isReturned"
-      );
-      expect(
-        forkchoiceStub.findAttesterDependentRoot.calledOnce,
-        "forkchoice should be called to check pivot block"
-      ).to.equal(true);
+      forkchoiceStub.getBlockHex.returns(generateEmptyProtoBlock());
+      forkchoiceStub.getDependentRoot.returns(ZERO_HASH_HEX);
+      if (isReturned) {
+        expect(pool.getAttestationsForBlock(forkchoiceStub, altairState).length).to.be.above(
+          0,
+          "Wrong attestation isReturned"
+        );
+      } else {
+        expect(pool.getAttestationsForBlock(forkchoiceStub, altairState).length).to.eql(0);
+      }
+      expect(forkchoiceStub.getDependentRoot, "forkchoice should be called to check pivot block").to.be.calledOnce;
     });
   }
 
@@ -92,20 +95,20 @@ describe("AggregatedAttestationPool", function () {
       [],
       "no attestation since incorrect source"
     );
-    expect(forkchoiceStub.iterateAncestorBlocks.calledOnce, "forkchoice should not be called").to.equal(false);
+    expect(forkchoiceStub.iterateAncestorBlocks, "forkchoice should not be called").to.not.be.calledOnce;
   });
 
   it("incompatible shuffling - incorrect pivot block root", function () {
     // all attesters are not seen
     const attestingIndices = [2, 3];
     pool.add(attestation, attestingIndices.length, committee);
-    forkchoiceStub.findAttesterDependentRoot.returns("0xWeird");
+    forkchoiceStub.getBlockHex.returns(generateEmptyProtoBlock());
+    forkchoiceStub.getDependentRoot.returns("0xWeird");
     expect(pool.getAttestationsForBlock(forkchoiceStub, altairState)).to.be.deep.equal(
       [],
       "no attestation since incorrect pivot block root"
     );
-    expect(forkchoiceStub.findAttesterDependentRoot.calledOnce, "forkchoice should be called to check pivot block").to
-      .be.true;
+    expect(forkchoiceStub.getDependentRoot, "forkchoice should be called to check pivot block").to.be.calledOnce;
   });
 });
 
@@ -170,7 +173,11 @@ describe("MatchingDataAttestationGroup.add()", () => {
       const attestationsAfterAdding = attestationGroup.getAttestations();
 
       for (const [i, {isKept}] of attestationsToAdd.entries()) {
-        expect(attestationsAfterAdding.indexOf(attestations[i]) >= 0).to.equal(isKept, `Wrong attestation ${i} isKept`);
+        if (isKept) {
+          expect(attestationsAfterAdding.indexOf(attestations[i])).to.be.gte(0, `Right attestation ${i} missed.`);
+        } else {
+          expect(attestationsAfterAdding.indexOf(attestations[i])).to.be.eql(-1, `Wrong attestation ${i} is kept.`);
+        }
       }
     });
   }

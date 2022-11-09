@@ -8,7 +8,6 @@ import {YargsError} from "../../../util/index.js";
 import {IGlobalArgs} from "../../../options/index.js";
 import {getValidatorPaths} from "../paths.js";
 import {getBeaconConfigFromArgs} from "../../../config/index.js";
-import {errorLogger} from "../../../util/logger.js";
 import {ISlashingProtectionArgs} from "./options.js";
 
 /**
@@ -21,11 +20,10 @@ export function getSlashingProtection(
   const validatorPaths = getValidatorPaths(args, network);
   const dbPath = validatorPaths.validatorsDbDir;
   const {config} = getBeaconConfigFromArgs(args);
-  const logger = errorLogger();
 
   const dbOpts: IDatabaseApiOptions = {
     config,
-    controller: new LevelDbController({name: dbPath}, {logger}),
+    controller: new LevelDbController({name: dbPath}, {}),
   };
 
   return {
@@ -38,7 +36,7 @@ export function getSlashingProtection(
  * Returns genesisValidatorsRoot from validator API client.
  */
 export async function getGenesisValidatorsRoot(args: IGlobalArgs & ISlashingProtectionArgs): Promise<Root> {
-  const server = args.server;
+  const server = args.beaconNodes[0];
 
   const networkGenesis = genesisData[args.network as NetworkName];
   if (networkGenesis !== undefined) {

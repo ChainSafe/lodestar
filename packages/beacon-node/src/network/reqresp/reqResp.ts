@@ -1,19 +1,18 @@
 import {setMaxListeners} from "node:events";
-import {Connection} from "libp2p";
-import {HandlerProps} from "libp2p/src/registrar";
-import LibP2p from "libp2p";
-import PeerId from "peer-id";
+import {Libp2p} from "libp2p";
+import {PeerId} from "@libp2p/interface-peer-id";
+import {Connection, Stream} from "@libp2p/interface-connection";
 import {ForkName} from "@lodestar/params";
 import {IBeaconConfig} from "@lodestar/config";
-import {allForks, phase0} from "@lodestar/types";
+import {allForks, altair, phase0} from "@lodestar/types";
 import {ILogger} from "@lodestar/utils";
 import {RespStatus, timeoutOptions} from "../../constants/index.js";
-import {IPeerRpcScoreStore} from "../peers/index.js";
-import {MetadataController} from "../metadata.js";
-import {INetworkEventBus, NetworkEvent} from "../events.js";
 import {PeersData} from "../peers/peersData.js";
-import {IMetrics} from "../../metrics/index.js";
-import {IReqResp, IReqRespModules, IRateLimiter, Libp2pStream} from "./interface.js";
+import {MetadataController} from "../metadata.js";
+import {IPeerRpcScoreStore} from "../peers/score.js";
+import {INetworkEventBus, NetworkEvent} from "../events.js";
+import {IMetrics} from "../../metrics/metrics.js";
+import {IReqResp, IReqRespModules, IRateLimiter} from "./interface.js";
 import {sendRequest} from "./request/index.js";
 import {handleRequest, ResponseError} from "./response/index.js";
 import {onOutgoingReqRespError} from "./score.js";
@@ -39,10 +38,11 @@ export type IReqRespOptions = Partial<typeof timeoutOptions>;
  * Implementation of Ethereum Consensus p2p Req/Resp domain.
  * For the spec that this code is based on, see:
  * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#the-reqresp-domain
+ * https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/light-client/p2p-interface.md#the-reqresp-domain
  */
 export class ReqResp implements IReqResp {
   private config: IBeaconConfig;
-  private libp2p: LibP2p;
+  private libp2p: Libp2p;
   private readonly peersData: PeersData;
   private logger: ILogger;
   private reqRespHandlers: ReqRespHandlers;
@@ -78,7 +78,7 @@ export class ReqResp implements IReqResp {
     for (const [method, version, encoding] of protocolsSupported) {
       await this.libp2p.handle(
         formatProtocolId(method, version, encoding),
-        (this.getRequestHandler({method, version, encoding}) as unknown) as (props: HandlerProps) => void
+        this.getRequestHandler({method, version, encoding})
       );
     }
     this.inboundRateLimiter.start();
@@ -142,6 +142,46 @@ export class ReqResp implements IReqResp {
     this.inboundRateLimiter.prune(peerId);
   }
 
+  async lightClientBootstrap(peerId: PeerId, request: Uint8Array): Promise<altair.LightClientBootstrap> {
+    return await this.sendRequest<altair.LightClientBootstrap>(
+      peerId,
+      Method.LightClientBootstrap,
+      [Version.V1],
+      request
+    );
+  }
+
+  async lightClientOptimisticUpdate(peerId: PeerId): Promise<altair.LightClientOptimisticUpdate> {
+    return await this.sendRequest<altair.LightClientOptimisticUpdate>(
+      peerId,
+      Method.LightClientOptimisticUpdate,
+      [Version.V1],
+      null
+    );
+  }
+
+  async lightClientFinalityUpdate(peerId: PeerId): Promise<altair.LightClientFinalityUpdate> {
+    return await this.sendRequest<altair.LightClientFinalityUpdate>(
+      peerId,
+      Method.LightClientFinalityUpdate,
+      [Version.V1],
+      null
+    );
+  }
+
+  async lightClientUpdate(
+    peerId: PeerId,
+    request: altair.LightClientUpdatesByRange
+  ): Promise<altair.LightClientUpdate[]> {
+    return await this.sendRequest<altair.LightClientUpdate[]>(
+      peerId,
+      Method.LightClientUpdate,
+      [Version.V1],
+      request,
+      request.count
+    );
+  }
+
   // Helper to reduce code duplication
   private async sendRequest<T extends IncomingResponseBody | IncomingResponseBody[]>(
     peerId: PeerId,
@@ -154,7 +194,7 @@ export class ReqResp implements IReqResp {
     const timer = this.metrics?.reqResp.outgoingRequestRoundtripTime.startTimer({method});
 
     try {
-      const encoding = this.peersData.getEncodingPreference(peerId.toB58String()) ?? Encoding.SSZ_SNAPPY;
+      const encoding = this.peersData.getEncodingPreference(peerId.toString()) ?? Encoding.SSZ_SNAPPY;
       const result = await sendRequest<T>(
         {forkDigestContext: this.config, logger: this.logger, libp2p: this.libp2p, peersData: this.peersData},
         peerId,
@@ -189,13 +229,13 @@ export class ReqResp implements IReqResp {
   }
 
   private getRequestHandler({method, version, encoding}: Protocol) {
-    return async ({connection, stream}: {connection: Connection; stream: Libp2pStream}) => {
+    return async ({connection, stream}: {connection: Connection; stream: Stream}) => {
       const peerId = connection.remotePeer;
 
       // TODO: Do we really need this now that there is only one encoding?
       // Remember the prefered encoding of this peer
       if (method === Method.Status) {
-        this.peersData.setEncodingPreference(peerId.toB58String(), encoding);
+        this.peersData.setEncodingPreference(peerId.toString(), encoding);
       }
 
       this.metrics?.reqResp.incomingRequests.inc({method});
@@ -258,7 +298,18 @@ export class ReqResp implements IReqResp {
       case Method.BeaconBlocksByRoot:
         yield* this.reqRespHandlers.onBeaconBlocksByRoot(requestTyped.body);
         break;
-
+      case Method.LightClientBootstrap:
+        yield* this.reqRespHandlers.onLightClientBootstrap(requestTyped.body);
+        break;
+      case Method.LightClientOptimisticUpdate:
+        yield* this.reqRespHandlers.onLightClientOptimisticUpdate();
+        break;
+      case Method.LightClientFinalityUpdate:
+        yield* this.reqRespHandlers.onLightClientFinalityUpdate();
+        break;
+      case Method.LightClientUpdate:
+        yield* this.reqRespHandlers.onLightClientUpdatesByRange(requestTyped.body);
+        break;
       default:
         throw Error(`Unsupported method ${protocol.method}`);
     }

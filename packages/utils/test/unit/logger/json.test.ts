@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
+import "../../setup.js";
 import {expect} from "chai";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {LodestarError} from "../../../src/index.js";

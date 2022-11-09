@@ -2,7 +2,7 @@ import {defaultOptions, IBeaconNodeOptions} from "@lodestar/beacon-node";
 import {ICliCommandOptions} from "../../util/index.js";
 
 const defaultListenAddress = "0.0.0.0";
-const defaultP2pPort = 9000;
+export const defaultP2pPort = 9000;
 
 export interface INetworkArgs {
   discv5?: boolean;
@@ -21,6 +21,10 @@ export interface INetworkArgs {
   "network.rateTrackerTimeoutMs": number;
   "network.dontSendGossipAttestationsToForkchoice": boolean;
   "network.allowPublishToZeroPeers": boolean;
+  "network.gossipsubD": number;
+  "network.gossipsubDLow": number;
+  "network.gossipsubDHigh": number;
+  "network.gossipsubAwaitHandler": boolean;
 }
 
 export function parseArgs(args: INetworkArgs): IBeaconNodeOptions["network"] {
@@ -37,7 +41,7 @@ export function parseArgs(args: INetworkArgs): IBeaconNodeOptions["network"] {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
       enr: undefined as any,
     },
-    maxPeers: args["network.maxPeers"],
+    maxPeers: args["network.maxPeers"] ?? (args["targetPeers"] !== undefined ? args["targetPeers"] * 1.1 : undefined),
     targetPeers: args["targetPeers"],
     localMultiaddrs: [`/ip4/${listenAddress}/tcp/${tcpPort}`],
     subscribeAllSubnets: args["subscribeAllSubnets"],
@@ -49,6 +53,10 @@ export function parseArgs(args: INetworkArgs): IBeaconNodeOptions["network"] {
     rateTrackerTimeoutMs: args["network.rateTrackerTimeoutMs"],
     dontSendGossipAttestationsToForkchoice: args["network.dontSendGossipAttestationsToForkchoice"],
     allowPublishToZeroPeers: args["network.allowPublishToZeroPeers"],
+    gossipsubD: args["network.gossipsubD"],
+    gossipsubDLow: args["network.gossipsubDLow"],
+    gossipsubDHigh: args["network.gossipsubDHigh"],
+    gossipsubAwaitHandler: args["network.gossipsubAwaitHandler"],
   };
 }
 
@@ -88,6 +96,10 @@ export const options: ICliCommandOptions<INetworkArgs> = {
     description: "Bootnodes for discv5 discovery",
     defaultDescription: JSON.stringify((defaultOptions.network.discv5 || {}).bootEnrs || []),
     group: "network",
+    // Each bootnode entry could be comma separated, just deserialize it into a single array
+    // as comma separated entries are generally most friendly in ansible kind of setups, i.e.
+    // [ "en1", "en2,en3" ] => [ 'en1', 'en2', 'en3' ]
+    coerce: (args: string[]) => args.map((item) => item.split(",")).flat(1),
   },
 
   targetPeers: {
@@ -171,6 +183,33 @@ export const options: ICliCommandOptions<INetworkArgs> = {
     hidden: true,
     type: "boolean",
     description: "Don't error when publishing to zero peers",
+    group: "network",
+  },
+
+  "network.gossipsubD": {
+    hidden: true,
+    type: "number",
+    description: "Gossipsub D param",
+    group: "network",
+  },
+
+  "network.gossipsubDLow": {
+    hidden: true,
+    type: "number",
+    description: "Gossipsub D param low",
+    group: "network",
+  },
+
+  "network.gossipsubDHigh": {
+    hidden: true,
+    type: "number",
+    description: "Gossipsub D param high",
+    group: "network",
+  },
+
+  "network.gossipsubAwaitHandler": {
+    hidden: true,
+    type: "boolean",
     group: "network",
   },
 };

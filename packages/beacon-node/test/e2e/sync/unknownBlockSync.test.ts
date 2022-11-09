@@ -74,7 +74,7 @@ describe("sync / unknown block sync", function () {
     afterEachCallbacks.push(() => bn.close());
 
     await waitForEvent<phase0.Checkpoint>(bn.chain.emitter, ChainEvent.checkpoint, 240000);
-    loggerNodeA.important("Node A emitted checkpoint event");
+    loggerNodeA.info("Node A emitted checkpoint event");
 
     const bn2 = await getDevBeaconNode({
       params: testParams,
@@ -101,7 +101,7 @@ describe("sync / unknown block sync", function () {
     await bn2.chain.processBlock(head).catch((e) => {
       if (e instanceof BlockError && e.type.code === BlockErrorCode.PARENT_UNKNOWN) {
         // Expected
-        bn2.network.events.emit(NetworkEvent.unknownBlockParent, head, bn2.network.peerId.toB58String());
+        bn2.network.events.emit(NetworkEvent.unknownBlockParent, head, bn2.network.peerId.toString());
       } else {
         throw e;
       }

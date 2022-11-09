@@ -1,5 +1,4 @@
-import chai, {expect} from "chai";
-import chaiAsPromised from "chai-as-promised";
+import {expect} from "chai";
 import {phase0, ssz} from "@lodestar/types";
 import {MAX_DEPOSITS} from "@lodestar/params";
 import {verifyMerkleBranch} from "@lodestar/utils";
@@ -10,8 +9,6 @@ import {generateState} from "../../../utils/state.js";
 import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
 import {getDeposits, getDepositsWithProofs, DepositGetter} from "../../../../src/eth1/utils/deposits.js";
 import {DepositTree} from "../../../../src/db/repositories/depositDataRoot.js";
-
-chai.use(chaiAsPromised);
 
 describe("eth1 / util / deposits", function () {
   describe("getDeposits", () => {

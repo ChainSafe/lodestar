@@ -1,6 +1,11 @@
 name: Sim tests
 
-on: [pull_request, push]
+on: 
+  push:
+    # We intentionally don't run push on feature branches. See PR for rational. 
+    branches: [unstable, stable]
+  pull_request:
+  workflow_dispatch:
 
 jobs:
   tests-sim:
@@ -31,27 +36,12 @@ jobs:
         if: steps.cache-deps.outputs.cache-hit == 'true'
       # </common-build>
 
-      - name: Simulation single thread single node test
-        run: yarn test:sim:singleThread
-        working-directory: packages/beacon-node
-      - name: Simulation single thread multi node test
-        run: yarn test:sim:singleThreadMultiNode
-        working-directory: packages/beacon-node
-      # - name: Simulation multi thread multi node test phase0
-      #   run: yarn test:sim:multiThread
-      #   working-directory: packages/beacon-node
-      #   env: {RUN_ONLY_SIM_TEST: phase0}
-      # - name: Simulation multi thread multi node test altair epoch genesis
-      #   run: yarn test:sim:multiThread
-      #   working-directory: packages/beacon-node
-      #   env: {RUN_ONLY_SIM_TEST: altair-genesis}
-      # - name: Simulation multi thread multi node test altair epoch 2
-      #   run: yarn test:sim:multiThread
-      #   working-directory: packages/beacon-node
-      #   env: {RUN_ONLY_SIM_TEST: altair-epoch2}
-      - name: Upload debug log test files
+      - name: Simulation tests for CLI
+        run: yarn test:sim
+        working-directory: packages/cli
+      - name: Upload debug log test files for "packages/cli"
         if: ${{ always() }}
         uses: actions/upload-artifact@v2
         with:
-          name: debug-test-logs
-          path: packages/beacon-node/test-logs
+          name: debug-test-logs-cli
+          path: packages/cli/test-logs

@@ -1,20 +1,20 @@
 import {expect} from "chai";
-import {FAR_FUTURE_EPOCH, MAX_EFFECTIVE_BALANCE} from "@lodestar/params";
-import {config} from "@lodestar/config/default";
-import {phase0, Slot, ssz, ValidatorIndex} from "@lodestar/types";
-import {CheckpointWithHex, ExecutionStatus, ForkChoice} from "@lodestar/fork-choice";
-import {
-  computeEpochAtSlot,
-  getTemporaryBlockHeader,
-  CachedBeaconStateAllForks,
-  getEffectiveBalanceIncrementsZeroed,
-  processSlots,
-} from "@lodestar/state-transition";
 import {toHexString} from "@chainsafe/ssz";
-import {generateSignedBlock} from "../../../utils/block.js";
-import {generateState} from "../../../utils/state.js";
+import {config} from "@lodestar/config/default";
+import {CheckpointWithHex, ExecutionStatus, ForkChoice} from "@lodestar/fork-choice";
+import {FAR_FUTURE_EPOCH, MAX_EFFECTIVE_BALANCE} from "@lodestar/params";
+import {
+  CachedBeaconStateAllForks,
+  computeEpochAtSlot,
+  getEffectiveBalanceIncrementsZeroed,
+} from "@lodestar/state-transition";
+import {phase0, Slot, ssz} from "@lodestar/types";
+import {getTemporaryBlockHeader, processSlots} from "@lodestar/state-transition";
 import {ChainEventEmitter, computeAnchorCheckpoint, initializeForkChoice} from "../../../../src/chain/index.js";
+import {generateSignedBlock} from "../../../utils/block.js";
 import {createCachedBeaconStateTest} from "../../../utils/cachedBeaconState.js";
+import {createIndexedAttestation} from "../../../utils/forkChoice.js";
+import {generateState} from "../../../utils/state.js";
 import {generateValidators} from "../../../utils/validator.js";
 
 describe("LodestarForkChoice", function () {
@@ -87,6 +87,7 @@ describe("LodestarForkChoice", function () {
       const parentBlockHex = ssz.phase0.BeaconBlock.hashTreeRoot(parentBlock.message);
       const orphanedBlockHex = ssz.phase0.BeaconBlock.hashTreeRoot(orphanedBlock.message);
       // forkchoice tie-break condition is based on root hex
+      // eslint-disable-next-line chai-expect/no-inner-compare
       expect(orphanedBlockHex > parentBlockHex).to.equal(true);
       const currentSlot = childBlock.message.slot;
       forkChoice.updateTime(currentSlot);
@@ -332,30 +333,4 @@ function makeChild(
   childBlock.message.parentRoot = parentRoot;
   const childState = runStateTransition(parent.state, childBlock);
   return {block: childBlock, state: childState};
-}
-
-export function createIndexedAttestation(
-  source: phase0.Checkpoint,
-  target: phase0.SignedBeaconBlock,
-  block: phase0.SignedBeaconBlock,
-  validatorIndex: ValidatorIndex
-): phase0.IndexedAttestation {
-  return {
-    attestingIndices: [validatorIndex],
-    data: {
-      slot: block.message.slot,
-      index: 0,
-      beaconBlockRoot: ssz.phase0.BeaconBlock.hashTreeRoot(block.message),
-      source,
-      target: createCheckpoint(target),
-    },
-    signature: Buffer.alloc(96),
-  };
-}
-
-function createCheckpoint(block: phase0.SignedBeaconBlock): phase0.Checkpoint {
-  return {
-    root: ssz.phase0.BeaconBlock.hashTreeRoot(block.message),
-    epoch: computeEpochAtSlot(block.message.slot),
-  };
 }

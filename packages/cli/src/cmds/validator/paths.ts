@@ -10,6 +10,7 @@ export type AccountPaths = {
   keystoresDir: string;
   secretsDir: string;
   remoteKeysDir: string;
+  proposerDir: string;
 };
 
 /**
@@ -29,7 +30,8 @@ export function getValidatorPaths(
   const globalPaths = getGlobalPaths(args, network);
 
   const dataDir = globalPaths.dataDir;
-  const validatorsDbDir = args.validatorsDbDir || path.join(dataDir, "validator-db");
+  const validatorsDbDir = args.validatorsDbDir ?? path.join(dataDir, "validator-db");
+
   return {
     ...globalPaths,
     validatorsDbDir,
@@ -74,11 +76,13 @@ export function getAccountPaths(
   const keystoresDir = args.keystoresDir || path.join(dataDir, "keystores");
   const secretsDir = args.secretsDir || path.join(dataDir, "secrets");
   const remoteKeysDir = args.remoteKeysDir || path.join(dataDir, "remoteKeys");
+  const proposerDir = args.proposerDir || path.join(dataDir, "proposerConfigs");
   return {
     ...globalPaths,
     keystoresDir,
     secretsDir,
     remoteKeysDir,
+    proposerDir,
   };
 }
 

@@ -81,24 +81,24 @@ describe.skip("AttnetsService", function () {
 
   it("should not subscribe when there is no active validator", () => {
     chain.emitter.emit(ChainEvent.clockSlot, 1);
-    expect(gossipStub.subscribeTopic.called).to.equal(false);
+    expect(gossipStub.subscribeTopic).to.be.called;
   });
 
   it.skip("should subscribe to RANDOM_SUBNETS_PER_VALIDATOR per 1 validator", () => {
     randomUtil.withArgs(0, ATTESTATION_SUBNET_COUNT).returns(30);
     randomUtil.withArgs(0, ATTESTATION_SUBNET_COUNT - 1).returns(40);
     service.addCommitteeSubscriptions([subscription]);
-    expect(gossipStub.subscribeTopic.calledOnce).to.equal(true);
+    expect(gossipStub.subscribeTopic).to.be.calledOnce;
     expect(metadata.seqNumber).to.be.equal(BigInt(1));
     // subscribe with a different validator
     subscription.validatorIndex = 2022;
     service.addCommitteeSubscriptions([subscription]);
-    expect(gossipStub.subscribeTopic.calledTwice).to.equal(true);
+    expect(gossipStub.subscribeTopic).to.be.calledTwice;
     expect(metadata.seqNumber).to.be.equal(BigInt(2));
     // subscribe with same validator
     subscription.validatorIndex = 2021;
     service.addCommitteeSubscriptions([subscription]);
-    expect(gossipStub.subscribeTopic.calledTwice).to.equal(true);
+    expect(gossipStub.subscribeTopic).to.be.calledTwice;
     expect(metadata.seqNumber).to.be.equal(BigInt(2));
   });
 
@@ -107,14 +107,14 @@ describe.skip("AttnetsService", function () {
     expect(metadata.seqNumber).to.be.equal(BigInt(1));
     expect(EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION * SLOTS_PER_EPOCH).to.be.gt(150);
     sandbox.clock.tick(150 * SLOTS_PER_EPOCH * SECONDS_PER_SLOT * 1000);
-    expect(gossipStub.unsubscribeTopic.called).to.equal(true);
+    expect(gossipStub.unsubscribeTopic).to.be.called;
     // subscribe then unsubscribe
     expect(metadata.seqNumber).to.be.equal(BigInt(2));
   });
 
   it.skip("should change subnet subscription after 2*EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION", async () => {
     service.addCommitteeSubscriptions([subscription]);
-    expect(gossipStub.subscribeTopic.calledOnce).to.equal(true);
+    expect(gossipStub.subscribeTopic).to.be.calledOnce;
     expect(metadata.seqNumber).to.be.equal(BigInt(1));
     for (let numEpoch = 0; numEpoch < 2 * EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION; numEpoch++) {
       // avoid known validator expiry
@@ -122,7 +122,7 @@ describe.skip("AttnetsService", function () {
       sandbox.clock.tick(SLOTS_PER_EPOCH * SECONDS_PER_SLOT * 1000);
     }
     // may call 2 times, 1 for committee subnet, 1 for random subnet
-    expect(gossipStub.unsubscribeTopic.called).to.equal(true);
+    expect(gossipStub.unsubscribeTopic).to.be.called;
     // subscribe then unsubscribe then subscribe again
     expect(metadata.seqNumber).to.be.equal(BigInt(3));
   });
@@ -161,11 +161,11 @@ describe.skip("AttnetsService", function () {
     service.addCommitteeSubscriptions([aggregatorSubscription]);
     expect(service.getActiveSubnets()).to.be.deep.equal([COMMITTEE_SUBNET_SUBSCRIPTION]);
     // committee subnet is same to random subnet
-    expect(gossipStub.subscribeTopic.calledOnce).to.equal(true);
+    expect(gossipStub.subscribeTopic).to.be.calledOnce;
     expect(metadata.seqNumber).to.be.equal(BigInt(1));
     // pass through subscription slot
     sandbox.clock.tick((aggregatorSubscription.slot + 2) * SECONDS_PER_SLOT * 1000);
     // don't unsubscribe bc random subnet is still there
-    expect(gossipStub.unsubscribeTopic.called).to.equal(false);
+    expect(gossipStub.unsubscribeTopic).to.be.called;
   });
 });

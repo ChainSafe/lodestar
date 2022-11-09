@@ -4,7 +4,7 @@ import {createMetricsTest} from "./utils.js";
 describe("BeaconMetrics", () => {
   it("updated metrics should be reflected in the register", async () => {
     const metrics = createMetricsTest();
-    const metricsAsArray = await metrics.register.getMetricsAsArray();
+    const metricsAsArray = metrics.register.getMetricsAsArray();
     const metricsAsText = await metrics.register.metrics();
 
     // basic assumptions
@@ -12,10 +12,10 @@ describe("BeaconMetrics", () => {
     expect(metricsAsText).to.not.equal("");
 
     // check updating beacon-specific metrics
-    expect((await metrics.register.getSingleMetricAsString("libp2p_peers")).includes("libp2p_peers 0"));
+    await expect(metrics.register.getSingleMetricAsString("libp2p_peers")).eventually.include("libp2p_peers 0");
     metrics.peers.set(1);
-    expect((await metrics.register.getSingleMetricAsString("libp2p_peers")).includes("libp2p_peers 1"));
+    await expect(metrics.register.getSingleMetricAsString("libp2p_peers")).eventually.include("libp2p_peers 1");
     metrics.peers.set(20);
-    expect((await metrics.register.getSingleMetricAsString("libp2p_peers")).includes("libp2p_peers 20"));
+    await expect(metrics.register.getSingleMetricAsString("libp2p_peers")).eventually.include("libp2p_peers 20");
   });
 });

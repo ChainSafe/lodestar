@@ -6,32 +6,43 @@ import {IForkConfig, IForkInfo} from "./types.js";
 export * from "./types.js";
 
 export function createIForkConfig(config: IChainConfig): IForkConfig {
-  const phase0 = {
+  const phase0: IForkInfo = {
     name: ForkName.phase0,
     seq: ForkSeq.phase0,
     epoch: GENESIS_EPOCH,
     version: config.GENESIS_FORK_VERSION,
     // Will never be used
+    prevVersion: config.GENESIS_FORK_VERSION,
     prevForkName: ForkName.phase0,
   };
-  const altair = {
+  const altair: IForkInfo = {
     name: ForkName.altair,
     seq: ForkSeq.altair,
     epoch: config.ALTAIR_FORK_EPOCH,
     version: config.ALTAIR_FORK_VERSION,
+    prevVersion: config.GENESIS_FORK_VERSION,
     prevForkName: ForkName.phase0,
   };
-  const bellatrix = {
+  const bellatrix: IForkInfo = {
     name: ForkName.bellatrix,
     seq: ForkSeq.bellatrix,
     epoch: config.BELLATRIX_FORK_EPOCH,
     version: config.BELLATRIX_FORK_VERSION,
+    prevVersion: config.ALTAIR_FORK_VERSION,
     prevForkName: ForkName.altair,
+  };
+  const capella: IForkInfo = {
+    name: ForkName.capella,
+    seq: ForkSeq.capella,
+    epoch: config.CAPELLA_FORK_EPOCH,
+    version: config.CAPELLA_FORK_VERSION,
+    prevVersion: config.BELLATRIX_FORK_VERSION,
+    prevForkName: ForkName.bellatrix,
   };
 
   /** Forks in order order of occurence, `phase0` first */
   // Note: Downstream code relies on proper ordering.
-  const forks = {phase0, altair, bellatrix};
+  const forks = {phase0, altair, bellatrix, capella};
 
   // Prevents allocating an array on every getForkInfo() call
   const forksAscendingEpochOrder = Object.values(forks);
@@ -62,6 +73,20 @@ export function createIForkConfig(config: IChainConfig): IForkConfig {
     },
     getForkTypes(slot: Slot): allForks.AllForksSSZTypes {
       return ssz.allForks[this.getForkName(slot)] as allForks.AllForksSSZTypes;
+    },
+    getExecutionForkTypes(slot: Slot): allForks.AllForksExecutionSSZTypes {
+      const forkName = this.getForkName(slot);
+      if (forkName === ForkName.phase0 || forkName === ForkName.altair) {
+        throw Error(`Invalid slot=${slot} fork=${forkName} for blinded fork types`);
+      }
+      return ssz.allForksExecution[forkName] as allForks.AllForksExecutionSSZTypes;
+    },
+    getBlindedForkTypes(slot: Slot): allForks.AllForksBlindedSSZTypes {
+      const forkName = this.getForkName(slot);
+      if (forkName === ForkName.phase0 || forkName === ForkName.altair) {
+        throw Error(`Invalid slot=${slot} fork=${forkName} for blinded fork types`);
+      }
+      return ssz.allForksBlinded[forkName] as allForks.AllForksBlindedSSZTypes;
     },
   };
 }

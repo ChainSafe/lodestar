@@ -1,6 +1,6 @@
-import chai, {expect} from "chai";
-import chaiAsPromised from "chai-as-promised";
+import {expect} from "chai";
 import varint from "varint";
+import {Uint8ArrayList} from "uint8arraylist";
 import {ssz} from "@lodestar/types";
 import {RequestOrResponseType} from "../../../../../../src/network/reqresp/types.js";
 import {BufferedSource} from "../../../../../../src/network/reqresp/utils/index.js";
@@ -11,8 +11,6 @@ import {
 import {isEqualSszType} from "../../../../../utils/ssz.js";
 import {arrToSource} from "../../utils.js";
 import {sszSnappyPing, sszSnappyStatus, sszSnappySignedBeaconBlockPhase0} from "./testData.js";
-
-chai.use(chaiAsPromised);
 
 describe("network / reqresp / sszSnappy / decode", () => {
   describe("Test data vectors (generated in a previous version)", () => {
@@ -63,7 +61,7 @@ describe("network / reqresp / sszSnappy / decode", () => {
 
     for (const {id, type, error, chunks} of testCases) {
       it(id, async () => {
-        const bufferedSource = new BufferedSource(arrToSource(chunks));
+        const bufferedSource = new BufferedSource(arrToSource([new Uint8ArrayList(...chunks)]));
         await expect(readSszSnappyPayload(bufferedSource, type)).to.be.rejectedWith(error);
       });
     }

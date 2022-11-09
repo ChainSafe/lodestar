@@ -709,7 +709,21 @@ export class EpochContext {
     return this.getShufflingAtEpoch(epoch);
   }
 
+  getShufflingAtSlotOrNull(slot: Slot): IEpochShuffling | null {
+    const epoch = computeEpochAtSlot(slot);
+    return this.getShufflingAtEpochOrNull(epoch);
+  }
+
   getShufflingAtEpoch(epoch: Epoch): IEpochShuffling {
+    const shuffling = this.getShufflingAtEpochOrNull(epoch);
+    if (shuffling === null) {
+      throw new Error(`Requesting slot committee out of range epoch: ${epoch} current: ${this.currentShuffling.epoch}`);
+    }
+
+    return shuffling;
+  }
+
+  getShufflingAtEpochOrNull(epoch: Epoch): IEpochShuffling | null {
     if (epoch === this.previousShuffling.epoch) {
       return this.previousShuffling;
     } else if (epoch === this.currentShuffling.epoch) {
@@ -717,7 +731,7 @@ export class EpochContext {
     } else if (epoch === this.nextShuffling.epoch) {
       return this.nextShuffling;
     } else {
-      throw new Error(`Requesting slot committee out of range epoch: ${epoch} current: ${this.currentShuffling.epoch}`);
+      return null;
     }
   }
 

@@ -1,7 +1,6 @@
 import path from "node:path";
 import rimraf from "rimraf";
-import chai, {expect} from "chai";
-import chaiAsPromised from "chai-as-promised";
+import {expect} from "chai";
 import {DeletionStatus, getClient, ImportStatus} from "@lodestar/api/keymanager";
 import {config} from "@lodestar/config/default";
 import {Interchange} from "@lodestar/validator";
@@ -11,8 +10,6 @@ import {cachedPubkeysHex, cachedSeckeysHex} from "../utils/cachedKeys.js";
 import {expectDeepEquals, getAfterEachCallbacks} from "../utils/runUtils.js";
 import {expectKeys, getKeymanagerTestRunner} from "../utils/keymanagerTestRunners.js";
 import {getKeystoresStr} from "../utils/keystores.js";
-
-chai.use(chaiAsPromised);
 
 describeCliTest("import keystores from api", function ({spawnCli}) {
   const dataDir = path.join(testFilesDir, "import-keystores-test");
@@ -69,7 +66,7 @@ describeCliTest("import keystores from api", function ({spawnCli}) {
     );
 
     // Attempt to run a second process and expect the keystore lock to throw
-    const vcProc2 = spawnCli([
+    const vcProc2 = spawnCli({pipeStdToParent: true, logPrefix: "vc-2"}, [
       // ⏎
       "validator",
       `--dataDir=${dataDir}`,
@@ -101,11 +98,11 @@ describeCliTest("import keystores from api", function ({spawnCli}) {
     await expectKeys(keymanagerClient, pubkeys, "Wrong listKeys before deleting");
 
     // Delete keys
-    const deleteRes = await keymanagerClient.deleteKeystores(pubkeys);
+    const deleteRes = await keymanagerClient.deleteKeys(pubkeys);
     expectDeepEquals(
       deleteRes.data,
       pubkeys.map(() => ({status: DeletionStatus.deleted})),
-      "Wrong deleteKeystores response"
+      "Wrong deleteKeys response"
     );
 
     // Check keys are deleted

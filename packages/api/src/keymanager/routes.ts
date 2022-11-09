@@ -47,6 +47,15 @@ export type ResponseStatus<Status> = {
   message?: string;
 };
 
+export type FeeRecipientData = {
+  pubkey: string;
+  ethaddress: string;
+};
+export type GasLimitData = {
+  pubkey: string;
+  gasLimit: number;
+};
+
 export type SignerDefinition = {
   pubkey: PubkeyHex;
   /**
@@ -140,7 +149,7 @@ export type Api = {
    *
    * https://github.com/ethereum/keymanager-APIs/blob/0c975dae2ac6053c8245ebdb6a9f27c2f114f407/keymanager-oapi.yaml
    */
-  deleteKeystores(
+  deleteKeys(
     pubkeysHex: string[]
   ): Promise<{
     data: ResponseStatus<DeletionStatus>[];
@@ -166,16 +175,40 @@ export type Api = {
   ): Promise<{
     data: ResponseStatus<DeleteRemoteKeyStatus>[];
   }>;
+
+  listFeeRecipient(
+    pubkey: string
+  ): Promise<{
+    data: FeeRecipientData;
+  }>;
+  setFeeRecipient(pubkey: string, ethaddress: string): Promise<void>;
+  deleteFeeRecipient(pubkey: string): Promise<void>;
+
+  getGasLimit(
+    pubkey: string
+  ): Promise<{
+    data: GasLimitData;
+  }>;
+  setGasLimit(pubkey: string, gasLimit: number): Promise<void>;
+  deleteGasLimit(pubkey: string): Promise<void>;
 };
 
 export const routesData: RoutesData<Api> = {
   listKeys: {url: "/eth/v1/keystores", method: "GET"},
   importKeystores: {url: "/eth/v1/keystores", method: "POST"},
-  deleteKeystores: {url: "/eth/v1/keystores", method: "DELETE"},
+  deleteKeys: {url: "/eth/v1/keystores", method: "DELETE"},
 
   listRemoteKeys: {url: "/eth/v1/remotekeys", method: "GET"},
   importRemoteKeys: {url: "/eth/v1/remotekeys", method: "POST"},
   deleteRemoteKeys: {url: "/eth/v1/remotekeys", method: "DELETE"},
+
+  listFeeRecipient: {url: "/eth/v1/validator/{pubkey}/feerecipient", method: "GET"},
+  setFeeRecipient: {url: "/eth/v1/validator/{pubkey}/feerecipient", method: "POST"},
+  deleteFeeRecipient: {url: "/eth/v1/validator/{pubkey}/feerecipient", method: "DELETE"},
+
+  getGasLimit: {url: "/eth/v1/validator/{pubkey}/gas_limit", method: "GET"},
+  setGasLimit: {url: "/eth/v1/validator/{pubkey}/gas_limit", method: "POST"},
+  deleteGasLimit: {url: "/eth/v1/validator/{pubkey}/gas_limit", method: "DELETE"},
 };
 
 /* eslint-disable @typescript-eslint/naming-convention */
@@ -189,7 +222,7 @@ export type ReqTypes = {
       slashing_protection?: SlashingProtectionData;
     };
   };
-  deleteKeystores: {body: {pubkeys: string[]}};
+  deleteKeys: {body: {pubkeys: string[]}};
 
   listRemoteKeys: ReqEmpty;
   importRemoteKeys: {
@@ -198,6 +231,14 @@ export type ReqTypes = {
     };
   };
   deleteRemoteKeys: {body: {pubkeys: string[]}};
+
+  listFeeRecipient: {params: {pubkey: string}};
+  setFeeRecipient: {params: {pubkey: string}; body: {ethaddress: string}};
+  deleteFeeRecipient: {params: {pubkey: string}};
+
+  getGasLimit: {params: {pubkey: string}};
+  setGasLimit: {params: {pubkey: string}; body: {gas_limit: string | number}};
+  deleteGasLimit: {params: {pubkey: string}};
 };
 
 export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
@@ -208,7 +249,7 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
       parseReq: ({body: {keystores, passwords, slashing_protection}}) => [keystores, passwords, slashing_protection],
       schema: {body: Schema.Object},
     },
-    deleteKeystores: {
+    deleteKeys: {
       writeReq: (pubkeys) => ({body: {pubkeys}}),
       parseReq: ({body: {pubkeys}}) => [pubkeys],
       schema: {body: Schema.Object},
@@ -225,6 +266,52 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
       parseReq: ({body: {pubkeys}}) => [pubkeys],
       schema: {body: Schema.Object},
     },
+
+    listFeeRecipient: {
+      writeReq: (pubkey) => ({params: {pubkey}}),
+      parseReq: ({params: {pubkey}}) => [pubkey],
+      schema: {
+        params: {pubkey: Schema.StringRequired},
+      },
+    },
+    setFeeRecipient: {
+      writeReq: (pubkey, ethaddress) => ({params: {pubkey}, body: {ethaddress}}),
+      parseReq: ({params: {pubkey}, body: {ethaddress}}) => [pubkey, ethaddress],
+      schema: {
+        params: {pubkey: Schema.StringRequired},
+        body: Schema.Object,
+      },
+    },
+    deleteFeeRecipient: {
+      writeReq: (pubkey) => ({params: {pubkey}}),
+      parseReq: ({params: {pubkey}}) => [pubkey],
+      schema: {
+        params: {pubkey: Schema.StringRequired},
+      },
+    },
+
+    getGasLimit: {
+      writeReq: (pubkey) => ({params: {pubkey}}),
+      parseReq: ({params: {pubkey}}) => [pubkey],
+      schema: {
+        params: {pubkey: Schema.StringRequired},
+      },
+    },
+    setGasLimit: {
+      writeReq: (pubkey, gas_limit) => ({params: {pubkey}, body: {gas_limit}}),
+      parseReq: ({params: {pubkey}, body: {gas_limit}}) => [pubkey, parseGasLimit(gas_limit)],
+      schema: {
+        params: {pubkey: Schema.StringRequired},
+        body: Schema.Object,
+      },
+    },
+    deleteGasLimit: {
+      writeReq: (pubkey) => ({params: {pubkey}}),
+      parseReq: ({params: {pubkey}}) => [pubkey],
+      schema: {
+        params: {pubkey: Schema.StringRequired},
+      },
+    },
   };
 }
 
@@ -233,10 +320,24 @@ export function getReturnTypes(): ReturnTypes<Api> {
   return {
     listKeys: jsonType("snake"),
     importKeystores: jsonType("snake"),
-    deleteKeystores: jsonType("snake"),
+    deleteKeys: jsonType("snake"),
 
     listRemoteKeys: jsonType("snake"),
     importRemoteKeys: jsonType("snake"),
     deleteRemoteKeys: jsonType("snake"),
+
+    listFeeRecipient: jsonType("snake"),
+    getGasLimit: jsonType("snake"),
   };
+}
+
+function parseGasLimit(gasLimitInput: string | number): number {
+  if ((typeof gasLimitInput !== "string" && typeof gasLimitInput !== "number") || `${gasLimitInput}`.trim() === "") {
+    throw Error("Not valid Gas Limit");
+  }
+  const gasLimit = Number(gasLimitInput);
+  if (Number.isNaN(gasLimit) || gasLimit === 0) {
+    throw Error(`Gas Limit is not valid gasLimit=${gasLimit}`);
+  }
+  return gasLimit;
 }

@@ -1,7 +1,7 @@
 import fetch from "cross-fetch";
 import {ForkName, activePreset} from "@lodestar/params";
 import {chainConfig} from "@lodestar/config/default";
-import {SPEC_TEST_VERSION} from "../../../spec/specTestVersioning.js";
+import {ethereumConsensusSpecsTests} from "../../../spec/specTestVersioning.js";
 import {specConstants} from "../../../../src/api/impl/config/constants.js";
 
 const CONSTANT_NAMES_SKIP_LIST = new Set([
@@ -15,7 +15,7 @@ describe("api / impl / config", function () {
   this.timeout(60 * 1000);
 
   it("Ensure all constants are exposed", async () => {
-    const constantNames = await downloadRemoveConstants(SPEC_TEST_VERSION);
+    const constantNames = await downloadRemoteConstants(ethereumConsensusSpecsTests.specVersion);
 
     const constantsInCode = new Set([
       // Constants for API only
@@ -42,7 +42,7 @@ describe("api / impl / config", function () {
   });
 });
 
-async function downloadRemoveConstants(commit: string): Promise<string[]> {
+async function downloadRemoteConstants(commit: string): Promise<string[]> {
   const downloadedSpecs: Promise<string>[] = [];
 
   for (const forkName of Object.values(ForkName)) {

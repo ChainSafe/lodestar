@@ -15,7 +15,7 @@ module.exports = {
     project: "./tsconfig.json",
     sourceType: "module",
   },
-  plugins: ["@typescript-eslint", "eslint-plugin-import", "@chainsafe/eslint-plugin-node", "no-only-tests", "prettier"],
+  plugins: ["@typescript-eslint", "eslint-plugin-import", "@chainsafe/eslint-plugin-node", "prettier"],
   extends: [
     "eslint:recommended",
     "plugin:import/errors",
@@ -132,7 +132,7 @@ module.exports = {
     "no-bitwise": "off",
     "no-cond-assign": "error",
     "no-consecutive-blank-lines": 0,
-    "no-console": "warn",
+    "no-console": "error",
     "no-var": "error",
     "object-curly-spacing": ["error", "never"],
     "object-literal-sort-keys": 0,
@@ -160,9 +160,6 @@ module.exports = {
     ],
     // Force to add names to all functions to ease CPU profiling
     "func-names": ["error", "always"],
-
-    // Prevents accidentally pushing a commit with .only in Mocha tests
-    "no-only-tests/no-only-tests": "error",
 
     // TEMP Disabled while eslint-plugin-import support ESM (Typescript does support it) https://github.com/import-js/eslint-plugin-import/issues/2170
     "import/no-unresolved": "off",
@@ -207,6 +204,28 @@ module.exports = {
         "import/no-named-as-default-member": "off",
         "@typescript-eslint/no-explicit-any": "off",
         "func-names": "off",
+      },
+    },
+    {
+      files: ["**/test/**/*.test.ts"],
+      plugins: ["mocha", "chai-expect"],
+      extends: ["plugin:mocha/recommended", "plugin:chai-expect/recommended"],
+      rules: {
+        // Use of arrow functions are very common
+        "mocha/no-mocha-arrows": "off",
+        // It's common to call function inside describe block
+        // https://github.com/lo1tuma/eslint-plugin-mocha/blob/master/docs/rules/no-setup-in-describe.md
+        "mocha/no-setup-in-describe": "off",
+        // We use to split before in small isolated tasks
+        // https://github.com/lo1tuma/eslint-plugin-mocha/blob/master/docs/rules/no-sibling-hooks.md
+        "mocha/no-sibling-hooks": "off",
+        // We need to disable because we disabled "mocha/no-setup-in-describe" rule
+        // TODO: Move all setup code to before/beforeEach and then disable async describe
+        // https://github.com/lo1tuma/eslint-plugin-mocha/blob/master/docs/rules/no-async-describe.md
+        "mocha/no-async-describe": "off",
+        // We observed that having multiple top level "describe" save valuable indentation
+        // https://github.com/lo1tuma/eslint-plugin-mocha/blob/master/docs/rules/max-top-level-suites.md
+        "mocha/max-top-level-suites": "off",
       },
     },
     {

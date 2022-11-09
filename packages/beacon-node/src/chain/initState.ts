@@ -3,12 +3,12 @@ import {
   computeEpochAtSlot,
   BeaconStateAllForks,
   CachedBeaconStateAllForks,
+  computeCheckpointEpochAtStateSlot,
 } from "@lodestar/state-transition";
 import {phase0, allForks, ssz} from "@lodestar/types";
 import {IChainForkConfig} from "@lodestar/config";
 import {ILogger} from "@lodestar/utils";
 import {toHexString} from "@chainsafe/ssz";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {GENESIS_SLOT, ZERO_HASH} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
 import {Eth1Provider} from "../eth1/index.js";
@@ -161,13 +161,29 @@ export async function initStateFromAnchorState(
   config: IChainForkConfig,
   db: IBeaconDb,
   logger: ILogger,
-  anchorState: BeaconStateAllForks
+  anchorState: BeaconStateAllForks,
+  {
+    isWithinWeakSubjectivityPeriod,
+    isCheckpointState,
+  }: {isWithinWeakSubjectivityPeriod: boolean; isCheckpointState: boolean}
 ): Promise<BeaconStateAllForks> {
-  logger.info("Initializing beacon state from anchor state", {
-    slot: anchorState.slot,
-    epoch: computeEpochAtSlot(anchorState.slot),
-    stateRoot: toHexString(anchorState.hashTreeRoot()),
-  });
+  const stateInfo = isCheckpointState ? "checkpoint" : "db";
+  if (isWithinWeakSubjectivityPeriod) {
+    logger.info(`Initializing beacon from a valid ${stateInfo} state`, {
+      slot: anchorState.slot,
+      epoch: computeEpochAtSlot(anchorState.slot),
+      stateRoot: toHexString(anchorState.hashTreeRoot()),
+      isWithinWeakSubjectivityPeriod,
+    });
+  } else {
+    logger.warn(`Initializing from a stale ${stateInfo} state vulnerable to long range attacks`, {
+      slot: anchorState.slot,
+      epoch: computeEpochAtSlot(anchorState.slot),
+      stateRoot: toHexString(anchorState.hashTreeRoot()),
+      isWithinWeakSubjectivityPeriod,
+    });
+    logger.warn("Checkpoint sync recommended, please use --help to see checkpoint sync options");
+  }
 
   await persistAnchorState(config, db, anchorState);
 
@@ -207,7 +223,7 @@ export function computeAnchorCheckpoint(
       root,
       // the checkpoint epoch = computeEpochAtSlot(anchorState.slot) + 1 if slot is not at epoch boundary
       // this is similar to a process_slots() call
-      epoch: Math.ceil(anchorState.slot / SLOTS_PER_EPOCH),
+      epoch: computeCheckpointEpochAtStateSlot(anchorState.slot),
     },
     blockHeader,
   };

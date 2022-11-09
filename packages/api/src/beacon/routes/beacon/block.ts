@@ -1,7 +1,7 @@
 import {ContainerType} from "@chainsafe/ssz";
 import {ForkName} from "@lodestar/params";
 import {IChainForkConfig} from "@lodestar/config";
-import {phase0, allForks, Slot, Root, ssz, bellatrix, RootHex} from "@lodestar/types";
+import {phase0, allForks, Slot, Root, ssz, RootHex} from "@lodestar/types";
 
 import {
   RoutesData,
@@ -108,7 +108,7 @@ export type Api = {
    * Publish a signed blinded block by submitting it to the mev relay and patching in the block
    * transactions beacon node gets in response.
    */
-  publishBlindedBlock(block: bellatrix.SignedBlindedBeaconBlock): Promise<void>;
+  publishBlindedBlock(block: allForks.SignedBlindedBeaconBlock): Promise<void>;
 };
 
 /**
@@ -156,6 +156,17 @@ export function getReqSerializers(config: IChainForkConfig): ReqSerializers<Api,
     fromJson: (data) => getSignedBeaconBlockType((data as unknown) as allForks.SignedBeaconBlock).fromJson(data),
   };
 
+  const getSignedBlindedBeaconBlockType = (
+    data: allForks.SignedBlindedBeaconBlock
+  ): allForks.AllForksBlindedSSZTypes["SignedBeaconBlock"] =>
+    config.getBlindedForkTypes(data.message.slot).SignedBeaconBlock;
+
+  const AllForksSignedBlindedBeaconBlock: TypeJson<allForks.SignedBlindedBeaconBlock> = {
+    toJson: (data) => getSignedBlindedBeaconBlockType(data).toJson(data),
+    fromJson: (data) =>
+      getSignedBlindedBeaconBlockType((data as unknown) as allForks.SignedBlindedBeaconBlock).fromJson(data),
+  };
+
   return {
     getBlock: blockIdOnlyReq,
     getBlockV2: blockIdOnlyReq,
@@ -168,7 +179,7 @@ export function getReqSerializers(config: IChainForkConfig): ReqSerializers<Api,
     },
     getBlockRoot: blockIdOnlyReq,
     publishBlock: reqOnlyBody(AllForksSignedBeaconBlock, Schema.Object),
-    publishBlindedBlock: reqOnlyBody(ssz.bellatrix.SignedBlindedBeaconBlock, Schema.Object),
+    publishBlindedBlock: reqOnlyBody(AllForksSignedBlindedBeaconBlock, Schema.Object),
   };
 }
 

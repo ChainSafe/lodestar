@@ -1,14 +1,15 @@
 import path from "node:path";
 import fs from "node:fs";
 import {expect} from "chai";
+import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
 import {chainConfig} from "@lodestar/config/default";
 import {chainConfigToJson} from "@lodestar/config";
 import {ENR} from "@chainsafe/discv5";
+import {exportToJSON} from "../../../src/config/peerId.js";
 import {beaconHandlerInit} from "../../../src/cmds/beacon/handler.js";
 import {IBeaconArgs} from "../../../src/cmds/beacon/options.js";
 import {IGlobalArgs} from "../../../src/options/globalOptions.js";
 import {testFilesDir} from "../../utils.js";
-import {createPeerId} from "../../../src/config/peerId.js";
 
 describe("cmds / beacon / args handler", () => {
   // Make tests faster skipping a network call
@@ -50,20 +51,20 @@ describe("cmds / beacon / args handler", () => {
     const {peerId: peerId1} = await runBeaconHandlerInit({});
     const {peerId: peerId2} = await runBeaconHandlerInit({});
 
-    expect(peerId1.toB58String()).not.equal(peerId2.toB58String(), "peer ids must be different");
+    expect(peerId1.toString()).not.equal(peerId2.toString(), "peer ids must be different");
   });
 
   it.skip("Re-use existing peer", async () => {
-    const prevPeerId = await createPeerId();
+    const prevPeerId = await createSecp256k1PeerId();
 
     const peerIdFile = path.join(testFilesDir, "prev_peerid.json");
-    fs.writeFileSync(peerIdFile, JSON.stringify(prevPeerId.toJSON()));
+    fs.writeFileSync(peerIdFile, JSON.stringify(exportToJSON(prevPeerId)));
 
     const {peerId} = await runBeaconHandlerInit({
-      peerIdFile,
+      // peerIdFile,
     });
 
-    expect(peerId.toB58String()).equal(prevPeerId.toB58String(), "peer must be equal to persisted");
+    expect(peerId.toString()).equal(prevPeerId.toString(), "peer must be equal to persisted");
   });
 
   it("Set known deposit contract", async () => {

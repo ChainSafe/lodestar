@@ -2,7 +2,7 @@ import {phase0, Slot, Root, ssz} from "@lodestar/types";
 import {PointFormat, Signature} from "@chainsafe/bls/types";
 import bls from "@chainsafe/bls";
 import {BitArray, toHexString} from "@chainsafe/ssz";
-import {MapDef} from "../../util/map.js";
+import {MapDef} from "@lodestar/utils";
 import {InsertOutcome, OpPoolError, OpPoolErrorCode} from "./types.js";
 import {pruneBySlot} from "./utils.js";
 

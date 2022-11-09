@@ -26,10 +26,11 @@ import {DoppelgangerService} from "./services/doppelgangerService.js";
 export type ValidatorOptions = {
   slashingProtection: ISlashingProtection;
   dbOps: IDatabaseApiOptions;
-  api: Api | string;
+  api: Api | string | string[];
   signers: Signer[];
   logger: ILogger;
   processShutdownCallback: ProcessShutdownCallback;
+  abortController: AbortController;
   afterBlockDelaySlotFraction?: number;
   scAfterBlockDelaySlotFraction?: number;
   doppelgangerProtectionEnabled?: boolean;
@@ -66,22 +67,26 @@ export class Validator {
   constructor(opts: ValidatorOptions, readonly genesis: Genesis, metrics: Metrics | null = null) {
     const {dbOps, logger, slashingProtection, signers, valProposerConfig} = opts;
     const config = createIBeaconConfig(dbOps.config, genesis.genesisValidatorsRoot);
-    this.controller = new AbortController();
+    this.controller = opts.abortController;
     const clock = new Clock(config, logger, {genesisTime: Number(genesis.genesisTime)});
     const loggerVc = getLoggerVc(logger, clock);
 
-    const api =
-      typeof opts.api === "string"
-        ? getClient(
-            {
-              baseUrl: opts.api,
-              // Validator would need the beacon to respond within the slot
-              timeoutMs: config.SECONDS_PER_SLOT * 1000,
-              getAbortSignal: () => this.controller.signal,
-            },
-            {config, logger, metrics: metrics?.restApiClient}
-          )
-        : opts.api;
+    let api: Api;
+    if (typeof opts.api === "string" || Array.isArray(opts.api)) {
+      // This new api instance can make do with default timeout as a faster timeout is
+      // not necessary since this instance won't be used for validator duties
+      api = getClient(
+        {
+          urls: typeof opts.api === "string" ? [opts.api] : opts.api,
+          // Validator would need the beacon to respond within the slot
+          timeoutMs: config.SECONDS_PER_SLOT * 1000,
+          getAbortSignal: () => this.controller.signal,
+        },
+        {config, logger, metrics: metrics?.restApiClient}
+      );
+    } else {
+      api = opts.api;
+    }
 
     const indicesService = new IndicesService(logger, api, metrics);
     const doppelgangerService = opts.doppelgangerProtectionEnabled
@@ -95,7 +100,8 @@ export class Validator {
       doppelgangerService,
       metrics,
       signers,
-      valProposerConfig
+      valProposerConfig,
+      genesis.genesisValidatorsRoot
     );
     pollPrepareBeaconProposer(config, loggerVc, api, clock, validatorStore, metrics);
     pollBuilderValidatorRegistration(config, loggerVc, api, clock, validatorStore, metrics);
@@ -160,29 +166,29 @@ export class Validator {
   }
 
   /** Waits for genesis and genesis time */
-  static async initializeFromBeaconNode(
-    opts: ValidatorOptions,
-    signal?: AbortSignal,
-    metrics?: Metrics | null
-  ): Promise<Validator> {
+  static async initializeFromBeaconNode(opts: ValidatorOptions, metrics?: Metrics | null): Promise<Validator> {
     const {config} = opts.dbOps;
     const {logger} = opts;
-    const api =
-      typeof opts.api === "string"
-        ? // This new api instance can make do with default timeout as a faster timeout is
-          // not necessary since this instance won't be used for validator duties
-          getClient({baseUrl: opts.api, getAbortSignal: () => signal}, {config, logger})
-        : opts.api;
 
-    const genesis = await waitForGenesis(api, opts.logger, signal);
-    logger.info("Genesis available");
+    let api: Api;
+    if (typeof opts.api === "string" || Array.isArray(opts.api)) {
+      const urls = typeof opts.api === "string" ? [opts.api] : opts.api;
+      // This new api instance can make do with default timeout as a faster timeout is
+      // not necessary since this instance won't be used for validator duties
+      api = getClient({urls, getAbortSignal: () => opts.abortController.signal}, {config, logger});
+    } else {
+      api = opts.api;
+    }
+
+    const genesis = await waitForGenesis(api, opts.logger, opts.abortController.signal);
+    logger.info("Genesis fetched from the beacon node");
 
     const {data: externalSpecJson} = await api.config.getSpec();
     assertEqualParams(config, externalSpecJson);
-    logger.info("Verified node and validator have same config");
+    logger.info("Verified connected beacon node and validator have same the config");
 
     await assertEqualGenesis(opts, genesis);
-    logger.info("Verified node and validator have same genesisValidatorRoot");
+    logger.info("Verified connected beacon node and validator have the same genesisValidatorRoot");
 
     return new Validator(opts, genesis, metrics);
   }

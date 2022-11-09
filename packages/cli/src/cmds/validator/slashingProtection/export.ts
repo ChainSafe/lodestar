@@ -1,10 +1,10 @@
+import path from "node:path";
 import {InterchangeFormatVersion} from "@lodestar/validator";
-import {ICliCommand, writeFile} from "../../../util/index.js";
+import {ICliCommand, writeFile600Perm} from "../../../util/index.js";
 import {IGlobalArgs} from "../../../options/index.js";
 import {AccountValidatorArgs} from "../options.js";
 import {getCliLogger, ILogArgs} from "../../../util/index.js";
 import {getBeaconConfigFromArgs} from "../../../config/index.js";
-import {getBeaconPaths} from "../../beacon/paths.js";
 import {getValidatorPaths} from "../paths.js";
 import {getGenesisValidatorsRoot, getSlashingProtection} from "./utils.js";
 import {ISlashingProtectionArgs} from "./options.js";
@@ -40,8 +40,9 @@ export const exportCmd: ICliCommand<
 
   handler: async (args) => {
     const {config, network} = getBeaconConfigFromArgs(args);
-    const beaconPaths = getBeaconPaths(args, network);
-    const logger = getCliLogger(args, beaconPaths, config);
+    const validatorPaths = getValidatorPaths(args, network);
+    // slashingProtection commands are fast so do not require logFile feature
+    const logger = getCliLogger(args, {defaultLogFilepath: path.join(validatorPaths.dataDir, "validator.log")}, config);
 
     const {validatorsDbDir: dbPath} = getValidatorPaths(args, network);
 
@@ -69,7 +70,7 @@ export const exportCmd: ICliCommand<
     );
 
     logger.info("Writing the slashing protection logs", {file: args.file});
-    writeFile(args.file, interchange);
+    writeFile600Perm(args.file, interchange);
     logger.verbose("Export completed successfully");
   },
 };

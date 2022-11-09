@@ -1,43 +1,31 @@
-import chai from "chai";
-import sinon from "sinon";
-import sinonChai from "sinon-chai";
+import "../../setup.js";
 import {expect} from "chai";
-import {LogData, LodestarError, LogFormat, logFormats, LogLevel, WinstonLogger} from "../../../src/index.js";
-import {TransportType} from "../../../src/logger/transport.js";
+import {MESSAGE} from "triple-beam";
+import Transport from "winston-transport";
+import {LogData, LodestarError, LogFormat, logFormats, createWinstonLogger} from "../../../src/index.js";
 
-chai.use(sinonChai);
+type WinstonLog = {[MESSAGE]: string};
 
-let isNode = true;
+class MemoryTransport extends Transport {
+  private readonly logs: WinstonLog[] = [];
 
-// Will be false on browser
-// eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-if (!global.setImmediate) {
-  isNode = false;
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  // @ts-expect-error
-  global.setImmediate = (cb) => {
-    setTimeout(cb, 0);
-  };
+  log(info: WinstonLog, next: () => void): void {
+    this.logs.push(info);
+    next();
+  }
+
+  getLogs(): string[] {
+    return this.logs.map((log) => log[MESSAGE]);
+  }
 }
 
+// describe("winston logger log level logic", () => {
+//   it("Should not run format function for not used log level", () => {
+//     const logger = createWinstonLogger({format, hideTimestamp: true}, [new MemoryTransport()]);
+//   });
+// });
+
 describe("winston logger", () => {
-  let loggerSpy: sinon.SinonSpy;
-
-  beforeEach(() => {
-    // Will be false on browser
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (process && process.stdout) {
-      loggerSpy = sinon.spy(process.stdout, "write");
-    } else {
-      loggerSpy = sinon.spy(console, "log");
-    }
-  });
-
-  afterEach(() => {
-    // Restore the default sandbox here
-    sinon.restore();
-  });
-
   describe("winston logger format and options", () => {
     interface ITestCase {
       id: string;
@@ -46,6 +34,7 @@ describe("winston logger", () => {
       error?: Error;
       output: {[P in LogFormat]: string};
     }
+    /* eslint-disable quotes */
     const testCases: (ITestCase | (() => ITestCase))[] = [
       {
         id: "regular log with metadata",
@@ -53,8 +42,7 @@ describe("winston logger", () => {
         context: {meta: "data"},
         output: {
           human: "[]                 \u001b[33mwarn\u001b[39m: foo bar meta=data",
-          // eslint-disable-next-line quotes
-          json: `{"module":"","context":{"meta":"data"},"level":"warn","message":"foo bar"}`,
+          json: `{"message":"foo bar","context":{"meta":"data"},"level":"warn","module":""}`,
         },
       },
 
@@ -64,8 +52,7 @@ describe("winston logger", () => {
         context: {data: BigInt(1)},
         output: {
           human: "[]                 \u001b[33mwarn\u001b[39m: big int data=1",
-          // eslint-disable-next-line quotes
-          json: `{"module":"","context":{"data":"1"},"level":"warn","message":"big int"}`,
+          json: `{"message":"big int","context":{"data":"1"},"level":"warn","module":""}`,
         },
       },
 
@@ -79,8 +66,7 @@ describe("winston logger", () => {
           error: error,
           output: {
             human: `[]                 \u001b[33mwarn\u001b[39m: foo bar code=SAMPLE_ERROR, data=foo=bar\n${error.stack}`,
-            // eslint-disable-next-line quotes
-            json: `{"module":"","error":{"code":"SAMPLE_ERROR","data":{"foo":"bar"},"stack":"$STACK"},"level":"warn","message":"foo bar"}`,
+            json: `{"message":"foo bar","error":{"code":"SAMPLE_ERROR","data":{"foo":"bar"},"stack":"$STACK"},"level":"warn","module":""}`,
           },
         };
       },
@@ -90,15 +76,11 @@ describe("winston logger", () => {
       const {id, message, context, error, output} = typeof testCase === "function" ? testCase() : testCase;
       for (const format of logFormats) {
         it(`${id} ${format} output`, async () => {
-          const logger = new WinstonLogger({format, hideTimestamp: true}, [{type: TransportType.console}]);
+          const memoryTransport = new MemoryTransport();
+          const logger = createWinstonLogger({format, hideTimestamp: true}, [memoryTransport]);
           logger.warn(message, context, error);
 
-          if (isNode) {
-            // Nodejs log ends with new lines
-            expect(loggerSpy).to.have.been.calledWith(`${output[format]}\n`);
-          } else {
-            expect(loggerSpy).to.have.been.calledWith(output[format]);
-          }
+          expect(memoryTransport.getLogs()).deep.equals([output[format]]);
         });
       }
     }
@@ -106,39 +88,20 @@ describe("winston logger", () => {
 
   describe("child logger", () => {
     it("Should parse child module", async () => {
-      const logger = new WinstonLogger({hideTimestamp: true, module: "A"}, [{type: TransportType.console}]);
-      const childB = logger.child({module: "B"});
-      const childC = childB.child({module: "C"});
-      childC.warn("test");
+      const memoryTransport = new MemoryTransport();
+      const loggerA = createWinstonLogger({hideTimestamp: true, module: "a"}, [memoryTransport]);
+      const loggerAB = loggerA.child({module: "b"});
+      const loggerABC = loggerAB.child({module: "c"});
 
-      const output = "[A B C]            \u001b[33mwarn\u001b[39m: test";
+      loggerA.warn("test a");
+      loggerAB.warn("test a/b");
+      loggerABC.warn("test a/b/c");
 
-      if (isNode) {
-        // Nodejs log ends with new lines
-        expect(loggerSpy).to.have.been.calledWith(`${output}\n`);
-      } else {
-        expect(loggerSpy).to.have.been.calledWith(output);
-      }
-    });
-
-    it("Should log to child at a lower logLevel", () => {
-      const logger = new WinstonLogger({hideTimestamp: true, module: "A"}, [
-        {type: TransportType.console, level: LogLevel.info},
+      expect(memoryTransport.getLogs()).deep.equals([
+        "[a]                \u001b[33mwarn\u001b[39m: test a",
+        "[a/b]              \u001b[33mwarn\u001b[39m: test a/b",
+        "[a/b/c]            \u001b[33mwarn\u001b[39m: test a/b/c",
       ]);
-
-      const childB = logger.child({module: "B", level: LogLevel.debug});
-
-      logger.debug("Should not be logged");
-      childB.debug("Should be logged");
-
-      const output = "[A B]             \u001b[34mdebug\u001b[39m: Should be logged";
-
-      if (isNode) {
-        // Nodejs log ends with new lines
-        expect(loggerSpy).to.have.been.calledWith(`${output}\n`);
-      } else {
-        expect(loggerSpy).to.have.been.calledWith(output);
-      }
     });
   });
 });

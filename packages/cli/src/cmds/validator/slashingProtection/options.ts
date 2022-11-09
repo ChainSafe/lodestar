@@ -1,12 +1,12 @@
 import {ICliCommandOptions} from "../../../util/index.js";
 import {IValidatorCliArgs, validatorOptions} from "../options.js";
 
-export type ISlashingProtectionArgs = Pick<IValidatorCliArgs, "server"> & {
+export type ISlashingProtectionArgs = Pick<IValidatorCliArgs, "beaconNodes"> & {
   force?: boolean;
 };
 
 export const slashingProtectionOptions: ICliCommandOptions<ISlashingProtectionArgs> = {
-  server: validatorOptions.server,
+  beaconNodes: validatorOptions.beaconNodes,
 
   force: {
     description: "If genesisValidatorsRoot can't be fetched from the Beacon node, use a zero hash",

@@ -1,22 +1,29 @@
 import {expect} from "chai";
 import {config} from "@lodestar/config/default";
 import {fromHexString} from "@chainsafe/ssz";
-import {RootHex} from "@lodestar/types";
+import {RootHex, Slot} from "@lodestar/types";
+import {toHex} from "@lodestar/utils";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {ForkChoice, IForkChoiceStore, ProtoBlock, ProtoArray, ExecutionStatus} from "../../../src/index.js";
+import {
+  ForkChoice,
+  IForkChoiceStore,
+  ProtoBlock,
+  ProtoArray,
+  ExecutionStatus,
+  EpochDifference,
+} from "../../../src/index.js";
+
+const rootStateBytePrefix = 0xaa;
+const rootBlockBytePrefix = 0xbb;
 
 describe("Forkchoice", function () {
   const genesisSlot = 0;
   const genesisEpoch = 0;
   const genesisRoot = "0x0000000000000000000000000000000000000000000000000000000000000000";
 
-  // missing 2 last chars
-  const stateRootPrefix = "0xb021a96da54dd89dfafc0e8817e23fe708f5746e924855f49b3f978133c3ac";
-  const finalizedRoot = "0x86d2ebb56a21be95b9036f4596ff4feaa336acf5fd8739cf39f5d58955b1295b";
-  const parentRoot = "0x853d08094d83f1db67159144db54ec0c882eb9715184c4bde8f4191c926a1671";
-  // missing 2 last chars
-  const blockRootPrefix = "0x37487efdbfbeeb82d7d35c6eb96438c4576f645b0f4c0386184592abab4b17";
+  const finalizedRoot = getBlockRoot(genesisSlot);
+  const parentRoot = toHex(Buffer.alloc(32, 0xff));
   let protoArr: ProtoArray;
 
   beforeEach(() => {
@@ -56,15 +63,7 @@ describe("Forkchoice", function () {
     finalizedCheckpoint: {epoch: genesisEpoch, root: fromHexString(finalizedRoot), rootHex: finalizedRoot},
     unrealizedFinalizedCheckpoint: {epoch: genesisEpoch, root: fromHexString(finalizedRoot), rootHex: finalizedRoot},
     justifiedBalancesGetter: () => new Uint8Array([32]),
-  };
-
-  const getBlockRoot = (slot: number): RootHex => {
-    if (slot === genesisSlot) return finalizedRoot;
-    return blockRootPrefix + (slot < 10 ? "0" + slot : slot);
-  };
-
-  const getStateRoot = (slot: number): RootHex => {
-    return stateRootPrefix + (slot < 10 ? "0" + slot : slot);
+    equivocatingIndices: new Set(),
   };
 
   const getParentBlockRoot = (slot: number, skippedSlots: number[] = []): RootHex => {
@@ -79,7 +78,7 @@ describe("Forkchoice", function () {
   const getTargetRoot = (slot: number, skippedSlots: number[] = []): RootHex => {
     let targetSlot = computeEpochAtSlot(slot) * SLOTS_PER_EPOCH;
     if (targetSlot === genesisSlot) return finalizedRoot;
-    while (targetSlot > 0) {
+    while (targetSlot >= 0) {
       if (!skippedSlots.includes(targetSlot)) return getBlockRoot(targetSlot);
       targetSlot -= 1;
     }
@@ -128,25 +127,47 @@ describe("Forkchoice", function () {
     expect(summaries[0]).to.be.deep.include(block, "the block summary is not correct");
   });
 
-  const dependentRootTestCases = [
-    {name: "no skipped lot", skippedSlots: [], pivotSlot: 31},
-    {name: "skipped pivot slot 31", skippedSlots: [31], pivotSlot: 30},
-    {name: "skipped pivot slot 31, 30", skippedSlots: [31, 30], pivotSlot: 29},
-    {name: "skipped slot 33 to 64", skippedSlots: Array.from({length: 32}, (_, i) => i + 33), pivotSlot: 31},
-    {name: "skipped slot 32 to 64", skippedSlots: Array.from({length: 33}, (_, i) => i + 32), pivotSlot: 31},
-    {name: "skipped slot 31 to 64", skippedSlots: Array.from({length: 34}, (_, i) => i + 31), pivotSlot: 30},
-    {name: "skipped slot 30 to 64", skippedSlots: Array.from({length: 35}, (_, i) => i + 30), pivotSlot: 29},
+  before("Assert SLOTS_PER_EPOCH", () => {
+    expect(SLOTS_PER_EPOCH).equals(32, "Unexpected SLOTS_PER_EPOCH value");
+  });
+
+  const dependentRootTestCases: {atSlot: Slot; pivotSlot: Slot; epoch: EpochDifference; skipped: Slot[]}[] = [
+    // First slot in epoch request, EpochDifference.current
+    {atSlot: 32, pivotSlot: 31, epoch: EpochDifference.current, skipped: []},
+    {atSlot: 32, pivotSlot: 30, epoch: EpochDifference.current, skipped: [31]},
+    {atSlot: 32, pivotSlot: 8, epoch: EpochDifference.current, skipped: range(9, 31)},
+    {atSlot: 32, pivotSlot: 0, epoch: EpochDifference.current, skipped: range(1, 31)},
+    // First slot in epoch request, EpochDifference.previous
+    {atSlot: 64, pivotSlot: 31, epoch: EpochDifference.previous, skipped: []},
+    {atSlot: 64, pivotSlot: 30, epoch: EpochDifference.previous, skipped: [31]},
+    {atSlot: 64, pivotSlot: 8, epoch: EpochDifference.previous, skipped: range(9, 32)},
+    {atSlot: 64, pivotSlot: 0, epoch: EpochDifference.previous, skipped: range(1, 32)},
+    // Mid slot in epoch request, EpochDifference.previous
+    {atSlot: 64 + 1, pivotSlot: 31, epoch: EpochDifference.previous, skipped: []},
+    {atSlot: 64 + 8, pivotSlot: 31, epoch: EpochDifference.previous, skipped: []},
+    {atSlot: 64 + 31, pivotSlot: 31, epoch: EpochDifference.previous, skipped: []},
+    // Underflow up to genesis
+    {atSlot: 31, pivotSlot: 0, epoch: EpochDifference.current, skipped: []},
+    {atSlot: 8, pivotSlot: 0, epoch: EpochDifference.current, skipped: []},
+    {atSlot: 0, pivotSlot: 0, epoch: EpochDifference.current, skipped: []},
+    {atSlot: 32, pivotSlot: 0, epoch: EpochDifference.previous, skipped: []},
+    {atSlot: 8, pivotSlot: 0, epoch: EpochDifference.previous, skipped: []},
+    {atSlot: 0, pivotSlot: 0, epoch: EpochDifference.previous, skipped: []},
   ];
 
-  for (const {name, skippedSlots, pivotSlot} of dependentRootTestCases) {
-    it(`findAttesterDependentRoot - ${name}`, () => {
-      const slot = 2 * 32 + 5;
-      populateProtoArray(slot, skippedSlots);
+  for (const {atSlot, pivotSlot, epoch, skipped} of dependentRootTestCases) {
+    it(`getDependentRoot epoch ${epoch} atSlot ${atSlot} skipped ${JSON.stringify(skipped)}`, () => {
+      populateProtoArray(atSlot, skipped);
       const forkchoice = new ForkChoice(config, fcStore, protoArr);
-      const blockRoot = getBlockRoot(slot);
-      const pivotRoot = getBlockRoot(pivotSlot);
-      expect(forkchoice.findAttesterDependentRoot(fromHexString(blockRoot))).to.be.equal(
-        pivotRoot,
+
+      const blockRoot = getBlockRoot(atSlot);
+      const block = forkchoice.getBlockHex(blockRoot);
+      if (!block) throw Error(`No block for blockRoot ${blockRoot}`);
+
+      const expectedDependentRoot = getBlockRoot(pivotSlot);
+
+      expect(forkchoice.getDependentRoot(block, epoch)).to.be.equal(
+        expectedDependentRoot,
         "incorrect attester dependent root"
       );
     });
@@ -154,3 +175,25 @@ describe("Forkchoice", function () {
 
   // TODO: more unit tests for other apis
 });
+
+function getStateRoot(slot: number): RootHex {
+  const root = Buffer.alloc(32, 0x00);
+  root[0] = rootStateBytePrefix;
+  root[31] = slot;
+  return toHex(root);
+}
+
+function getBlockRoot(slot: number): RootHex {
+  const root = Buffer.alloc(32, 0x00);
+  root[0] = rootBlockBytePrefix;
+  root[31] = slot;
+  return toHex(root);
+}
+
+function range(from: number, toInclusive: number): number[] {
+  const arr: number[] = [];
+  for (let i = from; i <= toInclusive; i++) {
+    arr.push(i);
+  }
+  return arr;
+}

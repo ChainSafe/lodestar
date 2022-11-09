@@ -10,6 +10,7 @@ export interface IApiArgs {
   rest: boolean;
   "rest.address": string;
   "rest.port": number;
+  "rest.bodyLimit": number;
 }
 
 export function parseArgs(args: IApiArgs): IBeaconNodeOptions["api"] {
@@ -21,6 +22,7 @@ export function parseArgs(args: IApiArgs): IBeaconNodeOptions["api"] {
       enabled: args["rest"],
       address: args["rest.address"],
       port: args["rest.port"],
+      bodyLimit: args["rest.bodyLimit"],
     },
   };
 }
@@ -74,5 +76,10 @@ export const options: ICliCommandOptions<IApiArgs> = {
     description: "Set port for HTTP API",
     defaultDescription: String(defaultOptions.api.rest.port),
     group: "api",
+  },
+  "rest.bodyLimit": {
+    hidden: true,
+    type: "number",
+    description: "Defines the maximum payload, in bytes, the server is allowed to accept",
   },
 };

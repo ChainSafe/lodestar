@@ -84,12 +84,551 @@
         "x": 0,
         "y": 0
       },
+      "id": 25,
+      "panels": [],
+      "title": "Engine job processor stats",
+      "type": "row"
+    },
+    {
+      "datasource": null,
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 1
+      },
+      "id": 26,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "hidden",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "8.4.0-beta1",
+      "targets": [
+        {
+          "exemplar": false,
+          "expr": "rate(lodestar_engine_http_processor_queue_job_time_seconds_sum[$rate_interval])",
+          "instant": false,
+          "interval": "",
+          "legendFormat": "engine_processor",
+          "refId": "A"
+        }
+      ],
+      "title": "Engine processor queue - Utilization rate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": null,
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 30,
+            "gradientMode": "opacity",
+            "hideFrom": {
+              "graph": false,
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 1
+      },
+      "id": 81,
+      "options": {
+        "graph": {},
+        "legend": {
+          "calcs": [],
+          "displayMode": "hidden",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "7.4.5",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "exemplar": false,
+          "expr": "12*rate(lodestar_engine_http_processor_queue_job_time_seconds_count[6m])",
+          "instant": false,
+          "interval": "",
+          "legendFormat": "engine_processor",
+          "refId": "A"
+        }
+      ],
+      "title": "Engine processor queue - Jobs / slot",
+      "type": "timeseries"
+    },
+    {
+      "datasource": null,
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 30,
+            "gradientMode": "opacity",
+            "hideFrom": {
+              "graph": false,
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 9
+      },
+      "id": 100,
+      "options": {
+        "graph": {},
+        "legend": {
+          "calcs": [],
+          "displayMode": "hidden",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "7.4.5",
+      "targets": [
+        {
+          "exemplar": false,
+          "expr": "delta(lodestar_engine_http_processor_queue_job_time_seconds_sum[$rate_interval])/delta(lodestar_engine_http_processor_queue_job_time_seconds_count[$rate_interval])",
+          "instant": false,
+          "interval": "",
+          "legendFormat": "engine_processor",
+          "refId": "A"
+        }
+      ],
+      "title": "Engine processor queue - Job time",
+      "type": "timeseries"
+    },
+    {
+      "datasource": null,
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 30,
+            "gradientMode": "opacity",
+            "hideFrom": {
+              "graph": false,
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 9
+      },
+      "id": 126,
+      "options": {
+        "graph": {},
+        "legend": {
+          "calcs": [],
+          "displayMode": "hidden",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "7.4.5",
+      "targets": [
+        {
+          "exemplar": false,
+          "expr": "delta(lodestar_engine_http_processor_queue_dropped_jobs_total[$rate_interval])/(delta(lodestar_engine_http_processor_queue_job_time_seconds_count[$rate_interval])+delta(lodestar_engine_http_processor_queue_dropped_jobs_total[$rate_interval]))",
+          "instant": false,
+          "interval": "",
+          "legendFormat": "engine_processor",
+          "refId": "A"
+        }
+      ],
+      "title": "Engine processor queue - Dropped jobs %",
+      "type": "timeseries"
+    },
+    {
+      "datasource": null,
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 30,
+            "gradientMode": "opacity",
+            "hideFrom": {
+              "graph": false,
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 17
+      },
+      "id": 127,
+      "options": {
+        "graph": {},
+        "legend": {
+          "calcs": [],
+          "displayMode": "hidden",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "7.4.5",
+      "targets": [
+        {
+          "exemplar": false,
+          "expr": "delta(lodestar_engine_http_processor_queue_job_wait_time_seconds_sum[$rate_interval])/delta(lodestar_engine_http_processor_queue_job_wait_time_seconds_count[$rate_interval])",
+          "instant": false,
+          "interval": "",
+          "legendFormat": "engine_processor",
+          "refId": "A"
+        }
+      ],
+      "title": "Engine processor queue - Job wait time",
+      "type": "timeseries"
+    },
+    {
+      "datasource": null,
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 30,
+            "gradientMode": "opacity",
+            "hideFrom": {
+              "graph": false,
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 17
+      },
+      "id": 128,
+      "options": {
+        "graph": {},
+        "legend": {
+          "calcs": [],
+          "displayMode": "hidden",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "7.4.5",
+      "targets": [
+        {
+          "exemplar": false,
+          "expr": "lodestar_engine_http_processor_queue_length",
+          "instant": false,
+          "interval": "",
+          "legendFormat": "engine_processor",
+          "refId": "A"
+        }
+      ],
+      "title": "Engine processor queue - Length",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "datasource": null,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 25
+      },
       "id": 388,
       "panels": [],
       "title": "Execution Metrics",
       "type": "row"
     },
     {
+      "datasource": null,
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -138,7 +677,7 @@
               }
             ]
           },
-          "unit": "s"
+          "unit": "none"
         },
         "overrides": []
       },
@@ -146,9 +685,9 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 1
+        "y": 26
       },
-      "id": 390,
+      "id": 433,
       "options": {
         "legend": {
           "calcs": [],
@@ -165,21 +704,21 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "Prometheus"
           },
           "exemplar": false,
-          "expr": "rate(lodestar_execution_engine_http_client_request_time_seconds_sum[32m])\n/\nrate(lodestar_execution_engine_http_client_request_time_seconds_count[32m])",
-          "format": "time_series",
+          "expr": "12*rate(lodestar_execution_engine_http_client_request_time_seconds_count[32m])",
           "hide": false,
           "interval": "",
           "legendFormat": "{{routeId}}",
           "refId": "A"
         }
       ],
-      "title": "Avg request durations",
+      "title": "Requests / slot",
       "type": "timeseries"
     },
     {
+      "datasource": null,
       "fieldConfig": {
         "defaults": {
           "mappings": [],
@@ -199,7 +738,7 @@
         "h": 4,
         "w": 3,
         "x": 12,
-        "y": 1
+        "y": 26
       },
       "id": 430,
       "options": {
@@ -208,14 +747,16 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": "",
           "values": false
         },
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "8.4.2",
+      "pluginVersion": "8.0.6",
       "targets": [
         {
           "exemplar": false,
@@ -230,6 +771,7 @@
       "type": "stat"
     },
     {
+      "datasource": null,
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -286,7 +828,7 @@
         "h": 4,
         "w": 9,
         "x": 15,
-        "y": 1
+        "y": 26
       },
       "id": 420,
       "options": {
@@ -315,6 +857,7 @@
       "type": "timeseries"
     },
     {
+      "datasource": null,
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -371,7 +914,7 @@
         "h": 6,
         "w": 12,
         "x": 12,
-        "y": 5
+        "y": 30
       },
       "id": 468,
       "options": {
@@ -400,6 +943,7 @@
       "type": "timeseries"
     },
     {
+      "datasource": null,
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -448,7 +992,7 @@
               }
             ]
           },
-          "unit": "none"
+          "unit": "s"
         },
         "overrides": []
       },
@@ -456,9 +1000,9 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 9
+        "y": 34
       },
-      "id": 433,
+      "id": 390,
       "options": {
         "legend": {
           "calcs": [],
@@ -475,20 +1019,22 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "Prometheus"
           },
           "exemplar": false,
-          "expr": "12*rate(lodestar_execution_engine_http_client_request_time_seconds_count[32m])",
+          "expr": "rate(lodestar_execution_engine_http_client_request_time_seconds_sum[32m])\n/\nrate(lodestar_execution_engine_http_client_request_time_seconds_count[32m])",
+          "format": "time_series",
           "hide": false,
           "interval": "",
           "legendFormat": "{{routeId}}",
           "refId": "A"
         }
       ],
-      "title": "Requests / slot",
+      "title": "Avg request durations",
       "type": "timeseries"
     },
     {
+      "datasource": null,
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -545,7 +1091,7 @@
         "h": 6,
         "w": 12,
         "x": 12,
-        "y": 11
+        "y": 36
       },
       "id": 418,
       "options": {
@@ -564,7 +1110,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "Prometheus"
           },
           "exemplar": false,
           "expr": "rate(lodestar_execution_engine_http_client_request_errors_total[$rate_interval])",
@@ -576,7 +1122,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "Prometheus"
           },
           "exemplar": false,
           "expr": "rate(lodestar_execution_engine_http_client_request_used_fallback_url_total[$rate_interval])",
@@ -591,11 +1137,12 @@
     },
     {
       "collapsed": false,
+      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 17
+        "y": 42
       },
       "id": 380,
       "panels": [],
@@ -603,6 +1150,7 @@
       "type": "row"
     },
     {
+      "datasource": null,
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -659,7 +1207,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 18
+        "y": 43
       },
       "id": 429,
       "options": {
@@ -704,6 +1252,7 @@
       "type": "timeseries"
     },
     {
+      "datasource": null,
       "fieldConfig": {
         "defaults": {
           "mappings": [
@@ -738,7 +1287,7 @@
         "h": 4,
         "w": 3,
         "x": 12,
-        "y": 18
+        "y": 43
       },
       "id": 426,
       "options": {
@@ -747,14 +1296,16 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": "",
           "values": false
         },
         "text": {},
         "textMode": "value"
       },
-      "pluginVersion": "8.4.2",
+      "pluginVersion": "8.0.6",
       "targets": [
         {
           "exemplar": false,
@@ -768,6 +1319,7 @@
       "type": "stat"
     },
     {
+      "datasource": null,
       "fieldConfig": {
         "defaults": {
           "mappings": [],
@@ -787,7 +1339,7 @@
         "h": 4,
         "w": 3,
         "x": 15,
-        "y": 18
+        "y": 43
       },
       "id": 427,
       "options": {
@@ -796,14 +1348,16 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": "",
           "values": false
         },
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "8.4.2",
+      "pluginVersion": "8.0.6",
       "targets": [
         {
           "exemplar": false,
@@ -818,6 +1372,7 @@
       "type": "stat"
     },
     {
+      "datasource": null,
       "fieldConfig": {
         "defaults": {
           "mappings": [],
@@ -838,7 +1393,7 @@
         "h": 4,
         "w": 3,
         "x": 18,
-        "y": 18
+        "y": 43
       },
       "id": 411,
       "options": {
@@ -847,14 +1402,16 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": "",
           "values": false
         },
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "8.4.2",
+      "pluginVersion": "8.0.6",
       "targets": [
         {
           "exemplar": false,
@@ -869,6 +1426,7 @@
       "type": "stat"
     },
     {
+      "datasource": null,
       "fieldConfig": {
         "defaults": {
           "mappings": [],
@@ -889,7 +1447,7 @@
         "h": 4,
         "w": 3,
         "x": 21,
-        "y": 18
+        "y": 43
       },
       "id": 431,
       "options": {
@@ -898,14 +1456,16 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": "/^Time$/",
           "values": false
         },
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "8.4.2",
+      "pluginVersion": "8.0.6",
       "targets": [
         {
           "exemplar": false,
@@ -922,6 +1482,7 @@
       "type": "stat"
     },
     {
+      "datasource": null,
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -978,7 +1539,7 @@
         "h": 6,
         "w": 12,
         "x": 12,
-        "y": 22
+        "y": 47
       },
       "id": 474,
       "options": {
@@ -1001,12 +1562,29 @@
           "interval": "",
           "legendFormat": "eth1_follow_distance_dynamic",
           "refId": "A"
+        },
+        {
+          "exemplar": false,
+          "expr": "lodestar_eth1_blocks_batch_size_dynamic",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "eth1_blocks_batch_size_dynamic",
+          "refId": "B"
+        },
+        {
+          "exemplar": false,
+          "expr": "lodestar_eth1_logs_batch_size_dynamic",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "eth1_logs_batch_size_dynamic",
+          "refId": "C"
         }
       ],
-      "title": "Eth1 Follow Distance Dynamic",
+      "title": "Eth1 Dynamic Stats",
       "type": "timeseries"
     },
     {
+      "datasource": null,
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1063,7 +1641,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 26
+        "y": 51
       },
       "id": 384,
       "options": {
@@ -1082,7 +1660,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "Prometheus"
           },
           "exemplar": false,
           "expr": "rate(lodestar_eth1_http_client_request_time_seconds_sum[32m])/rate(lodestar_eth1_http_client_request_time_seconds_count[32m])",
@@ -1097,6 +1675,7 @@
       "type": "timeseries"
     },
     {
+      "datasource": null,
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1153,7 +1732,7 @@
         "h": 6,
         "w": 12,
         "x": 12,
-        "y": 28
+        "y": 53
       },
       "id": 413,
       "options": {
@@ -1172,7 +1751,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "Prometheus"
           },
           "exemplar": false,
           "expr": "lodestar_eth1_http_client_request_errors_total",
@@ -1183,7 +1762,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "Prometheus"
           },
           "exemplar": false,
           "expr": "rate(lodestar_eth1_deposit_tracker_update_errors_total[$rate_interval])",
@@ -1195,7 +1774,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "Prometheus"
           },
           "exemplar": false,
           "expr": "rate(lodestar_eth1_http_client_request_used_fallback_url_total[$rate_interval])",
@@ -1209,6 +1788,7 @@
       "type": "timeseries"
     },
     {
+      "datasource": null,
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1265,7 +1845,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 34
+        "y": 59
       },
       "id": 434,
       "options": {
@@ -1284,7 +1864,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "Prometheus"
           },
           "exemplar": false,
           "expr": "12*rate(lodestar_eth1_http_client_request_time_seconds_count[32m])",
@@ -1297,6 +1877,7 @@
       "type": "timeseries"
     },
     {
+      "datasource": null,
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1353,7 +1934,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 34
+        "y": 59
       },
       "id": 428,
       "options": {
@@ -1372,7 +1953,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "Prometheus"
           },
           "exemplar": false,
           "expr": "rate(lodestar_eth1_blocks_fetched_total[32m])",
@@ -1384,7 +1965,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "Prometheus"
           },
           "exemplar": false,
           "expr": "rate(lodestar_eth1_deposit_events_fetched_total[32m])",
@@ -1399,11 +1980,12 @@
     },
     {
       "collapsed": false,
+      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 42
+        "y": 67
       },
       "id": 437,
       "panels": [],
@@ -1411,6 +1993,7 @@
       "type": "row"
     },
     {
+      "datasource": null,
       "fieldConfig": {
         "defaults": {
           "mappings": [
@@ -1453,7 +2036,7 @@
         "h": 3,
         "w": 2,
         "x": 0,
-        "y": 43
+        "y": 68
       },
       "id": 439,
       "options": {
@@ -1462,14 +2045,16 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": ["last"],
+          "calcs": [
+            "last"
+          ],
           "fields": "",
           "values": false
         },
         "text": {},
         "textMode": "value"
       },
-      "pluginVersion": "8.4.2",
+      "pluginVersion": "8.0.6",
       "targets": [
         {
           "exemplar": false,
@@ -1484,6 +2069,7 @@
       "type": "stat"
     },
     {
+      "datasource": null,
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1510,7 +2096,7 @@
         "h": 3,
         "w": 2,
         "x": 2,
-        "y": 43
+        "y": 68
       },
       "id": 459,
       "options": {
@@ -1519,14 +2105,16 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": "",
           "values": false
         },
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "8.4.2",
+      "pluginVersion": "8.0.6",
       "targets": [
         {
           "exemplar": false,
@@ -1542,6 +2130,7 @@
       "type": "stat"
     },
     {
+      "datasource": null,
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1569,7 +2158,7 @@
         "h": 3,
         "w": 4,
         "x": 4,
-        "y": 43
+        "y": 68
       },
       "id": 475,
       "options": {
@@ -1578,19 +2167,21 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": "",
           "values": false
         },
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "8.4.2",
+      "pluginVersion": "8.0.6",
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "Prometheus"
           },
           "exemplar": false,
           "expr": "(lodestar_eth1_merge_ttd - lodestar_eth1_latest_block_ttd)\n/\nrate(lodestar_eth1_latest_block_ttd[32m])",
@@ -1604,6 +2195,7 @@
       "type": "stat"
     },
     {
+      "datasource": null,
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1631,7 +2223,7 @@
         "h": 6,
         "w": 4,
         "x": 8,
-        "y": 43
+        "y": 68
       },
       "id": 476,
       "options": {
@@ -1640,19 +2232,21 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": "",
           "values": false
         },
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "8.4.2",
+      "pluginVersion": "8.0.6",
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "Prometheus"
           },
           "exemplar": false,
           "expr": "(time()\n+\n(lodestar_eth1_merge_ttd - lodestar_eth1_latest_block_ttd)\n/\nrate(lodestar_eth1_latest_block_ttd[32m])\n)*1000",
@@ -1666,6 +2260,7 @@
       "type": "stat"
     },
     {
+      "datasource": null,
       "fieldConfig": {
         "defaults": {
           "mappings": [],
@@ -1686,7 +2281,7 @@
         "h": 3,
         "w": 4,
         "x": 12,
-        "y": 43
+        "y": 68
       },
       "id": 462,
       "options": {
@@ -1695,14 +2290,16 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": ["last"],
+          "calcs": [
+            "last"
+          ],
           "fields": "",
           "values": false
         },
         "text": {},
         "textMode": "value"
       },
-      "pluginVersion": "8.4.2",
+      "pluginVersion": "8.0.6",
       "targets": [
         {
           "exemplar": false,
@@ -1717,6 +2314,7 @@
       "type": "stat"
     },
     {
+      "datasource": null,
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1743,7 +2341,7 @@
         "h": 3,
         "w": 4,
         "x": 16,
-        "y": 43
+        "y": 68
       },
       "id": 456,
       "options": {
@@ -1752,14 +2350,16 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": "",
           "values": false
         },
         "text": {},
         "textMode": "name"
       },
-      "pluginVersion": "8.4.2",
+      "pluginVersion": "8.0.6",
       "targets": [
         {
           "exemplar": false,
@@ -1775,6 +2375,7 @@
       "type": "stat"
     },
     {
+      "datasource": null,
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1801,7 +2402,7 @@
         "h": 3,
         "w": 4,
         "x": 20,
-        "y": 43
+        "y": 68
       },
       "id": 464,
       "options": {
@@ -1810,14 +2411,16 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": "",
           "values": false
         },
         "text": {},
         "textMode": "name"
       },
-      "pluginVersion": "8.4.2",
+      "pluginVersion": "8.0.6",
       "targets": [
         {
           "exemplar": false,
@@ -1833,6 +2436,7 @@
       "type": "stat"
     },
     {
+      "datasource": null,
       "fieldConfig": {
         "defaults": {
           "mappings": [],
@@ -1852,7 +2456,7 @@
         "h": 3,
         "w": 2,
         "x": 0,
-        "y": 46
+        "y": 71
       },
       "id": 460,
       "options": {
@@ -1861,14 +2465,16 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": ["last"],
+          "calcs": [
+            "last"
+          ],
           "fields": "",
           "values": false
         },
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "8.4.2",
+      "pluginVersion": "8.0.6",
       "targets": [
         {
           "exemplar": false,
@@ -1883,6 +2489,7 @@
       "type": "stat"
     },
     {
+      "datasource": null,
       "fieldConfig": {
         "defaults": {
           "mappings": [],
@@ -1902,7 +2509,7 @@
         "h": 3,
         "w": 2,
         "x": 2,
-        "y": 46
+        "y": 71
       },
       "id": 450,
       "options": {
@@ -1911,14 +2518,16 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": ["last"],
+          "calcs": [
+            "last"
+          ],
           "fields": "",
           "values": false
         },
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "8.4.2",
+      "pluginVersion": "8.0.6",
       "targets": [
         {
           "exemplar": false,
@@ -1933,6 +2542,7 @@
       "type": "stat"
     },
     {
+      "datasource": null,
       "fieldConfig": {
         "defaults": {
           "mappings": [],
@@ -1953,7 +2563,7 @@
         "h": 3,
         "w": 2,
         "x": 4,
-        "y": 46
+        "y": 71
       },
       "id": 463,
       "options": {
@@ -1962,14 +2572,16 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": ["last"],
+          "calcs": [
+            "last"
+          ],
           "fields": "",
           "values": false
         },
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "8.4.2",
+      "pluginVersion": "8.0.6",
       "targets": [
         {
           "exemplar": false,
@@ -1984,6 +2596,7 @@
       "type": "stat"
     },
     {
+      "datasource": null,
       "fieldConfig": {
         "defaults": {
           "mappings": [],
@@ -2003,7 +2616,7 @@
         "h": 3,
         "w": 2,
         "x": 6,
-        "y": 46
+        "y": 71
       },
       "id": 461,
       "options": {
@@ -2012,14 +2625,16 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": ["last"],
+          "calcs": [
+            "last"
+          ],
           "fields": "",
           "values": false
         },
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "8.4.2",
+      "pluginVersion": "8.0.6",
       "targets": [
         {
           "exemplar": false,
@@ -2034,6 +2649,7 @@
       "type": "stat"
     },
     {
+      "datasource": null,
       "fieldConfig": {
         "defaults": {
           "mappings": [],
@@ -2053,7 +2669,7 @@
         "h": 3,
         "w": 4,
         "x": 12,
-        "y": 46
+        "y": 71
       },
       "id": 467,
       "options": {
@@ -2062,14 +2678,16 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": ["last"],
+          "calcs": [
+            "last"
+          ],
           "fields": "",
           "values": false
         },
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "8.4.2",
+      "pluginVersion": "8.0.6",
       "targets": [
         {
           "exemplar": false,
@@ -2084,6 +2702,7 @@
       "type": "stat"
     },
     {
+      "datasource": null,
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -2110,7 +2729,7 @@
         "h": 3,
         "w": 8,
         "x": 16,
-        "y": 46
+        "y": 71
       },
       "id": 455,
       "options": {
@@ -2119,14 +2738,16 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": "",
           "values": false
         },
         "text": {},
         "textMode": "name"
       },
-      "pluginVersion": "8.4.2",
+      "pluginVersion": "8.0.6",
       "targets": [
         {
           "exemplar": false,
@@ -2142,6 +2763,7 @@
       "type": "stat"
     },
     {
+      "datasource": null,
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -2198,7 +2820,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 49
+        "y": 74
       },
       "id": 458,
       "options": {
@@ -2235,6 +2857,7 @@
       "type": "timeseries"
     },
     {
+      "datasource": null,
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -2291,7 +2914,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 49
+        "y": 74
       },
       "id": 444,
       "options": {
@@ -2320,7 +2943,7 @@
       "type": "timeseries"
     }
   ],
-  "refresh": false,
+  "refresh": "10s",
   "schemaVersion": 35,
   "style": "dark",
   "tags": ["lodestar"],
@@ -2434,7 +3057,7 @@
           }
         ],
         "hide": 0,
-        "name": "ByJob",
+        "name": "Filters",
         "skipUrlSync": false,
         "type": "adhoc"
       }

@@ -507,7 +507,7 @@
             "uid": "PBFA97CFB590B2093"
           },
           "exemplar": false,
-          "expr": "validator_monitor_validators_total",
+          "expr": "validator_monitor_validators",
           "instant": false,
           "interval": "",
           "intervalFactor": 1,
@@ -762,7 +762,7 @@
       "type": "timeseries"
     }
   ],
-  "refresh": "30s",
+  "refresh": "10s",
   "schemaVersion": 33,
   "style": "dark",
   "tags": ["lodestar"],

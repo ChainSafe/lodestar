@@ -1,11 +1,8 @@
-import fs from "node:fs";
 import path from "node:path";
-import chai, {expect} from "chai";
-import chaiAsPromised from "chai-as-promised";
+import {expect} from "chai";
 import rimraf from "rimraf";
 import {fromHexString} from "@chainsafe/ssz";
 import {LevelDbController} from "@lodestar/db";
-import {LogLevel, WinstonLogger} from "@lodestar/utils";
 import {config} from "@lodestar/config/default";
 import {ZERO_HASH} from "@lodestar/state-transition";
 import {
@@ -16,49 +13,22 @@ import {
   SlashingProtectionBlock,
   SlashingProtectionAttestation,
 } from "../../src/slashingProtection/index.js";
+import {loadTestCases} from "../utils/spec.js";
 import {SPEC_TEST_LOCATION} from "./params.js";
-
-chai.use(chaiAsPromised);
-
-/* eslint-disable @typescript-eslint/naming-convention */
-type SlashingProtectionInterchangeTest = {
-  name: string;
-  genesis_validators_root: string;
-  steps: [
-    {
-      should_succeed: boolean;
-      contains_slashable_data: boolean;
-      interchange: any;
-      blocks: {
-        pubkey: string;
-        should_succeed: boolean;
-        slot: string;
-        signing_root?: string;
-      }[];
-      attestations: {
-        pubkey: string;
-        should_succeed: boolean;
-        source_epoch: string;
-        target_epoch: string;
-        signing_root?: string;
-      }[];
-    }
-  ];
-};
 
 /* eslint-disable no-console */
 
 describe("slashing-protection-interchange-tests", () => {
   const testCases = loadTestCases(path.join(SPEC_TEST_LOCATION, "/tests/generated"));
   const dbLocation = "./.__testdb";
-  const controller = new LevelDbController({name: dbLocation}, {logger: new WinstonLogger({level: LogLevel.error})});
+  const controller = new LevelDbController({name: dbLocation}, {});
 
   after(() => {
     rimraf.sync(dbLocation);
   });
 
   for (const testCase of testCases) {
-    describe(testCase.name, async () => {
+    describe(testCase.name, () => {
       const slashingProtection = new SlashingProtection({config, controller});
 
       for (const step of testCase.steps) {
@@ -135,13 +105,3 @@ describe("slashing-protection-interchange-tests", () => {
     });
   }
 });
-
-export function loadTestCases(testsPath: string): SlashingProtectionInterchangeTest[] {
-  const files = fs.readdirSync(testsPath);
-  if (files.length === 0) {
-    throw Error(`Not tests found in ${testsPath}`);
-  }
-  return files.map(
-    (file) => JSON.parse(fs.readFileSync(path.join(testsPath, file), "utf8")) as SlashingProtectionInterchangeTest
-  );
-}

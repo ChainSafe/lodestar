@@ -1,7 +1,7 @@
 import {Options} from "yargs";
-import {defaultLogLevel, LogLevels} from "@lodestar/utils";
 import {beaconNodeOptions, paramsOptions, IBeaconNodeArgs} from "../../options/index.js";
-import {defaultLogMaxFiles, ICliCommandOptions, ILogArgs} from "../../util/index.js";
+import {logOptions} from "../../options/logOptions.js";
+import {ICliCommandOptions, ILogArgs} from "../../util/index.js";
 import {defaultBeaconPaths, IBeaconPaths} from "./paths.js";
 
 interface IBeaconExtraArgs {
@@ -12,6 +12,10 @@ interface IBeaconExtraArgs {
   checkpointSyncUrl?: string;
   checkpointState?: string;
   wssCheckpoint?: string;
+  beaconDir?: string;
+  dbDir?: string;
+  persistInvalidSszObjectsDir?: string;
+  peerStoreDir?: string;
 }
 
 export const beaconExtraOptions: ICliCommandOptions<IBeaconExtraArgs> = {
@@ -58,42 +62,7 @@ export const beaconExtraOptions: ICliCommandOptions<IBeaconExtraArgs> = {
     type: "string",
     group: "weak subjectivity",
   },
-};
 
-export const logOptions: ICliCommandOptions<ILogArgs> = {
-  logLevel: {
-    choices: LogLevels,
-    description: "Logging verbosity level",
-    defaultDescription: defaultLogLevel,
-    type: "string",
-  },
-
-  logFileLevel: {
-    choices: LogLevels,
-    description: "Logging verbosity level for file transport",
-    defaultDescription: defaultLogLevel,
-    type: "string",
-  },
-
-  logFormatGenesisTime: {
-    hidden: true,
-    description: "Logger format - Use EpochSlot TimestampFormat",
-    type: "number",
-  },
-
-  logFormatId: {
-    hidden: true,
-    description: "Logger format - Prefix module field with a string ID",
-    type: "string",
-  },
-
-  logFileDailyRotate: {
-    description: `Daily rotate log files, set to an integer to limit the file count, else defaults to ${defaultLogMaxFiles}`,
-    type: "number",
-  },
-};
-
-export const beaconPathsOptions: ICliCommandOptions<IBeaconPaths> = {
   beaconDir: {
     description: "Beacon root directory",
     defaultDescription: defaultBeaconPaths.beaconDir,
@@ -119,11 +88,6 @@ export const beaconPathsOptions: ICliCommandOptions<IBeaconPaths> = {
     hidden: true,
     description: "Peer store directory",
     defaultDescription: defaultBeaconPaths.peerStoreDir,
-    type: "string",
-  },
-
-  logFile: {
-    description: "Path to output all logs to a persistent log file",
     type: "string",
   },
 };
@@ -184,7 +148,6 @@ export type IBeaconArgs = IBeaconExtraArgs & ILogArgs & IBeaconPaths & IBeaconNo
 export const beaconOptions: {[k: string]: Options} = {
   ...beaconExtraOptions,
   ...logOptions,
-  ...beaconPathsOptions,
   ...beaconNodeOptions,
   ...paramsOptions,
   ...enrOptions,

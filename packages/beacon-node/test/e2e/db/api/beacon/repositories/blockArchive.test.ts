@@ -1,16 +1,13 @@
 import {expect} from "chai";
 import {config} from "@lodestar/config/default";
 import {fromHexString} from "@chainsafe/ssz";
-import {allForks, phase0, ssz} from "@lodestar/types";
+import {ssz} from "@lodestar/types";
 import {BeaconDb} from "../../../../../../src/db/index.js";
 import {generateSignedBlock} from "../../../../../utils/block.js";
-import {testLogger} from "../../../../../utils/logger.js";
-import {BlockArchiveBatchPutBinaryItem} from "../../../../../../src/db/repositories/index.js";
 import {startTmpBeaconDb} from "../../../../../utils/db.js";
 
 describe("BlockArchiveRepository", function () {
   let db: BeaconDb;
-  const logger = testLogger();
   const sampleBlock = generateSignedBlock({
     message: {
       slot: 0,
@@ -35,7 +32,7 @@ describe("BlockArchiveRepository", function () {
   });
 
   before(async () => {
-    db = await startTmpBeaconDb(config, logger);
+    db = await startTmpBeaconDb(config);
   });
 
   after(async () => {
@@ -70,49 +67,4 @@ describe("BlockArchiveRepository", function () {
     savedBlock2.message.slot = sampleBlock.message.slot;
     expect(ssz.phase0.SignedBeaconBlock.equals(savedBlock1, savedBlock2)).to.equal(true);
   });
-
-  it("batchPutBinary should be faster than batchPut", async () => {
-    // increase length to test performance
-    const signedBlocks = Array.from({length: 1000}, (_, i) => {
-      const signedBlock = sampleBlock;
-      signedBlock.message.slot = i;
-      return signedBlock;
-    });
-    // persist to block db
-    await Promise.all(signedBlocks.map((signedBlock: phase0.SignedBeaconBlock) => db.block.add(signedBlock)));
-    const blockSummaries = signedBlocks.map(toBatchPutBinaryItem);
-    // old way
-    logger.profile("batchPut");
-    const savedBlocks = notNull(
-      await Promise.all(blockSummaries.map((summary) => db.block.get(summary.blockRoot as Uint8Array)))
-    );
-    await db.blockArchive.batchPut(savedBlocks.map((block) => ({key: block.message.slot, value: block})));
-    logger.profile("batchPut");
-    logger.profile("batchPutBinary");
-    const blockBinaries = notNull(
-      await Promise.all(blockSummaries.map((summary) => db.block.getBinary(summary.blockRoot as Uint8Array)))
-    );
-    await db.blockArchive.batchPutBinary(
-      blockSummaries.map((summary, i) => ({
-        ...summary,
-        value: blockBinaries[i],
-      }))
-    );
-    logger.profile("batchPutBinary");
-  });
 });
-
-function notNull<T>(arr: (T | null)[]): T[] {
-  for (const item of arr) if (item === null) throw Error("null item");
-  return arr as T[];
-}
-
-function toBatchPutBinaryItem(signedBlock: allForks.SignedBeaconBlock): BlockArchiveBatchPutBinaryItem {
-  return {
-    key: signedBlock.message.slot,
-    value: ssz.phase0.SignedBeaconBlock.serialize(signedBlock) as Buffer,
-    slot: signedBlock.message.slot,
-    blockRoot: config.getForkTypes(signedBlock.message.slot).BeaconBlock.hashTreeRoot(signedBlock.message),
-    parentRoot: signedBlock.message.parentRoot,
-  };
-}

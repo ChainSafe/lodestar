@@ -9,10 +9,27 @@ export function computeEpochAtSlot(slot: Slot): Epoch {
 }
 
 /**
+ * Return the epoch at the state slot for purposes of checkpoint.
+ * Ideally this slot % SLOTS_PER_EPOCH === 0, but just to handle the improbable case of
+ * non boundary slot, using ceil so that the state's latestBlockHeader would always
+ * lie before this epooch
+ */
+export function computeCheckpointEpochAtStateSlot(slot: Slot): Epoch {
+  return Math.ceil(slot / SLOTS_PER_EPOCH);
+}
+
+/**
  * Return the starting slot of the given epoch.
  */
 export function computeStartSlotAtEpoch(epoch: Epoch): Slot {
   return epoch * SLOTS_PER_EPOCH;
+}
+
+/**
+ * Return the end slot of the given epoch.
+ */
+export function computeEndSlotAtEpoch(epoch: Epoch): Slot {
+  return computeStartSlotAtEpoch(epoch + 1) - 1;
 }
 
 /**

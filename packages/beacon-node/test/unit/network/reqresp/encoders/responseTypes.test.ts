@@ -1,8 +1,6 @@
-import chai from "chai";
-import chaiAsPromised from "chai-as-promised";
-import pipe from "it-pipe";
+import {pipe} from "it-pipe";
 import all from "it-all";
-import {allForks} from "@lodestar/types";
+import {allForks, ssz} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
 import {
   Method,
@@ -19,8 +17,6 @@ import {expectIsEqualSszTypeArr} from "../../../../utils/ssz.js";
 import {config} from "../../../../utils/config.js";
 import {blocksToReqRespBlockResponses} from "../../../../utils/block.js";
 
-chai.use(chaiAsPromised);
-
 // Ensure the types from all methods are supported properly
 describe("network / reqresp / encoders / responseTypes", () => {
   const testCases: {[P in keyof IncomingResponseBodyByMethod]: IncomingResponseBodyByMethod[P][][]} = {
@@ -30,6 +26,10 @@ describe("network / reqresp / encoders / responseTypes", () => {
     [Method.Metadata]: [],
     [Method.BeaconBlocksByRange]: [generateEmptySignedBlocks(2)],
     [Method.BeaconBlocksByRoot]: [generateEmptySignedBlocks(2)],
+    [Method.LightClientBootstrap]: [[ssz.altair.LightClientBootstrap.defaultValue()]],
+    [Method.LightClientUpdate]: [[ssz.altair.LightClientUpdate.defaultValue()]],
+    [Method.LightClientFinalityUpdate]: [[ssz.altair.LightClientFinalityUpdate.defaultValue()]],
+    [Method.LightClientOptimisticUpdate]: [[ssz.altair.LightClientOptimisticUpdate.defaultValue()]],
   };
 
   const encodings: Encoding[] = [Encoding.SSZ_SNAPPY];

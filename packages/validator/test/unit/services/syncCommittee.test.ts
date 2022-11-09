@@ -12,13 +12,13 @@ import {getApiClientStub} from "../../utils/apiStub.js";
 import {loggerVc} from "../../utils/logger.js";
 import {ClockMock} from "../../utils/clock.js";
 import {ChainHeaderTracker} from "../../../src/services/chainHeaderTracker.js";
+import {ZERO_HASH} from "../../utils/types.js";
 import {ValidatorEventEmitter} from "../../../src/services/emitter.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
 describe("SyncCommitteeService", function () {
   const sandbox = sinon.createSandbox();
-  const ZERO_HASH = Buffer.alloc(32, 0);
 
   const api = getApiClientStub(sandbox);
   const validatorStore = sinon.createStubInstance(ValidatorStore) as ValidatorStore &

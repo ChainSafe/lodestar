@@ -1,4 +1,4 @@
-import {altair, phase0, Root, Slot, ssz} from "@lodestar/types";
+import {altair, Root, Slot, ssz} from "@lodestar/types";
 import bls from "@chainsafe/bls/switchable";
 import type {PublicKey, Signature} from "@chainsafe/bls/types";
 import {
@@ -10,7 +10,6 @@ import {
   DOMAIN_SYNC_COMMITTEE,
 } from "@lodestar/params";
 import {IBeaconConfig} from "@lodestar/config";
-import {routes} from "@lodestar/api";
 import {isValidMerkleBranch} from "./utils/verifyMerkleBranch.js";
 import {assertZeroHashes, getParticipantPubkeys, isEmptyHeader} from "./utils/utils.js";
 import {SyncCommitteeFast} from "./types.js";
@@ -18,8 +17,9 @@ import {computeSyncPeriodAtSlot} from "./utils/clock.js";
 
 /**
  *
- * @param syncCommittee SyncPeriod that signed this update: `computeSyncPeriodAtSlot(update.header.slot) - 1`
- * @param forkVersion ForkVersion that was used to sign the update
+ * @param config the beacon node config
+ * @param syncCommittee the sync committee update
+ * @param update the light client update for validation
  */
 export function assertValidLightClientUpdate(
   config: IBeaconConfig,
@@ -64,7 +64,7 @@ export function assertValidLightClientUpdate(
  *
  * Where `hashTreeRoot(state) == update.finalityHeader.stateRoot`
  */
-export function assertValidFinalityProof(update: routes.lightclient.LightclientFinalizedUpdate): void {
+export function assertValidFinalityProof(update: altair.LightClientFinalityUpdate): void {
   if (
     !isValidMerkleBranch(
       ssz.phase0.BeaconBlockHeader.hashTreeRoot(update.finalizedHeader),
@@ -101,25 +101,11 @@ export function assertValidSyncCommitteeProof(update: altair.LightClientUpdate):
       update.nextSyncCommitteeBranch,
       NEXT_SYNC_COMMITTEE_DEPTH,
       NEXT_SYNC_COMMITTEE_INDEX,
-      activeHeader(update).stateRoot
+      update.attestedHeader.stateRoot
     )
   ) {
     throw Error("Invalid next sync committee merkle branch");
   }
-}
-
-/**
- * The "active header" is the header that the update is trying to convince us
- * to accept. If a finalized header is present, it's the finalized header,
- * otherwise it's the attested header
- * @param update
- */
-export function activeHeader(update: altair.LightClientUpdate): phase0.BeaconBlockHeader {
-  if (!isEmptyHeader(update.finalizedHeader)) {
-    return update.finalizedHeader;
-  }
-
-  return update.attestedHeader;
 }
 
 /**

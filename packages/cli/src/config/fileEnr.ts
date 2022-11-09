@@ -1,6 +1,6 @@
-import PeerId from "peer-id";
+import {PeerId} from "@libp2p/interface-peer-id";
 import {createKeypairFromPeerId, ENR, ENRKey, ENRValue} from "@chainsafe/discv5";
-import {writeFile, readFile} from "../util/index.js";
+import {writeFile600Perm, readFile} from "../util/index.js";
 
 /**
  * `FileENR` is an `ENR` that saves the ENR contents to a file on every modification
@@ -38,7 +38,7 @@ export class FileENR extends ENR {
   saveToFile(): void {
     if (this.localPeerId === null || this.localPeerId === undefined) return;
     const keypair = createKeypairFromPeerId(this.localPeerId);
-    writeFile(this.filename, this.encodeTxt(keypair.privateKey));
+    writeFile600Perm(this.filename, this.encodeTxt(keypair.privateKey));
   }
 
   set(key: ENRKey, value: ENRValue): this {

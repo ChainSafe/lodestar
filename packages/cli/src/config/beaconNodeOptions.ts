@@ -1,7 +1,6 @@
 import deepmerge from "deepmerge";
 import {defaultOptions, IBeaconNodeOptions} from "@lodestar/beacon-node";
 import {isPlainObject, RecursivePartial} from "@lodestar/utils";
-import {writeFile} from "../util/index.js";
 
 export class BeaconNodeOptions {
   /**
@@ -26,10 +25,6 @@ export class BeaconNodeOptions {
   set(beaconNodeOptionsPartial: RecursivePartial<IBeaconNodeOptions>): void {
     this.beaconNodeOptions = mergeBeaconNodeOptions(this.beaconNodeOptions, beaconNodeOptionsPartial);
   }
-}
-
-export function writeBeaconNodeOptions(filename: string, config: Partial<IBeaconNodeOptions>): void {
-  writeFile(filename, config);
 }
 
 /**

@@ -1,7 +1,7 @@
 import path from "node:path";
 import {fileURLToPath} from "node:url";
 import {expect} from "chai";
-import {config} from "@lodestar/config/default";
+import {createIChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {OpenApiFile} from "../../utils/parseOpenApiSpec.js";
 import {routes} from "../../../src/beacon/index.js";
 import {ReqSerializers} from "../../../src/utils/types.js";
@@ -48,6 +48,8 @@ const getEventsReqSerializers = (): ReqSerializers<routes.events.Api, routes.eve
   },
 });
 
+// eslint-disable-next-line @typescript-eslint/naming-convention
+const config = createIChainForkConfig({...defaultChainConfig, ALTAIR_FORK_EPOCH: 1, BELLATRIX_FORK_EPOCH: 2});
 const reqSerializers = {
   ...routes.beacon.getReqSerializers(config),
   ...routes.config.getReqSerializers(),

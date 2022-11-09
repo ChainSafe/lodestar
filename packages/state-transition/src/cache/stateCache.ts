@@ -1,6 +1,12 @@
 import {IBeaconConfig} from "@lodestar/config";
 import {EpochContext, EpochContextImmutableData, EpochContextOpts} from "./epochContext.js";
-import {BeaconStatePhase0, BeaconStateAltair, BeaconStateBellatrix, BeaconStateAllForks} from "./types.js";
+import {
+  BeaconStatePhase0,
+  BeaconStateAltair,
+  BeaconStateBellatrix,
+  BeaconStateCapella,
+  BeaconStateAllForks,
+} from "./types.js";
 
 export type BeaconStateCache = {
   config: IBeaconConfig;
@@ -108,8 +114,9 @@ export type CachedBeaconState<T extends BeaconStateAllForks> = T & BeaconStateCa
 export type CachedBeaconStatePhase0 = CachedBeaconState<BeaconStatePhase0>;
 export type CachedBeaconStateAltair = CachedBeaconState<BeaconStateAltair>;
 export type CachedBeaconStateBellatrix = CachedBeaconState<BeaconStateBellatrix>;
+export type CachedBeaconStateCapella = CachedBeaconState<BeaconStateCapella>;
 export type CachedBeaconStateAllForks = CachedBeaconState<BeaconStateAllForks>;
-
+export type CachedBeaconStateExecutions = CachedBeaconStateBellatrix | CachedBeaconStateCapella;
 /**
  * Create CachedBeaconState computing a new EpochContext instance
  */

@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import bls from "@chainsafe/bls";
 import {Keystore} from "@chainsafe/bls-keystore";
-import {Signer, SignerType} from "@lodestar/validator";
+import {Signer, SignerType, ProposerConfig} from "@lodestar/validator";
 import {DeletionStatus, ImportStatus, PubkeyHex, SignerDefinition} from "@lodestar/api/keymanager";
 import {
   getPubkeyHexFromKeystore,
@@ -10,6 +10,7 @@ import {
   rmdirSyncMaybe,
   unlinkSyncMaybe,
   writeFile600Perm,
+  readProposerConfigDir,
 } from "../../../util/index.js";
 import {lockFilepath} from "../../../util/lockfile.js";
 import {IPersistedKeysBackend} from "./interface.js";
@@ -20,6 +21,7 @@ type PathArgs = {
   keystoresDir: string;
   secretsDir: string;
   remoteKeysDir: string;
+  proposerDir: string;
 };
 
 export type LocalKeystoreDefinition = {
@@ -47,6 +49,46 @@ export type LocalKeystoreDefinition = {
  */
 export class PersistedKeysBackend implements IPersistedKeysBackend {
   constructor(private readonly paths: PathArgs) {}
+
+  writeProposerConfig(pubkeyHex: PubkeyHex, proposerConfig: ProposerConfig | null): void {
+    if (!fs.existsSync(this.paths.proposerDir)) {
+      // create directory
+      fs.mkdirSync(this.paths.proposerDir);
+    }
+
+    if (proposerConfig !== null) {
+      // if proposerConfig is not empty write or update the json to file
+      const {proposerDirPath} = this.getValidatorPaths(pubkeyHex);
+      writeFile600Perm(proposerDirPath, JSON.stringify(proposerConfig));
+    } else {
+      this.deleteProposerConfig(pubkeyHex);
+    }
+  }
+
+  deleteProposerConfig(pubkeyHex: PubkeyHex): void {
+    if (fs.existsSync(this.paths.proposerDir)) {
+      const {proposerDirPath} = this.getValidatorPaths(pubkeyHex);
+      unlinkSyncMaybe(proposerDirPath);
+    }
+  }
+
+  readProposerConfigs(): {[index: string]: ProposerConfig} {
+    if (!fs.existsSync(this.paths.proposerDir)) {
+      return {};
+    }
+    const proposerConfigs = {};
+
+    for (const pubkey of fs.readdirSync(this.paths.proposerDir)) {
+      Object.assign(proposerConfigs, {[pubkey]: readProposerConfigDir(this.paths.proposerDir, pubkey)});
+    }
+    return proposerConfigs;
+  }
+
+  deleteProposerConfigs(): void {
+    for (const pubkey of fs.readdirSync(this.paths.proposerDir)) {
+      this.deleteProposerConfig(pubkey);
+    }
+  }
 
   readAllKeystores(): LocalKeystoreDefinition[] {
     const {keystoresDir} = this.paths;
@@ -104,7 +146,7 @@ export class PersistedKeysBackend implements IPersistedKeysBackend {
       lockFilepath(keystoreFilepath);
     }
 
-    fs.writeFileSync(keystoreFilepath, keystoreStr);
+    writeFile600Perm(keystoreFilepath, keystoreStr);
     writeFile600Perm(passphraseFilepath, password);
 
     return true;
@@ -189,6 +231,7 @@ export class PersistedKeysBackend implements IPersistedKeysBackend {
     dirpath: string;
     keystoreFilepath: string;
     passphraseFilepath: string;
+    proposerDirPath: string;
   } {
     // TODO: Ensure correct formating 0x prefixed
 
@@ -198,6 +241,7 @@ export class PersistedKeysBackend implements IPersistedKeysBackend {
       dirpath,
       keystoreFilepath: path.join(dirpath, "voting-keystore.json"),
       passphraseFilepath: path.join(this.paths.secretsDir, pubkey),
+      proposerDirPath: path.join(this.paths.proposerDir, pubkey),
     };
   }
 }
@@ -272,5 +316,5 @@ export function writeRemoteSignerDefinition(filepath: string, remoteSigner: Sign
     url: remoteSigner.url,
     readonly: false,
   };
-  fs.writeFileSync(filepath, JSON.stringify(remoteSignerJson));
+  writeFile600Perm(filepath, JSON.stringify(remoteSignerJson));
 }

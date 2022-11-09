@@ -1,4 +1,5 @@
 import {PubkeyHex, SignerDefinition} from "@lodestar/api/keymanager";
+import {ProposerConfig} from "@lodestar/validator";
 
 export type LocalKeystoreDefinition = {
   keystorePath: string;
@@ -26,4 +27,9 @@ export interface IPersistedKeysBackend {
 
   /** Returns true some item is deleted from disk */
   deleteRemoteKey(pubkey: PubkeyHex): boolean;
+
+  writeProposerConfig(pubkey: PubkeyHex, proposerConfig: ProposerConfig | null): void;
+  deleteProposerConfig(pubkeyHex: PubkeyHex): void;
+  readProposerConfigs(): {[index: string]: ProposerConfig};
+  deleteProposerConfigs(): void;
 }

@@ -1,5 +1,5 @@
 import {ForkName} from "@lodestar/params";
-import {DomainType, ForkDigest, Slot} from "@lodestar/types";
+import {DomainType, ForkDigest, Root, Slot} from "@lodestar/types";
 
 export type ForkDigestHex = string;
 
@@ -17,4 +17,6 @@ export interface ICachedGenesis extends IForkDigestContext {
    * Note: The configured fork schedule is always used rather than on-chain fork schedule.
    */
   getDomain(stateSlot: Slot, domainType: DomainType, messageSlot?: Slot): Uint8Array;
+
+  readonly genesisValidatorsRoot: Root;
 }

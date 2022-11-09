@@ -1,6 +1,8 @@
-import {ssz, bellatrix, Slot, Root, BLSPubkey} from "@lodestar/types";
+import {ssz, allForks, bellatrix, Slot, Root, BLSPubkey} from "@lodestar/types";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {ForkName} from "@lodestar/params";
+import {IChainForkConfig} from "@lodestar/config";
+
 import {
   ReturnTypes,
   RoutesData,
@@ -13,6 +15,7 @@ import {
   WithVersion,
 } from "../utils/index.js";
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
+import {getReqSerializers as getBeaconReqSerializers} from "../beacon/routes/beacon/block.js";
 
 export type Api = {
   status(): Promise<void>;
@@ -23,8 +26,8 @@ export type Api = {
     proposerPubKey: BLSPubkey
   ): Promise<{version: ForkName; data: bellatrix.SignedBuilderBid}>;
   submitBlindedBlock(
-    signedBlock: bellatrix.SignedBlindedBeaconBlock
-  ): Promise<{version: ForkName; data: bellatrix.ExecutionPayload}>;
+    signedBlock: allForks.SignedBlindedBeaconBlock
+  ): Promise<{version: ForkName; data: allForks.ExecutionPayload}>;
 };
 
 /**
@@ -45,7 +48,7 @@ export type ReqTypes = {
   submitBlindedBlock: {body: unknown};
 };
 
-export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
+export function getReqSerializers(config: IChainForkConfig): ReqSerializers<Api, ReqTypes> {
   return {
     status: reqEmpty,
     registerValidator: reqOnlyBody(ArrayOf(ssz.bellatrix.SignedValidatorRegistrationV1), Schema.ObjectArray),
@@ -58,7 +61,7 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
         params: {slot: Schema.UintRequired, parent_hash: Schema.StringRequired, pubkey: Schema.StringRequired},
       },
     },
-    submitBlindedBlock: reqOnlyBody(ssz.bellatrix.SignedBlindedBeaconBlock, Schema.Object),
+    submitBlindedBlock: getBeaconReqSerializers(config)["publishBlindedBlock"],
   };
 }
 

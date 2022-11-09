@@ -1,7 +1,8 @@
-import {EventEmitter} from "events";
-import {Connection} from "libp2p";
+import {Connection} from "@libp2p/interface-connection";
+import {CustomEvent} from "@libp2p/interfaces/events";
 import sinon from "sinon";
 import {expect} from "chai";
+import {DefaultConnectionManager} from "libp2p/connection-manager";
 import {config} from "@lodestar/config/default";
 import {BitArray} from "@chainsafe/ssz";
 import {altair, phase0, ssz} from "@lodestar/types";
@@ -9,7 +10,7 @@ import {sleep} from "@lodestar/utils";
 import {createIBeaconConfig} from "@lodestar/config";
 import {IReqResp, ReqRespMethod} from "../../../../src/network/reqresp/index.js";
 import {PeerRpcScoreStore, PeerManager} from "../../../../src/network/peers/index.js";
-import {Eth2Gossipsub, NetworkEvent, NetworkEventBus} from "../../../../src/network/index.js";
+import {Eth2Gossipsub, getConnectionsMap, NetworkEvent, NetworkEventBus} from "../../../../src/network/index.js";
 import {PeersData} from "../../../../src/network/peers/peersData.js";
 import {createNode, getAttnets, getSyncnets} from "../../../utils/network.js";
 import {MockBeaconChain} from "../../../utils/mocks/chain/chain.js";
@@ -110,16 +111,24 @@ describe("network / peers / PeerManager", function () {
     beaconBlocksByRange = sinon.stub();
     beaconBlocksByRoot = sinon.stub();
     pruneOnPeerDisconnect = sinon.stub();
+    lightClientBootstrap = sinon.stub();
+    lightClientOptimisticUpdate = sinon.stub();
+    lightClientFinalityUpdate = sinon.stub();
+    lightClientUpdate = sinon.stub();
   }
 
   it("Should request metadata on receivedPing of unknown peer", async () => {
     const {reqResp, networkEventBus, peerManager} = await mockModules();
 
     // Simulate connection so that PeerManager persists the metadata response
-    await peerManager["onLibp2pPeerConnect"]({
-      stat: {direction: "inbound", status: "open"},
-      remotePeer: peerId1,
-    } as Connection);
+    await peerManager["onLibp2pPeerConnect"](
+      new CustomEvent("evt", {
+        detail: {
+          stat: {direction: "inbound", status: "OPEN"},
+          remotePeer: peerId1,
+        } as Connection,
+      })
+    );
 
     const seqNumber = BigInt(2);
     const metadata: phase0.Metadata = {seqNumber, attnets: BitArray.fromBitLen(0)};
@@ -144,7 +153,7 @@ describe("network / peers / PeerManager", function () {
   });
 
   const libp2pConnectionOutboud = {
-    stat: {direction: "outbound", status: "open"},
+    stat: {direction: "outbound", status: "OPEN"},
     remotePeer: peerId1,
   } as Connection;
 
@@ -152,7 +161,8 @@ describe("network / peers / PeerManager", function () {
     const {chain, libp2p, networkEventBus} = await mockModules();
 
     // Simualate a peer connection, get() should return truthy
-    libp2p.connectionManager.connections.set(peerId1.toB58String(), [libp2pConnectionOutboud]);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+    getConnectionsMap(libp2p.connectionManager).set(peerId1.toString(), [libp2pConnectionOutboud]);
 
     // Subscribe to `peerConnected` event, which must fire after checking peer relevance
     const peerConnectedPromise = waitForEvent(networkEventBus, NetworkEvent.peerConnected, this.timeout() / 2);
@@ -168,7 +178,8 @@ describe("network / peers / PeerManager", function () {
     const {chain, libp2p, reqResp, peerManager, networkEventBus} = await mockModules();
 
     // Simualate a peer connection, get() should return truthy
-    libp2p.connectionManager.get = sinon.stub().returns({});
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+    getConnectionsMap(libp2p.connectionManager).set(peerId1.toString(), [libp2pConnectionOutboud]);
 
     // Subscribe to `peerConnected` event, which must fire after checking peer relevance
     const peerConnectedPromise = waitForEvent(networkEventBus, NetworkEvent.peerConnected, this.timeout() / 2);
@@ -181,8 +192,11 @@ describe("network / peers / PeerManager", function () {
     reqResp.metadata.resolves(remoteMetadata);
 
     // Simualate a peer connection, get() should return truthy
-    libp2p.connectionManager.connections.set(peerId1.toB58String(), [libp2pConnectionOutboud]);
-    ((libp2p.connectionManager as any) as EventEmitter).emit("peer:connect", libp2pConnectionOutboud);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+    getConnectionsMap(libp2p.connectionManager).set(peerId1.toString(), [libp2pConnectionOutboud]);
+    (libp2p.connectionManager as DefaultConnectionManager).dispatchEvent(
+      new CustomEvent("peer:connect", {detail: libp2pConnectionOutboud})
+    );
 
     await peerConnectedPromise;
 
@@ -198,7 +212,7 @@ describe("network / peers / PeerManager", function () {
     expect(reqResp.status.callCount).to.equal(1, "reqResp.status must be called");
     expect(reqResp.metadata.callCount).to.equal(1, "reqResp.metadata must be called");
 
-    expect(peerManager["connectedPeers"].get(peerId1.toB58String())?.metadata).to.deep.equal(
+    expect(peerManager["connectedPeers"].get(peerId1.toString())?.metadata).to.deep.equal(
       remoteMetadata,
       "Wrong stored metadata"
     );

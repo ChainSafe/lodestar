@@ -65,7 +65,7 @@ describe("sync / finalized sync", function () {
     afterEachCallbacks.push(() => bn.close());
 
     await waitForEvent<phase0.Checkpoint>(bn.chain.emitter, ChainEvent.finalized, 240000);
-    loggerNodeA.important("Node A emitted finalized checkpoint event");
+    loggerNodeA.info("Node A emitted finalized checkpoint event");
 
     const bn2 = await getDevBeaconNode({
       params: beaconParams,

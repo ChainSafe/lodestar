@@ -1,5 +1,5 @@
-import PeerId from "peer-id";
-import {MapDef, pruneSetToMax} from "../../util/map.js";
+import {PeerId} from "@libp2p/interface-peer-id";
+import {MapDef, pruneSetToMax} from "@lodestar/utils";
 import {gossipScoreThresholds} from "../gossip/scoringParameters.js";
 import {IMetrics} from "../../metrics/index.js";
 
@@ -105,7 +105,7 @@ export class PeerRpcScoreStore implements IPeerRpcScoreStore {
   }
 
   getScore(peer: PeerId): number {
-    return this.scores.get(peer.toB58String())?.getScore() ?? DEFAULT_SCORE;
+    return this.scores.get(peer.toString())?.getScore() ?? DEFAULT_SCORE;
   }
 
   getScoreState(peer: PeerId): ScoreState {
@@ -113,7 +113,7 @@ export class PeerRpcScoreStore implements IPeerRpcScoreStore {
   }
 
   applyAction(peer: PeerId, action: PeerAction, actionName: string): void {
-    const peerScore = this.scores.getOrDefault(peer.toB58String());
+    const peerScore = this.scores.getOrDefault(peer.toString());
     peerScore.add(peerActionScore[action]);
 
     this.metrics?.peersReportPeerCount.inc({reason: actionName});

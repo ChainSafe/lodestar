@@ -1,5 +1,5 @@
-import {bellatrix, RootHex} from "@lodestar/types";
-import {BYTES_PER_LOGS_BLOOM} from "@lodestar/params";
+import {RootHex, allForks, capella} from "@lodestar/types";
+import {BYTES_PER_LOGS_BLOOM, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {fromHex} from "@lodestar/utils";
 
 import {ErrorJsonRpcResponse, HttpRpcError, JsonRpcHttpClient} from "../../eth1/provider/jsonRpcHttpClient.js";
@@ -14,6 +14,8 @@ import {
 } from "../../eth1/provider/utils.js";
 import {IJsonRpcHttpClient, ReqOpts} from "../../eth1/provider/jsonRpcHttpClient.js";
 import {IMetrics} from "../../metrics/index.js";
+import {JobItemQueue} from "../../util/queue/index.js";
+import {EPOCHS_PER_BATCH} from "../../sync/constants.js";
 import {
   ExecutePayloadStatus,
   ExecutePayloadResponse,
@@ -57,6 +59,12 @@ export const defaultExecutionEngineHttpOpts: ExecutionEngineHttpOpts = {
   timeout: 12000,
 };
 
+/**
+ * Size for the serializing queue for fcUs and new payloads, the max length could be equal to
+ * EPOCHS_PER_BATCH * 2 in case new payloads are also not awaited serially
+ */
+const QUEUE_MAX_LENGTH = EPOCHS_PER_BATCH * SLOTS_PER_EPOCH * 2;
+
 // Define static options once to prevent extra allocations
 const notifyNewPayloadOpts: ReqOpts = {routeId: "notifyNewPayload"};
 const forkchoiceUpdatedV1Opts: ReqOpts = {routeId: "forkchoiceUpdated"};
@@ -75,6 +83,23 @@ const exchageTransitionConfigOpts: ReqOpts = {routeId: "exchangeTransitionConfig
 export class ExecutionEngineHttp implements IExecutionEngine {
   readonly payloadIdCache = new PayloadIdCache();
   private readonly rpc: IJsonRpcHttpClient;
+  /**
+   * A queue to serialize the fcUs and newPayloads calls:
+   *
+   * While syncing, lodestar has a batch processing module which calls new payloads in batch followed by fcUs.
+   * Even though we await for responses to new payloads serially, we just trigger fcUs consecutively. This
+   * may lead to the EL receiving the fcUs out of the order and may break the EL's backfill/beacon sync. Since
+   * the order of new payloads and fcUs is pretty important to EL, this queue will serialize the calls in the
+   * order with which we make them.
+   */
+  private readonly rpcFetchQueue: JobItemQueue<[EngineRequest], EngineResponse>;
+
+  private jobQueueProcessor = async ({method, params, methodOpts}: EngineRequest): Promise<EngineResponse> => {
+    return this.rpc.fetchWithRetries<EngineApiRpcReturnTypes[typeof method], EngineApiRpcParamTypes[typeof method]>(
+      {method, params},
+      methodOpts
+    );
+  };
 
   constructor(opts: ExecutionEngineHttpOpts, {metrics, signal}: ExecutionEngineModules) {
     this.rpc = new JsonRpcHttpClient(opts.urls, {
@@ -83,6 +108,11 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       metrics: metrics?.executionEnginerHttpClient,
       jwtSecret: opts.jwtSecretHex ? fromHex(opts.jwtSecretHex) : undefined,
     });
+    this.rpcFetchQueue = new JobItemQueue<[EngineRequest], EngineResponse>(
+      this.jobQueueProcessor,
+      {maxLength: QUEUE_MAX_LENGTH, maxConcurrency: 1, signal},
+      metrics?.engineHttpProcessorQueue
+    );
   }
 
   /**
@@ -110,17 +140,14 @@ export class ExecutionEngineHttp implements IExecutionEngine {
    *
    * If any of the above fails due to errors unrelated to the normal processing flow of the method, client software MUST respond with an error object.
    */
-  async notifyNewPayload(executionPayload: bellatrix.ExecutionPayload): Promise<ExecutePayloadResponse> {
+  async notifyNewPayload(executionPayload: allForks.ExecutionPayload): Promise<ExecutePayloadResponse> {
     const method = "engine_newPayloadV1";
     const serializedExecutionPayload = serializeExecutionPayload(executionPayload);
-    const {status, latestValidHash, validationError} = await this.rpc
-      .fetchWithRetries<EngineApiRpcReturnTypes[typeof method], EngineApiRpcParamTypes[typeof method]>(
-        {
-          method,
-          params: [serializedExecutionPayload],
-        },
-        notifyNewPayloadOpts
-      )
+    const {status, latestValidHash, validationError} = await (this.rpcFetchQueue.push({
+      method,
+      params: [serializedExecutionPayload],
+      methodOpts: notifyNewPayloadOpts,
+    }) as Promise<EngineApiRpcReturnTypes[typeof method]>)
       // If there are errors by EL like connection refused, internal error, they need to be
       // treated separate from being INVALID. For now, just pass the error upstream.
       .catch((e: Error): EngineApiRpcReturnTypes[typeof method] => {
@@ -216,13 +243,11 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     const {
       payloadStatus: {status, latestValidHash: _latestValidHash, validationError},
       payloadId,
-    } = await this.rpc.fetchWithRetries<EngineApiRpcReturnTypes[typeof method], EngineApiRpcParamTypes[typeof method]>(
-      {
-        method,
-        params: [{headBlockHash, safeBlockHash, finalizedBlockHash}, apiPayloadAttributes],
-      },
-      fcUReqOpts
-    );
+    } = await (this.rpcFetchQueue.push({
+      method,
+      params: [{headBlockHash, safeBlockHash, finalizedBlockHash}, apiPayloadAttributes],
+      methodOpts: fcUReqOpts,
+    }) as Promise<EngineApiRpcReturnTypes[typeof method]>);
 
     switch (status) {
       case ExecutePayloadStatus.VALID:
@@ -264,7 +289,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
    * 2. The call MUST be responded with 5: Unavailable payload error if the building process identified by the payloadId doesn't exist.
    * 3. Client software MAY stop the corresponding building process after serving this call.
    */
-  async getPayload(payloadId: PayloadId): Promise<bellatrix.ExecutionPayload> {
+  async getPayload(payloadId: PayloadId): Promise<allForks.ExecutionPayload> {
     const method = "engine_getPayloadV1";
     const executionPayloadRpc = await this.rpc.fetchWithRetries<
       EngineApiRpcReturnTypes[typeof method],
@@ -371,9 +396,13 @@ type ExecutionPayloadRpc = {
   baseFeePerGas: QUANTITY;
   blockHash: DATA; // 32 bytes
   transactions: DATA[];
+  withdrawals?: DATA[]; // Capella hardfork
 };
 
-export function serializeExecutionPayload(data: bellatrix.ExecutionPayload): ExecutionPayloadRpc {
+export function serializeExecutionPayload(data: allForks.ExecutionPayload): ExecutionPayloadRpc {
+  if ((data as capella.ExecutionPayload).withdrawals !== undefined) {
+    throw Error("Capella Not implemented");
+  }
   return {
     parentHash: bytesToData(data.parentHash),
     feeRecipient: bytesToData(data.feeRecipient),
@@ -392,7 +421,10 @@ export function serializeExecutionPayload(data: bellatrix.ExecutionPayload): Exe
   };
 }
 
-export function parseExecutionPayload(data: ExecutionPayloadRpc): bellatrix.ExecutionPayload {
+export function parseExecutionPayload(data: ExecutionPayloadRpc): allForks.ExecutionPayload {
+  if (data.withdrawals !== undefined) {
+    throw Error("Capella Not implemented");
+  }
   return {
     parentHash: dataToBytes(data.parentHash, 32),
     feeRecipient: dataToBytes(data.feeRecipient, 20),
@@ -410,3 +442,11 @@ export function parseExecutionPayload(data: ExecutionPayloadRpc): bellatrix.Exec
     transactions: data.transactions.map((tran) => dataToBytes(tran)),
   };
 }
+
+type EngineRequestKey = keyof EngineApiRpcParamTypes;
+type EngineRequestByKey = {
+  [K in EngineRequestKey]: {method: K; params: EngineApiRpcParamTypes[K]; methodOpts: ReqOpts};
+};
+type EngineRequest = EngineRequestByKey[EngineRequestKey];
+type EngineResponseByKey = {[K in EngineRequestKey]: EngineApiRpcReturnTypes[K]};
+type EngineResponse = EngineResponseByKey[EngineRequestKey];

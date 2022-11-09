@@ -5,7 +5,7 @@ import {computeStartSlotAtEpoch, getBlockRootAtSlot, RootCache} from "../../../s
 
 const slot = computeStartSlotAtEpoch(perfStateEpoch) - 1;
 
-describe("RootCache.getBlockRootAtSlot", () => {
+describe("RootCache.getBlockRootAtSlot from rootCache", () => {
   itBench<RootCache, RootCache>({
     id: `RootCache.getBlockRootAtSlot - ${perfStateId}`,
     before: () => new RootCache(generatePerfTestCachedStatePhase0()),

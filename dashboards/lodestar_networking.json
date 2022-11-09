@@ -3318,7 +3318,7 @@
       "type": "timeseries"
     }
   ],
-  "refresh": false,
+  "refresh": "10s",
   "schemaVersion": 35,
   "style": "dark",
   "tags": ["lodestar"],
@@ -3432,7 +3432,7 @@
           }
         ],
         "hide": 0,
-        "name": "ByJob",
+        "name": "Filters",
         "skipUrlSync": false,
         "type": "adhoc"
       }

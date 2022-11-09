@@ -171,7 +171,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
           "expr": "lodestar_gossip_peer_score_by_threshold_count",
@@ -224,7 +224,7 @@
       "targets": [
         {
           "exemplar": false,
-          "expr": "validator_monitor_validators_total",
+          "expr": "validator_monitor_validators",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
@@ -643,7 +643,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
           "expr": "round((time() - lodestar_genesis_time) / 12)",
@@ -656,7 +656,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "beacon_head_slot",
           "hide": false,
@@ -667,7 +667,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "changes(process_start_time_seconds[5m])",
           "hide": false,
@@ -894,7 +894,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
           "expr": "lodestar_gossip_score_avg_min_max_max",
@@ -906,7 +906,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
           "expr": "lodestar_gossip_score_avg_min_max_avg",
@@ -918,7 +918,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
           "expr": "lodestar_gossip_score_avg_min_max_min",
@@ -1344,7 +1344,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "delta(lodestar_gossip_block_elappsed_time_till_received_sum[$rate_interval])\n/\ndelta(lodestar_gossip_block_elappsed_time_till_received_count[$rate_interval])",
@@ -1355,7 +1355,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "delta(lodestar_gossip_block_elappsed_time_till_processed_sum[$rate_interval])\n/\ndelta(lodestar_gossip_block_elappsed_time_till_processed_count[$rate_interval])",
@@ -1537,7 +1537,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "gossipsub_topic_peer_count",
@@ -1621,7 +1621,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "gossipsub_mesh_peer_count",
@@ -1706,7 +1706,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "sum(\n  rate(gossipsub_mesh_peer_inclusion_events_total[$rate_interval])\n) by (topic)",
@@ -1717,7 +1717,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "- sum(\n  rate(gossipsub_peer_churn_events_total [$rate_interval])\n) by (topic)",
@@ -1803,7 +1803,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "sum(\n  rate(gossipsub_mesh_peer_inclusion_events_total[$rate_interval])\n) by (reason)",
@@ -1815,7 +1815,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "- sum(\n  rate(gossipsub_peer_churn_events_total [$rate_interval])\n) by (reason)",
@@ -1915,7 +1915,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "rate(gossipsub_msg_received_prevalidation_total[$rate_interval])",
@@ -1999,7 +1999,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "(sum(rate(gossipsub_msg_received_status_total{status=\"duplicate\"} [32m])) by (topic))\n/\n(sum(rate(gossipsub_msg_received_status_total{status=\"valid\"} [32m])) by (topic))",
@@ -2085,7 +2085,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "rate(gossipsub_msg_received_status_total{status=\"valid\"} [$rate_interval])",
@@ -2171,7 +2171,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "(sum(rate(gossipsub_msg_received_prevalidation_total [32m])) by (topic))\n/\n(sum(rate(gossipsub_msg_received_status_total{status=\"valid\"} [32m])) by (topic))",
@@ -2257,7 +2257,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "rate(gossipsub_msg_received_invalid_total[$rate_interval])",
@@ -2343,7 +2343,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "rate(gossipsub_rpc_rcv_not_accepted_total[$rate_interval])",
@@ -2429,7 +2429,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "(sum(rate(gossipsub_async_validation_result_total{acceptance=\"ignore\"} [32m])) by (topic))\n/\n(sum(rate(gossipsub_async_validation_result_total[32m])) by (topic))",
@@ -2440,7 +2440,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "(sum(rate(gossipsub_async_validation_result_total{acceptance=\"reject\"} [32m])) by (topic))\n/\n(sum(rate(gossipsub_async_validation_result_total[32m])) by (topic))",
@@ -2527,7 +2527,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "rate(gossipsub_async_validation_mcache_hit_total [$rate_interval])",
@@ -2640,7 +2640,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "sum(rate(gossipsub_msg_publish_peers_by_group[$rate_interval])) by (peerGroup)",
@@ -2725,7 +2725,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "rate(gossipsub_msg_publish_bytes_total[$rate_interval])",
@@ -2811,7 +2811,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "rate(gossipsub_msg_publish_count_total[$rate_interval])",
@@ -2896,7 +2896,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "rate(gossipsub_msg_publish_peers_total[$rate_interval])\n/\nrate(gossipsub_msg_publish_count_total[$rate_interval])",
@@ -2981,7 +2981,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "rate(gossipsub_msg_forward_count_total[$rate_interval])",
@@ -3066,7 +3066,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "rate(gossipsub_msg_forward_peers_total[$rate_interval])\n/\nrate(gossipsub_msg_forward_count_total[$rate_interval])",
@@ -3164,7 +3164,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "gossipsub_peers_by_score_threshold_count",
@@ -3311,7 +3311,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "gossipsub_score_max",
@@ -3323,7 +3323,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "gossipsub_score_avg",
@@ -3335,7 +3335,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "gossipsub_score_min",
@@ -3420,7 +3420,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "gossipsub_score_weights_avg",
@@ -3504,7 +3504,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "gossipsub_score_weights_min",
@@ -3589,7 +3589,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "gossipsub_score_weights_avg > 1",
@@ -3674,7 +3674,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "- gossipsub_score_weights_avg > 10",
@@ -3758,7 +3758,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "gossipsub_score_per_mesh_avg",
@@ -3842,7 +3842,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "gossipsub_score_per_mesh_min",
@@ -4033,7 +4033,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "gossipsub_score_weights_avg{p=\"p3\"}",
@@ -4181,7 +4181,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "gossipsub_score_weights_avg{p=\"p3b\"}",
@@ -4266,7 +4266,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "rate(gossisub_duplicate_msg_late_delivery_total[$rate_interval])",
@@ -4351,7 +4351,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "sum(rate(gossisub_duplicate_msg_late_delivery_total[$rate_interval]))\n/\nsum(rate(gossisub_duplicate_msg_delivery_delay_seconds_count[$rate_interval]))",
@@ -4436,7 +4436,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "rate(gossisub_duplicate_msg_delivery_delay_seconds_bucket{le=\"6\"}[32m])",
@@ -4448,7 +4448,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "sum(rate(gossisub_duplicate_msg_delivery_delay_seconds_bucket{le=\"12\"}[32m]))\n-\nsum(rate(gossisub_duplicate_msg_delivery_delay_seconds_bucket{le=\"6\"}[32m]))",
@@ -4460,7 +4460,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "sum(rate(gossisub_duplicate_msg_delivery_delay_seconds_bucket{le=\"24\"}[32m]))\n-\nsum(rate(gossisub_duplicate_msg_delivery_delay_seconds_bucket{le=\"12\"}[32m]))",
@@ -4472,7 +4472,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "sum(rate(gossisub_duplicate_msg_delivery_delay_seconds_bucket{le=\"48\"}[32m]))\n-\nsum(rate(gossisub_duplicate_msg_delivery_delay_seconds_bucket{le=\"24\"}[32m]))",
@@ -4484,7 +4484,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "sum(rate(gossisub_duplicate_msg_delivery_delay_seconds_bucket{le=\"+Inf\"}[32m]))\n-\nsum(rate(gossisub_duplicate_msg_delivery_delay_seconds_bucket{le=\"48\"}[32m]))",
@@ -4526,7 +4526,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "rate(gossisub_duplicate_msg_delivery_delay_seconds_bucket[$rate_interval]) - 10000",
@@ -4717,7 +4717,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "gossipsub_score_weights_max{p=\"p7\"}",
@@ -4729,7 +4729,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "gossipsub_score_weights_avg{p=\"p7\"}",
@@ -4741,7 +4741,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "gossipsub_score_weights_min{p=\"p7\"}",
@@ -4827,7 +4827,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "rate(gossipsub_scoring_penalties_total[$rate_interval])",
@@ -4974,7 +4974,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "gossipsub_score_weights_avg{p=\"p7\"}",
@@ -5108,7 +5108,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "(\n  sum(gossipsub_peer_stat_behaviour_penalty_bucket{le=\"+Inf\"})\n  -\n  sum(gossipsub_peer_stat_behaviour_penalty_bucket{le=\"6\"})\n)\n/\nsum(gossipsub_peer_stat_behaviour_penalty_bucket{le=\"+Inf\"})",
@@ -5120,7 +5120,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "sum(gossipsub_peer_stat_behaviour_penalty_bucket{le=\"+Inf\"})\n-\nsum(gossipsub_peer_stat_behaviour_penalty_bucket{le=\"6\"})",
@@ -5206,7 +5206,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "gossipsub_peer_stat_behaviour_penalty_bucket{le=\"1.5\"}",
@@ -5218,7 +5218,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "sum(gossipsub_peer_stat_behaviour_penalty_bucket{le=\"3\"}) - sum(gossipsub_peer_stat_behaviour_penalty_bucket{le=\"1.5\"})",
@@ -5230,7 +5230,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "sum(gossipsub_peer_stat_behaviour_penalty_bucket{le=\"6\"}) - sum(gossipsub_peer_stat_behaviour_penalty_bucket{le=\"3\"})",
@@ -5242,7 +5242,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "sum(gossipsub_peer_stat_behaviour_penalty_bucket{le=\"12\"}) - sum(gossipsub_peer_stat_behaviour_penalty_bucket{le=\"6\"})",
@@ -5254,7 +5254,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "sum(gossipsub_peer_stat_behaviour_penalty_bucket{le=\"24\"}) - sum(gossipsub_peer_stat_behaviour_penalty_bucket{le=\"12\"})",
@@ -5266,7 +5266,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "sum(gossipsub_peer_stat_behaviour_penalty_bucket{le=\"+Inf\"}) - sum(gossipsub_peer_stat_behaviour_penalty_bucket{le=\"24\"})",
@@ -5347,7 +5347,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "sum(gossipsub_peer_stat_behaviour_penalty_bucket{le=\"6\"})\n-\nsum(gossipsub_peer_stat_behaviour_penalty_bucket{le=\"3\"})",
@@ -5359,7 +5359,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "sum(gossipsub_peer_stat_behaviour_penalty_bucket{le=\"+Inf\"})\n-\nsum(gossipsub_peer_stat_behaviour_penalty_bucket{le=\"6\"})",
@@ -5401,7 +5401,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "gossipsub_peer_stat_behaviour_penalty_bucket - 100",
@@ -5534,7 +5534,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "rate(gossipsub_iwant_promise_sent_total[$rate_interval])",
@@ -5545,7 +5545,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "rate(gossipsub_iwant_promise_resolved_total[$rate_interval])",
@@ -5557,7 +5557,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "rate(gossipsub_iwant_promise_broken[$rate_interval])",
@@ -5569,7 +5569,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "rate(gossipsub_iwant_promise_broken[$rate_interval])/rate(gossipsub_iwant_promise_sent_total[$rate_interval])",
@@ -5672,7 +5672,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "sum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=\"48\"}[32m]))\n-\nsum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=\"12\"}[32m]))",
@@ -5684,7 +5684,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "sum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=\"+Inf\"}[32m]))\n-\nsum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=\"48\"}[32m]))",
@@ -5696,7 +5696,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "(\n  sum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=\"+Inf\"}[32m]))\n  -\n  sum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=\"48\"}[32m]))\n)\n/\nsum(rate(gossipsub_iwant_promise_broken[$rate_interval]))",
@@ -5782,7 +5782,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=\"6\"}[32m])",
@@ -5794,7 +5794,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "sum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=\"12\"}[32m]))\n-\nsum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=\"6\"}[32m]))",
@@ -5806,7 +5806,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "sum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=\"24\"}[32m]))\n-\nsum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=\"12\"}[32m]))",
@@ -5818,7 +5818,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "sum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=\"48\"}[32m]))\n-\nsum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=\"24\"}[32m]))",
@@ -5830,7 +5830,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "sum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=\"+Inf\"}[32m]))\n-\nsum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=\"48\"}[32m]))",
@@ -5872,7 +5872,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "rate(gossipsub_iwant_promise_delivery_seconds_bucket[$rate_interval]) - 100",
@@ -5973,7 +5973,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=\"6\"}[32m])",
@@ -5985,7 +5985,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "sum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=\"12\"}[32m]))\n-\nsum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=\"6\"}[32m]))",
@@ -5997,7 +5997,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "sum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=\"24\"}[32m]))\n-\nsum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=\"12\"}[32m]))",
@@ -6009,7 +6009,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "sum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=\"48\"}[32m]))\n-\nsum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=\"24\"}[32m]))",
@@ -6021,7 +6021,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "sum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=\"+Inf\"}[32m]))\n-\nsum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=\"48\"}[32m]))",
@@ -6107,7 +6107,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=\"6\"}[32m])",
@@ -6119,7 +6119,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "sum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=\"12\"}[32m]))\n-\nsum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=\"6\"}[32m]))",
@@ -6131,7 +6131,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "sum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=\"24\"}[32m]))\n-\nsum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=\"12\"}[32m]))",
@@ -6143,7 +6143,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "sum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=\"48\"}[32m]))\n-\nsum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=\"24\"}[32m]))",
@@ -6155,7 +6155,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "sum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=\"+Inf\"}[32m]))\n-\nsum(rate(gossipsub_iwant_promise_delivery_seconds_bucket{le=\"48\"}[32m]))",
@@ -6255,7 +6255,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "rate(gossipsub_ihave_rcv_ignored_total[$rate_interval])",
@@ -6340,7 +6340,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "rate(gossipsub_ihave_rcv_msgids_total[$rate_interval])",
@@ -6425,7 +6425,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "rate(gossipsub_ihave_rcv_not_seen_msgids_total[$rate_interval])",
@@ -6510,7 +6510,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "rate(gossipsub_ihave_rcv_not_seen_msgids_total[$rate_interval])\n/\nrate(gossipsub_ihave_rcv_msgids_total[$rate_interval])",
@@ -6595,7 +6595,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "rate(gossipsub_iwant_rcv_msgids_total[$rate_interval])",
@@ -6727,7 +6727,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "rate(gossipsub_iwant_rcv_dont_have_msgids_total[$rate_interval])",
@@ -6739,7 +6739,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "sum(rate(gossipsub_iwant_rcv_dont_have_msgids_total[$rate_interval]))\n/\nsum(rate(gossipsub_iwant_rcv_msgids_total[$rate_interval]))",
@@ -6839,7 +6839,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "rate(gossipsub_heartbeat_duration_seconds_sum[$rate_interval])/rate(gossipsub_heartbeat_duration_seconds_count[$rate_interval])",
@@ -6850,7 +6850,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "histogram_quantile(0.75, sum(rate(gossipsub_heartbeat_duration_seconds_bucket[$rate_interval])) by (le))",
@@ -6862,7 +6862,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "histogram_quantile(0.90, sum(rate(gossipsub_heartbeat_duration_seconds_bucket[$rate_interval])) by (le))",
@@ -6949,7 +6949,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "rate(gossipsub_heartbeat_duration_seconds_count[$rate_interval])",
@@ -6960,7 +6960,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "rate(gossipsub_heartbeat_skipped[$rate_interval])",
@@ -7047,7 +7047,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "gossipsub_cache_size",
@@ -7134,7 +7134,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "gossipsub_cache_size",
@@ -7236,7 +7236,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "rate(gossipsub_score_fn_calls_total[$rate_interval])",
@@ -7247,7 +7247,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "rate(gossipsub_score_fn_runs_total[$rate_interval])",
@@ -7259,7 +7259,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "rate(gossipsub_score_fn_runs_total[$rate_interval])\n/\nrate(gossipsub_score_fn_calls_total[$rate_interval])",
@@ -7346,7 +7346,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "rate(gossipsub_score_cache_delta_sum[$rate_interval])/rate(gossipsub_score_cache_delta_count[$rate_interval])",
@@ -7357,7 +7357,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "histogram_quantile(0.75, sum(rate(gossipsub_score_cache_delta_bucket[$rate_interval])) by (le))",
@@ -7369,7 +7369,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "histogram_quantile(0.95, sum(rate(gossipsub_score_cache_delta_bucket[$rate_interval])) by (le))",
@@ -7484,7 +7484,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "rate(gossipsub_rpc_recv_bytes_total[$rate_interval])",
@@ -7495,7 +7495,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "-rate(gossipsub_rpc_sent_bytes_total[$rate_interval])",
@@ -7581,7 +7581,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "rate(gossipsub_rpc_recv_count_total[$rate_interval])",
@@ -7592,7 +7592,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "-rate(gossipsub_rpc_sent_count_total[$rate_interval])",
@@ -7678,7 +7678,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "rate(gossipsub_rpc_recv_subscription_total[$rate_interval])",
@@ -7689,7 +7689,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "-rate(gossipsub_rpc_sent_subscription_total[$rate_interval])",
@@ -7775,7 +7775,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "rate(gossipsub_rpc_recv_message_total[$rate_interval])",
@@ -7786,7 +7786,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "-rate(gossipsub_rpc_sent_message_total[$rate_interval])",
@@ -7872,7 +7872,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "rate(gossipsub_rpc_recv_control_total[$rate_interval])",
@@ -7883,7 +7883,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "-rate(gossipsub_rpc_sent_control_total[$rate_interval])",
@@ -7969,7 +7969,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "rate(gossipsub_rpc_recv_control_total[$rate_interval])",
@@ -7980,7 +7980,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "-rate(gossipsub_rpc_sent_control_total[$rate_interval])",
@@ -8066,7 +8066,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "rate(gossipsub_rpc_recv_ihave_total[$rate_interval])",
@@ -8077,7 +8077,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "-rate(gossipsub_rpc_sent_ihave_total[$rate_interval])",
@@ -8163,7 +8163,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "rate(gossipsub_rpc_recv_iwant_total[$rate_interval])",
@@ -8174,7 +8174,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "-rate(gossipsub_rpc_sent_iwant_total[$rate_interval])",
@@ -8260,7 +8260,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "rate(gossipsub_rpc_recv_graft_total[$rate_interval])",
@@ -8271,7 +8271,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "-rate(gossipsub_rpc_sent_graft_total[$rate_interval])",
@@ -8357,7 +8357,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "rate(gossipsub_rpc_recv_prune_total[$rate_interval])",
@@ -8368,7 +8368,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "-rate(gossipsub_rpc_sent_prune_total[$rate_interval])",
@@ -8454,7 +8454,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "rate(gossipsub_rpc_recv_message_total[$rate_interval])\n/\nrate(gossipsub_rpc_recv_count_total[$rate_interval])",
@@ -8465,7 +8465,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "- rate(gossipsub_rpc_sent_message_total[$rate_interval])\n/\nrate(gossipsub_rpc_sent_count_total[$rate_interval])",
@@ -8551,7 +8551,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "rate(gossipsub_rpc_recv_control_total[$rate_interval])\n/\nrate(gossipsub_rpc_recv_count_total[$rate_interval])",
@@ -8562,7 +8562,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "- rate(gossipsub_rpc_sent_control_total[$rate_interval])\n/\nrate(gossipsub_rpc_sent_count_total[$rate_interval])",
@@ -8580,7 +8580,7 @@
       "type": "row"
     }
   ],
-  "refresh": "30s",
+  "refresh": "10s",
   "schemaVersion": 35,
   "style": "dark",
   "tags": ["lodestar", "debug"],
@@ -8694,7 +8694,7 @@
           }
         ],
         "hide": 0,
-        "name": "ByJob",
+        "name": "Filters",
         "skipUrlSync": false,
         "type": "adhoc"
       }

@@ -13,7 +13,7 @@ export function upgradeStateToBellatrix(stateAltair: CachedBeaconStateAltair): C
   // An altair BeaconState tree can be safely casted to a bellatrix BeaconState tree because:
   // - All new fields are appended at the end
   //
-  // altair                        | op  | altair
+  // altair                        | op  | bellatrix
   // ----------------------------- | --- | ------------
   // genesis_time                  | -   | genesis_time
   // genesis_validators_root       | -   | genesis_validators_root

@@ -1,4 +1,4 @@
-import {bellatrix, Root, Slot, BLSPubkey} from "@lodestar/types";
+import {allForks, bellatrix, Root, Slot, BLSPubkey} from "@lodestar/types";
 
 export interface IExecutionBuilder {
   /**
@@ -11,6 +11,6 @@ export interface IExecutionBuilder {
   updateStatus(shouldEnable: boolean): void;
   checkStatus(): Promise<void>;
   registerValidator(registrations: bellatrix.SignedValidatorRegistrationV1[]): Promise<void>;
-  getHeader(slot: Slot, parentHash: Root, proposerPubKey: BLSPubkey): Promise<bellatrix.ExecutionPayloadHeader>;
-  submitBlindedBlock(signedBlock: bellatrix.SignedBlindedBeaconBlock): Promise<bellatrix.SignedBeaconBlock>;
+  getHeader(slot: Slot, parentHash: Root, proposerPubKey: BLSPubkey): Promise<allForks.ExecutionPayloadHeader>;
+  submitBlindedBlock(signedBlock: allForks.SignedBlindedBeaconBlock): Promise<allForks.SignedBeaconBlock>;
 }

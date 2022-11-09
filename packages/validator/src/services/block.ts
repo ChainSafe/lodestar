@@ -1,4 +1,4 @@
-import {BLSPubkey, Slot, BLSSignature, allForks, bellatrix} from "@lodestar/types";
+import {BLSPubkey, Slot, BLSSignature, allForks, bellatrix, isBlindedBeaconBlock} from "@lodestar/types";
 import {IChainForkConfig} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
 import {extendError, prettyBytes} from "@lodestar/utils";
@@ -104,7 +104,7 @@ export class BlockProposingService {
   }
 
   private publishBlockWrapper = async (signedBlock: allForks.FullOrBlindedSignedBeaconBlock): Promise<void> => {
-    return (signedBlock.message.body as bellatrix.BlindedBeaconBlockBody).executionPayloadHeader !== undefined
+    return isBlindedBeaconBlock(signedBlock.message)
       ? this.api.beacon.publishBlindedBlock(signedBlock as bellatrix.SignedBlindedBeaconBlock)
       : this.api.beacon.publishBlock(signedBlock as allForks.SignedBeaconBlock);
   };

@@ -1,4 +1,3 @@
-import {Writable} from "node:stream";
 import {LogData} from "./json.js";
 
 export enum LogLevel {
@@ -7,7 +6,7 @@ export enum LogLevel {
   info = "info",
   verbose = "verbose",
   debug = "debug",
-  silly = "silly",
+  trace = "trace",
 }
 
 export const logLevelNum: {[K in LogLevel]: number} = {
@@ -16,20 +15,12 @@ export const logLevelNum: {[K in LogLevel]: number} = {
   [LogLevel.info]: 2,
   [LogLevel.verbose]: 3,
   [LogLevel.debug]: 4,
-  [LogLevel.silly]: 5,
+  /** Request in https://github.com/ChainSafe/lodestar/issues/4536 by eth-docker */
+  [LogLevel.trace]: 5,
 };
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
 export const LogLevels = Object.values(LogLevel);
-
-export const customColors = {
-  error: "red",
-  warn: "yellow",
-  info: "white",
-  verbose: "green",
-  debug: "pink",
-  silly: "purple",
-};
 
 export const defaultLogLevel = LogLevel.info;
 
@@ -57,17 +48,18 @@ export interface ILoggerOptions {
   timestampFormat?: TimestampFormat;
 }
 
+export type LoggerChildOpts = {
+  module: string;
+};
+
 export type LogHandler = (message: string, context?: LogData, error?: Error) => void;
 
 export interface ILogger {
   error: LogHandler;
   warn: LogHandler;
   info: LogHandler;
-  important: LogHandler;
   verbose: LogHandler;
   debug: LogHandler;
-  silly: LogHandler;
-  stream(): Writable;
   // custom
-  child(options: ILoggerOptions): ILogger;
+  child(options: LoggerChildOpts): ILogger;
 }

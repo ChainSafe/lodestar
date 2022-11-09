@@ -1,20 +1,16 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import Libp2p from "libp2p";
-import GossipsubDefault from "libp2p-gossipsub";
-// TODO remove once Gossipsub goes ESM
-const Gossipsub = ((GossipsubDefault as unknown) as {default: unknown}).default as typeof GossipsubDefault;
-import {GossipsubMessage, SignaturePolicy, TopicStr} from "libp2p-gossipsub/src/types.js";
-import {PeerScore, PeerScoreParams} from "libp2p-gossipsub/src/score/index.js";
-import PeerId from "peer-id";
-import {MetricsRegister, TopicLabel, TopicStrToLabel} from "libp2p-gossipsub/src/metrics";
+import {Libp2p} from "libp2p";
+import {GossipSub, GossipsubEvents} from "@chainsafe/libp2p-gossipsub";
+import {SignaturePolicy, TopicStr} from "@chainsafe/libp2p-gossipsub/types";
+import {PeerScore, PeerScoreParams} from "@chainsafe/libp2p-gossipsub/score";
+import {MetricsRegister, TopicLabel, TopicStrToLabel} from "@chainsafe/libp2p-gossipsub/metrics";
 import {IBeaconConfig} from "@lodestar/config";
 import {ATTESTATION_SUBNET_COUNT, ForkName, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {allForks, altair, phase0} from "@lodestar/types";
-import {ILogger} from "@lodestar/utils";
+import {ILogger, Map2d, Map2dArr} from "@lodestar/utils";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 
 import {IMetrics} from "../../metrics/index.js";
-import {Map2d, Map2dArr} from "../../util/map.js";
 import {Eth2Context} from "../../chain/index.js";
 import {PeersData} from "../peers/peersData.js";
 import {ClientKind} from "../peers/client.js";
@@ -29,7 +25,7 @@ import {
   GossipHandlers,
 } from "./interface.js";
 import {getGossipSSZType, GossipTopicCache, stringifyGossipTopic} from "./topic.js";
-import {DataTransformSnappy, fastMsgIdFn, msgIdFn} from "./encoding.js";
+import {DataTransformSnappy, fastMsgIdFn, msgIdFn, msgIdToStrFn} from "./encoding.js";
 import {createValidatorFnsByType} from "./validation/index.js";
 
 import {
@@ -44,14 +40,7 @@ import {
 /** As specified in https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md */
 const GOSSIPSUB_HEARTBEAT_INTERVAL = 0.7 * 1000;
 
-// TODO: Export this type
-type GossipsubEvents = {
-  "gossipsub:message": {
-    propagationSource: PeerId;
-    msgId: string;
-    msg: GossipsubMessage;
-  };
-};
+const MAX_OUTBOUND_BUFFER_SIZE = 2 ** 24; // 16MB
 
 export type Eth2GossipsubModules = {
   config: IBeaconConfig;
@@ -66,6 +55,10 @@ export type Eth2GossipsubModules = {
 
 export type Eth2GossipsubOpts = {
   allowPublishToZeroPeers?: boolean;
+  gossipsubD?: number;
+  gossipsubDLow?: number;
+  gossipsubDHigh?: number;
+  gossipsubAwaitHandler?: boolean;
 };
 
 /**
@@ -81,7 +74,7 @@ export type Eth2GossipsubOpts = {
  *
  * See https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#the-gossip-domain-gossipsub
  */
-export class Eth2Gossipsub extends Gossipsub {
+export class Eth2Gossipsub extends GossipSub {
   readonly jobQueues: GossipJobQueues;
   readonly scoreParams: Partial<PeerScoreParams>;
   private readonly config: IBeaconConfig;
@@ -94,6 +87,7 @@ export class Eth2Gossipsub extends Gossipsub {
   private readonly validatorFnsByType: ValidatorFnsByType;
 
   constructor(opts: Eth2GossipsubOpts, modules: Eth2GossipsubModules) {
+    const {allowPublishToZeroPeers, gossipsubD, gossipsubDLow, gossipsubDHigh} = opts;
     const gossipTopicCache = new GossipTopicCache(modules.config);
 
     const scoreParams = computeGossipPeerScoreParams(modules);
@@ -101,13 +95,12 @@ export class Eth2Gossipsub extends Gossipsub {
 
     // Gossipsub parameters defined here:
     // https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#the-gossip-domain-gossipsub
-    super(modules.libp2p, {
-      gossipIncoming: true,
+    super({
       globalSignaturePolicy: SignaturePolicy.StrictNoSign,
-      allowPublishToZeroPeers: opts.allowPublishToZeroPeers,
-      D: GOSSIP_D,
-      Dlo: GOSSIP_D_LOW,
-      Dhi: GOSSIP_D_HIGH,
+      allowPublishToZeroPeers: allowPublishToZeroPeers,
+      D: gossipsubD ?? GOSSIP_D,
+      Dlo: gossipsubDLow ?? GOSSIP_D_LOW,
+      Dhi: gossipsubDHigh ?? GOSSIP_D_HIGH,
       Dlazy: 6,
       heartbeatInterval: GOSSIPSUB_HEARTBEAT_INTERVAL,
       fanoutTTL: 60 * 1000,
@@ -116,10 +109,15 @@ export class Eth2Gossipsub extends Gossipsub {
       seenTTL: 550 * GOSSIPSUB_HEARTBEAT_INTERVAL,
       scoreParams,
       scoreThresholds: gossipScoreThresholds,
+      // For a single stream, await processing each RPC before processing the next
+      awaitRpcHandler: opts.gossipsubAwaitHandler,
+      // For a single RPC, await processing each message before processing the next
+      awaitRpcMessageHandler: opts.gossipsubAwaitHandler,
       // the default in gossipsub is 3s is not enough since lodestar suffers from I/O lag
       gossipsubIWantFollowupMs: 12 * 1000, // 12s
       fastMsgIdFn: fastMsgIdFn,
       msgIdFn: msgIdFn.bind(msgIdFn, gossipTopicCache),
+      msgIdToStrFn: msgIdToStrFn,
       // Use the bellatrix max size if the merge is configured. pre-merge using this size
       // could only be an issue on outgoing payloads, its highly unlikely we will send out
       // a chunk bigger than GOSSIP_MAX_SIZE pre merge even on mainnet network.
@@ -131,6 +129,8 @@ export class Eth2Gossipsub extends Gossipsub {
       metricsRegister: modules.metrics ? ((modules.metrics.register as unknown) as MetricsRegister) : null,
       metricsTopicStrToLabel: modules.metrics ? getMetricsTopicStrToLabel(modules.config) : undefined,
       asyncValidation: true,
+
+      maxOutboundBufferSize: MAX_OUTBOUND_BUFFER_SIZE,
     });
     this.scoreParams = scoreParams;
     this.config = config;
@@ -154,7 +154,7 @@ export class Eth2Gossipsub extends Gossipsub {
       metrics.gossipMesh.peersByType.addCollect(() => this.onScrapeLodestarMetrics(metrics));
     }
 
-    this.on("gossipsub:message", this.onGossipsubMessage.bind(this));
+    this.addEventListener("gossipsub:message", this.onGossipsubMessage.bind(this));
 
     // Having access to this data is CRUCIAL for debugging. While this is a massive log, it must not be deleted.
     // Scoring issues require this dump + current peer score stats to re-calculate scores.
@@ -168,7 +168,8 @@ export class Eth2Gossipsub extends Gossipsub {
     const topicStr = this.getGossipTopicString(topic);
     const sszType = getGossipSSZType(topic);
     const messageData = (sszType.serialize as (object: GossipTypeMap[GossipType]) => Uint8Array)(object);
-    const sentPeers = await this.publish(topicStr, messageData);
+    const result = await this.publish(topicStr, messageData);
+    const sentPeers = result.recipients.length;
     this.logger.verbose("Publish to topic", {topic: topicStr, sentPeers});
     return sentPeers;
   }
@@ -249,6 +250,24 @@ export class Eth2Gossipsub extends Gossipsub {
     );
   }
 
+  async publishLightClientFinalityUpdate(lightClientFinalityUpdate: altair.LightClientFinalityUpdate): Promise<void> {
+    const fork = this.config.getForkName(lightClientFinalityUpdate.signatureSlot);
+    await this.publishObject<GossipType.light_client_finality_update>(
+      {type: GossipType.light_client_finality_update, fork},
+      lightClientFinalityUpdate
+    );
+  }
+
+  async publishLightClientOptimisticUpdate(
+    lightClientOptimisitcUpdate: altair.LightClientOptimisticUpdate
+  ): Promise<void> {
+    const fork = this.config.getForkName(lightClientOptimisitcUpdate.signatureSlot);
+    await this.publishObject<GossipType.light_client_optimistic_update>(
+      {type: GossipType.light_client_optimistic_update, fork},
+      lightClientOptimisitcUpdate
+    );
+  }
+
   private getGossipTopicString(topic: GossipTopic): string {
     return stringifyGossipTopic(this.config, topic);
   }
@@ -256,7 +275,7 @@ export class Eth2Gossipsub extends Gossipsub {
   private onScrapeLodestarMetrics(metrics: IMetrics): void {
     const mesh = this["mesh"] as Map<string, Set<string>>;
     const topics = this["topics"] as Map<string, Set<string>>;
-    const peers = this["peers"] as Map<string, unknown>;
+    const peers = this["peers"] as Set<string>;
     const score = this["score"] as PeerScore;
     const meshPeersByClient = new Map<string, number>();
     const meshPeerIdStrs = new Set<string>();
@@ -355,7 +374,7 @@ export class Eth2Gossipsub extends Gossipsub {
   }
 
   private onGossipsubMessage(event: GossipsubEvents["gossipsub:message"]): void {
-    const {propagationSource, msgId, msg} = event;
+    const {propagationSource, msgId, msg} = event.detail;
 
     // Also validates that the topicStr is known
     const topic = this.gossipTopicCache.getTopic(msg.topic);

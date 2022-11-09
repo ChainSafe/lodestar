@@ -71,6 +71,7 @@ Important Notes:
 - Interacting with and understanding the active preset is only necessary in very limited testing environments, eg: for ephemeral testnets
 - The `minimal` preset is NOT compatible with the `mainnet` preset.
 - using `setActivePreset` may be dangerous, and only should be run once before loading any other libraries. All downstream Lodestar libraries expect the active preset to never change.
+- Preset values can be overriden by executing `setActivePreset(presetName: PresetName, overrides?: Partial<BeaconPreset>)` and supplying values to override.
 
 ## License
 

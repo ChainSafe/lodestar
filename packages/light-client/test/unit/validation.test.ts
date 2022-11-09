@@ -35,7 +35,7 @@ describe("validation", function () {
 
   before("prepare data", function () {
     // Update slot must > snapshot slot
-    // updatePeriod must == snapshotPeriod + 1
+    // attestedHeaderSlot must == updateHeaderSlot + 1
     const snapshotHeaderSlot = 1;
     const updateHeaderSlot = EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH + 1;
     const attestedHeaderSlot = updateHeaderSlot + 1;
@@ -56,33 +56,31 @@ describe("validation", function () {
       aggregatePubkey: bls.aggregatePublicKeys(pubkeys),
     };
 
-    // finalizedCheckpointState must have `nextSyncCommittee`
-    const finalizedCheckpointState = ssz.altair.BeaconState.defaultViewDU();
-    finalizedCheckpointState.nextSyncCommittee = ssz.altair.SyncCommittee.toViewDU(nextSyncCommittee);
-    // Prove it
-    const nextSyncCommitteeBranch = new Tree(finalizedCheckpointState.node).getSingleProof(
-      BigInt(NEXT_SYNC_COMMITTEE_GINDEX)
-    );
+    const finalizedState = ssz.altair.BeaconState.defaultViewDU();
 
-    // update.header must have stateRoot to finalizedCheckpointState
+    // finalized header must have stateRoot to finalizedState
     const finalizedHeader = defaultBeaconBlockHeader(updateHeaderSlot);
-    finalizedHeader.stateRoot = finalizedCheckpointState.hashTreeRoot();
+    finalizedHeader.stateRoot = finalizedState.hashTreeRoot();
 
-    // syncAttestedState must have `header` as finalizedCheckpoint
-    const syncAttestedState = ssz.altair.BeaconState.defaultViewDU();
-    syncAttestedState.finalizedCheckpoint = ssz.phase0.Checkpoint.toViewDU({
+    // attestedState must have `finalizedHeader` as finalizedCheckpoint
+    const attestedState = ssz.altair.BeaconState.defaultViewDU();
+    attestedState.finalizedCheckpoint = ssz.phase0.Checkpoint.toViewDU({
       epoch: 0,
       root: ssz.phase0.BeaconBlockHeader.hashTreeRoot(finalizedHeader),
     });
-    // Prove it
-    const finalityBranch = new Tree(syncAttestedState.node).getSingleProof(BigInt(FINALIZED_ROOT_GINDEX));
 
-    // finalityHeader must have stateRoot to syncAttestedState
-    const syncAttestedBlockHeader = defaultBeaconBlockHeader(attestedHeaderSlot);
-    syncAttestedBlockHeader.stateRoot = syncAttestedState.hashTreeRoot();
+    // attested state must contain next sync committees
+    attestedState.nextSyncCommittee = ssz.altair.SyncCommittee.toViewDU(nextSyncCommittee);
 
-    const forkVersion = ssz.Bytes4.defaultValue();
-    const signingRoot = getSyncAggregateSigningRoot(config, syncAttestedBlockHeader);
+    // attestedHeader must have stateRoot to attestedState
+    const attestedHeader = defaultBeaconBlockHeader(attestedHeaderSlot);
+    attestedHeader.stateRoot = attestedState.hashTreeRoot();
+
+    // Creates proofs for nextSyncCommitteeBranch and finalityBranch rooted in attested state
+    const nextSyncCommitteeBranch = new Tree(attestedState.node).getSingleProof(BigInt(NEXT_SYNC_COMMITTEE_GINDEX));
+    const finalityBranch = new Tree(attestedState.node).getSingleProof(BigInt(FINALIZED_ROOT_GINDEX));
+
+    const signingRoot = getSyncAggregateSigningRoot(config, attestedHeader);
     const syncAggregate = signAndAggregate(signingRoot, sks);
 
     const syncCommittee: SyncCommitteeFast = {
@@ -91,13 +89,13 @@ describe("validation", function () {
     };
 
     update = {
-      attestedHeader: syncAttestedBlockHeader,
-      nextSyncCommittee: nextSyncCommittee,
-      nextSyncCommitteeBranch: nextSyncCommitteeBranch,
-      finalizedHeader: finalizedHeader,
-      finalityBranch: finalityBranch,
+      attestedHeader,
+      nextSyncCommittee,
+      nextSyncCommitteeBranch,
+      finalizedHeader,
+      finalityBranch,
       syncAggregate,
-      forkVersion,
+      signatureSlot: updateHeaderSlot,
     };
 
     snapshot = {

@@ -1,13 +1,16 @@
 import fs from "node:fs";
 import path from "node:path";
-import {expect} from "chai";
 import {ForkName} from "@lodestar/params";
 import {describeDirectorySpecTest} from "@lodestar/spec-test-util";
-import {SPEC_TEST_LOCATION} from "../specTestVersioning.js";
 import {RunnerType, TestRunner} from "./types.js";
 
-const specTestsTestPath = path.join(SPEC_TEST_LOCATION, "tests");
-const ARTIFACT_FILENAMES = new Set(["._.DS_Store", ".DS_Store"]);
+const ARTIFACT_FILENAMES = new Set([
+  // MacOS artifacts
+  "._.DS_Store",
+  ".DS_Store",
+  // File included by spec tests downloader
+  "version.txt",
+]);
 
 /**
  * This helper ensures that strictly all tests are run. There's no hardcoded value beyond "config".
@@ -35,21 +38,8 @@ const ARTIFACT_FILENAMES = new Set(["._.DS_Store", ".DS_Store"]);
  * ```
  * Ref: https://github.com/ethereum/consensus-specs/tree/dev/tests/formats#test-structure
  */
-export function specTestIterator(configName: string, testRunners: Record<string, TestRunner>): void {
-  // Check no unknown directory at the top level
-  it("Check top level directories", () => {
-    expect(readdirSyncSpec(specTestsTestPath).sort()).to.deep.equal(
-      ["general", "mainnet", "minimal"],
-      "Unknown top level directories"
-    );
-  });
-
-  const configDirpath = path.join(specTestsTestPath, configName);
+export function specTestIterator(configDirpath: string, testRunners: Record<string, TestRunner>): void {
   for (const forkStr of readdirSyncSpec(configDirpath)) {
-    // TODO enable capella
-    if (forkStr === "capella") {
-      continue;
-    }
     const fork = ForkName[forkStr as ForkName];
     if (fork === undefined) {
       throw Error(`Unknown fork ${forkStr}`);
@@ -58,7 +48,7 @@ export function specTestIterator(configName: string, testRunners: Record<string,
     const forkDirpath = path.join(configDirpath, fork);
     for (const testRunnerName of readdirSyncSpec(forkDirpath)) {
       // We don't have runner for light client yet
-      if (testRunnerName === "light_client") {
+      if (["light_client", "sync"].includes(testRunnerName)) {
         continue;
       }
       const testRunnerDirpath = path.join(forkDirpath, testRunnerName);
@@ -71,7 +61,7 @@ export function specTestIterator(configName: string, testRunners: Record<string,
       for (const testHandler of readdirSyncSpec(testRunnerDirpath)) {
         const testHandlerDirpath = path.join(testRunnerDirpath, testHandler);
         for (const testSuite of readdirSyncSpec(testHandlerDirpath)) {
-          const testId = `${configName}/${fork}/${testRunnerName}/${testHandler}/${testSuite}`;
+          const testId = `${fork}/${testRunnerName}/${testHandler}/${testSuite}`;
           const testSuiteDirpath = path.join(testHandlerDirpath, testSuite);
           // Specific logic for ssz_static since it has one extra level of directories
           if (testRunner.type === RunnerType.custom) {
@@ -92,7 +82,7 @@ export function specTestIterator(configName: string, testRunners: Record<string,
   }
 }
 
-function readdirSyncSpec(dirpath: string): string[] {
+export function readdirSyncSpec(dirpath: string): string[] {
   const files = fs.readdirSync(dirpath);
   return files.filter((file) => !ARTIFACT_FILENAMES.has(file));
 }

@@ -1909,7 +1909,7 @@
       "type": "timeseries"
     }
   ],
-  "refresh": false,
+  "refresh": "10s",
   "schemaVersion": 35,
   "style": "dark",
   "tags": ["lodestar"],
@@ -2019,11 +2019,11 @@
             "condition": "",
             "key": "instance",
             "operator": "=",
-            "value": "stable-lg1k-hzax41"
+            "value": "unstable-lg1k-hzax41"
           }
         ],
         "hide": 0,
-        "name": "ByJob",
+        "name": "Filters",
         "skipUrlSync": false,
         "type": "adhoc"
       }

@@ -1,9 +1,10 @@
+import {ACTIVE_PRESET} from "@lodestar/params";
 import {NetworkName, networkNames} from "../networks/index.js";
 import {ICliCommandOptions, readFile} from "../util/index.js";
 import {paramsOptions, IParamsArgs} from "./paramsOptions.js";
 
 interface IGlobalSingleArgs {
-  dataDir: string;
+  dataDir?: string;
   network?: NetworkName;
   paramsFile: string;
   preset: string;
@@ -33,6 +34,7 @@ const globalSingleOptions: ICliCommandOptions<IGlobalSingleArgs> = {
   preset: {
     hidden: true,
     type: "string",
+    default: ACTIVE_PRESET,
   },
 };
 

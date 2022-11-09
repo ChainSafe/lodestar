@@ -12,10 +12,9 @@ import {
   PubkeyIndexMap,
 } from "@lodestar/state-transition";
 import {IBeaconConfig} from "@lodestar/config";
-import {allForks, bellatrix, UintNum64, Root, phase0, Slot, RootHex, Epoch, ValidatorIndex} from "@lodestar/types";
+import {allForks, UintNum64, Root, phase0, Slot, RootHex, Epoch, ValidatorIndex} from "@lodestar/types";
 import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {ProcessShutdownCallback} from "@lodestar/validator";
-
 import {ILogger, toHex} from "@lodestar/utils";
 import {CompositeTypeAny, fromHexString, TreeView, Type} from "@chainsafe/ssz";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
@@ -31,7 +30,7 @@ import {ensureDir, writeIfNotExist} from "../util/file.js";
 import {CheckpointStateCache, StateContextCache} from "./stateCache/index.js";
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
 import {IBeaconClock, LocalClock} from "./clock/index.js";
-import {ChainEventEmitter, ChainEvent} from "./emitter.js";
+import {ChainEventEmitter, ChainEvent, HeadEventData} from "./emitter.js";
 import {IBeaconChain, ProposerPreparationData} from "./interface.js";
 import {IChainOptions} from "./options.js";
 import {IStateRegenerator, QueuedStateRegenerator, RegenCaller} from "./regen/index.js";
@@ -193,8 +192,6 @@ export class BeaconChain implements IBeaconChain {
       : new BlsMultiThreadWorkerPool(opts, {logger, metrics});
 
     if (!clock) clock = new LocalClock({config, emitter, genesisTime: this.genesisTime, signal});
-    const stateCache = new StateContextCache({metrics});
-    const checkpointStateCache = new CheckpointStateCache({metrics});
 
     this.seenAggregatedAttestations = new SeenAggregatedAttestations(metrics);
     this.seenContributionAndProof = new SeenContributionAndProof(metrics);
@@ -220,8 +217,12 @@ export class BeaconChain implements IBeaconChain {
     this.pubkey2index = cachedState.epochCtx.pubkey2index;
     this.index2pubkey = cachedState.epochCtx.index2pubkey;
 
+    const stateCache = new StateContextCache({metrics});
+    const checkpointStateCache = new CheckpointStateCache({metrics});
+
     const {checkpoint} = computeAnchorCheckpoint(config, anchorState);
     stateCache.add(cachedState);
+    stateCache.setHeadState(cachedState);
     checkpointStateCache.add(checkpoint, cachedState);
 
     const forkChoice = initializeForkChoice(
@@ -266,12 +267,12 @@ export class BeaconChain implements IBeaconChain {
 
     metrics?.opPool.aggregatedAttestationPoolSize.addCollect(() => this.onScrapeMetrics());
 
-    // Event handlers
-    this.emitter.addListener(ChainEvent.clockSlot, this.onClockSlot.bind(this));
-    this.emitter.addListener(ChainEvent.clockEpoch, this.onClockEpoch.bind(this));
-    this.emitter.addListener(ChainEvent.forkChoiceFinalized, this.onForkChoiceFinalized.bind(this));
-    this.emitter.addListener(ChainEvent.forkChoiceJustified, this.onForkChoiceJustified.bind(this));
-    this.emitter.addListener(ChainEvent.forkChoiceHead, this.onForkChoiceHead.bind(this));
+    // Event handlers. emitter is created internally and dropped on close(). Not need to .removeListener()
+    emitter.addListener(ChainEvent.clockSlot, this.onClockSlot.bind(this));
+    emitter.addListener(ChainEvent.clockEpoch, this.onClockEpoch.bind(this));
+    emitter.addListener(ChainEvent.forkChoiceFinalized, this.onForkChoiceFinalized.bind(this));
+    emitter.addListener(ChainEvent.forkChoiceJustified, this.onForkChoiceJustified.bind(this));
+    emitter.addListener(ChainEvent.head, this.onNewHead.bind(this));
   }
 
   async close(): Promise<void> {
@@ -343,7 +344,7 @@ export class BeaconChain implements IBeaconChain {
     return this.produceBlockWrapper<BlockType.Full>(BlockType.Full, blockAttributes);
   }
 
-  async produceBlindedBlock(blockAttributes: BlockAttributes): Promise<bellatrix.BlindedBeaconBlock> {
+  async produceBlindedBlock(blockAttributes: BlockAttributes): Promise<allForks.BlindedBeaconBlock> {
     return this.produceBlockWrapper<BlockType.Blinded>(BlockType.Blinded, blockAttributes);
   }
 
@@ -610,11 +611,11 @@ export class BeaconChain implements IBeaconChain {
     }
   }
 
-  private onForkChoiceHead(head: ProtoBlock): void {
+  private onNewHead(head: HeadEventData): void {
     const delaySec = this.clock.secFromSlot(head.slot);
     this.logger.verbose("New chain head", {
       headSlot: head.slot,
-      headRoot: head.blockRoot,
+      headRoot: head.block,
       delaySec,
     });
     this.syncContributionAndProofPool.prune(head.slot);

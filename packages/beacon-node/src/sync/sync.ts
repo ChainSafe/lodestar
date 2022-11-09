@@ -1,4 +1,4 @@
-import PeerId from "peer-id";
+import {PeerId} from "@libp2p/interface-peer-id";
 import {ILogger} from "@lodestar/utils";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Slot, phase0} from "@lodestar/types";
@@ -6,6 +6,7 @@ import {INetwork, NetworkEvent} from "../network/index.js";
 import {isOptimsticBlock} from "../util/forkChoice.js";
 import {IMetrics} from "../metrics/index.js";
 import {ChainEvent, IBeaconChain} from "../chain/index.js";
+import {GENESIS_SLOT} from "../constants/constants.js";
 import {IBeaconSync, ISyncModules, SyncingStatus} from "./interface.js";
 import {RangeSync, RangeSyncStatus, RangeSyncEvent} from "./range/range.js";
 import {getPeerSyncType, PeerSyncType, peerSyncTypes} from "./utils/remoteSyncType.js";
@@ -72,27 +73,37 @@ export class BeaconSync implements IBeaconSync {
 
   getSyncStatus(): SyncingStatus {
     const currentSlot = this.chain.clock.currentSlot;
-    const head = this.chain.forkChoice.getHead();
+    // If we are pre/at genesis, signal ready
+    if (currentSlot <= GENESIS_SLOT) {
+      return {
+        headSlot: "0",
+        syncDistance: "0",
+        isSyncing: false,
+        isOptimistic: false,
+      };
+    } else {
+      const head = this.chain.forkChoice.getHead();
 
-    switch (this.state) {
-      case SyncState.SyncingFinalized:
-      case SyncState.SyncingHead:
-      case SyncState.Stalled:
-        return {
-          headSlot: String(head.slot),
-          syncDistance: String(currentSlot - head.slot),
-          isSyncing: true,
-          isOptimistic: isOptimsticBlock(head),
-        };
-      case SyncState.Synced:
-        return {
-          headSlot: String(head.slot),
-          syncDistance: "0",
-          isSyncing: false,
-          isOptimistic: isOptimsticBlock(head),
-        };
-      default:
-        throw new Error("Node is stopped, cannot get sync status");
+      switch (this.state) {
+        case SyncState.SyncingFinalized:
+        case SyncState.SyncingHead:
+        case SyncState.Stalled:
+          return {
+            headSlot: String(head.slot),
+            syncDistance: String(currentSlot - head.slot),
+            isSyncing: true,
+            isOptimistic: isOptimsticBlock(head),
+          };
+        case SyncState.Synced:
+          return {
+            headSlot: String(head.slot),
+            syncDistance: "0",
+            isSyncing: false,
+            isOptimistic: isOptimsticBlock(head),
+          };
+        default:
+          throw new Error("Node is stopped, cannot get sync status");
+      }
     }
   }
 
@@ -155,7 +166,7 @@ export class BeaconSync implements IBeaconSync {
     const syncType = getPeerSyncType(localStatus, peerStatus, this.chain.forkChoice, this.slotImportTolerance);
 
     // For metrics only
-    this.peerSyncType.set(peerId.toB58String(), syncType);
+    this.peerSyncType.set(peerId.toString(), syncType);
 
     if (syncType === PeerSyncType.Advanced) {
       this.rangeSync.addPeer(peerId, localStatus, peerStatus);
@@ -170,7 +181,7 @@ export class BeaconSync implements IBeaconSync {
   private removePeer = (peerId: PeerId): void => {
     this.rangeSync.removePeer(peerId);
 
-    this.peerSyncType.delete(peerId.toB58String());
+    this.peerSyncType.delete(peerId.toString());
   };
 
   /**

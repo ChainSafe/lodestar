@@ -1,46 +1,58 @@
-import {Writable} from "node:stream";
 import winston from "winston";
 import type {Logger} from "winston";
-import chalk from "chalk";
-import {defaultLogLevel, ILogger, ILoggerOptions, LogLevel, logLevelNum} from "./interface.js";
+import {ILogger, ILoggerOptions, LoggerChildOpts, LogLevel, logLevelNum} from "./interface.js";
 import {getFormat} from "./format.js";
-import {TransportOpts, TransportType, fromTransportOpts} from "./transport.js";
 import {LogData} from "./json.js";
 
-const {createLogger} = winston;
+// # How to configure Winston log level?
+//
+// - Log level is meant to be configured BY TRANSPORT only
+// - There's no native logic that allows different logLevels by metadata.module
+// - Transports are shared between child loggers, so a custom transport is required
+//
+// This is the logic that controls if log or not based on each log message level.
+// Winston transport base class TransportStream check its own transport level to decide to format then log
+//
+// ```ts
+// TransportStream.prototype._write = function _write(info, enc, callback) {
+//   const level = this.level || (this.parent && this.parent.level);
+//   if (!level || this.levels[level] >= this.levels[info[LEVEL]]) {
+//     transformed = this.format.transform(Object.assign({}, info), this.format.options);
+//     return this.log(transformed, callback);
+//   }
+// };
+// ```
+// https://github.com/winstonjs/winston-transport/blob/51baf6138753f0766181355fb50b1b0334344c56/index.js#L80
+//
+// To configure different logLevel per metadata.module the simplest solution is to have a custom Transport
+// that overrides the `transport._write` with a lookup on a Map of module -> log level. This is done in
+// the CLI package on a special ConsoleTransport that could be set dynamically.
 
-const defaultTransportOpts: TransportOpts = {type: TransportType.console};
-
-type DefaultMeta = {
+interface DefaultMeta {
   module: string;
-};
+}
+
+export function createWinstonLogger(options: Partial<ILoggerOptions> = {}, transports?: winston.transport[]): ILogger {
+  return WinstonLogger.fromOpts(options, transports);
+}
 
 export class WinstonLogger implements ILogger {
-  private winston: Logger;
-  private _level: LogLevel;
-  private _options: Partial<ILoggerOptions>;
-  private _transportOptsArr: TransportOpts[];
+  constructor(private readonly winston: Logger) {}
 
-  constructor(options: Partial<ILoggerOptions> = {}, transportOptsArr: TransportOpts[] = [defaultTransportOpts]) {
-    // `options.level` can override the level in the transport
-    // This is necessary for child logger opts to take effect
-    let minLevel = options?.level;
-    for (const transportOpts of transportOptsArr) {
-      transportOpts.level = getMinLevel(options?.level, transportOpts.level); // General level may override transport level
-      minLevel = getMinLevel(minLevel, transportOpts.level); // Compute the minLevel from general and all transports
-    }
+  static fromOpts(options: Partial<ILoggerOptions> = {}, transports?: winston.transport[]): WinstonLogger {
+    const defaultMeta: DefaultMeta = {module: options?.module || ""};
 
-    this.winston = createLogger({
-      level: options?.level || defaultLogLevel,
-      defaultMeta: {module: options?.module || ""} as DefaultMeta,
-      format: getFormat(options),
-      transports: transportOptsArr.map((transportOpts) => fromTransportOpts(transportOpts)),
-      exitOnError: false,
-    });
-    this._level = minLevel || defaultLogLevel;
-    // Store for child logger
-    this._options = options;
-    this._transportOptsArr = transportOptsArr;
+    return new WinstonLogger(
+      winston.createLogger({
+        // Do not set level at the logger level. Always control by Transport, unless for testLogger
+        level: options.level,
+        defaultMeta,
+        format: getFormat(options),
+        transports,
+        exitOnError: false,
+        levels: logLevelNum,
+      })
+    );
   }
 
   error(message: string, context?: LogData, error?: Error): void {
@@ -55,10 +67,6 @@ export class WinstonLogger implements ILogger {
     this.createLogEntry(LogLevel.info, message, context, error);
   }
 
-  important(message: string, context?: LogData, error?: Error): void {
-    this.createLogEntry(LogLevel.info, chalk.red(message), context, error);
-  }
-
   verbose(message: string, context?: LogData, error?: Error): void {
     this.createLogEntry(LogLevel.verbose, message, context, error);
   }
@@ -67,42 +75,33 @@ export class WinstonLogger implements ILogger {
     this.createLogEntry(LogLevel.debug, message, context, error);
   }
 
-  silly(message: string, context?: LogData, error?: Error): void {
-    this.createLogEntry(LogLevel.silly, message, context, error);
+  trace(message: string, context?: LogData, error?: Error): void {
+    this.createLogEntry(LogLevel.trace, message, context, error);
   }
 
-  profile(message: string, option?: {level: string; message: string}): void {
-    this.winston.profile(message, option);
-  }
+  child(options: LoggerChildOpts): WinstonLogger {
+    const parentMeta = this.winston.defaultMeta as DefaultMeta | undefined;
+    const childModule = [parentMeta?.module, options.module].filter(Boolean).join("/");
+    const defaultMeta: DefaultMeta = {module: childModule};
 
-  stream(): Writable {
-    throw Error("Not implemented");
-  }
+    // Same strategy as Winston's source .child.
+    // However, their implementation of child is to merge info objects where parent takes precedence, so it's
+    // impossible for child to overwrite 'module' field. Instead the winston class is cloned as defaultMeta
+    // overwritten completely.
+    // https://github.com/winstonjs/winston/blob/3f1dcc13cda384eb30fe3b941764e47a5a5efc26/lib/winston/logger.js#L47
+    const childWinston = Object.create(this.winston) as typeof this.winston;
 
-  child(options: ILoggerOptions): WinstonLogger {
-    // Concat module tags
-    if (options.module) options.module = [this._options.module, options.module].filter(Boolean).join(" ");
-    return new WinstonLogger({...this._options, ...options}, this._transportOptsArr);
+    childWinston.defaultMeta = defaultMeta;
+
+    return new WinstonLogger(childWinston);
   }
 
   private createLogEntry(level: LogLevel, message: string, context?: LogData, error?: Error): void {
-    // don't propagate if silenced or message level is more detailed than logger level
-    if (logLevelNum[level] > logLevelNum[this._level]) {
-      return;
-    }
-    this.winston[level](message, {context, error});
+    // Note: logger does not run format.transform function unless it will actually write the log to the transport
+
+    // If winston logger is called with `winston.info(message, context, error)` it triggers the "splat" path
+    // while we just need winston to forward an object to the custom formatter. So we call the fn signature below
+    // https://github.com/winstonjs/winston/blob/3f1dcc13cda384eb30fe3b941764e47a5a5efc26/lib/winston/logger.js#L221
+    this.winston.log(level, {message, context, error});
   }
-}
-
-/** Return the min LogLevel from multiple transports */
-function getMinLevel(...levelsArg: (LogLevel | undefined)[]): LogLevel {
-  const levels = levelsArg.filter((level): level is LogLevel => Boolean(level));
-
-  // Only if there are no levels to compute min from, consider defaultLogLevel
-  if (levels.length === 0) return defaultLogLevel;
-
-  return levels.reduce(
-    // error: 0, warn: 1, info: 2, ...
-    (minLevel, level) => (logLevelNum[level] > logLevelNum[minLevel] ? level : minLevel)
-  );
 }

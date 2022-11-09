@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import {expect} from "chai";
 import {IBeaconNodeOptions} from "@lodestar/beacon-node";
-import {LogLevel, RecursivePartial} from "@lodestar/utils";
+import {RecursivePartial} from "@lodestar/utils";
 import {parseBeaconNodeArgs, IBeaconNodeArgs} from "../../../src/options/beaconNodeOptions/index.js";
 import {getTestdirPath} from "../../utils.js";
 
@@ -15,6 +15,7 @@ describe("options / beaconNodeOptions", () => {
       rest: true,
       "rest.address": "127.0.0.1",
       "rest.port": 7654,
+      "rest.bodyLimit": 30e6,
 
       "chain.blsVerifyAllMultiThread": true,
       "chain.blsVerifyAllMainThread": true,
@@ -23,6 +24,7 @@ describe("options / beaconNodeOptions", () => {
       "chain.proposerBoostEnabled": false,
       "chain.disableImportExecutionFcU": false,
       "chain.computeUnrealized": true,
+      "chain.countUnrealizedFull": true,
       suggestedFeeRecipient: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       "chain.assertCorrectProgressiveBalances": true,
       "chain.maxSkipSlots": 100,
@@ -46,9 +48,6 @@ describe("options / beaconNodeOptions", () => {
       "builder.urls": ["http://localhost:8661"],
       "builder.timeout": 12000,
 
-      "logger.eth1.level": "debug",
-      "logger.unknown.level": "debug",
-
       metrics: true,
       "metrics.port": 8765,
       "metrics.address": "0.0.0.0",
@@ -69,6 +68,10 @@ describe("options / beaconNodeOptions", () => {
       "network.rateTrackerTimeoutMs": 60000,
       "network.dontSendGossipAttestationsToForkchoice": true,
       "network.allowPublishToZeroPeers": true,
+      "network.gossipsubD": 4,
+      "network.gossipsubDLow": 2,
+      "network.gossipsubDHigh": 6,
+      "network.gossipsubAwaitHandler": true,
 
       "sync.isSingleNode": true,
       "sync.disableProcessAsChainSegment": true,
@@ -84,6 +87,7 @@ describe("options / beaconNodeOptions", () => {
           enabled: true,
           address: "127.0.0.1",
           port: 7654,
+          bodyLimit: 30e6,
         },
       },
       chain: {
@@ -94,6 +98,7 @@ describe("options / beaconNodeOptions", () => {
         proposerBoostEnabled: false,
         disableImportExecutionFcU: false,
         computeUnrealized: true,
+        countUnrealizedFull: true,
         safeSlotsToImportOptimistically: 256,
         suggestedFeeRecipient: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         assertCorrectProgressiveBalances: true,
@@ -119,11 +124,6 @@ describe("options / beaconNodeOptions", () => {
         urls: ["http://localhost:8661"],
         timeout: 12000,
       },
-      logger: {
-        eth1: {
-          level: LogLevel.debug,
-        },
-      },
       metrics: {
         enabled: true,
         port: 8765,
@@ -147,6 +147,10 @@ describe("options / beaconNodeOptions", () => {
         rateTrackerTimeoutMs: 60000,
         dontSendGossipAttestationsToForkchoice: true,
         allowPublishToZeroPeers: true,
+        gossipsubD: 4,
+        gossipsubDLow: 2,
+        gossipsubDHigh: 6,
+        gossipsubAwaitHandler: true,
       },
       sync: {
         isSingleNode: true,

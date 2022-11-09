@@ -7,10 +7,12 @@ function getForkConfig({
   phase0,
   altair,
   bellatrix,
+  capella,
 }: {
   phase0: number;
   altair: number;
   bellatrix: number;
+  capella: number;
 }): IBeaconConfig {
   const forks: Record<ForkName, IForkInfo> = {
     phase0: {
@@ -18,6 +20,7 @@ function getForkConfig({
       seq: ForkSeq.phase0,
       epoch: phase0,
       version: Buffer.from([0, 0, 0, 0]),
+      prevVersion: Buffer.from([0, 0, 0, 0]),
       prevForkName: ForkName.phase0,
     },
     altair: {
@@ -25,6 +28,7 @@ function getForkConfig({
       seq: ForkSeq.altair,
       epoch: altair,
       version: Buffer.from([0, 0, 0, 1]),
+      prevVersion: Buffer.from([0, 0, 0, 0]),
       prevForkName: ForkName.phase0,
     },
     bellatrix: {
@@ -32,7 +36,16 @@ function getForkConfig({
       seq: ForkSeq.bellatrix,
       epoch: bellatrix,
       version: Buffer.from([0, 0, 0, 2]),
+      prevVersion: Buffer.from([0, 0, 0, 1]),
       prevForkName: ForkName.altair,
+    },
+    capella: {
+      name: ForkName.capella,
+      seq: ForkSeq.capella,
+      epoch: capella,
+      version: Buffer.from([0, 0, 0, 3]),
+      prevVersion: Buffer.from([0, 0, 0, 2]),
+      prevForkName: ForkName.bellatrix,
     },
   };
   const forksAscendingEpochOrder = Object.values(forks);
@@ -45,6 +58,7 @@ const testScenarios = [
     phase0: 0,
     altair: 0,
     bellatrix: Infinity,
+    capella: Infinity,
     testCases: [
       {epoch: -1, currentFork: "altair", nextFork: undefined, activeForks: ["altair"]},
       {epoch: 0, currentFork: "altair", nextFork: undefined, activeForks: ["altair"]},
@@ -55,6 +69,7 @@ const testScenarios = [
     phase0: 0,
     altair: 0,
     bellatrix: 0,
+    capella: Infinity,
     testCases: [
       {epoch: -1, currentFork: "bellatrix", nextFork: undefined, activeForks: ["bellatrix"]},
       {epoch: 0, currentFork: "bellatrix", nextFork: undefined, activeForks: ["bellatrix"]},
@@ -65,6 +80,7 @@ const testScenarios = [
     phase0: 0,
     altair: 1,
     bellatrix: 1,
+    capella: Infinity,
     testCases: [
       {epoch: -1, currentFork: "phase0", nextFork: "bellatrix", activeForks: ["phase0", "bellatrix"]},
       {epoch: 2, currentFork: "bellatrix", nextFork: undefined, activeForks: ["phase0", "bellatrix"]},
@@ -76,6 +92,7 @@ const testScenarios = [
     phase0: 0,
     altair: 1,
     bellatrix: 2,
+    capella: Infinity,
     testCases: [
       {epoch: -1, currentFork: "phase0", nextFork: "altair", activeForks: ["phase0", "altair"]},
       {epoch: 0, currentFork: "phase0", nextFork: "altair", activeForks: ["phase0", "altair", "bellatrix"]},
@@ -90,6 +107,7 @@ const testScenarios = [
     phase0: 0,
     altair: 5,
     bellatrix: 10,
+    capella: Infinity,
     testCases: [
       {epoch: -1, currentFork: "phase0", nextFork: "altair", activeForks: ["phase0"]},
       {epoch: 3, currentFork: "phase0", nextFork: "altair", activeForks: ["phase0", "altair"]},
@@ -103,10 +121,10 @@ const testScenarios = [
 ];
 
 for (const testScenario of testScenarios) {
-  const {phase0, altair, bellatrix, testCases} = testScenario;
+  const {phase0, altair, bellatrix, capella, testCases} = testScenario;
 
-  describe(`network / fork: phase0: ${phase0}, altair: ${altair}, bellatrix: ${bellatrix}`, () => {
-    const forkConfig = getForkConfig({phase0, altair, bellatrix});
+  describe(`network / fork: phase0: ${phase0}, altair: ${altair}, bellatrix: ${bellatrix} capella: ${capella}`, () => {
+    const forkConfig = getForkConfig({phase0, altair, bellatrix, capella});
     const forks = forkConfig.forks;
     for (const testCase of testCases) {
       const {epoch, currentFork, nextFork, activeForks} = testCase;

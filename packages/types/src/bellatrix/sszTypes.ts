@@ -12,7 +12,6 @@ import {ssz as phase0Ssz} from "../phase0/index.js";
 import {ssz as altairSsz} from "../altair/index.js";
 
 const {
-  Bytes20,
   Bytes32,
   UintNum64,
   Slot,
@@ -21,6 +20,7 @@ const {
   BLSSignature,
   UintBn256: Uint256,
   BLSPubkey,
+  ExecutionAddress,
 } = primitiveSsz;
 
 /**
@@ -39,7 +39,7 @@ export const Transactions = new ListCompositeType(Transaction, MAX_TRANSACTIONS_
 
 const executionPayloadFields = {
   parentHash: Root,
-  feeRecipient: Bytes20,
+  feeRecipient: ExecutionAddress,
   stateRoot: Bytes32,
   receiptsRoot: Bytes32,
   logsBloom: new ByteVectorType(BYTES_PER_LOGS_BLOOM),
@@ -192,7 +192,7 @@ export const SignedBlindedBeaconBlock = new ContainerType(
 
 export const ValidatorRegistrationV1 = new ContainerType(
   {
-    feeRecipient: Bytes20,
+    feeRecipient: ExecutionAddress,
     gasLimit: UintNum64,
     timestamp: UintNum64,
     pubkey: BLSPubkey,

@@ -3,7 +3,7 @@ import {preset as mainnet} from "./presets/mainnet/index.js";
 import {preset as minimal} from "./presets/minimal/index.js";
 import {preset as gnosis} from "./presets/gnosis/index.js";
 import {presetStatus} from "./presetStatus.js";
-import {userSelectedPreset} from "./setPreset.js";
+import {userSelectedPreset, userOverrides} from "./setPreset.js";
 
 export * from "./interface/index.js";
 export {ForkName, ForkSeq} from "./forkName.js";
@@ -83,7 +83,12 @@ export const {
   MAX_TRANSACTIONS_PER_PAYLOAD,
   BYTES_PER_LOGS_BLOOM,
   MAX_EXTRA_DATA_BYTES,
-} = presets[ACTIVE_PRESET];
+
+  MAX_PARTIAL_WITHDRAWALS_PER_EPOCH,
+  WITHDRAWAL_QUEUE_LIMIT,
+  MAX_BLS_TO_EXECUTION_CHANGES,
+  MAX_WITHDRAWALS_PER_PAYLOAD,
+} = {...presets[ACTIVE_PRESET], ...userOverrides};
 
 ////////////
 // Constants
@@ -117,8 +122,19 @@ export const DOMAIN_AGGREGATE_AND_PROOF = Uint8Array.from([6, 0, 0, 0]);
 export const DOMAIN_SYNC_COMMITTEE = Uint8Array.from([7, 0, 0, 0]);
 export const DOMAIN_SYNC_COMMITTEE_SELECTION_PROOF = Uint8Array.from([8, 0, 0, 0]);
 export const DOMAIN_CONTRIBUTION_AND_PROOF = Uint8Array.from([9, 0, 0, 0]);
+export const DOMAIN_BLS_TO_EXECUTION_CHANGE = Uint8Array.from([10, 0, 0, 0]);
 
+// Application specfic domains
+
+/**
+ * `DOMAIN_APPLICATION_MASK` reserves the rest of the bitspace in `DomainType` for application
+ * usage. This means for some `DomainType` `DOMAIN_SOME_APPLICATION`, `DOMAIN_SOME_APPLICATION
+ * & DOMAIN_APPLICATION_MASK` **MUST** be non-zero. This expression for any other `DomainType`
+ * in the consensus specs **MUST** be zero.
+ */
+export const DOMAIN_APPLICATION_MASK = Uint8Array.from([0, 0, 0, 1]);
 export const DOMAIN_APPLICATION_BUILDER = Uint8Array.from([0, 0, 0, 1]);
+
 // Participation flag indices
 
 export const TIMELY_SOURCE_FLAG_INDEX = 0;
@@ -181,6 +197,7 @@ export const NEXT_SYNC_COMMITTEE_GINDEX = 55;
  */
 export const NEXT_SYNC_COMMITTEE_DEPTH = 5;
 export const NEXT_SYNC_COMMITTEE_INDEX = 23;
+export const MAX_REQUEST_LIGHT_CLIENT_UPDATES = 128;
 
 /**
  * Optimistic sync

@@ -1,10 +1,16 @@
-name: Sim merge tests
+name: Sim merge execution/builder tests
 
-on: [pull_request, push]
+on: 
+  push:
+    # We intentionally don't run push on feature branches. See PR for rational. 
+    branches: [unstable, stable]
+  pull_request:
+  workflow_dispatch:
 
 env:
-  GETH_COMMIT: be9742721f56eb8bb7ebf4f6a03fb01b13a05408
-  NETHERMIND_COMMIT: 82f331a3e7ff21712a5f839e0a62ba7c16110e44
+  GETH_IMAGE: ethereum/client-go:v1.10.25
+  NETHERMIND_IMAGE: nethermind/nethermind:1.14.3
+  MERGEMOCK_IMAGE: g11tech/mergemock:latest
 
 jobs:
   sim-merge-tests:
@@ -35,42 +41,43 @@ jobs:
         if: steps.cache-deps.outputs.cache-hit == 'true'
       # </common-build>
 
-      # Install Geth merge interop
-      - uses: actions/setup-go@v2
-        with:
-          go-version: '1.17'
-      - name: Clone Geth merge interop branch
-        run: git clone -b master https://github.com/g11tech/go-ethereum.git && cd go-ethereum && git reset --hard $GETH_COMMIT && git submodule update --init --recursive
-      - name: Build Geth
-        run: cd go-ethereum && make
+      - name: Pull Geth
+        run: docker pull $GETH_IMAGE
 
       - name: Test Lodestar <> Geth interop
         run: yarn test:sim:merge-interop
         working-directory: packages/beacon-node
         env:
-          EL_BINARY_DIR: ../../go-ethereum/build/bin
-          EL_SCRIPT_DIR: geth
+          EL_BINARY_DIR: ${{ env.GETH_IMAGE }}
+          EL_SCRIPT_DIR: gethdocker
           ENGINE_PORT: 8551
           ETH_PORT: 8545
           TX_SCENARIOS: simple
 
-      # Install Nethermind merge interop
-      - uses: actions/setup-dotnet@v1
-        with:
-          dotnet-version: "6.0.x"
-      - name: Clone Nethermind merge interop branch
-        run: git clone -b kiln-rebased https://github.com/g11tech/nethermind --recursive && cd nethermind && git reset --hard $NETHERMIND_COMMIT && git submodule update --init --recursive
-      - name: Build Nethermind
-        run: cd nethermind/src/Nethermind && dotnet build Nethermind.sln -c Release
+      - name: Pull Nethermind
+        run: docker pull $NETHERMIND_IMAGE
 
       - name: Test Lodestar <> Nethermind interop
         run: yarn test:sim:merge-interop
         working-directory: packages/beacon-node
         env:
-          EL_BINARY_DIR: ../../nethermind/src/Nethermind/Nethermind.Runner
-          EL_SCRIPT_DIR: nethermind
+          EL_BINARY_DIR: ${{ env.NETHERMIND_IMAGE }}
+          EL_SCRIPT_DIR: netherminddocker
           ENGINE_PORT: 8551
           ETH_PORT: 8545
+
+      - name: Pull mergemock
+        run: docker pull $MERGEMOCK_IMAGE
+
+      - name: Test Lodestar <> mergemock relay
+        run: yarn test:sim:mergemock
+        working-directory: packages/beacon-node
+        env:
+          EL_BINARY_DIR: ${{ env.MERGEMOCK_IMAGE }}
+          EL_SCRIPT_DIR: mergemock
+          LODESTAR_PRESET: mainnet
+          ENGINE_PORT: 8551
+          ETH_PORT: 8661
 
       - name: Upload debug log test files
         if: ${{ always() }}

@@ -7,6 +7,7 @@ export interface IForkInfo {
   seq: ForkSeq;
   epoch: Epoch;
   version: Version;
+  prevVersion: Version;
   prevForkName: ForkName;
 }
 
@@ -30,4 +31,8 @@ export interface IForkConfig {
   getForkVersion(slot: Slot): Version;
   /** Get SSZ types by hard-fork */
   getForkTypes(slot: Slot): allForks.AllForksSSZTypes;
+  /** Get execution SSZ tyoes by hard-fork*/
+  getExecutionForkTypes(slot: Slot): allForks.AllForksExecutionSSZTypes;
+  /** Get blinded SSZ types by hard-fork */
+  getBlindedForkTypes(slot: Slot): allForks.AllForksBlindedSSZTypes;
 }

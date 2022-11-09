@@ -21,7 +21,6 @@ const {
   SubcommitteeIndex,
   ValidatorIndex,
   Root,
-  Version,
   BLSPubkey,
   BLSSignature,
   ParticipationFlags,
@@ -183,13 +182,13 @@ export const BeaconState = new ContainerType(
   {typeName: "BeaconState", jsonCase: "eth2"}
 );
 
-export const LightClientSnapshot = new ContainerType(
+export const LightClientBootstrap = new ContainerType(
   {
     header: phase0Ssz.BeaconBlockHeader,
     currentSyncCommittee: SyncCommittee,
-    nextSyncCommittee: SyncCommittee,
+    currentSyncCommitteeBranch: new VectorCompositeType(Bytes32, NEXT_SYNC_COMMITTEE_DEPTH),
   },
-  {typeName: "LightClientSnapshot", jsonCase: "eth2"}
+  {typeName: "LightClientBootstrap", jsonCase: "eth2"}
 );
 
 export const LightClientUpdate = new ContainerType(
@@ -200,14 +199,42 @@ export const LightClientUpdate = new ContainerType(
     finalizedHeader: phase0Ssz.BeaconBlockHeader,
     finalityBranch: new VectorCompositeType(Bytes32, FINALIZED_ROOT_DEPTH),
     syncAggregate: SyncAggregate,
-    forkVersion: Version,
+    signatureSlot: Slot,
   },
   {typeName: "LightClientUpdate", jsonCase: "eth2"}
 );
 
+export const LightClientFinalityUpdate = new ContainerType(
+  {
+    attestedHeader: phase0Ssz.BeaconBlockHeader,
+    finalizedHeader: phase0Ssz.BeaconBlockHeader,
+    finalityBranch: new VectorCompositeType(Bytes32, FINALIZED_ROOT_DEPTH),
+    syncAggregate: SyncAggregate,
+    signatureSlot: Slot,
+  },
+  {typeName: "LightClientFinalityUpdate", jsonCase: "eth2"}
+);
+
+export const LightClientOptimisticUpdate = new ContainerType(
+  {
+    attestedHeader: phase0Ssz.BeaconBlockHeader,
+    syncAggregate: SyncAggregate,
+    signatureSlot: Slot,
+  },
+  {typeName: "LightClientOptimisticUpdate", jsonCase: "eth2"}
+);
+
+export const LightClientUpdatesByRange = new ContainerType(
+  {
+    startPeriod: UintNum64,
+    count: UintNum64,
+  },
+  {typeName: "LightClientUpdatesByRange", jsonCase: "eth2"}
+);
+
 export const LightClientStore = new ContainerType(
   {
-    snapshot: LightClientSnapshot,
+    snapshot: LightClientBootstrap,
     validUpdates: new ListCompositeType(LightClientUpdate, EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH),
   },
   {typeName: "LightClientStore", jsonCase: "eth2"}
