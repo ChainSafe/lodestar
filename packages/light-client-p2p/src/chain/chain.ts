@@ -52,6 +52,7 @@ import {
   OpPool,
 } from "./opPools/index.js";
 import {LightClientServer} from "./lightClient/index.js";
+import {Archiver} from "./archiver/index.js";
 import {PrepareNextSlotScheduler} from "./prepareNextSlot.js";
 import {ReprocessController} from "./reprocess.js";
 import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
@@ -113,6 +114,7 @@ export class LightChain implements IBeaconChain {
   protected readonly blockProcessor: BlockProcessor;
   protected readonly db: IBeaconDb;
   protected readonly metrics: IMetrics | null;
+  private readonly archiver: Archiver;
   private abortController = new AbortController();
   private successfulExchangeTransition = false;
   private readonly exchangeTransitionConfigurationEverySlots: number;
@@ -258,6 +260,7 @@ export class LightChain implements IBeaconChain {
     this.emitter = emitter;
     this.lightClientServer = lightClientServer;
 
+    this.archiver = new Archiver(db, this, logger, signal, opts);
     // always run PrepareNextSlotScheduler except for fork_choice spec tests
     if (!opts?.disablePrepareNextSlot) {
       new PrepareNextSlotScheduler(this, this.config, metrics, this.logger, signal);
@@ -306,6 +309,7 @@ export class LightChain implements IBeaconChain {
 
   /** Persist in-memory data to the DB. Call at least once before stopping the process */
   async persistToDisk(): Promise<void> {
+    await this.archiver.persistToDisk();
     await this.opPool.toPersisted(this.db);
   }
 

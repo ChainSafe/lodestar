@@ -82,6 +82,7 @@ describe.skip("verify+import blocks - range sync perf test", () => {
           proposerBoostEnabled: true,
           computeUnrealized: false,
           safeSlotsToImportOptimistically: SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY,
+          disableArchiveOnCheckpoint: true,
           suggestedFeeRecipient: defaultValidatorOptions.suggestedFeeRecipient,
           skipCreateStateCacheIfAvailable: true,
         },
