@@ -138,9 +138,7 @@ export class BlockProposingService {
     blobsSidecar.beaconBlockRoot = blindedOrFullBlockHashTreeRoot(this.config, block);
     blobsSidecar.beaconBlockSlot = block.slot;
     blobsSidecar.blobs = blobs;
-    blobsSidecar.kzgAggregatedProof = blobs.length
-      ? computeAggregateKzgProof(blobs)
-      : ssz.eip4844.KZGProof.defaultValue();
+    blobsSidecar.kzgAggregatedProof = computeAggregateKzgProof(blobs);
 
     return blobsSidecar;
   }
