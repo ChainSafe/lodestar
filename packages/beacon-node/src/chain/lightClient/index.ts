@@ -1,9 +1,11 @@
-import {altair, BLSPubkey, phase0, Root, RootHex, Slot, ssz, SyncPeriod} from "@lodestar/types";
+import {concat} from "uint8arrays";
+import {altair, phase0, Root, RootHex, Slot, ssz, SyncPeriod} from "@lodestar/types";
 import {IChainForkConfig} from "@lodestar/config";
 import {CachedBeaconStateAltair, computeSyncPeriodAtEpoch, computeSyncPeriodAtSlot} from "@lodestar/state-transition";
 import {ILogger, MapDef, pruneSetToMax} from "@lodestar/utils";
 import {BitArray, CompositeViewDU, toHexString} from "@chainsafe/ssz";
 import {MIN_SYNC_COMMITTEE_PARTICIPANTS, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
+import {digest} from "@chainsafe/as-sha256";
 import {IBeaconDb} from "../../db/index.js";
 import {IMetrics} from "../../metrics/index.js";
 import {ChainEvent, ChainEventEmitter} from "../emitter.js";
@@ -294,7 +296,7 @@ export class LightClientServer {
   /**
    * API ROUTE to get the current sync committee from the best available update for `period`.
    */
-  async getCommitteeHash(period: number): Promise<BLSPubkey[]> {
+  async getCommitteeHash(period: number): Promise<Uint8Array> {
     const {attestedHeader} = await this.getUpdate(period);
     const blockRoot = ssz.phase0.BeaconBlockHeader.serialize(attestedHeader);
 
@@ -313,7 +315,7 @@ export class LightClientServer {
         `currentSyncCommittee not available ${toHexString(blockRoot)} for period ${period}`
       );
     }
-    return currentSyncCommittee.pubkeys;
+    return digest(concat(currentSyncCommittee.pubkeys));
   }
 
   /**

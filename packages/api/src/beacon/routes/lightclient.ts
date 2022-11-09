@@ -1,6 +1,6 @@
 import {JsonPath} from "@chainsafe/ssz";
 import {Proof} from "@chainsafe/persistent-merkle-tree";
-import {altair, BLSPubkey, phase0, ssz, SyncPeriod} from "@lodestar/types";
+import {altair, phase0, ssz, SyncPeriod} from "@lodestar/types";
 import {
   ArrayOf,
   ReturnTypes,
@@ -52,7 +52,7 @@ export type Api = {
   /**
    * Returns an array of sync committee hashes based on the provided period and count
    */
-  getCommitteeHash(startPeriod: SyncPeriod, count: number): Promise<{data: BLSPubkey[][]}>;
+  getCommitteeHash(startPeriod: SyncPeriod, count: number): Promise<{data: Uint8Array[]}>;
 };
 
 /**
@@ -115,6 +115,6 @@ export function getReturnTypes(): ReturnTypes<Api> {
     getOptimisticUpdate: ContainerData(ssz.altair.LightClientOptimisticUpdate),
     getFinalityUpdate: ContainerData(ssz.altair.LightClientFinalityUpdate),
     getBootstrap: ContainerData(ssz.altair.LightClientBootstrap),
-    getCommitteeHash: ContainerData(ArrayOf(ArrayOf(ssz.BLSPubkey))),
+    getCommitteeHash: ContainerData(ArrayOf(ssz.Root)),
   };
 }

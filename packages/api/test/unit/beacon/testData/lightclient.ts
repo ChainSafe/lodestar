@@ -68,6 +68,6 @@ export const testData: GenericServerTestCases<Api> = {
   },
   getCommitteeHash: {
     args: [1, 2],
-    res: {data: [lightClientUpdate.nextSyncCommittee.pubkeys]},
+    res: {data: [Buffer.alloc(32, 0), Buffer.alloc(32, 1)]},
   },
 };
