@@ -9,9 +9,9 @@ import {nodeAssertion} from "../utils/simulation/assertions/nodeAssertion.js";
 import {mergeAssertion} from "../utils/simulation/assertions/mergeAssertion.js";
 
 const genesisSlotsDelay = 20;
-const altairForkEpoch = 1;
-const bellatrixForkEpoch = 2;
-const runTillEpoch = 3;
+const altairForkEpoch = 2;
+const bellatrixForkEpoch = 4;
+const runTillEpoch = 6;
 const syncWaitEpoch = 2;
 
 const timeout =

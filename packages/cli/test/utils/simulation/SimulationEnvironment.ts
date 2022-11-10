@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import {mkdir, rm, writeFile} from "node:fs/promises";
+import {mkdir, writeFile} from "node:fs/promises";
 import {EventEmitter} from "node:events";
 import {join} from "node:path";
 import tmp from "tmp";
@@ -213,7 +213,6 @@ export class SimulationEnvironment {
     await Promise.all(this.jobs.map((j) => j.cl.stop()));
     await this.externalSigner.stop();
     await this.dockerRunner.stop();
-    await rm(this.options.rootDir, {recursive: true});
 
     if (this.tracker.getErrorCount() > 0) {
       this.tracker.printErrors();
