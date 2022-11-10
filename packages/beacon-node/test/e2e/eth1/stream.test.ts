@@ -6,7 +6,7 @@ import {Eth1Provider} from "../../../src/eth1/provider/eth1Provider.js";
 import {getGoerliRpcUrl} from "../../testParams.js";
 import {Eth1Options} from "../../../src/eth1/options.js";
 
-describe("Eth1 streams", function () {
+describe.skip("Eth1 streams", function () {
   this.timeout("2 min");
 
   let controller: AbortController;
