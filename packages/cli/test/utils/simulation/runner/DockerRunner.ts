@@ -94,16 +94,22 @@ export class DockerRunner implements Runner<RunnerType.Docker> {
 
   async stop(): Promise<void> {
     // Wait for couple of seconds to allow docker to cleanup containers to network connections
-    await sleep(5000);
-    await startChildProcess({
-      cli: {
-        command: "docker",
-        args: ["network", "rm", dockerNetworkName],
-      },
-      logs: {
-        stdoutFilePath: this.logFilePath,
-      },
-    });
+    for (let i = 0; i < 5; i++) {
+      try {
+        await startChildProcess({
+          cli: {
+            command: "docker",
+            args: ["network", "rm", dockerNetworkName],
+          },
+          logs: {
+            stdoutFilePath: this.logFilePath,
+          },
+        });
+        return;
+      } catch {
+        await sleep(5000);
+      }
+    }
   }
 
   getNextIp(): string {

@@ -89,4 +89,8 @@ await connectNewNode(checkpointSync.nodePair, env.nodes);
 await env.waitForNodeSync(rangeSync.nodePair);
 await env.waitForNodeSync(checkpointSync.nodePair);
 
+await rangeSync.jobs.cl.stop();
+await rangeSync.jobs.el.stop();
+await checkpointSync.jobs.cl.stop();
+await checkpointSync.jobs.el.stop();
 await env.stop();
