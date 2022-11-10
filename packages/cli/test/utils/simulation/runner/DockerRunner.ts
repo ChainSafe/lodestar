@@ -1,5 +1,6 @@
 /* eslint-disable no-console */
 import EventEmitter from "node:events";
+import {sleep} from "@lodestar/utils";
 import {
   ChildProcessWithJobOptions,
   Job,
@@ -92,6 +93,8 @@ export class DockerRunner implements Runner<RunnerType.Docker> {
   }
 
   async stop(): Promise<void> {
+    // Wait for couple of seconds to allow docker to cleanup containers to network connections
+    await sleep(5000);
     await startChildProcess({
       cli: {
         command: "docker",
@@ -121,7 +124,6 @@ export class DockerRunner implements Runner<RunnerType.Docker> {
     const dockerJobOptions = convertJobOptionsToDocker(jobs, id, {image, dataVolumePath, exposePorts, dockerNetworkIp});
 
     const stop = async (): Promise<void> => {
-      // eslint-disable-next-line no-console
       console.log(`Stopping "${id}"...`);
       this.emitter.emit("stopping");
       for (const {jobOptions, childProcess} of childProcesses) {
@@ -131,7 +133,6 @@ export class DockerRunner implements Runner<RunnerType.Docker> {
         await stopChildProcess(childProcess);
       }
 
-      // eslint-disable-next-line no-console
       console.log(`Stopped "${id}"...`);
       this.emitter.emit("stopped");
     };
