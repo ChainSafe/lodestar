@@ -3,16 +3,19 @@ import {createWriteStream, mkdirSync} from "node:fs";
 import {dirname} from "node:path";
 import {ChildProcessWithJobOptions, JobOptions} from "../interfaces.js";
 
+const childProcessHealthCheckInterval = 1000;
+
 export const stopChildProcess = async (
   childProcess: ChildProcess,
   signal: NodeJS.Signals | number = "SIGTERM"
 ): Promise<void> => {
-  if (childProcess.killed || childProcess.exitCode !== null) {
+  if (childProcess.killed || childProcess.exitCode !== null || childProcess.signalCode !== undefined) {
     return;
   }
 
-  return new Promise((resolve) => {
-    childProcess.on("close", resolve);
+  return new Promise((resolve, reject) => {
+    childProcess.once("error", reject);
+    childProcess.once("close", resolve);
     childProcess.kill(signal);
   });
 };
@@ -26,34 +29,44 @@ export const startChildProcess = async (jobOptions: JobOptions): Promise<ChildPr
 
       mkdirSync(dirname(jobOptions.logs.stdoutFilePath), {recursive: true});
       const stdoutFileStream = createWriteStream(jobOptions.logs.stdoutFilePath);
-
       childProcess.stdout?.pipe(stdoutFileStream);
       childProcess.stderr?.pipe(stdoutFileStream);
 
+      // If there is any error in running the child process, reject the promise
       childProcess.on("error", reject);
 
-      if (jobOptions.health !== undefined) {
+      // If there is a health check, wait for it to pass
+      if (jobOptions.health) {
         const intervalId = setInterval(async () => {
           if (jobOptions.health && (await jobOptions.health())) {
             clearInterval(intervalId);
+            childProcess.removeAllListeners("exit");
             resolve(childProcess);
           }
-        }, 1000);
-        childProcess.on("exit", (code: number) => {
+        }, childProcessHealthCheckInterval);
+
+        childProcess.once("exit", (code: number) => {
           clearInterval(intervalId);
           stdoutFileStream.close();
-          reject(new Error(`process exited with code ${code}`));
+          reject(
+            new Error(`process exited with code ${code}. ${jobOptions.cli.command} ${jobOptions.cli.args.join(" ")}`)
+          );
         });
-      } else {
-        childProcess.on("exit", (code: number) => {
-          stdoutFileStream.close();
-          if (code > 0) {
-            reject(new Error(`process exited with code ${code}`));
-          } else {
-            resolve(childProcess);
-          }
-        });
+
+        return;
       }
+
+      // If there is no health check, resolve/reject on completion
+      childProcess.once("exit", (code: number) => {
+        stdoutFileStream.close();
+        if (code > 0) {
+          reject(
+            new Error(`$process exited with code ${code}. ${jobOptions.cli.command} ${jobOptions.cli.args.join(" ")}`)
+          );
+        } else {
+          resolve(childProcess);
+        }
+      });
     })();
   });
 };
