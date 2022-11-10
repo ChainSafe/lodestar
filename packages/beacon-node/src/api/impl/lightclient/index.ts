@@ -74,7 +74,9 @@ export function getLightclientApi(
     async getCommitteeHash(startPeriod: SyncPeriod, count: number) {
       const maxAllowedCount = Math.min(MAX_REQUEST_LIGHT_CLIENT_COMMITTEE_HASHES, count);
       const periods = Array.from({length: maxAllowedCount}, (_ignored, i) => i + startPeriod);
-      const committeeHashes = await Promise.all(periods.map(chain.lightClientServer.getCommitteeHash));
+      const committeeHashes = await Promise.all(
+        periods.map((period) => chain.lightClientServer.getCommitteeHash(period))
+      );
       return {data: committeeHashes};
     },
   };

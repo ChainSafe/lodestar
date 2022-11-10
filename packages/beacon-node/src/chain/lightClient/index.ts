@@ -298,7 +298,7 @@ export class LightClientServer {
    */
   async getCommitteeHash(period: number): Promise<Uint8Array> {
     const {attestedHeader} = await this.getUpdate(period);
-    const blockRoot = ssz.phase0.BeaconBlockHeader.serialize(attestedHeader);
+    const blockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(attestedHeader);
 
     const syncCommitteeWitness = await this.db.syncCommitteeWitness.get(blockRoot);
     if (!syncCommitteeWitness) {

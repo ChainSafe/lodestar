@@ -64,7 +64,7 @@ export const routesData: RoutesData<Api> = {
   getOptimisticUpdate: {url: "/eth/v1/beacon/light_client/optimistic_update", method: "GET"},
   getFinalityUpdate: {url: "/eth/v1/beacon/light_client/finality_update", method: "GET"},
   getBootstrap: {url: "/eth/v1/beacon/light_client/bootstrap/{block_root}", method: "GET"},
-  getCommitteeHash: {url: "/eth/v1/beacon/light_client/committe_hash", method: "GET"},
+  getCommitteeHash: {url: "/eth/v1/beacon/light_client/committee_hash", method: "GET"},
 };
 
 /* eslint-disable @typescript-eslint/naming-convention */
