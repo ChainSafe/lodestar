@@ -1,6 +1,6 @@
 import {Connection} from "@libp2p/interface-connection";
 import {routes} from "@lodestar/api";
-import {PeerStatus} from "../../../network/index.js";
+import {PeerStatus} from "@lodestar/beacon-node/network";
 
 /**
  * Format a list of connections from libp2p connections manager into the API's format NodePeer

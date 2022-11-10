@@ -6,15 +6,15 @@ import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {fromHexString} from "@chainsafe/ssz";
 import {Validator} from "@lodestar/validator";
 import {PubkeyHex} from "@lodestar/validator/src/types";
+import {Network} from "@lodestar/beacon-node/network";
+import {BeaconNode} from "@lodestar/beacon-node";
 import {getAndInitDevValidators} from "../../utils/node/validator.js";
 import {ChainEvent} from "../../../src/chain/index.js";
-import {Network} from "../../../src/network/index.js";
 import {connect} from "../../utils/network.js";
 import {testLogger, LogLevel, TestLoggerOpts} from "../../utils/logger.js";
 import {getDevBeaconNode} from "../../utils/node/beacon.js";
 import {waitForEvent} from "../../utils/events/resolver.js";
 import {generateAttestationData} from "../../utils/attestation.js";
-import {BeaconNodeLight} from "../../../src/node/index.js";
 
 /* eslint-disable @typescript-eslint/no-unsafe-call,@typescript-eslint/no-unsafe-member-access,@typescript-eslint/no-unsafe-assignment */
 // TODO: Reconsider this tests latter.
@@ -47,7 +47,7 @@ describe.skip("doppelganger / doppelganger test", function () {
     doppelgangerProtectionEnabled?: boolean;
   };
 
-  async function createBNAndVC(config?: TestConfig): Promise<{beaconNode: BeaconNodeLight; validators: Validator[]}> {
+  async function createBNAndVC(config?: TestConfig): Promise<{beaconNode: BeaconNode; validators: Validator[]}> {
     const testLoggerOpts: TestLoggerOpts = {logLevel: LogLevel.info};
     const loggerNodeA = testLogger("Node-A", testLoggerOpts);
 

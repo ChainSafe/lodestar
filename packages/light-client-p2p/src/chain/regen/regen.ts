@@ -11,7 +11,7 @@ import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {sleep} from "@lodestar/utils";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {IChainForkConfig} from "@lodestar/config";
-import {IMetrics} from "../../metrics/index.js";
+import {IMetrics} from "@lodestar/beacon-node/metrics";
 import {IBeaconDb} from "../../db/index.js";
 import {CheckpointStateCache, StateContextCache} from "../stateCache/index.js";
 import {getCheckpointFromState} from "../blocks/utils/checkpoint.js";

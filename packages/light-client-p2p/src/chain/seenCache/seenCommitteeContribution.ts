@@ -2,7 +2,7 @@ import {Slot, ValidatorIndex} from "@lodestar/types";
 import {ContributionAndProof, SyncCommitteeContribution} from "@lodestar/types/altair";
 import {MapDef} from "@lodestar/utils";
 import {toHexString} from "@chainsafe/ssz";
-import {IMetrics} from "../../metrics/index.js";
+import {IMetrics} from "@lodestar/beacon-node/metrics";
 import {isSuperSetOrEqual} from "../../util/bitArray.js";
 import {AggregationInfo, insertDesc} from "./seenAggregateAndProof.js";
 

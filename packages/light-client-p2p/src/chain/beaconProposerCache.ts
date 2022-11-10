@@ -1,7 +1,7 @@
 import {Epoch} from "@lodestar/types";
 import {routes} from "@lodestar/api";
 import {MapDef} from "@lodestar/utils";
-import {IMetrics} from "../metrics/index.js";
+import {IMetrics} from "@lodestar/beacon-node/metrics";;
 
 const PROPOSER_PRESERVE_EPOCHS = 2;
 

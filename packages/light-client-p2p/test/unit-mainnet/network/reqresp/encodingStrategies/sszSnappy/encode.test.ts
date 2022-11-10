@@ -5,9 +5,11 @@ import varint from "varint";
 
 import {allForks, ssz} from "@lodestar/types";
 
-import {reqRespBlockResponseSerializer} from "../../../../../../src/network/reqresp/types.js";
-import {writeSszSnappyPayload} from "../../../../../../src/network/reqresp/encodingStrategies/sszSnappy/index.js";
-import {RequestOrOutgoingResponseBody} from "../../../../../../src/network/reqresp/types.js";
+import {writeSszSnappyPayload} from "@lodestar/beacon-node/network/reqresp/encodingStrategies/sszSnappy";
+import {
+  reqRespBlockResponseSerializer,
+  RequestOrOutgoingResponseBody,
+} from "@lodestar/beacon-node/network/reqresp/types";
 import {goerliShadowForkBlock13249} from "./testData.js";
 
 describe("network / reqresp / sszSnappy / encode", () => {

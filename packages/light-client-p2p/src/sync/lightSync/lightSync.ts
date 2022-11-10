@@ -15,12 +15,11 @@ import {
 } from "@lodestar/params";
 import {toHexString} from "@chainsafe/ssz";
 import {GossipsubEvents} from "@chainsafe/libp2p-gossipsub";
+import {GossipType, INetwork, NetworkEvent} from "@lodestar/beacon-node/network";
+import {IMetrics} from "@lodestar/beacon-node/metrics";
 import {IBeaconDb} from "../../db/index.js";
-import {GossipType, INetwork, NetworkEvent} from "../../network/index.js";
 import {ItTrigger} from "../../util/itTrigger.js";
 import {PeerSet} from "../../util/peerMap.js";
-import {IMetrics} from "../../metrics/metrics";
-import {DEFAULT_ENCODING} from "../../network/gossip/constants.js";
 import {LightChain} from "../../chain/index.js";
 import {
   assertValidFinalityProof,
@@ -41,6 +40,7 @@ import {
   SyncCommitteeFast,
   timeUntilNextEpoch,
 } from "./lightSyncUtils.js";
+import {DEFAULT_ENCODING} from "@lodestar/beacon-node/network/gossip/constants";
 
 /** Provides some protection against a server client sending header updates too far away in the future */
 const MAX_CLOCK_DISPARITY_SEC = 12;

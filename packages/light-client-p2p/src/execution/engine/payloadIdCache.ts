@@ -1,6 +1,6 @@
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {pruneSetToMax} from "@lodestar/utils";
-import {IMetrics} from "../../metrics/index.js";
+import {IMetrics} from "@lodestar/beacon-node/metrics";
 import {DATA, QUANTITY} from "../../eth1/provider/utils.js";
 
 // Idealy this only need to be set to the max head reorgs number

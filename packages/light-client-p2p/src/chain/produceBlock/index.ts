@@ -3,7 +3,7 @@ import {allForks, Root} from "@lodestar/types";
 import {fromHexString} from "@chainsafe/ssz";
 
 import {ZERO_HASH} from "../../constants/index.js";
-import {IMetrics} from "../../metrics/index.js";
+import {IMetrics} from "@lodestar/beacon-node/metrics";
 import {RegenCaller} from "../regen/index.js";
 import type {LightChain} from "../chain.js";
 import {produceBlockBody, BlockType, AssembledBlockType, BlockAttributes} from "./produceBlockBody.js";

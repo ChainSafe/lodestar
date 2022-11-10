@@ -1,7 +1,7 @@
 import {CachedBeaconStateAllForks, stateTransition} from "@lodestar/state-transition";
 import {allForks} from "@lodestar/types";
 import {ErrorAborted, sleep} from "@lodestar/utils";
-import {IMetrics} from "../../metrics/index.js";
+import {IMetrics} from "@lodestar/beacon-node/metrics";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
 import {byteArrayEquals} from "../../util/bytes.js";

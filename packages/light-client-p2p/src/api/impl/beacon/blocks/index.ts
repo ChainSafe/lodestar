@@ -4,9 +4,9 @@ import {computeTimeAtSlot} from "@lodestar/state-transition";
 import {SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {sleep} from "@lodestar/utils";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
+import {NetworkEvent} from "@lodestar/beacon-node/network";
+import {OpSource} from "@lodestar/beacon-node/metrics/validatorMonitor";
 import {BlockError, BlockErrorCode} from "../../../../chain/errors/index.js";
-import {OpSource} from "../../../../metrics/validatorMonitor.js";
-import {NetworkEvent} from "../../../../network/index.js";
 import {ApiModules, IS_OPTIMISTIC_TEMP} from "../../types.js";
 import {resolveBlockId, toBeaconHeaderResponse} from "./utils.js";
 

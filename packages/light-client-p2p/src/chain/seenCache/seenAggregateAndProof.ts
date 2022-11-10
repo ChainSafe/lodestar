@@ -1,7 +1,7 @@
 import {Epoch, RootHex} from "@lodestar/types";
 import {BitArray} from "@chainsafe/ssz";
 import {MapDef} from "@lodestar/utils";
-import {IMetrics} from "../../metrics/index.js";
+import {IMetrics} from "@lodestar/beacon-node/metrics";
 import {isSuperSetOrEqual} from "../../util/bitArray.js";
 
 /**

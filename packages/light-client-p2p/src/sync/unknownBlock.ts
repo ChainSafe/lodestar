@@ -4,9 +4,8 @@ import {IChainForkConfig} from "@lodestar/config";
 import {ILogger, pruneSetToMax} from "@lodestar/utils";
 import {allForks, Root, RootHex} from "@lodestar/types";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {INetwork, NetworkEvent, PeerAction} from "../network/index.js";
+import {INetwork, NetworkEvent, PeerAction} from "@lodestar/beacon-node/network";
 import {IBeaconChain} from "../chain/index.js";
-import {IMetrics} from "../metrics/index.js";
 import {shuffle} from "../util/shuffle.js";
 import {byteArrayEquals} from "../util/bytes.js";
 import {BlockError, BlockErrorCode} from "../chain/errors/index.js";
@@ -18,6 +17,7 @@ import {
   getLowestPendingUnknownParents,
 } from "./utils/pendingBlocksTree.js";
 import {SyncOptions} from "./options.js";
+import {IMetrics} from "@lodestar/beacon-node/metrics";
 
 const MAX_ATTEMPTS_PER_BLOCK = 5;
 const MAX_KNOWN_BAD_BLOCKS = 500;

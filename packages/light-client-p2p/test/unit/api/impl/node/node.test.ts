@@ -11,11 +11,11 @@ import {BitArray} from "@chainsafe/ssz";
 import {altair} from "@lodestar/types";
 import {routes} from "@lodestar/api";
 import {BeaconSync, IBeaconSync} from "../../../../../src/sync/index.js";
-import {INetwork, Network} from "../../../../../src/network/index.js";
-import {MetadataController} from "../../../../../src/network/metadata.js";
 import {defaultApiOptions} from "../../../../../src/api/options.js";
 import {getNodeApi} from "../../../../../src/api/impl/node/index.js";
 import {libp2pConnection} from "../../../../utils/node/p2p.js";
+import {INetwork, Network} from "@lodestar/beacon-node/network";
+import {MetadataController} from "@lodestar/beacon-node/network/metadata";
 
 interface IPeerSummary {
   direction: string | null;

@@ -126,6 +126,7 @@
     "@lodestar/types": "^1.1.1",
     "@lodestar/utils": "^1.1.1",
     "@lodestar/validator": "^1.1.1",
+    "@lodestar/beacon-node": "^1.1.1",
     "@multiformats/multiaddr": "^11.0.0",
     "@types/datastore-level": "^3.0.0",
     "buffer-xor": "^2.0.2",

@@ -2,7 +2,7 @@ import {IChainConfig} from "@lodestar/config";
 import {RootHex} from "@lodestar/types";
 import {ILogger, pruneSetToMax} from "@lodestar/utils";
 import {toHexString} from "@chainsafe/ssz";
-import {IMetrics} from "../metrics/index.js";
+import {IMetrics} from "@lodestar/beacon-node/metrics";
 import {ZERO_HASH_HEX} from "../constants/index.js";
 import {enumToIndexMap} from "../util/enum.js";
 import {IEth1Provider, EthJsonRpcBlockRaw, PowMergeBlock, PowMergeBlockTimestamp, TDProgress} from "./interface.js";

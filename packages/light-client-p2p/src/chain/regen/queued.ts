@@ -3,7 +3,7 @@ import {IForkChoice} from "@lodestar/fork-choice";
 import {CachedBeaconStateAllForks, computeEpochAtSlot} from "@lodestar/state-transition";
 import {toHexString} from "@chainsafe/ssz";
 import {CheckpointStateCache, StateContextCache, toCheckpointHex} from "../stateCache/index.js";
-import {IMetrics} from "../../metrics/index.js";
+import {IMetrics} from "@lodestar/beacon-node/metrics";
 import {JobItemQueue} from "../../util/queue/index.js";
 import {IStateRegenerator, RegenCaller, RegenFnName} from "./interface.js";
 import {StateRegenerator, RegenModules} from "./regen.js";

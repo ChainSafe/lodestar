@@ -1,4 +1,4 @@
-import {IAvgMinMax} from "../../metrics/index.js";
+import {IAvgMinMax} from "@lodestar/beacon-node/metrics";
 
 type MapTrackerMetrics = {
   reads: IAvgMinMax;

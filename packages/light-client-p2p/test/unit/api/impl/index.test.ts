@@ -5,9 +5,9 @@ import {ForkChoice} from "@lodestar/fork-choice";
 import {IChainForkConfig} from "@lodestar/config";
 import {getBeaconBlockApi} from "../../../../src/api/impl/beacon/blocks/index.js";
 import {LightChain} from "../../../../src/chain/index.js";
-import {Network} from "../../../../src/network/index.js";
 import {BeaconSync} from "../../../../src/sync/index.js";
 import {StubbedBeaconDb, StubbedChainMutable} from "../../../utils/stub/index.js";
+import {Network} from "@lodestar/beacon-node/network";
 
 type StubbedChain = StubbedChainMutable<"forkChoice" | "clock">;
 

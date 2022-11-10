@@ -9,19 +9,18 @@ import {Api} from "@lodestar/api";
 import {BeaconStateAllForks} from "@lodestar/state-transition";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 
-import {fromHexString} from "@chainsafe/ssz";
-import {IBeaconDb} from "../db/index.js";
-import {INetwork, Network, getReqRespHandlers} from "../network/index.js";
-import {BeaconSync, IBeaconSync} from "../sync/index.js";
+import {INetwork, Network, getReqRespHandlers} from "@lodestar/beacon-node/network";
+import {createMetrics, IMetrics} from "@lodestar/beacon-node/metrics";
+import {HttpMetricsServer, IBeaconDb} from "@lodestar/beacon-node";
+import {BeaconChain, IBeaconChain, initBeaconMetrics} from "@lodestar/beacon-node/chain";
+import {createLibp2pMetrics} from "@lodestar/beacon-node/metrics/metrics/libp2p";
+import {initializeEth1ForBlockProduction} from "@lodestar/beacon-node/eth1";
+import {initializeExecutionBuilder, initializeExecutionEngine} from "@lodestar/beacon-node/execution";
+import {BeaconSync, IBeaconSync} from "@lodestar/beacon-node/sync";
+import {BeaconRestApiServer, getApi} from "@lodestar/beacon-node/api";
 import {LightSync} from "../sync/lightSync/index.js";
-import {LightChain, IBeaconChain, initBeaconMetrics} from "../chain/index.js";
-import {createMetrics, IMetrics, HttpMetricsServer} from "../metrics/index.js";
-import {getApi, BeaconRestApiServer} from "../api/index.js";
-import {initializeExecutionEngine, initializeExecutionBuilder} from "../execution/index.js";
-import {initializeEth1ForBlockProduction} from "../eth1/index.js";
-import {createLibp2pMetrics} from "../metrics/metrics/libp2p.js";
 import {IBeaconNodeOptions} from "./options.js";
-import {runNodeNotifier} from "./notifier.js";
+import {runNodeNotifier} from "@lodestar/beacon-node/node/notifier";
 
 export * from "./options.js";
 
@@ -163,7 +162,7 @@ export class BeaconNodeLight {
       createLibp2pMetrics(libp2p, metrics.register);
     }
 
-    const chain = new LightChain(opts.chain, {
+    const chain = new BeaconChain(opts.chain, {
       config,
       db,
       logger: logger.child({module: LoggerModule.chain}),
@@ -182,6 +181,27 @@ export class BeaconNodeLight {
         ? initializeExecutionBuilder(opts.executionBuilder, config)
         : undefined,
     });
+
+    // TODO DA POC. Delete later
+    // const chain = new LightChain(opts.chain, {
+    //   config,
+    //   db,
+    //   logger: logger.child({module: LoggerModule.chain}),
+    //   processShutdownCallback,
+    //   metrics,
+    //   anchorState,
+    //   eth1: initializeEth1ForBlockProduction(opts.eth1, {
+    //     config,
+    //     db,
+    //     metrics,
+    //     logger: logger.child({module: LoggerModule.eth1}),
+    //     signal,
+    //   }),
+    //   executionEngine: initializeExecutionEngine(opts.executionEngine, {metrics, signal}),
+    //   executionBuilder: opts.executionBuilder.enabled
+    //     ? initializeExecutionBuilder(opts.executionBuilder, config)
+    //     : undefined,
+    // });
 
     // Load persisted data from disk to in-memory caches
     await chain.loadFromDisk();
@@ -220,26 +240,26 @@ export class BeaconNodeLight {
       metrics,
     });
 
-    const {data: genesisData} = await api.beacon.getGenesis();
-
-    const lightClientSync = await LightSync.init(
-      {
-        checkpointRoot: fromHexString(lcCheckpointRoot),
-        genesisData: {
-          genesisTime: Number(genesisData.genesisTime),
-          genesisValidatorsRoot: genesisData.genesisValidatorsRoot,
-        },
-      },
-      {
-        chain,
-        config,
-        db,
-        metrics,
-        network,
-        logger: logger.child({module: LoggerModule.lightClient}),
-        signal,
-      }
-    );
+    // TODO DA POC. Delete later
+    // const {data: genesisData} = await api.beacon.getGenesis();
+    // const lightClientSync = await LightSync.init(
+    //   {
+    //     checkpointRoot: fromHexString(lcCheckpointRoot),
+    //     genesisData: {
+    //       genesisTime: Number(genesisData.genesisTime),
+    //       genesisValidatorsRoot: genesisData.genesisValidatorsRoot,
+    //     },
+    //   },
+    //   {
+    //     chain,
+    //     config,
+    //     db,
+    //     metrics,
+    //     network,
+    //     logger: logger.child({module: LoggerModule.lightClient}),
+    //     signal,
+    //   }
+    // );
 
     const metricsServer = metrics
       ? new HttpMetricsServer(opts.metrics, {
@@ -274,7 +294,7 @@ export class BeaconNodeLight {
       api,
       restApi,
       sync,
-      backfillSync: lightClientSync,
+      backfillSync: null, // TODO DA revisit
       controller,
     }) as T;
   }

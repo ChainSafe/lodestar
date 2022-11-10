@@ -6,8 +6,8 @@ import {allForks, phase0} from "@lodestar/types";
 import {ProtoBlock, ExecutionStatus} from "@lodestar/fork-choice";
 import {isPlainObject} from "@lodestar/utils";
 import {RecursivePartial} from "@lodestar/utils";
+import {ReqRespBlockResponse} from "@lodestar/beacon-node/network/reqresp/types";
 import {EMPTY_SIGNATURE, ZERO_HASH} from "../../src/constants/index.js";
-import {ReqRespBlockResponse} from "../../src/network/reqresp/types.js";
 
 export function generateEmptyBlock(): phase0.BeaconBlock {
   return {

@@ -1,6 +1,6 @@
 import {Slot, RootHex} from "@lodestar/types";
 import {MapDef} from "@lodestar/utils";
-import {IMetrics} from "../metrics/index.js";
+import {IMetrics} from "@lodestar/beacon-node/metrics";;
 
 /**
  * To prevent our node from having to reprocess while struggling to sync,

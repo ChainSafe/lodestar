@@ -1,9 +1,9 @@
+import {defaultNetworkOptions, INetworkOptions} from "@lodestar/beacon-node/network/options";
+import {defaultMetricsOptions, MetricsOptions} from "@lodestar/beacon-node/metrics/options";
 import {defaultApiOptions, IApiOptions} from "../api/options.js";
 import {defaultChainOptions, IChainOptions} from "../chain/options.js";
 import {defaultDbOptions, IDatabaseOptions} from "../db/options.js";
 import {defaultEth1Options, Eth1Options} from "../eth1/options.js";
-import {defaultMetricsOptions, MetricsOptions} from "../metrics/options.js";
-import {defaultNetworkOptions, INetworkOptions} from "../network/options.js";
 import {defaultSyncOptions, SyncOptions} from "../sync/options.js";
 import {
   defaultExecutionEngineOpts,

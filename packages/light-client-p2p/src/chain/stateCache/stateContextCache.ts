@@ -2,7 +2,7 @@ import {toHexString} from "@chainsafe/ssz";
 import {Epoch, RootHex} from "@lodestar/types";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {routes} from "@lodestar/api";
-import {IMetrics} from "../../metrics/index.js";
+import {IMetrics} from "@lodestar/beacon-node/metrics";
 import {MapTracker} from "./mapMetrics.js";
 import {stateInternalCachePopulated} from "./stateContextCheckpointsCache.js";
 

@@ -4,9 +4,8 @@ import {Libp2p} from "libp2p";
 import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
 import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {BitArray} from "@chainsafe/ssz";
-import {INetwork, Network} from "../../src/network/index.js";
-import {createNodejsLibp2p} from "../../src/network/nodejs/index.js";
 import {Libp2pEvent} from "../../src/constants/index.js";
+import {createNodejsLibp2p, INetwork, Network} from "@lodestar/beacon-node/network";
 
 export async function createNode(multiaddr: string, inPeerId?: PeerId): Promise<Libp2p> {
   const peerId = inPeerId || (await createSecp256k1PeerId());

@@ -3,7 +3,7 @@ import {phase0, Epoch, RootHex} from "@lodestar/types";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {MapDef} from "@lodestar/utils";
 import {routes} from "@lodestar/api";
-import {IMetrics} from "../../metrics/index.js";
+import {IMetrics} from "@lodestar/beacon-node/metrics";
 import {MapTracker} from "./mapMetrics.js";
 
 type CheckpointHex = {epoch: Epoch; rootHex: RootHex};

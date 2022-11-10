@@ -7,8 +7,10 @@ import {LevelDbController} from "@lodestar/db";
 import {createIBeaconConfig} from "@lodestar/config";
 import {ACTIVE_PRESET, PresetName} from "@lodestar/params";
 import {ProcessShutdownCallback} from "@lodestar/validator";
-import {BeaconNodeLight, BeaconDb, createNodeJsLibp2p} from "@lodestar/light-client-p2p";
-
+import {BeaconNodeLight, createNodeJsLibp2p} from "@lodestar/light-client-p2p";
+import {BeaconDb as BeaconDbLight} from "@lodestar/light-client-p2p";
+import {BeaconDb} from "@lodestar/beacon-node";
+//import {BeaconNode} from "@lodestar/light-client-p2p";
 import {IGlobalArgs, parseBeaconNodeArgs} from "../../options/index.js";
 import {BeaconNodeLightOptions, exportToJSON, FileENR, getBeaconConfigFromArgs} from "../../config/index.js";
 import {onGracefulShutdown, getCliLogger, mkdir, writeFile600Perm} from "../../util/index.js";
@@ -49,6 +51,11 @@ export async function beaconLightHandler(args: IBeaconArgs & IGlobalArgs): Promi
 
   // additional metrics registries
   const metricsRegistries: Registry[] = [];
+  const dblight = new BeaconDbLight({
+    config,
+    controller: new LevelDbController(options.db, {metrics: null}),
+  });
+
   const db = new BeaconDb({
     config,
     controller: new LevelDbController(options.db, {metrics: null}),
@@ -63,7 +70,7 @@ export async function beaconLightHandler(args: IBeaconArgs & IGlobalArgs): Promi
       options,
       args,
       config,
-      db,
+      dblight,
       logger,
       abortController.signal
     );

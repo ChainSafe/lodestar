@@ -1,4 +1,4 @@
-import {IGauge, IHistogram} from "../../metrics/index.js";
+import {IGauge, IHistogram} from "@lodestar/beacon-node/metrics";
 
 export enum QueueType {
   FIFO = "FIFO",

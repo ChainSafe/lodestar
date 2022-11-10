@@ -3,7 +3,7 @@ import {Epoch, Root, Slot, phase0, allForks} from "@lodestar/types";
 import {ErrorAborted, ILogger} from "@lodestar/utils";
 import {IChainForkConfig} from "@lodestar/config";
 import {toHexString} from "@chainsafe/ssz";
-import {PeerAction} from "../../network/index.js";
+import {PeerAction} from "@lodestar/beacon-node/network";
 import {ItTrigger} from "../../util/itTrigger.js";
 import {PeerMap} from "../../util/peerMap.js";
 import {wrapError} from "../../util/wrapError.js";

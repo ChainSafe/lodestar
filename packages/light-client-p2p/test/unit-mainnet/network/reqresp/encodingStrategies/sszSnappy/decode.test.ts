@@ -1,10 +1,10 @@
 import {expect} from "chai";
 import varint from "varint";
 import {Uint8ArrayList} from "uint8arraylist";
-import {BufferedSource} from "../../../../../../src/network/reqresp/utils/index.js";
-import {readSszSnappyPayload} from "../../../../../../src/network/reqresp/encodingStrategies/sszSnappy/index.js";
+import {arrToSource} from "@lodestar/beacon-node/test/unit/network/reqresp/utils";
+import {readSszSnappyPayload} from "@lodestar/beacon-node/network/reqresp/encodingStrategies/sszSnappy";
+import {BufferedSource} from "@lodestar/beacon-node/network/reqresp/utils";
 import {isEqualSszType} from "../../../../../utils/ssz.js";
-import {arrToSource} from "../../../../../../test/unit/network/reqresp/utils.js";
 import {goerliShadowForkBlock13249} from "./testData.js";
 
 describe("network / reqresp / sszSnappy / decode", () => {

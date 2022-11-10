@@ -11,7 +11,7 @@ import {Implementation, PointFormat} from "@chainsafe/bls/types";
 import {ILogger} from "@lodestar/utils";
 import {ISignatureSet} from "@lodestar/state-transition";
 import {QueueError, QueueErrorCode} from "../../../util/queue/index.js";
-import {IMetrics} from "../../../metrics/index.js";
+import {IMetrics} from "@lodestar/beacon-node/metrics";;
 import {IBlsVerifier, VerifySignatureOpts} from "../interface.js";
 import {getAggregatedPubkey, getAggregatedPubkeysCount} from "../utils.js";
 import {verifySignatureSetsMaybeBatch} from "../maybeBatch.js";

@@ -11,13 +11,12 @@ import {GENESIS_SLOT} from "@lodestar/params";
 import {BeaconStateAllForks} from "@lodestar/state-transition";
 import {isPlainObject} from "@lodestar/utils";
 import {createKeypairFromPeerId, ENR} from "@chainsafe/discv5";
-import {BeaconNodeLight} from "../../../src/index.js";
-import {createNodeJsLibp2p} from "../../../src/network/nodejs/index.js";
-import {defaultNetworkOptions} from "../../../src/network/options.js";
+import {defaultNetworkOptions} from "@lodestar/beacon-node/network/options";
+import {createNodeJsLibp2p} from "@lodestar/beacon-node/network/nodejs/util";
+import {BeaconDb, BeaconNode} from "@lodestar/beacon-node";
 import {initDevState, writeDeposits} from "../../../src/node/utils/state.js";
 import {IBeaconNodeOptions} from "../../../src/node/options.js";
 import {defaultOptions} from "../../../src/node/options.js";
-import {BeaconDb} from "../../../src/db/index.js";
 import {testLogger} from "../logger.js";
 import {InteropStateOpts} from "../../../src/node/utils/interop/state.js";
 
@@ -32,7 +31,7 @@ export async function getDevBeaconNode(
     anchorState?: BeaconStateAllForks;
     wsCheckpoint?: phase0.Checkpoint;
   } & InteropStateOpts
-): Promise<BeaconNodeLight> {
+): Promise<BeaconNode> {
   const {params, validatorCount = 8, peerStoreDir} = opts;
   let {options = {}, logger, peerId} = opts;
 
@@ -94,7 +93,7 @@ export async function getDevBeaconNode(
   }
 
   const beaconConfig = createIBeaconConfig(config, anchorState.genesisValidatorsRoot);
-  return await BeaconNodeLight.init({
+  return await BeaconNode.init({
     opts: options as IBeaconNodeOptions,
     config: beaconConfig,
     db,
@@ -104,7 +103,6 @@ export async function getDevBeaconNode(
     libp2p,
     anchorState,
     wsCheckpoint: opts.wsCheckpoint,
-    lcCheckpointRoot: "",
   });
 }
 
