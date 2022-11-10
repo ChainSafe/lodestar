@@ -58,7 +58,6 @@ env.tracker.register({
 await env.start(timeout);
 await connectAllNodes(env.nodes);
 await env.waitForSlot(env.clock.getLastSlotOfEpoch(bellatrixForkEpoch) + 4, env.nodes, true);
-await env.stop();
 
 const {
   data: {finalized},
