@@ -213,7 +213,7 @@ export class SimulationEnvironment {
     await Promise.all(this.jobs.map((j) => j.cl.stop()));
     await this.externalSigner.stop();
     await this.dockerRunner.stop();
-    // await rm(this.options.rootDir, {recursive: true});
+    await rm(this.options.rootDir, {recursive: true});
 
     if (this.tracker.getErrorCount() > 0) {
       this.tracker.printErrors();

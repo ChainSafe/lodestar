@@ -17,8 +17,6 @@ import {Eth1ProviderWithAdmin} from "../Eth1ProviderWithAdmin.js";
 import {isDockerRunner} from "../runner/index.js";
 import {getNethermindChainSpec} from "../utils/el_genesis.js";
 
-const GENESIS_ACCOUNT = "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b";
-
 export const generateNethermindNode: ELClientGenerator = (
   {
     id,
