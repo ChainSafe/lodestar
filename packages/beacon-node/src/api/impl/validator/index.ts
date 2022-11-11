@@ -231,6 +231,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
         graffiti: toGraffitiBuffer(graffiti || ""),
       });
       metrics?.blockProductionSuccess.inc();
+      metrics?.blockProductionNumAggregated.observe(block.body.attestations.length);
       return {data: block, version: config.getForkName(block.slot)};
     } finally {
       if (timer) timer();
