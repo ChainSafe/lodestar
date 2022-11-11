@@ -118,7 +118,7 @@ await checkpointSync.jobs.el.stop();
 // ========================================================
 const unknownBlockSync = env.createNodePair({
   id: "unknown-block-sync-node",
-  cl: {type: CLClient.Lodestar, options: {"network.allowPublishToZeroPeers": true}},
+  cl: {type: CLClient.Lodestar, options: {"network.allowPublishToZeroPeers": true, "sync.disableRangeSync": true}},
   el: ELClient.Geth,
   keysCount: 0,
 });
