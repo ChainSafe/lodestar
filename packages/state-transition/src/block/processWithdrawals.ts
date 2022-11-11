@@ -7,13 +7,11 @@ import {decreaseBalance} from "../util/index.js";
 export function getExpectedWithdrawals(state: CachedBeaconStateCapella): capella.Withdrawal[] {
   const currentEpoch = state.epochCtx.epoch + 1;
   let withdrawalIndex = state.nextWithdrawalIndex;
-  let validatorIndex = state.latestWithdrawalValidatorIndex;
+  let validatorIndex = state.nextWithdrawalValidatorIndex;
   const {validators, balances} = state;
 
   const withdrawals: capella.Withdrawal[] = [];
   for (let index = 0; index < validators.length; index++) {
-    // Get the index of validator next in turn
-    validatorIndex = (validatorIndex + 1) % validators.length;
     const validator = validators.get(validatorIndex);
     const balance = balances.get(validatorIndex);
     const {effectiveBalance, withdrawalCredentials, withdrawableEpoch} = validator;
@@ -39,6 +37,8 @@ export function getExpectedWithdrawals(state: CachedBeaconStateCapella): capella
     if (withdrawals.length >= MAX_WITHDRAWALS_PER_PAYLOAD) {
       break;
     }
+    // Get next validator in turn
+    validatorIndex = (validatorIndex + 1) % validators.length;
   }
   return withdrawals;
 }
@@ -61,8 +61,8 @@ export function processWithdrawals(
     decreaseBalance(state, withdrawal.validatorIndex, Number(withdrawal.amount));
   }
   if (expectedWithdrawals.length > 0) {
-    const lastWithdrawal = expectedWithdrawals[expectedWithdrawals.length - 1];
-    state.nextWithdrawalIndex = lastWithdrawal.index + 1;
-    state.latestWithdrawalValidatorIndex = lastWithdrawal.validatorIndex;
+    const latestWithdrawal = expectedWithdrawals[expectedWithdrawals.length - 1];
+    state.nextWithdrawalIndex = latestWithdrawal.index + 1;
+    state.nextWithdrawalValidatorIndex = (latestWithdrawal.validatorIndex + 1) % state.validators.length;
   }
 }
