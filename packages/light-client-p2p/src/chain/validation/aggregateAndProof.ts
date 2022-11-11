@@ -5,7 +5,7 @@ import {
   isAggregatorFromCommitteeLength,
   getIndexedAttestationSignatureSet,
 } from "@lodestar/state-transition";
-import {IBeaconChain} from "..";
+import {IBeaconChain} from "@lodestar/beacon-node/chain";
 import {AttestationError, AttestationErrorCode, GossipAction} from "../errors/index.js";
 import {RegenCaller} from "../regen/index.js";
 import {getSelectionProofSignatureSet, getAggregateAndProofSignatureSet} from "./signatureSets/index.js";

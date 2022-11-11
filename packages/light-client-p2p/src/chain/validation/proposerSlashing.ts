@@ -1,6 +1,6 @@
 import {phase0} from "@lodestar/types";
 import {assertValidProposerSlashing, getProposerSlashingSignatureSets} from "@lodestar/state-transition";
-import {IBeaconChain} from "..";
+import {IBeaconChain} from "@lodestar/beacon-node/chain";
 import {ProposerSlashingError, ProposerSlashingErrorCode, GossipAction} from "../errors/index.js";
 
 export async function validateGossipProposerSlashing(

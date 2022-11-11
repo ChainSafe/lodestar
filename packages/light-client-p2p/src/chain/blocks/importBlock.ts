@@ -8,16 +8,16 @@ import {
   RootCache,
 } from "@lodestar/state-transition";
 import {ForkChoiceError, ForkChoiceErrorCode, EpochDifference} from "@lodestar/fork-choice";
-import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {toCheckpointHex} from "../stateCache/index.js";
-import {isOptimsticBlock} from "../../util/forkChoice.js";
 import {ChainEvent} from "../emitter.js";
-import {REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC} from "../reprocess.js";
 import {RegenCaller} from "../regen/interface.js";
 import type {LightChain} from "../chain.js";
 import {FullyVerifiedBlock, ImportBlockOpts} from "./types.js";
 import {PendingEvents} from "./utils/pendingEvents.js";
 import {getCheckpointFromState} from "./utils/checkpoint.js";
+import {REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC} from "@lodestar/beacon-node/chain/reprocess";
+import {ZERO_HASH_HEX} from "@lodestar/beacon-node/constants";
+import {isOptimsticBlock} from "@lodestar/beacon-node/util/forkChoice";
 
 /**
  * Fork-choice allows to import attestations from current (0) or past (1) epoch.

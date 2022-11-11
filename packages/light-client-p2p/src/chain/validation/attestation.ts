@@ -7,10 +7,10 @@ import {
   CachedBeaconStateAllForks,
   getIndexedAttestationSignatureSet,
 } from "@lodestar/state-transition";
-import {IBeaconChain} from "..";
+import {IBeaconChain} from "@lodestar/beacon-node/chain";
 import {AttestationError, AttestationErrorCode, GossipAction} from "../errors/index.js";
-import {MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC} from "../../constants/index.js";
 import {RegenCaller} from "../regen/index.js";
+import {MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC} from "@lodestar/beacon-node/constants";
 
 export async function validateGossipAttestation(
   chain: IBeaconChain,

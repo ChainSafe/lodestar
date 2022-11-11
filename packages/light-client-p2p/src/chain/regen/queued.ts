@@ -3,11 +3,11 @@ import {IForkChoice} from "@lodestar/fork-choice";
 import {CachedBeaconStateAllForks, computeEpochAtSlot} from "@lodestar/state-transition";
 import {toHexString} from "@chainsafe/ssz";
 import {IMetrics} from "@lodestar/beacon-node/metrics";
-import {CheckpointStateCache, StateContextCache, toCheckpointHex} from "../stateCache/index.js";
-import {JobItemQueue} from "../../util/queue/index.js";
 import {IStateRegenerator, RegenCaller, RegenFnName} from "./interface.js";
 import {StateRegenerator, RegenModules} from "./regen.js";
 import {RegenError, RegenErrorCode} from "./errors.js";
+import {CheckpointStateCache, StateContextCache, toCheckpointHex} from "@lodestar/beacon-node/chain";
+import {JobItemQueue} from "@lodestar/beacon-node/util/queue";
 
 const REGEN_QUEUE_MAX_LEN = 256;
 

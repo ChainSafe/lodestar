@@ -11,7 +11,6 @@ import {Implementation, PointFormat} from "@chainsafe/bls/types";
 import {ILogger} from "@lodestar/utils";
 import {ISignatureSet} from "@lodestar/state-transition";
 import {IMetrics} from "@lodestar/beacon-node/metrics";
-import {QueueError, QueueErrorCode} from "../../../util/queue/index.js";
 
 import {IBlsVerifier, VerifySignatureOpts} from "../interface.js";
 import {getAggregatedPubkey, getAggregatedPubkeysCount} from "../utils.js";
@@ -19,6 +18,7 @@ import {verifySignatureSetsMaybeBatch} from "../maybeBatch.js";
 import {BlsWorkReq, BlsWorkResult, WorkerData, WorkResultCode} from "./types.js";
 import {chunkifyMaximizeChunkSize} from "./utils.js";
 import {defaultPoolSize} from "./poolSize.js";
+import {QueueError, QueueErrorCode} from "@lodestar/beacon-node/util/queue";
 
 export type BlsMultiThreadWorkerPoolModules = {
   logger: ILogger;

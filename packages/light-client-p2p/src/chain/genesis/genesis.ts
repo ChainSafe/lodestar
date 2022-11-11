@@ -15,9 +15,9 @@ import {
   getActiveValidatorIndices,
 } from "@lodestar/state-transition";
 import {ILogger} from "@lodestar/utils";
-import {IEth1Provider} from "../../eth1/index.js";
-import {IEth1StreamParams} from "../../eth1/interface.js";
-import {getDepositsAndBlockStreamForGenesis, getDepositsStream} from "../../eth1/stream.js";
+import {IEth1Provider} from "@lodestar/beacon-node";
+import {IEth1StreamParams} from "@lodestar/beacon-node/eth1/interface";
+import {getDepositsAndBlockStreamForGenesis, getDepositsStream} from "@lodestar/beacon-node/eth1/stream";
 import {DepositTree} from "../../db/repositories/depositDataRoot.js";
 import {IGenesisBuilder, IGenesisResult} from "./interface.js";
 

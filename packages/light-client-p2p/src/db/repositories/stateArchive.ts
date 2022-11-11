@@ -3,8 +3,8 @@ import {Epoch, Root, RootHex, Slot, ssz} from "@lodestar/types";
 import {IChainForkConfig} from "@lodestar/config";
 import {bytesToInt, toHex} from "@lodestar/utils";
 import {Db, Bucket, Repository} from "@lodestar/db";
-import {getStateTypeFromBytes} from "../../util/multifork.js";
 import {getRootIndexKey, storeRootIndex} from "./stateArchiveIndex.js";
+import {getStateTypeFromBytes} from "@lodestar/beacon-node/util/multifork";
 
 /* eslint-disable @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call */
 

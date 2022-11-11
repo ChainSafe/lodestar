@@ -2,8 +2,8 @@
 import {allForks} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
 import {IMetrics} from "@lodestar/beacon-node/metrics";
-import {JobItemQueue} from "../../util/queue/index.js";
 
+import {JobItemQueue} from "@lodestar/beacon-node/util/queue";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
 import type {LightChain} from "../chain.js";

@@ -8,14 +8,9 @@ import {
   computeCheckpointEpochAtStateSlot,
 } from "@lodestar/state-transition";
 import {Checkpoint} from "@lodestar/types/phase0";
-import {
-  IBeaconDb,
-  IBeaconNodeOptions,
-  initStateFromAnchorState,
-  initStateFromEth1,
-  getStateTypeFromBytes,
-} from "@lodestar/light-client-p2p";
+import {IBeaconDb, IBeaconNodeOptions, initStateFromAnchorState, initStateFromEth1} from "@lodestar/light-client-p2p";
 
+import {getStateTypeFromBytes} from "@lodestar/beacon-node/util/multifork";
 import {downloadOrLoadFile} from "../../util/index.js";
 import {defaultNetwork, IGlobalArgs} from "../../options/globalOptions.js";
 import {fetchWeakSubjectivityState, getCheckpointFromArg, getGenesisFileUrl} from "../../networks/index.js";

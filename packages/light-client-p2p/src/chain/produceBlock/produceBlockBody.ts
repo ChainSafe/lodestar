@@ -25,11 +25,11 @@ import {IChainForkConfig} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
 import {toHex, sleep} from "@lodestar/utils";
 
+import {IExecutionBuilder, IExecutionEngine, PayloadId} from "@lodestar/beacon-node/execution";
 import type {LightChain} from "../chain.js";
-import {PayloadId, IExecutionEngine, IExecutionBuilder} from "../../execution/index.js";
-import {ZERO_HASH, ZERO_HASH_HEX} from "../../constants/index.js";
-import {IEth1ForBlockProduction} from "../../eth1/index.js";
-import {numToQuantity} from "../../eth1/provider/utils.js";
+import {IEth1ForBlockProduction} from "@lodestar/beacon-node/eth1";
+import {numToQuantity} from "@lodestar/beacon-node/eth1/provider/utils";
+import {ZERO_HASH, ZERO_HASH_HEX} from "@lodestar/beacon-node/constants";
 
 // Time to provide the EL to generate a payload from new payload id
 const PAYLOAD_GENERATION_TIME_MS = 500;

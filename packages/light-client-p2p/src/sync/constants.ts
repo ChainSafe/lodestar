@@ -1,12 +1,3 @@
-/** The number of head syncing chains to sync at a time. */
-export const PARALLEL_HEAD_CHAINS = 2;
-
-/** Minimum work we require a finalized chain to do before picking a chain with more peers. */
-export const MIN_FINALIZED_CHAIN_VALIDATED_EPOCHS = 10;
-
-/** The number of times to retry a batch before it is considered failed. */
-export const MAX_BATCH_DOWNLOAD_ATTEMPTS = 5;
-
 /** Consider batch faulty after downloading and processing this number of times */
 export const MAX_BATCH_PROCESSING_ATTEMPTS = 3;
 
@@ -39,12 +30,3 @@ export const MIN_EPOCH_TO_START_GOSSIP = -1;
  * one batch at a time. Metrics can confirm preliminary tests that speed is as good.
  */
 export const EPOCHS_PER_BATCH = 1;
-
-/**
- * The maximum number of batches to queue before requesting more.
- * In good network conditions downloading batches is much faster than processing them
- * A number > 10 epochs worth results in wasted progress when the chain completes syncing
- *
- * TODO: When switching branches usually all batches in AwaitingProcessing are dropped, could it be optimized?
- */
-export const BATCH_BUFFER_SIZE = Math.ceil(10 / EPOCHS_PER_BATCH);

@@ -20,49 +20,52 @@ import {CompositeTypeAny, fromHexString, TreeView, Type} from "@chainsafe/ssz";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 
 import {IMetrics} from "@lodestar/beacon-node/metrics";
-import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
-import {IBeaconDb} from "../db/index.js";
+import {IBeaconDb} from "@lodestar/beacon-node";
+import {IExecutionBuilder, IExecutionEngine, TransitionConfigurationV1} from "@lodestar/beacon-node/execution";
+import {
+  CheckpointStateCache,
+  IBeaconChain,
+  ProposerPreparationData,
+  StateContextCache,
+} from "@lodestar/beacon-node/chain";
+import {LightClientServer} from "@lodestar/beacon-node/chain/lightClient";
+import {ReprocessController} from "@lodestar/beacon-node/lib/chain/reprocess";
+import {
+  AggregatedAttestationPool,
+  AttestationPool,
+  OpPool,
+  SyncCommitteeMessagePool,
+  SyncContributionAndProofPool,
+} from "@lodestar/beacon-node/chain/opPools";
+import {BeaconProposerCache} from "@lodestar/beacon-node/chain/beaconProposerCache";
+import {
+  SeenAggregators,
+  SeenAttesters,
+  SeenBlockProposers,
+  SeenContributionAndProof,
+  SeenSyncCommitteeMessages,
+} from "@lodestar/beacon-node/chain/seenCache";
+import {SeenAggregatedAttestations} from "@lodestar/beacon-node/chain/seenCache/seenAggregateAndProof";
+import {SeenBlockAttesters} from "@lodestar/beacon-node/chain/seenCache/seenBlockAttesters";
+import {CheckpointBalancesCache} from "@lodestar/beacon-node/chain/balancesCache";
+import {IEth1ForBlockProduction} from "@lodestar/beacon-node/eth1";
 
-import {bytesToData, numToQuantity} from "../eth1/provider/utils.js";
-import {wrapError} from "../util/wrapError.js";
-import {IEth1ForBlockProduction} from "../eth1/index.js";
-import {IExecutionEngine, IExecutionBuilder, TransitionConfigurationV1} from "../execution/index.js";
-import {ensureDir, writeIfNotExist} from "../util/file.js";
-import {CheckpointStateCache, StateContextCache} from "./stateCache/index.js";
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
 import {IBeaconClock, LocalClock} from "./clock/index.js";
 import {ChainEventEmitter, ChainEvent, HeadEventData} from "./emitter.js";
-import {IBeaconChain, ProposerPreparationData} from "./interface.js";
 import {IChainOptions} from "./options.js";
 import {IStateRegenerator, QueuedStateRegenerator, RegenCaller} from "./regen/index.js";
 import {initializeForkChoice} from "./forkChoice/index.js";
 import {computeAnchorCheckpoint} from "./initState.js";
 import {IBlsVerifier, BlsSingleThreadVerifier, BlsMultiThreadWorkerPool} from "./bls/index.js";
-import {
-  SeenAttesters,
-  SeenAggregators,
-  SeenBlockProposers,
-  SeenSyncCommitteeMessages,
-  SeenContributionAndProof,
-} from "./seenCache/index.js";
-import {
-  AggregatedAttestationPool,
-  AttestationPool,
-  SyncCommitteeMessagePool,
-  SyncContributionAndProofPool,
-  OpPool,
-} from "./opPools/index.js";
-import {LightClientServer} from "./lightClient/index.js";
-import {Archiver} from "./archiver/index.js";
 import {PrepareNextSlotScheduler} from "./prepareNextSlot.js";
-import {ReprocessController} from "./reprocess.js";
-import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
-import {SeenBlockAttesters} from "./seenCache/seenBlockAttesters.js";
-import {BeaconProposerCache} from "./beaconProposerCache.js";
-import {CheckpointBalancesCache} from "./balancesCache.js";
 import {AssembledBlockType, BlockType} from "./produceBlock/index.js";
 import {BlockAttributes, produceBlockBody} from "./produceBlock/produceBlockBody.js";
 import {computeNewStateRoot} from "./produceBlock/computeNewStateRoot.js";
+import {bytesToData, numToQuantity} from "@lodestar/beacon-node/eth1/provider/utils";
+import {ZERO_HASH} from "@lodestar/beacon-node/constants";
+import {ensureDir, writeIfNotExist} from "@lodestar/beacon-node/util/file";
+import {wrapError} from "@lodestar/beacon-node/util/wrapError";
 
 // TODO DA remove code not needed by light chain and define a proper ILightChain interface
 export class LightChain implements IBeaconChain {
@@ -115,7 +118,6 @@ export class LightChain implements IBeaconChain {
   protected readonly blockProcessor: BlockProcessor;
   protected readonly db: IBeaconDb;
   protected readonly metrics: IMetrics | null;
-  private readonly archiver: Archiver;
   private abortController = new AbortController();
   private successfulExchangeTransition = false;
   private readonly exchangeTransitionConfigurationEverySlots: number;
@@ -261,7 +263,6 @@ export class LightChain implements IBeaconChain {
     this.emitter = emitter;
     this.lightClientServer = lightClientServer;
 
-    this.archiver = new Archiver(db, this, logger, signal, opts);
     // always run PrepareNextSlotScheduler except for fork_choice spec tests
     if (!opts?.disablePrepareNextSlot) {
       new PrepareNextSlotScheduler(this, this.config, metrics, this.logger, signal);
@@ -284,23 +285,9 @@ export class LightChain implements IBeaconChain {
     await this.bls.close();
   }
 
-  validatorSeenAtEpoch(index: ValidatorIndex, epoch: Epoch): boolean {
-    // Caller must check that epoch is not older that current epoch - 1
-    // else the caches for that epoch may already be pruned.
-
-    return (
-      // Dedicated cache for liveness checks, registers attesters seen through blocks.
-      // Note: this check should be cheaper + overlap with counting participants of aggregates from gossip.
-      this.seenBlockAttesters.isKnown(epoch, index) ||
-      //
-      // Re-use gossip caches. Populated on validation of gossip + API messages
-      //   seenAttesters = single signer of unaggregated attestations
-      this.seenAttesters.isKnown(epoch, index) ||
-      //   seenAggregators = single aggregator index, not participants of the aggregate
-      this.seenAggregators.isKnown(epoch, index) ||
-      //   seenBlockProposers = single block proposer
-      this.seenBlockProposers.seenAtEpoch(epoch, index)
-    );
+  validatorSeenAtEpoch(_index: ValidatorIndex, _epoch: Epoch): boolean {
+    // TODO DA Update to a LC specific implementation
+    throw new Error("not implemented");
   }
 
   /** Populate in-memory caches with persisted data. Call at least once on startup */
@@ -310,44 +297,32 @@ export class LightChain implements IBeaconChain {
 
   /** Persist in-memory data to the DB. Call at least once before stopping the process */
   async persistToDisk(): Promise<void> {
-    await this.archiver.persistToDisk();
     await this.opPool.toPersisted(this.db);
   }
 
   getHeadState(): CachedBeaconStateAllForks {
-    // head state should always exist
-    const head = this.forkChoice.getHead();
-    const headState =
-      this.checkpointStateCache.getLatest(head.blockRoot, Infinity) || this.stateCache.get(head.stateRoot);
-    if (!headState) throw Error("headState does not exist");
-    return headState;
+    // TODO DA Update to a LC specific implementation
+    throw new Error("not implemented");
   }
 
   async getHeadStateAtCurrentEpoch(): Promise<CachedBeaconStateAllForks> {
-    const currentEpochStartSlot = computeStartSlotAtEpoch(this.clock.currentEpoch);
-    const head = this.forkChoice.getHead();
-    const bestSlot = currentEpochStartSlot > head.slot ? currentEpochStartSlot : head.slot;
-    return await this.regen.getBlockSlotState(head.blockRoot, bestSlot, RegenCaller.getDuties);
+    // TODO DA Update to a LC specific implementation
+    throw new Error("not implemented");
   }
 
   async getCanonicalBlockAtSlot(slot: Slot): Promise<allForks.SignedBeaconBlock | null> {
-    const finalizedBlock = this.forkChoice.getFinalizedBlock();
-    if (finalizedBlock.slot > slot) {
-      return this.db.blockArchive.get(slot);
-    }
-    const block = this.forkChoice.getCanonicalBlockAtSlot(slot);
-    if (!block) {
-      return null;
-    }
-    return await this.db.block.get(fromHexString(block.blockRoot));
+    // TODO DA Update to a LC specific implementation
+    throw new Error("not implemented");
   }
 
   async produceBlock(blockAttributes: BlockAttributes): Promise<allForks.BeaconBlock> {
-    return this.produceBlockWrapper<BlockType.Full>(BlockType.Full, blockAttributes);
+    // TODO DA Update to a LC specific implementation
+    throw new Error("not implemented");
   }
 
   async produceBlindedBlock(blockAttributes: BlockAttributes): Promise<allForks.BlindedBeaconBlock> {
-    return this.produceBlockWrapper<BlockType.Blinded>(BlockType.Blinded, blockAttributes);
+    // TODO DA Update to a LC specific implementation
+    throw new Error("not implemented");
   }
 
   async produceBlockWrapper<T extends BlockType>(
@@ -382,42 +357,23 @@ export class LightChain implements IBeaconChain {
   }
 
   async processBlock(block: allForks.SignedBeaconBlock, opts?: ImportBlockOpts): Promise<void> {
-    return await this.blockProcessor.processBlocksJob([block], opts);
+    // TODO DA Update to a LC specific implementation
+    throw new Error("not implemented");
   }
 
   async processChainSegment(blocks: allForks.SignedBeaconBlock[], opts?: ImportBlockOpts): Promise<void> {
-    return await this.blockProcessor.processBlocksJob(blocks, opts);
+    // TODO DA Update to a LC specific implementation
+    throw new Error("not implemented");
   }
 
   getStatus(): phase0.Status {
-    const head = this.forkChoice.getHead();
-    const finalizedCheckpoint = this.forkChoice.getFinalizedCheckpoint();
-    return {
-      // fork_digest: The node's ForkDigest (compute_fork_digest(current_fork_version, genesis_validators_root)) where
-      // - current_fork_version is the fork version at the node's current epoch defined by the wall-clock time (not necessarily the epoch to which the node is sync)
-      // - genesis_validators_root is the static Root found in state.genesis_validators_root
-      forkDigest: this.config.forkName2ForkDigest(this.config.getForkName(this.clock.currentSlot)),
-      // finalized_root: state.finalized_checkpoint.root for the state corresponding to the head block (Note this defaults to Root(b'\x00' * 32) for the genesis finalized checkpoint).
-      finalizedRoot: finalizedCheckpoint.epoch === GENESIS_EPOCH ? ZERO_HASH : finalizedCheckpoint.root,
-      finalizedEpoch: finalizedCheckpoint.epoch,
-      // TODO: PERFORMANCE: Memoize to prevent re-computing every time
-      headRoot: fromHexString(head.blockRoot),
-      headSlot: head.slot,
-    };
+    // TODO DA Update to a LC specific implementation
+    throw new Error("not implemented");
   }
 
   recomputeForkChoiceHead(): ProtoBlock {
-    this.metrics?.forkChoice.requests.inc();
-    const timer = this.metrics?.forkChoice.findHead.startTimer();
-
-    try {
-      return this.forkChoice.updateHead();
-    } catch (e) {
-      this.metrics?.forkChoice.errors.inc();
-      throw e;
-    } finally {
-      timer?.();
-    }
+    // TODO DA Update to a LC specific implementation
+    throw new Error("not implemented");
   }
 
   /**
@@ -425,20 +381,19 @@ export class LightChain implements IBeaconChain {
    * Used to handle unknown block root for both unaggregated and aggregated attestations.
    * @returns true if blockFound
    */
-  waitForBlockOfAttestation(slot: Slot, root: RootHex): Promise<boolean> {
-    return this.reprocessController.waitForBlockOfAttestation(slot, root);
+  waitForBlockOfAttestation(_slot: Slot, _root: RootHex): Promise<boolean> {
+    // TODO DA Update to a LC specific implementation
+    throw new Error("not implemented");
   }
 
-  persistInvalidSszValue<T>(type: Type<T>, sszObject: T, suffix?: string): void {
-    if (this.opts.persistInvalidSszObjects) {
-      void this.persistInvalidSszObject(type.typeName, type.serialize(sszObject), type.hashTreeRoot(sszObject), suffix);
-    }
+  persistInvalidSszValue<T>(_type: Type<T>, _sszObject: T, _suffix?: string): void {
+    // TODO DA Update to a LC specific implementation
+    throw new Error("not implemented");
   }
 
-  persistInvalidSszView(view: TreeView<CompositeTypeAny>, suffix?: string): void {
-    if (this.opts.persistInvalidSszObjects) {
-      void this.persistInvalidSszObject(view.type.typeName, view.serialize(), view.hashTreeRoot(), suffix);
-    }
+  persistInvalidSszView(_view: TreeView<CompositeTypeAny>, _suffix?: string): void {
+    // TODO DA Update to a LC specific implementation
+    throw new Error("not implemented");
   }
 
   /**
@@ -694,37 +649,13 @@ export class LightChain implements IBeaconChain {
     }
   }
 
-  async updateBeaconProposerData(epoch: Epoch, proposers: ProposerPreparationData[]): Promise<void> {
-    proposers.forEach((proposer) => {
-      this.beaconProposerCache.add(epoch, proposer);
-    });
+  async updateBeaconProposerData(_epoch: Epoch, _proposers: ProposerPreparationData[]): Promise<void> {
+    // TODO DA Update to a LC specific implementation
+    throw new Error("not implemented");
   }
 
-  updateBuilderStatus(clockSlot: Slot): void {
-    const executionBuilder = this.executionBuilder;
-    if (executionBuilder) {
-      const slotsPresent = this.forkChoice.getSlotsPresent(clockSlot - this.faultInspectionWindow);
-      const previousStatus = executionBuilder.status;
-      const shouldEnable = slotsPresent >= this.faultInspectionWindow - this.allowedFaults;
-
-      executionBuilder.updateStatus(shouldEnable);
-      // The status changed we should log
-      const status = executionBuilder.status;
-      if (status !== previousStatus) {
-        this.logger.info("Execution builder status updated", {
-          status,
-          slotsPresent,
-          window: this.faultInspectionWindow,
-          allowedFaults: this.allowedFaults,
-        });
-      } else {
-        this.logger.verbose("Execution builder status", {
-          status,
-          slotsPresent,
-          window: this.faultInspectionWindow,
-          allowedFaults: this.allowedFaults,
-        });
-      }
-    }
+  updateBuilderStatus(_clockSlot: Slot): void {
+    // TODO DA Update to a LC specific implementation
+    throw new Error("not implemented");
   }
 }

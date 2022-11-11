@@ -18,9 +18,9 @@ import {GossipsubEvents} from "@chainsafe/libp2p-gossipsub";
 import {GossipType, INetwork, NetworkEvent} from "@lodestar/beacon-node/network";
 import {IMetrics} from "@lodestar/beacon-node/metrics";
 import {DEFAULT_ENCODING} from "@lodestar/beacon-node/network/gossip/constants";
+import {ItTrigger} from "@lodestar/beacon-node/util/itTrigger";
+import {PeerSet} from "@lodestar/beacon-node/util/peerMap";
 import {IBeaconDb} from "../../db/index.js";
-import {ItTrigger} from "../../util/itTrigger.js";
-import {PeerSet} from "../../util/peerMap.js";
 import {LightChain} from "../../chain/index.js";
 import {
   assertValidFinalityProof,

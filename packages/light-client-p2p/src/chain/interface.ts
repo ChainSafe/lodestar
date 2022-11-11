@@ -5,37 +5,36 @@ import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
 import {ILogger} from "@lodestar/utils";
 
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
-import {IEth1ForBlockProduction} from "../eth1/index.js";
-import {IExecutionEngine, IExecutionBuilder} from "../execution/index.js";
+import {SeenAggregatedAttestations} from "@lodestar/beacon-node/chain/seenCache/seenAggregateAndProof";
+import {CheckpointStateCache, ProposerPreparationData, StateContextCache} from "@lodestar/beacon-node/chain";
+import {
+  SeenAggregators,
+  SeenAttesters,
+  SeenBlockProposers,
+  SeenContributionAndProof,
+  SeenSyncCommitteeMessages,
+} from "@lodestar/beacon-node/chain/seenCache";
+import {
+  AggregatedAttestationPool,
+  AttestationPool,
+  OpPool,
+  SyncCommitteeMessagePool,
+  SyncContributionAndProofPool,
+} from "@lodestar/beacon-node/chain/opPools";
+import {SeenBlockAttesters} from "@lodestar/beacon-node/chain/seenCache/seenBlockAttesters";
+import {BeaconProposerCache} from "@lodestar/beacon-node/chain/beaconProposerCache";
+import {CheckpointBalancesCache} from "@lodestar/beacon-node/chain/balancesCache";
+import {ReprocessController} from "@lodestar/beacon-node/chain/reprocess";
+import {IEth1ForBlockProduction} from "@lodestar/beacon-node/eth1";
+import {IExecutionBuilder, IExecutionEngine} from "@lodestar/beacon-node/execution";
 import {IBeaconClock} from "./clock/interface.js";
 import {ChainEventEmitter} from "./emitter.js";
 import {IStateRegenerator} from "./regen/index.js";
-import {StateContextCache, CheckpointStateCache} from "./stateCache/index.js";
 import {IBlsVerifier} from "./bls/index.js";
-import {
-  SeenAttesters,
-  SeenAggregators,
-  SeenBlockProposers,
-  SeenSyncCommitteeMessages,
-  SeenContributionAndProof,
-} from "./seenCache/index.js";
-import {AttestationPool, OpPool, SyncCommitteeMessagePool, SyncContributionAndProofPool} from "./opPools/index.js";
 import {LightClientServer} from "./lightClient/index.js";
-import {AggregatedAttestationPool} from "./opPools/aggregatedAttestationPool.js";
 import {ImportBlockOpts} from "./blocks/types.js";
-import {ReprocessController} from "./reprocess.js";
-import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
-import {BeaconProposerCache, ProposerPreparationData} from "./beaconProposerCache.js";
-import {SeenBlockAttesters} from "./seenCache/seenBlockAttesters.js";
-import {CheckpointBalancesCache} from "./balancesCache.js";
 import {IChainOptions} from "./options.js";
 import {AssembledBlockType, BlockAttributes, BlockType} from "./produceBlock/produceBlockBody.js";
-
-export type Eth2Context = {
-  activeValidatorCount: number;
-  currentSlot: number;
-  currentEpoch: number;
-};
 
 export {BlockType, AssembledBlockType};
 export {ProposerPreparationData};

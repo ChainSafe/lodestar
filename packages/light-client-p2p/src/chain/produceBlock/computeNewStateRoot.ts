@@ -1,8 +1,8 @@
 import {CachedBeaconStateAllForks, stateTransition} from "@lodestar/state-transition";
 import {allForks, Root} from "@lodestar/types";
 import {IMetrics} from "@lodestar/beacon-node/metrics";
-import {ZERO_HASH} from "../../constants/index.js";
 import {BlockType, AssembledBlockType} from "./produceBlockBody.js";
+import {ZERO_HASH} from "@lodestar/beacon-node/constants/constants";
 
 export {BlockType, AssembledBlockType};
 

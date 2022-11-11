@@ -2,13 +2,13 @@ import {CachedBeaconStateAltair, isSyncCommitteeAggregator} from "@lodestar/stat
 import {altair, ValidatorIndex} from "@lodestar/types";
 import {SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
 import {GossipAction, SyncCommitteeError, SyncCommitteeErrorCode} from "../errors/index.js";
-import {IBeaconChain} from "../interface.js";
 import {validateGossipSyncCommitteeExceptSig} from "./syncCommittee.js";
 import {
   getSyncCommitteeSelectionProofSignatureSet,
   getContributionAndProofSignatureSet,
   getSyncCommitteeContributionSignatureSet,
 } from "./signatureSets/index.js";
+import {IBeaconChain} from "@lodestar/beacon-node/chain";
 
 /**
  * Spec v1.1.0-beta.2

@@ -19,7 +19,7 @@ import {
 import {computeAnchorCheckpoint} from "../initState.js";
 import {ChainEventEmitter} from "../emitter.js";
 import {ChainEvent} from "../emitter.js";
-import {GENESIS_SLOT} from "../../constants/index.js";
+import {GENESIS_SLOT} from "@lodestar/beacon-node/constants";
 
 export {ForkChoiceOpts};
 

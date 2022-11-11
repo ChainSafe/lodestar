@@ -18,12 +18,12 @@ import {
 } from "@lodestar/fork-choice";
 import {IChainForkConfig} from "@lodestar/config";
 import {ErrorAborted, ILogger} from "@lodestar/utils";
-import {IExecutionEngine} from "../../execution/engine/index.js";
+import {IExecutionEngine} from "@lodestar/beacon-node/execution/engine";
+import {IEth1ForBlockProduction} from "@lodestar/beacon-node/eth1";
+import {ExecutePayloadStatus} from "@lodestar/beacon-node/execution";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {IBeaconClock} from "../clock/index.js";
 import {BlockProcessOpts} from "../options.js";
-import {ExecutePayloadStatus} from "../../execution/engine/interface.js";
-import {IEth1ForBlockProduction} from "../../eth1/index.js";
 
 export type VerifyBlockExecutionPayloadModules = {
   eth1: IEth1ForBlockProduction;

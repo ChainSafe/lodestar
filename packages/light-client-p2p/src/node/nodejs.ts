@@ -12,14 +12,16 @@ import {ProcessShutdownCallback} from "@lodestar/validator";
 import {INetwork, Network, getReqRespHandlers} from "@lodestar/beacon-node/network";
 import {createMetrics, IMetrics} from "@lodestar/beacon-node/metrics";
 import {HttpMetricsServer, IBeaconDb} from "@lodestar/beacon-node";
-import {BeaconChain, IBeaconChain, initBeaconMetrics} from "@lodestar/beacon-node/chain";
+import {IBeaconChain, initBeaconMetrics} from "@lodestar/beacon-node/chain";
 import {createLibp2pMetrics} from "@lodestar/beacon-node/metrics/metrics/libp2p";
 import {initializeEth1ForBlockProduction} from "@lodestar/beacon-node/eth1";
 import {initializeExecutionBuilder, initializeExecutionEngine} from "@lodestar/beacon-node/execution";
-import {BeaconSync, IBeaconSync} from "@lodestar/beacon-node/sync";
+import {IBeaconSync} from "@lodestar/beacon-node/sync";
 import {BeaconRestApiServer, getApi} from "@lodestar/beacon-node/api";
 import {runNodeNotifier} from "@lodestar/beacon-node/node/notifier";
 import {LightSync} from "../sync/lightSync/index.js";
+import {LightNodeSync} from "../sync/index.js";
+import {LightChain} from "../chain/index.js";
 import {IBeaconNodeOptions} from "./options.js";
 
 export * from "./options.js";
@@ -76,7 +78,7 @@ enum LoggerModule {
  * The main Beacon Node class.  Contains various components for getting and processing data from the
  * Ethereum Consensus ecosystem as well as systems for getting beacon node metadata.
  */
-export class BeaconNodeLight {
+export class LightNode {
   opts: IBeaconNodeOptions;
   config: IBeaconConfig;
   db: IBeaconDb;
@@ -126,7 +128,7 @@ export class BeaconNodeLight {
    * Initialize a beacon node.  Initializes and `start`s the varied sub-component services of the
    * beacon node
    */
-  static async init<T extends BeaconNodeLight = BeaconNodeLight>({
+  static async init<T extends LightNode = LightNode>({
     opts,
     config,
     db,
@@ -162,7 +164,7 @@ export class BeaconNodeLight {
       createLibp2pMetrics(libp2p, metrics.register);
     }
 
-    const chain = new BeaconChain(opts.chain, {
+    const chain = new LightChain(opts.chain, {
       config,
       db,
       logger: logger.child({module: LoggerModule.chain}),
@@ -182,27 +184,6 @@ export class BeaconNodeLight {
         : undefined,
     });
 
-    // TODO DA POC. Delete later
-    // const chain = new LightChain(opts.chain, {
-    //   config,
-    //   db,
-    //   logger: logger.child({module: LoggerModule.chain}),
-    //   processShutdownCallback,
-    //   metrics,
-    //   anchorState,
-    //   eth1: initializeEth1ForBlockProduction(opts.eth1, {
-    //     config,
-    //     db,
-    //     metrics,
-    //     logger: logger.child({module: LoggerModule.eth1}),
-    //     signal,
-    //   }),
-    //   executionEngine: initializeExecutionEngine(opts.executionEngine, {metrics, signal}),
-    //   executionBuilder: opts.executionBuilder.enabled
-    //     ? initializeExecutionBuilder(opts.executionBuilder, config)
-    //     : undefined,
-    // });
-
     // Load persisted data from disk to in-memory caches
     await chain.loadFromDisk();
 
@@ -220,7 +201,7 @@ export class BeaconNodeLight {
     // See https://github.com/ChainSafe/lodestar/issues/4543
     await network.start();
 
-    const sync = new BeaconSync(opts.sync, {
+    const sync = new LightNodeSync(opts.sync, {
       config,
       db,
       chain,

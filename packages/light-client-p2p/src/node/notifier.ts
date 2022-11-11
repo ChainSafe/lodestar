@@ -8,8 +8,8 @@ import {computeEpochAtSlot, isExecutionCachedStateType, isMergeTransitionComplet
 import {INetwork} from "@lodestar/beacon-node/network";
 import {IBeaconSync, SyncState} from "@lodestar/beacon-node/sync";
 import {IBeaconChain} from "../chain/index.js";
-import {prettyTimeDiffSec} from "../util/time.js";
-import {TimeSeries} from "../util/timeSeries.js";
+import {TimeSeries} from "@lodestar/beacon-node/util/timeSeries";
+import {prettyTimeDiffSec} from "@lodestar/beacon-node/util/time";
 
 /** Create a warning log whenever the peer count is at or below this value */
 const WARN_PEER_COUNT = 1;

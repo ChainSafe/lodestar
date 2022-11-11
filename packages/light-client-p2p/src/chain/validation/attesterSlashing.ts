@@ -4,7 +4,7 @@ import {
   assertValidAttesterSlashing,
   getAttesterSlashingSignatureSets,
 } from "@lodestar/state-transition";
-import {IBeaconChain} from "..";
+import {IBeaconChain} from "@lodestar/beacon-node/chain";
 import {AttesterSlashingError, AttesterSlashingErrorCode, GossipAction} from "../errors/index.js";
 
 export async function validateGossipAttesterSlashing(

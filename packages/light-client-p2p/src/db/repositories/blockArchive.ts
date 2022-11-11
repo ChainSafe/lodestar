@@ -3,9 +3,9 @@ import {IChainForkConfig} from "@lodestar/config";
 import {Db, Repository, IKeyValue, IFilterOptions, Bucket} from "@lodestar/db";
 import {Slot, Root, allForks, ssz} from "@lodestar/types";
 import {bytesToInt} from "@lodestar/utils";
-import {getSignedBlockTypeFromBytes} from "../../util/multifork.js";
 import {getRootIndexKey, getParentRootIndexKey} from "./blockArchiveIndex.js";
 import {deleteParentRootIndex, deleteRootIndex, storeParentRootIndex, storeRootIndex} from "./blockArchiveIndex.js";
+import {getSignedBlockTypeFromBytes} from "@lodestar/beacon-node/util/multifork";
 
 export interface IBlockFilterOptions extends IFilterOptions<Slot> {
   step?: number;

@@ -5,10 +5,9 @@ import {ILogger, MapDef, pruneSetToMax} from "@lodestar/utils";
 import {BitArray, CompositeViewDU, toHexString} from "@chainsafe/ssz";
 import {MIN_SYNC_COMMITTEE_PARTICIPANTS, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 import {IMetrics} from "@lodestar/beacon-node/metrics";
-import {IBeaconDb} from "../../db/index.js";
+import {IBeaconDb} from "@lodestar/beacon-node";
+import {ZERO_HASH} from "@lodestar/beacon-node/constants";
 import {ChainEvent, ChainEventEmitter} from "../emitter.js";
-import {byteArrayEquals} from "../../util/bytes.js";
-import {ZERO_HASH} from "../../constants/index.js";
 import {LightClientServerError, LightClientServerErrorCode} from "../errors/lightClientError.js";
 import {
   getNextSyncCommitteeBranch,
@@ -16,6 +15,7 @@ import {
   getFinalizedRootProof,
   getCurrentSyncCommitteeBranch,
 } from "./proofs.js";
+import {byteArrayEquals} from "@lodestar/beacon-node/util/bytes";
 
 export type LightClientServerOpts = {
   disableLightClientServerOnImportBlockHead?: boolean;

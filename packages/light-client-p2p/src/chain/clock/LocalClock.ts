@@ -5,8 +5,8 @@ import {computeEpochAtSlot, computeTimeAtSlot, getCurrentSlot} from "@lodestar/s
 
 import {ChainEvent, ChainEventEmitter} from "../emitter.js";
 
-import {MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../constants/index.js";
 import {IBeaconClock} from "./interface.js";
+import {MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "@lodestar/beacon-node/constants";
 
 /**
  * A local clock, the clock time is assumed to be trusted

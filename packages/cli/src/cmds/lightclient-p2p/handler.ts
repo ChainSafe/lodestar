@@ -7,10 +7,8 @@ import {LevelDbController} from "@lodestar/db";
 import {createIBeaconConfig} from "@lodestar/config";
 import {ACTIVE_PRESET, PresetName} from "@lodestar/params";
 import {ProcessShutdownCallback} from "@lodestar/validator";
-import {BeaconNodeLight, createNodeJsLibp2p} from "@lodestar/light-client-p2p";
-import {BeaconDb as BeaconDbLight} from "@lodestar/light-client-p2p";
+import {BeaconDb as BeaconDbLight, LightNode, createNodeJsLibp2p} from "@lodestar/light-client-p2p";
 import {BeaconDb} from "@lodestar/beacon-node";
-//import {BeaconNode} from "@lodestar/light-client-p2p";
 import {IGlobalArgs, parseBeaconNodeArgs} from "../../options/index.js";
 import {BeaconNodeLightOptions, exportToJSON, FileENR, getBeaconConfigFromArgs} from "../../config/index.js";
 import {onGracefulShutdown, getCliLogger, mkdir, writeFile600Perm} from "../../util/index.js";
@@ -76,7 +74,7 @@ export async function beaconLightHandler(args: IBeaconArgs & IGlobalArgs): Promi
     );
     const beaconConfig = createIBeaconConfig(config, anchorState.genesisValidatorsRoot);
     const lcCheckpointRoot = args.lcCheckpointRoot;
-    const node = await BeaconNodeLight.init({
+    const node = await LightNode.init({
       opts: options,
       config: beaconConfig,
       db,
@@ -92,7 +90,7 @@ export async function beaconLightHandler(args: IBeaconArgs & IGlobalArgs): Promi
       lcCheckpointRoot,
     });
 
-    if (args.attachToGlobalThis) ((globalThis as unknown) as {bn: BeaconNodeLight}).bn = node;
+    if (args.attachToGlobalThis) ((globalThis as unknown) as {bn: LightNode}).bn = node;
 
     abortController.signal.addEventListener("abort", () => node.close(), {once: true});
   } catch (e) {

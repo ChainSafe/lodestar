@@ -4,13 +4,13 @@ import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Slot} from "@lodestar/types";
 import {ILogger, sleep} from "@lodestar/utils";
 import {IMetrics} from "@lodestar/beacon-node/metrics";
-import {GENESIS_SLOT, ZERO_HASH_HEX} from "../constants/constants.js";
+import {IBeaconChain} from "@lodestar/beacon-node/chain";
 
-import {TransitionConfigurationV1} from "../execution/engine/interface.js";
+import {TransitionConfigurationV1} from "@lodestar/beacon-node/execution";
 import {ChainEvent} from "./emitter.js";
 import {prepareExecutionPayload} from "./produceBlock/produceBlockBody.js";
-import {IBeaconChain} from "./interface.js";
 import {RegenCaller} from "./regen/index.js";
+import {GENESIS_SLOT, ZERO_HASH_HEX} from "@lodestar/beacon-node/constants";
 
 /* With 12s slot times, this scheduler will run 4s before the start of each slot (`12 / 3 = 4`). */
 const SCHEDULER_LOOKAHEAD_FACTOR = 3;

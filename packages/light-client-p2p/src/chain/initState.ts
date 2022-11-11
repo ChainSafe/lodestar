@@ -10,13 +10,12 @@ import {IChainForkConfig} from "@lodestar/config";
 import {ILogger} from "@lodestar/utils";
 import {toHexString} from "@chainsafe/ssz";
 import {IMetrics} from "@lodestar/beacon-node/metrics";
-import {GENESIS_SLOT, ZERO_HASH} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
-import {Eth1Provider} from "../eth1/index.js";
-
-import {Eth1Options} from "../eth1/options.js";
 import {GenesisBuilder} from "./genesis/genesis.js";
 import {IGenesisResult} from "./genesis/interface.js";
+import {Eth1Options} from "@lodestar/beacon-node/eth1/options";
+import {Eth1Provider} from "@lodestar/beacon-node";
+import {GENESIS_SLOT, ZERO_HASH} from "@lodestar/beacon-node/constants";
 
 export async function persistGenesisResult(
   db: IBeaconDb,

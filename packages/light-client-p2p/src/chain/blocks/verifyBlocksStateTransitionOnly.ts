@@ -4,8 +4,8 @@ import {ErrorAborted, sleep} from "@lodestar/utils";
 import {IMetrics} from "@lodestar/beacon-node/metrics";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
-import {byteArrayEquals} from "../../util/bytes.js";
 import {ImportBlockOpts} from "./types.js";
+import {byteArrayEquals} from "@lodestar/beacon-node/util/bytes";
 
 /**
  * Verifies 1 or more blocks are fully valid running the full state transition; from a linear sequence of blocks.

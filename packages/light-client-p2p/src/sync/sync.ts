@@ -5,24 +5,11 @@ import {Slot, phase0} from "@lodestar/types";
 import {INetwork, NetworkEvent} from "@lodestar/beacon-node/network";
 import {IMetrics} from "@lodestar/beacon-node/metrics";
 import {IBeaconConfig} from "@lodestar/config";
-import {
-  IBeaconSync,
-  ISyncModules,
-  SyncChainDebugState,
-  SyncingStatus,
-  SyncState,
-  syncStateMetric,
-} from "@lodestar/beacon-node/sync";
-import {RangeSync, RangeSyncEvent, RangeSyncStatus} from "@lodestar/beacon-node/sync/range/range";
+import {IBeaconSync, ISyncModules, SyncChainDebugState, SyncingStatus, SyncState} from "@lodestar/beacon-node/sync";
 import {IBeaconChain} from "@lodestar/beacon-node/chain";
-import {isOptimsticBlock} from "../util/forkChoice.js";
 import {ChainEvent} from "../chain/index.js";
-import {GENESIS_SLOT} from "../constants/constants.js";
-import {getPeerSyncType, PeerSyncType, peerSyncTypes} from "./utils/remoteSyncType.js";
 import {MIN_EPOCH_TO_START_GOSSIP} from "./constants.js";
 import {SyncOptions} from "./options.js";
-import {UnknownBlockSync} from "./unknownBlock.js";
-import {computeEpochAtSlot} from "./lightSync/lightSyncUtils.js";
 
 export class LightNodeSync implements IBeaconSync {
   private readonly logger: ILogger;
@@ -32,11 +19,6 @@ export class LightNodeSync implements IBeaconSync {
   private readonly opts: SyncOptions;
   private readonly config: IBeaconConfig;
 
-  private readonly rangeSync: RangeSync;
-  private readonly unknownBlockSync: UnknownBlockSync;
-
-  /** For metrics only */
-  private readonly peerSyncType = new Map<string, PeerSyncType>();
 
   /**
    * The number of slots ahead of us that is allowed before starting a RangeSync
@@ -56,13 +38,10 @@ export class LightNodeSync implements IBeaconSync {
     this.chain = chain;
     this.metrics = metrics;
     this.logger = logger;
-    this.rangeSync = new RangeSync(modules, opts);
-    this.unknownBlockSync = new UnknownBlockSync(config, network, chain, logger, metrics, opts);
     this.slotImportTolerance = SLOTS_PER_EPOCH;
 
     // Subscribe to RangeSync completing a SyncChain and recompute sync state
     if (!opts.disableRangeSync) {
-      this.rangeSync.on(RangeSyncEvent.completedChain, this.updateSyncState);
       this.network.events.on(NetworkEvent.peerConnected, this.addPeer);
       this.network.events.on(NetworkEvent.peerDisconnected, this.removePeer);
     }
@@ -78,115 +57,45 @@ export class LightNodeSync implements IBeaconSync {
     this.network.events.off(NetworkEvent.peerConnected, this.addPeer);
     this.network.events.off(NetworkEvent.peerDisconnected, this.removePeer);
     this.chain.emitter.off(ChainEvent.clockEpoch, this.onClockEpoch);
-    this.rangeSync.close();
-    this.unknownBlockSync.close();
   }
 
   getSyncStatus(): SyncingStatus {
-    const currentSlot = this.chain.clock.currentSlot;
-    // If we are pre/at genesis, signal ready
-    if (currentSlot <= GENESIS_SLOT) {
-      return {
-        headSlot: "0",
-        syncDistance: "0",
-        isSyncing: false,
-        isOptimistic: false,
-      };
-    } else {
-      const head = this.chain.forkChoice.getHead();
-
-      switch (this.state) {
-        case SyncState.SyncingFinalized:
-        case SyncState.SyncingHead:
-        case SyncState.Stalled:
-          return {
-            headSlot: String(head.slot),
-            syncDistance: String(currentSlot - head.slot),
-            isSyncing: true,
-            isOptimistic: isOptimsticBlock(head),
-          };
-        case SyncState.Synced:
-          return {
-            headSlot: String(head.slot),
-            syncDistance: "0",
-            isSyncing: false,
-            isOptimistic: isOptimsticBlock(head),
-          };
-        default:
-          throw new Error("Node is stopped, cannot get sync status");
-      }
-    }
+    // TODO DA Update to a LC specific implementation
+    throw new Error("not implemented");
   }
 
   isSyncing(): boolean {
-    const state = this.state; // Don't run the getter twice
-    return state === SyncState.SyncingFinalized || state === SyncState.SyncingHead;
+    // TODO DA Update to a LC specific implementation
+    throw new Error("not implemented");
   }
 
   isSynced(): boolean {
-    return this.state === SyncState.Synced;
+    // TODO DA Update to a LC specific implementation
+    throw new Error("not implemented");
   }
 
   get state(): SyncState {
-    const currentSlot = this.chain.clock.currentSlot;
-    const headSlot = this.chain.forkChoice.getHead().slot;
-    if (
-      // Consider node synced IF
-      // Before genesis OR
-      (currentSlot < 0 ||
-        // head is behind clock but close enough with some tolerance
-        (headSlot <= currentSlot && headSlot >= currentSlot - this.slotImportTolerance)) &&
-      // Ensure there at least one connected peer to not claim synced if has no peers
-      // Allow to bypass this conditions for local networks with a single node
-      (this.opts.isSingleNode || this.network.hasSomeConnectedPeer())
-      // TODO: Consider enabling this condition (used in Lighthouse)
-      // && headSlot > 0
-    ) {
-      return SyncState.Synced;
-    }
-
-    const rangeSyncState = this.rangeSync.state;
-    switch (rangeSyncState.status) {
-      case RangeSyncStatus.Finalized:
-        return SyncState.SyncingFinalized;
-      case RangeSyncStatus.Head:
-        return SyncState.SyncingHead;
-      case RangeSyncStatus.Idle:
-        return SyncState.Stalled;
-    }
+    // TODO DA Update to a LC specific implementation
+    throw new Error("not implemented");
   }
 
   /** Full debug state for lodestar API */
   getSyncChainsDebugState(): SyncChainDebugState[] {
-    return this.rangeSync.getSyncChainsDebugState();
+    // TODO DA Update to a LC specific implementation
+    throw new Error("not implemented");
   }
 
-  private addPeer = (peerId: PeerId, peerStatus: phase0.Status): void => {
-    // We do not care about peers less than altair fork
-    if (computeEpochAtSlot(peerStatus.headSlot) < this.config.ALTAIR_FORK_EPOCH) {
-      return;
-    }
-
-    const localStatus = this.chain.getStatus();
-    const syncType = getPeerSyncType(localStatus, peerStatus, this.chain.forkChoice, this.slotImportTolerance);
-
-    // For metrics only
-    this.peerSyncType.set(peerId.toString(), syncType);
-
-    if (syncType === PeerSyncType.Advanced) {
-      this.rangeSync.addPeer(peerId, localStatus, peerStatus);
-    }
-
-    this.updateSyncState();
+  private addPeer = (_peerId: PeerId, _peerStatus: phase0.Status): void => {
+    // TODO DA Update to a LC specific implementation
+    throw new Error("not implemented");
   };
 
   /**
    * Must be called by libp2p when a peer is removed from the peer manager
    */
   private removePeer = (peerId: PeerId): void => {
-    this.rangeSync.removePeer(peerId);
-
-    this.peerSyncType.delete(peerId.toString());
+    // TODO DA Update to a LC specific implementation
+    throw new Error("not implemented");
   };
 
   /**
@@ -226,22 +135,9 @@ export class LightNodeSync implements IBeaconSync {
     this.updateSyncState();
   };
 
-  private scrapeMetrics(metrics: IMetrics): void {
+  private scrapeMetrics(_metrics: IMetrics): void {
     // Compute current sync state
-    metrics.syncStatus.set(syncStateMetric[this.state]);
-
-    // Count peers by syncType
-    const peerCountByType: Record<PeerSyncType, number> = {
-      [PeerSyncType.Advanced]: 0,
-      [PeerSyncType.FullySynced]: 0,
-      [PeerSyncType.Behind]: 0,
-    };
-    for (const syncType of this.peerSyncType.values()) {
-      peerCountByType[syncType]++;
-    }
-
-    for (const syncType of peerSyncTypes) {
-      metrics.syncPeersBySyncType.set({syncType}, peerCountByType[syncType]);
-    }
+    // TODO DA Update to a LC specific implementation
+    throw new Error("not implemented");
   }
 }
