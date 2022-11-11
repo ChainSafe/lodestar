@@ -74,7 +74,7 @@ await connectAllNodes(env.nodes);
 
 // The `TTD` will be reach around `start of bellatrixForkEpoch + additionalSlotsForMerge` slot
 // We wait for the end of that epoch with half more epoch to make sure merge transition is complete
-await waitForSlot(env.clock.getLastSlotOfEpoch(0), env.nodes, {
+await waitForSlot(env.clock.getLastSlotOfEpoch(bellatrixForkEpoch) + activePreset.SLOTS_PER_EPOCH / 2, env.nodes, {
   silent: true,
   env,
 });
