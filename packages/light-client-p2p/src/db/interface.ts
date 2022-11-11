@@ -17,7 +17,7 @@ import {
   LightClientOptimisticUpdateRepository,
   LightClientFinalityUpdateRepository,
   LightClientBootstrapRepository,
-  LightClientUpdateRepository
+  LightClientUpdateRepository,
 } from "./repositories/index.js";
 import {PreGenesisState, PreGenesisStateLastProcessedBlock} from "./single/index.js";
 

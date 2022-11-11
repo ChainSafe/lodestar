@@ -18,9 +18,9 @@ import {initializeEth1ForBlockProduction} from "@lodestar/beacon-node/eth1";
 import {initializeExecutionBuilder, initializeExecutionEngine} from "@lodestar/beacon-node/execution";
 import {BeaconSync, IBeaconSync} from "@lodestar/beacon-node/sync";
 import {BeaconRestApiServer, getApi} from "@lodestar/beacon-node/api";
+import {runNodeNotifier} from "@lodestar/beacon-node/node/notifier";
 import {LightSync} from "../sync/lightSync/index.js";
 import {IBeaconNodeOptions} from "./options.js";
-import {runNodeNotifier} from "@lodestar/beacon-node/node/notifier";
 
 export * from "./options.js";
 

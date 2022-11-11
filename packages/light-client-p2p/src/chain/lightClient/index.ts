@@ -4,8 +4,8 @@ import {CachedBeaconStateAltair, computeSyncPeriodAtEpoch, computeSyncPeriodAtSl
 import {ILogger, MapDef, pruneSetToMax} from "@lodestar/utils";
 import {BitArray, CompositeViewDU, toHexString} from "@chainsafe/ssz";
 import {MIN_SYNC_COMMITTEE_PARTICIPANTS, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
-import {IBeaconDb} from "../../db/index.js";
 import {IMetrics} from "@lodestar/beacon-node/metrics";
+import {IBeaconDb} from "../../db/index.js";
 import {ChainEvent, ChainEventEmitter} from "../emitter.js";
 import {byteArrayEquals} from "../../util/bytes.js";
 import {ZERO_HASH} from "../../constants/index.js";

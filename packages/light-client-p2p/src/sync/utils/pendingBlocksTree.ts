@@ -1,6 +1,6 @@
 import {RootHex} from "@lodestar/types";
 import {MapDef} from "@lodestar/utils";
-import {PendingBlock, PendingBlockStatus} from "../interface.js";
+import {PendingBlock, PendingBlockStatus} from "@lodestar/beacon-node/sync";
 
 export function getAllDescendantBlocks(blockRootHex: RootHex, blocks: Map<RootHex, PendingBlock>): PendingBlock[] {
   // Do one pass over all blocks to index by parent

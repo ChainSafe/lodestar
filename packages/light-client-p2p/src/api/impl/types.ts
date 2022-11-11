@@ -3,9 +3,9 @@ import {ILogger} from "@lodestar/utils";
 
 import {INetwork} from "@lodestar/beacon-node/network";
 import {IMetrics} from "@lodestar/beacon-node/metrics";
+import {IBeaconSync} from "@lodestar/beacon-node/sync";
 import {IBeaconChain} from "../../chain/index.js";
 import {IBeaconDb} from "../../db/index.js";
-import {IBeaconSync} from "../../sync/index.js";
 
 /**
  * PR ensure API follows spec required to include the isOptimstic boolean in many routes.

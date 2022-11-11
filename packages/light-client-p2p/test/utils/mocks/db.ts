@@ -20,8 +20,9 @@ import {createStubInstance} from "../types.js";
 import {
   LightClientBootstrapRepository,
   LightClientFinalityUpdateRepository,
-  LightClientOptimisticUpdateRepository, LightClientUpdateRepository
-} from "../../../lib/db/repositories";
+  LightClientOptimisticUpdateRepository,
+  LightClientUpdateRepository,
+} from "../../../lib/db/repositories.js";
 
 /* eslint-disable @typescript-eslint/no-empty-function */
 
@@ -70,6 +71,6 @@ export function getStubbedBeaconDb(): IBeaconDb {
     /**  Stop the connection to the db instance and close the db store. */
     async stop(): Promise<void> {},
     /** To inject metrics after CLI initialization */
-    setMetrics(): void {}
+    setMetrics(): void {},
   };
 }

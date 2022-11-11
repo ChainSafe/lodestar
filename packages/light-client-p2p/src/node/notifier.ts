@@ -5,9 +5,9 @@ import {ProtoBlock} from "@lodestar/fork-choice";
 import {ErrorAborted, ILogger, sleep, prettyBytes} from "@lodestar/utils";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeEpochAtSlot, isExecutionCachedStateType, isMergeTransitionComplete} from "@lodestar/state-transition";
-import {IBeaconChain} from "../chain/index.js";
 import {INetwork} from "@lodestar/beacon-node/network";
-import {IBeaconSync, SyncState} from "../sync/index.js";
+import {IBeaconSync, SyncState} from "@lodestar/beacon-node/sync";
+import {IBeaconChain} from "../chain/index.js";
 import {prettyTimeDiffSec} from "../util/time.js";
 import {TimeSeries} from "../util/timeSeries.js";
 

@@ -2,6 +2,7 @@ import {RootHex, allForks, capella} from "@lodestar/types";
 import {BYTES_PER_LOGS_BLOOM, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {fromHex} from "@lodestar/utils";
 
+import {IMetrics} from "@lodestar/beacon-node/metrics";
 import {ErrorJsonRpcResponse, HttpRpcError, JsonRpcHttpClient} from "../../eth1/provider/jsonRpcHttpClient.js";
 import {
   bytesToData,
@@ -13,7 +14,6 @@ import {
   quantityToBigint,
 } from "../../eth1/provider/utils.js";
 import {IJsonRpcHttpClient, ReqOpts} from "../../eth1/provider/jsonRpcHttpClient.js";
-import {IMetrics} from "@lodestar/beacon-node/metrics";
 import {JobItemQueue} from "../../util/queue/index.js";
 import {EPOCHS_PER_BATCH} from "../../sync/constants.js";
 import {

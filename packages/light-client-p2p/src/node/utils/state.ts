@@ -1,9 +1,9 @@
 import {IChainForkConfig} from "@lodestar/config";
 import {BeaconStateAllForks} from "@lodestar/state-transition";
 import {phase0, ssz} from "@lodestar/types";
+import {IBeaconDb} from "@lodestar/beacon-node";
 import {interopDeposits} from "./interop/deposits.js";
 import {getInteropState, InteropStateOpts} from "./interop/state.js";
-import {IBeaconDb} from "@lodestar/beacon-node";
 
 export function initDevState(
   config: IChainForkConfig,

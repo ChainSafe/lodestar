@@ -1,6 +1,6 @@
 import http, {Server} from "node:http";
 import {Socket} from "node:net";
-import {IGauge} from "@lodestar/beacon-node/metrics";;
+import {IGauge} from "@lodestar/beacon-node/metrics";
 
 export type SocketMetrics = {
   activeSockets: IGauge;

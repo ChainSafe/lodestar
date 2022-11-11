@@ -4,23 +4,33 @@ import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Slot, phase0} from "@lodestar/types";
 import {INetwork, NetworkEvent} from "@lodestar/beacon-node/network";
 import {IMetrics} from "@lodestar/beacon-node/metrics";
+import {IBeaconConfig} from "@lodestar/config";
+import {
+  IBeaconSync,
+  ISyncModules,
+  SyncChainDebugState,
+  SyncingStatus,
+  SyncState,
+  syncStateMetric,
+} from "@lodestar/beacon-node/sync";
+import {RangeSync, RangeSyncEvent, RangeSyncStatus} from "@lodestar/beacon-node/sync/range/range";
+import {IBeaconChain} from "@lodestar/beacon-node/chain";
 import {isOptimsticBlock} from "../util/forkChoice.js";
-import {ChainEvent, IBeaconChain} from "../chain/index.js";
+import {ChainEvent} from "../chain/index.js";
 import {GENESIS_SLOT} from "../constants/constants.js";
-import {IBeaconSync, ISyncModules, SyncingStatus} from "./interface.js";
-import {RangeSync, RangeSyncStatus, RangeSyncEvent} from "./range/range.js";
 import {getPeerSyncType, PeerSyncType, peerSyncTypes} from "./utils/remoteSyncType.js";
 import {MIN_EPOCH_TO_START_GOSSIP} from "./constants.js";
-import {SyncState, SyncChainDebugState, syncStateMetric} from "./interface.js";
 import {SyncOptions} from "./options.js";
 import {UnknownBlockSync} from "./unknownBlock.js";
+import {computeEpochAtSlot} from "./lightSync/lightSyncUtils.js";
 
-export class BeaconSync implements IBeaconSync {
+export class LightNodeSync implements IBeaconSync {
   private readonly logger: ILogger;
   private readonly network: INetwork;
   private readonly chain: IBeaconChain;
   private readonly metrics: IMetrics | null;
   private readonly opts: SyncOptions;
+  private readonly config: IBeaconConfig;
 
   private readonly rangeSync: RangeSync;
   private readonly unknownBlockSync: UnknownBlockSync;
@@ -41,6 +51,7 @@ export class BeaconSync implements IBeaconSync {
   constructor(opts: SyncOptions, modules: ISyncModules) {
     const {config, chain, metrics, network, logger} = modules;
     this.opts = opts;
+    this.config = config;
     this.network = network;
     this.chain = chain;
     this.metrics = metrics;
@@ -150,18 +161,12 @@ export class BeaconSync implements IBeaconSync {
     return this.rangeSync.getSyncChainsDebugState();
   }
 
-  /**
-   * A peer has connected which has blocks that are unknown to us.
-   *
-   * This function handles the logic associated with the connection of a new peer. If the peer
-   * is sufficiently ahead of our current head, a range-sync (batch) sync is started and
-   * batches of blocks are queued to download from the peer. Batched blocks begin at our latest
-   * finalized head.
-   *
-   * If the peer is within the `SLOT_IMPORT_TOLERANCE`, then it's head is sufficiently close to
-   * ours that we consider it fully sync'd with respect to our current chain.
-   */
   private addPeer = (peerId: PeerId, peerStatus: phase0.Status): void => {
+    // We do not care about peers less than altair fork
+    if (computeEpochAtSlot(peerStatus.headSlot) < this.config.ALTAIR_FORK_EPOCH) {
+      return;
+    }
+
     const localStatus = this.chain.getStatus();
     const syncType = getPeerSyncType(localStatus, peerStatus, this.chain.forkChoice, this.slotImportTolerance);
 

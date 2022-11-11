@@ -3,7 +3,7 @@ import chaiAsPromised from "chai-as-promised";
 import {use, expect} from "chai";
 import {config} from "@lodestar/config/default";
 import {ProtoBlock} from "@lodestar/fork-choice";
-import {IBeaconSync, SyncState} from "../../../../../src/sync/interface.js";
+import {IBeaconSync, SyncState} from "@lodestar/beacon-node/sync";
 import {ApiModules} from "../../../../../src/api/impl/types.js";
 import {getValidatorApi} from "../../../../../src/api/impl/validator/index.js";
 import {LocalClock} from "../../../../../src/chain/clock/index.js";

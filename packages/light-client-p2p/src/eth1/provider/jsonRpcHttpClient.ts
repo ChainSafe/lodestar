@@ -3,9 +3,9 @@
 import fetch from "cross-fetch";
 
 import {ErrorAborted, TimeoutError, retry} from "@lodestar/utils";
+import {IGauge, IHistogram} from "@lodestar/beacon-node/metrics";
 import {IJson, IRpcPayload} from "../interface.js";
 import {encodeJwtToken} from "./jwt.js";
-import {IGauge, IHistogram} from "@lodestar/beacon-node/metrics";
 /**
  * Limits the amount of response text printed with RPC or parsing errors
  */

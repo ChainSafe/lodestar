@@ -6,12 +6,12 @@ import {ForkChoice} from "@lodestar/fork-choice";
 
 import {ssz} from "@lodestar/types";
 import {MAX_EFFECTIVE_BALANCE, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {IBeaconSync} from "@lodestar/beacon-node/sync";
 import {LocalClock} from "../../../../../../src/chain/clock/index.js";
 import {FAR_FUTURE_EPOCH} from "../../../../../../src/constants/index.js";
 import {getValidatorApi} from "../../../../../../src/api/impl/validator/index.js";
 import {ApiModules} from "../../../../../../src/api/impl/types.js";
 import {generateState} from "../../../../../utils/state.js";
-import {IBeaconSync} from "../../../../../../src/sync/index.js";
 import {generateValidators} from "../../../../../utils/validator.js";
 import {StubbedBeaconDb, StubbedChainMutable} from "../../../../../utils/stub/index.js";
 import {setupApiImplTestServer, ApiImplTestModules} from "../../index.test.js";

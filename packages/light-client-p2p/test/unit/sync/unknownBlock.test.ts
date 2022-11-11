@@ -5,7 +5,7 @@ import {ssz} from "@lodestar/types";
 import {notNullish, sleep} from "@lodestar/utils";
 import {toHexString} from "@chainsafe/ssz";
 import {INetwork, IReqResp, NetworkEvent, NetworkEventBus, PeerAction} from "@lodestar/beacon-node/network";
-import {IBeaconChain} from "../../../src/chain/index.js";
+import {IBeaconChain} from "@lodestar/beacon-node/chain";
 import {UnknownBlockSync} from "../../../src/sync/unknownBlock.js";
 import {testLogger} from "../../utils/logger.js";
 import {getValidPeerId} from "../../utils/peer.js";

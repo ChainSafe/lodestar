@@ -4,8 +4,8 @@ import {Libp2p} from "libp2p";
 import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
 import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {BitArray} from "@chainsafe/ssz";
-import {Libp2pEvent} from "../../src/constants/index.js";
 import {createNodejsLibp2p, INetwork, Network} from "@lodestar/beacon-node/network";
+import {Libp2pEvent} from "../../src/constants/index.js";
 
 export async function createNode(multiaddr: string, inPeerId?: PeerId): Promise<Libp2p> {
   const peerId = inPeerId || (await createSecp256k1PeerId());
@@ -32,14 +32,14 @@ export async function disconnect(network: INetworkDebug, peer: PeerId): Promise<
 
 export function onPeerConnect(network: Network): Promise<void> {
   return new Promise<void>((resolve) =>
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return,@typescript-eslint/no-unsafe-call,@typescript-eslint/no-unsafe-member-access
     network["libp2p"].connectionManager.addEventListener(Libp2pEvent.peerConnect, () => resolve())
   );
 }
 
 export function onPeerDisconnect(network: Network): Promise<void> {
   return new Promise<void>((resolve) =>
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return,@typescript-eslint/no-unsafe-call,@typescript-eslint/no-unsafe-member-access
     network["libp2p"].connectionManager.addEventListener(Libp2pEvent.peerDisconnect, () => resolve())
   );
 }

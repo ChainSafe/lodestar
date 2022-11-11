@@ -1,6 +1,6 @@
 import {expect} from "chai";
 import {RootHex} from "@lodestar/types";
-import {PendingBlock, PendingBlockStatus} from "../../../../src/sync/index.js";
+import {PendingBlock, PendingBlockStatus} from "@lodestar/beacon-node/sync";
 import {
   getAllDescendantBlocks,
   getDescendantBlocks,

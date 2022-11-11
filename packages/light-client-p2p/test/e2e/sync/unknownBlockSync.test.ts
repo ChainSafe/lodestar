@@ -3,6 +3,7 @@ import {phase0, ssz} from "@lodestar/types";
 import {fromHexString} from "@chainsafe/ssz";
 import {TimestampFormatCode} from "@lodestar/utils";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {NetworkEvent} from "@lodestar/beacon-node/network";
 import {getDevBeaconNode} from "../../utils/node/beacon.js";
 import {waitForEvent} from "../../utils/events/resolver.js";
 import {getAndInitDevValidators} from "../../utils/node/validator.js";
@@ -10,7 +11,6 @@ import {ChainEvent} from "../../../src/chain/index.js";
 import {connect} from "../../utils/network.js";
 import {testLogger, LogLevel, TestLoggerOpts} from "../../utils/logger.js";
 import {BlockError, BlockErrorCode} from "../../../src/chain/errors/index.js";
-import {NetworkEvent} from "@lodestar/beacon-node/network";
 
 describe("sync / unknown block sync", function () {
   const validatorCount = 8;

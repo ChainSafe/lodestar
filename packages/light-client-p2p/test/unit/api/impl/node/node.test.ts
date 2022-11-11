@@ -10,12 +10,12 @@ import {createKeypairFromPeerId, ENR} from "@chainsafe/discv5";
 import {BitArray} from "@chainsafe/ssz";
 import {altair} from "@lodestar/types";
 import {routes} from "@lodestar/api";
-import {BeaconSync, IBeaconSync} from "../../../../../src/sync/index.js";
+import {INetwork, Network} from "@lodestar/beacon-node/network";
+import {MetadataController} from "@lodestar/beacon-node/network/metadata";
+import {BeaconSync, IBeaconSync} from "@lodestar/beacon-node/sync";
 import {defaultApiOptions} from "../../../../../src/api/options.js";
 import {getNodeApi} from "../../../../../src/api/impl/node/index.js";
 import {libp2pConnection} from "../../../../utils/node/p2p.js";
-import {INetwork, Network} from "@lodestar/beacon-node/network";
-import {MetadataController} from "@lodestar/beacon-node/network/metadata";
 
 interface IPeerSummary {
   direction: string | null;
