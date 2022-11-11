@@ -69,7 +69,7 @@ export async function waitForEvent(
   node: CLNode | "any",
   {env}: {env: SimulationEnvironment}
 ): Promise<routes.events.BeaconEvent> {
-  console.log(`Waiting for event "${event}" on "${node.id}"`);
+  console.log(`Waiting for event "${event}" on "${node === "any" ? node : node.id}"`);
 
   return new Promise((resolve) => {
     const handler = (beaconEvent: routes.events.BeaconEvent, eventNode: CLNode): void => {

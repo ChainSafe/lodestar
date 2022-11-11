@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {join} from "node:path";
 import {activePreset} from "@lodestar/params";
+import {BlockErrorCode} from "@lodestar/beacon-node/chain/errors";
 import {CLIQUE_SEALING_PERIOD, SIM_TESTS_SECONDS_PER_SLOT} from "../utils/simulation/constants.js";
 import {CLClient, ELClient} from "../utils/simulation/interfaces.js";
 import {SimulationEnvironment} from "../utils/simulation/SimulationEnvironment.js";
@@ -73,15 +74,13 @@ await connectAllNodes(env.nodes);
 
 // The `TTD` will be reach around `start of bellatrixForkEpoch + additionalSlotsForMerge` slot
 // We wait for the end of that epoch with half more epoch to make sure merge transition is complete
-await waitForSlot(env.clock.getLastSlotOfEpoch(bellatrixForkEpoch) + activePreset.SLOTS_PER_EPOCH / 2, env.nodes, {
+await waitForSlot(env.clock.getLastSlotOfEpoch(0), env.nodes, {
   silent: true,
   env,
 });
 
-const {
-  data: {finalized},
-} = await env.nodes[0].cl.api.beacon.getStateFinalityCheckpoints("head");
-
+// Range Sync
+// ========================================================
 const rangeSync = env.createNodePair({
   id: "range-sync-node",
   cl: CLClient.Lodestar,
@@ -89,12 +88,16 @@ const rangeSync = env.createNodePair({
   keysCount: 0,
 });
 
+// Checkpoint sync involves Weak Subjectivity Checkpoint
+// ========================================================
+const {
+  data: {finalized},
+} = await env.nodes[0].cl.api.beacon.getStateFinalityCheckpoints("head");
 const checkpointSync = env.createNodePair({
   id: "checkpoint-sync-node",
-  cl: CLClient.Lodestar,
+  cl: {type: CLClient.Lodestar, options: {wssCheckpoint: `${finalized.root}:${finalized.epoch}`}},
   el: ELClient.Geth,
   keysCount: 0,
-  wssCheckpoint: `${finalized.root}:${finalized.epoch}`,
 });
 
 await rangeSync.jobs.el.start();
@@ -107,9 +110,41 @@ await connectNewNode(checkpointSync.nodePair, env.nodes);
 
 await waitForNodeSync(rangeSync.nodePair, env.options.controller.signal);
 await waitForNodeSync(checkpointSync.nodePair, env.options.controller.signal);
-
 await rangeSync.jobs.cl.stop();
 await rangeSync.jobs.el.stop();
 await checkpointSync.jobs.cl.stop();
 await checkpointSync.jobs.el.stop();
+
+// Unknown block sync
+// ========================================================
+const unknownBlockSync = env.createNodePair({
+  id: "unknown-block-sync-node",
+  cl: {type: CLClient.Lodestar, options: {"network.allowPublishToZeroPeers": true}},
+  el: ELClient.Geth,
+  keysCount: 0,
+});
+await unknownBlockSync.jobs.el.start();
+await unknownBlockSync.jobs.cl.start();
+const head = await env.nodes[0].cl.api.beacon.getBlock("head");
+
+try {
+  await unknownBlockSync.nodePair.cl.api.beacon.publishBlock(head.data);
+
+  env.tracker.record({
+    message: "Publishing unknown block should fail",
+    slot: env.clock.currentSlot,
+    assertionId: "unknownBlockParent",
+  });
+} catch (error) {
+  if (!(error as Error).message.includes(BlockErrorCode.PARENT_UNKNOWN)) {
+    env.tracker.record({
+      message: `Publishing unknown block should return "${BlockErrorCode.PARENT_UNKNOWN}" got "${
+        (error as Error).message
+      }"`,
+      slot: env.clock.currentSlot,
+      assertionId: "unknownBlockParent",
+    });
+  }
+}
+
 await env.stop();

@@ -26,10 +26,12 @@ import {ExternalSignerServer} from "./ExternalSignerServer.js";
 import {
   AtLeast,
   CLClient,
-  CLClientOptions,
+  CLClientGeneratorOptions,
+  CLClientsOptions,
   CLNode,
   ELClient,
-  ELClientOptions,
+  ELClientsOptions,
+  ELGeneratorClientOptions,
   ELNode,
   ELStartMode,
   Job,
@@ -220,7 +222,14 @@ export class SimulationEnvironment {
     }
   }
 
-  createNodePair({el, cl, keysCount, id, wssCheckpoint, remote, mining}: NodePairOptions): NodePairResult {
+  createNodePair<C extends CLClient, E extends ELClient>({
+    el,
+    cl,
+    keysCount,
+    id,
+    remote,
+    mining,
+  }: NodePairOptions<C, E>): NodePairResult {
     if (this.genesisState && keysCount > 0) {
       throw new Error("Genesis state already initialized. Can not add more keys to it.");
     }
@@ -236,7 +245,6 @@ export class SimulationEnvironment {
       id,
       remoteKeys: remote ? keys : [],
       localKeys: remote ? [] : keys,
-      wssCheckpoint,
     });
 
     const elClient = this.createELNode(el, {id, mining});
@@ -247,15 +255,18 @@ export class SimulationEnvironment {
     };
   }
 
-  private createCLNode(
-    client: CLClient,
-    options?: AtLeast<CLClientOptions, "remoteKeys" | "localKeys" | "id">
+  private createCLNode<C extends CLClient>(
+    client: C | {type: C; options: CLClientsOptions[C]},
+    options?: AtLeast<CLClientGeneratorOptions, "remoteKeys" | "localKeys" | "id">
   ): {job: Job; node: CLNode} {
-    const clId = `${options?.id}-cl-${client}`;
+    const clientType = typeof client === "object" ? client.type : client;
+    const clientOptions = typeof client === "object" ? client.options : undefined;
 
-    switch (client) {
+    const clId = `${options?.id}-cl-${clientType}`;
+
+    switch (clientType) {
       case CLClient.Lodestar: {
-        const opts: CLClientOptions = {
+        const opts: CLClientGeneratorOptions = {
           id: clId,
           dataDir: join(this.options.rootDir, clId),
           logFilePath: join(this.options.logsDir, `${clId}.log`),
@@ -270,6 +281,7 @@ export class SimulationEnvironment {
           genesisTime: this.options.genesisTime,
           engineUrl: options?.engineUrl ?? `http://127.0.0.1:${EL_ENGINE_BASE_PORT + this.nodePairCount + 1}`,
           jwtSecretHex: options?.jwtSecretHex ?? SHARED_JWT_SECRET,
+          clientOptions: clientOptions ?? {},
         };
         return generateLodestarBeaconNode(opts, this.childProcessRunner);
       }
@@ -278,10 +290,16 @@ export class SimulationEnvironment {
     }
   }
 
-  private createELNode(client: ELClient, options: AtLeast<ELClientOptions, "id">): {job: Job; node: ELNode} {
-    const elId = `${options.id}-el-${client}`;
+  private createELNode<E extends ELClient>(
+    client: E | {type: E; options: ELClientsOptions[E]},
+    options: AtLeast<ELGeneratorClientOptions, "id">
+  ): {job: Job; node: ELNode} {
+    const clientType = typeof client === "object" ? client.type : client;
+    const clientOptions = typeof client === "object" ? client.options : undefined;
 
-    const opts: ELClientOptions = {
+    const elId = `${options.id}-el-${clientType}`;
+
+    const opts: ELGeneratorClientOptions<E> = {
       id: elId,
       mode: options?.mode ?? (this.forkConfig.BELLATRIX_FORK_EPOCH > 0 ? ELStartMode.PreMerge : ELStartMode.PostMerge),
       ttd: options?.ttd ?? this.forkConfig.TERMINAL_TOTAL_DIFFICULTY,
@@ -294,14 +312,15 @@ export class SimulationEnvironment {
       port: options?.port ?? EL_P2P_BASE_PORT + this.nodePairCount + 1,
       address: this.dockerRunner.getNextIp(),
       mining: options?.mining ?? false,
+      clientOptions: clientOptions ?? [],
     };
 
-    switch (client) {
+    switch (clientType) {
       case ELClient.Geth: {
-        return generateGethNode(opts, this.dockerRunner);
+        return generateGethNode(opts as ELGeneratorClientOptions<ELClient.Geth>, this.dockerRunner);
       }
       case ELClient.Nethermind: {
-        return generateNethermindNode(opts, this.dockerRunner);
+        return generateNethermindNode(opts as ELGeneratorClientOptions<ELClient.Nethermind>, this.dockerRunner);
       }
       default:
         throw new Error(`EL Client "${client}" not supported`);

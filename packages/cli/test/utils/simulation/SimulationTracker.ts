@@ -3,7 +3,15 @@ import {routes} from "@lodestar/api/beacon";
 import {IChainForkConfig} from "@lodestar/config";
 import {Epoch, Slot} from "@lodestar/types";
 import {EpochClock} from "./EpochClock.js";
-import {NodeId, NodePair, SimulationAssertion, SimulationAssertionError, StoreType, StoreTypes} from "./interfaces.js";
+import {
+  AtLeast,
+  NodeId,
+  NodePair,
+  SimulationAssertion,
+  SimulationAssertionError,
+  StoreType,
+  StoreTypes,
+} from "./interfaces.js";
 import {arrayGroupBy, avg, getForkName, squeezeString} from "./utils/index.js";
 import {attestationsCountAssertion} from "./assertions/defaults/attestationCountAssertion.js";
 import {attestationParticipationAssertion} from "./assertions/defaults/attestationParticipationAssertion.js";
@@ -200,6 +208,10 @@ export class SimulationTracker {
         }
       }
     }
+  }
+
+  record(error: AtLeast<SimulationAssertionError, "slot" | "message" | "assertionId">): void {
+    this.errors.push({...error, epoch: error.epoch ?? this.clock.getEpochForSlot(error.slot)});
   }
 
   private initDataForNode(node: NodePair): void {
