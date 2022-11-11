@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {join} from "node:path";
 import {activePreset} from "@lodestar/params";
-import {BlockErrorCode} from "@lodestar/beacon-node/chain/errors";
 import {CLIQUE_SEALING_PERIOD, SIM_TESTS_SECONDS_PER_SLOT} from "../utils/simulation/constants.js";
 import {CLClient, ELClient} from "../utils/simulation/interfaces.js";
 import {SimulationEnvironment} from "../utils/simulation/SimulationEnvironment.js";
@@ -136,11 +135,9 @@ try {
     assertionId: "unknownBlockParent",
   });
 } catch (error) {
-  if (!(error as Error).message.includes(BlockErrorCode.PARENT_UNKNOWN)) {
+  if (!(error as Error).message.includes("BLOCK_ERROR_PARENT_UNKNOWN")) {
     env.tracker.record({
-      message: `Publishing unknown block should return "${BlockErrorCode.PARENT_UNKNOWN}" got "${
-        (error as Error).message
-      }"`,
+      message: `Publishing unknown block should return "BLOCK_ERROR_PARENT_UNKNOWN" got "${(error as Error).message}"`,
       slot: env.clock.currentSlot,
       assertionId: "unknownBlockParent",
     });
