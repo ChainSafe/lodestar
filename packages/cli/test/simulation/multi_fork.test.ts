@@ -1,16 +1,19 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {join} from "node:path";
-import {SIM_TESTS_SECONDS_PER_SLOT} from "../utils/simulation/constants.js";
+import {activePreset} from "@lodestar/params";
+import {CLIQUE_SEALING_PERIOD, SIM_TESTS_SECONDS_PER_SLOT} from "../utils/simulation/constants.js";
 import {CLClient, ELClient} from "../utils/simulation/interfaces.js";
 import {SimulationEnvironment} from "../utils/simulation/SimulationEnvironment.js";
-import {getEstimatedTimeInSecForRun, logFilesDir} from "../utils/simulation/utils/index.js";
+import {getEstimatedTimeInSecForRun, getEstimatedTTD, logFilesDir} from "../utils/simulation/utils/index.js";
 import {connectAllNodes, connectNewNode} from "../utils/simulation/utils/network.js";
 import {nodeAssertion} from "../utils/simulation/assertions/nodeAssertion.js";
 import {mergeAssertion} from "../utils/simulation/assertions/mergeAssertion.js";
 
-const genesisSlotsDelay = 10;
+const genesisSlotsDelay = 20;
 const altairForkEpoch = 2;
 const bellatrixForkEpoch = 4;
+// Make sure bellatrix started before TTD reach
+const additionalSlotsForTTD = activePreset.SLOTS_PER_EPOCH - 2;
 const runTillEpoch = 6;
 const syncWaitEpoch = 2;
 
@@ -19,8 +22,17 @@ const timeout =
     genesisSlotDelay: genesisSlotsDelay,
     secondsPerSlot: SIM_TESTS_SECONDS_PER_SLOT,
     runTill: runTillEpoch + syncWaitEpoch,
-    graceExtraTimeFraction: 0.1, // 10% extra time
+    // After adding Nethermind its took longer to complete
+    graceExtraTimeFraction: 0.3,
   }) * 1000;
+
+const ttd = getEstimatedTTD({
+  genesisDelay: genesisSlotsDelay,
+  bellatrixForkEpoch: bellatrixForkEpoch,
+  secondsPerSlot: SIM_TESTS_SECONDS_PER_SLOT,
+  cliqueSealingPeriod: CLIQUE_SEALING_PERIOD,
+  additionalSlots: additionalSlotsForTTD,
+});
 
 const env = SimulationEnvironment.initWithDefaults(
   {
@@ -30,13 +42,14 @@ const env = SimulationEnvironment.initWithDefaults(
       ALTAIR_FORK_EPOCH: altairForkEpoch,
       BELLATRIX_FORK_EPOCH: bellatrixForkEpoch,
       GENESIS_DELAY: genesisSlotsDelay,
+      TERMINAL_TOTAL_DIFFICULTY: ttd,
     },
   },
   [
-    {id: "node-1", cl: CLClient.Lodestar, el: ELClient.Geth, keysCount: 32},
-    {id: "node-2", cl: CLClient.Lodestar, el: ELClient.Geth, keysCount: 32},
+    {id: "node-1", cl: CLClient.Lodestar, el: ELClient.Geth, keysCount: 32, mining: true},
+    {id: "node-2", cl: CLClient.Lodestar, el: ELClient.Nethermind, keysCount: 32, remote: true},
     {id: "node-3", cl: CLClient.Lodestar, el: ELClient.Geth, keysCount: 32},
-    {id: "node-4", cl: CLClient.Lodestar, el: ELClient.Geth, keysCount: 32},
+    {id: "node-4", cl: CLClient.Lodestar, el: ELClient.Nethermind, keysCount: 32},
   ]
 );
 
@@ -57,7 +70,13 @@ env.tracker.register({
 
 await env.start(timeout);
 await connectAllNodes(env.nodes);
-await env.waitForSlot(env.clock.getLastSlotOfEpoch(bellatrixForkEpoch), env.nodes, true);
+// The `TTD` will be reach around `start of bellatrixForkEpoch + additionalSlotsForMerge` slot
+// We wait for the end of that epoch with half more epoch to make sure merge transition is complete
+await env.waitForSlot(
+  env.clock.getLastSlotOfEpoch(bellatrixForkEpoch) + activePreset.SLOTS_PER_EPOCH / 2,
+  env.nodes,
+  true
+);
 
 const {
   data: {finalized},
@@ -89,4 +108,8 @@ await connectNewNode(checkpointSync.nodePair, env.nodes);
 await env.waitForNodeSync(rangeSync.nodePair);
 await env.waitForNodeSync(checkpointSync.nodePair);
 
+await rangeSync.jobs.cl.stop();
+await rangeSync.jobs.el.stop();
+await checkpointSync.jobs.cl.stop();
+await checkpointSync.jobs.el.stop();
 await env.stop();

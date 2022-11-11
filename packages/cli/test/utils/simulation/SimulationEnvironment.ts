@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import {mkdir, rm, writeFile} from "node:fs/promises";
+import {mkdir, writeFile} from "node:fs/promises";
 import {EventEmitter} from "node:events";
 import {join} from "node:path";
 import tmp from "tmp";
@@ -27,12 +27,10 @@ import {
   Job,
   NodePair,
   NodePairOptions,
-  Runner,
-  RunnerType,
   SimulationInitOptions,
   SimulationOptions,
 } from "./interfaces.js";
-import {ChildProcessRunner} from "./runner/child_process.js";
+import {ChildProcessRunner} from "./runner/ChildProcessRunner.js";
 import {SimulationTracker} from "./SimulationTracker.js";
 import {
   BN_P2P_BASE_PORT,
@@ -46,6 +44,8 @@ import {
 } from "./constants.js";
 import {generateGethNode} from "./el_clients/geth.js";
 import {getEstimatedTTD} from "./utils/index.js";
+import {DockerRunner} from "./runner/DockerRunner.js";
+import {generateNethermindNode} from "./el_clients/nethermind.js";
 
 export const SHARED_JWT_SECRET = "0xdc6457099f127cf0bac78de8b297df04951281909db4f58b43def7c7151e765d";
 
@@ -56,9 +56,9 @@ export class SimulationEnvironment {
   readonly clock: EpochClock;
   readonly tracker: SimulationTracker;
   readonly emitter: EventEmitter;
-  readonly runner: Runner;
+  readonly childProcessRunner: ChildProcessRunner;
+  readonly dockerRunner: DockerRunner;
   readonly externalSigner: ExternalSignerServer;
-  readonly externalKeysPercentage = 0.5;
 
   readonly forkConfig: IChainForkConfig;
   readonly options: SimulationOptions;
@@ -84,11 +84,8 @@ export class SimulationEnvironment {
     this.emitter = new EventEmitter();
     this.externalSigner = new ExternalSignerServer([]);
 
-    if (this.options.runnerType === RunnerType.ChildProcess) {
-      this.runner = new ChildProcessRunner();
-    } else {
-      throw new Error("Invalid runner type");
-    }
+    this.childProcessRunner = new ChildProcessRunner();
+    this.dockerRunner = new DockerRunner(join(this.options.logsDir, "docker_runner.log"));
 
     this.tracker = SimulationTracker.initWithDefaultAssertions({
       nodes: [],
@@ -111,7 +108,8 @@ export class SimulationEnvironment {
         bellatrixForkEpoch: chainConfig.BELLATRIX_FORK_EPOCH,
         secondsPerSlot: secondsPerSlot,
         cliqueSealingPeriod: CLIQUE_SEALING_PERIOD,
-        additionalSlots: 6, // Make sure bellatrix started before TTD reach
+        // Make sure bellatrix started before TTD reach, so we wait for few more slots to be sure
+        additionalSlots: activePreset.SLOTS_PER_EPOCH - 2,
       });
 
     const forkConfig = createIChainForkConfig({
@@ -122,7 +120,6 @@ export class SimulationEnvironment {
 
     const env = new SimulationEnvironment(forkConfig, {
       logsDir,
-      runnerType: RunnerType.ChildProcess,
       id,
       genesisTime,
       controller: new AbortController(),
@@ -141,12 +138,29 @@ export class SimulationEnvironment {
   async start(timeout: number): Promise<void> {
     try {
       setTimeout(async () => {
-        await this.stop();
-        throw new Error(`Simulation ${this.options.id} timed out after ${timeout}ms`);
+        await this.stop(1, "On timeout");
       }, timeout);
+
+      process.on("unhandledRejection", async (reason, promise) => {
+        console.error("Unhandled Rejection at:", promise, "reason:", reason);
+        await this.stop(1, "Unhandled promise rejection");
+      });
+
+      process.on("uncaughtException", async (err) => {
+        console.error("Uncaught exception:", err);
+        await this.stop(1, "Uncaught exception");
+      });
+
+      process.on("SIGTERM", async () => {
+        await this.stop(0, "Terminating");
+      });
+      process.on("SIGINT", async () => {
+        await this.stop(0, "Terminating");
+      });
 
       await mkdir(this.options.rootDir);
 
+      await this.dockerRunner.start();
       await Promise.all(this.jobs.map((j) => j.el.start()));
 
       for (let i = 0; i < this.nodes.length; i++) {
@@ -184,24 +198,28 @@ export class SimulationEnvironment {
       await this.tracker.start();
       await Promise.all(this.nodes.map((node) => this.tracker.track(node)));
     } catch (error) {
-      console.error(error);
-      await this.stop();
+      await this.stop(1, `Caused error in startup. ${(error as Error).message}`);
     }
   }
 
-  async stop(): Promise<void> {
+  async stop(code = 0, message = "On completion."): Promise<void> {
+    process.removeAllListeners("unhandledRejection");
+    process.removeAllListeners("uncaughtException");
+    process.removeAllListeners("SIGTERM");
+    process.removeAllListeners("SIGINT");
+    console.log(`Simulation environment "${this.options.id}" is stopping: ${message}`);
     this.options.controller.abort();
     await this.tracker.stop();
     await Promise.all(this.jobs.map((j) => j.el.stop()));
     await Promise.all(this.jobs.map((j) => j.cl.stop()));
     await this.externalSigner.stop();
-    await rm(this.options.rootDir, {recursive: true});
+    await this.dockerRunner.stop();
 
     if (this.tracker.getErrorCount() > 0) {
       this.tracker.printErrors();
-      process.exit(1);
+      process.exit(this.tracker.getErrorCount() > 0 ? 1 : code);
     } else {
-      process.exit(0);
+      process.exit(code);
     }
   }
 
@@ -256,7 +274,7 @@ export class SimulationEnvironment {
     }
   }
 
-  createNodePair({el, cl, keysCount, id, wssCheckpoint}: NodePairOptions): NodePairResult {
+  createNodePair({el, cl, keysCount, id, wssCheckpoint, remote, mining}: NodePairOptions): NodePairResult {
     if (this.genesisState && keysCount > 0) {
       throw new Error("Genesis state already initialized. Can not add more keys to it.");
     }
@@ -270,12 +288,12 @@ export class SimulationEnvironment {
 
     const clClient = this.createCLNode(cl, {
       id,
-      remoteKeys: keys.slice(0, keys.length * this.externalKeysPercentage),
-      localKeys: keys.slice(keys.length * this.externalKeysPercentage),
+      remoteKeys: remote ? keys : [],
+      localKeys: remote ? [] : keys,
       wssCheckpoint,
     });
 
-    const elClient = this.createELNode(el, {id});
+    const elClient = this.createELNode(el, {id, mining});
 
     return {
       nodePair: {id, el: elClient.node, cl: clClient.node},
@@ -307,7 +325,7 @@ export class SimulationEnvironment {
           engineUrl: options?.engineUrl ?? `http://127.0.0.1:${EL_ENGINE_BASE_PORT + this.nodePairCount + 1}`,
           jwtSecretHex: options?.jwtSecretHex ?? SHARED_JWT_SECRET,
         };
-        return generateLodestarBeaconNode(opts, this.runner);
+        return generateLodestarBeaconNode(opts, this.childProcessRunner);
       }
       default:
         throw new Error(`CL Client "${client}" not supported`);
@@ -317,22 +335,27 @@ export class SimulationEnvironment {
   private createELNode(client: ELClient, options: AtLeast<ELClientOptions, "id">): {job: Job; node: ELNode} {
     const elId = `${options.id}-el-${client}`;
 
+    const opts: ELClientOptions = {
+      id: elId,
+      mode: options?.mode ?? (this.forkConfig.BELLATRIX_FORK_EPOCH > 0 ? ELStartMode.PreMerge : ELStartMode.PostMerge),
+      ttd: options?.ttd ?? this.forkConfig.TERMINAL_TOTAL_DIFFICULTY,
+      cliqueSealingPeriod: options?.cliqueSealingPeriod ?? CLIQUE_SEALING_PERIOD,
+      logFilePath: options?.logFilePath ?? join(this.options.logsDir, `${elId}.log`),
+      dataDir: options?.dataDir ?? join(this.options.rootDir, elId),
+      jwtSecretHex: options?.jwtSecretHex ?? SHARED_JWT_SECRET,
+      enginePort: options?.enginePort ?? EL_ENGINE_BASE_PORT + this.nodePairCount + 1,
+      ethPort: options?.ethPort ?? EL_ETH_BASE_PORT + this.nodePairCount + 1,
+      port: options?.port ?? EL_P2P_BASE_PORT + this.nodePairCount + 1,
+      address: this.dockerRunner.getNextIp(),
+      mining: options?.mining ?? false,
+    };
+
     switch (client) {
       case ELClient.Geth: {
-        const opts: ELClientOptions = {
-          id: elId,
-          mode:
-            options?.mode ?? (this.forkConfig.BELLATRIX_FORK_EPOCH > 0 ? ELStartMode.PreMerge : ELStartMode.PostMerge),
-          ttd: options?.ttd ?? this.forkConfig.TERMINAL_TOTAL_DIFFICULTY,
-          cliqueSealingPeriod: options?.cliqueSealingPeriod ?? CLIQUE_SEALING_PERIOD,
-          logFilePath: options?.logFilePath ?? join(this.options.logsDir, `${elId}.log`),
-          dataDir: options?.dataDir ?? join(this.options.rootDir, elId),
-          jwtSecretHex: options?.jwtSecretHex ?? SHARED_JWT_SECRET,
-          enginePort: options?.enginePort ?? EL_ENGINE_BASE_PORT + this.nodePairCount + 1,
-          ethPort: options?.ethPort ?? EL_ETH_BASE_PORT + this.nodePairCount + 1,
-          port: options?.port ?? EL_P2P_BASE_PORT + this.nodePairCount + 1,
-        };
-        return generateGethNode(opts, this.runner);
+        return generateGethNode(opts, this.dockerRunner);
+      }
+      case ELClient.Nethermind: {
+        return generateNethermindNode(opts, this.dockerRunner);
       }
       default:
         throw new Error(`EL Client "${client}" not supported`);
