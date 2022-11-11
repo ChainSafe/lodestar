@@ -19,7 +19,8 @@ const timeout =
     genesisSlotDelay: genesisSlotsDelay,
     secondsPerSlot: SIM_TESTS_SECONDS_PER_SLOT,
     runTill: runTillEpoch + syncWaitEpoch,
-    graceExtraTimeFraction: 0.1, // 10% extra time
+    // After adding Nethermind its took longer to complete
+    graceExtraTimeFraction: 0.3,
   }) * 1000;
 
 const env = SimulationEnvironment.initWithDefaults(
