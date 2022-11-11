@@ -16,6 +16,7 @@ import {
 import {Eth1ProviderWithAdmin} from "../Eth1ProviderWithAdmin.js";
 import {isChildProcessRunner, isDockerRunner} from "../runner/index.js";
 import {getGethGenesisBlock} from "../utils/el_genesis.js";
+import {SIM_ENV_NETWORK_ID} from "../constants.js";
 
 const SECRET_KEY = "45a915e4d060149eb4365960e6a7a45f334393093061116b197e3240065ff2d8";
 const PASSWORD = "12345678";
@@ -34,6 +35,7 @@ export const generateGethNode: ELClientGenerator = (
     jwtSecretHex,
     cliqueSealingPeriod,
     address,
+    mining,
   }: ELClientOptions,
   runner: Runner<RunnerType.ChildProcess> | Runner<RunnerType.Docker>
 ) => {
@@ -70,7 +72,7 @@ export const generateGethNode: ELClientGenerator = (
     },
     cli: {
       command: binaryPath,
-      args: ["--datadir", gethDataDir, "--networkid", "1234", "init", genesisGethPath],
+      args: ["--datadir", gethDataDir, "--networkid", String(SIM_ENV_NETWORK_ID as number), "init", genesisGethPath],
       env: {},
     },
     logs: {
@@ -90,7 +92,7 @@ export const generateGethNode: ELClientGenerator = (
         "--datadir",
         gethDataDir,
         "--networkid",
-        "1234",
+        String(SIM_ENV_NETWORK_ID as number),
         "account",
         "import",
         "--password",
@@ -135,11 +137,12 @@ export const generateGethNode: ELClientGenerator = (
         "--syncmode",
         "full",
         "--networkid",
-        "1234",
+        String(SIM_ENV_NETWORK_ID as number),
         // Logging verbosity: 0=silent, 1=error, 2=warn, 3=info, 4=debug, 5=detail
         "--verbosity",
         "5",
-        ...(mode == ELStartMode.PreMerge ? ["--mine", "--nodiscover"] : []),
+        ...(mining ? ["--mine"] : []),
+        ...(mode == ELStartMode.PreMerge ? ["--nodiscover"] : []),
       ],
       env: {},
     },

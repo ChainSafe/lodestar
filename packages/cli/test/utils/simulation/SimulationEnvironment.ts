@@ -274,7 +274,7 @@ export class SimulationEnvironment {
     }
   }
 
-  createNodePair({el, cl, keysCount, id, wssCheckpoint, remote}: NodePairOptions): NodePairResult {
+  createNodePair({el, cl, keysCount, id, wssCheckpoint, remote, mining}: NodePairOptions): NodePairResult {
     if (this.genesisState && keysCount > 0) {
       throw new Error("Genesis state already initialized. Can not add more keys to it.");
     }
@@ -293,7 +293,7 @@ export class SimulationEnvironment {
       wssCheckpoint,
     });
 
-    const elClient = this.createELNode(el, {id});
+    const elClient = this.createELNode(el, {id, mining});
 
     return {
       nodePair: {id, el: elClient.node, cl: clClient.node},
@@ -347,6 +347,7 @@ export class SimulationEnvironment {
       ethPort: options?.ethPort ?? EL_ETH_BASE_PORT + this.nodePairCount + 1,
       port: options?.port ?? EL_P2P_BASE_PORT + this.nodePairCount + 1,
       address: this.dockerRunner.getNextIp(),
+      mining: options?.mining ?? false,
     };
 
     switch (client) {

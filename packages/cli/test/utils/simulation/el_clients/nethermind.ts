@@ -3,16 +3,7 @@ import {mkdir, writeFile} from "node:fs/promises";
 import {join} from "node:path";
 import got from "got";
 import {ZERO_HASH} from "@lodestar/state-transition";
-import {
-  ELClient,
-  ELClientGenerator,
-  ELClientOptions,
-  ELNode,
-  ELStartMode,
-  JobOptions,
-  Runner,
-  RunnerType,
-} from "../interfaces.js";
+import {ELClient, ELClientGenerator, ELClientOptions, ELNode, JobOptions, Runner, RunnerType} from "../interfaces.js";
 import {Eth1ProviderWithAdmin} from "../Eth1ProviderWithAdmin.js";
 import {isDockerRunner} from "../runner/index.js";
 import {getNethermindChainSpec} from "../utils/el_genesis.js";
@@ -30,6 +21,7 @@ export const generateNethermindNode: ELClientGenerator = (
     jwtSecretHex,
     cliqueSealingPeriod,
     address,
+    mining,
   }: ELClientOptions,
   runner: Runner<RunnerType.ChildProcess> | Runner<RunnerType.Docker>
 ) => {
@@ -93,14 +85,12 @@ export const generateNethermindNode: ELClientGenerator = (
         "0.0.0.0",
         "--Network.P2PPort",
         String(port as number),
-        // "--Merge.TerminalTotalDifficulty",
-        // String(ttd as bigint),
         // OFF|TRACE|DEBUG|INFO|WARN|ERROR
         "--log",
         "INFO",
         "--config",
         "none",
-        ...(mode == ELStartMode.PreMerge ? ["--Init.IsMining", "true", "--Mining.Enabled", "true"] : []),
+        ...(mining ? ["--Init.IsMining", "true", "--Mining.Enabled", "true"] : []),
       ],
       env: {},
     },

@@ -1,3 +1,4 @@
+import {SIM_ENV_CHAIN_ID, SIM_ENV_NETWORK_ID} from "../constants.js";
 import {ELGenesisOptions, ELStartMode, Eth1GenesisBlock} from "../interfaces.js";
 
 export const getGethGenesisBlock = (mode: ELStartMode, options: ELGenesisOptions): Record<string, unknown> => {
@@ -5,7 +6,7 @@ export const getGethGenesisBlock = (mode: ELStartMode, options: ELGenesisOptions
 
   const genesis = {
     config: {
-      chainId: 1234,
+      chainId: SIM_ENV_CHAIN_ID,
       homesteadBlock: 0,
       daoForkSupport: true,
       eip150Block: 0,
@@ -65,8 +66,8 @@ export const getNethermindChainSpec = (mode: ELStartMode, options: ELGenesisOpti
     engine: {clique: {params: genesis.config.clique}},
     params: {
       accountStartNonce: "0x0",
-      chainID: 1234,
-      networkID: 1234,
+      chainID: SIM_ENV_CHAIN_ID,
+      networkID: SIM_ENV_NETWORK_ID,
       eip140Transition: "0x0",
       eip145Transition: "0x0",
       eip150Transition: "0x0",

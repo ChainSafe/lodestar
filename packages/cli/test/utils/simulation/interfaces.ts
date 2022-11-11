@@ -43,6 +43,7 @@ export interface NodePairOptions {
   cl: CLClient;
   keysCount: number;
   remote?: boolean;
+  mining?: boolean;
   wssCheckpoint?: string;
   id: string;
 }
@@ -81,6 +82,7 @@ export interface ELClientOptions extends ELGenesisOptions {
   ethPort: number;
   port: number;
   address: string;
+  mining: boolean;
 }
 
 export interface CLNode {
