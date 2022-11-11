@@ -1,7 +1,7 @@
 import {EpochSlotOpts} from "./interface.js";
 
 /**
- * Formats time as: `EPOCH/SLOT_INDEX SECONDS.MILISECONDS
+ * Formats time as: `EPOCH/SLOT_INDEX SECONDS.MILLISECONDS
  */
 export function formatEpochSlotTime(opts: EpochSlotOpts, now = Date.now()): string {
   const nowSec = now / 1000;

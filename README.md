@@ -7,7 +7,6 @@
 [![Docker Image Version (latest by date)](https://img.shields.io/docker/v/chainsafe/lodestar?color=blue&label=Docker&sort=semver)](https://hub.docker.com/r/chainsafe/lodestar)
 [![Eth Consensus Spec v1.1.10](https://img.shields.io/badge/ETH%20consensus--spec-1.1.10-blue)](https://github.com/ethereum/consensus-specs/releases/tag/v1.1.10)
 [![codecov](https://codecov.io/gh/ChainSafe/lodestar/branch/unstable/graph/badge.svg)](https://codecov.io/gh/ChainSafe/lodestar)
-[![Maintainability](https://api.codeclimate.com/v1/badges/678099476c401e1af503/maintainability)](https://codeclimate.com/github/ChainSafe/lodestar/maintainability)
 ![ES Version](https://img.shields.io/badge/ES-2020-yellow)
 ![Node Version](https://img.shields.io/badge/node-16.x-green)
 [![gitpoap badge](https://public-api.gitpoap.io/v1/repo/ChainSafe/lodestar/badge)](https://www.gitpoap.io/gh/ChainSafe/lodestar)
@@ -18,7 +17,7 @@
 
 - :gear: Follow the installation method for [source install](https://chainsafe.github.io/lodestar/install/source/), [NPM install](https://chainsafe.github.io/lodestar/install/npm/), or [Docker install](https://chainsafe.github.io/lodestar/install/docker/) to install Lodestar. Or use our [comprehensive setup guide](https://hackmd.io/@philknows/rk5cDvKmK).
 - :books: Use [Lodestar libraries](https://chainsafe.github.io/lodestar/libraries) in your next Ethereum Typescript project.
-- :globe_with_meridians: Run a beacon node on [mainnet or a public testnet](https://chainsafe.github.io/lodestar/usage/beacon-management.md).
+- :globe_with_meridians: Run a beacon node on [mainnet or a public testnet](https://chainsafe.github.io/lodestar/usage/beacon-management).
 - :computer: Utilize the whole stack by [starting a local testnet](https://chainsafe.github.io/lodestar/usage/local).
 - :spiral_notepad: View the Lodestar [CLI commands and options](https://chainsafe.github.io/lodestar/reference/cli/).
 - :nerd_face: View the [TypeDoc code documentation](https://chainsafe.github.io/lodestar/packages).

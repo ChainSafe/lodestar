@@ -32,26 +32,26 @@ export type BlsMultiThreadWorkerPoolOptions = {
  * Split big signature sets into smaller sets so they can be sent to multiple workers.
  *
  * The biggest sets happen during sync, on mainnet batches of 64 blocks have around ~8000 signatures.
- * The latency cost of sending the job to and from the worker is aprox a single sig verification.
+ * The latency cost of sending the job to and from the worker is approx a single sig verification.
  * If you split a big signature into 2, the extra time cost is `(2+2N)/(1+2N)`.
  * For 128, the extra time cost is about 0.3%. No specific reasoning for `128`, it's just good enough.
  */
 const MAX_SIGNATURE_SETS_PER_JOB = 128;
 
 /**
- * If there are more than `MAX_BUFFERED_SIGS` buffered sigs, verify them immediatelly without waiting `MAX_BUFFER_WAIT_MS`.
+ * If there are more than `MAX_BUFFERED_SIGS` buffered sigs, verify them immediately without waiting `MAX_BUFFER_WAIT_MS`.
  *
- * The efficency improvement of batching sets asymptotically reaches x2. However, for batching large sets
+ * The efficiency improvement of batching sets asymptotically reaches x2. However, for batching large sets
  * has more risk in case a signature is invalid, requiring to revalidate all sets in the batch. 32 is sweet
  * point for this tradeoff.
  */
 const MAX_BUFFERED_SIGS = 32;
 /**
  * Gossip objects usually come in bursts. Buffering them for a short period of time allows to increase batching
- * efficieny, at the cost of delaying validation. Unless running in production shows otherwise, it's not critical
+ * efficiency, at the cost of delaying validation. Unless running in production shows otherwise, it's not critical
  * to hold attestations and aggregates for 100ms. Lodestar existing queues may hold those objects for much more anyway.
  *
- * There's no exact reasoning for the `100` miliseconds number. The metric `batchSigsSuccess` should indicate if this
+ * There's no exact reasoning for the `100` milliseconds number. The metric `batchSigsSuccess` should indicate if this
  * value needs revision
  */
 const MAX_BUFFER_WAIT_MS = 100;
@@ -92,7 +92,7 @@ type WorkerDescriptor = {
  * - Complete total outstanding jobs in total minimum time possible.
  *   Will split large signature sets into smaller sets and send to different workers
  * - Reduce the latency cost for small signature sets. In NodeJS 12,14 worker <-> main thread
- *   communiction has very high latency, of around ~5 ms. So package multiple small signature
+ *   communication has very high latency, of around ~5 ms. So package multiple small signature
  *   sets into packages of work and send at once to a worker to distribute the latency cost
  */
 export class BlsMultiThreadWorkerPool implements IBlsVerifier {
@@ -275,7 +275,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       }
 
       // Push job and schedule to call `runJob` in the next macro event loop cycle.
-      // This is usefull to allow batching job submited from a syncronous for loop,
+      // This is useful to allow batching job submitted from a synchronous for loop,
       // and to prevent large stacks since runJob may be called recursively.
       else {
         this.jobs.push(job);
@@ -292,7 +292,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       return;
     }
 
-    // Find iddle worker
+    // Find idle worker
     const worker = this.workers.find((worker) => worker.status.code === WorkerStatusCode.idle);
     if (!worker || worker.status.code !== WorkerStatusCode.idle) {
       return;
@@ -401,7 +401,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
   }
 
   /**
-   * Add all buffered jobs to the job queue and potentially run them immediatelly
+   * Add all buffered jobs to the job queue and potentially run them immediately
    */
   private runBufferedJobs = (): void => {
     if (this.bufferedJobs) {

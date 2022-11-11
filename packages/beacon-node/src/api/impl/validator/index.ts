@@ -16,7 +16,7 @@ import {AttestationError, AttestationErrorCode, GossipAction, SyncCommitteeError
 import {validateGossipAggregateAndProof} from "../../../chain/validation/index.js";
 import {ZERO_HASH} from "../../../constants/index.js";
 import {SyncState} from "../../../sync/index.js";
-import {isOptimsticBlock} from "../../../util/forkChoice.js";
+import {isOptimisticBlock} from "../../../util/forkChoice.js";
 import {toGraffitiBuffer} from "../../../util/graffiti.js";
 import {ApiError, NodeIsSyncing} from "../errors.js";
 import {validateSyncCommitteeGossipContributionAndProof} from "../../../chain/validation/syncCommitteeContributionAndProof.js";
@@ -39,7 +39,7 @@ const MAX_API_CLOCK_DISPARITY_MS = 1000;
  * finalized head.
  *
  * TODO: Lighthouse uses 8 for the attack described above. However, 8 kills Lodestar since validators
- * can trigger regen to fast-forward head state 8 epochs to be immediatelly invalidated as sync sets
+ * can trigger regen to fast-forward head state 8 epochs to be immediately invalidated as sync sets
  * a new head. Then the checkpoint state cache grows unbounded with very different states (because
  * they are 8 epochs apart) and causes an OOM. Research a proper solution once regen and the state
  * caches are better.
@@ -231,6 +231,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
         graffiti: toGraffitiBuffer(graffiti || ""),
       });
       metrics?.blockProductionSuccess.inc();
+      metrics?.blockProductionNumAggregated.observe(block.body.attestations.length);
       return {data: block, version: config.getForkName(block.slot)};
     } finally {
       if (timer) timer();
@@ -248,7 +249,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
       await waitForSlot(slot); // Must never request for a future slot > currentSlot
 
       // This needs a state in the same epoch as `slot` such that state.currentJustifiedCheckpoint is correct.
-      // Note: This may trigger an epoch transition if there skipped slots at the begining of the epoch.
+      // Note: This may trigger an epoch transition if there skipped slots at the beginning of the epoch.
       const headState = chain.getHeadState();
       const headSlot = headState.slot;
       const attEpoch = computeEpochAtSlot(slot);
@@ -354,7 +355,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
       return {
         data: duties,
         dependentRoot: toHex(dependentRoot),
-        executionOptimistic: isOptimsticBlock(head),
+        executionOptimistic: isOptimisticBlock(head),
       };
     },
 
@@ -404,7 +405,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
       return {
         data: duties,
         dependentRoot: toHex(dependentRoot),
-        executionOptimistic: isOptimsticBlock(head),
+        executionOptimistic: isOptimisticBlock(head),
       };
     },
 
@@ -431,7 +432,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
       // May request for an epoch that's in the future
       await waitForNextClosestEpoch();
 
-      // sync committee duties have a lookahead of 1 day. Assuming the validator only requests duties for upcomming
+      // sync committee duties have a lookahead of 1 day. Assuming the validator only requests duties for upcoming
       // epochs, the head state will very likely have the duties available for the requested epoch.
       // Note: does not support requesting past duties
       const head = chain.forkChoice.getHead();
@@ -441,12 +442,12 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
       const pubkeys = getPubkeysForIndices(state.validators, validatorIndices);
       // Ensures `epoch // EPOCHS_PER_SYNC_COMMITTEE_PERIOD <= current_epoch // EPOCHS_PER_SYNC_COMMITTEE_PERIOD + 1`
       const syncCommitteeCache = state.epochCtx.getIndexedSyncCommitteeAtEpoch(epoch);
-      const syncComitteeValidatorIndexMap = syncCommitteeCache.validatorIndexMap;
+      const syncCommitteeValidatorIndexMap = syncCommitteeCache.validatorIndexMap;
 
       const duties: routes.validator.SyncDuty[] = [];
       for (let i = 0, len = validatorIndices.length; i < len; i++) {
         const validatorIndex = validatorIndices[i];
-        const validatorSyncCommitteeIndices = syncComitteeValidatorIndexMap.get(validatorIndex);
+        const validatorSyncCommitteeIndices = syncCommitteeValidatorIndexMap.get(validatorIndex);
         if (validatorSyncCommitteeIndices) {
           duties.push({
             pubkey: pubkeys[i],
@@ -458,7 +459,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
 
       return {
         data: duties,
-        executionOptimistic: isOptimsticBlock(head),
+        executionOptimistic: isOptimisticBlock(head),
       };
     },
 

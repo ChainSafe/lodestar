@@ -1,7 +1,7 @@
 import fastify from "fastify";
 import {fromHexString} from "@chainsafe/ssz";
 import type {SecretKey} from "@chainsafe/bls/types";
-import {EXTERNAL_SIGNER_BASE_PORT} from "./utils.js";
+import {EXTERNAL_SIGNER_BASE_PORT} from "./constants.js";
 
 /* eslint-disable no-console */
 
@@ -45,6 +45,7 @@ export class ExternalSignerServer {
 
       const secretKey = this.secretKeyMap.get(pubkeyHex);
       if (!secretKey) {
+        console.log([...this.secretKeyMap.keys()].join("\n"));
         throw Error(`pubkey not known ${pubkeyHex}`);
       }
 
@@ -66,10 +67,12 @@ export class ExternalSignerServer {
   async start(): Promise<void> {
     console.log(`Starting external signer server at ${this.url}.`);
     await this.server.listen(this.port, this.address);
+    console.log(`Started external signer server at ${this.url}.`);
   }
 
   async stop(): Promise<void> {
     console.log(`Stopping external signer server at ${this.url}.`);
     await this.server.close();
+    console.log(`Stopped external signer server at ${this.url}.`);
   }
 }

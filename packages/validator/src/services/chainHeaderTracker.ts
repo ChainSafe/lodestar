@@ -70,7 +70,7 @@ export class ChainHeaderTracker {
       this.logger.verbose("Found new chain head", {
         slot: slot,
         head: block,
-        previouDuty: previousDutyDependentRoot,
+        previousDuty: previousDutyDependentRoot,
         currentDuty: currentDutyDependentRoot,
       });
     }

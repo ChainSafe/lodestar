@@ -93,21 +93,21 @@ export function createLodestarMetrics(
     }),
     peersRequestedToConnect: register.gauge({
       name: "lodestar_peers_requested_total_to_connect",
-      help: "Priorization results total peers count requested to connect",
+      help: "Prioritization results total peers count requested to connect",
     }),
     peersRequestedToDisconnect: register.gauge<"reason">({
       name: "lodestar_peers_requested_total_to_disconnect",
-      help: "Priorization results total peers count requested to disconnect",
+      help: "Prioritization results total peers count requested to disconnect",
       labelNames: ["reason"],
     }),
     peersRequestedSubnetsToQuery: register.gauge<"type">({
       name: "lodestar_peers_requested_total_subnets_to_query",
-      help: "Priorization results total subnets to query and discover peers in",
+      help: "Prioritization results total subnets to query and discover peers in",
       labelNames: ["type"],
     }),
     peersRequestedSubnetsPeerCount: register.gauge<"type">({
       name: "lodestar_peers_requested_total_subnets_peers_count",
-      help: "Priorization results total peers in subnets to query and discover peers in",
+      help: "Prioritization results total peers in subnets to query and discover peers in",
       labelNames: ["type"],
     }),
     peersReportPeerCount: register.gauge<"reason">({
@@ -195,7 +195,7 @@ export function createLodestarMetrics(
     gossipPeer: {
       scoreByThreshold: register.gauge<"threshold">({
         name: "lodestar_gossip_peer_score_by_threshold_count",
-        help: "Gossip peer score by threashold",
+        help: "Gossip peer score by threshold",
         labelNames: ["threshold"],
       }),
       meshPeersByClient: register.gauge<"client">({
@@ -354,7 +354,7 @@ export function createLodestarMetrics(
     apiRest: {
       responseTime: register.histogram<"operationId">({
         name: "lodestar_api_rest_response_time_seconds",
-        help: "REST API time to fullfill a request by operationId",
+        help: "REST API time to fulfill a request by operationId",
         labelNames: ["operationId"],
         // Request times range between 1ms to 100ms in normal conditions. Can get to 1-5 seconds if overloaded
         buckets: [0.01, 0.1, 1],
@@ -572,19 +572,19 @@ export function createLodestarMetrics(
     // Gossip block
     gossipBlock: {
       elapsedTimeTillReceived: register.histogram({
-        name: "lodestar_gossip_block_elappsed_time_till_received",
-        help: "Time elappsed between block slot time and the time block received via gossip",
+        name: "lodestar_gossip_block_elapsed_time_till_received",
+        help: "Time elapsed between block slot time and the time block received via gossip",
         buckets: [0.5, 1, 2, 4, 6, 12],
       }),
       elapsedTimeTillProcessed: register.histogram({
-        name: "lodestar_gossip_block_elappsed_time_till_processed",
-        help: "Time elappsed between block slot time and the time block processed",
+        name: "lodestar_gossip_block_elapsed_time_till_processed",
+        help: "Time elapsed between block slot time and the time block processed",
         buckets: [0.5, 1, 2, 4, 6, 12],
       }),
     },
     elapsedTimeTillBecomeHead: register.histogram({
       name: "lodestar_gossip_block_elapsed_time_till_become_head",
-      help: "Time elappsed between block slot time and the time block becomes head",
+      help: "Time elapsed between block slot time and the time block becomes head",
       buckets: [0.5, 1, 2, 4, 6, 12],
     }),
 
@@ -780,7 +780,7 @@ export function createLodestarMetrics(
         buckets: [0.1, 0.25, 0.5, 1, 2, 5, 10],
       }),
       unaggregatedAttestationSubmittedSentPeers: register.histogram({
-        name: "validator_monitor_unaggregated_attestation_submited_sent_peers_count",
+        name: "validator_monitor_unaggregated_attestation_submitted_sent_peers_count",
         help: "Number of peers that an unaggregated attestation sent to",
         // as of Apr 2022, most of the time we sent to >30 peers per attestations
         // these bucket values just base on that fact to get equal range
@@ -873,7 +873,7 @@ export function createLodestarMetrics(
         help: "Avg min max of all state cache items seconds since last reads",
       }),
       stateClonedCount: register.histogram({
-        name: "lodestar_state_cache_state_cloned_clount",
+        name: "lodestar_state_cache_state_cloned_count",
         help: "Histogram of cloned count per state every time state.clone() is called",
         buckets: [1, 2, 5, 10, 50, 250],
       }),
@@ -913,7 +913,7 @@ export function createLodestarMetrics(
         help: "Avg min max of all state cache items seconds since last reads",
       }),
       stateClonedCount: register.histogram({
-        name: "lodestar_cp_state_cache_state_cloned_clount",
+        name: "lodestar_cp_state_cache_state_cloned_count",
         help: "Histogram of cloned count per state every time state.clone() is called",
         buckets: [1, 2, 5, 10, 50, 250],
       }),
@@ -929,7 +929,7 @@ export function createLodestarMetrics(
         help: "Total number of balances cache requests",
       }),
       misses: register.counter({
-        name: "lodestar_balances_cache_missess_total",
+        name: "lodestar_balances_cache_misses_total",
         help: "Total number of balances cache misses",
       }),
       closestStateResult: register.counter<"stateId">({
@@ -993,9 +993,9 @@ export function createLodestarMetrics(
       help: "regen function total errors",
       labelNames: ["entrypoint", "caller"],
     }),
-    unhandeledPromiseRejections: register.gauge({
-      name: "lodestar_unhandeled_promise_rejections_total",
-      help: "UnhandeledPromiseRejection total count",
+    unhandledPromiseRejections: register.gauge({
+      name: "lodestar_unhandled_promise_rejections_total",
+      help: "UnhandledPromiseRejection total count",
     }),
 
     // Precompute next epoch transition
@@ -1047,7 +1047,7 @@ export function createLodestarMetrics(
         labelNames: ["event"],
       }),
       highestSlot: register.gauge<"item">({
-        name: "lodestar_lightclient_server_higest_slot",
+        name: "lodestar_lightclient_server_highest_slot",
         help: "Current highest slot of items stored by LightclientServer",
         labelNames: ["item"],
       }),

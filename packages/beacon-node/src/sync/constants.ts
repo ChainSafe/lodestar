@@ -17,7 +17,7 @@ export const MAX_BATCH_PROCESSING_ATTEMPTS = 3;
  * the block necessary so switch from Finalized sync to Head sync won't be in the fork-choice and range sync would
  * be stuck in a loop downloading the previous epoch to finalized epoch, until we get rate-limited.
  *
- * After Jul2022 during finalized sync the entire epoch of finalized epoch will be downloaded fullfilling the goal
+ * After Jul2022 during finalized sync the entire epoch of finalized epoch will be downloaded fulfilling the goal
  * to switch to Head sync latter. This does not affect performance nor sync speed and just downloads a few extra
  * blocks that would be required by Head sync anyway. However, having an offset of 0 allows to send to the processor
  * blocks that belong to the same epoch, which enables batch verification optimizations.

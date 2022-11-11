@@ -12,7 +12,7 @@ export type RetryOptions = {
    */
   shouldRetry?: (lastError: Error) => boolean;
   /**
-   * Miliseconds to wait before retrying again
+   * Milliseconds to wait before retrying again
    */
   retryDelay?: number;
 };

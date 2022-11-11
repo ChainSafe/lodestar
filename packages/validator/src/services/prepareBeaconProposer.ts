@@ -13,7 +13,7 @@ const REGISTRATION_CHUNK_SIZE = 512;
  * proposer data (currently `feeRecipient`) so that it can issue advance fcUs to
  * the engine for building execution payload with transactions.
  *
- * This needs to be done every epoch because the BN will cache it atmost for
+ * This needs to be done every epoch because the BN will cache it at most for
  * two epochs.
  */
 export function pollPrepareBeaconProposer(
@@ -62,7 +62,7 @@ export function pollPrepareBeaconProposer(
  * This service is responsible for registering validators with the mev builder as they
  * might prepare and keep ready the execution payloads of just registered validators.
  *
- * This needs to be done every epoch because the builder(s) will cache it atmost for
+ * This needs to be done every epoch because the builder(s) will cache it at most for
  * two epochs.
  */
 export function pollBuilderValidatorRegistration(

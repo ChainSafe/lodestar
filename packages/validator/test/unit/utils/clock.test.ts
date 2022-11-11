@@ -28,8 +28,8 @@ describe("util / Clock", function () {
     clock.runEverySlot(onSlot);
     clock.start(controller.signal);
 
-    // Must run once immediatelly
-    expect(onSlot.callCount).to.equal(1, "runEverySlot(cb) must be called immediatelly");
+    // Must run once immediately
+    expect(onSlot.callCount).to.equal(1, "runEverySlot(cb) must be called immediately");
     expect(onSlot.getCall(0).args[0]).to.equal(0, "Wrong arg on runEverySlot(cb) call 0");
 
     await fakeClock.tickAsync(config.SECONDS_PER_SLOT * 1000);
@@ -69,8 +69,8 @@ describe("util / Clock", function () {
     clock.runEveryEpoch(onEpoch);
     clock.start(controller.signal);
 
-    // Must run once immediatelly
-    expect(onEpoch.callCount).to.equal(1, "runEverySlot(cb) must be called immediatelly");
+    // Must run once immediately
+    expect(onEpoch.callCount).to.equal(1, "runEverySlot(cb) must be called immediately");
     expect(onEpoch.getCall(0).args[0]).to.equal(0, "Wrong arg on runEverySlot(cb) call 0");
 
     await fakeClock.tickAsync(config.SECONDS_PER_SLOT * 1000);

@@ -545,7 +545,7 @@ export class ValidatorStore {
     const feeRecipient = fromHexString(regAttributes.feeRecipient);
     const {gasLimit} = regAttributes;
 
-    const validatorRegistation: bellatrix.ValidatorRegistrationV1 = {
+    const validatorRegistration: bellatrix.ValidatorRegistrationV1 = {
       feeRecipient,
       gasLimit,
       timestamp: Math.floor(Date.now() / 1000),
@@ -554,15 +554,15 @@ export class ValidatorStore {
 
     const signingSlot = 0;
     const domain = computeDomain(DOMAIN_APPLICATION_BUILDER, this.config.GENESIS_FORK_VERSION, ZERO_HASH);
-    const signingRoot = computeSigningRoot(ssz.bellatrix.ValidatorRegistrationV1, validatorRegistation, domain);
+    const signingRoot = computeSigningRoot(ssz.bellatrix.ValidatorRegistrationV1, validatorRegistration, domain);
 
     const signableMessage: SignableMessage = {
       type: SignableMessageType.VALIDATOR_REGISTRATION,
-      data: validatorRegistation,
+      data: validatorRegistration,
     };
 
     return {
-      message: validatorRegistation,
+      message: validatorRegistration,
       signature: await this.getSignature(pubkeyMaybeHex, signingRoot, signingSlot, signableMessage),
     };
   }
