@@ -108,7 +108,8 @@ export class SimulationEnvironment {
         bellatrixForkEpoch: chainConfig.BELLATRIX_FORK_EPOCH,
         secondsPerSlot: secondsPerSlot,
         cliqueSealingPeriod: CLIQUE_SEALING_PERIOD,
-        additionalSlots: 6, // Make sure bellatrix started before TTD reach
+        // Make sure bellatrix started before TTD reach, so we wait for few more slots to be sure
+        additionalSlots: activePreset.SLOTS_PER_EPOCH - 2,
       });
 
     const forkConfig = createIChainForkConfig({
