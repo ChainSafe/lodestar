@@ -11,9 +11,13 @@ import {IValidatorCliArgs} from "../../../../src/cmds/validator/options.js";
 import {IGlobalArgs} from "../../../../src/options/globalOptions.js";
 import {CLClient, CLClientGenerator, CLClientOptions, JobOptions, Runner, RunnerType} from "../interfaces.js";
 import {LODESTAR_BINARY_PATH} from "../constants.js";
+import {isChildProcessRunner} from "../runner/index.js";
 
-export const generateLodestarBeaconNode: CLClientGenerator = (opts: CLClientOptions, runner: Runner) => {
-  if (runner.type !== RunnerType.ChildProcess) {
+export const generateLodestarBeaconNode: CLClientGenerator = (
+  opts: CLClientOptions,
+  runner: Runner<RunnerType.ChildProcess> | Runner<RunnerType.Docker>
+) => {
+  if (!isChildProcessRunner(runner)) {
     throw new Error(`Runner "${runner.type}" not yet supported.`);
   }
   const {
@@ -134,7 +138,10 @@ export const generateLodestarBeaconNode: CLClientGenerator = (opts: CLClientOpti
   return {job, node};
 };
 
-export const generateLodestarValidatorJobs = (opts: CLClientOptions, runner: Runner): JobOptions => {
+export const generateLodestarValidatorJobs = (
+  opts: CLClientOptions,
+  runner: Runner<RunnerType.ChildProcess> | Runner<RunnerType.Docker>
+): JobOptions => {
   if (runner.type !== RunnerType.ChildProcess) {
     throw new Error(`Runner "${runner.type}" not yet supported.`);
   }

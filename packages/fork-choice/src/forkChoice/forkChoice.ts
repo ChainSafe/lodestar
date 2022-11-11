@@ -824,8 +824,8 @@ export class ForkChoice implements IForkChoice {
       return genesisBlock.blockRoot;
     }
 
-    // eslint-disable-next-line no-constant-condition
-    while (true) {
+    const finalizedSlot = this.getFinalizedBlock().slot;
+    while (block.slot >= finalizedSlot) {
       // Dependant root must be in epoch less than `beforeSlot`
       if (block.slot < beforeSlot) {
         return block.blockRoot;
@@ -843,6 +843,8 @@ export class ForkChoice implements IForkChoice {
           : // else we can navigate much faster jumping to the target block
             this.protoArray.getBlockReadonly(block.targetRoot);
     }
+
+    throw Error(`Not found dependent root for block slot ${block.slot}, epoch difference ${epochDifference}`);
   }
 
   private getPreMergeExecStatus(executionStatus: MaybeValidExecutionStatus): ExecutionStatus.PreMerge {
@@ -1237,14 +1239,24 @@ export function assertValidTerminalPowBlock(
 
     const {powBlock, powBlockParent} = preCachedData;
     if (!powBlock) throw Error("onBlock preCachedData must include powBlock");
-    if (!powBlockParent) throw Error("onBlock preCachedData must include powBlockParent");
+    // if powBlock is genesis don't assert powBlockParent
+    if (!powBlockParent && powBlock.parentHash !== HEX_ZERO_HASH)
+      throw Error("onBlock preCachedData must include powBlockParent");
 
     const isTotalDifficultyReached = powBlock.totalDifficulty >= config.TERMINAL_TOTAL_DIFFICULTY;
-    const isParentTotalDifficultyValid = powBlockParent.totalDifficulty < config.TERMINAL_TOTAL_DIFFICULTY;
-    if (!isTotalDifficultyReached || !isParentTotalDifficultyValid)
+    // If we don't have powBlockParent here, powBlock is the genesis and as we would have errored above
+    // we can mark isParentTotalDifficultyValid as valid
+    const isParentTotalDifficultyValid =
+      !powBlockParent || powBlockParent.totalDifficulty < config.TERMINAL_TOTAL_DIFFICULTY;
+    if (!isTotalDifficultyReached) {
       throw Error(
-        `Invalid terminal POW block: total difficulty not reached ${powBlockParent.totalDifficulty} < ${powBlock.totalDifficulty}`
+        `Invalid terminal POW block: total difficulty not reached expected >= ${config.TERMINAL_TOTAL_DIFFICULTY}, actual = ${powBlock.totalDifficulty}`
       );
+    } else if (!isParentTotalDifficultyValid) {
+      throw Error(
+        `Invalid terminal POW block parent: expected < ${config.TERMINAL_TOTAL_DIFFICULTY}, actual = ${powBlockParent.totalDifficulty}`
+      );
+    }
   }
 }
 

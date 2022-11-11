@@ -17,4 +17,6 @@ export const EL_P2P_BASE_PORT = 9050;
 export const SIM_TESTS_SECONDS_PER_SLOT = 4;
 export const CLIQUE_SEALING_PERIOD = 5; // 5 seconds
 export const ETH_TTD_INCREMENT = 2;
+export const SIM_ENV_CHAIN_ID = 1234;
+export const SIM_ENV_NETWORK_ID = 1234;
 export const LODESTAR_BINARY_PATH = `${__dirname}/../../../bin/lodestar.js`;
