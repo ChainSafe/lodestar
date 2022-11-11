@@ -446,7 +446,7 @@ export function serializeExecutionPayload(data: allForks.ExecutionPayload): Exec
 export function parseExecutionPayload(data: ExecutionPayloadRpc): allForks.ExecutionPayload {
   const withdrawals = data.withdrawals;
   // Apparently, geth can return payload with withdrawals as null field before capella,
-  // so we check for both null and undefined
+  // so we check for undefined and null
   const withdrawalsAttr = withdrawals != null ? {withdrawals: withdrawals.map(deserializeWithdrawal)} : {};
 
   return {
