@@ -13,7 +13,7 @@ env:
 jobs:
   tests-sim:
     name: Sim tests
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, ubuntu, ax161, lodestar]
     steps:
       # <common-build> - Uses YAML anchors in the future
       - uses: actions/checkout@v2
@@ -40,7 +40,7 @@ jobs:
       # </common-build>
 
       - name: Pull Geth
-        run: | 
+        run: |
           TAR_NAME=$(basename $GETH_IMAGE)
           BINARY_FOLDER="${TAR_NAME%.*.*}"
           curl -sS $GETH_IMAGE > $TAR_NAME
