@@ -5,7 +5,7 @@ import {CLIQUE_SEALING_PERIOD, SIM_TESTS_SECONDS_PER_SLOT} from "../utils/simula
 import {CLClient, ELClient} from "../utils/simulation/interfaces.js";
 import {SimulationEnvironment} from "../utils/simulation/SimulationEnvironment.js";
 import {getEstimatedTimeInSecForRun, getEstimatedTTD, logFilesDir} from "../utils/simulation/utils/index.js";
-import {connectAllNodes, connectNewNode} from "../utils/simulation/utils/network.js";
+import {connectAllNodes, connectNewNode, waitForNodeSync, waitForSlot} from "../utils/simulation/utils/network.js";
 import {nodeAssertion} from "../utils/simulation/assertions/nodeAssertion.js";
 import {mergeAssertion} from "../utils/simulation/assertions/mergeAssertion.js";
 
@@ -70,13 +70,13 @@ env.tracker.register({
 
 await env.start(timeout);
 await connectAllNodes(env.nodes);
+
 // The `TTD` will be reach around `start of bellatrixForkEpoch + additionalSlotsForMerge` slot
 // We wait for the end of that epoch with half more epoch to make sure merge transition is complete
-await env.waitForSlot(
-  env.clock.getLastSlotOfEpoch(bellatrixForkEpoch) + activePreset.SLOTS_PER_EPOCH / 2,
-  env.nodes,
-  true
-);
+await waitForSlot(env.clock.getLastSlotOfEpoch(bellatrixForkEpoch) + activePreset.SLOTS_PER_EPOCH / 2, env.nodes, {
+  silent: true,
+  env,
+});
 
 const {
   data: {finalized},
@@ -105,8 +105,8 @@ await checkpointSync.jobs.el.start();
 await checkpointSync.jobs.cl.start();
 await connectNewNode(checkpointSync.nodePair, env.nodes);
 
-await env.waitForNodeSync(rangeSync.nodePair);
-await env.waitForNodeSync(checkpointSync.nodePair);
+await waitForNodeSync(rangeSync.nodePair, env.options.controller.signal);
+await waitForNodeSync(checkpointSync.nodePair, env.options.controller.signal);
 
 await rangeSync.jobs.cl.stop();
 await rangeSync.jobs.el.stop();

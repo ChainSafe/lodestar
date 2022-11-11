@@ -1,4 +1,8 @@
-import {ELClient, NodePair} from "../interfaces.js";
+import {routes} from "@lodestar/api";
+import {Slot} from "@lodestar/types";
+import {sleep} from "@lodestar/utils";
+import {CLNode, ELClient, NodePair} from "../interfaces.js";
+import {SimulationEnvironment} from "../SimulationEnvironment.js";
 
 export async function connectAllNodes(nodes: NodePair[]): Promise<void> {
   for (const node of nodes) {
@@ -24,4 +28,62 @@ export async function connectNewNode(newNode: NodePair, nodes: NodePair[]): Prom
 
     await node.cl.api.lodestar.connectPeer(clIdentity.peerId, clIdentity.p2pAddresses);
   }
+}
+
+export async function waitForNodeSync(node: NodePair, signal: AbortSignal): Promise<void> {
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    const result = await node.cl.api.node.getSyncingStatus();
+    if (result.data.isSyncing) {
+      await sleep(1000, signal);
+    } else {
+      break;
+    }
+  }
+}
+
+export async function waitForSlot(
+  slot: Slot,
+  nodes: NodePair[],
+  {silent, env}: {silent?: boolean; env: SimulationEnvironment}
+): Promise<void> {
+  if (!silent) {
+    console.log(`\nWaiting for slot on "${nodes.map((n) => n.cl.id).join(",")}"`, {
+      target: slot,
+      current: env.clock.currentSlot,
+    });
+  }
+
+  await Promise.all(
+    (nodes ?? nodes).map(
+      (node) =>
+        new Promise((resolve) => {
+          env.tracker.onSlot(slot, node, resolve);
+        })
+    )
+  );
+}
+
+export async function waitForEvent(
+  event: routes.events.EventType,
+  node: CLNode | "any",
+  {env}: {env: SimulationEnvironment}
+): Promise<routes.events.BeaconEvent> {
+  console.log(`Waiting for event "${event}" on "${node.id}"`);
+
+  return new Promise((resolve) => {
+    const handler = (beaconEvent: routes.events.BeaconEvent, eventNode: CLNode): void => {
+      if (node == "any") {
+        env.emitter.removeListener(event, handler);
+        resolve(beaconEvent);
+      }
+
+      if (node !== "any" && eventNode === node) {
+        env.emitter.removeListener(event, handler);
+        resolve(beaconEvent);
+      }
+    };
+
+    env.tracker.emitter.addListener(event, handler);
+  });
 }

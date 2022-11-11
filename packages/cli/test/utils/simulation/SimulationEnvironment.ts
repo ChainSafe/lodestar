@@ -1,37 +1,14 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import {mkdir, writeFile} from "node:fs/promises";
 import {EventEmitter} from "node:events";
+import {mkdir, writeFile} from "node:fs/promises";
 import {join} from "node:path";
 import tmp from "tmp";
-import {routes} from "@lodestar/api/beacon";
+import {fromHexString} from "@chainsafe/ssz";
 import {nodeUtils} from "@lodestar/beacon-node";
 import {createIChainForkConfig, IChainForkConfig} from "@lodestar/config";
 import {activePreset} from "@lodestar/params";
 import {BeaconStateAllForks, interopSecretKey} from "@lodestar/state-transition";
-import {Slot} from "@lodestar/types";
-import {fromHexString} from "@chainsafe/ssz";
-import {sleep} from "@lodestar/utils";
 import {generateLodestarBeaconNode} from "./cl_clients/lodestar.js";
-import {EpochClock} from "./EpochClock.js";
-import {ExternalSignerServer} from "./ExternalSignerServer.js";
-import {
-  AtLeast,
-  CLClient,
-  CLClientOptions,
-  CLNode,
-  NodePairResult,
-  ELClient,
-  ELClientOptions,
-  ELNode,
-  ELStartMode,
-  Job,
-  NodePair,
-  NodePairOptions,
-  SimulationInitOptions,
-  SimulationOptions,
-} from "./interfaces.js";
-import {ChildProcessRunner} from "./runner/ChildProcessRunner.js";
-import {SimulationTracker} from "./SimulationTracker.js";
 import {
   BN_P2P_BASE_PORT,
   BN_REST_BASE_PORT,
@@ -43,9 +20,29 @@ import {
   SIM_TESTS_SECONDS_PER_SLOT,
 } from "./constants.js";
 import {generateGethNode} from "./el_clients/geth.js";
-import {getEstimatedTTD} from "./utils/index.js";
-import {DockerRunner} from "./runner/DockerRunner.js";
 import {generateNethermindNode} from "./el_clients/nethermind.js";
+import {EpochClock} from "./EpochClock.js";
+import {ExternalSignerServer} from "./ExternalSignerServer.js";
+import {
+  AtLeast,
+  CLClient,
+  CLClientOptions,
+  CLNode,
+  ELClient,
+  ELClientOptions,
+  ELNode,
+  ELStartMode,
+  Job,
+  NodePair,
+  NodePairOptions,
+  NodePairResult,
+  SimulationInitOptions,
+  SimulationOptions,
+} from "./interfaces.js";
+import {ChildProcessRunner} from "./runner/ChildProcessRunner.js";
+import {DockerRunner} from "./runner/DockerRunner.js";
+import {SimulationTracker} from "./SimulationTracker.js";
+import {getEstimatedTTD} from "./utils/index.js";
 
 export const SHARED_JWT_SECRET = "0xdc6457099f127cf0bac78de8b297df04951281909db4f58b43def7c7151e765d";
 
@@ -220,57 +217,6 @@ export class SimulationEnvironment {
       process.exit(this.tracker.getErrorCount() > 0 ? 1 : code);
     } else {
       process.exit(code);
-    }
-  }
-
-  // TODO: Add timeout support
-  waitForEvent(event: routes.events.EventType, node?: CLNode): Promise<routes.events.BeaconEvent> {
-    console.log(`Waiting for event "${event}" on "${node?.id ?? "any node"}"`);
-
-    return new Promise((resolve) => {
-      const handler = (beaconEvent: routes.events.BeaconEvent, eventNode: CLNode): void => {
-        if (!node) {
-          this.emitter.removeListener(event, handler);
-          resolve(beaconEvent);
-        }
-
-        if (node && eventNode === node) {
-          this.emitter.removeListener(event, handler);
-          resolve(beaconEvent);
-        }
-      };
-
-      this.tracker.emitter.addListener(event, handler);
-    });
-  }
-
-  async waitForSlot(slot: Slot, nodes?: NodePair[], silent = true): Promise<void> {
-    if (!silent) {
-      console.log(`\nWaiting for slot on "${nodes ? nodes.map((n) => n.cl.id).join(",") : "all nodes"}"`, {
-        target: slot,
-        current: this.clock.currentSlot,
-      });
-    }
-
-    await Promise.all(
-      (nodes ?? this.nodes).map(
-        (node) =>
-          new Promise((resolve) => {
-            this.tracker.onSlot(slot, node, resolve);
-          })
-      )
-    );
-  }
-
-  async waitForNodeSync(node: NodePair): Promise<void> {
-    // eslint-disable-next-line no-constant-condition
-    while (true) {
-      const result = await node.cl.api.node.getSyncingStatus();
-      if (result.data.isSyncing) {
-        await sleep(1000, this.options.controller.signal);
-      } else {
-        break;
-      }
     }
   }
 
