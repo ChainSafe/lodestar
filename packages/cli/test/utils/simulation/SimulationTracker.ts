@@ -12,7 +12,7 @@ import {finalizedAssertion} from "./assertions/defaults/finalizedAssertion.js";
 import {headAssertion} from "./assertions/defaults/headAssertion.js";
 import {inclusionDelayAssertion} from "./assertions/defaults/inclusionDelayAssertion.js";
 import {missedBlocksAssertion} from "./assertions/defaults/missedBlocksAssertion.js";
-import {syncCommitteeAssertion} from "./assertions/defaults/syncCommitteeAssertion.js";
+import {syncCommitteeParticipation} from "./assertions/defaults/syncCommitteeParticipation.js";
 import {TableRenderer} from "./TableRenderer.js";
 
 const defaultAssertions = [
@@ -23,7 +23,7 @@ const defaultAssertions = [
   finalizedAssertion,
   headAssertion,
   missedBlocksAssertion,
-  syncCommitteeAssertion,
+  syncCommitteeParticipation,
 ];
 
 interface SimulationTrackerInitOptions {
