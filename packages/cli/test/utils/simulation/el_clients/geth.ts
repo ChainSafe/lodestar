@@ -14,41 +14,65 @@ import {
   RunnerType,
 } from "../interfaces.js";
 import {Eth1ProviderWithAdmin} from "../Eth1ProviderWithAdmin.js";
-import {getGenesisBlock} from "./genesis.js";
+import {isChildProcessRunner, isDockerRunner} from "../runner/index.js";
+import {getGethGenesisBlock} from "../utils/el_genesis.js";
+import {SIM_ENV_NETWORK_ID} from "../constants.js";
 
 const SECRET_KEY = "45a915e4d060149eb4365960e6a7a45f334393093061116b197e3240065ff2d8";
 const PASSWORD = "12345678";
 const GENESIS_ACCOUNT = "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b";
 
-export const generateGethNode: ELClientGenerator = (opts: ELClientOptions, runner: Runner) => {
-  if (runner.type !== RunnerType.ChildProcess) {
-    throw new Error(`Runner "${runner.type}" not yet supported.`);
+export const generateGethNode: ELClientGenerator = (
+  {
+    id,
+    mode,
+    dataDir,
+    ethPort,
+    port,
+    enginePort,
+    ttd,
+    logFilePath,
+    jwtSecretHex,
+    cliqueSealingPeriod,
+    address,
+    mining,
+  }: ELClientOptions,
+  runner: Runner<RunnerType.ChildProcess> | Runner<RunnerType.Docker>
+) => {
+  if (isChildProcessRunner(runner)) {
+    if (!process.env.GETH_BINARY_DIR) {
+      throw Error(`EL ENV must be provided, GETH_BINARY_DIR: ${process.env.GETH_BINARY_DIR}`);
+    }
   }
 
-  const elBinaryDir = process.env.GETH_BINARY_DIR;
-
-  if (!elBinaryDir) {
-    throw Error(`EL ENV must be provided, GETH_BINARY_DIR: ${process.env.GETH_BINARY_DIR}`);
+  if (isDockerRunner(runner)) {
+    if (!process.env.GETH_DOCKER_IMAGE) {
+      throw Error(`EL ENV must be provided, GETH_DOCKER_IMAGE: ${process.env.GETH_DOCKER_IMAGE}`);
+    }
   }
 
-  const {id, mode, dataDir, ethPort, port, enginePort, ttd, logFilePath, jwtSecretHex, cliqueSealingPeriod} = opts;
-
+  const binaryPath = isChildProcessRunner(runner) ? `${process.env.GETH_BINARY_DIR}/geth` : "";
+  const gethDataDir = isChildProcessRunner(runner) ? dataDir : "/data";
   const ethRpcUrl = `http://127.0.0.1:${ethPort}`;
   const engineRpcUrl = `http://127.0.0.1:${enginePort}`;
-  const binaryPath = `${elBinaryDir}/geth`;
+
   const skPath = join(dataDir, "sk.json");
+  const skGethPath = join(gethDataDir, "sk.json");
   const genesisPath = join(dataDir, "genesis.json");
+  const genesisGethPath = join(gethDataDir, "genesis.json");
   const passwordPath = join(dataDir, "password.txt");
+  const passwordGethPath = join(gethDataDir, "password.txt");
   const jwtSecretPath = join(dataDir, "jwtsecret");
+  const jwtSecretGethPath = join(gethDataDir, "jwtsecret");
 
   const initJobOptions: JobOptions = {
     bootstrap: async () => {
       await mkdir(dataDir, {recursive: true});
-      await writeFile(genesisPath, JSON.stringify(getGenesisBlock(mode, {ttd, cliqueSealingPeriod})));
+      await writeFile(genesisPath, JSON.stringify(getGethGenesisBlock(mode, {ttd, cliqueSealingPeriod})));
     },
     cli: {
       command: binaryPath,
-      args: ["--datadir", dataDir, "init", genesisPath],
+      args: ["--datadir", gethDataDir, "--networkid", String(SIM_ENV_NETWORK_ID as number), "init", genesisGethPath],
       env: {},
     },
     logs: {
@@ -64,7 +88,17 @@ export const generateGethNode: ELClientGenerator = (opts: ELClientOptions, runne
     },
     cli: {
       command: binaryPath,
-      args: ["--datadir", dataDir, "account", "import", "--password", passwordPath, skPath],
+      args: [
+        "--datadir",
+        gethDataDir,
+        "--networkid",
+        String(SIM_ENV_NETWORK_ID as number),
+        "account",
+        "import",
+        "--password",
+        passwordGethPath,
+        skGethPath,
+      ],
       env: {},
     },
     logs: {
@@ -81,25 +115,34 @@ export const generateGethNode: ELClientGenerator = (opts: ELClientOptions, runne
         "engine,net,eth,miner,admin",
         "--http.port",
         String(ethPort as number),
+        "--http.addr",
+        "0.0.0.0",
         "--authrpc.port",
         String(enginePort as number),
+        "--authrpc.addr",
+        "0.0.0.0",
         "--port",
         String(port as number),
+        "--nat",
+        `extip:${address}`,
         "--authrpc.jwtsecret",
-        jwtSecretPath,
+        jwtSecretGethPath,
         "--datadir",
-        dataDir,
+        gethDataDir,
         "--allow-insecure-unlock",
         "--unlock",
         GENESIS_ACCOUNT,
         "--password",
-        passwordPath,
+        passwordGethPath,
         "--syncmode",
         "full",
+        "--networkid",
+        String(SIM_ENV_NETWORK_ID as number),
         // Logging verbosity: 0=silent, 1=error, 2=warn, 3=info, 4=debug, 5=detail
         "--verbosity",
-        "4",
-        ...(mode == ELStartMode.PreMerge ? ["--mine", "--nodiscover"] : []),
+        "5",
+        ...(mining ? ["--mine"] : []),
+        ...(mode == ELStartMode.PreMerge ? ["--nodiscover"] : []),
       ],
       env: {},
     },
@@ -116,7 +159,14 @@ export const generateGethNode: ELClientGenerator = (opts: ELClientOptions, runne
     },
   };
 
-  const job = runner.create(id, [{...initJobOptions, children: [{...importJobOptions, children: [startJobOptions]}]}]);
+  const job = isChildProcessRunner(runner)
+    ? runner.create(id, [{...initJobOptions, children: [{...importJobOptions, children: [startJobOptions]}]}])
+    : runner.create(id, [{...initJobOptions, children: [{...importJobOptions, children: [startJobOptions]}]}], {
+        image: process.env.GETH_DOCKER_IMAGE as string,
+        dataVolumePath: dataDir,
+        exposePorts: [enginePort, ethPort, port],
+        dockerNetworkIp: address,
+      });
 
   const provider = new Eth1ProviderWithAdmin(
     {DEPOSIT_CONTRACT_ADDRESS: ZERO_HASH},

@@ -12,7 +12,7 @@ import {finalizedAssertion} from "./assertions/defaults/finalizedAssertion.js";
 import {headAssertion} from "./assertions/defaults/headAssertion.js";
 import {inclusionDelayAssertion} from "./assertions/defaults/inclusionDelayAssertion.js";
 import {missedBlocksAssertion} from "./assertions/defaults/missedBlocksAssertion.js";
-import {syncCommitteeAssertion} from "./assertions/defaults/syncCommitteeAssertion.js";
+import {syncCommitteeParticipation} from "./assertions/defaults/syncCommitteeParticipation.js";
 import {TableRenderer} from "./TableRenderer.js";
 
 const defaultAssertions = [
@@ -23,7 +23,7 @@ const defaultAssertions = [
   finalizedAssertion,
   headAssertion,
   missedBlocksAssertion,
-  syncCommitteeAssertion,
+  syncCommitteeParticipation,
 ];
 
 interface SimulationTrackerInitOptions {
@@ -40,8 +40,8 @@ export class SimulationTracker {
     fork: 10,
     eph: 5,
     slot: 4,
-    head: 15,
-    finalized: 10,
+    head: 16,
+    finzed: 6,
     peers: 6,
     attCount: 8,
     incDelay: 8,
@@ -174,11 +174,11 @@ export class SimulationTracker {
       fork: forkName,
       eph: epochStr,
       slot: slot,
-      head: headUnique.size === 1 ? squeezeString(head[0], 12) : "different",
-      finalized: finalizedSlotsUnique.size === 1 ? finalizedSlots[0] : finalizedSlots.join(","),
+      head: headUnique.size === 1 ? squeezeString(head[0], 16, "..") : "different",
+      finzed: finalizedSlotsUnique.size === 1 ? finalizedSlots[0] : finalizedSlots.join(","),
       peers: peerCountUnique.size === 1 ? peerCount[0] : peerCount.join(","),
-      attCount: attestationCountUnique.size === 1 ? attestationCount[0] : "--",
-      incDelay: inclusionDelayUnique.size === 1 ? inclusionDelay[0].toFixed(2) : inclusionDelay.join(","),
+      attCount: attestationCountUnique.size === 1 ? attestationCount[0] : "---",
+      incDelay: inclusionDelayUnique.size === 1 ? inclusionDelay[0].toFixed(2) : "---",
       errors: errorCount,
     });
   }
@@ -221,26 +221,31 @@ export class SimulationTracker {
       return;
     }
 
-    const block = await node.cl.api.beacon.getBlockV2(slot);
+    try {
+      const block = await node.cl.api.beacon.getBlockV2(slot);
 
-    for (const assertion of this.assertions) {
-      if (assertion.capture) {
-        const value = await assertion.capture({
-          fork: getForkName(epoch, this.config),
-          slot,
-          block: block.data,
-          clock: this.clock,
-          node,
-          forkConfig: this.config,
-          epoch,
-          store: this.stores[assertion.id][node.cl.id],
-          // TODO: Make the store safe, to filter just the dependant stores not all
-          dependantStores: this.stores,
-        });
-        if (value !== undefined || value !== null) {
-          this.stores[assertion.id][node.cl.id][slot] = value;
+      for (const assertion of this.assertions) {
+        if (assertion.capture) {
+          const value = await assertion.capture({
+            fork: getForkName(epoch, this.config),
+            slot,
+            block: block.data,
+            clock: this.clock,
+            node,
+            forkConfig: this.config,
+            epoch,
+            store: this.stores[assertion.id][node.cl.id],
+            // TODO: Make the store safe, to filter just the dependant stores not all
+            dependantStores: this.stores,
+          });
+          if (value !== undefined || value !== null) {
+            this.stores[assertion.id][node.cl.id][slot] = value;
+          }
         }
       }
+    } catch {
+      // Incase of reorg the block may not be available
+      return;
     }
 
     const capturedSlot = this.slotCapture.get(slot);
