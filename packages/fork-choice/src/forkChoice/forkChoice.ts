@@ -824,8 +824,8 @@ export class ForkChoice implements IForkChoice {
       return genesisBlock.blockRoot;
     }
 
-    // eslint-disable-next-line no-constant-condition
-    while (true) {
+    const finalizedSlot = this.getFinalizedBlock().slot;
+    while (block.slot >= finalizedSlot) {
       // Dependant root must be in epoch less than `beforeSlot`
       if (block.slot < beforeSlot) {
         return block.blockRoot;
@@ -843,6 +843,8 @@ export class ForkChoice implements IForkChoice {
           : // else we can navigate much faster jumping to the target block
             this.protoArray.getBlockReadonly(block.targetRoot);
     }
+
+    throw Error(`Not found dependent root for block slot ${block.slot}, epoch difference ${epochDifference}`);
   }
 
   private getPreMergeExecStatus(executionStatus: MaybeValidExecutionStatus): ExecutionStatus.PreMerge {
