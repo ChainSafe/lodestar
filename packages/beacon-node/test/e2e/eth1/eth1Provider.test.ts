@@ -8,7 +8,7 @@ import {Eth1Provider, parseEth1Block} from "../../../src/eth1/provider/eth1Provi
 import {Eth1Block} from "../../../src/eth1/interface.js";
 import {getGoerliRpcUrl} from "../../testParams.js";
 
-describe("eth1 / Eth1Provider", function () {
+describe.skip("eth1 / Eth1Provider", function () {
   this.timeout("2 min");
 
   let controller: AbortController;
