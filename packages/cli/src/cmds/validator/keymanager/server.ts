@@ -52,7 +52,7 @@ export class KeymanagerRestApiServer extends RestApiServer {
       writeFile600Perm(apiTokenPath, bearerToken, {encoding: "utf8"});
     }
 
-    super({address: opts.address, port: opts.port, cors: opts.cors, bearerToken}, modules);
+    super({...opts, bearerToken}, modules);
 
     // Instantiate and register the keymanager routes
     registerRoutes(this.server, modules.config, modules.api);
