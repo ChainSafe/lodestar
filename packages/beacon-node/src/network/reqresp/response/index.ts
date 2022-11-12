@@ -3,29 +3,25 @@ import {PeerId} from "@libp2p/interface-peer-id";
 import {Stream} from "@libp2p/interface-connection";
 import {Uint8ArrayList} from "uint8arraylist";
 import {ILogger, TimeoutError, withTimeout} from "@lodestar/utils";
-import {IBeaconConfig} from "@lodestar/config";
 import {REQUEST_TIMEOUT, RespStatus} from "../../../constants/index.js";
 import {prettyPrintPeerId} from "../../util.js";
-import {PeersData} from "../../peers/peersData.js";
-import {Protocol, RequestBody, OutgoingResponseBody} from "../types.js";
-import {renderRequestBody} from "../utils/index.js";
+import {ProtocolDefinition} from "../types.js";
 import {requestDecode} from "../encoders/requestDecode.js";
 import {responseEncodeError, responseEncodeSuccess} from "../encoders/responseEncode.js";
 import {ResponseError} from "./errors.js";
 
 export {ResponseError};
 
-export type PerformRequestHandler = (
-  protocol: Protocol,
-  requestBody: RequestBody,
-  peerId: PeerId
-) => AsyncIterable<OutgoingResponseBody>;
-
-type HandleRequestModules = {
-  config: IBeaconConfig;
+export interface HandleRequestOpts<Req, Resp> {
   logger: ILogger;
-  peersData: PeersData;
-};
+  stream: Stream;
+  peerId: PeerId;
+  protocol: ProtocolDefinition<Req, Resp>;
+  signal?: AbortSignal;
+  requestId?: number;
+  /** Peer client type for logging and metrics: 'prysm' | 'lighthouse' */
+  peerClient?: string;
+}
 
 /**
  * Handles a ReqResp request from a peer. Throws on error. Logs each step of the response lifecycle.
@@ -37,17 +33,16 @@ type HandleRequestModules = {
  * 4a. Encode and write `<response_chunks>` to peer
  * 4b. On error, encode and write an error `<response_chunk>` and stop
  */
-export async function handleRequest(
-  {config, logger, peersData: peersData}: HandleRequestModules,
-  performRequestHandler: PerformRequestHandler,
-  stream: Stream,
-  peerId: PeerId,
-  protocol: Protocol,
-  signal?: AbortSignal,
-  requestId = 0
-): Promise<void> {
-  const client = peersData.getPeerKind(peerId.toString());
-  const logCtx = {method: protocol.method, client, peer: prettyPrintPeerId(peerId), requestId};
+export async function handleRequest<Req, Resp>({
+  logger,
+  stream,
+  peerId,
+  protocol,
+  signal,
+  requestId = 0,
+  peerClient = "unknown",
+}: HandleRequestOpts<Req, Resp>): Promise<void> {
+  const logCtx = {method: protocol.method, client: peerClient, peer: prettyPrintPeerId(peerId), requestId};
 
   let responseError: Error | null = null;
   await pipe(
@@ -68,14 +63,14 @@ export async function handleRequest(
           }
         });
 
-        logger.debug("Resp received request", {...logCtx, body: renderRequestBody(protocol.method, requestBody)});
+        logger.debug("Resp received request", {...logCtx, body: protocol.renderRequestBody?.(requestBody)});
 
         yield* pipe(
-          performRequestHandler(protocol, requestBody, peerId),
+          protocol.handler(requestBody, peerId),
           // NOTE: Do not log the resp chunk contents, logs get extremely cluttered
           // Note: Not logging on each chunk since after 1 year it hasn't add any value when debugging
           // onChunk(() => logger.debug("Resp sending chunk", logCtx)),
-          responseEncodeSuccess(config, protocol)
+          responseEncodeSuccess<Req, Resp>(protocol)
         );
       } catch (e) {
         const status = e instanceof ResponseError ? e.status : RespStatus.SERVER_ERROR;

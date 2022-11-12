@@ -1,4 +1,5 @@
-import {Protocol, getRequestSzzTypeByMethod, RequestBody} from "../types.js";
+import {ForkName} from "@lodestar/params";
+import {EncodedPayloadType, ProtocolDefinition} from "../types.js";
 import {writeEncodedPayload} from "../encodingStrategies/index.js";
 
 /**
@@ -9,13 +10,10 @@ import {writeEncodedPayload} from "../encodingStrategies/index.js";
  * Requests may contain no payload (e.g. /eth2/beacon_chain/req/metadata/1/)
  * if so, it would yield no byte chunks
  */
-export async function* requestEncode(
-  protocol: Pick<Protocol, "method" | "encoding">,
-  requestBody: RequestBody
-): AsyncGenerator<Buffer> {
-  const type = getRequestSzzTypeByMethod(protocol.method);
+export async function* requestEncode<Req>(protocol: ProtocolDefinition<Req>, requestBody: Req): AsyncGenerator<Buffer> {
+  const type = protocol.requestType(ForkName.phase0);
 
   if (type && requestBody !== null) {
-    yield* writeEncodedPayload(requestBody, protocol.encoding, type);
+    yield* writeEncodedPayload({type: EncodedPayloadType.ssz, data: requestBody}, protocol.encoding, type);
   }
 }

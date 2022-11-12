@@ -1,4 +1,4 @@
-import {Method, isSingleResponseChunkByMethod, IncomingResponseBody} from "../types.js";
+import {ProtocolDefinition} from "../types.js";
 import {RequestErrorCode, RequestInternalError} from "./errors.js";
 
 /**
@@ -8,20 +8,20 @@ import {RequestErrorCode, RequestInternalError} from "./errors.js";
  * ```
  * Note: `response` has zero or more chunks for SSZ-list responses or exactly one chunk for non-list
  */
-export function collectResponses<T extends IncomingResponseBody | IncomingResponseBody[]>(
-  method: Method,
+export function collectResponses<T>(
+  protocol: ProtocolDefinition,
   maxResponses?: number
-): (source: AsyncIterable<IncomingResponseBody>) => Promise<T> {
+): (source: AsyncIterable<T>) => Promise<T | T[]> {
   return async (source) => {
-    if (isSingleResponseChunkByMethod[method]) {
+    if (protocol.isSingleResponse) {
       for await (const response of source) {
-        return response as T;
+        return response;
       }
       throw new RequestInternalError({code: RequestErrorCode.EMPTY_RESPONSE});
     }
 
     // else: zero or more responses
-    const responses: IncomingResponseBody[] = [];
+    const responses: T[] = [];
     for await (const response of source) {
       responses.push(response);
 
@@ -29,6 +29,6 @@ export function collectResponses<T extends IncomingResponseBody | IncomingRespon
         break;
       }
     }
-    return responses as T;
+    return responses;
   };
 }

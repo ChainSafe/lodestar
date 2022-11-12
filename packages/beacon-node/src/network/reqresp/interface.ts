@@ -10,7 +10,6 @@ import {INetworkEventBus} from "../events.js";
 import {PeersData} from "../peers/peersData.js";
 import {IMetrics} from "../../metrics/index.js";
 import {ReqRespHandlers} from "./handlers/index.js";
-import {RequestTypedContainer} from "./types.js";
 
 export interface IReqResp {
   start(): void;
@@ -47,10 +46,10 @@ export interface IReqRespModules {
  * Rate limiter interface for inbound and outbound requests.
  */
 export interface IRateLimiter {
-  /**
-   * Allow to request or response based on rate limit params configured.
-   */
-  allowRequest(peerId: PeerId, requestTyped: RequestTypedContainer): boolean;
+  /** Allow to request or response based on rate limit params configured. */
+  allowRequest(peerId: PeerId): boolean;
+  /** Rate limit check for block count */
+  allowBlockByRequest(peerId: PeerId, numBlock: number): boolean;
 
   /**
    * Prune by peer id

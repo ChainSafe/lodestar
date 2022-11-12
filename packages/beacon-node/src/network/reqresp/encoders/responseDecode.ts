@@ -1,18 +1,11 @@
 import {Uint8ArrayList} from "uint8arraylist";
 import {ForkName} from "@lodestar/params";
-import {IForkDigestContext} from "@lodestar/config";
+import {Type} from "@chainsafe/ssz";
 import {RespStatus} from "../../../constants/index.js";
 import {BufferedSource, decodeErrorMessage} from "../utils/index.js";
 import {readEncodedPayload} from "../encodingStrategies/index.js";
 import {ResponseError} from "../response/index.js";
-import {
-  Protocol,
-  IncomingResponseBody,
-  ContextBytesType,
-  contextBytesTypeByProtocol,
-  getResponseSzzTypeByMethod,
-  CONTEXT_BYTES_FORK_DIGEST_LENGTH,
-} from "../types.js";
+import {ContextBytesType, CONTEXT_BYTES_FORK_DIGEST_LENGTH, ContextBytesFactory, ProtocolDefinition} from "../types.js";
 
 /**
  * Internal helper type to signal stream ended early
@@ -29,16 +22,14 @@ enum StreamStatus {
  * result          ::= "0" | "1" | "2" | ["128" ... "255"]
  * ```
  */
-export function responseDecode(
-  forkDigestContext: IForkDigestContext,
-  protocol: Protocol,
+export function responseDecode<Resp>(
+  protocol: ProtocolDefinition,
   cbs: {
     onFirstHeader: () => void;
     onFirstResponseChunk: () => void;
   }
-): (source: AsyncIterable<Uint8Array | Uint8ArrayList>) => AsyncIterable<IncomingResponseBody> {
+): (source: AsyncIterable<Uint8Array | Uint8ArrayList>) => AsyncIterable<Resp> {
   return async function* responseDecodeSink(source) {
-    const contextBytesType = contextBytesTypeByProtocol(protocol);
     const bufferedSource = new BufferedSource(source as AsyncGenerator<Uint8ArrayList>);
 
     let readFirstHeader = false;
@@ -66,10 +57,10 @@ export function responseDecode(
         throw new ResponseError(status, errorMessage);
       }
 
-      const forkName = await readForkName(forkDigestContext, bufferedSource, contextBytesType);
-      const type = getResponseSzzTypeByMethod(protocol, forkName);
+      const forkName = await readContextBytes<Resp>(protocol.contextBytes, bufferedSource);
+      const type = protocol.responseType(forkName) as Type<Resp>;
 
-      yield await readEncodedPayload(bufferedSource, protocol.encoding, type);
+      yield await readEncodedPayload<Resp>(bufferedSource, protocol.encoding, type);
 
       if (!readFirstResponseChunk) {
         cbs.onFirstResponseChunk();
@@ -136,18 +127,17 @@ export async function readErrorMessage(bufferedSource: BufferedSource): Promise<
  * While `<context-bytes>` has a single type of `ForkDigest`, this function only parses the `ForkName`
  * of the `ForkDigest` or defaults to `phase0`
  */
-export async function readForkName(
-  forkDigestContext: IForkDigestContext,
-  bufferedSource: BufferedSource,
-  contextBytes: ContextBytesType
+export async function readContextBytes<Resp>(
+  contextBytes: ContextBytesFactory<Resp>,
+  bufferedSource: BufferedSource
 ): Promise<ForkName> {
-  switch (contextBytes) {
+  switch (contextBytes.type) {
     case ContextBytesType.Empty:
       return ForkName.phase0;
 
     case ContextBytesType.ForkDigest: {
       const forkDigest = await readContextBytesForkDigest(bufferedSource);
-      return forkDigestContext.forkDigest2ForkName(forkDigest);
+      return contextBytes.forkDigestContext.forkDigest2ForkName(forkDigest);
     }
   }
 }

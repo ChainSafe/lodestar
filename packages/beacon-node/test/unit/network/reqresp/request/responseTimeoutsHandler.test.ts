@@ -17,7 +17,7 @@ import {expectRejectedWithLodestarError} from "../../../../utils/errors.js";
 import {getValidPeerId} from "../../../../utils/peer.js";
 import {testLogger} from "../../../../utils/logger.js";
 import {sszSnappySignedBeaconBlockPhase0} from "../encodingStrategies/sszSnappy/testData.js";
-import {formatProtocolId} from "../../../../../src/network/reqresp/utils/protocolId.js";
+import {formatProtocolID} from "../../../../../src/network/reqresp/utils/protocolId.js";
 
 /* eslint-disable require-yield */
 
@@ -41,7 +41,7 @@ describe("network / reqresp / request / responseTimeoutsHandler", () => {
     Buffer.from([RespStatus.SUCCESS]),
     ...sszSnappySignedBeaconBlockPhase0.chunks.map((chunk) => chunk.subarray()),
   ]);
-  const protocol = formatProtocolId(method, version, encoding);
+  const protocol = formatProtocolID(method, version, encoding);
   const peerId = getValidPeerId();
   const metadata: IRequestErrorMetadata = {method, encoding, peer: peerId.toString()};
 

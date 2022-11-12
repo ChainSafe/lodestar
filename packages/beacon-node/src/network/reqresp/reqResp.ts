@@ -1,38 +1,39 @@
-import {setMaxListeners} from "node:events";
-import {Libp2p} from "libp2p";
 import {PeerId} from "@libp2p/interface-peer-id";
-import {Connection, Stream} from "@libp2p/interface-connection";
+import {Type} from "@chainsafe/ssz";
 import {ForkName} from "@lodestar/params";
-import {IBeaconConfig} from "@lodestar/config";
-import {allForks, altair, phase0} from "@lodestar/types";
-import {ILogger} from "@lodestar/utils";
+import {allForks, altair, phase0, Root, Slot, ssz} from "@lodestar/types";
+import {toHex} from "@lodestar/utils";
 import {RespStatus, timeoutOptions} from "../../constants/index.js";
-import {PeersData} from "../peers/peersData.js";
 import {MetadataController} from "../metadata.js";
 import {IPeerRpcScoreStore} from "../peers/score.js";
 import {INetworkEventBus, NetworkEvent} from "../events.js";
-import {IMetrics} from "../../metrics/metrics.js";
 import {IReqResp, IReqRespModules, IRateLimiter} from "./interface.js";
-import {sendRequest} from "./request/index.js";
-import {handleRequest, ResponseError} from "./response/index.js";
-import {onOutgoingReqRespError} from "./score.js";
-import {assertSequentialBlocksInRange, formatProtocolId} from "./utils/index.js";
+import {ResponseError} from "./response/index.js";
+import {assertSequentialBlocksInRange} from "./utils/index.js";
 import {ReqRespHandlers} from "./handlers/index.js";
-import {RequestError, RequestErrorCode} from "./request/index.js";
 import {
   Method,
   Version,
   Encoding,
-  Protocol,
-  OutgoingResponseBody,
-  RequestBody,
+  ContextBytesType,
+  ContextBytesFactory,
+  EncodedPayload,
+  EncodedPayloadType,
   RequestTypedContainer,
-  protocolsSupported,
-  IncomingResponseBody,
 } from "./types.js";
 import {InboundRateLimiter, RateLimiterOpts} from "./response/rateLimiter.js";
+import {ReqRespProtocol} from "./reqRespProtocol.js";
+import {RequestError} from "./request/errors.js";
+import {onOutgoingReqRespError} from "./score.js";
 
 export type IReqRespOptions = Partial<typeof timeoutOptions>;
+
+/** This type helps response to beacon_block_by_range and beacon_block_by_root more efficiently */
+export type ReqRespBlockResponse = {
+  /** Deserialized data of allForks.SignedBeaconBlock */
+  bytes: Uint8Array;
+  slot: Slot;
+};
 
 /**
  * Implementation of Ethereum Consensus p2p Req/Resp domain.
@@ -40,81 +41,216 @@ export type IReqRespOptions = Partial<typeof timeoutOptions>;
  * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#the-reqresp-domain
  * https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/light-client/p2p-interface.md#the-reqresp-domain
  */
-export class ReqResp implements IReqResp {
-  private config: IBeaconConfig;
-  private libp2p: Libp2p;
-  private readonly peersData: PeersData;
-  private logger: ILogger;
+export class ReqResp extends ReqRespProtocol implements IReqResp {
   private reqRespHandlers: ReqRespHandlers;
   private metadataController: MetadataController;
   private peerRpcScores: IPeerRpcScoreStore;
   private inboundRateLimiter: IRateLimiter;
   private networkEventBus: INetworkEventBus;
-  private controller = new AbortController();
-  private options?: IReqRespOptions;
-  private reqCount = 0;
-  private respCount = 0;
-  private metrics: IMetrics | null;
 
   constructor(modules: IReqRespModules, options: IReqRespOptions & RateLimiterOpts) {
-    this.config = modules.config;
-    this.libp2p = modules.libp2p;
-    this.peersData = modules.peersData;
-    this.logger = modules.logger;
+    super(modules, options);
+
+    const {reqRespHandlers, config} = modules;
+
+    // Single chunk protocols
+
+    this.registerProtocol<phase0.Status, phase0.Status>({
+      method: Method.Status,
+      version: Version.V1,
+      encoding: Encoding.SSZ_SNAPPY,
+      handler: this.onStatus.bind(this),
+      requestType: () => ssz.phase0.Status,
+      responseType: () => ssz.phase0.Status,
+      contextBytes: {type: ContextBytesType.Empty},
+      isSingleResponse: true,
+    });
+
+    this.registerProtocol<phase0.Goodbye, phase0.Goodbye>({
+      method: Method.Goodbye,
+      version: Version.V1,
+      encoding: Encoding.SSZ_SNAPPY,
+      handler: this.onGoodbye.bind(this),
+      requestType: () => ssz.phase0.Goodbye,
+      responseType: () => ssz.phase0.Goodbye,
+      renderRequestBody: (req) => req.toString(10),
+      contextBytes: {type: ContextBytesType.Empty},
+      isSingleResponse: true,
+    });
+
+    this.registerProtocol<phase0.Ping, phase0.Ping>({
+      method: Method.Ping,
+      version: Version.V1,
+      encoding: Encoding.SSZ_SNAPPY,
+      handler: this.onPing.bind(this),
+      requestType: () => ssz.phase0.Ping,
+      responseType: () => ssz.phase0.Ping,
+      renderRequestBody: (req) => req.toString(10),
+      contextBytes: {type: ContextBytesType.Empty},
+      isSingleResponse: true,
+    });
+
+    // V1 -> phase0.Metadata, V2 -> altair.Metadata
+    for (const [version, responseType] of [
+      [Version.V1, ssz.phase0.Metadata],
+      [Version.V2, ssz.altair.Metadata],
+    ] as [Version, Type<allForks.Metadata>][]) {
+      this.registerProtocol<null, allForks.Metadata>({
+        method: Method.Metadata,
+        version,
+        encoding: Encoding.SSZ_SNAPPY,
+        handler: this.onMetadata.bind(this),
+        requestType: () => null,
+        responseType: () => responseType,
+        contextBytes: {type: ContextBytesType.Empty},
+        isSingleResponse: true,
+      });
+    }
+
+    // Block by protocols
+
+    const contextBytesEmpty = {type: ContextBytesType.Empty};
+
+    const contextBytesBlocksByV2: ContextBytesFactory<allForks.SignedBeaconBlock> = {
+      type: ContextBytesType.ForkDigest,
+      forkDigestContext: config,
+      forkFromResponse: (block) => config.getForkName(block.message.slot),
+    };
+
+    for (const [version, contextBytes] of [
+      [Version.V1, contextBytesEmpty],
+      [Version.V2, contextBytesBlocksByV2],
+    ] as [Version, ContextBytesFactory<allForks.SignedBeaconBlock>][]) {
+      this.registerProtocol<phase0.BeaconBlocksByRangeRequest, allForks.SignedBeaconBlock>({
+        method: Method.BeaconBlocksByRange,
+        version,
+        encoding: Encoding.SSZ_SNAPPY,
+        handler: this.onBeaconBlocksByRange.bind(this),
+        requestType: () => ssz.phase0.BeaconBlocksByRangeRequest,
+        responseType: (forkName) => ssz[forkName].SignedBeaconBlock,
+        renderRequestBody: (req) => `${req.startSlot},${req.step},${req.count}`,
+        contextBytes,
+        isSingleResponse: false,
+      });
+
+      this.registerProtocol<phase0.BeaconBlocksByRootRequest, allForks.SignedBeaconBlock>({
+        method: Method.BeaconBlocksByRoot,
+        version,
+        encoding: Encoding.SSZ_SNAPPY,
+        handler: this.onBeaconBlocksByRoot.bind(this),
+        requestType: () => ssz.phase0.BeaconBlocksByRootRequest,
+        responseType: (forkName) => ssz[forkName].SignedBeaconBlock,
+        renderRequestBody: (req) => req.map((root) => toHex(root)).join(","),
+        contextBytes,
+        isSingleResponse: false,
+      });
+    }
+
+    // Lightclient methods
+
+    function getContextBytesLightclient<T>(forkFromResponse: (response: T) => ForkName): ContextBytesFactory<T> {
+      return {
+        type: ContextBytesType.ForkDigest,
+        forkDigestContext: config,
+        forkFromResponse,
+      };
+    }
+
+    this.registerProtocol<Root, altair.LightClientBootstrap>({
+      method: Method.LightClientBootstrap,
+      version: Version.V1,
+      encoding: Encoding.SSZ_SNAPPY,
+      handler: reqRespHandlers.onLightClientBootstrap,
+      requestType: () => ssz.Root,
+      responseType: () => ssz.altair.LightClientBootstrap,
+      renderRequestBody: (req) => toHex(req),
+      contextBytes: getContextBytesLightclient((bootstrap) => config.getForkName(bootstrap.header.slot)),
+      isSingleResponse: true,
+    });
+
+    this.registerProtocol<altair.LightClientUpdatesByRange, altair.LightClientUpdate>({
+      method: Method.LightClientUpdatesByRange,
+      version: Version.V1,
+      encoding: Encoding.SSZ_SNAPPY,
+      handler: reqRespHandlers.onLightClientUpdatesByRange,
+      requestType: () => ssz.altair.LightClientUpdatesByRange,
+      responseType: () => ssz.altair.LightClientUpdate,
+      renderRequestBody: (req) => `${req.startPeriod},${req.count}`,
+      contextBytes: getContextBytesLightclient((update) => config.getForkName(update.signatureSlot)),
+      isSingleResponse: false,
+    });
+
+    this.registerProtocol<null, altair.LightClientFinalityUpdate>({
+      method: Method.LightClientFinalityUpdate,
+      version: Version.V1,
+      encoding: Encoding.SSZ_SNAPPY,
+      handler: reqRespHandlers.onLightClientFinalityUpdate,
+      requestType: () => null,
+      responseType: () => ssz.altair.LightClientFinalityUpdate,
+      contextBytes: getContextBytesLightclient((update) => config.getForkName(update.signatureSlot)),
+      isSingleResponse: true,
+    });
+
+    this.registerProtocol<null, altair.LightClientOptimisticUpdate>({
+      method: Method.LightClientOptimisticUpdate,
+      version: Version.V1,
+      encoding: Encoding.SSZ_SNAPPY,
+      handler: reqRespHandlers.onLightClientOptimisticUpdate,
+      requestType: () => null,
+      responseType: () => ssz.altair.LightClientOptimisticUpdate,
+      contextBytes: getContextBytesLightclient((update) => config.getForkName(update.signatureSlot)),
+      isSingleResponse: true,
+    });
+
     this.reqRespHandlers = modules.reqRespHandlers;
     this.metadataController = modules.metadata;
     this.peerRpcScores = modules.peerRpcScores;
     this.inboundRateLimiter = new InboundRateLimiter(options, {...modules});
     this.networkEventBus = modules.networkEventBus;
-    this.options = options;
-    this.metrics = modules.metrics;
   }
 
   async start(): Promise<void> {
-    this.controller = new AbortController();
-    // We set infinity to prevent MaxListenersExceededWarning which get logged when listeners > 10
-    // Since it is perfectly fine to have listeners > 10
-    setMaxListeners(Infinity, this.controller.signal);
-    for (const [method, version, encoding] of protocolsSupported) {
-      await this.libp2p.handle(
-        formatProtocolId(method, version, encoding),
-        this.getRequestHandler({method, version, encoding})
-      );
-    }
+    await super.start();
     this.inboundRateLimiter.start();
   }
 
   async stop(): Promise<void> {
-    for (const [method, version, encoding] of protocolsSupported) {
-      await this.libp2p.unhandle(formatProtocolId(method, version, encoding));
-    }
-    this.controller.abort();
+    await super.stop();
     this.inboundRateLimiter.stop();
   }
 
+  pruneOnPeerDisconnect(peerId: PeerId): void {
+    this.inboundRateLimiter.prune(peerId);
+  }
+
   async status(peerId: PeerId, request: phase0.Status): Promise<phase0.Status> {
-    return await this.sendRequest<phase0.Status>(peerId, Method.Status, [Version.V1], request);
+    return await this.sendRequest<phase0.Status, phase0.Status>(peerId, Method.Status, [Version.V1], request);
   }
 
   async goodbye(peerId: PeerId, request: phase0.Goodbye): Promise<void> {
-    await this.sendRequest<phase0.Goodbye>(peerId, Method.Goodbye, [Version.V1], request);
+    await this.sendRequest<phase0.Goodbye, phase0.Goodbye>(peerId, Method.Goodbye, [Version.V1], request);
   }
 
   async ping(peerId: PeerId): Promise<phase0.Ping> {
-    return await this.sendRequest<phase0.Ping>(peerId, Method.Ping, [Version.V1], this.metadataController.seqNumber);
+    return await this.sendRequest<phase0.Ping, phase0.Ping>(
+      peerId,
+      Method.Ping,
+      [Version.V1],
+      this.metadataController.seqNumber
+    );
   }
 
   async metadata(peerId: PeerId, fork?: ForkName): Promise<allForks.Metadata> {
     // Only request V1 if forcing phase0 fork. It's safe to not specify `fork` and let stream negotiation pick the version
     const versions = fork === ForkName.phase0 ? [Version.V1] : [Version.V2, Version.V1];
-    return await this.sendRequest<allForks.Metadata>(peerId, Method.Metadata, versions, null);
+    return await this.sendRequest<null, allForks.Metadata>(peerId, Method.Metadata, versions, null);
   }
 
   async beaconBlocksByRange(
     peerId: PeerId,
     request: phase0.BeaconBlocksByRangeRequest
   ): Promise<allForks.SignedBeaconBlock[]> {
-    const blocks = await this.sendRequest<allForks.SignedBeaconBlock[]>(
+    const blocks = await this.sendRequest<phase0.BeaconBlocksByRangeRequest, allForks.SignedBeaconBlock[]>(
       peerId,
       Method.BeaconBlocksByRange,
       [Version.V2, Version.V1], // Prioritize V2
@@ -129,7 +265,7 @@ export class ReqResp implements IReqResp {
     peerId: PeerId,
     request: phase0.BeaconBlocksByRootRequest
   ): Promise<allForks.SignedBeaconBlock[]> {
-    return await this.sendRequest<allForks.SignedBeaconBlock[]>(
+    return await this.sendRequest<phase0.BeaconBlocksByRootRequest, allForks.SignedBeaconBlock[]>(
       peerId,
       Method.BeaconBlocksByRoot,
       [Version.V2, Version.V1], // Prioritize V2
@@ -138,12 +274,8 @@ export class ReqResp implements IReqResp {
     );
   }
 
-  pruneOnPeerDisconnect(peerId: PeerId): void {
-    this.inboundRateLimiter.prune(peerId);
-  }
-
-  async lightClientBootstrap(peerId: PeerId, request: Uint8Array): Promise<altair.LightClientBootstrap> {
-    return await this.sendRequest<altair.LightClientBootstrap>(
+  async lightClientBootstrap(peerId: PeerId, request: Root): Promise<altair.LightClientBootstrap> {
+    return await this.sendRequest<Root, altair.LightClientBootstrap>(
       peerId,
       Method.LightClientBootstrap,
       [Version.V1],
@@ -152,7 +284,7 @@ export class ReqResp implements IReqResp {
   }
 
   async lightClientOptimisticUpdate(peerId: PeerId): Promise<altair.LightClientOptimisticUpdate> {
-    return await this.sendRequest<altair.LightClientOptimisticUpdate>(
+    return await this.sendRequest<null, altair.LightClientOptimisticUpdate>(
       peerId,
       Method.LightClientOptimisticUpdate,
       [Version.V1],
@@ -161,7 +293,7 @@ export class ReqResp implements IReqResp {
   }
 
   async lightClientFinalityUpdate(peerId: PeerId): Promise<altair.LightClientFinalityUpdate> {
-    return await this.sendRequest<altair.LightClientFinalityUpdate>(
+    return await this.sendRequest<null, altair.LightClientFinalityUpdate>(
       peerId,
       Method.LightClientFinalityUpdate,
       [Version.V1],
@@ -173,150 +305,78 @@ export class ReqResp implements IReqResp {
     peerId: PeerId,
     request: altair.LightClientUpdatesByRange
   ): Promise<altair.LightClientUpdate[]> {
-    return await this.sendRequest<altair.LightClientUpdate[]>(
+    return await this.sendRequest<altair.LightClientUpdatesByRange, altair.LightClientUpdate[]>(
       peerId,
-      Method.LightClientUpdate,
+      Method.LightClientUpdatesByRange,
       [Version.V1],
       request,
       request.count
     );
   }
 
-  // Helper to reduce code duplication
-  private async sendRequest<T extends IncomingResponseBody | IncomingResponseBody[]>(
-    peerId: PeerId,
-    method: Method,
-    versions: Version[],
-    body: RequestBody,
-    maxResponses = 1
-  ): Promise<T> {
-    this.metrics?.reqResp.outgoingRequests.inc({method});
-    const timer = this.metrics?.reqResp.outgoingRequestRoundtripTime.startTimer({method});
-
-    try {
-      const encoding = this.peersData.getEncodingPreference(peerId.toString()) ?? Encoding.SSZ_SNAPPY;
-      const result = await sendRequest<T>(
-        {forkDigestContext: this.config, logger: this.logger, libp2p: this.libp2p, peersData: this.peersData},
-        peerId,
-        method,
-        encoding,
-        versions,
-        body,
-        maxResponses,
-        this.controller.signal,
-        this.options,
-        this.reqCount++
-      );
-
-      return result;
-    } catch (e) {
-      this.metrics?.reqResp.outgoingErrors.inc({method});
-
-      if (e instanceof RequestError) {
-        if (e.type.code === RequestErrorCode.DIAL_ERROR || e.type.code === RequestErrorCode.DIAL_TIMEOUT) {
-          this.metrics?.reqResp.dialErrors.inc();
-        }
-        const peerAction = onOutgoingReqRespError(e, method);
-        if (peerAction !== null) {
-          this.peerRpcScores.applyAction(peerId, peerAction, e.type.code);
-        }
-      }
-
-      throw e;
-    } finally {
-      timer?.();
-    }
-  }
-
-  private getRequestHandler({method, version, encoding}: Protocol) {
-    return async ({connection, stream}: {connection: Connection; stream: Stream}) => {
-      const peerId = connection.remotePeer;
-
-      // TODO: Do we really need this now that there is only one encoding?
-      // Remember the prefered encoding of this peer
-      if (method === Method.Status) {
-        this.peersData.setEncodingPreference(peerId.toString(), encoding);
-      }
-
-      this.metrics?.reqResp.incomingRequests.inc({method});
-      const timer = this.metrics?.reqResp.incomingRequestHandlerTime.startTimer({method});
-
-      try {
-        await handleRequest(
-          {config: this.config, logger: this.logger, peersData: this.peersData},
-          this.onRequest.bind(this),
-          stream,
-          peerId,
-          {method, version, encoding},
-          this.controller.signal,
-          this.respCount++
-        );
-        // TODO: Do success peer scoring here
-      } catch {
-        this.metrics?.reqResp.incomingErrors.inc({method});
-
-        // TODO: Do error peer scoring here
-        // Must not throw since this is an event handler
-      } finally {
-        timer?.();
-      }
-    };
-  }
-
-  private async *onRequest(
-    protocol: Protocol,
-    requestBody: RequestBody,
-    peerId: PeerId
-  ): AsyncIterable<OutgoingResponseBody> {
-    const requestTyped = {method: protocol.method, body: requestBody} as RequestTypedContainer;
-
-    if (requestTyped.method !== Method.Goodbye && !this.inboundRateLimiter.allowRequest(peerId, requestTyped)) {
+  /**
+   * @override Rate limit requests before decoding request body
+   */
+  protected onIncomingRequest(peerId: PeerId, method: Method): void {
+    if (method !== Method.Goodbye && !this.inboundRateLimiter.allowRequest(peerId)) {
       throw new ResponseError(RespStatus.RATE_LIMITED, "rate limit");
     }
+  }
 
-    switch (requestTyped.method) {
-      case Method.Ping:
-        yield this.metadataController.seqNumber;
-        break;
-      case Method.Metadata:
-        // V1 -> phase0, V2 -> altair. But the type serialization of phase0.Metadata will just ignore the extra .syncnets property
-        // It's safe to return altair.Metadata here for all versions
-        yield this.metadataController.json;
-        break;
-      case Method.Goodbye:
-        yield BigInt(0);
-        break;
-
-      // Don't bubble Ping, Metadata, and, Goodbye requests to the app layer
-
-      case Method.Status:
-        yield* this.reqRespHandlers.onStatus();
-        break;
-      case Method.BeaconBlocksByRange:
-        yield* this.reqRespHandlers.onBeaconBlocksByRange(requestTyped.body);
-        break;
-      case Method.BeaconBlocksByRoot:
-        yield* this.reqRespHandlers.onBeaconBlocksByRoot(requestTyped.body);
-        break;
-      case Method.LightClientBootstrap:
-        yield* this.reqRespHandlers.onLightClientBootstrap(requestTyped.body);
-        break;
-      case Method.LightClientOptimisticUpdate:
-        yield* this.reqRespHandlers.onLightClientOptimisticUpdate();
-        break;
-      case Method.LightClientFinalityUpdate:
-        yield* this.reqRespHandlers.onLightClientFinalityUpdate();
-        break;
-      case Method.LightClientUpdate:
-        yield* this.reqRespHandlers.onLightClientUpdatesByRange(requestTyped.body);
-        break;
-      default:
-        throw Error(`Unsupported method ${protocol.method}`);
+  protected onOutgoingReqRespError(peerId: PeerId, method: Method, error: RequestError): void {
+    const peerAction = onOutgoingReqRespError(error, method);
+    if (peerAction !== null) {
+      this.peerRpcScores.applyAction(peerId, peerAction, error.type.code);
     }
+  }
 
+  private onIncomingRequestBody(req: RequestTypedContainer, peerId: PeerId): void {
     // Allow onRequest to return and close the stream
     // For Goodbye there may be a race condition where the listener of `receivedGoodbye`
     // disconnects in the same syncronous call, preventing the stream from ending cleanly
-    setTimeout(() => this.networkEventBus.emit(NetworkEvent.reqRespRequest, requestTyped, peerId), 0);
+    setTimeout(() => this.networkEventBus.emit(NetworkEvent.reqRespRequest, req, peerId), 0);
+  }
+
+  private async *onStatus(req: phase0.Status, peerId: PeerId): AsyncIterable<EncodedPayload<phase0.Status>> {
+    this.onIncomingRequestBody({method: Method.Status, body: req}, peerId);
+    yield* this.reqRespHandlers.onStatus();
+  }
+
+  private async *onGoodbye(req: phase0.Goodbye, peerId: PeerId): AsyncIterable<EncodedPayload<phase0.Goodbye>> {
+    this.onIncomingRequestBody({method: Method.Goodbye, body: req}, peerId);
+    yield {type: EncodedPayloadType.ssz, data: BigInt(0)};
+  }
+
+  private async *onPing(req: phase0.Ping, peerId: PeerId): AsyncIterable<EncodedPayload<phase0.Ping>> {
+    this.onIncomingRequestBody({method: Method.Goodbye, body: req}, peerId);
+    yield {type: EncodedPayloadType.ssz, data: this.metadataController.seqNumber};
+  }
+
+  private async *onMetadata(req: null, peerId: PeerId): AsyncIterable<EncodedPayload<allForks.Metadata>> {
+    this.onIncomingRequestBody({method: Method.Metadata, body: req}, peerId);
+
+    // V1 -> phase0, V2 -> altair. But the type serialization of phase0.Metadata will just ignore the extra .syncnets property
+    // It's safe to return altair.Metadata here for all versions
+    yield {type: EncodedPayloadType.ssz, data: this.metadataController.json};
+  }
+
+  private async *onBeaconBlocksByRange(
+    req: phase0.BeaconBlocksByRangeRequest,
+    peerId: PeerId
+  ): AsyncIterable<EncodedPayload<allForks.SignedBeaconBlock>> {
+    if (!this.inboundRateLimiter.allowBlockByRequest(peerId, req.count)) {
+      throw new ResponseError(RespStatus.RATE_LIMITED, "rate limit");
+    }
+    yield* this.reqRespHandlers.onBeaconBlocksByRange(req);
+  }
+
+  private async *onBeaconBlocksByRoot(
+    req: phase0.BeaconBlocksByRootRequest,
+    peerId: PeerId
+  ): AsyncIterable<EncodedPayload<allForks.SignedBeaconBlock>> {
+    if (!this.inboundRateLimiter.allowBlockByRequest(peerId, req.length)) {
+      throw new ResponseError(RespStatus.RATE_LIMITED, "rate limit");
+    }
+    yield* this.reqRespHandlers.onBeaconBlocksByRoot(req);
   }
 }

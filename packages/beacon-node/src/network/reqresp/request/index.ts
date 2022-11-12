@@ -2,14 +2,12 @@ import {pipe} from "it-pipe";
 import {PeerId} from "@libp2p/interface-peer-id";
 import {Libp2p} from "libp2p";
 import {Uint8ArrayList} from "uint8arraylist";
-import {IForkDigestContext} from "@lodestar/config";
 import {ErrorAborted, ILogger, withTimeout, TimeoutError} from "@lodestar/utils";
 import {timeoutOptions} from "../../../constants/index.js";
 import {prettyPrintPeerId} from "../../util.js";
 import {abortableSource} from "../../../util/abortableSource.js";
-import {PeersData} from "../../peers/peersData.js";
-import {Method, Encoding, Protocol, Version, IncomingResponseBody, RequestBody} from "../types.js";
-import {formatProtocolId, renderRequestBody} from "../utils/index.js";
+import {ProtocolDefinition} from "../types.js";
+import {formatProtocolID} from "../utils/index.js";
 import {ResponseError} from "../response/index.js";
 import {requestEncode} from "../encoders/requestEncode.js";
 import {responseDecode} from "../encoders/responseDecode.js";
@@ -26,9 +24,8 @@ export {RequestError, RequestErrorCode};
 
 type SendRequestModules = {
   logger: ILogger;
-  forkDigestContext: IForkDigestContext;
   libp2p: Libp2p;
-  peersData: PeersData;
+  peerClient?: string;
 };
 
 /**
@@ -42,23 +39,25 @@ type SendRequestModules = {
  *    - Any part of the response_chunk fails validation. Throws a typed error (see `SszSnappyError`)
  *    - The maximum number of requested chunks are read. Does not throw, returns read chunks only.
  */
-export async function sendRequest<T extends IncomingResponseBody | IncomingResponseBody[]>(
-  {logger, forkDigestContext, libp2p, peersData}: SendRequestModules,
+export async function sendRequest<Req, Resp>(
+  {logger, libp2p, peerClient}: SendRequestModules,
   peerId: PeerId,
-  method: Method,
-  encoding: Encoding,
-  versions: Version[],
-  requestBody: RequestBody,
+  protocols: ProtocolDefinition[],
+  requestBody: Req,
   maxResponses: number,
   signal?: AbortSignal,
   options?: Partial<typeof timeoutOptions>,
   requestId = 0
-): Promise<T> {
+): Promise<Resp> {
+  if (protocols.length === 0) {
+    throw Error("sendRequest must set > 0 protocols");
+  }
+
   const {REQUEST_TIMEOUT, DIAL_TIMEOUT} = {...timeoutOptions, ...options};
   const peerIdStr = peerId.toString();
   const peerIdStrShort = prettyPrintPeerId(peerId);
-  const client = peersData.getPeerKind(peerIdStr);
-  const logCtx = {method, encoding, client, peer: peerIdStrShort, requestId};
+  const {method, encoding} = protocols[0];
+  const logCtx = {method, encoding, client: peerClient, peer: peerIdStrShort, requestId};
 
   if (signal?.aborted) {
     throw new ErrorAborted("sendRequest");
@@ -70,8 +69,8 @@ export async function sendRequest<T extends IncomingResponseBody | IncomingRespo
     // From Altair block query methods have V1 and V2. Both protocols should be requested.
     // On stream negotiation `libp2p.dialProtocol` will pick the available protocol and return
     // the picked protocol in `connection.protocol`
-    const protocols = new Map<string, Protocol>(
-      versions.map((version) => [formatProtocolId(method, version, encoding), {method, version, encoding}])
+    const protocolsMap = new Map<string, ProtocolDefinition>(
+      protocols.map((protocol) => [formatProtocolID(protocol.method, protocol.version, protocol.encoding), protocol])
     );
 
     // As of October 2020 we can't rely on libp2p.dialProtocol timeout to work so
@@ -87,7 +86,7 @@ export async function sendRequest<T extends IncomingResponseBody | IncomingRespo
     // DIAL_TIMEOUT: Non-spec timeout from dialing protocol until stream opened
     const stream = await withTimeout(
       async (timeoutAndParentSignal) => {
-        const protocolIds = Array.from(protocols.keys());
+        const protocolIds = Array.from(protocolsMap.keys());
         const conn = await libp2p.dialProtocol(peerId, protocolIds, {signal: timeoutAndParentSignal});
         // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
         if (!conn) throw Error("dialProtocol timeout");
@@ -105,10 +104,10 @@ export async function sendRequest<T extends IncomingResponseBody | IncomingRespo
 
     // Parse protocol selected by the responder
     const protocolId = stream.stat.protocol ?? "unknown";
-    const protocol = protocols.get(protocolId);
+    const protocol = protocolsMap.get(protocolId);
     if (!protocol) throw Error(`dialProtocol selected unknown protocolId ${protocolId}`);
 
-    logger.debug("Req  sending request", {...logCtx, body: renderRequestBody(method, requestBody)});
+    logger.debug("Req  sending request", {...logCtx, body: protocol.renderRequestBody?.(requestBody)});
 
     // Spec: The requester MUST close the write side of the stream once it finishes writing the request message
     // Impl: stream.sink is closed automatically by js-libp2p-mplex when piped source is exhausted
@@ -168,7 +167,7 @@ export async function sendRequest<T extends IncomingResponseBody | IncomingRespo
         ]),
 
         // Transforms `Buffer` chunks to yield `ResponseBody` chunks
-        responseDecode(forkDigestContext, protocol, {
+        responseDecode(protocol, {
           onFirstHeader() {
             // On first byte, cancel the single use TTFB_TIMEOUT, and start RESP_TIMEOUT
             clearTimeout(timeoutTTFB);
@@ -180,7 +179,7 @@ export async function sendRequest<T extends IncomingResponseBody | IncomingRespo
           },
         }),
 
-        collectResponses(method, maxResponses)
+        collectResponses(protocol, maxResponses)
       );
 
       // NOTE: Only log once per request to verbose, intermediate steps to debug
@@ -189,7 +188,7 @@ export async function sendRequest<T extends IncomingResponseBody | IncomingRespo
       const numResponse = Array.isArray(responses) ? responses.length : 1;
       logger.verbose("Req  done", {...logCtx, numResponse});
 
-      return responses as T;
+      return responses as Resp;
     } finally {
       clearTimeout(timeoutTTFB);
       if (timeoutRESP !== null) clearTimeout(timeoutRESP);

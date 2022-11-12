@@ -1,7 +1,8 @@
 import varint from "varint";
 import {source} from "stream-to-it";
+import {Type} from "@chainsafe/ssz";
 import snappy from "@chainsafe/snappy-stream";
-import {RequestOrOutgoingResponseBody, OutgoingSerializer} from "../../types.js";
+import {EncodedPayload, EncodedPayloadType} from "../../types.js";
 import {SszSnappyError, SszSnappyErrorCode} from "./errors.js";
 
 /**
@@ -11,11 +12,8 @@ import {SszSnappyError, SszSnappyErrorCode} from "./errors.js";
  * <encoding-dependent-header> | <encoded-payload>
  * ```
  */
-export async function* writeSszSnappyPayload<T extends RequestOrOutgoingResponseBody>(
-  body: T,
-  serializer: OutgoingSerializer
-): AsyncGenerator<Buffer> {
-  const serializedBody = serializeSszBody(body, serializer);
+export async function* writeSszSnappyPayload<T>(body: EncodedPayload<T>, type: Type<T>): AsyncGenerator<Buffer> {
+  const serializedBody = serializeSszBody(body, type);
 
   yield* encodeSszSnappy(serializedBody);
 }
@@ -47,12 +45,19 @@ export async function* encodeSszSnappy(bytes: Buffer): AsyncGenerator<Buffer> {
 /**
  * Returns SSZ serialized body. Wrapps errors with SszSnappyError.SERIALIZE_ERROR
  */
-function serializeSszBody<T extends RequestOrOutgoingResponseBody>(body: T, serializer: OutgoingSerializer): Buffer {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const bytes = serializer.serialize(body as any);
-    return Buffer.from(bytes.buffer, bytes.byteOffset, bytes.length);
-  } catch (e) {
-    throw new SszSnappyError({code: SszSnappyErrorCode.SERIALIZE_ERROR, serializeError: e as Error});
+function serializeSszBody<T>(chunk: EncodedPayload<T>, type: Type<T>): Buffer {
+  switch (chunk.type) {
+    case EncodedPayloadType.bytes:
+      return chunk.bytes as Buffer;
+
+    case EncodedPayloadType.ssz: {
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const bytes = type.serialize(chunk.data);
+        return Buffer.from(bytes.buffer, bytes.byteOffset, bytes.length);
+      } catch (e) {
+        throw new SszSnappyError({code: SszSnappyErrorCode.SERIALIZE_ERROR, serializeError: e as Error});
+      }
+    }
   }
 }

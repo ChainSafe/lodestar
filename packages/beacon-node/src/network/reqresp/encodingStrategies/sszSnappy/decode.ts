@@ -1,13 +1,13 @@
 import varint from "varint";
 import {Uint8ArrayList} from "uint8arraylist";
+import {Type} from "@chainsafe/ssz";
 import {MAX_VARINT_BYTES} from "../../../../constants/index.js";
 import {BufferedSource} from "../../utils/index.js";
-import {RequestOrResponseType, RequestOrIncomingResponseBody} from "../../types.js";
 import {SnappyFramesUncompress} from "./snappyFrames/uncompress.js";
 import {maxEncodedLen} from "./utils.js";
 import {SszSnappyError, SszSnappyErrorCode} from "./errors.js";
 
-export type RequestOrResponseTypeRead = Pick<RequestOrResponseType, "minSize" | "maxSize" | "deserialize">;
+export type TypeRead<T> = Pick<Type<T>, "minSize" | "maxSize" | "deserialize">;
 
 /**
  * ssz_snappy encoding strategy reader.
@@ -16,10 +16,7 @@ export type RequestOrResponseTypeRead = Pick<RequestOrResponseType, "minSize" | 
  * <encoding-dependent-header> | <encoded-payload>
  * ```
  */
-export async function readSszSnappyPayload<T extends RequestOrIncomingResponseBody>(
-  bufferedSource: BufferedSource,
-  type: RequestOrResponseTypeRead
-): Promise<T> {
+export async function readSszSnappyPayload<T>(bufferedSource: BufferedSource, type: TypeRead<T>): Promise<T> {
   const sszDataLength = await readSszSnappyHeader(bufferedSource, type);
 
   const bytes = await readSszSnappyBody(bufferedSource, sszDataLength);
@@ -32,7 +29,7 @@ export async function readSszSnappyPayload<T extends RequestOrIncomingResponseBo
  */
 export async function readSszSnappyHeader(
   bufferedSource: BufferedSource,
-  type: Pick<RequestOrResponseType, "minSize" | "maxSize">
+  type: Pick<Type<unknown>, "minSize" | "maxSize">
 ): Promise<number> {
   for await (const buffer of bufferedSource) {
     // Get next bytes if empty
@@ -129,12 +126,9 @@ export async function readSszSnappyBody(bufferedSource: BufferedSource, sszDataL
  * Deseralizes SSZ body.
  * `isSszTree` option allows the SignedBeaconBlock type to be deserialized as a tree
  */
-function deserializeSszBody<T extends RequestOrIncomingResponseBody>(
-  bytes: Uint8Array,
-  type: RequestOrResponseTypeRead
-): T {
+function deserializeSszBody<T>(bytes: Uint8Array, type: TypeRead<T>): T {
   try {
-    return type.deserialize(bytes) as T;
+    return type.deserialize(bytes);
   } catch (e) {
     throw new SszSnappyError({code: SszSnappyErrorCode.DESERIALIZE_ERROR, deserializeError: e as Error});
   }

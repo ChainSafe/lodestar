@@ -1,18 +1,14 @@
 import {ForkName} from "@lodestar/params";
-import {IBeaconConfig} from "@lodestar/config";
 import {RespStatus, RpcResponseStatusError} from "../../../constants/index.js";
 import {writeEncodedPayload} from "../encodingStrategies/index.js";
 import {encodeErrorMessage} from "../utils/index.js";
 import {
   ContextBytesType,
-  contextBytesTypeByProtocol,
-  getOutgoingSerializerByMethod,
-  IncomingResponseBodyByMethod,
-  Method,
-  OutgoingResponseBody,
-  OutgoingResponseBodyByMethod,
+  ContextBytesFactory,
   Protocol,
-  ResponseTypedContainer,
+  ProtocolDefinition,
+  EncodedPayload,
+  EncodedPayloadType,
 } from "../types.js";
 
 /**
@@ -24,24 +20,24 @@ import {
  * ```
  * Note: `response` has zero or more chunks (denoted by `<>*`)
  */
-export function responseEncodeSuccess(
-  config: IBeaconConfig,
-  protocol: Protocol
-): (source: AsyncIterable<OutgoingResponseBody>) => AsyncIterable<Buffer> {
-  const contextBytesType = contextBytesTypeByProtocol(protocol);
-
+export function responseEncodeSuccess<Req, Resp>(
+  protocol: ProtocolDefinition<Req, Resp>
+): (source: AsyncIterable<EncodedPayload<Resp>>) => AsyncIterable<Buffer> {
   return async function* responseEncodeSuccessTransform(source) {
     for await (const chunk of source) {
       // <result>
       yield Buffer.from([RespStatus.SUCCESS]);
 
       // <context-bytes> - from altair
-      const forkName = getForkNameFromResponseBody(config, protocol, chunk);
-      yield* writeContextBytes(config, contextBytesType, forkName);
+      const contextBytes = getContextBytes<Resp>(protocol.contextBytes, chunk);
+      if (contextBytes) {
+        yield contextBytes as Buffer;
+      }
 
       // <encoding-dependent-header> | <encoded-payload>
-      const serializer = getOutgoingSerializerByMethod(protocol);
-      yield* writeEncodedPayload(chunk, protocol.encoding, serializer);
+      const forkName = getForkNameFromContextBytes(protocol.contextBytes, chunk);
+      const respType = protocol.responseType(forkName);
+      yield* writeEncodedPayload(chunk, protocol.encoding, respType);
     }
   };
 }
@@ -74,43 +70,53 @@ export async function* responseEncodeError(
  * Yields byte chunks for a `<context-bytes>`. See `ContextBytesType` for possible types.
  * This item is mandatory but may be empty.
  */
-export async function* writeContextBytes(
-  config: IBeaconConfig,
-  contextBytesType: ContextBytesType,
-  forkName: ForkName
-): AsyncGenerator<Buffer> {
-  switch (contextBytesType) {
+function getContextBytes<Resp>(
+  contextBytes: ContextBytesFactory<Resp>,
+  chunk: EncodedPayload<Resp>
+): Uint8Array | null {
+  switch (contextBytes.type) {
     // Yield nothing
     case ContextBytesType.Empty:
-      return;
+      return null;
 
     // Yield a fixed-width 4 byte chunk, set to the `ForkDigest`
     case ContextBytesType.ForkDigest:
-      yield config.forkName2ForkDigest(forkName) as Buffer;
+      switch (chunk.type) {
+        case EncodedPayloadType.ssz:
+          return contextBytes.forkDigestContext.forkName2ForkDigest(
+            contextBytes.forkFromResponse(chunk.data)
+          ) as Buffer;
+
+        case EncodedPayloadType.bytes:
+          if (chunk.contextBytes.type !== ContextBytesType.ForkDigest) {
+            throw Error(`Expected context bytes ForkDigest but got ${chunk.contextBytes.type}`);
+          }
+          return contextBytes.forkDigestContext.forkName2ForkDigest(
+            contextBytes.forkDigestContext.getForkName(chunk.contextBytes.forkSlot)
+          ) as Buffer;
+      }
   }
 }
 
-export function getForkNameFromResponseBody<K extends Method>(
-  config: IBeaconConfig,
-  protocol: Protocol,
-  body: OutgoingResponseBodyByMethod[K] | IncomingResponseBodyByMethod[K]
+function getForkNameFromContextBytes<Resp>(
+  contextBytes: ContextBytesFactory<Resp>,
+  chunk: EncodedPayload<Resp>
 ): ForkName {
-  const requestTyped = {method: protocol.method, body} as ResponseTypedContainer;
-
-  switch (requestTyped.method) {
-    case Method.Status:
-    case Method.Goodbye:
-    case Method.Ping:
-    case Method.Metadata:
+  switch (contextBytes.type) {
+    case ContextBytesType.Empty:
       return ForkName.phase0;
 
-    case Method.BeaconBlocksByRange:
-    case Method.BeaconBlocksByRoot:
-      return config.getForkName(requestTyped.body.slot);
-    case Method.LightClientBootstrap:
-    case Method.LightClientUpdate:
-    case Method.LightClientFinalityUpdate:
-    case Method.LightClientOptimisticUpdate:
-      return ForkName.altair;
+    // Yield a fixed-width 4 byte chunk, set to the `ForkDigest`
+    case ContextBytesType.ForkDigest:
+      switch (chunk.type) {
+        case EncodedPayloadType.ssz:
+          return contextBytes.forkFromResponse(chunk.data);
+
+        case EncodedPayloadType.bytes:
+          if (chunk.contextBytes.type !== ContextBytesType.ForkDigest) {
+            throw Error(`Expected context bytes ForkDigest but got ${chunk.contextBytes.type}`);
+          }
+          return contextBytes.forkDigestContext.getForkName(chunk.contextBytes.forkSlot);
+      }
   }
 }

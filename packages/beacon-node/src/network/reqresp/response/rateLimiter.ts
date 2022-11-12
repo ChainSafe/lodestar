@@ -4,7 +4,6 @@ import {IMetrics} from "../../../metrics/index.js";
 import {IPeerRpcScoreStore, PeerAction} from "../../peers/score.js";
 import {IRateLimiter} from "../interface.js";
 import {RateTracker} from "../rateTracker.js";
-import {Method, RequestTypedContainer} from "../types.js";
 
 interface IRateLimiterModules {
   logger: ILogger;
@@ -96,7 +95,7 @@ export class InboundRateLimiter implements IRateLimiter {
   /**
    * Tracks a request from a peer and returns whether to allow the request based on the configured rate limit params.
    */
-  allowRequest(peerId: PeerId, requestTyped: RequestTypedContainer): boolean {
+  allowRequest(peerId: PeerId): boolean {
     const peerIdStr = peerId.toString();
     this.lastSeenRequestsByPeer.set(peerIdStr, Date.now());
 
@@ -114,39 +113,35 @@ export class InboundRateLimiter implements IRateLimiter {
       return false;
     }
 
-    let numBlock = 0;
-    switch (requestTyped.method) {
-      case Method.BeaconBlocksByRange:
-        numBlock = requestTyped.body.count;
-        break;
-      case Method.BeaconBlocksByRoot:
-        numBlock = requestTyped.body.length;
-        break;
+    return true;
+  }
+
+  /**
+   * Rate limit check for block count
+   */
+  allowBlockByRequest(peerId: PeerId, numBlock: number): boolean {
+    const peerIdStr = peerId.toString();
+    const blockCountPeerTracker = this.blockCountTrackersByPeer.getOrDefault(peerIdStr);
+
+    if (blockCountPeerTracker.requestObjects(numBlock) === 0) {
+      this.logger.verbose("Do not serve block request due to block count rate limit", {
+        peerId: peerIdStr,
+        blockCount: numBlock,
+        requestsWithinWindow: blockCountPeerTracker.getRequestedObjectsWithinWindow(),
+      });
+      this.peerRpcScores.applyAction(peerId, PeerAction.Fatal, "RateLimit");
+      if (this.metrics) {
+        this.metrics.reqResp.rateLimitErrors.inc({tracker: "blockCountPeerTracker"});
+      }
+      return false;
     }
 
-    // rate limit check for block count
-    if (numBlock > 0) {
-      const blockCountPeerTracker = this.blockCountTrackersByPeer.getOrDefault(peerIdStr);
-      if (blockCountPeerTracker.requestObjects(numBlock) === 0) {
-        this.logger.verbose("Do not serve block request due to block count rate limit", {
-          peerId: peerIdStr,
-          blockCount: numBlock,
-          requestsWithinWindow: blockCountPeerTracker.getRequestedObjectsWithinWindow(),
-        });
-        this.peerRpcScores.applyAction(peerId, PeerAction.Fatal, "RateLimit");
-        if (this.metrics) {
-          this.metrics.reqResp.rateLimitErrors.inc({tracker: "blockCountPeerTracker"});
-        }
-        return false;
+    if (this.blockCountTotalTracker.requestObjects(numBlock) === 0) {
+      if (this.metrics) {
+        this.metrics.reqResp.rateLimitErrors.inc({tracker: "blockCountTotalTracker"});
       }
-
-      if (this.blockCountTotalTracker.requestObjects(numBlock) === 0) {
-        if (this.metrics) {
-          this.metrics.reqResp.rateLimitErrors.inc({tracker: "blockCountTotalTracker"});
-        }
-        // don't apply penalty
-        return false;
-      }
+      // don't apply penalty
+      return false;
     }
 
     return true;

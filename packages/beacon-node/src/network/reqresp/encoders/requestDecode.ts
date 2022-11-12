@@ -1,6 +1,7 @@
 import {Sink} from "it-stream-types";
 import {Uint8ArrayList} from "uint8arraylist";
-import {getRequestSzzTypeByMethod, Protocol, RequestBody} from "../types.js";
+import {ForkName} from "@lodestar/params";
+import {ProtocolDefinition} from "../types.js";
 import {BufferedSource} from "../utils/index.js";
 import {readEncodedPayload} from "../encodingStrategies/index.js";
 /**
@@ -9,14 +10,14 @@ import {readEncodedPayload} from "../encodingStrategies/index.js";
  * request  ::= <encoding-dependent-header> | <encoded-payload>
  * ```
  */
-export function requestDecode(
-  protocol: Pick<Protocol, "method" | "encoding">
-): Sink<Uint8Array | Uint8ArrayList, Promise<RequestBody>> {
+export function requestDecode<Req, Resp>(
+  protocol: ProtocolDefinition<Req, Resp>
+): Sink<Uint8Array | Uint8ArrayList, Promise<Req>> {
   return async function requestDecodeSink(source) {
-    const type = getRequestSzzTypeByMethod(protocol.method);
-    if (!type) {
+    const type = protocol.requestType(ForkName.phase0);
+    if (type === null) {
       // method has no body
-      return null;
+      return (null as unknown) as Req;
     }
 
     // Request has a single payload, so return immediately

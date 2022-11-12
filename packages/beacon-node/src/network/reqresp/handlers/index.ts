@@ -1,7 +1,7 @@
-import {altair, phase0, Root} from "@lodestar/types";
+import {allForks, altair, phase0, Root} from "@lodestar/types";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
-import {ReqRespBlockResponse} from "../types.js";
+import {EncodedPayload, EncodedPayloadType} from "../types.js";
 import {onBeaconBlocksByRange} from "./beaconBlocksByRange.js";
 import {onBeaconBlocksByRoot} from "./beaconBlocksByRoot.js";
 import {onLightClientBootstrap} from "./lightClientBootstrap.js";
@@ -10,13 +10,19 @@ import {onLightClientFinalityUpdate} from "./lightClientFinalityUpdate.js";
 import {onLightClientOptimisticUpdate} from "./lightClientOptimisticUpdate.js";
 
 export type ReqRespHandlers = {
-  onStatus(): AsyncIterable<phase0.Status>;
-  onBeaconBlocksByRange(req: phase0.BeaconBlocksByRangeRequest): AsyncIterable<ReqRespBlockResponse>;
-  onBeaconBlocksByRoot(req: phase0.BeaconBlocksByRootRequest): AsyncIterable<ReqRespBlockResponse>;
-  onLightClientBootstrap(req: Root): AsyncIterable<altair.LightClientBootstrap>;
-  onLightClientUpdatesByRange(req: altair.LightClientUpdatesByRange): AsyncIterable<altair.LightClientUpdate>;
-  onLightClientFinalityUpdate(): AsyncIterable<altair.LightClientFinalityUpdate>;
-  onLightClientOptimisticUpdate(): AsyncIterable<altair.LightClientOptimisticUpdate>;
+  onStatus(): AsyncIterable<EncodedPayload<phase0.Status>>;
+  onBeaconBlocksByRange(
+    req: phase0.BeaconBlocksByRangeRequest
+  ): AsyncIterable<EncodedPayload<allForks.SignedBeaconBlock>>;
+  onBeaconBlocksByRoot(
+    req: phase0.BeaconBlocksByRootRequest
+  ): AsyncIterable<EncodedPayload<allForks.SignedBeaconBlock>>;
+  onLightClientBootstrap(req: Root): AsyncIterable<EncodedPayload<altair.LightClientBootstrap>>;
+  onLightClientUpdatesByRange(
+    req: altair.LightClientUpdatesByRange
+  ): AsyncIterable<EncodedPayload<altair.LightClientUpdate>>;
+  onLightClientFinalityUpdate(): AsyncIterable<EncodedPayload<altair.LightClientFinalityUpdate>>;
+  onLightClientOptimisticUpdate(): AsyncIterable<EncodedPayload<altair.LightClientOptimisticUpdate>>;
 };
 
 /**
@@ -26,7 +32,7 @@ export type ReqRespHandlers = {
 export function getReqRespHandlers({db, chain}: {db: IBeaconDb; chain: IBeaconChain}): ReqRespHandlers {
   return {
     async *onStatus() {
-      yield chain.getStatus();
+      yield {type: EncodedPayloadType.ssz, data: chain.getStatus()};
     },
     async *onBeaconBlocksByRange(req) {
       yield* onBeaconBlocksByRange(req, chain, db);
