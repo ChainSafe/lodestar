@@ -20,7 +20,7 @@
 - :globe_with_meridians: Run a beacon node on [mainnet or a public testnet](https://chainsafe.github.io/lodestar/usage/beacon-management).
 - :computer: Utilize the whole stack by [starting a local testnet](https://chainsafe.github.io/lodestar/usage/local).
 - :spiral_notepad: View the Lodestar [CLI commands and options](https://chainsafe.github.io/lodestar/reference/cli/).
-- :nerd_face: View the [TypeDoc code documentation](https://chainsafe.github.io/lodestar/packages).
+- :nerd_face: View the [Package and dependency structure](https://chainsafe.github.io/lodestar/design/depgraph/).
 - :memo: Prospective contributors can read the [contributing section](./CONTRIBUTING.md) to understand how we develop and test on Lodestar.
 - :writing_hand: If you have questions [submit an issue](https://github.com/ChainSafe/lodestar/issues/new) or join us on [Discord](https://discord.gg/yjyvFRP)!
   [![Discord](https://img.shields.io/discord/593655374469660673.svg?label=Discord&logo=discord)](https://discord.gg/aMxzVcr)
