@@ -1,0 +1,127 @@
+/* eslint-disable @typescript-eslint/naming-convention */
+import {join} from "node:path";
+import {expect} from "chai";
+import {toHexString} from "@chainsafe/ssz";
+import {CLClient, ELClient} from "../utils/simulation/interfaces.js";
+import {SimulationEnvironment} from "../utils/simulation/SimulationEnvironment.js";
+import {getEstimatedTimeInSecForRun, logFilesDir} from "../utils/simulation/utils/index.js";
+import {waitForSlot} from "../utils/simulation/utils/network.js";
+import {SIM_TESTS_SECONDS_PER_SLOT} from "../utils/simulation/constants.js";
+
+const genesisSlotsDelay = 10;
+const altairForkEpoch = 2;
+const bellatrixForkEpoch = 4;
+const validatorCount = 2;
+const timeout =
+  getEstimatedTimeInSecForRun({
+    genesisSlotDelay: genesisSlotsDelay,
+    secondsPerSlot: SIM_TESTS_SECONDS_PER_SLOT,
+    runTill: 2,
+    // After adding Nethermind its took longer to complete
+    graceExtraTimeFraction: 0.1,
+  }) * 1000;
+
+const env = SimulationEnvironment.initWithDefaults(
+  {
+    id: "beacon-endpoints",
+    logsDir: join(logFilesDir, "beacon-endpoints"),
+    chainConfig: {
+      ALTAIR_FORK_EPOCH: altairForkEpoch,
+      BELLATRIX_FORK_EPOCH: bellatrixForkEpoch,
+      GENESIS_DELAY: genesisSlotsDelay,
+    },
+  },
+  [
+    {
+      id: "node-1",
+      cl: {type: CLClient.Lodestar, options: {"sync.isSingleNode": true}},
+      el: ELClient.Geth,
+      keysCount: validatorCount,
+      mining: true,
+    },
+  ]
+);
+await env.start(timeout);
+
+const node = env.nodes[0].cl;
+await waitForSlot(2, env.nodes, {env, silent: true});
+
+const stateValidators = (await node.api.beacon.getStateValidators("head")).data;
+
+await env.tracker.assert("stateValidator", "should have correct validators count called without filters", async () => {
+  expect(stateValidators.length).to.be.equal(validatorCount);
+});
+
+await env.tracker.assert(
+  "stateValidator",
+  "should have correct validator index for first validator filters",
+  async () => {
+    expect(stateValidators[0].index).to.be.equal(0);
+  }
+);
+
+await env.tracker.assert(
+  "stateValidator",
+  "should have correct validator index for second validator filters",
+  async () => {
+    expect(stateValidators[1].index).to.be.equal(1);
+  }
+);
+
+await env.tracker.assert(
+  "stateValidator",
+  "should return correct number of filtered validators when getStateValidators called with filters",
+  async () => {
+    const filterPubKey =
+      "0xa99a76ed7796f7be22d5b7e85deeb7c5677e88e511e0b337618f8c4eb61349b4bf2d153f649f7b53359fe8b94a38e44c";
+
+    const response = await node.api.beacon.getStateValidators("head", {
+      id: [filterPubKey],
+    });
+
+    expect(response.data.length).to.be.equal(1);
+  }
+);
+
+await env.tracker.assert(
+  "stateValidator",
+  "should return correct filtered validators when getStateValidators called with filters",
+  async () => {
+    const filterPubKey =
+      "0xa99a76ed7796f7be22d5b7e85deeb7c5677e88e511e0b337618f8c4eb61349b4bf2d153f649f7b53359fe8b94a38e44c";
+
+    const response = await node.api.beacon.getStateValidators("head", {
+      id: [filterPubKey],
+    });
+
+    expect(toHexString(response.data[0].validator.pubkey)).to.be.equal(filterPubKey);
+  }
+);
+
+await env.tracker.assert(
+  "stateValidator",
+  "should return the validator when getStateValidator is called with the validator index",
+  async () => {
+    const validatorIndex = "0";
+
+    const response = await node.api.beacon.getStateValidator("head", validatorIndex);
+
+    // TODO: the index in data should be a string instead of an integer
+    expect(response.data.index).to.be.equal(parseInt(validatorIndex));
+  }
+);
+
+await env.tracker.assert(
+  "stateValidator",
+  "should return the validator when getStateValidator is called with the hex encoded public key",
+  async () => {
+    const hexPubKey =
+      "0xa99a76ed7796f7be22d5b7e85deeb7c5677e88e511e0b337618f8c4eb61349b4bf2d153f649f7b53359fe8b94a38e44c";
+
+    const response = await node.api.beacon.getStateValidator("head", hexPubKey);
+
+    expect(toHexString(response.data.validator.pubkey)).to.be.equal(hexPubKey);
+  }
+);
+
+await env.stop();

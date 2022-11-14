@@ -13,26 +13,8 @@ import {
   StoreTypes,
 } from "./interfaces.js";
 import {arrayGroupBy, avg, getForkName, squeezeString} from "./utils/index.js";
-import {attestationsCountAssertion} from "./assertions/defaults/attestationCountAssertion.js";
-import {attestationParticipationAssertion} from "./assertions/defaults/attestationParticipationAssertion.js";
-import {connectedPeerCountAssertion} from "./assertions/defaults/connectedPeerCountAssertion.js";
-import {finalizedAssertion} from "./assertions/defaults/finalizedAssertion.js";
-import {headAssertion} from "./assertions/defaults/headAssertion.js";
-import {inclusionDelayAssertion} from "./assertions/defaults/inclusionDelayAssertion.js";
-import {missedBlocksAssertion} from "./assertions/defaults/missedBlocksAssertion.js";
-import {syncCommitteeParticipation} from "./assertions/defaults/syncCommitteeParticipation.js";
 import {TableRenderer} from "./TableRenderer.js";
-
-const defaultAssertions = [
-  inclusionDelayAssertion,
-  attestationsCountAssertion,
-  attestationParticipationAssertion,
-  connectedPeerCountAssertion,
-  finalizedAssertion,
-  headAssertion,
-  missedBlocksAssertion,
-  syncCommitteeParticipation,
-];
+import {defaultAssertions} from "./assertions/defaults/index.js";
 
 interface SimulationTrackerInitOptions {
   nodes: NodePair[];
@@ -212,6 +194,18 @@ export class SimulationTracker {
 
   record(error: AtLeast<SimulationAssertionError, "slot" | "message" | "assertionId">): void {
     this.errors.push({...error, epoch: error.epoch ?? this.clock.getEpochForSlot(error.slot)});
+  }
+
+  async assert(assertionId: string, message: string, cb: () => void | Promise<void>): Promise<void> {
+    try {
+      await cb();
+    } catch (error) {
+      this.record({
+        assertionId,
+        message: `${message} failed with error ${(error as Error).message}`,
+        slot: this.clock.currentSlot,
+      });
+    }
   }
 
   private initDataForNode(node: NodePair): void {
