@@ -132,10 +132,19 @@ export class SimulationTracker {
         const source = avg(participation.map((p) => p.source)).toFixed(2);
         const target = avg(participation.map((p) => p.target)).toFixed(2);
 
-        // syncParticipation is calculated at last slot of an epoch so we subtract "slot -1"
-        const syncParticipation = avg(
-          this.nodes.map((node) => this.stores["syncCommitteeParticipation"][node.cl.id][slot - 1] ?? "-")
-        ).toFixed(2);
+        // As it's printed on the first slot of epoch we need to get the previous epoch
+        const startSlot = this.clock.getFirstSlotOfEpoch(epoch - 1);
+        const endSlot = this.clock.getLastSlotOfEpoch(epoch - 1);
+        const nodesSyncParticipationAvg: number[] = [];
+        for (const node of this.nodes) {
+          const syncCommitteeParticipation: number[] = [];
+          for (let slot = startSlot; slot <= endSlot; slot++) {
+            syncCommitteeParticipation.push(this.stores["syncCommitteeParticipation"][node.cl.id][slot]);
+          }
+          nodesSyncParticipationAvg.push(avg(syncCommitteeParticipation));
+        }
+
+        const syncParticipation = avg(nodesSyncParticipationAvg).toFixed(2);
 
         this.table.addEmptyRow(
           `Att Participation: H: ${head}, S: ${source}, T: ${target} - SC Participation: ${syncParticipation}`
