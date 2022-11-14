@@ -124,7 +124,7 @@ const unknownBlockSync = env.createNodePair({
 });
 await unknownBlockSync.jobs.el.start();
 await unknownBlockSync.jobs.cl.start();
-const head = await env.nodes[0].cl.api.beacon.getBlock("head");
+const head = await env.nodes[0].cl.api.beacon.getBlockV2("head");
 
 try {
   await unknownBlockSync.nodePair.cl.api.beacon.publishBlock(head.data);
@@ -136,7 +136,6 @@ try {
   });
 } catch (error) {
   if (!(error as Error).message.includes("BLOCK_ERROR_PARENT_UNKNOWN")) {
-    console.error(error);
     env.tracker.record({
       message: `Publishing unknown block should return "BLOCK_ERROR_PARENT_UNKNOWN" got "${(error as Error).message}"`,
       slot: env.clock.currentSlot,
