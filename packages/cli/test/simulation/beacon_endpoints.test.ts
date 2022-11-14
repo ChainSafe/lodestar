@@ -2,6 +2,7 @@
 import {join} from "node:path";
 import {expect} from "chai";
 import {toHexString} from "@chainsafe/ssz";
+import {routes} from "@lodestar/api";
 import {CLClient, ELClient} from "../utils/simulation/interfaces.js";
 import {SimulationEnvironment} from "../utils/simulation/SimulationEnvironment.js";
 import {getEstimatedTimeInSecForRun, logFilesDir} from "../utils/simulation/utils/index.js";
@@ -48,28 +49,19 @@ await waitForSlot(2, env.nodes, {env, silent: true});
 
 const stateValidators = (await node.api.beacon.getStateValidators("head")).data;
 
-await env.tracker.assert("stateValidator", "should have correct validators count called without filters", async () => {
+await env.tracker.assert("should have correct validators count called without filters", async () => {
   expect(stateValidators.length).to.be.equal(validatorCount);
 });
 
-await env.tracker.assert(
-  "stateValidator",
-  "should have correct validator index for first validator filters",
-  async () => {
-    expect(stateValidators[0].index).to.be.equal(0);
-  }
-);
+await env.tracker.assert("should have correct validator index for first validator filters", async () => {
+  expect(stateValidators[0].index).to.be.equal(0);
+});
+
+await env.tracker.assert("should have correct validator index for second validator filters", async () => {
+  expect(stateValidators[1].index).to.be.equal(1);
+});
 
 await env.tracker.assert(
-  "stateValidator",
-  "should have correct validator index for second validator filters",
-  async () => {
-    expect(stateValidators[1].index).to.be.equal(1);
-  }
-);
-
-await env.tracker.assert(
-  "stateValidator",
   "should return correct number of filtered validators when getStateValidators called with filters",
   async () => {
     const filterPubKey =
@@ -84,7 +76,6 @@ await env.tracker.assert(
 );
 
 await env.tracker.assert(
-  "stateValidator",
   "should return correct filtered validators when getStateValidators called with filters",
   async () => {
     const filterPubKey =
@@ -99,7 +90,6 @@ await env.tracker.assert(
 );
 
 await env.tracker.assert(
-  "stateValidator",
   "should return the validator when getStateValidator is called with the validator index",
   async () => {
     const validatorIndex = "0";
@@ -112,7 +102,6 @@ await env.tracker.assert(
 );
 
 await env.tracker.assert(
-  "stateValidator",
   "should return the validator when getStateValidator is called with the hex encoded public key",
   async () => {
     const hexPubKey =
@@ -123,5 +112,24 @@ await env.tracker.assert(
     expect(toHexString(response.data.validator.pubkey)).to.be.equal(hexPubKey);
   }
 );
+
+await env.tracker.assert("BN Not Synced", async () => {
+  const expectedSyncStatus: routes.node.SyncingStatus = {
+    headSlot: "0",
+    syncDistance: "0",
+    isSyncing: false,
+    isOptimistic: false,
+  };
+
+  const response = await node.api.node.getSyncingStatus();
+
+  expect(response.data).to.be.deep.equal(expectedSyncStatus);
+});
+
+await env.tracker.assert("Return READY pre genesis", async () => {
+  const response = await node.api.node.getHealth();
+
+  expect(response).to.be.equal(routes.node.NodeHealth.READY);
+});
 
 await env.stop();

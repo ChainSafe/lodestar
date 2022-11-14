@@ -205,13 +205,13 @@ export class SimulationTracker {
     this.errors.push({...error, epoch: error.epoch ?? this.clock.getEpochForSlot(error.slot)});
   }
 
-  async assert(assertionId: string, message: string, cb: () => void | Promise<void>): Promise<void> {
+  async assert(message: string, cb: () => void | Promise<void>): Promise<void> {
     try {
       await cb();
     } catch (error) {
       this.record({
-        assertionId,
-        message: `${message} failed with error ${(error as Error).message}`,
+        assertionId: message,
+        message: (error as Error).message,
         slot: this.clock.currentSlot,
       });
     }
