@@ -294,7 +294,7 @@ export class LightClientServer {
   }
 
   /**
-   * API ROUTE to get the current sync committee from the best available update for `period`.
+   * API ROUTE to get the sync committee hash from the best available update for `period`.
    */
   async getCommitteeHash(period: number): Promise<Uint8Array> {
     const {attestedHeader} = await this.getUpdate(period);
