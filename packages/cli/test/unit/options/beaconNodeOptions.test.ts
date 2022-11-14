@@ -157,6 +157,7 @@ describe("options / beaconNodeOptions", () => {
         isSingleNode: true,
         disableProcessAsChainSegment: true,
         backfillBatchSize: 64,
+        disableRangeSync: false,
       },
     };
 
