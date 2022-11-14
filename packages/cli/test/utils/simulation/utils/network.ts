@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import {routes} from "@lodestar/api";
 import {Slot} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";

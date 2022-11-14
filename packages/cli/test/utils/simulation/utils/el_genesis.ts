@@ -56,7 +56,10 @@ export const getGethGenesisBlock = (mode: ELStartMode, options: ELGeneratorGenes
   return genesis;
 };
 
-export const getNethermindChainSpec = (mode: ELStartMode, options: ELGeneratorGenesisOptions): Record<string, unknown> => {
+export const getNethermindChainSpec = (
+  mode: ELStartMode,
+  options: ELGeneratorGenesisOptions
+): Record<string, unknown> => {
   const {ttd} = options;
   const genesis = getGethGenesisBlock(mode, options) as Eth1GenesisBlock;
 
