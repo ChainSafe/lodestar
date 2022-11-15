@@ -124,7 +124,7 @@ export const DOMAIN_SYNC_COMMITTEE_SELECTION_PROOF = Uint8Array.from([8, 0, 0, 0
 export const DOMAIN_CONTRIBUTION_AND_PROOF = Uint8Array.from([9, 0, 0, 0]);
 export const DOMAIN_BLS_TO_EXECUTION_CHANGE = Uint8Array.from([10, 0, 0, 0]);
 
-// Application specfic domains
+// Application specific domains
 
 /**
  * `DOMAIN_APPLICATION_MASK` reserves the rest of the bitspace in `DomainType` for application
@@ -198,6 +198,7 @@ export const NEXT_SYNC_COMMITTEE_GINDEX = 55;
 export const NEXT_SYNC_COMMITTEE_DEPTH = 5;
 export const NEXT_SYNC_COMMITTEE_INDEX = 23;
 export const MAX_REQUEST_LIGHT_CLIENT_UPDATES = 128;
+export const MAX_REQUEST_LIGHT_CLIENT_COMMITTEE_HASHES = 128;
 
 /**
  * Optimistic sync

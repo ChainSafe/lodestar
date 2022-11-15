@@ -44,7 +44,7 @@ export const options: ICliCommandOptions<ExecutionEngineArgs> = {
   },
 
   "execution.timeout": {
-    description: "Timeout in miliseconds for execution engine API HTTP client",
+    description: "Timeout in milliseconds for execution engine API HTTP client",
     type: "number",
     defaultDescription:
       defaultOptions.executionEngine.mode === "http" ? String(defaultOptions.executionEngine.timeout) : "",

@@ -247,7 +247,7 @@ export class SyncCommitteeDutiesService {
 
       // Note: For networks where `state.validators.length < SYNC_COMMITTEE_SIZE` the same validator can appear
       // multiple times in the sync committee. So `routes.validator.SyncDuty` `.validatorSyncCommitteeIndices`
-      // is an array, with all of those apparences.
+      // is an array, with all of those appearances.
       //
       // Validator signs two messages:
       // `SyncCommitteeMessage`:
@@ -255,7 +255,7 @@ export class SyncCommitteeDutiesService {
       //  - Validator signs and publishes only one message regardless of validatorSyncCommitteeIndices length
       // `SyncCommitteeContribution`:
       //  - depends on slot, blockRoot, validatorIndex, and subnet.
-      //  - Validator must sign and publish only one message per subnet MAX. Regarless of validatorSyncCommitteeIndices
+      //  - Validator must sign and publish only one message per subnet MAX. Regardless of validatorSyncCommitteeIndices
       const subnets = syncCommitteeIndicesToSubnets(duty.validatorSyncCommitteeIndices);
 
       // TODO: Enable dependentRoot functionality

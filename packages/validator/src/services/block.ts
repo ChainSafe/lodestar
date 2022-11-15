@@ -148,7 +148,7 @@ export class BlockProposingService {
       const blockFeeRecipient = (fullBlock.data as bellatrix.BeaconBlock).body.executionPayload?.feeRecipient;
       const feeRecipient = blockFeeRecipient !== undefined ? toHexString(blockFeeRecipient) : undefined;
       if (feeRecipient !== undefined) {
-        // In Mev Builder, the feeRecipient could differ and rewards to the feeRecipeint
+        // In Mev Builder, the feeRecipient could differ and rewards to the feeRecipient
         // might be included in the block transactions as indicated by the BuilderBid
         // Address this appropriately in the Mev boost PR
         //

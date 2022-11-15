@@ -203,12 +203,12 @@ export const routesData: RoutesData<Api> = {
   deleteRemoteKeys: {url: "/eth/v1/remotekeys", method: "DELETE"},
 
   listFeeRecipient: {url: "/eth/v1/validator/{pubkey}/feerecipient", method: "GET"},
-  setFeeRecipient: {url: "/eth/v1/validator/{pubkey}/feerecipient", method: "POST"},
-  deleteFeeRecipient: {url: "/eth/v1/validator/{pubkey}/feerecipient", method: "DELETE"},
+  setFeeRecipient: {url: "/eth/v1/validator/{pubkey}/feerecipient", method: "POST", statusOk: 202},
+  deleteFeeRecipient: {url: "/eth/v1/validator/{pubkey}/feerecipient", method: "DELETE", statusOk: 204},
 
   getGasLimit: {url: "/eth/v1/validator/{pubkey}/gas_limit", method: "GET"},
-  setGasLimit: {url: "/eth/v1/validator/{pubkey}/gas_limit", method: "POST"},
-  deleteGasLimit: {url: "/eth/v1/validator/{pubkey}/gas_limit", method: "DELETE"},
+  setGasLimit: {url: "/eth/v1/validator/{pubkey}/gas_limit", method: "POST", statusOk: 202},
+  deleteGasLimit: {url: "/eth/v1/validator/{pubkey}/gas_limit", method: "DELETE", statusOk: 204},
 };
 
 /* eslint-disable @typescript-eslint/naming-convention */

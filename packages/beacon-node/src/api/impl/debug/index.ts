@@ -1,7 +1,7 @@
 import {routes} from "@lodestar/api";
 import {resolveStateId} from "../beacon/state/utils.js";
 import {ApiModules} from "../types.js";
-import {isOptimsticBlock} from "../../../util/forkChoice.js";
+import {isOptimisticBlock} from "../../../util/forkChoice.js";
 
 export function getDebugApi({chain, config, db}: Pick<ApiModules, "chain" | "config" | "db">): routes.debug.Api {
   return {
@@ -18,7 +18,7 @@ export function getDebugApi({chain, config, db}: Pick<ApiModules, "chain" | "con
         data: heads.map((block) => ({
           slot: block.slot,
           root: block.blockRoot,
-          executionOptimistic: isOptimsticBlock(block),
+          executionOptimistic: isOptimisticBlock(block),
         })),
       };
     },

@@ -99,8 +99,8 @@ type RunStatus =
  *               - known next_sync_committee, signed by current_sync_committee
  *
  * - No need to query for period 0 next_sync_committee until the end of period 0
- * - During most of period 0, current_sync_committe known, next_sync_committee unknown
- * - At the end of period 0, get a sync committe update, and populate period 1's committee
+ * - During most of period 0, current_sync_committee known, next_sync_committee unknown
+ * - At the end of period 0, get a sync committee update, and populate period 1's committee
  *
  * syncCommittees: Map<SyncPeriod, SyncCommittee>, limited to max of 2 items
  */
@@ -167,7 +167,7 @@ export class Lightclient {
     };
   }
 
-  // Embed lightweigth clock. The epoch cycles are handled with `this.runLoop()`
+  // Embed lightweight clock. The epoch cycles are handled with `this.runLoop()`
   get currentSlot(): number {
     return getCurrentSlot(this.config, this.genesisTime);
   }
@@ -185,7 +185,7 @@ export class Lightclient {
     genesisData: GenesisData;
     checkpointRoot: phase0.Checkpoint["root"];
   }): Promise<Lightclient> {
-    // Initialize the BLS implementation. This may requires intializing the WebAssembly instance
+    // Initialize the BLS implementation. This may requires initializing the WebAssembly instance
     // so why it's a an async process. This should be initialized once before any bls operations.
     // This process has to be done manually because of an issue in Karma runner
     // https://github.com/karma-runner/karma/issues/3804
@@ -254,7 +254,7 @@ export class Lightclient {
   }
 
   async sync(fromPeriod: SyncPeriod, toPeriod: SyncPeriod): Promise<void> {
-    // Initialize the BLS implementation. This may requires intializing the WebAssembly instance
+    // Initialize the BLS implementation. This may requires initializing the WebAssembly instance
     // so why it's a an async process. This should be initialized once before any bls operations.
     // This process has to be done manually because of an issue in Karma runner
     // https://github.com/karma-runner/karma/issues/3804
@@ -276,7 +276,7 @@ export class Lightclient {
   }
 
   private async runLoop(): Promise<void> {
-    // Initialize the BLS implementation. This may requires intializing the WebAssembly instance
+    // Initialize the BLS implementation. This may requires initializing the WebAssembly instance
     // so why it's a an async process. This should be initialized once before any bls operations.
     // This process has to be done manually because of an issue in Karma runner
     // https://github.com/karma-runner/karma/issues/3804

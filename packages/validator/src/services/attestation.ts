@@ -43,7 +43,7 @@ export class AttestationService {
   }
 
   private runAttestationTasks = async (slot: Slot, signal: AbortSignal): Promise<void> => {
-    // Fetch info first so a potential delay is absorved by the sleep() below
+    // Fetch info first so a potential delay is absorbed by the sleep() below
     const duties = this.dutiesService.getDutiesAtSlot(slot);
     if (duties.length === 0) {
       return;

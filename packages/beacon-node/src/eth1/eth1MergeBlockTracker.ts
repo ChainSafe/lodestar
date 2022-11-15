@@ -173,7 +173,7 @@ export class Eth1MergeBlockTracker {
     });
 
     const interval = setInterval(() => {
-      // Pre-emptively try to find merge block and cache it if found.
+      // Preemptively try to find merge block and cache it if found.
       // Future callers of getTerminalPowBlock() will re-use the cached found mergeBlock.
       this.getTerminalPowBlockFromEth1().catch((e) => {
         this.logger.error("Error on findMergeBlock", {}, e as Error);
@@ -267,7 +267,7 @@ export class Eth1MergeBlockTracker {
       // For the search below to require more than a few hops, multiple block proposers in a row must fail to detect
       // an existing merge block. Such situation is extremely unlikely, so this search is left un-optimized. Since
       // this class can start eagerly looking for the merge block when not necessary, startPollingMergeBlock() should
-      // only be called when there is certainity that a mergeBlock search is necessary.
+      // only be called when there is certainty that a mergeBlock search is necessary.
 
       // eslint-disable-next-line no-constant-condition
       while (true) {

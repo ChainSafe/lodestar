@@ -67,12 +67,12 @@ describe("chain / bls / multithread queue", function () {
     }
   }
 
-  it("Should verify multiple signatures submited syncronously", async () => {
+  it("Should verify multiple signatures submitted synchronously", async () => {
     // Given the `setTimeout(this.runJob, 0);` all sets should be verified in a single job an worker
     await testManyValidSignatures({sleep: false});
   });
 
-  it("Should verify multiple signatures submited asyncronously", async () => {
+  it("Should verify multiple signatures submitted asynchronously", async () => {
     // Because of the sleep, each sets submitted should be verified in a different job and worker
     await testManyValidSignatures({sleep: true});
   });

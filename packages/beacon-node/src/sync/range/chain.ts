@@ -392,7 +392,7 @@ export class SyncChain {
   }
 
   /**
-   * Requests the batch asigned to the given id from a given peer.
+   * Requests the batch assigned to the given id from a given peer.
    */
   private async sendBatch(batch: Batch, peer: PeerId): Promise<void> {
     try {
@@ -409,14 +409,14 @@ export class SyncChain {
         batch.downloadingError(); // Throws after MAX_DOWNLOAD_ATTEMPTS
       }
 
-      // Pre-emptively request more blocks from peers whilst we process current blocks
+      // Preemptively request more blocks from peers whilst we process current blocks
       this.triggerBatchDownloader();
     } catch (e) {
       // bubble the error up to the main async iterable loop
       this.batchProcessor.end(e as Error);
     }
 
-    // Pre-emptively request more blocks from peers whilst we process current blocks
+    // Preemptively request more blocks from peers whilst we process current blocks
     this.triggerBatchDownloader();
   }
 

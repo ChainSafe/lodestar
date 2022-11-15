@@ -1270,7 +1270,7 @@
           "type": "timeseries"
         },
         {
-          "description": "Time elappsed between block slot time and the time block received via gossip",
+          "description": "Time elapsed between block slot time and the time block received via gossip",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -1347,7 +1347,7 @@
                 "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
-              "expr": "delta(lodestar_gossip_block_elappsed_time_till_received_sum[$rate_interval])\n/\ndelta(lodestar_gossip_block_elappsed_time_till_received_count[$rate_interval])",
+              "expr": "delta(lodestar_gossip_block_elapsed_time_till_received_sum[$rate_interval])\n/\ndelta(lodestar_gossip_block_elapsed_time_till_received_count[$rate_interval])",
               "interval": "",
               "legendFormat": "till received",
               "refId": "A"
@@ -1358,7 +1358,7 @@
                 "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
-              "expr": "delta(lodestar_gossip_block_elappsed_time_till_processed_sum[$rate_interval])\n/\ndelta(lodestar_gossip_block_elappsed_time_till_processed_count[$rate_interval])",
+              "expr": "delta(lodestar_gossip_block_elapsed_time_till_processed_sum[$rate_interval])\n/\ndelta(lodestar_gossip_block_elapsed_time_till_processed_count[$rate_interval])",
               "hide": false,
               "interval": "",
               "legendFormat": "till processed",
@@ -7405,7 +7405,7 @@
           },
           "id": 423,
           "options": {
-            "content": "**Detailed stats about RPC recv / sent**\n\n- Big asymetries between recv and sent indicate that our node this node is behaving too differently from its peers. RPC behaviour _should_ be mostly symetrical.\n- As of Apr 2022, Lodestar seem to sends more GRAFTs than receives and receives more PRUNE than it sents. This indicates issues to mantain mesh peers.",
+            "content": "**Detailed stats about RPC recv / sent**\n\n- Big asymmetries between recv and sent indicate that our node this node is behaving too differently from its peers. RPC behaviour _should_ be mostly symmetrical.\n- As of Apr 2022, Lodestar seem to sends more GRAFTs than receives and receives more PRUNE than it sends. This indicates issues to maintain mesh peers.",
             "mode": "markdown"
           },
           "pluginVersion": "8.4.2",

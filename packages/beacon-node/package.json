@@ -11,7 +11,7 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "1.1.1",
+  "version": "1.2.1",
   "type": "module",
   "exports": {
     ".": {
@@ -100,7 +100,7 @@
   "dependencies": {
     "@chainsafe/as-sha256": "^0.3.1",
     "@chainsafe/bls": "7.1.1",
-    "@chainsafe/discv5": "^1.2.1",
+    "@chainsafe/discv5": "^1.4.0",
     "@chainsafe/libp2p-gossipsub": "^5.1.0",
     "@chainsafe/libp2p-noise": "^10.0.1",
     "@chainsafe/persistent-merkle-tree": "^0.4.2",
@@ -117,16 +117,16 @@
     "@libp2p/mplex": "^7.0.0",
     "@libp2p/peer-id-factory": "^1.0.19",
     "@libp2p/tcp": "^5.0.1",
-    "@lodestar/api": "^1.1.1",
-    "@lodestar/config": "^1.1.1",
-    "@lodestar/db": "^1.1.1",
-    "@lodestar/fork-choice": "^1.1.1",
-    "@lodestar/light-client": "^1.1.1",
-    "@lodestar/params": "^1.1.1",
-    "@lodestar/state-transition": "^1.1.1",
-    "@lodestar/types": "^1.1.1",
-    "@lodestar/utils": "^1.1.1",
-    "@lodestar/validator": "^1.1.1",
+    "@lodestar/api": "^1.2.1",
+    "@lodestar/config": "^1.2.1",
+    "@lodestar/db": "^1.2.1",
+    "@lodestar/fork-choice": "^1.2.1",
+    "@lodestar/light-client": "^1.2.1",
+    "@lodestar/params": "^1.2.1",
+    "@lodestar/state-transition": "^1.2.1",
+    "@lodestar/types": "^1.2.1",
+    "@lodestar/utils": "^1.2.1",
+    "@lodestar/validator": "^1.2.1",
     "@multiformats/multiaddr": "^11.0.0",
     "@types/datastore-level": "^3.0.0",
     "buffer-xor": "^2.0.2",
@@ -149,6 +149,7 @@
     "stream-to-it": "^0.2.0",
     "strict-event-emitter-types": "^2.0.0",
     "uint8arraylist": "^2.3.2",
+    "uint8arrays": "^4.0.2",
     "varint": "^6.0.0",
     "xxhash-wasm": "1.0.1"
   },

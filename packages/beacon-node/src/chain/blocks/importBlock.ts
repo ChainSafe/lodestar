@@ -10,7 +10,7 @@ import {
 import {ForkChoiceError, ForkChoiceErrorCode, EpochDifference} from "@lodestar/fork-choice";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {toCheckpointHex} from "../stateCache/index.js";
-import {isOptimsticBlock} from "../../util/forkChoice.js";
+import {isOptimisticBlock} from "../../util/forkChoice.js";
 import {ChainEvent} from "../emitter.js";
 import {REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC} from "../reprocess.js";
 import {RegenCaller} from "../regen/interface.js";
@@ -212,7 +212,7 @@ export async function importBlock(
       state: newHead.stateRoot,
       previousDutyDependentRoot: this.forkChoice.getDependentRoot(newHead, EpochDifference.previous),
       currentDutyDependentRoot: this.forkChoice.getDependentRoot(newHead, EpochDifference.current),
-      executionOptimistic: isOptimsticBlock(newHead),
+      executionOptimistic: isOptimisticBlock(newHead),
     });
 
     this.metrics?.forkChoice.changedHead.inc();
