@@ -73,7 +73,8 @@
     "@lodestar/utils": "^1.2.1",
     "cross-fetch": "^3.1.4",
     "strict-event-emitter-types": "^2.0.0",
-    "mitt": "^3.0.0"
+    "mitt": "^3.0.0",
+    "jwt-simple": "0.5.6"
   },
   "keywords": [
     "ethereum",
