@@ -3,14 +3,14 @@ import {Slot} from "@lodestar/types";
 import {defaultAssertions} from "./assertions/defaults/index.js";
 import {SimulationReporter} from "./interfaces.js";
 import {TableRenderer} from "./TableRenderer.js";
-import {arrayGroupBy, avg, squeezeString} from "./utils/index.js";
+import {arrayGroupBy, avg} from "./utils/index.js";
 
 export class TableReporter extends SimulationReporter<typeof defaultAssertions> {
   private table = new TableRenderer({
     fork: 10,
     eph: 5,
     slot: 4,
-    head: 16,
+    head: 8,
     finzed: 6,
     peers: 6,
     attCount: 8,
@@ -82,7 +82,7 @@ export class TableReporter extends SimulationReporter<typeof defaultAssertions> 
         fork: forkName,
         eph: epochStr,
         slot: slot,
-        head: headUnique.size === 1 ? squeezeString(head[0], 16, "..") : "different",
+        head: headUnique.size === 1 ? `${head[0].slice(0, 6)}..` : "different",
         finzed: finalizedSlotsUnique.size === 1 ? finalizedSlots[0] : finalizedSlots.join(","),
         peers: peerCountUnique.size === 1 ? peerCount[0] : peerCount.join(","),
         attCount: attestationCountUnique.size === 1 ? attestationCount[0] : "---",
