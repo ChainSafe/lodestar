@@ -14,8 +14,6 @@ export type WithdrawalV1 = {
   index: QUANTITY;
   validatorIndex: QUANTITY;
   address: DATA;
-  //geth incorrectly resposes as recipient so remove this when they fix name
-  recipient?: DATA;
   amount: QUANTITY;
 };
 

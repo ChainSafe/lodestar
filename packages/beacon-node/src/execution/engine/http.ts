@@ -473,7 +473,6 @@ function serializeWithdrawal(withdrawal: capella.Withdrawal): WithdrawalV1 {
     index: numToQuantity(withdrawal.index),
     validatorIndex: numToQuantity(withdrawal.validatorIndex),
     address: bytesToData(withdrawal.address),
-    recipient: bytesToData(withdrawal.address),
     // Note: the amount value is represented on the beacon chain as a little-endian value in
     // units of Gwei, whereas the amount in this structure MUST be converted to a big-endian value
     // in units of Wei
@@ -487,7 +486,7 @@ function deserializeWithdrawal(serialized: WithdrawalV1): capella.Withdrawal {
   return {
     index: quantityToNum(serialized.index),
     validatorIndex: quantityToNum(serialized.validatorIndex),
-    address: dataToBytes(serialized.recipient ?? serialized.address),
+    address: dataToBytes(serialized.address),
     // see: https://github.com/ethereum/execution-apis/blob/main/src/engine/specification.md
     amount: quantityToBigint(serialized.amount) / GWEI_TO_WEI,
   } as capella.Withdrawal;
