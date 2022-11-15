@@ -1,8 +1,8 @@
 import EventEmitter from "events";
 import StrictEventEmitter from "strict-event-emitter-types";
-import {altair, SyncPeriod} from "@lodestar/types";
+import {allForks, altair, Root, SyncPeriod} from "@lodestar/types";
 import {Api, routes} from "@lodestar/api";
-import {JsonPath} from "@chainsafe/ssz";
+import {JsonPath, toHexString} from "@chainsafe/ssz";
 import {Proof} from "@chainsafe/persistent-merkle-tree";
 
 export enum EventType {
@@ -48,6 +48,12 @@ export interface LightClientTransport {
    * Only block roots for checkpoints are guaranteed to be available.
    */
   getBootstrap(blockRoot: string): Promise<{data: altair.LightClientBootstrap}>;
+
+  /**
+   * For fetching the block when updating the EL
+   *
+   */
+  fetchBlock(blockRoot: string): Promise<{data: allForks.SignedBeaconBlock | undefined}>;
 
   // registers handler for LightClientOptimisticUpdate. This can come either via sse or p2p
   onOptimisticUpdate(handler: (optimisticUpdate: altair.LightClientOptimisticUpdate) => void): void;
@@ -95,6 +101,10 @@ export class LightClientRestTransport extends (EventEmitter as {new (): RestEven
 
   getBootstrap(blockRoot: string): Promise<{data: altair.LightClientBootstrap}> {
     return this.api.lightclient.getBootstrap(blockRoot);
+  }
+
+  fetchBlock(blockRootAsString: string): Promise<{data: allForks.SignedBeaconBlock}> {
+    return this.api.beacon.getBlock(blockRootAsString);
   }
 
   onOptimisticUpdate(handler: (optimisticUpdate: altair.LightClientOptimisticUpdate) => void): void {

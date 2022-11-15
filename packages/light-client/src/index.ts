@@ -170,11 +170,26 @@ export class Lightclient {
       ...deserializeSyncCommittee(snapshot.currentSyncCommittee),
     });
 
+    const headerBlockRoot = toHexString(ssz.phase0.BeaconBlockHeader.hashTreeRoot(snapshot.header));
     this.head = {
       participation: 0,
       header: snapshot.header,
-      blockRoot: toHexString(ssz.phase0.BeaconBlockHeader.hashTreeRoot(snapshot.header)),
+      blockRoot: headerBlockRoot,
     };
+
+    // fetch block only if configured to update EL
+    if (this.executionEngine) {
+      this.transport
+        .fetchBlock(headerBlockRoot)
+        .then((result) => {
+          if (result !== undefined) {
+            this.head.block = result.data;
+          }
+        })
+        .catch((error: Error) => {
+          this.logger.error("error fetching block", {}, error);
+        });
+    }
   }
 
   // Embed lightweight clock. The epoch cycles are handled with `this.runLoop()`
@@ -430,6 +445,20 @@ export class Lightclient {
       const prevHead = this.head;
       this.head = {header: attestedHeader, participation, blockRoot: headerBlockRootHex};
 
+      // fetch block only if configured to update EL
+      if (this.executionEngine) {
+        this.transport
+          .fetchBlock(headerBlockRootHex)
+          .then((result) => {
+            if (result !== undefined) {
+              this.head.block = result.data;
+            }
+          })
+          .catch((error: Error) => {
+            this.logger.error("error fetching block", {}, error);
+          });
+      }
+
       // This is not an error, but a problematic network condition worth knowing about
       if (attestedHeader.slot === prevHead.header.slot && prevHead.blockRoot !== headerBlockRootHex) {
         this.logger.warn("Head update on same slot", {
@@ -479,6 +508,20 @@ export class Lightclient {
 
       this.finalized = {header: finalizedHeader, participation, blockRoot: finalizedBlockRootHex};
 
+      // fetch block only if configured to update EL
+      if (this.executionEngine) {
+        this.transport
+          .fetchBlock(finalizedBlockRootHex)
+          .then((result) => {
+            if (result !== undefined && this.finalized !== null) {
+              this.finalized.block = result.data;
+            }
+          })
+          .catch((error: Error) => {
+            this.logger.error("error fetching block", {}, error);
+          });
+      }
+
       // This is not an error, but a problematic network condition worth knowing about
       if (
         prevFinalized &&
@@ -520,7 +563,6 @@ export class Lightclient {
       await this.notifyUpdatePayload();
     }
   }
-
 
   /**
    * Process SyncCommittee update, signed by a known previous SyncCommittee.
