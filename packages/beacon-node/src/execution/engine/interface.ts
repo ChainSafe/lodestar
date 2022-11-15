@@ -56,10 +56,9 @@ export type TransitionConfigurationV1 = {
 };
 
 export type BlobsBundle = {
-  blockHash: DATA;
-  kzgs: KZGCommitment[] | null;
-  blobs: Blob[] | null;
-  aggregatedProof: DATA;
+  blockHash: Uint8Array;
+  kzgs: KZGCommitment[];
+  blobs: Blob[];
 };
 
 /**
@@ -119,9 +118,6 @@ export interface IExecutionEngine {
    * describes as `get_blobs_and_kzg_commitments(payload_id)`.
    *
    * The Engine API spec is in PR: https://github.com/ethereum/execution-apis/pull/197
-   *
-   * @param payloadId
-   * @returns BlobsBundle
    */
   getBlobsBundle(payloadId: PayloadId): Promise<BlobsBundle>;
 

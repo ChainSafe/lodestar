@@ -1,4 +1,5 @@
 import path from "node:path";
+import {computeAggregateKzgProof} from "c-kzg";
 import {
   BeaconStateAllForks,
   CachedBeaconStateAllForks,
@@ -60,7 +61,7 @@ import {SeenBlockAttesters} from "./seenCache/seenBlockAttesters.js";
 import {BeaconProposerCache} from "./beaconProposerCache.js";
 import {CheckpointBalancesCache} from "./balancesCache.js";
 import {AssembledBlockType, BlockType} from "./produceBlock/index.js";
-import {BlockAttributes, produceBlockBody} from "./produceBlock/produceBlockBody.js";
+import {BlobsResultType, BlockAttributes, produceBlockBody} from "./produceBlock/produceBlockBody.js";
 import {computeNewStateRoot} from "./produceBlock/computeNewStateRoot.js";
 
 export class BeaconChain implements IBeaconChain {
@@ -117,6 +118,8 @@ export class BeaconChain implements IBeaconChain {
   private abortController = new AbortController();
   private successfulExchangeTransition = false;
   private readonly exchangeTransitionConfigurationEverySlots: number;
+
+  private readonly producedBlobsCache = new Map<RootHex, eip4844.Blobs>();
 
   private readonly faultInspectionWindow: number;
   private readonly allowedFaults: number;
@@ -340,26 +343,18 @@ export class BeaconChain implements IBeaconChain {
     return await this.db.block.get(fromHexString(block.blockRoot));
   }
 
-  async produceBlock(blockAttributes: BlockAttributes): Promise<allForks.BeaconBlock> {
-    const {block} = await this.produceBlockWrapper<BlockType.Full>(BlockType.Full, blockAttributes);
-    return block;
-  }
-
-  async produceBlockWithBlobs(
-    blockAttributes: BlockAttributes
-  ): Promise<{block: allForks.BeaconBlock; blobs: eip4844.Blobs}> {
+  produceBlock(blockAttributes: BlockAttributes): Promise<allForks.BeaconBlock> {
     return this.produceBlockWrapper<BlockType.Full>(BlockType.Full, blockAttributes);
   }
 
-  async produceBlindedBlock(blockAttributes: BlockAttributes): Promise<allForks.BlindedBeaconBlock> {
-    const {block} = await this.produceBlockWrapper<BlockType.Blinded>(BlockType.Blinded, blockAttributes);
-    return block;
+  produceBlindedBlock(blockAttributes: BlockAttributes): Promise<allForks.BlindedBeaconBlock> {
+    return this.produceBlockWrapper<BlockType.Blinded>(BlockType.Blinded, blockAttributes);
   }
 
   async produceBlockWrapper<T extends BlockType>(
     blockType: T,
     {randaoReveal, graffiti, slot}: BlockAttributes
-  ): Promise<{block: AssembledBlockType<T>; blobs: eip4844.Blobs}> {
+  ): Promise<AssembledBlockType<T>> {
     const head = this.forkChoice.getHead();
     const state = await this.regen.getBlockSlotState(head.blockRoot, slot, RegenCaller.produceBlock);
     const parentBlockRoot = fromHexString(head.blockRoot);
@@ -386,7 +381,36 @@ export class BeaconChain implements IBeaconChain {
 
     block.stateRoot = computeNewStateRoot(this.metrics, state, block);
 
-    return {block, blobs: blobs ?? []};
+    // Cache for latter broadcasting
+    if (blobs.type === BlobsResultType.produced) {
+      this.producedBlobsCache.set(blobs.blockRoot, blobs.blobs);
+    }
+
+    return block;
+  }
+
+  /**
+   * https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/validator.md#sidecar
+   * def get_blobs_sidecar(block: BeaconBlock, blobs: Sequence[Blob]) -> BlobsSidecar:
+   *   return BlobsSidecar(
+   *       beacon_block_root=hash_tree_root(block),
+   *       beacon_block_slot=block.slot,
+   *       blobs=blobs,
+   *       kzg_aggregated_proof=compute_proof_from_blobs(blobs),
+   *   )
+   */
+  getBlobsSidecar(beaconBlockRoot: RootHex): eip4844.BlobsSidecar {
+    const blobs = this.producedBlobsCache.get(beaconBlockRoot);
+    if (!blobs) {
+      throw Error(`No blobs for beaconBlockRoot ${beaconBlockRoot}`);
+    }
+
+    return {
+      beaconBlockRoot: beaconBlockRoot,
+      beaconBlockSlot: blobs.slot,
+      blobs: blobs,
+      kzgAggregatedProof: computeAggregateKzgProof(blobs),
+    };
   }
 
   async processBlock(block: allForks.SignedBeaconBlock, opts?: ImportBlockOpts): Promise<void> {

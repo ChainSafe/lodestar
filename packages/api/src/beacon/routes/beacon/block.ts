@@ -2,7 +2,6 @@ import {ContainerType} from "@chainsafe/ssz";
 import {ForkName} from "@lodestar/params";
 import {IChainForkConfig} from "@lodestar/config";
 import {phase0, allForks, Slot, Root, ssz, RootHex} from "@lodestar/types";
-import {SignedBeaconBlockAndBlobsSidecar} from "@lodestar/types/eip4844";
 
 import {
   RoutesData,
@@ -111,8 +110,6 @@ export type Api = {
    * transactions beacon node gets in response.
    */
   publishBlindedBlock(block: allForks.SignedBlindedBeaconBlock): Promise<void>;
-
-  publishBlockWithBlobs(blockWithBlobs: SignedBeaconBlockAndBlobsSidecar): Promise<void>;
 };
 
 /**
@@ -126,7 +123,6 @@ export const routesData: RoutesData<Api> = {
   getBlockHeaders: {url: "/eth/v1/beacon/headers", method: "GET"},
   getBlockRoot: {url: "/eth/v1/beacon/blocks/{block_id}/root", method: "GET"},
   publishBlock: {url: "/eth/v1/beacon/blocks", method: "POST"},
-  publishBlockWithBlobs: {url: "/eth/v1/beacon/blocksWithBlobs", method: "POST"},
   publishBlindedBlock: {url: "/eth/v1/beacon/blinded_blocks", method: "POST"},
 };
 
@@ -142,7 +138,6 @@ export type ReqTypes = {
   getBlockHeaders: {query: {slot?: number; parent_root?: string}};
   getBlockRoot: BlockIdOnlyReq;
   publishBlock: {body: unknown};
-  publishBlockWithBlobs: {body: unknown};
   publishBlindedBlock: {body: unknown};
 };
 
@@ -160,12 +155,6 @@ export function getReqSerializers(config: IChainForkConfig): ReqSerializers<Api,
   const AllForksSignedBeaconBlock: TypeJson<allForks.SignedBeaconBlock> = {
     toJson: (data) => getSignedBeaconBlockType(data).toJson(data),
     fromJson: (data) => getSignedBeaconBlockType((data as unknown) as allForks.SignedBeaconBlock).fromJson(data),
-  };
-
-  const BlockWithBlobsSsz = ssz.eip4844.SignedBeaconBlockAndBlobsSidecar;
-  const SignedBeaconBlockWithBlobs: TypeJson<SignedBeaconBlockAndBlobsSidecar> = {
-    toJson: (data) => BlockWithBlobsSsz.toJson(data),
-    fromJson: (data) => BlockWithBlobsSsz.fromJson(data),
   };
 
   const getSignedBlindedBeaconBlockType = (
@@ -191,7 +180,6 @@ export function getReqSerializers(config: IChainForkConfig): ReqSerializers<Api,
     },
     getBlockRoot: blockIdOnlyReq,
     publishBlock: reqOnlyBody(AllForksSignedBeaconBlock, Schema.Object),
-    publishBlockWithBlobs: reqOnlyBody(SignedBeaconBlockWithBlobs, Schema.Object),
     publishBlindedBlock: reqOnlyBody(AllForksSignedBlindedBeaconBlock, Schema.Object),
   };
 }

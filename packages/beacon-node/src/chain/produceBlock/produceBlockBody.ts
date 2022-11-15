@@ -3,7 +3,6 @@ import {
   phase0,
   allForks,
   altair,
-  eip4844,
   Root,
   RootHex,
   Slot,
@@ -12,6 +11,7 @@ import {
   BLSPubkey,
   BLSSignature,
   capella,
+  eip4844,
 } from "@lodestar/types";
 import {
   CachedBeaconStateAllForks,
@@ -24,7 +24,7 @@ import {
   isMergeTransitionComplete,
 } from "@lodestar/state-transition";
 import {IChainForkConfig} from "@lodestar/config";
-import {ForkName} from "@lodestar/params";
+import {ForkName, ForkSeq} from "@lodestar/params";
 import {toHex, sleep} from "@lodestar/utils";
 
 import type {BeaconChain} from "../chain.js";
@@ -32,6 +32,7 @@ import {PayloadId, IExecutionEngine, IExecutionBuilder} from "../../execution/in
 import {ZERO_HASH, ZERO_HASH_HEX} from "../../constants/index.js";
 import {IEth1ForBlockProduction} from "../../eth1/index.js";
 import {numToQuantity} from "../../eth1/provider/utils.js";
+import {byteArrayEquals} from "../../util/bytes.js";
 
 // Time to provide the EL to generate a payload from new payload id
 const PAYLOAD_GENERATION_TIME_MS = 500;
@@ -58,6 +59,13 @@ export type AssembledBlockType<T extends BlockType> = T extends BlockType.Full
   ? allForks.BeaconBlock
   : allForks.BlindedBeaconBlock;
 
+export enum BlobsResultType {
+  preEIP4844,
+  produced,
+}
+
+export type BlobsResult = {type: BlobsResultType.preEIP4844} | {type: BlobsResultType.produced; blobs: eip4844.Blobs};
+
 export async function produceBlockBody<T extends BlockType>(
   this: BeaconChain,
   blockType: T,
@@ -76,7 +84,7 @@ export async function produceBlockBody<T extends BlockType>(
     proposerIndex: ValidatorIndex;
     proposerPubKey: BLSPubkey;
   }
-): Promise<{body: AssembledBodyType<T>; blobs: eip4844.Blobs | null}> {
+): Promise<{body: AssembledBodyType<T>; blobs: BlobsResult}> {
   // TODO:
   // Iterate through the naive aggregation pool and ensure all the attestations from there
   // are included in the operation pool.
@@ -162,7 +170,16 @@ export async function produceBlockBody<T extends BlockType>(
           Buffer.alloc(32, 0)
         );
       }
-    } else {
+
+      if (forkName === ForkName.eip4844) {
+        // Empty blobs for now
+        (blockBody as eip4844.BeaconBlockBody).blobKzgCommitments = [];
+        blobs = [];
+      }
+    }
+
+    // blockType === BlockType.Full
+    else {
       // try catch payload fetch here, because there is still a recovery path possible if we
       // are pre-merge. We don't care the same for builder segment as the execution block
       // will takeover if the builder flow was activated and errors
@@ -202,10 +219,31 @@ export async function produceBlockBody<T extends BlockType>(
           }
 
           if (forkName === ForkName.eip4844) {
+            // SPEC: https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/validator.md#blob-kzg-commitments
+            // After retrieving the execution payload from the execution engine as specified in Bellatrix, use the
+            // payload_id to retrieve blobs and blob_kzg_commitments via get_blobs_and_kzg_commitments(payload_id)
             const blobsBundle = await this.executionEngine.getBlobsBundle(payloadId);
 
-            // TODO EIP-4844:  Optional (do it in a follow-up): sanity-check that the KZG commitments match blob contents as described by the spec
-            (blockBody as eip4844.BeaconBlockBody).blobKzgCommitments = blobsBundle.kzgs ?? [];
+            if (this.opts.sanityCheckExecutionEngineBlocks) {
+              // Optionally sanity-check that the KZG commitments match the versioned hashes in the transactions
+              verify_kzg_commitments_against_transactions(payload.transactions, blobsBundle.kzgs);
+
+              // Optionally sanity-check that the KZG commitments match the blobs (as produced by the execution engine)
+              if (blobsBundle.blobs.length !== blobsBundle.kzgs.length) {
+                throw Error(
+                  `Blobs bundle blobs len ${blobsBundle.blobs.length} != kzgs len ${blobsBundle.kzgs.length}`
+                );
+              }
+
+              for (let i = 0; i < blobsBundle.blobs.length; i++) {
+                const kzg = blob_to_kzg_commitment(blobsBundle.blobs[i]) as eip4844.KZGCommitment;
+                if (!byteArrayEquals(kzg, blobsBundle.kzgs[i])) {
+                  throw Error(`Wrong KZG[${i}] ${toHex(blobsBundle.kzgs[i])} expected ${toHex(kzg)}`);
+                }
+              }
+            }
+
+            (blockBody as eip4844.BeaconBlockBody).blobKzgCommitments = blobsBundle.kzgs;
             blobs = blobsBundle.blobs;
           }
 
@@ -238,7 +276,20 @@ export async function produceBlockBody<T extends BlockType>(
     }
   }
 
-  return {body: blockBody as AssembledBodyType<T>, blobs};
+  // Type-safe for blobs variable. Translate 'null' value into 'preEIP4844' enum
+  // TODO: Not ideal, but better than just using null.
+  // TODO: Does not guarantee that preEIP4844 enum goes with a preEIP4844 block
+  let blobsResult: BlobsResult;
+  if (currentState.config.getForkSeq(blockSlot) >= ForkSeq.eip4844) {
+    if (!blobs) {
+      throw Error("Blobs are null post eip4844");
+    }
+    blobsResult = {type: BlobsResultType.produced, blobs};
+  } else {
+    blobsResult = {type: BlobsResultType.preEIP4844};
+  }
+
+  return {body: blockBody as AssembledBodyType<T>, blobs: blobsResult};
 }
 
 /**

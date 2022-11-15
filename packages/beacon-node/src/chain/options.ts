@@ -20,6 +20,7 @@ export type IChainOptions = BlockProcessOpts &
     faultInspectionWindow?: number;
     /** Number of missed slots allowed in the faultInspectionWindow for builder circuit*/
     allowedFaults?: number;
+    sanityCheckExecutionEngineBlocks?: boolean;
   };
 
 export type BlockProcessOpts = {

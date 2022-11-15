@@ -109,7 +109,6 @@ export interface IBeaconChain {
   getCanonicalBlockAtSlot(slot: Slot): Promise<allForks.SignedBeaconBlock | null>;
 
   produceBlock(blockAttributes: BlockAttributes): Promise<allForks.BeaconBlock>;
-  produceBlockWithBlobs(blockAttributes: BlockAttributes): Promise<{block: allForks.BeaconBlock; blobs: eip4844.Blobs}>;
   produceBlindedBlock(blockAttributes: BlockAttributes): Promise<allForks.BlindedBeaconBlock>;
 
   /** Process a block until complete */

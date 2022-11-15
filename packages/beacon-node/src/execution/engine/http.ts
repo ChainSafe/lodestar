@@ -322,7 +322,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       getPayloadOpts
     );
 
-    return blobsBundle;
+    return parseBlobsBundle(blobsBundle);
   }
 
   /**
@@ -405,7 +405,7 @@ type EngineApiRpcReturnTypes = {
    */
   engine_exchangeTransitionConfigurationV1: TransitionConfigurationV1;
 
-  engine_getBlobsBundleV1: BlobsBundle;
+  engine_getBlobsBundleV1: BlobsBundleRpc;
 };
 
 type ExecutionPayloadRpc = {
@@ -426,6 +426,12 @@ type ExecutionPayloadRpc = {
   withdrawals?: DATA[]; // Capella hardfork
   excessDataGas?: QUANTITY; // EIP-4844
 };
+
+interface BlobsBundleRpc {
+  blockHash: DATA; // 32 Bytes
+  kzgs: DATA[]; // each 48 bytes
+  blobs: DATA[]; // each 4096 * 32 = 131072 bytes
+}
 
 export function serializeExecutionPayload(data: allForks.ExecutionPayload): ExecutionPayloadRpc {
   const payload: ExecutionPayloadRpc = {
@@ -489,6 +495,14 @@ export function parseExecutionPayload(data: ExecutionPayloadRpc): allForks.Execu
   }
 
   return payload;
+}
+
+export function parseBlobsBundle(data: BlobsBundleRpc): BlobsBundle {
+  return {
+    blockHash: dataToBytes(data.blockHash),
+    kzgs: data.kzgs.map((kzg) => dataToBytes(kzg)),
+    blobs: data.blobs.map((blob) => dataToBytes(blob)),
+  };
 }
 
 type EngineRequestKey = keyof EngineApiRpcParamTypes;
