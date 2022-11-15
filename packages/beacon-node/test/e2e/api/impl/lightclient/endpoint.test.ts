@@ -4,9 +4,9 @@ import {chainConfig as chainConfigDef} from "@lodestar/config/default";
 import {getClient} from "@lodestar/api";
 import {sleep} from "@lodestar/utils";
 import {SYNC_COMMITTEE_SIZE} from "@lodestar/params";
-import {digest} from "@chainsafe/as-sha256";
 import {Validator} from "@lodestar/validator";
-import {phase0} from "@lodestar/types";
+import {phase0, ssz} from "@lodestar/types";
+import bls from "@chainsafe/bls";
 import {LogLevel, testLogger, TestLoggerOpts} from "../../../../utils/logger.js";
 import {getDevBeaconNode} from "../../../../utils/node/beacon.js";
 import {getAndInitDevValidators} from "../../../../utils/node/validator.js";
@@ -100,19 +100,27 @@ describe("lightclient api", function () {
     expect(update).to.be.not.undefined;
   });
 
-  it("getCommitteeHash() for the 1st period", async function () {
+  it("getCommitteeRoot() for the 1st period", async function () {
     // call this right away causes "No partialUpdate available for period 0"
     await sleep(2 * SECONDS_PER_SLOT * 1000);
 
     const lightclient = getClient({baseUrl: `http://127.0.0.1:${restPort}`}, {config}).lightclient;
-    const {data: syncCommitteeHash} = await lightclient.getCommitteeHash(0, 1);
+    const {data: syncCommitteeHash} = await lightclient.getCommitteeRoot(0, 1);
     const client = getClient({baseUrl: `http://127.0.0.1:${restPort}`}, {config}).beacon;
     const {data: validatorResponses} = await client.getStateValidators("head");
     const pubkeys = validatorResponses.map((v) => v.validator.pubkey);
     expect(pubkeys.length).to.be.equal(validatorCount);
     // only 2 validators spreading to 512 committee slots
-    const syncCommittee = Array.from({length: SYNC_COMMITTEE_SIZE}, (_, i) => (i % 2 === 0 ? pubkeys[0] : pubkeys[1]));
+    const committeePubkeys = Array.from({length: SYNC_COMMITTEE_SIZE}, (_, i) =>
+      i % 2 === 0 ? pubkeys[0] : pubkeys[1]
+    );
+    const aggregatePubkey = bls.aggregatePublicKeys(committeePubkeys);
     // single committe hash since we requested for the first period
-    expect(syncCommitteeHash).to.be.deep.equal([digest(Buffer.concat(syncCommittee))]);
+    expect(syncCommitteeHash).to.be.deep.equal([
+      ssz.altair.SyncCommittee.hashTreeRoot({
+        pubkeys: committeePubkeys,
+        aggregatePubkey,
+      }),
+    ]);
   });
 });

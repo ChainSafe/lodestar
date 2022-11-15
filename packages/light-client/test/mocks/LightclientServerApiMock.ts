@@ -48,7 +48,7 @@ export class LightclientServerApiMock implements routes.lightclient.Api {
     return {data: snapshot};
   }
 
-  async getCommitteeHash(startPeriod: SyncPeriod, count: number): Promise<{data: Uint8Array[]}> {
+  async getCommitteeRoot(startPeriod: SyncPeriod, count: number): Promise<{data: Uint8Array[]}> {
     const periods = Array.from({length: count}, (_ignored, i) => i + startPeriod);
     const committeeHashes = periods
       .map((period) => this.updates.get(period)?.nextSyncCommittee.pubkeys)

@@ -71,11 +71,11 @@ export function getLightclientApi(
       return {data: bootstrapProof};
     },
 
-    async getCommitteeHash(startPeriod: SyncPeriod, count: number) {
+    async getCommitteeRoot(startPeriod: SyncPeriod, count: number) {
       const maxAllowedCount = Math.min(MAX_REQUEST_LIGHT_CLIENT_COMMITTEE_HASHES, count);
       const periods = Array.from({length: maxAllowedCount}, (_ignored, i) => i + startPeriod);
       const committeeHashes = await Promise.all(
-        periods.map((period) => chain.lightClientServer.getCommitteeHash(period))
+        periods.map((period) => chain.lightClientServer.getCommitteeRoot(period))
       );
       return {data: committeeHashes};
     },
