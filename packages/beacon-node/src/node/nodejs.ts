@@ -18,7 +18,6 @@ import {createMetrics, IMetrics, HttpMetricsServer} from "../metrics/index.js";
 import {getApi, BeaconRestApiServer} from "../api/index.js";
 import {initializeExecutionEngine, initializeExecutionBuilder} from "../execution/index.js";
 import {initializeEth1ForBlockProduction} from "../eth1/index.js";
-import {createLibp2pMetrics} from "../metrics/metrics/libp2p.js";
 import {IBeaconNodeOptions} from "./options.js";
 import {runNodeNotifier} from "./notifier.js";
 
@@ -156,7 +155,6 @@ export class BeaconNode {
       initBeaconMetrics(metrics, anchorState);
       // Since the db is instantiated before this, metrics must be injected manually afterwards
       db.setMetrics(metrics.db);
-      createLibp2pMetrics(libp2p, metrics.register);
     }
 
     const chain = new BeaconChain(opts.chain, {

@@ -8,6 +8,7 @@ import {Datastore} from "interface-datastore";
 import type {PeerDiscovery} from "@libp2p/interface-peer-discovery";
 import type {Components} from "libp2p/components";
 import {noise} from "@chainsafe/libp2p-noise";
+import { prometheusMetrics } from "@libp2p/prometheus-metrics";
 
 export interface ILibp2pOptions {
   peerId: PeerId;
@@ -44,11 +45,9 @@ export async function createNodejsLibp2p(options: ILibp2pOptions): Promise<Libp2
     transports: [tcp()],
     streamMuxers: [mplex({maxInboundStreams: 256})],
     peerDiscovery,
-    metrics: {
-      // temporarily disable since there is a performance issue with it
-      // see https://github.com/ChainSafe/lodestar/issues/4698
-      enabled: false,
-    },
+    metrics: options.metrics
+      ? prometheusMetrics({collectDefaultMetrics: false, preserveExistingMetrics: true})
+      : undefined,
     connectionManager: {
       // dialer config
       maxParallelDials: 100,
