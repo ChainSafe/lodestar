@@ -11,8 +11,10 @@ export function getExpectedWithdrawals(state: CachedBeaconStateCapella): capella
   const {validators, balances} = state;
 
   const withdrawals: capella.Withdrawal[] = [];
-  for (let index = 0; index < validators.length; index++) {
-    const validator = validators.get(validatorIndex);
+  // Just run a bounded loop max iterating over all withdrawals
+  // however breaks out once we have MAX_WITHDRAWALS_PER_PAYLOAD
+  for (let i = 0; i < validators.length; i++) {
+    const validator = validators.getReadonly(validatorIndex);
     const balance = balances.get(validatorIndex);
     const {effectiveBalance, withdrawalCredentials, withdrawableEpoch} = validator;
 
