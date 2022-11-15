@@ -23,6 +23,24 @@ interface SimulationTrackerInitOptions {
   signal: AbortSignal;
 }
 
+export enum SimulationTrackerEvent {
+  Slot = "slot",
+  Head = "head",
+}
+
+export type SimulationTrackerEvents = {
+  [SimulationTrackerEvent.Slot]: {slot: Slot};
+  [SimulationTrackerEvent.Head]: routes.events.EventData[routes.events.EventType.head];
+};
+
+export const getEventNameForNodePair = (nodePair: NodePair, event: SimulationTrackerEvent): string =>
+  `sim:tracker:${event}:${nodePair.id}`;
+
+const eventStreamEventMap = {
+  [SimulationTrackerEvent.Head]: routes.events.EventType.head,
+  [SimulationTrackerEvent.Slot]: routes.events.EventType.block,
+};
+
 /* eslint-disable no-console */
 export class SimulationTracker {
   readonly emitter = new EventEmitter();
@@ -65,6 +83,45 @@ export class SimulationTracker {
     }
 
     return tracker;
+  }
+
+  once<K extends keyof SimulationTrackerEvents>(
+    nodePair: NodePair,
+    eventName: K,
+    fn: (data: SimulationTrackerEvents[K]) => void
+  ): void {
+    if (this.nodes.indexOf(nodePair) < 0) {
+      this.initEventStreamForNode(nodePair, [eventStreamEventMap[eventName]]);
+    }
+
+    this.emitter.once(getEventNameForNodePair(nodePair, eventName), fn);
+  }
+
+  on<K extends keyof SimulationTrackerEvents>(
+    nodePair: NodePair,
+    eventName: K,
+    fn: (data: SimulationTrackerEvents[K]) => void
+  ): void {
+    if (this.nodes.indexOf(nodePair) < 0) {
+      this.initEventStreamForNode(nodePair, [eventStreamEventMap[eventName]]);
+    }
+    this.emitter.on(getEventNameForNodePair(nodePair, eventName), fn);
+  }
+
+  off<K extends keyof SimulationTrackerEvents>(
+    nodePair: NodePair,
+    eventName: K,
+    fn: (data: SimulationTrackerEvents[K]) => void
+  ): void {
+    this.emitter.off(getEventNameForNodePair(nodePair, eventName), fn);
+  }
+
+  private emit<K extends keyof SimulationTrackerEvents>(
+    nodePair: NodePair,
+    eventName: K,
+    data: SimulationTrackerEvents[K]
+  ): void {
+    this.emitter.emit(getEventNameForNodePair(nodePair, eventName), data);
   }
 
   track(node: NodePair): void {
@@ -135,7 +192,10 @@ export class SimulationTracker {
     }
   }
 
-  private async onBlock(event: routes.events.EventData[routes.events.EventType.block], node: NodePair): Promise<void> {
+  private async processOnBlock(
+    event: routes.events.EventData[routes.events.EventType.block],
+    node: NodePair
+  ): Promise<void> {
     const slot = event.slot;
     const epoch = this.clock.getEpochForSlot(slot);
     const lastSeenSlot = this.lastSeenSlot.get(node.cl.id);
@@ -184,14 +244,17 @@ export class SimulationTracker {
 
     await this.applyAssertions({slot, epoch});
 
-    this.emitter.emit(`${node.cl.id}:slot:${slot}`, slot);
+    this.emit(node, SimulationTrackerEvent.Slot, {slot});
   }
 
-  private async onHead(event: routes.events.EventData[routes.events.EventType.head], node: NodePair): Promise<void> {
-    this.emitter.emit(`head:change:${node.cl.id}`, event);
+  private async processOnHead(
+    event: routes.events.EventData[routes.events.EventType.head],
+    node: NodePair
+  ): Promise<void> {
+    this.emit(node, SimulationTrackerEvent.Head, event);
   }
 
-  private onFinalizedCheckpoint(
+  private processOnFinalizedCheckpoint(
     _event: routes.events.EventData[routes.events.EventType.finalizedCheckpoint],
     _node: NodePair
   ): void {
@@ -234,7 +297,7 @@ export class SimulationTracker {
       }
     }
 
-    this.printTrackerInfo(slot);
+    this.reporter.progress(slot);
     this.processRemoveAssertionQueue();
   }
 
@@ -252,17 +315,19 @@ export class SimulationTracker {
       routes.events.EventType.block,
       routes.events.EventType.head,
       routes.events.EventType.finalizedCheckpoint,
-    ]
+    ],
+    signal?: AbortSignal
   ): void {
-    node.cl.api.events.eventstream(events, this.signal, async (event) => {
-      this.emitter.emit(event.type, event, node);
-
+    node.cl.api.events.eventstream(events, signal ?? this.signal, async (event) => {
       switch (event.type) {
         case routes.events.EventType.block:
-          await this.onBlock(event.message, node);
+          await this.processOnBlock(event.message, node);
+          return;
+        case routes.events.EventType.head:
+          await this.processOnHead(event.message, node);
           return;
         case routes.events.EventType.finalizedCheckpoint:
-          this.onFinalizedCheckpoint(event.message, node);
+          this.processOnFinalizedCheckpoint(event.message, node);
           return;
       }
     });

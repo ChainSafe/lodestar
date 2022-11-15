@@ -3,6 +3,7 @@ import {Slot} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 import {ELClient, NodePair} from "../interfaces.js";
 import {SimulationEnvironment} from "../SimulationEnvironment.js";
+import {SimulationTrackerEvent} from "../SimulationTracker.js";
 
 export async function connectAllNodes(nodes: NodePair[]): Promise<void> {
   for (const node of nodes) {
@@ -31,21 +32,19 @@ export async function connectNewNode(newNode: NodePair, nodes: NodePair[]): Prom
 }
 
 export async function waitForNodeSync(env: SimulationEnvironment, node: NodePair, head?: string): Promise<void> {
-  let headReached = true;
-
   if (head) {
-    headReached = false;
-    env.tracker.onHeadChange(node, ({block}) => {
-      if (block === head) {
-        headReached = true;
-      }
-    });
+    await Promise.all([waitForNodeSyncStatus(env, node), waitForHead(env, node, head)]);
+    return;
   }
 
+  return waitForNodeSyncStatus(env, node);
+}
+
+export async function waitForNodeSyncStatus(env: SimulationEnvironment, node: NodePair): Promise<void> {
   // eslint-disable-next-line no-constant-condition
   while (true) {
     const result = await node.cl.api.node.getSyncingStatus();
-    if (!result.data.isSyncing && headReached) {
+    if (!result.data.isSyncing) {
       break;
     } else {
       await sleep(1000, env.options.controller.signal);
@@ -55,11 +54,13 @@ export async function waitForNodeSync(env: SimulationEnvironment, node: NodePair
 
 export async function waitForHead(env: SimulationEnvironment, node: NodePair, head: string): Promise<void> {
   return new Promise<void>((resolve) => {
-    env.tracker.onHeadChange(node, ({block}) => {
-      if (block === head) {
+    const cb = (event: {block: string}): void => {
+      if (event.block === head) {
+        env.tracker.off(node, SimulationTrackerEvent.Head, cb);
         resolve();
       }
-    });
+    };
+    env.tracker.on(node, SimulationTrackerEvent.Head, cb);
   });
 }
 
@@ -76,10 +77,21 @@ export async function waitForSlot(
   }
 
   await Promise.all(
-    (nodes ?? nodes).map(
+    nodes.map(
       (node) =>
-        new Promise((resolve) => {
-          env.tracker.onSlot(slot, node, resolve);
+        new Promise<void>((resolve, reject) => {
+          const cb = (event: {slot: Slot}): void => {
+            if (slot === event.slot) {
+              resolve();
+              env.tracker.off(node, SimulationTrackerEvent.Slot, cb);
+              return;
+            }
+
+            if (event.slot >= slot) {
+              reject(new Error(`${node.cl.id} had passed target slot ${slot}. Current slot ${event.slot}`));
+            }
+          };
+          env.tracker.on(node, SimulationTrackerEvent.Slot, cb);
         })
     )
   );

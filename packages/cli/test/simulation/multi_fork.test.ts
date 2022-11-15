@@ -1,11 +1,18 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {join} from "node:path";
 import {activePreset} from "@lodestar/params";
+import {toHexString} from "@lodestar/utils";
 import {CLIQUE_SEALING_PERIOD, SIM_TESTS_SECONDS_PER_SLOT} from "../utils/simulation/constants.js";
 import {CLClient, ELClient} from "../utils/simulation/interfaces.js";
 import {SimulationEnvironment} from "../utils/simulation/SimulationEnvironment.js";
 import {getEstimatedTimeInSecForRun, getEstimatedTTD, logFilesDir} from "../utils/simulation/utils/index.js";
-import {connectAllNodes, connectNewNode, waitForNodeSync, waitForSlot} from "../utils/simulation/utils/network.js";
+import {
+  connectAllNodes,
+  connectNewNode,
+  waitForHead,
+  waitForNodeSync,
+  waitForSlot,
+} from "../utils/simulation/utils/network.js";
 import {nodeAssertion} from "../utils/simulation/assertions/nodeAssertion.js";
 import {mergeAssertion} from "../utils/simulation/assertions/mergeAssertion.js";
 
@@ -78,6 +85,8 @@ await waitForSlot(env.clock.getLastSlotOfEpoch(bellatrixForkEpoch) + activePrese
   env,
 });
 
+const currentHead = await env.nodes[0].cl.api.beacon.getBlockHeader("head");
+
 // Range Sync
 // ========================================================
 const rangeSync = env.createNodePair({
@@ -107,8 +116,8 @@ await checkpointSync.jobs.el.start();
 await checkpointSync.jobs.cl.start();
 await connectNewNode(checkpointSync.nodePair, env.nodes);
 
-await waitForNodeSync(rangeSync.nodePair, env.options.controller.signal);
-await waitForNodeSync(checkpointSync.nodePair, env.options.controller.signal);
+await waitForNodeSync(env, rangeSync.nodePair, toHexString(currentHead.data.root));
+await waitForNodeSync(env, checkpointSync.nodePair, toHexString(currentHead.data.root));
 await rangeSync.jobs.cl.stop();
 await rangeSync.jobs.el.stop();
 await checkpointSync.jobs.cl.stop();
@@ -144,6 +153,10 @@ try {
     });
   }
 }
-await waitForNodeSync(unknownBlockSync.nodePair, env.options.controller.signal);
+await waitForHead(
+  env,
+  unknownBlockSync.nodePair,
+  toHexString(env.forkConfig.getForkTypes(head.data.message.slot).BeaconBlock.hashTreeRoot(head.data.message))
+);
 
 await env.stop();
