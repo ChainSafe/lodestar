@@ -55,6 +55,7 @@ export async function waitForNodeSyncStatus(env: SimulationEnvironment, node: No
 export async function waitForHead(env: SimulationEnvironment, node: NodePair, head: string): Promise<void> {
   return new Promise<void>((resolve) => {
     const cb = (event: {block: string}): void => {
+      console.log({node: node.cl.id, head, block: event.block});
       if (event.block === head) {
         env.tracker.off(node, SimulationTrackerEvent.Head, cb);
         resolve();
