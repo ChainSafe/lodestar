@@ -3,7 +3,7 @@ import {init} from "@chainsafe/bls/switchable";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {BeaconStateAllForks, BeaconStateAltair} from "@lodestar/state-transition";
 import {altair, phase0, ssz} from "@lodestar/types";
-import {routes, Api} from "@lodestar/api";
+import {routes, Api, getClient} from "@lodestar/api";
 import {chainConfig as chainConfigDef} from "@lodestar/config/default";
 import {createIBeaconConfig, IChainConfig} from "@lodestar/config";
 import {toHexString} from "@chainsafe/ssz";
@@ -21,6 +21,7 @@ import {
 } from "../utils/utils.js";
 import {startServer, ServerOpts} from "../utils/server.js";
 import {isNode} from "../../src/utils/utils.js";
+import {LightClientRestTransport} from "../../src/transport/index.js";
 
 const SOME_HASH = Buffer.alloc(32, 0xff);
 
@@ -83,6 +84,9 @@ describe("sync", () => {
       targetSlot
     );
 
+    const api = getClient({baseUrl: `http://${opts.host}:${opts.port}`}, {config});
+    const lightClientRestTransport = new LightClientRestTransport(api, api.lightclient.getStateProof);
+
     // Initialize from snapshot
     const lightclient = await Lightclient.initializeFromCheckpointRoot({
       config,
@@ -90,6 +94,7 @@ describe("sync", () => {
       beaconApiUrl: `http://${opts.host}:${opts.port}`,
       genesisData: {genesisTime, genesisValidatorsRoot},
       checkpointRoot: checkpointRoot,
+      transport: lightClientRestTransport,
     });
     afterEachCbs.push(() => lightclient.stop());
 

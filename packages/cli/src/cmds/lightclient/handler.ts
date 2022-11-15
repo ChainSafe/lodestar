@@ -2,6 +2,7 @@ import path from "node:path";
 import {getClient} from "@lodestar/api";
 import {Lightclient} from "@lodestar/light-client";
 import {fromHexString} from "@chainsafe/ssz";
+import {LightClientRestTransport} from "@lodestar/light-client/transport";
 import {getBeaconConfigFromArgs} from "../../config/beaconParams.js";
 import {getGlobalPaths} from "../../paths/global.js";
 import {IGlobalArgs} from "../../options/index.js";
@@ -17,6 +18,8 @@ export async function lightclientHandler(args: ILightClientArgs & IGlobalArgs): 
   const api = getClient({baseUrl: beaconApiUrl}, {config});
   const {data: genesisData} = await api.beacon.getGenesis();
 
+  const lightClientRestTransport = new LightClientRestTransport(api, api.lightclient.getStateProof);
+
   const client = await Lightclient.initializeFromCheckpointRoot({
     config,
     logger,
@@ -26,6 +29,7 @@ export async function lightclientHandler(args: ILightClientArgs & IGlobalArgs): 
       genesisValidatorsRoot: genesisData.genesisValidatorsRoot,
     },
     checkpointRoot: fromHexString(checkpointRoot),
+    transport: lightClientRestTransport,
   });
 
   client.start();

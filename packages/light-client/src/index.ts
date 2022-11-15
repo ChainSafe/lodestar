@@ -1,8 +1,7 @@
 import mitt from "mitt";
 import {init as initBls} from "@chainsafe/bls/switchable";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {getClient, Api, routes} from "@lodestar/api";
-import {altair, phase0, RootHex, ssz, SyncPeriod} from "@lodestar/types";
+import {allForks, altair, phase0, RootHex, ssz, SyncPeriod} from "@lodestar/types";
 import {createIBeaconConfig, IBeaconConfig, IChainForkConfig} from "@lodestar/config";
 import {TreeOffsetProof} from "@chainsafe/persistent-merkle-tree";
 import {isErrorAborted, sleep} from "@lodestar/utils";
@@ -18,6 +17,7 @@ import {LightclientEmitter, LightclientEvent} from "./events.js";
 import {assertValidSignedHeader, assertValidLightClientUpdate, assertValidFinalityProof} from "./validation.js";
 import {getLcLoggerConsole, ILcLogger} from "./utils/logger.js";
 import {computeSyncPeriodAtEpoch, computeSyncPeriodAtSlot, computeEpochAtSlot} from "./utils/clock.js";
+import {LightClientTransport} from "./transport/index.js";
 
 // Re-export types
 export {LightclientEvent} from "./events.js";
@@ -37,6 +37,10 @@ export type LightclientInitArgs = {
     header: phase0.BeaconBlockHeader;
     currentSyncCommittee: altair.SyncCommittee;
   };
+};
+
+export type LightClientModules = {
+  transport: LightClientTransport;
 };
 
 /** Provides some protection against a server client sending header updates too far away in the future */
@@ -99,15 +103,14 @@ type RunStatus =
  *               - known next_sync_committee, signed by current_sync_committee
  *
  * - No need to query for period 0 next_sync_committee until the end of period 0
- * - During most of period 0, current_sync_committee known, next_sync_committee unknown
- * - At the end of period 0, get a sync committee update, and populate period 1's committee
+ * - During most of period 0, current_sync_committe known, next_sync_committee unknown
+ * - At the end of period 0, get a sync committe update, and populate period 1's committee
  *
  * syncCommittees: Map<SyncPeriod, SyncCommittee>, limited to max of 2 items
  */
 export class Lightclient {
-  readonly api: Api;
+  private transport: LightClientTransport;
   readonly emitter: LightclientEmitter = mitt();
-
   readonly config: IBeaconConfig;
   readonly logger: ILcLogger;
   readonly genesisValidatorsRoot: Uint8Array;
@@ -129,17 +132,21 @@ export class Lightclient {
     participation: number;
     header: phase0.BeaconBlockHeader;
     blockRoot: RootHex;
+    block?: allForks.SignedBeaconBlock;
   };
 
   private finalized: {
     participation: number;
     header: phase0.BeaconBlockHeader;
     blockRoot: RootHex;
+    block?: allForks.SignedBeaconBlock;
   } | null = null;
 
   private status: RunStatus = {code: RunStatusCode.stopped};
 
-  constructor({config, logger, genesisData, beaconApiUrl, snapshot}: LightclientInitArgs) {
+  constructor({config, logger, genesisData, beaconApiUrl, snapshot}: LightclientInitArgs, modules: LightClientModules) {
+    this.transport = modules.transport;
+
     this.genesisTime = genesisData.genesisTime;
     this.genesisValidatorsRoot =
       typeof genesisData.genesisValidatorsRoot === "string"
@@ -150,7 +157,6 @@ export class Lightclient {
     this.logger = logger ?? getLcLoggerConsole();
 
     this.beaconApiUrl = beaconApiUrl;
-    this.api = getClient({baseUrl: beaconApiUrl}, {config});
 
     const periodCurr = computeSyncPeriodAtSlot(snapshot.header.slot);
     this.syncCommitteeByPeriod.set(periodCurr, {
@@ -178,12 +184,14 @@ export class Lightclient {
     beaconApiUrl,
     genesisData,
     checkpointRoot,
+    transport,
   }: {
     config: IChainForkConfig;
     logger?: ILcLogger;
     beaconApiUrl: string;
     genesisData: GenesisData;
     checkpointRoot: phase0.Checkpoint["root"];
+    transport: LightClientTransport;
   }): Promise<Lightclient> {
     // Initialize the BLS implementation. This may requires initializing the WebAssembly instance
     // so why it's a an async process. This should be initialized once before any bls operations.
@@ -191,10 +199,8 @@ export class Lightclient {
     // https://github.com/karma-runner/karma/issues/3804
     await initBls(isNode ? "blst-native" : "herumi");
 
-    const api = getClient({baseUrl: beaconApiUrl}, {config});
-
     // Fetch bootstrap state with proof at the trusted block root
-    const {data: bootstrapStateWithProof} = await api.lightclient.getBootstrap(toHexString(checkpointRoot));
+    const {data: bootstrapStateWithProof} = await transport.getBootstrap(toHexString(checkpointRoot));
     const {header, currentSyncCommittee, currentSyncCommitteeBranch} = bootstrapStateWithProof;
 
     // verify the response matches the requested root
@@ -216,13 +222,16 @@ export class Lightclient {
       throw Error("Snapshot sync committees proof does not match trusted checkpoint");
     }
 
-    return new Lightclient({
-      config,
-      logger,
-      beaconApiUrl,
-      genesisData,
-      snapshot: bootstrapStateWithProof,
-    });
+    return new Lightclient(
+      {
+        config,
+        logger,
+        beaconApiUrl,
+        genesisData,
+        snapshot: bootstrapStateWithProof,
+      },
+      {transport}
+    );
   }
 
   start(): void {
@@ -246,7 +255,7 @@ export class Lightclient {
   async getHeadStateProof(paths: JsonPath[]): Promise<{proof: TreeOffsetProof; header: phase0.BeaconBlockHeader}> {
     const header = this.head.header;
     const stateId = toHexString(header.stateRoot);
-    const res = await this.api.lightclient.getStateProof(stateId, paths);
+    const res = await this.transport.getStateProof(stateId, paths);
     return {
       proof: res.data as TreeOffsetProof,
       header,
@@ -264,7 +273,7 @@ export class Lightclient {
 
     for (const [fromPeriodRng, toPeriodRng] of periodRanges) {
       const count = toPeriodRng + 1 - fromPeriodRng;
-      const {data: updates} = await this.api.lightclient.getUpdates(fromPeriodRng, count);
+      const {data: updates} = await this.transport.getUpdates(fromPeriodRng, count);
       for (const update of updates) {
         this.processSyncCommitteeUpdate(update);
         const headPeriod = computeSyncPeriodAtSlot(update.attestedHeader.slot);
@@ -311,7 +320,7 @@ export class Lightclient {
         // Fetch latest optimistic head to prevent a potential 12 seconds lag between syncing and getting the first head,
         // Don't retry, this is a non-critical UX improvement
         try {
-          const {data: latestOptimisticUpdate} = await this.api.lightclient.getOptimisticUpdate();
+          const {data: latestOptimisticUpdate} = await this.transport.getOptimisticUpdate();
           this.processOptimisticUpdate(latestOptimisticUpdate);
         } catch (e) {
           this.logger.error("Error fetching getLatestHeadUpdate", {currentPeriod}, e as Error);
@@ -324,13 +333,8 @@ export class Lightclient {
         this.status = {code: RunStatusCode.started, controller};
         this.logger.debug("Started tracking the head");
 
-        // Subscribe to head updates over SSE
-        // TODO: Use polling for getLatestHeadUpdate() is SSE is unavailable
-        this.api.events.eventstream(
-          [routes.events.EventType.lightClientOptimisticUpdate, routes.events.EventType.lightClientFinalityUpdate],
-          controller.signal,
-          this.onSSE
-        );
+        this.transport.onFinalityUpdate(this.processFinalizedUpdate.bind(this));
+        this.transport.onOptimisticUpdate(this.processOptimisticUpdate.bind(this));
       }
 
       // When close to the end of a sync period poll for sync committee updates
@@ -363,29 +367,6 @@ export class Lightclient {
       }
     }
   }
-
-  private onSSE = (event: routes.events.BeaconEvent): void => {
-    try {
-      switch (event.type) {
-        case routes.events.EventType.lightClientOptimisticUpdate:
-          this.processOptimisticUpdate(event.message);
-          break;
-
-        case routes.events.EventType.lightClientFinalityUpdate:
-          this.processFinalizedUpdate(event.message);
-          break;
-
-        case routes.events.EventType.lightClientUpdate:
-          this.processSyncCommitteeUpdate(event.message);
-          break;
-
-        default:
-          throw Error(`Unknown event ${event.type}`);
-      }
-    } catch (e) {
-      this.logger.error("Error on onSSE", {}, e as Error);
-    }
-  };
 
   /**
    * Processes new optimistic header updates in only known synced sync periods.
