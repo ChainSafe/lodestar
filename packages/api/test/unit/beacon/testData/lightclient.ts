@@ -66,4 +66,8 @@ export const testData: GenericServerTestCases<Api> = {
       },
     },
   },
+  getCommitteeRoot: {
+    args: [1, 2],
+    res: {data: [Buffer.alloc(32, 0), Buffer.alloc(32, 1)]},
+  },
 };

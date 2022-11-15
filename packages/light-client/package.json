@@ -71,6 +71,10 @@
     "cross-fetch": "^3.1.4",
     "mitt": "^3.0.0"
   },
+  "devDependencies": {
+    "uint8arrays": "^4.0.2",
+    "@chainsafe/as-sha256": "^0.3.1"
+  },
   "keywords": [
     "ethereum",
     "eth-consensus",
