@@ -1,7 +1,7 @@
 import mitt from "mitt";
 import {init as initBls} from "@chainsafe/bls/switchable";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {allForks, altair, phase0, RootHex, ssz, SyncPeriod} from "@lodestar/types";
+import {allForks, altair, bellatrix, phase0, RootHex, ssz, SyncPeriod} from "@lodestar/types";
 import {createIBeaconConfig, IBeaconConfig, IChainForkConfig} from "@lodestar/config";
 import {TreeOffsetProof} from "@chainsafe/persistent-merkle-tree";
 import {isErrorAborted, sleep} from "@lodestar/utils";
@@ -18,6 +18,7 @@ import {assertValidSignedHeader, assertValidLightClientUpdate, assertValidFinali
 import {getLcLoggerConsole, ILcLogger} from "./utils/logger.js";
 import {computeSyncPeriodAtEpoch, computeSyncPeriodAtSlot, computeEpochAtSlot} from "./utils/clock.js";
 import {LightClientTransport} from "./transport/index.js";
+import {IExecutionEngine} from "./execution/index.js";
 
 // Re-export types
 export {LightclientEvent} from "./events.js";
@@ -41,6 +42,7 @@ export type LightclientInitArgs = {
 
 export type LightClientModules = {
   transport: LightClientTransport;
+  executionEngine?: IExecutionEngine;
 };
 
 /** Provides some protection against a server client sending header updates too far away in the future */
@@ -111,6 +113,7 @@ type RunStatus =
 export class Lightclient {
   private transport: LightClientTransport;
   readonly emitter: LightclientEmitter = mitt();
+  private executionEngine: IExecutionEngine | undefined;
   readonly config: IBeaconConfig;
   readonly logger: ILcLogger;
   readonly genesisValidatorsRoot: Uint8Array;
@@ -146,6 +149,7 @@ export class Lightclient {
 
   constructor({config, logger, genesisData, beaconApiUrl, snapshot}: LightclientInitArgs, modules: LightClientModules) {
     this.transport = modules.transport;
+    this.executionEngine = modules.executionEngine;
 
     this.genesisTime = genesisData.genesisTime;
     this.genesisValidatorsRoot =
@@ -185,6 +189,7 @@ export class Lightclient {
     genesisData,
     checkpointRoot,
     transport,
+    executionEngine,
   }: {
     config: IChainForkConfig;
     logger?: ILcLogger;
@@ -192,6 +197,7 @@ export class Lightclient {
     genesisData: GenesisData;
     checkpointRoot: phase0.Checkpoint["root"];
     transport: LightClientTransport;
+    executionEngine?: IExecutionEngine;
   }): Promise<Lightclient> {
     // Initialize the BLS implementation. This may requires initializing the WebAssembly instance
     // so why it's a an async process. This should be initialized once before any bls operations.
@@ -230,7 +236,7 @@ export class Lightclient {
         genesisData,
         snapshot: bootstrapStateWithProof,
       },
-      {transport}
+      {executionEngine, transport}
     );
   }
 
@@ -333,8 +339,8 @@ export class Lightclient {
         this.status = {code: RunStatusCode.started, controller};
         this.logger.debug("Started tracking the head");
 
-        this.transport.onFinalityUpdate(this.processFinalizedUpdate.bind(this));
-        this.transport.onOptimisticUpdate(this.processOptimisticUpdate.bind(this));
+        this.transport.onFinalityUpdate(this.processFinalizedUpdateAndEL.bind(this));
+        this.transport.onOptimisticUpdate(this.processOptimisticUpdateAndEL.bind(this));
       }
 
       // When close to the end of a sync period poll for sync committee updates
@@ -499,6 +505,23 @@ export class Lightclient {
     }
   }
 
+  private async processFinalizedUpdateAndEL(finalizedUpdate: altair.LightClientFinalityUpdate): Promise<void> {
+    const prevFinalized = this.finalized;
+    this.processFinalizedUpdate(finalizedUpdate);
+    if ((!prevFinalized && this.finalized) || prevFinalized?.blockRoot !== this.finalized?.blockRoot) {
+      await this.notifyUpdatePayload();
+    }
+  }
+
+  private async processOptimisticUpdateAndEL(headerUpdate: altair.LightClientOptimisticUpdate): Promise<void> {
+    const prevHead = this.head;
+    this.processOptimisticUpdate(headerUpdate);
+    if (prevHead.blockRoot !== this.head.blockRoot) {
+      await this.notifyUpdatePayload();
+    }
+  }
+
+
   /**
    * Process SyncCommittee update, signed by a known previous SyncCommittee.
    * SyncCommittee can be updated at any time, not strictly at the period borders.
@@ -550,6 +573,38 @@ export class Lightclient {
       });
       pruneSetToMax(this.syncCommitteeByPeriod, MAX_STORED_SYNC_COMMITTEES);
       // TODO: Metrics, updated syncCommittee
+    }
+  }
+
+  // Execution layer method
+  private async notifyUpdatePayload(): Promise<void> {
+    if (this.executionEngine === undefined) {
+      // Execution Engine not set, not driving EL
+      return;
+    }
+
+    if (this.head.block !== undefined) {
+      // attested block was before BELLATRIX_FORK_EPOCH cannot update EL
+      if (computeEpochAtSlot(this.head.header.slot) < this.config.BELLATRIX_FORK_EPOCH) {
+        return;
+      }
+
+      const executionPayload = (this.head.block as bellatrix.SignedBeaconBlock).message.body.executionPayload;
+      const response = await this.executionEngine.notifyNewPayload(executionPayload);
+      this.logger.info("notifyNewPayload response", response);
+    }
+
+    if (this.finalized?.block !== undefined) {
+      // attested block was before BELLATRIX_FORK_EPOCH cannot update EL
+      if (computeEpochAtSlot(this.finalized.header.slot) < this.config.BELLATRIX_FORK_EPOCH) {
+        return;
+      }
+      const finalizedBlock = this.finalized.block as bellatrix.SignedBeaconBlock;
+      const headHash = toHexString(finalizedBlock.message.body.executionPayload.blockHash);
+      const finalizedHash = toHexString(finalizedBlock.message.body.executionPayload.blockHash);
+      const response = await this.executionEngine.notifyForkchoiceUpdate(headHash, finalizedHash, finalizedHash);
+
+      this.logger.info("notifyForkchoiceUpdate response", response);
     }
   }
 }

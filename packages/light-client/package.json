@@ -28,6 +28,9 @@
     },
     "./transport": {
       "import": "./lib/transport/index.js"
+    },
+    "./execution": {
+      "import": "./lib/execution/engine/index.js"
     }
   },
   "types": "./lib/index.d.ts",
