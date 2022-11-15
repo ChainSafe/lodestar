@@ -33,6 +33,7 @@ import {NetworkEvent} from "../../events.js";
 import {PeerAction} from "../../peers/index.js";
 import {validateLightClientFinalityUpdate} from "../../../chain/validation/lightClientFinalityUpdate.js";
 import {validateLightClientOptimisticUpdate} from "../../../chain/validation/lightClientOptimisticUpdate.js";
+import {validateGossipBlobsSidecar} from "../../../chain/validation/blobsSidecar.js";
 
 /**
  * Gossip handler options as part of network options
@@ -76,23 +77,10 @@ const MAX_UNKNOWN_BLOCK_ROOT_RETRIES = 1;
 export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipHandlerOpts): GossipHandlers {
   const {chain, config, metrics, network, logger} = modules;
 
-  async function handleBeaconBlock(
-    signedBlock: SignedBeaconBlock,
-    fork: ForkName,
-    peerIdStr: string,
-    seenTimestampSec: number
-  ): Promise<void> {
+  async function validateBeaconBlock(signedBlock: SignedBeaconBlock, fork: ForkName, peerIdStr: string): Promise<void> {
     const slot = signedBlock.message.slot;
     const forkTypes = config.getForkTypes(slot);
     const blockHex = prettyBytes(forkTypes.BeaconBlock.hashTreeRoot(signedBlock.message));
-    const delaySec = chain.clock.secFromSlot(slot, seenTimestampSec);
-    logger.verbose("Received gossip block", {
-      slot: slot,
-      root: blockHex,
-      curentSlot: chain.clock.currentSlot,
-      peerId: peerIdStr,
-      delaySec,
-    });
 
     try {
       await validateGossipBlock(config, chain, signedBlock, fork);
@@ -110,6 +98,20 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
 
       throw e;
     }
+  }
+
+  function handleValidBeaconBlock(signedBlock: SignedBeaconBlock, peerIdStr: string, seenTimestampSec: number): void {
+    const slot = signedBlock.message.slot;
+    const forkTypes = config.getForkTypes(slot);
+    const blockHex = prettyBytes(forkTypes.BeaconBlock.hashTreeRoot(signedBlock.message));
+    const delaySec = chain.clock.secFromSlot(slot, seenTimestampSec);
+    logger.verbose("Received gossip block", {
+      slot: slot,
+      root: blockHex,
+      curentSlot: chain.clock.currentSlot,
+      peerId: peerIdStr,
+      delaySec,
+    });
 
     // Handler - MUST NOT `await`, to allow validation result to be propagated
 
@@ -146,15 +148,19 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
   }
 
   return {
-    [GossipType.beacon_block_and_blobs_sidecar]: async (signedBlock, topic, peerIdStr, seenTimestampSec) => {
-      const {beaconBlock, blobsSidecar: _} = signedBlock;
-      // TODO EIP-4844: Validate blobs
-
-      return handleBeaconBlock(beaconBlock, topic.fork, peerIdStr, seenTimestampSec);
+    [GossipType.beacon_block]: async (signedBlock, topic, peerIdStr, seenTimestampSec) => {
+      await validateBeaconBlock(signedBlock, topic.fork, peerIdStr);
+      handleValidBeaconBlock(signedBlock, peerIdStr, seenTimestampSec);
     },
 
-    [GossipType.beacon_block]: async (signedBlock, topic, peerIdStr, seenTimestampSec) => {
-      return handleBeaconBlock(signedBlock, topic.fork, peerIdStr, seenTimestampSec);
+    [GossipType.beacon_block_and_blobs_sidecar]: async (signedBlock, topic, peerIdStr, seenTimestampSec) => {
+      const {beaconBlock, blobsSidecar} = signedBlock;
+
+      // Validate block + blob. Then forward, then handle both
+      await validateBeaconBlock(beaconBlock, topic.fork, peerIdStr);
+      await validateGossipBlobsSidecar(config, chain, beaconBlock, blobsSidecar);
+      handleValidBeaconBlock(beaconBlock, peerIdStr, seenTimestampSec);
+      // TODO: EIP-4844 handle blobs
     },
 
     [GossipType.beacon_aggregate_and_proof]: async (signedAggregateAndProof, _topic, _peer, seenTimestampSec) => {

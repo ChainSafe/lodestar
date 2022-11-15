@@ -130,6 +130,7 @@
     "@multiformats/multiaddr": "^11.0.0",
     "@types/datastore-level": "^3.0.0",
     "buffer-xor": "^2.0.2",
+    "c-kzg": "^1.0.0",
     "cross-fetch": "^3.1.4",
     "datastore-core": "^8.0.1",
     "datastore-level": "^9.0.1",

@@ -1,12 +1,12 @@
 import {ssz} from "@lodestar/types";
-import {CachedBeaconState4844} from "../types.js";
+import {CachedBeaconStateEip4844} from "../types.js";
 import {getCachedBeaconState} from "../cache/stateCache.js";
 import {CachedBeaconStateCapella} from "../types.js";
 
 /**
  * Upgrade a state from Capella to 4844.
  */
-export function upgradeStateTo4844(stateCapella: CachedBeaconStateCapella): CachedBeaconState4844 {
+export function upgradeStateTo4844(stateCapella: CachedBeaconStateCapella): CachedBeaconStateEip4844 {
   const {config} = stateCapella;
 
   const stateCapellaNode = ssz.capella.BeaconState.commitViewDU(stateCapella);

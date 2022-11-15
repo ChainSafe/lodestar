@@ -56,7 +56,11 @@ export type TransitionConfigurationV1 = {
 };
 
 export type BlobsBundle = {
-  blockHash: Uint8Array;
+  /**
+   * Execution payload `blockHash` for the caller to sanity-check the consistency with the `engine_getPayload` call
+   * https://github.com/protolambda/execution-apis/blob/bf44a8d08ab34b861ef97fa9ef5c5e7806194547/src/engine/blob-extension.md?plain=1#L49
+   */
+  blockHash: RootHex;
   kzgs: KZGCommitment[];
   blobs: Blob[];
 };

@@ -499,7 +499,7 @@ export function parseExecutionPayload(data: ExecutionPayloadRpc): allForks.Execu
 
 export function parseBlobsBundle(data: BlobsBundleRpc): BlobsBundle {
   return {
-    blockHash: dataToBytes(data.blockHash),
+    blockHash: data.blockHash,
     kzgs: data.kzgs.map((kzg) => dataToBytes(kzg)),
     blobs: data.blobs.map((blob) => dataToBytes(blob)),
   };

@@ -5,7 +5,7 @@ import {
   BeaconStateAltair,
   BeaconStateBellatrix,
   BeaconStateCapella,
-  BeaconState4844,
+  BeaconStateEip4844,
   BeaconStateAllForks,
 } from "./types.js";
 
@@ -116,9 +116,12 @@ export type CachedBeaconStatePhase0 = CachedBeaconState<BeaconStatePhase0>;
 export type CachedBeaconStateAltair = CachedBeaconState<BeaconStateAltair>;
 export type CachedBeaconStateBellatrix = CachedBeaconState<BeaconStateBellatrix>;
 export type CachedBeaconStateCapella = CachedBeaconState<BeaconStateCapella>;
-export type CachedBeaconState4844 = CachedBeaconState<BeaconState4844>;
+export type CachedBeaconStateEip4844 = CachedBeaconState<BeaconStateEip4844>;
 export type CachedBeaconStateAllForks = CachedBeaconState<BeaconStateAllForks>;
-export type CachedBeaconStateExecutions = CachedBeaconStateBellatrix | CachedBeaconStateCapella | CachedBeaconState4844;
+export type CachedBeaconStateExecutions =
+  | CachedBeaconStateBellatrix
+  | CachedBeaconStateCapella
+  | CachedBeaconStateEip4844;
 
 /**
  * Create CachedBeaconState computing a new EpochContext instance

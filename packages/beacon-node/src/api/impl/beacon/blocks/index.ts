@@ -4,6 +4,7 @@ import {computeTimeAtSlot} from "@lodestar/state-transition";
 import {SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {sleep} from "@lodestar/utils";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
+import {promiseAllMaybeAsync} from "../../../../util/promises.js";
 import {BlockError, BlockErrorCode} from "../../../../chain/errors/index.js";
 import {OpSource} from "../../../../metrics/validatorMonitor.js";
 import {NetworkEvent} from "../../../../network/index.js";
@@ -23,16 +24,6 @@ export function getBeaconBlockApi({
   network,
   db,
 }: Pick<ApiModules, "chain" | "config" | "metrics" | "network" | "db">): routes.beacon.block.Api {
-  const waitForSlot = async (slot: number): Promise<void> => {
-    // Simple implementation of a pending block queue. Keeping the block here recycles the API logic, and keeps the
-    // REST request promise without any extra infrastructure.
-    const msToBlockSlot = computeTimeAtSlot(config, slot, chain.genesisTime) * 1000 - Date.now();
-    if (msToBlockSlot <= MAX_API_CLOCK_DISPARITY_MS && msToBlockSlot > 0) {
-      // If block is a bit early, hold it in a promise. Equivalent to a pending queue.
-      await sleep(msToBlockSlot);
-    }
-  };
-
   return {
     async getBlockHeaders(filters) {
       // TODO - SLOW CODE: This code seems like it could be improved
@@ -183,23 +174,31 @@ export function getBeaconBlockApi({
 
     async publishBlock(signedBlock) {
       const seenTimestampSec = Date.now() / 1000;
-      await waitForSlot(signedBlock.message.slot);
+
+      // Simple implementation of a pending block queue. Keeping the block here recycles the API logic, and keeps the
+      // REST request promise without any extra infrastructure.
+      const msToBlockSlot = computeTimeAtSlot(config, signedBlock.message.slot, chain.genesisTime) * 1000 - Date.now();
+      if (msToBlockSlot <= MAX_API_CLOCK_DISPARITY_MS && msToBlockSlot > 0) {
+        // If block is a bit early, hold it in a promise. Equivalent to a pending queue.
+        await sleep(msToBlockSlot);
+      }
 
       // TODO: Validate block
 
       metrics?.registerBeaconBlock(OpSource.api, seenTimestampSec, signedBlock.message);
 
-      await Promise.all([
+      await promiseAllMaybeAsync([
         // Send the block, regardless of whether or not it is valid. The API
         // specification is very clear that this is the desired behaviour.
-        network.gossip.publishBeaconBlock(signedBlock),
+        () => network.publishBeaconBlockMaybeBlobs(signedBlock),
 
-        chain.processBlock(signedBlock).catch((e) => {
-          if (e instanceof BlockError && e.type.code === BlockErrorCode.PARENT_UNKNOWN) {
-            network.events.emit(NetworkEvent.unknownBlockParent, signedBlock, network.peerId.toString());
-          }
-          throw e;
-        }),
+        () =>
+          chain.processBlock(signedBlock).catch((e) => {
+            if (e instanceof BlockError && e.type.code === BlockErrorCode.PARENT_UNKNOWN) {
+              network.events.emit(NetworkEvent.unknownBlockParent, signedBlock, network.peerId.toString());
+            }
+            throw e;
+          }),
       ]);
     },
   };

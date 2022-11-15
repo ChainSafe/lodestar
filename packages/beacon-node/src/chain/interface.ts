@@ -111,6 +111,8 @@ export interface IBeaconChain {
   produceBlock(blockAttributes: BlockAttributes): Promise<allForks.BeaconBlock>;
   produceBlindedBlock(blockAttributes: BlockAttributes): Promise<allForks.BlindedBeaconBlock>;
 
+  getBlobsSidecar(beaconBlock: eip4844.BeaconBlock): eip4844.BlobsSidecar;
+
   /** Process a block until complete */
   processBlock(block: allForks.SignedBeaconBlock, opts?: ImportBlockOpts): Promise<void>;
   /** Process a chain of blocks until complete */

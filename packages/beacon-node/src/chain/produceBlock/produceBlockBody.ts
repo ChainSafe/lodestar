@@ -1,3 +1,4 @@
+import {blobToKzgCommitment} from "c-kzg";
 import {
   Bytes32,
   phase0,
@@ -22,6 +23,7 @@ import {
   getRandaoMix,
   getCurrentEpoch,
   isMergeTransitionComplete,
+  verifyKzgCommitmentsAgainstTransactions,
 } from "@lodestar/state-transition";
 import {IChainForkConfig} from "@lodestar/config";
 import {ForkName, ForkSeq} from "@lodestar/params";
@@ -64,7 +66,9 @@ export enum BlobsResultType {
   produced,
 }
 
-export type BlobsResult = {type: BlobsResultType.preEIP4844} | {type: BlobsResultType.produced; blobs: eip4844.Blobs};
+export type BlobsResult =
+  | {type: BlobsResultType.preEIP4844}
+  | {type: BlobsResultType.produced; blobs: eip4844.Blobs; blockHash: RootHex};
 
 export async function produceBlockBody<T extends BlockType>(
   this: BeaconChain,
@@ -102,7 +106,7 @@ export async function produceBlockBody<T extends BlockType>(
   const {eth1Data, deposits} = await this.eth1.getEth1DataAndDeposits(currentState);
 
   // We assign this in an EIP-4844 branch below and return it
-  let blobs: eip4844.Blobs | null = null;
+  let blobs: {blobs: eip4844.Blobs; blockHash: RootHex} | null = null;
 
   const blockBody: phase0.BeaconBlockBody = {
     randaoReveal,
@@ -157,11 +161,12 @@ export async function produceBlockBody<T extends BlockType>(
       // For MeV boost integration, this is where the execution header will be
       // fetched from the payload id and a blinded block will be produced instead of
       // fullblock for the validator to sign
-      (blockBody as allForks.BlindedBeaconBlockBody).executionPayloadHeader = await prepareExecutionPayloadHeader(
+      const executionPayloadHeader = await prepareExecutionPayloadHeader(
         this,
         currentState as CachedBeaconStateBellatrix,
         proposerPubKey
       );
+      (blockBody as allForks.BlindedBeaconBlockBody).executionPayloadHeader = executionPayloadHeader;
 
       // Capella and later forks have withdrawalRoot on their ExecutionPayloadHeader
       // TODO Capella: Remove this. It will come from the execution client.
@@ -174,7 +179,7 @@ export async function produceBlockBody<T extends BlockType>(
       if (forkName === ForkName.eip4844) {
         // Empty blobs for now
         (blockBody as eip4844.BeaconBlockBody).blobKzgCommitments = [];
-        blobs = [];
+        blobs = {blobs: [], blockHash: executionPayloadHeader.blockHash};
       }
     }
 
@@ -224,9 +229,15 @@ export async function produceBlockBody<T extends BlockType>(
             // payload_id to retrieve blobs and blob_kzg_commitments via get_blobs_and_kzg_commitments(payload_id)
             const blobsBundle = await this.executionEngine.getBlobsBundle(payloadId);
 
+            // Sanity check consistency between getPayload() and getBlobsBundle()
+            const blockHash = toHex(payload.blockHash);
+            if (blobsBundle.blockHash !== blockHash) {
+              throw Error(`blobsBundle incorrect blockHash ${blobsBundle.blockHash} != ${blockHash}`);
+            }
+
             if (this.opts.sanityCheckExecutionEngineBlocks) {
               // Optionally sanity-check that the KZG commitments match the versioned hashes in the transactions
-              verify_kzg_commitments_against_transactions(payload.transactions, blobsBundle.kzgs);
+              verifyKzgCommitmentsAgainstTransactions(payload.transactions, blobsBundle.kzgs);
 
               // Optionally sanity-check that the KZG commitments match the blobs (as produced by the execution engine)
               if (blobsBundle.blobs.length !== blobsBundle.kzgs.length) {
@@ -236,7 +247,7 @@ export async function produceBlockBody<T extends BlockType>(
               }
 
               for (let i = 0; i < blobsBundle.blobs.length; i++) {
-                const kzg = blob_to_kzg_commitment(blobsBundle.blobs[i]) as eip4844.KZGCommitment;
+                const kzg = blobToKzgCommitment(blobsBundle.blobs[i]) as eip4844.KZGCommitment;
                 if (!byteArrayEquals(kzg, blobsBundle.kzgs[i])) {
                   throw Error(`Wrong KZG[${i}] ${toHex(blobsBundle.kzgs[i])} expected ${toHex(kzg)}`);
                 }
@@ -244,7 +255,7 @@ export async function produceBlockBody<T extends BlockType>(
             }
 
             (blockBody as eip4844.BeaconBlockBody).blobKzgCommitments = blobsBundle.kzgs;
-            blobs = blobsBundle.blobs;
+            blobs = {blobs: blobsBundle.blobs, blockHash};
           }
 
           const fetchedTime = Date.now() / 1000 - computeTimeAtSlot(this.config, blockSlot, this.genesisTime);
@@ -284,7 +295,7 @@ export async function produceBlockBody<T extends BlockType>(
     if (!blobs) {
       throw Error("Blobs are null post eip4844");
     }
-    blobsResult = {type: BlobsResultType.produced, blobs};
+    blobsResult = {type: BlobsResultType.produced, ...blobs};
   } else {
     blobsResult = {type: BlobsResultType.preEIP4844};
   }

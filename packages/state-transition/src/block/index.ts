@@ -1,14 +1,15 @@
 import {ForkSeq} from "@lodestar/params";
-import {allForks, altair} from "@lodestar/types";
+import {allForks, altair, eip4844} from "@lodestar/types";
 import {ExecutionEngine} from "../util/executionEngine.js";
 import {getFullOrBlindedPayload, isExecutionEnabled} from "../util/execution.js";
-import {CachedBeaconStateAllForks, CachedBeaconStateBellatrix} from "../types.js";
+import {CachedBeaconStateAllForks, CachedBeaconStateBellatrix, CachedBeaconStateEip4844} from "../types.js";
 import {processExecutionPayload} from "./processExecutionPayload.js";
 import {processSyncAggregate} from "./processSyncCommittee.js";
 import {processBlockHeader} from "./processBlockHeader.js";
 import {processEth1Data} from "./processEth1Data.js";
 import {processOperations} from "./processOperations.js";
 import {processRandao} from "./processRandao.js";
+import {processBlobKzgCommitments} from "./processBlobKzgCommitments.js";
 
 // Spec tests
 export {processBlockHeader, processExecutionPayload, processRandao, processEth1Data, processSyncAggregate};
@@ -41,5 +42,13 @@ export function processBlock(
   processOperations(fork, state, block.body, verifySignatures);
   if (fork >= ForkSeq.altair) {
     processSyncAggregate(state, block as altair.BeaconBlock, verifySignatures);
+  }
+
+  if (fork >= ForkSeq.eip4844) {
+    processBlobKzgCommitments(block.body as eip4844.BeaconBlockBody);
+
+    // New in EIP-4844, note: Can sync optimistically without this condition, see note on `is_data_available`
+    // NOTE: Ommitted and should be verified beforehand
+    // assert is_data_available(block.slot, hash_tree_root(block), block.body.blob_kzg_commitments)
   }
 }

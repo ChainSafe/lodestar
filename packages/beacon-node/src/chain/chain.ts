@@ -119,6 +119,7 @@ export class BeaconChain implements IBeaconChain {
   private successfulExchangeTransition = false;
   private readonly exchangeTransitionConfigurationEverySlots: number;
 
+  /** Map keyed by executionPayload.blockHash of the block for those blobs */
   private readonly producedBlobsCache = new Map<RootHex, eip4844.Blobs>();
 
   private readonly faultInspectionWindow: number;
@@ -383,7 +384,7 @@ export class BeaconChain implements IBeaconChain {
 
     // Cache for latter broadcasting
     if (blobs.type === BlobsResultType.produced) {
-      this.producedBlobsCache.set(blobs.blockRoot, blobs.blobs);
+      this.producedBlobsCache.set(blobs.blockHash, blobs.blobs);
     }
 
     return block;
@@ -399,15 +400,17 @@ export class BeaconChain implements IBeaconChain {
    *       kzg_aggregated_proof=compute_proof_from_blobs(blobs),
    *   )
    */
-  getBlobsSidecar(beaconBlockRoot: RootHex): eip4844.BlobsSidecar {
-    const blobs = this.producedBlobsCache.get(beaconBlockRoot);
+  getBlobsSidecar(beaconBlock: eip4844.BeaconBlock): eip4844.BlobsSidecar {
+    const blockHash = toHex(beaconBlock.body.executionPayload.blockHash);
+    const blobs = this.producedBlobsCache.get(blockHash);
     if (!blobs) {
-      throw Error(`No blobs for beaconBlockRoot ${beaconBlockRoot}`);
+      throw Error(`No blobs for beaconBlockRoot ${blockHash}`);
     }
 
     return {
-      beaconBlockRoot: beaconBlockRoot,
-      beaconBlockSlot: blobs.slot,
+      // TODO EIP-4844: Optimize, hashing the full block is not free.
+      beaconBlockRoot: this.config.getForkTypes(beaconBlock.slot).BeaconBlock.hashTreeRoot(beaconBlock),
+      beaconBlockSlot: beaconBlock.slot,
       blobs: blobs,
       kzgAggregatedProof: computeAggregateKzgProof(blobs),
     };
