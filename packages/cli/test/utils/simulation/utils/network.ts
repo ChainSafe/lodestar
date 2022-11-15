@@ -31,9 +31,13 @@ export async function connectNewNode(newNode: NodePair, nodes: NodePair[]): Prom
   }
 }
 
-export async function waitForNodeSync(env: SimulationEnvironment, node: NodePair, head?: string): Promise<void> {
-  if (head) {
-    await Promise.all([waitForNodeSyncStatus(env, node), waitForHead(env, node, head)]);
+export async function waitForNodeSync(
+  env: SimulationEnvironment,
+  node: NodePair,
+  options?: {head: string; slot: Slot}
+): Promise<void> {
+  if (options) {
+    await Promise.all([waitForNodeSyncStatus(env, node), waitForHead(env, node, options)]);
     return;
   }
 
@@ -52,15 +56,33 @@ export async function waitForNodeSyncStatus(env: SimulationEnvironment, node: No
   }
 }
 
-export async function waitForHead(env: SimulationEnvironment, node: NodePair, head: string): Promise<void> {
+export async function waitForHead(
+  env: SimulationEnvironment,
+  node: NodePair,
+  options: {slot: Slot; head: string}
+): Promise<void> {
   return new Promise<void>((resolve) => {
-    const cb = (event: {block: string}): void => {
-      console.log({node: node.cl.id, head, block: event.block});
-      if (event.block === head) {
+    let firstHeadEventSlot: number;
+
+    const cb = (event: {block: string; slot: Slot}): void => {
+      if (!firstHeadEventSlot) {
+        firstHeadEventSlot = event.slot;
+      }
+
+      // The syncing happens quickly and we already crossed the head slot
+      if (firstHeadEventSlot >= options.slot) {
         env.tracker.off(node, SimulationTrackerEvent.Head, cb);
         resolve();
+        return;
+      }
+
+      if (event.block === options.head) {
+        env.tracker.off(node, SimulationTrackerEvent.Head, cb);
+        resolve();
+        return;
       }
     };
+
     env.tracker.on(node, SimulationTrackerEvent.Head, cb);
   });
 }

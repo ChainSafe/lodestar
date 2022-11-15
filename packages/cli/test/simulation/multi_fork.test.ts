@@ -85,10 +85,9 @@ await waitForSlot(env.clock.getLastSlotOfEpoch(bellatrixForkEpoch) + activePrese
   env,
 });
 
-const currentHead = await env.nodes[0].cl.api.beacon.getBlockHeader("head");
-
 // Range Sync
 // ========================================================
+const headForRangeSync = await env.nodes[0].cl.api.beacon.getBlockHeader("head");
 const rangeSync = env.createNodePair({
   id: "range-sync-node",
   cl: CLClient.Lodestar,
@@ -99,11 +98,14 @@ const rangeSync = env.createNodePair({
 // Checkpoint sync involves Weak Subjectivity Checkpoint
 // ========================================================
 const {
-  data: {finalized},
+  data: {finalized: headForCheckpointSync},
 } = await env.nodes[0].cl.api.beacon.getStateFinalityCheckpoints("head");
 const checkpointSync = env.createNodePair({
   id: "checkpoint-sync-node",
-  cl: {type: CLClient.Lodestar, options: {wssCheckpoint: `${finalized.root}:${finalized.epoch}`}},
+  cl: {
+    type: CLClient.Lodestar,
+    options: {wssCheckpoint: `${headForCheckpointSync.root}:${headForCheckpointSync.epoch}`},
+  },
   el: ELClient.Geth,
   keysCount: 0,
 });
@@ -116,8 +118,17 @@ await checkpointSync.jobs.el.start();
 await checkpointSync.jobs.cl.start();
 await connectNewNode(checkpointSync.nodePair, env.nodes);
 
-await waitForNodeSync(env, rangeSync.nodePair, toHexString(currentHead.data.root));
-await waitForNodeSync(env, checkpointSync.nodePair, toHexString(currentHead.data.root));
+await Promise.all([
+  await waitForNodeSync(env, rangeSync.nodePair, {
+    head: toHexString(headForRangeSync.data.root),
+    slot: headForRangeSync.data.header.message.slot,
+  }),
+  await waitForNodeSync(env, checkpointSync.nodePair, {
+    head: toHexString(headForCheckpointSync.root),
+    slot: env.clock.getLastSlotOfEpoch(headForCheckpointSync.epoch),
+  }),
+]);
+
 await rangeSync.jobs.cl.stop();
 await rangeSync.jobs.el.stop();
 await checkpointSync.jobs.cl.stop();
@@ -133,11 +144,11 @@ const unknownBlockSync = env.createNodePair({
 });
 await unknownBlockSync.jobs.el.start();
 await unknownBlockSync.jobs.cl.start();
-const head = await env.nodes[0].cl.api.beacon.getBlockV2("head");
+const headForUnknownBlockSync = await env.nodes[0].cl.api.beacon.getBlockV2("head");
 await connectNewNode(unknownBlockSync.nodePair, env.nodes);
 
 try {
-  await unknownBlockSync.nodePair.cl.api.beacon.publishBlock(head.data);
+  await unknownBlockSync.nodePair.cl.api.beacon.publishBlock(headForUnknownBlockSync.data);
 
   env.tracker.record({
     message: "Publishing unknown block should fail",
@@ -153,10 +164,13 @@ try {
     });
   }
 }
-await waitForHead(
-  env,
-  unknownBlockSync.nodePair,
-  toHexString(env.forkConfig.getForkTypes(head.data.message.slot).BeaconBlock.hashTreeRoot(head.data.message))
-);
+await waitForHead(env, unknownBlockSync.nodePair, {
+  head: toHexString(
+    env.forkConfig
+      .getForkTypes(headForUnknownBlockSync.data.message.slot)
+      .BeaconBlock.hashTreeRoot(headForUnknownBlockSync.data.message)
+  ),
+  slot: headForUnknownBlockSync.data.message.slot,
+});
 
 await env.stop();
