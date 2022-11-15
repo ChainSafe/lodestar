@@ -125,6 +125,7 @@ const unknownBlockSync = env.createNodePair({
 await unknownBlockSync.jobs.el.start();
 await unknownBlockSync.jobs.cl.start();
 const head = await env.nodes[0].cl.api.beacon.getBlockV2("head");
+await connectNewNode(unknownBlockSync.nodePair, env.nodes);
 
 try {
   await unknownBlockSync.nodePair.cl.api.beacon.publishBlock(head.data);
@@ -143,5 +144,6 @@ try {
     });
   }
 }
+await waitForNodeSync(unknownBlockSync.nodePair, env.options.controller.signal);
 
 await env.stop();
