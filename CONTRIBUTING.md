@@ -17,8 +17,8 @@ Thanks for your contribution to Lodestar. It's people like you that push the Eth
 ## Tests
 
 - :computer: Run `lerna run download-spec-tests` to download the files necessary to run spec tests.
-- :test_tube: Run `lerna run test:spec-min` for minimal spec tests.
-- :test_tube: Run `lerna run test:spec-main` for mainnet spec tests.
+- :test_tube: Run `lerna run test:spec-minimal` for minimal spec tests.
+- :test_tube: Run `lerna run test:spec-mainnet` for mainnet spec tests.
 - :test_tube: Run `lerna run test:unit` for unit tests.
 - :test_tube: Run `lerna run test:e2e` for end-to-end tests.
 - :test_tube: Run `yarn check-types` to check TypeScript types.
