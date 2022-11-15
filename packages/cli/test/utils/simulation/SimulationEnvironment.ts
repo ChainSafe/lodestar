@@ -215,7 +215,7 @@ export class SimulationEnvironment {
     await this.dockerRunner.stop();
 
     if (this.tracker.getErrorCount() > 0) {
-      this.tracker.printErrors();
+      this.tracker.reporter.summary();
       process.exit(this.tracker.getErrorCount() > 0 ? 1 : code);
     } else {
       process.exit(code);

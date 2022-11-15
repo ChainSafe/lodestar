@@ -1,8 +1,7 @@
 /* eslint-disable no-console */
-import {routes} from "@lodestar/api";
 import {Slot} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
-import {CLNode, ELClient, NodePair} from "../interfaces.js";
+import {ELClient, NodePair} from "../interfaces.js";
 import {SimulationEnvironment} from "../SimulationEnvironment.js";
 
 export async function connectAllNodes(nodes: NodePair[]): Promise<void> {
@@ -31,16 +30,37 @@ export async function connectNewNode(newNode: NodePair, nodes: NodePair[]): Prom
   }
 }
 
-export async function waitForNodeSync(node: NodePair, signal: AbortSignal): Promise<void> {
+export async function waitForNodeSync(env: SimulationEnvironment, node: NodePair, head?: string): Promise<void> {
+  let headReached = true;
+
+  if (head) {
+    headReached = false;
+    env.tracker.onHeadChange(node, ({block}) => {
+      if (block === head) {
+        headReached = true;
+      }
+    });
+  }
+
   // eslint-disable-next-line no-constant-condition
   while (true) {
     const result = await node.cl.api.node.getSyncingStatus();
-    if (result.data.isSyncing) {
-      await sleep(1000, signal);
-    } else {
+    if (!result.data.isSyncing && headReached) {
       break;
+    } else {
+      await sleep(1000, env.options.controller.signal);
     }
   }
+}
+
+export async function waitForHead(env: SimulationEnvironment, node: NodePair, head: string): Promise<void> {
+  return new Promise<void>((resolve) => {
+    env.tracker.onHeadChange(node, ({block}) => {
+      if (block === head) {
+        resolve();
+      }
+    });
+  });
 }
 
 export async function waitForSlot(
@@ -63,28 +83,4 @@ export async function waitForSlot(
         })
     )
   );
-}
-
-export async function waitForEvent(
-  event: routes.events.EventType,
-  node: CLNode | "any",
-  {env}: {env: SimulationEnvironment}
-): Promise<routes.events.BeaconEvent> {
-  console.log(`Waiting for event "${event}" on "${node === "any" ? node : node.id}"`);
-
-  return new Promise((resolve) => {
-    const handler = (beaconEvent: routes.events.BeaconEvent, eventNode: CLNode): void => {
-      if (node == "any") {
-        env.emitter.removeListener(event, handler);
-        resolve(beaconEvent);
-      }
-
-      if (node !== "any" && eventNode === node) {
-        env.emitter.removeListener(event, handler);
-        resolve(beaconEvent);
-      }
-    };
-
-    env.tracker.emitter.addListener(event, handler);
-  });
 }

@@ -266,3 +266,18 @@ export type Eth1GenesisBlock = {
   };
   alloc: Record<string, {balance: string}>;
 };
+
+export abstract class SimulationReporter<T extends SimulationAssertion[]> {
+  constructor(
+    protected options: {
+      clock: EpochClock;
+      forkConfig: IChainForkConfig;
+      stores: StoreTypes<T>;
+      nodes: NodePair[];
+      errors: SimulationAssertionError[];
+    }
+  ) {}
+  abstract bootstrap(): void;
+  abstract progress(slot: Slot): void;
+  abstract summary(): void;
+}
