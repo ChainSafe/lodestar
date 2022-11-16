@@ -1,8 +1,7 @@
 import {allForks, phase0, Slot} from "@lodestar/types";
-import {IBeaconChain} from "../../../chain/index.js";
-import {IBeaconDb} from "../../../db/index.js";
-import {getSlotFromBytes} from "../../../util/multifork.js";
+import {IBeaconChain, IBeaconDb} from "../sharedTypes.js";
 import {ContextBytesType, EncodedPayload, EncodedPayloadType} from "../types.js";
+import {getSlotFromBytes} from "../utils/index.js";
 
 export async function* onBeaconBlocksByRoot(
   requestBody: phase0.BeaconBlocksByRootRequest,

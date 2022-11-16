@@ -1,11 +1,10 @@
 import {GENESIS_SLOT, MAX_REQUEST_BLOCKS} from "@lodestar/params";
 import {allForks, phase0, Slot} from "@lodestar/types";
 import {fromHexString} from "@chainsafe/ssz";
-import {IBeaconChain} from "../../../chain/index.js";
-import {IBeaconDb} from "../../../db/index.js";
-import {RespStatus} from "../../../constants/index.js";
 import {ResponseError} from "../response/index.js";
 import {ContextBytesType, EncodedPayload, EncodedPayloadType} from "../types.js";
+import {IBeaconChain, IBeaconDb} from "../sharedTypes.js";
+import {RespStatus} from "../interface.js";
 
 // TODO: Unit test
 

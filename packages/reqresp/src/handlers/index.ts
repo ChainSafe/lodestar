@@ -1,7 +1,6 @@
 import {allForks, altair, phase0, Root} from "@lodestar/types";
-import {IBeaconChain} from "../../../chain/index.js";
-import {IBeaconDb} from "../../../db/index.js";
 import {EncodedPayload, EncodedPayloadType} from "../types.js";
+import {IBeaconChain, IBeaconDb} from "../sharedTypes.js";
 import {onBeaconBlocksByRange} from "./beaconBlocksByRange.js";
 import {onBeaconBlocksByRoot} from "./beaconBlocksByRoot.js";
 import {onLightClientBootstrap} from "./lightClientBootstrap.js";

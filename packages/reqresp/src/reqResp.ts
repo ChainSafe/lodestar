@@ -3,10 +3,7 @@ import {Type} from "@chainsafe/ssz";
 import {ForkName} from "@lodestar/params";
 import {allForks, altair, phase0, Root, Slot, ssz} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
-import {RespStatus, timeoutOptions} from "../../constants/index.js";
-import {MetadataController} from "../metadata.js";
-import {IPeerRpcScoreStore} from "../peers/score.js";
-import {INetworkEventBus, NetworkEvent} from "../events.js";
+import {RespStatus} from "./interface.js";
 import {IReqResp, IReqRespModules, IRateLimiter} from "./interface.js";
 import {ResponseError} from "./response/index.js";
 import {assertSequentialBlocksInRange} from "./utils/index.js";
@@ -25,6 +22,8 @@ import {InboundRateLimiter, RateLimiterOpts} from "./response/rateLimiter.js";
 import {ReqRespProtocol} from "./reqRespProtocol.js";
 import {RequestError} from "./request/errors.js";
 import {onOutgoingReqRespError} from "./score.js";
+import {timeoutOptions} from "./constants.js";
+import {MetadataController, IPeerRpcScoreStore, INetworkEventBus, NetworkEvent} from "./sharedTypes.js";
 
 export type IReqRespOptions = Partial<typeof timeoutOptions>;
 

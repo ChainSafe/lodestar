@@ -4,15 +4,14 @@ import {PeerId} from "@libp2p/interface-peer-id";
 import {Connection, Stream} from "@libp2p/interface-connection";
 import {IBeaconConfig} from "@lodestar/config";
 import {ILogger} from "@lodestar/utils";
-import {timeoutOptions} from "../../constants/index.js";
-import {PeersData} from "../peers/peersData.js";
-import {IPeerRpcScoreStore} from "../peers/score.js";
-import {IMetrics} from "../../metrics/metrics.js";
 import {sendRequest} from "./request/index.js";
 import {handleRequest} from "./response/index.js";
 import {formatProtocolID} from "./utils/index.js";
 import {RequestError, RequestErrorCode} from "./request/index.js";
 import {Encoding, ProtocolDefinition} from "./types.js";
+import {timeoutOptions} from "./constants.js";
+import {IPeerRpcScoreStore, PeersData} from "./sharedTypes.js";
+import {Metrics} from "./metrics.js";
 
 export type IReqRespOptions = Partial<typeof timeoutOptions>;
 type ProtocolID = string;
@@ -23,7 +22,7 @@ export interface ReqRespProtocolModules {
   peersData: PeersData;
   logger: ILogger;
   peerRpcScores: IPeerRpcScoreStore;
-  metrics: IMetrics | null;
+  metrics: Metrics | null;
 }
 
 /**
@@ -40,7 +39,7 @@ export class ReqRespProtocol {
   private options?: IReqRespOptions;
   private reqCount = 0;
   private respCount = 0;
-  private metrics: IMetrics["reqResp"] | null;
+  private metrics: Metrics | null;
   /** `${protocolPrefix}/${method}/${version}/${encoding}` */
   private readonly supportedProtocols = new Map<ProtocolID, ProtocolDefinition>();
 
@@ -49,7 +48,7 @@ export class ReqRespProtocol {
     this.peersData = modules.peersData;
     this.logger = modules.logger;
     this.options = options;
-    this.metrics = modules.metrics?.reqResp ?? null;
+    this.metrics = modules.metrics ?? null;
   }
 
   registerProtocol<Req, Resp>(protocol: ProtocolDefinition<Req, Resp>): void {

@@ -1,14 +1,14 @@
 import {PeerId} from "@libp2p/interface-peer-id";
 import {ILogger, MapDef} from "@lodestar/utils";
-import {IMetrics} from "../../../metrics/index.js";
-import {IPeerRpcScoreStore, PeerAction} from "../../peers/score.js";
 import {IRateLimiter} from "../interface.js";
+import {Metrics} from "../metrics.js";
 import {RateTracker} from "../rateTracker.js";
+import {IPeerRpcScoreStore, PeerAction} from "../sharedTypes.js";
 
 interface IRateLimiterModules {
   logger: ILogger;
   peerRpcScores: IPeerRpcScoreStore;
-  metrics: IMetrics | null;
+  metrics: Metrics | null;
 }
 
 /**
@@ -52,7 +52,7 @@ export const defaultRateLimiterOpts = {
 export class InboundRateLimiter implements IRateLimiter {
   private readonly logger: ILogger;
   private readonly peerRpcScores: IPeerRpcScoreStore;
-  private readonly metrics: IMetrics | null;
+  private readonly metrics: Metrics | null;
   private requestCountTrackersByPeer: MapDef<string, RateTracker>;
   /**
    * This rate tracker is specific to lodestar, we don't want to serve too many blocks for peers at the
@@ -108,7 +108,7 @@ export class InboundRateLimiter implements IRateLimiter {
       });
       this.peerRpcScores.applyAction(peerId, PeerAction.Fatal, "RateLimit");
       if (this.metrics) {
-        this.metrics.reqResp.rateLimitErrors.inc({tracker: "requestCountPeerTracker"});
+        this.metrics.rateLimitErrors.inc({tracker: "requestCountPeerTracker"});
       }
       return false;
     }
@@ -131,14 +131,14 @@ export class InboundRateLimiter implements IRateLimiter {
       });
       this.peerRpcScores.applyAction(peerId, PeerAction.Fatal, "RateLimit");
       if (this.metrics) {
-        this.metrics.reqResp.rateLimitErrors.inc({tracker: "blockCountPeerTracker"});
+        this.metrics.rateLimitErrors.inc({tracker: "blockCountPeerTracker"});
       }
       return false;
     }
 
     if (this.blockCountTotalTracker.requestObjects(numBlock) === 0) {
       if (this.metrics) {
-        this.metrics.reqResp.rateLimitErrors.inc({tracker: "blockCountTotalTracker"});
+        this.metrics.rateLimitErrors.inc({tracker: "blockCountTotalTracker"});
       }
       // don't apply penalty
       return false;

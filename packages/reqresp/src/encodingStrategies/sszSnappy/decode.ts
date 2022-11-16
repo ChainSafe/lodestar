@@ -1,11 +1,11 @@
 import varint from "varint";
 import {Uint8ArrayList} from "uint8arraylist";
 import {Type} from "@chainsafe/ssz";
-import {MAX_VARINT_BYTES} from "../../../../constants/index.js";
 import {BufferedSource} from "../../utils/index.js";
 import {SnappyFramesUncompress} from "./snappyFrames/uncompress.js";
 import {maxEncodedLen} from "./utils.js";
 import {SszSnappyError, SszSnappyErrorCode} from "./errors.js";
+import {MAX_VARINT_BYTES} from "../../constants.js";
 
 export type TypeRead<T> = Pick<Type<T>, "minSize" | "maxSize" | "deserialize">;
 

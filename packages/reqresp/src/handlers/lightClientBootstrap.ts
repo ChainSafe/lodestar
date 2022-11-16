@@ -1,8 +1,7 @@
 import {altair, Root} from "@lodestar/types";
-import {IBeaconChain} from "../../../chain/index.js";
 import {ResponseError} from "../response/index.js";
-import {RespStatus} from "../../../constants/index.js";
-import {LightClientServerError, LightClientServerErrorCode} from "../../../chain/errors/lightClientError.js";
+import {IBeaconChain, LightClientServerError, LightClientServerErrorCode} from "../sharedTypes.js";
+import {RespStatus} from "../interface.js";
 import {EncodedPayload, EncodedPayloadType} from "../types.js";
 
 export async function* onLightClientBootstrap(

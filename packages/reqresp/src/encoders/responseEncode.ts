@@ -1,5 +1,4 @@
 import {ForkName} from "@lodestar/params";
-import {RespStatus, RpcResponseStatusError} from "../../../constants/index.js";
 import {writeEncodedPayload} from "../encodingStrategies/index.js";
 import {encodeErrorMessage} from "../utils/index.js";
 import {
@@ -10,6 +9,7 @@ import {
   EncodedPayload,
   EncodedPayloadType,
 } from "../types.js";
+import {RespStatus, RpcResponseStatusError} from "../interface.js";
 
 /**
  * Yields byte chunks for a `<response>` with a zero response code `<result>`

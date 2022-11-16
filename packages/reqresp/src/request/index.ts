@@ -3,14 +3,12 @@ import {PeerId} from "@libp2p/interface-peer-id";
 import {Libp2p} from "libp2p";
 import {Uint8ArrayList} from "uint8arraylist";
 import {ErrorAborted, ILogger, withTimeout, TimeoutError} from "@lodestar/utils";
-import {timeoutOptions} from "../../../constants/index.js";
-import {prettyPrintPeerId} from "../../util.js";
-import {abortableSource} from "../../../util/abortableSource.js";
 import {ProtocolDefinition} from "../types.js";
-import {formatProtocolID} from "../utils/index.js";
+import {formatProtocolID, prettyPrintPeerId, abortableSource} from "../utils/index.js";
 import {ResponseError} from "../response/index.js";
 import {requestEncode} from "../encoders/requestEncode.js";
 import {responseDecode} from "../encoders/responseDecode.js";
+import {timeoutOptions} from "../constants.js";
 import {collectResponses} from "./collectResponses.js";
 import {
   RequestError,

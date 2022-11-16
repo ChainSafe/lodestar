@@ -1,10 +1,9 @@
 import {altair} from "@lodestar/types";
 import {MAX_REQUEST_LIGHT_CLIENT_UPDATES} from "@lodestar/params";
-import {IBeaconChain} from "../../../chain/index.js";
-import {LightClientServerError, LightClientServerErrorCode} from "../../../chain/errors/lightClientError.js";
 import {ResponseError} from "../response/errors.js";
-import {RespStatus} from "../../../constants/network.js";
 import {EncodedPayload, EncodedPayloadType} from "../types.js";
+import {IBeaconChain, LightClientServerError, LightClientServerErrorCode} from "../sharedTypes.js";
+import {RespStatus} from "../interface.js";
 
 export async function* onLightClientUpdatesByRange(
   requestBody: altair.LightClientUpdatesByRange,

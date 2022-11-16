@@ -1,7 +1,7 @@
 import {altair} from "@lodestar/types";
-import {IBeaconChain} from "../../../chain/index.js";
 import {ResponseError} from "../response/index.js";
-import {RespStatus} from "../../../constants/index.js";
+import {IBeaconChain} from "../sharedTypes.js";
+import {RespStatus} from "../interface.js";
 import {EncodedPayload, EncodedPayloadType} from "../types.js";
 
 export async function* onLightClientOptimisticUpdate(

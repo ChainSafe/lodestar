@@ -3,11 +3,12 @@ import {PeerId} from "@libp2p/interface-peer-id";
 import {Stream} from "@libp2p/interface-connection";
 import {Uint8ArrayList} from "uint8arraylist";
 import {ILogger, TimeoutError, withTimeout} from "@lodestar/utils";
-import {REQUEST_TIMEOUT, RespStatus} from "../../../constants/index.js";
-import {prettyPrintPeerId} from "../../util.js";
+import {REQUEST_TIMEOUT} from "../constants.js";
+import {prettyPrintPeerId} from "../utils/index.js";
 import {ProtocolDefinition} from "../types.js";
 import {requestDecode} from "../encoders/requestDecode.js";
 import {responseEncodeError, responseEncodeSuccess} from "../encoders/responseEncode.js";
+import {RespStatus} from "../interface.js";
 import {ResponseError} from "./errors.js";
 
 export {ResponseError};
