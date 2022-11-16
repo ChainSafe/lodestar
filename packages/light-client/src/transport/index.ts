@@ -1,8 +1,8 @@
 import EventEmitter from "events";
 import StrictEventEmitter from "strict-event-emitter-types";
-import {allForks, altair, Root, SyncPeriod} from "@lodestar/types";
+import {allForks, altair, SyncPeriod} from "@lodestar/types";
 import {Api, routes} from "@lodestar/api";
-import {JsonPath, toHexString} from "@chainsafe/ssz";
+import {JsonPath} from "@chainsafe/ssz";
 import {Proof} from "@chainsafe/persistent-merkle-tree";
 
 export enum EventType {

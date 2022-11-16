@@ -103,10 +103,8 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
    * Perform RPC request with retry
    */
   async fetchWithRetries<R, P = IJson[]>(payload: IRpcPayload<P>, opts?: ReqOpts): Promise<R> {
-    const routeId = opts?.routeId ?? "unknown";
-
     const res = await retry<IRpcResponse<R>>(
-      async (attempt) => {
+      async (_attempt) => {
         return await this.fetchJson({jsonrpc: "2.0", id: this.id++, ...payload}, opts);
       },
       {
@@ -172,9 +170,6 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
 
     const onParentSignalAbort = (): void => controller.abort();
     this.opts?.signal?.addEventListener("abort", onParentSignalAbort, {once: true});
-
-    // Default to "unknown" to prevent mixing metrics with others.
-    const routeId = opts?.routeId ?? "unknown";
 
     try {
       const headers: Record<string, string> = {"Content-Type": "application/json"};

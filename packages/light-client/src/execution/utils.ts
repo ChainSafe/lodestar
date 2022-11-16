@@ -1,7 +1,6 @@
 import {RootHex} from "@lodestar/types";
 import {bytesToBigInt, bigIntToBytes, sleep} from "@lodestar/utils";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {ErrorParseJson} from "./jsonRpcHttpClient.js";
 import {defaultQueueOpts, JobQueueOpts, QueueError, QueueErrorCode, QueueType} from "./queue/index.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
@@ -204,7 +203,6 @@ export class JobItemQueue<Args extends any[], R> {
     }
   };
 }
-
 
 /**
  * Return the last index in the array that matches the predicate
