@@ -1,13 +1,14 @@
 import {IChainForkConfig} from "@lodestar/config";
-import {allForks, ssz} from "@lodestar/types";
+import {ssz} from "@lodestar/types";
 import {BlockError, BlockErrorCode} from "../../errors/index.js";
+import {BlockImport} from "../types.js";
 
 /**
  * Assert this chain segment of blocks is linear with slot numbers and hashes
  */
-export function assertLinearChainSegment(config: IChainForkConfig, blocks: allForks.SignedBeaconBlock[]): void {
-  for (const [i, block] of blocks.entries()) {
-    const child = blocks[i + 1];
+export function assertLinearChainSegment(config: IChainForkConfig, blocks: BlockImport[]): void {
+  for (const [i, {block}] of blocks.entries()) {
+    const child = blocks[i + 1].block;
     if (child !== undefined) {
       // If this block has a child in this chain segment, ensure that its parent root matches
       // the root of this block.

@@ -1,6 +1,11 @@
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {MaybeValidExecutionStatus} from "@lodestar/fork-choice";
-import {allForks, Slot} from "@lodestar/types";
+import {allForks, eip4844, Slot} from "@lodestar/types";
+
+export type BlockImport = {
+  block: allForks.SignedBeaconBlock;
+  blobs: eip4844.BlobsSidecar | null;
+};
 
 export type ImportBlockOpts = {
   /**
@@ -44,6 +49,7 @@ export type ImportBlockOpts = {
  */
 export type FullyVerifiedBlock = {
   block: allForks.SignedBeaconBlock;
+  blobs: eip4844.BlobsSidecar | null;
   postState: CachedBeaconStateAllForks;
   parentBlockSlot: Slot;
   proposerBalanceDelta: number;

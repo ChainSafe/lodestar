@@ -2,7 +2,8 @@ import {Connection} from "@libp2p/interface-connection";
 import {Multiaddr} from "@multiformats/multiaddr";
 import {PeerId} from "@libp2p/interface-peer-id";
 import {Discv5, ENR} from "@chainsafe/discv5";
-import {allForks} from "@lodestar/types";
+import {phase0} from "@lodestar/types";
+import {BlockImport} from "../chain/blocks/types.js";
 import {INetworkEventBus} from "./events.js";
 import {Eth2Gossipsub} from "./gossip/index.js";
 import {MetadataController} from "./metadata.js";
@@ -31,7 +32,10 @@ export interface INetwork {
   getConnectedPeers(): PeerId[];
   hasSomeConnectedPeer(): boolean;
 
-  publishBeaconBlockMaybeBlobs(signedBlock: allForks.SignedBeaconBlock): Promise<void>;
+  publishBeaconBlockMaybeBlobs(signedBlock: BlockImport): Promise<void>;
+
+  beaconBlocksMaybeBlobsByRange(peerId: PeerId, request: phase0.BeaconBlocksByRangeRequest): Promise<BlockImport[]>;
+  beaconBlocksMaybeBlobsByRoot(peerId: PeerId, request: phase0.BeaconBlocksByRootRequest): Promise<BlockImport[]>;
 
   /** Subscribe, search peers, join long-lived attnets */
   prepareBeaconCommitteeSubnet(subscriptions: CommitteeSubscription[]): void;

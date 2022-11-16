@@ -4,7 +4,7 @@ import {IBeaconConfig} from "@lodestar/config";
 import {phase0, ssz} from "@lodestar/types";
 import {ILogger, prettyBytes} from "@lodestar/utils";
 import {SignedBeaconBlock} from "@lodestar/types/lib/phase0/types.js";
-import {ForkName} from "@lodestar/params";
+import {ForkName, ForkSeq} from "@lodestar/params";
 import {IMetrics} from "../../../metrics/index.js";
 import {OpSource} from "../../../metrics/validatorMonitor.js";
 import {IBeaconChain} from "../../../chain/index.js";
@@ -15,6 +15,7 @@ import {
   BlockErrorCode,
   BlockGossipError,
   GossipAction,
+  GossipActionError,
   SyncCommitteeError,
 } from "../../../chain/errors/index.js";
 import {GossipHandlers, GossipType} from "../interface.js";
@@ -34,6 +35,7 @@ import {PeerAction} from "../../peers/index.js";
 import {validateLightClientFinalityUpdate} from "../../../chain/validation/lightClientFinalityUpdate.js";
 import {validateLightClientOptimisticUpdate} from "../../../chain/validation/lightClientOptimisticUpdate.js";
 import {validateGossipBlobsSidecar} from "../../../chain/validation/blobsSidecar.js";
+import {BlockImport} from "../../../chain/blocks/types.js";
 
 /**
  * Gossip handler options as part of network options
@@ -100,7 +102,8 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
     }
   }
 
-  function handleValidBeaconBlock(signedBlock: SignedBeaconBlock, peerIdStr: string, seenTimestampSec: number): void {
+  function handleValidBeaconBlock(blockImport: BlockImport, peerIdStr: string, seenTimestampSec: number): void {
+    const signedBlock = blockImport.block;
     const slot = signedBlock.message.slot;
     const forkTypes = config.getForkTypes(slot);
     const blockHex = prettyBytes(forkTypes.BeaconBlock.hashTreeRoot(signedBlock.message));
@@ -125,7 +128,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
     // otherwise we can't utilize bls thread pool capacity and Gossip Job Wait Time can't be kept low consistently.
     // See https://github.com/ChainSafe/lodestar/issues/3792
     chain
-      .processBlock(signedBlock, {validProposerSignature: true, blsVerifyOnMainThread: true})
+      .processBlock(blockImport, {validProposerSignature: true, blsVerifyOnMainThread: true})
       .then(() => {
         // Returns the delay between the start of `block.slot` and `current time`
         const delaySec = chain.clock.secFromSlot(slot);
@@ -150,17 +153,22 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
   return {
     [GossipType.beacon_block]: async (signedBlock, topic, peerIdStr, seenTimestampSec) => {
       await validateBeaconBlock(signedBlock, topic.fork, peerIdStr);
-      handleValidBeaconBlock(signedBlock, peerIdStr, seenTimestampSec);
+
+      // TODO EIP-4844: Can blocks be received by this topic?
+      if (config.getForkSeq(signedBlock.message.slot) >= ForkSeq.eip4844) {
+        throw new GossipActionError(GossipAction.REJECT, {code: "POST_EIP4844_BLOCK"});
+      }
+
+      handleValidBeaconBlock({block: signedBlock, blobs: null}, peerIdStr, seenTimestampSec);
     },
 
-    [GossipType.beacon_block_and_blobs_sidecar]: async (signedBlock, topic, peerIdStr, seenTimestampSec) => {
-      const {beaconBlock, blobsSidecar} = signedBlock;
+    [GossipType.beacon_block_and_blobs_sidecar]: async (blockAndBlocks, topic, peerIdStr, seenTimestampSec) => {
+      const {beaconBlock, blobsSidecar} = blockAndBlocks;
 
       // Validate block + blob. Then forward, then handle both
       await validateBeaconBlock(beaconBlock, topic.fork, peerIdStr);
       await validateGossipBlobsSidecar(config, chain, beaconBlock, blobsSidecar);
-      handleValidBeaconBlock(beaconBlock, peerIdStr, seenTimestampSec);
-      // TODO: EIP-4844 handle blobs
+      handleValidBeaconBlock({block: beaconBlock, blobs: blobsSidecar}, peerIdStr, seenTimestampSec);
     },
 
     [GossipType.beacon_aggregate_and_proof]: async (signedAggregateAndProof, _topic, _peer, seenTimestampSec) => {

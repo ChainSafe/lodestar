@@ -22,7 +22,7 @@ import {
 import {AttestationPool, OpPool, SyncCommitteeMessagePool, SyncContributionAndProofPool} from "./opPools/index.js";
 import {LightClientServer} from "./lightClient/index.js";
 import {AggregatedAttestationPool} from "./opPools/aggregatedAttestationPool.js";
-import {ImportBlockOpts} from "./blocks/types.js";
+import {BlockImport, ImportBlockOpts} from "./blocks/types.js";
 import {ReprocessController} from "./reprocess.js";
 import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
 import {BeaconProposerCache, ProposerPreparationData} from "./beaconProposerCache.js";
@@ -114,9 +114,9 @@ export interface IBeaconChain {
   getBlobsSidecar(beaconBlock: eip4844.BeaconBlock): eip4844.BlobsSidecar;
 
   /** Process a block until complete */
-  processBlock(block: allForks.SignedBeaconBlock, opts?: ImportBlockOpts): Promise<void>;
+  processBlock(block: BlockImport, opts?: ImportBlockOpts): Promise<void>;
   /** Process a chain of blocks until complete */
-  processChainSegment(blocks: allForks.SignedBeaconBlock[], opts?: ImportBlockOpts): Promise<void>;
+  processChainSegment(blocks: BlockImport[], opts?: ImportBlockOpts): Promise<void>;
 
   getStatus(): phase0.Status;
 

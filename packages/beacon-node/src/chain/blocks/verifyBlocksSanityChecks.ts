@@ -1,11 +1,11 @@
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {IChainForkConfig} from "@lodestar/config";
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
-import {allForks, Slot} from "@lodestar/types";
+import {Slot} from "@lodestar/types";
 import {toHexString} from "@lodestar/utils";
 import {IBeaconClock} from "../clock/interface.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
-import {ImportBlockOpts} from "./types.js";
+import {BlockImport, ImportBlockOpts} from "./types.js";
 
 /**
  * Verifies some early cheap sanity checks on the block before running the full state transition.
@@ -21,18 +21,19 @@ import {ImportBlockOpts} from "./types.js";
  */
 export function verifyBlocksSanityChecks(
   chain: {forkChoice: IForkChoice; clock: IBeaconClock; config: IChainForkConfig},
-  blocks: allForks.SignedBeaconBlock[],
+  blocks: BlockImport[],
   opts: ImportBlockOpts
-): {relevantBlocks: allForks.SignedBeaconBlock[]; parentSlots: Slot[]; parentBlock: ProtoBlock | null} {
+): {relevantBlocks: BlockImport[]; parentSlots: Slot[]; parentBlock: ProtoBlock | null} {
   if (blocks.length === 0) {
     throw Error("Empty partiallyVerifiedBlocks");
   }
 
-  const relevantBlocks: allForks.SignedBeaconBlock[] = [];
+  const relevantBlocks: BlockImport[] = [];
   const parentSlots: Slot[] = [];
   let parentBlock: ProtoBlock | null = null;
 
-  for (const block of blocks) {
+  for (const blockImport of blocks) {
+    const {block} = blockImport;
     const blockSlot = block.message.slot;
 
     // Not genesis block
@@ -59,7 +60,7 @@ export function verifyBlocksSanityChecks(
     let parentBlockSlot: Slot;
 
     if (relevantBlocks.length > 0) {
-      parentBlockSlot = relevantBlocks[relevantBlocks.length - 1].message.slot;
+      parentBlockSlot = relevantBlocks[relevantBlocks.length - 1].block.message.slot;
     } else {
       // When importing a block segment, only the first NON-IGNORED block must be known to the fork-choice.
       const parentRoot = toHexString(block.message.parentRoot);
@@ -92,7 +93,7 @@ export function verifyBlocksSanityChecks(
     }
 
     // Block is relevant
-    relevantBlocks.push(block);
+    relevantBlocks.push(blockImport);
     parentSlots.push(parentBlockSlot);
   }
 

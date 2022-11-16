@@ -9,7 +9,7 @@ import type {BeaconChain} from "../chain.js";
 import {verifyBlocksInEpoch} from "./verifyBlock.js";
 import {importBlock} from "./importBlock.js";
 import {assertLinearChainSegment} from "./utils/chainSegment.js";
-import {FullyVerifiedBlock, ImportBlockOpts} from "./types.js";
+import {BlockImport, FullyVerifiedBlock, ImportBlockOpts} from "./types.js";
 import {verifyBlocksSanityChecks} from "./verifyBlocksSanityChecks.js";
 export {ImportBlockOpts} from "./types.js";
 
@@ -19,10 +19,10 @@ const QUEUE_MAX_LENGTH = 256;
  * BlockProcessor processes block jobs in a queued fashion, one after the other.
  */
 export class BlockProcessor {
-  readonly jobQueue: JobItemQueue<[allForks.SignedBeaconBlock[], ImportBlockOpts], void>;
+  readonly jobQueue: JobItemQueue<[BlockImport[], ImportBlockOpts], void>;
 
   constructor(chain: BeaconChain, metrics: IMetrics | null, opts: BlockProcessOpts, signal: AbortSignal) {
-    this.jobQueue = new JobItemQueue<[allForks.SignedBeaconBlock[], ImportBlockOpts], void>(
+    this.jobQueue = new JobItemQueue<[BlockImport[], ImportBlockOpts], void>(
       (job, importOpts) => {
         return processBlocks.call(chain, job, {...opts, ...importOpts});
       },
@@ -31,7 +31,7 @@ export class BlockProcessor {
     );
   }
 
-  async processBlocksJob(job: allForks.SignedBeaconBlock[], opts: ImportBlockOpts = {}): Promise<void> {
+  async processBlocksJob(job: BlockImport[], opts: ImportBlockOpts = {}): Promise<void> {
     await this.jobQueue.push(job, opts);
   }
 }
@@ -48,7 +48,7 @@ export class BlockProcessor {
  */
 export async function processBlocks(
   this: BeaconChain,
-  blocks: allForks.SignedBeaconBlock[],
+  blocks: BlockImport[],
   opts: BlockProcessOpts & ImportBlockOpts
 ): Promise<void> {
   if (blocks.length === 0) {

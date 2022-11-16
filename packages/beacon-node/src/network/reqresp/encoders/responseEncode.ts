@@ -95,9 +95,9 @@ export function getForkNameFromResponseBody<K extends Method>(
   protocol: Protocol,
   body: OutgoingResponseBodyByMethod[K] | IncomingResponseBodyByMethod[K]
 ): ForkName {
-  const requestTyped = {method: protocol.method, body} as ResponseTypedContainer;
+  const responseTyped = {method: protocol.method, body} as ResponseTypedContainer;
 
-  switch (requestTyped.method) {
+  switch (responseTyped.method) {
     case Method.Status:
     case Method.Goodbye:
     case Method.Ping:
@@ -106,7 +106,11 @@ export function getForkNameFromResponseBody<K extends Method>(
 
     case Method.BeaconBlocksByRange:
     case Method.BeaconBlocksByRoot:
-      return config.getForkName(requestTyped.body.slot);
+      return config.getForkName(responseTyped.body.slot);
+    case Method.BlobsSidecarsByRange:
+      return config.getForkName(responseTyped.body.beaconBlockSlot);
+    case Method.BeaconBlockAndBlobsSidecarByRoot:
+      return config.getForkName(responseTyped.body.beaconBlock.message.slot);
     case Method.LightClientBootstrap:
     case Method.LightClientUpdate:
     case Method.LightClientFinalityUpdate:

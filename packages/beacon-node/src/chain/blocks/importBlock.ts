@@ -1,5 +1,5 @@
 import {altair, ssz} from "@lodestar/types";
-import {MAX_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ForkSeq, MAX_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {toHexString} from "@chainsafe/ssz";
 import {
   CachedBeaconStateAltair,
@@ -48,7 +48,7 @@ export async function importBlock(
   fullyVerifiedBlock: FullyVerifiedBlock,
   opts: ImportBlockOpts
 ): Promise<void> {
-  const {block, postState, parentBlockSlot, executionStatus} = fullyVerifiedBlock;
+  const {block, blobs, postState, parentBlockSlot, executionStatus} = fullyVerifiedBlock;
   const pendingEvents = new PendingEvents(this.emitter);
 
   // - Observe attestations
@@ -305,7 +305,17 @@ export async function importBlock(
   // MUST happen before any other block is processed
   // This adds the state necessary to process the next block
   this.stateCache.add(postState);
+
   await this.db.block.add(block);
+
+  if (this.config.getForkSeq(block.message.slot) >= ForkSeq.eip4844) {
+    if (!blobs) {
+      throw Error("blobsSidecar not provided for block post eip4844");
+    }
+    await this.db.blobsSidecar.add(blobs);
+
+    // TODO EIP-4844: Prune old blobs
+  }
 
   // - head_tracker.register_block(block_root, parent_root, slot)
 

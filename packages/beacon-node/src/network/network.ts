@@ -8,10 +8,11 @@ import {ILogger, sleep} from "@lodestar/utils";
 import {ATTESTATION_SUBNET_COUNT, ForkName, ForkSeq, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {Discv5, ENR} from "@chainsafe/discv5";
 import {computeEpochAtSlot, computeTimeAtSlot} from "@lodestar/state-transition";
-import {allForks, altair, Epoch, RootHex} from "@lodestar/types";
+import {altair, Epoch, phase0} from "@lodestar/types";
 import {promiseAllMaybeAsync} from "../util/promises.js";
 import {IMetrics} from "../metrics/index.js";
 import {ChainEvent, IBeaconChain, IBeaconClock} from "../chain/index.js";
+import {BlockImport} from "../chain/blocks/types.js";
 import {INetworkOptions} from "./options.js";
 import {INetwork} from "./interface.js";
 import {IReqResp, IReqRespOptions, ReqResp, ReqRespHandlers} from "./reqresp/index.js";
@@ -196,19 +197,73 @@ export class Network implements INetwork {
     return this.peerManager.hasSomeConnectedPeer();
   }
 
-  async publishBeaconBlockMaybeBlobs(beaconBlock: allForks.SignedBeaconBlock): Promise<void> {
+  async publishBeaconBlockMaybeBlobs(beaconAndBlobs: BlockImport): Promise<void> {
     const fns: (() => Promise<unknown>)[] = [
       // Always publish on beacon topic
-      () => this.gossip.publishBeaconBlock(beaconBlock),
+      () => this.gossip.publishBeaconBlock(beaconAndBlobs.block),
     ];
 
     // TODO EIP-4844: Open question if broadcast to both block topic + block_and_blobs topic
-    if (this.config.getForkSeq(beaconBlock.message.slot) >= ForkSeq.eip4844) {
-      const blobsSidecar = this.chain.getBlobsSidecar(beaconBlock.message as eip4844.BeaconBlock);
-      fns.push(() => this.gossip.publishSignedBeaconBlockAndBlobsSidecar({beaconBlock, blobsSidecar}));
+    if (this.config.getForkSeq(beaconAndBlobs.block.message.slot) >= ForkSeq.eip4844) {
+      const {block, blobs} = beaconAndBlobs;
+      if (!blobs) {
+        throw Error("blobs not defined for post eip4844 block");
+      }
+      fns.push(() => this.gossip.publishSignedBeaconBlockAndBlobsSidecar({beaconBlock: block, blobsSidecar: blobs}));
     }
 
     await promiseAllMaybeAsync(fns);
+  }
+
+  async beaconBlocksMaybeBlobsByRange(
+    peerId: PeerId,
+    request: phase0.BeaconBlocksByRangeRequest
+  ): Promise<BlockImport[]> {
+    // TODO EIP-4844: Assumes all blocks in the same epoch
+    if (this.config.getForkSeq(request.startSlot) >= ForkSeq.eip4844) {
+      // TODO EIP-4844: Do two requests at once for blocks and blobs
+      const blocks = await this.reqResp.beaconBlocksByRange(peerId, request);
+      const blobsSidecars = await this.reqResp.blobsSidecarsByRange(peerId, request);
+      const blockImports: BlockImport[] = [];
+      for (let i = 0; i < blocks.length; i++) {
+        const block = blocks[i];
+        const blobsSidecar = blobsSidecars[i];
+
+        // TODO EIP-4844: Do more verification blob is for block
+        if (block.message.slot !== blobsSidecar.beaconBlockSlot) {
+          throw Error(`blob does not match block slot ${block.message.slot} != ${blobsSidecar.beaconBlockSlot}`);
+        }
+
+        blockImports.push({block, blobs: blobsSidecar});
+      }
+      return blockImports;
+    }
+
+    // Regular call
+    else {
+      const blocks = await this.reqResp.beaconBlocksByRange(peerId, request);
+      return blocks.map((block) => ({block, blobs: null}));
+    }
+  }
+
+  async beaconBlocksMaybeBlobsByRoot(
+    peerId: PeerId,
+    request: phase0.BeaconBlocksByRootRequest
+  ): Promise<BlockImport[]> {
+    // Assume all requests are post EIP-4844
+    if (this.config.getForkSeq(this.chain.forkChoice.getFinalizedBlock().slot) >= ForkSeq.eip4844) {
+      const blocksAndBlobs = await this.reqResp.beaconBlockAndBlobsSidecarByRoot(peerId, request);
+      return blocksAndBlobs.map(({beaconBlock, blobsSidecar}) => ({block: beaconBlock, blobs: blobsSidecar}));
+    }
+
+    // Assume all request are pre EIP-4844
+    if (this.config.getForkSeq(this.clock.currentSlot) < ForkSeq.eip4844) {
+      const blocks = await this.reqResp.beaconBlocksByRoot(peerId, request);
+      return blocks.map((block) => ({block, blobs: null}));
+    }
+
+    // Consider blocks may be post or pre EIP-4844
+    // TODO EIP-4844: Request either blocks, or blocks+blobs
   }
 
   /**

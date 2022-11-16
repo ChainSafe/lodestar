@@ -21,11 +21,13 @@ export function renderRequestBody(method: Method, requestBody: RequestBody): str
     case Method.LightClientOptimisticUpdate:
       return "null";
 
+    case Method.BlobsSidecarsByRange:
     case Method.BeaconBlocksByRange: {
       const range = requestBody as RequestBodyByMethod[Method.BeaconBlocksByRange];
-      return `${range.startSlot},${range.step},${range.count}`;
+      return `${range.startSlot},${range.count}`;
     }
 
+    case Method.BeaconBlockAndBlobsSidecarByRoot:
     case Method.BeaconBlocksByRoot:
       return ((requestBody as RequestBodyByMethod[Method.BeaconBlocksByRoot]) as Uint8Array[])
         .map((root) => toHexString(root))

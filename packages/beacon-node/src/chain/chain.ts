@@ -63,6 +63,7 @@ import {CheckpointBalancesCache} from "./balancesCache.js";
 import {AssembledBlockType, BlockType} from "./produceBlock/index.js";
 import {BlobsResultType, BlockAttributes, produceBlockBody} from "./produceBlock/produceBlockBody.js";
 import {computeNewStateRoot} from "./produceBlock/computeNewStateRoot.js";
+import {BlockImport} from "./blocks/types.js";
 
 export class BeaconChain implements IBeaconChain {
   readonly genesisTime: UintNum64;
@@ -119,6 +120,7 @@ export class BeaconChain implements IBeaconChain {
   private successfulExchangeTransition = false;
   private readonly exchangeTransitionConfigurationEverySlots: number;
 
+  // TODO EIP-4844: Prune data structure every time period, for both old entries
   /** Map keyed by executionPayload.blockHash of the block for those blobs */
   private readonly producedBlobsCache = new Map<RootHex, eip4844.Blobs>();
 
@@ -384,6 +386,7 @@ export class BeaconChain implements IBeaconChain {
 
     // Cache for latter broadcasting
     if (blobs.type === BlobsResultType.produced) {
+      // TODO EIP-4844: Prune data structure for max entries
       this.producedBlobsCache.set(blobs.blockHash, blobs.blobs);
     }
 
@@ -416,11 +419,11 @@ export class BeaconChain implements IBeaconChain {
     };
   }
 
-  async processBlock(block: allForks.SignedBeaconBlock, opts?: ImportBlockOpts): Promise<void> {
+  async processBlock(block: BlockImport, opts?: ImportBlockOpts): Promise<void> {
     return await this.blockProcessor.processBlocksJob([block], opts);
   }
 
-  async processChainSegment(blocks: allForks.SignedBeaconBlock[], opts?: ImportBlockOpts): Promise<void> {
+  async processChainSegment(blocks: BlockImport[], opts?: ImportBlockOpts): Promise<void> {
     return await this.blockProcessor.processBlocksJob(blocks, opts);
   }
 

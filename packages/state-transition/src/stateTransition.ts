@@ -38,6 +38,7 @@ export type StateTransitionOpts = EpochProcessOpts & {
 export function stateTransition(
   state: CachedBeaconStateAllForks,
   signedBlock: allForks.FullOrBlindedSignedBeaconBlock,
+  // TODO EIP-4844: Consider merging BlockExternalData and StateTransitionOpts into a mandatory object, that makes sense
   externalData: BlockExternalData,
   options?: StateTransitionOpts,
   metrics?: IBeaconStateTransitionMetrics | null

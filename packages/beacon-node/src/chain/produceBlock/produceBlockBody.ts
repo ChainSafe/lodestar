@@ -179,7 +179,7 @@ export async function produceBlockBody<T extends BlockType>(
       if (forkName === ForkName.eip4844) {
         // Empty blobs for now
         (blockBody as eip4844.BeaconBlockBody).blobKzgCommitments = [];
-        blobs = {blobs: [], blockHash: executionPayloadHeader.blockHash};
+        blobs = {blobs: [], blockHash: toHex(executionPayloadHeader.blockHash)};
       }
     }
 
