@@ -222,6 +222,11 @@ export class Lightclient {
 
     // Fetch bootstrap state with proof at the trusted block root
     const {data: bootstrapStateWithProof} = await transport.getBootstrap(toHexString(checkpointRoot));
+
+    if (bootstrapStateWithProof === undefined) {
+      throw new Error("Snapshot not found");
+    }
+
     const {header, currentSyncCommittee, currentSyncCommitteeBranch} = bootstrapStateWithProof;
 
     // verify the response matches the requested root
@@ -342,9 +347,11 @@ export class Lightclient {
         // Don't retry, this is a non-critical UX improvement
         try {
           const {data: latestOptimisticUpdate} = await this.transport.getOptimisticUpdate();
-          this.processOptimisticUpdate(latestOptimisticUpdate);
+          if (latestOptimisticUpdate !== undefined) {
+            this.processOptimisticUpdate(latestOptimisticUpdate);
+          }
         } catch (e) {
-          this.logger.error("Error fetching getLatestHeadUpdate", {currentPeriod}, e as Error);
+          this.logger.error("Error fetching getLatestOptimisticUpdate", {currentPeriod}, e as Error);
         }
       }
 

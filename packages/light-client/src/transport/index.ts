@@ -1,9 +1,15 @@
 import EventEmitter from "events";
 import StrictEventEmitter from "strict-event-emitter-types";
-import {allForks, altair, Root, SyncPeriod} from "@lodestar/types";
+import {allForks, altair, Root, ssz, SyncPeriod} from "@lodestar/types";
 import {Api, routes} from "@lodestar/api";
-import {JsonPath, toHexString} from "@chainsafe/ssz";
+import {fromHexString, JsonPath, toHexString} from "@chainsafe/ssz";
 import {Proof} from "@chainsafe/persistent-merkle-tree";
+import {GossipType, INetwork} from "@lodestar/beacon-node/network";
+import {PeerSet} from "@lodestar/beacon-node/util/peerMap";
+import {GossipsubEvents} from "@chainsafe/libp2p-gossipsub";
+import {ForkName} from "@lodestar/params";
+import {DEFAULT_ENCODING} from "@lodestar/beacon-node/network/gossip/constants";
+import {IBeaconConfig} from "@lodestar/config";
 
 export enum EventType {
   /**
@@ -40,14 +46,14 @@ export interface LightClientTransport {
    * Returns the latest optimistic head update available. Clients should use the SSE type `light_client_optimistic_update`
    * unless to get the very first head update after syncing, or if SSE are not supported by the server.
    */
-  getOptimisticUpdate(): Promise<{data: altair.LightClientOptimisticUpdate}>;
-  getFinalityUpdate(): Promise<{data: altair.LightClientFinalityUpdate}>;
+  getOptimisticUpdate(): Promise<{data: altair.LightClientOptimisticUpdate | undefined}>;
+  getFinalityUpdate(): Promise<{data: altair.LightClientFinalityUpdate | undefined}>;
   /**
    * Fetch a bootstrapping state with a proof to a trusted block root.
    * The trusted block root should be fetched with similar means to a weak subjectivity checkpoint.
    * Only block roots for checkpoints are guaranteed to be available.
    */
-  getBootstrap(blockRoot: string): Promise<{data: altair.LightClientBootstrap}>;
+  getBootstrap(blockRoot: string): Promise<{data: altair.LightClientBootstrap | undefined}>;
 
   /**
    * For fetching the block when updating the EL
@@ -59,14 +65,11 @@ export interface LightClientTransport {
   onOptimisticUpdate(handler: (optimisticUpdate: altair.LightClientOptimisticUpdate) => void): void;
   // registers handler for LightClientFinalityUpdate. This can come either via sse or p2p
   onFinalityUpdate(handler: (finalityUpdate: altair.LightClientFinalityUpdate) => void): void;
-  // registers handler for LightClientUpdate. This can come either via sse or p2p
-  onUpdate(handler: (lightclietUpdate: altair.LightClientUpdate) => void): void;
 }
 
 export type LightClientRestEvents = {
   [EventType.lightClientUpdate]: altair.LightClientUpdate;
   [EventType.lightClientOptimisticUpdate]: altair.LightClientOptimisticUpdate;
-  [EventType.lightClientFinalityUpdate]: altair.LightClientFinalityUpdate;
 };
 
 // export class ChainEventEmitter extends (EventEmitter as {new (): StrictEventEmitter<EventEmitter, IChainEvents>}) {}
@@ -128,11 +131,128 @@ export class LightClientRestTransport extends (EventEmitter as {new (): RestEven
       finalityHandler
     );
   }
+}
 
-  onUpdate(handler: (lightClietUpdate: altair.LightClientUpdate) => void): void {
-    const updateHandler = (event: routes.events.BeaconEvent): void => {
-      handler(event.message as altair.LightClientUpdate);
+export class LightClientGossipTransport implements LightClientTransport {
+  private stateGetterFn: StateGetterFn;
+  private readonly network: INetwork;
+  private peers = new PeerSet();
+  private readonly config: IBeaconConfig;
+
+  constructor(network: INetwork, config: IBeaconConfig, stateGetterFn: StateGetterFn) {
+    this.network = network;
+    this.config = config;
+    this.stateGetterFn = stateGetterFn;
+  }
+
+  async fetchBlock(blockRoot: string): Promise<{data: allForks.SignedBeaconBlock | undefined}> {
+    let data: allForks.SignedBeaconBlock | undefined;
+    for (const peer of this.peers.values()) {
+      try {
+        [data] = await this.network.reqResp.beaconBlocksByRoot(peer, [fromHexString(blockRoot)]);
+      } catch (e) {
+        // log
+      }
+      // we have the data, stop attempting to fetch
+      if (data !== undefined) {
+        break;
+      }
+    }
+    return {data};
+  }
+
+  async getBootstrap(blockRoot: string): Promise<{data: altair.LightClientBootstrap | undefined}> {
+    let data: altair.LightClientBootstrap | undefined;
+    for (const peer of this.peers.values()) {
+      try {
+        data = await this.network.reqResp.lightClientBootstrap(peer, fromHexString(blockRoot));
+      } catch (e) {
+        // log error
+      }
+      // we have the requested data, stop attempting to fetch
+      if (data !== undefined) {
+        break;
+      }
+    }
+
+    return {data};
+  }
+
+  async getFinalityUpdate(): Promise<{data: altair.LightClientFinalityUpdate | undefined}> {
+    let data: altair.LightClientFinalityUpdate | undefined;
+    for (const peer of this.peers.values()) {
+      try {
+        data = await this.network.reqResp.lightClientFinalityUpdate(peer);
+      } catch (e) {
+        // log error
+      }
+      // we have the data, stop attempting to fetch
+      if (data !== undefined) {
+        break;
+      }
+    }
+    return {data};
+  }
+
+  async getOptimisticUpdate(): Promise<{data: altair.LightClientOptimisticUpdate | undefined}> {
+    let data: altair.LightClientOptimisticUpdate | undefined;
+    for (const peer of this.peers.values()) {
+      try {
+        data = await this.network.reqResp.lightClientOptimisticUpdate(peer);
+      } catch (e) {
+        // log error
+      }
+      // we have the data, stop attempting to fetch
+      if (data !== undefined) {
+        break;
+      }
+    }
+    return {data};
+  }
+
+  getStateProof(stateId: string, jsonPaths: JsonPath[]): Promise<{data: Proof}> {
+    return this.stateGetterFn(stateId, jsonPaths);
+  }
+
+  async getUpdates(startPeriod: SyncPeriod, count: number): Promise<{data: altair.LightClientUpdate[]}> {
+    let data: altair.LightClientUpdate[] = [];
+    for (const peer of this.peers.values()) {
+      try {
+        data = await this.network.reqResp.lightClientUpdate(peer, {startPeriod, count});
+      } catch (e) {
+        // log errr
+      }
+      // we have the data, stop attempting to fetch
+      if (data.length !== 0) {
+        break;
+      }
+    }
+    return {data};
+  }
+
+  onFinalityUpdate(handler: (finalityUpdate: altair.LightClientFinalityUpdate) => void): void {
+    const updateHandler = (event: GossipsubEvents["gossipsub:message"]): void => {
+      const {msg} = event.detail;
+      const forkDigestHex = this.config.forkName2ForkDigestHex(ForkName.bellatrix);
+      const finalityUpdateTopic = `/eth2/${forkDigestHex}/${GossipType.light_client_finality_update}/${DEFAULT_ENCODING}`;
+      if (msg.type === finalityUpdateTopic) {
+        const finalityUpdate = ssz.altair.LightClientFinalityUpdate.deserialize(msg.data);
+        handler(finalityUpdate);
+      }
     };
-    this.api.events.eventstream([routes.events.EventType.lightClientUpdate], this.controller.signal, updateHandler);
+    this.network.gossip.addEventListener("gossipsub:message", updateHandler);
+  }
+
+  onOptimisticUpdate(handler: (optimisticUpdate: altair.LightClientOptimisticUpdate) => void): void {
+    const updateHandler = (event: GossipsubEvents["gossipsub:message"]): void => {
+      const {msg} = event.detail;
+      const forkDigestHex = this.config.forkName2ForkDigestHex(ForkName.bellatrix);
+      const optimisiticUpdateTopic = `/eth2/${forkDigestHex}/${GossipType.light_client_optimistic_update}/${DEFAULT_ENCODING}`;
+      if (msg.type === optimisiticUpdateTopic) {
+        const optimisticUpdate = ssz.altair.LightClientOptimisticUpdate.deserialize(msg.data);
+        handler(optimisticUpdate);
+      }
+    };
+    this.network.gossip.addEventListener("gossipsub:message", updateHandler);
   }
 }
