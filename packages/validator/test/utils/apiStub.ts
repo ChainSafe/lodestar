@@ -18,6 +18,7 @@ export function getApiClientStub(
     lightclient: sandbox.stub(api.lightclient),
     lodestar: sandbox.stub(api.lodestar),
     node: sandbox.stub(api.node),
+    proofs: sandbox.stub(api.proofs),
     validator: sandbox.stub(api.validator),
   };
 }
