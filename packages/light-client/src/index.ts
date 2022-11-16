@@ -37,6 +37,7 @@ export type LightclientInitArgs = {
   snapshot: {
     header: phase0.BeaconBlockHeader;
     currentSyncCommittee: altair.SyncCommittee;
+    block?: allForks.SignedBeaconBlock;
   };
 };
 
@@ -175,21 +176,8 @@ export class Lightclient {
       participation: 0,
       header: snapshot.header,
       blockRoot: headerBlockRoot,
+      block: snapshot.block,
     };
-
-    // fetch block only if configured to update EL
-    if (this.executionEngine) {
-      this.transport
-        .fetchBlock(headerBlockRoot)
-        .then((result) => {
-          if (result !== undefined) {
-            this.head.block = result.data;
-          }
-        })
-        .catch((error: Error) => {
-          this.logger.error("error fetching block", {}, error);
-        });
-    }
   }
 
   // Embed lightweight clock. The epoch cycles are handled with `this.runLoop()`
@@ -243,13 +231,28 @@ export class Lightclient {
       throw Error("Snapshot sync committees proof does not match trusted checkpoint");
     }
 
+    let block: allForks.SignedBeaconBlock | undefined;
+    // fetch block only if configured to update EL
+    if (executionEngine) {
+      try {
+        block = (await transport.fetchBlock(toHexString(headerRoot))).data;
+      } catch (e) {
+        // for gossip transport it is possible node has no peer with the data yet
+        // so don't throw on initialize
+        logger?.warn("attempt to fetch checkpoint block failed", {}, e as Error);
+      }
+    }
+
     return new Lightclient(
       {
         config,
         logger,
         beaconApiUrl,
         genesisData,
-        snapshot: bootstrapStateWithProof,
+        snapshot: {
+          ...bootstrapStateWithProof,
+          ...block,
+        },
       },
       {executionEngine, transport}
     );
