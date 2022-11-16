@@ -2,13 +2,13 @@ import {ssz, allForks} from "@lodestar/types";
 import {toHexString, byteArrayEquals} from "@chainsafe/ssz";
 import {CachedBeaconStateBellatrix, CachedBeaconStateCapella} from "../types.js";
 import {getRandaoMix} from "../util/index.js";
-import {ExecutionEngine} from "../util/executionEngine.js";
 import {isExecutionPayload, isMergeTransitionComplete, isCapellaPayload} from "../util/execution.js";
+import {BlockExternalData, ExecutionPayloadStatus} from "./externalData.js";
 
 export function processExecutionPayload(
   state: CachedBeaconStateBellatrix | CachedBeaconStateCapella,
   payload: allForks.FullOrBlindedExecutionPayload,
-  executionEngine: ExecutionEngine | null
+  externalData: BlockExternalData
 ): void {
   // Verify consistency of the parent hash, block number, base fee per gas and gas limit
   // with respect to the previous execution payload header
@@ -46,8 +46,17 @@ export function processExecutionPayload(
   // if executionEngine is null, executionEngine.onPayload MUST be called after running processBlock to get the
   // correct randao mix. Since executionEngine will be an async call in most cases it is called afterwards to keep
   // the state transition sync
-  if (isExecutionPayload(payload) && executionEngine && !executionEngine.notifyNewPayload(payload)) {
-    throw Error("Invalid execution payload");
+  //
+  // Equivalent to `assert executionEngine.notifyNewPayload(payload)`
+  if (isExecutionPayload(payload)) {
+    switch (externalData.executionPayloadStatus) {
+      case ExecutionPayloadStatus.preMerge:
+        throw Error("executionPayloadStatus preMerge");
+      case ExecutionPayloadStatus.invalid:
+        throw Error("Invalid execution payload");
+      case ExecutionPayloadStatus.valid:
+        break; // ok
+    }
   }
 
   const transactionsRoot = isExecutionPayload(payload)

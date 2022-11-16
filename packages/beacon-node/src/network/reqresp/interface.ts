@@ -2,7 +2,7 @@ import {Libp2p} from "libp2p";
 import {PeerId} from "@libp2p/interface-peer-id";
 import {ForkName} from "@lodestar/params";
 import {IBeaconConfig} from "@lodestar/config";
-import {allForks, altair, phase0} from "@lodestar/types";
+import {allForks, altair, eip4844, phase0} from "@lodestar/types";
 import {ILogger} from "@lodestar/utils";
 import {IPeerRpcScoreStore} from "../peers/index.js";
 import {MetadataController} from "../metadata.js";
@@ -24,6 +24,19 @@ export interface IReqResp {
     request: phase0.BeaconBlocksByRangeRequest
   ): Promise<allForks.SignedBeaconBlock[]>;
   beaconBlocksByRoot(peerId: PeerId, request: phase0.BeaconBlocksByRootRequest): Promise<allForks.SignedBeaconBlock[]>;
+  /**
+   * Requests blocks by block root (= hash_tree_root(SignedBeaconBlockAndBlobsSidecar.beacon_block.message))
+   *
+   * BeaconBlockAndBlobsSidecarByRoot is primarily used to recover recent blocks and sidecars (e.g. when receiving a
+   * block or attestation whose parent is unknown)
+   *
+   * https://github.com/ethereum/consensus-specs/blob/11a037fd9227e29ee809c9397b09f8cc3383a8c0/specs/eip4844/p2p-interface.md#beaconblockandblobssidecarbyroot-v1
+   */
+  beaconBlockAndBlobsSidecarByRoot(
+    peerId: PeerId,
+    request: eip4844.BeaconBlockAndBlobsSidecarByRootRequest
+  ): Promise<eip4844.SignedBeaconBlockAndBlobsSidecar[]>;
+  blobsSidecarsByRange(peerId: PeerId, request: eip4844.BlobsSidecarsByRangeRequest): Promise<eip4844.BlobsSidecar[]>;
   pruneOnPeerDisconnect(peerId: PeerId): void;
   lightClientBootstrap(peerId: PeerId, request: Uint8Array): Promise<altair.LightClientBootstrap>;
   lightClientOptimisticUpdate(peerId: PeerId): Promise<altair.LightClientOptimisticUpdate>;

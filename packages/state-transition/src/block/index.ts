@@ -1,8 +1,7 @@
 import {ForkSeq} from "@lodestar/params";
 import {allForks, altair, eip4844} from "@lodestar/types";
-import {ExecutionEngine} from "../util/executionEngine.js";
 import {getFullOrBlindedPayload, isExecutionEnabled} from "../util/execution.js";
-import {CachedBeaconStateAllForks, CachedBeaconStateBellatrix, CachedBeaconStateEip4844} from "../types.js";
+import {CachedBeaconStateAllForks, CachedBeaconStateBellatrix} from "../types.js";
 import {processExecutionPayload} from "./processExecutionPayload.js";
 import {processSyncAggregate} from "./processSyncCommittee.js";
 import {processBlockHeader} from "./processBlockHeader.js";
@@ -10,6 +9,7 @@ import {processEth1Data} from "./processEth1Data.js";
 import {processOperations} from "./processOperations.js";
 import {processRandao} from "./processRandao.js";
 import {processBlobKzgCommitments} from "./processBlobKzgCommitments.js";
+import {BlockExternalData, DataAvailableStatus} from "./externalData.js";
 
 // Spec tests
 export {processBlockHeader, processExecutionPayload, processRandao, processEth1Data, processSyncAggregate};
@@ -17,13 +17,14 @@ export * from "./processOperations.js";
 
 export * from "./initiateValidatorExit.js";
 export * from "./isValidIndexedAttestation.js";
+export * from "./externalData.js";
 
 export function processBlock(
   fork: ForkSeq,
   state: CachedBeaconStateAllForks,
   block: allForks.FullOrBlindedBeaconBlock,
-  verifySignatures = true,
-  executionEngine: ExecutionEngine | null
+  externalData: BlockExternalData,
+  verifySignatures = true
 ): void {
   processBlockHeader(state, block);
 
@@ -33,7 +34,7 @@ export function processBlock(
     const fullOrBlindedPayload = getFullOrBlindedPayload(block);
 
     if (isExecutionEnabled(state as CachedBeaconStateBellatrix, block)) {
-      processExecutionPayload(state as CachedBeaconStateBellatrix, fullOrBlindedPayload, executionEngine);
+      processExecutionPayload(state as CachedBeaconStateBellatrix, fullOrBlindedPayload, externalData);
     }
   }
 
@@ -49,6 +50,15 @@ export function processBlock(
 
     // New in EIP-4844, note: Can sync optimistically without this condition, see note on `is_data_available`
     // NOTE: Ommitted and should be verified beforehand
+
     // assert is_data_available(block.slot, hash_tree_root(block), block.body.blob_kzg_commitments)
+    switch (externalData.dataAvailableStatus) {
+      case DataAvailableStatus.preEIP4844:
+        throw Error("dataAvailableStatus preEIP4844");
+      case DataAvailableStatus.notAvailable:
+        throw Error("dataAvailableStatus notAvailable");
+      case DataAvailableStatus.available:
+        break; // ok
+    }
   }
 }

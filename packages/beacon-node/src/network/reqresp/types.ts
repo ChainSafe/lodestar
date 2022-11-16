@@ -1,5 +1,5 @@
 import {ForkName} from "@lodestar/params";
-import {allForks, phase0, ssz, Slot, altair, Root} from "@lodestar/types";
+import {allForks, phase0, ssz, Slot, altair, Root, eip4844} from "@lodestar/types";
 
 export const protocolPrefix = "/eth2/beacon_chain/req";
 
@@ -12,6 +12,8 @@ export enum Method {
   Metadata = "metadata",
   BeaconBlocksByRange = "beacon_blocks_by_range",
   BeaconBlocksByRoot = "beacon_blocks_by_root",
+  BeaconBlockAndBlobsSidecarByRoot = "beacon_block_and_blobs_sidecar_by_root",
+  BlobsSidecarsByRange = "blobs_sidecars_by_range",
   LightClientBootstrap = "light_client_bootstrap",
   LightClientUpdate = "light_client_updates_by_range",
   LightClientFinalityUpdate = "light_client_finality_update",
@@ -48,6 +50,7 @@ export const protocolsSupported: [Method, Version, Encoding][] = [
   [Method.BeaconBlocksByRange, Version.V2, Encoding.SSZ_SNAPPY],
   [Method.BeaconBlocksByRoot, Version.V1, Encoding.SSZ_SNAPPY],
   [Method.BeaconBlocksByRoot, Version.V2, Encoding.SSZ_SNAPPY],
+  // TODO EIP-4844: Wait to have control on when this routes are available
   [Method.LightClientBootstrap, Version.V1, Encoding.SSZ_SNAPPY],
   [Method.LightClientUpdate, Version.V1, Encoding.SSZ_SNAPPY],
   [Method.LightClientFinalityUpdate, Version.V1, Encoding.SSZ_SNAPPY],
@@ -61,6 +64,8 @@ export const isSingleResponseChunkByMethod: {[K in Method]: boolean} = {
   [Method.Metadata]: true,
   [Method.BeaconBlocksByRange]: false, // A stream, 0 or more response chunks
   [Method.BeaconBlocksByRoot]: false,
+  [Method.BlobsSidecarsByRange]: false,
+  [Method.BeaconBlockAndBlobsSidecarByRoot]: false,
   [Method.LightClientBootstrap]: true,
   [Method.LightClientUpdate]: false,
   [Method.LightClientFinalityUpdate]: true,
@@ -87,6 +92,8 @@ export function contextBytesTypeByProtocol(protocol: Protocol): ContextBytesType
     case Method.LightClientUpdate:
     case Method.LightClientFinalityUpdate:
     case Method.LightClientOptimisticUpdate:
+    case Method.BlobsSidecarsByRange:
+    case Method.BeaconBlockAndBlobsSidecarByRoot:
       return ContextBytesType.ForkDigest;
     case Method.BeaconBlocksByRange:
     case Method.BeaconBlocksByRoot:
@@ -121,6 +128,10 @@ export function getRequestSzzTypeByMethod(method: Method) {
       return ssz.Root;
     case Method.LightClientUpdate:
       return ssz.altair.LightClientUpdatesByRange;
+    case Method.BlobsSidecarsByRange:
+      return ssz.eip4844.BlobsSidecarsByRangeRequest;
+    case Method.BeaconBlockAndBlobsSidecarByRoot:
+      return ssz.eip4844.BeaconBlockAndBlobsSidecarByRootRequest;
   }
 }
 
@@ -131,6 +142,8 @@ export type RequestBodyByMethod = {
   [Method.Metadata]: null;
   [Method.BeaconBlocksByRange]: phase0.BeaconBlocksByRangeRequest;
   [Method.BeaconBlocksByRoot]: phase0.BeaconBlocksByRootRequest;
+  [Method.BlobsSidecarsByRange]: eip4844.BlobsSidecarsByRangeRequest;
+  [Method.BeaconBlockAndBlobsSidecarByRoot]: eip4844.BeaconBlockAndBlobsSidecarByRootRequest;
   [Method.LightClientBootstrap]: Root;
   [Method.LightClientUpdate]: altair.LightClientUpdatesByRange;
   [Method.LightClientFinalityUpdate]: null;
@@ -156,6 +169,10 @@ export function getResponseSzzTypeByMethod(protocol: Protocol, forkName: ForkNam
     case Method.BeaconBlocksByRoot:
       // SignedBeaconBlock type is changed in altair
       return ssz[forkName].SignedBeaconBlock;
+    case Method.BlobsSidecarsByRange:
+      return ssz.eip4844.BlobsSidecar;
+    case Method.BeaconBlockAndBlobsSidecarByRoot:
+      return ssz.eip4844.SignedBeaconBlockAndBlobsSidecar;
     case Method.LightClientBootstrap:
       return ssz.altair.LightClientBootstrap;
     case Method.LightClientUpdate:
@@ -184,6 +201,11 @@ export function getOutgoingSerializerByMethod(protocol: Protocol): OutgoingSeria
     case Method.BeaconBlocksByRange:
     case Method.BeaconBlocksByRoot:
       return reqRespBlockResponseSerializer;
+    // TODO EIP-4844: Optimize responding bytes
+    case Method.BlobsSidecarsByRange:
+      return ssz.eip4844.BlobsSidecar;
+    case Method.BeaconBlockAndBlobsSidecarByRoot:
+      return ssz.eip4844.SignedBeaconBlockAndBlobsSidecar;
     case Method.LightClientBootstrap:
       return ssz.altair.LightClientBootstrap;
     case Method.LightClientUpdate:
@@ -211,12 +233,16 @@ type CommonResponseBodyByMethod = {
 export type OutgoingResponseBodyByMethod = CommonResponseBodyByMethod & {
   [Method.BeaconBlocksByRange]: ReqRespBlockResponse;
   [Method.BeaconBlocksByRoot]: ReqRespBlockResponse;
+  [Method.BlobsSidecarsByRange]: eip4844.BlobsSidecar;
+  [Method.BeaconBlockAndBlobsSidecarByRoot]: eip4844.SignedBeaconBlockAndBlobsSidecar;
 };
 
 // p2p protocol in the spec
 export type IncomingResponseBodyByMethod = CommonResponseBodyByMethod & {
   [Method.BeaconBlocksByRange]: allForks.SignedBeaconBlock;
   [Method.BeaconBlocksByRoot]: allForks.SignedBeaconBlock;
+  [Method.BlobsSidecarsByRange]: eip4844.BlobsSidecar;
+  [Method.BeaconBlockAndBlobsSidecarByRoot]: eip4844.SignedBeaconBlockAndBlobsSidecar;
 };
 
 // Helper types to generically define the arguments of the encoder functions

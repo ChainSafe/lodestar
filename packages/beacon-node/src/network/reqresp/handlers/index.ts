@@ -1,9 +1,11 @@
-import {altair, phase0, Root} from "@lodestar/types";
+import {altair, eip4844, phase0, Root} from "@lodestar/types";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
 import {ReqRespBlockResponse} from "../types.js";
 import {onBeaconBlocksByRange} from "./beaconBlocksByRange.js";
 import {onBeaconBlocksByRoot} from "./beaconBlocksByRoot.js";
+import {onBeaconBlockAndBlobsSidecarByRoot} from "./beaconBlockAndBlobsSidecarByRoot.js";
+import {onBlobsSidecarsByRange} from "./blobsSidecarsByRange.js";
 import {onLightClientBootstrap} from "./lightClientBootstrap.js";
 import {onLightClientUpdatesByRange} from "./lightClientUpdatesByRange.js";
 import {onLightClientFinalityUpdate} from "./lightClientFinalityUpdate.js";
@@ -13,6 +15,10 @@ export type ReqRespHandlers = {
   onStatus(): AsyncIterable<phase0.Status>;
   onBeaconBlocksByRange(req: phase0.BeaconBlocksByRangeRequest): AsyncIterable<ReqRespBlockResponse>;
   onBeaconBlocksByRoot(req: phase0.BeaconBlocksByRootRequest): AsyncIterable<ReqRespBlockResponse>;
+  onBeaconBlockAndBlobsSidecarByRoot(
+    req: eip4844.BeaconBlockAndBlobsSidecarByRootRequest
+  ): AsyncIterable<ReqRespBlockResponse>;
+  onBlobsSidecarsByRange(req: eip4844.BlobsSidecarsByRangeRequest): AsyncIterable<ReqRespBlockResponse>;
   onLightClientBootstrap(req: Root): AsyncIterable<altair.LightClientBootstrap>;
   onLightClientUpdatesByRange(req: altair.LightClientUpdatesByRange): AsyncIterable<altair.LightClientUpdate>;
   onLightClientFinalityUpdate(): AsyncIterable<altair.LightClientFinalityUpdate>;
@@ -33,6 +39,12 @@ export function getReqRespHandlers({db, chain}: {db: IBeaconDb; chain: IBeaconCh
     },
     async *onBeaconBlocksByRoot(req) {
       yield* onBeaconBlocksByRoot(req, chain, db);
+    },
+    async *onBeaconBlockAndBlobsSidecarByRoot(req) {
+      yield* onBeaconBlockAndBlobsSidecarByRoot(req, chain, db);
+    },
+    async *onBlobsSidecarsByRange(req) {
+      yield* onBlobsSidecarsByRange(req, chain, db);
     },
     async *onLightClientBootstrap(req) {
       yield* onLightClientBootstrap(req, chain);

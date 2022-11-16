@@ -1,5 +1,10 @@
 import {ContainerType, ListCompositeType, ByteVectorType} from "@chainsafe/ssz";
-import {HISTORICAL_ROOTS_LIMIT, FIELD_ELEMENTS_PER_BLOB, MAX_BLOBS_PER_BLOCK} from "@lodestar/params";
+import {
+  HISTORICAL_ROOTS_LIMIT,
+  FIELD_ELEMENTS_PER_BLOB,
+  MAX_BLOBS_PER_BLOCK,
+  MAX_REQUEST_BLOCKS,
+} from "@lodestar/params";
 import {ssz as primitiveSsz} from "../primitive/index.js";
 import {ssz as phase0Ssz} from "../phase0/index.js";
 import {ssz as altairSsz} from "../altair/index.js";
@@ -18,6 +23,7 @@ export const BLSFieldElement = Bytes32;
 export const KZGCommitment = Bytes48;
 export const KZGProof = Bytes48;
 
+// TODO EIP-4844: Not sure where these should go
 const BYTES_PER_FIELD_ELEMENT = 32;
 
 // Beacon chain
@@ -30,13 +36,7 @@ export const Blobs = new ListCompositeType(Blob, MAX_BLOBS_PER_BLOCK);
 export const VersionedHash = Bytes32;
 export const BlobKzgCommitments = new ListCompositeType(KZGCommitment, MAX_BLOBS_PER_BLOCK);
 
-const excessDataGas = UintBn256;
-
 // Constants
-
-// TODO EIP-4844: Not sure where these should go
-// export const BLOB_TX_TYPE	uint8(0x05)
-// VERSIONED_HASH_VERSION_KZG	Bytes1(0x01)
 
 // Validator types
 // https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/validator.md
@@ -66,13 +66,26 @@ export const PolynomialAndCommitment = new ContainerType(
   {typeName: "PolynomialAndCommitment", jsonCase: "eth2"}
 );
 
+// ReqResp types
+// =============
+
+export const BlobsSidecarsByRangeRequest = new ContainerType(
+  {
+    startSlot: Slot,
+    count: UintNum64,
+  },
+  {typeName: "BlobsSidecarsByRangeRequest", jsonCase: "eth2"}
+);
+
+export const BeaconBlockAndBlobsSidecarByRootRequest = new ListCompositeType(Root, MAX_REQUEST_BLOCKS);
+
 // Beacon Chain types
 // https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/beacon-chain.md#containers
 
 export const ExecutionPayload = new ContainerType(
   {
     ...capellaSsz.ExecutionPayload.fields,
-    excessDataGas, // New in EIP-4844
+    excessDataGas: UintBn256, // New in EIP-4844
   },
   {typeName: "ExecutionPayload", jsonCase: "eth2"}
 );
@@ -80,7 +93,7 @@ export const ExecutionPayload = new ContainerType(
 export const ExecutionPayloadHeader = new ContainerType(
   {
     ...capellaSsz.ExecutionPayloadHeader.fields,
-    excessDataGas, // New in EIP-4844
+    excessDataGas: UintBn256, // New in EIP-4844
   },
   {typeName: "ExecutionPayloadHeader", jsonCase: "eth2"}
 );

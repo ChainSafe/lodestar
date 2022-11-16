@@ -22,6 +22,7 @@ import {
 } from "./slot/index.js";
 import {processBlock} from "./block/index.js";
 import {processEpoch} from "./epoch/index.js";
+import {BlockExternalData} from "./block/externalData.js";
 
 // Multifork capable state transition
 
@@ -37,6 +38,7 @@ export type StateTransitionOpts = EpochProcessOpts & {
 export function stateTransition(
   state: CachedBeaconStateAllForks,
   signedBlock: allForks.FullOrBlindedSignedBeaconBlock,
+  externalData: BlockExternalData,
   options?: StateTransitionOpts,
   metrics?: IBeaconStateTransitionMetrics | null
 ): CachedBeaconStateAllForks {
@@ -67,7 +69,7 @@ export function stateTransition(
 
   const timer = metrics?.stfnProcessBlock.startTimer();
   try {
-    processBlock(fork, postState, block, verifySignatures, null);
+    processBlock(fork, postState, block, externalData, verifySignatures);
   } finally {
     timer?.();
   }

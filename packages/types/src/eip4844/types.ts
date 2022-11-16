@@ -11,6 +11,9 @@ export type Polynomial = ValueOf<typeof ssz.Polynomial>;
 export type PolynomialAndCommitment = ValueOf<typeof ssz.PolynomialAndCommitment>;
 export type BLSFieldElement = ValueOf<typeof ssz.BLSFieldElement>;
 
+export type BlobsSidecarsByRangeRequest = ValueOf<typeof ssz.BlobsSidecarsByRangeRequest>;
+export type BeaconBlockAndBlobsSidecarByRootRequest = ValueOf<typeof ssz.BeaconBlockAndBlobsSidecarByRootRequest>;
+
 export type ExecutionPayload = ValueOf<typeof ssz.ExecutionPayload>;
 export type ExecutionPayloadHeader = ValueOf<typeof ssz.ExecutionPayloadHeader>;
 

@@ -4,7 +4,7 @@ import {PeerId} from "@libp2p/interface-peer-id";
 import {Connection, Stream} from "@libp2p/interface-connection";
 import {ForkName} from "@lodestar/params";
 import {IBeaconConfig} from "@lodestar/config";
-import {allForks, altair, phase0} from "@lodestar/types";
+import {allForks, altair, eip4844, phase0} from "@lodestar/types";
 import {ILogger} from "@lodestar/utils";
 import {RespStatus, timeoutOptions} from "../../constants/index.js";
 import {PeersData} from "../peers/peersData.js";
@@ -135,6 +135,32 @@ export class ReqResp implements IReqResp {
       [Version.V2, Version.V1], // Prioritize V2
       request,
       request.length
+    );
+  }
+
+  async beaconBlockAndBlobsSidecarByRoot(
+    peerId: PeerId,
+    request: eip4844.BeaconBlockAndBlobsSidecarByRootRequest
+  ): Promise<eip4844.SignedBeaconBlockAndBlobsSidecar[]> {
+    return await this.sendRequest<eip4844.SignedBeaconBlockAndBlobsSidecar[]>(
+      peerId,
+      Method.BeaconBlockAndBlobsSidecarByRoot,
+      [Version.V1],
+      request,
+      request.length
+    );
+  }
+
+  async blobsSidecarsByRange(
+    peerId: PeerId,
+    request: eip4844.BlobsSidecarsByRangeRequest
+  ): Promise<eip4844.BlobsSidecar[]> {
+    return await this.sendRequest<eip4844.BlobsSidecar[]>(
+      peerId,
+      Method.BlobsSidecarsByRange,
+      [Version.V1],
+      request,
+      request.count
     );
   }
 
@@ -297,6 +323,12 @@ export class ReqResp implements IReqResp {
         break;
       case Method.BeaconBlocksByRoot:
         yield* this.reqRespHandlers.onBeaconBlocksByRoot(requestTyped.body);
+        break;
+      case Method.BeaconBlockAndBlobsSidecarByRoot:
+        yield* this.reqRespHandlers.onBeaconBlockAndBlobsSidecarByRoot(requestTyped.body);
+        break;
+      case Method.BlobsSidecarsByRange:
+        yield* this.reqRespHandlers.onBlobsSidecarsByRange(requestTyped.body);
         break;
       case Method.LightClientBootstrap:
         yield* this.reqRespHandlers.onLightClientBootstrap(requestTyped.body);

@@ -1,4 +1,10 @@
-import {CachedBeaconStateAllForks, stateTransition} from "@lodestar/state-transition";
+import {
+  CachedBeaconStateAllForks,
+  stateTransition,
+  BlockExternalData,
+  ExecutionPayloadStatus,
+  DataAvailableStatus,
+} from "@lodestar/state-transition";
 import {allForks} from "@lodestar/types";
 import {ErrorAborted, sleep} from "@lodestar/utils";
 import {IMetrics} from "../../metrics/index.js";
@@ -30,12 +36,19 @@ export async function verifyBlocksStateTransitionOnly(
     const block = blocks[i];
     const preState = i === 0 ? preState0 : postStates[i - 1];
 
+    const externalData: BlockExternalData = {
+      executionPayloadStatus: ExecutionPayloadStatus.valid,
+      // TODO EIP-4844: Actually validate data
+      dataAvailableStatus: DataAvailableStatus.available,
+    };
+
     // STFN - per_slot_processing() + per_block_processing()
     // NOTE: `regen.getPreState()` should have dialed forward the state already caching checkpoint states
     const useBlsBatchVerify = !opts?.disableBlsBatchVerify;
     const postState = stateTransition(
       preState,
       block,
+      externalData,
       {
         // false because it's verified below with better error typing
         verifyStateRoot: false,
