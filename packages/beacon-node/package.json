@@ -127,6 +127,7 @@
     "@lodestar/types": "^1.2.1",
     "@lodestar/utils": "^1.2.1",
     "@lodestar/validator": "^1.2.1",
+    "@lodestar/reqresp": "^0.1.0",
     "@multiformats/multiaddr": "^11.0.0",
     "@types/datastore-level": "^3.0.0",
     "buffer-xor": "^2.0.2",

@@ -9,11 +9,11 @@ import {ATTESTATION_SUBNET_COUNT, ForkName, SYNC_COMMITTEE_SUBNET_COUNT} from "@
 import {Discv5, ENR} from "@chainsafe/discv5";
 import {computeEpochAtSlot, computeTimeAtSlot} from "@lodestar/state-transition";
 import {altair, Epoch} from "@lodestar/types";
+import {IReqResp, ReqRespOptions} from "@lodestar/reqresp";
 import {IMetrics} from "../metrics/index.js";
 import {ChainEvent, IBeaconChain, IBeaconClock} from "../chain/index.js";
 import {INetworkOptions} from "./options.js";
 import {INetwork} from "./interface.js";
-import {IReqResp, IReqRespOptions, ReqResp, ReqRespHandlers} from "./reqresp/index.js";
 import {Eth2Gossipsub, getGossipHandlers, GossipHandlers, GossipType} from "./gossip/index.js";
 import {MetadataController} from "./metadata.js";
 import {FORK_EPOCH_LOOKAHEAD, getActiveForks} from "./forks.js";
@@ -23,6 +23,8 @@ import {INetworkEventBus, NetworkEventBus} from "./events.js";
 import {AttnetsService, CommitteeSubscription, SyncnetsService} from "./subnets/index.js";
 import {PeersData} from "./peers/peersData.js";
 import {getConnectionsMap, isPublishToZeroPeersError} from "./util.js";
+import {getBeaconNodeReqResp} from "./reqresp/index.js";
+import {ReqRespHandlers} from "./reqresp/handlers/index.js";
 
 interface INetworkModules {
   config: IBeaconConfig;
@@ -56,8 +58,8 @@ export class Network implements INetwork {
 
   private subscribedForks = new Set<ForkName>();
 
-  constructor(private readonly opts: INetworkOptions & IReqRespOptions, modules: INetworkModules) {
-    const {config, libp2p, logger, metrics, chain, reqRespHandlers, gossipHandlers, signal} = modules;
+  constructor(private readonly opts: INetworkOptions & Partial<ReqRespOptions>, modules: INetworkModules) {
+    const {config, libp2p, logger, metrics, chain, gossipHandlers, signal} = modules;
     this.libp2p = libp2p;
     this.logger = logger;
     this.config = config;
@@ -71,19 +73,18 @@ export class Network implements INetwork {
     this.events = networkEventBus;
     this.metadata = metadata;
     this.peerRpcScores = peerRpcScores;
-    this.reqResp = new ReqResp(
+    this.reqResp = getBeaconNodeReqResp(
       {
         config,
         libp2p,
-        reqRespHandlers,
+        logger,
+        metrics,
         metadata,
         peerRpcScores,
-        logger,
-        networkEventBus,
-        metrics,
         peersData: this.peersData,
+        networkEventBus,
       },
-      opts
+      modules.reqRespHandlers
     );
 
     this.gossip = new Eth2Gossipsub(opts, {
