@@ -59,14 +59,11 @@ export interface LightClientTransport {
   onOptimisticUpdate(handler: (optimisticUpdate: altair.LightClientOptimisticUpdate) => void): void;
   // registers handler for LightClientFinalityUpdate. This can come either via sse or p2p
   onFinalityUpdate(handler: (finalityUpdate: altair.LightClientFinalityUpdate) => void): void;
-  // registers handler for LightClientUpdate. This can come either via sse or p2p
-  onUpdate(handler: (lightclietUpdate: altair.LightClientUpdate) => void): void;
 }
 
 export type LightClientRestEvents = {
   [EventType.lightClientUpdate]: altair.LightClientUpdate;
   [EventType.lightClientOptimisticUpdate]: altair.LightClientOptimisticUpdate;
-  [EventType.lightClientFinalityUpdate]: altair.LightClientFinalityUpdate;
 };
 
 // export class ChainEventEmitter extends (EventEmitter as {new (): StrictEventEmitter<EventEmitter, IChainEvents>}) {}
@@ -127,12 +124,5 @@ export class LightClientRestTransport extends (EventEmitter as {new (): RestEven
       this.controller.signal,
       finalityHandler
     );
-  }
-
-  onUpdate(handler: (lightClietUpdate: altair.LightClientUpdate) => void): void {
-    const updateHandler = (event: routes.events.BeaconEvent): void => {
-      handler(event.message as altair.LightClientUpdate);
-    };
-    this.api.events.eventstream([routes.events.EventType.lightClientUpdate], this.controller.signal, updateHandler);
   }
 }
