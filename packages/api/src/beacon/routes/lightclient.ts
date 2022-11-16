@@ -49,6 +49,10 @@ export type Api = {
    * Only block roots for checkpoints are guaranteed to be available.
    */
   getBootstrap(blockRoot: string): Promise<{data: LightClientBootstrap}>;
+  /**
+   * Returns an array of sync committee hashes based on the provided period and count
+   */
+  getCommitteeRoot(startPeriod: SyncPeriod, count: number): Promise<{data: Uint8Array[]}>;
 };
 
 /**
@@ -60,6 +64,7 @@ export const routesData: RoutesData<Api> = {
   getOptimisticUpdate: {url: "/eth/v1/beacon/light_client/optimistic_update", method: "GET"},
   getFinalityUpdate: {url: "/eth/v1/beacon/light_client/finality_update", method: "GET"},
   getBootstrap: {url: "/eth/v1/beacon/light_client/bootstrap/{block_root}", method: "GET"},
+  getCommitteeRoot: {url: "/eth/v0/beacon/light_client/committee_root", method: "GET"},
 };
 
 /* eslint-disable @typescript-eslint/naming-convention */
@@ -69,6 +74,7 @@ export type ReqTypes = {
   getOptimisticUpdate: ReqEmpty;
   getFinalityUpdate: ReqEmpty;
   getBootstrap: {params: {block_root: string}};
+  getCommitteeRoot: {query: {start_period: number; count: number}};
 };
 
 export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
@@ -93,6 +99,11 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
       parseReq: ({params}) => [params.block_root],
       schema: {params: {block_root: Schema.StringRequired}},
     },
+    getCommitteeRoot: {
+      writeReq: (start_period, count) => ({query: {start_period, count}}),
+      parseReq: ({query}) => [query.start_period, query.count],
+      schema: {query: {start_period: Schema.UintRequired, count: Schema.UintRequired}},
+    },
   };
 }
 
@@ -104,5 +115,6 @@ export function getReturnTypes(): ReturnTypes<Api> {
     getOptimisticUpdate: ContainerData(ssz.altair.LightClientOptimisticUpdate),
     getFinalityUpdate: ContainerData(ssz.altair.LightClientFinalityUpdate),
     getBootstrap: ContainerData(ssz.altair.LightClientBootstrap),
+    getCommitteeRoot: ContainerData(ArrayOf(ssz.Root)),
   };
 }

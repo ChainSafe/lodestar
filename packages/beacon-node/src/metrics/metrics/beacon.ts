@@ -152,6 +152,11 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       name: "beacon_block_production_successes_total",
       help: "Count of blocks successfully produced",
     }),
+    blockProductionNumAggregated: register.histogram({
+      name: "beacon_block_production_num_aggregated_total",
+      help: "Count of all aggregated attestations in our produced block",
+      buckets: [32, 64, 96, 128],
+    }),
 
     blockPayload: {
       payloadAdvancePrepTime: register.histogram({

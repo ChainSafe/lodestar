@@ -1,9 +1,12 @@
+import {ChildProcess} from "node:child_process";
 import type {SecretKey} from "@chainsafe/bls/types";
 import {Api} from "@lodestar/api";
 import {Api as KeyManagerApi} from "@lodestar/api/keymanager";
 import {IChainConfig, IChainForkConfig} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
 import {Slot, allForks, Epoch} from "@lodestar/types";
+import {IBeaconArgs} from "../../../src/cmds/beacon/options.js";
+import {IGlobalArgs} from "../../../src/options/index.js";
 import {EpochClock} from "./EpochClock.js";
 import {Eth1ProviderWithAdmin} from "./Eth1ProviderWithAdmin.js";
 
@@ -19,7 +22,6 @@ export type SimulationOptions = {
   id: string;
   logsDir: string;
   rootDir: string;
-  runnerType: RunnerType;
   controller: AbortController;
   genesisTime: number;
 };
@@ -30,6 +32,7 @@ export enum CLClient {
 
 export enum ELClient {
   Geth = "geth",
+  Nethermind = "nethermind",
 }
 
 export enum ELStartMode {
@@ -37,15 +40,25 @@ export enum ELStartMode {
   PostMerge = "post-merge",
 }
 
-export interface NodePairOptions {
-  el: ELClient;
-  cl: CLClient;
+export type CLClientsOptions = {
+  [CLClient.Lodestar]: Partial<IBeaconArgs & IGlobalArgs>;
+};
+
+export type ELClientsOptions = {
+  [ELClient.Geth]: string[];
+  [ELClient.Nethermind]: string[];
+};
+
+export interface NodePairOptions<C extends CLClient = CLClient, E extends ELClient = ELClient> {
   keysCount: number;
-  wssCheckpoint?: string;
+  remote?: boolean;
+  mining?: boolean;
   id: string;
+  cl: C | {type: C; options: CLClientsOptions[C]};
+  el: E | {type: E; options: ELClientsOptions[E]};
 }
 
-export interface CLClientOptions {
+export interface CLClientGeneratorOptions<C extends CLClient = CLClient> {
   id: string;
   dataDir: string;
   logFilePath: string;
@@ -57,19 +70,18 @@ export interface CLClientOptions {
   config: IChainForkConfig;
   localKeys: SecretKey[];
   remoteKeys: SecretKey[];
-  checkpointSyncUrl?: string;
-  wssCheckpoint?: string;
   genesisTime: number;
   engineUrl: string;
   jwtSecretHex: string;
+  clientOptions: CLClientsOptions[C];
 }
 
-export interface ELGenesisOptions {
+export interface ELGeneratorGenesisOptions {
   ttd: bigint;
   cliqueSealingPeriod: number;
 }
 
-export interface ELClientOptions extends ELGenesisOptions {
+export interface ELGeneratorClientOptions<E extends ELClient = ELClient> extends ELGeneratorGenesisOptions {
   mode: ELStartMode;
   id: string;
   logFilePath: string;
@@ -78,6 +90,9 @@ export interface ELClientOptions extends ELGenesisOptions {
   enginePort: number;
   ethPort: number;
   port: number;
+  address: string;
+  mining: boolean;
+  clientOptions: ELClientsOptions[E];
 }
 
 export interface CLNode {
@@ -111,8 +126,14 @@ export interface NodePairResult {
   jobs: {el: Job; cl: Job};
 }
 
-export type CLClientGenerator = (opts: CLClientOptions, runner: Runner) => {job: Job; node: CLNode};
-export type ELClientGenerator = (opts: ELClientOptions, runner: Runner) => {job: Job; node: ELNode};
+export type CLClientGenerator<C extends CLClient> = (
+  opts: CLClientGeneratorOptions<C>,
+  runner: Runner<RunnerType.ChildProcess> | Runner<RunnerType.Docker>
+) => {job: Job; node: CLNode};
+export type ELClientGenerator<E extends ELClient> = (
+  opts: ELGeneratorClientOptions<E>,
+  runner: Runner<RunnerType.ChildProcess> | Runner<RunnerType.Docker>
+) => {job: Job; node: ELNode};
 
 export interface JobOptions {
   readonly cli: {
@@ -148,11 +169,26 @@ export interface Job {
 
 export enum RunnerType {
   ChildProcess = "child_process",
+  Docker = "docker",
 }
 
-export interface Runner {
-  type: RunnerType;
-  create: (id: string, options: JobOptions[]) => Job;
+export type RunnerOptions = {
+  [RunnerType.ChildProcess]: never;
+  [RunnerType.Docker]: {
+    image: string;
+    dataVolumePath: string;
+    exposePorts: number[];
+    dockerNetworkIp: string;
+  };
+};
+
+export interface Runner<T extends RunnerType> {
+  type: T;
+  create: (
+    id: string,
+    jobOptions: JobOptions[],
+    ...options: RunnerOptions[T] extends never ? [undefined?] : [RunnerOptions[T]]
+  ) => Job;
   on(event: RunnerEvent, cb: () => void | Promise<void>): void;
 }
 
@@ -219,4 +255,29 @@ export interface SimulationAssertionError {
   epoch: Epoch;
   assertionId: string;
   message: string;
+}
+export type ChildProcessWithJobOptions = {jobOptions: JobOptions; childProcess: ChildProcess};
+
+export type Eth1GenesisBlock = {
+  config: {
+    chainId: number;
+    clique: Record<string, unknown>;
+    terminalTotalDifficulty: string;
+  };
+  alloc: Record<string, {balance: string}>;
+};
+
+export abstract class SimulationReporter<T extends SimulationAssertion[]> {
+  constructor(
+    protected options: {
+      clock: EpochClock;
+      forkConfig: IChainForkConfig;
+      stores: StoreTypes<T>;
+      nodes: NodePair[];
+      errors: SimulationAssertionError[];
+    }
+  ) {}
+  abstract bootstrap(): void;
+  abstract progress(slot: Slot): void;
+  abstract summary(): void;
 }

@@ -1,16 +1,26 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {join} from "node:path";
-import {SIM_TESTS_SECONDS_PER_SLOT} from "../utils/simulation/constants.js";
+import {activePreset} from "@lodestar/params";
+import {toHexString} from "@lodestar/utils";
+import {CLIQUE_SEALING_PERIOD, SIM_TESTS_SECONDS_PER_SLOT} from "../utils/simulation/constants.js";
 import {CLClient, ELClient} from "../utils/simulation/interfaces.js";
 import {SimulationEnvironment} from "../utils/simulation/SimulationEnvironment.js";
-import {getEstimatedTimeInSecForRun, logFilesDir} from "../utils/simulation/utils/index.js";
-import {connectAllNodes, connectNewNode} from "../utils/simulation/utils/network.js";
+import {getEstimatedTimeInSecForRun, getEstimatedTTD, logFilesDir} from "../utils/simulation/utils/index.js";
+import {
+  connectAllNodes,
+  connectNewNode,
+  waitForHead,
+  waitForNodeSync,
+  waitForSlot,
+} from "../utils/simulation/utils/network.js";
 import {nodeAssertion} from "../utils/simulation/assertions/nodeAssertion.js";
 import {mergeAssertion} from "../utils/simulation/assertions/mergeAssertion.js";
 
-const genesisSlotsDelay = 10;
+const genesisSlotsDelay = 20;
 const altairForkEpoch = 2;
 const bellatrixForkEpoch = 4;
+// Make sure bellatrix started before TTD reach
+const additionalSlotsForTTD = activePreset.SLOTS_PER_EPOCH - 2;
 const runTillEpoch = 6;
 const syncWaitEpoch = 2;
 
@@ -19,8 +29,17 @@ const timeout =
     genesisSlotDelay: genesisSlotsDelay,
     secondsPerSlot: SIM_TESTS_SECONDS_PER_SLOT,
     runTill: runTillEpoch + syncWaitEpoch,
-    graceExtraTimeFraction: 0.1, // 10% extra time
+    // After adding Nethermind its took longer to complete
+    graceExtraTimeFraction: 0.3,
   }) * 1000;
+
+const ttd = getEstimatedTTD({
+  genesisDelay: genesisSlotsDelay,
+  bellatrixForkEpoch: bellatrixForkEpoch,
+  secondsPerSlot: SIM_TESTS_SECONDS_PER_SLOT,
+  cliqueSealingPeriod: CLIQUE_SEALING_PERIOD,
+  additionalSlots: additionalSlotsForTTD,
+});
 
 const env = SimulationEnvironment.initWithDefaults(
   {
@@ -30,13 +49,14 @@ const env = SimulationEnvironment.initWithDefaults(
       ALTAIR_FORK_EPOCH: altairForkEpoch,
       BELLATRIX_FORK_EPOCH: bellatrixForkEpoch,
       GENESIS_DELAY: genesisSlotsDelay,
+      TERMINAL_TOTAL_DIFFICULTY: ttd,
     },
   },
   [
-    {id: "node-1", cl: CLClient.Lodestar, el: ELClient.Geth, keysCount: 32},
-    {id: "node-2", cl: CLClient.Lodestar, el: ELClient.Geth, keysCount: 32},
+    {id: "node-1", cl: CLClient.Lodestar, el: ELClient.Geth, keysCount: 32, mining: true},
+    {id: "node-2", cl: CLClient.Lodestar, el: ELClient.Nethermind, keysCount: 32, remote: true},
     {id: "node-3", cl: CLClient.Lodestar, el: ELClient.Geth, keysCount: 32},
-    {id: "node-4", cl: CLClient.Lodestar, el: ELClient.Geth, keysCount: 32},
+    {id: "node-4", cl: CLClient.Lodestar, el: ELClient.Nethermind, keysCount: 32},
   ]
 );
 
@@ -57,12 +77,17 @@ env.tracker.register({
 
 await env.start(timeout);
 await connectAllNodes(env.nodes);
-await env.waitForSlot(env.clock.getLastSlotOfEpoch(bellatrixForkEpoch), env.nodes, true);
 
-const {
-  data: {finalized},
-} = await env.nodes[0].cl.api.beacon.getStateFinalityCheckpoints("head");
+// The `TTD` will be reach around `start of bellatrixForkEpoch + additionalSlotsForMerge` slot
+// We wait for the end of that epoch with half more epoch to make sure merge transition is complete
+await waitForSlot(env.clock.getLastSlotOfEpoch(bellatrixForkEpoch) + activePreset.SLOTS_PER_EPOCH / 2, env.nodes, {
+  silent: true,
+  env,
+});
 
+// Range Sync
+// ========================================================
+const headForRangeSync = await env.nodes[0].cl.api.beacon.getBlockHeader("head");
 const rangeSync = env.createNodePair({
   id: "range-sync-node",
   cl: CLClient.Lodestar,
@@ -70,12 +95,19 @@ const rangeSync = env.createNodePair({
   keysCount: 0,
 });
 
+// Checkpoint sync involves Weak Subjectivity Checkpoint
+// ========================================================
+const {
+  data: {finalized: headForCheckpointSync},
+} = await env.nodes[0].cl.api.beacon.getStateFinalityCheckpoints("head");
 const checkpointSync = env.createNodePair({
   id: "checkpoint-sync-node",
-  cl: CLClient.Lodestar,
+  cl: {
+    type: CLClient.Lodestar,
+    options: {wssCheckpoint: `${headForCheckpointSync.root}:${headForCheckpointSync.epoch}`},
+  },
   el: ELClient.Geth,
   keysCount: 0,
-  wssCheckpoint: `${finalized.root}:${finalized.epoch}`,
 });
 
 await rangeSync.jobs.el.start();
@@ -86,7 +118,59 @@ await checkpointSync.jobs.el.start();
 await checkpointSync.jobs.cl.start();
 await connectNewNode(checkpointSync.nodePair, env.nodes);
 
-await env.waitForNodeSync(rangeSync.nodePair);
-await env.waitForNodeSync(checkpointSync.nodePair);
+await Promise.all([
+  await waitForNodeSync(env, rangeSync.nodePair, {
+    head: toHexString(headForRangeSync.data.root),
+    slot: headForRangeSync.data.header.message.slot,
+  }),
+  await waitForNodeSync(env, checkpointSync.nodePair, {
+    head: toHexString(headForCheckpointSync.root),
+    slot: env.clock.getLastSlotOfEpoch(headForCheckpointSync.epoch),
+  }),
+]);
+
+await rangeSync.jobs.cl.stop();
+await rangeSync.jobs.el.stop();
+await checkpointSync.jobs.cl.stop();
+await checkpointSync.jobs.el.stop();
+
+// Unknown block sync
+// ========================================================
+const unknownBlockSync = env.createNodePair({
+  id: "unknown-block-sync-node",
+  cl: {type: CLClient.Lodestar, options: {"network.allowPublishToZeroPeers": true, "sync.disableRangeSync": true}},
+  el: ELClient.Geth,
+  keysCount: 0,
+});
+await unknownBlockSync.jobs.el.start();
+await unknownBlockSync.jobs.cl.start();
+const headForUnknownBlockSync = await env.nodes[0].cl.api.beacon.getBlockV2("head");
+await connectNewNode(unknownBlockSync.nodePair, env.nodes);
+
+try {
+  await unknownBlockSync.nodePair.cl.api.beacon.publishBlock(headForUnknownBlockSync.data);
+
+  env.tracker.record({
+    message: "Publishing unknown block should fail",
+    slot: env.clock.currentSlot,
+    assertionId: "unknownBlockParent",
+  });
+} catch (error) {
+  if (!(error as Error).message.includes("BLOCK_ERROR_PARENT_UNKNOWN")) {
+    env.tracker.record({
+      message: `Publishing unknown block should return "BLOCK_ERROR_PARENT_UNKNOWN" got "${(error as Error).message}"`,
+      slot: env.clock.currentSlot,
+      assertionId: "unknownBlockParent",
+    });
+  }
+}
+await waitForHead(env, unknownBlockSync.nodePair, {
+  head: toHexString(
+    env.forkConfig
+      .getForkTypes(headForUnknownBlockSync.data.message.slot)
+      .BeaconBlock.hashTreeRoot(headForUnknownBlockSync.data.message)
+  ),
+  slot: headForUnknownBlockSync.data.message.slot,
+});
 
 await env.stop();

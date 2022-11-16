@@ -14,7 +14,7 @@
 
 ## What you need
 
-You will need to go over the [specification](https://github.com/ethereum/consensus-specs). You will also need to have a [basic understanding of sharding](https://github.com/ethereum/wiki/wiki/Sharding-FAQs).
+You will need to go over the [specification](https://github.com/ethereum/consensus-specs).
 
 ## Getting started
 

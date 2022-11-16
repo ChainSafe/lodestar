@@ -3,28 +3,18 @@ import {routes} from "@lodestar/api/beacon";
 import {IChainForkConfig} from "@lodestar/config";
 import {Epoch, Slot} from "@lodestar/types";
 import {EpochClock} from "./EpochClock.js";
-import {NodeId, NodePair, SimulationAssertion, SimulationAssertionError, StoreType, StoreTypes} from "./interfaces.js";
-import {arrayGroupBy, avg, getForkName, squeezeString} from "./utils/index.js";
-import {attestationsCountAssertion} from "./assertions/defaults/attestationCountAssertion.js";
-import {attestationParticipationAssertion} from "./assertions/defaults/attestationParticipationAssertion.js";
-import {connectedPeerCountAssertion} from "./assertions/defaults/connectedPeerCountAssertion.js";
-import {finalizedAssertion} from "./assertions/defaults/finalizedAssertion.js";
-import {headAssertion} from "./assertions/defaults/headAssertion.js";
-import {inclusionDelayAssertion} from "./assertions/defaults/inclusionDelayAssertion.js";
-import {missedBlocksAssertion} from "./assertions/defaults/missedBlocksAssertion.js";
-import {syncCommitteeAssertion} from "./assertions/defaults/syncCommitteeAssertion.js";
-import {TableRenderer} from "./TableRenderer.js";
-
-const defaultAssertions = [
-  inclusionDelayAssertion,
-  attestationsCountAssertion,
-  attestationParticipationAssertion,
-  connectedPeerCountAssertion,
-  finalizedAssertion,
-  headAssertion,
-  missedBlocksAssertion,
-  syncCommitteeAssertion,
-];
+import {
+  AtLeast,
+  NodeId,
+  NodePair,
+  SimulationAssertion,
+  SimulationAssertionError,
+  SimulationReporter,
+  StoreType,
+  StoreTypes,
+} from "./interfaces.js";
+import {defaultAssertions} from "./assertions/defaults/index.js";
+import {TableReporter} from "./TableReporter.js";
 
 interface SimulationTrackerInitOptions {
   nodes: NodePair[];
@@ -33,20 +23,28 @@ interface SimulationTrackerInitOptions {
   signal: AbortSignal;
 }
 
+export enum SimulationTrackerEvent {
+  Slot = "slot",
+  Head = "head",
+}
+
+export type SimulationTrackerEvents = {
+  [SimulationTrackerEvent.Slot]: {slot: Slot};
+  [SimulationTrackerEvent.Head]: routes.events.EventData[routes.events.EventType.head];
+};
+
+export const getEventNameForNodePair = (nodePair: NodePair, event: SimulationTrackerEvent): string =>
+  `sim:tracker:${event}:${nodePair.id}`;
+
+const eventStreamEventMap = {
+  [SimulationTrackerEvent.Head]: routes.events.EventType.head,
+  [SimulationTrackerEvent.Slot]: routes.events.EventType.block,
+};
+
 /* eslint-disable no-console */
 export class SimulationTracker {
   readonly emitter = new EventEmitter();
-  table = new TableRenderer({
-    fork: 10,
-    eph: 5,
-    slot: 4,
-    head: 15,
-    finalized: 10,
-    peers: 6,
-    attCount: 8,
-    incDelay: 8,
-    errors: 10,
-  });
+  readonly reporter: SimulationReporter<typeof defaultAssertions & StoreType<string, unknown>>;
 
   private lastSeenSlot: Map<NodeId, Slot> = new Map();
   private slotCapture: Map<Slot, NodeId[]> = new Map();
@@ -54,21 +52,27 @@ export class SimulationTracker {
   private signal: AbortSignal;
   private nodes: NodePair[];
   private clock: EpochClock;
-  private config: IChainForkConfig;
+  private forkConfig: IChainForkConfig;
 
   private errors: SimulationAssertionError[] = [];
   private stores: StoreTypes<typeof defaultAssertions> & StoreType<string, unknown>;
   private assertions: SimulationAssertion[];
   private assertionIdsMap: Record<string, boolean> = {};
-
   private constructor({signal, nodes, clock, config}: SimulationTrackerInitOptions) {
     this.signal = signal;
     this.nodes = nodes;
     this.clock = clock;
-    this.config = config;
+    this.forkConfig = config;
 
     this.stores = {} as StoreTypes<typeof defaultAssertions> & StoreType<string, unknown>;
     this.assertions = [] as SimulationAssertion[];
+    this.reporter = new TableReporter({
+      clock: this.clock,
+      forkConfig: this.forkConfig,
+      nodes: this.nodes,
+      stores: this.stores,
+      errors: this.errors,
+    });
   }
 
   static initWithDefaultAssertions(opts: SimulationTrackerInitOptions): SimulationTracker {
@@ -81,6 +85,45 @@ export class SimulationTracker {
     return tracker;
   }
 
+  once<K extends keyof SimulationTrackerEvents>(
+    nodePair: NodePair,
+    eventName: K,
+    fn: (data: SimulationTrackerEvents[K]) => void
+  ): void {
+    if (this.nodes.indexOf(nodePair) < 0) {
+      this.initEventStreamForNode(nodePair, [eventStreamEventMap[eventName]]);
+    }
+
+    this.emitter.once(getEventNameForNodePair(nodePair, eventName), fn);
+  }
+
+  on<K extends keyof SimulationTrackerEvents>(
+    nodePair: NodePair,
+    eventName: K,
+    fn: (data: SimulationTrackerEvents[K]) => void
+  ): void {
+    if (this.nodes.indexOf(nodePair) < 0) {
+      this.initEventStreamForNode(nodePair, [eventStreamEventMap[eventName]]);
+    }
+    this.emitter.on(getEventNameForNodePair(nodePair, eventName), fn);
+  }
+
+  off<K extends keyof SimulationTrackerEvents>(
+    nodePair: NodePair,
+    eventName: K,
+    fn: (data: SimulationTrackerEvents[K]) => void
+  ): void {
+    this.emitter.off(getEventNameForNodePair(nodePair, eventName), fn);
+  }
+
+  private emit<K extends keyof SimulationTrackerEvents>(
+    nodePair: NodePair,
+    eventName: K,
+    data: SimulationTrackerEvents[K]
+  ): void {
+    this.emitter.emit(getEventNameForNodePair(nodePair, eventName), data);
+  }
+
   track(node: NodePair): void {
     this.initDataForNode(node);
     this.initEventStreamForNode(node);
@@ -91,7 +134,7 @@ export class SimulationTracker {
     for (const node of this.nodes) {
       this.initEventStreamForNode(node);
     }
-    this.table.printHeader();
+    this.reporter.bootstrap();
   }
 
   async stop(): Promise<void> {
@@ -126,79 +169,19 @@ export class SimulationTracker {
     }
   }
 
-  printTrackerInfo(slot: Slot): void {
-    const epoch = this.clock.getEpochForSlot(slot);
-    const forkName = getForkName(epoch, this.config);
-    const epochStr = `${epoch}/${this.clock.getSlotIndexInEpoch(slot)}`;
-
-    if (this.clock.isFirstSlotOfEpoch(slot)) {
-      // We are printing this info for last epoch
-      if (epoch - 1 < this.config.ALTAIR_FORK_EPOCH) {
-        this.table.addEmptyRow("Att Participation: N/A - SC Participation: N/A");
-      } else {
-        // attestationParticipation is calculated at first slot of an epoch
-        const participation = this.nodes.map((node) => this.stores["attestationParticipation"][node.cl.id][slot] ?? 0);
-        const head = avg(participation.map((p) => p.head)).toFixed(2);
-        const source = avg(participation.map((p) => p.source)).toFixed(2);
-        const target = avg(participation.map((p) => p.target)).toFixed(2);
-
-        // syncParticipation is calculated at last slot of an epoch so we subtract "slot -1"
-        const syncParticipation = avg(
-          this.nodes.map((node) => this.stores["syncCommitteeParticipation"][node.cl.id][slot - 1] ?? "-")
-        ).toFixed(2);
-
-        this.table.addEmptyRow(
-          `Att Participation: H: ${head}, S: ${source}, T: ${target} - SC Participation: ${syncParticipation}`
-        );
-      }
-    }
-
-    const finalizedSlots = this.nodes.map((node) => this.stores["finalized"][node.cl.id][slot] ?? "-");
-    const finalizedSlotsUnique = new Set(finalizedSlots);
-
-    const inclusionDelay = this.nodes.map((node) => this.stores["inclusionDelay"][node.cl.id][slot] ?? "-");
-    const inclusionDelayUnique = new Set(inclusionDelay);
-
-    const attestationCount = this.nodes.map((node) => this.stores["attestationsCount"][node.cl.id][slot] ?? "-");
-    const attestationCountUnique = new Set(attestationCount);
-
-    const head = this.nodes.map((node) => this.stores["head"][node.cl.id][slot] ?? "-");
-    const headUnique = new Set(head);
-
-    const peerCount = this.nodes.map((node) => this.stores["connectedPeerCount"][node.cl.id][slot] ?? "-");
-    const peerCountUnique = new Set(head);
-
-    const errorCount = this.errors.filter((e) => e.slot === slot).length;
-
-    this.table.addRow({
-      fork: forkName,
-      eph: epochStr,
-      slot: slot,
-      head: headUnique.size === 1 ? squeezeString(head[0], 12) : "different",
-      finalized: finalizedSlotsUnique.size === 1 ? finalizedSlots[0] : finalizedSlots.join(","),
-      peers: peerCountUnique.size === 1 ? peerCount[0] : peerCount.join(","),
-      attCount: attestationCountUnique.size === 1 ? attestationCount[0] : "--",
-      incDelay: inclusionDelayUnique.size === 1 ? inclusionDelay[0].toFixed(2) : inclusionDelay.join(","),
-      errors: errorCount,
-    });
+  record(error: AtLeast<SimulationAssertionError, "slot" | "message" | "assertionId">): void {
+    this.errors.push({...error, epoch: error.epoch ?? this.clock.getEpochForSlot(error.slot)});
   }
 
-  printErrors(): void {
-    console.log(`├${"─".repeat(10)} Errors (${this.errors.length}) ${"─".repeat(10)}┤`);
-
-    const groupBySlot = arrayGroupBy(this.errors, (e) => String(e.slot as number));
-
-    for (const [slot, slotErrors] of Object.entries(groupBySlot)) {
-      if (slotErrors.length > 0) console.log(`├─ Slot: ${slot}`);
-      const groupByAssertion = arrayGroupBy(slotErrors, (e) => e.assertionId);
-
-      for (const [assertionId, assertionErrors] of Object.entries(groupByAssertion)) {
-        if (assertionErrors.length > 0) console.log(`├── Assertion: ${assertionId}`);
-
-        for (const error of assertionErrors) {
-          console.error(`├──── ${error.message}`);
-        }
-      }
+  async assert(message: string, cb: () => void | Promise<void>): Promise<void> {
+    try {
+      await cb();
+    } catch (error) {
+      this.record({
+        assertionId: message,
+        message: (error as Error).message,
+        slot: this.clock.currentSlot,
+      });
     }
   }
 
@@ -209,7 +192,10 @@ export class SimulationTracker {
     }
   }
 
-  private async onBlock(event: routes.events.EventData[routes.events.EventType.block], node: NodePair): Promise<void> {
+  private async processOnBlock(
+    event: routes.events.EventData[routes.events.EventType.block],
+    node: NodePair
+  ): Promise<void> {
     const slot = event.slot;
     const epoch = this.clock.getEpochForSlot(slot);
     const lastSeenSlot = this.lastSeenSlot.get(node.cl.id);
@@ -221,26 +207,31 @@ export class SimulationTracker {
       return;
     }
 
-    const block = await node.cl.api.beacon.getBlockV2(slot);
+    try {
+      const block = await node.cl.api.beacon.getBlockV2(slot);
 
-    for (const assertion of this.assertions) {
-      if (assertion.capture) {
-        const value = await assertion.capture({
-          fork: getForkName(epoch, this.config),
-          slot,
-          block: block.data,
-          clock: this.clock,
-          node,
-          forkConfig: this.config,
-          epoch,
-          store: this.stores[assertion.id][node.cl.id],
-          // TODO: Make the store safe, to filter just the dependant stores not all
-          dependantStores: this.stores,
-        });
-        if (value !== undefined || value !== null) {
-          this.stores[assertion.id][node.cl.id][slot] = value;
+      for (const assertion of this.assertions) {
+        if (assertion.capture) {
+          const value = await assertion.capture({
+            fork: this.forkConfig.getForkName(slot),
+            slot,
+            block: block.data,
+            clock: this.clock,
+            node,
+            forkConfig: this.forkConfig,
+            epoch,
+            store: this.stores[assertion.id][node.cl.id],
+            // TODO: Make the store safe, to filter just the dependant stores not all
+            dependantStores: this.stores,
+          });
+          if (value !== undefined || value !== null) {
+            this.stores[assertion.id][node.cl.id][slot] = value;
+          }
         }
       }
+    } catch {
+      // Incase of reorg the block may not be available
+      return;
     }
 
     const capturedSlot = this.slotCapture.get(slot);
@@ -253,14 +244,17 @@ export class SimulationTracker {
 
     await this.applyAssertions({slot, epoch});
 
-    this.emitter.emit(`${node.cl.id}:slot:${slot}`, slot);
+    this.emit(node, SimulationTrackerEvent.Slot, {slot});
   }
 
-  private onHead(_event: routes.events.EventData[routes.events.EventType.head], _node: NodePair): void {
-    // TODO: Add head tracking
+  private async processOnHead(
+    event: routes.events.EventData[routes.events.EventType.head],
+    node: NodePair
+  ): Promise<void> {
+    this.emit(node, SimulationTrackerEvent.Head, event);
   }
 
-  private onFinalizedCheckpoint(
+  private processOnFinalizedCheckpoint(
     _event: routes.events.EventData[routes.events.EventType.finalizedCheckpoint],
     _node: NodePair
   ): void {
@@ -275,7 +269,7 @@ export class SimulationTracker {
     }
 
     for (const assertion of this.assertions) {
-      const match = assertion.match({slot, epoch, clock: this.clock, forkConfig: this.config});
+      const match = assertion.match({slot, epoch, clock: this.clock, forkConfig: this.forkConfig});
       if ((typeof match === "boolean" && match) || (typeof match === "object" && match.match)) {
         try {
           const errors = await assertion.assert({
@@ -283,7 +277,7 @@ export class SimulationTracker {
             epoch,
             nodes: this.nodes,
             clock: this.clock,
-            forkConfig: this.config,
+            forkConfig: this.forkConfig,
             store: this.stores[assertion.id],
             // TODO: Make the store safe, to filter just the dependant stores not all
             dependantStores: this.stores,
@@ -303,7 +297,7 @@ export class SimulationTracker {
       }
     }
 
-    this.printTrackerInfo(slot);
+    this.reporter.progress(slot);
     this.processRemoveAssertionQueue();
   }
 
@@ -315,22 +309,27 @@ export class SimulationTracker {
     this.removeAssertionQueue = [];
   }
 
-  private initEventStreamForNode(node: NodePair): void {
-    node.cl.api.events.eventstream(
-      [routes.events.EventType.block, routes.events.EventType.head, routes.events.EventType.finalizedCheckpoint],
-      this.signal,
-      async (event) => {
-        this.emitter.emit(event.type, event, node);
-
-        switch (event.type) {
-          case routes.events.EventType.block:
-            await this.onBlock(event.message, node);
-            return;
-          case routes.events.EventType.finalizedCheckpoint:
-            this.onFinalizedCheckpoint(event.message, node);
-            return;
-        }
+  private initEventStreamForNode(
+    node: NodePair,
+    events: routes.events.EventType[] = [
+      routes.events.EventType.block,
+      routes.events.EventType.head,
+      routes.events.EventType.finalizedCheckpoint,
+    ],
+    signal?: AbortSignal
+  ): void {
+    node.cl.api.events.eventstream(events, signal ?? this.signal, async (event) => {
+      switch (event.type) {
+        case routes.events.EventType.block:
+          await this.processOnBlock(event.message, node);
+          return;
+        case routes.events.EventType.head:
+          await this.processOnHead(event.message, node);
+          return;
+        case routes.events.EventType.finalizedCheckpoint:
+          this.processOnFinalizedCheckpoint(event.message, node);
+          return;
       }
-    );
+    });
   }
 }

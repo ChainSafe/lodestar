@@ -9,11 +9,12 @@ import {LogLevel} from "@lodestar/utils";
 import {IBeaconArgs} from "../../../../src/cmds/beacon/options.js";
 import {IValidatorCliArgs} from "../../../../src/cmds/validator/options.js";
 import {IGlobalArgs} from "../../../../src/options/globalOptions.js";
-import {CLClient, CLClientGenerator, CLClientOptions, JobOptions, Runner, RunnerType} from "../interfaces.js";
+import {CLClient, CLClientGenerator, CLClientGeneratorOptions, JobOptions, Runner, RunnerType} from "../interfaces.js";
 import {LODESTAR_BINARY_PATH} from "../constants.js";
+import {isChildProcessRunner} from "../runner/index.js";
 
-export const generateLodestarBeaconNode: CLClientGenerator = (opts: CLClientOptions, runner: Runner) => {
-  if (runner.type !== RunnerType.ChildProcess) {
+export const generateLodestarBeaconNode: CLClientGenerator<CLClient.Lodestar> = (opts, runner) => {
+  if (!isChildProcessRunner(runner)) {
     throw new Error(`Runner "${runner.type}" not yet supported.`);
   }
   const {
@@ -24,14 +25,13 @@ export const generateLodestarBeaconNode: CLClientGenerator = (opts: CLClientOpti
     id,
     config,
     genesisStateFilePath,
-    checkpointSyncUrl,
     remoteKeys,
     localKeys,
-    wssCheckpoint,
     keyManagerPort,
     genesisTime,
     engineUrl,
     jwtSecretHex,
+    clientOptions,
   } = opts;
 
   const jwtSecretPath = join(dataDir, "jwtsecret");
@@ -67,15 +67,8 @@ export const generateLodestarBeaconNode: CLClientGenerator = (opts: CLClientOpti
     eth1: true,
     "execution.urls": [engineUrl],
     "jwt-secret": jwtSecretPath,
+    ...clientOptions,
   } as unknown) as IBeaconArgs & IGlobalArgs;
-
-  if (checkpointSyncUrl) {
-    rcConfig["checkpointSyncUrl"] = checkpointSyncUrl;
-  }
-
-  if (wssCheckpoint) {
-    rcConfig["wssCheckpoint"] = wssCheckpoint;
-  }
 
   const validatorClientsJobs: JobOptions[] = [];
   if (opts.localKeys.length > 0 || opts.remoteKeys.length > 0) {
@@ -134,7 +127,10 @@ export const generateLodestarBeaconNode: CLClientGenerator = (opts: CLClientOpti
   return {job, node};
 };
 
-export const generateLodestarValidatorJobs = (opts: CLClientOptions, runner: Runner): JobOptions => {
+export const generateLodestarValidatorJobs = (
+  opts: CLClientGeneratorOptions,
+  runner: Runner<RunnerType.ChildProcess> | Runner<RunnerType.Docker>
+): JobOptions => {
   if (runner.type !== RunnerType.ChildProcess) {
     throw new Error(`Runner "${runner.type}" not yet supported.`);
   }

@@ -1,11 +1,12 @@
 import {ForkName} from "@lodestar/params";
 import {altair} from "@lodestar/types";
 import {SimulationAssertion} from "../../interfaces.js";
+import {avg} from "../../utils/index.js";
 import {everyEpochMatcher} from "../matchers.js";
 
 export const expectedMinSyncParticipationRate = 0.9;
 
-export const syncCommitteeAssertion: SimulationAssertion<"syncCommitteeParticipation", number> = {
+export const syncCommitteeParticipation: SimulationAssertion<"syncCommitteeParticipation", number> = {
   id: "syncCommitteeParticipation",
   match: everyEpochMatcher,
   async capture({fork, block}) {
@@ -28,6 +29,7 @@ export const syncCommitteeAssertion: SimulationAssertion<"syncCommitteeParticipa
     }
 
     for (const node of nodes) {
+      const syncCommitteeParticipation: number[] = [];
       for (let slot = startSlot; slot <= endSlot; slot++) {
         // Sync committee is not available before until 2 slots for altair epoch
         if (slot === altairStartSlot || slot === altairStartSlot + 1) {
@@ -35,18 +37,19 @@ export const syncCommitteeAssertion: SimulationAssertion<"syncCommitteeParticipa
         }
 
         const participation = store[node.cl.id][slot];
+        syncCommitteeParticipation.push(participation);
+      }
+      const syncCommitteeParticipationAvg = avg(syncCommitteeParticipation);
 
-        if (participation < expectedMinSyncParticipationRate) {
-          errors.push(
-            `node has low sync committee participation. ${JSON.stringify({
-              id: node.cl.id,
-              slot,
-              epoch,
-              participation,
-              expectedMinSyncParticipationRate,
-            })}`
-          );
-        }
+      if (syncCommitteeParticipationAvg < expectedMinSyncParticipationRate) {
+        errors.push(
+          `node has low avg sync committee participation for epoch. ${JSON.stringify({
+            id: node.cl.id,
+            epoch,
+            syncCommitteeParticipationAvg: syncCommitteeParticipationAvg,
+            expectedMinSyncParticipationRate,
+          })}`
+        );
       }
     }
 

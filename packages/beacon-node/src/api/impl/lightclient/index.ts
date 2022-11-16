@@ -2,7 +2,7 @@ import {routes} from "@lodestar/api";
 import {fromHexString} from "@chainsafe/ssz";
 import {ProofType, Tree} from "@chainsafe/persistent-merkle-tree";
 import {SyncPeriod} from "@lodestar/types";
-import {MAX_REQUEST_LIGHT_CLIENT_UPDATES} from "@lodestar/params";
+import {MAX_REQUEST_LIGHT_CLIENT_UPDATES, MAX_REQUEST_LIGHT_CLIENT_COMMITTEE_HASHES} from "@lodestar/params";
 import {ApiModules} from "../types.js";
 import {resolveStateId} from "../beacon/state/utils.js";
 import {IApiOptions} from "../../options.js";
@@ -69,6 +69,15 @@ export function getLightclientApi(
     async getBootstrap(blockRoot) {
       const bootstrapProof = await chain.lightClientServer.getBootstrap(fromHexString(blockRoot));
       return {data: bootstrapProof};
+    },
+
+    async getCommitteeRoot(startPeriod: SyncPeriod, count: number) {
+      const maxAllowedCount = Math.min(MAX_REQUEST_LIGHT_CLIENT_COMMITTEE_HASHES, count);
+      const periods = Array.from({length: maxAllowedCount}, (_ignored, i) => i + startPeriod);
+      const committeeHashes = await Promise.all(
+        periods.map((period) => chain.lightClientServer.getCommitteeRoot(period))
+      );
+      return {data: committeeHashes};
     },
   };
 }
