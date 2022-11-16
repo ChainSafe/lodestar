@@ -8,12 +8,13 @@ import {prettyPrintPeerId} from "../utils/index.js";
 import {ProtocolDefinition} from "../types.js";
 import {requestDecode} from "../encoders/requestDecode.js";
 import {responseEncodeError, responseEncodeSuccess} from "../encoders/responseEncode.js";
-import {RespStatus} from "../interface.js";
+import {ReqRespHandlerContext, RespStatus} from "../interface.js";
 import {ResponseError} from "./errors.js";
 
 export {ResponseError};
 
 export interface HandleRequestOpts<Req, Resp> {
+  context: ReqRespHandlerContext;
   logger: ILogger;
   stream: Stream;
   peerId: PeerId;
@@ -35,6 +36,7 @@ export interface HandleRequestOpts<Req, Resp> {
  * 4b. On error, encode and write an error `<response_chunk>` and stop
  */
 export async function handleRequest<Req, Resp>({
+  context,
   logger,
   stream,
   peerId,
@@ -67,7 +69,7 @@ export async function handleRequest<Req, Resp>({
         logger.debug("Resp received request", {...logCtx, body: protocol.renderRequestBody?.(requestBody)});
 
         yield* pipe(
-          protocol.handler(requestBody, peerId),
+          protocol.handler(context, requestBody, peerId),
           // NOTE: Do not log the resp chunk contents, logs get extremely cluttered
           // Note: Not logging on each chunk since after 1 year it hasn't add any value when debugging
           // onChunk(() => logger.debug("Resp sending chunk", logCtx)),

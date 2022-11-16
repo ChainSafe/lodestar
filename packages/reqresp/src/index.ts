@@ -1,6 +1,7 @@
-export {ReqResp, IReqRespOptions} from "./reqResp.js";
-export {ReqRespHandlers, getReqRespHandlers} from "./handlers/index.js";
+export {ReqResp} from "./ReqResp.js";
+export {getMetrics, Metrics, MetricsRegister} from "./metrics.js";
+export {Encoding as ReqRespEncoding, Method as ReqRespMethod} from "./types.js"; // Expose enums renamed
+export * from "./types.js";
 export * from "./interface.js";
 export * from "./constants.js";
-export {RequestTypedContainer} from "./types.js"; // To type-safe reqResp event listeners
-export {Encoding as ReqRespEncoding, Method as ReqRespMethod} from "./types.js"; // Expose enums renamed
+export * from "./response/errors.js";

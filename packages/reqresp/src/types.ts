@@ -3,6 +3,9 @@ import {Type} from "@chainsafe/ssz";
 import {IForkConfig, IForkDigestContext} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
 import {phase0, Slot} from "@lodestar/types";
+import {LodestarError} from "@lodestar/utils";
+import {ReqRespEventsHandlers, ReqRespHandlerContext, ReqRespModules} from "./interface.js";
+import {timeoutOptions} from "./constants.js";
 
 export enum EncodedPayloadType {
   ssz,
@@ -20,10 +23,16 @@ export type EncodedPayload<T> =
       contextBytes: ContextBytes;
     };
 
-export type Handler<Req, Resp> = (requestBody: Req, peerId: PeerId) => AsyncIterable<EncodedPayload<Resp>>;
+export type HandlerWithContext<Req, Resp> = (
+  context: ReqRespHandlerContext,
+  req: Req,
+  peerId: PeerId
+) => AsyncIterable<EncodedPayload<Resp>>;
+
+export type Handler<Req, Resp> = (req: Req, peerId: PeerId) => AsyncIterable<EncodedPayload<Resp>>;
 
 export interface ProtocolDefinition<Req = unknown, Resp = unknown> extends Protocol {
-  handler: Handler<Req, Resp>;
+  handler: HandlerWithContext<Req, Resp>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   requestType: (fork: ForkName) => Type<Req> | null;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -32,6 +41,11 @@ export interface ProtocolDefinition<Req = unknown, Resp = unknown> extends Proto
   contextBytes: ContextBytesFactory<Resp>;
   isSingleResponse: boolean;
 }
+
+export type ProtocolDefinitionGenerator<Req, Res> = (
+  handler: Handler<Req, Res>,
+  modules: ReqRespModules
+) => ProtocolDefinition<Req, Res>;
 
 export const protocolPrefix = "/eth2/beacon_chain/req";
 
@@ -107,3 +121,13 @@ export enum ContextBytesType {
   /** A fixed-width 4 byte <context-bytes>, set to the ForkDigest matching the chunk: compute_fork_digest(fork_version, genesis_validators_root) */
   ForkDigest,
 }
+
+export type ReqRespOptions = typeof timeoutOptions & ReqRespEventsHandlers;
+
+export enum LightClientServerErrorCode {
+  RESOURCE_UNAVAILABLE = "RESOURCE_UNAVAILABLE",
+}
+
+export type LightClientServerErrorType = {code: LightClientServerErrorCode.RESOURCE_UNAVAILABLE};
+
+export class LightClientServerError extends LodestarError<LightClientServerErrorType> {}

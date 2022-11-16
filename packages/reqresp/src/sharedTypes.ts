@@ -4,8 +4,7 @@ import StrictEventEmitter from "strict-event-emitter-types";
 import {ENR} from "@chainsafe/discv5";
 import {BitArray} from "@chainsafe/ssz";
 import {ForkName} from "@lodestar/params";
-import {allForks, altair, Epoch, phase0, Root, RootHex, Slot} from "@lodestar/types";
-import {LodestarError} from "@lodestar/utils";
+import {allForks, altair, Epoch, phase0} from "@lodestar/types";
 import {Encoding, RequestTypedContainer} from "./types.js";
 
 // These interfaces are shared among beacon-node package.
@@ -110,40 +109,4 @@ export interface MetadataController {
   json: altair.Metadata;
   start(enr: ENR | undefined, currentFork: ForkName): void;
   updateEth2Field(epoch: Epoch): void;
-}
-
-export interface IBeaconChain {
-  getStatus(): phase0.Status;
-
-  readonly lightClientServer: {
-    getUpdate(period: number): Promise<altair.LightClientUpdate>;
-    getOptimisticUpdate(): altair.LightClientOptimisticUpdate | null;
-    getFinalityUpdate(): altair.LightClientFinalityUpdate | null;
-    getBootstrap(blockRoot: Uint8Array): Promise<altair.LightClientBootstrap>;
-  };
-  readonly forkChoice: {
-    // For our use case we don't need the full block in this package
-    getBlock(blockRoot: Root): Uint8Array | null;
-    getHeadRoot(): RootHex;
-    iterateAncestorBlocks(blockRoot: RootHex): IterableIterator<{slot: Slot; blockRoot: RootHex}>;
-  };
-}
-
-export enum LightClientServerErrorCode {
-  RESOURCE_UNAVAILABLE = "RESOURCE_UNAVAILABLE",
-}
-
-export type LightClientServerErrorType = {code: LightClientServerErrorCode.RESOURCE_UNAVAILABLE};
-
-export class LightClientServerError extends LodestarError<LightClientServerErrorType> {}
-
-export interface IBeaconDb {
-  readonly block: {
-    getBinary: (blockRoot: Uint8Array) => Promise<Uint8Array | null>;
-  };
-  readonly blockArchive: {
-    getBinaryEntryByRoot(blockRoot: Uint8Array): Promise<{key: Slot; value: Uint8Array | null}>;
-    decodeKey(data: Uint8Array): number;
-    binaryEntriesStream(opts?: {gte: number; lt: number}): AsyncIterable<{key: Uint8Array; value: Uint8Array}>;
-  };
 }

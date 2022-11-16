@@ -4,9 +4,11 @@ import {ForkName} from "@lodestar/params";
 import {IBeaconConfig} from "@lodestar/config";
 import {allForks, altair, phase0} from "@lodestar/types";
 import {ILogger} from "@lodestar/utils";
-import {ReqRespHandlers} from "./handlers/index.js";
 import {INetworkEventBus, IPeerRpcScoreStore, MetadataController, PeersData} from "./sharedTypes.js";
 import {Metrics} from "./metrics.js";
+import {Method, ProtocolDefinition, RequestTypedContainer} from "./types.js";
+import {RequestError} from "./request/errors.js";
+import {ReqRespProtocolModules} from "./ReqRespProtocol.js";
 
 export interface IReqResp {
   start(): void;
@@ -25,24 +27,36 @@ export interface IReqResp {
   lightClientOptimisticUpdate(peerId: PeerId): Promise<altair.LightClientOptimisticUpdate>;
   lightClientFinalityUpdate(peerId: PeerId): Promise<altair.LightClientFinalityUpdate>;
   lightClientUpdate(peerId: PeerId, request: altair.LightClientUpdatesByRange): Promise<altair.LightClientUpdate[]>;
+  registerProtocol<Req, Resp>(protocol: ProtocolDefinition<Req, Resp>): void;
 }
 
-export interface IReqRespModules {
+export interface ReqRespEventsHandlers {
+  onIncomingRequestBody(modules: ReqRespProtocolModules, req: RequestTypedContainer, peerId: PeerId): void;
+  onOutgoingReqRespError(modules: ReqRespProtocolModules, peerId: PeerId, method: Method, error: RequestError): void;
+  onIncomingRequest(modules: ReqRespProtocolModules, peerId: PeerId, method: Method): void;
+}
+
+export interface ReqRespModules {
   config: IBeaconConfig;
   libp2p: Libp2p;
   peersData: PeersData;
   logger: ILogger;
   metadata: MetadataController;
-  reqRespHandlers: ReqRespHandlers;
   peerRpcScores: IPeerRpcScoreStore;
   networkEventBus: INetworkEventBus;
   metrics: Metrics | null;
+  inboundRateLimiter: RateLimiter;
+}
+
+export interface ReqRespHandlerContext {
+  modules: ReqRespProtocolModules;
+  eventsHandlers: ReqRespEventsHandlers;
 }
 
 /**
  * Rate limiter interface for inbound and outbound requests.
  */
-export interface IRateLimiter {
+export interface RateLimiter {
   /** Allow to request or response based on rate limit params configured. */
   allowRequest(peerId: PeerId): boolean;
   /** Rate limit check for block count */

@@ -11,11 +11,20 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "1.2.1",
+  "version": "0.1.0",
   "type": "module",
   "exports": {
     ".": {
       "import": "./lib/index.js"
+    },
+    "./messages": {
+      "import": "./lib/messages/index.js"
+    },
+    "./rate_limiter": {
+      "import": "./lib/rate_limiter/index.js"
+    },
+    "./utils": {
+      "import": "./lib/utils/index.js"
     }
   },
   "typesVersions": {

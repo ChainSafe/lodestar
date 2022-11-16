@@ -1,11 +1,11 @@
 import {PeerId} from "@libp2p/interface-peer-id";
 import {ILogger, MapDef} from "@lodestar/utils";
-import {IRateLimiter} from "../interface.js";
+import {RateLimiter} from "../interface.js";
 import {Metrics} from "../metrics.js";
-import {RateTracker} from "../rateTracker.js";
 import {IPeerRpcScoreStore, PeerAction} from "../sharedTypes.js";
+import {RateTracker} from "./RateTracker.js";
 
-interface IRateLimiterModules {
+interface RateLimiterModules {
   logger: ILogger;
   peerRpcScores: IPeerRpcScoreStore;
   metrics: Metrics | null;
@@ -18,7 +18,7 @@ interface IRateLimiterModules {
  * - blockCountTotalLimit: maximum block count we can serve for all peers within rateTrackerTimeoutMs
  * - rateTrackerTimeoutMs: the time period we want to track total requests or objects, normally 1 min
  */
-export type RateLimiterOpts = {
+export type RateLimiterOptions = {
   requestCountPeerLimit: number;
   blockCountPeerLimit: number;
   blockCountTotalLimit: number;
@@ -32,24 +32,10 @@ const CHECK_DISCONNECTED_PEERS_INTERVAL_MS = 10 * 60 * 1000;
 const DISCONNECTED_TIMEOUT_MS = 5 * 60 * 1000;
 
 /**
- * Default value for RateLimiterOpts
- * - requestCountPeerLimit: allow to serve 50 requests per peer within 1 minute
- * - blockCountPeerLimit: allow to serve 500 blocks per peer within 1 minute
- * - blockCountTotalLimit: allow to serve 2000 (blocks) for all peer within 1 minute (4 x blockCountPeerLimit)
- * - rateTrackerTimeoutMs: 1 minute
- */
-export const defaultRateLimiterOpts = {
-  requestCountPeerLimit: 50,
-  blockCountPeerLimit: 500,
-  blockCountTotalLimit: 2000,
-  rateTrackerTimeoutMs: 60 * 1000,
-};
-
-/**
  * This class is singleton, it has per-peer request count rate tracker and block count rate tracker
  * and a block count rate tracker for all peers (this is lodestar specific).
  */
-export class InboundRateLimiter implements IRateLimiter {
+export class InboundRateLimiter implements RateLimiter {
   private readonly logger: ILogger;
   private readonly peerRpcScores: IPeerRpcScoreStore;
   private readonly metrics: Metrics | null;
@@ -64,17 +50,34 @@ export class InboundRateLimiter implements IRateLimiter {
   private lastSeenRequestsByPeer: Map<string, number>;
   /** Interval to check lastSeenMessagesByPeer */
   private cleanupInterval: NodeJS.Timeout | undefined = undefined;
+  private options: RateLimiterOptions;
 
-  constructor(opts: RateLimiterOpts, modules: IRateLimiterModules) {
+  /**
+   * Default value for RateLimiterOpts
+   * - requestCountPeerLimit: allow to serve 50 requests per peer within 1 minute
+   * - blockCountPeerLimit: allow to serve 500 blocks per peer within 1 minute
+   * - blockCountTotalLimit: allow to serve 2000 (blocks) for all peer within 1 minute (4 x blockCountPeerLimit)
+   * - rateTrackerTimeoutMs: 1 minute
+   */
+  static defaults: RateLimiterOptions = {
+    requestCountPeerLimit: 50,
+    blockCountPeerLimit: 500,
+    blockCountTotalLimit: 2000,
+    rateTrackerTimeoutMs: 60 * 1000,
+  };
+
+  constructor(options: Partial<RateLimiterOptions>, modules: RateLimiterModules) {
+    this.options = {...InboundRateLimiter.defaults, ...options};
+
     this.requestCountTrackersByPeer = new MapDef(
-      () => new RateTracker({limit: opts.requestCountPeerLimit, timeoutMs: opts.rateTrackerTimeoutMs})
+      () => new RateTracker({limit: this.options.requestCountPeerLimit, timeoutMs: this.options.rateTrackerTimeoutMs})
     );
     this.blockCountTotalTracker = new RateTracker({
-      limit: opts.blockCountTotalLimit,
-      timeoutMs: opts.rateTrackerTimeoutMs,
+      limit: this.options.blockCountTotalLimit,
+      timeoutMs: this.options.rateTrackerTimeoutMs,
     });
     this.blockCountTrackersByPeer = new MapDef(
-      () => new RateTracker({limit: opts.blockCountPeerLimit, timeoutMs: opts.rateTrackerTimeoutMs})
+      () => new RateTracker({limit: this.options.blockCountPeerLimit, timeoutMs: this.options.rateTrackerTimeoutMs})
     );
     this.logger = modules.logger;
     this.peerRpcScores = modules.peerRpcScores;

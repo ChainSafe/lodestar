@@ -1,19 +1,17 @@
 import {setMaxListeners} from "node:events";
-import {Libp2p} from "libp2p";
-import {PeerId} from "@libp2p/interface-peer-id";
 import {Connection, Stream} from "@libp2p/interface-connection";
+import {PeerId} from "@libp2p/interface-peer-id";
+import {Libp2p} from "libp2p";
 import {IBeaconConfig} from "@lodestar/config";
 import {ILogger} from "@lodestar/utils";
-import {sendRequest} from "./request/index.js";
-import {handleRequest} from "./response/index.js";
-import {formatProtocolID} from "./utils/index.js";
-import {RequestError, RequestErrorCode} from "./request/index.js";
-import {Encoding, ProtocolDefinition} from "./types.js";
-import {timeoutOptions} from "./constants.js";
-import {IPeerRpcScoreStore, PeersData} from "./sharedTypes.js";
 import {Metrics} from "./metrics.js";
+import {RequestError, RequestErrorCode, sendRequest} from "./request/index.js";
+import {handleRequest} from "./response/index.js";
+import {IPeerRpcScoreStore, MetadataController, PeersData} from "./sharedTypes.js";
+import {Encoding, ProtocolDefinition, ReqRespOptions} from "./types.js";
+import {formatProtocolID} from "./utils/index.js";
+import {RateLimiter, ReqRespHandlerContext} from "./interface.js";
 
-export type IReqRespOptions = Partial<typeof timeoutOptions>;
 type ProtocolID = string;
 
 export interface ReqRespProtocolModules {
@@ -22,6 +20,8 @@ export interface ReqRespProtocolModules {
   peersData: PeersData;
   logger: ILogger;
   peerRpcScores: IPeerRpcScoreStore;
+  inboundRateLimiter: RateLimiter;
+  metadata: MetadataController;
   metrics: Metrics | null;
 }
 
@@ -36,19 +36,32 @@ export class ReqRespProtocol {
   private readonly peersData: PeersData;
   private logger: ILogger;
   private controller = new AbortController();
-  private options?: IReqRespOptions;
+  private options: ReqRespOptions;
   private reqCount = 0;
   private respCount = 0;
   private metrics: Metrics | null;
   /** `${protocolPrefix}/${method}/${version}/${encoding}` */
   private readonly supportedProtocols = new Map<ProtocolID, ProtocolDefinition>();
+  private readonly modules: ReqRespProtocolModules;
 
-  constructor(modules: ReqRespProtocolModules, options: IReqRespOptions) {
+  constructor(modules: ReqRespProtocolModules, options: ReqRespOptions) {
+    this.modules = modules;
+    this.options = options;
     this.libp2p = modules.libp2p;
     this.peersData = modules.peersData;
     this.logger = modules.logger;
-    this.options = options;
-    this.metrics = modules.metrics ?? null;
+    this.metrics = modules.metrics;
+  }
+
+  getContext(): ReqRespHandlerContext {
+    return {
+      modules: this.modules,
+      eventsHandlers: {
+        onIncomingRequest: this.options.onIncomingRequest,
+        onIncomingRequestBody: this.options.onIncomingRequestBody,
+        onOutgoingReqRespError: this.options.onOutgoingReqRespError,
+      },
+    };
   }
 
   registerProtocol<Req, Resp>(protocol: ProtocolDefinition<Req, Resp>): void {
@@ -143,6 +156,7 @@ export class ReqRespProtocol {
 
       try {
         await handleRequest({
+          context: this.getContext(),
           logger: this.logger,
           stream,
           peerId,
