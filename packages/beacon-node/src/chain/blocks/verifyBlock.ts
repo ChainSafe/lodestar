@@ -1,5 +1,5 @@
 import {CachedBeaconStateAllForks, computeEpochAtSlot} from "@lodestar/state-transition";
-import {bellatrix} from "@lodestar/types";
+import {allForks, bellatrix} from "@lodestar/types";
 import {toHexString} from "@chainsafe/ssz";
 import {ProtoBlock} from "@lodestar/fork-choice";
 import {IChainForkConfig} from "@lodestar/config";
@@ -8,7 +8,7 @@ import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
 import {RegenCaller} from "../regen/index.js";
 import type {BeaconChain} from "../chain.js";
-import {BlockImport, ImportBlockOpts} from "./types.js";
+import {ImportBlockOpts} from "./types.js";
 import {POS_PANDA_MERGE_TRANSITION_BANNER} from "./utils/pandaMergeTransitionBanner.js";
 import {verifyBlocksStateTransitionOnly} from "./verifyBlocksStateTransitionOnly.js";
 import {verifyBlocksSignatures} from "./verifyBlocksSignatures.js";
@@ -28,7 +28,7 @@ import {verifyBlocksExecutionPayload, SegmentExecStatus} from "./verifyBlocksExe
 export async function verifyBlocksInEpoch(
   this: BeaconChain,
   parentBlock: ProtoBlock,
-  blocks: BlockImport[],
+  blocks: allForks.SignedBeaconBlock[],
   opts: BlockProcessOpts & ImportBlockOpts
 ): Promise<{
   postStates: CachedBeaconStateAllForks[];
@@ -39,12 +39,12 @@ export async function verifyBlocksInEpoch(
     throw Error("Empty partiallyVerifiedBlocks");
   }
 
-  const block0 = blocks[0].block;
+  const block0 = blocks[0];
   const block0Epoch = computeEpochAtSlot(block0.message.slot);
 
   // Ensure all blocks are in the same epoch
   for (let i = 1; i < blocks.length; i++) {
-    const blockSlot = blocks[i].block.message.slot;
+    const blockSlot = blocks[i].message.slot;
     if (block0Epoch !== computeEpochAtSlot(blockSlot)) {
       throw Error(`Block ${i} slot ${blockSlot} not in same epoch ${block0Epoch}`);
     }

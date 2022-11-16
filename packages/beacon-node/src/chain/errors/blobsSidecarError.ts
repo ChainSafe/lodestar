@@ -18,6 +18,7 @@ export type BlobsSidecarErrorType =
   | {code: BlobsSidecarErrorCode.INVALID_KZG; kzgIdx: number}
   | {code: BlobsSidecarErrorCode.INVALID_KZG_TXS}
   | {code: BlobsSidecarErrorCode.INCORRECT_SLOT; blockSlot: Slot; blobSlot: Slot}
+  | {code: BlobsSidecarErrorCode.INVALID_BLOB; blobIdx: number}
   | {code: BlobsSidecarErrorCode.INVALID_KZG_PROOF};
 
 export class BlobsSidecarError extends GossipActionError<BlobsSidecarErrorType> {}

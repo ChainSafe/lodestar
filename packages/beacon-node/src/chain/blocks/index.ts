@@ -71,7 +71,7 @@ export async function processBlocks(
     const {postStates, proposerBalanceDeltas, segmentExecStatus} = await verifyBlocksInEpoch.call(
       this,
       parentBlock,
-      relevantBlocks,
+      relevantBlocks.map(({block}) => block),
       opts
     );
 
@@ -86,8 +86,9 @@ export async function processBlocks(
 
     const {executionStatuses} = segmentExecStatus;
     const fullyVerifiedBlocks = relevantBlocks.map(
-      (block, i): FullyVerifiedBlock => ({
+      ({block, blobs}, i): FullyVerifiedBlock => ({
         block,
+        blobs,
         postState: postStates[i],
         parentBlockSlot: parentSlots[i],
         executionStatus: executionStatuses[i],
@@ -104,7 +105,7 @@ export async function processBlocks(
     }
   } catch (e) {
     // above functions should only throw BlockError
-    const err = getBlockError(e, blocks[0]);
+    const err = getBlockError(e, blocks[0].block);
 
     // TODO: De-duplicate with logic above
     // ChainEvent.errorBlock

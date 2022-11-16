@@ -1,13 +1,15 @@
-import {IChainForkConfig} from "@lodestar/config";
+import bls from "@chainsafe/bls";
+import {CoordType} from "@chainsafe/bls/types";
 import {eip4844} from "@lodestar/types";
+import {bytesToBigInt} from "@lodestar/utils";
+import {FIELD_ELEMENTS_PER_BLOB} from "@lodestar/params";
 import {verifyKzgCommitmentsAgainstTransactions} from "@lodestar/state-transition";
-import {IBeaconChain} from "../interface.js";
 import {BlobsSidecarError, BlobsSidecarErrorCode} from "../errors/blobsSidecarError.js";
 import {GossipAction} from "../errors/gossipValidation.js";
 
+const BLS_MODULUS = BigInt("52435875175126190479447740508185965837690552500527637822603658699938581184513");
+
 export async function validateGossipBlobsSidecar(
-  config: IChainForkConfig,
-  chain: IBeaconChain,
   signedBlock: eip4844.SignedBeaconBlock,
   blobsSidecar: eip4844.BlobsSidecar
 ): Promise<void> {
@@ -18,7 +20,7 @@ export async function validateGossipBlobsSidecar(
   // -- i.e. all(bls.KeyValidate(commitment) for commitment in block.body.blob_kzg_commitments)
   const {blobKzgCommitments} = block.body;
   for (let i = 0; i < blobKzgCommitments.length; i++) {
-    if (!bls.keyValidate(blobKzgCommitments[i])) {
+    if (!blsKeyValidate(blobKzgCommitments[i])) {
       throw new BlobsSidecarError(GossipAction.REJECT, {code: BlobsSidecarErrorCode.INVALID_KZG, kzgIdx: i});
     }
   }
@@ -42,27 +44,46 @@ export async function validateGossipBlobsSidecar(
   }
 
   // [REJECT] the sidecar.blobs are all well formatted, i.e. the BLSFieldElement in valid range (x < BLS_MODULUS).
-  TODO;
+  for (let i = 0; blobsSidecar.blobs.length; i++) {
+    if (!blobIsValidRange(blobsSidecar.blobs[i])) {
+      throw new BlobsSidecarError(GossipAction.REJECT, {code: BlobsSidecarErrorCode.INVALID_BLOB, blobIdx: i});
+    }
+  }
 
   // [REJECT] The KZG proof is a correctly encoded compressed BLS G1 Point
-  // -- i.e. bls.KeyValidate(blobs_sidecar.kzg_aggregated_proof)
-  if (!bls.KeyValidate(blobsSidecar.kzgAggregatedProof)) {
+  // -- i.e. blsKeyValidate(blobs_sidecar.kzg_aggregated_proof)
+  if (!blsKeyValidate(blobsSidecar.kzgAggregatedProof)) {
     throw new BlobsSidecarError(GossipAction.REJECT, {code: BlobsSidecarErrorCode.INVALID_KZG_PROOF});
   }
 }
 
-type Result<T> = {ok: true; result: T} | {ok: false; error: Error};
-
-function rustOk(): Result<string>;
-
-function Ok<T>(result: T): Result<T> {
-  return {ok: true, result};
+/**
+ * From https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-bls-signature-04#section-2.5
+ * KeyValidate = valid, non-identity point that is in the correct subgroup
+ */
+function blsKeyValidate(g1Point: Uint8Array): boolean {
+  try {
+    bls.PublicKey.fromBytes(g1Point, CoordType.jacobian, true);
+    return true;
+  } catch (e) {
+    return false;
+  }
 }
 
-function okUser(): Result<number> {
-  const res = rustOk();
-  if (!res.ok) return res;
-  const resStr = res.result;
+/**
+ * ```
+ * Blob = new ByteVectorType(BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_PER_BLOB);
+ * ```
+ * Check that each FIELD_ELEMENT as a uint256 < BLS_MODULUS
+ */
+function blobIsValidRange(blob: eip4844.Blob): boolean {
+  for (let i = 0; i < FIELD_ELEMENTS_PER_BLOB; i++) {
+    const fieldElement = blob.subarray(i, i * 32);
+    const fieldElementBN = bytesToBigInt(fieldElement, "be");
+    if (fieldElementBN >= BLS_MODULUS) {
+      return false;
+    }
+  }
 
-  return Ok(parseInt(resStr));
+  return true;
 }
