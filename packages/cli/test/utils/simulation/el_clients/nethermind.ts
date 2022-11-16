@@ -3,12 +3,12 @@ import {mkdir, writeFile} from "node:fs/promises";
 import {join} from "node:path";
 import got from "got";
 import {ZERO_HASH} from "@lodestar/state-transition";
-import {ELClient, ELClientGenerator, ELClientOptions, ELNode, JobOptions, Runner, RunnerType} from "../interfaces.js";
+import {ELClient, ELClientGenerator, ELNode, JobOptions} from "../interfaces.js";
 import {Eth1ProviderWithAdmin} from "../Eth1ProviderWithAdmin.js";
 import {isDockerRunner} from "../runner/index.js";
 import {getNethermindChainSpec} from "../utils/el_genesis.js";
 
-export const generateNethermindNode: ELClientGenerator = (
+export const generateNethermindNode: ELClientGenerator<ELClient.Nethermind> = (
   {
     id,
     mode,
@@ -22,8 +22,9 @@ export const generateNethermindNode: ELClientGenerator = (
     cliqueSealingPeriod,
     address,
     mining,
-  }: ELClientOptions,
-  runner: Runner<RunnerType.ChildProcess> | Runner<RunnerType.Docker>
+    clientOptions,
+  },
+  runner
 ) => {
   if (!isDockerRunner(runner)) {
     throw new Error("Nethermind client only supports docker runner");
@@ -91,6 +92,7 @@ export const generateNethermindNode: ELClientGenerator = (
         "--config",
         "none",
         ...(mining ? ["--Init.IsMining", "true", "--Mining.Enabled", "true"] : []),
+        ...clientOptions,
       ],
       env: {},
     },

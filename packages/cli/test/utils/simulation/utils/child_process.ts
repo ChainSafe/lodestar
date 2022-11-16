@@ -9,7 +9,7 @@ export const stopChildProcess = async (
   childProcess: ChildProcess,
   signal: NodeJS.Signals | number = "SIGTERM"
 ): Promise<void> => {
-  if (childProcess.killed || childProcess.exitCode !== null || childProcess.signalCode !== undefined) {
+  if (childProcess.killed || childProcess.exitCode !== null || childProcess.signalCode !== null) {
     return;
   }
 
