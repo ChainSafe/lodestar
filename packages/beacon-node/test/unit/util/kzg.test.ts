@@ -1,7 +1,6 @@
 import {randomBytes} from "node:crypto";
 import {expect} from "chai";
 import {
-  loadTrustedSetup,
   freeTrustedSetup,
   blobToKzgCommitment,
   computeAggregateKzgProof,
@@ -9,16 +8,16 @@ import {
   BYTES_PER_FIELD_ELEMENT,
   FIELD_ELEMENTS_PER_BLOB,
 } from "c-kzg";
+import {loadEthereumTrustedSetup} from "../../../src/util/kzg.js";
 
-const SETUP_FILE_PATH = "../../../../trusted_setup.txt";
 const BLOB_BYTE_COUNT = FIELD_ELEMENTS_PER_BLOB * BYTES_PER_FIELD_ELEMENT;
 
 const generateRandomBlob = (): Uint8Array => new Uint8Array(randomBytes(BLOB_BYTE_COUNT));
 
 describe("C-KZG", () => {
-  before(function () {
+  before(async function () {
     this.timeout(10000); // Loading trusted setup is slow
-    loadTrustedSetup(SETUP_FILE_PATH);
+    await loadEthereumTrustedSetup();
   });
 
   after(() => {
