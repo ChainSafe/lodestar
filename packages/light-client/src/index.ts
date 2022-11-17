@@ -246,7 +246,7 @@ export class Lightclient {
   async getHeadStateProof(paths: JsonPath[]): Promise<{proof: TreeOffsetProof; header: phase0.BeaconBlockHeader}> {
     const header = this.head.header;
     const stateId = toHexString(header.stateRoot);
-    const res = await this.api.proofs.getStateProof(stateId, paths);
+    const res = await this.api.proof.getStateProof(stateId, paths);
     return {
       proof: res.data as TreeOffsetProof,
       header,

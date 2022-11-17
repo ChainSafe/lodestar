@@ -16,7 +16,7 @@ const allNamespacesObj: {[K in keyof Api]: true} = {
   lightclient: true,
   lodestar: true,
   node: true,
-  proofs: true,
+  proof: true,
   validator: true,
 };
 export const allNamespaces = Object.keys(allNamespacesObj) as ApiNamespace[];

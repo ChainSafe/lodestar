@@ -9,7 +9,7 @@ import * as events from "./events.js";
 import * as lightclient from "./lightclient.js";
 import * as lodestar from "./lodestar.js";
 import * as node from "./node.js";
-import * as proofs from "./proofs.js";
+import * as proof from "./proofs.js";
 import * as validator from "./validator.js";
 
 type ClientModules = HttpClientModules & {
@@ -32,7 +32,7 @@ export function getClient(opts: HttpClientOptions, modules: ClientModules): Api 
     lightclient: lightclient.getClient(config, httpClient),
     lodestar: lodestar.getClient(config, httpClient),
     node: node.getClient(config, httpClient),
-    proofs: proofs.getClient(config, httpClient),
+    proof: proof.getClient(config, httpClient),
     validator: validator.getClient(config, httpClient),
   };
 }

@@ -1,5 +1,5 @@
 import {ProofType} from "@chainsafe/persistent-merkle-tree";
-import {Api} from "../../../../src/beacon/routes/proofs.js";
+import {Api} from "../../../../src/beacon/routes/proof.js";
 import {GenericServerTestCases} from "../../../utils/genericServerTest.js";
 
 const root = Uint8Array.from(Buffer.alloc(32, 1));

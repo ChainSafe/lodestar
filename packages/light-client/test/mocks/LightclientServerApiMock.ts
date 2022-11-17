@@ -7,7 +7,7 @@ import {altair, RootHex, SyncPeriod} from "@lodestar/types";
 import {notNullish} from "@lodestar/utils";
 import {BeaconStateAltair} from "../utils/types.js";
 
-export class ProofsServerApiMock implements routes.proofs.Api {
+export class ProofsServerApiMock implements routes.proof.Api {
   readonly states = new Map<RootHex, BeaconStateAltair>();
 
   async getStateProof(stateId: string, paths: JsonPath[]): Promise<{data: Proof}> {

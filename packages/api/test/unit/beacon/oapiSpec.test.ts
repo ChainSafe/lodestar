@@ -37,7 +37,7 @@ const routesData = {
   ...routes.events.routesData,
   ...routes.lightclient.routesData,
   ...routes.node.routesData,
-  ...routes.proofs.routesData,
+  ...routes.proof.routesData,
   ...routes.validator.routesData,
 };
 
@@ -59,7 +59,7 @@ const reqSerializers = {
   ...getEventsReqSerializers(),
   ...routes.lightclient.getReqSerializers(),
   ...routes.node.getReqSerializers(),
-  ...routes.proofs.getReqSerializers(),
+  ...routes.proof.getReqSerializers(),
   ...routes.validator.getReqSerializers(),
 };
 
@@ -69,7 +69,7 @@ const returnTypes = {
   ...routes.debug.getReturnTypes(),
   ...routes.lightclient.getReturnTypes(),
   ...routes.node.getReturnTypes(),
-  ...routes.proofs.getReturnTypes(),
+  ...routes.proof.getReturnTypes(),
   ...routes.validator.getReturnTypes(),
 };
 
