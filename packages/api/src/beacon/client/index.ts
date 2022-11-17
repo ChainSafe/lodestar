@@ -9,7 +9,7 @@ import * as events from "./events.js";
 import * as lightclient from "./lightclient.js";
 import * as lodestar from "./lodestar.js";
 import * as node from "./node.js";
-import * as proof from "./proofs.js";
+import * as proof from "./proof.js";
 import * as validator from "./validator.js";
 
 type ClientModules = HttpClientModules & {
