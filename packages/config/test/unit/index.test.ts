@@ -1,6 +1,8 @@
 import {expect} from "chai";
 import {ForkName} from "@lodestar/params";
 import {toHexString} from "@chainsafe/ssz";
+import {chainConfig as mainnetPreset} from "../../src/chainConfig/presets/mainnet.js";
+import {chainConfig as minimalPreset} from "../../src/chainConfig/presets/minimal.js";
 import {config} from "../../src/default.js";
 
 describe("forks", () => {
@@ -29,6 +31,18 @@ describe("forks", () => {
       const prevFork = config.forksAscendingEpochOrder[i - 1];
       expect(toHexString(fork.prevVersion)).to.equal(toHexString(prevFork.version), `Wrong prevVersion ${fork.name}`);
       expect(fork.prevForkName).to.equal(prevFork.name, `Wrong prevName ${fork.name}`);
+    }
+  });
+
+  it("Must no schedule forks in the presets", () => {
+    // Every testnet extends the mainnet preset. If a fork is scheduled in the mainnet preset but not overridden
+    // in the testnet config, the testnet nodes may unexpectedly fork.
+    for (const preset of [mainnetPreset, minimalPreset]) {
+      for (const [key, value] of Object.entries(preset)) {
+        if (key.endsWith("FORK_EPOCH") && value !== Infinity) {
+          throw Error(`${key} must be Infinity but is ${value}`);
+        }
+      }
     }
   });
 });

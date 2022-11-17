@@ -7,9 +7,10 @@ export const chainConfig: IChainConfig = {
   PRESET_BASE: PresetName.mainnet,
   CONFIG_NAME: "mainnet",
 
-  // Transition
-  // Estimated: Sept 15, 2022
-  TERMINAL_TOTAL_DIFFICULTY: BigInt("58750000000000000000000"),
+  // ////////////////////////////////////////////////////////////////
+  // DO NOT SCHEDULE FORKS ON THE PRESET, DO IT IN THE NETWORK CONFIG
+  // ////////////////////////////////////////////////////////////////
+  TERMINAL_TOTAL_DIFFICULTY: BigInt("115792089237316195423570985008687907853269984665640564039457584007913129638912"),
   TERMINAL_BLOCK_HASH: b("0x0000000000000000000000000000000000000000000000000000000000000000"),
   TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH: Infinity,
 
@@ -26,22 +27,15 @@ export const chainConfig: IChainConfig = {
 
   // Forking
   // ---------------------------------------------------------------
-  // Some forks are disabled for now:
-  //  - These may be re-assigned to another fork-version later
-  //  - Temporarily set to max uint64 value: 2**64 - 1
-
-  // Altair
+  // ////////////////////////////////////////////////////////////////
+  // DO NOT SCHEDULE FORKS ON THE PRESET, DO IT IN THE NETWORK CONFIG
+  // ////////////////////////////////////////////////////////////////
   ALTAIR_FORK_VERSION: b("0x01000000"),
-  ALTAIR_FORK_EPOCH: 74240, // Oct 27, 2021, 10:56:23am UTC
-  // Bellatrix
+  ALTAIR_FORK_EPOCH: Infinity,
   BELLATRIX_FORK_VERSION: b("0x02000000"),
-  BELLATRIX_FORK_EPOCH: 144896, // Sept 6, 2022, 11:34:47am UTC
-
-  // Capella
+  BELLATRIX_FORK_EPOCH: Infinity,
   CAPELLA_FORK_VERSION: b("0x03000000"),
   CAPELLA_FORK_EPOCH: Infinity,
-
-  // EIP4844
   EIP4844_FORK_VERSION: b("0x04000000"),
   EIP4844_FORK_EPOCH: Infinity,
 
