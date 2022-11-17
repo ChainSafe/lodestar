@@ -1,7 +1,7 @@
 import sinon from "sinon";
 import {expect} from "chai";
 import {createIBeaconConfig} from "@lodestar/config";
-import {config} from "@lodestar/config/default";
+import {chainConfig} from "@lodestar/config/default";
 import {altair, phase0, ssz} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 
@@ -30,13 +30,17 @@ const opts: INetworkOptions = {
   discv5: null,
 };
 
-const ALTAIR_START_SLOT = computeStartSlotAtEpoch(config.ALTAIR_FORK_EPOCH);
-
 describe("gossipsub", function () {
   if (this.timeout() < 15 * 1000) this.timeout(15 * 1000);
   this.retries(2); // This test fail sometimes, with a 5% rate.
 
   const logger = testLogger();
+
+  const ALTAIR_FORK_EPOCH = 128;
+  const genesisValidatorsRoot = Buffer.alloc(32, 0xdd);
+  const ALTAIR_START_SLOT = computeStartSlotAtEpoch(ALTAIR_FORK_EPOCH);
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  const config = createIBeaconConfig({...chainConfig, ALTAIR_FORK_EPOCH}, genesisValidatorsRoot);
 
   const afterEachCallbacks: (() => Promise<void> | void)[] = [];
   afterEach(async () => {
@@ -58,13 +62,12 @@ describe("gossipsub", function () {
       },
     });
 
-    const beaconConfig = createIBeaconConfig(config, state.genesisValidatorsRoot);
     const chain = new MockBeaconChain({
       genesisTime: 0,
       chainId: 0,
       networkId: BigInt(0),
       state,
-      config: beaconConfig,
+      config,
     });
 
     chain.forkChoice.getHead = () => {
@@ -83,7 +86,7 @@ describe("gossipsub", function () {
     const loggerB = testLogger("B");
 
     const modules = {
-      config: beaconConfig,
+      config,
       chain,
       db,
       reqRespHandlers,
