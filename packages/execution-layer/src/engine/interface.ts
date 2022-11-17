@@ -1,9 +1,8 @@
 import {RootHex, allForks} from "@lodestar/types";
-import {DATA, QUANTITY} from "../utils.js";
-import {PayloadId, PayloadIdCache, ApiPayloadAttributes} from "./payloadIdCache.js";
+import {DATA, QUANTITY} from "../provider/utils.js";
+import {PayloadIdCache, PayloadId, ApiPayloadAttributes} from "./payloadIdCache.js";
 
 export {PayloadIdCache, PayloadId, ApiPayloadAttributes};
-
 export enum ExecutePayloadStatus {
   /** given payload is valid */
   VALID = "VALID",
@@ -92,4 +91,17 @@ export interface IExecutionEngine {
     finalizedBlockHash: RootHex,
     payloadAttributes?: PayloadAttributes
   ): Promise<PayloadId | null>;
+
+  /**
+   * Given the payload_id, get_payload returns the most recent version of the execution payload that has been built
+   * since the corresponding call to prepare_payload method.
+   *
+   * Required for block producing
+   * https://github.com/ethereum/consensus-specs/blob/dev/specs/merge/validator.md#get_payload
+   */
+  getPayload(payloadId: PayloadId): Promise<allForks.ExecutionPayload>;
+
+  exchangeTransitionConfigurationV1(
+    transitionConfiguration: TransitionConfigurationV1
+  ): Promise<TransitionConfigurationV1>;
 }

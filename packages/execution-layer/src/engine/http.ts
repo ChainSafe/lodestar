@@ -2,7 +2,7 @@ import {RootHex, allForks, capella} from "@lodestar/types";
 import {BYTES_PER_LOGS_BLOOM, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {fromHex} from "@lodestar/utils";
 
-import {ErrorJsonRpcResponse, HttpRpcError, JsonRpcHttpClient} from "../jsonRpcHttpClient.js";
+import {ErrorJsonRpcResponse, HttpRpcError, JsonRpcHttpClient} from "../provider/jsonRpcHttpClient.js";
 import {
   bytesToData,
   numToQuantity,
@@ -11,21 +11,11 @@ import {
   DATA,
   QUANTITY,
   quantityToBigint,
-  JobItemQueue,
-} from "../utils.js";
-import {IJsonRpcHttpClient, ReqOpts} from "../jsonRpcHttpClient.js";
-import {
-  ExecutePayloadStatus,
-  ExecutePayloadResponse,
-  ForkChoiceUpdateStatus,
-  IExecutionEngine,
-  PayloadId,
-  PayloadAttributes,
-  ApiPayloadAttributes,
-  TransitionConfigurationV1,
-} from "./interface.js";
-import {PayloadIdCache} from "./payloadIdCache.js";
+} from "../provider/utils.js";
+import {IJsonRpcHttpClient, ReqOpts} from "../provider/jsonRpcHttpClient.js";
+import {IMetrics} from "../metrics/index.js";
 
+// TODO DA duplicated constant.
 /**
  * Blocks are downloaded in batches from peers. This constant specifies how many epochs worth of
  * blocks per batch are requested _at most_. A batch may request less blocks to account for
@@ -39,14 +29,22 @@ import {PayloadIdCache} from "./payloadIdCache.js";
  */
 export const EPOCHS_PER_BATCH = 1;
 
-/**
- * Size for the serializing queue for fcUs and new payloads, the max length could be equal to
- * EPOCHS_PER_BATCH * 2 in case new payloads are also not awaited serially
- */
-const QUEUE_MAX_LENGTH = EPOCHS_PER_BATCH * SLOTS_PER_EPOCH * 2;
+import {JobItemQueue} from "../queue/index.js";
+import {
+  ExecutePayloadStatus,
+  ExecutePayloadResponse,
+  ForkChoiceUpdateStatus,
+  IExecutionEngine,
+  PayloadId,
+  PayloadAttributes,
+  ApiPayloadAttributes,
+  TransitionConfigurationV1,
+} from "./interface.js";
+import {PayloadIdCache} from "./payloadIdCache.js";
 
 export type ExecutionEngineModules = {
   signal: AbortSignal;
+  metrics?: IMetrics | null;
 };
 
 export type ExecutionEngineHttpOpts = {
@@ -75,9 +73,17 @@ export const defaultExecutionEngineHttpOpts: ExecutionEngineHttpOpts = {
   timeout: 12000,
 };
 
+/**
+ * Size for the serializing queue for fcUs and new payloads, the max length could be equal to
+ * EPOCHS_PER_BATCH * 2 in case new payloads are also not awaited serially
+ */
+const QUEUE_MAX_LENGTH = EPOCHS_PER_BATCH * SLOTS_PER_EPOCH * 2;
+
 // Define static options once to prevent extra allocations
 const notifyNewPayloadOpts: ReqOpts = {routeId: "notifyNewPayload"};
 const forkchoiceUpdatedV1Opts: ReqOpts = {routeId: "forkchoiceUpdated"};
+const getPayloadOpts: ReqOpts = {routeId: "getPayload"};
+const exchageTransitionConfigOpts: ReqOpts = {routeId: "exchangeTransitionConfiguration"};
 
 /**
  * based on Ethereum JSON-RPC API and inherits the following properties of this standard:
@@ -109,17 +115,18 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     );
   };
 
-  constructor(opts: ExecutionEngineHttpOpts, {signal}: ExecutionEngineModules) {
+  constructor(opts: ExecutionEngineHttpOpts, {metrics, signal}: ExecutionEngineModules) {
     this.rpc = new JsonRpcHttpClient(opts.urls, {
       ...opts,
       signal,
+      metrics: metrics?.executionEnginerHttpClient,
       jwtSecret: opts.jwtSecretHex ? fromHex(opts.jwtSecretHex) : undefined,
     });
-    this.rpcFetchQueue = new JobItemQueue<[EngineRequest], EngineResponse>(this.jobQueueProcessor, {
-      maxLength: QUEUE_MAX_LENGTH,
-      maxConcurrency: 1,
-      signal,
-    });
+    this.rpcFetchQueue = new JobItemQueue<[EngineRequest], EngineResponse>(
+      this.jobQueueProcessor,
+      {maxLength: QUEUE_MAX_LENGTH, maxConcurrency: 1, signal},
+      metrics?.engineHttpProcessorQueue
+    );
   }
 
   /**
@@ -287,6 +294,50 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       default:
         throw Error(`Unknown status ${status}`);
     }
+  }
+
+  /**
+   * `engine_getPayloadV1`
+   *
+   * 1. Given the payloadId client software MUST respond with the most recent version of the payload that is available in the corresponding building process at the time of receiving the call.
+   * 2. The call MUST be responded with 5: Unavailable payload error if the building process identified by the payloadId doesn't exist.
+   * 3. Client software MAY stop the corresponding building process after serving this call.
+   */
+  async getPayload(payloadId: PayloadId): Promise<allForks.ExecutionPayload> {
+    const method = "engine_getPayloadV1";
+    const executionPayloadRpc = await this.rpc.fetchWithRetries<
+      EngineApiRpcReturnTypes[typeof method],
+      EngineApiRpcParamTypes[typeof method]
+    >(
+      {
+        method,
+        params: [payloadId],
+      },
+      getPayloadOpts
+    );
+    return parseExecutionPayload(executionPayloadRpc);
+  }
+
+  /**
+   * `engine_exchangeTransitionConfigurationV1`
+   *
+   * An api method for EL<>CL transition config matching and heartbeat
+   */
+
+  async exchangeTransitionConfigurationV1(
+    transitionConfiguration: TransitionConfigurationV1
+  ): Promise<TransitionConfigurationV1> {
+    const method = "engine_exchangeTransitionConfigurationV1";
+    return await this.rpc.fetchWithRetries<
+      EngineApiRpcReturnTypes[typeof method],
+      EngineApiRpcParamTypes[typeof method]
+    >(
+      {
+        method,
+        params: [transitionConfiguration],
+      },
+      exchageTransitionConfigOpts
+    );
   }
 
   async prunePayloadIdCache(): Promise<void> {

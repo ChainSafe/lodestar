@@ -1,7 +1,6 @@
-import {sleep} from "@lodestar/utils";
-import {LinkedList} from "../utils.js";
+import {LinkedList, sleep} from "@lodestar/utils";
 import {QueueError, QueueErrorCode} from "./errors.js";
-import {defaultQueueOpts, JobQueueOpts, QueueType} from "./options.js";
+import {defaultQueueOpts, IQueueMetrics, JobQueueOpts, QueueType} from "./options.js";
 
 /**
  * JobQueue that stores arguments in the job array instead of closures.
@@ -20,12 +19,22 @@ export class JobItemQueue<Args extends any[], R> {
     resolve: (result: R | PromiseLike<R>) => void;
     reject: (error?: Error) => void;
   }> = new LinkedList();
+  private readonly metrics?: IQueueMetrics;
   private runningJobs = 0;
   private lastYield = 0;
 
-  constructor(private readonly itemProcessor: (...args: Args) => Promise<R>, opts: JobQueueOpts) {
+  constructor(
+    private readonly itemProcessor: (...args: Args) => Promise<R>,
+    opts: JobQueueOpts,
+    metrics?: IQueueMetrics
+  ) {
     this.opts = {...defaultQueueOpts, ...opts};
     this.opts.signal.addEventListener("abort", this.abortAllJobs, {once: true});
+
+    if (metrics) {
+      this.metrics = metrics;
+      metrics.length.addCollect(() => metrics.length.set(this.jobs.length));
+    }
   }
 
   push(...args: Args): Promise<R> {
@@ -34,6 +43,7 @@ export class JobItemQueue<Args extends any[], R> {
     }
 
     if (this.jobs.length + 1 > this.opts.maxLength) {
+      this.metrics?.droppedJobs.inc();
       if (this.opts.type === QueueType.LIFO) {
         // In LIFO queues keep the latest job and drop the oldest
         this.jobs.shift();
@@ -72,9 +82,17 @@ export class JobItemQueue<Args extends any[], R> {
 
     this.runningJobs++;
 
+    // If the job, metrics or any code below throws: the job will reject never going stale.
+    // Only downside is the the job promise may be resolved twice, but that's not an issue
     try {
+      const timer = this.metrics?.jobTime.startTimer();
+      this.metrics?.jobWaitTime.observe((Date.now() - job.addedTimeMs) / 1000);
+
       const result = await this.itemProcessor(...job.args);
       job.resolve(result);
+
+      if (timer) timer();
+
       // Yield to the macro queue
       if (Date.now() - this.lastYield > this.opts.yieldEveryMs) {
         this.lastYield = Date.now();

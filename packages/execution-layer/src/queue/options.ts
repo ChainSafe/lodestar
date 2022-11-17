@@ -1,3 +1,5 @@
+import {IGauge, IHistogram} from "@lodestar/utils";
+
 export enum QueueType {
   FIFO = "FIFO",
   LIFO = "LIFO",
@@ -13,6 +15,14 @@ export type JobQueueOpts = {
   /** Defaults to FIFO */
   type?: QueueType;
 };
+
+export interface IQueueMetrics {
+  length: IGauge;
+  droppedJobs: IGauge;
+  /** Compute async utilization rate with `rate(metrics_name[1m])` */
+  jobTime: IHistogram;
+  jobWaitTime: IHistogram;
+}
 
 export const defaultQueueOpts: Required<Pick<JobQueueOpts, "maxConcurrency" | "yieldEveryMs" | "type">> = {
   maxConcurrency: 1,

@@ -1,6 +1,7 @@
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {pruneSetToMax} from "@lodestar/utils";
-import {DATA, QUANTITY} from "../utils.js";
+import {DATA, QUANTITY} from "../provider/utils.js";
+import {IMetrics} from "../metrics/index.js";
 
 // Idealy this only need to be set to the max head reorgs number
 const MAX_PAYLOAD_IDS = SLOTS_PER_EPOCH;
@@ -22,6 +23,7 @@ type FcuAttributes = {headBlockHash: DATA; finalizedBlockHash: DATA} & ApiPayloa
 
 export class PayloadIdCache {
   private readonly payloadIdByFcuAttributes = new Map<string, {payloadId: PayloadId; fullKey: string}>();
+  constructor(private readonly metrics?: IMetrics | null) {}
 
   getFullKey({headBlockHash, finalizedBlockHash, timestamp, prevRandao, suggestedFeeRecipient}: FcuAttributes): string {
     return `${headBlockHash}-${finalizedBlockHash}-${timestamp}-${prevRandao}-${suggestedFeeRecipient}`;

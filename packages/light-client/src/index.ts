@@ -6,6 +6,7 @@ import {createIBeaconConfig, IBeaconConfig, IChainForkConfig} from "@lodestar/co
 import {TreeOffsetProof} from "@chainsafe/persistent-merkle-tree";
 import {isErrorAborted, sleep} from "@lodestar/utils";
 import {fromHexString, JsonPath, toHexString} from "@chainsafe/ssz";
+import {IExecutionEngine} from "@lodestar/execution-layer";
 import {getCurrentSlot, slotWithFutureTolerance, timeUntilNextEpoch} from "./utils/clock.js";
 import {isBetterUpdate, LightclientUpdateStats} from "./utils/update.js";
 import {deserializeSyncCommittee, isEmptyHeader, isNode, sumBits} from "./utils/utils.js";
@@ -18,7 +19,6 @@ import {assertValidSignedHeader, assertValidLightClientUpdate, assertValidFinali
 import {getLcLoggerConsole, ILcLogger} from "./utils/logger.js";
 import {computeSyncPeriodAtEpoch, computeSyncPeriodAtSlot, computeEpochAtSlot} from "./utils/clock.js";
 import {LightClientTransport} from "./transport/index.js";
-import {IExecutionEngine} from "./execution/index.js";
 
 // Re-export types
 export {LightclientEvent} from "./events.js";

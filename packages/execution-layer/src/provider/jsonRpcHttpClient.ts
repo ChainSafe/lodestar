@@ -2,14 +2,9 @@
 // Note: isomorphic-fetch is not well mantained and does not support abort signals
 import fetch from "cross-fetch";
 
-import {ErrorAborted, TimeoutError, retry} from "@lodestar/utils";
+import {ErrorAborted, TimeoutError, retry, IHistogram, IGauge} from "@lodestar/utils";
+import {IJson, IRpcPayload} from "../interface.js";
 import {encodeJwtToken} from "./jwt.js";
-
-export type IJson = string | number | boolean | undefined | IJson[] | {[key: string]: IJson};
-export interface IRpcPayload<P = IJson[]> {
-  method: string;
-  params: P;
-}
 /**
  * Limits the amount of response text printed with RPC or parsing errors
  */
@@ -39,6 +34,15 @@ export type ReqOpts = {
   shouldRetry?: (lastError: Error) => boolean;
 };
 
+export type JsonRpcHttpClientMetrics = {
+  requestTime: IHistogram<"routeId">;
+  requestErrors: IGauge<"routeId">;
+  requestUsedFallbackUrl: IGauge<"routeId">;
+  activeRequests: IGauge<"routeId">;
+  configUrlsCount: IGauge;
+  retryCount: IGauge<"routeId">;
+};
+
 export interface IJsonRpcHttpClient {
   fetch<R, P = IJson[]>(payload: IRpcPayload<P>, opts?: ReqOpts): Promise<R>;
   fetchWithRetries<R, P = IJson[]>(payload: IRpcPayload<P>, opts?: ReqOpts): Promise<R>;
@@ -54,6 +58,7 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
    * the token freshness +-5 seconds (via `iat` property of the token claim)
    */
   private readonly jwtSecret?: Uint8Array;
+  private readonly metrics: JsonRpcHttpClientMetrics | null;
 
   constructor(
     private readonly urls: string[],
@@ -76,6 +81,8 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
       retryAttempts?: number;
       /** Retry delay, only relevant with retry attempts */
       retryDelay?: number;
+      /** Metrics for retry, could be expanded later */
+      metrics?: JsonRpcHttpClientMetrics | null;
     }
   ) {
     // Sanity check for all URLs to be properly defined. Otherwise it will error in loop on fetch
@@ -89,6 +96,9 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
     }
 
     this.jwtSecret = opts?.jwtSecret;
+    this.metrics = opts?.metrics ?? null;
+
+    this.metrics?.configUrlsCount.set(urls.length);
   }
 
   /**
@@ -103,8 +113,14 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
    * Perform RPC request with retry
    */
   async fetchWithRetries<R, P = IJson[]>(payload: IRpcPayload<P>, opts?: ReqOpts): Promise<R> {
+    const routeId = opts?.routeId ?? "unknown";
+
     const res = await retry<IRpcResponse<R>>(
-      async (_attempt) => {
+      async (attempt) => {
+        /** If this is a retry, increment the retry counter for this method */
+        if (attempt > 1) {
+          this.opts?.metrics?.retryCount.inc({routeId});
+        }
         return await this.fetchJson({jsonrpc: "2.0", id: this.id++, ...payload}, opts);
       },
       {
@@ -131,9 +147,14 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
   }
 
   private async fetchJson<R, T = unknown>(json: T, opts?: ReqOpts): Promise<R> {
+    const routeId = opts?.routeId ?? "unknown";
     let lastError: Error | null = null;
 
     for (let i = 0; i < this.urls.length; i++) {
+      if (i > 0) {
+        this.metrics?.requestUsedFallbackUrl.inc({routeId});
+      }
+
       try {
         return await this.fetchJsonOneUrl<R, T>(this.urls[i], json, opts);
       } catch (e) {
@@ -171,6 +192,11 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
     const onParentSignalAbort = (): void => controller.abort();
     this.opts?.signal?.addEventListener("abort", onParentSignalAbort, {once: true});
 
+    // Default to "unknown" to prevent mixing metrics with others.
+    const routeId = opts?.routeId ?? "unknown";
+    const timer = this.metrics?.requestTime.startTimer({routeId});
+    this.metrics?.activeRequests.inc({routeId}, 1);
+
     try {
       const headers: Record<string, string> = {"Content-Type": "application/json"};
       if (this.jwtSecret) {
@@ -202,6 +228,8 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
 
       return parseJson(body);
     } catch (e) {
+      this.metrics?.requestErrors.inc({routeId});
+
       if (controller.signal.aborted) {
         // controller will abort on both parent signal abort + timeout of this specific request
         if (this.opts?.signal?.aborted) {
@@ -213,6 +241,9 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
         throw e;
       }
     } finally {
+      timer?.();
+      this.metrics?.activeRequests.dec({routeId}, 1);
+
       clearTimeout(timeout);
       this.opts?.signal?.removeEventListener("abort", onParentSignalAbort);
     }
