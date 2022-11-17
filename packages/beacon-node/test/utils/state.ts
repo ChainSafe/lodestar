@@ -146,7 +146,7 @@ export function generateState(
     ...defaultAltairState,
     latestExecutionPayloadHeader: {...ssz.capella.ExecutionPayloadHeader.defaultValue(), blockNumber: 2022},
     nextWithdrawalIndex: 0,
-    latestWithdrawalValidatorIndex: 0,
+    nextWithdrawalValidatorIndex: 0,
   };
 
   if (forkSeq === ForkSeq.capella) {
