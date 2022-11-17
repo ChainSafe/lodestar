@@ -211,3 +211,9 @@ export const MAX_REQUEST_LIGHT_CLIENT_COMMITTEE_HASHES = 128;
  */
 export const SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY = 128;
 export const INTERVALS_PER_SLOT = 3;
+
+// EIP-4844
+// https://github.com/ethereum/consensus-specs/blob/11a037fd9227e29ee809c9397b09f8cc3383a8c0/specs/eip4844/p2p-interface.md#configuration
+/** The minimum epoch range over which a node must serve blobs sidecars */
+export const MIN_EPOCHS_FOR_BLOBS_SIDECARS_REQUESTS = 4096;
+export const MAX_REQUEST_BLOBS_SIDECARS = 128;

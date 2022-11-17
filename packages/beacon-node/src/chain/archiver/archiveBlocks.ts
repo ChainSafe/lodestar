@@ -2,8 +2,8 @@ import {fromHexString} from "@chainsafe/ssz";
 import {Epoch, Slot} from "@lodestar/types";
 import {IForkChoice} from "@lodestar/fork-choice";
 import {ILogger, toHex} from "@lodestar/utils";
-import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {computeEpochAtSlot} from "@lodestar/state-transition";
+import {ForkSeq, MIN_EPOCHS_FOR_BLOBS_SIDECARS_REQUESTS, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {IKeyValue} from "@lodestar/db";
 import {IChainForkConfig} from "@lodestar/config";
 import {IBeaconDb} from "../../db/index.js";
@@ -33,7 +33,8 @@ export async function archiveBlocks(
   forkChoice: IForkChoice,
   lightclientServer: LightClientServer,
   logger: ILogger,
-  finalizedCheckpoint: {rootHex: string; epoch: Epoch}
+  finalizedCheckpoint: {rootHex: string; epoch: Epoch},
+  currentEpoch: Epoch
 ): Promise<void> {
   // Use fork choice to determine the blocks to archive and delete
   const finalizedCanonicalBlocks = forkChoice.getAllAncestorBlocks(finalizedCheckpoint.rootHex);
@@ -74,6 +75,23 @@ export async function archiveBlocks(
     if (finalizedPostEIP4844) {
       await db.blobsSidecar.batchDelete(nonCanonicalBlockRoots);
       logger.verbose("Deleted non canonical blobsSider from hot DB");
+    }
+  }
+
+  // Delete expired blobs
+  // Keep only `[max(GENESIS_EPOCH, current_epoch - MIN_EPOCHS_FOR_BLOBS_SIDECARS_REQUESTS), current_epoch]`
+  if (finalizedPostEIP4844) {
+    const blobsSidecarMinEpoch = currentEpoch - MIN_EPOCHS_FOR_BLOBS_SIDECARS_REQUESTS;
+    if (blobsSidecarMinEpoch > 0) {
+      const slotsToDelete = await db.blobsSidecarArchive.keys({lt: computeStartSlotAtEpoch(blobsSidecarMinEpoch)});
+      if (slotsToDelete.length > 0) {
+        await db.blobsSidecarArchive.batchDelete(slotsToDelete);
+        logger.verbose(
+          `blobsSidecar prune: batchDelete range ${slotsToDelete[0]}..${slotsToDelete[slotsToDelete.length - 1]}`
+        );
+      } else {
+        logger.verbose(`blobsSidecar prune: no entries before epoch ${blobsSidecarMinEpoch}`);
+      }
     }
   }
 
