@@ -27,13 +27,18 @@ export function computeNewStateRoot(
   const postState = stateTransition(
     state,
     blockEmptySig,
-    // ExecutionPayloadStatus.valid: Assume payload valid, it has been produced by a trusted EL
-    // DataAvailableStatus.available: Assume the blobs to be available, have just been produced by trusted EL
-    {executionPayloadStatus: ExecutionPayloadStatus.valid, dataAvailableStatus: DataAvailableStatus.available},
-    // verifyStateRoot: false  | the root in the block is zero-ed, it's being computed here
-    // verifyProposer: false   | as the block signature is zero-ed
-    // verifySignatures: false | since the data to assemble the block is trusted
-    {verifyStateRoot: false, verifyProposer: false, verifySignatures: false},
+    {
+      // ExecutionPayloadStatus.valid: Assume payload valid, it has been produced by a trusted EL
+      executionPayloadStatus: ExecutionPayloadStatus.valid,
+      // DataAvailableStatus.available: Assume the blobs to be available, have just been produced by trusted EL
+      dataAvailableStatus: DataAvailableStatus.available,
+      // verifyStateRoot: false  | the root in the block is zero-ed, it's being computed here
+      verifyStateRoot: false,
+      // verifyProposer: false   | as the block signature is zero-ed
+      verifyProposer: false,
+      // verifySignatures: false | since the data to assemble the block is trusted
+      verifySignatures: false,
+    },
     metrics
   );
 

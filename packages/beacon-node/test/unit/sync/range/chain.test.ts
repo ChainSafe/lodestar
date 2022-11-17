@@ -9,6 +9,7 @@ import {RangeSyncType} from "../../../../src/sync/utils/remoteSyncType.js";
 import {ZERO_HASH} from "../../../../src/constants/index.js";
 import {testLogger} from "../../../utils/logger.js";
 import {getValidPeerId} from "../../../utils/peer.js";
+import {BlockImport} from "../../../../src/chain/blocks/types.js";
 
 describe("sync / range / chain", () => {
   const testCases: {
@@ -65,14 +66,14 @@ describe("sync / range / chain", () => {
   for (const {id, startEpoch, targetEpoch, badBlocks, skippedSlots} of testCases) {
     it(id, async () => {
       const processChainSegment: SyncChainFns["processChainSegment"] = async (blocks) => {
-        for (const block of blocks) {
+        for (const {block} of blocks) {
           if (block.signature === ACCEPT_BLOCK) continue;
           if (block.signature === REJECT_BLOCK) throw Error("REJECT_BLOCK");
         }
       };
 
       const downloadBeaconBlocksByRange: SyncChainFns["downloadBeaconBlocksByRange"] = async (peerId, request) => {
-        const blocks: phase0.SignedBeaconBlock[] = [];
+        const blocks: BlockImport[] = [];
         for (let i = request.startSlot; i < request.startSlot + request.count; i += request.step) {
           if (skippedSlots?.has(i)) {
             continue; // Skip
@@ -82,8 +83,11 @@ describe("sync / range / chain", () => {
           const shouldReject = badBlocks?.has(i);
           if (shouldReject) badBlocks?.delete(i);
           blocks.push({
-            message: generateEmptyBlock(i),
-            signature: shouldReject ? REJECT_BLOCK : ACCEPT_BLOCK,
+            block: {
+              message: generateEmptyBlock(i),
+              signature: shouldReject ? REJECT_BLOCK : ACCEPT_BLOCK,
+            },
+            blobs: null,
           });
         }
         return blocks;
@@ -118,11 +122,14 @@ describe("sync / range / chain", () => {
     // eslint-disable-next-line @typescript-eslint/no-empty-function
     const processChainSegment: SyncChainFns["processChainSegment"] = async () => {};
     const downloadBeaconBlocksByRange: SyncChainFns["downloadBeaconBlocksByRange"] = async (peer, request) => {
-      const blocks: phase0.SignedBeaconBlock[] = [];
+      const blocks: BlockImport[] = [];
       for (let i = request.startSlot; i < request.startSlot + request.count; i += request.step) {
         blocks.push({
-          message: generateEmptyBlock(i),
-          signature: ACCEPT_BLOCK,
+          block: {
+            message: generateEmptyBlock(i),
+            signature: ACCEPT_BLOCK,
+          },
+          blobs: null,
         });
       }
       return blocks;
@@ -164,7 +171,7 @@ describe("sync / range / chain", () => {
 function logSyncChainFns(logger: ILogger, fns: SyncChainFns): SyncChainFns {
   return {
     processChainSegment(blocks, syncType) {
-      logger.debug("mock processChainSegment", {blocks: blocks.map((b) => b.message.slot).join(",")});
+      logger.debug("mock processChainSegment", {blocks: blocks.map((b) => b.block.message.slot).join(",")});
       return fns.processChainSegment(blocks, syncType);
     },
     downloadBeaconBlocksByRange(peer, request) {

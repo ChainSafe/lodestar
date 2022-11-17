@@ -1,7 +1,6 @@
 import {
   CachedBeaconStateAllForks,
   stateTransition,
-  BlockExternalData,
   ExecutionPayloadStatus,
   DataAvailableStatus,
 } from "@lodestar/state-transition";
@@ -36,20 +35,16 @@ export async function verifyBlocksStateTransitionOnly(
     const block = blocks[i];
     const preState = i === 0 ? preState0 : postStates[i - 1];
 
-    const externalData: BlockExternalData = {
-      executionPayloadStatus: ExecutionPayloadStatus.valid,
-      // TODO EIP-4844: Actually validate data
-      dataAvailableStatus: DataAvailableStatus.available,
-    };
-
     // STFN - per_slot_processing() + per_block_processing()
     // NOTE: `regen.getPreState()` should have dialed forward the state already caching checkpoint states
     const useBlsBatchVerify = !opts?.disableBlsBatchVerify;
     const postState = stateTransition(
       preState,
       block,
-      externalData,
       {
+        executionPayloadStatus: ExecutionPayloadStatus.valid,
+        // TODO EIP-4844: Actually validate data
+        dataAvailableStatus: DataAvailableStatus.available,
         // false because it's verified below with better error typing
         verifyStateRoot: false,
         // if block is trusted don't verify proposer or op signature

@@ -174,12 +174,10 @@ export class StateRegenerator implements IStateRegenerator {
         state = stateTransition(
           state,
           block,
-          // Replay previously imported blocks, assume valid and available
           {
+            // Replay previously imported blocks, assume valid and available
             executionPayloadStatus: ExecutionPayloadStatus.valid,
             dataAvailableStatus: DataAvailableStatus.available,
-          },
-          {
             verifyStateRoot: false,
             verifyProposer: false,
             verifySignatures: false,

@@ -26,11 +26,13 @@ import {BlockExternalData} from "./block/externalData.js";
 
 // Multifork capable state transition
 
-export type StateTransitionOpts = EpochProcessOpts & {
-  verifyStateRoot?: boolean;
-  verifyProposer?: boolean;
-  verifySignatures?: boolean;
-};
+// NOTE EIP-4844: Mandatory BlockExternalData to decide if block is available or not
+export type StateTransitionOpts = BlockExternalData &
+  EpochProcessOpts & {
+    verifyStateRoot?: boolean;
+    verifyProposer?: boolean;
+    verifySignatures?: boolean;
+  };
 
 /**
  * Implementation Note: follows the optimizations in protolambda's eth2fastspec (https://github.com/protolambda/eth2fastspec)
@@ -38,12 +40,10 @@ export type StateTransitionOpts = EpochProcessOpts & {
 export function stateTransition(
   state: CachedBeaconStateAllForks,
   signedBlock: allForks.FullOrBlindedSignedBeaconBlock,
-  // TODO EIP-4844: Consider merging BlockExternalData and StateTransitionOpts into a mandatory object, that makes sense
-  externalData: BlockExternalData,
-  options?: StateTransitionOpts,
+  options: StateTransitionOpts,
   metrics?: IBeaconStateTransitionMetrics | null
 ): CachedBeaconStateAllForks {
-  const {verifyStateRoot = true, verifyProposer = true, verifySignatures = true} = options || {};
+  const {verifyStateRoot = true, verifyProposer = true, verifySignatures = true} = options;
 
   const block = signedBlock.message;
   const blockSlot = block.slot;
@@ -70,7 +70,7 @@ export function stateTransition(
 
   const timer = metrics?.stfnProcessBlock.startTimer();
   try {
-    processBlock(fork, postState, block, externalData, verifySignatures);
+    processBlock(fork, postState, block, options, verifySignatures);
   } finally {
     timer?.();
   }

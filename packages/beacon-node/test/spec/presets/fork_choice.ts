@@ -19,6 +19,7 @@ import {ClockStopped} from "../../utils/mocks/clock.js";
 import {ZERO_HASH_HEX} from "../../../src/constants/constants.js";
 import {PowMergeBlock} from "../../../src/eth1/interface.js";
 import {assertCorrectProgressiveBalances} from "../config.js";
+import {BlockImport} from "../../../src/chain/blocks/types.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
@@ -137,8 +138,11 @@ export const forkChoiceTest: TestRunnerFn<ForkChoiceTestCase, void> = (fork) => 
               isValid,
             });
 
+            // TODO EIP-4844: blobs = null
+            const blockImport: BlockImport = {block: signedBlock, blobs: null};
+
             try {
-              await chain.processBlock(signedBlock, {seenTimestampSec: tickTime});
+              await chain.processBlock(blockImport, {seenTimestampSec: tickTime});
               if (!isValid) throw Error("Expect error since this is a negative test");
             } catch (e) {
               if (isValid) throw e;

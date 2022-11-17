@@ -26,6 +26,8 @@ describe("network / reqresp / encoders / responseTypes", () => {
     [Method.Metadata]: [],
     [Method.BeaconBlocksByRange]: [generateEmptySignedBlocks(2)],
     [Method.BeaconBlocksByRoot]: [generateEmptySignedBlocks(2)],
+    [Method.BlobsSidecarsByRange]: [[ssz.eip4844.BlobsSidecar.defaultValue()]],
+    [Method.BeaconBlockAndBlobsSidecarByRoot]: [[ssz.eip4844.SignedBeaconBlockAndBlobsSidecar.defaultValue()]],
     [Method.LightClientBootstrap]: [[ssz.altair.LightClientBootstrap.defaultValue()]],
     [Method.LightClientUpdate]: [[ssz.altair.LightClientUpdate.defaultValue()]],
     [Method.LightClientFinalityUpdate]: [[ssz.altair.LightClientFinalityUpdate.defaultValue()]],

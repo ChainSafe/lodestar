@@ -8,7 +8,7 @@ import {ILogger, sleep} from "@lodestar/utils";
 import {ATTESTATION_SUBNET_COUNT, ForkName, ForkSeq, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {Discv5, ENR} from "@chainsafe/discv5";
 import {computeEpochAtSlot, computeTimeAtSlot} from "@lodestar/state-transition";
-import {altair, Epoch, phase0} from "@lodestar/types";
+import {altair, eip4844, Epoch, phase0} from "@lodestar/types";
 import {promiseAllMaybeAsync} from "../util/promises.js";
 import {IMetrics} from "../metrics/index.js";
 import {ChainEvent, IBeaconChain, IBeaconClock} from "../chain/index.js";
@@ -209,7 +209,12 @@ export class Network implements INetwork {
       if (!blobs) {
         throw Error("blobs not defined for post eip4844 block");
       }
-      fns.push(() => this.gossip.publishSignedBeaconBlockAndBlobsSidecar({beaconBlock: block, blobsSidecar: blobs}));
+      fns.push(() =>
+        this.gossip.publishSignedBeaconBlockAndBlobsSidecar({
+          beaconBlock: block as eip4844.SignedBeaconBlock,
+          blobsSidecar: blobs,
+        })
+      );
     }
 
     await promiseAllMaybeAsync(fns);

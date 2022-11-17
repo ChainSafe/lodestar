@@ -1,4 +1,9 @@
-import {BeaconStateAllForks, stateTransition} from "@lodestar/state-transition";
+import {
+  BeaconStateAllForks,
+  DataAvailableStatus,
+  ExecutionPayloadStatus,
+  stateTransition,
+} from "@lodestar/state-transition";
 import {altair, bellatrix, ssz} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
@@ -18,6 +23,9 @@ export const finality: TestRunnerFn<FinalityTestCase, BeaconStateAllForks> = (fo
         const signedBlock = testcase[`blocks_${i}`] as bellatrix.SignedBeaconBlock;
 
         state = stateTransition(state, signedBlock, {
+          // TODO EIP-4844: Should assume valid and available for this test?
+          executionPayloadStatus: ExecutionPayloadStatus.valid,
+          dataAvailableStatus: DataAvailableStatus.available,
           verifyStateRoot: false,
           verifyProposer: verify,
           verifySignatures: verify,

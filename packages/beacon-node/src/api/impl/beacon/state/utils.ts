@@ -7,7 +7,6 @@ import {
   createCachedBeaconState,
   createEmptyEpochContextImmutableData,
   PubkeyIndexMap,
-  BlockExternalData,
   ExecutionPayloadStatus,
   DataAvailableStatus,
 } from "@lodestar/state-transition";
@@ -224,12 +223,10 @@ async function getFinalizedState(
 
   // process blocks up to the requested slot
   for await (const block of db.blockArchive.valuesStream({gt: state.slot, lte: slot})) {
-    // Replaying finalized blocks, all data is considered valid
-    const externalData: BlockExternalData = {
+    state = stateTransition(state, block, {
+      // Replaying finalized blocks, all data is considered valid
       executionPayloadStatus: ExecutionPayloadStatus.valid,
       dataAvailableStatus: DataAvailableStatus.available,
-    };
-    state = stateTransition(state, block, externalData, {
       verifyStateRoot: false,
       verifyProposer: false,
       verifySignatures: false,

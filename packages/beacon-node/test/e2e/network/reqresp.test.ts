@@ -81,6 +81,8 @@ describe("network / ReqResp", function () {
       onStatus: notImplemented,
       onBeaconBlocksByRange: notImplemented,
       onBeaconBlocksByRoot: notImplemented,
+      onBeaconBlockAndBlobsSidecarByRoot: notImplemented,
+      onBlobsSidecarsByRange: notImplemented,
       onLightClientBootstrap: notImplemented,
       onLightClientUpdatesByRange: notImplemented,
       onLightClientOptimisticUpdate: notImplemented,

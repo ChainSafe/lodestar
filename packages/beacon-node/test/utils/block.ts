@@ -8,6 +8,11 @@ import {isPlainObject} from "@lodestar/utils";
 import {RecursivePartial} from "@lodestar/utils";
 import {EMPTY_SIGNATURE, ZERO_HASH} from "../../src/constants/index.js";
 import {ReqRespBlockResponse} from "../../src/network/reqresp/types.js";
+import {BlockImport} from "../../src/chain/blocks/types.js";
+
+export function toBlockImport(block: allForks.SignedBeaconBlock): BlockImport {
+  return {block, blobs: null};
+}
 
 export function generateEmptyBlock(): phase0.BeaconBlock {
   return {

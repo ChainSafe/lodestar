@@ -9,6 +9,7 @@ import {INetwork, IReqResp, NetworkEvent, NetworkEventBus, PeerAction} from "../
 import {UnknownBlockSync} from "../../../src/sync/unknownBlock.js";
 import {testLogger} from "../../utils/logger.js";
 import {getValidPeerId} from "../../utils/peer.js";
+import {toBlockImport} from "../../utils/block.js";
 
 describe("sync / UnknownBlockSync", () => {
   const logger = testLogger();
@@ -69,7 +70,7 @@ describe("sync / UnknownBlockSync", () => {
 
       const chain: Partial<IBeaconChain> = {
         forkChoice: forkChoice as IForkChoice,
-        processBlock: async (block) => {
+        processBlock: async ({block}) => {
           if (!forkChoice.hasBlock(block.message.parentRoot)) throw Error("Unknown parent");
           // Simluate adding the block to the forkchoice
           const blockRootHex = toHexString(ssz.phase0.BeaconBlock.hashTreeRoot(block.message));
@@ -78,7 +79,7 @@ describe("sync / UnknownBlockSync", () => {
       };
 
       new UnknownBlockSync(config, network as INetwork, chain as IBeaconChain, logger, null);
-      network.events?.emit(NetworkEvent.unknownBlockParent, blockC, peerIdStr);
+      network.events?.emit(NetworkEvent.unknownBlockParent, toBlockImport(blockC), peerIdStr);
 
       if (reportPeer) {
         const err = await reportPeerPromise;

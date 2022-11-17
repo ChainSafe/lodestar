@@ -2,6 +2,7 @@ import {expect} from "chai";
 import sinon, {SinonStubbedInstance} from "sinon";
 import {ssz} from "@lodestar/types";
 import {ForkChoice} from "@lodestar/fork-choice";
+import {config} from "@lodestar/config/default";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {ZERO_HASH_HEX} from "../../../../src/constants/index.js";
 import {generateProtoBlock, generateEmptySignedBlock} from "../../../utils/block.js";
@@ -35,7 +36,16 @@ describe("block archiver task", function () {
     const nonCanonicalBlocks = [blocks[2]];
     forkChoiceStub.getAllAncestorBlocks.returns(canonicalBlocks);
     forkChoiceStub.getAllNonAncestorBlocks.returns(nonCanonicalBlocks);
-    await archiveBlocks(dbStub, forkChoiceStub, lightclientServer, logger, {epoch: 5, rootHex: ZERO_HASH_HEX});
+    const currentEpoch = 8;
+    await archiveBlocks(
+      config,
+      dbStub,
+      forkChoiceStub,
+      lightclientServer,
+      logger,
+      {epoch: 5, rootHex: ZERO_HASH_HEX},
+      currentEpoch
+    );
 
     expect(dbStub.blockArchive.batchPutBinary.getCall(0).args[0]).to.deep.equal(
       canonicalBlocks.map((summary) => ({

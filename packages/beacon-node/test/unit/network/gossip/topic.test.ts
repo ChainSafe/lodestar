@@ -15,6 +15,12 @@ describe("network / gossip / topic", function () {
         topicStr: "/eth2/18ae4ccb/beacon_block/ssz_snappy",
       },
     ],
+    [GossipType.beacon_block_and_blobs_sidecar]: [
+      {
+        topic: {type: GossipType.beacon_block_and_blobs_sidecar, fork: ForkName.eip4844, encoding},
+        topicStr: "/eth2/18ae4ccb/beacon_block_and_blobs_sidecar/ssz_snappy",
+      },
+    ],
     [GossipType.beacon_aggregate_and_proof]: [
       {
         topic: {type: GossipType.beacon_aggregate_and_proof, fork: ForkName.phase0, encoding},
