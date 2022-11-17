@@ -22,7 +22,7 @@ import {
 } from "./slot/index.js";
 import {processBlock} from "./block/index.js";
 import {processEpoch} from "./epoch/index.js";
-import {BlockExternalData} from "./block/externalData.js";
+import {BlockExternalData, DataAvailableStatus, ExecutionPayloadStatus} from "./block/externalData.js";
 
 // Multifork capable state transition
 
@@ -40,7 +40,11 @@ export type StateTransitionOpts = BlockExternalData &
 export function stateTransition(
   state: CachedBeaconStateAllForks,
   signedBlock: allForks.FullOrBlindedSignedBeaconBlock,
-  options: StateTransitionOpts,
+  options: StateTransitionOpts = {
+    // TODO EIP-4844: Review what default values make sense
+    executionPayloadStatus: ExecutionPayloadStatus.valid,
+    dataAvailableStatus: DataAvailableStatus.available,
+  },
   metrics?: IBeaconStateTransitionMetrics | null
 ): CachedBeaconStateAllForks {
   const {verifyStateRoot = true, verifyProposer = true, verifySignatures = true} = options;
