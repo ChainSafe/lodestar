@@ -29,6 +29,8 @@ export const fork: TestRunnerFn<ForkStateCase, BeaconStateAllForks> = (forkNext)
           return slotFns.upgradeStateToBellatrix(preState as CachedBeaconStateAltair);
         case ForkName.capella:
           return slotFns.upgradeStateToCapella(preState as CachedBeaconStateBellatrix);
+        case ForkName.eip4844:
+          throw Error("eip4844 not implemented");
       }
     },
     options: {
