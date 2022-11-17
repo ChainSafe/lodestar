@@ -2,8 +2,10 @@ import {fromHexString} from "@chainsafe/ssz";
 import {Epoch, Slot} from "@lodestar/types";
 import {IForkChoice} from "@lodestar/fork-choice";
 import {ILogger, toHex} from "@lodestar/utils";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
+import {IKeyValue} from "@lodestar/db";
+import {IChainForkConfig} from "@lodestar/config";
 import {IBeaconDb} from "../../db/index.js";
 import {BlockArchiveBatchPutBinaryItem} from "../../db/repositories/index.js";
 import {LightClientServer} from "../lightClient/index.js";
@@ -11,7 +13,8 @@ import {LightClientServer} from "../lightClient/index.js";
 // Process in chunks to avoid OOM
 // this number of blocks per chunk is tested in e2e test blockArchive.test.ts
 // TODO: Review after merge since the size of blocks will increase significantly
-const BATCH_SIZE = 256;
+const BLOCK_BATCH_SIZE = 256;
+const BLOB_SIDECAR_BATCH_SIZE = 32;
 
 type BlockRootSlot = {slot: Slot; root: Uint8Array};
 
@@ -25,6 +28,7 @@ type BlockRootSlot = {slot: Slot; root: Uint8Array};
  * the next run should not reprocess finalzied block of this run.
  */
 export async function archiveBlocks(
+  config: IChainForkConfig,
   db: IBeaconDb,
   forkChoice: IForkChoice,
   lightclientServer: LightClientServer,
@@ -34,6 +38,9 @@ export async function archiveBlocks(
   // Use fork choice to determine the blocks to archive and delete
   const finalizedCanonicalBlocks = forkChoice.getAllAncestorBlocks(finalizedCheckpoint.rootHex);
   const finalizedNonCanonicalBlocks = forkChoice.getAllNonAncestorBlocks(finalizedCheckpoint.rootHex);
+
+  // NOTE: The finalized block will be exactly the first block of `epoch` or previous
+  const finalizedPostEIP4844 = finalizedCheckpoint.epoch >= config.EIP4844_FORK_EPOCH;
 
   const finalizedCanonicalBlockRoots: BlockRootSlot[] = finalizedCanonicalBlocks.map((block) => ({
     slot: block.slot,
@@ -47,6 +54,11 @@ export async function archiveBlocks(
       toSlot: finalizedCanonicalBlockRoots[finalizedCanonicalBlockRoots.length - 1].slot,
       size: finalizedCanonicalBlockRoots.length,
     });
+
+    if (finalizedPostEIP4844) {
+      await migrateBlobsSidecarFromHotToColdDb(config, db, finalizedCanonicalBlockRoots);
+      logger.verbose("Migrated blobsSidecar from hot DB to cold DB");
+    }
   }
 
   // deleteNonCanonicalBlocks
@@ -55,9 +67,14 @@ export async function archiveBlocks(
   const nonCanonicalBlockRoots = finalizedNonCanonicalBlocks.map((summary) => fromHexString(summary.blockRoot));
   if (nonCanonicalBlockRoots.length > 0) {
     await db.block.batchDelete(nonCanonicalBlockRoots);
-    logger.verbose("deleteNonCanonicalBlocks", {
+    logger.verbose("Deleted non canonical blocks from hot DB", {
       slots: finalizedNonCanonicalBlocks.map((summary) => summary.slot).join(","),
     });
+
+    if (finalizedPostEIP4844) {
+      await db.blobsSidecar.batchDelete(nonCanonicalBlockRoots);
+      logger.verbose("Deleted non canonical blobsSider from hot DB");
+    }
   }
 
   // Prunning potential checkpoint data
@@ -79,8 +96,8 @@ async function migrateBlocksFromHotToColdDb(db: IBeaconDb, blocks: BlockRootSlot
   // Start from `i=0`: 1st block in iterateAncestorBlocks() is the finalized block itself
   // we move it to blockArchive but forkchoice still have it to check next onBlock calls
   // the next iterateAncestorBlocks call does not return this block
-  for (let i = 0; i < blocks.length; i += BATCH_SIZE) {
-    const toIdx = Math.min(i + BATCH_SIZE, blocks.length);
+  for (let i = 0; i < blocks.length; i += BLOCK_BATCH_SIZE) {
+    const toIdx = Math.min(i + BLOCK_BATCH_SIZE, blocks.length);
     const canonicalBlocks = blocks.slice(i, toIdx);
 
     // processCanonicalBlocks
@@ -108,6 +125,39 @@ async function migrateBlocksFromHotToColdDb(db: IBeaconDb, blocks: BlockRootSlot
     await Promise.all([
       db.blockArchive.batchPutBinary(canonicalBlockEntries),
       db.block.batchDelete(canonicalBlocks.map((block) => block.root)),
+    ]);
+  }
+}
+
+async function migrateBlobsSidecarFromHotToColdDb(
+  config: IChainForkConfig,
+  db: IBeaconDb,
+  blocks: BlockRootSlot[]
+): Promise<void> {
+  for (let i = 0; i < blocks.length; i += BLOB_SIDECAR_BATCH_SIZE) {
+    const toIdx = Math.min(i + BLOB_SIDECAR_BATCH_SIZE, blocks.length);
+    const canonicalBlocks = blocks.slice(i, toIdx);
+
+    // processCanonicalBlocks
+    if (canonicalBlocks.length === 0) return;
+
+    // load Buffer instead of ssz deserialized to improve performance
+    const canonicalBlobsSidecarEntries: IKeyValue<Slot, Uint8Array>[] = await Promise.all(
+      canonicalBlocks
+        .filter((block) => config.getForkSeq(block.slot) >= ForkSeq.eip4844)
+        .map(async (block) => {
+          const bytes = await db.blobsSidecar.getBinary(block.root);
+          if (!bytes) {
+            throw Error(`No blobsSidecar found for slot ${block.slot} root ${toHex(block.root)}`);
+          }
+          return {key: block.slot, value: bytes};
+        })
+    );
+
+    // put to blockArchive db and delete block db
+    await Promise.all([
+      db.blobsSidecarArchive.batchPutBinary(canonicalBlobsSidecarEntries),
+      db.blobsSidecar.batchDelete(canonicalBlocks.map((block) => block.root)),
     ]);
   }
 }
