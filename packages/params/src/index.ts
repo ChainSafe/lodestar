@@ -211,3 +211,5 @@ export const INTERVALS_PER_SLOT = 3;
 
 // EIP-4844: Crypto const
 export const BYTES_PER_FIELD_ELEMENT = 32;
+export const BLOB_TX_TYPE = 0x05;
+export const VERSIONED_HASH_VERSION_KZG = 0x01;
