@@ -88,6 +88,9 @@ export const {
   WITHDRAWAL_QUEUE_LIMIT,
   MAX_BLS_TO_EXECUTION_CHANGES,
   MAX_WITHDRAWALS_PER_PAYLOAD,
+
+  FIELD_ELEMENTS_PER_BLOB,
+  MAX_BLOBS_PER_BLOCK,
 } = {...presets[ACTIVE_PRESET], ...userOverrides};
 
 ////////////
@@ -205,3 +208,8 @@ export const MAX_REQUEST_LIGHT_CLIENT_COMMITTEE_HASHES = 128;
  */
 export const SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY = 128;
 export const INTERVALS_PER_SLOT = 3;
+
+// EIP-4844: Crypto const
+export const BYTES_PER_FIELD_ELEMENT = 32;
+export const BLOB_TX_TYPE = 0x05;
+export const VERSIONED_HASH_VERSION_KZG = 0x01;

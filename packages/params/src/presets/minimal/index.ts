@@ -3,6 +3,7 @@ import {phase0} from "./phase0.js";
 import {altair} from "./altair.js";
 import {bellatrix} from "./bellatrix.js";
 import {capella} from "./capella.js";
+import {eip4844} from "./eip4844.js";
 
 export const commit = "v1.2.0";
 
@@ -11,4 +12,5 @@ export const preset: BeaconPreset = {
   ...altair,
   ...bellatrix,
   ...capella,
+  ...eip4844,
 };
