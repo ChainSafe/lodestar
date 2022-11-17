@@ -1,10 +1,10 @@
 import {ForkName} from "@lodestar/params";
-import {ReqRespModules} from "../interface.js";
+import {ReqRespHandlerContext} from "../interface.js";
 import {ContextBytesType, ContextBytesFactory} from "../types.js";
 
 export function getContextBytesLightclient<T>(
   forkFromResponse: (response: T) => ForkName,
-  modules: ReqRespModules
+  modules: ReqRespHandlerContext["modules"]
 ): ContextBytesFactory<T> {
   return {
     type: ContextBytesType.ForkDigest,
@@ -12,3 +12,6 @@ export function getContextBytesLightclient<T>(
     forkFromResponse,
   };
 }
+
+export const getHandlerRequiredErrorFor = (method: string): Error =>
+  new Error(`Handler is required for method "${method}."`);

@@ -3,12 +3,17 @@ import {toHex} from "@lodestar/utils";
 import {RespStatus} from "../../interface.js";
 import {ResponseError} from "../../response/errors.js";
 import {ContextBytesType, Encoding, Method, ProtocolDefinitionGenerator, Version} from "../../types.js";
+import {getHandlerRequiredErrorFor} from "../utils.js";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
 export const BeaconBlocksByRootV2: ProtocolDefinitionGenerator<
   phase0.BeaconBlocksByRootRequest,
   allForks.SignedBeaconBlock
-> = (handler, modules) => {
+> = (modules, handler) => {
+  if (!handler) {
+    throw getHandlerRequiredErrorFor(Method.BeaconBlocksByRoot);
+  }
+
   return {
     method: Method.BeaconBlocksByRoot,
     version: Version.V2,

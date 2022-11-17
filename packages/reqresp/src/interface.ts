@@ -1,14 +1,9 @@
-import {Libp2p} from "libp2p";
 import {PeerId} from "@libp2p/interface-peer-id";
 import {ForkName} from "@lodestar/params";
-import {IBeaconConfig} from "@lodestar/config";
 import {allForks, altair, phase0} from "@lodestar/types";
-import {ILogger} from "@lodestar/utils";
-import {INetworkEventBus, IPeerRpcScoreStore, MetadataController, PeersData} from "./sharedTypes.js";
-import {Metrics} from "./metrics.js";
-import {Method, ProtocolDefinition, RequestTypedContainer} from "./types.js";
-import {RequestError} from "./request/errors.js";
 import {ReqRespProtocolModules} from "./ReqRespProtocol.js";
+import {IPeerRpcScoreStore, MetadataController} from "./sharedTypes.js";
+import {ProtocolDefinition, RequestTypedContainer} from "./types.js";
 
 export interface IReqResp {
   start(): void;
@@ -30,27 +25,23 @@ export interface IReqResp {
   registerProtocol<Req, Resp>(protocol: ProtocolDefinition<Req, Resp>): void;
 }
 
-export interface ReqRespEventsHandlers {
-  onIncomingRequestBody(modules: ReqRespProtocolModules, req: RequestTypedContainer, peerId: PeerId): void;
-  onOutgoingReqRespError(modules: ReqRespProtocolModules, peerId: PeerId, method: Method, error: RequestError): void;
-  onIncomingRequest(modules: ReqRespProtocolModules, peerId: PeerId, method: Method): void;
-}
-
-export interface ReqRespModules {
-  config: IBeaconConfig;
-  libp2p: Libp2p;
-  peersData: PeersData;
-  logger: ILogger;
-  metadata: MetadataController;
+export interface ReqRespModules extends ReqRespProtocolModules {
   peerRpcScores: IPeerRpcScoreStore;
-  networkEventBus: INetworkEventBus;
-  metrics: Metrics | null;
-  inboundRateLimiter: RateLimiter;
+  metadataController: MetadataController;
 }
 
-export interface ReqRespHandlerContext {
-  modules: ReqRespProtocolModules;
-  eventsHandlers: ReqRespEventsHandlers;
+export interface ReqRespHandlerProtocolContext {
+  modules: Omit<ReqRespProtocolModules, "libp2p">;
+  eventHandlers: {
+    onIncomingRequestBody(_req: RequestTypedContainer, _peerId: PeerId): void;
+  };
+}
+
+export interface ReqRespHandlerContext extends ReqRespHandlerProtocolContext {
+  modules: Omit<ReqRespProtocolModules, "libp2p"> & {
+    inboundRateLimiter: RateLimiter;
+    metadataController: MetadataController;
+  };
 }
 
 /**

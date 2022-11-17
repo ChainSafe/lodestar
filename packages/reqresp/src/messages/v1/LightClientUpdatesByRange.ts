@@ -1,12 +1,15 @@
 import {altair, ssz} from "@lodestar/types";
 import {Encoding, Method, ProtocolDefinitionGenerator, Version} from "../../types.js";
-import {getContextBytesLightclient} from "../utils.js";
+import {getContextBytesLightclient, getHandlerRequiredErrorFor} from "../utils.js";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
 export const LightClientUpdatesByRange: ProtocolDefinitionGenerator<
   altair.LightClientUpdatesByRange,
   altair.LightClientUpdate
-> = (handler, modules) => {
+> = (modules, handler) => {
+  if (!handler) {
+    throw getHandlerRequiredErrorFor(Method.LightClientUpdatesByRange);
+  }
   return {
     method: Method.LightClientUpdatesByRange,
     version: Version.V1,

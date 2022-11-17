@@ -15,9 +15,9 @@ export const Goodbye: ProtocolDefinitionGenerator<phase0.Goodbye, phase0.Goodbye
     version: Version.V1,
     encoding: Encoding.SSZ_SNAPPY,
     handler: async function* goodbyeHandler(context, req, peerId) {
-      context.eventsHandlers.onIncomingRequestBody(context.modules, {method: Method.Goodbye, body: req}, peerId);
+      context.eventHandlers.onIncomingRequestBody({method: Method.Goodbye, body: req}, peerId);
 
-      yield {type: EncodedPayloadType.ssz, data: context.modules.metadata.seqNumber};
+      yield {type: EncodedPayloadType.ssz, data: context.modules.metadataController.seqNumber};
     },
     requestType: () => ssz.phase0.Goodbye,
     responseType: () => ssz.phase0.Goodbye,

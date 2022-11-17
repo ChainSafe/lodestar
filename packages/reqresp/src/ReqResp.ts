@@ -1,14 +1,14 @@
 import {PeerId} from "@libp2p/interface-peer-id";
 import {ForkName} from "@lodestar/params";
 import {allForks, altair, phase0, Root, Slot} from "@lodestar/types";
-import {timeoutOptions} from "./constants.js";
-import {IReqResp, RateLimiter, ReqRespModules, RespStatus} from "./interface.js";
+import {IReqResp, RateLimiter, ReqRespHandlerContext, ReqRespModules, RespStatus} from "./interface.js";
+import {InboundRateLimiter, RateLimiterOptions} from "./rate_limiter/RateLimiter.js";
 import {ReqRespProtocol} from "./ReqRespProtocol.js";
 import {RequestError} from "./request/errors.js";
 import {ResponseError} from "./response/errors.js";
 import {onOutgoingReqRespError} from "./score.js";
-import {MetadataController, NetworkEvent} from "./sharedTypes.js";
-import {Method, ReqRespOptions, RequestTypedContainer, Version} from "./types.js";
+import {IPeerRpcScoreStore, MetadataController} from "./sharedTypes.js";
+import {Method, ReqRespOptions, Version} from "./types.js";
 import {assertSequentialBlocksInRange} from "./utils/index.js";
 
 /** This type helps response to beacon_block_by_range and beacon_block_by_root more efficiently */
@@ -24,48 +24,49 @@ export type ReqRespBlockResponse = {
  * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#the-reqresp-domain
  * https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/light-client/p2p-interface.md#the-reqresp-domain
  */
-export class ReqResp extends ReqRespProtocol implements IReqResp {
-  private metadataController: MetadataController;
+export abstract class ReqResp extends ReqRespProtocol<ReqRespHandlerContext> implements IReqResp {
   private inboundRateLimiter: RateLimiter;
+  private peerRpcScores: IPeerRpcScoreStore;
+  private metadataController: MetadataController;
 
-  private constructor(modules: ReqRespModules, options: ReqRespOptions) {
+  constructor(modules: ReqRespModules, options: ReqRespOptions & Partial<RateLimiterOptions>) {
     super(modules, options);
-    this.metadataController = modules.metadata;
-    this.inboundRateLimiter = modules.inboundRateLimiter;
+    this.peerRpcScores = modules.peerRpcScores;
+    this.metadataController = modules.metadataController;
+    this.inboundRateLimiter = new InboundRateLimiter(options, modules);
   }
 
-  static withDefaults(modules: ReqRespModules, options?: Partial<ReqRespOptions>): IReqResp {
-    const optionsWithDefaults = {
-      ...timeoutOptions,
-      ...{
-        onIncomingRequest: (modules: ReqRespModules, peerId: PeerId, method: Method) => {
-          if (method !== Method.Goodbye && !modules.inboundRateLimiter.allowRequest(peerId)) {
-            throw new ResponseError(RespStatus.RATE_LIMITED, "rate limit");
-          }
-        },
-        onOutgoingReqRespError: (
-          modules: ReqRespModules,
-          peerId: PeerId,
-          method: Method,
-          error: RequestError
-        ): void => {
-          const peerAction = onOutgoingReqRespError(error, method);
-          if (peerAction !== null) {
-            modules.peerRpcScores.applyAction(peerId, peerAction, error.type.code);
-          }
-        },
-        onIncomingRequestBody: (modules: ReqRespModules, req: RequestTypedContainer, peerId: PeerId): void => {
-          // Allow onRequest to return and close the stream
-          // For Goodbye there may be a race condition where the listener of `receivedGoodbye`
-          // disconnects in the same syncronous call, preventing the stream from ending cleanly
-          setTimeout(() => modules.networkEventBus.emit(NetworkEvent.reqRespRequest, req, peerId), 0);
-        },
+  protected onIncomingRequest(peerId: PeerId, method: Method): void {
+    if (method !== Method.Goodbye && !this.inboundRateLimiter.allowRequest(peerId)) {
+      throw new ResponseError(RespStatus.RATE_LIMITED, "rate limit");
+    }
+  }
+
+  protected onOutgoingRequestError(peerId: PeerId, method: Method, error: RequestError): void {
+    const peerAction = onOutgoingReqRespError(error, method);
+    if (peerAction !== null) {
+      this.peerRpcScores.applyAction(peerId, peerAction, error.type.code);
+    }
+  }
+
+  protected getContext(): ReqRespHandlerContext {
+    const context = super.getContext();
+    return {
+      ...context,
+      modules: {
+        ...context.modules,
+        inboundRateLimiter: this.inboundRateLimiter,
+        metadataController: this.metadataController,
       },
-      ...options,
     };
-
-    return new ReqResp(modules, optionsWithDefaults);
   }
+
+  // protected onIncomingRequestBody(req: RequestTypedContainer, peerId: PeerId): void {
+  //   // Allow onRequest to return and close the stream
+  //   // For Goodbye there may be a race condition where the listener of `receivedGoodbye`
+  //   // disconnects in the same syncronous call, preventing the stream from ending cleanly
+  //   setTimeout(() => this.networkEventBus.emit(NetworkEvent.reqRespRequest, req, peerId), 0);
+  // }
 
   async start(): Promise<void> {
     await super.start();

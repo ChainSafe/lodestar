@@ -4,8 +4,8 @@ import {IForkConfig, IForkDigestContext} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
 import {phase0, Slot} from "@lodestar/types";
 import {LodestarError} from "@lodestar/utils";
-import {ReqRespEventsHandlers, ReqRespHandlerContext, ReqRespModules} from "./interface.js";
 import {timeoutOptions} from "./constants.js";
+import {ReqRespHandlerContext, ReqRespHandlerProtocolContext} from "./interface.js";
 
 export enum EncodedPayloadType {
   ssz,
@@ -23,16 +23,16 @@ export type EncodedPayload<T> =
       contextBytes: ContextBytes;
     };
 
-export type HandlerWithContext<Req, Resp> = (
-  context: ReqRespHandlerContext,
+export type ReqRespHandlerWithContext<Req, Resp, Context = ReqRespHandlerContext> = (
+  context: Context,
   req: Req,
   peerId: PeerId
 ) => AsyncIterable<EncodedPayload<Resp>>;
 
-export type Handler<Req, Resp> = (req: Req, peerId: PeerId) => AsyncIterable<EncodedPayload<Resp>>;
+export type ReqRespHandler<Req, Resp> = (req: Req, peerId: PeerId) => AsyncIterable<EncodedPayload<Resp>>;
 
-export interface ProtocolDefinition<Req = unknown, Resp = unknown> extends Protocol {
-  handler: HandlerWithContext<Req, Resp>;
+export interface ProtocolDefinition<Req = unknown, Resp = unknown, Context = unknown> extends Protocol {
+  handler: ReqRespHandlerWithContext<Req, Resp, Context>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   requestType: (fork: ForkName) => Type<Req> | null;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -42,10 +42,11 @@ export interface ProtocolDefinition<Req = unknown, Resp = unknown> extends Proto
   isSingleResponse: boolean;
 }
 
-export type ProtocolDefinitionGenerator<Req, Res> = (
-  handler: Handler<Req, Res>,
-  modules: ReqRespModules
-) => ProtocolDefinition<Req, Res>;
+export type ProtocolDefinitionGenerator<
+  Req,
+  Res,
+  Context extends ReqRespHandlerProtocolContext = ReqRespHandlerContext
+> = (modules: Context["modules"], handler?: ReqRespHandler<Req, Res>) => ProtocolDefinition<Req, Res, Context>;
 
 export const protocolPrefix = "/eth2/beacon_chain/req";
 
@@ -122,7 +123,7 @@ export enum ContextBytesType {
   ForkDigest,
 }
 
-export type ReqRespOptions = typeof timeoutOptions & ReqRespEventsHandlers;
+export type ReqRespOptions = typeof timeoutOptions;
 
 export enum LightClientServerErrorCode {
   RESOURCE_UNAVAILABLE = "RESOURCE_UNAVAILABLE",

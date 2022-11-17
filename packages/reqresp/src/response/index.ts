@@ -8,13 +8,13 @@ import {prettyPrintPeerId} from "../utils/index.js";
 import {ProtocolDefinition} from "../types.js";
 import {requestDecode} from "../encoders/requestDecode.js";
 import {responseEncodeError, responseEncodeSuccess} from "../encoders/responseEncode.js";
-import {ReqRespHandlerContext, RespStatus} from "../interface.js";
+import {RespStatus} from "../interface.js";
 import {ResponseError} from "./errors.js";
 
 export {ResponseError};
 
-export interface HandleRequestOpts<Req, Resp> {
-  context: ReqRespHandlerContext;
+export interface HandleRequestOpts<Req, Resp, Context> {
+  context: Context;
   logger: ILogger;
   stream: Stream;
   peerId: PeerId;
@@ -35,7 +35,7 @@ export interface HandleRequestOpts<Req, Resp> {
  * 4a. Encode and write `<response_chunks>` to peer
  * 4b. On error, encode and write an error `<response_chunk>` and stop
  */
-export async function handleRequest<Req, Resp>({
+export async function handleRequest<Req, Resp, Context>({
   context,
   logger,
   stream,
@@ -44,7 +44,7 @@ export async function handleRequest<Req, Resp>({
   signal,
   requestId = 0,
   peerClient = "unknown",
-}: HandleRequestOpts<Req, Resp>): Promise<void> {
+}: HandleRequestOpts<Req, Resp, Context>): Promise<void> {
   const logCtx = {method: protocol.method, client: peerClient, peer: prettyPrintPeerId(peerId), requestId};
 
   let responseError: Error | null = null;

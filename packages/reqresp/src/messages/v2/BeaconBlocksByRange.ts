@@ -2,12 +2,17 @@ import {allForks, phase0, ssz} from "@lodestar/types";
 import {RespStatus} from "../../interface.js";
 import {ResponseError} from "../../response/errors.js";
 import {ContextBytesType, Encoding, Method, ProtocolDefinitionGenerator, Version} from "../../types.js";
+import {getHandlerRequiredErrorFor} from "../utils.js";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
 export const BeaconBlocksByRangeV2: ProtocolDefinitionGenerator<
   phase0.BeaconBlocksByRangeRequest,
   allForks.SignedBeaconBlock
-> = (handler, modules) => {
+> = (modules, handler) => {
+  if (!handler) {
+    throw getHandlerRequiredErrorFor(Method.BeaconBlocksByRange);
+  }
+
   return {
     method: Method.BeaconBlocksByRange,
     version: Version.V2,

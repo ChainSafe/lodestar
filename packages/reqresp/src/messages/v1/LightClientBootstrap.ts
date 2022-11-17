@@ -1,13 +1,17 @@
 import {altair, Root, ssz} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
 import {Encoding, Method, ProtocolDefinitionGenerator, Version} from "../../types.js";
-import {getContextBytesLightclient} from "../utils.js";
+import {getContextBytesLightclient, getHandlerRequiredErrorFor} from "../utils.js";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
 export const LightClientBootstrap: ProtocolDefinitionGenerator<Root, altair.LightClientBootstrap> = (
-  handler,
-  modules
+  modules,
+  handler
 ) => {
+  if (!handler) {
+    throw getHandlerRequiredErrorFor(Method.LightClientBootstrap);
+  }
+
   return {
     method: Method.LightClientBootstrap,
     version: Version.V1,

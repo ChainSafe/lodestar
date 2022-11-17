@@ -2,26 +2,23 @@ import {setMaxListeners} from "node:events";
 import {Connection, Stream} from "@libp2p/interface-connection";
 import {PeerId} from "@libp2p/interface-peer-id";
 import {Libp2p} from "libp2p";
-import {IBeaconConfig} from "@lodestar/config";
 import {ILogger} from "@lodestar/utils";
+import {IBeaconConfig} from "@lodestar/config";
 import {Metrics} from "./metrics.js";
 import {RequestError, RequestErrorCode, sendRequest} from "./request/index.js";
 import {handleRequest} from "./response/index.js";
-import {IPeerRpcScoreStore, MetadataController, PeersData} from "./sharedTypes.js";
-import {Encoding, ProtocolDefinition, ReqRespOptions} from "./types.js";
+import {PeersData} from "./sharedTypes.js";
+import {Encoding, Method, ProtocolDefinition, ReqRespOptions, RequestTypedContainer} from "./types.js";
 import {formatProtocolID} from "./utils/index.js";
-import {RateLimiter, ReqRespHandlerContext} from "./interface.js";
+import {ReqRespHandlerProtocolContext} from "./interface.js";
 
 type ProtocolID = string;
 
 export interface ReqRespProtocolModules {
-  config: IBeaconConfig;
   libp2p: Libp2p;
   peersData: PeersData;
   logger: ILogger;
-  peerRpcScores: IPeerRpcScoreStore;
-  inboundRateLimiter: RateLimiter;
-  metadata: MetadataController;
+  config: IBeaconConfig;
   metrics: Metrics | null;
 }
 
@@ -31,7 +28,7 @@ export interface ReqRespProtocolModules {
  * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#the-reqresp-domain
  * https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/light-client/p2p-interface.md#the-reqresp-domain
  */
-export class ReqRespProtocol {
+export abstract class ReqRespProtocol<Context extends ReqRespHandlerProtocolContext = ReqRespHandlerProtocolContext> {
   private libp2p: Libp2p;
   private readonly peersData: PeersData;
   private logger: ILogger;
@@ -40,28 +37,18 @@ export class ReqRespProtocol {
   private reqCount = 0;
   private respCount = 0;
   private metrics: Metrics | null;
+  private config: IBeaconConfig;
+
   /** `${protocolPrefix}/${method}/${version}/${encoding}` */
   private readonly supportedProtocols = new Map<ProtocolID, ProtocolDefinition>();
-  private readonly modules: ReqRespProtocolModules;
 
   constructor(modules: ReqRespProtocolModules, options: ReqRespOptions) {
-    this.modules = modules;
     this.options = options;
+    this.config = modules.config;
     this.libp2p = modules.libp2p;
     this.peersData = modules.peersData;
     this.logger = modules.logger;
     this.metrics = modules.metrics;
-  }
-
-  getContext(): ReqRespHandlerContext {
-    return {
-      modules: this.modules,
-      eventsHandlers: {
-        onIncomingRequest: this.options.onIncomingRequest,
-        onIncomingRequestBody: this.options.onIncomingRequestBody,
-        onOutgoingReqRespError: this.options.onOutgoingReqRespError,
-      },
-    };
   }
 
   registerProtocol<Req, Resp>(protocol: ProtocolDefinition<Req, Resp>): void {
@@ -134,7 +121,7 @@ export class ReqRespProtocol {
           this.metrics?.dialErrors.inc();
         }
 
-        this.onOutgoingReqRespError(peerId, method, e);
+        this.onOutgoingRequestError(peerId, method as Method, e);
       }
 
       throw e;
@@ -177,11 +164,14 @@ export class ReqRespProtocol {
     };
   }
 
-  protected onIncomingRequest(_peerId: PeerId, _method: string): void {
-    // Override
+  protected getContext(): Context {
+    return {
+      modules: {config: this.config, logger: this.logger, metrics: this.metrics, peersData: this.peersData},
+      eventHandlers: {onIncomingRequestBody: this.onIncomingRequestBody},
+    } as Context;
   }
 
-  protected onOutgoingReqRespError(_peerId: PeerId, _method: string, _error: RequestError): void {
-    // Override
-  }
+  protected abstract onIncomingRequestBody(_req: RequestTypedContainer, _peerId: PeerId): void;
+  protected abstract onOutgoingRequestError(_peerId: PeerId, _method: Method, _error: RequestError): void;
+  protected abstract onIncomingRequest(_peerId: PeerId, _method: Method): void;
 }
