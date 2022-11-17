@@ -30,15 +30,17 @@ export const chainConfig: IChainConfig = {
   // Values provided for illustrative purposes.
   // Individual tests/testnets may set different values.
 
-  // Altair
+  // ////////////////////////////////////////////////////////////////
+  // DO NOT SCHEDULE FORKS ON THE PRESET, DO IT IN THE NETWORK CONFIG
+  // ////////////////////////////////////////////////////////////////
   ALTAIR_FORK_VERSION: b("0x01000001"),
-  ALTAIR_FORK_EPOCH: 74240, // Oct 27, 2021, 10:56:23am UTC
-  // Bellatrix
+  ALTAIR_FORK_EPOCH: Infinity,
   BELLATRIX_FORK_VERSION: b("0x02000001"),
   BELLATRIX_FORK_EPOCH: Infinity,
-  // Capella
   CAPELLA_FORK_VERSION: b("0x03000001"),
   CAPELLA_FORK_EPOCH: Infinity,
+  EIP4844_FORK_VERSION: b("0x04000001"),
+  EIP4844_FORK_EPOCH: Infinity,
 
   // Time parameters
   // ---------------------------------------------------------------
@@ -74,4 +76,10 @@ export const chainConfig: IChainConfig = {
   DEPOSIT_NETWORK_ID: 5,
   // Configured on a per testnet basis
   DEPOSIT_CONTRACT_ADDRESS: b("0x1234567890123456789012345678901234567890"),
+
+  // Blobs
+  // ---------------------------------------------------------------
+  // https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/p2p-interface.md#configuration
+  MAX_REQUEST_BLOBS_SIDECARS: 128,
+  MIN_EPOCHS_FOR_BLOBS_SIDECARS_REQUESTS: 4096,
 };
