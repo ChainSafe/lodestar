@@ -1,11 +1,13 @@
-import {ssz, allForks} from "@lodestar/types";
+import {ssz, allForks, capella, eip4844} from "@lodestar/types";
 import {toHexString, byteArrayEquals} from "@chainsafe/ssz";
+import {ForkSeq} from "@lodestar/params";
 import {CachedBeaconStateBellatrix, CachedBeaconStateCapella} from "../types.js";
 import {getRandaoMix} from "../util/index.js";
 import {isExecutionPayload, isMergeTransitionComplete, isCapellaPayload} from "../util/execution.js";
 import {BlockExternalData, ExecutionPayloadStatus} from "./externalData.js";
 
 export function processExecutionPayload(
+  fork: ForkSeq,
   state: CachedBeaconStateBellatrix | CachedBeaconStateCapella,
   payload: allForks.FullOrBlindedExecutionPayload,
   externalData: BlockExternalData
@@ -59,10 +61,12 @@ export function processExecutionPayload(
     }
   }
 
+  // For blinded or full payload -> return common header
   const transactionsRoot = isExecutionPayload(payload)
     ? ssz.bellatrix.Transactions.hashTreeRoot(payload.transactions)
     : payload.transactionsRoot;
-  const bellatrixPayloadFields = {
+
+  const bellatrixPayloadFields: allForks.ExecutionPayloadHeader = {
     parentHash: payload.parentHash,
     feeRecipient: payload.feeRecipient,
     stateRoot: payload.stateRoot,
@@ -79,21 +83,29 @@ export function processExecutionPayload(
     transactionsRoot,
   };
 
-  const withdrawalsRoot = isCapellaPayload(payload)
-    ? isExecutionPayload(payload)
-      ? ssz.capella.Withdrawals.hashTreeRoot(payload.withdrawals)
-      : payload.withdrawalsRoot
-    : undefined;
+  if (fork >= ForkSeq.capella) {
+    // Must never happen
+    if (!isCapellaPayload(payload)) {
+      throw Error("not capella payload for post capella block");
+    }
 
-  // Cache execution payload header
-  if (withdrawalsRoot !== undefined) {
-    (state as CachedBeaconStateCapella).latestExecutionPayloadHeader = ssz.capella.ExecutionPayloadHeader.toViewDU({
-      ...bellatrixPayloadFields,
-      withdrawalsRoot,
-    });
-  } else {
-    (state as CachedBeaconStateBellatrix).latestExecutionPayloadHeader = ssz.bellatrix.ExecutionPayloadHeader.toViewDU(
-      bellatrixPayloadFields
-    );
+    const withdrawalsRoot = isExecutionPayload(payload)
+      ? ssz.capella.Withdrawals.hashTreeRoot(payload.withdrawals)
+      : payload.withdrawalsRoot;
+
+    (bellatrixPayloadFields as capella.ExecutionPayloadHeader).withdrawalsRoot = withdrawalsRoot;
   }
+
+  if (fork >= ForkSeq.eip4844) {
+    // https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/beacon-chain.md#process_execution_payload
+    (bellatrixPayloadFields as eip4844.ExecutionPayloadHeader).excessDataGas = (payload as
+      | eip4844.ExecutionPayloadHeader
+      | eip4844.ExecutionPayload).excessDataGas;
+  }
+
+  // TODO EIP-4844: Types are not happy by default. Since it's a generic allForks type going through ViewDU
+  // transformation then into allForks, probably some weird intersection incompatibility happens
+  state.latestExecutionPayloadHeader = state.config
+    .getExecutionForkTypes(state.slot)
+    .ExecutionPayloadHeader.toViewDU(bellatrixPayloadFields) as typeof state.latestExecutionPayloadHeader;
 }

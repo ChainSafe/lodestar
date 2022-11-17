@@ -71,7 +71,7 @@ export async function processBlocks(
     const {postStates, proposerBalanceDeltas, segmentExecStatus} = await verifyBlocksInEpoch.call(
       this,
       parentBlock,
-      relevantBlocks.map(({block}) => block),
+      relevantBlocks,
       opts
     );
 

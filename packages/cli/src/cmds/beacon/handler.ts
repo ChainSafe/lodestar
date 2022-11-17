@@ -1,5 +1,4 @@
 import path from "node:path";
-import {loadTrustedSetup, transformTrustedSetupJSON} from "c-kzg";
 import {Registry} from "prom-client";
 import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
 import {createKeypairFromPeerId, ENR} from "@chainsafe/discv5";
@@ -25,19 +24,6 @@ import {initBeaconState} from "./initBeaconState.js";
  */
 export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<void> {
   const {config, options, beaconPaths, network, version, commit, peerId} = await beaconHandlerInit(args);
-
-  // TODO EIP-4844, where is the best place to do this?
-  if (config.EIP4844_FORK_EPOCH < Infinity) {
-    // Load our KZG trusted setup into C-KZG for later use
-    const SETUP_FILE_PATH = "testing_trusted_setups.json";
-    try {
-      const file = await transformTrustedSetupJSON(SETUP_FILE_PATH);
-      loadTrustedSetup(file);
-    } catch (e) {
-      (e as Error).message = `Error loading trusted setup ${SETUP_FILE_PATH}: ${(e as Error).message}`;
-      throw e;
-    }
-  }
 
   // initialize directories
   mkdir(beaconPaths.dataDir);

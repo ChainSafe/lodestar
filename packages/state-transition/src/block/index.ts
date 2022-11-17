@@ -34,7 +34,7 @@ export function processBlock(
     const fullOrBlindedPayload = getFullOrBlindedPayload(block);
 
     if (isExecutionEnabled(state as CachedBeaconStateBellatrix, block)) {
-      processExecutionPayload(state as CachedBeaconStateBellatrix, fullOrBlindedPayload, externalData);
+      processExecutionPayload(fork, state as CachedBeaconStateBellatrix, fullOrBlindedPayload, externalData);
     }
   }
 

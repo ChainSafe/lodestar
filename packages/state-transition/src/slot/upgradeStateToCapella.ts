@@ -3,7 +3,7 @@ import {CachedBeaconStateBellatrix, CachedBeaconStateCapella} from "../types.js"
 import {getCachedBeaconState} from "../cache/stateCache.js";
 
 /**
- * Upgrade a state from Bellatrix to Capella.
+ * Upgrade a state from bellatrix to capella.
  */
 export function upgradeStateToCapella(stateBellatrix: CachedBeaconStateBellatrix): CachedBeaconStateCapella {
   const {config} = stateBellatrix;

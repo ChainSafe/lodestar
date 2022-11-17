@@ -1,11 +1,13 @@
+import {verifyAggregateKzgProof} from "c-kzg";
 import bls from "@chainsafe/bls";
 import {CoordType} from "@chainsafe/bls/types";
-import {eip4844} from "@lodestar/types";
+import {eip4844, Root} from "@lodestar/types";
 import {bytesToBigInt} from "@lodestar/utils";
 import {FIELD_ELEMENTS_PER_BLOB} from "@lodestar/params";
 import {verifyKzgCommitmentsAgainstTransactions} from "@lodestar/state-transition";
 import {BlobsSidecarError, BlobsSidecarErrorCode} from "../errors/blobsSidecarError.js";
 import {GossipAction} from "../errors/gossipValidation.js";
+import {byteArrayEquals} from "../../util/bytes.js";
 
 const BLS_MODULUS = BigInt("52435875175126190479447740508185965837690552500527637822603658699938581184513");
 
@@ -54,6 +56,52 @@ export async function validateGossipBlobsSidecar(
   // -- i.e. blsKeyValidate(blobs_sidecar.kzg_aggregated_proof)
   if (!blsKeyValidate(blobsSidecar.kzgAggregatedProof)) {
     throw new BlobsSidecarError(GossipAction.REJECT, {code: BlobsSidecarErrorCode.INVALID_KZG_PROOF});
+  }
+}
+
+// https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/beacon-chain.md#validate_blobs_sidecar
+export function validateBlobsSidecar(
+  slot: number,
+  beaconBlockRoot: Root,
+  expectedKzgCommitments: eip4844.KZGCommitment[],
+  blobsSidecar: eip4844.BlobsSidecar
+): void {
+  // assert slot == blobs_sidecar.beacon_block_slot
+  if (slot != blobsSidecar.beaconBlockSlot) {
+    throw new Error(`slot mismatch. Block slot: ${slot}, Blob slot ${blobsSidecar.beaconBlockSlot}`);
+  }
+
+  // assert beacon_block_root == blobs_sidecar.beacon_block_root
+  if (!byteArrayEquals(beaconBlockRoot, blobsSidecar.beaconBlockRoot)) {
+    throw new Error(
+      `beacon block root mismatch. Block root: ${beaconBlockRoot}, Blob root ${blobsSidecar.beaconBlockRoot}`
+    );
+  }
+
+  // blobs = blobs_sidecar.blobs
+  // kzg_aggregated_proof = blobs_sidecar.kzg_aggregated_proof
+  const {blobs, kzgAggregatedProof} = blobsSidecar;
+
+  // assert len(expected_kzg_commitments) == len(blobs)
+  if (expectedKzgCommitments.length !== blobs.length) {
+    throw new Error(
+      `blobs length to commitments length mismatch. Blob length: ${blobs.length}, Expected commitments length ${expectedKzgCommitments.length}`
+    );
+  }
+
+  // assert verify_aggregate_kzg_proof(blobs, expected_kzg_commitments, kzg_aggregated_proof)
+  let isProofValid: boolean;
+  try {
+    isProofValid = verifyAggregateKzgProof(blobs, expectedKzgCommitments, kzgAggregatedProof);
+  } catch (e) {
+    // TODO EIP-4844: TEMP Nov17: May always throw error -- we need to fix Geth's KZG to match C-KZG and the trusted setup used here
+    (e as Error).message = `Error on verifyAggregateKzgProof: ${(e as Error).message}`;
+    throw e;
+  }
+
+  // TODO EIP-4844: TEMP Nov17: May always throw error -- we need to fix Geth's KZG to match C-KZG and the trusted setup used here
+  if (!isProofValid) {
+    throw Error("Invalid AggregateKzgProof");
   }
 }
 

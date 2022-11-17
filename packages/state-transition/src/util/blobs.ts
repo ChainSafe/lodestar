@@ -9,6 +9,10 @@ const VERSIONED_HASH_VERSION_KZG = 0x01;
 
 type VersionHash = Uint8Array;
 
+/**
+ * https://github.com/ethereum/consensus-specs/blob/11a037fd9227e29ee809c9397b09f8cc3383a8c0/specs/eip4844/beacon-chain.md#verify_kzg_commitments_against_transactions
+ * No expensive verification, just checks that the version hashes are consistent with the kzg commitments
+ */
 export function verifyKzgCommitmentsAgainstTransactions(
   transactions: bellatrix.Transaction[],
   blobKzgCommitments: eip4844.KZGCommitment[]
@@ -39,7 +43,7 @@ function txPeekBlobVersionedHashes(opaqueTx: bellatrix.Transaction): VersionHash
 
   const opaqueTxDv = new DataView(opaqueTx.buffer, opaqueTx.byteOffset, opaqueTx.byteLength);
 
-  // uint32.decode_bytes(opaque_tx[1:5])
+  // uint32.decode_bytes(opaque_tx[1:5]), Should always be 70
   // true = little endian
   const messageOffset = 1 + opaqueTxDv.getUint32(1, true);
   // field offset: 32 + 8 + 32 + 32 + 8 + 4 + 32 + 4 + 4 + 32 = 188

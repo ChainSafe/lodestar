@@ -4,6 +4,7 @@ import {
   FIELD_ELEMENTS_PER_BLOB,
   MAX_BLOBS_PER_BLOCK,
   MAX_REQUEST_BLOCKS,
+  BYTES_PER_FIELD_ELEMENT,
 } from "@lodestar/params";
 import {ssz as primitiveSsz} from "../primitive/index.js";
 import {ssz as phase0Ssz} from "../phase0/index.js";
@@ -22,9 +23,6 @@ export const G2Point = Bytes96;
 export const BLSFieldElement = Bytes32;
 export const KZGCommitment = Bytes48;
 export const KZGProof = Bytes48;
-
-// TODO EIP-4844: Not sure where these should go
-const BYTES_PER_FIELD_ELEMENT = 32;
 
 // Beacon chain
 
