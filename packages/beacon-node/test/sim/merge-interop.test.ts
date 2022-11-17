@@ -8,8 +8,14 @@ import {IChainConfig} from "@lodestar/config";
 import {Epoch} from "@lodestar/types";
 import {ValidatorProposerConfig} from "@lodestar/validator";
 
-import {ExecutePayloadStatus} from "../../src/execution/engine/interface.js";
-import {ExecutionEngineHttp} from "../../src/execution/engine/http.js";
+import {
+  bytesToData,
+  dataToBytes,
+  defaultExecutionEngineHttpOpts,
+  ExecutePayloadStatus,
+  ExecutionEngineHttp,
+  quantityToNum,
+} from "@lodestar/execution-layer";
 import {ChainEvent} from "../../src/chain/index.js";
 import {testLogger, TestLoggerOpts} from "../utils/logger.js";
 import {getDevBeaconNode} from "../utils/node/beacon.js";
@@ -18,8 +24,6 @@ import {simTestInfoTracker} from "../utils/node/simTest.js";
 import {getAndInitDevValidators} from "../utils/node/validator.js";
 import {Eth1Provider} from "../../src/index.js";
 import {ZERO_HASH} from "../../src/constants/index.js";
-import {bytesToData, dataToBytes, quantityToNum} from "../../src/eth1/provider/utils.js";
-import {defaultExecutionEngineHttpOpts} from "../../src/execution/engine/http.js";
 import {runEL, ELStartMode, ELClient, sendTransaction, getBalance} from "../utils/runEl.js";
 import {logFilesDir} from "./params.js";
 import {shell} from "./shell.js";

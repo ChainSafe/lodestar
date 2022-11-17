@@ -2,15 +2,21 @@ import {toHexString} from "@chainsafe/ssz";
 import {phase0} from "@lodestar/types";
 import {IChainConfig} from "@lodestar/config";
 import {fromHex} from "@lodestar/utils";
-
+import {
+  dataToBytes,
+  isJsonRpcTruncatedError,
+  JsonRpcHttpClient,
+  JsonRpcHttpClientMetrics,
+  numToQuantity,
+  quantityToNum,
+  ReqOpts,
+} from "@lodestar/execution-layer";
 import {linspace} from "../../util/numpy.js";
 import {depositEventTopics, parseDepositLog} from "../utils/depositContract.js";
 import {Eth1Block, IEth1Provider} from "../interface.js";
 import {Eth1Options} from "../options.js";
 import {isValidAddress} from "../../util/address.js";
 import {EthJsonRpcBlockRaw} from "../interface.js";
-import {JsonRpcHttpClient, JsonRpcHttpClientMetrics, ReqOpts} from "./jsonRpcHttpClient.js";
-import {isJsonRpcTruncatedError, quantityToNum, numToQuantity, dataToBytes} from "./utils.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 

@@ -1,11 +1,14 @@
-import {expect} from "chai";
+import {expect, use} from "chai";
+import chaiAsPromised from "chai-as-promised";
 import {fastify} from "fastify";
 import {
   ExecutionEngineHttp,
   parseExecutionPayload,
   serializeExecutionPayload,
   defaultExecutionEngineHttpOpts,
-} from "../../../src/execution/engine/http.js";
+} from "../../../src/engine/http.js";
+
+use(chaiAsPromised);
 
 describe("ExecutionEngine / http", () => {
   const afterCallbacks: (() => Promise<void> | void)[] = [];

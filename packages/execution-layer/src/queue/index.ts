@@ -1,4 +1,4 @@
-export * from "./fnQueue";
-export * from "./itemQueue";
-export * from "./options";
-export {QueueError, QueueErrorCode} from "./errors";
+export * from "./fnQueue.js";
+export * from "./itemQueue.js";
+export * from "./options.js";
+export {QueueError, QueueErrorCode} from "./errors.js";

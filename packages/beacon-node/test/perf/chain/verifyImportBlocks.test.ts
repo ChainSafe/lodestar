@@ -4,6 +4,7 @@ import {SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY, SLOTS_PER_EPOCH} from "@lodestar/pa
 import {LevelDbController} from "@lodestar/db";
 import {sleep} from "@lodestar/utils";
 import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
+import {ExecutionEngineDisabled} from "@lodestar/execution-layer";
 import {
   beforeValue,
   getNetworkCachedState,
@@ -11,7 +12,6 @@ import {
 } from "../../../../state-transition/test/utils/index.js";
 import {rangeSyncTest} from "../../../../state-transition/test/perf/params.js";
 import {BeaconChain} from "../../../src/chain/index.js";
-import {ExecutionEngineDisabled} from "../../../src/execution/engine/index.js";
 import {Eth1ForBlockProductionDisabled} from "../../../src/eth1/index.js";
 import {testLogger} from "../../utils/logger.js";
 import {linspace} from "../../../src/util/numpy.js";

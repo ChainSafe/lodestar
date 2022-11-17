@@ -5,6 +5,7 @@ import {ForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {WinstonLogger} from "@lodestar/utils";
 import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {IChainForkConfig} from "@lodestar/config";
+import {ExecutionEngineHttp, IExecutionEngine, PayloadIdCache} from "@lodestar/execution-layer";
 import {BeaconChain, ChainEventEmitter} from "../../../src/chain/index.js";
 import {IBeaconChain} from "../../../src/chain/interface.js";
 import {LocalClock} from "../../../src/chain/clock/index.js";
@@ -13,9 +14,6 @@ import {StateRegenerator} from "../../../src/chain/regen/index.js";
 import {SinonStubFn} from "../../utils/types.js";
 import {generateCachedBellatrixState} from "../../utils/state.js";
 import {BeaconProposerCache} from "../../../src/chain/beaconProposerCache.js";
-import {PayloadIdCache} from "../../../src/execution/engine/payloadIdCache.js";
-import {ExecutionEngineHttp} from "../../../src/execution/engine/http.js";
-import {IExecutionEngine} from "../../../src/execution/engine/interface.js";
 import {StubbedChainMutable} from "../../utils/stub/index.js";
 
 type StubbedChain = StubbedChainMutable<"clock" | "forkChoice" | "emitter" | "regen">;

@@ -4,7 +4,7 @@ import leveldown from "leveldown";
 import all from "it-all";
 import {LevelDbController} from "../../../src/controller/index.js";
 
-describe("LevelDB controller", () => {
+describe.skip("LevelDB controller", () => {
   const dbLocation = "./.__testdb";
   const db = new LevelDbController({name: dbLocation}, {metrics: null});
 

@@ -18,11 +18,10 @@ import {
 } from "@lodestar/fork-choice";
 import {IChainForkConfig} from "@lodestar/config";
 import {ErrorAborted, ILogger} from "@lodestar/utils";
-import {IExecutionEngine} from "../../execution/engine/index.js";
+import {ExecutePayloadStatus, IExecutionEngine} from "@lodestar/execution-layer";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {IBeaconClock} from "../clock/index.js";
 import {BlockProcessOpts} from "../options.js";
-import {ExecutePayloadStatus} from "../../execution/engine/interface.js";
 import {IEth1ForBlockProduction} from "../../eth1/index.js";
 
 export type VerifyBlockExecutionPayloadModules = {

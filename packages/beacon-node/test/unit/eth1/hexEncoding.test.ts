@@ -6,7 +6,7 @@ import {
   quantityToBigint,
   numToQuantity,
   bytesToQuantity,
-} from "../../../src/eth1/provider/utils.js";
+} from "@lodestar/execution-layer";
 
 describe("eth1 / hex encoding", () => {
   describe("QUANTITY", () => {

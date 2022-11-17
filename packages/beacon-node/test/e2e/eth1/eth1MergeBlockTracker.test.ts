@@ -2,11 +2,11 @@ import {expect} from "chai";
 import {IChainConfig} from "@lodestar/config";
 import {sleep} from "@lodestar/utils";
 import {fromHexString} from "@chainsafe/ssz";
+import {quantityToBigint} from "@lodestar/execution-layer";
 import {Eth1Provider, IEth1Provider} from "../../../src/index.js";
 import {Eth1MergeBlockTracker, StatusCode} from "../../../src/eth1/eth1MergeBlockTracker.js";
 import {Eth1Options} from "../../../src/eth1/options.js";
 import {testLogger} from "../../utils/logger.js";
-import {quantityToBigint} from "../../../src/eth1/provider/utils.js";
 import {ZERO_HASH} from "../../../src/constants/index.js";
 import {getGoerliRpcUrl} from "../../testParams.js";
 

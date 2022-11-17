@@ -5,6 +5,8 @@ import {
   ExecutionEngineModules,
   ExecutionEngineHttpOpts,
   defaultExecutionEngineHttpOpts,
+  parseExecutionPayload,
+  serializeExecutionPayload,
 } from "./http.js";
 import {ExecutionEngineMock, ExecutionEngineMockOpts} from "./mock.js";
 
@@ -14,6 +16,8 @@ export {
   ExecutionEngineDisabled,
   ExecutionEngineMock,
   defaultExecutionEngineHttpOpts,
+  parseExecutionPayload,
+  serializeExecutionPayload,
 };
 
 export type ExecutionEngineOpts =

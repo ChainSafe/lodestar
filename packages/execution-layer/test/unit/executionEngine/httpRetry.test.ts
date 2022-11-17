@@ -3,9 +3,9 @@ import {fastify} from "fastify";
 
 import {fromHexString} from "@chainsafe/ssz";
 
-import {ExecutionEngineHttp, defaultExecutionEngineHttpOpts} from "../../../src/execution/engine/http.js";
+import {ExecutionEngineHttp, defaultExecutionEngineHttpOpts} from "../../../src/engine/http.js";
 
-import {bytesToData, numToQuantity} from "../../../src/eth1/provider/utils.js";
+import {bytesToData, numToQuantity} from "../../../src/provider/utils.js";
 
 describe("ExecutionEngine / http ", () => {
   const afterCallbacks: (() => Promise<void> | void)[] = [];
@@ -57,6 +57,7 @@ describe("ExecutionEngine / http ", () => {
 
   describe("notifyForkchoiceUpdate", function () {
     it("notifyForkchoiceUpdate no retry when no pay load attributes", async function () {
+      this.timeout("10 min");
       errorResponsesBeforeSuccess = 2;
       const forkChoiceHeadData = {
         headBlockHash: "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
