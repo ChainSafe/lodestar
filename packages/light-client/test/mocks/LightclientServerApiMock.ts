@@ -7,18 +7,21 @@ import {altair, RootHex, SyncPeriod} from "@lodestar/types";
 import {notNullish} from "@lodestar/utils";
 import {BeaconStateAltair} from "../utils/types.js";
 
-export class LightclientServerApiMock implements routes.lightclient.Api {
+export class ProofServerApiMock implements routes.proof.Api {
   readonly states = new Map<RootHex, BeaconStateAltair>();
-  readonly updates = new Map<SyncPeriod, altair.LightClientUpdate>();
-  readonly snapshots = new Map<RootHex, routes.lightclient.LightClientBootstrap>();
-  latestHeadUpdate: altair.LightClientOptimisticUpdate | null = null;
-  finalized: altair.LightClientFinalityUpdate | null = null;
 
   async getStateProof(stateId: string, paths: JsonPath[]): Promise<{data: Proof}> {
     const state = this.states.get(stateId);
     if (!state) throw Error(`stateId ${stateId} not available`);
     return {data: state.createProof(paths)};
   }
+}
+
+export class LightclientServerApiMock implements routes.lightclient.Api {
+  readonly updates = new Map<SyncPeriod, altair.LightClientUpdate>();
+  readonly snapshots = new Map<RootHex, routes.lightclient.LightClientBootstrap>();
+  latestHeadUpdate: altair.LightClientOptimisticUpdate | null = null;
+  finalized: altair.LightClientFinalityUpdate | null = null;
 
   async getUpdates(from: SyncPeriod, to: SyncPeriod): Promise<{data: altair.LightClientUpdate[]}> {
     const updates: altair.LightClientUpdate[] = [];
