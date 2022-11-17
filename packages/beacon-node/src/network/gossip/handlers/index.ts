@@ -167,6 +167,11 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       const {beaconBlock, blobsSidecar} = blockAndBlocks;
       const blockImport: BlockImport = {block: beaconBlock, blobs: blobsSidecar};
 
+      // TODO EIP-4844: Should throw for pre fork blocks?
+      if (config.getForkSeq(beaconBlock.message.slot) < ForkSeq.eip4844) {
+        throw new GossipActionError(GossipAction.REJECT, {code: "PRE_EIP4844_BLOCK"});
+      }
+
       // Validate block + blob. Then forward, then handle both
       await validateBeaconBlock(blockImport, topic.fork, peerIdStr);
       await validateGossipBlobsSidecar(beaconBlock, blobsSidecar);

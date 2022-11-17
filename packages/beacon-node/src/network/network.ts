@@ -225,6 +225,7 @@ export class Network implements INetwork {
     request: phase0.BeaconBlocksByRangeRequest
   ): Promise<BlockImport[]> {
     // TODO EIP-4844: Assumes all blocks in the same epoch
+    // TODO EIP-4844: Ensure all blocks are in the same epoch
     if (this.config.getForkSeq(request.startSlot) >= ForkSeq.eip4844) {
       // TODO EIP-4844: Do two requests at once for blocks and blobs
       const blocks = await this.reqResp.beaconBlocksByRange(peerId, request);
