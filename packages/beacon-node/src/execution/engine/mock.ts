@@ -239,10 +239,9 @@ export class ExecutionEngineMock implements IExecutionEngine {
     }
 
     return {
-      blockHash: "",
+      blockHash: toHex(payload.blockHash),
       kzgs: [],
       blobs: [],
-      aggregatedProof: "",
     };
   }
 

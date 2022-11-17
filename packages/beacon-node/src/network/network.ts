@@ -262,8 +262,50 @@ export class Network implements INetwork {
       return blocks.map((block) => ({block, blobs: null}));
     }
 
-    // Consider blocks may be post or pre EIP-4844
+    // NOTE: Consider blocks may be post or pre EIP-4844
     // TODO EIP-4844: Request either blocks, or blocks+blobs
+    const results = await Promise.all(
+      request.map(
+        async (beaconBlockRoot): Promise<BlockImport | null> => {
+          const [resultBlockBlobs, resultBlocks] = await Promise.allSettled([
+            this.reqResp.beaconBlockAndBlobsSidecarByRoot(peerId, []),
+            this.reqResp.beaconBlocksByRoot(peerId, [beaconBlockRoot]),
+          ]);
+
+          if (resultBlockBlobs.status === "fulfilled" && resultBlockBlobs.value.length === 1) {
+            const {beaconBlock, blobsSidecar} = resultBlockBlobs.value[0];
+            return {block: beaconBlock, blobs: blobsSidecar};
+          }
+
+          if (resultBlocks.status === "fulfilled") {
+            if (resultBlocks.value.length === 1) {
+              const block = resultBlocks.value[0];
+
+              if (this.config.getForkSeq(block.message.slot) >= ForkSeq.eip4844) {
+                // beaconBlockAndBlobsSidecarByRoot should have succeeded
+                if (resultBlockBlobs.status === "rejected") {
+                  // Recycle existing error for beaconBlockAndBlobsSidecarByRoot if any
+                  return Promise.reject(resultBlockBlobs.reason);
+                } else {
+                  throw Error(
+                    `Received post EIP-4844 ${beaconBlockRoot} over beaconBlocksByRoot not beaconBlockAndBlobsSidecarByRoot`
+                  );
+                }
+              }
+
+              // Block is pre EIP-4844
+              return {block, blobs: null};
+            } else {
+              return null;
+            }
+          } else {
+            return Promise.reject(resultBlocks.reason);
+          }
+        }
+      )
+    );
+
+    return results.filter((blockOrNull): blockOrNull is BlockImport => blockOrNull !== null);
   }
 
   /**

@@ -203,7 +203,7 @@ export function getBeaconBlockApi({
         () =>
           chain.processBlock(blockForImport).catch((e) => {
             if (e instanceof BlockError && e.type.code === BlockErrorCode.PARENT_UNKNOWN) {
-              network.events.emit(NetworkEvent.unknownBlockParent, signedBlock, network.peerId.toString());
+              network.events.emit(NetworkEvent.unknownBlockParent, blockForImport, network.peerId.toString());
             }
             throw e;
           }),

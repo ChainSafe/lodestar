@@ -3,7 +3,6 @@ import {toHexString} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@lodestar/config";
 import {phase0, ssz} from "@lodestar/types";
 import {ILogger, prettyBytes} from "@lodestar/utils";
-import {SignedBeaconBlock} from "@lodestar/types/lib/phase0/types.js";
 import {ForkName, ForkSeq} from "@lodestar/params";
 import {IMetrics} from "../../../metrics/index.js";
 import {OpSource} from "../../../metrics/validatorMonitor.js";
@@ -79,7 +78,8 @@ const MAX_UNKNOWN_BLOCK_ROOT_RETRIES = 1;
 export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipHandlerOpts): GossipHandlers {
   const {chain, config, metrics, network, logger} = modules;
 
-  async function validateBeaconBlock(signedBlock: SignedBeaconBlock, fork: ForkName, peerIdStr: string): Promise<void> {
+  async function validateBeaconBlock(blockImport: BlockImport, fork: ForkName, peerIdStr: string): Promise<void> {
+    const signedBlock = blockImport.block;
     const slot = signedBlock.message.slot;
     const forkTypes = config.getForkTypes(slot);
     const blockHex = prettyBytes(forkTypes.BeaconBlock.hashTreeRoot(signedBlock.message));
@@ -90,7 +90,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       if (e instanceof BlockGossipError) {
         if (e instanceof BlockGossipError && e.type.code === BlockErrorCode.PARENT_UNKNOWN) {
           logger.debug("Gossip block has error", {slot, root: blockHex, code: e.type.code});
-          network.events.emit(NetworkEvent.unknownBlockParent, signedBlock, peerIdStr);
+          network.events.emit(NetworkEvent.unknownBlockParent, blockImport, peerIdStr);
         }
       }
 
@@ -152,23 +152,25 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
 
   return {
     [GossipType.beacon_block]: async (signedBlock, topic, peerIdStr, seenTimestampSec) => {
-      await validateBeaconBlock(signedBlock, topic.fork, peerIdStr);
+      const blockImport: BlockImport = {block: signedBlock, blobs: null};
+      await validateBeaconBlock(blockImport, topic.fork, peerIdStr);
 
       // TODO EIP-4844: Can blocks be received by this topic?
       if (config.getForkSeq(signedBlock.message.slot) >= ForkSeq.eip4844) {
         throw new GossipActionError(GossipAction.REJECT, {code: "POST_EIP4844_BLOCK"});
       }
 
-      handleValidBeaconBlock({block: signedBlock, blobs: null}, peerIdStr, seenTimestampSec);
+      handleValidBeaconBlock(blockImport, peerIdStr, seenTimestampSec);
     },
 
     [GossipType.beacon_block_and_blobs_sidecar]: async (blockAndBlocks, topic, peerIdStr, seenTimestampSec) => {
       const {beaconBlock, blobsSidecar} = blockAndBlocks;
+      const blockImport: BlockImport = {block: beaconBlock, blobs: blobsSidecar};
 
       // Validate block + blob. Then forward, then handle both
-      await validateBeaconBlock(beaconBlock, topic.fork, peerIdStr);
+      await validateBeaconBlock(blockImport, topic.fork, peerIdStr);
       await validateGossipBlobsSidecar(beaconBlock, blobsSidecar);
-      handleValidBeaconBlock({block: beaconBlock, blobs: blobsSidecar}, peerIdStr, seenTimestampSec);
+      handleValidBeaconBlock(blockImport, peerIdStr, seenTimestampSec);
     },
 
     [GossipType.beacon_aggregate_and_proof]: async (signedAggregateAndProof, _topic, _peer, seenTimestampSec) => {
