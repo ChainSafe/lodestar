@@ -1,6 +1,7 @@
 import {PeerId} from "@libp2p/interface-peer-id";
 import {ForkName} from "@lodestar/params";
 import {allForks, altair, phase0, Root, Slot} from "@lodestar/types";
+import {DIAL_TIMEOUT, REQUEST_TIMEOUT, RESP_TIMEOUT, TTFB_TIMEOUT} from "./constants.js";
 import {IReqResp, RateLimiter, ReqRespHandlerContext, ReqRespModules, RespStatus} from "./interface.js";
 import {InboundRateLimiter, RateLimiterOptions} from "./rate_limiter/RateLimiter.js";
 import {ReqRespProtocol} from "./ReqRespProtocol.js";
@@ -18,6 +19,17 @@ export type ReqRespBlockResponse = {
   slot: Slot;
 };
 
+export const defaultReqRespOptions: ReqRespOptions = {
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  TTFB_TIMEOUT,
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  RESP_TIMEOUT,
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  REQUEST_TIMEOUT,
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  DIAL_TIMEOUT,
+};
+
 /**
  * Implementation of Ethereum Consensus p2p Req/Resp domain.
  * For the spec that this code is based on, see:
@@ -29,11 +41,11 @@ export abstract class ReqResp extends ReqRespProtocol<ReqRespHandlerContext> imp
   private peerRpcScores: IPeerRpcScoreStore;
   private metadataController: MetadataController;
 
-  constructor(modules: ReqRespModules, options: ReqRespOptions & Partial<RateLimiterOptions>) {
-    super(modules, options);
+  constructor(modules: ReqRespModules, options?: Partial<ReqRespOptions> & Partial<RateLimiterOptions>) {
+    super(modules, {...defaultReqRespOptions, ...options});
     this.peerRpcScores = modules.peerRpcScores;
     this.metadataController = modules.metadataController;
-    this.inboundRateLimiter = new InboundRateLimiter(options, modules);
+    this.inboundRateLimiter = new InboundRateLimiter({...InboundRateLimiter.defaults, ...options}, modules);
   }
 
   protected onIncomingRequest(peerId: PeerId, method: Method): void {
@@ -60,13 +72,6 @@ export abstract class ReqResp extends ReqRespProtocol<ReqRespHandlerContext> imp
       },
     };
   }
-
-  // protected onIncomingRequestBody(req: RequestTypedContainer, peerId: PeerId): void {
-  //   // Allow onRequest to return and close the stream
-  //   // For Goodbye there may be a race condition where the listener of `receivedGoodbye`
-  //   // disconnects in the same syncronous call, preventing the stream from ending cleanly
-  //   setTimeout(() => this.networkEventBus.emit(NetworkEvent.reqRespRequest, req, peerId), 0);
-  // }
 
   async start(): Promise<void> {
     await super.start();

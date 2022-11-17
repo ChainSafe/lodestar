@@ -38,7 +38,7 @@ export interface ReqRespHandlerProtocolContext {
 }
 
 export interface ReqRespHandlerContext extends ReqRespHandlerProtocolContext {
-  modules: Omit<ReqRespProtocolModules, "libp2p"> & {
+  modules: ReqRespHandlerProtocolContext["modules"] & {
     inboundRateLimiter: RateLimiter;
     metadataController: MetadataController;
   };

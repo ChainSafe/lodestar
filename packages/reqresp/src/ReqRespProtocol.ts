@@ -142,7 +142,7 @@ export abstract class ReqRespProtocol<Context extends ReqRespHandlerProtocolCont
       this.onIncomingRequest?.(peerId, method);
 
       try {
-        await handleRequest({
+        await handleRequest<Req, Resp, Context>({
           context: this.getContext(),
           logger: this.logger,
           stream,

@@ -23,15 +23,19 @@ export type EncodedPayload<T> =
       contextBytes: ContextBytes;
     };
 
-export type ReqRespHandlerWithContext<Req, Resp, Context = ReqRespHandlerContext> = (
-  context: Context,
-  req: Req,
-  peerId: PeerId
-) => AsyncIterable<EncodedPayload<Resp>>;
+export type ReqRespHandlerWithContext<
+  Req,
+  Resp,
+  Context extends ReqRespHandlerProtocolContext = ReqRespHandlerContext
+> = (context: Context, req: Req, peerId: PeerId) => AsyncIterable<EncodedPayload<Resp>>;
 
 export type ReqRespHandler<Req, Resp> = (req: Req, peerId: PeerId) => AsyncIterable<EncodedPayload<Resp>>;
 
-export interface ProtocolDefinition<Req = unknown, Resp = unknown, Context = unknown> extends Protocol {
+export interface ProtocolDefinition<
+  Req = unknown,
+  Resp = unknown,
+  Context extends ReqRespHandlerProtocolContext = ReqRespHandlerContext
+> extends Protocol {
   handler: ReqRespHandlerWithContext<Req, Resp, Context>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   requestType: (fork: ForkName) => Type<Req> | null;
@@ -46,7 +50,15 @@ export type ProtocolDefinitionGenerator<
   Req,
   Res,
   Context extends ReqRespHandlerProtocolContext = ReqRespHandlerContext
-> = (modules: Context["modules"], handler?: ReqRespHandler<Req, Res>) => ProtocolDefinition<Req, Res, Context>;
+> = (
+  // "inboundRateLimiter" is available only on handler context not on generator
+  modules: Omit<Context["modules"], "inboundRateLimiter">,
+  handler?: ReqRespHandler<Req, Res>
+) => ProtocolDefinition<Req, Res, Context>;
+
+export type HandlerTypeFromMessage<T> = T extends ProtocolDefinitionGenerator<infer Req, infer Res>
+  ? ReqRespHandler<Req, Res>
+  : never;
 
 export const protocolPrefix = "/eth2/beacon_chain/req";
 

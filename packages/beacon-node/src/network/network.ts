@@ -79,7 +79,7 @@ export class Network implements INetwork {
         libp2p,
         logger,
         metrics,
-        metadata,
+        metadataController: metadata,
         peerRpcScores,
         peersData: this.peersData,
         networkEventBus,

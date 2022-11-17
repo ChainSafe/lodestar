@@ -1,19 +1,11 @@
-import {
-  getMetrics as getReqResMetrics,
-  Handler,
-  IReqResp,
-  MetricsRegister,
-  ReqResp,
-  ReqRespModules,
-} from "@lodestar/reqresp";
+import {getMetrics as getReqResMetrics, IReqResp, MetricsRegister} from "@lodestar/reqresp";
 import messages from "@lodestar/reqresp/messages";
-import {InboundRateLimiter} from "@lodestar/reqresp/rate_limiter";
-import {phase0} from "@lodestar/types";
 import {IMetrics} from "../../metrics/index.js";
+import {BeaconNodeReqResp, BeaconNodeReqRespModules} from "./BeaconNodeReqResp.js";
 import {ReqRespHandlers} from "./handlers/index.js";
 
 export const getBeaconNodeReqResp = (
-  modules: Omit<ReqRespModules, "metrics" | "inboundRateLimiter"> & {
+  modules: Omit<BeaconNodeReqRespModules, "metrics"> & {
     metrics: IMetrics | null;
   },
   reqRespHandlers: ReqRespHandlers
@@ -26,28 +18,33 @@ export const getBeaconNodeReqResp = (
       })
     : null;
 
-  const inboundRateLimiter = new InboundRateLimiter(
-    {},
-    {logger: modules.logger, metrics, peerRpcScores: modules.peerRpcScores}
-  );
-
   const reqRespModules = {
     ...modules,
     metrics,
-    inboundRateLimiter,
-  };
+  } as BeaconNodeReqRespModules;
 
-  const reqresp = ReqResp.withDefaults(reqRespModules);
+  const reqresp = new BeaconNodeReqResp(reqRespModules);
 
-  reqresp.registerProtocol(messages.v1.Status(reqRespHandlers.onStatus, reqRespModules));
+  reqresp.registerProtocol(messages.v1.Ping(reqRespModules));
+  reqresp.registerProtocol(messages.v1.Status(reqRespModules, reqRespHandlers.onStatus));
+  reqresp.registerProtocol(messages.v1.Metadata(reqRespModules));
+  reqresp.registerProtocol(messages.v1.Goodbye(reqRespModules));
+  reqresp.registerProtocol(messages.v1.BeaconBlocksByRange(reqRespModules, reqRespHandlers.onBeaconBlocksByRange));
+  reqresp.registerProtocol(messages.v1.BeaconBlocksByRoot(reqRespModules, reqRespHandlers.onBeaconBlocksByRoot));
+  reqresp.registerProtocol(messages.v1.LightClientBootstrap(reqRespModules, reqRespHandlers.onLightClientBootstrap));
   reqresp.registerProtocol(
-    messages.v1.Ping(
-      async function* onPing() {
-        yield;
-      } as Handler<phase0.Ping, phase0.Ping>,
-      reqRespModules
-    )
+    messages.v1.LightClientFinalityUpdate(reqRespModules, reqRespHandlers.onLightClientFinalityUpdate)
   );
+  reqresp.registerProtocol(
+    messages.v1.LightClientOptimisticUpdate(reqRespModules, reqRespHandlers.onLightClientOptimisticUpdate)
+  );
+  reqresp.registerProtocol(
+    messages.v1.LightClientUpdatesByRange(reqRespModules, reqRespHandlers.onLightClientUpdatesByRange)
+  );
+
+  reqresp.registerProtocol(messages.v2.Metadata(reqRespModules));
+  reqresp.registerProtocol(messages.v2.BeaconBlocksByRange(reqRespModules, reqRespHandlers.onBeaconBlocksByRange));
+  reqresp.registerProtocol(messages.v2.BeaconBlocksByRoot(reqRespModules, reqRespHandlers.onBeaconBlocksByRoot));
 
   return reqresp;
 };
