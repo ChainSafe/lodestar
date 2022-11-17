@@ -71,6 +71,7 @@
     "@multiformats/multiaddr": "^11.0.0",
     "@types/lockfile": "^1.0.1",
     "bip39": "^3.0.2",
+    "c-kzg": "^1.0.4",
     "deepmerge": "^4.2.2",
     "ethers": "^5.0.2",
     "expand-tilde": "^2.0.2",

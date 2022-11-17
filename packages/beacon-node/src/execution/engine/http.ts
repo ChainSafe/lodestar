@@ -11,6 +11,7 @@ import {
   DATA,
   QUANTITY,
   quantityToBigint,
+  dataToRootHex,
 } from "../../eth1/provider/utils.js";
 import {IJsonRpcHttpClient, ReqOpts} from "../../eth1/provider/jsonRpcHttpClient.js";
 import {IMetrics} from "../../metrics/index.js";
@@ -491,7 +492,7 @@ export function parseExecutionPayload(data: ExecutionPayloadRpc): allForks.Execu
 
   // EIP-4844 adds excessDataGas to the ExecutionPayload
   if (data.excessDataGas) {
-    (payload as eip4844.ExecutionPayload).excessDataGas = BigInt(data.excessDataGas);
+    (payload as eip4844.ExecutionPayload).excessDataGas = quantityToBigint(data.excessDataGas);
   }
 
   return payload;
@@ -499,9 +500,11 @@ export function parseExecutionPayload(data: ExecutionPayloadRpc): allForks.Execu
 
 export function parseBlobsBundle(data: BlobsBundleRpc): BlobsBundle {
   return {
-    blockHash: data.blockHash,
-    kzgs: data.kzgs.map((kzg) => dataToBytes(kzg)),
-    blobs: data.blobs.map((blob) => dataToBytes(blob)),
+    // NOTE: Keep as hex, since it's only used for equality downstream
+    blockHash: dataToRootHex(data.blockHash),
+    // As of Nov 17th 2022 according to Dan's tests Geth returns null if no blobs in block
+    kzgs: (data.kzgs ?? []).map((kzg) => dataToBytes(kzg)),
+    blobs: (data.blobs ?? []).map((blob) => dataToBytes(blob)),
   };
 }
 

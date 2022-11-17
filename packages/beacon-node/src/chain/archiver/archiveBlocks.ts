@@ -2,7 +2,7 @@ import {fromHexString} from "@chainsafe/ssz";
 import {Epoch, Slot} from "@lodestar/types";
 import {IForkChoice} from "@lodestar/fork-choice";
 import {ILogger, toHex} from "@lodestar/utils";
-import {ForkSeq, MIN_EPOCHS_FOR_BLOBS_SIDECARS_REQUESTS, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {IKeyValue} from "@lodestar/db";
 import {IChainForkConfig} from "@lodestar/config";
@@ -81,7 +81,7 @@ export async function archiveBlocks(
   // Delete expired blobs
   // Keep only `[max(GENESIS_EPOCH, current_epoch - MIN_EPOCHS_FOR_BLOBS_SIDECARS_REQUESTS), current_epoch]`
   if (finalizedPostEIP4844) {
-    const blobsSidecarMinEpoch = currentEpoch - MIN_EPOCHS_FOR_BLOBS_SIDECARS_REQUESTS;
+    const blobsSidecarMinEpoch = currentEpoch - config.MIN_EPOCHS_FOR_BLOBS_SIDECARS_REQUESTS;
     if (blobsSidecarMinEpoch > 0) {
       const slotsToDelete = await db.blobsSidecarArchive.keys({lt: computeStartSlotAtEpoch(blobsSidecarMinEpoch)});
       if (slotsToDelete.length > 0) {

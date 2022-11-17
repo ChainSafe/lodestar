@@ -63,9 +63,10 @@ export type IChainConfig = {
   DEPOSIT_NETWORK_ID: number;
   DEPOSIT_CONTRACT_ADDRESS: Uint8Array;
 
-  // Blobs
-  // https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/p2p-interface.md#configuration
+  // EIP-4844
+  // https://github.com/ethereum/consensus-specs/blob/11a037fd9227e29ee809c9397b09f8cc3383a8c0/specs/eip4844/p2p-interface.md#configuration
   MAX_REQUEST_BLOBS_SIDECARS: number;
+  /** The minimum epoch range over which a node must serve blobs sidecars */
   MIN_EPOCHS_FOR_BLOBS_SIDECARS_REQUESTS: number;
 };
 

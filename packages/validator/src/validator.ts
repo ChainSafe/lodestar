@@ -1,4 +1,3 @@
-import {loadTrustedSetup} from "c-kzg";
 import {IDatabaseApiOptions} from "@lodestar/db";
 import {BLSPubkey, ssz} from "@lodestar/types";
 import {createIBeaconConfig, IBeaconConfig} from "@lodestar/config";
@@ -71,9 +70,6 @@ export class Validator {
     this.controller = opts.abortController;
     const clock = new Clock(config, logger, {genesisTime: Number(genesis.genesisTime)});
     const loggerVc = getLoggerVc(logger, clock);
-
-    // Load our KZG trusted setup into C-KZG for later use
-    loadTrustedSetup("trusted_setup.txt");
 
     let api: Api;
     if (typeof opts.api === "string" || Array.isArray(opts.api)) {

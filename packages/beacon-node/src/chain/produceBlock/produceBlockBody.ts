@@ -1,4 +1,3 @@
-import {blobToKzgCommitment} from "c-kzg";
 import {
   Bytes32,
   phase0,
@@ -23,7 +22,6 @@ import {
   getRandaoMix,
   getCurrentEpoch,
   isMergeTransitionComplete,
-  verifyKzgCommitmentsAgainstTransactions,
 } from "@lodestar/state-transition";
 import {IChainForkConfig} from "@lodestar/config";
 import {ForkName, ForkSeq} from "@lodestar/params";
@@ -34,7 +32,7 @@ import {PayloadId, IExecutionEngine, IExecutionBuilder} from "../../execution/in
 import {ZERO_HASH, ZERO_HASH_HEX} from "../../constants/index.js";
 import {IEth1ForBlockProduction} from "../../eth1/index.js";
 import {numToQuantity} from "../../eth1/provider/utils.js";
-import {byteArrayEquals} from "../../util/bytes.js";
+import {validateBlobsAndKzgCommitments} from "./validateBlobsAndKzgCommitments.js";
 
 // Time to provide the EL to generate a payload from new payload id
 const PAYLOAD_GENERATION_TIME_MS = 500;
@@ -235,23 +233,9 @@ export async function produceBlockBody<T extends BlockType>(
               throw Error(`blobsBundle incorrect blockHash ${blobsBundle.blockHash} != ${blockHash}`);
             }
 
+            // Optionally sanity-check that the KZG commitments match the versioned hashes in the transactions
             if (this.opts.sanityCheckExecutionEngineBlocks) {
-              // Optionally sanity-check that the KZG commitments match the versioned hashes in the transactions
-              verifyKzgCommitmentsAgainstTransactions(payload.transactions, blobsBundle.kzgs);
-
-              // Optionally sanity-check that the KZG commitments match the blobs (as produced by the execution engine)
-              if (blobsBundle.blobs.length !== blobsBundle.kzgs.length) {
-                throw Error(
-                  `Blobs bundle blobs len ${blobsBundle.blobs.length} != kzgs len ${blobsBundle.kzgs.length}`
-                );
-              }
-
-              for (let i = 0; i < blobsBundle.blobs.length; i++) {
-                const kzg = blobToKzgCommitment(blobsBundle.blobs[i]) as eip4844.KZGCommitment;
-                if (!byteArrayEquals(kzg, blobsBundle.kzgs[i])) {
-                  throw Error(`Wrong KZG[${i}] ${toHex(blobsBundle.kzgs[i])} expected ${toHex(kzg)}`);
-                }
-              }
+              validateBlobsAndKzgCommitments(payload, blobsBundle);
             }
 
             (blockBody as eip4844.BeaconBlockBody).blobKzgCommitments = blobsBundle.kzgs;

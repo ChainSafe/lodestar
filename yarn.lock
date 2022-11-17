@@ -4791,10 +4791,10 @@ bytes@3.1.2:
   resolved "https://registry.yarnpkg.com/bytes/-/bytes-3.1.2.tgz#8b0beeb98605adf1b128fa4386403c009e0221a5"
   integrity sha512-/Nf7TyzTx6S3yRJObOAV7956r8cr2+Oj8AC5dt8wSP3BQAoeX58NoHyCU8P8zGkNXStjTSi6fzO6F0pBdcYbEg==
 
-c-kzg@^1.0.0:
-  version "1.0.0"
-  resolved "https://registry.yarnpkg.com/c-kzg/-/c-kzg-1.0.0.tgz#1ba32dbadd3dadf2bf461e25fa833663c3897db8"
-  integrity sha512-8Oisu9MXJ7X50idvdPMSwzgk9IN4uu6FMQJtQbaHxcYxoN/TAk2sLO72fGgUJDHg0CjV7rPRstbp8x6m+O3fvg==
+c-kzg@^1.0.4:
+  version "1.0.4"
+  resolved "https://registry.yarnpkg.com/c-kzg/-/c-kzg-1.0.4.tgz#cd3b274cf1ead177d166eec481e0c4eade8b9e16"
+  integrity sha512-hzEyvdWODqDMkhuxsVatFeXEi2zHR8nXHamNXM3gE91hJ9VTR0G65XVGmxpQwP11Gn8dY54YOo0+q+7AoOZEuA==
   dependencies:
     node-addon-api "^5.0.0"
 

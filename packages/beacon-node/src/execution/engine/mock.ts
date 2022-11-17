@@ -240,6 +240,7 @@ export class ExecutionEngineMock implements IExecutionEngine {
 
     return {
       blockHash: toHex(payload.blockHash),
+      // TODO EIP-4844: Assumes payload has no blob transactions
       kzgs: [],
       blobs: [],
     };
