@@ -6,7 +6,7 @@ import {loadTrustedSetup, transformTrustedSetupJSON} from "c-kzg";
 // Solutions: https://stackoverflow.com/questions/46745014/alternative-for-dirname-in-node-js-when-using-es6-modules
 // eslint-disable-next-line @typescript-eslint/naming-convention
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const trustedSetupFilepath = path.join(__dirname, "../trusted_setup.json");
+const trustedSetupFilepath = path.join(__dirname, "../../trusted_setup.json");
 
 /**
  * Load our KZG trusted setup into C-KZG for later use
