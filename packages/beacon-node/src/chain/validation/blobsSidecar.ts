@@ -89,19 +89,23 @@ export function validateBlobsSidecar(
     );
   }
 
-  // assert verify_aggregate_kzg_proof(blobs, expected_kzg_commitments, kzg_aggregated_proof)
-  let isProofValid: boolean;
-  try {
-    isProofValid = verifyAggregateKzgProof(blobs, expectedKzgCommitments, kzgAggregatedProof);
-  } catch (e) {
-    // TODO EIP-4844: TEMP Nov17: May always throw error -- we need to fix Geth's KZG to match C-KZG and the trusted setup used here
-    (e as Error).message = `Error on verifyAggregateKzgProof: ${(e as Error).message}`;
-    throw e;
-  }
+  // No need to verify the aggregate proof of zero blobs. Also c-kzg throws.
+  // https://github.com/dankrad/c-kzg/pull/12/files#r1025851956
+  if (blobs.length > 0) {
+    // assert verify_aggregate_kzg_proof(blobs, expected_kzg_commitments, kzg_aggregated_proof)
+    let isProofValid: boolean;
+    try {
+      isProofValid = verifyAggregateKzgProof(blobs, expectedKzgCommitments, kzgAggregatedProof);
+    } catch (e) {
+      // TODO EIP-4844: TEMP Nov17: May always throw error -- we need to fix Geth's KZG to match C-KZG and the trusted setup used here
+      (e as Error).message = `Error on verifyAggregateKzgProof: ${(e as Error).message}`;
+      throw e;
+    }
 
-  // TODO EIP-4844: TEMP Nov17: May always throw error -- we need to fix Geth's KZG to match C-KZG and the trusted setup used here
-  if (!isProofValid) {
-    throw Error("Invalid AggregateKzgProof");
+    // TODO EIP-4844: TEMP Nov17: May always throw error -- we need to fix Geth's KZG to match C-KZG and the trusted setup used here
+    if (!isProofValid) {
+      throw Error("Invalid AggregateKzgProof");
+    }
   }
 }
 
