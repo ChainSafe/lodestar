@@ -1,5 +1,4 @@
 import {PeerId} from "@libp2p/interface-peer-id";
-import {Type} from "@chainsafe/ssz";
 import {IBeaconConfig, IForkConfig, IForkDigestContext} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
 import {Slot} from "@lodestar/types";
@@ -31,9 +30,9 @@ export interface ProtocolDefinition<Req = unknown, Resp = unknown> {
   encoding: Encoding;
   handler: ReqRespHandler<Req, Resp>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  requestType: (fork: ForkName) => Type<Req> | null;
+  requestType: (fork: ForkName) => TypeSerializer<Req> | null;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  responseType: (fork: ForkName) => Type<Resp>;
+  responseType: (fork: ForkName) => TypeSerializer<Resp>;
   renderRequestBody?: (request: Req) => string;
   contextBytes: ContextBytesFactory<Resp>;
 }
@@ -84,3 +83,13 @@ export enum LightClientServerErrorCode {
 export type LightClientServerErrorType = {code: LightClientServerErrorCode.RESOURCE_UNAVAILABLE};
 
 export class LightClientServerError extends LodestarError<LightClientServerErrorType> {}
+
+/**
+ * Lightweight interface of ssz Type<T>
+ */
+export interface TypeSerializer<T> {
+  serialize(data: T): Uint8Array;
+  deserialize(bytes: Uint8Array): T;
+  maxSize: number;
+  minSize: number;
+}

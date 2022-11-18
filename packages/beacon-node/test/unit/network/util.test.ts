@@ -4,7 +4,7 @@ import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
 import {config} from "@lodestar/config/default";
 import {ForkName} from "@lodestar/params";
 import {ENR} from "@chainsafe/discv5";
-import {Method, Version, Encoding, Protocol, protocolPrefix} from "../../../src/network/reqresp/types.js";
+import {ReqRespMethod, Version, Encoding, Protocol, protocolPrefix} from "../../../src/network/reqresp/types.js";
 import {defaultNetworkOptions} from "../../../src/network/options.js";
 import {formatProtocolID} from "../../../src/network/reqresp/utils/index.js";
 import {createNodeJsLibp2p, isLocalMultiAddr} from "../../../src/network/index.js";
@@ -24,19 +24,19 @@ describe("Test isLocalMultiAddr", () => {
 
 describe("ReqResp protocolID parse / render", () => {
   const testCases: {
-    method: Method;
+    method: ReqRespMethod;
     version: Version;
     encoding: Encoding;
     protocolId: string;
   }[] = [
     {
-      method: Method.Status,
+      method: ReqRespMethod.Status,
       version: Version.V1,
       encoding: Encoding.SSZ_SNAPPY,
       protocolId: "/eth2/beacon_chain/req/status/1/ssz_snappy",
     },
     {
-      method: Method.BeaconBlocksByRange,
+      method: ReqRespMethod.BeaconBlocksByRange,
       version: Version.V2,
       encoding: Encoding.SSZ_SNAPPY,
       protocolId: "/eth2/beacon_chain/req/beacon_blocks_by_range/2/ssz_snappy",
@@ -60,7 +60,7 @@ describe("ReqResp protocolID parse / render", () => {
 
     // +1 for the first "/"
     const suffix = protocolId.slice(protocolPrefix.length + 1);
-    const [method, version, encoding] = suffix.split("/") as [Method, Version, Encoding];
+    const [method, version, encoding] = suffix.split("/") as [ReqRespMethod, Version, Encoding];
     return {method, version, encoding};
   }
 });

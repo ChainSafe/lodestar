@@ -2,7 +2,7 @@ import {expect} from "chai";
 import {Uint8ArrayList} from "uint8arraylist";
 import {LodestarError, fromHex} from "@lodestar/utils";
 import {RespStatus} from "../../../../../src/constants/index.js";
-import {Method, Encoding, Version} from "../../../../../src/network/reqresp/types.js";
+import {ReqRespMethod, Encoding, Version} from "../../../../../src/network/reqresp/types.js";
 import {handleRequest, PerformRequestHandler} from "../../../../../src/network/reqresp/response/index.js";
 import {PeersData} from "../../../../../src/network/peers/peersData.js";
 import {expectRejectedWithLodestarError} from "../../../../utils/errors.js";
@@ -23,7 +23,7 @@ describe("network / reqresp / response / handleRequest", () => {
 
   const testCases: {
     id: string;
-    method: Method;
+    method: ReqRespMethod;
     encoding: Encoding;
     requestChunks: Uint8ArrayList[];
     performRequestHandler: PerformRequestHandler;
@@ -32,7 +32,7 @@ describe("network / reqresp / response / handleRequest", () => {
   }[] = [
     {
       id: "Yield two chunks, then throw",
-      method: Method.Ping,
+      method: ReqRespMethod.Ping,
       encoding: Encoding.SSZ_SNAPPY,
       requestChunks: sszSnappyPing.chunks, // Request Ping: BigInt(1)
       performRequestHandler: async function* () {

@@ -1,13 +1,12 @@
 import {PeerId} from "@libp2p/interface-peer-id";
 import {ILogger, MapDef} from "@lodestar/utils";
-import {RateLimiter} from "../interface.js";
-import {Metrics} from "../metrics.js";
-import {RateTracker} from "./RateTracker.js";
+import {IMetrics} from "../../metrics/index.js";
+import {RateTracker} from "./rateTracker.js";
 
 interface RateLimiterModules {
   logger: ILogger;
   reportPeer: (peer: PeerId) => void;
-  metrics: Metrics | null;
+  metrics: IMetrics | null;
 }
 
 /**
@@ -18,10 +17,17 @@ interface RateLimiterModules {
  * - rateTrackerTimeoutMs: the time period we want to track total requests or objects, normally 1 min
  */
 export type RateLimiterOptions = {
-  requestCountPeerLimit: number;
-  blockCountPeerLimit: number;
-  blockCountTotalLimit: number;
-  rateTrackerTimeoutMs: number;
+  requestCountPeerLimit?: number;
+  blockCountPeerLimit?: number;
+  blockCountTotalLimit?: number;
+  rateTrackerTimeoutMs?: number;
+};
+
+export const defaultRateLimiterOpts: Required<RateLimiterOptions> = {
+  requestCountPeerLimit: 50,
+  blockCountPeerLimit: 500,
+  blockCountTotalLimit: 2000,
+  rateTrackerTimeoutMs: 60 * 1000,
 };
 
 /** Sometimes a peer request comes AFTER libp2p disconnect event, check for such peers every 10 minutes */
@@ -34,10 +40,10 @@ const DISCONNECTED_TIMEOUT_MS = 5 * 60 * 1000;
  * This class is singleton, it has per-peer request count rate tracker and block count rate tracker
  * and a block count rate tracker for all peers (this is lodestar specific).
  */
-export class InboundRateLimiter implements RateLimiter {
+export class InboundRateLimiter {
   private readonly logger: ILogger;
   private readonly reportPeer: RateLimiterModules["reportPeer"];
-  private readonly metrics: Metrics | null;
+  private readonly metrics: IMetrics | null;
   private requestCountTrackersByPeer: MapDef<string, RateTracker>;
   /**
    * This rate tracker is specific to lodestar, we don't want to serve too many blocks for peers at the
@@ -49,24 +55,10 @@ export class InboundRateLimiter implements RateLimiter {
   private lastSeenRequestsByPeer: Map<string, number>;
   /** Interval to check lastSeenMessagesByPeer */
   private cleanupInterval: NodeJS.Timeout | undefined = undefined;
-  private options: RateLimiterOptions;
+  private options: Required<RateLimiterOptions>;
 
-  /**
-   * Default value for RateLimiterOpts
-   * - requestCountPeerLimit: allow to serve 50 requests per peer within 1 minute
-   * - blockCountPeerLimit: allow to serve 500 blocks per peer within 1 minute
-   * - blockCountTotalLimit: allow to serve 2000 (blocks) for all peer within 1 minute (4 x blockCountPeerLimit)
-   * - rateTrackerTimeoutMs: 1 minute
-   */
-  static defaults: RateLimiterOptions = {
-    requestCountPeerLimit: 50,
-    blockCountPeerLimit: 500,
-    blockCountTotalLimit: 2000,
-    rateTrackerTimeoutMs: 60 * 1000,
-  };
-
-  constructor(options: Partial<RateLimiterOptions>, modules: RateLimiterModules) {
-    this.options = {...InboundRateLimiter.defaults, ...options};
+  constructor(options: RateLimiterOptions, modules: RateLimiterModules) {
+    this.options = {...defaultRateLimiterOpts, ...options};
     this.reportPeer = modules.reportPeer;
 
     this.requestCountTrackersByPeer = new MapDef(
@@ -110,7 +102,7 @@ export class InboundRateLimiter implements RateLimiter {
       });
       this.reportPeer(peerId);
       if (this.metrics) {
-        this.metrics.rateLimitErrors.inc({tracker: "requestCountPeerTracker"});
+        this.metrics.reqResp.rateLimitErrors.inc({tracker: "requestCountPeerTracker"});
       }
       return false;
     }
@@ -133,14 +125,14 @@ export class InboundRateLimiter implements RateLimiter {
       });
       this.reportPeer(peerId);
       if (this.metrics) {
-        this.metrics.rateLimitErrors.inc({tracker: "blockCountPeerTracker"});
+        this.metrics.reqResp.rateLimitErrors.inc({tracker: "blockCountPeerTracker"});
       }
       return false;
     }
 
     if (this.blockCountTotalTracker.requestObjects(numBlock) === 0) {
       if (this.metrics) {
-        this.metrics.rateLimitErrors.inc({tracker: "blockCountTotalTracker"});
+        this.metrics.reqResp.rateLimitErrors.inc({tracker: "blockCountTotalTracker"});
       }
       // don't apply penalty
       return false;

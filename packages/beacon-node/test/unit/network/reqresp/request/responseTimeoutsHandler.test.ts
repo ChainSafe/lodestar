@@ -12,7 +12,7 @@ import {
   RequestErrorCode,
 } from "../../../../../src/network/reqresp/request/errors.js";
 import {sendRequest} from "../../../../../src/network/reqresp/request/index.js";
-import {Encoding, Method, Version} from "../../../../../src/network/reqresp/types.js";
+import {Encoding, ReqRespMethod, Version} from "../../../../../src/network/reqresp/types.js";
 import {expectRejectedWithLodestarError} from "../../../../utils/errors.js";
 import {getValidPeerId} from "../../../../utils/peer.js";
 import {testLogger} from "../../../../utils/logger.js";
@@ -32,7 +32,7 @@ describe("network / reqresp / request / responseTimeoutsHandler", () => {
   }
 
   // Generic request params not relevant to timeout tests
-  const method = Method.BeaconBlocksByRange;
+  const method = ReqRespMethod.BeaconBlocksByRange;
   const encoding = Encoding.SSZ_SNAPPY;
   const version = Version.V1;
   const requestBody: phase0.BeaconBlocksByRangeRequest = {startSlot: 0, count: 9, step: 1};

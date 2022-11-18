@@ -7,7 +7,7 @@ import {createIBeaconConfig} from "@lodestar/config";
 import {fromHex, LodestarError} from "@lodestar/utils";
 import {allForks} from "@lodestar/types";
 import {
-  Method,
+  ReqRespMethod,
   Version,
   Encoding,
   Protocol,
@@ -42,7 +42,7 @@ type ResponseChunk =
   | {status: Exclude<RespStatus, RespStatus.SUCCESS>; errorMessage: string};
 
 describe("network / reqresp / encoders / response - Success and error cases", () => {
-  const methodDefault = Method.Status;
+  const methodDefault = ReqRespMethod.Status;
   const encodingDefault = Encoding.SSZ_SNAPPY;
 
   // Set the altair fork to happen between the two precomputed SSZ snappy blocks
@@ -57,7 +57,7 @@ describe("network / reqresp / encoders / response - Success and error cases", ()
 
   const testCases: {
     id: string;
-    method?: Method;
+    method?: ReqRespMethod;
     version?: Version;
     encoding?: Encoding;
     chunks?: Uint8ArrayList[];
@@ -70,14 +70,14 @@ describe("network / reqresp / encoders / response - Success and error cases", ()
   }[] = [
     {
       id: "No chunks should be ok",
-      method: Method.Ping,
+      method: ReqRespMethod.Ping,
       encoding: Encoding.SSZ_SNAPPY,
       responseChunks: [],
       chunks: [],
     },
     {
       id: "Empty response chunk - Error",
-      method: Method.Ping,
+      method: ReqRespMethod.Ping,
       encoding: Encoding.SSZ_SNAPPY,
       decodeError: new SszSnappyError({code: SszSnappyErrorCode.SOURCE_ABORTED}),
       chunks: [new Uint8ArrayList(Buffer.from([RespStatus.SUCCESS]))],
@@ -85,7 +85,7 @@ describe("network / reqresp / encoders / response - Success and error cases", ()
     },
     {
       id: "Single chunk - wrong body SSZ type",
-      method: Method.Status,
+      method: ReqRespMethod.Status,
       version: Version.V1,
       encoding: Encoding.SSZ_SNAPPY,
       responseChunks: [{status: RespStatus.SUCCESS, body: BigInt(1)}],
@@ -100,7 +100,7 @@ describe("network / reqresp / encoders / response - Success and error cases", ()
     },
     {
       id: "block v1 without <context-bytes>",
-      method: Method.BeaconBlocksByRange,
+      method: ReqRespMethod.BeaconBlocksByRange,
       version: Version.V1,
       encoding: Encoding.SSZ_SNAPPY,
       responseChunks: [{status: RespStatus.SUCCESS, body: sszSnappySignedBeaconBlockPhase0.body}],
@@ -113,7 +113,7 @@ describe("network / reqresp / encoders / response - Success and error cases", ()
     },
     {
       id: "block v2 with <context-bytes> phase0",
-      method: Method.BeaconBlocksByRange,
+      method: ReqRespMethod.BeaconBlocksByRange,
       version: Version.V2,
       encoding: Encoding.SSZ_SNAPPY,
       responseChunks: [{status: RespStatus.SUCCESS, body: sszSnappySignedBeaconBlockPhase0.body}],
@@ -128,7 +128,7 @@ describe("network / reqresp / encoders / response - Success and error cases", ()
     },
     {
       id: "block v2 with <context-bytes> altair",
-      method: Method.BeaconBlocksByRange,
+      method: ReqRespMethod.BeaconBlocksByRange,
       version: Version.V2,
       encoding: Encoding.SSZ_SNAPPY,
       responseChunks: [{status: RespStatus.SUCCESS, body: sszSnappySignedBeaconBlockAltair.body}],
@@ -144,7 +144,7 @@ describe("network / reqresp / encoders / response - Success and error cases", ()
 
     {
       id: "Multiple chunks with success",
-      method: Method.Ping,
+      method: ReqRespMethod.Ping,
       encoding: Encoding.SSZ_SNAPPY,
       responseChunks: [
         {status: RespStatus.SUCCESS, body: sszSnappyPing.body},
@@ -161,7 +161,7 @@ describe("network / reqresp / encoders / response - Success and error cases", ()
     },
     {
       id: "Multiple chunks with final error, should error",
-      method: Method.Ping,
+      method: ReqRespMethod.Ping,
       encoding: Encoding.SSZ_SNAPPY,
       decodeError: new ResponseError(RespStatus.SERVER_ERROR, ""),
       responseChunks: [
@@ -182,7 +182,7 @@ describe("network / reqresp / encoders / response - Success and error cases", ()
     },
     {
       id: "Decode successfully response_chunk as a single Uint8ArrayList",
-      method: Method.Ping,
+      method: ReqRespMethod.Ping,
       encoding: Encoding.SSZ_SNAPPY,
       responseChunks: [
         {status: RespStatus.SUCCESS, body: BigInt(1)},
@@ -199,7 +199,7 @@ describe("network / reqresp / encoders / response - Success and error cases", ()
 
     {
       id: "Decode successfully response_chunk as a single concated chunk",
-      method: Method.Ping,
+      method: ReqRespMethod.Ping,
       encoding: Encoding.SSZ_SNAPPY,
       responseChunks: [
         {status: RespStatus.SUCCESS, body: BigInt(1)},
@@ -220,7 +220,7 @@ describe("network / reqresp / encoders / response - Success and error cases", ()
 
     {
       id: "Decode blocks v2 through a fork with multiple types",
-      method: Method.BeaconBlocksByRange,
+      method: ReqRespMethod.BeaconBlocksByRange,
       version: Version.V2,
       encoding: Encoding.SSZ_SNAPPY,
       responseChunks: [
@@ -285,7 +285,7 @@ describe("network / reqresp / encoders / response - Success and error cases", ()
     for (const chunk of responseChunks) {
       if (chunk.status === RespStatus.SUCCESS) {
         const lodestarResponseBodies =
-          protocol.method === Method.BeaconBlocksByRange || protocol.method === Method.BeaconBlocksByRoot
+          protocol.method === ReqRespMethod.BeaconBlocksByRange || protocol.method === ReqRespMethod.BeaconBlocksByRoot
             ? blocksToReqRespBlockResponses([chunk.body] as allForks.SignedBeaconBlock[], config)
             : [chunk.body];
         yield* pipe(

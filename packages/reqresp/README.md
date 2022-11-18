@@ -12,17 +12,21 @@ Typescript REST client for the [Ethereum Consensus API spec](https://github.com/
 ## Usage
 
 ```typescript
-import {getClient} from "@lodestar/api";
-import {config} from "@lodestar/config/default";
+import {Libp2p} from "libp2p";
+import {EncodedPayloadType, ReqResp} from "@lodestar/reqresp";
+import {Ping} from "@lodestar/reqresp/messages";
+import {ILogger} from "@lodestar/utils";
 
-const api = getClient({baseUrl: "http://localhost:9596"}, {config});
+async function getReqResp(libp2p: Libp2p, logger: ILogger): Promise<void> {
+  const reqResp = new ReqResp({libp2p, logger, metrics: null});
 
-api.beacon
-  .getStateValidator(
-    "head",
-    "0x933ad9491b62059dd065b560d256d8957a8c402cc6e8d8ee7290ae11e8f7329267a8811c397529dac52ae1342ba58c95"
-  )
-  .then((res) => console.log("Your balance is:", res.data.balance));
+  // Register a PONG handler to respond with caller's Ping request
+  reqResp.registerProtocol(
+    Ping(async function* (req: bigint) {
+      yield {type: EncodedPayloadType.ssz, data: req};
+    })
+  );
+}
 ```
 
 ## Prerequisites

@@ -2,7 +2,7 @@ import {PeerId} from "@libp2p/interface-peer-id";
 import {ForkName} from "@lodestar/params";
 import {allForks, altair, phase0} from "@lodestar/types";
 
-export interface IReqResp {
+export interface IReqRespBeaconNode {
   start(): void;
   stop(): void;
   status(peerId: PeerId, request: phase0.Status): Promise<phase0.Status>;

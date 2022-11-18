@@ -1,6 +1,6 @@
 import {expect} from "chai";
 import {collectResponses} from "../../../../../src/network/reqresp/request/collectResponses.js";
-import {Method, IncomingResponseBody} from "../../../../../src/network/reqresp/types.js";
+import {ReqRespMethod, IncomingResponseBody} from "../../../../../src/network/reqresp/types.js";
 import {arrToSource} from "../utils.js";
 
 describe("network / reqresp / request / collectResponses", () => {
@@ -8,20 +8,20 @@ describe("network / reqresp / request / collectResponses", () => {
 
   const testCases: {
     id: string;
-    method: Method;
+    method: ReqRespMethod;
     maxResponses?: number;
     sourceChunks: IncomingResponseBody[];
     expectedReturn: IncomingResponseBody | IncomingResponseBody[];
   }[] = [
     {
       id: "Return first chunk only for a single-chunk method",
-      method: Method.Ping,
+      method: ReqRespMethod.Ping,
       sourceChunks: [chunk, chunk],
       expectedReturn: chunk,
     },
     {
       id: "Return up to maxResponses for a multi-chunk method",
-      method: Method.BeaconBlocksByRange,
+      method: ReqRespMethod.BeaconBlocksByRange,
       sourceChunks: [chunk, chunk, chunk],
       maxResponses: 2,
       expectedReturn: [chunk, chunk],

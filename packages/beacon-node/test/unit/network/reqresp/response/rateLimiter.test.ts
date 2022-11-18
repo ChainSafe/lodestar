@@ -5,7 +5,7 @@ import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
 import {IPeerRpcScoreStore, PeerAction, PeerRpcScoreStore} from "../../../../../src/network/index.js";
 import {defaultNetworkOptions} from "../../../../../src/network/options.js";
 import {InboundRateLimiter} from "../../../../../src/network/reqresp/response/rateLimiter.js";
-import {Method, RequestTypedContainer} from "../../../../../src/network/reqresp/types.js";
+import {ReqRespMethod, RequestTypedContainer} from "../../../../../src/network/reqresp/types.js";
 import {testLogger} from "../../../../utils/logger.js";
 
 describe("ResponseRateLimiter", () => {
@@ -39,7 +39,7 @@ describe("ResponseRateLimiter", () => {
    */
   it("requestCountPeerLimit", async () => {
     const peerId = await createSecp256k1PeerId();
-    const requestTyped = {method: Method.Ping, body: BigInt(1)} as RequestTypedContainer;
+    const requestTyped = {method: ReqRespMethod.Ping, body: BigInt(1)} as RequestTypedContainer;
     for (let i = 0; i < defaultNetworkOptions.requestCountPeerLimit; i++) {
       expect(inboundRateLimiter.allowRequest(peerId, requestTyped)).to.equal(true);
     }
@@ -71,12 +71,18 @@ describe("ResponseRateLimiter", () => {
    */
   it("blockCountTotalTracker", async () => {
     const blockCount = Math.floor(defaultNetworkOptions.blockCountTotalLimit / 2);
-    const requestTyped = {method: Method.BeaconBlocksByRange, body: {count: blockCount}} as RequestTypedContainer;
+    const requestTyped = {
+      method: ReqRespMethod.BeaconBlocksByRange,
+      body: {count: blockCount},
+    } as RequestTypedContainer;
     for (let i = 0; i < 2; i++) {
       expect(inboundRateLimiter.allowRequest(await createSecp256k1PeerId(), requestTyped)).to.equal(true);
     }
 
-    const oneBlockRequestTyped = {method: Method.BeaconBlocksByRoot, body: [Buffer.alloc(32)]} as RequestTypedContainer;
+    const oneBlockRequestTyped = {
+      method: ReqRespMethod.BeaconBlocksByRoot,
+      body: [Buffer.alloc(32)],
+    } as RequestTypedContainer;
 
     expect(inboundRateLimiter.allowRequest(await createSecp256k1PeerId(), oneBlockRequestTyped)).to.equal(false);
     expect(peerRpcScoresStub.applyAction).not.to.be.calledOnce;
@@ -97,13 +103,19 @@ describe("ResponseRateLimiter", () => {
    */
   it("blockCountPeerLimit", async () => {
     const blockCount = Math.floor(defaultNetworkOptions.blockCountPeerLimit / 2);
-    const requestTyped = {method: Method.BeaconBlocksByRange, body: {count: blockCount}} as RequestTypedContainer;
+    const requestTyped = {
+      method: ReqRespMethod.BeaconBlocksByRange,
+      body: {count: blockCount},
+    } as RequestTypedContainer;
     const peerId = await createSecp256k1PeerId();
     for (let i = 0; i < 2; i++) {
       expect(inboundRateLimiter.allowRequest(peerId, requestTyped)).to.equal(true);
     }
     const peerId2 = await createSecp256k1PeerId();
-    const oneBlockRequestTyped = {method: Method.BeaconBlocksByRoot, body: [Buffer.alloc(32)]} as RequestTypedContainer;
+    const oneBlockRequestTyped = {
+      method: ReqRespMethod.BeaconBlocksByRoot,
+      body: [Buffer.alloc(32)],
+    } as RequestTypedContainer;
     // it's ok to request blocks for another peer
     expect(inboundRateLimiter.allowRequest(peerId2, oneBlockRequestTyped)).to.equal(true);
     // not ok for the same peer id as it reached the limit
@@ -123,7 +135,7 @@ describe("ResponseRateLimiter", () => {
     const peerId = await createSecp256k1PeerId();
     const pruneStub = sandbox.stub(inboundRateLimiter, "pruneByPeerIdStr" as keyof InboundRateLimiter);
     inboundRateLimiter.start();
-    const requestTyped = {method: Method.Ping, body: BigInt(1)} as RequestTypedContainer;
+    const requestTyped = {method: ReqRespMethod.Ping, body: BigInt(1)} as RequestTypedContainer;
     expect(inboundRateLimiter.allowRequest(peerId, requestTyped)).to.equal(true);
 
     // no request is made in 5 minutes
@@ -148,7 +160,7 @@ describe("ResponseRateLimiter", () => {
       peerRpcScores: peerRpcScoresStub,
       metrics: null,
     });
-    const requestTyped = {method: Method.BeaconBlocksByRoot, body: [Buffer.alloc(32)]} as RequestTypedContainer;
+    const requestTyped = {method: ReqRespMethod.BeaconBlocksByRoot, body: [Buffer.alloc(32)]} as RequestTypedContainer;
     // Make it full: every 1/2s add a new request for all peers
     for (let i = 0; i < 1000; i++) {
       for (const peerId of peerIds) {

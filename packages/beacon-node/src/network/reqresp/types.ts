@@ -1,7 +1,7 @@
 import {phase0} from "@lodestar/types";
 
 /** ReqResp protocol names or methods. Each Method can have multiple versions and encodings */
-export enum Method {
+export enum ReqRespMethod {
   // Phase 0
   Status = "status",
   Goodbye = "goodbye",
@@ -17,22 +17,22 @@ export enum Method {
 
 // To typesafe events to network
 type RequestBodyByMethod = {
-  [Method.Status]: phase0.Status;
-  [Method.Goodbye]: phase0.Goodbye;
-  [Method.Ping]: phase0.Ping;
-  [Method.Metadata]: null;
+  [ReqRespMethod.Status]: phase0.Status;
+  [ReqRespMethod.Goodbye]: phase0.Goodbye;
+  [ReqRespMethod.Ping]: phase0.Ping;
+  [ReqRespMethod.Metadata]: null;
   // Do not matter
-  [Method.BeaconBlocksByRange]: unknown;
-  [Method.BeaconBlocksByRoot]: unknown;
-  [Method.LightClientBootstrap]: unknown;
-  [Method.LightClientUpdatesByRange]: unknown;
-  [Method.LightClientFinalityUpdate]: unknown;
-  [Method.LightClientOptimisticUpdate]: unknown;
+  [ReqRespMethod.BeaconBlocksByRange]: unknown;
+  [ReqRespMethod.BeaconBlocksByRoot]: unknown;
+  [ReqRespMethod.LightClientBootstrap]: unknown;
+  [ReqRespMethod.LightClientUpdatesByRange]: unknown;
+  [ReqRespMethod.LightClientFinalityUpdate]: unknown;
+  [ReqRespMethod.LightClientOptimisticUpdate]: unknown;
 };
 
 export type RequestTypedContainer = {
-  [K in Method]: {method: K; body: RequestBodyByMethod[K]};
-}[Method];
+  [K in ReqRespMethod]: {method: K; body: RequestBodyByMethod[K]};
+}[ReqRespMethod];
 
 export enum Version {
   V1 = 1,

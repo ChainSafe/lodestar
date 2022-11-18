@@ -1,5 +1,4 @@
-import {Type} from "@chainsafe/ssz";
-import {Encoding, EncodedPayload} from "../types.js";
+import {Encoding, EncodedPayload, TypeSerializer} from "../types.js";
 import {BufferedSource} from "../utils/index.js";
 import {readSszSnappyPayload} from "./sszSnappy/decode.js";
 import {writeSszSnappyPayload} from "./sszSnappy/encode.js";
@@ -18,7 +17,7 @@ import {writeSszSnappyPayload} from "./sszSnappy/encode.js";
 export async function readEncodedPayload<T>(
   bufferedSource: BufferedSource,
   encoding: Encoding,
-  type: Type<T>
+  type: TypeSerializer<T>
 ): Promise<T> {
   switch (encoding) {
     case Encoding.SSZ_SNAPPY:
@@ -38,7 +37,7 @@ export async function readEncodedPayload<T>(
 export async function* writeEncodedPayload<T>(
   chunk: EncodedPayload<T>,
   encoding: Encoding,
-  serializer: Type<T>
+  serializer: TypeSerializer<T>
 ): AsyncGenerator<Buffer> {
   switch (encoding) {
     case Encoding.SSZ_SNAPPY:

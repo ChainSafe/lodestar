@@ -1,6 +1,6 @@
 import {PeerId} from "@libp2p/interface-peer-id";
-import {Encoding} from "@lodestar/reqresp";
 import {altair} from "@lodestar/types";
+import {Encoding} from "@lodestar/reqresp";
 import {ClientKind} from "./client.js";
 
 type PeerIdStr = string;

@@ -1,10 +1,15 @@
 import {Uint8ArrayList} from "uint8arraylist";
 import {ForkName} from "@lodestar/params";
-import {Type} from "@chainsafe/ssz";
 import {BufferedSource, decodeErrorMessage} from "../utils/index.js";
 import {readEncodedPayload} from "../encodingStrategies/index.js";
 import {ResponseError} from "../response/index.js";
-import {ContextBytesType, CONTEXT_BYTES_FORK_DIGEST_LENGTH, ContextBytesFactory, ProtocolDefinition} from "../types.js";
+import {
+  ContextBytesType,
+  CONTEXT_BYTES_FORK_DIGEST_LENGTH,
+  ContextBytesFactory,
+  ProtocolDefinition,
+  TypeSerializer,
+} from "../types.js";
 import {RespStatus} from "../interface.js";
 
 /**
@@ -58,7 +63,7 @@ export function responseDecode<Resp>(
       }
 
       const forkName = await readContextBytes<Resp>(protocol.contextBytes, bufferedSource);
-      const type = protocol.responseType(forkName) as Type<Resp>;
+      const type = protocol.responseType(forkName) as TypeSerializer<Resp>;
 
       yield await readEncodedPayload<Resp>(bufferedSource, protocol.encoding, type);
 

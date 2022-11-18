@@ -1,4 +1,4 @@
-import {HandlerTypeFromMessage} from "@lodestar/reqresp";
+import {EncodedPayloadType, HandlerTypeFromMessage} from "@lodestar/reqresp";
 import messages from "@lodestar/reqresp/messages";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
@@ -8,20 +8,8 @@ import {onLightClientBootstrap} from "./lightClientBootstrap.js";
 import {onLightClientFinalityUpdate} from "./lightClientFinalityUpdate.js";
 import {onLightClientOptimisticUpdate} from "./lightClientOptimisticUpdate.js";
 import {onLightClientUpdatesByRange} from "./lightClientUpdatesByRange.js";
-import {onStatus} from "./onStatus.js";
 
-export type ReqRespHandlers = ReturnType<typeof getReqRespHandlers>;
-/**
- * The ReqRespHandler module handles app-level requests / responses from other peers,
- * fetching state from the chain and database as needed.
- */
-export function getReqRespHandlers({
-  db,
-  chain,
-}: {
-  db: IBeaconDb;
-  chain: IBeaconChain;
-}): {
+export interface ReqRespHandlers {
   onStatus: HandlerTypeFromMessage<typeof messages.Status>;
   onBeaconBlocksByRange: HandlerTypeFromMessage<typeof messages.BeaconBlocksByRange>;
   onBeaconBlocksByRoot: HandlerTypeFromMessage<typeof messages.BeaconBlocksByRoot>;
@@ -29,10 +17,15 @@ export function getReqRespHandlers({
   onLightClientUpdatesByRange: HandlerTypeFromMessage<typeof messages.LightClientUpdatesByRange>;
   onLightClientFinalityUpdate: HandlerTypeFromMessage<typeof messages.LightClientFinalityUpdate>;
   onLightClientOptimisticUpdate: HandlerTypeFromMessage<typeof messages.LightClientOptimisticUpdate>;
-} {
+}
+/**
+ * The ReqRespHandler module handles app-level requests / responses from other peers,
+ * fetching state from the chain and database as needed.
+ */
+export function getReqRespHandlers({db, chain}: {db: IBeaconDb; chain: IBeaconChain}): ReqRespHandlers {
   return {
     async *onStatus() {
-      yield* onStatus(chain);
+      yield {type: EncodedPayloadType.ssz, data: chain.getStatus()};
     },
     async *onBeaconBlocksByRange(req) {
       yield* onBeaconBlocksByRange(req, chain, db);

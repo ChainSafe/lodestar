@@ -3,7 +3,7 @@ import all from "it-all";
 import {allForks, ssz} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
 import {
-  Method,
+  ReqRespMethod,
   Version,
   Encoding,
   OutgoingResponseBody,
@@ -20,16 +20,16 @@ import {blocksToReqRespBlockResponses} from "../../../../utils/block.js";
 // Ensure the types from all methods are supported properly
 describe("network / reqresp / encoders / responseTypes", () => {
   const testCases: {[P in keyof IncomingResponseBodyByMethod]: IncomingResponseBodyByMethod[P][][]} = {
-    [Method.Status]: [[createStatus()]],
-    [Method.Goodbye]: [[BigInt(0)], [BigInt(1)]],
-    [Method.Ping]: [[BigInt(0)], [BigInt(1)]],
-    [Method.Metadata]: [],
-    [Method.BeaconBlocksByRange]: [generateEmptySignedBlocks(2)],
-    [Method.BeaconBlocksByRoot]: [generateEmptySignedBlocks(2)],
-    [Method.LightClientBootstrap]: [[ssz.altair.LightClientBootstrap.defaultValue()]],
-    [Method.LightClientUpdatesByRange]: [[ssz.altair.LightClientUpdate.defaultValue()]],
-    [Method.LightClientFinalityUpdate]: [[ssz.altair.LightClientFinalityUpdate.defaultValue()]],
-    [Method.LightClientOptimisticUpdate]: [[ssz.altair.LightClientOptimisticUpdate.defaultValue()]],
+    [ReqRespMethod.Status]: [[createStatus()]],
+    [ReqRespMethod.Goodbye]: [[BigInt(0)], [BigInt(1)]],
+    [ReqRespMethod.Ping]: [[BigInt(0)], [BigInt(1)]],
+    [ReqRespMethod.Metadata]: [],
+    [ReqRespMethod.BeaconBlocksByRange]: [generateEmptySignedBlocks(2)],
+    [ReqRespMethod.BeaconBlocksByRoot]: [generateEmptySignedBlocks(2)],
+    [ReqRespMethod.LightClientBootstrap]: [[ssz.altair.LightClientBootstrap.defaultValue()]],
+    [ReqRespMethod.LightClientUpdatesByRange]: [[ssz.altair.LightClientUpdate.defaultValue()]],
+    [ReqRespMethod.LightClientFinalityUpdate]: [[ssz.altair.LightClientFinalityUpdate.defaultValue()]],
+    [ReqRespMethod.LightClientOptimisticUpdate]: [[ssz.altair.LightClientOptimisticUpdate.defaultValue()]],
   };
 
   const encodings: Encoding[] = [Encoding.SSZ_SNAPPY];
@@ -43,12 +43,12 @@ describe("network / reqresp / encoders / responseTypes", () => {
       const method = _method as keyof typeof testCases;
       // const responsesChunks = _responsesChunks as LodestarResponseBody[][];
       const lodestarResponseBodies =
-        _method === Method.BeaconBlocksByRange || _method === Method.BeaconBlocksByRoot
+        _method === ReqRespMethod.BeaconBlocksByRange || _method === ReqRespMethod.BeaconBlocksByRoot
           ? responsesChunks.map((chunk) => blocksToReqRespBlockResponses(chunk as allForks.SignedBeaconBlock[]))
           : (responsesChunks as OutgoingResponseBody[][]);
 
       const versions =
-        method === Method.BeaconBlocksByRange || method === Method.BeaconBlocksByRoot
+        method === ReqRespMethod.BeaconBlocksByRange || method === ReqRespMethod.BeaconBlocksByRoot
           ? [Version.V1, Version.V2]
           : [Version.V1];
 

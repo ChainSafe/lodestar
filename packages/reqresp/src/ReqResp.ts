@@ -3,7 +3,6 @@ import {Connection, Stream} from "@libp2p/interface-connection";
 import {PeerId} from "@libp2p/interface-peer-id";
 import {Libp2p} from "libp2p";
 import {ILogger} from "@lodestar/utils";
-import {IBeaconConfig} from "@lodestar/config";
 import {getMetrics, Metrics, MetricsRegister} from "./metrics.js";
 import {RequestError, RequestErrorCode, sendRequest, SendRequestOpts} from "./request/index.js";
 import {handleRequest} from "./response/index.js";
@@ -16,7 +15,6 @@ export const DEFAULT_PROTOCOL_PREFIX = "/eth2/beacon_chain/req";
 export interface ReqRespProtocolModules {
   libp2p: Libp2p;
   logger: ILogger;
-  config: IBeaconConfig;
   metrics: Metrics | null;
 }
 
@@ -32,7 +30,7 @@ export interface ReqRespOpts extends SendRequestOpts {
  * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#the-reqresp-domain
  * https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/light-client/p2p-interface.md#the-reqresp-domain
  */
-export abstract class ReqResp {
+export class ReqResp {
   private readonly libp2p: Libp2p;
   private readonly logger: ILogger;
   private readonly metrics: Metrics | null;
@@ -44,7 +42,7 @@ export abstract class ReqResp {
   /** `${protocolPrefix}/${method}/${version}/${encoding}` */
   private readonly supportedProtocols = new Map<ProtocolID, ProtocolDefinition>();
 
-  constructor(modules: ReqRespProtocolModules, private readonly opts: ReqRespOpts) {
+  constructor(modules: ReqRespProtocolModules, private readonly opts: ReqRespOpts = {}) {
     this.libp2p = modules.libp2p;
     this.logger = modules.logger;
     this.metrics = modules.metrics ? getMetrics((modules.metrics as unknown) as MetricsRegister) : null;
@@ -137,7 +135,7 @@ export abstract class ReqResp {
       this.metrics?.incomingRequests.inc({method});
       const timer = this.metrics?.incomingRequestHandlerTime.startTimer({method});
 
-      this.onIncomingRequest?.(peerId, method);
+      this.onIncomingRequest?.(peerId, protocol as ProtocolDefinition);
 
       try {
         await handleRequest<Req, Resp>({
@@ -162,7 +160,7 @@ export abstract class ReqResp {
     };
   }
 
-  protected onIncomingRequest(_peerId: PeerId, _method: string): void {
+  protected onIncomingRequest(_peerId: PeerId, _protocol: ProtocolDefinition): void {
     // Override
   }
 
