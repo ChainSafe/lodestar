@@ -1,5 +1,5 @@
 import {HandlerTypeFromMessage} from "@lodestar/reqresp";
-import messages from "@lodestar/reqresp/messages";
+import * as messages from "@lodestar/reqresp/messages";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
 import {onBeaconBlocksByRange} from "./beaconBlocksByRange.js";

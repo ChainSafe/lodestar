@@ -17,7 +17,7 @@ import {
   RequestError,
   ResponseError,
 } from "@lodestar/reqresp";
-import messages from "@lodestar/reqresp/messages";
+import * as messages from "@lodestar/reqresp/messages";
 import {IMetrics} from "../../metrics/metrics.js";
 import {INetworkEventBus, NetworkEvent} from "../events.js";
 import {IPeerRpcScoreStore, PeerAction} from "../peers/score.js";
