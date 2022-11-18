@@ -48,7 +48,7 @@ export interface ReqRespBeaconNodeModules {
   config: IBeaconConfig;
   metrics: IMetrics | null;
   reqRespHandlers: ReqRespHandlers;
-  metadataController: MetadataController;
+  metadata: MetadataController;
   peerRpcScores: IPeerRpcScoreStore;
   networkEventBus: INetworkEventBus;
 }
@@ -79,14 +79,14 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
   private readonly peersData: PeersData;
 
   constructor(modules: ReqRespBeaconNodeModules, options: ReqRespBeaconNodeOpts = {}) {
-    const {reqRespHandlers, networkEventBus, peersData, peerRpcScores, metadataController, logger, metrics} = modules;
+    const {reqRespHandlers, networkEventBus, peersData, peerRpcScores, metadata, logger, metrics} = modules;
 
-    super({...modules, metrics: metrics?.reqResp ?? null}, options);
+    super({...modules, metricsRegister: metrics?.register ?? null}, options);
 
     this.reqRespHandlers = reqRespHandlers;
     this.peerRpcScores = peerRpcScores;
     this.peersData = peersData;
-    this.metadataController = metadataController;
+    this.metadataController = metadata;
     this.networkEventBus = networkEventBus;
     this.inboundRateLimiter = new InboundRateLimiter(options, {
       logger,

@@ -13,6 +13,7 @@ import {IMetrics} from "../metrics/index.js";
 import {ChainEvent, IBeaconChain, IBeaconClock} from "../chain/index.js";
 import {INetworkOptions} from "./options.js";
 import {INetwork} from "./interface.js";
+import {IReqRespBeaconNode, ReqRespBeaconNode, ReqRespHandlers} from "./reqresp/index.js";
 import {Eth2Gossipsub, getGossipHandlers, GossipHandlers, GossipType} from "./gossip/index.js";
 import {MetadataController} from "./metadata.js";
 import {FORK_EPOCH_LOOKAHEAD, getActiveForks} from "./forks.js";
@@ -22,7 +23,6 @@ import {INetworkEventBus, NetworkEventBus} from "./events.js";
 import {AttnetsService, CommitteeSubscription, SyncnetsService} from "./subnets/index.js";
 import {PeersData} from "./peers/peersData.js";
 import {getConnectionsMap, isPublishToZeroPeersError} from "./util.js";
-import {IReqRespBeaconNode, ReqRespBeaconNode, ReqRespHandlers} from "./reqresp/index.js";
 
 interface INetworkModules {
   config: IBeaconConfig;
@@ -76,7 +76,7 @@ export class Network implements INetwork {
         config,
         libp2p,
         reqRespHandlers,
-        metadataController: metadata,
+        metadata,
         peerRpcScores,
         logger,
         networkEventBus,

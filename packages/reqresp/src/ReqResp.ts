@@ -15,7 +15,7 @@ export const DEFAULT_PROTOCOL_PREFIX = "/eth2/beacon_chain/req";
 export interface ReqRespProtocolModules {
   libp2p: Libp2p;
   logger: ILogger;
-  metrics: Metrics | null;
+  metricsRegister: MetricsRegister | null;
 }
 
 export interface ReqRespOpts extends SendRequestOpts {
@@ -45,7 +45,7 @@ export class ReqResp {
   constructor(modules: ReqRespProtocolModules, private readonly opts: ReqRespOpts = {}) {
     this.libp2p = modules.libp2p;
     this.logger = modules.logger;
-    this.metrics = modules.metrics ? getMetrics((modules.metrics as unknown) as MetricsRegister) : null;
+    this.metrics = modules.metricsRegister ? getMetrics(modules.metricsRegister) : null;
     this.protocolPrefix = opts.protocolPrefix ?? DEFAULT_PROTOCOL_PREFIX;
   }
 
