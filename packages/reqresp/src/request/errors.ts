@@ -1,5 +1,5 @@
 import {LodestarError} from "@lodestar/utils";
-import {Method, Encoding} from "../types.js";
+import {Encoding} from "../types.js";
 import {ResponseError} from "../response/index.js";
 import {RespStatus, RpcResponseStatusError} from "../interface.js";
 
@@ -46,7 +46,7 @@ type RequestErrorType =
   | {code: RequestErrorCode.RESP_TIMEOUT};
 
 export interface IRequestErrorMetadata {
-  method: Method;
+  method: string;
   encoding: Encoding;
   peer: string;
   // Do not include requestId in error metadata to make the errors deterministic for tests

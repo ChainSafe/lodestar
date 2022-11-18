@@ -1,34 +1,30 @@
+import {setMaxListeners} from "node:events";
+import {Connection, Stream} from "@libp2p/interface-connection";
 import {PeerId} from "@libp2p/interface-peer-id";
-import {ForkName} from "@lodestar/params";
-import {allForks, altair, phase0, Root, Slot} from "@lodestar/types";
-import {DIAL_TIMEOUT, REQUEST_TIMEOUT, RESP_TIMEOUT, TTFB_TIMEOUT} from "./constants.js";
-import {IReqResp, RateLimiter, ReqRespHandlerContext, ReqRespModules, RespStatus} from "./interface.js";
-import {InboundRateLimiter, RateLimiterOptions} from "./rate_limiter/RateLimiter.js";
-import {ReqRespProtocol} from "./ReqRespProtocol.js";
-import {RequestError} from "./request/errors.js";
-import {ResponseError} from "./response/errors.js";
-import {onOutgoingReqRespError} from "./score.js";
-import {IPeerRpcScoreStore, MetadataController} from "./sharedTypes.js";
-import {Method, ReqRespOptions, Version} from "./types.js";
-import {assertSequentialBlocksInRange} from "./utils/index.js";
+import {Libp2p} from "libp2p";
+import {ILogger} from "@lodestar/utils";
+import {IBeaconConfig} from "@lodestar/config";
+import {getMetrics, Metrics, MetricsRegister} from "./metrics.js";
+import {RequestError, RequestErrorCode, sendRequest, SendRequestOpts} from "./request/index.js";
+import {handleRequest} from "./response/index.js";
+import {Encoding, ProtocolDefinition} from "./types.js";
 
-/** This type helps response to beacon_block_by_range and beacon_block_by_root more efficiently */
-export type ReqRespBlockResponse = {
-  /** Deserialized data of allForks.SignedBeaconBlock */
-  bytes: Uint8Array;
-  slot: Slot;
-};
+type ProtocolID = string;
 
-export const defaultReqRespOptions: ReqRespOptions = {
-  // eslint-disable-next-line @typescript-eslint/naming-convention
-  TTFB_TIMEOUT,
-  // eslint-disable-next-line @typescript-eslint/naming-convention
-  RESP_TIMEOUT,
-  // eslint-disable-next-line @typescript-eslint/naming-convention
-  REQUEST_TIMEOUT,
-  // eslint-disable-next-line @typescript-eslint/naming-convention
-  DIAL_TIMEOUT,
-};
+export const DEFAULT_PROTOCOL_PREFIX = "/eth2/beacon_chain/req";
+
+export interface ReqRespProtocolModules {
+  libp2p: Libp2p;
+  logger: ILogger;
+  config: IBeaconConfig;
+  metrics: Metrics | null;
+}
+
+export interface ReqRespOpts extends SendRequestOpts {
+  /** Custom prefix for `/ProtocolPrefix/MessageName/SchemaVersion/Encoding` */
+  protocolPrefix?: string;
+  getPeerLogMetadata?: (peerId: string) => string;
+}
 
 /**
  * Implementation of Ethereum Consensus p2p Req/Resp domain.
@@ -36,145 +32,151 @@ export const defaultReqRespOptions: ReqRespOptions = {
  * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#the-reqresp-domain
  * https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/light-client/p2p-interface.md#the-reqresp-domain
  */
-export abstract class ReqResp extends ReqRespProtocol<ReqRespHandlerContext> implements IReqResp {
-  private inboundRateLimiter: RateLimiter;
-  private peerRpcScores: IPeerRpcScoreStore;
-  private metadataController: MetadataController;
+export abstract class ReqResp {
+  private readonly libp2p: Libp2p;
+  private readonly logger: ILogger;
+  private readonly metrics: Metrics | null;
+  private controller = new AbortController();
+  /** Tracks request and responses in a sequential counter */
+  private reqCount = 0;
+  private readonly protocolPrefix: string;
 
-  constructor(modules: ReqRespModules, options?: Partial<ReqRespOptions> & Partial<RateLimiterOptions>) {
-    super(modules, {...defaultReqRespOptions, ...options});
-    this.peerRpcScores = modules.peerRpcScores;
-    this.metadataController = modules.metadataController;
-    this.inboundRateLimiter = new InboundRateLimiter({...InboundRateLimiter.defaults, ...options}, modules);
+  /** `${protocolPrefix}/${method}/${version}/${encoding}` */
+  private readonly supportedProtocols = new Map<ProtocolID, ProtocolDefinition>();
+
+  constructor(modules: ReqRespProtocolModules, private readonly opts: ReqRespOpts) {
+    this.libp2p = modules.libp2p;
+    this.logger = modules.logger;
+    this.metrics = modules.metrics ? getMetrics((modules.metrics as unknown) as MetricsRegister) : null;
+    this.protocolPrefix = opts.protocolPrefix ?? DEFAULT_PROTOCOL_PREFIX;
   }
 
-  protected onIncomingRequest(peerId: PeerId, method: Method): void {
-    if (method !== Method.Goodbye && !this.inboundRateLimiter.allowRequest(peerId)) {
-      throw new ResponseError(RespStatus.RATE_LIMITED, "rate limit");
-    }
-  }
-
-  protected onOutgoingRequestError(peerId: PeerId, method: Method, error: RequestError): void {
-    const peerAction = onOutgoingReqRespError(error, method);
-    if (peerAction !== null) {
-      this.peerRpcScores.applyAction(peerId, peerAction, error.type.code);
-    }
-  }
-
-  protected getContext(): ReqRespHandlerContext {
-    const context = super.getContext();
-    return {
-      ...context,
-      modules: {
-        ...context.modules,
-        inboundRateLimiter: this.inboundRateLimiter,
-        metadataController: this.metadataController,
-      },
-    };
+  registerProtocol<Req, Resp>(protocol: ProtocolDefinition<Req, Resp>): void {
+    const {method, version, encoding} = protocol;
+    const protocolID = this.formatProtocolID(method, version, encoding);
+    this.supportedProtocols.set(protocolID, protocol as ProtocolDefinition);
   }
 
   async start(): Promise<void> {
-    await super.start();
-    this.inboundRateLimiter.start();
+    this.controller = new AbortController();
+    // We set infinity to prevent MaxListenersExceededWarning which get logged when listeners > 10
+    // Since it is perfectly fine to have listeners > 10
+    setMaxListeners(Infinity, this.controller.signal);
+
+    for (const [protocolID, protocol] of this.supportedProtocols) {
+      await this.libp2p.handle(protocolID, this.getRequestHandler(protocol));
+    }
   }
 
   async stop(): Promise<void> {
-    await super.stop();
-    this.inboundRateLimiter.stop();
+    for (const protocolID of this.supportedProtocols.keys()) {
+      await this.libp2p.unhandle(protocolID);
+    }
+    this.controller.abort();
   }
 
-  pruneOnPeerDisconnect(peerId: PeerId): void {
-    this.inboundRateLimiter.prune(peerId);
-  }
-
-  async status(peerId: PeerId, request: phase0.Status): Promise<phase0.Status> {
-    return await this.sendRequest<phase0.Status, phase0.Status>(peerId, Method.Status, [Version.V1], request);
-  }
-
-  async goodbye(peerId: PeerId, request: phase0.Goodbye): Promise<void> {
-    await this.sendRequest<phase0.Goodbye, phase0.Goodbye>(peerId, Method.Goodbye, [Version.V1], request);
-  }
-
-  async ping(peerId: PeerId): Promise<phase0.Ping> {
-    return await this.sendRequest<phase0.Ping, phase0.Ping>(
-      peerId,
-      Method.Ping,
-      [Version.V1],
-      this.metadataController.seqNumber
-    );
-  }
-
-  async metadata(peerId: PeerId, fork?: ForkName): Promise<allForks.Metadata> {
-    // Only request V1 if forcing phase0 fork. It's safe to not specify `fork` and let stream negotiation pick the version
-    const versions = fork === ForkName.phase0 ? [Version.V1] : [Version.V2, Version.V1];
-    return await this.sendRequest<null, allForks.Metadata>(peerId, Method.Metadata, versions, null);
-  }
-
-  async beaconBlocksByRange(
+  // Helper to reduce code duplication
+  protected async *sendRequest<Req, Resp>(
     peerId: PeerId,
-    request: phase0.BeaconBlocksByRangeRequest
-  ): Promise<allForks.SignedBeaconBlock[]> {
-    const blocks = await this.sendRequest<phase0.BeaconBlocksByRangeRequest, allForks.SignedBeaconBlock[]>(
-      peerId,
-      Method.BeaconBlocksByRange,
-      [Version.V2, Version.V1], // Prioritize V2
-      request,
-      request.count
-    );
-    assertSequentialBlocksInRange(blocks, request);
-    return blocks;
+    method: string,
+    versions: number[],
+    encoding: Encoding,
+    body: Req
+  ): AsyncIterable<Resp> {
+    const peerClient = this.opts.getPeerLogMetadata?.(peerId.toString());
+    this.metrics?.outgoingRequests.inc({method});
+    const timer = this.metrics?.outgoingRequestRoundtripTime.startTimer({method});
+
+    const protocols: ProtocolDefinition[] = [];
+    const protocolIDs: string[] = [];
+
+    for (const version of versions) {
+      const protocolID = this.formatProtocolID(method, version, encoding);
+      const protocol = this.supportedProtocols.get(protocolID);
+      if (!protocol) {
+        throw Error(`Request to send to protocol ${protocolID} but it has not been declared`);
+      }
+      protocols.push(protocol);
+      protocolIDs.push(protocolID);
+    }
+
+    try {
+      yield* sendRequest<Req, Resp>(
+        {logger: this.logger, libp2p: this.libp2p, peerClient},
+        peerId,
+        protocols,
+        protocolIDs,
+        body,
+        this.controller.signal,
+        this.opts,
+        this.reqCount++
+      );
+    } catch (e) {
+      this.metrics?.outgoingErrors.inc({method});
+
+      if (e instanceof RequestError) {
+        if (e.type.code === RequestErrorCode.DIAL_ERROR || e.type.code === RequestErrorCode.DIAL_TIMEOUT) {
+          this.metrics?.dialErrors.inc();
+        }
+
+        this.onOutgoingRequestError(peerId, method, e);
+      }
+
+      throw e;
+    } finally {
+      timer?.();
+    }
   }
 
-  async beaconBlocksByRoot(
-    peerId: PeerId,
-    request: phase0.BeaconBlocksByRootRequest
-  ): Promise<allForks.SignedBeaconBlock[]> {
-    return await this.sendRequest<phase0.BeaconBlocksByRootRequest, allForks.SignedBeaconBlock[]>(
-      peerId,
-      Method.BeaconBlocksByRoot,
-      [Version.V2, Version.V1], // Prioritize V2
-      request,
-      request.length
-    );
+  private getRequestHandler<Req, Resp>(protocol: ProtocolDefinition<Req, Resp>) {
+    return async ({connection, stream}: {connection: Connection; stream: Stream}) => {
+      const peerId = connection.remotePeer;
+      const peerClient = this.opts.getPeerLogMetadata?.(peerId.toString());
+      const method = protocol.method;
+
+      this.metrics?.incomingRequests.inc({method});
+      const timer = this.metrics?.incomingRequestHandlerTime.startTimer({method});
+
+      this.onIncomingRequest?.(peerId, method);
+
+      try {
+        await handleRequest<Req, Resp>({
+          logger: this.logger,
+          stream,
+          peerId,
+          protocol,
+          signal: this.controller.signal,
+          requestId: this.reqCount++,
+          peerClient,
+          requestTimeoutMs: this.opts.requestTimeoutMs,
+        });
+        // TODO: Do success peer scoring here
+      } catch {
+        this.metrics?.incomingErrors.inc({method});
+
+        // TODO: Do error peer scoring here
+        // Must not throw since this is an event handler
+      } finally {
+        timer?.();
+      }
+    };
   }
 
-  async lightClientBootstrap(peerId: PeerId, request: Root): Promise<altair.LightClientBootstrap> {
-    return await this.sendRequest<Root, altair.LightClientBootstrap>(
-      peerId,
-      Method.LightClientBootstrap,
-      [Version.V1],
-      request
-    );
+  protected onIncomingRequest(_peerId: PeerId, _method: string): void {
+    // Override
   }
 
-  async lightClientOptimisticUpdate(peerId: PeerId): Promise<altair.LightClientOptimisticUpdate> {
-    return await this.sendRequest<null, altair.LightClientOptimisticUpdate>(
-      peerId,
-      Method.LightClientOptimisticUpdate,
-      [Version.V1],
-      null
-    );
+  protected onOutgoingRequestError(_peerId: PeerId, _method: string, _error: RequestError): void {
+    // Override
   }
 
-  async lightClientFinalityUpdate(peerId: PeerId): Promise<altair.LightClientFinalityUpdate> {
-    return await this.sendRequest<null, altair.LightClientFinalityUpdate>(
-      peerId,
-      Method.LightClientFinalityUpdate,
-      [Version.V1],
-      null
-    );
-  }
-
-  async lightClientUpdate(
-    peerId: PeerId,
-    request: altair.LightClientUpdatesByRange
-  ): Promise<altair.LightClientUpdate[]> {
-    return await this.sendRequest<altair.LightClientUpdatesByRange, altair.LightClientUpdate[]>(
-      peerId,
-      Method.LightClientUpdatesByRange,
-      [Version.V1],
-      request,
-      request.count
-    );
+  /**
+   * ```
+   * /ProtocolPrefix/MessageName/SchemaVersion/Encoding
+   * ```
+   * https://github.com/ethereum/consensus-specs/blob/v1.2.0/specs/phase0/p2p-interface.md#protocol-identification
+   */
+  protected formatProtocolID(method: string, version: number, encoding: Encoding): string {
+    return `${this.protocolPrefix}/${method}/${version}/${encoding}`;
   }
 }

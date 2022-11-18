@@ -22,13 +22,13 @@ export function getReqRespHandlers({
   db: IBeaconDb;
   chain: IBeaconChain;
 }): {
-  onStatus: HandlerTypeFromMessage<typeof messages.v1.Status>;
-  onBeaconBlocksByRange: HandlerTypeFromMessage<typeof messages.v1.BeaconBlocksByRange>;
-  onBeaconBlocksByRoot: HandlerTypeFromMessage<typeof messages.v1.BeaconBlocksByRoot>;
-  onLightClientBootstrap: HandlerTypeFromMessage<typeof messages.v1.LightClientBootstrap>;
-  onLightClientUpdatesByRange: HandlerTypeFromMessage<typeof messages.v1.LightClientUpdatesByRange>;
-  onLightClientFinalityUpdate: HandlerTypeFromMessage<typeof messages.v1.LightClientFinalityUpdate>;
-  onLightClientOptimisticUpdate: HandlerTypeFromMessage<typeof messages.v1.LightClientOptimisticUpdate>;
+  onStatus: HandlerTypeFromMessage<typeof messages.Status>;
+  onBeaconBlocksByRange: HandlerTypeFromMessage<typeof messages.BeaconBlocksByRange>;
+  onBeaconBlocksByRoot: HandlerTypeFromMessage<typeof messages.BeaconBlocksByRoot>;
+  onLightClientBootstrap: HandlerTypeFromMessage<typeof messages.LightClientBootstrap>;
+  onLightClientUpdatesByRange: HandlerTypeFromMessage<typeof messages.LightClientUpdatesByRange>;
+  onLightClientFinalityUpdate: HandlerTypeFromMessage<typeof messages.LightClientFinalityUpdate>;
+  onLightClientOptimisticUpdate: HandlerTypeFromMessage<typeof messages.LightClientOptimisticUpdate>;
 } {
   return {
     async *onStatus() {

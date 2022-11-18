@@ -1,11 +1,9 @@
 import {PeerId} from "@libp2p/interface-peer-id";
 import {Type} from "@chainsafe/ssz";
-import {IForkConfig, IForkDigestContext} from "@lodestar/config";
+import {IBeaconConfig, IForkConfig, IForkDigestContext} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
-import {phase0, Slot} from "@lodestar/types";
+import {Slot} from "@lodestar/types";
 import {LodestarError} from "@lodestar/utils";
-import {timeoutOptions} from "./constants.js";
-import {ReqRespHandlerContext, ReqRespHandlerProtocolContext} from "./interface.js";
 
 export enum EncodedPayloadType {
   ssz,
@@ -23,84 +21,34 @@ export type EncodedPayload<T> =
       contextBytes: ContextBytes;
     };
 
-export type ReqRespHandlerWithContext<
-  Req,
-  Resp,
-  Context extends ReqRespHandlerProtocolContext = ReqRespHandlerContext
-> = (context: Context, req: Req, peerId: PeerId) => AsyncIterable<EncodedPayload<Resp>>;
-
 export type ReqRespHandler<Req, Resp> = (req: Req, peerId: PeerId) => AsyncIterable<EncodedPayload<Resp>>;
 
-export interface ProtocolDefinition<
-  Req = unknown,
-  Resp = unknown,
-  Context extends ReqRespHandlerProtocolContext = ReqRespHandlerContext
-> extends Protocol {
-  handler: ReqRespHandlerWithContext<Req, Resp, Context>;
+export interface ProtocolDefinition<Req = unknown, Resp = unknown> {
+  /** Protocol name identifier `beacon_blocks_by_range` or `status` */
+  method: string;
+  /** Version counter: `1`, `2` etc */
+  version: number;
+  encoding: Encoding;
+  handler: ReqRespHandler<Req, Resp>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   requestType: (fork: ForkName) => Type<Req> | null;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   responseType: (fork: ForkName) => Type<Resp>;
   renderRequestBody?: (request: Req) => string;
   contextBytes: ContextBytesFactory<Resp>;
-  isSingleResponse: boolean;
 }
 
-export type ProtocolDefinitionGenerator<
-  Req,
-  Res,
-  Context extends ReqRespHandlerProtocolContext = ReqRespHandlerContext
-> = (
+export type ProtocolDefinitionGenerator<Req, Res> = (
   // "inboundRateLimiter" is available only on handler context not on generator
-  modules: Omit<Context["modules"], "inboundRateLimiter">,
-  handler?: ReqRespHandler<Req, Res>
-) => ProtocolDefinition<Req, Res, Context>;
+  modules: {config: IBeaconConfig},
+  handler: ReqRespHandler<Req, Res>
+) => ProtocolDefinition<Req, Res>;
 
 export type HandlerTypeFromMessage<T> = T extends ProtocolDefinitionGenerator<infer Req, infer Res>
   ? ReqRespHandler<Req, Res>
   : never;
 
 export const protocolPrefix = "/eth2/beacon_chain/req";
-
-/** ReqResp protocol names or methods. Each Method can have multiple versions and encodings */
-export enum Method {
-  // Phase 0
-  Status = "status",
-  Goodbye = "goodbye",
-  Ping = "ping",
-  Metadata = "metadata",
-  BeaconBlocksByRange = "beacon_blocks_by_range",
-  BeaconBlocksByRoot = "beacon_blocks_by_root",
-  LightClientBootstrap = "light_client_bootstrap",
-  LightClientUpdatesByRange = "light_client_updates_by_range",
-  LightClientFinalityUpdate = "light_client_finality_update",
-  LightClientOptimisticUpdate = "light_client_optimistic_update",
-}
-
-// To typesafe events to network
-type RequestBodyByMethod = {
-  [Method.Status]: phase0.Status;
-  [Method.Goodbye]: phase0.Goodbye;
-  [Method.Ping]: phase0.Ping;
-  [Method.Metadata]: null;
-  // Do not matter
-  [Method.BeaconBlocksByRange]: unknown;
-  [Method.BeaconBlocksByRoot]: unknown;
-  [Method.LightClientBootstrap]: unknown;
-  [Method.LightClientUpdatesByRange]: unknown;
-  [Method.LightClientFinalityUpdate]: unknown;
-  [Method.LightClientOptimisticUpdate]: unknown;
-};
-
-export type RequestTypedContainer = {
-  [K in Method]: {method: K; body: RequestBodyByMethod[K]};
-}[Method];
-
-/** RPC Versions */
-export enum Version {
-  V1 = "1",
-  V2 = "2",
-}
 
 /**
  * Available request/response encoding strategies:
@@ -109,12 +57,6 @@ export enum Version {
 export enum Encoding {
   SSZ_SNAPPY = "ssz_snappy",
 }
-
-export type Protocol = {
-  method: Method;
-  version: Version;
-  encoding: Encoding;
-};
 
 export const CONTEXT_BYTES_FORK_DIGEST_LENGTH = 4;
 
@@ -134,8 +76,6 @@ export enum ContextBytesType {
   /** A fixed-width 4 byte <context-bytes>, set to the ForkDigest matching the chunk: compute_fork_digest(fork_version, genesis_validators_root) */
   ForkDigest,
 }
-
-export type ReqRespOptions = typeof timeoutOptions;
 
 export enum LightClientServerErrorCode {
   RESOURCE_UNAVAILABLE = "RESOURCE_UNAVAILABLE",

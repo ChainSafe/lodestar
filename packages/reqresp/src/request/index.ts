@@ -4,12 +4,10 @@ import {Libp2p} from "libp2p";
 import {Uint8ArrayList} from "uint8arraylist";
 import {ErrorAborted, ILogger, withTimeout, TimeoutError} from "@lodestar/utils";
 import {ProtocolDefinition} from "../types.js";
-import {formatProtocolID, prettyPrintPeerId, abortableSource} from "../utils/index.js";
+import {prettyPrintPeerId, abortableSource} from "../utils/index.js";
 import {ResponseError} from "../response/index.js";
 import {requestEncode} from "../encoders/requestEncode.js";
 import {responseDecode} from "../encoders/responseDecode.js";
-import {timeoutOptions} from "../constants.js";
-import {collectResponses} from "./collectResponses.js";
 import {
   RequestError,
   RequestErrorCode,
@@ -19,6 +17,23 @@ import {
 } from "./errors.js";
 
 export {RequestError, RequestErrorCode};
+
+// Default spec values from https://github.com/ethereum/consensus-specs/blob/v1.2.0/specs/phase0/p2p-interface.md#configuration
+export const DEFAULT_DIAL_TIMEOUT = 5 * 1000; // 5 sec
+export const DEFAULT_REQUEST_TIMEOUT = 5 * 1000; // 5 sec
+export const DEFAULT_TTFB_TIMEOUT = 5 * 1000; // 5 sec
+export const DEFAULT_RESP_TIMEOUT = 10 * 1000; // 10 sec
+
+export interface SendRequestOpts {
+  /** The maximum time for complete response transfer. */
+  respTimeoutMs?: number;
+  /** Non-spec timeout from sending request until write stream closed by responder */
+  requestTimeoutMs?: number;
+  /** The maximum time to wait for first byte of request response (time-to-first-byte). */
+  ttfbTimeoutMs?: number;
+  /** Non-spec timeout from dialing protocol until stream opened */
+  dialTimeoutMs?: number;
+}
 
 type SendRequestModules = {
   logger: ILogger;
@@ -37,21 +52,25 @@ type SendRequestModules = {
  *    - Any part of the response_chunk fails validation. Throws a typed error (see `SszSnappyError`)
  *    - The maximum number of requested chunks are read. Does not throw, returns read chunks only.
  */
-export async function sendRequest<Req, Resp>(
+export async function* sendRequest<Req, Resp>(
   {logger, libp2p, peerClient}: SendRequestModules,
   peerId: PeerId,
   protocols: ProtocolDefinition[],
+  protocolIDs: string[],
   requestBody: Req,
-  maxResponses: number,
   signal?: AbortSignal,
-  options?: Partial<typeof timeoutOptions>,
+  opts?: SendRequestOpts,
   requestId = 0
-): Promise<Resp> {
+): AsyncIterable<Resp> {
   if (protocols.length === 0) {
     throw Error("sendRequest must set > 0 protocols");
   }
 
-  const {REQUEST_TIMEOUT, DIAL_TIMEOUT} = {...timeoutOptions, ...options};
+  const DIAL_TIMEOUT = opts?.dialTimeoutMs ?? DEFAULT_DIAL_TIMEOUT;
+  const REQUEST_TIMEOUT = opts?.requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT;
+  const TTFB_TIMEOUT = opts?.ttfbTimeoutMs ?? DEFAULT_TTFB_TIMEOUT;
+  const RESP_TIMEOUT = opts?.respTimeoutMs ?? DEFAULT_RESP_TIMEOUT;
+
   const peerIdStr = peerId.toString();
   const peerIdStrShort = prettyPrintPeerId(peerId);
   const {method, encoding} = protocols[0];
@@ -68,7 +87,7 @@ export async function sendRequest<Req, Resp>(
     // On stream negotiation `libp2p.dialProtocol` will pick the available protocol and return
     // the picked protocol in `connection.protocol`
     const protocolsMap = new Map<string, ProtocolDefinition>(
-      protocols.map((protocol) => [formatProtocolID(protocol.method, protocol.version, protocol.encoding), protocol])
+      protocols.map((protocol, i) => [protocolIDs[i], protocol])
     );
 
     // As of October 2020 we can't rely on libp2p.dialProtocol timeout to work so
@@ -127,19 +146,15 @@ export async function sendRequest<Req, Resp>(
 
     logger.debug("Req  request sent", logCtx);
 
-    const {TTFB_TIMEOUT, RESP_TIMEOUT} = {...timeoutOptions, ...options};
-
     // - TTFB_TIMEOUT: The requester MUST wait a maximum of TTFB_TIMEOUT for the first response byte to arrive
     // - RESP_TIMEOUT: Requester allows a further RESP_TIMEOUT for each subsequent response_chunk
     // - Max total timeout: This timeout is not required by the spec. It may not be necessary, but it's kept as
     //   safe-guard to close. streams in case of bugs on other timeout mechanisms.
     const ttfbTimeoutController = new AbortController();
     const respTimeoutController = new AbortController();
-    const maxRTimeoutController = new AbortController();
 
     const timeoutTTFB = setTimeout(() => ttfbTimeoutController.abort(), TTFB_TIMEOUT);
     let timeoutRESP: NodeJS.Timeout | null = null;
-    const timeoutMaxR = setTimeout(() => maxRTimeoutController.abort(), TTFB_TIMEOUT + maxResponses * RESP_TIMEOUT);
 
     const restartRespTimeout = (): void => {
       if (timeoutRESP) clearTimeout(timeoutRESP);
@@ -148,7 +163,7 @@ export async function sendRequest<Req, Resp>(
 
     try {
       // Note: libp2p.stop() will close all connections, so not necessary to abort this pipe on parent stop
-      const responses = await pipe(
+      yield* pipe(
         abortableSource(stream.source as AsyncIterable<Uint8ArrayList>, [
           {
             signal: ttfbTimeoutController.signal,
@@ -157,10 +172,6 @@ export async function sendRequest<Req, Resp>(
           {
             signal: respTimeoutController.signal,
             getError: () => new RequestInternalError({code: RequestErrorCode.RESP_TIMEOUT}),
-          },
-          {
-            signal: maxRTimeoutController.signal,
-            getError: () => new RequestInternalError({code: RequestErrorCode.RESPONSE_TIMEOUT}),
           },
         ]),
 
@@ -175,22 +186,16 @@ export async function sendRequest<Req, Resp>(
             // On <response_chunk>, cancel this chunk's RESP_TIMEOUT and start next's
             restartRespTimeout();
           },
-        }),
-
-        collectResponses(protocol, maxResponses)
+        })
       );
 
       // NOTE: Only log once per request to verbose, intermediate steps to debug
       // NOTE: Do not log the response, logs get extremely cluttered
       // NOTE: add double space after "Req  " to align log with the "Resp " log
-      const numResponse = Array.isArray(responses) ? responses.length : 1;
-      logger.verbose("Req  done", {...logCtx, numResponse});
-
-      return responses as Resp;
+      logger.verbose("Req  done", {...logCtx});
     } finally {
       clearTimeout(timeoutTTFB);
       if (timeoutRESP !== null) clearTimeout(timeoutRESP);
-      clearTimeout(timeoutMaxR);
 
       // Necessary to call `stream.close()` since collectResponses() may break out of the source before exhausting it
       // `stream.close()` libp2p-mplex will .end() the source (it-pushable instance)

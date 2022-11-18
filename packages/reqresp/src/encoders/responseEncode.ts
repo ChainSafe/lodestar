@@ -4,7 +4,6 @@ import {encodeErrorMessage} from "../utils/index.js";
 import {
   ContextBytesType,
   ContextBytesFactory,
-  Protocol,
   ProtocolDefinition,
   EncodedPayload,
   EncodedPayloadType,
@@ -53,7 +52,7 @@ export function responseEncodeSuccess<Req, Resp>(
  * fn yields exactly one `<error_response>` and afterwards the stream must be terminated
  */
 export async function* responseEncodeError(
-  protocol: Protocol,
+  protocol: Pick<ProtocolDefinition, "encoding">,
   status: RpcResponseStatusError,
   errorMessage: string
 ): AsyncGenerator<Buffer> {

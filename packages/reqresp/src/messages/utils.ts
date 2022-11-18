@@ -12,6 +12,3 @@ export function getContextBytesLightclient<T>(
     forkFromResponse,
   };
 }
-
-export const getHandlerRequiredErrorFor = (method: string): Error =>
-  new Error(`Handler is required for method "${method}."`);

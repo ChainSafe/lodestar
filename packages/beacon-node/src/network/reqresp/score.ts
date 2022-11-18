@@ -1,6 +1,6 @@
+import {RequestError, RequestErrorCode} from "@lodestar/reqresp";
+import {PeerAction} from "../peers/score.js";
 import {Method} from "./types.js";
-import {RequestError, RequestErrorCode} from "./request/index.js";
-import {PeerAction} from "./sharedTypes.js";
 
 /**
  * libp2p-ts does not include types for the error codes.

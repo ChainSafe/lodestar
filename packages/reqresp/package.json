@@ -59,7 +59,6 @@
     "check-readme": "typescript-docs-verifier"
   },
   "dependencies": {
-    "@libp2p/interface-peer-id": "^1.0.4",
     "@libp2p/interface-connection": "^3.0.2",
     "@libp2p/interface-peer-id": "^1.0.4",
     "strict-event-emitter-types": "^2.0.0",

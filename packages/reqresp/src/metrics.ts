@@ -29,12 +29,6 @@ interface Histogram<Labels extends LabelsGeneric = never> {
   reset(): void;
 }
 
-interface AvgMinMax<Labels extends LabelsGeneric = never> {
-  set(values: number[]): void;
-  set(labels: Labels, values: number[]): void;
-  set(arg1?: Labels | number[], arg2?: number[]): void;
-}
-
 type GaugeConfig<Labels extends LabelsGeneric> = {
   name: string;
   help: string;
@@ -48,12 +42,9 @@ type HistogramConfig<Labels extends LabelsGeneric> = {
   buckets?: number[];
 };
 
-type AvgMinMaxConfig<Labels extends LabelsGeneric> = GaugeConfig<Labels>;
-
 export interface MetricsRegister {
   gauge<T extends LabelsGeneric>(config: GaugeConfig<T>): Gauge<T>;
   histogram<T extends LabelsGeneric>(config: HistogramConfig<T>): Histogram<T>;
-  avgMinMax<T extends LabelsGeneric>(config: AvgMinMaxConfig<T>): AvgMinMax<T>;
 }
 
 export type Metrics = ReturnType<typeof getMetrics>;
@@ -71,17 +62,8 @@ export type LodestarGitData = {
  * A collection of metrics used throughout the Gossipsub behaviour.
  */
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types, @typescript-eslint/explicit-function-return-type
-export function getMetrics(register: MetricsRegister, gitData: LodestarGitData) {
+export function getMetrics(register: MetricsRegister) {
   // Using function style instead of class to prevent having to re-declare all MetricsPrometheus types.
-
-  // Track version, same as https://github.com/ChainSafe/lodestar/blob/6df28de64f12ea90b341b219229a47c8a25c9343/packages/lodestar/src/metrics/metrics/lodestar.ts#L17
-  register
-    .gauge<LodestarGitData>({
-      name: "lodestar_version",
-      help: "Lodestar version",
-      labelNames: Object.keys(gitData) as (keyof LodestarGitData)[],
-    })
-    .set(gitData, 1);
 
   return {
     outgoingRequests: register.gauge<{method: string}>({

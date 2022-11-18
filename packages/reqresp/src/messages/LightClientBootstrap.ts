@@ -1,28 +1,21 @@
 import {altair, Root, ssz} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
-import {Encoding, Method, ProtocolDefinitionGenerator, Version} from "../../types.js";
-import {getContextBytesLightclient, getHandlerRequiredErrorFor} from "../utils.js";
+import {Encoding, ProtocolDefinitionGenerator} from "../types.js";
+import {getContextBytesLightclient} from "./utils.js";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
 export const LightClientBootstrap: ProtocolDefinitionGenerator<Root, altair.LightClientBootstrap> = (
   modules,
   handler
 ) => {
-  if (!handler) {
-    throw getHandlerRequiredErrorFor(Method.LightClientBootstrap);
-  }
-
   return {
-    method: Method.LightClientBootstrap,
-    version: Version.V1,
+    method: "light_client_bootstrap",
+    version: 1,
     encoding: Encoding.SSZ_SNAPPY,
-    handler: async function* lightClientBootstrapHandler(context, req, peerId) {
-      yield* handler(req, peerId);
-    },
+    handler,
     requestType: () => ssz.Root,
     responseType: () => ssz.altair.LightClientBootstrap,
     renderRequestBody: (req) => toHex(req),
     contextBytes: getContextBytesLightclient((bootstrap) => modules.config.getForkName(bootstrap.header.slot), modules),
-    isSingleResponse: true,
   };
 };

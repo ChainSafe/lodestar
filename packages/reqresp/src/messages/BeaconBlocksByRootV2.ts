@@ -1,30 +1,17 @@
 import {allForks, phase0, ssz} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
-import {RespStatus} from "../../interface.js";
-import {ResponseError} from "../../response/errors.js";
-import {ContextBytesType, Encoding, Method, ProtocolDefinitionGenerator, Version} from "../../types.js";
-import {getHandlerRequiredErrorFor} from "../utils.js";
+import {ContextBytesType, Encoding, ProtocolDefinitionGenerator} from "../types.js";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
 export const BeaconBlocksByRootV2: ProtocolDefinitionGenerator<
   phase0.BeaconBlocksByRootRequest,
   allForks.SignedBeaconBlock
 > = (modules, handler) => {
-  if (!handler) {
-    throw getHandlerRequiredErrorFor(Method.BeaconBlocksByRoot);
-  }
-
   return {
-    method: Method.BeaconBlocksByRoot,
-    version: Version.V2,
+    method: "beacon_blocks_by_root",
+    version: 2,
     encoding: Encoding.SSZ_SNAPPY,
-    handler: async function* beaconBlocksByRootV2Handler(context, req, peerId) {
-      if (!context.modules.inboundRateLimiter.allowBlockByRequest(peerId, req.length)) {
-        throw new ResponseError(RespStatus.RATE_LIMITED, "rate limit");
-      }
-
-      yield* handler(req, peerId);
-    },
+    handler,
     requestType: () => ssz.phase0.BeaconBlocksByRootRequest,
     responseType: (forkName) => ssz[forkName].SignedBeaconBlock,
     renderRequestBody: (req) => req.map((root) => toHex(root)).join(","),
@@ -33,6 +20,5 @@ export const BeaconBlocksByRootV2: ProtocolDefinitionGenerator<
       forkDigestContext: modules.config,
       forkFromResponse: (block) => modules.config.getForkName(block.message.slot),
     },
-    isSingleResponse: false,
   };
 };

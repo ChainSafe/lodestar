@@ -2,12 +2,11 @@ import {PeerId} from "@libp2p/interface-peer-id";
 import {ILogger, MapDef} from "@lodestar/utils";
 import {RateLimiter} from "../interface.js";
 import {Metrics} from "../metrics.js";
-import {IPeerRpcScoreStore, PeerAction} from "../sharedTypes.js";
 import {RateTracker} from "./RateTracker.js";
 
 interface RateLimiterModules {
   logger: ILogger;
-  peerRpcScores: IPeerRpcScoreStore;
+  reportPeer: (peer: PeerId) => void;
   metrics: Metrics | null;
 }
 
@@ -37,7 +36,7 @@ const DISCONNECTED_TIMEOUT_MS = 5 * 60 * 1000;
  */
 export class InboundRateLimiter implements RateLimiter {
   private readonly logger: ILogger;
-  private readonly peerRpcScores: IPeerRpcScoreStore;
+  private readonly reportPeer: RateLimiterModules["reportPeer"];
   private readonly metrics: Metrics | null;
   private requestCountTrackersByPeer: MapDef<string, RateTracker>;
   /**
@@ -68,6 +67,7 @@ export class InboundRateLimiter implements RateLimiter {
 
   constructor(options: Partial<RateLimiterOptions>, modules: RateLimiterModules) {
     this.options = {...InboundRateLimiter.defaults, ...options};
+    this.reportPeer = modules.reportPeer;
 
     this.requestCountTrackersByPeer = new MapDef(
       () => new RateTracker({limit: this.options.requestCountPeerLimit, timeoutMs: this.options.rateTrackerTimeoutMs})
@@ -80,7 +80,6 @@ export class InboundRateLimiter implements RateLimiter {
       () => new RateTracker({limit: this.options.blockCountPeerLimit, timeoutMs: this.options.rateTrackerTimeoutMs})
     );
     this.logger = modules.logger;
-    this.peerRpcScores = modules.peerRpcScores;
     this.metrics = modules.metrics;
     this.lastSeenRequestsByPeer = new Map();
   }
@@ -109,7 +108,7 @@ export class InboundRateLimiter implements RateLimiter {
         peerId: peerIdStr,
         requestsWithinWindow: requestCountPeerTracker.getRequestedObjectsWithinWindow(),
       });
-      this.peerRpcScores.applyAction(peerId, PeerAction.Fatal, "RateLimit");
+      this.reportPeer(peerId);
       if (this.metrics) {
         this.metrics.rateLimitErrors.inc({tracker: "requestCountPeerTracker"});
       }
@@ -132,7 +131,7 @@ export class InboundRateLimiter implements RateLimiter {
         blockCount: numBlock,
         requestsWithinWindow: blockCountPeerTracker.getRequestedObjectsWithinWindow(),
       });
-      this.peerRpcScores.applyAction(peerId, PeerAction.Fatal, "RateLimit");
+      this.reportPeer(peerId);
       if (this.metrics) {
         this.metrics.rateLimitErrors.inc({tracker: "blockCountPeerTracker"});
       }
