@@ -5,7 +5,7 @@ import {toHexString} from "@chainsafe/ssz";
 import {CheckpointWithHex, ForkChoice} from "@lodestar/fork-choice";
 import {phase0, allForks, bellatrix, ssz, RootHex} from "@lodestar/types";
 import {bnToNum} from "@lodestar/utils";
-import {createIBeaconConfig, createIChainForkConfig} from "@lodestar/config";
+import {createIBeaconConfig} from "@lodestar/config";
 import {BeaconChain, ChainEvent} from "../../../src/chain/index.js";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {testLogger} from "../../utils/logger.js";
@@ -32,9 +32,6 @@ const POW_BLOCK_FILE_NAME = "^(pow_block)_([0-9a-zA-Z]+)$";
 const ATTESTATION_FILE_NAME = "^(attestation)_([0-9a-zA-Z])+$";
 const ATTESTER_SLASHING_FILE_NAME = "^(attester_slashing)_([0-9a-zA-Z])+$";
 
-// Test bellatrix/fork_choice/on_merge_block/pyspec_tests/all_valid expects mainnet TTD
-const TERMINAL_TOTAL_DIFFICULTY = BigInt("58750000000000000000000");
-
 const logger = testLogger("spec-test");
 
 export const forkChoiceTest: TestRunnerFn<ForkChoiceTestCase, void> = (fork) => {
@@ -42,7 +39,7 @@ export const forkChoiceTest: TestRunnerFn<ForkChoiceTestCase, void> = (fork) => 
     testFunction: async (testcase) => {
       const {steps, anchorState} = testcase;
       const currentSlot = anchorState.slot;
-      const config = createIChainForkConfig({...getConfig(fork), TERMINAL_TOTAL_DIFFICULTY});
+      const config = getConfig(fork);
       const state = createCachedBeaconStateTest(anchorState, config);
 
       /** This is to track test's tickTime to be used in proposer boost */
