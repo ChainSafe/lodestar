@@ -25,6 +25,10 @@ export function verifyKzgCommitmentsAgainstTransactions(
     }
   }
 
+  if (allVersionedHashes.length !== blobKzgCommitments.length) {
+    throw Error(`allVersionedHashes len ${allVersionedHashes.length} != blobKzgCommitments len ${blobKzgCommitments.length}`)
+  }
+
   for (let i = 0; i < blobKzgCommitments.length; i++) {
     const versionedHash = kzgCommitmentToVersionedHash(blobKzgCommitments[i]);
     if (!byteArrayEquals(allVersionedHashes[i], versionedHash)) {
