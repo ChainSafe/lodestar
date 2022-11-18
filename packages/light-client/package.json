@@ -74,7 +74,7 @@
     "@lodestar/params": "^1.2.1",
     "@lodestar/types": "^1.2.1",
     "@lodestar/utils": "^1.2.1",
-    "@lodestar/execution-layer": "file:../execution-layer",
+    "@lodestar/execution-layer": "^1.2.1",
     "cross-fetch": "^3.1.4",
     "strict-event-emitter-types": "^2.0.0",
     "mitt": "^3.0.0"
