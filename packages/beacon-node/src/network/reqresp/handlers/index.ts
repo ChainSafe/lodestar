@@ -1,4 +1,4 @@
-import {EncodedPayloadType, HandlerTypeFromMessage} from "@lodestar/reqresp";
+import {HandlerTypeFromMessage} from "@lodestar/reqresp";
 import messages from "@lodestar/reqresp/messages";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
@@ -8,6 +8,7 @@ import {onLightClientBootstrap} from "./lightClientBootstrap.js";
 import {onLightClientFinalityUpdate} from "./lightClientFinalityUpdate.js";
 import {onLightClientOptimisticUpdate} from "./lightClientOptimisticUpdate.js";
 import {onLightClientUpdatesByRange} from "./lightClientUpdatesByRange.js";
+import {onStatus} from "./status.js";
 
 export interface ReqRespHandlers {
   onStatus: HandlerTypeFromMessage<typeof messages.Status>;
@@ -25,7 +26,7 @@ export interface ReqRespHandlers {
 export function getReqRespHandlers({db, chain}: {db: IBeaconDb; chain: IBeaconChain}): ReqRespHandlers {
   return {
     async *onStatus() {
-      yield {type: EncodedPayloadType.ssz, data: chain.getStatus()};
+      yield* onStatus(chain);
     },
     async *onBeaconBlocksByRange(req) {
       yield* onBeaconBlocksByRange(req, chain, db);
