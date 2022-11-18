@@ -1,32 +1,37 @@
-import {expect} from "chai";
 import {PeerId} from "@libp2p/interface-peer-id";
 import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
+import {expect} from "chai";
+import {BitArray} from "@chainsafe/ssz";
 import {createIBeaconConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
-import {sleep as _sleep} from "@lodestar/utils";
-import {altair, phase0, Root, ssz} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
-import {BitArray} from "@chainsafe/ssz";
-import {IReqRespOptions, Network} from "../../../src/network/index.js";
+import {
+  Encoding,
+  RequestError,
+  RequestErrorCode,
+  IRequestErrorMetadata,
+  HandlerTypeFromMessage,
+} from "@lodestar/reqresp";
+import * as messages from "@lodestar/reqresp/messages";
+import {altair, phase0, Root, ssz} from "@lodestar/types";
+import {sleep as _sleep} from "@lodestar/utils";
+import {GossipHandlers} from "../../../src/network/gossip/index.js";
+import {Network, ReqRespBeaconNodeOpts} from "../../../src/network/index.js";
 import {defaultNetworkOptions, INetworkOptions} from "../../../src/network/options.js";
-import {ReqRespMethod, Encoding} from "../../../src/network/reqresp/types.js";
 import {ReqRespHandlers} from "../../../src/network/reqresp/handlers/index.js";
-import {RequestError, RequestErrorCode} from "../../../src/network/reqresp/request/index.js";
-import {IRequestErrorMetadata} from "../../../src/network/reqresp/request/errors.js";
-import {testLogger} from "../../utils/logger.js";
-import {MockBeaconChain} from "../../utils/mocks/chain/chain.js";
-import {createNode} from "../../utils/network.js";
-import {generateState} from "../../utils/state.js";
-import {arrToSource, generateEmptySignedBlocks} from "../../unit/network/reqresp/utils.js";
+import {ReqRespMethod} from "../../../src/network/reqresp/types.js";
 import {
   blocksToReqRespBlockResponses,
   generateEmptyReqRespBlockResponse,
   generateEmptySignedBlock,
 } from "../../utils/block.js";
 import {expectRejectedWithLodestarError} from "../../utils/errors.js";
-import {connect, onPeerConnect} from "../../utils/network.js";
+import {testLogger} from "../../utils/logger.js";
+import {MockBeaconChain} from "../../utils/mocks/chain/chain.js";
+import {connect, createNode, onPeerConnect} from "../../utils/network.js";
+import {generateState} from "../../utils/state.js";
 import {StubbedBeaconDb} from "../../utils/stub/index.js";
-import {GossipHandlers} from "../../../src/network/gossip/index.js";
+import {arrToSource, generateEmptySignedBlocks} from "../../unit/network/reqresp/utils.js";
 
 /* eslint-disable require-yield, @typescript-eslint/naming-convention */
 
@@ -66,7 +71,7 @@ describe("network / ReqResp", function () {
 
   async function createAndConnectPeers(
     reqRespHandlersPartial?: Partial<ReqRespHandlers>,
-    reqRespOpts?: IReqRespOptions
+    reqRespOpts?: ReqRespBeaconNodeOpts
   ): Promise<[Network, Network]> {
     const controller = new AbortController();
     const peerIdB = await createSecp256k1PeerId();
@@ -168,7 +173,7 @@ describe("network / ReqResp", function () {
     const [netA, netB] = await createAndConnectPeers({
       onStatus: async function* onRequest() {
         yield statusNetB;
-      },
+      } as HandlerTypeFromMessage<typeof messages.Status>,
     });
 
     const receivedStatus = await netA.reqResp.status(netB.peerId, statusNetA);
@@ -187,7 +192,7 @@ describe("network / ReqResp", function () {
     const [netA, netB] = await createAndConnectPeers({
       onBeaconBlocksByRange: async function* () {
         yield* arrToSource(blocksToReqRespBlockResponses(blocks));
-      },
+      } as HandlerTypeFromMessage<typeof messages.BeaconBlocksByRange>,
     });
 
     const returnedBlocks = await netA.reqResp.beaconBlocksByRange(netB.peerId, req);
@@ -207,7 +212,7 @@ describe("network / ReqResp", function () {
     const [netA, netB] = await createAndConnectPeers({
       onLightClientBootstrap: async function* onRequest() {
         yield expectedValue;
-      },
+      } as HandlerTypeFromMessage<typeof messages.LightClientBootstrap>,
     });
 
     const returnedValue = await netA.reqResp.lightClientBootstrap(netB.peerId, root);
@@ -220,7 +225,7 @@ describe("network / ReqResp", function () {
     const [netA, netB] = await createAndConnectPeers({
       onLightClientOptimisticUpdate: async function* onRequest() {
         yield expectedValue;
-      },
+      } as HandlerTypeFromMessage<typeof messages.LightClientOptimisticUpdate>,
     });
 
     const returnedValue = await netA.reqResp.lightClientOptimisticUpdate(netB.peerId);
@@ -233,7 +238,7 @@ describe("network / ReqResp", function () {
     const [netA, netB] = await createAndConnectPeers({
       onLightClientFinalityUpdate: async function* onRequest() {
         yield expectedValue;
-      },
+      } as HandlerTypeFromMessage<typeof messages.LightClientFinalityUpdate>,
     });
 
     const returnedValue = await netA.reqResp.lightClientFinalityUpdate(netB.peerId);
@@ -252,10 +257,10 @@ describe("network / ReqResp", function () {
     const [netA, netB] = await createAndConnectPeers({
       onLightClientUpdatesByRange: async function* () {
         yield* arrToSource(lightClientUpdates);
-      },
+      } as HandlerTypeFromMessage<typeof messages.LightClientUpdatesByRange>,
     });
 
-    const returnedUpdates = await netA.reqResp.lightClientUpdate(netB.peerId, req);
+    const returnedUpdates = await netA.reqResp.lightClientUpdatesByRange(netB.peerId, req);
 
     if (returnedUpdates === null) throw Error("Returned null");
     expect(returnedUpdates).to.have.length(2, "Wrong returnedUpdates length");
@@ -292,7 +297,7 @@ describe("network / ReqResp", function () {
       onBeaconBlocksByRange: async function* onRequest() {
         yield* arrToSource(blocksToReqRespBlockResponses(generateEmptySignedBlocks(2)));
         throw Error(testErrorMessage);
-      },
+      } as HandlerTypeFromMessage<typeof messages.BeaconBlocksByRange>,
     });
 
     await expectRejectedWithLodestarError(
@@ -305,17 +310,17 @@ describe("network / ReqResp", function () {
   });
 
   it("trigger a TTFB_TIMEOUT error", async function () {
-    const TTFB_TIMEOUT = 250;
+    const ttfbTimeoutMs = 250;
 
     const [netA, netB] = await createAndConnectPeers(
       {
         onBeaconBlocksByRange: async function* onRequest() {
           // Wait for too long before sending first response chunk
-          await sleep(TTFB_TIMEOUT * 10);
+          await sleep(ttfbTimeoutMs * 10);
           yield generateEmptyReqRespBlockResponse();
-        },
+        } as HandlerTypeFromMessage<typeof messages.BeaconBlocksByRange>,
       },
-      {TTFB_TIMEOUT}
+      {ttfbTimeoutMs: ttfbTimeoutMs}
     );
 
     await expectRejectedWithLodestarError(
@@ -328,18 +333,18 @@ describe("network / ReqResp", function () {
   });
 
   it("trigger a RESP_TIMEOUT error", async function () {
-    const RESP_TIMEOUT = 250;
+    const respTimeoutMs = 250;
 
     const [netA, netB] = await createAndConnectPeers(
       {
         onBeaconBlocksByRange: async function* onRequest() {
           yield generateEmptyReqRespBlockResponse();
           // Wait for too long before sending second response chunk
-          await sleep(RESP_TIMEOUT * 5);
+          await sleep(respTimeoutMs * 5);
           yield generateEmptyReqRespBlockResponse();
-        },
+        } as HandlerTypeFromMessage<typeof messages.BeaconBlocksByRange>,
       },
-      {RESP_TIMEOUT}
+      {respTimeoutMs}
     );
 
     await expectRejectedWithLodestarError(
@@ -358,7 +363,7 @@ describe("network / ReqResp", function () {
           await sleep(100000000);
         },
       },
-      {RESP_TIMEOUT: 250, TTFB_TIMEOUT: 250}
+      {respTimeoutMs: 250, ttfbTimeoutMs: 250}
     );
 
     await expectRejectedWithLodestarError(
@@ -376,9 +381,9 @@ describe("network / ReqResp", function () {
         onBeaconBlocksByRange: async function* onRequest() {
           yield generateEmptyReqRespBlockResponse();
           await sleep(100000000);
-        },
+        } as HandlerTypeFromMessage<typeof messages.BeaconBlocksByRange>,
       },
-      {RESP_TIMEOUT: 250, TTFB_TIMEOUT: 250}
+      {respTimeoutMs: 250, ttfbTimeoutMs: 250}
     );
 
     await expectRejectedWithLodestarError(
