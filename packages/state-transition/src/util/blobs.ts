@@ -6,6 +6,20 @@ import {toHex} from "@lodestar/utils";
 // TODO EIP-4844: Move to params
 const BLOB_TX_TYPE = 0x05;
 const VERSIONED_HASH_VERSION_KZG = 0x01;
+const BYTES_PER_HASH = 32;
+
+/**
+ * Blob transaction:
+ * - 1 byte prefix
+ * - class SignedBlobTransaction(Container): message starts at offset 69
+ * - class BlobTransaction(Container): blob_versioned_hashes offset value in offset 188, last property in container
+ * So to read blob_versioned_hashes:
+ * - Read offset value at [70+188, 70+188+4]
+ * - Read chunks between offset value and EOF
+ * Reference: https://gist.github.com/protolambda/23bd106b66f6d4bb854ce46044aa3ca3
+ */
+const OPAQUE_TX_MESSAGE_OFFSET = 70;
+const OPAQUE_TX_BLOB_VERSIONED_HASHES_OFFSET = OPAQUE_TX_MESSAGE_OFFSET + 188;
 
 type VersionHash = Uint8Array;
 
@@ -26,7 +40,9 @@ export function verifyKzgCommitmentsAgainstTransactions(
   }
 
   if (allVersionedHashes.length !== blobKzgCommitments.length) {
-    throw Error(`allVersionedHashes len ${allVersionedHashes.length} != blobKzgCommitments len ${blobKzgCommitments.length}`)
+    throw Error(
+      `allVersionedHashes len ${allVersionedHashes.length} != blobKzgCommitments len ${blobKzgCommitments.length}`
+    );
   }
 
   for (let i = 0; i < blobKzgCommitments.length; i++) {
@@ -47,18 +63,25 @@ function txPeekBlobVersionedHashes(opaqueTx: bellatrix.Transaction): VersionHash
 
   const opaqueTxDv = new DataView(opaqueTx.buffer, opaqueTx.byteOffset, opaqueTx.byteLength);
 
-  // uint32.decode_bytes(opaque_tx[1:5]), Should always be 70
-  // true = little endian
-  const messageOffset = 1 + opaqueTxDv.getUint32(1, true);
-  // field offset: 32 + 8 + 32 + 32 + 8 + 4 + 32 + 4 + 4 + 32 = 188
-  // Reference: https://gist.github.com/protolambda/23bd106b66f6d4bb854ce46044aa3ca3
-  const blobVersionedHashesOffset = messageOffset + opaqueTxDv.getUint32(188);
+  const blobVersionedHashesOffset =
+    OPAQUE_TX_MESSAGE_OFFSET + opaqueTxDv.getUint32(OPAQUE_TX_BLOB_VERSIONED_HASHES_OFFSET, true);
+
+  // Guard against offsets that go beyond end of bytes
+  if (blobVersionedHashesOffset > opaqueTx.length) {
+    throw Error(`blobVersionedHashesOffset ${blobVersionedHashesOffset} > EOF ${opaqueTx.length}`);
+  }
+
+  // Guard against not multiple of BYTES_PER_HASH
+  const blobVersionedHashesByteLen = opaqueTx.length - blobVersionedHashesOffset;
+  if ((opaqueTx.length - blobVersionedHashesOffset) % BYTES_PER_HASH !== 0) {
+    throw Error(`Uneven blobVersionedHashesByteLen ${blobVersionedHashesByteLen}`);
+  }
 
   const versionedHashes: VersionHash[] = [];
 
   // iterate from x to end of data, in steps of 32, to get all hashes
-  for (let i = blobVersionedHashesOffset; i < opaqueTx.length; i += 32) {
-    versionedHashes.push(opaqueTx.subarray(i, i + 32));
+  for (let i = blobVersionedHashesOffset; i < opaqueTx.length; i += BYTES_PER_HASH) {
+    versionedHashes.push(opaqueTx.subarray(i, i + BYTES_PER_HASH));
   }
 
   return versionedHashes;
