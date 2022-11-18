@@ -548,14 +548,14 @@
     uint8arraylist "^2.3.2"
     uint8arrays "^3.0.0"
 
-"@chainsafe/libp2p-noise@^8.0.0":
-  version "8.0.0"
-  resolved "https://registry.yarnpkg.com/@chainsafe/libp2p-noise/-/libp2p-noise-8.0.0.tgz#93118f6872e09517ef50167f05f12aed6d4cc2f2"
-  integrity sha512-APAhb+3eZWHFo+oORG/nUhNTLKgbcTOGeJsnEq//KnjiOjfBDCk4gQmpoSTrLAz1cOTyZ3luSSI4Z+lo2Og7gQ==
+"@chainsafe/libp2p-noise@tuyennhv/js-libp2p-noise#tuyen/reuse-decrypt-allocation-dist":
+  version "10.1.0"
+  resolved "https://codeload.github.com/tuyennhv/js-libp2p-noise/tar.gz/79181207b5bc75b21a990ac2abce2d3b9b21af20"
   dependencies:
     "@libp2p/crypto" "^1.0.0"
-    "@libp2p/interface-connection-encrypter" "^2.0.1"
+    "@libp2p/interface-connection-encrypter" "^3.0.0"
     "@libp2p/interface-keys" "^1.0.2"
+    "@libp2p/interface-metrics" "^4.0.2"
     "@libp2p/interface-peer-id" "^1.0.2"
     "@libp2p/logger" "^2.0.0"
     "@libp2p/peer-id" "^1.1.8"
@@ -568,9 +568,9 @@
     it-pb-stream "^2.0.2"
     it-pipe "^2.0.3"
     it-stream-types "^1.0.4"
-    protons-runtime "^3.1.0"
+    protons-runtime "^4.0.1"
     uint8arraylist "^2.3.2"
-    uint8arrays "^3.1.0"
+    uint8arrays "^4.0.2"
 
 "@chainsafe/persistent-merkle-tree@^0.4.2":
   version "0.4.2"
@@ -1887,6 +1887,15 @@
     it-stream-types "^1.0.4"
     uint8arraylist "^2.1.1"
 
+"@libp2p/interface-connection-encrypter@^3.0.0":
+  version "3.0.1"
+  resolved "https://registry.yarnpkg.com/@libp2p/interface-connection-encrypter/-/interface-connection-encrypter-3.0.1.tgz#5a68ce162930b756e8177a88cb807d2937799d32"
+  integrity sha512-KZ/4vuLokv2fNCnEAM5S91t8v5lMWXdYa26v/iGLqLgiH5MXmIGOgLLGdboXNMYM2ZYYCBgEpSHv+ZRbfO524Q==
+  dependencies:
+    "@libp2p/interface-peer-id" "^1.0.0"
+    it-stream-types "^1.0.4"
+    uint8arraylist "^2.1.1"
+
 "@libp2p/interface-connection-manager@^1.1.0", "@libp2p/interface-connection-manager@^1.1.1":
   version "1.1.1"
   resolved "https://registry.yarnpkg.com/@libp2p/interface-connection-manager/-/interface-connection-manager-1.1.1.tgz#6b1e7116d77bf813f5a4d1aa3c2e39c5e00a3a24"
@@ -1948,6 +1957,13 @@
   dependencies:
     "@libp2p/interface-peer-id" "^1.0.0"
     it-stream-types "^1.0.4"
+
+"@libp2p/interface-metrics@^4.0.2":
+  version "4.0.2"
+  resolved "https://registry.yarnpkg.com/@libp2p/interface-metrics/-/interface-metrics-4.0.2.tgz#329a1602f7844f6a9cf441439001f8e8f8e7dafc"
+  integrity sha512-HON9yXhFaTnQ86tOdE18bFJv71zQdI7xrZJuA6pNUtpsfA+djhqWXv0a4mwEGUP7k4zz3FkH0M9CrrvL0pkBWg==
+  dependencies:
+    "@libp2p/interface-connection" "^3.0.0"
 
 "@libp2p/interface-peer-discovery@^1.0.0", "@libp2p/interface-peer-discovery@^1.0.1":
   version "1.0.1"
@@ -10998,6 +11014,14 @@ protons-runtime@^3.0.1, protons-runtime@^3.1.0:
     protobufjs "^7.0.0"
     uint8arraylist "^2.3.2"
 
+protons-runtime@^4.0.1:
+  version "4.0.1"
+  resolved "https://registry.yarnpkg.com/protons-runtime/-/protons-runtime-4.0.1.tgz#bcea3667b6263680e70e2da102f91b3513075374"
+  integrity sha512-SPeV+8TzJAp5UJYPV7vJkLRi08CP0DksxpKK60rcNaZSPkMBQwc0jQrmkHqwc5P0cYbZzKsdYrUBwRrDLrzTfQ==
+  dependencies:
+    protobufjs "^7.0.0"
+    uint8arraylist "^2.3.2"
+
 psl@^1.1.28:
   version "1.9.0"
   resolved "https://registry.yarnpkg.com/psl/-/psl-1.9.0.tgz#d0df2a137f00794565fcaf3b2c00cd09f8d5a5a7"
@@ -12030,6 +12054,10 @@ ssri@^9.0.0, ssri@^9.0.1:
   integrity sha512-o57Wcn66jMQvfHG1FlYbWeZWW/dHZhJXjpIcTfXldXEk5nz5lStPo3mK0OJQfGR3RbZUlbISexbljkJzuEj/8Q==
   dependencies:
     minipass "^3.1.1"
+
+"ssz-3@https://github.com/tuyennhv/ssz.git#tuyen/as-chacha20poly1305-lib":
+  version "1.0.0"
+  resolved "https://github.com/tuyennhv/ssz.git#9aa9db216934a2a50f2291e904ca0ddc3fecc77a"
 
 stack-trace@0.0.x:
   version "0.0.10"
