@@ -38,7 +38,11 @@ export const phase0: Phase0Preset = {
   // 2**0 (= 1) slots 6 seconds
   MIN_ATTESTATION_INCLUSION_DELAY: 1,
   // [customized] fast epochs
-  SLOTS_PER_EPOCH: 8,
+  ////////////////////////////////////////////////////////////////////////
+  // TODO EIP-4844: See https://github.com/Inphi/eip4844-interop/issues/65
+  // Can't customize this value, but otherwise the interop tests fail
+  ////////////////////////////////////////////////////////////////////////
+  SLOTS_PER_EPOCH: 3,
   // 2**0 (= 1) epochs
   MIN_SEED_LOOKAHEAD: 1,
   // 2**2 (= 4) epochs
