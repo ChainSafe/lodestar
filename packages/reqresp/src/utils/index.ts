@@ -5,3 +5,4 @@ export * from "./collectMaxResponse.js";
 export * from "./errorMessage.js";
 export * from "./onChunk.js";
 export * from "./peerId.js";
+export * from "./protocolId.js";

@@ -4,9 +4,7 @@ import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
 import {config} from "@lodestar/config/default";
 import {ForkName} from "@lodestar/params";
 import {ENR} from "@chainsafe/discv5";
-import {ReqRespMethod, Version, Encoding, Protocol, protocolPrefix} from "../../../src/network/reqresp/types.js";
 import {defaultNetworkOptions} from "../../../src/network/options.js";
-import {formatProtocolID} from "../../../src/network/reqresp/utils/index.js";
 import {createNodeJsLibp2p, isLocalMultiAddr} from "../../../src/network/index.js";
 import {getCurrentAndNextFork} from "../../../src/network/forks.js";
 
@@ -20,49 +18,6 @@ describe("Test isLocalMultiAddr", () => {
     const multi0 = multiaddr("/ip4/0.0.0.0/udp/30303");
     expect(isLocalMultiAddr(multi0)).to.equal(false);
   });
-});
-
-describe("ReqResp protocolID parse / render", () => {
-  const testCases: {
-    method: ReqRespMethod;
-    version: Version;
-    encoding: Encoding;
-    protocolId: string;
-  }[] = [
-    {
-      method: ReqRespMethod.Status,
-      version: Version.V1,
-      encoding: Encoding.SSZ_SNAPPY,
-      protocolId: "/eth2/beacon_chain/req/status/1/ssz_snappy",
-    },
-    {
-      method: ReqRespMethod.BeaconBlocksByRange,
-      version: Version.V2,
-      encoding: Encoding.SSZ_SNAPPY,
-      protocolId: "/eth2/beacon_chain/req/beacon_blocks_by_range/2/ssz_snappy",
-    },
-  ];
-
-  for (const {method, encoding, version, protocolId} of testCases) {
-    it(`Should render ${protocolId}`, () => {
-      expect(formatProtocolID(method, version, encoding)).to.equal(protocolId);
-    });
-
-    it(`Should parse ${protocolId}`, () => {
-      expect(parseProtocolId(protocolId)).to.deep.equal({method, version, encoding});
-    });
-  }
-
-  function parseProtocolId(protocolId: string): Protocol {
-    if (!protocolId.startsWith(protocolPrefix)) {
-      throw Error(`Unknown protocolId prefix: ${protocolId}`);
-    }
-
-    // +1 for the first "/"
-    const suffix = protocolId.slice(protocolPrefix.length + 1);
-    const [method, version, encoding] = suffix.split("/") as [ReqRespMethod, Version, Encoding];
-    return {method, version, encoding};
-  }
 });
 
 describe("getCurrentAndNextFork", function () {

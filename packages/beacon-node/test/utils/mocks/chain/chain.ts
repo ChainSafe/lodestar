@@ -33,7 +33,6 @@ import {
 import {LightClientServer} from "../../../../src/chain/lightClient/index.js";
 import {Eth1ForBlockProductionDisabled} from "../../../../src/eth1/index.js";
 import {ExecutionEngineDisabled} from "../../../../src/execution/engine/index.js";
-import {ReqRespBlockResponse} from "../../../../src/network/reqresp/types.js";
 import {testLogger} from "../../logger.js";
 import {ReprocessController} from "../../../../src/chain/reprocess.js";
 import {createCachedBeaconStateTest} from "../../../../../state-transition/test/utils/state.js";
@@ -43,6 +42,7 @@ import {BeaconProposerCache} from "../../../../src/chain/beaconProposerCache.js"
 import {CheckpointBalancesCache} from "../../../../src/chain/balancesCache.js";
 import {IChainOptions} from "../../../../src/chain/options.js";
 import {BlockAttributes} from "../../../../src/chain/produceBlock/produceBlockBody.js";
+import {ReqRespBlockResponse} from "../../../../src/network/index.js";
 
 /* eslint-disable @typescript-eslint/no-empty-function */
 

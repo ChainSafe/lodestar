@@ -5,4 +5,4 @@ export * from "./types.js";
 export * from "./interface.js";
 export {ResponseErrorCode, ResponseError} from "./response/errors.js";
 export {RequestErrorCode, RequestError} from "./request/errors.js";
-export {collectExactOne, collectMaxResponse} from "./utils/index.js";
+export {collectExactOne, collectMaxResponse, formatProtocolID, parseProtocolID} from "./utils/index.js";

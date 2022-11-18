@@ -7,6 +7,7 @@ import {getMetrics, Metrics, MetricsRegister} from "./metrics.js";
 import {RequestError, RequestErrorCode, sendRequest, SendRequestOpts} from "./request/index.js";
 import {handleRequest} from "./response/index.js";
 import {Encoding, ProtocolDefinition} from "./types.js";
+import {formatProtocolID} from "./utils/protocolId.js";
 
 type ProtocolID = string;
 
@@ -175,6 +176,6 @@ export class ReqResp {
    * https://github.com/ethereum/consensus-specs/blob/v1.2.0/specs/phase0/p2p-interface.md#protocol-identification
    */
   protected formatProtocolID(method: string, version: number, encoding: Encoding): string {
-    return `${this.protocolPrefix}/${method}/${version}/${encoding}`;
+    return formatProtocolID(this.protocolPrefix, method, version, encoding);
   }
 }

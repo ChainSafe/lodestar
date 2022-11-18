@@ -7,7 +7,7 @@ import {ProtoBlock, ExecutionStatus} from "@lodestar/fork-choice";
 import {isPlainObject} from "@lodestar/utils";
 import {RecursivePartial} from "@lodestar/utils";
 import {EMPTY_SIGNATURE, ZERO_HASH} from "../../src/constants/index.js";
-import {ReqRespBlockResponse} from "../../src/network/reqresp/types.js";
+import {ReqRespBlockResponse} from "../../src/network/index.js";
 
 export function generateEmptyBlock(): phase0.BeaconBlock {
   return {

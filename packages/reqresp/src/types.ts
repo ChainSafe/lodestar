@@ -22,12 +22,17 @@ export type EncodedPayload<T> =
 
 export type ReqRespHandler<Req, Resp> = (req: Req, peerId: PeerId) => AsyncIterable<EncodedPayload<Resp>>;
 
-export interface ProtocolDefinition<Req = unknown, Resp = unknown> {
+export interface Protocol {
+  readonly protocolPrefix: string;
   /** Protocol name identifier `beacon_blocks_by_range` or `status` */
-  method: string;
+  readonly method: string;
   /** Version counter: `1`, `2` etc */
-  version: number;
-  encoding: Encoding;
+  readonly version: number;
+  readonly encoding: Encoding;
+}
+
+// `protocolPrefix` is added runtime so not part of definition
+export interface ProtocolDefinition<Req = unknown, Resp = unknown> extends Omit<Protocol, "protocolPrefix"> {
   handler: ReqRespHandler<Req, Resp>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   requestType: (fork: ForkName) => TypeSerializer<Req> | null;
