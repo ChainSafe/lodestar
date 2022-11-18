@@ -28,7 +28,7 @@ const pyrmontDepositsDataRoot = [
   "0x61cef7d8a3f7c590a2dc066ae1c95def5ce769b3e9471fdb34f36f7a7246965e",
 ];
 
-describe("eth1 / Eth1Provider", function () {
+describe.skip("eth1 / Eth1Provider", function () {
   this.timeout("2 min");
 
   const controller = new AbortController();

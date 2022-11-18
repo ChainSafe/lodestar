@@ -1,4 +1,4 @@
-name: Sim merge tests
+name: Sim merge execution/builder tests
 
 on: 
   push:
@@ -10,6 +10,7 @@ on:
 env:
   GETH_IMAGE: ethereum/client-go:v1.10.25
   NETHERMIND_IMAGE: nethermind/nethermind:1.14.3
+  MERGEMOCK_IMAGE: g11tech/mergemock:latest
 
 jobs:
   sim-merge-tests:
@@ -64,6 +65,19 @@ jobs:
           EL_SCRIPT_DIR: netherminddocker
           ENGINE_PORT: 8551
           ETH_PORT: 8545
+
+      - name: Pull mergemock
+        run: docker pull $MERGEMOCK_IMAGE
+
+      - name: Test Lodestar <> mergemock relay
+        run: yarn test:sim:mergemock
+        working-directory: packages/beacon-node
+        env:
+          EL_BINARY_DIR: ${{ env.MERGEMOCK_IMAGE }}
+          EL_SCRIPT_DIR: mergemock
+          LODESTAR_PRESET: mainnet
+          ENGINE_PORT: 8551
+          ETH_PORT: 8661
 
       - name: Upload debug log test files
         if: ${{ always() }}

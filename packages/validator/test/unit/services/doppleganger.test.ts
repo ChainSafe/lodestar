@@ -173,6 +173,6 @@ class ClockMockMsToSlot extends ClockMock {
     await this.tickEpochFns(epoch, signal);
   }
 
-  /** Miliseconds from now to a specific slot */
+  /** Milliseconds from now to a specific slot */
   msToSlot = (_slot: Slot): number => 0;
 }

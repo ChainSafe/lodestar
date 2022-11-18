@@ -1,25 +1,19 @@
 import varint from "varint";
 import {routes} from "@lodestar/api";
 import {fromHexString} from "@chainsafe/ssz";
-import {ProofType, Tree} from "@chainsafe/persistent-merkle-tree";
 import {SyncPeriod} from "@lodestar/types";
-import {MAX_REQUEST_LIGHT_CLIENT_UPDATES} from "@lodestar/params";
+import {MAX_REQUEST_LIGHT_CLIENT_COMMITTEE_HASHES, MAX_REQUEST_LIGHT_CLIENT_UPDATES} from "@lodestar/params";
 import {LightClientUpdate} from "@lodestar/types/altair";
 import {ssz} from "@lodestar/types";
 import {ApiModules} from "../types.js";
-import {resolveStateId} from "../beacon/state/utils.js";
 import {IApiOptions} from "../../options.js";
 
 // TODO: Import from lightclient/server package
 
 export function getLightclientApi(
   opts: IApiOptions,
-  {chain, config, db}: Pick<ApiModules, "chain" | "config" | "db">
+  {chain, config}: Pick<ApiModules, "chain" | "config" | "db">
 ): routes.lightclient.Api {
-  // It's currently possible to request gigantic proofs (eg: a proof of the entire beacon state)
-  // We want some sort of resistance against this DoS vector.
-  const maxGindicesInProof = opts.maxGindicesInProof ?? 512;
-
   const serializeLightClientUpdates = (chunks: LightClientUpdate[]): Uint8Array => {
     // https://github.com/ethereum/beacon-APIs/blob/master/apis/beacon/light_client/updates.yaml#L39
     /**
@@ -47,31 +41,6 @@ export function getLightclientApi(
   };
 
   return {
-    async getStateProof(stateId, jsonPaths) {
-      const state = await resolveStateId(config, chain, db, stateId);
-
-      // Commit any changes before computing the state root. In normal cases the state should have no changes here
-      state.commit();
-      const stateNode = state.node;
-      const tree = new Tree(stateNode);
-
-      const gindexes = state.type.tree_createProofGindexes(stateNode, jsonPaths);
-      // TODO: Is it necessary to de-duplicate?
-      //       It's not a problem if we overcount gindexes
-      const gindicesSet = new Set(gindexes);
-
-      if (gindicesSet.size > maxGindicesInProof) {
-        throw new Error("Requested proof is too large.");
-      }
-
-      return {
-        data: tree.getProof({
-          type: ProofType.treeOffset,
-          gindices: Array.from(gindicesSet),
-        }),
-      };
-    },
-
     async getUpdates(startPeriod: SyncPeriod, count: number, format?: routes.debug.StateFormat) {
       const maxAllowedCount = Math.min(MAX_REQUEST_LIGHT_CLIENT_UPDATES, count);
       const periods = Array.from({length: maxAllowedCount}, (_ignored, i) => i + startPeriod);
@@ -120,6 +89,15 @@ export function getLightclientApi(
       } else {
         return {data: bootstrapProof};
       }
+    },
+
+    async getCommitteeRoot(startPeriod: SyncPeriod, count: number) {
+      const maxAllowedCount = Math.min(MAX_REQUEST_LIGHT_CLIENT_COMMITTEE_HASHES, count);
+      const periods = Array.from({length: maxAllowedCount}, (_ignored, i) => i + startPeriod);
+      const committeeHashes = await Promise.all(
+        periods.map((period) => chain.lightClientServer.getCommitteeRoot(period))
+      );
+      return {data: committeeHashes};
     },
   };
 }

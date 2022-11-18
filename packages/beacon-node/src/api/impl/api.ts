@@ -8,6 +8,7 @@ import {getEventsApi} from "./events/index.js";
 import {getLightclientApi} from "./lightclient/index.js";
 import {getLodestarApi} from "./lodestar/index.js";
 import {getNodeApi} from "./node/index.js";
+import {getProofApi} from "./proof/index.js";
 import {getValidatorApi} from "./validator/index.js";
 
 export function getApi(opts: IApiOptions, modules: ApiModules): Api {
@@ -19,6 +20,7 @@ export function getApi(opts: IApiOptions, modules: ApiModules): Api {
     lightclient: getLightclientApi(opts, modules),
     lodestar: getLodestarApi(modules),
     node: getNodeApi(opts, modules),
+    proof: getProofApi(opts, modules),
     validator: getValidatorApi(modules),
   };
 }

@@ -15,6 +15,7 @@ import {testData as debugTestData} from "./testData/debug.js";
 import {eventTestData, testData as eventsTestData} from "./testData/events.js";
 import {testData as lightclientTestData} from "./testData/lightclient.js";
 import {testData as nodeTestData} from "./testData/node.js";
+import {testData as proofsTestData} from "./testData/proofs.js";
 import {testData as validatorTestData} from "./testData/validator.js";
 
 // Global variable __dirname no longer available in ES6 modules.
@@ -36,6 +37,7 @@ const routesData = {
   ...routes.events.routesData,
   ...routes.lightclient.routesData,
   ...routes.node.routesData,
+  ...routes.proof.routesData,
   ...routes.validator.routesData,
 };
 
@@ -57,6 +59,7 @@ const reqSerializers = {
   ...getEventsReqSerializers(),
   ...routes.lightclient.getReqSerializers(),
   ...routes.node.getReqSerializers(),
+  ...routes.proof.getReqSerializers(),
   ...routes.validator.getReqSerializers(),
 };
 
@@ -66,6 +69,7 @@ const returnTypes = {
   ...routes.debug.getReturnTypes(),
   ...routes.lightclient.getReturnTypes(),
   ...routes.node.getReturnTypes(),
+  ...routes.proof.getReturnTypes(),
   ...routes.validator.getReturnTypes(),
 };
 
@@ -76,6 +80,7 @@ const testDatas = {
   ...eventsTestData,
   ...lightclientTestData,
   ...nodeTestData,
+  ...proofsTestData,
   ...validatorTestData,
 };
 

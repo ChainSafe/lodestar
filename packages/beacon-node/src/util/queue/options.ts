@@ -9,7 +9,7 @@ export type JobQueueOpts = {
   maxLength: number;
   /** Defaults to 1 */
   maxConcurrency?: number;
-  /** Yield to the macro queue every at least every N miliseconds */
+  /** Yield to the macro queue every at least every N milliseconds */
   yieldEveryMs?: number;
   signal: AbortSignal;
   /** Defaults to FIFO */

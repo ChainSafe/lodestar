@@ -37,6 +37,21 @@ describeCliTest("import keystores from api", function ({spawnCli}) {
     },
     data: [],
   };
+
+  /** From multiple tries, 20_000 results in a JSON of ~ 3MB */
+  const SLASHING_PROTECTION_ENTRIES = 20_000;
+  for (let i = 0; i < SLASHING_PROTECTION_ENTRIES; i++) {
+    slashingProtection.data.push({
+      pubkey: "0x" + String(i).padStart(96, "0"),
+      signed_blocks: [],
+      signed_attestations: [],
+    });
+    // // Uncomment to test if size is correct
+    // if (i % 100 === 0) {
+    //   console.log(i, Buffer.from(JSON.stringify(slashingProtection), "utf8").length / 1e6);
+    // }
+  }
+
   const slashingProtectionStr = JSON.stringify(slashingProtection);
 
   itKeymanagerStep("run 'validator' and import remote keys from API", async function (keymanagerClient) {

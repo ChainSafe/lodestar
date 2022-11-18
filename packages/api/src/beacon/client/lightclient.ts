@@ -1,5 +1,4 @@
 import {IChainForkConfig} from "@lodestar/config";
-import {deserializeProof} from "@chainsafe/persistent-merkle-tree";
 import {SyncPeriod} from "@lodestar/types";
 import {Api, ReqTypes, routesData, getReqSerializers, getReturnTypes, StateFormat} from "../routes/lightclient.js";
 import {IHttpClient, getFetchOptsSerializers, generateGenericJsonClient} from "../../utils/client/index.js";
@@ -19,11 +18,6 @@ export function getClient(_config: IChainForkConfig, httpClient: IHttpClient): A
   return {
     ...client,
 
-    async getStateProof(stateId, paths) {
-      const buffer = await httpClient.arrayBuffer(fetchOptsSerializers.getStateProof(stateId, paths));
-      const proof = deserializeProof(new Uint8Array(buffer));
-      return {data: proof};
-    },
     async getBootstrap(blockRoot, format?: StateFormat) {
       if (format === "ssz") {
         const buffer = await httpClient.arrayBuffer({

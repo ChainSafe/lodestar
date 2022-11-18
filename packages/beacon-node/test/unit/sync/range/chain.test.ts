@@ -41,7 +41,7 @@ describe("sync / range / chain", () => {
       targetEpoch: 0,
     },
     {
-      id: "Simulate sync that must be completed immediatelly",
+      id: "Simulate sync that must be completed immediately",
       startEpoch: 20,
       targetEpoch: 16,
     },

@@ -292,6 +292,24 @@ export class LightClientServer {
   }
 
   /**
+   * API ROUTE to get the sync committee hash from the best available update for `period`.
+   */
+  async getCommitteeRoot(period: number): Promise<Uint8Array> {
+    const {attestedHeader} = await this.getUpdate(period);
+    const blockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(attestedHeader);
+
+    const syncCommitteeWitness = await this.db.syncCommitteeWitness.get(blockRoot);
+    if (!syncCommitteeWitness) {
+      throw new LightClientServerError(
+        {code: LightClientServerErrorCode.RESOURCE_UNAVAILABLE},
+        `syncCommitteeWitness not available ${toHexString(blockRoot)} period ${period}`
+      );
+    }
+
+    return syncCommitteeWitness.currentSyncCommitteeRoot;
+  }
+
+  /**
    * API ROUTE to poll LightclientHeaderUpdate.
    * Clients should use the SSE type `light_client_optimistic_update` if available
    */

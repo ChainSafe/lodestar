@@ -18,7 +18,7 @@ export function parseInterchange(interchange: Interchange, expectedGenesisValida
           throw new InterchangeError({
             code: InterchangeErrorErrorCode.GENESIS_VALIDATOR_MISMATCH,
             root: interchangeLodestar.genesisValidatorsRoot,
-            extectedRoot: expectedGenesisValidatorsRoot,
+            expectedRoot: expectedGenesisValidatorsRoot,
           });
         }
         return interchangeLodestar;
@@ -39,7 +39,7 @@ export function parseInterchange(interchange: Interchange, expectedGenesisValida
             throw new InterchangeError({
               code: InterchangeErrorErrorCode.GENESIS_VALIDATOR_MISMATCH,
               root: interchangeLodestar.genesisValidatorsRoot,
-              extectedRoot: expectedGenesisValidatorsRoot,
+              expectedRoot: expectedGenesisValidatorsRoot,
             });
           }
           return interchangeLodestar;
