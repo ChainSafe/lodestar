@@ -30,15 +30,16 @@ export const chainConfig: IChainConfig = {
   // Values provided for illustrative purposes.
   // Individual tests/testnets may set different values.
 
-  // ////////////////////////////////////////////////////////////////
-  // DO NOT SCHEDULE FORKS ON THE PRESET, DO IT IN THE NETWORK CONFIG
-  // ////////////////////////////////////////////////////////////////
+  // Altair
   ALTAIR_FORK_VERSION: b("0x01000001"),
-  ALTAIR_FORK_EPOCH: Infinity,
+  ALTAIR_FORK_EPOCH: 74240, // Oct 27, 2021, 10:56:23am UTC
+  // Bellatrix
   BELLATRIX_FORK_VERSION: b("0x02000001"),
   BELLATRIX_FORK_EPOCH: Infinity,
+  // Capella
   CAPELLA_FORK_VERSION: b("0x03000001"),
   CAPELLA_FORK_EPOCH: Infinity,
+  // EIP-4844
   EIP4844_FORK_VERSION: b("0x04000001"),
   EIP4844_FORK_EPOCH: Infinity,
 
