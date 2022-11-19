@@ -1,7 +1,7 @@
 import {SIM_ENV_CHAIN_ID, SIM_ENV_NETWORK_ID} from "../constants.js";
-import {ELGenesisOptions, ELStartMode, Eth1GenesisBlock} from "../interfaces.js";
+import {ELGeneratorGenesisOptions, ELStartMode, Eth1GenesisBlock} from "../interfaces.js";
 
-export const getGethGenesisBlock = (mode: ELStartMode, options: ELGenesisOptions): Record<string, unknown> => {
+export const getGethGenesisBlock = (mode: ELStartMode, options: ELGeneratorGenesisOptions): Record<string, unknown> => {
   const {ttd, cliqueSealingPeriod} = options;
 
   const genesis = {
@@ -56,7 +56,10 @@ export const getGethGenesisBlock = (mode: ELStartMode, options: ELGenesisOptions
   return genesis;
 };
 
-export const getNethermindChainSpec = (mode: ELStartMode, options: ELGenesisOptions): Record<string, unknown> => {
+export const getNethermindChainSpec = (
+  mode: ELStartMode,
+  options: ELGeneratorGenesisOptions
+): Record<string, unknown> => {
   const {ttd} = options;
   const genesis = getGethGenesisBlock(mode, options) as Eth1GenesisBlock;
 

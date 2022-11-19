@@ -1,28 +1,8 @@
 import {IChainForkConfig} from "@lodestar/config";
-import {serializeProof} from "@chainsafe/persistent-merkle-tree";
 import {Api, ReqTypes, routesData, getReturnTypes, getReqSerializers} from "../routes/lightclient.js";
 import {ServerRoutes, getGenericJsonServer} from "../../utils/server/index.js";
 
 export function getRoutes(config: IChainForkConfig, api: Api): ServerRoutes<Api, ReqTypes> {
-  const reqSerializers = getReqSerializers();
-  const serverRoutes = getGenericJsonServer<Api, ReqTypes>(
-    {routesData, getReturnTypes, getReqSerializers},
-    config,
-    api
-  );
-
-  return {
-    ...serverRoutes,
-
-    // Non-JSON routes. Return binary
-    getStateProof: {
-      ...serverRoutes.getStateProof,
-      handler: async (req) => {
-        const args = reqSerializers.getStateProof.parseReq(req);
-        const {data: proof} = await api.getStateProof(...args);
-        // Fastify 3.x.x will automatically add header `Content-Type: application/octet-stream` if Buffer
-        return Buffer.from(serializeProof(proof));
-      },
-    },
-  };
+  // All routes return JSON, use a server auto-generator
+  return getGenericJsonServer<Api, ReqTypes>({routesData, getReturnTypes, getReqSerializers}, config, api);
 }

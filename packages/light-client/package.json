@@ -79,6 +79,10 @@
     "strict-event-emitter-types": "^2.0.0",
     "mitt": "^3.0.0"
   },
+  "devDependencies": {
+    "uint8arrays": "^4.0.2",
+    "@chainsafe/as-sha256": "^0.3.1"
+  },
   "keywords": [
     "ethereum",
     "eth-consensus",

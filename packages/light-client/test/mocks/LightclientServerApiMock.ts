@@ -1,21 +1,27 @@
+import {concat} from "uint8arrays";
+import {digest} from "@chainsafe/as-sha256";
 import {Proof} from "@chainsafe/persistent-merkle-tree";
 import {JsonPath} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {altair, RootHex, SyncPeriod} from "@lodestar/types";
+import {notNullish} from "@lodestar/utils";
 import {BeaconStateAltair} from "../utils/types.js";
 
-export class LightclientServerApiMock implements routes.lightclient.Api {
+export class ProofServerApiMock implements routes.proof.Api {
   readonly states = new Map<RootHex, BeaconStateAltair>();
-  readonly updates = new Map<SyncPeriod, altair.LightClientUpdate>();
-  readonly snapshots = new Map<RootHex, routes.lightclient.LightClientBootstrap>();
-  latestHeadUpdate: altair.LightClientOptimisticUpdate | null = null;
-  finalized: altair.LightClientFinalityUpdate | null = null;
 
   async getStateProof(stateId: string, paths: JsonPath[]): Promise<{data: Proof}> {
     const state = this.states.get(stateId);
     if (!state) throw Error(`stateId ${stateId} not available`);
     return {data: state.createProof(paths)};
   }
+}
+
+export class LightclientServerApiMock implements routes.lightclient.Api {
+  readonly updates = new Map<SyncPeriod, altair.LightClientUpdate>();
+  readonly snapshots = new Map<RootHex, routes.lightclient.LightClientBootstrap>();
+  latestHeadUpdate: altair.LightClientOptimisticUpdate | null = null;
+  finalized: altair.LightClientFinalityUpdate | null = null;
 
   async getUpdates(from: SyncPeriod, to: SyncPeriod): Promise<{data: altair.LightClientUpdate[]}> {
     const updates: altair.LightClientUpdate[] = [];
@@ -43,6 +49,15 @@ export class LightclientServerApiMock implements routes.lightclient.Api {
     const snapshot = this.snapshots.get(blockRoot);
     if (!snapshot) throw Error(`snapshot for blockRoot ${blockRoot} not available`);
     return {data: snapshot};
+  }
+
+  async getCommitteeRoot(startPeriod: SyncPeriod, count: number): Promise<{data: Uint8Array[]}> {
+    const periods = Array.from({length: count}, (_ignored, i) => i + startPeriod);
+    const committeeHashes = periods
+      .map((period) => this.updates.get(period)?.nextSyncCommittee.pubkeys)
+      .filter(notNullish)
+      .map((pubkeys) => digest(concat(pubkeys)));
+    return {data: committeeHashes};
   }
 }
 
