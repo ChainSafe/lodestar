@@ -1,4 +1,4 @@
-import varint from "varint";
+import {concat} from "uint8arrays/concat";
 import {routes} from "@lodestar/api";
 import {fromHexString} from "@chainsafe/ssz";
 import {SyncPeriod} from "@lodestar/types";
@@ -30,12 +30,11 @@ export function getLightclientApi(
     const result: Uint8Array[] = [];
     for (const lightClientUpdate of chunks) {
       const payload = ssz.altair.LightClientUpdate.serialize(lightClientUpdate);
-      const forkDigest = config.forkName2ForkDigest(config.getForkName(lightClientUpdate.attestedHeader.slot));
-      const responseChunk = new Uint8Array([...forkDigest, ...payload]);
-      // length portion should be u64bit long according to specification
-      const length = new Uint8Array(8);
-      length.set(Uint8Array.from(varint.encode(responseChunk.length)), 0);
-      result.push(new Uint8Array([...length, ...responseChunk]));
+      const context = config.forkName2ForkDigest(config.getForkName(lightClientUpdate.attestedHeader.slot));
+      // response_chunk_len should be u64bit long according to specification
+      const responseChunkLength = ssz.UintNum64.serialize(payload.length + 4);
+      concat([responseChunkLength, context, payload]);
+      result.push(concat([responseChunkLength, context, payload]));
     }
     return result.reduce((acc, curr) => new Uint8Array([...acc, ...curr]));
   };

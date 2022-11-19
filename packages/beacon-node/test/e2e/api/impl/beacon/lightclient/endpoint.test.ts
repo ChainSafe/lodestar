@@ -1,5 +1,4 @@
 import {expect} from "chai";
-import varint from "varint";
 import {createIBeaconConfig, IChainConfig} from "@lodestar/config";
 import {chainConfig as chainConfigDef} from "@lodestar/config/default";
 import {getClient} from "@lodestar/api";
@@ -27,7 +26,7 @@ describe("lodestar / api / impl / light_client", function () {
     let end = start + lengthOffset;
     const lightClientUpdates = [];
     while (end <= serialized.length) {
-      const length = varint.decode(serialized.slice(start, end));
+      const length = ssz.UintNum64.deserialize(serialized.slice(start, end));
       const paylod = serialized.slice(end + forkDigestLen, end + length);
       lightClientUpdates.push(ssz.altair.LightClientUpdate.deserialize(paylod));
       start = start + lengthOffset + length;
