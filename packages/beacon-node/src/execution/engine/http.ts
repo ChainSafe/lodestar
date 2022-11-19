@@ -1,5 +1,10 @@
 import {RootHex, allForks, capella, eip4844} from "@lodestar/types";
-import {BYTES_PER_LOGS_BLOOM, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {
+  BYTES_PER_LOGS_BLOOM,
+  SLOTS_PER_EPOCH,
+  FIELD_ELEMENTS_PER_BLOB,
+  BYTES_PER_FIELD_ELEMENT,
+} from "@lodestar/params";
 import {fromHex} from "@lodestar/utils";
 
 import {ErrorJsonRpcResponse, HttpRpcError, JsonRpcHttpClient} from "../../eth1/provider/jsonRpcHttpClient.js";
@@ -503,8 +508,8 @@ export function parseBlobsBundle(data: BlobsBundleRpc): BlobsBundle {
     // NOTE: Keep as hex, since it's only used for equality downstream
     blockHash: dataToRootHex(data.blockHash),
     // As of Nov 17th 2022 according to Dan's tests Geth returns null if no blobs in block
-    kzgs: (data.kzgs ?? []).map((kzg) => dataToBytes(kzg)),
-    blobs: (data.blobs ?? []).map((blob) => dataToBytes(blob)),
+    kzgs: (data.kzgs ?? []).map((kzg) => dataToBytes(kzg, 48)),
+    blobs: (data.blobs ?? []).map((blob) => dataToBytes(blob, BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_PER_BLOB)),
   };
 }
 
