@@ -21,7 +21,7 @@ export async function lightclientHandler(args: ILightClientArgs & ExecutionEngin
   const api = getClient({baseUrl: beaconApiUrl}, {config});
   const {data: genesisData} = await api.beacon.getGenesis();
 
-  const lightClientRestTransport = new LightClientRestTransport(api, api.lightclient.getStateProof);
+  const lightClientRestTransport = new LightClientRestTransport(api, api.proof.getStateProof);
   const parseArgs: ExecutionEngineOpts = execution.parseArgs(args) as ExecutionEngineOpts;
   const executionEngine = initializeExecutionEngine(parseArgs, {
     signal: new AbortController().signal,

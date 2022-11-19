@@ -6,7 +6,7 @@ import {createIBeaconConfig, IBeaconConfig, IChainForkConfig} from "@lodestar/co
 import {TreeOffsetProof} from "@chainsafe/persistent-merkle-tree";
 import {isErrorAborted, sleep} from "@lodestar/utils";
 import {fromHexString, JsonPath, toHexString} from "@chainsafe/ssz";
-import {IExecutionEngine} from "../../engine-api-client/index.js";
+import {IExecutionEngine} from "@lodestar/engine-api-client";
 import {getCurrentSlot, slotWithFutureTolerance, timeUntilNextEpoch} from "./utils/clock.js";
 import {isBetterUpdate, LightclientUpdateStats} from "./utils/update.js";
 import {deserializeSyncCommittee, isEmptyHeader, isNode, sumBits} from "./utils/utils.js";

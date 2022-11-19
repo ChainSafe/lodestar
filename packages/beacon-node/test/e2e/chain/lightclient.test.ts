@@ -118,7 +118,7 @@ describe("chain / lightclient", function () {
 
       const beaconApiUrl = `http://localhost:${restPort}`;
       const api = getClient({baseUrl: beaconApiUrl}, {config: bn.config});
-      const lightClientRestTransport = new LightClientRestTransport(api, api.lightclient.getStateProof);
+      const lightClientRestTransport = new LightClientRestTransport(api, api.proof.getStateProof);
       const lightclient = await Lightclient.initializeFromCheckpointRoot({
         config: bn.config,
         logger: loggerLC,

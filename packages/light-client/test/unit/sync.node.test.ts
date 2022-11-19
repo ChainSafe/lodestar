@@ -87,7 +87,7 @@ describe("sync", () => {
     );
 
     const api = getClient({baseUrl: `http://${opts.host}:${opts.port}`}, {config});
-    const lightClientRestTransport = new LightClientRestTransport(api, api.lightclient.getStateProof);
+    const lightClientRestTransport = new LightClientRestTransport(api, api.proof.getStateProof);
 
     // Initialize from snapshot
     const lightclient = await Lightclient.initializeFromCheckpointRoot({

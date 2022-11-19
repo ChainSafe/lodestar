@@ -3,7 +3,7 @@ import {
   defaultExecutionEngineOpts,
   ExecutionBuilderOpts,
   ExecutionEngineOpts,
-} from "../../../engine-api-client/index.js";
+} from "@lodestar/engine-api-client";
 import {defaultApiOptions, IApiOptions} from "../api/options.js";
 import {defaultChainOptions, IChainOptions} from "../chain/options.js";
 import {defaultDbOptions, IDatabaseOptions} from "../db/options.js";

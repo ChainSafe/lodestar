@@ -8,7 +8,7 @@ import {CheckpointWithHex, IForkChoice, ProtoBlock, ExecutionStatus} from "@lode
 import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
 import {ILogger} from "@lodestar/utils";
 
-import {ExecutionEngineDisabled} from "../../../../../engine-api-client/index.js";
+import {ExecutionEngineDisabled} from "@lodestar/engine-api-client";
 import {ChainEventEmitter, IBeaconChain} from "../../../../src/chain/index.js";
 import {IBeaconClock} from "../../../../src/chain/clock/interface.js";
 import {generateEmptySignedBlock} from "../../block.js";
