@@ -2,7 +2,7 @@ import {IChainConfig} from "@lodestar/config";
 import {RootHex} from "@lodestar/types";
 import {ILogger, pruneSetToMax} from "@lodestar/utils";
 import {toHexString} from "@chainsafe/ssz";
-import {dataToRootHex, quantityToBigint, quantityToNum} from "@lodestar/execution-layer";
+import {dataToRootHex, quantityToBigint, quantityToNum} from "../../../engine-api-client/index.js";
 import {IMetrics} from "../metrics/index.js";
 import {ZERO_HASH_HEX} from "../constants/index.js";
 import {enumToIndexMap} from "../util/enum.js";

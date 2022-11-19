@@ -5,7 +5,7 @@ import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
 import {ILogger} from "@lodestar/utils";
 
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
-import {IExecutionBuilder, IExecutionEngine} from "@lodestar/execution-layer";
+import {IExecutionBuilder, IExecutionEngine} from "../../../engine-api-client/index.js";
 import {IEth1ForBlockProduction} from "../eth1/index.js";
 import {IBeaconClock} from "./clock/interface.js";
 import {ChainEventEmitter} from "./emitter.js";

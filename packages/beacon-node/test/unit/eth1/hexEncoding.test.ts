@@ -6,7 +6,7 @@ import {
   quantityToBigint,
   numToQuantity,
   bytesToQuantity,
-} from "@lodestar/execution-layer";
+} from "@lodestar/engine-api-client";
 
 describe("eth1 / hex encoding", () => {
   describe("QUANTITY", () => {

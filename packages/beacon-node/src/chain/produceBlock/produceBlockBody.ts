@@ -25,7 +25,7 @@ import {IChainForkConfig} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
 import {toHex, sleep} from "@lodestar/utils";
 
-import {IExecutionBuilder, IExecutionEngine, numToQuantity, PayloadId} from "@lodestar/execution-layer";
+import {IExecutionBuilder, IExecutionEngine, numToQuantity, PayloadId} from "@lodestar/engine-api-client";
 import type {BeaconChain} from "../chain.js";
 import {ZERO_HASH, ZERO_HASH_HEX} from "../../constants/index.js";
 import {IEth1ForBlockProduction} from "../../eth1/index.js";

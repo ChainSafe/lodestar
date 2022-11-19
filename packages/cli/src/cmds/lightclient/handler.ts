@@ -3,7 +3,7 @@ import {getClient} from "@lodestar/api";
 import {Lightclient} from "@lodestar/light-client";
 import {fromHexString} from "@chainsafe/ssz";
 import {LightClientRestTransport} from "@lodestar/light-client/transport";
-import {ExecutionEngineOpts, initializeExecutionEngine} from "@lodestar/execution-layer";
+import {ExecutionEngineOpts, initializeExecutionEngine} from "@lodestar/engine-api-client";
 import {getBeaconConfigFromArgs} from "../../config/beaconParams.js";
 import {getGlobalPaths} from "../../paths/global.js";
 import {IGlobalArgs} from "../../options/index.js";

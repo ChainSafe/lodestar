@@ -25,7 +25,7 @@ import {
   IExecutionEngine,
   numToQuantity,
   TransitionConfigurationV1,
-} from "@lodestar/execution-layer";
+} from "../../../engine-api-client/index.js";
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
 import {IMetrics} from "../metrics/index.js";

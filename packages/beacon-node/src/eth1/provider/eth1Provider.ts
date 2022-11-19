@@ -10,7 +10,7 @@ import {
   numToQuantity,
   quantityToNum,
   ReqOpts,
-} from "@lodestar/execution-layer";
+} from "@lodestar/engine-api-client";
 import {linspace} from "../../util/numpy.js";
 import {depositEventTopics, parseDepositLog} from "../utils/depositContract.js";
 import {Eth1Block, IEth1Provider} from "../interface.js";
