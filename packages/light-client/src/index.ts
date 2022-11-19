@@ -44,6 +44,7 @@ export type LightclientInitArgs = {
 export type LightClientModules = {
   transport: LightClientTransport;
   executionEngine?: IExecutionEngine;
+  abortController?: AbortController;
 };
 
 /** Provides some protection against a server client sending header updates too far away in the future */
@@ -72,7 +73,7 @@ enum RunStatusCode {
   stopped,
 }
 type RunStatus =
-  | {code: RunStatusCode.started; controller: AbortController}
+  | {code: RunStatusCode.started; controller?: AbortController}
   | {code: RunStatusCode.syncing}
   | {code: RunStatusCode.stopped};
 
@@ -115,6 +116,7 @@ export class Lightclient {
   private transport: LightClientTransport;
   readonly emitter: LightclientEmitter = mitt();
   private executionEngine: IExecutionEngine | undefined;
+  private abortController: AbortController | undefined;
   readonly config: IBeaconConfig;
   readonly logger: ILcLogger;
   readonly genesisValidatorsRoot: Uint8Array;
@@ -151,6 +153,7 @@ export class Lightclient {
   constructor({config, logger, genesisData, beaconApiUrl, snapshot}: LightclientInitArgs, modules: LightClientModules) {
     this.transport = modules.transport;
     this.executionEngine = modules.executionEngine;
+    this.abortController = modules.abortController;
 
     this.genesisTime = genesisData.genesisTime;
     this.genesisValidatorsRoot =
@@ -193,6 +196,7 @@ export class Lightclient {
     checkpointRoot,
     transport,
     executionEngine,
+    abortController,
   }: {
     config: IChainForkConfig;
     logger?: ILcLogger;
@@ -201,9 +205,10 @@ export class Lightclient {
     checkpointRoot: phase0.Checkpoint["root"];
     transport: LightClientTransport;
     executionEngine?: IExecutionEngine;
+    abortController?: AbortController;
   }): Promise<Lightclient> {
     // Initialize the BLS implementation. This may requires initializing the WebAssembly instance
-    // so why it's a an async process. This should be initialized once before any bls operations.
+    // so why it's an async process. This should be initialized once before any bls operations.
     // This process has to be done manually because of an issue in Karma runner
     // https://github.com/karma-runner/karma/issues/3804
     await initBls(isNode ? "blst-native" : "herumi");
@@ -254,7 +259,7 @@ export class Lightclient {
           ...block,
         },
       },
-      {executionEngine, transport}
+      {executionEngine, transport, abortController}
     );
   }
 
@@ -267,7 +272,7 @@ export class Lightclient {
   stop(): void {
     if (this.status.code !== RunStatusCode.started) return;
 
-    this.status.controller.abort();
+    this.status.controller?.abort();
     this.status = {code: RunStatusCode.stopped};
   }
 
@@ -322,7 +327,7 @@ export class Lightclient {
       if (!this.syncCommitteeByPeriod.has(currentPeriod)) {
         // Stop head tracking
         if (this.status.code === RunStatusCode.started) {
-          this.status.controller.abort();
+          this.status.controller?.abort();
         }
 
         // Go into sync mode
@@ -353,7 +358,7 @@ export class Lightclient {
 
       // After successfully syncing, track head if not already
       if (this.status.code !== RunStatusCode.started) {
-        const controller = new AbortController();
+        const controller = this.abortController;
         this.status = {code: RunStatusCode.started, controller};
         this.logger.debug("Started tracking the head");
 
@@ -381,7 +386,7 @@ export class Lightclient {
         return;
       } else {
         try {
-          await sleep(timeUntilNextEpoch(this.config, this.genesisTime), this.status.controller.signal);
+          await sleep(timeUntilNextEpoch(this.config, this.genesisTime), this.status.controller?.signal);
         } catch (e) {
           if (isErrorAborted(e)) {
             return;
