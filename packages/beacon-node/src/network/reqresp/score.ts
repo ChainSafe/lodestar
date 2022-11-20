@@ -1,6 +1,6 @@
+import {RequestError, RequestErrorCode} from "@lodestar/reqresp";
 import {PeerAction} from "../peers/score.js";
-import {Method} from "./types.js";
-import {RequestError, RequestErrorCode} from "./request/index.js";
+import {ReqRespMethod} from "./types.js";
 
 /**
  * libp2p-ts does not include types for the error codes.
@@ -20,7 +20,7 @@ const multiStreamSelectErrorCodes = {
   protocolSelectionFailed: "protocol selection failed",
 };
 
-export function onOutgoingReqRespError(e: RequestError, method: Method): PeerAction | null {
+export function onOutgoingReqRespError(e: RequestError, method: ReqRespMethod): PeerAction | null {
   switch (e.type.code) {
     case RequestErrorCode.INVALID_REQUEST:
       return PeerAction.LowToleranceError;
@@ -32,7 +32,7 @@ export function onOutgoingReqRespError(e: RequestError, method: Method): PeerAct
 
     case RequestErrorCode.DIAL_TIMEOUT:
     case RequestErrorCode.DIAL_ERROR:
-      return e.message.includes(multiStreamSelectErrorCodes.protocolSelectionFailed) && method === Method.Ping
+      return e.message.includes(multiStreamSelectErrorCodes.protocolSelectionFailed) && method === ReqRespMethod.Ping
         ? PeerAction.Fatal
         : PeerAction.LowToleranceError;
     // TODO: Detect SSZDecodeError and return PeerAction.Fatal
@@ -40,10 +40,10 @@ export function onOutgoingReqRespError(e: RequestError, method: Method): PeerAct
     case RequestErrorCode.TTFB_TIMEOUT:
     case RequestErrorCode.RESP_TIMEOUT:
       switch (method) {
-        case Method.Ping:
+        case ReqRespMethod.Ping:
           return PeerAction.LowToleranceError;
-        case Method.BeaconBlocksByRange:
-        case Method.BeaconBlocksByRoot:
+        case ReqRespMethod.BeaconBlocksByRange:
+        case ReqRespMethod.BeaconBlocksByRoot:
           return PeerAction.MidToleranceError;
         default:
           return null;
@@ -52,10 +52,10 @@ export function onOutgoingReqRespError(e: RequestError, method: Method): PeerAct
 
   if (e.message.includes(libp2pErrorCodes.ERR_UNSUPPORTED_PROTOCOL)) {
     switch (method) {
-      case Method.Ping:
+      case ReqRespMethod.Ping:
         return PeerAction.Fatal;
-      case Method.Metadata:
-      case Method.Status:
+      case ReqRespMethod.Metadata:
+      case ReqRespMethod.Status:
         return PeerAction.LowToleranceError;
       default:
         return null;

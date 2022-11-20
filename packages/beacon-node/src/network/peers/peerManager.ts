@@ -11,7 +11,7 @@ import {IBeaconChain} from "../../chain/index.js";
 import {GoodByeReasonCode, GOODBYE_KNOWN_CODES, Libp2pEvent} from "../../constants/index.js";
 import {IMetrics} from "../../metrics/index.js";
 import {NetworkEvent, INetworkEventBus} from "../events.js";
-import {IReqResp, ReqRespMethod, RequestTypedContainer} from "../reqresp/index.js";
+import {IReqRespBeaconNode, ReqRespMethod, RequestTypedContainer} from "../reqresp/ReqRespBeaconNode.js";
 import {getConnection, getConnectionsMap, prettyPrintPeerId} from "../util.js";
 import {ISubnetsService} from "../subnets/index.js";
 import {SubnetType} from "../metadata.js";
@@ -76,7 +76,7 @@ export type PeerManagerModules = {
   libp2p: Libp2p;
   logger: ILogger;
   metrics: IMetrics | null;
-  reqResp: IReqResp;
+  reqResp: IReqRespBeaconNode;
   gossip: Eth2Gossipsub;
   attnetsService: ISubnetsService;
   syncnetsService: ISubnetsService;
@@ -107,7 +107,7 @@ export class PeerManager {
   private libp2p: Libp2p;
   private logger: ILogger;
   private metrics: IMetrics | null;
-  private reqResp: IReqResp;
+  private reqResp: IReqRespBeaconNode;
   private gossipsub: Eth2Gossipsub;
   private attnetsService: ISubnetsService;
   private syncnetsService: ISubnetsService;

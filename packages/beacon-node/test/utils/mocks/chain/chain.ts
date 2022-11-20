@@ -8,6 +8,7 @@ import {CheckpointWithHex, IForkChoice, ProtoBlock, ExecutionStatus} from "@lode
 import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
 import {ILogger} from "@lodestar/utils";
 
+import {ContextBytesType, EncodedPayloadType} from "@lodestar/reqresp";
 import {ExecutionEngineDisabled} from "@lodestar/engine-api-client";
 import {ChainEventEmitter, IBeaconChain} from "../../../../src/chain/index.js";
 import {IBeaconClock} from "../../../../src/chain/clock/interface.js";
@@ -33,7 +34,6 @@ import {
 } from "../../../../src/chain/opPools/index.js";
 import {LightClientServer} from "../../../../src/chain/lightClient/index.js";
 import {Eth1ForBlockProductionDisabled} from "../../../../src/eth1/index.js";
-import {ReqRespBlockResponse} from "../../../../src/network/reqresp/types.js";
 import {testLogger} from "../../logger.js";
 import {ReprocessController} from "../../../../src/chain/reprocess.js";
 import {createCachedBeaconStateTest} from "../../../../../state-transition/test/utils/state.js";
@@ -43,6 +43,7 @@ import {BeaconProposerCache} from "../../../../src/chain/beaconProposerCache.js"
 import {CheckpointBalancesCache} from "../../../../src/chain/balancesCache.js";
 import {IChainOptions} from "../../../../src/chain/options.js";
 import {BlockAttributes} from "../../../../src/chain/produceBlock/produceBlockBody.js";
+import {ReqRespBlockResponse} from "../../../../src/network/index.js";
 
 /* eslint-disable @typescript-eslint/no-empty-function */
 
@@ -164,16 +165,18 @@ export class MockBeaconChain implements IBeaconChain {
   }
 
   async getCanonicalBlockAtSlot(slot: Slot): Promise<allForks.SignedBeaconBlock> {
-    const block = generateEmptySignedBlock();
-    block.message.slot = slot;
-    return block;
+    return generateEmptySignedBlock(slot);
   }
 
   async getUnfinalizedBlocksAtSlots(slots: Slot[] = []): Promise<ReqRespBlockResponse[]> {
     const blocks = await Promise.all(slots.map(this.getCanonicalBlockAtSlot));
     return blocks.map((block, i) => ({
-      slot: slots[i],
+      type: EncodedPayloadType.bytes,
       bytes: Buffer.from(ssz.phase0.SignedBeaconBlock.serialize(block)),
+      contextBytes: {
+        type: ContextBytesType.ForkDigest,
+        forkSlot: slots[i],
+      },
     }));
   }
 
