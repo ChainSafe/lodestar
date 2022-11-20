@@ -1,5 +1,5 @@
-import {capella, ssz} from "@lodestar/types";
-import {BLS_WITHDRAWAL_PREFIX, ETH1_ADDRESS_WITHDRAWAL_PREFIX, WITHDRAWAL_PREFIX_BYTES} from "@lodestar/params";
+import {capella} from "@lodestar/types";
+import {BLS_WITHDRAWAL_PREFIX, ETH1_ADDRESS_WITHDRAWAL_PREFIX} from "@lodestar/params";
 import {toHexString, byteArrayEquals} from "@chainsafe/ssz";
 import {digest} from "@chainsafe/as-sha256";
 
@@ -11,33 +11,34 @@ export function processBlsToExecutionChange(
 ): void {
   const addressChange = signedBlsToExecutionChange.message;
   if (addressChange.validatorIndex >= state.validators.length) {
-    throw Error(`withdrawalValidatorIndex ${addressChange.validatorIndex} > state.validators len ${state.validators.length}`);
-  }
-  const validator = state.validators.get(addressChange.validatorIndex);
-  // We need to work on the slice otherwise ssz view seems to be getting messed up
-  // once we modify this using set for putting new credentials
-  const withdrawalCredentials = validator.withdrawalCredentials.slice();
-  const credentialPrefix = withdrawalCredentials.slice(0, WITHDRAWAL_PREFIX_BYTES);
-  if (!byteArrayEquals(credentialPrefix, BLS_WITHDRAWAL_PREFIX)) {
-    throw Error(`Invalid withdrawalCredentials prefix expected=${BLS_WITHDRAWAL_PREFIX} actual=${credentialPrefix}`);
-  }
-  if (
-    !byteArrayEquals(
-      withdrawalCredentials.slice(WITHDRAWAL_PREFIX_BYTES, 32),
-      digest(addressChange.fromBlsPubkey).slice(WITHDRAWAL_PREFIX_BYTES, 32)
-    )
-  ) {
     throw Error(
-      `Invalid withdrawalCredentials expected=${toHexString(
-        withdrawalCredentials.slice(WITHDRAWAL_PREFIX_BYTES, 32)
-      )} actual=${toHexString(
-        ssz.BLSPubkey.hashTreeRoot(addressChange.fromBlsPubkey).slice(WITHDRAWAL_PREFIX_BYTES, 32)
+      `withdrawalValidatorIndex ${addressChange.validatorIndex} > state.validators len ${state.validators.length}`
+    );
+  }
+
+  const validator = state.validators.get(addressChange.validatorIndex);
+  const {withdrawalCredentials} = validator;
+  if (withdrawalCredentials[0] !== BLS_WITHDRAWAL_PREFIX) {
+    throw Error(
+      `Invalid withdrawalCredentials prefix expected=${BLS_WITHDRAWAL_PREFIX} actual=${withdrawalCredentials[0]}`
+    );
+  }
+
+  const digestCredentials = digest(addressChange.fromBlsPubkey);
+  // Set the BLS_WITHDRAWAL_PREFIX on the digestCredentials for direct match
+  digestCredentials[0] = BLS_WITHDRAWAL_PREFIX;
+  if (!byteArrayEquals(withdrawalCredentials, digestCredentials)) {
+    throw Error(
+      `Invalid withdrawalCredentials expected=${toHexString(withdrawalCredentials)} actual=${toHexString(
+        digestCredentials
       )}`
     );
   }
-  withdrawalCredentials.set(ETH1_ADDRESS_WITHDRAWAL_PREFIX);
-  withdrawalCredentials.set([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], WITHDRAWAL_PREFIX_BYTES);
-  withdrawalCredentials.set(addressChange.toExecutionAddress, 12);
+
+  const newWithdrawalCredentials = new Uint8Array(32);
+  newWithdrawalCredentials[0] = ETH1_ADDRESS_WITHDRAWAL_PREFIX;
+  newWithdrawalCredentials.set(addressChange.toExecutionAddress, 12);
+
   // Set the new credentials back
-  validator.withdrawalCredentials = withdrawalCredentials;
+  validator.withdrawalCredentials = newWithdrawalCredentials;
 }

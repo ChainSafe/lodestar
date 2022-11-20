@@ -41,9 +41,8 @@ export function upgradeStateToCapella(stateBellatrix: CachedBeaconStateBellatrix
   // current_sync_committee           | -    | current_sync_committee
   // next_sync_committee              | -    | next_sync_committee
   // latest_execution_payload_header  | diff | latest_execution_payload_header
-  // -                                | new  | withdrawal_queue
   // -                                | new  | next_withdrawal_index
-  // -                                | new  | next_partial_withdrawal_validator_index
+  // -                                | new  | next_withdrawal_validator_index
 
   const stateBellatrixNode = ssz.bellatrix.BeaconState.commitViewDU(stateBellatrix);
   const stateCapellaView = ssz.capella.BeaconState.getViewDU(stateBellatrixNode);
@@ -55,7 +54,9 @@ export function upgradeStateToCapella(stateBellatrix: CachedBeaconStateBellatrix
     currentVersion: config.CAPELLA_FORK_VERSION,
     epoch: stateBellatrix.epochCtx.epoch,
   });
-  // nextWithdrawalIndex and latestWithdrawalValidatorIndex are already set to 0 by default
+
+  // nextWithdrawalIndex and nextWithdrawalValidatorIndex are already set to 0 by default
+  // latestExecutionPayloadHeader's withdrawalRoot set to zeros by default
 
   // Commit new added fields ViewDU to the root node
   stateCapella.commit();
