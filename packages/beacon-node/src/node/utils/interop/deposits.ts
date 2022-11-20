@@ -22,22 +22,26 @@ export function interopDeposits(
 ): phase0.Deposit[] {
   depositDataRootList.commit();
   const depositTreeDepth = depositDataRootList.type.depth;
+  // set credentials if we want withdrawal on or off
+  const withdrawalCredentialsPrefix = withEth1Credentials ? ETH1_ADDRESS_WITHDRAWAL_PREFIX : BLS_WITHDRAWAL_PREFIX;
 
   return interopSecretKeys(validatorCount).map((secretKey, i) => {
     const pubkey = secretKey.toPublicKey().toBytes();
+
     // create DepositData
+    const withdrawalCredentials = digest(pubkey);
+    withdrawalCredentials[0] = withdrawalCredentialsPrefix;
     const data: phase0.DepositData = {
       pubkey,
-      withdrawalCredentials: Buffer.concat([
-        withEth1Credentials ? ETH1_ADDRESS_WITHDRAWAL_PREFIX : BLS_WITHDRAWAL_PREFIX,
-        digest(pubkey).slice(1),
-      ]),
+      withdrawalCredentials,
       amount: MAX_EFFECTIVE_BALANCE,
       signature: Buffer.alloc(0),
     };
+
     const domain = computeDomain(DOMAIN_DEPOSIT, config.GENESIS_FORK_VERSION, ZERO_HASH);
     const signingRoot = computeSigningRoot(ssz.phase0.DepositMessage, data, domain);
     data.signature = secretKey.sign(signingRoot).toBytes();
+
     // Add to merkle tree
     depositDataRootList.push(ssz.phase0.DepositData.hashTreeRoot(data));
     depositDataRootList.commit();

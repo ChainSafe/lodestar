@@ -35,7 +35,7 @@ export type ELClient = {
  */
 
 export async function runEL(
-  {mode, elScriptDir, elBinaryDir, template}: ELSetupConfig,
+  {mode, elScriptDir, elBinaryDir, genesisTemplate: template}: ELSetupConfig,
   {ttd, dataPath, jwtSecretHex, enginePort, ethPort}: ELRunOptions,
   signal: AbortSignal
 ): Promise<{elClient: ELClient; tearDownCallBack: () => Promise<void>}> {
