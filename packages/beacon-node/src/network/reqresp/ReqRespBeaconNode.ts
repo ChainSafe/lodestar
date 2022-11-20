@@ -1,11 +1,7 @@
-import {Libp2p} from "libp2p";
 import {PeerId} from "@libp2p/interface-peer-id";
-import {ForkName} from "@lodestar/params";
-import {ILogger} from "@lodestar/utils";
+import {Libp2p} from "libp2p";
 import {IBeaconConfig} from "@lodestar/config";
-import {ReqRespOpts} from "@lodestar/reqresp/lib/ReqResp.js";
-
-import {allForks, altair, phase0, Root, Slot} from "@lodestar/types";
+import {ForkName} from "@lodestar/params";
 import {
   collectExactOne,
   collectMaxResponse,
@@ -17,22 +13,25 @@ import {
   RequestError,
   ResponseError,
 } from "@lodestar/reqresp";
+import {ReqRespOpts} from "@lodestar/reqresp/lib/ReqResp.js";
 import * as messages from "@lodestar/reqresp/messages";
+import {allForks, altair, phase0, Root} from "@lodestar/types";
+import {ILogger} from "@lodestar/utils";
 import {IMetrics} from "../../metrics/metrics.js";
 import {INetworkEventBus, NetworkEvent} from "../events.js";
-import {IPeerRpcScoreStore, PeerAction} from "../peers/score.js";
 import {MetadataController} from "../metadata.js";
 import {PeersData} from "../peers/peersData.js";
+import {IPeerRpcScoreStore, PeerAction} from "../peers/score.js";
 import {ReqRespHandlers} from "./handlers/index.js";
-import {collectSequentialBlocksInRange} from "./utils/collectSequentialBlocksInRange.js";
-import {IReqRespBeaconNode, RespStatus} from "./interface.js";
-import {ReqRespMethod, RequestTypedContainer, Version} from "./types.js";
-import {onOutgoingReqRespError} from "./score.js";
 import {InboundRateLimiter, RateLimiterOptions} from "./inboundRateLimiter.js";
+import {IReqRespBeaconNode, RespStatus} from "./interface.js";
+import {onOutgoingReqRespError} from "./score.js";
+import {ReqRespMethod, RequestTypedContainer, Version} from "./types.js";
+import {collectSequentialBlocksInRange} from "./utils/collectSequentialBlocksInRange.js";
 
-export {IReqRespBeaconNode};
-export {ReqRespMethod, RequestTypedContainer} from "./types.js";
 export {getReqRespHandlers, ReqRespHandlers} from "./handlers/index.js";
+export {ReqRespMethod, RequestTypedContainer} from "./types.js";
+export {IReqRespBeaconNode};
 
 /** This type helps response to beacon_block_by_range and beacon_block_by_root more efficiently */
 export type ReqRespBlockResponse = EncodedPayload<allForks.SignedBeaconBlock>;
