@@ -100,7 +100,7 @@ function getEffectiveBalanceTestData(
     CAPELLA_FORK_EPOCH: 0,
   });
 
-  const cachedBeaconState = createCachedBeaconStateTest(stateTree, config, {skipSyncPubkeys: true});
+  const cachedBeaconState = createCachedBeaconStateTest(stateTree, config);
   return {
     state: cachedBeaconState,
   };
