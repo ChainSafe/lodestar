@@ -6,7 +6,7 @@ import {INetworkEventBus} from "./events.js";
 import {Eth2Gossipsub} from "./gossip/index.js";
 import {MetadataController} from "./metadata.js";
 import {PeerAction} from "./peers/index.js";
-import {IReqRespBeaconNode} from "./reqresp/index.js";
+import {IReqRespBeaconNode} from "./reqresp/ReqRespBeaconNode.js";
 import {IAttnetsService, ISubnetsService, CommitteeSubscription} from "./subnets/index.js";
 
 export type PeerSearchOptions = {

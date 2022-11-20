@@ -2,7 +2,7 @@ import {ENR, IDiscv5DiscoveryInputOptions} from "@chainsafe/discv5";
 import {Eth2GossipsubOpts} from "./gossip/gossipsub.js";
 import {defaultGossipHandlerOpts, GossipHandlerOpts} from "./gossip/handlers/index.js";
 import {PeerManagerOpts} from "./peers/index.js";
-import {ReqRespBeaconNodeOpts} from "./reqresp/index.js";
+import {ReqRespBeaconNodeOpts} from "./reqresp/ReqRespBeaconNode.js";
 
 export interface INetworkOptions extends PeerManagerOpts, ReqRespBeaconNodeOpts, GossipHandlerOpts, Eth2GossipsubOpts {
   localMultiaddrs: string[];

@@ -11,7 +11,7 @@ import {IBeaconChain} from "../../chain/index.js";
 import {GoodByeReasonCode, GOODBYE_KNOWN_CODES, Libp2pEvent} from "../../constants/index.js";
 import {IMetrics} from "../../metrics/index.js";
 import {NetworkEvent, INetworkEventBus} from "../events.js";
-import {IReqRespBeaconNode, ReqRespMethod, RequestTypedContainer} from "../reqresp/index.js";
+import {IReqRespBeaconNode, ReqRespMethod, RequestTypedContainer} from "../reqresp/ReqRespBeaconNode.js";
 import {getConnection, getConnectionsMap, prettyPrintPeerId} from "../util.js";
 import {ISubnetsService} from "../subnets/index.js";
 import {SubnetType} from "../metadata.js";
