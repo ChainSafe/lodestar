@@ -11,6 +11,8 @@ import {
   RequestErrorCode,
   IRequestErrorMetadata,
   HandlerTypeFromMessage,
+  EncodedPayloadType,
+  EncodedPayload,
 } from "@lodestar/reqresp";
 import * as messages from "@lodestar/reqresp/messages";
 import {altair, phase0, Root, ssz} from "@lodestar/types";
@@ -32,6 +34,7 @@ import {connect, createNode, onPeerConnect} from "../../utils/network.js";
 import {generateState} from "../../utils/state.js";
 import {StubbedBeaconDb} from "../../utils/stub/index.js";
 import {arrToSource, generateEmptySignedBlocks} from "../../unit/network/reqresp/utils.js";
+import {defaultRateLimiterOpts} from "../../../src/network/reqresp/inboundRateLimiter.js";
 
 /* eslint-disable require-yield, @typescript-eslint/naming-convention */
 
@@ -42,6 +45,7 @@ describe("network / ReqResp", function () {
   const multiaddr = "/ip4/127.0.0.1/tcp/0";
   const networkOptsDefault: INetworkOptions = {
     ...defaultNetworkOptions,
+    ...defaultRateLimiterOpts,
     maxPeers: 1,
     targetPeers: 1,
     bootMultiaddrs: [],
@@ -83,7 +87,12 @@ describe("network / ReqResp", function () {
     };
 
     const reqRespHandlers: ReqRespHandlers = {
-      onStatus: notImplemented,
+      onStatus: async function* onRequest() {
+        yield {
+          type: EncodedPayloadType.ssz,
+          data: chain.getStatus(),
+        };
+      } as HandlerTypeFromMessage<typeof messages.Status>,
       onBeaconBlocksByRange: notImplemented,
       onBeaconBlocksByRoot: notImplemented,
       onLightClientBootstrap: notImplemented,
@@ -172,7 +181,7 @@ describe("network / ReqResp", function () {
 
     const [netA, netB] = await createAndConnectPeers({
       onStatus: async function* onRequest() {
-        yield statusNetB;
+        yield {type: EncodedPayloadType.ssz, data: statusNetB};
       } as HandlerTypeFromMessage<typeof messages.Status>,
     });
 
@@ -211,7 +220,10 @@ describe("network / ReqResp", function () {
 
     const [netA, netB] = await createAndConnectPeers({
       onLightClientBootstrap: async function* onRequest() {
-        yield expectedValue;
+        yield {
+          type: EncodedPayloadType.ssz,
+          data: expectedValue,
+        };
       } as HandlerTypeFromMessage<typeof messages.LightClientBootstrap>,
     });
 
@@ -224,7 +236,10 @@ describe("network / ReqResp", function () {
 
     const [netA, netB] = await createAndConnectPeers({
       onLightClientOptimisticUpdate: async function* onRequest() {
-        yield expectedValue;
+        yield {
+          type: EncodedPayloadType.ssz,
+          data: expectedValue,
+        };
       } as HandlerTypeFromMessage<typeof messages.LightClientOptimisticUpdate>,
     });
 
@@ -237,7 +252,10 @@ describe("network / ReqResp", function () {
 
     const [netA, netB] = await createAndConnectPeers({
       onLightClientFinalityUpdate: async function* onRequest() {
-        yield expectedValue;
+        yield {
+          type: EncodedPayloadType.ssz,
+          data: expectedValue,
+        };
       } as HandlerTypeFromMessage<typeof messages.LightClientFinalityUpdate>,
     });
 
@@ -247,11 +265,14 @@ describe("network / ReqResp", function () {
 
   it("should send/receive a light client update message", async function () {
     const req: altair.LightClientUpdatesByRange = {startPeriod: 0, count: 2};
-    const lightClientUpdates: altair.LightClientUpdate[] = [];
+    const lightClientUpdates: EncodedPayload<altair.LightClientUpdate>[] = [];
     for (let slot = req.startPeriod; slot < req.count; slot++) {
       const update = ssz.altair.LightClientUpdate.defaultValue();
       update.signatureSlot = slot;
-      lightClientUpdates.push(update);
+      lightClientUpdates.push({
+        type: EncodedPayloadType.ssz,
+        data: update,
+      });
     }
 
     const [netA, netB] = await createAndConnectPeers({
@@ -266,10 +287,15 @@ describe("network / ReqResp", function () {
     expect(returnedUpdates).to.have.length(2, "Wrong returnedUpdates length");
 
     for (const [i, returnedUpdate] of returnedUpdates.entries()) {
-      expect(ssz.altair.LightClientUpdate.equals(returnedUpdate, lightClientUpdates[i])).to.equal(
-        true,
-        `Wrong returnedUpdate[${i}]`
-      );
+      expect(
+        ssz.altair.LightClientUpdate.equals(
+          returnedUpdate,
+          (lightClientUpdates[i] as {
+            type: EncodedPayloadType.ssz;
+            data: altair.LightClientUpdate;
+          }).data
+        )
+      ).to.equal(true, `Wrong returnedUpdate[${i}]`);
     }
   });
 
@@ -320,7 +346,7 @@ describe("network / ReqResp", function () {
           yield generateEmptyReqRespBlockResponse();
         } as HandlerTypeFromMessage<typeof messages.BeaconBlocksByRange>,
       },
-      {ttfbTimeoutMs: ttfbTimeoutMs}
+      {ttfbTimeoutMs}
     );
 
     await expectRejectedWithLodestarError(

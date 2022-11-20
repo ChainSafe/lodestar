@@ -35,11 +35,7 @@ export {ReqRespMethod, RequestTypedContainer} from "./types.js";
 export {getReqRespHandlers, ReqRespHandlers} from "./handlers/index.js";
 
 /** This type helps response to beacon_block_by_range and beacon_block_by_root more efficiently */
-export type ReqRespBlockResponse = {
-  /** Deserialized data of allForks.SignedBeaconBlock */
-  bytes: Uint8Array;
-  slot: Slot;
-};
+export type ReqRespBlockResponse = EncodedPayload<allForks.SignedBeaconBlock>;
 
 export interface ReqRespBeaconNodeModules {
   libp2p: Libp2p;
@@ -272,6 +268,7 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
 
   private async *onGoodbye(req: phase0.Goodbye, peerId: PeerId): AsyncIterable<EncodedPayload<phase0.Goodbye>> {
     this.onIncomingRequestBody({method: ReqRespMethod.Goodbye, body: req}, peerId);
+
     yield {type: EncodedPayloadType.ssz, data: BigInt(0)};
   }
 

@@ -8,7 +8,7 @@ export const LightClientOptimisticUpdate: ProtocolDefinitionGenerator<null, alta
   handler
 ) => {
   return {
-    method: "light_client_finality_update",
+    method: "light_client_optimistic_update",
     version: 1,
     encoding: Encoding.SSZ_SNAPPY,
     handler,

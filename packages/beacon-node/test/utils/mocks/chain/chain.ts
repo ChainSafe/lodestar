@@ -8,6 +8,7 @@ import {CheckpointWithHex, IForkChoice, ProtoBlock, ExecutionStatus} from "@lode
 import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
 import {ILogger} from "@lodestar/utils";
 
+import {ContextBytesType, EncodedPayloadType} from "@lodestar/reqresp";
 import {ChainEventEmitter, IBeaconChain} from "../../../../src/chain/index.js";
 import {IBeaconClock} from "../../../../src/chain/clock/interface.js";
 import {generateEmptySignedBlock} from "../../block.js";
@@ -164,16 +165,18 @@ export class MockBeaconChain implements IBeaconChain {
   }
 
   async getCanonicalBlockAtSlot(slot: Slot): Promise<allForks.SignedBeaconBlock> {
-    const block = generateEmptySignedBlock();
-    block.message.slot = slot;
-    return block;
+    return generateEmptySignedBlock(slot);
   }
 
   async getUnfinalizedBlocksAtSlots(slots: Slot[] = []): Promise<ReqRespBlockResponse[]> {
     const blocks = await Promise.all(slots.map(this.getCanonicalBlockAtSlot));
     return blocks.map((block, i) => ({
-      slot: slots[i],
+      type: EncodedPayloadType.bytes,
       bytes: Buffer.from(ssz.phase0.SignedBeaconBlock.serialize(block)),
+      contextBytes: {
+        type: ContextBytesType.ForkDigest,
+        forkSlot: slots[i],
+      },
     }));
   }
 
