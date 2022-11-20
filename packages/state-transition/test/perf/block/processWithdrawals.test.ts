@@ -81,7 +81,7 @@ function getExpectedWithdrawalsTestData(
   const balances: number[] = [];
   for (let i = 0; i < vc; i++) {
     // Set flat balance to lower value
-    const balance = i < vc * lowBalanceRatio ? 30e9 : 32e9;
+    const balance = i < vc * lowBalanceRatio ? 30e9 : 33e9;
     stateTree.balances.push(balance);
     balances.push(balance);
 
