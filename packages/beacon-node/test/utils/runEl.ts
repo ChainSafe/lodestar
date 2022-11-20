@@ -15,7 +15,7 @@ export enum ELStartMode {
   PostMerge = "post-merge",
 }
 
-export type ELSetupConfig = {mode: ELStartMode; elScriptDir: string; elBinaryDir: string; template?: string};
+export type ELSetupConfig = {mode: ELStartMode; elScriptDir: string; elBinaryDir: string; genesisTemplate?: string};
 export type ELRunOptions = {ttd: bigint; dataPath: string; jwtSecretHex: string; enginePort: number; ethPort: number};
 export type ELClient = {
   genesisBlockHash: string;
