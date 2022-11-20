@@ -11,7 +11,7 @@ export function processBlsToExecutionChange(
 ): void {
   const addressChange = signedBlsToExecutionChange.message;
   if (addressChange.validatorIndex >= state.validators.length) {
-    throw Error(`Invalid validatorIndex expected<${state.validators.length} actual=${addressChange.validatorIndex}`);
+    throw Error(`withdrawalValidatorIndex ${addressChange.validatorIndex} > state.validators len ${state.validators.length}`);
   }
   const validator = state.validators.get(addressChange.validatorIndex);
   // We need to work on the slice otherwise ssz view seems to be getting messed up
