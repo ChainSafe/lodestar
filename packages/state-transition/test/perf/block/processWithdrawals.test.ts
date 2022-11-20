@@ -80,12 +80,14 @@ function getExpectedWithdrawalsTestData(
 
   const balances: number[] = [];
   for (let i = 0; i < vc; i++) {
-    // Set flat balance to lower value
-    const balance = i < vc * lowBalanceRatio ? 30e9 : 33e9;
+    // Math.random() supposedly gives a uniform distribution between 0 & 1
+    const balance = lowBalanceRatio > Math.random() ? 30e9 : 33e9;
     stateTree.balances.push(balance);
     balances.push(balance);
 
-    const credentialPrefix = i < vc * blsCredentialRatio ? BLS_WITHDRAWAL_PREFIX : ETH1_ADDRESS_WITHDRAWAL_PREFIX;
+    // Math.random() supposedly gives a uniform distribution between 0 & 1
+    const credentialPrefix =
+      blsCredentialRatio > Math.random() ? BLS_WITHDRAWAL_PREFIX : ETH1_ADDRESS_WITHDRAWAL_PREFIX;
     activeValidator.withdrawalCredentials[0] = credentialPrefix;
 
     // Initialize tree
