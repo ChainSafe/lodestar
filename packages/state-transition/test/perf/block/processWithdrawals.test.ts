@@ -47,7 +47,7 @@ describe("capella getExpectedWithdrawals", () => {
       id: `capella getExpectedWithdrawals - ${vc} ${id}`,
       yieldEventLoopAfterEach: true, // So SubTree(s)'s WeakRef can be garbage collected https://github.com/nodejs/node/issues/39902
       minRuns: 5, // Worst case is very slow
-      before: () => getEffectiveBalanceTestData(vc, lowBalanceRatio, blsCredentialRatio),
+      before: () => getExpectedWithdrawalsTestData(vc, lowBalanceRatio, blsCredentialRatio),
       beforeEach: ({state}) => ({state: state.clone()}),
       fn: ({state}) => {
         getExpectedWithdrawals(state);
@@ -57,9 +57,10 @@ describe("capella getExpectedWithdrawals", () => {
 });
 
 /**
- * Create a state that causes `changeRatio` fraction (0,1) of validators to change their effective balance.
+ * Create a state that has `lowBalanceRatio` fraction (0,1) of validators with balance < max effective
+ * balance and `blsCredentialRatio` fraction (0,1) of withdrawal credentials not set for withdrawals
  */
-function getEffectiveBalanceTestData(
+function getExpectedWithdrawalsTestData(
   vc: number,
   lowBalanceRatio: number,
   blsCredentialRatio: number
@@ -93,7 +94,7 @@ function getEffectiveBalanceTestData(
 
   stateTree.commit();
 
-  const cachedBeaconState = createCachedBeaconStateTest(stateTree, config);
+  const cachedBeaconState = createCachedBeaconStateTest(stateTree, config, {skipSyncPubkeys: true});
   return {
     state: cachedBeaconState,
   };
