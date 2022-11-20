@@ -70,7 +70,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
 
   it("Send stub payloads to EL", async () => {
     const {elClient, tearDownCallBack} = await runEL(
-      {...elSetupConfig, mode: ELStartMode.PostMerge, template: "genesisPostWithdraw.tmpl"},
+      {...elSetupConfig, mode: ELStartMode.PostMerge, genesisTemplate: "genesisPostWithdraw.tmpl"},
       {...elRunOptions, ttd: BigInt(0)},
       controller.signal
     );
@@ -183,7 +183,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
   it("Post-merge, run for a few blocks", async function () {
     console.log("\n\nPost-merge, run for a few blocks\n\n");
     const {elClient, tearDownCallBack} = await runEL(
-      {...elSetupConfig, mode: ELStartMode.PostMerge, template: "genesisPostWithdraw.tmpl"},
+      {...elSetupConfig, mode: ELStartMode.PostMerge, genesisTemplate: "genesisPostWithdraw.tmpl"},
       {...elRunOptions, ttd: BigInt(0)},
       controller.signal
     );
