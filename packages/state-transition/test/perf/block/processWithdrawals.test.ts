@@ -1,6 +1,6 @@
 import {itBench} from "@dapplion/benchmark";
 import {ssz} from "@lodestar/types";
-import {createIChainForkConfig} from "@lodestar/config";
+import {config} from "@lodestar/config/default";
 import {BLS_WITHDRAWAL_PREFIX, ETH1_ADDRESS_WITHDRAWAL_PREFIX} from "@lodestar/params";
 
 import {CachedBeaconStateCapella} from "../../../src/index.js";
@@ -92,13 +92,6 @@ function getEffectiveBalanceTestData(
   }
 
   stateTree.commit();
-
-  /* eslint-disable @typescript-eslint/naming-convention */
-  const config = createIChainForkConfig({
-    ALTAIR_FORK_EPOCH: 0,
-    BELLATRIX_FORK_EPOCH: 0,
-    CAPELLA_FORK_EPOCH: 0,
-  });
 
   const cachedBeaconState = createCachedBeaconStateTest(stateTree, config);
   return {
