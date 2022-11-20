@@ -273,7 +273,7 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
   }
 
   private async *onPing(req: phase0.Ping, peerId: PeerId): AsyncIterable<EncodedPayload<phase0.Ping>> {
-    this.onIncomingRequestBody({method: ReqRespMethod.Goodbye, body: req}, peerId);
+    this.onIncomingRequestBody({method: ReqRespMethod.Ping, body: req}, peerId);
     yield {type: EncodedPayloadType.ssz, data: this.metadataController.seqNumber};
   }
 
