@@ -15,17 +15,11 @@ import {IBeaconConfig} from "@lodestar/config";
 import {allForks, UintNum64, Root, phase0, Slot, RootHex, Epoch, ValidatorIndex} from "@lodestar/types";
 import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {ProcessShutdownCallback} from "@lodestar/validator";
-import {ILogger, toHex} from "@lodestar/utils";
+import {bytesToData, ILogger, numToQuantity, toHex} from "@lodestar/utils";
 import {CompositeTypeAny, fromHexString, TreeView, Type} from "@chainsafe/ssz";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 
-import {
-  bytesToData,
-  IExecutionBuilder,
-  IExecutionEngine,
-  numToQuantity,
-  TransitionConfigurationV1,
-} from "@lodestar/engine-api-client";
+import {IExecutionBuilder, IExecutionEngine, TransitionConfigurationV1} from "@lodestar/engine-api-client";
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
 import {IMetrics} from "../metrics/index.js";

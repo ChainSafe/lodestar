@@ -2,7 +2,6 @@ import {RootHex, allForks, capella} from "@lodestar/types";
 import {BYTES_PER_LOGS_BLOOM, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {fromHex} from "@lodestar/utils";
 
-import {ErrorJsonRpcResponse, HttpRpcError, JsonRpcHttpClient} from "../provider/jsonRpcHttpClient.js";
 import {
   bytesToData,
   numToQuantity,
@@ -11,7 +10,8 @@ import {
   DATA,
   QUANTITY,
   quantityToBigint,
-} from "../provider/utils.js";
+} from "@lodestar/utils";
+import {ErrorJsonRpcResponse, HttpRpcError, JsonRpcHttpClient} from "../provider/jsonRpcHttpClient.js";
 import {IJsonRpcHttpClient, ReqOpts} from "../provider/jsonRpcHttpClient.js";
 import {IMetrics} from "../metrics/index.js";
 

@@ -1,5 +1,5 @@
 import {RootHex, allForks} from "@lodestar/types";
-import {DATA, QUANTITY} from "../provider/utils.js";
+import {DATA, QUANTITY} from "@lodestar/utils";
 import {PayloadIdCache, PayloadId, ApiPayloadAttributes} from "./payloadIdCache.js";
 
 export {PayloadIdCache, PayloadId, ApiPayloadAttributes};

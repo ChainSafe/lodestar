@@ -1,14 +1,11 @@
 import {toHexString} from "@chainsafe/ssz";
 import {phase0} from "@lodestar/types";
 import {IChainConfig} from "@lodestar/config";
-import {fromHex} from "@lodestar/utils";
+import {fromHex, dataToBytes, quantityToNum, numToQuantity} from "@lodestar/utils";
 import {
-  dataToBytes,
   isJsonRpcTruncatedError,
   JsonRpcHttpClient,
   JsonRpcHttpClientMetrics,
-  numToQuantity,
-  quantityToNum,
   ReqOpts,
 } from "@lodestar/engine-api-client";
 import {linspace} from "../../util/numpy.js";

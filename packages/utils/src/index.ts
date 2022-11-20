@@ -3,6 +3,7 @@ export * from "./yaml/index.js";
 export * from "./array.js";
 export * from "./assert.js";
 export * from "./bytes.js";
+export * from "./hex.js";
 export * from "./errors.js";
 export * from "./format.js";
 export * from "./map.js";

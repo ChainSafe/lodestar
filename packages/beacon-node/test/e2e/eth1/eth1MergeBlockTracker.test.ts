@@ -1,8 +1,7 @@
 import {expect} from "chai";
 import {IChainConfig} from "@lodestar/config";
-import {sleep} from "@lodestar/utils";
+import {sleep, quantityToBigint} from "@lodestar/utils";
 import {fromHexString} from "@chainsafe/ssz";
-import {quantityToBigint} from "@lodestar/engine-api-client";
 import {Eth1Provider, IEth1Provider} from "../../../src/index.js";
 import {Eth1MergeBlockTracker, StatusCode} from "../../../src/eth1/eth1MergeBlockTracker.js";
 import {Eth1Options} from "../../../src/eth1/options.js";

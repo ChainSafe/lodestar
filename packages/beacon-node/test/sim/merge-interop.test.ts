@@ -2,20 +2,13 @@ import fs from "node:fs";
 import {Context} from "mocha";
 import {fromHexString} from "@chainsafe/ssz";
 import {isExecutionStateType, isMergeTransitionComplete} from "@lodestar/state-transition";
-import {LogLevel, sleep, TimestampFormatCode} from "@lodestar/utils";
+import {LogLevel, sleep, TimestampFormatCode, bytesToData, dataToBytes, quantityToNum} from "@lodestar/utils";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {IChainConfig} from "@lodestar/config";
 import {Epoch} from "@lodestar/types";
 import {ValidatorProposerConfig} from "@lodestar/validator";
 
-import {
-  bytesToData,
-  dataToBytes,
-  defaultExecutionEngineHttpOpts,
-  ExecutePayloadStatus,
-  ExecutionEngineHttp,
-  quantityToNum,
-} from "@lodestar/engine-api-client";
+import {defaultExecutionEngineHttpOpts, ExecutePayloadStatus, ExecutionEngineHttp} from "@lodestar/engine-api-client";
 import {ChainEvent} from "../../src/chain/index.js";
 import {testLogger, TestLoggerOpts} from "../utils/logger.js";
 import {getDevBeaconNode} from "../utils/node/beacon.js";
