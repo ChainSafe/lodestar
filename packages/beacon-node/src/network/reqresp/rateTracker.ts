@@ -31,7 +31,12 @@ export class RateTracker {
 
   requestObjects(objectCount: number): number {
     if (objectCount <= 0) throw Error("Invalid objectCount " + objectCount);
+    if (objectCount > this.limit) {
+      return 0;
+    }
+
     this.prune();
+
     if (this.currentWindowCount >= this.limit) {
       return 0;
     }

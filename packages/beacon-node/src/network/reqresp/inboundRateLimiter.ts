@@ -3,7 +3,7 @@ import {ILogger, MapDef} from "@lodestar/utils";
 import {IMetrics} from "../../metrics/index.js";
 import {RateTracker} from "./rateTracker.js";
 
-interface RateLimiterModules {
+export interface RateLimiterModules {
   logger: ILogger;
   reportPeer: (peer: PeerId) => void;
   metrics: IMetrics | null;

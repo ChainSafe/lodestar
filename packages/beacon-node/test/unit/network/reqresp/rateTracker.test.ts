@@ -48,6 +48,10 @@ describe("RateTracker", () => {
       expect(rateTracker.requestObjects(limit)).to.be.equal(limit);
     });
 
+    it("should return zero within request window for higher number of requests", () => {
+      expect(rateTracker.requestObjects(limit + 1)).to.be.equal(0);
+    });
+
     it("should return zero once the tracker limit reached", () => {
       rateTracker.requestObjects(limit);
       expect(rateTracker.requestObjects(10)).to.be.equal(0);
