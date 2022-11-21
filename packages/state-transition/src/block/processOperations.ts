@@ -45,5 +45,8 @@ export function processOperations(
     for (const blsToExecutionChange of (body as capella.BeaconBlockBody).blsToExecutionChanges) {
       processBlsToExecutionChange(state as CachedBeaconStateCapella, blsToExecutionChange);
     }
+
+    // Apply potential changes that require copying the eth1WithdrawalCredentialCache data
+    state.epochCtx.eth1WithdrawalCredentialCache.applyPending();
   }
 }

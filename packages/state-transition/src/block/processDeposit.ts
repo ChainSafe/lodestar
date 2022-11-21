@@ -14,6 +14,7 @@ import {
 
 import {ZERO_HASH} from "../constants/index.js";
 import {computeDomain, computeSigningRoot, increaseBalance} from "../util/index.js";
+import {hasEth1WithdrawalCredential} from "../util/capella.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateAltair} from "../types.js";
 
 /**
@@ -100,6 +101,11 @@ export function processDeposit(fork: ForkSeq, state: CachedBeaconStateAllForks, 
       // add participation caches
       stateAltair.previousEpochParticipation.push(0);
       stateAltair.currentEpochParticipation.push(0);
+    }
+
+    // Populate lazy capella cache if eth1 credentials are set on deposit
+    if (fork >= ForkSeq.capella && hasEth1WithdrawalCredential(deposit.data.withdrawalCredentials)) {
+      epochCtx.eth1WithdrawalCredentialCache.addPending(validatorIndex);
     }
   } else {
     // increase balance by deposit amount

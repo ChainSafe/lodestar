@@ -25,10 +25,12 @@ import {
   getSeed,
   computeProposers,
 } from "../util/index.js";
+import {hasEth1WithdrawalCredential} from "../util/capella.js";
 import {computeEpochShuffling, IEpochShuffling} from "../util/epochShuffling.js";
 import {computeBaseRewardPerIncrement, computeSyncParticipantReward} from "../util/syncCommittee.js";
 import {sumTargetUnslashedBalanceIncrements} from "../util/targetUnslashedBalance.js";
 import {EffectiveBalanceIncrements, getEffectiveBalanceIncrementsWithLen} from "./effectiveBalanceIncrements.js";
+import {Eth1WithdrawalCredentialCache} from "./eth1WithdrawalCredentialCache.js";
 import {Index2PubkeyCache, PubkeyIndexMap, syncPubkeys} from "./pubkeyCache.js";
 import {BeaconStateAllForks, BeaconStateAltair} from "./types.js";
 import {
@@ -181,6 +183,13 @@ export class EpochContext {
   /** TODO: Indexed SyncCommitteeCache */
   nextSyncCommitteeIndexed: SyncCommitteeCache;
 
+  /**
+   * Cache for `has_eth1_withdrawal_credential()`. Used to prevent having to retrieve the validator object during block
+   * processing. Required to make sure the worst case of capella block processing is not too expensive.
+   * https://github.com/ethereum/consensus-specs/blob/3d235740e5f1e641d3b160c8688f26e7dc5a1894/specs/capella/beacon-chain.md#has_eth1_withdrawal_credential
+   */
+  eth1WithdrawalCredentialCache: Eth1WithdrawalCredentialCache;
+
   // TODO: Helper stats
   epoch: Epoch;
   syncPeriod: SyncPeriod;
@@ -206,6 +215,7 @@ export class EpochContext {
     previousTargetUnslashedBalanceIncrements: number;
     currentSyncCommitteeIndexed: SyncCommitteeCache;
     nextSyncCommitteeIndexed: SyncCommitteeCache;
+    eth1WithdrawalCredentialCache: Eth1WithdrawalCredentialCache;
     epoch: Epoch;
     syncPeriod: SyncPeriod;
   }) {
@@ -229,6 +239,7 @@ export class EpochContext {
     this.previousTargetUnslashedBalanceIncrements = data.previousTargetUnslashedBalanceIncrements;
     this.currentSyncCommitteeIndexed = data.currentSyncCommitteeIndexed;
     this.nextSyncCommitteeIndexed = data.nextSyncCommitteeIndexed;
+    this.eth1WithdrawalCredentialCache = data.eth1WithdrawalCredentialCache;
     this.epoch = data.epoch;
     this.syncPeriod = data.syncPeriod;
   }
@@ -250,6 +261,9 @@ export class EpochContext {
       syncPubkeys(state, pubkey2index, index2pubkey);
     }
 
+    const fork = config.getForkSeq(state.slot);
+    const afterCapella = fork >= ForkSeq.capella;
+
     const currentEpoch = computeEpochAtSlot(state.slot);
     const isGenesis = currentEpoch === GENESIS_EPOCH;
     const previousEpoch = isGenesis ? GENESIS_EPOCH : currentEpoch - 1;
@@ -266,6 +280,13 @@ export class EpochContext {
     const previousActiveIndices: ValidatorIndex[] = [];
     const currentActiveIndices: ValidatorIndex[] = [];
     const nextActiveIndices: ValidatorIndex[] = [];
+
+    // Only populate Eth1WithdrawalCredentialCache after capella, else have an empty data structure.
+    // An empty cache should be almost equivalent to a disabled data structure, but requires less custom logic.
+    // It's also safer, since there are less code paths that can end up in errors
+    const eth1WithdrawalCredentialCache = afterCapella
+      ? Eth1WithdrawalCredentialCache.fromZero(validatorCount)
+      : Eth1WithdrawalCredentialCache.empty();
 
     for (let i = 0; i < validatorCount; i++) {
       const validator = validators[i];
@@ -293,6 +314,12 @@ export class EpochContext {
         } else if (exitEpoch === exitQueueEpoch) {
           exitQueueChurn += 1;
         }
+      }
+
+      // Only populate cache after capella, before it's just an empty data structure
+      // Only set if true, hasEth1WithdrawalCredential is initialized to false by default
+      if (afterCapella && hasEth1WithdrawalCredential(validator.withdrawalCredentials)) {
+        eth1WithdrawalCredentialCache.add(i);
       }
     }
 
@@ -323,9 +350,6 @@ export class EpochContext {
       seed: getSeed(state, nextEpoch, DOMAIN_BEACON_PROPOSER),
     };
 
-    // Only after altair, compute the indices of the current sync committee
-    const afterAltairFork = currentEpoch >= config.ALTAIR_FORK_EPOCH;
-
     // Values syncParticipantReward, syncProposerReward, baseRewardPerIncrement are only used after altair.
     // However, since they are very cheap to compute they are computed always to simplify upgradeState function.
     const syncParticipantReward = computeSyncParticipantReward(totalActiveBalanceIncrements);
@@ -335,7 +359,7 @@ export class EpochContext {
     let currentSyncCommitteeIndexed: SyncCommitteeCache;
     let nextSyncCommitteeIndexed: SyncCommitteeCache;
     // Allow to skip populating sync committee for initializeBeaconStateFromEth1()
-    if (afterAltairFork && !opts?.skipSyncCommitteeCache) {
+    if (fork >= ForkSeq.altair && !opts?.skipSyncCommitteeCache) {
       const altairState = state as BeaconStateAltair;
       currentSyncCommitteeIndexed = computeSyncCommitteeCache(altairState.currentSyncCommittee, pubkey2index);
       nextSyncCommitteeIndexed = computeSyncCommitteeCache(altairState.nextSyncCommittee, pubkey2index);
@@ -404,6 +428,7 @@ export class EpochContext {
       currentTargetUnslashedBalanceIncrements,
       currentSyncCommitteeIndexed,
       nextSyncCommitteeIndexed,
+      eth1WithdrawalCredentialCache,
       epoch: currentEpoch,
       syncPeriod: computeSyncPeriodAtEpoch(currentEpoch),
     });
@@ -442,6 +467,8 @@ export class EpochContext {
       currentTargetUnslashedBalanceIncrements: this.currentTargetUnslashedBalanceIncrements,
       currentSyncCommitteeIndexed: this.currentSyncCommitteeIndexed,
       nextSyncCommitteeIndexed: this.nextSyncCommitteeIndexed,
+      // May change on every slot; but internally HasEth1WithdrawalCredentialCache only clones data if necessary
+      eth1WithdrawalCredentialCache: this.eth1WithdrawalCredentialCache.clone(),
       epoch: this.epoch,
       syncPeriod: this.syncPeriod,
     });

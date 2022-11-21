@@ -17,7 +17,9 @@ import {
 } from "../util/attesterStatus.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateAltair, CachedBeaconStatePhase0} from "..";
 import {computeBaseRewardPerIncrement} from "../util/altair.js";
+import {hasEth1WithdrawalCredential} from "../util/capella.js";
 import {processPendingAttestations} from "../epoch/processPendingAttestations.js";
+import {Eth1WithdrawalCredentialCache} from "./eth1WithdrawalCredentialCache.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
@@ -179,6 +181,9 @@ export function beforeProcessEpoch(state: CachedBeaconStateAllForks, opts?: Epoc
   // active validator indices for nextShuffling is ready, we want to precalculate for the one after that
   const nextEpoch2 = currentEpoch + 2;
 
+  // state.slot is advanced after beforeProcessEpoch()
+  const nextEpochIsCapellaFork = currentEpoch + 1 === config.CAPELLA_FORK_EPOCH;
+
   const slashingsEpoch = currentEpoch + intDiv(EPOCHS_PER_SLASHINGS_VECTOR, 2);
 
   const eligibleValidatorIndices: ValidatorIndex[] = [];
@@ -203,6 +208,12 @@ export function beforeProcessEpoch(state: CachedBeaconStateAllForks, opts?: Epoc
   epochCtx.beforeEpochTransition();
 
   const effectiveBalancesByIncrements = epochCtx.effectiveBalanceIncrements;
+
+  // Exactly at the capella fork epoch, populate cache. eth1WithdrawalCredentialCache is just an empty cache of
+  // zero length, create a new data structure of the right size here
+  if (nextEpochIsCapellaFork) {
+    epochCtx.eth1WithdrawalCredentialCache = Eth1WithdrawalCredentialCache.fromZero(validatorCount);
+  }
 
   for (let i = 0; i < validatorCount; i++) {
     const validator = validators[i];
@@ -290,6 +301,12 @@ export function beforeProcessEpoch(state: CachedBeaconStateAllForks, opts?: Epoc
 
     if (isActiveNext2) {
       nextEpochShufflingActiveValidatorIndices.push(i);
+    }
+
+    // Exactly at the capella fork epoch, populate cache
+    // Only set if true, hasEth1WithdrawalCredential is initialized to false by default
+    if (nextEpochIsCapellaFork && hasEth1WithdrawalCredential(validator.withdrawalCredentials)) {
+      epochCtx.eth1WithdrawalCredentialCache.add(i);
     }
   }
 

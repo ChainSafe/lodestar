@@ -41,4 +41,7 @@ export function processBlsToExecutionChange(
 
   // Set the new credentials back
   validator.withdrawalCredentials = newWithdrawalCredentials;
+
+  // Update the cache
+  state.epochCtx.eth1WithdrawalCredentialCache.addPending(addressChange.validatorIndex);
 }
