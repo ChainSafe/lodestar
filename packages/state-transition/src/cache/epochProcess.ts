@@ -19,7 +19,7 @@ import {CachedBeaconStateAllForks, CachedBeaconStateAltair, CachedBeaconStatePha
 import {computeBaseRewardPerIncrement} from "../util/altair.js";
 import {hasEth1WithdrawalCredential} from "../util/capella.js";
 import {processPendingAttestations} from "../epoch/processPendingAttestations.js";
-import {Eth1WithdrawalCredentialCache} from "./eth1WithdrawalCredentialCache.js";
+import {BitArrayAutoResize} from "./bitArrayDynamic.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
@@ -182,7 +182,8 @@ export function beforeProcessEpoch(state: CachedBeaconStateAllForks, opts?: Epoc
   const nextEpoch2 = currentEpoch + 2;
 
   // state.slot is advanced after beforeProcessEpoch()
-  const nextEpochIsCapellaFork = currentEpoch + 1 === config.CAPELLA_FORK_EPOCH;
+  const nextEpochIsCapellaFork = nextEpoch === config.CAPELLA_FORK_EPOCH;
+  const nextEpochIsAfterCapellaFork = nextEpoch >= config.CAPELLA_FORK_EPOCH;
 
   const slashingsEpoch = currentEpoch + intDiv(EPOCHS_PER_SLASHINGS_VECTOR, 2);
 
@@ -212,7 +213,8 @@ export function beforeProcessEpoch(state: CachedBeaconStateAllForks, opts?: Epoc
   // Exactly at the capella fork epoch, populate cache. eth1WithdrawalCredentialCache is just an empty cache of
   // zero length, create a new data structure of the right size here
   if (nextEpochIsCapellaFork) {
-    epochCtx.eth1WithdrawalCredentialCache = Eth1WithdrawalCredentialCache.fromZero(validatorCount);
+    epochCtx.eth1WithdrawalCredentialCache = BitArrayAutoResize.fillZero(validatorCount);
+    epochCtx.withdrawableEpochCache = BitArrayAutoResize.fillZero(validatorCount);
   }
 
   for (let i = 0; i < validatorCount; i++) {
@@ -237,7 +239,6 @@ export function beforeProcessEpoch(state: CachedBeaconStateAllForks, opts?: Epoc
 
     // Both active validators and slashed-but-not-yet-withdrawn validators are eligible to receive penalties.
     // This is done to prevent self-slashing from being a way to escape inactivity leaks.
-    // TODO: Consider using an array of `eligibleValidatorIndices: number[]`
     if (isActivePrev || (validator.slashed && prevEpoch + 1 < validator.withdrawableEpoch)) {
       eligibleValidatorIndices.push(i);
       status.flags |= FLAG_ELIGIBLE_ATTESTER;
@@ -308,6 +309,27 @@ export function beforeProcessEpoch(state: CachedBeaconStateAllForks, opts?: Epoc
     if (nextEpochIsCapellaFork && hasEth1WithdrawalCredential(validator.withdrawalCredentials)) {
       epochCtx.eth1WithdrawalCredentialCache.add(i);
     }
+
+    // To optimize is_fully_withdrawable_validator():
+    // ```python
+    // validator.withdrawable_epoch <= epoch
+    // ```
+    if (nextEpochIsCapellaFork) {
+      // Of first capella epoch, populate the entire array for validators that hit withdrawableEpoch at any time
+      if (validator.withdrawableEpoch <= nextEpoch) {
+        epochCtx.withdrawableEpochCache.addPending(i);
+      }
+    } else if (nextEpochIsAfterCapellaFork) {
+      // After capella epoch, only populate for validators that just this epoch become withdrawable
+      if (validator.withdrawableEpoch === nextEpoch) {
+        epochCtx.withdrawableEpochCache.addPending(i);
+      }
+    }
+  }
+
+  // Auto-resize withdrawableEpochCache ArrayBuffer only if necessary
+  if (nextEpochIsAfterCapellaFork) {
+    epochCtx.withdrawableEpochCache.applyPending();
   }
 
   if (totalActiveStakeByIncrement < 1) {

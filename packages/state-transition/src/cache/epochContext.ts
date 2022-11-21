@@ -30,7 +30,7 @@ import {computeEpochShuffling, IEpochShuffling} from "../util/epochShuffling.js"
 import {computeBaseRewardPerIncrement, computeSyncParticipantReward} from "../util/syncCommittee.js";
 import {sumTargetUnslashedBalanceIncrements} from "../util/targetUnslashedBalance.js";
 import {EffectiveBalanceIncrements, getEffectiveBalanceIncrementsWithLen} from "./effectiveBalanceIncrements.js";
-import {Eth1WithdrawalCredentialCache} from "./eth1WithdrawalCredentialCache.js";
+import {BitArrayAutoResize} from "./bitArrayDynamic.js";
 import {Index2PubkeyCache, PubkeyIndexMap, syncPubkeys} from "./pubkeyCache.js";
 import {BeaconStateAllForks, BeaconStateAltair} from "./types.js";
 import {
@@ -187,8 +187,25 @@ export class EpochContext {
    * Cache for `has_eth1_withdrawal_credential()`. Used to prevent having to retrieve the validator object during block
    * processing. Required to make sure the worst case of capella block processing is not too expensive.
    * https://github.com/ethereum/consensus-specs/blob/3d235740e5f1e641d3b160c8688f26e7dc5a1894/specs/capella/beacon-chain.md#has_eth1_withdrawal_credential
+   *
+   * BitArrayAutoResize is a wrapper for BitArray that is only cloned when necessary.
+   * - EpochContext.createFromState(), this cache is created to the correct length and pre-populated
+   * - On processBlsToExecutionChange(), it's mutated if the credentials are changed
+   * - On processDeposit(), it may be extended and set
+   * During block processing sets may be defered to prevent copying the bitArray more than once for each block.
    */
-  eth1WithdrawalCredentialCache: Eth1WithdrawalCredentialCache;
+  eth1WithdrawalCredentialCache: BitArrayAutoResize;
+
+  /**
+   * Cache for `is_fully_withdrawable_validator`. used to prevent having to retrieve the validator object during block
+   * processing. Required to make sure the worst case of capella block processing is not too expensive.
+   * https://github.com/ethereum/consensus-specs/blob/3d235740e5f1e641d3b160c8688f26e7dc5a1894/specs/capella/beacon-chain.md#is_fully_withdrawable_validator
+   *
+   * withdrawableEpoch changed when performing validator exits. However the value set is always set to
+   * MIN_VALIDATOR_WITHDRAWABILITY_DELAY epochs into the future. Below it's asserted that MIN_VALIDATOR_WITHDRAWABILITY_DELAY >= 1.
+   * Once per epoch, just check if withdrawableEpoch <= state's epoch and update the BitArray.
+   */
+  withdrawableEpochCache: BitArrayAutoResize;
 
   // TODO: Helper stats
   epoch: Epoch;
@@ -215,7 +232,8 @@ export class EpochContext {
     previousTargetUnslashedBalanceIncrements: number;
     currentSyncCommitteeIndexed: SyncCommitteeCache;
     nextSyncCommitteeIndexed: SyncCommitteeCache;
-    eth1WithdrawalCredentialCache: Eth1WithdrawalCredentialCache;
+    eth1WithdrawalCredentialCache: BitArrayAutoResize;
+    withdrawableEpochCache: BitArrayAutoResize;
     epoch: Epoch;
     syncPeriod: SyncPeriod;
   }) {
@@ -240,6 +258,7 @@ export class EpochContext {
     this.currentSyncCommitteeIndexed = data.currentSyncCommitteeIndexed;
     this.nextSyncCommitteeIndexed = data.nextSyncCommitteeIndexed;
     this.eth1WithdrawalCredentialCache = data.eth1WithdrawalCredentialCache;
+    this.withdrawableEpochCache = data.withdrawableEpochCache;
     this.epoch = data.epoch;
     this.syncPeriod = data.syncPeriod;
   }
@@ -255,6 +274,13 @@ export class EpochContext {
     {config, pubkey2index, index2pubkey}: EpochContextImmutableData,
     opts?: EpochContextOpts
   ): EpochContext {
+    // Validate params to make cache and optimization assumptions safe
+    if (config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY < 1) {
+      throw Error(
+        "MIN_VALIDATOR_WITHDRAWABILITY_DELAY < 1. withdrawableEpochCache assumes that withdrawableEpoch will take at least one epoch to be <= that state's epoch"
+      );
+    }
+
     // syncPubkeys here to ensure EpochContextImmutableData is popualted before computing the rest of caches
     // - computeSyncCommitteeCache() needs a fully populated pubkey2index cache
     if (!opts?.skipSyncPubkeys) {
@@ -285,8 +311,12 @@ export class EpochContext {
     // An empty cache should be almost equivalent to a disabled data structure, but requires less custom logic.
     // It's also safer, since there are less code paths that can end up in errors
     const eth1WithdrawalCredentialCache = afterCapella
-      ? Eth1WithdrawalCredentialCache.fromZero(validatorCount)
-      : Eth1WithdrawalCredentialCache.empty();
+      ? BitArrayAutoResize.fillZero(validatorCount)
+      : BitArrayAutoResize.empty();
+
+    const withdrawableEpochCache = afterCapella
+      ? BitArrayAutoResize.fillZero(validatorCount)
+      : BitArrayAutoResize.empty();
 
     for (let i = 0; i < validatorCount; i++) {
       const validator = validators[i];
@@ -318,8 +348,13 @@ export class EpochContext {
 
       // Only populate cache after capella, before it's just an empty data structure
       // Only set if true, hasEth1WithdrawalCredential is initialized to false by default
-      if (afterCapella && hasEth1WithdrawalCredential(validator.withdrawalCredentials)) {
-        eth1WithdrawalCredentialCache.add(i);
+      if (afterCapella) {
+        if (hasEth1WithdrawalCredential(validator.withdrawalCredentials)) {
+          eth1WithdrawalCredentialCache.add(i);
+        }
+        if (validator.withdrawableEpoch <= currentEpoch) {
+          withdrawableEpochCache.add(i);
+        }
       }
     }
 
@@ -429,6 +464,7 @@ export class EpochContext {
       currentSyncCommitteeIndexed,
       nextSyncCommitteeIndexed,
       eth1WithdrawalCredentialCache,
+      withdrawableEpochCache,
       epoch: currentEpoch,
       syncPeriod: computeSyncPeriodAtEpoch(currentEpoch),
     });
@@ -469,6 +505,8 @@ export class EpochContext {
       nextSyncCommitteeIndexed: this.nextSyncCommitteeIndexed,
       // May change on every slot; but internally HasEth1WithdrawalCredentialCache only clones data if necessary
       eth1WithdrawalCredentialCache: this.eth1WithdrawalCredentialCache.clone(),
+      // When to clone? Changed only per epoch, so clone only on beforeEpochTransition()
+      withdrawableEpochCache: this.withdrawableEpochCache,
       epoch: this.epoch,
       syncPeriod: this.syncPeriod,
     });
@@ -545,6 +583,7 @@ export class EpochContext {
   beforeEpochTransition(): void {
     // Clone before being mutated in processEffectiveBalanceUpdates
     this.effectiveBalanceIncrements = this.effectiveBalanceIncrements.slice(0);
+    this.withdrawableEpochCache = this.withdrawableEpochCache.clone();
   }
 
   /**

@@ -1,8 +1,10 @@
-import {ssz, capella} from "@lodestar/types";
+import {ssz, capella, ValidatorIndex} from "@lodestar/types";
 import {MAX_EFFECTIVE_BALANCE, MAX_WITHDRAWALS_PER_PAYLOAD, EFFECTIVE_BALANCE_INCREMENT} from "@lodestar/params";
 
 import {CachedBeaconStateCapella} from "../types.js";
 import {decreaseBalance} from "../util/index.js";
+import {EffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements.js";
+import {BitArrayAutoResize} from "../cache/bitArrayDynamic.js";
 
 const MAX_EFFECTIVE_BALANCE_INCREMENT = MAX_EFFECTIVE_BALANCE / EFFECTIVE_BALANCE_INCREMENT;
 
@@ -31,10 +33,9 @@ export function processWithdrawals(
 }
 
 export function getExpectedWithdrawals(state: CachedBeaconStateCapella): capella.Withdrawal[] {
-  const epoch = state.epochCtx.epoch;
   let withdrawalIndex = state.nextWithdrawalIndex;
   let validatorIndex = state.nextWithdrawalValidatorIndex;
-  const {effectiveBalanceIncrements, eth1WithdrawalCredentialCache} = state.epochCtx;
+  const {effectiveBalanceIncrements, eth1WithdrawalCredentialCache, withdrawableEpochCache} = state.epochCtx;
   const {validators, balances} = state;
 
   const withdrawals: capella.Withdrawal[] = [];
@@ -65,6 +66,15 @@ export function getExpectedWithdrawals(state: CachedBeaconStateCapella): capella
     // effective_balance              | on epoch      | changes continuously
     // balance                        | on slot       | changes continuously
 
+    // Both withdrawals require eth1 credentials.
+    // This early return covers validators that have not already switched
+    if (!eth1WithdrawalCredentialCache.has(validatorIndex)) {
+      continue;
+    }
+
+    // TODO CAPELLA: To optimize getExpectedWithdrawals() more for the worst case, SSZ could support reading from
+    // a List of basic elements in bulk. Then read X balances at once in batches. That would allow amortizing the
+    // costs of traversing the tree + not having to read each node multiple times.
     const balance = balances.get(validatorIndex);
 
     // full withdrawal requires `balance > 0`, partial withdrawal requires `balance > MAX_EFFECTIVE_BALANCE`
@@ -73,22 +83,11 @@ export function getExpectedWithdrawals(state: CachedBeaconStateCapella): capella
       continue;
     }
 
-    // Both withdrawals require eth1 credentials.
-    // This early return covers validators that have not already switched
-    if (!eth1WithdrawalCredentialCache.has(validatorIndex)) {
-      continue;
-    }
-
-    const validator = validators.getReadonly(validatorIndex);
-    const effectiveBalanceIncrement = effectiveBalanceIncrements[validatorIndex];
-
-    // if is_fully_withdrawable_validator(validator, balance, epoch):
-    // Note: Already checked that has_eth1_withdrawal_credential() above
-    if (balance > 0 && validator.withdrawableEpoch <= epoch) {
+    if (isFullyWithdrawableValidator(withdrawableEpochCache, validatorIndex, balance)) {
       withdrawals.push({
         index: withdrawalIndex,
         validatorIndex,
-        address: validator.withdrawalCredentials.slice(12),
+        address: validators.getReadonly(validatorIndex).withdrawalCredentials.slice(12),
         amount: BigInt(balance),
       });
       withdrawalIndex++;
@@ -96,11 +95,11 @@ export function getExpectedWithdrawals(state: CachedBeaconStateCapella): capella
 
     // if is_partially_withdrawable_validator(validator, balance):
     // Note: Already checked that has_eth1_withdrawal_credential() above
-    else if (effectiveBalanceIncrement === MAX_EFFECTIVE_BALANCE_INCREMENT && balance > MAX_EFFECTIVE_BALANCE) {
+    else if (isPartiallyWithdrawableValidator(effectiveBalanceIncrements, validatorIndex, balance)) {
       withdrawals.push({
         index: withdrawalIndex,
         validatorIndex,
-        address: validator.withdrawalCredentials.slice(12),
+        address: validators.getReadonly(validatorIndex).withdrawalCredentials.slice(12),
         amount: BigInt(balance - MAX_EFFECTIVE_BALANCE),
       });
       withdrawalIndex++;
@@ -114,4 +113,26 @@ export function getExpectedWithdrawals(state: CachedBeaconStateCapella): capella
     validatorIndex = (validatorIndex + 1) % validators.length;
   }
   return withdrawals;
+}
+
+// if is_fully_withdrawable_validator(validator, balance, epoch):
+// Note: Already checked that has_eth1_withdrawal_credential() before calling this function
+function isFullyWithdrawableValidator(
+  withdrawableEpochCache: BitArrayAutoResize,
+  index: ValidatorIndex,
+  balance: number
+): boolean {
+  // Equivalent to `validator.withdrawable_epoch <= epoch and balance > 0`
+  return withdrawableEpochCache.hasInRange(index) && balance > 0;
+}
+
+// if is_partially_withdrawable_validator(validator, balance):
+// Note: Already checked that has_eth1_withdrawal_credential() before calling this function
+function isPartiallyWithdrawableValidator(
+  effectiveBalanceIncrements: EffectiveBalanceIncrements,
+  index: ValidatorIndex,
+  balance: number
+): boolean {
+  const effectiveBalanceIncrement = effectiveBalanceIncrements[index];
+  return effectiveBalanceIncrement === MAX_EFFECTIVE_BALANCE_INCREMENT && balance > MAX_EFFECTIVE_BALANCE;
 }
