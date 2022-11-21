@@ -9,6 +9,9 @@
 
 Lodestar client for [Engine JSON-RPC API](https://github.com/ethereum/execution-apis/tree/main/src/engine)
 
+> **Note**
+> No version of this package exist prior to version 1.2.1.
+
 ## License
 
 Apache-2.0 [ChainSafe Systems](https://chainsafe.io)

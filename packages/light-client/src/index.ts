@@ -242,8 +242,8 @@ export class Lightclient {
       try {
         block = (await transport.fetchBlock(toHexString(headerRoot))).data;
       } catch (e) {
-        // for gossip transport it is possible node has no peer with the data yet
-        // so don't throw on initialize
+        // for gossip transport it is possible block is not initially found (less so for rest transport)
+        // because node has no peer with the data so don't bubble up error
         logger?.warn("attempt to fetch checkpoint block failed", {}, e as Error);
       }
     }
@@ -350,7 +350,7 @@ export class Lightclient {
         // Don't retry, this is a non-critical UX improvement
         try {
           const {data: latestOptimisticUpdate} = await this.transport.getOptimisticUpdate();
-          this.processOptimisticUpdate(latestOptimisticUpdate);
+          await this.processOptimisticUpdate(latestOptimisticUpdate);
         } catch (e) {
           this.logger.error("Error fetching getLatestHeadUpdate", {currentPeriod}, e as Error);
         }
@@ -401,7 +401,7 @@ export class Lightclient {
    * Processes new optimistic header updates in only known synced sync periods.
    * This headerUpdate may update the head if there's enough participation.
    */
-  private processOptimisticUpdate(headerUpdate: altair.LightClientOptimisticUpdate): void {
+  private async processOptimisticUpdate(headerUpdate: altair.LightClientOptimisticUpdate): Promise<void> {
     const {attestedHeader, syncAggregate} = headerUpdate;
 
     // Prevent registering updates for slots to far ahead
@@ -455,16 +455,11 @@ export class Lightclient {
 
       // fetch block only if configured to update EL
       if (this.executionEngine) {
-        this.transport
-          .fetchBlock(headerBlockRootHex)
-          .then((result) => {
-            if (result !== undefined) {
-              this.head.block = result.data;
-            }
-          })
-          .catch((error: Error) => {
-            this.logger.error("error fetching block", {}, error);
-          });
+        try {
+          this.head.block = (await this.transport.fetchBlock(headerBlockRootHex)).data;
+        } catch (e) {
+          this.logger.warn("error fetching block", {headerRoot: headerBlockRootHex}, e as Error);
+        }
       }
 
       // This is not an error, but a problematic network condition worth knowing about
@@ -493,10 +488,10 @@ export class Lightclient {
    * Processes new header updates in only known synced sync periods.
    * This headerUpdate may update the head if there's enough participation.
    */
-  private processFinalizedUpdate(finalizedUpdate: altair.LightClientFinalityUpdate): void {
+  private async processFinalizedUpdate(finalizedUpdate: altair.LightClientFinalityUpdate): Promise<void> {
     // Validate sync aggregate of the attested header and other conditions like future update, period etc
     // and may be move head
-    this.processOptimisticUpdate(finalizedUpdate);
+    await this.processOptimisticUpdate(finalizedUpdate);
     assertValidFinalityProof(finalizedUpdate);
 
     const {finalizedHeader, syncAggregate} = finalizedUpdate;
@@ -518,16 +513,11 @@ export class Lightclient {
 
       // fetch block only if configured to update EL
       if (this.executionEngine) {
-        this.transport
-          .fetchBlock(finalizedBlockRootHex)
-          .then((result) => {
-            if (result !== undefined && this.finalized !== null) {
-              this.finalized.block = result.data;
-            }
-          })
-          .catch((error: Error) => {
-            this.logger.error("error fetching block", {}, error);
-          });
+        try {
+          this.finalized.block = (await this.transport.fetchBlock(finalizedBlockRootHex)).data;
+        } catch (e) {
+          this.logger.warn("error fetching block", {headerRoot: finalizedBlockRootHex}, e as Error);
+        }
       }
 
       // This is not an error, but a problematic network condition worth knowing about
@@ -558,7 +548,7 @@ export class Lightclient {
 
   private async processFinalizedUpdateAndEL(finalizedUpdate: altair.LightClientFinalityUpdate): Promise<void> {
     const prevFinalized = this.finalized;
-    this.processFinalizedUpdate(finalizedUpdate);
+    await this.processFinalizedUpdate(finalizedUpdate);
     if ((!prevFinalized && this.finalized) || prevFinalized?.blockRoot !== this.finalized?.blockRoot) {
       await this.notifyUpdatePayload();
     }
@@ -566,7 +556,7 @@ export class Lightclient {
 
   private async processOptimisticUpdateAndEL(headerUpdate: altair.LightClientOptimisticUpdate): Promise<void> {
     const prevHead = this.head;
-    this.processOptimisticUpdate(headerUpdate);
+    await this.processOptimisticUpdate(headerUpdate);
     if (prevHead.blockRoot !== this.head.blockRoot) {
       await this.notifyUpdatePayload();
     }
@@ -645,7 +635,7 @@ export class Lightclient {
     }
 
     if (this.finalized?.block !== undefined) {
-      // attested block was before BELLATRIX_FORK_EPOCH cannot update EL
+      // finalized block was before BELLATRIX_FORK_EPOCH cannot update EL
       if (computeEpochAtSlot(this.finalized.header.slot) < this.config.BELLATRIX_FORK_EPOCH) {
         return;
       }

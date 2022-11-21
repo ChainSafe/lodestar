@@ -4,34 +4,7 @@ import {allForks, altair, SyncPeriod} from "@lodestar/types";
 import {Api, routes} from "@lodestar/api";
 import {JsonPath} from "@chainsafe/ssz";
 import {Proof} from "@chainsafe/persistent-merkle-tree";
-
-export enum EventType {
-  /**
-   * The node has finished processing, resulting in a new head. previous_duty_dependent_root is
-   * `get_block_root_at_slot(state, compute_start_slot_at_epoch(epoch - 1) - 1)` and
-   * current_duty_dependent_root is `get_block_root_at_slot(state, compute_start_slot_at_epoch(epoch) - 1)`.
-   * Both dependent roots use the genesis block root in the case of underflow.
-   */
-  head = "head",
-  /** The node has received a valid block (from P2P or API) */
-  block = "block",
-  /** The node has received a valid attestation (from P2P or API) */
-  attestation = "attestation",
-  /** The node has received a valid voluntary exit (from P2P or API) */
-  voluntaryExit = "voluntary_exit",
-  /** Finalized checkpoint has been updated */
-  finalizedCheckpoint = "finalized_checkpoint",
-  /** The node has reorganized its chain */
-  chainReorg = "chain_reorg",
-  /** The node has received a valid sync committee SignedContributionAndProof (from P2P or API) */
-  contributionAndProof = "contribution_and_proof",
-  /** New or better optimistic header update available */
-  lightClientOptimisticUpdate = "light_client_optimistic_update",
-  /** New or better finality update available */
-  lightClientFinalityUpdate = "light_client_finality_update",
-  /** New or better light client update available */
-  lightClientUpdate = "light_client_update",
-}
+import {LightclientEvent} from "../events.js";
 
 export interface LightClientTransport {
   getStateProof(stateId: string, jsonPaths: JsonPath[]): Promise<{data: Proof}>;
@@ -53,7 +26,7 @@ export interface LightClientTransport {
    * For fetching the block when updating the EL
    *
    */
-  fetchBlock(blockRoot: string): Promise<{data: allForks.SignedBeaconBlock | undefined}>;
+  fetchBlock(blockRoot: string): Promise<{data: allForks.SignedBeaconBlock}>;
 
   // registers handler for LightClientOptimisticUpdate. This can come either via sse or p2p
   onOptimisticUpdate(handler: (optimisticUpdate: altair.LightClientOptimisticUpdate) => void): void;
@@ -62,8 +35,8 @@ export interface LightClientTransport {
 }
 
 export type LightClientRestEvents = {
-  [EventType.lightClientUpdate]: altair.LightClientUpdate;
-  [EventType.lightClientOptimisticUpdate]: altair.LightClientOptimisticUpdate;
+  [LightclientEvent.lightClientFinalityUpdate]: altair.LightClientFinalityUpdate;
+  [LightclientEvent.lightClientOptimisticUpdate]: altair.LightClientOptimisticUpdate;
 };
 
 // export class ChainEventEmitter extends (EventEmitter as {new (): StrictEventEmitter<EventEmitter, IChainEvents>}) {}

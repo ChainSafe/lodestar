@@ -15,7 +15,6 @@ import {ErrorJsonRpcResponse, HttpRpcError, JsonRpcHttpClient} from "../provider
 import {IJsonRpcHttpClient, ReqOpts} from "../provider/jsonRpcHttpClient.js";
 import {IMetrics} from "../metrics/index.js";
 
-// TODO DA duplicated constant.
 /**
  * Blocks are downloaded in batches from peers. This constant specifies how many epochs worth of
  * blocks per batch are requested _at most_. A batch may request less blocks to account for
