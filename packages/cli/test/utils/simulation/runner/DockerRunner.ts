@@ -81,15 +81,20 @@ export class DockerRunner implements Runner<RunnerType.Docker> {
   }
 
   async start(): Promise<void> {
-    await startChildProcess({
-      cli: {
-        command: "docker",
-        args: ["network", "create", "--subnet", `${dockerNetworkIpRange}.0/24`, dockerNetworkName],
-      },
-      logs: {
-        stdoutFilePath: this.logFilePath,
-      },
-    });
+    try {
+      await startChildProcess({
+        cli: {
+          command: "docker",
+          args: ["network", "create", "--subnet", `${dockerNetworkIpRange}.0/24`, dockerNetworkName],
+        },
+        logs: {
+          stdoutFilePath: this.logFilePath,
+        },
+      });
+    } catch (e) {
+      // During multiple sim tests files the network might already exist
+      console.error(e);
+    }
   }
 
   async stop(): Promise<void> {

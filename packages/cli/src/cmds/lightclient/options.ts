@@ -1,6 +1,6 @@
 import {logOptions} from "../../options/logOptions.js";
 import {ICliCommandOptions, ILogArgs} from "../../util/index.js";
-import {ExecutionEngineArgs, options} from "../../options/beaconNodeOptions/execution.js";
+import {ExecutionEngineArgs, executionEngineOptions} from "../../options/beaconNodeOptions/execution.js";
 
 export type ILightClientArgs = ILogArgs & {
   beaconApiUrl: string;
@@ -9,7 +9,7 @@ export type ILightClientArgs = ILogArgs & {
 
 export const lightclientOptions: ICliCommandOptions<ILightClientArgs & ExecutionEngineArgs> = {
   ...logOptions,
-  ...options,
+  ...executionEngineOptions,
   beaconApiUrl: {
     description: "Url to a beacon node that support lightclient API",
     type: "string",

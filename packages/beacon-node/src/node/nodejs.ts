@@ -9,6 +9,7 @@ import {Api} from "@lodestar/api";
 import {BeaconStateAllForks} from "@lodestar/state-transition";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 
+import {initializeExecutionBuilder, initializeExecutionEngine} from "@lodestar/engine-api-client";
 import {IBeaconDb} from "../db/index.js";
 import {INetwork, Network, getReqRespHandlers} from "../network/index.js";
 import {BeaconSync, IBeaconSync} from "../sync/index.js";
@@ -16,7 +17,6 @@ import {BackfillSync} from "../sync/backfill/index.js";
 import {BeaconChain, IBeaconChain, initBeaconMetrics} from "../chain/index.js";
 import {createMetrics, IMetrics, HttpMetricsServer} from "../metrics/index.js";
 import {getApi, BeaconRestApiServer} from "../api/index.js";
-import {initializeExecutionEngine, initializeExecutionBuilder} from "../execution/index.js";
 import {initializeEth1ForBlockProduction} from "../eth1/index.js";
 import {createLibp2pMetrics} from "../metrics/metrics/libp2p.js";
 import {IBeaconNodeOptions} from "./options.js";

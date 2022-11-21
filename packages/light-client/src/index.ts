@@ -6,6 +6,7 @@ import {createIBeaconConfig, IBeaconConfig, IChainForkConfig} from "@lodestar/co
 import {TreeOffsetProof} from "@chainsafe/persistent-merkle-tree";
 import {isErrorAborted, sleep} from "@lodestar/utils";
 import {fromHexString, JsonPath, toHexString} from "@chainsafe/ssz";
+import {IExecutionEngine} from "@lodestar/engine-api-client";
 import {getCurrentSlot, slotWithFutureTolerance, timeUntilNextEpoch} from "./utils/clock.js";
 import {isBetterUpdate, LightclientUpdateStats} from "./utils/update.js";
 import {deserializeSyncCommittee, isEmptyHeader, isNode, sumBits} from "./utils/utils.js";
@@ -18,7 +19,6 @@ import {assertValidSignedHeader, assertValidLightClientUpdate, assertValidFinali
 import {getLcLoggerConsole, ILcLogger} from "./utils/logger.js";
 import {computeSyncPeriodAtEpoch, computeSyncPeriodAtSlot, computeEpochAtSlot} from "./utils/clock.js";
 import {LightClientTransport} from "./transport/index.js";
-import {IExecutionEngine} from "./execution/index.js";
 
 // Re-export types
 export {LightclientEvent} from "./events.js";
@@ -37,12 +37,14 @@ export type LightclientInitArgs = {
   snapshot: {
     header: phase0.BeaconBlockHeader;
     currentSyncCommittee: altair.SyncCommittee;
+    block?: allForks.SignedBeaconBlock;
   };
 };
 
 export type LightClientModules = {
   transport: LightClientTransport;
   executionEngine?: IExecutionEngine;
+  abortController?: AbortController;
 };
 
 /** Provides some protection against a server client sending header updates too far away in the future */
@@ -71,7 +73,7 @@ enum RunStatusCode {
   stopped,
 }
 type RunStatus =
-  | {code: RunStatusCode.started; controller: AbortController}
+  | {code: RunStatusCode.started; controller?: AbortController}
   | {code: RunStatusCode.syncing}
   | {code: RunStatusCode.stopped};
 
@@ -114,6 +116,7 @@ export class Lightclient {
   private transport: LightClientTransport;
   readonly emitter: LightclientEmitter = mitt();
   private executionEngine: IExecutionEngine | undefined;
+  private abortController: AbortController | undefined;
   readonly config: IBeaconConfig;
   readonly logger: ILcLogger;
   readonly genesisValidatorsRoot: Uint8Array;
@@ -150,6 +153,7 @@ export class Lightclient {
   constructor({config, logger, genesisData, beaconApiUrl, snapshot}: LightclientInitArgs, modules: LightClientModules) {
     this.transport = modules.transport;
     this.executionEngine = modules.executionEngine;
+    this.abortController = modules.abortController;
 
     this.genesisTime = genesisData.genesisTime;
     this.genesisValidatorsRoot =
@@ -175,21 +179,8 @@ export class Lightclient {
       participation: 0,
       header: snapshot.header,
       blockRoot: headerBlockRoot,
+      block: snapshot.block,
     };
-
-    // fetch block only if configured to update EL
-    if (this.executionEngine) {
-      this.transport
-        .fetchBlock(headerBlockRoot)
-        .then((result) => {
-          if (result !== undefined) {
-            this.head.block = result.data;
-          }
-        })
-        .catch((error: Error) => {
-          this.logger.error("error fetching block", {}, error);
-        });
-    }
   }
 
   // Embed lightweight clock. The epoch cycles are handled with `this.runLoop()`
@@ -205,6 +196,7 @@ export class Lightclient {
     checkpointRoot,
     transport,
     executionEngine,
+    abortController,
   }: {
     config: IChainForkConfig;
     logger?: ILcLogger;
@@ -213,9 +205,10 @@ export class Lightclient {
     checkpointRoot: phase0.Checkpoint["root"];
     transport: LightClientTransport;
     executionEngine?: IExecutionEngine;
+    abortController?: AbortController;
   }): Promise<Lightclient> {
     // Initialize the BLS implementation. This may requires initializing the WebAssembly instance
-    // so why it's a an async process. This should be initialized once before any bls operations.
+    // so why it's an async process. This should be initialized once before any bls operations.
     // This process has to be done manually because of an issue in Karma runner
     // https://github.com/karma-runner/karma/issues/3804
     await initBls(isNode ? "blst-native" : "herumi");
@@ -248,15 +241,30 @@ export class Lightclient {
       throw Error("Snapshot sync committees proof does not match trusted checkpoint");
     }
 
+    let block: allForks.SignedBeaconBlock | undefined;
+    // fetch block only if configured to update EL
+    if (executionEngine) {
+      try {
+        block = (await transport.fetchBlock(toHexString(headerRoot))).data;
+      } catch (e) {
+        // for gossip transport it is possible block is not initially found (less so for rest transport)
+        // because node has no peer with the data so don't bubble up error
+        logger?.warn("attempt to fetch checkpoint block failed", {}, e as Error);
+      }
+    }
+
     return new Lightclient(
       {
         config,
         logger,
         beaconApiUrl,
         genesisData,
-        snapshot: bootstrapStateWithProof,
+        snapshot: {
+          ...bootstrapStateWithProof,
+          ...block,
+        },
       },
-      {executionEngine, transport}
+      {executionEngine, transport, abortController}
     );
   }
 
@@ -269,7 +277,7 @@ export class Lightclient {
   stop(): void {
     if (this.status.code !== RunStatusCode.started) return;
 
-    this.status.controller.abort();
+    this.status.controller?.abort();
     this.status = {code: RunStatusCode.stopped};
   }
 
@@ -324,7 +332,7 @@ export class Lightclient {
       if (!this.syncCommitteeByPeriod.has(currentPeriod)) {
         // Stop head tracking
         if (this.status.code === RunStatusCode.started) {
-          this.status.controller.abort();
+          this.status.controller?.abort();
         }
 
         // Go into sync mode
@@ -347,9 +355,7 @@ export class Lightclient {
         // Don't retry, this is a non-critical UX improvement
         try {
           const {data: latestOptimisticUpdate} = await this.transport.getOptimisticUpdate();
-          if (latestOptimisticUpdate !== undefined) {
-            this.processOptimisticUpdate(latestOptimisticUpdate);
-          }
+          await this.processOptimisticUpdate(latestOptimisticUpdate);
         } catch (e) {
           this.logger.error("Error fetching getLatestOptimisticUpdate", {currentPeriod}, e as Error);
         }
@@ -357,7 +363,7 @@ export class Lightclient {
 
       // After successfully syncing, track head if not already
       if (this.status.code !== RunStatusCode.started) {
-        const controller = new AbortController();
+        const controller = this.abortController;
         this.status = {code: RunStatusCode.started, controller};
         this.logger.debug("Started tracking the head");
 
@@ -385,7 +391,7 @@ export class Lightclient {
         return;
       } else {
         try {
-          await sleep(timeUntilNextEpoch(this.config, this.genesisTime), this.status.controller.signal);
+          await sleep(timeUntilNextEpoch(this.config, this.genesisTime), this.status.controller?.signal);
         } catch (e) {
           if (isErrorAborted(e)) {
             return;
@@ -400,7 +406,7 @@ export class Lightclient {
    * Processes new optimistic header updates in only known synced sync periods.
    * This headerUpdate may update the head if there's enough participation.
    */
-  private processOptimisticUpdate(headerUpdate: altair.LightClientOptimisticUpdate): void {
+  private async processOptimisticUpdate(headerUpdate: altair.LightClientOptimisticUpdate): Promise<void> {
     const {attestedHeader, syncAggregate} = headerUpdate;
 
     // Prevent registering updates for slots to far ahead
@@ -454,16 +460,11 @@ export class Lightclient {
 
       // fetch block only if configured to update EL
       if (this.executionEngine) {
-        this.transport
-          .fetchBlock(headerBlockRootHex)
-          .then((result) => {
-            if (result !== undefined) {
-              this.head.block = result.data;
-            }
-          })
-          .catch((error: Error) => {
-            this.logger.error("error fetching block", {}, error);
-          });
+        try {
+          this.head.block = (await this.transport.fetchBlock(headerBlockRootHex)).data;
+        } catch (e) {
+          this.logger.warn("error fetching block", {headerRoot: headerBlockRootHex}, e as Error);
+        }
       }
 
       // This is not an error, but a problematic network condition worth knowing about
@@ -492,10 +493,10 @@ export class Lightclient {
    * Processes new header updates in only known synced sync periods.
    * This headerUpdate may update the head if there's enough participation.
    */
-  private processFinalizedUpdate(finalizedUpdate: altair.LightClientFinalityUpdate): void {
+  private async processFinalizedUpdate(finalizedUpdate: altair.LightClientFinalityUpdate): Promise<void> {
     // Validate sync aggregate of the attested header and other conditions like future update, period etc
     // and may be move head
-    this.processOptimisticUpdate(finalizedUpdate);
+    await this.processOptimisticUpdate(finalizedUpdate);
     assertValidFinalityProof(finalizedUpdate);
 
     const {finalizedHeader, syncAggregate} = finalizedUpdate;
@@ -517,16 +518,11 @@ export class Lightclient {
 
       // fetch block only if configured to update EL
       if (this.executionEngine) {
-        this.transport
-          .fetchBlock(finalizedBlockRootHex)
-          .then((result) => {
-            if (result !== undefined && this.finalized !== null) {
-              this.finalized.block = result.data;
-            }
-          })
-          .catch((error: Error) => {
-            this.logger.error("error fetching block", {}, error);
-          });
+        try {
+          this.finalized.block = (await this.transport.fetchBlock(finalizedBlockRootHex)).data;
+        } catch (e) {
+          this.logger.warn("error fetching block", {headerRoot: finalizedBlockRootHex}, e as Error);
+        }
       }
 
       // This is not an error, but a problematic network condition worth knowing about
@@ -557,7 +553,7 @@ export class Lightclient {
 
   private async processFinalizedUpdateAndEL(finalizedUpdate: altair.LightClientFinalityUpdate): Promise<void> {
     const prevFinalized = this.finalized;
-    this.processFinalizedUpdate(finalizedUpdate);
+    await this.processFinalizedUpdate(finalizedUpdate);
     if ((!prevFinalized && this.finalized) || prevFinalized?.blockRoot !== this.finalized?.blockRoot) {
       await this.notifyUpdatePayload();
     }
@@ -565,7 +561,7 @@ export class Lightclient {
 
   private async processOptimisticUpdateAndEL(headerUpdate: altair.LightClientOptimisticUpdate): Promise<void> {
     const prevHead = this.head;
-    this.processOptimisticUpdate(headerUpdate);
+    await this.processOptimisticUpdate(headerUpdate);
     if (prevHead.blockRoot !== this.head.blockRoot) {
       await this.notifyUpdatePayload();
     }
@@ -644,7 +640,7 @@ export class Lightclient {
     }
 
     if (this.finalized?.block !== undefined) {
-      // attested block was before BELLATRIX_FORK_EPOCH cannot update EL
+      // finalized block was before BELLATRIX_FORK_EPOCH cannot update EL
       if (computeEpochAtSlot(this.finalized.header.slot) < this.config.BELLATRIX_FORK_EPOCH) {
         return;
       }

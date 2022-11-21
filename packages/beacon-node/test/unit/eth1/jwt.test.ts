@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {encodeJwtToken, decodeJwtToken} from "../../../src/eth1/provider/jwt.js";
+import {decodeJwtToken, encodeJwtToken} from "@lodestar/engine-api-client";
 
 describe("ExecutionEngine / jwt", () => {
   it("encode/decode correctly", () => {

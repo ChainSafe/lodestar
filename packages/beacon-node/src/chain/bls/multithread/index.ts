@@ -10,7 +10,7 @@ import bls from "@chainsafe/bls";
 import {Implementation, PointFormat} from "@chainsafe/bls/types";
 import {ILogger} from "@lodestar/utils";
 import {ISignatureSet} from "@lodestar/state-transition";
-import {QueueError, QueueErrorCode} from "../../../util/queue/index.js";
+import {QueueError, QueueErrorCode} from "@lodestar/engine-api-client";
 import {IMetrics} from "../../../metrics/index.js";
 import {IBlsVerifier, VerifySignatureOpts} from "../interface.js";
 import {getAggregatedPubkey, getAggregatedPubkeysCount} from "../utils.js";

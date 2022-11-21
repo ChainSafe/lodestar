@@ -73,7 +73,7 @@ describe("chain / lightclient", function () {
       options: {
         sync: {isSingleNode: true},
         network: {allowPublishToZeroPeers: true},
-        api: {rest: {enabled: true, api: ["lightclient"], port: restPort, address: "localhost"}},
+        api: {rest: {enabled: true, api: ["lightclient", "proof"], port: restPort, address: "localhost"}},
         chain: {blsVerifyAllMainThread: true},
       },
       validatorCount: validatorCount * validatorClientCount,
@@ -116,9 +116,9 @@ describe("chain / lightclient", function () {
       // Initialize lightclient
       loggerLC.info("Initializing lightclient", {slot: head.slot});
 
-      let beaconApiUrl = `http://localhost:${restPort}`;
-      const api = getClient({baseUrl: beaconApiUrl}, {config:bn.config});
-      const lightClientRestTransport = new LightClientRestTransport(api, api.lightclient.getStateProof);
+      const beaconApiUrl = `http://localhost:${restPort}`;
+      const api = getClient({baseUrl: beaconApiUrl}, {config: bn.config});
+      const lightClientRestTransport = new LightClientRestTransport(api, api.proof.getStateProof);
       const lightclient = await Lightclient.initializeFromCheckpointRoot({
         config: bn.config,
         logger: loggerLC,

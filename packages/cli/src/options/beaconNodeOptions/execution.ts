@@ -34,7 +34,7 @@ export function parseArgs(args: ExecutionEngineArgs): IBeaconNodeOptions["execut
   };
 }
 
-export const options: ICliCommandOptions<ExecutionEngineArgs> = {
+export const executionEngineOptions: ICliCommandOptions<ExecutionEngineArgs> = {
   "execution.urls": {
     description: "Urls to execution client engine API",
     type: "array",

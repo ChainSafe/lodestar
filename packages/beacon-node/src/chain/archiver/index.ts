@@ -1,8 +1,8 @@
 import {ILogger} from "@lodestar/utils";
 
 import {CheckpointWithHex} from "@lodestar/fork-choice";
+import {JobItemQueue} from "@lodestar/engine-api-client";
 import {IBeaconDb} from "../../db/index.js";
-import {JobItemQueue} from "../../util/queue/index.js";
 import {IBeaconChain} from "../interface.js";
 import {ChainEvent} from "../emitter.js";
 import {StatesArchiver} from "./archiveStates.js";

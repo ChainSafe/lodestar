@@ -1,43 +1,16 @@
 import EventEmitter from "events";
 import StrictEventEmitter from "strict-event-emitter-types";
-import {allForks, altair, Root, ssz, SyncPeriod} from "@lodestar/types";
+import {allForks, altair, ssz, SyncPeriod} from "@lodestar/types";
 import {Api, routes} from "@lodestar/api";
-import {fromHexString, JsonPath, toHexString} from "@chainsafe/ssz";
+import {fromHexString, JsonPath} from "@chainsafe/ssz";
 import {Proof} from "@chainsafe/persistent-merkle-tree";
-import {GossipType, INetwork} from "@lodestar/beacon-node/network";
 import {PeerSet} from "@lodestar/beacon-node/util/peerMap";
 import {GossipsubEvents} from "@chainsafe/libp2p-gossipsub";
 import {ForkName} from "@lodestar/params";
+import {GossipType, INetwork} from "@lodestar/beacon-node/network";
 import {DEFAULT_ENCODING} from "@lodestar/beacon-node/network/gossip/constants";
 import {IBeaconConfig} from "@lodestar/config";
-
-export enum EventType {
-  /**
-   * The node has finished processing, resulting in a new head. previous_duty_dependent_root is
-   * `get_block_root_at_slot(state, compute_start_slot_at_epoch(epoch - 1) - 1)` and
-   * current_duty_dependent_root is `get_block_root_at_slot(state, compute_start_slot_at_epoch(epoch) - 1)`.
-   * Both dependent roots use the genesis block root in the case of underflow.
-   */
-  head = "head",
-  /** The node has received a valid block (from P2P or API) */
-  block = "block",
-  /** The node has received a valid attestation (from P2P or API) */
-  attestation = "attestation",
-  /** The node has received a valid voluntary exit (from P2P or API) */
-  voluntaryExit = "voluntary_exit",
-  /** Finalized checkpoint has been updated */
-  finalizedCheckpoint = "finalized_checkpoint",
-  /** The node has reorganized its chain */
-  chainReorg = "chain_reorg",
-  /** The node has received a valid sync committee SignedContributionAndProof (from P2P or API) */
-  contributionAndProof = "contribution_and_proof",
-  /** New or better optimistic header update available */
-  lightClientOptimisticUpdate = "light_client_optimistic_update",
-  /** New or better finality update available */
-  lightClientFinalityUpdate = "light_client_finality_update",
-  /** New or better light client update available */
-  lightClientUpdate = "light_client_update",
-}
+import {LightclientEvent} from "../events.js";
 
 export interface LightClientTransport {
   getStateProof(stateId: string, jsonPaths: JsonPath[]): Promise<{data: Proof}>;
@@ -46,20 +19,20 @@ export interface LightClientTransport {
    * Returns the latest optimistic head update available. Clients should use the SSE type `light_client_optimistic_update`
    * unless to get the very first head update after syncing, or if SSE are not supported by the server.
    */
-  getOptimisticUpdate(): Promise<{data: altair.LightClientOptimisticUpdate | undefined}>;
-  getFinalityUpdate(): Promise<{data: altair.LightClientFinalityUpdate | undefined}>;
+  getOptimisticUpdate(): Promise<{data: altair.LightClientOptimisticUpdate}>;
+  getFinalityUpdate(): Promise<{data: altair.LightClientFinalityUpdate}>;
   /**
    * Fetch a bootstrapping state with a proof to a trusted block root.
    * The trusted block root should be fetched with similar means to a weak subjectivity checkpoint.
    * Only block roots for checkpoints are guaranteed to be available.
    */
-  getBootstrap(blockRoot: string): Promise<{data: altair.LightClientBootstrap | undefined}>;
+  getBootstrap(blockRoot: string): Promise<{data: altair.LightClientBootstrap}>;
 
   /**
    * For fetching the block when updating the EL
    *
    */
-  fetchBlock(blockRoot: string): Promise<{data: allForks.SignedBeaconBlock | undefined}>;
+  fetchBlock(blockRoot: string): Promise<{data: allForks.SignedBeaconBlock}>;
 
   // registers handler for LightClientOptimisticUpdate. This can come either via sse or p2p
   onOptimisticUpdate(handler: (optimisticUpdate: altair.LightClientOptimisticUpdate) => void): void;
@@ -68,8 +41,8 @@ export interface LightClientTransport {
 }
 
 export type LightClientRestEvents = {
-  [EventType.lightClientUpdate]: altair.LightClientUpdate;
-  [EventType.lightClientOptimisticUpdate]: altair.LightClientOptimisticUpdate;
+  [LightclientEvent.lightClientFinalityUpdate]: altair.LightClientFinalityUpdate;
+  [LightclientEvent.lightClientOptimisticUpdate]: altair.LightClientOptimisticUpdate;
 };
 
 // export class ChainEventEmitter extends (EventEmitter as {new (): StrictEventEmitter<EventEmitter, IChainEvents>}) {}
@@ -145,7 +118,7 @@ export class LightClientGossipTransport implements LightClientTransport {
     this.stateGetterFn = stateGetterFn;
   }
 
-  async fetchBlock(blockRoot: string): Promise<{data: allForks.SignedBeaconBlock | undefined}> {
+  async fetchBlock(blockRoot: string): Promise<{data: allForks.SignedBeaconBlock}> {
     let data: allForks.SignedBeaconBlock | undefined;
     for (const peer of this.peers.values()) {
       try {
@@ -158,10 +131,14 @@ export class LightClientGossipTransport implements LightClientTransport {
         break;
       }
     }
-    return {data};
+    if (data === undefined) {
+      throw new Error("Block not found");
+    } else {
+      return {data};
+    }
   }
 
-  async getBootstrap(blockRoot: string): Promise<{data: altair.LightClientBootstrap | undefined}> {
+  async getBootstrap(blockRoot: string): Promise<{data: altair.LightClientBootstrap}> {
     let data: altair.LightClientBootstrap | undefined;
     for (const peer of this.peers.values()) {
       try {
@@ -175,10 +152,14 @@ export class LightClientGossipTransport implements LightClientTransport {
       }
     }
 
-    return {data};
+    if (data === undefined) {
+      throw new Error("Bootstrap not found");
+    } else {
+      return {data};
+    }
   }
 
-  async getFinalityUpdate(): Promise<{data: altair.LightClientFinalityUpdate | undefined}> {
+  async getFinalityUpdate(): Promise<{data: altair.LightClientFinalityUpdate}> {
     let data: altair.LightClientFinalityUpdate | undefined;
     for (const peer of this.peers.values()) {
       try {
@@ -191,10 +172,14 @@ export class LightClientGossipTransport implements LightClientTransport {
         break;
       }
     }
-    return {data};
+    if (data === undefined) {
+      throw new Error("Finality Update not found");
+    } else {
+      return {data};
+    }
   }
 
-  async getOptimisticUpdate(): Promise<{data: altair.LightClientOptimisticUpdate | undefined}> {
+  async getOptimisticUpdate(): Promise<{data: altair.LightClientOptimisticUpdate}> {
     let data: altair.LightClientOptimisticUpdate | undefined;
     for (const peer of this.peers.values()) {
       try {
@@ -207,7 +192,11 @@ export class LightClientGossipTransport implements LightClientTransport {
         break;
       }
     }
-    return {data};
+    if (data === undefined) {
+      throw new Error("Optimisitic Update not found");
+    } else {
+      return {data};
+    }
   }
 
   getStateProof(stateId: string, jsonPaths: JsonPath[]): Promise<{data: Proof}> {
@@ -218,7 +207,8 @@ export class LightClientGossipTransport implements LightClientTransport {
     let data: altair.LightClientUpdate[] = [];
     for (const peer of this.peers.values()) {
       try {
-        data = await this.network.reqResp.lightClientUpdate(peer, {startPeriod, count});
+        // TODO DA revisit
+        // data = await this.network.reqResp.lightClientUpdate(peer, {startPeriod, count});
       } catch (e) {
         // log errr
       }

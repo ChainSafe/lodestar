@@ -9,6 +9,7 @@ import * as events from "./events.js";
 import * as lightclient from "./lightclient.js";
 import * as lodestar from "./lodestar.js";
 import * as node from "./node.js";
+import * as proof from "./proof.js";
 import * as validator from "./validator.js";
 
 // Re-export for convenience
@@ -36,6 +37,7 @@ export function registerRoutes(
     lightclient: () => lightclient.getRoutes(config, api.lightclient),
     lodestar: () => lodestar.getRoutes(config, api.lodestar),
     node: () => node.getRoutes(config, api.node),
+    proof: () => proof.getRoutes(config, api.proof),
     validator: () => validator.getRoutes(config, api.validator),
   };
 
