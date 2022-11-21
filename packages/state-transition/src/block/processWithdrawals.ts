@@ -29,7 +29,7 @@ export function processWithdrawals(
 }
 
 export function getExpectedWithdrawals(state: CachedBeaconStateCapella): capella.Withdrawal[] {
-  const currentEpoch = state.epochCtx.epoch + 1;
+  const epoch = state.epochCtx.epoch;
   let withdrawalIndex = state.nextWithdrawalIndex;
   let validatorIndex = state.nextWithdrawalValidatorIndex;
   const {validators, balances} = state;
@@ -43,12 +43,12 @@ export function getExpectedWithdrawals(state: CachedBeaconStateCapella): capella
     const {effectiveBalance, withdrawalCredentials, withdrawableEpoch} = validator;
 
     if (
-      ((balance > 0 && withdrawableEpoch <= currentEpoch) ||
+      ((balance > 0 && withdrawableEpoch <= epoch) ||
         (effectiveBalance === MAX_EFFECTIVE_BALANCE && balance > MAX_EFFECTIVE_BALANCE)) &&
       // WITHDRAWAL_PREFIX_BYTES is just 1
       withdrawalCredentials[0] === ETH1_ADDRESS_WITHDRAWAL_PREFIX
     ) {
-      const amount = withdrawableEpoch <= currentEpoch ? balance : balance - MAX_EFFECTIVE_BALANCE;
+      const amount = withdrawableEpoch <= epoch ? balance : balance - MAX_EFFECTIVE_BALANCE;
       const address = withdrawalCredentials.slice(12);
       withdrawals.push({
         index: withdrawalIndex,
