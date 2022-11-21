@@ -18,7 +18,7 @@ describe("RateTracker", () => {
   for (const objectCount of objectCounts) {
     itBench({
       id: `RateTracker ${iteration} limit, ${objectCount} obj count per request`,
-      beforeEach: () => new RateTracker({limit: iteration, timeoutMs: rateTrackerTimeoutMs}),
+      beforeEach: () => new RateTracker({limit: iteration, limitTimeMs: rateTrackerTimeoutMs}),
       fn: (rateTracker) => {
         for (let i = 0; i < iteration; i++) {
           rateTracker.requestObjects(objectCount);
@@ -33,7 +33,7 @@ describe("RateTracker", () => {
     id: "RateTracker with prune",
     beforeEach: () => {
       const requests = new MapDef<number, number>(() => 0);
-      const rateTracker = new RateTracker({limit: iteration, timeoutMs: rateTrackerTimeoutMs}, requests);
+      const rateTracker = new RateTracker({limit: iteration, limitTimeMs: rateTrackerTimeoutMs}, requests);
       for (let i = 0; i < 60; i++) {
         requests.set(i, 1);
       }
