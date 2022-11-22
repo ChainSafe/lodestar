@@ -1,8 +1,8 @@
 import crypto from "node:crypto";
 import {bellatrix, RootHex} from "@lodestar/types";
-import {fromHex, toHex, ZERO_HASH} from "@lodestar/utils";
+import {fromHex, toHex} from "@lodestar/utils";
 import {BYTES_PER_LOGS_BLOOM} from "@lodestar/params";
-import {ZERO_HASH_HEX} from "@lodestar/utils";
+import {ZERO_HASH_HEX, ZERO_HASH} from "@lodestar/utils/constants";
 import {
   ExecutePayloadStatus,
   ExecutePayloadResponse,

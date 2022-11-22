@@ -18,7 +18,3 @@ export * from "./timeout.js";
 export {RecursivePartial, bnToNum} from "./types.js";
 export * from "./verifyMerkleBranch.js";
 export * from "./promise.js";
-export * from "./constants/index.js";
-export * from "./metrics/index.js";
-export * from "./queue/index.js";
-export * from "./provider/index.js";

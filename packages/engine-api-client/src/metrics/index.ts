@@ -1,4 +1,4 @@
-import {IGauge, IHistogram} from "@lodestar/utils";
+import {IGauge, IHistogram} from "@lodestar/utils/metrics";
 
 export type IMetrics = {
   executionEnginerHttpClient: JsonRpcHttpClientMetrics;

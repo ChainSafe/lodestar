@@ -1,4 +1,5 @@
-import {ILogger, JobItemQueue} from "@lodestar/utils";
+import {ILogger} from "@lodestar/utils";
+import {JobItemQueue} from "@lodestar/utils/queue";
 
 import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {IBeaconDb} from "../../db/index.js";

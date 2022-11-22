@@ -1,5 +1,6 @@
 import {expect} from "chai";
-import {sleep, JobFnQueue, QueueError, QueueErrorCode, QueueType} from "@lodestar/utils";
+import {sleep} from "@lodestar/utils";
+import {JobFnQueue, QueueError, QueueErrorCode, QueueType} from "@lodestar/utils/queue";
 
 import {expectLodestarError, expectRejectedWithLodestarError} from "../../utils/errors.js";
 

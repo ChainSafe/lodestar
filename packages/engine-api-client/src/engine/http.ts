@@ -1,8 +1,8 @@
 import {RootHex, allForks, capella} from "@lodestar/types";
 import {BYTES_PER_LOGS_BLOOM, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {fromHex, JobItemQueue} from "@lodestar/utils";
 
 import {
+  fromHex,
   bytesToData,
   numToQuantity,
   dataToBytes,
@@ -11,7 +11,14 @@ import {
   QUANTITY,
   quantityToBigint,
 } from "@lodestar/utils";
-import {IJsonRpcHttpClient, ReqOpts, ErrorJsonRpcResponse, HttpRpcError, JsonRpcHttpClient} from "@lodestar/utils";
+import {
+  IJsonRpcHttpClient,
+  ReqOpts,
+  ErrorJsonRpcResponse,
+  HttpRpcError,
+  JsonRpcHttpClient,
+} from "@lodestar/utils/provider";
+import {JobItemQueue} from "@lodestar/utils/queue";
 import {IMetrics} from "../metrics/index.js";
 
 /**

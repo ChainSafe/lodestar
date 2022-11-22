@@ -1,4 +1,5 @@
-import {mapValues, JobItemQueue, JobQueueOpts, QueueType} from "@lodestar/utils";
+import {mapValues} from "@lodestar/utils";
+import {JobItemQueue, JobQueueOpts, QueueType} from "@lodestar/utils/queue";
 import {IMetrics} from "../../../metrics/index.js";
 import {GossipJobQueues, GossipType, GossipValidatorFn, ResolvedType, ValidatorFnsByType} from "../interface.js";
 

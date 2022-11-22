@@ -1,16 +1,8 @@
 import {toHexString} from "@chainsafe/ssz";
 import {phase0} from "@lodestar/types";
 import {IChainConfig} from "@lodestar/config";
-import {
-  isJsonRpcTruncatedError,
-  JsonRpcHttpClient,
-  JsonRpcHttpClientMetrics,
-  ReqOpts,
-  fromHex,
-  dataToBytes,
-  quantityToNum,
-  numToQuantity,
-} from "@lodestar/utils";
+import {fromHex, dataToBytes, quantityToNum, numToQuantity} from "@lodestar/utils";
+import {isJsonRpcTruncatedError, JsonRpcHttpClient, JsonRpcHttpClientMetrics, ReqOpts} from "@lodestar/utils/provider";
 import {linspace} from "../../util/numpy.js";
 import {depositEventTopics, parseDepositLog} from "../utils/depositContract.js";
 import {Eth1Block, IEth1Provider} from "../interface.js";
