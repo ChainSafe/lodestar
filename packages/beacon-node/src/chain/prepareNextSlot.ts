@@ -3,7 +3,7 @@ import {IChainForkConfig} from "@lodestar/config";
 import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Slot} from "@lodestar/types";
 import {ILogger, sleep} from "@lodestar/utils";
-import {TransitionConfigurationV1} from "@lodestar/engine-api-client/src";
+import {TransitionConfigurationV1} from "@lodestar/engine-api-client";
 import {GENESIS_SLOT, ZERO_HASH_HEX} from "../constants/constants.js";
 import {IMetrics} from "../metrics/index.js";
 import {ChainEvent} from "./emitter.js";

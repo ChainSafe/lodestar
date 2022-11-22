@@ -18,7 +18,7 @@ import {
 } from "@lodestar/fork-choice";
 import {IChainForkConfig} from "@lodestar/config";
 import {ErrorAborted, ILogger} from "@lodestar/utils";
-import {ExecutePayloadStatus, IExecutionEngine} from "@lodestar/engine-api-client/src";
+import {ExecutePayloadStatus, IExecutionEngine} from "@lodestar/engine-api-client";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {IBeaconClock} from "../clock/index.js";
 import {BlockProcessOpts} from "../options.js";

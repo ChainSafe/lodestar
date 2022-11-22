@@ -2,8 +2,8 @@
   "name": "@lodestar/engine-api-client",
   "version": "1.2.1",
   "description": "Package for interacting with the ethereum execution layer",
-  "type": "module",
   "author": "ChainSafe Systems",
+  "type": "module",
   "homepage": "https://github.com/ChainSafe/lodestar#readme",
   "license": "Apache-2.0",
   "repository": {

@@ -2,7 +2,7 @@ import "mocha";
 import crypto from "node:crypto";
 import http from "node:http";
 import {expect} from "chai";
-import {JsonRpcHttpClient} from "@lodestar/engine-api-client/src";
+import {JsonRpcHttpClient} from "@lodestar/engine-api-client";
 import {getGoerliRpcUrl} from "../../testParams.js";
 import {IRpcPayload} from "../../../src/eth1/interface.js";
 

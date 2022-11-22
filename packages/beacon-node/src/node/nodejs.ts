@@ -9,7 +9,7 @@ import {Api} from "@lodestar/api";
 import {BeaconStateAllForks} from "@lodestar/state-transition";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 
-import {initializeExecutionEngine} from "@lodestar/engine-api-client/src";
+import {initializeExecutionEngine} from "@lodestar/engine-api-client";
 import {IBeaconDb} from "../db/index.js";
 import {INetwork, Network, getReqRespHandlers} from "../network/index.js";
 import {BeaconSync, IBeaconSync} from "../sync/index.js";

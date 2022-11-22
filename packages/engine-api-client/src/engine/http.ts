@@ -1,6 +1,6 @@
 import {RootHex, allForks, capella} from "@lodestar/types";
 import {BYTES_PER_LOGS_BLOOM, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {fromHex} from "@lodestar/utils";
+import {fromHex, JobItemQueue} from "@lodestar/utils";
 
 import {
   bytesToData,
@@ -28,7 +28,6 @@ import {IMetrics} from "../metrics/index.js";
  */
 export const EPOCHS_PER_BATCH = 1;
 
-import {JobItemQueue} from "../../../utils/src/queue/index.js";
 import {
   ExecutePayloadStatus,
   ExecutePayloadResponse,

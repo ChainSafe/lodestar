@@ -4,7 +4,7 @@ import {SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY, SLOTS_PER_EPOCH} from "@lodestar/pa
 import {LevelDbController} from "@lodestar/db";
 import {sleep} from "@lodestar/utils";
 import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
-import {ExecutionEngineDisabled} from "@lodestar/engine-api-client/src";
+import {ExecutionEngineDisabled} from "@lodestar/engine-api-client";
 import {
   beforeValue,
   getNetworkCachedState,

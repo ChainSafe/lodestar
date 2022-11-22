@@ -9,7 +9,7 @@ import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
 import {ILogger} from "@lodestar/utils";
 
 import {ContextBytesType, EncodedPayloadType} from "@lodestar/reqresp";
-import {ExecutionEngineDisabled} from "@lodestar/engine-api-client/src";
+import {ExecutionEngineDisabled} from "@lodestar/engine-api-client";
 import {ChainEventEmitter, IBeaconChain} from "../../../../src/chain/index.js";
 import {IBeaconClock} from "../../../../src/chain/clock/interface.js";
 import {generateEmptySignedBlock} from "../../block.js";

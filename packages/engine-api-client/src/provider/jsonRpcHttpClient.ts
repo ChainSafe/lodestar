@@ -3,7 +3,7 @@
 import fetch from "cross-fetch";
 
 import {ErrorAborted, TimeoutError, retry, IHistogram, IGauge} from "@lodestar/utils";
-import {IJson, IRpcPayload} from "../interface.js";
+import {IJson, IRpcPayload} from "../engine/interface.js";
 import {encodeJwtToken} from "./jwt.js";
 /**
  * Limits the amount of response text printed with RPC or parsing errors

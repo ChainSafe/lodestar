@@ -8,11 +8,7 @@ import {IChainConfig} from "@lodestar/config";
 import {Epoch} from "@lodestar/types";
 import {ValidatorProposerConfig} from "@lodestar/validator";
 
-import {
-  defaultExecutionEngineHttpOpts,
-  ExecutePayloadStatus,
-  ExecutionEngineHttp,
-} from "@lodestar/engine-api-client/src";
+import {defaultExecutionEngineHttpOpts, ExecutePayloadStatus, ExecutionEngineHttp} from "@lodestar/engine-api-client";
 import {ChainEvent} from "../../src/chain/index.js";
 import {testLogger, TestLoggerOpts} from "../utils/logger.js";
 import {getDevBeaconNode} from "../utils/node/beacon.js";
