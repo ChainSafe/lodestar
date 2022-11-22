@@ -10,11 +10,7 @@
     "type": "git",
     "url": "git+https://github.com/ChainSafe/lodestar.git"
   },
-  "exports": {
-    ".": {
-      "import": "./lib/index.js"
-    }
-  },
+  "exports": "./lib/index.js",
   "types": "lib/index.d.ts",
   "files": [
     "lib/**/*.d.ts",

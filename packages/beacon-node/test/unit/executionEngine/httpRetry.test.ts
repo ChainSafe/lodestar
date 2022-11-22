@@ -3,7 +3,7 @@ import {fastify} from "fastify";
 
 import {fromHexString} from "@chainsafe/ssz";
 
-import {ExecutionEngineHttp, defaultExecutionEngineHttpOpts} from "@lodestar/engine-api-client";
+import {ExecutionEngineHttp, defaultExecutionEngineHttpOpts} from "@lodestar/engine-api-client/src";
 
 import {bytesToData, numToQuantity} from "../../../src/eth1/provider/utils.js";
 

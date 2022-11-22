@@ -2,7 +2,7 @@ import {allForks, RootHex, Slot, ValidatorIndex} from "@lodestar/types";
 import {LodestarError} from "@lodestar/utils";
 import {toHexString} from "@chainsafe/ssz";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
-import {ExecutePayloadStatus} from "@lodestar/engine-api-client";
+import {ExecutePayloadStatus} from "@lodestar/engine-api-client/src";
 import {GossipActionError} from "./gossipValidation.js";
 
 export enum BlockErrorCode {

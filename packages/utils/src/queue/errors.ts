@@ -1,4 +1,4 @@
-import {LodestarError} from "@lodestar/utils";
+import {LodestarError} from "../errors.js";
 
 export enum QueueErrorCode {
   QUEUE_ABORTED = "QUEUE_ERROR_QUEUE_ABORTED",

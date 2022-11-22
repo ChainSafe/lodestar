@@ -3,7 +3,7 @@ import {IChainForkConfig} from "@lodestar/config";
 import {BeaconStateAllForks, becomesNewEth1Data} from "@lodestar/state-transition";
 import {ErrorAborted, TimeoutError, fromHex, ILogger, isErrorAborted, sleep} from "@lodestar/utils";
 
-import {HttpRpcError, isJsonRpcTruncatedError} from "@lodestar/engine-api-client";
+import {HttpRpcError, isJsonRpcTruncatedError} from "@lodestar/engine-api-client/src";
 import {IBeaconDb} from "../db/index.js";
 import {IMetrics} from "../metrics/index.js";
 import {Eth1DepositsCache} from "./eth1DepositsCache.js";

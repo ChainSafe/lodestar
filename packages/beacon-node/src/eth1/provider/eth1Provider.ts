@@ -7,7 +7,7 @@ import {
   JsonRpcHttpClient,
   JsonRpcHttpClientMetrics,
   ReqOpts,
-} from "@lodestar/engine-api-client";
+} from "@lodestar/engine-api-client/src";
 import {linspace} from "../../util/numpy.js";
 import {depositEventTopics, parseDepositLog} from "../utils/depositContract.js";
 import {Eth1Block, IEth1Provider} from "../interface.js";

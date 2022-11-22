@@ -7,7 +7,7 @@ import {ForkName} from "@lodestar/params";
 import {allForks, altair, phase0} from "@lodestar/types";
 import {IBeaconConfig} from "@lodestar/config";
 import {ILogger} from "@lodestar/utils";
-import {JobItemQueue} from "@lodestar/engine-api-client";
+import {JobItemQueue} from "@lodestar/utils";
 import {IBeaconChain} from "../../chain/index.js";
 import {NetworkEvent} from "../events.js";
 

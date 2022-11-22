@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {Eth1Provider} from "@lodestar/beacon-node";
-import {JsonRpcHttpClient} from "@lodestar/engine-api-client";
+import {JsonRpcHttpClient} from "@lodestar/engine-api-client/src";
 
 interface EthJsonRpcAdminReturnTypes {
   admin_nodeInfo: {

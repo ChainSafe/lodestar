@@ -6,7 +6,7 @@ import {CheckpointWithHex, ForkChoice} from "@lodestar/fork-choice";
 import {phase0, allForks, bellatrix, ssz, RootHex} from "@lodestar/types";
 import {bnToNum} from "@lodestar/utils";
 import {createIBeaconConfig} from "@lodestar/config";
-import {ExecutionEngineMock} from "@lodestar/engine-api-client";
+import {ExecutionEngineMock} from "@lodestar/engine-api-client/src";
 import {BeaconChain, ChainEvent} from "../../../src/chain/index.js";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {testLogger} from "../../utils/logger.js";

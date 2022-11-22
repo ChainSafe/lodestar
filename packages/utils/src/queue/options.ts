@@ -1,4 +1,4 @@
-import {IGauge, IHistogram} from "../../metrics/index.js";
+import {IGauge, IHistogram} from "../metrics/index.js";
 
 export enum QueueType {
   FIFO = "FIFO",

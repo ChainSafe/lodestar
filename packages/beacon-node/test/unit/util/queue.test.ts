@@ -1,7 +1,7 @@
 import {expect} from "chai";
 import {sleep} from "@lodestar/utils";
 
-import {JobFnQueue, QueueError, QueueErrorCode, QueueType} from "@lodestar/engine-api-client";
+import {JobFnQueue, QueueError, QueueErrorCode, QueueType} from "@lodestar/engine-api-client/src";
 import {expectLodestarError, expectRejectedWithLodestarError} from "../../utils/errors.js";
 
 describe("Job queue", () => {

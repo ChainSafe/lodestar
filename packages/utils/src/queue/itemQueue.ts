@@ -1,4 +1,4 @@
-import {sleep} from "@lodestar/utils";
+import {sleep} from "../sleep.js";
 import {LinkedList} from "../array.js";
 import {QueueError, QueueErrorCode} from "./errors.js";
 import {defaultQueueOpts, IQueueMetrics, JobQueueOpts, QueueType} from "./options.js";

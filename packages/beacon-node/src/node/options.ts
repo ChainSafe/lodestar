@@ -1,4 +1,4 @@
-import {defaultExecutionEngineOpts, ExecutionEngineOpts} from "@lodestar/engine-api-client";
+import {defaultExecutionEngineOpts, ExecutionEngineOpts} from "@lodestar/engine-api-client/src";
 import {defaultApiOptions, IApiOptions} from "../api/options.js";
 import {defaultChainOptions, IChainOptions} from "../chain/options.js";
 import {defaultDbOptions, IDatabaseOptions} from "../db/options.js";

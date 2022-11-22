@@ -5,7 +5,7 @@ import {
   parseExecutionPayload,
   serializeExecutionPayload,
   defaultExecutionEngineHttpOpts,
-} from "@lodestar/engine-api-client";
+} from "@lodestar/engine-api-client/src";
 
 describe("ExecutionEngine / http", () => {
   const afterCallbacks: (() => Promise<void> | void)[] = [];

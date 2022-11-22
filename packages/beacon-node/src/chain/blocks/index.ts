@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
 import {allForks} from "@lodestar/types";
-import {toHex} from "@lodestar/utils";
-import {JobItemQueue} from "@lodestar/engine-api-client";
+import {toHex, JobItemQueue} from "@lodestar/utils";
 import {IMetrics} from "../../metrics/metrics.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";

@@ -5,7 +5,7 @@ import {ForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {WinstonLogger} from "@lodestar/utils";
 import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {IChainForkConfig} from "@lodestar/config";
-import {ExecutionEngineHttp, IExecutionEngine, PayloadIdCache} from "@lodestar/engine-api-client";
+import {ExecutionEngineHttp, IExecutionEngine, PayloadIdCache} from "@lodestar/engine-api-client/src";
 import {BeaconChain, ChainEventEmitter} from "../../../src/chain/index.js";
 import {IBeaconChain} from "../../../src/chain/interface.js";
 import {LocalClock} from "../../../src/chain/clock/index.js";

@@ -28,7 +28,7 @@ import {IMetrics} from "../metrics/index.js";
  */
 export const EPOCHS_PER_BATCH = 1;
 
-import {JobItemQueue} from "../queue/index.js";
+import {JobItemQueue} from "../../../utils/src/queue/index.js";
 import {
   ExecutePayloadStatus,
   ExecutePayloadResponse,
