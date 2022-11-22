@@ -19,13 +19,14 @@ import {bytesToData, ILogger, numToQuantity, toHex} from "@lodestar/utils";
 import {CompositeTypeAny, fromHexString, TreeView, Type} from "@chainsafe/ssz";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 
-import {IExecutionBuilder, IExecutionEngine, TransitionConfigurationV1} from "@lodestar/engine-api-client";
+import {IExecutionEngine, TransitionConfigurationV1} from "@lodestar/engine-api-client";
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
 import {IMetrics} from "../metrics/index.js";
 import {wrapError} from "../util/wrapError.js";
 import {IEth1ForBlockProduction} from "../eth1/index.js";
 import {ensureDir, writeIfNotExist} from "../util/file.js";
+import {IExecutionBuilder} from "../execution/index.js";
 import {CheckpointStateCache, StateContextCache} from "./stateCache/index.js";
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
 import {IBeaconClock, LocalClock} from "./clock/index.js";
