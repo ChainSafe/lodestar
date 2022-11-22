@@ -21,3 +21,4 @@ export * from "./promise.js";
 export * from "./constants/index.js";
 export * from "./metrics/index.js";
 export * from "./queue/index.js";
+export * from "./provider/index.js";

@@ -5,7 +5,7 @@ import {fromHexString} from "@chainsafe/ssz";
 
 import {ExecutionEngineHttp, defaultExecutionEngineHttpOpts} from "@lodestar/engine-api-client";
 
-import {bytesToData, numToQuantity} from "../../../src/eth1/provider/utils.js";
+import {bytesToData, numToQuantity} from "@lodestar/utils";
 
 describe("ExecutionEngine / http ", () => {
   const afterCallbacks: (() => Promise<void> | void)[] = [];

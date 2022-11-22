@@ -11,8 +11,7 @@ import {
   QUANTITY,
   quantityToBigint,
 } from "@lodestar/utils";
-import {ErrorJsonRpcResponse, HttpRpcError, JsonRpcHttpClient} from "../provider/jsonRpcHttpClient.js";
-import {IJsonRpcHttpClient, ReqOpts} from "../provider/jsonRpcHttpClient.js";
+import {IJsonRpcHttpClient, ReqOpts, ErrorJsonRpcResponse, HttpRpcError, JsonRpcHttpClient} from "@lodestar/utils";
 import {IMetrics} from "../metrics/index.js";
 
 /**

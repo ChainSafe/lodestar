@@ -2,10 +2,18 @@
 // Note: isomorphic-fetch is not well mantained and does not support abort signals
 import fetch from "cross-fetch";
 
-import {ErrorAborted, TimeoutError, retry} from "@lodestar/utils";
-import {IGauge, IHistogram} from "../../metrics/interface.js";
-import {IJson, IRpcPayload} from "../interface.js";
+import {ErrorAborted, TimeoutError} from "../errors.js";
+import {retry} from "../retry.js";
+import {IGauge, IHistogram} from "../metrics/index.js";
 import {encodeJwtToken} from "./jwt.js";
+
+export type IJson = string | number | boolean | undefined | IJson[] | {[key: string]: IJson};
+
+export interface IRpcPayload<P = IJson[]> {
+  method: string;
+  params: P;
+}
+
 /**
  * Limits the amount of response text printed with RPC or parsing errors
  */

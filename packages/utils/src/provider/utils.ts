@@ -1,4 +1,4 @@
-import {ErrorParseJson} from "@lodestar/utils";
+import {ErrorParseJson} from "./jsonRpcHttpClient.js";
 
 export function isJsonRpcTruncatedError(error: Error): boolean {
   return (
