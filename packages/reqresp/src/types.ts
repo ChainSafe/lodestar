@@ -97,4 +97,5 @@ export interface TypeSerializer<T> {
   deserialize(bytes: Uint8Array): T;
   maxSize: number;
   minSize: number;
+  equals(a: T, b: T): boolean;
 }
