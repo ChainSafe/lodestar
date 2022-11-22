@@ -10,6 +10,7 @@ import {ForkName} from "@lodestar/params";
 import {GossipType} from "@lodestar/beacon-node/network";
 import {DEFAULT_ENCODING} from "@lodestar/beacon-node/network/gossip/constants";
 import {IBeaconConfig} from "@lodestar/config";
+import {Eth2Gossipsub} from "@lodestar/beacon-node/network";
 import {LightclientEvent} from "../events.js";
 import {ReqRespLightClient} from "../network/ReqRespLightClient.js";
 
@@ -110,11 +111,13 @@ export class LightClientRestTransport extends (EventEmitter as {new (): RestEven
 export class LightClientGossipTransport implements LightClientTransport {
   private stateGetterFn: StateGetterFn;
   private readonly reqResp: ReqRespLightClient;
+  private readonly gossip: Eth2Gossipsub;
   private peers = new PeerSet();
   private readonly config: IBeaconConfig;
 
-  constructor(reqResp: ReqRespLightClient, config: IBeaconConfig, stateGetterFn: StateGetterFn) {
+  constructor(reqResp: ReqRespLightClient, gossip: Eth2Gossipsub, config: IBeaconConfig, stateGetterFn: StateGetterFn) {
     this.reqResp = reqResp;
+    this.gossip = gossip;
     this.config = config;
     this.stateGetterFn = stateGetterFn;
   }
@@ -221,7 +224,7 @@ export class LightClientGossipTransport implements LightClientTransport {
   }
 
   onFinalityUpdate(handler: (finalityUpdate: altair.LightClientFinalityUpdate) => void): void {
-    const _updateHandler = (event: GossipsubEvents["gossipsub:message"]): void => {
+    const updateHandler = (event: GossipsubEvents["gossipsub:message"]): void => {
       const {msg} = event.detail;
       const forkDigestHex = this.config.forkName2ForkDigestHex(ForkName.bellatrix);
       const finalityUpdateTopic = `/eth2/${forkDigestHex}/${GossipType.light_client_finality_update}/${DEFAULT_ENCODING}`;
@@ -230,11 +233,11 @@ export class LightClientGossipTransport implements LightClientTransport {
         handler(finalityUpdate);
       }
     };
-    // this.network.gossip.addEventListener("gossipsub:message", updateHandler);
+    this.gossip.addEventListener("gossipsub:message", updateHandler);
   }
 
   onOptimisticUpdate(handler: (optimisticUpdate: altair.LightClientOptimisticUpdate) => void): void {
-    const _updateHandler = (event: GossipsubEvents["gossipsub:message"]): void => {
+    const updateHandler = (event: GossipsubEvents["gossipsub:message"]): void => {
       const {msg} = event.detail;
       const forkDigestHex = this.config.forkName2ForkDigestHex(ForkName.bellatrix);
       const optimisiticUpdateTopic = `/eth2/${forkDigestHex}/${GossipType.light_client_optimistic_update}/${DEFAULT_ENCODING}`;
@@ -243,6 +246,6 @@ export class LightClientGossipTransport implements LightClientTransport {
         handler(optimisticUpdate);
       }
     };
-    // this.network.gossip.addEventListener("gossipsub:message", updateHandler);
+    this.gossip.addEventListener("gossipsub:message", updateHandler);
   }
 }
