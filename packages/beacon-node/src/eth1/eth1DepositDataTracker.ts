@@ -3,6 +3,7 @@ import {IChainForkConfig} from "@lodestar/config";
 import {BeaconStateAllForks, becomesNewEth1Data} from "@lodestar/state-transition";
 import {ErrorAborted, TimeoutError, fromHex, ILogger, isErrorAborted, sleep} from "@lodestar/utils";
 
+import {HttpRpcError, isJsonRpcTruncatedError} from "@lodestar/engine-api-client";
 import {IBeaconDb} from "../db/index.js";
 import {IMetrics} from "../metrics/index.js";
 import {Eth1DepositsCache} from "./eth1DepositsCache.js";
@@ -11,9 +12,7 @@ import {getEth1VotesToConsider, pickEth1Vote} from "./utils/eth1Vote.js";
 import {getDeposits} from "./utils/deposits.js";
 import {Eth1DataAndDeposits, IEth1Provider} from "./interface.js";
 import {Eth1Options} from "./options.js";
-import {HttpRpcError} from "./provider/jsonRpcHttpClient.js";
 import {parseEth1Block} from "./provider/eth1Provider.js";
-import {isJsonRpcTruncatedError} from "./provider/utils.js";
 
 const MAX_BLOCKS_PER_BLOCK_QUERY = 1000;
 const MIN_BLOCKS_PER_BLOCK_QUERY = 10;

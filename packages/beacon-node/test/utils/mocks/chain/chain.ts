@@ -9,6 +9,7 @@ import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
 import {ILogger} from "@lodestar/utils";
 
 import {ContextBytesType, EncodedPayloadType} from "@lodestar/reqresp";
+import {ExecutionEngineDisabled} from "@lodestar/engine-api-client";
 import {ChainEventEmitter, IBeaconChain} from "../../../../src/chain/index.js";
 import {IBeaconClock} from "../../../../src/chain/clock/interface.js";
 import {generateEmptySignedBlock} from "../../block.js";
@@ -33,7 +34,6 @@ import {
 } from "../../../../src/chain/opPools/index.js";
 import {LightClientServer} from "../../../../src/chain/lightClient/index.js";
 import {Eth1ForBlockProductionDisabled} from "../../../../src/eth1/index.js";
-import {ExecutionEngineDisabled} from "../../../../src/execution/engine/index.js";
 import {testLogger} from "../../logger.js";
 import {ReprocessController} from "../../../../src/chain/reprocess.js";
 import {createCachedBeaconStateTest} from "../../../../../state-transition/test/utils/state.js";

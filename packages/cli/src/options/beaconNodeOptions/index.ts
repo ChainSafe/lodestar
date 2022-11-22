@@ -38,7 +38,7 @@ export const beaconNodeOptions = {
   ...api.options,
   ...chain.options,
   ...eth1.options,
-  ...execution.options,
+  ...execution.executionEngineOptions,
   ...builder.options,
   ...metrics.options,
   ...network.options,
