@@ -407,6 +407,21 @@ export function createLodestarMetrics(
       // Block processing can take 5-40ms, 100ms max
       buckets: [0.005, 0.01, 0.02, 0.05, 0.1, 1],
     }),
+    stfnBalancesCacheMiss: register.gauge<"source">({
+      name: "lodestar_stfn_balances_nodes_populated_miss_total",
+      help: "Total count state.balances nodesPopulated is not true on stfn",
+      labelNames: ["source"],
+    }),
+    stfnValidatorsNodesPopulatedMiss: register.gauge<"source">({
+      name: "lodestar_stfn_validators_nodes_populated_miss_total",
+      help: "Total count state.validators nodesPopulated is not true on stfn",
+      labelNames: ["source"],
+    }),
+    stfnStateClone: register.gauge<"source">({
+      name: "lodestar_stfn_state_clone_total",
+      help: "Total count of state.clone() calls in stfn",
+      labelNames: ["source"],
+    }),
 
     // BLS verifier thread pool and queue
 
@@ -885,10 +900,6 @@ export function createLodestarMetrics(
         help: "Histogram of cloned count per state every time state.clone() is called",
         buckets: [1, 2, 5, 10, 50, 250],
       }),
-      stateInternalCacheMiss: register.gauge({
-        name: "lodestar_state_cache_state_internal_cache_miss",
-        help: "Retrieved state does not have its internal cache populated",
-      }),
     },
 
     cpStateCache: {
@@ -924,10 +935,6 @@ export function createLodestarMetrics(
         name: "lodestar_cp_state_cache_state_cloned_count",
         help: "Histogram of cloned count per state every time state.clone() is called",
         buckets: [1, 2, 5, 10, 50, 250],
-      }),
-      stateInternalCacheMiss: register.gauge({
-        name: "lodestar_cp_state_cache_state_internal_cache_miss",
-        help: "Retrieved state does not have its internal cache populated",
       }),
     },
 

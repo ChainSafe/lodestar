@@ -2,7 +2,7 @@
 import {allForks, Slot, ssz} from "@lodestar/types";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {toHexString} from "@chainsafe/ssz";
-import {IBeaconStateTransitionMetrics} from "./metrics.js";
+import {IBeaconStateTransitionMetrics, onStateCloneMetrics} from "./metrics.js";
 import {beforeProcessEpoch, EpochProcessOpts} from "./cache/epochProcess.js";
 import {
   CachedBeaconStateAllForks,
@@ -40,6 +40,10 @@ export function stateTransition(
 
   // .clone() before mutating state in state transition
   let postState = state.clone();
+
+  if (metrics) {
+    onStateCloneMetrics(postState, metrics, "stateTransition");
+  }
 
   // State is already a ViewDU, which won't commit changes. Equivalent to .setStateCachesAsTransient()
   // postState.setStateCachesAsTransient();
@@ -96,6 +100,10 @@ export function processSlots(
 ): CachedBeaconStateAllForks {
   // .clone() before mutating state in state transition
   let postState = state.clone();
+
+  if (metrics) {
+    onStateCloneMetrics(postState, metrics, "processSlots");
+  }
 
   // State is already a ViewDU, which won't commit changes. Equivalent to .setStateCachesAsTransient()
   // postState.setStateCachesAsTransient();
