@@ -105,6 +105,7 @@
     "@chainsafe/persistent-merkle-tree": "^0.4.2",
     "@chainsafe/snappy-stream": "5.1.1",
     "@chainsafe/ssz": "^0.9.2",
+    "@chainsafe/as-chacha20poly1305": "^0.1.0",
     "@chainsafe/threads": "^1.10.0",
     "@ethersproject/abi": "^5.0.0",
     "@libp2p/bootstrap": "^2.0.0",
@@ -151,7 +152,6 @@
     "uint8arraylist": "^2.3.2",
     "uint8arrays": "^4.0.2",
     "varint": "^6.0.0",
-    "@chainsafe/as-chacha20poly1305-2": "https://github.com/tuyennhv/as-chacha20poly1305#tuyen/initial-implementation-dist",
     "xxhash-wasm": "1.0.1"
   },
   "devDependencies": {
