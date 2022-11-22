@@ -20,3 +20,4 @@ export * from "./verifyMerkleBranch.js";
 export * from "./promise.js";
 export * from "./constants/index.js";
 export * from "./metrics/index.js";
+export * from "./clients/index.js";

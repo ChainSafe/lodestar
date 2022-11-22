@@ -7,10 +7,11 @@ import {Proof} from "@chainsafe/persistent-merkle-tree";
 import {PeerSet} from "@lodestar/beacon-node/util/peerMap";
 import {GossipsubEvents} from "@chainsafe/libp2p-gossipsub";
 import {ForkName} from "@lodestar/params";
-import {GossipType, INetwork} from "@lodestar/beacon-node/network";
+import {GossipType} from "@lodestar/beacon-node/network";
 import {DEFAULT_ENCODING} from "@lodestar/beacon-node/network/gossip/constants";
 import {IBeaconConfig} from "@lodestar/config";
 import {LightclientEvent} from "../events.js";
+import {ReqRespLightClient} from "../network/ReqRespLightClient.js";
 
 export interface LightClientTransport {
   getStateProof(stateId: string, jsonPaths: JsonPath[]): Promise<{data: Proof}>;
@@ -108,12 +109,12 @@ export class LightClientRestTransport extends (EventEmitter as {new (): RestEven
 
 export class LightClientGossipTransport implements LightClientTransport {
   private stateGetterFn: StateGetterFn;
-  private readonly network: INetwork;
+  private readonly reqResp: ReqRespLightClient;
   private peers = new PeerSet();
   private readonly config: IBeaconConfig;
 
-  constructor(network: INetwork, config: IBeaconConfig, stateGetterFn: StateGetterFn) {
-    this.network = network;
+  constructor(reqResp: ReqRespLightClient, config: IBeaconConfig, stateGetterFn: StateGetterFn) {
+    this.reqResp = reqResp;
     this.config = config;
     this.stateGetterFn = stateGetterFn;
   }
@@ -122,7 +123,7 @@ export class LightClientGossipTransport implements LightClientTransport {
     let data: allForks.SignedBeaconBlock | undefined;
     for (const peer of this.peers.values()) {
       try {
-        [data] = await this.network.reqResp.beaconBlocksByRoot(peer, [fromHexString(blockRoot)]);
+        [data] = await this.reqResp.beaconBlocksByRoot(peer, [fromHexString(blockRoot)]);
       } catch (e) {
         // log
       }
@@ -142,7 +143,7 @@ export class LightClientGossipTransport implements LightClientTransport {
     let data: altair.LightClientBootstrap | undefined;
     for (const peer of this.peers.values()) {
       try {
-        data = await this.network.reqResp.lightClientBootstrap(peer, fromHexString(blockRoot));
+        data = await this.reqResp.lightClientBootstrap(peer, fromHexString(blockRoot));
       } catch (e) {
         // log error
       }
@@ -163,7 +164,7 @@ export class LightClientGossipTransport implements LightClientTransport {
     let data: altair.LightClientFinalityUpdate | undefined;
     for (const peer of this.peers.values()) {
       try {
-        data = await this.network.reqResp.lightClientFinalityUpdate(peer);
+        data = await this.reqResp.lightClientFinalityUpdate(peer);
       } catch (e) {
         // log error
       }
@@ -183,7 +184,7 @@ export class LightClientGossipTransport implements LightClientTransport {
     let data: altair.LightClientOptimisticUpdate | undefined;
     for (const peer of this.peers.values()) {
       try {
-        data = await this.network.reqResp.lightClientOptimisticUpdate(peer);
+        data = await this.reqResp.lightClientOptimisticUpdate(peer);
       } catch (e) {
         // log error
       }
@@ -207,8 +208,7 @@ export class LightClientGossipTransport implements LightClientTransport {
     let data: altair.LightClientUpdate[] = [];
     for (const peer of this.peers.values()) {
       try {
-        // TODO DA revisit
-        // data = await this.network.reqResp.lightClientUpdate(peer, {startPeriod, count});
+        data = await this.reqResp.lightClientUpdatesByRange(peer, {startPeriod, count});
       } catch (e) {
         // log errr
       }
@@ -221,7 +221,7 @@ export class LightClientGossipTransport implements LightClientTransport {
   }
 
   onFinalityUpdate(handler: (finalityUpdate: altair.LightClientFinalityUpdate) => void): void {
-    const updateHandler = (event: GossipsubEvents["gossipsub:message"]): void => {
+    const _updateHandler = (event: GossipsubEvents["gossipsub:message"]): void => {
       const {msg} = event.detail;
       const forkDigestHex = this.config.forkName2ForkDigestHex(ForkName.bellatrix);
       const finalityUpdateTopic = `/eth2/${forkDigestHex}/${GossipType.light_client_finality_update}/${DEFAULT_ENCODING}`;
@@ -230,11 +230,11 @@ export class LightClientGossipTransport implements LightClientTransport {
         handler(finalityUpdate);
       }
     };
-    this.network.gossip.addEventListener("gossipsub:message", updateHandler);
+    // this.network.gossip.addEventListener("gossipsub:message", updateHandler);
   }
 
   onOptimisticUpdate(handler: (optimisticUpdate: altair.LightClientOptimisticUpdate) => void): void {
-    const updateHandler = (event: GossipsubEvents["gossipsub:message"]): void => {
+    const _updateHandler = (event: GossipsubEvents["gossipsub:message"]): void => {
       const {msg} = event.detail;
       const forkDigestHex = this.config.forkName2ForkDigestHex(ForkName.bellatrix);
       const optimisiticUpdateTopic = `/eth2/${forkDigestHex}/${GossipType.light_client_optimistic_update}/${DEFAULT_ENCODING}`;
@@ -243,6 +243,6 @@ export class LightClientGossipTransport implements LightClientTransport {
         handler(optimisticUpdate);
       }
     };
-    this.network.gossip.addEventListener("gossipsub:message", updateHandler);
+    // this.network.gossip.addEventListener("gossipsub:message", updateHandler);
   }
 }

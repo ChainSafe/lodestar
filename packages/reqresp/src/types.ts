@@ -4,6 +4,12 @@ import {ForkName} from "@lodestar/params";
 import {Slot} from "@lodestar/types";
 import {LodestarError} from "@lodestar/utils";
 
+// TODO DA Deduplicate
+export enum Version {
+  V1 = 1,
+  V2 = 2,
+}
+
 export enum EncodedPayloadType {
   ssz,
   bytes,
