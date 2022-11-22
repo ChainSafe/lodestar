@@ -12,6 +12,15 @@
   },
   "exports": "./lib/index.js",
   "types": "lib/index.d.ts",
+  "typesVersions": {
+    "*": {
+      "*": [
+        "*",
+        "lib/*",
+        "lib/*/index"
+      ]
+    }
+  },
   "files": [
     "lib/**/*.d.ts",
     "lib/**/*.js",
