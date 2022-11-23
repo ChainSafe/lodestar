@@ -46,6 +46,7 @@ const TX_SCENARIOS = process.env.TX_SCENARIOS?.split(",") || [];
 const jwtSecretHex = "0xdc6457099f127cf0bac78de8b297df04951281909db4f58b43def7c7151e765d";
 const retryAttempts = defaultExecutionEngineHttpOpts.retryAttempts;
 const retryDelay = defaultExecutionEngineHttpOpts.retryDelay;
+const queueMaxLength = defaultExecutionEngineHttpOpts.queueMaxLength;
 
 describe("executionEngine / ExecutionEngineHttp", function () {
   if (!process.env.EL_BINARY_DIR || !process.env.EL_SCRIPT_DIR) {
@@ -105,7 +106,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
 
     //const controller = new AbortController();
     const executionEngine = new ExecutionEngineHttp(
-      {urls: [engineRpcUrl], jwtSecretHex, retryAttempts, retryDelay},
+      {urls: [engineRpcUrl], jwtSecretHex, retryAttempts, retryDelay, queueMaxLength},
       {signal: controller.signal}
     );
 

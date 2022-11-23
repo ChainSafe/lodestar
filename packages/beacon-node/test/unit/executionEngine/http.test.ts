@@ -42,6 +42,7 @@ describe("ExecutionEngine / http", () => {
         urls: [baseUrl],
         retryAttempts: defaultExecutionEngineHttpOpts.retryAttempts,
         retryDelay: defaultExecutionEngineHttpOpts.retryDelay,
+        queueMaxLength: defaultExecutionEngineHttpOpts.queueMaxLength,
       },
       {signal: controller.signal}
     );

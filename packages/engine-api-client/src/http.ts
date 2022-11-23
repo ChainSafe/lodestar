@@ -21,19 +21,6 @@ import {
 } from "@lodestar/utils/provider";
 import {JobItemQueue} from "@lodestar/utils/queue";
 
-/**
- * Blocks are downloaded in batches from peers. This constant specifies how many epochs worth of
- * blocks per batch are requested _at most_. A batch may request less blocks to account for
- * already requested slots. There is a timeout for each batch request. If this value is too high,
- * we will negatively report peers with poor bandwidth. This can be set arbitrarily high, in which
- * case the responder will fill the response up to the max request size, assuming they have the
- * bandwidth to do so.
- *
- * Jul2022: Current batch block processor wants only blocks in the same epoch. So we'll process only
- * one batch at a time. Metrics can confirm preliminary tests that speed is as good.
- */
-export const EPOCHS_PER_BATCH = 1;
-
 import {
   ExecutePayloadStatus,
   ExecutePayloadResponse,
@@ -55,6 +42,7 @@ export type ExecutionEngineHttpOpts = {
   urls: string[];
   retryAttempts: number;
   retryDelay: number;
+  queueMaxLength: number;
   timeout?: number;
   /**
    * 256 bit jwt secret in hex format without the leading 0x. If provided, the execution engine
@@ -75,13 +63,8 @@ export const defaultExecutionEngineHttpOpts: ExecutionEngineHttpOpts = {
   retryAttempts: 3,
   retryDelay: 2000,
   timeout: 12000,
+  queueMaxLength: SLOTS_PER_EPOCH * 2,
 };
-
-/**
- * Size for the serializing queue for fcUs and new payloads, the max length could be equal to
- * EPOCHS_PER_BATCH * 2 in case new payloads are also not awaited serially
- */
-const QUEUE_MAX_LENGTH = EPOCHS_PER_BATCH * SLOTS_PER_EPOCH * 2;
 
 // Define static options once to prevent extra allocations
 const notifyNewPayloadOpts: ReqOpts = {routeId: "notifyNewPayload"};
@@ -128,7 +111,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     });
     this.rpcFetchQueue = new JobItemQueue<[EngineRequest], EngineResponse>(
       this.jobQueueProcessor,
-      {maxLength: QUEUE_MAX_LENGTH, maxConcurrency: 1, signal},
+      {maxLength: opts.queueMaxLength, maxConcurrency: 1, signal},
       metrics?.engineHttpProcessorQueue
     );
   }
