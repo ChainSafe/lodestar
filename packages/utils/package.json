@@ -70,7 +70,6 @@
     "chalk": "^4.1.2",
     "js-yaml": "^3.13.1",
     "winston": "^3.3.3",
-    "prom-client": "^14.1.0",
     "cross-fetch": "^3.1.4",
     "jwt-simple": "0.5.6"
   },
