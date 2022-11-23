@@ -2,7 +2,6 @@ import crypto from "node:crypto";
 import {bellatrix, RootHex} from "@lodestar/types";
 import {fromHex, toHex} from "@lodestar/utils";
 import {BYTES_PER_LOGS_BLOOM} from "@lodestar/params";
-import {ZERO_HASH_HEX, ZERO_HASH} from "@lodestar/utils/constants";
 import {
   ExecutePayloadStatus,
   ExecutePayloadResponse,
@@ -14,6 +13,9 @@ import {
 } from "./interface.js";
 
 const INTEROP_GAS_LIMIT = 30e6;
+
+export const ZERO_HASH = Buffer.alloc(32, 0);
+export const ZERO_HASH_HEX = "0x" + "00".repeat(32);
 
 export type ExecutionEngineMockOpts = {
   genesisBlockHash: string;

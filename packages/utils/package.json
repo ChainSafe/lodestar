@@ -17,9 +17,6 @@
     ".": {
       "import": "./lib/index.js"
     },
-    "./constants": {
-      "import": "./lib/constants/index.js"
-    },
     "./metrics": {
       "import": "./lib/metrics/index.js"
     },
