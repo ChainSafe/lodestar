@@ -553,9 +553,10 @@
     uint8arraylist "^2.3.2"
     uint8arrays "^3.0.0"
 
-"@chainsafe/libp2p-noise@tuyennhv/js-libp2p-noise#tuyen/reuse-decrypt-allocation-dist":
-  version "10.1.0"
-  resolved "https://codeload.github.com/tuyennhv/js-libp2p-noise/tar.gz/79181207b5bc75b21a990ac2abce2d3b9b21af20"
+"@chainsafe/libp2p-noise@^10.2.0":
+  version "10.2.0"
+  resolved "https://registry.yarnpkg.com/@chainsafe/libp2p-noise/-/libp2p-noise-10.2.0.tgz#809f7fff8685a1687958fc8f36d314e1d097b6ad"
+  integrity sha512-nXw09UwSE5JCiB5Dte6j0b0Qe+KbtepJvaPz/f5JyxcoyUfLE/t7XWRZAZmcuWBeVWWpOItnK5WmW8uocoiwCQ==
   dependencies:
     "@libp2p/crypto" "^1.0.0"
     "@libp2p/interface-connection-encrypter" "^3.0.0"
