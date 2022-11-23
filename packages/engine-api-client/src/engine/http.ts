@@ -11,6 +11,7 @@ import {
   QUANTITY,
   quantityToBigint,
 } from "@lodestar/utils";
+import {IMetrics} from "@lodestar/utils/metrics";
 import {
   IJsonRpcHttpClient,
   ReqOpts,
@@ -19,7 +20,6 @@ import {
   JsonRpcHttpClient,
 } from "@lodestar/utils/provider";
 import {JobItemQueue} from "@lodestar/utils/queue";
-import {IMetrics} from "../metrics/index.js";
 
 /**
  * Blocks are downloaded in batches from peers. This constant specifies how many epochs worth of

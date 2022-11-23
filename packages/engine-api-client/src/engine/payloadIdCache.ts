@@ -1,6 +1,6 @@
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {pruneSetToMax, DATA, QUANTITY} from "@lodestar/utils";
-import {IMetrics} from "../metrics/index.js";
+import {IMetrics} from "@lodestar/utils/metrics";
 
 // Idealy this only need to be set to the max head reorgs number
 const MAX_PAYLOAD_IDS = SLOTS_PER_EPOCH;

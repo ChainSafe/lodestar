@@ -4,7 +4,7 @@ import fetch from "cross-fetch";
 
 import {ErrorAborted, TimeoutError} from "../errors.js";
 import {retry} from "../retry.js";
-import {IGauge, IHistogram} from "../metrics/index.js";
+import {JsonRpcHttpClientMetrics} from "../metrics/index.js";
 import {encodeJwtToken} from "./jwt.js";
 
 export type IJson = string | number | boolean | undefined | IJson[] | {[key: string]: IJson};
@@ -41,15 +41,6 @@ export type ReqOpts = {
   retryAttempts?: number;
   retryDelay?: number;
   shouldRetry?: (lastError: Error) => boolean;
-};
-
-export type JsonRpcHttpClientMetrics = {
-  requestTime: IHistogram<"routeId">;
-  requestErrors: IGauge<"routeId">;
-  requestUsedFallbackUrl: IGauge<"routeId">;
-  activeRequests: IGauge<"routeId">;
-  configUrlsCount: IGauge;
-  retryCount: IGauge<"routeId">;
 };
 
 export interface IJsonRpcHttpClient {
