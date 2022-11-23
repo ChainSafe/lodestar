@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 
 import {fromHexString, toHexString} from "@chainsafe/ssz";
+import {RootHex} from "@lodestar/types";
 import {bigIntToBytes, bytesToBigInt} from "./bytes.js";
 
-type RootHex = string;
 /** QUANTITY as defined in ethereum execution layer JSON RPC https://eth.wiki/json-rpc/API */
 export type QUANTITY = string;
 /** DATA as defined in ethereum execution layer JSON RPC https://eth.wiki/json-rpc/API */
