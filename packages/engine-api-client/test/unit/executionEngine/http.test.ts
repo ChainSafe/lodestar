@@ -6,7 +6,7 @@ import {
   parseExecutionPayload,
   serializeExecutionPayload,
   defaultExecutionEngineHttpOpts,
-} from "../../../src/engine/http.js";
+} from "../../../src/http.js";
 
 use(chaiAsPromised);
 

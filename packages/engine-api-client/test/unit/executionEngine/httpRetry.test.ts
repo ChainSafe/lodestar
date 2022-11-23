@@ -4,7 +4,7 @@ import {fastify} from "fastify";
 import {fromHexString} from "@chainsafe/ssz";
 
 import {bytesToData, numToQuantity} from "@lodestar/utils";
-import {ExecutionEngineHttp, defaultExecutionEngineHttpOpts} from "../../../src/engine/http.js";
+import {ExecutionEngineHttp, defaultExecutionEngineHttpOpts} from "../../../src/http.js";
 
 describe("ExecutionEngine / http ", () => {
   const afterCallbacks: (() => Promise<void> | void)[] = [];
