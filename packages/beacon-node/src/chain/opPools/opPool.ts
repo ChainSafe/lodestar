@@ -1,13 +1,20 @@
 import {
   CachedBeaconStateAllForks,
+  CachedBeaconStateCapella,
   BeaconStateAllForks,
   computeEpochAtSlot,
   getAttesterSlashableIndices,
   isValidVoluntaryExit,
+  isValidBlsToExecutionChange,
 } from "@lodestar/state-transition";
 import {Repository, Id} from "@lodestar/db";
-import {MAX_PROPOSER_SLASHINGS, MAX_VOLUNTARY_EXITS} from "@lodestar/params";
-import {Epoch, phase0, ssz, ValidatorIndex} from "@lodestar/types";
+import {
+  MAX_PROPOSER_SLASHINGS,
+  MAX_VOLUNTARY_EXITS,
+  MAX_BLS_TO_EXECUTION_CHANGES,
+  BLS_WITHDRAWAL_PREFIX,
+} from "@lodestar/params";
+import {Epoch, phase0, capella, ssz, ValidatorIndex} from "@lodestar/types";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {IBeaconDb} from "../../db/index.js";
 
@@ -26,6 +33,8 @@ export class OpPool {
   private readonly voluntaryExits = new Map<ValidatorIndex, phase0.SignedVoluntaryExit>();
   /** Set of seen attester slashing indexes. No need to prune */
   private readonly attesterSlashingIndexes = new Set<ValidatorIndex>();
+  /** Map of validator index -> SignedBLSToExecutionChange */
+  private readonly blsToExecutionChanges = new Map<ValidatorIndex, capella.SignedBLSToExecutionChange>();
 
   // Getters for metrics
 
@@ -38,12 +47,16 @@ export class OpPool {
   get voluntaryExitsSize(): number {
     return this.voluntaryExits.size;
   }
+  get blsToExecutionChangeSize(): number {
+    return this.blsToExecutionChanges.size;
+  }
 
   async fromPersisted(db: IBeaconDb): Promise<void> {
-    const [attesterSlashings, proposerSlashings, voluntaryExits] = await Promise.all([
+    const [attesterSlashings, proposerSlashings, voluntaryExits, blsToExecutionChanges] = await Promise.all([
       db.attesterSlashing.entries(),
       db.proposerSlashing.values(),
       db.voluntaryExit.values(),
+      db.blsToExecutionChange.values(),
     ]);
 
     for (const attesterSlashing of attesterSlashings) {
@@ -54,6 +67,9 @@ export class OpPool {
     }
     for (const voluntaryExit of voluntaryExits) {
       this.insertVoluntaryExit(voluntaryExit);
+    }
+    for (const blsToExecutionChange of blsToExecutionChanges) {
+      this.insertBlsToExecutionChange(blsToExecutionChange);
     }
   }
 
@@ -77,6 +93,11 @@ export class OpPool {
         Array.from(this.voluntaryExits.entries()).map(([key, value]) => ({key, value})),
         (index) => index
       ),
+      persistDiff(
+        db.blsToExecutionChange,
+        Array.from(this.blsToExecutionChanges.entries()).map(([key, value]) => ({key, value})),
+        (index) => index
+      ),
     ]);
   }
 
@@ -94,6 +115,10 @@ export class OpPool {
 
   hasSeenVoluntaryExit(validatorIndex: ValidatorIndex): boolean {
     return this.voluntaryExits.has(validatorIndex);
+  }
+
+  hasSeenBlsToExecutionChange(validatorIndex: ValidatorIndex): boolean {
+    return this.blsToExecutionChanges.has(validatorIndex);
   }
 
   hasSeenProposerSlashing(validatorIndex: ValidatorIndex): boolean {
@@ -124,15 +149,25 @@ export class OpPool {
     this.voluntaryExits.set(voluntaryExit.message.validatorIndex, voluntaryExit);
   }
 
+  /** Must be validated beforehand */
+  insertBlsToExecutionChange(blsToExecutionChange: capella.SignedBLSToExecutionChange): void {
+    this.blsToExecutionChanges.set(blsToExecutionChange.message.validatorIndex, blsToExecutionChange);
+  }
+
   /**
-   * Get proposer and attester slashings and voluntary exits for inclusion in a block.
+   * Get proposer and attester slashings and voluntary exits and bls to execution change for inclusion in a block.
    *
    * This function computes both types of slashings and exits, because attester slashings and exits may be invalidated by
    * slashings included earlier in the block.
    */
   getSlashingsAndExits(
     state: CachedBeaconStateAllForks
-  ): [phase0.AttesterSlashing[], phase0.ProposerSlashing[], phase0.SignedVoluntaryExit[]] {
+  ): [
+    phase0.AttesterSlashing[],
+    phase0.ProposerSlashing[],
+    phase0.SignedVoluntaryExit[],
+    capella.SignedBLSToExecutionChange[]
+  ] {
     const stateEpoch = computeEpochAtSlot(state.slot);
     const toBeSlashedIndices = new Set<ValidatorIndex>();
     const proposerSlashings: phase0.ProposerSlashing[] = [];
@@ -190,7 +225,17 @@ export class OpPool {
       }
     }
 
-    return [attesterSlashings, proposerSlashings, voluntaryExits];
+    const blsToExecutionChanges: capella.SignedBLSToExecutionChange[] = [];
+    for (const blsToExecutionChange of this.blsToExecutionChanges.values()) {
+      if (isValidBlsToExecutionChange(state as CachedBeaconStateCapella, blsToExecutionChange, false).valid) {
+        blsToExecutionChanges.push(blsToExecutionChange);
+        if (blsToExecutionChanges.length >= MAX_BLS_TO_EXECUTION_CHANGES) {
+          break;
+        }
+      }
+    }
+
+    return [attesterSlashings, proposerSlashings, voluntaryExits, blsToExecutionChanges];
   }
 
   /** For beacon pool API */
@@ -208,13 +253,21 @@ export class OpPool {
     return Array.from(this.voluntaryExits.values());
   }
 
+  /** For beacon pool API */
+  getAllBlsToExecutionChanges(): capella.SignedBLSToExecutionChange[] {
+    return Array.from(this.blsToExecutionChanges.values());
+  }
+
   /**
    * Prune all types of transactions given the latest head state
    */
-  pruneAll(headState: BeaconStateAllForks): void {
+  pruneAll(headState: BeaconStateAllForks, finalizedState: BeaconStateAllForks | null): void {
     this.pruneAttesterSlashings(headState);
     this.pruneProposerSlashings(headState);
     this.pruneVoluntaryExits(headState);
+    if (finalizedState !== null) {
+      this.pruneBlsToExecutionChanges(finalizedState);
+    }
   }
 
   /**
@@ -265,6 +318,22 @@ export class OpPool {
       // TODO: Improve this simplistic condition
       if (voluntaryExit.message.epoch <= finalizedEpoch) {
         this.voluntaryExits.delete(key);
+      }
+    }
+  }
+
+  /**
+   * Call after finalizing
+   * Prune blsToExecutionChanges for validators which have been set with withdrawal
+   * credentials
+   */
+  private pruneBlsToExecutionChanges(finalizedState: BeaconStateAllForks): void {
+    for (const [key, blsToExecutionChange] of this.blsToExecutionChanges.entries()) {
+      const {validatorIndex} = blsToExecutionChange.message;
+      const validator = finalizedState.validators.getReadonly(validatorIndex);
+
+      if (validator.withdrawalCredentials[0] !== BLS_WITHDRAWAL_PREFIX) {
+        this.blsToExecutionChanges.delete(key);
       }
     }
   }

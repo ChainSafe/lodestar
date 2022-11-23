@@ -4,7 +4,7 @@ import {Message} from "@libp2p/interface-pubsub";
 import StrictEventEmitter from "strict-event-emitter-types";
 import {MessageAcceptance, PeerIdStr} from "@chainsafe/libp2p-gossipsub/types";
 import {ForkName} from "@lodestar/params";
-import {allForks, altair, eip4844, phase0} from "@lodestar/types";
+import {allForks, altair, capella, eip4844, phase0} from "@lodestar/types";
 import {IBeaconConfig} from "@lodestar/config";
 import {ILogger} from "@lodestar/utils";
 import {IBeaconChain} from "../../chain/index.js";
@@ -23,6 +23,8 @@ export enum GossipType {
   sync_committee = "sync_committee",
   light_client_finality_update = "light_client_finality_update",
   light_client_optimistic_update = "light_client_optimistic_update",
+  // capella
+  bls_to_execution_change = "bls_to_execution_change",
 }
 
 export enum GossipEncoding {
@@ -52,6 +54,7 @@ export type GossipTopicTypeMap = {
   [GossipType.sync_committee]: {type: GossipType.sync_committee; subnet: number};
   [GossipType.light_client_finality_update]: {type: GossipType.light_client_finality_update};
   [GossipType.light_client_optimistic_update]: {type: GossipType.light_client_optimistic_update};
+  [GossipType.bls_to_execution_change]: {type: GossipType.bls_to_execution_change};
 };
 
 export type GossipTopicMap = {
@@ -75,6 +78,7 @@ export type GossipTypeMap = {
   [GossipType.sync_committee]: altair.SyncCommitteeMessage;
   [GossipType.light_client_finality_update]: altair.LightClientFinalityUpdate;
   [GossipType.light_client_optimistic_update]: altair.LightClientOptimisticUpdate;
+  [GossipType.bls_to_execution_change]: capella.SignedBLSToExecutionChange;
 };
 
 export type GossipFnByType = {
@@ -96,6 +100,9 @@ export type GossipFnByType = {
   ) => Promise<void> | void;
   [GossipType.light_client_optimistic_update]: (
     lightClientOptimisticUpdate: altair.LightClientOptimisticUpdate
+  ) => Promise<void> | void;
+  [GossipType.bls_to_execution_change]: (
+    blsToExecutionChange: capella.SignedBLSToExecutionChange
   ) => Promise<void> | void;
 };
 

@@ -110,7 +110,12 @@ export async function produceBlockBody<T extends BlockType>(
   //   }
   // }
 
-  const [attesterSlashings, proposerSlashings, voluntaryExits] = this.opPool.getSlashingsAndExits(currentState);
+  const [
+    attesterSlashings,
+    proposerSlashings,
+    voluntaryExits,
+    blsToExecutionChanges,
+  ] = this.opPool.getSlashingsAndExits(currentState);
   const attestations = this.aggregatedAttestationPool.getAttestationsForBlock(this.forkChoice, currentState);
   const {eth1Data, deposits} = await this.eth1.getEth1DataAndDeposits(currentState);
 
@@ -259,7 +264,7 @@ export async function produceBlockBody<T extends BlockType>(
 
   if (ForkSeq[fork] >= ForkSeq.capella) {
     // TODO: blsToExecutionChanges should be passed in the produceBlock call
-    (blockBody as capella.BeaconBlockBody).blsToExecutionChanges = [];
+    (blockBody as capella.BeaconBlockBody).blsToExecutionChanges = blsToExecutionChanges;
   }
 
   // Type-safe for blobs variable. Translate 'null' value into 'preEIP4844' enum
