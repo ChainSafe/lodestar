@@ -51,6 +51,8 @@ export const protocolsSupported: [Method, Version, Encoding][] = [
   [Method.BeaconBlocksByRoot, Version.V1, Encoding.SSZ_SNAPPY],
   [Method.BeaconBlocksByRoot, Version.V2, Encoding.SSZ_SNAPPY],
   // TODO EIP-4844: Wait to have control on when this routes are available
+  [Method.BeaconBlockAndBlobsSidecarByRoot, Version.V1, Encoding.SSZ_SNAPPY],
+  [Method.BlobsSidecarsByRange, Version.V1, Encoding.SSZ_SNAPPY],
   [Method.LightClientBootstrap, Version.V1, Encoding.SSZ_SNAPPY],
   [Method.LightClientUpdate, Version.V1, Encoding.SSZ_SNAPPY],
   [Method.LightClientFinalityUpdate, Version.V1, Encoding.SSZ_SNAPPY],
