@@ -20,9 +20,6 @@
     "./messages": {
       "import": "./lib/messages/index.js"
     },
-    "./rate_limiter": {
-      "import": "./lib/rate_limiter/index.js"
-    },
     "./utils": {
       "import": "./lib/utils/index.js"
     }
