@@ -7,7 +7,7 @@ To quickly test and run Lodestar we recommend starting a local testnet. We recom
 Run a beacon node as a **bootnode**, with 8 validators with the following command.
 
 ```bash
-./lodestar dev --genesisValidators 8 --genesisTime 1578787200 --startValidators 0:8 --enr.ip 127.0.0.1 --enr.udp 9000 --dataDir </path/to/node1> --reset
+./lodestar dev --genesisValidators 8 --genesisTime 1578787200 --startValidators 0..8 --enr.ip 127.0.0.1 --enr.udp 9000 --dataDir </path/to/node1> --reset
 ```
 
 `--genesisValidators` and `--genesisTime` define the genesis state of the beacon chain. `--dataDir` defines a path where
@@ -36,8 +36,8 @@ Start the second node without starting any validators and connect to the first n
   --reset
 ```
 
-By default, lodestar starts as many validators as the number supplied by `--genesisValidators`. In other to not start any validator, this is overridden by
-the `--startValidators` option. Passing a value of `0:0` means no validators should be started.
+By default, lodestar starts as many validators as the number supplied by `--genesisValidators`. In order to not start any validator, this is overridden by
+the `--startValidators` option. Passing a value of `0..0` means no validators should be started.
 
 Also, take note that the values of `--genesisValidators` and `--genesisTime` must be the same as the ones passed to the first node in order for the two nodes
 to have the same beacon chain.
