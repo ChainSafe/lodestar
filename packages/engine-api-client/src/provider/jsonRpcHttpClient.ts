@@ -2,9 +2,8 @@
 // Note: isomorphic-fetch is not well mantained and does not support abort signals
 import fetch from "cross-fetch";
 
-import {ErrorAborted, TimeoutError} from "../errors.js";
-import {retry} from "../retry.js";
-import {JsonRpcHttpClientMetrics} from "../metrics/index.js";
+import {retry, ErrorAborted, TimeoutError} from "@lodestar/utils";
+import {JsonRpcHttpClientMetrics} from "./metrics.js";
 import {encodeJwtToken} from "./jwt.js";
 
 export type IJson = string | number | boolean | undefined | IJson[] | {[key: string]: IJson};

@@ -2,8 +2,12 @@ import {toHexString} from "@chainsafe/ssz";
 import {phase0} from "@lodestar/types";
 import {IChainConfig} from "@lodestar/config";
 import {fromHex, dataToBytes, quantityToNum, numToQuantity} from "@lodestar/utils";
-import {JsonRpcHttpClientMetrics} from "@lodestar/utils/metrics";
-import {isJsonRpcTruncatedError, JsonRpcHttpClient, ReqOpts} from "@lodestar/utils/provider";
+import {
+  isJsonRpcTruncatedError,
+  JsonRpcHttpClient,
+  ReqOpts,
+  JsonRpcHttpClientMetrics,
+} from "@lodestar/engine-api-client";
 import {linspace} from "../../util/numpy.js";
 import {depositEventTopics, parseDepositLog} from "../utils/depositContract.js";
 import {Eth1Block, IEth1Provider} from "../interface.js";

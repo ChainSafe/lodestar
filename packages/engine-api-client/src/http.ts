@@ -11,15 +11,8 @@ import {
   QUANTITY,
   quantityToBigint,
 } from "@lodestar/utils";
-import {IMetrics} from "@lodestar/utils/metrics";
-import {
-  IJsonRpcHttpClient,
-  ReqOpts,
-  ErrorJsonRpcResponse,
-  HttpRpcError,
-  JsonRpcHttpClient,
-} from "@lodestar/utils/provider";
 import {JobItemQueue} from "@lodestar/utils/queue";
+import {IMetrics} from "./provider/index.js";
 
 import {
   ExecutePayloadStatus,
@@ -32,6 +25,7 @@ import {
   TransitionConfigurationV1,
 } from "./interface.js";
 import {PayloadIdCache} from "./payloadIdCache.js";
+import {ErrorJsonRpcResponse, HttpRpcError, IJsonRpcHttpClient, JsonRpcHttpClient, ReqOpts} from "./provider/index.js";
 
 export type ExecutionEngineModules = {
   signal: AbortSignal;
