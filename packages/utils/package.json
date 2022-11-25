@@ -22,9 +22,6 @@
     },
     "./queue": {
       "import": "./lib/queue/index.js"
-    },
-    "./provider": {
-      "import": "./lib/provider/index.js"
     }
   },
   "typesVersions": {

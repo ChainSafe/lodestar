@@ -3,7 +3,6 @@
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {bigIntToBytes, bytesToBigInt} from "./bytes.js";
 
-/** Common non-spec type to represent roots as strings */
 export type RootHex = string;
 
 /** QUANTITY as defined in ethereum execution layer JSON RPC https://eth.wiki/json-rpc/API */
