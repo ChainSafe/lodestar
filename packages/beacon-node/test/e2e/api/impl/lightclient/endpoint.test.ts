@@ -72,16 +72,6 @@ describe("lightclient api", function () {
     }
   });
 
-  it("getUpdates()", async function () {
-    await sleep(2 * SECONDS_PER_SLOT * 1000);
-    const client = getClient({baseUrl: `http://127.0.0.1:${restPort}`}, {config}).lightclient;
-    const {data: updates} = await client.getUpdates(0, 1);
-    const slot = bn.chain.clock.currentSlot;
-    expect(updates.length).to.be.equal(1);
-    // at slot 2 we got attestedHeader for slot 1
-    expect(updates[0].attestedHeader.slot).to.be.equal(slot - 1);
-  });
-
   it("getOptimisticUpdate()", async function () {
     await sleep(2 * SECONDS_PER_SLOT * 1000);
     const client = getClient({baseUrl: `http://127.0.0.1:${restPort}`}, {config}).lightclient;

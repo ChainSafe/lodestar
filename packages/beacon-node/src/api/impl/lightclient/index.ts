@@ -5,6 +5,7 @@ import {SyncPeriod} from "@lodestar/types";
 import {MAX_REQUEST_LIGHT_CLIENT_COMMITTEE_HASHES, MAX_REQUEST_LIGHT_CLIENT_UPDATES} from "@lodestar/params";
 import {LightClientUpdate} from "@lodestar/types/altair";
 import {ssz} from "@lodestar/types";
+import {RestLightClientUpdate} from "@lodestar/api/src/beacon/routes/lightclient";
 import {ApiModules} from "../types.js";
 import {IApiOptions} from "../../options.js";
 
@@ -14,7 +15,7 @@ export function getLightclientApi(
   opts: IApiOptions,
   {chain, config}: Pick<ApiModules, "chain" | "config" | "db">
 ): routes.lightclient.Api {
-  const serializeLightClientUpdates = (chunks: LightClientUpdate[]): Uint8Array => {
+  const sszSerializeLightClientUpdates = (chunks: LightClientUpdate[]): Uint8Array => {
     // https://github.com/ethereum/beacon-APIs/blob/master/apis/beacon/light_client/updates.yaml#L39
     /**
      * Sequence of zero or more `response_chunk`. Each _successful_ `response_chunk` MUST contain a single `LightClientUpdate` payload:
@@ -39,6 +40,16 @@ export function getLightclientApi(
     return result.reduce((acc, curr) => new Uint8Array([...acc, ...curr]));
   };
 
+  const jsonSerializeLightClientUpdates = (chunks: LightClientUpdate[]): RestLightClientUpdate[] => {
+    return chunks.map((chunk) => {
+      const version = config.getForkName(chunk.attestedHeader.slot);
+      return {
+        version,
+        data: chunk,
+      };
+    });
+  };
+
   return {
     async getUpdates(startPeriod: SyncPeriod, count: number, format?: routes.debug.StateFormat) {
       const maxAllowedCount = Math.min(MAX_REQUEST_LIGHT_CLIENT_UPDATES, count);
@@ -47,9 +58,9 @@ export function getLightclientApi(
       if (format === "ssz") {
         // Casting to any otherwise Typescript doesn't like the multi-type return
         // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-explicit-any
-        return serializeLightClientUpdates(updates) as any;
+        return sszSerializeLightClientUpdates(updates) as any;
       } else {
-        return {data: updates};
+        return jsonSerializeLightClientUpdates(updates);
       }
     },
 

@@ -5,6 +5,8 @@ import {JsonPath} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {altair, RootHex, SyncPeriod} from "@lodestar/types";
 import {notNullish} from "@lodestar/utils";
+import {RestLightClientUpdate} from "@lodestar/api/src/beacon/routes/lightclient";
+import {ForkName} from "@lodestar/params";
 import {BeaconStateAltair} from "../utils/types.js";
 
 export class ProofServerApiMock implements routes.proof.Api {
@@ -23,17 +25,20 @@ export class LightclientServerApiMock implements routes.lightclient.Api {
   latestHeadUpdate: altair.LightClientOptimisticUpdate | null = null;
   finalized: altair.LightClientFinalityUpdate | null = null;
 
-  getUpdates(startPeriod: SyncPeriod, count: number, format?: "json"): Promise<{data: altair.LightClientUpdate[]}>;
+  getUpdates(startPeriod: SyncPeriod, count: number, format?: "json"): Promise<RestLightClientUpdate[]>;
   getUpdates(startPeriod: SyncPeriod, count: number, format?: "ssz"): Promise<Uint8Array>;
-  async getUpdates(from: SyncPeriod, to: SyncPeriod): Promise<Uint8Array | {data: altair.LightClientUpdate[]}> {
-    const updates: altair.LightClientUpdate[] = [];
+  async getUpdates(from: SyncPeriod, to: SyncPeriod): Promise<Uint8Array | RestLightClientUpdate[]> {
+    const updates: RestLightClientUpdate[] = [];
     for (let period = parseInt(String(from)); period <= parseInt(String(to)); period++) {
       const update = this.updates.get(period);
       if (update) {
-        updates.push(update);
+        updates.push({
+          version: ForkName.bellatrix,
+          data: update,
+        });
       }
     }
-    return {data: updates};
+    return updates;
   }
 
   getOptimisticUpdate(format?: "json"): Promise<{data: altair.LightClientOptimisticUpdate}>;

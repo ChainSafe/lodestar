@@ -1,8 +1,14 @@
-import {altair, ssz, SyncPeriod} from "@lodestar/types";
+import {altair, ssz, StringType, SyncPeriod} from "@lodestar/types";
+import {ContainerType} from "@chainsafe/ssz";
 import {ArrayOf, ReturnTypes, RoutesData, Schema, ContainerData, ReqSerializers} from "../../utils/index.js";
 
 export type StateFormat = "json" | "ssz";
 export const mimeTypeSSZ = "application/octet-stream";
+
+export type RestLightClientUpdate = {
+  version: string;
+  data: altair.LightClientUpdate;
+};
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 export type Api = {
@@ -13,13 +19,13 @@ export type Api = {
    * - Has most bits
    * - Oldest update
    */
-  getUpdates(startPeriod: SyncPeriod, count: number, format?: "json"): Promise<{data: altair.LightClientUpdate[]}>;
+  getUpdates(startPeriod: SyncPeriod, count: number, format?: "json"): Promise<RestLightClientUpdate[]>;
   getUpdates(startPeriod: SyncPeriod, count: number, format?: "ssz"): Promise<Uint8Array>;
   getUpdates(
     startPeriod: SyncPeriod,
     count: number,
     format?: StateFormat
-  ): Promise<Uint8Array | {data: altair.LightClientUpdate[]}>;
+  ): Promise<Uint8Array | RestLightClientUpdate[]>;
   /**
    * Returns the latest optimistic head update available. Clients should use the SSE type `light_client_optimistic_update`
    * unless to get the very first head update after syncing, or if SSE are not supported by the server.
@@ -112,8 +118,13 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
 }
 
 export function getReturnTypes(): ReturnTypes<Api> {
+  const restLightClientUpdate = new ContainerType({
+    version: new StringType(), // TODO DA change type
+    data: ssz.altair.LightClientUpdate,
+  });
+
   return {
-    getUpdates: ContainerData(ArrayOf(ssz.altair.LightClientUpdate)),
+    getUpdates: ArrayOf(restLightClientUpdate),
     getOptimisticUpdate: ContainerData(ssz.altair.LightClientOptimisticUpdate),
     getFinalityUpdate: ContainerData(ssz.altair.LightClientFinalityUpdate),
     getBootstrap: ContainerData(ssz.altair.LightClientBootstrap),

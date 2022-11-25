@@ -190,8 +190,8 @@ describe("lodestar / api / impl / light_client", function () {
         "Second LightClientUpdate is invalid"
       ).to.be.true;
 
-      const responseJSON = await client.lightclient.getUpdates(1, 2, "json");
-      expect(responseJSON.data).to.be.deep.equal([firstLcUpdate, secondLcUpdate], "Returned Updates in JSON invalid");
+      const responseJSON = (await client.lightclient.getUpdates(1, 2, "json")).map((response) => response.data);
+      expect(responseJSON).to.be.deep.equal([firstLcUpdate, secondLcUpdate], "Returned Updates in JSON invalid");
     });
   });
 });
