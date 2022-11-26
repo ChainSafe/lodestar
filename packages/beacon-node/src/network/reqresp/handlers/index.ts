@@ -1,24 +1,24 @@
-import {altair, phase0, Root} from "@lodestar/types";
+import {HandlerTypeFromMessage} from "@lodestar/reqresp";
+import * as messages from "@lodestar/reqresp/messages";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
-import {ReqRespBlockResponse} from "../types.js";
 import {onBeaconBlocksByRange} from "./beaconBlocksByRange.js";
 import {onBeaconBlocksByRoot} from "./beaconBlocksByRoot.js";
 import {onLightClientBootstrap} from "./lightClientBootstrap.js";
-import {onLightClientUpdatesByRange} from "./lightClientUpdatesByRange.js";
 import {onLightClientFinalityUpdate} from "./lightClientFinalityUpdate.js";
 import {onLightClientOptimisticUpdate} from "./lightClientOptimisticUpdate.js";
+import {onLightClientUpdatesByRange} from "./lightClientUpdatesByRange.js";
+import {onStatus} from "./status.js";
 
-export type ReqRespHandlers = {
-  onStatus(): AsyncIterable<phase0.Status>;
-  onBeaconBlocksByRange(req: phase0.BeaconBlocksByRangeRequest): AsyncIterable<ReqRespBlockResponse>;
-  onBeaconBlocksByRoot(req: phase0.BeaconBlocksByRootRequest): AsyncIterable<ReqRespBlockResponse>;
-  onLightClientBootstrap(req: Root): AsyncIterable<altair.LightClientBootstrap>;
-  onLightClientUpdatesByRange(req: altair.LightClientUpdatesByRange): AsyncIterable<altair.LightClientUpdate>;
-  onLightClientFinalityUpdate(): AsyncIterable<altair.LightClientFinalityUpdate>;
-  onLightClientOptimisticUpdate(): AsyncIterable<altair.LightClientOptimisticUpdate>;
-};
-
+export interface ReqRespHandlers {
+  onStatus: HandlerTypeFromMessage<typeof messages.Status>;
+  onBeaconBlocksByRange: HandlerTypeFromMessage<typeof messages.BeaconBlocksByRange>;
+  onBeaconBlocksByRoot: HandlerTypeFromMessage<typeof messages.BeaconBlocksByRoot>;
+  onLightClientBootstrap: HandlerTypeFromMessage<typeof messages.LightClientBootstrap>;
+  onLightClientUpdatesByRange: HandlerTypeFromMessage<typeof messages.LightClientUpdatesByRange>;
+  onLightClientFinalityUpdate: HandlerTypeFromMessage<typeof messages.LightClientFinalityUpdate>;
+  onLightClientOptimisticUpdate: HandlerTypeFromMessage<typeof messages.LightClientOptimisticUpdate>;
+}
 /**
  * The ReqRespHandler module handles app-level requests / responses from other peers,
  * fetching state from the chain and database as needed.
@@ -26,7 +26,7 @@ export type ReqRespHandlers = {
 export function getReqRespHandlers({db, chain}: {db: IBeaconDb; chain: IBeaconChain}): ReqRespHandlers {
   return {
     async *onStatus() {
-      yield chain.getStatus();
+      yield* onStatus(chain);
     },
     async *onBeaconBlocksByRange(req) {
       yield* onBeaconBlocksByRange(req, chain, db);

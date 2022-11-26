@@ -3,6 +3,7 @@ import * as ssz from "./sszTypes.js";
 
 export type Withdrawal = ValueOf<typeof ssz.Withdrawal>;
 export type BLSToExecutionChange = ValueOf<typeof ssz.BLSToExecutionChange>;
+export type BLSToExecutionChanges = ValueOf<typeof ssz.BLSToExecutionChanges>;
 export type SignedBLSToExecutionChange = ValueOf<typeof ssz.SignedBLSToExecutionChange>;
 
 export type ExecutionPayload = ValueOf<typeof ssz.ExecutionPayload>;

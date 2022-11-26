@@ -41,6 +41,10 @@ export const chainConfig: IChainConfig = {
   CAPELLA_FORK_VERSION: b("0x03000000"),
   CAPELLA_FORK_EPOCH: Infinity,
 
+  // EIP-4844
+  EIP4844_FORK_VERSION: b("0x04000000"),
+  EIP4844_FORK_EPOCH: Infinity,
+
   // Time parameters
   // ---------------------------------------------------------------
   // 12 seconds
@@ -74,4 +78,10 @@ export const chainConfig: IChainConfig = {
   DEPOSIT_CHAIN_ID: 1,
   DEPOSIT_NETWORK_ID: 1,
   DEPOSIT_CONTRACT_ADDRESS: b("0x00000000219ab540356cBB839Cbe05303d7705Fa"),
+
+  // Blobs
+  // ---------------------------------------------------------------
+  // https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/p2p-interface.md#configuration
+  MAX_REQUEST_BLOBS_SIDECARS: 128,
+  MIN_EPOCHS_FOR_BLOBS_SIDECARS_REQUESTS: 4096,
 };
