@@ -55,13 +55,11 @@ export class PrepareNextSlotScheduler {
     const prepareEpoch = computeEpochAtSlot(prepareSlot);
     const nextEpoch = computeEpochAtSlot(clockSlot) + 1;
     const isEpochTransition = prepareEpoch === nextEpoch;
+    const forkSeq = this.config.getForkSeq(prepareSlot);
 
     // Early return if we are pre-genesis
     //  or we are pre-bellatrix and this is not an epoch transition
-    if (
-      prepareSlot <= GENESIS_SLOT ||
-      (this.config.getForkSeq(prepareSlot) < ForkSeq.bellatrix && !isEpochTransition)
-    ) {
+    if (prepareSlot <= GENESIS_SLOT || (forkSeq < ForkSeq.bellatrix && !isEpochTransition)) {
       return;
     }
 

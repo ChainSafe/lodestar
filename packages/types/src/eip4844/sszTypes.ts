@@ -196,7 +196,7 @@ export const BeaconState = new BeaconStateType(
     eth1DataVotes: phase0Ssz.Eth1DataVotes,
     eth1DepositIndex: UintNum64,
     // Registry
-    validators: capellaSsz.Validators, // [Modified in Capella]
+    validators: phase0Ssz.Validators,
     balances: phase0Ssz.Balances,
     randaoMixes: phase0Ssz.RandaoMixes,
     // Slashings
@@ -217,9 +217,8 @@ export const BeaconState = new BeaconStateType(
     // Execution
     latestExecutionPayloadHeader: ExecutionPayloadHeader, // Modified in EIP-4844
     // Withdrawals
-    withdrawalQueue: capellaSsz.WithdrawalQueue,
     nextWithdrawalIndex: capellaSsz.BeaconState.fields.nextWithdrawalIndex,
-    nextPartialWithdrawalValidatorIndex: capellaSsz.BeaconState.fields.nextPartialWithdrawalValidatorIndex,
+    nextWithdrawalValidatorIndex: capellaSsz.BeaconState.fields.nextWithdrawalValidatorIndex,
   },
   {typeName: "BeaconState", jsonCase: "eth2"}
 );

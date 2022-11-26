@@ -1,7 +1,7 @@
 import {ForkSeq} from "@lodestar/params";
-import {allForks, altair, eip4844} from "@lodestar/types";
+import {allForks, altair, capella, eip4844} from "@lodestar/types";
 import {getFullOrBlindedPayload, isExecutionEnabled} from "../util/execution.js";
-import {CachedBeaconStateAllForks, CachedBeaconStateBellatrix} from "../types.js";
+import {CachedBeaconStateAllForks, CachedBeaconStateCapella, CachedBeaconStateBellatrix} from "../types.js";
 import {processExecutionPayload} from "./processExecutionPayload.js";
 import {processSyncAggregate} from "./processSyncCommittee.js";
 import {processBlockHeader} from "./processBlockHeader.js";
@@ -10,9 +10,17 @@ import {processOperations} from "./processOperations.js";
 import {processRandao} from "./processRandao.js";
 import {processBlobKzgCommitments} from "./processBlobKzgCommitments.js";
 import {BlockExternalData, DataAvailableStatus} from "./externalData.js";
+import {processWithdrawals} from "./processWithdrawals.js";
 
 // Spec tests
-export {processBlockHeader, processExecutionPayload, processRandao, processEth1Data, processSyncAggregate};
+export {
+  processBlockHeader,
+  processExecutionPayload,
+  processRandao,
+  processEth1Data,
+  processSyncAggregate,
+  processWithdrawals,
+};
 export * from "./processOperations.js";
 
 export * from "./initiateValidatorExit.js";
@@ -30,12 +38,15 @@ export function processBlock(
 
   // The call to the process_execution_payload must happen before the call to the process_randao as the former depends
   // on the randao_mix computed with the reveal of the previous block.
-  if (fork >= ForkSeq.bellatrix) {
+  if (fork >= ForkSeq.bellatrix && isExecutionEnabled(state as CachedBeaconStateBellatrix, block)) {
     const fullOrBlindedPayload = getFullOrBlindedPayload(block);
-
-    if (isExecutionEnabled(state as CachedBeaconStateBellatrix, block)) {
-      processExecutionPayload(fork, state as CachedBeaconStateBellatrix, fullOrBlindedPayload, externalData);
+    if (fork >= ForkSeq.capella) {
+      processWithdrawals(
+        state as CachedBeaconStateCapella,
+        fullOrBlindedPayload as capella.FullOrBlindedExecutionPayload
+      );
     }
+    processExecutionPayload(fork, state as CachedBeaconStateBellatrix, fullOrBlindedPayload, externalData);
   }
 
   processRandao(state, block, verifySignatures);

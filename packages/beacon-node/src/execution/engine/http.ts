@@ -4,6 +4,8 @@ import {
   SLOTS_PER_EPOCH,
   FIELD_ELEMENTS_PER_BLOB,
   BYTES_PER_FIELD_ELEMENT,
+  ForkName,
+  ForkSeq,
 } from "@lodestar/params";
 import {fromHex} from "@lodestar/utils";
 
@@ -30,10 +32,13 @@ import {
   PayloadId,
   PayloadAttributes,
   ApiPayloadAttributes,
+  WithdrawalV1,
   TransitionConfigurationV1,
   BlobsBundle,
 } from "./interface.js";
 import {PayloadIdCache} from "./payloadIdCache.js";
+
+const GWEI_TO_WEI = BigInt(1000000000);
 
 export type ExecutionEngineModules = {
   signal: AbortSignal;
@@ -147,9 +152,9 @@ export class ExecutionEngineHttp implements IExecutionEngine {
    *
    * If any of the above fails due to errors unrelated to the normal processing flow of the method, client software MUST respond with an error object.
    */
-  async notifyNewPayload(executionPayload: allForks.ExecutionPayload): Promise<ExecutePayloadResponse> {
-    const method = "engine_newPayloadV1";
-    const serializedExecutionPayload = serializeExecutionPayload(executionPayload);
+  async notifyNewPayload(fork: ForkName, executionPayload: allForks.ExecutionPayload): Promise<ExecutePayloadResponse> {
+    const method = ForkSeq[fork] >= ForkSeq.capella ? "engine_newPayloadV2" : "engine_newPayloadV1";
+    const serializedExecutionPayload = serializeExecutionPayload(fork, executionPayload);
     const {status, latestValidHash, validationError} = await (this.rpcFetchQueue.push({
       method,
       params: [serializedExecutionPayload],
@@ -229,20 +234,23 @@ export class ExecutionEngineHttp implements IExecutionEngine {
    * If any of the above fails due to errors unrelated to the normal processing flow of the method, client software MUST respond with an error object.
    */
   async notifyForkchoiceUpdate(
+    seq: ForkSeq,
     headBlockHash: RootHex,
     safeBlockHash: RootHex,
     finalizedBlockHash: RootHex,
     payloadAttributes?: PayloadAttributes
   ): Promise<PayloadId | null> {
-    const method = "engine_forkchoiceUpdatedV1";
+    // Once on capella, should this need to be permanently switched to v2 when payload attrs
+    // not provided
+    const method = seq >= ForkSeq.capella ? "engine_forkchoiceUpdatedV2" : "engine_forkchoiceUpdatedV1";
     const apiPayloadAttributes: ApiPayloadAttributes | undefined = payloadAttributes
       ? {
           timestamp: numToQuantity(payloadAttributes.timestamp),
           prevRandao: bytesToData(payloadAttributes.prevRandao),
           suggestedFeeRecipient: payloadAttributes.suggestedFeeRecipient,
+          withdrawals: payloadAttributes.withdrawals?.map(serializeWithdrawal),
         }
       : undefined;
-
     // If we are just fcUing and not asking execution for payload, retry is not required
     // and we can move on, as the next fcU will be issued soon on the new slot
     const fcUReqOpts =
@@ -300,8 +308,8 @@ export class ExecutionEngineHttp implements IExecutionEngine {
    * 2. The call MUST be responded with 5: Unavailable payload error if the building process identified by the payloadId doesn't exist.
    * 3. Client software MAY stop the corresponding building process after serving this call.
    */
-  async getPayload(payloadId: PayloadId): Promise<allForks.ExecutionPayload> {
-    const method = "engine_getPayloadV1";
+  async getPayload(fork: ForkName, payloadId: PayloadId): Promise<allForks.ExecutionPayload> {
+    const method = ForkSeq[fork] >= ForkSeq.capella ? "engine_getPayloadV2" : "engine_getPayloadV1";
     const executionPayloadRpc = await this.rpc.fetchWithRetries<
       EngineApiRpcReturnTypes[typeof method],
       EngineApiRpcParamTypes[typeof method]
@@ -312,7 +320,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       },
       getPayloadOpts
     );
-    return parseExecutionPayload(executionPayloadRpc);
+    return parseExecutionPayload(fork, executionPayloadRpc);
   }
 
   async getBlobsBundle(payloadId: PayloadId): Promise<BlobsBundle> {
@@ -365,6 +373,7 @@ type EngineApiRpcParamTypes = {
    * 1. Object - Instance of ExecutionPayload
    */
   engine_newPayloadV1: [ExecutionPayloadRpc];
+  engine_newPayloadV2: [ExecutionPayloadRpc];
   /**
    * 1. Object - Payload validity status with respect to the consensus rules:
    *   - blockHash: DATA, 32 Bytes - block hash value of the payload
@@ -374,10 +383,15 @@ type EngineApiRpcParamTypes = {
     param1: {headBlockHash: DATA; safeBlockHash: DATA; finalizedBlockHash: DATA},
     payloadAttributes?: ApiPayloadAttributes
   ];
+  engine_forkchoiceUpdatedV2: [
+    param1: {headBlockHash: DATA; safeBlockHash: DATA; finalizedBlockHash: DATA},
+    payloadAttributes?: ApiPayloadAttributes
+  ];
   /**
    * 1. payloadId: QUANTITY, 64 Bits - Identifier of the payload building process
    */
   engine_getPayloadV1: [QUANTITY];
+  engine_getPayloadV2: [QUANTITY];
   /**
    * 1. Object - Instance of TransitionConfigurationV1
    */
@@ -398,7 +412,16 @@ type EngineApiRpcReturnTypes = {
     latestValidHash: DATA | null;
     validationError: string | null;
   };
+  engine_newPayloadV2: {
+    status: ExecutePayloadStatus;
+    latestValidHash: DATA | null;
+    validationError: string | null;
+  };
   engine_forkchoiceUpdatedV1: {
+    payloadStatus: {status: ForkChoiceUpdateStatus; latestValidHash: DATA | null; validationError: string | null};
+    payloadId: QUANTITY | null;
+  };
+  engine_forkchoiceUpdatedV2: {
     payloadStatus: {status: ForkChoiceUpdateStatus; latestValidHash: DATA | null; validationError: string | null};
     payloadId: QUANTITY | null;
   };
@@ -406,6 +429,7 @@ type EngineApiRpcReturnTypes = {
    * payloadId | Error: QUANTITY, 64 Bits - Identifier of the payload building process
    */
   engine_getPayloadV1: ExecutionPayloadRpc;
+  engine_getPayloadV2: ExecutionPayloadRpc;
   /**
    * Object - Instance of TransitionConfigurationV1
    */
@@ -429,7 +453,7 @@ type ExecutionPayloadRpc = {
   baseFeePerGas: QUANTITY;
   blockHash: DATA; // 32 bytes
   transactions: DATA[];
-  withdrawals?: DATA[]; // Capella hardfork
+  withdrawals?: WithdrawalV1[]; // Capella hardfork
   excessDataGas?: QUANTITY; // EIP-4844
 };
 
@@ -439,7 +463,7 @@ interface BlobsBundleRpc {
   blobs: DATA[]; // each 4096 * 32 = 131072 bytes
 }
 
-export function serializeExecutionPayload(data: allForks.ExecutionPayload): ExecutionPayloadRpc {
+export function serializeExecutionPayload(fork: ForkName, data: allForks.ExecutionPayload): ExecutionPayloadRpc {
   const payload: ExecutionPayloadRpc = {
     parentHash: bytesToData(data.parentHash),
     feeRecipient: bytesToData(data.feeRecipient),
@@ -458,9 +482,9 @@ export function serializeExecutionPayload(data: allForks.ExecutionPayload): Exec
   };
 
   // Capella adds withdrawals to the ExecutionPayload
-  if ((data as capella.ExecutionPayload).withdrawals !== undefined) {
-    // TODO Capella
-    payload.withdrawals = [];
+  if (ForkSeq[fork] >= ForkSeq.capella) {
+    const {withdrawals} = data as capella.ExecutionPayload;
+    payload.withdrawals = withdrawals.map(serializeWithdrawal);
   }
 
   // EIP-4844 adds excessDataGas to the ExecutionPayload
@@ -471,7 +495,7 @@ export function serializeExecutionPayload(data: allForks.ExecutionPayload): Exec
   return payload;
 }
 
-export function parseExecutionPayload(data: ExecutionPayloadRpc): allForks.ExecutionPayload {
+export function parseExecutionPayload(fork: ForkName, data: ExecutionPayloadRpc): allForks.ExecutionPayload {
   const payload = {
     parentHash: dataToBytes(data.parentHash, 32),
     feeRecipient: dataToBytes(data.feeRecipient, 20),
@@ -483,20 +507,30 @@ export function parseExecutionPayload(data: ExecutionPayloadRpc): allForks.Execu
     gasLimit: quantityToNum(data.gasLimit),
     gasUsed: quantityToNum(data.gasUsed),
     timestamp: quantityToNum(data.timestamp),
-    extraData: dataToBytes(data.extraData),
+    extraData: dataToBytes(data.extraData, null),
     baseFeePerGas: quantityToBigint(data.baseFeePerGas),
     blockHash: dataToBytes(data.blockHash, 32),
-    transactions: data.transactions.map((tran) => dataToBytes(tran)),
+    transactions: data.transactions.map((tran) => dataToBytes(tran, null)),
   };
 
-  // Capella adds withdrawals to the ExecutionPayload
-  if (data.withdrawals) {
-    // TODO Capella
-    (payload as capella.ExecutionPayload).withdrawals = [];
+  if (ForkSeq[fork] >= ForkSeq.capella) {
+    const {withdrawals} = data;
+    // Geth can also reply with null
+    if (withdrawals == null) {
+      throw Error(
+        `withdrawals missing for ${fork} >= capella executionPayload number=${payload.blockNumber} hash=${data.blockHash}`
+      );
+    }
+    (payload as capella.ExecutionPayload).withdrawals = withdrawals.map((w) => deserializeWithdrawal(w));
   }
 
   // EIP-4844 adds excessDataGas to the ExecutionPayload
-  if (data.excessDataGas) {
+  if (ForkSeq[fork] >= ForkSeq.eip4844) {
+    if (data.excessDataGas == null) {
+      throw Error(
+        `excessDataGas missing for ${fork} >= eip4844 executionPayload number=${payload.blockNumber} hash=${data.blockHash}`
+      );
+    }
     (payload as eip4844.ExecutionPayload).excessDataGas = quantityToBigint(data.excessDataGas);
   }
 
@@ -511,6 +545,30 @@ export function parseBlobsBundle(data: BlobsBundleRpc): BlobsBundle {
     kzgs: (data.kzgs ?? []).map((kzg) => dataToBytes(kzg, 48)),
     blobs: (data.blobs ?? []).map((blob) => dataToBytes(blob, BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_PER_BLOB)),
   };
+}
+
+function serializeWithdrawal(withdrawal: capella.Withdrawal): WithdrawalV1 {
+  return {
+    index: numToQuantity(withdrawal.index),
+    validatorIndex: numToQuantity(withdrawal.validatorIndex),
+    address: bytesToData(withdrawal.address),
+    // Note: the amount value is represented on the beacon chain as a little-endian value in
+    // units of Gwei, whereas the amount in this structure MUST be converted to a big-endian value
+    // in units of Wei
+    //
+    // see: https://github.com/ethereum/execution-apis/blob/main/src/engine/specification.md
+    amount: numToQuantity(withdrawal.amount * GWEI_TO_WEI),
+  };
+}
+
+function deserializeWithdrawal(serialized: WithdrawalV1): capella.Withdrawal {
+  return {
+    index: quantityToNum(serialized.index),
+    validatorIndex: quantityToNum(serialized.validatorIndex),
+    address: dataToBytes(serialized.address, 20),
+    // see: https://github.com/ethereum/execution-apis/blob/main/src/engine/specification.md
+    amount: quantityToBigint(serialized.amount) / GWEI_TO_WEI,
+  } as capella.Withdrawal;
 }
 
 type EngineRequestKey = keyof EngineApiRpcParamTypes;

@@ -37,7 +37,8 @@ export function increaseBalance(state: BeaconStateAllForks, index: ValidatorInde
  * Set to ``0`` when underflow.
  */
 export function decreaseBalance(state: BeaconStateAllForks, index: ValidatorIndex, delta: number): void {
-  const newBalance = state.balances.get(index) - delta;
+  const currentBalance = state.balances.get(index);
+  const newBalance = currentBalance > delta ? state.balances.get(index) - delta : 0;
   // TODO: Is it necessary to protect against underflow here? Add unit test
   state.balances.set(index, Math.max(0, newBalance));
 }

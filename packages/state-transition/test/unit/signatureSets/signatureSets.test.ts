@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import {expect} from "chai";
 import bls from "@chainsafe/bls";
 import {config} from "@lodestar/config/default";
-import {phase0, ValidatorIndex, BLSSignature} from "@lodestar/types";
+import {phase0, capella, ValidatorIndex, BLSSignature, ssz} from "@lodestar/types";
 import {FAR_FUTURE_EPOCH, MAX_EFFECTIVE_BALANCE} from "@lodestar/params";
 import {BitArray} from "@chainsafe/ssz";
 import {ZERO_HASH} from "../../../src/constants/index.js";
@@ -14,12 +14,14 @@ const EMPTY_SIGNATURE = Buffer.alloc(96);
 
 describe("signatureSets", () => {
   it("should aggregate all signatures from a block", () => {
-    const block: phase0.BeaconBlock = {
+    const emptyBlockBody = ssz.capella.BeaconBlockBody.defaultValue();
+    const block: capella.BeaconBlock = {
       slot: 0,
       proposerIndex: 0,
       parentRoot: crypto.randomBytes(32),
       stateRoot: ZERO_HASH,
       body: {
+        ...emptyBlockBody,
         randaoReveal: Buffer.alloc(96),
         eth1Data: {
           depositRoot: crypto.randomBytes(32),
@@ -43,6 +45,7 @@ describe("signatureSets", () => {
         attestations: [getMockAttestations(1)],
         deposits: [] as phase0.Deposit[],
         voluntaryExits: [getMockSignedVoluntaryExit({validatorIndex: 0, signature: EMPTY_SIGNATURE})],
+        blsToExecutionChanges: [getMockSignedBlsToExecutionChange({validatorIndex: 0, signature: EMPTY_SIGNATURE})],
       },
     };
 
@@ -164,6 +167,17 @@ function getMockSignedVoluntaryExit(data: ISignedVoluntaryExitData): phase0.Sign
     message: {
       epoch: 0,
       validatorIndex: data.validatorIndex,
+    },
+    signature: data.signature,
+  };
+}
+
+function getMockSignedBlsToExecutionChange(data: ISignedVoluntaryExitData): capella.SignedBLSToExecutionChange {
+  return {
+    message: {
+      validatorIndex: 0,
+      fromBlsPubkey: Buffer.alloc(48),
+      toExecutionAddress: Buffer.alloc(20),
     },
     signature: data.signature,
   };

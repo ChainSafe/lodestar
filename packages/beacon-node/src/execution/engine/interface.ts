@@ -1,12 +1,13 @@
 import {ForkName} from "@lodestar/params";
-import {RootHex, allForks} from "@lodestar/types";
 import {KZGCommitment, Blob} from "@lodestar/types/eip4844";
-import {DATA, QUANTITY} from "../../eth1/provider/utils.js";
-import {PayloadIdCache, PayloadId, ApiPayloadAttributes} from "./payloadIdCache.js";
+import {RootHex, allForks, capella} from "@lodestar/types";
+import {ForkSeq} from "@lodestar/params";
 
-export {PayloadIdCache, PayloadId, ApiPayloadAttributes};
+import {DATA, QUANTITY} from "../../eth1/provider/utils.js";
+import {PayloadIdCache, PayloadId, ApiPayloadAttributes, WithdrawalV1} from "./payloadIdCache.js";
 
 export type ForkExecution = ForkName.bellatrix | ForkName.capella | ForkName.eip4844;
+export {PayloadIdCache, PayloadId, ApiPayloadAttributes, WithdrawalV1};
 
 export enum ExecutePayloadStatus {
   /** given payload is valid */
@@ -53,6 +54,7 @@ export type PayloadAttributes = {
   suggestedFeeRecipient: string;
   // Not spec'ed, to know the type of the payload
   fork: ForkExecution;
+  withdrawals?: capella.Withdrawal[];
 };
 
 export type TransitionConfigurationV1 = {
@@ -88,7 +90,7 @@ export interface IExecutionEngine {
    *
    * Should be called in advance before, after or in parallel to block processing
    */
-  notifyNewPayload(executionPayload: allForks.ExecutionPayload): Promise<ExecutePayloadResponse>;
+  notifyNewPayload(seq: ForkSeq, executionPayload: allForks.ExecutionPayload): Promise<ExecutePayloadResponse>;
 
   /**
    * Signal fork choice updates
@@ -103,6 +105,7 @@ export interface IExecutionEngine {
    * Should be called in response to fork-choice head and finalized events
    */
   notifyForkchoiceUpdate(
+    seq: ForkSeq,
     headBlockHash: RootHex,
     safeBlockHash: RootHex,
     finalizedBlockHash: RootHex,
@@ -116,7 +119,7 @@ export interface IExecutionEngine {
    * Required for block producing
    * https://github.com/ethereum/consensus-specs/blob/dev/specs/merge/validator.md#get_payload
    */
-  getPayload(payloadId: PayloadId): Promise<allForks.ExecutionPayload>;
+  getPayload(seq: ForkSeq, payloadId: PayloadId): Promise<allForks.ExecutionPayload>;
 
   /**
    * "After retrieving the execution payload from the execution engine as specified in Bellatrix,

@@ -3,7 +3,7 @@ import {toHexString, byteArrayEquals} from "@chainsafe/ssz";
 import {ForkSeq} from "@lodestar/params";
 import {CachedBeaconStateBellatrix, CachedBeaconStateCapella} from "../types.js";
 import {getRandaoMix} from "../util/index.js";
-import {isExecutionPayload, isMergeTransitionComplete, isCapellaPayload} from "../util/execution.js";
+import {isExecutionPayload, isMergeTransitionComplete} from "../util/execution.js";
 import {BlockExternalData, ExecutionPayloadStatus} from "./externalData.js";
 
 export function processExecutionPayload(
@@ -84,16 +84,9 @@ export function processExecutionPayload(
   };
 
   if (fork >= ForkSeq.capella) {
-    // Must never happen
-    if (!isCapellaPayload(payload)) {
-      throw Error("not capella payload for post capella block");
-    }
-
-    const withdrawalsRoot = isExecutionPayload(payload)
-      ? ssz.capella.Withdrawals.hashTreeRoot(payload.withdrawals)
-      : payload.withdrawalsRoot;
-
-    (bellatrixPayloadFields as capella.ExecutionPayloadHeader).withdrawalsRoot = withdrawalsRoot;
+    (bellatrixPayloadFields as capella.ExecutionPayloadHeader).withdrawalsRoot = ssz.capella.Withdrawals.hashTreeRoot(
+      (payload as capella.ExecutionPayload).withdrawals
+    );
   }
 
   if (fork >= ForkSeq.eip4844) {
