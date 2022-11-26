@@ -1,12 +1,13 @@
 import {altair, ssz, StringType, SyncPeriod} from "@lodestar/types";
 import {ContainerType} from "@chainsafe/ssz";
+import {ForkName} from "@lodestar/params";
 import {ArrayOf, ReturnTypes, RoutesData, Schema, ContainerData, ReqSerializers} from "../../utils/index.js";
 
 export type StateFormat = "json" | "ssz";
 export const mimeTypeSSZ = "application/octet-stream";
 
 export type RestLightClientUpdate = {
-  version: string;
+  version: ForkName;
   data: altair.LightClientUpdate;
 };
 
@@ -119,7 +120,7 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
 
 export function getReturnTypes(): ReturnTypes<Api> {
   const restLightClientUpdate = new ContainerType({
-    version: new StringType(), // TODO DA change type
+    version: new StringType<ForkName>(),
     data: ssz.altair.LightClientUpdate,
   });
 
