@@ -79,7 +79,10 @@ describe("ExecutionEngine / http", () => {
 
     const payload = await executionEngine.getPayload(ForkSeq.bellatrix, "0x0");
 
-    expect(serializeExecutionPayload(payload)).to.deep.equal(response.result, "Wrong returned payload");
+    expect(serializeExecutionPayload(ForkSeq.bellatrix, payload)).to.deep.equal(
+      response.result,
+      "Wrong returned payload"
+    );
     expect(reqJsonRpcPayload).to.deep.equal(request, "Wrong request JSON RPC payload");
   });
 
@@ -119,7 +122,7 @@ describe("ExecutionEngine / http", () => {
 
     const {status} = await executionEngine.notifyNewPayload(
       ForkSeq.bellatrix,
-      parseExecutionPayload(request.params[0])
+      parseExecutionPayload(ForkSeq.bellatrix, request.params[0])
     );
 
     expect(status).to.equal("VALID", "Wrong returned execute payload result");

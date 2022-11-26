@@ -1,3 +1,4 @@
+import {ForkSeq} from "@lodestar/params";
 import {allForks, altair, capella} from "@lodestar/types";
 import {computeEpochAtSlot, ISignatureSet} from "../util/index.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateAltair, CachedBeaconStateCapella} from "../types.js";
@@ -42,8 +43,11 @@ export function getBlockSignatureSets(
     signatureSets.push(getProposerSignatureSet(state, signedBlock));
   }
 
+  // fork based validations
+  const fork = state.config.getForkSeq(signedBlock.message.slot);
+
   // Only after altair fork, validate tSyncCommitteeSignature
-  if (computeEpochAtSlot(signedBlock.message.slot) >= state.config.ALTAIR_FORK_EPOCH) {
+  if (fork >= ForkSeq.altair) {
     const syncCommitteeSignatureSet = getSyncCommitteeSignatureSet(
       state as CachedBeaconStateAltair,
       (signedBlock as altair.SignedBeaconBlock).message
@@ -55,7 +59,7 @@ export function getBlockSignatureSets(
   }
 
   // only after capella fork
-  if (computeEpochAtSlot(signedBlock.message.slot) >= state.config.CAPELLA_FORK_EPOCH) {
+  if (fork >= ForkSeq.capella) {
     const blsToExecutionChangeSignatureSets = getBlsToExecutionChangeSignatureSets(
       state as CachedBeaconStateCapella,
       signedBlock as capella.SignedBeaconBlock
