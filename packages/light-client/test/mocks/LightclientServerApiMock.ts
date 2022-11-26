@@ -41,27 +41,27 @@ export class LightclientServerApiMock implements routes.lightclient.Api {
     return updates;
   }
 
-  getOptimisticUpdate(format?: "json"): Promise<{data: altair.LightClientOptimisticUpdate}>;
+  getOptimisticUpdate(format?: "json"): Promise<{version: ForkName; data: altair.LightClientOptimisticUpdate}>;
   getOptimisticUpdate(format?: "ssz"): Promise<Uint8Array>;
-  async getOptimisticUpdate(): Promise<Uint8Array | {data: altair.LightClientOptimisticUpdate}> {
+  async getOptimisticUpdate(): Promise<Uint8Array | {version: ForkName; data: altair.LightClientOptimisticUpdate}> {
     if (!this.latestHeadUpdate) throw Error("No latest head update");
-    return {data: this.latestHeadUpdate};
+    return {version: ForkName.bellatrix, data: this.latestHeadUpdate};
   }
 
-  getFinalityUpdate(format?: "json"): Promise<{data: altair.LightClientFinalityUpdate}>;
+  getFinalityUpdate(format?: "json"): Promise<{version: ForkName; data: altair.LightClientFinalityUpdate}>;
   getFinalityUpdate(format?: "ssz"): Promise<Uint8Array>;
-  async getFinalityUpdate(): Promise<Uint8Array | {data: altair.LightClientFinalityUpdate}> {
+  async getFinalityUpdate(): Promise<Uint8Array | {version: ForkName; data: altair.LightClientFinalityUpdate}> {
     if (!this.finalized) throw Error("No finalized head update");
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    return {data: this.finalized};
+    return {version: ForkName.bellatrix, data: this.finalized};
   }
 
-  getBootstrap(blockRoot: string, format?: "json"): Promise<{data: altair.LightClientBootstrap}>;
+  getBootstrap(blockRoot: string, format?: "json"): Promise<{version: ForkName; data: altair.LightClientBootstrap}>;
   getBootstrap(blockRoot: string, format?: "ssz"): Promise<Uint8Array>;
-  async getBootstrap(blockRoot: string): Promise<Uint8Array | {data: altair.LightClientBootstrap}> {
+  async getBootstrap(blockRoot: string): Promise<Uint8Array | {version: ForkName; data: altair.LightClientBootstrap}> {
     const snapshot = this.snapshots.get(blockRoot);
     if (!snapshot) throw Error(`snapshot for blockRoot ${blockRoot} not available`);
-    return {data: snapshot};
+    return {version: ForkName.bellatrix, data: snapshot};
   }
 
   async getCommitteeRoot(startPeriod: SyncPeriod, count: number): Promise<{data: Uint8Array[]}> {

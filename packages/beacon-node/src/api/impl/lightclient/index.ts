@@ -73,7 +73,7 @@ export function getLightclientApi(
         // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-explicit-any
         return ssz.altair.LightClientOptimisticUpdate.serialize(data) as any;
       } else {
-        return {data};
+        return {version: config.getForkName(data.attestedHeader.slot), data};
       }
     },
 
@@ -86,7 +86,7 @@ export function getLightclientApi(
         // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-explicit-any
         return ssz.altair.LightClientFinalityUpdate.serialize(data) as any;
       } else {
-        return {data};
+        return {version: config.getForkName(data.attestedHeader.slot), data};
       }
     },
 
@@ -97,7 +97,7 @@ export function getLightclientApi(
         // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-explicit-any
         return ssz.altair.LightClientBootstrap.serialize(bootstrapProof) as any;
       } else {
-        return {data: bootstrapProof};
+        return {version: config.getForkName(bootstrapProof.header.slot), data: bootstrapProof};
       }
     },
 

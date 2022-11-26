@@ -1,7 +1,15 @@
 import {altair, ssz, StringType, SyncPeriod} from "@lodestar/types";
 import {ContainerType} from "@chainsafe/ssz";
 import {ForkName} from "@lodestar/params";
-import {ArrayOf, ReturnTypes, RoutesData, Schema, ContainerData, ReqSerializers} from "../../utils/index.js";
+import {
+  ArrayOf,
+  ReturnTypes,
+  RoutesData,
+  Schema,
+  ContainerData,
+  ReqSerializers,
+  WithVersion,
+} from "../../utils/index.js";
 
 export type StateFormat = "json" | "ssz";
 export const mimeTypeSSZ = "application/octet-stream";
@@ -31,20 +39,27 @@ export type Api = {
    * Returns the latest optimistic head update available. Clients should use the SSE type `light_client_optimistic_update`
    * unless to get the very first head update after syncing, or if SSE are not supported by the server.
    */
-  getOptimisticUpdate(format?: "json"): Promise<{data: altair.LightClientOptimisticUpdate}>;
+  getOptimisticUpdate(format?: "json"): Promise<{version: ForkName; data: altair.LightClientOptimisticUpdate}>;
   getOptimisticUpdate(format?: "ssz"): Promise<Uint8Array>;
-  getOptimisticUpdate(format?: StateFormat): Promise<Uint8Array | {data: altair.LightClientOptimisticUpdate}>;
-  getFinalityUpdate(format?: "json"): Promise<{data: altair.LightClientFinalityUpdate}>;
+  getOptimisticUpdate(
+    format?: StateFormat
+  ): Promise<Uint8Array | {version: ForkName; data: altair.LightClientOptimisticUpdate}>;
+  getFinalityUpdate(format?: "json"): Promise<{version: ForkName; data: altair.LightClientFinalityUpdate}>;
   getFinalityUpdate(format?: "ssz"): Promise<Uint8Array>;
-  getFinalityUpdate(format?: StateFormat): Promise<Uint8Array | {data: altair.LightClientFinalityUpdate}>;
+  getFinalityUpdate(
+    format?: StateFormat
+  ): Promise<Uint8Array | {version: ForkName; data: altair.LightClientFinalityUpdate}>;
   /**
    * Fetch a bootstrapping state with a proof to a trusted block root.
    * The trusted block root should be fetched with similar means to a weak subjectivity checkpoint.
    * Only block roots for checkpoints are guaranteed to be available.
    */
-  getBootstrap(blockRoot: string, format?: "json"): Promise<{data: altair.LightClientBootstrap}>;
+  getBootstrap(blockRoot: string, format?: "json"): Promise<{version: ForkName; data: altair.LightClientBootstrap}>;
   getBootstrap(blockRoot: string, format?: "ssz"): Promise<Uint8Array>;
-  getBootstrap(blockRoot: string, format?: StateFormat): Promise<Uint8Array | {data: altair.LightClientBootstrap}>;
+  getBootstrap(
+    blockRoot: string,
+    format?: StateFormat
+  ): Promise<Uint8Array | {version: ForkName; data: altair.LightClientBootstrap}>;
   /**
    * Returns an array of sync committee hashes based on the provided period and count
    */
@@ -91,7 +106,6 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
         headers: {accept: format === "ssz" ? mimeTypeSSZ : ""},
       }),
       parseReq: ({headers}) => [headers.accept === mimeTypeSSZ ? "ssz" : "json"],
-      schema: {},
     },
 
     getFinalityUpdate: {
@@ -99,7 +113,6 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
         headers: {accept: format === "ssz" ? mimeTypeSSZ : ""},
       }),
       parseReq: ({headers}) => [headers.accept === mimeTypeSSZ ? "ssz" : "json"],
-      schema: {},
     },
 
     getBootstrap: {
@@ -126,9 +139,9 @@ export function getReturnTypes(): ReturnTypes<Api> {
 
   return {
     getUpdates: ArrayOf(restLightClientUpdate),
-    getOptimisticUpdate: ContainerData(ssz.altair.LightClientOptimisticUpdate),
-    getFinalityUpdate: ContainerData(ssz.altair.LightClientFinalityUpdate),
-    getBootstrap: ContainerData(ssz.altair.LightClientBootstrap),
+    getOptimisticUpdate: WithVersion(() => ssz.altair.LightClientOptimisticUpdate),
+    getFinalityUpdate: WithVersion(() => ssz.altair.LightClientFinalityUpdate),
+    getBootstrap: WithVersion(() => ssz.altair.LightClientBootstrap),
     getCommitteeRoot: ContainerData(ArrayOf(ssz.Root)),
   };
 }

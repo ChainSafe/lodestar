@@ -18,11 +18,12 @@ export const testData: GenericServerTestCases<Api> = {
   },
   getOptimisticUpdate: {
     args: ["json"],
-    res: {data: {syncAggregate, attestedHeader: header, signatureSlot}},
+    res: {version: ForkName.bellatrix, data: {syncAggregate, attestedHeader: header, signatureSlot}},
   },
   getFinalityUpdate: {
     args: ["json"],
     res: {
+      version: ForkName.bellatrix,
       data: {
         syncAggregate,
         attestedHeader: header,
@@ -35,6 +36,7 @@ export const testData: GenericServerTestCases<Api> = {
   getBootstrap: {
     args: [toHexString(root), "json"],
     res: {
+      version: ForkName.bellatrix,
       data: {
         header,
         currentSyncCommittee: lightClientUpdate.nextSyncCommittee,
