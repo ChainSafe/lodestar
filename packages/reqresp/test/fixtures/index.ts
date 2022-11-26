@@ -1,3 +1,3 @@
 export * from "./encodingStrategies.js";
 export * from "./encoders.js";
-export * from "./requests.js";
+export * from "./messages.js";

@@ -3,7 +3,7 @@ import chaiAsPromised from "chai-as-promised";
 import {Uint8ArrayList} from "uint8arraylist";
 import varint from "varint";
 import {readSszSnappyPayload} from "../../../../src/encodingStrategies/sszSnappy/index.js";
-import {EncodedPayloadType} from "../../../../src/types.js";
+import {EncodedPayloadType, TypeSerializer} from "../../../../src/types.js";
 import {BufferedSource} from "../../../../src/utils/index.js";
 import {
   encodingStrategiesDecodingErrorCases,
@@ -19,7 +19,7 @@ describe("encodingStrategies / sszSnappy / decode", () => {
   for (const {id, type, payload, chunks} of encodingStrategiesTestCases) {
     it(id, async () => {
       const bufferedSource = new BufferedSource(arrToSource(chunks));
-      const bodyResult = await readSszSnappyPayload(bufferedSource, type);
+      const bodyResult = await readSszSnappyPayload(bufferedSource, type as TypeSerializer<unknown>);
       expect(isEqualSszType(type, bodyResult, payload.data)).to.equal(true, "Wrong decoded body");
     });
   }

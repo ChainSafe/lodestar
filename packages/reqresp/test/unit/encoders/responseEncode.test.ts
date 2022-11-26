@@ -7,15 +7,11 @@ import {allForks} from "@lodestar/types";
 import {responseEncodeError, responseEncodeSuccess} from "../../../src/encoders/responseEncode.js";
 import {RespStatus} from "../../../src/interface.js";
 import {EncodedPayload, EncodedPayloadType, ProtocolDefinition} from "../../../src/types.js";
-import {
-  beaconConfig,
-  ResponseChunk,
-  responseEncodersErrorTestCases,
-  responseEncodersTestCases,
-} from "../../fixtures/encoders.js";
+import {ResponseChunk, responseEncodersErrorTestCases, responseEncodersTestCases} from "../../fixtures/encoders.js";
 import {blocksToReqRespBlockResponses} from "../../utils/block.js";
 import {expectRejectedWithLodestarError} from "../../utils/errors.js";
 import {arrToSource, expectEqualByteChunks} from "../../utils/index.js";
+import {beaconConfig} from "../../fixtures/messages.js";
 
 chai.use(chaiAsPromised);
 

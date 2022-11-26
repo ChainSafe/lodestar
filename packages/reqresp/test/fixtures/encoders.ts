@@ -1,31 +1,18 @@
 import {Uint8ArrayList} from "uint8arraylist";
-import {createIBeaconConfig} from "@lodestar/config";
-import {chainConfig} from "@lodestar/config/default";
-import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ForkName} from "@lodestar/params";
 import {LodestarError} from "@lodestar/utils";
 import {SszSnappyError, SszSnappyErrorCode} from "../../src/encodingStrategies/sszSnappy/index.js";
 import {ResponseError} from "../../src/index.js";
 import {RespStatus} from "../../src/interface.js";
 import {EncodedPayload, EncodedPayloadType, ProtocolDefinition} from "../../src/types.js";
-import {fromHexBuf, ZERO_HASH} from "../utils/index.js";
+import {fromHexBuf} from "../utils/index.js";
 import {
+  beaconConfig,
+  messages,
   sszSnappyPing,
   sszSnappySignedBeaconBlockAltair,
   sszSnappySignedBeaconBlockPhase0,
-} from "./encodingStrategies.js";
-import {getAllMessages} from "./requests.js";
-
-// Set the altair fork to happen between the two precomputed SSZ snappy blocks
-const slotBlockPhase0 = sszSnappySignedBeaconBlockPhase0.payload.data.message.slot;
-const slotBlockAltair = sszSnappySignedBeaconBlockAltair.payload.data.message.slot;
-if (slotBlockAltair - slotBlockPhase0 < SLOTS_PER_EPOCH) {
-  throw Error("phase0 block slot must be an epoch apart from altair block slot");
-}
-const ALTAIR_FORK_EPOCH = Math.floor(slotBlockAltair / SLOTS_PER_EPOCH);
-// eslint-disable-next-line @typescript-eslint/naming-convention
-export const beaconConfig = createIBeaconConfig({...chainConfig, ALTAIR_FORK_EPOCH}, ZERO_HASH);
-
-const messages = getAllMessages({config: beaconConfig});
+} from "./messages.js";
 
 export const requestEncodersCases: {
   id: string;
