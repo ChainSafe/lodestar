@@ -307,7 +307,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       },
       getPayloadOpts
     );
-    return parseExecutionPayload(executionPayloadRpc);
+    return parseExecutionPayload(seq, executionPayloadRpc);
   }
 
   /**
@@ -465,9 +465,15 @@ export function parseExecutionPayload(seq: ForkSeq, data: ExecutionPayloadRpc): 
   };
   if (seq >= ForkSeq.capella) {
     const {withdrawals} = data;
-    payload.withdrawals = withdrawals.map(deserializeWithdrawal);
+    // Geth can also reply with null
+    if (withdrawals === undefined || withdrawals === null) {
+      throw Error(
+        `withdrawals missing for seq=${seq} >= capella seq=${ForkSeq.capella} executionPayload number=${payload.blockNumber} hash=${data.blockHash}`
+      );
+    }
+    (payload as capella.ExecutionPayload).withdrawals = withdrawals.map(deserializeWithdrawal);
   }
-  return;
+  return payload;
 }
 
 function serializeWithdrawal(withdrawal: capella.Withdrawal): WithdrawalV1 {
