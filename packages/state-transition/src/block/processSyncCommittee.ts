@@ -5,6 +5,7 @@ import {computeSigningRoot, ISignatureSet, SignatureSetType, verifySignatureSet}
 import {CachedBeaconStateAllForks} from "../types.js";
 import {G2_POINT_AT_INFINITY} from "../constants/index.js";
 import {getUnparticipantValues} from "../util/array.js";
+import {decreaseBalance, increaseBalance} from "../util/index.js";
 
 export function processSyncAggregate(
   state: CachedBeaconStateAllForks,
@@ -26,20 +27,18 @@ export function processSyncAggregate(
     }
   }
 
-  const balances = state.balances;
-
   // Proposer reward
   const proposerIndex = state.epochCtx.getBeaconProposer(state.slot);
-  balances.set(proposerIndex, balances.get(proposerIndex) + syncProposerReward * participantIndices.length);
+  increaseBalance(state, proposerIndex, syncProposerReward * participantIndices.length);
 
   // Positive rewards for participants
   for (const index of participantIndices) {
-    balances.set(index, balances.get(index) + syncParticipantReward);
+    increaseBalance(state, index, syncParticipantReward);
   }
 
   // Negative rewards for non participants
   for (const index of unparticipantIndices) {
-    balances.set(index, balances.get(index) - syncParticipantReward);
+    decreaseBalance(state, index, syncParticipantReward);
   }
 }
 

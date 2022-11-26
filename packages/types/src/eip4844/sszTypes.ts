@@ -88,6 +88,14 @@ export const ExecutionPayload = new ContainerType(
   {typeName: "ExecutionPayload", jsonCase: "eth2"}
 );
 
+export const BlindedExecutionPayload = new ContainerType(
+  {
+    ...capellaSsz.ExecutionPayloadHeader.fields,
+    excessDataGas: UintBn256, // New in EIP-4844
+  },
+  {typeName: "BlindedExecutionPayload", jsonCase: "eth2"}
+);
+
 export const ExecutionPayloadHeader = new ContainerType(
   {
     ...capellaSsz.ExecutionPayloadHeader.fields,
@@ -183,7 +191,7 @@ export const BeaconState = new ContainerType(
     eth1DataVotes: phase0Ssz.Eth1DataVotes,
     eth1DepositIndex: UintNum64,
     // Registry
-    validators: capellaSsz.Validators, // [Modified in Capella]
+    validators: phase0Ssz.Validators,
     balances: phase0Ssz.Balances,
     randaoMixes: phase0Ssz.RandaoMixes,
     // Slashings
@@ -204,9 +212,8 @@ export const BeaconState = new ContainerType(
     // Execution
     latestExecutionPayloadHeader: ExecutionPayloadHeader, // Modified in EIP-4844
     // Withdrawals
-    withdrawalQueue: capellaSsz.WithdrawalQueue,
     nextWithdrawalIndex: capellaSsz.BeaconState.fields.nextWithdrawalIndex,
-    nextPartialWithdrawalValidatorIndex: capellaSsz.BeaconState.fields.nextPartialWithdrawalValidatorIndex,
+    nextWithdrawalValidatorIndex: capellaSsz.BeaconState.fields.nextWithdrawalValidatorIndex,
   },
   {typeName: "BeaconState", jsonCase: "eth2"}
 );

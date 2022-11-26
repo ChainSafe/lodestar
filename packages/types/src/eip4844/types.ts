@@ -15,6 +15,7 @@ export type BlobsSidecarsByRangeRequest = ValueOf<typeof ssz.BlobsSidecarsByRang
 export type BeaconBlockAndBlobsSidecarByRootRequest = ValueOf<typeof ssz.BeaconBlockAndBlobsSidecarByRootRequest>;
 
 export type ExecutionPayload = ValueOf<typeof ssz.ExecutionPayload>;
+export type BlindedExecutionPayload = ValueOf<typeof ssz.BlindedExecutionPayload>;
 export type ExecutionPayloadHeader = ValueOf<typeof ssz.ExecutionPayloadHeader>;
 
 export type BeaconBlockBody = ValueOf<typeof ssz.BeaconBlockBody>;

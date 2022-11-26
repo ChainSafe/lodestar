@@ -38,8 +38,11 @@ export {
 
 // BeaconChain validation
 export {isValidVoluntaryExit} from "./block/processVoluntaryExit.js";
+export {assertValidBlsToExecutionChange} from "./block/processBlsToExecutionChange.js";
 export {assertValidProposerSlashing} from "./block/processProposerSlashing.js";
 export {assertValidAttesterSlashing} from "./block/processAttesterSlashing.js";
 
 // BeaconChain, to prepare new blocks
 export {becomesNewEth1Data} from "./block/processEth1Data.js";
+// Withdrawals for new blocks
+export {getExpectedWithdrawals} from "./block/processWithdrawals.js";
