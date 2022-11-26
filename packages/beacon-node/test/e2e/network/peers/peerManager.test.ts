@@ -8,7 +8,7 @@ import {BitArray} from "@chainsafe/ssz";
 import {altair, phase0, ssz} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 import {createIBeaconConfig} from "@lodestar/config";
-import {IReqResp, ReqRespMethod} from "../../../../src/network/reqresp/index.js";
+import {IReqRespBeaconNode, ReqRespMethod} from "../../../../src/network/reqresp/ReqRespBeaconNode.js";
 import {PeerRpcScoreStore, PeerManager} from "../../../../src/network/peers/index.js";
 import {Eth2Gossipsub, getConnectionsMap, NetworkEvent, NetworkEventBus} from "../../../../src/network/index.js";
 import {PeersData} from "../../../../src/network/peers/peersData.js";
@@ -101,7 +101,7 @@ describe("network / peers / PeerManager", function () {
   }
 
   // Create a real event emitter with stubbed methods
-  class ReqRespFake implements IReqResp {
+  class ReqRespFake implements IReqRespBeaconNode {
     start = sinon.stub();
     stop = sinon.stub();
     status = sinon.stub();
@@ -117,6 +117,7 @@ describe("network / peers / PeerManager", function () {
     lightClientOptimisticUpdate = sinon.stub();
     lightClientFinalityUpdate = sinon.stub();
     lightClientUpdate = sinon.stub();
+    lightClientUpdatesByRange = sinon.stub();
   }
 
   it("Should request metadata on receivedPing of unknown peer", async () => {

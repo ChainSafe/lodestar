@@ -2,20 +2,21 @@ export {EpochContext} from "./cache/epochContext.js";
 export {EpochProcess} from "./cache/epochProcess.js";
 
 export {
+  CachedBeaconStateAllForks,
+  CachedBeaconStateExecutions,
   CachedBeaconStatePhase0,
   CachedBeaconStateAltair,
   CachedBeaconStateBellatrix,
-  CachedBeaconStateAllForks,
   CachedBeaconStateCapella,
-  CachedBeaconStateExecutions,
   CachedBeaconStateEip4844,
 } from "./cache/stateCache.js";
 
 export {
+  BeaconStateAllForks,
+  BeaconStateExecutions,
   BeaconStatePhase0,
   BeaconStateAltair,
   BeaconStateBellatrix,
   BeaconStateCapella,
-  BeaconStateAllForks,
-  BeaconStateExecutions,
+  BeaconStateEip4844,
 } from "./cache/types.js";

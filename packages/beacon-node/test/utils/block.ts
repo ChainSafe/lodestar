@@ -1,11 +1,12 @@
 import deepmerge from "deepmerge";
-import {ssz} from "@lodestar/types";
+import {Slot, ssz} from "@lodestar/types";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {IChainForkConfig} from "@lodestar/config";
 import {allForks, phase0} from "@lodestar/types";
 import {ProtoBlock, ExecutionStatus} from "@lodestar/fork-choice";
 import {isPlainObject} from "@lodestar/utils";
 import {RecursivePartial} from "@lodestar/utils";
+import {ContextBytesType, EncodedPayloadType} from "@lodestar/reqresp";
 import {EMPTY_SIGNATURE, ZERO_HASH} from "../../src/constants/index.js";
 import {ReqRespBlockResponse} from "../../src/network/reqresp/types.js";
 import {BlockImport} from "../../src/chain/blocks/types.js";
@@ -14,9 +15,9 @@ export function toBlockImport(block: allForks.SignedBeaconBlock): BlockImport {
   return {block, blobs: null};
 }
 
-export function generateEmptyBlock(): phase0.BeaconBlock {
+export function generateEmptyBlock(slot: Slot = 0): phase0.BeaconBlock {
   return {
-    slot: 0,
+    slot,
     proposerIndex: 0,
     parentRoot: Buffer.alloc(32),
     stateRoot: ZERO_HASH,
@@ -37,17 +38,23 @@ export function generateEmptyBlock(): phase0.BeaconBlock {
   };
 }
 
-export function generateEmptySignedBlock(): phase0.SignedBeaconBlock {
+export function generateEmptySignedBlock(slot: Slot = 0): phase0.SignedBeaconBlock {
   return {
-    message: generateEmptyBlock(),
+    message: generateEmptyBlock(slot),
     signature: EMPTY_SIGNATURE,
   };
 }
 
 export function generateEmptyReqRespBlockResponse(): ReqRespBlockResponse {
+  const block = generateEmptySignedBlock();
+
   return {
-    slot: 0,
+    type: EncodedPayloadType.bytes,
     bytes: Buffer.from(ssz.phase0.SignedBeaconBlock.serialize(generateEmptySignedBlock())),
+    contextBytes: {
+      type: ContextBytesType.ForkDigest,
+      forkSlot: block.message.slot,
+    },
   };
 }
 
@@ -61,8 +68,12 @@ export function blocksToReqRespBlockResponses(
       ? config.getForkTypes(slot).SignedBeaconBlock
       : defaultConfig.getForkTypes(slot).SignedBeaconBlock;
     return {
-      slot,
+      type: EncodedPayloadType.bytes,
       bytes: Buffer.from(sszType.serialize(block)),
+      contextBytes: {
+        type: ContextBytesType.ForkDigest,
+        forkSlot: block.message.slot,
+      },
     };
   });
 }

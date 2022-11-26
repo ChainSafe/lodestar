@@ -5,8 +5,8 @@ import {Bootstrap} from "@libp2p/bootstrap";
 import {MulticastDNS} from "@libp2p/mdns";
 import {PeerId} from "@libp2p/interface-peer-id";
 import {Datastore} from "interface-datastore";
-import {Noise} from "@chainsafe/libp2p-noise";
 import {yamux} from "@chainsafe/libp2p-yamux";
+import {createNoise} from "./noise.js";
 
 export interface ILibp2pOptions {
   peerId: PeerId;
@@ -42,7 +42,7 @@ export async function createNodejsLibp2p(options: ILibp2pOptions): Promise<Libp2
       listen: options.addresses.listen,
       announce: options.addresses.announce || [],
     },
-    connectionEncryption: [new Noise()],
+    connectionEncryption: [createNoise()],
     transports: [new TCP()],
     streamMuxers: [
       //

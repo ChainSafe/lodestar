@@ -16,6 +16,8 @@ export {
   BeaconStatePhase0,
   BeaconStateAltair,
   BeaconStateBellatrix,
+  BeaconStateCapella,
+  BeaconStateEip4844,
   BeaconStateAllForks,
   BeaconStateExecutions,
 } from "./types.js";

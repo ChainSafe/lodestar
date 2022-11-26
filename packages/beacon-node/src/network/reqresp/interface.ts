@@ -1,18 +1,8 @@
-import {Libp2p} from "libp2p";
 import {PeerId} from "@libp2p/interface-peer-id";
 import {ForkName} from "@lodestar/params";
-import {IBeaconConfig} from "@lodestar/config";
 import {allForks, altair, eip4844, phase0} from "@lodestar/types";
-import {ILogger} from "@lodestar/utils";
-import {IPeerRpcScoreStore} from "../peers/index.js";
-import {MetadataController} from "../metadata.js";
-import {INetworkEventBus} from "../events.js";
-import {PeersData} from "../peers/peersData.js";
-import {IMetrics} from "../../metrics/index.js";
-import {ReqRespHandlers} from "./handlers/index.js";
-import {RequestTypedContainer} from "./types.js";
 
-export interface IReqResp {
+export interface IReqRespBeaconNode {
   start(): void;
   stop(): void;
   status(peerId: PeerId, request: phase0.Status): Promise<phase0.Status>;
@@ -41,29 +31,20 @@ export interface IReqResp {
   lightClientBootstrap(peerId: PeerId, request: Uint8Array): Promise<altair.LightClientBootstrap>;
   lightClientOptimisticUpdate(peerId: PeerId): Promise<altair.LightClientOptimisticUpdate>;
   lightClientFinalityUpdate(peerId: PeerId): Promise<altair.LightClientFinalityUpdate>;
-  lightClientUpdate(peerId: PeerId, request: altair.LightClientUpdatesByRange): Promise<altair.LightClientUpdate[]>;
-}
-
-export interface IReqRespModules {
-  config: IBeaconConfig;
-  libp2p: Libp2p;
-  peersData: PeersData;
-  logger: ILogger;
-  metadata: MetadataController;
-  reqRespHandlers: ReqRespHandlers;
-  peerRpcScores: IPeerRpcScoreStore;
-  networkEventBus: INetworkEventBus;
-  metrics: IMetrics | null;
+  lightClientUpdatesByRange(
+    peerId: PeerId,
+    request: altair.LightClientUpdatesByRange
+  ): Promise<altair.LightClientUpdate[]>;
 }
 
 /**
  * Rate limiter interface for inbound and outbound requests.
  */
-export interface IRateLimiter {
-  /**
-   * Allow to request or response based on rate limit params configured.
-   */
-  allowRequest(peerId: PeerId, requestTyped: RequestTypedContainer): boolean;
+export interface RateLimiter {
+  /** Allow to request or response based on rate limit params configured. */
+  allowRequest(peerId: PeerId): boolean;
+  /** Rate limit check for block count */
+  allowBlockByRequest(peerId: PeerId, numBlock: number): boolean;
 
   /**
    * Prune by peer id
@@ -72,3 +53,30 @@ export interface IRateLimiter {
   start(): void;
   stop(): void;
 }
+
+//  Request/Response constants
+export enum RespStatus {
+  /**
+   * A normal response follows, with contents matching the expected message schema and encoding specified in the request
+   */
+  SUCCESS = 0,
+  /**
+   * The contents of the request are semantically invalid, or the payload is malformed,
+   * or could not be understood. The response payload adheres to the ErrorMessage schema
+   */
+  INVALID_REQUEST = 1,
+  /**
+   * The responder encountered an error while processing the request. The response payload adheres to the ErrorMessage schema
+   */
+  SERVER_ERROR = 2,
+  /**
+   * The responder does not have requested resource.  The response payload adheres to the ErrorMessage schema (described below). Note: This response code is only valid as a response to BlocksByRange
+   */
+  RESOURCE_UNAVAILABLE = 3,
+  /**
+   * Our node does not have bandwidth to serve requests due to either per-peer quota or total quota.
+   */
+  RATE_LIMITED = 139,
+}
+
+export type RpcResponseStatusError = Exclude<RespStatus, RespStatus.SUCCESS>;

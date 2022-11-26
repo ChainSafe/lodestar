@@ -15,7 +15,7 @@ import {ChainEvent, IBeaconChain, IBeaconClock} from "../chain/index.js";
 import {BlockImport} from "../chain/blocks/types.js";
 import {INetworkOptions} from "./options.js";
 import {INetwork} from "./interface.js";
-import {IReqResp, IReqRespOptions, ReqResp, ReqRespHandlers} from "./reqresp/index.js";
+import {IReqRespBeaconNode, ReqRespBeaconNode, ReqRespHandlers} from "./reqresp/index.js";
 import {Eth2Gossipsub, getGossipHandlers, GossipHandlers, GossipTopicTypeMap, GossipType} from "./gossip/index.js";
 import {MetadataController} from "./metadata.js";
 import {FORK_EPOCH_LOOKAHEAD, getActiveForks} from "./forks.js";
@@ -40,7 +40,7 @@ interface INetworkModules {
 
 export class Network implements INetwork {
   events: INetworkEventBus;
-  reqResp: IReqResp;
+  reqResp: IReqRespBeaconNode;
   attnetsService: AttnetsService;
   syncnetsService: SyncnetsService;
   gossip: Eth2Gossipsub;
@@ -58,7 +58,7 @@ export class Network implements INetwork {
 
   private subscribedForks = new Set<ForkName>();
 
-  constructor(private readonly opts: INetworkOptions & IReqRespOptions, modules: INetworkModules) {
+  constructor(private readonly opts: INetworkOptions, modules: INetworkModules) {
     const {config, libp2p, logger, metrics, chain, reqRespHandlers, gossipHandlers, signal} = modules;
     this.libp2p = libp2p;
     this.logger = logger;
@@ -73,7 +73,7 @@ export class Network implements INetwork {
     this.events = networkEventBus;
     this.metadata = metadata;
     this.peerRpcScores = peerRpcScores;
-    this.reqResp = new ReqResp(
+    this.reqResp = new ReqRespBeaconNode(
       {
         config,
         libp2p,

@@ -17,7 +17,7 @@ export async function startServer(opts: ServerOpts, config: IChainForkConfig, ap
     querystringParser: querystring.parse,
   });
 
-  registerRoutes(server, config, api, ["lightclient", "events"]);
+  registerRoutes(server, config, api, ["lightclient", "proof", "events"]);
 
   void server.register(fastifyCors, {origin: "*"});
 

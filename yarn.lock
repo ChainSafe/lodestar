@@ -404,6 +404,11 @@
   resolved "https://registry.yarnpkg.com/@balena/dockerignore/-/dockerignore-1.0.2.tgz#9ffe4726915251e8eb69f44ef3547e0da2c03e0d"
   integrity sha512-wMue2Sy4GAVTk6Ic4tJVcnfdau+gx2EnG7S+uAEe+TWJFqE4YoWN4/H8MSLj4eYJKxGg26lZwboEniNiNwZQ6Q==
 
+"@chainsafe/as-chacha20poly1305@^0.1.0":
+  version "0.1.0"
+  resolved "https://registry.yarnpkg.com/@chainsafe/as-chacha20poly1305/-/as-chacha20poly1305-0.1.0.tgz#7da6f8796f9b42dac6e830a086d964f1f9189e09"
+  integrity sha512-BpNcL8/lji/GM3+vZ/bgRWqJ1q5kwvTFmGPk7pxm/QQZDbaMI98waOHjEymTjq2JmdD/INdNBFOVSyJofXg7ew==
+
 "@chainsafe/as-sha256@^0.3.1":
   version "0.3.1"
   resolved "https://registry.npmjs.org/@chainsafe/as-sha256/-/as-sha256-0.3.1.tgz"
@@ -464,10 +469,10 @@
     bls-eth-wasm "^0.4.8"
     randombytes "^2.1.0"
 
-"@chainsafe/blst@^0.2.4":
-  version "0.2.4"
-  resolved "https://registry.npmjs.org/@chainsafe/blst/-/blst-0.2.4.tgz"
-  integrity sha512-jjhB4dALUvLdTc2flHE6BEI7KCvXVGevIP8si4OdtERu+Ed+cc6zBsrpLvOySX9pgAMAmAuTnB349AlmRfmR2Q==
+"@chainsafe/blst@^0.2.6":
+  version "0.2.6"
+  resolved "https://registry.yarnpkg.com/@chainsafe/blst/-/blst-0.2.6.tgz#56f17c82338d62421321dca60250951dd3a7db7a"
+  integrity sha512-7mzE9IRjG0TZKPit83GT4XPSgMnqmMT4AAeUTyTj/IwO4FDPQ3fJVheT6i9LaH3I4Y18oaL68G9j+Uh3mEEAYg==
   dependencies:
     node-fetch "^2.6.1"
     node-gyp "^8.4.0"
@@ -548,14 +553,15 @@
     uint8arraylist "^2.3.2"
     uint8arrays "^3.0.0"
 
-"@chainsafe/libp2p-noise@^8.0.0":
-  version "8.0.0"
-  resolved "https://registry.yarnpkg.com/@chainsafe/libp2p-noise/-/libp2p-noise-8.0.0.tgz#93118f6872e09517ef50167f05f12aed6d4cc2f2"
-  integrity sha512-APAhb+3eZWHFo+oORG/nUhNTLKgbcTOGeJsnEq//KnjiOjfBDCk4gQmpoSTrLAz1cOTyZ3luSSI4Z+lo2Og7gQ==
+"@chainsafe/libp2p-noise@^10.2.0":
+  version "10.2.0"
+  resolved "https://registry.yarnpkg.com/@chainsafe/libp2p-noise/-/libp2p-noise-10.2.0.tgz#809f7fff8685a1687958fc8f36d314e1d097b6ad"
+  integrity sha512-nXw09UwSE5JCiB5Dte6j0b0Qe+KbtepJvaPz/f5JyxcoyUfLE/t7XWRZAZmcuWBeVWWpOItnK5WmW8uocoiwCQ==
   dependencies:
     "@libp2p/crypto" "^1.0.0"
-    "@libp2p/interface-connection-encrypter" "^2.0.1"
+    "@libp2p/interface-connection-encrypter" "^3.0.0"
     "@libp2p/interface-keys" "^1.0.2"
+    "@libp2p/interface-metrics" "^4.0.2"
     "@libp2p/interface-peer-id" "^1.0.2"
     "@libp2p/logger" "^2.0.0"
     "@libp2p/peer-id" "^1.1.8"
@@ -568,9 +574,9 @@
     it-pb-stream "^2.0.2"
     it-pipe "^2.0.3"
     it-stream-types "^1.0.4"
-    protons-runtime "^3.1.0"
+    protons-runtime "^4.0.1"
     uint8arraylist "^2.3.2"
-    uint8arrays "^3.1.0"
+    uint8arrays "^4.0.2"
 
 "@chainsafe/libp2p-yamux@^3.0.3":
   version "3.0.3"
@@ -1905,6 +1911,15 @@
     it-stream-types "^1.0.4"
     uint8arraylist "^2.1.1"
 
+"@libp2p/interface-connection-encrypter@^3.0.0":
+  version "3.0.1"
+  resolved "https://registry.yarnpkg.com/@libp2p/interface-connection-encrypter/-/interface-connection-encrypter-3.0.1.tgz#5a68ce162930b756e8177a88cb807d2937799d32"
+  integrity sha512-KZ/4vuLokv2fNCnEAM5S91t8v5lMWXdYa26v/iGLqLgiH5MXmIGOgLLGdboXNMYM2ZYYCBgEpSHv+ZRbfO524Q==
+  dependencies:
+    "@libp2p/interface-peer-id" "^1.0.0"
+    it-stream-types "^1.0.4"
+    uint8arraylist "^2.1.1"
+
 "@libp2p/interface-connection-manager@^1.1.0", "@libp2p/interface-connection-manager@^1.1.1":
   version "1.1.1"
   resolved "https://registry.yarnpkg.com/@libp2p/interface-connection-manager/-/interface-connection-manager-1.1.1.tgz#6b1e7116d77bf813f5a4d1aa3c2e39c5e00a3a24"
@@ -1966,6 +1981,13 @@
   dependencies:
     "@libp2p/interface-peer-id" "^1.0.0"
     it-stream-types "^1.0.4"
+
+"@libp2p/interface-metrics@^4.0.2":
+  version "4.0.2"
+  resolved "https://registry.yarnpkg.com/@libp2p/interface-metrics/-/interface-metrics-4.0.2.tgz#329a1602f7844f6a9cf441439001f8e8f8e7dafc"
+  integrity sha512-HON9yXhFaTnQ86tOdE18bFJv71zQdI7xrZJuA6pNUtpsfA+djhqWXv0a4mwEGUP7k4zz3FkH0M9CrrvL0pkBWg==
+  dependencies:
+    "@libp2p/interface-connection" "^3.0.0"
 
 "@libp2p/interface-peer-discovery@^1.0.0", "@libp2p/interface-peer-discovery@^1.0.1":
   version "1.0.1"
@@ -11046,6 +11068,14 @@ protons-runtime@^3.0.1, protons-runtime@^3.1.0:
   version "3.1.0"
   resolved "https://registry.yarnpkg.com/protons-runtime/-/protons-runtime-3.1.0.tgz#500918da4a2d97aa28007f30c3f2f7021e05c0b2"
   integrity sha512-S1iSPQC0McdHKJRi0XcATBkWgwWPx46UDfrnshYDXBvGHSYqkFtn4MQ8Gatf67w7FzFtHivA+Hb0ZPq56upG8w==
+  dependencies:
+    protobufjs "^7.0.0"
+    uint8arraylist "^2.3.2"
+
+protons-runtime@^4.0.1:
+  version "4.0.1"
+  resolved "https://registry.yarnpkg.com/protons-runtime/-/protons-runtime-4.0.1.tgz#bcea3667b6263680e70e2da102f91b3513075374"
+  integrity sha512-SPeV+8TzJAp5UJYPV7vJkLRi08CP0DksxpKK60rcNaZSPkMBQwc0jQrmkHqwc5P0cYbZzKsdYrUBwRrDLrzTfQ==
   dependencies:
     protobufjs "^7.0.0"
     uint8arraylist "^2.3.2"

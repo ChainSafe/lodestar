@@ -3,7 +3,7 @@ import {PeerId} from "@libp2p/interface-peer-id";
 import StrictEventEmitter from "strict-event-emitter-types";
 import {phase0} from "@lodestar/types";
 import {BlockImport} from "../chain/blocks/types.js";
-import {RequestTypedContainer} from "./reqresp/index.js";
+import {RequestTypedContainer} from "./reqresp/ReqRespBeaconNode.js";
 
 export enum NetworkEvent {
   /** A relevant peer has connected or has been re-STATUS'd */
