@@ -81,7 +81,7 @@ describe("lightclient api", function () {
     expect(update.attestedHeader.slot).to.be.equal(slot - 1);
   });
 
-  it.skip("getFinalityUpdate()", async function () {
+  it("getFinalityUpdate()", async function () {
     // TODO: not sure how this causes subsequent tests failed
     await waitForEvent<phase0.Checkpoint>(bn.chain.emitter, ChainEvent.finalized, 240000);
     await sleep(SECONDS_PER_SLOT * 1000);
