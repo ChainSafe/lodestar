@@ -26,6 +26,12 @@
     "./bellatrix": {
       "import": "./lib/bellatrix/index.js"
     },
+    "./capella": {
+      "import": "./lib/capella/index.js"
+    },
+    "./eip4844": {
+      "import": "./lib/eip4844/index.js"
+    },
     "./phase0": {
       "import": "./lib/phase0/index.js"
     }

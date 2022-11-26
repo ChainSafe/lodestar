@@ -8,12 +8,16 @@ export {
   CachedBeaconStatePhase0,
   CachedBeaconStateAltair,
   CachedBeaconStateBellatrix,
+  CachedBeaconStateCapella,
+  CachedBeaconStateEip4844,
   CachedBeaconStateAllForks,
   CachedBeaconStateExecutions,
   // Non-cached states
   BeaconStatePhase0,
   BeaconStateAltair,
   BeaconStateBellatrix,
+  BeaconStateCapella,
+  BeaconStateEip4844,
   BeaconStateAllForks,
   BeaconStateExecutions,
 } from "./types.js";
