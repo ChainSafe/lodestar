@@ -1,8 +1,7 @@
 import crypto from "node:crypto";
-import {bellatrix, RootHex} from "@lodestar/types";
+import {allForks, bellatrix, RootHex, ssz} from "@lodestar/types";
 import {fromHex, toHex} from "@lodestar/utils";
-import {BYTES_PER_LOGS_BLOOM} from "@lodestar/params";
-import {ZERO_HASH, ZERO_HASH_HEX} from "../../constants/index.js";
+import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {
   ExecutePayloadStatus,
   ExecutePayloadResponse,
@@ -13,7 +12,9 @@ import {
   TransitionConfigurationV1,
   BlobsBundle,
 } from "./interface.js";
+
 const INTEROP_GAS_LIMIT = 30e6;
+const PRUNE_PAYLOAD_ID_AFTER_MS = 5000;
 
 export type ExecutionEngineMockOpts = {
   genesisBlockHash: string;
@@ -39,7 +40,8 @@ export class ExecutionEngineMock implements IExecutionEngine {
   /** Known valid blocks, both pre-merge and post-merge */
   private readonly validBlocks = new Map<RootHex, ExecutionBlock>();
   /** Preparing payloads to be retrieved via engine_getPayloadV1 */
-  private readonly preparingPayloads = new Map<number, bellatrix.ExecutionPayload>();
+  private readonly preparingPayloads = new Map<number, allForks.ExecutionPayload>();
+  private readonly payloadsForDeletion = new Map<number, number>();
 
   private payloadId = 0;
 
@@ -175,22 +177,22 @@ export class ExecutionEngineMock implements IExecutionEngine {
       //    identified via buildProcessId value if payloadAttributes is not null and the forkchoice state has been
       //    updated successfully. The build process is specified in the Payload building section.
       const payloadId = this.payloadId++;
-      this.preparingPayloads.set(payloadId, {
-        parentHash: fromHex(headBlockHash),
-        feeRecipient: fromHex(payloadAttributes.suggestedFeeRecipient),
-        stateRoot: crypto.randomBytes(32),
-        receiptsRoot: crypto.randomBytes(32),
-        logsBloom: crypto.randomBytes(BYTES_PER_LOGS_BLOOM),
-        prevRandao: payloadAttributes.prevRandao,
-        blockNumber: headBlock.blockNumber + 1,
-        gasLimit: INTEROP_GAS_LIMIT,
-        gasUsed: Math.floor(0.5 * INTEROP_GAS_LIMIT),
-        timestamp: payloadAttributes.timestamp,
-        extraData: ZERO_HASH,
-        baseFeePerGas: BigInt(0),
-        blockHash: crypto.randomBytes(32),
-        transactions: [crypto.randomBytes(512)],
-      });
+
+      // Generate empty payload first to be correct with respect to fork
+      const executionPayload = ssz[payloadAttributes.fork].ExecutionPayload.defaultValue();
+
+      // Make executionPayload valid
+      executionPayload.parentHash = fromHex(headBlockHash);
+      executionPayload.feeRecipient = fromHex(payloadAttributes.suggestedFeeRecipient);
+      executionPayload.prevRandao = payloadAttributes.prevRandao;
+      executionPayload.blockNumber = headBlock.blockNumber + 1;
+      executionPayload.gasLimit = INTEROP_GAS_LIMIT;
+      executionPayload.gasUsed = Math.floor(0.5 * INTEROP_GAS_LIMIT);
+      executionPayload.timestamp = payloadAttributes.timestamp;
+      executionPayload.blockHash = crypto.randomBytes(32);
+      executionPayload.transactions = [crypto.randomBytes(512)];
+
+      this.preparingPayloads.set(payloadId, executionPayload);
 
       // IF the payload is deemed VALID and the build process has begun
       // {payloadStatus: {status: VALID, latestValidHash: forkchoiceState.headBlockHash, validationError: null}, payloadId: buildProcessId}
@@ -225,7 +227,15 @@ export class ExecutionEngineMock implements IExecutionEngine {
     }
 
     // 3. Client software MAY stop the corresponding build process after serving this call.
-    this.preparingPayloads.delete(payloadIdNbr);
+    // Do after a while to allow getBlobsBundle()
+    const now = Date.now();
+    for (const [oldPayloadId, addedTimestampMs] of this.payloadsForDeletion.entries()) {
+      if (addedTimestampMs < now - PRUNE_PAYLOAD_ID_AFTER_MS) {
+        this.preparingPayloads.delete(oldPayloadId);
+        this.payloadsForDeletion.delete(oldPayloadId);
+      }
+    }
+    this.payloadsForDeletion.set(payloadIdNbr, now);
 
     return payload;
   }
@@ -240,9 +250,9 @@ export class ExecutionEngineMock implements IExecutionEngine {
 
     return {
       blockHash: toHex(payload.blockHash),
-      // TODO EIP-4844: Assumes payload has no blob transactions
-      kzgs: [],
-      blobs: [],
+      // TODO EIP-4844: Fills with wrong data
+      kzgs: [ssz.eip4844.KZGCommitment.defaultValue()],
+      blobs: [ssz.eip4844.Blob.defaultValue()],
     };
   }
 

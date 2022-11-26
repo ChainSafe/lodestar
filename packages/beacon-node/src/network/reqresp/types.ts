@@ -205,9 +205,9 @@ export function getOutgoingSerializerByMethod(protocol: Protocol): OutgoingSeria
       return reqRespBlockResponseSerializer;
     // TODO EIP-4844: Optimize responding bytes
     case Method.BlobsSidecarsByRange:
-      return ssz.eip4844.BlobsSidecar;
+      return reqRespBlockResponseSerializer;
     case Method.BeaconBlockAndBlobsSidecarByRoot:
-      return ssz.eip4844.SignedBeaconBlockAndBlobsSidecar;
+      return reqRespBlockResponseSerializer;
     case Method.LightClientBootstrap:
       return ssz.altair.LightClientBootstrap;
     case Method.LightClientUpdate:
@@ -235,8 +235,8 @@ type CommonResponseBodyByMethod = {
 export type OutgoingResponseBodyByMethod = CommonResponseBodyByMethod & {
   [Method.BeaconBlocksByRange]: ReqRespBlockResponse;
   [Method.BeaconBlocksByRoot]: ReqRespBlockResponse;
-  [Method.BlobsSidecarsByRange]: eip4844.BlobsSidecar;
-  [Method.BeaconBlockAndBlobsSidecarByRoot]: eip4844.SignedBeaconBlockAndBlobsSidecar;
+  [Method.BlobsSidecarsByRange]: ReqRespBlockResponse;
+  [Method.BeaconBlockAndBlobsSidecarByRoot]: ReqRespBlockResponse;
 };
 
 // p2p protocol in the spec

@@ -1,9 +1,13 @@
+import {ForkName} from "@lodestar/params";
 import {RootHex, allForks} from "@lodestar/types";
 import {KZGCommitment, Blob} from "@lodestar/types/eip4844";
 import {DATA, QUANTITY} from "../../eth1/provider/utils.js";
 import {PayloadIdCache, PayloadId, ApiPayloadAttributes} from "./payloadIdCache.js";
 
 export {PayloadIdCache, PayloadId, ApiPayloadAttributes};
+
+export type ForkExecution = ForkName.bellatrix | ForkName.capella | ForkName.eip4844;
+
 export enum ExecutePayloadStatus {
   /** given payload is valid */
   VALID = "VALID",
@@ -47,6 +51,8 @@ export type PayloadAttributes = {
   // DATA is anyway a hex string, so we can just track it as a hex string to
   // avoid any conversions
   suggestedFeeRecipient: string;
+  // Not spec'ed, to know the type of the payload
+  fork: ForkExecution;
 };
 
 export type TransitionConfigurationV1 = {

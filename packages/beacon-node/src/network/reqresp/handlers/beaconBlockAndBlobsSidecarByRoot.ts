@@ -50,7 +50,10 @@ export async function* onBeaconBlockAndBlobsSidecarByRoot(
  *   blobs_sidecar: BlobsSidecar
  * ```
  */
-function signedBeaconBlockAndBlobsSidecarFromBytes(blockBytes: Uint8Array, blobsSidecarBytes: Uint8Array): Uint8Array {
+export function signedBeaconBlockAndBlobsSidecarFromBytes(
+  blockBytes: Uint8Array,
+  blobsSidecarBytes: Uint8Array
+): Uint8Array {
   const totalLen = 4 + 4 + blockBytes.length + blobsSidecarBytes.length;
   const arrayBuffer = new ArrayBuffer(totalLen);
   const dataView = new DataView(arrayBuffer);
@@ -60,8 +63,8 @@ function signedBeaconBlockAndBlobsSidecarFromBytes(blockBytes: Uint8Array, blobs
   const blobsOffset = 8 + blockBytes.length;
 
   // Write offsets
-  dataView.setUint32(0, blockOffset);
-  dataView.setUint32(4, blobsOffset);
+  dataView.setUint32(0, blockOffset, true);
+  dataView.setUint32(4, blobsOffset, true);
 
   uint8Array.set(blockBytes, blockOffset);
   uint8Array.set(blobsSidecarBytes, blobsOffset);

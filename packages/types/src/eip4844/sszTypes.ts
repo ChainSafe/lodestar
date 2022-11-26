@@ -1,4 +1,4 @@
-import {ContainerType, ListCompositeType, ByteVectorType} from "@chainsafe/ssz";
+import {ContainerType, ListCompositeType, ByteVectorType, Type, UintBigintType} from "@chainsafe/ssz";
 import {
   HISTORICAL_ROOTS_LIMIT,
   FIELD_ELEMENTS_PER_BLOB,
@@ -11,7 +11,12 @@ import {ssz as phase0Ssz} from "../phase0/index.js";
 import {ssz as altairSsz} from "../altair/index.js";
 import {ssz as capellaSsz} from "../capella/index.js";
 
-const {UintNum64, Slot, Root, BLSSignature, UintBn256, Bytes32, Bytes48, Bytes96} = primitiveSsz;
+const {UintNum64, Slot, Root, BLSSignature, Bytes32, Bytes48, Bytes96} = primitiveSsz;
+
+type FAny = Record<string, Type<unknown>>;
+
+export class ExcessDataGasType extends UintBigintType {}
+const ExcessDataGas = new ExcessDataGasType(32);
 
 // Polynomial commitments
 // https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/polynomial-commitments.md
@@ -45,7 +50,8 @@ export const Polynomial = new ListCompositeType(BLSFieldElement, FIELD_ELEMENTS_
 // class BlobsAndCommitments(Container):
 //     blobs: List[Blob, MAX_BLOBS_PER_BLOCK]
 //     kzg_commitments: List[KZGCommitment, MAX_BLOBS_PER_BLOCK]
-export const BlobsAndCommitments = new ContainerType(
+export class BlobsAndCommitmentsEip4844Type<F extends FAny> extends ContainerType<F> {}
+export const BlobsAndCommitments = new BlobsAndCommitmentsEip4844Type(
   {
     blobs: Blobs,
     kzgCommitments: BlobKzgCommitments,
@@ -79,25 +85,27 @@ export const BeaconBlockAndBlobsSidecarByRootRequest = new ListCompositeType(Roo
 
 // Beacon Chain types
 // https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/beacon-chain.md#containers
-
-export const ExecutionPayload = new ContainerType(
+export class ExecutionPayloadEip4844Type<F extends FAny> extends ContainerType<F> {}
+export const ExecutionPayload = new ExecutionPayloadEip4844Type(
   {
     ...capellaSsz.ExecutionPayload.fields,
-    excessDataGas: UintBn256, // New in EIP-4844
+    excessDataGas: ExcessDataGas, // New in EIP-4844
   },
   {typeName: "ExecutionPayload", jsonCase: "eth2"}
 );
 
-export const ExecutionPayloadHeader = new ContainerType(
+export class ExecutionPayloadHeaderEip4844Type<F extends FAny> extends ContainerType<F> {}
+export const ExecutionPayloadHeader = new ExecutionPayloadHeaderEip4844Type(
   {
     ...capellaSsz.ExecutionPayloadHeader.fields,
-    excessDataGas: UintBn256, // New in EIP-4844
+    excessDataGas: ExcessDataGas, // New in EIP-4844
   },
   {typeName: "ExecutionPayloadHeader", jsonCase: "eth2"}
 );
 
 // We have to preserve Fields ordering while changing the type of ExecutionPayload
-export const BeaconBlockBody = new ContainerType(
+export class BeaconBlockBodyEip4844Type<F extends FAny> extends ContainerType<F> {}
+export const BeaconBlockBody = new BeaconBlockBodyEip4844Type(
   {
     ...altairSsz.BeaconBlockBody.fields,
     executionPayload: ExecutionPayload, // Modified in EIP-4844
@@ -107,7 +115,8 @@ export const BeaconBlockBody = new ContainerType(
   {typeName: "BeaconBlockBody", jsonCase: "eth2", cachePermanentRootStruct: true}
 );
 
-export const BeaconBlock = new ContainerType(
+export class BeaconBlockEip4844Type<F extends FAny> extends ContainerType<F> {}
+export const BeaconBlock = new BeaconBlockEip4844Type(
   {
     ...capellaSsz.BeaconBlock.fields,
     body: BeaconBlockBody, // Modified in EIP-4844
@@ -115,7 +124,8 @@ export const BeaconBlock = new ContainerType(
   {typeName: "BeaconBlock", jsonCase: "eth2", cachePermanentRootStruct: true}
 );
 
-export const SignedBeaconBlock = new ContainerType(
+export class SignedBeaconBlockEip4844Type<F extends FAny> extends ContainerType<F> {}
+export const SignedBeaconBlock = new SignedBeaconBlockEip4844Type(
   {
     message: BeaconBlock, // Modified in EIP-4844
     signature: BLSSignature,
@@ -123,7 +133,8 @@ export const SignedBeaconBlock = new ContainerType(
   {typeName: "SignedBeaconBlock", jsonCase: "eth2"}
 );
 
-export const BlobsSidecar = new ContainerType(
+export class BlobsSidecarType<F extends FAny> extends ContainerType<F> {}
+export const BlobsSidecar = new BlobsSidecarType(
   {
     beaconBlockRoot: Root,
     beaconBlockSlot: Slot,
@@ -133,7 +144,8 @@ export const BlobsSidecar = new ContainerType(
   {typeName: "BlobsSidecar", jsonCase: "eth2"}
 );
 
-export const SignedBeaconBlockAndBlobsSidecar = new ContainerType(
+export class SignedBeaconBlockAndBlobsSidecarType<F extends FAny> extends ContainerType<F> {}
+export const SignedBeaconBlockAndBlobsSidecar = new SignedBeaconBlockAndBlobsSidecarType(
   {
     beaconBlock: SignedBeaconBlock,
     blobsSidecar: BlobsSidecar,
@@ -167,7 +179,8 @@ export const SignedBlindedBeaconBlock = new ContainerType(
 
 // We don't spread capella.BeaconState fields since we need to replace
 // latestExecutionPayloadHeader and we cannot keep order doing that
-export const BeaconState = new ContainerType(
+export class BeaconStateType<F extends FAny> extends ContainerType<F> {}
+export const BeaconState = new BeaconStateType(
   {
     genesisTime: UintNum64,
     genesisValidatorsRoot: Root,

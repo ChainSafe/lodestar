@@ -1,6 +1,7 @@
 import {altair, ssz} from "@lodestar/types";
 import {ForkSeq, MAX_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {toHexString} from "@chainsafe/ssz";
+import {toHex} from "@lodestar/utils";
 import {
   CachedBeaconStateAltair,
   computeEpochAtSlot,
@@ -307,12 +308,21 @@ export async function importBlock(
   this.stateCache.add(postState);
 
   await this.db.block.add(block);
+  this.logger.debug("Persisted block to hot DB", {
+    slot: block.message.slot,
+    root: blockRoot,
+  });
 
   if (this.config.getForkSeq(block.message.slot) >= ForkSeq.eip4844) {
     if (!blobs) {
       throw Error("blobsSidecar not provided for block post eip4844");
     }
     await this.db.blobsSidecar.add(blobs);
+    this.logger.debug("Persisted blobsSidecar to hot DB", {
+      blobsLen: blobs.blobs.length,
+      slot: blobs.beaconBlockSlot,
+      root: toHex(blobs.beaconBlockRoot),
+    });
 
     // TODO EIP-4844: Prune old blobs
   }

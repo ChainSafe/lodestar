@@ -230,6 +230,11 @@ export class Network implements INetwork {
       // TODO EIP-4844: Do two requests at once for blocks and blobs
       const blocks = await this.reqResp.beaconBlocksByRange(peerId, request);
       const blobsSidecars = await this.reqResp.blobsSidecarsByRange(peerId, request);
+
+      if (blocks.length !== blobsSidecars.length) {
+        throw Error(`blocks.length ${blocks.length} != blobsSidecars.length ${blobsSidecars.length}`);
+      }
+
       const blockImports: BlockImport[] = [];
       for (let i = 0; i < blocks.length; i++) {
         const block = blocks[i];

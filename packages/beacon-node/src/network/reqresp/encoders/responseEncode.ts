@@ -108,9 +108,9 @@ export function getForkNameFromResponseBody<K extends Method>(
     case Method.BeaconBlocksByRoot:
       return config.getForkName(responseTyped.body.slot);
     case Method.BlobsSidecarsByRange:
-      return config.getForkName(responseTyped.body.beaconBlockSlot);
+      return config.getForkName(responseTyped.body.slot);
     case Method.BeaconBlockAndBlobsSidecarByRoot:
-      return config.getForkName(responseTyped.body.beaconBlock.message.slot);
+      return config.getForkName(responseTyped.body.slot);
     case Method.LightClientBootstrap:
     case Method.LightClientUpdate:
     case Method.LightClientFinalityUpdate:

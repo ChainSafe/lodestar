@@ -28,7 +28,7 @@ import {ForkName, ForkSeq} from "@lodestar/params";
 import {toHex, sleep} from "@lodestar/utils";
 
 import type {BeaconChain} from "../chain.js";
-import {PayloadId, IExecutionEngine, IExecutionBuilder} from "../../execution/index.js";
+import {PayloadId, IExecutionEngine, IExecutionBuilder, ForkExecution} from "../../execution/index.js";
 import {ZERO_HASH, ZERO_HASH_HEX} from "../../constants/index.js";
 import {IEth1ForBlockProduction} from "../../eth1/index.js";
 import {numToQuantity} from "../../eth1/provider/utils.js";
@@ -149,6 +149,7 @@ export async function produceBlockBody<T extends BlockType>(
       if (this.executionBuilder.issueLocalFcUForBlockProduction) {
         await prepareExecutionPayload(
           this,
+          forkName,
           safeBlockHash,
           finalizedBlockHash ?? ZERO_HASH_HEX,
           currentState as CachedBeaconStateBellatrix,
@@ -191,6 +192,7 @@ export async function produceBlockBody<T extends BlockType>(
 
         const prepareRes = await prepareExecutionPayload(
           this,
+          forkName,
           safeBlockHash,
           finalizedBlockHash ?? ZERO_HASH_HEX,
           currentState as CachedBeaconStateExecutions,
@@ -300,6 +302,7 @@ export async function prepareExecutionPayload(
     executionEngine: IExecutionEngine;
     config: IChainForkConfig;
   },
+  fork: ForkExecution,
   safeBlockHash: RootHex,
   finalizedBlockHash: RootHex,
   state: CachedBeaconStateExecutions,
@@ -346,6 +349,7 @@ export async function prepareExecutionPayload(
       safeBlockHash,
       finalizedBlockHash,
       {
+        fork,
         timestamp,
         prevRandao,
         suggestedFeeRecipient,

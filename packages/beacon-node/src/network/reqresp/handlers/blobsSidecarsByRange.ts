@@ -61,15 +61,19 @@ export async function* onBlobsSidecarsByRange(
     // TODO EIP-4844: forkChoice should mantain an array of canonical blocks, and change only on reorg
     const headChain = chain.forkChoice.getAllAncestorBlocks(headRoot);
 
-    for (const blockSummary of headChain) {
-      // Must include only blocks with slot < endSlot
-      if (blockSummary.slot >= endSlot) {
-        break;
+    // Iterate head chain with ascending block numbers
+    for (const block of headChain) {
+      // Must include only blocks in the range requested
+      if (block.slot >= startSlot && block.slot < endSlot) {
+        const blockBytes = await db.blobsSidecar.getBinary(fromHex(block.blockRoot));
+        if (blockBytes) {
+          yield {bytes: blockBytes, slot: block.slot};
+        }
       }
 
-      const blockBytes = await db.blobsSidecar.getBinary(fromHex(blockSummary.blockRoot));
-      if (blockBytes) {
-        yield {bytes: blockBytes, slot: blockSummary.slot};
+      // If block is after endSlot, stop iterating
+      else if (block.slot >= endSlot) {
+        break;
       }
     }
   }

@@ -47,7 +47,8 @@ export class BeaconSync implements IBeaconSync {
     this.logger = logger;
     this.rangeSync = new RangeSync(modules, opts);
     this.unknownBlockSync = new UnknownBlockSync(config, network, chain, logger, metrics, opts);
-    this.slotImportTolerance = SLOTS_PER_EPOCH;
+    // TODO EIP-4844 TEMP, for fast tests
+    this.slotImportTolerance = 2 * SLOTS_PER_EPOCH;
 
     // Subscribe to RangeSync completing a SyncChain and recompute sync state
     if (!opts.disableRangeSync) {
@@ -119,6 +120,7 @@ export class BeaconSync implements IBeaconSync {
   get state(): SyncState {
     const currentSlot = this.chain.clock.currentSlot;
     const headSlot = this.chain.forkChoice.getHead().slot;
+
     if (
       // Consider node synced IF
       // Before genesis OR
