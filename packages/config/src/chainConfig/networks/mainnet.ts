@@ -39,8 +39,4 @@ export const mainnetChainConfig: IChainConfig = {
   // Capella
   CAPELLA_FORK_VERSION: b("0x03000000"),
   CAPELLA_FORK_EPOCH: Infinity,
-
-  // EIP4844
-  EIP4844_FORK_VERSION: b("0x04000000"),
-  EIP4844_FORK_EPOCH: Infinity,
 };
