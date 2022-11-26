@@ -145,7 +145,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
    */
   async notifyNewPayload(seq: ForkSeq, executionPayload: allForks.ExecutionPayload): Promise<ExecutePayloadResponse> {
     const method = seq >= ForkSeq.capella ? "engine_newPayloadV2" : "engine_newPayloadV1";
-    const serializedExecutionPayload = serializeExecutionPayload(executionPayload);
+    const serializedExecutionPayload = serializeExecutionPayload(seq, executionPayload);
     const {status, latestValidHash, validationError} = await (this.rpcFetchQueue.push({
       method,
       params: [serializedExecutionPayload],
@@ -421,10 +421,8 @@ type ExecutionPayloadRpc = {
   withdrawals?: WithdrawalV1[]; // Capella hardfork
 };
 
-export function serializeExecutionPayload(data: allForks.ExecutionPayload): ExecutionPayloadRpc {
-  const withdrawals = (data as capella.ExecutionPayload).withdrawals;
-  const withdrawalsAttr = withdrawals !== undefined ? {withdrawals: withdrawals.map(serializeWithdrawal)} : {};
-  return {
+export function serializeExecutionPayload(seq: ForkSeq, data: allForks.ExecutionPayload): ExecutionPayloadRpc {
+  const payload: ExecutionPayloadRpc = {
     parentHash: bytesToData(data.parentHash),
     feeRecipient: bytesToData(data.feeRecipient),
     stateRoot: bytesToData(data.stateRoot),
@@ -439,17 +437,17 @@ export function serializeExecutionPayload(data: allForks.ExecutionPayload): Exec
     baseFeePerGas: numToQuantity(data.baseFeePerGas),
     blockHash: bytesToData(data.blockHash),
     transactions: data.transactions.map((tran) => bytesToData(tran)),
-    ...withdrawalsAttr,
   };
+
+  if (seq >= ForkSeq.capella) {
+    const {withdrawals} = data as capella.ExecutionPayload;
+    payload.withdrawals = withdrawals.map(serializeWithdrawal);
+  }
+  return payload;
 }
 
-export function parseExecutionPayload(data: ExecutionPayloadRpc): allForks.ExecutionPayload {
-  const withdrawals = data.withdrawals;
-  // Apparently, geth can return payload with withdrawals as null field before capella,
-  // so we check for undefined and null
-  const withdrawalsAttr = withdrawals != null ? {withdrawals: withdrawals.map(deserializeWithdrawal)} : {};
-
-  return {
+export function parseExecutionPayload(seq: ForkSeq, data: ExecutionPayloadRpc): allForks.ExecutionPayload {
+  const payload = {
     parentHash: dataToBytes(data.parentHash, 32),
     feeRecipient: dataToBytes(data.feeRecipient, 20),
     stateRoot: dataToBytes(data.stateRoot, 32),
@@ -464,8 +462,12 @@ export function parseExecutionPayload(data: ExecutionPayloadRpc): allForks.Execu
     baseFeePerGas: quantityToBigint(data.baseFeePerGas),
     blockHash: dataToBytes(data.blockHash, 32),
     transactions: data.transactions.map((tran) => dataToBytes(tran)),
-    ...withdrawalsAttr,
   };
+  if (seq >= ForkSeq.capella) {
+    const {withdrawals} = data;
+    payload.withdrawals = withdrawals.map(deserializeWithdrawal);
+  }
+  return;
 }
 
 function serializeWithdrawal(withdrawal: capella.Withdrawal): WithdrawalV1 {
