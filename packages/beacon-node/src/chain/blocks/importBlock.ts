@@ -296,7 +296,7 @@ export async function importBlock(
     if (headBlockHash !== ZERO_HASH_HEX) {
       this.executionEngine
         .notifyForkchoiceUpdate(
-          this.config.getForkSeq(this.forkChoice.getHead().slot),
+          this.config.getForkName(this.forkChoice.getHead().slot),
           headBlockHash,
           safeBlockHash,
           finalizedBlockHash

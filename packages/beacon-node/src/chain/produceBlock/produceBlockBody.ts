@@ -30,7 +30,13 @@ import {ForkName, ForkSeq} from "@lodestar/params";
 import {toHex, sleep} from "@lodestar/utils";
 
 import type {BeaconChain} from "../chain.js";
-import {PayloadId, IExecutionEngine, IExecutionBuilder, ForkExecution, PayloadAttributes} from "../../execution/index.js";
+import {
+  PayloadId,
+  IExecutionEngine,
+  IExecutionBuilder,
+  ForkExecution,
+  PayloadAttributes,
+} from "../../execution/index.js";
 import {ZERO_HASH, ZERO_HASH_HEX} from "../../constants/index.js";
 import {IEth1ForBlockProduction} from "../../eth1/index.js";
 import {numToQuantity} from "../../eth1/provider/utils.js";
@@ -168,20 +174,11 @@ export async function produceBlockBody<T extends BlockType>(
         currentState as CachedBeaconStateBellatrix,
         proposerPubKey
       );
-      (blockBody as allForks.BlindedBeaconBlockBody).executionPayloadHeader = executionPayloadHeader;
 
       // Capella and later forks have withdrawalRoot on their ExecutionPayloadHeader
       // TODO Capella: Remove this. It will come from the execution client.
       if (fork === ForkName.capella || fork === ForkName.eip4844) {
-        (blockBody as capella.BlindedBeaconBlockBody).executionPayloadHeader.withdrawalsRoot = Uint8Array.from(
-          Buffer.alloc(32, 0)
-        );
-      }
-
-      if (fork === ForkName.eip4844) {
-        // Empty blobs for now
-        (blockBody as eip4844.BeaconBlockBody).blobKzgCommitments = [];
-        blobs = {blobs: [], blockHash: toHex(executionPayloadHeader.blockHash)};
+        throw Error("Builder blinded blocks not supported for capella and eip4844");
       }
     }
 
@@ -194,7 +191,6 @@ export async function produceBlockBody<T extends BlockType>(
         // https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/validator.md#constructing-the-beaconblockbody
 
         const prepareRes = await prepareExecutionPayload(
-          forkInfo.seq,
           this,
           fork,
           safeBlockHash,
@@ -205,7 +201,7 @@ export async function produceBlockBody<T extends BlockType>(
 
         if (prepareRes.isPremerge) {
           (blockBody as allForks.ExecutionBlockBody).executionPayload = ssz.allForksExecution[
-            forkInfo.name
+            fork
           ].ExecutionPayload.defaultValue();
         } else {
           const {prepType, payloadId} = prepareRes;
@@ -266,7 +262,7 @@ export async function produceBlockBody<T extends BlockType>(
             e as Error
           );
           (blockBody as allForks.ExecutionBlockBody).executionPayload = ssz.allForksExecution[
-            forkInfo.name
+            fork
           ].ExecutionPayload.defaultValue();
         } else {
           // since merge transition is complete, we need a valid payload even if with an
@@ -358,11 +354,10 @@ export async function prepareExecutionPayload(
       timestamp,
       prevRandao,
       suggestedFeeRecipient,
-    }
+    };
 
-    if (fork >= ForkSeq.capella) {
-      attributes.withdrawals =  getExpectedWithdrawals(state as CachedBeaconStateCapella).withdrawals}
-
+    if (ForkSeq[fork] >= ForkSeq.capella) {
+      attributes.withdrawals = getExpectedWithdrawals(state as CachedBeaconStateCapella).withdrawals;
     }
 
     payloadId = await chain.executionEngine.notifyForkchoiceUpdate(
@@ -370,7 +365,7 @@ export async function prepareExecutionPayload(
       toHex(parentHash),
       safeBlockHash,
       finalizedBlockHash,
-      attributes,
+      attributes
     );
   }
 
@@ -399,7 +394,7 @@ async function prepareExecutionPayloadHeader(
   if (!chain.executionBuilder) {
     throw Error("executionBuilder required");
   }
-  if (ForkName[ fork] >= ForkSeq.capella) {
+  if (ForkSeq[fork] >= ForkSeq.capella) {
     throw Error("executionBuilder capella api not implemented");
   }
 

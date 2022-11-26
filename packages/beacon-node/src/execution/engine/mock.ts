@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import {allForks, bellatrix, RootHex, ssz} from "@lodestar/types";
 import {fromHex, toHex} from "@lodestar/utils";
-import {ForkSeq} from "@lodestar/params";
+import {ForkName} from "@lodestar/params";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {
   ExecutePayloadStatus,
@@ -58,7 +58,10 @@ export class ExecutionEngineMock implements IExecutionEngine {
   /**
    * `engine_newPayloadV1`
    */
-  async notifyNewPayload(_seq: ForkSeq, executionPayload: bellatrix.ExecutionPayload): Promise<ExecutePayloadResponse> {
+  async notifyNewPayload(
+    _fork: ForkName,
+    executionPayload: bellatrix.ExecutionPayload
+  ): Promise<ExecutePayloadResponse> {
     const blockHash = toHex(executionPayload.blockHash);
     const parentHash = toHex(executionPayload.parentHash);
 
@@ -109,7 +112,7 @@ export class ExecutionEngineMock implements IExecutionEngine {
    * `engine_forkchoiceUpdatedV1`
    */
   async notifyForkchoiceUpdate(
-    _seq: ForkSeq,
+    _fork: ForkName,
     headBlockHash: RootHex,
     safeBlockHash: RootHex,
     finalizedBlockHash: RootHex,
@@ -216,7 +219,7 @@ export class ExecutionEngineMock implements IExecutionEngine {
    * 2. The call MUST be responded with 5: Unavailable payload error if the building process identified by the payloadId doesn't exist.
    * 3. Client software MAY stop the corresponding building process after serving this call.
    */
-  async getPayload(_seq: ForkSeq, payloadId: PayloadId): Promise<bellatrix.ExecutionPayload> {
+  async getPayload(_fork: ForkName, payloadId: PayloadId): Promise<bellatrix.ExecutionPayload> {
     // 1. Given the payloadId client software MUST return the most recent version of the payload that is available in
     //    the corresponding build process at the time of receiving the call.
     const payloadIdNbr = Number(payloadId);

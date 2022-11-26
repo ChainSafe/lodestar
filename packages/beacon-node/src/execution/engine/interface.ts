@@ -1,7 +1,6 @@
 import {ForkName} from "@lodestar/params";
 import {KZGCommitment, Blob} from "@lodestar/types/eip4844";
 import {RootHex, allForks, capella} from "@lodestar/types";
-import {ForkSeq} from "@lodestar/params";
 
 import {DATA, QUANTITY} from "../../eth1/provider/utils.js";
 import {PayloadIdCache, PayloadId, ApiPayloadAttributes, WithdrawalV1} from "./payloadIdCache.js";
@@ -90,7 +89,7 @@ export interface IExecutionEngine {
    *
    * Should be called in advance before, after or in parallel to block processing
    */
-  notifyNewPayload(seq: ForkSeq, executionPayload: allForks.ExecutionPayload): Promise<ExecutePayloadResponse>;
+  notifyNewPayload(fork: ForkName, executionPayload: allForks.ExecutionPayload): Promise<ExecutePayloadResponse>;
 
   /**
    * Signal fork choice updates
@@ -105,7 +104,7 @@ export interface IExecutionEngine {
    * Should be called in response to fork-choice head and finalized events
    */
   notifyForkchoiceUpdate(
-    seq: ForkSeq,
+    fork: ForkName,
     headBlockHash: RootHex,
     safeBlockHash: RootHex,
     finalizedBlockHash: RootHex,
@@ -119,7 +118,7 @@ export interface IExecutionEngine {
    * Required for block producing
    * https://github.com/ethereum/consensus-specs/blob/dev/specs/merge/validator.md#get_payload
    */
-  getPayload(seq: ForkSeq, payloadId: PayloadId): Promise<allForks.ExecutionPayload>;
+  getPayload(fork: ForkName, payloadId: PayloadId): Promise<allForks.ExecutionPayload>;
 
   /**
    * "After retrieving the execution payload from the execution engine as specified in Bellatrix,

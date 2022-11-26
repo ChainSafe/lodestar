@@ -103,6 +103,15 @@ export const ExecutionPayloadHeader = new ExecutionPayloadHeaderEip4844Type(
   {typeName: "ExecutionPayloadHeader", jsonCase: "eth2"}
 );
 
+export class BlindedExecutionPayloadEip4844Type<F extends FAny> extends ContainerType<F> {}
+export const BlindedExecutionPayload = new BlindedExecutionPayloadEip4844Type(
+  {
+    ...capellaSsz.BlindedExecutionPayload.fields,
+    excessDataGas: ExcessDataGas, // New in EIP-4844
+  },
+  {typeName: "BlindedExecutionPayload", jsonCase: "eth2"}
+);
+
 // We have to preserve Fields ordering while changing the type of ExecutionPayload
 export class BeaconBlockBodyEip4844Type<F extends FAny> extends ContainerType<F> {}
 export const BeaconBlockBody = new BeaconBlockBodyEip4844Type(

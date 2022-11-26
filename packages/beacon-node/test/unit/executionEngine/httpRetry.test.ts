@@ -2,10 +2,8 @@ import {expect} from "chai";
 import {fastify} from "fastify";
 import {ForkName} from "@lodestar/params";
 import {fromHexString} from "@chainsafe/ssz";
-import {ForkSeq} from "@lodestar/params";
 
 import {ExecutionEngineHttp, defaultExecutionEngineHttpOpts} from "../../../src/execution/engine/http.js";
-
 import {bytesToData, numToQuantity} from "../../../src/eth1/provider/utils.js";
 import {PayloadAttributes} from "../../../src/execution/index.js";
 
@@ -75,7 +73,7 @@ describe("ExecutionEngine / http ", () => {
       expect(errorResponsesBeforeSuccess).to.be.equal(2, "errorResponsesBeforeSuccess should be 2 before request");
       try {
         await executionEngine.notifyForkchoiceUpdate(
-          ForkSeq.bellatrix,
+          ForkName.bellatrix,
           forkChoiceHeadData.headBlockHash,
           forkChoiceHeadData.safeBlockHash,
           forkChoiceHeadData.finalizedBlockHash
@@ -131,7 +129,7 @@ describe("ExecutionEngine / http ", () => {
         "errorResponsesBeforeSuccess should not be zero before request"
       );
       await executionEngine.notifyForkchoiceUpdate(
-        ForkSeq.bellatrix,
+        ForkName.bellatrix,
         forkChoiceHeadData.headBlockHash,
         forkChoiceHeadData.safeBlockHash,
         forkChoiceHeadData.finalizedBlockHash,
