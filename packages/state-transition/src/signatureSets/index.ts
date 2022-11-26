@@ -1,6 +1,6 @@
 import {ForkSeq} from "@lodestar/params";
 import {allForks, altair, capella} from "@lodestar/types";
-import {computeEpochAtSlot, ISignatureSet} from "../util/index.js";
+import {ISignatureSet} from "../util/index.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateAltair, CachedBeaconStateCapella} from "../types.js";
 import {getSyncCommitteeSignatureSet} from "../block/processSyncCommittee.js";
 import {getProposerSlashingsSignatureSets} from "./proposerSlashings.js";
