@@ -207,7 +207,7 @@ function getSpecCriticalParams(localConfig: IChainConfig): Record<keyof ConfigWi
 
     // # CapellaPreset
     /////////////////
-    // Remove them on when new spec tests for without queue withdrawals are
+    // TODO CAPELLA: Remove them on when new spec tests for without queue withdrawals are
     // released
     MAX_PARTIAL_WITHDRAWALS_PER_EPOCH: capellaForkRelevant,
     WITHDRAWAL_QUEUE_LIMIT: capellaForkRelevant,

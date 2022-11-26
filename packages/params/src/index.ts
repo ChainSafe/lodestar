@@ -84,7 +84,7 @@ export const {
   BYTES_PER_LOGS_BLOOM,
   MAX_EXTRA_DATA_BYTES,
 
-  // Remove the bottom ones after the new spec test vectors are released
+  // TODO CAPELLA: Remove the bottom ones after the new spec test vectors are released
   MAX_PARTIAL_WITHDRAWALS_PER_EPOCH,
   WITHDRAWAL_QUEUE_LIMIT,
 

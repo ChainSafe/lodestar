@@ -2,7 +2,7 @@ import {CapellaPreset} from "../../interface/capella.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 export const capella: CapellaPreset = {
-  // Remove these two when we move to the new spec vectors
+  // TODO CAPELLA: Remove these two when we move to the new spec vectors
   MAX_PARTIAL_WITHDRAWALS_PER_EPOCH: 16,
   WITHDRAWAL_QUEUE_LIMIT: 1099511627776,
 
