@@ -3,12 +3,12 @@ import {Context} from "mocha";
 import {fromHexString} from "@chainsafe/ssz";
 import {isExecutionStateType, isMergeTransitionComplete} from "@lodestar/state-transition";
 import {LogLevel, sleep, TimestampFormatCode} from "@lodestar/utils";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {IChainConfig} from "@lodestar/config";
 import {Epoch} from "@lodestar/types";
 import {ValidatorProposerConfig} from "@lodestar/validator";
 
-import {ExecutePayloadStatus} from "../../src/execution/engine/interface.js";
+import {ExecutePayloadStatus, PayloadAttributes} from "../../src/execution/engine/interface.js";
 import {ExecutionEngineHttp} from "../../src/execution/engine/http.js";
 import {ChainEvent} from "../../src/chain/index.js";
 import {testLogger, TestLoggerOpts} from "../utils/logger.js";
@@ -118,11 +118,12 @@ describe("executionEngine / ExecutionEngineHttp", function () {
      * curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"engine_forkchoiceUpdatedV1","params":[{"headBlockHash":"0x3b8fb240d288781d4aac94d3fd16809ee413bc99294a085798a589dae51ddd4a", "safeBlockHash":"0x3b8fb240d288781d4aac94d3fd16809ee413bc99294a085798a589dae51ddd4a", "finalizedBlockHash":"0x0000000000000000000000000000000000000000000000000000000000000000"}, {"timestamp":"0x5", "prevRandao":"0x0000000000000000000000000000000000000000000000000000000000000000", "feeRecipient":"0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b"}],"id":67}' http://localhost:8550
      **/
 
-    const preparePayloadParams = {
+    const preparePayloadParams: PayloadAttributes = {
       // Note: this is created with a pre-defined genesis.json
       timestamp: quantityToNum("0x5"),
       prevRandao: dataToBytes("0x0000000000000000000000000000000000000000000000000000000000000000"),
       suggestedFeeRecipient: "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b",
+      fork: ForkName.bellatrix,
     };
 
     const finalizedBlockHash = "0x0000000000000000000000000000000000000000000000000000000000000000";

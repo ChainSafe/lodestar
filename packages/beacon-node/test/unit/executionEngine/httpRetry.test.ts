@@ -1,11 +1,12 @@
 import {expect} from "chai";
 import {fastify} from "fastify";
-
+import {ForkName} from "@lodestar/params";
 import {fromHexString} from "@chainsafe/ssz";
 
 import {ExecutionEngineHttp, defaultExecutionEngineHttpOpts} from "../../../src/execution/engine/http.js";
 
 import {bytesToData, numToQuantity} from "../../../src/eth1/provider/utils.js";
+import {PayloadAttributes} from "../../../src/execution/index.js";
 
 describe("ExecutionEngine / http ", () => {
   const afterCallbacks: (() => Promise<void> | void)[] = [];
@@ -95,10 +96,11 @@ describe("ExecutionEngine / http ", () => {
         safeBlockHash: "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
         finalizedBlockHash: "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
       };
-      const payloadAttributes = {
+      const payloadAttributes: PayloadAttributes = {
         timestamp: 1647036763,
         prevRandao: fromHexString("0x0000000000000000000000000000000000000000000000000000000000000000"),
         suggestedFeeRecipient: "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b",
+        fork: ForkName.bellatrix,
       };
 
       const request = {
