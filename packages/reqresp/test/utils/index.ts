@@ -1,8 +1,11 @@
-import {expect} from "chai";
 import {Stream, StreamStat} from "@libp2p/interface-connection";
+import {expect} from "chai";
 import {Uint8ArrayList} from "uint8arraylist";
-import {Root, phase0} from "@lodestar/types";
 import {toHexString} from "@chainsafe/ssz";
+import {phase0, Root} from "@lodestar/types";
+import {fromHex} from "@lodestar/utils";
+import {EncodedPayload, RespStatus} from "../../src/index.js";
+import {ResponseChunk} from "../fixtures/index.js";
 
 export function createStatus(): phase0.Status {
   return {
@@ -39,6 +42,10 @@ export function expectEqualByteChunks(chunks: Uint8Array[], expectedChunks: Uint
   expect(chunks.map(toHexString)).to.deep.equal(expectedChunks.map(toHexString), message);
 }
 
+export function expectInEqualByteChunks(chunks: Uint8Array[], expectedChunks: Uint8Array[], message?: string): void {
+  expect(chunks.map(toHexString)).not.to.deep.equal(expectedChunks.map(toHexString), message);
+}
+
 /**
  * Useful to simulate a LibP2P stream source emitting prepared bytes
  * and capture the response with a sink accessible via `this.resultChunks`
@@ -72,3 +79,13 @@ export class MockLibP2pStream implements Stream {
   reset: Stream["reset"] = () => this.close();
   abort: Stream["abort"] = () => this.close();
 }
+
+export function fromHexBuf(hex: string): Buffer {
+  return Buffer.from(fromHex(hex));
+}
+
+export const ZERO_HASH = Buffer.alloc(32, 0);
+
+export const onlySuccessResp = (
+  resp: ResponseChunk
+): resp is {status: RespStatus.SUCCESS; payload: EncodedPayload<unknown>} => resp.status === RespStatus.SUCCESS;
