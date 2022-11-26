@@ -10,10 +10,7 @@ export function processBlsToExecutionChange(
   state: CachedBeaconStateCapella,
   signedBlsToExecutionChange: capella.SignedBLSToExecutionChange
 ): void {
-  const validatedChange = isValidBlsToExecutionChange(state, signedBlsToExecutionChange, true);
-  if (!validatedChange.validate) {
-    throw Error(validatedChange.msg);
-  }
+  assertValidBlsToExecutionChange(state, signedBlsToExecutionChange, true);
 
   const addressChange = signedBlsToExecutionChange.message;
   const validator = state.validators.get(addressChange.validatorIndex);
@@ -26,48 +23,39 @@ export function processBlsToExecutionChange(
   validator.withdrawalCredentials = newWithdrawalCredentials;
 }
 
-export function isValidBlsToExecutionChange(
+export function assertValidBlsToExecutionChange(
   state: CachedBeaconStateCapella,
   signedBLSToExecutionChange: capella.SignedBLSToExecutionChange,
   verifySignature = true
-): {validate: boolean; msg?: string} {
+): void {
   const addressChange = signedBLSToExecutionChange.message;
 
   if (addressChange.validatorIndex >= state.validators.length) {
-    return {
-      msg: `withdrawalValidatorIndex ${addressChange.validatorIndex} > state.validators len ${state.validators.length}`,
-      validate: false,
-    };
+    throw Error(
+      `withdrawalValidatorIndex ${addressChange.validatorIndex} > state.validators len ${state.validators.length}`
+    );
   }
 
   const validator = state.validators.get(addressChange.validatorIndex);
   const {withdrawalCredentials} = validator;
   if (withdrawalCredentials[0] !== BLS_WITHDRAWAL_PREFIX) {
-    return {
-      msg: `Invalid withdrawalCredentials prefix expected=${BLS_WITHDRAWAL_PREFIX} actual=${withdrawalCredentials[0]}`,
-      validate: false,
-    };
+    throw Error(
+      `Invalid withdrawalCredentials prefix expected=${BLS_WITHDRAWAL_PREFIX} actual=${withdrawalCredentials[0]}`
+    );
   }
 
   const digestCredentials = digest(addressChange.fromBlsPubkey);
   // Set the BLS_WITHDRAWAL_PREFIX on the digestCredentials for direct match
   digestCredentials[0] = BLS_WITHDRAWAL_PREFIX;
   if (!byteArrayEquals(withdrawalCredentials, digestCredentials)) {
-    return {
-      msg: `Invalid withdrawalCredentials expected=${toHexString(withdrawalCredentials)} actual=${toHexString(
+    throw Error(
+      `Invalid withdrawalCredentials expected=${toHexString(withdrawalCredentials)} actual=${toHexString(
         digestCredentials
-      )}`,
-      validate: false,
-    };
+      )}`
+    );
   }
 
   if (verifySignature && !verifyBlsToExecutionChangeSignature(state, signedBLSToExecutionChange)) {
-    return {
-      msg: `Signature could not be verified for BLS to Execution Change for validatorIndex${addressChange.validatorIndex}`,
-      validate: false,
-    };
+    throw `Signature could not be verified for BLS to Execution Change for validatorIndex${addressChange.validatorIndex}`;
   }
-
-  // All checks have passed return true
-  return {validate: true};
 }
