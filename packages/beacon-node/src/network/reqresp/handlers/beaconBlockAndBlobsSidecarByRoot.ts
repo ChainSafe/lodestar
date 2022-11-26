@@ -1,15 +1,15 @@
+import {ContextBytesType, EncodedPayload, EncodedPayloadType} from "@lodestar/reqresp";
 import {eip4844} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
 import {getSlotFromBytes} from "../../../util/multifork.js";
-import {ReqRespBlockResponse} from "../types.js";
 
 export async function* onBeaconBlockAndBlobsSidecarByRoot(
   requestBody: eip4844.BeaconBlockAndBlobsSidecarByRootRequest,
   chain: IBeaconChain,
   db: IBeaconDb
-): AsyncIterable<ReqRespBlockResponse> {
+): AsyncIterable<EncodedPayload<eip4844.SignedBeaconBlockAndBlobsSidecar>> {
   const finalizedSlot = chain.forkChoice.getFinalizedBlock().slot;
 
   for (const blockRoot of requestBody) {
@@ -36,8 +36,12 @@ export async function* onBeaconBlockAndBlobsSidecarByRoot(
     }
 
     yield {
+      type: EncodedPayloadType.bytes,
       bytes: signedBeaconBlockAndBlobsSidecarFromBytes(blockBytes, blobsSidecarBytes),
-      slot: getSlotFromBytes(blockBytes),
+      contextBytes: {
+        type: ContextBytesType.ForkDigest,
+        forkSlot: getSlotFromBytes(blockBytes),
+      },
     };
   }
 }

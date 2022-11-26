@@ -1,10 +1,9 @@
 import {GENESIS_SLOT, MAX_REQUEST_BLOCKS} from "@lodestar/params";
 import {eip4844, Slot} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
+import {ContextBytesType, EncodedPayload, EncodedPayloadType, ResponseError, RespStatus} from "@lodestar/reqresp";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
-import {RespStatus} from "../../../constants/index.js";
-import {ResponseError} from "../response/index.js";
 
 /** This type helps response to beacon_block_by_range and beacon_block_by_root more efficiently */
 export type ReqRespBlobsResponse = {
@@ -19,7 +18,7 @@ export async function* onBlobsSidecarsByRange(
   requestBody: eip4844.BlobsSidecarsByRangeRequest,
   chain: IBeaconChain,
   db: IBeaconDb
-): AsyncIterable<ReqRespBlobsResponse> {
+): AsyncIterable<EncodedPayload<eip4844.BlobsSidecar>> {
   const {startSlot} = requestBody;
   let {count} = requestBody;
 
@@ -50,7 +49,14 @@ export async function* onBlobsSidecarsByRange(
   if (endSlot <= finalizedSlot) {
     // Chain of blobs won't change
     for await (const {key, value} of db.blobsSidecarArchive.binaryEntriesStream({gte: startSlot, lt: endSlot})) {
-      yield {bytes: value, slot: db.blockArchive.decodeKey(key)};
+      yield {
+        type: EncodedPayloadType.bytes,
+        bytes: value,
+        contextBytes: {
+          type: ContextBytesType.ForkDigest,
+          forkSlot: db.blockArchive.decodeKey(key),
+        },
+      };
     }
   }
 
@@ -67,7 +73,14 @@ export async function* onBlobsSidecarsByRange(
       if (block.slot >= startSlot && block.slot < endSlot) {
         const blockBytes = await db.blobsSidecar.getBinary(fromHex(block.blockRoot));
         if (blockBytes) {
-          yield {bytes: blockBytes, slot: block.slot};
+          yield {
+            type: EncodedPayloadType.bytes,
+            bytes: blockBytes,
+            contextBytes: {
+              type: ContextBytesType.ForkDigest,
+              forkSlot: block.slot,
+            },
+          };
         }
       }
 
