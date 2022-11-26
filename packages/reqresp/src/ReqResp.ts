@@ -25,6 +25,10 @@ export interface ReqRespOpts extends SendRequestOpts {
   getPeerLogMetadata?: (peerId: string) => string;
 }
 
+export interface ReqRespRegisterOpts {
+  ignoreIfDuplicate?: boolean;
+}
+
 /**
  * Implementation of Ethereum Consensus p2p Req/Resp domain.
  * For the spec that this code is based on, see:
@@ -33,7 +37,7 @@ export interface ReqRespOpts extends SendRequestOpts {
  */
 export class ReqResp {
   private readonly libp2p: Libp2p;
-  private readonly logger: ILogger;
+  protected readonly logger: ILogger;
   private readonly metrics: Metrics | null;
   private controller = new AbortController();
   /** Tracks request and responses in a sequential counter */
@@ -41,7 +45,7 @@ export class ReqResp {
   private readonly protocolPrefix: string;
 
   /** `${protocolPrefix}/${method}/${version}/${encoding}` */
-  private readonly supportedProtocols = new Map<ProtocolID, ProtocolDefinition>();
+  private readonly registeredProtocols = new Map<ProtocolID, ProtocolDefinition>();
 
   constructor(modules: ReqRespProtocolModules, private readonly opts: ReqRespOpts = {}) {
     this.libp2p = modules.libp2p;
@@ -50,10 +54,51 @@ export class ReqResp {
     this.protocolPrefix = opts.protocolPrefix ?? DEFAULT_PROTOCOL_PREFIX;
   }
 
-  registerProtocol<Req, Resp>(protocol: ProtocolDefinition<Req, Resp>): void {
-    const {method, version, encoding} = protocol;
-    const protocolID = this.formatProtocolID(method, version, encoding);
-    this.supportedProtocols.set(protocolID, protocol as ProtocolDefinition);
+  /**
+   * Register protocol as supported and to libp2p.
+   * async because libp2p registar persists the new protocol list in the peer-store.
+   * Throws if the same protocol is registered twice.
+   * Can be called at any time, no concept of started / stopped
+   */
+  async registerProtocol<Req, Resp>(
+    protocol: ProtocolDefinition<Req, Resp>,
+    opts?: ReqRespRegisterOpts
+  ): Promise<void> {
+    const protocolID = this.formatProtocolID(protocol);
+
+    // libp2p will throw on error on duplicates, allow to overwrite behaviour
+    if (opts?.ignoreIfDuplicate && this.registeredProtocols.has(protocolID)) {
+      return;
+    }
+
+    this.registeredProtocols.set(protocolID, protocol as ProtocolDefinition);
+
+    return this.libp2p.handle(protocolID, this.getRequestHandler(protocol));
+  }
+
+  /**
+   * Remove protocol as supported and from libp2p.
+   * async because libp2p registar persists the new protocol list in the peer-store.
+   * Does NOT throw if the protocolID is unknown.
+   * Can be called at any time, no concept of started / stopped
+   */
+  async unregisterProtocol(protocolID: ProtocolID): Promise<void> {
+    this.registeredProtocols.delete(protocolID);
+
+    return this.libp2p.unhandle(protocolID);
+  }
+
+  /**
+   * Remove all registered protocols from libp2p
+   */
+  async unregisterAllProtocols(): Promise<void> {
+    for (const protocolID of this.registeredProtocols.keys()) {
+      await this.unregisterProtocol(protocolID);
+    }
+  }
+
+  getRegisteredProtocols(): ProtocolID[] {
+    return Array.from(this.registeredProtocols.values()).map((protocol) => this.formatProtocolID(protocol));
   }
 
   async start(): Promise<void> {
@@ -61,16 +106,9 @@ export class ReqResp {
     // We set infinity to prevent MaxListenersExceededWarning which get logged when listeners > 10
     // Since it is perfectly fine to have listeners > 10
     setMaxListeners(Infinity, this.controller.signal);
-
-    for (const [protocolID, protocol] of this.supportedProtocols) {
-      await this.libp2p.handle(protocolID, this.getRequestHandler(protocol));
-    }
   }
 
   async stop(): Promise<void> {
-    for (const protocolID of this.supportedProtocols.keys()) {
-      await this.libp2p.unhandle(protocolID);
-    }
     this.controller.abort();
   }
 
@@ -90,8 +128,8 @@ export class ReqResp {
     const protocolIDs: string[] = [];
 
     for (const version of versions) {
-      const protocolID = this.formatProtocolID(method, version, encoding);
-      const protocol = this.supportedProtocols.get(protocolID);
+      const protocolID = this.formatProtocolID({method, version, encoding});
+      const protocol = this.registeredProtocols.get(protocolID);
       if (!protocol) {
         throw Error(`Request to send to protocol ${protocolID} but it has not been declared`);
       }
@@ -175,7 +213,7 @@ export class ReqResp {
    * ```
    * https://github.com/ethereum/consensus-specs/blob/v1.2.0/specs/phase0/p2p-interface.md#protocol-identification
    */
-  protected formatProtocolID(method: string, version: number, encoding: Encoding): string {
-    return formatProtocolID(this.protocolPrefix, method, version, encoding);
+  protected formatProtocolID(protocol: Pick<ProtocolDefinition, "method" | "version" | "encoding">): string {
+    return formatProtocolID(this.protocolPrefix, protocol.method, protocol.version, protocol.encoding);
   }
 }

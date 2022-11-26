@@ -40,7 +40,7 @@ interface INetworkModules {
 
 export class Network implements INetwork {
   events: INetworkEventBus;
-  reqResp: IReqRespBeaconNode;
+  reqResp: ReqRespBeaconNode;
   attnetsService: AttnetsService;
   syncnetsService: SyncnetsService;
   gossip: Eth2Gossipsub;
@@ -145,8 +145,13 @@ export class Network implements INetwork {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
     (this.libp2p.connectionManager as DefaultConnectionManager)["latencyMonitor"].stop();
 
-    this.reqResp.start();
-    this.metadata.start(this.getEnr(), this.config.getForkName(this.clock.currentSlot));
+    // Network spec decides version changes based on clock fork, not head fork
+    const forkCurrentSlot = this.config.getForkName(this.clock.currentSlot);
+
+    await this.reqResp.start();
+    this.reqResp.registerProtocolsAtFork(forkCurrentSlot);
+
+    this.metadata.start(this.getEnr(), forkCurrentSlot);
     await this.peerManager.start();
     await this.gossip.start();
     this.attnetsService.start();
@@ -163,7 +168,8 @@ export class Network implements INetwork {
     await this.peerManager.goodbyeAndDisconnectAllPeers();
     await this.peerManager.stop();
     await this.gossip.stop();
-    this.reqResp.stop();
+    await this.reqResp.stop();
+    await this.reqResp.unregisterAllProtocols();
     this.attnetsService.stop();
     this.syncnetsService.stop();
     await this.libp2p.stop();
@@ -417,6 +423,7 @@ export class Network implements INetwork {
           if (epoch === forkEpoch) {
             // updateEth2Field() MUST be called with clock epoch, onEpoch event is emitted in response to clock events
             this.metadata.updateEth2Field(epoch);
+            this.reqResp.registerProtocolsAtFork(nextFork);
           }
 
           // After fork transition
