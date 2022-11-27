@@ -16,9 +16,9 @@ import {IBeaconConfig} from "@lodestar/config";
 import {allForks, UintNum64, Root, phase0, eip4844, Slot, RootHex, Epoch, ValidatorIndex} from "@lodestar/types";
 import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {ProcessShutdownCallback} from "@lodestar/validator";
-import {ILogger, toHex} from "@lodestar/utils";
+import {ILogger, pruneSetToMax, toHex} from "@lodestar/utils";
 import {CompositeTypeAny, fromHexString, TreeView, Type} from "@chainsafe/ssz";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
@@ -64,6 +64,9 @@ import {AssembledBlockType, BlockType} from "./produceBlock/index.js";
 import {BlobsResultType, BlockAttributes, produceBlockBody} from "./produceBlock/produceBlockBody.js";
 import {computeNewStateRoot} from "./produceBlock/computeNewStateRoot.js";
 import {BlockImport} from "./blocks/types.js";
+
+const DEFAULT_MAX_CACHED_BLOBS_SIDECAR = 8;
+const MAX_RETAINED_SLOTS_CACHED_BLOBS_SIDECAR = 8;
 
 export class BeaconChain implements IBeaconChain {
   readonly genesisTime: UintNum64;
@@ -394,6 +397,10 @@ export class BeaconChain implements IBeaconChain {
         blobs: blobs.blobs,
         kzgAggregatedProof: computeAggregateKzgProof(blobs.blobs),
       });
+      pruneSetToMax(
+        this.producedBlobsSidecarCache,
+        this.opts.maxCachedBlobsSidecar ?? DEFAULT_MAX_CACHED_BLOBS_SIDECAR
+      );
     }
 
     return block;
@@ -629,6 +636,15 @@ export class BeaconChain implements IBeaconChain {
         // Should never throw
         this.logger.error("Error on exchangeTransitionConfiguration", {}, e as Error);
       });
+    }
+
+    // Prune old blobsSidecar for block production, those are only useful on their slot
+    if (this.config.getForkSeq(slot) >= ForkSeq.eip4844 && this.producedBlobsSidecarCache.size > 0) {
+      for (const [key, blobsSidecar] of this.producedBlobsSidecarCache) {
+        if (slot > blobsSidecar.beaconBlockSlot + MAX_RETAINED_SLOTS_CACHED_BLOBS_SIDECAR) {
+          this.producedBlobsSidecarCache.delete(key);
+        }
+      }
     }
   }
 
