@@ -2,7 +2,7 @@
 export const CAPELLA_OWL_BANNER = String.raw`
 
                                       /^----^\
-                                      | -  - |
+                                      | ◡  ◡ |
                                       |  \/  |
                                       /       \
                                      |     |;;;|
