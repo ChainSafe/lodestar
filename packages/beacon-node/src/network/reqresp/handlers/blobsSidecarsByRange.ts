@@ -46,7 +46,7 @@ export async function* onBlobsSidecarsByRange(
   // Finalized tram of blobs
   // TODO EIP-4844: Should the finalized block be included here or below?
 
-  if (endSlot <= finalizedSlot) {
+  if (startSlot <= finalizedSlot) {
     // Chain of blobs won't change
     for await (const {key, value} of db.blobsSidecarArchive.binaryEntriesStream({gte: startSlot, lt: endSlot})) {
       yield {
@@ -71,6 +71,11 @@ export async function* onBlobsSidecarsByRange(
     for (const block of headChain) {
       // Must include only blocks in the range requested
       if (block.slot >= startSlot && block.slot < endSlot) {
+        // Note: Here the forkChoice head may change due to a re-org, so the headChain reflects the cannonical chain
+        // at the time of the start of the request. Spec is clear the chain of blobs must be consistent, but on
+        // re-org there's no need to abort the request
+        // Spec: https://github.com/ethereum/consensus-specs/blob/a1e46d1ae47dd9d097725801575b46907c12a1f8/specs/eip4844/p2p-interface.md#blobssidecarsbyrange-v1
+
         const blockBytes = await db.blobsSidecar.getBinary(fromHex(block.blockRoot));
         if (blockBytes) {
           yield {
