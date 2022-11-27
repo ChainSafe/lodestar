@@ -122,7 +122,7 @@ export class BeaconChain implements IBeaconChain {
 
   // TODO EIP-4844: Prune data structure every time period, for both old entries
   /** Map keyed by executionPayload.blockHash of the block for those blobs */
-  private readonly producedBlobsCache = new Map<RootHex, eip4844.Blobs>();
+  private readonly producedBlobsSidecarCache = new Map<RootHex, eip4844.BlobsSidecar>();
 
   private readonly faultInspectionWindow: number;
   private readonly allowedFaults: number;
@@ -387,7 +387,13 @@ export class BeaconChain implements IBeaconChain {
     // Cache for latter broadcasting
     if (blobs.type === BlobsResultType.produced) {
       // TODO EIP-4844: Prune data structure for max entries
-      this.producedBlobsCache.set(blobs.blockHash, blobs.blobs);
+      this.producedBlobsSidecarCache.set(blobs.blockHash, {
+        // TODO EIP-4844: Optimize, hashing the full block is not free.
+        beaconBlockRoot: this.config.getForkTypes(block.slot).BeaconBlock.hashTreeRoot(block),
+        beaconBlockSlot: block.slot,
+        blobs: blobs.blobs,
+        kzgAggregatedProof: computeAggregateKzgProof(blobs.blobs),
+      });
     }
 
     return block;
@@ -405,18 +411,12 @@ export class BeaconChain implements IBeaconChain {
    */
   getBlobsSidecar(beaconBlock: eip4844.BeaconBlock): eip4844.BlobsSidecar {
     const blockHash = toHex(beaconBlock.body.executionPayload.blockHash);
-    const blobs = this.producedBlobsCache.get(blockHash);
-    if (!blobs) {
-      throw Error(`No blobs for beaconBlockRoot ${blockHash}`);
+    const blobsSidecar = this.producedBlobsSidecarCache.get(blockHash);
+    if (!blobsSidecar) {
+      throw Error(`No blobsSidecar for executionPayload.blockHash ${blockHash}`);
     }
 
-    return {
-      // TODO EIP-4844: Optimize, hashing the full block is not free.
-      beaconBlockRoot: this.config.getForkTypes(beaconBlock.slot).BeaconBlock.hashTreeRoot(beaconBlock),
-      beaconBlockSlot: beaconBlock.slot,
-      blobs: blobs,
-      kzgAggregatedProof: computeAggregateKzgProof(blobs),
-    };
+    return blobsSidecar;
   }
 
   async processBlock(block: BlockImport, opts?: ImportBlockOpts): Promise<void> {
