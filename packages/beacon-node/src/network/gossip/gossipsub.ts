@@ -5,7 +5,7 @@ import {SignaturePolicy, TopicStr} from "@chainsafe/libp2p-gossipsub/types";
 import {PeerScore, PeerScoreParams} from "@chainsafe/libp2p-gossipsub/score";
 import {MetricsRegister, TopicLabel, TopicStrToLabel} from "@chainsafe/libp2p-gossipsub/metrics";
 import {IBeaconConfig} from "@lodestar/config";
-import {ATTESTATION_SUBNET_COUNT, ForkName, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
+import {ATTESTATION_SUBNET_COUNT, ForkName, ForkSeq, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {allForks, altair, phase0} from "@lodestar/types";
 import {ILogger, Map2d, Map2dArr} from "@lodestar/utils";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
@@ -426,7 +426,13 @@ function getMetricsTopicStrToLabel(config: IBeaconConfig): TopicStrToLabel {
       topics.push({fork, type: GossipType.sync_committee, subnet});
     }
 
-    topics.push({fork, type: GossipType.beacon_block});
+    // beacon_block_and_blobs_sidecar replaces beacon_block topic after EIP-4844
+    // Ref https://github.com/ethereum/consensus-specs/blob/a1e46d1ae47dd9d097725801575b46907c12a1f8/specs/eip4844/p2p-interface.md#beacon_block_and_blobs_sidecar
+    if (ForkSeq[fork] >= ForkSeq.eip4844) {
+      topics.push({fork, type: GossipType.beacon_block_and_blobs_sidecar});
+    } else {
+      topics.push({fork, type: GossipType.beacon_block});
+    }
     topics.push({fork, type: GossipType.beacon_aggregate_and_proof});
     topics.push({fork, type: GossipType.voluntary_exit});
     topics.push({fork, type: GossipType.proposer_slashing});
