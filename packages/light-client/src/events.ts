@@ -14,15 +14,19 @@ export enum LightclientEvent {
    * Note: the SyncCommittee is stored for `period + 1`.
    */
   committee = "committee",
+  /** New or better optimistic header update available */
+  lightClientOptimisticUpdate = "light_client_optimistic_update",
+  /** New or better finality update available */
+  lightClientFinalityUpdate = "light_client_finality_update",
 }
 
-export type LightclientEvents = {
+export type LightclientEmitterEvents = {
   [LightclientEvent.head]: (newHeader: phase0.BeaconBlockHeader) => void;
   [LightclientEvent.finalized]: (newHeader: phase0.BeaconBlockHeader) => void;
   [LightclientEvent.committee]: (updatePeriod: SyncPeriod) => void;
 };
 
-export type LightclientEmitter = MittEmitter<LightclientEvents>;
+export type LightclientEmitter = MittEmitter<LightclientEmitterEvents>;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type MittEmitter<T extends Record<string, (...args: any[]) => void>> = {

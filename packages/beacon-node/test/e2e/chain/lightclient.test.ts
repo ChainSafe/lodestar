@@ -6,6 +6,8 @@ import {TimestampFormatCode} from "@lodestar/utils";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Lightclient} from "@lodestar/light-client";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {LightClientRestTransport} from "@lodestar/light-client/transport";
+import {getClient} from "@lodestar/api";
 import {testLogger, LogLevel, TestLoggerOpts} from "../../utils/logger.js";
 import {getDevBeaconNode} from "../../utils/node/beacon.js";
 import {getAndInitDevValidators} from "../../utils/node/validator.js";
@@ -113,16 +115,19 @@ describe("chain / lightclient", function () {
     }).then(async (head) => {
       // Initialize lightclient
       loggerLC.info("Initializing lightclient", {slot: head.slot});
-
+      const beaconApiUrl = `http://localhost:${restPort}`;
+      const api = getClient({baseUrl: beaconApiUrl}, {config: bn.config});
+      const lightClientRestTransport = new LightClientRestTransport(api, api.proof.getStateProof);
       const lightclient = await Lightclient.initializeFromCheckpointRoot({
         config: bn.config,
         logger: loggerLC,
-        beaconApiUrl: `http://localhost:${restPort}`,
+        beaconApiUrl: beaconApiUrl,
         genesisData: {
           genesisTime: bn.chain.genesisTime,
           genesisValidatorsRoot: bn.chain.genesisValidatorsRoot as Uint8Array,
         },
         checkpointRoot: fromHexString(head.block),
+        transport: lightClientRestTransport,
       });
 
       afterEachCallbacks.push(async () => {
