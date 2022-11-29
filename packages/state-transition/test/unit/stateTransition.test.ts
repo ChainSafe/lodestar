@@ -13,6 +13,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 describe("capella withdrawal consensus", () => {
   it("devnet 1 - process slot 10497", () => {
+    const testPath = __dirname + "/data/withdrawal-devnet-slot-10497";
     const config = createIChainForkConfig({
       ...defaultChainConfig,
       ALTAIR_FORK_EPOCH: 0,
@@ -20,14 +21,14 @@ describe("capella withdrawal consensus", () => {
       CAPELLA_FORK_EPOCH: 0,
     });
 
-    const preStateBuffer = fs.readFileSync(path.join(__dirname, "./10497/preState.ssz"));
+    const preStateBuffer = fs.readFileSync(path.join(testPath, "./preState.ssz"));
     const preBeaconState = ssz.capella.BeaconState.deserializeToViewDU(preStateBuffer);
     const preState = createCachedBeaconStateTest(preBeaconState, config);
 
-    const postStateBuffer = fs.readFileSync(path.join(__dirname, "./10497/postState.ssz"));
+    const postStateBuffer = fs.readFileSync(path.join(testPath, "./postState.ssz"));
     const postBeaconState = ssz.capella.BeaconState.deserializeToViewDU(postStateBuffer);
     const postState = createCachedBeaconStateTest(postBeaconState, config);
-    const signedBlockJson = JSON.parse(fs.readFileSync(path.join(__dirname, "./10497/block.json"), "utf8")) as {
+    const signedBlockJson = JSON.parse(fs.readFileSync(path.join(testPath, "./block.json"), "utf8")) as {
       data: unknown;
     };
     const signedBlock = ssz.capella.SignedBeaconBlock.fromJson(signedBlockJson.data);
