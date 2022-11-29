@@ -1,7 +1,6 @@
 import {PeerId} from "@libp2p/interface-peer-id";
-import {ILogger, MapDef} from "@lodestar/utils";
+import {ILogger, RateLimiterGRCA} from "@lodestar/utils";
 import {IMetrics} from "../../metrics/index.js";
-import {RateTracker} from "./rateTracker.js";
 
 export interface RateLimiterModules {
   logger: ILogger;
@@ -44,13 +43,13 @@ export class InboundRateLimiter {
   private readonly logger: ILogger;
   private readonly reportPeer: RateLimiterModules["reportPeer"];
   private readonly metrics: IMetrics | null;
-  private requestCountTrackersByPeer: MapDef<string, RateTracker>;
+  private requestCountByPeerTracker: RateLimiterGRCA<string>;
   /**
    * This rate tracker is specific to lodestar, we don't want to serve too many blocks for peers at the
    * same time, even through we limit block count per peer as in blockCountTrackersByPeer
    */
-  private blockCountTotalTracker: RateTracker;
-  private blockCountTrackersByPeer: MapDef<string, RateTracker>;
+  private blockCountTotalTracker: RateLimiterGRCA<null>;
+  private blockCountByPeerTracker: RateLimiterGRCA<string>;
   /** Periodically check this to remove tracker of disconnected peers */
   private lastSeenRequestsByPeer: Map<string, number>;
   /** Interval to check lastSeenMessagesByPeer */
@@ -61,16 +60,19 @@ export class InboundRateLimiter {
     this.options = {...defaultRateLimiterOpts, ...options};
     this.reportPeer = modules.reportPeer;
 
-    this.requestCountTrackersByPeer = new MapDef(
-      () => new RateTracker({limit: this.options.requestCountPeerLimit, limitTimeMs: this.options.rateTrackerTimeoutMs})
-    );
-    this.blockCountTotalTracker = new RateTracker({
-      limit: this.options.blockCountTotalLimit,
-      limitTimeMs: this.options.rateTrackerTimeoutMs,
+    this.requestCountByPeerTracker = RateLimiterGRCA.fromQuota({
+      maxTokens: this.options.requestCountPeerLimit,
+      replenishAllEvery: this.options.rateTrackerTimeoutMs,
     });
-    this.blockCountTrackersByPeer = new MapDef(
-      () => new RateTracker({limit: this.options.blockCountPeerLimit, limitTimeMs: this.options.rateTrackerTimeoutMs})
-    );
+    this.blockCountTotalTracker = RateLimiterGRCA.fromQuota({
+      maxTokens: this.options.blockCountTotalLimit,
+      replenishAllEvery: this.options.rateTrackerTimeoutMs,
+    });
+    this.blockCountByPeerTracker = RateLimiterGRCA.fromQuota({
+      maxTokens: this.options.blockCountPeerLimit,
+      replenishAllEvery: this.options.rateTrackerTimeoutMs,
+    });
+
     this.logger = modules.logger;
     this.metrics = modules.metrics;
     this.lastSeenRequestsByPeer = new Map();
@@ -94,11 +96,10 @@ export class InboundRateLimiter {
     this.lastSeenRequestsByPeer.set(peerIdStr, Date.now());
 
     // rate limit check for request
-    const requestCountPeerTracker = this.requestCountTrackersByPeer.getOrDefault(peerIdStr);
-    if (requestCountPeerTracker.requestObjects(1) === 0) {
+    if (!this.requestCountByPeerTracker.allows(peerIdStr, 1)) {
       this.logger.verbose("Do not serve request due to request count rate limit", {
         peerId: peerIdStr,
-        requestsWithinWindow: requestCountPeerTracker.getRequestedObjectsWithinWindow(),
+        requestsWithinWindow: this.requestCountByPeerTracker.currentBucketRemainingTokens(peerIdStr),
       });
       this.reportPeer(peerId);
       if (this.metrics) {
@@ -115,13 +116,12 @@ export class InboundRateLimiter {
    */
   allowBlockByRequest(peerId: PeerId, numBlock: number): boolean {
     const peerIdStr = peerId.toString();
-    const blockCountPeerTracker = this.blockCountTrackersByPeer.getOrDefault(peerIdStr);
 
-    if (blockCountPeerTracker.requestObjects(numBlock) === 0) {
+    if (!this.blockCountByPeerTracker.allows(peerIdStr, numBlock)) {
       this.logger.verbose("Do not serve block request due to block count rate limit", {
         peerId: peerIdStr,
         blockCount: numBlock,
-        requestsWithinWindow: blockCountPeerTracker.getRequestedObjectsWithinWindow(),
+        requestsWithinWindow: this.blockCountByPeerTracker.currentBucketRemainingTokens(peerIdStr),
       });
       this.reportPeer(peerId);
       if (this.metrics) {
@@ -130,7 +130,7 @@ export class InboundRateLimiter {
       return false;
     }
 
-    if (this.blockCountTotalTracker.requestObjects(numBlock) === 0) {
+    if (!this.blockCountTotalTracker.allows(null, numBlock)) {
       if (this.metrics) {
         this.metrics.reqResp.rateLimitErrors.inc({tracker: "blockCountTotalTracker"});
       }
@@ -147,8 +147,8 @@ export class InboundRateLimiter {
   }
 
   private pruneByPeerIdStr(peerIdStr: string): void {
-    this.requestCountTrackersByPeer.delete(peerIdStr);
-    this.blockCountTrackersByPeer.delete(peerIdStr);
+    this.requestCountByPeerTracker.pruneByKey(peerIdStr);
+    this.blockCountByPeerTracker.pruneByKey(peerIdStr);
     this.lastSeenRequestsByPeer.delete(peerIdStr);
   }
 
