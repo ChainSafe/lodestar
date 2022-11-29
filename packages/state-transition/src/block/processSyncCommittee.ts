@@ -34,7 +34,7 @@ export function processSyncAggregate(
 
     if (syncCommitteeBits.get(i)) {
       // Positive rewards for participants
-      if (index === proposerBalance) {
+      if (index === proposerIndex) {
         proposerBalance += syncParticipantReward;
       } else {
         increaseBalance(state, index, syncParticipantReward);
@@ -43,7 +43,7 @@ export function processSyncAggregate(
       proposerBalance += syncProposerReward;
     } else {
       // Negative rewards for non participants
-      if (index === proposerBalance) {
+      if (index === proposerIndex) {
         proposerBalance = Math.max(0, proposerBalance - syncParticipantReward);
       } else {
         decreaseBalance(state, index, syncParticipantReward);
