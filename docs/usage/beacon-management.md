@@ -49,16 +49,6 @@ Use the `--engine-jwt-secret=<FILE>` flag to configure the secret. Use their doc
 **For Erigon:**
 Use the `--authrpc.jwtsecret` flag to configure the secret. Use their documentation [here](https://github.com/ledgerwatch/erigon#authentication-api).
 
-## Initialize a beacon node (optional)
-
-If you would like to initialize your beacon node with the basic files required to run on a testnet or mainnet before actually running the node (Especially useful for configuring a new testnet), you can run the following command:
-
-```bash
-./lodestar init --network $NETWORK_NAME
-```
-
-By default, Lodestar stores all configuration and chain data at the path `$XDG_DATA_HOME/lodestar/$NETWORK_NAME`.
-
 ## Run a beacon node
 
 To start a Lodestar beacon run the command:
@@ -106,11 +96,13 @@ Jul-09 17:34:54.278 []                 info: Syncing - 3 days left - 3.00 slots/
     If your node is stuck with `Searching for peers` review your network configuration to make sure your ports are open.
 <!-- prettier-ignore-end -->
 
+By default, Lodestar stores all configuration and chain data at the path `$XDG_DATA_HOME/lodestar/$NETWORK_NAME`.
+
 A young testnet should take a few hours to sync. If you see multiple or consistent errors in the logs, please open a [Github issue](https://github.com/ChainSafe/lodestar/issues/new) or reach out to us in [Discord](https://discord.gg/yjyvFRP). Just by reporting anomalies you are helping accelerate the progress of Ethereum Consensus, thanks for contributing!
 
 <!-- prettier-ignore-start -->
 !!! warning
-    It is dangerous to expose your Beacon APIs publicly as there is no default authentication mechanism provided. Ensure your beacon node host is not exposing ports 8545 or 9596 outside of your internal network. 
+    It is dangerous to expose your Beacon APIs publicly as there is no default authentication mechanism provided. Ensure your beacon node host is not exposing ports 8545 or 9596 outside of your internal network.
 <!-- prettier-ignore-end -->
 
 ### Checkpoint Sync
@@ -130,6 +122,6 @@ In case you really trust `checkpointSyncUrl` then you may skip providing `wssChe
 
 <!-- prettier-ignore-start -->
 !!! warning
-    Please use this option very carefully (and at your own risk), a malicious server URL can put you on the wrong chain with a danger of you losing your funds by social engineering. 
+    Please use this option very carefully (and at your own risk), a malicious server URL can put you on the wrong chain with a danger of you losing your funds by social engineering.
 If possible, validate your `wssCheckpoint` from multiple places (e.g. different client distributions) or from other trusted sources. This will highly reduce the risk of starting off on a malicious chain.
 <!-- prettier-ignore-end -->
