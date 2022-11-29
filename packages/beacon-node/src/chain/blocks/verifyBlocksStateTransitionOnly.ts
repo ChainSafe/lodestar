@@ -41,7 +41,7 @@ export async function verifyBlocksStateTransitionOnly(
     // TODO EIP-4844: Is the best place here to call validateBlobsSidecar()?
     // TODO EIP-4844: Gossip may already call validateBlobsSidecar, add some flag to de-dup from here
     // TODO EIP-4844: For sync if this function is expensive, consider adding sleep(0) if metrics show it
-    const dataAvailableStatus = maybeValidateBlobs(config, blocks[i]);
+    const dataAvailableStatus = maybeValidateBlobs(config, blocks[i], opts);
 
     // STFN - per_slot_processing() + per_block_processing()
     // NOTE: `regen.getPreState()` should have dialed forward the state already caching checkpoint states
@@ -96,10 +96,18 @@ export async function verifyBlocksStateTransitionOnly(
   return {postStates, proposerBalanceDeltas};
 }
 
-function maybeValidateBlobs(config: IChainForkConfig, blockImport: BlockImport): DataAvailableStatus {
+function maybeValidateBlobs(
+  config: IChainForkConfig,
+  blockImport: BlockImport,
+  opts: ImportBlockOpts
+): DataAvailableStatus {
   // TODO EIP4844: Make switch verify it's exhaustive
   switch (blockImport.type) {
     case BlockImportType.postEIP4844: {
+      if (opts.validBlobsSidecar) {
+        return DataAvailableStatus.available;
+      }
+
       const {block, blobs} = blockImport;
       const blockSlot = block.message.slot;
       const {blobKzgCommitments} = (block as eip4844.SignedBeaconBlock).message.body;

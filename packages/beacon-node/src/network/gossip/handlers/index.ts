@@ -120,15 +120,20 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
 
     metrics?.registerBeaconBlock(OpSource.gossip, seenTimestampSec, signedBlock.message);
 
-    // `validProposerSignature = true`, in gossip validation the proposer signature is checked
-    // At gossip time, it's critical to keep a good number of mesh peers.
-    // To do that, the Gossip Job Wait Time should be consistently <3s to avoid the behavior penalties in gossip
-    // Gossip Job Wait Time depends on the BLS Job Wait Time
-    // so `blsVerifyOnMainThread = true`: we want to verify signatures immediately without affecting the bls thread pool.
-    // otherwise we can't utilize bls thread pool capacity and Gossip Job Wait Time can't be kept low consistently.
-    // See https://github.com/ChainSafe/lodestar/issues/3792
     chain
-      .processBlock(blockImport, {validProposerSignature: true, blsVerifyOnMainThread: true})
+      .processBlock(blockImport, {
+        // proposer signature already checked in validateBeaconBlock()
+        validProposerSignature: true,
+        // blobsSidecar already checked in validateGossipBlobsSidecar()
+        validBlobsSidecar: true,
+        // It's critical to keep a good number of mesh peers.
+        // To do that, the Gossip Job Wait Time should be consistently <3s to avoid the behavior penalties in gossip
+        // Gossip Job Wait Time depends on the BLS Job Wait Time
+        // so `blsVerifyOnMainThread = true`: we want to verify signatures immediately without affecting the bls thread pool.
+        // otherwise we can't utilize bls thread pool capacity and Gossip Job Wait Time can't be kept low consistently.
+        // See https://github.com/ChainSafe/lodestar/issues/3792
+        blsVerifyOnMainThread: true,
+      })
       .then(() => {
         // Returns the delay between the start of `block.slot` and `current time`
         const delaySec = chain.clock.secFromSlot(slot);

@@ -89,6 +89,8 @@ export type ImportBlockOpts = {
    * Metadata: `true` if all the signatures including the proposer signature have been verified
    */
   validSignatures?: boolean;
+  /** Set to true if already run `validateBlobsSidecar()` sucessfully on the blobs */
+  validBlobsSidecar?: boolean;
   /** Seen timestamp seconds */
   seenTimestampSec?: number;
 };
