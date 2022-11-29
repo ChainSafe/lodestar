@@ -1,10 +1,59 @@
-import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
+import {CachedBeaconStateAllForks, computeEpochAtSlot} from "@lodestar/state-transition";
 import {MaybeValidExecutionStatus} from "@lodestar/fork-choice";
 import {allForks, eip4844, Slot} from "@lodestar/types";
+import {ForkSeq} from "@lodestar/params";
+import {IChainForkConfig} from "@lodestar/config";
 
-export type BlockImport = {
-  block: allForks.SignedBeaconBlock;
-  blobs: eip4844.BlobsSidecar | null;
+export enum BlockImportType {
+  preEIP4844 = "preEIP4844",
+  postEIP4844 = "postEIP4844",
+  postEIP4844OldBlobs = "postEIP4844OldBlobs",
+}
+
+export type BlockImport =
+  | {type: BlockImportType.preEIP4844; block: allForks.SignedBeaconBlock}
+  | {type: BlockImportType.postEIP4844; block: allForks.SignedBeaconBlock; blobs: eip4844.BlobsSidecar}
+  | {type: BlockImportType.postEIP4844OldBlobs; block: allForks.SignedBeaconBlock};
+
+export function blockRequiresBlobs(config: IChainForkConfig, blockSlot: Slot, clockSlot: Slot): boolean {
+  return (
+    config.getForkSeq(blockSlot) >= ForkSeq.eip4844 &&
+    // Only request blobs if they are recent enough
+    computeEpochAtSlot(blockSlot) >= computeEpochAtSlot(clockSlot) - config.MIN_EPOCHS_FOR_BLOBS_SIDECARS_REQUESTS
+  );
+}
+
+export const getBlockImport = {
+  preEIP4844(config: IChainForkConfig, block: allForks.SignedBeaconBlock): BlockImport {
+    if (config.getForkSeq(block.message.slot) >= ForkSeq.eip4844) {
+      throw Error(`Post EIP4844 block slot ${block.message.slot}`);
+    }
+    return {
+      type: BlockImportType.preEIP4844,
+      block,
+    };
+  },
+
+  postEIP4844(config: IChainForkConfig, block: allForks.SignedBeaconBlock, blobs: eip4844.BlobsSidecar): BlockImport {
+    if (config.getForkSeq(block.message.slot) < ForkSeq.eip4844) {
+      throw Error(`Pre EIP4844 block slot ${block.message.slot}`);
+    }
+    return {
+      type: BlockImportType.postEIP4844,
+      block,
+      blobs,
+    };
+  },
+
+  postEIP4844OldBlobs(config: IChainForkConfig, block: allForks.SignedBeaconBlock): BlockImport {
+    if (config.getForkSeq(block.message.slot) < ForkSeq.eip4844) {
+      throw Error(`Pre EIP4844 block slot ${block.message.slot}`);
+    }
+    return {
+      type: BlockImportType.postEIP4844OldBlobs,
+      block,
+    };
+  },
 };
 
 export type ImportBlockOpts = {
@@ -48,8 +97,7 @@ export type ImportBlockOpts = {
  * A wrapper around a `SignedBeaconBlock` that indicates that this block is fully verified and ready to import
  */
 export type FullyVerifiedBlock = {
-  block: allForks.SignedBeaconBlock;
-  blobs: eip4844.BlobsSidecar | null;
+  blockImport: BlockImport;
   postState: CachedBeaconStateAllForks;
   parentBlockSlot: Slot;
   proposerBalanceDelta: number;

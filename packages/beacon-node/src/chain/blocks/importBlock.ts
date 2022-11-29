@@ -1,5 +1,5 @@
 import {altair, ssz} from "@lodestar/types";
-import {ForkSeq, MAX_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {MAX_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {toHexString} from "@chainsafe/ssz";
 import {toHex} from "@lodestar/utils";
 import {
@@ -16,7 +16,7 @@ import {ChainEvent} from "../emitter.js";
 import {REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC} from "../reprocess.js";
 import {RegenCaller} from "../regen/interface.js";
 import type {BeaconChain} from "../chain.js";
-import {FullyVerifiedBlock, ImportBlockOpts} from "./types.js";
+import {BlockImportType, FullyVerifiedBlock, ImportBlockOpts} from "./types.js";
 import {PendingEvents} from "./utils/pendingEvents.js";
 import {getCheckpointFromState} from "./utils/checkpoint.js";
 
@@ -49,7 +49,8 @@ export async function importBlock(
   fullyVerifiedBlock: FullyVerifiedBlock,
   opts: ImportBlockOpts
 ): Promise<void> {
-  const {block, blobs, postState, parentBlockSlot, executionStatus} = fullyVerifiedBlock;
+  const {blockImport, postState, parentBlockSlot, executionStatus} = fullyVerifiedBlock;
+  const {block} = blockImport;
   const pendingEvents = new PendingEvents(this.emitter);
 
   // - Observe attestations
@@ -320,18 +321,15 @@ export async function importBlock(
     root: blockRoot,
   });
 
-  if (this.config.getForkSeq(block.message.slot) >= ForkSeq.eip4844) {
-    if (!blobs) {
-      throw Error("blobsSidecar not provided for block post eip4844");
-    }
+  if (blockImport.type === BlockImportType.postEIP4844) {
+    const {blobs} = blockImport;
+    // NOTE: Old blobs are pruned on archive
     await this.db.blobsSidecar.add(blobs);
     this.logger.debug("Persisted blobsSidecar to hot DB", {
       blobsLen: blobs.blobs.length,
       slot: blobs.beaconBlockSlot,
       root: toHex(blobs.beaconBlockRoot),
     });
-
-    // TODO EIP-4844: Prune old blobs
   }
 
   // - head_tracker.register_block(block_root, parent_root, slot)

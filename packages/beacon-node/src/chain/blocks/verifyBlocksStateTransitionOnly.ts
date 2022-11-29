@@ -6,13 +6,13 @@ import {
 } from "@lodestar/state-transition";
 import {eip4844} from "@lodestar/types";
 import {ErrorAborted, sleep} from "@lodestar/utils";
-import {ForkSeq} from "@lodestar/params";
+import {IChainForkConfig} from "@lodestar/config";
 import {IMetrics} from "../../metrics/index.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
 import {byteArrayEquals} from "../../util/bytes.js";
 import {validateBlobsSidecar} from "../validation/blobsSidecar.js";
-import {BlockImport, ImportBlockOpts} from "./types.js";
+import {BlockImport, BlockImportType, ImportBlockOpts} from "./types.js";
 
 /**
  * Verifies 1 or more blocks are fully valid running the full state transition; from a linear sequence of blocks.
@@ -35,24 +35,13 @@ export async function verifyBlocksStateTransitionOnly(
 
   for (let i = 0; i < blocks.length; i++) {
     const {validProposerSignature, validSignatures} = opts;
-    const {block, blobs} = blocks[i];
-    const blockSlot = block.message.slot;
+    const {block} = blocks[i];
     const preState = i === 0 ? preState0 : postStates[i - 1];
 
     // TODO EIP-4844: Is the best place here to call validateBlobsSidecar()?
     // TODO EIP-4844: Gossip may already call validateBlobsSidecar, add some flag to de-dup from here
     // TODO EIP-4844: For sync if this function is expensive, consider adding sleep(0) if metrics show it
-    const postEIP4844 = config.getForkSeq(blockSlot) >= ForkSeq.eip4844;
-    if (postEIP4844) {
-      if (blobs === null) {
-        // TODO EIP-4844: Throw typed errors
-        throw Error(`Post eip-4844 block slot ${blockSlot} blobs = null`);
-      }
-      const {blobKzgCommitments} = (block as eip4844.SignedBeaconBlock).message.body;
-      const beaconBlockRoot = config.getForkTypes(blockSlot).BeaconBlock.hashTreeRoot(block.message);
-      // TODO EIP-4844: This function throws un-typed errors
-      validateBlobsSidecar(blockSlot, beaconBlockRoot, blobKzgCommitments, blobs);
-    }
+    const dataAvailableStatus = maybeValidateBlobs(config, blocks[i]);
 
     // STFN - per_slot_processing() + per_block_processing()
     // NOTE: `regen.getPreState()` should have dialed forward the state already caching checkpoint states
@@ -65,7 +54,7 @@ export async function verifyBlocksStateTransitionOnly(
         // Latter verifyBlocksInEpoch() will make sure that payload is indeed valid
         executionPayloadStatus: ExecutionPayloadStatus.valid,
         // TODO EIP-4844: Data is validated above for
-        dataAvailableStatus: postEIP4844 ? DataAvailableStatus.available : DataAvailableStatus.preEIP4844,
+        dataAvailableStatus,
         // false because it's verified below with better error typing
         verifyStateRoot: false,
         // if block is trusted don't verify proposer or op signature
@@ -105,4 +94,27 @@ export async function verifyBlocksStateTransitionOnly(
   }
 
   return {postStates, proposerBalanceDeltas};
+}
+
+function maybeValidateBlobs(config: IChainForkConfig, blockImport: BlockImport): DataAvailableStatus {
+  // TODO EIP4844: Make switch verify it's exhaustive
+  switch (blockImport.type) {
+    case BlockImportType.postEIP4844: {
+      const {block, blobs} = blockImport;
+      const blockSlot = block.message.slot;
+      const {blobKzgCommitments} = (block as eip4844.SignedBeaconBlock).message.body;
+      const beaconBlockRoot = config.getForkTypes(blockSlot).BeaconBlock.hashTreeRoot(block.message);
+      // TODO EIP-4844: This function throws un-typed errors
+      validateBlobsSidecar(blockSlot, beaconBlockRoot, blobKzgCommitments, blobs);
+
+      return DataAvailableStatus.available;
+    }
+
+    case BlockImportType.preEIP4844:
+      return DataAvailableStatus.preEIP4844;
+
+    // TODO: Ok to assume old data available?
+    case BlockImportType.postEIP4844OldBlobs:
+      return DataAvailableStatus.available;
+  }
 }

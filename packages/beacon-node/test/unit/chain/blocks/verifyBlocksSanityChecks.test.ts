@@ -12,6 +12,7 @@ import {BlockErrorCode} from "../../../../src/chain/errors/index.js";
 import {expectThrowsLodestarError} from "../../../utils/errors.js";
 import {IBeaconClock} from "../../../../src/chain/index.js";
 import {ClockStopped} from "../../../utils/mocks/clock.js";
+import {getBlockImport} from "../../../../src/chain/blocks/types.js";
 
 describe("chain / blocks / verifyBlocksSanityChecks", function () {
   let forkChoice: SinonStubbedInstance<ForkChoice>;
@@ -126,7 +127,7 @@ function verifyBlocksSanityChecks(
 ): {relevantBlocks: allForks.SignedBeaconBlock[]; parentSlots: Slot[]; parentBlock: ProtoBlock | null} {
   const {relevantBlocks, parentSlots, parentBlock} = verifyBlocksImportSanityChecks(
     modules,
-    blocks.map((block) => ({block, blobs: null})),
+    blocks.map((block) => getBlockImport.preEIP4844(config, block)),
     opts
   );
   return {

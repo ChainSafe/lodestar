@@ -9,7 +9,7 @@ import {RangeSyncType} from "../../../../src/sync/utils/remoteSyncType.js";
 import {ZERO_HASH} from "../../../../src/constants/index.js";
 import {testLogger} from "../../../utils/logger.js";
 import {getValidPeerId} from "../../../utils/peer.js";
-import {BlockImport} from "../../../../src/chain/blocks/types.js";
+import {BlockImport, getBlockImport} from "../../../../src/chain/blocks/types.js";
 
 describe("sync / range / chain", () => {
   const testCases: {
@@ -82,13 +82,12 @@ describe("sync / range / chain", () => {
           // Only reject once to prevent an infinite loop
           const shouldReject = badBlocks?.has(i);
           if (shouldReject) badBlocks?.delete(i);
-          blocks.push({
-            block: {
+          blocks.push(
+            getBlockImport.preEIP4844(config, {
               message: generateEmptyBlock(i),
               signature: shouldReject ? REJECT_BLOCK : ACCEPT_BLOCK,
-            },
-            blobs: null,
-          });
+            })
+          );
         }
         return blocks;
       };
@@ -124,13 +123,12 @@ describe("sync / range / chain", () => {
     const downloadBeaconBlocksByRange: SyncChainFns["downloadBeaconBlocksByRange"] = async (peer, request) => {
       const blocks: BlockImport[] = [];
       for (let i = request.startSlot; i < request.startSlot + request.count; i += request.step) {
-        blocks.push({
-          block: {
+        blocks.push(
+          getBlockImport.preEIP4844(config, {
             message: generateEmptyBlock(i),
             signature: ACCEPT_BLOCK,
-          },
-          blobs: null,
-        });
+          })
+        );
       }
       return blocks;
     };

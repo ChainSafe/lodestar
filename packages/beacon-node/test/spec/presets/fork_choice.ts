@@ -16,10 +16,10 @@ import {ExecutionEngineMock} from "../../../src/execution/index.js";
 import {defaultChainOptions} from "../../../src/chain/options.js";
 import {getStubbedBeaconDb} from "../../utils/mocks/db.js";
 import {ClockStopped} from "../../utils/mocks/clock.js";
+import {getBlockImport} from "../../../src/chain/blocks/types.js";
 import {ZERO_HASH_HEX} from "../../../src/constants/constants.js";
 import {PowMergeBlock} from "../../../src/eth1/interface.js";
 import {assertCorrectProgressiveBalances} from "../config.js";
-import {BlockImport} from "../../../src/chain/blocks/types.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
@@ -138,8 +138,7 @@ export const forkChoiceTest: TestRunnerFn<ForkChoiceTestCase, void> = (fork) => 
               isValid,
             });
 
-            // TODO EIP-4844: blobs = null
-            const blockImport: BlockImport = {block: signedBlock, blobs: null};
+            const blockImport = getBlockImport.preEIP4844(config, signedBlock);
 
             try {
               await chain.processBlock(blockImport, {seenTimestampSec: tickTime});

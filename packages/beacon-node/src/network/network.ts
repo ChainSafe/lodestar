@@ -9,13 +9,12 @@ import {ATTESTATION_SUBNET_COUNT, ForkName, ForkSeq, SYNC_COMMITTEE_SUBNET_COUNT
 import {Discv5, ENR} from "@chainsafe/discv5";
 import {computeEpochAtSlot, computeTimeAtSlot} from "@lodestar/state-transition";
 import {altair, eip4844, Epoch, phase0} from "@lodestar/types";
-import {promiseAllMaybeAsync} from "../util/promises.js";
 import {IMetrics} from "../metrics/index.js";
 import {ChainEvent, IBeaconChain, IBeaconClock} from "../chain/index.js";
-import {BlockImport} from "../chain/blocks/types.js";
+import {BlockImport, BlockImportType, getBlockImport} from "../chain/blocks/types.js";
 import {INetworkOptions} from "./options.js";
 import {INetwork} from "./interface.js";
-import {IReqRespBeaconNode, ReqRespBeaconNode, ReqRespHandlers} from "./reqresp/index.js";
+import {ReqRespBeaconNode, ReqRespHandlers} from "./reqresp/index.js";
 import {Eth2Gossipsub, getGossipHandlers, GossipHandlers, GossipTopicTypeMap, GossipType} from "./gossip/index.js";
 import {MetadataController} from "./metadata.js";
 import {FORK_EPOCH_LOOKAHEAD, getActiveForks} from "./forks.js";
@@ -203,27 +202,20 @@ export class Network implements INetwork {
     return this.peerManager.hasSomeConnectedPeer();
   }
 
-  async publishBeaconBlockMaybeBlobs(beaconAndBlobs: BlockImport): Promise<void> {
-    const fns: (() => Promise<unknown>)[] = [
-      // Always publish on beacon topic
-      () => this.gossip.publishBeaconBlock(beaconAndBlobs.block),
-    ];
+  publishBeaconBlockMaybeBlobs(blockImport: BlockImport): Promise<void> {
+    switch (blockImport.type) {
+      case BlockImportType.preEIP4844:
+        return this.gossip.publishBeaconBlock(blockImport.block);
 
-    // TODO EIP-4844: Open question if broadcast to both block topic + block_and_blobs topic
-    if (this.config.getForkSeq(beaconAndBlobs.block.message.slot) >= ForkSeq.eip4844) {
-      const {block, blobs} = beaconAndBlobs;
-      if (!blobs) {
-        throw Error("blobs not defined for post eip4844 block");
-      }
-      fns.push(() =>
-        this.gossip.publishSignedBeaconBlockAndBlobsSidecar({
-          beaconBlock: block as eip4844.SignedBeaconBlock,
-          blobsSidecar: blobs,
-        })
-      );
+      case BlockImportType.postEIP4844:
+        return this.gossip.publishSignedBeaconBlockAndBlobsSidecar({
+          beaconBlock: blockImport.block as eip4844.SignedBeaconBlock,
+          blobsSidecar: blockImport.blobs,
+        });
+
+      case BlockImportType.postEIP4844OldBlobs:
+        throw Error(`Attempting to broadcast old BlockImport slot ${blockImport.block.message.slot}`);
     }
-
-    await promiseAllMaybeAsync(fns);
   }
 
   async beaconBlocksMaybeBlobsByRange(
@@ -232,7 +224,16 @@ export class Network implements INetwork {
   ): Promise<BlockImport[]> {
     // TODO EIP-4844: Assumes all blocks in the same epoch
     // TODO EIP-4844: Ensure all blocks are in the same epoch
-    if (this.config.getForkSeq(request.startSlot) >= ForkSeq.eip4844) {
+    if (this.config.getForkSeq(request.startSlot) < ForkSeq.eip4844) {
+      const blocks = await this.reqResp.beaconBlocksByRange(peerId, request);
+      return blocks.map((block) => getBlockImport.preEIP4844(this.config, block));
+    }
+
+    // Only request blobs if they are recent enough
+    else if (
+      computeEpochAtSlot(request.startSlot) >=
+      this.chain.clock.currentEpoch - this.config.MIN_EPOCHS_FOR_BLOBS_SIDECARS_REQUESTS
+    ) {
       // TODO EIP-4844: Do two requests at once for blocks and blobs
       const blocks = await this.reqResp.beaconBlocksByRange(peerId, request);
       const blobsSidecars = await this.reqResp.blobsSidecarsByRange(peerId, request);
@@ -251,15 +252,15 @@ export class Network implements INetwork {
           throw Error(`blob does not match block slot ${block.message.slot} != ${blobsSidecar.beaconBlockSlot}`);
         }
 
-        blockImports.push({block, blobs: blobsSidecar});
+        blockImports.push(getBlockImport.postEIP4844(this.config, block, blobsSidecar));
       }
       return blockImports;
     }
 
-    // Regular call
+    // Post EIP-4844 but old blobs
     else {
       const blocks = await this.reqResp.beaconBlocksByRange(peerId, request);
-      return blocks.map((block) => ({block, blobs: null}));
+      return blocks.map((block) => getBlockImport.postEIP4844OldBlobs(this.config, block));
     }
   }
 
@@ -270,59 +271,64 @@ export class Network implements INetwork {
     // Assume all requests are post EIP-4844
     if (this.config.getForkSeq(this.chain.forkChoice.getFinalizedBlock().slot) >= ForkSeq.eip4844) {
       const blocksAndBlobs = await this.reqResp.beaconBlockAndBlobsSidecarByRoot(peerId, request);
-      return blocksAndBlobs.map(({beaconBlock, blobsSidecar}) => ({block: beaconBlock, blobs: blobsSidecar}));
+      return blocksAndBlobs.map(({beaconBlock, blobsSidecar}) =>
+        getBlockImport.postEIP4844(this.config, beaconBlock, blobsSidecar)
+      );
     }
 
     // Assume all request are pre EIP-4844
-    if (this.config.getForkSeq(this.clock.currentSlot) < ForkSeq.eip4844) {
+    else if (this.config.getForkSeq(this.clock.currentSlot) < ForkSeq.eip4844) {
       const blocks = await this.reqResp.beaconBlocksByRoot(peerId, request);
-      return blocks.map((block) => ({block, blobs: null}));
+      return blocks.map((block) => getBlockImport.preEIP4844(this.config, block));
     }
 
     // NOTE: Consider blocks may be post or pre EIP-4844
     // TODO EIP-4844: Request either blocks, or blocks+blobs
-    const results = await Promise.all(
-      request.map(
-        async (beaconBlockRoot): Promise<BlockImport | null> => {
-          const [resultBlockBlobs, resultBlocks] = await Promise.allSettled([
-            this.reqResp.beaconBlockAndBlobsSidecarByRoot(peerId, []),
-            this.reqResp.beaconBlocksByRoot(peerId, [beaconBlockRoot]),
-          ]);
+    else {
+      const results = await Promise.all(
+        request.map(
+          async (beaconBlockRoot): Promise<BlockImport | null> => {
+            const [resultBlockBlobs, resultBlocks] = await Promise.allSettled([
+              this.reqResp.beaconBlockAndBlobsSidecarByRoot(peerId, []),
+              this.reqResp.beaconBlocksByRoot(peerId, [beaconBlockRoot]),
+            ]);
 
-          if (resultBlockBlobs.status === "fulfilled" && resultBlockBlobs.value.length === 1) {
-            const {beaconBlock, blobsSidecar} = resultBlockBlobs.value[0];
-            return {block: beaconBlock, blobs: blobsSidecar};
-          }
+            if (resultBlockBlobs.status === "fulfilled" && resultBlockBlobs.value.length === 1) {
+              const {beaconBlock, blobsSidecar} = resultBlockBlobs.value[0];
+              return getBlockImport.postEIP4844(this.config, beaconBlock, blobsSidecar);
+            }
 
-          if (resultBlocks.status === "fulfilled") {
-            if (resultBlocks.value.length === 1) {
-              const block = resultBlocks.value[0];
+            if (resultBlocks.status === "rejected") {
+              return Promise.reject(resultBlocks.reason);
+            }
 
-              if (this.config.getForkSeq(block.message.slot) >= ForkSeq.eip4844) {
-                // beaconBlockAndBlobsSidecarByRoot should have succeeded
-                if (resultBlockBlobs.status === "rejected") {
-                  // Recycle existing error for beaconBlockAndBlobsSidecarByRoot if any
-                  return Promise.reject(resultBlockBlobs.reason);
-                } else {
-                  throw Error(
-                    `Received post EIP-4844 ${beaconBlockRoot} over beaconBlocksByRoot not beaconBlockAndBlobsSidecarByRoot`
-                  );
-                }
-              }
-
-              // Block is pre EIP-4844
-              return {block, blobs: null};
-            } else {
+            // Promise fullfilled + no result = block not found
+            if (resultBlocks.value.length < 1) {
               return null;
             }
-          } else {
-            return Promise.reject(resultBlocks.reason);
-          }
-        }
-      )
-    );
 
-    return results.filter((blockOrNull): blockOrNull is BlockImport => blockOrNull !== null);
+            const block = resultBlocks.value[0];
+
+            if (this.config.getForkSeq(block.message.slot) >= ForkSeq.eip4844) {
+              // beaconBlockAndBlobsSidecarByRoot should have succeeded
+              if (resultBlockBlobs.status === "rejected") {
+                // Recycle existing error for beaconBlockAndBlobsSidecarByRoot if any
+                return Promise.reject(resultBlockBlobs.reason);
+              } else {
+                throw Error(
+                  `Received post EIP-4844 ${beaconBlockRoot} over beaconBlocksByRoot not beaconBlockAndBlobsSidecarByRoot`
+                );
+              }
+            }
+
+            // Block is pre EIP-4844
+            return getBlockImport.preEIP4844(this.config, block);
+          }
+        )
+      );
+
+      return results.filter((blockOrNull): blockOrNull is BlockImport => blockOrNull !== null);
+    }
   }
 
   /**

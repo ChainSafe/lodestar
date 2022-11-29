@@ -34,7 +34,7 @@ import {PeerAction} from "../../peers/index.js";
 import {validateLightClientFinalityUpdate} from "../../../chain/validation/lightClientFinalityUpdate.js";
 import {validateLightClientOptimisticUpdate} from "../../../chain/validation/lightClientOptimisticUpdate.js";
 import {validateGossipBlobsSidecar} from "../../../chain/validation/blobsSidecar.js";
-import {BlockImport} from "../../../chain/blocks/types.js";
+import {BlockImport, getBlockImport} from "../../../chain/blocks/types.js";
 
 /**
  * Gossip handler options as part of network options
@@ -152,27 +152,25 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
 
   return {
     [GossipType.beacon_block]: async (signedBlock, topic, peerIdStr, seenTimestampSec) => {
-      const blockImport: BlockImport = {block: signedBlock, blobs: null};
-      await validateBeaconBlock(blockImport, topic.fork, peerIdStr);
-
       // TODO EIP-4844: Can blocks be received by this topic?
       if (config.getForkSeq(signedBlock.message.slot) >= ForkSeq.eip4844) {
         throw new GossipActionError(GossipAction.REJECT, {code: "POST_EIP4844_BLOCK"});
       }
 
+      const blockImport = getBlockImport.preEIP4844(config, signedBlock);
+      await validateBeaconBlock(blockImport, topic.fork, peerIdStr);
       handleValidBeaconBlock(blockImport, peerIdStr, seenTimestampSec);
     },
 
     [GossipType.beacon_block_and_blobs_sidecar]: async (blockAndBlocks, topic, peerIdStr, seenTimestampSec) => {
       const {beaconBlock, blobsSidecar} = blockAndBlocks;
-      const blockImport: BlockImport = {block: beaconBlock, blobs: blobsSidecar};
-
       // TODO EIP-4844: Should throw for pre fork blocks?
       if (config.getForkSeq(beaconBlock.message.slot) < ForkSeq.eip4844) {
         throw new GossipActionError(GossipAction.REJECT, {code: "PRE_EIP4844_BLOCK"});
       }
 
       // Validate block + blob. Then forward, then handle both
+      const blockImport = getBlockImport.postEIP4844(config, beaconBlock, blobsSidecar);
       await validateBeaconBlock(blockImport, topic.fork, peerIdStr);
       await validateGossipBlobsSidecar(beaconBlock, blobsSidecar);
       handleValidBeaconBlock(blockImport, peerIdStr, seenTimestampSec);
