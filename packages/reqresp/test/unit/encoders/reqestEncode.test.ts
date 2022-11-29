@@ -1,11 +1,10 @@
-import {expect} from "chai";
 import all from "it-all";
 import {pipe} from "it-pipe";
 import {LodestarError} from "@lodestar/utils";
 import {requestEncode} from "../../../src/encoders/requestEncode.js";
 import {requestEncodersCases, requestEncodersErrorCases} from "../../fixtures/encoders.js";
 import {expectRejectedWithLodestarError} from "../../utils/errors.js";
-import {expectEqualByteChunks, expectInEqualByteChunks} from "../../utils/index.js";
+import {expectEqualByteChunks} from "../../utils/index.js";
 
 describe("encoders / requestEncode", () => {
   describe("valid cases", () => {

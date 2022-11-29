@@ -62,14 +62,17 @@ export class MockLibP2pStream implements Stream {
   source: Stream["source"];
   resultChunks: Uint8Array[] = [];
 
-  constructor(requestChunks: Uint8ArrayList[]) {
-    this.source = arrToSource(requestChunks);
+  constructor(requestChunks: Uint8ArrayList[] | AsyncIterable<any> | AsyncGenerator<any>, protocol?: string) {
+    this.source = Array.isArray(requestChunks) ? arrToSource(requestChunks) : requestChunks;
+    this.stat.protocol = protocol ?? "mock";
   }
+
   sink: Stream["sink"] = async (source) => {
     for await (const chunk of source) {
       this.resultChunks.push(chunk.subarray());
     }
   };
+
   // eslint-disable-next-line @typescript-eslint/no-empty-function
   close: Stream["close"] = () => {};
   // eslint-disable-next-line @typescript-eslint/no-empty-function

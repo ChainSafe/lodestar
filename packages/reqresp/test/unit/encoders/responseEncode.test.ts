@@ -3,41 +3,12 @@ import chaiAsPromised from "chai-as-promised";
 import all from "it-all";
 import {pipe} from "it-pipe";
 import {LodestarError} from "@lodestar/utils";
-import {allForks} from "@lodestar/types";
-import {responseEncodeError, responseEncodeSuccess} from "../../../src/encoders/responseEncode.js";
-import {RespStatus} from "../../../src/interface.js";
-import {EncodedPayload, EncodedPayloadType, ProtocolDefinition} from "../../../src/types.js";
 import {ResponseChunk, responseEncodersErrorTestCases, responseEncodersTestCases} from "../../fixtures/encoders.js";
-import {blocksToReqRespBlockResponses} from "../../utils/block.js";
 import {expectRejectedWithLodestarError} from "../../utils/errors.js";
-import {arrToSource, expectEqualByteChunks} from "../../utils/index.js";
-import {beaconConfig} from "../../fixtures/messages.js";
+import {expectEqualByteChunks} from "../../utils/index.js";
+import {responseEncode} from "../../utils/response.js";
 
 chai.use(chaiAsPromised);
-
-async function* responseEncode(
-  responseChunks: ResponseChunk[],
-  protocol: ProtocolDefinition<any, any>
-): AsyncIterable<Buffer> {
-  for (const chunk of responseChunks) {
-    if (chunk.status === RespStatus.SUCCESS) {
-      if (chunk.payload.type === EncodedPayloadType.bytes) {
-        return [chunk.payload.bytes];
-      }
-
-      const lodestarResponseBodies = protocol.method.startsWith("beacon_blocks")
-        ? blocksToReqRespBlockResponses(([chunk.payload.data] as unknown) as allForks.SignedBeaconBlock[], beaconConfig)
-        : [chunk.payload];
-
-      yield* pipe(
-        arrToSource(lodestarResponseBodies as EncodedPayload<allForks.SignedBeaconBlock>[]),
-        responseEncodeSuccess(protocol)
-      );
-    } else {
-      yield* responseEncodeError(protocol, chunk.status, chunk.errorMessage);
-    }
-  }
-}
 
 describe("encoders / responseEncode", () => {
   describe("valid cases", () => {

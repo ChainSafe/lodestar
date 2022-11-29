@@ -1,12 +1,11 @@
-import {expect} from "chai";
-import {pipe} from "it-pipe";
-import chai from "chai";
+import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
+import {pipe} from "it-pipe";
 import {LodestarError} from "@lodestar/utils";
 import {requestDecode} from "../../../src/encoders/requestDecode.js";
 import {requestEncodersCases, requestEncodersErrorCases} from "../../fixtures/encoders.js";
-import {arrToSource} from "../../utils/index.js";
 import {expectRejectedWithLodestarError} from "../../utils/errors.js";
+import {arrToSource} from "../../utils/index.js";
 
 chai.use(chaiAsPromised);
 
