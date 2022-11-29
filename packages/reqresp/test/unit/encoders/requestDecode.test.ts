@@ -13,6 +13,8 @@ describe("encoders / requestDecode", () => {
   describe("valid cases", () => {
     for (const {id, protocol, requestBody, chunks} of requestEncodersCases) {
       it(`${id}`, async () => {
+        // TODO: Debug this type error
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         const decodedBody = await pipe(arrToSource(chunks), requestDecode(protocol));
         expect(decodedBody).to.equal(requestBody);
       });
