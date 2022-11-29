@@ -1,10 +1,9 @@
 import {altair, ssz} from "@lodestar/types";
-import {DOMAIN_SYNC_COMMITTEE} from "@lodestar/params";
+import {DOMAIN_SYNC_COMMITTEE, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 import {byteArrayEquals} from "@chainsafe/ssz";
 import {computeSigningRoot, ISignatureSet, SignatureSetType, verifySignatureSet} from "../util/index.js";
 import {CachedBeaconStateAllForks} from "../types.js";
 import {G2_POINT_AT_INFINITY} from "../constants/index.js";
-import {getUnparticipantValues} from "../util/array.js";
 import {decreaseBalance, increaseBalance} from "../util/index.js";
 
 export function processSyncAggregate(
@@ -12,14 +11,12 @@ export function processSyncAggregate(
   block: altair.BeaconBlock,
   verifySignatures = true
 ): void {
-  const {syncParticipantReward, syncProposerReward} = state.epochCtx;
   const committeeIndices = state.epochCtx.currentSyncCommitteeIndexed.validatorIndices;
-  const participantIndices = block.body.syncAggregate.syncCommitteeBits.intersectValues(committeeIndices);
-  const unparticipantIndices = getUnparticipantValues(participantIndices, committeeIndices);
 
   // different from the spec but not sure how to get through signature verification for default/empty SyncAggregate in the spec test
   if (verifySignatures) {
     // This is to conform to the spec - we want the signature to be verified
+    const participantIndices = block.body.syncAggregate.syncCommitteeBits.intersectValues(committeeIndices);
     const signatureSet = getSyncCommitteeSignatureSet(state, block, participantIndices);
     // When there's no participation we consider the signature valid and just ignore i
     if (signatureSet !== null && !verifySignatureSet(signatureSet)) {
@@ -27,19 +24,35 @@ export function processSyncAggregate(
     }
   }
 
-  // Proposer reward
+  const {syncParticipantReward, syncProposerReward} = state.epochCtx;
+  const {syncCommitteeBits} = block.body.syncAggregate;
   const proposerIndex = state.epochCtx.getBeaconProposer(state.slot);
-  increaseBalance(state, proposerIndex, syncProposerReward * participantIndices.length);
+  let proposerBalance = state.balances.get(proposerIndex);
 
-  // Positive rewards for participants
-  for (const index of participantIndices) {
-    increaseBalance(state, index, syncParticipantReward);
+  for (let i = 0; i < SYNC_COMMITTEE_SIZE; i++) {
+    const index = committeeIndices[i];
+
+    if (syncCommitteeBits.get(i)) {
+      // Positive rewards for participants
+      if (index === proposerIndex) {
+        proposerBalance += syncParticipantReward;
+      } else {
+        increaseBalance(state, index, syncParticipantReward);
+      }
+      // Proposer reward
+      proposerBalance += syncProposerReward;
+    } else {
+      // Negative rewards for non participants
+      if (index === proposerIndex) {
+        proposerBalance = Math.max(0, proposerBalance - syncParticipantReward);
+      } else {
+        decreaseBalance(state, index, syncParticipantReward);
+      }
+    }
   }
 
-  // Negative rewards for non participants
-  for (const index of unparticipantIndices) {
-    decreaseBalance(state, index, syncParticipantReward);
-  }
+  // Apply proposer balance
+  state.balances.set(proposerIndex, proposerBalance);
 }
 
 export function getSyncCommitteeSignatureSet(
