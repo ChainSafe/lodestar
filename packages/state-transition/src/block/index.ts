@@ -27,20 +27,29 @@ export * from "./initiateValidatorExit.js";
 export * from "./isValidIndexedAttestation.js";
 export * from "./externalData.js";
 
+export interface ProcessBlockOpts {
+  verifySignatures?: boolean;
+  disabledWithdrawals?: boolean;
+}
+
 export function processBlock(
   fork: ForkSeq,
   state: CachedBeaconStateAllForks,
   block: allForks.FullOrBlindedBeaconBlock,
-  externalData: BlockExternalData,
-  verifySignatures = true
+  externalData: BlockExternalData & ProcessBlockOpts,
+  opts?: ProcessBlockOpts
 ): void {
+  const {verifySignatures = true} = opts ?? {};
+
   processBlockHeader(state, block);
 
   // The call to the process_execution_payload must happen before the call to the process_randao as the former depends
   // on the randao_mix computed with the reveal of the previous block.
   if (fork >= ForkSeq.bellatrix && isExecutionEnabled(state as CachedBeaconStateBellatrix, block)) {
     const fullOrBlindedPayload = getFullOrBlindedPayload(block);
-    if (fork >= ForkSeq.capella) {
+    // TODO EIP-4844: Allow to disable withdrawals for interop testing
+    // https://github.com/ethereum/consensus-specs/blob/b62c9e877990242d63aa17a2a59a49bc649a2f2e/specs/eip4844/beacon-chain.md#disabling-withdrawals
+    if (fork >= ForkSeq.capella && !opts?.disabledWithdrawals) {
       processWithdrawals(
         state as CachedBeaconStateCapella,
         fullOrBlindedPayload as capella.FullOrBlindedExecutionPayload

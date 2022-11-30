@@ -47,6 +47,8 @@ export type BlockProcessOpts = {
    * will still issue fcU for block proposal
    */
   disableImportExecutionFcU?: boolean;
+  // TODO EIP-4844: to test without capella
+  disabledWithdrawals?: boolean;
 };
 
 export const defaultChainOptions: IChainOptions = {

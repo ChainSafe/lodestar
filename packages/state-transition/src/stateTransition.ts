@@ -32,6 +32,8 @@ export type StateTransitionOpts = BlockExternalData &
     verifyStateRoot?: boolean;
     verifyProposer?: boolean;
     verifySignatures?: boolean;
+    // TODO EIP-4844: Merge this options with ProcessBlockOpts
+    disabledWithdrawals?: boolean;
   };
 
 /**
@@ -47,7 +49,7 @@ export function stateTransition(
   },
   metrics?: IBeaconStateTransitionMetrics | null
 ): CachedBeaconStateAllForks {
-  const {verifyStateRoot = true, verifyProposer = true, verifySignatures = true} = options;
+  const {verifyStateRoot = true, verifyProposer = true} = options;
 
   const block = signedBlock.message;
   const blockSlot = block.slot;
@@ -74,7 +76,7 @@ export function stateTransition(
 
   const timer = metrics?.stfnProcessBlock.startTimer();
   try {
-    processBlock(fork, postState, block, options, verifySignatures);
+    processBlock(fork, postState, block, options, options);
   } finally {
     timer?.();
   }
