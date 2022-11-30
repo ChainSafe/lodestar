@@ -1,17 +1,21 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {mkdir, writeFile} from "node:fs/promises";
+import fs from "node:fs";
 import {dirname, join} from "node:path";
 import got from "got";
 import {Keystore} from "@chainsafe/bls-keystore";
 import {getClient} from "@lodestar/api/beacon";
+import {chainConfigToJson} from "@lodestar/config";
 import {getClient as keyManagerGetClient} from "@lodestar/api/keymanager";
-import {LogLevel} from "@lodestar/utils";
+import {dumpYaml, LogLevel} from "@lodestar/utils";
 import {IBeaconArgs} from "../../../../src/cmds/beacon/options.js";
 import {IValidatorCliArgs} from "../../../../src/cmds/validator/options.js";
 import {IGlobalArgs} from "../../../../src/options/globalOptions.js";
 import {CLClient, CLClientGenerator, CLClientGeneratorOptions, JobOptions, Runner, RunnerType} from "../interfaces.js";
 import {LODESTAR_BINARY_PATH} from "../constants.js";
 import {isChildProcessRunner} from "../runner/index.js";
+
+const MOCK_ETH1_GENESIS_HASH = "0xfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfb";
 
 export const generateLodestarBeaconNode: CLClientGenerator<CLClient.Lodestar> = (opts, runner) => {
   if (!isChildProcessRunner(runner)) {
@@ -36,16 +40,18 @@ export const generateLodestarBeaconNode: CLClientGenerator<CLClient.Lodestar> = 
 
   const jwtSecretPath = join(dataDir, "jwtsecret");
   const rcConfigPath = join(dataDir, "rc_config.json");
+  const configPath = join(dataDir, "config.yaml");
 
-  const rcConfig = ({
+  const rcConfig: Partial<IBeaconArgs & IGlobalArgs> = {
     network: "dev",
     preset: "minimal",
     dataDir,
     genesisStateFile: genesisStateFilePath,
+    paramsFile: configPath,
     rest: true,
     "rest.address": address,
     "rest.port": restPort,
-    "rest.namespace": "*",
+    "rest.namespace": ["*"],
     "sync.isSingleNode": false,
     "network.allowPublishToZeroPeers": false,
     discv5: true,
@@ -54,21 +60,17 @@ export const generateLodestarBeaconNode: CLClientGenerator<CLClient.Lodestar> = 
     port: port,
     metrics: false,
     bootnodes: [],
-    "params.SECONDS_PER_SLOT": String(config.SECONDS_PER_SLOT),
-    "params.GENESIS_DELAY": String(config.GENESIS_DELAY),
-    "params.ALTAIR_FORK_EPOCH": String(config.ALTAIR_FORK_EPOCH),
-    "params.BELLATRIX_FORK_EPOCH": String(config.BELLATRIX_FORK_EPOCH),
-    "params.TERMINAL_TOTAL_DIFFICULTY": String(config.TERMINAL_TOTAL_DIFFICULTY),
     logPrefix: id,
-    logFormatGenesisTime: `${genesisTime}`,
+    logFormatGenesisTime: genesisTime,
     logLevel: LogLevel.debug,
     logFileDailyRotate: 0,
     logFile: "none",
-    eth1: true,
+    eth1: false,
     "execution.urls": [engineUrl],
+    "execution.engineMock": MOCK_ETH1_GENESIS_HASH,
     "jwt-secret": jwtSecretPath,
     ...clientOptions,
-  } as unknown) as IBeaconArgs & IGlobalArgs;
+  };
 
   const validatorClientsJobs: JobOptions[] = [];
   if (opts.localKeys.length > 0 || opts.remoteKeys.length > 0) {
@@ -91,12 +93,13 @@ export const generateLodestarBeaconNode: CLClientGenerator<CLClient.Lodestar> = 
         await mkdir(dataDir, {recursive: true});
         await writeFile(rcConfigPath, JSON.stringify(rcConfig, null, 2));
         await writeFile(jwtSecretPath, jwtSecretHex);
+        fs.writeFileSync(configPath, dumpYaml(chainConfigToJson(config))); // There is no need to use async fs here =D
       },
       cli: {
         command: LODESTAR_BINARY_PATH,
         args: ["beacon", "--rcConfig", rcConfigPath],
         env: {
-          DEBUG: "*,-winston:*",
+          DEBUG: process.env.DISABLE_DEBUG_LOGS ? "" : "*,-winston:*",
         },
       },
       logs: {
@@ -137,19 +140,18 @@ export const generateLodestarValidatorJobs = (
 
   const {dataDir: rootDir, id, address, keyManagerPort, localKeys, restPort, config, genesisTime} = opts;
 
+  const configPath = join(rootDir, "config.yaml");
+
   const rcConfig = ({
     network: "dev",
     preset: "minimal",
     dataDir: rootDir,
+    paramsFile: configPath,
     server: `http://${address}:${restPort}/`,
     keymanager: true,
     "keymanager.authEnabled": false,
     "keymanager.address": address,
     "keymanager.port": keyManagerPort,
-    "params.SECONDS_PER_SLOT": String(config.SECONDS_PER_SLOT),
-    "params.GENESIS_DELAY": String(config.GENESIS_DELAY),
-    "params.ALTAIR_FORK_EPOCH": String(config.ALTAIR_FORK_EPOCH),
-    "params.BELLATRIX_FORK_EPOCH": String(config.BELLATRIX_FORK_EPOCH),
     logPrefix: id,
     logFormatGenesisTime: genesisTime,
     logLevel: LogLevel.debug,
@@ -164,6 +166,7 @@ export const generateLodestarValidatorJobs = (
       await mkdir(`${rootDir}/keystores`);
       await writeFile(join(rootDir, "password.txt"), "password");
       await writeFile(join(rootDir, "rc_config.json"), JSON.stringify(rcConfig, null, 2));
+      fs.writeFileSync(configPath, dumpYaml(chainConfigToJson(config))); // There is no need to use async fs here =D
 
       // Split half of the keys to the keymanager
       for (const key of localKeys) {
@@ -178,7 +181,7 @@ export const generateLodestarValidatorJobs = (
       command: LODESTAR_BINARY_PATH,
       args: ["validator", "--rcConfig", join(rootDir, "rc_config.json")],
       env: {
-        DEBUG: "*,-winston:*",
+        DEBUG: process.env.DISABLE_DEBUG_LOGS ? "" : "*,-winston:*",
       },
     },
     logs: {

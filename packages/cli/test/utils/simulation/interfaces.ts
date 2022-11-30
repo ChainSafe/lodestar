@@ -31,6 +31,7 @@ export enum CLClient {
 }
 
 export enum ELClient {
+  Mock = "mock",
   Geth = "geth",
   Nethermind = "nethermind",
 }
@@ -45,6 +46,7 @@ export type CLClientsOptions = {
 };
 
 export type ELClientsOptions = {
+  [ELClient.Mock]: string[];
   [ELClient.Geth]: string[];
   [ELClient.Nethermind]: string[];
 };
@@ -118,12 +120,17 @@ export interface ELNode {
 export interface NodePair {
   readonly id: string;
   readonly cl: CLNode;
-  readonly el: ELNode;
+  readonly el: ELNode | null;
+}
+
+export interface PairJobs {
+  el: Job | null;
+  cl: Job;
 }
 
 export interface NodePairResult {
   nodePair: NodePair;
-  jobs: {el: Job; cl: Job};
+  jobs: PairJobs;
 }
 
 export type CLClientGenerator<C extends CLClient> = (

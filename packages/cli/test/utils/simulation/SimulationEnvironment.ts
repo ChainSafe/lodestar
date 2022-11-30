@@ -38,6 +38,7 @@ import {
   NodePair,
   NodePairOptions,
   NodePairResult,
+  PairJobs,
   SimulationInitOptions,
   SimulationOptions,
 } from "./interfaces.js";
@@ -46,6 +47,7 @@ import {DockerRunner} from "./runner/DockerRunner.js";
 import {SimulationTracker} from "./SimulationTracker.js";
 import {getEstimatedTTD} from "./utils/index.js";
 
+const MOCK_ETH1_GENESIS_HASH = "0xfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfb";
 export const SHARED_JWT_SECRET = "0xdc6457099f127cf0bac78de8b297df04951281909db4f58b43def7c7151e765d";
 
 /* eslint-disable no-console */
@@ -62,7 +64,7 @@ export class SimulationEnvironment {
   readonly forkConfig: IChainForkConfig;
   readonly options: SimulationOptions;
 
-  private readonly jobs: {cl: Job; el: Job}[] = [];
+  private readonly jobs: PairJobs[] = [];
   private keysCount = 0;
   private nodePairCount = 0;
   private genesisState?: BeaconStateAllForks;
@@ -160,18 +162,27 @@ export class SimulationEnvironment {
       await mkdir(this.options.rootDir);
 
       await this.dockerRunner.start();
-      await Promise.all(this.jobs.map((j) => j.el.start()));
+      await Promise.all(this.jobs.map((j) => j.el?.start()));
 
       for (let i = 0; i < this.nodes.length; i++) {
+        const nodeEl = this.nodes[i].el;
+
         // Get genesis block hash
-        const eth1Genesis = await this.nodes[i].el.provider.getBlockByNumber(0);
-        if (!eth1Genesis) {
-          throw new Error(`Eth1 genesis not found for node "${this.nodes[i].id}"`);
+        let eth1GenesisHash: string;
+        if (!nodeEl) {
+          eth1GenesisHash = MOCK_ETH1_GENESIS_HASH;
+        } else {
+          const eth1Genesis = await nodeEl.provider.getBlockByNumber(0);
+          if (!eth1Genesis) {
+            throw new Error(`Eth1 genesis not found for node "${this.nodes[i].id}"`);
+          }
+          eth1GenesisHash = eth1Genesis.hash;
         }
 
+        // TODO FOR NAZAR: Create state only once, eth1 genesis hash must be equal on all hosts
         const genesisState = nodeUtils.initDevState(this.forkConfig, this.keysCount, {
           genesisTime: this.options.genesisTime,
-          eth1BlockHash: fromHexString(eth1Genesis.hash),
+          eth1BlockHash: fromHexString(eth1GenesisHash),
         }).state;
 
         this.genesisState = genesisState;
@@ -209,7 +220,7 @@ export class SimulationEnvironment {
     console.log(`Simulation environment "${this.options.id}" is stopping: ${message}`);
     this.options.controller.abort();
     await this.tracker.stop();
-    await Promise.all(this.jobs.map((j) => j.el.stop()));
+    await Promise.all(this.jobs.map((j) => j.el?.stop()));
     await Promise.all(this.jobs.map((j) => j.cl.stop()));
     await this.externalSigner.stop();
     await this.dockerRunner.stop();
@@ -250,8 +261,8 @@ export class SimulationEnvironment {
     const elClient = this.createELNode(el, {id, mining});
 
     return {
-      nodePair: {id, el: elClient.node, cl: clClient.node},
-      jobs: {el: elClient.job, cl: clClient.job},
+      nodePair: {id, el: elClient?.node ?? null, cl: clClient.node},
+      jobs: {el: elClient?.job ?? null, cl: clClient.job},
     };
   }
 
@@ -293,7 +304,7 @@ export class SimulationEnvironment {
   private createELNode<E extends ELClient>(
     client: E | {type: E; options: ELClientsOptions[E]},
     options: AtLeast<ELGeneratorClientOptions, "id">
-  ): {job: Job; node: ELNode} {
+  ): {job: Job; node: ELNode} | null {
     const clientType = typeof client === "object" ? client.type : client;
     const clientOptions = typeof client === "object" ? client.options : undefined;
 
@@ -316,6 +327,8 @@ export class SimulationEnvironment {
     };
 
     switch (clientType) {
+      case ELClient.Mock:
+        return null;
       case ELClient.Geth: {
         return generateGethNode(opts as ELGeneratorClientOptions<ELClient.Geth>, this.dockerRunner);
       }

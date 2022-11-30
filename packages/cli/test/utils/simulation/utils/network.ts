@@ -15,15 +15,15 @@ export async function connectNewNode(newNode: NodePair, nodes: NodePair[]): Prom
   const clIdentity = (await newNode.cl.api.node.getNetworkIdentity()).data;
   if (!clIdentity.peerId) return;
 
-  const elIdentity = await newNode.el.provider.admin.nodeInfo();
-  if (!elIdentity.enode) return;
+  const elIdentity = await newNode.el?.provider.admin.nodeInfo();
+  if (elIdentity && !elIdentity.enode) return;
 
   for (const node of nodes) {
     if (node === newNode) continue;
 
     // Nethermind had a bug in admin_addPeer RPC call
     // https://github.com/NethermindEth/nethermind/issues/4876
-    if (node.el.client !== ELClient.Nethermind) {
+    if (elIdentity && node.el && node.el.client !== ELClient.Nethermind) {
       await node.el.provider.admin.addPeer(elIdentity.enode);
     }
 
