@@ -5,6 +5,7 @@ import {describeCliTest} from "../utils/childprocRunner.js";
 import {itDone} from "../utils/runUtils.js";
 
 describeCliTest("Run dev command", function ({spawnCli}) {
+  this.timeout(60_000);
   itDone("Run dev command with no --dataDir until beacon api is listening", async function (done) {
     const beaconPort = 39011;
 

@@ -42,7 +42,7 @@ describeCliTest("voluntaryExit cmd", function ({spawnCli}) {
         const head = await client.beacon.getBlockHeader("head");
         if (head.data.header.message.slot < 1) throw Error("pre-genesis");
       },
-      {retryDelay: 1000, retries: 20}
+      {retryDelay: 2000, retries: 20}
     );
 
     const indexesToExit = [0, 1];
