@@ -52,6 +52,10 @@ export const SHARED_JWT_SECRET = "0xdc6457099f127cf0bac78de8b297df04951281909db4
 
 /* eslint-disable no-console */
 
+interface StartOpts {
+  runTimeoutMs: number;
+}
+
 export class SimulationEnvironment {
   readonly nodes: NodePair[] = [];
   readonly clock: EpochClock;
@@ -136,12 +140,16 @@ export class SimulationEnvironment {
     return env;
   }
 
-  async start(timeout: number): Promise<void> {
-    try {
-      setTimeout(async () => {
-        await this.stop(1, "On timeout");
-      }, timeout);
+  async start(opts: StartOpts): Promise<void> {
+    setTimeout(() => {
+      this.stop(1, "Overall run timeout").catch((e) => console.error("Error on stop", e));
+    }, opts.runTimeoutMs);
 
+    const startTimeout = setTimeout(() => {
+      this.stop(1, "Start timeout, no genesis till").catch((e) => console.error("Error on stop", e));
+    }, this.clock.msToGenesis());
+
+    try {
       process.on("unhandledRejection", async (reason, promise) => {
         console.error("Unhandled Rejection at:", promise, "reason:", reason);
         await this.stop(1, "Unhandled promise rejection");
@@ -196,19 +204,33 @@ export class SimulationEnvironment {
 
       await Promise.all(this.jobs.map((j) => j.cl.start()));
 
-      await this.externalSigner.start();
-      for (const node of this.nodes) {
-        const remoteKeys = node.cl.remoteKeys;
-        this.externalSigner.addKeys(remoteKeys);
-        await node.cl.keyManager.importRemoteKeys(
-          remoteKeys.map((sk) => ({pubkey: sk.toPublicKey().toHex(), url: this.externalSigner.url}))
-        );
+      // Only start external signer if necessary
+      // TODO FOR NAZAR: Start 1 external signer per validator client, do not mix keys. Only start external signer if remote == true
+      if (this.nodes.some((node) => node.cl.keys.type === "remote")) {
+        console.log("Starting external signer...");
+        await this.externalSigner.start();
+        console.log("Started external signer");
+
+        for (const node of this.nodes) {
+          if (node.cl.keys.type === "remote") {
+            const {secretKeys} = node.cl.keys;
+            this.externalSigner.addKeys(secretKeys);
+            await node.cl.keyManager.importRemoteKeys(
+              secretKeys.map((sk) => ({pubkey: sk.toPublicKey().toHex(), url: this.externalSigner.url}))
+            );
+            console.log(`Imported remote keys for node ${node.id}`);
+          }
+        }
       }
+
+      console.log(`Start complete, seconds to genesis: ${this.clock.msToGenesis() / 1000}`);
 
       await this.tracker.start();
       await Promise.all(this.nodes.map((node) => this.tracker.track(node)));
     } catch (error) {
-      await this.stop(1, `Caused error in startup. ${(error as Error).message}`);
+      await this.stop(1, `Error in startup. ${(error as Error).stack}`);
+    } finally {
+      clearTimeout(startTimeout);
     }
   }
 
@@ -247,15 +269,14 @@ export class SimulationEnvironment {
 
     this.nodePairCount += 1;
 
-    const keys = Array.from({length: keysCount}, (_, vi) => {
+    const secretKeys = Array.from({length: keysCount}, (_, vi) => {
       return interopSecretKey(this.keysCount + vi);
     });
     this.keysCount += keysCount;
 
     const clClient = this.createCLNode(cl, {
       id,
-      remoteKeys: remote ? keys : [],
-      localKeys: remote ? [] : keys,
+      keys: keysCount > 0 ? (remote ? {type: "remote", secretKeys} : {type: "local", secretKeys}) : {type: "no-keys"},
     });
 
     const elClient = this.createELNode(el, {id, mining});
@@ -268,7 +289,7 @@ export class SimulationEnvironment {
 
   private createCLNode<C extends CLClient>(
     client: C | {type: C; options: CLClientsOptions[C]},
-    options?: AtLeast<CLClientGeneratorOptions, "remoteKeys" | "localKeys" | "id">
+    options?: AtLeast<CLClientGeneratorOptions, "keys" | "id">
   ): {job: Job; node: CLNode} {
     const clientType = typeof client === "object" ? client.type : client;
     const clientOptions = typeof client === "object" ? client.options : undefined;
@@ -287,8 +308,7 @@ export class SimulationEnvironment {
           keyManagerPort: KEY_MANAGER_BASE_PORT + this.nodePairCount + 1,
           config: this.forkConfig,
           address: "127.0.0.1",
-          remoteKeys: options?.remoteKeys ?? [],
-          localKeys: options?.localKeys ?? [],
+          keys: options?.keys ?? {type: "no-keys"},
           genesisTime: this.options.genesisTime,
           engineUrl: options?.engineUrl ?? `http://127.0.0.1:${EL_ENGINE_BASE_PORT + this.nodePairCount + 1}`,
           jwtSecretHex: options?.jwtSecretHex ?? SHARED_JWT_SECRET,

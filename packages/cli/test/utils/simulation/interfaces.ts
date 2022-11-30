@@ -60,6 +60,11 @@ export interface NodePairOptions<C extends CLClient = CLClient, E extends ELClie
   el: E | {type: E; options: ELClientsOptions[E]};
 }
 
+export type CLClientKeys =
+  | {type: "local"; secretKeys: SecretKey[]}
+  | {type: "remote"; secretKeys: SecretKey[]}
+  | {type: "no-keys"};
+
 export interface CLClientGeneratorOptions<C extends CLClient = CLClient> {
   id: string;
   dataDir: string;
@@ -70,8 +75,7 @@ export interface CLClientGeneratorOptions<C extends CLClient = CLClient> {
   port: number;
   keyManagerPort: number;
   config: IChainForkConfig;
-  localKeys: SecretKey[];
-  remoteKeys: SecretKey[];
+  keys: CLClientKeys;
   genesisTime: number;
   engineUrl: string;
   jwtSecretHex: string;
@@ -103,8 +107,7 @@ export interface CLNode {
   readonly url: string;
   readonly api: Api;
   readonly keyManager: KeyManagerApi;
-  readonly localKeys: SecretKey[];
-  readonly remoteKeys: SecretKey[];
+  readonly keys: CLClientKeys;
 }
 
 export interface ELNode {
@@ -142,7 +145,11 @@ export type ELClientGenerator<E extends ELClient> = (
   runner: Runner<RunnerType.ChildProcess> | Runner<RunnerType.Docker>
 ) => {job: Job; node: ELNode};
 
+export type HealthStatus = {ok: true} | {ok: false; reason: string; checkId: string};
+
 export interface JobOptions {
+  readonly id: string;
+
   readonly cli: {
     readonly command: string;
     readonly args: string[];
@@ -158,7 +165,7 @@ export interface JobOptions {
 
   // Will be called frequently to check the health of job startup
   // If not present then wait for the job to exit
-  health?(): Promise<boolean>;
+  health?(): Promise<HealthStatus>;
 
   // Called once before the `job.start` is called
   bootstrap?(): Promise<void>;

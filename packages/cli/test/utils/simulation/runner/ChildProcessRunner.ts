@@ -1,6 +1,8 @@
 import {EventEmitter} from "node:events";
 import {ChildProcessWithJobOptions, Job, JobOptions, Runner, RunnerEvent, RunnerType} from "../interfaces.js";
-import {startJobs, stopChildProcess} from "../utils/child_process.js";
+import {resolveNestedJobOptions, startChildProcess, stopChildProcess} from "../utils/child_process.js";
+
+/* eslint-disable no-console */
 
 export class ChildProcessRunner implements Runner<RunnerType.ChildProcess> {
   type = RunnerType.ChildProcess as const;
@@ -11,42 +13,44 @@ export class ChildProcessRunner implements Runner<RunnerType.ChildProcess> {
     this.emitter.on(event, cb);
   }
 
-  create(id: string, jobOptions: JobOptions[]): Job {
+  create(id: string, jobOptionsArr: JobOptions[]): Job {
     const childProcesses: ChildProcessWithJobOptions[] = [];
 
     const stop = async (): Promise<void> => {
-      // eslint-disable-next-line no-console
-      console.log(`Stopping "${id}"...`);
+      // TODO FOR NAZAR: Why are this events necessary?
       this.emitter.emit("stopping");
       for (const {jobOptions, childProcess} of childProcesses) {
+        console.log(`ChildProcessRunner stopping '${jobOptions.id}'...`);
         if (jobOptions.teardown) {
           await jobOptions.teardown();
         }
         await stopChildProcess(childProcess);
+        console.log(`ChildProcessRunner stopped '${jobOptions.id}'`);
       }
 
       // eslint-disable-next-line no-console
-      console.log(`Stopped "${id}"...`);
+
       this.emitter.emit("stopped");
     };
 
-    const start = (): Promise<void> =>
-      new Promise<void>((resolve, reject) => {
-        void (async () => {
-          try {
-            // eslint-disable-next-line no-console
-            console.log(`Starting "${id}"...`);
-            this.emitter.emit("starting");
-            childProcesses.push(...(await startJobs(jobOptions)));
-            // eslint-disable-next-line no-console
-            console.log(`Started "${id}"...`);
-            this.emitter.emit("started");
-            resolve();
-          } catch (err) {
-            reject(err);
-          }
-        })();
-      });
+    const start = async (): Promise<void> => {
+      const jobOptions = resolveNestedJobOptions(jobOptionsArr);
+
+      for (const job of jobOptions) {
+        if (job.bootstrap) {
+          console.log(`ChildProcessRunner bootstraping '${job.id}'...`);
+          await job.bootstrap();
+          console.log(`ChildProcessRunner bootstraped '${job.id}'`);
+        }
+
+        console.log(`ChildProcessRunner starting '${job.id}'...`);
+        childProcesses.push({
+          childProcess: await startChildProcess(job),
+          jobOptions: job,
+        });
+        console.log(`ChildProcessRunner started '${job.id}'`);
+      }
+    };
 
     return {id, start, stop, type: this.type};
   }

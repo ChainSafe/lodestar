@@ -29,8 +29,7 @@ export const generateLodestarBeaconNode: CLClientGenerator<CLClient.Lodestar> = 
     id,
     config,
     genesisStateFilePath,
-    remoteKeys,
-    localKeys,
+    keys,
     keyManagerPort,
     genesisTime,
     engineUrl,
@@ -73,7 +72,7 @@ export const generateLodestarBeaconNode: CLClientGenerator<CLClient.Lodestar> = 
   };
 
   const validatorClientsJobs: JobOptions[] = [];
-  if (opts.localKeys.length > 0 || opts.remoteKeys.length > 0) {
+  if (keys.type === "local" || keys.type === "remote") {
     validatorClientsJobs.push(
       generateLodestarValidatorJobs(
         {
@@ -89,6 +88,7 @@ export const generateLodestarBeaconNode: CLClientGenerator<CLClient.Lodestar> = 
 
   const job = runner.create(id, [
     {
+      id,
       bootstrap: async () => {
         await mkdir(dataDir, {recursive: true});
         await writeFile(rcConfigPath, JSON.stringify(rcConfig, null, 2));
@@ -108,9 +108,9 @@ export const generateLodestarBeaconNode: CLClientGenerator<CLClient.Lodestar> = 
       health: async () => {
         try {
           await got.get(`http://${address}:${restPort}/eth/v1/node/health`);
-          return true;
-        } catch {
-          return false;
+          return {ok: true};
+        } catch (e) {
+          return {ok: false, reason: (e as Error).message, checkId: "eth/v1/node/health query"};
         }
       },
       children: validatorClientsJobs,
@@ -121,8 +121,7 @@ export const generateLodestarBeaconNode: CLClientGenerator<CLClient.Lodestar> = 
     id,
     client: CLClient.Lodestar,
     url: `http://${address}:${restPort}`,
-    localKeys,
-    remoteKeys,
+    keys,
     api: getClient({baseUrl: `http://${address}:${restPort}`}, {config}),
     keyManager: keyManagerGetClient({baseUrl: `http://${address}:${keyManagerPort}`}, {config}),
   };
@@ -138,7 +137,11 @@ export const generateLodestarValidatorJobs = (
     throw new Error(`Runner "${runner.type}" not yet supported.`);
   }
 
-  const {dataDir: rootDir, id, address, keyManagerPort, localKeys, restPort, config, genesisTime} = opts;
+  const {dataDir: rootDir, id, address, keyManagerPort, keys, restPort, config, genesisTime} = opts;
+
+  if (keys.type === "no-keys") {
+    throw Error("Attempting to run a vc with keys.type == 'no-keys'");
+  }
 
   const configPath = join(rootDir, "config.yaml");
 
@@ -161,6 +164,7 @@ export const generateLodestarValidatorJobs = (
   } as unknown) as IValidatorCliArgs & IGlobalArgs;
 
   return {
+    id,
     bootstrap: async () => {
       await mkdir(rootDir);
       await mkdir(`${rootDir}/keystores`);
@@ -169,12 +173,14 @@ export const generateLodestarValidatorJobs = (
       fs.writeFileSync(configPath, dumpYaml(chainConfigToJson(config))); // There is no need to use async fs here =D
 
       // Split half of the keys to the keymanager
-      for (const key of localKeys) {
-        const keystore = await Keystore.create("password", key.toBytes(), key.toPublicKey().toBytes(), "");
-        await writeFile(
-          join(rootDir, "keystores", `${key.toPublicKey().toHex()}.json`),
-          JSON.stringify(keystore.toObject(), null, 2)
-        );
+      if (keys.type === "local") {
+        for (const key of keys.secretKeys) {
+          const keystore = await Keystore.create("password", key.toBytes(), key.toPublicKey().toBytes(), "");
+          await writeFile(
+            join(rootDir, "keystores", `${key.toPublicKey().toHex()}.json`),
+            JSON.stringify(keystore.toObject(), null, 2)
+          );
+        }
       }
     },
     cli: {
@@ -190,9 +196,9 @@ export const generateLodestarValidatorJobs = (
     health: async () => {
       try {
         await got.get(`http://${address}:${keyManagerPort}/eth/v1/keystores`);
-        return true;
-      } catch (err) {
-        return false;
+        return {ok: true};
+      } catch (e) {
+        return {ok: false, reason: (e as Error).message, checkId: "eth/v1/keystores query"};
       }
     },
   };

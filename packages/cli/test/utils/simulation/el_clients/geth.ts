@@ -67,6 +67,7 @@ export const generateGethNode: ELClientGenerator<ELClient.Geth> = (
   const jwtSecretGethPath = join(gethDataDir, "jwtsecret");
 
   const initJobOptions: JobOptions = {
+    id,
     bootstrap: async () => {
       await mkdir(dataDir, {recursive: true});
       await writeFile(genesisPath, JSON.stringify(getGethGenesisBlock(mode, {ttd, cliqueSealingPeriod})));
@@ -82,6 +83,7 @@ export const generateGethNode: ELClientGenerator<ELClient.Geth> = (
   };
 
   const importJobOptions: JobOptions = {
+    id,
     bootstrap: async () => {
       await writeFile(skPath, SECRET_KEY);
       await writeFile(passwordPath, PASSWORD);
@@ -108,6 +110,7 @@ export const generateGethNode: ELClientGenerator<ELClient.Geth> = (
   };
 
   const startJobOptions: JobOptions = {
+    id,
     cli: {
       command: binaryPath,
       args: [
@@ -151,12 +154,12 @@ export const generateGethNode: ELClientGenerator<ELClient.Geth> = (
     logs: {
       stdoutFilePath: logFilePath,
     },
-    health: async (): Promise<boolean> => {
+    health: async () => {
       try {
         await got.post(ethRpcUrl, {json: {jsonrpc: "2.0", method: "net_version", params: [], id: 67}});
-        return true;
+        return {ok: true};
       } catch (e) {
-        return false;
+        return {ok: false, reason: (e as Error).message, checkId: "JSON RPC query net_version"};
       }
     },
   };
