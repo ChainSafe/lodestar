@@ -116,3 +116,9 @@ export function isCapellaPayload(
     (payload as capella.ExecutionPayloadHeader).withdrawalsRoot !== undefined
   );
 }
+
+export function isCapellaPayloadHeader(
+  payload: capella.ExecutionPayload | capella.ExecutionPayloadHeader | capella.BlindedExecutionPayload 
+): payload is capella.ExecutionPayloadHeader {
+  return (payload as capella.ExecutionPayloadHeader).withdrawalsRoot !== undefined;
+}
