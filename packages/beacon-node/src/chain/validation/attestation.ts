@@ -76,6 +76,7 @@ export async function validateGossipAttestation(
   //  --i.e. get_ancestor(store, attestation.data.beacon_block_root, compute_start_slot_at_epoch(attestation.data.target.epoch)) == attestation.data.target.root
   // > Altready check in `verifyHeadBlockAndTargetRoot()`
 
+  // TODO: Must be a state in the same chain as attHeadBlock, but dialed to target.epoch
   const attHeadState = await chain.regen
     .getState(attHeadBlock.stateRoot, RegenCaller.validateGossipAttestation)
     .catch((e: Error) => {

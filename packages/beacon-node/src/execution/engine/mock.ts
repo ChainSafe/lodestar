@@ -255,9 +255,9 @@ export class ExecutionEngineMock implements IExecutionEngine {
 
     return {
       blockHash: toHex(payload.blockHash),
-      // TODO EIP-4844: Fills with wrong data
-      kzgs: [ssz.eip4844.KZGCommitment.defaultValue()],
-      blobs: [ssz.eip4844.Blob.defaultValue()],
+      // TODO EIP-4844: Fill with actual data that pass crypto validation
+      kzgs: [],
+      blobs: [],
     };
   }
 
