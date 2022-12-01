@@ -177,7 +177,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       // Validate block + blob. Then forward, then handle both
       const blockImport = getBlockImport.postEIP4844(config, beaconBlock, blobsSidecar);
       await validateBeaconBlock(blockImport, topic.fork, peerIdStr);
-      await validateGossipBlobsSidecar(beaconBlock, blobsSidecar);
+      validateGossipBlobsSidecar(beaconBlock, blobsSidecar);
       handleValidBeaconBlock(blockImport, peerIdStr, seenTimestampSec);
     },
 

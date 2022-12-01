@@ -1,7 +1,13 @@
 import crypto from "node:crypto";
-import {allForks, bellatrix, RootHex, ssz} from "@lodestar/types";
+import {blobToKzgCommitment, BYTES_PER_FIELD_ELEMENT, FIELD_ELEMENTS_PER_BLOB} from "c-kzg";
+import {
+  kzgCommitmentToVersionedHash,
+  OPAQUE_TX_BLOB_VERSIONED_HASHES_OFFSET,
+  OPAQUE_TX_MESSAGE_OFFSET,
+} from "@lodestar/state-transition";
+import {allForks, bellatrix, eip4844, RootHex, ssz} from "@lodestar/types";
 import {fromHex, toHex} from "@lodestar/utils";
-import {ForkName} from "@lodestar/params";
+import {BLOB_TX_TYPE, ForkName, ForkSeq} from "@lodestar/params";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {
   ExecutePayloadStatus,
@@ -28,6 +34,13 @@ type ExecutionBlock = {
   blockNumber: number;
 };
 
+const TX_TYPE_EIP1559 = 2;
+
+type PreparedPayload = {
+  executionPayload: allForks.ExecutionPayload;
+  blobsBundle: BlobsBundle;
+};
+
 /**
  * Mock ExecutionEngine for fast prototyping and unit testing
  */
@@ -41,7 +54,7 @@ export class ExecutionEngineMock implements IExecutionEngine {
   /** Known valid blocks, both pre-merge and post-merge */
   private readonly validBlocks = new Map<RootHex, ExecutionBlock>();
   /** Preparing payloads to be retrieved via engine_getPayloadV1 */
-  private readonly preparingPayloads = new Map<number, allForks.ExecutionPayload>();
+  private readonly preparingPayloads = new Map<number, PreparedPayload>();
   private readonly payloadsForDeletion = new Map<number, number>();
 
   private payloadId = 0;
@@ -195,9 +208,39 @@ export class ExecutionEngineMock implements IExecutionEngine {
       executionPayload.gasUsed = Math.floor(0.5 * INTEROP_GAS_LIMIT);
       executionPayload.timestamp = payloadAttributes.timestamp;
       executionPayload.blockHash = crypto.randomBytes(32);
-      executionPayload.transactions = [crypto.randomBytes(512)];
+      executionPayload.transactions = [];
 
-      this.preparingPayloads.set(payloadId, executionPayload);
+      // Between 0 and 4 transactions for all forks
+      const eip1559TxCount = Math.round(4 * Math.random());
+      for (let i = 0; i < eip1559TxCount; i++) {
+        const tx = crypto.randomBytes(512);
+        tx[0] = TX_TYPE_EIP1559;
+        executionPayload.transactions.push(tx);
+      }
+
+      const kzgs: eip4844.KZGCommitment[] = [];
+      const blobs: eip4844.Blob[] = [];
+
+      // if post eip4844, add between 0 and 2 blob transactions
+      if (ForkSeq[payloadAttributes.fork] >= ForkSeq.eip4844) {
+        const eip4844TxCount = Math.round(2 * Math.random());
+        for (let i = 0; i < eip4844TxCount; i++) {
+          const blob = generateRandomBlob();
+          const kzg = blobToKzgCommitment(blob);
+          executionPayload.transactions.push(transactionForKzgCommitment(kzg));
+          kzgs.push(kzg);
+          blobs.push(blob);
+        }
+      }
+
+      this.preparingPayloads.set(payloadId, {
+        executionPayload,
+        blobsBundle: {
+          blockHash: toHex(executionPayload.blockHash),
+          kzgs,
+          blobs,
+        },
+      });
 
       // IF the payload is deemed VALID and the build process has begun
       // {payloadStatus: {status: VALID, latestValidHash: forkchoiceState.headBlockHash, validationError: null}, payloadId: buildProcessId}
@@ -242,7 +285,7 @@ export class ExecutionEngineMock implements IExecutionEngine {
     }
     this.payloadsForDeletion.set(payloadIdNbr, now);
 
-    return payload;
+    return payload.executionPayload;
   }
 
   async getBlobsBundle(payloadId: PayloadId): Promise<BlobsBundle> {
@@ -253,12 +296,7 @@ export class ExecutionEngineMock implements IExecutionEngine {
       throw Error(`Unknown payloadId ${payloadId}`);
     }
 
-    return {
-      blockHash: toHex(payload.blockHash),
-      // TODO EIP-4844: Fill with actual data that pass crypto validation
-      kzgs: [],
-      blobs: [],
-    };
+    return payload.blobsBundle;
   }
 
   async exchangeTransitionConfigurationV1(
@@ -279,4 +317,39 @@ export class ExecutionEngineMock implements IExecutionEngine {
       blockNumber: 0,
     });
   }
+}
+
+function transactionForKzgCommitment(kzgCommitment: eip4844.KZGCommitment): bellatrix.Transaction {
+  // Some random value that after the offset's position
+  const blobVersionedHashesOffset = OPAQUE_TX_BLOB_VERSIONED_HASHES_OFFSET + 64;
+
+  // +32 for the size of versionedHash
+  const ab = new ArrayBuffer(blobVersionedHashesOffset + 32);
+  const dv = new DataView(ab);
+  const ua = new Uint8Array(ab);
+
+  // Set tx type
+  dv.setUint8(0, BLOB_TX_TYPE);
+
+  // Set offset to hashes array
+  // const blobVersionedHashesOffset =
+  //   OPAQUE_TX_MESSAGE_OFFSET + opaqueTxDv.getUint32(OPAQUE_TX_BLOB_VERSIONED_HASHES_OFFSET, true);
+  dv.setUint32(OPAQUE_TX_BLOB_VERSIONED_HASHES_OFFSET, blobVersionedHashesOffset - OPAQUE_TX_MESSAGE_OFFSET, true);
+
+  const versionedHash = kzgCommitmentToVersionedHash(kzgCommitment);
+  ua.set(versionedHash, blobVersionedHashesOffset);
+
+  return ua;
+}
+
+/**
+ * Generate random blob of sequential integers such that each element is < BLS_MODULUS
+ */
+function generateRandomBlob(): eip4844.Blob {
+  const blob = new Uint8Array(FIELD_ELEMENTS_PER_BLOB * BYTES_PER_FIELD_ELEMENT);
+  const dv = new DataView(blob.buffer, blob.byteOffset, blob.byteLength);
+  for (let i = 0; i < FIELD_ELEMENTS_PER_BLOB; i++) {
+    dv.setUint32(i * BYTES_PER_FIELD_ELEMENT, i);
+  }
+  return blob;
 }

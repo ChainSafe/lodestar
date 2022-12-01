@@ -1,4 +1,4 @@
-import {verifyAggregateKzgProof} from "c-kzg";
+import {BYTES_PER_FIELD_ELEMENT, verifyAggregateKzgProof} from "c-kzg";
 import bls from "@chainsafe/bls";
 import {CoordType} from "@chainsafe/bls/types";
 import {eip4844, Root} from "@lodestar/types";
@@ -11,10 +11,10 @@ import {byteArrayEquals} from "../../util/bytes.js";
 
 const BLS_MODULUS = BigInt("52435875175126190479447740508185965837690552500527637822603658699938581184513");
 
-export async function validateGossipBlobsSidecar(
+export function validateGossipBlobsSidecar(
   signedBlock: eip4844.SignedBeaconBlock,
   blobsSidecar: eip4844.BlobsSidecar
-): Promise<void> {
+): void {
   const block = signedBlock.message;
 
   // Spec: https://github.com/ethereum/consensus-specs/blob/4cb6fd1c8c8f190d147d15b182c2510d0423ec61/specs/eip4844/p2p-interface.md#beacon_block_and_blobs_sidecar
@@ -46,7 +46,7 @@ export async function validateGossipBlobsSidecar(
   }
 
   // [REJECT] the sidecar.blobs are all well formatted, i.e. the BLSFieldElement in valid range (x < BLS_MODULUS).
-  for (let i = 0; blobsSidecar.blobs.length; i++) {
+  for (let i = 0; i < blobsSidecar.blobs.length; i++) {
     if (!blobIsValidRange(blobsSidecar.blobs[i])) {
       throw new BlobsSidecarError(GossipAction.REJECT, {code: BlobsSidecarErrorCode.INVALID_BLOB, blobIdx: i});
     }
@@ -130,7 +130,7 @@ function blsKeyValidate(g1Point: Uint8Array): boolean {
  */
 function blobIsValidRange(blob: eip4844.Blob): boolean {
   for (let i = 0; i < FIELD_ELEMENTS_PER_BLOB; i++) {
-    const fieldElement = blob.subarray(i, i * 32);
+    const fieldElement = blob.subarray(i * BYTES_PER_FIELD_ELEMENT, (i + 1) * BYTES_PER_FIELD_ELEMENT);
     const fieldElementBN = bytesToBigInt(fieldElement, "be");
     if (fieldElementBN >= BLS_MODULUS) {
       return false;

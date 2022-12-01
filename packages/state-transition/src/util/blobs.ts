@@ -1,11 +1,10 @@
 import SHA256 from "@chainsafe/as-sha256";
 import {byteArrayEquals} from "@chainsafe/ssz";
+import {BLOB_TX_TYPE, VERSIONED_HASH_VERSION_KZG} from "@lodestar/params";
 import {bellatrix, eip4844} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
 
 // TODO EIP-4844: Move to params
-const BLOB_TX_TYPE = 0x05;
-const VERSIONED_HASH_VERSION_KZG = 0x01;
 const BYTES_PER_HASH = 32;
 
 /**
@@ -18,8 +17,8 @@ const BYTES_PER_HASH = 32;
  * - Read chunks between offset value and EOF
  * Reference: https://gist.github.com/protolambda/23bd106b66f6d4bb854ce46044aa3ca3
  */
-const OPAQUE_TX_MESSAGE_OFFSET = 70;
-const OPAQUE_TX_BLOB_VERSIONED_HASHES_OFFSET = OPAQUE_TX_MESSAGE_OFFSET + 188;
+export const OPAQUE_TX_MESSAGE_OFFSET = 70;
+export const OPAQUE_TX_BLOB_VERSIONED_HASHES_OFFSET = OPAQUE_TX_MESSAGE_OFFSET + 188;
 
 type VersionHash = Uint8Array;
 
@@ -87,7 +86,7 @@ function txPeekBlobVersionedHashes(opaqueTx: bellatrix.Transaction): VersionHash
   return versionedHashes;
 }
 
-function kzgCommitmentToVersionedHash(kzgCommitment: eip4844.KZGCommitment): VersionHash {
+export function kzgCommitmentToVersionedHash(kzgCommitment: eip4844.KZGCommitment): VersionHash {
   const hash = SHA256.digest(kzgCommitment);
   // Equivalent to `VERSIONED_HASH_VERSION_KZG + hash(kzg_commitment)[1:]`
   hash[0] = VERSIONED_HASH_VERSION_KZG;
