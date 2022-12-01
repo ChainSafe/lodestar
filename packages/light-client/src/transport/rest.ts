@@ -46,7 +46,7 @@ export class LightClientRestTransport extends (EventEmitter as {new (): RestEven
   }
 
   fetchBlock(blockRootAsString: string): Promise<{data: allForks.SignedBeaconBlock}> {
-    return this.api.beacon.getBlock(blockRootAsString);
+    return this.api.beacon.getBlockV2(blockRootAsString);
   }
 
   onOptimisticUpdate(handler: (optimisticUpdate: altair.LightClientOptimisticUpdate) => void): void {
