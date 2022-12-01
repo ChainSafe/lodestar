@@ -196,7 +196,7 @@ export class BeaconSync implements IBeaconSync {
     if (
       state === SyncState.Synced &&
       !this.network.isSubscribedToGossipCoreTopics() &&
-      this.chain.clock.currentSlot >= MIN_EPOCH_TO_START_GOSSIP
+      this.chain.clock.currentEpoch >= MIN_EPOCH_TO_START_GOSSIP
     ) {
       this.network.subscribeGossipCoreTopics();
       this.metrics?.syncSwitchGossipSubscriptions.inc({action: "subscribed"});
