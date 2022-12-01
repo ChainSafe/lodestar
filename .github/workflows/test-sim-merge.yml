@@ -17,33 +17,33 @@ env:
   GETH_4844_IMAGE: g11tech/geth:4844
 
 jobs:
-  # sim-merge-tests:
-  #   name: Sim merge tests
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     # <common-build> - Uses YAML anchors in the future
-  #     - uses: actions/checkout@v2
-  #     - uses: actions/setup-node@v2
-  #       with:
-  #         node-version: "lts/gallium"
-  #     - name: Node.js version
-  #       id: node
-  #       run: echo "::set-output name=v8CppApiVersion::$(node --print "process.versions.modules")"
-  #     - name: Restore dependencies
-  #       uses: actions/cache@master
-  #       id: cache-deps
-  #       with:
-  #         path: |
-  #           node_modules
-  #           packages/*/node_modules
-  #         key: ${{ runner.os }}-${{ steps.node.outputs.v8CppApiVersion }}-${{ hashFiles('**/yarn.lock', '**/package.json') }}
-  #     - name: Install & build
-  #       if: steps.cache-deps.outputs.cache-hit != 'true'
-  #       run: yarn install --frozen-lockfile --ignore-optional && yarn build
-  #     - name: Build
-  #       run: yarn build
-  #       if: steps.cache-deps.outputs.cache-hit == 'true'
-  #     # </common-build>
+  sim-merge-tests:
+    name: Sim merge tests
+    runs-on: ubuntu-latest
+    steps:
+      # <common-build> - Uses YAML anchors in the future
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v2
+        with:
+          node-version: "lts/gallium"
+      - name: Node.js version
+        id: node
+        run: echo "::set-output name=v8CppApiVersion::$(node --print "process.versions.modules")"
+      - name: Restore dependencies
+        uses: actions/cache@master
+        id: cache-deps
+        with:
+          path: |
+            node_modules
+            packages/*/node_modules
+          key: ${{ runner.os }}-${{ steps.node.outputs.v8CppApiVersion }}-${{ hashFiles('**/yarn.lock', '**/package.json') }}
+      - name: Install & build
+        if: steps.cache-deps.outputs.cache-hit != 'true'
+        run: yarn install --frozen-lockfile --ignore-optional && yarn build
+      - name: Build
+        run: yarn build
+        if: steps.cache-deps.outputs.cache-hit == 'true'
+      # </common-build>
 
   #     - name: Pull Geth
   #       run: docker pull $GETH_IMAGE
