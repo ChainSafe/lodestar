@@ -418,9 +418,13 @@ export class Network implements INetwork {
 
           // Before fork transition
           if (epoch === forkEpoch - FORK_EPOCH_LOOKAHEAD) {
-            this.logger.info("Subscribing gossip topics to next fork", {nextFork});
             // Don't subscribe to new fork if the node is not subscribed to any topic
-            if (this.isSubscribedToGossipCoreTopics()) this.subscribeCoreTopicsAtFork(nextFork);
+            if (this.isSubscribedToGossipCoreTopics()) {
+              this.subscribeCoreTopicsAtFork(nextFork);
+              this.logger.info("Subscribing gossip topics before fork", {nextFork});
+            } else {
+              this.logger.info("Skipping subscribing gossip topics before fork", {nextFork});
+            }
             this.attnetsService.subscribeSubnetsToNextFork(nextFork);
             this.syncnetsService.subscribeSubnetsToNextFork(nextFork);
           }
@@ -494,11 +498,11 @@ export class Network implements INetwork {
 
     if (this.opts.subscribeAllSubnets) {
       for (let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++) {
-        this.gossip.unsubscribeTopic({type: GossipType.beacon_attestation, fork, subnet});
+        topics.push({type: GossipType.beacon_attestation, subnet});
       }
       if (forkSeq >= ForkSeq.altair) {
         for (let subnet = 0; subnet < SYNC_COMMITTEE_SUBNET_COUNT; subnet++) {
-          this.gossip.unsubscribeTopic({type: GossipType.sync_committee, fork, subnet});
+          topics.push({type: GossipType.sync_committee, subnet});
         }
       }
     }
