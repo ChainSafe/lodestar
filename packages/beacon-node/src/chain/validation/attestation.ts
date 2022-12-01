@@ -77,14 +77,20 @@ export async function validateGossipAttestation(
   // > Altready check in `verifyHeadBlockAndTargetRoot()`
 
   // TODO: Must be a state in the same chain as attHeadBlock, but dialed to target.epoch
-  const attHeadState = await chain.regen
-    .getState(attHeadBlock.stateRoot, RegenCaller.validateGossipAttestation)
-    .catch((e: Error) => {
-      throw new AttestationError(GossipAction.REJECT, {
-        code: AttestationErrorCode.MISSING_ATTESTATION_HEAD_STATE,
-        error: e as Error,
-      });
-    });
+  const attHeadState =
+    computeEpochAtSlot(attHeadBlock.slot) < attEpoch
+      ? await chain.regen.getCheckpointState(attTarget, RegenCaller.validateGossipAttestation).catch((e: Error) => {
+          throw new AttestationError(GossipAction.REJECT, {
+            code: AttestationErrorCode.MISSING_ATTESTATION_HEAD_STATE,
+            error: e as Error,
+          });
+        })
+      : await chain.regen.getState(attHeadBlock.stateRoot, RegenCaller.validateGossipAttestation).catch((e: Error) => {
+          throw new AttestationError(GossipAction.REJECT, {
+            code: AttestationErrorCode.MISSING_ATTESTATION_HEAD_STATE,
+            error: e as Error,
+          });
+        });
 
   // [REJECT] The committee index is within the expected range
   // -- i.e. data.index < get_committee_count_per_slot(state, data.target.epoch)
