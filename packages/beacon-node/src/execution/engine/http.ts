@@ -57,6 +57,7 @@ export type ExecutionEngineHttpOpts = {
    * +-5 seconds interval.
    */
   jwtSecretHex?: string;
+  skipWithdrawals?: boolean;
 };
 
 export const defaultExecutionEngineHttpOpts: ExecutionEngineHttpOpts = {
@@ -94,6 +95,7 @@ const exchageTransitionConfigOpts: ReqOpts = {routeId: "exchangeTransitionConfig
  */
 export class ExecutionEngineHttp implements IExecutionEngine {
   readonly payloadIdCache = new PayloadIdCache();
+  readonly skipWithdrawals: boolean = true;
   private readonly rpc: IJsonRpcHttpClient;
   /**
    * A queue to serialize the fcUs and newPayloads calls:
@@ -153,8 +155,9 @@ export class ExecutionEngineHttp implements IExecutionEngine {
    * If any of the above fails due to errors unrelated to the normal processing flow of the method, client software MUST respond with an error object.
    */
   async notifyNewPayload(fork: ForkName, executionPayload: allForks.ExecutionPayload): Promise<ExecutePayloadResponse> {
-    const method = ForkSeq[fork] >= ForkSeq.capella ? "engine_newPayloadV2" : "engine_newPayloadV1";
-    const serializedExecutionPayload = serializeExecutionPayload(fork, executionPayload);
+    const method =
+      ForkSeq[fork] >= ForkSeq.capella && !this.skipWithdrawals ? "engine_newPayloadV2" : "engine_newPayloadV1";
+    const serializedExecutionPayload = serializeExecutionPayload(fork, executionPayload, this.skipWithdrawals);
     const {status, latestValidHash, validationError} = await (this.rpcFetchQueue.push({
       method,
       params: [serializedExecutionPayload],
@@ -242,13 +245,16 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   ): Promise<PayloadId | null> {
     // Once on capella, should this need to be permanently switched to v2 when payload attrs
     // not provided
-    const method = ForkSeq[fork] >= ForkSeq.capella ? "engine_forkchoiceUpdatedV2" : "engine_forkchoiceUpdatedV1";
+    const method =
+      ForkSeq[fork] >= ForkSeq.capella && !this.skipWithdrawals
+        ? "engine_forkchoiceUpdatedV2"
+        : "engine_forkchoiceUpdatedV1";
     const apiPayloadAttributes: ApiPayloadAttributes | undefined = payloadAttributes
       ? {
           timestamp: numToQuantity(payloadAttributes.timestamp),
           prevRandao: bytesToData(payloadAttributes.prevRandao),
           suggestedFeeRecipient: payloadAttributes.suggestedFeeRecipient,
-          withdrawals: payloadAttributes.withdrawals?.map(serializeWithdrawal),
+          // withdrawals: this.skipWithdrawals!==true? payloadAttributes.withdrawals?.map(serializeWithdrawal): undefined,
         }
       : undefined;
     // If we are just fcUing and not asking execution for payload, retry is not required
@@ -309,7 +315,8 @@ export class ExecutionEngineHttp implements IExecutionEngine {
    * 3. Client software MAY stop the corresponding building process after serving this call.
    */
   async getPayload(fork: ForkName, payloadId: PayloadId): Promise<allForks.ExecutionPayload> {
-    const method = ForkSeq[fork] >= ForkSeq.capella ? "engine_getPayloadV2" : "engine_getPayloadV1";
+    const method =
+      ForkSeq[fork] >= ForkSeq.capella && !this.skipWithdrawals ? "engine_getPayloadV2" : "engine_getPayloadV1";
     const executionPayloadRpc = await this.rpc.fetchWithRetries<
       EngineApiRpcReturnTypes[typeof method],
       EngineApiRpcParamTypes[typeof method]
@@ -320,7 +327,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       },
       getPayloadOpts
     );
-    return parseExecutionPayload(fork, executionPayloadRpc);
+    return parseExecutionPayload(fork, executionPayloadRpc, this.skipWithdrawals);
   }
 
   async getBlobsBundle(payloadId: PayloadId): Promise<BlobsBundle> {
@@ -463,7 +470,11 @@ interface BlobsBundleRpc {
   blobs: DATA[]; // each 4096 * 32 = 131072 bytes
 }
 
-export function serializeExecutionPayload(fork: ForkName, data: allForks.ExecutionPayload): ExecutionPayloadRpc {
+export function serializeExecutionPayload(
+  fork: ForkName,
+  data: allForks.ExecutionPayload,
+  skipWithdrawals = false
+): ExecutionPayloadRpc {
   const payload: ExecutionPayloadRpc = {
     parentHash: bytesToData(data.parentHash),
     feeRecipient: bytesToData(data.feeRecipient),
@@ -482,7 +493,7 @@ export function serializeExecutionPayload(fork: ForkName, data: allForks.Executi
   };
 
   // Capella adds withdrawals to the ExecutionPayload
-  if (ForkSeq[fork] >= ForkSeq.capella) {
+  if (ForkSeq[fork] >= ForkSeq.capella && !skipWithdrawals) {
     const {withdrawals} = data as capella.ExecutionPayload;
     payload.withdrawals = withdrawals.map(serializeWithdrawal);
   }
@@ -495,7 +506,11 @@ export function serializeExecutionPayload(fork: ForkName, data: allForks.Executi
   return payload;
 }
 
-export function parseExecutionPayload(fork: ForkName, data: ExecutionPayloadRpc): allForks.ExecutionPayload {
+export function parseExecutionPayload(
+  fork: ForkName,
+  data: ExecutionPayloadRpc,
+  skipWithdrawals: boolean
+): allForks.ExecutionPayload {
   const payload = {
     parentHash: dataToBytes(data.parentHash, 32),
     feeRecipient: dataToBytes(data.feeRecipient, 20),
@@ -514,12 +529,16 @@ export function parseExecutionPayload(fork: ForkName, data: ExecutionPayloadRpc)
   };
 
   if (ForkSeq[fork] >= ForkSeq.capella) {
-    const {withdrawals} = data;
+    let {withdrawals} = data;
     // Geth can also reply with null
     if (withdrawals == null) {
-      throw Error(
-        `withdrawals missing for ${fork} >= capella executionPayload number=${payload.blockNumber} hash=${data.blockHash}`
-      );
+      if (skipWithdrawals) {
+        withdrawals = [];
+      } else {
+        throw Error(
+          `withdrawals missing for ${fork} >= capella executionPayload number=${payload.blockNumber} hash=${data.blockHash}`
+        );
+      }
     }
     (payload as capella.ExecutionPayload).withdrawals = withdrawals.map((w) => deserializeWithdrawal(w));
   }

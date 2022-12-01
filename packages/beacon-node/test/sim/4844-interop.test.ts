@@ -1,14 +1,12 @@
 import fs from "node:fs";
 import {Context} from "mocha";
-import {fromHexString, toHexString} from "@chainsafe/ssz";
+import {fromHexString} from "@chainsafe/ssz";
 import {LogLevel, sleep, TimestampFormatCode} from "@lodestar/utils";
-import {SLOTS_PER_EPOCH, ForkSeq} from "@lodestar/params";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {IChainConfig} from "@lodestar/config";
 import {Epoch} from "@lodestar/types";
 import {ValidatorProposerConfig} from "@lodestar/validator";
 
-import {ExecutePayloadStatus} from "../../src/execution/engine/interface.js";
-import {ExecutionEngineHttp} from "../../src/execution/engine/http.js";
 import {ChainEvent} from "../../src/chain/index.js";
 import {testLogger, TestLoggerOpts} from "../utils/logger.js";
 import {getDevBeaconNode} from "../utils/node/beacon.js";
@@ -17,8 +15,6 @@ import {simTestInfoTracker} from "../utils/node/simTest.js";
 import {getAndInitDevValidators} from "../utils/node/validator.js";
 import {Eth1Provider} from "../../src/index.js";
 import {ZERO_HASH} from "../../src/constants/index.js";
-import {bytesToData, dataToBytes} from "../../src/eth1/provider/utils.js";
-import {defaultExecutionEngineHttpOpts} from "../../src/execution/engine/http.js";
 import {runEL, ELStartMode, ELClient} from "../utils/runEl.js";
 import {logFilesDir} from "./params.js";
 import {shell} from "./shell.js";
@@ -30,9 +26,6 @@ import {shell} from "./shell.js";
 /* eslint-disable no-console, @typescript-eslint/naming-convention, quotes */
 
 const jwtSecretHex = "0xdc6457099f127cf0bac78de8b297df04951281909db4f58b43def7c7151e765d";
-const retryAttempts = defaultExecutionEngineHttpOpts.retryAttempts;
-const retryDelay = defaultExecutionEngineHttpOpts.retryDelay;
-const GWEI_TO_WEI = BigInt(1000000000);
 
 describe("executionEngine / ExecutionEngineHttp", function () {
   if (!process.env.EL_BINARY_DIR || !process.env.EL_SCRIPT_DIR) {

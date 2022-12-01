@@ -29,8 +29,12 @@ export function processWithdrawals(
 }
 
 export function getExpectedWithdrawals(
-  state: CachedBeaconStateCapella
+  state: CachedBeaconStateCapella,
+  skipWithdrawals = true
 ): {withdrawals: capella.Withdrawal[]; sampledValidators: number} {
+  if (skipWithdrawals) {
+    return {withdrawals: [], sampledValidators: 0};
+  }
   const epoch = state.epochCtx.epoch;
   let withdrawalIndex = state.nextWithdrawalIndex;
   const {validators, balances, nextWithdrawalValidatorIndex} = state;
