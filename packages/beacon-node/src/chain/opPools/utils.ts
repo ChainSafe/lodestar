@@ -1,3 +1,5 @@
+import bls from "@chainsafe/bls";
+import {CoordType, Signature} from "@chainsafe/bls/types";
 import {Slot} from "@lodestar/types";
 
 /**
@@ -19,4 +21,12 @@ export function pruneBySlot(map: Map<Slot, unknown>, slot: Slot, slotsRetained: 
   }
 
   return lowestPermissibleSlot;
+}
+
+/**
+ * De-serialize bytes into Signature.
+ * No need to verify Signature is valid, already run sig-verify = false
+ */
+export function signatureFromBytesNoCheck(signature: Uint8Array): Signature {
+  return bls.Signature.fromBytes(signature, CoordType.affine, false);
 }
