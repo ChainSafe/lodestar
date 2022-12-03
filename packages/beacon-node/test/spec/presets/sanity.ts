@@ -103,6 +103,7 @@ type SanityBlocksTestCase = {
 };
 
 type SanitySlotsTestCase = {
+  meta?: any;
   pre: BeaconStateAllForks;
   post?: BeaconStateAllForks;
   slots: bigint;
