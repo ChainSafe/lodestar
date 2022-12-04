@@ -8,7 +8,7 @@ import {describeCliTest, execCli} from "../utils/childprocRunner.js";
 import {itDone} from "../utils/runUtils.js";
 
 describeCliTest("voluntaryExit cmd", function ({spawnCli}) {
-  this.timeout("60s");
+  this.timeout("120s");
 
   itDone("Perform a voluntary exit", async function (done) {
     const restPort = 9596;
@@ -42,7 +42,7 @@ describeCliTest("voluntaryExit cmd", function ({spawnCli}) {
         const head = await client.beacon.getBlockHeader("head");
         if (head.data.header.message.slot < 1) throw Error("pre-genesis");
       },
-      {retryDelay: 2000, retries: 20}
+      {retryDelay: 2000, retries: 40}
     );
 
     const indexesToExit = [0, 1];
@@ -76,7 +76,7 @@ describeCliTest("voluntaryExit cmd", function ({spawnCli}) {
             console.log(`Confirmed validator ${pubkey} = ${data.status}`);
           }
         },
-        {retryDelay: 1000, retries: 20}
+        {retryDelay: 2000, retries: 40}
       );
     }
   });
