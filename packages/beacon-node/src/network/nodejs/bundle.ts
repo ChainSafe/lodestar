@@ -7,8 +7,8 @@ import {PeerId} from "@libp2p/interface-peer-id";
 import {Datastore} from "interface-datastore";
 import type {PeerDiscovery} from "@libp2p/interface-peer-discovery";
 import type {Components} from "libp2p/components";
+import {prometheusMetrics} from "@libp2p/prometheus-metrics";
 import {createNoise} from "./noise.js";
-import { prometheusMetrics } from "@libp2p/prometheus-metrics";
 
 export interface ILibp2pOptions {
   peerId: PeerId;
