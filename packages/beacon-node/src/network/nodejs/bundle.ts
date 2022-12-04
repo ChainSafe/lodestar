@@ -8,6 +8,7 @@ import {Datastore} from "interface-datastore";
 import type {PeerDiscovery} from "@libp2p/interface-peer-discovery";
 import type {Components} from "libp2p/components";
 import {prometheusMetrics} from "@libp2p/prometheus-metrics";
+import {Registry} from "prom-client";
 import {createNoise} from "./noise.js";
 
 export interface ILibp2pOptions {
@@ -22,6 +23,7 @@ export interface ILibp2pOptions {
   maxConnections?: number;
   minConnections?: number;
   metrics?: boolean;
+  metricsRegistry?: Registry;
   lodestarVersion?: string;
 }
 
@@ -46,7 +48,11 @@ export async function createNodejsLibp2p(options: ILibp2pOptions): Promise<Libp2
     streamMuxers: [mplex({maxInboundStreams: 256})],
     peerDiscovery,
     metrics: options.metrics
-      ? prometheusMetrics({collectDefaultMetrics: false, preserveExistingMetrics: true})
+      ? prometheusMetrics({
+          collectDefaultMetrics: false,
+          preserveExistingMetrics: true,
+          registry: options.metricsRegistry,
+        })
       : undefined,
     connectionManager: {
       // dialer config
