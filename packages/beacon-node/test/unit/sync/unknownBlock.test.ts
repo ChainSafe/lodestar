@@ -5,7 +5,7 @@ import {ssz} from "@lodestar/types";
 import {notNullish, sleep} from "@lodestar/utils";
 import {toHexString} from "@chainsafe/ssz";
 import {IBeaconChain} from "../../../src/chain/index.js";
-import {INetwork, IReqResp, NetworkEvent, NetworkEventBus, PeerAction} from "../../../src/network/index.js";
+import {INetwork, IReqRespBeaconNode, NetworkEvent, NetworkEventBus, PeerAction} from "../../../src/network/index.js";
 import {UnknownBlockSync} from "../../../src/sync/unknownBlock.js";
 import {testLogger} from "../../utils/logger.js";
 import {getValidPeerId} from "../../utils/peer.js";
@@ -44,7 +44,7 @@ describe("sync / UnknownBlockSync", () => {
         [blockRootHexB, blockB],
       ]);
 
-      const reqResp: Partial<IReqResp> = {
+      const reqResp: Partial<IReqRespBeaconNode> = {
         beaconBlocksByRoot: async (_peer, roots) =>
           Array.from(roots)
             .map((root) => blocksByRoot.get(toHexString(root)))
@@ -57,7 +57,7 @@ describe("sync / UnknownBlockSync", () => {
       const network: Partial<INetwork> = {
         events: new NetworkEventBus(),
         getConnectedPeers: () => [peer],
-        reqResp: reqResp as IReqResp,
+        reqResp: reqResp as IReqRespBeaconNode,
         reportPeer: (peerId, action, actionName) => reportPeerResolveFn([peerId, action, actionName]),
       };
 

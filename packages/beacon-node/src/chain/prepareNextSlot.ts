@@ -55,13 +55,11 @@ export class PrepareNextSlotScheduler {
     const prepareEpoch = computeEpochAtSlot(prepareSlot);
     const nextEpoch = computeEpochAtSlot(clockSlot) + 1;
     const isEpochTransition = prepareEpoch === nextEpoch;
+    const forkSeq = this.config.getForkSeq(prepareSlot);
 
     // Early return if we are pre-genesis
     //  or we are pre-bellatrix and this is not an epoch transition
-    if (
-      prepareSlot <= GENESIS_SLOT ||
-      (this.config.getForkSeq(prepareSlot) < ForkSeq.bellatrix && !isEpochTransition)
-    ) {
+    if (prepareSlot <= GENESIS_SLOT || (forkSeq < ForkSeq.bellatrix && !isEpochTransition)) {
       return;
     }
 
@@ -138,7 +136,14 @@ export class PrepareNextSlotScheduler {
           // awaiting here instead of throwing an async call because there is no other task
           // left for scheduler and this gives nice sematics to catch and log errors in the
           // try/catch wrapper here.
-          await prepareExecutionPayload(this.chain, safeBlockHash, finalizedBlockHash, prepareState, feeRecipient);
+          await prepareExecutionPayload(
+            forkSeq,
+            this.chain,
+            safeBlockHash,
+            finalizedBlockHash,
+            prepareState,
+            feeRecipient
+          );
           this.logger.verbose("PrepareNextSlotScheduler prepared new payload", {
             prepareSlot,
             proposerIndex,

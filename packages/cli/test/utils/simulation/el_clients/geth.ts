@@ -6,7 +6,7 @@ import {ZERO_HASH} from "@lodestar/state-transition";
 import {
   ELClient,
   ELClientGenerator,
-  ELClientOptions,
+  ELGeneratorClientOptions,
   ELNode,
   ELStartMode,
   JobOptions,
@@ -22,7 +22,7 @@ const SECRET_KEY = "45a915e4d060149eb4365960e6a7a45f334393093061116b197e3240065f
 const PASSWORD = "12345678";
 const GENESIS_ACCOUNT = "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b";
 
-export const generateGethNode: ELClientGenerator = (
+export const generateGethNode: ELClientGenerator<ELClient.Geth> = (
   {
     id,
     mode,
@@ -36,7 +36,8 @@ export const generateGethNode: ELClientGenerator = (
     cliqueSealingPeriod,
     address,
     mining,
-  }: ELClientOptions,
+    clientOptions,
+  }: ELGeneratorClientOptions,
   runner: Runner<RunnerType.ChildProcess> | Runner<RunnerType.Docker>
 ) => {
   if (isChildProcessRunner(runner)) {
@@ -143,6 +144,7 @@ export const generateGethNode: ELClientGenerator = (
         "5",
         ...(mining ? ["--mine"] : []),
         ...(mode == ELStartMode.PreMerge ? ["--nodiscover"] : []),
+        ...clientOptions,
       ],
       env: {},
     },

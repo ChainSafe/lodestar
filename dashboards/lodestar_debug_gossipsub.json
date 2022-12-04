@@ -5404,7 +5404,7 @@
                 "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
-              "expr": "gossipsub_peer_stat_behaviour_penalty_bucket - 100",
+              "expr": "gossipsub_peer_stat_behaviour_penalty_bucket",
               "format": "heatmap",
               "interval": "",
               "intervalFactor": 10,
@@ -5875,7 +5875,7 @@
                 "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
-              "expr": "rate(gossipsub_iwant_promise_delivery_seconds_bucket[$rate_interval]) - 100",
+              "expr": "rate(gossipsub_iwant_promise_delivery_seconds_bucket[$rate_interval])",
               "format": "heatmap",
               "interval": "",
               "intervalFactor": 10,

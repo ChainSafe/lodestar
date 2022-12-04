@@ -5,7 +5,7 @@ import {altair, Root, Slot, SubcommitteeIndex} from "@lodestar/types";
 import {BitArray, toHexString} from "@chainsafe/ssz";
 import {MapDef} from "@lodestar/utils";
 import {InsertOutcome, OpPoolError, OpPoolErrorCode} from "./types.js";
-import {pruneBySlot} from "./utils.js";
+import {pruneBySlot, signatureFromBytesNoCheck} from "./utils.js";
 
 /**
  * SyncCommittee signatures are only useful during a single slot according to our peer's clocks
@@ -125,7 +125,7 @@ function aggregateSignatureInto(
   contribution.aggregationBits.set(indexInSubcommittee, true);
   contribution.signature = bls.Signature.aggregate([
     contribution.signature,
-    bls.Signature.fromBytes(signature.signature, undefined, true),
+    signatureFromBytesNoCheck(signature.signature),
   ]);
   return InsertOutcome.Aggregated;
 }
@@ -146,6 +146,6 @@ function signatureToAggregate(
     beaconBlockRoot: signature.beaconBlockRoot,
     subcommitteeIndex: subnet,
     aggregationBits,
-    signature: bls.Signature.fromBytes(signature.signature, undefined, true),
+    signature: signatureFromBytesNoCheck(signature.signature),
   };
 }

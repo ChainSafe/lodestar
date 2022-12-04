@@ -84,10 +84,15 @@ export const {
   BYTES_PER_LOGS_BLOOM,
   MAX_EXTRA_DATA_BYTES,
 
+  // TODO CAPELLA: Remove the bottom ones after the new spec test vectors are released
   MAX_PARTIAL_WITHDRAWALS_PER_EPOCH,
   WITHDRAWAL_QUEUE_LIMIT,
+
   MAX_BLS_TO_EXECUTION_CHANGES,
   MAX_WITHDRAWALS_PER_PAYLOAD,
+
+  FIELD_ELEMENTS_PER_BLOB,
+  MAX_BLOBS_PER_BLOCK,
 } = {...presets[ACTIVE_PRESET], ...userOverrides};
 
 ////////////
@@ -106,9 +111,9 @@ export const DEPOSIT_CONTRACT_TREE_DEPTH = 2 ** 5; // 32
 export const JUSTIFICATION_BITS_LENGTH = 4;
 
 // Withdrawal prefixes
-
-export const BLS_WITHDRAWAL_PREFIX = Uint8Array.from([0]);
-export const ETH1_ADDRESS_WITHDRAWAL_PREFIX = Uint8Array.from([1]);
+// Since the prefixes are just 1 byte, we define and use them as number
+export const BLS_WITHDRAWAL_PREFIX = 0;
+export const ETH1_ADDRESS_WITHDRAWAL_PREFIX = 1;
 
 // Domain types
 
@@ -205,3 +210,8 @@ export const MAX_REQUEST_LIGHT_CLIENT_COMMITTEE_HASHES = 128;
  */
 export const SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY = 128;
 export const INTERVALS_PER_SLOT = 3;
+
+// EIP-4844: Crypto const
+export const BYTES_PER_FIELD_ELEMENT = 32;
+export const BLOB_TX_TYPE = 0x05;
+export const VERSIONED_HASH_VERSION_KZG = 0x01;

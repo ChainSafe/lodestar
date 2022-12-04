@@ -7,7 +7,7 @@ import {PeerId} from "@libp2p/interface-peer-id";
 import {Datastore} from "interface-datastore";
 import type {PeerDiscovery} from "@libp2p/interface-peer-discovery";
 import type {Components} from "libp2p/components";
-import {noise} from "@chainsafe/libp2p-noise";
+import {createNoise} from "./noise.js";
 import { prometheusMetrics } from "@libp2p/prometheus-metrics";
 
 export interface ILibp2pOptions {
@@ -41,7 +41,7 @@ export async function createNodejsLibp2p(options: ILibp2pOptions): Promise<Libp2
       listen: options.addresses.listen,
       announce: options.addresses.announce || [],
     },
-    connectionEncryption: [noise()],
+    connectionEncryption: [createNoise()],
     transports: [tcp()],
     streamMuxers: [mplex({maxInboundStreams: 256})],
     peerDiscovery,
