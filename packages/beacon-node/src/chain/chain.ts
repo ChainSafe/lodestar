@@ -593,6 +593,8 @@ export class BeaconChain implements IBeaconChain {
   }
 
   private onClockEpoch(epoch: Epoch): void {
+    this.metrics?.clockEpoch.set(epoch);
+
     this.seenAttesters.prune(epoch);
     this.seenAggregators.prune(epoch);
     this.seenAggregatedAttestations.prune(epoch);
