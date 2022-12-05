@@ -98,6 +98,7 @@
     "@chainsafe/discv5": "^1.4.0",
     "@chainsafe/libp2p-gossipsub": "^5.3.0",
     "@chainsafe/libp2p-noise": "^10.2.0",
+    "@chainsafe/libp2p-yamux": "^3.0.3",
     "@chainsafe/persistent-merkle-tree": "^0.4.2",
     "@chainsafe/snappy-stream": "^5.1.2",
     "@chainsafe/ssz": "^0.9.2",
