@@ -1,6 +1,6 @@
 import {altair, ssz} from "@lodestar/types";
 import {Encoding, ProtocolDefinitionGenerator} from "../types.js";
-import {getContextBytesLightclient} from "./utils.js";
+import {getContextBytesLightclient, minutes} from "./utils.js";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
 export const LightClientUpdatesByRange: ProtocolDefinitionGenerator<
@@ -16,5 +16,14 @@ export const LightClientUpdatesByRange: ProtocolDefinitionGenerator<
     responseType: () => ssz.altair.LightClientUpdate,
     renderRequestBody: (req) => `${req.startPeriod},${req.count}`,
     contextBytes: getContextBytesLightclient((update) => modules.config.getForkName(update.signatureSlot), modules),
+    inboundRateLimits: {
+      /**
+       * To start with we will use same as blocksByRange
+       * Can be optimized later on
+       */
+      byPeer: {quota: 500, quotaTime: minutes(1)},
+      total: {quota: 2000, quotaTime: minutes(1)},
+      getRequestCount: (req) => req.count,
+    },
   };
 };

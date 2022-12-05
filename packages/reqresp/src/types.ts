@@ -2,7 +2,9 @@ import {PeerId} from "@libp2p/interface-peer-id";
 import {IBeaconConfig, IForkConfig, IForkDigestContext} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
 import {Slot} from "@lodestar/types";
-import {LodestarError} from "@lodestar/utils";
+import {ILogger, LodestarError} from "@lodestar/utils";
+import {Metrics} from "./metrics.js";
+import {RateLimiterQuota} from "./rate_limiter/rateLimiterGRCA.js";
 
 export enum EncodedPayloadType {
   ssz,
@@ -40,6 +42,15 @@ export interface ProtocolDefinition<Req = unknown, Resp = unknown> extends Omit<
   responseType: (fork: ForkName) => TypeSerializer<Resp>;
   renderRequestBody?: (request: Req) => string;
   contextBytes: ContextBytesFactory<Resp>;
+  inboundRateLimits: {
+    // Will be tracked for the protocol per peer
+    byPeer: RateLimiterQuota;
+    // Will be tracked regardless of the peer
+    total: RateLimiterQuota;
+    // Some requests may be counted multiple e.g. getBlocksByRange
+    // for such implement this method else `1` will be used default
+    getRequestCount?: (req: Req) => number;
+  };
 }
 
 export type ProtocolDefinitionGenerator<Req, Res> = (
@@ -98,4 +109,14 @@ export interface TypeSerializer<T> {
   maxSize: number;
   minSize: number;
   equals(a: T, b: T): boolean;
+}
+
+export interface ReqRespRateLimiterModules {
+  logger: ILogger;
+  reportPeer: (peer: PeerId) => void;
+  metrics: Metrics | null;
+}
+
+export interface ReqRespRateLimiterOpts {
+  rateLimitMultiplier?: number;
 }

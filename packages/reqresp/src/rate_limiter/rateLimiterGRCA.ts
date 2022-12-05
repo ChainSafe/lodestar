@@ -2,9 +2,9 @@ type MiliSeconds = number;
 
 export interface RateLimiterQuota {
   /** How often are `max_tokens` fully replenished. */
-  replenishAllEvery: MiliSeconds;
+  quotaTime: MiliSeconds;
   /** Token limit. This translates on how large can an instantaneous batch of tokens be. */
-  maxTokens: number;
+  quota: number;
 }
 
 /**
@@ -32,45 +32,15 @@ export class RateLimiterGRCA<Key> {
   ) {}
 
   static fromQuota<Key>(quota: RateLimiterQuota): RateLimiterGRCA<Key> {
-    if (quota.maxTokens === 0) {
+    if (quota.quota === 0) {
       throw Error("Max number of tokens should be positive");
     }
-    const msPerBucket = quota.replenishAllEvery;
+    const msPerBucket = quota.quotaTime;
     if (msPerBucket === 0) {
       throw Error("Replenish time must be positive");
     }
-    const msPerToken = msPerBucket / quota.maxTokens;
+    const msPerToken = msPerBucket / quota.quota;
     return new RateLimiterGRCA(msPerBucket, msPerToken);
-  }
-
-  currentBucketRemainingTime(key: Key, msSinceStart?: number): number {
-    if (msSinceStart === undefined) {
-      msSinceStart = Date.now() - this.startTimeMs;
-    }
-
-    return Math.max(0, this.msPerBucket - (msSinceStart % this.msPerBucket));
-  }
-
-  currentBucketRemainingTokens(key: Key, msSinceStart?: number): number {
-    if (msSinceStart === undefined) {
-      msSinceStart = Date.now() - this.startTimeMs;
-    }
-
-    let resetTimeForKey = this.tatPerKey.get(key);
-    if (resetTimeForKey === undefined) {
-      resetTimeForKey = msSinceStart;
-    }
-
-    if (resetTimeForKey <= msSinceStart) {
-      return this.currentBucketRemainingTime(key, msSinceStart) / this.msPerToken;
-    }
-
-    const timePassedBucket = resetTimeForKey % this.msPerBucket;
-    const timeRemainingForBucket =
-      timePassedBucket === this.msPerBucket || resetTimeForKey === this.msPerBucket
-        ? 0
-        : this.msPerBucket - timePassedBucket;
-    return timeRemainingForBucket / this.msPerToken;
   }
 
   allows(key: Key, tokens: number, msSinceStart?: number): boolean {

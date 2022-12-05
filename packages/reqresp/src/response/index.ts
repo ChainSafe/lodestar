@@ -8,6 +8,7 @@ import {ProtocolDefinition} from "../types.js";
 import {requestDecode} from "../encoders/requestDecode.js";
 import {responseEncodeError, responseEncodeSuccess} from "../encoders/responseEncode.js";
 import {RespStatus} from "../interface.js";
+import {ReqRespRateLimiter} from "../rate_limiter/ReqRespRateLimiter.js";
 import {ResponseError} from "./errors.js";
 
 export {ResponseError};
@@ -19,6 +20,7 @@ export interface HandleRequestOpts<Req, Resp> {
   logger: ILogger;
   stream: Stream;
   peerId: PeerId;
+  protocolRateLimiter: ReqRespRateLimiter;
   protocol: ProtocolDefinition<Req, Resp>;
   signal?: AbortSignal;
   requestId?: number;
@@ -43,6 +45,7 @@ export async function handleRequest<Req, Resp>({
   stream,
   peerId,
   protocol,
+  protocolRateLimiter,
   signal,
   requestId = 0,
   peerClient = "unknown",
@@ -72,6 +75,8 @@ export async function handleRequest<Req, Resp>({
         });
 
         logger.debug("Resp received request", {...logCtx, body: protocol.renderRequestBody?.(requestBody)});
+
+        protocolRateLimiter.validateRateLimits({peerId, protocol, requestBody});
 
         yield* pipe(
           // TODO: Debug the reason for type conversion here

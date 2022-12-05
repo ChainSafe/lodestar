@@ -6,20 +6,21 @@ import {ILogger} from "@lodestar/utils";
 import {getMetrics, Metrics, MetricsRegister} from "./metrics.js";
 import {RequestError, RequestErrorCode, sendRequest, SendRequestOpts} from "./request/index.js";
 import {handleRequest} from "./response/index.js";
-import {Encoding, ProtocolDefinition} from "./types.js";
+import {Encoding, ProtocolDefinition, ReqRespRateLimiterModules, ReqRespRateLimiterOpts} from "./types.js";
 import {formatProtocolID} from "./utils/protocolId.js";
+import {ReqRespRateLimiter} from "./rate_limiter/ReqRespRateLimiter.js";
 
 type ProtocolID = string;
 
 export const DEFAULT_PROTOCOL_PREFIX = "/eth2/beacon_chain/req";
 
-export interface ReqRespProtocolModules {
+export interface ReqRespProtocolModules extends Omit<ReqRespRateLimiterModules, "metrics"> {
   libp2p: Libp2p;
   logger: ILogger;
   metricsRegister: MetricsRegister | null;
 }
 
-export interface ReqRespOpts extends SendRequestOpts {
+export interface ReqRespOpts extends SendRequestOpts, ReqRespRateLimiterOpts {
   /** Custom prefix for `/ProtocolPrefix/MessageName/SchemaVersion/Encoding` */
   protocolPrefix?: string;
   getPeerLogMetadata?: (peerId: string) => string;
@@ -32,6 +33,8 @@ export interface ReqRespOpts extends SendRequestOpts {
  * https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/light-client/p2p-interface.md#the-reqresp-domain
  */
 export class ReqResp {
+  readonly rateLimiter: ReqRespRateLimiter;
+
   private readonly libp2p: Libp2p;
   private readonly logger: ILogger;
   private readonly metrics: Metrics | null;
@@ -48,22 +51,44 @@ export class ReqResp {
     this.logger = modules.logger;
     this.metrics = modules.metricsRegister ? getMetrics(modules.metricsRegister) : null;
     this.protocolPrefix = opts.protocolPrefix ?? DEFAULT_PROTOCOL_PREFIX;
+    this.rateLimiter = new ReqRespRateLimiter(
+      {
+        metrics: this.metrics,
+        reportPeer: modules.reportPeer,
+        logger: modules.logger,
+      },
+      {
+        rateLimitMultiplier: opts.rateLimitMultiplier,
+      }
+    );
   }
 
   registerProtocol<Req, Resp>(protocol: ProtocolDefinition<Req, Resp>): void {
     const {method, version, encoding} = protocol;
     const protocolID = this.formatProtocolID(method, version, encoding);
     this.supportedProtocols.set(protocolID, protocol as ProtocolDefinition);
+    this.rateLimiter.initRateLimits(protocol);
   }
 
   async start(): Promise<void> {
     this.controller = new AbortController();
+    this.rateLimiter.start();
     // We set infinity to prevent MaxListenersExceededWarning which get logged when listeners > 10
     // Since it is perfectly fine to have listeners > 10
     setMaxListeners(Infinity, this.controller.signal);
 
     for (const [protocolID, protocol] of this.supportedProtocols) {
-      await this.libp2p.handle(protocolID, this.getRequestHandler(protocol));
+      try {
+        await this.libp2p.handle(protocolID, this.getRequestHandler(protocol));
+      } catch (err) {
+        this.metrics?.incomingErrors.inc({method: protocol.method});
+
+        if (err instanceof RequestError) {
+          this.onIncomingRequestError(protocol, err);
+        }
+
+        throw err;
+      }
     }
   }
 
@@ -71,6 +96,7 @@ export class ReqResp {
     for (const protocolID of this.supportedProtocols.keys()) {
       await this.libp2p.unhandle(protocolID);
     }
+    this.rateLimiter.stop();
     this.controller.abort();
   }
 
@@ -131,7 +157,7 @@ export class ReqResp {
     return async ({connection, stream}: {connection: Connection; stream: Stream}) => {
       const peerId = connection.remotePeer;
       const peerClient = this.opts.getPeerLogMetadata?.(peerId.toString());
-      const method = protocol.method;
+      const {method} = protocol;
 
       this.metrics?.incomingRequests.inc({method});
       const timer = this.metrics?.incomingRequestHandlerTime.startTimer({method});
@@ -144,6 +170,7 @@ export class ReqResp {
           stream,
           peerId,
           protocol,
+          protocolRateLimiter: this.rateLimiter,
           signal: this.controller.signal,
           requestId: this.reqCount++,
           peerClient,
@@ -162,6 +189,10 @@ export class ReqResp {
   }
 
   protected onIncomingRequest(_peerId: PeerId, _protocol: ProtocolDefinition): void {
+    // Override
+  }
+
+  protected onIncomingRequestError(_protocol: ProtocolDefinition, _error: RequestError): void {
     // Override
   }
 

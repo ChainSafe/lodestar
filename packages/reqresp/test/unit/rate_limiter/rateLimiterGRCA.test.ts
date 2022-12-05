@@ -1,6 +1,6 @@
 import {expect} from "chai";
 import sinon from "sinon";
-import {RateLimiterGRCA} from "../../src/rateLimiterGRCA.js";
+import {RateLimiterGRCA} from "../../../src/rate_limiter/rateLimiterGRCA.js";
 type Seconds = number;
 
 describe("rateLimiterGRCA", () => {
@@ -48,7 +48,7 @@ describe("rateLimiterGRCA", () => {
 
     for (const {title, steps} of testCases) {
       it(title, () => {
-        const limiter = RateLimiterGRCA.fromQuota<number>({replenishAllEvery, maxTokens});
+        const limiter = RateLimiterGRCA.fromQuota<number>({quotaTime: replenishAllEvery, quota: maxTokens});
         for (const [i, {sec, tokens, allows}] of steps.entries()) {
           expect(limiter.allows(key, tokens, sec * 1000)).equals(allows, `step ${i}`);
         }
@@ -64,7 +64,7 @@ describe("rateLimiterGRCA", () => {
 
     beforeEach(() => {
       sandbox.useFakeTimers();
-      rateLimiter = RateLimiterGRCA.fromQuota({replenishAllEvery: limitTimeMs, maxTokens: limit});
+      rateLimiter = RateLimiterGRCA.fromQuota({quotaTime: limitTimeMs, quota: limit});
     });
 
     afterEach(() => {
