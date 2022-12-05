@@ -2,7 +2,6 @@ import crypto from "node:crypto";
 import {promisify} from "node:util";
 import {Libp2p} from "libp2p";
 import {PeerId} from "@libp2p/interface-peer-id";
-import {isPeerDiscovery} from "@libp2p/interface-peer-discovery";
 import {multiaddr, Multiaddr} from "@multiformats/multiaddr";
 import {PeerInfo} from "@libp2p/interface-peer-info";
 import {IBeaconConfig} from "@lodestar/config";
@@ -134,13 +133,9 @@ export class PeerDiscovery {
     await this.discv5.start();
     this.discv5StartMs = Date.now();
 
-    for (const service of ((this.libp2p as unknown) as {services: unknown[]}).services) {
-      if (isPeerDiscovery(service)) {
-        service.addEventListener("peer", this.onDiscoveredPeer);
-      }
-    }
-
+    this.libp2p.addEventListener("peer:discovery", this.onDiscoveredPeer);
     this.discv5.on("discovered", this.onDiscoveredENR);
+
     if (this.connectToDiscv5BootnodesOnStart) {
       // In devnet scenarios, especially, we want more control over which peers we connect to.
       // Only dial the discv5.bootEnrs if the option
@@ -150,13 +145,7 @@ export class PeerDiscovery {
   }
 
   async stop(): Promise<void> {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
-    for (const service of (this.libp2p as any).services) {
-      if (isPeerDiscovery(service)) {
-        service.removeEventListener("peer", this.onDiscoveredPeer);
-      }
-    }
-
+    this.libp2p.removeEventListener("peer:discovery", this.onDiscoveredPeer);
     this.discv5.off("discovered", this.onDiscoveredENR);
     await this.discv5.stop();
   }
