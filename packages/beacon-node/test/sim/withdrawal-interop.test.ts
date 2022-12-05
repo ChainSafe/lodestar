@@ -2,12 +2,12 @@ import fs from "node:fs";
 import {Context} from "mocha";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {LogLevel, sleep, TimestampFormatCode} from "@lodestar/utils";
-import {SLOTS_PER_EPOCH, ForkSeq} from "@lodestar/params";
+import {SLOTS_PER_EPOCH, ForkName} from "@lodestar/params";
 import {IChainConfig} from "@lodestar/config";
 import {Epoch} from "@lodestar/types";
 import {ValidatorProposerConfig} from "@lodestar/validator";
 
-import {ExecutePayloadStatus} from "../../src/execution/engine/interface.js";
+import {ExecutePayloadStatus, PayloadAttributes} from "../../src/execution/engine/interface.js";
 import {ExecutionEngineHttp} from "../../src/execution/engine/http.js";
 import {ChainEvent} from "../../src/chain/index.js";
 import {testLogger, TestLoggerOpts} from "../utils/logger.js";
@@ -133,22 +133,23 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     const withdrawals = withdrawalsVector.map((testVec) => ({
       index: testVec.Index,
       validatorIndex: testVec.Validator,
-      address: dataToBytes(testVec.Recipient),
+      address: dataToBytes(testVec.Recipient, 20),
       amount: BigInt(testVec.Amount) / GWEI_TO_WEI,
     }));
 
-    const preparePayloadParams = {
+    const preparePayloadParams: PayloadAttributes = {
       // Note: this is created with a pre-defined genesis.json
       timestamp: 47,
-      prevRandao: dataToBytes("0xff00000000000000000000000000000000000000000000000000000000000000"),
+      prevRandao: dataToBytes("0xff00000000000000000000000000000000000000000000000000000000000000", 32),
       suggestedFeeRecipient: "0xaa00000000000000000000000000000000000000",
       withdrawals,
+      fork: ForkName.capella,
     };
     const finalizedBlockHash = "0xfe950635b1bd2a416ff6283b0bbd30176e1b1125ad06fa729da9f3f4c1c61710";
 
     // 1. Prepare a payload
     const payloadId = await executionEngine.notifyForkchoiceUpdate(
-      ForkSeq.capella,
+      ForkName.capella,
       genesisBlockHash,
       //use finalizedBlockHash as safeBlockHash
       finalizedBlockHash,
@@ -158,7 +159,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     if (!payloadId) throw Error("InvalidPayloadId");
 
     // 2. Get the payload
-    const payload = await executionEngine.getPayload(ForkSeq.capella, payloadId);
+    const payload = await executionEngine.getPayload(ForkName.capella, payloadId);
     const blockHash = toHexString(payload.blockHash);
     const expectedBlockHash = "0x64707e5574d14103a7f583e702f09e68ca1eb334e8eb0632a4272efe54f2fc7c";
     if (blockHash !== expectedBlockHash) {
@@ -166,14 +167,14 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     }
 
     // 3. Execute the payload
-    const payloadResult = await executionEngine.notifyNewPayload(ForkSeq.capella, payload);
+    const payloadResult = await executionEngine.notifyNewPayload(ForkName.capella, payload);
     if (payloadResult.status !== ExecutePayloadStatus.VALID) {
       throw Error("getPayload returned payload that notifyNewPayload deems invalid");
     }
 
     // 4. Update the fork choice
     await executionEngine.notifyForkchoiceUpdate(
-      ForkSeq.capella,
+      ForkName.capella,
       bytesToData(payload.blockHash),
       genesisBlockHash,
       genesisBlockHash
