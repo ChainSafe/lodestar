@@ -20,6 +20,8 @@ Thanks for your contribution to Lodestar. It's people like you that push the Eth
 - :test_tube: Run `lerna run test:e2e` for end-to-end tests.
 - :test_tube: Run `lerna run test:spec` for spec tests.
 - :test_tube: Run `lerna run test` to run all tests.
+- :test_tube: Run `yarn check-types` to check TypeScript types.
+- :test_tube: Run `yarn lint` to run the linter (ESLint).
 
 ### Debugging Spec Tests
 
