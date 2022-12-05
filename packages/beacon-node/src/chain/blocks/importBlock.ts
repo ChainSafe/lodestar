@@ -191,8 +191,8 @@ export async function importBlock(
       const preFinalizedEpoch = parentBlockSummary.finalizedEpoch;
       if (finalizedEpoch > preFinalizedEpoch) {
         this.emitter.emit(ChainEvent.finalized, finalizedCheckpoint, checkpointState);
-        this.logger.verbose("Checkpoint finalized", toCheckpointHex(cp));
-        this.metrics?.finalizedEpoch.set(cp.epoch);
+        this.logger.verbose("Checkpoint finalized", toCheckpointHex(finalizedCheckpoint));
+        this.metrics?.finalizedEpoch.set(finalizedCheckpoint.epoch);
       }
     }
   }
