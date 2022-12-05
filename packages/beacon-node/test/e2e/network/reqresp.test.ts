@@ -3,7 +3,7 @@ import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
 import {expect} from "chai";
 import {BitArray} from "@chainsafe/ssz";
 import {createIBeaconConfig} from "@lodestar/config";
-import {config} from "@lodestar/config/default";
+import {chainConfig} from "@lodestar/config/default";
 import {ForkName} from "@lodestar/params";
 import {
   Encoding,
@@ -53,6 +53,13 @@ describe("network / ReqResp", function () {
     discv5FirstQueryDelayMs: 0,
     discv5: null,
   };
+
+  // Schedule ALTAIR_FORK_EPOCH to trigger registering lightclient ReqResp protocols immediately
+  const config: typeof chainConfig = {
+    ...chainConfig,
+    ALTAIR_FORK_EPOCH: 0,
+  };
+
   const state = generateState();
   const beaconConfig = createIBeaconConfig(config, state.genesisValidatorsRoot);
   const chain = new MockBeaconChain({genesisTime: 0, chainId: 0, networkId: BigInt(0), state, config: beaconConfig});
