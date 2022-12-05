@@ -304,7 +304,7 @@ export class Lightclient {
       const count = toPeriodRng + 1 - fromPeriodRng;
       const {data: updates} = await this.transport.getUpdates(fromPeriodRng, count);
       for (const update of updates) {
-        this.processSyncCommitteeUpdate(update);
+        await this.processSyncCommitteeUpdate(update);
         const headPeriod = computeSyncPeriodAtSlot(update.attestedHeader.slot);
         this.logger.debug(`processed sync update for period ${headPeriod}`);
         // Yield to the macro queue, verifying updates is somewhat expensive and we want responsiveness
@@ -376,6 +376,7 @@ export class Lightclient {
         const period = computeSyncPeriodAtEpoch(currentEpoch);
         try {
           await this.sync(period, period);
+          await this.notifyExecutionLayer();
         } catch (e) {
           this.logger.error("Error re-syncing period", {period}, e as Error);
         }
@@ -550,7 +551,7 @@ export class Lightclient {
     const prevFinalized = this.finalized;
     await this.processFinalizedUpdate(finalizedUpdate);
     if ((!prevFinalized && this.finalized) || prevFinalized?.blockRoot !== this.finalized?.blockRoot) {
-      await this.notifyUpdatePayload();
+      await this.notifyExecutionLayer();
     }
   }
 
@@ -558,7 +559,7 @@ export class Lightclient {
     const prevHead = this.head;
     await this.processOptimisticUpdate(headerUpdate);
     if (prevHead.blockRoot !== this.head.blockRoot) {
-      await this.notifyUpdatePayload();
+      await this.notifyExecutionLayer();
     }
   }
 
@@ -572,7 +573,7 @@ export class Lightclient {
    *                     - current_sync_committee: period 0
    *                     - known next_sync_committee, signed by current_sync_committee
    */
-  private processSyncCommitteeUpdate(update: altair.LightClientUpdate): void {
+  private async processSyncCommitteeUpdate(update: altair.LightClientUpdate): Promise<void> {
     // Prevent registering updates for slots too far in the future
     const updateSlot = update.attestedHeader.slot;
     if (updateSlot > slotWithFutureTolerance(this.config, this.genesisTime, MAX_CLOCK_DISPARITY_SEC)) {
@@ -598,14 +599,16 @@ export class Lightclient {
     // update available, where best is decided by `isBetterUpdate()`
     const nextPeriod = updatePeriod + 1;
     const existingNextSyncCommittee = this.syncCommitteeByPeriod.get(nextPeriod);
+    const finalizedHeader = update.finalizedHeader;
+
     const newNextSyncCommitteeStats: LightclientUpdateStats = {
-      isFinalized: !isEmptyHeader(update.finalizedHeader),
+      isFinalized: !isEmptyHeader(finalizedHeader),
       participation: sumBits(update.syncAggregate.syncCommitteeBits),
       slot: updateSlot,
     };
 
     if (!existingNextSyncCommittee || isBetterUpdate(existingNextSyncCommittee, newNextSyncCommitteeStats)) {
-      this.logger.info("Stored SyncCommittee", {nextPeriod, replacedPrevious: existingNextSyncCommittee != null});
+      this.logger.info("Stored SyncCommittee", { nextPeriod, replacedPrevious: existingNextSyncCommittee != null });
       this.emitter.emit(LightclientEvent.committee, updatePeriod);
       this.syncCommitteeByPeriod.set(nextPeriod, {
         ...newNextSyncCommitteeStats,
@@ -614,10 +617,22 @@ export class Lightclient {
       pruneSetToMax(this.syncCommitteeByPeriod, MAX_STORED_SYNC_COMMITTEES);
       // TODO: Metrics, updated syncCommittee
     }
+
+    const finalizedBlockRootHex = toHexString(ssz.phase0.BeaconBlockHeader.hashTreeRoot(finalizedHeader));
+    const participation = sumBits(update.syncAggregate.syncCommitteeBits);
+    this.finalized = {header: finalizedHeader, participation, blockRoot: finalizedBlockRootHex};
+
+    if (this.executionEngine) {
+      try {
+        this.finalized.block = (await this.transport.fetchBlock(finalizedBlockRootHex)).data;
+      } catch (e) {
+        this.logger.warn("error fetching block", {headerRoot: finalizedBlockRootHex}, e as Error);
+      }
+    }
   }
 
   // Execution layer method
-  private async notifyUpdatePayload(): Promise<void> {
+  private async notifyExecutionLayer(): Promise<void> {
     if (this.executionEngine === undefined) {
       // Execution Engine not set, not driving EL
       return;
@@ -640,7 +655,8 @@ export class Lightclient {
         return;
       }
       const finalizedBlock = this.finalized.block as bellatrix.SignedBeaconBlock;
-      const headHash = toHexString(finalizedBlock.message.body.executionPayload.blockHash);
+      const headBlock = this.head.block as bellatrix.SignedBeaconBlock;
+      const headHash = toHexString(headBlock.message.body.executionPayload.blockHash);
       const finalizedHash = toHexString(finalizedBlock.message.body.executionPayload.blockHash);
       const response = await this.executionEngine.notifyForkchoiceUpdate(headHash, finalizedHash, finalizedHash);
 
