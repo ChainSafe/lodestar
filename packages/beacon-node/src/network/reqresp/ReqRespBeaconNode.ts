@@ -11,7 +11,6 @@ import {
   ProtocolDefinition,
   ReqResp,
   RequestError,
-  ResponseError,
 } from "@lodestar/reqresp";
 import {ReqRespOpts} from "@lodestar/reqresp/lib/ReqResp.js";
 import * as messages from "@lodestar/reqresp/messages";
@@ -23,8 +22,7 @@ import {MetadataController} from "../metadata.js";
 import {PeersData} from "../peers/peersData.js";
 import {IPeerRpcScoreStore, PeerAction} from "../peers/score.js";
 import {ReqRespHandlers} from "./handlers/index.js";
-import {InboundRateLimiter, RateLimiterOptions} from "./inboundRateLimiter.js";
-import {IReqRespBeaconNode, RespStatus} from "./interface.js";
+import {IReqRespBeaconNode} from "./interface.js";
 import {onOutgoingReqRespError} from "./score.js";
 import {ReqRespMethod, RequestTypedContainer, Version} from "./types.js";
 import {collectSequentialBlocksInRange} from "./utils/collectSequentialBlocksInRange.js";
@@ -48,16 +46,7 @@ export interface ReqRespBeaconNodeModules {
   networkEventBus: INetworkEventBus;
 }
 
-export interface ReqRespBeaconNodeOpts extends ReqRespOpts, RateLimiterOptions {
-  /** maximum request count we can serve per peer within rateTrackerTimeoutMs */
-  requestCountPeerLimit?: number;
-  /** maximum block count we can serve per peer within rateTrackerTimeoutMs */
-  blockCountPeerLimit?: number;
-  /** maximum block count we can serve for all peers within rateTrackerTimeoutMs */
-  blockCountTotalLimit?: number;
-  /** the time period we want to track total requests or objects, normally 1 min */
-  rateTrackerTimeoutMs?: number;
-}
+export type ReqRespBeaconNodeOpts = ReqRespOpts;
 
 /**
  * Implementation of Ethereum Consensus p2p Req/Resp domain.
@@ -69,25 +58,26 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
   private readonly reqRespHandlers: ReqRespHandlers;
   private readonly metadataController: MetadataController;
   private readonly peerRpcScores: IPeerRpcScoreStore;
-  private readonly inboundRateLimiter: InboundRateLimiter;
   private readonly networkEventBus: INetworkEventBus;
   private readonly peersData: PeersData;
 
   constructor(modules: ReqRespBeaconNodeModules, options: ReqRespBeaconNodeOpts = {}) {
     const {reqRespHandlers, networkEventBus, peersData, peerRpcScores, metadata, logger, metrics} = modules;
 
-    super({...modules, metricsRegister: metrics?.register ?? null}, options);
+    super(
+      {
+        ...modules,
+        metricsRegister: metrics?.register ?? null,
+        reportPeer: (peerId) => peerRpcScores.applyAction(peerId, PeerAction.Fatal, "rate_limit_rpc"),
+      },
+      options
+    );
 
     this.reqRespHandlers = reqRespHandlers;
     this.peerRpcScores = peerRpcScores;
     this.peersData = peersData;
     this.metadataController = metadata;
     this.networkEventBus = networkEventBus;
-    this.inboundRateLimiter = new InboundRateLimiter(options, {
-      logger,
-      reportPeer: (peerId) => peerRpcScores.applyAction(peerId, PeerAction.Fatal, "rate_limit_rpc"),
-      metrics,
-    });
 
     // TODO: Do not register everything! Some protocols are fork dependant
     this.registerProtocol(messages.Ping(this.onPing.bind(this)));
@@ -107,16 +97,14 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
 
   async start(): Promise<void> {
     await super.start();
-    this.inboundRateLimiter.start();
   }
 
   async stop(): Promise<void> {
     await super.stop();
-    this.inboundRateLimiter.stop();
   }
 
   pruneOnPeerDisconnect(peerId: PeerId): void {
-    this.inboundRateLimiter.prune(peerId);
+    this.rateLimiter.prune(peerId);
   }
 
   async status(peerId: PeerId, request: phase0.Status): Promise<phase0.Status> {
@@ -242,10 +230,6 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
   }
 
   protected onIncomingRequest(peerId: PeerId, protocol: ProtocolDefinition): void {
-    if (protocol.method !== ReqRespMethod.Goodbye && !this.inboundRateLimiter.allowRequest(peerId)) {
-      throw new ResponseError(RespStatus.RATE_LIMITED, "rate limit");
-    }
-
     // Remember prefered encoding
     if (protocol.method === ReqRespMethod.Status) {
       this.peersData.setEncodingPreference(peerId.toString(), protocol.encoding);
@@ -288,9 +272,6 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
     req: phase0.BeaconBlocksByRangeRequest,
     peerId: PeerId
   ): AsyncIterable<EncodedPayload<allForks.SignedBeaconBlock>> {
-    if (!this.inboundRateLimiter.allowBlockByRequest(peerId, req.count)) {
-      throw new ResponseError(RespStatus.RATE_LIMITED, "rate limit");
-    }
     yield* this.reqRespHandlers.onBeaconBlocksByRange(req, peerId);
   }
 
@@ -298,9 +279,6 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
     req: phase0.BeaconBlocksByRootRequest,
     peerId: PeerId
   ): AsyncIterable<EncodedPayload<allForks.SignedBeaconBlock>> {
-    if (!this.inboundRateLimiter.allowBlockByRequest(peerId, req.length)) {
-      throw new ResponseError(RespStatus.RATE_LIMITED, "rate limit");
-    }
     yield* this.reqRespHandlers.onBeaconBlocksByRoot(req, peerId);
   }
 }
