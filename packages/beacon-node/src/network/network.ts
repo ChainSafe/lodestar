@@ -14,8 +14,8 @@ import {ChainEvent, IBeaconChain, IBeaconClock} from "../chain/index.js";
 import {BlockInput, BlockInputType, getBlockInput} from "../chain/blocks/types.js";
 import {INetworkOptions} from "./options.js";
 import {INetwork} from "./interface.js";
-import {IReqRespBeaconNode, ReqRespBeaconNode, ReqRespHandlers} from "./reqresp/ReqRespBeaconNode.js";
-import {Eth2Gossipsub, getGossipHandlers, GossipHandlers, GossipType} from "./gossip/index.js";
+import {ReqRespBeaconNode, ReqRespHandlers} from "./reqresp/ReqRespBeaconNode.js";
+import {Eth2Gossipsub, getGossipHandlers, GossipHandlers, GossipTopicTypeMap, GossipType} from "./gossip/index.js";
 import {MetadataController} from "./metadata.js";
 import {FORK_EPOCH_LOOKAHEAD, getActiveForks} from "./forks.js";
 import {PeerManager} from "./peers/peerManager.js";
@@ -39,7 +39,7 @@ interface INetworkModules {
 
 export class Network implements INetwork {
   events: INetworkEventBus;
-  reqResp: IReqRespBeaconNode;
+  reqResp: ReqRespBeaconNode;
   attnetsService: AttnetsService;
   syncnetsService: SyncnetsService;
   gossip: Eth2Gossipsub;
@@ -144,8 +144,16 @@ export class Network implements INetwork {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
     (this.libp2p.connectionManager as DefaultConnectionManager)["latencyMonitor"].stop();
 
-    this.reqResp.start();
-    this.metadata.start(this.getEnr(), this.config.getForkName(this.clock.currentSlot));
+    // Network spec decides version changes based on clock fork, not head fork
+    const forkCurrentSlot = this.config.getForkName(this.clock.currentSlot);
+
+    // Register only ReqResp protocols relevant to clock's fork
+    await this.reqResp.start();
+    this.reqResp.registerProtocolsAtFork(forkCurrentSlot);
+
+    // Initialize ENR with clock's fork
+    this.metadata.start(this.getEnr(), forkCurrentSlot);
+
     await this.peerManager.start();
     await this.gossip.start();
     this.attnetsService.start();
@@ -162,7 +170,10 @@ export class Network implements INetwork {
     await this.peerManager.goodbyeAndDisconnectAllPeers();
     await this.peerManager.stop();
     await this.gossip.stop();
-    this.reqResp.stop();
+
+    await this.reqResp.stop();
+    await this.reqResp.unregisterAllProtocols();
+
     this.attnetsService.stop();
     this.syncnetsService.stop();
     await this.libp2p.stop();
@@ -349,9 +360,13 @@ export class Network implements INetwork {
 
           // Before fork transition
           if (epoch === forkEpoch - FORK_EPOCH_LOOKAHEAD) {
-            this.logger.info("Subscribing gossip topics to next fork", {nextFork});
             // Don't subscribe to new fork if the node is not subscribed to any topic
-            if (this.isSubscribedToGossipCoreTopics()) this.subscribeCoreTopicsAtFork(nextFork);
+            if (this.isSubscribedToGossipCoreTopics()) {
+              this.subscribeCoreTopicsAtFork(nextFork);
+              this.logger.info("Subscribing gossip topics before fork", {nextFork});
+            } else {
+              this.logger.info("Skipping subscribing gossip topics before fork", {nextFork});
+            }
             this.attnetsService.subscribeSubnetsToNextFork(nextFork);
             this.syncnetsService.subscribeSubnetsToNextFork(nextFork);
           }
@@ -360,6 +375,7 @@ export class Network implements INetwork {
           if (epoch === forkEpoch) {
             // updateEth2Field() MUST be called with clock epoch, onEpoch event is emitted in response to clock events
             this.metadata.updateEth2Field(epoch);
+            this.reqResp.registerProtocolsAtFork(nextFork);
           }
 
           // After fork transition
@@ -380,25 +396,8 @@ export class Network implements INetwork {
     if (this.subscribedForks.has(fork)) return;
     this.subscribedForks.add(fork);
 
-    this.gossip.subscribeTopic({type: GossipType.beacon_block, fork});
-    this.gossip.subscribeTopic({type: GossipType.beacon_aggregate_and_proof, fork});
-    this.gossip.subscribeTopic({type: GossipType.voluntary_exit, fork});
-    this.gossip.subscribeTopic({type: GossipType.proposer_slashing, fork});
-    this.gossip.subscribeTopic({type: GossipType.attester_slashing, fork});
-    // Any fork after altair included
-    if (fork !== ForkName.phase0) {
-      this.gossip.subscribeTopic({type: GossipType.sync_committee_contribution_and_proof, fork});
-      this.gossip.subscribeTopic({type: GossipType.light_client_optimistic_update, fork});
-      this.gossip.subscribeTopic({type: GossipType.light_client_finality_update, fork});
-    }
-
-    if (this.opts.subscribeAllSubnets) {
-      for (let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++) {
-        this.gossip.subscribeTopic({type: GossipType.beacon_attestation, fork, subnet});
-      }
-      for (let subnet = 0; subnet < SYNC_COMMITTEE_SUBNET_COUNT; subnet++) {
-        this.gossip.subscribeTopic({type: GossipType.sync_committee, fork, subnet});
-      }
+    for (const topic of this.coreTopicsAtFork(fork)) {
+      this.gossip.subscribeTopic({...topic, fork});
     }
   };
 
@@ -406,27 +405,44 @@ export class Network implements INetwork {
     if (!this.subscribedForks.has(fork)) return;
     this.subscribedForks.delete(fork);
 
-    this.gossip.unsubscribeTopic({type: GossipType.beacon_block, fork});
-    this.gossip.unsubscribeTopic({type: GossipType.beacon_aggregate_and_proof, fork});
-    this.gossip.unsubscribeTopic({type: GossipType.voluntary_exit, fork});
-    this.gossip.unsubscribeTopic({type: GossipType.proposer_slashing, fork});
-    this.gossip.unsubscribeTopic({type: GossipType.attester_slashing, fork});
+    for (const topic of this.coreTopicsAtFork(fork)) {
+      this.gossip.unsubscribeTopic({...topic, fork});
+    }
+  };
+
+  /**
+   * De-duplicate logic to pick fork topics between subscribeCoreTopicsAtFork and unsubscribeCoreTopicsAtFork
+   */
+  private coreTopicsAtFork(fork: ForkName): GossipTopicTypeMap[keyof GossipTopicTypeMap][] {
+    // Common topics for all forks
+    const topics: GossipTopicTypeMap[keyof GossipTopicTypeMap][] = [
+      {type: GossipType.beacon_block},
+      {type: GossipType.beacon_aggregate_and_proof},
+      {type: GossipType.voluntary_exit},
+      {type: GossipType.proposer_slashing},
+      {type: GossipType.attester_slashing},
+    ];
+
     // Any fork after altair included
-    if (fork !== ForkName.phase0) {
-      this.gossip.unsubscribeTopic({type: GossipType.sync_committee_contribution_and_proof, fork});
-      this.gossip.unsubscribeTopic({type: GossipType.light_client_optimistic_update, fork});
-      this.gossip.unsubscribeTopic({type: GossipType.light_client_finality_update, fork});
+    if (ForkSeq[fork] >= ForkSeq.altair) {
+      topics.push({type: GossipType.sync_committee_contribution_and_proof});
+      topics.push({type: GossipType.light_client_optimistic_update});
+      topics.push({type: GossipType.light_client_finality_update});
     }
 
     if (this.opts.subscribeAllSubnets) {
       for (let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++) {
-        this.gossip.unsubscribeTopic({type: GossipType.beacon_attestation, fork, subnet});
+        topics.push({type: GossipType.beacon_attestation, subnet});
       }
-      for (let subnet = 0; subnet < SYNC_COMMITTEE_SUBNET_COUNT; subnet++) {
-        this.gossip.unsubscribeTopic({type: GossipType.sync_committee, fork, subnet});
+      if (ForkSeq[fork] >= ForkSeq.altair) {
+        for (let subnet = 0; subnet < SYNC_COMMITTEE_SUBNET_COUNT; subnet++) {
+          topics.push({type: GossipType.sync_committee, subnet});
+        }
       }
     }
-  };
+
+    return topics;
+  }
 
   private onLightClientFinalityUpdate = async (finalityUpdate: altair.LightClientFinalityUpdate): Promise<void> => {
     if (this.hasAttachedSyncCommitteeMember()) {
