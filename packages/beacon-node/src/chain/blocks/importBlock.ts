@@ -48,7 +48,8 @@ export async function importBlock(
   fullyVerifiedBlock: FullyVerifiedBlock,
   opts: ImportBlockOpts
 ): Promise<void> {
-  const {block, postState, parentBlockSlot, executionStatus} = fullyVerifiedBlock;
+  const {blockInput, postState, parentBlockSlot, executionStatus} = fullyVerifiedBlock;
+  const {block} = blockInput;
   const pendingEvents = new PendingEvents(this.emitter);
 
   // - Observe attestations
@@ -312,6 +313,7 @@ export async function importBlock(
   // MUST happen before any other block is processed
   // This adds the state necessary to process the next block
   this.stateCache.add(postState);
+
   await this.db.block.add(block);
 
   // - head_tracker.register_block(block_root, parent_root, slot)

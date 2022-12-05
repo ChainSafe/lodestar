@@ -31,6 +31,7 @@ import {NetworkEvent} from "../../events.js";
 import {PeerAction} from "../../peers/index.js";
 import {validateLightClientFinalityUpdate} from "../../../chain/validation/lightClientFinalityUpdate.js";
 import {validateLightClientOptimisticUpdate} from "../../../chain/validation/lightClientOptimisticUpdate.js";
+import {getBlockInput} from "../../../chain/blocks/types.js";
 
 /**
  * Gossip handler options as part of network options
@@ -88,13 +89,16 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
         delaySec,
       });
 
+      // TODO EIP-4844: Will throw an error for blocks post EIP-4844
+      const blockInput = getBlockInput.preEIP4844(config, signedBlock);
+
       try {
         await validateGossipBlock(config, chain, signedBlock, topic.fork);
       } catch (e) {
         if (e instanceof BlockGossipError) {
           if (e instanceof BlockGossipError && e.type.code === BlockErrorCode.PARENT_UNKNOWN) {
             logger.debug("Gossip block has error", {slot, root: blockHex, code: e.type.code});
-            network.events.emit(NetworkEvent.unknownBlockParent, signedBlock, peerIdStr);
+            network.events.emit(NetworkEvent.unknownBlockParent, blockInput, peerIdStr);
           }
         }
 
@@ -117,7 +121,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       // otherwise we can't utilize bls thread pool capacity and Gossip Job Wait Time can't be kept low consistently.
       // See https://github.com/ChainSafe/lodestar/issues/3792
       chain
-        .processBlock(signedBlock, {validProposerSignature: true, blsVerifyOnMainThread: true})
+        .processBlock(blockInput, {validProposerSignature: true, blsVerifyOnMainThread: true})
         .then(() => {
           // Returns the delay between the start of `block.slot` and `current time`
           const delaySec = chain.clock.secFromSlot(slot);

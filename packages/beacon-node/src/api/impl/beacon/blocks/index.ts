@@ -5,6 +5,7 @@ import {SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {sleep} from "@lodestar/utils";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {BlockError, BlockErrorCode} from "../../../../chain/errors/index.js";
+import {getBlockInput} from "../../../../chain/blocks/types.js";
 import {OpSource} from "../../../../metrics/validatorMonitor.js";
 import {NetworkEvent} from "../../../../network/index.js";
 import {ApiModules, IS_OPTIMISTIC_TEMP} from "../../types.js";
@@ -186,14 +187,17 @@ export function getBeaconBlockApi({
 
       metrics?.registerBeaconBlock(OpSource.api, seenTimestampSec, signedBlock.message);
 
+      // TODO EIP-4844: Will throw an error for blocks post EIP-4844
+      const blockInput = getBlockInput.preEIP4844(config, signedBlock);
+
       await Promise.all([
         // Send the block, regardless of whether or not it is valid. The API
         // specification is very clear that this is the desired behaviour.
         network.gossip.publishBeaconBlock(signedBlock),
 
-        chain.processBlock(signedBlock).catch((e) => {
+        chain.processBlock(blockInput).catch((e) => {
           if (e instanceof BlockError && e.type.code === BlockErrorCode.PARENT_UNKNOWN) {
-            network.events.emit(NetworkEvent.unknownBlockParent, signedBlock, network.peerId.toString());
+            network.events.emit(NetworkEvent.unknownBlockParent, blockInput, network.peerId.toString());
           }
           throw e;
         }),

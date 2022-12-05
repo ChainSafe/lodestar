@@ -229,8 +229,8 @@ export class LightClientServer {
       this.metrics?.lightclientServer.onSyncAggregate.inc({event: "error"});
     });
 
-    this.persistPostBlockImportData(block, postState, parentBlockSlot).catch((e) => {
-      this.logger.error("Error persistPostBlockImportData", {}, e);
+    this.persistPostBlockInputData(block, postState, parentBlockSlot).catch((e) => {
+      this.logger.error("Error persistPostBlockInputData", {}, e);
     });
   }
 
@@ -332,7 +332,7 @@ export class LightClientServer {
     ]);
   }
 
-  private async persistPostBlockImportData(
+  private async persistPostBlockInputData(
     block: altair.BeaconBlock,
     postState: CachedBeaconStateAltair,
     parentBlockSlot: Slot
