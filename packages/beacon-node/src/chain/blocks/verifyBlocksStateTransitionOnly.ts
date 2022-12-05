@@ -1,5 +1,10 @@
-import {CachedBeaconStateAllForks, stateTransition} from "@lodestar/state-transition";
 import {ErrorAborted, ILogger, sleep} from "@lodestar/utils";
+import {
+  CachedBeaconStateAllForks,
+  stateTransition,
+  ExecutionPayloadStatus,
+  DataAvailableStatus,
+} from "@lodestar/state-transition";
 import {IMetrics} from "../../metrics/index.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
@@ -37,6 +42,11 @@ export async function verifyBlocksStateTransitionOnly(
       preState,
       block,
       {
+        // NOTE: Assume valid for now while sending payload to execution engine in parallel
+        // Latter verifyBlocksInEpoch() will make sure that payload is indeed valid
+        executionPayloadStatus: ExecutionPayloadStatus.valid,
+        // TODO EIP-4844: Conditionally validate blobs
+        dataAvailableStatus: DataAvailableStatus.preEIP4844,
         // false because it's verified below with better error typing
         verifyStateRoot: false,
         // if block is trusted don't verify proposer or op signature
