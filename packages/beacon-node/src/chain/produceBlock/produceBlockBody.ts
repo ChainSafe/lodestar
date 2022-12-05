@@ -10,9 +10,11 @@ import {
   ValidatorIndex,
   BLSPubkey,
   BLSSignature,
+  capella,
 } from "@lodestar/types";
 import {
   CachedBeaconStateAllForks,
+  CachedBeaconStateCapella,
   CachedBeaconStateBellatrix,
   CachedBeaconStateExecutions,
   computeEpochAtSlot,
@@ -20,16 +22,22 @@ import {
   getRandaoMix,
   getCurrentEpoch,
   isMergeTransitionComplete,
+  getExpectedWithdrawals,
 } from "@lodestar/state-transition";
 import {IChainForkConfig} from "@lodestar/config";
-import {ForkName} from "@lodestar/params";
+import {ForkName, ForkSeq} from "@lodestar/params";
 import {toHex, sleep, numToQuantity} from "@lodestar/utils";
 
-import {IExecutionEngine, PayloadId} from "@lodestar/engine-api-client";
+import {
+  PayloadId,
+  IExecutionEngine,
+  IExecutionBuilder,
+  PayloadAttributes,
+  ForkExecution,
+} from "@lodestar/engine-api-client";
 import type {BeaconChain} from "../chain.js";
 import {ZERO_HASH, ZERO_HASH_HEX} from "../../constants/index.js";
 import {IEth1ForBlockProduction} from "../../eth1/index.js";
-import {IExecutionBuilder} from "../../execution/index.js";
 
 // Time to provide the EL to generate a payload from new payload id
 const PAYLOAD_GENERATION_TIME_MS = 500;
@@ -111,8 +119,9 @@ export async function produceBlockBody<T extends BlockType>(
     );
   }
 
-  const forkName = currentState.config.getForkName(blockSlot);
-  if (forkName !== ForkName.phase0 && forkName !== ForkName.altair) {
+  const fork = currentState.config.getForkName(blockSlot);
+
+  if (fork !== ForkName.phase0 && fork !== ForkName.altair) {
     const safeBlockHash = this.forkChoice.getJustifiedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
     const finalizedBlockHash = this.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
     const feeRecipient = this.beaconProposerCache.getOrDefault(proposerIndex);
@@ -126,6 +135,7 @@ export async function produceBlockBody<T extends BlockType>(
       if (this.executionBuilder.issueLocalFcUForBlockProduction) {
         await prepareExecutionPayload(
           this,
+          fork,
           safeBlockHash,
           finalizedBlockHash ?? ZERO_HASH_HEX,
           currentState as CachedBeaconStateBellatrix,
@@ -138,6 +148,7 @@ export async function produceBlockBody<T extends BlockType>(
       // fullblock for the validator to sign
       (blockBody as allForks.BlindedBeaconBlockBody).executionPayloadHeader = await prepareExecutionPayloadHeader(
         this,
+        fork,
         currentState as CachedBeaconStateBellatrix,
         proposerPubKey
       );
@@ -148,6 +159,7 @@ export async function produceBlockBody<T extends BlockType>(
       try {
         const prepareRes = await prepareExecutionPayload(
           this,
+          fork,
           safeBlockHash,
           finalizedBlockHash ?? ZERO_HASH_HEX,
           currentState as CachedBeaconStateBellatrix,
@@ -155,7 +167,7 @@ export async function produceBlockBody<T extends BlockType>(
         );
         if (prepareRes.isPremerge) {
           (blockBody as allForks.ExecutionBlockBody).executionPayload = ssz.allForksExecution[
-            forkName
+            fork
           ].ExecutionPayload.defaultValue();
         } else {
           const {prepType, payloadId} = prepareRes;
@@ -167,7 +179,7 @@ export async function produceBlockBody<T extends BlockType>(
             // See: https://discord.com/channels/595666850260713488/892088344438255616/1009882079632314469
             await sleep(PAYLOAD_GENERATION_TIME_MS);
           }
-          const payload = await this.executionEngine.getPayload(payloadId);
+          const payload = await this.executionEngine.getPayload(fork, payloadId);
           (blockBody as allForks.ExecutionBlockBody).executionPayload = payload;
 
           const fetchedTime = Date.now() / 1000 - computeTimeAtSlot(this.config, blockSlot, this.genesisTime);
@@ -188,7 +200,7 @@ export async function produceBlockBody<T extends BlockType>(
             e as Error
           );
           (blockBody as allForks.ExecutionBlockBody).executionPayload = ssz.allForksExecution[
-            forkName
+            fork
           ].ExecutionPayload.defaultValue();
         } else {
           // since merge transition is complete, we need a valid payload even if with an
@@ -197,6 +209,11 @@ export async function produceBlockBody<T extends BlockType>(
         }
       }
     }
+  }
+
+  if (ForkSeq[fork] >= ForkSeq.capella) {
+    // TODO: blsToExecutionChanges should be passed in the produceBlock call
+    (blockBody as capella.BeaconBlockBody).blsToExecutionChanges = [];
   }
 
   return blockBody as AssembledBodyType<T>;
@@ -215,6 +232,7 @@ export async function prepareExecutionPayload(
     executionEngine: IExecutionEngine;
     config: IChainForkConfig;
   },
+  fork: ForkExecution,
   safeBlockHash: RootHex,
   finalizedBlockHash: RootHex,
   state: CachedBeaconStateExecutions,
@@ -256,15 +274,23 @@ export async function prepareExecutionPayload(
       prepType = PayloadPreparationType.Fresh;
     }
 
+    const attributes: PayloadAttributes = {
+      fork,
+      timestamp,
+      prevRandao,
+      suggestedFeeRecipient,
+    };
+
+    if (ForkSeq[fork] >= ForkSeq.capella) {
+      attributes.withdrawals = getExpectedWithdrawals(state as CachedBeaconStateCapella).withdrawals;
+    }
+
     payloadId = await chain.executionEngine.notifyForkchoiceUpdate(
+      fork,
       toHex(parentHash),
       safeBlockHash,
       finalizedBlockHash,
-      {
-        timestamp,
-        prevRandao,
-        suggestedFeeRecipient,
-      }
+      attributes
     );
   }
 
@@ -286,11 +312,15 @@ async function prepareExecutionPayloadHeader(
     executionBuilder?: IExecutionBuilder;
     config: IChainForkConfig;
   },
+  fork: ForkExecution,
   state: CachedBeaconStateBellatrix,
   proposerPubKey: BLSPubkey
 ): Promise<allForks.ExecutionPayloadHeader> {
   if (!chain.executionBuilder) {
     throw Error("executionBuilder required");
+  }
+  if (ForkSeq[fork] >= ForkSeq.capella) {
+    throw Error("executionBuilder capella api not implemented");
   }
 
   const parentHashRes = await getExecutionPayloadParentHash(chain, state);

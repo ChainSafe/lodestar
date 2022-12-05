@@ -84,6 +84,8 @@ function getTransitionConfig(fork: ForkName, forkEpoch: number): Partial<IChainC
       return {ALTAIR_FORK_EPOCH: 0, BELLATRIX_FORK_EPOCH: forkEpoch};
     case ForkName.capella:
       return {ALTAIR_FORK_EPOCH: 0, BELLATRIX_FORK_EPOCH: 0, CAPELLA_FORK_EPOCH: forkEpoch};
+    case ForkName.eip4844:
+      return {ALTAIR_FORK_EPOCH: 0, BELLATRIX_FORK_EPOCH: 0, CAPELLA_FORK_EPOCH: 0, EIP4844_FORK_EPOCH: forkEpoch};
   }
 }
 

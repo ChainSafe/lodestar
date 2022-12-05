@@ -1,11 +1,9 @@
-import {ContainerType, ListCompositeType, VectorCompositeType, ContainerNodeStructType} from "@chainsafe/ssz";
+import {ContainerType, ListCompositeType, VectorCompositeType} from "@chainsafe/ssz";
 import {
   HISTORICAL_ROOTS_LIMIT,
   SLOTS_PER_HISTORICAL_ROOT,
   MAX_WITHDRAWALS_PER_PAYLOAD,
   MAX_BLS_TO_EXECUTION_CHANGES,
-  WITHDRAWAL_QUEUE_LIMIT,
-  VALIDATOR_REGISTRY_LIMIT,
 } from "@lodestar/params";
 import {ssz as primitiveSsz} from "../primitive/index.js";
 import {ssz as phase0Ssz} from "../phase0/index.js";
@@ -15,7 +13,6 @@ import {ssz as bellatrixSsz} from "../bellatrix/index.js";
 const {
   UintNum64,
   Slot,
-  EpochInf,
   ValidatorIndex,
   WithdrawalIndex,
   Root,
@@ -28,6 +25,7 @@ const {
 export const Withdrawal = new ContainerType(
   {
     index: WithdrawalIndex,
+    validatorIndex: ValidatorIndex,
     address: ExecutionAddress,
     amount: Gwei,
   },
@@ -60,6 +58,14 @@ export const ExecutionPayload = new ContainerType(
   {typeName: "ExecutionPayload", jsonCase: "eth2"}
 );
 
+export const BlindedExecutionPayload = new ContainerType(
+  {
+    ...bellatrixSsz.ExecutionPayloadHeader.fields,
+    withdrawals: Withdrawals, // New in capella
+  },
+  {typeName: "BlindedExecutionPayload", jsonCase: "eth2"}
+);
+
 export const ExecutionPayloadHeader = new ContainerType(
   {
     ...bellatrixSsz.ExecutionPayloadHeader.fields,
@@ -68,19 +74,7 @@ export const ExecutionPayloadHeader = new ContainerType(
   {typeName: "ExecutionPayloadHeader", jsonCase: "eth2"}
 );
 
-export const ValidatorContainer = new ContainerType(
-  {
-    ...phase0Ssz.ValidatorContainer.fields,
-    fullyWithdrawnEpoch: EpochInf,
-  },
-  {typeName: "Validator", jsonCase: "eth2"}
-);
-export const ValidatorNodeStruct = new ContainerNodeStructType(ValidatorContainer.fields, ValidatorContainer.opts);
-// The main Validator type is the 'ContainerNodeStructType' version
-export const Validator = ValidatorNodeStruct;
-export const Validators = new ListCompositeType(ValidatorNodeStruct, VALIDATOR_REGISTRY_LIMIT);
-
-export const BLSToExecutionChanges = new ListCompositeType(BLSToExecutionChange, MAX_BLS_TO_EXECUTION_CHANGES);
+export const BLSToExecutionChanges = new ListCompositeType(SignedBLSToExecutionChange, MAX_BLS_TO_EXECUTION_CHANGES);
 export const BeaconBlockBody = new ContainerType(
   {
     ...altairSsz.BeaconBlockBody.fields,
@@ -122,8 +116,6 @@ export const HistoricalBatch = new ContainerType(
   {typeName: "HistoricalBatch", jsonCase: "eth2"}
 );
 
-export const WithdrawalQueue = new ListCompositeType(Withdrawal, WITHDRAWAL_QUEUE_LIMIT);
-
 // we don't reuse bellatrix.BeaconState fields since we need to replace some keys
 // and we cannot keep order doing that
 export const BeaconState = new ContainerType(
@@ -142,7 +134,7 @@ export const BeaconState = new ContainerType(
     eth1DataVotes: phase0Ssz.Eth1DataVotes,
     eth1DepositIndex: UintNum64,
     // Registry
-    validators: Validators, // [Modified in Capella]
+    validators: phase0Ssz.Validators,
     balances: phase0Ssz.Balances,
     randaoMixes: phase0Ssz.RandaoMixes,
     // Slashings
@@ -163,9 +155,8 @@ export const BeaconState = new ContainerType(
     // Execution
     latestExecutionPayloadHeader: ExecutionPayloadHeader, // [Modified in Capella]
     // Withdrawals
-    withdrawalQueue: WithdrawalQueue, // [New in Capella]
     nextWithdrawalIndex: WithdrawalIndex, // [New in Capella]
-    nextPartialWithdrawalValidatorIndex: ValidatorIndex, //[New in Capella]
+    nextWithdrawalValidatorIndex: ValidatorIndex, // [New in Capella]
   },
   {typeName: "BeaconState", jsonCase: "eth2"}
 );
@@ -173,7 +164,7 @@ export const BeaconState = new ContainerType(
 export const BlindedBeaconBlockBody = new ContainerType(
   {
     ...altairSsz.BeaconBlockBody.fields,
-    executionPayloadHeader: ExecutionPayloadHeader, // Modified in capella
+    executionPayloadHeader: BlindedExecutionPayload, // Modified in capella
     blsToExecutionChanges: BLSToExecutionChanges, // New in capella
   },
   {typeName: "BlindedBeaconBlockBody", jsonCase: "eth2", cachePermanentRootStruct: true}

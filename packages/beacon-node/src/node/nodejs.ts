@@ -18,6 +18,7 @@ import {BeaconChain, IBeaconChain, initBeaconMetrics} from "../chain/index.js";
 import {createMetrics, IMetrics, HttpMetricsServer} from "../metrics/index.js";
 import {getApi, BeaconRestApiServer} from "../api/index.js";
 import {initializeEth1ForBlockProduction} from "../eth1/index.js";
+import {loadEthereumTrustedSetup} from "../util/kzg.js";
 import {createLibp2pMetrics} from "../metrics/metrics/libp2p.js";
 import {initializeExecutionBuilder} from "../execution/index.js";
 import {IBeaconNodeOptions} from "./options.js";
@@ -141,6 +142,11 @@ export class BeaconNode {
     // Since it is perfectly fine to have listeners > 10
     setMaxListeners(Infinity, controller.signal);
     const signal = controller.signal;
+
+    // TODO EIP-4844, where is the best place to do this?
+    if (config.EIP4844_FORK_EPOCH < Infinity) {
+      loadEthereumTrustedSetup();
+    }
 
     // start db if not already started
     await db.start();
