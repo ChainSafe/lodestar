@@ -1,6 +1,6 @@
 import {expect} from "chai";
 import {fastify} from "fastify";
-import {ForkSeq} from "@lodestar/params";
+import {ForkName} from "@lodestar/params";
 import {
   ExecutionEngineHttp,
   parseExecutionPayload,
@@ -77,9 +77,9 @@ describe("ExecutionEngine / http", () => {
     };
     returnValue = response;
 
-    const payload = await executionEngine.getPayload(ForkSeq.bellatrix, "0x0");
+    const payload = await executionEngine.getPayload(ForkName.bellatrix, "0x0");
 
-    expect(serializeExecutionPayload(ForkSeq.bellatrix, payload)).to.deep.equal(
+    expect(serializeExecutionPayload(ForkName.bellatrix, payload)).to.deep.equal(
       response.result,
       "Wrong returned payload"
     );
@@ -121,8 +121,8 @@ describe("ExecutionEngine / http", () => {
     };
 
     const {status} = await executionEngine.notifyNewPayload(
-      ForkSeq.bellatrix,
-      parseExecutionPayload(ForkSeq.bellatrix, request.params[0])
+      ForkName.bellatrix,
+      parseExecutionPayload(ForkName.bellatrix, request.params[0])
     );
 
     expect(status).to.equal("VALID", "Wrong returned execute payload result");
@@ -151,7 +151,7 @@ describe("ExecutionEngine / http", () => {
     };
 
     await executionEngine.notifyForkchoiceUpdate(
-      ForkSeq.bellatrix,
+      ForkName.bellatrix,
       forkChoiceHeadData.headBlockHash,
       forkChoiceHeadData.safeBlockHash,
       forkChoiceHeadData.finalizedBlockHash
@@ -169,7 +169,7 @@ describe("ExecutionEngine / http", () => {
     const response = {jsonrpc: "2.0", id: 67, error: {code: 5, message: "unknown payload"}};
     returnValue = response;
 
-    await expect(executionEngine.getPayload(ForkSeq.bellatrix, request.params[0])).to.be.rejectedWith(
+    await expect(executionEngine.getPayload(ForkName.bellatrix, request.params[0])).to.be.rejectedWith(
       "JSON RPC error: unknown payload, engine_getPayload"
     );
   });
