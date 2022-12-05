@@ -338,6 +338,7 @@ export class Lightclient {
         try {
           await this.sync(headPeriod, currentPeriod);
           this.logger.debug("Synced", {currentPeriod});
+          await this.notifyExecutionLayer();
         } catch (e) {
           this.logger.error("Error sync", {}, e as Error);
 
@@ -575,7 +576,8 @@ export class Lightclient {
    */
   private async processSyncCommitteeUpdate(update: altair.LightClientUpdate): Promise<void> {
     // Prevent registering updates for slots too far in the future
-    const updateSlot = update.attestedHeader.slot;
+    const attestedHeader = update.attestedHeader;
+    const updateSlot = attestedHeader.slot;
     if (updateSlot > slotWithFutureTolerance(this.config, this.genesisTime, MAX_CLOCK_DISPARITY_SEC)) {
       throw Error(`updateSlot ${updateSlot} is too far in the future, currentSlot ${this.currentSlot}`);
     }
@@ -618,15 +620,25 @@ export class Lightclient {
       // TODO: Metrics, updated syncCommittee
     }
 
-    const finalizedBlockRootHex = toHexString(ssz.phase0.BeaconBlockHeader.hashTreeRoot(finalizedHeader));
     const participation = sumBits(update.syncAggregate.syncCommitteeBits);
-    this.finalized = {header: finalizedHeader, participation, blockRoot: finalizedBlockRootHex};
+
+    const finalizedBlockRootHex = toHexString(ssz.phase0.BeaconBlockHeader.hashTreeRoot(finalizedHeader));
+    this.finalized = {header: finalizedHeader, participation: participation, blockRoot: finalizedBlockRootHex};
+
+    const headerBlockRootHex = toHexString(ssz.phase0.BeaconBlockHeader.hashTreeRoot(attestedHeader));
+    this.head = {header: attestedHeader, participation, blockRoot: headerBlockRootHex};
 
     if (this.executionEngine) {
       try {
         this.finalized.block = (await this.transport.fetchBlock(finalizedBlockRootHex)).data;
       } catch (e) {
         this.logger.warn("error fetching block", {headerRoot: finalizedBlockRootHex}, e as Error);
+      }
+
+      try {
+        this.head.block = (await this.transport.fetchBlock(headerBlockRootHex)).data;
+      } catch (e) {
+        this.logger.warn("error fetching block", {headerRoot: headerBlockRootHex}, e as Error);
       }
     }
   }
