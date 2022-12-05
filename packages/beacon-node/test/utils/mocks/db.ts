@@ -14,6 +14,8 @@ import {
   SyncCommitteeRepository,
   SyncCommitteeWitnessRepository,
   BackfilledRanges,
+  BlobsSidecarRepository,
+  BlobsSidecarArchiveRepository,
 } from "../../../src/db/repositories/index.js";
 import {PreGenesisState, PreGenesisStateLastProcessedBlock} from "../../../src/db/single/index.js";
 import {createStubInstance} from "../types.js";
@@ -27,9 +29,11 @@ export function getStubbedBeaconDb(): IBeaconDb {
   return {
     // unfinalized blocks
     block: createStubInstance(BlockRepository),
+    blobsSidecar: createStubInstance(BlobsSidecarRepository),
 
     // finalized blocks
     blockArchive: createStubInstance(BlockArchiveRepository),
+    blobsSidecarArchive: createStubInstance(BlobsSidecarArchiveRepository),
 
     // finalized states
     stateArchive: createStubInstance(StateArchiveRepository),
