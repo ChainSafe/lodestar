@@ -10,6 +10,7 @@ import {handleRequest} from "../../../src/response/index.js";
 import {createStubbedLogger} from "../../mocks/logger.js";
 import {getValidPeerId} from "../../utils/peer.js";
 import {expectRejectedWithLodestarError} from "../../utils/errors.js";
+import {ReqRespRateLimiter} from "../../../src/rate_limiter/ReqRespRateLimiter.js";
 
 const testCases: {
   id: string;
@@ -58,8 +59,25 @@ describe("response / handleRequest", () => {
   for (const {id, requestChunks, protocol, expectedResponseChunks, expectedError} of testCases) {
     it(id, async () => {
       const stream = new MockLibP2pStream(requestChunks);
+      const protocolRateLimiter = new ReqRespRateLimiter(
+        {
+          logger,
+          metrics: null,
+          reportPeer: () => {
+            /* do nothing */
+          },
+        },
+        {rateLimitMultiplier: 0}
+      );
 
-      const resultPromise = handleRequest({logger, protocol, stream, peerId, signal: controller.signal});
+      const resultPromise = handleRequest({
+        logger,
+        protocol,
+        stream,
+        peerId,
+        signal: controller.signal,
+        protocolRateLimiter,
+      });
 
       // Make sure the test error-ed with expected error, otherwise it's hard to debug with responseChunks
       if (expectedError) {

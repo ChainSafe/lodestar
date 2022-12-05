@@ -43,14 +43,12 @@ export class RateLimiterGRCA<Key> {
     return new RateLimiterGRCA(msPerBucket, msPerToken);
   }
 
-  allows(key: Key, tokens: number, msSinceStart?: number): boolean {
+  allows(key: Key, tokens: number): boolean {
     if (tokens <= 0) {
       throw new Error(`Token value should always be positive. Given: ${tokens}.`);
     }
 
-    if (msSinceStart === undefined) {
-      msSinceStart = Date.now() - this.startTimeMs;
-    }
+    const msSinceStart = Date.now() - this.startTimeMs;
 
     /** how long does it take to replenish these tokens */
     const additionalTime = this.msPerToken * tokens;

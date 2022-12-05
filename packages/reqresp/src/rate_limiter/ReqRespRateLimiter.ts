@@ -35,7 +35,7 @@ export class ReqRespRateLimiter {
   }
 
   get enabled(): boolean {
-    return this.rateLimitMultiplier === 0;
+    return this.rateLimitMultiplier > 0;
   }
 
   initRateLimits<Req, Resp>(protocol: ProtocolDefinition<Req, Resp>): void {
