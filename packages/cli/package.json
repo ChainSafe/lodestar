@@ -93,7 +93,7 @@
   "devDependencies": {
     "@types/expand-tilde": "^2.0.0",
     "@types/got": "^9.6.11",
-    "@types/inquirer": "^7.3.0",
+    "@types/inquirer": "^8.2.3",
     "@types/js-yaml": "^3.12.5",
     "@types/lodash": "^4.14.157",
     "@types/rimraf": "^3.0.2",

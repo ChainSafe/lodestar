@@ -49,6 +49,7 @@ export const blsTestRunner: TestRunnerFn<BlsTestCase, unknown> = (fork, testName
 };
 
 type BlsTestCase = {
+  meta?: any;
   data: {
     input: unknown;
     output: unknown;

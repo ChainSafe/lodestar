@@ -5,7 +5,12 @@ import {ForkSeq} from "@lodestar/params";
 import {CachedBeaconStateBellatrix, CachedBeaconStateCapella} from "../types.js";
 import {getRandaoMix} from "../util/index.js";
 import {ExecutionEngine} from "../util/executionEngine.js";
-import {isExecutionPayload, isMergeTransitionComplete, isCapellaPayload} from "../util/execution.js";
+import {
+  isExecutionPayload,
+  isMergeTransitionComplete,
+  isCapellaPayload,
+  isCapellaPayloadHeader,
+} from "../util/execution.js";
 
 export function processExecutionPayload(
   fork: ForkSeq,
@@ -74,7 +79,9 @@ export function processExecutionPayload(
   };
 
   const withdrawalsRoot = isCapellaPayload(payload)
-    ? ssz.capella.Withdrawals.hashTreeRoot(payload.withdrawals)
+    ? isCapellaPayloadHeader(payload)
+      ? payload.withdrawalsRoot
+      : ssz.capella.Withdrawals.hashTreeRoot(payload.withdrawals)
     : undefined;
 
   // Cache execution payload header

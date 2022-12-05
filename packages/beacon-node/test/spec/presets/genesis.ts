@@ -122,6 +122,7 @@ function generateDepositSSZTypeMapping(n: number): Record<string, typeof ssz.pha
 }
 
 type GenesisValidityTestCase = {
+  meta?: any;
   is_valid: boolean;
   genesis: BeaconStateAllForks;
 };

@@ -63,6 +63,7 @@ export const rewards: TestRunnerFn<RewardTestCase, Deltas> = (fork) => {
 type Deltas = [number[], number[]];
 
 type RewardTestCase = {
+  meta?: any;
   pre: BeaconStateAllForks;
   source_deltas: Deltas;
   target_deltas: Deltas;
