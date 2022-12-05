@@ -20,6 +20,7 @@ export const shuffling: TestRunnerFn<ShufflingTestCase, number[]> = () => {
 };
 
 type ShufflingTestCase = {
+  meta?: any;
   mapping: {
     seed: string;
     count: bigint;

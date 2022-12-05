@@ -51,6 +51,7 @@ export const fork: TestRunnerFn<ForkStateCase, BeaconStateAllForks> = (forkNext)
 };
 
 type ForkStateCase = {
+  meta?: any;
   pre: BeaconStateAllForks;
   post: Exclude<BeaconStateAllForks, phase0.BeaconState>;
 };

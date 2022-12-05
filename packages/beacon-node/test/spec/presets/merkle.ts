@@ -51,6 +51,7 @@ export const merkle: TestRunnerFn<MerkleTestCase, IProof> = (fork) => {
 };
 
 type MerkleTestCase = {
+  meta?: any;
   state: BeaconStateAllForks;
   proof: IProof;
 };
