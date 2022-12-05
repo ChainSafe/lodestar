@@ -1,6 +1,5 @@
 import {ForkSeq} from "@lodestar/params";
 import {allForks, altair, capella} from "@lodestar/types";
-import {ExecutionEngine} from "../util/executionEngine.js";
 import {getFullOrBlindedPayload, isExecutionEnabled} from "../util/execution.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateCapella, CachedBeaconStateBellatrix} from "../types.js";
 import {processExecutionPayload} from "./processExecutionPayload.js";
@@ -9,6 +8,7 @@ import {processBlockHeader} from "./processBlockHeader.js";
 import {processEth1Data} from "./processEth1Data.js";
 import {processOperations} from "./processOperations.js";
 import {processRandao} from "./processRandao.js";
+import {BlockExternalData} from "./externalData.js";
 import {processWithdrawals} from "./processWithdrawals.js";
 
 // Spec tests
@@ -24,14 +24,22 @@ export * from "./processOperations.js";
 
 export * from "./initiateValidatorExit.js";
 export * from "./isValidIndexedAttestation.js";
+export * from "./externalData.js";
+
+export interface ProcessBlockOpts {
+  verifySignatures?: boolean;
+  disabledWithdrawals?: boolean;
+}
 
 export function processBlock(
   fork: ForkSeq,
   state: CachedBeaconStateAllForks,
   block: allForks.FullOrBlindedBeaconBlock,
-  verifySignatures = true,
-  executionEngine: ExecutionEngine | null
+  externalData: BlockExternalData & ProcessBlockOpts,
+  opts?: ProcessBlockOpts
 ): void {
+  const {verifySignatures = true} = opts ?? {};
+
   processBlockHeader(state, block);
 
   // The call to the process_execution_payload must happen before the call to the process_randao as the former depends
@@ -44,7 +52,7 @@ export function processBlock(
         fullOrBlindedPayload as capella.FullOrBlindedExecutionPayload
       );
     }
-    processExecutionPayload(fork, state as CachedBeaconStateBellatrix, fullOrBlindedPayload, executionEngine);
+    processExecutionPayload(fork, state as CachedBeaconStateBellatrix, fullOrBlindedPayload, externalData);
   }
 
   processRandao(state, block, verifySignatures);
