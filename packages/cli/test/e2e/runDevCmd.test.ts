@@ -5,16 +5,14 @@ import {describeCliTest} from "../utils/childprocRunner.js";
 import {itDone} from "../utils/runUtils.js";
 
 describeCliTest("Run dev command", function ({spawnCli}) {
-  this.timeout(120_000);
   itDone("Run dev command with no --dataDir until beacon api is listening", async function (done) {
     const beaconPort = 39011;
 
-    const devProc = spawnCli({pipeStdToParent: true, printOnlyOnError: true, logPrefix: "dev"}, [
+    const devProc = spawnCli({pipeStdToParent: false, printOnlyOnError: true, logPrefix: "dev"}, [
       // ⏎
       "dev",
       "--reset",
       "--startValidators=0..7",
-      "--logLevel=debug",
       `--rest.port=${beaconPort}`,
     ]);
 
@@ -25,7 +23,7 @@ describeCliTest("Run dev command", function ({spawnCli}) {
       }
     });
 
-    const beaconUrl = `http://localhost:${beaconPort}`;
+    const beaconUrl = `http://127.0.0.1:${beaconPort}`;
     const client = getClient({baseUrl: beaconUrl}, {config});
 
     // Wrap in retry since the API may not be listening yet

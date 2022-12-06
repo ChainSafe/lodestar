@@ -8,19 +8,18 @@ import {describeCliTest, execCli} from "../utils/childprocRunner.js";
 import {itDone} from "../utils/runUtils.js";
 
 describeCliTest("voluntaryExit cmd", function ({spawnCli}) {
-  this.timeout("120s");
+  this.timeout("60s");
 
   itDone("Perform a voluntary exit", async function (done) {
     const restPort = 9596;
 
-    const devBnProc = spawnCli({pipeStdToParent: true, logPrefix: "dev"}, [
+    const devBnProc = spawnCli({pipeStdToParent: false, logPrefix: "dev"}, [
       // ⏎
       "dev",
       `--dataDir=${path.join(testFilesDir, "dev-voluntary-exit")}`,
       "--genesisValidators=8",
       "--startValidators=0..7",
       "--rest",
-      "--logLevel=debug",
       `--rest.port=${restPort}`,
       // Speed up test to make genesis happen faster
       "--params.SECONDS_PER_SLOT=2",
@@ -34,7 +33,7 @@ describeCliTest("voluntaryExit cmd", function ({spawnCli}) {
       }
     });
 
-    const baseUrl = `http://localhost:${restPort}`;
+    const baseUrl = `http://127.0.0.1:${restPort}`;
     const client = getClient({baseUrl}, {config});
 
     // Wait for beacon node API to be available + genesis
@@ -43,7 +42,7 @@ describeCliTest("voluntaryExit cmd", function ({spawnCli}) {
         const head = await client.beacon.getBlockHeader("head");
         if (head.data.header.message.slot < 1) throw Error("pre-genesis");
       },
-      {retryDelay: 2000, retries: 40}
+      {retryDelay: 1000, retries: 20}
     );
 
     const indexesToExit = [0, 1];
@@ -77,7 +76,7 @@ describeCliTest("voluntaryExit cmd", function ({spawnCli}) {
             console.log(`Confirmed validator ${pubkey} = ${data.status}`);
           }
         },
-        {retryDelay: 2000, retries: 40}
+        {retryDelay: 1000, retries: 20}
       );
     }
   });
