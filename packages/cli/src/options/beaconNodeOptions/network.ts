@@ -12,6 +12,7 @@ export interface INetworkArgs {
   bootnodes?: string[];
   targetPeers: number;
   subscribeAllSubnets: boolean;
+  mdns: boolean;
   "network.maxPeers": number;
   "network.connectToDiscv5Bootnodes": boolean;
   "network.discv5FirstQueryDelayMs": number;
@@ -57,6 +58,7 @@ export function parseArgs(args: INetworkArgs): IBeaconNodeOptions["network"] {
     gossipsubDLow: args["network.gossipsubDLow"],
     gossipsubDHigh: args["network.gossipsubDHigh"],
     gossipsubAwaitHandler: args["network.gossipsubAwaitHandler"],
+    mdns: args["mdns"],
   };
 }
 
@@ -113,6 +115,13 @@ export const options: ICliCommandOptions<INetworkArgs> = {
     type: "boolean",
     description: "Subscribe to all subnets regardless of validator count",
     defaultDescription: String(defaultOptions.network.subscribeAllSubnets === true),
+    group: "network",
+  },
+
+  mdns: {
+    type: "boolean",
+    description: "Enable mdns local peer discovery",
+    defaultDescription: String(defaultOptions.network.mdns === true),
     group: "network",
   },
 
