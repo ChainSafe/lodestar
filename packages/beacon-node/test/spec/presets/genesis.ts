@@ -12,7 +12,7 @@ import {ForkName} from "@lodestar/params";
 
 import {expectEqualBeaconState} from "../utils/expectEqualBeaconState.js";
 import {TestRunnerFn} from "../utils/types.js";
-import {getConfig} from "../utils/getConfig.js";
+import {getConfig} from "../../utils/config.js";
 // The aim of the genesis tests is to provide a baseline to test genesis-state initialization and test if the
 // proposed genesis-validity conditions are working.
 

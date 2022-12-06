@@ -76,6 +76,9 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
   private readonly networkEventBus: INetworkEventBus;
   private readonly peersData: PeersData;
 
+  /** Track registered fork to only send to known protocols */
+  private currentRegisteredFork: ForkSeq = ForkSeq.phase0;
+
   private readonly config: IBeaconConfig;
   protected readonly logger: ILogger;
 
@@ -113,6 +116,8 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
   }
 
   registerProtocolsAtFork(fork: ForkName): void {
+    this.currentRegisteredFork = ForkSeq[fork];
+
     const mustSubscribeProtocols = this.getProtocolsAtFork(fork);
     const mustSubscribeProtocolIDs = new Set(mustSubscribeProtocols.map((protocol) => this.formatProtocolID(protocol)));
 
@@ -158,10 +163,16 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
     );
   }
 
-  async metadata(peerId: PeerId, fork?: ForkName): Promise<allForks.Metadata> {
-    // Only request V1 if forcing phase0 fork. It's safe to not specify `fork` and let stream negotiation pick the version
-    const versions = fork === ForkName.phase0 ? [Version.V1] : [Version.V2, Version.V1];
-    return collectExactOne(this.sendRequest<null, allForks.Metadata>(peerId, ReqRespMethod.Metadata, versions, null));
+  async metadata(peerId: PeerId): Promise<allForks.Metadata> {
+    return collectExactOne(
+      this.sendRequest<null, allForks.Metadata>(
+        peerId,
+        ReqRespMethod.Metadata,
+        // Before altair, prioritize V2. After altair only request V2
+        this.currentRegisteredFork >= ForkSeq.altair ? [Version.V2] : [(Version.V2, Version.V1)],
+        null
+      )
+    );
   }
 
   async beaconBlocksByRange(
@@ -172,7 +183,8 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
       this.sendRequest<phase0.BeaconBlocksByRangeRequest, allForks.SignedBeaconBlock>(
         peerId,
         ReqRespMethod.BeaconBlocksByRange,
-        [Version.V2, Version.V1], // Prioritize V2
+        // Before altair, prioritize V2. After altair only request V2
+        this.currentRegisteredFork >= ForkSeq.altair ? [Version.V2] : [(Version.V2, Version.V1)],
         request
       ),
       request
@@ -187,7 +199,8 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
       this.sendRequest<phase0.BeaconBlocksByRootRequest, allForks.SignedBeaconBlock>(
         peerId,
         ReqRespMethod.BeaconBlocksByRoot,
-        [Version.V2, Version.V1], // Prioritize V2
+        // Before altair, prioritize V2. After altair only request V2
+        this.currentRegisteredFork >= ForkSeq.altair ? [Version.V2] : [(Version.V2, Version.V1)],
         request
       ),
       request.length

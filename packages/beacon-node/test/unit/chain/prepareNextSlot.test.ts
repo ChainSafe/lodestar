@@ -1,6 +1,5 @@
 import {expect} from "chai";
 import sinon, {SinonStubbedInstance} from "sinon";
-import {config} from "@lodestar/config/default";
 import {ForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {WinstonLogger} from "@lodestar/utils";
 import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
@@ -17,12 +16,14 @@ import {PayloadIdCache} from "../../../src/execution/engine/payloadIdCache.js";
 import {ExecutionEngineHttp} from "../../../src/execution/engine/http.js";
 import {IExecutionEngine} from "../../../src/execution/engine/interface.js";
 import {StubbedChainMutable} from "../../utils/stub/index.js";
+import {getConfig} from "../../utils/config.js";
 
 type StubbedChain = StubbedChainMutable<"clock" | "forkChoice" | "emitter" | "regen">;
 
 describe("PrepareNextSlot scheduler", () => {
   const sandbox = sinon.createSandbox();
   const abortController = new AbortController();
+  const config = getConfig(ForkName.bellatrix, 0);
 
   let chainStub: StubbedChain;
   let scheduler: PrepareNextSlotScheduler;
