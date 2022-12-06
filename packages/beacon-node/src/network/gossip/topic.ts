@@ -51,6 +51,7 @@ export function stringifyGossipTopic(forkDigestContext: IForkDigestContext, topi
 function stringifyGossipTopicType(topic: GossipTopic): string {
   switch (topic.type) {
     case GossipType.beacon_block:
+    case GossipType.beacon_block_and_blobs_sidecar:
     case GossipType.beacon_aggregate_and_proof:
     case GossipType.voluntary_exit:
     case GossipType.proposer_slashing:
@@ -71,6 +72,8 @@ export function getGossipSSZType(topic: GossipTopic) {
     case GossipType.beacon_block:
       // beacon_block is updated in altair to support the updated SignedBeaconBlock type
       return ssz[topic.fork].SignedBeaconBlock;
+    case GossipType.beacon_block_and_blobs_sidecar:
+      return ssz.eip4844.SignedBeaconBlockAndBlobsSidecar;
     case GossipType.beacon_aggregate_and_proof:
       return ssz.phase0.SignedAggregateAndProof;
     case GossipType.beacon_attestation:
