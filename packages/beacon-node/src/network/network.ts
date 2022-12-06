@@ -289,7 +289,7 @@ export class Network implements INetwork {
         request.map(
           async (beaconBlockRoot): Promise<BlockInput | null> => {
             const [resultBlockBlobs, resultBlocks] = await Promise.allSettled([
-              this.reqResp.beaconBlockAndBlobsSidecarByRoot(peerId, []),
+              this.reqResp.beaconBlockAndBlobsSidecarByRoot(peerId, [beaconBlockRoot]),
               this.reqResp.beaconBlocksByRoot(peerId, [beaconBlockRoot]),
             ]);
 
