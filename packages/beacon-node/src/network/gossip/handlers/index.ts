@@ -81,12 +81,15 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       const forkTypes = config.getForkTypes(slot);
       const blockHex = prettyBytes(forkTypes.BeaconBlock.hashTreeRoot(signedBlock.message));
       const delaySec = chain.clock.secFromSlot(slot, seenTimestampSec);
+      const recvToVal = Date.now() / 1000 - seenTimestampSec;
+      metrics?.gossipBlock.receivedToGossipValidate.observe(recvToVal);
       logger.verbose("Received gossip block", {
         slot: slot,
         root: blockHex,
         curentSlot: chain.clock.currentSlot,
         peerId: peerIdStr,
         delaySec,
+        recvToVal,
       });
 
       // TODO EIP-4844: Will throw an error for blocks post EIP-4844
@@ -121,7 +124,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       // otherwise we can't utilize bls thread pool capacity and Gossip Job Wait Time can't be kept low consistently.
       // See https://github.com/ChainSafe/lodestar/issues/3792
       chain
-        .processBlock(blockInput, {validProposerSignature: true, blsVerifyOnMainThread: true})
+        .processBlock(blockInput, {validProposerSignature: true, blsVerifyOnMainThread: true, seenTimestampSec})
         .then(() => {
           // Returns the delay between the start of `block.slot` and `current time`
           const delaySec = chain.clock.secFromSlot(slot);
