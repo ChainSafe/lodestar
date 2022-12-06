@@ -5,6 +5,7 @@ import {getClient} from "@lodestar/api";
 import {toHexString} from "@chainsafe/ssz";
 import {ssz} from "@lodestar/types";
 import {LightClientUpdate} from "@lodestar/types/altair";
+import {ForkName} from "@lodestar/params";
 import {LogLevel, testLogger, TestLoggerOpts} from "../../../../../utils/logger.js";
 import {getDevBeaconNode} from "../../../../../utils/node/beacon.js";
 import {BeaconNode} from "../../../../../../src/index.js";
@@ -79,7 +80,10 @@ describe("lodestar / api / impl / light_client", function () {
     );
 
     const responseJSON = await client.lightclient.getBootstrap(toHexString(Buffer.alloc(0)), "json");
-    expect(responseJSON.data).to.be.deep.equal(expectedValue, "Returned Bootstrap in JSON invalid");
+    expect(responseJSON).to.be.deep.equal(
+      {version: ForkName.altair, data: expectedValue},
+      "Returned Bootstrap in JSON invalid"
+    );
   });
 
   it("should return Finality Update as ssz and json", async function () {
@@ -97,7 +101,10 @@ describe("lodestar / api / impl / light_client", function () {
     );
 
     const responseJSON = await client.lightclient.getFinalityUpdate("json");
-    expect(responseJSON.data).to.be.deep.equal(expectedValue, "Returned FinalityUpdate in JSON invalid");
+    expect(responseJSON).to.be.deep.equal(
+      {version: ForkName.altair, data: expectedValue},
+      "Returned FinalityUpdate in JSON invalid"
+    );
   });
 
   it("should return Optimistic Update as ssz and json", async function () {
@@ -115,7 +122,10 @@ describe("lodestar / api / impl / light_client", function () {
     );
 
     const responseJSON = await client.lightclient.getOptimisticUpdate("json");
-    expect(responseJSON.data).to.be.deep.equal(expectedValue, "Returned OptimisticUpdate in JSON invalid");
+    expect(responseJSON).to.be.deep.equal(
+      {version: ForkName.altair, data: expectedValue},
+      "Returned OptimisticUpdate in JSON invalid"
+    );
   });
 
   it("should return Update as ssz and json", async function () {
@@ -149,7 +159,13 @@ describe("lodestar / api / impl / light_client", function () {
       "Second LightClientUpdate is invalid"
     ).to.be.true;
 
-    const responseJSON = (await client.lightclient.getUpdates(1, 2, "json")).map((response) => response.data);
-    expect(responseJSON).to.be.deep.equal([firstLcUpdate, secondLcUpdate], "Returned Updates in JSON invalid");
+    const responseJSON = await client.lightclient.getUpdates(1, 2, "json");
+    expect(responseJSON).to.be.deep.equal(
+      [
+        {version: ForkName.altair, data: firstLcUpdate},
+        {version: ForkName.altair, data: secondLcUpdate},
+      ],
+      "Returned Updates in JSON invalid"
+    );
   });
 });
