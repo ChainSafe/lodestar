@@ -75,4 +75,12 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
   async stop(): Promise<void> {
     await super.stop();
   }
+
+  async pruneHotDb(): Promise<void> {
+    // Prune all hot blobs
+    await this.blobsSidecar.batchDelete(await this.blobsSidecar.keys());
+    // Prune all hot blocks
+    // TODO: Enable once it's deemed safe
+    // await this.block.batchDelete(await this.block.keys());
+  }
 }
