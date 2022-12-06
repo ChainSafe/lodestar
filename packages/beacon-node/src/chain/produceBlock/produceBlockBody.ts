@@ -212,12 +212,6 @@ export async function produceBlockBody<T extends BlockType>(
             this.metrics?.blockPayload.emptyPayloads.inc({prepType});
           }
 
-          // Capella and later forks have withdrawals on their ExecutionPayload
-          if (fork === ForkName.capella || fork === ForkName.eip4844) {
-            // TODO EIP-4844 Remove this when the EC includes `withdrawals`
-            (blockBody as capella.BeaconBlockBody).executionPayload.withdrawals = [];
-          }
-
           if (fork === ForkName.eip4844) {
             // SPEC: https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/validator.md#blob-kzg-commitments
             // After retrieving the execution payload from the execution engine as specified in Bellatrix, use the
