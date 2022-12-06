@@ -182,17 +182,17 @@ export async function importBlock(
       const preJustifiedEpoch = parentBlockSummary.justifiedEpoch;
       if (justifiedEpoch > preJustifiedEpoch) {
         this.emitter.emit(ChainEvent.justified, justifiedCheckpoint, checkpointState);
-        this.logger.verbose("Checkpoint justified", toCheckpointHex(cp));
+        this.logger.verbose("Checkpoint justified", toCheckpointHex(justifiedCheckpoint));
         this.metrics?.previousJustifiedEpoch.set(checkpointState.previousJustifiedCheckpoint.epoch);
-        this.metrics?.currentJustifiedEpoch.set(cp.epoch);
+        this.metrics?.currentJustifiedEpoch.set(justifiedCheckpoint.epoch);
       }
       const finalizedCheckpoint = checkpointState.finalizedCheckpoint;
       const finalizedEpoch = finalizedCheckpoint.epoch;
       const preFinalizedEpoch = parentBlockSummary.finalizedEpoch;
       if (finalizedEpoch > preFinalizedEpoch) {
         this.emitter.emit(ChainEvent.finalized, finalizedCheckpoint, checkpointState);
-        this.logger.verbose("Checkpoint finalized", toCheckpointHex(cp));
-        this.metrics?.finalizedEpoch.set(cp.epoch);
+        this.logger.verbose("Checkpoint finalized", toCheckpointHex(finalizedCheckpoint));
+        this.metrics?.finalizedEpoch.set(finalizedCheckpoint.epoch);
       }
     }
   }
