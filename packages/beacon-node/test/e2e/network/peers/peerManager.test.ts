@@ -111,6 +111,7 @@ describe("network / peers / PeerManager", function () {
     beaconBlocksByRange = sinon.stub();
     beaconBlocksByRoot = sinon.stub();
     blobsSidecarsByRange = sinon.stub();
+    beaconBlockAndBlobsSidecarByRoot = sinon.stub();
     pruneOnPeerDisconnect = sinon.stub();
     lightClientBootstrap = sinon.stub();
     lightClientOptimisticUpdate = sinon.stub();

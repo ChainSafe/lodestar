@@ -270,6 +270,21 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
     );
   }
 
+  async beaconBlockAndBlobsSidecarByRoot(
+    peerId: PeerId,
+    request: eip4844.BeaconBlockAndBlobsSidecarByRootRequest
+  ): Promise<eip4844.SignedBeaconBlockAndBlobsSidecar[]> {
+    return collectMaxResponse(
+      this.sendRequest<eip4844.BeaconBlockAndBlobsSidecarByRootRequest, eip4844.SignedBeaconBlockAndBlobsSidecar>(
+        peerId,
+        ReqRespMethod.BeaconBlockAndBlobsSidecarByRoot,
+        [Version.V1],
+        request
+      ),
+      request.length
+    );
+  }
+
   /**
    * Returns the list of protocols that must be subscribed during a specific fork.
    * Any protocol not in this list must be un-subscribed.

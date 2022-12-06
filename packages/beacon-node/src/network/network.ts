@@ -268,9 +268,67 @@ export class Network implements INetwork {
   }
 
   async beaconBlocksMaybeBlobsByRoot(peerId: PeerId, request: phase0.BeaconBlocksByRootRequest): Promise<BlockInput[]> {
-    // TODO EIP-4844: Will throw an error for blocks post EIP-4844
-    const blocks = await this.reqResp.beaconBlocksByRoot(peerId, request);
-    return blocks.map((block) => getBlockInput.preEIP4844(this.config, block));
+    // Assume all requests are post EIP-4844
+    if (this.config.getForkSeq(this.chain.forkChoice.getFinalizedBlock().slot) >= ForkSeq.eip4844) {
+      const blocksAndBlobs = await this.reqResp.beaconBlockAndBlobsSidecarByRoot(peerId, request);
+      return blocksAndBlobs.map(({beaconBlock, blobsSidecar}) =>
+        getBlockInput.postEIP4844(this.config, beaconBlock, blobsSidecar)
+      );
+    }
+
+    // Assume all request are pre EIP-4844
+    else if (this.config.getForkSeq(this.clock.currentSlot) < ForkSeq.eip4844) {
+      const blocks = await this.reqResp.beaconBlocksByRoot(peerId, request);
+      return blocks.map((block) => getBlockInput.preEIP4844(this.config, block));
+    }
+
+    // NOTE: Consider blocks may be post or pre EIP-4844
+    // TODO EIP-4844: Request either blocks, or blocks+blobs
+    else {
+      const results = await Promise.all(
+        request.map(
+          async (beaconBlockRoot): Promise<BlockInput | null> => {
+            const [resultBlockBlobs, resultBlocks] = await Promise.allSettled([
+              this.reqResp.beaconBlockAndBlobsSidecarByRoot(peerId, []),
+              this.reqResp.beaconBlocksByRoot(peerId, [beaconBlockRoot]),
+            ]);
+
+            if (resultBlockBlobs.status === "fulfilled" && resultBlockBlobs.value.length === 1) {
+              const {beaconBlock, blobsSidecar} = resultBlockBlobs.value[0];
+              return getBlockInput.postEIP4844(this.config, beaconBlock, blobsSidecar);
+            }
+
+            if (resultBlocks.status === "rejected") {
+              return Promise.reject(resultBlocks.reason);
+            }
+
+            // Promise fullfilled + no result = block not found
+            if (resultBlocks.value.length < 1) {
+              return null;
+            }
+
+            const block = resultBlocks.value[0];
+
+            if (this.config.getForkSeq(block.message.slot) >= ForkSeq.eip4844) {
+              // beaconBlockAndBlobsSidecarByRoot should have succeeded
+              if (resultBlockBlobs.status === "rejected") {
+                // Recycle existing error for beaconBlockAndBlobsSidecarByRoot if any
+                return Promise.reject(resultBlockBlobs.reason);
+              } else {
+                throw Error(
+                  `Received post EIP-4844 ${beaconBlockRoot} over beaconBlocksByRoot not beaconBlockAndBlobsSidecarByRoot`
+                );
+              }
+            }
+
+            // Block is pre EIP-4844
+            return getBlockInput.preEIP4844(this.config, block);
+          }
+        )
+      );
+
+      return results.filter((blockOrNull): blockOrNull is BlockInput => blockOrNull !== null);
+    }
   }
 
   /**
