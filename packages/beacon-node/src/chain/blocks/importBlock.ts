@@ -331,7 +331,18 @@ export async function importBlock(
 
   const advancedSlot = this.clock.slotWithFutureTolerance(REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC);
 
-  this.reprocessController.onBlockImported({slot: block.message.slot, root: blockRoot}, advancedSlot);
+  // Gossip blocks need to be imported as soon as possible, waiting attestations could be processed
+  // in the next event loop. See https://github.com/ChainSafe/lodestar/issues/4789
+  setTimeout(() => {
+    this.reprocessController.onBlockImported({slot: block.message.slot, root: blockRoot}, advancedSlot);
+  }, 0);
+
+  if (opts.seenTimestampSec !== undefined) {
+    const delaySec = this.clock.secFromSlot(block.message.slot, opts.seenTimestampSec);
+    const recvToImportedBlock = this.clock.secFromSlot(block.message.slot, Date.now() / 1000) - delaySec;
+    this.metrics?.gossipBlock.receivedToBlockImport.observe(recvToImportedBlock);
+    this.logger.verbose("Imported block", {slot: block.message.slot, recvToImportedBlock});
+  }
 
   this.logger.verbose("Block processed", {
     slot: block.message.slot,

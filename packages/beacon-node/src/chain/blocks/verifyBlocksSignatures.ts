@@ -1,7 +1,9 @@
 import {CachedBeaconStateAllForks, getBlockSignatureSets} from "@lodestar/state-transition";
 import {allForks} from "@lodestar/types";
-import {sleep} from "@lodestar/utils";
+import {ILogger, sleep} from "@lodestar/utils";
+import {IMetrics} from "../../metrics/metrics.js";
 import {IBlsVerifier} from "../bls/index.js";
+import {IBeaconClock} from "../clock/interface.js";
 import {BlockError, BlockErrorCode} from "../errors/blockError.js";
 import {ImportBlockOpts} from "./types.js";
 
@@ -14,6 +16,9 @@ import {ImportBlockOpts} from "./types.js";
  */
 export async function verifyBlocksSignatures(
   bls: IBlsVerifier,
+  clock: IBeaconClock,
+  logger: ILogger,
+  metrics: IMetrics | null,
   preState0: CachedBeaconStateAllForks,
   blocks: allForks.SignedBeaconBlock[],
   opts: ImportBlockOpts
@@ -41,6 +46,13 @@ export async function verifyBlocksSignatures(
     if ((i + 1) % 8 === 0) {
       await sleep(0);
     }
+  }
+
+  if (blocks.length === 1 && opts.seenTimestampSec !== undefined) {
+    const delaySec = clock.secFromSlot(blocks[0].message.slot, opts.seenTimestampSec);
+    const recvToSigVer = clock.secFromSlot(blocks[0].message.slot, Date.now() / 1000) - delaySec;
+    metrics?.gossipBlock.receivedToSignaturesVerification.observe(recvToSigVer);
+    logger.verbose("Verified block signatures", {slot: blocks[0].message.slot, recvToSigVer});
   }
 
   // `rejectFirstInvalidResolveAllValid()` returns on isValid result with its index

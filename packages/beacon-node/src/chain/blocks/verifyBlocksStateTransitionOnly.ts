@@ -1,10 +1,11 @@
 import {CachedBeaconStateAllForks, stateTransition} from "@lodestar/state-transition";
-import {ErrorAborted, sleep} from "@lodestar/utils";
+import {ErrorAborted, ILogger, sleep} from "@lodestar/utils";
 import {IMetrics} from "../../metrics/index.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
 import {byteArrayEquals} from "../../util/bytes.js";
 import {BlockInput, ImportBlockOpts} from "./types.js";
+import {IBeaconClock} from "../clock/index.js";
 
 /**
  * Verifies 1 or more blocks are fully valid running the full state transition; from a linear sequence of blocks.
@@ -17,7 +18,9 @@ import {BlockInput, ImportBlockOpts} from "./types.js";
 export async function verifyBlocksStateTransitionOnly(
   preState0: CachedBeaconStateAllForks,
   blocks: BlockInput[],
+  logger: ILogger,
   metrics: IMetrics | null,
+  clock: IBeaconClock,
   signal: AbortSignal,
   opts: BlockProcessOpts & ImportBlockOpts
 ): Promise<{postStates: CachedBeaconStateAllForks[]; proposerBalanceDeltas: number[]}> {
@@ -72,6 +75,13 @@ export async function verifyBlocksStateTransitionOnly(
     if (i < blocks.length - 1) {
       await sleep(0);
     }
+  }
+
+  if (blocks.length === 1 && opts.seenTimestampSec !== undefined) {
+    const delaySec = clock.secFromSlot(blocks[0].message.slot, opts.seenTimestampSec);
+    const recvToTransition = clock.secFromSlot(blocks[0].message.slot, Date.now() / 1000) - delaySec;
+    metrics?.gossipBlock.receivedToStateTransition.observe(recvToTransition);
+    logger.verbose("Transitioned gossip block", {slot: blocks[0].message.slot, recvToTransition});
   }
 
   return {postStates, proposerBalanceDeltas};

@@ -26,7 +26,7 @@ export class BlockProcessor {
       (job, importOpts) => {
         return processBlocks.call(chain, job, {...opts, ...importOpts});
       },
-      {maxLength: QUEUE_MAX_LENGTH, signal},
+      {maxLength: QUEUE_MAX_LENGTH, noYieldIfOneItem: true, signal},
       metrics?.blockProcessorQueue ?? undefined
     );
   }
