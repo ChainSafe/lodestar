@@ -11,7 +11,7 @@ import {computeEpochAtSlot, computeTimeAtSlot} from "@lodestar/state-transition"
 import {altair, Epoch, phase0} from "@lodestar/types";
 import {IMetrics} from "../metrics/index.js";
 import {ChainEvent, IBeaconChain, IBeaconClock} from "../chain/index.js";
-import {BlockInput, getBlockInput} from "../chain/blocks/types.js";
+import {BlockInput, BlockInputType, getBlockInput} from "../chain/blocks/types.js";
 import {INetworkOptions} from "./options.js";
 import {INetwork} from "./interface.js";
 import {IReqRespBeaconNode, ReqRespBeaconNode, ReqRespHandlers} from "./reqresp/ReqRespBeaconNode.js";
@@ -194,6 +194,20 @@ export class Network implements INetwork {
 
   hasSomeConnectedPeer(): boolean {
     return this.peerManager.hasSomeConnectedPeer();
+  }
+
+  publishBeaconBlockMaybeBlobs(blockImport: BlockInput): Promise<void> {
+    switch (blockImport.type) {
+      case BlockInputType.preEIP4844:
+        return this.gossip.publishBeaconBlock(blockImport.block);
+
+      case BlockInputType.postEIP4844:
+        // TODO EIP-4844: Implement SignedBeaconBlockAndBlobsSidecar publish topic
+        throw Error("SignedBeaconBlockAndBlobsSidecar publish not implemented");
+
+      case BlockInputType.postEIP4844OldBlobs:
+        throw Error(`Attempting to broadcast old BlockImport slot ${blockImport.block.message.slot}`);
+    }
   }
 
   async beaconBlocksMaybeBlobsByRange(

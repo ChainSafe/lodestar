@@ -188,6 +188,10 @@ export class MockBeaconChain implements IBeaconChain {
     throw Error("Not implemented");
   }
 
+  getBlobsSidecar(): never {
+    throw Error("Not implemented");
+  }
+
   async processBlock(): Promise<void> {}
   async processChainSegment(): Promise<void> {}
 
