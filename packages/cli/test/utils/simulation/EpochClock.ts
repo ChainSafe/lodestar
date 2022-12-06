@@ -30,6 +30,10 @@ export class EpochClock {
     return Math.floor(Date.now() / MS_IN_SEC - this.genesisTime);
   }
 
+  msToGenesis(): number {
+    return this.genesisTime * 1000 - Date.now();
+  }
+
   get currentSlot(): number {
     return this.getSlotFor();
   }
@@ -65,10 +69,6 @@ export class EpochClock {
     const slotGenesisTimeOffset = slot * this.secondsPerSlot;
 
     return this.genesisTime + slotGenesisTimeOffset;
-  }
-
-  msToGenesis(): number {
-    return this.genesisTime * 1000 - Date.now();
   }
 
   isFirstSlotOfEpoch(slot: number): boolean {

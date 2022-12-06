@@ -579,6 +579,21 @@
     uint8arraylist "^2.3.2"
     uint8arrays "^4.0.2"
 
+"@chainsafe/libp2p-yamux@^3.0.3":
+  version "3.0.5"
+  resolved "https://registry.yarnpkg.com/@chainsafe/libp2p-yamux/-/libp2p-yamux-3.0.5.tgz#203148c08dcfc02197a9c67dccd4a8838f1ff84e"
+  integrity sha512-7glE71hJ+QnlB7ADcevQSufCOofeVx1ZHp5xPUagjWBfJ+nLLfjwQmI+yAAKemmkw4BN767zH2nW5O/PJpJ2EA==
+  dependencies:
+    "@libp2p/interface-connection" "^3.0.1"
+    "@libp2p/interface-stream-muxer" "^3.0.0"
+    "@libp2p/interfaces" "^3.2.0"
+    "@libp2p/logger" "^2.0.1"
+    abortable-iterator "^4.0.2"
+    any-signal "^3.0.1"
+    it-pipe "^2.0.4"
+    it-pushable "^3.1.0"
+    uint8arraylist "^2.3.2"
+
 "@chainsafe/persistent-merkle-tree@^0.4.2":
   version "0.4.2"
   resolved "https://registry.yarnpkg.com/@chainsafe/persistent-merkle-tree/-/persistent-merkle-tree-0.4.2.tgz#4c9ee80cc57cd3be7208d98c40014ad38f36f7ff"
@@ -4052,6 +4067,11 @@ any-signal@^3.0.0:
   resolved "https://registry.npmjs.org/any-signal/-/any-signal-3.0.0.tgz"
   integrity sha512-l1H1GEkGGIXVGfCtvq8N68YI7gHajmfzRdKhmb8sGyAQpLCblirLa8eB09j4uKaiwe7vodAChocUf7AT3mYq5g==
 
+any-signal@^3.0.1:
+  version "3.0.1"
+  resolved "https://registry.yarnpkg.com/any-signal/-/any-signal-3.0.1.tgz#49cae34368187a3472e31de28fb5cb1430caa9a6"
+  integrity sha512-xgZgJtKEa9YmDqXodIgl7Fl1C8yNXr8w6gXjqK3LW4GcEiYT+6AQfJSE/8SPsEpLLmcvbv8YU+qet94UewHxqg==
+
 anymatch@~3.1.2:
   version "3.1.2"
   resolved "https://registry.npmjs.org/anymatch/-/anymatch-3.1.2.tgz"
@@ -4737,6 +4757,13 @@ bytes@3.1.2:
   version "3.1.2"
   resolved "https://registry.yarnpkg.com/bytes/-/bytes-3.1.2.tgz#8b0beeb98605adf1b128fa4386403c009e0221a5"
   integrity sha512-/Nf7TyzTx6S3yRJObOAV7956r8cr2+Oj8AC5dt8wSP3BQAoeX58NoHyCU8P8zGkNXStjTSi6fzO6F0pBdcYbEg==
+
+c-kzg@^1.0.8:
+  version "1.0.9"
+  resolved "https://registry.yarnpkg.com/c-kzg/-/c-kzg-1.0.9.tgz#cabadd0013b28b3e75dcb3ad115d65fee37baed7"
+  integrity sha512-5shQs7k/f7cN0Ya7g1bTgCX7CO2emh/2mkPKrjxqkC7Y+tM9YN88MWkop9ftMMZXadvVMrxWfZ/RCqBR8jRQOQ==
+  dependencies:
+    node-addon-api "^5.0.0"
 
 cacache@^15.2.0:
   version "15.3.0"
@@ -9681,6 +9708,11 @@ node-addon-api@^3.2.1:
   version "3.2.1"
   resolved "https://registry.yarnpkg.com/node-addon-api/-/node-addon-api-3.2.1.tgz#81325e0a2117789c0128dab65e7e38f07ceba161"
   integrity sha512-mmcei9JghVNDYydghQmeDX8KoAm0FAiYyIcUt/N4nhyAipB17pllZQDOJD2fotxABnt4Mdz+dKTO7eftLg4d0A==
+
+node-addon-api@^5.0.0:
+  version "5.1.0"
+  resolved "https://registry.yarnpkg.com/node-addon-api/-/node-addon-api-5.1.0.tgz#49da1ca055e109a23d537e9de43c09cca21eb762"
+  integrity sha512-eh0GgfEkpnoWDq+VY8OyvYhFEzBk6jIYbRKdIlyTiAXIVJ8PyBaKb0rp7oDtoddbdoHWhq8wwr+XZ81F1rpNdA==
 
 node-fetch@2.6.7, node-fetch@^2.6.0, node-fetch@^2.6.1, node-fetch@^2.6.7:
   version "2.6.7"

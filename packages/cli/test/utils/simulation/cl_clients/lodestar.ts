@@ -1,17 +1,18 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {mkdir, writeFile} from "node:fs/promises";
+import fs from "node:fs";
 import {dirname, join} from "node:path";
 import got from "got";
 import {Keystore} from "@chainsafe/bls-keystore";
 import {getClient} from "@lodestar/api/beacon";
-import {getClient as keyManagerGetClient} from "@lodestar/api/keymanager";
-import {LogLevel} from "@lodestar/utils";
 import {chainConfigToJson} from "@lodestar/config";
+import {getClient as keyManagerGetClient} from "@lodestar/api/keymanager";
+import {dumpYaml, LogLevel} from "@lodestar/utils";
 import {IBeaconArgs} from "../../../../src/cmds/beacon/options.js";
 import {IValidatorCliArgs} from "../../../../src/cmds/validator/options.js";
 import {IGlobalArgs} from "../../../../src/options/globalOptions.js";
 import {CLClient, CLClientGenerator, CLClientGeneratorOptions, JobOptions, Runner, RunnerType} from "../interfaces.js";
-import {LODESTAR_BINARY_PATH} from "../constants.js";
+import {LODESTAR_BINARY_PATH, MOCK_ETH1_GENESIS_HASH} from "../constants.js";
 import {isChildProcessRunner} from "../runner/index.js";
 
 export const generateLodestarBeaconNode: CLClientGenerator<CLClient.Lodestar> = (opts, runner) => {
@@ -37,17 +38,18 @@ export const generateLodestarBeaconNode: CLClientGenerator<CLClient.Lodestar> = 
 
   const jwtSecretPath = join(dataDir, "jwtsecret");
   const rcConfigPath = join(dataDir, "rc_config.json");
-  const paramsPath = join(dataDir, "params.json");
+  const paramsPath = join(dataDir, "params.yaml");
 
-  const rcConfig = ({
+  const rcConfig: Partial<IBeaconArgs & IGlobalArgs> = {
     network: "dev",
     preset: "minimal",
     dataDir,
     genesisStateFile: genesisStateFilePath,
+    paramsFile: paramsPath,
     rest: true,
     "rest.address": address,
     "rest.port": restPort,
-    "rest.namespace": "*",
+    "rest.namespace": ["*"],
     "sync.isSingleNode": false,
     "network.allowPublishToZeroPeers": false,
     discv5: true,
@@ -57,18 +59,17 @@ export const generateLodestarBeaconNode: CLClientGenerator<CLClient.Lodestar> = 
     metrics: false,
     bootnodes: [],
     logPrefix: id,
-    logFormatGenesisTime: `${genesisTime}`,
+    logFormatGenesisTime: genesisTime,
     logLevel: LogLevel.debug,
     logFileDailyRotate: 0,
     logFile: "none",
     "jwt-secret": jwtSecretPath,
-    paramsFile: paramsPath,
     ...clientOptions,
-  } as unknown) as IBeaconArgs & IGlobalArgs;
+  };
 
   if (engineMock) {
     rcConfig["eth1"] = false;
-    rcConfig["execution.engineMock"] = true;
+    rcConfig["execution.engineMock"] = MOCK_ETH1_GENESIS_HASH;
     rcConfig["execution.urls"] = [];
   } else {
     rcConfig["eth1"] = true;
@@ -98,11 +99,11 @@ export const generateLodestarBeaconNode: CLClientGenerator<CLClient.Lodestar> = 
         await mkdir(dataDir, {recursive: true});
         await writeFile(rcConfigPath, JSON.stringify(rcConfig, null, 2));
         await writeFile(jwtSecretPath, jwtSecretHex);
-        await writeFile(paramsPath, JSON.stringify(chainConfigToJson(config), null, 2));
+        fs.writeFileSync(paramsPath, dumpYaml(chainConfigToJson(config))); // There is no need to use async fs here =D
       },
       cli: {
         command: LODESTAR_BINARY_PATH,
-        args: ["beacon", "--rcConfig", rcConfigPath, "--paramsFile", paramsPath],
+        args: ["beacon", "--rcConfig", rcConfigPath, "--paramsFile", paramsPath] as string[],
         env: {
           DEBUG: process.env.DISABLE_DEBUG_LOGS ? "" : "*,-winston:*",
         },
@@ -147,10 +148,13 @@ export const generateLodestarValidatorJobs = (
     throw Error("Attempting to run a vc with keys.type == 'no-keys'");
   }
 
+  const configPath = join(rootDir, "config.yaml");
+
   const rcConfig = ({
     network: "dev",
     preset: "minimal",
     dataDir: rootDir,
+    paramsFile: configPath,
     server: `http://${address}:${restPort}/`,
     keymanager: true,
     "keymanager.authEnabled": false,
@@ -171,7 +175,7 @@ export const generateLodestarValidatorJobs = (
       await mkdir(`${rootDir}/keystores`);
       await writeFile(join(rootDir, "password.txt"), "password");
       await writeFile(join(rootDir, "rc_config.json"), JSON.stringify(rcConfig, null, 2));
-      await writeFile(join(rootDir, "params.json"), JSON.stringify(chainConfigToJson(config), null, 2));
+      fs.writeFileSync(configPath, dumpYaml(chainConfigToJson(config))); // There is no need to use async fs here =D
 
       if (keys.type === "local") {
         for (const key of keys.secretKeys) {

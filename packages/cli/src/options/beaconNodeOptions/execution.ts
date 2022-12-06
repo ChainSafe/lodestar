@@ -7,7 +7,7 @@ export type ExecutionEngineArgs = {
   "execution.timeout": number;
   "execution.retryAttempts": number;
   "execution.retryDelay": number;
-  "execution.engineMock"?: boolean;
+  "execution.engineMock"?: string;
   "jwt-secret"?: string;
 };
 
@@ -15,7 +15,7 @@ export function parseArgs(args: ExecutionEngineArgs): IBeaconNodeOptions["execut
   if (args["execution.engineMock"]) {
     return {
       mode: "mock",
-      genesisBlockHash: "",
+      genesisBlockHash: args["execution.engineMock"] ?? "",
     };
   }
 
@@ -68,8 +68,8 @@ export const options: ICliCommandOptions<ExecutionEngineArgs> = {
   },
 
   "execution.engineMock": {
-    description: "Set the execution engine to mock mode",
-    type: "boolean",
+    description: "Set the execution engine to mock mode, providing the eth1GenesisHash",
+    type: "string",
     hidden: true,
     group: "execution",
   },

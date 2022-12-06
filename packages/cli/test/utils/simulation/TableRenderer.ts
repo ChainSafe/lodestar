@@ -46,8 +46,7 @@ export class TableRenderer<Columns extends string[number]> {
 
     this.printVSeparator("start");
     for (const [index, column] of this.columns.entries()) {
-      const value = String(row[column]);
-      process.stdout.write(value.padEnd(this.columnsSizes[column]));
+      process.stdout.write(strFixedSize(String(row[column]), this.columnsSizes[column]));
       if (index === this.columns.length - 1) {
         this.printVSeparator("end");
       } else {
@@ -70,4 +69,8 @@ export class TableRenderer<Columns extends string[number]> {
       process.stdout.write(" │\n");
     }
   }
+}
+
+function strFixedSize(str: string, width: number): string {
+  return str.padEnd(width).slice(0, width);
 }

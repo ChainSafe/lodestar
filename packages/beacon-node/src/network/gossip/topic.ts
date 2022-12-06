@@ -97,6 +97,8 @@ export function getGossipSSZType(topic: GossipTopic) {
       return ssz.altair.LightClientFinalityUpdate;
     case GossipType.bls_to_execution_change:
       return ssz.capella.SignedBLSToExecutionChange;
+    default:
+      throw new Error(`No ssz gossip type for ${(topic as GossipTopic).type}`);
   }
 }
 
