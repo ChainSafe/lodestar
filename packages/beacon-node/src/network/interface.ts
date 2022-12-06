@@ -32,6 +32,7 @@ export interface INetwork {
   getConnectedPeers(): PeerId[];
   hasSomeConnectedPeer(): boolean;
 
+  publishBeaconBlockMaybeBlobs(signedBlock: BlockInput): Promise<void>;
   beaconBlocksMaybeBlobsByRange(peerId: PeerId, request: phase0.BeaconBlocksByRangeRequest): Promise<BlockInput[]>;
   beaconBlocksMaybeBlobsByRoot(peerId: PeerId, request: phase0.BeaconBlocksByRootRequest): Promise<BlockInput[]>;
 
