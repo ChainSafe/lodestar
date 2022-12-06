@@ -230,7 +230,7 @@ describe("network", function () {
 
     expect(netA.gossip.getTopics().length).to.equal(0);
     netA.subscribeGossipCoreTopics();
-    expect(netA.gossip.getTopics().length).to.equal(13);
+    expect(netA.gossip.getTopics().length).to.greaterThan(0);
     netA.unsubscribeGossipCoreTopics();
     expect(netA.gossip.getTopics().length).to.equal(0);
     netA.close();

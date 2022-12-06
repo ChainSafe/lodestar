@@ -34,6 +34,7 @@ const ttd = getEstimatedTTD({
   additionalSlots: additionalSlotsForTTD,
 });
 
+const EIP4844_FORK_EPOCH = 1;
 const env = SimulationEnvironment.initWithDefaults(
   {
     id: "multi-fork",
@@ -41,13 +42,17 @@ const env = SimulationEnvironment.initWithDefaults(
     chainConfig: {
       ALTAIR_FORK_EPOCH: altairForkEpoch,
       BELLATRIX_FORK_EPOCH: bellatrixForkEpoch,
+      CAPELLA_FORK_EPOCH: 0,
+      EIP4844_FORK_EPOCH: EIP4844_FORK_EPOCH,
       GENESIS_DELAY: genesisSlotsDelay,
       TERMINAL_TOTAL_DIFFICULTY: ttd,
     },
   },
   [
     {id: "node-1", cl: CLClient.Lodestar, el: ELClient.Mock, keysCount: 32},
-    {id: "node-2", cl: CLClient.Lodestar, el: ELClient.Mock, keysCount: 32, remote: true},
+    {id: "node-2", cl: CLClient.Lodestar, el: ELClient.Mock, keysCount: 32},
+    // {id: "node-3", cl: CLClient.Lodestar, el: ELClient.Geth, keysCount: 32},
+    // {id: "node-4", cl: CLClient.Lodestar, el: ELClient.Nethermind, keysCount: 32},
   ]
 );
 
@@ -63,7 +68,7 @@ await connectAllNodes(env.nodes);
 
 // The `TTD` will be reach around `start of bellatrixForkEpoch + additionalSlotsForMerge` slot
 // We wait for the end of that epoch with half more epoch to make sure merge transition is complete
-await waitForSlot(env.clock.getLastSlotOfEpoch(bellatrixForkEpoch) + activePreset.SLOTS_PER_EPOCH / 2, env.nodes, {
+await waitForSlot(env.clock.getLastSlotOfEpoch(EIP4844_FORK_EPOCH + 2) + activePreset.SLOTS_PER_EPOCH / 2, env.nodes, {
   silent: true,
   env,
 });
@@ -74,7 +79,7 @@ const headForRangeSync = await env.nodes[0].cl.api.beacon.getBlockHeader("head")
 const rangeSync = env.createNodePair({
   id: "range-sync-node",
   cl: CLClient.Lodestar,
-  el: ELClient.Geth,
+  el: ELClient.Mock,
   keysCount: 0,
 });
 
@@ -89,7 +94,7 @@ const checkpointSync = env.createNodePair({
     type: CLClient.Lodestar,
     options: {wssCheckpoint: `${headForCheckpointSync.root}:${headForCheckpointSync.epoch}`},
   },
-  el: ELClient.Geth,
+  el: ELClient.Mock,
   keysCount: 0,
 });
 

@@ -34,6 +34,8 @@ export type StateTransitionOpts = BlockExternalData &
     verifyStateRoot?: boolean;
     verifyProposer?: boolean;
     verifySignatures?: boolean;
+    // TODO EIP-4844: Merge this options with ProcessBlockOpts
+    disabledWithdrawals?: boolean;
   };
 
 /**

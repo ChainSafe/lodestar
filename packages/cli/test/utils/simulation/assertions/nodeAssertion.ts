@@ -20,7 +20,6 @@ export const nodeAssertion: SimulationAssertion<"node", string> = {
 
       const keyManagerKeys = (await node.cl.keyManager.listKeys()).data.map((k) => k.validatingPubkey);
       const expectedPubkeys = getAllKeys(node.cl.keys).map((k) => k.toPublicKey().toHex());
-
       if (!arrayEquals(keyManagerKeys.sort(), expectedPubkeys.sort())) {
         errors.push(
           `Validator should have correct number of keys loaded. ${JSON.stringify({

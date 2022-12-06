@@ -1,6 +1,7 @@
 import sinon from "sinon";
 import {expect} from "chai";
 import {createIBeaconConfig, createIChainForkConfig, defaultChainConfig} from "@lodestar/config";
+import {chainConfig} from "@lodestar/config/default";
 import {capella, altair, phase0, ssz} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 
@@ -44,6 +45,11 @@ describe("gossipsub", function () {
 
   const logger = testLogger();
 
+  const ALTAIR_FORK_EPOCH = 128;
+  const genesisValidatorsRoot = Buffer.alloc(32, 0xdd);
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  const config = createIBeaconConfig({...chainConfig, ALTAIR_FORK_EPOCH}, genesisValidatorsRoot);
+
   const afterEachCallbacks: (() => Promise<void> | void)[] = [];
   afterEach(async () => {
     while (afterEachCallbacks.length > 0) {
@@ -64,13 +70,12 @@ describe("gossipsub", function () {
       },
     });
 
-    const beaconConfig = createIBeaconConfig(config, state.genesisValidatorsRoot);
     const chain = new MockBeaconChain({
       genesisTime: 0,
       chainId: 0,
       networkId: BigInt(0),
       state,
-      config: beaconConfig,
+      config,
     });
 
     chain.forkChoice.getHead = () => {
@@ -89,7 +94,7 @@ describe("gossipsub", function () {
     const loggerB = testLogger("B");
 
     const modules = {
-      config: beaconConfig,
+      config,
       chain,
       db,
       reqRespHandlers,

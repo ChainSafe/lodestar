@@ -5,6 +5,7 @@ import {Bootstrap} from "@libp2p/bootstrap";
 import {MulticastDNS} from "@libp2p/mdns";
 import {PeerId} from "@libp2p/interface-peer-id";
 import {Datastore} from "interface-datastore";
+import {yamux} from "@chainsafe/libp2p-yamux";
 import {createNoise} from "./noise.js";
 
 export interface ILibp2pOptions {
@@ -35,6 +36,9 @@ export async function createNodejsLibp2p(options: ILibp2pOptions): Promise<Libp2
       peerDiscovery.push(new MulticastDNS());
     }
   }
+
+  const yamuxInstance = yamux()();
+
   return await createLibp2p({
     peerId: options.peerId,
     addresses: {
@@ -43,7 +47,12 @@ export async function createNodejsLibp2p(options: ILibp2pOptions): Promise<Libp2
     },
     connectionEncryption: [createNoise()],
     transports: [new TCP()],
-    streamMuxers: [new Mplex({maxInboundStreams: 256})],
+    streamMuxers: [
+      //
+      new Mplex({maxInboundStreams: 256}),
+      // Cast because yamux.StreamMuxerFactory is different than libp2p.StreamMuxerFactory
+      yamuxInstance as Mplex,
+    ],
     peerDiscovery,
     metrics: {
       // temporarily disable since there is a performance issue with it

@@ -99,19 +99,23 @@ export async function waitForSlot(
     });
   }
 
+  for (const node of nodes) {
+    const head = await node.cl.api.beacon.getBlockHeader("head");
+    const headSlot = head.data.header.message.slot;
+    if (headSlot > slot) {
+      throw Error(`waitForSlot error, node ${node.id} head.slot ${headSlot} > target slot ${slot}`);
+    }
+  }
+
   await Promise.all(
     nodes.map(
       (node) =>
-        new Promise<void>((resolve, reject) => {
+        new Promise<void>((resolve) => {
           const cb = (event: {slot: Slot}): void => {
-            if (slot === event.slot) {
+            // TODO FOR NAZAR: slots may be skipped, so we can't just assert event.slot == slot
+            if (event.slot >= slot) {
               resolve();
               env.tracker.off(node, SimulationTrackerEvent.Slot, cb);
-              return;
-            }
-
-            if (event.slot >= slot) {
-              reject(new Error(`${node.cl.id} had passed target slot ${slot}. Current slot ${event.slot}`));
             }
           };
           env.tracker.on(node, SimulationTrackerEvent.Slot, cb);

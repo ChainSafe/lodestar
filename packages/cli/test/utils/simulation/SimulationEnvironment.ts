@@ -56,6 +56,10 @@ interface StartOpts {
 
 /* eslint-disable no-console */
 
+interface StartOpts {
+  runTimeoutMs: number;
+}
+
 export class SimulationEnvironment {
   readonly nodes: NodePair[] = [];
   readonly clock: EpochClock;
@@ -173,7 +177,7 @@ export class SimulationEnvironment {
       await mkdir(this.options.rootDir);
 
       await this.dockerRunner.start();
-      await Promise.all(this.jobs.map((j) => j.el.start()));
+      await Promise.all(this.jobs.map((j) => j.el?.start()));
 
       for (let i = 0; i < this.nodes.length; i++) {
         // Get genesis block hash
@@ -187,6 +191,7 @@ export class SimulationEnvironment {
           throw new Error(`Eth1 genesis not found for node "${this.nodes[i].id}"`);
         }
 
+        // TODO FOR NAZAR: Create state only once, eth1 genesis hash must be equal on all hosts
         const genesisState = nodeUtils.initDevState(this.forkConfig, this.keysCount, {
           genesisTime: this.options.genesisTime,
           eth1BlockHash: fromHexString(eth1Genesis.hash),
@@ -203,6 +208,8 @@ export class SimulationEnvironment {
 
       await Promise.all(this.jobs.map((j) => j.cl.start()));
 
+      // Only start external signer if necessary
+      // TODO FOR NAZAR: Start 1 external signer per validator client, do not mix keys. Only start external signer if remote == true
       if (this.nodes.some((node) => node.cl.keys.type === "remote")) {
         console.log("Starting external signer...");
         await this.externalSigner.start();
@@ -218,6 +225,8 @@ export class SimulationEnvironment {
           }
         }
       }
+
+      console.log(`Start complete, seconds to genesis: ${this.clock.msToGenesis() / 1000}`);
 
       await this.tracker.start();
       await Promise.all(this.nodes.map((node) => this.tracker.track(node)));
@@ -236,7 +245,7 @@ export class SimulationEnvironment {
     console.log(`Simulation environment "${this.options.id}" is stopping: ${message}`);
     this.options.controller.abort();
     await this.tracker.stop();
-    await Promise.all(this.jobs.map((j) => j.el.stop()));
+    await Promise.all(this.jobs.map((j) => j.el?.stop()));
     await Promise.all(this.jobs.map((j) => j.cl.stop()));
     await this.externalSigner.stop();
     await this.dockerRunner.stop();
@@ -263,7 +272,7 @@ export class SimulationEnvironment {
 
     this.nodePairCount += 1;
 
-    const keys = Array.from({length: keysCount}, (_, vi) => {
+    const secretKeys = Array.from({length: keysCount}, (_, vi) => {
       return interopSecretKey(this.keysCount + vi);
     });
     this.keysCount += keysCount;
@@ -271,10 +280,10 @@ export class SimulationEnvironment {
     const clClient = this.createCLNode(cl, {
       id,
       keys:
-        keys.length > 0 && remote
-          ? {type: "remote", secretKeys: keys}
-          : keys.length > 0
-          ? {type: "local", secretKeys: keys}
+        keysCount > 0 && remote
+          ? {type: "remote", secretKeys}
+          : keysCount > 0
+          ? {type: "local", secretKeys}
           : {type: "no-keys"},
       engineMock: typeof el === "string" ? el === ELClient.Mock : el.type === ELClient.Mock,
     });

@@ -14,6 +14,7 @@ env:
   GETH_WITHDRAWALS_IMAGE: ethpandaops/geth:withdrawals-timestamp-e92fb91
   ETHEREUMJS_WITHDRAWALS_IMAGE: g11tech/ethereumjs:withdrawals-07b106
   NETHERMIND_WITHDRAWALS_IMAGE: nethermindeth/nethermind:withdrawals_yolo
+  GETH_4844_IMAGE: g11tech/geth:4844-c3121
 
 jobs:
   sim-merge-tests:
@@ -121,6 +122,16 @@ jobs:
       #   env:
       #     EL_BINARY_DIR: ${{ env.NETHERMIND_WITHDRAWALS_IMAGE }}
       #     EL_SCRIPT_DIR: netherminddocker
+
+      - name: Pull geth eip4844
+        run: docker pull $GETH_4844_IMAGE
+
+      - name: Test Lodestar <> geth 4844
+        run: yarn test:sim:eip4844
+        working-directory: packages/beacon-node
+        env:
+          EL_BINARY_DIR: ${{ env.GETH_4844_IMAGE }}
+          EL_SCRIPT_DIR: gethdocker
 
       - name: Upload debug log test files
         if: ${{ always() }}

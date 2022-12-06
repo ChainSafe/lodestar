@@ -10,7 +10,7 @@ import {loadEthereumTrustedSetup, initCKZG, ckzg, FIELD_ELEMENTS_PER_BLOB_MAINNE
 import {validateBlobsSidecar, validateGossipBlobsSidecar} from "../../../src/chain/validation/blobsSidecar.js";
 
 describe("C-KZG", () => {
-  before(async function () {
+  before(function () {
     this.timeout(10000); // Loading trusted setup is slow
     await initCKZG();
     loadEthereumTrustedSetup();
@@ -40,7 +40,7 @@ describe("C-KZG", () => {
 
     const blobsSidecar: eip4844.BlobsSidecar = {
       beaconBlockRoot,
-      beaconBlockSlot: 0,
+      beaconBlockSlot: signedBeaconBlock.message.slot,
       blobs,
       kzgAggregatedProof: ckzg.computeAggregateKzgProof(blobs),
     };

@@ -40,16 +40,16 @@ jobs:
         if: steps.cache-deps.outputs.cache-hit == 'true'
       # </common-build>
 
+      - name: Sim tests eip4844
+        run: yarn test:sim:eip4844
+        working-directory: packages/cli
+
       - name: Sim tests multifork
         run: yarn test:sim:multifork
         working-directory: packages/cli
 
       - name: Sim tests endpoints
         run: yarn test:sim:endpoints
-        working-directory: packages/cli
-
-      - name: Sim tests eip4844
-        run: yarn test:sim:eip4844
         working-directory: packages/cli
 
       - name: Upload debug log test files for "packages/cli"

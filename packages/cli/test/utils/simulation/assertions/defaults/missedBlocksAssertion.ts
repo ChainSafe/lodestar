@@ -16,7 +16,7 @@ export const missedBlocksAssertion: SimulationAssertion<"missedBlocks", number[]
     const missedSlots: number[] = [];
 
     for (let slot = startSlot; slot < endSlot; slot++) {
-      if (!dependantStores["head"][node.cl.id][slot].slot) {
+      if (dependantStores["head"][node.cl.id][slot] !== undefined) {
         missedSlots.push(slot);
       }
     }

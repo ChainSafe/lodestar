@@ -135,7 +135,6 @@ export class SimulationTracker {
       this.initEventStreamForNode(node);
     }
     this.reporter.bootstrap();
-
     // Start clock loop on current slot or genesis
     this.clockLoop(Math.max(this.clock.currentSlot, 0)).catch((e) => {
       console.error("error on clockLoop", e);

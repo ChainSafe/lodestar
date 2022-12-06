@@ -146,6 +146,12 @@ export async function produceBlockBody<T extends BlockType>(
     const finalizedBlockHash = this.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
     const feeRecipient = this.beaconProposerCache.getOrDefault(proposerIndex);
 
+    // Capella and later forks have blsToExecutionChanges on BeaconBlockBody
+    // It would be nicer to use ForkSeq, but that doesn't narrow the type appropriately
+    if (fork === ForkName.capella || fork === ForkName.eip4844) {
+      (blockBody as capella.BeaconBlockBody).blsToExecutionChanges = [];
+    }
+
     if (blockType === BlockType.Blinded) {
       if (!this.executionBuilder) throw Error("Execution Builder not available");
 
