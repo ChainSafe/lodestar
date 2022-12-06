@@ -13,13 +13,14 @@ describeCliTest("voluntaryExit cmd", function ({spawnCli}) {
   itDone("Perform a voluntary exit", async function (done) {
     const restPort = 9596;
 
-    const devBnProc = spawnCli({pipeStdToParent: false, logPrefix: "dev"}, [
+    const devBnProc = spawnCli({pipeStdToParent: true, logPrefix: "dev"}, [
       // ⏎
       "dev",
       `--dataDir=${path.join(testFilesDir, "dev-voluntary-exit")}`,
       "--genesisValidators=8",
       "--startValidators=0..7",
       "--rest",
+      "--logLevel=debug",
       `--rest.port=${restPort}`,
       // Speed up test to make genesis happen faster
       "--params.SECONDS_PER_SLOT=2",

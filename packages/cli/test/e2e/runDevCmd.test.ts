@@ -9,11 +9,12 @@ describeCliTest("Run dev command", function ({spawnCli}) {
   itDone("Run dev command with no --dataDir until beacon api is listening", async function (done) {
     const beaconPort = 39011;
 
-    const devProc = spawnCli({pipeStdToParent: false, printOnlyOnError: true, logPrefix: "dev"}, [
+    const devProc = spawnCli({pipeStdToParent: true, printOnlyOnError: true, logPrefix: "dev"}, [
       // ⏎
       "dev",
       "--reset",
       "--startValidators=0..7",
+      "--logLevel=debug",
       `--rest.port=${beaconPort}`,
     ]);
 
