@@ -1200,7 +1200,7 @@
             "type": "prometheus",
             "uid": "prometheus_local"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "1 - sum(rate(lodestar_execution_engine_http_client_request_time_seconds_bucket{le=\"1\"}[32m])) by (routeId) / sum(rate(lodestar_execution_engine_http_client_request_time_seconds_count[32m])) by (routeId)",
           "interval": "",
           "legendFormat": "{{routeId}}",
