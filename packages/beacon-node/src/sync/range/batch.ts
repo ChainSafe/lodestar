@@ -1,8 +1,9 @@
 import {PeerId} from "@libp2p/interface-peer-id";
-import {allForks, Epoch, phase0, RootHex} from "@lodestar/types";
+import {Epoch, phase0, RootHex} from "@lodestar/types";
 import {IChainForkConfig} from "@lodestar/config";
 import {LodestarError} from "@lodestar/utils";
 import {MAX_BATCH_DOWNLOAD_ATTEMPTS, MAX_BATCH_PROCESSING_ATTEMPTS} from "../constants.js";
+import {BlockInput} from "../../chain/blocks/types.js";
 import {BlockError, BlockErrorCode} from "../../chain/errors/index.js";
 import {getBatchSlotRange, hashBlocks} from "./utils/index.js";
 
@@ -38,7 +39,7 @@ export type Attempt = {
 export type BatchState =
   | {status: BatchStatus.AwaitingDownload}
   | {status: BatchStatus.Downloading; peer: PeerId}
-  | {status: BatchStatus.AwaitingProcessing; peer: PeerId; blocks: allForks.SignedBeaconBlock[]}
+  | {status: BatchStatus.AwaitingProcessing; peer: PeerId; blocks: BlockInput[]}
   | {status: BatchStatus.Processing; attempt: Attempt}
   | {status: BatchStatus.AwaitingValidation; attempt: Attempt};
 
@@ -109,7 +110,7 @@ export class Batch {
   /**
    * Downloading -> AwaitingProcessing
    */
-  downloadingSuccess(blocks: allForks.SignedBeaconBlock[]): void {
+  downloadingSuccess(blocks: BlockInput[]): void {
     if (this.state.status !== BatchStatus.Downloading) {
       throw new BatchError(this.wrongStatusErrorType(BatchStatus.Downloading));
     }
@@ -136,7 +137,7 @@ export class Batch {
   /**
    * AwaitingProcessing -> Processing
    */
-  startProcessing(): allForks.SignedBeaconBlock[] {
+  startProcessing(): BlockInput[] {
     if (this.state.status !== BatchStatus.AwaitingProcessing) {
       throw new BatchError(this.wrongStatusErrorType(BatchStatus.AwaitingProcessing));
     }

@@ -8,9 +8,10 @@ import {ILogger, sleep} from "@lodestar/utils";
 import {ATTESTATION_SUBNET_COUNT, ForkName, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {Discv5, ENR} from "@chainsafe/discv5";
 import {computeEpochAtSlot, computeTimeAtSlot} from "@lodestar/state-transition";
-import {altair, Epoch} from "@lodestar/types";
+import {altair, Epoch, phase0} from "@lodestar/types";
 import {IMetrics} from "../metrics/index.js";
 import {ChainEvent, IBeaconChain, IBeaconClock} from "../chain/index.js";
+import {BlockInput, getBlockInput} from "../chain/blocks/types.js";
 import {INetworkOptions} from "./options.js";
 import {INetwork} from "./interface.js";
 import {IReqRespBeaconNode, ReqRespBeaconNode, ReqRespHandlers} from "./reqresp/ReqRespBeaconNode.js";
@@ -193,6 +194,21 @@ export class Network implements INetwork {
 
   hasSomeConnectedPeer(): boolean {
     return this.peerManager.hasSomeConnectedPeer();
+  }
+
+  async beaconBlocksMaybeBlobsByRange(
+    peerId: PeerId,
+    request: phase0.BeaconBlocksByRangeRequest
+  ): Promise<BlockInput[]> {
+    // TODO EIP-4844: Will throw an error for blocks post EIP-4844
+    const blocks = await this.reqResp.beaconBlocksByRange(peerId, request);
+    return blocks.map((block) => getBlockInput.preEIP4844(this.config, block));
+  }
+
+  async beaconBlocksMaybeBlobsByRoot(peerId: PeerId, request: phase0.BeaconBlocksByRootRequest): Promise<BlockInput[]> {
+    // TODO EIP-4844: Will throw an error for blocks post EIP-4844
+    const blocks = await this.reqResp.beaconBlocksByRoot(peerId, request);
+    return blocks.map((block) => getBlockInput.preEIP4844(this.config, block));
   }
 
   /**

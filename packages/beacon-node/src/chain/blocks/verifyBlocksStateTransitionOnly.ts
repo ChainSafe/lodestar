@@ -1,11 +1,10 @@
 import {CachedBeaconStateAllForks, stateTransition} from "@lodestar/state-transition";
-import {allForks} from "@lodestar/types";
 import {ErrorAborted, sleep} from "@lodestar/utils";
 import {IMetrics} from "../../metrics/index.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
 import {byteArrayEquals} from "../../util/bytes.js";
-import {ImportBlockOpts} from "./types.js";
+import {BlockInput, ImportBlockOpts} from "./types.js";
 
 /**
  * Verifies 1 or more blocks are fully valid running the full state transition; from a linear sequence of blocks.
@@ -17,7 +16,7 @@ import {ImportBlockOpts} from "./types.js";
  */
 export async function verifyBlocksStateTransitionOnly(
   preState0: CachedBeaconStateAllForks,
-  blocks: allForks.SignedBeaconBlock[],
+  blocks: BlockInput[],
   metrics: IMetrics | null,
   signal: AbortSignal,
   opts: BlockProcessOpts & ImportBlockOpts
@@ -27,7 +26,7 @@ export async function verifyBlocksStateTransitionOnly(
 
   for (let i = 0; i < blocks.length; i++) {
     const {validProposerSignature, validSignatures} = opts;
-    const block = blocks[i];
+    const {block} = blocks[i];
     const preState = i === 0 ? preState0 : postStates[i - 1];
 
     // STFN - per_slot_processing() + per_block_processing()

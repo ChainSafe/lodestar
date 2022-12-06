@@ -62,6 +62,7 @@ import {CheckpointBalancesCache} from "./balancesCache.js";
 import {AssembledBlockType, BlockType} from "./produceBlock/index.js";
 import {BlockAttributes, produceBlockBody} from "./produceBlock/produceBlockBody.js";
 import {computeNewStateRoot} from "./produceBlock/computeNewStateRoot.js";
+import {BlockInput} from "./blocks/types.js";
 
 export class BeaconChain implements IBeaconChain {
   readonly genesisTime: UintNum64;
@@ -379,11 +380,11 @@ export class BeaconChain implements IBeaconChain {
     return block;
   }
 
-  async processBlock(block: allForks.SignedBeaconBlock, opts?: ImportBlockOpts): Promise<void> {
+  async processBlock(block: BlockInput, opts?: ImportBlockOpts): Promise<void> {
     return await this.blockProcessor.processBlocksJob([block], opts);
   }
 
-  async processChainSegment(blocks: allForks.SignedBeaconBlock[], opts?: ImportBlockOpts): Promise<void> {
+  async processChainSegment(blocks: BlockInput[], opts?: ImportBlockOpts): Promise<void> {
     return await this.blockProcessor.processBlocksJob(blocks, opts);
   }
 
