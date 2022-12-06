@@ -198,7 +198,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
 
   /** Convenience method for `SyncChain` */
   private downloadBeaconBlocksByRange: SyncChainFns["downloadBeaconBlocksByRange"] = async (peerId, request) => {
-    return await this.network.reqResp.beaconBlocksByRange(peerId, request);
+    return await this.network.beaconBlocksMaybeBlobsByRange(peerId, request);
   };
 
   /** Convenience method for `SyncChain` */

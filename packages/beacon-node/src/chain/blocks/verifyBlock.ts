@@ -1,5 +1,6 @@
 import {CachedBeaconStateAllForks, computeEpochAtSlot} from "@lodestar/state-transition";
-import {allForks, bellatrix} from "@lodestar/types";
+import {bellatrix} from "@lodestar/types";
+import {ForkName} from "@lodestar/params";
 import {toHexString} from "@chainsafe/ssz";
 import {ProtoBlock} from "@lodestar/fork-choice";
 import {IChainForkConfig} from "@lodestar/config";
@@ -8,8 +9,9 @@ import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
 import {RegenCaller} from "../regen/index.js";
 import type {BeaconChain} from "../chain.js";
-import {ImportBlockOpts} from "./types.js";
+import {BlockInput, ImportBlockOpts} from "./types.js";
 import {POS_PANDA_MERGE_TRANSITION_BANNER} from "./utils/pandaMergeTransitionBanner.js";
+import {CAPELLA_OWL_BANNER} from "./utils/ownBanner.js";
 import {verifyBlocksStateTransitionOnly} from "./verifyBlocksStateTransitionOnly.js";
 import {verifyBlocksSignatures} from "./verifyBlocksSignatures.js";
 import {verifyBlocksExecutionPayload, SegmentExecStatus} from "./verifyBlocksExecutionPayloads.js";
@@ -28,13 +30,14 @@ import {verifyBlocksExecutionPayload, SegmentExecStatus} from "./verifyBlocksExe
 export async function verifyBlocksInEpoch(
   this: BeaconChain,
   parentBlock: ProtoBlock,
-  blocks: allForks.SignedBeaconBlock[],
+  blocksImport: BlockInput[],
   opts: BlockProcessOpts & ImportBlockOpts
 ): Promise<{
   postStates: CachedBeaconStateAllForks[];
   proposerBalanceDeltas: number[];
   segmentExecStatus: SegmentExecStatus;
 }> {
+  const blocks = blocksImport.map(({block}) => block);
   if (blocks.length === 0) {
     throw Error("Empty partiallyVerifiedBlocks");
   }
@@ -64,22 +67,30 @@ export async function verifyBlocksInEpoch(
   const abortController = new AbortController();
 
   try {
-    const [{postStates, proposerBalanceDeltas}, , segmentExecStatus] = await Promise.all([
-      // Run state transition only
-      // TODO: Ensure it yields to allow flushing to workers and engine API
-      verifyBlocksStateTransitionOnly(preState0, blocks, this.metrics, abortController.signal, opts),
-
-      // All signatures at once
-      verifyBlocksSignatures(this.bls, preState0, blocks, opts),
-
+    const [segmentExecStatus, {postStates, proposerBalanceDeltas}] = await Promise.all([
       // Execution payloads
       verifyBlocksExecutionPayload(this, parentBlock, blocks, preState0, abortController.signal, opts),
+      // Run state transition only
+      // TODO: Ensure it yields to allow flushing to workers and engine API
+      verifyBlocksStateTransitionOnly(preState0, blocksImport, this.logger, this.metrics, abortController.signal, opts),
+
+      // All signatures at once
+      verifyBlocksSignatures(this.bls, this.logger, this.metrics, preState0, blocks, opts),
     ]);
 
     if (segmentExecStatus.execAborted === null && segmentExecStatus.mergeBlockFound !== null) {
       // merge block found and is fully valid = state transition + signatures + execution payload.
       // TODO: Will this banner be logged during syncing?
       logOnPowBlock(this.logger, this.config, segmentExecStatus.mergeBlockFound);
+    }
+
+    const fromFork = this.config.getForkName(parentBlock.slot);
+    const toFork = this.config.getForkName(blocks[blocks.length - 1].message.slot);
+
+    // If transition through capella, note won't happen if CAPELLA_EPOCH = 0, will log double on re-org
+    if (fromFork !== ForkName.capella && toFork === ForkName.capella) {
+      this.logger.info(CAPELLA_OWL_BANNER);
+      this.logger.info("Activating withdrawals", {epoch: this.config.CAPELLA_FORK_EPOCH});
     }
 
     return {postStates, proposerBalanceDeltas, segmentExecStatus};

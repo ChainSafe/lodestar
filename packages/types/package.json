@@ -23,6 +23,9 @@
     "./altair": {
       "import": "./lib/altair/index.js"
     },
+    "./capella": {
+      "import": "./lib/capella/index.js"
+    },
     "./bellatrix": {
       "import": "./lib/bellatrix/index.js"
     },

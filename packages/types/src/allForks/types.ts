@@ -38,7 +38,6 @@ export type BeaconState =
   | capella.BeaconState
   | eip4844.BeaconState;
 export type Metadata = phase0.Metadata | altair.Metadata;
-export type Validator = phase0.Validator | capella.Validator;
 
 // For easy reference in the assemble block for building payloads
 export type ExecutionBlockBody = bellatrix.BeaconBlockBody | capella.BeaconBlockBody | eip4844.BeaconBlockBody;
@@ -49,6 +48,10 @@ export type ExecutionPayloadHeader =
   | bellatrix.ExecutionPayloadHeader
   | capella.ExecutionPayloadHeader
   | eip4844.ExecutionPayloadHeader;
+export type BlindedExecutionPayload =
+  | bellatrix.ExecutionPayloadHeader
+  | capella.BlindedExecutionPayload
+  | eip4844.BlindedExecutionPayload;
 
 // Blinded types that will change across forks
 export type BlindedBeaconBlockBody =
@@ -62,7 +65,9 @@ export type SignedBlindedBeaconBlock =
   | eip4844.SignedBlindedBeaconBlock;
 
 // Full or blinded types
-export type FullOrBlindedExecutionPayload = ExecutionPayload | ExecutionPayloadHeader;
+export type FullOrBlindedExecutionPayload =
+  | bellatrix.FullOrBlindedExecutionPayload
+  | capella.FullOrBlindedExecutionPayload;
 export type FullOrBlindedBeaconBlockBody = BeaconBlockBody | BlindedBeaconBlockBody;
 export type FullOrBlindedBeaconBlock = BeaconBlock | BlindedBeaconBlock;
 export type FullOrBlindedSignedBeaconBlock = SignedBeaconBlock | SignedBlindedBeaconBlock;

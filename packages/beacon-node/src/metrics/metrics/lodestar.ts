@@ -407,6 +407,26 @@ export function createLodestarMetrics(
       // Block processing can take 5-40ms, 100ms max
       buckets: [0.005, 0.01, 0.02, 0.05, 0.1, 1],
     }),
+    stfnBalancesNodesPopulatedMiss: register.gauge<"source">({
+      name: "lodestar_stfn_balances_nodes_populated_miss_total",
+      help: "Total count state.balances nodesPopulated is not true on stfn",
+      labelNames: ["source"],
+    }),
+    stfnValidatorsNodesPopulatedMiss: register.gauge<"source">({
+      name: "lodestar_stfn_validators_nodes_populated_miss_total",
+      help: "Total count state.validators nodesPopulated is not true on stfn",
+      labelNames: ["source"],
+    }),
+    stfnStateClone: register.gauge<"source">({
+      name: "lodestar_stfn_state_clone_total",
+      help: "Total count of state.clone() calls in stfn",
+      labelNames: ["source"],
+    }),
+    stfnStateClonedCount: register.histogram({
+      name: "lodestar_stfn_state_cloned_count",
+      help: "Histogram of cloned count per state every time state.clone() is called",
+      buckets: [1, 2, 5, 10, 50, 250],
+    }),
 
     // BLS verifier thread pool and queue
 
@@ -588,6 +608,31 @@ export function createLodestarMetrics(
         name: "lodestar_gossip_block_elapsed_time_till_processed",
         help: "Time elapsed between block slot time and the time block processed",
         buckets: [0.5, 1, 2, 4, 6, 12],
+      }),
+      receivedToGossipValidate: register.histogram({
+        name: "lodestar_gossip_block_received_to_gossip_validate",
+        help: "Time elapsed between block received and block validated",
+        buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5, 2, 4],
+      }),
+      receivedToStateTransition: register.histogram({
+        name: "lodestar_gossip_block_received_to_state_transition",
+        help: "Time elapsed between block received and block state transition",
+        buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5, 2, 4],
+      }),
+      receivedToSignaturesVerification: register.histogram({
+        name: "lodestar_gossip_block_received_to_signatures_verification",
+        help: "Time elapsed between block received and block signatures verification",
+        buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5, 2, 4],
+      }),
+      receivedToExecutionPayloadVerification: register.histogram({
+        name: "lodestar_gossip_block_received_to_execution_payload_verification",
+        help: "Time elapsed between block received and execution payload verification",
+        buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5, 2, 4],
+      }),
+      receivedToBlockImport: register.histogram({
+        name: "lodestar_gossip_block_received_to_block_import",
+        help: "Time elapsed between block received and block import",
+        buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5, 2, 4],
       }),
     },
     elapsedTimeTillBecomeHead: register.histogram({
@@ -885,10 +930,6 @@ export function createLodestarMetrics(
         help: "Histogram of cloned count per state every time state.clone() is called",
         buckets: [1, 2, 5, 10, 50, 250],
       }),
-      stateInternalCacheMiss: register.gauge({
-        name: "lodestar_state_cache_state_internal_cache_miss",
-        help: "Retrieved state does not have its internal cache populated",
-      }),
     },
 
     cpStateCache: {
@@ -924,10 +965,6 @@ export function createLodestarMetrics(
         name: "lodestar_cp_state_cache_state_cloned_count",
         help: "Histogram of cloned count per state every time state.clone() is called",
         buckets: [1, 2, 5, 10, 50, 250],
-      }),
-      stateInternalCacheMiss: register.gauge({
-        name: "lodestar_cp_state_cache_state_internal_cache_miss",
-        help: "Retrieved state does not have its internal cache populated",
       }),
     },
 

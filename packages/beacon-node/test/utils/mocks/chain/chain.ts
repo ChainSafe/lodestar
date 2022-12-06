@@ -62,6 +62,7 @@ export class MockBeaconChain implements IBeaconChain {
   readonly executionEngine = new ExecutionEngineDisabled();
   readonly config: IBeaconConfig;
   readonly logger: ILogger;
+  readonly metrics = null;
   readonly opts: IChainOptions = {
     persistInvalidSszObjectsDir: "",
     proposerBoostEnabled: false,
@@ -184,6 +185,10 @@ export class MockBeaconChain implements IBeaconChain {
     throw Error("Not implemented");
   }
   async produceBlindedBlock(_blockAttributes: BlockAttributes): Promise<allForks.BlindedBeaconBlock> {
+    throw Error("Not implemented");
+  }
+
+  getBlobsSidecar(): never {
     throw Error("Not implemented");
   }
 

@@ -15,7 +15,7 @@ import {
 } from "@lodestar/reqresp";
 import {ReqRespOpts} from "@lodestar/reqresp/lib/ReqResp.js";
 import * as messages from "@lodestar/reqresp/messages";
-import {allForks, altair, phase0, Root} from "@lodestar/types";
+import {allForks, altair, eip4844, phase0, Root} from "@lodestar/types";
 import {ILogger} from "@lodestar/utils";
 import {IMetrics} from "../../metrics/metrics.js";
 import {INetworkEventBus, NetworkEvent} from "../events.js";
@@ -220,6 +220,21 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
       this.sendRequest<altair.LightClientUpdatesByRange, altair.LightClientUpdate>(
         peerId,
         ReqRespMethod.LightClientUpdatesByRange,
+        [Version.V1],
+        request
+      ),
+      request.count
+    );
+  }
+
+  async blobsSidecarsByRange(
+    peerId: PeerId,
+    request: eip4844.BlobsSidecarsByRangeRequest
+  ): Promise<eip4844.BlobsSidecar[]> {
+    return collectMaxResponse(
+      this.sendRequest<eip4844.BlobsSidecarsByRangeRequest, eip4844.BlobsSidecar>(
+        peerId,
+        ReqRespMethod.BlobsSidecarsByRange,
         [Version.V1],
         request
       ),

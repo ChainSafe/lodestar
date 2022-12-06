@@ -5,12 +5,13 @@ import {PeerId} from "@libp2p/interface-peer-id";
 import {Multiaddr} from "@multiformats/multiaddr";
 import {IBeaconConfig} from "@lodestar/config";
 import {ILogger, sleep} from "@lodestar/utils";
-import {ATTESTATION_SUBNET_COUNT, ForkName, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
+import {ATTESTATION_SUBNET_COUNT, ForkName, ForkSeq, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {Discv5, ENR} from "@chainsafe/discv5";
 import {computeEpochAtSlot, computeTimeAtSlot} from "@lodestar/state-transition";
-import {altair, Epoch} from "@lodestar/types";
+import {altair, Epoch, phase0} from "@lodestar/types";
 import {IMetrics} from "../metrics/index.js";
 import {ChainEvent, IBeaconChain, IBeaconClock} from "../chain/index.js";
+import {BlockInput, BlockInputType, getBlockInput} from "../chain/blocks/types.js";
 import {INetworkOptions} from "./options.js";
 import {INetwork} from "./interface.js";
 import {IReqRespBeaconNode, ReqRespBeaconNode, ReqRespHandlers} from "./reqresp/ReqRespBeaconNode.js";
@@ -193,6 +194,72 @@ export class Network implements INetwork {
 
   hasSomeConnectedPeer(): boolean {
     return this.peerManager.hasSomeConnectedPeer();
+  }
+
+  publishBeaconBlockMaybeBlobs(blockImport: BlockInput): Promise<void> {
+    switch (blockImport.type) {
+      case BlockInputType.preEIP4844:
+        return this.gossip.publishBeaconBlock(blockImport.block);
+
+      case BlockInputType.postEIP4844:
+        // TODO EIP-4844: Implement SignedBeaconBlockAndBlobsSidecar publish topic
+        throw Error("SignedBeaconBlockAndBlobsSidecar publish not implemented");
+
+      case BlockInputType.postEIP4844OldBlobs:
+        throw Error(`Attempting to broadcast old BlockImport slot ${blockImport.block.message.slot}`);
+    }
+  }
+
+  async beaconBlocksMaybeBlobsByRange(
+    peerId: PeerId,
+    request: phase0.BeaconBlocksByRangeRequest
+  ): Promise<BlockInput[]> {
+    // TODO EIP-4844: Assumes all blocks in the same epoch
+    // TODO EIP-4844: Ensure all blocks are in the same epoch
+    if (this.config.getForkSeq(request.startSlot) < ForkSeq.eip4844) {
+      const blocks = await this.reqResp.beaconBlocksByRange(peerId, request);
+      return blocks.map((block) => getBlockInput.preEIP4844(this.config, block));
+    }
+
+    // Only request blobs if they are recent enough
+    else if (
+      computeEpochAtSlot(request.startSlot) >=
+      this.chain.clock.currentEpoch - this.config.MIN_EPOCHS_FOR_BLOBS_SIDECARS_REQUESTS
+    ) {
+      // TODO EIP-4844: Do two requests at once for blocks and blobs
+      const blocks = await this.reqResp.beaconBlocksByRange(peerId, request);
+      const blobsSidecars = await this.reqResp.blobsSidecarsByRange(peerId, request);
+
+      if (blocks.length !== blobsSidecars.length) {
+        throw Error(`blocks.length ${blocks.length} != blobsSidecars.length ${blobsSidecars.length}`);
+      }
+
+      const blockImports: BlockInput[] = [];
+      for (let i = 0; i < blocks.length; i++) {
+        const block = blocks[i];
+        const blobsSidecar = blobsSidecars[i];
+
+        // TODO EIP-4844: Do more verification blob is for block
+        if (block.message.slot !== blobsSidecar.beaconBlockSlot) {
+          throw Error(`blob does not match block slot ${block.message.slot} != ${blobsSidecar.beaconBlockSlot}`);
+        }
+
+        blockImports.push(getBlockInput.postEIP4844(this.config, block, blobsSidecar));
+      }
+      return blockImports;
+    }
+
+    // Post EIP-4844 but old blobs
+    else {
+      const blocks = await this.reqResp.beaconBlocksByRange(peerId, request);
+      return blocks.map((block) => getBlockInput.postEIP4844OldBlobs(this.config, block));
+    }
+  }
+
+  async beaconBlocksMaybeBlobsByRoot(peerId: PeerId, request: phase0.BeaconBlocksByRootRequest): Promise<BlockInput[]> {
+    // TODO EIP-4844: Will throw an error for blocks post EIP-4844
+    const blocks = await this.reqResp.beaconBlocksByRoot(peerId, request);
+    return blocks.map((block) => getBlockInput.preEIP4844(this.config, block));
   }
 
   /**

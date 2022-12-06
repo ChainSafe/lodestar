@@ -6,7 +6,7 @@ export enum RunnerType {
   default,
 }
 
-export type TestRunnerFn<TestCase, Result> = (
+export type TestRunnerFn<TestCase extends {meta?: any}, Result> = (
   fork: ForkName,
   testHandler: string,
   testSuite: string
