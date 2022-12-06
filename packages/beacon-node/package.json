@@ -155,7 +155,7 @@
     "uint8arraylist": "^2.3.2",
     "uint8arrays": "^4.0.2",
     "varint": "^6.0.0",
-    "xxhash-wasm": "1.0.1"
+    "xxhash-wasm": "1.0.2"
   },
   "devDependencies": {
     "@types/bl": "^5.0.1",
