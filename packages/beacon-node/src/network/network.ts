@@ -14,7 +14,7 @@ import {ChainEvent, IBeaconChain, IBeaconClock} from "../chain/index.js";
 import {BlockInput, getBlockInput} from "../chain/blocks/types.js";
 import {INetworkOptions} from "./options.js";
 import {INetwork} from "./interface.js";
-import {ReqRespBeaconNode, ReqRespHandlers} from "./reqresp/index.js";
+import {IReqRespBeaconNode, ReqRespBeaconNode, ReqRespHandlers} from "./reqresp/ReqRespBeaconNode.js";
 import {Eth2Gossipsub, getGossipHandlers, GossipHandlers, GossipType} from "./gossip/index.js";
 import {MetadataController} from "./metadata.js";
 import {FORK_EPOCH_LOOKAHEAD, getActiveForks} from "./forks.js";
@@ -39,7 +39,7 @@ interface INetworkModules {
 
 export class Network implements INetwork {
   events: INetworkEventBus;
-  reqResp: ReqRespBeaconNode;
+  reqResp: IReqRespBeaconNode;
   attnetsService: AttnetsService;
   syncnetsService: SyncnetsService;
   gossip: Eth2Gossipsub;
@@ -144,7 +144,7 @@ export class Network implements INetwork {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
     (this.libp2p.connectionManager as DefaultConnectionManager)["latencyMonitor"].stop();
 
-    await this.reqResp.start();
+    this.reqResp.start();
     this.metadata.start(this.getEnr(), this.config.getForkName(this.clock.currentSlot));
     await this.peerManager.start();
     await this.gossip.start();
@@ -162,7 +162,7 @@ export class Network implements INetwork {
     await this.peerManager.goodbyeAndDisconnectAllPeers();
     await this.peerManager.stop();
     await this.gossip.stop();
-    await this.reqResp.stop();
+    this.reqResp.stop();
     this.attnetsService.stop();
     this.syncnetsService.stop();
     await this.libp2p.stop();
