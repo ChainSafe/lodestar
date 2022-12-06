@@ -69,28 +69,13 @@ export async function verifyBlocksInEpoch(
   try {
     const [segmentExecStatus, {postStates, proposerBalanceDeltas}] = await Promise.all([
       // Execution payloads
-      verifyBlocksExecutionPayload(
-        {...this, metrics: this.metrics},
-        parentBlock,
-        blocks,
-        preState0,
-        abortController.signal,
-        opts
-      ),
+      verifyBlocksExecutionPayload(this, parentBlock, blocks, preState0, abortController.signal, opts),
       // Run state transition only
       // TODO: Ensure it yields to allow flushing to workers and engine API
-      verifyBlocksStateTransitionOnly(
-        preState0,
-        blocksImport,
-        this.logger,
-        this.metrics,
-        this.clock,
-        abortController.signal,
-        opts
-      ),
+      verifyBlocksStateTransitionOnly(preState0, blocksImport, this.logger, this.metrics, abortController.signal, opts),
 
       // All signatures at once
-      verifyBlocksSignatures(this.bls, this.clock, this.logger, this.metrics, preState0, blocks, opts),
+      verifyBlocksSignatures(this.bls, this.logger, this.metrics, preState0, blocks, opts),
     ]);
 
     if (segmentExecStatus.execAborted === null && segmentExecStatus.mergeBlockFound !== null) {

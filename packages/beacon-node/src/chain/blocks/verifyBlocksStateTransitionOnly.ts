@@ -5,7 +5,6 @@ import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
 import {byteArrayEquals} from "../../util/bytes.js";
 import {BlockInput, ImportBlockOpts} from "./types.js";
-import {IBeaconClock} from "../clock/index.js";
 
 /**
  * Verifies 1 or more blocks are fully valid running the full state transition; from a linear sequence of blocks.
@@ -20,7 +19,6 @@ export async function verifyBlocksStateTransitionOnly(
   blocks: BlockInput[],
   logger: ILogger,
   metrics: IMetrics | null,
-  clock: IBeaconClock,
   signal: AbortSignal,
   opts: BlockProcessOpts & ImportBlockOpts
 ): Promise<{postStates: CachedBeaconStateAllForks[]; proposerBalanceDeltas: number[]}> {
@@ -78,10 +76,10 @@ export async function verifyBlocksStateTransitionOnly(
   }
 
   if (blocks.length === 1 && opts.seenTimestampSec !== undefined) {
-    const delaySec = clock.secFromSlot(blocks[0].message.slot, opts.seenTimestampSec);
-    const recvToTransition = clock.secFromSlot(blocks[0].message.slot, Date.now() / 1000) - delaySec;
+    const slot = blocks[0].block.message.slot;
+    const recvToTransition = Date.now() / 1000 - opts.seenTimestampSec;
     metrics?.gossipBlock.receivedToStateTransition.observe(recvToTransition);
-    logger.verbose("Transitioned gossip block", {slot: blocks[0].message.slot, recvToTransition});
+    logger.verbose("Transitioned gossip block", {slot, recvToTransition});
   }
 
   return {postStates, proposerBalanceDeltas};

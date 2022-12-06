@@ -81,7 +81,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       const forkTypes = config.getForkTypes(slot);
       const blockHex = prettyBytes(forkTypes.BeaconBlock.hashTreeRoot(signedBlock.message));
       const delaySec = chain.clock.secFromSlot(slot, seenTimestampSec);
-      const recvToVal = chain.clock.secFromSlot(slot, Date.now() / 1000) - delaySec;
+      const recvToVal = Date.now() / 1000 - seenTimestampSec;
       metrics?.gossipBlock.receivedToGossipValidate.observe(recvToVal);
       logger.verbose("Received gossip block", {
         slot: slot,

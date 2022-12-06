@@ -73,6 +73,7 @@ export class BeaconChain implements IBeaconChain {
   // Expose config for convenience in modularized functions
   readonly config: IBeaconConfig;
   readonly logger: ILogger;
+  readonly metrics: IMetrics | null;
 
   readonly anchorStateLatestBlockSlot: Slot;
 
@@ -113,7 +114,6 @@ export class BeaconChain implements IBeaconChain {
 
   protected readonly blockProcessor: BlockProcessor;
   protected readonly db: IBeaconDb;
-  protected readonly metrics: IMetrics | null;
   private readonly archiver: Archiver;
   private abortController = new AbortController();
   private successfulExchangeTransition = false;

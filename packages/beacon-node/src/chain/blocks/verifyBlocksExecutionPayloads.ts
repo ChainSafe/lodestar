@@ -240,8 +240,7 @@ export async function verifyBlocksExecutionPayload(
   }
 
   if (blocks.length === 1 && opts.seenTimestampSec !== undefined) {
-    const delaySec = chain.clock.secFromSlot(blocks[0].message.slot, opts.seenTimestampSec);
-    const recvToVerifiedExecPayload = chain.clock.secFromSlot(blocks[0].message.slot, Date.now() / 1000) - delaySec;
+    const recvToVerifiedExecPayload = Date.now() / 1000 - opts.seenTimestampSec;
     chain.metrics?.gossipBlock.receivedToExecutionPayloadVerification.observe(recvToVerifiedExecPayload);
     chain.logger.verbose("Verified execution payload", {
       slot: blocks[0].message.slot,

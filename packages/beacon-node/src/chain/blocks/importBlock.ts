@@ -338,8 +338,7 @@ export async function importBlock(
   }, 0);
 
   if (opts.seenTimestampSec !== undefined) {
-    const delaySec = this.clock.secFromSlot(block.message.slot, opts.seenTimestampSec);
-    const recvToImportedBlock = this.clock.secFromSlot(block.message.slot, Date.now() / 1000) - delaySec;
+    const recvToImportedBlock = Date.now() / 1000 - opts.seenTimestampSec;
     this.metrics?.gossipBlock.receivedToBlockImport.observe(recvToImportedBlock);
     this.logger.verbose("Imported block", {slot: block.message.slot, recvToImportedBlock});
   }

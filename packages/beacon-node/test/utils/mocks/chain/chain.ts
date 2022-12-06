@@ -62,6 +62,7 @@ export class MockBeaconChain implements IBeaconChain {
   readonly executionEngine = new ExecutionEngineDisabled();
   readonly config: IBeaconConfig;
   readonly logger: ILogger;
+  readonly metrics = null;
   readonly opts: IChainOptions = {
     persistInvalidSszObjectsDir: "",
     proposerBoostEnabled: false,

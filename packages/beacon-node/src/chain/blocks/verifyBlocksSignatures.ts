@@ -3,7 +3,6 @@ import {allForks} from "@lodestar/types";
 import {ILogger, sleep} from "@lodestar/utils";
 import {IMetrics} from "../../metrics/metrics.js";
 import {IBlsVerifier} from "../bls/index.js";
-import {IBeaconClock} from "../clock/interface.js";
 import {BlockError, BlockErrorCode} from "../errors/blockError.js";
 import {ImportBlockOpts} from "./types.js";
 
@@ -16,7 +15,6 @@ import {ImportBlockOpts} from "./types.js";
  */
 export async function verifyBlocksSignatures(
   bls: IBlsVerifier,
-  clock: IBeaconClock,
   logger: ILogger,
   metrics: IMetrics | null,
   preState0: CachedBeaconStateAllForks,
@@ -49,8 +47,7 @@ export async function verifyBlocksSignatures(
   }
 
   if (blocks.length === 1 && opts.seenTimestampSec !== undefined) {
-    const delaySec = clock.secFromSlot(blocks[0].message.slot, opts.seenTimestampSec);
-    const recvToSigVer = clock.secFromSlot(blocks[0].message.slot, Date.now() / 1000) - delaySec;
+    const recvToSigVer = Date.now() / 1000 - opts.seenTimestampSec;
     metrics?.gossipBlock.receivedToSignaturesVerification.observe(recvToSigVer);
     logger.verbose("Verified block signatures", {slot: blocks[0].message.slot, recvToSigVer});
   }
