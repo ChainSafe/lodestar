@@ -1,4 +1,5 @@
 import path from "node:path";
+import {computeAggregateKzgProof} from "c-kzg";
 import {
   BeaconStateAllForks,
   CachedBeaconStateAllForks,
@@ -12,12 +13,12 @@ import {
   PubkeyIndexMap,
 } from "@lodestar/state-transition";
 import {IBeaconConfig} from "@lodestar/config";
-import {allForks, UintNum64, Root, phase0, Slot, RootHex, Epoch, ValidatorIndex} from "@lodestar/types";
+import {allForks, UintNum64, Root, phase0, eip4844, Slot, RootHex, Epoch, ValidatorIndex} from "@lodestar/types";
 import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {ProcessShutdownCallback} from "@lodestar/validator";
-import {ILogger, toHex} from "@lodestar/utils";
+import {ILogger, pruneSetToMax, toHex} from "@lodestar/utils";
 import {CompositeTypeAny, fromHexString, TreeView, Type} from "@chainsafe/ssz";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
@@ -60,8 +61,12 @@ import {SeenBlockAttesters} from "./seenCache/seenBlockAttesters.js";
 import {BeaconProposerCache} from "./beaconProposerCache.js";
 import {CheckpointBalancesCache} from "./balancesCache.js";
 import {AssembledBlockType, BlockType} from "./produceBlock/index.js";
-import {BlockAttributes, produceBlockBody} from "./produceBlock/produceBlockBody.js";
+import {BlobsResultType, BlockAttributes, produceBlockBody} from "./produceBlock/produceBlockBody.js";
 import {computeNewStateRoot} from "./produceBlock/computeNewStateRoot.js";
+import {BlockImport} from "./blocks/types.js";
+
+const DEFAULT_MAX_CACHED_BLOBS_SIDECAR = 8;
+const MAX_RETAINED_SLOTS_CACHED_BLOBS_SIDECAR = 8;
 
 export class BeaconChain implements IBeaconChain {
   readonly genesisTime: UintNum64;
@@ -117,6 +122,10 @@ export class BeaconChain implements IBeaconChain {
   private abortController = new AbortController();
   private successfulExchangeTransition = false;
   private readonly exchangeTransitionConfigurationEverySlots: number;
+
+  // TODO EIP-4844: Prune data structure every time period, for both old entries
+  /** Map keyed by executionPayload.blockHash of the block for those blobs */
+  private readonly producedBlobsSidecarCache = new Map<RootHex, eip4844.BlobsSidecar>();
 
   private readonly faultInspectionWindow: number;
   private readonly allowedFaults: number;
@@ -340,11 +349,11 @@ export class BeaconChain implements IBeaconChain {
     return await this.db.block.get(fromHexString(block.blockRoot));
   }
 
-  async produceBlock(blockAttributes: BlockAttributes): Promise<allForks.BeaconBlock> {
+  produceBlock(blockAttributes: BlockAttributes): Promise<allForks.BeaconBlock> {
     return this.produceBlockWrapper<BlockType.Full>(BlockType.Full, blockAttributes);
   }
 
-  async produceBlindedBlock(blockAttributes: BlockAttributes): Promise<allForks.BlindedBeaconBlock> {
+  produceBlindedBlock(blockAttributes: BlockAttributes): Promise<allForks.BlindedBeaconBlock> {
     return this.produceBlockWrapper<BlockType.Blinded>(BlockType.Blinded, blockAttributes);
   }
 
@@ -358,32 +367,70 @@ export class BeaconChain implements IBeaconChain {
     const proposerIndex = state.epochCtx.getBeaconProposer(slot);
     const proposerPubKey = state.epochCtx.index2pubkey[proposerIndex].toBytes();
 
+    const {body, blobs} = await produceBlockBody.call(this, blockType, state, {
+      randaoReveal,
+      graffiti,
+      slot,
+      parentSlot: slot - 1,
+      parentBlockRoot,
+      proposerIndex,
+      proposerPubKey,
+    });
+
     const block = {
       slot,
       proposerIndex,
       parentRoot: parentBlockRoot,
       stateRoot: ZERO_HASH,
-      body: await produceBlockBody.call(this, blockType, state, {
-        randaoReveal,
-        graffiti,
-        slot,
-        parentSlot: slot - 1,
-        parentBlockRoot,
-        proposerIndex,
-        proposerPubKey,
-      }),
+      body,
     } as AssembledBlockType<T>;
 
     block.stateRoot = computeNewStateRoot(this.metrics, state, block);
 
+    // Cache for latter broadcasting
+    if (blobs.type === BlobsResultType.produced) {
+      // TODO EIP-4844: Prune data structure for max entries
+      this.producedBlobsSidecarCache.set(blobs.blockHash, {
+        // TODO EIP-4844: Optimize, hashing the full block is not free.
+        beaconBlockRoot: this.config.getForkTypes(block.slot).BeaconBlock.hashTreeRoot(block),
+        beaconBlockSlot: block.slot,
+        blobs: blobs.blobs,
+        kzgAggregatedProof: computeAggregateKzgProof(blobs.blobs),
+      });
+      pruneSetToMax(
+        this.producedBlobsSidecarCache,
+        this.opts.maxCachedBlobsSidecar ?? DEFAULT_MAX_CACHED_BLOBS_SIDECAR
+      );
+    }
+
     return block;
   }
 
-  async processBlock(block: allForks.SignedBeaconBlock, opts?: ImportBlockOpts): Promise<void> {
+  /**
+   * https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/validator.md#sidecar
+   * def get_blobs_sidecar(block: BeaconBlock, blobs: Sequence[Blob]) -> BlobsSidecar:
+   *   return BlobsSidecar(
+   *       beacon_block_root=hash_tree_root(block),
+   *       beacon_block_slot=block.slot,
+   *       blobs=blobs,
+   *       kzg_aggregated_proof=compute_proof_from_blobs(blobs),
+   *   )
+   */
+  getBlobsSidecar(beaconBlock: eip4844.BeaconBlock): eip4844.BlobsSidecar {
+    const blockHash = toHex(beaconBlock.body.executionPayload.blockHash);
+    const blobsSidecar = this.producedBlobsSidecarCache.get(blockHash);
+    if (!blobsSidecar) {
+      throw Error(`No blobsSidecar for executionPayload.blockHash ${blockHash}`);
+    }
+
+    return blobsSidecar;
+  }
+
+  async processBlock(block: BlockImport, opts?: ImportBlockOpts): Promise<void> {
     return await this.blockProcessor.processBlocksJob([block], opts);
   }
 
-  async processChainSegment(blocks: allForks.SignedBeaconBlock[], opts?: ImportBlockOpts): Promise<void> {
+  async processChainSegment(blocks: BlockImport[], opts?: ImportBlockOpts): Promise<void> {
     return await this.blockProcessor.processBlocksJob(blocks, opts);
   }
 
@@ -589,6 +636,15 @@ export class BeaconChain implements IBeaconChain {
         // Should never throw
         this.logger.error("Error on exchangeTransitionConfiguration", {}, e as Error);
       });
+    }
+
+    // Prune old blobsSidecar for block production, those are only useful on their slot
+    if (this.config.getForkSeq(slot) >= ForkSeq.eip4844 && this.producedBlobsSidecarCache.size > 0) {
+      for (const [key, blobsSidecar] of this.producedBlobsSidecarCache) {
+        if (slot > blobsSidecar.beaconBlockSlot + MAX_RETAINED_SLOTS_CACHED_BLOBS_SIDECAR) {
+          this.producedBlobsSidecarCache.delete(key);
+        }
+      }
     }
   }
 

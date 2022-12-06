@@ -1,6 +1,7 @@
 import {altair, ssz} from "@lodestar/types";
 import {MAX_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {toHexString} from "@chainsafe/ssz";
+import {toHex} from "@lodestar/utils";
 import {
   CachedBeaconStateAltair,
   computeEpochAtSlot,
@@ -15,7 +16,7 @@ import {ChainEvent} from "../emitter.js";
 import {REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC} from "../reprocess.js";
 import {RegenCaller} from "../regen/interface.js";
 import type {BeaconChain} from "../chain.js";
-import {FullyVerifiedBlock, ImportBlockOpts} from "./types.js";
+import {BlockImportType, FullyVerifiedBlock, ImportBlockOpts} from "./types.js";
 import {PendingEvents} from "./utils/pendingEvents.js";
 import {getCheckpointFromState} from "./utils/checkpoint.js";
 
@@ -48,7 +49,8 @@ export async function importBlock(
   fullyVerifiedBlock: FullyVerifiedBlock,
   opts: ImportBlockOpts
 ): Promise<void> {
-  const {block, postState, parentBlockSlot, executionStatus} = fullyVerifiedBlock;
+  const {blockImport, postState, parentBlockSlot, executionStatus} = fullyVerifiedBlock;
+  const {block} = blockImport;
   const pendingEvents = new PendingEvents(this.emitter);
 
   // - Observe attestations
@@ -295,7 +297,7 @@ export async function importBlock(
     if (headBlockHash !== ZERO_HASH_HEX) {
       this.executionEngine
         .notifyForkchoiceUpdate(
-          this.config.getForkSeq(this.forkChoice.getHead().slot),
+          this.config.getForkName(this.forkChoice.getHead().slot),
           headBlockHash,
           safeBlockHash,
           finalizedBlockHash
@@ -312,7 +314,23 @@ export async function importBlock(
   // MUST happen before any other block is processed
   // This adds the state necessary to process the next block
   this.stateCache.add(postState);
+
   await this.db.block.add(block);
+  this.logger.debug("Persisted block to hot DB", {
+    slot: block.message.slot,
+    root: blockRoot,
+  });
+
+  if (blockImport.type === BlockImportType.postEIP4844) {
+    const {blobs} = blockImport;
+    // NOTE: Old blobs are pruned on archive
+    await this.db.blobsSidecar.add(blobs);
+    this.logger.debug("Persisted blobsSidecar to hot DB", {
+      blobsLen: blobs.blobs.length,
+      slot: blobs.beaconBlockSlot,
+      root: toHex(blobs.beaconBlockRoot),
+    });
+  }
 
   // - head_tracker.register_block(block_root, parent_root, slot)
 

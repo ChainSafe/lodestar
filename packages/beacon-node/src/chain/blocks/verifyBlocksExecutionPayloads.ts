@@ -274,7 +274,7 @@ export async function verifyBlockExecutionPayload(
 
   // TODO: Handle better notifyNewPayload() returning error is syncing
   const execResult = await chain.executionEngine.notifyNewPayload(
-    chain.config.getForkSeq(block.message.slot),
+    chain.config.getForkName(block.message.slot),
     executionPayloadEnabled
   );
 

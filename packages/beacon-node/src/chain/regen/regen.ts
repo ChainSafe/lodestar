@@ -3,6 +3,8 @@ import {
   CachedBeaconStateAllForks,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
+  DataAvailableStatus,
+  ExecutionPayloadStatus,
   processSlots,
   stateTransition,
 } from "@lodestar/state-transition";
@@ -173,6 +175,9 @@ export class StateRegenerator implements IStateRegenerator {
           state,
           block,
           {
+            // Replay previously imported blocks, assume valid and available
+            executionPayloadStatus: ExecutionPayloadStatus.valid,
+            dataAvailableStatus: DataAvailableStatus.available,
             verifyStateRoot: false,
             verifyProposer: false,
             verifySignatures: false,

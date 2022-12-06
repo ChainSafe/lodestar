@@ -58,6 +58,7 @@ function stringifyGossipTopicType(topic: GossipTopic): string {
     case GossipType.sync_committee_contribution_and_proof:
     case GossipType.light_client_finality_update:
     case GossipType.light_client_optimistic_update:
+    case GossipType.beacon_block_and_blobs_sidecar:
       return topic.type;
     case GossipType.beacon_attestation:
     case GossipType.sync_committee:
@@ -89,6 +90,10 @@ export function getGossipSSZType(topic: GossipTopic) {
       return ssz.altair.LightClientOptimisticUpdate;
     case GossipType.light_client_finality_update:
       return ssz.altair.LightClientFinalityUpdate;
+    case GossipType.beacon_block_and_blobs_sidecar:
+      return ssz.eip4844.SignedBeaconBlockAndBlobsSidecar;
+    default:
+      throw new Error(`No ssz gossip type for ${(topic as GossipTopic).type}`);
   }
 }
 
@@ -119,6 +124,7 @@ export function parseGossipTopic(forkDigestContext: IForkDigestContext, topicStr
     switch (gossipTypeStr) {
       case GossipType.beacon_block:
       case GossipType.beacon_aggregate_and_proof:
+      case GossipType.beacon_block_and_blobs_sidecar:
       case GossipType.voluntary_exit:
       case GossipType.proposer_slashing:
       case GossipType.attester_slashing:

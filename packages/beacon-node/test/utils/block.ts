@@ -8,7 +8,7 @@ import {isPlainObject} from "@lodestar/utils";
 import {RecursivePartial} from "@lodestar/utils";
 import {ContextBytesType, EncodedPayloadType} from "@lodestar/reqresp";
 import {EMPTY_SIGNATURE, ZERO_HASH} from "../../src/constants/index.js";
-import {ReqRespBlockResponse} from "../../src/network/index.js";
+import {ReqRespBlockResponse} from "../../src/network/reqresp/index.js";
 
 export function generateEmptyBlock(slot: Slot = 0): phase0.BeaconBlock {
   return {

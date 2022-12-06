@@ -5,7 +5,7 @@ import {Slot} from "@lodestar/types";
 import {ILogger, sleep} from "@lodestar/utils";
 import {GENESIS_SLOT, ZERO_HASH_HEX} from "../constants/constants.js";
 import {IMetrics} from "../metrics/index.js";
-import {TransitionConfigurationV1} from "../execution/engine/interface.js";
+import {ForkExecution, TransitionConfigurationV1} from "../execution/engine/interface.js";
 import {ChainEvent} from "./emitter.js";
 import {prepareExecutionPayload} from "./produceBlock/produceBlockBody.js";
 import {IBeaconChain} from "./interface.js";
@@ -115,6 +115,9 @@ export class PrepareNextSlotScheduler {
       }
 
       if (isExecutionStateType(prepareState)) {
+        // State is of execution type
+        const fork = this.config.getForkName(prepareSlot) as ForkExecution;
+
         const proposerIndex = prepareState.epochCtx.getBeaconProposer(prepareSlot);
         const feeRecipient = this.chain.beaconProposerCache.get(proposerIndex);
         if (feeRecipient) {
@@ -137,8 +140,8 @@ export class PrepareNextSlotScheduler {
           // left for scheduler and this gives nice sematics to catch and log errors in the
           // try/catch wrapper here.
           await prepareExecutionPayload(
-            forkSeq,
             this.chain,
+            fork,
             safeBlockHash,
             finalizedBlockHash,
             prepareState,

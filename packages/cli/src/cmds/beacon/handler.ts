@@ -5,7 +5,7 @@ import {createKeypairFromPeerId, ENR} from "@chainsafe/discv5";
 import {ErrorAborted} from "@lodestar/utils";
 import {LevelDbController} from "@lodestar/db";
 import {BeaconNode, BeaconDb, createNodeJsLibp2p} from "@lodestar/beacon-node";
-import {createIBeaconConfig} from "@lodestar/config";
+import {chainConfigToJson, createIBeaconConfig} from "@lodestar/config";
 import {ACTIVE_PRESET, PresetName} from "@lodestar/params";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 
@@ -46,6 +46,7 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
   };
 
   if (ACTIVE_PRESET === PresetName.minimal) logger.info("ACTIVE_PRESET == minimal preset");
+  logger.debug(`chain config: ${JSON.stringify(chainConfigToJson(config))}`);
 
   // additional metrics registries
   const metricsRegistries: Registry[] = [];

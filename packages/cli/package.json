@@ -34,7 +34,9 @@
     "pretest": "yarn run check-types",
     "test:unit": "nyc --cache-dir .nyc_output/.cache -e .ts mocha 'test/unit/**/*.test.ts'",
     "test:e2e": "mocha --timeout 30000 'test/e2e/**/*.test.ts'",
-    "test:sim": "export LODESTAR_PRESET=minimal && ts-node --esm test/simulation/multi_fork.test.ts && ts-node --esm test/simulation/beacon_endpoints.test.ts",
+    "test:sim:multifork": "LODESTAR_PRESET=minimal ts-node --esm test/simulation/multi_fork.test.ts",
+    "test:sim:endpoints": "LODESTAR_PRESET=minimal ts-node --esm test/simulation/beacon_endpoints.test.ts",
+    "test:sim:eip4844": "LODESTAR_PRESET=minimal ts-node --esm test/simulation/eip4844.test.ts",
     "test": "yarn test:unit && yarn test:e2e",
     "coverage": "codecov -F lodestar",
     "check-readme": "typescript-docs-verifier"
@@ -93,7 +95,7 @@
   "devDependencies": {
     "@types/expand-tilde": "^2.0.0",
     "@types/got": "^9.6.11",
-    "@types/inquirer": "^7.3.0",
+    "@types/inquirer": "^9.0.2",
     "@types/js-yaml": "^3.12.5",
     "@types/lodash": "^4.14.157",
     "@types/rimraf": "^3.0.2",

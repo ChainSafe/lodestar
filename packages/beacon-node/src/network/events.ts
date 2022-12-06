@@ -1,7 +1,8 @@
 import {EventEmitter} from "events";
 import {PeerId} from "@libp2p/interface-peer-id";
 import StrictEventEmitter from "strict-event-emitter-types";
-import {allForks, phase0} from "@lodestar/types";
+import {phase0} from "@lodestar/types";
+import {BlockImport} from "../chain/blocks/types.js";
 import {RequestTypedContainer} from "./reqresp/ReqRespBeaconNode.js";
 
 export enum NetworkEvent {
@@ -19,7 +20,7 @@ export type NetworkEvents = {
   [NetworkEvent.peerConnected]: (peer: PeerId, status: phase0.Status) => void;
   [NetworkEvent.peerDisconnected]: (peer: PeerId) => void;
   [NetworkEvent.reqRespRequest]: (request: RequestTypedContainer, peer: PeerId) => void;
-  [NetworkEvent.unknownBlockParent]: (signedBlock: allForks.SignedBeaconBlock, peerIdStr: string) => void;
+  [NetworkEvent.unknownBlockParent]: (blockImport: BlockImport, peerIdStr: string) => void;
 };
 
 export type INetworkEventBus = StrictEventEmitter<EventEmitter, NetworkEvents>;

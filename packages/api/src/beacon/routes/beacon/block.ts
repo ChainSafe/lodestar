@@ -104,6 +104,7 @@ export type Api = {
    * @returns any The block was validated successfully and has been broadcast. It has also been integrated into the beacon node's database.
    */
   publishBlock(block: allForks.SignedBeaconBlock): Promise<void>;
+
   /**
    * Publish a signed blinded block by submitting it to the mev relay and patching in the block
    * transactions beacon node gets in response.

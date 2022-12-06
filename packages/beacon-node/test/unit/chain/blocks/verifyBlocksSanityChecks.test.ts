@@ -7,11 +7,12 @@ import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {toHex} from "@lodestar/utils";
 import {IChainForkConfig} from "@lodestar/config";
 import {allForks, Slot, ssz} from "@lodestar/types";
-import {verifyBlocksSanityChecks} from "../../../../src/chain/blocks/verifyBlocksSanityChecks.js";
+import {verifyBlocksSanityChecks as verifyBlocksImportSanityChecks} from "../../../../src/chain/blocks/verifyBlocksSanityChecks.js";
 import {BlockErrorCode} from "../../../../src/chain/errors/index.js";
 import {expectThrowsLodestarError} from "../../../utils/errors.js";
 import {IBeaconClock} from "../../../../src/chain/index.js";
 import {ClockStopped} from "../../../utils/mocks/clock.js";
+import {getBlockImport} from "../../../../src/chain/blocks/types.js";
 
 describe("chain / blocks / verifyBlocksSanityChecks", function () {
   let forkChoice: SinonStubbedInstance<ForkChoice>;
@@ -115,6 +116,26 @@ describe("chain / blocks / verifyBlocksSanityChecks", function () {
     expectBlocks(relevantBlocks, [blocks[2], blocks[3]], blocks, "Wrong relevantBlocks");
   });
 });
+
+/**
+ * Wrap verifyBlocksSanityChecks to deal with SignedBeaconBlock instead of BlockImport
+ */
+function verifyBlocksSanityChecks(
+  modules: Parameters<typeof verifyBlocksImportSanityChecks>[0],
+  blocks: allForks.SignedBeaconBlock[],
+  opts: Parameters<typeof verifyBlocksImportSanityChecks>[2]
+): {relevantBlocks: allForks.SignedBeaconBlock[]; parentSlots: Slot[]; parentBlock: ProtoBlock | null} {
+  const {relevantBlocks, parentSlots, parentBlock} = verifyBlocksImportSanityChecks(
+    modules,
+    blocks.map((block) => getBlockImport.preEIP4844(config, block)),
+    opts
+  );
+  return {
+    relevantBlocks: relevantBlocks.map(({block}) => block),
+    parentSlots,
+    parentBlock,
+  };
+}
 
 function getValidChain(count: number, initialSlot = 0): allForks.SignedBeaconBlock[] {
   const blocks: allForks.SignedBeaconBlock[] = [];

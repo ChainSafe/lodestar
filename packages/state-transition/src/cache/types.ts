@@ -11,11 +11,12 @@ export type BeaconStateEip4844 = CompositeViewDU<typeof ssz.eip4844.BeaconState>
 // - Works well as function argument and as generic type for allForks functions
 //
 // Quasy equivalent to
-// CompositeViewDU<typeof ssz.phase0.BeaconState | typeof ssz.altair.BeaconState | typeof ssz.bellatrix.BeaconState>
+// CompositeViewDU<typeof ssz.phase0.BeaconState | typeof ssz.altair.BeaconState | typeof ssz.bellatrix.BeaconState ...> // + future forks
 export type BeaconStateAllForks =
   | BeaconStatePhase0
   | BeaconStateAltair
   | BeaconStateBellatrix
   | BeaconStateCapella
   | BeaconStateEip4844;
+
 export type BeaconStateExecutions = BeaconStateBellatrix | BeaconStateCapella | BeaconStateEip4844;

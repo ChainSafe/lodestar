@@ -1,5 +1,5 @@
 import {CachedBeaconStateAllForks, computeEpochAtSlot} from "@lodestar/state-transition";
-import {allForks, bellatrix} from "@lodestar/types";
+import {bellatrix} from "@lodestar/types";
 import {toHexString} from "@chainsafe/ssz";
 import {ProtoBlock} from "@lodestar/fork-choice";
 import {IChainForkConfig} from "@lodestar/config";
@@ -8,7 +8,7 @@ import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
 import {RegenCaller} from "../regen/index.js";
 import type {BeaconChain} from "../chain.js";
-import {ImportBlockOpts} from "./types.js";
+import {BlockImport, ImportBlockOpts} from "./types.js";
 import {POS_PANDA_MERGE_TRANSITION_BANNER} from "./utils/pandaMergeTransitionBanner.js";
 import {verifyBlocksStateTransitionOnly} from "./verifyBlocksStateTransitionOnly.js";
 import {verifyBlocksSignatures} from "./verifyBlocksSignatures.js";
@@ -28,13 +28,14 @@ import {verifyBlocksExecutionPayload, SegmentExecStatus} from "./verifyBlocksExe
 export async function verifyBlocksInEpoch(
   this: BeaconChain,
   parentBlock: ProtoBlock,
-  blocks: allForks.SignedBeaconBlock[],
+  blocksImport: BlockImport[],
   opts: BlockProcessOpts & ImportBlockOpts
 ): Promise<{
   postStates: CachedBeaconStateAllForks[];
   proposerBalanceDeltas: number[];
   segmentExecStatus: SegmentExecStatus;
 }> {
+  const blocks = blocksImport.map(({block}) => block);
   if (blocks.length === 0) {
     throw Error("Empty partiallyVerifiedBlocks");
   }
@@ -67,7 +68,7 @@ export async function verifyBlocksInEpoch(
     const [{postStates, proposerBalanceDeltas}, , segmentExecStatus] = await Promise.all([
       // Run state transition only
       // TODO: Ensure it yields to allow flushing to workers and engine API
-      verifyBlocksStateTransitionOnly(preState0, blocks, this.metrics, abortController.signal, opts),
+      verifyBlocksStateTransitionOnly(preState0, blocksImport, this.metrics, abortController.signal, opts),
 
       // All signatures at once
       verifyBlocksSignatures(this.bls, preState0, blocks, opts),

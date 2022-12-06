@@ -5,10 +5,11 @@ import {ssz} from "@lodestar/types";
 import {notNullish, sleep} from "@lodestar/utils";
 import {toHexString} from "@chainsafe/ssz";
 import {IBeaconChain} from "../../../src/chain/index.js";
-import {INetwork, IReqRespBeaconNode, NetworkEvent, NetworkEventBus, PeerAction} from "../../../src/network/index.js";
+import {INetwork, NetworkEvent, NetworkEventBus, PeerAction} from "../../../src/network/index.js";
 import {UnknownBlockSync} from "../../../src/sync/unknownBlock.js";
 import {testLogger} from "../../utils/logger.js";
 import {getValidPeerId} from "../../utils/peer.js";
+import {getBlockImport} from "../../../src/chain/blocks/types.js";
 
 describe("sync / UnknownBlockSync", () => {
   const logger = testLogger();
@@ -44,20 +45,18 @@ describe("sync / UnknownBlockSync", () => {
         [blockRootHexB, blockB],
       ]);
 
-      const reqResp: Partial<IReqRespBeaconNode> = {
-        beaconBlocksByRoot: async (_peer, roots) =>
-          Array.from(roots)
-            .map((root) => blocksByRoot.get(toHexString(root)))
-            .filter(notNullish),
-      };
-
       let reportPeerResolveFn: (value: Parameters<INetwork["reportPeer"]>) => void;
       const reportPeerPromise = new Promise<Parameters<INetwork["reportPeer"]>>((r) => (reportPeerResolveFn = r));
 
       const network: Partial<INetwork> = {
         events: new NetworkEventBus(),
         getConnectedPeers: () => [peer],
-        reqResp: reqResp as IReqRespBeaconNode,
+        beaconBlocksMaybeBlobsByRoot: async (_peerId, roots) =>
+          Array.from(roots)
+            .map((root) => blocksByRoot.get(toHexString(root)))
+            .filter(notNullish)
+            .map((block) => getBlockImport.preEIP4844(config, block)),
+
         reportPeer: (peerId, action, actionName) => reportPeerResolveFn([peerId, action, actionName]),
       };
 
@@ -69,7 +68,7 @@ describe("sync / UnknownBlockSync", () => {
 
       const chain: Partial<IBeaconChain> = {
         forkChoice: forkChoice as IForkChoice,
-        processBlock: async (block) => {
+        processBlock: async ({block}) => {
           if (!forkChoice.hasBlock(block.message.parentRoot)) throw Error("Unknown parent");
           // Simluate adding the block to the forkchoice
           const blockRootHex = toHexString(ssz.phase0.BeaconBlock.hashTreeRoot(block.message));
@@ -78,7 +77,7 @@ describe("sync / UnknownBlockSync", () => {
       };
 
       new UnknownBlockSync(config, network as INetwork, chain as IBeaconChain, logger, null);
-      network.events?.emit(NetworkEvent.unknownBlockParent, blockC, peerIdStr);
+      network.events?.emit(NetworkEvent.unknownBlockParent, getBlockImport.preEIP4844(config, blockC), peerIdStr);
 
       if (reportPeer) {
         const err = await reportPeerPromise;

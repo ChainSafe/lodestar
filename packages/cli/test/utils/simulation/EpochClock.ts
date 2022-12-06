@@ -28,6 +28,10 @@ export class EpochClock {
     return Math.floor(Date.now() / MS_IN_SEC - this.genesisTime);
   }
 
+  msToGenesis(): number {
+    return this.genesisTime * 1000 - Date.now();
+  }
+
   get currentSlot(): number {
     return this.getSlotFor();
   }
@@ -74,9 +78,6 @@ export class EpochClock {
   }
 
   waitForStartOfSlot(slot: number): Promise<this> {
-    // eslint-disable-next-line no-console
-    console.log("Waiting for start of slot", {target: slot, current: this.currentSlot});
-
     return new Promise((resolve) => {
       const slotTime = this.getSlotTime(slot) * MS_IN_SEC - Date.now();
 

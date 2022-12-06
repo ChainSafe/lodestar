@@ -1,4 +1,9 @@
-import {BeaconStateAllForks, stateTransition} from "@lodestar/state-transition";
+import {
+  BeaconStateAllForks,
+  DataAvailableStatus,
+  ExecutionPayloadStatus,
+  stateTransition,
+} from "@lodestar/state-transition";
 import {allForks, ssz} from "@lodestar/types";
 import {createIChainForkConfig, IChainConfig} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
@@ -45,6 +50,9 @@ export const transition: TestRunnerFn<TransitionTestCase, BeaconStateAllForks> =
       for (let i = 0; i < meta.blocks_count; i++) {
         const signedBlock = testcase[`blocks_${i}`] as allForks.SignedBeaconBlock;
         state = stateTransition(state, signedBlock, {
+          // TODO EIP-4844: Should assume valid and available for this test?
+          executionPayloadStatus: ExecutionPayloadStatus.valid,
+          dataAvailableStatus: DataAvailableStatus.available,
           verifyStateRoot: true,
           verifyProposer: false,
           verifySignatures: false,

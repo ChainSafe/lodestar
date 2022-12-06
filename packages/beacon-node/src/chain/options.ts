@@ -20,6 +20,8 @@ export type IChainOptions = BlockProcessOpts &
     faultInspectionWindow?: number;
     /** Number of missed slots allowed in the faultInspectionWindow for builder circuit*/
     allowedFaults?: number;
+    sanityCheckExecutionEngineBlocks?: boolean;
+    maxCachedBlobsSidecar?: number;
   };
 
 export type BlockProcessOpts = {
@@ -45,6 +47,8 @@ export type BlockProcessOpts = {
    * will still issue fcU for block proposal
    */
   disableImportExecutionFcU?: boolean;
+  // TODO EIP-4844: to test without capella
+  disabledWithdrawals?: boolean;
 };
 
 export const defaultChainOptions: IChainOptions = {

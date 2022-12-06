@@ -2,10 +2,11 @@ import {PeerId} from "@libp2p/interface-peer-id";
 import {peerIdFromString} from "@libp2p/peer-id";
 import {IChainForkConfig} from "@lodestar/config";
 import {ILogger, pruneSetToMax} from "@lodestar/utils";
-import {allForks, Root, RootHex} from "@lodestar/types";
+import {Root, RootHex} from "@lodestar/types";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {INetwork, NetworkEvent, PeerAction} from "../network/index.js";
 import {IBeaconChain} from "../chain/index.js";
+import {BlockImport} from "../chain/blocks/types.js";
 import {IMetrics} from "../metrics/index.js";
 import {shuffle} from "../util/shuffle.js";
 import {byteArrayEquals} from "../util/bytes.js";
@@ -61,7 +62,7 @@ export class UnknownBlockSync {
   /**
    * Process an unknownBlockParent event and register the block in `pendingBlocks` Map.
    */
-  private onUnknownBlock = (signedBlock: allForks.SignedBeaconBlock, peerIdStr: string): void => {
+  private onUnknownBlock = (signedBlock: BlockImport, peerIdStr: string): void => {
     try {
       this.addToPendingBlocks(signedBlock, peerIdStr);
       this.triggerUnknownBlockSearch();
@@ -71,8 +72,8 @@ export class UnknownBlockSync {
     }
   };
 
-  private addToPendingBlocks(signedBlock: allForks.SignedBeaconBlock, peerIdStr: string): PendingBlock {
-    const block = signedBlock.message;
+  private addToPendingBlocks(blockImport: BlockImport, peerIdStr: string): PendingBlock {
+    const block = blockImport.block.message;
     const blockRoot = this.config.getForkTypes(block.slot).BeaconBlock.hashTreeRoot(block);
     const blockRootHex = toHexString(blockRoot);
     const parentBlockRootHex = toHexString(block.parentRoot);
@@ -82,7 +83,7 @@ export class UnknownBlockSync {
       pendingBlock = {
         blockRootHex,
         parentBlockRootHex,
-        signedBlock,
+        blockImport,
         peerIdStrs: new Set(),
         status: PendingBlockStatus.pending,
         downloadAttempts: 0,
@@ -135,12 +136,12 @@ export class UnknownBlockSync {
     else this.metrics?.syncUnknownBlock.downloadedBlocksSuccess.inc();
 
     if (!res.err) {
-      const {signedBlock, peerIdStr} = res.result;
-      const parentSlot = signedBlock.message.slot;
+      const {blockImport, peerIdStr} = res.result;
+      const parentSlot = blockImport.block.message.slot;
       const finalizedSlot = this.chain.forkChoice.getFinalizedBlock().slot;
-      if (this.chain.forkChoice.hasBlock(signedBlock.message.parentRoot)) {
+      if (this.chain.forkChoice.hasBlock(blockImport.block.message.parentRoot)) {
         // Bingo! Process block. Add to pending blocks anyway for recycle the cache that prevents duplicate processing
-        this.processBlock(this.addToPendingBlocks(signedBlock, peerIdStr)).catch((e) => {
+        this.processBlock(this.addToPendingBlocks(blockImport, peerIdStr)).catch((e) => {
           this.logger.error("Unexpect error - processBlock", {}, e);
         });
       } else if (parentSlot <= finalizedSlot) {
@@ -149,14 +150,15 @@ export class UnknownBlockSync {
         // 0 - 1 - ... - n - finalizedSlot
         //                \
         //                parent 1 - parent 2 - ... - unknownParent block
+        const parentRoot = this.config.getForkTypes(parentSlot).BeaconBlock.hashTreeRoot(blockImport.block.message);
         this.logger.error("Downloaded block parent is before finalized slot", {
           finalizedSlot,
           parentSlot,
-          parentRoot: toHexString(this.config.getForkTypes(parentSlot).BeaconBlock.hashTreeRoot(signedBlock.message)),
+          parentRoot: toHexString(parentRoot),
         });
         this.removeAndDownscoreAllDescendants(block);
       } else {
-        this.onUnknownBlock(signedBlock, peerIdStr);
+        this.onUnknownBlock(blockImport, peerIdStr);
       }
     } else {
       // parentSlot > finalizedSlot, continue downloading parent of parent
@@ -190,7 +192,7 @@ export class UnknownBlockSync {
     // otherwise we can't utilize bls thread pool capacity and Gossip Job Wait Time can't be kept low consistently.
     // See https://github.com/ChainSafe/lodestar/issues/3792
     const res = await wrapError(
-      this.chain.processBlock(pendingBlock.signedBlock, {ignoreIfKnown: true, blsVerifyOnMainThread: true})
+      this.chain.processBlock(pendingBlock.blockImport, {ignoreIfKnown: true, blsVerifyOnMainThread: true})
     );
     pendingBlock.status = PendingBlockStatus.pending;
 
@@ -207,7 +209,7 @@ export class UnknownBlockSync {
         });
       }
     } else {
-      const errorData = {root: pendingBlock.blockRootHex, slot: pendingBlock.signedBlock.message.slot};
+      const errorData = {root: pendingBlock.blockRootHex, slot: pendingBlock.blockImport.block.message.slot};
       if (res.err instanceof BlockError) {
         switch (res.err.type.code) {
           // This cases are already handled with `{ignoreIfKnown: true}`
@@ -250,7 +252,7 @@ export class UnknownBlockSync {
   private async fetchUnknownBlockRoot(
     blockRoot: Root,
     connectedPeers: PeerId[]
-  ): Promise<{signedBlock: allForks.SignedBeaconBlock; peerIdStr: string}> {
+  ): Promise<{blockImport: BlockImport; peerIdStr: string}> {
     const shuffledPeers = shuffle(connectedPeers);
     const blockRootHex = toHexString(blockRoot);
 
@@ -258,21 +260,22 @@ export class UnknownBlockSync {
     for (let i = 0; i < MAX_ATTEMPTS_PER_BLOCK; i++) {
       const peer = shuffledPeers[i % shuffledPeers.length];
       try {
-        const [signedBlock] = await this.network.reqResp.beaconBlocksByRoot(peer, [blockRoot]);
+        // TODO EIP-4844: Use
+        const [blockImport] = await this.network.beaconBlocksMaybeBlobsByRoot(peer, [blockRoot]);
 
         // Peer does not have the block, try with next peer
-        if (signedBlock === undefined) {
+        if (blockImport === undefined) {
           continue;
         }
 
         // Verify block root is correct
-        const block = signedBlock.message;
+        const block = blockImport.block.message;
         const receivedBlockRoot = this.config.getForkTypes(block.slot).BeaconBlock.hashTreeRoot(block);
         if (!byteArrayEquals(receivedBlockRoot, blockRoot)) {
           throw Error(`Wrong block received by peer, expected ${toHexString(receivedBlockRoot)} got ${blockRootHex}`);
         }
 
-        return {signedBlock, peerIdStr: peer.toString()};
+        return {blockImport, peerIdStr: peer.toString()};
       } catch (e) {
         this.logger.debug(
           "Error fetching UnknownBlockRoot",
@@ -305,7 +308,7 @@ export class UnknownBlockSync {
       this.knownBadBlocks.add(block.blockRootHex);
       this.logger.error("Banning unknown parent block", {
         root: block.blockRootHex,
-        slot: block.signedBlock.message.slot,
+        slot: block.blockImport.block.message.slot,
       });
 
       for (const peerIdStr of block.peerIdStrs) {
@@ -329,7 +332,7 @@ export class UnknownBlockSync {
       this.pendingBlocks.delete(block.blockRootHex);
       this.logger.error("Removing unknown parent block", {
         root: block.blockRootHex,
-        slot: block.signedBlock.message.slot,
+        slot: block.blockImport.block.message.slot,
       });
     }
 
