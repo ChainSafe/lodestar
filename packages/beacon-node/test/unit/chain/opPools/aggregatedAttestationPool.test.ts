@@ -4,7 +4,6 @@ import sinon from "sinon";
 import type {SecretKey} from "@chainsafe/bls/types";
 import bls from "@chainsafe/bls";
 import {BitArray, fromHexString} from "@chainsafe/ssz";
-import {createIChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ssz, phase0} from "@lodestar/types";
@@ -18,7 +17,7 @@ import {
 import {InsertOutcome} from "../../../../src/chain/opPools/types.js";
 import {linspace} from "../../../../src/util/numpy.js";
 import {generateAttestation, generateEmptyAttestation} from "../../../utils/attestation.js";
-import {generateCachedState} from "../../../utils/state.js";
+import {generateCachedAltairState} from "../../../utils/state.js";
 import {renderBitArray} from "../../../utils/render.js";
 import {ZERO_HASH_HEX} from "../../../../src/constants/constants.js";
 import {generateEmptyProtoBlock} from "../../../utils/block.js";
@@ -33,9 +32,7 @@ describe("AggregatedAttestationPool", function () {
   const altairForkEpoch = 2020;
   const currentEpoch = altairForkEpoch + 10;
   const currentSlot = SLOTS_PER_EPOCH * currentEpoch;
-  // eslint-disable-next-line @typescript-eslint/naming-convention
-  const config = createIChainForkConfig(Object.assign({}, defaultChainConfig, {ALTAIR_FORK_EPOCH: altairForkEpoch}));
-  const originalState = generateCachedState({slot: currentSlot + 1}, config, true);
+  const originalState = generateCachedAltairState({slot: currentSlot + 1}, altairForkEpoch);
   let altairState: CachedBeaconStateAllForks;
   const attestation = generateAttestation({data: {slot: currentSlot, target: {epoch: currentEpoch}}});
   const committee = [0, 1, 2, 3];

@@ -9,7 +9,7 @@ import {ForkName} from "@lodestar/params";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
 import {shouldVerify, TestRunnerFn} from "../utils/types.js";
-import {getConfig} from "../utils/getConfig.js";
+import {getConfig} from "../../utils/config.js";
 import {assertCorrectProgressiveBalances} from "../config.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */

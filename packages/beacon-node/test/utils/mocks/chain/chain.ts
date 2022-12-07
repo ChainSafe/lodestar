@@ -104,7 +104,7 @@ export class MockBeaconChain implements IBeaconChain {
   });
   readonly checkpointBalancesCache = new CheckpointBalancesCache();
 
-  private state: BeaconStateAllForks;
+  private readonly state: CachedBeaconStateAllForks;
   private abortController: AbortController;
 
   constructor({genesisTime, chainId, networkId, state, config}: IMockChainParams) {
@@ -114,7 +114,7 @@ export class MockBeaconChain implements IBeaconChain {
     this.bls = sinon.createStubInstance(BlsSingleThreadVerifier);
     this.chainId = chainId || 0;
     this.networkId = networkId || BigInt(0);
-    this.state = state;
+    this.state = createCachedBeaconStateTest(state, config);
     this.anchorStateLatestBlockSlot = state.latestBlockHeader.slot;
     this.config = config;
     this.emitter = new ChainEventEmitter();
@@ -158,11 +158,11 @@ export class MockBeaconChain implements IBeaconChain {
   persistInvalidSszView(_: TreeView<CompositeTypeAny>): void {}
 
   getHeadState(): CachedBeaconStateAllForks {
-    return createCachedBeaconStateTest(this.state, this.config);
+    return this.state;
   }
 
   async getHeadStateAtCurrentEpoch(): Promise<CachedBeaconStateAllForks> {
-    return createCachedBeaconStateTest(this.state, this.config);
+    return this.state;
   }
 
   async getCanonicalBlockAtSlot(slot: Slot): Promise<allForks.SignedBeaconBlock> {

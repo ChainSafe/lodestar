@@ -1,5 +1,4 @@
 import {PeerId} from "@libp2p/interface-peer-id";
-import {ForkName} from "@lodestar/params";
 import {allForks, altair, eip4844, phase0} from "@lodestar/types";
 
 export interface IReqRespBeaconNode {
@@ -8,7 +7,7 @@ export interface IReqRespBeaconNode {
   status(peerId: PeerId, request: phase0.Status): Promise<phase0.Status>;
   goodbye(peerId: PeerId, request: phase0.Goodbye): Promise<void>;
   ping(peerId: PeerId): Promise<phase0.Ping>;
-  metadata(peerId: PeerId, fork?: ForkName): Promise<allForks.Metadata>;
+  metadata(peerId: PeerId): Promise<allForks.Metadata>;
   beaconBlocksByRange(
     peerId: PeerId,
     request: phase0.BeaconBlocksByRangeRequest

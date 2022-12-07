@@ -13,7 +13,7 @@ import {ForkName} from "@lodestar/params";
 
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
-import {getConfig} from "../utils/getConfig.js";
+import {getConfig} from "../../utils/config.js";
 import {BaseSpecTest, shouldVerify, TestRunnerFn} from "../utils/types.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
