@@ -49,6 +49,7 @@ export const finality: TestRunnerFn<FinalityTestCase, BeaconStateAllForks> = (fo
       expectFunc: (testCase, expected, actual) => {
         expectEqualBeaconState(fork, expected, actual);
       },
+      // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
     },
   };
 };

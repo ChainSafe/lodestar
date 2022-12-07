@@ -50,6 +50,7 @@ const sanitySlots: TestRunnerFn<SanitySlotsTestCase, BeaconStateAllForks> = (for
       expectFunc: (testCase, expected, actual) => {
         expectEqualBeaconState(fork, expected, actual);
       },
+      // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
     },
   };
 };
@@ -87,6 +88,7 @@ export const sanityBlocks: TestRunnerFn<SanityBlocksTestCase, BeaconStateAllFork
       expectFunc: (testCase, expected, actual) => {
         expectEqualBeaconState(fork, expected, actual);
       },
+      // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
     },
   };
 };

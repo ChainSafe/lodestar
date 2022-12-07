@@ -56,6 +56,7 @@ export const rewards: TestRunnerFn<RewardTestCase, Deltas> = (fork) => {
       expectFunc: (testCase, expected, actual) => {
         expect(actual).to.deep.equal(expected);
       },
+      // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
     },
   };
 };
