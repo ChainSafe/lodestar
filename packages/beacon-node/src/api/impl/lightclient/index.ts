@@ -9,7 +9,7 @@ import {ApiModules} from "../types.js";
 // TODO: Import from lightclient/server package
 
 export function getLightclientApi({chain, config}: Pick<ApiModules, "chain" | "config">): routes.lightclient.Api {
-  const jsonSerializeLightClientUpdates = (chunks: LightClientUpdate[]): VersionedLightClientUpdate[] => {
+  const lightClientUpdatesWithVersion = (chunks: LightClientUpdate[]): VersionedLightClientUpdate[] => {
     return chunks.map((chunk) => {
       const version = config.getForkName(chunk.attestedHeader.slot);
       return {
@@ -24,7 +24,7 @@ export function getLightclientApi({chain, config}: Pick<ApiModules, "chain" | "c
       const maxAllowedCount = Math.min(MAX_REQUEST_LIGHT_CLIENT_UPDATES, count);
       const periods = Array.from({length: maxAllowedCount}, (_ignored, i) => i + startPeriod);
       const updates = await Promise.all(periods.map((period) => chain.lightClientServer.getUpdate(period)));
-      return jsonSerializeLightClientUpdates(updates);
+      return lightClientUpdatesWithVersion(updates);
     },
 
     async getOptimisticUpdate() {
