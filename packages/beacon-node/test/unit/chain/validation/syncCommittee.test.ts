@@ -8,7 +8,7 @@ import {LocalClock} from "../../../../src/chain/clock/index.js";
 import {SyncCommitteeErrorCode} from "../../../../src/chain/errors/syncCommitteeError.js";
 import {validateGossipSyncCommittee} from "../../../../src/chain/validation/syncCommittee.js";
 import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
-import {generateCachedState} from "../../../utils/state.js";
+import {generateCachedAltairState} from "../../../utils/state.js";
 import {generateSyncCommitteeSignature} from "../../../utils/syncCommittee.js";
 import {SeenSyncCommitteeMessages} from "../../../../src/chain/seenCache/index.js";
 import {BlsVerifierMock} from "../../../utils/mocks/bls.js";
@@ -69,7 +69,7 @@ describe("Sync Committee Signature validation", function () {
       slot: currentSlot,
       validatorIndex: validatorIndexInSyncCommittee,
     });
-    const headState = generateCachedState({slot: currentSlot}, config, true);
+    const headState = generateCachedAltairState({slot: currentSlot}, altairForkEpoch);
     chain.getHeadState.returns(headState);
     chain.seenSyncCommitteeMessages.isKnown = () => true;
     await expectRejectedWithLodestarError(
@@ -80,7 +80,7 @@ describe("Sync Committee Signature validation", function () {
 
   it("should throw error - the validator is not part of the current sync committee", async function () {
     const syncCommittee = generateSyncCommitteeSignature({slot: currentSlot, validatorIndex: 100});
-    const headState = generateCachedState({slot: currentSlot}, config, true);
+    const headState = generateCachedAltairState({slot: currentSlot}, altairForkEpoch);
     chain.getHeadState.returns(headState);
 
     await expectRejectedWithLodestarError(
@@ -95,7 +95,7 @@ describe("Sync Committee Signature validation", function () {
    */
   it.skip("should throw error - incorrect subnet", async function () {
     const syncCommittee = generateSyncCommitteeSignature({slot: currentSlot, validatorIndex: 1});
-    const headState = generateCachedState({slot: currentSlot}, config, true);
+    const headState = generateCachedAltairState({slot: currentSlot}, altairForkEpoch);
     chain.getHeadState.returns(headState);
     await expectRejectedWithLodestarError(
       validateGossipSyncCommittee(chain, syncCommittee, 0),
@@ -108,7 +108,7 @@ describe("Sync Committee Signature validation", function () {
       slot: currentSlot,
       validatorIndex: validatorIndexInSyncCommittee,
     });
-    const headState = generateCachedState({slot: currentSlot}, config, true);
+    const headState = generateCachedAltairState({slot: currentSlot}, altairForkEpoch);
 
     chain.getHeadState.returns(headState);
     chain.bls = new BlsVerifierMock(false);

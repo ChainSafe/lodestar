@@ -7,7 +7,7 @@ import {
   CachedBeaconStateBellatrix,
   BeaconStateBellatrix,
 } from "@lodestar/state-transition";
-import {allForks, altair, ssz} from "@lodestar/types";
+import {allForks, altair, bellatrix, ssz} from "@lodestar/types";
 import {createIBeaconConfig, IChainForkConfig} from "@lodestar/config";
 import {FAR_FUTURE_EPOCH, ForkName, ForkSeq, MAX_EFFECTIVE_BALANCE, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 
@@ -81,6 +81,14 @@ export function generateState(
     };
   }
 
+  if (forkSeq >= ForkSeq.bellatrix) {
+    const stateBellatrix = state as bellatrix.BeaconState;
+    stateBellatrix.latestExecutionPayloadHeader = {
+      ...ssz.bellatrix.ExecutionPayloadHeader.defaultValue(),
+      blockNumber: 2022,
+    };
+  }
+
   return config.getForkTypes(stateSlot).BeaconState.toViewDU(state);
 }
 
@@ -101,8 +109,8 @@ export function generateCachedState(opts?: TestBeaconState): CachedBeaconStateAl
 /**
  * This generates state with default pubkey
  */
-export function generateCachedAltairState(opts?: TestBeaconState): CachedBeaconStateAllForks {
-  const config = getConfig(ForkName.altair);
+export function generateCachedAltairState(opts?: TestBeaconState, altairForkEpoch = 0): CachedBeaconStateAllForks {
+  const config = getConfig(ForkName.altair, altairForkEpoch);
   const state = generateState(opts, config);
   return createCachedBeaconState(state, {
     config: createIBeaconConfig(config, state.genesisValidatorsRoot),
