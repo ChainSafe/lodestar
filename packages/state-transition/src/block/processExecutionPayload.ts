@@ -1,4 +1,4 @@
-import {ssz, allForks, capella} from "@lodestar/types";
+import {ssz, allForks, capella, eip4844} from "@lodestar/types";
 import {toHexString, byteArrayEquals} from "@chainsafe/ssz";
 import {ForkSeq} from "@lodestar/params";
 import {CachedBeaconStateBellatrix, CachedBeaconStateCapella} from "../types.js";
@@ -87,6 +87,13 @@ export function processExecutionPayload(
     (bellatrixPayloadFields as capella.ExecutionPayloadHeader).withdrawalsRoot = ssz.capella.Withdrawals.hashTreeRoot(
       (payload as capella.ExecutionPayload).withdrawals
     );
+  }
+
+  if (fork >= ForkSeq.eip4844) {
+    // https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/beacon-chain.md#process_execution_payload
+    (bellatrixPayloadFields as eip4844.ExecutionPayloadHeader).excessDataGas = (payload as
+      | eip4844.ExecutionPayloadHeader
+      | eip4844.ExecutionPayload).excessDataGas;
   }
 
   // TODO EIP-4844: Types are not happy by default. Since it's a generic allForks type going through ViewDU

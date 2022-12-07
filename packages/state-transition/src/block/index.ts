@@ -1,5 +1,5 @@
 import {ForkSeq} from "@lodestar/params";
-import {allForks, altair, capella} from "@lodestar/types";
+import {allForks, altair, capella, eip4844} from "@lodestar/types";
 import {getFullOrBlindedPayload, isExecutionEnabled} from "../util/execution.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateCapella, CachedBeaconStateBellatrix} from "../types.js";
 import {processExecutionPayload} from "./processExecutionPayload.js";
@@ -8,7 +8,8 @@ import {processBlockHeader} from "./processBlockHeader.js";
 import {processEth1Data} from "./processEth1Data.js";
 import {processOperations} from "./processOperations.js";
 import {processRandao} from "./processRandao.js";
-import {BlockExternalData} from "./externalData.js";
+import {processBlobKzgCommitments} from "./processBlobKzgCommitments.js";
+import {BlockExternalData, DataAvailableStatus} from "./externalData.js";
 import {processWithdrawals} from "./processWithdrawals.js";
 
 // Spec tests
@@ -46,7 +47,9 @@ export function processBlock(
   // on the randao_mix computed with the reveal of the previous block.
   if (fork >= ForkSeq.bellatrix && isExecutionEnabled(state as CachedBeaconStateBellatrix, block)) {
     const fullOrBlindedPayload = getFullOrBlindedPayload(block);
-    if (fork >= ForkSeq.capella) {
+    // TODO EIP-4844: Allow to disable withdrawals for interop testing
+    // https://github.com/ethereum/consensus-specs/blob/b62c9e877990242d63aa17a2a59a49bc649a2f2e/specs/eip4844/beacon-chain.md#disabling-withdrawals
+    if (fork >= ForkSeq.capella && !opts?.disabledWithdrawals) {
       processWithdrawals(
         state as CachedBeaconStateCapella,
         fullOrBlindedPayload as capella.FullOrBlindedExecutionPayload
@@ -60,5 +63,22 @@ export function processBlock(
   processOperations(fork, state, block.body, verifySignatures);
   if (fork >= ForkSeq.altair) {
     processSyncAggregate(state, block as altair.BeaconBlock, verifySignatures);
+  }
+
+  if (fork >= ForkSeq.eip4844) {
+    processBlobKzgCommitments(block.body as eip4844.BeaconBlockBody);
+
+    // New in EIP-4844, note: Can sync optimistically without this condition, see note on `is_data_available`
+    // NOTE: Ommitted and should be verified beforehand
+
+    // assert is_data_available(block.slot, hash_tree_root(block), block.body.blob_kzg_commitments)
+    switch (externalData.dataAvailableStatus) {
+      case DataAvailableStatus.preEIP4844:
+        throw Error("dataAvailableStatus preEIP4844");
+      case DataAvailableStatus.notAvailable:
+        throw Error("dataAvailableStatus notAvailable");
+      case DataAvailableStatus.available:
+        break; // ok
+    }
   }
 }
