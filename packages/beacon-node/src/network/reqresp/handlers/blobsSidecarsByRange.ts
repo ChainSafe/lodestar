@@ -61,7 +61,9 @@ export async function* onBlobsSidecarsByRange(
     const headChain = chain.forkChoice.getAllAncestorBlocks(headRoot);
 
     // Iterate head chain with ascending block numbers
-    for (const block of headChain) {
+    for (let i = headChain.length - 1; i >= 0; i--) {
+      const block = headChain[i];
+
       // Must include only blocks in the range requested
       if (block.slot >= startSlot && block.slot < endSlot) {
         // Note: Here the forkChoice head may change due to a re-org, so the headChain reflects the cannonical chain
