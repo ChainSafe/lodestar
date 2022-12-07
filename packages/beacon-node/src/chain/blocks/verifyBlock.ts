@@ -30,14 +30,14 @@ import {verifyBlocksExecutionPayload, SegmentExecStatus} from "./verifyBlocksExe
 export async function verifyBlocksInEpoch(
   this: BeaconChain,
   parentBlock: ProtoBlock,
-  blocksImport: BlockInput[],
+  blocksInput: BlockInput[],
   opts: BlockProcessOpts & ImportBlockOpts
 ): Promise<{
   postStates: CachedBeaconStateAllForks[];
   proposerBalanceDeltas: number[];
   segmentExecStatus: SegmentExecStatus;
 }> {
-  const blocks = blocksImport.map(({block}) => block);
+  const blocks = blocksInput.map(({block}) => block);
   if (blocks.length === 0) {
     throw Error("Empty partiallyVerifiedBlocks");
   }
@@ -72,7 +72,7 @@ export async function verifyBlocksInEpoch(
       verifyBlocksExecutionPayload(this, parentBlock, blocks, preState0, abortController.signal, opts),
       // Run state transition only
       // TODO: Ensure it yields to allow flushing to workers and engine API
-      verifyBlocksStateTransitionOnly(preState0, blocksImport, this.logger, this.metrics, abortController.signal, opts),
+      verifyBlocksStateTransitionOnly(preState0, blocksInput, this.logger, this.metrics, abortController.signal, opts),
 
       // All signatures at once
       verifyBlocksSignatures(this.bls, this.logger, this.metrics, preState0, blocks, opts),
