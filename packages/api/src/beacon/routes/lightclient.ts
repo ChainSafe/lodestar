@@ -1,4 +1,6 @@
-import {altair, phase0, ssz, SyncPeriod} from "@lodestar/types";
+import {altair, phase0, ssz, StringType, SyncPeriod} from "@lodestar/types";
+import {ForkName} from "@lodestar/params";
+import {ContainerType} from "@chainsafe/ssz";
 import {
   ArrayOf,
   ReturnTypes,
@@ -8,6 +10,7 @@ import {
   ReqSerializers,
   reqEmpty,
   ReqEmpty,
+  WithVersion,
 } from "../../utils/index.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
@@ -19,6 +22,17 @@ export type LightClientBootstrap = {
   currentSyncCommitteeBranch: Uint8Array[];
 };
 
+export type VersionedLightClientUpdate = {
+  version: ForkName;
+  data: altair.LightClientUpdate;
+};
+
+export type VersionedLightClientOptimisticUpdate = {version: ForkName; data: altair.LightClientOptimisticUpdate};
+
+export type VersionedLightClientFinalityUpdate = {version: ForkName; data: altair.LightClientFinalityUpdate};
+
+export type VersionedLightClientBootstrap = {version: ForkName; data: altair.LightClientBootstrap};
+
 export type Api = {
   /**
    * Returns an array of best updates given a `startPeriod` and `count` number of sync committee period to return.
@@ -27,19 +41,19 @@ export type Api = {
    * - Has most bits
    * - Oldest update
    */
-  getUpdates(startPeriod: SyncPeriod, count: number): Promise<{data: altair.LightClientUpdate[]}>;
+  getUpdates(startPeriod: SyncPeriod, count: number): Promise<VersionedLightClientUpdate[]>;
   /**
    * Returns the latest optimistic head update available. Clients should use the SSE type `light_client_optimistic_update`
    * unless to get the very first head update after syncing, or if SSE are not supported by the server.
    */
-  getOptimisticUpdate(): Promise<{data: altair.LightClientOptimisticUpdate}>;
-  getFinalityUpdate(): Promise<{data: altair.LightClientFinalityUpdate}>;
+  getOptimisticUpdate(): Promise<VersionedLightClientOptimisticUpdate>;
+  getFinalityUpdate(): Promise<VersionedLightClientFinalityUpdate>;
   /**
    * Fetch a bootstrapping state with a proof to a trusted block root.
    * The trusted block root should be fetched with similar means to a weak subjectivity checkpoint.
    * Only block roots for checkpoints are guaranteed to be available.
    */
-  getBootstrap(blockRoot: string): Promise<{data: LightClientBootstrap}>;
+  getBootstrap(blockRoot: string): Promise<VersionedLightClientBootstrap>;
   /**
    * Returns an array of sync committee hashes based on the provided period and count
    */
@@ -91,11 +105,16 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
 }
 
 export function getReturnTypes(): ReturnTypes<Api> {
+  const restLightClientUpdate = new ContainerType({
+    version: new StringType<ForkName>(),
+    data: ssz.altair.LightClientUpdate,
+  });
+
   return {
-    getUpdates: ContainerData(ArrayOf(ssz.altair.LightClientUpdate)),
-    getOptimisticUpdate: ContainerData(ssz.altair.LightClientOptimisticUpdate),
-    getFinalityUpdate: ContainerData(ssz.altair.LightClientFinalityUpdate),
-    getBootstrap: ContainerData(ssz.altair.LightClientBootstrap),
+    getUpdates: ArrayOf(restLightClientUpdate),
+    getOptimisticUpdate: WithVersion(() => ssz.altair.LightClientOptimisticUpdate),
+    getFinalityUpdate: WithVersion(() => ssz.altair.LightClientFinalityUpdate),
+    getBootstrap: WithVersion(() => ssz.altair.LightClientBootstrap),
     getCommitteeRoot: ContainerData(ArrayOf(ssz.Root)),
   };
 }
