@@ -46,6 +46,7 @@ export const generateNethermindNode: ELClientGenerator<ELClient.Nethermind> = (
   const jwtSecretContainerPath = join(containerDataDir, "jwtsecret");
 
   const startJobOptions: JobOptions = {
+    id,
     bootstrap: async () => {
       await mkdir(dataDir, {recursive: true});
       await writeFile(chainSpecPath, JSON.stringify(getNethermindChainSpec(mode, {ttd, cliqueSealingPeriod})));
@@ -99,12 +100,12 @@ export const generateNethermindNode: ELClientGenerator<ELClient.Nethermind> = (
     logs: {
       stdoutFilePath: logFilePath,
     },
-    health: async (): Promise<boolean> => {
+    health: async () => {
       try {
         await got.post(ethRpcUrl, {json: {jsonrpc: "2.0", method: "net_version", params: [], id: 67}});
-        return true;
+        return {ok: true};
       } catch (e) {
-        return false;
+        return {ok: false, reason: (e as Error).message, checkId: "JSON RPC query net_version"};
       }
     },
   };

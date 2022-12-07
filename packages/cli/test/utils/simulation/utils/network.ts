@@ -15,15 +15,15 @@ export async function connectNewNode(newNode: NodePair, nodes: NodePair[]): Prom
   const clIdentity = (await newNode.cl.api.node.getNetworkIdentity()).data;
   if (!clIdentity.peerId) return;
 
-  const elIdentity = await newNode.el.provider.admin.nodeInfo();
-  if (!elIdentity.enode) return;
+  const elIdentity = await newNode.el?.provider.admin.nodeInfo();
+  if (elIdentity && !elIdentity.enode) return;
 
   for (const node of nodes) {
     if (node === newNode) continue;
 
     // Nethermind had a bug in admin_addPeer RPC call
     // https://github.com/NethermindEth/nethermind/issues/4876
-    if (node.el.client !== ELClient.Nethermind) {
+    if (elIdentity && node.el && node.el.client !== ELClient.Nethermind) {
       await node.el.provider.admin.addPeer(elIdentity.enode);
     }
 
@@ -99,19 +99,23 @@ export async function waitForSlot(
     });
   }
 
+  for (const node of nodes) {
+    const head = await node.cl.api.beacon.getBlockHeader("head");
+    const headSlot = head.data.header.message.slot;
+    if (headSlot > slot) {
+      throw Error(`waitForSlot error, node ${node.id} head.slot ${headSlot} > target slot ${slot}`);
+    }
+  }
+
   await Promise.all(
     nodes.map(
       (node) =>
-        new Promise<void>((resolve, reject) => {
+        new Promise<void>((resolve) => {
           const cb = (event: {slot: Slot}): void => {
-            if (slot === event.slot) {
+            // TODO FOR NAZAR: slots may be skipped, so we can't just assert event.slot == slot
+            if (event.slot >= slot) {
               resolve();
               env.tracker.off(node, SimulationTrackerEvent.Slot, cb);
-              return;
-            }
-
-            if (event.slot >= slot) {
-              reject(new Error(`${node.cl.id} had passed target slot ${slot}. Current slot ${event.slot}`));
             }
           };
           env.tracker.on(node, SimulationTrackerEvent.Slot, cb);
