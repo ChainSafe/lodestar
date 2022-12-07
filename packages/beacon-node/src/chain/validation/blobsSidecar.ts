@@ -1,7 +1,7 @@
 import {BYTES_PER_FIELD_ELEMENT, verifyAggregateKzgProof} from "c-kzg";
 import bls from "@chainsafe/bls";
 import {CoordType} from "@chainsafe/bls/types";
-import {eip4844, Root} from "@lodestar/types";
+import {eip4844, Root, ssz} from "@lodestar/types";
 import {bytesToBigInt} from "@lodestar/utils";
 import {FIELD_ELEMENTS_PER_BLOB} from "@lodestar/params";
 import {verifyKzgCommitmentsAgainstTransactions} from "@lodestar/state-transition";
@@ -57,6 +57,15 @@ export function validateGossipBlobsSidecar(
   if (!blsKeyValidate(blobsSidecar.kzgAggregatedProof)) {
     throw new BlobsSidecarError(GossipAction.REJECT, {code: BlobsSidecarErrorCode.INVALID_KZG_PROOF});
   }
+
+  // [REJECT] The KZG commitments in the block are valid against the provided blobs sidecar. -- i.e.
+  // validate_blobs_sidecar(block.slot, hash_tree_root(block), block.body.blob_kzg_commitments, sidecar)
+  validateBlobsSidecar(
+    block.slot,
+    ssz.bellatrix.BeaconBlock.hashTreeRoot(block),
+    block.body.blobKzgCommitments,
+    blobsSidecar
+  );
 }
 
 // https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/beacon-chain.md#validate_blobs_sidecar

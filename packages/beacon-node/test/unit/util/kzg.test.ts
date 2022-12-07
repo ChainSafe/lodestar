@@ -39,12 +39,18 @@ describe("C-KZG", () => {
 
   it("BlobsSidecar", () => {
     const slot = 0;
-    const beaconBlockRoot = Buffer.alloc(32, 0xdd);
     const blobs = [generateRandomBlob(), generateRandomBlob()];
     const kzgCommitments = blobs.map(blobToKzgCommitment);
 
+    const signedBeaconBlock = ssz.eip4844.SignedBeaconBlock.defaultValue();
+    for (const kzgCommitment of kzgCommitments) {
+      signedBeaconBlock.message.body.executionPayload.transactions.push(transactionForKzgCommitment(kzgCommitment));
+      signedBeaconBlock.message.body.blobKzgCommitments.push(kzgCommitment);
+    }
+    const beaconBlockRoot = ssz.eip4844.BeaconBlock.hashTreeRoot(signedBeaconBlock.message);
+
     const blobsSidecar: eip4844.BlobsSidecar = {
-      beaconBlockRoot: Buffer.alloc(32, 0xdd),
+      beaconBlockRoot,
       beaconBlockSlot: 0,
       blobs,
       kzgAggregatedProof: computeAggregateKzgProof(blobs),
@@ -52,12 +58,6 @@ describe("C-KZG", () => {
 
     // Full validation
     validateBlobsSidecar(slot, beaconBlockRoot, kzgCommitments, blobsSidecar);
-
-    const signedBeaconBlock = ssz.eip4844.SignedBeaconBlock.defaultValue();
-    for (const kzgCommitment of kzgCommitments) {
-      signedBeaconBlock.message.body.executionPayload.transactions.push(transactionForKzgCommitment(kzgCommitment));
-      signedBeaconBlock.message.body.blobKzgCommitments.push(kzgCommitment);
-    }
 
     // Gossip validation
     validateGossipBlobsSidecar(signedBeaconBlock, blobsSidecar);
