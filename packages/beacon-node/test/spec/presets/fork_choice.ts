@@ -274,6 +274,7 @@ export const forkChoiceTest: TestRunnerFn<ForkChoiceTestCase, void> = (fork) => 
       timeout: 10000,
       // eslint-disable-next-line @typescript-eslint/no-empty-function
       expectFunc: () => {},
+      // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
     },
   };
 };

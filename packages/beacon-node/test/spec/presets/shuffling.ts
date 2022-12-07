@@ -15,6 +15,7 @@ export const shuffling: TestRunnerFn<ShufflingTestCase, number[]> = () => {
       inputTypes: {mapping: InputType.YAML},
       timeout: 10000,
       getExpected: (testCase) => testCase.mapping.mapping.map((value) => bnToNum(value)),
+      // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
     },
   };
 };

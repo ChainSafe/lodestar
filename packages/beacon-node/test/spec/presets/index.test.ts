@@ -29,7 +29,7 @@ const skipOpts: SkipOpts = {
 specTestIterator(
   path.join(ethereumConsensusSpecsTests.outputDir, "tests", ACTIVE_PRESET),
   {
-    epoch_processing: {type: RunnerType.default, fn: epochProcessing},
+    epoch_processing: {type: RunnerType.default, fn: epochProcessing(["invalid_large_withdrawable_epoch"])},
     finality: {type: RunnerType.default, fn: finality},
     fork: {type: RunnerType.default, fn: fork},
     fork_choice: {type: RunnerType.default, fn: forkChoiceTest},
@@ -40,7 +40,15 @@ specTestIterator(
     rewards: {type: RunnerType.default, fn: rewards},
     sanity: {type: RunnerType.default, fn: sanity},
     shuffling: {type: RunnerType.default, fn: shuffling},
-    ssz_static: {type: RunnerType.custom, fn: sszStatic},
+    ssz_static: {
+      type: RunnerType.custom,
+      fn: sszStatic([
+        "LightClientUpdate",
+        "LightClientBootstrap",
+        "LightClientFinalityUpdate",
+        "LightClientOptimisticUpdate",
+      ]),
+    },
     transition: {type: RunnerType.default, fn: transition},
   },
   skipOpts

@@ -76,6 +76,7 @@ export const transition: TestRunnerFn<TransitionTestCase, BeaconStateAllForks> =
       expectFunc: (testCase, expected, actual) => {
         expectEqualBeaconState(forkNext, expected, actual);
       },
+      // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
     },
   };
 };
