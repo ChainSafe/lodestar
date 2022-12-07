@@ -2,6 +2,8 @@ import {
   BeaconStateAllForks,
   CachedBeaconStateAllForks,
   CachedBeaconStateBellatrix,
+  DataAvailableStatus,
+  ExecutionPayloadStatus,
   getBlockRootAtSlot,
 } from "@lodestar/state-transition";
 import * as blockFns from "@lodestar/state-transition/block";
@@ -72,7 +74,13 @@ const operationFns: Record<string, BlockProcessFn<CachedBeaconStateAllForks>> = 
       fork,
       (state as CachedBeaconStateAllForks) as CachedBeaconStateBellatrix,
       testCase.execution_payload,
-      {notifyNewPayload: () => testCase.execution.execution_valid}
+      {
+        executionPayloadStatus: testCase.execution.execution_valid
+          ? ExecutionPayloadStatus.valid
+          : ExecutionPayloadStatus.invalid,
+        // TODO EIP-4844: Make this value dynamic on fork EIP4844
+        dataAvailableStatus: DataAvailableStatus.preEIP4844,
+      }
     );
   },
 };
