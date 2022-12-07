@@ -1,8 +1,9 @@
 import {PeerId} from "@libp2p/interface-peer-id";
-import {Epoch, Root, Slot, phase0, allForks} from "@lodestar/types";
+import {Epoch, Root, Slot, phase0} from "@lodestar/types";
 import {ErrorAborted, ILogger} from "@lodestar/utils";
 import {IChainForkConfig} from "@lodestar/config";
 import {toHexString} from "@chainsafe/ssz";
+import {BlockInput} from "../../chain/blocks/types.js";
 import {PeerAction} from "../../network/index.js";
 import {ItTrigger} from "../../util/itTrigger.js";
 import {PeerMap} from "../../util/peerMap.js";
@@ -32,12 +33,9 @@ export type SyncChainFns = {
    * Must return if ALL blocks are processed successfully
    * If SOME blocks are processed must throw BlockProcessorError()
    */
-  processChainSegment: (blocks: allForks.SignedBeaconBlock[], syncType: RangeSyncType) => Promise<void>;
+  processChainSegment: (blocks: BlockInput[], syncType: RangeSyncType) => Promise<void>;
   /** Must download blocks, and validate their range */
-  downloadBeaconBlocksByRange: (
-    peer: PeerId,
-    request: phase0.BeaconBlocksByRangeRequest
-  ) => Promise<allForks.SignedBeaconBlock[]>;
+  downloadBeaconBlocksByRange: (peer: PeerId, request: phase0.BeaconBlocksByRangeRequest) => Promise<BlockInput[]>;
   /** Report peer for negative actions. Decouples from the full network instance */
   reportPeer: (peer: PeerId, action: PeerAction, actionName: string) => void;
   /** Hook called when Chain state completes */
@@ -392,7 +390,7 @@ export class SyncChain {
   }
 
   /**
-   * Requests the batch asigned to the given id from a given peer.
+   * Requests the batch assigned to the given id from a given peer.
    */
   private async sendBatch(batch: Batch, peer: PeerId): Promise<void> {
     try {
@@ -409,14 +407,14 @@ export class SyncChain {
         batch.downloadingError(); // Throws after MAX_DOWNLOAD_ATTEMPTS
       }
 
-      // Pre-emptively request more blocks from peers whilst we process current blocks
+      // Preemptively request more blocks from peers whilst we process current blocks
       this.triggerBatchDownloader();
     } catch (e) {
       // bubble the error up to the main async iterable loop
       this.batchProcessor.end(e as Error);
     }
 
-    // Pre-emptively request more blocks from peers whilst we process current blocks
+    // Preemptively request more blocks from peers whilst we process current blocks
     this.triggerBatchDownloader();
   }
 

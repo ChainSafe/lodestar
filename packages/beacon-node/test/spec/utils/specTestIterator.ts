@@ -12,6 +12,12 @@ const ARTIFACT_FILENAMES = new Set([
   "version.txt",
 ]);
 
+export interface SkipOpts {
+  skippedForks: string[];
+  skippedRunners: string[];
+  skippedHandlers: string[];
+}
+
 /**
  * This helper ensures that strictly all tests are run. There's no hardcoded value beyond "config".
  * Any additional unknown fork, testRunner, testHandler, or testSuite will result in an error.
@@ -38,8 +44,16 @@ const ARTIFACT_FILENAMES = new Set([
  * ```
  * Ref: https://github.com/ethereum/consensus-specs/tree/dev/tests/formats#test-structure
  */
-export function specTestIterator(configDirpath: string, testRunners: Record<string, TestRunner>): void {
+export function specTestIterator(
+  configDirpath: string,
+  testRunners: Record<string, TestRunner>,
+  opts?: SkipOpts
+): void {
   for (const forkStr of readdirSyncSpec(configDirpath)) {
+    if (opts?.skippedForks.includes(forkStr)) {
+      continue;
+    }
+
     const fork = ForkName[forkStr as ForkName];
     if (fork === undefined) {
       throw Error(`Unknown fork ${forkStr}`);
@@ -47,18 +61,21 @@ export function specTestIterator(configDirpath: string, testRunners: Record<stri
 
     const forkDirpath = path.join(configDirpath, fork);
     for (const testRunnerName of readdirSyncSpec(forkDirpath)) {
-      // We don't have runner for light client yet
-      if (["light_client", "sync"].includes(testRunnerName)) {
+      if (opts?.skippedRunners.includes(testRunnerName)) {
         continue;
       }
-      const testRunnerDirpath = path.join(forkDirpath, testRunnerName);
 
+      const testRunnerDirpath = path.join(forkDirpath, testRunnerName);
       const testRunner = testRunners[testRunnerName];
       if (testRunner === undefined) {
         throw Error(`No test runner for ${testRunnerName}`);
       }
 
       for (const testHandler of readdirSyncSpec(testRunnerDirpath)) {
+        if (opts?.skippedHandlers.includes(testHandler)) {
+          continue;
+        }
+
         const testHandlerDirpath = path.join(testRunnerDirpath, testHandler);
         for (const testSuite of readdirSyncSpec(testHandlerDirpath)) {
           const testId = `${fork}/${testRunnerName}/${testHandler}/${testSuite}`;

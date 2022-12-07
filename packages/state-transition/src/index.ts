@@ -8,12 +8,16 @@ export {
   CachedBeaconStatePhase0,
   CachedBeaconStateAltair,
   CachedBeaconStateBellatrix,
+  CachedBeaconStateCapella,
+  CachedBeaconStateEip4844,
   CachedBeaconStateAllForks,
   CachedBeaconStateExecutions,
   // Non-cached states
   BeaconStatePhase0,
   BeaconStateAltair,
   BeaconStateBellatrix,
+  BeaconStateCapella,
+  BeaconStateEip4844,
   BeaconStateAllForks,
   BeaconStateExecutions,
 } from "./types.js";
@@ -34,8 +38,12 @@ export {
 
 // BeaconChain validation
 export {isValidVoluntaryExit} from "./block/processVoluntaryExit.js";
+export {assertValidBlsToExecutionChange} from "./block/processBlsToExecutionChange.js";
 export {assertValidProposerSlashing} from "./block/processProposerSlashing.js";
 export {assertValidAttesterSlashing} from "./block/processAttesterSlashing.js";
+export {ExecutionPayloadStatus, DataAvailableStatus, BlockExternalData} from "./block/externalData.js";
 
 // BeaconChain, to prepare new blocks
 export {becomesNewEth1Data} from "./block/processEth1Data.js";
+// Withdrawals for new blocks
+export {getExpectedWithdrawals} from "./block/processWithdrawals.js";

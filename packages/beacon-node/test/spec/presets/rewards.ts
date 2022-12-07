@@ -5,7 +5,7 @@ import {VectorCompositeType} from "@chainsafe/ssz";
 import {ssz} from "@lodestar/types";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
-import {getConfig} from "../utils/getConfig.js";
+import {getConfig} from "../../utils/config.js";
 import {TestRunnerFn} from "../utils/types.js";
 import {assertCorrectProgressiveBalances} from "../config.js";
 
@@ -56,6 +56,7 @@ export const rewards: TestRunnerFn<RewardTestCase, Deltas> = (fork) => {
       expectFunc: (testCase, expected, actual) => {
         expect(actual).to.deep.equal(expected);
       },
+      // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
     },
   };
 };
@@ -63,6 +64,7 @@ export const rewards: TestRunnerFn<RewardTestCase, Deltas> = (fork) => {
 type Deltas = [number[], number[]];
 
 type RewardTestCase = {
+  meta?: any;
   pre: BeaconStateAllForks;
   source_deltas: Deltas;
   target_deltas: Deltas;

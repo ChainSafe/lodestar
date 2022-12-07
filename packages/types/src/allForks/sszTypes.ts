@@ -2,6 +2,7 @@ import {ssz as phase0} from "../phase0/index.js";
 import {ssz as altair} from "../altair/index.js";
 import {ssz as bellatrix} from "../bellatrix/index.js";
 import {ssz as capella} from "../capella/index.js";
+import {ssz as eip4844} from "../eip4844/index.js";
 
 /**
  * Index the ssz types that differ by fork
@@ -36,6 +37,13 @@ export const allForks = {
     BeaconState: capella.BeaconState,
     Metadata: altair.Metadata,
   },
+  eip4844: {
+    BeaconBlockBody: eip4844.BeaconBlockBody,
+    BeaconBlock: eip4844.BeaconBlock,
+    SignedBeaconBlock: eip4844.SignedBeaconBlock,
+    BeaconState: eip4844.BeaconState,
+    Metadata: altair.Metadata,
+  },
 };
 
 /**
@@ -60,6 +68,14 @@ export const allForksExecution = {
     ExecutionPayload: capella.ExecutionPayload,
     ExecutionPayloadHeader: capella.ExecutionPayloadHeader,
   },
+  eip4844: {
+    BeaconBlockBody: eip4844.BeaconBlockBody,
+    BeaconBlock: eip4844.BeaconBlock,
+    SignedBeaconBlock: eip4844.SignedBeaconBlock,
+    BeaconState: eip4844.BeaconState,
+    ExecutionPayload: eip4844.ExecutionPayload,
+    ExecutionPayloadHeader: eip4844.ExecutionPayloadHeader,
+  },
 };
 
 /**
@@ -76,5 +92,10 @@ export const allForksBlinded = {
     BeaconBlockBody: capella.BlindedBeaconBlockBody,
     BeaconBlock: capella.BlindedBeaconBlock,
     SignedBeaconBlock: capella.SignedBlindedBeaconBlock,
+  },
+  eip4844: {
+    BeaconBlockBody: eip4844.BlindedBeaconBlockBody,
+    BeaconBlock: eip4844.BlindedBeaconBlock,
+    SignedBeaconBlock: eip4844.SignedBlindedBeaconBlock,
   },
 };

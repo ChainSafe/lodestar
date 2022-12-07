@@ -8,7 +8,7 @@ import * as epochFns from "@lodestar/state-transition/epoch";
 import {ssz} from "@lodestar/types";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
-import {getConfig} from "../utils/getConfig.js";
+import {getConfig} from "../../utils/config.js";
 import {TestRunnerFn} from "../utils/types.js";
 import {assertCorrectProgressiveBalances} from "../config.js";
 
@@ -45,7 +45,9 @@ type EpochProcessingTestCase = {
  * @param fork
  * @param epochProcessFns Describe with which function to run each directory of tests
  */
-export const epochProcessing: TestRunnerFn<EpochProcessingTestCase, BeaconStateAllForks> = (fork, testName) => {
+export const epochProcessing = (
+  skipTestNames: string[]
+): TestRunnerFn<EpochProcessingTestCase, BeaconStateAllForks> => (fork, testName) => {
   const config = getConfig(fork);
 
   const epochProcessFn = epochProcessFns[testName];
@@ -74,9 +76,8 @@ export const epochProcessing: TestRunnerFn<EpochProcessingTestCase, BeaconStateA
       expectFunc: (testCase, expected, actual) => {
         expectEqualBeaconState(fork, expected, actual);
       },
-      shouldSkip: (_testcase, name, _index) => {
-        return name.includes("invalid_large_withdrawable_epoch");
-      },
+      // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
+      shouldSkip: (_testcase, name, _index) => skipTestNames.some((skipTestName) => name.includes(skipTestName)),
     },
   };
 };

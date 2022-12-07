@@ -6,7 +6,7 @@ import {CheckpointHexWithBalance} from "./interface.js";
 /**
  * Stores checkpoints in a hybrid format:
  * - Original checkpoint for fast consumption in Lodestar's side
- * - Root in string hex for fast comparisions inside the fork-choice
+ * - Root in string hex for fast comparisons inside the fork-choice
  */
 export type CheckpointWithHex = phase0.Checkpoint & {rootHex: RootHex};
 

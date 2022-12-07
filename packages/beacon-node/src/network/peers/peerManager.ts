@@ -11,7 +11,7 @@ import {IBeaconChain} from "../../chain/index.js";
 import {GoodByeReasonCode, GOODBYE_KNOWN_CODES, Libp2pEvent} from "../../constants/index.js";
 import {IMetrics} from "../../metrics/index.js";
 import {NetworkEvent, INetworkEventBus} from "../events.js";
-import {IReqResp, ReqRespMethod, RequestTypedContainer} from "../reqresp/index.js";
+import {IReqRespBeaconNode, ReqRespMethod, RequestTypedContainer} from "../reqresp/ReqRespBeaconNode.js";
 import {getConnection, getConnectionsMap, prettyPrintPeerId} from "../util.js";
 import {ISubnetsService} from "../subnets/index.js";
 import {SubnetType} from "../metadata.js";
@@ -31,8 +31,8 @@ import {
 /** heartbeat performs regular updates such as updating reputations and performing discovery requests */
 const HEARTBEAT_INTERVAL_MS = 30 * 1000;
 /** The time in seconds between PING events. We do not send a ping if the other peer has PING'd us */
-const PING_INTERVAL_INBOUND_MS = 4 * 60 * 1000 - 11 * 1000; // Offset to not ping when outbound reqs
-const PING_INTERVAL_OUTBOUND_MS = 4 * 60 * 1000;
+const PING_INTERVAL_INBOUND_MS = 15 * 1000; // Offset to not ping when outbound reqs
+const PING_INTERVAL_OUTBOUND_MS = 20 * 1000;
 /** The time in seconds between re-status's peers. */
 const STATUS_INTERVAL_MS = 5 * 60 * 1000;
 /** Expect a STATUS request from on inbound peer for some time. Afterwards the node does a request */
@@ -76,7 +76,7 @@ export type PeerManagerModules = {
   libp2p: Libp2p;
   logger: ILogger;
   metrics: IMetrics | null;
-  reqResp: IReqResp;
+  reqResp: IReqRespBeaconNode;
   gossip: Eth2Gossipsub;
   attnetsService: ISubnetsService;
   syncnetsService: ISubnetsService;
@@ -107,7 +107,7 @@ export class PeerManager {
   private libp2p: Libp2p;
   private logger: ILogger;
   private metrics: IMetrics | null;
-  private reqResp: IReqResp;
+  private reqResp: IReqRespBeaconNode;
   private gossipsub: Eth2Gossipsub;
   private attnetsService: ISubnetsService;
   private syncnetsService: ISubnetsService;

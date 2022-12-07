@@ -214,7 +214,11 @@ export function initializeBeaconStateFromEth1(
   eth1Timestamp: TimeSeconds,
   deposits: phase0.Deposit[],
   fullDepositDataRootList?: DepositDataRootViewDU,
-  executionPayloadHeader = ssz.bellatrix.ExecutionPayloadHeader.defaultViewDU()
+  executionPayloadHeader?: CompositeViewDU<
+    | typeof ssz.bellatrix.ExecutionPayloadHeader
+    | typeof ssz.capella.ExecutionPayloadHeader
+    | typeof ssz.eip4844.ExecutionPayloadHeader
+  >
 ): CachedBeaconStateAllForks {
   const stateView = getGenesisBeaconState(
     // CachedBeaconcState is used for convinience only, we return BeaconStateAllForks anyway
@@ -261,7 +265,27 @@ export function initializeBeaconStateFromEth1(
     const stateBellatrix = state as CompositeViewDU<typeof ssz.bellatrix.BeaconState>;
     stateBellatrix.fork.previousVersion = config.BELLATRIX_FORK_VERSION;
     stateBellatrix.fork.currentVersion = config.BELLATRIX_FORK_VERSION;
-    stateBellatrix.latestExecutionPayloadHeader = executionPayloadHeader;
+    stateBellatrix.latestExecutionPayloadHeader =
+      (executionPayloadHeader as CompositeViewDU<typeof ssz.bellatrix.ExecutionPayloadHeader>) ??
+      ssz.bellatrix.ExecutionPayloadHeader.defaultViewDU();
+  }
+
+  if (GENESIS_SLOT >= config.CAPELLA_FORK_EPOCH) {
+    const stateCapella = state as CompositeViewDU<typeof ssz.capella.BeaconState>;
+    stateCapella.fork.previousVersion = config.CAPELLA_FORK_VERSION;
+    stateCapella.fork.currentVersion = config.CAPELLA_FORK_VERSION;
+    stateCapella.latestExecutionPayloadHeader =
+      (executionPayloadHeader as CompositeViewDU<typeof ssz.capella.ExecutionPayloadHeader>) ??
+      ssz.capella.ExecutionPayloadHeader.defaultViewDU();
+  }
+
+  if (GENESIS_SLOT >= config.CAPELLA_FORK_EPOCH) {
+    const stateEip4844 = state as CompositeViewDU<typeof ssz.eip4844.BeaconState>;
+    stateEip4844.fork.previousVersion = config.EIP4844_FORK_VERSION;
+    stateEip4844.fork.currentVersion = config.EIP4844_FORK_VERSION;
+    stateEip4844.latestExecutionPayloadHeader =
+      (executionPayloadHeader as CompositeViewDU<typeof ssz.eip4844.ExecutionPayloadHeader>) ??
+      ssz.eip4844.ExecutionPayloadHeader.defaultViewDU();
   }
 
   state.commit();

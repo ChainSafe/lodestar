@@ -11,7 +11,7 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "1.1.1",
+  "version": "1.2.1",
   "type": "module",
   "exports": {
     ".": {
@@ -23,8 +23,17 @@
     "./altair": {
       "import": "./lib/altair/index.js"
     },
+    "./capella": {
+      "import": "./lib/capella/index.js"
+    },
     "./bellatrix": {
       "import": "./lib/bellatrix/index.js"
+    },
+    "./capella": {
+      "import": "./lib/capella/index.js"
+    },
+    "./eip4844": {
+      "import": "./lib/eip4844/index.js"
     },
     "./phase0": {
       "import": "./lib/phase0/index.js"
@@ -63,7 +72,7 @@
   "types": "lib/index.d.ts",
   "dependencies": {
     "@chainsafe/ssz": "^0.9.2",
-    "@lodestar/params": "^1.1.1"
+    "@lodestar/params": "^1.2.1"
   },
   "keywords": [
     "ethereum",

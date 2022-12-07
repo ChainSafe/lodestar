@@ -29,6 +29,8 @@ export const fork: TestRunnerFn<ForkStateCase, BeaconStateAllForks> = (forkNext)
           return slotFns.upgradeStateToBellatrix(preState as CachedBeaconStateAltair);
         case ForkName.capella:
           return slotFns.upgradeStateToCapella(preState as CachedBeaconStateBellatrix);
+        case ForkName.eip4844:
+          throw Error("eip4844 not implemented");
       }
     },
     options: {
@@ -44,11 +46,13 @@ export const fork: TestRunnerFn<ForkStateCase, BeaconStateAllForks> = (forkNext)
       expectFunc: (testCase, expected, actual) => {
         expectEqualBeaconState(forkNext, expected, actual);
       },
+      // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
     },
   };
 };
 
 type ForkStateCase = {
+  meta?: any;
   pre: BeaconStateAllForks;
   post: Exclude<BeaconStateAllForks, phase0.BeaconState>;
 };

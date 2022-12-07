@@ -5,6 +5,7 @@ import {Api as EventsApi} from "./events.js";
 import {Api as LightclientApi} from "./lightclient.js";
 import {Api as LodestarApi} from "./lodestar.js";
 import {Api as NodeApi} from "./node.js";
+import {Api as ProofApi} from "./proof.js";
 import {Api as ValidatorApi} from "./validator.js";
 
 export * as beacon from "./beacon/index.js";
@@ -14,6 +15,7 @@ export * as events from "./events.js";
 export * as lightclient from "./lightclient.js";
 export * as lodestar from "./lodestar.js";
 export * as node from "./node.js";
+export * as proof from "./proof.js";
 export * as validator from "./validator.js";
 
 export type Api = {
@@ -24,6 +26,7 @@ export type Api = {
   lightclient: LightclientApi;
   lodestar: LodestarApi;
   node: NodeApi;
+  proof: ProofApi;
   validator: ValidatorApi;
 };
 

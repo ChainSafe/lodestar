@@ -19,7 +19,7 @@ import {toHexString} from "@chainsafe/ssz";
 import {IForkChoice, EpochDifference} from "@lodestar/fork-choice";
 import {toHex, MapDef} from "@lodestar/utils";
 import {intersectUint8Arrays, IntersectResult} from "../../util/bitArray.js";
-import {pruneBySlot} from "./utils.js";
+import {pruneBySlot, signatureFromBytesNoCheck} from "./utils.js";
 import {InsertOutcome} from "./types.js";
 
 type DataRootHex = string;
@@ -316,8 +316,8 @@ export function aggregateInto(attestation1: AttestationWithIndex, attestation2: 
   // Merge bits of attestation2 into attestation1
   attestation1.attestation.aggregationBits.mergeOrWith(attestation2.attestation.aggregationBits);
 
-  const signature1 = bls.Signature.fromBytes(attestation1.attestation.signature, undefined, true);
-  const signature2 = bls.Signature.fromBytes(attestation2.attestation.signature, undefined, true);
+  const signature1 = signatureFromBytesNoCheck(attestation1.attestation.signature);
+  const signature2 = signatureFromBytesNoCheck(attestation2.attestation.signature);
   attestation1.attestation.signature = bls.Signature.aggregate([signature1, signature2]).toBytes();
 }
 
@@ -446,7 +446,15 @@ export function isValidAttestationData(
     throw Error(`Attestation data.beaconBlockRoot ${beaconBlockRootHex} not found in forkchoice`);
   }
 
-  const attestationDependantRoot = forkChoice.getDependentRoot(beaconBlock, EpochDifference.previous);
+  let attestationDependantRoot: string;
+  try {
+    attestationDependantRoot = forkChoice.getDependentRoot(beaconBlock, EpochDifference.previous);
+  } catch (_) {
+    // getDependent root may throw error if the dependent root of attestation data is prior to finalized slot
+    // ignore this attestation data in that case since we're not sure it's compatible to the state
+    // see https://github.com/ChainSafe/lodestar/issues/4743
+    return false;
+  }
   return attestationDependantRoot === stateDependentRoot;
 }
 

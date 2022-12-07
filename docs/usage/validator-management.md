@@ -73,21 +73,22 @@ Inside the keystore JSON file, you should have an [EIP-2335 conformant keystore 
 }
 ```
 
-These keystore files should be placed into your `./keystores` folder in your Lodestar directory.
+These keystore files can be imported into your Lodestar's keystores folder with the `--importKeystores` command.
 
-<!-- prettier-ignore-start -->
-!!! info
-    The `./keystores` folder is the default directory for storing validator keystores. You can specify a custom path using the `--keystoresDir /path/to/folder` flag. Reference our [validator command line](https://chainsafe.github.io/lodestar/reference/cli/#validator) for more information.
-<!-- prettier-ignore-end -->
+```bash
+./lodestar validator \
+  --importKeystores keystore-m_12381_3600_0_0_0-1654128694.json
+```
 
-Create a `password.txt` file with the password you set for your keystores and save it into your `./secrets` folder in your Lodestar directory.
+Similarly, create a `password.txt` file with the password you set for your keystores and import it with the `--importKeystoresPassword` command.
+
+```bash
+./lodestar validator \
+  --importKeystores keystore-m_12381_3600_0_0_0-1654128694.json \
+  --importKeystoresPassword password.txt
+```
 
 ### Configuring the fee recipient address
-
-<!-- prettier-ignore-start -->
-!!! warning
-    This feature is in review. Please use with caution and report any issues to the team through our [Discord](https://discord.gg/yjyvFRP).
-<!-- prettier-ignore-end -->
 
 Post-Merge Ethereum requires validators to set a **Fee Recipient** which allows you to receive priority fees when proposing blocks. If you do not set this address, your priority fees will be sent to the [burn address](https://etherscan.io/address/0x0000000000000000000000000000000000000000).
 
@@ -97,7 +98,9 @@ You may choose to use the `--strictFeeRecipientCheck` flag to enable a strict ch
 
 ### Submit a validator deposit
 
-DEPRECATED. Please use the official tools to perform your deposits - `staking-deposit-cli`: https://github.com/ethereum/staking-deposit-cli - Ethereum Foundation launchpad: https://launchpad.ethereum.org/en/
+Please use the official tools to perform your deposits
+- `staking-deposit-cli`: <https://github.com/ethereum/staking-deposit-cli>
+- Ethereum Foundation launchpad: <https://launchpad.ethereum.org>
 
 ## Run the validator
 
@@ -110,10 +113,19 @@ To start a Lodestar validator run the command:
 You should see confirmation that modules have started.
 
 ```bash
-2020-08-07 14:14:24  []                 info: Decrypted 2 validator keystores
-2020-08-07 14:14:24  [VALIDATOR 0X8BAC4815] info: Setting up validator client...
-2020-08-07 14:14:24  [VALIDATOR 0X8BAC4815] info: Setting up RPC connection...
-2020-08-07 14:14:24  []                 info: Checking genesis time and beacon node connection
-2020-08-07 14:14:24  [VALIDATOR 0X8E44237B] info: Setting up validator client...
-2020-08-07 14:14:24  [VALIDATOR 0X8E44237B] info: Setting up RPC connection...
+Nov-29 10:47:13.647[]                 info: Lodestar network=sepolia, version=v1.2.2/f093b46, commit=f093b468ec3ab0dbbe8e2d2c8175f52ad88aa35f
+Nov-29 10:47:13.649[]                 info: Connecting to LevelDB database path=/home/user/.local/share/lodestar/sepolia/validator-db
+Nov-29 10:47:51.732[]                 info: 3 local keystores
+Nov-29 10:47:51.735[]                 info: 0x800f6be579b31ea950a50be65f7de8f678b23b7466579c01ac26ebf9c19599fb2b446da40ad4fc92c6109fcd6793303f
+Nov-29 10:47:51.735[]                 info: 0x81337ebe90d6942d8b61922ea880c4d28ebc745ddc10a1acc85b745a15c6c8754af1a73b1b3483b6a5024b783510b35c
+Nov-29 10:47:51.757[]                 info: 0xb95fc0ec39596deee2c4363f57bb4786f5bb8dfb345c1e5b14e2927be482615971d0d81f9a88b3389fac7079b3cb2f46
+Nov-29 10:47:51.776[]                 info: Genesis fetched from the beacon node
+Nov-29 10:47:51.781[]                 info: Verified connected beacon node and validator have same the config
+Nov-29 10:47:51.837[]                 info: Verified connected beacon node and validator have the same genesisValidatorRoot
+Nov-29 10:47:51.914[]                 info: Discovered new validators count=100
+Nov-29 10:48:00.197[]                 info: Published SyncCommitteeMessage slot=1165140, count=27
+Nov-29 10:48:02.296[]                 info: Published attestations slot=1165140, count=6
+Nov-29 10:48:08.122[]                 info: Published aggregateAndProofs slot=1165140, index=0, count=2
+Nov-29 10:48:12.102[]                 info: Published SyncCommitteeMessage slot=1165141, count=27
+Nov-29 10:48:14.236[]                 info: Published attestations slot=1165141, count=4
 ```

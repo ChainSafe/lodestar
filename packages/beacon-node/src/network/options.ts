@@ -2,12 +2,13 @@ import {ENR, IDiscv5DiscoveryInputOptions} from "@chainsafe/discv5";
 import {Eth2GossipsubOpts} from "./gossip/gossipsub.js";
 import {defaultGossipHandlerOpts, GossipHandlerOpts} from "./gossip/handlers/index.js";
 import {PeerManagerOpts} from "./peers/index.js";
-import {defaultRateLimiterOpts, RateLimiterOpts} from "./reqresp/response/rateLimiter.js";
+import {ReqRespBeaconNodeOpts} from "./reqresp/ReqRespBeaconNode.js";
 
-export interface INetworkOptions extends PeerManagerOpts, RateLimiterOpts, GossipHandlerOpts, Eth2GossipsubOpts {
+export interface INetworkOptions extends PeerManagerOpts, ReqRespBeaconNodeOpts, GossipHandlerOpts, Eth2GossipsubOpts {
   localMultiaddrs: string[];
   bootMultiaddrs?: string[];
   subscribeAllSubnets?: boolean;
+  mdns: boolean;
   connectToDiscv5Bootnodes?: boolean;
   version?: string;
 }
@@ -26,7 +27,7 @@ export const defaultNetworkOptions: INetworkOptions = {
   discv5FirstQueryDelayMs: 1000,
   localMultiaddrs: ["/ip4/0.0.0.0/tcp/9000"],
   bootMultiaddrs: [],
+  mdns: false,
   discv5: defaultDiscv5Options,
-  ...defaultRateLimiterOpts,
   ...defaultGossipHandlerOpts,
 };

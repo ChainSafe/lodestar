@@ -36,9 +36,14 @@ export function getGenericJsonServer<
       id: routeId as string,
       schema: routeSerdes.schema && getFastifySchema(routeSerdes.schema),
 
-      handler: async function handler(req: ReqGeneric): Promise<unknown | void> {
+      handler: async function handler(req: ReqGeneric, resp): Promise<unknown | void> {
         const args: any[] = routeSerdes.parseReq(req as ReqTypes[keyof Api]);
         const data = (await api[routeId](...args)) as Resolves<Api[keyof Api]>;
+
+        if (routeDef.statusOk !== undefined) {
+          resp.statusCode = routeDef.statusOk;
+        }
+
         if (returnType) {
           return returnType.toJson(data);
         } else {

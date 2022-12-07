@@ -1,4 +1,4 @@
-import {BLSPubkey, Slot, BLSSignature, allForks, bellatrix, isBlindedBeaconBlock} from "@lodestar/types";
+import {BLSPubkey, Slot, BLSSignature, allForks, bellatrix, capella, isBlindedBeaconBlock} from "@lodestar/types";
 import {IChainForkConfig} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
 import {extendError, prettyBytes} from "@lodestar/utils";
@@ -127,7 +127,7 @@ export class BlockProposingService {
       : null;
 
     const fullBlockPromise = this.produceBlock(slot, randaoReveal, graffiti).catch((e: Error) => {
-      this.logger.error("Failed to produce builder block", {}, e as Error);
+      this.logger.error("Failed to produce execution block", {}, e as Error);
       return null;
     });
 
@@ -148,7 +148,7 @@ export class BlockProposingService {
       const blockFeeRecipient = (fullBlock.data as bellatrix.BeaconBlock).body.executionPayload?.feeRecipient;
       const feeRecipient = blockFeeRecipient !== undefined ? toHexString(blockFeeRecipient) : undefined;
       if (feeRecipient !== undefined) {
-        // In Mev Builder, the feeRecipient could differ and rewards to the feeRecipeint
+        // In Mev Builder, the feeRecipient could differ and rewards to the feeRecipient
         // might be included in the block transactions as indicated by the BuilderBid
         // Address this appropriately in the Mev boost PR
         //
@@ -163,7 +163,9 @@ export class BlockProposingService {
         if (feeRecipient !== expectedFeeRecipient && strictFeeRecipientCheck) {
           throw Error(`Invalid feeRecipient=${feeRecipient}, expected=${expectedFeeRecipient}`);
         }
-        Object.assign(debugLogCtx, {feeRecipient});
+        const transactions = (fullBlock.data as bellatrix.BeaconBlock).body.executionPayload?.transactions.length;
+        const withdrawals = (fullBlock.data as capella.BeaconBlock).body.executionPayload?.withdrawals?.length;
+        Object.assign(debugLogCtx, {feeRecipient, transactions}, withdrawals !== undefined ? {withdrawals} : {});
       }
       return {...fullBlock, debugLogCtx};
       // throw Error("random")

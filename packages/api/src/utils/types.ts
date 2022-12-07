@@ -23,6 +23,7 @@ export type RouteGroupDefinition<
 export type RouteDef = {
   url: string;
   method: "GET" | "POST" | "DELETE";
+  statusOk?: number;
 };
 
 export type ReqGeneric = {

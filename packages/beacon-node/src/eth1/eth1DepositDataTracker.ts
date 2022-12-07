@@ -25,10 +25,10 @@ const MIN_BLOCKS_PER_LOG_QUERY = 10;
 const AUTO_UPDATE_PERIOD_MS = 60 * 1000;
 /** Prevent infinite loops */
 const MIN_UPDATE_PERIOD_MS = 1 * 1000;
-/** Miliseconds to wait after getting 429 Too Many Requests */
+/** Milliseconds to wait after getting 429 Too Many Requests */
 const RATE_LIMITED_WAIT_MS = 30 * 1000;
 /** Min time to wait on auto update loop on unknown error */
-const MIN_WAIT_ON_ERORR_MS = 1 * 1000;
+const MIN_WAIT_ON_ERROR_MS = 1 * 1000;
 
 /** Number of blocks to download if the node detects it is lagging behind due to an inaccurate
     relationship between block-number-based follow distance and time-based follow distance. */
@@ -47,7 +47,7 @@ export type Eth1DepositDataTrackerModules = {
 
 /**
  * Main class handling eth1 data fetching, processing and storing
- * Upon instantiation, starts fetcheing deposits and blocks at regular intervals
+ * Upon instantiation, starts fetching deposits and blocks at regular intervals
  */
 export class Eth1DepositDataTracker {
   private config: IChainForkConfig;
@@ -62,9 +62,9 @@ export class Eth1DepositDataTracker {
 
   /** Dynamically adjusted follow distance */
   private eth1FollowDistance: number;
-  /** Dynamically adusted batch size to fetch deposit logs */
+  /** Dynamically adjusted batch size to fetch deposit logs */
   private eth1GetBlocksBatchSizeDynamic = MAX_BLOCKS_PER_BLOCK_QUERY;
-  /** Dynamically adusted batch size to fetch deposit logs */
+  /** Dynamically adjusted batch size to fetch deposit logs */
   private eth1GetLogsBatchSizeDynamic = MAX_BLOCKS_PER_LOG_QUERY;
   private readonly forcedEth1DataVote: phase0.Eth1Data | null;
 
@@ -132,7 +132,7 @@ export class Eth1DepositDataTracker {
       return pickEth1Vote(state, eth1VotesToConsider);
     } catch (e) {
       // Note: In case there's a DB issue, don't stop a block proposal. Just vote for current eth1Data
-      this.logger.error("CRITICIAL: Error reading valid votes, voting for current eth1Data", {}, e as Error);
+      this.logger.error("CRITICAL: Error reading valid votes, voting for current eth1Data", {}, e as Error);
       return state.eth1Data;
     }
   }
@@ -182,7 +182,7 @@ export class Eth1DepositDataTracker {
           await sleep(RATE_LIMITED_WAIT_MS, this.signal);
         } else if (!isErrorAborted(e)) {
           this.logger.error("Error updating eth1 chain cache", {}, e as Error);
-          await sleep(MIN_WAIT_ON_ERORR_MS, this.signal);
+          await sleep(MIN_WAIT_ON_ERROR_MS, this.signal);
         }
 
         this.metrics?.eth1.depositTrackerUpdateErrors.inc(1);
@@ -223,7 +223,7 @@ export class Eth1DepositDataTracker {
     let depositEvents;
     try {
       depositEvents = await this.eth1Provider.getDepositEvents(fromBlock, toBlock);
-      // Increase the batch size linearly even if we scale down exponentioanlly (half each time)
+      // Increase the batch size linearly even if we scale down exponentially (half each time)
       this.eth1GetLogsBatchSizeDynamic = Math.min(
         MAX_BLOCKS_PER_LOG_QUERY,
         this.eth1GetLogsBatchSizeDynamic + MIN_BLOCKS_PER_LOG_QUERY
@@ -293,7 +293,7 @@ export class Eth1DepositDataTracker {
     let blocksRaw;
     try {
       blocksRaw = await this.eth1Provider.getBlocksByNumber(fromBlock, toBlock);
-      // Increase the batch size linearly even if we scale down exponentioanlly (half each time)
+      // Increase the batch size linearly even if we scale down exponentially (half each time)
       this.eth1GetBlocksBatchSizeDynamic = Math.min(
         MAX_BLOCKS_PER_BLOCK_QUERY,
         this.eth1GetBlocksBatchSizeDynamic + MIN_BLOCKS_PER_BLOCK_QUERY

@@ -9,5 +9,13 @@ import {sszGeneric} from "./ssz_generic.js";
 
 specTestIterator(path.join(ethereumConsensusSpecsTests.outputDir, "tests", "general"), {
   bls: {type: RunnerType.default, fn: blsTestRunner},
-  ssz_generic: {type: RunnerType.custom, fn: sszGeneric},
+  ssz_generic: {
+    type: RunnerType.custom,
+    fn: sszGeneric([
+      // NOTE: ComplexTestStruct tests are not correctly generated.
+      // where deserialized .d value is D: '0x00'. However the tests guide mark that field as D: Bytes[256].
+      // Those test won't be fixed since most implementations staticly compile types.
+      "ComplexTestStruct",
+    ]),
+  },
 });

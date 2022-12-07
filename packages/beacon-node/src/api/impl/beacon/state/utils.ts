@@ -7,6 +7,8 @@ import {
   createCachedBeaconState,
   createEmptyEpochContextImmutableData,
   PubkeyIndexMap,
+  ExecutionPayloadStatus,
+  DataAvailableStatus,
 } from "@lodestar/state-transition";
 import {BLSPubkey, phase0} from "@lodestar/types";
 import {stateTransition, processSlots} from "@lodestar/state-transition";
@@ -185,9 +187,11 @@ export function filterStateValidatorsByStatus(
   for (const validator of validatorsArr) {
     const validatorStatus = getValidatorStatus(validator, currentEpoch);
 
-    const validatorIndex = getStateValidatorIndex(validator.pubkey, state, pubkey2index);
-    if (validatorIndex !== undefined && statusSet.has(validatorStatus)) {
-      responses.push(toValidatorResponse(validatorIndex, validator, state.balances.get(validatorIndex), currentEpoch));
+    const resp = getStateValidatorIndex(validator.pubkey, state, pubkey2index);
+    if (resp.valid && statusSet.has(validatorStatus)) {
+      responses.push(
+        toValidatorResponse(resp.validatorIndex, validator, state.balances.get(resp.validatorIndex), currentEpoch)
+      );
     }
   }
   return responses;
@@ -220,6 +224,9 @@ async function getFinalizedState(
   // process blocks up to the requested slot
   for await (const block of db.blockArchive.valuesStream({gt: state.slot, lte: slot})) {
     state = stateTransition(state, block, {
+      // Replaying finalized blocks, all data is considered valid
+      executionPayloadStatus: ExecutionPayloadStatus.valid,
+      dataAvailableStatus: DataAvailableStatus.available,
       verifyStateRoot: false,
       verifyProposer: false,
       verifySignatures: false,
@@ -234,22 +241,42 @@ async function getFinalizedState(
   return state;
 }
 
+type StateValidatorIndexResponse = {valid: true; validatorIndex: number} | {valid: false; code: number; reason: string};
+
 export function getStateValidatorIndex(
   id: routes.beacon.ValidatorId | BLSPubkey,
   state: BeaconStateAllForks,
   pubkey2index: PubkeyIndexMap
-): number | undefined {
+): StateValidatorIndexResponse {
   let validatorIndex: ValidatorIndex | undefined;
-  if (typeof id === "number") {
-    if (state.validators.length > id) {
-      validatorIndex = id;
-    }
-  } else {
-    validatorIndex = pubkey2index.get(id) ?? undefined;
-    // validator added later than given stateId
-    if (validatorIndex !== undefined && validatorIndex >= state.validators.length) {
-      validatorIndex = undefined;
+  if (typeof id === "string") {
+    if (id.startsWith("0x")) {
+      // mutate `id` and fallthrough to below
+      try {
+        id = fromHexString(id);
+      } catch (e) {
+        return {valid: false, code: 400, reason: "Invalid pubkey hex encoding"};
+      }
+    } else {
+      validatorIndex = Number(id);
+      // validator is invalid or added later than given stateId
+      if (!Number.isSafeInteger(validatorIndex)) {
+        return {valid: false, code: 400, reason: "Invalid validator index"};
+      }
+      if (validatorIndex >= state.validators.length) {
+        return {valid: false, code: 404, reason: "Validator index from future state"};
+      }
+      return {valid: true, validatorIndex};
     }
   }
-  return validatorIndex;
+
+  // typeof id === Uint8Array
+  validatorIndex = pubkey2index.get(id as BLSPubkey);
+  if (validatorIndex === undefined) {
+    return {valid: false, code: 404, reason: "Validator pubkey not found in state"};
+  }
+  if (validatorIndex >= state.validators.length) {
+    return {valid: false, code: 404, reason: "Validator pubkey from future state"};
+  }
+  return {valid: true, validatorIndex};
 }

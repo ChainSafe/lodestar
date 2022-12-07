@@ -3,7 +3,7 @@ import {CachedBeaconStateBellatrix, CachedBeaconStateCapella} from "../types.js"
 import {getCachedBeaconState} from "../cache/stateCache.js";
 
 /**
- * Upgrade a state from altair to bellatrix.
+ * Upgrade a state from bellatrix to capella.
  */
 export function upgradeStateToCapella(stateBellatrix: CachedBeaconStateBellatrix): CachedBeaconStateCapella {
   const {config} = stateBellatrix;
@@ -27,7 +27,7 @@ export function upgradeStateToCapella(stateBellatrix: CachedBeaconStateBellatrix
   // eth1_data                        | -    | eth1_data
   // eth1_data_votes                  | -    | eth1_data_votes
   // eth1_deposit_index               | -    | eth1_deposit_index
-  // validators                       | diff | validators
+  // validators                       | -    | validators
   // balances                         | -    | balances
   // randao_mixes                     | -    | randao_mixes
   // slashings                        | -    | slashings
@@ -41,9 +41,8 @@ export function upgradeStateToCapella(stateBellatrix: CachedBeaconStateBellatrix
   // current_sync_committee           | -    | current_sync_committee
   // next_sync_committee              | -    | next_sync_committee
   // latest_execution_payload_header  | diff | latest_execution_payload_header
-  // -                                | new  | withdrawal_queue
   // -                                | new  | next_withdrawal_index
-  // -                                | new  | next_partial_withdrawal_validator_index
+  // -                                | new  | next_withdrawal_validator_index
 
   const stateBellatrixNode = ssz.bellatrix.BeaconState.commitViewDU(stateBellatrix);
   const stateCapellaView = ssz.capella.BeaconState.getViewDU(stateBellatrixNode);
@@ -56,15 +55,8 @@ export function upgradeStateToCapella(stateBellatrix: CachedBeaconStateBellatrix
     epoch: stateBellatrix.epochCtx.epoch,
   });
 
-  // Upgrade the validators, this validator change is not present in latest specs but in 1.2.0
-  // so just set it to 0 and cleanup later
-  for (let i = 0; i < stateCapella.validators.length; i++) {
-    const validator = stateCapella.validators.get(i);
-    validator.fullyWithdrawnEpoch = Infinity;
-  }
-  // Nothing to do for latestExecutionPayloadHeader as the root is set to 0 by default
-  stateCapella.withdrawalQueue = ssz.capella.WithdrawalQueue.defaultViewDU();
-  // nextWithdrawalIndex and nextPartialWithdrawalValidatorIndex are also set to 0 by default
+  // nextWithdrawalIndex and nextWithdrawalValidatorIndex are already set to 0 by default
+  // latestExecutionPayloadHeader's withdrawalRoot set to zeros by default
 
   // Commit new added fields ViewDU to the root node
   stateCapella.commit();

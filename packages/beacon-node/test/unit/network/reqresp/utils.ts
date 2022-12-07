@@ -34,7 +34,7 @@ export async function* arrToSource<T>(arr: T[]): AsyncGenerator<T> {
 }
 
 export function generateEmptySignedBlocks(n = 3): phase0.SignedBeaconBlock[] {
-  return Array.from({length: n}).map(() => generateEmptySignedBlock());
+  return Array.from({length: n}).map((_, i) => generateEmptySignedBlock(i));
 }
 
 /**

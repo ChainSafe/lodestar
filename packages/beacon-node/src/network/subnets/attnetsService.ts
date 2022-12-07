@@ -172,7 +172,16 @@ export class AttnetsService implements IAttnetsService {
    */
   private unsubscribeExpiredRandomSubnets(slot: Slot): void {
     const expired = this.subscriptionsRandom.getExpired(slot);
-    // TODO: Optimization: If we have to be subcribed to all subnets, no need to unsubscribe. Just extend the timeout
+    const currentSlot = this.chain.clock.currentSlot;
+
+    if (this.knownValidators.size * RANDOM_SUBNETS_PER_VALIDATOR >= ATTESTATION_SUBNET_COUNT) {
+      // Optimization: If we have to be subcribed to all subnets, no need to unsubscribe. Just extend the timeout
+      for (const subnet of expired) {
+        this.subscriptionsRandom.request({subnet, toSlot: randomSubscriptionSlotLen() + currentSlot});
+      }
+      return;
+    }
+
     // Prune subnets and re-subcribe to new ones
     this.unsubscribeSubnets(expired, slot);
     this.rebalanceRandomSubnets();

@@ -24,12 +24,15 @@ import {IBeaconClock} from "../clock/index.js";
 import {BlockProcessOpts} from "../options.js";
 import {ExecutePayloadStatus} from "../../execution/engine/interface.js";
 import {IEth1ForBlockProduction} from "../../eth1/index.js";
+import {IMetrics} from "../../metrics/metrics.js";
+import {ImportBlockOpts} from "./types.js";
 
 export type VerifyBlockExecutionPayloadModules = {
   eth1: IEth1ForBlockProduction;
   executionEngine: IExecutionEngine;
   clock: IBeaconClock;
   logger: ILogger;
+  metrics: IMetrics | null;
   forkChoice: IForkChoice;
   config: IChainForkConfig;
 };
@@ -56,7 +59,7 @@ type VerifyBlockExecutionResponse =
 /**
  * Verifies 1 or more execution payloads from a linear sequence of blocks.
  *
- * Since the EL client must be aware of each parent, all payloads must be submited in sequence.
+ * Since the EL client must be aware of each parent, all payloads must be submitted in sequence.
  */
 export async function verifyBlocksExecutionPayload(
   chain: VerifyBlockExecutionPayloadModules,
@@ -64,7 +67,7 @@ export async function verifyBlocksExecutionPayload(
   blocks: allForks.SignedBeaconBlock[],
   preState0: CachedBeaconStateAllForks,
   signal: AbortSignal,
-  opts: BlockProcessOpts
+  opts: BlockProcessOpts & ImportBlockOpts
 ): Promise<SegmentExecStatus> {
   const executionStatuses: MaybeValidExecutionStatus[] = [];
   let mergeBlockFound: bellatrix.BeaconBlock | null = null;
@@ -77,8 +80,8 @@ export async function verifyBlocksExecutionPayload(
   // For a block with SYNCING status (called optimistic block), it's okay to import with
   // SYNCING status as EL could switch into syncing
   //
-  // 1. On intial startup/restart
-  // 2. When some reorg might have occured and EL doesn't has a parent root
+  // 1. On initial startup/restart
+  // 2. When some reorg might have occurred and EL doesn't has a parent root
   //    (observed on devnets)
   // 3. Because of some unavailable (and potentially invalid) root but there is no way
   //    of knowing if this is invalid/unavailable. For unavailable block, some proposer
@@ -131,7 +134,7 @@ export async function verifyBlocksExecutionPayload(
   //
   //
   // For this segment of blocks:
-  //   We are optimistically safe with respec to this entire block segment if:
+  //   We are optimistically safe with respect to this entire block segment if:
   //    - all the blocks are way behind the current slot
   //    - or we have already imported a post-merge parent of first block of this chain in forkchoice
   const lastBlock = blocks[blocks.length - 1];
@@ -174,7 +177,7 @@ export async function verifyBlocksExecutionPayload(
 
     const isMergeTransitionBlock =
       // If the merge block is found, stop the search as the isMergeTransitionBlockFn condition
-      // will still evalute to true for the following blocks leading to errors (while syncing)
+      // will still evaluate to true for the following blocks leading to errors (while syncing)
       // as the preState0 still belongs to the pre state of the first block on segment
       mergeBlockFound === null &&
       isExecutionStateType(preState0) &&
@@ -236,6 +239,15 @@ export async function verifyBlocksExecutionPayload(
     }
   }
 
+  if (blocks.length === 1 && opts.seenTimestampSec !== undefined) {
+    const recvToVerifiedExecPayload = Date.now() / 1000 - opts.seenTimestampSec;
+    chain.metrics?.gossipBlock.receivedToExecutionPayloadVerification.observe(recvToVerifiedExecPayload);
+    chain.logger.verbose("Verified execution payload", {
+      slot: blocks[0].message.slot,
+      recvToVerifiedExecPayload,
+    });
+  }
+
   return {
     execAborted: null,
     executionStatuses,
@@ -273,7 +285,10 @@ export async function verifyBlockExecutionPayload(
   }
 
   // TODO: Handle better notifyNewPayload() returning error is syncing
-  const execResult = await chain.executionEngine.notifyNewPayload(executionPayloadEnabled);
+  const execResult = await chain.executionEngine.notifyNewPayload(
+    chain.config.getForkName(block.message.slot),
+    executionPayloadEnabled
+  );
 
   switch (execResult.status) {
     case ExecutePayloadStatus.VALID: {
@@ -321,7 +336,7 @@ export async function verifyBlockExecutionPayload(
     // There can be other reasons for which EL failed some of the observed ones are
     // 1. Connection refused / can't connect to EL port
     // 2. EL Internal Error
-    // 3. Geth sometimes gives invalid merkel root error which means invalid
+    // 3. Geth sometimes gives invalid merkle root error which means invalid
     //    but expects it to be handled in CL as of now. But we should log as warning
     //    and give it as optimistic treatment and expect any other non-geth CL<>EL
     //    combination to reject the invalid block and propose a block.
@@ -373,7 +388,7 @@ function getSegmentErrorResponse(
     // If there is no valid in the segment then we have to propagate invalid response
     // in forkchoice as well if
     //  - if the parentBlock is also not the lvh
-    //  - and parentBlock is not pre merhe
+    //  - and parentBlock is not pre merge
     if (
       !lvhFound &&
       parentBlock.executionStatus !== ExecutionStatus.PreMerge &&

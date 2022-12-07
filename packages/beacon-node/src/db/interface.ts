@@ -14,20 +14,24 @@ import {
   SyncCommitteeRepository,
   SyncCommitteeWitnessRepository,
   BackfilledRanges,
+  BlobsSidecarRepository,
+  BlobsSidecarArchiveRepository,
 } from "./repositories/index.js";
 import {PreGenesisState, PreGenesisStateLastProcessedBlock} from "./single/index.js";
 
 /**
  * The DB service manages the data layer of the beacon chain
  * The exposed methods do not refer to the underlying data engine,
- * but instead expose relevent beacon chain objects
+ * but instead expose relevant beacon chain objects
  */
 export interface IBeaconDb {
   // unfinalized blocks
   block: BlockRepository;
+  blobsSidecar: BlobsSidecarRepository;
 
   // finalized blocks
   blockArchive: BlockArchiveRepository;
+  blobsSidecarArchive: BlobsSidecarArchiveRepository;
 
   // finalized states
   stateArchive: StateArchiveRepository;
@@ -53,6 +57,8 @@ export interface IBeaconDb {
   syncCommitteeWitness: SyncCommitteeWitnessRepository;
 
   backfilledRanges: BackfilledRanges;
+
+  pruneHotDb(): Promise<void>;
 
   /** Start the connection to the db instance and open the db store. */
   start(): Promise<void>;

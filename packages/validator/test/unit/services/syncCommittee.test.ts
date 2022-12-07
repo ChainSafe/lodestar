@@ -32,7 +32,7 @@ describe("SyncCommitteeService", function () {
   const config = createIChainForkConfig({
     ...mainnetConfig,
     SECONDS_PER_SLOT: 1 / 1000, // Make slot time super short: 1 ms
-    ALTAIR_FORK_EPOCH: 0, // Activate Altair immediatelly
+    ALTAIR_FORK_EPOCH: 0, // Activate Altair immediately
   });
 
   before(() => {

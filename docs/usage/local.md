@@ -4,38 +4,49 @@ To quickly test and run Lodestar we recommend starting a local testnet. We recom
 
 **Terminal 1**
 
-Run a beacon node, with 8 validators with the following command.
+Run a beacon node as a **bootnode**, with 8 validators with the following command.
 
 ```bash
-./lodestar dev --genesisValidators 8 --genesisTime 1578787200 --startValidators 0:8 --enr.ip 127.0.0.1 --dataDir </path/to/node1> --reset
+./lodestar dev \
+  --genesisValidators 8 \
+  --genesisTime 1669713528 \
+  --startValidators 0..7 \
+  --enr.ip 127.0.0.1 \
+  --enr.udp 9000 \
+  --dataDir </path/to/node1> \
+  --reset
 ```
 
 `--genesisValidators` and `--genesisTime` define the genesis state of the beacon chain. `--dataDir` defines a path where
-lodestar should store the beacon state, `--enr.ip` sets the enr ip entry for the node while the `--reset` flag ensures the state is cleared on each restart - which is useful when testing locally.
+lodestar should store the beacon state.
+`--enr.ip` sets the enr ip entry for the node (essential for second node to connect via `enr`) and `--enr.udp` exposes the `discv5` discovery service (if you want to connect more than 1 node and enable discovery amongst them via *bootnode*).
+Lastly the `--reset` flag ensures the state is cleared on each restart - which is useful when testing locally.
 
 Once the node has started, make a request to `curl http://localhost:9596/eth/v1/node/identity` and copy the `enr` value.
 
 This would be used to connect from the second node.
 
-> enr stands for ethereum node records, which is a format for conveying p2p connectivity information for ethereum nodes.
-> For more info see [eip-778](https://eips.ethereum.org/EIPS/eip-778)
+> ENR stands for ethereum node records, which is a format for conveying p2p connectivity information for ethereum nodes.
+> For more info see [eip-778](https://eips.ethereum.org/EIPS/eip-778).
 
 **Terminal 2**
 
 Start the second node without starting any validators and connect to the first node by supplying the copied `enr` value:
 
 ```bash
-./lodestar dev --genesisValidators 8 --genesisTime 1578787200 \
-  --dataDir /path/to/node2 \
+./lodestar dev \
+  --genesisValidators 8 \
+  --genesisTime 1669713528 \
+  --dataDir </path/to/node2> \
   --port 9001 \
   --rest.port 9597 \
   --network.connectToDiscv5Bootnodes true \
-  --network.discv5.bootEnrs <enr value>
+  --bootnodes <enr value> \
   --reset
 ```
 
-By default, lodestar starts as many validators as the number supplied by `--genesisValidators`. In other to not start any validator, this is overridden by
-the `--startValidators` option. Passing a value of `0:0` means no validators should be started.
+By default, lodestar starts as many validators as the number supplied by `--genesisValidators`. In order to not start any validator, this is overridden by
+the `--startValidators` option. Passing a value of `0..0` means no validators should be started.
 
 Also, take note that the values of `--genesisValidators` and `--genesisTime` must be the same as the ones passed to the first node in order for the two nodes
 to have the same beacon chain.

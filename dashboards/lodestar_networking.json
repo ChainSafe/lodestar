@@ -2430,7 +2430,7 @@
       }
     },
     {
-      "description": "Time elappsed between block slot time and the time block received via gossip",
+      "description": "Time elapsed between block slot time and the time block received via gossip",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -2508,7 +2508,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "delta(lodestar_gossip_block_elappsed_time_till_received_sum[$rate_interval])\n/\ndelta(lodestar_gossip_block_elappsed_time_till_received_count[$rate_interval])",
+          "expr": "delta(lodestar_gossip_block_elapsed_time_till_received_sum[$rate_interval])\n/\ndelta(lodestar_gossip_block_elapsed_time_till_received_count[$rate_interval])",
           "interval": "",
           "legendFormat": "till received",
           "refId": "A"
@@ -2519,7 +2519,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "delta(lodestar_gossip_block_elappsed_time_till_processed_sum[$rate_interval])\n/\ndelta(lodestar_gossip_block_elappsed_time_till_processed_count[$rate_interval])",
+          "expr": "delta(lodestar_gossip_block_elapsed_time_till_processed_sum[$rate_interval])\n/\ndelta(lodestar_gossip_block_elapsed_time_till_processed_count[$rate_interval])",
           "hide": false,
           "interval": "",
           "legendFormat": "till processed",
@@ -2542,7 +2542,7 @@
       "type": "timeseries"
     },
     {
-      "description": "Time elappsed between block slot time and the time block received via gossip",
+      "description": "Time elapsed between block slot time and the time block received via gossip",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -2620,7 +2620,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "(\n  delta(lodestar_gossip_block_elappsed_time_till_processed_sum[$rate_interval])\n  -\n  delta(lodestar_gossip_block_elappsed_time_till_received_sum[$rate_interval])\n)\n/\ndelta(lodestar_gossip_block_elappsed_time_till_received_count[$rate_interval])",
+          "expr": "(\n  delta(lodestar_gossip_block_elapsed_time_till_processed_sum[$rate_interval])\n  -\n  delta(lodestar_gossip_block_elapsed_time_till_received_sum[$rate_interval])\n)\n/\ndelta(lodestar_gossip_block_elapsed_time_till_received_count[$rate_interval])",
           "interval": "",
           "legendFormat": "processed minus received",
           "refId": "A"
