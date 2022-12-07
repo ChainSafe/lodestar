@@ -402,7 +402,7 @@ export class Lightclient {
     const attestedPeriod = computeSyncPeriodAtSlot(attestedHeader.slot);
     const signaturePeriod = computeSyncPeriodAtSlot(signatureSlot);
     // if at sync period boundary, the signature is constructed by sync committee in the next period
-    const syncCommittee = this.getSigningSyncCommitteeAtBoundary(attestedPeriod, signaturePeriod);
+    const syncCommittee = this.syncCommitteeByPeriod.get(signaturePeriod);
 
     if (!syncCommittee) {
       // TODO: Attempt to fetch committee update for period if it's before the current clock period
