@@ -105,13 +105,13 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
 }
 
 export function getReturnTypes(): ReturnTypes<Api> {
-  const restLightClientUpdate = new ContainerType({
-    version: new StringType<ForkName>(),
-    data: ssz.altair.LightClientUpdate,
-  });
-
   return {
-    getUpdates: ArrayOf(restLightClientUpdate),
+    getUpdates: ArrayOf(
+      new ContainerType({
+        version: new StringType<ForkName>(),
+        data: ssz.altair.LightClientUpdate,
+      })
+    ),
     getOptimisticUpdate: WithVersion(() => ssz.altair.LightClientOptimisticUpdate),
     getFinalityUpdate: WithVersion(() => ssz.altair.LightClientFinalityUpdate),
     getBootstrap: WithVersion(() => ssz.altair.LightClientBootstrap),
