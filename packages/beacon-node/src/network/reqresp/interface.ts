@@ -14,6 +14,10 @@ export interface IReqRespBeaconNode {
   ): Promise<allForks.SignedBeaconBlock[]>;
   beaconBlocksByRoot(peerId: PeerId, request: phase0.BeaconBlocksByRootRequest): Promise<allForks.SignedBeaconBlock[]>;
   blobsSidecarsByRange(peerId: PeerId, request: eip4844.BlobsSidecarsByRangeRequest): Promise<eip4844.BlobsSidecar[]>;
+  beaconBlockAndBlobsSidecarByRoot(
+    peerId: PeerId,
+    request: eip4844.BeaconBlockAndBlobsSidecarByRootRequest
+  ): Promise<eip4844.SignedBeaconBlockAndBlobsSidecar[]>;
   pruneOnPeerDisconnect(peerId: PeerId): void;
   lightClientBootstrap(peerId: PeerId, request: Uint8Array): Promise<altair.LightClientBootstrap>;
   lightClientOptimisticUpdate(peerId: PeerId): Promise<altair.LightClientOptimisticUpdate>;
