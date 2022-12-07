@@ -3,17 +3,16 @@ import {fromHexString} from "@chainsafe/ssz";
 import {SyncPeriod} from "@lodestar/types";
 import {MAX_REQUEST_LIGHT_CLIENT_UPDATES, MAX_REQUEST_LIGHT_CLIENT_COMMITTEE_HASHES} from "@lodestar/params";
 import {LightClientUpdate} from "@lodestar/types/altair";
-import {VersionedLightClientUpdate} from "@lodestar/api/src/beacon/routes/lightclient";
 import {ApiModules} from "../types.js";
 
 // TODO: Import from lightclient/server package
 
 export function getLightclientApi({chain, config}: Pick<ApiModules, "chain" | "config">): routes.lightclient.Api {
-  const lightClientUpdatesWithVersion = (chunks: LightClientUpdate[]): VersionedLightClientUpdate[] => {
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+  const lightClientUpdatesWithVersion = (chunks: LightClientUpdate[]) => {
     return chunks.map((chunk) => {
-      const version = config.getForkName(chunk.attestedHeader.slot);
       return {
-        version,
+        version: config.getForkName(chunk.attestedHeader.slot),
         data: chunk,
       };
     });

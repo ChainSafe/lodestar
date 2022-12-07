@@ -5,12 +5,6 @@ import {JsonPath} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {altair, RootHex, SyncPeriod} from "@lodestar/types";
 import {notNullish} from "@lodestar/utils";
-import {
-  VersionedLightClientFinalityUpdate,
-  VersionedLightClientOptimisticUpdate,
-  VersionedLightClientUpdate,
-  VersionedLightClientBootstrap,
-} from "@lodestar/api/src/beacon/routes/lightclient";
 import {ForkName} from "@lodestar/params";
 import {BeaconStateAltair} from "../utils/types.js";
 
@@ -23,6 +17,11 @@ export class ProofServerApiMock implements routes.proof.Api {
     return {data: state.createProof(paths)};
   }
 }
+
+type VersionedLightClientUpdate = {
+  version: ForkName;
+  data: altair.LightClientUpdate;
+};
 
 export class LightclientServerApiMock implements routes.lightclient.Api {
   readonly updates = new Map<SyncPeriod, altair.LightClientUpdate>();
@@ -44,18 +43,18 @@ export class LightclientServerApiMock implements routes.lightclient.Api {
     return updates;
   }
 
-  async getOptimisticUpdate(): Promise<VersionedLightClientOptimisticUpdate> {
+  async getOptimisticUpdate(): Promise<{version: ForkName; data: altair.LightClientOptimisticUpdate}> {
     if (!this.latestHeadUpdate) throw Error("No latest head update");
     return {version: ForkName.bellatrix, data: this.latestHeadUpdate};
   }
 
-  async getFinalityUpdate(): Promise<VersionedLightClientFinalityUpdate> {
+  async getFinalityUpdate(): Promise<{version: ForkName; data: altair.LightClientFinalityUpdate}> {
     if (!this.finalized) throw Error("No finalized head update");
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     return {version: ForkName.bellatrix, data: this.finalized};
   }
 
-  async getBootstrap(blockRoot: string): Promise<VersionedLightClientBootstrap> {
+  async getBootstrap(blockRoot: string): Promise<{version: ForkName; data: altair.LightClientBootstrap}> {
     const snapshot = this.snapshots.get(blockRoot);
     if (!snapshot) throw Error(`snapshot for blockRoot ${blockRoot} not available`);
     return {version: ForkName.bellatrix, data: snapshot};

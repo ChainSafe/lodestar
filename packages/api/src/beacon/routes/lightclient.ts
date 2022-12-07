@@ -22,17 +22,6 @@ export type LightClientBootstrap = {
   currentSyncCommitteeBranch: Uint8Array[];
 };
 
-export type VersionedLightClientUpdate = {
-  version: ForkName;
-  data: altair.LightClientUpdate;
-};
-
-export type VersionedLightClientOptimisticUpdate = {version: ForkName; data: altair.LightClientOptimisticUpdate};
-
-export type VersionedLightClientFinalityUpdate = {version: ForkName; data: altair.LightClientFinalityUpdate};
-
-export type VersionedLightClientBootstrap = {version: ForkName; data: altair.LightClientBootstrap};
-
 export type Api = {
   /**
    * Returns an array of best updates given a `startPeriod` and `count` number of sync committee period to return.
@@ -41,19 +30,27 @@ export type Api = {
    * - Has most bits
    * - Oldest update
    */
-  getUpdates(startPeriod: SyncPeriod, count: number): Promise<VersionedLightClientUpdate[]>;
+  getUpdates(
+    startPeriod: SyncPeriod,
+    count: number
+  ): Promise<
+    {
+      version: ForkName;
+      data: altair.LightClientUpdate;
+    }[]
+  >;
   /**
    * Returns the latest optimistic head update available. Clients should use the SSE type `light_client_optimistic_update`
    * unless to get the very first head update after syncing, or if SSE are not supported by the server.
    */
-  getOptimisticUpdate(): Promise<VersionedLightClientOptimisticUpdate>;
-  getFinalityUpdate(): Promise<VersionedLightClientFinalityUpdate>;
+  getOptimisticUpdate(): Promise<{version: ForkName; data: altair.LightClientOptimisticUpdate}>;
+  getFinalityUpdate(): Promise<{version: ForkName; data: altair.LightClientFinalityUpdate}>;
   /**
    * Fetch a bootstrapping state with a proof to a trusted block root.
    * The trusted block root should be fetched with similar means to a weak subjectivity checkpoint.
    * Only block roots for checkpoints are guaranteed to be available.
    */
-  getBootstrap(blockRoot: string): Promise<VersionedLightClientBootstrap>;
+  getBootstrap(blockRoot: string): Promise<{version: ForkName; data: altair.LightClientBootstrap}>;
   /**
    * Returns an array of sync committee hashes based on the provided period and count
    */
