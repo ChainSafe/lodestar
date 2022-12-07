@@ -15,7 +15,7 @@ import {ChainEvent} from "../emitter.js";
 import {REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC} from "../reprocess.js";
 import {RegenCaller} from "../regen/interface.js";
 import type {BeaconChain} from "../chain.js";
-import {FullyVerifiedBlock, ImportBlockOpts} from "./types.js";
+import {BlockInputType, FullyVerifiedBlock, ImportBlockOpts} from "./types.js";
 import {PendingEvents} from "./utils/pendingEvents.js";
 import {getCheckpointFromState} from "./utils/checkpoint.js";
 
@@ -315,6 +315,21 @@ export async function importBlock(
   this.stateCache.add(postState);
 
   await this.db.block.add(block);
+  this.logger.debug("Persisted block to hot DB", {
+    slot: block.message.slot,
+    root: blockRoot,
+  });
+
+  if (blockInput.type === BlockInputType.postEIP4844) {
+    const {blobs} = blockInput;
+    // NOTE: Old blobs are pruned on archive
+    await this.db.blobsSidecar.add(blobs);
+    this.logger.debug("Persisted blobsSidecar to hot DB", {
+      blobsLen: blobs.blobs.length,
+      slot: blobs.beaconBlockSlot,
+      root: toHexString(blobs.beaconBlockRoot),
+    });
+  }
 
   // - head_tracker.register_block(block_root, parent_root, slot)
 
