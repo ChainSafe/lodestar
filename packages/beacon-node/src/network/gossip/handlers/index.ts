@@ -3,6 +3,7 @@ import {toHexString} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@lodestar/config";
 import {phase0, ssz} from "@lodestar/types";
 import {ILogger, prettyBytes} from "@lodestar/utils";
+import {ForkSeq} from "@lodestar/params";
 import {IMetrics} from "../../../metrics/index.js";
 import {OpSource} from "../../../metrics/validatorMonitor.js";
 import {IBeaconChain} from "../../../chain/index.js";
@@ -13,6 +14,7 @@ import {
   BlockErrorCode,
   BlockGossipError,
   GossipAction,
+  GossipActionError,
   SyncCommitteeError,
 } from "../../../chain/errors/index.js";
 import {GossipHandlers, GossipType} from "../interface.js";
@@ -32,6 +34,7 @@ import {PeerAction} from "../../peers/index.js";
 import {validateLightClientFinalityUpdate} from "../../../chain/validation/lightClientFinalityUpdate.js";
 import {validateLightClientOptimisticUpdate} from "../../../chain/validation/lightClientOptimisticUpdate.js";
 import {getBlockInput} from "../../../chain/blocks/types.js";
+import {validateGossipBlobsSidecar} from "../../../chain/validation/blobsSidecar.js";
 
 /**
  * Gossip handler options as part of network options
@@ -144,6 +147,17 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
           }
           logger.error("Error receiving block", {slot, peer: peerIdStr}, e as Error);
         });
+    },
+
+    [GossipType.beacon_block_and_blobs_sidecar]: async (blockAndBlocks) => {
+      const {beaconBlock, blobsSidecar} = blockAndBlocks;
+      // TODO EIP-4844: Should throw for pre fork blocks?
+      if (config.getForkSeq(beaconBlock.message.slot) < ForkSeq.eip4844) {
+        throw new GossipActionError(GossipAction.REJECT, {code: "PRE_EIP4844_BLOCK"});
+      }
+
+      // TODO EIP-4844: Handle beacon_block_and_blobs_sidecar
+      validateGossipBlobsSidecar(beaconBlock, blobsSidecar);
     },
 
     [GossipType.beacon_aggregate_and_proof]: async (signedAggregateAndProof, _topic, _peer, seenTimestampSec) => {
