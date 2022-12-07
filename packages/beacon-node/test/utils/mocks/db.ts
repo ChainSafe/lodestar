@@ -66,5 +66,6 @@ export function getStubbedBeaconDb(): IBeaconDb {
     async stop(): Promise<void> {},
     /** To inject metrics after CLI initialization */
     setMetrics(): void {},
+    async pruneHotDb(): Promise<void> {},
   };
 }
