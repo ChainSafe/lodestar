@@ -15,7 +15,7 @@ import {ChainEvent} from "../emitter.js";
 import {REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC} from "../reprocess.js";
 import {RegenCaller} from "../regen/interface.js";
 import type {BeaconChain} from "../chain.js";
-import {FullyVerifiedBlock, ImportBlockOpts} from "./types.js";
+import {BlockInputType, FullyVerifiedBlock, ImportBlockOpts} from "./types.js";
 import {PendingEvents} from "./utils/pendingEvents.js";
 import {getCheckpointFromState} from "./utils/checkpoint.js";
 
@@ -48,7 +48,8 @@ export async function importBlock(
   fullyVerifiedBlock: FullyVerifiedBlock,
   opts: ImportBlockOpts
 ): Promise<void> {
-  const {block, postState, parentBlockSlot, executionStatus} = fullyVerifiedBlock;
+  const {blockInput, postState, parentBlockSlot, executionStatus} = fullyVerifiedBlock;
+  const {block} = blockInput;
   const pendingEvents = new PendingEvents(this.emitter);
 
   // - Observe attestations
@@ -182,17 +183,17 @@ export async function importBlock(
       const preJustifiedEpoch = parentBlockSummary.justifiedEpoch;
       if (justifiedEpoch > preJustifiedEpoch) {
         this.emitter.emit(ChainEvent.justified, justifiedCheckpoint, checkpointState);
-        this.logger.verbose("Checkpoint justified", toCheckpointHex(cp));
+        this.logger.verbose("Checkpoint justified", toCheckpointHex(justifiedCheckpoint));
         this.metrics?.previousJustifiedEpoch.set(checkpointState.previousJustifiedCheckpoint.epoch);
-        this.metrics?.currentJustifiedEpoch.set(cp.epoch);
+        this.metrics?.currentJustifiedEpoch.set(justifiedCheckpoint.epoch);
       }
       const finalizedCheckpoint = checkpointState.finalizedCheckpoint;
       const finalizedEpoch = finalizedCheckpoint.epoch;
       const preFinalizedEpoch = parentBlockSummary.finalizedEpoch;
       if (finalizedEpoch > preFinalizedEpoch) {
         this.emitter.emit(ChainEvent.finalized, finalizedCheckpoint, checkpointState);
-        this.logger.verbose("Checkpoint finalized", toCheckpointHex(cp));
-        this.metrics?.finalizedEpoch.set(cp.epoch);
+        this.logger.verbose("Checkpoint finalized", toCheckpointHex(finalizedCheckpoint));
+        this.metrics?.finalizedEpoch.set(finalizedCheckpoint.epoch);
       }
     }
   }
@@ -312,7 +313,23 @@ export async function importBlock(
   // MUST happen before any other block is processed
   // This adds the state necessary to process the next block
   this.stateCache.add(postState);
+
   await this.db.block.add(block);
+  this.logger.debug("Persisted block to hot DB", {
+    slot: block.message.slot,
+    root: blockRoot,
+  });
+
+  if (blockInput.type === BlockInputType.postEIP4844) {
+    const {blobs} = blockInput;
+    // NOTE: Old blobs are pruned on archive
+    await this.db.blobsSidecar.add(blobs);
+    this.logger.debug("Persisted blobsSidecar to hot DB", {
+      blobsLen: blobs.blobs.length,
+      slot: blobs.beaconBlockSlot,
+      root: toHexString(blobs.beaconBlockRoot),
+    });
+  }
 
   // - head_tracker.register_block(block_root, parent_root, slot)
 
@@ -329,7 +346,17 @@ export async function importBlock(
 
   const advancedSlot = this.clock.slotWithFutureTolerance(REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC);
 
-  this.reprocessController.onBlockImported({slot: block.message.slot, root: blockRoot}, advancedSlot);
+  // Gossip blocks need to be imported as soon as possible, waiting attestations could be processed
+  // in the next event loop. See https://github.com/ChainSafe/lodestar/issues/4789
+  setTimeout(() => {
+    this.reprocessController.onBlockImported({slot: block.message.slot, root: blockRoot}, advancedSlot);
+  }, 0);
+
+  if (opts.seenTimestampSec !== undefined) {
+    const recvToImportedBlock = Date.now() / 1000 - opts.seenTimestampSec;
+    this.metrics?.gossipBlock.receivedToBlockImport.observe(recvToImportedBlock);
+    this.logger.verbose("Imported block", {slot: block.message.slot, recvToImportedBlock});
+  }
 
   this.logger.verbose("Block processed", {
     slot: block.message.slot,

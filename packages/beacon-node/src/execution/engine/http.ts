@@ -122,7 +122,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     });
     this.rpcFetchQueue = new JobItemQueue<[EngineRequest], EngineResponse>(
       this.jobQueueProcessor,
-      {maxLength: QUEUE_MAX_LENGTH, maxConcurrency: 1, signal},
+      {maxLength: QUEUE_MAX_LENGTH, maxConcurrency: 1, noYieldIfOneItem: true, signal},
       metrics?.engineHttpProcessorQueue
     );
   }

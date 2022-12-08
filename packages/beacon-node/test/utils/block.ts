@@ -1,14 +1,10 @@
 import deepmerge from "deepmerge";
-import {Slot, ssz} from "@lodestar/types";
-import {config as defaultConfig} from "@lodestar/config/default";
-import {IChainForkConfig} from "@lodestar/config";
-import {allForks, phase0} from "@lodestar/types";
+import {Slot} from "@lodestar/types";
+import {phase0} from "@lodestar/types";
 import {ProtoBlock, ExecutionStatus} from "@lodestar/fork-choice";
 import {isPlainObject} from "@lodestar/utils";
 import {RecursivePartial} from "@lodestar/utils";
-import {ContextBytesType, EncodedPayloadType} from "@lodestar/reqresp";
 import {EMPTY_SIGNATURE, ZERO_HASH} from "../../src/constants/index.js";
-import {ReqRespBlockResponse} from "../../src/network/index.js";
 
 export function generateEmptyBlock(slot: Slot = 0): phase0.BeaconBlock {
   return {
@@ -38,39 +34,6 @@ export function generateEmptySignedBlock(slot: Slot = 0): phase0.SignedBeaconBlo
     message: generateEmptyBlock(slot),
     signature: EMPTY_SIGNATURE,
   };
-}
-
-export function generateEmptyReqRespBlockResponse(): ReqRespBlockResponse {
-  const block = generateEmptySignedBlock();
-
-  return {
-    type: EncodedPayloadType.bytes,
-    bytes: Buffer.from(ssz.phase0.SignedBeaconBlock.serialize(generateEmptySignedBlock())),
-    contextBytes: {
-      type: ContextBytesType.ForkDigest,
-      forkSlot: block.message.slot,
-    },
-  };
-}
-
-export function blocksToReqRespBlockResponses(
-  blocks: allForks.SignedBeaconBlock[],
-  config?: IChainForkConfig
-): ReqRespBlockResponse[] {
-  return blocks.map((block) => {
-    const slot = block.message.slot;
-    const sszType = config
-      ? config.getForkTypes(slot).SignedBeaconBlock
-      : defaultConfig.getForkTypes(slot).SignedBeaconBlock;
-    return {
-      type: EncodedPayloadType.bytes,
-      bytes: Buffer.from(sszType.serialize(block)),
-      contextBytes: {
-        type: ContextBytesType.ForkDigest,
-        forkSlot: block.message.slot,
-      },
-    };
-  });
 }
 
 export function generateEmptySignedBlockHeader(): phase0.SignedBeaconBlockHeader {

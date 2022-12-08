@@ -609,6 +609,31 @@ export function createLodestarMetrics(
         help: "Time elapsed between block slot time and the time block processed",
         buckets: [0.5, 1, 2, 4, 6, 12],
       }),
+      receivedToGossipValidate: register.histogram({
+        name: "lodestar_gossip_block_received_to_gossip_validate",
+        help: "Time elapsed between block received and block validated",
+        buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5, 2, 4],
+      }),
+      receivedToStateTransition: register.histogram({
+        name: "lodestar_gossip_block_received_to_state_transition",
+        help: "Time elapsed between block received and block state transition",
+        buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5, 2, 4],
+      }),
+      receivedToSignaturesVerification: register.histogram({
+        name: "lodestar_gossip_block_received_to_signatures_verification",
+        help: "Time elapsed between block received and block signatures verification",
+        buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5, 2, 4],
+      }),
+      receivedToExecutionPayloadVerification: register.histogram({
+        name: "lodestar_gossip_block_received_to_execution_payload_verification",
+        help: "Time elapsed between block received and execution payload verification",
+        buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5, 2, 4],
+      }),
+      receivedToBlockImport: register.histogram({
+        name: "lodestar_gossip_block_received_to_block_import",
+        help: "Time elapsed between block received and block import",
+        buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5, 2, 4],
+      }),
     },
     elapsedTimeTillBecomeHead: register.histogram({
       name: "lodestar_gossip_block_elapsed_time_till_become_head",

@@ -2,6 +2,8 @@ import {
   BeaconStateAllForks,
   CachedBeaconStateAllForks,
   CachedBeaconStateBellatrix,
+  DataAvailableStatus,
+  ExecutionPayloadStatus,
   getBlockRootAtSlot,
 } from "@lodestar/state-transition";
 import * as blockFns from "@lodestar/state-transition/block";
@@ -11,7 +13,7 @@ import {ForkName} from "@lodestar/params";
 
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
-import {getConfig} from "../utils/getConfig.js";
+import {getConfig} from "../../utils/config.js";
 import {BaseSpecTest, shouldVerify, TestRunnerFn} from "../utils/types.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
@@ -72,7 +74,13 @@ const operationFns: Record<string, BlockProcessFn<CachedBeaconStateAllForks>> = 
       fork,
       (state as CachedBeaconStateAllForks) as CachedBeaconStateBellatrix,
       testCase.execution_payload,
-      {notifyNewPayload: () => testCase.execution.execution_valid}
+      {
+        executionPayloadStatus: testCase.execution.execution_valid
+          ? ExecutionPayloadStatus.valid
+          : ExecutionPayloadStatus.invalid,
+        // TODO EIP-4844: Make this value dynamic on fork EIP4844
+        dataAvailableStatus: DataAvailableStatus.preEIP4844,
+      }
     );
   },
 };
@@ -126,6 +134,7 @@ export const operations: TestRunnerFn<OperationsTestCase, BeaconStateAllForks> =
       expectFunc: (testCase, expected, actual) => {
         expectEqualBeaconState(fork, expected, actual);
       },
+      // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
     },
   };
 };

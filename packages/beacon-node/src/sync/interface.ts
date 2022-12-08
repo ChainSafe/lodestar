@@ -1,7 +1,8 @@
 import {ILogger} from "@lodestar/utils";
-import {allForks, RootHex, Slot, phase0} from "@lodestar/types";
+import {RootHex, Slot, phase0} from "@lodestar/types";
 import {IBeaconConfig} from "@lodestar/config";
 import {routes} from "@lodestar/api";
+import {BlockInput} from "../chain/blocks/types.js";
 import {INetwork} from "../network/index.js";
 import {IBeaconChain} from "../chain/index.js";
 import {IMetrics} from "../metrics/index.js";
@@ -61,7 +62,7 @@ export interface ISyncModules {
 export type PendingBlock = {
   blockRootHex: RootHex;
   parentBlockRootHex: RootHex;
-  signedBlock: allForks.SignedBeaconBlock;
+  blockInput: BlockInput;
   peerIdStrs: Set<string>;
   status: PendingBlockStatus;
   downloadAttempts: number;
