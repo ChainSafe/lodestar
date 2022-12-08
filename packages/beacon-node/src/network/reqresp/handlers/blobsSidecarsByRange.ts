@@ -72,18 +72,19 @@ export async function* onBlobsSidecarsByRange(
         // Spec: https://github.com/ethereum/consensus-specs/blob/a1e46d1ae47dd9d097725801575b46907c12a1f8/specs/eip4844/p2p-interface.md#blobssidecarsbyrange-v1
 
         const blobsSidecarBytes = await db.blobsSidecar.getBinary(fromHex(block.blockRoot));
-        if (blobsSidecarBytes) {
-          yield {
-            type: EncodedPayloadType.bytes,
-            bytes: blobsSidecarBytes,
-            contextBytes: {
-              type: ContextBytesType.ForkDigest,
-              forkSlot: block.slot,
-            },
-          };
-        } else {
-          throw new ResponseError(RespStatus.RESOURCE_UNAVAILABLE, `No blobsSidecar found for slot ${block.slot}`);
+        if (!blobsSidecarBytes) {
+          // Handle the same to onBeaconBlocksByRange
+          throw new ResponseError(RespStatus.SERVER_ERROR, `No blobsSidecar found for slot ${block.slot}`);
         }
+
+        yield {
+          type: EncodedPayloadType.bytes,
+          bytes: blobsSidecarBytes,
+          contextBytes: {
+            type: ContextBytesType.ForkDigest,
+            forkSlot: block.slot,
+          },
+        };
       }
 
       // If block is after endSlot, stop iterating

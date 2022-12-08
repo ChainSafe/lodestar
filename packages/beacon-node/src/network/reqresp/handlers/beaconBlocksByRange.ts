@@ -107,15 +107,15 @@ async function getUnfinalizedBlocksAtSlots(
 
   for (let i = 0; i < unfinalizedBlocksOrNull.length; i++) {
     const block = unfinalizedBlocksOrNull[i];
-    if (block) {
-      unfinalizedBlocks.push({
-        slot: slots[i],
-        bytes: block,
-      });
-    } else {
+    if (!block) {
       // otherwise the returned block is not really a chain segment if it misses a block in the middle
-      throw new ResponseError(RespStatus.RESOURCE_UNAVAILABLE, `No block found for slot ${slots[i]}`);
+      throw new ResponseError(RespStatus.SERVER_ERROR, `No block found for slot ${slots[i]}`);
     }
+
+    unfinalizedBlocks.push({
+      slot: slots[i],
+      bytes: block,
+    });
   }
 
   return unfinalizedBlocks;
