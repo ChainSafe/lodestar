@@ -31,6 +31,7 @@ export enum CLClient {
 }
 
 export enum ELClient {
+  Mock = "mock",
   Geth = "geth",
   Nethermind = "nethermind",
 }
@@ -45,6 +46,7 @@ export type CLClientsOptions = {
 };
 
 export type ELClientsOptions = {
+  [ELClient.Mock]: string[];
   [ELClient.Geth]: string[];
   [ELClient.Nethermind]: string[];
 };
@@ -72,6 +74,7 @@ export interface CLClientGeneratorOptions<C extends CLClient = CLClient> {
   remoteKeys: SecretKey[];
   genesisTime: number;
   engineUrl: string;
+  engineMock: boolean;
   jwtSecretHex: string;
   clientOptions: CLClientsOptions[C];
 }
@@ -105,14 +108,14 @@ export interface CLNode {
   readonly remoteKeys: SecretKey[];
 }
 
-export interface ELNode {
-  readonly client: ELClient;
+export interface ELNode<E extends ELClient = ELClient> {
+  readonly client: E;
   readonly id: string;
   readonly ttd: bigint;
   readonly engineRpcUrl: string;
   readonly ethRpcUrl: string;
   readonly jwtSecretHex: string;
-  readonly provider: Eth1ProviderWithAdmin;
+  readonly provider: E extends ELClient.Mock ? null : Eth1ProviderWithAdmin;
 }
 
 export interface NodePair {
@@ -121,9 +124,14 @@ export interface NodePair {
   readonly el: ELNode;
 }
 
+export interface JobPair {
+  el: Job;
+  cl: Job;
+}
+
 export interface NodePairResult {
   nodePair: NodePair;
-  jobs: {el: Job; cl: Job};
+  jobs: JobPair;
 }
 
 export type CLClientGenerator<C extends CLClient> = (
