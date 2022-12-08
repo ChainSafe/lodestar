@@ -2,19 +2,12 @@
 import {join} from "node:path";
 import {activePreset} from "@lodestar/params";
 import {toHexString} from "@lodestar/utils";
+import {nodeAssertion} from "../utils/simulation/assertions/nodeAssertion.js";
 import {CLIQUE_SEALING_PERIOD, SIM_TESTS_SECONDS_PER_SLOT} from "../utils/simulation/constants.js";
 import {CLClient, ELClient} from "../utils/simulation/interfaces.js";
 import {SimulationEnvironment} from "../utils/simulation/SimulationEnvironment.js";
 import {getEstimatedTimeInSecForRun, getEstimatedTTD, logFilesDir} from "../utils/simulation/utils/index.js";
-import {
-  connectAllNodes,
-  connectNewNode,
-  waitForHead,
-  waitForNodeSync,
-  waitForSlot,
-} from "../utils/simulation/utils/network.js";
-import {nodeAssertion} from "../utils/simulation/assertions/nodeAssertion.js";
-import {mergeAssertion} from "../utils/simulation/assertions/mergeAssertion.js";
+import {connectAllNodes, connectNewNode, waitForNodeSync, waitForSlot} from "../utils/simulation/utils/network.js";
 
 const genesisSlotsDelay = 20;
 const altairForkEpoch = 2;
@@ -53,10 +46,8 @@ const env = SimulationEnvironment.initWithDefaults(
     },
   },
   [
-    {id: "node-1", cl: CLClient.Lodestar, el: ELClient.Mock, keysCount: 32, mining: true},
-    {id: "node-2", cl: CLClient.Lodestar, el: ELClient.Nethermind, keysCount: 32, remote: true},
-    {id: "node-3", cl: CLClient.Lodestar, el: ELClient.Geth, keysCount: 32},
-    {id: "node-4", cl: CLClient.Lodestar, el: ELClient.Nethermind, keysCount: 32},
+    {id: "node-1", cl: CLClient.Lodestar, el: ELClient.Mock, keysCount: 32},
+    {id: "node-2", cl: CLClient.Lodestar, el: ELClient.Mock, keysCount: 32, remote: true},
   ]
 );
 
@@ -64,14 +55,6 @@ env.tracker.register({
   ...nodeAssertion,
   match: ({slot}) => {
     return slot === 1 ? {match: true, remove: true} : false;
-  },
-});
-
-env.tracker.register({
-  ...mergeAssertion,
-  match: ({slot}) => {
-    // Check at the end of bellatrix fork, merge should happen by then
-    return slot === env.clock.getLastSlotOfEpoch(bellatrixForkEpoch) - 1 ? {match: true, remove: true} : false;
   },
 });
 
@@ -133,44 +116,5 @@ await rangeSync.jobs.cl.stop();
 await rangeSync.jobs.el.stop();
 await checkpointSync.jobs.cl.stop();
 await checkpointSync.jobs.el.stop();
-
-// Unknown block sync
-// ========================================================
-const unknownBlockSync = env.createNodePair({
-  id: "unknown-block-sync-node",
-  cl: {type: CLClient.Lodestar, options: {"network.allowPublishToZeroPeers": true, "sync.disableRangeSync": true}},
-  el: ELClient.Geth,
-  keysCount: 0,
-});
-await unknownBlockSync.jobs.el.start();
-await unknownBlockSync.jobs.cl.start();
-const headForUnknownBlockSync = await env.nodes[0].cl.api.beacon.getBlockV2("head");
-await connectNewNode(unknownBlockSync.nodePair, env.nodes);
-
-try {
-  await unknownBlockSync.nodePair.cl.api.beacon.publishBlock(headForUnknownBlockSync.data);
-
-  env.tracker.record({
-    message: "Publishing unknown block should fail",
-    slot: env.clock.currentSlot,
-    assertionId: "unknownBlockParent",
-  });
-} catch (error) {
-  if (!(error as Error).message.includes("BLOCK_ERROR_PARENT_UNKNOWN")) {
-    env.tracker.record({
-      message: `Publishing unknown block should return "BLOCK_ERROR_PARENT_UNKNOWN" got "${(error as Error).message}"`,
-      slot: env.clock.currentSlot,
-      assertionId: "unknownBlockParent",
-    });
-  }
-}
-await waitForHead(env, unknownBlockSync.nodePair, {
-  head: toHexString(
-    env.forkConfig
-      .getForkTypes(headForUnknownBlockSync.data.message.slot)
-      .BeaconBlock.hashTreeRoot(headForUnknownBlockSync.data.message)
-  ),
-  slot: headForUnknownBlockSync.data.message.slot,
-});
 
 await env.stop();

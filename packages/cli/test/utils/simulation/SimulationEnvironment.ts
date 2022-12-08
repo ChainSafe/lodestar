@@ -168,11 +168,9 @@ export class SimulationEnvironment {
         // Get genesis block hash
         const el = this.nodes[i].el;
 
-        if (el.provider === null) {
-          continue;
-        }
+        // If eth1 is mock then genesis hash would be empty
+        const eth1Genesis = el.provider === null ? {hash: ""} : await el.provider.getBlockByNumber(0);
 
-        const eth1Genesis = await el.provider.getBlockByNumber(0);
         if (!eth1Genesis) {
           throw new Error(`Eth1 genesis not found for node "${this.nodes[i].id}"`);
         }
