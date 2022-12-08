@@ -1,8 +1,28 @@
 import path from "node:path";
 import fs from "node:fs";
 import {fileURLToPath} from "node:url";
-import {FIELD_ELEMENTS_PER_BLOB, loadTrustedSetup} from "c-kzg";
 import {fromHex, toHex} from "@lodestar/utils";
+import {FIELD_ELEMENTS_PER_BLOB} from "@lodestar/params";
+
+function ckzgNotLoaded(): never {
+  throw Error("c-kzg library not loaded");
+}
+
+export let ckzg: {
+  loadTrustedSetup(filePath: string): void;
+  blobToKzgCommitment(blob: Uint8Array): Uint8Array;
+  computeAggregateKzgProof(blobs: Uint8Array[]): Uint8Array;
+  verifyAggregateKzgProof(
+    blobs: Uint8Array[],
+    expectedKzgCommitments: Uint8Array[],
+    kzgAggregatedProof: Uint8Array
+  ): boolean;
+} = {
+  loadTrustedSetup: ckzgNotLoaded,
+  blobToKzgCommitment: ckzgNotLoaded,
+  computeAggregateKzgProof: ckzgNotLoaded,
+  verifyAggregateKzgProof: ckzgNotLoaded,
+};
 
 // Global variable __dirname no longer available in ES6 modules.
 // Solutions: https://stackoverflow.com/questions/46745014/alternative-for-dirname-in-node-js-when-using-es6-modules
@@ -19,6 +39,11 @@ const G1POINT_COUNT = FIELD_ELEMENTS_PER_BLOB;
 const G2POINT_COUNT = 65;
 const TOTAL_SIZE = 2 * POINT_COUNT_BYTES + G1POINT_BYTES * G1POINT_COUNT + G2POINT_BYTES * G2POINT_COUNT;
 
+export async function initCKZG(): Promise<void> {
+  // eslint-disable-next-line import/no-extraneous-dependencies
+  ckzg = await import("c-kzg");
+}
+
 /**
  * Load our KZG trusted setup into C-KZG for later use.
  * We persist the trusted setup as serialized bytes to save space over TXT or JSON formats.
@@ -31,7 +56,7 @@ export function loadEthereumTrustedSetup(): void {
     const txt = trustedSetupJsonToTxt(json);
     fs.writeFileSync(TRUSTED_SETUP_TXT_FILEPATH, txt);
 
-    loadTrustedSetup(TRUSTED_SETUP_TXT_FILEPATH);
+    ckzg.loadTrustedSetup(TRUSTED_SETUP_TXT_FILEPATH);
   } catch (e) {
     (e as Error).message = `Error loading trusted setup ${TRUSTED_SETUP_JSON_FILEPATH}: ${(e as Error).message}`;
     throw e;
