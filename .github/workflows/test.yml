@@ -41,7 +41,7 @@ jobs:
       # </common-build>
 
       # Only install c-kzg if required. See https://github.com/ChainSafe/lodestar/pull/4888
-      - run: yarn install c-kzg
+      - run: yarn add c-kzg
 
       # Cache validator slashing protection data tests
       - name: Restore spec tests cache
