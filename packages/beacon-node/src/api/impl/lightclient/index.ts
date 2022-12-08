@@ -2,28 +2,20 @@ import {routes} from "@lodestar/api";
 import {fromHexString} from "@chainsafe/ssz";
 import {SyncPeriod} from "@lodestar/types";
 import {MAX_REQUEST_LIGHT_CLIENT_UPDATES, MAX_REQUEST_LIGHT_CLIENT_COMMITTEE_HASHES} from "@lodestar/params";
-import {LightClientUpdate} from "@lodestar/types/altair";
 import {ApiModules} from "../types.js";
 
 // TODO: Import from lightclient/server package
 
 export function getLightclientApi({chain, config}: Pick<ApiModules, "chain" | "config">): routes.lightclient.Api {
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  const lightClientUpdatesWithVersion = (chunks: LightClientUpdate[]) => {
-    return chunks.map((chunk) => {
-      return {
-        version: config.getForkName(chunk.attestedHeader.slot),
-        data: chunk,
-      };
-    });
-  };
-
   return {
     async getUpdates(startPeriod: SyncPeriod, count: number) {
       const maxAllowedCount = Math.min(MAX_REQUEST_LIGHT_CLIENT_UPDATES, count);
       const periods = Array.from({length: maxAllowedCount}, (_ignored, i) => i + startPeriod);
       const updates = await Promise.all(periods.map((period) => chain.lightClientServer.getUpdate(period)));
-      return lightClientUpdatesWithVersion(updates);
+      return updates.map((update) => ({
+        version: config.getForkName(update.attestedHeader.slot),
+        data: update,
+      }));
     },
 
     async getOptimisticUpdate() {
