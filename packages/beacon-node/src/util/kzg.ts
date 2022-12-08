@@ -2,7 +2,11 @@ import path from "node:path";
 import fs from "node:fs";
 import {fileURLToPath} from "node:url";
 import {fromHex, toHex} from "@lodestar/utils";
-import {FIELD_ELEMENTS_PER_BLOB} from "@lodestar/params";
+
+/* eslint-disable @typescript-eslint/naming-convention */
+
+// "c-kzg" has hardcoded the mainnet value, do not use params
+const FIELD_ELEMENTS_PER_BLOB_MAINNET = 4096;
 
 function ckzgNotLoaded(): never {
   throw Error("c-kzg library not loaded");
@@ -35,7 +39,7 @@ const TRUSTED_SETUP_TXT_FILEPATH = path.join(__dirname, "../../trusted_setup.txt
 const POINT_COUNT_BYTES = 4;
 const G1POINT_BYTES = 48;
 const G2POINT_BYTES = 96;
-const G1POINT_COUNT = FIELD_ELEMENTS_PER_BLOB;
+const G1POINT_COUNT = FIELD_ELEMENTS_PER_BLOB_MAINNET;
 const G2POINT_COUNT = 65;
 const TOTAL_SIZE = 2 * POINT_COUNT_BYTES + G1POINT_BYTES * G1POINT_COUNT + G2POINT_BYTES * G2POINT_COUNT;
 
@@ -121,12 +125,13 @@ export function trustedSetupBinToJson(bytes: TrustedSetupBin): TrustedSetupJSON 
 }
 
 export function trustedSetupJsonToTxt(data: TrustedSetupJSON): TrustedSetupTXT {
-  let out = `${FIELD_ELEMENTS_PER_BLOB}\n65\n`;
-
-  for (const p of data.setup_G1) out += strip0xPrefix(p) + "\n";
-  for (const p of data.setup_G2) out += strip0xPrefix(p) + "\n";
-
-  return out;
+  return [
+    // ↵
+    G1POINT_COUNT,
+    G2POINT_COUNT,
+    ...data.setup_G1.map(strip0xPrefix),
+    ...data.setup_G2.map(strip0xPrefix),
+  ].join("\n");
 }
 
 function strip0xPrefix(hex: string): string {
