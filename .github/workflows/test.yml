@@ -40,6 +40,9 @@ jobs:
         if: steps.cache-deps.outputs.cache-hit == 'true'
       # </common-build>
 
+      # Only install c-kzg if required. See https://github.com/ChainSafe/lodestar/pull/4888
+      - run: yarn install c-kzg
+
       # Cache validator slashing protection data tests
       - name: Restore spec tests cache
         uses: actions/cache@master
