@@ -138,10 +138,10 @@ export const forkChoiceTest: TestRunnerFn<ForkChoiceTestCase, void> = (fork) => 
               isValid,
             });
 
-            const blockImport = getBlockInput.preEIP4844(config, signedBlock);
+            const blockInput = getBlockInput.preEIP4844(config, signedBlock);
 
             try {
-              await chain.processBlock(blockImport, {seenTimestampSec: tickTime});
+              await chain.processBlock(blockInput, {seenTimestampSec: tickTime});
               if (!isValid) throw Error("Expect error since this is a negative test");
             } catch (e) {
               if (isValid) throw e;

@@ -322,6 +322,13 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
       );
     }
 
+    if (ForkSeq[fork] >= ForkSeq.eip4844) {
+      protocols.push(
+        messages.BeaconBlockAndBlobsSidecarByRoot(modules, this.reqRespHandlers.onBeaconBlockAndBlobsSidecarByRoot),
+        messages.BlobsSidecarsByRange(modules, this.reqRespHandlers.onBlobsSidecarsByRange)
+      );
+    }
+
     return protocols;
   }
 
