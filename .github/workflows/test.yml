@@ -41,8 +41,8 @@ jobs:
       # </common-build>
 
       # Only install c-kzg if required. See https://github.com/ChainSafe/lodestar/pull/4888
-      - run: yarn add c-kzg
-        working-directory: packages/beacon-node
+      # Install in workspace root, else there are weird type errors with NodeJS types
+      - run: yarn add --ignore-workspace-root-check c-kzg
 
       # Cache validator slashing protection data tests
       - name: Restore spec tests cache
