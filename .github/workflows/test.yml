@@ -42,6 +42,7 @@ jobs:
 
       # Only install c-kzg if required. See https://github.com/ChainSafe/lodestar/pull/4888
       - run: yarn add c-kzg
+        working-directory: packages/beacon-node
 
       # Cache validator slashing protection data tests
       - name: Restore spec tests cache
