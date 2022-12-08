@@ -141,7 +141,7 @@ export class Network implements INetwork {
     await this.libp2p.start();
     // Stop latency monitor since we handle disconnects here and don't want additional load on the event loop
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
-    (this.libp2p.connectionManager as DefaultConnectionManager)["latencyMonitor"].stop();
+    ((this.libp2p.connectionManager as unknown) as DefaultConnectionManager)["latencyMonitor"].stop();
 
     this.reqResp.start();
     this.metadata.start(this.getEnr(), this.config.getForkName(this.clock.currentSlot));
