@@ -315,7 +315,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
    */
   async getPayload(fork: ForkName, payloadId: PayloadId): Promise<allForks.ExecutionPayload> {
     const method =
-      ForkSeq[fork] >= ForkSeq.capella
+      ForkSeq[fork] >= ForkSeq.eip4844
         ? "engine_getPayloadV3"
         : ForkSeq[fork] >= ForkSeq.capella
         ? "engine_getPayloadV2"
