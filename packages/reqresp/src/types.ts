@@ -9,16 +9,18 @@ export enum EncodedPayloadType {
   bytes,
 }
 
-export type EncodedPayload<T> =
-  | {
-      type: EncodedPayloadType.ssz;
-      data: T;
-    }
-  | {
-      type: EncodedPayloadType.bytes;
-      bytes: Uint8Array;
-      contextBytes: ContextBytes;
-    };
+export interface EncodedPayloadSsz<T> {
+  type: EncodedPayloadType.ssz;
+  data: T;
+}
+
+export interface EncodedPayloadBytes {
+  type: EncodedPayloadType.bytes;
+  bytes: Uint8Array;
+  contextBytes: ContextBytes;
+}
+
+export type EncodedPayload<T> = EncodedPayloadSsz<T> | EncodedPayloadBytes;
 
 export type ReqRespHandler<Req, Resp> = (req: Req, peerId: PeerId) => AsyncIterable<EncodedPayload<Resp>>;
 
