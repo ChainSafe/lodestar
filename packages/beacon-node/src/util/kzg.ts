@@ -44,8 +44,10 @@ const G2POINT_COUNT = 65;
 const TOTAL_SIZE = 2 * POINT_COUNT_BYTES + G1POINT_BYTES * G1POINT_COUNT + G2POINT_BYTES * G2POINT_COUNT;
 
 export async function initCKZG(): Promise<void> {
-  // eslint-disable-next-line import/no-extraneous-dependencies
-  ckzg = await import("c-kzg");
+  /* eslint-disable import/no-extraneous-dependencies, @typescript-eslint/ban-ts-comment */
+  // @ts-ignore
+  ckzg = (await import("c-kzg")) as typeof ckzg;
+  /* eslint-enable import/no-extraneous-dependencies, @typescript-eslint/ban-ts-comment */
 }
 
 /**
