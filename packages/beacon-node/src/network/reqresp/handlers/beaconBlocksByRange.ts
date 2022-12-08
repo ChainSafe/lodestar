@@ -112,6 +112,9 @@ async function getUnfinalizedBlocksAtSlots(
         slot: slots[i],
         bytes: block,
       });
+    } else {
+      // otherwise the returned block is not really a chain segment if it misses a block in the middle
+      throw new ResponseError(RespStatus.RESOURCE_UNAVAILABLE, `No block found for slot ${slots[i]}`);
     }
   }
 

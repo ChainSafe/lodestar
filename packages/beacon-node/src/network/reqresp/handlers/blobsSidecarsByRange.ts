@@ -71,16 +71,18 @@ export async function* onBlobsSidecarsByRange(
         // re-org there's no need to abort the request
         // Spec: https://github.com/ethereum/consensus-specs/blob/a1e46d1ae47dd9d097725801575b46907c12a1f8/specs/eip4844/p2p-interface.md#blobssidecarsbyrange-v1
 
-        const blockBytes = await db.blobsSidecar.getBinary(fromHex(block.blockRoot));
-        if (blockBytes) {
+        const blobsSidecarBytes = await db.blobsSidecar.getBinary(fromHex(block.blockRoot));
+        if (blobsSidecarBytes) {
           yield {
             type: EncodedPayloadType.bytes,
-            bytes: blockBytes,
+            bytes: blobsSidecarBytes,
             contextBytes: {
               type: ContextBytesType.ForkDigest,
               forkSlot: block.slot,
             },
           };
+        } else {
+          throw new ResponseError(RespStatus.RESOURCE_UNAVAILABLE, `No blobsSidecar found for slot ${block.slot}`);
         }
       }
 
