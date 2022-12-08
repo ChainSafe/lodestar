@@ -1,7 +1,7 @@
-import {Phase0Preset} from "../../interface/phase0.js";
+import {BeaconPreset} from "../interface.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
-export const phase0: Phase0Preset = {
+export const minimalPreset: BeaconPreset = {
   // Misc
   // ---------------------------------------------------------------
   // [customized] Just 4 committees for slot for testing purposes
@@ -94,4 +94,35 @@ export const phase0: Phase0Preset = {
   MAX_DEPOSITS: 16,
   // 2**4 (= 16)
   MAX_VOLUNTARY_EXITS: 16,
+
+  // ALTAIR
+  /////////
+  SYNC_COMMITTEE_SIZE: 32,
+  EPOCHS_PER_SYNC_COMMITTEE_PERIOD: 8,
+  INACTIVITY_PENALTY_QUOTIENT_ALTAIR: 50331648,
+  MIN_SLASHING_PENALTY_QUOTIENT_ALTAIR: 64,
+  PROPORTIONAL_SLASHING_MULTIPLIER_ALTAIR: 2,
+  MIN_SYNC_COMMITTEE_PARTICIPANTS: 1,
+  UPDATE_TIMEOUT: 64,
+
+  // BELLATRIX
+  ////////////
+  INACTIVITY_PENALTY_QUOTIENT_BELLATRIX: 16777216,
+  MIN_SLASHING_PENALTY_QUOTIENT_BELLATRIX: 32,
+  PROPORTIONAL_SLASHING_MULTIPLIER_BELLATRIX: 3,
+  MAX_BYTES_PER_TRANSACTION: 1073741824,
+  MAX_TRANSACTIONS_PER_PAYLOAD: 1048576,
+  BYTES_PER_LOGS_BLOOM: 256,
+  MAX_EXTRA_DATA_BYTES: 32,
+
+  // CAPELLA
+  //////////
+  MAX_BLS_TO_EXECUTION_CHANGES: 16,
+  MAX_WITHDRAWALS_PER_PAYLOAD: 4,
+
+  // EIP-4844
+  ///////////
+  // https://github.com/ethereum/consensus-specs/blob/dev/presets/minimal/eip4844.yaml
+  FIELD_ELEMENTS_PER_BLOB: 4,
+  MAX_BLOBS_PER_BLOCK: 16,
 };
