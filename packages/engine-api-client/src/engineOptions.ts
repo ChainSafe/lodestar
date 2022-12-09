@@ -1,9 +1,4 @@
-import {
-  defaultExecutionEngineHttpOpts,
-  ExecutionEngineHttp,
-  ExecutionEngineHttpOpts,
-  ExecutionEngineModules,
-} from "./http.js";
+import {ExecutionEngineHttp, ExecutionEngineHttpOpts, ExecutionEngineModules} from "./http.js";
 import {ExecutionEngineMock, ExecutionEngineMockOpts} from "./mock.js";
 import {IExecutionEngine} from "./interface.js";
 import {ExecutionEngineDisabled} from "./disabled.js";
@@ -12,7 +7,6 @@ export type ExecutionEngineOpts =
   | ({mode?: "http"} & ExecutionEngineHttpOpts)
   | ({mode: "mock"} & ExecutionEngineMockOpts)
   | {mode: "disabled"};
-export const defaultExecutionEngineOpts: ExecutionEngineOpts = defaultExecutionEngineHttpOpts;
 
 export function initializeExecutionEngine(
   opts: ExecutionEngineOpts,

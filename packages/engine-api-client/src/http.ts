@@ -11,8 +11,8 @@ import {
   QUANTITY,
   quantityToBigint,
 } from "@lodestar/utils";
-import {JobItemQueue} from "@lodestar/utils/queue";
-import {IMetrics} from "./provider/index.js";
+import {IQueueMetrics, JobItemQueue} from "@lodestar/utils/queue";
+import {JsonRpcHttpClientMetrics} from "./provider/index.js";
 
 import {
   ExecutePayloadStatus,
@@ -27,16 +27,31 @@ import {
 import {PayloadIdCache} from "./payloadIdCache.js";
 import {ErrorJsonRpcResponse, HttpRpcError, IJsonRpcHttpClient, JsonRpcHttpClient, ReqOpts} from "./provider/index.js";
 
+const DEFAULT_RETRY_ATTEMPTS = 3;
+const DEFAULT_RETRY_DELAY = 3000;
+const DEFAULT_TIMEOUT = 12000;
+const DEFAULT_QUEUE_MAX_LENGTH = SLOTS_PER_EPOCH * 2;
+
 export type ExecutionEngineModules = {
   signal: AbortSignal;
-  metrics?: IMetrics | null;
+  metrics?: ExecutionEngineMetrics | null;
+};
+
+export type ExecutionEngineMetrics = {
+  executionEnginerHttpClient: JsonRpcHttpClientMetrics;
+  engineHttpProcessorQueue: IQueueMetrics;
 };
 
 export type ExecutionEngineHttpOpts = {
+  /**
+   * By default ELs host engine api on an auth protected 8551 port, would need a jwt secret to be
+   * specified to bundle jwt tokens if that is the case. In case one has access to an open
+   * port/url, one can override this and skip providing a jwt secret.
+   */
   urls: string[];
-  retryAttempts: number;
-  retryDelay: number;
-  queueMaxLength: number;
+  retryAttempts?: number;
+  retryDelay?: number;
+  queueMaxLength?: number;
   timeout?: number;
   /**
    * 256 bit jwt secret in hex format without the leading 0x. If provided, the execution engine
@@ -45,19 +60,6 @@ export type ExecutionEngineHttpOpts = {
    * +-5 seconds interval.
    */
   jwtSecretHex?: string;
-};
-
-export const defaultExecutionEngineHttpOpts: ExecutionEngineHttpOpts = {
-  /**
-   * By default ELs host engine api on an auth protected 8551 port, would need a jwt secret to be
-   * specified to bundle jwt tokens if that is the case. In case one has access to an open
-   * port/url, one can override this and skip providing a jwt secret.
-   */
-  urls: ["http://localhost:8551"],
-  retryAttempts: 3,
-  retryDelay: 2000,
-  timeout: 12000,
-  queueMaxLength: SLOTS_PER_EPOCH * 2,
 };
 
 // Define static options once to prevent extra allocations
@@ -98,14 +100,20 @@ export class ExecutionEngineHttp implements IExecutionEngine {
 
   constructor(opts: ExecutionEngineHttpOpts, {metrics, signal}: ExecutionEngineModules) {
     this.rpc = new JsonRpcHttpClient(opts.urls, {
-      ...opts,
+      retryAttempts: opts.retryAttempts ?? DEFAULT_RETRY_ATTEMPTS,
+      retryDelay: opts.retryDelay ?? DEFAULT_RETRY_DELAY,
+      timeout: opts.timeout ?? DEFAULT_TIMEOUT,
       signal,
       metrics: metrics?.executionEnginerHttpClient,
       jwtSecret: opts.jwtSecretHex ? fromHex(opts.jwtSecretHex) : undefined,
     });
     this.rpcFetchQueue = new JobItemQueue<[EngineRequest], EngineResponse>(
       this.jobQueueProcessor,
-      {maxLength: opts.queueMaxLength, maxConcurrency: 1, signal},
+      {
+        maxLength: opts.queueMaxLength ?? DEFAULT_QUEUE_MAX_LENGTH,
+        maxConcurrency: 1,
+        signal,
+      },
       metrics?.engineHttpProcessorQueue
     );
   }
