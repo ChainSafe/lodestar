@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-export type Phase0Preset = {
+export interface BeaconPreset {
   // Misc
   MAX_COMMITTEES_PER_SLOT: number;
   TARGET_COMMITTEE_SIZE: number;
@@ -48,4 +48,34 @@ export type Phase0Preset = {
   MAX_ATTESTATIONS: number;
   MAX_DEPOSITS: number;
   MAX_VOLUNTARY_EXITS: number;
-};
+
+  // ALTAIR
+  /////////
+  SYNC_COMMITTEE_SIZE: number;
+  EPOCHS_PER_SYNC_COMMITTEE_PERIOD: number;
+  INACTIVITY_PENALTY_QUOTIENT_ALTAIR: number;
+  MIN_SLASHING_PENALTY_QUOTIENT_ALTAIR: number;
+  PROPORTIONAL_SLASHING_MULTIPLIER_ALTAIR: number;
+  MIN_SYNC_COMMITTEE_PARTICIPANTS: number;
+  UPDATE_TIMEOUT: number;
+
+  // BELLATRIX
+  ////////////
+  INACTIVITY_PENALTY_QUOTIENT_BELLATRIX: number;
+  MIN_SLASHING_PENALTY_QUOTIENT_BELLATRIX: number;
+  PROPORTIONAL_SLASHING_MULTIPLIER_BELLATRIX: number;
+  MAX_BYTES_PER_TRANSACTION: number;
+  MAX_TRANSACTIONS_PER_PAYLOAD: number;
+  BYTES_PER_LOGS_BLOOM: number;
+  MAX_EXTRA_DATA_BYTES: number;
+
+  // CAPELLA
+  //////////
+  MAX_BLS_TO_EXECUTION_CHANGES: number;
+  MAX_WITHDRAWALS_PER_PAYLOAD: number;
+
+  // EIP-4844
+  ///////////
+  FIELD_ELEMENTS_PER_BLOB: number;
+  MAX_BLOBS_PER_BLOCK: number;
+}
