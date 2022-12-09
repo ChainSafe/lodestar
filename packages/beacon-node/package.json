@@ -32,9 +32,6 @@
     "./eth1": {
       "import": "./lib/eth1/index.js"
     },
-    "./executionEngine": {
-      "import": "./lib/executionEngine/index.js"
-    },
     "./metrics": {
       "import": "./lib/metrics/index.js"
     },
@@ -46,9 +43,6 @@
     },
     "./sync": {
       "import": "./lib/sync/index.js"
-    },
-    "./util": {
-      "import": "./lib/util/index.js"
     }
   },
   "typesVersions": {

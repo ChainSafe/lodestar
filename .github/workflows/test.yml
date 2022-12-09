@@ -1,8 +1,8 @@
 name: Tests
 
-on: 
+on:
   push:
-    # We intentionally don't run push on feature branches. See PR for rational. 
+    # We intentionally don't run push on feature branches. See PR for rational.
     branches: [unstable, stable]
   pull_request:
   workflow_dispatch:
@@ -56,6 +56,8 @@ jobs:
         run: .github/workflows/scripts/reject_yarn_lock_changes.sh
         # Run only on forks
         if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}
+      - name: Assert ESM module exports
+        run: node scripts/assert_exports.mjs
 
       - name: Check Types
         run: yarn run check-types
