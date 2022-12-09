@@ -42,7 +42,7 @@ export type ForkChoiceUpdateStatus =
 
 export type PayloadAttributes = {
   timestamp: number;
-  prevRandao: Uint8Array;
+  prevRandao: RootHex;
   // DATA is anyway a hex string, so we can just track it as a hex string to
   // avoid any conversions
   suggestedFeeRecipient: string;

@@ -1,10 +1,9 @@
 import {expect} from "chai";
 import {fastify} from "fastify";
 
-import {fromHexString} from "@chainsafe/ssz";
-
-import {bytesToData, numToQuantity} from "@lodestar/utils";
+import {numToQuantity} from "@lodestar/utils";
 import {ExecutionEngineHttp, defaultExecutionEngineHttpOpts} from "../../../src/http.js";
+import {PayloadAttributes} from "../../../src/interface.js";
 
 describe("ExecutionEngine / http ", () => {
   const afterCallbacks: (() => Promise<void> | void)[] = [];
@@ -96,9 +95,9 @@ describe("ExecutionEngine / http ", () => {
         safeBlockHash: "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
         finalizedBlockHash: "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
       };
-      const payloadAttributes = {
+      const payloadAttributes: PayloadAttributes = {
         timestamp: 1647036763,
-        prevRandao: fromHexString("0x0000000000000000000000000000000000000000000000000000000000000000"),
+        prevRandao: "0x0000000000000000000000000000000000000000000000000000000000000000",
         suggestedFeeRecipient: "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b",
       };
 
@@ -109,7 +108,7 @@ describe("ExecutionEngine / http ", () => {
           forkChoiceHeadData,
           {
             timestamp: numToQuantity(payloadAttributes.timestamp),
-            prevRandao: bytesToData(payloadAttributes.prevRandao),
+            prevRandao: payloadAttributes.prevRandao,
             suggestedFeeRecipient: payloadAttributes.suggestedFeeRecipient,
           },
         ],

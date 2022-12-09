@@ -183,7 +183,7 @@ export class ExecutionEngineMock implements IExecutionEngine {
         stateRoot: crypto.randomBytes(32),
         receiptsRoot: crypto.randomBytes(32),
         logsBloom: crypto.randomBytes(BYTES_PER_LOGS_BLOOM),
-        prevRandao: payloadAttributes.prevRandao,
+        prevRandao: fromHex(payloadAttributes.prevRandao),
         blockNumber: headBlock.blockNumber + 1,
         gasLimit: INTEROP_GAS_LIMIT,
         gasUsed: Math.floor(0.5 * INTEROP_GAS_LIMIT),

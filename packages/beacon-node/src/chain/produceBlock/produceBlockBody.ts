@@ -262,7 +262,7 @@ export async function prepareExecutionPayload(
       finalizedBlockHash,
       {
         timestamp,
-        prevRandao,
+        prevRandao: toHex(prevRandao),
         suggestedFeeRecipient,
       }
     );

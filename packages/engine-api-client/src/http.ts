@@ -231,7 +231,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     const apiPayloadAttributes: ApiPayloadAttributes | undefined = payloadAttributes
       ? {
           timestamp: numToQuantity(payloadAttributes.timestamp),
-          prevRandao: bytesToData(payloadAttributes.prevRandao),
+          prevRandao: payloadAttributes.prevRandao,
           suggestedFeeRecipient: payloadAttributes.suggestedFeeRecipient,
         }
       : undefined;
