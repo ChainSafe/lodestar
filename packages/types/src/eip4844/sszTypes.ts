@@ -10,6 +10,7 @@ import {ssz as primitiveSsz} from "../primitive/index.js";
 import {ssz as phase0Ssz} from "../phase0/index.js";
 import {ssz as altairSsz} from "../altair/index.js";
 import {ssz as capellaSsz} from "../capella/index.js";
+import {ssz as bellatrixSsz} from "../bellatrix/index.js";
 
 const {UintNum64, Slot, Root, BLSSignature, UintBn256, Bytes32, Bytes48, Bytes96} = primitiveSsz;
 
@@ -82,8 +83,12 @@ export const BeaconBlockAndBlobsSidecarByRootRequest = new ListCompositeType(Roo
 
 export const ExecutionPayload = new ContainerType(
   {
-    ...capellaSsz.ExecutionPayload.fields,
+    ...bellatrixSsz.CommonExecutionPayloadType.fields,
     excessDataGas: UintBn256, // New in EIP-4844
+    // Extra payload fields
+    blockHash: Root,
+    transactions: bellatrixSsz.Transactions,
+    withdrawals: capellaSsz.Withdrawals, // New in capella
   },
   {typeName: "ExecutionPayload", jsonCase: "eth2"}
 );
