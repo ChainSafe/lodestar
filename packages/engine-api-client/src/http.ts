@@ -27,9 +27,6 @@ import {
 import {PayloadIdCache} from "./payloadIdCache.js";
 import {ErrorJsonRpcResponse, HttpRpcError, IJsonRpcHttpClient, JsonRpcHttpClient, ReqOpts} from "./provider/index.js";
 
-const DEFAULT_RETRY_ATTEMPTS = 3;
-const DEFAULT_RETRY_DELAY = 3000;
-const DEFAULT_TIMEOUT = 12000;
 const DEFAULT_QUEUE_MAX_LENGTH = SLOTS_PER_EPOCH * 2;
 
 export type ExecutionEngineModules = {
@@ -100,9 +97,9 @@ export class ExecutionEngineHttp implements IExecutionEngine {
 
   constructor(opts: ExecutionEngineHttpOpts, {metrics, signal}: ExecutionEngineModules) {
     this.rpc = new JsonRpcHttpClient(opts.urls, {
-      retryAttempts: opts.retryAttempts ?? DEFAULT_RETRY_ATTEMPTS,
-      retryDelay: opts.retryDelay ?? DEFAULT_RETRY_DELAY,
-      timeout: opts.timeout ?? DEFAULT_TIMEOUT,
+      retryAttempts: opts.retryAttempts,
+      retryDelay: opts.retryDelay,
+      timeout: opts.timeout,
       signal,
       metrics: metrics?.executionEnginerHttpClient,
       jwtSecret: opts.jwtSecretHex ? fromHex(opts.jwtSecretHex) : undefined,
