@@ -8,7 +8,7 @@ import {IChainConfig} from "@lodestar/config";
 import {Epoch} from "@lodestar/types";
 import {ValidatorProposerConfig} from "@lodestar/validator";
 
-import {defaultExecutionEngineHttpOpts, ExecutePayloadStatus, ExecutionEngineHttp} from "@lodestar/engine-api-client";
+import {ExecutePayloadStatus, ExecutionEngineHttp} from "@lodestar/engine-api-client";
 import {ChainEvent} from "../../src/chain/index.js";
 import {testLogger, TestLoggerOpts} from "../utils/logger.js";
 import {getDevBeaconNode} from "../utils/node/beacon.js";
@@ -44,9 +44,6 @@ import {shell} from "./shell.js";
 const terminalTotalDifficultyPreMerge = 10;
 const TX_SCENARIOS = process.env.TX_SCENARIOS?.split(",") || [];
 const jwtSecretHex = "0xdc6457099f127cf0bac78de8b297df04951281909db4f58b43def7c7151e765d";
-const retryAttempts = defaultExecutionEngineHttpOpts.retryAttempts;
-const retryDelay = defaultExecutionEngineHttpOpts.retryDelay;
-const queueMaxLength = defaultExecutionEngineHttpOpts.queueMaxLength;
 
 describe("executionEngine / ExecutionEngineHttp", function () {
   if (!process.env.EL_BINARY_DIR || !process.env.EL_SCRIPT_DIR) {
@@ -106,7 +103,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
 
     //const controller = new AbortController();
     const executionEngine = new ExecutionEngineHttp(
-      {urls: [engineRpcUrl], jwtSecretHex, retryAttempts, retryDelay, queueMaxLength},
+      {urls: [engineRpcUrl], jwtSecretHex, retryAttempts: 2, retryDelay: 1000},
       {signal: controller.signal}
     );
 

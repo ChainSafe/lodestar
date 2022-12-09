@@ -1,12 +1,7 @@
 import {expect, use} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import {fastify} from "fastify";
-import {
-  ExecutionEngineHttp,
-  parseExecutionPayload,
-  serializeExecutionPayload,
-  defaultExecutionEngineHttpOpts,
-} from "../../../src/http.js";
+import {ExecutionEngineHttp, parseExecutionPayload, serializeExecutionPayload} from "../../../src/http.js";
 
 use(chaiAsPromised);
 
@@ -40,15 +35,7 @@ describe("ExecutionEngine / http", () => {
 
     const baseUrl = await server.listen(0);
 
-    executionEngine = new ExecutionEngineHttp(
-      {
-        urls: [baseUrl],
-        retryAttempts: defaultExecutionEngineHttpOpts.retryAttempts,
-        retryDelay: defaultExecutionEngineHttpOpts.retryDelay,
-        queueMaxLength: defaultExecutionEngineHttpOpts.queueMaxLength,
-      },
-      {signal: controller.signal}
-    );
+    executionEngine = new ExecutionEngineHttp({urls: [baseUrl]}, {signal: controller.signal});
   });
 
   it("getPayload", async () => {
