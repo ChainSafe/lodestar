@@ -9,7 +9,7 @@ import {isErrorAborted, sleep} from "@lodestar/utils";
 import {fromHexString, JsonPath, toHexString} from "@chainsafe/ssz";
 import {getCurrentSlot, slotWithFutureTolerance, timeUntilNextEpoch} from "./utils/clock.js";
 import {isBetterUpdate, LightclientUpdateStats} from "./utils/update.js";
-import {deserializeSyncCommittee, isEmptyHeader, isNode, sumBits} from "./utils/utils.js";
+import {deserializeSyncCommittee, isEmptyHeader, isLastSlotInPeriod, isNode, sumBits} from "./utils/utils.js";
 import {pruneSetToMax} from "./utils/map.js";
 import {isValidMerkleBranch} from "./utils/verifyMerkleBranch.js";
 import {SyncCommitteeFast} from "./types.js";
@@ -554,32 +554,46 @@ export class Lightclient {
       throw Error(`update must not rollback existing committee at period ${minPeriod}`);
     }
 
-    // if at sync period boundary, the signature is constructed by sync committee in the next period
-    const syncCommittee = this.getSigningSyncCommitteeAtBoundary(attestedPeriod, signaturePeriod);
-
-    if (!syncCommittee) {
-      throw Error(`No syncCommittee for attested period ${attestedPeriod} and signaturePeriod ${signaturePeriod}`);
-    }
-
-    assertValidLightClientUpdate(this.config, syncCommittee, update);
-
-    // Store next_sync_committee keyed by next period.
-    // Multiple updates could be requested for the same period, only keep the SyncCommittee associated with the best
-    // update available, where best is decided by `isBetterUpdate()`
-    const nextPeriod = attestedPeriod + 1;
-    const existingNextSyncCommittee = this.syncCommitteeByPeriod.get(nextPeriod);
     const newNextSyncCommitteeStats: LightclientUpdateStats = {
       isFinalized: !isEmptyHeader(update.finalizedHeader),
       participation: sumBits(update.syncAggregate.syncCommitteeBits),
       slot: updateSlot,
     };
 
+    let nextSyncCommittee: SyncCommitteeFast | undefined;
+    let signingSyncCommittee;
+
+    signingSyncCommittee = this.getSigningSyncCommitteeAtBoundary(attestedPeriod, signaturePeriod);
+
+    // in the scenario where only update for period came at the boundry,
+    // there won't have been an update to process that would have enabled next sync committee to be
+    // cached in this.syncCommitteeByPeriod, hence directly use one in update
+    if (isLastSlotInPeriod(updateSlot) && signingSyncCommittee === undefined) {
+      nextSyncCommittee = deserializeSyncCommittee(update.nextSyncCommittee);
+      signingSyncCommittee = {
+        ...newNextSyncCommitteeStats,
+        ...nextSyncCommittee,
+      };
+    }
+
+    if (!signingSyncCommittee) {
+      throw Error(`No syncCommittee for attested period ${attestedPeriod} and signaturePeriod ${signaturePeriod}`);
+    }
+
+    assertValidLightClientUpdate(this.config, signingSyncCommittee, update);
+
+    // Store next_sync_committee keyed by next period.
+    // Multiple updates could be requested for the same period, only keep the SyncCommittee associated with the best
+    // update available, where best is decided by `isBetterUpdate()`
+    const nextPeriod = attestedPeriod + 1;
+    const existingNextSyncCommittee = this.syncCommitteeByPeriod.get(nextPeriod);
+
     if (!existingNextSyncCommittee || isBetterUpdate(existingNextSyncCommittee, newNextSyncCommitteeStats)) {
       this.logger.info("Stored SyncCommittee", {nextPeriod, replacedPrevious: existingNextSyncCommittee != null});
       this.emitter.emit(LightclientEvent.committee, attestedPeriod);
       this.syncCommitteeByPeriod.set(nextPeriod, {
         ...newNextSyncCommitteeStats,
-        ...deserializeSyncCommittee(update.nextSyncCommittee),
+        ...(nextSyncCommittee !== undefined ? nextSyncCommittee : deserializeSyncCommittee(update.nextSyncCommittee)),
       });
       pruneSetToMax(this.syncCommitteeByPeriod, MAX_STORED_SYNC_COMMITTEES);
       // TODO: Metrics, updated syncCommittee

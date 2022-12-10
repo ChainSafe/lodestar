@@ -1,8 +1,9 @@
 import bls from "@chainsafe/bls/switchable";
 import type {PublicKey} from "@chainsafe/bls/types";
-import {altair, Root, ssz} from "@lodestar/types";
+import {altair, Root, Slot, ssz} from "@lodestar/types";
 import {BeaconBlockHeader} from "@lodestar/types/phase0";
 import {BitArray} from "@chainsafe/ssz";
+import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {SyncCommitteeFast} from "../types.js";
 
 export function sumBits(bits: BitArray): number {
@@ -78,3 +79,7 @@ export function isEmptyHeader(header: BeaconBlockHeader): boolean {
 // Thanks https://github.com/iliakan/detect-node/blob/master/index.esm.js
 export const isNode =
   Object.prototype.toString.call(typeof process !== "undefined" ? process : 0) === "[object process]";
+
+export function isLastSlotInPeriod(slot: Slot): boolean {
+  return (slot + 1) % (EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH) === 0;
+}

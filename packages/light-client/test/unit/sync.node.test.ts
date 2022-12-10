@@ -43,10 +43,9 @@ describe("sync", () => {
     const ALTAIR_FORK_EPOCH = 0;
 
     const initialPeriod = 0;
-    const lastSignatureUpdatePeriod = 5;
-    const lastUpdatePeriod = lastSignatureUpdatePeriod - 1;
+    const targetPeriod = 5;
     const slotsIntoPeriod = 8;
-    const firstHeadSlot = lastSignatureUpdatePeriod * EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH;
+    const firstHeadSlot = targetPeriod * EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH;
     const targetSlot = firstHeadSlot + slotsIntoPeriod;
 
     // Genesis data such that targetSlot is at the current clock slot
@@ -73,11 +72,11 @@ describe("sync", () => {
     lightclientServerApi.snapshots.set(toHexString(checkpointRoot), snapshot);
 
     // Populate sync committee updates
-    for (let period = initialPeriod; period <= lastSignatureUpdatePeriod; period++) {
+    for (let period = initialPeriod; period <= targetPeriod; period++) {
       let committeeUpdate;
-      if (period === lastSignatureUpdatePeriod) {
-        // at last period, have the update at the last slot of the epoch so that
-        // it is signed by in the next sync committee period
+      if (period === 1) {
+        // at period 1, have the update at the last slot of the period so that
+        // it is signed by the sync committee in the next period
         const slotAtBoundary = true;
         committeeUpdate = computeLightclientUpdate(config, period, slotAtBoundary);
       } else {
@@ -107,7 +106,7 @@ describe("sync", () => {
     // Sync periods to current
     await new Promise<void>((resolve) => {
       lightclient.emitter.on(LightclientEvent.committee, (updatePeriod) => {
-        if (updatePeriod === lastUpdatePeriod) {
+        if (updatePeriod === targetPeriod) {
           resolve();
         }
       });
@@ -126,7 +125,7 @@ describe("sync", () => {
     state.latestExecutionPayloadHeader.stateRoot = executionStateRoot;
 
     // Track head + reference states with some known data
-    const syncCommittee = getInteropSyncCommittee(lastSignatureUpdatePeriod);
+    const syncCommittee = getInteropSyncCommittee(targetPeriod);
     await new Promise<void>((resolve) => {
       lightclient.emitter.on(LightclientEvent.head, (header) => {
         if (header.slot === targetSlot) {
