@@ -1,6 +1,5 @@
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {pruneSetToMax, DATA, QUANTITY} from "@lodestar/utils";
-import {IMetrics} from "./provider/index.js";
 
 // Idealy this only need to be set to the max head reorgs number
 const MAX_PAYLOAD_IDS = SLOTS_PER_EPOCH;
@@ -30,7 +29,6 @@ type FcuAttributes = {headBlockHash: DATA; finalizedBlockHash: DATA} & Omit<ApiP
 
 export class PayloadIdCache {
   private readonly payloadIdByFcuAttributes = new Map<string, {payloadId: PayloadId; fullKey: string}>();
-  constructor(private readonly metrics?: IMetrics | null) {}
 
   getFullKey({headBlockHash, finalizedBlockHash, timestamp, prevRandao, suggestedFeeRecipient}: FcuAttributes): string {
     return `${headBlockHash}-${finalizedBlockHash}-${timestamp}-${prevRandao}-${suggestedFeeRecipient}`;

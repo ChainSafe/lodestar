@@ -1,12 +1,13 @@
 import {expect} from "chai";
 import {fastify} from "fastify";
 
-import {fromHexString} from "@chainsafe/ssz";
-
-import {bytesToData, numToQuantity} from "@lodestar/utils";
-import {ExecutionEngineHttp, defaultExecutionEngineHttpOpts} from "../../../src/http.js";
 import {ForkName} from "@lodestar/params";
-import {PayloadAttributes} from "../../../lib";
+import {numToQuantity} from "@lodestar/utils";
+import {fromHexString} from "@chainsafe/ssz";
+import {PayloadAttributes} from "../../../src/interface.js";
+import {ExecutionEngineHttp} from "../../../src/http.js";
+
+const retryAttempts = 3;
 
 describe("ExecutionEngine / http ", () => {
   const afterCallbacks: (() => Promise<void> | void)[] = [];
@@ -46,15 +47,7 @@ describe("ExecutionEngine / http ", () => {
 
     baseUrl = await server.listen(0);
 
-    executionEngine = new ExecutionEngineHttp(
-      {
-        urls: [baseUrl],
-        retryAttempts: defaultExecutionEngineHttpOpts.retryAttempts,
-        retryDelay: defaultExecutionEngineHttpOpts.retryDelay,
-        queueMaxLength: defaultExecutionEngineHttpOpts.queueMaxLength,
-      },
-      {signal: controller.signal}
-    );
+    executionEngine = new ExecutionEngineHttp({urls: [baseUrl], retryAttempts}, {signal: controller.signal});
   });
 
   describe("notifyForkchoiceUpdate", function () {
@@ -93,7 +86,7 @@ describe("ExecutionEngine / http ", () => {
     it("notifyForkchoiceUpdate with retry when pay load attributes", async function () {
       this.timeout("10 min");
 
-      errorResponsesBeforeSuccess = defaultExecutionEngineHttpOpts.retryAttempts - 1;
+      errorResponsesBeforeSuccess = retryAttempts - 1;
       const forkChoiceHeadData = {
         headBlockHash: "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
         safeBlockHash: "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
@@ -113,7 +106,7 @@ describe("ExecutionEngine / http ", () => {
           forkChoiceHeadData,
           {
             timestamp: numToQuantity(payloadAttributes.timestamp),
-            prevRandao: bytesToData(payloadAttributes.prevRandao),
+            prevRandao: payloadAttributes.prevRandao,
             suggestedFeeRecipient: payloadAttributes.suggestedFeeRecipient,
           },
         ],

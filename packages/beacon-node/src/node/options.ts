@@ -1,4 +1,5 @@
-import {defaultExecutionEngineOpts, ExecutionEngineOpts} from "@lodestar/engine-api-client";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ExecutionEngineOpts} from "@lodestar/engine-api-client";
 import {defaultApiOptions, IApiOptions} from "../api/options.js";
 import {defaultChainOptions, IChainOptions} from "../chain/options.js";
 import {defaultDbOptions, IDatabaseOptions} from "../db/options.js";
@@ -27,7 +28,14 @@ export const defaultOptions: IBeaconNodeOptions = {
   chain: defaultChainOptions,
   db: defaultDbOptions,
   eth1: defaultEth1Options,
-  executionEngine: defaultExecutionEngineOpts,
+  executionEngine: {
+    mode: "http",
+    urls: ["http://localhost:8551"],
+    retryAttempts: 3,
+    retryDelay: 3000,
+    timeout: 12000,
+    queueMaxLength: SLOTS_PER_EPOCH * 2,
+  },
   executionBuilder: defaultExecutionBuilderOpts,
   metrics: defaultMetricsOptions,
   network: defaultNetworkOptions,

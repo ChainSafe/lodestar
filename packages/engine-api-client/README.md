@@ -12,7 +12,6 @@ Lodestar client for [Engine JSON-RPC API](https://github.com/ethereum/execution-
 > **Note**
 > No version of this package exist prior to version 1.2.1.
 
-
 ## Usage
 
 ```
@@ -21,11 +20,11 @@ yarn add @lodestar/engine-api-client
 
 Provides method for interacting with the Engine API of the execution layer client as defined in [Engine JSON-RPC API](https://github.com/ethereum/execution-apis/tree/main/src/engine)
 
-```
+```ts
  const baseUrl = http://localhost:8551 // running execution layer client
  const controller = new AbortController()
  const jwtSecretHex = "" // "jwt secret shared with execution layer client"
- 
+
  const executionEngine = new ExecutionEngineHttp(
    {
      urls: [baseUrl],
@@ -36,31 +35,31 @@ Provides method for interacting with the Engine API of the execution layer clien
    },
    {signal: controller.signal}
  );
- 
+
  // Prepare a payload
  const payloadId = await executionEngine.notifyForkchoiceUpdate(
   genesisBlockHash,
   safeBlockHash,
   finalizedBlockHash,
   {
-      timestamp: quantityToNum("0x..."),
-      prevRandao: dataToBytes("0x..."),
-      suggestedFeeRecipient: "0x...",
+      timestamp: 1670578479,
+      prevRandao: "0x58cab4a6ffcd733cacb4c9f13d71fe0ed53c7b75163c616f8fb86d7c7c2fcabf",
+      suggestedFeeRecipient: "0xAb5801a7D398351b8bE11C439e05C5B3259aeC9B",
   }
  );
- 
+
  // Getting payload
  const payload = await executionEngine.getPayload(payloadId);
- 
+
  // Execute payload
  const payloadResult = await executionEngine.notifyNewPayload(payload);
- 
+
  // Update the fork choice
  await executionEngine.notifyForkchoiceUpdate(
-     bytesToData(payload.blockHash), 
-     safeBlockHash, 
+     bytesToData(payload.blockHash),
+     safeBlockHash,
      genesisBlockHash
- ); 
+ );
 ```
 
 ## License
