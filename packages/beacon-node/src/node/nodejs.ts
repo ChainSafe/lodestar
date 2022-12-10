@@ -150,6 +150,9 @@ export class BeaconNode {
 
     // start db if not already started
     await db.start();
+    // Prune hot db repos
+    // TODO: Should this call be awaited?
+    await db.pruneHotDb();
 
     let metrics = null;
     if (opts.metrics.enabled) {

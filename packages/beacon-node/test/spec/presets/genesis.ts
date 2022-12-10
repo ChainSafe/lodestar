@@ -12,7 +12,7 @@ import {ForkName} from "@lodestar/params";
 
 import {expectEqualBeaconState} from "../utils/expectEqualBeaconState.js";
 import {TestRunnerFn} from "../utils/types.js";
-import {getConfig} from "../utils/getConfig.js";
+import {getConfig} from "../../utils/config.js";
 // The aim of the genesis tests is to provide a baseline to test genesis-state initialization and test if the
 // proposed genesis-validity conditions are working.
 
@@ -83,6 +83,7 @@ const genesisInitialization: TestRunnerFn<GenesisInitSpecTest, BeaconStateAllFor
       expectFunc: (testCase, expected, actual) => {
         expectEqualBeaconState(fork, expected, actual);
       },
+      // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
     },
   };
 };
@@ -122,6 +123,7 @@ function generateDepositSSZTypeMapping(n: number): Record<string, typeof ssz.pha
 }
 
 type GenesisValidityTestCase = {
+  meta?: any;
   is_valid: boolean;
   genesis: BeaconStateAllForks;
 };

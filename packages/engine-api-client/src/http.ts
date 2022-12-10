@@ -152,7 +152,12 @@ export class ExecutionEngineHttp implements IExecutionEngine {
    * If any of the above fails due to errors unrelated to the normal processing flow of the method, client software MUST respond with an error object.
    */
   async notifyNewPayload(fork: ForkName, executionPayload: allForks.ExecutionPayload): Promise<ExecutePayloadResponse> {
-    const method = ForkSeq[fork] >= ForkSeq.capella ? "engine_newPayloadV2" : "engine_newPayloadV1";
+    const method =
+      ForkSeq[fork] >= ForkSeq.eip4844
+        ? "engine_newPayloadV3"
+        : ForkSeq[fork] >= ForkSeq.capella
+        ? "engine_newPayloadV2"
+        : "engine_newPayloadV1";
     const serializedExecutionPayload = serializeExecutionPayload(fork, executionPayload);
     const {status, latestValidHash, validationError} = await (this.rpcFetchQueue.push({
       method,
@@ -308,7 +313,12 @@ export class ExecutionEngineHttp implements IExecutionEngine {
    * 3. Client software MAY stop the corresponding building process after serving this call.
    */
   async getPayload(fork: ForkName, payloadId: PayloadId): Promise<allForks.ExecutionPayload> {
-    const method = ForkSeq[fork] >= ForkSeq.capella ? "engine_getPayloadV2" : "engine_getPayloadV1";
+    const method =
+      ForkSeq[fork] >= ForkSeq.eip4844
+        ? "engine_getPayloadV3"
+        : ForkSeq[fork] >= ForkSeq.capella
+        ? "engine_getPayloadV2"
+        : "engine_getPayloadV1";
     const executionPayloadRpc = await this.rpc.fetchWithRetries<
       EngineApiRpcReturnTypes[typeof method],
       EngineApiRpcParamTypes[typeof method]
@@ -373,6 +383,7 @@ type EngineApiRpcParamTypes = {
    */
   engine_newPayloadV1: [ExecutionPayloadRpc];
   engine_newPayloadV2: [ExecutionPayloadRpc];
+  engine_newPayloadV3: [ExecutionPayloadRpc];
   /**
    * 1. Object - Payload validity status with respect to the consensus rules:
    *   - blockHash: DATA, 32 Bytes - block hash value of the payload
@@ -391,6 +402,7 @@ type EngineApiRpcParamTypes = {
    */
   engine_getPayloadV1: [QUANTITY];
   engine_getPayloadV2: [QUANTITY];
+  engine_getPayloadV3: [QUANTITY];
   /**
    * 1. Object - Instance of TransitionConfigurationV1
    */
@@ -416,6 +428,11 @@ type EngineApiRpcReturnTypes = {
     latestValidHash: DATA | null;
     validationError: string | null;
   };
+  engine_newPayloadV3: {
+    status: ExecutePayloadStatus;
+    latestValidHash: DATA | null;
+    validationError: string | null;
+  };
   engine_forkchoiceUpdatedV1: {
     payloadStatus: {status: ForkChoiceUpdateStatus; latestValidHash: DATA | null; validationError: string | null};
     payloadId: QUANTITY | null;
@@ -429,6 +446,7 @@ type EngineApiRpcReturnTypes = {
    */
   engine_getPayloadV1: ExecutionPayloadRpc;
   engine_getPayloadV2: ExecutionPayloadRpc;
+  engine_getPayloadV3: ExecutionPayloadRpc;
   /**
    * Object - Instance of TransitionConfigurationV1
    */

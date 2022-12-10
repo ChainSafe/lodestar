@@ -149,5 +149,9 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       name: "beacon_clock_slot",
       help: "Current clock slot",
     }),
+    clockEpoch: register.gauge({
+      name: "beacon_clock_epoch",
+      help: "Current clock epoch",
+    }),
   };
 }

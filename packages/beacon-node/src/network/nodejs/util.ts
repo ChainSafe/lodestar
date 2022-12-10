@@ -74,5 +74,6 @@ export async function createNodeJsLibp2p(
     peerDiscovery: disablePeerDiscovery ? [] : undefined,
     metrics: nodeJsLibp2pOpts.metrics,
     lodestarVersion: networkOpts.version,
+    mdns: networkOpts.mdns,
   });
 }

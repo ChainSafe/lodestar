@@ -1,5 +1,5 @@
 import {CachedBeaconStateAllForks, computeEpochAtSlot} from "@lodestar/state-transition";
-import {allForks, bellatrix} from "@lodestar/types";
+import {bellatrix} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
 import {toHexString} from "@chainsafe/ssz";
 import {ProtoBlock} from "@lodestar/fork-choice";
@@ -9,7 +9,7 @@ import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
 import {RegenCaller} from "../regen/index.js";
 import type {BeaconChain} from "../chain.js";
-import {ImportBlockOpts} from "./types.js";
+import {BlockInput, ImportBlockOpts} from "./types.js";
 import {POS_PANDA_MERGE_TRANSITION_BANNER} from "./utils/pandaMergeTransitionBanner.js";
 import {CAPELLA_OWL_BANNER} from "./utils/ownBanner.js";
 import {verifyBlocksStateTransitionOnly} from "./verifyBlocksStateTransitionOnly.js";
@@ -30,13 +30,14 @@ import {verifyBlocksExecutionPayload, SegmentExecStatus} from "./verifyBlocksExe
 export async function verifyBlocksInEpoch(
   this: BeaconChain,
   parentBlock: ProtoBlock,
-  blocks: allForks.SignedBeaconBlock[],
+  blocksInput: BlockInput[],
   opts: BlockProcessOpts & ImportBlockOpts
 ): Promise<{
   postStates: CachedBeaconStateAllForks[];
   proposerBalanceDeltas: number[];
   segmentExecStatus: SegmentExecStatus;
 }> {
+  const blocks = blocksInput.map(({block}) => block);
   if (blocks.length === 0) {
     throw Error("Empty partiallyVerifiedBlocks");
   }
@@ -66,16 +67,15 @@ export async function verifyBlocksInEpoch(
   const abortController = new AbortController();
 
   try {
-    const [{postStates, proposerBalanceDeltas}, , segmentExecStatus] = await Promise.all([
-      // Run state transition only
-      // TODO: Ensure it yields to allow flushing to workers and engine API
-      verifyBlocksStateTransitionOnly(preState0, blocks, this.metrics, abortController.signal, opts),
-
-      // All signatures at once
-      verifyBlocksSignatures(this.bls, preState0, blocks, opts),
-
+    const [segmentExecStatus, {postStates, proposerBalanceDeltas}] = await Promise.all([
       // Execution payloads
       verifyBlocksExecutionPayload(this, parentBlock, blocks, preState0, abortController.signal, opts),
+      // Run state transition only
+      // TODO: Ensure it yields to allow flushing to workers and engine API
+      verifyBlocksStateTransitionOnly(preState0, blocksInput, this.logger, this.metrics, abortController.signal, opts),
+
+      // All signatures at once
+      verifyBlocksSignatures(this.bls, this.logger, this.metrics, preState0, blocks, opts),
     ]);
 
     if (segmentExecStatus.execAborted === null && segmentExecStatus.mergeBlockFound !== null) {

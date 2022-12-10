@@ -1,4 +1,4 @@
-import {allForks, UintNum64, Root, phase0, Slot, RootHex, Epoch, ValidatorIndex} from "@lodestar/types";
+import {allForks, UintNum64, Root, phase0, Slot, RootHex, Epoch, ValidatorIndex, eip4844} from "@lodestar/types";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {IBeaconConfig} from "@lodestar/config";
 import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
@@ -23,7 +23,7 @@ import {
 import {AttestationPool, OpPool, SyncCommitteeMessagePool, SyncContributionAndProofPool} from "./opPools/index.js";
 import {LightClientServer} from "./lightClient/index.js";
 import {AggregatedAttestationPool} from "./opPools/aggregatedAttestationPool.js";
-import {ImportBlockOpts} from "./blocks/types.js";
+import {BlockInput, ImportBlockOpts} from "./blocks/types.js";
 import {ReprocessController} from "./reprocess.js";
 import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
 import {BeaconProposerCache, ProposerPreparationData} from "./beaconProposerCache.js";
@@ -109,13 +109,15 @@ export interface IBeaconChain {
    */
   getCanonicalBlockAtSlot(slot: Slot): Promise<allForks.SignedBeaconBlock | null>;
 
+  getBlobsSidecar(beaconBlock: eip4844.BeaconBlock): eip4844.BlobsSidecar;
+
   produceBlock(blockAttributes: BlockAttributes): Promise<allForks.BeaconBlock>;
   produceBlindedBlock(blockAttributes: BlockAttributes): Promise<allForks.BlindedBeaconBlock>;
 
   /** Process a block until complete */
-  processBlock(block: allForks.SignedBeaconBlock, opts?: ImportBlockOpts): Promise<void>;
+  processBlock(block: BlockInput, opts?: ImportBlockOpts): Promise<void>;
   /** Process a chain of blocks until complete */
-  processChainSegment(blocks: allForks.SignedBeaconBlock[], opts?: ImportBlockOpts): Promise<void>;
+  processChainSegment(blocks: BlockInput[], opts?: ImportBlockOpts): Promise<void>;
 
   getStatus(): phase0.Status;
 

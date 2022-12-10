@@ -46,11 +46,13 @@ export const fork: TestRunnerFn<ForkStateCase, BeaconStateAllForks> = (forkNext)
       expectFunc: (testCase, expected, actual) => {
         expectEqualBeaconState(forkNext, expected, actual);
       },
+      // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
     },
   };
 };
 
 type ForkStateCase = {
+  meta?: any;
   pre: BeaconStateAllForks;
   post: Exclude<BeaconStateAllForks, phase0.BeaconState>;
 };

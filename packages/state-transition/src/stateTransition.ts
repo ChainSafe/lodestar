@@ -9,20 +9,30 @@ import {
   CachedBeaconStatePhase0,
   CachedBeaconStateAltair,
   CachedBeaconStateBellatrix,
+  CachedBeaconStateCapella,
 } from "./types.js";
 import {computeEpochAtSlot} from "./util/index.js";
 import {verifyProposerSignature} from "./signatureSets/index.js";
-import {processSlot, upgradeStateToAltair, upgradeStateToBellatrix, upgradeStateToCapella} from "./slot/index.js";
+import {
+  processSlot,
+  upgradeStateToAltair,
+  upgradeStateToBellatrix,
+  upgradeStateToCapella,
+  upgradeStateTo4844,
+} from "./slot/index.js";
 import {processBlock} from "./block/index.js";
 import {processEpoch} from "./epoch/index.js";
+import {BlockExternalData, DataAvailableStatus, ExecutionPayloadStatus} from "./block/externalData.js";
 
 // Multifork capable state transition
 
-export type StateTransitionOpts = EpochProcessOpts & {
-  verifyStateRoot?: boolean;
-  verifyProposer?: boolean;
-  verifySignatures?: boolean;
-};
+// NOTE EIP-4844: Mandatory BlockExternalData to decide if block is available or not
+export type StateTransitionOpts = BlockExternalData &
+  EpochProcessOpts & {
+    verifyStateRoot?: boolean;
+    verifyProposer?: boolean;
+    verifySignatures?: boolean;
+  };
 
 /**
  * Implementation Note: follows the optimizations in protolambda's eth2fastspec (https://github.com/protolambda/eth2fastspec)
@@ -30,10 +40,14 @@ export type StateTransitionOpts = EpochProcessOpts & {
 export function stateTransition(
   state: CachedBeaconStateAllForks,
   signedBlock: allForks.FullOrBlindedSignedBeaconBlock,
-  options?: StateTransitionOpts,
+  options: StateTransitionOpts = {
+    // TODO EIP-4844: Review what default values make sense
+    executionPayloadStatus: ExecutionPayloadStatus.valid,
+    dataAvailableStatus: DataAvailableStatus.available,
+  },
   metrics?: IBeaconStateTransitionMetrics | null
 ): CachedBeaconStateAllForks {
-  const {verifyStateRoot = true, verifyProposer = true, verifySignatures = true} = options || {};
+  const {verifyStateRoot = true, verifyProposer = true} = options;
 
   const block = signedBlock.message;
   const blockSlot = block.slot;
@@ -64,7 +78,7 @@ export function stateTransition(
 
   const timer = metrics?.stfnProcessBlock.startTimer();
   try {
-    processBlock(fork, postState, block, verifySignatures, null);
+    processBlock(fork, postState, block, options, options);
   } finally {
     timer?.();
   }
@@ -160,6 +174,9 @@ function processSlotsWithTransientCache(
       }
       if (stateSlot === config.CAPELLA_FORK_EPOCH) {
         postState = upgradeStateToCapella(postState as CachedBeaconStateBellatrix) as CachedBeaconStateAllForks;
+      }
+      if (stateSlot === config.EIP4844_FORK_EPOCH) {
+        postState = upgradeStateTo4844(postState as CachedBeaconStateCapella) as CachedBeaconStateAllForks;
       }
     } else {
       postState.slot++;

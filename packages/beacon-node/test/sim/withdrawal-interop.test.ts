@@ -4,7 +4,7 @@ import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {LogLevel, sleep, TimestampFormatCode} from "@lodestar/utils";
 import {SLOTS_PER_EPOCH, ForkName} from "@lodestar/params";
 import {IChainConfig} from "@lodestar/config";
-import {Epoch} from "@lodestar/types";
+import {Epoch, capella} from "@lodestar/types";
 import {ValidatorProposerConfig} from "@lodestar/validator";
 
 import {ExecutePayloadStatus, PayloadAttributes, ExecutionEngineHttp} from "@lodestar/engine-api-client";
@@ -207,7 +207,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
 
     // Should reach justification in 6 epochs max.
     // Merge block happens at epoch 2 slot 4. Then 4 epochs to finalize
-    const expectedEpochsToFinish = 10;
+    const expectedEpochsToFinish = 1;
     // 1 epoch of margin of error
     const epochsOfMargin = 1;
     const timeoutSetupMargin = 30 * 1000; // Give extra 30 seconds of margin
@@ -287,12 +287,22 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       await Promise.all(validators.map((v) => v.close()));
     });
 
+    let withdrawalsStarted = false;
+    let withdrawalsBlocks = 0;
+
     await new Promise<void>((resolve, _reject) => {
       bn.chain.emitter.on(ChainEvent.clockEpoch, (epoch) => {
         // Resolve only if the finalized checkpoint includes execution payload
         if (epoch >= expectedEpochsToFinish) {
           console.log(`\nGot event ${ChainEvent.clockEpoch}, stopping validators and nodes\n`);
           resolve();
+        }
+      });
+
+      bn.chain.emitter.on(ChainEvent.block, (block) => {
+        if ((block as capella.SignedBeaconBlock).message.body.executionPayload?.withdrawals.length > 0) {
+          withdrawalsStarted = true;
+          withdrawalsBlocks++;
         }
       });
     });
@@ -322,6 +332,13 @@ describe("executionEngine / ExecutionEngineHttp", function () {
             consensusHeadExecutionPayloadBlockHash: consensusHead.executionPayloadBlockHash,
             consensusHeadSlot: consensusHead.slot,
           })
+      );
+    }
+
+    // Simple check to confirm that withdrawals were mostly processed
+    if (!withdrawalsStarted || withdrawalsBlocks < 4) {
+      throw Error(
+        `Withdrawals not processed withdrawalsStarted=${withdrawalsStarted} withdrawalsBlocks=${withdrawalsBlocks}`
       );
     }
 

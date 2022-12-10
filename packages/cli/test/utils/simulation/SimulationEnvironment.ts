@@ -20,6 +20,7 @@ import {
   SIM_TESTS_SECONDS_PER_SLOT,
 } from "./constants.js";
 import {generateGethNode} from "./el_clients/geth.js";
+import {generateMockNode} from "./el_clients/mock.js";
 import {generateNethermindNode} from "./el_clients/nethermind.js";
 import {EpochClock} from "./EpochClock.js";
 import {ExternalSignerServer} from "./ExternalSignerServer.js";
@@ -35,6 +36,7 @@ import {
   ELNode,
   ELStartMode,
   Job,
+  JobPair,
   NodePair,
   NodePairOptions,
   NodePairResult,
@@ -62,7 +64,7 @@ export class SimulationEnvironment {
   readonly forkConfig: IChainForkConfig;
   readonly options: SimulationOptions;
 
-  private readonly jobs: {cl: Job; el: Job}[] = [];
+  private readonly jobs: JobPair[] = [];
   private keysCount = 0;
   private nodePairCount = 0;
   private genesisState?: BeaconStateAllForks;
@@ -164,7 +166,11 @@ export class SimulationEnvironment {
 
       for (let i = 0; i < this.nodes.length; i++) {
         // Get genesis block hash
-        const eth1Genesis = await this.nodes[i].el.provider.getBlockByNumber(0);
+        const el = this.nodes[i].el;
+
+        // If eth1 is mock then genesis hash would be empty
+        const eth1Genesis = el.provider === null ? {hash: ""} : await el.provider.getBlockByNumber(0);
+
         if (!eth1Genesis) {
           throw new Error(`Eth1 genesis not found for node "${this.nodes[i].id}"`);
         }
@@ -245,13 +251,14 @@ export class SimulationEnvironment {
       id,
       remoteKeys: remote ? keys : [],
       localKeys: remote ? [] : keys,
+      engineMock: typeof el === "string" ? el === ELClient.Mock : el.type === ELClient.Mock,
     });
 
     const elClient = this.createELNode(el, {id, mining});
 
     return {
-      nodePair: {id, el: elClient.node, cl: clClient.node},
-      jobs: {el: elClient.job, cl: clClient.job},
+      nodePair: {id, el: elClient?.node, cl: clClient.node},
+      jobs: {el: elClient?.job, cl: clClient.job},
     };
   }
 
@@ -280,6 +287,7 @@ export class SimulationEnvironment {
           localKeys: options?.localKeys ?? [],
           genesisTime: this.options.genesisTime,
           engineUrl: options?.engineUrl ?? `http://127.0.0.1:${EL_ENGINE_BASE_PORT + this.nodePairCount + 1}`,
+          engineMock: options?.engineMock ?? false,
           jwtSecretHex: options?.jwtSecretHex ?? SHARED_JWT_SECRET,
           clientOptions: clientOptions ?? {},
         };
@@ -316,6 +324,9 @@ export class SimulationEnvironment {
     };
 
     switch (clientType) {
+      case ELClient.Mock: {
+        return generateMockNode(opts as ELGeneratorClientOptions<ELClient.Mock>, this.childProcessRunner);
+      }
       case ELClient.Geth: {
         return generateGethNode(opts as ELGeneratorClientOptions<ELClient.Geth>, this.dockerRunner);
       }

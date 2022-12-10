@@ -32,9 +32,6 @@
     "./eth1": {
       "import": "./lib/eth1/index.js"
     },
-    "./executionEngine": {
-      "import": "./lib/executionEngine/index.js"
-    },
     "./metrics": {
       "import": "./lib/metrics/index.js"
     },
@@ -46,9 +43,6 @@
     },
     "./sync": {
       "import": "./lib/sync/index.js"
-    },
-    "./util": {
-      "import": "./lib/util/index.js"
     }
   },
   "typesVersions": {
@@ -113,6 +107,7 @@
     "@libp2p/interface-connection": "^3.0.2",
     "@libp2p/interface-connection-manager": "^1.1.1",
     "@libp2p/interface-peer-id": "^1.0.4",
+    "@libp2p/interface-peer-info": "^1.0.3",
     "@libp2p/interface-pubsub": "^2.1.0",
     "@libp2p/mdns": "^3.0.1",
     "@libp2p/mplex": "^5.2.4",
@@ -138,7 +133,7 @@
     "datastore-core": "^8.0.1",
     "datastore-level": "^9.0.1",
     "deepmerge": "^3.2.0",
-    "fastify": "3.15.1",
+    "fastify": "3.29.4",
     "fastify-bearer-auth": "6.1.0",
     "fastify-cors": "^6.0.1",
     "gc-stats": "^1.4.0",
