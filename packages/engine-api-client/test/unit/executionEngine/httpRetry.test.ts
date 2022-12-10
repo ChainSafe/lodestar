@@ -3,7 +3,6 @@ import {fastify} from "fastify";
 
 import {ForkName} from "@lodestar/params";
 import {numToQuantity} from "@lodestar/utils";
-import {fromHexString} from "@chainsafe/ssz";
 import {PayloadAttributes} from "../../../src/interface.js";
 import {ExecutionEngineHttp} from "../../../src/http.js";
 
@@ -94,7 +93,7 @@ describe("ExecutionEngine / http ", () => {
       };
       const payloadAttributes: PayloadAttributes = {
         timestamp: 1647036763,
-        prevRandao: fromHexString("0x0000000000000000000000000000000000000000000000000000000000000000"),
+        prevRandao: "0x0000000000000000000000000000000000000000000000000000000000000000",
         suggestedFeeRecipient: "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b",
         fork: ForkName.bellatrix,
       };

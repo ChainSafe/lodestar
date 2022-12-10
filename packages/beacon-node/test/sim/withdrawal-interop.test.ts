@@ -7,12 +7,7 @@ import {IChainConfig} from "@lodestar/config";
 import {Epoch} from "@lodestar/types";
 import {ValidatorProposerConfig} from "@lodestar/validator";
 
-import {
-  ExecutePayloadStatus,
-  PayloadAttributes,
-  ExecutionEngineHttp,
-  defaultExecutionEngineHttpOpts,
-} from "@lodestar/engine-api-client";
+import {ExecutePayloadStatus, PayloadAttributes, ExecutionEngineHttp} from "@lodestar/engine-api-client";
 import {bytesToData, dataToBytes} from "@lodestar/utils";
 import {ChainEvent} from "../../src/chain/index.js";
 import {testLogger, TestLoggerOpts} from "../utils/logger.js";
@@ -33,8 +28,6 @@ import {shell} from "./shell.js";
 /* eslint-disable no-console, @typescript-eslint/naming-convention, quotes */
 
 const jwtSecretHex = "0xdc6457099f127cf0bac78de8b297df04951281909db4f58b43def7c7151e765d";
-const retryAttempts = defaultExecutionEngineHttpOpts.retryAttempts;
-const retryDelay = defaultExecutionEngineHttpOpts.retryDelay;
 const GWEI_TO_WEI = BigInt(1000000000);
 
 describe("executionEngine / ExecutionEngineHttp", function () {
@@ -83,7 +76,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
 
     //const controller = new AbortController();
     const executionEngine = new ExecutionEngineHttp(
-      {urls: [engineRpcUrl], jwtSecretHex, retryAttempts, retryDelay},
+      {urls: [engineRpcUrl], jwtSecretHex, retryAttempts: 2, retryDelay: 1000},
       {signal: controller.signal}
     );
 
@@ -143,7 +136,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     const preparePayloadParams: PayloadAttributes = {
       // Note: this is created with a pre-defined genesis.json
       timestamp: 47,
-      prevRandao: dataToBytes("0xff00000000000000000000000000000000000000000000000000000000000000", 32),
+      prevRandao: "0xff00000000000000000000000000000000000000000000000000000000000000",
       suggestedFeeRecipient: "0xaa00000000000000000000000000000000000000",
       withdrawals,
       fork: ForkName.capella,

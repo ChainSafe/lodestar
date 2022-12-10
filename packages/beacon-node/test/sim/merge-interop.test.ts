@@ -2,7 +2,7 @@ import fs from "node:fs";
 import {Context} from "mocha";
 import {fromHexString} from "@chainsafe/ssz";
 import {isExecutionStateType, isMergeTransitionComplete} from "@lodestar/state-transition";
-import {LogLevel, sleep, TimestampFormatCode, bytesToData, dataToBytes, quantityToNum} from "@lodestar/utils";
+import {LogLevel, sleep, TimestampFormatCode, bytesToData, quantityToNum} from "@lodestar/utils";
 import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {IChainConfig} from "@lodestar/config";
 import {Epoch} from "@lodestar/types";
@@ -116,7 +116,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     const preparePayloadParams: PayloadAttributes = {
       // Note: this is created with a pre-defined genesis.json
       timestamp: quantityToNum("0x5"),
-      prevRandao: dataToBytes("0x0000000000000000000000000000000000000000000000000000000000000000", 32),
+      prevRandao: "0x0000000000000000000000000000000000000000000000000000000000000000",
       suggestedFeeRecipient: "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b",
       fork: ForkName.bellatrix,
     };

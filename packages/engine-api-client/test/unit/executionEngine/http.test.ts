@@ -1,8 +1,8 @@
 import {expect, use} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import {fastify} from "fastify";
-import {ExecutionEngineHttp, parseExecutionPayload, serializeExecutionPayload} from "../../../src/http.js";
 import {ForkName} from "@lodestar/params";
+import {ExecutionEngineHttp, parseExecutionPayload, serializeExecutionPayload} from "../../../src/http.js";
 
 use(chaiAsPromised);
 
@@ -70,7 +70,10 @@ describe("ExecutionEngine / http", () => {
 
     const payload = await executionEngine.getPayload(ForkName.bellatrix, "0x0");
 
-    expect(serializeExecutionPayload(ForkName.bellatrix, payload)).to.deep.equal(response.result, "Wrong returned payload");
+    expect(serializeExecutionPayload(ForkName.bellatrix, payload)).to.deep.equal(
+      response.result,
+      "Wrong returned payload"
+    );
     expect(reqJsonRpcPayload).to.deep.equal(request, "Wrong request JSON RPC payload");
   });
 

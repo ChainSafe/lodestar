@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import {allForks, bellatrix, eip4844, RootHex, ssz} from "@lodestar/types";
 import {fromHex, toHex} from "@lodestar/utils";
-import {BYTES_PER_LOGS_BLOOM, ForkName} from "@lodestar/params";
+import {ForkName} from "@lodestar/params";
 import {
   ExecutePayloadStatus,
   ExecutePayloadResponse,
@@ -198,7 +198,7 @@ export class ExecutionEngineMock implements IExecutionEngine {
       // Make executionPayload valid
       executionPayload.parentHash = fromHex(headBlockHash);
       executionPayload.feeRecipient = fromHex(payloadAttributes.suggestedFeeRecipient);
-      executionPayload.prevRandao = payloadAttributes.prevRandao;
+      executionPayload.prevRandao = fromHex(payloadAttributes.prevRandao);
       executionPayload.blockNumber = headBlock.blockNumber + 1;
       executionPayload.gasLimit = INTEROP_GAS_LIMIT;
       executionPayload.gasUsed = Math.floor(0.5 * INTEROP_GAS_LIMIT);

@@ -277,7 +277,7 @@ export async function prepareExecutionPayload(
     const attributes: PayloadAttributes = {
       fork,
       timestamp,
-      prevRandao: prevRandao,
+      prevRandao: toHex(prevRandao),
       suggestedFeeRecipient,
     };
 

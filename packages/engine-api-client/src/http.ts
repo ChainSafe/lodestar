@@ -70,19 +70,6 @@ export type ExecutionEngineHttpOpts = {
   jwtSecretHex?: string;
 };
 
-export const defaultExecutionEngineHttpOpts: ExecutionEngineHttpOpts = {
-  /**
-   * By default ELs host engine api on an auth protected 8551 port, would need a jwt secret to be
-   * specified to bundle jwt tokens if that is the case. In case one has access to an open
-   * port/url, one can override this and skip providing a jwt secret.
-   */
-  urls: ["http://localhost:8551"],
-  retryAttempts: 3,
-  retryDelay: 2000,
-  timeout: 12000,
-  queueMaxLength: SLOTS_PER_EPOCH * 2,
-};
-
 // Define static options once to prevent extra allocations
 const notifyNewPayloadOpts: ReqOpts = {routeId: "notifyNewPayload"};
 const forkchoiceUpdatedV1Opts: ReqOpts = {routeId: "forkchoiceUpdated"};
@@ -258,7 +245,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     const apiPayloadAttributes: ApiPayloadAttributes | undefined = payloadAttributes
       ? {
           timestamp: numToQuantity(payloadAttributes.timestamp),
-          prevRandao: bytesToData(payloadAttributes.prevRandao),
+          prevRandao: payloadAttributes.prevRandao,
           suggestedFeeRecipient: payloadAttributes.suggestedFeeRecipient,
           withdrawals: payloadAttributes.withdrawals?.map(serializeWithdrawal),
         }
@@ -519,10 +506,10 @@ export function parseExecutionPayload(fork: ForkName, data: ExecutionPayloadRpc)
     gasLimit: quantityToNum(data.gasLimit),
     gasUsed: quantityToNum(data.gasUsed),
     timestamp: quantityToNum(data.timestamp),
-    extraData: dataToBytes(data.extraData, null),
+    extraData: dataToBytes(data.extraData),
     baseFeePerGas: quantityToBigint(data.baseFeePerGas),
     blockHash: dataToBytes(data.blockHash, 32),
-    transactions: data.transactions.map((tran) => dataToBytes(tran, null)),
+    transactions: data.transactions.map((tran) => dataToBytes(tran)),
   };
 
   if (ForkSeq[fork] >= ForkSeq.capella) {
