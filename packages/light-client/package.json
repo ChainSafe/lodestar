@@ -22,9 +22,6 @@
     },
     "./validation": {
       "import": "./lib/validation.js"
-    },
-    "./networks": {
-      "import": "./lib/networks.js"
     }
   },
   "types": "./lib/index.d.ts",
