@@ -95,16 +95,22 @@ export const ExecutionPayload = new ContainerType(
 
 export const BlindedExecutionPayload = new ContainerType(
   {
-    ...capellaSsz.ExecutionPayloadHeader.fields,
+    ...bellatrixSsz.CommonExecutionPayloadType.fields,
     excessDataGas: UintBn256, // New in EIP-4844
+    blockHash: Root,
+    transactionsRoot: Root,
+    withdrawalsRoot: Root,
   },
   {typeName: "BlindedExecutionPayload", jsonCase: "eth2"}
 );
 
 export const ExecutionPayloadHeader = new ContainerType(
   {
-    ...capellaSsz.ExecutionPayloadHeader.fields,
+    ...bellatrixSsz.CommonExecutionPayloadType.fields,
     excessDataGas: UintBn256, // New in EIP-4844
+    blockHash: Root,
+    transactionsRoot: Root,
+    withdrawalsRoot: Root,
   },
   {typeName: "ExecutionPayloadHeader", jsonCase: "eth2"}
 );
