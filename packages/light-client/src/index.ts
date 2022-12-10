@@ -401,7 +401,6 @@ export class Lightclient {
 
     const attestedPeriod = computeSyncPeriodAtSlot(attestedHeader.slot);
     const signaturePeriod = computeSyncPeriodAtSlot(signatureSlot);
-    // if at sync period boundary, the signature is constructed by sync committee in the next period
     const syncCommittee = this.syncCommitteeByPeriod.get(signaturePeriod);
 
     if (!syncCommittee) {
@@ -563,9 +562,9 @@ export class Lightclient {
     let nextSyncCommittee: SyncCommitteeFast | undefined;
     let signingSyncCommittee;
 
-    signingSyncCommittee = this.getSigningSyncCommitteeAtBoundary(attestedPeriod, signaturePeriod);
+    signingSyncCommittee = this.syncCommitteeByPeriod.get(signaturePeriod);
 
-    // in the scenario where only update for period came at the boundry,
+    // in the scenario where only update for period is requested at the boundary,
     // there won't have been an update to process that would have enabled next sync committee to be
     // cached in this.syncCommitteeByPeriod, hence directly use one in update
     if (isLastSlotInPeriod(updateSlot) && signingSyncCommittee === undefined) {
@@ -598,14 +597,5 @@ export class Lightclient {
       pruneSetToMax(this.syncCommitteeByPeriod, MAX_STORED_SYNC_COMMITTEES);
       // TODO: Metrics, updated syncCommittee
     }
-  }
-
-  private getSigningSyncCommitteeAtBoundary(
-    firstPeriod: SyncPeriod,
-    secondPeriod: SyncPeriod
-  ): (LightclientUpdateStats & SyncCommitteeFast) | undefined {
-    return firstPeriod === secondPeriod
-      ? this.syncCommitteeByPeriod.get(firstPeriod)
-      : this.syncCommitteeByPeriod.get(Math.max(firstPeriod, secondPeriod));
   }
 }
