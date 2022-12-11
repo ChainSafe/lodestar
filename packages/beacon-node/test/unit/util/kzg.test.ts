@@ -1,12 +1,12 @@
 import {expect} from "chai";
 import {bellatrix, eip4844, ssz} from "@lodestar/types";
-import {BLOB_TX_TYPE, BYTES_PER_FIELD_ELEMENT, FIELD_ELEMENTS_PER_BLOB} from "@lodestar/params";
+import {BLOB_TX_TYPE, BYTES_PER_FIELD_ELEMENT} from "@lodestar/params";
 import {
   kzgCommitmentToVersionedHash,
   OPAQUE_TX_BLOB_VERSIONED_HASHES_OFFSET,
   OPAQUE_TX_MESSAGE_OFFSET,
 } from "@lodestar/state-transition";
-import {loadEthereumTrustedSetup, initCKZG, ckzg} from "../../../src/util/kzg.js";
+import {loadEthereumTrustedSetup, initCKZG, ckzg, FIELD_ELEMENTS_PER_BLOB_MAINNET} from "../../../src/util/kzg.js";
 import {validateBlobsSidecar, validateGossipBlobsSidecar} from "../../../src/chain/validation/blobsSidecar.js";
 
 describe("C-KZG", () => {
@@ -80,9 +80,9 @@ function transactionForKzgCommitment(kzgCommitment: eip4844.KZGCommitment): bell
  * Generate random blob of sequential integers such that each element is < BLS_MODULUS
  */
 function generateRandomBlob(): eip4844.Blob {
-  const blob = new Uint8Array(FIELD_ELEMENTS_PER_BLOB * BYTES_PER_FIELD_ELEMENT);
+  const blob = new Uint8Array(FIELD_ELEMENTS_PER_BLOB_MAINNET * BYTES_PER_FIELD_ELEMENT);
   const dv = new DataView(blob.buffer, blob.byteOffset, blob.byteLength);
-  for (let i = 0; i < FIELD_ELEMENTS_PER_BLOB; i++) {
+  for (let i = 0; i < FIELD_ELEMENTS_PER_BLOB_MAINNET; i++) {
     dv.setUint32(i * BYTES_PER_FIELD_ELEMENT, i);
   }
   return blob;

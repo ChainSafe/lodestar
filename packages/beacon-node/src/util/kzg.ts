@@ -6,7 +6,7 @@ import {fromHex, toHex} from "@lodestar/utils";
 /* eslint-disable @typescript-eslint/naming-convention */
 
 // "c-kzg" has hardcoded the mainnet value, do not use params
-const FIELD_ELEMENTS_PER_BLOB_MAINNET = 4096;
+export const FIELD_ELEMENTS_PER_BLOB_MAINNET = 4096;
 
 function ckzgNotLoaded(): never {
   throw Error("c-kzg library not loaded");
