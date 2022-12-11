@@ -524,10 +524,10 @@ export function parseExecutionPayload(fork: ForkName, data: ExecutionPayloadRpc)
     gasLimit: quantityToNum(data.gasLimit),
     gasUsed: quantityToNum(data.gasUsed),
     timestamp: quantityToNum(data.timestamp),
-    extraData: dataToBytes(data.extraData),
+    extraData: dataToBytes(data.extraData, null),
     baseFeePerGas: quantityToBigint(data.baseFeePerGas),
     blockHash: dataToBytes(data.blockHash, 32),
-    transactions: data.transactions.map((tran) => dataToBytes(tran)),
+    transactions: data.transactions.map((tran) => dataToBytes(tran, null)),
   };
 
   if (ForkSeq[fork] >= ForkSeq.capella) {
