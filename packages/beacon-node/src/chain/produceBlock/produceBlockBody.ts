@@ -27,10 +27,9 @@ import {
 } from "@lodestar/state-transition";
 import {IChainForkConfig} from "@lodestar/config";
 import {ForkName, ForkSeq} from "@lodestar/params";
-import {toHex, sleep} from "@lodestar/utils";
+import {toHex, sleep, numToQuantity} from "@lodestar/utils";
 
 import {PayloadId, IExecutionEngine, PayloadAttributes, ForkExecution} from "@lodestar/engine-api-client";
-import {numToQuantity} from "@lodestar/utils/hex";
 import type {BeaconChain} from "../chain.js";
 import {ZERO_HASH, ZERO_HASH_HEX} from "../../constants/index.js";
 import {IEth1ForBlockProduction} from "../../eth1/index.js";
