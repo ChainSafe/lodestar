@@ -21,9 +21,13 @@ yarn add @lodestar/engine-api-client
 Provides method for interacting with the Engine API of the execution layer client as defined in [Engine JSON-RPC API](https://github.com/ethereum/execution-apis/tree/main/src/engine)
 
 ```ts
- const baseUrl = http://localhost:8551 // running execution layer client
+import {ExecutionEngineHttp} from "@lodestar/engine-api-client";
+import {ForkName} from "@lodestar/params";
+import {bytesToData} from "@lodestar/utils";
+
+ const baseUrl = "http://localhost:8551" // running execution layer client
  const controller = new AbortController()
- const jwtSecretHex = "" // "jwt secret shared with execution layer client"
+ const jwtSecretHex = "25030...101299" // "64 char, jwt secret shared with execution layer client"
 
  const executionEngine = new ExecutionEngineHttp(
    {
@@ -37,7 +41,11 @@ Provides method for interacting with the Engine API of the execution layer clien
  );
 
  // Prepare a payload
+ const genesisBlockHash = "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174";
+ const safeBlockHash = "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174";
+ const finalizedBlockHash = "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174";
  const payloadId = await executionEngine.notifyForkchoiceUpdate(
+  ForkName.bellatrix,
   genesisBlockHash,
   safeBlockHash,
   finalizedBlockHash,
@@ -45,17 +53,23 @@ Provides method for interacting with the Engine API of the execution layer clien
       timestamp: 1670578479,
       prevRandao: "0x58cab4a6ffcd733cacb4c9f13d71fe0ed53c7b75163c616f8fb86d7c7c2fcabf",
       suggestedFeeRecipient: "0xAb5801a7D398351b8bE11C439e05C5B3259aeC9B",
+      fork: ForkName.bellatrix
   }
  );
 
  // Getting payload
- const payload = await executionEngine.getPayload(payloadId);
+ if (payloadId === null) {
+  throw Error("notifyForkchoiceUpdate returned payloadId null");
+ }
+ 
+ const payload = await executionEngine.getPayload(ForkName.bellatrix, payloadId);
 
  // Execute payload
- const payloadResult = await executionEngine.notifyNewPayload(payload);
+ const payloadResult = await executionEngine.notifyNewPayload(ForkName.bellatrix, payload);
 
  // Update the fork choice
  await executionEngine.notifyForkchoiceUpdate(
+     ForkName.bellatrix,
      bytesToData(payload.blockHash),
      safeBlockHash,
      genesisBlockHash
