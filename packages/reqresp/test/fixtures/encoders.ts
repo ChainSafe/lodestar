@@ -58,9 +58,10 @@ export const requestEncodersErrorCases: {
   },
 ];
 
-export type ResponseChunk =
-  | {status: RespStatus.SUCCESS; payload: EncodedPayload<unknown>}
-  | {status: Exclude<RespStatus, RespStatus.SUCCESS>; errorMessage: string};
+export type SuccessResponseChunk = {status: RespStatus.SUCCESS; payload: EncodedPayload<unknown>};
+export type ErrorResponseChunk = {status: Exclude<RespStatus, RespStatus.SUCCESS>; errorMessage: string};
+
+export type ResponseChunk = SuccessResponseChunk | ErrorResponseChunk;
 
 export const responseEncodersTestCases: {
   id: string;

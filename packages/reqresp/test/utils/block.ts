@@ -64,6 +64,7 @@ export function blocksToReqRespBlockResponses(
     const sszType = config
       ? config.getForkTypes(slot).SignedBeaconBlock
       : defaultConfig.getForkTypes(slot).SignedBeaconBlock;
+
     return {
       type: EncodedPayloadType.bytes,
       bytes: Buffer.from(sszType.serialize(block)),
