@@ -99,6 +99,9 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
   // Collect NodeJS metrics defined in the Lodestar repo
 
   if (metrics) {
+    // eslint-disable-next-line @typescript-eslint/naming-convention
+    register.setDefaultLabels({scrape_location: "validator"});
+
     collectNodeJSMetrics(register);
 
     const port = args["metrics.port"] ?? validatorMetricsDefaultOptions.port;

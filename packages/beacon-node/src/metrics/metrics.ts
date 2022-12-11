@@ -33,6 +33,9 @@ export function createMetrics(
     lodestar.unhandledPromiseRejections.inc();
   });
 
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  register.setDefaultLabels({scrape_location: "beacon"});
+
   collectNodeJSMetrics(register);
 
   // Merge external registries
