@@ -14,7 +14,6 @@ import {Eth2Gossipsub, getConnectionsMap, NetworkEvent, NetworkEventBus} from ".
 import {PeersData} from "../../../../src/network/peers/peersData.js";
 import {createNode, getAttnets, getSyncnets} from "../../../utils/network.js";
 import {MockBeaconChain} from "../../../utils/mocks/chain/chain.js";
-import {generateEmptySignedBlock} from "../../../utils/block.js";
 import {generateState} from "../../../utils/state.js";
 import {waitForEvent} from "../../../utils/events/resolver.js";
 import {testLogger} from "../../../utils/logger.js";
@@ -37,7 +36,7 @@ describe("network / peers / PeerManager", function () {
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async function mockModules() {
     // Setup fake chain
-    const block = generateEmptySignedBlock();
+    const block = ssz.phase0.SignedBeaconBlock.defaultValue();
     const state = generateState({
       finalizedCheckpoint: {
         epoch: 0,

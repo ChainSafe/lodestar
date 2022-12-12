@@ -12,7 +12,6 @@ import {createIBeaconConfig, IChainForkConfig} from "@lodestar/config";
 import {FAR_FUTURE_EPOCH, ForkName, ForkSeq, MAX_EFFECTIVE_BALANCE, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 
 import bls from "@chainsafe/bls";
-import {generateEmptyBlock} from "./block.js";
 import {generateValidator, generateValidators} from "./validator.js";
 import {getConfig} from "./config.js";
 
@@ -63,7 +62,7 @@ export function generateState(
   state.genesisTime = Math.floor(Date.now() / 1000);
   state.fork.previousVersion = config.GENESIS_FORK_VERSION;
   state.fork.currentVersion = config.GENESIS_FORK_VERSION;
-  state.latestBlockHeader.bodyRoot = ssz.phase0.BeaconBlockBody.hashTreeRoot(generateEmptyBlock().body);
+  state.latestBlockHeader.bodyRoot = ssz.phase0.BeaconBlockBody.hashTreeRoot(ssz.phase0.BeaconBlockBody.defaultValue());
   state.validators = validators;
   state.balances = Array.from({length: numValidators}, () => MAX_EFFECTIVE_BALANCE);
 

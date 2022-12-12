@@ -4,7 +4,6 @@ import {MAX_DEPOSITS} from "@lodestar/params";
 import {verifyMerkleBranch} from "@lodestar/utils";
 import {filterBy} from "../../../utils/db.js";
 import {Eth1ErrorCode} from "../../../../src/eth1/errors.js";
-import {generateDepositData, generateDepositEvent} from "../../../utils/deposit.js";
 import {generateState} from "../../../utils/state.js";
 import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
 import {getDeposits, getDepositsWithProofs, DepositGetter} from "../../../../src/eth1/utils/deposits.js";
@@ -151,5 +150,16 @@ function generateEth1Data(depositCount: number, depositRootTree?: DepositTree): 
     blockHash: Buffer.alloc(32),
     depositRoot: depositRootTree ? depositRootTree.sliceTo(depositCount - 1).hashTreeRoot() : Buffer.alloc(32),
     depositCount,
+  };
+}
+
+function generateDepositEvent(index: number, blockNumber = 0): phase0.DepositEvent {
+  const depositData = ssz.phase0.DepositData.defaultValue();
+  depositData.amount = 32 * 10 * 9;
+
+  return {
+    index,
+    blockNumber,
+    depositData,
   };
 }

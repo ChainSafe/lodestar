@@ -12,7 +12,7 @@ import {
 } from "../../../../../../src/api/impl/beacon/state/utils.js";
 import {IBeaconChain} from "../../../../../../src/chain/index.js";
 import {PERSIST_STATE_EVERY_EPOCHS} from "../../../../../../src/chain/archiver/archiveStates.js";
-import {generateProtoBlock} from "../../../../../utils/block.js";
+import {generateProtoBlock} from "../../../../../utils/typeGenerator.js";
 import {generateCachedAltairState, generateCachedState, generateState} from "../../../../../utils/state.js";
 import {StubbedBeaconDb} from "../../../../../utils/stub/index.js";
 

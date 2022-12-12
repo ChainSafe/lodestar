@@ -1,8 +1,7 @@
 import {expect} from "chai";
 import {config} from "@lodestar/config/default";
 import {FAR_FUTURE_EPOCH, MAX_EFFECTIVE_BALANCE} from "@lodestar/params";
-import {phase0} from "@lodestar/types";
-import {generateAttestationData} from "../../utils/attestation.js";
+import {phase0, ssz} from "@lodestar/types";
 import {EMPTY_SIGNATURE} from "../../../src/index.js";
 import {generateCachedState} from "../../utils/state.js";
 import {generateValidators} from "../../utils/validator.js";
@@ -38,7 +37,9 @@ describe("validate indexed attestation", () => {
 
   for (const testValue of testValues) {
     it(testValue.name, function () {
-      const attestationData = generateAttestationData(0, 1);
+      const attestationData = ssz.phase0.AttestationData.defaultValue();
+      attestationData.source.epoch = 0;
+      attestationData.target.epoch = 1;
 
       const indexedAttestation: phase0.IndexedAttestation = {
         attestingIndices: testValue.indices,
