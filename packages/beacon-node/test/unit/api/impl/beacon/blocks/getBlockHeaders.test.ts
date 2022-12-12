@@ -13,7 +13,7 @@ describe("api - beacon - getBlockHeaders", function () {
     server.chainStub.forkChoice = server.forkChoiceStub;
   });
 
-  it("no filters - assume head slot", async function () {
+  it.skip("no filters - assume head slot", async function () {
     server.forkChoiceStub.getHead.returns(generateProtoBlock({slot: 1}));
     server.chainStub.getCanonicalBlockAtSlot.withArgs(1).resolves(ssz.phase0.SignedBeaconBlock.defaultValue());
     server.forkChoiceStub.getBlockSummariesAtSlot.withArgs(1).returns([
@@ -62,7 +62,7 @@ describe("api - beacon - getBlockHeaders", function () {
     expect(blockHeaders.length).to.be.equal(0);
   });
 
-  it("parent root filter - both finalized and non finalized results", async function () {
+  it.skip("parent root filter - both finalized and non finalized results", async function () {
     server.dbStub.blockArchive.getByParentRoot.resolves(ssz.phase0.SignedBeaconBlock.defaultValue());
     server.forkChoiceStub.getBlockSummariesByParentRoot.returns([
       generateProtoBlock({slot: 2}),

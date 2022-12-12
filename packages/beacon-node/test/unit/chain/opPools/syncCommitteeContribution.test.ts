@@ -14,6 +14,7 @@ import {
 import {InsertOutcome} from "../../../../src/chain/opPools/types.js";
 import {EMPTY_SIGNATURE} from "../../../../src/constants/index.js";
 import {renderBitArray} from "../../../utils/render.js";
+import {VALID_BLS_SIGNATURE_RAND} from "../../../utils/typeGenerator.js";
 
 describe("chain / opPools / SyncContributionAndProofPool", function () {
   let cache: SyncContributionAndProofPool;
@@ -23,6 +24,7 @@ describe("chain / opPools / SyncContributionAndProofPool", function () {
   const contributionAndProof = ssz.altair.ContributionAndProof.defaultValue();
   contributionAndProof.contribution.slot = slot;
   contributionAndProof.contribution.beaconBlockRoot = beaconBlockRoot;
+  contributionAndProof.contribution.signature = VALID_BLS_SIGNATURE_RAND;
 
   beforeEach(() => {
     cache = new SyncContributionAndProofPool();
