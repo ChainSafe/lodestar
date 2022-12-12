@@ -16,10 +16,8 @@ export const Status: ProtocolDefinitionGenerator<phase0.Status, phase0.Status> =
       /**
        * Status is exchanged during handshake process, but peer can ask for it again.
        * We don't want to be flooded with status requests, so we limit it.
-       * For total we multiply with `defaultNetworkOptions.maxPeers`
        */
       byPeer: {quota: 5, quotaTime: seconds(15)},
-      total: {quota: 275, quotaTime: seconds(15)},
     },
   };
 };

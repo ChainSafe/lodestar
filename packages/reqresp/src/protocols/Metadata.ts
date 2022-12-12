@@ -5,10 +5,8 @@ import {seconds} from "./utils.js";
 export const metadataInboundRateLimit = {
   /**
    * One peer does not request a lot of metadata
-   * For total we multiply with `defaultNetworkOptions.maxPeers`
    */
   byPeer: {quota: 2, quotaTime: seconds(5)},
-  total: {quota: 110, quotaTime: seconds(5)},
 };
 
 // eslint-disable-next-line @typescript-eslint/naming-convention

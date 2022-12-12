@@ -16,10 +16,8 @@ export const Goodbye: ProtocolDefinitionGenerator<phase0.Goodbye, phase0.Goodbye
     inboundRateLimits: {
       /**
        * A peer can send good bye once and then reconnect in 10 seconds.
-       * For total we multiply with `defaultNetworkOptions.maxPeers`
        */
       byPeer: {quota: 1, quotaTime: seconds(10)},
-      total: {quota: 55, quotaTime: seconds(10)},
     },
   };
 };

@@ -16,10 +16,8 @@ export function Ping(handler: ReqRespHandler<phase0.Ping, phase0.Ping>): Protoco
     inboundRateLimits: {
       /**
        * One peer ping not a lot of times if connection is active, if not once per 10 seconds.
-       * For total we multiply with `defaultNetworkOptions.maxPeers`
        */
       byPeer: {quota: 1, quotaTime: seconds(10)},
-      total: {quota: 55, quotaTime: seconds(10)},
     },
   };
 }
