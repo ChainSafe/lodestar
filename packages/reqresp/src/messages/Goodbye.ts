@@ -1,6 +1,6 @@
 import {phase0, ssz} from "@lodestar/types";
 import {ContextBytesType, Encoding, ProtocolDefinitionGenerator} from "../types.js";
-import {minutes} from "./utils.js";
+import {seconds} from "./utils.js";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
 export const Goodbye: ProtocolDefinitionGenerator<phase0.Goodbye, phase0.Goodbye> = (_modules, handler) => {
@@ -15,11 +15,11 @@ export const Goodbye: ProtocolDefinitionGenerator<phase0.Goodbye, phase0.Goodbye
     contextBytes: {type: ContextBytesType.Empty},
     inboundRateLimits: {
       /**
-       * Metadata is part of handshake process, so we keep it
-       * equivalent to status message
+       * A peer can send good bye once and then reconnect in 10 seconds.
+       * For total we multiply with `defaultNetworkOptions.maxPeers`
        */
-      byPeer: {quota: 2, quotaTime: minutes(1)},
-      total: {quota: 50, quotaTime: minutes(1)},
+      byPeer: {quota: 1, quotaTime: seconds(10)},
+      total: {quota: 55, quotaTime: seconds(10)},
     },
   };
 };

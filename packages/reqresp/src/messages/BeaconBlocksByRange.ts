@@ -1,6 +1,21 @@
 import {allForks, phase0, ssz} from "@lodestar/types";
-import {ContextBytesType, Encoding, ProtocolDefinitionGenerator} from "../types.js";
-import {minutes} from "./utils.js";
+import {ContextBytesType, Encoding, InboundRateLimitQuota, ProtocolDefinitionGenerator} from "../types.js";
+import {seconds} from "./utils.js";
+
+export const blocksByRangeInboundRateLimit: InboundRateLimitQuota<phase0.BeaconBlocksByRangeRequest> = {
+  /**
+   * One peer can request maximum blocks upto `MAX_REQUEST_BLOCKS` which is default to `1024`.
+   * This limit can be consumed by peer in 10 seconds. Allowing him to send multiple requests
+   * with lower limits or less requests with higher limit.
+   *
+   * 10 seconds is chosen to be fair but can be updated in future.
+   *
+   * For total we multiply with `defaultNetworkOptions.maxPeers`.
+   */
+  byPeer: {quota: 1024, quotaTime: seconds(10)},
+  total: {quota: 56320, quotaTime: seconds(10)},
+  getRequestCount: (req) => req.count,
+};
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
 export const BeaconBlocksByRange: ProtocolDefinitionGenerator<
@@ -16,16 +31,6 @@ export const BeaconBlocksByRange: ProtocolDefinitionGenerator<
     responseType: (forkName) => ssz[forkName].SignedBeaconBlock,
     renderRequestBody: (req) => `${req.startSlot},${req.step},${req.count}`,
     contextBytes: {type: ContextBytesType.Empty},
-    inboundRateLimits: {
-      /**
-       * Nodes uses these endpoint during the sync to fetch blocks.
-       * If we restrict too much we can get into a situation where nodes can't sync from us.
-       * Higher range may end-up in a DOS attack.
-       * So we try to use optimistic values. We can always tune this later.
-       */
-      byPeer: {quota: 500, quotaTime: minutes(1)},
-      total: {quota: 2000, quotaTime: minutes(1)},
-      getRequestCount: (req) => req.count,
-    },
+    inboundRateLimits: blocksByRangeInboundRateLimit,
   };
 };

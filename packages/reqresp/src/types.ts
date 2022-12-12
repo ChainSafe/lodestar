@@ -33,6 +33,16 @@ export interface Protocol {
   readonly encoding: Encoding;
 }
 
+export interface InboundRateLimitQuota<Req = unknown> {
+  // Will be tracked for the protocol per peer
+  byPeer: RateLimiterQuota;
+  // Will be tracked regardless of the peer
+  total: RateLimiterQuota;
+  // Some requests may be counted multiple e.g. getBlocksByRange
+  // for such implement this method else `1` will be used default
+  getRequestCount?: (req: Req) => number;
+}
+
 // `protocolPrefix` is added runtime so not part of definition
 export interface ProtocolDefinition<Req = unknown, Resp = unknown> extends Omit<Protocol, "protocolPrefix"> {
   handler: ReqRespHandler<Req, Resp>;
@@ -42,15 +52,7 @@ export interface ProtocolDefinition<Req = unknown, Resp = unknown> extends Omit<
   responseType: (fork: ForkName) => TypeSerializer<Resp>;
   renderRequestBody?: (request: Req) => string;
   contextBytes: ContextBytesFactory<Resp>;
-  inboundRateLimits: {
-    // Will be tracked for the protocol per peer
-    byPeer: RateLimiterQuota;
-    // Will be tracked regardless of the peer
-    total: RateLimiterQuota;
-    // Some requests may be counted multiple e.g. getBlocksByRange
-    // for such implement this method else `1` will be used default
-    getRequestCount?: (req: Req) => number;
-  };
+  inboundRateLimits: InboundRateLimitQuota<Req>;
 }
 
 export type ProtocolDefinitionGenerator<Req, Res> = (

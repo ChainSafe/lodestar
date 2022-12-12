@@ -15,10 +15,11 @@ export function Ping(handler: ReqRespHandler<phase0.Ping, phase0.Ping>): Protoco
     contextBytes: {type: ContextBytesType.Empty},
     inboundRateLimits: {
       /**
-       * Ping is a very light message, we can allow more peers to connect
+       * One peer ping not a lot of times if connection is active, if not once per 10 seconds.
+       * For total we multiply with `defaultNetworkOptions.maxPeers`
        */
       byPeer: {quota: 1, quotaTime: seconds(10)},
-      total: {quota: 50, quotaTime: seconds(10)},
+      total: {quota: 55, quotaTime: seconds(10)},
     },
   };
 }
