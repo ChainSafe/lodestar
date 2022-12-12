@@ -14,4 +14,6 @@ packages/cli/bin/lodestar dev \
   --metrics \
   --logLevel debug \
   --eth1 false \
-
+  --network.requestCountPeerLimit 1000000 \
+  --network.blockCountTotalLimit 1000000 \
+  --network.blockCountPeerLimit 1000000
