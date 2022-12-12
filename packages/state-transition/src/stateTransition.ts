@@ -29,7 +29,8 @@ import {ProcessBlockOpts} from "./block/types.js";
 
 // NOTE EIP-4844: Mandatory BlockExternalData to decide if block is available or not
 export type StateTransitionOpts = BlockExternalData &
-  EpochProcessOpts & ProcessBlockOpts & {
+  EpochProcessOpts &
+  ProcessBlockOpts & {
     verifyStateRoot?: boolean;
     verifyProposer?: boolean;
     verifySignatures?: boolean;

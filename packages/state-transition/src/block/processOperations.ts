@@ -23,7 +23,7 @@ export function processOperations(
   fork: ForkSeq,
   state: CachedBeaconStateAllForks,
   body: allForks.BeaconBlockBody,
-  opts: ProcessBlockOpts = {verifySignatures: true},
+  opts: ProcessBlockOpts = {verifySignatures: true}
 ): void {
   // verify that outstanding deposits are processed up to the maximum number of deposits
   const maxDeposits = Math.min(MAX_DEPOSITS, state.eth1Data.depositCount - state.eth1DepositIndex);
