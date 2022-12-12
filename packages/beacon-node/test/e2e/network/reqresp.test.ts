@@ -14,7 +14,7 @@ import {
   EncodedPayloadType,
   EncodedPayload,
 } from "@lodestar/reqresp";
-import * as messages from "@lodestar/reqresp/messages";
+import * as protocols from "@lodestar/reqresp/protocols";
 import {altair, phase0, Root, ssz} from "@lodestar/types";
 import {sleep as _sleep} from "@lodestar/utils";
 import {GossipHandlers} from "../../../src/network/gossip/index.js";
@@ -92,7 +92,7 @@ describe("network / ReqResp", function () {
           type: EncodedPayloadType.ssz,
           data: chain.getStatus(),
         };
-      } as HandlerTypeFromMessage<typeof messages.Status>,
+      } as HandlerTypeFromMessage<typeof protocols.Status>,
       onBeaconBlocksByRange: notImplemented,
       onBeaconBlocksByRoot: notImplemented,
       onLightClientBootstrap: notImplemented,
@@ -182,7 +182,7 @@ describe("network / ReqResp", function () {
     const [netA, netB] = await createAndConnectPeers({
       onStatus: async function* onRequest() {
         yield {type: EncodedPayloadType.ssz, data: statusNetB};
-      } as HandlerTypeFromMessage<typeof messages.Status>,
+      } as HandlerTypeFromMessage<typeof protocols.Status>,
     });
 
     const receivedStatus = await netA.reqResp.status(netB.peerId, statusNetA);
@@ -201,7 +201,7 @@ describe("network / ReqResp", function () {
     const [netA, netB] = await createAndConnectPeers({
       onBeaconBlocksByRange: async function* () {
         yield* arrToSource(blocksToReqRespBlockResponses(blocks));
-      } as HandlerTypeFromMessage<typeof messages.BeaconBlocksByRange>,
+      } as HandlerTypeFromMessage<typeof protocols.BeaconBlocksByRange>,
     });
 
     const returnedBlocks = await netA.reqResp.beaconBlocksByRange(netB.peerId, req);
@@ -224,7 +224,7 @@ describe("network / ReqResp", function () {
           type: EncodedPayloadType.ssz,
           data: expectedValue,
         };
-      } as HandlerTypeFromMessage<typeof messages.LightClientBootstrap>,
+      } as HandlerTypeFromMessage<typeof protocols.LightClientBootstrap>,
     });
 
     const returnedValue = await netA.reqResp.lightClientBootstrap(netB.peerId, root);
@@ -240,7 +240,7 @@ describe("network / ReqResp", function () {
           type: EncodedPayloadType.ssz,
           data: expectedValue,
         };
-      } as HandlerTypeFromMessage<typeof messages.LightClientOptimisticUpdate>,
+      } as HandlerTypeFromMessage<typeof protocols.LightClientOptimisticUpdate>,
     });
 
     const returnedValue = await netA.reqResp.lightClientOptimisticUpdate(netB.peerId);
@@ -256,7 +256,7 @@ describe("network / ReqResp", function () {
           type: EncodedPayloadType.ssz,
           data: expectedValue,
         };
-      } as HandlerTypeFromMessage<typeof messages.LightClientFinalityUpdate>,
+      } as HandlerTypeFromMessage<typeof protocols.LightClientFinalityUpdate>,
     });
 
     const returnedValue = await netA.reqResp.lightClientFinalityUpdate(netB.peerId);
@@ -278,7 +278,7 @@ describe("network / ReqResp", function () {
     const [netA, netB] = await createAndConnectPeers({
       onLightClientUpdatesByRange: async function* () {
         yield* arrToSource(lightClientUpdates);
-      } as HandlerTypeFromMessage<typeof messages.LightClientUpdatesByRange>,
+      } as HandlerTypeFromMessage<typeof protocols.LightClientUpdatesByRange>,
     });
 
     const returnedUpdates = await netA.reqResp.lightClientUpdatesByRange(netB.peerId, req);
@@ -323,7 +323,7 @@ describe("network / ReqResp", function () {
       onBeaconBlocksByRange: async function* onRequest() {
         yield* arrToSource(blocksToReqRespBlockResponses(generateEmptySignedBlocks(2)));
         throw Error(testErrorMessage);
-      } as HandlerTypeFromMessage<typeof messages.BeaconBlocksByRange>,
+      } as HandlerTypeFromMessage<typeof protocols.BeaconBlocksByRange>,
     });
 
     await expectRejectedWithLodestarError(
@@ -344,7 +344,7 @@ describe("network / ReqResp", function () {
           // Wait for too long before sending first response chunk
           await sleep(ttfbTimeoutMs * 10);
           yield generateEmptyReqRespBlockResponse();
-        } as HandlerTypeFromMessage<typeof messages.BeaconBlocksByRange>,
+        } as HandlerTypeFromMessage<typeof protocols.BeaconBlocksByRange>,
       },
       {ttfbTimeoutMs}
     );
@@ -368,7 +368,7 @@ describe("network / ReqResp", function () {
           // Wait for too long before sending second response chunk
           await sleep(respTimeoutMs * 5);
           yield generateEmptyReqRespBlockResponse();
-        } as HandlerTypeFromMessage<typeof messages.BeaconBlocksByRange>,
+        } as HandlerTypeFromMessage<typeof protocols.BeaconBlocksByRange>,
       },
       {respTimeoutMs}
     );
@@ -407,7 +407,7 @@ describe("network / ReqResp", function () {
         onBeaconBlocksByRange: async function* onRequest() {
           yield generateEmptyReqRespBlockResponse();
           await sleep(100000000);
-        } as HandlerTypeFromMessage<typeof messages.BeaconBlocksByRange>,
+        } as HandlerTypeFromMessage<typeof protocols.BeaconBlocksByRange>,
       },
       {respTimeoutMs: 250, ttfbTimeoutMs: 250}
     );

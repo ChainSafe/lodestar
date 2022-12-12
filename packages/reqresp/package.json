@@ -17,8 +17,8 @@
     ".": {
       "import": "./lib/index.js"
     },
-    "./messages": {
-      "import": "./lib/messages/index.js"
+    "./protocols": {
+      "import": "./lib/protocols/index.js"
     },
     "./rate_limiter": {
       "import": "./lib/rate_limiter/index.js"
