@@ -39,7 +39,7 @@ export class ExecutionEngineMock implements IExecutionEngine {
   readonly payloadIdCache = new PayloadIdCache();
 
   /** Known valid blocks, both pre-merge and post-merge */
-  private readonly validBlocks = new Map<RootHex, ExecutionBlock>();
+  readonly validBlocks = new Map<RootHex, ExecutionBlock>();
   /** Preparing payloads to be retrieved via engine_getPayloadV1 */
   private readonly preparingPayloads = new Map<number, bellatrix.ExecutionPayload>();
 
