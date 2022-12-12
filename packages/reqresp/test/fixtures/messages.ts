@@ -31,9 +31,7 @@ export const sszSnappyPing: MessageFixture<phase0.Ping> = {
     "0x08", // length prefix
     "0xff060000734e61507059", // snappy frames header
     "0x010c00000175de410100000000000000", // snappy frames content
-  ]
-    .map(fromHexString)
-    .map(Buffer.from),
+  ].map((d) => Buffer.from(fromHexString(d))),
 };
 
 export const sszSnappyStatus: MessageFixture<phase0.Status> = {
@@ -52,9 +50,7 @@ export const sszSnappyStatus: MessageFixture<phase0.Status> = {
     "0x54", // length prefix
     "0xff060000734e61507059", // snappy frames header
     "0x001b0000097802c15400da8a010004090009017e2b001c0900000000000000",
-  ]
-    .map(fromHexString)
-    .map(Buffer.from),
+  ].map((d) => Buffer.from(fromHexString(d))),
   chunks: ["0x54", "0xff060000734e61507059001b0000097802c15400da8a010004090009017e2b001c0900000000000000"].map(
     (s) => new Uint8ArrayList(fromHexString(s))
   ),
@@ -92,9 +88,7 @@ export const sszSnappySignedBeaconBlockPhase0: MessageFixture<phase0.SignedBeaco
     "0x9403",
     "0xff060000734e61507059",
     "0x00340000fff3b3f594031064000000dafe01007a010004090009011108fe6f000054feb4008ab4007e0100fecc0011cc0cdc0000003e0400",
-  ]
-    .map(fromHexString)
-    .map(Buffer.from),
+  ].map((d) => Buffer.from(fromHexString(d))),
   chunks: [
     "0x9403",
     "0xff060000734e6150705900340000fff3b3f594031064000000dafe01007a010004090009011108fe6f000054feb4008ab4007e0100fecc0011cc0cdc0000003e0400",
@@ -121,9 +115,7 @@ export const sszSnappySignedBeaconBlockAltair: MessageFixture<altair.SignedBeaco
     "0xf803", // length prefix
     "0xff060000734e61507059", // snappy frames header
     "0x003f0000ee14ab0df8031064000000dafe01007a01000c995f0100010100090105ee70000d700054ee44000d44fe0100fecc0011cc0c400100003e0400fe01008e0100",
-  ]
-    .map(fromHexString)
-    .map(Buffer.from),
+  ].map((d) => Buffer.from(fromHexString(d))),
   chunks: [
     "0xb404",
     "0xff060000734e6150705900420000bab7f8feb4041064000000dafe01007a01000c995f0100010100090105ee70000d700054ee44000d44fe0100fecc0011cc0c7c0100003e0400fe0100fe01007e0100",

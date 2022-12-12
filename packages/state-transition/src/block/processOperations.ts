@@ -1,14 +1,22 @@
-import {allForks} from "@lodestar/types";
+import {allForks, capella} from "@lodestar/types";
 import {ForkSeq, MAX_DEPOSITS} from "@lodestar/params";
 
-import {CachedBeaconStateAllForks} from "../types.js";
+import {CachedBeaconStateAllForks, CachedBeaconStateCapella} from "../types.js";
 import {processAttestations} from "./processAttestations.js";
 import {processProposerSlashing} from "./processProposerSlashing.js";
 import {processAttesterSlashing} from "./processAttesterSlashing.js";
 import {processDeposit} from "./processDeposit.js";
 import {processVoluntaryExit} from "./processVoluntaryExit.js";
+import {processBlsToExecutionChange} from "./processBlsToExecutionChange.js";
 
-export {processProposerSlashing, processAttesterSlashing, processAttestations, processDeposit, processVoluntaryExit};
+export {
+  processProposerSlashing,
+  processAttesterSlashing,
+  processAttestations,
+  processDeposit,
+  processVoluntaryExit,
+  processBlsToExecutionChange,
+};
 
 export function processOperations(
   fork: ForkSeq,
@@ -38,5 +46,11 @@ export function processOperations(
   }
   for (const voluntaryExit of body.voluntaryExits) {
     processVoluntaryExit(state, voluntaryExit, verifySignatures);
+  }
+
+  if (fork >= ForkSeq.capella) {
+    for (const blsToExecutionChange of (body as capella.BeaconBlockBody).blsToExecutionChanges) {
+      processBlsToExecutionChange(state as CachedBeaconStateCapella, blsToExecutionChange);
+    }
   }
 }

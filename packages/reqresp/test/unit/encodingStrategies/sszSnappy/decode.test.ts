@@ -11,7 +11,6 @@ import {
   encodingStrategiesTestCases,
 } from "../../../fixtures/index.js";
 import {arrToSource} from "../../../utils/index.js";
-import {isEqualSszType} from "../../../utils/ssz.js";
 
 chai.use(chaiAsPromised);
 
@@ -19,8 +18,12 @@ describe("encodingStrategies / sszSnappy / decode", () => {
   for (const {id, type, payload, chunks} of encodingStrategiesTestCases) {
     it(id, async () => {
       const bufferedSource = new BufferedSource(arrToSource(chunks));
-      const bodyResult = await readSszSnappyPayload(bufferedSource, type as TypeSerializer<unknown>);
-      expect(isEqualSszType(type, bodyResult, payload.data)).to.equal(true, "Wrong decoded body");
+      const serializer = type as TypeSerializer<typeof payload.data>;
+      const bodyResult = await readSszSnappyPayload(bufferedSource, serializer);
+      // To convert from Buffer values to Uint8Array values
+      const payloadInUint8ArrayValues = serializer.deserialize(serializer.serialize(payload.data));
+
+      expect(bodyResult).to.deep.equal(payloadInUint8ArrayValues, "Wrong decoded body");
     });
   }
 
@@ -36,7 +39,8 @@ describe("encodingStrategies / sszSnappy / decode", () => {
       it(id, async () => {
         const bufferedSource = new BufferedSource(arrToSource([streamedBytes]));
         const bodyResult = await readSszSnappyPayload(bufferedSource, serializer);
-        expect(isEqualSszType(serializer, bodyResult, deserializedBody)).to.equal(true, "Wrong decoded body");
+
+        expect(bodyResult).to.deep.equal(deserializedBody, "Wrong decoded body");
       });
     }
   });

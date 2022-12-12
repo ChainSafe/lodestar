@@ -59,6 +59,7 @@ describe("options / beaconNodeOptions", () => {
       bootnodes: ["enr:-somedata"],
       targetPeers: 25,
       subscribeAllSubnets: true,
+      mdns: false,
       "network.maxPeers": 30,
       "network.connectToDiscv5Bootnodes": true,
       "network.discv5FirstQueryDelayMs": 1000,
@@ -148,6 +149,7 @@ describe("options / beaconNodeOptions", () => {
         gossipsubDLow: 2,
         gossipsubDHigh: 6,
         gossipsubAwaitHandler: true,
+        mdns: false,
       },
       sync: {
         isSingleNode: true,

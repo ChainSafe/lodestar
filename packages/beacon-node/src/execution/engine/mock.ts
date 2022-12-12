@@ -1,8 +1,14 @@
 import crypto from "node:crypto";
-import {bellatrix, RootHex} from "@lodestar/types";
+import {
+  kzgCommitmentToVersionedHash,
+  OPAQUE_TX_BLOB_VERSIONED_HASHES_OFFSET,
+  OPAQUE_TX_MESSAGE_OFFSET,
+} from "@lodestar/state-transition";
+import {allForks, bellatrix, eip4844, RootHex, ssz} from "@lodestar/types";
 import {fromHex, toHex} from "@lodestar/utils";
-import {BYTES_PER_LOGS_BLOOM} from "@lodestar/params";
-import {ZERO_HASH, ZERO_HASH_HEX} from "../../constants/index.js";
+import {BYTES_PER_FIELD_ELEMENT, FIELD_ELEMENTS_PER_BLOB, BLOB_TX_TYPE, ForkName, ForkSeq} from "@lodestar/params";
+import {ZERO_HASH_HEX} from "../../constants/index.js";
+import {ckzg} from "../../util/kzg.js";
 import {
   ExecutePayloadStatus,
   ExecutePayloadResponse,
@@ -11,8 +17,11 @@ import {
   PayloadAttributes,
   PayloadIdCache,
   TransitionConfigurationV1,
+  BlobsBundle,
 } from "./interface.js";
+
 const INTEROP_GAS_LIMIT = 30e6;
+const PRUNE_PAYLOAD_ID_AFTER_MS = 5000;
 
 export type ExecutionEngineMockOpts = {
   genesisBlockHash: string;
@@ -23,6 +32,13 @@ type ExecutionBlock = {
   blockHash: RootHex;
   timestamp: number;
   blockNumber: number;
+};
+
+const TX_TYPE_EIP1559 = 2;
+
+type PreparedPayload = {
+  executionPayload: allForks.ExecutionPayload;
+  blobsBundle: BlobsBundle;
 };
 
 /**
@@ -38,7 +54,8 @@ export class ExecutionEngineMock implements IExecutionEngine {
   /** Known valid blocks, both pre-merge and post-merge */
   private readonly validBlocks = new Map<RootHex, ExecutionBlock>();
   /** Preparing payloads to be retrieved via engine_getPayloadV1 */
-  private readonly preparingPayloads = new Map<number, bellatrix.ExecutionPayload>();
+  private readonly preparingPayloads = new Map<number, PreparedPayload>();
+  private readonly payloadsForDeletion = new Map<number, number>();
 
   private payloadId = 0;
 
@@ -54,7 +71,10 @@ export class ExecutionEngineMock implements IExecutionEngine {
   /**
    * `engine_newPayloadV1`
    */
-  async notifyNewPayload(executionPayload: bellatrix.ExecutionPayload): Promise<ExecutePayloadResponse> {
+  async notifyNewPayload(
+    _fork: ForkName,
+    executionPayload: bellatrix.ExecutionPayload
+  ): Promise<ExecutePayloadResponse> {
     const blockHash = toHex(executionPayload.blockHash);
     const parentHash = toHex(executionPayload.parentHash);
 
@@ -105,6 +125,7 @@ export class ExecutionEngineMock implements IExecutionEngine {
    * `engine_forkchoiceUpdatedV1`
    */
   async notifyForkchoiceUpdate(
+    _fork: ForkName,
     headBlockHash: RootHex,
     safeBlockHash: RootHex,
     finalizedBlockHash: RootHex,
@@ -174,21 +195,51 @@ export class ExecutionEngineMock implements IExecutionEngine {
       //    identified via buildProcessId value if payloadAttributes is not null and the forkchoice state has been
       //    updated successfully. The build process is specified in the Payload building section.
       const payloadId = this.payloadId++;
+
+      // Generate empty payload first to be correct with respect to fork
+      const executionPayload = ssz[payloadAttributes.fork].ExecutionPayload.defaultValue();
+
+      // Make executionPayload valid
+      executionPayload.parentHash = fromHex(headBlockHash);
+      executionPayload.feeRecipient = fromHex(payloadAttributes.suggestedFeeRecipient);
+      executionPayload.prevRandao = payloadAttributes.prevRandao;
+      executionPayload.blockNumber = headBlock.blockNumber + 1;
+      executionPayload.gasLimit = INTEROP_GAS_LIMIT;
+      executionPayload.gasUsed = Math.floor(0.5 * INTEROP_GAS_LIMIT);
+      executionPayload.timestamp = payloadAttributes.timestamp;
+      executionPayload.blockHash = crypto.randomBytes(32);
+      executionPayload.transactions = [];
+
+      // Between 0 and 4 transactions for all forks
+      const eip1559TxCount = Math.round(4 * Math.random());
+      for (let i = 0; i < eip1559TxCount; i++) {
+        const tx = crypto.randomBytes(512);
+        tx[0] = TX_TYPE_EIP1559;
+        executionPayload.transactions.push(tx);
+      }
+
+      const kzgs: eip4844.KZGCommitment[] = [];
+      const blobs: eip4844.Blob[] = [];
+
+      // if post eip4844, add between 0 and 2 blob transactions
+      if (ForkSeq[payloadAttributes.fork] >= ForkSeq.eip4844) {
+        const eip4844TxCount = Math.round(2 * Math.random());
+        for (let i = 0; i < eip4844TxCount; i++) {
+          const blob = generateRandomBlob();
+          const kzg = ckzg.blobToKzgCommitment(blob);
+          executionPayload.transactions.push(transactionForKzgCommitment(kzg));
+          kzgs.push(kzg);
+          blobs.push(blob);
+        }
+      }
+
       this.preparingPayloads.set(payloadId, {
-        parentHash: fromHex(headBlockHash),
-        feeRecipient: fromHex(payloadAttributes.suggestedFeeRecipient),
-        stateRoot: crypto.randomBytes(32),
-        receiptsRoot: crypto.randomBytes(32),
-        logsBloom: crypto.randomBytes(BYTES_PER_LOGS_BLOOM),
-        prevRandao: payloadAttributes.prevRandao,
-        blockNumber: headBlock.blockNumber + 1,
-        gasLimit: INTEROP_GAS_LIMIT,
-        gasUsed: Math.floor(0.5 * INTEROP_GAS_LIMIT),
-        timestamp: payloadAttributes.timestamp,
-        extraData: ZERO_HASH,
-        baseFeePerGas: BigInt(0),
-        blockHash: crypto.randomBytes(32),
-        transactions: [crypto.randomBytes(512)],
+        executionPayload,
+        blobsBundle: {
+          blockHash: toHex(executionPayload.blockHash),
+          kzgs,
+          blobs,
+        },
       });
 
       // IF the payload is deemed VALID and the build process has begun
@@ -211,7 +262,7 @@ export class ExecutionEngineMock implements IExecutionEngine {
    * 2. The call MUST be responded with 5: Unavailable payload error if the building process identified by the payloadId doesn't exist.
    * 3. Client software MAY stop the corresponding building process after serving this call.
    */
-  async getPayload(payloadId: PayloadId): Promise<bellatrix.ExecutionPayload> {
+  async getPayload(_fork: ForkName, payloadId: PayloadId): Promise<bellatrix.ExecutionPayload> {
     // 1. Given the payloadId client software MUST return the most recent version of the payload that is available in
     //    the corresponding build process at the time of receiving the call.
     const payloadIdNbr = Number(payloadId);
@@ -224,9 +275,28 @@ export class ExecutionEngineMock implements IExecutionEngine {
     }
 
     // 3. Client software MAY stop the corresponding build process after serving this call.
-    this.preparingPayloads.delete(payloadIdNbr);
+    // Do after a while to allow getBlobsBundle()
+    const now = Date.now();
+    for (const [oldPayloadId, addedTimestampMs] of this.payloadsForDeletion.entries()) {
+      if (addedTimestampMs < now - PRUNE_PAYLOAD_ID_AFTER_MS) {
+        this.preparingPayloads.delete(oldPayloadId);
+        this.payloadsForDeletion.delete(oldPayloadId);
+      }
+    }
+    this.payloadsForDeletion.set(payloadIdNbr, now);
 
-    return payload;
+    return payload.executionPayload;
+  }
+
+  async getBlobsBundle(payloadId: PayloadId): Promise<BlobsBundle> {
+    const payloadIdNbr = Number(payloadId);
+    const payload = this.preparingPayloads.get(payloadIdNbr);
+
+    if (!payload) {
+      throw Error(`Unknown payloadId ${payloadId}`);
+    }
+
+    return payload.blobsBundle;
   }
 
   async exchangeTransitionConfigurationV1(
@@ -247,4 +317,39 @@ export class ExecutionEngineMock implements IExecutionEngine {
       blockNumber: 0,
     });
   }
+}
+
+function transactionForKzgCommitment(kzgCommitment: eip4844.KZGCommitment): bellatrix.Transaction {
+  // Some random value that after the offset's position
+  const blobVersionedHashesOffset = OPAQUE_TX_BLOB_VERSIONED_HASHES_OFFSET + 64;
+
+  // +32 for the size of versionedHash
+  const ab = new ArrayBuffer(blobVersionedHashesOffset + 32);
+  const dv = new DataView(ab);
+  const ua = new Uint8Array(ab);
+
+  // Set tx type
+  dv.setUint8(0, BLOB_TX_TYPE);
+
+  // Set offset to hashes array
+  // const blobVersionedHashesOffset =
+  //   OPAQUE_TX_MESSAGE_OFFSET + opaqueTxDv.getUint32(OPAQUE_TX_BLOB_VERSIONED_HASHES_OFFSET, true);
+  dv.setUint32(OPAQUE_TX_BLOB_VERSIONED_HASHES_OFFSET, blobVersionedHashesOffset - OPAQUE_TX_MESSAGE_OFFSET, true);
+
+  const versionedHash = kzgCommitmentToVersionedHash(kzgCommitment);
+  ua.set(versionedHash, blobVersionedHashesOffset);
+
+  return ua;
+}
+
+/**
+ * Generate random blob of sequential integers such that each element is < BLS_MODULUS
+ */
+function generateRandomBlob(): eip4844.Blob {
+  const blob = new Uint8Array(FIELD_ELEMENTS_PER_BLOB * BYTES_PER_FIELD_ELEMENT);
+  const dv = new DataView(blob.buffer, blob.byteOffset, blob.byteLength);
+  for (let i = 0; i < FIELD_ELEMENTS_PER_BLOB; i++) {
+    dv.setUint32(i * BYTES_PER_FIELD_ELEMENT, i);
+  }
+  return blob;
 }

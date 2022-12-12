@@ -6,6 +6,7 @@ import {Keystore} from "@chainsafe/bls-keystore";
 import {getClient} from "@lodestar/api/beacon";
 import {getClient as keyManagerGetClient} from "@lodestar/api/keymanager";
 import {LogLevel} from "@lodestar/utils";
+import {chainConfigToJson} from "@lodestar/config";
 import {IBeaconArgs} from "../../../../src/cmds/beacon/options.js";
 import {IValidatorCliArgs} from "../../../../src/cmds/validator/options.js";
 import {IGlobalArgs} from "../../../../src/options/globalOptions.js";
@@ -30,12 +31,14 @@ export const generateLodestarBeaconNode: CLClientGenerator<CLClient.Lodestar> = 
     keyManagerPort,
     genesisTime,
     engineUrl,
+    engineMock,
     jwtSecretHex,
     clientOptions,
   } = opts;
 
   const jwtSecretPath = join(dataDir, "jwtsecret");
   const rcConfigPath = join(dataDir, "rc_config.json");
+  const paramsPath = join(dataDir, "params.json");
 
   const rcConfig = ({
     network: "dev",
@@ -54,21 +57,25 @@ export const generateLodestarBeaconNode: CLClientGenerator<CLClient.Lodestar> = 
     port: port,
     metrics: false,
     bootnodes: [],
-    "params.SECONDS_PER_SLOT": String(config.SECONDS_PER_SLOT),
-    "params.GENESIS_DELAY": String(config.GENESIS_DELAY),
-    "params.ALTAIR_FORK_EPOCH": String(config.ALTAIR_FORK_EPOCH),
-    "params.BELLATRIX_FORK_EPOCH": String(config.BELLATRIX_FORK_EPOCH),
-    "params.TERMINAL_TOTAL_DIFFICULTY": String(config.TERMINAL_TOTAL_DIFFICULTY),
     logPrefix: id,
     logFormatGenesisTime: `${genesisTime}`,
     logLevel: LogLevel.debug,
     logFileDailyRotate: 0,
     logFile: "none",
-    eth1: true,
-    "execution.urls": [engineUrl],
     "jwt-secret": jwtSecretPath,
+    paramsFile: paramsPath,
     ...clientOptions,
   } as unknown) as IBeaconArgs & IGlobalArgs;
+
+  if (engineMock) {
+    rcConfig["eth1"] = false;
+    rcConfig["execution.engineMock"] = true;
+    rcConfig["execution.urls"] = [];
+  } else {
+    rcConfig["eth1"] = true;
+    rcConfig["execution.engineMock"] = false;
+    rcConfig["execution.urls"] = [engineUrl];
+  }
 
   const validatorClientsJobs: JobOptions[] = [];
   if (opts.localKeys.length > 0 || opts.remoteKeys.length > 0) {
@@ -91,10 +98,11 @@ export const generateLodestarBeaconNode: CLClientGenerator<CLClient.Lodestar> = 
         await mkdir(dataDir, {recursive: true});
         await writeFile(rcConfigPath, JSON.stringify(rcConfig, null, 2));
         await writeFile(jwtSecretPath, jwtSecretHex);
+        await writeFile(paramsPath, JSON.stringify(chainConfigToJson(config), null, 2));
       },
       cli: {
         command: LODESTAR_BINARY_PATH,
-        args: ["beacon", "--rcConfig", rcConfigPath],
+        args: ["beacon", "--rcConfig", rcConfigPath, "--paramsFile", paramsPath],
         env: {
           DEBUG: "*,-winston:*",
         },
@@ -146,10 +154,6 @@ export const generateLodestarValidatorJobs = (
     "keymanager.authEnabled": false,
     "keymanager.address": address,
     "keymanager.port": keyManagerPort,
-    "params.SECONDS_PER_SLOT": String(config.SECONDS_PER_SLOT),
-    "params.GENESIS_DELAY": String(config.GENESIS_DELAY),
-    "params.ALTAIR_FORK_EPOCH": String(config.ALTAIR_FORK_EPOCH),
-    "params.BELLATRIX_FORK_EPOCH": String(config.BELLATRIX_FORK_EPOCH),
     logPrefix: id,
     logFormatGenesisTime: genesisTime,
     logLevel: LogLevel.debug,
@@ -164,8 +168,8 @@ export const generateLodestarValidatorJobs = (
       await mkdir(`${rootDir}/keystores`);
       await writeFile(join(rootDir, "password.txt"), "password");
       await writeFile(join(rootDir, "rc_config.json"), JSON.stringify(rcConfig, null, 2));
+      await writeFile(join(rootDir, "params.json"), JSON.stringify(chainConfigToJson(config), null, 2));
 
-      // Split half of the keys to the keymanager
       for (const key of localKeys) {
         const keystore = await Keystore.create("password", key.toBytes(), key.toPublicKey().toBytes(), "");
         await writeFile(
@@ -176,7 +180,7 @@ export const generateLodestarValidatorJobs = (
     },
     cli: {
       command: LODESTAR_BINARY_PATH,
-      args: ["validator", "--rcConfig", join(rootDir, "rc_config.json")],
+      args: ["validator", "--rcConfig", join(rootDir, "rc_config.json"), "--paramsFile", join(rootDir, "params.json")],
       env: {
         DEBUG: "*,-winston:*",
       },

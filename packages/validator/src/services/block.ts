@@ -1,4 +1,4 @@
-import {BLSPubkey, Slot, BLSSignature, allForks, bellatrix, isBlindedBeaconBlock} from "@lodestar/types";
+import {BLSPubkey, Slot, BLSSignature, allForks, bellatrix, capella, isBlindedBeaconBlock} from "@lodestar/types";
 import {IChainForkConfig} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
 import {extendError, prettyBytes} from "@lodestar/utils";
@@ -127,7 +127,7 @@ export class BlockProposingService {
       : null;
 
     const fullBlockPromise = this.produceBlock(slot, randaoReveal, graffiti).catch((e: Error) => {
-      this.logger.error("Failed to produce builder block", {}, e as Error);
+      this.logger.error("Failed to produce execution block", {}, e as Error);
       return null;
     });
 
@@ -163,7 +163,9 @@ export class BlockProposingService {
         if (feeRecipient !== expectedFeeRecipient && strictFeeRecipientCheck) {
           throw Error(`Invalid feeRecipient=${feeRecipient}, expected=${expectedFeeRecipient}`);
         }
-        Object.assign(debugLogCtx, {feeRecipient});
+        const transactions = (fullBlock.data as bellatrix.BeaconBlock).body.executionPayload?.transactions.length;
+        const withdrawals = (fullBlock.data as capella.BeaconBlock).body.executionPayload?.withdrawals?.length;
+        Object.assign(debugLogCtx, {feeRecipient, transactions}, withdrawals !== undefined ? {withdrawals} : {});
       }
       return {...fullBlock, debugLogCtx};
       // throw Error("random")

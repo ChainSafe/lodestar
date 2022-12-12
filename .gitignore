@@ -50,6 +50,9 @@ docs/reference/cli.md
 *.ssz
 .pyrmont
 .tmpdb
+# EIP-4844 (only commit .ssz file)
+packages/beacon-node/trusted_setup.json
+packages/beacon-node/trusted_setup.txt
 
 # Wallet CLI artifacts
 .pass

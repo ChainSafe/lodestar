@@ -24,12 +24,15 @@ import {IBeaconClock} from "../clock/index.js";
 import {BlockProcessOpts} from "../options.js";
 import {ExecutePayloadStatus} from "../../execution/engine/interface.js";
 import {IEth1ForBlockProduction} from "../../eth1/index.js";
+import {IMetrics} from "../../metrics/metrics.js";
+import {ImportBlockOpts} from "./types.js";
 
 export type VerifyBlockExecutionPayloadModules = {
   eth1: IEth1ForBlockProduction;
   executionEngine: IExecutionEngine;
   clock: IBeaconClock;
   logger: ILogger;
+  metrics: IMetrics | null;
   forkChoice: IForkChoice;
   config: IChainForkConfig;
 };
@@ -64,7 +67,7 @@ export async function verifyBlocksExecutionPayload(
   blocks: allForks.SignedBeaconBlock[],
   preState0: CachedBeaconStateAllForks,
   signal: AbortSignal,
-  opts: BlockProcessOpts
+  opts: BlockProcessOpts & ImportBlockOpts
 ): Promise<SegmentExecStatus> {
   const executionStatuses: MaybeValidExecutionStatus[] = [];
   let mergeBlockFound: bellatrix.BeaconBlock | null = null;
@@ -236,6 +239,15 @@ export async function verifyBlocksExecutionPayload(
     }
   }
 
+  if (blocks.length === 1 && opts.seenTimestampSec !== undefined) {
+    const recvToVerifiedExecPayload = Date.now() / 1000 - opts.seenTimestampSec;
+    chain.metrics?.gossipBlock.receivedToExecutionPayloadVerification.observe(recvToVerifiedExecPayload);
+    chain.logger.verbose("Verified execution payload", {
+      slot: blocks[0].message.slot,
+      recvToVerifiedExecPayload,
+    });
+  }
+
   return {
     execAborted: null,
     executionStatuses,
@@ -273,7 +285,10 @@ export async function verifyBlockExecutionPayload(
   }
 
   // TODO: Handle better notifyNewPayload() returning error is syncing
-  const execResult = await chain.executionEngine.notifyNewPayload(executionPayloadEnabled);
+  const execResult = await chain.executionEngine.notifyNewPayload(
+    chain.config.getForkName(block.message.slot),
+    executionPayloadEnabled
+  );
 
   switch (execResult.status) {
     case ExecutePayloadStatus.VALID: {

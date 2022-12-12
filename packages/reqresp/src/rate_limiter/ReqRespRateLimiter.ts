@@ -92,7 +92,7 @@ export class ReqRespRateLimiter {
       this.reportPeer(peerId);
 
       if (this.metrics) {
-        this.metrics.rateLimitErrors.inc({tracker: "requestCountPeerTracker"});
+        this.metrics.rateLimitErrors.inc();
       }
 
       throw new RequestError(
