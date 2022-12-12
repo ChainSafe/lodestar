@@ -25,7 +25,7 @@ export const LightClientOptimisticUpdate: ProtocolDefinitionGenerator<null, alta
        * For total we multiply with `10` to have lower peer count on light client.
        */
       byPeer: {quota: 2, quotaTime: seconds(12)},
-      total: {quota: 20, quotaTime: seconds(10)},
+      total: {quota: 20, quotaTime: seconds(12)},
     },
   };
 };
