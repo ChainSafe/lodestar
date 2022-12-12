@@ -37,9 +37,9 @@ export interface Protocol {
 
 export interface InboundRateLimitQuota<Req = unknown> {
   // Will be tracked for the protocol per peer
-  byPeer: RateLimiterQuota;
+  byPeer?: RateLimiterQuota;
   // Will be tracked regardless of the peer
-  total: RateLimiterQuota;
+  total?: RateLimiterQuota;
   // Some requests may be counted multiple e.g. getBlocksByRange
   // for such implement this method else `1` will be used default
   getRequestCount?: (req: Req) => number;

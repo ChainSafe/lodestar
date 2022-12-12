@@ -44,25 +44,32 @@ export class ReqRespRateLimiter {
     }
 
     const {method, version} = protocol;
-    const limiterByPeer = RateLimiterGRCA.fromQuota<string>({
-      ...protocol.inboundRateLimits.byPeer,
-      quota: protocol.inboundRateLimits.byPeer.quota * this.rateLimitMultiplier,
-    });
-    const limiterTotal = RateLimiterGRCA.fromQuota<null>({
-      ...protocol.inboundRateLimits.total,
-      quota: protocol.inboundRateLimits.total.quota * this.rateLimitMultiplier,
-    });
 
-    if (!this.rateLimitersPerPeer.has(method)) {
-      this.rateLimitersPerPeer.set(method, new Map());
+    if (protocol.inboundRateLimits.byPeer) {
+      const limiterByPeer = RateLimiterGRCA.fromQuota<string>({
+        ...protocol.inboundRateLimits.byPeer,
+        quota: protocol.inboundRateLimits.byPeer.quota * this.rateLimitMultiplier,
+      });
+
+      if (!this.rateLimitersPerPeer.has(method)) {
+        this.rateLimitersPerPeer.set(method, new Map());
+      }
+
+      this.rateLimitersPerPeer.get(method)?.set(version, limiterByPeer);
     }
 
-    if (!this.rateLimitersTotal.has(method)) {
-      this.rateLimitersTotal.set(method, new Map());
-    }
+    if (protocol.inboundRateLimits.total) {
+      const limiterTotal = RateLimiterGRCA.fromQuota<null>({
+        ...protocol.inboundRateLimits.total,
+        quota: protocol.inboundRateLimits.total.quota * this.rateLimitMultiplier,
+      });
 
-    this.rateLimitersPerPeer.get(method)?.set(version, limiterByPeer);
-    this.rateLimitersTotal.get(method)?.set(version, limiterTotal);
+      if (!this.rateLimitersTotal.has(method)) {
+        this.rateLimitersTotal.set(method, new Map());
+      }
+
+      this.rateLimitersTotal.get(method)?.set(version, limiterTotal);
+    }
   }
 
   validateRateLimits<Req, Resp>({
@@ -74,17 +81,20 @@ export class ReqRespRateLimiter {
     protocol: ProtocolDefinition<Req, Resp>;
     requestBody: Req;
   }): void {
-    if (!this.enabled) {
-      return;
-    }
+    if (!this.enabled) return;
+
     const peerIdStr = peerId.toString();
     this.lastSeenRequestsByPeer.set(peerIdStr, Date.now());
-    const {method, version, encoding} = protocol;
+
+    const {method, encoding} = protocol;
+
     const requestCount = protocol.inboundRateLimits.getRequestCount
       ? protocol.inboundRateLimits.getRequestCount(requestBody)
       : 1;
 
-    if (!this.rateLimitersPerPeer.get(method)?.get(version)?.allows(peerIdStr, requestCount)) {
+    const {byPeer, total} = this.getRaterLimiters(protocol);
+
+    if (byPeer && !byPeer.allows(peerIdStr, requestCount)) {
       this.logger.debug("Do not serve request due to rate limit", {
         peerId: peerIdStr,
       });
@@ -92,13 +102,13 @@ export class ReqRespRateLimiter {
       this.reportPeer(peerId);
 
       if (this.metrics) {
-        this.metrics.rateLimitErrors.inc({method: protocol.method});
+        this.metrics.rateLimitErrors.inc({method});
       }
 
       throw new RequestError({code: RequestErrorCode.REQUEST_RATE_LIMITED}, {peer: peerIdStr, method, encoding});
     }
 
-    if (!this.rateLimitersTotal.get(method)?.get(version)?.allows(null, requestCount)) {
+    if (total && !total.allows(null, requestCount)) {
       this.logger.debug("Do not serve request due to total rate limit", {
         peerId: peerIdStr,
       });
@@ -139,5 +149,14 @@ export class ReqRespRateLimiter {
         this.pruneByPeerIdStr(peerIdStr);
       }
     }
+  }
+
+  private getRaterLimiters<Req, Resp>(
+    protocol: ProtocolDefinition<Req, Resp>
+  ): {byPeer?: RateLimiterGRCA<string>; total?: RateLimiterGRCA<null>} {
+    return {
+      byPeer: this.rateLimitersPerPeer.get(protocol.method)?.get(protocol.version),
+      total: this.rateLimitersTotal.get(protocol.method)?.get(protocol.version),
+    };
   }
 }
