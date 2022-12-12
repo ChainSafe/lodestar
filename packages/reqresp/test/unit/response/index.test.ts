@@ -4,7 +4,7 @@ import {PeerId} from "@libp2p/interface-peer-id";
 import {LodestarError, fromHex, ILogger} from "@lodestar/utils";
 import {ProtocolDefinition, RespStatus} from "../../../src/index.js";
 import {sszSnappyPing} from "../../fixtures/messages.js";
-import {Ping} from "../../../src/protocols/index.js";
+import {Ping} from "../../../src/messages/index.js";
 import {expectEqualByteChunks, MockLibP2pStream} from "../../utils/index.js";
 import {handleRequest} from "../../../src/response/index.js";
 import {createStubbedLogger} from "../../mocks/logger.js";
