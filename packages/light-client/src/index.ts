@@ -9,7 +9,7 @@ import {isErrorAborted, sleep} from "@lodestar/utils";
 import {fromHexString, JsonPath, toHexString} from "@chainsafe/ssz";
 import {getCurrentSlot, slotWithFutureTolerance, timeUntilNextEpoch} from "./utils/clock.js";
 import {isBetterUpdate, LightclientUpdateStats} from "./utils/update.js";
-import {deserializeSyncCommittee, isEmptyHeader, isLastSlotInPeriod, isNode, sumBits} from "./utils/utils.js";
+import {deserializeSyncCommittee, isEmptyHeader, isNode, sumBits} from "./utils/utils.js";
 import {pruneSetToMax} from "./utils/map.js";
 import {isValidMerkleBranch} from "./utils/verifyMerkleBranch.js";
 import {SyncCommitteeFast} from "./types.js";
@@ -561,9 +561,7 @@ export class Lightclient {
     };
 
     let nextSyncCommittee: SyncCommitteeFast | undefined;
-    let signingSyncCommittee;
-
-    signingSyncCommittee = this.syncCommitteeByPeriod.get(signaturePeriod);
+    const signingSyncCommittee = this.syncCommitteeByPeriod.get(signaturePeriod);
 
     if (!signingSyncCommittee) {
       throw Error(`No syncCommittee for attested period ${attestedPeriod} and signaturePeriod ${signaturePeriod}`);
