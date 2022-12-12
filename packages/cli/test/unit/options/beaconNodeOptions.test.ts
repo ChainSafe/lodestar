@@ -144,10 +144,6 @@ describe("options / beaconNodeOptions", () => {
         subscribeAllSubnets: true,
         connectToDiscv5Bootnodes: true,
         discv5FirstQueryDelayMs: 1000,
-        requestCountPeerLimit: 5,
-        blockCountTotalLimit: 1000,
-        blockCountPeerLimit: 500,
-        rateTrackerTimeoutMs: 60000,
         dontSendGossipAttestationsToForkchoice: true,
         allowPublishToZeroPeers: true,
         gossipsubD: 4,
@@ -155,6 +151,7 @@ describe("options / beaconNodeOptions", () => {
         gossipsubDHigh: 6,
         gossipsubAwaitHandler: true,
         mdns: false,
+        rateLimitMultiplier: 1,
       },
       sync: {
         isSingleNode: true,
