@@ -3,6 +3,7 @@ import {
   CachedBeaconStateBellatrix,
   CachedBeaconStateAltair,
   CachedBeaconStatePhase0,
+  CachedBeaconStateCapella,
 } from "@lodestar/state-transition";
 import * as slotFns from "@lodestar/state-transition/slot";
 import {phase0, ssz} from "@lodestar/types";
@@ -30,7 +31,7 @@ export const fork: TestRunnerFn<ForkStateCase, BeaconStateAllForks> = (forkNext)
         case ForkName.capella:
           return slotFns.upgradeStateToCapella(preState as CachedBeaconStateBellatrix);
         case ForkName.eip4844:
-          throw Error("eip4844 not implemented");
+          return slotFns.upgradeStateTo4844(preState as CachedBeaconStateCapella);
       }
     },
     options: {
