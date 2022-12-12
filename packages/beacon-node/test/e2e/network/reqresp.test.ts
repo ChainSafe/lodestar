@@ -29,7 +29,6 @@ import {connect, createNode, onPeerConnect} from "../../utils/network.js";
 import {generateState} from "../../utils/state.js";
 import {StubbedBeaconDb} from "../../utils/stub/index.js";
 import {arrToSource} from "../../unit/network/reqresp/utils.js";
-import {defaultRateLimiterOpts} from "../../../src/network/reqresp/inboundRateLimiter.js";
 
 /* eslint-disable require-yield, @typescript-eslint/naming-convention */
 
@@ -40,7 +39,6 @@ describe("network / ReqResp", function () {
   const multiaddr = "/ip4/127.0.0.1/tcp/0";
   const networkOptsDefault: INetworkOptions = {
     ...defaultNetworkOptions,
-    ...defaultRateLimiterOpts,
     maxPeers: 1,
     targetPeers: 1,
     bootMultiaddrs: [],

@@ -73,6 +73,7 @@ describe("options / beaconNodeOptions", () => {
       "network.gossipsubDLow": 2,
       "network.gossipsubDHigh": 6,
       "network.gossipsubAwaitHandler": true,
+      "network.rateLimitMultiplier": 1,
 
       "sync.isSingleNode": true,
       "sync.disableProcessAsChainSegment": true,
