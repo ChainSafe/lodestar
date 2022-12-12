@@ -2,10 +2,7 @@ import {expect} from "chai";
 import sinon from "sinon";
 import bls from "@chainsafe/bls";
 import {toHexString} from "@chainsafe/ssz";
-import {
-  generateEmptyAttestation,
-  generateEmptySignedAggregateAndProof,
-} from "../../../../beacon-node/test/utils/attestation.js";
+import {ssz} from "@lodestar/types";
 import {AttestationService} from "../../../src/services/attestation.js";
 import {AttDutyAndProof} from "../../../src/services/attestationDuties.js";
 import {ValidatorStore} from "../../../src/services/validatorStore.js";
@@ -53,8 +50,8 @@ describe("AttestationService", function () {
       null
     );
 
-    const attestation = generateEmptyAttestation();
-    const aggregate = generateEmptySignedAggregateAndProof();
+    const attestation = ssz.phase0.Attestation.defaultValue();
+    const aggregate = ssz.phase0.SignedAggregateAndProof.defaultValue();
     const duties: AttDutyAndProof[] = [
       {
         duty: {

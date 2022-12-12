@@ -10,7 +10,6 @@ import {getReqRespHandlers, Network} from "../../../src/network/index.js";
 import {defaultNetworkOptions, INetworkOptions} from "../../../src/network/options.js";
 import {GossipType, GossipHandlers} from "../../../src/network/gossip/index.js";
 
-import {generateEmptySignedBlock} from "../../utils/block.js";
 import {MockBeaconChain, zeroProtoBlock} from "../../utils/mocks/chain/chain.js";
 import {createNode} from "../../utils/network.js";
 import {generateState} from "../../utils/state.js";
@@ -50,7 +49,7 @@ describe("gossipsub", function () {
   async function mockModules(gossipHandlersPartial?: Partial<GossipHandlers>) {
     const controller = new AbortController();
 
-    const block = generateEmptySignedBlock();
+    const block = ssz.phase0.SignedBeaconBlock.defaultValue();
     const state = generateState({
       finalizedCheckpoint: {
         epoch: 0,

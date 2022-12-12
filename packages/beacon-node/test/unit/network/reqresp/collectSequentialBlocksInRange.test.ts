@@ -1,13 +1,12 @@
 import {expect} from "chai";
 import chai from "chai";
 import chaiAsPromised from "chai-as-promised";
-import {phase0} from "@lodestar/types";
+import {phase0, ssz} from "@lodestar/types";
 import {
   BlocksByRangeError,
   BlocksByRangeErrorCode,
   collectSequentialBlocksInRange,
 } from "../../../../src/network/reqresp/utils/collectSequentialBlocksInRange.js";
-import {generateEmptySignedBlock} from "../../../utils/block.js";
 import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
 import {arrToSource} from "./utils.js";
 
@@ -70,7 +69,7 @@ describe("beacon-node / network / reqresp / utils / collectSequentialBlocksInRan
   for (const {id, slots, request, error} of testCases) {
     it(id, async () => {
       const blocks = slots.map((slot) => {
-        const block = generateEmptySignedBlock();
+        const block = ssz.phase0.SignedBeaconBlock.defaultValue();
         block.message.slot = slot;
         return block;
       });

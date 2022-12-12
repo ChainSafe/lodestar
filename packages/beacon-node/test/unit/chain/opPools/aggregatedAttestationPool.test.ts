@@ -16,11 +16,10 @@ import {
 } from "../../../../src/chain/opPools/aggregatedAttestationPool.js";
 import {InsertOutcome} from "../../../../src/chain/opPools/types.js";
 import {linspace} from "../../../../src/util/numpy.js";
-import {generateAttestation, generateEmptyAttestation} from "../../../utils/attestation.js";
 import {generateCachedAltairState} from "../../../utils/state.js";
 import {renderBitArray} from "../../../utils/render.js";
 import {ZERO_HASH_HEX} from "../../../../src/constants/constants.js";
-import {generateEmptyProtoBlock} from "../../../utils/block.js";
+import {generateProtoBlock} from "../../../utils/typeGenerator.js";
 
 /** Valid signature of random data to prevent BLS errors */
 const validSignature = fromHexString(
@@ -34,7 +33,11 @@ describe("AggregatedAttestationPool", function () {
   const currentSlot = SLOTS_PER_EPOCH * currentEpoch;
   const originalState = generateCachedAltairState({slot: currentSlot + 1}, altairForkEpoch);
   let altairState: CachedBeaconStateAllForks;
-  const attestation = generateAttestation({data: {slot: currentSlot, target: {epoch: currentEpoch}}});
+
+  const attestation = ssz.phase0.Attestation.defaultValue();
+  attestation.data.slot = currentSlot;
+  attestation.data.target.epoch = currentEpoch;
+
   const committee = [0, 1, 2, 3];
   let forkchoiceStub: SinonStubbedInstance<IForkChoice>;
   const sandbox = sinon.createSandbox();
@@ -69,7 +72,7 @@ describe("AggregatedAttestationPool", function () {
     it(name, function () {
       const aggregationBits = new BitArray(new Uint8Array(attestingBits), 8);
       pool.add({...attestation, aggregationBits}, aggregationBits.getTrueBitIndexes().length, committee);
-      forkchoiceStub.getBlockHex.returns(generateEmptyProtoBlock());
+      forkchoiceStub.getBlockHex.returns(generateProtoBlock());
       forkchoiceStub.getDependentRoot.returns(ZERO_HASH_HEX);
       if (isReturned) {
         expect(pool.getAttestationsForBlock(forkchoiceStub, altairState).length).to.be.above(
@@ -99,7 +102,7 @@ describe("AggregatedAttestationPool", function () {
     // all attesters are not seen
     const attestingIndices = [2, 3];
     pool.add(attestation, attestingIndices.length, committee);
-    forkchoiceStub.getBlockHex.returns(generateEmptyProtoBlock());
+    forkchoiceStub.getBlockHex.returns(generateProtoBlock());
     forkchoiceStub.getDependentRoot.returns("0xWeird");
     expect(pool.getAttestationsForBlock(forkchoiceStub, altairState)).to.be.deep.equal(
       [],
@@ -143,7 +146,7 @@ describe("MatchingDataAttestationGroup.add()", () => {
     },
   ];
 
-  const attestationData = generateEmptyAttestation().data;
+  const attestationData = ssz.phase0.AttestationData.defaultValue();
   const committee = linspace(0, 7);
 
   for (const {id, attestationsToAdd} of testCases) {
@@ -213,7 +216,7 @@ describe("MatchingDataAttestationGroup.getAttestationsForBlock", () => {
     },
   ];
 
-  const attestationData = generateEmptyAttestation().data;
+  const attestationData = ssz.phase0.AttestationData.defaultValue();
   const committee = linspace(0, 7);
 
   for (const {id, seenAttestingBits, attestationsToAdd} of testCases) {
@@ -248,7 +251,7 @@ describe("MatchingDataAttestationGroup.getAttestationsForBlock", () => {
 });
 
 describe("MatchingDataAttestationGroup aggregateInto", function () {
-  const attestationSeed = generateEmptyAttestation();
+  const attestationSeed = ssz.phase0.Attestation.defaultValue();
   const attestation1 = {...attestationSeed, ...{aggregationBits: BitArray.fromBoolArray([false, true])}};
   const attestation2 = {...attestationSeed, ...{aggregationBits: BitArray.fromBoolArray([true, false])}};
   const mergedBitArray = BitArray.fromBoolArray([true, true]); // = [false, true] + [true, false]

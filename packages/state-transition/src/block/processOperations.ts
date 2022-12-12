@@ -8,6 +8,7 @@ import {processAttesterSlashing} from "./processAttesterSlashing.js";
 import {processDeposit} from "./processDeposit.js";
 import {processVoluntaryExit} from "./processVoluntaryExit.js";
 import {processBlsToExecutionChange} from "./processBlsToExecutionChange.js";
+import {ProcessBlockOpts} from "./types.js";
 
 export {
   processProposerSlashing,
@@ -22,7 +23,7 @@ export function processOperations(
   fork: ForkSeq,
   state: CachedBeaconStateAllForks,
   body: allForks.BeaconBlockBody,
-  verifySignatures = true
+  opts: ProcessBlockOpts = {verifySignatures: true}
 ): void {
   // verify that outstanding deposits are processed up to the maximum number of deposits
   const maxDeposits = Math.min(MAX_DEPOSITS, state.eth1Data.depositCount - state.eth1DepositIndex);
@@ -33,22 +34,22 @@ export function processOperations(
   }
 
   for (const proposerSlashing of body.proposerSlashings) {
-    processProposerSlashing(fork, state, proposerSlashing, verifySignatures);
+    processProposerSlashing(fork, state, proposerSlashing, opts.verifySignatures);
   }
   for (const attesterSlashing of body.attesterSlashings) {
-    processAttesterSlashing(fork, state, attesterSlashing, verifySignatures);
+    processAttesterSlashing(fork, state, attesterSlashing, opts.verifySignatures);
   }
 
-  processAttestations(fork, state, body.attestations, verifySignatures);
+  processAttestations(fork, state, body.attestations, opts.verifySignatures);
 
   for (const deposit of body.deposits) {
     processDeposit(fork, state, deposit);
   }
   for (const voluntaryExit of body.voluntaryExits) {
-    processVoluntaryExit(state, voluntaryExit, verifySignatures);
+    processVoluntaryExit(state, voluntaryExit, opts.verifySignatures);
   }
 
-  if (fork >= ForkSeq.capella) {
+  if (fork >= ForkSeq.capella && !opts?.disabledWithdrawals) {
     for (const blsToExecutionChange of (body as capella.BeaconBlockBody).blsToExecutionChanges) {
       processBlsToExecutionChange(state as CachedBeaconStateCapella, blsToExecutionChange);
     }

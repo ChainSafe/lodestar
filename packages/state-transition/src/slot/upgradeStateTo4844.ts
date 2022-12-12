@@ -20,12 +20,12 @@ export function upgradeStateTo4844(stateCapella: CachedBeaconStateCapella): Cach
     epoch: stateCapella.epochCtx.epoch,
   });
 
-  // capella.latestExecutionPayloadHeader has 15 properties, adding only 1 extra will not increase the tree depth.
-  // The initial value of the new property 'excessDataGas' is zero, so the default tree value is correct.
-  // Just casting the same tree node to state4844 is sufficient and nothing has to be done.
-  // ```
-  // state4844.latestExecutionPayloadHeader.excessDataGas = ssz.UintBn256.defaultValue()
-  // ```
+  // The field order of eip4844 latestExecutionPayloadHeader is not the same to capella
+  // all fields after excessDataGas need to explicitly set
+  state4844.latestExecutionPayloadHeader.excessDataGas = ssz.UintBn256.defaultValue();
+  state4844.latestExecutionPayloadHeader.blockHash = stateCapella.latestExecutionPayloadHeader.blockHash;
+  state4844.latestExecutionPayloadHeader.transactionsRoot = stateCapella.latestExecutionPayloadHeader.transactionsRoot;
+  state4844.latestExecutionPayloadHeader.withdrawalsRoot = stateCapella.latestExecutionPayloadHeader.withdrawalsRoot;
 
   state4844.commit();
 

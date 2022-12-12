@@ -23,7 +23,7 @@ describeCliTest("Run dev command", function ({spawnCli}) {
       }
     });
 
-    const beaconUrl = `http://localhost:${beaconPort}`;
+    const beaconUrl = `http://127.0.0.1:${beaconPort}`;
     const client = getClient({baseUrl: beaconUrl}, {config});
 
     // Wrap in retry since the API may not be listening yet

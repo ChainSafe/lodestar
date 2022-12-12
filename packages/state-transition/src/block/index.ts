@@ -11,6 +11,7 @@ import {processRandao} from "./processRandao.js";
 import {processBlobKzgCommitments} from "./processBlobKzgCommitments.js";
 import {BlockExternalData, DataAvailableStatus} from "./externalData.js";
 import {processWithdrawals} from "./processWithdrawals.js";
+import {ProcessBlockOpts} from "./types.js";
 
 // Spec tests
 export {
@@ -26,11 +27,6 @@ export * from "./processOperations.js";
 export * from "./initiateValidatorExit.js";
 export * from "./isValidIndexedAttestation.js";
 export * from "./externalData.js";
-
-export interface ProcessBlockOpts {
-  verifySignatures?: boolean;
-  disabledWithdrawals?: boolean;
-}
 
 export function processBlock(
   fork: ForkSeq,
@@ -60,7 +56,7 @@ export function processBlock(
 
   processRandao(state, block, verifySignatures);
   processEth1Data(state, block.body.eth1Data);
-  processOperations(fork, state, block.body, verifySignatures);
+  processOperations(fork, state, block.body, opts);
   if (fork >= ForkSeq.altair) {
     processSyncAggregate(state, block as altair.BeaconBlock, verifySignatures);
   }
