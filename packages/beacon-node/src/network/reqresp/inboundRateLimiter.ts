@@ -3,7 +3,7 @@ import {ILogger, MapDef} from "@lodestar/utils";
 import {IMetrics} from "../../metrics/index.js";
 import {RateTracker} from "./rateTracker.js";
 
-interface RateLimiterModules {
+export interface RateLimiterModules {
   logger: ILogger;
   reportPeer: (peer: PeerId) => void;
   metrics: IMetrics | null;
@@ -62,14 +62,14 @@ export class InboundRateLimiter {
     this.reportPeer = modules.reportPeer;
 
     this.requestCountTrackersByPeer = new MapDef(
-      () => new RateTracker({limit: this.options.requestCountPeerLimit, timeoutMs: this.options.rateTrackerTimeoutMs})
+      () => new RateTracker({limit: this.options.requestCountPeerLimit, limitTimeMs: this.options.rateTrackerTimeoutMs})
     );
     this.blockCountTotalTracker = new RateTracker({
       limit: this.options.blockCountTotalLimit,
-      timeoutMs: this.options.rateTrackerTimeoutMs,
+      limitTimeMs: this.options.rateTrackerTimeoutMs,
     });
     this.blockCountTrackersByPeer = new MapDef(
-      () => new RateTracker({limit: this.options.blockCountPeerLimit, timeoutMs: this.options.rateTrackerTimeoutMs})
+      () => new RateTracker({limit: this.options.blockCountPeerLimit, limitTimeMs: this.options.rateTrackerTimeoutMs})
     );
     this.logger = modules.logger;
     this.metrics = modules.metrics;
