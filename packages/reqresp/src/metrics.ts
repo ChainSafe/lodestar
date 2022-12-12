@@ -102,8 +102,8 @@ export function getMetrics(register: MetricsRegister) {
       help: "Count total dial errors",
     }),
     rateLimitErrors: register.gauge({
-      name: "beacon_reqresp_rate_limit_errors_total",
-      help: "Count total rate limit errors",
+      name: "beacon_reqresp_rate_limiter_errors_total",
+      help: "Count rate limiter errors",
     }),
   };
 }
