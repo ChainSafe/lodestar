@@ -1,13 +1,13 @@
-import {BYTES_PER_FIELD_ELEMENT, verifyAggregateKzgProof} from "c-kzg";
 import bls from "@chainsafe/bls";
 import {CoordType} from "@chainsafe/bls/types";
 import {eip4844, Root, ssz} from "@lodestar/types";
 import {bytesToBigInt} from "@lodestar/utils";
-import {FIELD_ELEMENTS_PER_BLOB} from "@lodestar/params";
+import {BYTES_PER_FIELD_ELEMENT, FIELD_ELEMENTS_PER_BLOB} from "@lodestar/params";
 import {verifyKzgCommitmentsAgainstTransactions} from "@lodestar/state-transition";
 import {BlobsSidecarError, BlobsSidecarErrorCode} from "../errors/blobsSidecarError.js";
 import {GossipAction} from "../errors/gossipValidation.js";
 import {byteArrayEquals} from "../../util/bytes.js";
+import {ckzg} from "../../util/kzg.js";
 
 const BLS_MODULUS = BigInt("52435875175126190479447740508185965837690552500527637822603658699938581184513");
 
@@ -104,7 +104,7 @@ export function validateBlobsSidecar(
     // assert verify_aggregate_kzg_proof(blobs, expected_kzg_commitments, kzg_aggregated_proof)
     let isProofValid: boolean;
     try {
-      isProofValid = verifyAggregateKzgProof(blobs, expectedKzgCommitments, kzgAggregatedProof);
+      isProofValid = ckzg.verifyAggregateKzgProof(blobs, expectedKzgCommitments, kzgAggregatedProof);
     } catch (e) {
       // TODO EIP-4844: TEMP Nov17: May always throw error -- we need to fix Geth's KZG to match C-KZG and the trusted setup used here
       (e as Error).message = `Error on verifyAggregateKzgProof: ${(e as Error).message}`;
