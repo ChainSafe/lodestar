@@ -4,7 +4,7 @@ Thanks for your contribution to Lodestar. It's people like you that push the Eth
 
 ## Prerequisites
 
-- :gear: [NodeJS](https://nodejs.org/) (LTS/Gallium)
+- :gear: [NodeJS](https://nodejs.org/) (LTS)
 - :toolbox: [Yarn](https://yarnpkg.com/)/[Lerna](https://lerna.js.org/)
 
 ## Getting Started

@@ -17,6 +17,21 @@ describe("bytes utils", function () {
     fn: () => {
       Buffer.concat(buffers);
     },
-    runsFactor: 1000,
+  });
+
+  itBench({
+    id: `Uint8Array.set ${count} items`,
+    fn: () => {
+      let size = 0;
+      for (const b of buffers) {
+        size += b.length;
+      }
+      const arr = new Uint8Array(size);
+      let offset = 0;
+      for (const b of buffers) {
+        arr.set(b, offset);
+        offset += b.length;
+      }
+    },
   });
 });
