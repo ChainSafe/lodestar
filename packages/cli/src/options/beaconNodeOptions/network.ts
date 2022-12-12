@@ -22,6 +22,7 @@ export interface INetworkArgs {
   "network.gossipsubDLow": number;
   "network.gossipsubDHigh": number;
   "network.gossipsubAwaitHandler": boolean;
+  "network.rateLimitMultiplier": number;
 
   /** @deprecated This option is deprecated and should be removed in next major release. */
   "network.requestCountPeerLimit": number;
@@ -60,6 +61,7 @@ export function parseArgs(args: INetworkArgs): IBeaconNodeOptions["network"] {
     gossipsubDHigh: args["network.gossipsubDHigh"],
     gossipsubAwaitHandler: args["network.gossipsubAwaitHandler"],
     mdns: args["mdns"],
+    rateLimitMultiplier: args["network.rateLimitMultiplier"],
 
     // TODO: These options are deprecated and should be removed in next major release
     requestCountPeerLimit: args["network.requestCountPeerLimit"],
@@ -230,6 +232,14 @@ export const options: ICliCommandOptions<INetworkArgs> = {
   "network.gossipsubAwaitHandler": {
     hidden: true,
     type: "boolean",
+    group: "network",
+  },
+
+  "network.rateLimitMultiplier": {
+    type: "number",
+    description: "The multiplier to increase the rate limits. Set to zero to disable rate limiting.",
+    hidden: true,
+    defaultDescription: String(defaultOptions.network.rateLimitMultiplier),
     group: "network",
   },
 };

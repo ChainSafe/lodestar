@@ -35,5 +35,6 @@ export const defaultNetworkOptions: INetworkOptions = {
   bootMultiaddrs: [],
   mdns: false,
   discv5: defaultDiscv5Options,
+  rateLimitMultiplier: 1,
   ...defaultGossipHandlerOpts,
 };
