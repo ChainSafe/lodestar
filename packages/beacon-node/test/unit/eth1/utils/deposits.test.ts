@@ -110,7 +110,7 @@ describe("eth1 / util / deposits", function () {
       const depositEvents = Array.from(
         {length: 2},
         (_, index): phase0.DepositEvent => ({
-          depositData: generateDepositData(),
+          depositData: ssz.phase0.DepositData.defaultValue(),
           blockNumber: index,
           index,
         })

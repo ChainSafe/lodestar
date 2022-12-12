@@ -34,14 +34,14 @@ describe("web3signer signature test", function () {
   const epoch = 0;
   // Sample validator
   const validatorIndex = 4;
-  const subcommitteeIndex = 1;
+  const subcommitteeIndex = 0;
 
   const duty: routes.validator.AttesterDuty = {
     slot: altairSlot,
-    committeeIndex: 1,
+    committeeIndex: 0,
     committeeLength: 120,
     committeesAtSlot: 120,
-    validatorCommitteeIndex: 1,
+    validatorCommitteeIndex: 0,
     validatorIndex,
     pubkey: pubkeyBytes,
   };
@@ -145,6 +145,8 @@ describe("web3signer signature test", function () {
 
   it("signAggregateAndProof", async () => {
     const aggregateAndProof = ssz.phase0.AggregateAndProof.defaultValue();
+    aggregateAndProof.aggregate.data.slot = duty.slot;
+    aggregateAndProof.aggregate.data.index = duty.committeeIndex;
     await assertSameSignature(
       "signAggregateAndProof",
       duty,
@@ -160,6 +162,8 @@ describe("web3signer signature test", function () {
 
   it("signContributionAndProof", async () => {
     const contributionAndProof = ssz.altair.ContributionAndProof.defaultValue();
+    contributionAndProof.contribution.slot = duty.slot;
+    contributionAndProof.contribution.subcommitteeIndex = duty.committeeIndex;
 
     await assertSameSignature(
       "signContributionAndProof",
