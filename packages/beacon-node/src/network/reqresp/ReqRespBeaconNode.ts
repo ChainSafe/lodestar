@@ -71,7 +71,7 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
   protected readonly logger: ILogger;
 
   constructor(modules: ReqRespBeaconNodeModules, options: ReqRespBeaconNodeOpts = {}) {
-    const {reqRespHandlers, networkEventBus, peersData, peerRpcScores, metadata, logger, metrics} = modules;
+    const {reqRespHandlers, networkEventBus, peersData, peerRpcScores, metadata, metrics} = modules;
 
     super(
       {

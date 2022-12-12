@@ -1,5 +1,3 @@
-import {PeerId} from "@libp2p/interface-peer-id";
-
 //  Request/Response constants
 export enum RespStatus {
   /**

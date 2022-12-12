@@ -1,6 +1,5 @@
 import {eip4844, ssz} from "@lodestar/types";
 import {ContextBytesType, Encoding, ProtocolDefinitionGenerator} from "../types.js";
-import {blocksByRangeInboundRateLimit} from "./BeaconBlocksByRange.js";
 import {seconds} from "./utils.js";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
