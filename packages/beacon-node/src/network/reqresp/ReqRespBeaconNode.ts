@@ -13,7 +13,7 @@ import {
   RequestError,
 } from "@lodestar/reqresp";
 import {ReqRespOpts} from "@lodestar/reqresp/lib/ReqResp.js";
-import * as messages from "@lodestar/reqresp/messages";
+import * as protocols from "@lodestar/reqresp/protocols";
 import {allForks, altair, eip4844, phase0, Root} from "@lodestar/types";
 import {ILogger} from "@lodestar/utils";
 import {IMetrics} from "../../metrics/metrics.js";
@@ -281,39 +281,39 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
     const modules = {config: this.config};
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const protocols: ProtocolDefinition<any, any>[] = [
-      messages.Ping(this.onPing.bind(this)),
-      messages.Status(modules, this.onStatus.bind(this)),
-      messages.Goodbye(modules, this.onGoodbye.bind(this)),
+      protocols.Ping(this.onPing.bind(this)),
+      protocols.Status(modules, this.onStatus.bind(this)),
+      protocols.Goodbye(modules, this.onGoodbye.bind(this)),
       // Support V2 methods as soon as implemented (for altair)
       // Ref https://github.com/ethereum/consensus-specs/blob/v1.2.0/specs/altair/p2p-interface.md#transitioning-from-v1-to-v2
-      messages.MetadataV2(modules, this.onMetadata.bind(this)),
-      messages.BeaconBlocksByRangeV2(modules, this.onBeaconBlocksByRange.bind(this)),
-      messages.BeaconBlocksByRootV2(modules, this.onBeaconBlocksByRoot.bind(this)),
+      protocols.MetadataV2(modules, this.onMetadata.bind(this)),
+      protocols.BeaconBlocksByRangeV2(modules, this.onBeaconBlocksByRange.bind(this)),
+      protocols.BeaconBlocksByRootV2(modules, this.onBeaconBlocksByRoot.bind(this)),
     ];
 
     if (ForkSeq[fork] < ForkSeq.altair) {
       // Unregister V1 topics at the fork boundary, so only declare for pre-altair
       protocols.push(
-        messages.Metadata(modules, this.onMetadata.bind(this)),
-        messages.BeaconBlocksByRange(modules, this.onBeaconBlocksByRange.bind(this)),
-        messages.BeaconBlocksByRoot(modules, this.onBeaconBlocksByRoot.bind(this))
+        protocols.Metadata(modules, this.onMetadata.bind(this)),
+        protocols.BeaconBlocksByRange(modules, this.onBeaconBlocksByRange.bind(this)),
+        protocols.BeaconBlocksByRoot(modules, this.onBeaconBlocksByRoot.bind(this))
       );
     }
 
     if (ForkSeq[fork] >= ForkSeq.altair) {
       // Should be okay to enable before altair, but for consistency only enable afterwards
       protocols.push(
-        messages.LightClientBootstrap(modules, this.reqRespHandlers.onLightClientBootstrap),
-        messages.LightClientFinalityUpdate(modules, this.reqRespHandlers.onLightClientFinalityUpdate),
-        messages.LightClientOptimisticUpdate(modules, this.reqRespHandlers.onLightClientOptimisticUpdate),
-        messages.LightClientUpdatesByRange(modules, this.reqRespHandlers.onLightClientUpdatesByRange)
+        protocols.LightClientBootstrap(modules, this.reqRespHandlers.onLightClientBootstrap),
+        protocols.LightClientFinalityUpdate(modules, this.reqRespHandlers.onLightClientFinalityUpdate),
+        protocols.LightClientOptimisticUpdate(modules, this.reqRespHandlers.onLightClientOptimisticUpdate),
+        protocols.LightClientUpdatesByRange(modules, this.reqRespHandlers.onLightClientUpdatesByRange)
       );
     }
 
     if (ForkSeq[fork] >= ForkSeq.eip4844) {
       protocols.push(
-        messages.BeaconBlockAndBlobsSidecarByRoot(modules, this.reqRespHandlers.onBeaconBlockAndBlobsSidecarByRoot),
-        messages.BlobsSidecarsByRange(modules, this.reqRespHandlers.onBlobsSidecarsByRange)
+        protocols.BeaconBlockAndBlobsSidecarByRoot(modules, this.reqRespHandlers.onBeaconBlockAndBlobsSidecarByRoot),
+        protocols.BlobsSidecarsByRange(modules, this.reqRespHandlers.onBlobsSidecarsByRange)
       );
     }
 
