@@ -76,25 +76,17 @@ export async function validateGossipAggregateAndProof(
   // -- i.e. get_ancestor(store, aggregate.data.beacon_block_root, compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)) == store.finalized_checkpoint.root
   // > Altready check in `chain.forkChoice.hasBlock(attestation.data.beaconBlockRoot)`
 
-  // TODO: Must be a state in the same chain as attHeadBlock, but dialed to target.epoch
-  const attHeadState =
-    computeEpochAtSlot(attHeadBlock.slot) < attEpoch
-      ? await chain.regen
-          .getCheckpointState(attTarget, RegenCaller.validateGossipAggregateAndProof)
-          .catch((e: Error) => {
-            throw new AttestationError(GossipAction.REJECT, {
-              code: AttestationErrorCode.MISSING_ATTESTATION_HEAD_STATE,
-              error: e as Error,
-            });
-          })
-      : await chain.regen
-          .getState(attHeadBlock.stateRoot, RegenCaller.validateGossipAggregateAndProof)
-          .catch((e: Error) => {
-            throw new AttestationError(GossipAction.REJECT, {
-              code: AttestationErrorCode.MISSING_ATTESTATION_HEAD_STATE,
-              error: e as Error,
-            });
-          });
+  // Using the target checkpoint state here caused unstable memory issue
+  // See https://github.com/ChainSafe/lodestar/issues/4896
+  // TODO: https://github.com/ChainSafe/lodestar/issues/4900
+  const attHeadState = await chain.regen
+    .getState(attHeadBlock.stateRoot, RegenCaller.validateGossipAggregateAndProof)
+    .catch((e: Error) => {
+      throw new AttestationError(GossipAction.REJECT, {
+        code: AttestationErrorCode.MISSING_ATTESTATION_HEAD_STATE,
+        error: e as Error,
+      });
+    });
 
   const committeeIndices: number[] = getCommitteeIndices(attHeadState, attSlot, attIndex);
 
