@@ -18,7 +18,7 @@ import {BeaconChain, IBeaconChain, initBeaconMetrics} from "../chain/index.js";
 import {createMetrics, IMetrics, HttpMetricsServer} from "../metrics/index.js";
 import {getApi, BeaconRestApiServer} from "../api/index.js";
 import {initializeEth1ForBlockProduction} from "../eth1/index.js";
-import {loadEthereumTrustedSetup} from "../util/kzg.js";
+import {initCKZG, loadEthereumTrustedSetup} from "../util/kzg.js";
 import {createLibp2pMetrics} from "../metrics/metrics/libp2p.js";
 import {initializeExecutionBuilder} from "../execution/index.js";
 import {IBeaconNodeOptions} from "./options.js";
@@ -145,6 +145,9 @@ export class BeaconNode {
 
     // TODO EIP-4844, where is the best place to do this?
     if (config.EIP4844_FORK_EPOCH < Infinity) {
+      // TODO EIP-4844: "c-kzg" is not installed by default, so if the library is not installed this will throw
+      // See "Not able to build lodestar from source" https://github.com/ChainSafe/lodestar/issues/4886
+      await initCKZG();
       loadEthereumTrustedSetup();
     }
 

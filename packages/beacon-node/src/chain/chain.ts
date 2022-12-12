@@ -1,5 +1,4 @@
 import path from "node:path";
-import {computeAggregateKzgProof} from "c-kzg";
 import {
   BeaconStateAllForks,
   CachedBeaconStateAllForks,
@@ -25,6 +24,7 @@ import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
 import {IMetrics} from "../metrics/index.js";
 import {wrapError} from "../util/wrapError.js";
+import {ckzg} from "../util/kzg.js";
 import {IEth1ForBlockProduction} from "../eth1/index.js";
 import {ensureDir, writeIfNotExist} from "../util/file.js";
 import {IExecutionBuilder} from "../execution/index.js";
@@ -399,7 +399,7 @@ export class BeaconChain implements IBeaconChain {
         beaconBlockRoot: this.config.getForkTypes(block.slot).BeaconBlock.hashTreeRoot(block),
         beaconBlockSlot: block.slot,
         blobs: blobs.blobs,
-        kzgAggregatedProof: computeAggregateKzgProof(blobs.blobs),
+        kzgAggregatedProof: ckzg.computeAggregateKzgProof(blobs.blobs),
       });
       pruneSetToMax(
         this.producedBlobsSidecarCache,
