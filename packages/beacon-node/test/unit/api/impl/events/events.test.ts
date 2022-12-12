@@ -2,10 +2,10 @@ import {expect} from "chai";
 import sinon, {SinonStubbedInstance} from "sinon";
 import {routes} from "@lodestar/api";
 import {config} from "@lodestar/config/default";
+import {ssz} from "@lodestar/types";
 import {BeaconChain, ChainEvent, ChainEventEmitter, HeadEventData} from "../../../../../src/chain/index.js";
 import {getEventsApi} from "../../../../../src/api/impl/events/index.js";
-import {generateProtoBlock, generateEmptySignedBlock, generateSignedBlock} from "../../../../utils/block.js";
-import {generateAttestation, generateEmptySignedVoluntaryExit} from "../../../../utils/attestation.js";
+import {generateProtoBlock} from "../../../../utils/typeGenerator.js";
 import {generateCachedState} from "../../../../utils/state.js";
 import {StateContextCache} from "../../../../../src/chain/stateCache/index.js";
 import {StubbedChainMutable} from "../../../../utils/stub/index.js";
@@ -77,7 +77,7 @@ describe("Events api impl", function () {
     it("should process block event", async function () {
       const events = getEvents([routes.events.EventType.block]);
 
-      const block = generateSignedBlock();
+      const block = ssz.phase0.SignedBeaconBlock.defaultValue();
       chainEventEmmitter.emit(ChainEvent.block, block, null as any);
 
       expect(events).to.have.length(1, "Wrong num of received events");
@@ -88,7 +88,7 @@ describe("Events api impl", function () {
     it("should process attestation event", async function () {
       const events = getEvents([routes.events.EventType.attestation]);
 
-      const attestation = generateAttestation();
+      const attestation = ssz.phase0.Attestation.defaultValue();
       chainEventEmmitter.emit(ChainEvent.attestation, attestation);
 
       expect(events).to.have.length(1, "Wrong num of received events");
@@ -99,8 +99,8 @@ describe("Events api impl", function () {
     it("should process voluntary exit event", async function () {
       const events = getEvents([routes.events.EventType.voluntaryExit]);
 
-      const exit = generateEmptySignedVoluntaryExit();
-      const block = generateEmptySignedBlock();
+      const exit = ssz.phase0.SignedVoluntaryExit.defaultValue();
+      const block = ssz.phase0.SignedBeaconBlock.defaultValue();
       block.message.body.voluntaryExits.push(exit);
       chainEventEmmitter.emit(ChainEvent.block, block, null as any);
 

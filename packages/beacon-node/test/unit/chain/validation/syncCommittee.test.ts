@@ -1,6 +1,6 @@
 import sinon from "sinon";
 import {SinonStubbedInstance} from "sinon";
-import {Epoch} from "@lodestar/types";
+import {altair, Epoch, Slot} from "@lodestar/types";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {createIChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {BeaconChain} from "../../../../src/chain/index.js";
@@ -9,10 +9,10 @@ import {SyncCommitteeErrorCode} from "../../../../src/chain/errors/syncCommittee
 import {validateGossipSyncCommittee} from "../../../../src/chain/validation/syncCommittee.js";
 import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
 import {generateCachedAltairState} from "../../../utils/state.js";
-import {generateSyncCommitteeSignature} from "../../../utils/syncCommittee.js";
 import {SeenSyncCommitteeMessages} from "../../../../src/chain/seenCache/index.js";
 import {BlsVerifierMock} from "../../../utils/mocks/bls.js";
 import {StubbedChainMutable} from "../../../utils/stub/index.js";
+import {ZERO_HASH} from "../../../../src/constants/constants.js";
 
 type StubbedChain = StubbedChainMutable<"clock" | "bls">;
 
@@ -57,7 +57,7 @@ describe("Sync Committee Signature validation", function () {
     clockStub.isCurrentSlotGivenGossipDisparity.returns(false);
     sandbox.stub(clockStub, "currentSlot").get(() => 100);
 
-    const syncCommittee = generateSyncCommitteeSignature({slot: 1});
+    const syncCommittee = getSyncCommitteeSignature(1, 0);
     await expectRejectedWithLodestarError(
       validateGossipSyncCommittee(chain, syncCommittee, 0),
       SyncCommitteeErrorCode.NOT_CURRENT_SLOT
@@ -65,10 +65,7 @@ describe("Sync Committee Signature validation", function () {
   });
 
   it("should throw error - there has been another valid sync committee signature for the declared slot", async function () {
-    const syncCommittee = generateSyncCommitteeSignature({
-      slot: currentSlot,
-      validatorIndex: validatorIndexInSyncCommittee,
-    });
+    const syncCommittee = getSyncCommitteeSignature(currentSlot, validatorIndexInSyncCommittee);
     const headState = generateCachedAltairState({slot: currentSlot}, altairForkEpoch);
     chain.getHeadState.returns(headState);
     chain.seenSyncCommitteeMessages.isKnown = () => true;
@@ -79,7 +76,7 @@ describe("Sync Committee Signature validation", function () {
   });
 
   it("should throw error - the validator is not part of the current sync committee", async function () {
-    const syncCommittee = generateSyncCommitteeSignature({slot: currentSlot, validatorIndex: 100});
+    const syncCommittee = getSyncCommitteeSignature(currentSlot, 100);
     const headState = generateCachedAltairState({slot: currentSlot}, altairForkEpoch);
     chain.getHeadState.returns(headState);
 
@@ -94,7 +91,7 @@ describe("Sync Committee Signature validation", function () {
    * because it's the same to VALIDATOR_NOT_IN_SYNC_COMMITTEE
    */
   it.skip("should throw error - incorrect subnet", async function () {
-    const syncCommittee = generateSyncCommitteeSignature({slot: currentSlot, validatorIndex: 1});
+    const syncCommittee = getSyncCommitteeSignature(currentSlot, 1);
     const headState = generateCachedAltairState({slot: currentSlot}, altairForkEpoch);
     chain.getHeadState.returns(headState);
     await expectRejectedWithLodestarError(
@@ -104,10 +101,7 @@ describe("Sync Committee Signature validation", function () {
   });
 
   it("should throw error - invalid signature", async function () {
-    const syncCommittee = generateSyncCommitteeSignature({
-      slot: currentSlot,
-      validatorIndex: validatorIndexInSyncCommittee,
-    });
+    const syncCommittee = getSyncCommitteeSignature(currentSlot, validatorIndexInSyncCommittee);
     const headState = generateCachedAltairState({slot: currentSlot}, altairForkEpoch);
 
     chain.getHeadState.returns(headState);
@@ -118,3 +112,12 @@ describe("Sync Committee Signature validation", function () {
     );
   });
 });
+
+function getSyncCommitteeSignature(slot: Slot, validatorIndex: number): altair.SyncCommitteeMessage {
+  return {
+    slot,
+    beaconBlockRoot: ZERO_HASH,
+    validatorIndex,
+    signature: ZERO_HASH,
+  };
+}

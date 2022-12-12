@@ -5,7 +5,7 @@ import {ForkChoice} from "@lodestar/fork-choice";
 import {config} from "@lodestar/config/default";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {ZERO_HASH_HEX} from "../../../../src/constants/index.js";
-import {generateProtoBlock, generateEmptySignedBlock} from "../../../utils/block.js";
+import {generateProtoBlock} from "../../../utils/typeGenerator.js";
 import {StubbedBeaconDb} from "../../../utils/stub/index.js";
 import {testLogger} from "../../../utils/logger.js";
 import {archiveBlocks} from "../../../../src/chain/archiver/archiveBlocks.js";
@@ -26,8 +26,8 @@ describe("block archiver task", function () {
   });
 
   it("should archive finalized blocks", async function () {
-    const blockBuffer = Buffer.from(ssz.phase0.SignedBeaconBlock.serialize(generateEmptySignedBlock()));
-    dbStub.block.getBinary.resolves(blockBuffer);
+    const blockBytes = ssz.phase0.SignedBeaconBlock.serialize(ssz.phase0.SignedBeaconBlock.defaultValue());
+    dbStub.block.getBinary.resolves(Buffer.from(blockBytes));
     // block i has slot i+1
     const blocks = Array.from({length: 5}, (_, i) =>
       generateProtoBlock({slot: i + 1, blockRoot: toHexString(Buffer.alloc(32, i + 1))})
@@ -50,7 +50,7 @@ describe("block archiver task", function () {
     expect(dbStub.blockArchive.batchPutBinary.getCall(0).args[0]).to.deep.equal(
       canonicalBlocks.map((summary) => ({
         key: summary.slot,
-        value: blockBuffer,
+        value: blockBytes,
         slot: summary.slot,
         blockRoot: fromHexString(summary.blockRoot),
         parentRoot: fromHexString(summary.parentRoot),

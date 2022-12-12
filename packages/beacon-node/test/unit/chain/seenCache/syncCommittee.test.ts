@@ -1,7 +1,7 @@
 import {expect} from "chai";
 import {BitArray} from "@chainsafe/ssz";
+import {ssz} from "@lodestar/types";
 import {SeenSyncCommitteeMessages, SeenContributionAndProof} from "../../../../src/chain/seenCache/index.js";
-import {generateContributionAndProof} from "../../../utils/contributionAndProof.js";
 
 const NUM_SLOTS_IN_CACHE = 3;
 
@@ -42,13 +42,18 @@ describe("chain / seenCache / SeenSyncCommittee caches", function () {
     const aggregatorIndex = 100;
 
     it("should find a sync committee based on same slot and validator index", () => {
+      const contributionAndProof = ssz.altair.ContributionAndProof.defaultValue();
+      contributionAndProof.aggregatorIndex = aggregatorIndex;
+      contributionAndProof.contribution.slot = slot;
+      contributionAndProof.contribution.subcommitteeIndex = subcommitteeIndex;
+
       const cache = new SeenContributionAndProof(null);
 
       expect(cache.isAggregatorKnown(slot, subcommitteeIndex, aggregatorIndex)).to.equal(
         false,
         "Should not know before adding"
       );
-      cache.add(generateContributionAndProof({aggregatorIndex, contribution: {slot, subcommitteeIndex}}), 0);
+      cache.add(contributionAndProof, 0);
       expect(cache.isAggregatorKnown(slot, subcommitteeIndex, aggregatorIndex)).to.equal(
         true,
         "Should know before adding"
@@ -70,10 +75,10 @@ describe("chain / seenCache / SeenSyncCommittee caches", function () {
 
     it("should prune", () => {
       const cache = new SeenContributionAndProof(null);
-      const contributionAndProof = generateContributionAndProof({
-        aggregatorIndex,
-        contribution: {slot, subcommitteeIndex},
-      });
+      const contributionAndProof = ssz.altair.ContributionAndProof.defaultValue();
+      contributionAndProof.aggregatorIndex = aggregatorIndex;
+      contributionAndProof.contribution.slot = slot;
+      contributionAndProof.contribution.subcommitteeIndex = subcommitteeIndex;
 
       for (let i = 0; i < NUM_SLOTS_IN_CACHE; i++) {
         cache.add(contributionAndProof, 0);
@@ -134,10 +139,12 @@ describe("chain / seenCache / SeenSyncCommittee caches", function () {
       it(id, () => {
         const cache = new SeenContributionAndProof(null);
         const aggregationBits = new BitArray(new Uint8Array(seenAttestingBits), 8);
-        const contributionAndProof = generateContributionAndProof({
-          aggregatorIndex,
-          contribution: {slot, subcommitteeIndex, aggregationBits},
-        });
+        const contributionAndProof = ssz.altair.ContributionAndProof.defaultValue();
+        contributionAndProof.aggregatorIndex = aggregatorIndex;
+        contributionAndProof.contribution.slot = slot;
+        contributionAndProof.contribution.subcommitteeIndex = subcommitteeIndex;
+        contributionAndProof.contribution.aggregationBits = aggregationBits;
+
         cache.add(contributionAndProof, aggregationBits.getTrueBitIndexes().length);
 
         for (const {bits, isKnown} of checkAttestingBits) {

@@ -5,7 +5,7 @@ import {toHexString} from "@chainsafe/ssz";
 import {createIChainForkConfig} from "@lodestar/config";
 import {config as mainnetConfig} from "@lodestar/config/default";
 import {sleep} from "@lodestar/utils";
-import {generateEmptySignedBlock} from "../../../../beacon-node/test/utils/block.js";
+import {ssz} from "@lodestar/types";
 import {BlockProposingService} from "../../../src/services/block.js";
 import {ValidatorStore} from "../../../src/services/validatorStore.js";
 import {getApiClientStub} from "../../utils/apiStub.js";
@@ -45,7 +45,7 @@ describe("BlockDutiesService", function () {
     const clock = new ClockMock();
     const blockService = new BlockProposingService(config, loggerVc, api, clock, validatorStore, null);
 
-    const signedBlock = generateEmptySignedBlock();
+    const signedBlock = ssz.phase0.SignedBeaconBlock.defaultValue();
     validatorStore.signRandao.resolves(signedBlock.message.body.randaoReveal);
     validatorStore.signBlock.callsFake(async (_, block) => ({message: block, signature: signedBlock.signature}));
     api.validator.produceBlock.resolves({data: signedBlock.message});

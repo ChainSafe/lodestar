@@ -14,7 +14,6 @@ import {Network, NetworkEvent, ReqRespMethod, getReqRespHandlers} from "../../..
 import {defaultNetworkOptions, INetworkOptions} from "../../../src/network/options.js";
 import {GoodByeReasonCode} from "../../../src/constants/index.js";
 
-import {generateEmptySignedBlock} from "../../utils/block.js";
 import {MockBeaconChain, zeroProtoBlock} from "../../utils/mocks/chain/chain.js";
 import {createNode} from "../../utils/network.js";
 import {generateState} from "../../utils/state.js";
@@ -67,7 +66,7 @@ describe("network", function () {
   }
 
   const getStaticData = memoOnce(() => {
-    const block = generateEmptySignedBlock();
+    const block = ssz.phase0.SignedBeaconBlock.defaultValue();
     const state = generateState({
       finalizedCheckpoint: {
         epoch: 0,

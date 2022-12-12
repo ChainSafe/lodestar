@@ -2,9 +2,10 @@ import {SinonStubbedInstance} from "sinon";
 import {expect, use} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import {ForkChoice, ProtoBlock, ExecutionStatus} from "@lodestar/fork-choice";
+import {ssz} from "@lodestar/types";
 import {toHexString} from "@chainsafe/ssz";
 import {resolveBlockId} from "../../../../../../src/api/impl/beacon/blocks/utils.js";
-import {generateEmptySignedBlock, generateProtoBlock} from "../../../../../utils/block.js";
+import {generateProtoBlock} from "../../../../../utils/typeGenerator.js";
 import {StubbedBeaconDb} from "../../../../../utils/stub/index.js";
 import {GENESIS_SLOT} from "../../../../../../src/constants/index.js";
 import {bufferEqualsMatcher} from "../../../../../utils/sinon/matcher.js";
@@ -22,6 +23,7 @@ describe("block api utils", function () {
     let expectedBuffer: Buffer;
     let expectedRootHex: string;
     let expectedSummary: ProtoBlock;
+    const emptyBlock = ssz.phase0.SignedBeaconBlock.defaultValue();
 
     before(function () {
       expectedBuffer = Buffer.alloc(32, 2);
@@ -79,7 +81,7 @@ describe("block api utils", function () {
 
     it("should resolve non finalized block root", async function () {
       forkChoiceStub.getBlock.returns(null);
-      dbStub.block.get.withArgs(bufferEqualsMatcher(expectedBuffer)).resolves(generateEmptySignedBlock());
+      dbStub.block.get.withArgs(bufferEqualsMatcher(expectedBuffer)).resolves(emptyBlock);
       await resolveBlockId(forkChoiceStub, dbStub, toHexString(expectedBuffer)).catch(() => {});
       expect(dbStub.blockArchive.getByRoot).to.be.calledOnceWithExactly(bufferEqualsMatcher(expectedBuffer));
     });
