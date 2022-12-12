@@ -14,13 +14,13 @@
       "import": "./lib/index.js"
     },
     "./presets/mainnet": {
-      "import": "./lib/presets/mainnet/index.js"
+      "import": "./lib/presets/mainnet.js"
     },
     "./presets/minimal": {
-      "import": "./lib/presets/minimal/index.js"
+      "import": "./lib/presets/minimal.js"
     },
     "./presets/gnosis": {
-      "import": "./lib/presets/gnosis/index.js"
+      "import": "./lib/presets/gnosis.js"
     },
     "./setPreset": {
       "import": "./lib/setPreset.js"

@@ -264,10 +264,11 @@ export class Lightclient {
 
     for (const [fromPeriodRng, toPeriodRng] of periodRanges) {
       const count = toPeriodRng + 1 - fromPeriodRng;
-      const {data: updates} = await this.api.lightclient.getUpdates(fromPeriodRng, count);
+      const updates = await this.api.lightclient.getUpdates(fromPeriodRng, count);
       for (const update of updates) {
-        this.processLightClientUpdate(update);
-        const headPeriod = computeSyncPeriodAtSlot(update.attestedHeader.slot);
+        const lightClientUpdate = update.data;
+        this.processLightClientUpdate(lightClientUpdate);
+        const headPeriod = computeSyncPeriodAtSlot(lightClientUpdate.attestedHeader.slot);
         this.logger.debug(`processed sync update for period ${headPeriod}`);
         // Yield to the macro queue, verifying updates is somewhat expensive and we want responsiveness
         await new Promise((r) => setTimeout(r, 0));

@@ -8,7 +8,7 @@ import {ILogger, sleep} from "@lodestar/utils";
 import {ATTESTATION_SUBNET_COUNT, ForkName, ForkSeq, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {Discv5, ENR} from "@chainsafe/discv5";
 import {computeEpochAtSlot, computeTimeAtSlot} from "@lodestar/state-transition";
-import {altair, Epoch, phase0} from "@lodestar/types";
+import {altair, eip4844, Epoch, phase0} from "@lodestar/types";
 import {IMetrics} from "../metrics/index.js";
 import {ChainEvent, IBeaconChain, IBeaconClock} from "../chain/index.js";
 import {BlockInput, BlockInputType, getBlockInput} from "../chain/blocks/types.js";
@@ -207,17 +207,19 @@ export class Network implements INetwork {
     return this.peerManager.hasSomeConnectedPeer();
   }
 
-  publishBeaconBlockMaybeBlobs(blockImport: BlockInput): Promise<void> {
-    switch (blockImport.type) {
+  publishBeaconBlockMaybeBlobs(blockInput: BlockInput): Promise<void> {
+    switch (blockInput.type) {
       case BlockInputType.preEIP4844:
-        return this.gossip.publishBeaconBlock(blockImport.block);
+        return this.gossip.publishBeaconBlock(blockInput.block);
 
       case BlockInputType.postEIP4844:
-        // TODO EIP-4844: Implement SignedBeaconBlockAndBlobsSidecar publish topic
-        throw Error("SignedBeaconBlockAndBlobsSidecar publish not implemented");
+        return this.gossip.publishSignedBeaconBlockAndBlobsSidecar({
+          beaconBlock: blockInput.block as eip4844.SignedBeaconBlock,
+          blobsSidecar: blockInput.blobs,
+        });
 
       case BlockInputType.postEIP4844OldBlobs:
-        throw Error(`Attempting to broadcast old BlockImport slot ${blockImport.block.message.slot}`);
+        throw Error(`Attempting to broadcast old BlockImport slot ${blockInput.block.message.slot}`);
     }
   }
 
@@ -245,7 +247,7 @@ export class Network implements INetwork {
         throw Error(`blocks.length ${blocks.length} != blobsSidecars.length ${blobsSidecars.length}`);
       }
 
-      const blockImports: BlockInput[] = [];
+      const blockInput: BlockInput[] = [];
       for (let i = 0; i < blocks.length; i++) {
         const block = blocks[i];
         const blobsSidecar = blobsSidecars[i];
@@ -255,9 +257,9 @@ export class Network implements INetwork {
           throw Error(`blob does not match block slot ${block.message.slot} != ${blobsSidecar.beaconBlockSlot}`);
         }
 
-        blockImports.push(getBlockInput.postEIP4844(this.config, block, blobsSidecar));
+        blockInput.push(getBlockInput.postEIP4844(this.config, block, blobsSidecar));
       }
-      return blockImports;
+      return blockInput;
     }
 
     // Post EIP-4844 but old blobs
@@ -474,12 +476,19 @@ export class Network implements INetwork {
   private coreTopicsAtFork(fork: ForkName): GossipTopicTypeMap[keyof GossipTopicTypeMap][] {
     // Common topics for all forks
     const topics: GossipTopicTypeMap[keyof GossipTopicTypeMap][] = [
-      {type: GossipType.beacon_block},
+      // {type: GossipType.beacon_block}, // Handled below
       {type: GossipType.beacon_aggregate_and_proof},
       {type: GossipType.voluntary_exit},
       {type: GossipType.proposer_slashing},
       {type: GossipType.attester_slashing},
     ];
+
+    // After EIP4844 only track beacon_block_and_blobs_sidecar topic
+    if (ForkSeq[fork] < ForkSeq.eip4844) {
+      topics.push({type: GossipType.beacon_block});
+    } else {
+      topics.push({type: GossipType.beacon_block_and_blobs_sidecar});
+    }
 
     // Any fork after altair included
     if (ForkSeq[fork] >= ForkSeq.altair) {

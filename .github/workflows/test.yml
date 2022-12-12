@@ -1,8 +1,8 @@
 name: Tests
 
-on: 
+on:
   push:
-    # We intentionally don't run push on feature branches. See PR for rational. 
+    # We intentionally don't run push on feature branches. See PR for rational.
     branches: [unstable, stable]
   pull_request:
   workflow_dispatch:
@@ -40,6 +40,10 @@ jobs:
         if: steps.cache-deps.outputs.cache-hit == 'true'
       # </common-build>
 
+      # Only install c-kzg if required. See https://github.com/ChainSafe/lodestar/pull/4888
+      # Install in workspace root, else there are weird type errors with NodeJS types
+      - run: yarn add --ignore-workspace-root-check c-kzg
+
       # Cache validator slashing protection data tests
       - name: Restore spec tests cache
         uses: actions/cache@master
@@ -56,6 +60,8 @@ jobs:
         run: .github/workflows/scripts/reject_yarn_lock_changes.sh
         # Run only on forks
         if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}
+      - name: Assert ESM module exports
+        run: node scripts/assert_exports.mjs
 
       - name: Check Types
         run: yarn run check-types

@@ -7,7 +7,7 @@ import {LodestarError} from "@lodestar/utils";
  */
 export async function collectSequentialBlocksInRange(
   blockStream: AsyncIterable<allForks.SignedBeaconBlock>,
-  {count, startSlot}: phase0.BeaconBlocksByRangeRequest
+  {count, startSlot}: Pick<phase0.BeaconBlocksByRangeRequest, "count" | "startSlot">
 ): Promise<allForks.SignedBeaconBlock[]> {
   const blocks: allForks.SignedBeaconBlock[] = [];
 

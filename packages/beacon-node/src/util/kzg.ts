@@ -1,8 +1,32 @@
 import path from "node:path";
 import fs from "node:fs";
 import {fileURLToPath} from "node:url";
-import {FIELD_ELEMENTS_PER_BLOB, loadTrustedSetup} from "c-kzg";
 import {fromHex, toHex} from "@lodestar/utils";
+
+/* eslint-disable @typescript-eslint/naming-convention */
+
+// "c-kzg" has hardcoded the mainnet value, do not use params
+export const FIELD_ELEMENTS_PER_BLOB_MAINNET = 4096;
+
+function ckzgNotLoaded(): never {
+  throw Error("c-kzg library not loaded");
+}
+
+export let ckzg: {
+  loadTrustedSetup(filePath: string): void;
+  blobToKzgCommitment(blob: Uint8Array): Uint8Array;
+  computeAggregateKzgProof(blobs: Uint8Array[]): Uint8Array;
+  verifyAggregateKzgProof(
+    blobs: Uint8Array[],
+    expectedKzgCommitments: Uint8Array[],
+    kzgAggregatedProof: Uint8Array
+  ): boolean;
+} = {
+  loadTrustedSetup: ckzgNotLoaded,
+  blobToKzgCommitment: ckzgNotLoaded,
+  computeAggregateKzgProof: ckzgNotLoaded,
+  verifyAggregateKzgProof: ckzgNotLoaded,
+};
 
 // Global variable __dirname no longer available in ES6 modules.
 // Solutions: https://stackoverflow.com/questions/46745014/alternative-for-dirname-in-node-js-when-using-es6-modules
@@ -15,9 +39,16 @@ const TRUSTED_SETUP_TXT_FILEPATH = path.join(__dirname, "../../trusted_setup.txt
 const POINT_COUNT_BYTES = 4;
 const G1POINT_BYTES = 48;
 const G2POINT_BYTES = 96;
-const G1POINT_COUNT = FIELD_ELEMENTS_PER_BLOB;
+const G1POINT_COUNT = FIELD_ELEMENTS_PER_BLOB_MAINNET;
 const G2POINT_COUNT = 65;
 const TOTAL_SIZE = 2 * POINT_COUNT_BYTES + G1POINT_BYTES * G1POINT_COUNT + G2POINT_BYTES * G2POINT_COUNT;
+
+export async function initCKZG(): Promise<void> {
+  /* eslint-disable import/no-extraneous-dependencies, @typescript-eslint/ban-ts-comment */
+  // @ts-ignore
+  ckzg = (await import("c-kzg")) as typeof ckzg;
+  /* eslint-enable import/no-extraneous-dependencies, @typescript-eslint/ban-ts-comment */
+}
 
 /**
  * Load our KZG trusted setup into C-KZG for later use.
@@ -31,7 +62,7 @@ export function loadEthereumTrustedSetup(): void {
     const txt = trustedSetupJsonToTxt(json);
     fs.writeFileSync(TRUSTED_SETUP_TXT_FILEPATH, txt);
 
-    loadTrustedSetup(TRUSTED_SETUP_TXT_FILEPATH);
+    ckzg.loadTrustedSetup(TRUSTED_SETUP_TXT_FILEPATH);
   } catch (e) {
     (e as Error).message = `Error loading trusted setup ${TRUSTED_SETUP_JSON_FILEPATH}: ${(e as Error).message}`;
     throw e;
@@ -96,12 +127,13 @@ export function trustedSetupBinToJson(bytes: TrustedSetupBin): TrustedSetupJSON 
 }
 
 export function trustedSetupJsonToTxt(data: TrustedSetupJSON): TrustedSetupTXT {
-  let out = `${FIELD_ELEMENTS_PER_BLOB}\n65\n`;
-
-  for (const p of data.setup_G1) out += strip0xPrefix(p) + "\n";
-  for (const p of data.setup_G2) out += strip0xPrefix(p) + "\n";
-
-  return out;
+  return [
+    // ↵
+    G1POINT_COUNT,
+    G2POINT_COUNT,
+    ...data.setup_G1.map(strip0xPrefix),
+    ...data.setup_G2.map(strip0xPrefix),
+  ].join("\n");
 }
 
 function strip0xPrefix(hex: string): string {
