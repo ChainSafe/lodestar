@@ -6,7 +6,7 @@ import {
   processSlots,
   stateTransition,
 } from "@lodestar/state-transition";
-import {allForks, bellatrix, ssz} from "@lodestar/types";
+import {allForks, eip4844, ssz} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
 import {bnToNum} from "@lodestar/utils";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
@@ -62,7 +62,7 @@ export const sanityBlocks: TestRunnerFn<SanityBlocksTestCase, BeaconStateAllFork
       let wrappedState = createCachedBeaconStateTest(stateTB, getConfig(fork));
       const verify = shouldVerify(testcase);
       for (let i = 0; i < testcase.meta.blocks_count; i++) {
-        const signedBlock = testcase[`blocks_${i}`] as bellatrix.SignedBeaconBlock;
+        const signedBlock = testcase[`blocks_${i}`] as eip4844.SignedBeaconBlock;
         wrappedState = stateTransition(wrappedState, signedBlock, {
           // TODO EIP-4844: Should assume valid and available for this test?
           executionPayloadStatus: ExecutionPayloadStatus.valid,
@@ -71,6 +71,7 @@ export const sanityBlocks: TestRunnerFn<SanityBlocksTestCase, BeaconStateAllFork
           verifyProposer: verify,
           verifySignatures: verify,
           assertCorrectProgressiveBalances,
+          disabledWithdrawals: true,
         });
       }
       return wrappedState;
