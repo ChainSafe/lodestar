@@ -565,17 +565,6 @@ export class Lightclient {
 
     signingSyncCommittee = this.syncCommitteeByPeriod.get(signaturePeriod);
 
-    // in the scenario where only update for period is requested at the boundary,
-    // there won't have been an update to process that would have enabled next sync committee to be
-    // cached in this.syncCommitteeByPeriod, hence directly use one in update
-    if (isLastSlotInPeriod(updateSlot) && signingSyncCommittee === undefined) {
-      nextSyncCommittee = deserializeSyncCommittee(update.nextSyncCommittee);
-      signingSyncCommittee = {
-        ...newNextSyncCommitteeStats,
-        ...nextSyncCommittee,
-      };
-    }
-
     if (!signingSyncCommittee) {
       throw Error(`No syncCommittee for attested period ${attestedPeriod} and signaturePeriod ${signaturePeriod}`);
     }
