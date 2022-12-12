@@ -92,15 +92,10 @@ export class ReqRespRateLimiter {
       this.reportPeer(peerId);
 
       if (this.metrics) {
-        this.metrics.rateLimitErrors.inc();
+        this.metrics.rateLimitErrors.inc({method: protocol.method});
       }
 
-      throw new RequestError(
-        {
-          code: RequestErrorCode.REQUEST_RATE_LIMITED,
-        },
-        {peer: peerIdStr, method, encoding}
-      );
+      throw new RequestError({code: RequestErrorCode.REQUEST_RATE_LIMITED}, {peer: peerIdStr, method, encoding});
     }
 
     if (!this.rateLimitersTotal.get(method)?.get(version)?.allows(null, requestCount)) {
@@ -108,12 +103,7 @@ export class ReqRespRateLimiter {
         peerId: peerIdStr,
       });
 
-      throw new RequestError(
-        {
-          code: RequestErrorCode.REQUEST_RATE_LIMITED,
-        },
-        {peer: peerIdStr, method, encoding}
-      );
+      throw new RequestError({code: RequestErrorCode.REQUEST_RATE_LIMITED}, {peer: peerIdStr, method, encoding});
     }
   }
 

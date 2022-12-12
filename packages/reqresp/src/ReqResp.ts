@@ -87,17 +87,7 @@ export class ReqResp {
     this.registeredProtocols.set(protocolID, protocol as ProtocolDefinition);
     this.rateLimiter.initRateLimits(protocol);
 
-    try {
-      await this.libp2p.handle(protocolID, this.getRequestHandler(protocol));
-    } catch (err) {
-      this.metrics?.incomingErrors.inc({method: protocol.method});
-
-      if (err instanceof RequestError) {
-        this.onIncomingRequestError(protocol, err);
-      }
-
-      throw err;
-    }
+    return this.libp2p.handle(protocolID, this.getRequestHandler(protocol));
   }
 
   /**
@@ -214,8 +204,12 @@ export class ReqResp {
           requestTimeoutMs: this.opts.requestTimeoutMs,
         });
         // TODO: Do success peer scoring here
-      } catch {
+      } catch (err) {
         this.metrics?.incomingErrors.inc({method});
+
+        if (err instanceof RequestError) {
+          this.onIncomingRequestError(protocol, err);
+        }
 
         // TODO: Do error peer scoring here
         // Must not throw since this is an event handler
