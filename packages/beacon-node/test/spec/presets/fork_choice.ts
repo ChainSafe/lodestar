@@ -7,6 +7,7 @@ import {phase0, allForks, bellatrix, ssz, RootHex} from "@lodestar/types";
 import {bnToNum} from "@lodestar/utils";
 import {createIBeaconConfig} from "@lodestar/config";
 import {ExecutionEngineMock} from "@lodestar/engine-api-client";
+import {ForkSeq} from "@lodestar/params";
 import {BeaconChain, ChainEvent} from "../../../src/chain/index.js";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {testLogger} from "../../utils/logger.js";
@@ -127,21 +128,25 @@ export const forkChoiceTest: TestRunnerFn<ForkChoiceTestCase, void> = (fork) => 
               throw Error(`No block ${step.block}`);
             }
 
+            const {slot} = signedBlock.message;
             // Log the BeaconBlock root instead of the SignedBeaconBlock root, forkchoice references BeaconBlock roots
             const blockRoot = config
               .getForkTypes(signedBlock.message.slot)
               .BeaconBlock.hashTreeRoot(signedBlock.message);
             logger.debug(`Step ${i}/${stepsLen} block`, {
-              slot: signedBlock.message.slot,
+              slot,
               root: toHexString(blockRoot),
               parentRoot: toHexString(signedBlock.message.parentRoot),
               isValid,
             });
 
-            const blockInput = getBlockInput.preEIP4844(config, signedBlock);
+            const blockImport =
+              config.getForkSeq(slot) < ForkSeq.eip4844
+                ? getBlockInput.preEIP4844(config, signedBlock)
+                : getBlockInput.postEIP4844OldBlobs(config, signedBlock);
 
             try {
-              await chain.processBlock(blockInput, {seenTimestampSec: tickTime});
+              await chain.processBlock(blockImport, {seenTimestampSec: tickTime, validBlobsSidecar: true});
               if (!isValid) throw Error("Expect error since this is a negative test");
             } catch (e) {
               if (isValid) throw e;

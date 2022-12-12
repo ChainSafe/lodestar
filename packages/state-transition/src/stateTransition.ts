@@ -23,12 +23,14 @@ import {
 import {processBlock} from "./block/index.js";
 import {processEpoch} from "./epoch/index.js";
 import {BlockExternalData, DataAvailableStatus, ExecutionPayloadStatus} from "./block/externalData.js";
+import {ProcessBlockOpts} from "./block/types.js";
 
 // Multifork capable state transition
 
 // NOTE EIP-4844: Mandatory BlockExternalData to decide if block is available or not
 export type StateTransitionOpts = BlockExternalData &
-  EpochProcessOpts & {
+  EpochProcessOpts &
+  ProcessBlockOpts & {
     verifyStateRoot?: boolean;
     verifyProposer?: boolean;
     verifySignatures?: boolean;
