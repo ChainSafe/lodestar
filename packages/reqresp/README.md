@@ -18,7 +18,7 @@ import {Ping} from "@lodestar/reqresp/protocols";
 import {ILogger} from "@lodestar/utils";
 
 async function getReqResp(libp2p: Libp2p, logger: ILogger): Promise<void> {
-  const reqResp = new ReqResp({libp2p, logger, metricsRegister: null});
+  const reqResp = new ReqResp({libp2p, logger, metricsRegister: null, reportPeer: () => {}});
 
   // Register a PONG handler to respond with caller's Ping request
   reqResp.registerProtocol(
