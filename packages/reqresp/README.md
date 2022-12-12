@@ -14,7 +14,7 @@ Typescript REST client for the [Ethereum Consensus API spec](https://github.com/
 ```typescript
 import {Libp2p} from "libp2p";
 import {EncodedPayloadType, ReqResp} from "@lodestar/reqresp";
-import {Ping} from "@lodestar/reqresp/protocols";
+import {Ping} from "@lodestar/reqresp/messages";
 import {ILogger} from "@lodestar/utils";
 
 async function getReqResp(libp2p: Libp2p, logger: ILogger): Promise<void> {

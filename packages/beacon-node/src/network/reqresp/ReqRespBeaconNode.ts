@@ -13,7 +13,7 @@ import {
   RequestError,
 } from "@lodestar/reqresp";
 import {ReqRespOpts} from "@lodestar/reqresp/lib/ReqResp.js";
-import * as protocols from "@lodestar/reqresp/protocols";
+import * as messages from "@lodestar/reqresp/messages";
 import {allForks, altair, phase0, Root} from "@lodestar/types";
 import {ILogger} from "@lodestar/utils";
 import {IMetrics} from "../../metrics/metrics.js";
@@ -80,21 +80,19 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
     this.networkEventBus = networkEventBus;
 
     // TODO: Do not register everything! Some protocols are fork dependant
-    this.registerProtocol(protocols.Ping(this.onPing.bind(this)));
-    this.registerProtocol(protocols.Status(modules, this.onStatus.bind(this)));
-    this.registerProtocol(protocols.Metadata(modules, this.onMetadata.bind(this)));
-    this.registerProtocol(protocols.MetadataV2(modules, this.onMetadata.bind(this)));
-    this.registerProtocol(protocols.Goodbye(modules, this.onGoodbye.bind(this)));
-    this.registerProtocol(protocols.BeaconBlocksByRange(modules, this.onBeaconBlocksByRange.bind(this)));
-    this.registerProtocol(protocols.BeaconBlocksByRangeV2(modules, this.onBeaconBlocksByRange.bind(this)));
-    this.registerProtocol(protocols.BeaconBlocksByRoot(modules, this.onBeaconBlocksByRoot.bind(this)));
-    this.registerProtocol(protocols.BeaconBlocksByRootV2(modules, this.onBeaconBlocksByRoot.bind(this)));
-    this.registerProtocol(protocols.LightClientBootstrap(modules, reqRespHandlers.onLightClientBootstrap));
-    this.registerProtocol(protocols.LightClientFinalityUpdate(modules, reqRespHandlers.onLightClientFinalityUpdate));
-    this.registerProtocol(
-      protocols.LightClientOptimisticUpdate(modules, reqRespHandlers.onLightClientOptimisticUpdate)
-    );
-    this.registerProtocol(protocols.LightClientUpdatesByRange(modules, reqRespHandlers.onLightClientUpdatesByRange));
+    this.registerProtocol(messages.Ping(this.onPing.bind(this)));
+    this.registerProtocol(messages.Status(modules, this.onStatus.bind(this)));
+    this.registerProtocol(messages.Metadata(modules, this.onMetadata.bind(this)));
+    this.registerProtocol(messages.MetadataV2(modules, this.onMetadata.bind(this)));
+    this.registerProtocol(messages.Goodbye(modules, this.onGoodbye.bind(this)));
+    this.registerProtocol(messages.BeaconBlocksByRange(modules, this.onBeaconBlocksByRange.bind(this)));
+    this.registerProtocol(messages.BeaconBlocksByRangeV2(modules, this.onBeaconBlocksByRange.bind(this)));
+    this.registerProtocol(messages.BeaconBlocksByRoot(modules, this.onBeaconBlocksByRoot.bind(this)));
+    this.registerProtocol(messages.BeaconBlocksByRootV2(modules, this.onBeaconBlocksByRoot.bind(this)));
+    this.registerProtocol(messages.LightClientBootstrap(modules, reqRespHandlers.onLightClientBootstrap));
+    this.registerProtocol(messages.LightClientFinalityUpdate(modules, reqRespHandlers.onLightClientFinalityUpdate));
+    this.registerProtocol(messages.LightClientOptimisticUpdate(modules, reqRespHandlers.onLightClientOptimisticUpdate));
+    this.registerProtocol(messages.LightClientUpdatesByRange(modules, reqRespHandlers.onLightClientUpdatesByRange));
   }
 
   async start(): Promise<void> {
