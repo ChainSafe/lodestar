@@ -11,6 +11,12 @@ export interface INetworkOptions extends PeerManagerOpts, ReqRespBeaconNodeOpts,
   mdns: boolean;
   connectToDiscv5Bootnodes?: boolean;
   version?: string;
+
+  // TODO: These options  are deprecated and will be removed in next major release.
+  requestCountPeerLimit?: number;
+  blockCountPeerLimit?: number;
+  blockCountTotalLimit?: number;
+  rateTrackerTimeoutMs?: number;
 }
 
 export const defaultDiscv5Options: IDiscv5DiscoveryInputOptions = {
