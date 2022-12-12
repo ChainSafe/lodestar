@@ -45,6 +45,8 @@ describe("network / ReqResp", function () {
     localMultiaddrs: [],
     discv5FirstQueryDelayMs: 0,
     discv5: null,
+    // Disable rate limiting for the tests
+    rateLimitMultiplier: 0,
   };
 
   // Schedule ALTAIR_FORK_EPOCH to trigger registering lightclient ReqResp protocols immediately
