@@ -657,16 +657,21 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
     async registerValidator(registrations) {
       // should only send active or pending validator to builder
       // Spec: https://ethereum.github.io/builder-specs/#/Builder/registerValidator
+      const headState = chain.getHeadState();
+      const currentEpoch = chain.clock.currentEpoch;
+      const seenValidators = new Set<ValidatorIndex>();
+
       const filteredRegistrations = registrations.filter((registration) => {
         const {pubkey} = registration.message;
-        const headState = chain.getHeadState();
         const validatorIndex = headState.epochCtx.pubkey2index.get(pubkey);
-        if (validatorIndex === undefined) return false;
+        if (validatorIndex === undefined || seenValidators.has(validatorIndex)) return false;
 
+        seenValidators.add(validatorIndex);
         const validator = headState.validators.getReadonly(validatorIndex);
-        const currentEpoch = headState.epochCtx.epoch;
+
         return isActiveValidator(validator, currentEpoch) || isPendingValidator(validator, currentEpoch);
       });
+
       return chain.executionBuilder?.registerValidator(filteredRegistrations);
     },
   };
