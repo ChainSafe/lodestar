@@ -2,7 +2,7 @@ type MiliSeconds = number;
 
 export interface RateLimiterQuota {
   /** How often are `max_tokens` fully replenished. */
-  quotaTime: MiliSeconds;
+  quotaTimeMs: MiliSeconds;
   /** Token limit. This translates on how large can an instantaneous batch of tokens be. */
   quota: number;
 }
@@ -35,7 +35,7 @@ export class RateLimiterGRCA<Key> {
     if (quota.quota === 0) {
       throw Error("Max number of tokens should be positive");
     }
-    const msPerBucket = quota.quotaTime;
+    const msPerBucket = quota.quotaTimeMs;
     if (msPerBucket === 0) {
       throw Error("Replenish time must be positive");
     }

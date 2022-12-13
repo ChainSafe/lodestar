@@ -1,6 +1,6 @@
+import {MAX_REQUEST_BLOCKS} from "@lodestar/params";
 import {eip4844, ssz} from "@lodestar/types";
 import {ContextBytesType, Encoding, ProtocolDefinitionGenerator} from "../types.js";
-import {seconds} from "./utils.js";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
 export const BlobsSidecarsByRange: ProtocolDefinitionGenerator<
@@ -22,17 +22,8 @@ export const BlobsSidecarsByRange: ProtocolDefinitionGenerator<
       forkFromResponse: (blobsSidecar) => modules.config.getForkName(blobsSidecar.beaconBlockSlot),
     },
     inboundRateLimits: {
-      /**
-       * One peer can request maximum blocks upto `MAX_REQUEST_BLOCKS` which is default to `1024`.
-       * This limit can be consumed by peer in 10 seconds. Allowing him to send multiple requests
-       * with lower limits or less requests with higher limit.
-       *
-       * 10 seconds is chosen to be fair but can be updated in future.
-       *
-       * For total we multiply with `defaultNetworkOptions.maxPeers`.
-       */
-      byPeer: {quota: 1024, quotaTime: seconds(10)},
-      total: {quota: 56320, quotaTime: seconds(10)},
+      // TODO EIP-4844: For now same value as BeaconBlocksByRange https://github.com/sigp/lighthouse/blob/bf533c8e42cc73c35730e285c21df8add0195369/beacon_node/lighthouse_network/src/rpc/mod.rs#L118-L130
+      byPeer: {quota: MAX_REQUEST_BLOCKS, quotaTimeMs: 10_000},
       getRequestCount: (req) => req.count,
     },
   };

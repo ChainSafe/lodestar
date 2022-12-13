@@ -59,15 +59,16 @@ describe("response / handleRequest", () => {
   for (const {id, requestChunks, protocol, expectedResponseChunks, expectedError} of testCases) {
     it(id, async () => {
       const stream = new MockLibP2pStream(requestChunks);
-      const protocolRateLimiter = new ReqRespRateLimiter({rateLimitMultiplier: 0});
+      const rateLimiter = new ReqRespRateLimiter({rateLimitMultiplier: 0});
 
       const resultPromise = handleRequest({
         logger,
         protocol,
+        protocolID: protocol.method,
         stream,
         peerId,
         signal: controller.signal,
-        protocolRateLimiter,
+        rateLimiter,
       });
 
       // Make sure the test error-ed with expected error, otherwise it's hard to debug with responseChunks

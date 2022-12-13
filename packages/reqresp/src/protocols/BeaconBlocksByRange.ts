@@ -1,20 +1,21 @@
+import {MAX_REQUEST_BLOCKS} from "@lodestar/params";
 import {allForks, phase0, ssz} from "@lodestar/types";
-import {ContextBytesType, Encoding, InboundRateLimitQuota, ProtocolDefinitionGenerator} from "../types.js";
-import {seconds} from "./utils.js";
+import {ContextBytesType, Encoding, ProtocolDefinition, ProtocolDefinitionGenerator} from "../types.js";
 
-export const blocksByRangeInboundRateLimit: InboundRateLimitQuota<phase0.BeaconBlocksByRangeRequest> = {
-  /**
-   * One peer can request maximum blocks upto `MAX_REQUEST_BLOCKS` which is default to `1024`.
-   * This limit can be consumed by peer in 10 seconds. Allowing him to send multiple requests
-   * with lower limits or less requests with higher limit.
-   *
-   * 10 seconds is chosen to be fair but can be updated in future.
-   *
-   * For total we multiply with `defaultNetworkOptions.maxPeers`.
-   */
-  byPeer: {quota: 1024, quotaTime: seconds(10)},
-  total: {quota: 56320, quotaTime: seconds(10)},
-  getRequestCount: (req) => req.count,
+/* eslint-disable @typescript-eslint/naming-convention */
+const BeaconBlocksByRangeCommon: Pick<
+  ProtocolDefinition<phase0.BeaconBlocksByRangeRequest, allForks.SignedBeaconBlock>,
+  "method" | "encoding" | "requestType" | "renderRequestBody" | "inboundRateLimits"
+> = {
+  method: "beacon_blocks_by_range",
+  encoding: Encoding.SSZ_SNAPPY,
+  requestType: () => ssz.phase0.BeaconBlocksByRangeRequest,
+  renderRequestBody: (req) => `${req.startSlot},${req.step},${req.count}`,
+  inboundRateLimits: {
+    // Rationale: https://github.com/sigp/lighthouse/blob/bf533c8e42cc73c35730e285c21df8add0195369/beacon_node/lighthouse_network/src/rpc/mod.rs#L118-L130
+    byPeer: {quota: MAX_REQUEST_BLOCKS, quotaTimeMs: 10_000},
+    getRequestCount: (req) => req.count,
+  },
 };
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -23,14 +24,28 @@ export const BeaconBlocksByRange: ProtocolDefinitionGenerator<
   allForks.SignedBeaconBlock
 > = (_modules, handler) => {
   return {
-    method: "beacon_blocks_by_range",
+    ...BeaconBlocksByRangeCommon,
     version: 1,
-    encoding: Encoding.SSZ_SNAPPY,
     handler,
-    requestType: () => ssz.phase0.BeaconBlocksByRangeRequest,
-    responseType: (forkName) => ssz[forkName].SignedBeaconBlock,
-    renderRequestBody: (req) => `${req.startSlot},${req.step},${req.count}`,
+    responseType: () => ssz.phase0.SignedBeaconBlock,
     contextBytes: {type: ContextBytesType.Empty},
-    inboundRateLimits: blocksByRangeInboundRateLimit,
+  };
+};
+
+// eslint-disable-next-line @typescript-eslint/naming-convention
+export const BeaconBlocksByRangeV2: ProtocolDefinitionGenerator<
+  phase0.BeaconBlocksByRangeRequest,
+  allForks.SignedBeaconBlock
+> = (modules, handler) => {
+  return {
+    ...BeaconBlocksByRangeCommon,
+    version: 2,
+    handler,
+    responseType: (forkName) => ssz[forkName].SignedBeaconBlock,
+    contextBytes: {
+      type: ContextBytesType.ForkDigest,
+      forkDigestContext: modules.config,
+      forkFromResponse: (block) => modules.config.getForkName(block.message.slot),
+    },
   };
 };

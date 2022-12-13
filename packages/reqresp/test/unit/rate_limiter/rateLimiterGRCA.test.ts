@@ -10,7 +10,7 @@ describe("rateLimiterGRCA", () => {
 
   beforeEach(() => {
     sandbox.useFakeTimers();
-    rateLimiter = RateLimiterGRCA.fromQuota({quotaTime: limitTimeMs, quota: limit});
+    rateLimiter = RateLimiterGRCA.fromQuota({quotaTimeMs: limitTimeMs, quota: limit});
   });
 
   afterEach(() => {

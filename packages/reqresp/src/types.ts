@@ -2,8 +2,7 @@ import {PeerId} from "@libp2p/interface-peer-id";
 import {IBeaconConfig, IForkConfig, IForkDigestContext} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
 import {Slot} from "@lodestar/types";
-import {ILogger, LodestarError} from "@lodestar/utils";
-import {Metrics} from "./metrics.js";
+import {LodestarError} from "@lodestar/utils";
 import {RateLimiterQuota} from "./rate_limiter/rateLimiterGRCA.js";
 
 export enum EncodedPayloadType {
@@ -54,7 +53,7 @@ export interface ProtocolDefinition<Req = unknown, Resp = unknown> extends Omit<
   responseType: (fork: ForkName) => TypeSerializer<Resp>;
   renderRequestBody?: (request: Req) => string;
   contextBytes: ContextBytesFactory<Resp>;
-  inboundRateLimits: InboundRateLimitQuota<Req>;
+  inboundRateLimits?: InboundRateLimitQuota<Req>;
 }
 
 export type ProtocolDefinitionGenerator<Req, Res> = (

@@ -1,6 +1,5 @@
 import {PeerId} from "@libp2p/interface-peer-id";
-import {RequestError, RequestErrorCode} from "../request/errors.js";
-import {ProtocolDefinition, ReqRespRateLimiterOpts} from "../types.js";
+import {InboundRateLimitQuota, ReqRespRateLimiterOpts} from "../types.js";
 import {RateLimiterGRCA} from "./rateLimiterGRCA.js";
 
 /** Sometimes a peer request comes AFTER libp2p disconnect event, check for such peers every 10 minutes */
@@ -9,12 +8,11 @@ const CHECK_DISCONNECTED_PEERS_INTERVAL_MS = 10 * 60 * 1000;
 /** Peers don't request us for 5 mins are considered disconnected */
 const DISCONNECTED_TIMEOUT_MS = 5 * 60 * 1000;
 
-type ProtocolMethod = string;
-type ProtocolVersion = number;
+type ProtocolID = string;
 
 export class ReqRespRateLimiter {
-  private readonly rateLimitersPerPeer = new Map<ProtocolMethod, Map<ProtocolVersion, RateLimiterGRCA<string>>>();
-  private readonly rateLimitersTotal = new Map<ProtocolMethod, Map<ProtocolVersion, RateLimiterGRCA<null>>>();
+  private readonly rateLimitersPerPeer = new Map<ProtocolID, RateLimiterGRCA<string>>();
+  private readonly rateLimitersTotal = new Map<ProtocolID, RateLimiterGRCA<null>>();
   /** Interval to check lastSeenMessagesByPeer */
   private cleanupInterval: NodeJS.Timeout | undefined = undefined;
   private rateLimitMultiplier: number;
@@ -30,69 +28,48 @@ export class ReqRespRateLimiter {
     return this.rateLimitMultiplier > 0;
   }
 
-  initRateLimits<Req, Resp>(protocol: ProtocolDefinition<Req, Resp>): void {
+  initRateLimits<Req>(protocolID: ProtocolID, rateLimits: InboundRateLimitQuota<Req>): void {
     if (!this.enabled) {
       return;
     }
 
-    const {method, version} = protocol;
-
-    if (protocol.inboundRateLimits.byPeer) {
-      const limiterByPeer = RateLimiterGRCA.fromQuota<string>({
-        ...protocol.inboundRateLimits.byPeer,
-        quota: protocol.inboundRateLimits.byPeer.quota * this.rateLimitMultiplier,
-      });
-
-      if (!this.rateLimitersPerPeer.has(method)) {
-        this.rateLimitersPerPeer.set(method, new Map());
-      }
-
-      this.rateLimitersPerPeer.get(method)?.set(version, limiterByPeer);
+    if (rateLimits.byPeer) {
+      this.rateLimitersPerPeer.set(
+        protocolID,
+        RateLimiterGRCA.fromQuota<string>({
+          quotaTimeMs: rateLimits.byPeer.quotaTimeMs,
+          quota: rateLimits.byPeer.quota * this.rateLimitMultiplier,
+        })
+      );
     }
 
-    if (protocol.inboundRateLimits.total) {
-      const limiterTotal = RateLimiterGRCA.fromQuota<null>({
-        ...protocol.inboundRateLimits.total,
-        quota: protocol.inboundRateLimits.total.quota * this.rateLimitMultiplier,
-      });
-
-      if (!this.rateLimitersTotal.has(method)) {
-        this.rateLimitersTotal.set(method, new Map());
-      }
-
-      this.rateLimitersTotal.get(method)?.set(version, limiterTotal);
+    if (rateLimits.total) {
+      this.rateLimitersTotal.set(
+        protocolID,
+        RateLimiterGRCA.fromQuota<null>({
+          quotaTimeMs: rateLimits.total.quotaTimeMs,
+          quota: rateLimits.total.quota * this.rateLimitMultiplier,
+        })
+      );
     }
   }
 
-  validateRateLimits<Req, Resp>({
-    peerId,
-    protocol,
-    requestBody,
-  }: {
-    peerId: PeerId;
-    protocol: ProtocolDefinition<Req, Resp>;
-    requestBody: Req;
-  }): void {
+  allows(peerId: PeerId, protocolID: string, requestCount: number): boolean {
     if (!this.enabled) {
-      return;
+      return true;
     }
 
     const peerIdStr = peerId.toString();
     this.lastSeenRequestsByPeer.set(peerIdStr, Date.now());
 
-    const {method, encoding} = protocol;
-
-    const requestCount = protocol.inboundRateLimits.getRequestCount
-      ? protocol.inboundRateLimits.getRequestCount(requestBody)
-      : 1;
-
-    const byPeer = this.rateLimitersPerPeer.get(protocol.method)?.get(protocol.version);
-    const total = this.rateLimitersTotal.get(protocol.method)?.get(protocol.version);
+    const byPeer = this.rateLimitersPerPeer.get(protocolID);
+    const total = this.rateLimitersTotal.get(protocolID);
 
     if ((byPeer && !byPeer.allows(peerIdStr, requestCount)) || (total && !total.allows(null, requestCount))) {
-      this.opts?.onRateLimit?.(peerId, method);
-
-      throw new RequestError({code: RequestErrorCode.REQUEST_RATE_LIMITED}, {peer: peerIdStr, method, encoding});
+      this.opts?.onRateLimit?.(peerId, protocolID);
+      return false;
+    } else {
+      return true;
     }
   }
 
@@ -114,9 +91,7 @@ export class ReqRespRateLimiter {
   private pruneByPeerIdStr(peerIdStr: string): void {
     // Check for every method and version to cleanup
     for (const method of this.rateLimitersPerPeer.values()) {
-      for (const version of method.values()) {
-        version.pruneByKey(peerIdStr);
-      }
+      method.pruneByKey(peerIdStr);
     }
     this.lastSeenRequestsByPeer.delete(peerIdStr);
   }

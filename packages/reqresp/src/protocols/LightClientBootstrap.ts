@@ -1,7 +1,7 @@
 import {altair, Root, ssz} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
 import {Encoding, ProtocolDefinitionGenerator} from "../types.js";
-import {getContextBytesLightclient, seconds} from "./utils.js";
+import {getContextBytesLightclient} from "./utils.js";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
 export const LightClientBootstrap: ProtocolDefinitionGenerator<Root, altair.LightClientBootstrap> = (
@@ -18,11 +18,8 @@ export const LightClientBootstrap: ProtocolDefinitionGenerator<Root, altair.Ligh
     renderRequestBody: (req) => toHex(req),
     contextBytes: getContextBytesLightclient((bootstrap) => modules.config.getForkName(bootstrap.header.slot), modules),
     inboundRateLimits: {
-      /**
-       * As similar in the nature of `Status` protocol so we use the same rate limits.
-       */
-      byPeer: {quota: 5, quotaTime: seconds(15)},
-      total: {quota: 275, quotaTime: seconds(15)},
+      // As similar in the nature of `Status` protocol so we use the same rate limits.
+      byPeer: {quota: 5, quotaTimeMs: 15_000},
     },
   };
 };

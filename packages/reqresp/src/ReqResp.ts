@@ -76,9 +76,12 @@ export class ReqResp {
     }
 
     this.registeredProtocols.set(protocolID, protocol as ProtocolDefinition);
-    this.rateLimiter.initRateLimits(protocol);
 
-    return this.libp2p.handle(protocolID, this.getRequestHandler(protocol));
+    if (protocol.inboundRateLimits) {
+      this.rateLimiter.initRateLimits(protocolID, protocol.inboundRateLimits);
+    }
+
+    return this.libp2p.handle(protocolID, this.getRequestHandler(protocol, protocolID));
   }
 
   /**
@@ -171,7 +174,7 @@ export class ReqResp {
     }
   }
 
-  private getRequestHandler<Req, Resp>(protocol: ProtocolDefinition<Req, Resp>) {
+  private getRequestHandler<Req, Resp>(protocol: ProtocolDefinition<Req, Resp>, protocolID: string) {
     return async ({connection, stream}: {connection: Connection; stream: Stream}) => {
       const peerId = connection.remotePeer;
       const peerClient = this.opts.getPeerLogMetadata?.(peerId.toString());
@@ -188,7 +191,8 @@ export class ReqResp {
           stream,
           peerId,
           protocol,
-          protocolRateLimiter: this.rateLimiter,
+          protocolID,
+          rateLimiter: this.rateLimiter,
           signal: this.controller.signal,
           requestId: this.reqCount++,
           peerClient,

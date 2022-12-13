@@ -1,24 +1,36 @@
 import {allForks, ssz} from "@lodestar/types";
-import {ContextBytesType, Encoding, ProtocolDefinitionGenerator} from "../types.js";
-import {seconds} from "./utils.js";
+import {ContextBytesType, Encoding, ProtocolDefinition, ProtocolDefinitionGenerator} from "../types.js";
 
-export const metadataInboundRateLimit = {
-  /**
-   * One peer does not request a lot of metadata
-   */
-  byPeer: {quota: 2, quotaTime: seconds(5)},
+/* eslint-disable @typescript-eslint/naming-convention */
+const MetadataCommon: Pick<
+  ProtocolDefinition<null, allForks.Metadata>,
+  "method" | "encoding" | "requestType" | "renderRequestBody" | "inboundRateLimits"
+> = {
+  method: "metadata",
+  encoding: Encoding.SSZ_SNAPPY,
+  requestType: () => null,
+  inboundRateLimits: {
+    // Rationale: https://github.com/sigp/lighthouse/blob/bf533c8e42cc73c35730e285c21df8add0195369/beacon_node/lighthouse_network/src/rpc/mod.rs#L118-L130
+    byPeer: {quota: 2, quotaTimeMs: 5_000},
+  },
 };
 
-// eslint-disable-next-line @typescript-eslint/naming-convention
 export const Metadata: ProtocolDefinitionGenerator<null, allForks.Metadata> = (modules, handler) => {
   return {
-    method: "metadata",
+    ...MetadataCommon,
     version: 1,
-    encoding: Encoding.SSZ_SNAPPY,
     handler,
-    requestType: () => null,
     responseType: () => ssz.phase0.Metadata,
     contextBytes: {type: ContextBytesType.Empty},
-    inboundRateLimits: metadataInboundRateLimit,
+  };
+};
+
+export const MetadataV2: ProtocolDefinitionGenerator<null, allForks.Metadata> = (modules, handler) => {
+  return {
+    ...MetadataCommon,
+    version: 2,
+    handler,
+    responseType: () => ssz.altair.Metadata,
+    contextBytes: {type: ContextBytesType.Empty},
   };
 };

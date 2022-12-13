@@ -12,11 +12,3 @@ export function getContextBytesLightclient<T>(
     forkFromResponse,
   };
 }
-
-export function seconds(n: number): number {
-  return n * 1000;
-}
-
-export function minutes(n: number): number {
-  return seconds(n * 60);
-}
