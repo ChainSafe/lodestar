@@ -14,14 +14,14 @@ The beacon state transition and state transition utilities
 
 ```typescript
 import {CachedBeaconStateAllForks, stateTransition} from "@lodestar/state-transition";
-import {generateEmptySignedBlock} from "../test/utils/block";
+import {ssz} from "@lodestar/types";
 import {generateState} from "../test/utils/state";
 
 // dummy test state
 const preState: CachedBeaconStateAllForks = generateState() as CachedBeaconStateAllForks;
 
 // dummy test block
-const block = generateEmptySignedBlock();
+const block = ssz.phase0.SignedBeaconBlock.defaultValue();
 
 // Run state transition on block
 const postState = stateTransition(preState, block);

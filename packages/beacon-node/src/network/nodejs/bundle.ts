@@ -5,7 +5,7 @@ import {Bootstrap} from "@libp2p/bootstrap";
 import {MulticastDNS} from "@libp2p/mdns";
 import {PeerId} from "@libp2p/interface-peer-id";
 import {Datastore} from "interface-datastore";
-import {Noise} from "@chainsafe/libp2p-noise";
+import {createNoise} from "./noise.js";
 
 export interface ILibp2pOptions {
   peerId: PeerId;
@@ -20,6 +20,7 @@ export interface ILibp2pOptions {
   minConnections?: number;
   metrics?: boolean;
   lodestarVersion?: string;
+  mdns?: boolean;
 }
 
 export async function createNodejsLibp2p(options: ILibp2pOptions): Promise<Libp2p> {
@@ -30,7 +31,9 @@ export async function createNodejsLibp2p(options: ILibp2pOptions): Promise<Libp2
     if ((options.bootMultiaddrs?.length ?? 0) > 0) {
       peerDiscovery.push(new Bootstrap({interval: 2000, list: options.bootMultiaddrs ?? []}));
     }
-    peerDiscovery.push(new MulticastDNS());
+    if (options.mdns) {
+      peerDiscovery.push(new MulticastDNS());
+    }
   }
   return await createLibp2p({
     peerId: options.peerId,
@@ -38,7 +41,7 @@ export async function createNodejsLibp2p(options: ILibp2pOptions): Promise<Libp2
       listen: options.addresses.listen,
       announce: options.addresses.announce || [],
     },
-    connectionEncryption: [new Noise()],
+    connectionEncryption: [createNoise()],
     transports: [new TCP()],
     streamMuxers: [new Mplex({maxInboundStreams: 256})],
     peerDiscovery,

@@ -43,6 +43,7 @@ describe("options / beaconNodeOptions", () => {
       "execution.timeout": 12000,
       "execution.retryDelay": 2000,
       "execution.retryAttempts": 1,
+      "execution.queueMaxLength": 2,
 
       builder: false,
       "builder.urls": ["http://localhost:8661"],
@@ -59,6 +60,7 @@ describe("options / beaconNodeOptions", () => {
       bootnodes: ["enr:-somedata"],
       targetPeers: 25,
       subscribeAllSubnets: true,
+      mdns: false,
       "network.maxPeers": 30,
       "network.connectToDiscv5Bootnodes": true,
       "network.discv5FirstQueryDelayMs": 1000,
@@ -119,6 +121,7 @@ describe("options / beaconNodeOptions", () => {
         retryAttempts: 1,
         retryDelay: 2000,
         timeout: 12000,
+        queueMaxLength: 2,
       },
       executionBuilder: {
         enabled: false,
@@ -152,6 +155,7 @@ describe("options / beaconNodeOptions", () => {
         gossipsubDLow: 2,
         gossipsubDHigh: 6,
         gossipsubAwaitHandler: true,
+        mdns: false,
       },
       sync: {
         isSingleNode: true,

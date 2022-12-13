@@ -1,10 +1,12 @@
 import {expect} from "chai";
 import {fastify} from "fastify";
 
-import {fromHexString} from "@chainsafe/ssz";
+import {ForkName} from "@lodestar/params";
+import {numToQuantity} from "@lodestar/utils";
+import {PayloadAttributes} from "../../../src/interface.js";
+import {ExecutionEngineHttp} from "../../../src/http.js";
 
-import {bytesToData, numToQuantity} from "@lodestar/utils";
-import {ExecutionEngineHttp, defaultExecutionEngineHttpOpts} from "../../../src/engine/http.js";
+const retryAttempts = 3;
 
 describe("ExecutionEngine / http ", () => {
   const afterCallbacks: (() => Promise<void> | void)[] = [];
@@ -44,19 +46,12 @@ describe("ExecutionEngine / http ", () => {
 
     baseUrl = await server.listen(0);
 
-    executionEngine = new ExecutionEngineHttp(
-      {
-        urls: [baseUrl],
-        retryAttempts: defaultExecutionEngineHttpOpts.retryAttempts,
-        retryDelay: defaultExecutionEngineHttpOpts.retryDelay,
-      },
-      {signal: controller.signal}
-    );
+    executionEngine = new ExecutionEngineHttp({urls: [baseUrl], retryAttempts}, {signal: controller.signal});
   });
 
   describe("notifyForkchoiceUpdate", function () {
     it("notifyForkchoiceUpdate no retry when no pay load attributes", async function () {
-      this.timeout("10 min");
+      this.timeout("60s");
       errorResponsesBeforeSuccess = 2;
       const forkChoiceHeadData = {
         headBlockHash: "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
@@ -73,6 +68,7 @@ describe("ExecutionEngine / http ", () => {
       expect(errorResponsesBeforeSuccess).to.be.equal(2, "errorResponsesBeforeSuccess should be 2 before request");
       try {
         await executionEngine.notifyForkchoiceUpdate(
+          ForkName.bellatrix,
           forkChoiceHeadData.headBlockHash,
           forkChoiceHeadData.safeBlockHash,
           forkChoiceHeadData.finalizedBlockHash
@@ -89,16 +85,17 @@ describe("ExecutionEngine / http ", () => {
     it("notifyForkchoiceUpdate with retry when pay load attributes", async function () {
       this.timeout("10 min");
 
-      errorResponsesBeforeSuccess = defaultExecutionEngineHttpOpts.retryAttempts - 1;
+      errorResponsesBeforeSuccess = retryAttempts - 1;
       const forkChoiceHeadData = {
         headBlockHash: "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
         safeBlockHash: "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
         finalizedBlockHash: "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
       };
-      const payloadAttributes = {
+      const payloadAttributes: PayloadAttributes = {
         timestamp: 1647036763,
-        prevRandao: fromHexString("0x0000000000000000000000000000000000000000000000000000000000000000"),
+        prevRandao: "0x0000000000000000000000000000000000000000000000000000000000000000",
         suggestedFeeRecipient: "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b",
+        fork: ForkName.bellatrix,
       };
 
       const request = {
@@ -108,7 +105,7 @@ describe("ExecutionEngine / http ", () => {
           forkChoiceHeadData,
           {
             timestamp: numToQuantity(payloadAttributes.timestamp),
-            prevRandao: bytesToData(payloadAttributes.prevRandao),
+            prevRandao: payloadAttributes.prevRandao,
             suggestedFeeRecipient: payloadAttributes.suggestedFeeRecipient,
           },
         ],
@@ -127,6 +124,7 @@ describe("ExecutionEngine / http ", () => {
         "errorResponsesBeforeSuccess should not be zero before request"
       );
       await executionEngine.notifyForkchoiceUpdate(
+        ForkName.bellatrix,
         forkChoiceHeadData.headBlockHash,
         forkChoiceHeadData.safeBlockHash,
         forkChoiceHeadData.finalizedBlockHash,

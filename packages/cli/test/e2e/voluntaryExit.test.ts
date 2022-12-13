@@ -33,7 +33,7 @@ describeCliTest("voluntaryExit cmd", function ({spawnCli}) {
       }
     });
 
-    const baseUrl = `http://localhost:${restPort}`;
+    const baseUrl = `http://127.0.0.1:${restPort}`;
     const client = getClient({baseUrl}, {config});
 
     // Wait for beacon node API to be available + genesis

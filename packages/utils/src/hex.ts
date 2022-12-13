@@ -3,7 +3,8 @@
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {bigIntToBytes, bytesToBigInt} from "./bytes.js";
 
-type RootHex = string;
+export type RootHex = string;
+
 /** QUANTITY as defined in ethereum execution layer JSON RPC https://eth.wiki/json-rpc/API */
 export type QUANTITY = string;
 /** DATA as defined in ethereum execution layer JSON RPC https://eth.wiki/json-rpc/API */
@@ -96,10 +97,10 @@ export function bytesToData(bytes: Uint8Array): DATA {
 /**
  * DATA as defined in ethereum execution layer JSON RPC https://eth.wiki/json-rpc/API
  */
-export function dataToBytes(hex: DATA, fixedLength?: number): Uint8Array {
+export function dataToBytes(hex: DATA, fixedLength: number | null): Uint8Array {
   try {
     const bytes = fromHexString(hex);
-    if (fixedLength !== undefined && bytes.length !== fixedLength) {
+    if (fixedLength != null && bytes.length !== fixedLength) {
       throw Error(`Wrong data length ${bytes.length} expected ${fixedLength}`);
     }
     return bytes;

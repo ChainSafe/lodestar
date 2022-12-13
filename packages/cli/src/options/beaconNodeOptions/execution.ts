@@ -7,6 +7,7 @@ export type ExecutionEngineArgs = {
   "execution.timeout": number;
   "execution.retryAttempts": number;
   "execution.retryDelay": number;
+  "execution.queueMaxLength": number;
   "execution.engineMock"?: boolean;
   "jwt-secret"?: string;
 };
@@ -24,6 +25,7 @@ export function parseArgs(args: ExecutionEngineArgs): IBeaconNodeOptions["execut
     timeout: args["execution.timeout"],
     retryAttempts: args["execution.retryAttempts"],
     retryDelay: args["execution.retryDelay"],
+    queueMaxLength: args["execution.queueMaxLength"],
     /**
      * jwtSecret is parsed as hex instead of bytes because the merge with defaults
      * in beaconOptions messes up the bytes array as as index => value object
@@ -64,6 +66,14 @@ export const executionEngineOptions: ICliCommandOptions<ExecutionEngineArgs> = {
     type: "number",
     defaultDescription:
       defaultOptions.executionEngine.mode === "http" ? String(defaultOptions.executionEngine.retryDelay) : "0",
+    group: "execution",
+  },
+
+  "execution.queueMaxLength": {
+    description: "Size for the serializing queue for fcUs and new payloads",
+    type: "number",
+    defaultDescription:
+      defaultOptions.executionEngine.mode === "http" ? String(defaultOptions.executionEngine.queueMaxLength) : "",
     group: "execution",
   },
 

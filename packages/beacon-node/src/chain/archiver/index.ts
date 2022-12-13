@@ -1,7 +1,7 @@
 import {ILogger} from "@lodestar/utils";
+import {JobItemQueue} from "@lodestar/utils/queue";
 
 import {CheckpointWithHex} from "@lodestar/fork-choice";
-import {JobItemQueue} from "@lodestar/engine-api-client";
 import {IBeaconDb} from "../../db/index.js";
 import {IBeaconChain} from "../interface.js";
 import {ChainEvent} from "../emitter.js";
@@ -73,7 +73,15 @@ export class Archiver {
     try {
       const finalizedEpoch = finalized.epoch;
       this.logger.verbose("Start processing finalized checkpoint", {epoch: finalizedEpoch});
-      await archiveBlocks(this.db, this.chain.forkChoice, this.chain.lightClientServer, this.logger, finalized);
+      await archiveBlocks(
+        this.chain.config,
+        this.db,
+        this.chain.forkChoice,
+        this.chain.lightClientServer,
+        this.logger,
+        finalized,
+        this.chain.clock.currentEpoch
+      );
 
       // should be after ArchiveBlocksTask to handle restart cleanly
       await this.statesArchiver.maybeArchiveState(finalized);

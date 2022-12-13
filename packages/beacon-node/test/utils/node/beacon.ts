@@ -6,8 +6,8 @@ import {config as minimalConfig} from "@lodestar/config/default";
 import {createIBeaconConfig, createIChainForkConfig, IChainConfig} from "@lodestar/config";
 import {ILogger, RecursivePartial} from "@lodestar/utils";
 import {LevelDbController} from "@lodestar/db";
-import {phase0} from "@lodestar/types";
-import {GENESIS_SLOT} from "@lodestar/params";
+import {phase0, ssz} from "@lodestar/types";
+import {ForkSeq, GENESIS_SLOT} from "@lodestar/params";
 import {BeaconStateAllForks} from "@lodestar/state-transition";
 import {isPlainObject} from "@lodestar/utils";
 import {createKeypairFromPeerId, ENR} from "@chainsafe/discv5";
@@ -91,6 +91,12 @@ export async function getDevBeaconNode(
     const block = config.getForkTypes(GENESIS_SLOT).SignedBeaconBlock.defaultValue();
     block.message.stateRoot = state.hashTreeRoot();
     await db.blockArchive.add(block);
+
+    if (config.getForkSeq(GENESIS_SLOT) >= ForkSeq.eip4844) {
+      const blobsSidecar = ssz.eip4844.BlobsSidecar.defaultValue();
+      blobsSidecar.beaconBlockRoot = config.getForkTypes(GENESIS_SLOT).BeaconBlock.hashTreeRoot(block.message);
+      await db.blobsSidecar.add(blobsSidecar);
+    }
   }
 
   const beaconConfig = createIBeaconConfig(config, anchorState.genesisValidatorsRoot);

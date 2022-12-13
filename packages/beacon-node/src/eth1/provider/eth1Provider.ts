@@ -5,8 +5,8 @@ import {fromHex, dataToBytes, quantityToNum, numToQuantity} from "@lodestar/util
 import {
   isJsonRpcTruncatedError,
   JsonRpcHttpClient,
-  JsonRpcHttpClientMetrics,
   ReqOpts,
+  JsonRpcHttpClientMetrics,
 } from "@lodestar/engine-api-client";
 import {linspace} from "../../util/numpy.js";
 import {depositEventTopics, parseDepositLog} from "../utils/depositContract.js";

@@ -6,6 +6,7 @@ export enum ForkName {
   altair = "altair",
   bellatrix = "bellatrix",
   capella = "capella",
+  eip4844 = "eip4844",
 }
 
 /**
@@ -16,4 +17,5 @@ export enum ForkSeq {
   altair = 1,
   bellatrix = 2,
   capella = 3,
+  eip4844 = 4,
 }

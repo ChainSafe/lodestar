@@ -1,21 +1,26 @@
 {
   "name": "@lodestar/engine-api-client",
   "version": "1.2.1",
-  "description": "Package for interacting with the ethereum execution layer",
-  "type": "module",
+  "description": "Client implementation of the execution layer's Engine API",
   "author": "ChainSafe Systems",
+  "type": "module",
   "homepage": "https://github.com/ChainSafe/lodestar#readme",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/ChainSafe/lodestar.git"
   },
-  "exports": {
-    ".": {
-      "import": "./lib/index.js"
+  "exports": "./lib/index.js",
+  "types": "lib/index.d.ts",
+  "typesVersions": {
+    "*": {
+      "*": [
+        "*",
+        "lib/*",
+        "lib/*/index"
+      ]
     }
   },
-  "types": "lib/index.d.ts",
   "files": [
     "lib/**/*.d.ts",
     "lib/**/*.js",
@@ -44,8 +49,10 @@
     "@lodestar/types": "^1.2.1",
     "@lodestar/config": "^1.2.1",
     "@lodestar/db": "^1.2.1",
+    "@lodestar/state-transition": "^1.2.1",
+    "cross-fetch": "^3.1.4",
     "jwt-simple": "0.5.6",
-    "cross-fetch": "^3.1.4"
+    "c-kzg": "^1.0.7"
   },
   "devDependencies": {
     "@types/sinon-chai": "^3.2.8",

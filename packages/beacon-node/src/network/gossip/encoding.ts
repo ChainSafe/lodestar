@@ -39,16 +39,14 @@ export function msgIdFn(gossipTopicCache: GossipTopicCache, msg: Message): Uint8
 
   let vec: Uint8Array[];
 
-  switch (topic.fork) {
+  if (topic.fork === ForkName.phase0) {
     // message id for phase0.
     // ```
     // SHA256(MESSAGE_DOMAIN_VALID_SNAPPY + snappy_decompress(message.data))[:20]
     // ```
-    case ForkName.phase0:
-      vec = [MESSAGE_DOMAIN_VALID_SNAPPY, msg.data];
-      break;
-
-    // message id for altair.
+    vec = [MESSAGE_DOMAIN_VALID_SNAPPY, msg.data];
+  } else {
+    // message id for altair and subsequent future forks.
     // ```
     // SHA256(
     //   MESSAGE_DOMAIN_VALID_SNAPPY +
@@ -58,14 +56,7 @@ export function msgIdFn(gossipTopicCache: GossipTopicCache, msg: Message): Uint8
     // )[:20]
     // ```
     // https://github.com/ethereum/eth2.0-specs/blob/v1.1.0-alpha.7/specs/altair/p2p-interface.md#topics-and-messages
-    //
-    // TODO: check if the capella handling is same as the other forks
-    case ForkName.altair:
-    case ForkName.bellatrix:
-    case ForkName.capella: {
-      vec = [MESSAGE_DOMAIN_VALID_SNAPPY, intToBytes(msg.topic.length, 8), Buffer.from(msg.topic), msg.data];
-      break;
-    }
+    vec = [MESSAGE_DOMAIN_VALID_SNAPPY, intToBytes(msg.topic.length, 8), Buffer.from(msg.topic), msg.data];
   }
 
   return Buffer.from(digest(Buffer.concat(vec))).subarray(0, 20);

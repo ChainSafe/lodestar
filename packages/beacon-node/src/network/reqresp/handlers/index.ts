@@ -4,6 +4,8 @@ import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
 import {onBeaconBlocksByRange} from "./beaconBlocksByRange.js";
 import {onBeaconBlocksByRoot} from "./beaconBlocksByRoot.js";
+import {onBeaconBlockAndBlobsSidecarByRoot} from "./beaconBlockAndBlobsSidecarByRoot.js";
+import {onBlobsSidecarsByRange} from "./blobsSidecarsByRange.js";
 import {onLightClientBootstrap} from "./lightClientBootstrap.js";
 import {onLightClientFinalityUpdate} from "./lightClientFinalityUpdate.js";
 import {onLightClientOptimisticUpdate} from "./lightClientOptimisticUpdate.js";
@@ -14,6 +16,8 @@ export interface ReqRespHandlers {
   onStatus: HandlerTypeFromMessage<typeof messages.Status>;
   onBeaconBlocksByRange: HandlerTypeFromMessage<typeof messages.BeaconBlocksByRange>;
   onBeaconBlocksByRoot: HandlerTypeFromMessage<typeof messages.BeaconBlocksByRoot>;
+  onBeaconBlockAndBlobsSidecarByRoot: HandlerTypeFromMessage<typeof messages.BeaconBlockAndBlobsSidecarByRoot>;
+  onBlobsSidecarsByRange: HandlerTypeFromMessage<typeof messages.BlobsSidecarsByRange>;
   onLightClientBootstrap: HandlerTypeFromMessage<typeof messages.LightClientBootstrap>;
   onLightClientUpdatesByRange: HandlerTypeFromMessage<typeof messages.LightClientUpdatesByRange>;
   onLightClientFinalityUpdate: HandlerTypeFromMessage<typeof messages.LightClientFinalityUpdate>;
@@ -33,6 +37,12 @@ export function getReqRespHandlers({db, chain}: {db: IBeaconDb; chain: IBeaconCh
     },
     async *onBeaconBlocksByRoot(req) {
       yield* onBeaconBlocksByRoot(req, chain, db);
+    },
+    async *onBeaconBlockAndBlobsSidecarByRoot(req) {
+      yield* onBeaconBlockAndBlobsSidecarByRoot(req, chain, db);
+    },
+    async *onBlobsSidecarsByRange(req) {
+      yield* onBlobsSidecarsByRange(req, chain, db);
     },
     async *onLightClientBootstrap(req) {
       yield* onLightClientBootstrap(req, chain);

@@ -8,6 +8,7 @@ import {Lightclient} from "@lodestar/light-client";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {LightClientRestTransport} from "@lodestar/light-client/transport";
 import {getClient} from "@lodestar/api";
+import {ExecutionEngineMock, ZERO_HASH_HEX} from "@lodestar/engine-api-client";
 import {testLogger, LogLevel, TestLoggerOpts} from "../../utils/logger.js";
 import {getDevBeaconNode} from "../../utils/node/beacon.js";
 import {getAndInitDevValidators} from "../../utils/node/validator.js";
@@ -29,10 +30,16 @@ describe("chain / lightclient", function () {
   const targetSlotToReach = computeStartSlotAtEpoch(finalizedEpochToReach + 2) - 1;
   const restPort = 9000;
 
-  const testParams: Pick<IChainConfig, "SECONDS_PER_SLOT" | "ALTAIR_FORK_EPOCH"> = {
+  const testParams: Pick<
+    IChainConfig,
+    // "SECONDS_PER_SLOT" | "ALTAIR_FORK_EPOCH"
+    "SECONDS_PER_SLOT" | "ALTAIR_FORK_EPOCH" | "BELLATRIX_FORK_EPOCH" | "TERMINAL_TOTAL_DIFFICULTY"
+  > = {
     /* eslint-disable @typescript-eslint/naming-convention */
     SECONDS_PER_SLOT: 1,
     ALTAIR_FORK_EPOCH: 0,
+    BELLATRIX_FORK_EPOCH: 1,
+    TERMINAL_TOTAL_DIFFICULTY: BigInt(0),
   };
 
   // Sometimes the machine may slow down and the lightclient head is too old.
@@ -49,6 +56,10 @@ describe("chain / lightclient", function () {
 
   it("Lightclient track head on server configuration", async function () {
     this.timeout("10 min");
+
+    const executionEngine: ExecutionEngineMock = new ExecutionEngineMock({
+      genesisBlockHash: ZERO_HASH_HEX,
+    });
 
     // delay a bit so regular sync sees it's up to date and sync is completed from the beginning
     // also delay to allow bls workers to be transpiled/initialized
@@ -75,6 +86,10 @@ describe("chain / lightclient", function () {
         network: {allowPublishToZeroPeers: true},
         api: {rest: {enabled: true, api: ["lightclient", "proof"], port: restPort, address: "localhost"}},
         chain: {blsVerifyAllMainThread: true},
+        executionEngine: {
+          mode: "mock",
+          genesisBlockHash: ZERO_HASH_HEX,
+        },
       },
       validatorCount: validatorCount * validatorClientCount,
       genesisTime,
@@ -115,7 +130,6 @@ describe("chain / lightclient", function () {
     }).then(async (head) => {
       // Initialize lightclient
       loggerLC.info("Initializing lightclient", {slot: head.slot});
-
       const beaconApiUrl = `http://localhost:${restPort}`;
       const api = getClient({baseUrl: beaconApiUrl}, {config: bn.config});
       const lightClientRestTransport = new LightClientRestTransport(api, api.proof.getStateProof);
@@ -129,6 +143,7 @@ describe("chain / lightclient", function () {
         },
         checkpointRoot: fromHexString(head.block),
         transport: lightClientRestTransport,
+        executionEngine,
       });
 
       afterEachCallbacks.push(async () => {
@@ -160,6 +175,7 @@ describe("chain / lightclient", function () {
             if (head.slot - lcHeadSlot > maxLcHeadTrackingDiffSlots) {
               throw Error(`Lightclient head ${lcHeadSlot} is too far behind the beacon node ${head.slot}`);
             } else if (head.slot > targetSlotToReach) {
+              expect(executionEngine.validBlocks).to.be.above(0, "No valid blocks in execution engine");
               resolve();
             }
           } catch (e) {

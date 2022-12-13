@@ -1,10 +1,10 @@
 # Install from source
 
-Make sure to have [Yarn installed](https://classic.yarnpkg.com/en/docs/install). It is also recommended to [install NVM (Node Version Manager)](https://github.com/nvm-sh/nvm) and use v16 of [NodeJS](https://nodejs.org/en/).
+Make sure to have [Yarn installed](https://classic.yarnpkg.com/en/docs/install). It is also recommended to [install NVM (Node Version Manager)](https://github.com/nvm-sh/nvm) and use v18 of [NodeJS](https://nodejs.org/en/).
 
 <!-- prettier-ignore-start -->
 !!! info
-    NodeJS versions < 16.x are not supported by Lodestar. We currently recommend running NodeJS 16.x.
+    NodeJS versions < 16.x are not supported by Lodestar. We currently recommend running NodeJS 18.x.
 <!-- prettier-ignore-end -->
 
 Clone the repo locally.

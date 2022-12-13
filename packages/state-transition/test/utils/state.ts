@@ -22,7 +22,6 @@ import {
 } from "../../src/index.js";
 import {BeaconStateCache} from "../../src/cache/stateCache.js";
 import {EpochContextOpts} from "../../src/cache/epochContext.js";
-import {generateEmptyBlock} from "./block.js";
 
 /**
  * Copy of BeaconState, but all fields are marked optional to allow for swapping out variables as needed.
@@ -50,7 +49,7 @@ export function generateState(opts?: TestBeaconState): BeaconStatePhase0 {
       proposerIndex: 0,
       parentRoot: Buffer.alloc(32),
       stateRoot: Buffer.alloc(32),
-      bodyRoot: ssz.phase0.BeaconBlockBody.hashTreeRoot(generateEmptyBlock().body),
+      bodyRoot: ssz.phase0.BeaconBlockBody.hashTreeRoot(ssz.phase0.BeaconBlockBody.defaultValue()),
     },
     blockRoots: Array.from({length: SLOTS_PER_HISTORICAL_ROOT}, () => ZERO_HASH),
     stateRoots: Array.from({length: SLOTS_PER_HISTORICAL_ROOT}, () => ZERO_HASH),
