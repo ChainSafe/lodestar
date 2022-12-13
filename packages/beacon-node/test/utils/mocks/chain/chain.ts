@@ -8,11 +8,9 @@ import {CheckpointWithHex, IForkChoice, ProtoBlock, ExecutionStatus} from "@lode
 import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
 import {ILogger} from "@lodestar/utils";
 
-import {ContextBytesType, EncodedPayloadType} from "@lodestar/reqresp";
 import {ExecutionEngineDisabled} from "@lodestar/engine-api-client";
 import {ChainEventEmitter, IBeaconChain} from "../../../../src/chain/index.js";
 import {IBeaconClock} from "../../../../src/chain/clock/interface.js";
-import {generateEmptySignedBlock} from "../../block.js";
 import {CheckpointStateCache, StateContextCache} from "../../../../src/chain/stateCache/index.js";
 import {LocalClock} from "../../../../src/chain/clock/index.js";
 import {IStateRegenerator, StateRegenerator} from "../../../../src/chain/regen/index.js";
@@ -165,20 +163,12 @@ export class MockBeaconChain implements IBeaconChain {
     return this.state;
   }
 
-  async getCanonicalBlockAtSlot(slot: Slot): Promise<allForks.SignedBeaconBlock> {
-    return generateEmptySignedBlock(slot);
+  async getCanonicalBlockAtSlot(): Promise<allForks.SignedBeaconBlock> {
+    throw Error("Not implemented");
   }
 
-  async getUnfinalizedBlocksAtSlots(slots: Slot[] = []): Promise<ReqRespBlockResponse[]> {
-    const blocks = await Promise.all(slots.map(this.getCanonicalBlockAtSlot));
-    return blocks.map((block, i) => ({
-      type: EncodedPayloadType.bytes,
-      bytes: Buffer.from(ssz.phase0.SignedBeaconBlock.serialize(block)),
-      contextBytes: {
-        type: ContextBytesType.ForkDigest,
-        forkSlot: slots[i],
-      },
-    }));
+  async getUnfinalizedBlocksAtSlots(): Promise<ReqRespBlockResponse[]> {
+    throw Error("Not implemented");
   }
 
   async produceBlock(_blockAttributes: BlockAttributes): Promise<allForks.BeaconBlock> {

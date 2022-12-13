@@ -7,7 +7,7 @@ import {BlockInput} from "../chain/blocks/types.js";
 import {INetworkEventBus} from "./events.js";
 import {Eth2Gossipsub} from "./gossip/index.js";
 import {MetadataController} from "./metadata.js";
-import {PeerAction} from "./peers/index.js";
+import {IPeerRpcScoreStore, PeerAction} from "./peers/index.js";
 import {IReqRespBeaconNode} from "./reqresp/ReqRespBeaconNode.js";
 import {IAttnetsService, ISubnetsService, CommitteeSubscription} from "./subnets/index.js";
 
@@ -24,6 +24,7 @@ export interface INetwork {
   gossip: Eth2Gossipsub;
   discv5?: Discv5;
   metadata: MetadataController;
+  peerRpcScores: IPeerRpcScoreStore;
   /** Our network identity */
   peerId: PeerId;
   localMultiaddrs: Multiaddr[];

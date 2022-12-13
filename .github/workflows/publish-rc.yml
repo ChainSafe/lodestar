@@ -54,7 +54,7 @@ jobs:
           fetch-depth: 0 # Needs full depth for changelog generation
       - uses: actions/setup-node@v2
         with:
-          node-version: "lts/gallium"
+          node-version: 18
       - name: Node.js version
         id: node
         run: echo "::set-output name=v8CppApiVersion::$(node --print "process.versions.modules")"

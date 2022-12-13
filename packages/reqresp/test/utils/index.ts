@@ -2,28 +2,9 @@ import {Stream, StreamStat} from "@libp2p/interface-connection";
 import {expect} from "chai";
 import {Uint8ArrayList} from "uint8arraylist";
 import {toHexString} from "@chainsafe/ssz";
-import {phase0, Root} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
 import {EncodedPayload, RespStatus} from "../../src/index.js";
 import {ResponseChunk} from "../fixtures/index.js";
-
-export function createStatus(): phase0.Status {
-  return {
-    finalizedEpoch: 1,
-    finalizedRoot: Buffer.alloc(32, 0),
-    forkDigest: Buffer.alloc(4),
-    headRoot: Buffer.alloc(32, 0),
-    headSlot: 10,
-  };
-}
-
-export function generateRoots(count: number, offset = 0): Root[] {
-  const roots: Root[] = [];
-  for (let i = 0; i < count; i++) {
-    roots.push(Buffer.alloc(32, i + offset));
-  }
-  return roots;
-}
 
 /**
  * Helper for it-pipe when first argument is an array.

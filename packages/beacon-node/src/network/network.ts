@@ -44,7 +44,7 @@ export class Network implements INetwork {
   syncnetsService: SyncnetsService;
   gossip: Eth2Gossipsub;
   metadata: MetadataController;
-  private readonly peerRpcScores: IPeerRpcScoreStore;
+  readonly peerRpcScores: IPeerRpcScoreStore;
   private readonly peersData: PeersData;
 
   private readonly peerManager: PeerManager;
@@ -142,7 +142,7 @@ export class Network implements INetwork {
     await this.libp2p.start();
     // Stop latency monitor since we handle disconnects here and don't want additional load on the event loop
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
-    (this.libp2p.connectionManager as DefaultConnectionManager)["latencyMonitor"].stop();
+    ((this.libp2p.connectionManager as unknown) as DefaultConnectionManager)["latencyMonitor"].stop();
 
     // Network spec decides version changes based on clock fork, not head fork
     const forkCurrentSlot = this.config.getForkName(this.clock.currentSlot);

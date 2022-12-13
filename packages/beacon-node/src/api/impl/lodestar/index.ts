@@ -105,7 +105,11 @@ export function getLodestarApi({
     },
 
     async getGossipPeerScoreStats() {
-      return network.gossip.dumpPeerScoreStats();
+      return Object.entries(network.gossip.dumpPeerScoreStats()).map(([peerId, stats]) => ({peerId, ...stats}));
+    },
+
+    async getLodestarPeerScoreStats() {
+      return network.peerRpcScores.dumpPeerScoreStats();
     },
 
     async runGC() {
