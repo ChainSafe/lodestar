@@ -462,7 +462,6 @@ export class PeerManager {
       for (const [peerIdStr, peerData] of this.connectedPeers) {
         if (!actualConnectedPeerIds.has(peerIdStr)) {
           this.connectedPeers.delete(peerIdStr);
-          this.reqResp.pruneOnPeerDisconnect(peerData.peerId);
         }
       }
     }
@@ -579,7 +578,6 @@ export class PeerManager {
 
     this.logger.verbose("peer disconnected", {peer: prettyPrintPeerId(peer), direction, status});
     this.networkEventBus.emit(NetworkEvent.peerDisconnected, peer);
-    this.reqResp.pruneOnPeerDisconnect(peer);
     this.metrics?.peerDisconnectedEvent.inc({direction});
   };
 

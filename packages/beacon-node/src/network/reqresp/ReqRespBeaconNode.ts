@@ -103,9 +103,9 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
     await super.stop();
   }
 
-  pruneOnPeerDisconnect(peerId: PeerId): void {
-    this.rateLimiter.prune(peerId);
-  }
+  // NOTE: Do not pruneOnPeerDisconnect. Persist peer rate limit data until pruned by time
+  // pruneOnPeerDisconnect(peerId: PeerId): void {
+  //   this.rateLimiter.prune(peerId);
 
   registerProtocolsAtFork(fork: ForkName): void {
     this.currentRegisteredFork = ForkSeq[fork];
