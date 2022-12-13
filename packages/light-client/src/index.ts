@@ -194,8 +194,8 @@ export class Lightclient {
     const api = getClient({baseUrl: beaconApiUrl}, {config});
 
     // Fetch bootstrap state with proof at the trusted block root
-    const {data: bootstrapStateWithProof} = await api.lightclient.getBootstrap(toHexString(checkpointRoot));
-    const {header, currentSyncCommittee, currentSyncCommitteeBranch} = bootstrapStateWithProof;
+    const {data: bootstrap} = await api.lightclient.getBootstrap(toHexString(checkpointRoot));
+    const {header, currentSyncCommittee, currentSyncCommitteeBranch} = bootstrap;
 
     // verify the response matches the requested root
     const headerRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(header);
@@ -221,7 +221,7 @@ export class Lightclient {
       logger,
       beaconApiUrl,
       genesisData,
-      snapshot: bootstrapStateWithProof,
+      snapshot: bootstrap,
     });
   }
 

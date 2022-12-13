@@ -22,7 +22,7 @@ export function chainConfigFromJson(json: Record<string, unknown>): IChainConfig
   for (const key of Object.keys(chainConfigTypes) as (keyof IChainConfig)[]) {
     const value = json[key];
     if (value !== undefined) {
-      config[key] = deserializeSpecValue(json[key], chainConfigTypes[key]) as never;
+      config[key] = deserializeSpecValue(json[key], chainConfigTypes[key], key) as never;
     }
   }
 
@@ -79,9 +79,9 @@ export function serializeSpecValue(value: SpecValue, typeName: SpecValueTypeName
   }
 }
 
-export function deserializeSpecValue(valueStr: unknown, typeName: SpecValueTypeName): SpecValue {
+export function deserializeSpecValue(valueStr: unknown, typeName: SpecValueTypeName, keyName: string): SpecValue {
   if (typeof valueStr !== "string") {
-    throw Error(`Invalid value ${valueStr} expected string`);
+    throw Error(`Invalid ${keyName} value ${valueStr} expected string`);
   }
 
   switch (typeName) {
