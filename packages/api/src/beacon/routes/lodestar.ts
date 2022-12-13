@@ -33,11 +33,17 @@ export type GossipQueueItem = {
 };
 
 export type PeerScoreStat = {
+  peerId: string;
   lodestarScore: number;
   gossipScore: number;
   ignoreNegativeGossipScore: boolean;
   score: number;
   lastUpdate: number;
+};
+
+export type GossipPeerScoreStat = {
+  peerId: string;
+  // + Other un-typed options
 };
 
 export type RegenQueueItem = {
@@ -83,9 +89,9 @@ export type Api = {
   /** Dump a summary of the states in the CheckpointStateCache */
   getCheckpointStateCacheItems(): Promise<StateCacheItem[]>;
   /** Dump peer gossip stats by peer */
-  getGossipPeerScoreStats(): Promise<Record<string, unknown>>;
+  getGossipPeerScoreStats(): Promise<GossipPeerScoreStat[]>;
   /** Dump lodestar score stats by peer */
-  getLodestarPeerScoreStats(): Promise<Record<string, PeerScoreStat>>;
+  getLodestarPeerScoreStats(): Promise<PeerScoreStat[]>;
   /** Run GC with `global.gc()` */
   runGC(): Promise<void>;
   /** Drop all states in the state cache */
