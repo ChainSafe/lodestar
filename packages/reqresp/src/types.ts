@@ -115,12 +115,7 @@ export interface TypeSerializer<T> {
   equals(a: T, b: T): boolean;
 }
 
-export interface ReqRespRateLimiterModules {
-  logger: ILogger;
-  reportPeer: (peer: PeerId) => void;
-  metrics: Metrics | null;
-}
-
 export interface ReqRespRateLimiterOpts {
   rateLimitMultiplier?: number;
+  onRateLimit?: (peer: PeerId, method: string) => void;
 }

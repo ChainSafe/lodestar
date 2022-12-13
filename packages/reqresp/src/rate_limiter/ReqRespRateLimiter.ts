@@ -1,8 +1,6 @@
 import {PeerId} from "@libp2p/interface-peer-id";
-import {ILogger} from "@lodestar/utils";
-import {Metrics} from "../metrics.js";
 import {RequestError, RequestErrorCode} from "../request/errors.js";
-import {ProtocolDefinition, ReqRespRateLimiterModules, ReqRespRateLimiterOpts} from "../types.js";
+import {ProtocolDefinition, ReqRespRateLimiterOpts} from "../types.js";
 import {RateLimiterGRCA} from "./rateLimiterGRCA.js";
 
 /** Sometimes a peer request comes AFTER libp2p disconnect event, check for such peers every 10 minutes */
@@ -22,15 +20,9 @@ export class ReqRespRateLimiter {
   private rateLimitMultiplier: number;
   /** Periodically check this to remove tracker of disconnected peers */
   private lastSeenRequestsByPeer: Map<string, number>;
-  private readonly metrics: Metrics | null;
-  private readonly logger: ILogger;
-  private readonly reportPeer: ReqRespRateLimiterModules["reportPeer"];
 
-  constructor({metrics, logger, reportPeer}: ReqRespRateLimiterModules, {rateLimitMultiplier}: ReqRespRateLimiterOpts) {
-    this.metrics = metrics;
-    this.reportPeer = reportPeer;
-    this.logger = logger;
-    this.rateLimitMultiplier = rateLimitMultiplier ?? 1;
+  constructor(private readonly opts?: ReqRespRateLimiterOpts) {
+    this.rateLimitMultiplier = opts?.rateLimitMultiplier ?? 1;
     this.lastSeenRequestsByPeer = new Map();
   }
 
@@ -81,7 +73,9 @@ export class ReqRespRateLimiter {
     protocol: ProtocolDefinition<Req, Resp>;
     requestBody: Req;
   }): void {
-    if (!this.enabled) return;
+    if (!this.enabled) {
+      return;
+    }
 
     const peerIdStr = peerId.toString();
     this.lastSeenRequestsByPeer.set(peerIdStr, Date.now());
@@ -92,26 +86,11 @@ export class ReqRespRateLimiter {
       ? protocol.inboundRateLimits.getRequestCount(requestBody)
       : 1;
 
-    const {byPeer, total} = this.getRaterLimiters(protocol);
+    const byPeer = this.rateLimitersPerPeer.get(protocol.method)?.get(protocol.version);
+    const total = this.rateLimitersTotal.get(protocol.method)?.get(protocol.version);
 
-    if (byPeer && !byPeer.allows(peerIdStr, requestCount)) {
-      this.logger.debug("Do not serve request due to rate limit", {
-        peerId: peerIdStr,
-      });
-
-      this.reportPeer(peerId);
-
-      if (this.metrics) {
-        this.metrics.rateLimitErrors.inc({method});
-      }
-
-      throw new RequestError({code: RequestErrorCode.REQUEST_RATE_LIMITED}, {peer: peerIdStr, method, encoding});
-    }
-
-    if (total && !total.allows(null, requestCount)) {
-      this.logger.debug("Do not serve request due to total rate limit", {
-        peerId: peerIdStr,
-      });
+    if ((byPeer && !byPeer.allows(peerIdStr, requestCount)) || (total && !total.allows(null, requestCount))) {
+      this.opts?.onRateLimit?.(peerId, method);
 
       throw new RequestError({code: RequestErrorCode.REQUEST_RATE_LIMITED}, {peer: peerIdStr, method, encoding});
     }
@@ -149,14 +128,5 @@ export class ReqRespRateLimiter {
         this.pruneByPeerIdStr(peerIdStr);
       }
     }
-  }
-
-  private getRaterLimiters<Req, Resp>(
-    protocol: ProtocolDefinition<Req, Resp>
-  ): {byPeer?: RateLimiterGRCA<string>; total?: RateLimiterGRCA<null>} {
-    return {
-      byPeer: this.rateLimitersPerPeer.get(protocol.method)?.get(protocol.version),
-      total: this.rateLimitersTotal.get(protocol.method)?.get(protocol.version),
-    };
   }
 }

@@ -6,7 +6,7 @@ import {ILogger} from "@lodestar/utils";
 import {getMetrics, Metrics, MetricsRegister} from "./metrics.js";
 import {RequestError, RequestErrorCode, sendRequest, SendRequestOpts} from "./request/index.js";
 import {handleRequest} from "./response/index.js";
-import {Encoding, ProtocolDefinition, ReqRespRateLimiterModules, ReqRespRateLimiterOpts} from "./types.js";
+import {Encoding, ProtocolDefinition, ReqRespRateLimiterOpts} from "./types.js";
 import {formatProtocolID} from "./utils/protocolId.js";
 import {ReqRespRateLimiter} from "./rate_limiter/ReqRespRateLimiter.js";
 
@@ -14,7 +14,7 @@ type ProtocolID = string;
 
 export const DEFAULT_PROTOCOL_PREFIX = "/eth2/beacon_chain/req";
 
-export interface ReqRespProtocolModules extends Omit<ReqRespRateLimiterModules, "metrics"> {
+export interface ReqRespProtocolModules {
   libp2p: Libp2p;
   logger: ILogger;
   metricsRegister: MetricsRegister | null;
@@ -55,16 +55,7 @@ export class ReqResp {
     this.logger = modules.logger;
     this.metrics = modules.metricsRegister ? getMetrics(modules.metricsRegister) : null;
     this.protocolPrefix = opts.protocolPrefix ?? DEFAULT_PROTOCOL_PREFIX;
-    this.rateLimiter = new ReqRespRateLimiter(
-      {
-        metrics: this.metrics,
-        reportPeer: modules.reportPeer,
-        logger: modules.logger,
-      },
-      {
-        rateLimitMultiplier: opts.rateLimitMultiplier,
-      }
-    );
+    this.rateLimiter = new ReqRespRateLimiter(opts);
   }
 
   /**
