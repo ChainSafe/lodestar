@@ -1,22 +1,3 @@
-import {PeerId} from "@libp2p/interface-peer-id";
-
-/**
- * Rate limiter interface for inbound and outbound requests.
- */
-export interface RateLimiter {
-  /** Allow to request or response based on rate limit params configured. */
-  allowRequest(peerId: PeerId): boolean;
-  /** Rate limit check for block count */
-  allowBlockByRequest(peerId: PeerId, numBlock: number): boolean;
-
-  /**
-   * Prune by peer id
-   */
-  prune(peerId: PeerId): void;
-  start(): void;
-  stop(): void;
-}
-
 //  Request/Response constants
 export enum RespStatus {
   /**

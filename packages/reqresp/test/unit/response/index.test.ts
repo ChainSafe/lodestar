@@ -4,12 +4,13 @@ import {PeerId} from "@libp2p/interface-peer-id";
 import {LodestarError, fromHex, ILogger} from "@lodestar/utils";
 import {ProtocolDefinition, RespStatus} from "../../../src/index.js";
 import {sszSnappyPing} from "../../fixtures/messages.js";
-import {Ping} from "../../../src/messages/index.js";
+import {Ping} from "../../../src/protocols/index.js";
 import {expectEqualByteChunks, MockLibP2pStream} from "../../utils/index.js";
 import {handleRequest} from "../../../src/response/index.js";
 import {createStubbedLogger} from "../../mocks/logger.js";
 import {getValidPeerId} from "../../utils/peer.js";
 import {expectRejectedWithLodestarError} from "../../utils/errors.js";
+import {ReqRespRateLimiter} from "../../../src/rate_limiter/ReqRespRateLimiter.js";
 
 const testCases: {
   id: string;
@@ -58,8 +59,17 @@ describe("response / handleRequest", () => {
   for (const {id, requestChunks, protocol, expectedResponseChunks, expectedError} of testCases) {
     it(id, async () => {
       const stream = new MockLibP2pStream(requestChunks);
+      const rateLimiter = new ReqRespRateLimiter({rateLimitMultiplier: 0});
 
-      const resultPromise = handleRequest({logger, protocol, stream, peerId, signal: controller.signal});
+      const resultPromise = handleRequest({
+        logger,
+        protocol,
+        protocolID: protocol.method,
+        stream,
+        peerId,
+        signal: controller.signal,
+        rateLimiter,
+      });
 
       // Make sure the test error-ed with expected error, otherwise it's hard to debug with responseChunks
       if (expectedError) {

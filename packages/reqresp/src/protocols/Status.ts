@@ -11,5 +11,9 @@ export const Status: ProtocolDefinitionGenerator<phase0.Status, phase0.Status> =
     requestType: () => ssz.phase0.Status,
     responseType: () => ssz.phase0.Status,
     contextBytes: {type: ContextBytesType.Empty},
+    inboundRateLimits: {
+      // Rationale: https://github.com/sigp/lighthouse/blob/bf533c8e42cc73c35730e285c21df8add0195369/beacon_node/lighthouse_network/src/rpc/mod.rs#L118-L130
+      byPeer: {quota: 5, quotaTimeMs: 15_000},
+    },
   };
 };

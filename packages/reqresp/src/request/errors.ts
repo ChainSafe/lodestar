@@ -29,6 +29,8 @@ export enum RequestErrorCode {
   TTFB_TIMEOUT = "REQUEST_ERROR_TTFB_TIMEOUT",
   /** Timeout between `<response_chunk>` exceed */
   RESP_TIMEOUT = "REQUEST_ERROR_RESP_TIMEOUT",
+  /** Request rate limited */
+  REQUEST_RATE_LIMITED = "REQUEST_ERROR_RATE_LIMITED",
 }
 
 type RequestErrorType =
@@ -43,7 +45,8 @@ type RequestErrorType =
   | {code: RequestErrorCode.RESPONSE_TIMEOUT}
   | {code: RequestErrorCode.EMPTY_RESPONSE}
   | {code: RequestErrorCode.TTFB_TIMEOUT}
-  | {code: RequestErrorCode.RESP_TIMEOUT};
+  | {code: RequestErrorCode.RESP_TIMEOUT}
+  | {code: RequestErrorCode.REQUEST_RATE_LIMITED};
 
 export interface IRequestErrorMetadata {
   method: string;
