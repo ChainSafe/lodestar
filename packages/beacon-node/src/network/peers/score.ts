@@ -79,6 +79,7 @@ type PeerIdStr = string;
 export interface IPeerRpcScoreStore {
   getScore(peer: PeerId): number;
   getScoreState(peer: PeerId): ScoreState;
+  dumpPeerScoreStats(): Record<PeerIdStr, PeerScoreStat>;
   applyAction(peer: PeerId, action: PeerAction, actionName: string): void;
   update(): void;
   updateGossipsubScore(peerId: PeerIdStr, newScore: number, ignore: boolean): void;
@@ -87,6 +88,14 @@ export interface IPeerRpcScoreStore {
 export interface IPeerRpcScoreStoreModules {
   metrics: IMetrics | null;
 }
+
+export type PeerScoreStat = {
+  lodestarScore: number;
+  gossipScore: number;
+  ignoreNegativeGossipScore: boolean;
+  score: number;
+  lastUpdate: number;
+};
 
 /**
  * A peer's score (perceived potential usefulness).
@@ -110,6 +119,14 @@ export class PeerRpcScoreStore implements IPeerRpcScoreStore {
 
   getScoreState(peer: PeerId): ScoreState {
     return scoreToState(this.getScore(peer));
+  }
+
+  dumpPeerScoreStats(): Record<PeerIdStr, PeerScoreStat> {
+    const peerStats: Record<PeerIdStr, PeerScoreStat> = {};
+    for (const [peerId, peerScore] of this.scores.entries()) {
+      peerStats[peerId] = peerScore.getStat();
+    }
+    return peerStats;
   }
 
   applyAction(peer: PeerId, action: PeerAction, actionName: string): void {
@@ -200,6 +217,16 @@ export class PeerScore {
       this.gossipScore = newScore;
       this.ignoreNegativeGossipScore = ignore;
     }
+  }
+
+  getStat(): PeerScoreStat {
+    return {
+      lodestarScore: this.lodestarScore,
+      gossipScore: this.gossipScore,
+      ignoreNegativeGossipScore: this.ignoreNegativeGossipScore,
+      score: this.score,
+      lastUpdate: this.lastUpdate,
+    };
   }
 
   /**

@@ -44,7 +44,7 @@ export class Network implements INetwork {
   syncnetsService: SyncnetsService;
   gossip: Eth2Gossipsub;
   metadata: MetadataController;
-  private readonly peerRpcScores: IPeerRpcScoreStore;
+  readonly peerRpcScores: IPeerRpcScoreStore;
   private readonly peersData: PeersData;
 
   private readonly peerManager: PeerManager;
