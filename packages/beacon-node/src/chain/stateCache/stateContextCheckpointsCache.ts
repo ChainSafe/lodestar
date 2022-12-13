@@ -48,9 +48,6 @@ export class CheckpointStateCache {
     }
 
     this.metrics?.stateClonedCount.observe(item.clonedCount);
-    if (!stateInternalCachePopulated(item)) {
-      this.metrics?.stateInternalCacheMiss.inc();
-    }
 
     return item;
   }
@@ -162,16 +159,3 @@ export function toCheckpointHex(checkpoint: phase0.Checkpoint): CheckpointHex {
 export function toCheckpointKey(cp: CheckpointHex): string {
   return `${cp.rootHex}:${cp.epoch}`;
 }
-
-/**
- * Given a CachedBeaconState, check if validators array internal cache is populated.
- * This cache is populated during epoch transition, and should be preserved for performance.
- * If the cache is missing too often, means that our clone strategy is not working well.
- */
-export function stateInternalCachePopulated(state: CachedBeaconStateAllForks): boolean {
-  return ((state.validators as unknown) as ViewDU).nodesPopulated === true;
-}
-
-type ViewDU = {
-  nodesPopulated: boolean;
-};

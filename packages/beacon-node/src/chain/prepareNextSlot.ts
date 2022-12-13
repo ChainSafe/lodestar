@@ -3,7 +3,7 @@ import {IChainForkConfig} from "@lodestar/config";
 import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Slot} from "@lodestar/types";
 import {ILogger, sleep} from "@lodestar/utils";
-import {TransitionConfigurationV1} from "@lodestar/engine-api-client";
+import {ForkExecution, TransitionConfigurationV1} from "@lodestar/engine-api-client";
 import {GENESIS_SLOT, ZERO_HASH_HEX} from "../constants/constants.js";
 import {IMetrics} from "../metrics/index.js";
 import {ChainEvent} from "./emitter.js";
@@ -55,13 +55,11 @@ export class PrepareNextSlotScheduler {
     const prepareEpoch = computeEpochAtSlot(prepareSlot);
     const nextEpoch = computeEpochAtSlot(clockSlot) + 1;
     const isEpochTransition = prepareEpoch === nextEpoch;
+    const fork = this.config.getForkName(prepareSlot);
 
     // Early return if we are pre-genesis
     //  or we are pre-bellatrix and this is not an epoch transition
-    if (
-      prepareSlot <= GENESIS_SLOT ||
-      (this.config.getForkSeq(prepareSlot) < ForkSeq.bellatrix && !isEpochTransition)
-    ) {
+    if (prepareSlot <= GENESIS_SLOT || (ForkSeq[fork] < ForkSeq.bellatrix && !isEpochTransition)) {
       return;
     }
 
@@ -138,7 +136,14 @@ export class PrepareNextSlotScheduler {
           // awaiting here instead of throwing an async call because there is no other task
           // left for scheduler and this gives nice sematics to catch and log errors in the
           // try/catch wrapper here.
-          await prepareExecutionPayload(this.chain, safeBlockHash, finalizedBlockHash, prepareState, feeRecipient);
+          await prepareExecutionPayload(
+            this.chain,
+            fork as ForkExecution, // State is of execution type
+            safeBlockHash,
+            finalizedBlockHash,
+            prepareState,
+            feeRecipient
+          );
           this.logger.verbose("PrepareNextSlotScheduler prepared new payload", {
             prepareSlot,
             proposerIndex,

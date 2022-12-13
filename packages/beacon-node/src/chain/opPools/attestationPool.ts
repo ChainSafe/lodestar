@@ -4,7 +4,7 @@ import bls from "@chainsafe/bls";
 import {BitArray, toHexString} from "@chainsafe/ssz";
 import {MapDef} from "@lodestar/utils";
 import {InsertOutcome, OpPoolError, OpPoolErrorCode} from "./types.js";
-import {pruneBySlot} from "./utils.js";
+import {pruneBySlot, signatureFromBytesNoCheck} from "./utils.js";
 
 /**
  * The number of slots that will be stored in the pool.
@@ -183,7 +183,7 @@ function aggregateAttestationInto(aggregate: AggregateFast, attestation: phase0.
   aggregate.aggregationBits.set(bitIndex, true);
   aggregate.signature = bls.Signature.aggregate([
     aggregate.signature,
-    bls.Signature.fromBytes(attestation.signature, undefined, true),
+    signatureFromBytesNoCheck(attestation.signature),
   ]);
   return InsertOutcome.Aggregated;
 }
@@ -196,7 +196,7 @@ function attestationToAggregate(attestation: phase0.Attestation): AggregateFast 
     data: attestation.data,
     // clone because it will be mutated
     aggregationBits: attestation.aggregationBits.clone(),
-    signature: bls.Signature.fromBytes(attestation.signature, undefined, true),
+    signature: signatureFromBytesNoCheck(attestation.signature),
   };
 }
 

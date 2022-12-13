@@ -1,6 +1,6 @@
 import mitt from "mitt";
 import {init as initBls} from "@chainsafe/bls/switchable";
-import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {allForks, altair, bellatrix, phase0, RootHex, ssz, SyncPeriod} from "@lodestar/types";
 import {createIBeaconConfig, IBeaconConfig, IChainForkConfig} from "@lodestar/config";
 import {TreeOffsetProof} from "@chainsafe/persistent-merkle-tree";
@@ -35,6 +35,7 @@ export type LightclientInitArgs = {
   genesisData: GenesisData;
   beaconApiUrl: string;
   snapshot: {
+    version: ForkName;
     header: phase0.BeaconBlockHeader;
     currentSyncCommittee: altair.SyncCommittee;
     block?: allForks.SignedBeaconBlock;
@@ -138,6 +139,7 @@ export class Lightclient {
     participation: number;
     header: phase0.BeaconBlockHeader;
     blockRoot: RootHex;
+    version: ForkName;
     block?: allForks.SignedBeaconBlock;
   };
 
@@ -145,6 +147,7 @@ export class Lightclient {
     participation: number;
     header: phase0.BeaconBlockHeader;
     blockRoot: RootHex;
+    version: ForkName;
     block?: allForks.SignedBeaconBlock;
   } | null = null;
 
@@ -179,6 +182,7 @@ export class Lightclient {
       participation: 0,
       header: snapshot.header,
       blockRoot: headerBlockRoot,
+      version: snapshot.version,
       block: snapshot.block,
     };
   }
@@ -214,7 +218,7 @@ export class Lightclient {
     await initBls(isNode ? "blst-native" : "herumi");
 
     // Fetch bootstrap state with proof at the trusted block root
-    const {data: bootstrapStateWithProof} = await transport.getBootstrap(toHexString(checkpointRoot));
+    const {version, data: bootstrapStateWithProof} = await transport.getBootstrap(toHexString(checkpointRoot));
     const {header, currentSyncCommittee, currentSyncCommitteeBranch} = bootstrapStateWithProof;
 
     // verify the response matches the requested root
@@ -255,6 +259,7 @@ export class Lightclient {
         beaconApiUrl,
         genesisData,
         snapshot: {
+          version,
           ...bootstrapStateWithProof,
           ...block,
         },
@@ -302,10 +307,11 @@ export class Lightclient {
 
     for (const [fromPeriodRng, toPeriodRng] of periodRanges) {
       const count = toPeriodRng + 1 - fromPeriodRng;
-      const {data: updates} = await this.transport.getUpdates(fromPeriodRng, count);
+      const updates = await this.transport.getUpdates(fromPeriodRng, count);
       for (const update of updates) {
-        await this.processSyncCommitteeUpdate(update);
-        const headPeriod = computeSyncPeriodAtSlot(update.attestedHeader.slot);
+        const lightClientUpdate = update.data;
+        await this.processSyncCommitteeUpdate(update.version, lightClientUpdate);
+        const headPeriod = computeSyncPeriodAtSlot(lightClientUpdate.attestedHeader.slot);
         this.logger.debug(`processed sync update for period ${headPeriod}`);
         // Yield to the macro queue, verifying updates is somewhat expensive and we want responsiveness
         await new Promise((r) => setTimeout(r, 0));
@@ -319,7 +325,7 @@ export class Lightclient {
     // This process has to be done manually because of an issue in Karma runner
     // https://github.com/karma-runner/karma/issues/3804
     await initBls(isNode ? "blst-native" : "herumi");
-
+    let version = ForkName.altair; // TODO revisit
     // eslint-disable-next-line no-constant-condition
     while (true) {
       const currentPeriod = computeSyncPeriodAtSlot(this.currentSlot);
@@ -350,8 +356,9 @@ export class Lightclient {
         // Fetch latest optimistic head to prevent a potential 12 seconds lag between syncing and getting the first head,
         // Don't retry, this is a non-critical UX improvement
         try {
-          const {data: latestOptimisticUpdate} = await this.transport.getOptimisticUpdate();
-          await this.processOptimisticUpdate(latestOptimisticUpdate);
+          const update = await this.transport.getOptimisticUpdate();
+          await this.processOptimisticUpdate(update.version, update.data);
+          version = update.version;
         } catch (e) {
           this.logger.error("Error fetching getLatestHeadUpdate", {currentPeriod}, e as Error);
         }
@@ -363,8 +370,8 @@ export class Lightclient {
         this.status = {code: RunStatusCode.started, controller};
         this.logger.debug("Started tracking the head");
 
-        this.transport.onFinalityUpdate(this.processFinalizedUpdateAndEL.bind(this));
-        this.transport.onOptimisticUpdate(this.processOptimisticUpdateAndEL.bind(this));
+        this.transport.onFinalityUpdate(version, this.processFinalizedUpdateAndEL.bind(this));
+        this.transport.onOptimisticUpdate(version, this.processOptimisticUpdateAndEL.bind(this));
       }
 
       // When close to the end of a sync period poll for sync committee updates
@@ -403,7 +410,10 @@ export class Lightclient {
    * Processes new optimistic header updates in only known synced sync periods.
    * This headerUpdate may update the head if there's enough participation.
    */
-  private async processOptimisticUpdate(headerUpdate: altair.LightClientOptimisticUpdate): Promise<void> {
+  private async processOptimisticUpdate(
+    version: ForkName,
+    headerUpdate: altair.LightClientOptimisticUpdate
+  ): Promise<void> {
     const {attestedHeader, syncAggregate} = headerUpdate;
 
     // Prevent registering updates for slots to far ahead
@@ -453,7 +463,7 @@ export class Lightclient {
     ) {
       // TODO: Do metrics for each case (advance vs replace same slot)
       const prevHead = this.head;
-      this.head = {header: attestedHeader, participation, blockRoot: headerBlockRootHex};
+      this.head = {header: attestedHeader, participation, version, blockRoot: headerBlockRootHex};
 
       // fetch block only if configured to update EL
       if (this.executionEngine) {
@@ -490,10 +500,13 @@ export class Lightclient {
    * Processes new header updates in only known synced sync periods.
    * This headerUpdate may update the head if there's enough participation.
    */
-  private async processFinalizedUpdate(finalizedUpdate: altair.LightClientFinalityUpdate): Promise<void> {
+  private async processFinalizedUpdate(
+    version: ForkName,
+    finalizedUpdate: altair.LightClientFinalityUpdate
+  ): Promise<void> {
     // Validate sync aggregate of the attested header and other conditions like future update, period etc
     // and may be move head
-    await this.processOptimisticUpdate(finalizedUpdate);
+    await this.processOptimisticUpdate(version, finalizedUpdate);
     assertValidFinalityProof(finalizedUpdate);
 
     const {finalizedHeader, syncAggregate} = finalizedUpdate;
@@ -511,7 +524,7 @@ export class Lightclient {
       const prevFinalized = this.finalized;
       const finalizedBlockRootHex = toHexString(finalizedBlockRoot);
 
-      this.finalized = {header: finalizedHeader, participation, blockRoot: finalizedBlockRootHex};
+      this.finalized = {header: finalizedHeader, participation, version, blockRoot: finalizedBlockRootHex};
 
       // fetch block only if configured to update EL
       if (this.executionEngine) {
@@ -548,17 +561,23 @@ export class Lightclient {
     }
   }
 
-  private async processFinalizedUpdateAndEL(finalizedUpdate: altair.LightClientFinalityUpdate): Promise<void> {
+  private async processFinalizedUpdateAndEL(
+    version: ForkName,
+    finalizedUpdate: altair.LightClientFinalityUpdate
+  ): Promise<void> {
     const prevFinalized = this.finalized;
-    await this.processFinalizedUpdate(finalizedUpdate);
+    await this.processFinalizedUpdate(version, finalizedUpdate);
     if ((!prevFinalized && this.finalized) || prevFinalized?.blockRoot !== this.finalized?.blockRoot) {
       await this.notifyExecutionLayer();
     }
   }
 
-  private async processOptimisticUpdateAndEL(headerUpdate: altair.LightClientOptimisticUpdate): Promise<void> {
+  private async processOptimisticUpdateAndEL(
+    version: ForkName,
+    headerUpdate: altair.LightClientOptimisticUpdate
+  ): Promise<void> {
     const prevHead = this.head;
-    await this.processOptimisticUpdate(headerUpdate);
+    await this.processOptimisticUpdate(version, headerUpdate);
     if (prevHead.blockRoot !== this.head.blockRoot) {
       await this.notifyExecutionLayer();
     }
@@ -574,7 +593,7 @@ export class Lightclient {
    *                     - current_sync_committee: period 0
    *                     - known next_sync_committee, signed by current_sync_committee
    */
-  private async processSyncCommitteeUpdate(update: altair.LightClientUpdate): Promise<void> {
+  private async processSyncCommitteeUpdate(version: ForkName, update: altair.LightClientUpdate): Promise<void> {
     // Prevent registering updates for slots too far in the future
     const attestedHeader = update.attestedHeader;
     const updateSlot = attestedHeader.slot;
@@ -623,10 +642,10 @@ export class Lightclient {
     const participation = sumBits(update.syncAggregate.syncCommitteeBits);
 
     const finalizedBlockRootHex = toHexString(ssz.phase0.BeaconBlockHeader.hashTreeRoot(finalizedHeader));
-    this.finalized = {header: finalizedHeader, participation: participation, blockRoot: finalizedBlockRootHex};
+    this.finalized = {header: finalizedHeader, participation: participation, version, blockRoot: finalizedBlockRootHex};
 
     const headerBlockRootHex = toHexString(ssz.phase0.BeaconBlockHeader.hashTreeRoot(attestedHeader));
-    this.head = {header: attestedHeader, participation, blockRoot: headerBlockRootHex};
+    this.head = {header: attestedHeader, participation, version, blockRoot: headerBlockRootHex};
 
     if (this.executionEngine) {
       try {
@@ -657,7 +676,7 @@ export class Lightclient {
       }
 
       const executionPayload = (this.head.block as bellatrix.SignedBeaconBlock).message.body.executionPayload;
-      const response = await this.executionEngine.notifyNewPayload(executionPayload);
+      const response = await this.executionEngine.notifyNewPayload(this.head.version, executionPayload);
       this.logger.info("notifyNewPayload response", response);
     }
 
@@ -670,7 +689,12 @@ export class Lightclient {
       const headBlock = this.head.block as bellatrix.SignedBeaconBlock;
       const headHash = toHexString(headBlock.message.body.executionPayload.blockHash);
       const finalizedHash = toHexString(finalizedBlock.message.body.executionPayload.blockHash);
-      const response = await this.executionEngine.notifyForkchoiceUpdate(headHash, finalizedHash, finalizedHash);
+      const response = await this.executionEngine.notifyForkchoiceUpdate(
+        this.finalized.version,
+        headHash,
+        finalizedHash,
+        finalizedHash
+      );
 
       this.logger.info("notifyForkchoiceUpdate response", response);
     }

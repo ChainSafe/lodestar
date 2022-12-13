@@ -6,13 +6,16 @@ import {ApiModules} from "../types.js";
 
 // TODO: Import from lightclient/server package
 
-export function getLightclientApi({chain}: Pick<ApiModules, "chain">): routes.lightclient.Api {
+export function getLightclientApi({chain, config}: Pick<ApiModules, "chain" | "config">): routes.lightclient.Api {
   return {
     async getUpdates(startPeriod: SyncPeriod, count: number) {
       const maxAllowedCount = Math.min(MAX_REQUEST_LIGHT_CLIENT_UPDATES, count);
       const periods = Array.from({length: maxAllowedCount}, (_ignored, i) => i + startPeriod);
       const updates = await Promise.all(periods.map((period) => chain.lightClientServer.getUpdate(period)));
-      return {data: updates};
+      return updates.map((update) => ({
+        version: config.getForkName(update.attestedHeader.slot),
+        data: update,
+      }));
     },
 
     async getOptimisticUpdate() {
@@ -20,7 +23,7 @@ export function getLightclientApi({chain}: Pick<ApiModules, "chain">): routes.li
       if (data === null) {
         throw Error("No optimistic update available");
       }
-      return {data};
+      return {version: config.getForkName(data.attestedHeader.slot), data};
     },
 
     async getFinalityUpdate() {
@@ -28,12 +31,12 @@ export function getLightclientApi({chain}: Pick<ApiModules, "chain">): routes.li
       if (data === null) {
         throw Error("No finality update available");
       }
-      return {data};
+      return {version: config.getForkName(data.attestedHeader.slot), data};
     },
 
     async getBootstrap(blockRoot) {
       const bootstrapProof = await chain.lightClientServer.getBootstrap(fromHexString(blockRoot));
-      return {data: bootstrapProof};
+      return {version: config.getForkName(bootstrapProof.header.slot), data: bootstrapProof};
     },
 
     async getCommitteeRoot(startPeriod: SyncPeriod, count: number) {

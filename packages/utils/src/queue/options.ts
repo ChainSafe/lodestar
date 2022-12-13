@@ -14,6 +14,8 @@ export type JobQueueOpts = {
   signal: AbortSignal;
   /** Defaults to FIFO */
   type?: QueueType;
+  /**By default yield per push()*/
+  noYieldIfOneItem?: boolean;
 };
 
 export interface IQueueMetrics {
@@ -24,8 +26,11 @@ export interface IQueueMetrics {
   jobWaitTime: IHistogram;
 }
 
-export const defaultQueueOpts: Required<Pick<JobQueueOpts, "maxConcurrency" | "yieldEveryMs" | "type">> = {
+export const defaultQueueOpts: Required<
+  Pick<JobQueueOpts, "maxConcurrency" | "yieldEveryMs" | "type" | "noYieldIfOneItem">
+> = {
   maxConcurrency: 1,
   yieldEveryMs: 50,
   type: QueueType.FIFO,
+  noYieldIfOneItem: false,
 };

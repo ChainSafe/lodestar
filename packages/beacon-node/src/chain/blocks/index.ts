@@ -9,29 +9,29 @@ import type {BeaconChain} from "../chain.js";
 import {verifyBlocksInEpoch} from "./verifyBlock.js";
 import {importBlock} from "./importBlock.js";
 import {assertLinearChainSegment} from "./utils/chainSegment.js";
-import {FullyVerifiedBlock, ImportBlockOpts} from "./types.js";
+import {BlockInput, FullyVerifiedBlock, ImportBlockOpts} from "./types.js";
 import {verifyBlocksSanityChecks} from "./verifyBlocksSanityChecks.js";
 export {ImportBlockOpts} from "./types.js";
 
-const QUEUE_MAX_LENGHT = 256;
+const QUEUE_MAX_LENGTH = 256;
 
 /**
  * BlockProcessor processes block jobs in a queued fashion, one after the other.
  */
 export class BlockProcessor {
-  readonly jobQueue: JobItemQueue<[allForks.SignedBeaconBlock[], ImportBlockOpts], void>;
+  readonly jobQueue: JobItemQueue<[BlockInput[], ImportBlockOpts], void>;
 
   constructor(chain: BeaconChain, metrics: IMetrics | null, opts: BlockProcessOpts, signal: AbortSignal) {
-    this.jobQueue = new JobItemQueue<[allForks.SignedBeaconBlock[], ImportBlockOpts], void>(
+    this.jobQueue = new JobItemQueue<[BlockInput[], ImportBlockOpts], void>(
       (job, importOpts) => {
         return processBlocks.call(chain, job, {...opts, ...importOpts});
       },
-      {maxLength: QUEUE_MAX_LENGHT, signal},
+      {maxLength: QUEUE_MAX_LENGTH, noYieldIfOneItem: true, signal},
       metrics?.blockProcessorQueue ?? undefined
     );
   }
 
-  async processBlocksJob(job: allForks.SignedBeaconBlock[], opts: ImportBlockOpts = {}): Promise<void> {
+  async processBlocksJob(job: BlockInput[], opts: ImportBlockOpts = {}): Promise<void> {
     await this.jobQueue.push(job, opts);
   }
 }
@@ -48,7 +48,7 @@ export class BlockProcessor {
  */
 export async function processBlocks(
   this: BeaconChain,
-  blocks: allForks.SignedBeaconBlock[],
+  blocks: BlockInput[],
   opts: BlockProcessOpts & ImportBlockOpts
 ): Promise<void> {
   if (blocks.length === 0) {
@@ -87,7 +87,7 @@ export async function processBlocks(
     const {executionStatuses} = segmentExecStatus;
     const fullyVerifiedBlocks = relevantBlocks.map(
       (block, i): FullyVerifiedBlock => ({
-        block,
+        blockInput: block,
         postState: postStates[i],
         parentBlockSlot: parentSlots[i],
         executionStatus: executionStatuses[i],
@@ -104,7 +104,7 @@ export async function processBlocks(
     }
   } catch (e) {
     // above functions should only throw BlockError
-    const err = getBlockError(e, blocks[0]);
+    const err = getBlockError(e, blocks[0].block);
 
     // TODO: De-duplicate with logic above
     // ChainEvent.errorBlock

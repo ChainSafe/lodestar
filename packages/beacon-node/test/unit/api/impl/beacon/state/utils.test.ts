@@ -12,8 +12,8 @@ import {
 } from "../../../../../../src/api/impl/beacon/state/utils.js";
 import {IBeaconChain} from "../../../../../../src/chain/index.js";
 import {PERSIST_STATE_EVERY_EPOCHS} from "../../../../../../src/chain/archiver/archiveStates.js";
-import {generateProtoBlock} from "../../../../../utils/block.js";
-import {generateCachedState, generateCachedStateWithPubkeys, generateState} from "../../../../../utils/state.js";
+import {generateProtoBlock} from "../../../../../utils/typeGenerator.js";
+import {generateCachedAltairState, generateCachedState, generateState} from "../../../../../utils/state.js";
 import {StubbedBeaconDb} from "../../../../../utils/stub/index.js";
 
 use(chaiAsPromised);
@@ -222,7 +222,7 @@ describe("beacon state api utils", function () {
   });
 
   describe("getStateValidatorIndex", async function () {
-    const state = await generateCachedStateWithPubkeys({}, config, true);
+    const state = generateCachedAltairState();
     const pubkey2index = state.epochCtx.pubkey2index;
 
     it("should return valid: false on invalid input", () => {

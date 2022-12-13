@@ -3,7 +3,7 @@ import sinon, {SinonStubbedInstance} from "sinon";
 import {config} from "@lodestar/config/default";
 import {ForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {WinstonLogger} from "@lodestar/utils";
-import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {IChainForkConfig} from "@lodestar/config";
 import {ExecutionEngineHttp, IExecutionEngine, PayloadIdCache} from "@lodestar/engine-api-client";
 import {BeaconChain, ChainEventEmitter} from "../../../src/chain/index.js";
@@ -28,7 +28,7 @@ describe("PrepareNextSlot scheduler", () => {
   let regenStub: SinonStubbedInstance<StateRegenerator> & StateRegenerator;
   let loggerStub: SinonStubbedInstance<WinstonLogger> & WinstonLogger;
   let beaconProposerCacheStub: SinonStubbedInstance<BeaconProposerCache> & BeaconProposerCache;
-  let getForkSeqStub: SinonStubFn<typeof config["getForkSeq"]>;
+  let getForkStub: SinonStubFn<typeof config["getForkName"]>;
   let updateBuilderStatus: SinonStubFn<IBeaconChain["updateBuilderStatus"]>;
   let executionEngineStub: SinonStubbedInstance<ExecutionEngineHttp> & ExecutionEngineHttp;
 
@@ -53,7 +53,7 @@ describe("PrepareNextSlot scheduler", () => {
     ((chainStub as unknown) as {beaconProposerCache: BeaconProposerCache})[
       "beaconProposerCache"
     ] = beaconProposerCacheStub;
-    getForkSeqStub = sandbox.stub(config, "getForkSeq");
+    getForkStub = sandbox.stub(config, "getForkName");
     executionEngineStub = sandbox.createStubInstance(ExecutionEngineHttp) as SinonStubbedInstance<ExecutionEngineHttp> &
       ExecutionEngineHttp;
     ((chainStub as unknown) as {executionEngine: IExecutionEngine}).executionEngine = executionEngineStub;
@@ -66,13 +66,13 @@ describe("PrepareNextSlot scheduler", () => {
   });
 
   it("pre bellatrix - should not run due to not last slot of epoch", async () => {
-    getForkSeqStub.returns(ForkSeq.phase0);
+    getForkStub.returns(ForkName.phase0);
     await scheduler.prepareForNextSlot(3);
     expect(chainStub.recomputeForkChoiceHead).not.to.be.called;
   });
 
   it("pre bellatrix - should skip, headSlot is more than 1 epoch to prepare slot", async () => {
-    getForkSeqStub.returns(ForkSeq.phase0);
+    getForkStub.returns(ForkName.phase0);
     chainStub.recomputeForkChoiceHead.returns({slot: SLOTS_PER_EPOCH - 2} as ProtoBlock);
     await Promise.all([
       scheduler.prepareForNextSlot(2 * SLOTS_PER_EPOCH - 1),
@@ -83,7 +83,7 @@ describe("PrepareNextSlot scheduler", () => {
   });
 
   it("pre bellatrix - should run regen.getBlockSlotState", async () => {
-    getForkSeqStub.returns(ForkSeq.phase0);
+    getForkStub.returns(ForkName.phase0);
     chainStub.recomputeForkChoiceHead.returns({slot: SLOTS_PER_EPOCH - 1} as ProtoBlock);
     regenStub.getBlockSlotState.resolves();
     await Promise.all([
@@ -95,7 +95,7 @@ describe("PrepareNextSlot scheduler", () => {
   });
 
   it("pre bellatrix - should handle regen.getBlockSlotState error", async () => {
-    getForkSeqStub.returns(ForkSeq.phase0);
+    getForkStub.returns(ForkName.phase0);
     chainStub.recomputeForkChoiceHead.returns({slot: SLOTS_PER_EPOCH - 1} as ProtoBlock);
     regenStub.getBlockSlotState.rejects("Unit test error");
     expect(loggerStub.error).to.not.be.called;
@@ -109,7 +109,7 @@ describe("PrepareNextSlot scheduler", () => {
   });
 
   it("bellatrix - should skip, headSlot is more than 1 epoch to prepare slot", async () => {
-    getForkSeqStub.returns(ForkSeq.bellatrix);
+    getForkStub.returns(ForkName.bellatrix);
     chainStub.recomputeForkChoiceHead.returns({slot: SLOTS_PER_EPOCH - 2} as ProtoBlock);
     await Promise.all([
       scheduler.prepareForNextSlot(2 * SLOTS_PER_EPOCH - 1),
@@ -120,7 +120,7 @@ describe("PrepareNextSlot scheduler", () => {
   });
 
   it("bellatrix - should skip, no block proposer", async () => {
-    getForkSeqStub.returns(ForkSeq.bellatrix);
+    getForkStub.returns(ForkName.bellatrix);
     chainStub.recomputeForkChoiceHead.returns({slot: SLOTS_PER_EPOCH - 3} as ProtoBlock);
     const state = generateCachedBellatrixState();
     regenStub.getBlockSlotState.resolves(state);
@@ -133,7 +133,7 @@ describe("PrepareNextSlot scheduler", () => {
   });
 
   it("bellatrix - should prepare payload", async () => {
-    getForkSeqStub.returns(ForkSeq.bellatrix);
+    getForkStub.returns(ForkName.bellatrix);
     chainStub.recomputeForkChoiceHead.returns({slot: SLOTS_PER_EPOCH - 3} as ProtoBlock);
     forkChoiceStub.getJustifiedBlock.returns({} as ProtoBlock);
     forkChoiceStub.getFinalizedBlock.returns({} as ProtoBlock);

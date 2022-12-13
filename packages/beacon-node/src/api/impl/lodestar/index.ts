@@ -87,9 +87,9 @@ export function getLodestarApi({
 
     async getBlockProcessorQueueItems() {
       return (chain as BeaconChain)["blockProcessor"].jobQueue.getItems().map((item) => {
-        const [blocks, opts] = item.args;
+        const [blockInputs, opts] = item.args;
         return {
-          blockSlots: blocks.map((block) => block.message.slot),
+          blockSlots: blockInputs.map((blockInput) => blockInput.block.message.slot),
           jobOpts: opts,
           addedTimeMs: item.addedTimeMs,
         };
@@ -105,7 +105,11 @@ export function getLodestarApi({
     },
 
     async getGossipPeerScoreStats() {
-      return network.gossip.dumpPeerScoreStats();
+      return Object.entries(network.gossip.dumpPeerScoreStats()).map(([peerId, stats]) => ({peerId, ...stats}));
+    },
+
+    async getLodestarPeerScoreStats() {
+      return network.peerRpcScores.dumpPeerScoreStats();
     },
 
     async runGC() {

@@ -3,7 +3,6 @@ import bls from "@chainsafe/bls";
 import {altair} from "@lodestar/types";
 import {toHexString} from "@chainsafe/ssz";
 import {SyncCommitteeMessagePool} from "../../../../src/chain/opPools/index.js";
-import {generateSyncCommitteeSignature} from "../../../utils/syncCommittee.js";
 
 describe("chain / opPools / SyncCommitteeMessagePool", function () {
   let cache: SyncCommitteeMessagePool;
@@ -15,12 +14,12 @@ describe("chain / opPools / SyncCommitteeMessagePool", function () {
 
   before("Init BLS", async () => {
     const sk = bls.SecretKey.fromBytes(Buffer.alloc(32, 1));
-    syncCommittee = generateSyncCommitteeSignature({
+    syncCommittee = {
       slot,
       beaconBlockRoot,
       validatorIndex: 2000,
       signature: sk.sign(beaconBlockRoot).toBytes(),
-    });
+    };
   });
 
   beforeEach(() => {
@@ -32,13 +31,13 @@ describe("chain / opPools / SyncCommitteeMessagePool", function () {
     let contribution = cache.getContribution(subcommitteeIndex, syncCommittee.slot, syncCommittee.beaconBlockRoot);
     expect(contribution).to.be.not.null;
     const newSecretKey = bls.SecretKey.fromBytes(Buffer.alloc(32, 2));
-    const newSyncCommittee = generateSyncCommitteeSignature({
+    const newSyncCommittee: altair.SyncCommitteeMessage = {
       slot: syncCommittee.slot,
       beaconBlockRoot,
       // different validatorIndex
       validatorIndex: syncCommittee.validatorIndex + 1,
       signature: newSecretKey.sign(beaconBlockRoot).toBytes(),
-    });
+    };
     const newIndicesInSubSyncCommittee = [1];
     cache.add(subcommitteeIndex, newSyncCommittee, newIndicesInSubSyncCommittee[0]);
     contribution = cache.getContribution(subcommitteeIndex, syncCommittee.slot, syncCommittee.beaconBlockRoot);

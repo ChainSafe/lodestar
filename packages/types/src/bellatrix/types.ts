@@ -18,3 +18,5 @@ export type ValidatorRegistrationV1 = ValueOf<typeof ssz.ValidatorRegistrationV1
 export type SignedValidatorRegistrationV1 = ValueOf<typeof ssz.SignedValidatorRegistrationV1>;
 export type BuilderBid = ValueOf<typeof ssz.BuilderBid>;
 export type SignedBuilderBid = ValueOf<typeof ssz.SignedBuilderBid>;
+
+export type FullOrBlindedExecutionPayload = ExecutionPayload | ExecutionPayloadHeader;

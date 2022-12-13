@@ -2,7 +2,6 @@ import {phase0, ssz} from "@lodestar/types";
 import {IChainForkConfig} from "@lodestar/config";
 import {BeaconStateAllForks, becomesNewEth1Data} from "@lodestar/state-transition";
 import {ErrorAborted, TimeoutError, fromHex, ILogger, isErrorAborted, sleep} from "@lodestar/utils";
-
 import {HttpRpcError, isJsonRpcTruncatedError} from "@lodestar/engine-api-client";
 
 import {IBeaconDb} from "../db/index.js";

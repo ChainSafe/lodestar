@@ -1,6 +1,5 @@
 import {PeerId} from "@libp2p/interface-peer-id";
-import {ForkName} from "@lodestar/params";
-import {allForks, altair, phase0} from "@lodestar/types";
+import {allForks, altair, eip4844, phase0} from "@lodestar/types";
 
 export interface IReqRespBeaconNode {
   start(): void;
@@ -8,12 +7,17 @@ export interface IReqRespBeaconNode {
   status(peerId: PeerId, request: phase0.Status): Promise<phase0.Status>;
   goodbye(peerId: PeerId, request: phase0.Goodbye): Promise<void>;
   ping(peerId: PeerId): Promise<phase0.Ping>;
-  metadata(peerId: PeerId, fork?: ForkName): Promise<allForks.Metadata>;
+  metadata(peerId: PeerId): Promise<allForks.Metadata>;
   beaconBlocksByRange(
     peerId: PeerId,
     request: phase0.BeaconBlocksByRangeRequest
   ): Promise<allForks.SignedBeaconBlock[]>;
   beaconBlocksByRoot(peerId: PeerId, request: phase0.BeaconBlocksByRootRequest): Promise<allForks.SignedBeaconBlock[]>;
+  blobsSidecarsByRange(peerId: PeerId, request: eip4844.BlobsSidecarsByRangeRequest): Promise<eip4844.BlobsSidecar[]>;
+  beaconBlockAndBlobsSidecarByRoot(
+    peerId: PeerId,
+    request: eip4844.BeaconBlockAndBlobsSidecarByRootRequest
+  ): Promise<eip4844.SignedBeaconBlockAndBlobsSidecar[]>;
   pruneOnPeerDisconnect(peerId: PeerId): void;
   lightClientBootstrap(peerId: PeerId, request: Uint8Array): Promise<altair.LightClientBootstrap>;
   lightClientOptimisticUpdate(peerId: PeerId): Promise<altair.LightClientOptimisticUpdate>;

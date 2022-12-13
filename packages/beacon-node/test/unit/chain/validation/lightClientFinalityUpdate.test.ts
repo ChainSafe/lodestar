@@ -5,7 +5,6 @@ import {config} from "@lodestar/config/default";
 import {altair, ssz} from "@lodestar/types";
 
 import {computeTimeAtSlot} from "@lodestar/state-transition";
-import {generateEmptySignedBlock} from "../../../utils/block.js";
 import {MockBeaconChain} from "../../../utils/mocks/chain/chain.js";
 import {generateState} from "../../../utils/state.js";
 import {validateLightClientFinalityUpdate} from "../../../../src/chain/validation/lightClientFinalityUpdate.js";
@@ -27,7 +26,7 @@ describe("Light Client Finality Update validation", function () {
   });
 
   function mockChain(): IBeaconChain {
-    const block = generateEmptySignedBlock();
+    const block = ssz.phase0.SignedBeaconBlock.defaultValue();
     const state = generateState({
       finalizedCheckpoint: {
         epoch: 0,

@@ -8,12 +8,11 @@ import {
   computeEpochAtSlot,
   getEffectiveBalanceIncrementsZeroed,
 } from "@lodestar/state-transition";
-import {phase0, Slot, ssz} from "@lodestar/types";
+import {phase0, Slot, ssz, ValidatorIndex} from "@lodestar/types";
 import {getTemporaryBlockHeader, processSlots} from "@lodestar/state-transition";
 import {ChainEventEmitter, computeAnchorCheckpoint, initializeForkChoice} from "../../../../src/chain/index.js";
-import {generateSignedBlock} from "../../../utils/block.js";
+import {generateSignedBlockAtSlot} from "../../../utils/typeGenerator.js";
 import {createCachedBeaconStateTest} from "../../../utils/cachedBeaconState.js";
-import {createIndexedAttestation} from "../../../utils/forkChoice.js";
 import {generateState} from "../../../utils/state.js";
 import {generateValidators} from "../../../utils/validator.js";
 
@@ -76,7 +75,7 @@ describe("LodestarForkChoice", function () {
     it.skip("getHead - should not consider orphaned block as head", () => {
       const {blockHeader} = computeAnchorCheckpoint(config, anchorState);
       const finalizedRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(blockHeader);
-      const targetBlock = generateSignedBlock({message: {slot: 32}});
+      const targetBlock = generateSignedBlockAtSlot(32);
       targetBlock.message.parentRoot = finalizedRoot;
       //
       const targetState = runStateTransition(anchorState, targetBlock);
@@ -125,7 +124,7 @@ describe("LodestarForkChoice", function () {
     it("prune - should prune old blocks", () => {
       const {blockHeader} = computeAnchorCheckpoint(config, anchorState);
       const finalizedRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(blockHeader);
-      const block08 = generateSignedBlock({message: {slot: 8}});
+      const block08 = generateSignedBlockAtSlot(8);
       block08.message.parentRoot = finalizedRoot;
       const state08 = runStateTransition(anchorState, block08);
       block08.message.stateRoot = state08.hashTreeRoot();
@@ -201,7 +200,7 @@ describe("LodestarForkChoice", function () {
     it("getAllNonAncestorBlocks - should get non ancestor nodes", () => {
       const {blockHeader} = computeAnchorCheckpoint(config, anchorState);
       const finalizedRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(blockHeader);
-      const targetBlock = generateSignedBlock({message: {slot: 32}});
+      const targetBlock = generateSignedBlockAtSlot(32);
       targetBlock.message.parentRoot = finalizedRoot;
       const targetState = runStateTransition(anchorState, targetBlock);
       targetBlock.message.stateRoot = targetState.hashTreeRoot();
@@ -248,7 +247,7 @@ describe("LodestarForkChoice", function () {
       const {blockHeader} = computeAnchorCheckpoint(config, anchorState);
       const finalizedRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(blockHeader);
       // C10
-      const blockW = generateSignedBlock({message: {slot: 8}});
+      const blockW = generateSignedBlockAtSlot(8);
       blockW.message.parentRoot = finalizedRoot;
       const stateW = runStateTransition(anchorState, blockW);
       blockW.message.stateRoot = stateW.hashTreeRoot();
@@ -328,9 +327,35 @@ function makeChild(
   parent: {block: phase0.SignedBeaconBlock; state: CachedBeaconStateAllForks},
   slot: Slot
 ): {block: phase0.SignedBeaconBlock; state: CachedBeaconStateAllForks} {
-  const childBlock = generateSignedBlock({message: {slot}});
+  const childBlock = generateSignedBlockAtSlot(slot);
   const parentRoot = ssz.phase0.BeaconBlock.hashTreeRoot(parent.block.message);
   childBlock.message.parentRoot = parentRoot;
   const childState = runStateTransition(parent.state, childBlock);
   return {block: childBlock, state: childState};
+}
+
+function createIndexedAttestation(
+  source: phase0.Checkpoint,
+  target: phase0.SignedBeaconBlock,
+  block: phase0.SignedBeaconBlock,
+  validatorIndex: ValidatorIndex
+): phase0.IndexedAttestation {
+  return {
+    attestingIndices: [validatorIndex],
+    data: {
+      slot: block.message.slot,
+      index: 0,
+      beaconBlockRoot: ssz.phase0.BeaconBlock.hashTreeRoot(block.message),
+      source,
+      target: createCheckpoint(target),
+    },
+    signature: Buffer.alloc(96),
+  };
+}
+
+function createCheckpoint(block: phase0.SignedBeaconBlock): phase0.Checkpoint {
+  return {
+    root: ssz.phase0.BeaconBlock.hashTreeRoot(block.message),
+    epoch: computeEpochAtSlot(block.message.slot),
+  };
 }
