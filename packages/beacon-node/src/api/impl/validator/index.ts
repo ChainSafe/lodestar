@@ -6,6 +6,8 @@ import {
   attesterShufflingDecisionRoot,
   getBlockRootAtSlot,
   computeEpochAtSlot,
+  isActiveValidator,
+  isPendingValidator,
 } from "@lodestar/state-transition";
 import {GENESIS_SLOT, SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT, SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
 import {Root, Slot, ValidatorIndex, ssz, Epoch} from "@lodestar/types";
@@ -653,7 +655,19 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
     },
 
     async registerValidator(registrations) {
-      return chain.executionBuilder?.registerValidator(registrations);
+      // should only send active or pending validator to builder
+      // Spec: https://ethereum.github.io/builder-specs/#/Builder/registerValidator
+      const filteredRegistrations = registrations.filter((registration) => {
+        const {pubkey} = registration.message;
+        const headState = chain.getHeadState();
+        const validatorIndex = headState.epochCtx.pubkey2index.get(pubkey);
+        if (validatorIndex === undefined) return false;
+
+        const validator = headState.validators.getReadonly(validatorIndex);
+        const currentEpoch = headState.epochCtx.epoch;
+        return isActiveValidator(validator, currentEpoch) || isPendingValidator(validator, currentEpoch);
+      });
+      return chain.executionBuilder?.registerValidator(filteredRegistrations);
     },
   };
 }

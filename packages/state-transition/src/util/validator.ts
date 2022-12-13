@@ -11,6 +11,13 @@ export function isActiveValidator(validator: phase0.Validator, epoch: Epoch): bo
 }
 
 /**
+ * Checking if [[validator]] is pending
+ */
+export function isPendingValidator(validator: phase0.Validator, epoch: Epoch): boolean {
+  return validator.activationEpoch > epoch;
+}
+
+/**
  * Check if [[validator]] is slashable
  */
 export function isSlashableValidator(validator: phase0.Validator, epoch: Epoch): boolean {
