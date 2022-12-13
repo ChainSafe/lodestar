@@ -459,7 +459,7 @@ export class PeerManager {
     // disconnect is not always called for all peers
     if (this.connectedPeers.size > connectedPeers.length * 2) {
       const actualConnectedPeerIds = new Set(connectedPeers.map((peerId) => peerId.toString()));
-      for (const [peerIdStr, peerData] of this.connectedPeers) {
+      for (const peerIdStr of this.connectedPeers.keys()) {
         if (!actualConnectedPeerIds.has(peerIdStr)) {
           this.connectedPeers.delete(peerIdStr);
         }
