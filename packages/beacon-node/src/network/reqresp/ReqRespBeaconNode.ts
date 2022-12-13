@@ -63,7 +63,6 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
   private readonly peerRpcScores: IPeerRpcScoreStore;
   private readonly networkEventBus: INetworkEventBus;
   private readonly peersData: PeersData;
-  private readonly metrics: IMetrics | null;
 
   /** Track registered fork to only send to known protocols */
   private currentRegisteredFork: ForkSeq = ForkSeq.phase0;
@@ -72,7 +71,7 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
   protected readonly logger: ILogger;
 
   constructor(modules: ReqRespBeaconNodeModules, options: ReqRespBeaconNodeOpts = {}) {
-    const {reqRespHandlers, networkEventBus, peersData, peerRpcScores, metadata, metrics} = modules;
+    const {reqRespHandlers, networkEventBus, peersData, peerRpcScores, metadata, metrics, logger} = modules;
 
     super(
       {
@@ -81,16 +80,19 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
       },
       {
         ...options,
-        onReportPeer: this.onReportPeer.bind(this),
+        onRateLimit(peerId, method) {
+          logger.debug("Do not serve request due to rate limit", {peerId: peerId.toString()});
+          peerRpcScores.applyAction(peerId, PeerAction.Fatal, "rate_limit_rpc");
+          metrics?.reqResp.rateLimitErrors.inc({method});
+        },
       }
     );
 
     this.reqRespHandlers = reqRespHandlers;
     this.peerRpcScores = peerRpcScores;
     this.peersData = peersData;
-    this.metrics = metrics;
     this.config = modules.config;
-    this.logger = modules.logger;
+    this.logger = logger;
     this.metadataController = metadata;
     this.networkEventBus = networkEventBus;
   }
@@ -275,12 +277,6 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
       ),
       request.length
     );
-  }
-
-  private onReportPeer(peerId: PeerId, method: string): void {
-    this.logger.debug("Do not serve request due to rate limit", {peerId: peerId.toString()});
-    this.peerRpcScores.applyAction(peerId, PeerAction.Fatal, "rate_limit_rpc");
-    this.metrics?.reqResp.rateLimitErrors.inc({method});
   }
 
   /**

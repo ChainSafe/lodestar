@@ -37,11 +37,13 @@ export interface ReqRespRegisterOpts {
  * https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/light-client/p2p-interface.md#the-reqresp-domain
  */
 export class ReqResp {
-  readonly rateLimiter: ReqRespRateLimiter;
-
-  private readonly libp2p: Libp2p;
+  // protected to be usable by extending class
+  protected readonly libp2p: Libp2p;
   protected readonly logger: ILogger;
-  private readonly metrics: Metrics | null;
+  protected readonly metrics: Metrics | null;
+
+  // to not be used by extending class
+  private readonly rateLimiter: ReqRespRateLimiter;
   private controller = new AbortController();
   /** Tracks request and responses in a sequential counter */
   private reqCount = 0;
