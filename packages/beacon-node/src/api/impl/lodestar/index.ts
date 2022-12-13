@@ -108,6 +108,10 @@ export function getLodestarApi({
       return network.gossip.dumpPeerScoreStats();
     },
 
+    async getLodestarPeerScoreStats() {
+      return network.peerRpcScores.dumpPeerScoreStats();
+    },
+
     async runGC() {
       // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       if (!global.gc) throw Error("You must expose GC running the Node.js process with 'node --expose_gc'");

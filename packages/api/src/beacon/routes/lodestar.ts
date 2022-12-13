@@ -32,6 +32,14 @@ export type GossipQueueItem = {
   seenTimestampSec: number;
 };
 
+export type PeerScoreStat = {
+  lodestarScore: number;
+  gossipScore: number;
+  ignoreNegativeGossipScore: boolean;
+  score: number;
+  lastUpdate: number;
+};
+
 export type RegenQueueItem = {
   key: string;
   args: unknown;
@@ -76,6 +84,8 @@ export type Api = {
   getCheckpointStateCacheItems(): Promise<StateCacheItem[]>;
   /** Dump peer gossip stats by peer */
   getGossipPeerScoreStats(): Promise<Record<string, unknown>>;
+  /** Dump lodestar score stats by peer */
+  getLodestarPeerScoreStats(): Promise<Record<string, PeerScoreStat>>;
   /** Run GC with `global.gc()` */
   runGC(): Promise<void>;
   /** Drop all states in the state cache */
@@ -114,6 +124,7 @@ export const routesData: RoutesData<Api> = {
   getStateCacheItems: {url: "/eth/v1/lodestar/state-cache-items", method: "GET"},
   getCheckpointStateCacheItems: {url: "/eth/v1/lodestar/checkpoint-state-cache-items", method: "GET"},
   getGossipPeerScoreStats: {url: "/eth/v1/lodestar/gossip-peer-score-stats", method: "GET"},
+  getLodestarPeerScoreStats: {url: "/eth/v1/lodestar/lodestar-peer-score-stats", method: "GET"},
   runGC: {url: "/eth/v1/lodestar/gc", method: "POST"},
   dropStateCache: {url: "/eth/v1/lodestar/drop-state-cache", method: "POST"},
   connectPeer: {url: "/eth/v1/lodestar/connect_peer", method: "POST"},
@@ -134,6 +145,7 @@ export type ReqTypes = {
   getStateCacheItems: ReqEmpty;
   getCheckpointStateCacheItems: ReqEmpty;
   getGossipPeerScoreStats: ReqEmpty;
+  getLodestarPeerScoreStats: ReqEmpty;
   runGC: ReqEmpty;
   dropStateCache: ReqEmpty;
   connectPeer: {query: {peerId: string; multiaddr: string[]}};
@@ -163,6 +175,7 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
     getStateCacheItems: reqEmpty,
     getCheckpointStateCacheItems: reqEmpty,
     getGossipPeerScoreStats: reqEmpty,
+    getLodestarPeerScoreStats: reqEmpty,
     runGC: reqEmpty,
     dropStateCache: reqEmpty,
     connectPeer: {
@@ -202,6 +215,7 @@ export function getReturnTypes(): ReturnTypes<Api> {
     getStateCacheItems: jsonType("snake"),
     getCheckpointStateCacheItems: jsonType("snake"),
     getGossipPeerScoreStats: jsonType("snake"),
+    getLodestarPeerScoreStats: jsonType("snake"),
     getPeers: jsonType("snake"),
     discv5GetKadValues: jsonType("snake"),
     dumpDbBucketKeys: sameType(),
