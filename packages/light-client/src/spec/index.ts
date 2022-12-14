@@ -9,19 +9,16 @@ export {isBetterUpdate, toLightClientUpdateSummary, LightClientUpdateSummary} fr
 export class LightclientSpec {
   readonly store: ILightClientStore;
 
-  // TODO: Connect to clock
-  currentSlot: Slot = 0;
-
   constructor(config: IBeaconConfig, private readonly opts: ProcessUpdateOpts, bootstrap: altair.LightClientBootstrap) {
     this.store = new LightClientStore(config, bootstrap);
   }
 
-  onUpdate(update: altair.LightClientUpdate): void {
-    processLightClientUpdate(this.store, this.currentSlot, this.opts, update);
+  onUpdate(currentSlot: Slot, update: altair.LightClientUpdate): void {
+    processLightClientUpdate(this.store, currentSlot, this.opts, update);
   }
 
-  onFinalityUpdate(finalityUpdate: altair.LightClientFinalityUpdate): void {
-    this.onUpdate({
+  onFinalityUpdate(currentSlot: Slot, finalityUpdate: altair.LightClientFinalityUpdate): void {
+    this.onUpdate(currentSlot, {
       attestedHeader: finalityUpdate.attestedHeader,
       nextSyncCommittee: ZERO_SYNC_COMMITTEE,
       nextSyncCommitteeBranch: ZERO_NEXT_SYNC_COMMITTEE_BRANCH,
@@ -32,8 +29,8 @@ export class LightclientSpec {
     });
   }
 
-  onOptimisticUpdate(optimisticUpdate: altair.LightClientOptimisticUpdate): void {
-    this.onUpdate({
+  onOptimisticUpdate(currentSlot: Slot, optimisticUpdate: altair.LightClientOptimisticUpdate): void {
+    this.onUpdate(currentSlot, {
       attestedHeader: optimisticUpdate.attestedHeader,
       nextSyncCommittee: ZERO_SYNC_COMMITTEE,
       nextSyncCommitteeBranch: ZERO_NEXT_SYNC_COMMITTEE_BRANCH,

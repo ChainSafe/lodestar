@@ -193,7 +193,7 @@ export class Lightclient {
       const count = toPeriodRng + 1 - fromPeriodRng;
       const updates = await this.api.lightclient.getUpdates(fromPeriodRng, count);
       for (const update of updates) {
-        this.lightclientSpec.onUpdate(update.data);
+        this.processSyncCommitteeUpdate(update.data);
         this.logger.debug("processed sync update", {slot: update.data.attestedHeader.slot});
 
         // Yield to the macro queue, verifying updates is somewhat expensive and we want responsiveness
@@ -319,7 +319,7 @@ export class Lightclient {
    * This headerUpdate may update the head if there's enough participation.
    */
   private processOptimisticUpdate(optimisticUpdate: altair.LightClientOptimisticUpdate): void {
-    this.lightclientSpec.onOptimisticUpdate(optimisticUpdate);
+    this.lightclientSpec.onOptimisticUpdate(this.currentSlot, optimisticUpdate);
 
     // Emit to consumers
     this.emitter.emit(LightclientEvent.head, optimisticUpdate.attestedHeader);
@@ -330,12 +330,12 @@ export class Lightclient {
    * This headerUpdate may update the head if there's enough participation.
    */
   private processFinalizedUpdate(finalizedUpdate: altair.LightClientFinalityUpdate): void {
-    this.lightclientSpec.onFinalityUpdate(finalizedUpdate);
+    this.lightclientSpec.onFinalityUpdate(this.currentSlot, finalizedUpdate);
 
     this.emitter.emit(LightclientEvent.finalized, finalizedUpdate.finalizedHeader);
   }
 
   private processSyncCommitteeUpdate(update: altair.LightClientUpdate): void {
-    this.lightclientSpec.onUpdate(update);
+    this.lightclientSpec.onUpdate(this.currentSlot, update);
   }
 }

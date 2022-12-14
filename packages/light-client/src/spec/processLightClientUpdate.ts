@@ -72,18 +72,24 @@ export function getSyncCommitteeAtPeriod(
     return syncCommittee;
   }
 
-  const bestValidUpdate = store.bestValidUpdates.get(period);
+  const bestValidUpdate = store.bestValidUpdates.get(period - 1);
   if (bestValidUpdate) {
     if (isSafeLightClientUpdate(bestValidUpdate.summary) || opts.allowForcedUpdates) {
       const syncCommittee = deserializeSyncCommittee(bestValidUpdate.update.nextSyncCommittee);
       store.syncCommittees.set(period, syncCommittee);
-      store.bestValidUpdates.delete(period);
+      store.bestValidUpdates.delete(period - 1);
 
       return syncCommittee;
     }
   }
 
-  throw Error(`No bestValidUpdate for period ${period}`);
+  const availableSyncCommittees = Array.from(store.syncCommittees.keys());
+  const availableBestValidUpdates = Array.from(store.bestValidUpdates.keys());
+  throw Error(
+    `No SyncCommittee for period ${period}` +
+      ` available syncCommittees ${JSON.stringify(availableSyncCommittees)}` +
+      ` available bestValidUpdates ${JSON.stringify(availableBestValidUpdates)}`
+  );
 }
 
 export function isSafeLightClientUpdate(update: LightClientUpdateSummary): boolean {
