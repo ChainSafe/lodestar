@@ -15,6 +15,7 @@ import {getLcLoggerConsole, ILcLogger} from "./utils/logger.js";
 import {computeSyncPeriodAtEpoch, computeSyncPeriodAtSlot, computeEpochAtSlot} from "./utils/clock.js";
 import {LightclientSpec} from "./spec/index.js";
 import {validateLightClientBootstrap} from "./spec/validateLightClientBootstrap.js";
+import {ProcessUpdateOpts} from "./spec/processLightClientUpdate.js";
 
 // Re-export types
 export {LightclientEvent} from "./events.js";
@@ -25,9 +26,12 @@ export type GenesisData = {
   genesisValidatorsRoot: RootHex | Uint8Array;
 };
 
+export type LightclientOpts = ProcessUpdateOpts;
+
 export type LightclientInitArgs = {
   config: IChainForkConfig;
   logger?: ILcLogger;
+  opts?: LightclientOpts;
   genesisData: GenesisData;
   beaconApiUrl: string;
   bootstrap: altair.LightClientBootstrap;
@@ -121,9 +125,11 @@ export class Lightclient {
         allowForcedUpdates: ALLOW_FORCED_UPDATES,
         onSetFinalizedHeader: (header) => {
           this.emitter.emit(LightclientEvent.finalized, header);
+          this.logger.debug("Updated state.finalizedHeader", {slot: header.slot});
         },
         onSetOptimisticHeader: (header) => {
           this.emitter.emit(LightclientEvent.head, header);
+          this.logger.debug("Updated state.optimisticHeader", {slot: header.slot});
         },
       },
       bootstrap
@@ -135,19 +141,13 @@ export class Lightclient {
     return getCurrentSlot(this.config, this.genesisTime);
   }
 
-  static async initializeFromCheckpointRoot({
-    config,
-    logger,
-    beaconApiUrl,
-    genesisData,
-    checkpointRoot,
-  }: {
-    config: IChainForkConfig;
-    logger?: ILcLogger;
-    beaconApiUrl: string;
-    genesisData: GenesisData;
-    checkpointRoot: phase0.Checkpoint["root"];
-  }): Promise<Lightclient> {
+  static async initializeFromCheckpointRoot(
+    args: Omit<LightclientInitArgs, "bootstrap"> & {
+      checkpointRoot: phase0.Checkpoint["root"];
+    }
+  ): Promise<Lightclient> {
+    const {config, beaconApiUrl, checkpointRoot} = args;
+
     // Initialize the BLS implementation. This may requires initializing the WebAssembly instance
     // so why it's a an async process. This should be initialized once before any bls operations.
     // This process has to be done manually because of an issue in Karma runner
@@ -161,7 +161,7 @@ export class Lightclient {
 
     validateLightClientBootstrap(checkpointRoot, bootstrap);
 
-    return new Lightclient({config, logger, beaconApiUrl, genesisData, bootstrap});
+    return new Lightclient({...args, bootstrap});
   }
 
   start(): void {
@@ -305,6 +305,8 @@ export class Lightclient {
 
   private onSSE = (event: routes.events.BeaconEvent): void => {
     try {
+      this.logger.debug("Received SSE event", {event: event.type});
+
       switch (event.type) {
         case routes.events.EventType.lightClientOptimisticUpdate:
           this.processOptimisticUpdate(event.message);

@@ -1,4 +1,4 @@
-import {phase0, SyncPeriod} from "@lodestar/types";
+import {phase0} from "@lodestar/types";
 
 export enum LightclientEvent {
   /**
@@ -9,17 +9,11 @@ export enum LightclientEvent {
    * New finalized
    */
   finalized = "finalized",
-  /**
-   * Stored nextSyncCommittee from an update at period `period`.
-   * Note: the SyncCommittee is stored for `period + 1`.
-   */
-  committee = "committee",
 }
 
 export type LightclientEvents = {
   [LightclientEvent.head]: (newHeader: phase0.BeaconBlockHeader) => void;
   [LightclientEvent.finalized]: (newHeader: phase0.BeaconBlockHeader) => void;
-  [LightclientEvent.committee]: (updatePeriod: SyncPeriod) => void;
 };
 
 export type LightclientEmitter = MittEmitter<LightclientEvents>;

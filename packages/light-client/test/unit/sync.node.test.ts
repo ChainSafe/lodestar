@@ -21,6 +21,7 @@ import {
 } from "../utils/utils.js";
 import {startServer, ServerOpts} from "../utils/server.js";
 import {isNode} from "../../src/utils/utils.js";
+import {computeSyncPeriodAtSlot} from "../../src/utils/clock.js";
 
 const SOME_HASH = Buffer.alloc(32, 0xff);
 
@@ -92,13 +93,18 @@ describe("sync", () => {
       beaconApiUrl: `http://${opts.host}:${opts.port}`,
       genesisData: {genesisTime, genesisValidatorsRoot},
       checkpointRoot: checkpointRoot,
+      opts: {
+        // Trigger `LightclientEvent.finalized` events for the Promise below
+        allowForcedUpdates: true,
+        updateHeadersOnForcedUpdate: true,
+      },
     });
     afterEachCbs.push(() => lightclient.stop());
 
     // Sync periods to current
     await new Promise<void>((resolve) => {
-      lightclient.emitter.on(LightclientEvent.committee, (updatePeriod) => {
-        if (updatePeriod === targetPeriod) {
+      lightclient.emitter.on(LightclientEvent.finalized, (header) => {
+        if (computeSyncPeriodAtSlot(header.slot) >= targetPeriod) {
           resolve();
         }
       });
@@ -107,7 +113,7 @@ describe("sync", () => {
 
     // Wait for lightclient to subscribe to header updates
     while (!eventsServerApi.hasSubscriptions()) {
-      await new Promise((r) => setTimeout(r, 10));
+      await new Promise((r) => setTimeout(r, 100));
     }
 
     // Test fetching a proof
@@ -152,6 +158,7 @@ describe("sync", () => {
 
         lightclientServerApi.latestHeadUpdate = headUpdate;
         eventsServerApi.emit({type: routes.events.EventType.lightClientOptimisticUpdate, message: headUpdate});
+        testLogger.debug("Emitted EventType.lightClientOptimisticUpdate", {slot});
       }
     });
 
