@@ -545,7 +545,7 @@ export class LightClientServer {
       const prevBestUpdateSummary = toLightClientUpdateSummary(prevBestUpdate);
 
       const nextBestUpdate: LightClientUpdateSummary = {
-        syncCommitteeTrueBits: sumBits(syncAggregate.syncCommitteeBits),
+        activeParticipants: sumBits(syncAggregate.syncCommitteeBits),
         attestedHeaderSlot: attestedData.attestedHeader.slot,
         signatureSlot,
         // The actual finalizedHeader is fetched below. To prevent a DB read we approximate the actual slot.

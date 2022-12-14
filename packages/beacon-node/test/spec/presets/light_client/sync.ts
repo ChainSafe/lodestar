@@ -1,10 +1,11 @@
 import {expect} from "chai";
-import {altair, phase0, RootHex, ssz} from "@lodestar/types";
+import {altair, phase0, RootHex, Slot, ssz} from "@lodestar/types";
 import {init} from "@chainsafe/bls/switchable";
 import {InputType} from "@lodestar/spec-test-util";
 import {createIBeaconConfig, IChainConfig} from "@lodestar/config";
 import {fromHex, toHex} from "@lodestar/utils";
-import {LightclientSpec} from "@lodestar/light-client/spec";
+import {LightclientSpec, toLightClientUpdateSummary} from "@lodestar/light-client/spec";
+import {computeSyncPeriodAtSlot} from "@lodestar/state-transition";
 import {TestRunnerFn} from "../../utils/types.js";
 import {testLogger} from "../../../utils/logger.js";
 
@@ -83,49 +84,72 @@ export const sync: TestRunnerFn<SyncTestCase, void> = () => {
         fromHex(testcase.meta.genesis_validators_root)
       );
 
-      const lightClient = new LightclientSpec(config, testcase.bootstrap, fromHex(testcase.meta.trusted_block_root));
+      const lightClientOpts = {
+        allowForcedUpdates: true,
+        updateHeadersOnForcedUpdate: true,
+      };
+      const lightClient = new LightclientSpec(config, lightClientOpts, testcase.bootstrap);
+
+      // fromHex(testcase.meta.trusted_block_root)
 
       const stepsLen = testcase.steps.length;
 
-      function updateClock(update: {current_slot: bigint}): void {
-        lightClient.currentSlot = Number(update.current_slot as bigint);
+      function toHeaderSummary(header: phase0.BeaconBlockHeader): {root: string; slot: number} {
+        return {
+          root: toHex(ssz.phase0.BeaconBlockHeader.hashTreeRoot(header)),
+          slot: header.slot,
+        };
       }
 
-      function assertHeader(checkHeader: CheckHeader, storeHeader: phase0.BeaconBlockHeader, msg: string): void {
-        expect({root: checkHeader.beacon_root, slot: Number(checkHeader.slot as bigint)}).deep.equals(
-          {root: toHex(ssz.phase0.BeaconBlockHeader.hashTreeRoot(storeHeader)), slot: storeHeader.slot},
+      function assertHeader(actualHeader: phase0.BeaconBlockHeader, expectedHeader: CheckHeader, msg: string): void {
+        expect(toHeaderSummary(actualHeader)).deep.equals(
+          {root: expectedHeader.beacon_root, slot: Number(expectedHeader.slot as bigint)},
           msg
         );
       }
 
       function runChecks(update: {checks: Checks}): void {
-        assertHeader(update.checks.finalized_header, lightClient.store.finalizedHeader, "wrong finalizedHeader");
-        assertHeader(update.checks.optimistic_header, lightClient.store.optimisticHeader, "wrong optimisticHeader");
+        assertHeader(lightClient.store.finalizedHeader, update.checks.finalized_header, "wrong finalizedHeader");
+        assertHeader(lightClient.store.optimisticHeader, update.checks.optimistic_header, "wrong optimisticHeader");
+      }
+
+      function renderSlot(currentSlot: Slot): {currentSlot: number; curretPeriod: number} {
+        return {currentSlot, curretPeriod: computeSyncPeriodAtSlot(currentSlot)};
       }
 
       for (const [i, step] of testcase.steps.entries()) {
         try {
           if (isProcessUpdateStep(step)) {
-            logger.debug(`Step ${i}/${stepsLen} process_update`, {currentSlot: step.process_update.current_slot});
-            updateClock(step.process_update);
+            const currentSlot = Number(step.process_update.current_slot as bigint);
+            logger.debug(`Step ${i}/${stepsLen} process_update`, renderSlot(currentSlot));
 
             const update = testcase.updates.get(step.process_update.update);
             if (!update) {
               throw Error(`update ${step.process_update.update} not found`);
             }
 
-            lightClient.onUpdate(update);
+            logger.debug(`LightclientUpdateSummary: ${JSON.stringify(toLightClientUpdateSummary(update))}`);
+
+            lightClient.onUpdate(currentSlot, update);
             runChecks(step.process_update);
           }
 
           // force_update step
           else if (isForceUpdateStep(step)) {
-            logger.debug(`Step ${i}/${stepsLen} force_update`, {currentSlot: step.force_update.current_slot});
-            updateClock(step.force_update);
+            const currentSlot = Number(step.force_update.current_slot as bigint);
+            logger.debug(`Step ${i}/${stepsLen} force_update`, renderSlot(currentSlot));
 
-            lightClient.forceUpdate();
+            // Simulate force_update()
+            lightClient.forceUpdate(currentSlot);
+
+            // lightClient.forceUpdate();
             runChecks(step.force_update);
           }
+
+          logger.debug(
+            `finalizedHeader = ${JSON.stringify(toHeaderSummary(lightClient.store.finalizedHeader))}` +
+              ` optimisticHeader = ${JSON.stringify(toHeaderSummary(lightClient.store.optimisticHeader))}`
+          );
         } catch (e) {
           (e as Error).message = `Error on step ${i}/${stepsLen}: ${(e as Error).message}`;
           throw e;

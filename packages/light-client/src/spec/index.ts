@@ -1,6 +1,8 @@
 import {IBeaconConfig} from "@lodestar/config";
+import {UPDATE_TIMEOUT} from "@lodestar/params";
 import {altair, Slot} from "@lodestar/types";
-import {processLightClientUpdate, ProcessUpdateOpts} from "./processLightClientUpdate.js";
+import {computeSyncPeriodAtSlot} from "../utils/index.js";
+import {getSyncCommitteeAtPeriod, processLightClientUpdate, ProcessUpdateOpts} from "./processLightClientUpdate.js";
 import {ILightClientStore, LightClientStore} from "./store.js";
 import {ZERO_FINALITY_BRANCH, ZERO_HEADER, ZERO_NEXT_SYNC_COMMITTEE_BRANCH, ZERO_SYNC_COMMITTEE} from "./utils.js";
 
@@ -39,5 +41,17 @@ export class LightclientSpec {
       syncAggregate: optimisticUpdate.syncAggregate,
       signatureSlot: optimisticUpdate.signatureSlot,
     });
+  }
+
+  forceUpdate(currentSlot: Slot): void {
+    for (const bestValidUpdate of this.store.bestValidUpdates.values()) {
+      if (currentSlot > bestValidUpdate.update.finalizedHeader.slot + UPDATE_TIMEOUT) {
+        const updatePeriod = computeSyncPeriodAtSlot(bestValidUpdate.update.signatureSlot);
+        // Simulate process_light_client_store_force_update() by forcing to apply a bestValidUpdate
+        // https://github.com/ethereum/consensus-specs/blob/a57e15636013eeba3610ff3ade41781dba1bb0cd/specs/altair/light-client/sync-protocol.md?plain=1#L394
+        // Call for `updatePeriod + 1` to force the update at `update.signatureSlot` to be applied
+        getSyncCommitteeAtPeriod(this.store, updatePeriod + 1, this.opts);
+      }
+    }
   }
 }
