@@ -6,8 +6,6 @@ import {
   attesterShufflingDecisionRoot,
   getBlockRootAtSlot,
   computeEpochAtSlot,
-  isActiveValidator,
-  isPendingValidator,
 } from "@lodestar/state-transition";
 import {GENESIS_SLOT, SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT, SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
 import {Root, Slot, ValidatorIndex, ssz, Epoch} from "@lodestar/types";
@@ -25,6 +23,7 @@ import {validateSyncCommitteeGossipContributionAndProof} from "../../../chain/va
 import {CommitteeSubscription} from "../../../network/subnets/index.js";
 import {ApiModules} from "../types.js";
 import {RegenCaller} from "../../../chain/regen/index.js";
+import {getValidatorStatus} from "../beacon/state/utils.js";
 import {computeSubnetForCommitteesAtSlot, getPubkeysForIndices} from "./utils.js";
 
 /**
@@ -659,17 +658,22 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
       // Spec: https://ethereum.github.io/builder-specs/#/Builder/registerValidator
       const headState = chain.getHeadState();
       const currentEpoch = chain.clock.currentEpoch;
-      const seenValidators = new Set<ValidatorIndex>();
 
       const filteredRegistrations = registrations.filter((registration) => {
         const {pubkey} = registration.message;
         const validatorIndex = headState.epochCtx.pubkey2index.get(pubkey);
-        if (validatorIndex === undefined || seenValidators.has(validatorIndex)) return false;
+        if (validatorIndex === undefined) return false;
 
-        seenValidators.add(validatorIndex);
         const validator = headState.validators.getReadonly(validatorIndex);
-
-        return isActiveValidator(validator, currentEpoch) || isPendingValidator(validator, currentEpoch);
+        const status = getValidatorStatus(validator, currentEpoch);
+        return (
+          status === "active" ||
+          status === "active_exiting" ||
+          status === "active_ongoing" ||
+          status === "active_slashed" ||
+          status === "pending_initialized" ||
+          status === "pending_queued"
+        );
       });
 
       return chain.executionBuilder?.registerValidator(filteredRegistrations);
