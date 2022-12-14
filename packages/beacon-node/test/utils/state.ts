@@ -49,15 +49,17 @@ export function generateState(
   };
   const numValidators = 16;
 
-  const validators = withPubkey
-    ? Array.from({length: numValidators}, (_, i) => {
-        const sk = bls.SecretKey.fromBytes(Buffer.alloc(32, i + 1));
-        return generateValidator({
-          ...validatorOpts,
-          pubkey: sk.toPublicKey().toBytes(),
-        });
-      })
-    : generateValidators(numValidators, validatorOpts);
+  const validators =
+    opts.validators ??
+    (withPubkey
+      ? Array.from({length: numValidators}, (_, i) => {
+          const sk = bls.SecretKey.fromBytes(Buffer.alloc(32, i + 1));
+          return generateValidator({
+            ...validatorOpts,
+            pubkey: sk.toPublicKey().toBytes(),
+          });
+        })
+      : generateValidators(numValidators, validatorOpts));
 
   state.genesisTime = Math.floor(Date.now() / 1000);
   state.fork.previousVersion = config.GENESIS_FORK_VERSION;

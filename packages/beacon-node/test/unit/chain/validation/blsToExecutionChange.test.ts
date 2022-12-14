@@ -1,11 +1,9 @@
 import sinon, {SinonStubbedInstance} from "sinon";
-
 import {digest} from "@chainsafe/as-sha256";
 import {config} from "@lodestar/config/default";
-import {CachedBeaconStateAllForks, computeDomain, computeSigningRoot} from "@lodestar/state-transition";
+import {computeDomain, computeSigningRoot} from "@lodestar/state-transition";
 import {ForkChoice} from "@lodestar/fork-choice";
 import {capella, ssz} from "@lodestar/types";
-
 import {
   BLS_WITHDRAWAL_PREFIX,
   ETH1_ADDRESS_WITHDRAWAL_PREFIX,
@@ -16,6 +14,7 @@ import {
 import bls from "@chainsafe/bls";
 import {PointFormat} from "@chainsafe/bls/types";
 import {createIBeaconConfig} from "@lodestar/config";
+
 import {BeaconChain} from "../../../../src/chain/index.js";
 import {StubbedChainMutable} from "../../../utils/stub/index.js";
 import {generateState} from "../../../utils/state.js";
@@ -31,70 +30,69 @@ type StubbedChain = StubbedChainMutable<"forkChoice" | "bls">;
 describe("validate bls to execution change", () => {
   const sandbox = sinon.createSandbox();
   let chainStub: StubbedChain;
-  let state: CachedBeaconStateAllForks;
-  let signedBlsToExecChange: capella.SignedBLSToExecutionChange;
   let opPool: OpPool & SinonStubbedInstance<OpPool>;
 
-  before(() => {
-    const sk = bls.SecretKey.fromKeygen();
-    const wsk = bls.SecretKey.fromKeygen();
+  const stateEmpty = ssz.phase0.BeaconState.defaultValue();
+  // Validator has to be active for long enough
+  stateEmpty.slot = config.SHARD_COMMITTEE_PERIOD * SLOTS_PER_EPOCH;
+  // A withdrawal key which we will keep same on the two vals we generate
+  const wsk = bls.SecretKey.fromKeygen();
 
-    const stateEmpty = ssz.phase0.BeaconState.defaultValue();
-
-    // Validator has to be active for long enough
-    stateEmpty.slot = config.SHARD_COMMITTEE_PERIOD * SLOTS_PER_EPOCH;
-
-    // Add a validator that's active since genesis and ready to exit
-    const fromBlsPubkey = wsk.toPublicKey().toBytes(PointFormat.compressed);
-    const withdrawalCredentials = digest(fromBlsPubkey);
-    withdrawalCredentials[0] = BLS_WITHDRAWAL_PREFIX;
-    const validator = ssz.phase0.Validator.toViewDU({
-      pubkey: sk.toPublicKey().toBytes(PointFormat.compressed),
-      withdrawalCredentials,
-      effectiveBalance: 32e9,
-      slashed: false,
-      activationEligibilityEpoch: 0,
-      activationEpoch: 0,
-      exitEpoch: FAR_FUTURE_EPOCH,
-      withdrawableEpoch: FAR_FUTURE_EPOCH,
-    });
-
-    // Set the next validator to already eth1 credential
-    const withdrawalCredentialsTwo = digest(fromBlsPubkey);
-    withdrawalCredentialsTwo[0] = ETH1_ADDRESS_WITHDRAWAL_PREFIX;
-    const validatorTwo = ssz.phase0.Validator.toViewDU({
-      pubkey: sk.toPublicKey().toBytes(PointFormat.compressed),
-      withdrawalCredentials: withdrawalCredentialsTwo,
-      effectiveBalance: 32e9,
-      slashed: false,
-      activationEligibilityEpoch: 0,
-      activationEpoch: 0,
-      exitEpoch: FAR_FUTURE_EPOCH,
-      withdrawableEpoch: FAR_FUTURE_EPOCH,
-    });
-
-    stateEmpty.validators[0] = validator;
-    stateEmpty.validators[1] = validatorTwo;
-
-    const blsToExecutionChange = {
-      validatorIndex: 0,
-      fromBlsPubkey,
-      toExecutionAddress: Buffer.alloc(20),
-    };
-
-    const domain = computeDomain(
-      DOMAIN_BLS_TO_EXECUTION_CHANGE,
-      stateEmpty.fork.currentVersion,
-      stateEmpty.genesisValidatorsRoot
-    );
-    const signingRoot = computeSigningRoot(ssz.capella.BLSToExecutionChange, blsToExecutionChange, domain);
-    signedBlsToExecChange = {message: blsToExecutionChange, signature: sk.sign(signingRoot).toBytes()};
-    const _state = generateState(stateEmpty, config);
-
-    state = createCachedBeaconStateTest(_state, createIBeaconConfig(config, _state.genesisValidatorsRoot));
+  // Generate and add first val
+  const sk1 = bls.SecretKey.fromKeygen();
+  const pubkey1 = sk1.toPublicKey().toBytes(PointFormat.compressed);
+  const fromBlsPubkey = wsk.toPublicKey().toBytes(PointFormat.compressed);
+  const withdrawalCredentials = digest(fromBlsPubkey);
+  withdrawalCredentials[0] = BLS_WITHDRAWAL_PREFIX;
+  const validator = ssz.phase0.Validator.toViewDU({
+    pubkey: pubkey1,
+    withdrawalCredentials,
+    effectiveBalance: 32e9,
+    slashed: false,
+    activationEligibilityEpoch: 0,
+    activationEpoch: 0,
+    exitEpoch: FAR_FUTURE_EPOCH,
+    withdrawableEpoch: FAR_FUTURE_EPOCH,
   });
+  stateEmpty.validators[0] = validator;
 
-  beforeEach(() => {
+  // Gen and add second val
+  const sk2 = bls.SecretKey.fromKeygen();
+  const pubkey2 = sk2.toPublicKey().toBytes(PointFormat.compressed);
+  // Set the next validator to already eth1 credential
+  const withdrawalCredentialsTwo = digest(fromBlsPubkey);
+  withdrawalCredentialsTwo[0] = ETH1_ADDRESS_WITHDRAWAL_PREFIX;
+  const validatorTwo = ssz.phase0.Validator.toViewDU({
+    pubkey: pubkey2,
+    withdrawalCredentials: withdrawalCredentialsTwo,
+    effectiveBalance: 32e9,
+    slashed: false,
+    activationEligibilityEpoch: 0,
+    activationEpoch: 0,
+    exitEpoch: FAR_FUTURE_EPOCH,
+    withdrawableEpoch: FAR_FUTURE_EPOCH,
+  });
+  stateEmpty.validators[1] = validatorTwo;
+
+  // Generate the state
+  const _state = generateState(stateEmpty, config);
+  const state = createCachedBeaconStateTest(_state, createIBeaconConfig(config, _state.genesisValidatorsRoot));
+
+  // Gen a valid blsToExecutionChange for first val
+  const blsToExecutionChange = {
+    validatorIndex: 0,
+    fromBlsPubkey,
+    toExecutionAddress: Buffer.alloc(20),
+  };
+  const domain = computeDomain(
+    DOMAIN_BLS_TO_EXECUTION_CHANGE,
+    stateEmpty.fork.currentVersion,
+    stateEmpty.genesisValidatorsRoot
+  );
+  const signingRoot = computeSigningRoot(ssz.capella.BLSToExecutionChange, blsToExecutionChange, domain);
+  const signedBlsToExecChange = {message: blsToExecutionChange, signature: wsk.sign(signingRoot).toBytes()};
+
+  before(() => {
     chainStub = sandbox.createStubInstance(BeaconChain) as StubbedChain;
     chainStub.forkChoice = sandbox.createStubInstance(ForkChoice);
     opPool = sandbox.createStubInstance(OpPool) as OpPool & SinonStubbedInstance<OpPool>;
@@ -104,7 +102,7 @@ describe("validate bls to execution change", () => {
     chainStub.bls = new BlsVerifierMock(true);
   });
 
-  afterEach(() => {
+  after(() => {
     sandbox.restore();
   });
 
@@ -115,7 +113,7 @@ describe("validate bls to execution change", () => {
     };
 
     // Return BlsToExecutionChange known
-    opPool.hasSeenBlsToExecutionChange.returns(true);
+    // opPool.hasSeenBlsToExecutionChange.returns(true);
 
     await expectRejectedWithLodestarError(
       validateBlsToExecutionChange(chainStub, signedBlsToExecChangeInvalid),
