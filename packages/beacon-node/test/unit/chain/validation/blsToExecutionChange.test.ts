@@ -92,7 +92,7 @@ describe("validate bls to execution change", () => {
   const signingRoot = computeSigningRoot(ssz.capella.BLSToExecutionChange, blsToExecutionChange, domain);
   const signedBlsToExecChange = {message: blsToExecutionChange, signature: wsk.sign(signingRoot).toBytes()};
 
-  before(() => {
+  beforeEach(() => {
     chainStub = sandbox.createStubInstance(BeaconChain) as StubbedChain;
     chainStub.forkChoice = sandbox.createStubInstance(ForkChoice);
     opPool = sandbox.createStubInstance(OpPool) as OpPool & SinonStubbedInstance<OpPool>;
@@ -102,7 +102,7 @@ describe("validate bls to execution change", () => {
     chainStub.bls = new BlsVerifierMock(true);
   });
 
-  after(() => {
+  afterEach(() => {
     sandbox.restore();
   });
 
@@ -113,7 +113,7 @@ describe("validate bls to execution change", () => {
     };
 
     // Return BlsToExecutionChange known
-    // opPool.hasSeenBlsToExecutionChange.returns(true);
+    opPool.hasSeenBlsToExecutionChange.returns(true);
 
     await expectRejectedWithLodestarError(
       validateBlsToExecutionChange(chainStub, signedBlsToExecChangeInvalid),
