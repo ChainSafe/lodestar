@@ -2,12 +2,12 @@ import mitt from "mitt";
 import {init as initBls} from "@chainsafe/bls/switchable";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD} from "@lodestar/params";
 import {getClient, Api, routes} from "@lodestar/api";
-import {altair, phase0, RootHex, SyncPeriod} from "@lodestar/types";
+import {altair, phase0, RootHex, Slot, SyncPeriod} from "@lodestar/types";
 import {createIBeaconConfig, IBeaconConfig, IChainForkConfig} from "@lodestar/config";
 import {TreeOffsetProof} from "@chainsafe/persistent-merkle-tree";
 import {isErrorAborted, sleep} from "@lodestar/utils";
 import {fromHexString, JsonPath, toHexString} from "@chainsafe/ssz";
-import {getCurrentSlot, timeUntilNextEpoch} from "./utils/clock.js";
+import {getCurrentSlot, slotWithFutureTolerance, timeUntilNextEpoch} from "./utils/clock.js";
 import {isNode} from "./utils/utils.js";
 import {chunkifyInclusiveRange} from "./utils/chunkify.js";
 import {LightclientEmitter, LightclientEvent} from "./events.js";
@@ -37,6 +37,8 @@ export type LightclientInitArgs = {
   bootstrap: altair.LightClientBootstrap;
 };
 
+/** Provides some protection against a server client sending header updates too far away in the future */
+const MAX_CLOCK_DISPARITY_SEC = 10;
 /** Prevent responses that are too big and get truncated. No specific reasoning for 32 */
 const MAX_PERIODS_PER_REQUEST = 32;
 /** For mainnet preset 8 epochs, for minimal preset `EPOCHS_PER_SYNC_COMMITTEE_PERIOD / 2` */
@@ -333,7 +335,7 @@ export class Lightclient {
    * This headerUpdate may update the head if there's enough participation.
    */
   private processOptimisticUpdate(optimisticUpdate: altair.LightClientOptimisticUpdate): void {
-    this.lightclientSpec.onOptimisticUpdate(this.currentSlot, optimisticUpdate);
+    this.lightclientSpec.onOptimisticUpdate(this.currentSlotWithTolerance(), optimisticUpdate);
   }
 
   /**
@@ -341,10 +343,14 @@ export class Lightclient {
    * This headerUpdate may update the head if there's enough participation.
    */
   private processFinalizedUpdate(finalizedUpdate: altair.LightClientFinalityUpdate): void {
-    this.lightclientSpec.onFinalityUpdate(this.currentSlot, finalizedUpdate);
+    this.lightclientSpec.onFinalityUpdate(this.currentSlotWithTolerance(), finalizedUpdate);
   }
 
   private processSyncCommitteeUpdate(update: altair.LightClientUpdate): void {
-    this.lightclientSpec.onUpdate(this.currentSlot, update);
+    this.lightclientSpec.onUpdate(this.currentSlotWithTolerance(), update);
+  }
+
+  private currentSlotWithTolerance(): Slot {
+    return slotWithFutureTolerance(this.config, this.genesisTime, MAX_CLOCK_DISPARITY_SEC);
   }
 }
