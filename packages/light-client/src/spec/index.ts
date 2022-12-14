@@ -3,7 +3,7 @@ import {UPDATE_TIMEOUT} from "@lodestar/params";
 import {altair, Slot} from "@lodestar/types";
 import {computeSyncPeriodAtSlot} from "../utils/index.js";
 import {getSyncCommitteeAtPeriod, processLightClientUpdate, ProcessUpdateOpts} from "./processLightClientUpdate.js";
-import {ILightClientStore, LightClientStore} from "./store.js";
+import {ILightClientStore, LightClientStore, LightClientStoreEvents} from "./store.js";
 import {ZERO_FINALITY_BRANCH, ZERO_HEADER, ZERO_NEXT_SYNC_COMMITTEE_BRANCH, ZERO_SYNC_COMMITTEE} from "./utils.js";
 
 export {isBetterUpdate, toLightClientUpdateSummary, LightClientUpdateSummary} from "./isBetterUpdate.js";
@@ -11,8 +11,12 @@ export {isBetterUpdate, toLightClientUpdateSummary, LightClientUpdateSummary} fr
 export class LightclientSpec {
   readonly store: ILightClientStore;
 
-  constructor(config: IBeaconConfig, private readonly opts: ProcessUpdateOpts, bootstrap: altair.LightClientBootstrap) {
-    this.store = new LightClientStore(config, bootstrap);
+  constructor(
+    config: IBeaconConfig,
+    private readonly opts: ProcessUpdateOpts & LightClientStoreEvents,
+    bootstrap: altair.LightClientBootstrap
+  ) {
+    this.store = new LightClientStore(config, bootstrap, opts);
   }
 
   onUpdate(currentSlot: Slot, update: altair.LightClientUpdate): void {

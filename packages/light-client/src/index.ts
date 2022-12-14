@@ -115,7 +115,19 @@ export class Lightclient {
     this.beaconApiUrl = beaconApiUrl;
     this.api = getClient({baseUrl: beaconApiUrl}, {config});
 
-    this.lightclientSpec = new LightclientSpec(this.config, {allowForcedUpdates: ALLOW_FORCED_UPDATES}, bootstrap);
+    this.lightclientSpec = new LightclientSpec(
+      this.config,
+      {
+        allowForcedUpdates: ALLOW_FORCED_UPDATES,
+        onSetFinalizedHeader: (header) => {
+          this.emitter.emit(LightclientEvent.finalized, header);
+        },
+        onSetOptimisticHeader: (header) => {
+          this.emitter.emit(LightclientEvent.head, header);
+        },
+      },
+      bootstrap
+    );
   }
 
   // Embed lightweight clock. The epoch cycles are handled with `this.runLoop()`
@@ -320,9 +332,6 @@ export class Lightclient {
    */
   private processOptimisticUpdate(optimisticUpdate: altair.LightClientOptimisticUpdate): void {
     this.lightclientSpec.onOptimisticUpdate(this.currentSlot, optimisticUpdate);
-
-    // Emit to consumers
-    this.emitter.emit(LightclientEvent.head, optimisticUpdate.attestedHeader);
   }
 
   /**
@@ -331,8 +340,6 @@ export class Lightclient {
    */
   private processFinalizedUpdate(finalizedUpdate: altair.LightClientFinalityUpdate): void {
     this.lightclientSpec.onFinalityUpdate(this.currentSlot, finalizedUpdate);
-
-    this.emitter.emit(LightclientEvent.finalized, finalizedUpdate.finalizedHeader);
   }
 
   private processSyncCommitteeUpdate(update: altair.LightClientUpdate): void {

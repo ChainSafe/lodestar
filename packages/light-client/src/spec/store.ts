@@ -24,20 +24,47 @@ export interface ILightClientStore {
   optimisticHeader: phase0.BeaconBlockHeader;
 }
 
+export interface LightClientStoreEvents {
+  onSetFinalizedHeader?: (header: phase0.BeaconBlockHeader) => void;
+  onSetOptimisticHeader?: (header: phase0.BeaconBlockHeader) => void;
+}
+
 export class LightClientStore implements ILightClientStore {
   readonly syncCommittees = new Map<SyncPeriod, SyncCommitteeFast>();
   readonly bestValidUpdates = new Map<SyncPeriod, LightClientUpdateWithSummary>();
 
-  finalizedHeader: phase0.BeaconBlockHeader;
-  optimisticHeader: phase0.BeaconBlockHeader;
+  private _finalizedHeader: phase0.BeaconBlockHeader;
+  private _optimisticHeader: phase0.BeaconBlockHeader;
 
   private readonly maxActiveParticipants = new Map<SyncPeriod, number>();
 
-  constructor(readonly config: IBeaconConfig, bootstrap: altair.LightClientBootstrap) {
+  constructor(
+    readonly config: IBeaconConfig,
+    bootstrap: altair.LightClientBootstrap,
+    private readonly events: LightClientStoreEvents
+  ) {
     const bootstrapPeriod = computeSyncPeriodAtSlot(bootstrap.header.slot);
     this.syncCommittees.set(bootstrapPeriod, deserializeSyncCommittee(bootstrap.currentSyncCommittee));
-    this.finalizedHeader = bootstrap.header;
-    this.optimisticHeader = bootstrap.header;
+    this._finalizedHeader = bootstrap.header;
+    this._optimisticHeader = bootstrap.header;
+  }
+
+  get finalizedHeader(): phase0.BeaconBlockHeader {
+    return this._finalizedHeader;
+  }
+
+  set finalizedHeader(value: phase0.BeaconBlockHeader) {
+    this._finalizedHeader = value;
+    this.events.onSetFinalizedHeader?.(value);
+  }
+
+  get optimisticHeader(): phase0.BeaconBlockHeader {
+    return this._optimisticHeader;
+  }
+
+  set optimisticHeader(value: phase0.BeaconBlockHeader) {
+    this._optimisticHeader = value;
+    this.events.onSetOptimisticHeader?.(value);
   }
 
   getMaxActiveParticipants(period: SyncPeriod): number {
