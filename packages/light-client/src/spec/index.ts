@@ -1,37 +1,46 @@
 import {IBeaconConfig} from "@lodestar/config";
-import {altair, Root, Slot} from "@lodestar/types";
-import {LightClientStore} from "../types.js";
-import {initializeLightClientStore} from "./initializeLightClientStore.js";
-import {processLightClientFinalityUpdate} from "./processLightClientFinalityUpdate.js";
-import {processLightClientOptimisticUpdate} from "./processLightClientOptimisticUpdate.js";
-import {processLightClientStoreForceUpdate} from "./processLightClientStoreForceUpdate.js";
-import {processLightClientUpdate} from "./processLightClientUpdate.js";
+import {altair, Slot} from "@lodestar/types";
+import {processLightClientUpdate, ProcessUpdateOpts} from "./processLightClientUpdate.js";
+import {ILightClientStore, LightClientStore} from "./store.js";
+import {ZERO_FINALITY_BRANCH, ZERO_HEADER, ZERO_NEXT_SYNC_COMMITTEE_BRANCH, ZERO_SYNC_COMMITTEE} from "./utils.js";
 
 export {isBetterUpdate, toLightClientUpdateSummary, LightClientUpdateSummary} from "./isBetterUpdate.js";
 
 export class LightclientSpec {
-  readonly store: LightClientStore;
+  readonly store: ILightClientStore;
 
   // TODO: Connect to clock
   currentSlot: Slot = 0;
 
-  constructor(private readonly config: IBeaconConfig, bootstrap: altair.LightClientBootstrap, trustedBlockRoot: Root) {
-    this.store = initializeLightClientStore(trustedBlockRoot, bootstrap);
+  constructor(config: IBeaconConfig, private readonly opts: ProcessUpdateOpts, bootstrap: altair.LightClientBootstrap) {
+    this.store = new LightClientStore(config, bootstrap);
   }
 
   onUpdate(update: altair.LightClientUpdate): void {
-    processLightClientUpdate(this.config, this.store, update, this.currentSlot);
+    processLightClientUpdate(this.store, this.currentSlot, this.opts, update);
   }
 
-  onFinalityUpdate(update: altair.LightClientFinalityUpdate): void {
-    processLightClientFinalityUpdate(this.config, this.store, update, this.currentSlot);
+  onFinalityUpdate(finalityUpdate: altair.LightClientFinalityUpdate): void {
+    this.onUpdate({
+      attestedHeader: finalityUpdate.attestedHeader,
+      nextSyncCommittee: ZERO_SYNC_COMMITTEE,
+      nextSyncCommitteeBranch: ZERO_NEXT_SYNC_COMMITTEE_BRANCH,
+      finalizedHeader: finalityUpdate.finalizedHeader,
+      finalityBranch: finalityUpdate.finalityBranch,
+      syncAggregate: finalityUpdate.syncAggregate,
+      signatureSlot: finalityUpdate.signatureSlot,
+    });
   }
 
-  onOptimisticUpdate(update: altair.LightClientOptimisticUpdate): void {
-    processLightClientOptimisticUpdate(this.config, this.store, update, this.currentSlot);
-  }
-
-  forceUpdate(): void {
-    processLightClientStoreForceUpdate(this.store, this.currentSlot);
+  onOptimisticUpdate(optimisticUpdate: altair.LightClientOptimisticUpdate): void {
+    this.onUpdate({
+      attestedHeader: optimisticUpdate.attestedHeader,
+      nextSyncCommittee: ZERO_SYNC_COMMITTEE,
+      nextSyncCommitteeBranch: ZERO_NEXT_SYNC_COMMITTEE_BRANCH,
+      finalizedHeader: ZERO_HEADER,
+      finalityBranch: ZERO_FINALITY_BRANCH,
+      syncAggregate: optimisticUpdate.syncAggregate,
+      signatureSlot: optimisticUpdate.signatureSlot,
+    });
   }
 }

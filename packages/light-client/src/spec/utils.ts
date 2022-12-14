@@ -1,7 +1,6 @@
 import {BitArray, byteArrayEquals} from "@chainsafe/ssz";
 import {FINALIZED_ROOT_DEPTH, NEXT_SYNC_COMMITTEE_DEPTH} from "@lodestar/params";
 import {altair, phase0, ssz} from "@lodestar/types";
-import {LightClientStore} from "../types.js";
 
 export const GENESIS_SLOT = 0;
 export const ZERO_HASH = new Uint8Array(32);
@@ -10,17 +9,15 @@ export const ZERO_SYNC_COMMITTEE = ssz.altair.SyncCommittee.defaultValue();
 export const ZERO_NEXT_SYNC_COMMITTEE_BRANCH = Array.from({length: NEXT_SYNC_COMMITTEE_DEPTH}, () => ZERO_HASH);
 export const ZERO_HEADER = ssz.phase0.BeaconBlockHeader.defaultValue();
 export const ZERO_FINALITY_BRANCH = Array.from({length: FINALIZED_ROOT_DEPTH}, () => ZERO_HASH);
+/** From https://notes.ethereum.org/@vbuterin/extended_light_client_protocol#Optimistic-head-determining-function */
+const SAFETY_THRESHOLD_FACTOR = 2;
 
 export function sumBits(bits: BitArray): number {
   return bits.getTrueBitIndexes().length;
 }
 
-export function getSafetyThreshold(store: LightClientStore): number {
-  return Math.floor(Math.max(store.previousMaxActiveParticipants, store.currentMaxActiveParticipants) / 2);
-}
-
-export function isNextSyncCommitteeKnown(store: LightClientStore): boolean {
-  return store.nextSyncCommittee !== null;
+export function getSafetyThreshold(maxActiveParticipants: number): number {
+  return Math.floor(maxActiveParticipants / SAFETY_THRESHOLD_FACTOR);
 }
 
 export function isSyncCommitteeUpdate(update: altair.LightClientUpdate): boolean {

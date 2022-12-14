@@ -7,7 +7,7 @@ import {isFinalityUpdate, isSyncCommitteeUpdate, sumBits} from "./utils.js";
  * Wrapper type for `isBetterUpdate()` so we can apply its logic without requiring the full LightClientUpdate type.
  */
 export type LightClientUpdateSummary = {
-  syncCommitteeTrueBits: number;
+  activeParticipants: number;
   attestedHeaderSlot: Slot;
   signatureSlot: Slot;
   finalizedHeaderSlot: Slot;
@@ -24,8 +24,8 @@ export type LightClientUpdateSummary = {
  */
 export function isBetterUpdate(newUpdate: LightClientUpdateSummary, oldUpdate: LightClientUpdateSummary): boolean {
   // Compare supermajority (> 2/3) sync committee participation
-  const newNumActiveParticipants = newUpdate.syncCommitteeTrueBits;
-  const oldNumActiveParticipants = oldUpdate.syncCommitteeTrueBits;
+  const newNumActiveParticipants = newUpdate.activeParticipants;
+  const oldNumActiveParticipants = oldUpdate.activeParticipants;
   const newHasSupermajority = newNumActiveParticipants * 3 >= SYNC_COMMITTEE_SIZE * 2;
   const oldHasSupermajority = oldNumActiveParticipants * 3 >= SYNC_COMMITTEE_SIZE * 2;
   if (newHasSupermajority != oldHasSupermajority) {
@@ -76,9 +76,15 @@ export function isBetterUpdate(newUpdate: LightClientUpdateSummary, oldUpdate: L
   return newUpdate.signatureSlot < oldUpdate.signatureSlot;
 }
 
+export function isSafeLightClientUpdate(update: LightClientUpdateSummary): boolean {
+  return (
+    update.activeParticipants * 3 >= SYNC_COMMITTEE_SIZE * 2 && update.isFinalityUpdate && update.isSyncCommitteeUpdate
+  );
+}
+
 export function toLightClientUpdateSummary(update: altair.LightClientUpdate): LightClientUpdateSummary {
   return {
-    syncCommitteeTrueBits: sumBits(update.syncAggregate.syncCommitteeBits),
+    activeParticipants: sumBits(update.syncAggregate.syncCommitteeBits),
     attestedHeaderSlot: update.attestedHeader.slot,
     signatureSlot: update.signatureSlot,
     finalizedHeaderSlot: update.finalizedHeader.slot,

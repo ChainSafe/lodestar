@@ -1,4 +1,4 @@
-import {altair, Root, Slot, ssz} from "@lodestar/types";
+import {altair, Root, ssz} from "@lodestar/types";
 import bls from "@chainsafe/bls/switchable";
 import type {PublicKey, Signature} from "@chainsafe/bls/types";
 import {
@@ -10,23 +10,16 @@ import {
   DOMAIN_SYNC_COMMITTEE,
   GENESIS_SLOT,
 } from "@lodestar/params";
-import {IBeaconConfig} from "@lodestar/config";
-import {LightClientStore} from "../types.js";
 import {getParticipantPubkeys, sumBits} from "../utils/utils.js";
-import {computeSyncPeriodAtSlot, isValidMerkleBranch} from "../utils/index.js";
+import {isValidMerkleBranch} from "../utils/index.js";
+import {SyncCommitteeFast} from "../types.js";
 import {isFinalityUpdate, isSyncCommitteeUpdate, isZeroedHeader, isZeroedSyncCommittee, ZERO_HASH} from "./utils.js";
+import {ILightClientStore} from "./store.js";
 
-/**
- *
- * @param config the beacon node config
- * @param syncCommittee the sync committee update
- * @param update the light client update for validation
- */
 export function validateLightClientUpdate(
-  config: IBeaconConfig,
-  store: LightClientStore,
+  store: ILightClientStore,
   update: altair.LightClientUpdate,
-  currentSlot: Slot
+  syncCommittee: SyncCommitteeFast
 ): void {
   // Verify sync committee has sufficient participants
   if (sumBits(update.syncAggregate.syncCommitteeBits) < MIN_SYNC_COMMITTEE_PARTICIPANTS) {
@@ -34,9 +27,6 @@ export function validateLightClientUpdate(
   }
 
   // Sanity check that slots are in correct order
-  if (update.signatureSlot > currentSlot) {
-    throw Error(`update slot ${update.signatureSlot} must not be in the future, current slot ${currentSlot}`);
-  }
   if (update.signatureSlot <= update.attestedHeader.slot) {
     throw Error(
       `signature slot ${update.signatureSlot} must be after attested header slot ${update.attestedHeader.slot}`
@@ -46,16 +36,6 @@ export function validateLightClientUpdate(
     throw Error(
       `attested header slot ${update.signatureSlot} must be after finalized header slot ${update.finalizedHeader.slot}`
     );
-  }
-
-  // Verify update does not skip a sync committee period
-  const storePeriod = computeSyncPeriodAtSlot(store.finalizedHeader.slot);
-  const updateSignaturePeriod = computeSyncPeriodAtSlot(update.signatureSlot);
-  if (updateSignaturePeriod > storePeriod + 1) {
-    throw Error(`update skips one sync period ${updateSignaturePeriod} > ${storePeriod} + 1`);
-  }
-  if (updateSignaturePeriod < storePeriod) {
-    throw Error(`update too old sync period ${updateSignaturePeriod} < ${storePeriod}`);
   }
 
   // Verify that the `finality_branch`, if present, confirms `finalized_header`
@@ -111,16 +91,12 @@ export function validateLightClientUpdate(
   }
 
   // Verify sync committee aggregate signature
-  const syncCommittee = updateSignaturePeriod === storePeriod ? store.currentSyncCommittee : store.nextSyncCommittee;
-  if (!syncCommittee) {
-    throw Error(`syncCommittee not available for signature period ${updateSignaturePeriod}`);
-  }
 
   const participantPubkeys = getParticipantPubkeys(syncCommittee.pubkeys, update.syncAggregate.syncCommitteeBits);
 
   const signingRoot = ssz.phase0.SigningData.hashTreeRoot({
     objectRoot: ssz.phase0.BeaconBlockHeader.hashTreeRoot(update.attestedHeader),
-    domain: config.getDomain(update.signatureSlot, DOMAIN_SYNC_COMMITTEE),
+    domain: store.config.getDomain(update.signatureSlot, DOMAIN_SYNC_COMMITTEE),
   });
 
   if (!isValidBlsAggregate(participantPubkeys, signingRoot, update.syncAggregate.syncCommitteeSignature)) {
