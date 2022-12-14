@@ -80,11 +80,12 @@ like to choose for BLS To Execution Change.",
     const currentSlot = getCurrentSlot(config, genesisTime);
     const domain = config.getDomain(currentSlot, DOMAIN_BLS_TO_EXECUTION_CHANGE);
     const signingRoot = computeSigningRoot(ssz.capella.BLSToExecutionChange, blsToExecutionChange, domain);
-
-    await client.beacon.submitPoolBlsToExecutionChange({
+    const signedBLSToExecutionChange = {
       message: blsToExecutionChange,
       signature: fromBlsPrivkey.sign(signingRoot).toBytes(),
-    });
+    };
+
+    await client.beacon.submitPoolBlsToExecutionChange([signedBLSToExecutionChange]);
     console.log(`Submitted bls to execution change for ${publicKey}`);
   },
 };

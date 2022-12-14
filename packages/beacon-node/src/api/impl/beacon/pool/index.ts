@@ -96,10 +96,31 @@ export function getBeaconPoolApi({
       await network.gossip.publishVoluntaryExit(voluntaryExit);
     },
 
-    async submitPoolBlsToExecutionChange(blsToExecutionChange) {
-      await validateBlsToExecutionChange(chain, blsToExecutionChange);
-      chain.opPool.insertBlsToExecutionChange(blsToExecutionChange);
-      await network.gossip.publishBlsToExecutionChange(blsToExecutionChange);
+    async submitPoolBlsToExecutionChange(blsToExecutionChanges) {
+      const errors: Error[] = [];
+
+      await Promise.all(
+        blsToExecutionChanges.map(async (blsToExecutionChange, i) => {
+          try {
+            await validateBlsToExecutionChange(chain, blsToExecutionChange);
+            chain.opPool.insertBlsToExecutionChange(blsToExecutionChange);
+            await network.gossip.publishBlsToExecutionChange(blsToExecutionChange);
+          } catch (e) {
+            errors.push(e as Error);
+            logger.error(
+              `Error on submitPoolSyncCommitteeSignatures [${i}]`,
+              {validatorIndex: blsToExecutionChange.message.validatorIndex},
+              e as Error
+            );
+          }
+        })
+      );
+
+      if (errors.length > 1) {
+        throw Error("Multiple errors on submitPoolBlsToExecutionChange\n" + errors.map((e) => e.message).join("\n"));
+      } else if (errors.length === 1) {
+        throw errors[0];
+      }
     },
 
     /**

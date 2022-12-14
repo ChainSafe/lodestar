@@ -109,7 +109,7 @@ export type Api = {
    * @returns any BLSToExecutionChange is stored in node and broadcasted to network
    * @throws ApiError
    */
-  submitPoolBlsToExecutionChange(blsToExecutionChange: capella.SignedBLSToExecutionChange): Promise<void>;
+  submitPoolBlsToExecutionChange(blsToExecutionChange: capella.SignedBLSToExecutionChange[]): Promise<void>;
 
   /**
    * TODO: Add description
@@ -164,7 +164,7 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
     submitPoolAttesterSlashings: reqOnlyBody(ssz.phase0.AttesterSlashing, Schema.Object),
     submitPoolProposerSlashings: reqOnlyBody(ssz.phase0.ProposerSlashing, Schema.Object),
     submitPoolVoluntaryExit: reqOnlyBody(ssz.phase0.SignedVoluntaryExit, Schema.Object),
-    submitPoolBlsToExecutionChange: reqOnlyBody(ssz.capella.SignedBLSToExecutionChange, Schema.Object),
+    submitPoolBlsToExecutionChange: reqOnlyBody(ArrayOf(ssz.capella.SignedBLSToExecutionChange), Schema.ObjectArray),
     submitPoolSyncCommitteeSignatures: reqOnlyBody(ArrayOf(ssz.altair.SyncCommitteeMessage), Schema.ObjectArray),
   };
 }
