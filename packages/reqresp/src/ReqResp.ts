@@ -6,8 +6,9 @@ import {ILogger} from "@lodestar/utils";
 import {getMetrics, Metrics, MetricsRegister} from "./metrics.js";
 import {RequestError, RequestErrorCode, sendRequest, SendRequestOpts} from "./request/index.js";
 import {handleRequest} from "./response/index.js";
-import {Encoding, ProtocolDefinition} from "./types.js";
+import {Encoding, ProtocolDefinition, ReqRespRateLimiterOpts} from "./types.js";
 import {formatProtocolID} from "./utils/protocolId.js";
+import {ReqRespRateLimiter} from "./rate_limiter/ReqRespRateLimiter.js";
 
 type ProtocolID = string;
 
@@ -19,7 +20,7 @@ export interface ReqRespProtocolModules {
   metricsRegister: MetricsRegister | null;
 }
 
-export interface ReqRespOpts extends SendRequestOpts {
+export interface ReqRespOpts extends SendRequestOpts, ReqRespRateLimiterOpts {
   /** Custom prefix for `/ProtocolPrefix/MessageName/SchemaVersion/Encoding` */
   protocolPrefix?: string;
   getPeerLogMetadata?: (peerId: string) => string;
@@ -36,9 +37,13 @@ export interface ReqRespRegisterOpts {
  * https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/light-client/p2p-interface.md#the-reqresp-domain
  */
 export class ReqResp {
-  private readonly libp2p: Libp2p;
+  // protected to be usable by extending class
+  protected readonly libp2p: Libp2p;
   protected readonly logger: ILogger;
-  private readonly metrics: Metrics | null;
+  protected readonly metrics: Metrics | null;
+
+  // to not be used by extending class
+  private readonly rateLimiter: ReqRespRateLimiter;
   private controller = new AbortController();
   /** Tracks request and responses in a sequential counter */
   private reqCount = 0;
@@ -52,6 +57,7 @@ export class ReqResp {
     this.logger = modules.logger;
     this.metrics = modules.metricsRegister ? getMetrics(modules.metricsRegister) : null;
     this.protocolPrefix = opts.protocolPrefix ?? DEFAULT_PROTOCOL_PREFIX;
+    this.rateLimiter = new ReqRespRateLimiter(opts);
   }
 
   /**
@@ -73,7 +79,11 @@ export class ReqResp {
 
     this.registeredProtocols.set(protocolID, protocol as ProtocolDefinition);
 
-    return this.libp2p.handle(protocolID, this.getRequestHandler(protocol));
+    if (protocol.inboundRateLimits) {
+      this.rateLimiter.initRateLimits(protocolID, protocol.inboundRateLimits);
+    }
+
+    return this.libp2p.handle(protocolID, this.getRequestHandler(protocol, protocolID));
   }
 
   /**
@@ -103,6 +113,7 @@ export class ReqResp {
 
   async start(): Promise<void> {
     this.controller = new AbortController();
+    this.rateLimiter.start();
     // We set infinity to prevent MaxListenersExceededWarning which get logged when listeners > 10
     // Since it is perfectly fine to have listeners > 10
     setMaxListeners(Infinity, this.controller.signal);
@@ -165,11 +176,11 @@ export class ReqResp {
     }
   }
 
-  private getRequestHandler<Req, Resp>(protocol: ProtocolDefinition<Req, Resp>) {
+  private getRequestHandler<Req, Resp>(protocol: ProtocolDefinition<Req, Resp>, protocolID: string) {
     return async ({connection, stream}: {connection: Connection; stream: Stream}) => {
       const peerId = connection.remotePeer;
       const peerClient = this.opts.getPeerLogMetadata?.(peerId.toString());
-      const method = protocol.method;
+      const {method} = protocol;
 
       this.metrics?.incomingRequests.inc({method});
       const timer = this.metrics?.incomingRequestHandlerTime.startTimer({method});
@@ -182,14 +193,20 @@ export class ReqResp {
           stream,
           peerId,
           protocol,
+          protocolID,
+          rateLimiter: this.rateLimiter,
           signal: this.controller.signal,
           requestId: this.reqCount++,
           peerClient,
           requestTimeoutMs: this.opts.requestTimeoutMs,
         });
         // TODO: Do success peer scoring here
-      } catch {
+      } catch (err) {
         this.metrics?.incomingErrors.inc({method});
+
+        if (err instanceof RequestError) {
+          this.onIncomingRequestError(protocol, err);
+        }
 
         // TODO: Do error peer scoring here
         // Must not throw since this is an event handler
@@ -200,6 +217,11 @@ export class ReqResp {
   }
 
   protected onIncomingRequest(_peerId: PeerId, _protocol: ProtocolDefinition): void {
+    // Override
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  protected onIncomingRequestError(_protocol: ProtocolDefinition<any, any>, _error: RequestError): void {
     // Override
   }
 
