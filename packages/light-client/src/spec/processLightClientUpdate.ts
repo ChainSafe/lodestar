@@ -1,8 +1,9 @@
 import {SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 import {altair, Slot, SyncPeriod} from "@lodestar/types";
+import {pruneSetToMax} from "@lodestar/utils";
 import {computeSyncPeriodAtSlot, deserializeSyncCommittee, sumBits} from "../utils/index.js";
 import {isBetterUpdate, LightClientUpdateSummary, toLightClientUpdateSummary} from "./isBetterUpdate.js";
-import {ILightClientStore, SyncCommitteeFast} from "./store.js";
+import {ILightClientStore, MAX_SYNC_PERIODS_CACHE, SyncCommitteeFast} from "./store.js";
 import {getSafetyThreshold, isSyncCommitteeUpdate} from "./utils.js";
 import {validateLightClientUpdate} from "./validateLightClientUpdate.js";
 
@@ -57,6 +58,7 @@ export function processLightClientUpdate(
     const updateSummary = toLightClientUpdateSummary(update);
     if (!bestValidUpdate || isBetterUpdate(updateSummary, bestValidUpdate.summary)) {
       store.bestValidUpdates.set(updateSignaturePeriod, {update, summary: updateSummary});
+      pruneSetToMax(store.bestValidUpdates, MAX_SYNC_PERIODS_CACHE);
     }
 
     // Note: defer update next sync committee to a future getSyncCommitteeAtPeriod() call
@@ -79,6 +81,7 @@ export function getSyncCommitteeAtPeriod(
       const {update} = bestValidUpdate;
       const syncCommittee = deserializeSyncCommittee(update.nextSyncCommittee);
       store.syncCommittees.set(period, syncCommittee);
+      pruneSetToMax(store.syncCommittees, MAX_SYNC_PERIODS_CACHE);
       store.bestValidUpdates.delete(period - 1);
 
       if (opts.updateHeadersOnForcedUpdate) {

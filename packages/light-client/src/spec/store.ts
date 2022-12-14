@@ -4,7 +4,7 @@ import {altair, phase0, SyncPeriod} from "@lodestar/types";
 import {computeSyncPeriodAtSlot, deserializeSyncCommittee} from "../utils/index.js";
 import {LightClientUpdateSummary} from "./isBetterUpdate.js";
 
-const MAX_SYNC_PERIODS_CACHE = 2;
+export const MAX_SYNC_PERIODS_CACHE = 2;
 
 export interface ILightClientStore {
   readonly config: IBeaconConfig;
