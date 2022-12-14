@@ -79,7 +79,7 @@ export const sync: TestRunnerFn<SyncTestCase, void> = () => {
 
       // Grab only the ALTAIR_FORK_EPOCH, since the domains are the same as minimal
       const config = createIBeaconConfig(
-        {ALTAIR_FORK_EPOCH: testcase.config.ALTAIR_FORK_EPOCH},
+        pickConfigForkEpochs(testcase.config),
         fromHex(testcase.meta.genesis_validators_root)
       );
 
@@ -163,6 +163,16 @@ export const sync: TestRunnerFn<SyncTestCase, void> = () => {
     },
   };
 };
+
+function pickConfigForkEpochs(config: Partial<IChainConfig>): Partial<IChainConfig> {
+  const configOnlyFork: Record<string, number> = {};
+  for (const key of Object.keys(config) as (keyof IChainConfig)[]) {
+    if (key.endsWith("_FORK_EPOCH")) {
+      configOnlyFork[key] = config[key] as number;
+    }
+  }
+  return configOnlyFork;
+}
 
 function isProcessUpdateStep(step: unknown): step is ProcessUpdateStep {
   return (step as ProcessUpdateStep).process_update !== undefined;
