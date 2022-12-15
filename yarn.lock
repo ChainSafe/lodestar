@@ -469,10 +469,10 @@
     bls-eth-wasm "^0.4.8"
     randombytes "^2.1.0"
 
-"@chainsafe/blst@^0.2.6":
-  version "0.2.6"
-  resolved "https://registry.yarnpkg.com/@chainsafe/blst/-/blst-0.2.6.tgz#56f17c82338d62421321dca60250951dd3a7db7a"
-  integrity sha512-7mzE9IRjG0TZKPit83GT4XPSgMnqmMT4AAeUTyTj/IwO4FDPQ3fJVheT6i9LaH3I4Y18oaL68G9j+Uh3mEEAYg==
+"@chainsafe/blst@^0.2.7":
+  version "0.2.7"
+  resolved "https://registry.yarnpkg.com/@chainsafe/blst/-/blst-0.2.7.tgz#9e966b097e59d0a4f547824f8aa136b4b898d672"
+  integrity sha512-9ztDTg+/PjwOfnsJnkTkhIqWSju8XfqiX32ZLYviF+QUNrPIIeJUh4/IH94jTDpb4yVCEdGk38Sq3rBzGSNx5w==
   dependencies:
     node-fetch "^2.6.1"
     node-gyp "^8.4.0"
