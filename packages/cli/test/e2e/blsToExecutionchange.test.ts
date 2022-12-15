@@ -12,7 +12,7 @@ describeCliTest("bLSToExecutionChange cmd", function ({spawnCli}) {
   this.timeout("60s");
 
   itDone("Perform bLSToExecutionChange", async function (done) {
-    const restPort = 9596;
+    const restPort = 19596;
 
     const devBnProc = spawnCli({pipeStdToParent: false, logPrefix: "dev"}, [
       // ⏎
@@ -41,7 +41,7 @@ describeCliTest("bLSToExecutionChange cmd", function ({spawnCli}) {
         const head = await client.beacon.getBlockHeader("head");
         if (head.data.header.message.slot < 1) throw Error("pre-genesis");
       },
-      {retryDelay: 1000, retries: 20}
+      {retryDelay: 1000, retries: 60}
     );
 
     const indexesToWithdraw = [0];
