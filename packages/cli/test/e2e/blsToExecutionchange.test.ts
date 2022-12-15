@@ -44,11 +44,11 @@ describeCliTest("bLSToExecutionChange cmd", function ({spawnCli}) {
       {retryDelay: 1000, retries: 20}
     );
 
-    const indexesToExit = [0];
-    const pubkeysToExit = indexesToExit.map((i) => interopSecretKey(i).toPublicKey().toHex());
+    const indexesToWithdraw = [0];
+    const pubkeysToWithdraw = indexesToWithdraw.map((i) => interopSecretKey(i).toPublicKey().toHex());
     // Currently in dev interop the withdrawals is just set using the validator pvt keys
-    const withdrawalsPvtKeys = indexesToExit.map((i) => interopSecretKey(i).toHex());
-    const withdrawalsPubKeys = pubkeysToExit;
+    const withdrawalsPvtKeys = indexesToWithdraw.map((i) => interopSecretKey(i).toHex());
+    const withdrawalsPubKeys = pubkeysToWithdraw;
 
     // Interop pubkeys
     // 0 0xa99a76ed7796f7be22d5b7e85deeb7c5677e88e511e0b337618f8c4eb61349b4bf2d153f649f7b
@@ -62,7 +62,7 @@ describeCliTest("bLSToExecutionChange cmd", function ({spawnCli}) {
       "bls-to-execution-change",
       "--network=dev",
       `--server=${baseUrl}`,
-      `--publicKey=${pubkeysToExit[0]}`,
+      `--publicKey=${pubkeysToWithdraw[0]}`,
       `--fromBlsPrivkey=${withdrawalsPvtKeys[0]}`,
       "--toExecutionAddress 0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     ]);
