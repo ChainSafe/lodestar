@@ -36,6 +36,7 @@ import {validateLightClientOptimisticUpdate} from "../../../chain/validation/lig
 import {validateGossipBlobsSidecar} from "../../../chain/validation/blobsSidecar.js";
 import {BlockInput, getBlockInput} from "../../../chain/blocks/types.js";
 import {AttnetsService} from "../../subnets/attnetsService.js";
+import {isErr} from "../../../util/err.js";
 
 /**
  * Gossip handler options as part of network options
@@ -244,11 +245,17 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
         // Waiting here requires minimal code and automatically affects attestation, and aggregate validation
         // both from gossip and the API. I also prevents having to catch and re-throw in multiple places.
         validationResult = await validateGossipFnRetryUnknownRoot(validateFn, chain, slot, beaconBlockRoot);
+        // const validationResult = await validateGossipAttestationRetryUnknownRoot(chain, attestation, subnet);
+        // if (isErr(validationResult)) {
+        //   if (validationResult.error.action === GossipAction.REJECT) {
+        //     //
+        //   }
+        // }
       } catch (e) {
         if (e instanceof AttestationError && e.action === GossipAction.REJECT) {
           chain.persistInvalidSszValue(ssz.phase0.Attestation, attestation, "gossip_reject");
         }
-        throw e;
+        return validationResult.error;
       }
 
       // Handler
@@ -275,6 +282,8 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
           logger.debug("Error adding gossip unaggregated attestation to forkchoice", {subnet}, e as Error);
         }
       }
+
+      return;
     },
 
     [GossipType.attester_slashing]: async (attesterSlashing) => {

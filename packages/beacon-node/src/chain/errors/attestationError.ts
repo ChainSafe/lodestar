@@ -1,6 +1,6 @@
 import {CommitteeIndex, Epoch, Slot, ValidatorIndex, RootHex} from "@lodestar/types";
 import {toHexString} from "@chainsafe/ssz";
-import {GossipActionError} from "./gossipValidation.js";
+import {GossipAction, GossipActionError} from "./gossipValidation.js";
 
 export enum AttestationErrorCode {
   /**
@@ -159,6 +159,8 @@ export type AttestationErrorType =
   | {code: AttestationErrorCode.MISSING_ATTESTATION_HEAD_STATE; error: Error}
   | {code: AttestationErrorCode.INVALID_AGGREGATOR}
   | {code: AttestationErrorCode.INVALID_INDEXED_ATTESTATION};
+
+export type AttestationGossipErrorType = AttestationErrorType & {action: GossipAction};
 
 export class AttestationError extends GossipActionError<AttestationErrorType> {
   getMetadata(): Record<string, string | number | null> {

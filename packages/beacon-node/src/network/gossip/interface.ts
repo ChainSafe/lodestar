@@ -10,6 +10,7 @@ import {Logger} from "@lodestar/utils";
 import {IBeaconChain} from "../../chain/index.js";
 import {NetworkEvent} from "../events.js";
 import {JobItemQueue} from "../../util/queue/index.js";
+import {GossipAction} from "../../chain/errors/gossipValidation.js";
 
 export enum GossipType {
   beacon_block = "beacon_block",
@@ -151,14 +152,19 @@ export type GossipHandlerFn = (
   topic: GossipTopicMap[GossipType],
   peerIdStr: string,
   seenTimestampSec: number
-) => Promise<void>;
+) => Promise<GossipValidationResult | void>;
 export type GossipHandlers = {
   [K in GossipType]: (
     object: GossipTypeMap[K],
     topic: GossipTopicMap[K],
     peerIdStr: string,
     seenTimestampSec: number
-  ) => Promise<void>;
+  ) => Promise<GossipValidationResult | void>;
+};
+
+export type GossipValidationResult = {
+  action: GossipAction;
+  code: string;
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
