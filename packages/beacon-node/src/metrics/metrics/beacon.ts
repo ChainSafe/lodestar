@@ -95,14 +95,6 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       buckets: [1, 2, 3, 5, 7, 10, 20, 30, 50, 100],
     }),
 
-    reqResp: {
-      rateLimitErrors: register.gauge<"method">({
-        name: "beacon_reqresp_rate_limiter_errors_total",
-        help: "Count rate limiter errors",
-        labelNames: ["method"],
-      }),
-    },
-
     blockProductionTime: register.histogram({
       name: "beacon_block_production_seconds",
       help: "Full runtime of block production",
