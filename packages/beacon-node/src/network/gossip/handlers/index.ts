@@ -138,6 +138,8 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
         // otherwise we can't utilize bls thread pool capacity and Gossip Job Wait Time can't be kept low consistently.
         // See https://github.com/ChainSafe/lodestar/issues/3792
         blsVerifyOnMainThread: true,
+        // to track block process steps
+        seenTimestampSec,
       })
       .then(() => {
         // Returns the delay between the start of `block.slot` and `current time`
