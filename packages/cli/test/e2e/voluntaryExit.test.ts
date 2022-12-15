@@ -1,5 +1,5 @@
 import path from "node:path";
-import {retry} from "@lodestar/utils";
+import {sleep, retry} from "@lodestar/utils";
 import {getClient} from "@lodestar/api";
 import {config} from "@lodestar/config/default";
 import {interopSecretKey} from "@lodestar/state-transition";
@@ -79,5 +79,9 @@ describeCliTest("voluntaryExit cmd", function ({spawnCli}) {
         {retryDelay: 1000, retries: 20}
       );
     }
+
+    devBnProc.kill("SIGINT");
+    await sleep(1000);
+    devBnProc.kill("SIGKILL");
   });
 });
