@@ -187,6 +187,4 @@ describe("validate bls to execution change", () => {
       BlsToExecutionChangeErrorCode.INVALID
     );
   });
-
-  // validate signature TBD after signature
 });

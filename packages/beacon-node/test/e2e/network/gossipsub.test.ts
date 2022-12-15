@@ -133,7 +133,6 @@ describe("gossipsub", function () {
     while (!controller.signal.aborted) {
       await sleep(500);
       const topicStr = netA.gossip.getTopics()[0];
-
       if (topicStr && netA.gossip.getMeshPeers(topicStr).length > 0) {
         break;
       }
