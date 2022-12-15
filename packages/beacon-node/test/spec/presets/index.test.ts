@@ -21,7 +21,7 @@ import {transition} from "./transition.js";
 // because the latest withdrawals we implemented are a breaking change
 const skipOpts: SkipOpts = {
   skippedForks: [],
-  skippedRunners: ["sync"],
+  skippedRunners: [],
   skippedHandlers: ["full_withdrawals", "partial_withdrawals", "bls_to_execution_change", "withdrawals"],
 };
 
@@ -51,6 +51,7 @@ specTestIterator(
         "LightClientOptimisticUpdate",
       ]),
     },
+    sync: {type: RunnerType.default, fn: forkChoiceTest},
     transition: {type: RunnerType.default, fn: transition},
   },
   skipOpts

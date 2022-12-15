@@ -13,7 +13,9 @@ import {testLogger} from "../../utils/logger.js";
 import {getConfig} from "../../utils/config.js";
 import {TestRunnerFn} from "../utils/types.js";
 import {Eth1ForBlockProductionDisabled} from "../../../src/eth1/index.js";
-import {ExecutionEngineMock} from "../../../src/execution/index.js";
+import {getExecutionEngineFromBackend} from "../../../src/execution/index.js";
+import {ExecutePayloadStatus} from "../../../src/execution/engine/interface.js";
+import {ExecutionEngineMockBackend} from "../../../src/execution/engine/mock.js";
 import {defaultChainOptions} from "../../../src/chain/options.js";
 import {getStubbedBeaconDb} from "../../utils/mocks/db.js";
 import {ClockStopped} from "../../utils/mocks/clock.js";
@@ -47,11 +49,14 @@ export const forkChoiceTest: TestRunnerFn<ForkChoiceTestCase, void> = (fork) => 
       let tickTime = 0;
       const clock = new ClockStopped(currentSlot);
       const eth1 = new Eth1ForBlockProductionMock();
-      const executionEngine = new ExecutionEngineMock({
+      const executionEngineBackend = new ExecutionEngineMockBackend({
         genesisBlockHash: isExecutionStateType(anchorState)
           ? toHexString(anchorState.latestExecutionPayloadHeader.blockHash)
           : ZERO_HASH_HEX,
       });
+
+      const controller = new AbortController();
+      const executionEngine = getExecutionEngineFromBackend(executionEngineBackend, {signal: controller.signal});
 
       const chain = new BeaconChain(
         {
@@ -168,7 +173,21 @@ export const forkChoiceTest: TestRunnerFn<ForkChoiceTestCase, void> = (fork) => 
             // Register PowBlock for `get_pow_block(hash: Hash32)` calls in verifyBlock
             eth1.addPowBlock(powBlock);
             // Register PowBlock to allow validation in execution engine
-            executionEngine.addPowBlock(powBlock);
+            executionEngineBackend.addPowBlock(powBlock);
+          }
+
+          // Optional step for optimistic sync tests.
+          else if (isOnPayloadInfoStep(step)) {
+            logger.debug(`Step ${i}/${stepsLen} payload_status`, {blockHash: step.block_hash});
+            const status = ExecutePayloadStatus[step.payload_status.status];
+            if (status === undefined) {
+              throw Error(`Unknown payload_status.status: ${step.payload_status.status}`);
+            }
+            executionEngineBackend.addPredefinedPayloadStatus(step.block_hash, {
+              status,
+              latestValidHash: step.payload_status.latest_valid_hash,
+              validationError: step.payload_status.validation_error,
+            });
           }
 
           // checks step
@@ -292,7 +311,7 @@ function toSpecTestCheckpoint(checkpoint: CheckpointWithHex): SpecTestCheckpoint
   };
 }
 
-type Step = OnTick | OnAttestation | OnAttesterSlashing | OnBlock | OnPowBlock | Checks;
+type Step = OnTick | OnAttestation | OnAttesterSlashing | OnBlock | OnPowBlock | OnPayloadInfo | Checks;
 
 type SpecTestCheckpoint = {epoch: bigint; root: string};
 
@@ -330,12 +349,25 @@ type OnBlock = {
   valid?: number;
 };
 
+/** Optional step for optimistic sync tests. */
 type OnPowBlock = {
   /**
    * the name of the `pow_block_<32-byte-root>.ssz_snappy` file. To
    * execute `on_pow_block(store, block)`
    */
   pow_block: string;
+};
+
+type OnPayloadInfo = {
+  /** Encoded 32-byte value of payload's block hash. */
+  block_hash: string;
+  payload_status: {
+    status: "VALID" | "INVALID" | "SYNCING" | "ACCEPTED" | "INVALID_BLOCK_HASH";
+    /** Encoded 32-byte value of the latest valid block hash, may be `null`. */
+    latest_valid_hash: string;
+    /** Message providing additional details on the validation error, may be `null`. */
+    validation_error: string;
+  };
 };
 
 type Checks = {
@@ -385,6 +417,10 @@ function isBlock(step: Step): step is OnBlock {
 
 function isPowBlock(step: Step): step is OnPowBlock {
   return typeof (step as OnPowBlock).pow_block === "string";
+}
+
+function isOnPayloadInfoStep(step: Step): step is OnPayloadInfo {
+  return typeof (step as OnPayloadInfo).block_hash === "string";
 }
 
 function isCheck(step: Step): step is Checks {

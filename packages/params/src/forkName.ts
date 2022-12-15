@@ -19,3 +19,5 @@ export enum ForkSeq {
   capella = 3,
   eip4844 = 4,
 }
+
+export type ForkExecution = ForkName.bellatrix | ForkName.capella | ForkName.eip4844;

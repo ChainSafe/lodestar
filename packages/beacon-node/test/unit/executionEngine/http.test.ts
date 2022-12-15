@@ -1,12 +1,9 @@
 import {expect} from "chai";
 import {fastify} from "fastify";
 import {ForkName} from "@lodestar/params";
-import {
-  ExecutionEngineHttp,
-  parseExecutionPayload,
-  serializeExecutionPayload,
-  defaultExecutionEngineHttpOpts,
-} from "../../../src/execution/engine/http.js";
+import {defaultExecutionEngineHttpOpts} from "../../../src/execution/engine/http.js";
+import {IExecutionEngine, initializeExecutionEngine} from "../../../src/execution/index.js";
+import {parseExecutionPayload, serializeExecutionPayload} from "../../../src/execution/engine/types.js";
 
 describe("ExecutionEngine / http", () => {
   const afterCallbacks: (() => Promise<void> | void)[] = [];
@@ -17,7 +14,7 @@ describe("ExecutionEngine / http", () => {
     }
   });
 
-  let executionEngine: ExecutionEngineHttp;
+  let executionEngine: IExecutionEngine;
   let returnValue: unknown = {};
   let reqJsonRpcPayload: unknown = {};
 
@@ -38,8 +35,9 @@ describe("ExecutionEngine / http", () => {
 
     const baseUrl = await server.listen(0);
 
-    executionEngine = new ExecutionEngineHttp(
+    executionEngine = initializeExecutionEngine(
       {
+        mode: "http",
         urls: [baseUrl],
         retryAttempts: defaultExecutionEngineHttpOpts.retryAttempts,
         retryDelay: defaultExecutionEngineHttpOpts.retryDelay,

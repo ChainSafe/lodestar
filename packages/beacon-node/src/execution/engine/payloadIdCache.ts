@@ -2,6 +2,7 @@ import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {pruneSetToMax} from "@lodestar/utils";
 import {IMetrics} from "../../metrics/index.js";
 import {DATA, QUANTITY} from "../../eth1/provider/utils.js";
+import {PayloadAttributesRpc} from "./types.js";
 
 // Idealy this only need to be set to the max head reorgs number
 const MAX_PAYLOAD_IDS = SLOTS_PER_EPOCH;
@@ -17,17 +18,7 @@ export type WithdrawalV1 = {
   amount: QUANTITY;
 };
 
-export type ApiPayloadAttributes = {
-  /** QUANTITY, 64 Bits - value for the timestamp field of the new payload */
-  timestamp: QUANTITY;
-  /** DATA, 32 Bytes - value for the prevRandao field of the new payload */
-  prevRandao: DATA;
-  /** DATA, 20 Bytes - suggested value for the coinbase field of the new payload */
-  suggestedFeeRecipient: DATA;
-  withdrawals?: WithdrawalV1[];
-};
-
-type FcuAttributes = {headBlockHash: DATA; finalizedBlockHash: DATA} & Omit<ApiPayloadAttributes, "withdrawals">;
+type FcuAttributes = {headBlockHash: DATA; finalizedBlockHash: DATA} & Omit<PayloadAttributesRpc, "withdrawals">;
 
 export class PayloadIdCache {
   private readonly payloadIdByFcuAttributes = new Map<string, {payloadId: PayloadId; fullKey: string}>();
