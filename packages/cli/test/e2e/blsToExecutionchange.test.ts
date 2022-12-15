@@ -12,7 +12,7 @@ describeCliTest("bLSToExecutionChange cmd", function ({spawnCli}) {
   this.timeout("60s");
 
   itDone("Perform bLSToExecutionChange", async function (done) {
-    const restPort = 19596;
+    const restPort = 9596;
 
     const devBnProc = spawnCli({pipeStdToParent: false, logPrefix: "dev"}, [
       // ⏎
