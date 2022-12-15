@@ -96,7 +96,7 @@ export const testData: GenericServerTestCases<Api> = {
     res: undefined,
   },
   submitPoolBlsToExecutionChange: {
-    args: [ssz.capella.SignedBLSToExecutionChange.defaultValue()],
+    args: [[ssz.capella.SignedBLSToExecutionChange.defaultValue()]],
     res: undefined,
   },
   submitPoolSyncCommitteeSignatures: {
