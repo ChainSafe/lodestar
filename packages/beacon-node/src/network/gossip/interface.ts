@@ -23,7 +23,6 @@ export enum GossipType {
   sync_committee = "sync_committee",
   light_client_finality_update = "light_client_finality_update",
   light_client_optimistic_update = "light_client_optimistic_update",
-  // capella
   bls_to_execution_change = "bls_to_execution_change",
 }
 
