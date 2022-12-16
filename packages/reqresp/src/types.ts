@@ -51,6 +51,7 @@ export interface ProtocolDefinition<Req = unknown, Resp = unknown> extends Omit<
   requestType: (fork: ForkName) => TypeSerializer<Req> | null;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   responseType: (fork: ForkName) => TypeSerializer<Resp>;
+  ignoreResponse?: boolean;
   renderRequestBody?: (request: Req) => string;
   contextBytes: ContextBytesFactory<Resp>;
   inboundRateLimits?: InboundRateLimitQuota<Req>;

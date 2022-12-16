@@ -10,6 +10,7 @@ export const Goodbye: ProtocolDefinitionGenerator<phase0.Goodbye, phase0.Goodbye
     handler,
     requestType: () => ssz.phase0.Goodbye,
     responseType: () => ssz.phase0.Goodbye,
+    ignoreResponse: true,
     renderRequestBody: (req) => req.toString(10),
     contextBytes: {type: ContextBytesType.Empty},
     inboundRateLimits: {
