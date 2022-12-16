@@ -17,9 +17,10 @@ describe("getExpectedWithdrawals", () => {
     {excessBalance: 0.95, eth1Credentials: 0.7, withdrawable: 0.05, withdrawn: 0, withdrawals: 16, sampled: 18},
     // Intermediate bad case
     {excessBalance: 0.1, eth1Credentials: 0.1, withdrawable: 0, withdrawn: 0, withdrawals: 16, sampled: 1020},
-    {excessBalance: 0.01, eth1Credentials: 0.01, withdrawable: 0, withdrawn: 0, withdrawals: 16, sampled: 141069},
-    // Worst case: All validators need to be probed
-    {excessBalance: 0, eth1Credentials: 0.0, withdrawable: 0, withdrawn: 0, withdrawals: 0, sampled: vc},
+    // Expected 141069 but gets bounded by 16384
+    {excessBalance: 0.01, eth1Credentials: 0.01, withdrawable: 0, withdrawn: 0, withdrawals: 2, sampled: 16384},
+    // Expected 250000 but gets bounded by 16384
+    {excessBalance: 0, eth1Credentials: 0.0, withdrawable: 0, withdrawn: 0, withdrawals: 0, sampled: 16384},
   ];
 
   for (const opts of testCases) {
