@@ -209,6 +209,7 @@ function getSpecCriticalParams(localConfig: IChainConfig): Record<keyof ConfigWi
     /////////////////
     MAX_BLS_TO_EXECUTION_CHANGES: capellaForkRelevant,
     MAX_WITHDRAWALS_PER_PAYLOAD: capellaForkRelevant,
+    MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP: capellaForkRelevant,
 
     // # EIP4844Preset
     /////////////////

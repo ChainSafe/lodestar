@@ -119,6 +119,7 @@ export const minimalPreset: BeaconPreset = {
   //////////
   MAX_BLS_TO_EXECUTION_CHANGES: 16,
   MAX_WITHDRAWALS_PER_PAYLOAD: 4,
+  MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP: 16,
 
   // EIP-4844
   ///////////
