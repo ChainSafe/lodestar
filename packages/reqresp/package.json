@@ -17,8 +17,8 @@
     ".": {
       "import": "./lib/index.js"
     },
-    "./messages": {
-      "import": "./lib/messages/index.js"
+    "./protocols": {
+      "import": "./lib/protocols/index.js"
     },
     "./utils": {
       "import": "./lib/utils/index.js"
