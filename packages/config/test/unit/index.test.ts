@@ -1,7 +1,8 @@
 import {expect} from "chai";
 import {ForkName} from "@lodestar/params";
 import {toHexString} from "@chainsafe/ssz";
-import {config} from "../../src/default.js";
+import {config, chainConfig} from "../../src/default.js";
+import {createIForkConfig} from "../../src/index.js";
 
 describe("forks", () => {
   it("Forks should be in ascending order", () => {
@@ -30,5 +31,11 @@ describe("forks", () => {
       expect(toHexString(fork.prevVersion)).to.equal(toHexString(prevFork.version), `Wrong prevVersion ${fork.name}`);
       expect(fork.prevForkName).to.equal(prevFork.name, `Wrong prevName ${fork.name}`);
     }
+  });
+
+  it("correctly handle pre-genesis", () => {
+    // eslint-disable-next-line @typescript-eslint/naming-convention
+    const postMergeTestnet = createIForkConfig({...chainConfig, ALTAIR_FORK_EPOCH: 0, BELLATRIX_FORK_EPOCH: 0});
+    expect(postMergeTestnet.getForkName(-1)).to.equal(ForkName.bellatrix);
   });
 });
