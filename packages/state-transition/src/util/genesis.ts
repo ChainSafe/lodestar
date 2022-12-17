@@ -279,7 +279,7 @@ export function initializeBeaconStateFromEth1(
       ssz.capella.ExecutionPayloadHeader.defaultViewDU();
   }
 
-  if (GENESIS_SLOT >= config.CAPELLA_FORK_EPOCH) {
+  if (GENESIS_SLOT >= config.EIP4844_FORK_EPOCH) {
     const stateEip4844 = state as CompositeViewDU<typeof ssz.eip4844.BeaconState>;
     stateEip4844.fork.previousVersion = config.EIP4844_FORK_VERSION;
     stateEip4844.fork.currentVersion = config.EIP4844_FORK_VERSION;
