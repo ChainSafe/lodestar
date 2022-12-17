@@ -13,7 +13,7 @@ const genesisSlotsDelay = 10;
 const altairForkEpoch = 2;
 const bellatrixForkEpoch = 4;
 const validatorCount = 2;
-const timeout =
+const runTimeoutMs =
   getEstimatedTimeInSecForRun({
     genesisSlotDelay: genesisSlotsDelay,
     secondsPerSlot: SIM_TESTS_SECONDS_PER_SLOT,
@@ -42,7 +42,7 @@ const env = SimulationEnvironment.initWithDefaults(
     },
   ]
 );
-await env.start(timeout);
+await env.start({runTimeoutMs});
 
 const node = env.nodes[0].cl;
 await waitForSlot(2, env.nodes, {env, silent: true});
