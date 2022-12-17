@@ -1,3 +1,5 @@
+import {strFixedSize} from "./utils/index.js";
+
 export class TableRenderer<Columns extends string[number]> {
   private columnsSizes: Record<Columns, number>;
   private columns: Columns[];
@@ -20,7 +22,7 @@ export class TableRenderer<Columns extends string[number]> {
   addEmptyRow(text: string): void {
     this.printHSeparator(true);
     this.printVSeparator("start");
-    process.stdout.write(text.padEnd(this.totalWidth - 4));
+    process.stdout.write(strFixedSize(text, this.totalWidth - 4));
     this.printVSeparator("end");
     this.printHSeparator(true);
   }
@@ -29,7 +31,7 @@ export class TableRenderer<Columns extends string[number]> {
     this.printHSeparator(true);
     this.printVSeparator("start");
     for (const [index, column] of this.columns.entries()) {
-      process.stdout.write(column.padEnd(this.columnsSizes[column]));
+      process.stdout.write(strFixedSize(column, this.columnsSizes[column]));
       if (index === this.columns.length - 1) {
         this.printVSeparator("end");
       } else {
