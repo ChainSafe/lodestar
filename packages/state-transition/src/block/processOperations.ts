@@ -49,7 +49,7 @@ export function processOperations(
     processVoluntaryExit(state, voluntaryExit, opts.verifySignatures);
   }
 
-  if (fork >= ForkSeq.capella && !opts?.disabledWithdrawals) {
+  if (fork === ForkSeq.capella || (fork > ForkSeq.capella && !opts?.disabledWithdrawals)) {
     for (const blsToExecutionChange of (body as capella.BeaconBlockBody).blsToExecutionChanges) {
       processBlsToExecutionChange(state as CachedBeaconStateCapella, blsToExecutionChange);
     }

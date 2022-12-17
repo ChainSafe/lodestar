@@ -45,7 +45,7 @@ export function processBlock(
     const fullOrBlindedPayload = getFullOrBlindedPayload(block);
     // TODO EIP-4844: Allow to disable withdrawals for interop testing
     // https://github.com/ethereum/consensus-specs/blob/b62c9e877990242d63aa17a2a59a49bc649a2f2e/specs/eip4844/beacon-chain.md#disabling-withdrawals
-    if (fork >= ForkSeq.capella && !opts?.disabledWithdrawals) {
+    if (fork === ForkSeq.capella || (fork > ForkSeq.capella && !opts?.disabledWithdrawals)) {
       processWithdrawals(
         state as CachedBeaconStateCapella,
         fullOrBlindedPayload as capella.FullOrBlindedExecutionPayload

@@ -71,6 +71,7 @@ export const forkChoiceTest: TestRunnerFn<ForkChoiceTestCase, void> = (fork) => 
           disablePrepareNextSlot: true,
           assertCorrectProgressiveBalances,
           computeUnrealized: false,
+          disabledWithdrawals: true,
         },
         {
           config: createIBeaconConfig(config, state.genesisValidatorsRoot),

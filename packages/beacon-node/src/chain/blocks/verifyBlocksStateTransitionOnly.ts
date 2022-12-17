@@ -35,7 +35,7 @@ export async function verifyBlocksStateTransitionOnly(
   const proposerBalanceDeltas: number[] = [];
 
   for (let i = 0; i < blocks.length; i++) {
-    const {validProposerSignature, validSignatures} = opts;
+    const {validProposerSignature, validSignatures, disabledWithdrawals} = opts;
     const {block} = blocks[i];
     const preState = i === 0 ? preState0 : postStates[i - 1];
 
@@ -61,6 +61,7 @@ export async function verifyBlocksStateTransitionOnly(
         // if block is trusted don't verify proposer or op signature
         verifyProposer: !useBlsBatchVerify && !validSignatures && !validProposerSignature,
         verifySignatures: !useBlsBatchVerify && !validSignatures,
+        disabledWithdrawals,
       },
       metrics
     );
