@@ -446,8 +446,8 @@ type EngineApiRpcReturnTypes = {
    * payloadId | Error: QUANTITY, 64 Bits - Identifier of the payload building process
    */
   engine_getPayloadV1: ExecutionPayloadRpc;
-  engine_getPayloadV2: {executionPayload: ExecutionPayloadRpc; blockValue: QUANTITY};
-  engine_getPayloadV3: {executionPayload: ExecutionPayloadRpc; blockValue: QUANTITY};
+  engine_getPayloadV2: ExecutionPayloadRpcWithBlockValue;
+  engine_getPayloadV3: ExecutionPayloadRpcWithBlockValue;
   /**
    * Object - Instance of TransitionConfigurationV1
    */
