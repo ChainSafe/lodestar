@@ -320,7 +320,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
         : ForkSeq[fork] >= ForkSeq.capella
         ? "engine_getPayloadV2"
         : "engine_getPayloadV1";
-    const executionPayloadRpc = await this.rpc.fetchWithRetries<
+    const payloadResponse = await this.rpc.fetchWithRetries<
       EngineApiRpcReturnTypes[typeof method],
       EngineApiRpcParamTypes[typeof method]
     >(
@@ -330,7 +330,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       },
       getPayloadOpts
     );
-    return parseExecutionPayload(fork, executionPayloadRpc);
+    return parseExecutionPayload(fork, payloadResponse);
   }
 
   async getBlobsBundle(payloadId: PayloadId): Promise<BlobsBundle> {
@@ -446,8 +446,8 @@ type EngineApiRpcReturnTypes = {
    * payloadId | Error: QUANTITY, 64 Bits - Identifier of the payload building process
    */
   engine_getPayloadV1: ExecutionPayloadRpc;
-  engine_getPayloadV2: ExecutionPayloadRpc;
-  engine_getPayloadV3: ExecutionPayloadRpc;
+  engine_getPayloadV2: {executionPayload: ExecutionPayloadRpc; blockValue: QUANTITY};
+  engine_getPayloadV3: {executionPayload: ExecutionPayloadRpc; blockValue: QUANTITY};
   /**
    * Object - Instance of TransitionConfigurationV1
    */
@@ -513,7 +513,23 @@ export function serializeExecutionPayload(fork: ForkName, data: allForks.Executi
   return payload;
 }
 
-export function parseExecutionPayload(fork: ForkName, data: ExecutionPayloadRpc): allForks.ExecutionPayload {
+type ExecutionPayloadRpcWithBlockValue = {executionPayload: ExecutionPayloadRpc; blockValue: QUANTITY};
+type ExecutionPayloadResponse = ExecutionPayloadRpc | ExecutionPayloadRpcWithBlockValue;
+
+export function hasBlockValue(response: ExecutionPayloadResponse): response is ExecutionPayloadRpcWithBlockValue {
+  return (response as ExecutionPayloadRpcWithBlockValue).blockValue !== undefined;
+}
+
+export function parseExecutionPayload<T extends ForkName>(
+  fork: T,
+  response: ExecutionPayloadResponse
+): allForks.ExecutionPayload {
+  let data: ExecutionPayloadRpc;
+  if (hasBlockValue(response)) {
+    data = response.executionPayload;
+  } else {
+    data = response;
+  }
   const payload = {
     parentHash: dataToBytes(data.parentHash, 32),
     feeRecipient: dataToBytes(data.feeRecipient, 20),
