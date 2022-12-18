@@ -469,10 +469,10 @@
     bls-eth-wasm "^0.4.8"
     randombytes "^2.1.0"
 
-"@chainsafe/blst@^0.2.6":
-  version "0.2.6"
-  resolved "https://registry.yarnpkg.com/@chainsafe/blst/-/blst-0.2.6.tgz#56f17c82338d62421321dca60250951dd3a7db7a"
-  integrity sha512-7mzE9IRjG0TZKPit83GT4XPSgMnqmMT4AAeUTyTj/IwO4FDPQ3fJVheT6i9LaH3I4Y18oaL68G9j+Uh3mEEAYg==
+"@chainsafe/blst@^0.2.7":
+  version "0.2.7"
+  resolved "https://registry.yarnpkg.com/@chainsafe/blst/-/blst-0.2.7.tgz#9e966b097e59d0a4f547824f8aa136b4b898d672"
+  integrity sha512-9ztDTg+/PjwOfnsJnkTkhIqWSju8XfqiX32ZLYviF+QUNrPIIeJUh4/IH94jTDpb4yVCEdGk38Sq3rBzGSNx5w==
   dependencies:
     node-fetch "^2.6.1"
     node-gyp "^8.4.0"
@@ -3317,11 +3317,6 @@
   integrity sha512-QXlzybid60YtAwfgG3cpykptRYUx2KomzNutMlWsQC64J/WG/gQSl+P4w7A21sGN0VIxRVava4rgnT7FQmFCdg==
   dependencies:
     "@types/through" "*"
-
-"@types/it-all@^1.0.0":
-  version "1.0.0"
-  resolved "https://registry.npmjs.org/@types/it-all/-/it-all-1.0.0.tgz"
-  integrity sha512-sF9Os6utVd3/H+PSj7YV5Fwd/aC0LLAOr0/oW1aEx8BQFfLsq7fKIuj7vH1vzbaiQ8IkYpoP1Yu8HSIepL3xgg==
 
 "@types/js-yaml@^3.12.1", "@types/js-yaml@^3.12.5":
   version "3.12.6"
@@ -8324,15 +8319,15 @@ istanbul-reports@^3.0.2:
     html-escaper "^2.0.0"
     istanbul-lib-report "^3.0.0"
 
-it-all@^1.0.2:
-  version "1.0.2"
-  resolved "https://registry.npmjs.org/it-all/-/it-all-1.0.2.tgz"
-  integrity sha512-3hrCLLcuHS1/VUn1qETPuh9rFTw31SBCUUijjs41VJ+oQGx3H+3Lpxo1bFD3q3570w3o99a+sfRGic5PBBt3Vg==
-
 it-all@^1.0.4, it-all@^1.0.6:
   version "1.0.6"
   resolved "https://registry.npmjs.org/it-all/-/it-all-1.0.6.tgz"
   integrity sha512-3cmCc6Heqe3uWi3CVM/k51fa/XbMFpQVzFoDsV0IZNHSQDyAXl3c4MjHkFX5kF3922OGj7Myv1nSEUgRtcuM1A==
+
+it-all@^2.0.0:
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/it-all/-/it-all-2.0.0.tgz#6f4e5cdb71af02793072822a90bc44de901a92c3"
+  integrity sha512-I/yi9ogTY59lFxtfsDSlI9w9QZtC/5KJt6g7CPPBJJh2xql2ZS7Ghcp9hoqDDbc4QfwQvtx8Loy0zlKQ8H5gFg==
 
 it-drain@^1.0.4:
   version "1.0.4"

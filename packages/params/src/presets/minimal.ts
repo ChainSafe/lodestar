@@ -119,10 +119,11 @@ export const minimalPreset: BeaconPreset = {
   //////////
   MAX_BLS_TO_EXECUTION_CHANGES: 16,
   MAX_WITHDRAWALS_PER_PAYLOAD: 4,
+  MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP: 16,
 
   // EIP-4844
   ///////////
   // https://github.com/ethereum/consensus-specs/blob/dev/presets/minimal/eip4844.yaml
   FIELD_ELEMENTS_PER_BLOB: 4,
-  MAX_BLOBS_PER_BLOCK: 16,
+  MAX_BLOBS_PER_BLOCK: 4,
 };

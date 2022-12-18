@@ -1,5 +1,9 @@
 import {ssz, capella} from "@lodestar/types";
-import {MAX_EFFECTIVE_BALANCE, MAX_WITHDRAWALS_PER_PAYLOAD} from "@lodestar/params";
+import {
+  MAX_EFFECTIVE_BALANCE,
+  MAX_WITHDRAWALS_PER_PAYLOAD,
+  MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP,
+} from "@lodestar/params";
 
 import {CachedBeaconStateCapella} from "../types.js";
 import {decreaseBalance, hasEth1WithdrawalCredential} from "../util/index.js";
@@ -21,10 +25,23 @@ export function processWithdrawals(
     }
     decreaseBalance(state, withdrawal.validatorIndex, Number(withdrawal.amount));
   }
+
+  // Update the nextWithdrawalIndex
   if (expectedWithdrawals.length > 0) {
     const latestWithdrawal = expectedWithdrawals[expectedWithdrawals.length - 1];
     state.nextWithdrawalIndex = latestWithdrawal.index + 1;
+  }
+
+  // Update the nextWithdrawalValidatorIndex
+  if (expectedWithdrawals.length === MAX_WITHDRAWALS_PER_PAYLOAD) {
+    // All slots filled, nextWithdrawalValidatorIndex should be validatorIndex having next turn
+    const latestWithdrawal = expectedWithdrawals[expectedWithdrawals.length - 1];
     state.nextWithdrawalValidatorIndex = (latestWithdrawal.validatorIndex + 1) % state.validators.length;
+  } else {
+    // expected withdrawals came up short in the bound, so we move nextWithdrawalValidatorIndex to
+    // the next post the bound
+    state.nextWithdrawalValidatorIndex =
+      (state.nextWithdrawalValidatorIndex + MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP) % state.validators.length;
   }
 }
 
@@ -34,14 +51,14 @@ export function getExpectedWithdrawals(
   const epoch = state.epochCtx.epoch;
   let withdrawalIndex = state.nextWithdrawalIndex;
   const {validators, balances, nextWithdrawalValidatorIndex} = state;
-  const validatorCount = validators.length;
+  const bound = Math.min(validators.length, MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP);
 
   let n = 0;
 
   const withdrawals: capella.Withdrawal[] = [];
   // Just run a bounded loop max iterating over all withdrawals
   // however breaks out once we have MAX_WITHDRAWALS_PER_PAYLOAD
-  for (n = 0; n < validatorCount; n++) {
+  for (n = 0; n < bound; n++) {
     // Get next validator in turn
     const validatorIndex = (nextWithdrawalValidatorIndex + n) % validators.length;
 
