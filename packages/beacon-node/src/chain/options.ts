@@ -49,6 +49,8 @@ export type BlockProcessOpts = {
    * will still issue fcU for block proposal
    */
   disableImportExecutionFcU?: boolean;
+  /** For EIP4844 */
+  disabledWithdrawals?: boolean;
 };
 
 export const defaultChainOptions: IChainOptions = {
