@@ -30,7 +30,7 @@ export const finality: TestRunnerFn<FinalityTestCase, BeaconStateAllForks> = (fo
           verifyProposer: verify,
           verifySignatures: verify,
           assertCorrectProgressiveBalances,
-          disabledWithdrawals: true,
+          disabledWithdrawals: fork === ForkName.eip4844,
         });
       }
 

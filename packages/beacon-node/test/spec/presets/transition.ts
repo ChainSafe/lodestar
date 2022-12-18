@@ -57,7 +57,7 @@ export const transition: TestRunnerFn<TransitionTestCase, BeaconStateAllForks> =
           verifyProposer: false,
           verifySignatures: false,
           assertCorrectProgressiveBalances,
-          disabledWithdrawals: true,
+          disabledWithdrawals: testConfig.getForkName(signedBlock.message.slot) === ForkName.eip4844,
         });
       }
       return state;
@@ -77,6 +77,7 @@ export const transition: TestRunnerFn<TransitionTestCase, BeaconStateAllForks> =
       expectFunc: (testCase, expected, actual) => {
         expectEqualBeaconState(forkNext, expected, actual);
       },
+      // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
     },
   };
 };
