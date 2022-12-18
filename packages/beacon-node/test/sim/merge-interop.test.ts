@@ -1,4 +1,6 @@
 import fs from "node:fs";
+import path from "node:path";
+import * as os from "node:os";
 import {Context} from "mocha";
 import {fromHexString} from "@chainsafe/ssz";
 import {isExecutionStateType, isMergeTransitionComplete} from "@lodestar/state-transition";
@@ -53,7 +55,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
   }
   this.timeout("10min");
 
-  const dataPath = fs.mkdtempSync("lodestar-test-merge-interop");
+  const dataPath = fs.mkdtempSync(path.join(os.tmpdir(), "lodestar-test-merge-interop"));
   const elSetupConfig = {
     elScriptDir: process.env.EL_SCRIPT_DIR,
     elBinaryDir: process.env.EL_BINARY_DIR,
@@ -272,6 +274,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     };
     const loggerNodeA = testLogger("Node-A", testLoggerOpts);
 
+    const port = 9000;
     const bn = await getDevBeaconNode({
       params: {
         ...testParams,
@@ -280,7 +283,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
         TERMINAL_TOTAL_DIFFICULTY: ttd,
       },
       options: {
-        api: {rest: {enabled: true} as BeaconRestApiServerOpts},
+        api: {rest: {enabled: true, port, address: "localhost"} as BeaconRestApiServerOpts},
         sync: {isSingleNode: true},
         network: {allowPublishToZeroPeers: true, discv5: null},
         // Now eth deposit/merge tracker methods directly available on engine endpoints

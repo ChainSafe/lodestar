@@ -132,6 +132,7 @@ async function startELProcess(args: {
 
   //Passing process.env as it might have important PATH/docker socket info set
   const gethProc = spawn(runScriptPath, [], {
+    shell: true,
     env: {
       ...process.env,
       EL_BINARY_DIR,
