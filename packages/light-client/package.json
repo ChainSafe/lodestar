@@ -23,9 +23,6 @@
     "./validation": {
       "import": "./lib/validation.js"
     },
-    "./networks": {
-      "import": "./lib/networks.js"
-    },
     "./transport": {
       "import": "./lib/transport/index.js"
     }
