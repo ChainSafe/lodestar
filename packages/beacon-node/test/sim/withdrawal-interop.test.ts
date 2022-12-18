@@ -1,4 +1,6 @@
 import fs from "node:fs";
+import path from "node:path";
+import os from "node:os";
 import {Context} from "mocha";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {LogLevel, sleep, TimestampFormatCode} from "@lodestar/utils";
@@ -38,7 +40,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
   }
   this.timeout("10min");
 
-  const dataPath = fs.mkdtempSync("lodestar-test-withdrawal");
+  const dataPath = fs.mkdtempSync(path.join(os.tmpdir(), "lodestar-test-withdrawal"));
   const elSetupConfig = {
     elScriptDir: process.env.EL_SCRIPT_DIR,
     elBinaryDir: process.env.EL_BINARY_DIR,
