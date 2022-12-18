@@ -21,5 +21,5 @@ echo $JWT_SECRET_HEX> $DATA_DIR/jwtsecret
 docker rm -f custom-execution
 rm -rf $DATA_DIR/geth
 
-docker run --rm -u $(id -u ${USER}):$(id -g ${USER}) --name custom-execution -v $currentDir/$DATA_DIR:/data $EL_BINARY_DIR --datadir /data/geth init /data/genesis.json
-docker run --rm -u $(id -u ${USER}):$(id -g ${USER}) --name custom-execution -v $currentDir/$DATA_DIR:/data $EL_BINARY_DIR  --datadir /data/geth account import --password /data/password.txt /data/sk.json
+docker run --rm -u $(id -u ${USER}):$(id -g ${USER}) --name custom-execution -v $DATA_DIR:/data $EL_BINARY_DIR --datadir /data/geth init /data/genesis.json
+docker run --rm -u $(id -u ${USER}):$(id -g ${USER}) --name custom-execution -v $DATA_DIR:/data $EL_BINARY_DIR  --datadir /data/geth account import --password /data/password.txt /data/sk.json
