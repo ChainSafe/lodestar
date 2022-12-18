@@ -73,6 +73,7 @@ export interface BeaconPreset {
   //////////
   MAX_BLS_TO_EXECUTION_CHANGES: number;
   MAX_WITHDRAWALS_PER_PAYLOAD: number;
+  MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP: number;
 
   // EIP-4844
   ///////////
