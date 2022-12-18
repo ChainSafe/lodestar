@@ -96,10 +96,10 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
     }),
 
     reqResp: {
-      rateLimitErrors: register.gauge<"tracker">({
+      rateLimitErrors: register.gauge<"method">({
         name: "beacon_reqresp_rate_limiter_errors_total",
         help: "Count rate limiter errors",
-        labelNames: ["tracker"],
+        labelNames: ["method"],
       }),
     },
 
