@@ -17,7 +17,7 @@ const additionalSlotsForTTD = activePreset.SLOTS_PER_EPOCH - 2;
 const runTillEpoch = 6;
 const syncWaitEpoch = 2;
 
-const timeout =
+const runTimeoutMs =
   getEstimatedTimeInSecForRun({
     genesisSlotDelay: genesisSlotsDelay,
     secondsPerSlot: SIM_TESTS_SECONDS_PER_SLOT,
@@ -58,7 +58,7 @@ env.tracker.register({
   },
 });
 
-await env.start(timeout);
+await env.start({runTimeoutMs});
 await connectAllNodes(env.nodes);
 
 // The `TTD` will be reach around `start of bellatrixForkEpoch + additionalSlotsForMerge` slot
