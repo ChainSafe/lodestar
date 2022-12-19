@@ -345,13 +345,13 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
     [GossipType.light_client_optimistic_update]: async (lightClientOptimisticUpdate) => {
       validateLightClientOptimisticUpdate(config, chain, lightClientOptimisticUpdate);
     },
-    [GossipType.bls_to_execution_change]: async (blsToExecutionChange) => {
-      // validate ?? - to do assuming returning true
-      const {signatureEpoch} = await validateBlsToExecutionChange(chain, blsToExecutionChange);
+
+    [GossipType.bls_to_execution_change]: async (blsToExecutionChange, topic) => {
+      await validateBlsToExecutionChange(chain, blsToExecutionChange, topic.fork);
 
       // Handler
       try {
-        chain.opPool.insertBlsToExecutionChange(blsToExecutionChange, signatureEpoch);
+        chain.opPool.insertBlsToExecutionChange(blsToExecutionChange, topic.fork);
       } catch (e) {
         logger.error("Error adding blsToExecutionChange to pool", {}, e as Error);
       }

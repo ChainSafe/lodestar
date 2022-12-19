@@ -6,8 +6,9 @@ import {ssz} from "@lodestar/types";
 export type SignedBLSToExecutionChangeVersioned = ValueOf<typeof signedBLSToExecutionChangeVersionedType>;
 export const signedBLSToExecutionChangeVersionedType = new ContainerType(
   {
+    // Assumes less than 256 forks, sounds reasonable in our lifetime
+    signatureForkSeq: ssz.Uint8,
     data: ssz.capella.SignedBLSToExecutionChange,
-    signatureEpoch: ssz.Epoch,
   },
   {jsonCase: "eth2", typeName: "SignedBLSToExecutionChangeVersionedType"}
 );
