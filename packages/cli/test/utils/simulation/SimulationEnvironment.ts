@@ -142,11 +142,13 @@ export class SimulationEnvironment {
 
   async start(opts: StartOpts): Promise<void> {
     setTimeout(() => {
-      this.stop(1, "Overall run timeout").catch((e) => console.error("Error on stop", e));
+      this.stop(1, `Overall run timeout in ${opts.runTimeoutMs}ms`).catch((e) => console.error("Error on stop", e));
     }, opts.runTimeoutMs);
 
     const startTimeout = setTimeout(() => {
-      this.stop(1, "Start timeout, no genesis till").catch((e) => console.error("Error on stop", e));
+      this.stop(1, `Start timeout, no genesis in ${this.clock.msToGenesis()}ms`).catch((e) =>
+        console.error("Error on stop", e)
+      );
     }, this.clock.msToGenesis());
 
     try {
