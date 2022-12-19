@@ -21,6 +21,6 @@ export function validateLightClientBootstrap(trustedBlockRoot: Root, bootstrap: 
       bootstrap.header.stateRoot
     )
   ) {
-    throw Error("Invalid next sync committee merkle branch");
+    throw Error("Invalid currentSyncCommittee merkle branch");
   }
 }
