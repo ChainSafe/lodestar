@@ -1,8 +1,9 @@
-import {capella} from "@lodestar/types";
+import {capella, Epoch} from "@lodestar/types";
 import {
   isValidBlsToExecutionChange,
   getBlsToExecutionChangeSignatureSet,
   CachedBeaconStateCapella,
+  computeEpochAtSlot,
 } from "@lodestar/state-transition";
 import {IBeaconChain} from "..";
 import {BlsToExecutionChangeError, BlsToExecutionChangeErrorCode, GossipAction} from "../errors/index.js";
@@ -10,7 +11,7 @@ import {BlsToExecutionChangeError, BlsToExecutionChangeErrorCode, GossipAction} 
 export async function validateBlsToExecutionChange(
   chain: IBeaconChain,
   blsToExecutionChange: capella.SignedBLSToExecutionChange
-): Promise<void> {
+): Promise<{signatureEpoch: Epoch}> {
   // [IGNORE] The blsToExecutionChange is the first valid blsToExecutionChange received for the validator with index
   // signedBLSToExecutionChange.message.validatorIndex.
   if (chain.opPool.hasSeenBlsToExecutionChange(blsToExecutionChange.message.validatorIndex)) {
@@ -37,4 +38,6 @@ export async function validateBlsToExecutionChange(
       code: BlsToExecutionChangeErrorCode.INVALID_SIGNATURE,
     });
   }
+
+  return {signatureEpoch: computeEpochAtSlot(state.slot)};
 }

@@ -347,11 +347,11 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
     },
     [GossipType.bls_to_execution_change]: async (blsToExecutionChange) => {
       // validate ?? - to do assuming returning true
-      await validateBlsToExecutionChange(chain, blsToExecutionChange);
+      const {signatureEpoch} = await validateBlsToExecutionChange(chain, blsToExecutionChange);
 
       // Handler
       try {
-        chain.opPool.insertBlsToExecutionChange(blsToExecutionChange);
+        chain.opPool.insertBlsToExecutionChange(blsToExecutionChange, signatureEpoch);
       } catch (e) {
         logger.error("Error adding blsToExecutionChange to pool", {}, e as Error);
       }

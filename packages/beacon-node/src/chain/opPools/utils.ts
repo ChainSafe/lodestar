@@ -1,8 +1,9 @@
 import bls from "@chainsafe/bls";
 import {CoordType, Signature} from "@chainsafe/bls/types";
 import {BLS_WITHDRAWAL_PREFIX} from "@lodestar/params";
-import {CachedBeaconStateCapella} from "@lodestar/state-transition";
-import {capella, Slot} from "@lodestar/types";
+import {CachedBeaconStateCapella, computeEpochAtSlot} from "@lodestar/state-transition";
+import {Slot} from "@lodestar/types";
+import {SignedBLSToExecutionChangeVersioned} from "../../util/types.js";
 
 /**
  * Prune a Map indexed by slot to keep the most recent slots, up to `slotsRetained`
@@ -39,7 +40,7 @@ export function signatureFromBytesNoCheck(signature: Uint8Array): Signature {
  */
 export function isValidBlsToExecutionChangeForBlockInclusion(
   state: CachedBeaconStateCapella,
-  signedBLSToExecutionChange: capella.SignedBLSToExecutionChange
+  signedBLSToExecutionChange: SignedBLSToExecutionChangeVersioned
 ): boolean {
   // For each condition from https://github.com/ethereum/consensus-specs/blob/dev/specs/capella/beacon-chain.md#new-process_bls_to_execution_change
   //
@@ -48,7 +49,7 @@ export function isValidBlsToExecutionChangeForBlockInclusion(
   //
   // 2. assert validator.withdrawal_credentials[:1] == BLS_WITHDRAWAL_PREFIX:
   //    Must be checked again, since it can already be changed by now.
-  const validator = state.validators.getReadonly(signedBLSToExecutionChange.message.validatorIndex);
+  const validator = state.validators.getReadonly(signedBLSToExecutionChange.data.message.validatorIndex);
   const {withdrawalCredentials} = validator;
   if (withdrawalCredentials[0] !== BLS_WITHDRAWAL_PREFIX) {
     return false;
@@ -62,6 +63,9 @@ export function isValidBlsToExecutionChangeForBlockInclusion(
   //    the fork it was valid, is still the current fork
   //
   // TODO CAPELLA: Ensure that the fork at witch the signature was verified is the same as the state's fork
+  if (signedBLSToExecutionChange.signatureEpoch !== computeEpochAtSlot(state.slot)) {
+    return false;
+  }
 
   return true;
 }
