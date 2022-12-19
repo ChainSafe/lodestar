@@ -90,8 +90,6 @@ export const sync: TestRunnerFn<SyncTestCase, void> = () => {
       };
       const lightClient = new LightclientSpec(config, lightClientOpts, testcase.bootstrap);
 
-      // fromHex(testcase.meta.trusted_block_root)
-
       const stepsLen = testcase.steps.length;
 
       function toHeaderSummary(header: phase0.BeaconBlockHeader): {root: string; slot: number} {
