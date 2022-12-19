@@ -5,7 +5,6 @@ import {
   computeEpochAtSlot,
   getAttesterSlashableIndices,
   isValidVoluntaryExit,
-  isValidBlsToExecutionChange,
 } from "@lodestar/state-transition";
 import {Repository, Id} from "@lodestar/db";
 import {
@@ -17,6 +16,7 @@ import {
 import {Epoch, phase0, capella, ssz, ValidatorIndex} from "@lodestar/types";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {IBeaconDb} from "../../db/index.js";
+import {isValidBlsToExecutionChangeForBlockInclusion} from "./utils.js";
 
 type HexRoot = string;
 type AttesterSlashingCached = {
@@ -227,7 +227,7 @@ export class OpPool {
 
     const blsToExecutionChanges: capella.SignedBLSToExecutionChange[] = [];
     for (const blsToExecutionChange of this.blsToExecutionChanges.values()) {
-      if (isValidBlsToExecutionChange(state as CachedBeaconStateCapella, blsToExecutionChange, false).valid) {
+      if (isValidBlsToExecutionChangeForBlockInclusion(state as CachedBeaconStateCapella, blsToExecutionChange)) {
         blsToExecutionChanges.push(blsToExecutionChange);
         if (blsToExecutionChanges.length >= MAX_BLS_TO_EXECUTION_CHANGES) {
           break;
