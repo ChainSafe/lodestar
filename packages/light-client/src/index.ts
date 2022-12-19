@@ -1,12 +1,10 @@
 import mitt from "mitt";
 import {init as initBls} from "@chainsafe/bls/switchable";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD} from "@lodestar/params";
-import {getClient, Api, routes} from "@lodestar/api";
 import {altair, phase0, RootHex, Slot, SyncPeriod} from "@lodestar/types";
 import {createIBeaconConfig, IBeaconConfig, IChainForkConfig} from "@lodestar/config";
-import {TreeOffsetProof} from "@chainsafe/persistent-merkle-tree";
 import {isErrorAborted, sleep} from "@lodestar/utils";
-import {fromHexString, JsonPath, toHexString} from "@chainsafe/ssz";
+import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {getCurrentSlot, slotWithFutureTolerance, timeUntilNextEpoch} from "./utils/clock.js";
 import {isNode} from "./utils/utils.js";
 import {chunkifyInclusiveRange} from "./utils/chunkify.js";
@@ -16,6 +14,7 @@ import {computeSyncPeriodAtEpoch, computeSyncPeriodAtSlot, computeEpochAtSlot} f
 import {LightclientSpec} from "./spec/index.js";
 import {validateLightClientBootstrap} from "./spec/validateLightClientBootstrap.js";
 import {ProcessUpdateOpts} from "./spec/processLightClientUpdate.js";
+import {LightClientTransport} from "./transport/interface.js";
 
 // Re-export types
 export {LightclientEvent} from "./events.js";
@@ -33,7 +32,7 @@ export type LightclientInitArgs = {
   logger?: ILcLogger;
   opts?: LightclientOpts;
   genesisData: GenesisData;
-  beaconApiUrl: string;
+  transport: LightClientTransport;
   bootstrap: altair.LightClientBootstrap;
 };
 
@@ -95,20 +94,18 @@ type RunStatus =
  * syncCommittees: Map<SyncPeriod, SyncCommittee>, limited to max of 2 items
  */
 export class Lightclient {
-  readonly api: Api;
   readonly emitter: LightclientEmitter = mitt();
-
   readonly config: IBeaconConfig;
   readonly logger: ILcLogger;
   readonly genesisValidatorsRoot: Uint8Array;
   readonly genesisTime: number;
-  readonly beaconApiUrl: string;
+  private readonly transport: LightClientTransport;
 
   private readonly lightclientSpec: LightclientSpec;
 
   private status: RunStatus = {code: RunStatusCode.stopped};
 
-  constructor({config, logger, genesisData, beaconApiUrl, bootstrap}: LightclientInitArgs) {
+  constructor({config, logger, genesisData, bootstrap, transport}: LightclientInitArgs) {
     this.genesisTime = genesisData.genesisTime;
     this.genesisValidatorsRoot =
       typeof genesisData.genesisValidatorsRoot === "string"
@@ -117,20 +114,18 @@ export class Lightclient {
 
     this.config = createIBeaconConfig(config, this.genesisValidatorsRoot);
     this.logger = logger ?? getLcLoggerConsole();
-
-    this.beaconApiUrl = beaconApiUrl;
-    this.api = getClient({baseUrl: beaconApiUrl}, {config});
+    this.transport = transport;
 
     this.lightclientSpec = new LightclientSpec(
       this.config,
       {
         allowForcedUpdates: ALLOW_FORCED_UPDATES,
         onSetFinalizedHeader: (header) => {
-          this.emitter.emit(LightclientEvent.finalized, header);
+          this.emitter.emit(LightclientEvent.lightClientFinalityUpdate, header);
           this.logger.debug("Updated state.finalizedHeader", {slot: header.slot});
         },
         onSetOptimisticHeader: (header) => {
-          this.emitter.emit(LightclientEvent.head, header);
+          this.emitter.emit(LightclientEvent.lightClientOptimisticUpdate, header);
           this.logger.debug("Updated state.optimisticHeader", {slot: header.slot});
         },
       },
@@ -148,18 +143,16 @@ export class Lightclient {
       checkpointRoot: phase0.Checkpoint["root"];
     }
   ): Promise<Lightclient> {
-    const {config, beaconApiUrl, checkpointRoot} = args;
+    const {transport, checkpointRoot} = args;
 
     // Initialize the BLS implementation. This may requires initializing the WebAssembly instance
-    // so why it's a an async process. This should be initialized once before any bls operations.
+    // so why it's an async process. This should be initialized once before any bls operations.
     // This process has to be done manually because of an issue in Karma runner
     // https://github.com/karma-runner/karma/issues/3804
     await initBls(isNode ? "blst-native" : "herumi");
 
-    const api = getClient({baseUrl: beaconApiUrl}, {config});
-
     // Fetch bootstrap state with proof at the trusted block root
-    const {data: bootstrap} = await api.lightclient.getBootstrap(toHexString(checkpointRoot));
+    const {data: bootstrap} = await transport.getBootstrap(toHexString(checkpointRoot));
 
     validateLightClientBootstrap(checkpointRoot, bootstrap);
 
@@ -183,17 +176,6 @@ export class Lightclient {
     return this.lightclientSpec.store.optimisticHeader;
   }
 
-  /** Returns header since head may change during request */
-  async getHeadStateProof(paths: JsonPath[]): Promise<{proof: TreeOffsetProof; header: phase0.BeaconBlockHeader}> {
-    const header = this.getHead();
-    const stateId = toHexString(header.stateRoot);
-    const res = await this.api.proof.getStateProof(stateId, paths);
-    return {
-      proof: res.data as TreeOffsetProof,
-      header,
-    };
-  }
-
   async sync(fromPeriod: SyncPeriod, toPeriod: SyncPeriod): Promise<void> {
     // Initialize the BLS implementation. This may requires initializing the WebAssembly instance
     // so why it's a an async process. This should be initialized once before any bls operations.
@@ -205,7 +187,7 @@ export class Lightclient {
 
     for (const [fromPeriodRng, toPeriodRng] of periodRanges) {
       const count = toPeriodRng + 1 - fromPeriodRng;
-      const updates = await this.api.lightclient.getUpdates(fromPeriodRng, count);
+      const updates = await this.transport.getUpdates(fromPeriodRng, count);
       for (const update of updates) {
         this.processSyncCommitteeUpdate(update.data);
         this.logger.debug("processed sync update", {slot: update.data.attestedHeader.slot});
@@ -252,8 +234,8 @@ export class Lightclient {
         // Fetch latest optimistic head to prevent a potential 12 seconds lag between syncing and getting the first head,
         // Don't retry, this is a non-critical UX improvement
         try {
-          const {data: latestOptimisticUpdate} = await this.api.lightclient.getOptimisticUpdate();
-          this.processOptimisticUpdate(latestOptimisticUpdate);
+          const update = await this.transport.getOptimisticUpdate();
+          this.processOptimisticUpdate(update.data);
         } catch (e) {
           this.logger.error("Error fetching getLatestHeadUpdate", {currentPeriod}, e as Error);
         }
@@ -265,13 +247,8 @@ export class Lightclient {
         this.status = {code: RunStatusCode.started, controller};
         this.logger.debug("Started tracking the head");
 
-        // Subscribe to head updates over SSE
-        // TODO: Use polling for getLatestHeadUpdate() is SSE is unavailable
-        this.api.events.eventstream(
-          [routes.events.EventType.lightClientOptimisticUpdate, routes.events.EventType.lightClientFinalityUpdate],
-          controller.signal,
-          this.onSSE
-        );
+        this.transport.onOptimisticUpdate(this.processOptimisticUpdate.bind(this));
+        this.transport.onFinalityUpdate(this.processFinalizedUpdate.bind(this));
       }
 
       // When close to the end of a sync period poll for sync committee updates
@@ -304,31 +281,6 @@ export class Lightclient {
       }
     }
   }
-
-  private onSSE = (event: routes.events.BeaconEvent): void => {
-    try {
-      this.logger.debug("Received SSE event", {event: event.type});
-
-      switch (event.type) {
-        case routes.events.EventType.lightClientOptimisticUpdate:
-          this.processOptimisticUpdate(event.message);
-          break;
-
-        case routes.events.EventType.lightClientFinalityUpdate:
-          this.processFinalizedUpdate(event.message);
-          break;
-
-        case routes.events.EventType.lightClientUpdate:
-          this.processSyncCommitteeUpdate(event.message);
-          break;
-
-        default:
-          throw Error(`Unknown event ${event.type}`);
-      }
-    } catch (e) {
-      this.logger.error("Error on onSSE", {}, e as Error);
-    }
-  };
 
   /**
    * Processes new optimistic header updates in only known synced sync periods.
