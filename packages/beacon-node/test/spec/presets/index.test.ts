@@ -8,6 +8,7 @@ import {finality} from "./finality.js";
 import {fork} from "./fork.js";
 import {forkChoiceTest} from "./fork_choice.js";
 import {genesis} from "./genesis.js";
+import {lightClient} from "./light_client/index.js";
 import {merkle} from "./merkle.js";
 import {operations} from "./operations.js";
 import {rewards} from "./rewards.js";
@@ -20,7 +21,7 @@ import {transition} from "./transition.js";
 // because the latest withdrawals we implemented are a breaking change
 const skipOpts: SkipOpts = {
   skippedForks: [],
-  skippedRunners: ["light_client", "sync"],
+  skippedRunners: ["sync"],
   skippedHandlers: ["full_withdrawals", "partial_withdrawals", "bls_to_execution_change", "withdrawals"],
 };
 
@@ -34,6 +35,7 @@ specTestIterator(
     fork: {type: RunnerType.default, fn: fork},
     fork_choice: {type: RunnerType.default, fn: forkChoiceTest},
     genesis: {type: RunnerType.default, fn: genesis},
+    light_client: {type: RunnerType.default, fn: lightClient},
     merkle: {type: RunnerType.default, fn: merkle},
     operations: {type: RunnerType.default, fn: operations},
     random: {type: RunnerType.default, fn: sanityBlocks},
