@@ -69,11 +69,11 @@ export const generateLodestarBeaconNode: CLClientGenerator<CLClient.Lodestar> = 
 
   if (engineMock) {
     rcConfig["eth1"] = false;
-    rcConfig["execution.engineMock"] = true;
+    rcConfig["execution.engineMock"] = MOCK_ETH1_GENESIS_HASH;
     rcConfig["execution.urls"] = [];
   } else {
     rcConfig["eth1"] = true;
-    rcConfig["execution.engineMock"] = false;
+    rcConfig["execution.engineMock"] = MOCK_ETH1_GENESIS_HASH;
     rcConfig["execution.urls"] = [engineUrl];
   }
 
