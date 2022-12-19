@@ -1,5 +1,4 @@
 import crypto from "node:crypto";
-import {blobToKzgCommitment, BYTES_PER_FIELD_ELEMENT, FIELD_ELEMENTS_PER_BLOB} from "c-kzg";
 import {
   kzgCommitmentToVersionedHash,
   OPAQUE_TX_BLOB_VERSIONED_HASHES_OFFSET,
@@ -7,7 +6,7 @@ import {
 } from "@lodestar/state-transition";
 import {allForks, bellatrix, eip4844, RootHex, ssz} from "@lodestar/types";
 import {fromHex, toHex} from "@lodestar/utils";
-import {BLOB_TX_TYPE, ForkName, ForkSeq} from "@lodestar/params";
+import {BYTES_PER_FIELD_ELEMENT, FIELD_ELEMENTS_PER_BLOB, BLOB_TX_TYPE, ForkName, ForkSeq} from "@lodestar/params";
 import {
   ExecutePayloadStatus,
   ExecutePayloadResponse,
@@ -18,6 +17,7 @@ import {
   TransitionConfigurationV1,
   BlobsBundle,
 } from "./interface.js";
+import {ckzg} from "./util/kzg.js";
 
 const INTEROP_GAS_LIMIT = 30e6;
 const PRUNE_PAYLOAD_ID_AFTER_MS = 5000;
@@ -228,7 +228,7 @@ export class ExecutionEngineMock implements IExecutionEngine {
         const eip4844TxCount = Math.round(2 * Math.random());
         for (let i = 0; i < eip4844TxCount; i++) {
           const blob = generateRandomBlob();
-          const kzg = blobToKzgCommitment(blob);
+          const kzg = ckzg.blobToKzgCommitment(blob);
           executionPayload.transactions.push(transactionForKzgCommitment(kzg));
           kzgs.push(kzg);
           blobs.push(blob);
