@@ -265,6 +265,8 @@ export class OpPool {
     this.pruneAttesterSlashings(headState);
     this.pruneProposerSlashings(headState);
     this.pruneVoluntaryExits(headState);
+    // TODO CAPELLA: We need the finalizedState to safely prune BlsToExecutionChanges. Finalized state may not be
+    // available in the cache, so it can be null. Once there's a head only prunning strategy, change
     if (finalizedState !== null) {
       this.pruneBlsToExecutionChanges(finalizedState);
     }
