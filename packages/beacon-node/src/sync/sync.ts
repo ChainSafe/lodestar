@@ -119,6 +119,7 @@ export class BeaconSync implements IBeaconSync {
   get state(): SyncState {
     const currentSlot = this.chain.clock.currentSlot;
     const headSlot = this.chain.forkChoice.getHead().slot;
+
     if (
       // Consider node synced IF
       // Before genesis OR

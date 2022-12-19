@@ -49,7 +49,7 @@ export type BlockProcessOpts = {
    * will still issue fcU for block proposal
    */
   disableImportExecutionFcU?: boolean;
-  /** For EIP4844 */
+  // TODO EIP-4844: to test without capella
   disabledWithdrawals?: boolean;
 };
 

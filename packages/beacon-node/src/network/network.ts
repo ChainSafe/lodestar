@@ -14,7 +14,7 @@ import {ChainEvent, IBeaconChain, IBeaconClock} from "../chain/index.js";
 import {BlockInput, BlockInputType, getBlockInput} from "../chain/blocks/types.js";
 import {INetworkOptions} from "./options.js";
 import {INetwork} from "./interface.js";
-import {ReqRespBeaconNode, ReqRespHandlers} from "./reqresp/ReqRespBeaconNode.js";
+import {ReqRespBeaconNode, ReqRespHandlers} from "./reqresp/index.js";
 import {Eth2Gossipsub, getGossipHandlers, GossipHandlers, GossipTopicTypeMap, GossipType} from "./gossip/index.js";
 import {MetadataController} from "./metadata.js";
 import {FORK_EPOCH_LOOKAHEAD, getActiveForks} from "./forks.js";
@@ -219,7 +219,7 @@ export class Network implements INetwork {
         });
 
       case BlockInputType.postEIP4844OldBlobs:
-        throw Error(`Attempting to broadcast old BlockImport slot ${blockInput.block.message.slot}`);
+        throw Error(`Attempting to broadcast old BlockInput slot ${blockInput.block.message.slot}`);
     }
   }
 
@@ -247,7 +247,7 @@ export class Network implements INetwork {
         throw Error(`blocks.length ${blocks.length} != blobsSidecars.length ${blobsSidecars.length}`);
       }
 
-      const blockInput: BlockInput[] = [];
+      const blockInputs: BlockInput[] = [];
       for (let i = 0; i < blocks.length; i++) {
         const block = blocks[i];
         const blobsSidecar = blobsSidecars[i];
@@ -257,9 +257,9 @@ export class Network implements INetwork {
           throw Error(`blob does not match block slot ${block.message.slot} != ${blobsSidecar.beaconBlockSlot}`);
         }
 
-        blockInput.push(getBlockInput.postEIP4844(this.config, block, blobsSidecar));
+        blockInputs.push(getBlockInput.postEIP4844(this.config, block, blobsSidecar));
       }
-      return blockInput;
+      return blockInputs;
     }
 
     // Post EIP-4844 but old blobs
