@@ -27,6 +27,7 @@ import {
   validateGossipSyncCommittee,
   validateSyncCommitteeGossipContributionAndProof,
   validateGossipVoluntaryExit,
+  validateBlsToExecutionChange,
 } from "../../../chain/validation/index.js";
 import {INetwork} from "../../interface.js";
 import {NetworkEvent} from "../../events.js";
@@ -293,7 +294,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       try {
         chain.opPool.insertVoluntaryExit(voluntaryExit);
       } catch (e) {
-        logger.error("Error adding attesterSlashing to pool", {}, e as Error);
+        logger.error("Error adding voluntaryExit to pool", {}, e as Error);
       }
     },
 
@@ -343,6 +344,17 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
 
     [GossipType.light_client_optimistic_update]: async (lightClientOptimisticUpdate) => {
       validateLightClientOptimisticUpdate(config, chain, lightClientOptimisticUpdate);
+    },
+    [GossipType.bls_to_execution_change]: async (blsToExecutionChange) => {
+      // validate ?? - to do assuming returning true
+      await validateBlsToExecutionChange(chain, blsToExecutionChange);
+
+      // Handler
+      try {
+        chain.opPool.insertBlsToExecutionChange(blsToExecutionChange);
+      } catch (e) {
+        logger.error("Error adding blsToExecutionChange to pool", {}, e as Error);
+      }
     },
   };
 }

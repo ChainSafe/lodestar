@@ -698,6 +698,10 @@ export function createLodestarMetrics(
         name: "lodestar_oppool_voluntary_exit_pool_size",
         help: "Current size of the VoluntaryExitPool",
       }),
+      blsToExecutionChangePoolSize: register.gauge({
+        name: "lodestar_oppool_bls_to_execution_change_pool_size",
+        help: "Current size of the blsToExecutionChangePool",
+      }),
       syncCommitteeMessagePoolSize: register.gauge({
         name: "lodestar_oppool_sync_committee_message_pool_size",
         help: "Current size of the SyncCommitteeMessagePool unique by slot subnet and block root",

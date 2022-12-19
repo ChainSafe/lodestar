@@ -490,6 +490,11 @@ export class Network implements INetwork {
       topics.push({type: GossipType.beacon_block_and_blobs_sidecar});
     }
 
+    // capella
+    if (ForkSeq[fork] >= ForkSeq.capella) {
+      topics.push({type: GossipType.bls_to_execution_change});
+    }
+
     // Any fork after altair included
     if (ForkSeq[fork] >= ForkSeq.altair) {
       topics.push({type: GossipType.sync_committee_contribution_and_proof});

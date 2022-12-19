@@ -59,6 +59,7 @@ function stringifyGossipTopicType(topic: GossipTopic): string {
     case GossipType.sync_committee_contribution_and_proof:
     case GossipType.light_client_finality_update:
     case GossipType.light_client_optimistic_update:
+    case GossipType.bls_to_execution_change:
       return topic.type;
     case GossipType.beacon_attestation:
     case GossipType.sync_committee:
@@ -92,6 +93,8 @@ export function getGossipSSZType(topic: GossipTopic) {
       return ssz.altair.LightClientOptimisticUpdate;
     case GossipType.light_client_finality_update:
       return ssz.altair.LightClientFinalityUpdate;
+    case GossipType.bls_to_execution_change:
+      return ssz.capella.SignedBLSToExecutionChange;
   }
 }
 
@@ -129,6 +132,7 @@ export function parseGossipTopic(forkDigestContext: IForkDigestContext, topicStr
       case GossipType.sync_committee_contribution_and_proof:
       case GossipType.light_client_finality_update:
       case GossipType.light_client_optimistic_update:
+      case GossipType.bls_to_execution_change:
         return {type: gossipTypeStr, fork, encoding};
     }
 

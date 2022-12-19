@@ -109,6 +109,19 @@ describe("Events api impl", function () {
       expect(events[0].message).to.equal(exit);
     });
 
+    it("should process bls to execution change event", async function () {
+      const events = getEvents([routes.events.EventType.blsToExecutionChange]);
+
+      const blsToExecution = ssz.capella.SignedBLSToExecutionChange.defaultValue();
+      const block = ssz.capella.SignedBeaconBlock.defaultValue();
+      block.message.body.blsToExecutionChanges.push(blsToExecution);
+      chainEventEmmitter.emit(ChainEvent.block, block, null as any);
+
+      expect(events).to.have.length(1, "Wrong num of received events");
+      expect(events[0].type).to.equal(routes.events.EventType.blsToExecutionChange);
+      expect(events[0].message).to.equal(blsToExecution);
+    });
+
     it("should process finalized checkpoint event", async function () {
       const events = getEvents([routes.events.EventType.finalizedCheckpoint]);
 

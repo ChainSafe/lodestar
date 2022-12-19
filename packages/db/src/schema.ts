@@ -32,6 +32,7 @@ export enum Bucket {
   phase0_exit = 13, // ValidatorIndex -> VoluntaryExit
   phase0_proposerSlashing = 14, // ValidatorIndex -> ProposerSlashing
   phase0_attesterSlashing = 15, // Root -> AttesterSlashing
+  capella_blsToExecutionChange = 16, // ValidatorIndex -> SignedBLSToExecutionChange
   // validator
   // validator = 16, // DEPRECATED on v0.11.0
   // lastProposedBlock = 17, // DEPRECATED on v0.11.0

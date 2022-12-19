@@ -1,8 +1,7 @@
 import sinon from "sinon";
 import {expect} from "chai";
-import {createIBeaconConfig} from "@lodestar/config";
-import {config} from "@lodestar/config/default";
-import {altair, phase0, ssz} from "@lodestar/types";
+import {createIBeaconConfig, createIChainForkConfig, defaultChainConfig} from "@lodestar/config";
+import {capella, altair, phase0, ssz} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
@@ -29,7 +28,15 @@ const opts: INetworkOptions = {
   discv5: null,
 };
 
-const ALTAIR_START_SLOT = computeStartSlotAtEpoch(config.ALTAIR_FORK_EPOCH);
+// Schedule all forks at ALTAIR_FORK_EPOCH to avoid generating the pubkeys cache
+/* eslint-disable @typescript-eslint/naming-convention */
+const config = createIChainForkConfig({
+  ...defaultChainConfig,
+  ALTAIR_FORK_EPOCH: 1,
+  BELLATRIX_FORK_EPOCH: 1,
+  CAPELLA_FORK_EPOCH: 1,
+});
+const START_SLOT = computeStartSlotAtEpoch(config.ALTAIR_FORK_EPOCH);
 
 describe("gossipsub", function () {
   if (this.timeout() < 15 * 1000) this.timeout(15 * 1000);
@@ -69,7 +76,7 @@ describe("gossipsub", function () {
     chain.forkChoice.getHead = () => {
       return {
         ...zeroProtoBlock,
-        slot: ALTAIR_START_SLOT,
+        slot: START_SLOT,
       };
     };
 
@@ -182,6 +189,41 @@ describe("gossipsub", function () {
     }
   });
 
+  it("Publish and receive a blsToExecutionChange", async function () {
+    let onBlsToExecutionChange: (blsToExec: capella.SignedBLSToExecutionChange) => void;
+    const onBlsToExecutionChangePromise = new Promise<capella.SignedBLSToExecutionChange>(
+      (resolve) => (onBlsToExecutionChange = resolve)
+    );
+
+    const {netA, netB, controller} = await mockModules({
+      [GossipType.bls_to_execution_change]: async (blsToExec) => {
+        onBlsToExecutionChange(blsToExec);
+      },
+    });
+
+    await Promise.all([onPeerConnect(netA), onPeerConnect(netB), connect(netA, netB.peerId, netB.localMultiaddrs)]);
+    expect(Array.from(netA.getConnectionsByPeer().values()).length).to.equal(1);
+    expect(Array.from(netB.getConnectionsByPeer().values()).length).to.equal(1);
+
+    netA.subscribeGossipCoreTopics();
+    netB.subscribeGossipCoreTopics();
+
+    // Wait to have a peer connected to a topic
+    while (!controller.signal.aborted) {
+      await sleep(500);
+      const topicStr = netA.gossip.getTopics()[0];
+      if (topicStr && netA.gossip.getMeshPeers(topicStr).length > 0) {
+        break;
+      }
+    }
+
+    const blsToExec = ssz.capella.SignedBLSToExecutionChange.defaultValue();
+    await netA.gossip.publishBlsToExecutionChange(blsToExec);
+
+    const receivedblsToExec = await onBlsToExecutionChangePromise;
+    expect(receivedblsToExec).to.deep.equal(blsToExec);
+  });
+
   it("Publish and receive a LightClientOptimisticUpdate", async function () {
     let onLightClientOptimisticUpdate: (ou: altair.LightClientOptimisticUpdate) => void;
     const onLightClientOptimisticUpdatePromise = new Promise<altair.LightClientOptimisticUpdate>(
@@ -211,7 +253,7 @@ describe("gossipsub", function () {
     }
 
     const lightClientOptimisticUpdate = ssz.altair.LightClientOptimisticUpdate.defaultValue();
-    lightClientOptimisticUpdate.signatureSlot = ALTAIR_START_SLOT;
+    lightClientOptimisticUpdate.signatureSlot = START_SLOT;
     await netA.gossip.publishLightClientOptimisticUpdate(lightClientOptimisticUpdate);
 
     const optimisticUpdate = await onLightClientOptimisticUpdatePromise;
@@ -247,7 +289,7 @@ describe("gossipsub", function () {
     }
 
     const lightClientFinalityUpdate = ssz.altair.LightClientFinalityUpdate.defaultValue();
-    lightClientFinalityUpdate.signatureSlot = ALTAIR_START_SLOT;
+    lightClientFinalityUpdate.signatureSlot = START_SLOT;
     await netA.gossip.publishLightClientFinalityUpdate(lightClientFinalityUpdate);
 
     const optimisticUpdate = await onLightClientFinalityUpdatePromise;

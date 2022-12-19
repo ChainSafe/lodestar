@@ -24,7 +24,7 @@ export function getBlsToExecutionChangeSignatureSet(
 
   return {
     type: SignatureSetType.single,
-    // The withdrawal publey is the same as signedBLSToExecutionChange's fromBlsPubkey as it should
+    // The withdrawal pubkey is the same as signedBLSToExecutionChange's fromBlsPubkey as it should
     // be validated against the withdrawal credentials digest
     pubkey: bls.PublicKey.fromBytes(signedBLSToExecutionChange.message.fromBlsPubkey, CoordType.affine, true),
     signingRoot: computeSigningRoot(ssz.capella.BLSToExecutionChange, signedBLSToExecutionChange.message, domain),

@@ -49,27 +49,29 @@ export function generateState(
   };
   const numValidators = 16;
 
-  const validators = withPubkey
-    ? Array.from({length: numValidators}, (_, i) => {
-        const sk = bls.SecretKey.fromBytes(Buffer.alloc(32, i + 1));
-        return generateValidator({
-          ...validatorOpts,
-          pubkey: sk.toPublicKey().toBytes(),
-        });
-      })
-    : generateValidators(numValidators, validatorOpts);
+  const validators =
+    opts.validators ??
+    (withPubkey
+      ? Array.from({length: numValidators}, (_, i) => {
+          const sk = bls.SecretKey.fromBytes(Buffer.alloc(32, i + 1));
+          return generateValidator({
+            ...validatorOpts,
+            pubkey: sk.toPublicKey().toBytes(),
+          });
+        })
+      : generateValidators(numValidators, validatorOpts));
 
   state.genesisTime = Math.floor(Date.now() / 1000);
   state.fork.previousVersion = config.GENESIS_FORK_VERSION;
   state.fork.currentVersion = config.GENESIS_FORK_VERSION;
   state.latestBlockHeader.bodyRoot = ssz.phase0.BeaconBlockBody.hashTreeRoot(ssz.phase0.BeaconBlockBody.defaultValue());
   state.validators = validators;
-  state.balances = Array.from({length: numValidators}, () => MAX_EFFECTIVE_BALANCE);
+  state.balances = Array.from({length: validators.length}, () => MAX_EFFECTIVE_BALANCE);
 
   if (forkSeq >= ForkSeq.altair) {
     const stateAltair = state as altair.BeaconState;
-    stateAltair.previousEpochParticipation = [...[0xff, 0xff], ...Array.from({length: numValidators - 2}, () => 0)];
-    stateAltair.currentEpochParticipation = [...[0xff, 0xff], ...Array.from({length: numValidators - 2}, () => 0)];
+    stateAltair.previousEpochParticipation = [...[0xff, 0xff], ...Array.from({length: validators.length - 2}, () => 0)];
+    stateAltair.currentEpochParticipation = [...[0xff, 0xff], ...Array.from({length: validators.length - 2}, () => 0)];
     stateAltair.currentSyncCommittee = {
       pubkeys: Array.from({length: SYNC_COMMITTEE_SIZE}, (_, i) => validators[i % validators.length].pubkey),
       aggregatePubkey: ssz.BLSPubkey.defaultValue(),

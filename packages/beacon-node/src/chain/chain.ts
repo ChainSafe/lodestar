@@ -616,6 +616,7 @@ export class BeaconChain implements IBeaconChain {
     this.metrics?.opPool.voluntaryExitPoolSize.set(this.opPool.voluntaryExitsSize);
     this.metrics?.opPool.syncCommitteeMessagePoolSize.set(this.syncCommitteeMessagePool.size);
     this.metrics?.opPool.syncContributionAndProofPoolSize.set(this.syncContributionAndProofPool.size);
+    this.metrics?.opPool.blsToExecutionChangePoolSize.set(this.opPool.blsToExecutionChangeSize);
   }
 
   private onClockSlot(slot: Slot): void {
@@ -703,8 +704,9 @@ export class BeaconChain implements IBeaconChain {
 
     // TODO: Improve using regen here
     const headState = this.stateCache.get(this.forkChoice.getHead().stateRoot);
+    const finalizedState = this.checkpointStateCache.get(cp);
     if (headState) {
-      this.opPool.pruneAll(headState);
+      this.opPool.pruneAll(headState, finalizedState);
     }
   }
 

@@ -1,3 +1,4 @@
+import {capella} from "@lodestar/types";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {routes} from "@lodestar/api";
 import {toHexString} from "@chainsafe/ssz";
@@ -19,6 +20,7 @@ const chainEventMap = {
   [routes.events.EventType.lightClientOptimisticUpdate]: ChainEvent.lightClientOptimisticUpdate as const,
   [routes.events.EventType.lightClientFinalityUpdate]: ChainEvent.lightClientFinalityUpdate as const,
   [routes.events.EventType.lightClientUpdate]: ChainEvent.lightClientUpdate as const,
+  [routes.events.EventType.blsToExecutionChange]: ChainEvent.block as const,
 };
 
 export function getEventsApi({chain, config}: Pick<ApiModules, "chain" | "config">): routes.events.Api {
@@ -64,6 +66,8 @@ export function getEventsApi({chain, config}: Pick<ApiModules, "chain" | "config
     [routes.events.EventType.lightClientOptimisticUpdate]: (headerUpdate) => [headerUpdate],
     [routes.events.EventType.lightClientFinalityUpdate]: (headerUpdate) => [headerUpdate],
     [routes.events.EventType.lightClientUpdate]: (headerUpdate) => [headerUpdate],
+    [routes.events.EventType.blsToExecutionChange]: (block) =>
+      Array.from((block.message.body as capella.BeaconBlockBody).blsToExecutionChanges ?? []),
   };
 
   return {

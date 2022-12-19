@@ -209,8 +209,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       SECONDS_PER_SLOT: 2,
     };
 
-    // Should reach justification in 6 epochs max.
-    // Merge block happens at epoch 2 slot 4. Then 4 epochs to finalize
+    // Just finish the run within first epoch as we only need to test if withdrawals started
     const expectedEpochsToFinish = 1;
     // 1 epoch of margin of error
     const epochsOfMargin = 1;

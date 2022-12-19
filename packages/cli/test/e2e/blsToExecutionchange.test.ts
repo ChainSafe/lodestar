@@ -3,28 +3,27 @@ import {sleep, retry} from "@lodestar/utils";
 import {getClient} from "@lodestar/api";
 import {config} from "@lodestar/config/default";
 import {interopSecretKey} from "@lodestar/state-transition";
+import {toHexString} from "@chainsafe/ssz";
 import {testFilesDir} from "../utils.js";
 import {describeCliTest, execCli} from "../utils/childprocRunner.js";
 import {itDone} from "../utils/runUtils.js";
 
-describeCliTest("voluntaryExit cmd", function ({spawnCli}) {
+describeCliTest("bLSToExecutionChange cmd", function ({spawnCli}) {
   this.timeout("60s");
 
-  itDone("Perform a voluntary exit", async function (done) {
+  itDone("Perform bLSToExecutionChange", async function (done) {
     const restPort = 9596;
 
     const devBnProc = spawnCli({pipeStdToParent: false, logPrefix: "dev"}, [
       // ⏎
       "dev",
-      `--dataDir=${path.join(testFilesDir, "dev-voluntary-exit")}`,
+      `--dataDir=${path.join(testFilesDir, "dev-bls-to-execution-change")}`,
       "--genesisValidators=8",
       "--startValidators=0..7",
       "--rest",
       `--rest.port=${restPort}`,
       // Speed up test to make genesis happen faster
       "--params.SECONDS_PER_SLOT=2",
-      // Allow voluntary exists to be valid immediately
-      "--params.SHARD_COMMITTEE_PERIOD=0",
     ]);
     // Exit early if process exits
     devBnProc.on("exit", (code) => {
@@ -42,11 +41,14 @@ describeCliTest("voluntaryExit cmd", function ({spawnCli}) {
         const head = await client.beacon.getBlockHeader("head");
         if (head.data.header.message.slot < 1) throw Error("pre-genesis");
       },
-      {retryDelay: 1000, retries: 20}
+      {retryDelay: 1000, retries: 60}
     );
 
-    const indexesToExit = [0, 1];
-    const pubkeysToExit = indexesToExit.map((i) => interopSecretKey(i).toPublicKey().toHex());
+    const indexesToWithdraw = [0];
+    const pubkeysToWithdraw = indexesToWithdraw.map((i) => interopSecretKey(i).toPublicKey().toHex());
+    // Currently in dev interop the withdrawals is just set using the validator pvt keys
+    const withdrawalsPvtKeys = indexesToWithdraw.map((i) => interopSecretKey(i).toHex());
+    const withdrawalsPubKeys = pubkeysToWithdraw;
 
     // Interop pubkeys
     // 0 0xa99a76ed7796f7be22d5b7e85deeb7c5677e88e511e0b337618f8c4eb61349b4bf2d153f649f7b
@@ -57,27 +59,23 @@ describeCliTest("voluntaryExit cmd", function ({spawnCli}) {
     await execCli([
       // ⏎
       "validator",
-      "voluntary-exit",
+      "bls-to-execution-change",
       "--network=dev",
-      "--yes",
-      "--interopIndexes=0..3",
       `--server=${baseUrl}`,
-      `--pubkeys=${pubkeysToExit.join(",")}`,
+      `--publicKey=${pubkeysToWithdraw[0]}`,
+      `--fromBlsPrivkey=${withdrawalsPvtKeys[0]}`,
+      "--toExecutionAddress 0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     ]);
 
-    for (const pubkey of pubkeysToExit) {
-      await retry(
-        async () => {
-          const {data} = await client.beacon.getStateValidator("head", pubkey);
-          if (data.status !== "active_exiting") {
-            throw Error("Validator not exiting");
-          } else {
-            // eslint-disable-next-line no-console
-            console.log(`Confirmed validator ${pubkey} = ${data.status}`);
-          }
-        },
-        {retryDelay: 1000, retries: 20}
-      );
+    const pooledBlsChanges = await client.beacon.getPoolBlsToExecutionChanges();
+    const message = pooledBlsChanges.data[0].message;
+    const {validatorIndex, toExecutionAddress, fromBlsPubkey} = message;
+    if (
+      validatorIndex !== 0 ||
+      (toHexString(toExecutionAddress) !== "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" &&
+        toHexString(fromBlsPubkey) !== withdrawalsPubKeys[0])
+    ) {
+      throw Error("Invalid message generated");
     }
 
     devBnProc.kill("SIGINT");

@@ -1,4 +1,4 @@
-import {Epoch, phase0, Slot, ssz, StringType, RootHex, altair, UintNum64} from "@lodestar/types";
+import {Epoch, phase0, capella, Slot, ssz, StringType, RootHex, altair, UintNum64} from "@lodestar/types";
 import {ContainerType, Type, VectorCompositeType} from "@chainsafe/ssz";
 import {FINALIZED_ROOT_DEPTH} from "@lodestar/params";
 import {RouteDef, TypeJson} from "../../utils/index.js";
@@ -19,6 +19,8 @@ export enum EventType {
   attestation = "attestation",
   /** The node has received a valid voluntary exit (from P2P or API) */
   voluntaryExit = "voluntary_exit",
+  /** The node has received a valid blsToExecutionChange (from P2P or API) */
+  blsToExecutionChange = "bls_to_execution_change",
   /** Finalized checkpoint has been updated */
   finalizedCheckpoint = "finalized_checkpoint",
   /** The node has reorganized its chain */
@@ -50,6 +52,7 @@ export type EventData = {
   };
   [EventType.attestation]: phase0.Attestation;
   [EventType.voluntaryExit]: phase0.SignedVoluntaryExit;
+  [EventType.blsToExecutionChange]: capella.SignedBLSToExecutionChange;
   [EventType.finalizedCheckpoint]: {
     block: RootHex;
     state: RootHex;
@@ -127,6 +130,7 @@ export function getTypeByEvent(): {[K in EventType]: Type<EventData[K]>} {
 
     [EventType.attestation]: ssz.phase0.Attestation,
     [EventType.voluntaryExit]: ssz.phase0.SignedVoluntaryExit,
+    [EventType.blsToExecutionChange]: ssz.capella.SignedBLSToExecutionChange,
 
     [EventType.finalizedCheckpoint]: new ContainerType(
       {
