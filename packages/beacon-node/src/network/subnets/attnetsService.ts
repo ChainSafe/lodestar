@@ -73,11 +73,10 @@ export class AttnetsService implements IAttnetsService {
     // if subscribeAllSubnets, we act like we have >= ATTESTATION_SUBNET_COUNT validators connecting to this node
     // so that we have enough subnet topic peers
     // see https://github.com/ChainSafe/lodestar/issues/4921
-    const currentSlot = this.chain.clock.currentSlot;
     if (this.opts?.subscribeAllSubnets) {
       const requestedSubnets: RequestedSubnet[] = [];
       for (let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++) {
-        requestedSubnets.push({subnet, toSlot: randomSubscriptionSlotLen() + currentSlot});
+        requestedSubnets.push({subnet, toSlot: Infinity});
       }
       return requestedSubnets;
     }
