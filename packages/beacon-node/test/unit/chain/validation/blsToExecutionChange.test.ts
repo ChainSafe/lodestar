@@ -99,7 +99,7 @@ describe("validate bls to execution change", () => {
     chainStub.forkChoice = sandbox.createStubInstance(ForkChoice);
     opPool = sandbox.createStubInstance(OpPool) as OpPool & SinonStubbedInstance<OpPool>;
     (chainStub as {opPool: OpPool}).opPool = opPool;
-    chainStub.getHeadStateAtCurrentEpoch.resolves(state);
+    chainStub.getHeadState.returns(state);
     // TODO: Use actual BLS verification
     chainStub.bls = new BlsVerifierMock(true);
   });
