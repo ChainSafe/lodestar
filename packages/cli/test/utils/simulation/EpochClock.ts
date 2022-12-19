@@ -69,10 +69,6 @@ export class EpochClock {
     return this.genesisTime + slotGenesisTimeOffset;
   }
 
-  msToGenesis(): number {
-    return this.genesisTime * 1000 - Date.now();
-  }
-
   isFirstSlotOfEpoch(slot: number): boolean {
     return slot % this.slotsPerEpoch === 0;
   }
