@@ -12,7 +12,7 @@ import {IBeaconArgs} from "../../../../src/cmds/beacon/options.js";
 import {IValidatorCliArgs} from "../../../../src/cmds/validator/options.js";
 import {IGlobalArgs} from "../../../../src/options/globalOptions.js";
 import {CLClient, CLClientGenerator, CLClientGeneratorOptions, JobOptions, Runner, RunnerType} from "../interfaces.js";
-import {LODESTAR_BINARY_PATH} from "../constants.js";
+import {LODESTAR_BINARY_PATH, MOCK_ETH1_GENESIS_HASH} from "../constants.js";
 import {isChildProcessRunner} from "../runner/index.js";
 
 export const generateLodestarBeaconNode: CLClientGenerator<CLClient.Lodestar> = (opts, runner) => {
