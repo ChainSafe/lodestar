@@ -23,6 +23,7 @@ import {
 import {startServer, ServerOpts} from "../utils/server.js";
 import {isNode} from "../../src/utils/utils.js";
 import {computeSyncPeriodAtSlot} from "../../src/utils/clock.js";
+import {LightClientRestTransport} from "../../src/transport/rest.js";
 
 const SOME_HASH = Buffer.alloc(32, 0xff);
 
