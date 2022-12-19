@@ -472,13 +472,6 @@ export class Network implements INetwork {
       topics.push({type: GossipType.light_client_finality_update});
     }
 
-    // After EIP4844 only track beacon_block_and_blobs_sidecar topic
-    if (ForkSeq[fork] < ForkSeq.eip4844) {
-      topics.push({type: GossipType.beacon_block});
-    } else {
-      topics.push({type: GossipType.beacon_block_and_blobs_sidecar});
-    }
-
     if (this.opts.subscribeAllSubnets) {
       for (let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++) {
         topics.push({type: GossipType.beacon_attestation, subnet});
