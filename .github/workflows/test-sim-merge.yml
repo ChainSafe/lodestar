@@ -11,8 +11,8 @@ env:
   GETH_IMAGE: ethereum/client-go:v1.10.25
   NETHERMIND_IMAGE: nethermind/nethermind:1.14.3
   MERGEMOCK_IMAGE: g11tech/mergemock:latest
-  GETH_WITHDRAWALS_IMAGE: g11tech/geth:withdrawals-fix
-  ETHEREUMJS_WITHDRAWALS_IMAGE: g11tech/ethereumjs:withdrawals
+  GETH_WITHDRAWALS_IMAGE: ethpandaops/geth:withdrawals-timestamp-e92fb91
+  ETHEREUMJS_WITHDRAWALS_IMAGE: g11tech/ethereumjs:withdrawals-07b106
   NETHERMIND_WITHDRAWALS_IMAGE: nethermindeth/nethermind:withdrawals_yolo
 
 jobs:

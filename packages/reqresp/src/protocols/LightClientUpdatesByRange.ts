@@ -1,3 +1,4 @@
+import {MAX_REQUEST_LIGHT_CLIENT_UPDATES} from "@lodestar/params";
 import {altair, ssz} from "@lodestar/types";
 import {Encoding, ProtocolDefinitionGenerator} from "../types.js";
 import {getContextBytesLightclient} from "./utils.js";
@@ -16,5 +17,10 @@ export const LightClientUpdatesByRange: ProtocolDefinitionGenerator<
     responseType: () => ssz.altair.LightClientUpdate,
     renderRequestBody: (req) => `${req.startPeriod},${req.count}`,
     contextBytes: getContextBytesLightclient((update) => modules.config.getForkName(update.signatureSlot), modules),
+    inboundRateLimits: {
+      // Same rationale as for BeaconBlocksByRange
+      byPeer: {quota: MAX_REQUEST_LIGHT_CLIENT_UPDATES, quotaTimeMs: 10_000},
+      getRequestCount: (req) => req.count,
+    },
   };
 };

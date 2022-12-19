@@ -20,7 +20,7 @@ import {transition} from "./transition.js";
 // Just disable all capella tests as well and renable when new vectors are released
 // because the latest withdrawals we implemented are a breaking change
 const skipOpts: SkipOpts = {
-  skippedForks: ["capella"],
+  skippedForks: [],
   skippedRunners: ["sync"],
   skippedHandlers: ["full_withdrawals", "partial_withdrawals", "bls_to_execution_change", "withdrawals"],
 };

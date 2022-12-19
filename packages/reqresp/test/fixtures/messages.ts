@@ -4,7 +4,7 @@ import {chainConfig} from "@lodestar/config/default";
 import {allForks, altair, phase0, ssz} from "@lodestar/types";
 import {fromHexString} from "@chainsafe/ssz";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import * as messagesDef from "../../src/messages/index.js";
+import * as messagesDef from "../../src/protocols/index.js";
 import {EncodedPayloadType, ProtocolDefinition, TypeSerializer} from "../../src/types.js";
 import {ZERO_HASH} from "../utils/index.js";
 

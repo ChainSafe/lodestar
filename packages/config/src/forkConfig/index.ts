@@ -63,7 +63,7 @@ export function createIForkConfig(config: IChainConfig): IForkConfig {
 
     // Fork convenience methods
     getForkInfo(slot: Slot): IForkInfo {
-      const epoch = Math.floor(slot / SLOTS_PER_EPOCH);
+      const epoch = Math.floor(Math.max(slot, 0) / SLOTS_PER_EPOCH);
       // NOTE: forks must be sorted by descending epoch, latest fork first
       for (const fork of forksDescendingEpochOrder) {
         if (epoch >= fork.epoch) return fork;

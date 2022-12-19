@@ -32,12 +32,13 @@ describe("getExpectedWithdrawals", () => {
     // Intermediate bad case
     {excessBalance: 0.1, eth1Credentials: 0.1, withdrawable: 0, withdrawn: 0, cache: true, sampled: 1_020},
     {excessBalance: 0.03, eth1Credentials: 0.03, withdrawable: 0, withdrawn: 0, cache: true, sampled: 11_777},
-    {excessBalance: 0.01, eth1Credentials: 0.01, withdrawable: 0, withdrawn: 0, cache: true, sampled: 141_069},
-    // Worst case: All validators need to be probed
-    {excessBalance: 0, eth1Credentials: 0.0, withdrawable: 0, withdrawn: 0, cache: true, sampled: 250_000},
-    {excessBalance: 0, eth1Credentials: 0.0, withdrawable: 0, withdrawn: 0, cache: false, sampled: 250_000},
-    {excessBalance: 0, eth1Credentials: 1, withdrawable: 0, withdrawn: 0, cache: true, sampled: 250_000},
-    {excessBalance: 0, eth1Credentials: 1, withdrawable: 0, withdrawn: 0, cache: false, sampled: 250_000},
+    // Expected 141_069 but gets bounded at 16_384
+    {excessBalance: 0.01, eth1Credentials: 0.01, withdrawable: 0, withdrawn: 0, cache: true, sampled: 16_384},
+    // Worst case: All validators 250_000 need to be probed but get bounded at 16_384
+    {excessBalance: 0, eth1Credentials: 0.0, withdrawable: 0, withdrawn: 0, cache: true, sampled: 16_384},
+    {excessBalance: 0, eth1Credentials: 0.0, withdrawable: 0, withdrawn: 0, cache: false, sampled: 16_384},
+    {excessBalance: 0, eth1Credentials: 1, withdrawable: 0, withdrawn: 0, cache: true, sampled: 16_384},
+    {excessBalance: 0, eth1Credentials: 1, withdrawable: 0, withdrawn: 0, cache: false, sampled: 16_384},
   ];
 
   for (const opts of testCases) {

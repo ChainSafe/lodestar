@@ -3,7 +3,7 @@
 [![Discord](https://img.shields.io/discord/593655374469660673.svg?label=Discord&logo=discord)](https://discord.gg/aMxzVcr)
 [![ETH Beacon APIs Spec v2.1.0](https://img.shields.io/badge/ETH%20beacon--APIs-2.1.0-blue)](https://github.com/ethereum/beacon-APIs/releases/tag/v2.1.0)
 ![ES Version](https://img.shields.io/badge/ES-2020-yellow)
-![Node Version](https://img.shields.io/badge/node-16.x-green)
+![Node Version](https://img.shields.io/badge/node-18.x-green)
 
 > This package is part of [ChainSafe's Lodestar](https://lodestar.chainsafe.io) project
 
@@ -14,7 +14,7 @@ Typescript REST client for the [Ethereum Consensus API spec](https://github.com/
 ```typescript
 import {Libp2p} from "libp2p";
 import {EncodedPayloadType, ReqResp} from "@lodestar/reqresp";
-import {Ping} from "@lodestar/reqresp/messages";
+import {Ping} from "@lodestar/reqresp/protocols";
 import {ILogger} from "@lodestar/utils";
 
 async function getReqResp(libp2p: Libp2p, logger: ILogger): Promise<void> {
