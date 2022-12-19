@@ -145,11 +145,12 @@ export class SimulationEnvironment {
       this.stop(1, `Sim run timedout in ${opts.runTimeoutMs} ms `).catch((e) => console.error("Error on stop", e));
     }, opts.runTimeoutMs);
 
+    const msToGenesis = this.clock.msToGenesis();
     const startTimeout = setTimeout(() => {
-      this.stop(1, `Start timeout, no genesis in ${this.clock.msToGenesis()} ms`).catch((e) =>
+      this.stop(1, `Start sequence not completed before genesis, in ${msToGenesis} ms`).catch((e) =>
         console.error("Error on stop", e)
       );
-    }, this.clock.msToGenesis());
+    }, msToGenesis);
 
     try {
       process.on("unhandledRejection", async (reason, promise) => {
