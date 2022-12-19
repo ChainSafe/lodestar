@@ -14,9 +14,7 @@ export function processBlsToExecutionChange(
 
   const validation = isValidBlsToExecutionChange(state, signedBlsToExecutionChange, true);
   if (!validation.valid) {
-    throw (
-      validation.error ?? Error(`Invalid signedBlsToExecutionChange validatorIndex=${addressChange.validatorIndex}`)
-    );
+    throw validation.error;
   }
 
   const validator = state.validators.get(addressChange.validatorIndex);
