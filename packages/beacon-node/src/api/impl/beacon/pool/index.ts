@@ -99,11 +99,14 @@ export function getBeaconPoolApi({
     async submitPoolBlsToExecutionChange(blsToExecutionChanges) {
       const errors: Error[] = [];
 
+      // TODO CAPELLA: Which fork should assume to validate submitted execution changes?
+      const signatureFork = chain.config.getForkName(chain.clock.currentSlot);
+
       await Promise.all(
         blsToExecutionChanges.map(async (blsToExecutionChange, i) => {
           try {
-            const {signatureEpoch} = await validateBlsToExecutionChange(chain, blsToExecutionChange);
-            chain.opPool.insertBlsToExecutionChange(blsToExecutionChange, signatureEpoch);
+            await validateBlsToExecutionChange(chain, blsToExecutionChange, signatureFork);
+            chain.opPool.insertBlsToExecutionChange(blsToExecutionChange, signatureFork);
             await network.gossip.publishBlsToExecutionChange(blsToExecutionChange);
           } catch (e) {
             errors.push(e as Error);

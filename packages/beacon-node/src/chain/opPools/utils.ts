@@ -1,7 +1,7 @@
 import bls from "@chainsafe/bls";
 import {CoordType, Signature} from "@chainsafe/bls/types";
 import {BLS_WITHDRAWAL_PREFIX} from "@lodestar/params";
-import {CachedBeaconStateCapella, computeEpochAtSlot} from "@lodestar/state-transition";
+import {CachedBeaconStateCapella} from "@lodestar/state-transition";
 import {Slot} from "@lodestar/types";
 import {SignedBLSToExecutionChangeVersioned} from "../../util/types.js";
 
@@ -63,7 +63,7 @@ export function isValidBlsToExecutionChangeForBlockInclusion(
   //    the fork it was valid, is still the current fork
   //
   // TODO CAPELLA: Ensure that the fork at witch the signature was verified is the same as the state's fork
-  if (signedBLSToExecutionChange.signatureEpoch !== computeEpochAtSlot(state.slot)) {
+  if (signedBLSToExecutionChange.signatureForkSeq !== state.config.getForkSeq(state.slot)) {
     return false;
   }
 
