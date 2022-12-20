@@ -220,7 +220,7 @@ export async function produceBlockBody<T extends BlockType>(
             this.metrics?.blockPayload.emptyPayloads.inc({prepType});
           }
 
-          if (fork === ForkName.eip4844) {
+          if (ForkSeq[fork] >= ForkSeq.eip4844) {
             // SPEC: https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/validator.md#blob-kzg-commitments
             // After retrieving the execution payload from the execution engine as specified in Bellatrix, use the
             // payload_id to retrieve blobs and blob_kzg_commitments via get_blobs_and_kzg_commitments(payload_id)
@@ -274,7 +274,7 @@ export async function produceBlockBody<T extends BlockType>(
   // TODO: Not ideal, but better than just using null.
   // TODO: Does not guarantee that preEIP4844 enum goes with a preEIP4844 block
   let blobsResult: BlobsResult;
-  if (currentState.config.getForkSeq(blockSlot) >= ForkSeq.eip4844) {
+  if (ForkSeq[fork] >= ForkSeq.eip4844) {
     if (!blobs) {
       throw Error("Blobs are null post eip4844");
     }
