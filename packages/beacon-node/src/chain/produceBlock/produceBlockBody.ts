@@ -186,14 +186,16 @@ export async function produceBlockBody<T extends BlockType>(
       // are pre-merge. We don't care the same for builder segment as the execution block
       // will takeover if the builder flow was activated and errors
       try {
+        // https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/validator.md#constructing-the-beaconblockbody
         const prepareRes = await prepareExecutionPayload(
           this,
           fork,
           safeBlockHash,
           finalizedBlockHash ?? ZERO_HASH_HEX,
-          currentState as CachedBeaconStateBellatrix,
+          currentState as CachedBeaconStateExecutions,
           feeRecipient
         );
+
         if (prepareRes.isPremerge) {
           (blockBody as allForks.ExecutionBlockBody).executionPayload = ssz.allForksExecution[
             fork
@@ -208,6 +210,7 @@ export async function produceBlockBody<T extends BlockType>(
             // See: https://discord.com/channels/595666850260713488/892088344438255616/1009882079632314469
             await sleep(PAYLOAD_GENERATION_TIME_MS);
           }
+
           const payload = await this.executionEngine.getPayload(fork, payloadId);
           (blockBody as allForks.ExecutionBlockBody).executionPayload = payload;
 
