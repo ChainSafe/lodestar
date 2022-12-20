@@ -27,8 +27,13 @@ export function runGenericServerTest<
 ): void {
   const mockApi = getMockApi<Api>(testCases);
   const {baseUrl, server} = getTestServer();
-
   const httpClient = new HttpClientSpy({baseUrl});
+
+  after("stop server", async () => {
+    httpClient.destroy();
+    await server.close();
+  });
+
   const client = getClient(config, httpClient);
 
   for (const route of Object.values(getRoutes(config, mockApi))) {

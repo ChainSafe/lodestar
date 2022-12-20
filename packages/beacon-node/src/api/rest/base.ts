@@ -2,6 +2,8 @@ import querystring from "querystring";
 import fastify, {FastifyError, FastifyInstance} from "fastify";
 import fastifyCors from "fastify-cors";
 import bearerAuthPlugin from "fastify-bearer-auth";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {IChainForkConfig} from "@lodestar/config";
 import {RouteConfig} from "@lodestar/api/beacon/server";
 import {ErrorAborted, ILogger} from "@lodestar/utils";
 import {isLocalhostIP} from "../../util/ip.js";
@@ -20,6 +22,7 @@ export type RestApiServerOpts = {
 export type RestApiServerModules = {
   logger: ILogger;
   metrics: RestApiServerMetrics | null;
+  config: IChainForkConfig;
 };
 
 export type RestApiServerMetrics = SocketMetrics & {
@@ -27,6 +30,12 @@ export type RestApiServerMetrics = SocketMetrics & {
   responseTime: IHistogram<"operationId">;
   errors: IGauge<"operationId">;
 };
+
+/**
+ * Validator has to publish attestations per epoch. In the worse case validator publish attestation in 1st slot
+ * of epoch n and last slot of epoch n + 1 so we have to wait for 2 epochs.
+ */
+const TIMEOUT_EPOCH_NBR = 2;
 
 /**
  * REST API powered by `fastify` server.
@@ -38,13 +47,14 @@ export class RestApiServer {
 
   constructor(private readonly opts: RestApiServerOpts, modules: RestApiServerModules) {
     // Apply opts defaults
-    const {logger, metrics} = modules;
+    const {logger, metrics, config} = modules;
 
     const server = fastify({
       logger: false,
       ajv: {customOptions: {coerceTypes: "array"}},
       querystringParser: querystring.parse,
       bodyLimit: opts.bodyLimit,
+      keepAliveTimeout: TIMEOUT_EPOCH_NBR * SLOTS_PER_EPOCH * config.SECONDS_PER_SLOT * 1000,
     });
 
     this.activeSockets = new HttpActiveSocketsTracker(server.server, metrics);

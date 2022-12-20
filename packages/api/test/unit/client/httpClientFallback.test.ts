@@ -1,4 +1,5 @@
 import Sinon from "sinon";
+import fetch, {Response} from "node-fetch";
 import {expect} from "chai";
 import {HttpClient} from "../../../src/utils/client/index.js";
 
@@ -34,7 +35,7 @@ describe("httpClient fallback", () => {
     httpClient = new HttpClient({
       baseUrl: "",
       urls: baseUrls.map((baseUrl) => ({baseUrl})),
-      fetch: fetchStub as typeof fetch,
+      fetch: (fetchStub as unknown) as typeof fetch,
     });
 
     fetchStub.callsFake(async (url) => {

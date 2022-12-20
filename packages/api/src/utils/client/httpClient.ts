@@ -1,4 +1,5 @@
-import {fetch} from "cross-fetch";
+import http from "node:http";
+import fetch, {Response} from "node-fetch";
 import {ErrorAborted, ILogger, TimeoutError} from "@lodestar/utils";
 import {ReqGeneric, RouteDef} from "../index.js";
 import {stringifyQuery, urlJoin} from "./format.js";
@@ -71,6 +72,7 @@ export class HttpClient implements IHttpClient {
   private readonly fetch: typeof fetch;
   private readonly metrics: null | Metrics;
   private readonly logger: null | ILogger;
+  private readonly httpAgent = new http.Agent({keepAlive: true});
 
   private readonly urlsOpts: URLOpts[] = [];
   private readonly urlsScore: number[];
@@ -134,6 +136,10 @@ export class HttpClient implements IHttpClient {
 
   async arrayBuffer(opts: FetchOpts): Promise<ArrayBuffer> {
     return await this.requestWithBodyWithRetries<ArrayBuffer>(opts, (res) => res.arrayBuffer());
+  }
+
+  destroy(): void {
+    this.httpAgent.destroy();
   }
 
   private async requestWithBodyWithRetries<T>(opts: FetchOpts, getBody: (res: Response) => Promise<T>): Promise<T> {
@@ -250,7 +256,12 @@ export class HttpClient implements IHttpClient {
         method: opts.method,
         headers: headers as Record<string, string>,
         body: opts.body ? JSON.stringify(opts.body) : undefined,
+        // eslint-disable-next-line
+        // @ts-ignore
         signal: controller.signal,
+        // keepalive is not implemented in NodeJS, see https://github.com/node-fetch/node-fetch#custom-agent
+        // keepalive: true,
+        agent: this.httpAgent,
       });
 
       if (!res.ok) {

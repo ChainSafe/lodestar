@@ -64,7 +64,7 @@ export function getMockBeaconApiServer(opts: RestApiServerOpts, apiOpts?: MockBe
   } as Partial<Api>) as Api;
 
   const logger = testLogger("mock-beacon-api");
-  const restApiServer = new MockBeaconRestApiServer(opts, {logger, metrics: null}, config, api);
+  const restApiServer = new MockBeaconRestApiServer(opts, {logger, metrics: null, config}, config, api);
 
   return restApiServer;
 }

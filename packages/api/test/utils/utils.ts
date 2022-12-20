@@ -30,10 +30,6 @@ export function getTestServer(): {baseUrl: string; server: FastifyInstance} {
     });
   });
 
-  after("stop server", async () => {
-    await server.close();
-  });
-
   return {baseUrl, server};
 }
 

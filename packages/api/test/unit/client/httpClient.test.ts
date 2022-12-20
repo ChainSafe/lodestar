@@ -46,6 +46,7 @@ describe("httpClient json client", () => {
       method: "GET",
       handler: async () => ({test: 1}),
     });
+    afterEachCallbacks.push(() => httpClient.destroy());
 
     const resBody: IUser = await httpClient.json<IUser>({url, method: "GET"});
 
@@ -69,6 +70,7 @@ describe("httpClient json client", () => {
         return resBody;
       },
     });
+    afterEachCallbacks.push(() => httpClient.destroy());
 
     const resBodyReceived: IUser = await httpClient.json<IUser>({url, method: "POST", query, body});
 
@@ -83,6 +85,7 @@ describe("httpClient json client", () => {
       method: "GET",
       handler: async () => ({}),
     });
+    afterEachCallbacks.push(() => httpClient.destroy());
 
     try {
       await httpClient.json(testRoute);
@@ -101,6 +104,7 @@ describe("httpClient json client", () => {
         throw Error("Test error");
       },
     });
+    afterEachCallbacks.push(() => httpClient.destroy());
 
     try {
       await httpClient.json(testRoute);
@@ -119,6 +123,7 @@ describe("httpClient json client", () => {
         return res.code(503).send("Node is syncing");
       },
     });
+    afterEachCallbacks.push(() => httpClient.destroy());
 
     try {
       await httpClient.json(testRoute);
@@ -137,6 +142,7 @@ describe("httpClient json client", () => {
     });
 
     const httpClient = new HttpClient({baseUrl, timeoutMs: 10});
+    afterEachCallbacks.push(() => httpClient.destroy());
 
     try {
       await httpClient.json(testRoute);
@@ -155,6 +161,7 @@ describe("httpClient json client", () => {
     const controller = new AbortController();
     const signal = controller.signal;
     const httpClient = new HttpClient({baseUrl, getAbortSignal: () => signal});
+    afterEachCallbacks.push(() => httpClient.destroy());
 
     setTimeout(() => controller.abort(), 10);
 
