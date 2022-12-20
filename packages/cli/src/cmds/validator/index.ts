@@ -8,6 +8,7 @@ import {voluntaryExit} from "./voluntaryExit.js";
 import {blsToExecutionChange} from "./blsToExecutionChange.js";
 import {validatorOptions, IValidatorCliArgs} from "./options.js";
 import {validatorHandler} from "./handler.js";
+import {mock} from "./mock.js";
 
 export const validator: ICliCommand<IValidatorCliArgs, IGlobalArgs> = {
   command: "validator",
@@ -22,5 +23,5 @@ export const validator: ICliCommand<IValidatorCliArgs, IGlobalArgs> = {
   ],
   options: validatorOptions,
   handler: validatorHandler,
-  subcommands: [slashingProtection, importCmd, list, voluntaryExit, blsToExecutionChange],
+  subcommands: [slashingProtection, importCmd, list, voluntaryExit, blsToExecutionChange, mock],
 };

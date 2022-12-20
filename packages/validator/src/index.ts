@@ -1,4 +1,5 @@
 export {Validator, ValidatorOptions} from "./validator.js";
+export {MockValidator} from "./mock.js";
 export {
   ValidatorStore,
   SignerType,

@@ -5,7 +5,7 @@ export type ICliCommandOptions<OwnArgs> = Required<{[key in keyof OwnArgs]: Opti
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export interface ICliCommand<OwnArgs = Record<never, never>, ParentArgs = Record<never, never>, R = any> {
   command: string;
-  describe: string;
+  describe: string | false;
   examples?: {command: string; description: string}[];
   options?: ICliCommandOptions<OwnArgs>;
   // 1st arg: any = free own sub command options
