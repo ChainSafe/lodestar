@@ -54,7 +54,15 @@ export class AttnetsService implements IAttnetsService {
     private readonly metadata: MetadataController,
     private readonly logger: ILogger,
     private readonly opts?: SubnetsServiceOpts
-  ) {}
+  ) {
+    // if subscribeAllSubnets, we act like we have >= ATTESTATION_SUBNET_COUNT validators connecting to this node
+    // so that we have enough subnet topic peers, see https://github.com/ChainSafe/lodestar/issues/4921
+    if (this.opts?.subscribeAllSubnets) {
+      for (let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++) {
+        this.committeeSubnets.request({subnet, toSlot: Infinity});
+      }
+    }
+  }
 
   start(): void {
     this.chain.emitter.on(ChainEvent.clockSlot, this.onSlot);
