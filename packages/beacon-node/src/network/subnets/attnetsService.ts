@@ -151,6 +151,10 @@ export class AttnetsService implements IAttnetsService {
    */
   private onSlot = (slot: Slot): void => {
     try {
+      // For node >= 64 validators, we should consistently subscribe to all subnets
+      // it's important to check random subnets first
+      // See https://github.com/ChainSafe/lodestar/issues/4929
+      this.unsubscribeExpiredRandomSubnets(slot);
       this.unsubscribeExpiredCommitteeSubnets(slot);
     } catch (e) {
       this.logger.error("Error on AttnetsService.onSlot", {slot}, e as Error);
@@ -163,7 +167,6 @@ export class AttnetsService implements IAttnetsService {
   private onEpoch = (epoch: Epoch): void => {
     try {
       const slot = computeStartSlotAtEpoch(epoch);
-      this.unsubscribeExpiredRandomSubnets(slot);
       this.pruneExpiredKnownValidators(slot);
     } catch (e) {
       this.logger.error("Error on AttnetsService.onEpoch", {epoch}, e as Error);
@@ -176,6 +179,7 @@ export class AttnetsService implements IAttnetsService {
    */
   private unsubscribeExpiredCommitteeSubnets(slot: Slot): void {
     const expired = this.subscriptionsCommittee.getExpired(slot);
+    if (expired.length === 0) return;
     this.unsubscribeSubnets(expired, slot);
   }
 

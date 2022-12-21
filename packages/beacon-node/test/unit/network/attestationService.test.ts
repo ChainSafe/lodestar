@@ -13,7 +13,7 @@ import {generateState} from "../../utils/state.js";
 import {testLogger} from "../../utils/logger.js";
 import {MetadataController} from "../../../src/network/metadata.js";
 import {Eth2Gossipsub, GossipType} from "../../../src/network/gossip/index.js";
-import {AttnetsService, CommitteeSubscription} from "../../../src/network/subnets/index.js";
+import {AttnetsService, CommitteeSubscription, ShuffleFn} from "../../../src/network/subnets/index.js";
 import {ChainEvent, IBeaconChain} from "../../../src/chain/index.js";
 import {ZERO_HASH} from "../../../src/constants/index.js";
 
@@ -27,48 +27,44 @@ describe("AttnetsService", function () {
   let service: AttnetsService;
 
   const sandbox = sinon.createSandbox();
-  // let clock: SinonFakeTimers;
   let gossipStub: SinonStubbedInstance<Eth2Gossipsub> & Eth2Gossipsub;
   let metadata: MetadataController;
 
   let chain: IBeaconChain;
   let state: BeaconStateAllForks;
   const logger = testLogger();
+  const committeeSubnet = 10;
   const subscription: CommitteeSubscription = {
     validatorIndex: 2021,
-    subnet: 10,
+    subnet: committeeSubnet,
     slot: 100,
     isAggregator: false,
   };
+  const numEpochRandomSubscription = EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION + 1;
+  // at middle of epoch
+  const startSlot = Math.floor(SLOTS_PER_EPOCH / 2);
+  // test case may decide this value based on its business logic
+  let randomSubnet = 0;
 
   beforeEach(function () {
     sandbox.useFakeTimers(Date.now());
     gossipStub = sandbox.createStubInstance(Eth2Gossipsub) as SinonStubbedInstance<Eth2Gossipsub> & Eth2Gossipsub;
     const randBetweenFn = (min: number, max: number): number => {
       if (min === EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION && max === 2 * EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION) {
-        return EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION + 1;
-      }
-
-      if (min === 0 && max === ATTESTATION_SUBNET_COUNT) {
-        return 30;
-      }
-
-      if (min === 0 && max === ATTESTATION_SUBNET_COUNT - 1) {
-        return 40;
+        return numEpochRandomSubscription;
       }
 
       throw Error(`Not expected min=${min} and max=${max}`);
     };
 
-    // shuffle function to return 1st item based on i-th called
-    let i = 0;
-    function shuffleFn<T>(arr: T[]): T[] {
-      return [arr[i++], ...arr];
+    // shuffle function to return randomSubnet and increase its value
+    function shuffleFn(arr: number[]): number[] {
+      return [randomSubnet++ % ATTESTATION_SUBNET_COUNT, ...arr];
     }
 
     state = generateState();
     chain = new MockBeaconChain({
-      genesisTime: Math.floor(Date.now() / 1000),
+      genesisTime: Math.floor(Date.now() / 1000 - config.SECONDS_PER_SLOT * startSlot),
       chainId: 0,
       networkId: BigInt(0),
       state,
@@ -77,13 +73,17 @@ describe("AttnetsService", function () {
     // load getCurrentSlot first, vscode not able to debug without this
     getCurrentSlot(config, Math.floor(Date.now() / 1000));
     metadata = new MetadataController({}, {config, chain, logger});
-    service = new AttnetsService(config, chain, gossipStub, metadata, logger, {randBetweenFn, shuffleFn});
+    service = new AttnetsService(config, chain, gossipStub, metadata, logger, {
+      randBetweenFn,
+      shuffleFn: shuffleFn as ShuffleFn,
+    });
     service.start();
   });
 
   afterEach(() => {
     service.stop();
     sandbox.restore();
+    randomSubnet = 0;
   });
 
   it("should not subscribe when there is no active validator", () => {
@@ -121,7 +121,7 @@ describe("AttnetsService", function () {
     service.addCommitteeSubscriptions([subscription]);
     expect(gossipStub.subscribeTopic.calledOnce).to.be.true;
     expect(metadata.seqNumber).to.be.equal(BigInt(1));
-    for (let numEpoch = 0; numEpoch < 2 * EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION; numEpoch++) {
+    for (let numEpoch = 0; numEpoch <= numEpochRandomSubscription; numEpoch++) {
       // avoid known validator expiry
       service.addCommitteeSubscriptions([subscription]);
       sandbox.clock.tick(SLOTS_PER_EPOCH * SECONDS_PER_SLOT * 1000);
@@ -130,6 +130,32 @@ describe("AttnetsService", function () {
     expect(gossipStub.unsubscribeTopic).to.be.called;
     // rebalance twice
     expect(metadata.seqNumber).to.be.equal(BigInt(2));
+  });
+
+  // Reproduce issue https://github.com/ChainSafe/lodestar/issues/4929
+  it("should NOT unsubscribe any subnet if there are 64 known validators", async () => {
+    expect(chain.clock.currentSlot).to.be.equal(startSlot, "incorrect start slot");
+    // after random subnet expiration but before the next epoch
+    subscription.slot = startSlot + numEpochRandomSubscription * SLOTS_PER_EPOCH + 1;
+    subscription.isAggregator = true;
+    // expect to subscribe to all random subnets
+    const subscriptions = Array.from({length: ATTESTATION_SUBNET_COUNT}, (_, i) => ({
+      ...subscription,
+      validatorIndex: i,
+    }));
+    service.addCommitteeSubscriptions(subscriptions);
+    for (let numEpoch = 0; numEpoch < numEpochRandomSubscription; numEpoch++) {
+      // avoid known validator expiry
+      service.addCommitteeSubscriptions(subscriptions);
+      sandbox.clock.tick(SLOTS_PER_EPOCH * SECONDS_PER_SLOT * 1000);
+    }
+    // tick 3 next slots to expect an attempt to expire committee subscription
+    sandbox.clock.tick(3 * SECONDS_PER_SLOT * 1000);
+    // should not unsubscribe any subnet topics as we have ATTESTATION_SUBNET_COUNT subscription
+    expect(gossipStub.unsubscribeTopic.called).to.be.equal(
+      false,
+      "should not unsubscribe any subnet topic if full random subnet subscriptions"
+    );
   });
 
   it("should prepare for a hard fork", async () => {
