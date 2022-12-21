@@ -15,7 +15,7 @@ import {Eth2Gossipsub, GossipType} from "../gossip/index.js";
 import {MetadataController} from "../metadata.js";
 import {SubnetMap, RequestedSubnet} from "../peers/utils/index.js";
 import {getActiveForks} from "../forks.js";
-import {IAttnetsService, CommitteeSubscription, SubnetsServiceOpts, RandBetweenFn} from "./interface.js";
+import {IAttnetsService, CommitteeSubscription, SubnetsServiceOpts, RandBetweenFn, ShuffleFn} from "./interface.js";
 
 /**
  * The time (in slots) before a last seen validator is considered absent and we unsubscribe from the random
@@ -48,6 +48,7 @@ export class AttnetsService implements IAttnetsService {
   private knownValidators = new Map<number, Slot>();
 
   private randBetweenFn: RandBetweenFn;
+  private shuffleFn: ShuffleFn;
 
   constructor(
     private readonly config: IChainForkConfig,
@@ -66,6 +67,7 @@ export class AttnetsService implements IAttnetsService {
     }
 
     this.randBetweenFn = this.opts?.randBetweenFn ?? randBetween;
+    this.shuffleFn = this.opts?.shuffleFn ?? shuffle;
   }
 
   start(): void {
@@ -186,6 +188,8 @@ export class AttnetsService implements IAttnetsService {
     const expired = this.subscriptionsRandom.getExpired(slot);
     const currentSlot = this.chain.clock.currentSlot;
 
+    if (expired.length === 0) return;
+
     if (this.knownValidators.size * RANDOM_SUBNETS_PER_VALIDATOR >= ATTESTATION_SUBNET_COUNT) {
       // Optimization: If we have to be subcribed to all subnets, no need to unsubscribe. Just extend the timeout
       for (const subnet of expired) {
@@ -237,7 +241,7 @@ export class AttnetsService implements IAttnetsService {
       const activeSubnets = new Set(this.subscriptionsRandom.getActive(slot));
       const allSubnets = Array.from({length: ATTESTATION_SUBNET_COUNT}, (_, i) => i);
       const availableSubnets = allSubnets.filter((subnet) => !activeSubnets.has(subnet));
-      const subnetsToConnect = shuffle(availableSubnets).slice(0, subnetDiff);
+      const subnetsToConnect = this.shuffleFn(availableSubnets).slice(0, subnetDiff);
 
       // Tell gossip to connect to the subnets if not connected already
       this.subscribeToSubnets(subnetsToConnect);
