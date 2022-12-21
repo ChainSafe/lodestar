@@ -23,6 +23,10 @@ export interface IAttnetsService extends ISubnetsService {
   shouldProcess(subnet: number, slot: Slot): boolean;
 }
 
+export type RandBetweenFn = (min: number, max: number) => number;
+
 export type SubnetsServiceOpts = {
   subscribeAllSubnets?: boolean;
+  // For unit test
+  randBetweenFn?: RandBetweenFn;
 };

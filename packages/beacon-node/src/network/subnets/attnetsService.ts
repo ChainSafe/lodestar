@@ -15,7 +15,7 @@ import {Eth2Gossipsub, GossipType} from "../gossip/index.js";
 import {MetadataController} from "../metadata.js";
 import {SubnetMap, RequestedSubnet} from "../peers/utils/index.js";
 import {getActiveForks} from "../forks.js";
-import {IAttnetsService, CommitteeSubscription, SubnetsServiceOpts} from "./interface.js";
+import {IAttnetsService, CommitteeSubscription, SubnetsServiceOpts, RandBetweenFn} from "./interface.js";
 
 /**
  * The time (in slots) before a last seen validator is considered absent and we unsubscribe from the random
@@ -47,6 +47,8 @@ export class AttnetsService implements IAttnetsService {
    */
   private knownValidators = new Map<number, Slot>();
 
+  private randBetweenFn: RandBetweenFn;
+
   constructor(
     private readonly config: IChainForkConfig,
     private readonly chain: IBeaconChain,
@@ -62,6 +64,8 @@ export class AttnetsService implements IAttnetsService {
         this.committeeSubnets.request({subnet, toSlot: Infinity});
       }
     }
+
+    this.randBetweenFn = this.opts?.randBetweenFn ?? randBetween;
   }
 
   start(): void {
@@ -185,7 +189,7 @@ export class AttnetsService implements IAttnetsService {
     if (this.knownValidators.size * RANDOM_SUBNETS_PER_VALIDATOR >= ATTESTATION_SUBNET_COUNT) {
       // Optimization: If we have to be subcribed to all subnets, no need to unsubscribe. Just extend the timeout
       for (const subnet of expired) {
-        this.subscriptionsRandom.request({subnet, toSlot: randomSubscriptionSlotLen() + currentSlot});
+        this.subscriptionsRandom.request({subnet, toSlot: this.randomSubscriptionSlotLen() + currentSlot});
       }
       return;
     }
@@ -241,7 +245,7 @@ export class AttnetsService implements IAttnetsService {
       // Register these new subnets until some future slot
       for (const subnet of subnetsToConnect) {
         // the heartbeat will help connect to respective peers
-        this.subscriptionsRandom.request({subnet, toSlot: randomSubscriptionSlotLen() + slot});
+        this.subscriptionsRandom.request({subnet, toSlot: this.randomSubscriptionSlotLen() + slot});
       }
     }
 
@@ -305,10 +309,11 @@ export class AttnetsService implements IAttnetsService {
       }
     }
   }
-}
 
-function randomSubscriptionSlotLen(): Slot {
-  return (
-    randBetween(EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION, 2 * EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION) * SLOTS_PER_EPOCH
-  );
+  private randomSubscriptionSlotLen(): Slot {
+    return (
+      this.randBetweenFn(EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION, 2 * EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION) *
+      SLOTS_PER_EPOCH
+    );
+  }
 }
