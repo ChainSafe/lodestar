@@ -65,9 +65,8 @@ export class MockValidator {
 
     // "start" the validator
     this.state = Status.running;
-    this.clock.start(this.controller.signal);
-
     this.clock.runEverySlot(this.produceAttestationData);
+    this.clock.start(this.controller.signal);
   }
 
   get isRunning(): boolean {
