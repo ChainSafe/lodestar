@@ -192,8 +192,9 @@ export class AttnetsService implements IAttnetsService {
    */
   private unsubscribeExpiredCommitteeSubnets(slot: Slot): void {
     const expired = this.subscriptionsCommittee.getExpired(slot);
-    if (expired.length === 0) return;
-    this.unsubscribeSubnets(expired, slot, SubnetSource.committee);
+    if (expired.length > 0) {
+      this.unsubscribeSubnets(expired, slot, SubnetSource.committee);
+    }
   }
 
   /**
@@ -205,7 +206,9 @@ export class AttnetsService implements IAttnetsService {
     const expired = this.subscriptionsRandom.getExpired(slot);
     const currentSlot = this.chain.clock.currentSlot;
 
-    if (expired.length === 0) return;
+    if (expired.length === 0) {
+      return;
+    }
 
     if (this.knownValidators.size * RANDOM_SUBNETS_PER_VALIDATOR >= ATTESTATION_SUBNET_COUNT) {
       // Optimization: If we have to be subcribed to all subnets, no need to unsubscribe. Just extend the timeout

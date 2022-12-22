@@ -28,7 +28,7 @@ export type ShuffleFn = <T>(arr: T[]) => T[];
 
 export type SubnetsServiceOpts = {
   subscribeAllSubnets?: boolean;
-  // For unit test
+  // For deterministic randomness in unit test after ESM prevents simple import mocking
   randBetweenFn?: RandBetweenFn;
   shuffleFn?: ShuffleFn;
 };
