@@ -43,7 +43,7 @@ fs.writeFileSync(docsMarkdownPath, docsString);
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function cmdToMarkdownSection(cmd: ICliCommand<any>, parentCommand?: string): IMarkdownSection {
   const commandJson = [parentCommand, cmd.command.replace("<command>", "")].filter(Boolean).join(" ");
-  const body = [cmd.describe];
+  const body = [cmd.describe as string];
 
   if (cmd.examples) {
     body.push("**Examples**");
@@ -76,7 +76,10 @@ function cmdToMarkdownSection(cmd: ICliCommand<any>, parentCommand?: string): IM
   return {
     title: `\`${commandJson}\``,
     body,
-    subsections: (cmd.subcommands || []).map((subcmd) => cmdToMarkdownSection(subcmd, commandJson)),
+    subsections: (cmd.subcommands || [])
+      // do not render hidden subcommand
+      .filter((cmd) => cmd.describe !== false)
+      .map((subcmd) => cmdToMarkdownSection(subcmd, commandJson)),
   };
 }
 

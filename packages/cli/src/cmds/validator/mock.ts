@@ -35,8 +35,8 @@ export const mock: ICliCommand<MockValidatorArgs, IGlobalArgs> = {
       description: "The beacon node http url",
       type: "string",
     },
-    // Metrics
 
+    // Metrics
     metrics: {
       type: "boolean",
       description: "Enable the Prometheus metrics HTTP server",
@@ -87,13 +87,12 @@ export const mock: ICliCommand<MockValidatorArgs, IGlobalArgs> = {
     logger.info("Connecting to LevelDB database", {path: validatorPaths.validatorsDbDir});
     const register = args["metrics"] ? new RegistryMetricCreator() : null;
     const metrics = register && getMetrics((register as unknown) as MetricsRegister, {version, commit, network});
+
     if (metrics) {
       collectNodeJSMetrics(register);
-
       const port = args["metrics.port"] ?? validatorMetricsDefaultOptions.port;
       const address = args["metrics.address"] ?? validatorMetricsDefaultOptions.address;
       const metricsServer = new HttpMetricsServer({port, address}, {register, logger});
-
       onGracefulShutdownCbs.push(() => metricsServer.stop());
       await metricsServer.start();
     }
