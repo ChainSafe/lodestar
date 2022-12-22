@@ -294,6 +294,48 @@ export function createLodestarMetrics(
       buckets: [0.1, 1, 10, 100],
     }),
 
+    attnetsService: {
+      committeeSubnets: register.gauge({
+        name: "lodestar_attnets_service_committee_subnets_total",
+        help: "Count of committee subnets",
+      }),
+      subscriptionsCommittee: register.gauge({
+        name: "lodestar_attnets_service_committee_subscriptions_total",
+        help: "Count of committee subscriptions",
+      }),
+      subscriptionsRandom: register.gauge({
+        name: "lodestar_attnets_service_random_subscriptions_total",
+        help: "Count of random subscriptions",
+      }),
+      subscribeSubnets: register.gauge<"subnet" | "src">({
+        name: "lodestar_attnets_service_subscribe_subnets_total",
+        help: "Count of subscribe_subnets calls",
+        labelNames: ["subnet", "src"],
+      }),
+      unsubscribeSubnets: register.gauge<"subnet" | "src">({
+        name: "lodestar_attnets_service_unsubscribe_subnets_total",
+        help: "Count of unsubscribe_subnets calls",
+        labelNames: ["subnet", "src"],
+      }),
+    },
+
+    syncnetsService: {
+      subscriptionsCommittee: register.gauge({
+        name: "lodestar_syncnets_service_committee_subscriptions_total",
+        help: "Count of syncnet committee subscriptions",
+      }),
+      subscribeSubnets: register.gauge<"subnet">({
+        name: "lodestar_syncnets_service_subscribe_subnets_total",
+        help: "Count of syncnet subscribe_subnets calls",
+        labelNames: ["subnet"],
+      }),
+      unsubscribeSubnets: register.gauge<"subnet">({
+        name: "lodestar_syncnets_service_unsubscribe_subnets_total",
+        help: "Count of syncnet unsubscribe_subnets calls",
+        labelNames: ["subnet"],
+      }),
+    },
+
     regenQueue: {
       length: register.gauge({
         name: "lodestar_regen_queue_length",
