@@ -199,8 +199,10 @@ export const forkChoiceTest: TestRunnerFn<ForkChoiceTestCase, void> = (fork) => 
             const proposerBootRoot = (chain.forkChoice as ForkChoice).getProposerBoostRoot();
 
             if (step.checks.head !== undefined) {
-              expect(head.slot).to.be.equal(bnToNum(step.checks.head.slot), `Invalid head slot at step ${i}`);
-              expect(head.blockRoot).to.be.equal(step.checks.head.root, `Invalid head root at step ${i}`);
+              expect({slot: head.slot, root: head.blockRoot}).deep.equals(
+                {slot: bnToNum(step.checks.head.slot), root: step.checks.head.root},
+                `Invalid head at step ${i}`
+              );
             }
             if (step.checks.proposer_boost_root !== undefined) {
               expect(proposerBootRoot).to.be.equal(
