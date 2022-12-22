@@ -59,7 +59,7 @@ export class MockValidator {
     emitter.setMaxListeners(Infinity);
 
     this.config = config;
-    this.logger = logger;
+    this.logger = logger.child({module: "mock"});
     this.api = api;
     this.clock = clock;
 
@@ -114,6 +114,7 @@ export class MockValidator {
     await sleep(this.clock.msToSlot(slot + 1 / 3));
     // There should be committee index 0 in all committees
     const committeeIndex = 0;
+    this.logger.info("Producing attestation data", {slot, committeeIndex});
     await this.api.validator.produceAttestationData(committeeIndex, slot).catch((e: Error) => {
       throw extendError(e, "Error producing attestation");
     });
