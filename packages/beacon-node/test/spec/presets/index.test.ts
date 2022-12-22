@@ -33,7 +33,7 @@ specTestIterator(
     epoch_processing: {type: RunnerType.default, fn: epochProcessing(["invalid_large_withdrawable_epoch"])},
     finality: {type: RunnerType.default, fn: finality},
     fork: {type: RunnerType.default, fn: fork},
-    fork_choice: {type: RunnerType.default, fn: forkChoiceTest},
+    fork_choice: {type: RunnerType.default, fn: forkChoiceTest({onlyPredefinedResponses: false})},
     genesis: {type: RunnerType.default, fn: genesis},
     light_client: {type: RunnerType.default, fn: lightClient},
     merkle: {type: RunnerType.default, fn: merkle},
@@ -51,7 +51,7 @@ specTestIterator(
         "LightClientOptimisticUpdate",
       ]),
     },
-    sync: {type: RunnerType.default, fn: forkChoiceTest},
+    sync: {type: RunnerType.default, fn: forkChoiceTest({onlyPredefinedResponses: true})},
     transition: {type: RunnerType.default, fn: transition},
   },
   skipOpts

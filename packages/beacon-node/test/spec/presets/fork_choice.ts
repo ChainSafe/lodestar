@@ -37,7 +37,9 @@ const ATTESTER_SLASHING_FILE_NAME = "^(attester_slashing)_([0-9a-zA-Z])+$";
 
 const logger = testLogger("spec-test");
 
-export const forkChoiceTest: TestRunnerFn<ForkChoiceTestCase, void> = (fork) => {
+export const forkChoiceTest = (opts: {onlyPredefinedResponses: boolean}): TestRunnerFn<ForkChoiceTestCase, void> => (
+  fork
+) => {
   return {
     testFunction: async (testcase) => {
       const {steps, anchorState} = testcase;
@@ -50,6 +52,7 @@ export const forkChoiceTest: TestRunnerFn<ForkChoiceTestCase, void> = (fork) => 
       const clock = new ClockStopped(currentSlot);
       const eth1 = new Eth1ForBlockProductionMock();
       const executionEngineBackend = new ExecutionEngineMockBackend({
+        onlyPredefinedResponses: opts.onlyPredefinedResponses,
         genesisBlockHash: isExecutionStateType(anchorState)
           ? toHexString(anchorState.latestExecutionPayloadHeader.blockHash)
           : ZERO_HASH_HEX,
@@ -141,6 +144,7 @@ export const forkChoiceTest: TestRunnerFn<ForkChoiceTestCase, void> = (fork) => 
               .BeaconBlock.hashTreeRoot(signedBlock.message);
             logger.debug(`Step ${i}/${stepsLen} block`, {
               slot,
+              id: step.block,
               root: toHexString(blockRoot),
               parentRoot: toHexString(signedBlock.message.parentRoot),
               isValid,

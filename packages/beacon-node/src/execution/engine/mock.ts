@@ -35,6 +35,7 @@ const PRUNE_PAYLOAD_ID_AFTER_MS = 5000;
 
 export type ExecutionEngineMockOpts = {
   genesisBlockHash: string;
+  onlyPredefinedResponses?: boolean;
   capellaForkTimestamp?: number;
   eip4844ForkTimestamp?: number;
 };
@@ -132,6 +133,8 @@ export class ExecutionEngineMockBackend implements IJsonRpcBackend {
     const predefinedResponse = this.predefinedPayloadStatuses.get(blockHash);
     if (predefinedResponse) {
       return predefinedResponse;
+    } else if (this.opts.onlyPredefinedResponses) {
+      throw Error(`No predefined response for blockHash ${blockHash}`);
     }
 
     // 1. Client software MUST validate blockHash value as being equivalent to Keccak256(RLP(ExecutionBlockHeader)),
@@ -193,6 +196,8 @@ export class ExecutionEngineMockBackend implements IJsonRpcBackend {
         payloadStatus: predefinedResponse,
         payloadId: null,
       };
+    } else if (this.opts.onlyPredefinedResponses) {
+      throw Error(`No predefined response for headBlockHash ${headBlockHash}`);
     }
 
     // 1. Client software MAY initiate a sync process if forkchoiceState.headBlockHash references an unknown payload or
