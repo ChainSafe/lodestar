@@ -12,7 +12,7 @@ import {validatorMetricsDefaultOptions} from "./options.js";
 /* eslint-disable no-console */
 
 type MockValidatorArgs = {
-  beaconNode: string;
+  beaconNodes: string;
   metrics?: boolean;
   "metrics.port"?: number;
   "metrics.address"?: string;
@@ -25,13 +25,14 @@ export const mock: ICliCommand<MockValidatorArgs, IGlobalArgs> = {
 
   examples: [
     {
-      command: "validator mock --beaconNode ...",
+      command: "validator mock --beaconNodes ...",
       description: "Run validator mock connecting to a specified beacon node url",
     },
   ],
 
   options: {
-    beaconNode: {
+    // same to validator to simplify deployment
+    beaconNodes: {
       description: "The beacon node http url",
       type: "string",
     },
@@ -100,7 +101,7 @@ export const mock: ICliCommand<MockValidatorArgs, IGlobalArgs> = {
     const mockValidator = await MockValidator.initializeFromBeaconNode(
       {
         config,
-        api: args.beaconNode,
+        api: args.beaconNodes,
         logger,
         abortController,
       },
