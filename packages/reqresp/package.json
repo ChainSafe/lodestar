@@ -70,7 +70,7 @@
     "varint": "^6.0.0"
   },
   "peerDependencies": {
-    "libp2p": "0.39.2"
+    "libp2p": "0.41.0"
   },
   "keywords": [
     "ethereum",
