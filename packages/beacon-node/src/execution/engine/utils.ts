@@ -16,7 +16,7 @@ export class ExecutionEngineMockJsonRpcClient implements IJsonRpcHttpClient {
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return handler(payload.params as any) as R;
+    return handler(...(payload.params as any[])) as R;
   }
 
   fetchWithRetries<R, P = IJson[]>(payload: IRpcPayload<P>): Promise<R> {
