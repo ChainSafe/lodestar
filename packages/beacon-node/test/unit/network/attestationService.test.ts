@@ -33,10 +33,9 @@ describe("AttnetsService", function () {
   let chain: IBeaconChain;
   let state: BeaconStateAllForks;
   const logger = testLogger();
-  const committeeSubnet = 10;
   const subscription: CommitteeSubscription = {
     validatorIndex: 2021,
-    subnet: committeeSubnet,
+    subnet: COMMITTEE_SUBNET_SUBSCRIPTION,
     slot: 100,
     isAggregator: false,
   };
@@ -136,11 +135,14 @@ describe("AttnetsService", function () {
   it("should NOT unsubscribe any subnet if there are 64 known validators", async () => {
     expect(chain.clock.currentSlot).to.be.equal(startSlot, "incorrect start slot");
     // after random subnet expiration but before the next epoch
-    subscription.slot = startSlot + numEpochRandomSubscription * SLOTS_PER_EPOCH + 1;
-    subscription.isAggregator = true;
+    const tcSubscription = {
+      ...subscription,
+      slot: startSlot + numEpochRandomSubscription * SLOTS_PER_EPOCH + 1,
+      isAggregator: true,
+    };
     // expect to subscribe to all random subnets
     const subscriptions = Array.from({length: ATTESTATION_SUBNET_COUNT}, (_, i) => ({
-      ...subscription,
+      ...tcSubscription,
       validatorIndex: i,
     }));
     service.addCommitteeSubscriptions(subscriptions);
@@ -186,8 +188,9 @@ describe("AttnetsService", function () {
     }
   });
 
-  it.skip("handle committee subnet the same to random subnet", () => {
+  it("handle committee subnet the same to random subnet", () => {
     // randomUtil.withArgs(0, ATTESTATION_SUBNET_COUNT).returns(COMMITTEE_SUBNET_SUBSCRIPTION);
+    randomSubnet = COMMITTEE_SUBNET_SUBSCRIPTION;
     const aggregatorSubscription: CommitteeSubscription = {...subscription, isAggregator: true};
     service.addCommitteeSubscriptions([aggregatorSubscription]);
     expect(service.getActiveSubnets()).to.be.deep.equal([{subnet: COMMITTEE_SUBNET_SUBSCRIPTION, toSlot: 101}]);
@@ -197,6 +200,6 @@ describe("AttnetsService", function () {
     // pass through subscription slot
     sandbox.clock.tick((aggregatorSubscription.slot + 2) * SECONDS_PER_SLOT * 1000);
     // don't unsubscribe bc random subnet is still there
-    expect(gossipStub.unsubscribeTopic).to.be.called;
+    expect(gossipStub.unsubscribeTopic).to.be.not.called;
   });
 });
