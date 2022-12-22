@@ -8,6 +8,7 @@ import {getActiveForks} from "../forks.js";
 import {Eth2Gossipsub, GossipType} from "../gossip/index.js";
 import {MetadataController} from "../metadata.js";
 import {RequestedSubnet, SubnetMap} from "../peers/utils/index.js";
+import {IMetrics} from "../../metrics/metrics.js";
 import {CommitteeSubscription, ISubnetsService, SubnetsServiceOpts} from "./interface.js";
 
 const gossipType = GossipType.sync_committee;
@@ -32,8 +33,13 @@ export class SyncnetsService implements ISubnetsService {
     private readonly gossip: Eth2Gossipsub,
     private readonly metadata: MetadataController,
     private readonly logger: ILogger,
+    private readonly metrics: IMetrics | null,
     private readonly opts?: SubnetsServiceOpts
-  ) {}
+  ) {
+    if (metrics) {
+      metrics.syncnetsService.subscriptionsCommittee.addCollect(() => this.onScrapeLodestarMetrics(metrics));
+    }
+  }
 
   start(): void {
     this.chain.emitter.on(ChainEvent.clockEpoch, this.onEpoch);
@@ -120,6 +126,7 @@ export class SyncnetsService implements ISubnetsService {
         for (const fork of forks) {
           this.gossip.subscribeTopic({type: gossipType, fork, subnet});
         }
+        this.metrics?.syncnetsService.subscribeSubnets.inc({subnet});
       }
     }
   }
@@ -129,11 +136,16 @@ export class SyncnetsService implements ISubnetsService {
     const forks = getActiveForks(this.config, this.chain.clock.currentEpoch);
     for (const subnet of subnets) {
       // No need to check if active in subscriptionsCommittee since we only have a single SubnetMap
-      for (const fork of forks) {
-        if (!this.opts?.subscribeAllSubnets) {
+      if (!this.opts?.subscribeAllSubnets) {
+        for (const fork of forks) {
           this.gossip.unsubscribeTopic({type: gossipType, fork, subnet});
         }
+        this.metrics?.syncnetsService.unsubscribeSubnets.inc({subnet});
       }
     }
+  }
+
+  private onScrapeLodestarMetrics(metrics: IMetrics): void {
+    metrics.syncnetsService.subscriptionsCommittee.set(this.subscriptionsCommittee.size);
   }
 }
