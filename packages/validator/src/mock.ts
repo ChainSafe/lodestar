@@ -110,7 +110,7 @@ export class MockValidator {
   /**
    * Produce attestation data right at 1/3 of slot to monitor I/O lag issue.
    */
-  private async produceAttestationData(slot: Slot): Promise<void> {
+  private produceAttestationData = async (slot: Slot): Promise<void> => {
     await sleep(this.clock.msToSlot(slot + 1 / 3));
     // There should be committee index 0 in all committees
     const committeeIndex = 0;
@@ -119,5 +119,5 @@ export class MockValidator {
       throw extendError(e, "Error producing attestation");
     });
     this.logger.info("Produced attestation successfully", {slot, committeeIndex});
-  }
+  };
 }
