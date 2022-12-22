@@ -1,15 +1,21 @@
 import {setMaxListeners} from "node:events";
 import path from "node:path";
-import {MockValidator} from "@lodestar/validator";
+import {getMetrics, MetricsRegister, MockValidator} from "@lodestar/validator";
+import {collectNodeJSMetrics, HttpMetricsServer, RegistryMetricCreator} from "@lodestar/beacon-node";
 import {getCliLogger, ICliCommand, onGracefulShutdown} from "../../util/index.js";
 import {IGlobalArgs} from "../../options/index.js";
 import {getBeaconConfigFromArgs} from "../../config/index.js";
+import {getVersionData} from "../../util/version.js";
 import {getValidatorPaths} from "./paths.js";
+import {validatorMetricsDefaultOptions} from "./options.js";
 
 /* eslint-disable no-console */
 
 type MockValidatorArgs = {
   beaconNode: string;
+  metrics?: boolean;
+  "metrics.port"?: number;
+  "metrics.address"?: string;
 };
 
 export const mock: ICliCommand<MockValidatorArgs, IGlobalArgs> = {
@@ -28,6 +34,28 @@ export const mock: ICliCommand<MockValidatorArgs, IGlobalArgs> = {
     beaconNode: {
       description: "The beacon node http url",
       type: "string",
+    },
+    // Metrics
+
+    metrics: {
+      type: "boolean",
+      description: "Enable the Prometheus metrics HTTP server",
+      defaultDescription: String(validatorMetricsDefaultOptions.enabled),
+      group: "metrics",
+    },
+
+    "metrics.port": {
+      type: "number",
+      description: "Listen TCP port for the Prometheus metrics HTTP server",
+      defaultDescription: String(validatorMetricsDefaultOptions.port),
+      group: "metrics",
+    },
+
+    "metrics.address": {
+      type: "string",
+      description: "Listen address for the Prometheus metrics HTTP server",
+      defaultDescription: String(validatorMetricsDefaultOptions.address),
+      group: "metrics",
     },
   },
 
@@ -54,12 +82,31 @@ export const mock: ICliCommand<MockValidatorArgs, IGlobalArgs> = {
     }, logger.info.bind(logger));
     onGracefulShutdownCbs.push(async () => abortController.abort());
 
-    const mockValidator = await MockValidator.initializeFromBeaconNode({
-      config,
-      api: args.beaconNode,
-      logger,
-      abortController,
-    });
+    const {version, commit} = getVersionData();
+    logger.info("Lodestar", {network, version, commit});
+    logger.info("Connecting to LevelDB database", {path: validatorPaths.validatorsDbDir});
+    const register = args["metrics"] ? new RegistryMetricCreator() : null;
+    const metrics = register && getMetrics((register as unknown) as MetricsRegister, {version, commit, network});
+    if (metrics) {
+      collectNodeJSMetrics(register);
+
+      const port = args["metrics.port"] ?? validatorMetricsDefaultOptions.port;
+      const address = args["metrics.address"] ?? validatorMetricsDefaultOptions.address;
+      const metricsServer = new HttpMetricsServer({port, address}, {register, logger});
+
+      onGracefulShutdownCbs.push(() => metricsServer.stop());
+      await metricsServer.start();
+    }
+
+    const mockValidator = await MockValidator.initializeFromBeaconNode(
+      {
+        config,
+        api: args.beaconNode,
+        logger,
+        abortController,
+      },
+      metrics
+    );
 
     onGracefulShutdownCbs.push(() => mockValidator.close());
   },
