@@ -1,7 +1,7 @@
 import {ForkSeq} from "@lodestar/params";
 import {allForks, altair, capella} from "@lodestar/types";
 import {ISignatureSet} from "../util/index.js";
-import {CachedBeaconStateAllForks, CachedBeaconStateAltair, CachedBeaconStateCapella} from "../types.js";
+import {CachedBeaconStateAllForks, CachedBeaconStateAltair} from "../types.js";
 import {getSyncCommitteeSignatureSet} from "../block/processSyncCommittee.js";
 import {getProposerSlashingsSignatureSets} from "./proposerSlashings.js";
 import {getAttesterSlashingsSignatureSets} from "./attesterSlashings.js";
@@ -61,7 +61,8 @@ export function getBlockSignatureSets(
   // only after capella fork
   if (fork >= ForkSeq.capella) {
     const blsToExecutionChangeSignatureSets = getBlsToExecutionChangeSignatureSets(
-      state as CachedBeaconStateCapella,
+      state.config,
+      state.slot,
       signedBlock as capella.SignedBeaconBlock
     );
     if (blsToExecutionChangeSignatureSets.length > 0) {

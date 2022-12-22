@@ -294,6 +294,48 @@ export function createLodestarMetrics(
       buckets: [0.1, 1, 10, 100],
     }),
 
+    attnetsService: {
+      committeeSubnets: register.gauge({
+        name: "lodestar_attnets_service_committee_subnets_total",
+        help: "Count of committee subnets",
+      }),
+      subscriptionsCommittee: register.gauge({
+        name: "lodestar_attnets_service_committee_subscriptions_total",
+        help: "Count of committee subscriptions",
+      }),
+      subscriptionsRandom: register.gauge({
+        name: "lodestar_attnets_service_random_subscriptions_total",
+        help: "Count of random subscriptions",
+      }),
+      subscribeSubnets: register.gauge<"subnet" | "src">({
+        name: "lodestar_attnets_service_subscribe_subnets_total",
+        help: "Count of subscribe_subnets calls",
+        labelNames: ["subnet", "src"],
+      }),
+      unsubscribeSubnets: register.gauge<"subnet" | "src">({
+        name: "lodestar_attnets_service_unsubscribe_subnets_total",
+        help: "Count of unsubscribe_subnets calls",
+        labelNames: ["subnet", "src"],
+      }),
+    },
+
+    syncnetsService: {
+      subscriptionsCommittee: register.gauge({
+        name: "lodestar_syncnets_service_committee_subscriptions_total",
+        help: "Count of syncnet committee subscriptions",
+      }),
+      subscribeSubnets: register.gauge<"subnet">({
+        name: "lodestar_syncnets_service_subscribe_subnets_total",
+        help: "Count of syncnet subscribe_subnets calls",
+        labelNames: ["subnet"],
+      }),
+      unsubscribeSubnets: register.gauge<"subnet">({
+        name: "lodestar_syncnets_service_unsubscribe_subnets_total",
+        help: "Count of syncnet unsubscribe_subnets calls",
+        labelNames: ["subnet"],
+      }),
+    },
+
     regenQueue: {
       length: register.gauge({
         name: "lodestar_regen_queue_length",
@@ -609,6 +651,31 @@ export function createLodestarMetrics(
         help: "Time elapsed between block slot time and the time block processed",
         buckets: [0.5, 1, 2, 4, 6, 12],
       }),
+      receivedToGossipValidate: register.histogram({
+        name: "lodestar_gossip_block_received_to_gossip_validate",
+        help: "Time elapsed between block received and block validated",
+        buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5, 2, 4],
+      }),
+      receivedToStateTransition: register.histogram({
+        name: "lodestar_gossip_block_received_to_state_transition",
+        help: "Time elapsed between block received and block state transition",
+        buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5, 2, 4],
+      }),
+      receivedToSignaturesVerification: register.histogram({
+        name: "lodestar_gossip_block_received_to_signatures_verification",
+        help: "Time elapsed between block received and block signatures verification",
+        buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5, 2, 4],
+      }),
+      receivedToExecutionPayloadVerification: register.histogram({
+        name: "lodestar_gossip_block_received_to_execution_payload_verification",
+        help: "Time elapsed between block received and execution payload verification",
+        buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5, 2, 4],
+      }),
+      receivedToBlockImport: register.histogram({
+        name: "lodestar_gossip_block_received_to_block_import",
+        help: "Time elapsed between block received and block import",
+        buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5, 2, 4],
+      }),
     },
     elapsedTimeTillBecomeHead: register.histogram({
       name: "lodestar_gossip_block_elapsed_time_till_become_head",
@@ -672,6 +739,10 @@ export function createLodestarMetrics(
       voluntaryExitPoolSize: register.gauge({
         name: "lodestar_oppool_voluntary_exit_pool_size",
         help: "Current size of the VoluntaryExitPool",
+      }),
+      blsToExecutionChangePoolSize: register.gauge({
+        name: "lodestar_oppool_bls_to_execution_change_pool_size",
+        help: "Current size of the blsToExecutionChangePool",
       }),
       syncCommitteeMessagePoolSize: register.gauge({
         name: "lodestar_oppool_sync_committee_message_pool_size",

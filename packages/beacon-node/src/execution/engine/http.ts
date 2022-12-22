@@ -122,7 +122,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     });
     this.rpcFetchQueue = new JobItemQueue<[EngineRequest], EngineResponse>(
       this.jobQueueProcessor,
-      {maxLength: QUEUE_MAX_LENGTH, maxConcurrency: 1, signal},
+      {maxLength: QUEUE_MAX_LENGTH, maxConcurrency: 1, noYieldIfOneItem: true, signal},
       metrics?.engineHttpProcessorQueue
     );
   }
@@ -153,7 +153,12 @@ export class ExecutionEngineHttp implements IExecutionEngine {
    * If any of the above fails due to errors unrelated to the normal processing flow of the method, client software MUST respond with an error object.
    */
   async notifyNewPayload(fork: ForkName, executionPayload: allForks.ExecutionPayload): Promise<ExecutePayloadResponse> {
-    const method = ForkSeq[fork] >= ForkSeq.capella ? "engine_newPayloadV2" : "engine_newPayloadV1";
+    const method =
+      ForkSeq[fork] >= ForkSeq.eip4844
+        ? "engine_newPayloadV3"
+        : ForkSeq[fork] >= ForkSeq.capella
+        ? "engine_newPayloadV2"
+        : "engine_newPayloadV1";
     const serializedExecutionPayload = serializeExecutionPayload(fork, executionPayload);
     const {status, latestValidHash, validationError} = await (this.rpcFetchQueue.push({
       method,
@@ -309,8 +314,13 @@ export class ExecutionEngineHttp implements IExecutionEngine {
    * 3. Client software MAY stop the corresponding building process after serving this call.
    */
   async getPayload(fork: ForkName, payloadId: PayloadId): Promise<allForks.ExecutionPayload> {
-    const method = ForkSeq[fork] >= ForkSeq.capella ? "engine_getPayloadV2" : "engine_getPayloadV1";
-    const executionPayloadRpc = await this.rpc.fetchWithRetries<
+    const method =
+      ForkSeq[fork] >= ForkSeq.eip4844
+        ? "engine_getPayloadV3"
+        : ForkSeq[fork] >= ForkSeq.capella
+        ? "engine_getPayloadV2"
+        : "engine_getPayloadV1";
+    const payloadResponse = await this.rpc.fetchWithRetries<
       EngineApiRpcReturnTypes[typeof method],
       EngineApiRpcParamTypes[typeof method]
     >(
@@ -320,7 +330,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       },
       getPayloadOpts
     );
-    return parseExecutionPayload(fork, executionPayloadRpc);
+    return parseExecutionPayload(fork, payloadResponse);
   }
 
   async getBlobsBundle(payloadId: PayloadId): Promise<BlobsBundle> {
@@ -374,6 +384,7 @@ type EngineApiRpcParamTypes = {
    */
   engine_newPayloadV1: [ExecutionPayloadRpc];
   engine_newPayloadV2: [ExecutionPayloadRpc];
+  engine_newPayloadV3: [ExecutionPayloadRpc];
   /**
    * 1. Object - Payload validity status with respect to the consensus rules:
    *   - blockHash: DATA, 32 Bytes - block hash value of the payload
@@ -392,6 +403,7 @@ type EngineApiRpcParamTypes = {
    */
   engine_getPayloadV1: [QUANTITY];
   engine_getPayloadV2: [QUANTITY];
+  engine_getPayloadV3: [QUANTITY];
   /**
    * 1. Object - Instance of TransitionConfigurationV1
    */
@@ -417,6 +429,11 @@ type EngineApiRpcReturnTypes = {
     latestValidHash: DATA | null;
     validationError: string | null;
   };
+  engine_newPayloadV3: {
+    status: ExecutePayloadStatus;
+    latestValidHash: DATA | null;
+    validationError: string | null;
+  };
   engine_forkchoiceUpdatedV1: {
     payloadStatus: {status: ForkChoiceUpdateStatus; latestValidHash: DATA | null; validationError: string | null};
     payloadId: QUANTITY | null;
@@ -429,7 +446,8 @@ type EngineApiRpcReturnTypes = {
    * payloadId | Error: QUANTITY, 64 Bits - Identifier of the payload building process
    */
   engine_getPayloadV1: ExecutionPayloadRpc;
-  engine_getPayloadV2: ExecutionPayloadRpc;
+  engine_getPayloadV2: ExecutionPayloadRpcWithBlockValue;
+  engine_getPayloadV3: ExecutionPayloadRpcWithBlockValue;
   /**
    * Object - Instance of TransitionConfigurationV1
    */
@@ -495,7 +513,23 @@ export function serializeExecutionPayload(fork: ForkName, data: allForks.Executi
   return payload;
 }
 
-export function parseExecutionPayload(fork: ForkName, data: ExecutionPayloadRpc): allForks.ExecutionPayload {
+type ExecutionPayloadRpcWithBlockValue = {executionPayload: ExecutionPayloadRpc; blockValue: QUANTITY};
+type ExecutionPayloadResponse = ExecutionPayloadRpc | ExecutionPayloadRpcWithBlockValue;
+
+export function hasBlockValue(response: ExecutionPayloadResponse): response is ExecutionPayloadRpcWithBlockValue {
+  return (response as ExecutionPayloadRpcWithBlockValue).blockValue !== undefined;
+}
+
+export function parseExecutionPayload<T extends ForkName>(
+  fork: T,
+  response: ExecutionPayloadResponse
+): allForks.ExecutionPayload {
+  let data: ExecutionPayloadRpc;
+  if (hasBlockValue(response)) {
+    data = response.executionPayload;
+  } else {
+    data = response;
+  }
   const payload = {
     parentHash: dataToBytes(data.parentHash, 32),
     feeRecipient: dataToBytes(data.feeRecipient, 20),

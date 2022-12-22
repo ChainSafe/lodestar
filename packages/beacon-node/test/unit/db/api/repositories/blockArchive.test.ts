@@ -6,7 +6,6 @@ import {config} from "@lodestar/config/default";
 import {intToBytes} from "@lodestar/utils";
 import {LevelDbController, Bucket, encodeKey} from "@lodestar/db";
 
-import {generateEmptySignedBlock} from "../../../../utils/block.js";
 import {BlockArchiveRepository} from "../../../../../src/db/repositories/index.js";
 
 describe("block archive repository", function () {
@@ -28,7 +27,7 @@ describe("block archive repository", function () {
     await blockArchive.batchPut(
       Array.from({length: 1001}, (_, i) => {
         const slot = i;
-        const block = generateEmptySignedBlock();
+        const block = ssz.phase0.SignedBeaconBlock.defaultValue();
         block.message.slot = slot;
         return {
           key: slot,
@@ -109,7 +108,7 @@ describe("block archive repository", function () {
 
   it("should store indexes when adding single block", async function () {
     const spy = sinon.spy(controller, "put");
-    const block = generateEmptySignedBlock();
+    const block = ssz.phase0.SignedBeaconBlock.defaultValue();
     await blockArchive.add(block);
     expect(
       spy.withArgs(
@@ -127,7 +126,7 @@ describe("block archive repository", function () {
 
   it("should store indexes when block batch", async function () {
     const spy = sinon.spy(controller, "put");
-    const blocks = [generateEmptySignedBlock(), generateEmptySignedBlock()];
+    const blocks = [ssz.phase0.SignedBeaconBlock.defaultValue(), ssz.phase0.SignedBeaconBlock.defaultValue()];
     await blockArchive.batchAdd(blocks);
     expect(
       spy.withArgs(
@@ -144,14 +143,14 @@ describe("block archive repository", function () {
   });
 
   it("should get slot by root", async function () {
-    const block = generateEmptySignedBlock();
+    const block = ssz.phase0.SignedBeaconBlock.defaultValue();
     await blockArchive.add(block);
     const slot = await blockArchive.getSlotByRoot(ssz.phase0.BeaconBlock.hashTreeRoot(block.message));
     expect(slot).to.equal(block.message.slot);
   });
 
   it("should get block by root", async function () {
-    const block = generateEmptySignedBlock();
+    const block = ssz.phase0.SignedBeaconBlock.defaultValue();
     await blockArchive.add(block);
     const retrieved = await blockArchive.getByRoot(ssz.phase0.BeaconBlock.hashTreeRoot(block.message));
     if (!retrieved) throw Error("getByRoot returned null");
@@ -159,14 +158,14 @@ describe("block archive repository", function () {
   });
 
   it("should get slot by parent root", async function () {
-    const block = generateEmptySignedBlock();
+    const block = ssz.phase0.SignedBeaconBlock.defaultValue();
     await blockArchive.add(block);
     const slot = await blockArchive.getSlotByParentRoot(block.message.parentRoot);
     expect(slot).to.equal(block.message.slot);
   });
 
   it("should get block by parent root", async function () {
-    const block = generateEmptySignedBlock();
+    const block = ssz.phase0.SignedBeaconBlock.defaultValue();
     await blockArchive.add(block);
     const retrieved = await blockArchive.getByParentRoot(block.message.parentRoot);
     if (!retrieved) throw Error("getByRoot returned null");

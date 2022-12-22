@@ -469,10 +469,10 @@
     bls-eth-wasm "^0.4.8"
     randombytes "^2.1.0"
 
-"@chainsafe/blst@^0.2.6":
-  version "0.2.6"
-  resolved "https://registry.yarnpkg.com/@chainsafe/blst/-/blst-0.2.6.tgz#56f17c82338d62421321dca60250951dd3a7db7a"
-  integrity sha512-7mzE9IRjG0TZKPit83GT4XPSgMnqmMT4AAeUTyTj/IwO4FDPQ3fJVheT6i9LaH3I4Y18oaL68G9j+Uh3mEEAYg==
+"@chainsafe/blst@^0.2.7":
+  version "0.2.7"
+  resolved "https://registry.yarnpkg.com/@chainsafe/blst/-/blst-0.2.7.tgz#9e966b097e59d0a4f547824f8aa136b4b898d672"
+  integrity sha512-9ztDTg+/PjwOfnsJnkTkhIqWSju8XfqiX32ZLYviF+QUNrPIIeJUh4/IH94jTDpb4yVCEdGk38Sq3rBzGSNx5w==
   dependencies:
     node-fetch "^2.6.1"
     node-gyp "^8.4.0"
@@ -3254,11 +3254,6 @@
   dependencies:
     "@types/through" "*"
 
-"@types/it-all@^1.0.0":
-  version "1.0.0"
-  resolved "https://registry.npmjs.org/@types/it-all/-/it-all-1.0.0.tgz"
-  integrity sha512-sF9Os6utVd3/H+PSj7YV5Fwd/aC0LLAOr0/oW1aEx8BQFfLsq7fKIuj7vH1vzbaiQ8IkYpoP1Yu8HSIepL3xgg==
-
 "@types/js-yaml@^3.12.1", "@types/js-yaml@^3.12.5":
   version "3.12.6"
   resolved "https://registry.npmjs.org/@types/js-yaml/-/js-yaml-3.12.6.tgz"
@@ -4746,13 +4741,6 @@ bytes@3.1.2:
   version "3.1.2"
   resolved "https://registry.yarnpkg.com/bytes/-/bytes-3.1.2.tgz#8b0beeb98605adf1b128fa4386403c009e0221a5"
   integrity sha512-/Nf7TyzTx6S3yRJObOAV7956r8cr2+Oj8AC5dt8wSP3BQAoeX58NoHyCU8P8zGkNXStjTSi6fzO6F0pBdcYbEg==
-
-c-kzg@^1.0.7:
-  version "1.0.7"
-  resolved "https://registry.yarnpkg.com/c-kzg/-/c-kzg-1.0.7.tgz#33368cac542971792c65be203ea46b33a5b2c484"
-  integrity sha512-AfTJfjTBH7N4a7JAEXbrWtdzYrrXoe/GAQYDzqkF0HUc/aJPSkKwYhWxZdvZkGamQx5LXXO9EAab3+ZnK1oOsg==
-  dependencies:
-    node-addon-api "^5.0.0"
 
 cacache@^15.2.0:
   version "15.3.0"
@@ -8246,11 +8234,6 @@ istanbul-reports@^3.0.2:
     html-escaper "^2.0.0"
     istanbul-lib-report "^3.0.0"
 
-it-all@^1.0.2:
-  version "1.0.2"
-  resolved "https://registry.npmjs.org/it-all/-/it-all-1.0.2.tgz"
-  integrity sha512-3hrCLLcuHS1/VUn1qETPuh9rFTw31SBCUUijjs41VJ+oQGx3H+3Lpxo1bFD3q3570w3o99a+sfRGic5PBBt3Vg==
-
 it-all@^1.0.4, it-all@^1.0.6:
   version "1.0.6"
   resolved "https://registry.npmjs.org/it-all/-/it-all-1.0.6.tgz"
@@ -9770,11 +9753,6 @@ node-addon-api@^3.2.1:
   resolved "https://registry.yarnpkg.com/node-addon-api/-/node-addon-api-3.2.1.tgz#81325e0a2117789c0128dab65e7e38f07ceba161"
   integrity sha512-mmcei9JghVNDYydghQmeDX8KoAm0FAiYyIcUt/N4nhyAipB17pllZQDOJD2fotxABnt4Mdz+dKTO7eftLg4d0A==
 
-node-addon-api@^5.0.0:
-  version "5.0.0"
-  resolved "https://registry.yarnpkg.com/node-addon-api/-/node-addon-api-5.0.0.tgz#7d7e6f9ef89043befdb20c1989c905ebde18c501"
-  integrity sha512-CvkDw2OEnme7ybCykJpVcKH+uAOLV2qLqiyla128dN9TkEWfrYmxG6C2boDe5KcNQqZF3orkqzGgOMvZ/JNekA==
-
 node-fetch@2.6.7, node-fetch@^2.6.0, node-fetch@^2.6.1, node-fetch@^2.6.7:
   version "2.6.7"
   resolved "https://registry.npmjs.org/@achingbrain/node-fetch/-/node-fetch-2.6.7.tgz"
@@ -11082,14 +11060,7 @@ qs@6.9.3:
   resolved "https://registry.yarnpkg.com/qs/-/qs-6.9.3.tgz#bfadcd296c2d549f1dffa560619132c977f5008e"
   integrity sha512-EbZYNarm6138UKKq46tdx08Yo/q9ZhFoAXAI1meAFd2GtbRDhbZY2WQSICskT0c5q99aFzLG1D4nvTk9tqfXIw==
 
-qs@^6.10.1:
-  version "6.10.1"
-  resolved "https://registry.npmjs.org/qs/-/qs-6.10.1.tgz"
-  integrity sha512-M528Hph6wsSVOBiYUnGf+K/7w0hNshs/duGsNXPUCLH5XAqjEtiPGwNONLV0tBH8NoGb0mvD5JubnUTrujKDTg==
-  dependencies:
-    side-channel "^1.0.4"
-
-qs@^6.10.3:
+qs@^6.10.1, qs@^6.10.3:
   version "6.11.0"
   resolved "https://registry.yarnpkg.com/qs/-/qs-6.11.0.tgz#fd0d963446f7a65e1367e01abd85429453f0c37a"
   integrity sha512-MvjoMCJwEarSbUYk5O+nmoSzSutSsTwF85zcHPQ9OrlFoZOYIjaqBAJIqIXjptyD5vThxGq52Xu/MaJzRkIk4Q==

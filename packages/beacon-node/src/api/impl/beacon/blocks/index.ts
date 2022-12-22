@@ -1,9 +1,11 @@
 import {routes} from "@lodestar/api";
-
 import {computeTimeAtSlot} from "@lodestar/state-transition";
-import {SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
+import {ForkSeq, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {sleep} from "@lodestar/utils";
+import {eip4844} from "@lodestar/types";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
+import {getBlockInput} from "../../../../chain/blocks/types.js";
+import {promiseAllMaybeAsync} from "../../../../util/promises.js";
 import {BlockError, BlockErrorCode} from "../../../../chain/errors/index.js";
 import {OpSource} from "../../../../metrics/validatorMonitor.js";
 import {NetworkEvent} from "../../../../network/index.js";
@@ -186,17 +188,28 @@ export function getBeaconBlockApi({
 
       metrics?.registerBeaconBlock(OpSource.api, seenTimestampSec, signedBlock.message);
 
-      await Promise.all([
+      // TODO EIP-4844: Open question if broadcast to both block topic + block_and_blobs topic
+      const blockForImport =
+        config.getForkSeq(signedBlock.message.slot) >= ForkSeq.eip4844
+          ? getBlockInput.postEIP4844(
+              config,
+              signedBlock,
+              chain.getBlobsSidecar(signedBlock.message as eip4844.BeaconBlock)
+            )
+          : getBlockInput.preEIP4844(config, signedBlock);
+
+      await promiseAllMaybeAsync([
         // Send the block, regardless of whether or not it is valid. The API
         // specification is very clear that this is the desired behaviour.
-        network.gossip.publishBeaconBlock(signedBlock),
+        () => network.publishBeaconBlockMaybeBlobs(blockForImport),
 
-        chain.processBlock(signedBlock).catch((e) => {
-          if (e instanceof BlockError && e.type.code === BlockErrorCode.PARENT_UNKNOWN) {
-            network.events.emit(NetworkEvent.unknownBlockParent, signedBlock, network.peerId.toString());
-          }
-          throw e;
-        }),
+        () =>
+          chain.processBlock(blockForImport).catch((e) => {
+            if (e instanceof BlockError && e.type.code === BlockErrorCode.PARENT_UNKNOWN) {
+              network.events.emit(NetworkEvent.unknownBlockParent, blockForImport, network.peerId.toString());
+            }
+            throw e;
+          }),
       ]);
     },
   };

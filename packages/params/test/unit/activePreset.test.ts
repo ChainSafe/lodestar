@@ -1,7 +1,7 @@
 import {expect} from "chai";
-import {preset as mainnetParams} from "../../src/presets/mainnet/index.js";
-import {preset as minimalParams} from "../../src/presets/minimal/index.js";
-import {preset as gnosisParams} from "../../src/presets/gnosis/index.js";
+import {mainnetPreset} from "../../src/presets/mainnet.js";
+import {minimalPreset} from "../../src/presets/minimal.js";
+import {gnosisPreset as gnosisParams} from "../../src/presets/gnosis.js";
 import {ACTIVE_PRESET, PresetName} from "../../src/index.js";
 import {setActivePreset} from "../../src/setPreset.js";
 import {setActivePreset as setActivePresetLib} from "../../src/setPreset.js";
@@ -9,8 +9,8 @@ import {setActivePreset as setActivePresetLib} from "../../src/setPreset.js";
 describe("active preset", async () => {
   const exports = (await import("../../src/index.js")) as Record<string, unknown>;
   const params = {
-    [PresetName.mainnet]: mainnetParams,
-    [PresetName.minimal]: minimalParams,
+    [PresetName.mainnet]: mainnetPreset,
+    [PresetName.minimal]: minimalPreset,
     [PresetName.gnosis]: gnosisParams,
   };
 

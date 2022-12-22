@@ -59,6 +59,7 @@ const convertJobOptionsToDocker = (
 
 const connectContainerToNetwork = async (container: string, ip: string, logFilePath: string): Promise<void> => {
   await startChildProcess({
+    id: `connect ${container} to network ${dockerNetworkName}`,
     cli: {
       command: "docker",
       args: ["network", "connect", dockerNetworkName, container, "--ip", ip],
@@ -83,6 +84,7 @@ export class DockerRunner implements Runner<RunnerType.Docker> {
   async start(): Promise<void> {
     try {
       await startChildProcess({
+        id: `create docker network '${dockerNetworkName}'`,
         cli: {
           command: "docker",
           args: ["network", "create", "--subnet", `${dockerNetworkIpRange}.0/24`, dockerNetworkName],
@@ -102,6 +104,7 @@ export class DockerRunner implements Runner<RunnerType.Docker> {
     for (let i = 0; i < 5; i++) {
       try {
         await startChildProcess({
+          id: `docker network rm '${dockerNetworkName}'`,
           cli: {
             command: "docker",
             args: ["network", "rm", dockerNetworkName],
@@ -135,7 +138,7 @@ export class DockerRunner implements Runner<RunnerType.Docker> {
     const dockerJobOptions = convertJobOptionsToDocker(jobs, id, {image, dataVolumePath, exposePorts, dockerNetworkIp});
 
     const stop = async (): Promise<void> => {
-      console.log(`Stopping "${id}"...`);
+      console.log(`DockerRunner stopping '${id}'...`);
       this.emitter.emit("stopping");
       for (const {jobOptions, childProcess} of childProcesses) {
         if (jobOptions.teardown) {
@@ -144,7 +147,7 @@ export class DockerRunner implements Runner<RunnerType.Docker> {
         await stopChildProcess(childProcess);
       }
 
-      console.log(`Stopped "${id}"...`);
+      console.log(`DockerRunner stopped '${id}'`);
       this.emitter.emit("stopped");
     };
 
@@ -152,15 +155,14 @@ export class DockerRunner implements Runner<RunnerType.Docker> {
       new Promise<void>((resolve, reject) => {
         void (async () => {
           try {
-            // eslint-disable-next-line no-console
             console.log(`Starting "${id}"...`);
             this.emitter.emit("starting");
             childProcesses.push(...(await startJobs(dockerJobOptions)));
-            // eslint-disable-next-line no-console
             console.log(`Started "${id}"...`);
             this.emitter.emit("started");
 
             await connectContainerToNetwork(id, dockerNetworkIp, this.logFilePath);
+            console.log(`DockerRunner connected container to network '${id}'`);
             resolve();
           } catch (err) {
             reject(err);

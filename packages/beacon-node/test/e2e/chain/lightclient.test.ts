@@ -1,11 +1,14 @@
 import {expect} from "chai";
 import {IChainConfig} from "@lodestar/config";
-import {ssz} from "@lodestar/types";
-import {fromHexString, toHexString} from "@chainsafe/ssz";
+import {ssz, phase0} from "@lodestar/types";
+import {JsonPath, toHexString, fromHexString} from "@chainsafe/ssz";
+import {TreeOffsetProof} from "@chainsafe/persistent-merkle-tree";
 import {TimestampFormatCode} from "@lodestar/utils";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Lightclient} from "@lodestar/light-client";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {LightClientRestTransport} from "@lodestar/light-client/transport";
+import {Api, getClient} from "@lodestar/api";
 import {testLogger, LogLevel, TestLoggerOpts} from "../../utils/logger.js";
 import {getDevBeaconNode} from "../../utils/node/beacon.js";
 import {getAndInitDevValidators} from "../../utils/node/validator.js";
@@ -113,11 +116,11 @@ describe("chain / lightclient", function () {
     }).then(async (head) => {
       // Initialize lightclient
       loggerLC.info("Initializing lightclient", {slot: head.slot});
-
+      const api = getClient({baseUrl: `http://localhost:${restPort}`}, {config: bn.config});
       const lightclient = await Lightclient.initializeFromCheckpointRoot({
         config: bn.config,
         logger: loggerLC,
-        beaconApiUrl: `http://localhost:${restPort}`,
+        transport: new LightClientRestTransport(api),
         genesisData: {
           genesisTime: bn.chain.genesisTime,
           genesisValidatorsRoot: bn.chain.genesisValidatorsRoot as Uint8Array,
@@ -136,7 +139,7 @@ describe("chain / lightclient", function () {
         bn.chain.emitter.on(ChainEvent.head, async (head) => {
           try {
             // Test fetching proofs
-            const {proof, header} = await lightclient.getHeadStateProof([["latestBlockHeader", "bodyRoot"]]);
+            const {proof, header} = await getHeadStateProof(lightclient, api, [["latestBlockHeader", "bodyRoot"]]);
             const stateRootHex = toHexString(header.stateRoot);
             const lcHeadState = bn.chain.stateCache.get(stateRootHex);
             if (!lcHeadState) {
@@ -179,3 +182,18 @@ describe("chain / lightclient", function () {
     if (!head) throw Error("First beacon node has no head block");
   });
 });
+
+// TODO: Re-incorporate for REST-only light-client
+async function getHeadStateProof(
+  lightclient: Lightclient,
+  api: Api,
+  paths: JsonPath[]
+): Promise<{proof: TreeOffsetProof; header: phase0.BeaconBlockHeader}> {
+  const header = lightclient.getHead();
+  const stateId = toHexString(header.stateRoot);
+  const res = await api.proof.getStateProof(stateId, paths);
+  return {
+    proof: res.data as TreeOffsetProof,
+    header,
+  };
+}

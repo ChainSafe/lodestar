@@ -1,19 +1,19 @@
 import {PresetName} from "./presetName.js";
-import {preset as mainnet} from "./presets/mainnet/index.js";
-import {preset as minimal} from "./presets/minimal/index.js";
-import {preset as gnosis} from "./presets/gnosis/index.js";
+import {mainnetPreset} from "./presets/mainnet.js";
+import {minimalPreset} from "./presets/minimal.js";
+import {gnosisPreset} from "./presets/gnosis.js";
 import {presetStatus} from "./presetStatus.js";
 import {userSelectedPreset, userOverrides} from "./setPreset.js";
 
-export * from "./interface/index.js";
+export {BeaconPreset} from "./interface.js";
 export {ForkName, ForkSeq} from "./forkName.js";
 export {presetToJson} from "./json.js";
 export {PresetName};
 
 const presets = {
-  [PresetName.mainnet]: mainnet,
-  [PresetName.minimal]: minimal,
-  [PresetName.gnosis]: gnosis,
+  [PresetName.mainnet]: mainnetPreset,
+  [PresetName.minimal]: minimalPreset,
+  [PresetName.gnosis]: gnosisPreset,
 };
 
 // Once this file is imported, freeze the preset so calling setActivePreset() will throw an error
@@ -84,12 +84,9 @@ export const {
   BYTES_PER_LOGS_BLOOM,
   MAX_EXTRA_DATA_BYTES,
 
-  // TODO CAPELLA: Remove the bottom ones after the new spec test vectors are released
-  MAX_PARTIAL_WITHDRAWALS_PER_EPOCH,
-  WITHDRAWAL_QUEUE_LIMIT,
-
   MAX_BLS_TO_EXECUTION_CHANGES,
   MAX_WITHDRAWALS_PER_PAYLOAD,
+  MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP,
 
   FIELD_ELEMENTS_PER_BLOB,
   MAX_BLOBS_PER_BLOCK,

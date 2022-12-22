@@ -44,6 +44,7 @@ export const blsTestRunner: TestRunnerFn<BlsTestCase, unknown> = (fork, testName
     options: {
       inputTypes: {data: InputType.YAML},
       getExpected: (testCase) => testCase.data.output,
+      // Do not manually skip tests here, do it in packages/beacon-node/test/spec/general/index.test.ts
     },
   };
 };

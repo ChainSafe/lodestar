@@ -16,6 +16,7 @@ import {
   BackfilledRanges,
   BlobsSidecarRepository,
   BlobsSidecarArchiveRepository,
+  BLSToExecutionChangeRepository,
 } from "./repositories/index.js";
 import {PreGenesisState, PreGenesisStateLastProcessedBlock} from "./single/index.js";
 
@@ -41,6 +42,7 @@ export interface IBeaconDb {
   proposerSlashing: ProposerSlashingRepository;
   attesterSlashing: AttesterSlashingRepository;
   depositEvent: DepositEventRepository;
+  blsToExecutionChange: BLSToExecutionChangeRepository;
 
   // eth1 processing
   preGenesisState: PreGenesisState;
@@ -57,6 +59,8 @@ export interface IBeaconDb {
   syncCommitteeWitness: SyncCommitteeWitnessRepository;
 
   backfilledRanges: BackfilledRanges;
+
+  pruneHotDb(): Promise<void>;
 
   /** Start the connection to the db instance and open the db store. */
   start(): Promise<void>;

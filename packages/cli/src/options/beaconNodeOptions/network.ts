@@ -12,19 +12,26 @@ export interface INetworkArgs {
   bootnodes?: string[];
   targetPeers: number;
   subscribeAllSubnets: boolean;
+  mdns: boolean;
   "network.maxPeers": number;
   "network.connectToDiscv5Bootnodes": boolean;
   "network.discv5FirstQueryDelayMs": number;
-  "network.requestCountPeerLimit": number;
-  "network.blockCountTotalLimit": number;
-  "network.blockCountPeerLimit": number;
-  "network.rateTrackerTimeoutMs": number;
   "network.dontSendGossipAttestationsToForkchoice": boolean;
   "network.allowPublishToZeroPeers": boolean;
   "network.gossipsubD": number;
   "network.gossipsubDLow": number;
   "network.gossipsubDHigh": number;
   "network.gossipsubAwaitHandler": boolean;
+  "network.rateLimitMultiplier": number;
+
+  /** @deprecated This option is deprecated and should be removed in next major release. */
+  "network.requestCountPeerLimit": number;
+  /** @deprecated This option is deprecated and should be removed in next major release. */
+  "network.blockCountTotalLimit": number;
+  /** @deprecated This option is deprecated and should be removed in next major release. */
+  "network.blockCountPeerLimit": number;
+  /** @deprecated This option is deprecated and should be removed in next major release. */
+  "network.rateTrackerTimeoutMs": number;
 }
 
 export function parseArgs(args: INetworkArgs): IBeaconNodeOptions["network"] {
@@ -47,16 +54,14 @@ export function parseArgs(args: INetworkArgs): IBeaconNodeOptions["network"] {
     subscribeAllSubnets: args["subscribeAllSubnets"],
     connectToDiscv5Bootnodes: args["network.connectToDiscv5Bootnodes"],
     discv5FirstQueryDelayMs: args["network.discv5FirstQueryDelayMs"],
-    requestCountPeerLimit: args["network.requestCountPeerLimit"],
-    blockCountTotalLimit: args["network.blockCountTotalLimit"],
-    blockCountPeerLimit: args["network.blockCountPeerLimit"],
-    rateTrackerTimeoutMs: args["network.rateTrackerTimeoutMs"],
     dontSendGossipAttestationsToForkchoice: args["network.dontSendGossipAttestationsToForkchoice"],
     allowPublishToZeroPeers: args["network.allowPublishToZeroPeers"],
     gossipsubD: args["network.gossipsubD"],
     gossipsubDLow: args["network.gossipsubDLow"],
     gossipsubDHigh: args["network.gossipsubDHigh"],
     gossipsubAwaitHandler: args["network.gossipsubAwaitHandler"],
+    mdns: args["mdns"],
+    rateLimitMultiplier: args["network.rateLimitMultiplier"],
   };
 }
 
@@ -116,6 +121,13 @@ export const options: ICliCommandOptions<INetworkArgs> = {
     group: "network",
   },
 
+  mdns: {
+    type: "boolean",
+    description: "Enable mdns local peer discovery",
+    defaultDescription: String(defaultOptions.network.mdns === true),
+    group: "network",
+  },
+
   "network.maxPeers": {
     hidden: true,
     type: "number",
@@ -144,32 +156,32 @@ export const options: ICliCommandOptions<INetworkArgs> = {
     type: "number",
     description: "Max block req/resp requests per peer per rateTrackerTimeoutMs",
     hidden: true,
-    defaultDescription: String(defaultOptions.network.requestCountPeerLimit),
     group: "network",
+    deprecated: true,
   },
 
   "network.blockCountTotalLimit": {
     type: "number",
     description: "Max block count requested per rateTrackerTimeoutMs",
     hidden: true,
-    defaultDescription: String(defaultOptions.network.blockCountTotalLimit),
     group: "network",
+    deprecated: true,
   },
 
   "network.blockCountPeerLimit": {
     type: "number",
     description: "Max block count requested per peer per rateTrackerTimeoutMs",
     hidden: true,
-    defaultDescription: String(defaultOptions.network.blockCountPeerLimit),
     group: "network",
+    deprecated: true,
   },
 
   "network.rateTrackerTimeoutMs": {
     type: "number",
     description: "Time window to track rate limit in milli seconds",
     hidden: true,
-    defaultDescription: String(defaultOptions.network.rateTrackerTimeoutMs),
     group: "network",
+    deprecated: true,
   },
 
   "network.dontSendGossipAttestationsToForkchoice": {
@@ -210,6 +222,14 @@ export const options: ICliCommandOptions<INetworkArgs> = {
   "network.gossipsubAwaitHandler": {
     hidden: true,
     type: "boolean",
+    group: "network",
+  },
+
+  "network.rateLimitMultiplier": {
+    type: "number",
+    description: "The multiplier to increase the rate limits. Set to zero to disable rate limiting.",
+    hidden: true,
+    defaultDescription: String(defaultOptions.network.rateLimitMultiplier),
     group: "network",
   },
 };

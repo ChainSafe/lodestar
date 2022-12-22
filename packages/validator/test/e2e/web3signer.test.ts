@@ -3,18 +3,16 @@ import path from "node:path";
 import tmp from "tmp";
 import {expect} from "chai";
 import {GenericContainer, Wait, StartedTestContainer} from "testcontainers";
-import deepmerge from "deepmerge";
 import {Keystore} from "@chainsafe/bls-keystore";
-import {fromHex, isPlainObject, RecursivePartial, toHex} from "@lodestar/utils";
+import {fromHex, toHex} from "@lodestar/utils";
 import {config} from "@lodestar/config/default";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {createIBeaconConfig} from "@lodestar/config";
 import {genesisData} from "@lodestar/config/networks";
 import {getClient, routes} from "@lodestar/api";
 import bls from "@chainsafe/bls";
-import {altair, phase0, ssz} from "@lodestar/types";
-import {BitArray} from "@chainsafe/ssz";
-import {FAR_FUTURE_EPOCH, SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
+import {ssz} from "@lodestar/types";
+import {FAR_FUTURE_EPOCH} from "@lodestar/params";
 import {Interchange, ISlashingProtection, Signer, SignerType, ValidatorStore} from "../../src/index.js";
 import {IndicesService} from "../../src/services/indices.js";
 import {testLogger} from "../utils/logger.js";
@@ -36,77 +34,17 @@ describe("web3signer signature test", function () {
   const epoch = 0;
   // Sample validator
   const validatorIndex = 4;
-  const subcommitteeIndex = 1;
+  const subcommitteeIndex = 0;
 
   const duty: routes.validator.AttesterDuty = {
     slot: altairSlot,
-    committeeIndex: 1,
+    committeeIndex: 0,
     committeeLength: 120,
     committeesAtSlot: 120,
-    validatorCommitteeIndex: 1,
+    validatorCommitteeIndex: 0,
     validatorIndex,
     pubkey: pubkeyBytes,
   };
-
-  function generateAttestation(override: RecursivePartial<phase0.Attestation> = {}): phase0.Attestation {
-    return deepmerge<phase0.Attestation, RecursivePartial<phase0.Attestation>>(
-      {
-        aggregationBits: BitArray.fromBitLen(64),
-        data: {
-          slot: altairSlot,
-          index: subcommitteeIndex,
-          beaconBlockRoot: Buffer.alloc(32),
-          source: {
-            epoch: 0,
-            root: Buffer.alloc(32),
-          },
-          target: {
-            epoch: 0,
-            root: Buffer.alloc(32),
-          },
-        },
-        signature: Buffer.alloc(96),
-      },
-      override,
-      {isMergeableObject: isPlainObject}
-    );
-  }
-  function generateEmptyAttestation(): phase0.Attestation {
-    return generateAttestation();
-  }
-  function generateEmptyAggregateAndProof(): phase0.AggregateAndProof {
-    const attestation = generateEmptyAttestation();
-    return {
-      aggregatorIndex: 0,
-      selectionProof: Buffer.alloc(96),
-      aggregate: attestation,
-    };
-  }
-
-  function generateEmptyContribution(): altair.SyncCommitteeContribution {
-    return {
-      aggregationBits: BitArray.fromBitLen(SYNC_COMMITTEE_SUBNET_SIZE),
-      beaconBlockRoot: Buffer.alloc(32),
-      signature: fromHex(
-        "99cb82bc69b4111d1a828963f0316ec9aa38c4e9e041a8afec86cd20dfe9a590999845bf01d4689f3bbe3df54e48695e081f1216027b577c7fccf6ab0a4fcc75faf8009c6b55e518478139f604f542d138ae3bc34bad01ee6002006d64c4ff82"
-      ),
-      slot: altairSlot,
-      subcommitteeIndex,
-    };
-  }
-  function generateContributionAndProof(
-    override: RecursivePartial<altair.ContributionAndProof> = {}
-  ): altair.ContributionAndProof {
-    return deepmerge<altair.ContributionAndProof, RecursivePartial<altair.ContributionAndProof>>(
-      {
-        aggregatorIndex: 0,
-        contribution: generateEmptyContribution(),
-        selectionProof: Buffer.alloc(96),
-      },
-      override,
-      {isMergeableObject: isPlainObject}
-    );
-  }
 
   after("stop container", async function () {
     await startedContainer.stop();
@@ -206,7 +144,9 @@ describe("web3signer signature test", function () {
   });
 
   it("signAggregateAndProof", async () => {
-    const aggregateAndProof = generateEmptyAggregateAndProof();
+    const aggregateAndProof = ssz.phase0.AggregateAndProof.defaultValue();
+    aggregateAndProof.aggregate.data.slot = duty.slot;
+    aggregateAndProof.aggregate.data.index = duty.committeeIndex;
     await assertSameSignature(
       "signAggregateAndProof",
       duty,
@@ -221,7 +161,9 @@ describe("web3signer signature test", function () {
   });
 
   it("signContributionAndProof", async () => {
-    const contributionAndProof = generateContributionAndProof({selectionProof: Buffer.alloc(96)});
+    const contributionAndProof = ssz.altair.ContributionAndProof.defaultValue();
+    contributionAndProof.contribution.slot = duty.slot;
+    contributionAndProof.contribution.subcommitteeIndex = duty.committeeIndex;
 
     await assertSameSignature(
       "signContributionAndProof",

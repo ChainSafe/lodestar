@@ -8,20 +8,16 @@ import {
 } from "@lodestar/params";
 import {createIBeaconConfig} from "@lodestar/config";
 import {BeaconStateAllForks, getCurrentSlot} from "@lodestar/state-transition";
-import * as mathUtils from "@lodestar/utils";
-import * as shuffleUtils from "../../../src/util/shuffle.js";
 import {MockBeaconChain} from "../../utils/mocks/chain/chain.js";
 import {generateState} from "../../utils/state.js";
 import {testLogger} from "../../utils/logger.js";
-import {SinonStubFn} from "../../utils/types.js";
 import {MetadataController} from "../../../src/network/metadata.js";
 import {Eth2Gossipsub, GossipType} from "../../../src/network/gossip/index.js";
-import {AttnetsService, CommitteeSubscription} from "../../../src/network/subnets/index.js";
+import {AttnetsService, CommitteeSubscription, ShuffleFn} from "../../../src/network/subnets/index.js";
 import {ChainEvent, IBeaconChain} from "../../../src/chain/index.js";
 import {ZERO_HASH} from "../../../src/constants/index.js";
 
-// TODO remove stub
-describe.skip("AttnetsService", function () {
+describe("AttnetsService", function () {
   const COMMITTEE_SUBNET_SUBSCRIPTION = 10;
   const ALTAIR_FORK_EPOCH = 1 * EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION;
   // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -31,9 +27,7 @@ describe.skip("AttnetsService", function () {
   let service: AttnetsService;
 
   const sandbox = sinon.createSandbox();
-  // let clock: SinonFakeTimers;
   let gossipStub: SinonStubbedInstance<Eth2Gossipsub> & Eth2Gossipsub;
-  let randomUtil: SinonStubFn<typeof mathUtils["randBetween"]>;
   let metadata: MetadataController;
 
   let chain: IBeaconChain;
@@ -41,27 +35,35 @@ describe.skip("AttnetsService", function () {
   const logger = testLogger();
   const subscription: CommitteeSubscription = {
     validatorIndex: 2021,
-    subnet: 10,
+    subnet: COMMITTEE_SUBNET_SUBSCRIPTION,
     slot: 100,
     isAggregator: false,
   };
+  const numEpochRandomSubscription = EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION + 1;
+  // at middle of epoch
+  const startSlot = Math.floor(SLOTS_PER_EPOCH / 2);
+  // test case may decide this value based on its business logic
+  let randomSubnet = 0;
 
   beforeEach(function () {
     sandbox.useFakeTimers(Date.now());
     gossipStub = sandbox.createStubInstance(Eth2Gossipsub) as SinonStubbedInstance<Eth2Gossipsub> & Eth2Gossipsub;
-    randomUtil = sandbox.stub(mathUtils, "randBetween");
-    randomUtil
-      .withArgs(EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION, 2 * EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION)
-      .returns(EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION + 1);
-    randomUtil.withArgs(0, ATTESTATION_SUBNET_COUNT).returns(30);
-    randomUtil.withArgs(0, ATTESTATION_SUBNET_COUNT - 1).returns(40);
+    const randBetweenFn = (min: number, max: number): number => {
+      if (min === EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION && max === 2 * EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION) {
+        return numEpochRandomSubscription;
+      }
 
-    // Force shuffle function to not shuffle and just return the original array
-    sandbox.stub(shuffleUtils, "shuffle").callsFake((arr) => arr);
+      throw Error(`Not expected min=${min} and max=${max}`);
+    };
+
+    // shuffle function to return randomSubnet and increase its value
+    function shuffleFn(arr: number[]): number[] {
+      return [randomSubnet++ % ATTESTATION_SUBNET_COUNT, ...arr];
+    }
 
     state = generateState();
     chain = new MockBeaconChain({
-      genesisTime: Math.floor(Date.now() / 1000),
+      genesisTime: Math.floor(Date.now() / 1000 - config.SECONDS_PER_SLOT * startSlot),
       chainId: 0,
       networkId: BigInt(0),
       state,
@@ -70,23 +72,25 @@ describe.skip("AttnetsService", function () {
     // load getCurrentSlot first, vscode not able to debug without this
     getCurrentSlot(config, Math.floor(Date.now() / 1000));
     metadata = new MetadataController({}, {config, chain, logger});
-    service = new AttnetsService(config, chain, gossipStub, metadata, logger);
+    service = new AttnetsService(config, chain, gossipStub, metadata, logger, null, {
+      randBetweenFn,
+      shuffleFn: shuffleFn as ShuffleFn,
+    });
     service.start();
   });
 
   afterEach(() => {
     service.stop();
     sandbox.restore();
+    randomSubnet = 0;
   });
 
   it("should not subscribe when there is no active validator", () => {
     chain.emitter.emit(ChainEvent.clockSlot, 1);
-    expect(gossipStub.subscribeTopic).to.be.called;
+    expect(gossipStub.subscribeTopic).to.be.not.called;
   });
 
-  it.skip("should subscribe to RANDOM_SUBNETS_PER_VALIDATOR per 1 validator", () => {
-    randomUtil.withArgs(0, ATTESTATION_SUBNET_COUNT).returns(30);
-    randomUtil.withArgs(0, ATTESTATION_SUBNET_COUNT - 1).returns(40);
+  it("should subscribe to RANDOM_SUBNETS_PER_VALIDATOR per 1 validator", () => {
     service.addCommitteeSubscriptions([subscription]);
     expect(gossipStub.subscribeTopic).to.be.calledOnce;
     expect(metadata.seqNumber).to.be.equal(BigInt(1));
@@ -112,19 +116,48 @@ describe.skip("AttnetsService", function () {
     expect(metadata.seqNumber).to.be.equal(BigInt(2));
   });
 
-  it.skip("should change subnet subscription after 2*EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION", async () => {
+  it("should change subnet subscription after 2*EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION", async () => {
     service.addCommitteeSubscriptions([subscription]);
-    expect(gossipStub.subscribeTopic).to.be.calledOnce;
+    expect(gossipStub.subscribeTopic.calledOnce).to.be.true;
     expect(metadata.seqNumber).to.be.equal(BigInt(1));
-    for (let numEpoch = 0; numEpoch < 2 * EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION; numEpoch++) {
+    for (let numEpoch = 0; numEpoch <= numEpochRandomSubscription; numEpoch++) {
       // avoid known validator expiry
       service.addCommitteeSubscriptions([subscription]);
       sandbox.clock.tick(SLOTS_PER_EPOCH * SECONDS_PER_SLOT * 1000);
     }
     // may call 2 times, 1 for committee subnet, 1 for random subnet
     expect(gossipStub.unsubscribeTopic).to.be.called;
-    // subscribe then unsubscribe then subscribe again
-    expect(metadata.seqNumber).to.be.equal(BigInt(3));
+    // rebalance twice
+    expect(metadata.seqNumber).to.be.equal(BigInt(2));
+  });
+
+  // Reproduce issue https://github.com/ChainSafe/lodestar/issues/4929
+  it("should NOT unsubscribe any subnet if there are 64 known validators", async () => {
+    expect(chain.clock.currentSlot).to.be.equal(startSlot, "incorrect start slot");
+    // after random subnet expiration but before the next epoch
+    const tcSubscription = {
+      ...subscription,
+      slot: startSlot + numEpochRandomSubscription * SLOTS_PER_EPOCH + 1,
+      isAggregator: true,
+    };
+    // expect to subscribe to all random subnets
+    const subscriptions = Array.from({length: ATTESTATION_SUBNET_COUNT}, (_, i) => ({
+      ...tcSubscription,
+      validatorIndex: i,
+    }));
+    service.addCommitteeSubscriptions(subscriptions);
+    for (let numEpoch = 0; numEpoch < numEpochRandomSubscription; numEpoch++) {
+      // avoid known validator expiry
+      service.addCommitteeSubscriptions(subscriptions);
+      sandbox.clock.tick(SLOTS_PER_EPOCH * SECONDS_PER_SLOT * 1000);
+    }
+    // tick 3 next slots to expect an attempt to expire committee subscription
+    sandbox.clock.tick(3 * SECONDS_PER_SLOT * 1000);
+    // should not unsubscribe any subnet topics as we have ATTESTATION_SUBNET_COUNT subscription
+    expect(gossipStub.unsubscribeTopic.called).to.be.equal(
+      false,
+      "should not unsubscribe any subnet topic if full random subnet subscriptions"
+    );
   });
 
   it("should prepare for a hard fork", async () => {
@@ -155,17 +188,18 @@ describe.skip("AttnetsService", function () {
     }
   });
 
-  it.skip("handle committee subnet the same to random subnet", () => {
-    randomUtil.withArgs(0, ATTESTATION_SUBNET_COUNT).returns(COMMITTEE_SUBNET_SUBSCRIPTION);
+  it("handle committee subnet the same to random subnet", () => {
+    // randomUtil.withArgs(0, ATTESTATION_SUBNET_COUNT).returns(COMMITTEE_SUBNET_SUBSCRIPTION);
+    randomSubnet = COMMITTEE_SUBNET_SUBSCRIPTION;
     const aggregatorSubscription: CommitteeSubscription = {...subscription, isAggregator: true};
     service.addCommitteeSubscriptions([aggregatorSubscription]);
-    expect(service.getActiveSubnets()).to.be.deep.equal([COMMITTEE_SUBNET_SUBSCRIPTION]);
+    expect(service.getActiveSubnets()).to.be.deep.equal([{subnet: COMMITTEE_SUBNET_SUBSCRIPTION, toSlot: 101}]);
     // committee subnet is same to random subnet
     expect(gossipStub.subscribeTopic).to.be.calledOnce;
     expect(metadata.seqNumber).to.be.equal(BigInt(1));
     // pass through subscription slot
     sandbox.clock.tick((aggregatorSubscription.slot + 2) * SECONDS_PER_SLOT * 1000);
     // don't unsubscribe bc random subnet is still there
-    expect(gossipStub.unsubscribeTopic).to.be.called;
+    expect(gossipStub.unsubscribeTopic).to.be.not.called;
   });
 });

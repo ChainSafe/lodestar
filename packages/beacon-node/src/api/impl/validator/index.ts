@@ -23,6 +23,7 @@ import {validateSyncCommitteeGossipContributionAndProof} from "../../../chain/va
 import {CommitteeSubscription} from "../../../network/subnets/index.js";
 import {ApiModules} from "../types.js";
 import {RegenCaller} from "../../../chain/regen/index.js";
+import {getValidatorStatus} from "../beacon/state/utils.js";
 import {computeSubnetForCommitteesAtSlot, getPubkeysForIndices} from "./utils.js";
 
 /**
@@ -653,7 +654,29 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
     },
 
     async registerValidator(registrations) {
-      return chain.executionBuilder?.registerValidator(registrations);
+      // should only send active or pending validator to builder
+      // Spec: https://ethereum.github.io/builder-specs/#/Builder/registerValidator
+      const headState = chain.getHeadState();
+      const currentEpoch = chain.clock.currentEpoch;
+
+      const filteredRegistrations = registrations.filter((registration) => {
+        const {pubkey} = registration.message;
+        const validatorIndex = headState.epochCtx.pubkey2index.get(pubkey);
+        if (validatorIndex === undefined) return false;
+
+        const validator = headState.validators.getReadonly(validatorIndex);
+        const status = getValidatorStatus(validator, currentEpoch);
+        return (
+          status === "active" ||
+          status === "active_exiting" ||
+          status === "active_ongoing" ||
+          status === "active_slashed" ||
+          status === "pending_initialized" ||
+          status === "pending_queued"
+        );
+      });
+
+      return chain.executionBuilder?.registerValidator(filteredRegistrations);
     },
   };
 }
