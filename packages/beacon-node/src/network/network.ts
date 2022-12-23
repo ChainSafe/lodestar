@@ -263,6 +263,13 @@ export class Network implements INetwork {
           lastMatchedSlot = block.message.slot;
           blobSideCarIndex++;
         } else {
+          // Quick inspect if the blobsSidecar was expected
+          const blobKzgCommitmentsLen = (block.message.body as eip4844.BeaconBlockBody).blobKzgCommitments.length;
+          if (blobKzgCommitmentsLen !== 0) {
+            throw Error(
+              `Missing blobsSidecar for blockSlot=${block.message.slot} with blobKzgCommitmentsLen=${blobKzgCommitmentsLen}`
+            );
+          }
           blobsSidecar = {
             beaconBlockRoot: this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message),
             beaconBlockSlot: block.message.slot,
