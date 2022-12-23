@@ -2136,9 +2136,9 @@
     varint "^6.0.0"
 
 "@libp2p/peer-store@^5.0.0":
-  version "5.0.0"
-  resolved "https://registry.yarnpkg.com/@libp2p/peer-store/-/peer-store-5.0.0.tgz#2142d24d7fdb2a7b0a60b7c9d0f211ea14402d56"
-  integrity sha512-Yz/JykQ9xA0cpv4jIOt9dzYXBAugjoJFPVpA8/LEwU6Y+aUcTIAC3AhOe88QxjYxy4pz+H7C711K2HNCj207jg==
+  version "5.0.1"
+  resolved "https://registry.yarnpkg.com/@libp2p/peer-store/-/peer-store-5.0.1.tgz#cd4dbc26bd0ef3ed43c1a7c120f3ec750e343b33"
+  integrity sha512-TeHxy5Qv+KzajbEZH1wdE6ubk8G7IUyU+Dyl4W06unZpxq6rD+OTnCkvYuEdglROUxmvSBEkFqJnxV6xgVBWJA==
   dependencies:
     "@libp2p/interface-peer-id" "^1.0.4"
     "@libp2p/interface-peer-info" "^1.0.3"
@@ -2151,10 +2151,10 @@
     "@multiformats/multiaddr" "^11.0.0"
     err-code "^3.0.1"
     interface-datastore "^7.0.0"
-    it-all "^1.0.6"
-    it-filter "^1.0.3"
-    it-foreach "^0.1.1"
-    it-map "^1.0.6"
+    it-all "^2.0.0"
+    it-filter "^2.0.0"
+    it-foreach "^1.0.0"
+    it-map "^2.0.0"
     it-pipe "^2.0.3"
     mortice "^3.0.0"
     multiformats "^10.0.0"
@@ -5519,21 +5519,21 @@ dargs@^7.0.0:
   integrity sha512-2iy1EkLdlBzQGvbweYRFxmFath8+K7+AKB0TlhHWkNuH+TmovaMH/Wp7V7R4u7f4SnX3OgLsU9t1NI9ioDnUpg==
 
 datastore-core@^8.0.1:
-  version "8.0.2"
-  resolved "https://registry.yarnpkg.com/datastore-core/-/datastore-core-8.0.2.tgz#84ff7974e3d8b7ef6f12e8a5092140bc50582caa"
-  integrity sha512-BJe0kXbGFxdgBe6eTWtiGk8z9933CREosiZp7JdBBxdqNud0A3eXR/DA5/0vTarOzD/XTcJMLXzDn84EFbTreA==
+  version "8.0.3"
+  resolved "https://registry.yarnpkg.com/datastore-core/-/datastore-core-8.0.3.tgz#d14bda75184b03d319c80d94f49ff36b27a619d4"
+  integrity sha512-x1cAYGXnJQRDbUYF7pUBpx4bN+UP+8MOk66A30G70pVVnIG9TbkEAiapYUrwZGFdJnpZnb3HeS5Q13rsUNxIJQ==
   dependencies:
     "@libp2p/logger" "^2.0.0"
     err-code "^3.0.1"
     interface-datastore "^7.0.0"
-    it-all "^1.0.4"
-    it-drain "^1.0.4"
-    it-filter "^1.0.2"
-    it-map "^1.0.5"
-    it-merge "^1.0.1"
+    it-all "^2.0.0"
+    it-drain "^2.0.0"
+    it-filter "^2.0.0"
+    it-map "^2.0.0"
+    it-merge "^2.0.0"
     it-pipe "^2.0.3"
     it-pushable "^3.0.0"
-    it-take "^1.0.1"
+    it-take "^2.0.0"
     uint8arrays "^4.0.2"
 
 datastore-level@*, datastore-level@^9.0.1:
@@ -8175,11 +8175,6 @@ istanbul-reports@^3.0.2:
     html-escaper "^2.0.0"
     istanbul-lib-report "^3.0.0"
 
-it-all@^1.0.4, it-all@^1.0.6:
-  version "1.0.6"
-  resolved "https://registry.npmjs.org/it-all/-/it-all-1.0.6.tgz"
-  integrity sha512-3cmCc6Heqe3uWi3CVM/k51fa/XbMFpQVzFoDsV0IZNHSQDyAXl3c4MjHkFX5kF3922OGj7Myv1nSEUgRtcuM1A==
-
 it-all@^2.0.0:
   version "2.0.0"
   resolved "https://registry.yarnpkg.com/it-all/-/it-all-2.0.0.tgz#6f4e5cdb71af02793072822a90bc44de901a92c3"
@@ -8194,25 +8189,10 @@ it-batched-bytes@^1.0.0:
     p-defer "^4.0.0"
     uint8arraylist "^2.4.1"
 
-it-drain@^1.0.4:
-  version "1.0.4"
-  resolved "https://registry.npmjs.org/it-drain/-/it-drain-1.0.4.tgz"
-  integrity sha512-coB7mcyZ4lWBQKoQGJuqM+P94pvpn2T3KY27vcVWPqeB1WmoysRC76VZnzAqrBWzpWcoEJMjZ+fsMBslxNaWfQ==
-
 it-drain@^2.0.0:
   version "2.0.0"
   resolved "https://registry.yarnpkg.com/it-drain/-/it-drain-2.0.0.tgz#724c910720a109916bce0a991cf954e8d7b4fe21"
   integrity sha512-oa/5iyBtRs9UW486vPpyDTC0ee3rqx5qlrPI7txIUJcqqtiO5yVozEB6LQrl5ysQYv+P3y/dlKEqwVqlCV0SEA==
-
-it-filter@^1.0.2:
-  version "1.0.2"
-  resolved "https://registry.npmjs.org/it-filter/-/it-filter-1.0.2.tgz"
-  integrity sha512-rxFUyPCrhk7WrNxD8msU10iEPhQmROoqwuyWmQUYY1PtopwUGBYyra9EYG2nRZADYeuT83cohKWmKCWPzpeyiw==
-
-it-filter@^1.0.3:
-  version "1.0.3"
-  resolved "https://registry.yarnpkg.com/it-filter/-/it-filter-1.0.3.tgz#66ea0cc4bf84af71bebd353c05a9c5735fcba751"
-  integrity sha512-EI3HpzUrKjTH01miLHWmhNWy3Xpbx4OXMXltgrNprL5lDpF3giVpHIouFpr5l+evXw6aOfxhnt01BIB+4VQA+w==
 
 it-filter@^2.0.0:
   version "2.0.0"
@@ -8228,11 +8208,6 @@ it-first@^2.0.0:
   version "2.0.0"
   resolved "https://registry.yarnpkg.com/it-first/-/it-first-2.0.0.tgz#b0bba28414caa2b27b807ac15e897d4a9526940d"
   integrity sha512-fzZGzVf01exFyIZXNjkpSMFr1eW2+J1K0v018tYY26Dd4f/O3pWlBTdrOBfSQRZwtI8Pst6c7eKhYczWvFs6tA==
-
-it-foreach@^0.1.1:
-  version "0.1.1"
-  resolved "https://registry.npmjs.org/it-foreach/-/it-foreach-0.1.1.tgz"
-  integrity sha512-ZLxL651N5w5SL/EIIcrXELgYrrkuEKj/TErG93C4lr6lNZziKsf338ljSG85PjQfu7Frg/1wESl5pLrPSFXI9g==
 
 it-foreach@^1.0.0:
   version "1.0.0"
@@ -8261,22 +8236,10 @@ it-length-prefixed@^8.0.2, it-length-prefixed@^8.0.3:
     uint8arraylist "^2.0.0"
     uint8arrays "^4.0.2"
 
-it-map@^1.0.5, it-map@^1.0.6:
-  version "1.0.6"
-  resolved "https://registry.yarnpkg.com/it-map/-/it-map-1.0.6.tgz#6aa547e363eedcf8d4f69d8484b450bc13c9882c"
-  integrity sha512-XT4/RM6UHIFG9IobGlQPFQUrlEKkU4eBUFG3qhWhfAdh1JfF2x11ShCrKCdmZ0OiZppPfoLuzcfA4cey6q3UAQ==
-
 it-map@^2.0.0:
   version "2.0.0"
   resolved "https://registry.yarnpkg.com/it-map/-/it-map-2.0.0.tgz#4fd20dfae9eeb21b3dac812774c09d490ee5b691"
   integrity sha512-mLgtk/NZaN7NZ06iLrMXCA6jjhtZO0vZT5Ocsp31H+nsGI18RSPVmUbFyA1sWx7q+g92J22Sixya7T2QSSAwfA==
-
-it-merge@^1.0.1:
-  version "1.0.4"
-  resolved "https://registry.yarnpkg.com/it-merge/-/it-merge-1.0.4.tgz#81c8d427b389b1cd039c25015edb804cd1a60545"
-  integrity sha512-DcL6GksTD2HQ7+5/q3JznXaLNfwjyG3/bObaF98da+oHfUiPmdo64oJlT9J8R8G5sJRU7thwaY5zxoAKCn7FJw==
-  dependencies:
-    it-pushable "^1.4.0"
 
 it-merge@^2.0.0:
   version "2.0.0"
@@ -8312,13 +8275,6 @@ it-pipe@^2.0.3, it-pipe@^2.0.4, it-pipe@^2.0.5:
     it-pushable "^3.1.0"
     it-stream-types "^1.0.3"
 
-it-pushable@^1.4.0:
-  version "1.4.2"
-  resolved "https://registry.npmjs.org/it-pushable/-/it-pushable-1.4.2.tgz"
-  integrity sha512-vVPu0CGRsTI8eCfhMknA7KIBqqGFolbRx+1mbQ6XuZ7YCz995Qj7L4XUviwClFunisDq96FdxzF5FnAbw15afg==
-  dependencies:
-    fast-fifo "^1.0.0"
-
 it-pushable@^3.0.0, it-pushable@^3.1.0:
   version "3.1.0"
   resolved "https://registry.yarnpkg.com/it-pushable/-/it-pushable-3.1.0.tgz#2fba7aaca189595e64e042ac947c6748ece2eb6b"
@@ -8343,11 +8299,6 @@ it-stream-types@^1.0.3, it-stream-types@^1.0.4:
   version "1.0.4"
   resolved "https://registry.yarnpkg.com/it-stream-types/-/it-stream-types-1.0.4.tgz#6e66a11abfd98abab4894c30da15829a0a56bb43"
   integrity sha512-0F3CqTIcIHwtnmIgqd03a7sw8BegAmE32N2w7anIGdALea4oAN4ltqPgDMZ7zn4XPLZifXEZlBXSzgg64L1Ebw==
-
-it-take@^1.0.1:
-  version "1.0.1"
-  resolved "https://registry.npmjs.org/it-take/-/it-take-1.0.1.tgz"
-  integrity sha512-6H6JAWYcyumKSpcIPLs6tHN4xnibphmyU79WQaYVCBtaBOzf4fn75wzvSH8fH8fcMlPBTWY1RlmOWleQxBt2Ug==
 
 it-take@^2.0.0:
   version "2.0.0"
