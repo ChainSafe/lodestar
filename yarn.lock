@@ -525,9 +525,9 @@
   integrity sha512-nqSJ8u2a1Rv9FYbyI8qpDhTYujaKEyLknNrTejLYoSWmdeg+2WB7R6BZqPZYfrJzDxVi3rl6ZQuoaEvpKRZWgQ==
 
 "@chainsafe/libp2p-gossipsub@^5.3.0":
-  version "5.3.0"
-  resolved "https://registry.yarnpkg.com/@chainsafe/libp2p-gossipsub/-/libp2p-gossipsub-5.3.0.tgz#55b11e13406cb331f1c8b66528561613e9eec53e"
-  integrity sha512-oQ3SlegB3NeeErE27jeoZhlKG4y3BS4/Pegxq6EhvPH0bCUINzWKlUn+ORqQSFQINB0PZyOA0rXRMnkaWeljgA==
+  version "5.4.1"
+  resolved "https://registry.yarnpkg.com/@chainsafe/libp2p-gossipsub/-/libp2p-gossipsub-5.4.1.tgz#bbf79de028757f3adbcff5c3a209bbe2f1714535"
+  integrity sha512-lcqtG74lwQevxC/OTZHZzszb8HS91VkmJxTyndQUu9a6AXBok2a95lyWCK2l8/VPLg0JxIpwYgUCHTTTExDK/A==
   dependencies:
     "@libp2p/crypto" "^1.0.3"
     "@libp2p/interface-connection" "^3.0.1"
