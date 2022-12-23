@@ -12,6 +12,7 @@ import {altair, eip4844, Epoch, phase0} from "@lodestar/types";
 import {IMetrics} from "../metrics/index.js";
 import {ChainEvent, IBeaconChain, IBeaconClock} from "../chain/index.js";
 import {BlockInput, BlockInputType, getBlockInput} from "../chain/blocks/types.js";
+import {ckzg} from "../util/kzg.js";
 import {INetworkOptions} from "./options.js";
 import {INetwork} from "./interface.js";
 import {ReqRespBeaconNode, ReqRespHandlers} from "./reqresp/index.js";
@@ -243,21 +244,45 @@ export class Network implements INetwork {
       const blocks = await this.reqResp.beaconBlocksByRange(peerId, request);
       const blobsSidecars = await this.reqResp.blobsSidecarsByRange(peerId, request);
 
-      if (blocks.length !== blobsSidecars.length) {
-        throw Error(`blocks.length ${blocks.length} != blobsSidecars.length ${blobsSidecars.length}`);
-      }
-
       const blockInputs: BlockInput[] = [];
+      let blobSideCarIndex = 0;
+      let lastMatchedSlot = -1;
+
+      // Match blobSideCar with the block as some blocks would have no blobs and hence
+      // would be omitted from the response. If there are any inconsitencies in the
+      // response, the validations during import will reject the block and hence this
+      // entire segment.
+      //
+      // Assuming that the blocks and blobs will come in same sorted order
       for (let i = 0; i < blocks.length; i++) {
         const block = blocks[i];
-        const blobsSidecar = blobsSidecars[i];
+        let blobsSidecar: eip4844.BlobsSidecar;
 
-        // TODO EIP-4844: Do more verification blob is for block
-        if (block.message.slot !== blobsSidecar.beaconBlockSlot) {
-          throw Error(`blob does not match block slot ${block.message.slot} != ${blobsSidecar.beaconBlockSlot}`);
+        if (blobsSidecars[blobSideCarIndex]?.beaconBlockSlot === block.message.slot) {
+          blobsSidecar = blobsSidecars[blobSideCarIndex];
+          lastMatchedSlot = block.message.slot;
+          blobSideCarIndex++;
+        } else {
+          blobsSidecar = {
+            beaconBlockRoot: this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message),
+            beaconBlockSlot: block.message.slot,
+            blobs: [],
+            kzgAggregatedProof: ckzg.computeAggregateKzgProof([]),
+          };
         }
-
         blockInputs.push(getBlockInput.postEIP4844(this.config, block, blobsSidecar));
+      }
+
+      // If there are still unconsumed blobs this means that the response was inconsistent
+      // and matching was wrong and hence we should throw error
+      if (blobsSidecars[blobSideCarIndex] !== undefined) {
+        throw Error(
+          `Unmatched blobsSidecars, blocks=${blocks.length}, blobs=${
+            blobsSidecars.length
+          } lastMatchedSlot=${lastMatchedSlot}, pending blobsSidecars slots=${blobsSidecars
+            .slice(blobSideCarIndex)
+            .map((blb) => blb.beaconBlockSlot)}`
+        );
       }
       return blockInputs;
     }
