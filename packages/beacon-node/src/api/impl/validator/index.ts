@@ -6,6 +6,7 @@ import {
   attesterShufflingDecisionRoot,
   getBlockRootAtSlot,
   computeEpochAtSlot,
+  getCurrentSlot,
 } from "@lodestar/state-transition";
 import {GENESIS_SLOT, SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT, SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
 import {Root, Slot, ValidatorIndex, ssz, Epoch} from "@lodestar/types";
@@ -25,12 +26,6 @@ import {ApiModules} from "../types.js";
 import {RegenCaller} from "../../../chain/regen/index.js";
 import {getValidatorStatus} from "../beacon/state/utils.js";
 import {computeSubnetForCommitteesAtSlot, getPubkeysForIndices} from "./utils.js";
-
-/**
- * Validator clock may be advanced from beacon's clock. If the validator requests a resource in a
- * future slot, wait some time instead of rejecting the request because it's in the future
- */
-const MAX_API_CLOCK_DISPARITY_MS = 1000;
 
 /**
  * If the node is within this many epochs from the head, we declare it to be synced regardless of
@@ -53,6 +48,13 @@ const SYNC_TOLERANCE_EPOCHS = 1;
  */
 export function getValidatorApi({chain, config, logger, metrics, network, sync}: ApiModules): routes.validator.Api {
   let genesisBlockRoot: Root | null = null;
+
+  /**
+   * Validator clock may be advanced from beacon's clock. If the validator requests a resource in a
+   * future slot, wait some time instead of rejecting the request because it's in the future.
+   * For very fast networks, reduce clock disparity to half a slot.
+   */
+  const MAX_API_CLOCK_DISPARITY_MS = Math.min(1000, (1000 * config.SECONDS_PER_SLOT) / 2);
 
   /** Compute and cache the genesis block root */
   async function getGenesisBlockRoot(state: CachedBeaconStateAllForks): Promise<Root> {
@@ -106,6 +108,10 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
     if (msToNextEpoch > 0 && msToNextEpoch < MAX_API_CLOCK_DISPARITY_MS) {
       await chain.clock.waitForSlot(computeStartSlotAtEpoch(nextEpoch));
     }
+  }
+
+  function currentEpochWithDisparity(): Epoch {
+    return computeEpochAtSlot(getCurrentSlot(config, chain.genesisTime - MAX_API_CLOCK_DISPARITY_MS));
   }
 
   /**
@@ -319,8 +325,14 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
     async getProposerDuties(epoch) {
       notWhileSyncing();
 
-      const startSlot = computeStartSlotAtEpoch(epoch);
-      await waitForSlot(startSlot); // Must never request for a future slot > currentSlot
+      // Early check that epoch is within [current_epoch, current_epoch + 1]
+      const currentEpoch = currentEpochWithDisparity();
+      if (epoch !== currentEpoch && epoch !== currentEpoch + 1) {
+        throw Error(`Requested epoch ${epoch} must equal current ${currentEpoch} or next epoch ${currentEpoch + 1}`);
+      }
+
+      // May request for an epoch that's in the future, for getBeaconProposersNextEpoch()
+      await waitForNextClosestEpoch();
 
       const head = chain.forkChoice.getHead();
       const state = await chain.getHeadStateAtCurrentEpoch();
@@ -335,6 +347,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
         // @see `epochCtx.getBeaconProposersNextEpoch` JSDocs for rationale.
         indexes = state.epochCtx.getBeaconProposersNextEpoch();
       } else {
+        // Should never happen, epoch is checked to be in bounds above
         throw Error(`Proposer duties for epoch ${epoch} not supported, current epoch ${stateEpoch}`);
       }
 
@@ -344,6 +357,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
       // TODO: Add a flag to just send 0x00 as pubkeys since the Lodestar validator does not need them.
       const pubkeys = getPubkeysForIndices(state.validators, indexes);
 
+      const startSlot = computeStartSlotAtEpoch(stateEpoch);
       const duties: routes.validator.ProposerDuty[] = [];
       for (let i = 0; i < SLOTS_PER_EPOCH; i++) {
         duties.push({slot: startSlot + i, validatorIndex: indexes[i], pubkey: pubkeys[i]});
