@@ -21,7 +21,7 @@ import {zeroProtoBlock} from "../../../../../utils/mocks/chain/chain.js";
 
 use(chaiAsPromised);
 
-describe("get proposers api impl", function () {
+describe.skip("get proposers api impl", function () {
   const logger = testLogger();
 
   let chainStub: StubbedChainMutable<"clock" | "forkChoice">,
