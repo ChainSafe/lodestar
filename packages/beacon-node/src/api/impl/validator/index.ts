@@ -54,7 +54,8 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
    * future slot, wait some time instead of rejecting the request because it's in the future.
    * For very fast networks, reduce clock disparity to half a slot.
    */
-  const MAX_API_CLOCK_DISPARITY_MS = Math.min(1000, (1000 * config.SECONDS_PER_SLOT) / 2);
+  const MAX_API_CLOCK_DISPARITY_SEC = Math.min(1, config.SECONDS_PER_SLOT / 2);
+  const MAX_API_CLOCK_DISPARITY_MS = MAX_API_CLOCK_DISPARITY_SEC * 1000;
 
   /** Compute and cache the genesis block root */
   async function getGenesisBlockRoot(state: CachedBeaconStateAllForks): Promise<Root> {
@@ -111,7 +112,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
   }
 
   function currentEpochWithDisparity(): Epoch {
-    return computeEpochAtSlot(getCurrentSlot(config, chain.genesisTime - MAX_API_CLOCK_DISPARITY_MS));
+    return computeEpochAtSlot(getCurrentSlot(config, chain.genesisTime - MAX_API_CLOCK_DISPARITY_SEC));
   }
 
   /**
