@@ -326,9 +326,9 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
     async getProposerDuties(epoch) {
       notWhileSyncing();
 
-      // Early check that epoch is within [current_epoch, current_epoch + 1]
+      // Early check that epoch is within [current_epoch, current_epoch + 1], or allow for pre-genesis
       const currentEpoch = currentEpochWithDisparity();
-      if (epoch !== currentEpoch && epoch !== currentEpoch + 1) {
+      if (currentEpoch >= 0 && epoch !== currentEpoch && epoch !== currentEpoch + 1) {
         throw Error(`Requested epoch ${epoch} must equal current ${currentEpoch} or next epoch ${currentEpoch + 1}`);
       }
 
