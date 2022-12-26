@@ -5,7 +5,6 @@ import {ForkSeq} from "@lodestar/params";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 
 import {BlockInput, getBlockInput} from "../../chain/blocks/types.js";
-import {ckzg} from "../../util/kzg.js";
 import {IReqRespBeaconNode} from "./interface.js";
 
 export async function doBeaconBlocksMaybeBlobsByRange(
@@ -13,7 +12,9 @@ export async function doBeaconBlocksMaybeBlobsByRange(
   reqResp: IReqRespBeaconNode,
   peerId: PeerId,
   request: phase0.BeaconBlocksByRangeRequest,
-  currentEpoch: Epoch
+  currentEpoch: Epoch,
+  // To make test life easy without loading ckzg
+  emptyKzgAggregatedProof: eip4844.BlobsSidecar["kzgAggregatedProof"]
 ): Promise<BlockInput[]> {
   // TODO EIP-4844: Assumes all blocks in the same epoch
   // TODO EIP-4844: Ensure all blocks are in the same epoch
@@ -58,7 +59,7 @@ export async function doBeaconBlocksMaybeBlobsByRange(
           beaconBlockRoot: config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message),
           beaconBlockSlot: block.message.slot,
           blobs: [],
-          kzgAggregatedProof: ckzg.computeAggregateKzgProof([]),
+          kzgAggregatedProof: emptyKzgAggregatedProof,
         };
       }
       blockInputs.push(getBlockInput.postEIP4844(config, block, blobsSidecar));

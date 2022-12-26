@@ -12,6 +12,7 @@ import {altair, eip4844, Epoch, phase0} from "@lodestar/types";
 import {IMetrics} from "../metrics/index.js";
 import {ChainEvent, IBeaconChain, IBeaconClock} from "../chain/index.js";
 import {BlockInput, BlockInputType, getBlockInput} from "../chain/blocks/types.js";
+import {ckzg} from "../util/kzg.js";
 import {INetworkOptions} from "./options.js";
 import {INetwork} from "./interface.js";
 import {ReqRespBeaconNode, ReqRespHandlers, doBeaconBlocksMaybeBlobsByRange} from "./reqresp/index.js";
@@ -227,7 +228,14 @@ export class Network implements INetwork {
     peerId: PeerId,
     request: phase0.BeaconBlocksByRangeRequest
   ): Promise<BlockInput[]> {
-    return doBeaconBlocksMaybeBlobsByRange(this.config, this.reqResp, peerId, request, this.clock.currentEpoch);
+    return doBeaconBlocksMaybeBlobsByRange(
+      this.config,
+      this.reqResp,
+      peerId,
+      request,
+      this.clock.currentEpoch,
+      ckzg.computeAggregateKzgProof([])
+    );
   }
 
   async beaconBlocksMaybeBlobsByRoot(peerId: PeerId, request: phase0.BeaconBlocksByRootRequest): Promise<BlockInput[]> {
