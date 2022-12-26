@@ -6,11 +6,11 @@ import {computeEpochAtSlot} from "@lodestar/state-transition";
 
 import {BlockInput, getBlockInput} from "../../chain/blocks/types.js";
 import {ckzg} from "../../util/kzg.js";
-import {ReqRespBeaconNode} from "./ReqRespBeaconNode.js";
+import {IReqRespBeaconNode} from "./interface.js";
 
 export async function doBeaconBlocksMaybeBlobsByRange(
   config: IBeaconConfig,
-  reqResp: ReqRespBeaconNode,
+  reqResp: IReqRespBeaconNode,
   peerId: PeerId,
   request: phase0.BeaconBlocksByRangeRequest,
   currentEpoch: Epoch
