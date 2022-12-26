@@ -93,6 +93,8 @@ export class ForkChoice implements IForkChoice {
   private proposerBoostRoot: RootHex | null = null;
   /** Score to use in proposer boost, evaluated lazily from justified balances */
   private justifiedProposerBoostScore: number | null = null;
+  /** The current effective balances */
+  private balances: EffectiveBalanceIncrements;
   /**
    * Instantiates a Fork Choice from some existing components
    *
@@ -106,6 +108,7 @@ export class ForkChoice implements IForkChoice {
     private readonly opts?: ForkChoiceOpts
   ) {
     this.head = this.updateHead();
+    this.balances = this.fcStore.justified.balances;
   }
 
   /**
@@ -191,15 +194,16 @@ export class ForkChoice implements IForkChoice {
     // No need to cache the head anymore
 
     // Check if scores need to be calculated/updated
-    // eslint-disable-next-line prefer-const
-    const justifiedBalances = this.fcStore.justified.balances;
+    const oldBalances = this.balances;
+    const newBalances = this.fcStore.justified.balances;
     const deltas = computeDeltas(
       this.protoArray.indices,
       this.votes,
-      justifiedBalances,
-      justifiedBalances,
+      oldBalances,
+      newBalances,
       this.fcStore.equivocatingIndices
     );
+    this.balances = newBalances;
     /**
      * The structure in line with deltas to propagate boost up the branch
      * starting from the proposerIndex
