@@ -119,6 +119,7 @@ export class PeerDiscovery {
         [K in keyof IMetrics["discv5"]]: IDiscv5Metrics[keyof IDiscv5Metrics];
       },
     });
+    opts.discv5.bootEnrs.forEach((bootEnr) => this.discv5.addEnr(bootEnr));
     this.logger.verbose("PeerDiscovery number of bootEnrs", {bootEnrs: opts.discv5.bootEnrs.length});
 
     if (metrics) {
