@@ -119,11 +119,7 @@ export class PeerDiscovery {
         [K in keyof IMetrics["discv5"]]: IDiscv5Metrics[keyof IDiscv5Metrics];
       },
     });
-    this.logger.info("PeerDiscovery number of bootEnr", {bootEnrs: opts.discv5.bootEnrs.length});
-    opts.discv5.bootEnrs.forEach((bootEnr) => {
-      this.discv5.addEnr(bootEnr);
-      this.logger.info("PeerDiscovery", {bootEnr: bootEnr as string});
-    });
+    this.logger.verbose("PeerDiscovery number of bootEnrs", {bootEnrs: opts.discv5.bootEnrs.length});
 
     if (metrics) {
       metrics.discovery.cachedENRsSize.addCollect(() => {
