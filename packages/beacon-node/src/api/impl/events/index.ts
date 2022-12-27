@@ -1,10 +1,11 @@
 import {capella} from "@lodestar/types";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {routes} from "@lodestar/api";
-import {toHexString} from "@chainsafe/ssz";
-import {ApiModules, IS_OPTIMISTIC_TEMP} from "../types.js";
+import {fromHexString, toHexString} from "@chainsafe/ssz";
+import {ApiModules} from "../types.js";
 import {ChainEvent, IChainEvents} from "../../../chain/index.js";
 import {ApiError} from "../errors.js";
+import {isOptimisticBlock} from "../../../util/forkChoice.js";
 
 /**
  * Mapping of internal `ChainEvents` to API spec events
@@ -24,6 +25,7 @@ const chainEventMap = {
 };
 
 export function getEventsApi({chain, config}: Pick<ApiModules, "chain" | "config">): routes.events.Api {
+  const forkchoice = chain.forkChoice;
   /**
    * Mapping to convert internal `ChainEvents` payload to the API spec events data
    */
@@ -33,13 +35,17 @@ export function getEventsApi({chain, config}: Pick<ApiModules, "chain" | "config
     ) => routes.events.EventData[K][];
   } = {
     [routes.events.EventType.head]: (data) => [data],
-    [routes.events.EventType.block]: (block) => [
-      {
-        block: toHexString(config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message)),
-        slot: block.message.slot,
-        executionOptimistic: IS_OPTIMISTIC_TEMP,
-      },
-    ],
+    [routes.events.EventType.block]: (block) => {
+      const blockRoot = config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
+      const blockSummary = forkchoice.getBlock(blockRoot);
+      return [
+        {
+          block: toHexString(blockRoot),
+          slot: block.message.slot,
+          executionOptimistic: blockSummary != null && isOptimisticBlock(blockSummary),
+        },
+      ];
+    },
     [routes.events.EventType.attestation]: (attestation) => [attestation],
     [routes.events.EventType.voluntaryExit]: (block) => Array.from(block.message.body.voluntaryExits),
     [routes.events.EventType.finalizedCheckpoint]: (checkpoint, state) => [
@@ -47,21 +53,24 @@ export function getEventsApi({chain, config}: Pick<ApiModules, "chain" | "config
         block: toHexString(checkpoint.root),
         epoch: checkpoint.epoch,
         state: toHexString(state.hashTreeRoot()),
-        executionOptimistic: IS_OPTIMISTIC_TEMP,
+        executionOptimistic: false,
       },
     ],
-    [routes.events.EventType.chainReorg]: (oldHead, newHead, depth) => [
-      {
-        depth,
-        epoch: computeEpochAtSlot(newHead.slot),
-        slot: newHead.slot,
-        newHeadBlock: newHead.blockRoot,
-        oldHeadBlock: oldHead.blockRoot,
-        newHeadState: newHead.stateRoot,
-        oldHeadState: oldHead.stateRoot,
-        executionOptimistic: IS_OPTIMISTIC_TEMP,
-      },
-    ],
+    [routes.events.EventType.chainReorg]: (oldHead, newHead, depth) => {
+      const blockSummary = forkchoice.getBlock(fromHexString(newHead.blockRoot));
+      return [
+        {
+          depth,
+          epoch: computeEpochAtSlot(newHead.slot),
+          slot: newHead.slot,
+          newHeadBlock: newHead.blockRoot,
+          oldHeadBlock: oldHead.blockRoot,
+          newHeadState: newHead.stateRoot,
+          oldHeadState: oldHead.stateRoot,
+          executionOptimistic: blockSummary != null && isOptimisticBlock(blockSummary),
+        },
+      ];
+    },
     [routes.events.EventType.contributionAndProof]: (contributionAndProof) => [contributionAndProof],
     [routes.events.EventType.lightClientOptimisticUpdate]: (headerUpdate) => [headerUpdate],
     [routes.events.EventType.lightClientFinalityUpdate]: (headerUpdate) => [headerUpdate],

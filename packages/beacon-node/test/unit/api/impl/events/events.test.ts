@@ -3,6 +3,7 @@ import sinon, {SinonStubbedInstance} from "sinon";
 import {routes} from "@lodestar/api";
 import {config} from "@lodestar/config/default";
 import {ssz} from "@lodestar/types";
+import {IForkChoice} from "@lodestar/fork-choice";
 import {BeaconChain, ChainEvent, ChainEventEmitter, HeadEventData} from "../../../../../src/chain/index.js";
 import {getEventsApi} from "../../../../../src/api/impl/events/index.js";
 import {generateProtoBlock} from "../../../../utils/typeGenerator.js";
@@ -24,6 +25,7 @@ describe("Events api impl", function () {
       chainStub.stateCache = (stateCacheStub as unknown) as StateContextCache;
       chainEventEmmitter = new ChainEventEmitter();
       chainStub.emitter = chainEventEmmitter;
+      (chainStub as {forkChoice: IForkChoice}).forkChoice = ({getBlock: sinon.stub()} as unknown) as IForkChoice;
       api = getEventsApi({config, chain: chainStub});
     });
 
