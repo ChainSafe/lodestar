@@ -1,4 +1,5 @@
 import path from "node:path";
+import fs from "node:fs";
 import DailyRotateFile from "winston-daily-rotate-file";
 import TransportStream from "winston-transport";
 import winston from "winston";
@@ -20,6 +21,7 @@ export const LOG_FILE_DISABLE_KEYWORD = "none";
 export const LOG_LEVEL_DEFAULT = LogLevel.info;
 export const LOG_FILE_LEVEL_DEFAULT = LogLevel.debug;
 export const LOG_DAILY_ROTATE_DEFAULT = 5;
+const DATE_PATTERN = "YYYY-MM-DD";
 
 export interface ILogArgs {
   logLevel?: LogLevel;
@@ -40,7 +42,7 @@ export function getCliLogger(
   paths: {defaultLogFilepath: string},
   config: IChainForkConfig,
   opts?: {hideTimestamp?: boolean}
-): ILogger {
+): {logger: ILogger; logParams: {filename: string; rotateMaxFiles: number}} {
   const consoleTransport = new ConsoleDynamicLevel({
     // Set defaultLevel, not level for dynamic level setting of ConsoleDynamicLvevel
     defaultLevel: args.logLevel ?? LOG_LEVEL_DEFAULT,
@@ -62,17 +64,17 @@ export function getCliLogger(
 
   const transports: TransportStream[] = [consoleTransport];
 
+  // yargs populates with undefined if just set but with no arg
+  // $ ./bin/lodestar.js beacon --logFileDailyRotate
+  // args = {
+  //   logFileDailyRotate: undefined,
+  // }
+  // `lodestar --logFileDailyRotate` -> enabled daily rotate with default value
+  // `lodestar --logFileDailyRotate 10` -> set daily rotate to custom value 10
+  // `lodestar --logFileDailyRotate 0` -> disable daily rotate and accumulate in same file
+  const rotateMaxFiles = args.logFileDailyRotate ?? LOG_DAILY_ROTATE_DEFAULT;
+  const filename = args.logFile ?? paths.defaultLogFilepath;
   if (args.logFile !== LOG_FILE_DISABLE_KEYWORD) {
-    // yargs populates with undefined if just set but with no arg
-    // $ ./bin/lodestar.js beacon --logFileDailyRotate
-    // args = {
-    //   logFileDailyRotate: undefined,
-    // }
-    // `lodestar --logFileDailyRotate` -> enabled daily rotate with default value
-    // `lodestar --logFileDailyRotate 10` -> set daily rotate to custom value 10
-    // `lodestar --logFileDailyRotate 0` -> disable daily rotate and accumulate in same file
-    const rotateMaxFiles = args.logFileDailyRotate ?? LOG_DAILY_ROTATE_DEFAULT;
-    const filename = args.logFile ?? paths.defaultLogFilepath;
     const logFileLevel = args.logFileLevel ?? LOG_FILE_LEVEL_DEFAULT;
 
     transports.push(
@@ -81,7 +83,7 @@ export function getCliLogger(
             level: logFileLevel,
             //insert the date pattern in filename before the file extension.
             filename: filename.replace(/\.(?=[^.]*$)|$/, "-%DATE%$&"),
-            datePattern: "YYYY-MM-DD",
+            datePattern: DATE_PATTERN,
             handleExceptions: true,
             maxFiles: rotateMaxFiles,
             auditFile: path.join(path.dirname(filename), ".log_rotate_audit.json"),
@@ -106,7 +108,7 @@ export function getCliLogger(
           format: TimestampFormatCode.DateRegular,
         };
 
-  return createWinstonLogger(
+  const logger = createWinstonLogger(
     {
       module: args.logPrefix,
       format: args.logFormat ? parseLogFormat(args.logFormat) : "human",
@@ -115,6 +117,39 @@ export function getCliLogger(
     },
     transports
   );
+
+  return {logger, logParams: {filename, rotateMaxFiles}};
+}
+
+/**
+ * Winston is not able to clean old log files if server is offline for a while
+ * so we have to do this manually when starting the node.
+ * See https://github.com/ChainSafe/lodestar/issues/4419
+ */
+export function cleanOldLogFiles(filePath: string, maxFiles: number): void {
+  const folder = path.dirname(filePath);
+  const filename = path.basename(filePath);
+  const lastIndexDot = filename.lastIndexOf(".");
+  const prefix = filename.substring(0, lastIndexDot);
+  const extension = filename.substring(lastIndexDot + 1, filename.length);
+  const toDelete = fs
+    .readdirSync(folder, {withFileTypes: true})
+    .filter((de) => de.isFile())
+    .map((de) => de.name)
+    .filter((logFileName) => shouldDeleteLogFile(prefix, extension, logFileName, maxFiles))
+    .map((logFileName) => path.join(folder, logFileName));
+  // delete files
+  toDelete.forEach((filename) => fs.unlinkSync(filename));
+}
+
+export function shouldDeleteLogFile(prefix: string, extension: string, logFileName: string, maxFiles: number): boolean {
+  const maxDifferenceMs = maxFiles * 24 * 60 * 60 * 1000;
+  const match = logFileName.match(new RegExp(`${prefix}-([0-9]{4}-[0-9]{2}-[0-9]{2}).${extension}`));
+  // if match[1] exists, it should be the date pattern of YYYY-MM-DD
+  if (match && match[1] && Date.now() - new Date(match[1]).getTime() > maxDifferenceMs) {
+    return true;
+  }
+  return false;
 }
 
 function parseLogFormat(format: string): LogFormat {
