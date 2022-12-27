@@ -67,7 +67,7 @@ describe("beacon state api utils", function () {
 
     it("resolve state by root", async function () {
       const get = sinon.stub().returns(generateCachedState());
-      const chainStub = ({stateCache: {get}} as unknown) as IBeaconChain;
+      const chainStub = ({stateCache: {get}, forkChoice: {getBlock: sinon.stub()}} as unknown) as IBeaconChain;
 
       const state = await resolveStateId(config, chainStub, dbStub, otherRoot);
       expect(state).to.not.be.null;
@@ -116,7 +116,7 @@ describe("beacon state api utils", function () {
         blockArchive: {valuesStream: blockArchiveValuesStream},
         stateArchive: {get, valuesStream: stateArchiveValuesStream},
       } as StubbedBeaconDb;
-      const state = await resolveStateId(config, chainStub, tempDbStub, requestedSlot.toString(), {
+      const {state} = await resolveStateId(config, chainStub, tempDbStub, requestedSlot.toString(), {
         regenFinalizedState: true,
       });
       expect(state).to.not.be.null;
