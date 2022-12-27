@@ -12,9 +12,10 @@ import {altair, eip4844, Epoch, phase0} from "@lodestar/types";
 import {IMetrics} from "../metrics/index.js";
 import {ChainEvent, IBeaconChain, IBeaconClock} from "../chain/index.js";
 import {BlockInput, BlockInputType, getBlockInput} from "../chain/blocks/types.js";
+import {ckzg} from "../util/kzg.js";
 import {INetworkOptions} from "./options.js";
 import {INetwork} from "./interface.js";
-import {ReqRespBeaconNode, ReqRespHandlers} from "./reqresp/index.js";
+import {ReqRespBeaconNode, ReqRespHandlers, doBeaconBlocksMaybeBlobsByRange} from "./reqresp/index.js";
 import {Eth2Gossipsub, getGossipHandlers, GossipHandlers, GossipTopicTypeMap, GossipType} from "./gossip/index.js";
 import {MetadataController} from "./metadata.js";
 import {FORK_EPOCH_LOOKAHEAD, getActiveForks} from "./forks.js";
@@ -227,46 +228,14 @@ export class Network implements INetwork {
     peerId: PeerId,
     request: phase0.BeaconBlocksByRangeRequest
   ): Promise<BlockInput[]> {
-    // TODO EIP-4844: Assumes all blocks in the same epoch
-    // TODO EIP-4844: Ensure all blocks are in the same epoch
-    if (this.config.getForkSeq(request.startSlot) < ForkSeq.eip4844) {
-      const blocks = await this.reqResp.beaconBlocksByRange(peerId, request);
-      return blocks.map((block) => getBlockInput.preEIP4844(this.config, block));
-    }
-
-    // Only request blobs if they are recent enough
-    else if (
-      computeEpochAtSlot(request.startSlot) >=
-      this.chain.clock.currentEpoch - this.config.MIN_EPOCHS_FOR_BLOBS_SIDECARS_REQUESTS
-    ) {
-      // TODO EIP-4844: Do two requests at once for blocks and blobs
-      const blocks = await this.reqResp.beaconBlocksByRange(peerId, request);
-      const blobsSidecars = await this.reqResp.blobsSidecarsByRange(peerId, request);
-
-      if (blocks.length !== blobsSidecars.length) {
-        throw Error(`blocks.length ${blocks.length} != blobsSidecars.length ${blobsSidecars.length}`);
-      }
-
-      const blockInputs: BlockInput[] = [];
-      for (let i = 0; i < blocks.length; i++) {
-        const block = blocks[i];
-        const blobsSidecar = blobsSidecars[i];
-
-        // TODO EIP-4844: Do more verification blob is for block
-        if (block.message.slot !== blobsSidecar.beaconBlockSlot) {
-          throw Error(`blob does not match block slot ${block.message.slot} != ${blobsSidecar.beaconBlockSlot}`);
-        }
-
-        blockInputs.push(getBlockInput.postEIP4844(this.config, block, blobsSidecar));
-      }
-      return blockInputs;
-    }
-
-    // Post EIP-4844 but old blobs
-    else {
-      const blocks = await this.reqResp.beaconBlocksByRange(peerId, request);
-      return blocks.map((block) => getBlockInput.postEIP4844OldBlobs(this.config, block));
-    }
+    return doBeaconBlocksMaybeBlobsByRange(
+      this.config,
+      this.reqResp,
+      peerId,
+      request,
+      this.clock.currentEpoch,
+      ckzg.computeAggregateKzgProof([])
+    );
   }
 
   async beaconBlocksMaybeBlobsByRoot(peerId: PeerId, request: phase0.BeaconBlocksByRootRequest): Promise<BlockInput[]> {
