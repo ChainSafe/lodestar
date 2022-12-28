@@ -329,6 +329,7 @@
           },
           "exemplar": false,
           "expr": "nodejs_version_info{scrape_location=\"validator\"}",
+          "instant": true,
           "interval": "",
           "legendFormat": "{{version}}",
           "refId": "A"
