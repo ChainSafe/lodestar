@@ -24,7 +24,7 @@ import {
   ValidatorFnsByType,
   GossipHandlers,
 } from "./interface.js";
-import {getGossipSSZType, GossipTopicCache, stringifyGossipTopic} from "./topic.js";
+import {getGossipSSZType, GossipTopicCache, stringifyGossipTopic, getCoreTopicsAtFork} from "./topic.js";
 import {DataTransformSnappy, fastMsgIdFn, msgIdFn, msgIdToStrFn} from "./encoding.js";
 import {createValidatorFnsByType} from "./validation/index.js";
 
@@ -420,34 +420,12 @@ function attSubnetLabel(subnet: number): string {
 
 function getMetricsTopicStrToLabel(config: IBeaconConfig): TopicStrToLabel {
   const metricsTopicStrToLabel = new Map<TopicStr, TopicLabel>();
-  const topics: GossipTopic[] = [];
 
   for (const {name: fork} of config.forksAscendingEpochOrder) {
-    for (let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++) {
-      topics.push({fork, type: GossipType.beacon_attestation, subnet});
-    }
-
-    for (let subnet = 0; subnet < SYNC_COMMITTEE_SUBNET_COUNT; subnet++) {
-      topics.push({fork, type: GossipType.sync_committee, subnet});
-    }
-
-    topics.push({fork, type: GossipType.beacon_block});
-    topics.push({fork, type: GossipType.beacon_aggregate_and_proof});
-    topics.push({fork, type: GossipType.voluntary_exit});
-    topics.push({fork, type: GossipType.proposer_slashing});
-    topics.push({fork, type: GossipType.attester_slashing});
-    topics.push({fork, type: GossipType.sync_committee_contribution_and_proof});
-    topics.push({fork, type: GossipType.bls_to_execution_change});
-
-    // TODO EIP-4844: It's an issue to pre-declare the topic here before the fork?
-    if (config.EIP4844_FORK_EPOCH < Infinity) {
-      topics.push({fork, type: GossipType.beacon_block_and_blobs_sidecar});
+    const topics = getCoreTopicsAtFork(fork, {subscribeAllSubnets: true});
+    for (const topic of topics) {
+      metricsTopicStrToLabel.set(stringifyGossipTopic(config, {...topic, fork}), topic.type);
     }
   }
-
-  for (const topic of topics) {
-    metricsTopicStrToLabel.set(stringifyGossipTopic(config, topic), topic.type);
-  }
-
   return metricsTopicStrToLabel;
 }

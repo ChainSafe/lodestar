@@ -16,7 +16,14 @@ import {ckzg} from "../util/kzg.js";
 import {INetworkOptions} from "./options.js";
 import {INetwork} from "./interface.js";
 import {ReqRespBeaconNode, ReqRespHandlers, doBeaconBlocksMaybeBlobsByRange} from "./reqresp/index.js";
-import {Eth2Gossipsub, getGossipHandlers, GossipHandlers, GossipTopicTypeMap, GossipType} from "./gossip/index.js";
+import {
+  Eth2Gossipsub,
+  getGossipHandlers,
+  GossipHandlers,
+  GossipTopicTypeMap,
+  GossipType,
+  getCoreTopicsAtFork,
+} from "./gossip/index.js";
 import {MetadataController} from "./metadata.js";
 import {FORK_EPOCH_LOOKAHEAD, getActiveForks} from "./forks.js";
 import {PeerManager} from "./peers/peerManager.js";
@@ -424,8 +431,9 @@ export class Network implements INetwork {
   private subscribeCoreTopicsAtFork = (fork: ForkName): void => {
     if (this.subscribedForks.has(fork)) return;
     this.subscribedForks.add(fork);
+    const {subscribeAllSubnets} = this.opts;
 
-    for (const topic of this.coreTopicsAtFork(fork)) {
+    for (const topic of getCoreTopicsAtFork(fork, {subscribeAllSubnets})) {
       this.gossip.subscribeTopic({...topic, fork});
     }
   };
@@ -433,8 +441,9 @@ export class Network implements INetwork {
   private unsubscribeCoreTopicsAtFork = (fork: ForkName): void => {
     if (!this.subscribedForks.has(fork)) return;
     this.subscribedForks.delete(fork);
+    const {subscribeAllSubnets} = this.opts;
 
-    for (const topic of this.coreTopicsAtFork(fork)) {
+    for (const topic of getCoreTopicsAtFork(fork, {subscribeAllSubnets})) {
       this.gossip.unsubscribeTopic({...topic, fork});
     }
   };
