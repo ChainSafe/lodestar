@@ -575,7 +575,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "rate(process_cpu_user_seconds_total{scrape_location=\"beacon\"} [1m])",
+          "expr": "rate(process_cpu_user_seconds_total{job=\"beacon\"} [1m])",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
@@ -629,7 +629,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "process_heap_bytes{scrape_location=\"beacon\"}",
+          "expr": "process_heap_bytes{job=\"beacon\"}",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
@@ -687,7 +687,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "process_start_time_seconds{scrape_location=\"beacon\"}*1000",
+          "expr": "process_start_time_seconds{job=\"beacon\"}*1000",
           "instant": false,
           "interval": "",
           "legendFormat": "",
@@ -815,7 +815,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "lodestar_version{scrape_location=\"beacon\"}",
+          "expr": "lodestar_version{job=\"beacon\"}",
           "format": "time_series",
           "instant": true,
           "interval": "",
@@ -869,7 +869,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "lodestar_version{scrape_location=\"beacon\"}",
+          "expr": "lodestar_version{job=\"beacon\"}",
           "format": "time_series",
           "instant": true,
           "interval": "",
@@ -932,7 +932,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "nodejs_version_info{scrape_location=\"beacon\"}",
+          "expr": "nodejs_version_info{job=\"beacon\"}",
           "instant": true,
           "interval": "",
           "legendFormat": "{{version}}",
@@ -1553,7 +1553,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "sum(rate(nodejs_gc_duration_seconds_sum{scrape_location=\"beacon\"} [$rate_interval])) by (instance)",
+          "expr": "sum(rate(nodejs_gc_duration_seconds_sum{job=\"beacon\"} [$rate_interval])) by (instance)",
           "hide": false,
           "interval": "",
           "legendFormat": "gc_duration_sum",
@@ -1565,7 +1565,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "sum(rate(nodejs_gc_pause_seconds_total{scrape_location=\"beacon\"} [$rate_interval])) by (instance)",
+          "expr": "sum(rate(nodejs_gc_pause_seconds_total{job=\"beacon\"} [$rate_interval])) by (instance)",
           "hide": false,
           "interval": "",
           "legendFormat": "gc_pause_sum",
@@ -1687,7 +1687,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "avg_over_time( scrape_duration_seconds{scrape_location=\"beacon\"} [$rate_interval])",
+          "expr": "avg_over_time( scrape_duration_seconds{job=\"beacon\"} [$rate_interval])",
           "hide": false,
           "interval": "",
           "legendFormat": "prometheus_beacon_scrape_roundtrip",
@@ -1699,7 +1699,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "avg_over_time( scrape_duration_seconds{scrape_location=\"validator\"} [$rate_interval])",
+          "expr": "avg_over_time( scrape_duration_seconds{job=\"validator\"} [$rate_interval])",
           "hide": false,
           "interval": "",
           "legendFormat": "prometheus_validator_scrape_roundtrip",
