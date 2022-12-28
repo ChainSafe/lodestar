@@ -120,6 +120,7 @@ export class PeerDiscovery {
       },
     });
     opts.discv5.bootEnrs.forEach((bootEnr) => this.discv5.addEnr(bootEnr));
+    this.logger.verbose("PeerDiscovery number of bootEnrs", {bootEnrs: opts.discv5.bootEnrs.length});
 
     if (metrics) {
       metrics.discovery.cachedENRsSize.addCollect(() => {
