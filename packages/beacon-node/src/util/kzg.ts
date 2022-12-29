@@ -67,9 +67,13 @@ export function loadEthereumTrustedSetup(): void {
     try {
       // in unit tests, calling loadTrustedSetup() twice has error so we have to free and retry
       ckzg.loadTrustedSetup(TRUSTED_SETUP_TXT_FILEPATH);
-    } catch (_) {
-      ckzg.freeTrustedSetup();
-      ckzg.loadTrustedSetup(TRUSTED_SETUP_TXT_FILEPATH);
+    } catch (e) {
+      if ((e as Error).message === "Call freeTrustedSetup before loading a new trusted setup.") {
+        ckzg.freeTrustedSetup();
+        ckzg.loadTrustedSetup(TRUSTED_SETUP_TXT_FILEPATH);
+      } else {
+        throw e;
+      }
     }
   } catch (e) {
     (e as Error).message = `Error loading trusted setup ${TRUSTED_SETUP_JSON_FILEPATH}: ${(e as Error).message}`;
