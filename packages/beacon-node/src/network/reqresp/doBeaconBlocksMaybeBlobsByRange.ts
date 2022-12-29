@@ -5,6 +5,7 @@ import {ForkSeq} from "@lodestar/params";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 
 import {BlockInput, getBlockInput} from "../../chain/blocks/types.js";
+import {ckzg} from "../../util/kzg.js";
 import {IReqRespBeaconNode} from "./interface.js";
 
 export async function doBeaconBlocksMaybeBlobsByRange(
@@ -12,9 +13,7 @@ export async function doBeaconBlocksMaybeBlobsByRange(
   reqResp: IReqRespBeaconNode,
   peerId: PeerId,
   request: phase0.BeaconBlocksByRangeRequest,
-  currentEpoch: Epoch,
-  // To make test life easy without loading ckzg
-  emptyKzgAggregatedProof: eip4844.BlobsSidecar["kzgAggregatedProof"]
+  currentEpoch: Epoch
 ): Promise<BlockInput[]> {
   // TODO EIP-4844: Assumes all blocks in the same epoch
   // TODO EIP-4844: Ensure all blocks are in the same epoch
@@ -32,6 +31,8 @@ export async function doBeaconBlocksMaybeBlobsByRange(
     const blockInputs: BlockInput[] = [];
     let blobSideCarIndex = 0;
     let lastMatchedSlot = -1;
+
+    const emptyKzgAggregatedProof = ckzg.computeAggregateKzgProof([]);
 
     // Match blobSideCar with the block as some blocks would have no blobs and hence
     // would be omitted from the response. If there are any inconsitencies in the
