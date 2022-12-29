@@ -26,17 +26,11 @@ import {
   getExpectedWithdrawals,
 } from "@lodestar/state-transition";
 import {IChainForkConfig} from "@lodestar/config";
-import {ForkName, ForkSeq} from "@lodestar/params";
+import {ForkName, ForkSeq, ForkExecution} from "@lodestar/params";
 import {toHex, sleep} from "@lodestar/utils";
 
 import type {BeaconChain} from "../chain.js";
-import {
-  PayloadId,
-  IExecutionEngine,
-  IExecutionBuilder,
-  PayloadAttributes,
-  ForkExecution,
-} from "../../execution/index.js";
+import {PayloadId, IExecutionEngine, IExecutionBuilder, PayloadAttributes} from "../../execution/index.js";
 import {ZERO_HASH, ZERO_HASH_HEX} from "../../constants/index.js";
 import {IEth1ForBlockProduction} from "../../eth1/index.js";
 import {numToQuantity} from "../../eth1/provider/utils.js";
@@ -342,7 +336,6 @@ export async function prepareExecutionPayload(
     }
 
     const attributes: PayloadAttributes = {
-      fork,
       timestamp,
       prevRandao,
       suggestedFeeRecipient,

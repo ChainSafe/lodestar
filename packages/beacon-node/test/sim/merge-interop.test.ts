@@ -9,7 +9,7 @@ import {Epoch} from "@lodestar/types";
 import {ValidatorProposerConfig} from "@lodestar/validator";
 
 import {ExecutePayloadStatus, PayloadAttributes} from "../../src/execution/engine/interface.js";
-import {ExecutionEngineHttp} from "../../src/execution/engine/http.js";
+import {initializeExecutionEngine} from "../../src/execution/index.js";
 import {ChainEvent} from "../../src/chain/index.js";
 import {testLogger, TestLoggerOpts} from "../utils/logger.js";
 import {getDevBeaconNode} from "../utils/node/beacon.js";
@@ -107,8 +107,8 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     }
 
     //const controller = new AbortController();
-    const executionEngine = new ExecutionEngineHttp(
-      {urls: [engineRpcUrl], jwtSecretHex, retryAttempts, retryDelay},
+    const executionEngine = initializeExecutionEngine(
+      {mode: "http", urls: [engineRpcUrl], jwtSecretHex, retryAttempts, retryDelay},
       {signal: controller.signal}
     );
 
@@ -123,7 +123,6 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       timestamp: quantityToNum("0x5"),
       prevRandao: dataToBytes("0x0000000000000000000000000000000000000000000000000000000000000000", 32),
       suggestedFeeRecipient: "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b",
-      fork: ForkName.bellatrix,
     };
 
     const finalizedBlockHash = "0x0000000000000000000000000000000000000000000000000000000000000000";

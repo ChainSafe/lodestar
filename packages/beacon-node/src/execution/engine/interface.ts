@@ -3,10 +3,9 @@ import {KZGCommitment, Blob} from "@lodestar/types/eip4844";
 import {RootHex, allForks, capella} from "@lodestar/types";
 
 import {DATA, QUANTITY} from "../../eth1/provider/utils.js";
-import {PayloadIdCache, PayloadId, ApiPayloadAttributes, WithdrawalV1} from "./payloadIdCache.js";
+import {PayloadIdCache, PayloadId, WithdrawalV1} from "./payloadIdCache.js";
 
-export type ForkExecution = ForkName.bellatrix | ForkName.capella | ForkName.eip4844;
-export {PayloadIdCache, PayloadId, ApiPayloadAttributes, WithdrawalV1};
+export {PayloadIdCache, PayloadId, WithdrawalV1};
 
 export enum ExecutePayloadStatus {
   /** given payload is valid */
@@ -51,8 +50,6 @@ export type PayloadAttributes = {
   // DATA is anyway a hex string, so we can just track it as a hex string to
   // avoid any conversions
   suggestedFeeRecipient: string;
-  // Not spec'ed, to know the type of the payload
-  fork: ForkExecution;
   withdrawals?: capella.Withdrawal[];
 };
 

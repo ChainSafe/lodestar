@@ -16,7 +16,7 @@ import {Eth1ForBlockProductionDisabled} from "../../../src/eth1/index.js";
 import {testLogger} from "../../utils/logger.js";
 import {linspace} from "../../../src/util/numpy.js";
 import {BeaconDb} from "../../../src/index.js";
-import {getBlockInput} from "../../../src/chain/blocks/types.js";
+import {getBlockInput, AttestationImportOpt} from "../../../src/chain/blocks/types.js";
 
 // Define this params in `packages/state-transition/test/perf/params.ts`
 // to trigger Github actions CI cache
@@ -112,7 +112,7 @@ describe.skip("verify+import blocks - range sync perf test", () => {
         // Only skip importing attestations for finalized sync. For head sync attestation are valuable.
         // Importing attestations also triggers a head update, see https://github.com/ChainSafe/lodestar/issues/3804
         // TODO: Review if this is okay, can we prevent some attacks by importing attestations?
-        skipImportingAttestations: true,
+        importAttestations: AttestationImportOpt.Skip,
         // Ignores ALREADY_KNOWN or GENESIS_BLOCK errors, and continues with the next block in chain segment
         ignoreIfKnown: true,
         // Ignore WOULD_REVERT_FINALIZED_SLOT error, continue with the next block in chain segment

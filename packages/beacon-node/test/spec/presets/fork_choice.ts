@@ -13,11 +13,13 @@ import {testLogger} from "../../utils/logger.js";
 import {getConfig} from "../../utils/config.js";
 import {TestRunnerFn} from "../utils/types.js";
 import {Eth1ForBlockProductionDisabled} from "../../../src/eth1/index.js";
-import {ExecutionEngineMock} from "../../../src/execution/index.js";
+import {getExecutionEngineFromBackend} from "../../../src/execution/index.js";
+import {ExecutePayloadStatus} from "../../../src/execution/engine/interface.js";
+import {ExecutionEngineMockBackend} from "../../../src/execution/engine/mock.js";
 import {defaultChainOptions} from "../../../src/chain/options.js";
 import {getStubbedBeaconDb} from "../../utils/mocks/db.js";
 import {ClockStopped} from "../../utils/mocks/clock.js";
-import {getBlockInput} from "../../../src/chain/blocks/types.js";
+import {getBlockInput, AttestationImportOpt} from "../../../src/chain/blocks/types.js";
 import {ZERO_HASH_HEX} from "../../../src/constants/constants.js";
 import {PowMergeBlock} from "../../../src/eth1/interface.js";
 import {assertCorrectProgressiveBalances} from "../config.js";
@@ -35,7 +37,9 @@ const ATTESTER_SLASHING_FILE_NAME = "^(attester_slashing)_([0-9a-zA-Z])+$";
 
 const logger = testLogger("spec-test");
 
-export const forkChoiceTest: TestRunnerFn<ForkChoiceTestCase, void> = (fork) => {
+export const forkChoiceTest = (opts: {onlyPredefinedResponses: boolean}): TestRunnerFn<ForkChoiceTestCase, void> => (
+  fork
+) => {
   return {
     testFunction: async (testcase) => {
       const {steps, anchorState} = testcase;
@@ -47,11 +51,15 @@ export const forkChoiceTest: TestRunnerFn<ForkChoiceTestCase, void> = (fork) => 
       let tickTime = 0;
       const clock = new ClockStopped(currentSlot);
       const eth1 = new Eth1ForBlockProductionMock();
-      const executionEngine = new ExecutionEngineMock({
+      const executionEngineBackend = new ExecutionEngineMockBackend({
+        onlyPredefinedResponses: opts.onlyPredefinedResponses,
         genesisBlockHash: isExecutionStateType(anchorState)
           ? toHexString(anchorState.latestExecutionPayloadHeader.blockHash)
           : ZERO_HASH_HEX,
       });
+
+      const controller = new AbortController();
+      const executionEngine = getExecutionEngineFromBackend(executionEngineBackend, {signal: controller.signal});
 
       const chain = new BeaconChain(
         {
@@ -136,6 +144,7 @@ export const forkChoiceTest: TestRunnerFn<ForkChoiceTestCase, void> = (fork) => 
               .BeaconBlock.hashTreeRoot(signedBlock.message);
             logger.debug(`Step ${i}/${stepsLen} block`, {
               slot,
+              id: step.block,
               root: toHexString(blockRoot),
               parentRoot: toHexString(signedBlock.message.parentRoot),
               isValid,
@@ -147,7 +156,11 @@ export const forkChoiceTest: TestRunnerFn<ForkChoiceTestCase, void> = (fork) => 
                 : getBlockInput.postEIP4844OldBlobs(config, signedBlock);
 
             try {
-              await chain.processBlock(blockImport, {seenTimestampSec: tickTime, validBlobsSidecar: true});
+              await chain.processBlock(blockImport, {
+                seenTimestampSec: tickTime,
+                validBlobsSidecar: true,
+                importAttestations: AttestationImportOpt.Force,
+              });
               if (!isValid) throw Error("Expect error since this is a negative test");
             } catch (e) {
               if (isValid) throw e;
@@ -168,7 +181,21 @@ export const forkChoiceTest: TestRunnerFn<ForkChoiceTestCase, void> = (fork) => 
             // Register PowBlock for `get_pow_block(hash: Hash32)` calls in verifyBlock
             eth1.addPowBlock(powBlock);
             // Register PowBlock to allow validation in execution engine
-            executionEngine.addPowBlock(powBlock);
+            executionEngineBackend.addPowBlock(powBlock);
+          }
+
+          // Optional step for optimistic sync tests.
+          else if (isOnPayloadInfoStep(step)) {
+            logger.debug(`Step ${i}/${stepsLen} payload_status`, {blockHash: step.block_hash});
+            const status = ExecutePayloadStatus[step.payload_status.status];
+            if (status === undefined) {
+              throw Error(`Unknown payload_status.status: ${step.payload_status.status}`);
+            }
+            executionEngineBackend.addPredefinedPayloadStatus(step.block_hash, {
+              status,
+              latestValidHash: step.payload_status.latest_valid_hash,
+              validationError: step.payload_status.validation_error,
+            });
           }
 
           // checks step
@@ -180,8 +207,10 @@ export const forkChoiceTest: TestRunnerFn<ForkChoiceTestCase, void> = (fork) => 
             const proposerBootRoot = (chain.forkChoice as ForkChoice).getProposerBoostRoot();
 
             if (step.checks.head !== undefined) {
-              expect(head.slot).to.be.equal(bnToNum(step.checks.head.slot), `Invalid head slot at step ${i}`);
-              expect(head.blockRoot).to.be.equal(step.checks.head.root, `Invalid head root at step ${i}`);
+              expect({slot: head.slot, root: head.blockRoot}).deep.equals(
+                {slot: bnToNum(step.checks.head.slot), root: step.checks.head.root},
+                `Invalid head at step ${i}`
+              );
             }
             if (step.checks.proposer_boost_root !== undefined) {
               expect(proposerBootRoot).to.be.equal(
@@ -292,7 +321,7 @@ function toSpecTestCheckpoint(checkpoint: CheckpointWithHex): SpecTestCheckpoint
   };
 }
 
-type Step = OnTick | OnAttestation | OnAttesterSlashing | OnBlock | OnPowBlock | Checks;
+type Step = OnTick | OnAttestation | OnAttesterSlashing | OnBlock | OnPowBlock | OnPayloadInfo | Checks;
 
 type SpecTestCheckpoint = {epoch: bigint; root: string};
 
@@ -330,12 +359,25 @@ type OnBlock = {
   valid?: number;
 };
 
+/** Optional step for optimistic sync tests. */
 type OnPowBlock = {
   /**
    * the name of the `pow_block_<32-byte-root>.ssz_snappy` file. To
    * execute `on_pow_block(store, block)`
    */
   pow_block: string;
+};
+
+type OnPayloadInfo = {
+  /** Encoded 32-byte value of payload's block hash. */
+  block_hash: string;
+  payload_status: {
+    status: "VALID" | "INVALID" | "SYNCING" | "ACCEPTED" | "INVALID_BLOCK_HASH";
+    /** Encoded 32-byte value of the latest valid block hash, may be `null`. */
+    latest_valid_hash: string;
+    /** Message providing additional details on the validation error, may be `null`. */
+    validation_error: string;
+  };
 };
 
 type Checks = {
@@ -385,6 +427,10 @@ function isBlock(step: Step): step is OnBlock {
 
 function isPowBlock(step: Step): step is OnPowBlock {
   return typeof (step as OnPowBlock).pow_block === "string";
+}
+
+function isOnPayloadInfoStep(step: Step): step is OnPayloadInfo {
+  return typeof (step as OnPayloadInfo).block_hash === "string";
 }
 
 function isCheck(step: Step): step is Checks {
