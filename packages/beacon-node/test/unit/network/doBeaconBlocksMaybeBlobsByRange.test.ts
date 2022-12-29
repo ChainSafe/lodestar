@@ -6,12 +6,19 @@ import {createIBeaconConfig, createIChainForkConfig, defaultChainConfig} from "@
 
 import {doBeaconBlocksMaybeBlobsByRange, ReqRespBeaconNode} from "../../../src/network/reqresp/index.js";
 import {BlockInputType} from "../../../src/chain/blocks/types.js";
+import {ckzg, initCKZG, loadEthereumTrustedSetup} from "../../../src/util/kzg.js";
 
 describe("doBeaconBlocksMaybeBlobsByRange", function () {
   const sandbox = sinon.createSandbox();
   const reqResp = sandbox.createStubInstance(ReqRespBeaconNode) as SinonStubbedInstance<ReqRespBeaconNode> &
     ReqRespBeaconNode;
   const peerId = peerIdFromString("Qma9T5YraSnpRDZqRR4krcSJabThc8nwZuJV3LercPHufi");
+
+  before(async function () {
+    this.timeout(10000); // Loading trusted setup is slow
+    await initCKZG();
+    loadEthereumTrustedSetup();
+  });
 
   /* eslint-disable @typescript-eslint/naming-convention */
   const chainConfig = createIChainForkConfig({
@@ -24,7 +31,7 @@ describe("doBeaconBlocksMaybeBlobsByRange", function () {
   const genesisValidatorsRoot = Buffer.alloc(32, 0xaa);
   const config = createIBeaconConfig(chainConfig, genesisValidatorsRoot);
   const rangeRequest = ssz.phase0.BeaconBlocksByRangeRequest.defaultValue();
-  const emptyKzgAggregatedProof = ssz.eip4844.BlobsSidecar.defaultValue().kzgAggregatedProof;
+  const emptyKzgAggregatedProof = ckzg.computeAggregateKzgProof([]);
 
   const block1 = ssz.eip4844.SignedBeaconBlock.defaultValue();
   block1.message.slot = 1;
@@ -74,14 +81,7 @@ describe("doBeaconBlocksMaybeBlobsByRange", function () {
       reqResp.beaconBlocksByRange.resolves(blocks);
       reqResp.blobsSidecarsByRange.resolves(blobsSidecars);
 
-      const response = await doBeaconBlocksMaybeBlobsByRange(
-        config,
-        reqResp,
-        peerId,
-        rangeRequest,
-        0,
-        emptyKzgAggregatedProof
-      );
+      const response = await doBeaconBlocksMaybeBlobsByRange(config, reqResp, peerId, rangeRequest, 0);
       expect(response).to.be.deep.equal(expectedResponse);
     });
   });
