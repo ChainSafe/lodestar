@@ -8,17 +8,17 @@ import {doBeaconBlocksMaybeBlobsByRange, ReqRespBeaconNode} from "../../../src/n
 import {BlockInputType} from "../../../src/chain/blocks/types.js";
 import {ckzg, initCKZG, loadEthereumTrustedSetup} from "../../../src/util/kzg.js";
 
-describe("doBeaconBlocksMaybeBlobsByRange", function () {
-  const sandbox = sinon.createSandbox();
-  const reqResp = sandbox.createStubInstance(ReqRespBeaconNode) as SinonStubbedInstance<ReqRespBeaconNode> &
-    ReqRespBeaconNode;
-  const peerId = peerIdFromString("Qma9T5YraSnpRDZqRR4krcSJabThc8nwZuJV3LercPHufi");
-
+describe("doBeaconBlocksMaybeBlobsByRange", () => {
   before(async function () {
     this.timeout(10000); // Loading trusted setup is slow
     await initCKZG();
     loadEthereumTrustedSetup();
   });
+
+  const sandbox = sinon.createSandbox();
+  const reqResp = sandbox.createStubInstance(ReqRespBeaconNode) as SinonStubbedInstance<ReqRespBeaconNode> &
+    ReqRespBeaconNode;
+  const peerId = peerIdFromString("Qma9T5YraSnpRDZqRR4krcSJabThc8nwZuJV3LercPHufi");
 
   /* eslint-disable @typescript-eslint/naming-convention */
   const chainConfig = createIChainForkConfig({
@@ -31,7 +31,6 @@ describe("doBeaconBlocksMaybeBlobsByRange", function () {
   const genesisValidatorsRoot = Buffer.alloc(32, 0xaa);
   const config = createIBeaconConfig(chainConfig, genesisValidatorsRoot);
   const rangeRequest = ssz.phase0.BeaconBlocksByRangeRequest.defaultValue();
-  const emptyKzgAggregatedProof = ckzg.computeAggregateKzgProof([]);
 
   const block1 = ssz.eip4844.SignedBeaconBlock.defaultValue();
   block1.message.slot = 1;
@@ -61,7 +60,7 @@ describe("doBeaconBlocksMaybeBlobsByRange", function () {
       const blobsSidecars = blocksWithBlobs
         .map(([_block, blobs]) => blobs as eip4844.BlobsSidecar)
         .filter((blobs) => blobs !== undefined);
-
+      const emptyKzgAggregatedProof = ckzg.computeAggregateKzgProof([]);
       const expectedResponse = blocksWithBlobs.map(([block, blobsSidecar]) => {
         const blobs =
           blobsSidecar !== undefined
