@@ -19,7 +19,7 @@ import {ExecutionEngineMockBackend} from "../../../src/execution/engine/mock.js"
 import {defaultChainOptions} from "../../../src/chain/options.js";
 import {getStubbedBeaconDb} from "../../utils/mocks/db.js";
 import {ClockStopped} from "../../utils/mocks/clock.js";
-import {getBlockInput} from "../../../src/chain/blocks/types.js";
+import {getBlockInput, AttestationImportOpt} from "../../../src/chain/blocks/types.js";
 import {ZERO_HASH_HEX} from "../../../src/constants/constants.js";
 import {PowMergeBlock} from "../../../src/eth1/interface.js";
 import {assertCorrectProgressiveBalances} from "../config.js";
@@ -156,7 +156,11 @@ export const forkChoiceTest = (opts: {onlyPredefinedResponses: boolean}): TestRu
                 : getBlockInput.postEIP4844OldBlobs(config, signedBlock);
 
             try {
-              await chain.processBlock(blockImport, {seenTimestampSec: tickTime, validBlobsSidecar: true});
+              await chain.processBlock(blockImport, {
+                seenTimestampSec: tickTime,
+                validBlobsSidecar: true,
+                importAttestations: AttestationImportOpt.Force,
+              });
               if (!isValid) throw Error("Expect error since this is a negative test");
             } catch (e) {
               if (isValid) throw e;

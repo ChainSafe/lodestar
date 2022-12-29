@@ -96,7 +96,7 @@ export interface IForkChoice {
    * The supplied `attestation` **must** pass the `in_valid_indexed_attestation` function as it
    * will not be run here.
    */
-  onAttestation(attestation: phase0.IndexedAttestation, attDataRoot?: string): void;
+  onAttestation(attestation: phase0.IndexedAttestation, attDataRoot?: string, forceImport?: boolean): void;
   /**
    * Register attester slashing in order not to consider their votes in `getHead`
    *
