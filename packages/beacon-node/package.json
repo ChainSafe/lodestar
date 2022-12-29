@@ -139,7 +139,7 @@
     "it-all": "^2.0.0",
     "it-pipe": "^2.0.4",
     "jwt-simple": "0.5.6",
-    "libp2p": "0.39.2",
+    "libp2p": "0.41.0",
     "prom-client": "^14.1.0",
     "prometheus-gc-stats": "^0.6.3",
     "snappyjs": "^0.7.0",
