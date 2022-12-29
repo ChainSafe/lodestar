@@ -13,6 +13,7 @@ function ckzgNotLoaded(): never {
 }
 
 export let ckzg: {
+  freeTrustedSetup(): void;
   loadTrustedSetup(filePath: string): void;
   blobToKzgCommitment(blob: Uint8Array): Uint8Array;
   computeAggregateKzgProof(blobs: Uint8Array[]): Uint8Array;
@@ -22,6 +23,7 @@ export let ckzg: {
     kzgAggregatedProof: Uint8Array
   ): boolean;
 } = {
+  freeTrustedSetup: ckzgNotLoaded,
   loadTrustedSetup: ckzgNotLoaded,
   blobToKzgCommitment: ckzgNotLoaded,
   computeAggregateKzgProof: ckzgNotLoaded,
@@ -62,7 +64,13 @@ export function loadEthereumTrustedSetup(): void {
     const txt = trustedSetupJsonToTxt(json);
     fs.writeFileSync(TRUSTED_SETUP_TXT_FILEPATH, txt);
 
-    ckzg.loadTrustedSetup(TRUSTED_SETUP_TXT_FILEPATH);
+    try {
+      // in unit tests, calling loadTrustedSetup() twice has error so we have to free and retry
+      ckzg.loadTrustedSetup(TRUSTED_SETUP_TXT_FILEPATH);
+    } catch (_) {
+      ckzg.freeTrustedSetup();
+      ckzg.loadTrustedSetup(TRUSTED_SETUP_TXT_FILEPATH);
+    }
   } catch (e) {
     (e as Error).message = `Error loading trusted setup ${TRUSTED_SETUP_JSON_FILEPATH}: ${(e as Error).message}`;
     throw e;
