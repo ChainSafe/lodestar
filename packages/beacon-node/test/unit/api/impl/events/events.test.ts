@@ -54,7 +54,7 @@ describe("Events api impl", function () {
 
       const headBlock = generateProtoBlock();
       stateCacheStub.get.withArgs(headBlock.stateRoot).returns(generateCachedState({slot: 1000}));
-      chainEventEmmitter.emit(ChainEvent.forkChoiceReorg, headBlock, headBlock, 2);
+      chainEventEmmitter.emit(ChainEvent.forkChoiceReorg, headBlock, headBlock, 2, false);
       chainEventEmmitter.emit(ChainEvent.head, headEventData);
 
       expect(events).to.have.length(1, "Wrong num of received events");
@@ -78,7 +78,7 @@ describe("Events api impl", function () {
       const events = getEvents([routes.events.EventType.block]);
 
       const block = ssz.phase0.SignedBeaconBlock.defaultValue();
-      chainEventEmmitter.emit(ChainEvent.block, block, null as any);
+      chainEventEmmitter.emit(ChainEvent.block, block, null as any, false);
 
       expect(events).to.have.length(1, "Wrong num of received events");
       expect(events[0].type).to.equal(routes.events.EventType.block);
@@ -102,7 +102,7 @@ describe("Events api impl", function () {
       const exit = ssz.phase0.SignedVoluntaryExit.defaultValue();
       const block = ssz.phase0.SignedBeaconBlock.defaultValue();
       block.message.body.voluntaryExits.push(exit);
-      chainEventEmmitter.emit(ChainEvent.block, block, null as any);
+      chainEventEmmitter.emit(ChainEvent.block, block, null as any, false);
 
       expect(events).to.have.length(1, "Wrong num of received events");
       expect(events[0].type).to.equal(routes.events.EventType.voluntaryExit);
@@ -115,7 +115,7 @@ describe("Events api impl", function () {
       const blsToExecution = ssz.capella.SignedBLSToExecutionChange.defaultValue();
       const block = ssz.capella.SignedBeaconBlock.defaultValue();
       block.message.body.blsToExecutionChanges.push(blsToExecution);
-      chainEventEmmitter.emit(ChainEvent.block, block, null as any);
+      chainEventEmmitter.emit(ChainEvent.block, block, null as any, false);
 
       expect(events).to.have.length(1, "Wrong num of received events");
       expect(events[0].type).to.equal(routes.events.EventType.blsToExecutionChange);
@@ -140,7 +140,7 @@ describe("Events api impl", function () {
       const depth = 3;
       const oldHead = generateProtoBlock({slot: 4});
       const newHead = generateProtoBlock({slot: 3});
-      chainEventEmmitter.emit(ChainEvent.forkChoiceReorg, oldHead, newHead, depth);
+      chainEventEmmitter.emit(ChainEvent.forkChoiceReorg, oldHead, newHead, depth, false);
 
       expect(events).to.have.length(1, "Wrong num of received events");
       const event = events[0];

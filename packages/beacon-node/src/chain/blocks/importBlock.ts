@@ -65,9 +65,10 @@ export async function importBlock(
 
   const prevFinalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
   const blockDelaySec = (fullyVerifiedBlock.seenTimestampSec - postState.genesisTime) % this.config.SECONDS_PER_SLOT;
-  const blockRoot = toHexString(this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message));
+  const blockRoot = this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
+  const blockRootHex = toHexString(blockRoot);
   // Should compute checkpoint balances before forkchoice.onBlock
-  this.checkpointBalancesCache.processState(blockRoot, postState);
+  this.checkpointBalancesCache.processState(blockRootHex, postState);
   this.forkChoice.onBlock(block.message, postState, blockDelaySec, this.clock.currentSlot, executionStatus);
 
   // - Register state and block to the validator monitor
@@ -216,6 +217,7 @@ export async function importBlock(
 
   if (newHead.blockRoot !== oldHead.blockRoot) {
     // new head
+    const executionOptimistic = isOptimisticBlock(newHead);
 
     pendingEvents.push(ChainEvent.head, {
       block: newHead.blockRoot,
@@ -224,7 +226,7 @@ export async function importBlock(
       state: newHead.stateRoot,
       previousDutyDependentRoot: this.forkChoice.getDependentRoot(newHead, EpochDifference.previous),
       currentDutyDependentRoot: this.forkChoice.getDependentRoot(newHead, EpochDifference.current),
-      executionOptimistic: isOptimisticBlock(newHead),
+      executionOptimistic,
     });
 
     this.metrics?.forkChoice.changedHead.inc();
@@ -242,7 +244,7 @@ export async function importBlock(
         newSlot: newHead.slot,
       });
 
-      pendingEvents.push(ChainEvent.forkChoiceReorg, newHead, oldHead, distance);
+      pendingEvents.push(ChainEvent.forkChoiceReorg, newHead, oldHead, distance, executionOptimistic);
 
       this.metrics?.forkChoice.reorg.inc();
       this.metrics?.forkChoice.reorgDistance.observe(distance);
@@ -328,7 +330,7 @@ export async function importBlock(
   await this.db.block.add(block);
   this.logger.debug("Persisted block to hot DB", {
     slot: block.message.slot,
-    root: blockRoot,
+    root: blockRootHex,
   });
 
   if (blockInput.type === BlockInputType.postEIP4844) {
@@ -346,8 +348,10 @@ export async function importBlock(
 
   // - Send event after everything is done
 
+  const blockSummary = this.forkChoice.getBlock(blockRoot);
+  const executionOptimistic = blockSummary != null && isOptimisticBlock(blockSummary);
   // Emit all events at once after fully completing importBlock()
-  this.emitter.emit(ChainEvent.block, block, postState);
+  this.emitter.emit(ChainEvent.block, block, postState, executionOptimistic);
   pendingEvents.emit();
 
   // Register stat metrics about the block after importing it
@@ -360,7 +364,7 @@ export async function importBlock(
   // Gossip blocks need to be imported as soon as possible, waiting attestations could be processed
   // in the next event loop. See https://github.com/ChainSafe/lodestar/issues/4789
   setTimeout(() => {
-    this.reprocessController.onBlockImported({slot: block.message.slot, root: blockRoot}, advancedSlot);
+    this.reprocessController.onBlockImported({slot: block.message.slot, root: blockRootHex}, advancedSlot);
   }, 0);
 
   if (opts.seenTimestampSec !== undefined) {
@@ -371,7 +375,7 @@ export async function importBlock(
 
   this.logger.verbose("Block processed", {
     slot: block.message.slot,
-    root: blockRoot,
+    root: blockRootHex,
     delaySec: this.clock.secFromSlot(block.message.slot),
   });
 }
