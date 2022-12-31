@@ -60,6 +60,7 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
    */
   private readonly jwtSecret?: Uint8Array;
   private readonly metrics: JsonRpcHttpClientMetrics | null;
+  private useFallbackUrl = false;
 
   constructor(
     private readonly urls: string[],
@@ -100,6 +101,13 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
     this.metrics = opts?.metrics ?? null;
 
     this.metrics?.configUrlsCount.set(urls.length);
+
+    if (this.urls.length >= 2) {
+      // Use fallback url every 5 minutes
+      setInterval(() => {
+        this.useFallbackUrl = !this.useFallbackUrl;
+      }, 5 * 60 * 1000);
+    }
   }
 
   /**
@@ -157,6 +165,9 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
       }
 
       try {
+        if (this.urls.length >= 2 && i === 0 && this.useFallbackUrl) {
+          throw Error("use fallback url");
+        }
         return await this.fetchJsonOneUrl<R, T>(this.urls[i], json, opts);
       } catch (e) {
         if (this.opts?.shouldNotFallback?.(e as Error)) {
