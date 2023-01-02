@@ -86,7 +86,7 @@ export class TableReporter extends SimulationReporter<typeof defaultAssertions> 
     }
 
     const head0 = heads.length > 0 ? heads[0] : null;
-    const nodesHaveSameHead = heads.every((head) => head?.blockRoot !== head0?.blockRoot);
+    const nodesHaveSameHead = heads.every((head) => head?.blockRoot === head0?.blockRoot);
     const errorCount = errors.filter((e) => e.slot === slot).length;
 
     this.table.addRow({
