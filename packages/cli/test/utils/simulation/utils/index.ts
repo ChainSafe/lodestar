@@ -68,5 +68,5 @@ export function strFixedSize(str: string, width: number): string {
   return str.padEnd(width).slice(0, width);
 }
 
-export const isUnique = <T>(arr: T[], predicate?: (val: T) => unknown): boolean =>
+export const arrayIsUnique = <T>(arr: T[], predicate?: (val: T) => unknown): boolean =>
   arr.length === new Set(predicate ? arr.map(predicate) : arr).size;

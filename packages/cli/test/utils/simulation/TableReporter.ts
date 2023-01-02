@@ -4,7 +4,7 @@ import {HeadSummary} from "./assertions/defaults/headAssertion.js";
 import {defaultAssertions} from "./assertions/defaults/index.js";
 import {SimulationReporter} from "./interfaces.js";
 import {TableRenderer} from "./TableRenderer.js";
-import {arrayGroupBy, avg, isUnique} from "./utils/index.js";
+import {arrayGroupBy, avg, arrayIsUnique} from "./utils/index.js";
 
 export class TableReporter extends SimulationReporter<typeof defaultAssertions> {
   private lastPrintedSlot = -1;
@@ -94,10 +94,10 @@ export class TableReporter extends SimulationReporter<typeof defaultAssertions> 
       eph: epochStr,
       slot: head0 ? head0.slot : "-",
       head: head0 ? (nodesHaveSameHead ? `${head0?.blockRoot.slice(0, 6)}..` : "different") : "-",
-      finzed: isUnique(finalizedSlots) ? finalizedSlots[0] : finalizedSlots.join(","),
-      peers: isUnique(peerCount) ? peerCount[0] : peerCount.join(","),
-      attCount: isUnique(attestationCount) ? attestationCount[0] : "---",
-      incDelay: isUnique(inclusionDelay) ? inclusionDelay[0].toFixed(2) : "---",
+      finzed: !arrayIsUnique(finalizedSlots) ? finalizedSlots[0] : finalizedSlots.join(","),
+      peers: !arrayIsUnique(peerCount) ? peerCount[0] : peerCount.join(","),
+      attCount: !arrayIsUnique(attestationCount) ? attestationCount[0] : "---",
+      incDelay: !arrayIsUnique(inclusionDelay) ? inclusionDelay[0].toFixed(2) : "---",
       errors: errorCount,
     });
   }
