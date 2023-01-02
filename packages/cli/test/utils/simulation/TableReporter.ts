@@ -1,9 +1,10 @@
 /* eslint-disable no-console */
 import {Slot} from "@lodestar/types";
+import {HeadSummary} from "./assertions/defaults/headAssertion.js";
 import {defaultAssertions} from "./assertions/defaults/index.js";
 import {SimulationReporter} from "./interfaces.js";
 import {TableRenderer} from "./TableRenderer.js";
-import {arrayGroupBy, avg} from "./utils/index.js";
+import {arrayGroupBy, avg, isUnique} from "./utils/index.js";
 
 export class TableReporter extends SimulationReporter<typeof defaultAssertions> {
   private lastPrintedSlot = -1;
@@ -69,22 +70,22 @@ export class TableReporter extends SimulationReporter<typeof defaultAssertions> 
       }
     }
 
-    const finalizedSlots = nodes.map((node) => stores["finalized"][node.cl.id][slot] ?? "-");
-    const finalizedSlotsUnique = new Set(finalizedSlots);
+    const finalizedSlots: number[] = [];
+    const inclusionDelay: number[] = [];
+    const attestationCount: number[] = [];
+    const heads: HeadSummary[] = [];
+    const peerCount: number[] = [];
 
-    const inclusionDelay = nodes.map((node) => stores["inclusionDelay"][node.cl.id][slot] ?? "-");
-    const inclusionDelayUnique = new Set(inclusionDelay);
+    for (const node of nodes) {
+      finalizedSlots.push(stores["finalized"][node.cl.id][slot] ?? "-");
+      inclusionDelay.push(stores["inclusionDelay"][node.cl.id][slot] ?? "-");
+      attestationCount.push(stores["attestationsCount"][node.cl.id][slot] ?? "-");
+      heads.push(stores["head"][node.cl.id][slot] ?? "-");
+      peerCount.push(stores["connectedPeerCount"][node.cl.id][slot] ?? "-");
+    }
 
-    const attestationCount = nodes.map((node) => stores["attestationsCount"][node.cl.id][slot] ?? "-");
-    const attestationCountUnique = new Set(attestationCount);
-
-    const heads = nodes.map((node) => stores["head"][node.cl.id][slot]);
     const head0 = heads.length > 0 ? heads[0] : null;
     const nodesHaveSameHead = heads.every((head) => head?.blockRoot !== head0?.blockRoot);
-
-    const peerCount = nodes.map((node) => stores["connectedPeerCount"][node.cl.id][slot] ?? "-");
-    const peerCountUnique = new Set(peerCount);
-
     const errorCount = errors.filter((e) => e.slot === slot).length;
 
     this.table.addRow({
@@ -92,10 +93,10 @@ export class TableReporter extends SimulationReporter<typeof defaultAssertions> 
       eph: epochStr,
       slot: head0 ? head0.slot : "-",
       head: head0 ? (nodesHaveSameHead ? `${head0?.blockRoot.slice(0, 6)}..` : "different") : "-",
-      finzed: finalizedSlotsUnique.size === 1 ? finalizedSlots[0] : finalizedSlots.join(","),
-      peers: peerCountUnique.size === 1 ? peerCount[0] : peerCount.join(","),
-      attCount: attestationCountUnique.size === 1 ? attestationCount[0] : "---",
-      incDelay: inclusionDelayUnique.size === 1 ? inclusionDelay[0].toFixed(2) : "---",
+      finzed: isUnique(finalizedSlots) ? finalizedSlots[0] : finalizedSlots.join(","),
+      peers: isUnique(peerCount) ? peerCount[0] : peerCount.join(","),
+      attCount: isUnique(attestationCount) ? attestationCount[0] : "---",
+      incDelay: isUnique(inclusionDelay) ? inclusionDelay[0].toFixed(2) : "---",
       errors: errorCount,
     });
   }
