@@ -12,37 +12,7 @@ export function processWithdrawals(
   state: CachedBeaconStateCapella,
   payload: capella.FullOrBlindedExecutionPayload
 ): void {
-  const {withdrawals: expectedWithdrawals} = getExpectedWithdrawals(state);
-  const numWithdrawals = expectedWithdrawals.length;
-
-  if (expectedWithdrawals.length !== payload.withdrawals.length) {
-    throw Error(`Invalid withdrawals length expected=${numWithdrawals} actual=${payload.withdrawals.length}`);
-  }
-  for (let i = 0; i < numWithdrawals; i++) {
-    const withdrawal = expectedWithdrawals[i];
-    if (!ssz.capella.Withdrawal.equals(withdrawal, payload.withdrawals[i])) {
-      throw Error(`Withdrawal mismatch at index=${i}`);
-    }
-    decreaseBalance(state, withdrawal.validatorIndex, Number(withdrawal.amount));
-  }
-
-  // Update the nextWithdrawalIndex
-  if (expectedWithdrawals.length > 0) {
-    const latestWithdrawal = expectedWithdrawals[expectedWithdrawals.length - 1];
-    state.nextWithdrawalIndex = latestWithdrawal.index + 1;
-  }
-
-  // Update the nextWithdrawalValidatorIndex
-  if (expectedWithdrawals.length === MAX_WITHDRAWALS_PER_PAYLOAD) {
-    // All slots filled, nextWithdrawalValidatorIndex should be validatorIndex having next turn
-    const latestWithdrawal = expectedWithdrawals[expectedWithdrawals.length - 1];
-    state.nextWithdrawalValidatorIndex = (latestWithdrawal.validatorIndex + 1) % state.validators.length;
-  } else {
-    // expected withdrawals came up short in the bound, so we move nextWithdrawalValidatorIndex to
-    // the next post the bound
-    state.nextWithdrawalValidatorIndex =
-      (state.nextWithdrawalValidatorIndex + MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP) % state.validators.length;
-  }
+  return;
 }
 
 export function getExpectedWithdrawals(
