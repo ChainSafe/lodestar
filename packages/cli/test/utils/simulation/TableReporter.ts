@@ -44,17 +44,14 @@ export class TableReporter extends SimulationReporter<typeof defaultAssertions> 
       if (epoch - 1 < forkConfig.ALTAIR_FORK_EPOCH) {
         this.table.addEmptyRow("Att Participation: N/A - SC Participation: N/A");
       } else {
-        // attestationParticipation is calculated at first slot of an epoch
-        const participation = nodes.map((node) => stores["attestationParticipation"][node.cl.id][slot] ?? 0);
-        const head = avg(participation.map((p) => p.head)).toFixed(2);
-        const source = avg(participation.map((p) => p.source)).toFixed(2);
-        const target = avg(participation.map((p) => p.target)).toFixed(2);
-
         // As it's printed on the first slot of epoch we need to get the previous epoch
         const startSlot = clock.getFirstSlotOfEpoch(epoch - 1);
         const endSlot = clock.getLastSlotOfEpoch(epoch - 1);
         const nodesSyncParticipationAvg: number[] = [];
+        const participation: {head: number; source: number; target: number}[] = [];
+
         for (const node of nodes) {
+          participation.push(stores["attestationParticipation"][node.cl.id][slot] ?? 0);
           const syncCommitteeParticipation: number[] = [];
           for (let slot = startSlot; slot <= endSlot; slot++) {
             syncCommitteeParticipation.push(stores["syncCommitteeParticipation"][node.cl.id][slot]);
@@ -62,6 +59,10 @@ export class TableReporter extends SimulationReporter<typeof defaultAssertions> 
           nodesSyncParticipationAvg.push(avg(syncCommitteeParticipation));
         }
 
+        // attestationParticipation is calculated at first slot of an epoch
+        const head = avg(participation.map((p) => p.head)).toFixed(2);
+        const source = avg(participation.map((p) => p.source)).toFixed(2);
+        const target = avg(participation.map((p) => p.target)).toFixed(2);
         const syncParticipation = avg(nodesSyncParticipationAvg).toFixed(2);
 
         this.table.addEmptyRow(
