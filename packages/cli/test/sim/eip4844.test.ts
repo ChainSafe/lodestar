@@ -93,28 +93,28 @@ const checkpointSync = env.createNodePair({
   keysCount: 0,
 });
 
-await rangeSync.jobs.el.start();
-await rangeSync.jobs.cl.start();
-await connectNewNode(rangeSync.nodePair, env.nodes);
+await rangeSync.el.job.start();
+await rangeSync.cl.job.start();
+await connectNewNode(rangeSync, env.nodes);
 
-await checkpointSync.jobs.el.start();
-await checkpointSync.jobs.cl.start();
-await connectNewNode(checkpointSync.nodePair, env.nodes);
+await checkpointSync.el.job.start();
+await checkpointSync.cl.job.start();
+await connectNewNode(checkpointSync, env.nodes);
 
 await Promise.all([
-  await waitForNodeSync(env, rangeSync.nodePair, {
+  await waitForNodeSync(env, rangeSync, {
     head: toHexString(headForRangeSync.data.root),
     slot: headForRangeSync.data.header.message.slot,
   }),
-  await waitForNodeSync(env, checkpointSync.nodePair, {
+  await waitForNodeSync(env, checkpointSync, {
     head: toHexString(headForCheckpointSync.root),
     slot: env.clock.getLastSlotOfEpoch(headForCheckpointSync.epoch),
   }),
 ]);
 
-await rangeSync.jobs.cl.stop();
-await rangeSync.jobs.el.stop();
-await checkpointSync.jobs.cl.stop();
-await checkpointSync.jobs.el.stop();
+await rangeSync.cl.job.stop();
+await rangeSync.el.job.stop();
+await checkpointSync.cl.job.stop();
+await checkpointSync.el.job.stop();
 
 await env.stop();

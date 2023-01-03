@@ -44,10 +44,7 @@ const env = SimulationEnvironment.initWithDefaults(
       TERMINAL_TOTAL_DIFFICULTY: ttd,
     },
   },
-  [
-    {id: "node-1", cl: CLClient.Lodestar, el: ELClient.Geth, keysCount: 32, mining: true},
-    {id: "node-2", cl: CLClient.Lodestar, el: ELClient.Geth, keysCount: 32},
-  ]
+  [{id: "node-1", cl: CLClient.Lodestar, el: ELClient.Geth, keysCount: 32, mining: true}]
 );
 
 env.tracker.register({
@@ -57,21 +54,30 @@ env.tracker.register({
   },
 });
 
-const newNode = env.createNodePair({
-  id: "node-3",
-  cl: {type: CLClient.Lodestar, options: {engineUrls: [env.nodes[1].el.engineRpcUrl]}},
+const newNode1 = env.createNodePair({
+  id: "node-2",
+  cl: {type: CLClient.Lodestar, options: {engineUrls: [env.nodes[0].el.engineRpcUrl]}},
   el: ELClient.Geth,
   keysCount: 0,
 });
 
-env.nodes.push(newNode);
+const newNode2 = env.createNodePair({
+  id: "node-3",
+  cl: {type: CLClient.Lodestar, options: {engineUrls: [env.nodes[0].el.engineRpcUrl]}},
+  el: ELClient.Geth,
+  keysCount: 0,
+});
+
+env.nodes.push(newNode1);
+env.nodes.push(newNode2);
 
 await env.start({runTimeoutMs});
 await connectAllNodes(env.nodes);
 
 await waitForSlot(env.clock.getLastSlotOfEpoch(1), env.nodes, {silent: true, env});
 
-await newNode.el.job.stop();
+await newNode1.el.job.stop();
+await newNode2.el.job.stop();
 
 // The `TTD` will be reach around `start of bellatrixForkEpoch + additionalSlotsForMerge` slot
 // We wait for the end of that epoch with half more epoch to make sure merge transition is complete
