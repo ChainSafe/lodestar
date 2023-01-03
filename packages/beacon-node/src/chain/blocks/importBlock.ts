@@ -70,6 +70,10 @@ export async function importBlock(
   // Should compute checkpoint balances before forkchoice.onBlock
   this.checkpointBalancesCache.processState(blockRootHex, postState);
   this.forkChoice.onBlock(block.message, postState, blockDelaySec, this.clock.currentSlot, executionStatus);
+  this.logger.verbose("Added block to forkchoice", {
+    slot: block.message.slot,
+    root: blockRootHex,
+  });
 
   // - Register state and block to the validator monitor
   // TODO
@@ -231,23 +235,27 @@ export async function importBlock(
 
     this.metrics?.forkChoice.changedHead.inc();
 
-    const distance = this.forkChoice.getCommonAncestorDistance(oldHead, newHead);
-    if (distance !== null) {
-      // chain reorg
-      this.logger.verbose("Chain reorg", {
-        depth: distance,
-        previousHead: oldHead.blockRoot,
-        previousHeadParent: oldHead.parentRoot,
-        previousSlot: oldHead.slot,
-        newHead: newHead.blockRoot,
-        newHeadParent: newHead.parentRoot,
-        newSlot: newHead.slot,
-      });
+    try {
+      const distance = this.forkChoice.getCommonAncestorDistance(oldHead, newHead);
+      if (distance !== null) {
+        // chain reorg
+        this.logger.verbose("Chain reorg", {
+          depth: distance,
+          previousHead: oldHead.blockRoot,
+          previousHeadParent: oldHead.parentRoot,
+          previousSlot: oldHead.slot,
+          newHead: newHead.blockRoot,
+          newHeadParent: newHead.parentRoot,
+          newSlot: newHead.slot,
+        });
 
-      pendingEvents.push(ChainEvent.forkChoiceReorg, newHead, oldHead, distance, executionOptimistic);
+        pendingEvents.push(ChainEvent.forkChoiceReorg, newHead, oldHead, distance, executionOptimistic);
 
-      this.metrics?.forkChoice.reorg.inc();
-      this.metrics?.forkChoice.reorgDistance.observe(distance);
+        this.metrics?.forkChoice.reorg.inc();
+        this.metrics?.forkChoice.reorgDistance.observe(distance);
+      }
+    } catch (e) {
+      this.logger.debug("Error forkChoice.getCommonAncestorDistance", {slot: block.message.slot}, e as Error);
     }
 
     // Lightclient server support (only after altair)
