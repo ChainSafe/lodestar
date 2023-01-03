@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {join} from "node:path";
 import {activePreset} from "@lodestar/params";
-import {mergeAssertion} from "../utils/simulation/assertions/mergeAssertion.js";
 import {nodeAssertion} from "../utils/simulation/assertions/nodeAssertion.js";
 import {CLIQUE_SEALING_PERIOD, SIM_TESTS_SECONDS_PER_SLOT} from "../utils/simulation/constants.js";
 import {CLClient, ELClient} from "../utils/simulation/interfaces.js";
@@ -55,14 +54,6 @@ env.tracker.register({
   ...nodeAssertion,
   match: ({slot}) => {
     return slot === 1 ? {match: true, remove: true} : false;
-  },
-});
-
-env.tracker.register({
-  ...mergeAssertion,
-  match: ({slot}) => {
-    // Check at the end of bellatrix fork, merge should happen by then
-    return slot === env.clock.getLastSlotOfEpoch(bellatrixForkEpoch) - 1 ? {match: true, remove: true} : false;
   },
 });
 
