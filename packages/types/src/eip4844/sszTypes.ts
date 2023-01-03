@@ -12,7 +12,7 @@ import {ssz as altairSsz} from "../altair/index.js";
 import {ssz as capellaSsz} from "../capella/index.js";
 import {ssz as bellatrixSsz} from "../bellatrix/index.js";
 
-const {UintNum64, Slot, Root, BLSSignature, UintBn256, Bytes32, Bytes48, Bytes96} = primitiveSsz;
+const {UintNum64, Slot, Root, BLSSignature, UintBn256, Bytes32, Bytes48, Bytes96, BLSPubkey} = primitiveSsz;
 
 // Polynomial commitments
 // https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/polynomial-commitments.md
@@ -93,17 +93,6 @@ export const ExecutionPayload = new ContainerType(
   {typeName: "ExecutionPayload", jsonCase: "eth2"}
 );
 
-export const BlindedExecutionPayload = new ContainerType(
-  {
-    ...bellatrixSsz.CommonExecutionPayloadType.fields,
-    excessDataGas: UintBn256, // New in EIP-4844
-    blockHash: Root,
-    transactionsRoot: Root,
-    withdrawalsRoot: Root,
-  },
-  {typeName: "BlindedExecutionPayload", jsonCase: "eth2"}
-);
-
 export const ExecutionPayloadHeader = new ContainerType(
   {
     ...bellatrixSsz.CommonExecutionPayloadType.fields,
@@ -182,6 +171,24 @@ export const SignedBlindedBeaconBlock = new ContainerType(
     signature: BLSSignature,
   },
   {typeName: "SignedBlindedBeaconBlock", jsonCase: "eth2"}
+);
+
+export const BuilderBid = new ContainerType(
+  {
+    header: ExecutionPayloadHeader,
+    value: UintBn256,
+    pubkey: BLSPubkey,
+    blobKzgCommitments: BlobKzgCommitments,
+  },
+  {typeName: "BuilderBid", jsonCase: "eth2"}
+);
+
+export const SignedBuilderBid = new ContainerType(
+  {
+    message: BuilderBid,
+    signature: BLSSignature,
+  },
+  {typeName: "SignedBuilderBid", jsonCase: "eth2"}
 );
 
 // We don't spread capella.BeaconState fields since we need to replace
