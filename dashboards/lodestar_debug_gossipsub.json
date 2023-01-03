@@ -454,6 +454,7 @@
       "targets": [
         {
           "expr": "nodejs_version_info",
+          "instant": true,
           "interval": "",
           "legendFormat": "{{version}}",
           "refId": "A"

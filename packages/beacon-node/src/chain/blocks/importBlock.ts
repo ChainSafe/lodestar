@@ -15,7 +15,7 @@ import {ChainEvent} from "../emitter.js";
 import {REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC} from "../reprocess.js";
 import {RegenCaller} from "../regen/interface.js";
 import type {BeaconChain} from "../chain.js";
-import {BlockInputType, FullyVerifiedBlock, ImportBlockOpts} from "./types.js";
+import {BlockInputType, FullyVerifiedBlock, ImportBlockOpts, AttestationImportOpt} from "./types.js";
 import {PendingEvents} from "./utils/pendingEvents.js";
 import {getCheckpointFromState} from "./utils/checkpoint.js";
 
@@ -65,9 +65,10 @@ export async function importBlock(
 
   const prevFinalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
   const blockDelaySec = (fullyVerifiedBlock.seenTimestampSec - postState.genesisTime) % this.config.SECONDS_PER_SLOT;
-  const blockRoot = toHexString(this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message));
+  const blockRoot = this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
+  const blockRootHex = toHexString(blockRoot);
   // Should compute checkpoint balances before forkchoice.onBlock
-  this.checkpointBalancesCache.processState(blockRoot, postState);
+  this.checkpointBalancesCache.processState(blockRootHex, postState);
   this.forkChoice.onBlock(block.message, postState, blockDelaySec, this.clock.currentSlot, executionStatus);
 
   // - Register state and block to the validator monitor
@@ -83,7 +84,10 @@ export async function importBlock(
   // Only process attestations of blocks with relevant attestations for the fork-choice:
   // If current epoch is N, and block is epoch X, block may include attestations for epoch X or X - 1.
   // The latest block that is useful is at epoch N - 1 which may include attestations for epoch N - 1 or N - 2.
-  if (!opts.skipImportingAttestations && blockEpoch >= currentEpoch - FORK_CHOICE_ATT_EPOCH_LIMIT) {
+  if (
+    opts.importAttestations === AttestationImportOpt.Force ||
+    (opts.importAttestations !== AttestationImportOpt.Skip && blockEpoch >= currentEpoch - FORK_CHOICE_ATT_EPOCH_LIMIT)
+  ) {
     const attestations = block.message.body.attestations;
     const rootCache = new RootCache(postState);
     const invalidAttestationErrorsByCode = new Map<string, {error: Error; count: number}>();
@@ -102,8 +106,15 @@ export async function importBlock(
         );
         // Duplicated logic from fork-choice onAttestation validation logic.
         // Attestations outside of this range will be dropped as Errors, so no need to import
-        if (target.epoch <= currentEpoch && target.epoch >= currentEpoch - FORK_CHOICE_ATT_EPOCH_LIMIT) {
-          this.forkChoice.onAttestation(indexedAttestation, attDataRoot);
+        if (
+          opts.importAttestations === AttestationImportOpt.Force ||
+          (target.epoch <= currentEpoch && target.epoch >= currentEpoch - FORK_CHOICE_ATT_EPOCH_LIMIT)
+        ) {
+          this.forkChoice.onAttestation(
+            indexedAttestation,
+            attDataRoot,
+            opts.importAttestations === AttestationImportOpt.Force
+          );
         }
 
         // Note: To avoid slowing down sync, only register attestations within FORK_CHOICE_ATT_EPOCH_LIMIT
@@ -146,8 +157,9 @@ export async function importBlock(
   // but AttesterSlashing could be found before that time and still able to submit valid attestations
   // until slashed validator become inactive, see computeActivationExitEpoch() function
   if (
-    !opts.skipImportingAttestations &&
-    blockEpoch >= currentEpoch - FORK_CHOICE_ATT_EPOCH_LIMIT - 1 - MAX_SEED_LOOKAHEAD
+    opts.importAttestations === AttestationImportOpt.Force ||
+    (opts.importAttestations !== AttestationImportOpt.Skip &&
+      blockEpoch >= currentEpoch - FORK_CHOICE_ATT_EPOCH_LIMIT - 1 - MAX_SEED_LOOKAHEAD)
   ) {
     for (const slashing of block.message.body.attesterSlashings) {
       try {
@@ -205,6 +217,7 @@ export async function importBlock(
 
   if (newHead.blockRoot !== oldHead.blockRoot) {
     // new head
+    const executionOptimistic = isOptimisticBlock(newHead);
 
     pendingEvents.push(ChainEvent.head, {
       block: newHead.blockRoot,
@@ -213,7 +226,7 @@ export async function importBlock(
       state: newHead.stateRoot,
       previousDutyDependentRoot: this.forkChoice.getDependentRoot(newHead, EpochDifference.previous),
       currentDutyDependentRoot: this.forkChoice.getDependentRoot(newHead, EpochDifference.current),
-      executionOptimistic: isOptimisticBlock(newHead),
+      executionOptimistic,
     });
 
     this.metrics?.forkChoice.changedHead.inc();
@@ -231,7 +244,7 @@ export async function importBlock(
         newSlot: newHead.slot,
       });
 
-      pendingEvents.push(ChainEvent.forkChoiceReorg, newHead, oldHead, distance);
+      pendingEvents.push(ChainEvent.forkChoiceReorg, newHead, oldHead, distance, executionOptimistic);
 
       this.metrics?.forkChoice.reorg.inc();
       this.metrics?.forkChoice.reorgDistance.observe(distance);
@@ -317,7 +330,7 @@ export async function importBlock(
   await this.db.block.add(block);
   this.logger.debug("Persisted block to hot DB", {
     slot: block.message.slot,
-    root: blockRoot,
+    root: blockRootHex,
   });
 
   if (blockInput.type === BlockInputType.postEIP4844) {
@@ -335,8 +348,10 @@ export async function importBlock(
 
   // - Send event after everything is done
 
+  const blockSummary = this.forkChoice.getBlock(blockRoot);
+  const executionOptimistic = blockSummary != null && isOptimisticBlock(blockSummary);
   // Emit all events at once after fully completing importBlock()
-  this.emitter.emit(ChainEvent.block, block, postState);
+  this.emitter.emit(ChainEvent.block, block, postState, executionOptimistic);
   pendingEvents.emit();
 
   // Register stat metrics about the block after importing it
@@ -349,7 +364,7 @@ export async function importBlock(
   // Gossip blocks need to be imported as soon as possible, waiting attestations could be processed
   // in the next event loop. See https://github.com/ChainSafe/lodestar/issues/4789
   setTimeout(() => {
-    this.reprocessController.onBlockImported({slot: block.message.slot, root: blockRoot}, advancedSlot);
+    this.reprocessController.onBlockImported({slot: block.message.slot, root: blockRootHex}, advancedSlot);
   }, 0);
 
   if (opts.seenTimestampSec !== undefined) {
@@ -360,7 +375,7 @@ export async function importBlock(
 
   this.logger.verbose("Block processed", {
     slot: block.message.slot,
-    root: blockRoot,
+    root: blockRootHex,
     delaySec: this.clock.secFromSlot(block.message.slot),
   });
 }

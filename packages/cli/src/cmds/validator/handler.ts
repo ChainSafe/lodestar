@@ -6,7 +6,7 @@ import {getMetrics, MetricsRegister} from "@lodestar/validator";
 import {RegistryMetricCreator, collectNodeJSMetrics, HttpMetricsServer} from "@lodestar/beacon-node";
 import {getBeaconConfigFromArgs} from "../../config/index.js";
 import {IGlobalArgs} from "../../options/index.js";
-import {YargsError, getDefaultGraffiti, mkdir, getCliLogger} from "../../util/index.js";
+import {YargsError, getDefaultGraffiti, mkdir, getCliLogger, cleanOldLogFiles} from "../../util/index.js";
 import {onGracefulShutdown, parseFeeRecipient, parseProposerConfig} from "../../util/index.js";
 import {getVersionData} from "../../util/version.js";
 import {getAccountPaths, getValidatorPaths} from "./paths.js";
@@ -29,7 +29,16 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
   const validatorPaths = getValidatorPaths(args, network);
   const accountPaths = getAccountPaths(args, network);
 
-  const logger = getCliLogger(args, {defaultLogFilepath: path.join(validatorPaths.dataDir, "validator.log")}, config);
+  const {logger, logParams} = getCliLogger(
+    args,
+    {defaultLogFilepath: path.join(validatorPaths.dataDir, "validator.log")},
+    config
+  );
+  try {
+    cleanOldLogFiles(logParams.filename, logParams.rotateMaxFiles);
+  } catch (e) {
+    logger.debug("Not able to delete log files", logParams, e as Error);
+  }
 
   const persistedKeysBackend = new PersistedKeysBackend(accountPaths);
   const valProposerConfig = getProposerConfigFromArgs(args, {persistedKeysBackend, accountPaths});

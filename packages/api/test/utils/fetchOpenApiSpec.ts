@@ -19,7 +19,13 @@ export async function fetchOpenApiSpec(openApiFile: OpenApiFile): Promise<OpenAp
   const openApiStr = await fetch(openApiFile.url).then((res) => res.text());
 
   // Parse before writting to ensure it's proper JSON
-  const openApiJson = JSON.parse(openApiStr) as OpenApiJson;
+  let openApiJson: OpenApiJson;
+  try {
+    openApiJson = JSON.parse(openApiStr) as OpenApiJson;
+  } catch (e) {
+    console.log(openApiStr);
+    throw e;
+  }
 
   fs.mkdirSync(path.dirname(openApiFile.filepath), {recursive: true});
   fs.writeFileSync(openApiFile.filepath, openApiStr);

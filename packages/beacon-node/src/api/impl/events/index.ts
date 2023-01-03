@@ -2,7 +2,7 @@ import {capella} from "@lodestar/types";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {routes} from "@lodestar/api";
 import {toHexString} from "@chainsafe/ssz";
-import {ApiModules, IS_OPTIMISTIC_TEMP} from "../types.js";
+import {ApiModules} from "../types.js";
 import {ChainEvent, IChainEvents} from "../../../chain/index.js";
 import {ApiError} from "../errors.js";
 
@@ -33,11 +33,11 @@ export function getEventsApi({chain, config}: Pick<ApiModules, "chain" | "config
     ) => routes.events.EventData[K][];
   } = {
     [routes.events.EventType.head]: (data) => [data],
-    [routes.events.EventType.block]: (block) => [
+    [routes.events.EventType.block]: (block, _, executionOptimistic) => [
       {
         block: toHexString(config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message)),
         slot: block.message.slot,
-        executionOptimistic: IS_OPTIMISTIC_TEMP,
+        executionOptimistic,
       },
     ],
     [routes.events.EventType.attestation]: (attestation) => [attestation],
@@ -47,10 +47,10 @@ export function getEventsApi({chain, config}: Pick<ApiModules, "chain" | "config
         block: toHexString(checkpoint.root),
         epoch: checkpoint.epoch,
         state: toHexString(state.hashTreeRoot()),
-        executionOptimistic: IS_OPTIMISTIC_TEMP,
+        executionOptimistic: false,
       },
     ],
-    [routes.events.EventType.chainReorg]: (oldHead, newHead, depth) => [
+    [routes.events.EventType.chainReorg]: (oldHead, newHead, depth, executionOptimistic) => [
       {
         depth,
         epoch: computeEpochAtSlot(newHead.slot),
@@ -59,7 +59,7 @@ export function getEventsApi({chain, config}: Pick<ApiModules, "chain" | "config
         oldHeadBlock: oldHead.blockRoot,
         newHeadState: newHead.stateRoot,
         oldHeadState: oldHead.stateRoot,
-        executionOptimistic: IS_OPTIMISTIC_TEMP,
+        executionOptimistic,
       },
     ],
     [routes.events.EventType.contributionAndProof]: (contributionAndProof) => [contributionAndProof],

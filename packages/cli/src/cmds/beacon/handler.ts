@@ -11,8 +11,8 @@ import {ProcessShutdownCallback} from "@lodestar/validator";
 
 import {IGlobalArgs, parseBeaconNodeArgs} from "../../options/index.js";
 import {BeaconNodeOptions, exportToJSON, FileENR, getBeaconConfigFromArgs} from "../../config/index.js";
-import {onGracefulShutdown, getCliLogger, mkdir, writeFile600Perm} from "../../util/index.js";
-import {getNetworkBootnodes, getNetworkData, readBootnodes} from "../../networks/index.js";
+import {getNetworkBootnodes, getNetworkData, isKnownNetworkName, readBootnodes} from "../../networks/index.js";
+import {onGracefulShutdown, getCliLogger, mkdir, writeFile600Perm, cleanOldLogFiles} from "../../util/index.js";
 import {getVersionData} from "../../util/version.js";
 import {defaultP2pPort} from "../../options/beaconNodeOptions/network.js";
 import {IBeaconArgs} from "./options.js";
@@ -31,7 +31,16 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
   mkdir(beaconPaths.dbDir);
 
   const abortController = new AbortController();
-  const logger = getCliLogger(args, {defaultLogFilepath: path.join(beaconPaths.dataDir, "beacon.log")}, config);
+  const {logger, logParams} = getCliLogger(
+    args,
+    {defaultLogFilepath: path.join(beaconPaths.dataDir, "beacon.log")},
+    config
+  );
+  try {
+    cleanOldLogFiles(logParams.filename, logParams.rotateMaxFiles);
+  } catch (e) {
+    logger.debug("Not able to delete log files", logParams, e as Error);
+  }
 
   onGracefulShutdown(async () => {
     abortController.abort();
@@ -123,13 +132,13 @@ export async function beaconHandlerInit(args: IBeaconArgs & IGlobalArgs) {
   // Fetch extra bootnodes
   const extraBootnodes = (beaconNodeOptions.get().network?.discv5?.bootEnrs ?? []).concat(
     args.bootnodesFile ? readBootnodes(args.bootnodesFile) : [],
-    args.network ? await getNetworkBootnodes(args.network) : []
+    isKnownNetworkName(network) ? await getNetworkBootnodes(network) : []
   );
   beaconNodeOptions.set({network: {discv5: {bootEnrs: extraBootnodes}}});
 
   // Set known depositContractDeployBlock
-  if (args.network) {
-    const {depositContractDeployBlock} = getNetworkData(args.network);
+  if (isKnownNetworkName(network)) {
+    const {depositContractDeployBlock} = getNetworkData(network);
     beaconNodeOptions.set({eth1: {depositContractDeployBlock}});
   }
 

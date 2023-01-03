@@ -2,6 +2,7 @@ import {
   CachedBeaconStateAllForks,
   CachedBeaconStateCapella,
   computeEpochAtSlot,
+  computeStartSlotAtEpoch,
   getAttesterSlashableIndices,
   isValidVoluntaryExit,
 } from "@lodestar/state-transition";
@@ -173,7 +174,9 @@ export class OpPool {
     phase0.SignedVoluntaryExit[],
     capella.SignedBLSToExecutionChange[]
   ] {
+    const {config} = state;
     const stateEpoch = computeEpochAtSlot(state.slot);
+    const stateFork = config.getForkName(state.slot);
     const toBeSlashedIndices = new Set<ValidatorIndex>();
     const proposerSlashings: phase0.ProposerSlashing[] = [];
 
@@ -221,7 +224,11 @@ export class OpPool {
     for (const voluntaryExit of this.voluntaryExits.values()) {
       if (
         !toBeSlashedIndices.has(voluntaryExit.message.validatorIndex) &&
-        isValidVoluntaryExit(state, voluntaryExit, false)
+        isValidVoluntaryExit(state, voluntaryExit, false) &&
+        // Signature validation is skipped in `isValidVoluntaryExit(,,false)` since it was already validated in gossip
+        // However we must make sure that the signature fork is the same, or it will become invalid if included through
+        // a future fork.
+        stateFork === config.getForkName(computeStartSlotAtEpoch(voluntaryExit.message.epoch))
       ) {
         voluntaryExits.push(voluntaryExit);
         if (voluntaryExits.length >= MAX_VOLUNTARY_EXITS) {
@@ -316,8 +323,17 @@ export class OpPool {
    * Prune if validator has already exited at or before the finalized checkpoint of the head.
    */
   private pruneVoluntaryExits(headState: CachedBeaconStateAllForks): void {
+    const {config} = headState;
+    const headStateFork = config.getForkSeq(headState.slot);
     const finalizedEpoch = headState.finalizedCheckpoint.epoch;
+
     for (const [key, voluntaryExit] of this.voluntaryExits.entries()) {
+      // VoluntaryExit messages signed in the previous fork become invalid and can never be included in any future
+      // block, so just drop as the head state advances into the next fork.
+      if (config.getForkSeq(computeStartSlotAtEpoch(voluntaryExit.message.epoch)) < headStateFork) {
+        this.voluntaryExits.delete(key);
+      }
+
       // TODO: Improve this simplistic condition
       if (voluntaryExit.message.epoch <= finalizedEpoch) {
         this.voluntaryExits.delete(key);

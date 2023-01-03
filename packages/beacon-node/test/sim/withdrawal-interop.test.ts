@@ -8,7 +8,7 @@ import {Epoch, capella} from "@lodestar/types";
 import {ValidatorProposerConfig} from "@lodestar/validator";
 
 import {ExecutePayloadStatus, PayloadAttributes} from "../../src/execution/engine/interface.js";
-import {ExecutionEngineHttp} from "../../src/execution/engine/http.js";
+import {initializeExecutionEngine} from "../../src/execution/index.js";
 import {ChainEvent} from "../../src/chain/index.js";
 import {testLogger, TestLoggerOpts} from "../utils/logger.js";
 import {getDevBeaconNode} from "../utils/node/beacon.js";
@@ -79,8 +79,8 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     console.log({genesisBlockHash});
 
     //const controller = new AbortController();
-    const executionEngine = new ExecutionEngineHttp(
-      {urls: [engineRpcUrl], jwtSecretHex, retryAttempts, retryDelay},
+    const executionEngine = initializeExecutionEngine(
+      {mode: "http", urls: [engineRpcUrl], jwtSecretHex, retryAttempts, retryDelay},
       {signal: controller.signal}
     );
 
@@ -143,7 +143,6 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       prevRandao: dataToBytes("0xff00000000000000000000000000000000000000000000000000000000000000", 32),
       suggestedFeeRecipient: "0xaa00000000000000000000000000000000000000",
       withdrawals,
-      fork: ForkName.capella,
     };
     const finalizedBlockHash = "0xfe950635b1bd2a416ff6283b0bbd30176e1b1125ad06fa729da9f3f4c1c61710";
 

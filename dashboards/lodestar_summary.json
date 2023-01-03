@@ -933,6 +933,7 @@
           },
           "exemplar": false,
           "expr": "nodejs_version_info{scrape_location=\"beacon\"}",
+          "instant": true,
           "interval": "",
           "legendFormat": "{{version}}",
           "refId": "A"

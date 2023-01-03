@@ -53,3 +53,5 @@ export class StringType<T extends string = string> extends BasicType<T> {
     return value;
   }
 }
+
+export const stringType = new StringType();

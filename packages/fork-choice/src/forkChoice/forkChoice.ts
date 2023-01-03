@@ -93,6 +93,8 @@ export class ForkChoice implements IForkChoice {
   private proposerBoostRoot: RootHex | null = null;
   /** Score to use in proposer boost, evaluated lazily from justified balances */
   private justifiedProposerBoostScore: number | null = null;
+  /** The current effective balances */
+  private balances: EffectiveBalanceIncrements;
   /**
    * Instantiates a Fork Choice from some existing components
    *
@@ -106,6 +108,7 @@ export class ForkChoice implements IForkChoice {
     private readonly opts?: ForkChoiceOpts
   ) {
     this.head = this.updateHead();
+    this.balances = this.fcStore.justified.balances;
   }
 
   /**
@@ -191,15 +194,16 @@ export class ForkChoice implements IForkChoice {
     // No need to cache the head anymore
 
     // Check if scores need to be calculated/updated
-    // eslint-disable-next-line prefer-const
-    const justifiedBalances = this.fcStore.justified.balances;
+    const oldBalances = this.balances;
+    const newBalances = this.fcStore.justified.balances;
     const deltas = computeDeltas(
       this.protoArray.indices,
       this.votes,
-      justifiedBalances,
-      justifiedBalances,
+      oldBalances,
+      newBalances,
       this.fcStore.equivocatingIndices
     );
+    this.balances = newBalances;
     /**
      * The structure in line with deltas to propagate boost up the branch
      * starting from the proposerIndex
@@ -502,7 +506,7 @@ export class ForkChoice implements IForkChoice {
    * The supplied `attestation` **must** pass the `in_valid_indexed_attestation` function as it
    * will not be run here.
    */
-  onAttestation(attestation: phase0.IndexedAttestation, attDataRoot?: string): void {
+  onAttestation(attestation: phase0.IndexedAttestation, attDataRoot?: string, forceImport?: boolean): void {
     // Ignore any attestations to the zero hash.
     //
     // This is an edge case that results from the spec aliasing the zero hash to the genesis
@@ -524,7 +528,7 @@ export class ForkChoice implements IForkChoice {
       return;
     }
 
-    this.validateOnAttestation(attestation, slot, blockRootHex, targetEpoch, attDataRoot);
+    this.validateOnAttestation(attestation, slot, blockRootHex, targetEpoch, attDataRoot, forceImport);
 
     if (slot < this.fcStore.currentSlot) {
       for (const validatorIndex of attestation.attestingIndices) {
@@ -974,7 +978,9 @@ export class ForkChoice implements IForkChoice {
     slot: Slot,
     blockRootHex: string,
     targetEpoch: Epoch,
-    attDataRoot?: string
+    attDataRoot?: string,
+    // forceImport attestation even if too old, mostly used in spec tests
+    forceImport?: boolean
   ): void {
     // There is no point in processing an attestation with an empty bitfield. Reject
     // it immediately.
@@ -995,7 +1001,14 @@ export class ForkChoice implements IForkChoice {
     const attestationCacheKey = attDataRoot ?? toHexString(ssz.phase0.AttestationData.hashTreeRoot(attestationData));
 
     if (!this.validatedAttestationDatas.has(attestationCacheKey)) {
-      this.validateAttestationData(indexedAttestation.data, slot, blockRootHex, targetEpoch, attestationCacheKey);
+      this.validateAttestationData(
+        indexedAttestation.data,
+        slot,
+        blockRootHex,
+        targetEpoch,
+        attestationCacheKey,
+        forceImport
+      );
     }
   }
 
@@ -1004,7 +1017,9 @@ export class ForkChoice implements IForkChoice {
     slot: Slot,
     beaconBlockRootHex: string,
     targetEpoch: Epoch,
-    attestationCacheKey: string
+    attestationCacheKey: string,
+    // forceImport attestation even if too old, mostly used in spec tests
+    forceImport?: boolean
   ): void {
     const epochNow = computeEpochAtSlot(this.fcStore.currentSlot);
     const targetRootHex = toHexString(attestationData.target.root);
@@ -1019,7 +1034,7 @@ export class ForkChoice implements IForkChoice {
           currentEpoch: epochNow,
         },
       });
-    } else if (targetEpoch + 1 < epochNow) {
+    } else if (!forceImport && targetEpoch + 1 < epochNow) {
       throw new ForkChoiceError({
         code: ForkChoiceErrorCode.INVALID_ATTESTATION,
         err: {

@@ -1,3 +1,5 @@
+import {fromHex} from "@lodestar/utils";
+import {JsonRpcHttpClient} from "../../eth1/provider/jsonRpcHttpClient.js";
 import {IExecutionEngine} from "./interface.js";
 import {ExecutionEngineDisabled} from "./disabled.js";
 import {
@@ -6,15 +8,10 @@ import {
   ExecutionEngineHttpOpts,
   defaultExecutionEngineHttpOpts,
 } from "./http.js";
-import {ExecutionEngineMock, ExecutionEngineMockOpts} from "./mock.js";
+import {ExecutionEngineMockOpts, ExecutionEngineMockBackend} from "./mock.js";
+import {ExecutionEngineMockJsonRpcClient, IJsonRpcBackend} from "./utils.js";
 
-export {
-  IExecutionEngine,
-  ExecutionEngineHttp,
-  ExecutionEngineDisabled,
-  ExecutionEngineMock,
-  defaultExecutionEngineHttpOpts,
-};
+export {IExecutionEngine, ExecutionEngineHttp, ExecutionEngineDisabled, defaultExecutionEngineHttpOpts};
 
 export type ExecutionEngineOpts =
   | ({mode?: "http"} & ExecutionEngineHttpOpts)
@@ -22,17 +19,40 @@ export type ExecutionEngineOpts =
   | {mode: "disabled"};
 export const defaultExecutionEngineOpts: ExecutionEngineOpts = defaultExecutionEngineHttpOpts;
 
+export function getExecutionEngineFromBackend(
+  backend: IJsonRpcBackend,
+  modules: ExecutionEngineModules
+): IExecutionEngine {
+  const rpc = new ExecutionEngineMockJsonRpcClient(backend);
+  return new ExecutionEngineHttp(rpc, modules);
+}
+
+export function getExecutionEngineHttp(
+  opts: ExecutionEngineHttpOpts,
+  modules: ExecutionEngineModules
+): IExecutionEngine {
+  const rpc = new JsonRpcHttpClient(opts.urls, {
+    ...opts,
+    signal: modules.signal,
+    metrics: modules.metrics?.executionEnginerHttpClient,
+    jwtSecret: opts.jwtSecretHex ? fromHex(opts.jwtSecretHex) : undefined,
+  });
+  return new ExecutionEngineHttp(rpc, modules);
+}
+
 export function initializeExecutionEngine(
   opts: ExecutionEngineOpts,
   modules: ExecutionEngineModules
 ): IExecutionEngine {
   switch (opts.mode) {
-    case "mock":
-      return new ExecutionEngineMock(opts);
     case "disabled":
       return new ExecutionEngineDisabled();
+
+    case "mock":
+      return getExecutionEngineFromBackend(new ExecutionEngineMockBackend(opts), modules);
+
     case "http":
     default:
-      return new ExecutionEngineHttp(opts, modules);
+      return getExecutionEngineHttp(opts, modules);
   }
 }

@@ -516,8 +516,9 @@ export class EpochContext {
   }
 
   beforeEpochTransition(): void {
-    // Clone before being mutated in processEffectiveBalanceUpdates
-    this.effectiveBalanceIncrements = this.effectiveBalanceIncrements.slice(0);
+    // Clone (copy) before being mutated in processEffectiveBalanceUpdates
+    // NOTE: Force to use Uint8Array.slice (copy) instead of Buffer.call (not copy)
+    this.effectiveBalanceIncrements = Uint8Array.prototype.slice.call(this.effectiveBalanceIncrements, 0);
   }
 
   /**

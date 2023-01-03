@@ -406,6 +406,7 @@ export class PeerManager {
         const peerData = this.connectedPeers.get(peer.toString());
         return {
           id: peer,
+          direction: peerData?.direction ?? null,
           attnets: peerData?.metadata?.attnets ?? null,
           syncnets: peerData?.metadata?.syncnets ?? null,
           score: this.peerRpcScores.getScore(peer),

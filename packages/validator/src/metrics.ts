@@ -3,6 +3,14 @@ export enum MessageSource {
   publish = "publish",
 }
 
+export enum BeaconHealth {
+  READY = 0,
+  SYNCING = 1,
+  NOT_INITIALIZED_OR_ISSUES = 2,
+  UNKNOWN = 3,
+  ERROR = 4,
+}
+
 type LabelsGeneric = Record<string, string | undefined>;
 type CollectFn<Labels extends LabelsGeneric> = (metric: Gauge<Labels>) => void;
 
@@ -312,6 +320,11 @@ export function getMetrics(register: MetricsRegister, gitData: LodestarGitData) 
 
     // REST API client
 
+    beaconHealth: register.gauge({
+      name: "vc_beacon_health",
+      help: `Current health status of the beacon(s) the validator is connected too. ${renderEnumNumeric(BeaconHealth)}`,
+    }),
+
     restApiClient: {
       requestTime: register.histogram<{routeId: string}>({
         name: "vc_rest_api_client_request_time_seconds",
@@ -408,4 +421,16 @@ export function getMetrics(register: MetricsRegister, gitData: LodestarGitData) 
       }),
     },
   };
+}
+
+export function renderEnumNumeric(obj: Record<string, unknown>): string {
+  const out: string[] = [];
+
+  for (const [key, value] of Object.entries(obj)) {
+    if (typeof value === "number") {
+      out.push(`${key}=${value}`);
+    }
+  }
+
+  return out.join(", ");
 }

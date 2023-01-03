@@ -9,6 +9,7 @@ coverage/**
 beaconchain
 lodestar-config.toml
 keys/
+keystores/
 test-db
 yarn-error.log
 package-lock.json

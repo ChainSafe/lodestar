@@ -1,25 +1,7 @@
-import {RootHex, allForks, capella, eip4844} from "@lodestar/types";
-import {
-  BYTES_PER_LOGS_BLOOM,
-  SLOTS_PER_EPOCH,
-  FIELD_ELEMENTS_PER_BLOB,
-  BYTES_PER_FIELD_ELEMENT,
-  ForkName,
-  ForkSeq,
-} from "@lodestar/params";
-import {fromHex} from "@lodestar/utils";
+import {RootHex, allForks} from "@lodestar/types";
+import {SLOTS_PER_EPOCH, ForkName, ForkSeq} from "@lodestar/params";
 
-import {ErrorJsonRpcResponse, HttpRpcError, JsonRpcHttpClient} from "../../eth1/provider/jsonRpcHttpClient.js";
-import {
-  bytesToData,
-  numToQuantity,
-  dataToBytes,
-  quantityToNum,
-  DATA,
-  QUANTITY,
-  quantityToBigint,
-  dataToRootHex,
-} from "../../eth1/provider/utils.js";
+import {ErrorJsonRpcResponse, HttpRpcError} from "../../eth1/provider/jsonRpcHttpClient.js";
 import {IJsonRpcHttpClient, ReqOpts} from "../../eth1/provider/jsonRpcHttpClient.js";
 import {IMetrics} from "../../metrics/index.js";
 import {JobItemQueue} from "../../util/queue/index.js";
@@ -27,18 +9,21 @@ import {EPOCHS_PER_BATCH} from "../../sync/constants.js";
 import {
   ExecutePayloadStatus,
   ExecutePayloadResponse,
-  ForkChoiceUpdateStatus,
   IExecutionEngine,
   PayloadId,
   PayloadAttributes,
-  ApiPayloadAttributes,
-  WithdrawalV1,
   TransitionConfigurationV1,
   BlobsBundle,
 } from "./interface.js";
 import {PayloadIdCache} from "./payloadIdCache.js";
-
-const GWEI_TO_WEI = BigInt(1000000000);
+import {
+  EngineApiRpcParamTypes,
+  EngineApiRpcReturnTypes,
+  parseBlobsBundle,
+  parseExecutionPayload,
+  serializeExecutionPayload,
+  serializePayloadAttributes,
+} from "./types.js";
 
 export type ExecutionEngineModules = {
   signal: AbortSignal;
@@ -94,7 +79,6 @@ const exchageTransitionConfigOpts: ReqOpts = {routeId: "exchangeTransitionConfig
  */
 export class ExecutionEngineHttp implements IExecutionEngine {
   readonly payloadIdCache = new PayloadIdCache();
-  private readonly rpc: IJsonRpcHttpClient;
   /**
    * A queue to serialize the fcUs and newPayloads calls:
    *
@@ -113,13 +97,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     );
   };
 
-  constructor(opts: ExecutionEngineHttpOpts, {metrics, signal}: ExecutionEngineModules) {
-    this.rpc = new JsonRpcHttpClient(opts.urls, {
-      ...opts,
-      signal,
-      metrics: metrics?.executionEnginerHttpClient,
-      jwtSecret: opts.jwtSecretHex ? fromHex(opts.jwtSecretHex) : undefined,
-    });
+  constructor(private readonly rpc: IJsonRpcHttpClient, {metrics, signal}: ExecutionEngineModules) {
     this.rpcFetchQueue = new JobItemQueue<[EngineRequest], EngineResponse>(
       this.jobQueueProcessor,
       {maxLength: QUEUE_MAX_LENGTH, maxConcurrency: 1, noYieldIfOneItem: true, signal},
@@ -248,14 +226,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     // Once on capella, should this need to be permanently switched to v2 when payload attrs
     // not provided
     const method = ForkSeq[fork] >= ForkSeq.capella ? "engine_forkchoiceUpdatedV2" : "engine_forkchoiceUpdatedV1";
-    const apiPayloadAttributes: ApiPayloadAttributes | undefined = payloadAttributes
-      ? {
-          timestamp: numToQuantity(payloadAttributes.timestamp),
-          prevRandao: bytesToData(payloadAttributes.prevRandao),
-          suggestedFeeRecipient: payloadAttributes.suggestedFeeRecipient,
-          withdrawals: payloadAttributes.withdrawals?.map(serializeWithdrawal),
-        }
-      : undefined;
+    const payloadAttributesRpc = payloadAttributes ? serializePayloadAttributes(payloadAttributes) : undefined;
     // If we are just fcUing and not asking execution for payload, retry is not required
     // and we can move on, as the next fcU will be issued soon on the new slot
     const fcUReqOpts =
@@ -263,7 +234,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
 
     const request = this.rpcFetchQueue.push({
       method,
-      params: [{headBlockHash, safeBlockHash, finalizedBlockHash}, apiPayloadAttributes],
+      params: [{headBlockHash, safeBlockHash, finalizedBlockHash}, payloadAttributesRpc],
       methodOpts: fcUReqOpts,
     }) as Promise<EngineApiRpcReturnTypes[typeof method]>;
 
@@ -276,12 +247,12 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     switch (status) {
       case ExecutePayloadStatus.VALID:
         // if payloadAttributes are provided, a valid payloadId is expected
-        if (apiPayloadAttributes) {
+        if (payloadAttributesRpc) {
           if (!payloadId || payloadId === "0x") {
             throw Error(`Received invalid payloadId=${payloadId}`);
           }
 
-          this.payloadIdCache.add({headBlockHash, finalizedBlockHash, ...apiPayloadAttributes}, payloadId);
+          this.payloadIdCache.add({headBlockHash, finalizedBlockHash, ...payloadAttributesRpc}, payloadId);
           void this.prunePayloadIdCache();
         }
         return payloadId !== "0x" ? payloadId : null;
@@ -374,235 +345,6 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   async prunePayloadIdCache(): Promise<void> {
     this.payloadIdCache.prune();
   }
-}
-
-/* eslint-disable @typescript-eslint/naming-convention */
-
-type EngineApiRpcParamTypes = {
-  /**
-   * 1. Object - Instance of ExecutionPayload
-   */
-  engine_newPayloadV1: [ExecutionPayloadRpc];
-  engine_newPayloadV2: [ExecutionPayloadRpc];
-  engine_newPayloadV3: [ExecutionPayloadRpc];
-  /**
-   * 1. Object - Payload validity status with respect to the consensus rules:
-   *   - blockHash: DATA, 32 Bytes - block hash value of the payload
-   *   - status: String: VALID|INVALID - result of the payload validation with respect to the proof-of-stake consensus rules
-   */
-  engine_forkchoiceUpdatedV1: [
-    param1: {headBlockHash: DATA; safeBlockHash: DATA; finalizedBlockHash: DATA},
-    payloadAttributes?: ApiPayloadAttributes
-  ];
-  engine_forkchoiceUpdatedV2: [
-    param1: {headBlockHash: DATA; safeBlockHash: DATA; finalizedBlockHash: DATA},
-    payloadAttributes?: ApiPayloadAttributes
-  ];
-  /**
-   * 1. payloadId: QUANTITY, 64 Bits - Identifier of the payload building process
-   */
-  engine_getPayloadV1: [QUANTITY];
-  engine_getPayloadV2: [QUANTITY];
-  engine_getPayloadV3: [QUANTITY];
-  /**
-   * 1. Object - Instance of TransitionConfigurationV1
-   */
-  engine_exchangeTransitionConfigurationV1: [TransitionConfigurationV1];
-  /**
-   * 1. payloadId: QUANTITY, 64 Bits - Identifier of the payload building process
-   */
-  engine_getBlobsBundleV1: [QUANTITY];
-};
-
-type EngineApiRpcReturnTypes = {
-  /**
-   * Object - Response object:
-   * - status: String - the result of the payload execution:
-   */
-  engine_newPayloadV1: {
-    status: ExecutePayloadStatus;
-    latestValidHash: DATA | null;
-    validationError: string | null;
-  };
-  engine_newPayloadV2: {
-    status: ExecutePayloadStatus;
-    latestValidHash: DATA | null;
-    validationError: string | null;
-  };
-  engine_newPayloadV3: {
-    status: ExecutePayloadStatus;
-    latestValidHash: DATA | null;
-    validationError: string | null;
-  };
-  engine_forkchoiceUpdatedV1: {
-    payloadStatus: {status: ForkChoiceUpdateStatus; latestValidHash: DATA | null; validationError: string | null};
-    payloadId: QUANTITY | null;
-  };
-  engine_forkchoiceUpdatedV2: {
-    payloadStatus: {status: ForkChoiceUpdateStatus; latestValidHash: DATA | null; validationError: string | null};
-    payloadId: QUANTITY | null;
-  };
-  /**
-   * payloadId | Error: QUANTITY, 64 Bits - Identifier of the payload building process
-   */
-  engine_getPayloadV1: ExecutionPayloadRpc;
-  engine_getPayloadV2: ExecutionPayloadRpcWithBlockValue;
-  engine_getPayloadV3: ExecutionPayloadRpcWithBlockValue;
-  /**
-   * Object - Instance of TransitionConfigurationV1
-   */
-  engine_exchangeTransitionConfigurationV1: TransitionConfigurationV1;
-
-  engine_getBlobsBundleV1: BlobsBundleRpc;
-};
-
-type ExecutionPayloadRpc = {
-  parentHash: DATA; // 32 bytes
-  feeRecipient: DATA; // 20 bytes
-  stateRoot: DATA; // 32 bytes
-  receiptsRoot: DATA; // 32 bytes
-  logsBloom: DATA; // 256 bytes
-  prevRandao: DATA; // 32 bytes
-  blockNumber: QUANTITY;
-  gasLimit: QUANTITY;
-  gasUsed: QUANTITY;
-  timestamp: QUANTITY;
-  extraData: DATA; // 0 to 32 bytes
-  baseFeePerGas: QUANTITY;
-  blockHash: DATA; // 32 bytes
-  transactions: DATA[];
-  withdrawals?: WithdrawalV1[]; // Capella hardfork
-  excessDataGas?: QUANTITY; // EIP-4844
-};
-
-interface BlobsBundleRpc {
-  blockHash: DATA; // 32 Bytes
-  kzgs: DATA[]; // each 48 bytes
-  blobs: DATA[]; // each 4096 * 32 = 131072 bytes
-}
-
-export function serializeExecutionPayload(fork: ForkName, data: allForks.ExecutionPayload): ExecutionPayloadRpc {
-  const payload: ExecutionPayloadRpc = {
-    parentHash: bytesToData(data.parentHash),
-    feeRecipient: bytesToData(data.feeRecipient),
-    stateRoot: bytesToData(data.stateRoot),
-    receiptsRoot: bytesToData(data.receiptsRoot),
-    logsBloom: bytesToData(data.logsBloom),
-    prevRandao: bytesToData(data.prevRandao),
-    blockNumber: numToQuantity(data.blockNumber),
-    gasLimit: numToQuantity(data.gasLimit),
-    gasUsed: numToQuantity(data.gasUsed),
-    timestamp: numToQuantity(data.timestamp),
-    extraData: bytesToData(data.extraData),
-    baseFeePerGas: numToQuantity(data.baseFeePerGas),
-    blockHash: bytesToData(data.blockHash),
-    transactions: data.transactions.map((tran) => bytesToData(tran)),
-  };
-
-  // Capella adds withdrawals to the ExecutionPayload
-  if (ForkSeq[fork] >= ForkSeq.capella) {
-    const {withdrawals} = data as capella.ExecutionPayload;
-    payload.withdrawals = withdrawals.map(serializeWithdrawal);
-  }
-
-  // EIP-4844 adds excessDataGas to the ExecutionPayload
-  if ((data as eip4844.ExecutionPayload).excessDataGas !== undefined) {
-    payload.excessDataGas = numToQuantity((data as eip4844.ExecutionPayload).excessDataGas);
-  }
-
-  return payload;
-}
-
-type ExecutionPayloadRpcWithBlockValue = {executionPayload: ExecutionPayloadRpc; blockValue: QUANTITY};
-type ExecutionPayloadResponse = ExecutionPayloadRpc | ExecutionPayloadRpcWithBlockValue;
-
-export function hasBlockValue(response: ExecutionPayloadResponse): response is ExecutionPayloadRpcWithBlockValue {
-  return (response as ExecutionPayloadRpcWithBlockValue).blockValue !== undefined;
-}
-
-export function parseExecutionPayload<T extends ForkName>(
-  fork: T,
-  response: ExecutionPayloadResponse
-): allForks.ExecutionPayload {
-  let data: ExecutionPayloadRpc;
-  if (hasBlockValue(response)) {
-    data = response.executionPayload;
-  } else {
-    data = response;
-  }
-  const payload = {
-    parentHash: dataToBytes(data.parentHash, 32),
-    feeRecipient: dataToBytes(data.feeRecipient, 20),
-    stateRoot: dataToBytes(data.stateRoot, 32),
-    receiptsRoot: dataToBytes(data.receiptsRoot, 32),
-    logsBloom: dataToBytes(data.logsBloom, BYTES_PER_LOGS_BLOOM),
-    prevRandao: dataToBytes(data.prevRandao, 32),
-    blockNumber: quantityToNum(data.blockNumber),
-    gasLimit: quantityToNum(data.gasLimit),
-    gasUsed: quantityToNum(data.gasUsed),
-    timestamp: quantityToNum(data.timestamp),
-    extraData: dataToBytes(data.extraData, null),
-    baseFeePerGas: quantityToBigint(data.baseFeePerGas),
-    blockHash: dataToBytes(data.blockHash, 32),
-    transactions: data.transactions.map((tran) => dataToBytes(tran, null)),
-  };
-
-  if (ForkSeq[fork] >= ForkSeq.capella) {
-    const {withdrawals} = data;
-    // Geth can also reply with null
-    if (withdrawals == null) {
-      throw Error(
-        `withdrawals missing for ${fork} >= capella executionPayload number=${payload.blockNumber} hash=${data.blockHash}`
-      );
-    }
-    (payload as capella.ExecutionPayload).withdrawals = withdrawals.map((w) => deserializeWithdrawal(w));
-  }
-
-  // EIP-4844 adds excessDataGas to the ExecutionPayload
-  if (ForkSeq[fork] >= ForkSeq.eip4844) {
-    if (data.excessDataGas == null) {
-      throw Error(
-        `excessDataGas missing for ${fork} >= eip4844 executionPayload number=${payload.blockNumber} hash=${data.blockHash}`
-      );
-    }
-    (payload as eip4844.ExecutionPayload).excessDataGas = quantityToBigint(data.excessDataGas);
-  }
-
-  return payload;
-}
-
-export function parseBlobsBundle(data: BlobsBundleRpc): BlobsBundle {
-  return {
-    // NOTE: Keep as hex, since it's only used for equality downstream
-    blockHash: dataToRootHex(data.blockHash),
-    // As of Nov 17th 2022 according to Dan's tests Geth returns null if no blobs in block
-    kzgs: (data.kzgs ?? []).map((kzg) => dataToBytes(kzg, 48)),
-    blobs: (data.blobs ?? []).map((blob) => dataToBytes(blob, BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_PER_BLOB)),
-  };
-}
-
-function serializeWithdrawal(withdrawal: capella.Withdrawal): WithdrawalV1 {
-  return {
-    index: numToQuantity(withdrawal.index),
-    validatorIndex: numToQuantity(withdrawal.validatorIndex),
-    address: bytesToData(withdrawal.address),
-    // Note: the amount value is represented on the beacon chain as a little-endian value in
-    // units of Gwei, whereas the amount in this structure MUST be converted to a big-endian value
-    // in units of Wei
-    //
-    // see: https://github.com/ethereum/execution-apis/blob/main/src/engine/specification.md
-    amount: numToQuantity(withdrawal.amount * GWEI_TO_WEI),
-  };
-}
-
-function deserializeWithdrawal(serialized: WithdrawalV1): capella.Withdrawal {
-  return {
-    index: quantityToNum(serialized.index),
-    validatorIndex: quantityToNum(serialized.validatorIndex),
-    address: dataToBytes(serialized.address, 20),
-    // see: https://github.com/ethereum/execution-apis/blob/main/src/engine/specification.md
-    amount: quantityToBigint(serialized.amount) / GWEI_TO_WEI,
-  } as capella.Withdrawal;
 }
 
 type EngineRequestKey = keyof EngineApiRpcParamTypes;

@@ -27,6 +27,10 @@ export const networkNames: NetworkName[] = [
   "dev",
 ];
 
+export function isKnownNetworkName(network: string): network is NetworkName {
+  return networkNames.includes(network as NetworkName);
+}
+
 export type WeakSubjectivityFetchOptions = {
   weakSubjectivityServerUrl: string;
   weakSubjectivityCheckpoint?: string;

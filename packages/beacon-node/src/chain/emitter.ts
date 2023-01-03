@@ -104,7 +104,11 @@ export type HeadEventData = routes.events.EventData[routes.events.EventType.head
 export interface IChainEvents {
   [ChainEvent.attestation]: (attestation: phase0.Attestation) => void;
   [ChainEvent.contributionAndProof]: (contributionAndProof: altair.SignedContributionAndProof) => void;
-  [ChainEvent.block]: (signedBlock: allForks.SignedBeaconBlock, postState: CachedBeaconStateAllForks) => void;
+  [ChainEvent.block]: (
+    signedBlock: allForks.SignedBeaconBlock,
+    postState: CachedBeaconStateAllForks,
+    executionOptimistic: boolean
+  ) => void;
 
   [ChainEvent.checkpoint]: (checkpoint: phase0.Checkpoint, state: CachedBeaconStateAllForks) => void;
   [ChainEvent.justified]: (checkpoint: phase0.Checkpoint, state: CachedBeaconStateAllForks) => void;
@@ -114,7 +118,12 @@ export interface IChainEvents {
   [ChainEvent.clockEpoch]: (epoch: Epoch) => void;
 
   [ChainEvent.head]: (data: HeadEventData) => void;
-  [ChainEvent.forkChoiceReorg]: (head: ProtoBlock, oldHead: ProtoBlock, depth: number) => void;
+  [ChainEvent.forkChoiceReorg]: (
+    head: ProtoBlock,
+    oldHead: ProtoBlock,
+    depth: number,
+    executionOptimistic: boolean
+  ) => void;
   [ChainEvent.forkChoiceJustified]: (checkpoint: CheckpointWithHex) => void;
   [ChainEvent.forkChoiceFinalized]: (checkpoint: CheckpointWithHex) => void;
 
