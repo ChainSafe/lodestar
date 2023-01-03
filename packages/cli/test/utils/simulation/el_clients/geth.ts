@@ -7,7 +7,6 @@ import {
   ELClient,
   ELClientGenerator,
   ELGeneratorClientOptions,
-  ELNode,
   ELStartMode,
   JobOptions,
   Runner,
@@ -70,7 +69,10 @@ export const generateGethNode: ELClientGenerator<ELClient.Geth> = (
     id: `${id}-init`,
     bootstrap: async () => {
       await mkdir(dataDir, {recursive: true});
-      await writeFile(genesisPath, JSON.stringify(getGethGenesisBlock(mode, {ttd, cliqueSealingPeriod})));
+      await writeFile(
+        genesisPath,
+        JSON.stringify(getGethGenesisBlock(mode, {ttd, cliqueSealingPeriod, clientOptions: []}))
+      );
     },
     cli: {
       command: binaryPath,
@@ -179,7 +181,7 @@ export const generateGethNode: ELClientGenerator<ELClient.Geth> = (
     {providerUrls: [ethRpcUrl, engineRpcUrl], jwtSecretHex}
   );
 
-  const node: ELNode = {
+  return {
     client: ELClient.Geth,
     id,
     engineRpcUrl,
@@ -187,7 +189,6 @@ export const generateGethNode: ELClientGenerator<ELClient.Geth> = (
     ttd,
     jwtSecretHex,
     provider,
+    job,
   };
-
-  return {job, node};
 };
