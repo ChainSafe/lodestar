@@ -3,6 +3,7 @@ import {
   CachedBeaconStateBellatrix,
   CachedBeaconStateAltair,
   CachedBeaconStatePhase0,
+  CachedBeaconStateCapella,
 } from "@lodestar/state-transition";
 import * as slotFns from "@lodestar/state-transition/slot";
 import {phase0, ssz} from "@lodestar/types";
@@ -29,6 +30,8 @@ export const fork: TestRunnerFn<ForkStateCase, BeaconStateAllForks> = (forkNext)
           return slotFns.upgradeStateToBellatrix(preState as CachedBeaconStateAltair);
         case ForkName.capella:
           return slotFns.upgradeStateToCapella(preState as CachedBeaconStateBellatrix);
+        case ForkName.eip4844:
+          return slotFns.upgradeStateTo4844(preState as CachedBeaconStateCapella);
       }
     },
     options: {
@@ -44,11 +47,13 @@ export const fork: TestRunnerFn<ForkStateCase, BeaconStateAllForks> = (forkNext)
       expectFunc: (testCase, expected, actual) => {
         expectEqualBeaconState(forkNext, expected, actual);
       },
+      // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
     },
   };
 };
 
 type ForkStateCase = {
+  meta?: any;
   pre: BeaconStateAllForks;
   post: Exclude<BeaconStateAllForks, phase0.BeaconState>;
 };

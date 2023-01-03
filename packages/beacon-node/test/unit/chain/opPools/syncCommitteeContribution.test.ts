@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {altair, ssz} from "@lodestar/types";
+import {ssz} from "@lodestar/types";
 import {newFilledArray} from "@lodestar/state-transition";
 import type {SecretKey} from "@chainsafe/bls/types";
 import bls from "@chainsafe/bls";
@@ -11,19 +11,20 @@ import {
   SyncContributionAndProofPool,
   SyncContributionFast,
 } from "../../../../src/chain/opPools/syncContributionAndProofPool.js";
-import {generateContributionAndProof, generateEmptyContribution} from "../../../utils/contributionAndProof.js";
 import {InsertOutcome} from "../../../../src/chain/opPools/types.js";
 import {EMPTY_SIGNATURE} from "../../../../src/constants/index.js";
 import {renderBitArray} from "../../../utils/render.js";
+import {VALID_BLS_SIGNATURE_RAND} from "../../../utils/typeGenerator.js";
 
 describe("chain / opPools / SyncContributionAndProofPool", function () {
   let cache: SyncContributionAndProofPool;
   const beaconBlockRoot = Buffer.alloc(32, 1);
   const slot = 10;
   const syncCommitteeParticipants = 0;
-  const contributionAndProof: altair.ContributionAndProof = generateContributionAndProof({
-    contribution: {slot, beaconBlockRoot},
-  });
+  const contributionAndProof = ssz.altair.ContributionAndProof.defaultValue();
+  contributionAndProof.contribution.slot = slot;
+  contributionAndProof.contribution.beaconBlockRoot = beaconBlockRoot;
+  contributionAndProof.contribution.signature = VALID_BLS_SIGNATURE_RAND;
 
   beforeEach(() => {
     cache = new SyncContributionAndProofPool();
@@ -31,10 +32,11 @@ describe("chain / opPools / SyncContributionAndProofPool", function () {
   });
 
   it("should return SyncCommitteeContribution list based on same slot and block root", () => {
-    const newContributionAndProof = generateContributionAndProof({
-      aggregatorIndex: contributionAndProof.aggregatorIndex + 1,
-      contribution: {slot, beaconBlockRoot},
-    });
+    const newContributionAndProof = ssz.altair.ContributionAndProof.defaultValue();
+    newContributionAndProof.aggregatorIndex = contributionAndProof.aggregatorIndex + 1;
+    newContributionAndProof.contribution.slot = slot;
+    newContributionAndProof.contribution.beaconBlockRoot = beaconBlockRoot;
+
     cache.add(newContributionAndProof, syncCommitteeParticipants);
     const aggregate = cache.getAggregate(slot, beaconBlockRoot);
     expect(ssz.altair.SyncAggregate.equals(aggregate, ssz.altair.SyncAggregate.defaultValue())).to.equal(false);
@@ -56,7 +58,7 @@ describe("replaceIfBetter", function () {
   });
 
   it("less participants", () => {
-    const contribution = generateEmptyContribution();
+    const contribution = ssz.altair.SyncCommitteeContribution.defaultValue();
     contribution.aggregationBits.set(0, true);
     expect(replaceIfBetter(bestContribution, contribution, numParticipants - 1)).to.be.equal(
       InsertOutcome.NotBetterThan,
@@ -65,7 +67,7 @@ describe("replaceIfBetter", function () {
   });
 
   it("same participants", () => {
-    const contribution = generateEmptyContribution();
+    const contribution = ssz.altair.SyncCommitteeContribution.defaultValue();
     expect(replaceIfBetter(bestContribution, contribution, numParticipants)).to.be.equal(
       InsertOutcome.NotBetterThan,
       "same participant item should not replace the best contribution"
@@ -73,7 +75,7 @@ describe("replaceIfBetter", function () {
   });
 
   it("more participants", () => {
-    const contribution = generateEmptyContribution();
+    const contribution = ssz.altair.SyncCommitteeContribution.defaultValue();
     const numParticipantsNew = numParticipants + 1;
 
     expect(replaceIfBetter(bestContribution, contribution, numParticipantsNew)).to.be.equal(

@@ -32,7 +32,7 @@ export type EpochProcessOpts = {
  * EpochProcess is the parent object of:
  * - Any data-structures not part of the spec'ed BeaconState
  * - Necessary to only compute data once
- * - Only necessary for epoch processing, can be disposed immediatelly
+ * - Only necessary for epoch processing, can be disposed immediately
  * - Not already part of `EpochContext` {@see} {@link EpochContext}
  *
  * EpochProcess speeds up epoch processing as a whole at the cost of more memory temporarily. This is okay since
@@ -89,12 +89,12 @@ export interface EpochProcess {
   indicesToSlash: ValidatorIndex[];
 
   /**
-   * Indices of validators that just joinned and will be eligible for the active queue.
+   * Indices of validators that just joined and will be eligible for the active queue.
    * ```
    * v.activationEligibilityEpoch === FAR_FUTURE_EPOCH && v.effectiveBalance === MAX_EFFECTIVE_BALANCE
    * ```
    * All validators in indicesEligibleForActivationQueue get activationEligibilityEpoch set. So it can only include
-   * validators that have just joinned the registry through a valid full deposit(s).
+   * validators that have just joined the registry through a valid full deposit(s).
    * ```
    * max indicesEligibleForActivationQueue = SLOTS_PER_EPOCH * MAX_DEPOSITS
    * ```
@@ -194,7 +194,7 @@ export function beforeProcessEpoch(state: CachedBeaconStateAllForks, opts?: Epoc
   let totalActiveStakeByIncrement = 0;
 
   // To optimize memory each validator node in `state.validators` is represented with a special node type
-  // `BranchNodeStruct` that represents the data as struct internally. This utility grabs the struct data directrly
+  // `BranchNodeStruct` that represents the data as struct internally. This utility grabs the struct data directly
   // from the nodes without any extra transformation. The returned `validators` array contains native JS objects.
   const validators = state.validators.getAllReadonlyValues();
   const validatorCount = validators.length;

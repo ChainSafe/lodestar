@@ -6,8 +6,11 @@ const MAX_UINT64_JSON = "18446744073709551615";
 export function chainConfigToJson(config: IChainConfig): Record<string, string> {
   const json: Record<string, string> = {};
 
-  for (const key of Object.keys(config) as (keyof IChainConfig)[]) {
-    json[key] = serializeSpecValue(config[key], chainConfigTypes[key]);
+  for (const key of Object.keys(chainConfigTypes) as (keyof IChainConfig)[]) {
+    const value = config[key];
+    if (value !== undefined) {
+      json[key] = serializeSpecValue(value, chainConfigTypes[key]);
+    }
   }
 
   return json;
@@ -16,8 +19,11 @@ export function chainConfigToJson(config: IChainConfig): Record<string, string> 
 export function chainConfigFromJson(json: Record<string, unknown>): IChainConfig {
   const config = {} as IChainConfig;
 
-  for (const key of Object.keys(json) as (keyof IChainConfig)[]) {
-    config[key] = deserializeSpecValue(json[key], chainConfigTypes[key]) as never;
+  for (const key of Object.keys(chainConfigTypes) as (keyof IChainConfig)[]) {
+    const value = json[key];
+    if (value !== undefined) {
+      config[key] = deserializeSpecValue(json[key], chainConfigTypes[key]) as never;
+    }
   }
 
   return config;

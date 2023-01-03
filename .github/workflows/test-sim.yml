@@ -1,11 +1,15 @@
 name: Sim tests
 
-on: 
+on:
   push:
-    # We intentionally don't run push on feature branches. See PR for rational. 
+    # We intentionally don't run push on feature branches. See PR for rational.
     branches: [unstable, stable]
   pull_request:
   workflow_dispatch:
+
+env:
+  GETH_DOCKER_IMAGE: ethereum/client-go:v1.10.25
+  NETHERMIND_DOCKER_IMAGE: nethermind/nethermind:1.14.5
 
 jobs:
   tests-sim:
@@ -16,7 +20,7 @@ jobs:
       - uses: actions/checkout@v2
       - uses: actions/setup-node@v2
         with:
-          node-version: "lts/gallium"
+          node-version: 18
       - name: Node.js version
         id: node
         run: echo "::set-output name=v8CppApiVersion::$(node --print "process.versions.modules")"
@@ -36,9 +40,18 @@ jobs:
         if: steps.cache-deps.outputs.cache-hit == 'true'
       # </common-build>
 
-      - name: Simulation tests for CLI
-        run: yarn test:sim
+      - name: Sim tests multifork
+        run: yarn test:sim:multifork
         working-directory: packages/cli
+
+      - name: Sim tests endpoints
+        run: yarn test:sim:endpoints
+        working-directory: packages/cli
+
+      - name: Sim tests eip4844
+        run: yarn test:sim:eip4844
+        working-directory: packages/cli
+
       - name: Upload debug log test files for "packages/cli"
         if: ${{ always() }}
         uses: actions/upload-artifact@v2

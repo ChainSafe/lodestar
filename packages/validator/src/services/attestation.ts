@@ -17,6 +17,15 @@ type AttestationServiceOpts = {
 };
 
 /**
+ * Previously, submitting attestations too early may cause some attestations missed (because some clients may not queue attestations, and
+ * sent peers are few) so it was configured as 1/6. See https://github.com/ChainSafe/lodestar/issues/3943
+ *
+ * As of Nov 2022, it's proved that submitting attestations asap is better as it avoids busy time of node at around 1/3 of slot (and could be
+ * because sent peers are better than before). See https://github.com/ChainSafe/lodestar/issues/4600#issuecomment-1321546586
+ */
+const DEFAULT_AFTER_BLOCK_DELAY_SLOT_FRACTION = 0;
+
+/**
  * Service that sets up and handles validator attester duties.
  */
 export class AttestationService {
@@ -43,7 +52,7 @@ export class AttestationService {
   }
 
   private runAttestationTasks = async (slot: Slot, signal: AbortSignal): Promise<void> => {
-    // Fetch info first so a potential delay is absorved by the sleep() below
+    // Fetch info first so a potential delay is absorbed by the sleep() below
     const duties = this.dutiesService.getDutiesAtSlot(slot);
     if (duties.length === 0) {
       return;
@@ -135,8 +144,11 @@ export class AttestationService {
     // never beyond the 1/3 cutoff time.
     // https://github.com/status-im/nimbus-eth2/blob/7b64c1dce4392731a4a59ee3a36caef2e0a8357a/beacon_chain/validators/validator_duties.nim#L1123
     const msToOneThirdSlot = this.clock.msToSlot(slot + 1 / 3);
-    // Default = 1/6, which is half of attestation offset
-    const afterBlockDelayMs = 1000 * this.clock.secondsPerSlot * (this.opts?.afterBlockDelaySlotFraction ?? 1 / 6);
+    // submitting attestations asap to avoid busy time at around 1/3 of slot
+    const afterBlockDelayMs =
+      1000 *
+      this.clock.secondsPerSlot *
+      (this.opts?.afterBlockDelaySlotFraction ?? DEFAULT_AFTER_BLOCK_DELAY_SLOT_FRACTION);
     await sleep(Math.min(msToOneThirdSlot, afterBlockDelayMs));
 
     this.metrics?.attesterStepCallPublishAttestation.observe(this.clock.secFromSlot(slot + 1 / 3));

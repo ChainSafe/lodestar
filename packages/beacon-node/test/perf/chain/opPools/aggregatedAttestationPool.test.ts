@@ -44,7 +44,7 @@ describe("getAttestationsForBlock", () => {
     expect(numCurrentEpochParticipation).to.equal(250000, "Wrong numCurrentEpochParticipation");
 
     const {blockHeader, checkpoint} = computeAnchorCheckpoint(originalState.config, originalState);
-    // TODO figure out why getBlockRootAtSlot(originalState, justfifiedSlot) is not the same to justifiedCheckpoint.root
+    // TODO figure out why getBlockRootAtSlot(originalState, justifiedSlot) is not the same to justifiedCheckpoint.root
     const finalizedEpoch = originalState.finalizedCheckpoint.epoch;
     const finalizedCheckpoint = {
       epoch: finalizedEpoch,

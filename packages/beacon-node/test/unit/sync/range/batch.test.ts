@@ -2,16 +2,17 @@ import {expect} from "chai";
 import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {config} from "@lodestar/config/default";
-import {generateEmptySignedBlock} from "../../../utils/block.js";
+import {ssz} from "@lodestar/types";
 import {expectThrowsLodestarError} from "../../../utils/errors.js";
 import {Batch, BatchStatus, BatchErrorCode, BatchError} from "../../../../src/sync/range/batch.js";
 import {EPOCHS_PER_BATCH} from "../../../../src/sync/constants.js";
+import {getBlockInput} from "../../../../src/chain/blocks/types.js";
 
 describe("sync / range / batch", async () => {
   // Common mock data
   const startEpoch = 0;
   const peer = await createSecp256k1PeerId();
-  const blocksDownloaded = [generateEmptySignedBlock()];
+  const blocksDownloaded = [getBlockInput.preEIP4844(config, ssz.phase0.SignedBeaconBlock.defaultValue())];
 
   it("Should return correct blockByRangeRequest", () => {
     const batch = new Batch(startEpoch, config);

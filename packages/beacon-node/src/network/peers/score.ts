@@ -18,10 +18,10 @@ const MAX_SCORE = 100;
 const MIN_SCORE = -100;
 /** Drop score if absolute value is below this threshold */
 const SCORE_THRESHOLD = 1;
-/** The halflife of a peer's score. I.e the number of miliseconds it takes for the score to decay to half its value */
+/** The halflife of a peer's score. I.e the number of milliseconds it takes for the score to decay to half its value */
 const SCORE_HALFLIFE_MS = 10 * 60 * 1000;
 const HALFLIFE_DECAY_MS = -Math.log(2) / SCORE_HALFLIFE_MS;
-/** The number of miliseconds we ban a peer for before their score begins to decay */
+/** The number of milliseconds we ban a peer for before their score begins to decay */
 const BANNED_BEFORE_DECAY_MS = 30 * 60 * 1000;
 /** Limit of entries in the scores map */
 const MAX_ENTRIES = 1000;
@@ -79,6 +79,7 @@ type PeerIdStr = string;
 export interface IPeerRpcScoreStore {
   getScore(peer: PeerId): number;
   getScoreState(peer: PeerId): ScoreState;
+  dumpPeerScoreStats(): PeerScoreStats;
   applyAction(peer: PeerId, action: PeerAction, actionName: string): void;
   update(): void;
   updateGossipsubScore(peerId: PeerIdStr, newScore: number, ignore: boolean): void;
@@ -87,6 +88,16 @@ export interface IPeerRpcScoreStore {
 export interface IPeerRpcScoreStoreModules {
   metrics: IMetrics | null;
 }
+
+export type PeerScoreStats = ({peerId: PeerIdStr} & PeerScoreStat)[];
+
+export type PeerScoreStat = {
+  lodestarScore: number;
+  gossipScore: number;
+  ignoreNegativeGossipScore: boolean;
+  score: number;
+  lastUpdate: number;
+};
 
 /**
  * A peer's score (perceived potential usefulness).
@@ -110,6 +121,10 @@ export class PeerRpcScoreStore implements IPeerRpcScoreStore {
 
   getScoreState(peer: PeerId): ScoreState {
     return scoreToState(this.getScore(peer));
+  }
+
+  dumpPeerScoreStats(): PeerScoreStats {
+    return Array.from(this.scores.entries()).map(([peerId, peerScore]) => ({peerId, ...peerScore.getStat()}));
   }
 
   applyAction(peer: PeerId, action: PeerAction, actionName: string): void {
@@ -200,6 +215,16 @@ export class PeerScore {
       this.gossipScore = newScore;
       this.ignoreNegativeGossipScore = ignore;
     }
+  }
+
+  getStat(): PeerScoreStat {
+    return {
+      lodestarScore: this.lodestarScore,
+      gossipScore: this.gossipScore,
+      ignoreNegativeGossipScore: this.ignoreNegativeGossipScore,
+      score: this.score,
+      lastUpdate: this.lastUpdate,
+    };
   }
 
   /**

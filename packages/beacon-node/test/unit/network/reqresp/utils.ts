@@ -1,19 +1,8 @@
 import {expect} from "chai";
 import {Stream, StreamStat} from "@libp2p/interface-connection";
 import {Uint8ArrayList} from "uint8arraylist";
-import {Root, phase0} from "@lodestar/types";
+import {Root} from "@lodestar/types";
 import {toHexString} from "@chainsafe/ssz";
-import {generateEmptySignedBlock} from "../../../utils/block.js";
-
-export function createStatus(): phase0.Status {
-  return {
-    finalizedEpoch: 1,
-    finalizedRoot: Buffer.alloc(32, 0),
-    forkDigest: Buffer.alloc(4),
-    headRoot: Buffer.alloc(32, 0),
-    headSlot: 10,
-  };
-}
 
 export function generateRoots(count: number, offset = 0): Root[] {
   const roots: Root[] = [];
@@ -31,10 +20,6 @@ export async function* arrToSource<T>(arr: T[]): AsyncGenerator<T> {
   for (const item of arr) {
     yield item;
   }
-}
-
-export function generateEmptySignedBlocks(n = 3): phase0.SignedBeaconBlock[] {
-  return Array.from({length: n}).map(() => generateEmptySignedBlock());
 }
 
 /**

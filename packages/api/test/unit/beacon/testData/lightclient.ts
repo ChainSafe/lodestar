@@ -1,6 +1,6 @@
 import {ssz} from "@lodestar/types";
-import {ProofType} from "@chainsafe/persistent-merkle-tree";
 import {toHexString} from "@chainsafe/ssz";
+import {ForkName} from "@lodestar/params";
 import {Api} from "../../../../src/beacon/routes/lightclient.js";
 import {GenericServerTestCases} from "../../../utils/genericServerTest.js";
 
@@ -12,41 +12,18 @@ const header = ssz.phase0.BeaconBlockHeader.defaultValue();
 const signatureSlot = ssz.Slot.defaultValue();
 
 export const testData: GenericServerTestCases<Api> = {
-  getStateProof: {
-    args: [
-      "head",
-      [
-        // ["validator", 0, "balance"],
-        ["finalized_checkpoint", 0, "root", 12000],
-      ],
-    ],
-    res: {
-      data: {
-        type: ProofType.treeOffset,
-        offsets: [1, 2, 3],
-        leaves: [root, root, root, root],
-      },
-    },
-    /* eslint-disable quotes */
-    query: {
-      paths: [
-        // '["validator",0,"balance"]',
-        '["finalized_checkpoint",0,"root",12000]',
-      ],
-    },
-    /* eslint-enable quotes */
-  },
   getUpdates: {
     args: [1, 2],
-    res: {data: [lightClientUpdate]},
+    res: [{version: ForkName.bellatrix, data: lightClientUpdate}],
   },
   getOptimisticUpdate: {
     args: [],
-    res: {data: {syncAggregate, attestedHeader: header, signatureSlot}},
+    res: {version: ForkName.bellatrix, data: {syncAggregate, attestedHeader: header, signatureSlot}},
   },
   getFinalityUpdate: {
     args: [],
     res: {
+      version: ForkName.bellatrix,
       data: {
         syncAggregate,
         attestedHeader: header,
@@ -59,11 +36,16 @@ export const testData: GenericServerTestCases<Api> = {
   getBootstrap: {
     args: [toHexString(root)],
     res: {
+      version: ForkName.bellatrix,
       data: {
         header,
         currentSyncCommittee: lightClientUpdate.nextSyncCommittee,
         currentSyncCommitteeBranch: [root, root, root, root, root], // Vector(Root, 5)
       },
     },
+  },
+  getCommitteeRoot: {
+    args: [1, 2],
+    res: {data: [Buffer.alloc(32, 0), Buffer.alloc(32, 1)]},
   },
 };

@@ -8,13 +8,12 @@ import {BitArray} from "@chainsafe/ssz";
 import {altair, phase0, ssz} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 import {createIBeaconConfig} from "@lodestar/config";
-import {IReqResp, ReqRespMethod} from "../../../../src/network/reqresp/index.js";
+import {IReqRespBeaconNode, ReqRespMethod} from "../../../../src/network/reqresp/ReqRespBeaconNode.js";
 import {PeerRpcScoreStore, PeerManager} from "../../../../src/network/peers/index.js";
 import {Eth2Gossipsub, getConnectionsMap, NetworkEvent, NetworkEventBus} from "../../../../src/network/index.js";
 import {PeersData} from "../../../../src/network/peers/peersData.js";
 import {createNode, getAttnets, getSyncnets} from "../../../utils/network.js";
 import {MockBeaconChain} from "../../../utils/mocks/chain/chain.js";
-import {generateEmptySignedBlock} from "../../../utils/block.js";
 import {generateState} from "../../../utils/state.js";
 import {waitForEvent} from "../../../utils/events/resolver.js";
 import {testLogger} from "../../../utils/logger.js";
@@ -37,7 +36,7 @@ describe("network / peers / PeerManager", function () {
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async function mockModules() {
     // Setup fake chain
-    const block = generateEmptySignedBlock();
+    const block = ssz.phase0.SignedBeaconBlock.defaultValue();
     const state = generateState({
       finalizedCheckpoint: {
         epoch: 0,
@@ -101,7 +100,7 @@ describe("network / peers / PeerManager", function () {
   }
 
   // Create a real event emitter with stubbed methods
-  class ReqRespFake implements IReqResp {
+  class ReqRespFake implements IReqRespBeaconNode {
     start = sinon.stub();
     stop = sinon.stub();
     status = sinon.stub();
@@ -110,11 +109,13 @@ describe("network / peers / PeerManager", function () {
     ping = sinon.stub();
     beaconBlocksByRange = sinon.stub();
     beaconBlocksByRoot = sinon.stub();
-    pruneOnPeerDisconnect = sinon.stub();
+    blobsSidecarsByRange = sinon.stub();
+    beaconBlockAndBlobsSidecarByRoot = sinon.stub();
     lightClientBootstrap = sinon.stub();
     lightClientOptimisticUpdate = sinon.stub();
     lightClientFinalityUpdate = sinon.stub();
     lightClientUpdate = sinon.stub();
+    lightClientUpdatesByRange = sinon.stub();
   }
 
   it("Should request metadata on receivedPing of unknown peer", async () => {

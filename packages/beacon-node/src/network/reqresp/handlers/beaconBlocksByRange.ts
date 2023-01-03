@@ -1,24 +1,106 @@
 import {GENESIS_SLOT, MAX_REQUEST_BLOCKS} from "@lodestar/params";
-import {phase0, Slot} from "@lodestar/types";
-import {fromHexString} from "@chainsafe/ssz";
+import {ContextBytesType, EncodedPayloadBytes, EncodedPayloadType, ResponseError, RespStatus} from "@lodestar/reqresp";
+import {eip4844, phase0} from "@lodestar/types";
+import {fromHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
-import {RespStatus} from "../../../constants/index.js";
-import {ResponseError} from "../response/index.js";
-import {ReqRespBlockResponse} from "../types.js";
 
 // TODO: Unit test
 
-export async function* onBeaconBlocksByRange(
-  requestBody: phase0.BeaconBlocksByRangeRequest,
+export function onBeaconBlocksByRange(
+  request: phase0.BeaconBlocksByRangeRequest,
   chain: IBeaconChain,
   db: IBeaconDb
-): AsyncIterable<ReqRespBlockResponse> {
-  const {startSlot, step} = requestBody;
-  let {count} = requestBody;
-  if (step < 1) {
-    throw new ResponseError(RespStatus.INVALID_REQUEST, "step < 1");
+): AsyncIterable<EncodedPayloadBytes> {
+  return onBlocksOrBlobsSidecarsByRange(request, chain, {
+    finalized: db.blockArchive,
+    unfinalized: db.block,
+  });
+}
+
+export async function* onBlocksOrBlobsSidecarsByRange(
+  request: eip4844.BlobsSidecarsByRangeRequest,
+  chain: IBeaconChain,
+  db: {
+    finalized: Pick<IBeaconDb["blockArchive"], "binaryEntriesStream" | "decodeKey">;
+    unfinalized: Pick<IBeaconDb["block"], "getBinary">;
   }
+): AsyncIterable<EncodedPayloadBytes> {
+  const {startSlot, count} = validateBeaconBlocksByRangeRequest(request);
+  const endSlot = startSlot + count;
+
+  // SPEC: Clients MUST respond with blobs sidecars from their view of the current fork choice -- that is, blobs
+  // sidecars as included by blocks from the single chain defined by the current head. Of note, blocks from slots
+  // before the finalization MUST lead to the finalized block reported in the Status handshake.
+  // https://github.com/ethereum/consensus-specs/blob/11a037fd9227e29ee809c9397b09f8cc3383a8c0/specs/eip4844/p2p-interface.md#blobssidecarsbyrange-v1
+
+  const finalizedSlot = chain.forkChoice.getFinalizedBlock().slot;
+
+  // Finalized range of blobs
+  // TODO EIP-4844: Should the finalized block be included here or below?
+
+  if (startSlot <= finalizedSlot) {
+    // Chain of blobs won't change
+    for await (const {key, value} of db.finalized.binaryEntriesStream({gte: startSlot, lt: endSlot})) {
+      yield {
+        type: EncodedPayloadType.bytes,
+        bytes: value,
+        contextBytes: {
+          type: ContextBytesType.ForkDigest,
+          forkSlot: db.finalized.decodeKey(key),
+        },
+      };
+    }
+  }
+
+  // Non-finalized range of blobs
+
+  if (endSlot > finalizedSlot) {
+    const headRoot = chain.forkChoice.getHeadRoot();
+    // TODO EIP-4844: forkChoice should mantain an array of canonical blocks, and change only on reorg
+    const headChain = chain.forkChoice.getAllAncestorBlocks(headRoot);
+
+    // Iterate head chain with ascending block numbers
+    for (let i = headChain.length - 1; i >= 0; i--) {
+      const block = headChain[i];
+
+      // Must include only blocks in the range requested
+      if (block.slot >= startSlot && block.slot < endSlot) {
+        // Note: Here the forkChoice head may change due to a re-org, so the headChain reflects the cannonical chain
+        // at the time of the start of the request. Spec is clear the chain of blobs must be consistent, but on
+        // re-org there's no need to abort the request
+        // Spec: https://github.com/ethereum/consensus-specs/blob/a1e46d1ae47dd9d097725801575b46907c12a1f8/specs/eip4844/p2p-interface.md#blobssidecarsbyrange-v1
+
+        const blockBytes = await db.unfinalized.getBinary(fromHex(block.blockRoot));
+        if (!blockBytes) {
+          // Handle the same to onBeaconBlocksByRange
+          throw new ResponseError(RespStatus.SERVER_ERROR, `No item for root ${block.blockRoot} slot ${block.slot}`);
+        }
+
+        yield {
+          type: EncodedPayloadType.bytes,
+          bytes: blockBytes,
+          contextBytes: {
+            type: ContextBytesType.ForkDigest,
+            forkSlot: block.slot,
+          },
+        };
+      }
+
+      // If block is after endSlot, stop iterating
+      else if (block.slot >= endSlot) {
+        break;
+      }
+    }
+  }
+}
+
+export function validateBeaconBlocksByRangeRequest(
+  request: eip4844.BlobsSidecarsByRangeRequest
+): eip4844.BlobsSidecarsByRangeRequest {
+  const {startSlot} = request;
+  let {count} = request;
+
   if (count < 1) {
     throw new ResponseError(RespStatus.INVALID_REQUEST, "count < 1");
   }
@@ -27,91 +109,11 @@ export async function* onBeaconBlocksByRange(
     throw new ResponseError(RespStatus.INVALID_REQUEST, "startSlot < genesis");
   }
 
-  if (step > 1) {
-    // step > 1 is deprecated, see https://github.com/ethereum/consensus-specs/pull/2856
-    count = 1;
-  }
+  // step > 1 is deprecated, see https://github.com/ethereum/consensus-specs/pull/2856
 
   if (count > MAX_REQUEST_BLOCKS) {
     count = MAX_REQUEST_BLOCKS;
   }
 
-  const lt = startSlot + count;
-
-  // step < 1 was validated above
-  const archivedBlocksStream = getFinalizedBlocksByRange(startSlot, lt, db);
-
-  yield* injectRecentBlocks(archivedBlocksStream, chain, db, requestBody);
-}
-
-export async function* injectRecentBlocks(
-  archiveStream: AsyncIterable<ReqRespBlockResponse>,
-  chain: IBeaconChain,
-  db: IBeaconDb,
-  request: phase0.BeaconBlocksByRangeRequest
-): AsyncGenerator<ReqRespBlockResponse> {
-  let totalBlock = 0;
-  let slot = -1;
-  for await (const p2pBlock of archiveStream) {
-    totalBlock++;
-    yield p2pBlock;
-    slot = p2pBlock.slot;
-  }
-  slot = slot === -1 ? request.startSlot : slot + request.step;
-  const upperSlot = request.startSlot + request.count * request.step;
-  const slots = [] as number[];
-  while (slot < upperSlot) {
-    slots.push(slot);
-    slot += request.step;
-  }
-
-  const p2pBlocks = await getUnfinalizedBlocksAtSlots(slots, {chain, db});
-  for (const p2pBlock of p2pBlocks) {
-    if (p2pBlock !== undefined) {
-      totalBlock++;
-      yield p2pBlock;
-    }
-  }
-  if (totalBlock === 0) {
-    throw new ResponseError(RespStatus.RESOURCE_UNAVAILABLE, "No block found");
-  }
-}
-
-async function* getFinalizedBlocksByRange(gte: number, lt: number, db: IBeaconDb): AsyncIterable<ReqRespBlockResponse> {
-  const binaryEntriesStream = db.blockArchive.binaryEntriesStream({
-    gte,
-    lt,
-  });
-  for await (const {key, value} of binaryEntriesStream) {
-    const slot = db.blockArchive.decodeKey(key);
-    yield {bytes: value, slot};
-  }
-}
-
-/** Returned blocks have the same ordering as `slots` */
-async function getUnfinalizedBlocksAtSlots(
-  slots: Slot[],
-  {chain, db}: {chain: IBeaconChain; db: IBeaconDb}
-): Promise<ReqRespBlockResponse[]> {
-  if (slots.length === 0) {
-    return [];
-  }
-
-  const slotsSet = new Set(slots);
-  const minSlot = Math.min(...slots); // Slots must have length > 0
-  const blockRootsPerSlot = new Map<Slot, Promise<Uint8Array | null>>();
-
-  // these blocks are on the same chain to head
-  for (const block of chain.forkChoice.iterateAncestorBlocks(chain.forkChoice.getHeadRoot())) {
-    if (block.slot < minSlot) {
-      break;
-    } else if (slotsSet.has(block.slot)) {
-      blockRootsPerSlot.set(block.slot, db.block.getBinary(fromHexString(block.blockRoot)));
-    }
-  }
-
-  const unfinalizedBlocks = await Promise.all(slots.map((slot) => blockRootsPerSlot.get(slot)));
-  return unfinalizedBlocks
-    .map((block, i) => ({bytes: block, slot: slots[i]}))
-    .filter((p2pBlock): p2pBlock is ReqRespBlockResponse => p2pBlock.bytes != null);
+  return {startSlot, count};
 }

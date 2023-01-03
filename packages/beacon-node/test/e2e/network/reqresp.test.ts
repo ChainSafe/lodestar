@@ -1,32 +1,34 @@
-import {expect} from "chai";
 import {PeerId} from "@libp2p/interface-peer-id";
 import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
-import {createIBeaconConfig} from "@lodestar/config";
-import {config} from "@lodestar/config/default";
-import {sleep as _sleep} from "@lodestar/utils";
-import {altair, phase0, Root, ssz} from "@lodestar/types";
-import {ForkName} from "@lodestar/params";
+import {expect} from "chai";
 import {BitArray} from "@chainsafe/ssz";
-import {IReqRespOptions, Network} from "../../../src/network/index.js";
+import {createIBeaconConfig, createIChainForkConfig, IChainForkConfig} from "@lodestar/config";
+import {chainConfig} from "@lodestar/config/default";
+import {
+  Encoding,
+  RequestError,
+  RequestErrorCode,
+  IRequestErrorMetadata,
+  HandlerTypeFromMessage,
+  EncodedPayloadType,
+  EncodedPayload,
+  ContextBytesType,
+} from "@lodestar/reqresp";
+import * as protocols from "@lodestar/reqresp/protocols";
+import {allForks, altair, phase0, Root, ssz} from "@lodestar/types";
+import {sleep as _sleep} from "@lodestar/utils";
+import {GossipHandlers} from "../../../src/network/gossip/index.js";
+import {Network, ReqRespBeaconNodeOpts} from "../../../src/network/index.js";
 import {defaultNetworkOptions, INetworkOptions} from "../../../src/network/options.js";
-import {Method, Encoding} from "../../../src/network/reqresp/types.js";
 import {ReqRespHandlers} from "../../../src/network/reqresp/handlers/index.js";
-import {RequestError, RequestErrorCode} from "../../../src/network/reqresp/request/index.js";
-import {IRequestErrorMetadata} from "../../../src/network/reqresp/request/errors.js";
+import {ReqRespMethod} from "../../../src/network/reqresp/types.js";
+import {expectRejectedWithLodestarError} from "../../utils/errors.js";
 import {testLogger} from "../../utils/logger.js";
 import {MockBeaconChain} from "../../utils/mocks/chain/chain.js";
-import {createNode} from "../../utils/network.js";
+import {connect, createNode, onPeerConnect} from "../../utils/network.js";
 import {generateState} from "../../utils/state.js";
-import {arrToSource, generateEmptySignedBlocks} from "../../unit/network/reqresp/utils.js";
-import {
-  blocksToReqRespBlockResponses,
-  generateEmptyReqRespBlockResponse,
-  generateEmptySignedBlock,
-} from "../../utils/block.js";
-import {expectRejectedWithLodestarError} from "../../utils/errors.js";
-import {connect, onPeerConnect} from "../../utils/network.js";
 import {StubbedBeaconDb} from "../../utils/stub/index.js";
-import {GossipHandlers} from "../../../src/network/gossip/index.js";
+import {arrToSource} from "../../unit/network/reqresp/utils.js";
 
 /* eslint-disable require-yield, @typescript-eslint/naming-convention */
 
@@ -43,8 +45,17 @@ describe("network / ReqResp", function () {
     localMultiaddrs: [],
     discv5FirstQueryDelayMs: 0,
     discv5: null,
+    // Disable rate limiting for the tests
+    rateLimitMultiplier: 0,
   };
-  const state = generateState();
+
+  // Schedule ALTAIR_FORK_EPOCH to trigger registering lightclient ReqResp protocols immediately
+  const config = createIChainForkConfig({
+    ...chainConfig,
+    ALTAIR_FORK_EPOCH: 0,
+  });
+
+  const state = generateState({}, config);
   const beaconConfig = createIBeaconConfig(config, state.genesisValidatorsRoot);
   const chain = new MockBeaconChain({genesisTime: 0, chainId: 0, networkId: BigInt(0), state, config: beaconConfig});
   const db = new StubbedBeaconDb();
@@ -66,7 +77,7 @@ describe("network / ReqResp", function () {
 
   async function createAndConnectPeers(
     reqRespHandlersPartial?: Partial<ReqRespHandlers>,
-    reqRespOpts?: IReqRespOptions
+    reqRespOpts?: ReqRespBeaconNodeOpts
   ): Promise<[Network, Network]> {
     const controller = new AbortController();
     const peerIdB = await createSecp256k1PeerId();
@@ -78,9 +89,16 @@ describe("network / ReqResp", function () {
     };
 
     const reqRespHandlers: ReqRespHandlers = {
-      onStatus: notImplemented,
+      onStatus: async function* onRequest() {
+        yield {
+          type: EncodedPayloadType.ssz,
+          data: chain.getStatus(),
+        };
+      } as HandlerTypeFromMessage<typeof protocols.Status>,
       onBeaconBlocksByRange: notImplemented,
       onBeaconBlocksByRoot: notImplemented,
+      onBlobsSidecarsByRange: notImplemented,
+      onBeaconBlockAndBlobsSidecarByRoot: notImplemented,
       onLightClientBootstrap: notImplemented,
       onLightClientUpdatesByRange: notImplemented,
       onLightClientOptimisticUpdate: notImplemented,
@@ -129,18 +147,6 @@ describe("network / ReqResp", function () {
     expect(pong.toString()).to.deep.equal(expectedPong.toString(), "Wrong response body");
   });
 
-  it("should send/receive a metadata message - phase0", async function () {
-    const [netA, netB] = await createAndConnectPeers();
-
-    const metadata: phase0.Metadata = {
-      seqNumber: netB.metadata.seqNumber,
-      attnets: netB.metadata.attnets,
-    };
-
-    const receivedMetadata = await netA.reqResp.metadata(netB.peerId, ForkName.phase0);
-    expect(receivedMetadata).to.deep.equal(metadata, "Wrong response body");
-  });
-
   it("should send/receive a metadata message - altair", async function () {
     const [netA, netB] = await createAndConnectPeers();
 
@@ -167,8 +173,8 @@ describe("network / ReqResp", function () {
 
     const [netA, netB] = await createAndConnectPeers({
       onStatus: async function* onRequest() {
-        yield statusNetB;
-      },
+        yield {type: EncodedPayloadType.ssz, data: statusNetB};
+      } as HandlerTypeFromMessage<typeof protocols.Status>,
     });
 
     const receivedStatus = await netA.reqResp.status(netB.peerId, statusNetA);
@@ -179,15 +185,17 @@ describe("network / ReqResp", function () {
     const req: phase0.BeaconBlocksByRangeRequest = {startSlot: 0, step: 1, count: 2};
     const blocks: phase0.SignedBeaconBlock[] = [];
     for (let slot = req.startSlot; slot < req.count; slot++) {
-      const block = generateEmptySignedBlock();
+      const block = config.getForkTypes(slot).SignedBeaconBlock.defaultValue();
       block.message.slot = slot;
       blocks.push(block);
     }
 
     const [netA, netB] = await createAndConnectPeers({
       onBeaconBlocksByRange: async function* () {
-        yield* arrToSource(blocksToReqRespBlockResponses(blocks));
-      },
+        for (const block of blocks) {
+          yield wrapBlockAsEncodedPayload(config, block);
+        }
+      } as HandlerTypeFromMessage<typeof protocols.BeaconBlocksByRange>,
     });
 
     const returnedBlocks = await netA.reqResp.beaconBlocksByRange(netB.peerId, req);
@@ -206,8 +214,11 @@ describe("network / ReqResp", function () {
 
     const [netA, netB] = await createAndConnectPeers({
       onLightClientBootstrap: async function* onRequest() {
-        yield expectedValue;
-      },
+        yield {
+          type: EncodedPayloadType.ssz,
+          data: expectedValue,
+        };
+      } as HandlerTypeFromMessage<typeof protocols.LightClientBootstrap>,
     });
 
     const returnedValue = await netA.reqResp.lightClientBootstrap(netB.peerId, root);
@@ -219,8 +230,11 @@ describe("network / ReqResp", function () {
 
     const [netA, netB] = await createAndConnectPeers({
       onLightClientOptimisticUpdate: async function* onRequest() {
-        yield expectedValue;
-      },
+        yield {
+          type: EncodedPayloadType.ssz,
+          data: expectedValue,
+        };
+      } as HandlerTypeFromMessage<typeof protocols.LightClientOptimisticUpdate>,
     });
 
     const returnedValue = await netA.reqResp.lightClientOptimisticUpdate(netB.peerId);
@@ -232,8 +246,11 @@ describe("network / ReqResp", function () {
 
     const [netA, netB] = await createAndConnectPeers({
       onLightClientFinalityUpdate: async function* onRequest() {
-        yield expectedValue;
-      },
+        yield {
+          type: EncodedPayloadType.ssz,
+          data: expectedValue,
+        };
+      } as HandlerTypeFromMessage<typeof protocols.LightClientFinalityUpdate>,
     });
 
     const returnedValue = await netA.reqResp.lightClientFinalityUpdate(netB.peerId);
@@ -242,29 +259,37 @@ describe("network / ReqResp", function () {
 
   it("should send/receive a light client update message", async function () {
     const req: altair.LightClientUpdatesByRange = {startPeriod: 0, count: 2};
-    const lightClientUpdates: altair.LightClientUpdate[] = [];
+    const lightClientUpdates: EncodedPayload<altair.LightClientUpdate>[] = [];
     for (let slot = req.startPeriod; slot < req.count; slot++) {
       const update = ssz.altair.LightClientUpdate.defaultValue();
       update.signatureSlot = slot;
-      lightClientUpdates.push(update);
+      lightClientUpdates.push({
+        type: EncodedPayloadType.ssz,
+        data: update,
+      });
     }
 
     const [netA, netB] = await createAndConnectPeers({
       onLightClientUpdatesByRange: async function* () {
         yield* arrToSource(lightClientUpdates);
-      },
+      } as HandlerTypeFromMessage<typeof protocols.LightClientUpdatesByRange>,
     });
 
-    const returnedUpdates = await netA.reqResp.lightClientUpdate(netB.peerId, req);
+    const returnedUpdates = await netA.reqResp.lightClientUpdatesByRange(netB.peerId, req);
 
     if (returnedUpdates === null) throw Error("Returned null");
     expect(returnedUpdates).to.have.length(2, "Wrong returnedUpdates length");
 
     for (const [i, returnedUpdate] of returnedUpdates.entries()) {
-      expect(ssz.altair.LightClientUpdate.equals(returnedUpdate, lightClientUpdates[i])).to.equal(
-        true,
-        `Wrong returnedUpdate[${i}]`
-      );
+      expect(
+        ssz.altair.LightClientUpdate.equals(
+          returnedUpdate,
+          (lightClientUpdates[i] as {
+            type: EncodedPayloadType.ssz;
+            data: altair.LightClientUpdate;
+          }).data
+        )
+      ).to.equal(true, `Wrong returnedUpdate[${i}]`);
     }
   });
 
@@ -280,7 +305,7 @@ describe("network / ReqResp", function () {
       netA.reqResp.beaconBlocksByRange(netB.peerId, {startSlot: 0, step: 1, count: 3}),
       new RequestError(
         {code: RequestErrorCode.SERVER_ERROR, errorMessage: "sNaPpYa" + testErrorMessage},
-        formatMetadata(Method.BeaconBlocksByRange, Encoding.SSZ_SNAPPY, netB.peerId)
+        formatMetadata(ReqRespMethod.BeaconBlocksByRange, Encoding.SSZ_SNAPPY, netB.peerId)
       )
     );
   });
@@ -290,63 +315,67 @@ describe("network / ReqResp", function () {
 
     const [netA, netB] = await createAndConnectPeers({
       onBeaconBlocksByRange: async function* onRequest() {
-        yield* arrToSource(blocksToReqRespBlockResponses(generateEmptySignedBlocks(2)));
+        for (let slot = 0; slot < 2; slot++) {
+          const block = config.getForkTypes(slot).SignedBeaconBlock.defaultValue();
+          block.message.slot = slot;
+          yield wrapBlockAsEncodedPayload(config, block);
+        }
         throw Error(testErrorMessage);
-      },
+      } as HandlerTypeFromMessage<typeof protocols.BeaconBlocksByRange>,
     });
 
     await expectRejectedWithLodestarError(
       netA.reqResp.beaconBlocksByRange(netB.peerId, {startSlot: 0, step: 1, count: 3}),
       new RequestError(
         {code: RequestErrorCode.SERVER_ERROR, errorMessage: "sNaPpYa" + testErrorMessage},
-        formatMetadata(Method.BeaconBlocksByRange, Encoding.SSZ_SNAPPY, netB.peerId)
+        formatMetadata(ReqRespMethod.BeaconBlocksByRange, Encoding.SSZ_SNAPPY, netB.peerId)
       )
     );
   });
 
   it("trigger a TTFB_TIMEOUT error", async function () {
-    const TTFB_TIMEOUT = 250;
+    const ttfbTimeoutMs = 250;
 
     const [netA, netB] = await createAndConnectPeers(
       {
         onBeaconBlocksByRange: async function* onRequest() {
           // Wait for too long before sending first response chunk
-          await sleep(TTFB_TIMEOUT * 10);
-          yield generateEmptyReqRespBlockResponse();
-        },
+          await sleep(ttfbTimeoutMs * 10);
+          yield config.getForkTypes(0).SignedBeaconBlock.defaultValue();
+        } as HandlerTypeFromMessage<typeof protocols.BeaconBlocksByRange>,
       },
-      {TTFB_TIMEOUT}
+      {ttfbTimeoutMs}
     );
 
     await expectRejectedWithLodestarError(
       netA.reqResp.beaconBlocksByRange(netB.peerId, {startSlot: 0, step: 1, count: 1}),
       new RequestError(
         {code: RequestErrorCode.TTFB_TIMEOUT},
-        formatMetadata(Method.BeaconBlocksByRange, Encoding.SSZ_SNAPPY, netB.peerId)
+        formatMetadata(ReqRespMethod.BeaconBlocksByRange, Encoding.SSZ_SNAPPY, netB.peerId)
       )
     );
   });
 
   it("trigger a RESP_TIMEOUT error", async function () {
-    const RESP_TIMEOUT = 250;
+    const respTimeoutMs = 250;
 
     const [netA, netB] = await createAndConnectPeers(
       {
         onBeaconBlocksByRange: async function* onRequest() {
-          yield generateEmptyReqRespBlockResponse();
+          yield getEmptyEncodedPayloadSignedBeaconBlock(config);
           // Wait for too long before sending second response chunk
-          await sleep(RESP_TIMEOUT * 5);
-          yield generateEmptyReqRespBlockResponse();
-        },
+          await sleep(respTimeoutMs * 5);
+          yield getEmptyEncodedPayloadSignedBeaconBlock(config);
+        } as HandlerTypeFromMessage<typeof protocols.BeaconBlocksByRange>,
       },
-      {RESP_TIMEOUT}
+      {respTimeoutMs}
     );
 
     await expectRejectedWithLodestarError(
       netA.reqResp.beaconBlocksByRange(netB.peerId, {startSlot: 0, step: 1, count: 2}),
       new RequestError(
         {code: RequestErrorCode.RESP_TIMEOUT},
-        formatMetadata(Method.BeaconBlocksByRange, Encoding.SSZ_SNAPPY, netB.peerId)
+        formatMetadata(ReqRespMethod.BeaconBlocksByRange, Encoding.SSZ_SNAPPY, netB.peerId)
       )
     );
   });
@@ -358,14 +387,14 @@ describe("network / ReqResp", function () {
           await sleep(100000000);
         },
       },
-      {RESP_TIMEOUT: 250, TTFB_TIMEOUT: 250}
+      {respTimeoutMs: 250, ttfbTimeoutMs: 250}
     );
 
     await expectRejectedWithLodestarError(
       netA.reqResp.beaconBlocksByRange(netB.peerId, {startSlot: 0, step: 1, count: 2}),
       new RequestError(
         {code: RequestErrorCode.TTFB_TIMEOUT},
-        formatMetadata(Method.BeaconBlocksByRange, Encoding.SSZ_SNAPPY, netB.peerId)
+        formatMetadata(ReqRespMethod.BeaconBlocksByRange, Encoding.SSZ_SNAPPY, netB.peerId)
       )
     );
   });
@@ -374,24 +403,42 @@ describe("network / ReqResp", function () {
     const [netA, netB] = await createAndConnectPeers(
       {
         onBeaconBlocksByRange: async function* onRequest() {
-          yield generateEmptyReqRespBlockResponse();
+          yield getEmptyEncodedPayloadSignedBeaconBlock(config);
           await sleep(100000000);
-        },
+        } as HandlerTypeFromMessage<typeof protocols.BeaconBlocksByRange>,
       },
-      {RESP_TIMEOUT: 250, TTFB_TIMEOUT: 250}
+      {respTimeoutMs: 250, ttfbTimeoutMs: 250}
     );
 
     await expectRejectedWithLodestarError(
       netA.reqResp.beaconBlocksByRange(netB.peerId, {startSlot: 0, step: 1, count: 2}),
       new RequestError(
         {code: RequestErrorCode.RESP_TIMEOUT},
-        formatMetadata(Method.BeaconBlocksByRange, Encoding.SSZ_SNAPPY, netB.peerId)
+        formatMetadata(ReqRespMethod.BeaconBlocksByRange, Encoding.SSZ_SNAPPY, netB.peerId)
       )
     );
   });
 });
 
 /** Helper to reduce code-duplication */
-function formatMetadata(method: Method, encoding: Encoding, peer: PeerId): IRequestErrorMetadata {
+function formatMetadata(method: ReqRespMethod, encoding: Encoding, peer: PeerId): IRequestErrorMetadata {
   return {method, encoding, peer: peer.toString()};
+}
+
+function getEmptyEncodedPayloadSignedBeaconBlock(config: IChainForkConfig): EncodedPayload<allForks.SignedBeaconBlock> {
+  return wrapBlockAsEncodedPayload(config, config.getForkTypes(0).SignedBeaconBlock.defaultValue());
+}
+
+function wrapBlockAsEncodedPayload(
+  config: IChainForkConfig,
+  block: allForks.SignedBeaconBlock
+): EncodedPayload<allForks.SignedBeaconBlock> {
+  return {
+    type: EncodedPayloadType.bytes,
+    bytes: config.getForkTypes(block.message.slot).SignedBeaconBlock.serialize(block),
+    contextBytes: {
+      type: ContextBytesType.ForkDigest,
+      forkSlot: block.message.slot,
+    },
+  };
 }

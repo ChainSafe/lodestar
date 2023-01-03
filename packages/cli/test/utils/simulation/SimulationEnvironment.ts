@@ -1,250 +1,340 @@
+/* eslint-disable @typescript-eslint/naming-convention */
 import {EventEmitter} from "node:events";
-import {mkdir, rm, writeFile} from "node:fs/promises";
+import {mkdir, writeFile} from "node:fs/promises";
 import {join} from "node:path";
 import tmp from "tmp";
-import {getClient, routes} from "@lodestar/api/beacon";
-import {getClient as keyManagerGetClient} from "@lodestar/api/keymanager";
-import {createIChainForkConfig, IChainForkConfig} from "@lodestar/config";
-import {chainConfig} from "@lodestar/config/default";
-import {activePreset, MAX_COMMITTEES_PER_SLOT} from "@lodestar/params";
-import {Slot} from "@lodestar/types";
-import {BeaconStateAllForks, interopSecretKey} from "@lodestar/state-transition";
+import {fromHexString} from "@chainsafe/ssz";
 import {nodeUtils} from "@lodestar/beacon-node";
-import {EpochClock} from "./EpochClock.js";
+import {createIChainForkConfig, IChainForkConfig} from "@lodestar/config";
+import {activePreset} from "@lodestar/params";
+import {BeaconStateAllForks, interopSecretKey} from "@lodestar/state-transition";
 import {generateLodestarBeaconNode} from "./cl_clients/lodestar.js";
-import {ChildProcessRunner} from "./runner/child_process.js";
-import {SimulationTracker} from "./SimulationTracker.js";
-import {
-  CLParticipant,
-  CLClientOptions,
-  Runner,
-  SimulationOptionalParams,
-  SimulationParams,
-  SimulationRequiredParams,
-  Job,
-  CLClient,
-} from "./interfaces.js";
 import {
   BN_P2P_BASE_PORT,
   BN_REST_BASE_PORT,
-  defaultSimulationParams,
-  getSimulationId,
+  CLIQUE_SEALING_PERIOD,
+  EL_ENGINE_BASE_PORT,
+  EL_ETH_BASE_PORT,
+  EL_P2P_BASE_PORT,
   KEY_MANAGER_BASE_PORT,
-  logFilesDir,
-} from "./utils.js";
+  SIM_TESTS_SECONDS_PER_SLOT,
+} from "./constants.js";
+import {generateGethNode} from "./el_clients/geth.js";
+import {generateMockNode} from "./el_clients/mock.js";
+import {generateNethermindNode} from "./el_clients/nethermind.js";
+import {EpochClock} from "./EpochClock.js";
 import {ExternalSignerServer} from "./ExternalSignerServer.js";
+import {
+  AtLeast,
+  CLClient,
+  CLClientGeneratorOptions,
+  CLClientsOptions,
+  CLNode,
+  ELClient,
+  ELClientsOptions,
+  ELGeneratorClientOptions,
+  ELNode,
+  ELStartMode,
+  Job,
+  JobPair,
+  NodePair,
+  NodePairOptions,
+  NodePairResult,
+  SimulationInitOptions,
+  SimulationOptions,
+} from "./interfaces.js";
+import {ChildProcessRunner} from "./runner/ChildProcessRunner.js";
+import {DockerRunner} from "./runner/DockerRunner.js";
+import {SimulationTracker} from "./SimulationTracker.js";
+import {getEstimatedTTD} from "./utils/index.js";
+
+export const SHARED_JWT_SECRET = "0xdc6457099f127cf0bac78de8b297df04951281909db4f58b43def7c7151e765d";
 
 /* eslint-disable no-console */
 
 export class SimulationEnvironment {
-  readonly params: SimulationParams;
-  readonly id: string;
-  readonly rootDir: string;
-  readonly nodes: CLParticipant[] = [];
+  readonly nodes: NodePair[] = [];
   readonly clock: EpochClock;
-  readonly expectedMinParticipationRate = 0.9;
-  readonly expectedMaxInclusionDelay = 2;
-  readonly expectedMinAttestationCount = MAX_COMMITTEES_PER_SLOT - 1;
-  readonly expectedMinSyncParticipationRate = 0.9;
   readonly tracker: SimulationTracker;
   readonly emitter: EventEmitter;
-  readonly controller: AbortController;
-  readonly config: IChainForkConfig;
-  readonly runner: Runner;
+  readonly childProcessRunner: ChildProcessRunner;
+  readonly dockerRunner: DockerRunner;
   readonly externalSigner: ExternalSignerServer;
 
-  private readonly genesisState: BeaconStateAllForks;
-  private readonly jobs: Job[] = [];
+  readonly forkConfig: IChainForkConfig;
+  readonly options: SimulationOptions;
 
-  readonly network = {
-    connectAllNodes: async (): Promise<void> => {
-      for (let i = 0; i < this.params.beaconNodes; i += 1) {
-        for (let j = 0; j < this.params.beaconNodes; j += 1) {
-          const networkIdentity = (await this.nodes[j].api.node.getNetworkIdentity()).data;
+  private readonly jobs: JobPair[] = [];
+  private keysCount = 0;
+  private nodePairCount = 0;
+  private genesisState?: BeaconStateAllForks;
+  private genesisStatePath: string;
 
-          if (i === j || !networkIdentity.peerId) continue;
+  private constructor(forkConfig: IChainForkConfig, options: SimulationOptions) {
+    this.forkConfig = forkConfig;
+    this.options = options;
+    this.genesisStatePath = join(this.options.rootDir, "genesis.ssz");
 
-          await this.nodes[i].api.lodestar.connectPeer(networkIdentity.peerId, networkIdentity.p2pAddresses);
-        }
-      }
-    },
-
-    connectNewNode: async (newNode: CLParticipant): Promise<void> => {
-      for (const node of this.nodes) {
-        const networkIdentity = (await node.api.node.getNetworkIdentity()).data;
-        await newNode.api.lodestar.connectPeer(networkIdentity.peerId, networkIdentity.p2pAddresses);
-      }
-    },
-  };
-
-  constructor(params: SimulationRequiredParams & Partial<SimulationOptionalParams>) {
-    const paramsWithDefaults = {...defaultSimulationParams, ...params} as SimulationRequiredParams &
-      SimulationOptionalParams;
-
-    const genesisTime =
-      Math.floor(Date.now() / 1000) + paramsWithDefaults.genesisSlotsDelay * paramsWithDefaults.secondsPerSlot;
-
-    this.params = {
-      ...paramsWithDefaults,
-      genesisTime,
-      slotsPerEpoch: activePreset.SLOTS_PER_EPOCH,
-    } as SimulationParams;
-
-    this.config = createIChainForkConfig({
-      ...chainConfig,
-      /* eslint-disable @typescript-eslint/naming-convention */
-      ...{
-        SECONDS_PER_SLOT: this.params.secondsPerSlot,
-        SLOTS_PER_EPOCH: this.params.slotsPerEpoch,
-        GENESIS_DELAY: this.params.genesisSlotsDelay,
-        ALTAIR_FORK_EPOCH: this.params.altairEpoch,
-        BELLATRIX_FORK_EPOCH: this.params.bellatrixEpoch,
-      },
-    });
-    this.genesisState = nodeUtils.initDevState(
-      this.config,
-      this.params.beaconNodes * this.params.validatorClients * this.params.validatorsPerClient,
-      {
-        genesisTime: genesisTime,
-      }
-    ).state;
-    this.controller = new AbortController();
-    this.id = getSimulationId(this.params);
-    this.rootDir = join(tmp.dirSync({unsafeCleanup: true}).name, this.id);
     this.clock = new EpochClock({
-      genesisTime,
-      secondsPerSlot: this.params.secondsPerSlot,
-      slotsPerEpoch: this.params.slotsPerEpoch,
-      signal: this.controller.signal,
+      genesisTime: this.options.genesisTime,
+      secondsPerSlot: this.forkConfig.SECONDS_PER_SLOT,
+      slotsPerEpoch: activePreset.SLOTS_PER_EPOCH,
+      signal: this.options.controller.signal,
     });
+
     this.emitter = new EventEmitter();
-    this.runner = new ChildProcessRunner();
     this.externalSigner = new ExternalSignerServer([]);
 
-    for (let nodeIndex = 0; nodeIndex < this.params.beaconNodes; nodeIndex++) {
-      const {participant, job} = this.createCLClient(CLClient.Lodestar, nodeIndex);
-      this.jobs.push(job);
-      this.nodes.push(participant);
-    }
+    this.childProcessRunner = new ChildProcessRunner();
+    this.dockerRunner = new DockerRunner(join(this.options.logsDir, "docker_runner.log"));
 
-    this.tracker = new SimulationTracker(this.nodes, this.clock, this.params, this.controller.signal);
+    this.tracker = SimulationTracker.initWithDefaultAssertions({
+      nodes: [],
+      config: this.forkConfig,
+      clock: this.clock,
+      signal: this.options.controller.signal,
+    });
   }
 
-  async start(): Promise<this> {
-    await mkdir(this.rootDir);
-    const genesisStateFilePath = join(this.rootDir, "genesis.ssz");
-    await writeFile(genesisStateFilePath, this.genesisState.serialize());
-    await this.externalSigner.start();
+  static initWithDefaults(
+    {chainConfig, logsDir, id}: SimulationInitOptions,
+    clients: NodePairOptions[]
+  ): SimulationEnvironment {
+    const secondsPerSlot = chainConfig.SECONDS_PER_SLOT ?? SIM_TESTS_SECONDS_PER_SLOT;
+    const genesisTime = Math.floor(Date.now() / 1000) + chainConfig.GENESIS_DELAY * secondsPerSlot;
+    const ttd =
+      chainConfig.TERMINAL_TOTAL_DIFFICULTY ??
+      getEstimatedTTD({
+        genesisDelay: chainConfig.GENESIS_DELAY,
+        bellatrixForkEpoch: chainConfig.BELLATRIX_FORK_EPOCH,
+        secondsPerSlot: secondsPerSlot,
+        cliqueSealingPeriod: CLIQUE_SEALING_PERIOD,
+        // Make sure bellatrix started before TTD reach, so we wait for few more slots to be sure
+        additionalSlots: activePreset.SLOTS_PER_EPOCH - 2,
+      });
 
-    await Promise.all(this.jobs.map((j) => j.start()));
+    const forkConfig = createIChainForkConfig({
+      ...chainConfig,
+      SECONDS_PER_SLOT: secondsPerSlot,
+      TERMINAL_TOTAL_DIFFICULTY: ttd,
+    });
 
-    // Load half of the validators into the external signer
-    for (const node of this.nodes) {
-      const halfKeys = node.secretKeys.slice(0, node.secretKeys.length * this.params.externalKeysPercentage);
-      this.externalSigner.addKeys(halfKeys);
-      await node.keyManager.importRemoteKeys(
-        halfKeys.map((sk) => ({pubkey: sk.toPublicKey().toHex(), url: this.externalSigner.url}))
-      );
+    const env = new SimulationEnvironment(forkConfig, {
+      logsDir,
+      id,
+      genesisTime,
+      controller: new AbortController(),
+      rootDir: join(tmp.dirSync({unsafeCleanup: true, tmpdir: "/tmp", template: "sim-XXXXXX"}).name, id),
+    });
+
+    for (const client of clients) {
+      const result = env.createNodePair(client);
+      env.jobs.push(result.jobs);
+      env.nodes.push(result.nodePair);
     }
 
-    await this.tracker.start();
-    return this;
+    return env;
   }
 
-  async stop(): Promise<void> {
-    this.controller.abort();
+  async start(timeout: number): Promise<void> {
+    try {
+      setTimeout(async () => {
+        await this.stop(1, "On timeout");
+      }, timeout);
+
+      process.on("unhandledRejection", async (reason, promise) => {
+        console.error("Unhandled Rejection at:", promise, "reason:", reason);
+        await this.stop(1, "Unhandled promise rejection");
+      });
+
+      process.on("uncaughtException", async (err) => {
+        console.error("Uncaught exception:", err);
+        await this.stop(1, "Uncaught exception");
+      });
+
+      process.on("SIGTERM", async () => {
+        await this.stop(0, "Terminating");
+      });
+      process.on("SIGINT", async () => {
+        await this.stop(0, "Terminating");
+      });
+
+      await mkdir(this.options.rootDir);
+
+      await this.dockerRunner.start();
+      await Promise.all(this.jobs.map((j) => j.el.start()));
+
+      for (let i = 0; i < this.nodes.length; i++) {
+        // Get genesis block hash
+        const el = this.nodes[i].el;
+
+        // If eth1 is mock then genesis hash would be empty
+        const eth1Genesis = el.provider === null ? {hash: ""} : await el.provider.getBlockByNumber(0);
+
+        if (!eth1Genesis) {
+          throw new Error(`Eth1 genesis not found for node "${this.nodes[i].id}"`);
+        }
+
+        const genesisState = nodeUtils.initDevState(this.forkConfig, this.keysCount, {
+          genesisTime: this.options.genesisTime,
+          eth1BlockHash: fromHexString(eth1Genesis.hash),
+        }).state;
+
+        this.genesisState = genesisState;
+      }
+
+      if (!this.genesisState) {
+        throw new Error("The genesis state for CL clients is not defined.");
+      }
+
+      await writeFile(this.genesisStatePath, this.genesisState.serialize());
+
+      await Promise.all(this.jobs.map((j) => j.cl.start()));
+
+      await this.externalSigner.start();
+      for (const node of this.nodes) {
+        const remoteKeys = node.cl.remoteKeys;
+        this.externalSigner.addKeys(remoteKeys);
+        await node.cl.keyManager.importRemoteKeys(
+          remoteKeys.map((sk) => ({pubkey: sk.toPublicKey().toHex(), url: this.externalSigner.url}))
+        );
+      }
+
+      await this.tracker.start();
+      await Promise.all(this.nodes.map((node) => this.tracker.track(node)));
+    } catch (error) {
+      await this.stop(1, `Caused error in startup. ${(error as Error).message}`);
+    }
+  }
+
+  async stop(code = 0, message = "On completion."): Promise<void> {
+    process.removeAllListeners("unhandledRejection");
+    process.removeAllListeners("uncaughtException");
+    process.removeAllListeners("SIGTERM");
+    process.removeAllListeners("SIGINT");
+    console.log(`Simulation environment "${this.options.id}" is stopping: ${message}`);
+    this.options.controller.abort();
     await this.tracker.stop();
+    await Promise.all(this.jobs.map((j) => j.el.stop()));
+    await Promise.all(this.jobs.map((j) => j.cl.stop()));
     await this.externalSigner.stop();
-    await Promise.all(this.jobs.map((j) => j.stop()));
-    await rm(this.rootDir, {recursive: true});
+    await this.dockerRunner.stop();
+
+    if (this.tracker.getErrorCount() > 0) {
+      this.tracker.reporter.summary();
+      process.exit(this.tracker.getErrorCount() > 0 ? 1 : code);
+    } else {
+      process.exit(code);
+    }
   }
 
-  // TODO: Add timeout support
-  waitForEvent(event: routes.events.EventType, node?: CLParticipant): Promise<routes.events.BeaconEvent> {
-    console.log(`Waiting for event "${event}" on "${node?.id ?? "any node"}"`);
-
-    return new Promise((resolve) => {
-      const handler = (beaconEvent: routes.events.BeaconEvent, eventNode: CLParticipant): void => {
-        if (!node) {
-          this.emitter.removeListener(event, handler);
-          resolve(beaconEvent);
-        }
-
-        if (node && eventNode === node) {
-          this.emitter.removeListener(event, handler);
-          resolve(beaconEvent);
-        }
-      };
-
-      this.tracker.emitter.addListener(event, handler);
-    });
-  }
-
-  async waitForSlot(slot: Slot, nodes?: CLParticipant[]): Promise<void> {
-    console.log(`\nWaiting for slot on "${nodes ? nodes.map((n) => n.id).join(",") : "all nodes"}"`, {
-      target: slot,
-      current: this.clock.currentSlot,
-    });
-
-    await Promise.all(
-      (nodes ?? this.nodes).map(
-        (node) =>
-          new Promise((resolve) => {
-            this.tracker.onSlot(slot, node, resolve);
-          })
-      )
-    );
-  }
-
-  createCLClient(
-    client: CLClient,
-    index?: number,
-    opts?: Partial<CLClientOptions>
-  ): {job: Job; participant: CLParticipant; options: CLClientOptions} {
-    const nodeIndex = index ?? this.nodes.length;
-    const genesisStateFilePath = join(this.rootDir, "genesis.ssz");
-    let options!: CLClientOptions;
-    let job!: Job;
-
-    if (client !== CLClient.Lodestar) {
-      throw new Error(`Client ${client} not supported`);
+  createNodePair<C extends CLClient, E extends ELClient>({
+    el,
+    cl,
+    keysCount,
+    id,
+    remote,
+    mining,
+  }: NodePairOptions<C, E>): NodePairResult {
+    if (this.genesisState && keysCount > 0) {
+      throw new Error("Genesis state already initialized. Can not add more keys to it.");
     }
 
-    if (client === CLClient.Lodestar) {
-      const id = opts?.id ?? `lodestar-bn-${nodeIndex}`;
+    this.nodePairCount += 1;
 
-      options = {
-        params: this.params,
-        id,
-        rootDir: `${this.rootDir}/${id}`,
-        logFilePath: `${logFilesDir}/${this.id}/${id}.log`,
-        genesisStateFilePath,
-        restPort: BN_REST_BASE_PORT + nodeIndex + 1,
-        port: BN_P2P_BASE_PORT + nodeIndex + 1,
-        keyManagerPort: KEY_MANAGER_BASE_PORT + nodeIndex + 1,
-        config: this.config,
-        address: "127.0.0.1",
-        secretKeys:
-          opts?.secretKeys ??
-          Array.from({length: this.params.validatorsPerClient}, (_, vi) => {
-            return interopSecretKey(nodeIndex * this.params.validatorsPerClient + vi);
-          }),
-      };
-      job = generateLodestarBeaconNode(options, this.runner);
+    const keys = Array.from({length: keysCount}, (_, vi) => {
+      return interopSecretKey(this.keysCount + vi);
+    });
+    this.keysCount += keysCount;
+
+    const clClient = this.createCLNode(cl, {
+      id,
+      remoteKeys: remote ? keys : [],
+      localKeys: remote ? [] : keys,
+      engineMock: typeof el === "string" ? el === ELClient.Mock : el.type === ELClient.Mock,
+    });
+
+    const elClient = this.createELNode(el, {id, mining});
+
+    return {
+      nodePair: {id, el: elClient?.node, cl: clClient.node},
+      jobs: {el: elClient?.job, cl: clClient.job},
+    };
+  }
+
+  private createCLNode<C extends CLClient>(
+    client: C | {type: C; options: CLClientsOptions[C]},
+    options?: AtLeast<CLClientGeneratorOptions, "remoteKeys" | "localKeys" | "id">
+  ): {job: Job; node: CLNode} {
+    const clientType = typeof client === "object" ? client.type : client;
+    const clientOptions = typeof client === "object" ? client.options : undefined;
+
+    const clId = `${options?.id}-cl-${clientType}`;
+
+    switch (clientType) {
+      case CLClient.Lodestar: {
+        const opts: CLClientGeneratorOptions = {
+          id: clId,
+          dataDir: join(this.options.rootDir, clId),
+          logFilePath: join(this.options.logsDir, `${clId}.log`),
+          genesisStateFilePath: this.genesisStatePath,
+          restPort: BN_REST_BASE_PORT + this.nodePairCount + 1,
+          port: BN_P2P_BASE_PORT + this.nodePairCount + 1,
+          keyManagerPort: KEY_MANAGER_BASE_PORT + this.nodePairCount + 1,
+          config: this.forkConfig,
+          address: "127.0.0.1",
+          remoteKeys: options?.remoteKeys ?? [],
+          localKeys: options?.localKeys ?? [],
+          genesisTime: this.options.genesisTime,
+          engineUrl: options?.engineUrl ?? `http://127.0.0.1:${EL_ENGINE_BASE_PORT + this.nodePairCount + 1}`,
+          engineMock: options?.engineMock ?? false,
+          jwtSecretHex: options?.jwtSecretHex ?? SHARED_JWT_SECRET,
+          clientOptions: clientOptions ?? {},
+        };
+        return generateLodestarBeaconNode(opts, this.childProcessRunner);
+      }
+      default:
+        throw new Error(`CL Client "${client}" not supported`);
     }
+  }
 
-    const participant: CLParticipant = {
-      id: options.id,
-      url: `http://${options.address}:${options.restPort}`,
-      secretKeys: options.secretKeys,
-      // TODO: Switch the CL client here
-      api: getClient({baseUrl: `http://${options.address}:${options.restPort}`}, {config: this.config}),
-      keyManager: keyManagerGetClient(
-        {baseUrl: `http://${options.address}:${options.keyManagerPort}`},
-        {config: this.config}
-      ),
+  private createELNode<E extends ELClient>(
+    client: E | {type: E; options: ELClientsOptions[E]},
+    options: AtLeast<ELGeneratorClientOptions, "id">
+  ): {job: Job; node: ELNode} {
+    const clientType = typeof client === "object" ? client.type : client;
+    const clientOptions = typeof client === "object" ? client.options : undefined;
+
+    const elId = `${options.id}-el-${clientType}`;
+
+    const opts: ELGeneratorClientOptions<E> = {
+      id: elId,
+      mode: options?.mode ?? (this.forkConfig.BELLATRIX_FORK_EPOCH > 0 ? ELStartMode.PreMerge : ELStartMode.PostMerge),
+      ttd: options?.ttd ?? this.forkConfig.TERMINAL_TOTAL_DIFFICULTY,
+      cliqueSealingPeriod: options?.cliqueSealingPeriod ?? CLIQUE_SEALING_PERIOD,
+      logFilePath: options?.logFilePath ?? join(this.options.logsDir, `${elId}.log`),
+      dataDir: options?.dataDir ?? join(this.options.rootDir, elId),
+      jwtSecretHex: options?.jwtSecretHex ?? SHARED_JWT_SECRET,
+      enginePort: options?.enginePort ?? EL_ENGINE_BASE_PORT + this.nodePairCount + 1,
+      ethPort: options?.ethPort ?? EL_ETH_BASE_PORT + this.nodePairCount + 1,
+      port: options?.port ?? EL_P2P_BASE_PORT + this.nodePairCount + 1,
+      address: this.dockerRunner.getNextIp(),
+      mining: options?.mining ?? false,
+      clientOptions: clientOptions ?? [],
     };
 
-    return {participant, options, job};
+    switch (clientType) {
+      case ELClient.Mock: {
+        return generateMockNode(opts as ELGeneratorClientOptions<ELClient.Mock>, this.childProcessRunner);
+      }
+      case ELClient.Geth: {
+        return generateGethNode(opts as ELGeneratorClientOptions<ELClient.Geth>, this.dockerRunner);
+      }
+      case ELClient.Nethermind: {
+        return generateNethermindNode(opts as ELGeneratorClientOptions<ELClient.Nethermind>, this.dockerRunner);
+      }
+      default:
+        throw new Error(`EL Client "${client}" not supported`);
+    }
   }
 }

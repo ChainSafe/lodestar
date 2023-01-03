@@ -34,6 +34,8 @@ import {
   ATTESTATION_SUBNET_COUNT,
   TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE,
   SYNC_COMMITTEE_SUBNET_COUNT,
+  BLOB_TX_TYPE,
+  VERSIONED_HASH_VERSION_KZG,
 } from "@lodestar/params";
 
 /* eslint-disable @typescript-eslint/naming-convention */
@@ -94,4 +96,8 @@ export const specConstants = {
 
   // ## Capella domain types
   DOMAIN_BLS_TO_EXECUTION_CHANGE,
+
+  // EIP4844 types
+  BLOB_TX_TYPE,
+  VERSIONED_HASH_VERSION_KZG,
 };

@@ -6,7 +6,7 @@ import {G2_POINT_AT_INFINITY} from "@lodestar/state-transition";
 import {BitArray, toHexString} from "@chainsafe/ssz";
 import {MapDef} from "@lodestar/utils";
 import {InsertOutcome, OpPoolError, OpPoolErrorCode} from "./types.js";
-import {pruneBySlot} from "./utils.js";
+import {pruneBySlot, signatureFromBytesNoCheck} from "./utils.js";
 
 /**
  * SyncCommittee aggregates are only useful for the next block they have signed.
@@ -178,7 +178,7 @@ export function aggregate(bestContributionBySubnet: Map<number, SyncContribution
       syncCommitteeBits.uint8Array[byteOffset + i] = bestContribution.syncSubcommitteeBits.uint8Array[i];
     }
 
-    signatures.push(bls.Signature.fromBytes(bestContribution.syncSubcommitteeSignature, undefined, true));
+    signatures.push(signatureFromBytesNoCheck(bestContribution.syncSubcommitteeSignature));
   }
   return {
     syncCommitteeBits,

@@ -1,10 +1,15 @@
-import {BeaconStateAllForks, stateTransition} from "@lodestar/state-transition";
+import {
+  BeaconStateAllForks,
+  DataAvailableStatus,
+  ExecutionPayloadStatus,
+  stateTransition,
+} from "@lodestar/state-transition";
 import {altair, bellatrix, ssz} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
 import {shouldVerify, TestRunnerFn} from "../utils/types.js";
-import {getConfig} from "../utils/getConfig.js";
+import {getConfig} from "../../utils/config.js";
 import {assertCorrectProgressiveBalances} from "../config.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
@@ -18,6 +23,9 @@ export const finality: TestRunnerFn<FinalityTestCase, BeaconStateAllForks> = (fo
         const signedBlock = testcase[`blocks_${i}`] as bellatrix.SignedBeaconBlock;
 
         state = stateTransition(state, signedBlock, {
+          // TODO EIP-4844: Should assume valid and available for this test?
+          executionPayloadStatus: ExecutionPayloadStatus.valid,
+          dataAvailableStatus: DataAvailableStatus.available,
           verifyStateRoot: false,
           verifyProposer: verify,
           verifySignatures: verify,
@@ -41,6 +49,7 @@ export const finality: TestRunnerFn<FinalityTestCase, BeaconStateAllForks> = (fo
       expectFunc: (testCase, expected, actual) => {
         expectEqualBeaconState(fork, expected, actual);
       },
+      // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
     },
   };
 };

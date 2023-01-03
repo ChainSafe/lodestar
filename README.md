@@ -7,9 +7,8 @@
 [![Docker Image Version (latest by date)](https://img.shields.io/docker/v/chainsafe/lodestar?color=blue&label=Docker&sort=semver)](https://hub.docker.com/r/chainsafe/lodestar)
 [![Eth Consensus Spec v1.1.10](https://img.shields.io/badge/ETH%20consensus--spec-1.1.10-blue)](https://github.com/ethereum/consensus-specs/releases/tag/v1.1.10)
 [![codecov](https://codecov.io/gh/ChainSafe/lodestar/branch/unstable/graph/badge.svg)](https://codecov.io/gh/ChainSafe/lodestar)
-[![Maintainability](https://api.codeclimate.com/v1/badges/678099476c401e1af503/maintainability)](https://codeclimate.com/github/ChainSafe/lodestar/maintainability)
 ![ES Version](https://img.shields.io/badge/ES-2020-yellow)
-![Node Version](https://img.shields.io/badge/node-16.x-green)
+![Node Version](https://img.shields.io/badge/node-18.x-green)
 [![gitpoap badge](https://public-api.gitpoap.io/v1/repo/ChainSafe/lodestar/badge)](https://www.gitpoap.io/gh/ChainSafe/lodestar)
 
 [Lodestar](https://lodestar.chainsafe.io) is a TypeScript implementation of the [Ethereum Consensus specification](https://github.com/ethereum/consensus-specs) developed by [ChainSafe Systems](https://chainsafe.io).
@@ -18,10 +17,10 @@
 
 - :gear: Follow the installation method for [source install](https://chainsafe.github.io/lodestar/install/source/), [NPM install](https://chainsafe.github.io/lodestar/install/npm/), or [Docker install](https://chainsafe.github.io/lodestar/install/docker/) to install Lodestar. Or use our [comprehensive setup guide](https://hackmd.io/@philknows/rk5cDvKmK).
 - :books: Use [Lodestar libraries](https://chainsafe.github.io/lodestar/libraries) in your next Ethereum Typescript project.
-- :globe_with_meridians: Run a beacon node on [mainnet or a public testnet](https://chainsafe.github.io/lodestar/usage/beacon-management.md).
+- :globe_with_meridians: Run a beacon node on [mainnet or a public testnet](https://chainsafe.github.io/lodestar/usage/beacon-management).
 - :computer: Utilize the whole stack by [starting a local testnet](https://chainsafe.github.io/lodestar/usage/local).
 - :spiral_notepad: View the Lodestar [CLI commands and options](https://chainsafe.github.io/lodestar/reference/cli/).
-- :nerd_face: View the [TypeDoc code documentation](https://chainsafe.github.io/lodestar/packages).
+- :nerd_face: View the [Package and dependency structure](https://chainsafe.github.io/lodestar/design/depgraph/).
 - :memo: Prospective contributors can read the [contributing section](./CONTRIBUTING.md) to understand how we develop and test on Lodestar.
 - :writing_hand: If you have questions [submit an issue](https://github.com/ChainSafe/lodestar/issues/new) or join us on [Discord](https://discord.gg/yjyvFRP)!
   [![Discord](https://img.shields.io/discord/593655374469660673.svg?label=Discord&logo=discord)](https://discord.gg/aMxzVcr)
@@ -30,7 +29,7 @@
 
 ## Prerequisites
 
-- :gear: [NodeJS](https://nodejs.org/) (LTS/Gallium)
+- :gear: [NodeJS](https://nodejs.org/) (LTS)
 - :toolbox: [Yarn](https://yarnpkg.com/)/[Lerna](https://lerna.js.org/)
 
 ###### Developer Quickstart:

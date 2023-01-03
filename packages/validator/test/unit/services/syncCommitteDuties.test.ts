@@ -31,7 +31,7 @@ describe("SyncCommitteeDutiesService", function () {
 
   const altair0Config = createIChainForkConfig({
     ...mainnetConfig,
-    ALTAIR_FORK_EPOCH: 0, // Activate Altair immediatelly
+    ALTAIR_FORK_EPOCH: 0, // Activate Altair immediately
   });
 
   const indices = [4, 100];
@@ -56,12 +56,12 @@ describe("SyncCommitteeDutiesService", function () {
   beforeEach(() => {
     controller = new AbortController();
     // Reply with active validators
-    const validatorReponses = [0, 1].map((i) => ({
+    const validatorResponses = [0, 1].map((i) => ({
       ...defaultValidator,
       index: indices[i],
       validator: {...defaultValidator.validator, pubkey: pubkeys[i]},
     }));
-    api.beacon.getStateValidators.resolves({data: validatorReponses, executionOptimistic: false});
+    api.beacon.getStateValidators.resolves({data: validatorResponses, executionOptimistic: false});
   });
   afterEach(() => controller.abort());
 
@@ -78,7 +78,7 @@ describe("SyncCommitteeDutiesService", function () {
     // Accept all subscriptions
     api.validator.prepareSyncCommitteeSubnets.resolves();
 
-    // Clock will call runAttesterDutiesTasks() immediatelly
+    // Clock will call runAttesterDutiesTasks() immediately
     const clock = new ClockMock();
     const dutiesService = new SyncCommitteeDutiesService(altair0Config, loggerVc, api, clock, validatorStore, null);
 
@@ -150,7 +150,7 @@ describe("SyncCommitteeDutiesService", function () {
       .withArgs(1, sinon.match.any)
       .resolves({data: [duty2], executionOptimistic: false});
 
-    // Clock will call runAttesterDutiesTasks() immediatelly
+    // Clock will call runAttesterDutiesTasks() immediately
     const clock = new ClockMock();
     const dutiesService = new SyncCommitteeDutiesService(altair0Config, loggerVc, api, clock, validatorStore, null);
 
@@ -208,7 +208,7 @@ describe("SyncCommitteeDutiesService", function () {
     // Accept all subscriptions
     api.validator.prepareSyncCommitteeSubnets.resolves();
 
-    // Clock will call runAttesterDutiesTasks() immediatelly
+    // Clock will call runAttesterDutiesTasks() immediately
     const clock = new ClockMock();
     const dutiesService = new SyncCommitteeDutiesService(altair0Config, loggerVc, api, clock, validatorStore, null);
 

@@ -1,23 +1,26 @@
 import {expect} from "chai";
 import axios from "axios";
-import * as mainnet from "../../src/presets/mainnet/index.js";
-import * as minimal from "../../src/presets/minimal/index.js";
+import {mainnetPreset} from "../../src/presets/mainnet.js";
+import {minimalPreset} from "../../src/presets/minimal.js";
 import {ForkName, BeaconPreset} from "../../src/index.js";
 import {loadConfigYaml} from "../yaml.js";
 
 // Not e2e, but slow. Run with e2e tests
 
+/** https://github.com/ethereum/consensus-specs/releases */
+const specConfigCommit = "v1.3.0-alpha.1";
+
 describe("Ensure config is synced", function () {
   this.timeout(60 * 1000);
 
   it("mainnet", async function () {
-    const remotePreset = await downloadRemoteConfig("mainnet", mainnet.commit);
-    assertCorrectPreset({...mainnet.preset}, remotePreset);
+    const remotePreset = await downloadRemoteConfig("mainnet", specConfigCommit);
+    assertCorrectPreset({...mainnetPreset}, remotePreset);
   });
 
   it("minimal", async function () {
-    const remotePreset = await downloadRemoteConfig("minimal", minimal.commit);
-    assertCorrectPreset({...minimal.preset}, remotePreset);
+    const remotePreset = await downloadRemoteConfig("minimal", specConfigCommit);
+    assertCorrectPreset({...minimalPreset}, remotePreset);
   });
 });
 

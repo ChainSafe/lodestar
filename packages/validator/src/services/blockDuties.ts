@@ -110,7 +110,7 @@ export class BlockDutiesService {
    *
    * This sounds great, but is it safe? Firstly, the additional notification will only contain block
    * producers that were not included in the first notification. This should be safety enough.
-   * However, we also have the slashing protection as a second line of defence. These two factors
+   * However, we also have the slashing protection as a second line of defense. These two factors
    * provide an acceptable level of safety.
    *
    * It's important to note that since there is a 0-epoch look-ahead (i.e., no look-ahead) for block

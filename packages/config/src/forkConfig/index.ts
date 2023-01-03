@@ -39,10 +39,18 @@ export function createIForkConfig(config: IChainConfig): IForkConfig {
     prevVersion: config.BELLATRIX_FORK_VERSION,
     prevForkName: ForkName.bellatrix,
   };
+  const eip4844: IForkInfo = {
+    name: ForkName.eip4844,
+    seq: ForkSeq.eip4844,
+    epoch: config.EIP4844_FORK_EPOCH,
+    version: config.EIP4844_FORK_VERSION,
+    prevVersion: config.CAPELLA_FORK_VERSION,
+    prevForkName: ForkName.capella,
+  };
 
   /** Forks in order order of occurence, `phase0` first */
   // Note: Downstream code relies on proper ordering.
-  const forks = {phase0, altair, bellatrix, capella};
+  const forks = {phase0, altair, bellatrix, capella, eip4844};
 
   // Prevents allocating an array on every getForkInfo() call
   const forksAscendingEpochOrder = Object.values(forks);
@@ -55,7 +63,7 @@ export function createIForkConfig(config: IChainConfig): IForkConfig {
 
     // Fork convenience methods
     getForkInfo(slot: Slot): IForkInfo {
-      const epoch = Math.floor(slot / SLOTS_PER_EPOCH);
+      const epoch = Math.floor(Math.max(slot, 0) / SLOTS_PER_EPOCH);
       // NOTE: forks must be sorted by descending epoch, latest fork first
       for (const fork of forksDescendingEpochOrder) {
         if (epoch >= fork.epoch) return fork;

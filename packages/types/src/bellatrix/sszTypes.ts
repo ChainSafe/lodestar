@@ -37,7 +37,7 @@ export const Transaction = new ByteListType(MAX_BYTES_PER_TRANSACTION);
  */
 export const Transactions = new ListCompositeType(Transaction, MAX_TRANSACTIONS_PER_PAYLOAD);
 
-const executionPayloadFields = {
+export const CommonExecutionPayloadType = new ContainerType({
   parentHash: Root,
   feeRecipient: ExecutionAddress,
   stateRoot: Bytes32,
@@ -51,6 +51,10 @@ const executionPayloadFields = {
   // TODO: if there is perf issue, consider making ByteListType
   extraData: new ByteListType(MAX_EXTRA_DATA_BYTES),
   baseFeePerGas: Uint256,
+});
+
+const executionPayloadFields = {
+  ...CommonExecutionPayloadType.fields,
   // Extra payload fields
   blockHash: Root,
 };

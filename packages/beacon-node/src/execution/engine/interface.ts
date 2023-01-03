@@ -1,8 +1,13 @@
-import {RootHex, allForks} from "@lodestar/types";
-import {DATA, QUANTITY} from "../../eth1/provider/utils.js";
-import {PayloadIdCache, PayloadId, ApiPayloadAttributes} from "./payloadIdCache.js";
+import {ForkName} from "@lodestar/params";
+import {KZGCommitment, Blob} from "@lodestar/types/eip4844";
+import {RootHex, allForks, capella} from "@lodestar/types";
 
-export {PayloadIdCache, PayloadId, ApiPayloadAttributes};
+import {DATA, QUANTITY} from "../../eth1/provider/utils.js";
+import {PayloadIdCache, PayloadId, ApiPayloadAttributes, WithdrawalV1} from "./payloadIdCache.js";
+
+export type ForkExecution = ForkName.bellatrix | ForkName.capella | ForkName.eip4844;
+export {PayloadIdCache, PayloadId, ApiPayloadAttributes, WithdrawalV1};
+
 export enum ExecutePayloadStatus {
   /** given payload is valid */
   VALID = "VALID",
@@ -46,12 +51,25 @@ export type PayloadAttributes = {
   // DATA is anyway a hex string, so we can just track it as a hex string to
   // avoid any conversions
   suggestedFeeRecipient: string;
+  // Not spec'ed, to know the type of the payload
+  fork: ForkExecution;
+  withdrawals?: capella.Withdrawal[];
 };
 
 export type TransitionConfigurationV1 = {
   terminalTotalDifficulty: QUANTITY;
   terminalBlockHash: DATA;
   terminalBlockNumber: QUANTITY;
+};
+
+export type BlobsBundle = {
+  /**
+   * Execution payload `blockHash` for the caller to sanity-check the consistency with the `engine_getPayload` call
+   * https://github.com/protolambda/execution-apis/blob/bf44a8d08ab34b861ef97fa9ef5c5e7806194547/src/engine/blob-extension.md?plain=1#L49
+   */
+  blockHash: RootHex;
+  kzgs: KZGCommitment[];
+  blobs: Blob[];
 };
 
 /**
@@ -71,7 +89,7 @@ export interface IExecutionEngine {
    *
    * Should be called in advance before, after or in parallel to block processing
    */
-  notifyNewPayload(executionPayload: allForks.ExecutionPayload): Promise<ExecutePayloadResponse>;
+  notifyNewPayload(fork: ForkName, executionPayload: allForks.ExecutionPayload): Promise<ExecutePayloadResponse>;
 
   /**
    * Signal fork choice updates
@@ -86,6 +104,7 @@ export interface IExecutionEngine {
    * Should be called in response to fork-choice head and finalized events
    */
   notifyForkchoiceUpdate(
+    fork: ForkName,
     headBlockHash: RootHex,
     safeBlockHash: RootHex,
     finalizedBlockHash: RootHex,
@@ -99,7 +118,20 @@ export interface IExecutionEngine {
    * Required for block producing
    * https://github.com/ethereum/consensus-specs/blob/dev/specs/merge/validator.md#get_payload
    */
-  getPayload(payloadId: PayloadId): Promise<allForks.ExecutionPayload>;
+  getPayload(fork: ForkName, payloadId: PayloadId): Promise<allForks.ExecutionPayload>;
+
+  /**
+   * "After retrieving the execution payload from the execution engine as specified in Bellatrix,
+   * use the payload_id to retrieve blobs and blob_kzg_commitments
+   * via get_blobs_and_kzg_commitments(payload_id)."
+   * https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/validator.md#blob-kzg-commitments
+   *
+   * This function calls the Engine API method engine_getBlobsBundleV1, what the consensus-spec
+   * describes as `get_blobs_and_kzg_commitments(payload_id)`.
+   *
+   * The Engine API spec is in PR: https://github.com/ethereum/execution-apis/pull/197
+   */
+  getBlobsBundle(payloadId: PayloadId): Promise<BlobsBundle>;
 
   exchangeTransitionConfigurationV1(
     transitionConfiguration: TransitionConfigurationV1

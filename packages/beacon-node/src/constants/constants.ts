@@ -7,7 +7,6 @@ export const ZERO_HASH = Buffer.alloc(32, 0);
 export const ZERO_HASH_HEX = "0x" + "00".repeat(32);
 export const EMPTY_SIGNATURE = Buffer.alloc(96, 0);
 export const GRAFFITI_SIZE = 32;
-export const MAX_VARINT_BYTES = 10;
 
 /**
  * The maximum milliseconds of clock disparity assumed between honest nodes.

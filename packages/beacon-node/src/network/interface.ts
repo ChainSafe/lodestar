@@ -2,11 +2,13 @@ import {Connection} from "@libp2p/interface-connection";
 import {Multiaddr} from "@multiformats/multiaddr";
 import {PeerId} from "@libp2p/interface-peer-id";
 import {Discv5, ENR} from "@chainsafe/discv5";
+import {phase0} from "@lodestar/types";
+import {BlockInput} from "../chain/blocks/types.js";
 import {INetworkEventBus} from "./events.js";
 import {Eth2Gossipsub} from "./gossip/index.js";
 import {MetadataController} from "./metadata.js";
-import {PeerAction} from "./peers/index.js";
-import {IReqResp} from "./reqresp/index.js";
+import {IPeerRpcScoreStore, PeerAction} from "./peers/index.js";
+import {IReqRespBeaconNode} from "./reqresp/ReqRespBeaconNode.js";
 import {IAttnetsService, ISubnetsService, CommitteeSubscription} from "./subnets/index.js";
 
 export type PeerSearchOptions = {
@@ -16,12 +18,13 @@ export type PeerSearchOptions = {
 
 export interface INetwork {
   events: INetworkEventBus;
-  reqResp: IReqResp;
+  reqResp: IReqRespBeaconNode;
   attnetsService: IAttnetsService;
   syncnetsService: ISubnetsService;
   gossip: Eth2Gossipsub;
   discv5?: Discv5;
   metadata: MetadataController;
+  peerRpcScores: IPeerRpcScoreStore;
   /** Our network identity */
   peerId: PeerId;
   localMultiaddrs: Multiaddr[];
@@ -29,6 +32,11 @@ export interface INetwork {
   getConnectionsByPeer(): Map<string, Connection[]>;
   getConnectedPeers(): PeerId[];
   hasSomeConnectedPeer(): boolean;
+
+  publishBeaconBlockMaybeBlobs(signedBlock: BlockInput): Promise<void>;
+  beaconBlocksMaybeBlobsByRange(peerId: PeerId, request: phase0.BeaconBlocksByRangeRequest): Promise<BlockInput[]>;
+  beaconBlocksMaybeBlobsByRoot(peerId: PeerId, request: phase0.BeaconBlocksByRootRequest): Promise<BlockInput[]>;
+
   /** Subscribe, search peers, join long-lived attnets */
   prepareBeaconCommitteeSubnet(subscriptions: CommitteeSubscription[]): void;
   /** Subscribe, search peers, join long-lived syncnets */
