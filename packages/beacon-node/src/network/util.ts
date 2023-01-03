@@ -1,10 +1,13 @@
 import {networkInterfaces} from "node:os";
-import {PeerId} from "@libp2p/interface-peer-id";
-import {Multiaddr} from "@multiformats/multiaddr";
-import {Connection} from "@libp2p/interface-connection";
-import {ConnectionManager} from "@libp2p/interface-connection-manager";
-import {DefaultConnectionManager} from "libp2p/connection-manager";
-import {ENR} from "@chainsafe/discv5";
+import type {PeerId} from "@libp2p/interface-peer-id";
+import type {Multiaddr} from "@multiformats/multiaddr";
+import type {Connection} from "@libp2p/interface-connection";
+import type {ConnectionManager} from "@libp2p/interface-connection-manager";
+import type {Components} from "libp2p/components.js";
+import type {DefaultConnectionManager} from "libp2p/connection-manager/index.js";
+import type {DefaultDialer} from "libp2p/connection-manager/dialer/index.js";
+import type {Libp2p} from "libp2p";
+import type {ENR} from "@chainsafe/discv5";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -80,4 +83,8 @@ export function getConnection(connectionManager: ConnectionManager, peerIdStr: s
 // https://github.com/ChainSafe/js-libp2p-gossipsub/blob/3475242ed254f7647798ab7f36b21909f6cb61da/src/index.ts#L2009
 export function isPublishToZeroPeersError(e: Error): boolean {
   return e.message.includes("PublishError.InsufficientPeers");
+}
+
+export function getDefaultDialer(libp2p: Libp2p): DefaultDialer {
+  return ((libp2p as unknown) as {components: Components}).components.dialer as DefaultDialer;
 }
