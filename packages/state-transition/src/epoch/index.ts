@@ -1,5 +1,11 @@
 import {ForkSeq} from "@lodestar/params";
-import {CachedBeaconStateAllForks, CachedBeaconStateAltair, CachedBeaconStatePhase0, EpochProcess} from "../types.js";
+import {
+  CachedBeaconStateAllForks,
+  CachedBeaconStateCapella,
+  CachedBeaconStateAltair,
+  CachedBeaconStatePhase0,
+  EpochProcess,
+} from "../types.js";
 import {processEffectiveBalanceUpdates} from "./processEffectiveBalanceUpdates.js";
 import {processEth1DataReset} from "./processEth1DataReset.js";
 import {processHistoricalRootsUpdate} from "./processHistoricalRootsUpdate.js";
@@ -49,7 +55,7 @@ export function processEpoch(fork: ForkSeq, state: CachedBeaconStateAllForks, ep
   processRandaoMixesReset(state, epochProcess);
 
   if (fork >= ForkSeq.capella) {
-    processHistoricalSummariesUpdate(state, epochProcess);
+    processHistoricalSummariesUpdate(state as CachedBeaconStateCapella, epochProcess);
   } else {
     processHistoricalRootsUpdate(state, epochProcess);
   }

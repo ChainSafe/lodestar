@@ -1,7 +1,7 @@
 import {SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {intDiv} from "@lodestar/utils";
-import {EpochProcess, CachedBeaconStateAllForks} from "../types.js";
+import {EpochProcess, CachedBeaconStateCapella} from "../types.js";
 
 /**
  * TODO: change this comment
@@ -9,17 +9,15 @@ import {EpochProcess, CachedBeaconStateAllForks} from "../types.js";
  *
  * PERF: Very low (constant) cost. Most of the HistoricalBatch should already be hashed.
  */
-export function processHistoricalSummariesUpdate(state: CachedBeaconStateAllForks, epochProcess: EpochProcess): void {
+export function processHistoricalSummariesUpdate(state: CachedBeaconStateCapella, epochProcess: EpochProcess): void {
   const nextEpoch = epochProcess.currentEpoch + 1;
 
   // set historical root accumulator
   if (nextEpoch % intDiv(SLOTS_PER_HISTORICAL_ROOT, SLOTS_PER_EPOCH) === 0) {
-    state.historicalRoots.push(
-      // HistoricalBatchRoots = Non-spec'ed helper type to allow efficient hashing in epoch transition.
-      // This type is like a 'Header' of HistoricalBatch where its fields are hashed.
-      ssz.phase0.HistoricalBatchRoots.hashTreeRoot({
-        blockRoots: state.blockRoots.hashTreeRoot(),
-        stateRoots: state.stateRoots.hashTreeRoot(),
+    state.historicalSummaries.push(
+      ssz.capella.HistoricalSummary.toViewDU({
+        blockSummaryRoot: state.blockRoots.hashTreeRoot(),
+        stateSummaryRoot: state.stateRoots.hashTreeRoot(),
       })
     );
   }
