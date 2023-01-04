@@ -3,6 +3,7 @@ import {CachedBeaconStateAllForks, CachedBeaconStateAltair, CachedBeaconStatePha
 import {processEffectiveBalanceUpdates} from "./processEffectiveBalanceUpdates.js";
 import {processEth1DataReset} from "./processEth1DataReset.js";
 import {processHistoricalRootsUpdate} from "./processHistoricalRootsUpdate.js";
+import {processHistoricalSummariesUpdate} from "./processHistoricalSummariesUpdate.js";
 import {processInactivityUpdates} from "./processInactivityUpdates.js";
 import {processJustificationAndFinalization} from "./processJustificationAndFinalization.js";
 import {processParticipationFlagUpdates} from "./processParticipationFlagUpdates.js";
@@ -46,7 +47,13 @@ export function processEpoch(fork: ForkSeq, state: CachedBeaconStateAllForks, ep
   processEffectiveBalanceUpdates(state, epochProcess);
   processSlashingsReset(state, epochProcess);
   processRandaoMixesReset(state, epochProcess);
-  processHistoricalRootsUpdate(state, epochProcess);
+
+  if (fork >= ForkSeq.capella) {
+    processHistoricalSummariesUpdate(state, epochProcess);
+  } else {
+    processHistoricalRootsUpdate(state, epochProcess);
+  }
+
   if (fork === ForkSeq.phase0) {
     processParticipationRecordUpdates(state as CachedBeaconStatePhase0);
   } else {
