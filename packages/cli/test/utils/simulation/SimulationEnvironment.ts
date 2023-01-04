@@ -141,15 +141,27 @@ export class SimulationEnvironment {
   }
 
   async start(opts: StartOpts): Promise<void> {
+    const currentTime = Date.now();
     setTimeout(() => {
-      this.stop(1, `Sim run timedout in ${opts.runTimeoutMs} ms `).catch((e) => console.error("Error on stop", e));
+      const slots = this.clock.getSlotFor(currentTime + opts.runTimeoutMs);
+      const epoch = this.clock.getEpochForSlot(slots);
+      const slot = this.clock.getSlotIndexInEpoch(slots);
+
+      this.stop(1, `Sim run timedout in ${opts.runTimeoutMs}ms (approx. ${epoch}/${slot}).`).catch((e) =>
+        console.error("Error on stop", e)
+      );
     }, opts.runTimeoutMs);
 
     const msToGenesis = this.clock.msToGenesis();
     const startTimeout = setTimeout(() => {
-      this.stop(1, `Start sequence not completed before genesis, in ${msToGenesis} ms`).catch((e) =>
-        console.error("Error on stop", e)
-      );
+      const slots = this.clock.getSlotFor(currentTime + msToGenesis);
+      const epoch = this.clock.getEpochForSlot(slots);
+      const slot = this.clock.getSlotIndexInEpoch(slots);
+
+      this.stop(
+        1,
+        `Start sequence not completed before genesis, in ${msToGenesis}ms (approx. ${epoch}/${slot}).`
+      ).catch((e) => console.error("Error on stop", e));
     }, msToGenesis);
 
     try {

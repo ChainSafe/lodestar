@@ -1,9 +1,10 @@
 /* eslint-disable no-console */
 import {Slot} from "@lodestar/types";
+import {HeadSummary} from "./assertions/defaults/headAssertion.js";
 import {defaultAssertions} from "./assertions/defaults/index.js";
 import {SimulationReporter} from "./interfaces.js";
 import {TableRenderer} from "./TableRenderer.js";
-import {arrayGroupBy, avg} from "./utils/index.js";
+import {arrayGroupBy, avg, arrayIsUnique} from "./utils/index.js";
 
 export class TableReporter extends SimulationReporter<typeof defaultAssertions> {
   private lastPrintedSlot = -1;
@@ -43,17 +44,14 @@ export class TableReporter extends SimulationReporter<typeof defaultAssertions> 
       if (epoch - 1 < forkConfig.ALTAIR_FORK_EPOCH) {
         this.table.addEmptyRow("Att Participation: N/A - SC Participation: N/A");
       } else {
-        // attestationParticipation is calculated at first slot of an epoch
-        const participation = nodes.map((node) => stores["attestationParticipation"][node.cl.id][slot] ?? 0);
-        const head = avg(participation.map((p) => p.head)).toFixed(2);
-        const source = avg(participation.map((p) => p.source)).toFixed(2);
-        const target = avg(participation.map((p) => p.target)).toFixed(2);
-
         // As it's printed on the first slot of epoch we need to get the previous epoch
         const startSlot = clock.getFirstSlotOfEpoch(epoch - 1);
         const endSlot = clock.getLastSlotOfEpoch(epoch - 1);
         const nodesSyncParticipationAvg: number[] = [];
+        const participation: {head: number; source: number; target: number}[] = [];
+
         for (const node of nodes) {
+          participation.push(stores["attestationParticipation"][node.cl.id][slot] ?? 0);
           const syncCommitteeParticipation: number[] = [];
           for (let slot = startSlot; slot <= endSlot; slot++) {
             syncCommitteeParticipation.push(stores["syncCommitteeParticipation"][node.cl.id][slot]);
@@ -61,6 +59,10 @@ export class TableReporter extends SimulationReporter<typeof defaultAssertions> 
           nodesSyncParticipationAvg.push(avg(syncCommitteeParticipation));
         }
 
+        // attestationParticipation is calculated at first slot of an epoch
+        const head = avg(participation.map((p) => p.head)).toFixed(2);
+        const source = avg(participation.map((p) => p.source)).toFixed(2);
+        const target = avg(participation.map((p) => p.target)).toFixed(2);
         const syncParticipation = avg(nodesSyncParticipationAvg).toFixed(2);
 
         this.table.addEmptyRow(
@@ -69,22 +71,22 @@ export class TableReporter extends SimulationReporter<typeof defaultAssertions> 
       }
     }
 
-    const finalizedSlots = nodes.map((node) => stores["finalized"][node.cl.id][slot] ?? "-");
-    const finalizedSlotsUnique = new Set(finalizedSlots);
+    const finalizedSlots: number[] = [];
+    const inclusionDelay: number[] = [];
+    const attestationCount: number[] = [];
+    const heads: HeadSummary[] = [];
+    const peerCount: number[] = [];
 
-    const inclusionDelay = nodes.map((node) => stores["inclusionDelay"][node.cl.id][slot] ?? "-");
-    const inclusionDelayUnique = new Set(inclusionDelay);
+    for (const node of nodes) {
+      finalizedSlots.push(stores["finalized"][node.cl.id][slot] ?? "-");
+      inclusionDelay.push(stores["inclusionDelay"][node.cl.id][slot] ?? "-");
+      attestationCount.push(stores["attestationsCount"][node.cl.id][slot] ?? "-");
+      heads.push(stores["head"][node.cl.id][slot] ?? "-");
+      peerCount.push(stores["connectedPeerCount"][node.cl.id][slot] ?? "-");
+    }
 
-    const attestationCount = nodes.map((node) => stores["attestationsCount"][node.cl.id][slot] ?? "-");
-    const attestationCountUnique = new Set(attestationCount);
-
-    const heads = nodes.map((node) => stores["head"][node.cl.id][slot]);
     const head0 = heads.length > 0 ? heads[0] : null;
-    const nodesHaveSameHead = heads.every((head) => head?.blockRoot !== head0?.blockRoot);
-
-    const peerCount = nodes.map((node) => stores["connectedPeerCount"][node.cl.id][slot] ?? "-");
-    const peerCountUnique = new Set(peerCount);
-
+    const nodesHaveSameHead = heads.every((head) => head?.blockRoot === head0?.blockRoot);
     const errorCount = errors.filter((e) => e.slot === slot).length;
 
     this.table.addRow({
@@ -92,10 +94,10 @@ export class TableReporter extends SimulationReporter<typeof defaultAssertions> 
       eph: epochStr,
       slot: head0 ? head0.slot : "-",
       head: head0 ? (nodesHaveSameHead ? `${head0?.blockRoot.slice(0, 6)}..` : "different") : "-",
-      finzed: finalizedSlotsUnique.size === 1 ? finalizedSlots[0] : finalizedSlots.join(","),
-      peers: peerCountUnique.size === 1 ? peerCount[0] : peerCount.join(","),
-      attCount: attestationCountUnique.size === 1 ? attestationCount[0] : "---",
-      incDelay: inclusionDelayUnique.size === 1 ? inclusionDelay[0].toFixed(2) : "---",
+      finzed: !arrayIsUnique(finalizedSlots) ? finalizedSlots[0] : finalizedSlots.join(","),
+      peers: !arrayIsUnique(peerCount) ? peerCount[0] : peerCount.join(","),
+      attCount: !arrayIsUnique(attestationCount) ? attestationCount[0] : "---",
+      incDelay: !arrayIsUnique(inclusionDelay) ? inclusionDelay[0].toFixed(2) : "---",
       errors: errorCount,
     });
   }

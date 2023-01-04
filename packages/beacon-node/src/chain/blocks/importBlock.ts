@@ -249,7 +249,16 @@ export async function importBlock(
           newSlot: newHead.slot,
         });
 
-        pendingEvents.push(ChainEvent.forkChoiceReorg, newHead, oldHead, distance, executionOptimistic);
+        pendingEvents.push(ChainEvent.forkChoiceReorg, {
+          depth: distance,
+          epoch: computeEpochAtSlot(newHead.slot),
+          slot: newHead.slot,
+          newHeadBlock: newHead.blockRoot,
+          oldHeadBlock: oldHead.blockRoot,
+          newHeadState: newHead.stateRoot,
+          oldHeadState: oldHead.stateRoot,
+          executionOptimistic,
+        });
 
         this.metrics?.forkChoice.reorg.inc();
         this.metrics?.forkChoice.reorgDistance.observe(distance);

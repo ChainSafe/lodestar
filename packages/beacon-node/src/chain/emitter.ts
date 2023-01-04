@@ -3,7 +3,7 @@ import StrictEventEmitter from "strict-event-emitter-types";
 
 import {routes} from "@lodestar/api";
 import {phase0, Epoch, Slot, allForks, altair} from "@lodestar/types";
-import {CheckpointWithHex, ProtoBlock} from "@lodestar/fork-choice";
+import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 
 /**
@@ -100,6 +100,7 @@ export enum ChainEvent {
 }
 
 export type HeadEventData = routes.events.EventData[routes.events.EventType.head];
+export type ReorgEventData = routes.events.EventData[routes.events.EventType.chainReorg];
 
 export interface IChainEvents {
   [ChainEvent.attestation]: (attestation: phase0.Attestation) => void;
@@ -118,12 +119,7 @@ export interface IChainEvents {
   [ChainEvent.clockEpoch]: (epoch: Epoch) => void;
 
   [ChainEvent.head]: (data: HeadEventData) => void;
-  [ChainEvent.forkChoiceReorg]: (
-    head: ProtoBlock,
-    oldHead: ProtoBlock,
-    depth: number,
-    executionOptimistic: boolean
-  ) => void;
+  [ChainEvent.forkChoiceReorg]: (data: ReorgEventData) => void;
   [ChainEvent.forkChoiceJustified]: (checkpoint: CheckpointWithHex) => void;
   [ChainEvent.forkChoiceFinalized]: (checkpoint: CheckpointWithHex) => void;
 

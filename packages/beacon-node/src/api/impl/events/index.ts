@@ -1,5 +1,4 @@
 import {capella} from "@lodestar/types";
-import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {routes} from "@lodestar/api";
 import {toHexString} from "@chainsafe/ssz";
 import {ApiModules} from "../types.js";
@@ -50,18 +49,7 @@ export function getEventsApi({chain, config}: Pick<ApiModules, "chain" | "config
         executionOptimistic: false,
       },
     ],
-    [routes.events.EventType.chainReorg]: (oldHead, newHead, depth, executionOptimistic) => [
-      {
-        depth,
-        epoch: computeEpochAtSlot(newHead.slot),
-        slot: newHead.slot,
-        newHeadBlock: newHead.blockRoot,
-        oldHeadBlock: oldHead.blockRoot,
-        newHeadState: newHead.stateRoot,
-        oldHeadState: oldHead.stateRoot,
-        executionOptimistic,
-      },
-    ],
+    [routes.events.EventType.chainReorg]: (data) => [data],
     [routes.events.EventType.contributionAndProof]: (contributionAndProof) => [contributionAndProof],
     [routes.events.EventType.lightClientOptimisticUpdate]: (headerUpdate) => [headerUpdate],
     [routes.events.EventType.lightClientFinalityUpdate]: (headerUpdate) => [headerUpdate],
