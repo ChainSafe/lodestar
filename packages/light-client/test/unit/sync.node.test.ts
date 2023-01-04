@@ -73,15 +73,7 @@ describe("sync", () => {
 
     // Populate sync committee updates
     for (let period = initialPeriod; period <= targetPeriod; period++) {
-      let committeeUpdate;
-      if (period === 1) {
-        // at period 1, have the update at the last slot of the period so that
-        // it is signed by the sync committee in the next period
-        const slotAtBoundary = true;
-        committeeUpdate = computeLightclientUpdate(config, period, slotAtBoundary);
-      } else {
-        committeeUpdate = computeLightclientUpdate(config, period);
-      }
+      const committeeUpdate = computeLightclientUpdate(config, period);
       lightclientServerApi.updates.set(period, committeeUpdate);
     }
 

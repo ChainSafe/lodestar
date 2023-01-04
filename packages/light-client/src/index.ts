@@ -406,7 +406,7 @@ export class Lightclient {
 
     if (!syncCommittee) {
       // TODO: Attempt to fetch committee update for period if it's before the current clock period
-      throw Error(`No syncCommittee for attested period ${attestedPeriod} and signaturePeriod ${signaturePeriod}`);
+      throw Error(`No syncCommittee for period ${signaturePeriod}`);
     }
 
     const headerBlockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(attestedHeader);
@@ -536,9 +536,9 @@ export class Lightclient {
     const updateSlot = update.attestedHeader.slot;
     const signatureSlot = update.signatureSlot;
 
-    if (signatureSlot < updateSlot) {
+    if (signatureSlot <= updateSlot) {
       throw Error(
-        `signatureSlot: ${signatureSlot} where update is signed should not be before updateSlot: ${updateSlot}`
+        `signature slot must be after attested slot: signatureSlot=${signatureSlot} updateSlot=${updateSlot}`
       );
     }
 
@@ -554,17 +554,9 @@ export class Lightclient {
       throw Error(`update must not rollback existing committee at period ${minPeriod}`);
     }
 
-    const newNextSyncCommitteeStats: LightclientUpdateStats = {
-      isFinalized: !isEmptyHeader(update.finalizedHeader),
-      participation: sumBits(update.syncAggregate.syncCommitteeBits),
-      slot: updateSlot,
-    };
-
-    let nextSyncCommittee: SyncCommitteeFast | undefined;
     const signingSyncCommittee = this.syncCommitteeByPeriod.get(signaturePeriod);
-
     if (!signingSyncCommittee) {
-      throw Error(`No syncCommittee for attested period ${attestedPeriod} and signaturePeriod ${signaturePeriod}`);
+      throw Error(`No syncCommittee for period ${signaturePeriod}`);
     }
 
     assertValidLightClientUpdate(this.config, signingSyncCommittee, update);
@@ -574,13 +566,18 @@ export class Lightclient {
     // update available, where best is decided by `isBetterUpdate()`
     const nextPeriod = attestedPeriod + 1;
     const existingNextSyncCommittee = this.syncCommitteeByPeriod.get(nextPeriod);
+    const newNextSyncCommitteeStats: LightclientUpdateStats = {
+      isFinalized: !isEmptyHeader(update.finalizedHeader),
+      participation: sumBits(update.syncAggregate.syncCommitteeBits),
+      slot: updateSlot,
+    };
 
     if (!existingNextSyncCommittee || isBetterUpdate(existingNextSyncCommittee, newNextSyncCommitteeStats)) {
       this.logger.info("Stored SyncCommittee", {nextPeriod, replacedPrevious: existingNextSyncCommittee != null});
       this.emitter.emit(LightclientEvent.committee, attestedPeriod);
       this.syncCommitteeByPeriod.set(nextPeriod, {
         ...newNextSyncCommitteeStats,
-        ...(nextSyncCommittee !== undefined ? nextSyncCommittee : deserializeSyncCommittee(update.nextSyncCommittee)),
+        ...deserializeSyncCommittee(update.nextSyncCommittee),
       });
       pruneSetToMax(this.syncCommitteeByPeriod, MAX_STORED_SYNC_COMMITTEES);
       // TODO: Metrics, updated syncCommittee

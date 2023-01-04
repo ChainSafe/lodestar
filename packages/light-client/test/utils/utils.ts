@@ -16,7 +16,6 @@ import {altair, phase0, Slot, ssz, SyncPeriod} from "@lodestar/types";
 import {SyncCommitteeFast} from "../../src/types.js";
 import {computeSigningRoot} from "../../src/utils/domain.js";
 import {getLcLoggerConsole} from "../../src/utils/logger.js";
-import {isLastSlotInPeriod} from "../../src/utils/utils.js";
 
 const CURRENT_SYNC_COMMITTEE_INDEX = 22;
 const CURRENT_SYNC_COMMITTEE_DEPTH = 5;
@@ -114,20 +113,20 @@ export function getInteropSyncCommittee(period: SyncPeriod): SyncCommitteeKeys {
  */
 export function computeLightclientUpdate(
   config: IBeaconConfig,
-  period: SyncPeriod,
-  atBoundary = false
+  updatePeriod: SyncPeriod,
+  signaturePeriod?: SyncPeriod
 ): altair.LightClientUpdate {
-  // if atBoundary, set update slot as period boundary, that is, last slot in the period
-  // do this by using the next period (ie period + 1) to calculate slot and minus 1 to get
-  // the last slot in the previous period
-  const updateSlot = atBoundary
-    ? (period + 1) * EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH - 1
-    : period * EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH + 1;
+  signaturePeriod = signaturePeriod ?? updatePeriod;
+  if (updatePeriod !== signaturePeriod && updatePeriod + 1 !== signaturePeriod) {
+    throw new Error("signingPeriod must be equal to updatePeriod or updatePeriod + 1");
+  }
+  const updateSlot = updatePeriod * EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH;
+  const signatureSlot = signaturePeriod * EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH + 1;
 
-  const committee = getInteropSyncCommittee(period);
-  const committeeNext = getInteropSyncCommittee(period + 1);
+  const nextCommittee = getInteropSyncCommittee(updatePeriod + 1);
+  const signingCommittee = getInteropSyncCommittee(signaturePeriod);
 
-  const nextSyncCommittee = committeeNext.syncCommittee;
+  const nextSyncCommittee = nextCommittee.syncCommittee;
 
   const finalizedState = ssz.altair.BeaconState.defaultViewDU();
 
@@ -153,9 +152,7 @@ export function computeLightclientUpdate(
   const finalityBranch = new Tree(attestedState.node).getSingleProof(BigInt(FINALIZED_ROOT_GINDEX));
 
   // if last slot in this period, then the syncAggregate is by next sync committee
-  const syncAggregate = isLastSlotInPeriod(attestedHeader.slot)
-    ? committeeNext.signHeader(config, attestedHeader)
-    : committee.signHeader(config, attestedHeader);
+  const syncAggregate = signingCommittee.signHeader(config, attestedHeader);
 
   return {
     attestedHeader,
@@ -164,7 +161,7 @@ export function computeLightclientUpdate(
     finalizedHeader,
     finalityBranch,
     syncAggregate,
-    signatureSlot: attestedHeader.slot + 1,
+    signatureSlot,
   };
 }
 

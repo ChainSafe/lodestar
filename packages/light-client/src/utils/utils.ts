@@ -79,7 +79,3 @@ export function isEmptyHeader(header: BeaconBlockHeader): boolean {
 // Thanks https://github.com/iliakan/detect-node/blob/master/index.esm.js
 export const isNode =
   Object.prototype.toString.call(typeof process !== "undefined" ? process : 0) === "[object process]";
-
-export function isLastSlotInPeriod(slot: Slot): boolean {
-  return (slot + 1) % (EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH) === 0;
-}
