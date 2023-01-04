@@ -330,7 +330,9 @@ export class BeaconChain implements IBeaconChain {
     const head = this.forkChoice.getHead();
     const headState =
       this.checkpointStateCache.getLatest(head.blockRoot, Infinity) || this.stateCache.get(head.stateRoot);
-    if (!headState) throw Error("headState does not exist, headSlot=" + head.slot);
+    if (!headState) {
+      throw Error(`headState does not exist for head root=${head.root} slot=${head.slot}`);
+    }
     return headState;
   }
 
