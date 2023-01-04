@@ -150,7 +150,7 @@ export const BeaconState = new ContainerType(
     nextWithdrawalIndex: WithdrawalIndex, // [New in Capella]
     nextWithdrawalValidatorIndex: ValidatorIndex, // [New in Capella]
     // Deep history valid from Capella onwards
-    // historicalSummaries: new ListCompositeType(HistoricalSummary, HISTORICAL_ROOTS_LIMIT), // [New in Capella]
+    historicalSummaries: new ListCompositeType(HistoricalSummary, HISTORICAL_ROOTS_LIMIT), // [New in Capella]
   },
   {typeName: "BeaconState", jsonCase: "eth2"}
 );
