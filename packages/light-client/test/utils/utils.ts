@@ -151,7 +151,6 @@ export function computeLightclientUpdate(
   const nextSyncCommitteeBranch = new Tree(attestedState.node).getSingleProof(BigInt(NEXT_SYNC_COMMITTEE_GINDEX));
   const finalityBranch = new Tree(attestedState.node).getSingleProof(BigInt(FINALIZED_ROOT_GINDEX));
 
-  // if last slot in this period, then the syncAggregate is by next sync committee
   const syncAggregate = signingCommittee.signHeader(config, attestedHeader);
 
   return {
