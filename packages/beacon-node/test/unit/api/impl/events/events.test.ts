@@ -54,7 +54,7 @@ describe("Events api impl", function () {
 
       const headBlock = generateProtoBlock();
       stateCacheStub.get.withArgs(headBlock.stateRoot).returns(generateCachedState({slot: 1000}));
-      chainEventEmmitter.emit(ChainEvent.forkChoiceReorg, headBlock, headBlock, 2, false);
+      chainEventEmmitter.emit(ChainEvent.attestation, ssz.phase0.Attestation.defaultValue());
       chainEventEmmitter.emit(ChainEvent.head, headEventData);
 
       expect(events).to.have.length(1, "Wrong num of received events");
@@ -132,22 +132,6 @@ describe("Events api impl", function () {
       expect(events).to.have.length(1, "Wrong num of received events");
       expect(events[0].type).to.equal(routes.events.EventType.finalizedCheckpoint);
       expect(events[0].message).to.not.be.null;
-    });
-
-    it("should process chain reorg event", async function () {
-      const events = getEvents([routes.events.EventType.chainReorg]);
-
-      const depth = 3;
-      const oldHead = generateProtoBlock({slot: 4});
-      const newHead = generateProtoBlock({slot: 3});
-      chainEventEmmitter.emit(ChainEvent.forkChoiceReorg, oldHead, newHead, depth, false);
-
-      expect(events).to.have.length(1, "Wrong num of received events");
-      const event = events[0];
-      if (event.type !== routes.events.EventType.chainReorg) throw Error(`Wrong event type ${event.type}`);
-      expect(events[0].type).to.equal(routes.events.EventType.chainReorg);
-      expect(event.message).to.not.be.null;
-      expect(event.message.depth).to.equal(depth, "Wrong depth");
     });
   });
 });
