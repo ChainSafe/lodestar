@@ -5,7 +5,7 @@ import {PeerId} from "@libp2p/interface-peer-id";
 import {multiaddr, Multiaddr} from "@multiformats/multiaddr";
 import {PeerInfo} from "@libp2p/interface-peer-info";
 import {IBeaconConfig} from "@lodestar/config";
-import {ILogger, pruneSetToMax} from "@lodestar/utils";
+import {ILogger, pruneSetToMax, sleep} from "@lodestar/utils";
 import {Discv5, ENR, IDiscv5Metrics, IDiscv5DiscoveryInputOptions} from "@chainsafe/discv5";
 import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {IMetrics} from "../../metrics/index.js";
@@ -222,8 +222,9 @@ export class PeerDiscovery {
   private async runFindRandomNodeQuery(): Promise<void> {
     // Delay the 1st query after starting discv5
     // See https://github.com/ChainSafe/lodestar/issues/3423
-    if (Date.now() - this.discv5StartMs <= this.discv5FirstQueryDelayMs) {
-      return;
+    const msSinceDiscv5Start = Date.now() - this.discv5StartMs;
+    if (msSinceDiscv5Start <= this.discv5FirstQueryDelayMs) {
+      await sleep(msSinceDiscv5Start);
     }
 
     // Run a general discv5 query if one is not already in progress
