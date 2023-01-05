@@ -90,7 +90,7 @@ export interface IForkChoice {
     blockDelaySec: number,
     currentSlot: Slot,
     executionStatus: MaybeValidExecutionStatus
-  ): void;
+  ): ProtoBlock;
   /**
    * Register `attestation` with the fork choice DAG so that it may influence future calls to `getHead`.
    *

@@ -258,7 +258,7 @@ function mockForkChoice(): IForkChoice {
     getHeads: () => [block],
     getFinalizedCheckpoint: () => checkpoint,
     getJustifiedCheckpoint: () => checkpoint,
-    onBlock: () => {},
+    onBlock: () => block,
     onAttestation: () => {},
     onAttesterSlashing: () => {},
     getLatestMessage: () => undefined,
