@@ -309,7 +309,7 @@ export class ForkChoice implements IForkChoice {
     blockDelaySec: number,
     currentSlot: Slot,
     executionStatus: MaybeValidExecutionStatus
-  ): void {
+  ): ProtoBlock {
     const {parentRoot, slot} = block;
     const parentRootHex = toHexString(parentRoot);
     // Parent block must be known
@@ -466,34 +466,36 @@ export class ForkChoice implements IForkChoice {
 
     const targetSlot = computeStartSlotAtEpoch(blockEpoch);
     const targetRoot = slot === targetSlot ? blockRoot : state.blockRoots.get(targetSlot % SLOTS_PER_HISTORICAL_ROOT);
+
     // This does not apply a vote to the block, it just makes fork choice aware of the block so
     // it can still be identified as the head even if it doesn't have any votes.
-    this.protoArray.onBlock(
-      {
-        slot: slot,
-        blockRoot: blockRootHex,
-        parentRoot: parentRootHex,
-        targetRoot: toHexString(targetRoot),
-        stateRoot: toHexString(block.stateRoot),
+    const protoBlock: ProtoBlock = {
+      slot: slot,
+      blockRoot: blockRootHex,
+      parentRoot: parentRootHex,
+      targetRoot: toHexString(targetRoot),
+      stateRoot: toHexString(block.stateRoot),
 
-        justifiedEpoch: stateJustifiedEpoch,
-        justifiedRoot: toHexString(state.currentJustifiedCheckpoint.root),
-        finalizedEpoch: finalizedCheckpoint.epoch,
-        finalizedRoot: toHexString(state.finalizedCheckpoint.root),
-        unrealizedJustifiedEpoch: unrealizedJustifiedCheckpoint.epoch,
-        unrealizedJustifiedRoot: unrealizedJustifiedCheckpoint.rootHex,
-        unrealizedFinalizedEpoch: unrealizedFinalizedCheckpoint.epoch,
-        unrealizedFinalizedRoot: unrealizedFinalizedCheckpoint.rootHex,
+      justifiedEpoch: stateJustifiedEpoch,
+      justifiedRoot: toHexString(state.currentJustifiedCheckpoint.root),
+      finalizedEpoch: finalizedCheckpoint.epoch,
+      finalizedRoot: toHexString(state.finalizedCheckpoint.root),
+      unrealizedJustifiedEpoch: unrealizedJustifiedCheckpoint.epoch,
+      unrealizedJustifiedRoot: unrealizedJustifiedCheckpoint.rootHex,
+      unrealizedFinalizedEpoch: unrealizedFinalizedCheckpoint.epoch,
+      unrealizedFinalizedRoot: unrealizedFinalizedCheckpoint.rootHex,
 
-        ...(isExecutionBlockBodyType(block.body) && isExecutionStateType(state) && isExecutionEnabled(state, block)
-          ? {
-              executionPayloadBlockHash: toHexString(block.body.executionPayload.blockHash),
-              executionStatus: this.getPostMergeExecStatus(executionStatus),
-            }
-          : {executionPayloadBlockHash: null, executionStatus: this.getPreMergeExecStatus(executionStatus)}),
-      },
-      currentSlot
-    );
+      ...(isExecutionBlockBodyType(block.body) && isExecutionStateType(state) && isExecutionEnabled(state, block)
+        ? {
+            executionPayloadBlockHash: toHexString(block.body.executionPayload.blockHash),
+            executionStatus: this.getPostMergeExecStatus(executionStatus),
+          }
+        : {executionPayloadBlockHash: null, executionStatus: this.getPreMergeExecStatus(executionStatus)}),
+    };
+
+    this.protoArray.onBlock(protoBlock, currentSlot);
+
+    return protoBlock;
   }
 
   /**
