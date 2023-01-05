@@ -4,10 +4,9 @@ import {intDiv} from "@lodestar/utils";
 import {EpochProcess, CachedBeaconStateCapella} from "../types.js";
 
 /**
- * TODO: change this comment
- * Persist blockRoots and stateRoots to historicalRoots.
+ * Persist blockRoots and stateRoots to historicalSummaries.
  *
- * PERF: Very low (constant) cost. Most of the HistoricalBatch should already be hashed.
+ * PERF: Very low (constant) cost. Most of the HistoricalSummaries should already be hashed.
  */
 export function processHistoricalSummariesUpdate(state: CachedBeaconStateCapella, epochProcess: EpochProcess): void {
   const nextEpoch = epochProcess.currentEpoch + 1;
