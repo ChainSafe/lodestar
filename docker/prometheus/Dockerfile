@@ -1,7 +1,8 @@
 FROM prom/prometheus:latest
 
 COPY prometheus.yml /etc/prometheus/prometheus.yml
-COPY entrypoint.sh /prometheus/entrypoint.sh
+COPY --chown=nobody:nobody entrypoint.sh /prometheus/entrypoint.sh
+RUN chmod +x /prometheus/entrypoint.sh
 
 # Modified datasource to work with a network_mode: host
 # Docker DNS: "beacon_node:8008"
@@ -15,4 +16,4 @@ ENTRYPOINT ["/prometheus/entrypoint.sh"]
 CMD [ \
   "--config.file=/etc/prometheus/prometheus.yml", \
   "--storage.tsdb.path=/prometheus" \
-  ]
+]
