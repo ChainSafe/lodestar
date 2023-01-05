@@ -153,6 +153,7 @@ export const BlindedBeaconBlockBody = new ContainerType(
   {
     ...BeaconBlockBody.fields,
     executionPayloadHeader: ExecutionPayloadHeader, // Modified in EIP-4844
+    blobKzgCommitments: BlobKzgCommitments, // New in EIP-4844
   },
   {typeName: "BlindedBeaconBlockBody", jsonCase: "eth2", cachePermanentRootStruct: true}
 );

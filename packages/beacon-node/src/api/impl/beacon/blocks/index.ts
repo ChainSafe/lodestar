@@ -2,7 +2,7 @@ import {routes} from "@lodestar/api";
 import {computeTimeAtSlot} from "@lodestar/state-transition";
 import {ForkSeq, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {sleep} from "@lodestar/utils";
-import {eip4844} from "@lodestar/types";
+import {eip4844, allForks} from "@lodestar/types";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {getBlockInput} from "../../../../chain/blocks/types.js";
 import {promiseAllMaybeAsync} from "../../../../util/promises.js";
@@ -181,7 +181,21 @@ export function getBeaconBlockApi({
     async publishBlindedBlock(signedBlindedBlock) {
       const executionBuilder = chain.executionBuilder;
       if (!executionBuilder) throw Error("exeutionBuilder required to publish SignedBlindedBeaconBlock");
-      const signedBlock = await executionBuilder.submitBlindedBlock(signedBlindedBlock);
+      let signedBlock: allForks.SignedBeaconBlock;
+      if (config.getForkSeq(signedBlindedBlock.message.slot) >= ForkSeq.eip4844) {
+        const {beaconBlock, blobsSidecar} = await executionBuilder.submitBlindedBlockV2(signedBlindedBlock);
+        signedBlock = beaconBlock;
+        // add this blobs to the map for access & broadcasting in publishBlock
+        const {blockHash} = signedBlindedBlock.message.body.executionPayloadHeader;
+        chain.producedBlobsSidecarCache.set(toHexString(blockHash), blobsSidecar);
+        // TODO: Do we need to prune here ? prune will anyway be called in local execution flow
+        // pruneSetToMax(
+        //   chain.producedBlobsSidecarCache,
+        //   chain.opts.maxCachedBlobsSidecar ?? DEFAULT_MAX_CACHED_BLOBS_SIDECAR
+        // );
+      } else {
+        signedBlock = await executionBuilder.submitBlindedBlock(signedBlindedBlock);
+      }
       return await this.publishBlock(signedBlock);
     },
 

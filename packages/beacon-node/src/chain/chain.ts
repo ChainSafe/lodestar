@@ -118,6 +118,9 @@ export class BeaconChain implements IBeaconChain {
 
   readonly beaconProposerCache: BeaconProposerCache;
   readonly checkpointBalancesCache: CheckpointBalancesCache;
+  // TODO EIP-4844: Prune data structure every time period, for both old entries
+  /** Map keyed by executionPayload.blockHash of the block for those blobs */
+  readonly producedBlobsSidecarCache = new Map<RootHex, eip4844.BlobsSidecar>();
   readonly opts: IChainOptions;
 
   protected readonly blockProcessor: BlockProcessor;
@@ -126,10 +129,6 @@ export class BeaconChain implements IBeaconChain {
   private abortController = new AbortController();
   private successfulExchangeTransition = false;
   private readonly exchangeTransitionConfigurationEverySlots: number;
-
-  // TODO EIP-4844: Prune data structure every time period, for both old entries
-  /** Map keyed by executionPayload.blockHash of the block for those blobs */
-  private readonly producedBlobsSidecarCache = new Map<RootHex, eip4844.BlobsSidecar>();
 
   private readonly faultInspectionWindow: number;
   private readonly allowedFaults: number;
@@ -393,6 +392,9 @@ export class BeaconChain implements IBeaconChain {
     block.stateRoot = computeNewStateRoot(this.metrics, state, block);
 
     // Cache for latter broadcasting
+    //
+    // blinded blobs will be fetched and added to this cache later before finally
+    // publishing the blinded block's full version
     if (blobs.type === BlobsResultType.produced) {
       // TODO EIP-4844: Prune data structure for max entries
       this.producedBlobsSidecarCache.set(blobs.blockHash, {

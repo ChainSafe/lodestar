@@ -26,7 +26,7 @@ import {
   getExpectedWithdrawals,
 } from "@lodestar/state-transition";
 import {IChainForkConfig} from "@lodestar/config";
-import {ForkName, ForkSeq, ForkExecution} from "@lodestar/params";
+import {ForkSeq, ForkExecution, isForkExecution} from "@lodestar/params";
 import {toHex, sleep} from "@lodestar/utils";
 
 import type {BeaconChain} from "../chain.js";
@@ -64,10 +64,11 @@ export type AssembledBlockType<T extends BlockType> = T extends BlockType.Full
 export enum BlobsResultType {
   preEIP4844,
   produced,
+  blinded,
 }
 
 export type BlobsResult =
-  | {type: BlobsResultType.preEIP4844}
+  | {type: BlobsResultType.preEIP4844 | BlobsResultType.blinded}
   | {type: BlobsResultType.produced; blobs: eip4844.Blobs; blockHash: RootHex};
 
 export async function produceBlockBody<T extends BlockType>(
@@ -89,8 +90,10 @@ export async function produceBlockBody<T extends BlockType>(
     proposerPubKey: BLSPubkey;
   }
 ): Promise<{body: AssembledBodyType<T>; blobs: BlobsResult}> {
-  // We assign this in an EIP-4844 branch below and return it
-  let blobs: {blobs: eip4844.Blobs; blockHash: RootHex} | null = null;
+  // Type-safe for blobs variable. Translate 'null' value into 'preEIP4844' enum
+  // TODO: Not ideal, but better than just using null.
+  // TODO: Does not guarantee that preEIP4844 enum goes with a preEIP4844 block
+  let blobsResult: BlobsResult;
 
   // TODO:
   // Iterate through the naive aggregation pool and ensure all the attestations from there
@@ -135,7 +138,7 @@ export async function produceBlockBody<T extends BlockType>(
 
   const fork = currentState.config.getForkName(blockSlot);
 
-  if (fork !== ForkName.phase0 && fork !== ForkName.altair) {
+  if (isForkExecution(fork)) {
     const safeBlockHash = this.forkChoice.getJustifiedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
     const finalizedBlockHash = this.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
     const feeRecipient = this.beaconProposerCache.getOrDefault(proposerIndex);
@@ -160,17 +163,22 @@ export async function produceBlockBody<T extends BlockType>(
       // For MeV boost integration, this is where the execution header will be
       // fetched from the payload id and a blinded block will be produced instead of
       // fullblock for the validator to sign
-      (blockBody as allForks.BlindedBeaconBlockBody).executionPayloadHeader = await prepareExecutionPayloadHeader(
+      const builderRes = await prepareExecutionPayloadHeader(
         this,
         fork,
         currentState as CachedBeaconStateBellatrix,
         proposerPubKey
       );
-
-      // Capella and later forks have withdrawalRoot on their ExecutionPayloadHeader
-      // TODO Capella: Remove this. It will come from the execution client.
-      if (ForkSeq[fork] >= ForkSeq.capella) {
-        throw Error("Builder blinded blocks not supported after capella");
+      (blockBody as allForks.BlindedBeaconBlockBody).executionPayloadHeader = builderRes.header;
+      if (ForkSeq[fork] >= ForkSeq.eip4844) {
+        const {blobKzgCommitments} = builderRes as {blobKzgCommitments: eip4844.BlobKzgCommitments};
+        if (blobKzgCommitments === undefined) {
+          throw Error(`Invalid builder getHeader response for fork=${fork}, missing blobKzgCommitments`);
+        }
+        (blockBody as eip4844.BlindedBeaconBlockBody).blobKzgCommitments = blobKzgCommitments;
+        blobsResult = {type: BlobsResultType.blinded};
+      } else {
+        blobsResult = {type: BlobsResultType.preEIP4844};
       }
     }
 
@@ -194,6 +202,7 @@ export async function produceBlockBody<T extends BlockType>(
           (blockBody as allForks.ExecutionBlockBody).executionPayload = ssz.allForksExecution[
             fork
           ].ExecutionPayload.defaultValue();
+          blobsResult = {type: BlobsResultType.preEIP4844};
         } else {
           const {prepType, payloadId} = prepareRes;
           if (prepType !== PayloadPreparationType.Cached) {
@@ -233,7 +242,9 @@ export async function produceBlockBody<T extends BlockType>(
             }
 
             (blockBody as eip4844.BeaconBlockBody).blobKzgCommitments = blobsBundle.kzgs;
-            blobs = {blobs: blobsBundle.blobs, blockHash};
+            blobsResult = {type: BlobsResultType.produced, blobs: blobsBundle.blobs, blockHash};
+          } else {
+            blobsResult = {type: BlobsResultType.preEIP4844};
           }
         }
       } catch (e) {
@@ -250,6 +261,7 @@ export async function produceBlockBody<T extends BlockType>(
           (blockBody as allForks.ExecutionBlockBody).executionPayload = ssz.allForksExecution[
             fork
           ].ExecutionPayload.defaultValue();
+          blobsResult = {type: BlobsResultType.preEIP4844};
         } else {
           // since merge transition is complete, we need a valid payload even if with an
           // empty (transactions) one. defaultValue isn't gonna cut it!
@@ -257,24 +269,13 @@ export async function produceBlockBody<T extends BlockType>(
         }
       }
     }
+  } else {
+    blobsResult = {type: BlobsResultType.preEIP4844};
   }
 
   if (ForkSeq[fork] >= ForkSeq.capella) {
     // TODO: blsToExecutionChanges should be passed in the produceBlock call
     (blockBody as capella.BeaconBlockBody).blsToExecutionChanges = blsToExecutionChanges;
-  }
-
-  // Type-safe for blobs variable. Translate 'null' value into 'preEIP4844' enum
-  // TODO: Not ideal, but better than just using null.
-  // TODO: Does not guarantee that preEIP4844 enum goes with a preEIP4844 block
-  let blobsResult: BlobsResult;
-  if (ForkSeq[fork] >= ForkSeq.eip4844) {
-    if (!blobs) {
-      throw Error("Blobs are null post eip4844");
-    }
-    blobsResult = {type: BlobsResultType.produced, ...blobs};
-  } else {
-    blobsResult = {type: BlobsResultType.preEIP4844};
   }
 
   return {body: blockBody as AssembledBodyType<T>, blobs: blobsResult};
@@ -375,7 +376,7 @@ async function prepareExecutionPayloadHeader(
   fork: ForkExecution,
   state: CachedBeaconStateBellatrix,
   proposerPubKey: BLSPubkey
-): Promise<allForks.ExecutionPayloadHeader> {
+): Promise<{header: allForks.ExecutionPayloadHeader; blobKzgCommitments?: eip4844.BlobKzgCommitments}> {
   if (!chain.executionBuilder) {
     throw Error("executionBuilder required");
   }
