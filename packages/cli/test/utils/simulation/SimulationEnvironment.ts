@@ -30,18 +30,13 @@ import {
   AtLeast,
   CLClient,
   CLClientGeneratorOptions,
-  CLClientsOptions,
   CLNode,
   ELClient,
-  ELClientsOptions,
   ELGeneratorClientOptions,
   ELNode,
   ELStartMode,
-  Job,
-  JobPair,
   NodePair,
   NodePairOptions,
-  NodePairResult,
   SimulationInitOptions,
   SimulationOptions,
 } from "./interfaces.js";
@@ -68,7 +63,6 @@ export class SimulationEnvironment {
   readonly forkConfig: IChainForkConfig;
   readonly options: SimulationOptions;
 
-  private readonly jobs: JobPair[] = [];
   private keysCount = 0;
   private nodePairCount = 0;
   private genesisState?: BeaconStateAllForks;
@@ -132,9 +126,7 @@ export class SimulationEnvironment {
     });
 
     for (const client of clients) {
-      const result = env.createNodePair(client);
-      env.jobs.push(result.jobs);
-      env.nodes.push(result.nodePair);
+      env.nodes.push(env.createNodePair(client));
     }
 
     return env;
@@ -185,7 +177,7 @@ export class SimulationEnvironment {
       await mkdir(this.options.rootDir);
 
       await this.dockerRunner.start();
-      await Promise.all(this.jobs.map((j) => j.el.start()));
+      await Promise.all(this.nodes.map((node) => node.el.job.start()));
 
       for (let i = 0; i < this.nodes.length; i++) {
         // Get genesis block hash
@@ -213,7 +205,7 @@ export class SimulationEnvironment {
 
       await writeFile(this.genesisStatePath, this.genesisState.serialize());
 
-      await Promise.all(this.jobs.map((j) => j.cl.start()));
+      await Promise.all(this.nodes.map((node) => node.cl.job.start()));
 
       if (this.nodes.some((node) => node.cl.keys.type === "remote")) {
         console.log("Starting external signer...");
@@ -248,8 +240,8 @@ export class SimulationEnvironment {
     console.log(`Simulation environment "${this.options.id}" is stopping: ${message}`);
     this.options.controller.abort();
     await this.tracker.stop();
-    await Promise.all(this.jobs.map((j) => j.el.stop()));
-    await Promise.all(this.jobs.map((j) => j.cl.stop()));
+    await Promise.all(this.nodes.map((node) => node.el.job.stop()));
+    await Promise.all(this.nodes.map((node) => node.cl.job.stop()));
     await this.externalSigner.stop();
     await this.dockerRunner.stop();
 
@@ -268,7 +260,7 @@ export class SimulationEnvironment {
     id,
     remote,
     mining,
-  }: NodePairOptions<C, E>): NodePairResult {
+  }: NodePairOptions<C, E>): NodePair {
     if (this.genesisState && keysCount > 0) {
       throw new Error("Genesis state already initialized. Can not add more keys to it.");
     }
@@ -280,7 +272,10 @@ export class SimulationEnvironment {
     });
     this.keysCount += keysCount;
 
-    const clClient = this.createCLNode(cl, {
+    const clType = typeof cl === "object" ? cl.type : cl;
+    const clOptions = typeof cl === "object" ? cl.options : {};
+    const clNode = this.createCLNode(clType, {
+      ...clOptions,
       id,
       keys:
         keys.length > 0 && remote
@@ -291,24 +286,20 @@ export class SimulationEnvironment {
       engineMock: typeof el === "string" ? el === ELClient.Mock : el.type === ELClient.Mock,
     });
 
-    const elClient = this.createELNode(el, {id, mining});
+    const elType = typeof el === "object" ? el.type : el;
+    const elOptions = typeof el === "object" ? el.options : {};
+    const elNode = this.createELNode(elType, {...elOptions, id, mining});
 
-    return {
-      nodePair: {id, el: elClient?.node, cl: clClient.node},
-      jobs: {el: elClient?.job, cl: clClient.job},
-    };
+    return {id, el: elNode, cl: clNode};
   }
 
   private createCLNode<C extends CLClient>(
-    client: C | {type: C; options: CLClientsOptions[C]},
-    options?: AtLeast<CLClientGeneratorOptions, "keys" | "id">
-  ): {job: Job; node: CLNode} {
-    const clientType = typeof client === "object" ? client.type : client;
-    const clientOptions = typeof client === "object" ? client.options : undefined;
+    client: C,
+    options?: AtLeast<CLClientGeneratorOptions<C>, "keys" | "id">
+  ): CLNode {
+    const clId = `${options?.id}-cl-${client}`;
 
-    const clId = `${options?.id}-cl-${clientType}`;
-
-    switch (clientType) {
+    switch (client) {
       case CLClient.Lodestar: {
         const opts: CLClientGeneratorOptions = {
           id: clId,
@@ -322,10 +313,12 @@ export class SimulationEnvironment {
           address: "127.0.0.1",
           keys: options?.keys ?? {type: "no-keys"},
           genesisTime: this.options.genesisTime,
-          engineUrl: options?.engineUrl ?? `http://127.0.0.1:${EL_ENGINE_BASE_PORT + this.nodePairCount + 1}`,
+          engineUrls: options?.engineUrls
+            ? [`http://127.0.0.1:${EL_ENGINE_BASE_PORT + this.nodePairCount + 1}`, ...options.engineUrls]
+            : [`http://127.0.0.1:${EL_ENGINE_BASE_PORT + this.nodePairCount + 1}`],
           engineMock: options?.engineMock ?? false,
           jwtSecretHex: options?.jwtSecretHex ?? SHARED_JWT_SECRET,
-          clientOptions: clientOptions ?? {},
+          clientOptions: options?.clientOptions ?? {},
         };
         return generateLodestarBeaconNode(opts, this.childProcessRunner);
       }
@@ -334,14 +327,8 @@ export class SimulationEnvironment {
     }
   }
 
-  private createELNode<E extends ELClient>(
-    client: E | {type: E; options: ELClientsOptions[E]},
-    options: AtLeast<ELGeneratorClientOptions, "id">
-  ): {job: Job; node: ELNode} {
-    const clientType = typeof client === "object" ? client.type : client;
-    const clientOptions = typeof client === "object" ? client.options : undefined;
-
-    const elId = `${options.id}-el-${clientType}`;
+  private createELNode<E extends ELClient>(client: E, options: AtLeast<ELGeneratorClientOptions<E>, "id">): ELNode {
+    const elId = `${options.id}-el-${client}`;
 
     const opts: ELGeneratorClientOptions<E> = {
       id: elId,
@@ -356,10 +343,10 @@ export class SimulationEnvironment {
       port: options?.port ?? EL_P2P_BASE_PORT + this.nodePairCount + 1,
       address: this.dockerRunner.getNextIp(),
       mining: options?.mining ?? false,
-      clientOptions: clientOptions ?? [],
+      clientOptions: options.clientOptions ?? [],
     };
 
-    switch (clientType) {
+    switch (client) {
       case ELClient.Mock: {
         return generateMockNode(opts as ELGeneratorClientOptions<ELClient.Mock>, this.childProcessRunner);
       }

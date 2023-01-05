@@ -29,7 +29,7 @@ export const generateLodestarBeaconNode: CLClientGenerator<CLClient.Lodestar> = 
     keys,
     keyManagerPort,
     genesisTime,
-    engineUrl,
+    engineUrls,
     engineMock,
     jwtSecretHex,
     clientOptions,
@@ -73,7 +73,7 @@ export const generateLodestarBeaconNode: CLClientGenerator<CLClient.Lodestar> = 
   } else {
     rcConfig["eth1"] = true;
     rcConfig["execution.engineMock"] = false;
-    rcConfig["execution.urls"] = [engineUrl];
+    rcConfig["execution.urls"] = [...engineUrls];
   }
 
   const validatorClientsJobs: JobOptions[] = [];
@@ -122,16 +122,15 @@ export const generateLodestarBeaconNode: CLClientGenerator<CLClient.Lodestar> = 
     },
   ]);
 
-  const node = {
+  return {
     id,
     client: CLClient.Lodestar,
     url: `http://${address}:${restPort}`,
     keys,
     api: getClient({baseUrl: `http://${address}:${restPort}`}, {config}),
     keyManager: keyManagerGetClient({baseUrl: `http://${address}:${keyManagerPort}`}, {config}),
+    job,
   };
-
-  return {job, node};
 };
 
 export const generateLodestarValidatorJobs = (

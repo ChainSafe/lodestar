@@ -33,6 +33,10 @@ export class TableReporter extends SimulationReporter<typeof defaultAssertions> 
       this.lastPrintedSlot = slot;
     }
 
+    if (slot <= 0) {
+      return;
+    }
+
     const {clock, forkConfig, nodes, stores, errors} = this.options;
 
     const epoch = clock.getEpochForSlot(slot);
