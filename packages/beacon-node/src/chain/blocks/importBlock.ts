@@ -7,7 +7,7 @@ import {
   computeStartSlotAtEpoch,
   RootCache,
 } from "@lodestar/state-transition";
-import {ForkChoiceError, ForkChoiceErrorCode, EpochDifference} from "@lodestar/fork-choice";
+import {ForkChoiceError, ForkChoiceErrorCode, EpochDifference, AncestorStatus} from "@lodestar/fork-choice";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {toCheckpointHex} from "../stateCache/index.js";
 import {isOptimisticBlock} from "../../util/forkChoice.js";
@@ -235,36 +235,32 @@ export async function importBlock(
 
     this.metrics?.forkChoice.changedHead.inc();
 
-    try {
-      const distance = this.forkChoice.getCommonAncestorDistance(oldHead, newHead);
-      if (distance !== null) {
-        // chain reorg
-        this.logger.verbose("Chain reorg", {
-          depth: distance,
-          previousHead: oldHead.blockRoot,
-          previousHeadParent: oldHead.parentRoot,
-          previousSlot: oldHead.slot,
-          newHead: newHead.blockRoot,
-          newHeadParent: newHead.parentRoot,
-          newSlot: newHead.slot,
-        });
+    const ancestorResult = this.forkChoice.getCommonAncestorDepth(oldHead, newHead);
+    if (ancestorResult.code === AncestorStatus.CommonAncestor) {
+      // chain reorg
+      this.logger.verbose("Chain reorg", {
+        depth: ancestorResult.depth,
+        previousHead: oldHead.blockRoot,
+        previousHeadParent: oldHead.parentRoot,
+        previousSlot: oldHead.slot,
+        newHead: newHead.blockRoot,
+        newHeadParent: newHead.parentRoot,
+        newSlot: newHead.slot,
+      });
 
-        pendingEvents.push(ChainEvent.forkChoiceReorg, {
-          depth: distance,
-          epoch: computeEpochAtSlot(newHead.slot),
-          slot: newHead.slot,
-          newHeadBlock: newHead.blockRoot,
-          oldHeadBlock: oldHead.blockRoot,
-          newHeadState: newHead.stateRoot,
-          oldHeadState: oldHead.stateRoot,
-          executionOptimistic,
-        });
+      pendingEvents.push(ChainEvent.forkChoiceReorg, {
+        depth: ancestorResult.depth,
+        epoch: computeEpochAtSlot(newHead.slot),
+        slot: newHead.slot,
+        newHeadBlock: newHead.blockRoot,
+        oldHeadBlock: oldHead.blockRoot,
+        newHeadState: newHead.stateRoot,
+        oldHeadState: oldHead.stateRoot,
+        executionOptimistic,
+      });
 
-        this.metrics?.forkChoice.reorg.inc();
-        this.metrics?.forkChoice.reorgDistance.observe(distance);
-      }
-    } catch (e) {
-      this.logger.debug("Error forkChoice.getCommonAncestorDistance", {slot: block.message.slot}, e as Error);
+      this.metrics?.forkChoice.reorg.inc();
+      this.metrics?.forkChoice.reorgDistance.observe(ancestorResult.depth);
     }
 
     // Lightclient server support (only after altair)

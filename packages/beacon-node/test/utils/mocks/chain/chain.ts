@@ -4,7 +4,7 @@ import {CompositeTypeAny, toHexString, TreeView} from "@chainsafe/ssz";
 import {phase0, allForks, UintNum64, Root, Slot, ssz, Uint16, UintBn64} from "@lodestar/types";
 import {IBeaconConfig} from "@lodestar/config";
 import {BeaconStateAllForks, CachedBeaconStateAllForks} from "@lodestar/state-transition";
-import {CheckpointWithHex, IForkChoice, ProtoBlock, ExecutionStatus} from "@lodestar/fork-choice";
+import {CheckpointWithHex, IForkChoice, ProtoBlock, ExecutionStatus, AncestorStatus} from "@lodestar/fork-choice";
 import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
 import {ILogger} from "@lodestar/utils";
 
@@ -283,7 +283,7 @@ function mockForkChoice(): IForkChoice {
     forwardIterateDescendants: emptyGenerator,
     getBlockSummariesByParentRoot: () => [block],
     getBlockSummariesAtSlot: () => [block],
-    getCommonAncestorDistance: () => null,
+    getCommonAncestorDepth: () => ({code: AncestorStatus.NoCommonAncenstor}),
     validateLatestHash: () => {},
     getDependentRoot: () => rootHex,
   };
