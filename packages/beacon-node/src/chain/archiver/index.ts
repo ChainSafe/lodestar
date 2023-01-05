@@ -72,7 +72,7 @@ export class Archiver {
   private processFinalizedCheckpoint = async (finalized: CheckpointWithHex): Promise<void> => {
     try {
       const finalizedEpoch = finalized.epoch;
-      this.logger.verbose("Start processing finalized checkpoint", {epoch: finalizedEpoch});
+      this.logger.verbose("Start processing finalized checkpoint", {epoch: finalizedEpoch, rootHex: finalized.rootHex});
       await archiveBlocks(
         this.chain.config,
         this.db,
@@ -92,7 +92,10 @@ export class Archiver {
       this.chain.forkChoice.prune(finalized.rootHex);
       await this.updateBackfillRange(finalized);
 
-      this.logger.verbose("Finish processing finalized checkpoint", {epoch: finalizedEpoch});
+      this.logger.verbose("Finish processing finalized checkpoint", {
+        epoch: finalizedEpoch,
+        rootHex: finalized.rootHex,
+      });
     } catch (e) {
       this.logger.error("Error processing finalized checkpoint", {epoch: finalized.epoch}, e as Error);
     }

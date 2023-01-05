@@ -7,7 +7,7 @@ import {
   computeStartSlotAtEpoch,
   RootCache,
 } from "@lodestar/state-transition";
-import {ForkChoiceError, ForkChoiceErrorCode, EpochDifference} from "@lodestar/fork-choice";
+import {ForkChoiceError, ForkChoiceErrorCode, EpochDifference, AncestorStatus} from "@lodestar/fork-choice";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {toCheckpointHex} from "../stateCache/index.js";
 import {isOptimisticBlock} from "../../util/forkChoice.js";
@@ -70,6 +70,10 @@ export async function importBlock(
   // Should compute checkpoint balances before forkchoice.onBlock
   this.checkpointBalancesCache.processState(blockRootHex, postState);
   this.forkChoice.onBlock(block.message, postState, blockDelaySec, this.clock.currentSlot, executionStatus);
+  this.logger.verbose("Added block to forkchoice", {
+    slot: block.message.slot,
+    root: blockRootHex,
+  });
 
   // - Register state and block to the validator monitor
   // TODO
@@ -231,11 +235,11 @@ export async function importBlock(
 
     this.metrics?.forkChoice.changedHead.inc();
 
-    const distance = this.forkChoice.getCommonAncestorDistance(oldHead, newHead);
-    if (distance !== null) {
+    const ancestorResult = this.forkChoice.getCommonAncestorDepth(oldHead, newHead);
+    if (ancestorResult.code === AncestorStatus.CommonAncestor) {
       // chain reorg
       this.logger.verbose("Chain reorg", {
-        depth: distance,
+        depth: ancestorResult.depth,
         previousHead: oldHead.blockRoot,
         previousHeadParent: oldHead.parentRoot,
         previousSlot: oldHead.slot,
@@ -245,7 +249,7 @@ export async function importBlock(
       });
 
       pendingEvents.push(ChainEvent.forkChoiceReorg, {
-        depth: distance,
+        depth: ancestorResult.depth,
         epoch: computeEpochAtSlot(newHead.slot),
         slot: newHead.slot,
         newHeadBlock: newHead.blockRoot,
@@ -256,7 +260,7 @@ export async function importBlock(
       });
 
       this.metrics?.forkChoice.reorg.inc();
-      this.metrics?.forkChoice.reorgDistance.observe(distance);
+      this.metrics?.forkChoice.reorgDistance.observe(ancestorResult.depth);
     }
 
     // Lightclient server support (only after altair)
