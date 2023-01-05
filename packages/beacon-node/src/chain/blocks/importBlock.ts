@@ -8,7 +8,7 @@ import {
   RootCache,
 } from "@lodestar/state-transition";
 import {routes} from "@lodestar/api";
-import {ForkChoiceError, ForkChoiceErrorCode, EpochDifference} from "@lodestar/fork-choice";
+import {ForkChoiceError, ForkChoiceErrorCode, EpochDifference, AncestorStatus} from "@lodestar/fork-choice";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {toCheckpointHex} from "../stateCache/index.js";
 import {isOptimisticBlock} from "../../util/forkChoice.js";
@@ -272,7 +272,7 @@ export async function importBlock(
       });
 
       pendingEvents.push(routes.events.EventType.chainReorg, {
-        depth: distance,
+        depth: ancestorResult.depth,
         epoch: computeEpochAtSlot(newHead.slot),
         slot: newHead.slot,
         newHeadBlock: newHead.blockRoot,
