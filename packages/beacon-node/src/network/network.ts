@@ -9,6 +9,7 @@ import {ATTESTATION_SUBNET_COUNT, ForkName, ForkSeq, SYNC_COMMITTEE_SUBNET_COUNT
 import {Discv5, ENR} from "@chainsafe/discv5";
 import {computeEpochAtSlot, computeTimeAtSlot} from "@lodestar/state-transition";
 import {altair, eip4844, Epoch, phase0} from "@lodestar/types";
+import {routes} from "@lodestar/api";
 import {IMetrics} from "../metrics/index.js";
 import {ChainEvent, IBeaconChain, IBeaconClock} from "../chain/index.js";
 import {BlockInput, BlockInputType, getBlockInput} from "../chain/blocks/types.js";
@@ -133,16 +134,16 @@ export class Network implements INetwork {
     );
 
     this.chain.emitter.on(ChainEvent.clockEpoch, this.onEpoch);
-    this.chain.emitter.on(ChainEvent.lightClientFinalityUpdate, this.onLightClientFinalityUpdate);
-    this.chain.emitter.on(ChainEvent.lightClientOptimisticUpdate, this.onLightClientOptimisticUpdate);
+    this.chain.emitter.on(routes.events.EventType.lightClientFinalityUpdate, this.onLightClientFinalityUpdate);
+    this.chain.emitter.on(routes.events.EventType.lightClientOptimisticUpdate, this.onLightClientOptimisticUpdate);
     modules.signal.addEventListener("abort", this.close.bind(this), {once: true});
   }
 
   /** Destroy this instance. Can only be called once. */
   close(): void {
     this.chain.emitter.off(ChainEvent.clockEpoch, this.onEpoch);
-    this.chain.emitter.off(ChainEvent.lightClientFinalityUpdate, this.onLightClientFinalityUpdate);
-    this.chain.emitter.off(ChainEvent.lightClientOptimisticUpdate, this.onLightClientOptimisticUpdate);
+    this.chain.emitter.off(routes.events.EventType.lightClientFinalityUpdate, this.onLightClientFinalityUpdate);
+    this.chain.emitter.off(routes.events.EventType.lightClientOptimisticUpdate, this.onLightClientOptimisticUpdate);
   }
 
   async start(): Promise<void> {

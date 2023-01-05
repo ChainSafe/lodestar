@@ -1,7 +1,7 @@
 import {expect} from "chai";
 import {createIBeaconConfig, IChainConfig} from "@lodestar/config";
 import {chainConfig as chainConfigDef} from "@lodestar/config/default";
-import {getClient} from "@lodestar/api";
+import {getClient, routes} from "@lodestar/api";
 import {sleep} from "@lodestar/utils";
 import {ForkName, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 import {Validator} from "@lodestar/validator";
@@ -12,7 +12,6 @@ import {getDevBeaconNode} from "../../../../utils/node/beacon.js";
 import {getAndInitDevValidators} from "../../../../utils/node/validator.js";
 import {BeaconNode} from "../../../../../src/node/nodejs.js";
 import {waitForEvent} from "../../../../utils/events/resolver.js";
-import {ChainEvent} from "../../../../../src/chain/emitter.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 describe("lightclient api", function () {
@@ -97,7 +96,7 @@ describe("lightclient api", function () {
 
   it.skip("getFinalityUpdate()", async function () {
     // TODO: not sure how this causes subsequent tests failed
-    await waitForEvent<phase0.Checkpoint>(bn.chain.emitter, ChainEvent.finalized, 240000);
+    await waitForEvent<phase0.Checkpoint>(bn.chain.emitter, routes.events.EventType.finalizedCheckpoint, 240000);
     await sleep(SECONDS_PER_SLOT * 1000);
     const client = getClient({baseUrl: `http://127.0.0.1:${restPort}`}, {config}).lightclient;
     const {data: update} = await client.getFinalityUpdate();

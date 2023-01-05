@@ -8,11 +8,12 @@ import {
 } from "@lodestar/state-transition";
 import {isBetterUpdate, toLightClientUpdateSummary, LightClientUpdateSummary} from "@lodestar/light-client/spec";
 import {ILogger, MapDef, pruneSetToMax} from "@lodestar/utils";
+import {routes} from "@lodestar/api";
 import {BitArray, CompositeViewDU, toHexString} from "@chainsafe/ssz";
 import {MIN_SYNC_COMMITTEE_PARTICIPANTS, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 import {IBeaconDb} from "../../db/index.js";
 import {IMetrics} from "../../metrics/index.js";
-import {ChainEvent, ChainEventEmitter} from "../emitter.js";
+import {ChainEventEmitter} from "../emitter.js";
 import {byteArrayEquals} from "../../util/bytes.js";
 import {ZERO_HASH} from "../../constants/index.js";
 import {LightClientServerError, LightClientServerErrorCode} from "../errors/lightClientError.js";
@@ -484,7 +485,7 @@ export class LightClientServer {
 
     // Emit update
     // Note: Always emit optimistic update even if we have emitted one with higher or equal attested_header.slot
-    this.emitter.emit(ChainEvent.lightClientOptimisticUpdate, headerUpdate);
+    this.emitter.emit(routes.events.EventType.lightClientOptimisticUpdate, headerUpdate);
 
     // Persist latest best update for getLatestHeadUpdate()
     // TODO: Once SyncAggregate are constructed from P2P too, count bits to decide "best"
@@ -513,7 +514,7 @@ export class LightClientServer {
         this.metrics?.lightclientServer.onSyncAggregate.inc({event: "update_latest_finalized_update"});
 
         // Note: Ignores gossip rule to always emit finaly_update with higher finalized_header.slot, for simplicity
-        this.emitter.emit(ChainEvent.lightClientFinalityUpdate, this.finalized);
+        this.emitter.emit(routes.events.EventType.lightClientFinalityUpdate, this.finalized);
       }
     }
 
